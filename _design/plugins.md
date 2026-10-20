@@ -927,7 +927,7 @@ type Host interface {
   `registry.Later(ctx)` is how any command says it finishes after `Run` returns, and `registry.OnDone(ctx, fn)` is a
   caller asking to hear how one `Run` ended, then or later; `plugin.Await(ctx, run)` waits for it off the loop (the
   launcher, Start work, Ori's tools). A caller that waits shows its own busy state, so no notice goes up for it.
-  `repos.add`, `repos.clone`, `repos.fetch`, `session.stop`, `session.archive`, `session.end`, `session.next-pr`,
+  `repos.add`, `repos.clone`, `repos.fetch`, `session.stop`, `session.archive`, `session.end`,
   `session.start-work`, `session.add-repo`, `session.open` (resuming), and `diff.open` and `git.commit` on a path
   in no work tree the app knows are built on it.
 

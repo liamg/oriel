@@ -100,6 +100,8 @@ type shipPlugin struct {
 	reports  map[core.SessionID]*shipReport
 	seenPRs  map[string]bool // the PRs PrSeen has fired for, by URL
 	merged   map[string]bool // the PRs PrMerged has fired for, by URL
+	opened   map[string]bool // the PRs read open by this process, by URL
+	movedOn  map[string]bool // the merged PRs whose next PR has been started or asked about, by URL
 	cache    prCache
 	mirrored map[core.SessionID]time.Time // when each session's reviews were last mirrored from a code host
 
@@ -417,15 +419,18 @@ func (x *shipPlugin) readAs(id core.SessionID, r *shipReport, n int, fresh bool)
 	} else {
 		r.ships, r.err, r.read = ships, "", time.Now()
 	}
-	seen, merged := x.newPRs(id, ships)
+	seen, merged, asks := x.newPRs(id, ships)
 	x.mu.Unlock()
-	if len(seen)+len(merged) > 0 {
+	if len(seen)+len(merged)+len(asks) > 0 {
 		x.h.Do(func() {
 			for _, ev := range seen {
 				x.h.Fire(context.Background(), "PrSeen", ev.URL, &ev)
 			}
 			for _, ev := range merged {
 				x.h.Fire(context.Background(), "PrMerged", ev.URL, &ev)
+			}
+			for _, s := range asks {
+				x.askNextPR(id, s, s.PR)
 			}
 		})
 	}
@@ -434,13 +439,13 @@ func (x *shipPlugin) readAs(id core.SessionID, r *shipReport, n int, fresh bool)
 
 // newPRs are the PRs in ships not seen before, as PrSeen events, and those not seen merged before, as PrMerged
 // events; x.mu is held.
-func (x *shipPlugin) newPRs(id core.SessionID, ships []shipRead) (seen []PrSeen, merged []PrMerged) {
+func (x *shipPlugin) newPRs(id core.SessionID, ships []shipRead) (seen []PrSeen, merged []PrMerged, asks []shipRead) {
 	if x.seenPRs == nil {
 		x.seenPRs, x.merged = map[string]bool{}, map[string]bool{}
 	}
-	ticket := ""
+	ticket, direct := "", false
 	if se, ok := x.h.Session(id); ok {
-		ticket = se.Snapshot().Ticket
+		ticket, direct = se.Snapshot().Ticket, se.Snapshot().Kind == core.KindDirect
 	}
 	open := 0 // a project its code host didn't answer for counts as open
 	for _, s := range ships {
@@ -457,13 +462,26 @@ func (x *shipPlugin) newPRs(id core.SessionID, ships []shipRead) (seen []PrSeen,
 			seen = append(seen, PrSeen{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
 				Title: s.PR.Title, State: s.PR.State, Draft: s.PR.Draft, Merged: s.PR.Merged})
 		}
+		if s.PR.Open() {
+			if x.opened == nil {
+				x.opened = map[string]bool{}
+			}
+			x.opened[s.PR.URL] = true
+		}
+		if s.PR.Merged && x.opened[s.PR.URL] && !x.movedOn[s.PR.URL] && !direct {
+			if x.movedOn == nil {
+				x.movedOn = map[string]bool{}
+			}
+			x.movedOn[s.PR.URL] = true
+			asks = append(asks, s)
+		}
 		if s.PR.Merged && !x.merged[s.PR.URL] {
 			x.merged[s.PR.URL] = true
 			merged = append(merged, PrMerged{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
 				Title: s.PR.Title, Open: open})
 		}
 	}
-	return seen, merged
+	return seen, merged, asks
 }
 
 // wait is until every read and step started has finished.
@@ -849,6 +867,10 @@ func (x *shipPlugin) commands() {
 			})},
 		{ID: "ship.merge-default", Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
 			Available: inFront, Run: run(x.mergeDefault)},
+		{ID: "ship.next-pr", Title: "Move a project on from its merged or closed PR to a fresh branch from its updated base: {project}",
+			Available: inFront, Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
+				return x.nextPR(se, p, nil)
+			})},
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
@@ -917,8 +939,16 @@ func (x *shipPlugin) commands() {
 				}
 				return x.step(se.ID, p, "Saving", func(ctx context.Context, c *host.Host) error { return c.ShipDraft(ctx, req) })
 			})},
-		{ID: "ship.browse", Title: "Open a project's PR on its code host, in the browser: {project}", Available: inFront,
-			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
+		{ID: "ship.browse", Title: "Open a project's PR, or a past one by {number}, in the browser: {project}", Available: inFront,
+			Run: run(func(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
+				if n := a.Int("number"); n > 0 {
+					for _, pr := range se.Past {
+						if pr.Project == p && pr.Number == n && pr.URL != "" {
+							return x.sh.desktop.OpenURL(pr.URL)
+						}
+					}
+					return fmt.Errorf("%s has no past PR #%d", p, n)
+				}
 				s, _ := x.ship(se.ID, p)
 				if s.PR == nil || s.PR.URL == "" {
 					return fmt.Errorf("%s has no PR yet", p)
@@ -1037,8 +1067,107 @@ func (x *shipPlugin) mergeDefault(_ registry.Ctx, se core.SessionState, p string
 		x.h.Notify(core.Notice{ID: "ship.merged-default", Severity: core.SevInfo, Session: se.ID, Title: p,
 			Text: fmt.Sprintf("Merged %s into %s (%s), here: push %s when you're ready.", m.From, m.Into, how, m.Into)})
 		return nil
+	}, func() {
+		var done *registry.PR
+		if s.PR != nil {
+			pr := *s.PR
+			pr.Merged = true
+			done = &pr
+		}
+		x.h.Do(func() { x.afterMerge(se.ID, p, done) })
 	})
 }
+
+// nextPRStep is ship.next-pr's step.
+const nextPRStep = "Starting the next PR"
+
+// nextPR moves a project onto a fresh branch from its updated base, keeping the PR it leaves in the session's past:
+// done when given, else the one last read.
+func (x *shipPlugin) nextPR(se core.SessionState, p string, done *registry.PR) error {
+	s, _ := x.ship(se.ID, p)
+	if done == nil {
+		done = s.PR
+	}
+	req := host.NextPRReq{Session: se.ID, Project: p}
+	if done != nil {
+		req.Done = core.PastPR{Number: done.Number, URL: done.URL, Title: done.Title, State: prStateWord(done)}
+		req.Head = done.Head
+	}
+	x.h.Dismiss(nextPRAsk(p))
+	return x.step(se.ID, p, nextPRStep, func(ctx context.Context, c *host.Host) error {
+		return c.NextPR(ctx, req)
+	}, func() { delete(x.prs, formKey(se.ID, p)) })
+}
+
+// afterMerge moves a project on to its next PR once Oriel has merged its branch: at once when nothing's in the way
+// (the agent idle, nothing uncommitted), else asking.
+func (x *shipPlugin) afterMerge(id core.SessionID, p string, done *registry.PR) {
+	sess, ok := x.h.Session(id)
+	if !ok {
+		return
+	}
+	se := sess.Snapshot()
+	if se.Kind == core.KindDirect {
+		return
+	}
+	s, _ := x.ship(id, p)
+	if ships, _ := x.sessionShips(se); archivesOnMerge(x.h, se, ships) {
+		return
+	}
+	if se.Agent.Working || len(s.Files) > 0 {
+		x.askNextPR(id, s, done)
+		return
+	}
+	if err := x.nextPR(se, p, done); err != nil {
+		x.askNextPR(id, s, done)
+	}
+}
+
+// mergedHere marks a project's PR as merged from here, before the read that sees it so: that read asks its code host
+// again, so PrMerged fires, and doesn't ask about the next PR, which afterMerge sees to.
+func (x *shipPlugin) mergedHere(id core.SessionID, s shipRead, pr registry.PR) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if x.movedOn == nil {
+		x.movedOn = map[string]bool{}
+	}
+	x.movedOn[pr.URL] = true
+	x.cache.mu.Lock()
+	delete(x.cache.read, formKey(id, s.Project)+"/"+s.Branch)
+	x.cache.mu.Unlock()
+}
+
+// askNextPR asks whether to start a project's next PR, its PR having been merged.
+func (x *shipPlugin) askNextPR(id core.SessionID, s shipRead, done *registry.PR) {
+	w := s.words()
+	title := "Merged"
+	if done != nil {
+		title = fmt.Sprintf("%s%d merged", w.Sigil, done.Number)
+	}
+	why := ""
+	switch {
+	case len(s.Files) > 0:
+		why = fmt.Sprintf(" %s has uncommitted changes: commit or discard them first.", s.Branch)
+	default:
+		if sess, ok := x.h.Session(id); ok && sess.Snapshot().Agent.Working {
+			why = " The agent is working on it now."
+		}
+	}
+	x.h.Notify(core.Notice{ID: nextPRAsk(s.Project), Severity: core.SevQuestion, Session: id, Title: title,
+		Text: fmt.Sprintf("Start the next %s in %s, on a fresh branch from %s?%s", w.Short, s.Project, cmpOr(s.Base, "its base"), why),
+		Actions: []core.Action{
+			{Title: "Start next " + w.Short, Command: "ship.next-pr", Args: map[string]any{"id": string(id), "project": s.Project}},
+			{Title: "Not now", Command: "notice.dismiss", Args: map[string]any{"id": nextPRAsk(s.Project)}},
+		}})
+}
+
+// movesOn says a project's PR is done with and its branch has nothing left to raise: its next step is the next PR.
+func movesOn(s shipRead) bool {
+	return s.PR != nil && !s.PR.Open() && (s.PR.Merged || s.Commits == 0)
+}
+
+// nextPRAsk is the id of the notice asking whether to start a project's next PR.
+func nextPRAsk(project string) string { return "ship.next-pr." + project }
 
 // commitLater runs ship.commit again shortly, while the commit gates are still counting, until commitWait has gone.
 func (x *shipPlugin) commitLater(se core.SessionState, p string, a registry.Args) error {
@@ -1134,6 +1263,10 @@ func (x *shipPlugin) raiseReq(ctx registry.Ctx, se core.SessionState, p string, 
 	}
 	if strings.TrimSpace(ev.Title) == "" {
 		return prReq{}, fmt.Errorf("%s's %s needs a title", p, s.words().Short)
+	}
+	if !s.PR.Open() && s.BaseAhead > 0 {
+		return prReq{}, fmt.Errorf("%s: push %s first: it has %s origin hasn't, which the %s would show again", p, s.Base,
+			counted(s.BaseAhead, "commit"), s.words().Short)
 	}
 	if v, _ := x.h.Fire(ctx, "ShipRaise", p, ev); v.Veto {
 		f.veto = v.Reason

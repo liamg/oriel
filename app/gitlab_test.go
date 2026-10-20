@@ -178,7 +178,7 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 		return strings.Contains(f, "MERGE !1") && strings.Contains(f, lead)
 	})
 	s.clickText(t, "Continue")
-	s.shipSettle(t, "merged", func() bool { sh, _ := x.ship(se.ID, p); return sh.PR != nil && sh.PR.Merged })
+	s.shipSettle(t, "merged, and the next PR started", func() bool { p := pastPRs(s, se.ID); return len(p) == 1 && p[0].State == "merged" })
 	if m := g.Merged(); len(m) != 1 || m[0].SHA != mrs[0]["sha"] {
 		t.Errorf("merged %+v, want at %v", m, mrs[0]["sha"])
 	}

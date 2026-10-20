@@ -111,7 +111,15 @@ stateDiagram-v2
 
 - **Worktrees** are created from a freshly fetched base on a branch named `<you>/<ticket>-<slug>`. All repos in the session
   share the branch. Repos can be added mid-session (by you, or by the agent asking).
-- **Start next PR** cuts a new branch from the updated base inside the same session. Earlier PRs stay readable under Previous.
+- **Start next PR** (`ship.next-pr`) moves one project on from its merged or closed PR: it brings the default branch
+  up to date and cuts a fresh branch from it in the same worktree, so open buffers, the layout and the agent stay put.
+  It refuses while the old branch has uncommitted changes, or commits that are neither pushed, on the base, nor the
+  PR's. The PR it leaves is kept with its number, link, title and state, and Previous (the PR tab, the Ship page)
+  lists them. Merged from Oriel (Merge…, or Merge into main) with the agent idle and nothing uncommitted, the next PR
+  starts by itself; merged on GitHub, or with something in the way, a question asks first. Cut from a local default
+  branch that isn't pushed (after Merge into main), raising waits until it is, since the PR would show its commits.
+  A project that moved on from a merged PR with nothing since counts as merged for Finish session and
+  `session.archive_on_merge`; when that setting would archive the session, the next PR isn't started.
 - **Archiving** (after merge, or by hand) removes the worktrees but keeps the threads, transcript and test history, so
   past sessions stay searchable in the omnibox. Reopening one (`session.open`) makes its worktrees again on their
   branches, or pinned at their commit; a branch that's gone is an error.
@@ -177,7 +185,6 @@ type SessionSpec struct {
 type Sessions interface {
     Start(ctx context.Context, s SessionSpec) (SessionID, error)
     AddRepo(ctx context.Context, id SessionID, r RepoID) error
-    NextPR(ctx context.Context, id SessionID) error
     Archive(ctx context.Context, id SessionID) error
     Resume(ctx context.Context, id SessionID) error
 }

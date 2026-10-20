@@ -309,7 +309,7 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	s.shipSettle(t, "the warning", func() bool { return strings.Contains(s.frameText(), "1 reviewer comment unresolved") })
 	s.wantFrame(t, "MERGE #100", "Continue", "Cancel")
 	s.clickText(t, "Continue")
-	s.shipSettle(t, "merged", func() bool { sh, _ := x.ship(se.ID, "app"); return sh.PR != nil && sh.PR.Merged })
+	s.shipSettle(t, "merged, and the next PR started", func() bool { p := pastPRs(s, se.ID); return len(p) == 1 && p[0].State == "merged" })
 	gt.mu.Lock()
 	how := gt.merged["acme/app#100"]
 	gt.asks = append(gt.asks, giteaAsk{repo: "acme/api", number: 12, title: "Cache the token lookup", author: "priya"})

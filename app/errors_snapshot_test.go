@@ -221,7 +221,8 @@ func (s *errScene) populate() {
 func TestErrorsSnapshots(t *testing.T) {
 	s := newErrScene(t, "")
 	s.populate()
-	seq := s.store.State().Notifications[1].Seq
+	row := s.store.State().Notifications[1]
+	seq := row.Seq
 	s.run("log.open", registry.Args{"seq": seq})
 	s.golden("errors-all")
 	text := s.frameText()
@@ -231,7 +232,7 @@ func TestErrorsSnapshots(t *testing.T) {
 			t.Errorf("the frame lacks %q", want)
 		}
 	}
-	s.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: seq})
+	s.sh.cfg.Store.Apply(core.Dismissal(row))
 	s.sh.cfg.Logs.Router.Write(logs.Record{Time: at(14, 7, 10), Session: "config", Source: "session", Msg: "config session opened"})
 	for _, sc := range []struct {
 		name  string

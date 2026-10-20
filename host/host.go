@@ -238,8 +238,13 @@ func (w *Host) restore() error {
 }
 
 // settle puts back what the last process left running when it ended without handing over: those agents stopped
-// with it (StoppedByCrash), and nobody is asked anything.
+// with it (StoppedByCrash), and nobody is asked anything: its agents' asks are closed, and its questions dismissed.
 func (w *Host) settle() {
+	for _, n := range w.store.State().Notifications {
+		if n.Session != "" && n.Severity == core.SevQuestion && !n.Dismissed {
+			_ = w.store.Apply(core.Dismissal(n))
+		}
+	}
 	for _, se := range w.store.State().Sessions {
 		if se.Agent.Running || se.Agent.Working || se.Agent.Starting != nil || len(se.Asks) > 0 {
 			a := se.Agent

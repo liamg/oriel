@@ -307,19 +307,82 @@ func TestNextPRCutsAFreshBranchAndKeepsThePast(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	first := r.session(id).Branch
-	if err := r.w.NextPR(context.Background(), id); err != nil {
+	done := core.PastPR{Number: 812, URL: "https://github.com/acme/pricing/pull/812", Title: "fix: round half even", State: "merged"}
+	if err := r.w.NextPR(context.Background(), NextPRReq{Session: id, Project: r.session(id).Projects[0].Name, Done: done}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.session(id)
 	if se.Branch == first || branchOf(t, se.Projects[0].Dir) != se.Branch {
 		t.Errorf("branch %q → %q", first, se.Branch)
 	}
-	if len(se.Past) != 1 || se.Past[0].Branch != first {
+	if len(se.Past) != 1 || se.Past[0].Branch != first || se.Past[0].Number != 812 || se.Past[0].State != "merged" || se.Past[0].Project != se.Projects[0].Name {
 		t.Errorf("past = %+v", se.Past)
 	}
 	m, _ := LoadManifest(se.Dir)
-	if len(m.Projects[0].Past) != 1 || m.Projects[0].Branch != se.Branch {
+	if len(m.Projects[0].Past) != 1 || m.Projects[0].Branch != se.Branch || m.Projects[0].Past[0].Title != done.Title {
 		t.Errorf("manifest = %+v", m.Projects[0])
+	}
+}
+
+// Start next PR leaves nothing behind: not uncommitted changes, and not commits that are neither pushed, on the
+// base, nor the PR's.
+func TestNextPRRefusesToLeaveWorkBehind(t *testing.T) {
+	ctx := context.Background()
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	p := r.session(id).Projects[0]
+	first := p.Branch
+	wt := gitx.Repo{Dir: p.Dir}
+	next := func() error { return r.w.NextPR(ctx, NextPRReq{Session: id, Project: p.Name}) }
+
+	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n\nfunc Round() int { return 0 }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := next(); err == nil || !strings.Contains(err.Error(), "uncommitted changes") {
+		t.Errorf("with uncommitted changes: %v", err)
+	}
+	if _, err := wt.Run(ctx, "commit", "-qam", "round to zero"); err != nil {
+		t.Fatal(err)
+	}
+	if err := next(); err == nil || !strings.Contains(err.Error(), "1 commit on "+first+" that aren't pushed") {
+		t.Errorf("with a commit nowhere else: %v", err)
+	}
+	head, err := wt.Run(ctx, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.w.NextPR(ctx, NextPRReq{Session: id, Project: p.Name, Head: strings.TrimSpace(head)}); err != nil {
+		t.Errorf("with the commit the PR's: %v", err)
+	}
+	if b := r.session(id).Projects[0].Branch; b == first {
+		t.Errorf("still on %q", b)
+	}
+}
+
+// Merged into the default branch here, the branch's commits are on the base, and the next PR starts after them.
+func TestNextPRAfterMergingIntoTheDefaultBranch(t *testing.T) {
+	ctx := context.Background()
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	p := r.session(id).Projects[0]
+	wt := gitx.Repo{Dir: p.Dir}
+	if err := os.WriteFile(filepath.Join(p.Dir, "half.go"), []byte("package pricing\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := wt.Run(ctx, "add", "."); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := wt.Run(ctx, "commit", "-qm", "round half even"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.w.ShipMergeDefault(ctx, ShipRef{Session: id, Project: p.Name}); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.w.NextPR(ctx, NextPRReq{Session: id, Project: p.Name}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(p.Dir, "half.go")); err != nil {
+		t.Errorf("the next PR doesn't start after the merge: %v", err)
 	}
 }
 
@@ -384,5 +447,61 @@ func TestEndDeletesTheBranchToo(t *testing.T) {
 	}
 	if _, err := r.w.session(id); err == nil {
 		t.Error("the session is still there")
+	}
+}
+
+// errors.md: a notice "becomes a core event, Notified, so it lands in the event log"; one dismissed stays dismissed
+// when the log is replayed.
+func TestDismissedNoticeStaysDismissedOnRestore(t *testing.T) {
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	store := r.w.Store()
+	if err := store.Apply(core.Notified{Notice: core.Notice{ID: "ship.merge-default", Severity: core.SevQuestion, Source: "builtin:ship",
+		Session: id, Text: "Merge into main?", Time: r.now()}}); err != nil {
+		t.Fatal(err)
+	}
+	dismissed := func() (bool, bool) {
+		for _, n := range r.w.Store().State().Notifications {
+			if n.ID == "ship.merge-default" && n.Session == id {
+				return n.Dismissed, true
+			}
+		}
+		return false, false
+	}
+	for _, n := range store.State().Notifications {
+		if n.ID == "ship.merge-default" {
+			if err := store.Apply(core.Dismissal(n)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	r.restart()
+	if d, ok := dismissed(); !ok || !d {
+		t.Errorf("after a restart the notice is there %v, dismissed %v; want there and dismissed", ok, d)
+	}
+}
+
+// A question belongs to the process that asked it: one left unanswered isn't asked again after a restart.
+func TestQuestionIsNotAskedAgainOnRestore(t *testing.T) {
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	for _, n := range []core.Notice{
+		{ID: "ship.merge-default", Severity: core.SevQuestion, Source: "builtin:ship", Session: id, Text: "Merge into main?", Time: r.now()},
+		{ID: "hook.failed", Severity: core.SevError, Source: "builtin:ship", Session: id, Text: "a hook failed", Time: r.now()},
+	} {
+		if err := r.w.Store().Apply(core.Notified{Notice: n}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r.restart()
+	got := map[string]bool{}
+	for _, n := range r.w.Store().State().Notifications {
+		got[n.ID] = n.Dismissed
+	}
+	if d, ok := got["ship.merge-default"]; !ok || !d {
+		t.Errorf("the question after a restart: there %v, dismissed %v; want there and dismissed", ok, d)
+	}
+	if d, ok := got["hook.failed"]; !ok || d {
+		t.Errorf("the error after a restart: there %v, dismissed %v; want there until dismissed", ok, d)
 	}
 }

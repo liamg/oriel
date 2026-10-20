@@ -68,7 +68,6 @@ type SessionSpec struct {
 type Sessions interface {
 	Start(ctx context.Context, s SessionSpec) (SessionID, error)
 	AddRepo(ctx context.Context, id SessionID, r RepoID) error
-	NextPR(ctx context.Context, id SessionID) error
 	Archive(ctx context.Context, id SessionID) error
 	Resume(ctx context.Context, id SessionID) error
 }

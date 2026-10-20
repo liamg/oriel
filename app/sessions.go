@@ -167,10 +167,6 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w *host.Host, id core.SessionID) error { return w.Stop(ctx, id) })},
 		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
 			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w *host.Host, id core.SessionID) error { return w.Archive(ctx, id) })},
-		{ID: "session.next-pr", Title: "Start the next PR in this session, on a fresh branch from the updated base", Available: focused,
-			Run: x.slowSession("session.next-pr", "Starting the next PR in", func(ctx context.Context, w *host.Host, id core.SessionID) error {
-				return w.NextPR(ctx, id)
-			})},
 		{ID: "session.start-work", Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
 			Available: planning,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -230,7 +226,7 @@ func (x *sessions) loginNotices(signedOut, was []core.Login) {
 	if len(signedOut) == 0 {
 		for _, n := range x.h.State().Notifications {
 			if n.ID == "agent.login" && strings.HasPrefix(n.Source, source) && !n.Dismissed {
-				_ = x.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: n.Seq})
+				_ = x.sh.cfg.Store.Apply(core.Dismissal(n))
 			}
 		}
 		return

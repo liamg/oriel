@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image/color"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -116,6 +117,7 @@ func (x *shipPlugin) page(c *ui.Ctx) {
 			c.Column("side", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(tShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 				x.gatesList(c, se)
 				x.mergeOrder(c, se, ships)
+				x.previous(c, se, "")
 				x.ticket(c, se)
 				c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
 				widget.Wrap(c, "note", "Commits, pushes and PRs run with your git and gh. The agent can draft, never send.", 266,
@@ -168,7 +170,7 @@ func (x *shipPlugin) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRea
 		case raisable > 2:
 			label = fmt.Sprintf("Push + raise all %d %ss", raisable, w.Short)
 		}
-		if allMerged(ships) {
+		if allMerged(se, ships) {
 			if widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: endHelp, Disabled: waiting}) {
 				x.run("session.end", registry.Args{"id": string(se.ID)})
 			}
@@ -566,6 +568,9 @@ func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 			}
 			x.mergeButton(c, se, s)
 			x.prActions(c, se, s)
+			if !s.PR.Open() {
+				x.nextButton(c, se, s, false)
+			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Button(c, "browse", "Open on "+s.Code.Label()+" ↗", widget.ButtonOpts{Help: "git/ship#pr"}) {
 				x.run("ship.browse", registry.Args{"project": s.Project})
@@ -580,19 +585,56 @@ func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 	})
 }
 
+// nextButton is a project's next step when it has no open PR: the next PR once its PR's done with and nothing's
+// left on its branch, else raising one.
+func (x *shipPlugin) nextButton(c *ui.Ctx, se core.SessionState, s shipRead, primary bool) {
+	w := s.words()
+	switch {
+	case movesOn(s) && se.Kind != core.KindDirect:
+		if widget.Button(c, "next", "Start next "+w.Short, x.stepOpts(se.ID, s.Project, nextPRStep, widget.ButtonOpts{Primary: primary, Help: "git/ship#next"})) {
+			x.run("ship.next-pr", registry.Args{"project": s.Project})
+		}
+	case s.Code == nil:
+	case s.PR == nil:
+		if widget.Button(c, "raise", "Raise "+w.Short, widget.ButtonOpts{Primary: primary, Help: "git/ship#raise"}) {
+			x.run("ship.pr.open", registry.Args{"project": s.Project})
+		}
+	default:
+		if widget.Button(c, "again", "Raise a new "+w.Short+"…", widget.ButtonOpts{Primary: primary, Help: "git/ship#raise"}) {
+			x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": true})
+		}
+	}
+}
+
 // prStateChip is where a PR stands: open, draft, merged or closed.
 func prStateChip(c *ui.Ctx, pr *registry.PR) {
-	th := c.Theme()
-	label, tone := "open", th.C(theme.OK)
+	widget.Chip(c, "state", prStateWord(pr), prStateTone(c, prStateWord(pr)), "git/ship#pr")
+}
+
+// prStateWord is where a PR stands, in a word: open, draft, merged or closed.
+func prStateWord(pr *registry.PR) string {
 	switch {
 	case pr.Merged:
-		label, tone = "merged", th.C(theme.StatusPermission)
+		return "merged"
 	case pr.State == "closed":
-		label, tone = "closed", th.C(theme.FgFaint)
+		return "closed"
 	case pr.Draft:
-		label, tone = "draft", th.C(theme.FgMuted)
+		return "draft"
 	}
-	widget.Chip(c, "state", label, tone, "git/ship#pr")
+	return "open"
+}
+
+func prStateTone(c *ui.Ctx, word string) color.NRGBA {
+	th := c.Theme()
+	switch word {
+	case "merged":
+		return th.C(theme.StatusPermission)
+	case "closed":
+		return th.C(theme.FgFaint)
+	case "draft":
+		return th.C(theme.FgMuted)
+	}
+	return th.C(theme.OK)
 }
 
 // readyButton is Ready for review, on a draft PR.
@@ -845,6 +887,45 @@ func (x *shipPlugin) mergeOrder(c *ui.Ctx, se core.SessionState, ships []shipRea
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 }
 
+// previous is the PRs the session has moved on from, newest first: one project's, or every project's for "".
+// Each opens on its code host.
+func (x *shipPlugin) previous(c *ui.Ctx, se core.SessionState, project string) {
+	th := c.Theme()
+	var past []core.PastPR
+	for _, pr := range slices.Backward(se.Past) {
+		if project == "" || pr.Project == project {
+			past = append(past, pr)
+		}
+	}
+	if len(past) == 0 {
+		return
+	}
+	shipCap(c, "PREVIOUS")
+	for i, pr := range past {
+		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
+			state := cmpOr(pr.State, "merged here")
+			widget.Chip(c, "state", state, prStateTone(c, state), "git/ship#next")
+			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+				label := pr.Branch
+				if pr.Number > 0 {
+					label = fmt.Sprintf("#%d · %s", pr.Number, cmpOr(pr.Title, pr.Branch))
+				}
+				if project == "" {
+					label = pr.Project + " " + label
+				}
+				if pr.URL == "" {
+					c.Text("l", label, monoFont(11, th.C(theme.FgMuted)))
+					return
+				}
+				if widget.Link(c, "l", label, "git/ship#next") {
+					x.run("ship.browse", registry.Args{"project": pr.Project, "number": pr.Number})
+				}
+			})
+		})
+	}
+	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
+}
+
 func (x *shipPlugin) ticket(c *ui.Ctx, se core.SessionState) {
 	if se.Ticket == "" {
 		return
@@ -910,9 +991,12 @@ func (x *shipPlugin) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	} else {
 		line("committed", "ok", "Committed", "")
 	}
-	if s.Behind > 0 {
+	switch {
+	case s.Behind > 0:
 		line("uptodate", "warn", "Up to date with "+s.Base, fmt.Sprintf("%d behind", s.Behind))
-	} else {
+	case s.BaseAhead > 0:
+		line("uptodate", "warn", s.Base+" pushed", fmt.Sprintf("%d to push", s.BaseAhead))
+	default:
 		line("uptodate", "ok", "Up to date with "+cmpOr(s.Base, "base"), "")
 	}
 	switch {
@@ -924,8 +1008,12 @@ func (x *shipPlugin) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 		line("pushed", "todo", "Pushed", "")
 	}
 	switch {
-	case s.PR != nil:
+	case s.PR.Open():
 		line("pr", "ok", w.Short+" open", w.Sigil+strconv.Itoa(s.PR.Number))
+	case s.PR != nil && s.PR.Merged:
+		line("pr", "ok", w.Short+" merged", w.Sigil+strconv.Itoa(s.PR.Number))
+	case s.PR != nil:
+		line("pr", "todo", w.Short+" closed", w.Sigil+strconv.Itoa(s.PR.Number))
 	case !s.PRDraft.Empty() || x.prForm(se.ID, s).edited:
 		line("pr", "doing", w.Short, "drafting")
 	default:
@@ -954,16 +1042,14 @@ func (x *shipPlugin) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	}
 	c.Box("sp2", ui.Style{H: ui.Px(8)}, nil)
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+		if s.PR != nil && widget.Button(c, "open", "Open "+w.Short, widget.ButtonOpts{Help: "git/ship#pr"}) {
+			x.run("ship.pr.open", registry.Args{"project": p})
+		}
 		if s.PR.Open() {
-			if widget.Button(c, "open", "Open "+w.Short, widget.ButtonOpts{Help: "git/ship#pr"}) {
-				x.run("ship.pr.open", registry.Args{"project": p})
-			}
 			x.prActions(c, se, s)
 			return
 		}
-		if s.Code != nil && s.PR == nil && widget.Button(c, "raise", "Raise "+w.Short, widget.ButtonOpts{Primary: true, Help: "git/ship#raise"}) {
-			x.run("ship.pr.open", registry.Args{"project": p})
-		}
+		x.nextButton(c, se, s, true)
 		if widget.Button(c, "ship", "Ship ⇉", widget.ButtonOpts{Help: "git/ship#page"}) {
 			x.run("ship.open", nil)
 		}
@@ -975,8 +1061,11 @@ func (x *shipPlugin) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	}
 	explainKept(c, x.sh, "ship.ci."+p, "git/ship#checks")
 	note := "opens the Raise " + w.Short + " tab →"
-	if s.PR.Open() {
+	switch {
+	case s.PR.Open():
 		note = "Open " + w.Short + " opens as a main tab"
+	case movesOn(s) && se.Kind != core.KindDirect:
+		note = "Start next " + w.Short + " cuts a fresh branch from " + cmpOr(s.Base, "the base")
 	}
 	c.Text("note", note, monoFont(10, th.C(theme.FgGhost)))
 }

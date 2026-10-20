@@ -137,7 +137,12 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			if !ok {
 				return fmt.Errorf("notice.dismiss needs a seq or an id")
 			}
-			return n.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: seq})
+			for _, row := range n.sh.cfg.Store.State().Notifications {
+				if row.Seq == seq {
+					return n.sh.cfg.Store.Apply(core.Dismissal(row))
+				}
+			}
+			return fmt.Errorf("no notification %d", seq)
 		}},
 		{ID: "contribution.turn_on", Title: "Turn a contribution that was turned off back on", Run: func(_ registry.Ctx, a registry.Args) error {
 			kind, id := str(a, "kind"), str(a, "id")
@@ -252,15 +257,15 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	switch {
 	case res.Action >= 0 && res.Action == details:
 		n.h.Run(ctx, "log.open", registry.Args{"seq": row.Seq})
-		n.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: row.Seq})
+		n.sh.cfg.Store.Apply(core.Dismissal(row))
 	case res.Action >= 0:
 		a := row.Actions[res.Action]
 		if err := n.h.Run(ctx, a.Command, registry.Args(a.Args)); err != nil {
 			n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
 		}
-		n.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: row.Seq})
+		n.sh.cfg.Store.Apply(core.Dismissal(row))
 	case res.Closed:
-		n.sh.cfg.Store.Apply(core.NoticeDismissed{Seq: row.Seq})
+		n.sh.cfg.Store.Apply(core.Dismissal(row))
 	}
 }
 
