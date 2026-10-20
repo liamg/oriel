@@ -37,6 +37,7 @@ type Case struct {
 	Msg     *string          // the last message
 	Win     *Win             // the current window's number and the window count
 	Top     *int             // the window's first line, 1-based, as line('w0')
+	Left    *int             // the window's first column, 0-based, as winsaveview().leftcol
 	Bufs    *string          // the listed buffers, as `1# 2%`
 	RawKeys string
 }
@@ -241,6 +242,13 @@ func (c *Case) fill(f map[string]string) error {
 			return fmt.Errorf("top: want a line number, got %q", t)
 		}
 		c.Top = &n
+	}
+	if l, ok := take("left"); ok {
+		n, err := strconv.Atoi(l)
+		if err != nil || n < 0 {
+			return fmt.Errorf("left: want a column, got %q", l)
+		}
+		c.Left = &n
 	}
 	if b, ok := take("bufs"); ok {
 		if c.Bufs, err = parseBufs(b); err != nil {

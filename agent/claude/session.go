@@ -2,6 +2,7 @@ package claude
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -438,7 +439,11 @@ func (s *session) event(in eventIn) {
 		s.working = false
 		base := s.base
 		s.mu.Unlock()
-		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage())})
+		var bg []core.BackgroundTask
+		for _, t := range in.Background {
+			bg = append(bg, core.BackgroundTask{Kind: t.Type, Description: cmp.Or(t.Description, t.Command, t.Type)})
+		}
+		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage()), Background: bg})
 		s.planUsage(in.RateLimits)
 	case "usage":
 		s.planUsage(in.RateLimits)

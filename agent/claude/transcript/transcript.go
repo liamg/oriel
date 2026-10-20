@@ -377,11 +377,11 @@ func (r *Reader) entries(rec record) []Entry {
 	}
 	at := rec.Timestamp
 	if name, text, ok := pluginOf(rec); ok {
-		return []Entry{{Kind: Plugin, Role: "user", ID: ref(rec.UUID, 0), Text: text, Tool: name, Agent: agent, At: at}}
+		return []Entry{{Kind: Plugin, Role: "user", ID: ref(rec.UUID, 0), Text: dropTrailer(text), Tool: name, Agent: agent, At: at}}
 	}
 	var s string
 	if json.Unmarshal(rec.Message.Content, &s) == nil {
-		if t := strings.TrimSpace(s); t != "" && !strings.HasPrefix(t, "<") {
+		if t := dropTrailer(strings.TrimSpace(s)); t != "" && !strings.HasPrefix(t, "<") {
 			return []Entry{{Kind: Text, Role: rec.Type, ID: ref(rec.UUID, 0), Text: t, Agent: agent, At: at}}
 		}
 		return nil
@@ -395,6 +395,9 @@ func (r *Reader) entries(rec record) []Entry {
 		switch b.Type {
 		case "text":
 			t := strings.TrimSpace(b.Text)
+			if rec.Type == "user" {
+				t = dropTrailer(t)
+			}
 			// What the system injects into a user message (reminders, hook output) is wrapped in tags.
 			if t == "" || (rec.Type == "user" && strings.HasPrefix(t, "<")) {
 				continue
@@ -428,6 +431,11 @@ func (r *Reader) entries(rec record) []Entry {
 }
 
 func ref(uuid string, i int) string { return uuid + ":" + strconv.Itoa(i) }
+
+// pluginTrailer is how Claude Code ends a prompt a plugin submits: a line for the model about where it came from.
+var pluginTrailer = regexp.MustCompile(`\s*This is how Claude Code surfaces a prompt a plugin submits between turns[^\n]*$`)
+
+func dropTrailer(text string) string { return pluginTrailer.ReplaceAllString(text, "") }
 
 // pluginSays is how Claude Code opens a prompt a plugin submits.
 var pluginSays = regexp.MustCompile(`^The (\S+) plugin sent a message:\s*`)

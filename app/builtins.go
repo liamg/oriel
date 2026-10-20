@@ -21,7 +21,7 @@ func builtins(sh *shell) []plugin.Plugin {
 	perms := &permissionsPlugin{sh: sh}
 	sh.layout = &layoutPlugin{sh: sh}
 	return []plugin.Plugin{&uiOptions{}, &languagesPlugin{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitPlugin{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{sh: sh}, &sessionTabs{sh: sh}, &hudPlugin{sh: sh}, &inboxPlugin{sh: sh}, &missionPlugin{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &consentPlugin{}, &helpView{sh: sh}, &navPlugin{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
-		&editorPlugin{sh: sh}, &markdownPlugin{}, &imagePlugin{}, &desktopPlugin{sh: sh}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspPlugin{sh: sh}, &testsPlugin{sh: sh}, &debugPlugin{sh: sh}, &explainPlugin{sh: sh}, &walkthroughPlugin{sh: sh}, &tourPlugin{sh: sh}, &terminals{sh: sh}, &settingsPlugin{sh: sh}, &codeSitesPlugin{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, perms, &workspacePlugin{sh: sh, perms: perms}, &statsPlugin{sh: sh}, &jobsPlugin{sh: sh}, &reposPlugin{sh: sh}, &machinePlugin{sh: sh}, &updatePlugin{sh: sh}, &promptsPlugin{sh: sh}, &voicePlugin{sh: sh}, &assistantPlugin{sh: sh}, &ticketsPlugin{}, &reviewsPlugin{sh: sh}, &githubHost{sh: sh}, &launcher{sh: sh}, &requests{sh: sh}, &planPlugin{sh: sh}, &diffPlugin{sh: sh}, &shipPlugin{sh: sh}, &aiReviewPlugin{sh: sh}, &verifyPlugin{sh: sh}, &githubPlugin{sh: sh}, &secretsPlugin{sh: sh}, &luaPlugin{sh: sh, dir: sh.cfg.ConfigDir}, &catalogPlugin{sh: sh}}
+		&editorPlugin{sh: sh}, &markdownPlugin{}, &imagePlugin{}, &desktopPlugin{sh: sh}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspPlugin{sh: sh}, &testsPlugin{sh: sh}, &debugPlugin{sh: sh}, &explainPlugin{sh: sh}, &walkthroughPlugin{sh: sh}, &terminals{sh: sh}, &settingsPlugin{sh: sh}, &codeSitesPlugin{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, perms, &workspacePlugin{sh: sh, perms: perms}, &statsPlugin{sh: sh}, &jobsPlugin{sh: sh}, &reposPlugin{sh: sh}, &machinePlugin{sh: sh}, &updatePlugin{sh: sh}, &promptsPlugin{sh: sh}, &voicePlugin{sh: sh}, &assistantPlugin{sh: sh}, &ticketsPlugin{}, &reviewsPlugin{sh: sh}, &githubHost{sh: sh}, &launcher{sh: sh}, &requests{sh: sh}, &planPlugin{sh: sh}, &diffPlugin{sh: sh}, &shipPlugin{sh: sh}, &aiReviewPlugin{sh: sh}, &verifyPlugin{sh: sh}, &githubPlugin{sh: sh}, &secretsPlugin{sh: sh}, &luaPlugin{sh: sh, dir: sh.cfg.ConfigDir}, &catalogPlugin{sh: sh}}
 }
 
 // onLoop runs fn on the app's loop and waits for it: an agent tool's way in from the session host's goroutine.
@@ -86,6 +86,8 @@ var movePlacements = []struct {
 
 func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	l.root, l.saved = layout.New(), map[string]layout.Snapshot{}
+	// A view put in front is what the user asked to see: the page over the layout gives way to it.
+	l.root.OnShow(func(layout.ViewRef) { closePlaces(h) })
 	h.Do(func() { // once every plugin has registered its views
 		l.restore(h)
 		l.restored = true
@@ -187,6 +189,11 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "view.toggle", Title: "Show a view {id} (for a {project}), or close it if it's showing", Available: viewRegistered,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				if s, ok := l.matching(a, l.root.Visible()); ok {
+					if placeShown(h) {
+						// Open under a page: asked for, it's revealed, not put away.
+						l.root.Show(s)
+						return nil
+					}
 					l.root.Close(s)
 					return nil
 				}

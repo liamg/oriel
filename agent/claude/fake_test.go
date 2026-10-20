@@ -287,6 +287,7 @@ func (f *fake) turn(text string) {
 	_ = f.hook("event", map[string]any{"kind": "turn-start", "turnId": turnID}, nil)
 
 	reason, answer := "answer", ""
+	var background []any
 	switch text {
 	case "say hello":
 		answer = f.say("hello")
@@ -347,6 +348,9 @@ func (f *fake) turn(text string) {
 	case "work slowly":
 		<-ctx.Done()
 		reason = "aborted"
+	case "test in the background":
+		answer = f.say("the suite is running")
+		background = []any{map[string]any{"id": "b1", "type": "shell", "status": "running", "description": "Run the suite", "command": "go test ./..."}}
 	case "what did I say":
 		if len(before) == 0 {
 			answer = f.say("nothing yet")
@@ -366,6 +370,7 @@ func (f *fake) turn(text string) {
 		"usage":      map[string]any{"input_tokens": 10, "output_tokens": 5, "cache_read_input_tokens": 100, "cache_creation_input_tokens": 20, "model": "claude-opus-5"},
 		"context":    map[string]any{"tokens": 130, "window": 200000},
 		"rateLimits": fakeRateLimits,
+		"background": background,
 	}, nil)
 }
 

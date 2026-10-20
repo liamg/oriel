@@ -137,7 +137,8 @@ text "✕" @87.1225,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @98.71625,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @119.31,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
-text "Go · utf-8 · LF" @1400.3438,984.71 #b3ab99 JetBrains Mono 10.5
+text "Go · utf-8 · LF" @1357.9688,984.71 #b3ab99 JetBrains Mono 10.5
+text "wrap" @1472.875,990.78 #7c7566 JetBrains Mono 10.5
 text "1:1" @1515.25,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 16%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 rect 112,102 8.40625x19 fill #ffd23f
@@ -191,7 +192,7 @@ clip 250,92 1100x660 r 10
     text "job" @419.32812,272.78 #7c7566 JetBrains Mono 10.5
     text "off" @913,272.6 #4f4a40 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 151" @883,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 155" @883,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13

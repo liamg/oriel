@@ -146,6 +146,8 @@ type window struct {
 	loc        *qfStack // the location list
 	locOwner   *window  // for a location-list window, the window whose list it shows
 	top        int      // the first line shown
+	left       int      // the first screen column shown, with 'nowrap'
+	width      int      // screen columns for text; 0 for the window's share of the default screen
 	height     int      // rows shown; 0 for the window's share of the default screen
 	scroll     int      // 'scroll', set by a count to CTRL-D or CTRL-U; 0 for half the window
 }
@@ -540,7 +542,8 @@ var commands = map[string]bool{
 	"zA": true, "zv": true, "zx": true, "zX": true, "zm": true, "zM": true, "zr": true, "zR": true, "zn": true,
 	"zN": true, "zi": true,
 	"<C-e>": true, "<C-y>": true, "<C-d>": true, "<C-u>": true, "<C-f>": true, "<C-b>": true, "<PageDown>": true,
-	"<PageUp>": true, "<S-Down>": true, "<S-Up>": true, "zt": true, "z<CR>": true, "zz": true, "z.": true, "zb": true, "z-": true,
+	"<PageUp>": true, "<S-Down>": true, "<S-Up>": true, "zl": true, "z<Right>": true, "zh": true, "z<Left>": true, "zL": true,
+	"zH": true, "zs": true, "ze": true, "zt": true, "z<CR>": true, "zz": true, "z.": true, "zb": true, "z-": true,
 	"ZZ": true, "ZQ": true, "Q": true, "<C-g>": true, "<C-a>": true, "<C-x>": true, "<C-^>": true, "<C-6>": true,
 }
 

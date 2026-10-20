@@ -19,7 +19,7 @@ lines the commit takes that you haven't read (`ledger.gate`):
   (`a`) commits, with a trailer saying how many lines went unread (`Unreviewed-Agent-Lines: 38`), and the
   session's log says so.
 - **soft** (jobs): one confirmation (`⏎`), then it commits; the session's log says so.
-- **off** (tours, reviews, scratch and direct sessions, and outside a session): it commits.
+- **off** (reviews and direct sessions, and outside a session): it commits.
 
 A project's `.oriel/settings.toml` can set `ledger.gate` for its own repo. Plugins add gates of their own, and a
 `Commit` hook can still veto a commit that got past them.

@@ -8,7 +8,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// ui.md, "Annotation house style (explain, tours, :Inspect): numbered diamond, angled leader line, clipped-corner
+// ui.md, "Annotation house style (explain, :Inspect): numbered diamond, angled leader line, clipped-corner
 // card".
 func TestAnnotation(t *testing.T) {
 	var id ui.ID

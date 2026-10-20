@@ -26,7 +26,7 @@ statusline segments, status colours. You never see help until you ask for it, an
 
 ## Written in markdown
 
-Help pages are plain markdown in the repo, rendered with the same renderer as plan docs, requests and tours
+Help pages are plain markdown in the repo, rendered with the same renderer as plan docs and requests
 (mermaid diagrams included):
 
 ```markdown

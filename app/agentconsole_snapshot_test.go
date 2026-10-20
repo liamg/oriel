@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 )
 
 // consoleScene is mockup 15's session in front, with its console open: a Codex turn with reads, a search, edits,
@@ -135,4 +136,27 @@ func TestLoginCardsSnapshot(t *testing.T) {
 	s.frame()
 	s.lint("the login cards")
 	s.golden("login-cards")
+}
+
+// A long session's transcript draws only its screenful, following its end, so a frame costs the same at its
+// three-thousandth block as at its tenth: the window stays quick with the console open behind the omnibox.
+func TestLongTranscriptDrawsWhatShows(t *testing.T) {
+	s := newScene(t, "", t.TempDir(), render.Point{X: 1600, Y: 1000})
+	var items []core.Item
+	for i := range 3000 {
+		items = append(items, core.Item{ID: fmt.Sprint("a", i), Kind: core.ItemAssistant, Text: fmt.Sprintf("step %d of the work", i)})
+	}
+	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusWorking,
+		Agent: core.AgentState{Provider: "claude", Running: true}, Transcript: items}})
+	s.store.Apply(core.SessionFocused{ID: "w"})
+	s.run("agent.console", nil)
+	s.frame()
+	s.frame()
+	text := s.frameText()
+	if !strings.Contains(text, "step 2999 of the work") {
+		t.Errorf("the transcript doesn't show its end:\n%s", text)
+	}
+	if strings.Contains(text, "step 10 of the work") || strings.Count(text, " of the work") > 200 {
+		t.Errorf("the transcript drew %d blocks, past its screenful", strings.Count(text, " of the work"))
+	}
 }

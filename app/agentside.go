@@ -215,12 +215,15 @@ func (x *agentConsole) rules(c *ui.Ctx, se core.SessionState) {
 		tone  theme.TokenID
 	}
 	var rs []rule
-	switch se.Agent.Policy {
-	case "ask":
+	switch {
+	case se.Agent.Sandboxed:
+		// The agent asks nothing itself in a sandbox: the sandbox and its gateway are the gate.
+		rs = append(rs, rule{"tools · auto", tRuleAllow})
+	case se.Agent.Policy == "ask":
 		rs = append(rs, rule{"edit · ask", tRuleAsk}, rule{"bash · ask", tRuleAsk})
-	case "light":
+	case se.Agent.Policy == "light":
 		rs = append(rs, rule{"edit · auto", tRuleAllow}, rule{"bash · ask", tRuleAsk})
-	case "bypass":
+	case se.Agent.Policy == "bypass":
 		rs = append(rs, rule{"tools · auto", tRuleAllow})
 	}
 	if se.Agent.Sandboxed {

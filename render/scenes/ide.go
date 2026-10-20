@@ -85,7 +85,7 @@ func (c *Canvas) titlebar() {
 		{c.p.violet, "review #4410", "permission", "⌘3"},
 		{c.p.ciBlue, "flaky e2e sweep", "ci", "⌘4"},
 		{c.p.pink, "dash-filters", "in review", "⌘5"},
-		{c.p.green, "tour: auth flow", "", "⌘6"},
+		{c.p.green, "auth flow", "", "⌘6"},
 	}
 	for i, t := range tabs {
 		col := c.p.fg2

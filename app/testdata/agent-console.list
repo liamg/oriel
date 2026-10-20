@@ -121,10 +121,6 @@ clip 44,38 1556x936 r 0
     text "THREAD · HANDLER.GO:88" @220.5,146.98225 #ff9b45 JetBrains Mono 9.5
     text "The 429 path never sets Retry-After. Add it from the limiter's reset time and cover it in the handler test." @391.76,148.10938 #ece6d8 Inter 12.5
     clip 44,161.12451 1225x712.7955 r 0
-      rect 206.5,108.211914 900x28.519531 fill #0c0c0b radius 6
-      clip 206.5,108.211914 900x28.519531 r 6
-      pop
-      rect 206.5,108.211914 900x28.519531 radius 6 stroke 1 #24221d
       text "Reading the limiter to see what it exposes for the reset time." @214.5,158.35645 #b3ab99 Inter 12
       rect 206.5,171.25098 900x32 fill #0c0c0b radius 6
       clip 206.5,171.25098 900x32 r 6
@@ -332,12 +328,10 @@ clip 44,38 1556x936 r 0
       text "+18" @1564.2188,616.51 #4fe0a0 JetBrains Mono 10.5
       rect 1270,634.32 330x1 fill #24221d
       text "RULES IN FORCE" @1286,659.01 #7c7566 JetBrains Mono 9.5
-      rect 1286,670.86 86.27002x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
-      text "EDIT · AUTO" @1293,682.55 #4fe0a0 JetBrains Mono 9.5
-      rect 1378.27,670.86 79.69995x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
-      text "BASH · ASK" @1385.27,682.55 #ff7ad6 JetBrains Mono 9.5
-      rect 1463.97,670.86 73.130005x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
-      text "NET · ASK" @1470.97,682.55 #ff7ad6 JetBrains Mono 9.5
+      rect 1286,670.86 92.839966x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
+      text "TOOLS · AUTO" @1293,682.55 #4fe0a0 JetBrains Mono 9.5
+      rect 1384.84,670.86 73.130005x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
+      text "NET · ASK" @1391.84,682.55 #ff7ad6 JetBrains Mono 9.5
       rect 1286,696.4 132.26001x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
       text "GIT PUSH · GATEWAY" @1293,708.09 #ff7ad6 JetBrains Mono 9.5
       rect 1424.26,696.4 105.97998x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059

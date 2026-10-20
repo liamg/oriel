@@ -3,6 +3,7 @@ package prompts
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -12,12 +13,28 @@ import (
 )
 
 // crit-reference.md, "Prompts page": "editable prompts, including Coding style (also written into the generated
-// CLAUDE.md). Only overrides are stored." Oriel's are the coding style, each pack and each part packs include.
+// CLAUDE.md). Only overrides are stored." Oriel's are the coding style, the side requests (explain, the verify quiz,
+// redrafts), each pack and each part packs include.
+var placeholder = regexp.MustCompile(`\{\{(\w+)\}\}`)
+
 func TestEveryPromptIsOnThePage(t *testing.T) {
 	defs := Defs()
-	want := 1 + len(packs.Builtins()) + len(packs.Parts())
+	sides := []string{"explain.request", "explain.walkthrough", "verify.questions", "verify.grade", "drafts.commit.again", "drafts.pr.again"}
+	want := 1 + len(sides) + len(packs.Builtins()) + len(packs.Parts())
 	if len(defs) != want {
-		t.Fatalf("%d prompts, want %d (the style, %d packs, %d parts)", len(defs), want, len(packs.Builtins()), len(packs.Parts()))
+		t.Fatalf("%d prompts, want %d (the style, %d side requests, %d packs, %d parts)", len(defs), want, len(sides), len(packs.Builtins()), len(packs.Parts()))
+	}
+	for _, id := range sides {
+		d, ok := Lookup(id)
+		if !ok {
+			t.Errorf("no prompt %s", id)
+			continue
+		}
+		for _, m := range placeholder.FindAllStringSubmatch(d.Default, -1) {
+			if m[1] != "style" && !slices.ContainsFunc(d.Vars, func(v Var) bool { return v.Name == m[1] }) {
+				t.Errorf("%s: {{%s}} isn't among its vars", id, m[1])
+			}
+		}
 	}
 	seen := map[string]bool{}
 	for _, d := range defs {

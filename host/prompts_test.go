@@ -95,19 +95,3 @@ func TestNoNotesInTheUsersOwnDirectory(t *testing.T) {
 		}
 	}
 }
-
-// RV-8's tour kinds' guidance is editable like the other prompts: the user's reaches the tour_kind tool.
-func TestTourKindGuidanceIsAPrompt(t *testing.T) {
-	d, ok := prompts.Lookup(TourKindID("demo"))
-	if !ok || d.Group != "Tour kinds" || d.Label != "Demo" || !strings.Contains(d.Default, "Show the feature, not its source.") {
-		t.Fatalf("the demo kind's prompt: %+v", d)
-	}
-	r := newRig(t)
-	if err := r.w.SetPrompts(prompts.Overrides{TourKindID("archaeology"): "Read the blame first."}); err != nil {
-		t.Fatal(err)
-	}
-	_, a := r.tourSession("archaeology")
-	if got := a.Call(t, "tour_kind", map[string]any{}); !strings.Contains(got, "How to shape an archaeology tour:\n\nRead the blame first.") {
-		t.Errorf("tour_kind = %q", got)
-	}
-}

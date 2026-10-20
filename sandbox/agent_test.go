@@ -60,3 +60,31 @@ func TestGitBindsGuardHostGit(t *testing.T) {
 	gitT(t, wt, "commit", "-q", "--allow-empty", "-m", "y")
 	gitT(t, repo, "status", "--short")
 }
+
+// A checkout the agent reads without a worktree of its own (a plan session's, until Start work) is in the sandbox at
+// its own path, read-only: the agent reads it and can't change it.
+func TestBindsReadTheCheckouts(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	repo := t.TempDir()
+	gitT(t, repo, "init", "-q")
+	root := t.TempDir()
+	if _, err := Create(root, ModeSandbox); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveManifest(root, Manifest{Reads: []string{repo}}); err != nil {
+		t.Fatal(err)
+	}
+	binds, err := Binds(root, root, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, b := range binds {
+		if b.Host == repo {
+			if b.Agent != repo || !b.ReadOnly {
+				t.Errorf("the checkout is bound %+v", b)
+			}
+			return
+		}
+	}
+	t.Errorf("the checkout isn't in the sandbox: %+v", binds)
+}

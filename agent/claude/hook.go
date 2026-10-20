@@ -56,14 +56,15 @@ type waitOut struct {
 type eventIn struct {
 	Kind string `json:"kind"`
 	// turn-complete
-	TurnID     string      `json:"turnId,omitempty"`
-	Reason     string      `json:"reason,omitempty"`
-	Answer     string      `json:"answer,omitempty"`
-	DurationMs int64       `json:"durationMs,omitempty"`
-	Usage      *turnUsage  `json:"usage,omitempty"`
-	Context    *ctxUsage   `json:"context,omitempty"`
-	Cost       *float64    `json:"cost,omitempty"`
-	RateLimits []rateLimit `json:"rateLimits,omitempty"`
+	TurnID     string           `json:"turnId,omitempty"`
+	Reason     string           `json:"reason,omitempty"`
+	Answer     string           `json:"answer,omitempty"`
+	DurationMs int64            `json:"durationMs,omitempty"`
+	Usage      *turnUsage       `json:"usage,omitempty"`
+	Context    *ctxUsage        `json:"context,omitempty"`
+	Cost       *float64         `json:"cost,omitempty"`
+	RateLimits []rateLimit      `json:"rateLimits,omitempty"`
+	Background []backgroundTask `json:"background,omitempty"` // what the turn left running: the Stop hook's background_tasks
 	// subagent-start, -run, -end
 	ID          string `json:"id,omitempty"`
 	Description string `json:"description,omitempty"`
@@ -72,6 +73,13 @@ type eventIn struct {
 	Text        string `json:"text,omitempty"`
 	// api-error
 	Error string `json:"error,omitempty"`
+}
+
+// backgroundTask is one of the Stop hook's background_tasks: a shell, subagent, monitor or workflow still running.
+type backgroundTask struct {
+	Type        string `json:"type"`
+	Description string `json:"description"`
+	Command     string `json:"command,omitempty"`
 }
 
 // turnUsage is turn.complete's usage: the turn's tokens and its model.

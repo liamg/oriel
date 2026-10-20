@@ -29,7 +29,7 @@ var tabFixture = []core.SessionOpened{
 	{ID: "s3", Name: "review #4410", Kind: core.KindReview, Status: core.StatusPermission},
 	{ID: "s4", Name: "flaky e2e sweep", Kind: core.KindJob, Status: core.StatusCI},
 	{ID: "s5", Name: "dash-filters", Kind: core.KindWork, Status: core.StatusReviewer},
-	{ID: "s6", Name: "tour: auth flow", Kind: core.KindTour, Status: core.StatusQuiet},
+	{ID: "s6", Name: "auth flow", Kind: core.KindPlan, Status: core.StatusQuiet},
 	{ID: "s7", Name: "old spike", Kind: core.KindWork, Status: core.StatusOff},
 }
 
@@ -126,7 +126,7 @@ func TestSessionTabsSnapshot(t *testing.T) {
 	s.store.Apply(core.Notified{Notice: core.Notice{ID: "lsp.crashed", Severity: core.SevError, Session: "s4", Text: "gopls crashed"}})
 	s.golden("session-tabs")
 	text := s.frameText()
-	for _, want := range []string{"ORIEL", "pricing-rounding", "plan", "needs you", "permission", "ci", "in review", "tour: auth flow", "off", "✕1", "⌘7"} {
+	for _, want := range []string{"ORIEL", "pricing-rounding", "plan", "needs you", "permission", "ci", "in review", "auth flow", "off", "✕1", "⌘7"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the tabs lack %q", want)
 		}

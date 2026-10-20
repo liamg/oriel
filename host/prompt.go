@@ -155,16 +155,13 @@ func clip(body string) string {
 		fmt.Sprintf("\n… (%d more lines clipped: mcp__oriel__thread for the full text)", len(lines)-clipKeep)
 }
 
-// where is a thread's place: file:line, or the whole change; a plan's own thread is "plan", a tour's "tour", and a
-// plan doc's (or a tour step's) lines are relative to the workspace.
+// where is a thread's place: file:line, or the whole change; a plan's own thread is "plan", and a plan doc's lines
+// are relative to the workspace.
 func where(se core.SessionState, t core.Thread) string {
 	a := t.Anchor
 	if a == nil {
-		switch {
-		case se.StartWork && t.ID == se.PlanThread():
+		if se.StartWork && t.ID == se.PlanThread() {
 			return "plan"
-		case se.Kind == core.KindTour && t.ID == se.PlanThread():
-			return "tour"
 		}
 		return "general"
 	}

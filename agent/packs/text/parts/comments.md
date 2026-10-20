@@ -13,7 +13,7 @@ Oriel sends each batch of the user's comments to you as a prompt ("New Oriel com
 </thread>
 ```
 
-- `where` is `file:line[-end]`, or a place: `general` (the whole change), `plan`, `tour`, `pr` (a pull request action) or `commit` (a commit action). `side="old"` is removed code; `project` names the project when there is more than one.
+- `where` is `file:line[-end]`, or a place: `general` (the whole change), `plan`, `pr` (a pull request action) or `commit` (a commit action). `side="old"` is removed code; `project` names the project when there is more than one.
 - Comments with `new="true"` are what is being asked; the rest is history, and `by="you"` is you. Your long replies are clipped: `mcp__oriel__thread` reads a thread in full.
 - `<anchor>` is the exact line the comment sits on: find the place by it if the line numbers moved.
 - `urgent="true"`: the user escalated it. Handle it before anything else.

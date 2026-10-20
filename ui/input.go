@@ -181,6 +181,8 @@ func (u *UI) pointer(ev render.PointerEvent) {
 	u.setHot(u.topInteractive(ev.Pos))
 	u.dragPointer(ev)
 	switch ev.Kind {
+	case render.PointerMove:
+		u.selMove(ev.Pos)
 	case render.PointerPress:
 		if ev.Buttons&render.ButtonSecondary != 0 && in.hot != 0 {
 			if in.context == nil {
@@ -193,6 +195,7 @@ func (u *UI) pointer(ev render.PointerEvent) {
 			return
 		}
 		u.Chord()
+		u.selPress(ev)
 		in.active, in.mods = in.hot, ev.Mods
 		// A press focuses the nearest focusable node at or above what's pressed, or nothing.
 		in.focus, in.visible = 0, false
@@ -206,11 +209,16 @@ func (u *UI) pointer(ev render.PointerEvent) {
 		if ev.Buttons&render.ButtonPrimary == 0 {
 			return
 		}
+		// A drag that selected text isn't a click on what it started over.
+		selected := u.sel != nil && u.sel.held && u.sel.anchor != u.sel.focus
+		if u.sel != nil {
+			u.sel.held = false
+		}
 		if u.dragRelease() {
 			in.active = 0
 			return
 		}
-		if in.active != 0 && in.active == in.hot {
+		if in.active != 0 && in.active == in.hot && !selected {
 			if in.clicks == nil {
 				in.clicks = map[ID]bool{}
 			}
@@ -300,6 +308,9 @@ func (u *UI) Interaction(id ID) Interaction {
 // Key gives a key to the focused node, for its next frame. It reports whether the focused node takes keys
 // (it has a KeyMode); if not, nothing does.
 func (u *UI) Key(ev render.KeyEvent) bool {
+	if u.selKey(ev) {
+		return true
+	}
 	id := u.in.focus
 	if id == 0 || u.flags[id].keyMode == "" {
 		return false

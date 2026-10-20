@@ -66,7 +66,7 @@ func (w *Host) AIReview(ctx context.Context, r AIReviewReq) (_ string, err error
 		if rp.From == "" {
 			base := pr.Base
 			if pr.Detached {
-				base = "" // a review's or a tour's start, not a branch it left
+				base = "" // a review's start, not a branch it left
 			}
 			rp.Since = repo.MergeBase(ctx, base)
 			rp.From = rp.Since

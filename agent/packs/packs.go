@@ -23,7 +23,6 @@ var Tools = []string{
 	"task_add", "task_update", "tasks", "projects",
 	"commit_draft", "pr_draft", "test_run", "finding",
 	"lsp_definition", "lsp_references", "lsp_diagnostics",
-	"tour_kind", "tour_steps", "tour_run", "tour_share", "tour_export",
 }
 
 // GatewayTools are the sandbox gateway's tools a pack may name: the agent sees each as mcp__oriel-gw__<name>.

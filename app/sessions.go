@@ -433,7 +433,7 @@ func specFrom(a registry.Args) core.SessionSpec {
 	s := core.SessionSpec{Kind: core.Kind(a.String("kind")), Name: a.String("name"), Prompt: a.String("prompt"), Ticket: a.String("ticket"), Context: a.String("context"),
 		PR: a.String("pr"), PRRemote: a.String("pr_remote"), PRRef: a.String("pr_ref"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
 		Model: a.String("model"), Effort: a.String("effort"), Template: a.String("template"),
-		Variant: a.String("variant"), Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate"),
+		Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate"),
 			Backend: a.String("backend")}}
 	if s.Kind == "" {
 		s.Kind = core.KindWork
@@ -796,19 +796,17 @@ func (x *sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if err != nil {
 		return "", err
 	}
-	how := map[string]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles",
-		registry.ExplainWhy: "and why it is the way it is, from its history below and what you know of this session"}[r.Depth]
-	if how == "" {
-		how = "briefly, in a short paragraph"
+	how := map[string]string{registry.ExplainDetailed: "in detail: what it does, step by step, and the cases it handles, in markdown",
+		registry.ExplainWhy: "and why it is the way it is, from its history below and what you know of this session, in markdown"}[r.Depth]
+	switch {
+	case r.Format != "":
+		how = "in the form asked for at the end"
+	case how == "":
+		how = "briefly, in a short paragraph, in markdown"
 	}
 	var b strings.Builder
-	if r.Format != "" {
-		fmt.Fprintf(&b, "Explain this %s. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
-			r.Kind, r.Subject, r.Context)
-	} else {
-		fmt.Fprintf(&b, "Explain this %s %s, in markdown. You have no tools here, and this exchange is not part of the main conversation.\n\n%s\n\n%s",
-			r.Kind, how, r.Subject, r.Context)
-	}
+	b.WriteString(x.sh.prompt("explain.request", map[string]string{"kind": r.Kind, "how": how}))
+	fmt.Fprintf(&b, "\n\n%s\n\n%s", r.Subject, r.Context)
 	if len(r.Files) > 0 {
 		fmt.Fprintf(&b, "\n\nFiles: %s", strings.Join(r.Files, ", "))
 	}

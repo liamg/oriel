@@ -1186,14 +1186,25 @@ func (e *Engine) exSet(args string) error {
 		if n := len(name); hasVal && n > 0 && strings.IndexByte("+-^", name[n-1]) >= 0 {
 			op, name = name[n-1], name[:n-1]
 		}
-		on := true
-		if !hasVal && strings.HasPrefix(name, "no") {
+		on, invert := true, false
+		switch {
+		case hasVal:
+		case strings.HasSuffix(name, "!"):
+			invert, name = true, name[:len(name)-1]
+		case strings.HasPrefix(name, "inv"):
+			if _, ok := optionDef(name[3:]); ok {
+				invert, name = true, name[3:]
+			}
+		case strings.HasPrefix(name, "no"):
 			on = false
 			name = name[2:]
 		}
 		if d, ok := optionDef(name); ok {
-			if d.Kind != "bool" && !on {
-				return errUnknownOption.with("no" + name)
+			if d.Kind != "bool" && (!on || invert) {
+				return errUnknownOption.with(a)
+			}
+			if invert {
+				on = !d.get(&e.opts).(bool)
 			}
 			v, err := e.setValue(d, a, val, hasVal, on, op)
 			if err != nil {

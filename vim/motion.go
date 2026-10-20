@@ -42,8 +42,8 @@ func init() {
 	for k, m := range map[string]motion{
 		"h": left, "<Left>": left, "<BS>": left, "<C-h>": left,
 		"l": right, "<Right>": right, " ": right,
-		"j": down, "<Down>": down, "<C-j>": down, "<C-n>": down, "gj": down, "<NL>": down,
-		"k": up, "<Up>": up, "<C-p>": up, "gk": up,
+		"j": down, "<Down>": down, "<C-j>": down, "<C-n>": down, "<NL>": down,
+		"k": up, "<Up>": up, "<C-p>": up,
 		"+": lineDown, "<CR>": lineDown, "<C-m>": lineDown, "-": lineUp, "_": lineCurrent,
 		"0": col0, "<Home>": col0, "^": firstNonBlank, "$": dollar, "<End>": dollar, "g_": lastNonBlank,
 		"|": column, "gg": gotoLine, "G": gotoLine, "go": gotoByte,

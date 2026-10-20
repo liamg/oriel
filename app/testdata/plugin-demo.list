@@ -610,9 +610,10 @@ text "✕" @87.1225,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @98.71625,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @119.31,990.95996 #ff9b45 JetBrains Mono 11
 text "1" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
-text "CI" @1310.1875,990.95996 #b3ab99 JetBrains Mono 11
-text "✓ main" @1335.375,990.95996 #4fe0a0 JetBrains Mono 11
-text "Go · utf-8 · LF" @1406.9375,984.71 #b3ab99 JetBrains Mono 10.5
+text "CI" @1267.8125,990.95996 #b3ab99 JetBrains Mono 11
+text "✓ main" @1293,990.95996 #4fe0a0 JetBrains Mono 11
+text "Go · utf-8 · LF" @1364.5625,984.71 #b3ab99 JetBrains Mono 10.5
+text "wrap" @1479.4688,990.78 #7c7566 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 1%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
 text "◆" @93.296875,156.77 #ffd23f JetBrains Mono 13.5

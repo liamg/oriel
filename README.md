@@ -2,7 +2,7 @@
 
 # Oriel
 
-A native, vim-first IDE built around AI sessions, written in Go. You start **sessions** (plan, work, review, tour, job) on
+A native, vim-first IDE built around AI sessions, written in Go. You start **sessions** (work, plan, review, job) on
 your repos instead of opening folders. Agents work in worktrees and sandboxes while you read, review and steer, with
 threads on any line, explain-anything, a review ledger, and the whole fleet of sessions visible at a glance.
 

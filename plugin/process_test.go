@@ -277,3 +277,25 @@ func TestProfileFor(t *testing.T) {
 		t.Errorf("a plugin with no grants: %+v", p)
 	}
 }
+
+// A bundled plugin's program is oriel itself, as trusted as oriel: it runs as a trusted process does, outside the OS
+// sandbox (a GUI binary can't start under macOS's deny-default profile), while its calls to the host still meet the
+// plugin's guard.
+func TestBundledProgramRunsAsOriel(t *testing.T) {
+	self, _ := os.Executable()
+	outside := filepath.Join(t.TempDir(), "outside.txt")
+	if err := os.WriteFile(outside, []byte("seen"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ps := testProcesses(&syncBuf{})
+	defer ps.Close()
+	p := Caller{ID: "liamg/linear", Dir: t.TempDir(), Guard: NewGrants(), Programs: map[string][]string{"bin/oriel-linear": {self}}}
+	pr, err := ps.Spawn(p, "bin/oriel-linear", SpawnOpts{Env: []string{fakeEnv + "=1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pr.Stop()
+	if got, err := call(t, pr, "read", map[string]string{"path": outside}); err != nil || got != `"seen"` {
+		t.Errorf("the bundled program was confined: %s, %v", got, err)
+	}
+}

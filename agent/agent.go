@@ -112,7 +112,7 @@ type Sandbox struct {
 	GatewayMCP string // an MCP config file naming the gateway server
 }
 
-// Pack is a prompt pack: what a kind of session tells its agent (plan, work, review, tour, job).
+// Pack is a prompt pack: what a kind of session tells its agent (work, plan, review, job).
 type Pack struct {
 	Name  string // "plan"
 	Skill string // the skill a Claude session starts with: /oriel:<Skill>
@@ -238,6 +238,9 @@ type (
 	// TurnEnd ends a turn.
 	TurnEnd struct {
 		Usage Usage
+		// Background is the work the turn left running that will wake the agent again (shells, subagents), by what
+		// each is; while there is some, the work isn't done.
+		Background []core.BackgroundTask
 	}
 	// Failure is a turn that failed after the provider's own retries.
 	Failure struct {

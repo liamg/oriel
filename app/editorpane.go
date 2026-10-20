@@ -129,12 +129,14 @@ func (x *editorPlugin) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 		// engine keeps the cursor clear of them.
 		x.rows[id] = max(int((r.Dy()-codePadT-x.blockPx[id])/m.lineH), 1)
 		x.e.SetRows(id, x.rows[id])
-		if in.Clicked {
-			x.click(p, r, in.Pointer(), m)
-		}
+		x.e.SetCols(id, max(int((r.Dx()-gutterWidth(p.Buf().Lines(), m)-4)/m.charW), 1))
+		x.pointer(c, p, st, in, r, m)
 	}
 	if in.Scroll.Y != 0 {
 		x.e.ScrollTo(id, p.Top()+int(math.Round(float64(in.Scroll.Y/m.lineH))))
+	}
+	if in.Scroll.X != 0 {
+		x.e.ScrollLeft(id, p.Left()+int(math.Round(float64(in.Scroll.X/m.charW))))
 	}
 	p, _ = x.e.Pane(id) // what the keys left
 	c.Column("pane", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tEditorBg), Clip: true}, func(c *ui.Ctx) {
@@ -155,30 +157,153 @@ func (x *editorPlugin) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	})
 }
 
-// click puts the cursor where the pointer is.
-func (x *editorPlugin) click(p vim.Pane, r render.Rect, at render.Point, m paneMetrics) {
-	row := int((at.Y - r.Min.Y - codePadT) / m.lineH)
+// mouseTime is how close together clicks must come to count as a double or triple click.
+const mouseTime = 400 * time.Millisecond
+
+// paneDrag is a press in a window: where it started, how many clicks it is, and whether it's on the gutter.
+type paneDrag struct {
+	held, gutter bool
+	at           vim.Pos // where the press put the cursor: the Visual area's other end
+	pressed      vim.Pos // the character pressed on: a drag starts once the pointer leaves it
+	last         time.Time
+	lastAt       vim.Pos
+	clicks       int
+	moved        bool
+}
+
+// pointer is the mouse in window p (term.txt *mouse-overview*, 'mousemodel' "popup"): a click puts the cursor, a drag
+// selects, a double click selects the word and a triple the line, S-click extends the selection and A-drag selects a
+// block. The gutter runs its action instead.
+func (x *editorPlugin) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Interaction, r render.Rect, m paneMetrics) {
+	if x.drags == nil {
+		x.drags = map[vim.WindowID]*paneDrag{}
+	}
+	d := x.drags[p.ID()]
+	if d == nil {
+		d = &paneDrag{}
+		x.drags[p.ID()] = d
+	}
+	pressed := in.Held || in.Clicked
+	if !pressed {
+		d.held = false
+		return
+	}
+	at := in.Pointer()
+	pos, line := x.posAt(p, r, at, m)
+	if !d.held {
+		d.held, d.moved = true, false
+		d.gutter = at.X-r.Min.X < gutterWidth(p.Buf().Lines(), m) && x.gutterAction(p, line)
+		if d.gutter {
+			return
+		}
+		now := c.Now()
+		if now.Sub(d.last) < mouseTime && pos == d.lastAt {
+			d.clicks++
+		} else {
+			d.clicks = 1
+		}
+		d.last, d.lastAt, d.pressed = now, pos, pos
+		x.press(p, st, d, pos, in.Mods)
+	} else if !d.gutter && isVim(st) && (d.moved || pos != d.pressed) && pos != x.e.Cursor() {
+		if !d.moved {
+			d.moved = true
+			if _, ok := x.e.Visual(); !ok {
+				mode := 'v'
+				if in.Mods&render.ModAlt != 0 {
+					mode = 0x16
+				}
+				x.e.Select(d.at, pos, mode)
+				return
+			}
+		}
+		x.e.SetCursor(pos)
+	}
+	if !in.Held {
+		d.held = false
+		return
+	}
+	// Dragging past the top or bottom scrolls, a line a frame.
+	switch {
+	case at.Y < r.Min.Y+codePadT:
+		x.e.ScrollTo(p.ID(), max(p.Top()-1, 0))
+		c.WakeAt(c.Now().Add(30 * time.Millisecond))
+	case at.Y > r.Max.Y:
+		x.e.ScrollTo(p.ID(), p.Top()+1)
+		c.WakeAt(c.Now().Add(30 * time.Millisecond))
+	}
+}
+
+// press is a press at pos: the cursor goes there, or with a double or triple click the word or line is selected, or
+// with Shift the selection reaches to it.
+func (x *editorPlugin) press(p vim.Pane, st input.State, d *paneDrag, pos vim.Pos, mods render.Mods) {
+	x.e.EnterWindow(p.ID())
+	if !isVim(st) {
+		x.e.SetCursor(pos)
+		return
+	}
+	start, selecting := x.e.Visual()
+	switch {
+	case mods&render.ModShift != 0:
+		if !selecting {
+			start = x.e.Cursor()
+		}
+		x.e.Select(start, pos, 'v')
+		d.at = start
+	case d.clicks == 2: // *<2-LeftMouse>*: the word
+		x.e.Deselect()
+		x.e.SetCursor(pos)
+		x.e.TypeMapped([]string{"v", "i", "w"}, true)
+		d.at, _ = x.e.Visual()
+	case d.clicks >= 3: // *<3-LeftMouse>*: the line
+		x.e.Select(pos, pos, 'V')
+		d.at = pos
+	default:
+		if selecting {
+			x.e.Deselect()
+		}
+		x.e.SetCursor(pos)
+		d.at = x.e.Cursor()
+	}
+	d.moved = false
+}
+
+// posAt is the buffer position under at, and the line it's on.
+func (x *editorPlugin) posAt(p vim.Pane, r render.Rect, at render.Point, m paneMetrics) (vim.Pos, int) {
+	row := int(math.Floor(float64((at.Y - r.Min.Y - codePadT) / m.lineH)))
 	line := p.Top()
-	for ; row > 0 && line < p.Buf().Lines()-1; row-- {
+	for row > 0 && line < p.Buf().Lines()-1 {
+		n := p.RowsOf(line)
+		if row < n {
+			break
+		}
+		row -= n
 		line = p.NextRow(line)
 	}
 	line = min(line, p.Buf().Lines()-1)
-	if at.X-r.Min.X < gutterWidth(p.Buf().Lines(), m) {
-		path := x.panePath(p)
-		if a, ok := registry.GutterActionFor(x.h, path); ok {
-			args := registry.Args{"file": path, "line": line + 1}
-			for k, v := range a.Args {
-				args[k] = v
-			}
-			if err := x.h.Run(context.Background(), a.Command, args); err != nil {
-				x.h.Notify(core.Notice{ID: "editor.gutter", Severity: core.SevWarning, Key: true, Text: err.Error()})
-			}
-			return
-		}
+	g := rowSegs(p, line, m)
+	seg := g[min(max(row, 0), len(g)-1)]
+	want := int(math.Floor(float64((at.X-r.Min.X-m.textX)/m.charW))) + seg.from
+	if p.Wrap() {
+		want = min(want, seg.to-1)
 	}
-	want := int((at.X - r.Min.X - m.textX + m.charW/2) / m.charW)
-	x.e.EnterWindow(p.ID())
-	x.e.SetCursor(vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0), p.TabStop())})
+	return vim.Pos{Line: line, Col: colAtVCol(p.Buf().Line(line), max(want, 0), p.TabStop())}, line
+}
+
+// gutterAction runs the gutter's action for line, if a plugin gives the file one.
+func (x *editorPlugin) gutterAction(p vim.Pane, line int) bool {
+	path := x.panePath(p)
+	a, ok := registry.GutterActionFor(x.h, path)
+	if !ok {
+		return false
+	}
+	args := registry.Args{"file": path, "line": line + 1}
+	for k, v := range a.Args {
+		args[k] = v
+	}
+	if err := x.h.Run(context.Background(), a.Command, args); err != nil {
+		x.h.Notify(core.Notice{ID: "editor.gutter", Severity: core.SevWarning, Key: true, Text: err.Error()})
+	}
+	return true
 }
 
 func (x *editorPlugin) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
@@ -291,12 +416,17 @@ func (x *editorPlugin) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 	cur := p.Cursor()
 	gw := gutterWidth(snap.Lines(), m)
 	numStyle := ui.TextStyle{Font: x.pane.font, Color: th.C(tGutterFg)}
-	for row := 0; row < rows && line < snap.Lines(); row++ {
+	for row := 0; row < rows && line < snap.Lines(); {
 		rowID := c.Next(line)
 		foldEnd, folded := p.Fold(line)
 		ds := decor[line]
 		bg, edge := lineBg(th, ds)
-		c.Row(line, ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Cross: ui.Center, Fill: bg}, func(c *ui.Ctx) {
+		segs := rowSegs(p, line, m)
+		cross := ui.Center
+		if len(segs) > 1 {
+			cross = ui.Start
+		}
+		c.Row(line, ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH * float32(len(segs))), Cross: cross, Fill: bg}, func(c *ui.Ctx) {
 			ns := numStyle
 			if line == cur.Line {
 				ns.Color = th.C(tGutterCur)
@@ -305,26 +435,39 @@ func (x *editorPlugin) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 				ns.Color = theme.WithAlpha(edge, .75)
 			}
 			num := fmt.Sprint(line + 1)
-			c.Row("gutter", ui.Style{W: ui.Px(gw), Pad: ui.Insets{R: 16}, Main: ui.End}, func(c *ui.Ctx) {
+			c.Row("gutter", ui.Style{W: ui.Px(gw), H: ui.Px(m.lineH), Pad: ui.Insets{R: 16}, Main: ui.End, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
 			x.signs(c, ds, gw, m)
 			if edge.A > 0 {
-				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
+				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.lineH * float32(len(segs))), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
 			}
 			c.Box("gap", ui.Style{W: ui.Px(4)}, nil)
 			if !folded {
-				x.selections(c, p, line, gw+4, m, ds)
+				x.selections(c, p, line, gw+4, m, ds, segs)
 			}
 			if folded {
 				x.foldRow(c, snap, line, foldEnd)
 				return
 			}
-			x.textRow(c, snap, line, hl, p.TabStop(), inlays(ds))
-			virtualText(c, th, ds)
+			if len(segs) == 1 {
+				x.textRow(c, snap, line, hl, p.TabStop(), inlays(ds), segs[0].from, segs[0].to)
+				virtualText(c, th, ds)
+				return
+			}
+			c.Column("wrap", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+				for r, g := range segs {
+					c.Row(r, ui.Style{H: ui.Px(m.lineH), Cross: ui.Center}, func(c *ui.Ctx) {
+						x.textRow(c, snap, line, hl, p.TabStop(), inlays(ds), g.from, g.to)
+						if r == len(segs)-1 {
+							virtualText(c, th, ds)
+						}
+					})
+				}
+			})
 		})
-		spans(c, th, p, line, ds, rowID, gw+4, m)
-		x.overlay(c, p, rowID, line, folded, gw, m, ds)
+		spans(c, th, p, line, ds, rowID, gw+4, m, segs)
+		x.overlay(c, p, rowID, line, folded, gw, m, ds, segs)
 		ids, reveal := blocks(c, line, ds, gw+4)
 		for i, id := range ids {
 			r, ok := c.Rect(id)
@@ -337,6 +480,7 @@ func (x *editorPlugin) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 				revealTo = max(revealTo, min(p.Top()+over, line))
 			}
 		}
+		row += len(segs)
 		line = p.NextRow(line)
 	}
 	x.blockPx[p.ID()] = blockPx
@@ -344,6 +488,35 @@ func (x *editorPlugin) lines(c *ui.Ctx, p vim.Pane, m paneMetrics) {
 		x.e.ScrollTo(p.ID(), revealTo)
 		x.h.Redraw()
 	}
+}
+
+// rowSeg is one screen row of a line: the screen columns it shows, [from, to), and how far down the line's rows it is.
+type rowSeg struct {
+	from, to int
+	y        float32
+}
+
+// rowSegs are line's screen rows in window p: one per row of the pane's width with 'wrap', else one row from the
+// window's left column.
+func rowSegs(p vim.Pane, line int, m paneMetrics) []rowSeg {
+	if !p.Wrap() {
+		return []rowSeg{{from: p.Left(), to: math.MaxInt32}}
+	}
+	n, cols := p.RowsOf(line), p.Cols()
+	out := make([]rowSeg, n)
+	for r := range n {
+		out[r] = rowSeg{from: r * cols, to: (r + 1) * cols, y: float32(r) * m.lineH}
+	}
+	return out
+}
+
+// clip is screen columns [a, z) on segment g, as an x across the text and a width; false when none of it shows there.
+func (g rowSeg) clip(a, z int, m paneMetrics) (float32, float32, bool) {
+	a, z = max(a, g.from), min(z, g.to)
+	if z <= a {
+		return 0, 0, false
+	}
+	return float32(a-g.from) * m.charW, float32(z-a) * m.charW, true
 }
 
 // panePath is the absolute path of a window's file, "" for none.
@@ -361,8 +534,9 @@ func gutterWidth(lines int, m paneMetrics) float32 {
 	return max(float32(gutterW), float32(digits)*m.charW+34)
 }
 
-// textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop.
-func (x *editorPlugin) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int, inl []registry.Decoration) {
+// textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop, over screen
+// columns [left, right): one row of a wrapped line, or the window scrolled sideways with 'nowrap'.
+func (x *editorPlugin) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Span, ts int, inl []registry.Decoration, left, right int) {
 	th := c.Theme()
 	b := snap.Line(line)
 	start := snap.LineStart(line)
@@ -379,21 +553,29 @@ func (x *editorPlugin) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syn
 			if cut > 0 {
 				run(fmt.Sprint(key, "a"), s[:cut], capture)
 			}
-			inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+			if vcol >= left && vcol < right {
+				inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+			}
 			next++
 			run(fmt.Sprint(key, "b"), s[cut:], capture)
 			return
 		}
 		var out strings.Builder
 		for _, r := range string(s) {
+			w := 1
 			if r == '\t' {
-				n := ts - vcol%ts
-				out.WriteString(strings.Repeat(" ", n))
-				vcol += n
-				continue
+				w = ts - vcol%ts
 			}
-			out.WriteRune(r)
-			vcol++
+			switch {
+			case vcol >= right:
+			case vcol >= left && r == '\t':
+				out.WriteString(strings.Repeat(" ", min(vcol+w, right)-vcol))
+			case vcol >= left:
+				out.WriteRune(r)
+			case vcol+w > left: // a tab across the left edge shows what's past it
+				out.WriteString(strings.Repeat(" ", min(vcol+w, right)-left))
+			}
+			vcol += w
 		}
 		col := th.C(tCodeFg)
 		st := ui.TextStyle{Font: x.pane.font, Color: col}
@@ -407,7 +589,9 @@ func (x *editorPlugin) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syn
 				st.Font.Weight = typeset.Bold
 			}
 		}
-		c.Text(key, out.String(), st)
+		if out.Len() > 0 {
+			c.Text(key, out.String(), st)
+		}
 		pos += len(s)
 	}
 	k := 0
@@ -424,7 +608,9 @@ func (x *editorPlugin) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syn
 	}
 	run(k, b[pos:], "")
 	for ; next < len(inl); next++ {
-		inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+		if vcol >= left && vcol < right {
+			inlayBox(c, fmt.Sprint("inlay", next), inl[next], x.pane)
+		}
 	}
 }
 
@@ -438,12 +624,16 @@ func (x *editorPlugin) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 }
 
 // selections draws a row's selection, and each multi-cursor region on it, under its text.
-func (x *editorPlugin) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m paneMetrics, ds []registry.Decoration) {
+func (x *editorPlugin) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m paneMetrics, ds []registry.Decoration, segs []rowSeg) {
 	fill := c.Theme().C(theme.Selection)
 	box := func(key any, from, to, extra int) {
 		a, z := p.VCol(line, from)+inlayShift(ds, from, true), p.VCol(line, to)+inlayShift(ds, to, false)+extra
-		c.Box(key, ui.Style{W: ui.Px(max(float32(z-a), 0) * m.charW), H: ui.Px(m.lineH), Fill: fill, Z: ui.LayerUnder,
-			Float: &ui.Float{Offset: render.Point{X: x0 + float32(a)*m.charW}}}, nil)
+		for r, g := range segs {
+			if dx, w, ok := g.clip(a, z, m); ok {
+				c.Box(fmt.Sprint(key, r), ui.Style{W: ui.Px(w), H: ui.Px(m.lineH), Fill: fill, Z: ui.LayerUnder,
+					Float: &ui.Float{Offset: render.Point{X: x0 + dx, Y: g.y}}}, nil)
+			}
+		}
 	}
 	from, to, eol, sel := p.Selected(line)
 	if st := x.drawing; st != nil && !isVim(st) {
@@ -464,7 +654,7 @@ func (x *editorPlugin) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m
 }
 
 // overlay draws, on the cursor's row of the current window, the cursor over its text, and the other cursors.
-func (x *editorPlugin) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics, ds []registry.Decoration) {
+func (x *editorPlugin) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m paneMetrics, ds []registry.Decoration, segs []rowSeg) {
 	th := c.Theme()
 	cur := p.Cursor()
 	showCursor := p.Current() && line == cur.Line && x.e.Mode() != "cmdline"
@@ -484,18 +674,33 @@ func (x *editorPlugin) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, fol
 	}
 	b := p.Buf().Line(line)
 	x0 := gw + 4
-	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH), Z: ui.LayerContent + 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
+	// at is where screen column vc is on the line: its segment's x and y, or false when it doesn't show.
+	at := func(vc int) (float32, float32, bool) {
+		for i, g := range segs {
+			if vc >= g.from && (vc < g.to || i == len(segs)-1 && p.Wrap()) {
+				return x0 + float32(vc-g.from)*m.charW, g.y, true
+			}
+		}
+		return 0, 0, false
+	}
+	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH * float32(len(segs))), Z: ui.LayerContent + 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
 		for i, r := range others {
 			if r.head >= 0 && !(showCursor && r.head == cur.Col) {
-				vc := p.VCol(line, r.head) + inlayShift(ds, r.head, true)
+				cx, cy, ok := at(p.VCol(line, r.head) + inlayShift(ds, r.head, true))
+				if !ok {
+					continue
+				}
 				c.Box(fmt.Sprint("mcur", i), ui.Style{W: ui.Px(m.charW), H: ui.Px(m.lineH - 2), Fill: theme.WithAlpha(th.C(tCursorBg), .55),
-					Float: &ui.Float{To: rowID, Offset: render.Point{X: x0 + float32(vc)*m.charW, Y: 1}}, Role: ui.RoleText, Label: "cursor"}, nil)
+					Float: &ui.Float{To: rowID, Offset: render.Point{X: cx, Y: cy + 1}}, Role: ui.RoleText, Label: "cursor"}, nil)
 			}
 		}
 		if !showCursor {
 			return
 		}
-		vc := p.VCol(line, cur.Col) + inlayShift(ds, cur.Col, true)
+		cx, cy, ok := at(p.VCol(line, cur.Col) + inlayShift(ds, cur.Col, true))
+		if !ok {
+			return
+		}
 		r, size := utf8.DecodeRune(b[min(cur.Col, len(b)):])
 		w := float32(1)
 		if size > 0 && r != '\t' && wideRune(r) {
@@ -505,14 +710,13 @@ func (x *editorPlugin) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, fol
 		if size > 0 && r != '\t' {
 			ch = string(r)
 		}
-		cx := x0 + float32(vc)*m.charW
-		st := ui.Style{W: ui.Px(w * m.charW), H: ui.Px(m.lineH - 2), Fill: th.C(tCursorBg), Float: &ui.Float{To: rowID, Offset: render.Point{X: cx, Y: 1}},
+		st := ui.Style{W: ui.Px(w * m.charW), H: ui.Px(m.lineH - 2), Fill: th.C(tCursorBg), Float: &ui.Float{To: rowID, Offset: render.Point{X: cx, Y: cy + 1}},
 			Role: ui.RoleText, Label: "cursor"}
 		switch shape {
 		case vim.Bar:
 			st.W, ch = ui.Px(2), ""
 		case vim.Underline:
-			st.H, st.Float.Offset.Y, ch = ui.Px(2), m.lineH-3, ""
+			st.H, st.Float.Offset.Y, ch = ui.Px(2), cy+m.lineH-3, ""
 		}
 		if p.Current() {
 			x.caret = c.Next("cursor")
@@ -686,6 +890,25 @@ func (x *editorPlugin) positionSegment(c *ui.Ctx) {
 		c.Text("lc", fmt.Sprintf("%d:%d", cur.Line+1, p.VCol(cur.Line, cur.Col)+1), statusText(c, tStatusFg))
 		c.Text("pct", fmt.Sprintf("≡ %d%%", (cur.Line+1)*100/max(n, 1)), statusText(c, tStatusFg))
 	})
+}
+
+// wrapSegment says whether long lines wrap, and switches it.
+func (x *editorPlugin) wrapSegment(c *ui.Ctx) {
+	if !x.shown() {
+		return
+	}
+	on := x.current().Wrap()
+	tok, tip := theme.FgFaint, "Long lines run off the right: click to wrap them"
+	if on {
+		tok, tip = tStatusStrong, "Long lines wrap: click to stop wrapping them"
+	}
+	in := widget.Clickable(c, "wrap", ui.Style{H: ui.Flex(1), Cross: ui.Center, Role: ui.RoleButton, Label: "Wrap", Tooltip: tip,
+		Help: "editor/pane#wrap"}, func(c *ui.Ctx) {
+		c.Text("t", "wrap", statusText(c, tok))
+	})
+	if in.Clicked {
+		x.e.Run("set wrap!")
+	}
 }
 
 func statusText(c *ui.Ctx, tok theme.TokenID) ui.TextStyle {

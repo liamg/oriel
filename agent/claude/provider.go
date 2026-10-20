@@ -300,8 +300,15 @@ func (p Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (age
 	return p.start(ctx, s, id)
 }
 
-// permissionMode is the agent's own gate for a policy.
+// permissionMode is the agent's own gate for a policy. In a sandbox there's none: the sandbox and its gateway are the
+// gate, and a prompt in Claude's own terminal would only stall the turn where nobody sees it.
 func permissionMode(s agent.StartSpec) (string, error) {
+	if s.Sandbox != nil {
+		switch s.Policy {
+		case agent.PolicyAsk, agent.PolicyLight, agent.PolicyBypass, "":
+			return "bypassPermissions", nil
+		}
+	}
 	switch s.Policy {
 	case agent.PolicyAsk, "":
 		return "default", nil

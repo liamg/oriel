@@ -249,9 +249,9 @@ clip 0,38 1600x962 r 0
       rect 1397.2656,94 1x37 fill #24221d
       effect glow-disc 1410.2656,109 7x7 blur 8 #4fe0a0e6
       path 6 segments fill #4fe0a0
-      text "tour: auth flow" @1424.2656,116.865234 #b3ab99 Inter 12
-      text "⌘6" @1513.4219,115.92 #4f4a40 JetBrains Mono 9.5
-      rect 1537.4219,94 1x37 fill #24221d
+      text "auth flow" @1424.2656,116.865234 #b3ab99 Inter 12
+      text "⌘6" @1483.8594,115.92 #4f4a40 JetBrains Mono 9.5
+      rect 1507.8594,94 1x37 fill #24221d
       text "5H" @1609.0938,116.28 #b3ab99 JetBrains Mono 10.5
       rect 1628.2812,110.5 46x4 fill #23211c radius 2
       rect 1628.2812,110.5 17.47998x4 fill #ffd23f radius 2

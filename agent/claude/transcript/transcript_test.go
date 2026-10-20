@@ -359,3 +359,14 @@ func TestAPIErrors(t *testing.T) {
 		t.Errorf("the agent's own words: %+v", es)
 	}
 }
+
+// Claude Code ends a prompt a plugin submits with a line for the model about where it came from; the transcript shows
+// what was said, not that line.
+func TestReadDropsThePluginTrailer(t *testing.T) {
+	trailer := "\n\nThis is how Claude Code surfaces a prompt a plugin submits between turns — it starts this turn in the user's place. Address the message above."
+	_, got := read(t, `{"type":"user","uuid":"p1","origin":{"kind":"plugin","name":"oriel","asUser":true},"message":{"role":"user","content":"hello?`+strings.ReplaceAll(trailer, "\n", `\n`)+`"}}`+"\n"+
+		`{"type":"user","uuid":"p2","message":{"role":"user","content":"The crit plugin sent a message:\nNew comments.`+strings.ReplaceAll(trailer, "\n", `\n`)+`"}}`+"\n")
+	if len(got) != 2 || got[0].Text != "hello?" || got[1].Text != "New comments." {
+		t.Fatalf("entries = %+v", got)
+	}
+}

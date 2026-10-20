@@ -14,6 +14,13 @@ the rail's `❯`) and moves like any pane (`⌃W M`).
 The provider, model and effort, a chip for what the agent is doing (working, wants permission, needs you, idle), and
 the ticket, session and branch.
 
+## In the background {#background}
+
+When the agent's turn ends with work still running that will wake it again (a shell left running, a background
+subagent, a monitor), the header says **working in the background** and the end of the transcript lists each, by
+kind and what it's for. The threads that turn was handling stay busy and the session working until a turn ends with
+nothing left running.
+
 ## Fork
 
 Asks the agent a side question ("btw"), answered from its context by a fork that has no tools and doesn't join the

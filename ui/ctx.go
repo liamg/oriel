@@ -202,6 +202,7 @@ type ItemsOpts struct {
 	Estimate float32         // an item's height before it's first built; 24 if 0
 	Key      func(i int) any // item i's key, which its height is remembered by; i if nil
 	Reveal   int             // an item to scroll to the top of the view unless it's in view already; -1 for none
+	End      bool            // keep scrolled to the end, as a log that follows what's added does
 }
 
 // itemsState is the height each item had when it was last built, and what was built last frame.
@@ -245,6 +246,14 @@ func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i i
 			view = r.Dy()
 		}
 		scroll := lc.u.Scroll(id).Y
+		if o.End {
+			var total float32
+			for i := range n {
+				total += height(i)
+			}
+			scroll = max(total-view, 0)
+			lc.u.ScrollTo(id, render.Point{Y: scroll})
+		}
 		if o.Reveal >= 0 && o.Reveal < n {
 			top := float32(0)
 			for i := range o.Reveal {

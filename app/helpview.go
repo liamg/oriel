@@ -347,7 +347,7 @@ func (v *helpView) body(c *ui.Ctx, id string, width float32) {
 	head, blocks, _ := p.Section(anchor)
 	text := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13.5}, Color: th.C(theme.Fg)}
 	label := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium, Tracking: .14}, Color: th.C(tHelpLabel)}
-	c.Column("body", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
+	c.Column("body", ui.Style{W: ui.Flex(1), Gap: 12, Selectable: true}, func(c *ui.Ctx) {
 		c.Text("title", head.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 20, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
 		for i, b := range blocks {
 			switch b.Kind {

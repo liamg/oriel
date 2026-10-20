@@ -78,6 +78,11 @@ func Binds(root, cwd, modDir string) ([]Bind, error) {
 			}
 			b = append(b, gb...)
 		}
+		for _, dir := range ws.Reads {
+			if fi, err := os.Stat(dir); err == nil && fi.IsDir() {
+				b = append(b, same(dir, true))
+			}
+		}
 	}
 	return b, nil
 }

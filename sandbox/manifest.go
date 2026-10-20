@@ -22,6 +22,9 @@ type Project struct {
 // kept under Dir where the container cannot change it.
 type Manifest struct {
 	Projects []Project `json:"projects"`
+	// Reads are checkouts the agent reads without a worktree of its own (a plan session's, until Start work): in the
+	// sandbox at their own paths, read-only.
+	Reads []string `json:"reads,omitempty"`
 }
 
 // LoadManifest reads root's manifest; ok=false when there is none.

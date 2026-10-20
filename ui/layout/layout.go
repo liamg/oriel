@@ -79,6 +79,7 @@ type Root struct {
 	Focus    *ViewRef       `json:"focus,omitempty"`
 	prev     *ViewRef       // focus before the last FocusDir, which breaks its ties
 	onClose  []func(ViewRef)
+	onShow   []func(ViewRef)
 }
 
 // OnClose calls fn after each view is closed.
@@ -86,6 +87,21 @@ func (r *Root) OnClose(fn func(ViewRef)) (cancel func()) {
 	r.onClose = append(r.onClose, fn)
 	i := len(r.onClose) - 1
 	return func() { r.onClose[i] = nil }
+}
+
+// OnShow calls fn after each view is put in front: opened, or shown.
+func (r *Root) OnShow(fn func(ViewRef)) (cancel func()) {
+	r.onShow = append(r.onShow, fn)
+	i := len(r.onShow) - 1
+	return func() { r.onShow[i] = nil }
+}
+
+func (r *Root) shown(v ViewRef) {
+	for _, fn := range r.onShow {
+		if fn != nil {
+			fn(v)
+		}
+	}
 }
 
 // Shown is the view each of main's leaves shows, top-left to bottom-right.
@@ -222,6 +238,7 @@ func (r *Root) Show(v ViewRef) {
 	}
 	w.Leaf.Active = slices.Index(w.Leaf.Tabs, v)
 	r.Focus = &v
+	r.shown(v)
 }
 
 // New returns an empty layout: an empty main, closed docks.
@@ -266,6 +283,14 @@ type Opts struct {
 
 // Open puts v at p and focuses it. A view already open is moved instead.
 func (r *Root) Open(v ViewRef, p Placement, o Opts) error {
+	if err := r.open(v, p, o); err != nil {
+		return err
+	}
+	r.shown(v)
+	return nil
+}
+
+func (r *Root) open(v ViewRef, p Placement, o Opts) error {
 	if d, ok := r.Docks[o.Edge]; ok && p == Docked && o.Alone {
 		for _, other := range slices.Clone(d.Leaf.Tabs) {
 			if other != v {
@@ -600,13 +625,13 @@ func Restore(s Snapshot) (*Root, error) {
 	return r, nil
 }
 
-// Load replaces the layout with a saved one in place, keeping whoever listens for closes.
+// Load replaces the layout with a saved one in place, keeping whoever listens for closes and shows.
 func (r *Root) Load(s Snapshot) error {
 	n, err := Restore(s)
 	if err != nil {
 		return err
 	}
-	n.onClose = r.onClose
+	n.onClose, n.onShow = r.onClose, r.onShow
 	*r = *n
 	return nil
 }

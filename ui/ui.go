@@ -95,6 +95,8 @@ type UI struct {
 	clip      render.Clipboard
 	tracked   bool          // the latest frame read where the pointer is (Interaction.Pointer)
 	regions   []render.Rect // and asked whether it was in these
+	sel       *textSel      // the text selected (Style.Selectable)
+	selLast   ID            // the Selectable box last pressed in, which ⌘A selects all of
 }
 
 type flags struct {
@@ -193,6 +195,8 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 		}
 	}
 	u.layered, u.asked = layered, nil
+	u.selFrame()
+	u.selScroll()
 	u.animate(prev)
 	for id, st := range u.states {
 		if st.seen != u.frame {
@@ -212,6 +216,9 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 			if s.KeyMode == "" {
 				s.KeyMode = DragKeyMode
 			}
+		}
+		if s.Selectable && s.Cursor == 0 {
+			s.Cursor = render.CursorText
 		}
 		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.Help != "" || s.Trap {
 			var parent ID
@@ -882,6 +889,7 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	}
 	switch e.kind {
 	case kText:
+		u.paintSel(f, e, r)
 		f.Glyphs(e.run, render.Point{X: r.Min.X, Y: r.Min.Y + e.run.Ascent}, e.ts.Color)
 		return
 	case kPaint:

@@ -70,7 +70,7 @@ flowchart LR
 | `core` | sessions, workspaces, threads, tasks, events (pure state + logic) | – |
 | `agent` | `Provider` interface + shared turn/transcript types; `agent/agenttest` (the conformance suite and a fake provider); `agent/hostexec` (processes and PTYs on the host); `agent/packs` (prompt packs); `agent/prompts` (the editable prompts and the user's versions of them); `agent/jsonrpc` | core, term (PTYs) |
 | `agent/claude`, `agent/codex` | provider impls | agent; `agent/claude` also `sandbox/hookcall` (`oriel hook`, which the sandbox's helper serves too) |
-| `host` | the session host, in the app's process: sessions, pty, worktrees, launches providers, jobs; `host/search` (project search on ripgrep); `host/stats` (session stats); `host/sysload` (CPU and memory); `host/tour` (tours) | core, agent, gitx, gh, testrun (test runs as evidence), sandbox |
+| `host` | the session host, in the app's process: sessions, pty, worktrees, launches providers, jobs; `host/search` (project search on ripgrep); `host/stats` (session stats); `host/sysload` (CPU and memory) | core, agent, gitx, gh, testrun (test runs as evidence), sandbox |
 | `sandbox` | sandbox backends (docker containers, macOS seatbelt), gateway, egress (ported from crit); `sandbox/hookcall` (`oriel hook`'s client and wire types); `sandbox/helper` (the static Linux `oriel-sandbox` the app embeds, built by `make helper`) | – |
 | `gitx`, `gh` | git and GitHub (ported from crit) | – |
 | `integ/*` | linear (agentbus and Slack PTAL are company-specific, so they're external plugins: agentbus is `github.com/liamg/oriel-agentbus`, with its `oriel-agentbus` helper process) | core; their processes `agent/jsonrpc`, `gh` |
@@ -116,7 +116,7 @@ Rules:
 
 - Ported almost as-is: `sandbox`, `egress`, `gateway`, `mcp`, `gh`, `git`,
   `agentbus`, `linear`, `prompts`, `slop`, `review`'s thread model,
-  `tour`, `job`, `quota`, `transcript`, `stats`.
+  `job`, `quota`, `transcript`, `stats` (not `tour`: tours were removed).
 - Rewritten: everything under `web/`, `server/` (it becomes `host` + `core`),
   `manager`, `dashboard` and the worker (they fold into the app), `lsp` (it grows into a
   full client), and the neovim editor.
@@ -136,7 +136,7 @@ type Store interface {
 
 type Session interface {
     ID() SessionID
-    Kind() Kind                                    // plan, work, review, tour, job, or plugin-defined
+    Kind() Kind                                    // work, plan, review, job, newrepo, direct, or plugin-defined
     Status() Status                                // needs_you, permission, working, ci, reviewer, quiet
     Projects() []Project
     Threads() ThreadList

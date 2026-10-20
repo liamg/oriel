@@ -33,6 +33,7 @@ type Query struct {
 	Msg   bool
 	Win   bool
 	Top   bool
+	Left  bool
 	Bufs  bool
 }
 
@@ -48,6 +49,7 @@ type Result struct {
 	Msg    string
 	Win    Win
 	Top    int    // 1-based
+	Left   int    // the first column shown, 0-based, as winsaveview().leftcol
 	Bufs   string // the listed buffers, as a case's `bufs:` writes them
 
 	Undo *Buffer // the buffer after the keys and `u`, when the case checks it
@@ -60,7 +62,7 @@ type NewEngine func() (Engine, error)
 // Run plays the case's keys on fresh engines and reads back everything the case declares.
 func Run(t testing.TB, newEngine NewEngine, c Case) Result {
 	t.Helper()
-	q := Query{Jumps: c.Jumps != nil, Msg: c.Msg != nil, Win: c.Win != nil, Top: c.Top != nil, Bufs: c.Bufs != nil}
+	q := Query{Jumps: c.Jumps != nil, Msg: c.Msg != nil, Win: c.Win != nil, Top: c.Top != nil, Left: c.Left != nil, Bufs: c.Bufs != nil}
 	for r := range c.Regs {
 		q.Regs = append(q.Regs, r)
 	}
@@ -146,6 +148,9 @@ func (c Case) Diff(got Result) []string {
 	}
 	if c.Win != nil && *c.Win != got.Win {
 		add("win: got %s, want %s", got.Win, c.Win)
+	}
+	if c.Left != nil && *c.Left != got.Left {
+		add("left: got %d, want %d", got.Left, *c.Left)
 	}
 	if c.Top != nil && *c.Top != got.Top {
 		add("top: got %d, want %d", got.Top, *c.Top)

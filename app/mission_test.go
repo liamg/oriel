@@ -75,7 +75,7 @@ func missionScene(t *testing.T) (*errScene, *[]string) {
 					Output: "go: upgraded chroma v2.26.0 => v2.27.0\ngo: upgraded x/net v0.41.0 => v0.44.0"},
 				{ID: "t2", Kind: core.ItemTool, Tool: "shell", Input: `{"command":"go test ./..."}`},
 			}},
-		{ID: "tour-auth", Name: "tour: auth flow", Kind: core.KindTour, Status: core.StatusQuiet, Created: ago(30 * time.Hour),
+		{ID: "auth-flow", Name: "auth flow", Kind: core.KindPlan, Status: core.StatusQuiet, Created: ago(30 * time.Hour),
 			Transcript: []core.Item{{ID: "a1", Kind: core.ItemAssistant, Text: "How a request is authenticated, from the edge middleware to the JWT verifier and session store.",
 				Time: ago(26 * time.Hour)}}},
 		{ID: "review-4410", Name: "review #4410", Kind: core.KindReview, Status: core.StatusPermission, Created: ago(time.Hour),
@@ -218,6 +218,18 @@ func TestMissionWorkingCardsStreamOutput(t *testing.T) {
 	}
 }
 
+// A session whose last turn left work running says how much at its card's foot.
+func TestMissionCardShowsBackgroundWork(t *testing.T) {
+	s, _ := missionScene(t)
+	s.openMission(t)
+	s.store.Apply(core.SessionSynced{Session: core.SessionState{ID: "deps-sweep", Name: "deps sweep", Kind: core.KindJob, Status: core.StatusWorking,
+		Agent: core.AgentState{Provider: "claude", Running: true, Background: []core.BackgroundTask{
+			{Kind: "shell", Description: "Run the whole suite"}, {Kind: "subagent", Description: "Review the diff"}}}}})
+	s.frame()
+	s.frame()
+	s.wantFrame(t, "+2 in background")
+}
+
 // SH-7 done when "Allow/Deny works from the card": a waiting session's card is the inbox's card for its ask, and its
 // buttons answer that ask through ask.answer; `a` allows the selected card's; nothing is stacked over the window twice.
 func TestMissionAllowDenyFromTheCard(t *testing.T) {
@@ -268,7 +280,7 @@ func TestMissionKeys(t *testing.T) {
 	s.openMission(t)
 	m := s.mission()
 	// By status, the oldest first in each: needs you: ENG-2231 search api, ci lint fix; permission: review #4410;
-	// working: pricing-rounding, deps sweep; then flaky e2e sweep, dash-filters, tour: auth flow.
+	// working: pricing-rounding, deps sweep; then flaky e2e sweep, dash-filters, auth flow.
 	if m.selected() != "search-api" {
 		t.Fatalf("the first card selected is %s", m.selected())
 	}

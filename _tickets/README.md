@@ -157,7 +157,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 77. [PL-9](PL-9-slack-ptal-via-webhook.md): Slack PTAL via webhook · after PL-2
 78. [PL-10](PL-10-calendar-next-meeting-tat-ical-url-or-macos-even.md): Calendar: next meeting indicator (iCal URL or macOS EventKit) · after PL-2
 79. [PL-11](PL-11-prompts-page-editable-prompt-packs-coding-style-.md): Prompts page (editable prompt packs, coding style written into CLAUDE.md), voice dictation · after AI-2
-80. [RV-8](RV-8-tours-reader-7-kinds-export.md): Tours: reader, 7 kinds, export · after RV-5
+80. [RV-8](RV-8-tours-reader-7-kinds-export.md): Tours: reader, 7 kinds, export · after RV-5 · dropped (the user removed tours)
 - [RV-9](RV-9-reviews-page-prs-waiting-on-your-review.md): Reviews page: PRs waiting on your review, GitHub built in · after RV-4, PL-8
 - [RV-10](RV-10-review-kind-made-host-agnostic.md): Review kind made host-agnostic: the source says where to fetch · after RV-9
 - [RV-11](RV-11-gitlab-review-source-plugin.md): GitLab code host plugin: review, raise and merge · after RV-13, PL-2

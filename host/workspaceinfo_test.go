@@ -107,3 +107,17 @@ func TestOpenNetworkStillGoesThroughTheHost(t *testing.T) {
 		t.Error("an open session reads as filtered")
 	}
 }
+
+// A plan session reads its projects' checkouts in place until Start work: the sandbox's manifest has them, so the
+// agent finds them at their own paths, read-only.
+func TestPlanSessionReadsItsCheckouts(t *testing.T) {
+	s := newSandboxRig(t)
+	id := s.start(core.SessionSpec{Kind: core.KindPlan, Prompt: "Plan", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
+		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
+	s.agent()
+	b := s.keptBox(id)
+	m, ok := sandbox.LoadManifest(b.root)
+	if !ok || !slices.Contains(m.Reads, s.repo.Dir) {
+		t.Errorf("the manifest reads %v, want the checkout %s (projects %+v)", m.Reads, s.repo.Dir, m.Projects)
+	}
+}

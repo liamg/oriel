@@ -180,7 +180,7 @@ const (
 )
 
 // DefaultGate is a kind of session's commit gate when nothing else sets one: hard for work, plan and a new repo,
-// soft for jobs, off for the rest (tours, reviews, scratch, direct).
+// soft for jobs, off for the rest (reviews, direct).
 func DefaultGate(k Kind) string {
 	switch k {
 	case KindWork, KindPlan, KindNewRepo:

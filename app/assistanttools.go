@@ -55,10 +55,10 @@ func (x *assistantPlugin) tools() []registry.AgentTool {
 		{Name: "resume_session", Params: id, Run: x.toolResumeSession,
 			Desc: "Bring a finished or stopped session back and open it. id is from past_sessions."},
 		{Name: "new_session", Params: map[string]string{"kind": "string?", "prompt": "string?", "repos": "string?"}, Run: x.toolNewSession,
-			Desc: "Open the new-session launcher for the user to finish, with a kind (plan, work, review, tour, job), prompt and repos (names, comma separated) filled in."},
+			Desc: "Open the new-session launcher for the user to finish, with a kind (work, plan, review, job), prompt and repos (names, comma separated) filled in."},
 		{Name: "start_session", Params: map[string]string{"repo": "string", "prompt": "string", "kind": "string?"},
 			Confirm: x.confirmStart, Run: x.toolStart,
-			Desc: "Start a session: kind plan (the default) drafts a plan first, work starts at once on a fresh branch, tour explains how something works. repo is a name from repos. Check sessions first: when one is already on that ticket or work, open it instead."},
+			Desc: "Start a session: kind plan (the default) drafts a plan first, work starts at once on a fresh branch. repo is a name from repos. Check sessions first: when one is already on that ticket or work, open it instead."},
 		{Name: "stop_session", Params: id, Confirm: x.confirmStop, Run: x.toolStop,
 			Desc: "Stop a session's agent, only when the user asked to. Its workspace stays and it can be resumed. id is from sessions."},
 		{Name: "review_pr", Params: map[string]string{"pr": "string"}, Confirm: x.confirmReview, Run: x.toolReview,
@@ -361,7 +361,6 @@ func (x *assistantPlugin) repo(ctx context.Context, name string) (repoLine, erro
 var startNotes = map[string]string{
 	"plan": "A plan session drafts a plan first; no work starts until you press Start work.",
 	"work": "A work session starts at once, on a fresh branch from the updated base.",
-	"tour": "A tour reads the code in a pinned, read-only worktree and writes a guided tour.",
 }
 
 type startReq struct {
@@ -372,7 +371,7 @@ type startReq struct {
 func (x *assistantPlugin) startReq(ctx context.Context, p map[string]any) (startReq, error) {
 	r := startReq{kind: cmpOr(pstr(p, "kind"), "plan"), prompt: pstr(p, "prompt")}
 	if startNotes[r.kind] == "" {
-		return r, fmt.Errorf("kind is plan, work or tour, not %q", r.kind)
+		return r, fmt.Errorf("kind is plan or work, not %q", r.kind)
 	}
 	if r.prompt == "" {
 		return r, errors.New("what should the session do? prompt is empty")

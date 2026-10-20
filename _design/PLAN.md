@@ -31,7 +31,7 @@ none of the room.
 | `shell.md` | Native Go GPU app on **Gio**, behind our own `render`/`ui` seams. Electron is the fallback if the spike fails. Wails ruled out (WebKitGTK). |
 | `editor.md` | **Decided: our own vim engine in Go, all the way** (no embedded neovim), held to vim behaviour by differential tests against headless neovim. |
 | `rendering.md` | Own immediate-mode `ui` toolkit, HarfBuzz-grade shaping, glyph atlas, a handful of shader effects for the look. |
-| `sessions.md` | **Sessions, not folders.** You start work (plan, work, review, tour, job, new repo) on repos, and Oriel creates worktrees on a branch. Also a `direct` mode for editing a checkout in place, and `scratch`. The app opens on mission control, not a file dialog. |
+| `sessions.md` | **Sessions, not folders.** You start work (work, plan or review from the launcher; jobs from the Jobs page; a new repo with `session.start`) on zero or more repos, and Oriel creates worktrees on a branch. Also a `direct` mode for editing a checkout in place. No scratch kind: a chat is Ori, or a plan or work session with no repos. The app opens on mission control, not a file dialog. |
 | `architecture.md` | One process per machine: the Oriel window hosts its sessions itself (the `host` package). No per-session servers, no sockets, no browser. |
 | `agents.md` | `agent.Provider` interface. Claude runs as an interactive PTY session driven by the Oriel mod's hooks (subscription billing, not `-p`); Codex via `app-server`. Nothing calls `claude -p`. |
 | `plugins.md` | Vim-level extensibility: every action a command, every event hookable (observe / veto / rewrite / decide), every surface replaceable. Tiers: Lua, process (JSON-RPC), WASM, built-in Go, all using the same registry. |
@@ -51,9 +51,9 @@ none of the room.
 ## Keep, rewrite, drop
 
 **Keep (port the logic)**
-- Plan / work / review / tour / job sessions, multi-repo workspaces and worktrees.
+- Plan / work / review / job sessions, multi-repo workspaces and worktrees.
 - Threads on lines, ranges, files and whole changes; btw side questions; urgent comments.
-- Explain: crit's hunk `?` cards become **explain by code unit** (function, block, condition) plus **Explain this** on any selection; the "Explain this change" walkthrough, tours with their 7 kinds.
+- Explain: crit's hunk `?` cards become **explain by code unit** (function, block, condition) plus **Explain this** on any selection; the "Explain this change" walkthrough. Tours: removed (the user's decision).
 - AI review, Git page, PR page, GitHub review mirroring ("Forward to GitHub"), PR template drafts.
 - Commit and PR drafts written when the agent goes idle.
 - Verify (an optional quiz about the change; a PR never waits for it), the slop gate, trusted-orgs redaction.
@@ -101,7 +101,7 @@ flowchart LR
 - **4. IDE.** LSP, running tests, terminals, git, search. Daily-drivable without AI.
 - **5. AI.** The session host, the Claude and Codex providers, sessions, requests, plan and work.
 - **6. Review.** Diff views, review ledger, explain, AI review, PR and Ship pages, verify.
-- **7. The rest.** DAP, HUD and mission control, plugins and security, integrations, assistant, tours, self-update. Then cut-over: crit is archived.
+- **7. The rest.** DAP, HUD and mission control, plugins and security, integrations, assistant, self-update. Then cut-over: crit is archived.
 - **8. Plugin registry.** `[plugins]` in `settings.toml`, lockfile consent, the package format, the registry repo and
   publishing (`catalog.md`).
 
@@ -135,7 +135,7 @@ Usable as a daily editor after phase 4.
 - **Platforms: macOS and Linux from day one**, both in CI from phase 0, and the spike measures both. macOS is Liam's daily machine, so it's
   the primary target for feel (Metal, Retina, ⌘ keys, IME, notarisation). Windows is out of scope.
 - **Commit gate**: hard for work and plan sessions ("commit anyway" is one keypress, recorded in a commit trailer), soft for jobs,
-  off for tours and scratch sessions. Repos can override it (`agents.md`).
+  off for reviews and direct sessions. Repos can override it (`agents.md`).
 - **No built-in web client.** Remote control (phone, browser) can be a process plugin using `session.control` and the agent permissions.
 - **Gio approved**, on condition the phase-0 spike reproduces the mockups' look with no blocking limits.
 - **go-text, wazero and gopher-lua approved** (`deps.md`).

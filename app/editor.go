@@ -53,6 +53,7 @@ type editorPlugin struct {
 	disk    diskWatch
 	maps    map[string]registry.Disposable // :map's keymaps, by mode and keys
 	inputs  map[vim.WindowID]paneInput
+	drags   map[vim.WindowID]*paneDrag      // a press in each window
 	present map[vim.WindowID]*windowPresent // the windows a presenter draws
 
 	now          time.Time   // the frame's, for decorations
@@ -174,6 +175,17 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 			x.e.TypeMapped(keymap.Parse(str(a, "keys")), noremap)
 			return nil
 		}},
+		{ID: "editor.copy", Title: "Copy the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("copy") }},
+		{ID: "editor.cut", Title: "Cut the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("cut") }},
+		{ID: "editor.select-all", Title: "Select the whole buffer", Run: func(registry.Ctx, registry.Args) error {
+			b := x.e.Buf()
+			last := max(b.Lines()-1, 0)
+			x.e.Select(vim.Pos{}, vim.Pos{Line: last, Col: max(len(b.Line(last))-1, 0)}, 'v')
+			return nil
+		}},
+		{ID: "editor.paste", Title: "Paste the system clipboard: at the cursor, or over the selection", Run: func(registry.Ctx, registry.Args) error {
+			return x.clip("paste")
+		}},
 		{ID: "editor.back", Title: "Back in the jumplist (CTRL-O), or to the session or page before once it has nothing older",
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.jumpOr(ctx, -1) }},
 		{ID: "editor.forward", Title: "Forward in the jumplist (CTRL-I), or to the session or page after once it has nothing newer",
@@ -196,6 +208,10 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 				return fmt.Errorf("no input engine %q: %s", id, strings.Join(h.Inputs(), ", "))
 			}
 			return h.Options().Set(InputOption, registry.LayerBuffer, registry.At{Buffer: x.e.Name()}, id)
+		}},
+		{ID: "editor.wrap.toggle", Title: "Wrap long lines, or stop wrapping them", Run: func(registry.Ctx, registry.Args) error {
+			x.e.Run("set wrap!")
+			return nil
 		}},
 		{ID: "editor.save", Title: "Write the current buffer", Run: func(registry.Ctx, registry.Args) error {
 			x.e.Run("w")
@@ -264,6 +280,20 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.grep-word", Desc: "Grep the word under the cursor"}))
 	for _, k := range []registry.Keymap{
+		{Mode: "n", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},
+		{Mode: "x", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},
+		{Mode: "i", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},
+		{Mode: "x", Keys: "<D-c>", Command: "editor.copy", Desc: "Copy"},
+		{Mode: "x", Keys: "<C-S-c>", Command: "editor.copy", Desc: "Copy"},
+		{Mode: "x", Keys: "<D-x>", Command: "editor.cut", Desc: "Cut"},
+		{Mode: "x", Keys: "<C-S-x>", Command: "editor.cut", Desc: "Cut"},
+		{Mode: "x", Keys: "<D-v>", Command: "editor.paste", Desc: "Paste over the selection"},
+		{Mode: "x", Keys: "<C-S-v>", Command: "editor.paste", Desc: "Paste over the selection"},
+		{Mode: "n", Keys: "<D-v>", Command: "editor.paste", Desc: "Paste"},
+		{Mode: "n", Keys: "<C-S-v>", Command: "editor.paste", Desc: "Paste"},
+		{Mode: "i", Keys: "<D-v>", Command: "editor.paste", Desc: "Paste"},
+		{Mode: "i", Keys: "<C-S-v>", Command: "editor.paste", Desc: "Paste"},
+		{Mode: "c", Keys: "<D-v>", Command: "editor.paste", Desc: "Paste"},
 		{Mode: "n", Keys: "<X1Mouse>", Command: "editor.back", Desc: "Back"},
 		{Mode: "n", Keys: "<X2Mouse>", Command: "editor.forward", Desc: "Forward"},
 		{Mode: "n", Keys: "<C-n>", Command: "editor.multi.next", Desc: "Cursor at the next match"},
@@ -274,10 +304,14 @@ func (x *editorPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>'", Command: "picker.resume", Desc: "Resume the last picker"}))
 	x.add(h.View("statusline.left.00-mode", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "mode", Fn: x.modeSegment} })))
-	x.add(h.View("statusline.right.80-file", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "file", Fn: x.fileSegment} })))
-	x.add(h.View("statusline.right.90-position", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
-		return &ui.Func{Key: "position", Fn: x.positionSegment}
-	})))
+	for name, fn := range map[string]func(*ui.Ctx){"80-file": x.fileSegment, "85-wrap": x.wrapSegment, "90-position": x.positionSegment} {
+		x.add(h.View(StatusRight+name, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+			if !x.shown() {
+				return nil
+			}
+			return &ui.Func{Key: name, Fn: fn}
+		})))
+	}
 	for _, f := range x.sh.cfg.Files {
 		if _, err := x.open(context.Background(), f, ""); err != nil {
 			return err
@@ -1078,6 +1112,31 @@ func (x *editorPlugin) openFileBytes(rel string) ([]byte, bool) {
 }
 
 func layoutRef(id string) layout.ViewRef { return layout.ViewRef{ID: id} }
+
+// clip copies, cuts or pastes with the system clipboard, the "+ register, as the platform's keys do in any mode.
+func (x *editorPlugin) clip(op string) error {
+	_, selecting := x.e.Visual()
+	var keys []string
+	switch {
+	case op == "copy" && selecting:
+		keys = []string{"\"", "+", "y"}
+	case op == "cut" && selecting:
+		keys = []string{"\"", "+", "d"}
+	case op == "paste" && selecting:
+		keys = []string{"\"", "+", "p"}
+	case op == "paste":
+		switch x.e.Mode() {
+		case "insert", "replace", "cmdline":
+			keys = []string{"<C-r>", "+"}
+		default:
+			keys = []string{"\"", "+", "P"}
+		}
+	}
+	if keys != nil {
+		x.e.TypeMapped(keys, true)
+	}
+	return nil
+}
 
 // jumpOr goes dir along the jumplist, as CTRL-O and CTRL-I do, or along the window's history once the jumplist has
 // nowhere to go.

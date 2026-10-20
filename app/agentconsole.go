@@ -464,6 +464,8 @@ func consoleStatus(se core.SessionState) (string, theme.TokenID) {
 		return "wants permission", theme.StatusPermission
 	case se.Agent.Working:
 		return "working", theme.StatusWorking
+	case len(se.Agent.Background) > 0:
+		return "working in the background", theme.StatusWorking
 	case se.Agent.Starting != nil:
 		return "starting", theme.StatusWorking
 	case se.Agent.Error != "":
@@ -598,56 +600,85 @@ func scrolled(c *ui.Ctx, key any, st *scrollState, s, content ui.Style, body fun
 // focus is whether the console's pane has focus with nothing in it focused: the transcript takes it.
 func (x *agentConsole) transcript(c *ui.Ctx, se core.SessionState, st *consoleState, width float32, focus bool) {
 	th := c.Theme()
+	if st.sel == "" {
+		st.scroll.follow = true
+	}
+	// The blocks first, as keys and how to draw each: only those in view are drawn, so a long session's transcript
+	// costs what its screenful does.
+	type entry struct {
+		key  string
+		draw func(c *ui.Ctx)
+	}
+	var entries []entry
+	add := func(k string, draw func(c *ui.Ctx)) { entries = append(entries, entry{k, draw}) }
+	asks := slices.Clone(se.Asks)
+	emitAsks := func(before time.Time) {
+		for len(asks) > 0 && (before.IsZero() || !asks[0].Created.IsZero() && asks[0].Created.Before(before)) {
+			a := asks[0]
+			asks = asks[1:]
+			k := "ask:" + a.ID
+			add(k, func(c *ui.Ctx) {
+				c.Box(k, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, a, false, st.sel == k, nil) })
+			})
+		}
+	}
+	var lead func(c *ui.Ctx)
+	if se.Agent.Starting != nil {
+		lead = func(c *ui.Ctx) { startingCard(c, "starting", se, width) }
+	} else if len(se.Transcript) == 0 && len(asks) == 0 {
+		lead = func(c *ui.Ctx) {
+			c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", uiFont(12.5, th.C(theme.FgGhost)))
+		}
+	}
+	for _, it := range se.Transcript {
+		if it.Agent != "" {
+			continue
+		}
+		emitAsks(it.Time)
+		k := "item:" + it.ID
+		add(k, func(c *ui.Ctx) { x.item(c, k, se, it, st, width) })
+	}
+	if len(se.Subagents) > 0 {
+		add("subagents", func(c *ui.Ctx) { x.subagents(c, se, width, st.sel == "subagents") })
+	}
+	if len(se.Agent.Background) > 0 {
+		add("background", func(c *ui.Ctx) { x.background(c, se, width, st.sel == "background") })
+	}
+	emitAsks(time.Time{})
+	for i, f := range st.forks {
+		k := fmt.Sprint("fork:", i)
+		add(k, func(c *ui.Ctx) { x.forkCard(c, k, f, width, st.sel == k) })
+	}
+	keys := make([]string, len(entries))
+	for i, e := range entries {
+		keys[i] = e.key
+	}
+	if lead != nil {
+		entries = append([]entry{{"\x00lead", lead}}, entries...)
+	}
+
 	bodyID := c.Next("transcript")
 	if focus || st.focus {
 		c.Focus(bodyID)
 		st.focus = false
 	}
-	if st.sel == "" {
-		st.scroll.follow = true
+	reveal := -1
+	if k := st.scroll.reveal; k != "" {
+		reveal = slices.IndexFunc(entries, func(e entry) bool { return e.key == k })
+		st.scroll.follow, st.scroll.reveal = false, ""
 	}
-	var keys []string
-	asks := slices.Clone(se.Asks)
-	scrolled(c, "transcript", &st.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, KeyMode: AgentKeyMode, Help: "agent/console#transcript",
-		Role: ui.RoleList, Label: "Transcript"}, ui.Style{Gap: 10, Pad: ui.Insets{T: 12, B: 16}, Cross: ui.Center}, func(c *ui.Ctx, block func(string) ui.ID) {
-		emitAsks := func(before time.Time) {
-			for len(asks) > 0 && (before.IsZero() || !asks[0].Created.IsZero() && asks[0].Created.Before(before)) {
-				a := asks[0]
-				asks = asks[1:]
-				k := "ask:" + a.ID
-				block(k)
-				keys = append(keys, k)
-				c.Box(k, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, a, false, st.sel == k, nil) })
+	c.Items("transcript", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, KeyMode: AgentKeyMode, Help: "agent/console#transcript",
+		Role: ui.RoleList, Label: "Transcript", Selectable: true}, len(entries),
+		ui.ItemsOpts{Estimate: 60, Reveal: reveal, End: st.scroll.follow, Key: func(i int) any { return entries[i].key }}, func(c *ui.Ctx, i int) {
+			pad := ui.Insets{B: 10}
+			if i == 0 {
+				pad.T = 12
 			}
-		}
-		if se.Agent.Starting != nil {
-			startingCard(c, "starting", se, width)
-		} else if len(se.Transcript) == 0 && len(asks) == 0 {
-			c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", uiFont(12.5, th.C(theme.FgGhost)))
-		}
-		for _, it := range se.Transcript {
-			if it.Agent != "" {
-				continue
+			if i == len(entries)-1 {
+				pad.B = 16
 			}
-			emitAsks(it.Time)
-			k := "item:" + it.ID
-			block(k)
-			keys = append(keys, k)
-			x.item(c, k, se, it, st, width)
-		}
-		if len(se.Subagents) > 0 {
-			block("subagents")
-			keys = append(keys, "subagents")
-			x.subagents(c, se, width, st.sel == "subagents")
-		}
-		emitAsks(time.Time{})
-		for i, f := range st.forks {
-			k := fmt.Sprint("fork:", i)
-			block(k)
-			keys = append(keys, k)
-			x.forkCard(c, k, f, width, st.sel == k)
-		}
-	})
+			c.Column("block", ui.Style{W: ui.Flex(1), Pad: pad, Cross: ui.Center}, entries[i].draw)
+		})
 	st.blocks = keys
 	if st.sel != "" && !slices.Contains(keys, st.sel) {
 		st.sel = ""
@@ -941,6 +972,29 @@ func (x *agentConsole) subagents(c *ui.Ctx, se core.SessionState, width float32,
 						el = fmt.Sprintf("%d:%02d · ", int(d.Minutes()), int(d.Seconds())%60)
 					}
 					c.Text("n", fmt.Sprintf("%s%d %s", el, s.Tools, plural(s.Tools, "tool", "tools")), monoFont(10, th.C(theme.FgGhost)))
+				})
+		}
+	})
+}
+
+// background is the box of the work the last turn left running, which wakes the agent again when it's done.
+func (x *agentConsole) background(c *ui.Ctx, se core.SessionState, width float32, sel bool) {
+	th := c.Theme()
+	bg := se.Agent.Background
+	c.Column("background", blockStyle(th, width, sel), func(c *ui.Ctx) {
+		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Cross: ui.Center, Help: "agent/console#background"}, func(c *ui.Ctx) {
+			c.Text("k", "IN THE BACKGROUND", kickerFont(th.C(theme.FgFaint)))
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			c.Text("n", fmt.Sprintf("%d running · wakes the agent when done", len(bg)), monoFont(10, th.C(theme.FgFaint)))
+		})
+		for i, t := range bg {
+			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
+			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 10, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Description},
+				func(c *ui.Ctx) {
+					c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(tToolRunning)}, nil)
+					c.Text("kind", cmpOr(t.Kind, "task"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.Medium},
+						Color: th.C(theme.Fg)})
+					c.Text("desc", truncate(t.Description, 100), uiFont(12, th.C(theme.FgMuted)))
 				})
 		}
 	})

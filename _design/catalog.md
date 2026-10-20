@@ -149,7 +149,8 @@ net = { hosts = ["acme.atlassian.net"], why = "Fetch and update Jira tickets" }
 - The Plugins page shows them as **bundled**. They can be turned off (`bundled.disabled`), not uninstalled.
 - `[plugins]` installing the same id replaces the bundled copy while it's listed.
 - A bundled plugin's process is oriel itself, run as `oriel plugin-process <name>`: no executable per platform to
-  extract. It's still its own sandboxed process, over the same JSON-RPC. See plugins.md, "As built (tickets page)".
+  extract. It's still its own process, over the same JSON-RPC and through the plugin's guard, but outside the OS
+  sandbox, as oriel itself is. See plugins.md, "As built (tickets page)".
 
 ## The registry repo: `liamg/oriel-plugins`
 

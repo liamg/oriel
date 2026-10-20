@@ -76,11 +76,6 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	if b := spec.Sandbox.Backend; b != "" && spec.Sandbox.Container && !slices.Contains(w.opts.Sandbox.Backends(), b) {
 		return "", fmt.Errorf("this machine can't run a %s sandbox", b)
 	}
-	variant, err := k.variant(spec.Variant)
-	if err != nil {
-		return "", err
-	}
-	spec.Variant = variant
 	name := w.freshName(spec)
 	id := core.SessionID(name)
 	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Prompt: spec.Prompt, Ticket: spec.Ticket,
@@ -150,12 +145,8 @@ func gate(spec core.SessionSpec) string {
 	return "ask"
 }
 
-// startInPlace is a direct session (the directory itself, never a worktree) or a scratch one (no repo at all).
+// startInPlace is a direct session: the directory itself, never a worktree.
 func (w *Host) startInPlace(ctx context.Context, se *core.SessionState, spec core.SessionSpec) error {
-	if se.Kind == core.KindScratch {
-		se.Dir = filepath.Join(w.workspacesDir(), string(se.ID))
-		return os.MkdirAll(se.Dir, 0o755)
-	}
 	if spec.Dir == "" {
 		return errors.New("a direct session needs a directory")
 	}
@@ -180,9 +171,6 @@ func (w *Host) startInPlace(ctx context.Context, se *core.SessionState, spec cor
 func (w *Host) startWorkspace(ctx context.Context, se *core.SessionState, spec core.SessionSpec, k KindSpec, branch string) error {
 	root := filepath.Join(w.workspacesDir(), string(se.ID))
 	m := Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(spec.Kind), Ticket: spec.Ticket, Model: spec.Model}
-	if spec.Kind == core.KindTour {
-		m.Tour = &TourInfo{Title: spec.Prompt, Kind: spec.Variant}
-	}
 	if err := newWorkspace(ctx, root, m); err != nil {
 		return err
 	}
@@ -208,10 +196,6 @@ func (w *Host) startWorkspace(ctx context.Context, se *core.SessionState, spec c
 			m.Projects = append(m.Projects, ManifestEntry{Name: se.Projects[len(se.Projects)-1].Name, Repo: r.Path, Dir: r.Path, Primary: len(m.Projects) == 0})
 		case WorktreesPR:
 			if _, err := w.addPRProject(ctx, root, &m, r, spec); err != nil {
-				return w.undo(root, err)
-			}
-		case WorktreesPinned:
-			if _, err := addProject(ctx, root, &m, r.Path, "", "", true); err != nil {
 				return w.undo(root, err)
 			}
 		default:
@@ -622,7 +606,7 @@ func (w *Host) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) 
 	if err != nil {
 		return err
 	}
-	if se.Kind == core.KindDirect || se.Kind == core.KindScratch {
+	if se.Kind == core.KindDirect {
 		return fmt.Errorf("a %s session has no workspace to add a repo to", se.Kind)
 	}
 	r, err := w.resolveRepo(ctx, string(ref))
@@ -646,7 +630,7 @@ func (w *Host) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) 
 	case k.Worktrees == WorktreesStartWork && !se.Started:
 		projects = append(projects, core.Project{Name: uniqueProjectName(m, r.Path), Repo: r.Path, Dir: r.Path, ReadOnly: true, Branch: branch, Primary: len(projects) == 0})
 	default:
-		e, err := addProject(ctx, se.Dir, &m, r.Path, branch, "", k.Worktrees == WorktreesPinned)
+		e, err := addProject(ctx, se.Dir, &m, r.Path, branch, "", false)
 		if err != nil {
 			return err
 		}

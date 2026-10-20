@@ -240,3 +240,31 @@ func TestTerminalNormalKeepsColours(t *testing.T) {
 	}
 	t.Fatalf("no red line in terminal-normal mode:\n%s", s.frameText())
 }
+
+// Text in a terminal selects with the mouse, a drag from the press or a double click on a word, and ⌘C copies it,
+// as in any terminal on the platform. With nothing selected, ⌘C goes to the program.
+func TestTerminalMouseSelectsAndCopies(t *testing.T) {
+	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "printf 'first line\\nsecond line\\n'; exec cat"}})
+	s.waitTerm(t, "second line")
+	s.frame()
+	s.drag(s.charAt(t, "first line", 0), s.charAt(t, "second line", 5))
+	s.keyCommand(t, "<D-c>")
+	if got, _ := s.clip.ReadClipboard(); got != "first line\nsecond" {
+		t.Errorf("a drag and ⌘C copied %q", got)
+	}
+	word := s.charAt(t, "second line", 8)
+	s.click(word)
+	s.click(word)
+	s.keyCommand(t, "<C-S-c>")
+	if got, _ := s.clip.ReadClipboard(); got != "line" {
+		t.Errorf("a double click and ⌃⇧C copied %q", got)
+	}
+	if _, _, ok := s.terms().get("1").selection(); ok {
+		t.Error("the selection stayed after it was copied")
+	}
+	s.keyCommand(t, "<D-a>")
+	s.keyCommand(t, "<D-c>")
+	if got, _ := s.clip.ReadClipboard(); !strings.HasPrefix(got, "first line\nsecond line") {
+		t.Errorf("⌘A and ⌘C copied %q", got)
+	}
+}

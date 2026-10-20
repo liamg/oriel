@@ -28,7 +28,7 @@ Each provider is driven the way its **subscription** allows.
 
 - **Terminal view comes free** for Claude: it *is* a PTY session, so "Show terminal" attaches to it.
   For Codex, "Open in terminal" runs `codex resume` on the same session.
-- The skills (`plan`, `diff`, `new`, `tour`, `job`) become **prompt packs**: markdown plus tool lists.
+- crit's skills (`plan`, `diff`, `new`, `job`; not `tour`) become **prompt packs**: markdown plus tool lists.
   The Claude mod loads them as skills; Codex gets them as the first user message plus `AGENTS.md`.
 - The mod is the one Claude-specific piece of TypeScript. It stays small (crit's is about 575 lines),
   and everything it decides is delegated to the host. Like crit's, it reaches the host by running a command (`oriel
@@ -40,7 +40,9 @@ Each provider is driven the way its **subscription** allows.
   [--mcp-config <GatewayMCP> --strict-mcp-config] (--session-id <uuid> [/oriel:<skill> <prompt>] | --resume <id>)`
   in a 200×50 PTY, env `ORIEL_SPAWNED=1`, `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`, `ORIEL_HOOK_SOCK`, `ORIEL_BIN`, then
   `StartSpec.Env`. Oriel picks the session id itself (`--session-id`), so `ID()` is known before claude is up.
-  Policy → mode: ask → `default`, light → `acceptEdits`, bypass → `bypassPermissions` (refused without a sandbox).
+  Policy → mode: ask → `default`, light → `acceptEdits`, bypass → `bypassPermissions` (refused without a sandbox). A
+  sandboxed session is `bypassPermissions` whatever its policy: the sandbox and its gateway are the gate, and a prompt in
+  Claude's own terminal would stall the turn where nobody sees it (as crit).
   On the host the folder is pre-trusted in `.claude.json` and crit's agent defaults are merged into `settings.json`.
 - The mod (`agent/claude/mod`, embedded) runs `$ORIEL_BIN hook <op>` with JSON on stdin for every decision; `oriel
   hook` (`claude.HookMain`) carries it over the unix socket. Ops: `hello` (→ tools to register), `wait` (a ≤45 s long
@@ -50,6 +52,12 @@ Each provider is driven the way its **subscription** allows.
 - Messages, tool calls and results (with `core.FileDiff` from the edit's `structuredPatch`, else its input) come
   from tailing `<config>/projects/<slug(cwd)>/<id>.jsonl` and `<id>/subagents/agent-*.jsonl`. A turn's end waits
   briefly for the log to hold the turn's answer, so its messages always come before `TurnEnd`.
+- Background work: `turn-complete` carries the `Stop` hook's `background_tasks` (shells, subagents, monitors and
+  workflows still running, each of which wakes the session with a turn of its own), as `TurnEnd.Background`. While
+  the last turn left some, the session is working (`AgentState.Background`: each task's kind and description; the
+  console's "working in the background" and its list at the transcript's end, mission control's "+N in background"): the threads that turn was given stay busy, and the idle nudges (commit and PR drafts) wait, until a
+  turn ends with none. New comments are still delivered between those turns. Codex has nothing to report: its
+  background terminals never start a turn, so its turn's end is the work's.
 - `Usage` is the newest reading of the plan's windows: a session's mod's, through `$.session.usage()` at each turn's
   end, or the `/usage` probe's (below), which `Usage` runs when `claude` is on PATH and no probe is running already. Claude's
   files aren't asked whether it's signed in: on macOS the token is in the Keychain, and the probe finds out itself.
@@ -187,7 +195,7 @@ JSON-RPC under it (Codex's messages carry no `"jsonrpc"` field; MCP's do).
   `cwd`, `model`, `approvalPolicy`, `sandbox` and `config`; `ID()` is the thread id.
 - Policy: ask → `untrusted` + `workspace-write`; light → `on-request` + `workspace-write` (edits in the workspace go
   ahead, shell runs in Codex's sandbox and asks to leave it); bypass → `never` + `danger-full-access`, refused
-  without a sandbox.
+  without a sandbox. A sandboxed session is `never` + `danger-full-access` whatever its policy, as Claude's is bypass.
 - Oriel's tools: `config["mcp_servers.oriel"] = {command: ORIEL_BIN, args: [hook, mcp], env: {ORIEL_HOOK_SOCK},
   default_tools_approval_mode: approve}`. `oriel hook mcp` (`codex.MCPMain`) is an MCP stdio server that answers
   `initialize` and passes `tools/list` / `tools/call` over the session's unix socket to `StartSpec.Tools`. A sandbox's
@@ -285,11 +293,6 @@ type Session interface {
   (`agent/packs`), Oriel's tools (`reply`, `thread`, `resolve`, `comment`, `task_add`, `task_update`, `tasks`,
   `projects`, `commit_draft`, `pr_draft`, `test_run`) and any the app's plugins offer (`registry.AgentTool`, reached
   through the app's callbacks: LS-3's `lsp_*`), and the user's checkouts as `Protect`.
-- Built in RV-8: a tour's agent also has `tour_kind` (its kind and that kind's guidance, `host/tour/kinds/*.md`;
-  with `kind`, it changes it), `tour_steps`, `tour_run` (a command run inside the tour, its output, exit code and
-  time appended to a step as a run block; refused in a sandbox, where only the agent's own shell runs commands) and
-  `tour_share` (the published export's link), and the app's `tour_export`. The tour's question is its `where="tour"`
-  thread.
 - Comments go to the agent as a batch in crit's tagged format (`host/prompt.go`): at once when it's idle; after
   `Interrupt` when one is urgent; at the turn's end otherwise. A delivered thread is `Busy` until the agent replies.
   btw is a `Fork`, its answer a `Btw` comment. The console's messages queue (`Agent.Queue`) the same way.
@@ -308,11 +311,12 @@ type Session interface {
 ### Prompts and voice (PL-11, as built)
 
 - The Prompts page (`:Prompts`, `app/prompts.go`) edits every `agent/prompts` prompt: the coding style (crit's text),
-  each built-in pack, each part the packs include, and each tour kind's guidance (RV-8's `host/tour/kinds`, which
-  the host registers as `tour.<kind>` and the `tour_kind` tool reads through the user's prompts). crit's other 27 prompts don't carry over one for one: in
-  Oriel their text lives in the packs (drafts, comments, tours) or in code that hasn't been made editable yet
-  (Start work's request, explain's depths, the walkthrough format); `prompts.Register` is how those join the page.
-- Only the user's changes are kept, a file each: `prompts/style.code.md`, `agents/<kind>.md` (the same file a
+  the side requests (explain's request and walkthrough format, the verify quiz's questions and grading, and the
+  commit and PR redraft nudges, each a `defaults/NN-<id>.md`), each built-in pack and each part the packs include.
+  crit's other prompts don't carry over one for one: in Oriel their text lives in the packs (drafts, comments) or in
+  code that hasn't been made editable yet (Start work's request, explain's depth phrases); `prompts.Register` is
+  how those join the page.
+- Only the user's changes are kept, a file each: `prompts/<id>.md` (`style.code.md`, `explain.request.md`…), `agents/<kind>.md` (the same file a
   hand-written pack override is) and `agents/parts/<part>.md`. The app gives them to the host at start and on
   each change (and when one of those files is saved in the editor); the host keeps them in `prompts.json` and
   builds a built-in pack the user changed (or whose parts they changed) from them. Its own `packs.LoadDir` of
@@ -344,7 +348,7 @@ type Session interface {
   ends without drafting isn't asked twice.
 - A draft by "you" (`host.DraftByYou`) is the user's: `commit_draft`/`pr_draft` answer "Not saved: the user wrote …"
   and leave it. `ship.draft` with `Drop` clears it (Redraft).
-- Decided in AI-10: a session whose pack doesn't offer `commit_draft` (direct, review, tour, scratch) is never asked.
+- Decided in AI-10: a session whose pack doesn't offer `commit_draft` (direct, review) is never asked.
 - Not yet: an option to turn the nudge off, and remembering what was asked across a restart of Oriel (one repeat ask
   after a restart).
 
@@ -538,7 +542,8 @@ sequenceDiagram
   dir; a slow step says what it's doing with `sandbox.Report(ctx, …)`, sessions.md "Starting one"), stops, reports `Health` and `Sweep`s, and says where the agent finds the run dir (`AgentRunDir`) and
   whether the session must also serve on a port (`ServesPort`). What every backend gives the agent is shared in
   `sandbox`: `Binds` (the workspace, Claude's dir and transcripts, attachments, each project's git dir with git's
-  own files read-only), `Prepare` (Claude settings and login, the home's ssh config, shims, git config), `AgentEnv`
+  own files read-only, and the checkouts a session reads in place without a worktree yet, a plan session's until
+  Start work, read-only at their own paths: the manifest's `Reads`), `Prepare` (Claude settings and login, the home's ssh config, shims, git config), `AgentEnv`
   and `LoginProblems`. A backend may also say what it runs the agent in (`sandbox.Describer`: the container,
   whether it's running, the image, where it comes from and its Dockerfile, the last build's log, the running
   container's mounts, and where the agent finds host paths that aren't at the same path inside), and build its image
@@ -645,7 +650,7 @@ All on by default, all configurable, none a nag:
   - **work and plan: hard.** Commit and PR are blocked until every agent-written line is read. "Commit anyway" is one keypress,
     and it's recorded in a commit trailer (`Unreviewed-Agent-Lines: 38`) and in the session log.
   - **jobs: soft.** One confirmation, logged.
-  - **tours and scratch sessions: off.**
+  - **reviews and direct sessions: off.**
   - Repos can override it in `.oriel/`, and the ledger shows in the HUD, on the Ship page and in the PR description.
   - Built in RV-2: the ledger counts the agent-written lines of a repo's branch change (against the merge-base,
     uncommitted work included; in a session, of the files an agent commit on the branch touched or the session's

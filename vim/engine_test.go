@@ -97,6 +97,9 @@ func (t *testEngine) Snapshot(q vimtest.Query) (vimtest.Result, error) {
 	if q.Top {
 		r.Top = t.e.Top() + 1
 	}
+	if q.Left {
+		r.Left = t.e.Left()
+	}
 	if q.Bufs {
 		r.Bufs = t.e.Buffers()
 	}

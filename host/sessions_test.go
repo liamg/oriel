@@ -74,10 +74,12 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	}
 }
 
-func TestWorkNeedsARepo(t *testing.T) {
+// A kind with NeedsRepo refuses to start with none.
+func TestKindNeedsARepo(t *testing.T) {
 	r := newRig(t)
-	if _, err := r.w.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Prompt: "x"}); err == nil {
-		t.Fatal("a work session started with no repo")
+	defer r.w.Kinds().Register(KindSpec{Kind: "incident", Title: "Incident", Pack: "work", Worktrees: WorktreesNow, NeedsRepo: true})()
+	if _, err := r.w.Start(context.Background(), core.SessionSpec{Kind: "incident", Prompt: "x"}); err == nil {
+		t.Fatal("an incident session started with no repo")
 	}
 }
 
@@ -142,19 +144,6 @@ func TestPlanWorktreesComeAtStartWork(t *testing.T) {
 	plan, _ := se.Thread(se.PlanThread())
 	if last, _ := plan.Last(); !strings.HasPrefix(last.Body, "**Start work**") {
 		t.Errorf("the agent wasn't told to start: %+v", plan)
-	}
-}
-
-func TestTourIsPinnedAndReadOnly(t *testing.T) {
-	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindTour, Prompt: "How does rounding work?", Variant: "demo", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
-	p := r.session(id).Projects[0]
-	if !p.Detached || !p.ReadOnly || p.Commit == "" || branchOf(t, p.Dir) != "HEAD" {
-		t.Fatalf("tour project = %+v", p)
-	}
-	m, _ := LoadManifest(r.session(id).Dir)
-	if m.Tour == nil || m.Tour.Kind != "demo" {
-		t.Errorf("manifest tour = %+v", m.Tour)
 	}
 }
 
@@ -239,15 +228,28 @@ func TestNewRepoInitsAndRegisters(t *testing.T) {
 	}
 }
 
-func TestScratchHasNoRepo(t *testing.T) {
+// Plan and work start with no repos: a workspace with no projects yet, which a repo joins later on the session's branch.
+func TestPlanAndWorkStartWithNoRepo(t *testing.T) {
 	r := newRig(t)
-	id := r.start(core.SessionSpec{Kind: core.KindScratch})
-	se := r.session(id)
-	if len(se.Projects) != 0 || se.Dir == "" {
-		t.Fatalf("scratch = %+v", se)
-	}
-	if fi, err := os.Stat(se.Dir); err != nil || !fi.IsDir() {
-		t.Error("scratch has nowhere to keep notes")
+	for _, k := range []core.Kind{core.KindPlan, core.KindWork} {
+		id := r.start(core.SessionSpec{Kind: k, Prompt: "what should the " + string(k) + " be"})
+		se := r.session(id)
+		if len(se.Projects) != 0 || se.Dir == "" {
+			t.Fatalf("%s = %+v", k, se)
+		}
+		if fi, err := os.Stat(se.Dir); err != nil || !fi.IsDir() {
+			t.Fatalf("%s has no workspace: %v", k, err)
+		}
+		if k != core.KindWork {
+			continue
+		}
+		if err := r.w.AddRepo(context.Background(), id, core.RepoID(r.repo.Dir)); err != nil {
+			t.Fatal(err)
+		}
+		se = r.session(id)
+		if len(se.Projects) != 1 || se.Projects[0].ReadOnly || branchOf(t, se.Projects[0].Dir) != se.Branch {
+			t.Errorf("the repo that joined the work session = %+v, branch %q", se.Projects, se.Branch)
+		}
 	}
 }
 

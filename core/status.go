@@ -15,7 +15,7 @@ func DeriveStatus(se SessionState) Status {
 	if len(se.Asks) > 0 {
 		return StatusPermission
 	}
-	if se.Agent.Working {
+	if se.Agent.Working || len(se.Agent.Background) > 0 {
 		return StatusWorking
 	}
 	for _, a := range se.Subagents {
@@ -45,7 +45,7 @@ func DeriveStatus(se SessionState) Status {
 	if se.Agent.Error != "" {
 		return StatusNeedsYou
 	}
-	if se.Agent.Provider == "" && len(se.Threads) == 0 && se.Kind != KindDirect && se.Kind != KindScratch {
+	if se.Agent.Provider == "" && len(se.Threads) == 0 && se.Kind != KindDirect {
 		return StatusOff
 	}
 	return StatusQuiet

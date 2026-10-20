@@ -836,10 +836,11 @@ func (x *shipPlugin) commands() {
 		{ID: "ship.redraft", Title: "Ask the agent to draft a project's {kind} again: commit or pr", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				kind := cmpOr(a.String("kind"), "commit")
-				text := fmt.Sprintf("Draft the commit message for %s's uncommitted changes again, and save it with mcp__oriel__commit_draft (project %q).", p, p)
+				id := "drafts.commit.again"
 				if kind == "pr" {
-					text = fmt.Sprintf("Draft %s's pull request again from its commits and the repo's template, and save it with mcp__oriel__pr_draft (project %q).", p, p)
+					id = "drafts.pr.again"
 				}
+				text := x.sh.prompt(id, map[string]string{"project": p})
 				c, err := x.client(se.ID)
 				if err != nil {
 					return err

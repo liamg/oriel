@@ -91,6 +91,27 @@ func (e *Engine) reselect() {
 	}
 }
 
+// Select makes the Visual area run from start to end, in mode 'v', 'V' or CTRL-V, as the mouse does (term.txt
+// *mouse-overview*): Insert or Replace mode ends first, and the cursor goes to end.
+func (e *Engine) Select(start, end Pos, mode rune) {
+	if e.mode == Insert || e.mode == Replace {
+		e.finishInsert()
+	}
+	v := e.view()
+	e.visual = &start
+	e.vmode = mode
+	e.cur = end
+	e.clampVisual(v)
+	e.setWant(v)
+	e.sync()
+}
+
+// Deselect leaves Visual mode, keeping the area for gv, as a click does.
+func (e *Engine) Deselect() {
+	e.endVisual()
+	e.sync()
+}
+
 // endVisual leaves Visual mode, remembering the area for gv and the '< and '> marks.
 func (e *Engine) endVisual() {
 	if e.visual == nil {

@@ -157,13 +157,7 @@ flowchart TB
   to, tone)` (`LeaderPath`) the angled leader line from code to its card. Theme tokens `annotation.*`.
 - images (RV-8): `widget.Image(c, key, img, width, ImageOpts{Label, Help})` draws an `image.Image` at a width, its
   shape kept, scaled once per size to the device's pixels (`ui.RoleImage` to assistive technology).
-- tours (RV-8): `tour.open` opens the tour reader (the `tour` view, a tab) for the tour session in front, and opens
-  by itself when one comes to the front; `tour.step {step | by}`, `tour.scroll {by}`, `tour.open-quote {n}`,
-  `tour.ask {text}`, `tour.export {format, ask}` and `tour.close` drive it, and its keys are the `tour` key mode.
-  Steps are read by `host/tour` (`tour.NewLoader().Load(ctx, root, host.TourOf(root))`, the model a plugin's own
-  reader would draw), `tour.Markdown` and `tour.HTML(t, HTMLOptions{Highlight, Palette})` export them, and
-  `tour.Palette(dark, light)` is a page's colours. The app offers the `tour_export` agent tool
-  (`registry.AgentTool`); the host its `tour_kind`, `tour_steps`, `tour_run` and `tour_share`.
+- tours: removed (the user's decision).
 - clickable signs: a `Sign` decoration with a `Command` runs it, with its `Args`, when clicked (a test's ▶).
 - block signs: a `Sign` whose text is one lower (▁…█) or left (▉…▏) block element fills that part of the whole line,
   so a run of them on consecutive lines is one unbroken bar (the git gutter's ▎).
@@ -456,12 +450,13 @@ flowchart TB
   one in front; `session.start {then}`, like `session.open`'s, is a list of `{command, args}` run once the window
   is on it (the launcher's opens the first request). `gh.SearchPRs` (`gh.SearchMine`, `gh.SearchReview`) through
   `Host.SearchPRs`; `gh.ParsePR` reads a PR's URL or `owner/name#N`.
-- prompt packs, session kinds (plan, work, review, tour, job, newrepo, direct and scratch are built-ins). A kind is
+- prompt packs, session kinds (work, plan, review, job, newrepo and direct are built-ins). A kind is
   registered on the host (`host.Kinds().Register(host.KindSpec{…})`: its title, a few words (`Desc`), what
-  starting does (`About`), what it starts from (`From`: prompt, pr, name, dir or nothing), its pack and worktrees,
-  and its `Variants`, the sorts of it a session can be, the first the default: a tour's seven kinds, RV-8);
-  the launcher lists the host's kinds (`Host.Kinds().All()`), so a registered one is a mode there with no more code, and a
-  kind with variants gets a picker whose choice is `session.start {variant}` (`SessionSpec.Variant`).
+  starting does (`About`), what it starts from (`From`: prompt, pr, name or dir), its pack and worktrees, whether
+  it needs a repo (`NeedsRepo`), and `Launcher`, whether the new-session launcher offers it as a mode). The
+  launcher lists the host's kinds with `Launcher` (`Host.Kinds().All()`, in registration order: built in, Work,
+  Plan and Review PR), so a plugin's kind that sets it is a mode there with no more code; every kind starts with
+  `session.start {kind}`, and `session.new {kind}` opens the launcher on any kind.
   `oriel.session.kind` (`registry.SessionKind`) is the app's side and doesn't reach the host yet.
   `agent/packs`: `packs.Register(agent.Pack)` shadows a kind's pack until unregistered; each `agents/<kind>.md`
   (frontmatter `name`, `description`, `tools`; `<!-- include: part -->` pulls in a part, the user's
@@ -470,8 +465,7 @@ flowchart TB
 - **editable prompts** (PL-11, `agent/prompts`): every prompt the Prompts page edits is a `prompts.Def{ID, Group,
   Label, Help, Vars, Default, File}`: the built-ins (`agent/prompts/defaults/NN-<id>.md`, crit's frontmatter: group,
   label, help, vars), each built-in pack (`pack.<name>`, kept in `agents/<name>.md`) and part (`part.<name>`,
-  `agents/parts/<name>.md`), and any `prompts.Register(Def)` adds (kept in `prompts/<id>.md`): the host registers
-  each tour kind's guidance as `tour.<kind>` (`host.TourKindID`). Only the user's
+  `agents/parts/<name>.md`), and any `prompts.Register(Def)` adds (kept in `prompts/<id>.md`). Only the user's
   changes are kept (`prompts.Store{Dir}`: `Load`, `Set`, which takes the file away for empty or default text,
   `Reset`, `Path`). `prompts.Overrides` reads them: `Text(id)`, `Custom(id)`, `Style()`, `Render(id, vars)` (with
   `{{style}}` the coding style, `prompts.StyleID`), `Pack(name, base)` (a built-in pack the user changed, or whose
@@ -1128,8 +1122,9 @@ type Host interface {
   need a directory).
 - **A bundled process is oriel itself**: `plugin.Caller.Programs` maps a binary's name to another command line
   (`plugin.BundledPrograms`: `oriel plugin-process linear`, oriel from `os.Executable()`, or `app.Config.Self` in
-  tests). It's still its own process, in the same OS sandbox, over the same JSON-RPC, with the host's `http.request`;
-  only the file it runs from differs. `oriel plugin-process NAME` runs `integ.Mains[NAME]` on stdin and stdout. The
+  tests). It's still its own process, over the same JSON-RPC, with the host's `http.request` and the plugin's guard on
+  every call; but not in the OS sandbox: it's oriel's own code, as trusted as oriel, and a GUI binary can't start under
+  macOS's deny-default profile. A catalog install's own binary is still confined. `oriel plugin-process NAME` runs `integ.Mains[NAME]` on stdin and stdout. The
   standalone `bin/oriel-linear` and the manifest's `binaries` stay for a catalog install.
 - **Linear's own UI**: a Linear icon (`icons/linear.png`, `[contributes] icons`), a global rail entry and a start view
   entry "Linear tickets", each running `tickets.open {tracker = "linear"}` and shown only while

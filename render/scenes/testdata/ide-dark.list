@@ -43,9 +43,9 @@ text "⌘5" @1056.2656,21.92 #4f4a40 JetBrains Mono 9.5
 rect 1080.2656,0 1x37 fill #24221d
 effect glow-disc 1093.2656,15 7x7 blur 8 #4fe0a0e6
 path 6 segments fill #4fe0a0
-text "tour: auth flow" @1107.2656,22.865234 #b3ab99 Inter 12
-text "⌘6" @1196.4219,21.92 #4f4a40 JetBrains Mono 9.5
-rect 1220.4219,0 1x37 fill #24221d
+text "auth flow" @1107.2656,22.865234 #b3ab99 Inter 12
+text "⌘6" @1166.8594,21.92 #4f4a40 JetBrains Mono 9.5
+rect 1190.8594,0 1x37 fill #24221d
 text "5H" @1292.0938,22.28 #b3ab99 JetBrains Mono 10.5
 rect 1311.2812,16.5 46x4 fill #23211c radius 2
 rect 1311.2812,16.5 17.47998x4 fill #ffd23f radius 2

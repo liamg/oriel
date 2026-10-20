@@ -21,6 +21,11 @@ One card for each session that isn't archived. Its border is its status colour, 
 outlined in the accent. A click selects a card; its kind, its pull request and its agent are in its heading, and its
 tasks, context, change and how long it's been at its foot.
 
+## In the background {#background}
+
+When the agent's last turn left work running that will wake it again (a long test run, a background subagent), the
+card's foot says **+2 in background**; hover it for what each is. The session counts as working until that's done.
+
 ## Opening a session {#open}
 
 `⏎`, or a click on a card's name, brings its session to the front, resuming its agent if it was stopped, and puts

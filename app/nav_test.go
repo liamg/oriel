@@ -136,3 +136,40 @@ oriel.place.add{ name = "board", title = "Board", command = "Board", shown = fun
 	s.keyCommand(t, "<X2Mouse>")
 	s.at(t, "forward", "", "board")
 }
+
+// A page gives way to what's put in front: a view shown from the sidebar or a command, or a file opened, closes the
+// page over the layout. A view already open under the page is revealed, not toggled away.
+func TestPagesGiveWayToViews(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("one\n"), 0o644)
+	s := navScene(t, dir)
+	shown := func() string { p, _ := registry.ShownPlace(s.reg); return p }
+	explorer := registry.Args{"id": ExplorerView, "place": "dock", "edge": "left", "title": "Explorer"}
+
+	s.run("settings.open", nil)
+	s.frame()
+	s.run("view.toggle", explorer)
+	s.frame()
+	if p := shown(); p != "" {
+		t.Errorf("%s stayed over the Explorer", p)
+	}
+	if !showing(s.host, ExplorerView, "") {
+		t.Error("the Explorer didn't open")
+	}
+
+	s.run("stats.open", nil)
+	s.frame()
+	s.run("view.toggle", explorer)
+	s.frame()
+	if p := shown(); p != "" || !showing(s.host, ExplorerView, "") {
+		t.Errorf("the Explorer open under %q was toggled away, or the page stayed", p)
+	}
+
+	s.run("settings.open", nil)
+	s.frame()
+	s.open(t, "a.txt")
+	s.frame()
+	if p := shown(); p != "" {
+		t.Errorf("%s stayed over the file opened", p)
+	}
+}

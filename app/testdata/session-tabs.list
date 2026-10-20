@@ -36,14 +36,14 @@ clip 102.9375,0 1353.2438x38 r 0
   text "⌘5" @1080.2656,23.42 #4f4a40 JetBrains Mono 9.5
   rect 1104.2656,0 1x38 fill #24221d
   rect 1117.2656,16 8x8 fill #4fe0a0 radius 4
-  text "tour: auth flow" @1132.2656,24.365234 #b3ab99 Inter 12
-  text "⌘6" @1221.4219,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1245.4219,0 1x38 fill #24221d
-  rect 1258.4219,16 8x8 fill #4f4a40 radius 4
-  text "old spike" @1273.4219,24.365234 #b3ab99 Inter 12
-  text "off" @1331.4219,23.599998 #7c7566 JetBrains Mono 10
-  text "⌘7" @1356.4219,23.42 #4f4a40 JetBrains Mono 9.5
-  rect 1380.4219,0 1x38 fill #24221d
+  text "auth flow" @1132.2656,24.365234 #b3ab99 Inter 12
+  text "⌘6" @1191.8594,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1215.8594,0 1x38 fill #24221d
+  rect 1228.8594,16 8x8 fill #4f4a40 radius 4
+  text "old spike" @1243.8594,24.365234 #b3ab99 Inter 12
+  text "off" @1301.8594,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘7" @1326.8594,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 1350.8594,0 1x38 fill #24221d
 pop
 text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
 rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
