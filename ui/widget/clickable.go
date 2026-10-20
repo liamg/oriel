@@ -104,12 +104,13 @@ func Segmented(c *ui.Ctx, key any, labels []string, active *int, o SegmentedOpts
 func PointerIn(c *ui.Ctx) bool { return c.Interaction(c.ID()).Inside }
 
 type IconButtonOpts struct {
-	Label   string // its accessible name, and its tooltip
-	Help    string
-	Size    float32                          // its side; 20 if 0
-	Tooltip string                           // when it should say more than Label
-	Icon    func(c *ui.Ctx, fg render.Color) // drawn in place of the glyph
-	On      bool                             // lit, as while what it opens is showing
+	Label    string // its accessible name, and its tooltip
+	Help     string
+	Size     float32                          // its side; 20 if 0
+	Tooltip  string                           // when it should say more than Label
+	Icon     func(c *ui.Ctx, fg render.Color) // drawn in place of the glyph
+	On       bool                             // lit, as while what it opens is showing
+	Disabled bool
 }
 
 // IconButton is a small square button showing a glyph, such as ✕. It reports a click.
@@ -123,11 +124,14 @@ func IconButton(c *ui.Ctx, key any, glyph string, o IconButtonOpts) bool {
 		tip = o.Label
 	}
 	fg, fill := col(c, tIconButtonFg), render.Color{}
-	if o.On {
+	switch {
+	case o.Disabled:
+		fg = col(c, tDisabledFg)
+	case o.On:
 		fg, fill = col(c, tSegOnFg), col(c, tSegOnBg)
 	}
 	return Clickable(c, key, ui.Style{W: ui.Px(side), H: ui.Px(side), Radius: 5, Main: ui.Center, Cross: ui.Center, Fill: fill, Label: o.Label,
-		Tooltip: tip, Selected: o.On, Help: o.Help}, func(c *ui.Ctx) {
+		Tooltip: tip, Selected: o.On, Disabled: o.Disabled, Help: o.Help}, func(c *ui.Ctx) {
 		if o.Icon != nil {
 			o.Icon(c, fg)
 			return

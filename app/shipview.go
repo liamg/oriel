@@ -45,9 +45,7 @@ func (x *shipPlugin) views() {
 	x.add(x.h.View(GitView, registry.ViewFunc(func(v registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "git", Fn: func(c *ui.Ctx) { x.gitPanel(c, v.Project) }}
 	})))
-	x.add(x.h.View(PRView, registry.ViewFunc(func(v registry.ViewCtx) ui.Node {
-		return &ui.Func{Key: "pr", Fn: func(c *ui.Ctx) { x.prTab(c, v.Instance) }}
-	})))
+	x.add(x.h.View(PRView, prView{x}))
 }
 
 func (x *shipPlugin) run(id string, a registry.Args) {
@@ -324,6 +322,7 @@ func (x *shipPlugin) uncommitted(c *ui.Ctx, se core.SessionState, s shipRead, op
 func (x *shipPlugin) fileRows(c *ui.Ctx, se core.SessionState, s shipRead, f *commitForm, discard bool) {
 	th := c.Theme()
 	led, ledOK := x.ledger(se, s.Project)
+	busy := x.doing(se.ID, s.Project) != ""
 	for _, fl := range s.Files {
 		c.Row(fl.Path, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Row("cb", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
@@ -332,7 +331,7 @@ func (x *shipPlugin) fileRows(c *ui.Ctx, se core.SessionState, s shipRead, f *co
 					st = widget.CheckOff
 				}
 				if widget.Check(c, "cb", st, widget.CheckOpts{Text: fl.Path, Plain: true, Help: "git/ship#commit",
-					Tooltip: "Ticked files go in the commit"}) {
+					Tooltip: "Ticked files go in the commit", Disabled: busy}) {
 					f.skip[fl.Path] = !f.skip[fl.Path]
 				}
 			})
@@ -340,7 +339,8 @@ func (x *shipPlugin) fileRows(c *ui.Ctx, se core.SessionState, s shipRead, f *co
 				c.Text("new", "new", monoFont(10, th.C(theme.FgFaint)))
 			}
 			widget.DiffStat(c, "ds", fl.Add, fl.Del, widget.DiffStatOpts{Binary: fl.Binary})
-			if discard && widget.IconButton(c, "discard", "↺", widget.IconButtonOpts{Label: "Discard " + fl.Path + "'s changes", Help: "git/ship#git"}) {
+			if discard && widget.IconButton(c, "discard", "↺", widget.IconButtonOpts{Label: "Discard " + fl.Path + "'s changes", Help: "git/ship#git",
+				Disabled: busy}) {
 				x.run("git.discard", registry.Args{"path": filepath.Join(sessionProjectDir(se, s.Project), fl.Path)})
 			}
 			if lf, ok := led.File(fl.Path); ledOK && ok && lf.Uncommitted.Total() > 0 {
@@ -380,7 +380,7 @@ func (x *shipPlugin) commitBox(c *ui.Ctx, se core.SessionState, s shipRead, f *c
 			c.Row("by", ui.Style{W: ui.Flex(1), Main: ui.End}, func(c *ui.Ctx) { draftChip(c, s.CommitDraft) })
 		}
 		r := widget.Input(c, "message", &f.message, widget.InputOpts{Label: "Commit message", Placeholder: "The commit message (the agent drafts one when it's idle)",
-			Lines: 10, MinLines: 4, Help: "git/ship#commit"})
+			Lines: 10, MinLines: 4, Help: "git/ship#commit", Disabled: x.doing(se.ID, s.Project) != ""})
 		first := r.Changed && !f.edited
 		if r.Changed {
 			f.edited = true
@@ -455,6 +455,14 @@ func (x *shipPlugin) behind(c *ui.Ctx, se core.SessionState, s shipRead) {
 	}())
 }
 
+// pushLabel is Push, or Force push once a rebase has rewritten what origin has (gitx.Repo.Push leases it).
+func pushLabel(s shipRead) string {
+	if s.Replaced > 0 {
+		return "Force push"
+	}
+	return "Push"
+}
+
 func (x *shipPlugin) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 	th := c.Theme()
 	if len(s.Unpushed) == 0 {
@@ -467,8 +475,12 @@ func (x *shipPlugin) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 		return
 	}
 	shipCard(c, false, func(c *ui.Ctx) {
-		stepTitle(c, "Unpushed", counted(len(s.Unpushed), "commit"))
-		if s.Remote && widget.Button(c, "push", "Push", x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push"})) {
+		note := counted(len(s.Unpushed), "commit")
+		if s.Replaced > 0 {
+			note += " · rebased: replaces " + counted(s.Replaced, "commit") + " on origin"
+		}
+		stepTitle(c, "Unpushed", note)
+		if s.Remote && widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push"})) {
 			x.run("ship.push", registry.Args{"project": s.Project})
 		}
 	}, func(c *ui.Ctx) {
@@ -538,30 +550,17 @@ func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 			c.Text("t", fmt.Sprintf("%s%d · %s", w.Sigil, s.PR.Number, s.PR.Title),
 				ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		})
-		label, tone := "open", th.C(theme.OK)
-		switch {
-		case s.PR.Merged:
-			label, tone = "merged", th.C(theme.StatusPermission)
-		case s.PR.State == "closed":
-			label, tone = "closed", th.C(theme.FgFaint)
-		case s.PR.Draft:
-			label, tone = "draft", th.C(theme.FgMuted)
-		}
-		widget.Chip(c, "state", label, tone, "git/ship#pr")
+		prStateChip(c, s.PR)
 	}, func(c *ui.Ctx) {
 		x.checks(c, s)
 		x.reviewersLine(c, s, s.PR.Reviewers, s.Owners)
 		x.links(c, se, s)
 		c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-			if s.PR.Open() && s.PR.Draft && widget.Button(c, "ready", "Ready for review", x.stepOpts(se.ID, s.Project, "Marking ready", widget.ButtonOpts{Help: "git/ship#pr"})) {
-				x.run("ship.ready", registry.Args{"project": s.Project})
-			}
+			x.readyButton(c, se, s)
 			if s.PR.Open() && widget.Button(c, "edit", "Edit "+w.Short, widget.ButtonOpts{Help: "git/ship#raise"}) {
-				x.run("ship.pr.open", registry.Args{"project": s.Project})
+				x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": true})
 			}
-			if s.PR.Open() && s.Code.Merge != nil && widget.Button(c, "merge", "Merge…", x.stepOpts(se.ID, s.Project, "Merging", widget.ButtonOpts{Help: mergeHelp})) {
-				x.run("ship.merge", registry.Args{"project": s.Project})
-			}
+			x.mergeButton(c, se, s)
 			x.prActions(c, se, s)
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Button(c, "browse", "Open on "+s.Code.Label()+" ↗", widget.ButtonOpts{Help: "git/ship#pr"}) {
@@ -575,6 +574,35 @@ func (x *shipPlugin) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 		}
 		explainKept(c, x.sh, "ship.ci."+s.Project, "git/ship#checks")
 	})
+}
+
+// prStateChip is where a PR stands: open, draft, merged or closed.
+func prStateChip(c *ui.Ctx, pr *registry.PR) {
+	th := c.Theme()
+	label, tone := "open", th.C(theme.OK)
+	switch {
+	case pr.Merged:
+		label, tone = "merged", th.C(theme.StatusPermission)
+	case pr.State == "closed":
+		label, tone = "closed", th.C(theme.FgFaint)
+	case pr.Draft:
+		label, tone = "draft", th.C(theme.FgMuted)
+	}
+	widget.Chip(c, "state", label, tone, "git/ship#pr")
+}
+
+// readyButton is Ready for review, on a draft PR.
+func (x *shipPlugin) readyButton(c *ui.Ctx, se core.SessionState, s shipRead) {
+	if s.PR.Open() && s.PR.Draft && widget.Button(c, "ready", "Ready for review", x.stepOpts(se.ID, s.Project, "Marking ready", widget.ButtonOpts{Help: "git/ship#pr"})) {
+		x.run("ship.ready", registry.Args{"project": s.Project})
+	}
+}
+
+// mergeButton is Merge…, on an open PR whose code host merges.
+func (x *shipPlugin) mergeButton(c *ui.Ctx, se core.SessionState, s shipRead) {
+	if s.PR.Open() && s.Code != nil && s.Code.Merge != nil && widget.Button(c, "merge", "Merge…", x.stepOpts(se.ID, s.Project, "Merging", widget.ButtonOpts{Help: mergeHelp})) {
+		x.run("ship.merge", registry.Args{"project": s.Project})
+	}
 }
 
 // prActions are the buttons plugins add to a raised PR (registry.PRAction).
@@ -923,7 +951,7 @@ func (x *shipPlugin) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	c.Box("sp2", ui.Style{H: ui.Px(8)}, nil)
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 		if s.PR.Open() {
-			if widget.Button(c, "edit", "Edit "+w.Short, widget.ButtonOpts{Help: "git/ship#raise"}) {
+			if widget.Button(c, "open", "Open "+w.Short, widget.ButtonOpts{Help: "git/ship#pr"}) {
 				x.run("ship.pr.open", registry.Args{"project": p})
 			}
 			x.prActions(c, se, s)
@@ -944,7 +972,7 @@ func (x *shipPlugin) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	explainKept(c, x.sh, "ship.ci."+p, "git/ship#checks")
 	note := "opens the Raise " + w.Short + " tab →"
 	if s.PR.Open() {
-		note = "Edit " + w.Short + " opens as a main tab"
+		note = "Open " + w.Short + " opens as a main tab"
 	}
 	c.Text("note", note, monoFont(10, th.C(theme.FgGhost)))
 }

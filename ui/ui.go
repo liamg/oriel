@@ -503,6 +503,8 @@ func (u *UI) grow(e *elem, axis int) {
 		if axis == 0 {
 			squeeze(e, kids, inner)
 		}
+	} else if e.main(axis) {
+		stretch(e, kids, axis, inner)
 	}
 	if e.kind == kText && e.size[0] < e.run.Advance-slack {
 		e.run = u.sh.Shape(Elide(u.sh, e.text, e.ts.Font, e.size[0]), e.ts.Font)
@@ -564,6 +566,26 @@ func trim(soft []*elem, over float32) float32 {
 		took += cut
 	}
 	return took
+}
+
+// stretch hands what a scrolling box's view has left past its content to its grow children, by weight; none shrinks.
+func stretch(e *elem, kids []*elem, axis int, inner float32) {
+	left := inner - e.style.Gap*float32(max(len(kids)-1, 0))
+	var weight float32
+	for _, c := range kids {
+		left -= c.size[axis]
+		if s := c.sz(axis); s.Kind == Grow {
+			weight += max(s.Value, 0)
+		}
+	}
+	if left <= 0 || weight == 0 {
+		return
+	}
+	for _, c := range kids {
+		if s := c.sz(axis); s.Kind == Grow {
+			c.size[axis] = s.clamp(c.size[axis] + left*max(s.Value, 0)/weight)
+		}
+	}
 }
 
 // share splits what's left along the main axis between grow children by weight, honouring Min and Max.

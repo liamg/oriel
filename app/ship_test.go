@@ -206,11 +206,11 @@ func TestShipFlow(t *testing.T) {
 	s.click(centre(s.access("Raise PR…").Bounds))
 	s.until(t, "the Raise PR tab", func() bool { return strings.Contains(s.frameText(), "RAISE PR") })
 	if !slices.ContainsFunc(s.visibleRefs(), func(v layout.ViewRef) bool {
-		return v.ID == PRView && v.Instance == "search-api" && v.Title == "Raise PR · search-api"
+		return v.ID == PRView && v.Instance == "search-api"
 	}) {
 		t.Errorf("the tab: %+v", s.visibleRefs())
 	}
-	s.wantFrame(t, "TITLE", "BODY", "DRAFTED BY FAKE", "TEMPLATE FILLED", "REVIEWERS", "platform-team", "jkowalski", "CODEOWNERS",
+	s.wantFrame(t, "Raise PR · search-api", "TITLE", "BODY", "DRAFTED BY FAKE", "TEMPLATE FILLED", "REVIEWERS", "platform-team", "jkowalski", "CODEOWNERS",
 		"CROSS-LINKED PRS", "pairs with web-dashboard", "BEFORE THIS SHIPS")
 	if v := s.access("Title").Value; v != "feat(search): back off on 429 using Retry-After" {
 		t.Errorf("the title field has %q", v)
@@ -272,7 +272,7 @@ func TestShipFlow(t *testing.T) {
 	s.run("project.open", registry.Args{"project": "web-dashboard"})
 	s.run("project.panel", registry.Args{"name": "pull-request"})
 	s.frame()
-	s.wantFrame(t, "feat(web): show the wait", "Committed", "Up to date with main", "Pushed", "PR open", "Checks", "1 of 3 failing", "Edit PR")
+	s.wantFrame(t, "feat(web): show the wait", "Committed", "Up to date with main", "Pushed", "PR open", "Checks", "1 of 3 failing", "Open PR")
 	s.lint("the Pull request panel")
 
 	// Fix CI with agent writes a request with the failing line attached.
@@ -310,7 +310,7 @@ func TestShipRaiseHookStopsARaise(t *testing.T) {
 		t.Errorf("raised from the first commit and the template: %+v", got)
 	}
 	// Edit PR once it's raised.
-	s.run("ship.pr.open", registry.Args{"project": "search-api"})
+	s.run("ship.pr.open", registry.Args{"project": "search-api", "edit": true})
 	s.until(t, "Edit PR", func() bool { return strings.Contains(s.frameText(), "EDIT PR #") })
 }
 

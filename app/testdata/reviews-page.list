@@ -38,8 +38,8 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
-  rect -0.5,391 2x18 fill #ffd23f radius 1
-  rect 5.5,384 32x32 fill #1f1c0f radius 7
+  rect -0.5,778 2x18 fill #ffd23f radius 1
+  rect 5.5,771 32x32 fill #1f1c0f radius 7
   path 6 segments stroke 1.4545455 #ffd23f
   path 6 segments stroke 1.4545455 #ffd23f
   path 6 segments stroke 1.4545455 #ffd23f
@@ -58,9 +58,9 @@ clip 0,38 43x936 r 0
   path 3 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
-  effect glow 18.9,533.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  effect glow 18.9,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 22.8,533.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  effect glow 22.8,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
@@ -183,8 +183,8 @@ text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
 text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
 text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
-rect 22.09375,387 13.40625x13.5 fill #b98aff radius 6.75
-text "3" @26.09375,396.81003 #141006 JetBrains Mono 8.5
+rect 22.09375,774 13.40625x13.5 fill #b98aff radius 6.75
+text "3" @26.09375,783.81 #141006 JetBrains Mono 8.5
 rect 44,38 1556x936 fill #060606
 clip 44,38 1556x936 r 0
   rect 44,38 1556x42 fill #0c0c0b

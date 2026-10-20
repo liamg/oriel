@@ -139,6 +139,51 @@ func TestRebaseCarriesWorkOver(t *testing.T) {
 	}
 }
 
+// A rebase replaces what origin's branch has; Push then replaces it too, with a lease: only while origin still has
+// what the branch was rebased from, so a push from elsewhere since is never lost.
+func TestPushAfterRebase(t *testing.T) {
+	ctx := context.Background()
+	work, upstream := flightFixture(t)
+	r := gitx.Repo{Dir: work.Dir}
+	work.Write(map[string]string{"a.go": "package a\n"})
+	work.Commit("You", "feat: a")
+	if err := r.Push(ctx, "feature"); err != nil {
+		t.Fatal(err)
+	}
+	upstream.Write(map[string]string{"README": "hello\n"})
+	upstream.Commit("Other", "docs")
+	upstream.Git("push", "-q", "origin", "main")
+	r.Fetch(ctx)
+	if err := r.Rebase(ctx, "origin/main"); err != nil {
+		t.Fatal(err)
+	}
+	f, _ := r.Flight(ctx, "main")
+	if f.Replaced != 1 || len(f.Unpushed) != 2 {
+		t.Fatalf("after the rebase: replaced %d, unpushed %d; want 1 and 2 (the rebased commit and main's)", f.Replaced, len(f.Unpushed))
+	}
+	if err := r.Push(ctx, "feature"); err != nil {
+		t.Fatalf("pushing the rebased branch: %v", err)
+	}
+	if f, _ = r.Flight(ctx, "main"); f.Replaced != 0 || len(f.Unpushed) != 0 {
+		t.Fatalf("after the push: replaced %d, unpushed %d", f.Replaced, len(f.Unpushed))
+	}
+
+	// Someone else pushes to the branch, and a fetch brings it in unseen: the branch, rewritten again, isn't pushed over it.
+	upstream.Git("fetch", "-q", "origin")
+	upstream.Git("checkout", "-q", "-b", "feature", "origin/feature")
+	upstream.Write(map[string]string{"theirs.go": "package theirs\n"})
+	upstream.Commit("Other", "feat: theirs")
+	upstream.Git("push", "-q", "origin", "feature")
+	work.Git("commit", "-q", "--amend", "-m", "feat: a, amended")
+	r.Fetch(ctx)
+	if err := r.Push(ctx, "feature"); err == nil {
+		t.Fatal("pushed over a commit the branch never had")
+	}
+	if got := strings.TrimSpace(upstream.Git("log", "-1", "--format=%s", "origin/feature")); got != "feat: theirs" {
+		t.Fatalf("origin's branch is %q", got)
+	}
+}
+
 func itoa(n int) string { return strconv.Itoa(n) }
 
 // AI-10: a draft is stale once the code moved on. The fingerprint follows the work tree's code, untracked files

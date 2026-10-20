@@ -304,7 +304,7 @@ flowchart TB
   project, title, body, draft, reviewers, edit, all}` before a raise or edit (a veto shows on the Raise PR tab; a rewrite can change
   the body, as a passed verify quiz's reviewer notes; `all` is one of `ship.raise-all`'s). Commands: `ship.open`, `ship.refresh`, `ship.commit {project, message, files, force}`,
   `ship.commit-all`, `ship.sync {project}`, `ship.sync-all`, `ship.push {project}`, `ship.raise {project, title,
-  body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.rename {project, name}`, `ship.pr.open`, `ship.fix-ci`, `ship.redraft {project,
+  body, draft, reviewers}`, `ship.raise-all`, `ship.ready`, `ship.rename {project, name}`, `ship.pr.open {project, edit}`, `ship.copy-link {project}`, `ship.fix-ci`, `ship.redraft {project,
   kind}`, `ship.draft.save`, `ship.github`; views `ship`, `pull-request`, `git`, `pr` (instance = project). The host answers
   `ShipRead` (`host.ShipReq` → `[]host.Ship`: files, behind and predicted conflicts, unpushed commits, the PR,
   checks and a failing job's log line, the drafts and who wrote them, the PR template, CODEOWNERS), `ShipCommit`,
@@ -932,7 +932,7 @@ type Host interface {
 ## As built (PL-9)
 
 - **PR actions** (`registry.PRAction{Name, Order, Label(PullRequest) string, Help, Command, Args}`, kind
-  `ship.pr.action`): buttons on a raised PR, after Edit PR on the Ship page's PR step and on the Pull request panel.
+  `ship.pr.action`): buttons on a raised PR: on the Ship page's PR step, the PR tab's overview and the Pull request panel.
   `Label` names it for the PR, "" leaving it off (a closed PR's); a click runs `Command` with `Args` and the PR's
   fields (`registry.PullRequest{Session, Project, Repo, Number, Title, URL, State, Draft, Merged}`, `Args()`).
   `registry.PRActions(r, pr)` lists them by Order. Lua: `oriel.ship.action`.

@@ -14,8 +14,29 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// prTab is Raise PR (or Edit PR once it's raised) for a project, a main tab in 18's style (42's panel 6): the title,
-// the body from the agent's draft or the template, reviewers, cross-linked PRs; at the right the gates and the ticket.
+// prView is the pr view, a main tab per project; its tab names the PR it shows.
+type prView struct{ x *shipPlugin }
+
+func (v prView) Build(vc registry.ViewCtx) ui.Node {
+	return &ui.Func{Key: "pr", Fn: func(c *ui.Ctx) { v.x.prTab(c, vc.Instance) }}
+}
+
+// Title is "Raise PR · api" until the PR is raised, then "PR #790 · api".
+func (v prView) Title(project string) string {
+	se, p, ok := v.x.here(project)
+	if !ok {
+		return ""
+	}
+	s, _ := v.x.ship(se.ID, p)
+	w := s.words()
+	if s.PR == nil {
+		return "Raise " + w.Short + " · " + p
+	}
+	return fmt.Sprintf("%s %s%d · %s", w.Short, w.Sigil, s.PR.Number, p)
+}
+
+// prTab is a project's PR in 18's style (42's panel 6): Raise PR's form until it's raised, then the PR's overview, with
+// Edit PR's form on asking; at the right the gates and the ticket.
 func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 	th := c.Theme()
 	se, p, ok := x.here(project)
@@ -31,16 +52,45 @@ func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 	})
 }
 
+// editPR puts a project's raised PR's tab on its form, or back on its overview, dropping what was typed.
+func (x *shipPlugin) editPR(id core.SessionID, project string, edit bool) {
+	k := formKey(id, project)
+	f := x.prs[k]
+	if f == nil {
+		f = &prForm{}
+		x.prs[k] = f
+	}
+	if f.editing == edit {
+		return
+	}
+	f.editing, f.edited, f.save, f.veto, f.tab = edit, false, autosave{}, "", 0
+}
+
 // prTabBody is the tab once the project's been read.
 func (x *shipPlugin) prTabBody(c *ui.Ctx, se core.SessionState, p string) {
 	th := c.Theme()
 	s, _ := x.ship(se.ID, p)
 	f := x.prForm(se.ID, s)
-	x.prHeader(c, se, s, f)
+	overview := s.PR != nil && !f.editing
+	if overview {
+		x.overviewHeader(c, se, s)
+	} else {
+		x.prHeader(c, se, s, f)
+	}
 	c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-		c.Column("form", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 8}, func(c *ui.Ctx) {
-			x.prFields(c, se, s, f)
-		})
+		if overview {
+			width := float32(640)
+			if r, ok := c.Rect(c.Next("overview")); ok {
+				width = max(r.Dx()-36, 240)
+			}
+			c.Column("overview", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12}, func(c *ui.Ctx) {
+				x.overview(c, se, s, width)
+			})
+		} else {
+			c.Column("form", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 8}, func(c *ui.Ctx) {
+				x.prFields(c, se, s, f)
+			})
+		}
 		c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
 		c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(tShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 			x.gatesList(c, se)
@@ -63,22 +113,21 @@ func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *pr
 			Color: th.C(theme.Fg)})
 		c.Box("sq", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: tokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
 		c.Text("p", s.Project, mono(12, typeset.SemiBold, th.C(theme.Fg)))
-		add, del := 0, 0
-		for _, fl := range s.Files {
-			add, del = add+fl.Add, del+fl.Del
-		}
 		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmpOr(s.Base, "?"), counted(s.Commits, "commit")), monoFont(11, th.C(theme.FgFaint)))
 		})
 		step := func(step string, o widget.ButtonOpts) widget.ButtonOpts { return x.stepOpts(se.ID, s.Project, step, o) }
-		if widget.Button(c, "save", "Save draft", step("Saving", widget.ButtonOpts{Help: "git/ship#raise"})) {
-			x.run("ship.draft.save", registry.Args{"project": s.Project})
+		if s.PR != nil && widget.Button(c, "cancel", "Cancel", step("", widget.ButtonOpts{Ghost: true, Help: "git/ship#raise"})) {
+			x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": false})
 		}
 		if edit {
 			if widget.Button(c, "update", "Update "+w.Short, step("Updating", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"})) {
 				x.run("ship.raise", registry.Args{"project": s.Project})
 			}
 			return
+		}
+		if widget.Button(c, "save", "Save draft", step("Saving", widget.ButtonOpts{Help: "git/ship#raise"})) {
+			x.run("ship.draft.save", registry.Args{"project": s.Project})
 		}
 		if widget.Button(c, "draft", "Raise as draft", step("Raising", widget.ButtonOpts{Help: "git/ship#raise"})) {
 			x.run("ship.raise", registry.Args{"project": s.Project, "draft": true})
@@ -88,6 +137,156 @@ func (x *shipPlugin) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *pr
 		}
 	})
 	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+}
+
+// overviewHeader is a raised PR's header: its number, project, state and branch, and what can be done with it.
+func (x *shipPlugin) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
+	th := c.Theme()
+	w := s.words()
+	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(tShipHead)}, func(c *ui.Ctx) {
+		c.Text("h", fmt.Sprintf("%s %s%d", strings.ToUpper(w.Short), w.Sigil, s.PR.Number),
+			ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
+		c.Box("sq", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: tokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
+		c.Text("p", s.Project, mono(12, typeset.SemiBold, th.C(theme.Fg)))
+		prStateChip(c, s.PR)
+		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmpOr(s.Base, "?"), counted(s.Commits, "commit")), monoFont(11, th.C(theme.FgFaint)))
+		})
+		x.readyButton(c, se, s)
+		x.mergeButton(c, se, s)
+		x.prActions(c, se, s)
+		switch {
+		case s.PR.Open():
+			if widget.Button(c, "edit", "Edit "+w.Short, x.stepOpts(se.ID, s.Project, "Updating", widget.ButtonOpts{Primary: true, Help: "git/ship#raise"})) {
+				x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": true})
+			}
+		case !s.PR.Merged:
+			if widget.Button(c, "again", "Raise a new "+w.Short+"…", widget.ButtonOpts{Help: "git/ship#raise"}) {
+				x.run("ship.pr.open", registry.Args{"project": s.Project, "edit": true})
+			}
+		}
+	})
+	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+}
+
+// overview is a raised PR as its code host has it: the title, its link, reviewers and links to the session's other PRs,
+// then its checks, its description and its review threads.
+func (x *shipPlugin) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float32) {
+	th := c.Theme()
+	if e := x.failed(se.ID, s.Project); e != "" {
+		widget.Wrap(c, "failed", e, width, monoFont(11, th.C(theme.Error)))
+	}
+	if s.HostError != "" {
+		widget.Wrap(c, "gherr", s.HostError, width, monoFont(11, th.C(theme.Error)))
+	}
+	widget.Wrap(c, "title", s.PR.Title, width, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 18, Weight: typeset.SemiBold},
+		Color: th.C(theme.Fg)})
+	if s.PR.URL != "" {
+		c.Row("link", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
+			if widget.Link(c, "url", s.PR.URL, "git/ship#pr") {
+				x.run("ship.browse", registry.Args{"project": s.Project})
+			}
+			if widget.Button(c, "copy", "Copy link", widget.ButtonOpts{Ghost: true, Help: "git/ship#pr"}) {
+				x.run("ship.copy-link", registry.Args{"project": s.Project})
+			}
+		})
+	}
+	x.reviewersLine(c, s, s.PR.Reviewers, s.Owners)
+	x.links(c, se, s)
+	section := func(key string, body func(c *ui.Ctx)) {
+		c.Column(key, ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(14, 12), Gap: 8}, body)
+	}
+	inner := width - 30
+	section("checks", func(c *ui.Ctx) {
+		x.checks(c, s)
+		if t, ok := ciTrouble(s); ok && s.PR.Open() {
+			c.Row("ci", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
+				askTwinsLabelled(c, x.h, "ship.ci."+s.Project, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+			})
+		}
+		explainKept(c, x.sh, "ship.ci."+s.Project, "git/ship#checks")
+	})
+	section("description", func(c *ui.Ctx) {
+		shipCap(c, "DESCRIPTION")
+		if strings.TrimSpace(s.PR.Body) == "" {
+			c.Text("none", "No description.", uiFont(12, th.C(theme.FgFaint)))
+			return
+		}
+		markdownText(c, "md", s.PR.Body, inner, uiFont(12.5, th.C(theme.FgMuted)))
+	})
+	section("review", func(c *ui.Ctx) { x.reviewThreads(c, se, s, inner) })
+}
+
+// prThreads are the session's threads mirrored from a project's PR: its review threads and its conversation.
+func prThreads(se core.SessionState, s shipRead) []core.Thread {
+	if s.PR == nil || s.Code == nil {
+		return nil
+	}
+	var out []core.Thread
+	for _, t := range se.Threads {
+		if g := t.Hosted; g != nil && g.Project == s.Project && g.PR == s.PR.Number && cmpOr(g.Host, "github") == s.Code.Name {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// reviewThreads is the PR's review, as mirrored into the session: each thread's place, reviewer and where they stand,
+// and its comments.
+func (x *shipPlugin) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width float32) {
+	th := c.Theme()
+	ts := prThreads(se, s)
+	if len(ts) == 0 {
+		shipCap(c, "REVIEW · NONE YET")
+		c.Text("none", "No review comments yet.", uiFont(12, th.C(theme.FgFaint)))
+		return
+	}
+	shipCap(c, "REVIEW · "+strings.ToUpper(counted(len(ts), "thread")))
+	for _, t := range ts {
+		place := "conversation"
+		if a := t.Anchor; a != nil {
+			place = fmt.Sprintf("%s:%d", a.File, a.Line)
+		}
+		c.Column(string(t.ID), ui.Style{W: ui.Flex(1), Gap: 6, Pad: ui.Insets{T: 8}, Role: ui.RoleGroup, Label: "Thread " + place}, func(c *ui.Ctx) {
+			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Row("place", ui.Style{Clip: true}, func(c *ui.Ctx) { c.Text("p", place, monoFont(11, th.C(theme.FgMuted))) })
+				if r := t.Hosted.Reviewer; r != "" {
+					widget.Chip(c, "who", "@"+r, th.C(tGitHub), "git/github#threads")
+				}
+				if word, tok := githubReviewWord(t.Hosted.State); word != "" {
+					widget.Chip(c, "state", word, th.C(tok), "git/github#threads")
+				}
+				if !t.Open() {
+					widget.Chip(c, "status", string(t.Status), th.C(theme.StatusQuiet), "git/github#threads")
+				}
+				if t.Hosted.Outdated {
+					widget.Chip(c, "outdated", "outdated", th.C(theme.FgFaint), "git/github#threads")
+				}
+				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+				if widget.Button(c, "open", "Open", widget.ButtonOpts{Ghost: true, Help: "git/github#threads"}) {
+					x.run("request.open", registry.Args{"thread": string(t.ID)})
+				}
+			})
+			for _, cm := range t.Comments {
+				if cm.Draft {
+					continue
+				}
+				c.Column(cm.ID, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
+					c.Row("by", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+						c.Text("n", cmpOr(cm.Name, string(cm.Author)), mono(11, typeset.SemiBold, th.C(theme.Fg)))
+						if !cm.Time.IsZero() {
+							c.Text("at", ago(c.Now(), cm.Time), monoFont(10, th.C(theme.FgFaint)))
+						}
+					})
+					markdownTextIn(c, "body", cm.Body, width, uiFont(12.5, th.C(theme.FgMuted)), threadMarkdown(se, t))
+				})
+			}
+			if n := len(t.Drafts()); n > 0 {
+				c.Text("drafts", fmt.Sprintf("%d %s to forward", n, plural(n, "draft reply", "draft replies")), monoFont(10.5, th.C(tGitHub)))
+			}
+		})
+	}
 }
 
 // prFields is the tab's form: title, body (write or preview), reviewers and cross-linked PRs.

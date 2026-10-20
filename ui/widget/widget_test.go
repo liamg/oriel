@@ -523,6 +523,26 @@ func TestIconButtonInARow(t *testing.T) {
 	}
 }
 
+// A disabled icon button takes no clicks and says it's off to assistive technology.
+func TestIconButtonDisabled(t *testing.T) {
+	var btn ui.ID
+	clicks := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		btn = c.Next("x")
+		if IconButton(c, "x", "↺", IconButtonOpts{Label: "Discard", Help: "test/row", Disabled: true}) {
+			clicks++
+		}
+	})
+	r := h.rect(btn)
+	h.click(r.Min.X+5, r.Min.Y+5)
+	if clicks != 0 {
+		t.Errorf("a disabled icon button took %d clicks", clicks)
+	}
+	if n := h.access(btn); n == nil || !n.Disabled {
+		t.Error("the button isn't disabled to assistive technology")
+	}
+}
+
 // texts are the runs of text the last frame drew, in order.
 func (h *harness) texts() []string {
 	var out []string

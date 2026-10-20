@@ -39,7 +39,7 @@ type RailEntry struct {
 const (
 	ScopeProjectEntry = "project"
 	ScopeSessionEntry = "session"
-	ScopeGlobalEntry  = "global" // pages of every session's, below a second divider: Stats, Usage, Settings
+	ScopeGlobalEntry  = "global" // pages of every session's, at the sidebar's foot: Stats, Usage, Settings
 )
 
 // ArgsFor is the args the entry runs its command with for project: a project entry's name it, unless project is ""

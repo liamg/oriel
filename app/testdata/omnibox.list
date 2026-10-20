@@ -58,9 +58,9 @@ clip 0,38 43x936 r 0
   path 3 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
-  effect glow 18.9,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 18.9,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
-  effect glow 22.8,465.9 1.2999992x3.600006 blur 2 #ff8a1f73
+  effect glow 22.8,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
   path 5 segments fill #ff8a1f
   path 2 segments stroke 0.8 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
@@ -192,7 +192,7 @@ clip 250,92 1100x660 r 10
     text "job" @419.32812,272.78 #7c7566 JetBrains Mono 10.5
     text "off" @913,272.6 #4f4a40 JetBrains Mono 10
     text "COMMANDS" @268,301.42 #7c7566 JetBrains Mono 9.5
-    text "4 of 155" @883,301.42 #7c7566 JetBrains Mono 9.5
+    text "4 of 157" @883,301.42 #7c7566 JetBrains Mono 9.5
     text "›" @275.6953,331.36523 #7c7566 Inter 12
     text "Run job: " @296,331.729 #ece6d8 Inter 13
     text "pri" @349.70312,331.729 #ffd23f Inter 13
