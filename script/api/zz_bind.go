@@ -549,6 +549,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return []any{x.DatePicker(c.Table(0))}, nil
 			},
+			"dots": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Dots(c.Table(0))}, nil
+			},
 			"indicator": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err

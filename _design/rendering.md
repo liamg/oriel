@@ -125,6 +125,9 @@ flowchart TB
     slides with no known end (a still, striped bar with reduced motion). `widget.Skeleton` is placeholder rows or
     blocks in the shape of what's coming, pulsing gently, still with reduced motion. `ButtonOpts.Busy` puts a spinner
     in place of the key cap, swaps in `BusyLabel`, disables the button and keeps its width.
+  - `widget.Dots` says someone is at work with no known end (an agent's turn): three dots with a wave of brightness
+    crossing them in twelve ticks a cycle, a frame a tick, still with reduced motion; read out as a status. Token
+    `dots.fg` (`status.working`).
   - `widget.Async` draws a section by its load's state and a policy (ui.md, "Loading"): nothing for the first
     150 ms (`Delay`), then the loading view, which stays at least 300 ms (`MinShow`) so a load just past the delay
     doesn't flash; a failure is a warning-coloured line with **Retry**; `Empty` only once Ready; a reload keeps the

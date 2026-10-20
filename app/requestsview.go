@@ -257,6 +257,9 @@ func (x *requests) requestView(c *ui.Ctx, vc registry.ViewCtx) {
 							block(cm.ID)
 							x.comment(c, se, t, cm, width)
 						}
+						if t.Busy {
+							workingLine(c, "working", se, ui.Px(width))
+						}
 						startingCard(c, "starting", se, width)
 					})
 					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)

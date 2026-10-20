@@ -915,7 +915,9 @@ Removed (the user's decision): there is no tour kind, reader or export.
   long session costs what its screenful does), with the busy thread's anchor and your comment pinned above it: prose as
   markdown, prompts (long ones folded), thinking dimmed and folded, tool calls with a status dot, title and summary
   (lines, hits, duration), edits as mini-diffs with "view in diff" (`diff.open`, else the file), shell output folded,
-  errors red, the SUBAGENTS box, and asks' cards where they arose. Keys in mode `agent`: `j`/`k` between blocks, `⏎`
+  errors red, the SUBAGENTS box, and asks' cards where they arose; while a turn runs, a working line last
+  (`widget.Dots`, who's working and for how long since `TurnStarted`), also under the busy thread's last comment in the
+  Request view and its inline card. Keys in mode `agent`: `j`/`k` between blocks, `⏎`
   folds, `i` the composer, `y`/`a`/`n`/`⇧n` answer the selected or first ask, `Esc` interrupts (closes when idle).
   Composer (mode `composer`): `⏎` sends with `agent.send` (queued as QUEUED while the agent works), `⌘⏎` sends now
   (urgent). Under it, the model and effort menus (the launcher's `modelSelects`) switch the agent with
@@ -945,7 +947,8 @@ Crit's per-session Settings page, grown: where the session in front's agent work
 it may do. A full page (`workspace.open {tab}`, `app/workspace.go`), from **Workspace** in the sidebar's session
 entries (while there's a session host). Tabs:
 
-- **Overview.** The session and its kind, the workspace root; the sandbox's backend, container (running or stopped)
+- **Overview.** The session's name with **Rename…** (edits it in place, `session.rename {id, name}`: the id and branches
+  stay), its id and kind, the workspace root; the sandbox's backend, container (running or stopped)
   and image with where it comes from; then every directory the session uses, each with where the agent finds it
   when that's elsewhere ("in the sandbox: /tmp/claude-501"), a note, **Browse** (into Files) and **Copy**: each
   project's checkout (branch, and the checkout it's a worktree of), the session's state, the scratchpad, the

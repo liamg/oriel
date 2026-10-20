@@ -1123,10 +1123,12 @@ func (x *agentConsole) forkCard(c *ui.Ctx, k string, f forkAnswer, width float32
 	})
 }
 
-// composer is where you write to the agent: queued messages over it, the input, and its chips and keys.
+// composer is where you write to the agent: the working line and queued messages over it, the input, and its chips
+// and keys.
 func (x *agentConsole) composer(c *ui.Ctx, se core.SessionState, st *consoleState) {
 	th := c.Theme()
 	c.Column("composer", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(24, 10), Gap: 8, Help: "agent/console#composer"}, func(c *ui.Ctx) {
+		workingLine(c, "working", se, ui.Flex(1))
 		for i, q := range se.Agent.Queue {
 			c.Row(fmt.Sprint("q", i), ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				widget.Chip(c, "chip", "queued", th.C(tQueued), "agent/console#composer")

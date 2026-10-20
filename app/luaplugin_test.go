@@ -282,6 +282,17 @@ func TestLuaSpinner(t *testing.T) {
 	}
 }
 
+// oriel.ui.dots draws widget.Dots, read out as what's going on.
+func TestLuaDots(t *testing.T) {
+	s := luaScene(t, `oriel.hud.indicator("busy", { slot = "statusline.right" },
+  oriel.ui.dots{ name = "the wiki bot is writing", size = 4, color = "accent" })`)
+	s.frame()
+	s.frame()
+	if n := s.access("the wiki bot is writing"); n.Role != "status" {
+		t.Errorf("the dots read as %+v", n)
+	}
+}
+
 // oriel.load and oriel.ui.async: the section shows its busy line while the work runs, then what body draws from the
 // value done handed back; a failure shows Retry, which runs the work again.
 func TestLuaLoadAsync(t *testing.T) {

@@ -257,6 +257,7 @@ func (l LedgerAPI) Unread(project string) int { return l.s.Ledger(project).Unrea
 - `oriel.exec(argv, { on_done = fn(output, err) })` runs the program in the background and returns nothing.
 - `oriel.ui.ring{ value, label, color, size, name, id }` is a dial (`widget.Ring`); `oriel.ui.text(s, "title")` is a
   heading. `oriel.ui.spinner{ name, color, size, id }` says something is in progress (`widget.Spinner`).
+  `oriel.ui.dots{ name, color, size, id }` says someone is at work (`widget.Dots`).
 
 ## As built (FW-14)
 
