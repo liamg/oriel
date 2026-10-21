@@ -80,7 +80,7 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	name := w.freshName(spec)
 	id := core.SessionID(name)
 	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Prompt: spec.Prompt, Ticket: spec.Ticket,
-		PR: spec.PR, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
+		PR: spec.PR, PRRef: spec.PRRef, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
 		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit, CommitGate: k.Gate,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: gate(spec),
 			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network, Backend: spec.Sandbox.Backend}}
@@ -113,7 +113,13 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 			w.log.Warn("AI review", "session", id, "err", err)
 		}
 	}
-	if p, body := strings.TrimSpace(spec.Prompt), firstRequest(spec); body != "" {
+	p, body := strings.TrimSpace(spec.Prompt), firstRequest(spec)
+	if k.From == FromPR && p == "" {
+		// The review is the agent's request, so it's one the user sees in Requests.
+		p = "Review " + cmp.Or(spec.Title, "the pull request")
+		body = strings.TrimSpace(fmt.Sprintf("%s: %s\n\n%s", p, spec.PR, body))
+	}
+	if body != "" {
 		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(cmp.Or(p, body)), Body: body}); err != nil {
 			return id, err
 		}
@@ -264,19 +270,103 @@ func remotePath(remote string) string {
 
 // addPRProject fetches the PR's head (spec.PRRef, else GitHub's pull/N/head) and pins a worktree there.
 func (w *Host) addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, spec core.SessionSpec) (ManifestEntry, error) {
-	from, ref := strings.TrimSpace(spec.PRRef), "refs/oriel/pr/"+filepath.Base(root)
-	if from == "" {
-		_, n, err := gh.ParsePR(spec.PR)
-		if err != nil {
-			return ManifestEntry{}, err
+	from, ref, err := prRefs(spec.PR, spec.PRRef, root)
+	if err != nil {
+		return ManifestEntry{}, err
+	}
+	if err := fetchPR(ctx, r.Path, from, ref); err != nil {
+		return ManifestEntry{}, err
+	}
+	p, err := addProject(ctx, root, m, r.Path, "", ref, true)
+	if err != nil || spec.PRBase == "" {
+		return p, err
+	}
+	base := spec.PRBase
+	if _, err := (gitx.Repo{Dir: r.Path}).Run(ctx, "fetch", "--quiet", "origin", "+refs/heads/"+base+":refs/remotes/origin/"+base); err != nil {
+		return p, nil // Changed compares with the default branch
+	}
+	return p, gitx.Repo{Dir: filepath.Join(root, p.Dir)}.SetBase(ctx, "origin/"+base)
+}
+
+// prRefs are where a review's PR is fetched from (from, else GitHub's pull/N/head) and the ref it's kept at.
+func prRefs(url, from, root string) (string, string, error) {
+	if from = strings.TrimSpace(from); from != "" {
+		return from, "refs/oriel/pr/" + filepath.Base(root), nil
+	}
+	_, n, err := gh.ParsePR(url)
+	if err != nil {
+		return "", "", err
+	}
+	return fmt.Sprintf("pull/%d/head", n), fmt.Sprintf("refs/oriel/pr/%d", n), nil
+}
+
+func fetchPR(ctx context.Context, repo, from, ref string) error {
+	if _, err := (gitx.Repo{Dir: repo}).Run(ctx, "fetch", "--quiet", "origin", "+"+from+":"+ref); err != nil {
+		return fmt.Errorf("fetching %s: %w", from, err)
+	}
+	return nil
+}
+
+// PRMove is a review's project moved on to its pull request's new head: Commits on from From to To, one for a
+// force-push that rewrote it.
+type PRMove struct {
+	From    string `json:"from"`
+	To      string `json:"to"`
+	Commits int    `json:"commits"`
+}
+
+// UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
+// the projects that moved.
+func (w *Host) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]PRMove, err error) {
+	defer w.recover("UpdatePR", &err)
+	se, err := w.session(id)
+	if err != nil {
+		return nil, err
+	}
+	if se.PR == "" {
+		return nil, fmt.Errorf("session %s isn't reviewing a pull request", id)
+	}
+	from, ref, err := prRefs(se.PR, se.PRRef, se.Dir)
+	if err != nil {
+		return nil, err
+	}
+	moved := map[string]PRMove{}
+	projects := slices.Clone(se.Projects)
+	for i, p := range projects {
+		if !p.Detached || p.Repo == "" || p.Base != ref {
+			continue
 		}
-		from, ref = fmt.Sprintf("pull/%d/head", n), fmt.Sprintf("refs/oriel/pr/%d", n)
+		if err := fetchPR(ctx, p.Repo, from, ref); err != nil {
+			return nil, fmt.Errorf("%s: %w", p.Name, err)
+		}
+		g := gitx.Repo{Dir: p.Dir}
+		head, err := g.Run(ctx, "rev-parse", ref)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", p.Name, err)
+		}
+		head = strings.TrimSpace(head)
+		if head == p.Commit {
+			continue
+		}
+		n := 1
+		if out, err := g.Run(ctx, "rev-list", "--count", p.Commit+".."+head); err == nil {
+			if c, _ := strconv.Atoi(strings.TrimSpace(out)); c > 0 {
+				n = c
+			}
+		}
+		if _, err := g.Run(ctx, "checkout", "--quiet", "--detach", head); err != nil {
+			return nil, fmt.Errorf("%s: %w", p.Name, err)
+		}
+		projects[i].Commit, moved[p.Name] = head, PRMove{From: p.Commit, To: head, Commits: n}
 	}
-	g := gitx.Repo{Dir: r.Path}
-	if _, err := g.Run(ctx, "fetch", "--quiet", "origin", "+"+from+":"+ref); err != nil {
-		return ManifestEntry{}, fmt.Errorf("fetching %s: %w", from, err)
+	if len(moved) == 0 {
+		return moved, nil
 	}
-	return addProject(ctx, root, m, r.Path, "", ref, true)
+	if err := w.emit(core.ProjectsChanged{ID: se.ID, Branch: se.Branch, Projects: projects, Past: se.Past, Started: se.Started}); err != nil {
+		return nil, err
+	}
+	w.saveProjects(se.ID)
+	return moved, nil
 }
 
 // startNewRepo makes a repo from a template, registers it, and carries on as a plan for it.
@@ -806,7 +896,7 @@ func (w *Host) saveProjects(id core.SessionID) {
 	for i, e := range m.Projects {
 		for _, p := range se.Projects {
 			if p.Name == e.Name {
-				m.Projects[i].Branch, m.Projects[i].Base = p.Branch, p.Base
+				m.Projects[i].Branch, m.Projects[i].Base, m.Projects[i].Commit = p.Branch, p.Base, p.Commit
 			}
 		}
 		m.Projects[i].Past = nil

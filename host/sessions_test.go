@@ -170,6 +170,88 @@ func TestReviewChecksOutThePRHead(t *testing.T) {
 	if !p.ReadOnly || !p.Detached || p.Commit != head || se.PR == "" {
 		t.Fatalf("review project = %+v, want detached at %s", p, head)
 	}
+	if len(se.Threads) != 1 || se.Threads[0].Title != "Review the pull request" || !strings.Contains(se.Threads[0].Comments[0].Body, se.PR) {
+		t.Errorf("the review isn't a request: %+v", se.Threads)
+	}
+	named := r.start(core.SessionSpec{Kind: core.KindReview, PR: se.PR, Title: "pricing#7", Context: "Its base is main.",
+		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
+	if th := r.session(named).Threads; len(th) != 1 || th[0].Title != "Review pricing#7" || th[0].Comments[0].Body != "Review pricing#7: "+se.PR+"\n\nIts base is main." {
+		t.Errorf("a named review's request: %+v", th)
+	}
+}
+
+// A review's Changed compares with the branch its PR merges into, not origin's default: only the PR's own files.
+// ref: oracle git
+func TestReviewComparesWithThePRBase(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	origin := r.repo
+	origin.Git("checkout", "-q", "-b", "release")
+	origin.Write(map[string]string{"release.go": "package pricing\n"})
+	origin.Commit("Ada", "on release")
+	origin.Git("checkout", "-q", "-b", "feature")
+	origin.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() { /* pr */ }\n"})
+	origin.Commit("Bob", "the PR")
+	origin.Git("update-ref", "refs/pull/7/head", strings.TrimSpace(origin.Git("rev-parse", "HEAD")))
+	origin.Git("checkout", "-q", "main")
+	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
+	clone.Git("clone", "-q", origin.Dir, ".")
+	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
+		t.Fatal(err)
+	}
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRBase: "release",
+		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
+	st, err := gitx.Repo{Dir: r.session(id).Projects[0].Dir}.Status(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, f := range st.Files(gitx.Changed) {
+		got = append(got, f.Path)
+	}
+	if st.Base != "origin/release" || strings.Join(got, " ") != "round.go" {
+		t.Errorf("Changed is %v against %q, want [round.go] against origin/release", got, st.Base)
+	}
+}
+
+// A review fetches its PR again on asking: the pinned worktree moves to the head the author has pushed since.
+func TestReviewUpdatesToTheNewHead(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	origin := r.repo
+	origin.Git("checkout", "-q", "-b", "feature")
+	origin.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() { /* pr */ }\n"})
+	origin.Commit("Bob", "the PR")
+	origin.Git("update-ref", "refs/pull/7/head", strings.TrimSpace(origin.Git("rev-parse", "HEAD")))
+	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
+	clone.Git("clone", "-q", origin.Dir, ".")
+	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
+		t.Fatal(err)
+	}
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", Repos: []core.RepoID{core.RepoID(clone.Dir)}})
+	if moved, err := r.w.UpdatePR(ctx, id); err != nil || len(moved) != 0 {
+		t.Fatalf("nothing new: %v, %v", moved, err)
+	}
+	for _, msg := range []string{"review fixes", "and a test"} {
+		origin.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() { /* " + msg + " */ }\n"})
+		origin.Commit("Bob", msg)
+	}
+	head := strings.TrimSpace(origin.Git("rev-parse", "HEAD"))
+	origin.Git("update-ref", "refs/pull/7/head", head)
+	moved, err := r.w.UpdatePR(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := r.session(id).Projects[0]
+	if moved[p.Name].Commits != 2 || moved[p.Name].To != head || p.Commit != head || !p.Detached || !p.ReadOnly {
+		t.Fatalf("moved %v, project %+v; want 2 commits on to %s", moved, p, head)
+	}
+	if got, _ := (gitx.Repo{Dir: p.Dir}).Head(ctx); got != head {
+		t.Errorf("the worktree is at %s, want %s", got, head)
+	}
+	if m, _ := LoadManifest(r.session(id).Dir); m.Projects[0].Commit != head {
+		t.Errorf("the manifest keeps %s, want %s", m.Projects[0].Commit, head)
+	}
 }
 
 // api.md, "Checkout": a source that isn't GitHub names the repo by a substring of its remote and the refspec to fetch;

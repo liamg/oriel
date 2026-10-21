@@ -366,6 +366,13 @@ func TestLuaReviewSource(t *testing.T) {
 	if err := s.sh.sessions.prCheckout(context.Background(), &gh); err != nil || gh.PRRemote != "acme/api" || gh.PRRef != "pull/7/head" {
 		t.Errorf("GitHub's checkout: %+v %v", gh, err)
 	}
+	// A review is named after its pull request, as its host writes one, so two reviews' tabs tell apart.
+	for _, sp := range []*core.SessionSpec{&spec, &gh} {
+		s.sh.sessions.prName(sp)
+	}
+	if spec.Title != "gateway#57" || spec.Name != "gateway-57" || gh.Title != "api#7" || gh.Name != "api-7" {
+		t.Errorf("named %q (%q) and %q (%q), want gateway#57 and api#7", spec.Title, spec.Name, gh.Title, gh.Name)
+	}
 }
 
 // docs/examples/gitea: "an error in a later callback hangs silently". A code host's answer that a later callback

@@ -29,16 +29,17 @@ type Server struct {
 	fail   map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
 	calls  []string              // "POST /repos/acme/api/pulls"
 
-	login    string                         // who the fake's client is: what it posts is by them
-	review   map[string][]*gh.ReviewComment // by owner/name#number
-	reviews  map[string][]gh.Review
-	issue    map[string][]*gh.IssueComment
-	resolved map[int64]bool                  // review threads resolved, by their first comment
-	members  map[string][]string             // org → logins
-	sizes    map[string]PRSize               // by owner/name#number
-	teams    map[string][]string             // org/team → logins
-	commits  map[string][]string             // by owner/name#number, oldest first
-	asked    map[string]map[string]time.Time // by owner/name#number: when each reviewer was last asked
+	login     string                         // who the fake's client is: what it posts is by them
+	review    map[string][]*gh.ReviewComment // by owner/name#number
+	reviews   map[string][]gh.Review
+	issue     map[string][]*gh.IssueComment
+	resolved  map[int64]bool                  // review threads resolved, by their first comment
+	members   map[string][]string             // org → logins
+	sizes     map[string]PRSize               // by owner/name#number
+	diffLines map[string][]string             // by owner/name#number: where a review may comment
+	teams     map[string][]string             // org/team → logins
+	commits   map[string][]string             // by owner/name#number, oldest first
+	asked     map[string]map[string]time.Time // by owner/name#number: when each reviewer was last asked
 
 	mergeRepo  map[string]MergeRepo // by owner/name
 	mergeable  map[string][2]string // by owner/name#number: mergeable, mergeStateStatus
@@ -50,7 +51,7 @@ type Server struct {
 func New(t testing.TB) *Server {
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{},
 		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
-		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{},
+		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{}, diffLines: map[string][]string{},
 		teams: map[string][]string{}, commits: map[string][]string{}, asked: map[string]map[string]time.Time{},
 		mergeRepo: map[string]MergeRepo{}, mergeable: map[string][2]string{}, mergedWith: map[string]string{}}
 	mux := http.NewServeMux()
@@ -392,6 +393,10 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 		s.mergeState(w, in.Variables)
 		return
 	}
+	if strings.Contains(in.Query, "resolveReviewThread") {
+		s.resolveThread(w, in.Query, in.Variables)
+		return
+	}
 	if strings.Contains(in.Query, "reviewThreads") {
 		s.reviewThreads(w, in.Variables)
 		return
@@ -401,7 +406,7 @@ func (s *Server) graphql(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !strings.Contains(in.Query, "markPullRequestReadyForReview") {
-		reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "the fake knows only markPullRequestReadyForReview, reviewThreads and search"}}})
+		reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "the fake knows only markPullRequestReadyForReview, reviewThreads, (un)resolveReviewThread and search"}}})
 		return
 	}
 	s.mu.Lock()

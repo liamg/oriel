@@ -3,6 +3,7 @@ package host
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -221,5 +222,71 @@ func TestSearchPRs(t *testing.T) {
 	}
 	if _, err := r.w.SearchPRs(context.Background(), PRsReq{Query: " "}); err == nil {
 		t.Error("an empty search ran")
+	}
+}
+
+// A review session's PR is mirrored too: the comment the user posted joins the thread it was posted from, their own
+// words aren't handed to the agent, the author's reply is, and resolving the thread in Oriel resolves it on GitHub.
+func TestReviewSessionMirrorsItsPR(t *testing.T) {
+	r := newRig(t)
+	hub := ghtest.New(t)
+	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	ctx := context.Background()
+	co, up := githubRepo(t, "pricing", map[string]string{"round.go": "package pricing\n"})
+	if _, err := r.w.addRepo(ctx, co.Dir, core.RepoAdded); err != nil {
+		t.Fatal(err)
+	}
+	pr := hub.AddPR("acme/pricing", gh.PR{Title: "feat: round", Author: "bob", Head: "bob/round", Base: "main"})
+	up.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
+	up.Commit("Bob", "round")
+	head := strings.TrimSpace(up.Git("rev-parse", "HEAD"))
+	up.Git("push", "-q", "origin", fmt.Sprintf("HEAD:refs/pull/%d/head", pr.Number))
+	hub.SetPRSize("acme/pricing", pr.Number, ghtest.PRSize{Author: "bob", HeadSHA: head})
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr.URL, Repos: []core.RepoID{core.RepoID(co.Dir)}})
+
+	mine, err := r.w.Comment(ctx, CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "Name the mode.", Outgoing: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if th, _ := r.session(id).Thread(mine); !th.Outgoing || len(th.Undelivered()) != 0 || th.WaitsOnAgent() {
+		t.Fatalf("a comment for the author is the agent's to answer: %+v", th)
+	}
+	sent := "**nit:** Name the mode."
+	if err := r.w.SetReviewDraft(core.ReviewDrafted{Session: id, Draft: core.ReviewDraft{Picks: map[string]core.ReviewPick{string(mine): {State: core.PickKeep, Sent: sent}}}}); err != nil {
+		t.Fatal(err)
+	}
+	root := hub.AddReviewComment("acme/pricing", pr.Number, gh.ReviewComment{User: "you", Path: "round.go", Line: 3, Body: sent})
+	m, err := r.w.SyncGitHub(ctx, MirrorReq{Session: id, Fresh: true})
+	if err != nil || len(m.Errors) > 0 || len(m.PRs) != 1 || m.PRs[0].Head != head {
+		t.Fatalf("sync = %+v, %v", m, err)
+	}
+	th, _ := r.session(id).Thread(mine)
+	if th.Hosted == nil || th.Hosted.Root != root.ID || th.Origin != core.OriginGitHub || !th.Open() {
+		t.Fatalf("the posted comment didn't join its thread: %+v", th)
+	}
+	if c, _ := th.Last(); c.GitHubID != root.ID || !c.Delivered {
+		t.Errorf("the user's own words went to the agent: %+v", c)
+	}
+	if n := len(githubThreads(r.session(id))); n != 1 {
+		t.Errorf("%d GitHub threads, want the posted one alone", n)
+	}
+
+	hub.AddReviewComment("acme/pricing", pr.Number, gh.ReviewComment{User: "bob", InReplyTo: root.ID, Body: "Renamed it."})
+	if _, err := r.w.SyncGitHub(ctx, MirrorReq{Session: id, Fresh: true}); err != nil {
+		t.Fatal(err)
+	}
+	th, _ = r.session(id).Thread(mine)
+	if u := th.Undelivered(); len(u) != 1 || u[0].Name != "bob" {
+		t.Errorf("the agent is handed %+v, want the author's reply alone", u)
+	}
+	if c, _ := th.Last(); c.Name != "bob" || c.Body != "Renamed it." {
+		t.Errorf("the author's reply %+v", c)
+	}
+
+	if err := r.w.ResolveGitHub(ctx, ResolveReq{Session: id, Thread: mine, Resolved: true}); err != nil {
+		t.Fatal(err)
+	}
+	if th, _ := r.session(id).Thread(mine); !hub.Resolved(root.ID) || !th.Hosted.Resolved {
+		t.Errorf("resolved on GitHub %v, recorded %+v", hub.Resolved(root.ID), th.Hosted)
 	}
 }

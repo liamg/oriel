@@ -58,6 +58,16 @@ func TestReviewMirrorReads(t *testing.T) {
 				t.Errorf("bo in acme: %v, %v", ok, err)
 			}
 
+			if err := c.ResolveThread(ctx, acme, pr.Number, root.ID, false); err != nil || s.Resolved(root.ID) {
+				t.Fatalf("reopening the thread: %v, resolved %v", err, s.Resolved(root.ID))
+			}
+			if err := c.ResolveThread(ctx, acme, pr.Number, root.ID, true); err != nil || !s.Resolved(root.ID) {
+				t.Fatalf("resolving the thread: %v, resolved %v", err, s.Resolved(root.ID))
+			}
+			if err := c.ResolveThread(ctx, acme, pr.Number, 999999, true); err == nil {
+				t.Error("resolved a thread that isn't there")
+			}
+
 			r, err := c.ReplyReview(ctx, acme, pr.Number, root.ID, "Agreed.")
 			if err != nil || r.ID == 0 || r.InReplyTo != root.ID || r.User != "you" {
 				t.Fatalf("reply %+v, %v", r, err)

@@ -52,6 +52,9 @@ type CommentReq struct {
 	Status   core.ThreadStatus `json:"status,omitempty"`
 	Severity string            `json:"severity,omitempty"` // a new thread's rating, as a review finding's (core.Severities)
 	Finding  string            `json:"finding,omitempty"`  // the AI review finding a new thread is opened from
+	// Outgoing opens a comment for a pull request's author, in the review the user will submit: the agent isn't
+	// asked to answer it.
+	Outgoing bool `json:"outgoing,omitempty"`
 }
 
 // AIReviewReq asks for an AI review of a session's change (agents.md, Guardrails: cross-model review).

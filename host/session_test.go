@@ -3,6 +3,7 @@ package host
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -143,6 +144,31 @@ func TestClaimsWithoutEvidenceAreFlagged(t *testing.T) {
 	th, _ = r.session(id).Thread(core.ThreadID(tid))
 	if c, _ := th.Last(); c.Unbacked != "" || len(c.Evidence) != 1 || c.Evidence[0].Ref != "beef01" {
 		t.Errorf("a cited run: %+v", c)
+	}
+}
+
+// A turn's failed runs on the way are its activity; its evidence is the run it ended on.
+func TestEvidenceIsTheLastRun(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Fix it")
+	a.WaitSent(t)
+	tid := string(r.session(id).Threads[0].ID)
+	a.Emit(agent.TurnStart{})
+	for i, out := range []string{"--- FAIL: TestA (0.00s)\nFAIL\tpricing\t0.01s\n", "--- FAIL: TestA (0.00s)\nFAIL\tpricing\t0.01s\n", "--- PASS: TestA (0.00s)\nok  \tpricing\t0.01s\n"} {
+		call := fmt.Sprint("c", i)
+		test, _ := json.Marshal(map[string]string{"command": "go test ./..."})
+		a.Emit(agent.ToolCall{ID: call, Tool: "Bash", Input: test})
+		a.Emit(agent.ToolResult{ID: call, Output: out})
+		r.eventually(id, "run "+call, func(se core.SessionState) bool { return len(se.Runs) == i+1 })
+	}
+	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Fixed: tests pass."})
+	th, _ := r.session(id).Thread(core.ThreadID(tid))
+	c, _ := th.Last()
+	if len(c.Activity) != 3 {
+		t.Errorf("activity = %+v", c.Activity)
+	}
+	if len(c.Evidence) != 1 || !c.Evidence[0].OK || c.Evidence[0].Ref != r.session(id).Runs[2].ID || c.Unbacked != "" {
+		t.Errorf("evidence = %+v, unbacked %q", c.Evidence, c.Unbacked)
 	}
 }
 

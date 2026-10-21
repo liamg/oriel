@@ -511,7 +511,7 @@ func (x *aiReviewPlugin) card(c *ui.Ctx, se core.SessionState, f core.Finding, w
 						if widget.Button(c, "thread", "→ Thread", widget.ButtonOpts{Help: findHelp + "#actions"}) {
 							run("review.ai.thread", nil)
 						}
-						if widget.Button(c, "fix", "Fix", widget.ButtonOpts{Ghost: true, Help: findHelp + "#actions"}) {
+						if se.PR == "" && widget.Button(c, "fix", "Fix", widget.ButtonOpts{Ghost: true, Help: findHelp + "#actions"}) {
 							run("review.ai.fix", nil)
 						}
 					}
@@ -519,6 +519,7 @@ func (x *aiReviewPlugin) card(c *ui.Ctx, se core.SessionState, f core.Finding, w
 						run("review.ai.dismiss", nil)
 					}
 				})
+				registry.DrawThreadFeet(x.h, c, string(se.ID), f.ID, width)
 			})
 		})
 	})

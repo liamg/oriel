@@ -88,7 +88,7 @@ func (w *Host) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err 
 	if r.Thread == "" {
 		c.Severity = r.Severity
 		t = core.Thread{ID: core.ThreadID(newID(8)), Anchor: r.Anchor, Title: r.Title, Status: cmp.Or(r.Status, core.ThreadOpen), Urgent: r.Urgent,
-			Btw: r.Btw, Comments: []core.Comment{c}, Created: now, Updated: now}
+			Btw: r.Btw, Outgoing: r.Outgoing, Comments: []core.Comment{c}, Created: now, Updated: now}
 		if r.Finding != "" {
 			t.Origin = core.OriginAIReview
 		}
@@ -122,7 +122,7 @@ func (w *Host) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err 
 		w.goSafe("a btw", func() { w.answerBtw(r.Session, t.ID) })
 		return t.ID, nil
 	}
-	if se.Agent.Provider == "" || se.Archived || !t.Open() {
+	if se.Agent.Provider == "" || se.Archived || !t.Open() || t.Outgoing {
 		return t.ID, nil
 	}
 	h := w.sessionOf(r.Session)

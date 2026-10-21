@@ -47,8 +47,16 @@ type KindSpec struct {
 	AutoReview bool `json:"autoReview,omitempty"`
 	// PromptFile is a file at the workspace root the prompt is written to as the session starts: a job's JOB.md.
 	PromptFile string `json:"promptFile,omitempty"`
+	// Opens are commands run once the window is on a new session of the kind, before session.start's own then.
+	Opens []KindCall `json:"opens,omitempty"`
 
 	reg int // which registration it is
+}
+
+// KindCall is a command and its args.
+type KindCall struct {
+	Command string         `json:"command"`
+	Args    map[string]any `json:"args,omitempty"`
 }
 
 // Kinds is the set of session kinds, a later one shadowing an earlier with the same Kind.
@@ -65,7 +73,8 @@ func builtinKinds() *Kinds {
 		{Kind: core.KindPlan, Title: "Plan", Desc: "docs first, Start work later", From: FromPrompt, Pack: "plan", Worktrees: WorktreesStartWork,
 			Gate: "hard", Launcher: true, About: "The agent drafts the plan in PLAN.md, you annotate it, and Start work implements it in these worktrees."},
 		{Kind: core.KindReview, Title: "Review PR", Desc: "someone else's change", From: FromPR, Pack: "review", Worktrees: WorktreesPR, Gate: "off",
-			Launcher: true, AutoReview: true, About: "The PR's head is checked out read-only from the repo whose remote it's on, and the agent reviews it."},
+			Launcher: true, AutoReview: true, About: "The PR's head is checked out read-only from the repo whose remote it's on, and the agent reviews it.",
+			Opens: []KindCall{{Command: "explorer.scope", Args: map[string]any{"scope": "changed"}}, {Command: "ship.pr.open"}}},
 		{Kind: core.KindJob, Title: "Job", Desc: "runs to done on its own", From: FromPrompt, Pack: "job", Worktrees: WorktreesNow, Gate: "soft",
 			PromptFile: "JOB.md", About: "The agent runs the prompt until it's done or blocked, and makes worktrees as it needs them."},
 		{Kind: core.KindNewRepo, Title: "New repo", Desc: "start from nothing", From: FromName, Pack: "newrepo", Worktrees: WorktreesInit, Gate: "hard",

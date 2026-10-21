@@ -52,8 +52,9 @@ type SessionSpec struct {
 	// remote contains PRRemote, and the refspec PRRef. A GitHub URL needs neither.
 	PRRemote string        `json:"prRemote,omitempty"`
 	PRRef    string        `json:"prRef,omitempty"`
-	Repos    []RepoID      `json:"repos,omitempty"` // 0..n
-	Dir      string        `json:"dir,omitempty"`   // direct kind: the directory itself; new repo: where it goes
+	PRBase   string        `json:"prBase,omitempty"` // the branch the PR merges into, which its Changed compares with
+	Repos    []RepoID      `json:"repos,omitempty"`  // 0..n
+	Dir      string        `json:"dir,omitempty"`    // direct kind: the directory itself; new repo: where it goes
 	Branch   string        `json:"branch,omitempty"`
 	Base     string        `json:"base,omitempty"` // the branch to cut from; each repo's default if empty
 	Provider string        `json:"provider,omitempty"`

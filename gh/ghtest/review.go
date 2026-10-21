@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/liamg/oriel/gh"
 )
@@ -269,9 +270,31 @@ func (s *Server) reviewThreads(w http.ResponseWriter, vars map[string]any) {
 		if c.InReplyTo != 0 {
 			continue
 		}
-		nodes = append(nodes, map[string]any{"isResolved": s.resolved[c.ID],
+		nodes = append(nodes, map[string]any{"id": fmt.Sprintf("RT_%d", c.ID), "isResolved": s.resolved[c.ID],
 			"comments": map[string]any{"nodes": []map[string]any{{"databaseId": c.ID}}}})
 	}
 	reply(w, 200, map[string]any{"data": map[string]any{"repository": map[string]any{"pullRequest": map[string]any{
 		"reviewThreads": map[string]any{"nodes": nodes}}}}})
+}
+
+// resolveThread is GitHub's resolveReviewThread and unresolveReviewThread mutations, on a thread's id from
+// reviewThreads.
+func (s *Server) resolveThread(w http.ResponseWriter, query string, vars map[string]any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var root int64
+	if _, err := fmt.Sscanf(fmt.Sprint(vars["id"]), "RT_%d", &root); err != nil {
+		reply(w, 200, map[string]any{"errors": []map[string]string{{"message": "Could not resolve to a node"}}})
+		return
+	}
+	resolved := !strings.Contains(query, "unresolveReviewThread")
+	s.resolved[root] = resolved
+	reply(w, 200, map[string]any{"data": map[string]any{"resolveReviewThread": map[string]any{"thread": map[string]bool{"isResolved": resolved}}}})
+}
+
+// Resolved says whether the review thread that starts with comment root is resolved.
+func (s *Server) Resolved(root int64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.resolved[root]
 }

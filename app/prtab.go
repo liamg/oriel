@@ -27,6 +27,9 @@ func (v prView) Title(project string) string {
 	if !ok {
 		return ""
 	}
+	if se.Kind == core.KindReview {
+		return "Review · " + label(se)
+	}
 	s, _ := v.x.ship(se.ID, p)
 	w := s.words()
 	if s.PR == nil {
@@ -43,6 +46,10 @@ func (x *shipPlugin) prTab(c *ui.Ctx, project string) {
 	c.Column("prtab", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 		if !ok {
 			shipEmpty(c, "Raise PR is a session's project's: open the session.")
+			return
+		}
+		if se.Kind == core.KindReview && x.sh.prReview != nil {
+			x.sh.prReview.page(c, se)
 			return
 		}
 		widget.Async(c, "load", x.loadState(c, se.ID, p), widget.AsyncOpts{Policy: widget.Block, Label: "Reading " + p, Retry: func() { x.refresh(se.ID, true) },

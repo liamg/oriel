@@ -151,7 +151,7 @@ func (x *diffPlugin) Activate(_ context.Context, h plugin.Host) error {
 				}
 				return x.reviewFile(st, cmpOr(a.String("path"), st.sel.file), want)
 			})},
-		{ID: "diff.comment", Title: "Open a thread on the selected line of the diff, or its hunk's lines", Available: has, Run: on(x.comment)},
+		{ID: "diff.comment", Title: "Open a thread on the selected line of the diff, or its hunk's lines: {to} the agent or the author, as thread.new", Available: has, Run: on(x.comment)},
 		{ID: "diff.explain", Title: "Explain the code unit of the selected line (" + ExplainUnit + ")", Available: has, Run: on(x.explain)},
 		{ID: "diff.source", Title: "Open the selected line in the editor", Available: has, Run: on(x.source)},
 		{ID: "diff.expand", Title: "Show or fold a file of the diff: {path}, the selected one if none", Available: has,
@@ -172,6 +172,7 @@ func (x *diffPlugin) Activate(_ context.Context, h plugin.Host) error {
 		{Keys: "<Up>", Command: "diff.line.prev", Desc: "Line before"},
 		{Keys: "r", Command: "diff.review", Desc: "Mark reviewed"},
 		{Keys: "gc", Command: "diff.comment", Desc: "Comment"},
+		{Keys: "ga", Command: "diff.comment", Args: registry.Args{"to": "agent"}, Desc: "Ask the agent"},
 		{Keys: "?", Command: "diff.explain", Desc: "Explain"},
 		{Keys: "o", Command: "diff.source", Desc: "Open in the editor"},
 		{Keys: "<CR>", Command: "diff.expand", Desc: "Show or fold the file"},
@@ -548,12 +549,12 @@ func (st *diffState) selLine() (path string, line, end int, ok bool) {
 }
 
 // comment opens a thread on the selection's lines, between them in the diff.
-func (x *diffPlugin) comment(st *diffState, _ registry.Args) error {
+func (x *diffPlugin) comment(st *diffState, args registry.Args) error {
 	path, line, end, ok := st.selLine()
 	if !ok {
 		return errors.New("no hunk is selected")
 	}
-	a := registry.Args{"file": path, "line": line}
+	a := registry.Args{"file": path, "line": line, "to": args.String("to")}
 	if end > line {
 		a["end_line"] = end
 	}

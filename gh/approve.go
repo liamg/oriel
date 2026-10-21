@@ -1,6 +1,7 @@
 package gh
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ type PRDetails struct {
 	Head         string `json:"head,omitempty"` // its branch
 	URL          string `json:"url,omitempty"`
 	Draft        bool   `json:"draft,omitempty"`
+	Merged       bool   `json:"merged,omitempty"`
 	// Mergeable is nil until GitHub has worked it out; MergeState is its mergeable_state: clean, behind, dirty…
 	Mergeable  *bool    `json:"mergeable,omitempty"`
 	MergeState string   `json:"mergeState,omitempty"`
@@ -89,7 +91,7 @@ func (a API) PRDetails(ctx context.Context, repo Repo, number int) (PRDetails, e
 	pr := p.pr(repo.Owner)
 	out := PRDetails{Title: p.Title, State: p.State, Author: p.User.Login, Base: p.Base.Ref, HeadSHA: p.Head.SHA, Additions: p.Additions,
 		Deletions: p.Deletions, ChangedFiles: p.ChangedFiles, Body: p.Body, Head: p.Head.Ref, URL: p.HTMLURL, Draft: p.Draft,
-		Mergeable: p.Mergeable, MergeState: p.MergeState, Reviewers: pr.Reviewers}
+		Mergeable: p.Mergeable, MergeState: p.MergeState, Reviewers: pr.Reviewers, Merged: pr.Merged}
 	for _, l := range p.Labels {
 		out.Labels = append(out.Labels, l.Name)
 	}
@@ -106,6 +108,48 @@ func (a API) PRFiles(ctx context.Context, repo Repo, number int) ([]PRFile, erro
 // ApproveAt approves a pull request at commit sha, so a later push isn't approved with it. The review has no body.
 func (a API) ApproveAt(ctx context.Context, repo Repo, number int, sha string) error {
 	return a.T.Do(ctx, "POST", repoPath(repo, fmt.Sprintf("pulls/%d/reviews", number)), map[string]string{"event": "APPROVE", "commit_id": sha}, nil)
+}
+
+// ReviewInput is a review to submit: Event is APPROVE, REQUEST_CHANGES or COMMENT; Commit pins it to the head it read.
+type ReviewInput struct {
+	Event    string
+	Body     string
+	Commit   string
+	Comments []ReviewComment // Path, Line, Side and Body; OriginalLine, when set, is where a range starts
+}
+
+// SubmitReview submits a review with its comments on lines. A comment GitHub won't put on the diff (its line isn't
+// in it) fails the whole review, so then every comment goes in the body instead, under its file and line.
+func (a API) SubmitReview(ctx context.Context, repo Repo, number int, in ReviewInput) error {
+	post := func(body string, comments []ReviewComment) error {
+		req := map[string]any{"event": in.Event, "body": body}
+		if in.Commit != "" {
+			req["commit_id"] = in.Commit
+		}
+		var cs []map[string]any
+		for _, c := range comments {
+			m := map[string]any{"path": c.Path, "line": c.Line, "side": cmp.Or(c.Side, "RIGHT"), "body": c.Body}
+			if c.OriginalLine > 0 && c.OriginalLine < c.Line {
+				m["start_line"], m["start_side"] = c.OriginalLine, m["side"]
+			}
+			cs = append(cs, m)
+		}
+		if len(cs) > 0 {
+			req["comments"] = cs
+		}
+		return a.T.Do(ctx, "POST", repoPath(repo, fmt.Sprintf("pulls/%d/reviews", number)), req, nil)
+	}
+	err := post(in.Body, in.Comments)
+	var e *Error
+	if err == nil || len(in.Comments) == 0 || !errors.As(err, &e) || e.Status != 422 {
+		return err
+	}
+	var b strings.Builder
+	b.WriteString(strings.TrimSpace(in.Body))
+	for _, c := range in.Comments {
+		fmt.Fprintf(&b, "\n\n**`%s:%d`**\n\n%s", c.Path, c.Line, c.Body)
+	}
+	return post(strings.TrimSpace(b.String()), nil)
 }
 
 // Green says whether every check passed (or was skipped); none at all isn't green.

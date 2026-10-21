@@ -35,6 +35,7 @@ type CodeHost struct {
 	Requested func(ctx context.Context, s Site) ([]ReviewRequest, error) // open pull requests asking you, and those you're part way through
 	Lookup    func(ctx context.Context, s Site, url string) (ReviewDetail, error)
 	Checkout  func(ctx context.Context, s Site, url string) (PRCheckout, error)
+	Submit    func(ctx context.Context, s Site, url string, r ReviewSubmit) error // the user's review of someone else's
 
 	ForBranch        func(ctx context.Context, r CodeRepo, branch string) (*PR, error) // the branch's newest PR, open first; nil for none
 	Create           func(ctx context.Context, r CodeRepo, pr NewPR) (*PR, error)
@@ -47,6 +48,8 @@ type CodeHost struct {
 	// user's forwarded draft on one (with no ID, the conversation) and answers the new comment's id.
 	Threads func(ctx context.Context, r CodeRepo, pr PR) ([]ReviewThread, error)
 	Reply   func(ctx context.Context, r CodeRepo, pr PR, thread ReviewThread, body string) (string, error)
+	// Resolve resolves a review thread there, or reopens it, as the user did in Oriel.
+	Resolve func(ctx context.Context, r CodeRepo, pr PR, thread ReviewThread, resolved bool) error
 
 	MergeMethods func(ctx context.Context, r CodeRepo, pr PR) (MergeMethods, error)
 	Blockers     func(ctx context.Context, r CodeRepo, pr PR) ([]MergeBlocker, error)
@@ -80,6 +83,21 @@ func (h CodeHost) Label() string { return cmp.Or(h.Title, h.Name) }
 
 // TakesPath says whether path (a URL's) is one of the host's pull requests.
 func (h CodeHost) TakesPath(path string) bool { return h.Takes != nil && h.Takes.MatchString(path) }
+
+// PRNumber is the number of the pull request at path (a URL's): the last run of digits Takes matches.
+func (h CodeHost) PRNumber(path string) (int, bool) {
+	if h.Takes == nil {
+		return 0, false
+	}
+	m := h.Takes.FindString(path)
+	end := len(strings.TrimRight(m, "/"))
+	start := end
+	for start > 0 && m[start-1] >= '0' && m[start-1] <= '9' {
+		start--
+	}
+	n, err := strconv.Atoi(m[start:end])
+	return n, err == nil
+}
 
 // RepoAt is the repo a remote's path names on the host.
 func (h CodeHost) RepoAt(path string) (string, bool) {

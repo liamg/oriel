@@ -260,6 +260,9 @@ func (x *requests) requestView(c *ui.Ctx, vc registry.ViewCtx) {
 						if t.Busy {
 							workingLine(c, "working", se, ui.Px(width))
 						}
+						if has {
+							registry.DrawThreadFeet(x.h, c, string(se.ID), string(t.ID), width)
+						}
 						startingCard(c, "starting", se, width)
 					})
 					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)

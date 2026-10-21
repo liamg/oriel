@@ -417,3 +417,26 @@ func (x *shipPlugin) forwardHost(se core.SessionState, thread core.ThreadID, com
 		return err
 	})
 }
+
+// resolveHost resolves or reopens a review thread mirrored from a code host other than GitHub, on that host, as the
+// user did in Oriel.
+func (x *shipPlugin) resolveHost(se core.SessionState, t core.Thread, resolved bool) error {
+	s, ok := x.ship(se.ID, t.Hosted.Project)
+	if !ok || s.Code == nil || s.Code.Name != t.Hosted.Host || s.PR == nil {
+		return fmt.Errorf("%s's %s hasn't been read yet", t.Hosted.Project, t.Hosted.Host)
+	}
+	if s.Code.Resolve == nil {
+		return fmt.Errorf("%s can't resolve threads from Oriel", s.Code.Label())
+	}
+	h, repo, pr := *s.Code, s.codeRepo(se.ID), *s.PR
+	rt := registry.ReviewThread{ID: t.Hosted.Key, URL: t.Hosted.URL, Outdated: t.Hosted.Outdated}
+	if a := t.Anchor; a != nil {
+		rt.Path, rt.Line, rt.Old = a.File, a.Line, a.Side == "old"
+	}
+	return x.step(se.ID, s.Project, map[bool]string{true: "Resolving", false: "Reopening"}[resolved], func(ctx context.Context, c *host.Host) error {
+		if err := registry.Call(func() error { return h.Resolve(ctx, repo, pr, rt, resolved) }); err != nil {
+			return err
+		}
+		return c.MarkHostResolved(host.ResolveReq{Session: se.ID, Thread: t.ID, Resolved: resolved})
+	})
+}
