@@ -148,7 +148,9 @@ func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 		t.Fatalf("project = %+v", p)
 	}
 	r.typeKeys("<Space><Space>")
-	r.waitFrame("the worktree's files in the picker", func(s string) bool { return !strings.Contains(s, "Open Directory") })
+	r.waitFrame("the worktree's files in the picker", func(s string) bool {
+		return !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening rounding")
+	})
 	var dir string
 	r.do(func() error { dir = r.host.Here().Project; return nil })
 	if dir != p.Dir {

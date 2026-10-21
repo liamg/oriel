@@ -77,6 +77,10 @@ func (x *statsPlugin) usagePanel(c *ui.Ctx) {
 		return 0
 	})
 	if len(us) == 0 {
+		if st := x.reading.State(); st.Phase == widget.Pending {
+			widget.Busy(c, "none", st, widget.BusyOpts{Label: "Reading the plans", Size: 10.5, Help: "agent/usage"})
+			return
+		}
 		c.Text("none", "no plan read yet", monoFont(10.5, th.C(theme.FgGhost)))
 		return
 	}
@@ -448,6 +452,18 @@ type ciRow struct {
 	note    string
 }
 
+// firstRead says a session's projects are being read for the first time, and since when.
+func (x *shipPlugin) firstRead() (time.Time, bool) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	for _, r := range x.reports {
+		if r.loading && r.read.IsZero() {
+			return r.since, true
+		}
+	}
+	return time.Time{}, false
+}
+
 // ciRows are the pull requests the Ship page has read, failing first, then running, then passing.
 func (x *shipPlugin) ciRows(now time.Time) []ciRow {
 	x.mu.Lock()
@@ -504,6 +520,10 @@ func (x *shipPlugin) ciPanel(c *ui.Ctx) {
 	th := c.Theme()
 	rows := x.ciRows(c.Now())
 	if len(rows) == 0 {
+		if since, ok := x.firstRead(); ok {
+			widget.Busy(c, "none", widget.LoadState{Phase: widget.Pending, Since: since}, widget.BusyOpts{Label: "Reading pull requests", Size: 10.5})
+			return
+		}
 		c.Text("none", "no pull requests read", monoFont(10.5, th.C(theme.FgGhost)))
 		return
 	}

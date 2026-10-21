@@ -20,7 +20,7 @@ import (
 func builtins(sh *shell) []plugin.Plugin {
 	perms := &permissionsPlugin{sh: sh}
 	sh.layout = &layoutPlugin{sh: sh}
-	return []plugin.Plugin{&uiOptions{}, &languagesPlugin{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitPlugin{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{sh: sh}, &sessionTabs{sh: sh}, &hudPlugin{sh: sh}, &inboxPlugin{sh: sh}, &missionPlugin{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &consentPlugin{}, &helpView{sh: sh}, &navPlugin{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
+	return []plugin.Plugin{&uiOptions{}, &languagesPlugin{dir: filepath.Join(sh.cfg.ConfigDir, "languages"), cacheDir: sh.cfg.CacheDir}, &themes{dir: filepath.Join(sh.cfg.ConfigDir, "themes")}, sh.layout, &gitPlugin{sh: sh}, &rail{sh: sh}, &explorer{sh: sh}, &start{sh: sh}, &overview{sh: sh}, &introspect{configDir: sh.cfg.ConfigDir}, &statusLine{sh: sh}, &sessionTabs{sh: sh}, &aboutPlugin{sh: sh}, &hudPlugin{sh: sh}, &inboxPlugin{sh: sh}, &missionPlugin{sh: sh}, &omnibox{}, &picker{}, &whichKey{}, &consentPlugin{}, &helpView{sh: sh}, &navPlugin{sh: sh}, &contextMenus{sh: sh}, &notices{sh: sh}, &problems{sh: sh}, &themeEditor{dir: filepath.Join(sh.cfg.ConfigDir, "themes")},
 		&editorPlugin{sh: sh}, &markdownPlugin{}, &imagePlugin{}, &desktopPlugin{sh: sh}, &gitSigns{sh: sh}, &projectSearch{sh: sh}, &lspPlugin{sh: sh}, &testsPlugin{sh: sh}, &debugPlugin{sh: sh}, &explainPlugin{sh: sh}, &walkthroughPlugin{sh: sh}, &terminals{sh: sh}, &settingsPlugin{sh: sh}, &codeSitesPlugin{sh: sh}, &sessions{sh: sh}, &agentConsole{sh: sh}, perms, &workspacePlugin{sh: sh, perms: perms}, &statsPlugin{sh: sh}, &jobsPlugin{sh: sh}, &reposPlugin{sh: sh}, &machinePlugin{sh: sh}, &updatePlugin{sh: sh}, &promptsPlugin{sh: sh}, &voicePlugin{sh: sh}, &assistantPlugin{sh: sh}, &ticketsPlugin{}, &reviewsPlugin{sh: sh}, &githubHost{sh: sh}, &launcher{sh: sh}, &requests{sh: sh}, &planPlugin{sh: sh}, &diffPlugin{sh: sh}, &shipPlugin{sh: sh}, &prReviewPlugin{sh: sh}, &sessionEnd{sh: sh}, &aiReviewPlugin{sh: sh}, &verifyPlugin{sh: sh}, &githubPlugin{sh: sh}, &secretsPlugin{sh: sh}, &luaPlugin{sh: sh, dir: sh.cfg.ConfigDir}, &catalogPlugin{sh: sh}}
 }
 
@@ -99,7 +99,11 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	})
 	l.panes.Empty = func(c *ui.Ctx) {
 		id := StartView
-		if l.sh != nil && l.sh.cfg.WorkDir != "" {
+		switch {
+		case l.sh == nil:
+		case l.sh.heading.Load() != nil:
+			id = OpeningView
+		case l.sh.cfg.WorkDir != "":
 			id = OverviewView
 		}
 		if v, ok := h.ViewByID(id); ok {

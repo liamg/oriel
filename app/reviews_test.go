@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -203,6 +205,74 @@ func TestReviewsNoticeOnANewAsk(t *testing.T) {
 			}
 		}
 		return false
+	})
+}
+
+// A new ask's toast stays until answered: Ignore puts it away, and Start review in background starts a review of it
+// on the default agent, behind the session in front, with a notice to open it.
+func TestReviewsNoticeStartsAReviewBehind(t *testing.T) {
+	s, lw, hub, _ := reviewScene(t)
+	x := s.reviews()
+	s.run("reviews.open", nil)
+	s.until(t, "the requests", func() bool { return strings.Contains(s.frameText(), "Rate-limit the search") })
+	s.typeKeys("Esc")
+	s.frame()
+	ask := func(title string) gh.PR {
+		pr := hub.AddPR("acme/api", gh.PR{Title: title, Author: "rlopez", Reviewers: []string{"you"}})
+		<-x.fresh(s.sh.sites.reviewSources()[0], 0)
+		s.until(t, "the toast", func() bool {
+			return containsAll(s.frameText(), "rlopez asked you to review api#"+itoa(pr.Number), "Start review in background", "Ignore")
+		})
+		return pr
+	}
+	reviews := func() (n int) {
+		for _, se := range s.store.State().Sessions {
+			if se.Kind == core.KindReview {
+				n++
+			}
+		}
+		return n
+	}
+
+	ask("Drop the legacy v1 webhooks")
+	s.clickText(t, "Ignore")
+	s.until(t, "the toast gone", func() bool { return !strings.Contains(s.frameText(), "Start review in background") })
+	if n := reviews(); n != 0 {
+		t.Fatalf("Ignore started %d reviews", n)
+	}
+
+	alias := filepath.Join(t.TempDir(), "acme", "api")
+	if err := os.MkdirAll(filepath.Dir(alias), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(lw.repo, alias); err != nil {
+		t.Fatal(err)
+	}
+	pr := ask("Cache the search index")
+	for _, args := range [][]string{{"remote", "add", "origin", alias}, {"update-ref", fmt.Sprintf("refs/pull/%d/head", pr.Number), "HEAD"}} {
+		if out, err := exec.Command("git", append([]string{"-C", lw.repo}, args...)...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	if _, err := lw.w.AddRepoPath(context.Background(), lw.repo); err != nil {
+		t.Fatal(err)
+	}
+	front := s.store.State().Focus
+	s.clickText(t, "Start review in background")
+	s.untilState(t, "the review", func(core.State) bool {
+		se, ok := prSession(s.host, pr.URL)
+		return ok && se.Snapshot().Kind == core.KindReview
+	})
+	st := s.store.State()
+	se, _ := prSession(s.host, pr.URL)
+	if a := se.Snapshot().Agent; a.Provider != "fake" {
+		t.Errorf("the review's agent is %q, want the default, fake", a.Provider)
+	}
+	if st.Focus != front {
+		t.Errorf("the review came to the front (%s), want it behind %q", st.Focus, front)
+	}
+	s.until(t, "the notice to open it", func() bool {
+		return strings.Contains(s.frameText(), "Reviewing api#"+itoa(pr.Number)+" in the background")
 	})
 }
 

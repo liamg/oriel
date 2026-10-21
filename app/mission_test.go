@@ -338,7 +338,8 @@ func TestMissionKeys(t *testing.T) {
 }
 
 // SE-3, SH-7: started with nothing open and sessions there, the app lands on the one in front last time, else the
-// newest, with mission control over it; Escape from mission control is in that session, not on the start view.
+// newest, with mission control over it; Escape from mission control is in that session, not on the start view. On
+// the way it shows what it's opening, never the start view.
 func TestMissionOpensAtLaunch(t *testing.T) {
 	lw := newLocalHost(t)
 	ids := map[string]core.SessionID{}
@@ -354,6 +355,17 @@ func TestMissionOpensAtLaunch(t *testing.T) {
 	}
 	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	r.waitText("MISSION CONTROL")
+	if text := r.win.Frames()[0].Text(); !strings.Contains(text, "Opening front…") {
+		t.Errorf("the first frame isn't the opening view:\n%s", text)
+	}
+	for i, f := range r.win.Frames() {
+		if text := f.Text(); strings.Contains(text, "Open Directory") {
+			t.Fatalf("frame %d showed the start view before mission control:\n%s", i, text)
+		}
+		if strings.Contains(f.Text(), "MISSION CONTROL") {
+			break
+		}
+	}
 	if f := r.store.State().Focus; f != ids["front"] {
 		t.Errorf("landed on %q, want the session in front last time (%s)", f, ids["front"])
 	}

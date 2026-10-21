@@ -114,10 +114,8 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc registry.ViewCtx) {
 	th := c.Theme()
 	st := h.State()
 	c.Row("titlebar", ui.Style{W: ui.Flex(1), H: ui.Px(titleH), Cross: ui.Center, Fill: th.C(tTitleBg), Role: ui.RoleToolbar, Label: "Sessions"}, func(c *ui.Ctx) {
-		c.Row("brand", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Paint("logo", ui.Px(22), ui.Px(22), func(f render.Frame, r render.Rect) { logo(f, r, th) })
-			c.Text("word", "ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Weight: typeset.Bold, Size: 12, Tracking: .2},
-				Color: th.C(tWordmark)})
+		c.Row("brand", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+			t.sh.slot(c, h, registry.SlotTitleBrand, vc)
 		})
 		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 		// More sessions than fit scroll sideways, the one in front brought into view when it changes.
@@ -238,16 +236,24 @@ func (t *sessionTabs) close(h plugin.Host, id core.SessionID) error {
 }
 
 // logo is the o▌ mark: a ring in the accent and a tall cursor in the brand orange, each with a faint glow.
-func logo(f render.Frame, r render.Rect, th *theme.Resolved) {
+func logo(f render.Frame, r render.Rect, th *theme.Resolved) { logoLit(f, r, th, true, 1) }
+
+// logoLit is the logo with its cursor shown or not, as it blinks, and its glow scaled by glow.
+func logoLit(f render.Frame, r render.Rect, th *theme.Resolved, lit bool, glow float64) {
 	s := r.Dx() / 100
 	cx, cy := r.Min.X+38*s, r.Min.Y+r.Dy()/2+3*s
 	ring, cursor := th.C(tLogoRing), th.C(tLogoCursor)
 	if r.Dx() <= 64 {
-		f.Effect(render.GlowDisc, render.XYWH(cx-25*s, cy-25*s, 50*s, 50*s), 4, theme.WithAlpha(cursor, .22)) // a big logo glows from its bar alone: this would fill the ring
+		f.Effect(render.GlowDisc, render.XYWH(cx-25*s, cy-25*s, 50*s, 50*s), 4, theme.WithAlpha(cursor, min(.22*glow, 1))) // a big logo glows from its bar alone: this would fill the ring
 	}
 	bar := render.XYWH(r.Min.X+68*s, r.Min.Y+r.Dy()/2-22*s, 13*s, 50*s)
-	f.Effect(render.Glow, bar, 4, theme.WithAlpha(cursor, .3))
+	if lit {
+		f.Effect(render.Glow, bar, 4, theme.WithAlpha(cursor, min(.3*glow, 1)))
+	}
 	f.Path(render.Ellipse(render.XYWH(cx-21*s, cy-21*s, 42*s, 42*s)), render.Style{Stroke: ring, Width: 8 * s})
+	if !lit {
+		return
+	}
 	var p render.Path // a path, not a rect, so the bar isn't snapped to pixels and stays level with the ring
 	p.MoveTo(bar.Min).LineTo(render.Point{X: bar.Max.X, Y: bar.Min.Y}).LineTo(bar.Max).LineTo(render.Point{X: bar.Min.X, Y: bar.Max.Y}).Close()
 	f.Path(&p, render.Style{Fill: cursor})

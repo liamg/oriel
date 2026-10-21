@@ -504,7 +504,9 @@ func TestSidebarAddsAProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitState(t, r.store, "the session in front", func(st core.State) bool { return st.Focus == "rounding" })
-	r.waitFrame("the window on the session", func(s string) bool { return strings.Contains(s, "+") && !strings.Contains(s, "Open Directory") })
+	r.waitFrame("the window on the session", func(s string) bool {
+		return strings.Contains(s, "+") && !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening rounding")
+	})
 	r.clickAccess("Add a project")
 	r.waitText("ADD A PROJECT")
 	r.typeText(billing)

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
@@ -184,21 +185,47 @@ func (x *launcher) providersState() widget.LoadState {
 func (x *launcher) settle() {
 	if ps := x.providerList(); !x.picked && len(ps) > 0 {
 		x.picked, x.err = true, ""
-		x.pickProvider(defaultProvider(ps))
+		provider, model := defaultAgent(x.h.State(), ps)
+		x.pickProvider(provider)
+		x.model = model
 	}
 }
 
-// defaultProvider is the first provider that's logged in, else the first.
-func defaultProvider(ps []host.ProviderInfo) string {
-	for _, p := range ps {
-		if p.Install.LoggedIn && p.Error == "" {
-			return p.ID
+// defaultAgent is the agent and model a session starts on when nobody picks: the last session's (a job's runs on its
+// own), while its provider is still there; else the first provider by installed, then logged in, then name.
+func defaultAgent(st core.State, ps []host.ProviderInfo) (provider, model string) {
+	var last core.SessionState
+	for _, se := range st.Sessions {
+		if se.Agent.Provider != "" && se.Kind != core.KindJob && se.Created.After(last.Created) {
+			last = se
 		}
 	}
-	if len(ps) > 0 {
-		return ps[0].ID
+	if i := slices.IndexFunc(ps, func(p host.ProviderInfo) bool { return p.ID == last.Agent.Provider }); i >= 0 {
+		p := ps[i]
+		if last.Agent.Model != "" && (len(p.Models) == 0 || slices.ContainsFunc(p.Models, func(m agent.Model) bool { return m.ID == last.Agent.Model })) {
+			return p.ID, last.Agent.Model
+		}
+		return p.ID, defaultModel(p)
 	}
-	return ""
+	if len(ps) == 0 {
+		return "", ""
+	}
+	rank := func(p host.ProviderInfo) int {
+		switch installed := p.Error == "" && p.Install.Bin != ""; {
+		case installed && p.Install.LoggedIn:
+			return 0
+		case installed:
+			return 1
+		}
+		return 2
+	}
+	best := slices.MinFunc(ps, func(a, b host.ProviderInfo) int {
+		if d := rank(a) - rank(b); d != 0 {
+			return d
+		}
+		return strings.Compare(a.ID, b.ID)
+	})
+	return best.ID, defaultModel(best)
 }
 
 // pickProvider makes id the agent, with its default model.
@@ -694,7 +721,7 @@ func (x *launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 			})
 			c.Text("name", name, uiFont(13, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if p.ID == defaultProvider(x.providerList()) {
+			if id, _ := defaultAgent(x.h.State(), x.providerList()); p.ID == id {
 				widget.Chip(c, "default", "default", th.C(theme.Accent), "agent/launcher#agent")
 			}
 		})

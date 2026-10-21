@@ -92,6 +92,13 @@ clip 0,38 43x936 r 0
 pop
 rect 43,38 1x936 fill #24221d
 rect 44,38 1556x936 fill #060606
+effect glow-disc 805.72,479.45526 22x22 blur 4 #ff8a1f38
+effect glow 829.92,479.45526 5.7199707x22 blur 4 #ff8a1f4d
+path 6 segments stroke 3.52 #ffd23f
+path 5 segments fill #ff8a1f
+path 6 segments stroke 1.625 #232220
+path 25 segments stroke 1.625 #ffd23f
+text "Opening other…" @782.46875,541.729 #7c7566 Inter 13
 rect 0,974 1600x26 fill #0c0c0b
 text "✕" @16,990.95996 #ff5f6d JetBrains Mono 11
 text "1" @27.59375,990.95996 #b3ab99 JetBrains Mono 11

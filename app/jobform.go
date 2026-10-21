@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -126,18 +127,14 @@ func (x *jobsPlugin) closeForm() {
 }
 
 // settle picks the default agent once the providers arrive, unless the job names one.
-func (f *jobForm) settle() {
+func (f *jobForm) settle(st core.State) {
 	ps, ok := f.agents.Value()
 	if !ok || f.picked {
 		return
 	}
 	f.picked = true
-	if id := defaultProvider(ps); id != "" {
-		for _, p := range ps {
-			if p.ID == id {
-				f.agent, f.model = p.ID, cmpOr(f.model, defaultModel(p))
-			}
-		}
+	if id, model := defaultAgent(st, ps); id != "" {
+		f.agent, f.model = id, cmpOr(f.model, model)
 	}
 }
 
@@ -215,7 +212,7 @@ func (x *jobsPlugin) formBody(c *ui.Ctx, f *jobForm) {
 	th := c.Theme()
 	focus := f.focus
 	f.focus = false
-	f.settle()
+	f.settle(x.h.State())
 	c.Column("title", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		heading(c, "h", "Title", "from the prompt's first line when empty")
 		x.field(c, "title", &f.title, "Title", "a name for the list", focus, widget.InputOpts{})

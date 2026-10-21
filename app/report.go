@@ -44,7 +44,8 @@ type shell struct {
 	todo        []func()                         // Host.Do's, for the loop
 	editorAt    func(at registry.At) registry.At // the focused editor's buffer and window, added to at
 	shot        func(th *theme.Resolved) *image.RGBA
-	reopen      chan reopenTo // the directory for the loop to start again on: Open Directory's, or a session's
+	reopen      chan reopenTo            // the directory for the loop to start again on: Open Directory's, or a session's
+	heading     atomic.Pointer[reopenTo] // what reopen holds until the loop takes it, for the opening view
 	recents     *recents
 	secretsOnce sync.Once
 	secrets     plugin.Secrets   // the store plugins' requests take secrets from, each one handed out redacted from the logs

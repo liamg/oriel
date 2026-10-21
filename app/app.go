@@ -287,6 +287,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config) (err error) {
 		case <-dirty:
 		case to := <-sh.reopen:
 			// Open Directory, or another session in front: every plugin starts again on its directory.
+			sh.heading.Store(nil)
 			if err := deactivate(); err != nil {
 				log.Error("reopen", "dir", to.dir, "err", err)
 			}

@@ -42,7 +42,7 @@ type missionPlugin struct {
 	rows    [][]core.SessionID // the cards as last laid out, a row at a time
 	reveal  bool               // bring the selected card into view next frame
 	pending bool               // opens once a session is known, while the window is still on the start view
-	launch  time.Time          // the first frame, for the sessions there were at launch
+	launch  time.Time          // when it started, for the sessions there were at launch
 
 	focusFilter bool
 	renaming    core.SessionID
@@ -70,6 +70,8 @@ func (x *missionPlugin) Activate(_ context.Context, h plugin.Host) error {
 	if !x.sh.launchDone {
 		x.sh.launchDone = true
 		x.pending = x.sh.cfg.WorkDir == "" && len(x.sh.cfg.Files) == 0
+		x.launch = time.Now()
+		h.Do(x.land) // before the first frame, so the start view never shows on the way
 	}
 	x.add(h.Option(registry.OptionSpec{Name: AtLaunchOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Open on mission control, over the session that was in front, when Oriel starts with nothing open and there are sessions."}))
@@ -324,17 +326,36 @@ func (x *missionPlugin) atLaunch(st core.State) (id core.SessionID, ok bool) {
 	return newest.ID, ok
 }
 
+// land picks the session the window lands on at launch, once the sessions there were are known.
+func (x *missionPlugin) land() {
+	if !x.pending {
+		return
+	}
+	id, known := x.atLaunch(x.h.State())
+	switch {
+	case x.sh.cfg.WorkDir != "":
+		x.pending = false
+	case known:
+		x.pending = false
+		x.landOn(id)
+	}
+}
+
 // landOn brings session id to the front at launch, with mission control over it (mission.at_launch): the start
 // view shows only while there are no sessions, and Escape from mission control lands in this one.
 func (x *missionPlugin) landOn(id core.SessionID) {
+	moves := x.sh.sessions != nil && x.sh.sessions.moves(id)
 	if v, _, err := x.h.Options().Get(AtLaunchOption, registry.At{}); err == nil && v == true {
-		if x.sh.sessions != nil {
+		if moves {
 			x.sh.sessions.after(id, []call{{command: "mission.open"}})
 		} else {
 			x.show()
 		}
 	}
 	x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
+	if moves {
+		x.sh.sessions.follow(id) // now, so the opening view shows from the first frame
+	}
 }
 
 // live are the sessions mission control shows: not archived, and matching the filter.

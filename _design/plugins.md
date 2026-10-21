@@ -347,7 +347,8 @@ flowchart TB
   `titlebar.right.<order>-<name>`: the plan's usage windows are `titlebar.right.40-usage` (the stats plugin's since AI-12: one button to Usage with a
   hover card).
 - indicators in slots (SH-8): `registry.Indicator{Name, Slot, Order, Title, Note, Span, Help, Every, On, Build}`
-  (kind `hud.indicator`), listed by `registry.Indicators(r, slot)`. Slots: `titlebar.right`, `statusline.left`,
+  (kind `hud.indicator`), listed by `registry.Indicators(r, slot)`. Slots: `titlebar.brand` (the title bar's left,
+  before the tabs: the built-in `about` indicator's logo and About card), `titlebar.right`, `statusline.left`,
   `statusline.right` (drawn among the views named `<slot>.<order>-<name>`, an indicator sorting as
   `<slot>.<Order>-<Name>`), `hud` (the HUD's panels: `Title`, `Note`, `Span` of four columns), `hud.today` (under
   the Today panel) and, since SH-7, `mission` (`registry.SlotMission`: mission control's strip, each part drawn with
@@ -758,7 +759,9 @@ type Host interface {
 
 - The window is made of views like any other, each replaceable by registering the same id: `app.root`,
   `app.statusline`, `app.notifications` (toasts) and `app.modal`. The log panel is `log`, and `:Events` is `events`.
-- The titlebar is `app.titlebar`: the logo, a tab per session open in the window (`State.Tabs`: status dot, name,
+- The titlebar is `app.titlebar`: the `titlebar.brand` slot (the logo; the `about` plugin's cursor blinks under the
+  pointer, and a click, `about.toggle`, opens the About card: version, updates, Copy report, Help, Website,
+  `about.website`), a tab per session open in the window (`State.Tabs`: status dot, name,
   its status or kind, `⌘N`, a ✕ under the pointer, and `✕N` while it has errors you haven't seen), and segments named
   `titlebar.right.<order>-<name>` at its right, for indicators. `session.focus {n}` or `{id}` brings a session to the
   front, opening its tab (`SessionFocused`); `⌘1`–`⌘9` run it, counting the tabs. `session.close-tab {id}` closes one
@@ -1051,7 +1054,7 @@ type Host interface {
   (`reviews.poll`), the Reviews page (ui.md), the global rail entry with its pill, a start view link, the notices
   (`reviews.notify`, `reviews.count_teams`), the omnibox source `reviews`, and the assistant's `review_requests`
   (which used to search GitHub alone). Commands: `Reviews`, `reviews.open {source}`, `reviews.refresh`,
-  `reviews.start`, `reviews.browse`, `reviews.filter`, `reviews.scope {scope}`; keys in mode `reviews`: `<CR>`, `o`,
+  `reviews.start`, `reviews.start-background {url}`, `reviews.browse`, `reviews.filter`, `reviews.scope {scope}`; keys in mode `reviews`: `<CR>`, `o`,
   `r`, `/`, `t`; global `<D-V>`.
 - **GitHub is a code host like any other** (`app/codehost_github.go`, `builtin:github`), on the user's gh through the
   host: `host.ReviewQueue` runs `gh.API.ReviewQueue`, one GraphQL search for `review-requested:@me` and one for

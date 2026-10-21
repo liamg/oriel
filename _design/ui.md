@@ -525,6 +525,9 @@ The centred fuzzy-finder boxes you know from snacks.nvim (`Snacks.picker`), tele
   asked at once), as skeleton cards with "Checking which agents are installed…" and the elapsed time. Nothing is
   picked while it runs: No agent is a choice, never a default. Start is busy ("Checking agents…") until the probe
   answers, and ⌘↵ says why; a probe that finds none says so, with Retry.
+- The default agent (picked once the probe answers, and marked "default"; the New job dialog's and a background
+  review's too) is the last session's agent and model, a job's aside, while its provider is still there; else the
+  first provider that's installed, logged in before not, then by name.
 
 ![04-launch](mockups/04-launch.png)
 
@@ -1305,8 +1308,11 @@ out as the Tickets page.
   user only) and the files, from the source's `Lookup`, off the loop, once per URL until the list is asked again.
   Start and Continue close the page as the launcher or session comes up.
 - **Refresh**: each source every `reviews.poll` (5m) while Oriel is open, as the page opens (a minute), and on `r`.
-  A request that counts and wasn't in the source's last answer, or came back re-requested, is a notice ("mkhan asked
-  you to review api#812"), unless `reviews.notify` is off. Requests asked longer ago than `reviews.max_age` (30d) are
+  A request that counts and wasn't in the source's last answer, or came back re-requested, is a question toast,
+  "Review requested" ("mkhan asked you to review api#812"), unless `reviews.notify` is off. It stays until answered:
+  **Start review in background** (`reviews.start-background {url}`: `session.start {kind = "review", pr,
+  background}` on the launcher's default agent and `sandbox.default`, then a notice with **Open**) or **Ignore**,
+  which puts the toast away and leaves the request on the page. Requests asked longer ago than `reviews.max_age` (30d) are
   left out everywhere.
 - **Elsewhere**: the omnibox lists the same rows (source `reviews`); the assistant's `review_requests` reads them.
 - **No checkout**: the detail says so, and **Add repo…** opens the Add repo dialog (`repos.new`) on the detail's clone

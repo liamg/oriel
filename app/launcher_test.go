@@ -211,11 +211,11 @@ func launcherModes(n *render.AccessNode) []string {
 // sessions.md: "The app opens on mission control", whose stand-in until SH-7 is the start view's recent sessions.
 func TestStartViewListsSessions(t *testing.T) {
 	lw := newLocalHost(t)
-	c := lw.w
-	if _, err := c.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Name: "pricing-rounding", Repos: []core.RepoID{core.RepoID(lw.repo)}}); err != nil {
+	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
+	r.waitText("Open Directory") // one there at launch is landed on, past the start view
+	if _, err := lw.w.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Name: "pricing-rounding", Repos: []core.RepoID{core.RepoID(lw.repo)}}); err != nil {
 		t.Fatal(err)
 	}
-	r := startAppWith(t, t.TempDir(), "", nil, lw.connect(t))
 	r.waitFrame("the session under Recent", func(s string) bool {
 		return containsAll(s, "SESSIONS", "pricing-rounding", "work · pricing") && !strings.Contains(s, "SOON")
 	})
@@ -434,4 +434,36 @@ func TestLauncherProbeFails(t *testing.T) {
 	}
 	s.frame()
 	s.wantFrame(t, "To start: pick an agent, or No agent.")
+}
+
+// The default agent is the last session's, while its provider is there; else installed, then logged in, then by name.
+func TestDefaultAgent(t *testing.T) {
+	models := []agent.Model{{ID: "big", Default: true}, {ID: "small"}}
+	claude := host.ProviderInfo{ID: "claude", Install: agent.Install{Bin: "claude"}, Models: models}
+	codex := host.ProviderInfo{ID: "codex", Install: agent.Install{Bin: "codex", LoggedIn: true}, Models: models}
+	gemini := host.ProviderInfo{ID: "gemini", Error: "not installed"}
+	aider := host.ProviderInfo{ID: "aider", Error: "not installed"}
+	session := func(provider, model string, ago time.Duration) core.SessionState {
+		return core.SessionState{ID: core.SessionID(provider + model), Created: time.Now().Add(-ago), Agent: core.AgentState{Provider: provider, Model: model}}
+	}
+	for _, tt := range []struct {
+		name            string
+		sessions        []core.SessionState
+		ps              []host.ProviderInfo
+		provider, model string
+	}{
+		{"last session's agent and model", []core.SessionState{session("codex", "big", time.Hour), session("claude", "small", time.Minute)}, []host.ProviderInfo{codex, claude}, "claude", "small"},
+		{"last session's model gone", []core.SessionState{session("claude", "old", time.Minute)}, []host.ProviderInfo{codex, claude}, "claude", "big"},
+		{"not a job's", []core.SessionState{session("claude", "big", time.Hour), {ID: "job", Kind: core.KindJob, Created: time.Now(), Agent: core.AgentState{Provider: "codex"}}}, []host.ProviderInfo{codex, claude}, "claude", "big"},
+		{"last session's provider gone", []core.SessionState{session("gone", "x", time.Minute)}, []host.ProviderInfo{claude, codex}, "codex", "big"},
+		{"logged in over installed", nil, []host.ProviderInfo{gemini, claude, codex}, "codex", "big"},
+		{"installed over not", nil, []host.ProviderInfo{gemini, claude}, "claude", "big"},
+		{"by name", nil, []host.ProviderInfo{gemini, aider}, "aider", ""},
+		{"none", nil, nil, "", ""},
+	} {
+		st := core.State{Sessions: tt.sessions}
+		if p, m := defaultAgent(st, tt.ps); p != tt.provider || m != tt.model {
+			t.Errorf("%s: %s %s, want %s %s", tt.name, p, m, tt.provider, tt.model)
+		}
+	}
 }
