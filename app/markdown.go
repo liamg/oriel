@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/svg"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -329,15 +330,18 @@ func mdAligned(c *ui.Ctx, key any, align string, width float32, text func(c *ui.
 }
 
 // mdPictures draws a block's images in rows that wrap at width, aligned as the block says: each one zoomable, in the
-// document's lightbox group, at the size its attributes ask for and never wider than the column. One that can't be
-// shown (a remote or SVG image, a missing file) is a chip with its alt text and source.
+// document's lightbox group, at the size its attributes ask for and never wider than the column. A remote one is a
+// placeholder while it loads; one that can't be shown (a missing file, one that won't decode) is a chip with its alt
+// text and source.
 func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32, o mdOpts) {
 	th := c.Theme()
 	type pic struct {
-		im  mdImage
-		img image.Image
-		why string
-		w   float32
+		im      mdImage
+		img     image.Image
+		doc     *svg.Doc
+		loading bool
+		why     string
+		w       float32
 	}
 	const gap = 8
 	chipFont := uiFont(12, th.C(theme.FgMuted))
@@ -346,21 +350,32 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 	var used float32
 	for _, im := range imgs {
 		p := pic{im: im}
-		p.img, p.why = mdPicture(im.Src, o.Dir)
-		if p.img != nil {
+		pc, why := mdPicture(im.Src, o.Dir)
+		p.img, p.doc, p.loading, p.why = pc.img, pc.doc, pc.loading, why
+		var nat render.Point
+		switch {
+		case p.img != nil:
 			b := p.img.Bounds()
-			w := float32(b.Dx())
+			nat = render.Point{X: float32(b.Dx()), Y: float32(b.Dy())}
+		case p.doc != nil:
+			nat = p.doc.Size
+		}
+		if nat.X > 0 {
+			w := nat.X
 			switch {
 			case im.W > 0:
 				w = im.W
 			case im.WPct > 0:
 				w = im.WPct * width
 			case im.H > 0:
-				w = im.H * float32(b.Dx()) / float32(max(b.Dy(), 1))
+				w = im.H * nat.X / max(nat.Y, 1)
 			}
 			p.w = min(w, width)
 		} else {
 			p.w = min(14+c.Shaper().Shape(cmpOr(im.Alt, "image"), chipFont.Font).Advance+c.Shaper().Shape(im.Src, srcFont.Font).Advance+16+16, width, 320)
+			if p.loading {
+				p.w = min(p.w+mdLoadingDots+8, width)
+			}
 		}
 		if len(rows) == 0 || used+gap+p.w > width {
 			rows, used = append(rows, nil), p.w
@@ -380,15 +395,29 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 		for r, row := range rows {
 			c.Row(r, ui.Style{W: ui.Px(width), Gap: gap, Main: main, Cross: ui.End}, func(c *ui.Ctx) {
 				for i, p := range row {
-					if p.img != nil {
-						widget.Image(c, i, p.img, p.w, widget.ImageOpts{Label: cmpOr(p.im.Alt, p.im.Src), Help: o.Help, Zoom: true, Group: o.Group})
+					label := cmpOr(p.im.Alt, p.im.Src)
+					switch {
+					case p.img != nil:
+						widget.Image(c, i, p.img, p.w, widget.ImageOpts{Label: label, Help: o.Help, Zoom: true, Group: o.Group})
+						continue
+					case p.doc != nil:
+						doc, sh := p.doc, c.Shaper()
+						v := widget.Vector{Size: doc.Size, Fill: th.C(theme.BgSurface), Draw: func(f render.Frame, r render.Rect) { doc.Draw(f, r, sh) }}
+						widget.VectorImage(c, i, v, p.w, widget.ImageOpts{Label: label, Help: o.Help, Zoom: true, Group: o.Group})
 						continue
 					}
+					tip := p.why
+					if p.loading {
+						tip = "Loading " + p.im.Src
+					}
 					c.Row(i, ui.Style{W: ui.Px(p.w), H: ui.Px(24), Pad: ui.PadXY(8, 0), Gap: 8, Cross: ui.Center, Radius: 4, Stroke: th.C(theme.LineStrong),
-						Border: 1, Clip: true, Role: ui.RoleImage, Label: cmpOr(p.im.Alt, p.im.Src), Tooltip: p.why, Help: o.Help}, func(c *ui.Ctx) {
+						Border: 1, Clip: true, Role: ui.RoleImage, Label: label, Tooltip: tip, Help: o.Help}, func(c *ui.Ctx) {
 						fg := th.C(theme.FgFaint)
 						c.Paint("icon", ui.Px(14), ui.Px(11), func(f render.Frame, r render.Rect) { paintPictureIcon(f, r, fg) })
 						c.Text("alt", cmpOr(p.im.Alt, "image"), chipFont)
+						if p.loading {
+							widget.Dots(c, "loading", widget.DotsOpts{Size: 4, Tone: fg, Name: "Loading " + label})
+						}
 						c.Text("src", p.im.Src, srcFont)
 					})
 				}
@@ -396,6 +425,9 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 		}
 	})
 }
+
+// mdLoadingDots is the width of a loading placeholder's dots.
+const mdLoadingDots = 4*3 + 3.2*2
 
 // paintPictureIcon draws a small picture, a frame with a hill in it, into r.
 func paintPictureIcon(f render.Frame, r render.Rect, fg render.Color) {
@@ -406,17 +438,18 @@ func paintPictureIcon(f render.Frame, r render.Rect, fg render.Color) {
 	f.Path(&p, render.Style{Fill: fg})
 }
 
-// mdPicture is the image a markdown src names: a file, relative to dir unless it's absolute, or a data: URI. Without
-// one, why says why.
-func mdPicture(src, dir string) (img image.Image, why string) {
-	var err error
+// mdPicture is the image or drawing a markdown src names: a file, relative to dir unless it's absolute, a data: URI,
+// or an http(s) URL, fetched in the background and loading until it's in. Without one, why says why.
+func mdPicture(src, dir string) (pc *picture, why string) {
 	switch {
 	case src == "":
-		return nil, "an image with no source"
+		return &picture{}, "an image with no source"
 	case strings.HasPrefix(src, "data:"):
-		img, _, err = pictures.data(src)
-	case strings.HasPrefix(src, "http://"), strings.HasPrefix(src, "https://"), strings.HasPrefix(src, "//"):
-		return nil, "Remote images aren't fetched"
+		pc = pictures.dataEntry(src)
+	case strings.HasPrefix(src, "//"):
+		pc = pictures.remote("https:" + src)
+	case strings.HasPrefix(src, "http://"), strings.HasPrefix(src, "https://"):
+		pc = pictures.remote(src)
 	default:
 		p := strings.TrimPrefix(src, "file://")
 		if i := strings.IndexAny(p, "?#"); i >= 0 {
@@ -427,16 +460,16 @@ func mdPicture(src, dir string) (img image.Image, why string) {
 		}
 		if !filepath.IsAbs(p) {
 			if dir == "" {
-				return nil, "There's no folder to find " + src + " in"
+				return &picture{}, "There's no folder to find " + src + " in"
 			}
 			p = filepath.Join(dir, filepath.FromSlash(p))
 		}
-		img, _, err = pictures.file(p)
+		pc = pictures.fileEntry(p)
 	}
-	if err != nil {
-		return nil, err.Error()
+	if pc.err != nil {
+		return pc, pc.err.Error()
 	}
-	return img, ""
+	return pc, ""
 }
 
 // mdSpans is a paragraph's inline markdown as spans: `code`, **bold**, ~~struck~~, and [links](url) as their text.

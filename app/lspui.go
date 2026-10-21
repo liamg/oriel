@@ -334,25 +334,6 @@ func markdown(c *ui.Ctx, key any, m lsp.Markup, width float32) {
 	markdownText(c, key, m.Text, width, body)
 }
 
-// plainMarkdown takes inline markup out of a paragraph: `code`, **bold**, *em* and [links](url).
-func plainMarkdown(s string) string {
-	r := strings.NewReplacer("`", "", "**", "", "__", "", "~~", "")
-	s = r.Replace(s)
-	for {
-		i := strings.Index(s, "](")
-		if i < 0 {
-			break
-		}
-		j := strings.Index(s[i:], ")")
-		open := strings.LastIndex(s[:i], "[")
-		if j < 0 || open < 0 {
-			break
-		}
-		s = s[:open] + s[open+1:i] + s[i+j+1:]
-	}
-	return s
-}
-
 // lspStatus is the status line's server segment: the current file's server and what it's doing.
 type lspStatus struct{ x *lspPlugin }
 

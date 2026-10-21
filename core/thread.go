@@ -1,9 +1,6 @@
 package core
 
-import (
-	"strings"
-	"time"
-)
+import "time"
 
 // ThreadID names a thread within its session.
 type ThreadID string
@@ -193,14 +190,15 @@ func (t Thread) Drafts() []Comment {
 	return out
 }
 
-// Heading is what a list shows for the thread: its title, else the first line of its first comment.
+// Heading is what a list shows for the thread: its title, else the first line of plain text in its first comment.
 func (t Thread) Heading() string {
 	if t.Title != "" {
 		return t.Title
 	}
-	if len(t.Comments) == 0 {
-		return string(t.ID)
+	if len(t.Comments) > 0 {
+		if line := Summary(t.Comments[0].Body); line != "" {
+			return line
+		}
 	}
-	line, _, _ := strings.Cut(strings.TrimSpace(t.Comments[0].Body), "\n")
-	return line
+	return string(t.ID)
 }

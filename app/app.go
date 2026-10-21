@@ -341,6 +341,7 @@ func newShell(cfg Config, poke func()) (*shell, func()) {
 	notices := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })
 	sh := &shell{cfg: cfg, events: events, poke: poke, reopen: make(chan reopenTo, 1)}
 	iconReg.Store(&cfg.Registry)
+	pictureWake.Store(&poke)
 	return sh, func() { tail(); notices() }
 }
 

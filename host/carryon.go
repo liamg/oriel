@@ -84,7 +84,7 @@ func carryOnNotice(se core.SessionState, threads []core.Thread, tasks []core.Tas
 	for _, t := range threads {
 		about := t.Title
 		if c, ok := firstComment(t); ok && about == "" {
-			about = firstLine(c.Body)
+			about = core.Summary(c.Body)
 		}
 		parts = append(parts, fmt.Sprintf("thread %s (%s: %s)", t.ID, where(se, t), clipLine(about)))
 	}

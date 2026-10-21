@@ -36,6 +36,15 @@ func photo(w, h int) *image.NRGBA {
 // accessRole is the node with role and label in the accessibility tree.
 func (s *errScene) accessRole(t *testing.T, role render.Role, label string) *render.AccessNode {
 	t.Helper()
+	n := s.findRole(role, label)
+	if n == nil {
+		t.Fatalf("no %s labelled %q", role, label)
+	}
+	return n
+}
+
+// findRole is the first node with role and label in the access tree, or nil.
+func (s *errScene) findRole(role render.Role, label string) *render.AccessNode {
 	var find func(n *render.AccessNode) *render.AccessNode
 	find = func(n *render.AccessNode) *render.AccessNode {
 		if n.Role == role && n.Name == label {
@@ -48,11 +57,7 @@ func (s *errScene) accessRole(t *testing.T, role render.Role, label string) *ren
 		}
 		return nil
 	}
-	n := find(s.ui.AccessTree())
-	if n == nil {
-		t.Fatalf("no %s labelled %q", role, label)
-	}
-	return n
+	return find(s.ui.AccessTree())
 }
 
 func (s *errScene) drew(text string) bool { return strings.Contains(s.frameText(), text) }
@@ -107,13 +112,12 @@ func TestImageFileTab(t *testing.T) {
 	}
 }
 
-// editor.md, "Images": "an SVG, a video, audio, a PDF or another binary file is a card with its name, type and size
-// and \"Open in default app\" (`open` on macOS, `xdg-open` on Linux)."
+// editor.md, "Images": "A video, audio, a PDF or another binary file is a card with its name, type and size and
+// \"Open in default app\" (`open` on macOS, `xdg-open` on Linux)."
 func TestMediaFileCard(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "demo.mp4"), make([]byte, 3<<20), 0o644)
 	os.WriteFile(filepath.Join(dir, "blob.bin"), []byte("ab\x00cd"), 0o644)
-	os.WriteFile(filepath.Join(dir, "logo.svg"), []byte("<svg xmlns='http://www.w3.org/2000/svg'/>"), 0o644)
 	s := newScene(t, "", dir, render.Point{X: 1200, Y: 800})
 	s.run("editor.open", registry.Args{"path": "demo.mp4"})
 	s.frames(3)
@@ -132,16 +136,45 @@ func TestMediaFileCard(t *testing.T) {
 	if !s.drew("binary file · 5 B") {
 		t.Errorf("a binary file's card:\n%s", s.frameText())
 	}
-	s.run("editor.open", registry.Args{"path": "logo.svg"})
-	s.frames(2)
-	if !s.drew("SVG image") || !s.drew("SVG isn't drawn here") {
-		t.Errorf("an SVG's card:\n%s", s.frameText())
-	}
 	// Text still opens as text.
 	os.WriteFile(filepath.Join(dir, "notes.txt"), []byte("hello\n"), 0o644)
 	s.run("editor.open", registry.Args{"path": "notes.txt"})
 	s.frames(2)
 	if !s.showing(EditorView) || !s.drew("hello") {
 		t.Errorf("a text file didn't open in the editor:\n%s", s.frameText())
+	}
+}
+
+// editor.md, "Images": "an SVG is drawn the same way, as vectors"; one that can't be read is a card saying why.
+func TestSVGFileTab(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "logo.svg"), []byte(testBadge), 0o644)
+	os.WriteFile(filepath.Join(dir, "broken.svg"), []byte("<svg width="), 0o644)
+	s := newScene(t, "", dir, render.Point{X: 1200, Y: 800})
+	s.run("editor.open", registry.Args{"path": "logo.svg"})
+	s.frames(3)
+	if !s.showing(ImageView) {
+		t.Fatalf("logo.svg didn't open in the image view:\n%s", s.frameText())
+	}
+	for _, want := range []string{"90 × 20 · ", "· SVG"} {
+		if !s.drew(want) {
+			t.Errorf("the tab lacks %q:\n%s", want, s.frameText())
+		}
+	}
+	img := s.accessRole(t, "image", "logo.svg")
+	if w := img.Bounds.Dx(); w != 90 {
+		t.Errorf("the SVG is %v wide, want its own 90", w)
+	}
+	s.click(centre(img.Bounds))
+	s.frames(2)
+	if !s.drew("90×20") {
+		t.Errorf("a click on the SVG doesn't show it in the lightbox:\n%s", s.frameText())
+	}
+	s.Key("Esc")
+	s.frames(2)
+	s.run("editor.open", registry.Args{"path": "broken.svg"})
+	s.frames(2)
+	if !s.drew("SVG image") || !s.drew("It can't be read as an image") {
+		t.Errorf("a broken SVG's card:\n%s", s.frameText())
 	}
 }

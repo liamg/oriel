@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/svg"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -37,6 +40,7 @@ type imagePlugin struct {
 // viewedFile is a file as its tab last read it; it's read again a second after.
 type viewedFile struct {
 	img    image.Image
+	doc    *svg.Doc
 	format string
 	err    error
 	size   int64
@@ -108,7 +112,8 @@ func (x *imagePlugin) file(c *ui.Ctx, path string) *viewedFile {
 		} else {
 			f.size = fi.Size()
 			if isImage(path) {
-				f.img, f.format, f.err = pictures.file(path)
+				pc := pictures.fileEntry(path)
+				f.img, f.doc, f.format, f.err = pc.img, pc.doc, pc.format, pc.err
 			}
 		}
 		x.files[path] = f
@@ -124,15 +129,28 @@ func (x *imagePlugin) view(c *ui.Ctx, vc registry.ViewCtx) {
 	name := filepath.Base(path)
 	c.Column("image", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(24), Gap: 12, Main: ui.Center, Cross: ui.Center, Fill: th.C(tImageViewBg),
 		Clip: true, Role: ui.RoleRegion, Label: name, Help: imageHelp}, func(c *ui.Ctx) {
-		if f.img == nil {
+		var size render.Point
+		switch {
+		case f.img != nil:
+			b := f.img.Bounds()
+			size = render.Point{X: float32(b.Dx()), Y: float32(b.Dy())}
+		case f.doc != nil:
+			size = f.doc.Size
+		default:
 			x.card(c, path, f)
 			return
 		}
-		b := f.img.Bounds()
 		availW, availH := max(vc.Width-48, 16), max(vc.Height-48-12-16, 16)
-		w := min(float32(b.Dx()), availW, availH*float32(b.Dx())/float32(max(b.Dy(), 1)))
-		widget.Image(c, "img", f.img, w, widget.ImageOpts{Label: name, Help: imageHelp, Zoom: true, Group: "file:" + path})
-		c.Text("info", fmt.Sprintf("%d × %d · %s · %s", b.Dx(), b.Dy(), humanBytes(f.size), strings.ToUpper(f.format)), monoFont(11, th.C(theme.FgFaint)))
+		w := min(size.X, availW, availH*size.X/max(size.Y, 1))
+		o := widget.ImageOpts{Label: name, Help: imageHelp, Zoom: true, Group: "file:" + path}
+		if f.img != nil {
+			widget.Image(c, "img", f.img, w, o)
+		} else {
+			doc, sh := f.doc, c.Shaper()
+			widget.VectorImage(c, "img", widget.Vector{Size: size, Fill: th.C(tImageViewBg), Draw: func(fr render.Frame, r render.Rect) { doc.Draw(fr, r, sh) }}, w, o)
+		}
+		c.Text("info", fmt.Sprintf("%d × %d · %s · %s", int(math.Round(float64(size.X))), int(math.Round(float64(size.Y))), humanBytes(f.size),
+			strings.ToUpper(f.format)), monoFont(11, th.C(theme.FgFaint)))
 	})
 }
 
@@ -144,8 +162,6 @@ func (x *imagePlugin) card(c *ui.Ctx, path string, f *viewedFile) {
 	switch {
 	case os.IsNotExist(f.err):
 		why = "The file isn't there any more."
-	case f.err == errSVG:
-		why = "SVG isn't drawn here: only raster images are."
 	case f.err != nil && isImage(path):
 		why = "It can't be read as an image: " + f.err.Error()
 	case strings.Contains(kind, "video") || strings.Contains(kind, "audio"):
