@@ -20,10 +20,12 @@ import (
 )
 
 // StartView is what the main area shows with nothing open: no directory and no session (ui.md 01e).
-// OverviewView is what it shows with a directory or session open but no view in it (01g).
+// OverviewView is what it shows with a directory or session open but no view in it (01g). OpeningView is what it
+// shows while the window is about to open again on another directory or session.
 const (
 	StartView    = "app.start"
 	OverviewView = "app.overview"
+	OpeningView  = "app.opening"
 	// OverviewPanelsView is a directory's overview panels alone, the directory its instance: the Repos page's stats.
 	OverviewPanelsView = "app.overview.panels"
 )
@@ -171,7 +173,28 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 	s.add(h.View(StartView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
 		return &ui.Func{Key: "start", Fn: func(c *ui.Ctx) { s.build(c, h) }}
 	})))
+	s.add(h.View(OpeningView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+		return &ui.Func{Key: "opening", Fn: func(c *ui.Ctx) { s.opening(c, h) }}
+	})))
 	return nil
+}
+
+// opening is the logo and what the window is opening, while the loop starts every plugin again on it.
+func (s *start) opening(c *ui.Ctx, h plugin.Host) {
+	to := s.sh.heading.Load()
+	if to == nil {
+		return
+	}
+	what := filepath.Base(to.dir)
+	if se, ok := h.State().Session(to.session); ok {
+		what = se.Name()
+	}
+	th := c.Theme()
+	c.Column("opening", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 18, Role: ui.RoleRegion, Label: "Opening"},
+		func(c *ui.Ctx) {
+			c.Paint("logo", ui.Px(44), ui.Px(44), func(f render.Frame, r render.Rect) { logo(f, r, th) })
+			widget.Busy(c, "busy", widget.LoadState{}, widget.BusyOpts{Label: "Opening " + what, Size: 13})
+		})
 }
 
 // keeps says whether a key from beyond the start view works while it shows: only its own entries' and links' (ui.md
@@ -213,6 +236,7 @@ func (sh *shell) reopenOn(to reopenTo) error {
 	case <-sh.reopen:
 	default:
 	}
+	sh.heading.Store(&to)
 	sh.reopen <- to
 	sh.poke()
 	return nil

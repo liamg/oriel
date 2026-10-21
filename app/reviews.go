@@ -94,6 +94,9 @@ func (x *reviewsPlugin) Activate(_ context.Context, h plugin.Host) error {
 		}},
 		{ID: "reviews.start", Title: "Start a review of the pull request selected on the Reviews page, or continue its session", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("start") }},
+		{ID: "reviews.start-background", Title: "Start a review of pull request {url} behind the session in front, on the default agent",
+			Available: func(registry.Args) bool { return x.sh.cfg.Host != nil },
+			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.startBehind(ctx, a.String("url")) }},
 		{ID: "reviews.browse", Title: "Open the pull request selected on the Reviews page in the browser", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { return x.pageCommand("browse") }},
 		{ID: "reviews.filter", Title: "Filter the Reviews page's list", Available: open,
@@ -279,8 +282,12 @@ func (x *reviewsPlugin) notifyNew(s registry.HostSite, before, now []registry.Re
 		if st, ok := was[r.URL]; ok && (st == r.State || st == registry.ReviewNew) {
 			continue
 		}
-		x.h.Notify(core.Notice{ID: "reviews.asked:" + r.URL, Severity: core.SevInfo, Source: s.Source, Text: askedText(r), Time: time.Now(),
-			Actions: []core.Action{{Title: "Reviews", Command: "reviews.open"}}})
+		id := "reviews.asked:" + r.URL
+		x.h.Notify(core.Notice{ID: id, Severity: core.SevQuestion, Source: s.Source, Title: "Review requested", Text: askedText(r), Time: time.Now(),
+			Actions: []core.Action{
+				{Title: "Start review in background", Command: "reviews.start-background", Args: map[string]any{"url": r.URL}},
+				{Title: "Ignore", Command: "notice.dismiss", Args: map[string]any{"id": id}},
+			}})
 	}
 }
 
@@ -487,6 +494,47 @@ func (x *reviewsPlugin) start(ctx context.Context, r reviewRow) error {
 		return fmt.Errorf("%s can't check out %s for a review", r.src.Label(), r.req.Key())
 	}
 	return x.h.Run(ctx, "session.new", registry.Args{"kind": string(core.KindReview), "pr": r.req.URL})
+}
+
+// startBehind starts a review of url behind the session in front, on the agent the launcher would pick, and says
+// so once it's up.
+func (x *reviewsPlugin) startBehind(ctx registry.Ctx, url string) error {
+	if url == "" {
+		return errors.New("start a review of which pull request? {url}")
+	}
+	name := url
+	for _, r := range x.rows() {
+		if r.req != nil && r.req.URL == url {
+			name = shortKey(*r.req)
+		}
+	}
+	open := func(se core.Session) []core.Action {
+		return []core.Action{{Title: "Open", Command: "session.open", Args: map[string]any{"id": string(se.ID())}}}
+	}
+	if se, ok := prSession(x.h, url); ok {
+		x.h.Notify(core.Notice{ID: "reviews.started:" + url, Severity: core.SevInfo, Source: "reviews", Text: se.Name() + " is already reviewing " + name,
+			Actions: open(se)})
+		return nil
+	}
+	w, h, st := x.sh.cfg.Host, x.h, x.h.State()
+	v, _, _ := h.Options().Get("sandbox.default", registry.At{})
+	sandbox := v == "sandbox"
+	return plugin.RunSlow(ctx, h, plugin.Slow{ID: "reviews.start:" + url, Doing: "Starting a review of " + name},
+		func(ctx context.Context) (struct{}, error) {
+			provider, model := defaultAgent(st, w.ProviderInfo(ctx))
+			a := registry.Args{"kind": string(core.KindReview), "pr": url, "provider": provider, "model": model, "sandbox": sandbox, "background": true}
+			if sandbox {
+				a["network"] = "ask"
+			}
+			return struct{}{}, plugin.Await(ctx, func(ctx registry.Ctx) error { return h.Run(ctx, "session.start", a) })
+		},
+		func(registry.Ctx, struct{}) error {
+			if se, ok := prSession(h, url); ok {
+				h.Notify(core.Notice{ID: "reviews.started:" + url, Severity: core.SevInfo, Source: "reviews", Text: "Reviewing " + name + " in the background",
+					Actions: open(se)})
+			}
+			return nil
+		})
 }
 
 func (x *reviewsPlugin) source() registry.PickerSource {

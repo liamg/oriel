@@ -118,7 +118,9 @@ func TestOpenDirectory(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	r.waitFrame("the start view gone", func(s string) bool { return !strings.Contains(s, "Open Directory") })
+	r.waitFrame("the window on proj", func(s string) bool {
+		return !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening proj")
+	})
 	r.typeKeys("<Space><Space>")
 	r.waitText("hello.txt")
 

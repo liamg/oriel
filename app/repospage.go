@@ -696,8 +696,11 @@ func (x *reposPlugin) tagCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 		x.loadTag(r.ID, t)
 	}
 	summary := "no tags yet"
-	if t.preview.Latest != "" {
+	switch {
+	case t.preview.Latest != "":
 		summary = "latest " + t.preview.Latest
+	case !t.loaded && t.err == "":
+		summary = "" // not "no tags" before they're read
 	}
 	right := func(c *ui.Ctx) {
 		if !t.open && widget.Button(c, "new", "New tag…", widget.ButtonOpts{Help: "agent/repos#tags"}) {

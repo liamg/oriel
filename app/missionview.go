@@ -41,19 +41,7 @@ var missionTermFont = typeset.FontSpec{Family: typeset.Mono, Size: 11}
 // page is mission control while it's open, under the title bar: the header, the needs-you queue beside the cards,
 // the strip of indicators and the keys along its foot.
 func (x *missionPlugin) page(c *ui.Ctx) {
-	if x.launch.IsZero() {
-		x.launch = c.Now()
-	}
-	if x.pending {
-		id, known := x.atLaunch(x.h.State())
-		switch {
-		case x.sh.cfg.WorkDir != "":
-			x.pending = false
-		case known:
-			x.pending = false
-			x.landOn(id)
-		}
-	}
+	x.land()
 	if !x.open || c.Theme().IsProbe() {
 		if !x.open {
 			x.closeTerms(nil)
