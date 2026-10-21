@@ -36,6 +36,8 @@ type sandboxRig struct {
 	launched chan []string
 	opts     chan sandbox.LaunchOptions
 	hold     chan struct{} // when set, a launch reports a step and waits on it
+	swept    chan bool     // when set, each sweep sends whether the session's sandbox was attached
+	root     string        // the root swept asks about
 }
 
 // fakeBackend launches an echo in place of the agent.
@@ -59,7 +61,12 @@ func (fakeBackend) Stop(context.Context, string) error { return nil }
 
 func (fakeBackend) Health(context.Context, sandbox.Config) []sandbox.Problem { return nil }
 
-func (fakeBackend) Sweep(context.Context, func(string) bool) []string { return nil }
+func (f fakeBackend) Sweep(_ context.Context, attached func(string) bool) []string {
+	if f.s.swept != nil {
+		f.s.swept <- attached(f.s.root)
+	}
+	return nil
+}
 
 func (fakeBackend) AgentRunDir(string) string { return "/run/oriel" }
 

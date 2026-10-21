@@ -217,46 +217,45 @@ clip 44,38 1556x936 r 0
     text "none ▾" @1475.4062,683.11426 #ece6d8 Inter 12
     rect 1540.5469,665.749 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,683.11426 #4f4a40 Inter 12
-    text "sandbox.hidden_servers" @332,733.68677 #ece6d8 JetBrains Mono 12.5
-    text "Upstream MCP servers a sandbox never sees, by name." @332,753.54614 #7c7566 Inter 12.5
-    text "default" @1202.3906,742.52905 #7c7566 JetBrains Mono 10.5
-    rect 1465.4062,725.749 59.140625x26 fill #191815 radius 6 stroke 1 #332f27
-    text "none ▾" @1475.4062,743.11426 #ece6d8 Inter 12
-    rect 1540.5469,725.749 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,743.11426 #4f4a40 Inter 12
-    text "sandbox.image" @332,793.68677 #ece6d8 JetBrains Mono 12.5
-    text "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo." @332,813.54614 #7c7566 Inter 12.5
-    text "default" @1202.3906,802.52905 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,783.749 200x30 fill #060606 radius 6
-    clip 1324.5469,783.749 200x30 r 6
+    text "sandbox.go_cache_max" @332,733.499 #ece6d8 JetBrains Mono 12.5
+    text "The cap on the sandboxes' shared Go build cache (\"20g\"): the hourly sweep removes the" @332,753.3584 #7c7566 Inter 12.5
+    text "least recently used past it. Empty is 20g, \"none\" no cap." @332,771.4829 #7c7566 Inter 12.5
+    text "default" @1202.3906,751.40356 #7c7566 JetBrains Mono 10.5
+    rect 1324.5469,732.62354 200x30 fill #060606 radius 6
+    clip 1324.5469,732.62354 200x30 r 6
     pop
-    rect 1324.5469,783.749 200x30 radius 6 stroke 1 #332f27
-    rect 1540.5469,785.749 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,803.11426 #4f4a40 Inter 12
-    text "sandbox.loopback" @332,853.499 #ece6d8 JetBrains Mono 12.5
-    text "The host's loopback ports a seatbelt sandbox may connect to: all; ephemeral, not services" @332,873.3584 #7c7566 Inter 12.5
-    text "on fixed ports; or none." @332,891.4829 #7c7566 Inter 12.5
-    text "default" @1202.3906,871.40356 #7c7566 JetBrains Mono 10.5
-    clip 1353.3469,855.62354 171.19995x24 r 5
-      rect 1353.3469,855.62354 40.849976x24 fill #1f1c0f
-      text "ALL" @1363.3469,871.0435 #ffd23f JetBrains Mono 9.5
-      text "EPHEMERAL" @1404.1969,871.0435 #7c7566 JetBrains Mono 9.5
-      text "NONE" @1486.747,871.0435 #7c7566 JetBrains Mono 9.5
+    rect 1324.5469,732.62354 200x30 radius 6 stroke 1 #332f27
+    rect 1540.5469,734.62354 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,751.9888 #4f4a40 Inter 12
+    text "sandbox.hidden_servers" @332,811.4358 #ece6d8 JetBrains Mono 12.5
+    text "Upstream MCP servers a sandbox never sees, by name." @332,831.29517 #7c7566 Inter 12.5
+    text "default" @1202.3906,820.2781 #7c7566 JetBrains Mono 10.5
+    rect 1465.4062,803.49805 59.140625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "none ▾" @1475.4062,820.8633 #ece6d8 Inter 12
+    rect 1540.5469,803.49805 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,820.8633 #4f4a40 Inter 12
+    text "sandbox.image" @332,871.4358 #ece6d8 JetBrains Mono 12.5
+    text "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo." @332,891.29517 #7c7566 Inter 12.5
+    text "default" @1202.3906,880.2781 #7c7566 JetBrains Mono 10.5
+    rect 1324.5469,861.49805 200x30 fill #060606 radius 6
+    clip 1324.5469,861.49805 200x30 r 6
     pop
-    rect 1353.3469,855.62354 171.19995x24 radius 5 stroke 1 #332f27
-    rect 1540.5469,854.62354 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,871.9888 #4f4a40 Inter 12
-    rect 313,918.49805 3x36 fill #ffd23f radius 2
-    text "sandbox.memory" @332,931.4358 #ece6d8 JetBrains Mono 12.5
-    text "Each container's memory cap in docker's units (\"8g\"); empty is 8g, \"none\" no cap." @332,951.29517 #7c7566 Inter 12.5
-    text "user" @1222.1719,940.2781 #7c7566 JetBrains Mono 10.5
-    rect 1324.5469,921.49805 200x30 fill #060606 radius 6
-    clip 1324.5469,921.49805 200x30 r 6
-      text "4g" @1334.5469,941.04517 #ece6d8 Inter 12.5
+    rect 1324.5469,861.49805 200x30 radius 6 stroke 1 #332f27
+    rect 1540.5469,863.49805 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,880.8633 #4f4a40 Inter 12
+    text "sandbox.loopback" @332,931.24805 #ece6d8 JetBrains Mono 12.5
+    text "The host's loopback ports a seatbelt sandbox may connect to: all; ephemeral, not services" @332,951.1074 #7c7566 Inter 12.5
+    text "on fixed ports; or none." @332,969.23193 #7c7566 Inter 12.5
+    text "default" @1202.3906,949.1526 #7c7566 JetBrains Mono 10.5
+    clip 1353.3469,933.37256 171.19995x24 r 5
+      rect 1353.3469,933.37256 40.849976x24 fill #1f1c0f
+      text "ALL" @1363.3469,948.79254 #ffd23f JetBrains Mono 9.5
+      text "EPHEMERAL" @1404.1969,948.79254 #7c7566 JetBrains Mono 9.5
+      text "NONE" @1486.747,948.79254 #7c7566 JetBrains Mono 9.5
     pop
-    rect 1324.5469,921.49805 200x30 radius 6 stroke 1 #332f27
-    rect 1540.5469,923.49805 31.453125x26 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,940.8633 #ece6d8 Inter 12
+    rect 1353.3469,933.37256 171.19995x24 radius 5 stroke 1 #332f27
+    rect 1540.5469,932.37256 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,949.7378 #4f4a40 Inter 12
   pop
   rect 44,944 1556x30 fill #0c0c0b stroke 1 #24221d
   text "writing to ~/.config/oriel/settings.toml" @60,962.78 #7c7566 JetBrains Mono 10.5

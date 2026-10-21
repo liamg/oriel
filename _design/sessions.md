@@ -135,6 +135,8 @@ stateDiagram-v2
     PR (it stays open), then an agent mid-turn and a running sandbox. With uncommitted work Archive is **Discard
     and archive** (`EndReq.Discard`).
   - **Delete the branches too** deletes each project's local branch, never the default one; the remote's stays.
+  - A sandboxed session's archive empties its sandbox's temp dir and home caches; a delete removes its sandbox dir
+    (agents.md, "Disk").
   - `session.archive_on_merge` (off by default) archives by itself on `PrMerged` once every PR is merged and nothing
     is uncommitted.
 - **Sessions survive restarts**: the agent resumes by session id, and the layout, open buffers and cursor positions come back.

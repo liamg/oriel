@@ -43,5 +43,5 @@
 //     runner.OrielBinary: cmd/oriel-sandbox built static for Linux, which the
 //     app embeds (package helper, `make helper`) and hands over with
 //     runner.SetHelper. Under seatbelt it is the running binary.
-//   - Backend.Sweep and Backend.Health run on timers.
+//   - Backend.Sweep, then Sweep, run hourly (host.SweepSandboxes).
 package sandbox

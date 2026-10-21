@@ -577,6 +577,13 @@ sequenceDiagram
   container's mounts, and where the agent finds host paths that aren't at the same path inside), and build its image
   again (`sandbox.Rebuilder`). `Host.Workspace`, `Host.RebuildSandbox` and `Host.RestartSandbox` are those for a
   session, and the Workspace page (ui.md 15b) shows them.
+  - **Disk.** An agent ending (stop, restart, exit: `box.Close`) empties its sandbox's temp dir. Archiving a session
+    also removes its home's tool caches (`sandbox.Clean`, `sandbox.HomeCaches`) and keeps the rest, so it reopens
+    as before; deleting one removes its sandbox dir (`sandbox.Remove`). `Host.SweepSandboxes` runs at start and
+    hourly: every backend this machine can run `Sweep`s, then `sandbox.Sweep` removes sandbox dirs whose workspace
+    is gone and that no session (archived or not) has, and trims the shared Go build cache, least recently used
+    first, to `sandbox.go_cache_max` (`Config.GoCacheMax`, 20g). The Go cache stays the sandboxes' own: sharing the
+    host's would let an agent plant build outputs or module sources the host then builds.
   - `docker` (`sandbox/runner`): a container per run, binds as mounts, the egress sidecar on an internal network
     (always, filtering on or off: the host dials every connection, so its VPN, tailnet and private DNS reach the
     sandbox; with filtering off, `egress.Session.Open` allows them all),

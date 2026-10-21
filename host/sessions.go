@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/sandbox"
 )
 
 var _ core.Sessions = (*Host)(nil)
@@ -493,6 +494,11 @@ func (w *Host) archive(ctx context.Context, se core.SessionState, discard bool) 
 	if h, _ := w.sessionFor(id, false); h != nil {
 		h.stop("archived", core.StoppedByYou)
 	}
+	if root := agentDir(se); root != "" {
+		if err := sandbox.Clean(root); err != nil {
+			w.log.Warn("archive: sandbox cleanup", "session", id, "err", err)
+		}
+	}
 	if se.Kind != core.KindDirect {
 		for _, p := range worktrees(se) {
 			if err := (gitx.Repo{Dir: p.Repo}).RemoveWorktree(ctx, p.Dir, discard); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -940,6 +946,11 @@ func (w *Host) delete(ctx context.Context, se core.SessionState) error {
 	if se.Dir != "" && within(se.Dir, w.workspacesDir()) {
 		if err := os.RemoveAll(se.Dir); err != nil {
 			return err
+		}
+	}
+	if root := agentDir(se); root != "" {
+		if err := sandbox.Remove(root); err != nil {
+			w.log.Warn("delete: sandbox", "session", id, "err", err)
 		}
 	}
 	if err := w.emit(core.SessionClosed{ID: id}); err != nil {

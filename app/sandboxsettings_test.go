@@ -39,6 +39,7 @@ func TestSandboxOptionsAreDeclared(t *testing.T) {
 		{"sandbox.egress_proxy", registry.Bool, true, false},
 		{"sandbox.memory", registry.String, "", false},
 		{"sandbox.pids_limit", registry.Int, 0, false},
+		{"sandbox.go_cache_max", registry.String, "", false},
 		{"sandbox.servers", registry.Map, map[string]string{}, false},
 	} {
 		sp, ok := o.Spec(tt.name)
@@ -64,7 +65,7 @@ func TestSandboxOptionsAreDeclared(t *testing.T) {
 		t.Errorf("sandbox.env doesn't offer the host's variables: %v", sp.Choices())
 	}
 	for name, bad := range map[string]any{"sandbox.egress": []string{"allow"}, "sandbox.rules": []string{"always oriel__push"},
-		"sandbox.memory": "lots", "sandbox.approval_timeout": -time.Second, "sandbox.servers": map[string]string{"Git Hub": "https://x"},
+		"sandbox.memory": "lots", "sandbox.go_cache_max": "big", "sandbox.approval_timeout": -time.Second, "sandbox.servers": map[string]string{"Git Hub": "https://x"},
 		"sandbox.servers ": map[string]string{"gh": `npx "open`}} {
 		name = strings.TrimSpace(name)
 		if err := o.Set(name, registry.LayerUser, registry.At{}, bad); err == nil {
@@ -83,6 +84,7 @@ func TestSandboxSettingsReachTheHost(t *testing.T) {
 	s := newSceneWith(t, "", lw.repo, mockupSize, lw.connect(t))
 	writeFile(t, filepath.Join(s.sh.cfg.ConfigDir, "settings.toml"), `[sandbox]
 memory = "4g"
+go_cache_max = "8g"
 egress = ["allow proxy.golang.org", "deny ads.example.com"]
 approval_timeout = "2m"
 egress_proxy = false
@@ -110,7 +112,7 @@ linear = "npx -y linear-mcp"
 	cfg := waitSandbox(t, lw, "the user's and both projects' settings", func(c sandbox.Config) bool {
 		return len(c.Projects[other].Rules) == 1 && len(c.Projects[lw.repo].Egress) == 1
 	})
-	want := sandbox.Config{Default: "sandbox", Backend: "docker", Loopback: "all", Memory: "4g", ApprovalSecs: 120, NoEgressProxy: true, Env: []string{"GOFLAGS"},
+	want := sandbox.Config{Default: "sandbox", Backend: "docker", Loopback: "all", Memory: "4g", GoCacheMax: "8g", ApprovalSecs: 120, NoEgressProxy: true, Env: []string{"GOFLAGS"},
 		Servers: map[string]json.RawMessage{"docs": json.RawMessage(`{"type":"http","url":"https://docs.example.com/mcp"}`),
 			"linear": json.RawMessage(`{"command":"npx","args":["-y","linear-mcp"]}`)},
 		Egress: []sandbox.EgressRule{{Host: "proxy.golang.org", Allow: true}, {Host: "ads.example.com"}},
@@ -154,7 +156,7 @@ func TestSettingsSandboxSection(t *testing.T) {
 	s.run("Settings", registry.Args{"args": "sandbox"})
 	s.golden("settings-sandbox")
 	text := s.frameText()
-	for _, want := range []string{"sandbox.egress", "sandbox.memory", "4g", "sandbox.egress_proxy", "sandbox.default", "sandbox.backend", "sandbox.loopback",
+	for _, want := range []string{"sandbox.egress", "sandbox.go_cache_max", "sandbox.egress_proxy", "sandbox.default", "sandbox.backend", "sandbox.loopback",
 		"none ▾"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the sandbox section lacks %q", want)
@@ -174,6 +176,12 @@ func TestSettingsSandboxSection(t *testing.T) {
 		s.frame()
 		s.frame()
 	}
+	search("sandbox.memory")
+	if text := s.frameText(); !strings.Contains(text, "sandbox.memory") || !strings.Contains(text, "4g") {
+		t.Error("the sandbox section lacks sandbox.memory at 4g")
+	}
+	s.typeKeys("Esc")
+	s.frame()
 	search("sandbox.rules")
 	if !strings.Contains(s.frameText(), "sandbox.rules") {
 		t.Error("the sandbox section lacks sandbox.rules")

@@ -54,6 +54,20 @@ func NewSandboxFactory(config func() sandbox.Config) *Sandboxes {
 
 func (s *Sandboxes) Backends() []string { return s.Available() }
 
+func (s *Sandboxes) Sweep(ctx context.Context, attached, known func(root string) bool) []string {
+	cfg := s.config(core.SessionState{})
+	var out []string
+	for _, name := range s.Available() {
+		named := cfg
+		named.Backend = name
+		if b, err := s.Backend(named); err == nil {
+			out = append(out, b.Sweep(ctx, attached)...)
+		}
+	}
+	keep := func(root string) bool { return attached(root) || known(root) }
+	return append(out, sandbox.Sweep(keep, cfg)...)
+}
+
 // Attach gives the factory the host whose sessions it serves.
 func (s *Sandboxes) Attach(w *Host) {
 	s.mu.Lock()
@@ -300,12 +314,13 @@ func (b *box) Close() error {
 	b.mu.Lock()
 	launched := b.launched
 	b.mu.Unlock()
+	var err error
 	if launched {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		return b.backend.Stop(ctx, b.root)
+		err = b.backend.Stop(ctx, b.root)
 	}
-	return nil
+	return errors.Join(err, sandbox.EmptyTmp(b.root))
 }
 
 func (b *box) session() (core.SessionState, error) { return b.w.session(b.id) }
