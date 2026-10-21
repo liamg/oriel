@@ -301,15 +301,20 @@ The engine's scrolling counts lines, not the rows blocks take, so a tall block c
   `<sub>`, `<sup>`, `<i>` and tags it doesn't know are their text, and comments are hidden. Entities are decoded.
 - A block's images are drawn in rows that wrap at the column, at their `width`/`height` (a percentage is of the
   column), never wider than it; each is zoomable, and a document's images are one lightbox group. A relative `src` is
-  found from the markdown file's folder (a thread's: its project's), and a `data:` URI is decoded. Oriel fetches
-  nothing: a remote (`http(s)`) image, an SVG (nothing here rasterizes one) or a missing file is a chip with its alt
-  text and source, its tooltip saying why.
-- PNG, JPEG, GIF, WebP, BMP and ICO are decoded (the stdlib and `golang.org/x/image`), once per file while its time
-  and size stay the same (`pictures` in `app/images.go`, shared by markdown, image tabs and image diffs).
+  found from the markdown file's folder (a thread's: its project's), and a `data:` URI is decoded. A remote
+  (`http(s)`) image is fetched in the background: the document draws at once, the image a placeholder with its alt
+  text and loading dots until it's in, then the image; one that fails is a chip saying why. Each URL is fetched once
+  per run (`pictures.remote`), 20 MB at most, and the window is woken when it arrives. An SVG is drawn as vectors
+  (`render/svg`, our own: shapes, paths, transforms, linear gradients, a rect clip or mask, `<use>` and text in the
+  bundled fonts, fitted to its `textLength`), so it stays crisp in the lightbox. A missing file or one that won't
+  decode is a chip with its alt text and source, its tooltip saying why.
+- PNG, JPEG, GIF, WebP, BMP and ICO are decoded (the stdlib and `golang.org/x/image`), and SVG parsed, once per file
+  while its time and size stay the same (`pictures` in `app/images.go`, shared by markdown, image tabs and image diffs).
 - **In a tab**: a file a `registry.FileViewer` claims opens in that viewer's view instead of a buffer
   (`plugins.md`). The built-in `image` viewer shows an image centred and fit to the tab, with its dimensions, size
-  and format under it, zoomable, and reloads it when the file changes; an SVG, a video, audio, a PDF or another binary
-  file is a card with its name, type and size and "Open in default app" (`open` on macOS, `xdg-open` on Linux).
+  and format under it, zoomable, and reloads it when the file changes; an SVG is drawn the same way, as vectors. A
+  video, audio, a PDF or another binary file is a card with its name, type and size and "Open in default app" (`open`
+  on macOS, `xdg-open` on Linux).
 - **In the branch diff**: a changed image is drawn old and new, Side by side (each labelled with its dimensions and
   size) or as a Slider (the two overlaid, a draggable divider with the old left of it and the new right); an added or
   deleted image shows its one side. Both are one lightbox group.

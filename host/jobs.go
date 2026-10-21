@@ -252,7 +252,7 @@ func (w *Host) DeleteJob(name string) (err error) {
 
 // promptTitle is a prompt's first line, without heading marks, cut to fit a row.
 func promptTitle(prompt string) string {
-	line := strings.TrimSpace(strings.TrimLeft(firstLine(prompt), "#> -*"))
+	line := strings.TrimSpace(strings.TrimLeft(core.Summary(prompt), "-*"))
 	if r := []rune(line); len(r) > 80 {
 		line = strings.TrimSpace(string(r[:80])) + "…"
 	}

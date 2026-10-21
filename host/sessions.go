@@ -26,7 +26,7 @@ func (w *Host) workspacesDir() string { return filepath.Join(w.opts.Home, "works
 func (w *Host) freshName(spec core.SessionSpec) string {
 	base := Sanitise(spec.Name)
 	if base == "" {
-		base = trimWords(Sanitise(firstLine(spec.Prompt)), 5)
+		base = trimWords(Sanitise(core.Summary(spec.Prompt)), 5)
 	}
 	if t := Sanitise(spec.Ticket); t != "" && !strings.HasPrefix(base, t) {
 		base = strings.Trim(t+"-"+base, "-")
@@ -121,7 +121,7 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 		body = strings.TrimSpace(fmt.Sprintf("%s: %s\n\n%s", p, spec.PR, body))
 	}
 	if body != "" {
-		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: firstLine(cmp.Or(p, body)), Body: body}); err != nil {
+		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: core.Summary(cmp.Or(p, body)), Body: body}); err != nil {
 			return id, err
 		}
 	} else if spec.Provider != "" {

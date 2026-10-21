@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -54,7 +55,7 @@ func markdownBlocks(ctx *registry.PresentCtx) {
 	var toc []string
 	for _, b := range md {
 		if b.Kind == mdHeading && b.Level == 2 {
-			toc = append(toc, plainMarkdown(b.Text))
+			toc = append(toc, core.PlainMarkdown(b.Text))
 		}
 	}
 	for i, b := range md {
@@ -65,9 +66,9 @@ func markdownBlocks(ctx *registry.PresentCtx) {
 		pb := ctx.Block(b.Line-1, b.End-1, func(c *ui.Ctx, d registry.PresentDraw) {
 			markdownBlock(c, b, line, i == first, toc, d, o)
 		})
-		pb.Space, pb.Label = 6, plainMarkdown(b.Text)
+		pb.Space, pb.Label = 6, core.PlainMarkdown(b.Text)
 		if b.Kind == mdTable {
-			pb.Label = plainMarkdown(strings.Join(b.Rows[0], " · "))
+			pb.Label = core.PlainMarkdown(strings.Join(b.Rows[0], " · "))
 		}
 		if pb.Label == "" && len(b.Images) > 0 {
 			pb.Label = cmpOr(b.Images[0].Alt, b.Images[0].Src)
@@ -194,7 +195,7 @@ func wordDiff(was, now string, b mdBlock) []widget.Span {
 	}
 	add(nw[:p])
 	if old := ow[p : len(ow)-s]; len(old) > 0 {
-		out = append(out, widget.Span{Text: plainMarkdown(strings.Join(old, " ")), Strike: true}, widget.Span{Text: " "})
+		out = append(out, widget.Span{Text: core.PlainMarkdown(strings.Join(old, " ")), Strike: true}, widget.Span{Text: " "})
 	}
 	add(nw[p : len(nw)-s])
 	add(nw[len(nw)-s:])

@@ -609,9 +609,9 @@ func preview(se core.SessionState, t core.Thread) string {
 	case c.Author == core.AuthorYou && !c.Delivered && se.Agent.Working:
 		return "queued · sends when the current turn ends"
 	case c.Author == core.AuthorAgent:
-		return providerName(cmpOr(c.Name, se.Agent.Provider)) + ": " + firstLine(strings.TrimSpace(plainMarkdown(c.Body)))
+		return providerName(cmpOr(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
 	}
-	return firstLine(strings.TrimSpace(plainMarkdown(c.Body)))
+	return core.Summary(c.Body)
 }
 
 func msgs(n int) string { return fmt.Sprintf("%d %s", n, plural(n, "msg", "msgs")) }

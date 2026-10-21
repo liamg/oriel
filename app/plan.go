@@ -378,7 +378,7 @@ func (x *planPlugin) docsView(c *ui.Ctx) {
 					prompt = cm.Body
 				}
 			}
-			if prompt = strings.TrimSpace(plainMarkdown(prompt)); prompt != "" {
+			if prompt = strings.TrimSpace(core.PlainMarkdown(prompt)); prompt != "" {
 				widget.Wrap(c, "p", truncate(strings.Join(strings.Fields(prompt), " "), 160), 220, uiFont(12, th.C(theme.FgFaint)))
 			}
 		})
@@ -495,7 +495,7 @@ func (x *planPlugin) header(c *ui.Ctx, se core.SessionState, st *planState, d pl
 		title := se.Name
 		for _, b := range d.blocks {
 			if b.Kind == mdHeading && b.Level == 1 {
-				title = plainMarkdown(b.Text)
+				title = core.PlainMarkdown(b.Text)
 				break
 			}
 		}

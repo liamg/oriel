@@ -288,7 +288,7 @@ func foldedThread(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread,
 			widget.Chip(c, "status", string(t.Status), th.C(tok), "agent/requests#inline")
 			quote := "“" + firstLine(t.Heading()) + "”"
 			if last, ok := t.Last(); ok && last.Author == core.AuthorAgent {
-				quote += " → " + firstLine(plainMarkdown(last.Body))
+				quote += " → " + core.Summary(last.Body)
 			}
 			if r, ok := c.Rect(c.Next("q")); ok {
 				quote = truncate(quote, max(int(r.Dx()/6.4), 8))

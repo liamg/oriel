@@ -606,7 +606,7 @@ func (x *agentConsole) threadCard(c *ui.Ctx, se core.SessionState, width float32
 			kicker := ui.Elide(c.Shaper(), strings.ToUpper("thread · "+where), kf.Font, inner*0.45)
 			c.Text("k", kicker, kf)
 			left := inner - c.Shaper().Shape(kicker, kf.Font).Advance
-			c.Text("b", ui.Elide(c.Shaper(), firstLine(strings.TrimSpace(plainMarkdown(body))), bf.Font, left), bf)
+			c.Text("b", ui.Elide(c.Shaper(), core.Summary(body), bf.Font, left), bf)
 		})
 	})
 }
