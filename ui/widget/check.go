@@ -3,6 +3,7 @@ package widget
 import (
 	"strings"
 
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -34,6 +35,9 @@ type CheckOpts struct {
 	Tooltip  string
 }
 
+// tickIn is a check's tick coming in: it fades in dropping 2 px.
+var tickIn = &ui.Transition{Fade: true, Shift: render.Point{Y: -2}}
+
 // Check is a checkbox showing st, with Text beside it lit while it's on. It returns true on the frame it's clicked
 // (or Enter or Space while focused); the caller keeps the state.
 func Check(c *ui.Ctx, key any, st CheckState, o CheckOpts) bool {
@@ -48,7 +52,7 @@ func Check(c *ui.Ctx, key any, st CheckState, o CheckOpts) bool {
 	}
 	in := Clickable(c, key, ui.Style{Dir: ui.Row, Gap: 6, Cross: ui.Center, Focusable: true, Disabled: o.Disabled, Selected: st == CheckOn,
 		Label: name, Tooltip: o.Tooltip, Help: o.Help}, func(c *ui.Ctx) {
-		box := ui.Style{W: ui.Px(13), H: ui.Px(13), Radius: 3, Border: 1, Stroke: col(c, tCheckBorder), Main: ui.Center, Cross: ui.Center, Clip: true}
+		box := ui.Style{W: ui.Px(13), H: ui.Px(13), Radius: 3, Border: 1, Stroke: col(c, tCheckBorder), Main: ui.Center, Cross: ui.Center, Clip: true, EaseFill: true}
 		switch st {
 		case CheckOn:
 			box.Stroke, box.Fill = on, alpha(on, .15)
@@ -59,9 +63,11 @@ func Check(c *ui.Ctx, key any, st CheckState, o CheckOpts) bool {
 		c.Row("box", box, func(c *ui.Ctx) {
 			switch st {
 			case CheckOn:
-				c.Text("t", "✓", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 9, Weight: typeset.Bold}, Color: on})
+				c.Box("tick", ui.Style{Enter: tickIn, Exit: fadeIn}, func(c *ui.Ctx) {
+					c.Text("t", "✓", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 9, Weight: typeset.Bold}, Color: on})
+				})
 			case CheckMixed:
-				c.Box("half", ui.Style{W: ui.Px(5.5), H: ui.Flex(1), Fill: alpha(mixed, .3)}, nil)
+				c.Box("half", ui.Style{W: ui.Px(5.5), H: ui.Flex(1), Fill: alpha(mixed, .3), Enter: fadeIn}, nil)
 			}
 		})
 		switch {

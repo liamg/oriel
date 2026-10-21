@@ -1,0 +1,24 @@
+== start
+backdrop #060606
+clip 0,0.099999905 13x13 r 3
+pop
+rect 0,0.099999905 13x13 radius 3 stroke 1 #4fe0a0
+text "SIGN COMMITS" @19,10.2 #4fe0a0 JetBrains Mono 10
+== mid
+backdrop #060606
+rect 0,0.099999905 13x13 fill #4fe0a01f radius 3
+clip 0,0.099999905 13x13 r 3
+  opacity 0.80419856
+    text "✓" @2.5234375,9.482324 #4fe0a0 Inter 9
+  pop
+pop
+rect 0,0.099999905 13x13 radius 3 stroke 1 #4fe0a0
+text "SIGN COMMITS" @19,10.2 #4fe0a0 JetBrains Mono 10
+== settled
+backdrop #060606
+rect 0,0.099999905 13x13 fill #4fe0a026 radius 3
+clip 0,0.099999905 13x13 r 3
+  text "✓" @2.5234375,9.873926 #4fe0a0 Inter 9
+pop
+rect 0,0.099999905 13x13 radius 3 stroke 1 #4fe0a0
+text "SIGN COMMITS" @19,10.2 #4fe0a0 JetBrains Mono 10

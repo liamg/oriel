@@ -98,6 +98,7 @@ func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 		at, w, h = r.Min, r.Dx(), r.Dy()
 	}
 	c.Column(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
+		Enter: &ui.Transition{Fade: true, Shift: render.Point{Y: 6}}, Exit: fadeIn,
 		Focusable: true, KeyMode: o.KeyMode, Float: &ui.Float{Point: &at}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, func(c *ui.Ctx) {
 		if !c.FocusWithin(id) {
 			c.Focus(id)

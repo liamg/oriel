@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"math"
 	"strings"
 
 	"github.com/liamg/oriel/render"
@@ -304,13 +305,20 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 		if it.Section {
 			t = monoText(9.5, typeset.SemiBold, col(c, tLabel), .12)
 		}
-		rc.Row("row", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 10 + float32(flat[i].depth)*14, R: 10}, Gap: 6, Cross: ui.Center, Help: it.Help}, func(rc *ui.Ctx) {
+		// A row under a folder just opened fades in, coming down 4 px from it.
+		in := float32(1)
+		for p := flat[i].parent; p >= 0; p = flat[p].parent {
+			in = min(in, c.Ease(treeTurn{flat[p].item.ID}, 1))
+		}
+		rc.Row("row", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 10 + float32(flat[i].depth)*14, R: 10, B: 8 * (1 - in)}, Gap: 6,
+			Cross: ui.Center, Fade: 1 - in, Help: it.Help}, func(rc *ui.Ctx) {
 			if len(it.Children) > 0 && !it.Section {
-				caret := "▸"
+				turn := float32(0)
 				if st.isOpen(it) {
-					caret = "▾"
+					turn = 1
 				}
-				rc.Box("caret", ui.Style{Role: ui.RoleNone}, func(rc *ui.Ctx) { rc.Paint("glyph", ui.Px(8), ui.Px(14), caretPainter(c, caret, t)) })
+				turn = c.Ease(treeTurn{it.ID}, turn)
+				rc.Box("caret", ui.Style{Role: ui.RoleNone}, func(rc *ui.Ctx) { rc.Paint("glyph", ui.Px(8), ui.Px(14), caretPainter(turn, t)) })
 			}
 			if it.Glyph != "" {
 				rc.Text("glyph", it.Glyph, monoText(9, typeset.Normal, it.GlyphTone, 0))
@@ -362,10 +370,19 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 	return res
 }
 
-// caretPainter draws a tree's caret as a glyph without making it text a reader would say.
-func caretPainter(c *ui.Ctx, caret string, t ui.TextStyle) func(f render.Frame, r render.Rect) {
-	run := c.Shaper().Shape(caret, t.Font)
+// caretPainter draws a tree's caret, pointing right and turned a quarter down by turn (0..1) as its folder opens.
+func caretPainter(turn float32, t ui.TextStyle) func(f render.Frame, r render.Rect) {
 	return func(f render.Frame, r render.Rect) {
-		f.Glyphs(run, render.Point{X: r.Min.X, Y: r.Min.Y + (r.Dy()+run.Ascent-run.Descent)/2}, t.Color)
+		cx, cy := r.Min.X+r.Dx()/2, r.Min.Y+r.Dy()/2
+		sin, cos := math.Sincos(float64(turn) * math.Pi / 2)
+		at := func(x, y float32) render.Point {
+			return render.Point{X: cx + x*float32(cos) - y*float32(sin), Y: cy + x*float32(sin) + y*float32(cos)}
+		}
+		var p render.Path
+		p.MoveTo(at(-1.5, -3)).LineTo(at(2, 0)).LineTo(at(-1.5, 3))
+		f.Path(&p, render.Style{Stroke: t.Color, Width: 1.3})
 	}
 }
+
+// treeTurn is a folder's caret turning, keyed by its item, which its children fade in by.
+type treeTurn struct{ id string }

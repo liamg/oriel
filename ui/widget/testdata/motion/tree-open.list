@@ -1,0 +1,55 @@
+== start
+backdrop #060606
+clip 0,0 640x120 r 0
+  rect 0,0 640x22 fill #1f1c0f
+  rect 0,0 2x22 fill #ffd23f
+  path 3 segments stroke 1.3 #ece6d8
+  clip 26,3.4377441 604x15.124512 r 0
+    text "ui" @26,15.547119 #ece6d8 Inter 12.5
+  pop
+  clip 12,69.437744 618x15.124512 r 0
+    text "render" @12,81.54712 #b3ab99 Inter 12.5
+  pop
+pop
+== mid
+backdrop #060606
+clip 0,0 640x120 r 0
+  rect 0,0 640x22 fill #1f1c0f
+  rect 0,0 2x22 fill #ffd23f
+  path 3 segments stroke 1.3 #ece6d8
+  clip 26,3.4377441 604x15.124512 r 0
+    text "ui" @26,15.547119 #ece6d8 Inter 12.5
+  pop
+  opacity 0.80419856
+    clip 26,24.654537 604x15.124512 r 0
+      text "motion.go" @26,36.763912 #b3ab99 Inter 12.5
+    pop
+  pop
+  opacity 0.80419856
+    clip 26,46.654537 604x15.124512 r 0
+      text "ui.go" @26,58.763912 #b3ab99 Inter 12.5
+    pop
+  pop
+  clip 12,69.437744 618x15.124512 r 0
+    text "render" @12,81.54712 #b3ab99 Inter 12.5
+  pop
+pop
+== settled
+backdrop #060606
+clip 0,0 640x120 r 0
+  rect 0,0 640x22 fill #1f1c0f
+  rect 0,0 2x22 fill #ffd23f
+  path 3 segments stroke 1.3 #ece6d8
+  clip 26,3.4377441 604x15.124512 r 0
+    text "ui" @26,15.547119 #ece6d8 Inter 12.5
+  pop
+  clip 26,25.437744 604x15.124512 r 0
+    text "motion.go" @26,37.54712 #b3ab99 Inter 12.5
+  pop
+  clip 26,47.437744 604x15.124512 r 0
+    text "ui.go" @26,59.54712 #b3ab99 Inter 12.5
+  pop
+  clip 12,69.437744 618x15.124512 r 0
+    text "render" @12,81.54712 #b3ab99 Inter 12.5
+  pop
+pop

@@ -66,11 +66,15 @@ func Segmented(c *ui.Ctx, key any, labels []string, active *int, o SegmentedOpts
 	}
 	c.Row(key, strip,
 		func(c *ui.Ctx) {
+			placed := glideMark(c, "pill", *active, len(shown), col(c, tSegOnBg), 0, ui.LayerUnder)
 			for i, l := range shown {
 				on := i == *active
 				fill, fg := render.Color{}, col(c, tSegFg)
 				if on {
-					fill, fg = col(c, tSegOnBg), col(c, tSegOnFg)
+					fg = col(c, tSegOnFg)
+					if !placed {
+						fill = col(c, tSegOnBg)
+					}
 				}
 				badge := ""
 				if i < len(o.Badges) {
@@ -98,6 +102,36 @@ func Segmented(c *ui.Ctx, key any, labels []string, active *int, o SegmentedOpts
 		})
 	return changed
 }
+
+// glideMark marks item active of the n items keyed 0..n-1 in the box being built, gliding between them as active
+// changes: a selected segment's fill, behind them on LayerUnder, or with h an underline that tall along their foot.
+// It places the mark by last frame's layout and reports whether it could.
+func glideMark(c *ui.Ctx, key any, active, n int, fill render.Color, h float32, z int) bool {
+	if active < 0 || active >= n {
+		return false
+	}
+	at := c.Ease(markKey{key}, float32(active))
+	lo := max(0, min(n-1, int(at)))
+	hi := min(n-1, lo+1)
+	box, ok0 := c.Rect(c.ID())
+	a, ok1 := c.Rect(ui.Child(c.ID(), lo))
+	b, ok2 := c.Rect(ui.Child(c.ID(), hi))
+	if !ok0 || !ok1 || !ok2 || a.Dx() <= 0 || b.Dx() <= 0 {
+		return false
+	}
+	// Placed against the box as it's laid out now, by where the items sat in it, so it keeps up with a scroll.
+	f := at - float32(lo)
+	x0, x1 := a.Min.X+(b.Min.X-a.Min.X)*f, a.Max.X+(b.Max.X-a.Max.X)*f
+	off := render.Point{X: x0 - box.Min.X, Y: a.Min.Y - box.Min.Y}
+	height := a.Dy()
+	if h > 0 {
+		off.Y, height = a.Max.Y-h-box.Min.Y, h
+	}
+	c.Box(key, ui.Style{W: ui.Px(x1 - x0), H: ui.Px(height), Fill: fill, Z: z, Float: &ui.Float{Offset: off}}, nil)
+	return true
+}
+
+type markKey struct{ key any }
 
 // PointerIn reports whether the pointer is in the box being built, or on something clickable inside it: for what
 // shows only on hover, such as a row's remove button.
@@ -131,7 +165,7 @@ func IconButton(c *ui.Ctx, key any, glyph string, o IconButtonOpts) bool {
 		fg, fill = col(c, tSegOnFg), col(c, tSegOnBg)
 	}
 	return Clickable(c, key, ui.Style{W: ui.Px(side), H: ui.Px(side), Radius: 5, Main: ui.Center, Cross: ui.Center, Fill: fill, Label: o.Label,
-		Tooltip: tip, Selected: o.On, Disabled: o.Disabled, Help: o.Help}, func(c *ui.Ctx) {
+		Tooltip: tip, Selected: o.On, Disabled: o.Disabled, Help: o.Help, Sink: true}, func(c *ui.Ctx) {
 		if o.Icon != nil {
 			o.Icon(c, fg)
 			return

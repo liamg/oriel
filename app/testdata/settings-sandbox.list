@@ -172,8 +172,8 @@ clip 44,38 1556x936 r 0
     text "launcher's Sandbox toggle starts here." @332,447.7339 #7c7566 Inter 12.5
     text "default" @1202.3906,427.6545 #7c7566 JetBrains Mono 10.5
     clip 1408.0969,411.8745 116.44995x24 r 5
-      text "HOST" @1418.0969,427.29453 #7c7566 JetBrains Mono 9.5
       rect 1455.897,411.8745 68.650024x24 fill #1f1c0f
+      text "HOST" @1418.0969,427.29453 #7c7566 JetBrains Mono 9.5
       text "SANDBOX" @1465.897,427.29453 #ffd23f JetBrains Mono 9.5
     pop
     rect 1408.0969,411.8745 116.44995x24 radius 5 stroke 1 #332f27

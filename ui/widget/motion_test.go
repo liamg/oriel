@@ -60,6 +60,18 @@ func TestWidgetMotion(t *testing.T) {
 		{"tab-underline", tabsScene, func(s *motionState) { s.tab = 2 }},
 		{"list-selection", listScene, func(s *motionState) { s.sel = 3 }},
 		{"button-hover", buttonScene, func(s *motionState) { s.hover = true }},
+		{"button-press", buttonScene, func(s *motionState) { s.hover, s.press = true, true }},
+		{"button-busy", busyScene, func(s *motionState) { s.on = true }},
+		{"toggle", toggleScene, func(s *motionState) { s.on = true }},
+		{"check", checkScene, func(s *motionState) { s.on = true }},
+		{"segmented", segmentedScene, func(s *motionState) { s.tab = 2 }},
+		{"choices", choicesScene, func(s *motionState) { s.tab = 2 }},
+		{"tree-open", treeScene, func(s *motionState) { s.on = true }},
+		{"hovercard", hoverCardScene, func(s *motionState) { s.hover = true }},
+		{"meter-ring-progress", valuesScene, func(s *motionState) { s.frac = .8 }},
+		{"badge-in", badgeScene, func(s *motionState) { s.n = 3 }},
+		{"badge-roll", badgeScene, func(s *motionState) { s.n = 12 }},
+		{"page-open", pageScene, func(s *motionState) { s.on = true }},
 	}
 	for _, sc := range scenes {
 		for _, reduced := range []bool{false, true} {
@@ -67,7 +79,10 @@ func TestWidgetMotion(t *testing.T) {
 			if reduced {
 				name += "-reduced"
 			}
-			s := &motionState{menu: strings.HasSuffix(sc.name, "close"), modal: strings.HasSuffix(sc.name, "close")}
+			s := &motionState{menu: strings.HasSuffix(sc.name, "close"), modal: strings.HasSuffix(sc.name, "close"), frac: .2}
+			if sc.name == "badge-roll" {
+				s.n = 9
+			}
 			s.toasts.Push(Toast{Title: "git push", Body: "3 commits", Tone: render.Color{R: 0x4c, G: 0xc9, B: 0xf0, A: 255}})
 			h := motionHarness(t, reduced, sc.build(s))
 			s.h = h
@@ -97,6 +112,10 @@ type motionState struct {
 	tab    int
 	sel    int
 	hover  bool
+	press  bool
+	on     bool
+	frac   float64
+	n      int
 }
 
 func menuScene(s *motionState) func(c *ui.Ctx) {
@@ -139,6 +158,10 @@ func buttonScene(s *motionState) func(c *ui.Ctx) {
 		if s.hover {
 			s.h.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 20, Y: 10}})
 		}
+		if s.press {
+			s.h.u.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 20, Y: 10}, Buttons: render.ButtonPrimary})
+			s.press = false
+		}
 		Button(c, "save", "Save", ButtonOpts{})
 	}
 }
@@ -158,5 +181,75 @@ func TestKeysActMidAnimation(t *testing.T) {
 	h.keys("j")
 	if s.sel != 2 {
 		t.Errorf("two j's mid-glide: selection %d, want 2", s.sel)
+	}
+}
+
+func busyScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) { Button(c, "push", "Push", ButtonOpts{Key: "p", Busy: s.on}) }
+}
+
+func toggleScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) { Toggle(c, "t", s.on, ToggleOpts{Label: "Format on save"}) }
+}
+
+func checkScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) {
+		st := CheckOff
+		if s.on {
+			st = CheckOn
+		}
+		Check(c, "c", st, CheckOpts{Text: "Sign commits"})
+	}
+}
+
+func segmentedScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) {
+		Segmented(c, "seg", []string{"ALL", "OPEN", "DRAFT", "MERGED"}, &s.tab, SegmentedOpts{})
+	}
+}
+
+func choicesScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) {
+		c.Column("col", ui.Style{W: ui.Px(400)}, func(c *ui.Ctx) {
+			Choices(c, "modes", []Choice{{Title: "Work"}, {Title: "Plan"}, {Title: "Review"}}, &s.tab, ChoicesOpts{})
+		})
+	}
+}
+
+func treeScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) {
+		roots := []TreeItem{{ID: "ui", Label: "ui", Open: s.on, Children: []TreeItem{{ID: "ui/a", Label: "motion.go"}, {ID: "ui/b", Label: "ui.go"}}},
+			{ID: "render", Label: "render"}}
+		Tree(c, "tree", roots, TreeOpts{Height: ui.Px(120)})
+	}
+}
+
+func hoverCardScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) {
+		if s.hover {
+			s.h.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 20, Y: 10}})
+		}
+		anchor := c.Box("hash", ui.Style{W: ui.Px(60), H: ui.Px(20), Interactive: true}, nil)
+		HoverCard(c, "card", anchor, HoverCardOpts{Width: 200}, func(c *ui.Ctx) { c.Text("t", "08a47ca", ui.TextStyle{}) })
+	}
+}
+
+func valuesScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) {
+		c.Column("col", ui.Style{W: ui.Px(200), Gap: 10}, func(c *ui.Ctx) {
+			Meter(c, "meter", s.frac, MeterOpts{Label: "context"})
+			Ring(c, "ring", RingOpts{Frac: s.frac, Label: "12m"})
+			ProgressBar(c, "progress", ProgressOpts{Frac: s.frac})
+		})
+	}
+}
+
+func badgeScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) { Badge(c, "badge", s.n, BadgeOpts{}) }
+}
+
+func pageScene(s *motionState) func(c *ui.Ctx) {
+	return func(c *ui.Ctx) {
+		Page(c, "settings", &s.on, PageOpts{Label: "Settings"}, func(c *ui.Ctx) { c.Text("t", "Settings", ui.TextStyle{}) })
 	}
 }

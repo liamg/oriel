@@ -330,6 +330,21 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(*ui.Ctx)) DrawerResult /
   underline and a list's selection glide; buttons, menu items and rows ease their fills; docks slide open and shut
   with their content fading. Rendering has no scale transform, so menus move rather than scale (0.97 → 1). A key
   acts at once whatever is moving. Six things animating take about 0.1 ms a frame.
+- **More motion** (FW-15), on the same spring and generally in `ui`:
+  - `c.Ease(key, v)` glides a value to v (a meter's fill, a dial's arc, the editor cursor's place); a new v mid-glide
+    sets off from where it is, keeping its speed, so nothing queues. `c.Snap(key, v)` puts it there at once.
+  - The hover and press wash eases in and out on each node, and a `Style.Sink` node's content sinks a pixel while
+    it's pressed (buttons, icon buttons).
+  - The focus ring fades in drawing in from 3 px out, and glides to the next focusable in the same parent.
+  - Tooltips fade in rising 3 px and fade out. A `BarsAuto` scrollbar fades in and out on the spring.
+  - `ScrollTo` glides, from a view's length away at most: `Scroll` says where it's going at once, `UI.ScrollShown`
+    where it's drawn, and the wheel or a scrollbar takes over from there. Virtual lists build the rows between.
+  - Widgets: a toggle's knob glides and its track eases; a check's tick fades in dropping 2 px; Segmented's pill
+    and Choices' underline glide between items; a tree's caret turns and a folder's rows fade in coming down 4 px;
+    hover cards fade in 4 px from their anchor; Meter, Ring and ProgressBar ease their value; a badge fades in and
+    rolls a new count in from below; a Page fades in rising 6 px; a busy button fades its spinner and key cap.
+  - The editor cursor glides between places (`editor.cursor_glide`, on by default). A step of one column on the
+    same line, a move within 90 ms of the last and a scroll snap, so it never trails typing or held keys.
 - **Springs**: `c.Anim(key, target)` is critically damped (within 2% at 200 ms, settled by 500 ms). The UI reports
   `NextFrame()` while anything moves or a tooltip is due, and the app redraws at 120 Hz until then. A frame that read
   input (a click, keys, the wheel) asks for the next one too, since what the input changed shows only then. The option

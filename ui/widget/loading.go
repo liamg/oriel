@@ -146,6 +146,9 @@ func ProgressBar(c *ui.Ctx, key any, o ProgressOpts) ui.ID {
 	if o.Frac >= 0 {
 		value = fmt.Sprintf("%.0f%%", math.Min(o.Frac, 1)*100)
 	}
+	if o.Frac >= 0 {
+		o.Frac = float64(c.Ease(easedKey{key}, float32(math.Min(o.Frac, 1))))
+	}
 	still := c.Still()
 	phase := 0.0
 	if o.Frac < 0 && !still {

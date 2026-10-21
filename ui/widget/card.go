@@ -276,6 +276,8 @@ type MeterPart struct {
 // Meter is a thin bar filled to frac (0–1): a context window, a plan's usage; with Then, a stacked bar of parts.
 func Meter(c *ui.Ctx, key any, frac float64, o MeterOpts) {
 	frac = min(max(frac, 0), 1)
+	label := fmt.Sprintf("%s %d%%", o.Label, int(frac*100+.5))
+	frac = float64(c.Ease(easedKey{key}, float32(frac)))
 	w := o.Width
 	if w == (ui.Size{}) {
 		w = ui.Flex(1)
@@ -288,7 +290,7 @@ func Meter(c *ui.Ctx, key any, frac float64, o MeterOpts) {
 	parts := append([]MeterPart{{Frac: frac, Tone: o.Tone}}, o.Then...)
 	to := min(max(o.To, frac), 1)
 	hatch, tick := col(c, tMeterProjection), col(c, tMeterProjectMark)
-	c.Box(key, ui.Style{W: w, Role: ui.RoleStatus, Label: fmt.Sprintf("%s %d%%", o.Label, int(frac*100+.5))}, func(c *ui.Ctx) {
+	c.Box(key, ui.Style{W: w, Role: ui.RoleStatus, Label: label}, func(c *ui.Ctx) {
 		c.Paint("bar", ui.Flex(1), ui.Px(h), func(f render.Frame, r render.Rect) {
 			f.Rect(r, render.Style{Fill: track, Radius: min(h/2, 2)})
 			if to > frac {
@@ -315,6 +317,9 @@ func Meter(c *ui.Ctx, key any, frac float64, o MeterOpts) {
 		})
 	})
 }
+
+// easedKey is a widget's value eased on the motion spring (Ctx.Ease), keyed by the widget's own key.
+type easedKey struct{ key any }
 
 // buttonWidth is how wide Button draws label with a key cap.
 func buttonWidth(c *ui.Ctx, label, key string) float32 {

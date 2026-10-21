@@ -260,9 +260,10 @@ func TestConsoleShowsTheAgentWorking(t *testing.T) {
 	r, a, _ := consoleSession(t)
 	a.Emit(agent.TurnStart{})
 	r.waitFrame("the working line", func(s string) bool { return containsAll(s, "Fake is working", "· 0:0") })
-	if n := r.access("Fake is working"); n == nil || n.Role != "status" {
-		t.Errorf("the dots read as %+v", n)
-	}
+	r.waitAccess("the dots read as a status", func(r *running) bool {
+		n := r.access("Fake is working")
+		return n != nil && n.Role == "status"
+	})
 	a.Emit(agent.TurnEnd{})
 	r.waitText("IDLE")
 	r.waitGone("Fake is working")

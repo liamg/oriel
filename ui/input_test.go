@@ -210,6 +210,7 @@ func TestWheelScrollsWhatsUnderThePointer(t *testing.T) {
 
 func TestSprings(t *testing.T) {
 	u := newUI()
+	u.opts.ReducedMotion = false
 	clk := &clock{t: time.Unix(1000, 0)}
 	u.SetClock(clk.now)
 	target := float32(0)

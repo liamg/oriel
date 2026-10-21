@@ -1,0 +1,27 @@
+== start
+backdrop #060606
+rect 0,0 200x4 fill #24221d radius 2
+rect 0,0 40x4 radius 2
+text "12m" @11.1953125,40.1184 #ece6d8 JetBrains Mono 11.44
+rect 0,68 200x4 fill #232220 radius 2
+rect 0,68 40x4 fill #ffd23f radius 2
+path 6 segments stroke 3 #272724
+path 20 segments stroke 3 #ffd23f
+== mid
+backdrop #060606
+rect 0,0 200x4 fill #24221d radius 2
+rect 0,0 136.50383x4 radius 2
+text "12m" @11.1953125,40.1184 #ece6d8 JetBrains Mono 11.44
+rect 0,68 200x4 fill #232220 radius 2
+rect 0,68 136.50383x4 fill #ffd23f radius 2
+path 6 segments stroke 3 #272724
+path 66 segments stroke 3 #ffd23f
+== settled
+backdrop #060606
+rect 0,0 200x4 fill #24221d radius 2
+rect 0,0 160x4 radius 2
+text "12m" @11.1953125,40.1184 #ece6d8 JetBrains Mono 11.44
+rect 0,68 200x4 fill #232220 radius 2
+rect 0,68 160x4 fill #ffd23f radius 2
+path 6 segments stroke 3 #272724
+path 77 segments stroke 3 #ffd23f

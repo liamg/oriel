@@ -751,9 +751,9 @@ clip 490,202.99524 620x594.0095 r 10
   text "no repo or branch here: the agent adds what the prompt names, fresh each run" @506,466.59528 #4f4a40 JetBrains Mono 10
   text "RUNS IN" @506,489.28522 #7c7566 JetBrains Mono 9.5
   clip 506,506.13522 185.10004x24.00003 r 5
+    rect 622.45,506.13522 68.650024x24.00003 fill #1f1c0f
     text "Sandbox" @516,521.55524 #7c7566 JetBrains Mono 9.5
     text "Host" @584.65,521.55524 #7c7566 JetBrains Mono 9.5
-    rect 622.45,506.13522 68.650024x24.00003 fill #1f1c0f
     text "Default" @632.45,521.55524 #ffd23f JetBrains Mono 9.5
   pop
   rect 506,506.13522 185.10004x24.00003 radius 5 stroke 1 #332f27
@@ -766,7 +766,6 @@ clip 490,202.99524 620x594.0095 r 10
       text "Claude" @518,609.12897 #ffd23f Inter 13
       text "1" @518,625.9547 #7c7566 JetBrains Mono 9.5
     pop
-    rect 506,638.8047 588x2 fill #ffd23f
   pop
   rect 506,586.5352 588x54.26947 radius 6 stroke 1 #24221d
   rect 506,646.8047 46.046875x26 fill #191815 radius 6 stroke 1 #332f27
@@ -795,3 +794,4 @@ clip 490,202.99524 620x594.0095 r 10
   text "⌘↵" @1064.0469,771.42474 #141006cc JetBrains Mono 9.5
 pop
 rect 490,202.99524 620x594.0095 radius 10 stroke 1 #332f27
+rect 506,638.8047 588x2 fill #ffd23f

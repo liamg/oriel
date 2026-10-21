@@ -65,17 +65,20 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 		weight = typeset.SemiBold
 	}
 	c.Row(key, ui.Style{W: w, H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, EaseFill: true, Stroke: border, Border: 1, Radius: 6,
-		Focusable: true, Disabled: o.Disabled, NoHover: true, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton}, func(c *ui.Ctx) {
+		Focusable: true, Disabled: o.Disabled, NoHover: true, Sink: true, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton}, func(c *ui.Ctx) {
 		if o.Busy {
-			Spinner(c, "busy", SpinnerOpts{Size: 11, Tone: fg, Name: label})
+			c.Box("busy", ui.Style{Enter: fadeIn, Exit: fadeIn}, func(c *ui.Ctx) { Spinner(c, "busy", SpinnerOpts{Size: 11, Tone: fg, Name: label}) })
 		}
 		c.Text(nil, label, uiText(c, 12, weight, fg))
 		if o.Key != "" && !o.Busy {
-			keyCap(c, o.Key, fg)
+			c.Box("cap", ui.Style{Enter: fadeIn, Exit: fadeIn}, func(c *ui.Ctx) { keyCap(c, o.Key, fg) })
 		}
 	})
 	return !o.Disabled && (in.Clicked || pressedKey(in.Keys))
 }
+
+// fadeIn is a part of a control that fades as it comes and goes: a busy button's spinner, its key cap.
+var fadeIn = &ui.Transition{Fade: true}
 
 // Chip is the uppercase status pill (base.css .chip): tone sets its text, border and tint.
 func Chip(c *ui.Ctx, key any, label string, tone color.NRGBA, help string) ui.ID {

@@ -58,7 +58,12 @@ type state struct {
 	ext, view  [2]float32 // a scrolling box's content and what of it shows, along each axis
 	scrolledAt time.Time
 	seen       int
-	data       any // a widget's own state: State[T]
+	// A scroll set by ScrollTo glides there: shown is the offset drawn, easing from easeFrom while easing.
+	shown, easeFrom [2]float32
+	asked           [2]float32
+	easing, placed  bool
+	bar             barFade
+	data            any // a widget's own state: State[T]
 }
 
 // atEnd is whether the box is scrolled to its end along axis, as it was last laid out.
@@ -92,6 +97,8 @@ type UI struct {
 	fills     map[ID]*fillState
 	exitable  map[ID]*elem // this frame's nodes with an Exit
 	exiting   map[ID]*exiting
+	eases     map[ID]*easeState
+	ring      ringState
 	noHits    bool
 	animating bool
 	wake      time.Time
@@ -144,6 +151,11 @@ func (u *UI) Fork() *UI {
 	}
 	f.flags = maps.Clone(u.flags)
 	f.glides, f.fills, f.exitable, f.exiting = maps.Clone(u.glides), maps.Clone(u.fills), maps.Clone(u.exitable), maps.Clone(u.exiting)
+	f.eases = make(map[ID]*easeState, len(u.eases))
+	for id, x := range u.eases {
+		c := *x
+		f.eases[id] = &c
+	}
 	f.parents = maps.Clone(u.parents)
 	f.in.clicks, f.in.doubles, f.in.keys, f.in.context, f.in.wheel, f.in.claimed, f.in.help = nil, nil, nil, nil, nil, nil, ""
 	return &f
@@ -273,7 +285,7 @@ func (u *UI) tooltip() {
 	u.tracked = true // it follows the pointer
 	c := &Ctx{u: u, e: u.root}
 	c.Box(tooltipKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: u.opts.TooltipStroke, Border: 1, Radius: 4,
-		Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}, Scale: u.opts.TooltipScale}, func(c *Ctx) {
+		Enter: &Transition{Fade: true, Shift: render.Point{Y: 3}}, Exit: &Transition{Fade: true}, Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}, Scale: u.opts.TooltipScale}, func(c *Ctx) {
 		c.Text(nil, tip, u.opts.Tooltip)
 	})
 }
@@ -304,20 +316,55 @@ func (u *UI) Scroll(id ID) render.Point {
 	return render.Point{X: st.scroll[0], Y: st.scroll[1]}
 }
 
-// ScrollBy moves id's scroll offset; the next layout clamps it to the content.
+// ScrollBy moves id's scroll offset at once, from where it's drawn; the next layout clamps it to the content.
 func (u *UI) ScrollBy(id ID, dx, dy float32) {
 	st := u.state(id)
 	st.seen = u.frame
 	st.scrolledAt = u.now()
+	st.stopEasing()
 	st.scroll[0] += dx
 	st.scroll[1] += dy
 }
 
-// ScrollTo sets id's scroll offset; the next layout clamps it to the content.
+// ScrollTo sets id's scroll offset, which the next layout clamps to the content. Once the box has been laid out it
+// glides there, over a view's length at most.
 func (u *UI) ScrollTo(id ID, p render.Point) {
 	st := u.state(id)
 	st.seen = u.frame
-	st.scroll = [2]float32{p.X, p.Y}
+	to := [2]float32{p.X, p.Y}
+	if !st.placed || u.opts.ReducedMotion || u.opts.MotionSpeed <= 0 {
+		st.scroll, st.shown = to, to
+		return
+	}
+	if st.easing && to == st.asked || !st.easing && to == st.scroll {
+		return
+	}
+	for axis := range 2 {
+		d := max(-st.view[axis], min(st.view[axis], to[axis]-st.shown[axis]))
+		st.easeFrom[axis] = to[axis] - d
+	}
+	st.scroll, st.asked, st.easing = to, to, true
+	u.springs[childID(id, motionKey{"scroll"})] = &spring{x: 0, at: u.now(), seen: u.frame}
+}
+
+// ScrollShown is id's scroll offset as it's drawn, which lags Scroll while a ScrollTo glides.
+func (u *UI) ScrollShown(id ID) render.Point {
+	st := u.state(id)
+	if !st.easing {
+		return render.Point{X: st.scroll[0], Y: st.scroll[1]}
+	}
+	p := float32(0)
+	if sp, ok := u.springs[childID(id, motionKey{"scroll"})]; ok {
+		p = sp.x
+	}
+	return render.Point{X: st.easeFrom[0] + (st.scroll[0]-st.easeFrom[0])*p, Y: st.easeFrom[1] + (st.scroll[1]-st.easeFrom[1])*p}
+}
+
+// stopEasing leaves the scroll where it's drawn, for a move that takes it from there: the wheel, a scrollbar.
+func (st *state) stopEasing() {
+	if st.easing {
+		st.scroll, st.easing = st.shown, false
+	}
 }
 
 // Hit lists the nodes painted at p in the latest frame, topmost first, clipped as they were drawn.
@@ -653,6 +700,10 @@ func (u *UI) place(e *elem, x, y float32) {
 	kids := e.flow()
 	origin := [2]float32{x + e.style.Pad.L, y + e.style.Pad.T}
 	var inner [2]float32
+	ease := float32(1)
+	if st.easing {
+		ease = u.motion(childID(e.id, motionKey{"scroll"}), 1, 1)
+	}
 	for axis := range 2 {
 		a, b := e.pad(axis)
 		inner[axis] = e.size[axis] - a - b
@@ -677,10 +728,18 @@ func (u *UI) place(e *elem, x, y float32) {
 			}
 			st.scroll[axis] = max(0, min(st.scroll[axis], ext-inner[axis]))
 			st.ext[axis], st.view[axis] = ext, inner[axis]
-			origin[axis] -= st.scroll[axis]
+			st.shown[axis] = st.scroll[axis]
+			if st.easing {
+				st.shown[axis] = st.easeFrom[axis] + (st.scroll[axis]-st.easeFrom[axis])*ease
+			}
+			origin[axis] -= st.shown[axis]
+			st.placed = true
 		} else {
-			st.scroll[axis] = 0
+			st.scroll[axis], st.shown[axis] = 0, 0
 		}
+	}
+	if ease >= 1 {
+		st.easing = false
 	}
 	if e.wraps() {
 		y := origin[1]
@@ -942,16 +1001,20 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 	case !edgeOver && (s.Fill.A > 0 || edge):
 		f.Rect(r, render.Style{Fill: s.Fill, Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
-	if w := u.wash(e); w.A > 0 {
+	if w := e.fx.wash; w.A > 0 {
 		f.Rect(r, render.Style{Fill: w, Radius: s.Radius})
 	}
 	if clips {
 		f.PushClip(r, s.Radius)
 		clip = intersect(clip, r)
 	}
+	kf := f
+	if e.fx.sink != 0 {
+		kf = render.Offset(f, render.Point{Y: e.fx.sink})
+	}
 	for _, c := range e.kids {
 		if c.style.Float != nil && c.style.Z < 0 {
-			u.paint(f, c, clip) // an underlay, behind the content
+			u.paint(kf, c, clip) // an underlay, behind the content
 		}
 	}
 	for _, c := range e.kids {
@@ -961,7 +1024,7 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 		if cr := c.rect(); clips && (cr.Max.X <= clip.Min.X || cr.Min.X >= clip.Max.X || cr.Max.Y <= clip.Min.Y || cr.Min.Y >= clip.Max.Y) {
 			continue
 		}
-		u.paint(f, c, clip)
+		u.paint(kf, c, clip)
 	}
 	if clips {
 		f.Pop()
@@ -973,22 +1036,15 @@ func (u *UI) paint(f render.Frame, e *elem, clip render.Rect) {
 		f.Rect(r, render.Style{Radius: s.Radius, Stroke: s.Stroke, Width: s.Border})
 	}
 	if e.id == u.in.focus && u.in.visible && e.id != 0 {
+		// The ring settles in from 3 px further out, and is drawn where it's gliding from (focusRing).
 		const w, gap = 2, 2
-		ring := render.Rect{Min: render.Point{X: r.Min.X - gap - w, Y: r.Min.Y - gap - w}, Max: render.Point{X: r.Max.X + gap + w, Y: r.Max.Y + gap + w}}
-		f.Rect(ring, render.Style{Stroke: u.opts.FocusRing, Width: w, Radius: s.Radius + gap + w})
+		g := gap + w + 3*(1-u.ring.in)
+		d := u.ring.delta
+		ring := render.Rect{Min: render.Point{X: r.Min.X - g + d.Min.X, Y: r.Min.Y - g + d.Min.Y}, Max: render.Point{X: r.Max.X + g + d.Max.X, Y: r.Max.Y + g + d.Max.Y}}
+		c := u.opts.FocusRing
+		c.A = uint8(math.Round(float64(c.A) * float64(max(0, min(1, u.ring.in)))))
+		f.Rect(ring, render.Style{Stroke: c, Width: w, Radius: s.Radius + g})
 	}
-}
-
-// wash is what's washed over e for hover or press: a box clickable with the pointer that doesn't draw its own.
-func (u *UI) wash(e *elem) render.Color {
-	s := e.style
-	if e.id == 0 || e.id != u.in.hot || !(s.Interactive || s.Focusable) || s.Disabled || s.NoHover || s.Cursor != render.CursorPointer {
-		return render.Color{}
-	}
-	if u.in.active == e.id {
-		return u.opts.Pressed
-	}
-	return u.opts.Hover
 }
 
 // Dump writes the latest layout as an indented tree, for golden tests.

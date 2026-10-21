@@ -1,0 +1,55 @@
+== start
+backdrop #060606
+clip 0,0 400x37.729492 r 6
+  rect 0,0 132.66667x37.729492 fill #1d1a0f
+  clip 0,0 132.66667x37.729492 r 0
+    text "Work" @12,22.59375 #ece6d8 Inter 13
+  pop
+  rect 132.66667,0 1x37.729492 fill #24221d
+  clip 133.66667,0 132.66667x37.729492 r 0
+    text "Plan" @145.66667,22.59375 #ece6d8 Inter 13
+  pop
+  rect 266.33334,0 1x37.729492 fill #24221d
+  clip 267.33334,0 132.66666x35.729492 r 0
+    text "Review" @279.33334,22.59375 #ffd23f Inter 13
+  pop
+pop
+rect 0,0 400x37.729492 radius 6 stroke 1 #24221d
+rect 0,35.729492 132.66667x2 fill #ffd23f
+== mid
+backdrop #060606
+clip 0,0 400x37.729492 r 6
+  rect 0,0 132.66667x37.729492 fill #1d1a0f32
+  clip 0,0 132.66667x37.729492 r 0
+    text "Work" @12,22.59375 #ece6d8 Inter 13
+  pop
+  rect 132.66667,0 1x37.729492 fill #24221d
+  clip 133.66667,0 132.66667x37.729492 r 0
+    text "Plan" @145.66667,22.59375 #ece6d8 Inter 13
+  pop
+  rect 266.33334,0 1x37.729492 fill #24221d
+  rect 267.33334,0 132.66666x37.729492 fill #1d1a0fcd
+  clip 267.33334,0 132.66666x35.729492 r 0
+    text "Review" @279.33334,22.59375 #ffd23f Inter 13
+  pop
+pop
+rect 0,0 400x37.729492 radius 6 stroke 1 #24221d
+rect 214.98909,35.729492 132.66667x2 fill #ffd23f
+== settled
+backdrop #060606
+clip 0,0 400x37.729492 r 6
+  clip 0,0 132.66667x37.729492 r 0
+    text "Work" @12,22.59375 #ece6d8 Inter 13
+  pop
+  rect 132.66667,0 1x37.729492 fill #24221d
+  clip 133.66667,0 132.66667x37.729492 r 0
+    text "Plan" @145.66667,22.59375 #ece6d8 Inter 13
+  pop
+  rect 266.33334,0 1x37.729492 fill #24221d
+  rect 267.33334,0 132.66666x37.729492 fill #1d1a0f
+  clip 267.33334,0 132.66666x35.729492 r 0
+    text "Review" @279.33334,22.59375 #ffd23f Inter 13
+  pop
+pop
+rect 0,0 400x37.729492 radius 6 stroke 1 #24221d
+rect 267.33334,35.729492 132.66666x2 fill #ffd23f

@@ -680,6 +680,13 @@ func (x *editorPlugin) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, fol
 		}
 		return 0, 0, false
 	}
+	var glide cursorGlide
+	if showCursor {
+		vc := p.VCol(line, cur.Col) + inlayShift(ds, cur.Col, true)
+		if cx, cy, ok := at(vc); ok {
+			glide = x.glideCursor(c, p, rowID, line, vc, cx, cy, shape, m)
+		}
+	}
 	c.Box(fmt.Sprint("over", line), ui.Style{W: ui.Flex(1), H: ui.Px(m.lineH * float32(len(segs))), Z: ui.LayerContent + 2, Float: &ui.Float{To: rowID}}, func(c *ui.Ctx) {
 		for i, r := range others {
 			if r.head >= 0 && !(showCursor && r.head == cur.Col) {
@@ -714,6 +721,14 @@ func (x *editorPlugin) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, fol
 			st.W, ch = ui.Px(2), ""
 		case vim.Underline:
 			st.H, st.Float.Offset.Y, ch = ui.Px(2), cy+m.lineH-3, ""
+		}
+		if glide.on {
+			st.W, st.H = ui.Px(glide.w(st.W.Value)), ui.Px(glide.h(st.H.Value))
+			st.Float.Offset.X += glide.dx
+			st.Float.Offset.Y += glide.dy
+			if glide.moving {
+				ch = "" // its character shows once it's there
+			}
 		}
 		if p.Current() {
 			x.caret = c.Next("cursor")
@@ -952,4 +967,73 @@ func (x *editorPlugin) otherCursors(p vim.Pane, line int) []lineCursor {
 		}
 	}
 	return out
+}
+
+// cursorTrail is where the cursor was last frame, and when it last moved.
+type cursorTrail struct {
+	seen      bool
+	line, col int
+	top       int
+	at        time.Time
+}
+
+type cursorTrailKey struct{}
+
+// cursorKey is an eased part of the cursor: "x", "y", "w", "h".
+type cursorKey string
+
+// cursorFast is how soon after the last move a move snaps rather than glides: held keys and quick runs.
+const cursorFast = 90 * time.Millisecond
+
+// cursorGlide is how the cursor is drawn against where it is: off by dx, dy, and its size eased as its shape
+// changes (unless it's new).
+type cursorGlide struct {
+	on, moving bool
+	dx, dy     float32
+	first      bool
+	c          *ui.Ctx
+}
+
+func (g cursorGlide) w(v float32) float32 { return g.size("w", v) }
+func (g cursorGlide) h(v float32) float32 { return g.size("h", v) }
+
+func (g cursorGlide) size(k cursorKey, v float32) float32 {
+	if g.first {
+		return g.c.Snap(k, v)
+	}
+	return g.c.Ease(k, v)
+}
+
+// glideCursor glides the cursor between positions on the motion spring (editor.cursor_glide). A step of one column
+// on the same line, a move within cursorFast of the last, and a scroll snap, so it never trails typing or held keys.
+// c is the window's lines, which the cursor's place is measured in.
+func (x *editorPlugin) glideCursor(c *ui.Ctx, p vim.Pane, rowID ui.ID, line, vc int, cx, cy float32, shape vim.Shape, m paneMetrics) cursorGlide {
+	if on, _, err := x.h.Options().Get("editor.cursor_glide", registry.At{}); err == nil && on == false {
+		return cursorGlide{}
+	}
+	lines, ok1 := c.Rect(c.ID())
+	row, ok2 := c.Rect(rowID)
+	tr := ui.State[cursorTrail](c, ui.Child(c.ID(), cursorTrailKey{}))
+	first := !tr.seen
+	now := c.Now()
+	moved := tr.line != line || tr.col != vc
+	snap := !tr.seen || !ok1 || !ok2 || p.Top() != tr.top ||
+		moved && (tr.line == line && max(vc-tr.col, tr.col-vc) <= 1 || now.Sub(tr.at) < cursorFast)
+	if moved {
+		tr.at = now
+	}
+	tr.seen, tr.line, tr.col, tr.top = true, line, vc, p.Top()
+	ty := cy
+	if shape == vim.Underline {
+		ty += m.lineH - 4
+	}
+	tx, ty := row.Min.X-lines.Min.X+cx, row.Min.Y-lines.Min.Y+ty
+	ease := c.Ease
+	if snap {
+		ease = c.Snap
+	}
+	ex, ey := ease(cursorKey("x"), tx), ease(cursorKey("y"), ty)
+	g := cursorGlide{on: true, dx: ex - tx, dy: ey - ty, first: first, c: c}
+	g.moving = max(g.dx, -g.dx) > m.charW*.35 || max(g.dy, -g.dy) > 2
+	return g
 }

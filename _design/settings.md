@@ -120,6 +120,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `editor.hidden` | true | input | `hidden`, `hid` | ED-13 |
 | `editor.font_size` | 13.5 | app | | – |
 | `editor.line_height` | 1.55: a multiple of the font size | app | | – |
+| `editor.cursor_glide` | true: the cursor glides between places; typing, single steps and held keys still move it at once | app | | FW-15 |
 | `editor.end_of_line` | `keep`: the file's own; or `lf`, `crlf` | app | | ED-9 |
 | `editor.charset` | `keep`; or `utf-8`, `utf-8-bom` | app | | ED-9 |
 | `editor.trim_trailing_whitespace` | false | app | | ED-9 |

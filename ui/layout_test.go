@@ -16,7 +16,12 @@ var update = flag.Bool("update", false, "rewrite golden files")
 // The headless shaper is fixed-pitch: at size 10 a character is 6 wide and a line 14 tall.
 var body = TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: render.Color{R: 200, G: 200, B: 200, A: 255}}
 
-func newUI() *UI { return New(headless.Shaper{}, body) }
+// newUI is a UI with reduced motion: behaviour tests are of the settled UI, and motion has its own (motion_test.go).
+func newUI() *UI {
+	u := New(headless.Shaper{}, body)
+	u.opts.ReducedMotion = true
+	return u
+}
 
 func golden(t *testing.T, name, got string) {
 	t.Helper()

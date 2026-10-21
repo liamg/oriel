@@ -1,0 +1,18 @@
+== start
+backdrop #060606
+rect 0,0 640x400 fill #060606
+clip 0,0 640x400 r 0
+  text "Settings" @0,12.109375 #ece6d8 Inter 12.5
+pop
+== mid
+backdrop #060606
+rect 0,0 640x400 fill #060606
+clip 0,0 640x400 r 0
+  text "Settings" @0,12.109375 #ece6d8 Inter 12.5
+pop
+== settled
+backdrop #060606
+rect 0,0 640x400 fill #060606
+clip 0,0 640x400 r 0
+  text "Settings" @0,12.109375 #ece6d8 Inter 12.5
+pop

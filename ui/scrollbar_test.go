@@ -51,6 +51,14 @@ func (s *scroller) thumb() (render.Rect, render.Color, bool) {
 	return render.Rect{}, render.Color{}, false
 }
 
+// settle runs the clock on until what's moving has settled.
+func (s *scroller) settle() {
+	for range 30 {
+		s.clk.advance(10 * time.Millisecond)
+		s.frame()
+	}
+}
+
 func (s *scroller) move(x, y float32) {
 	s.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: x, Y: y}})
 	s.frame()
@@ -58,13 +66,19 @@ func (s *scroller) move(x, y float32) {
 
 func TestScrollbarShowsWhileHoveredOrScrolled(t *testing.T) {
 	s := newScroller(20, BarsAuto)
+	s.u.opts.ReducedMotion = false
 	if _, _, ok := s.thumb(); ok {
 		t.Fatal("a bar shows with the pointer elsewhere and no scroll")
 	}
 	s.move(50, 50)
-	r, _, ok := s.thumb()
+	_, faint, _ := s.thumb()
+	s.settle()
+	r, full, ok := s.thumb()
 	if !ok {
 		t.Fatal("no bar while the pointer is over the list")
+	}
+	if faint.A >= full.A {
+		t.Errorf("the bar didn't fade in: %d then %d", faint.A, full.A)
 	}
 	// 100 of 400 shows: the thumb is a quarter of the track.
 	if h := r.Dy(); h < 23 || h > 25 {
@@ -72,17 +86,20 @@ func TestScrollbarShowsWhileHoveredOrScrolled(t *testing.T) {
 	}
 	s.u.Pointer(render.PointerEvent{Kind: render.PointerLeave})
 	s.frame()
+	s.settle()
 	if _, _, ok := s.thumb(); ok {
 		t.Error("the bar stayed after the pointer left")
 	}
 	s.u.ScrollBy(s.id, 0, 100)
 	s.frame()
+	s.settle()
 	r, _, ok = s.thumb()
 	if !ok || r.Min.Y < 25 {
 		t.Fatalf("no bar, or not moved down, just after a scroll: %v %v", ok, r)
 	}
-	s.clk.advance(barLinger + barFade + time.Millisecond)
+	s.clk.advance(barLinger)
 	s.frame()
+	s.settle()
 	if _, _, ok := s.thumb(); ok {
 		t.Error("the bar didn't fade after the scroll")
 	}

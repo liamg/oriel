@@ -47,6 +47,7 @@ func Choices(c *ui.Ctx, key any, items []Choice, active *int, o ChoicesOpts) boo
 	descStyle := monoText(9.5, typeset.Normal, col(c, tChoiceDesc), 0)
 	c.Row(key, ui.Style{W: ui.Flex(1), Stroke: col(c, tChoiceLine), Border: 1, Radius: 6, Clip: true, Focusable: true, KeyMode: "tabs",
 		Help: o.Help, Role: ui.RoleTabList, Label: o.Label}, func(c *ui.Ctx) {
+		placed := glideMark(c, "underline", *active, len(items), col(c, tChoiceOnLine), 2, ui.LayerContent)
 		for i, it := range items {
 			if i > 0 {
 				c.Box(choiceSep{i}, ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: col(c, tChoiceLine)}, nil)
@@ -60,7 +61,7 @@ func Choices(c *ui.Ctx, key any, items []Choice, active *int, o ChoicesOpts) boo
 			if r, ok := c.Rect(ui.Child(c.ID(), i)); ok {
 				width = r.Dx() - 24
 			}
-			if Clickable(c, i, ui.Style{Dir: ui.Column, W: ui.Flex(1), H: ui.Flex(1), Fill: fill, Help: o.Help, Role: ui.RoleTab, Label: it.Title, Selected: on},
+			if Clickable(c, i, ui.Style{Dir: ui.Column, W: ui.Flex(1), H: ui.Flex(1), Fill: fill, EaseFill: true, Help: o.Help, Role: ui.RoleTab, Label: it.Title, Selected: on},
 				func(c *ui.Ctx) {
 					c.Column("text", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, T: 10, B: 10}, Gap: 4, Clip: true}, func(c *ui.Ctx) {
 						c.Text("title", it.Title, uiText(c, 13, typeset.Medium, title))
@@ -71,7 +72,12 @@ func Choices(c *ui.Ctx, key any, items []Choice, active *int, o ChoicesOpts) boo
 						}
 					})
 					if on {
-						c.Box("underline", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: col(c, tChoiceOnLine)}, nil)
+						// Its room under the card; the gliding underline is drawn over it once it's placed.
+						line := col(c, tChoiceOnLine)
+						if placed {
+							line = render.Color{}
+						}
+						c.Box("underline", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: line}, nil)
 					}
 				}).Clicked {
 				*active = i
