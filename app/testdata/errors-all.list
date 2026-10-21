@@ -143,9 +143,9 @@ clip 0,614 1600x360 r 0
   rect 0,644 1600x1 fill #24221d
   clip 0,645 1600x329 r 0
     clip 10,658 226.79999x24 r 5
+      rect 195.94998,658 40.850006x24 fill #1f1c0f
       text "ORIEL" @20,673.42 #7c7566 JetBrains Mono 9.5
       text "SESSION · CONFIG" @74.75,673.42 #7c7566 JetBrains Mono 9.5
-      rect 195.94998,658 40.850006x24 fill #1f1c0f
       text "ALL" @205.94998,673.42 #ffd23f JetBrains Mono 9.5
     pop
     rect 10,658 226.79999x24 radius 5 stroke 1 #332f27

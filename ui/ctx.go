@@ -178,7 +178,7 @@ func (c *Ctx) ListBehind(key any, st Style, n int, rowH float32, behind func(c *
 		if behind != nil {
 			top := float32(0)
 			if r, ok := lc.u.Rect(lc.e.id); ok {
-				top = r.Min.Y - lc.u.Scroll(lc.e.id).Y
+				top = r.Min.Y - lc.u.ScrollShown(lc.e.id).Y
 			}
 			behind(lc, top)
 		}
@@ -186,9 +186,11 @@ func (c *Ctx) ListBehind(key any, st Style, n int, rowH float32, behind func(c *
 		if r, ok := lc.u.Rect(lc.e.id); ok && r.Dy() > 0 {
 			view = r.Dy()
 		}
-		scroll := lc.u.Scroll(lc.e.id).Y
-		first := max(0, min(n, int(math.Floor(float64(scroll/rowH)))))
-		last := min(n, first+int(math.Ceil(float64(view/rowH)))+1)
+		// While a scroll glides, what's built covers both where it's drawn and where it's going.
+		scroll, shown := lc.u.Scroll(lc.e.id).Y, lc.u.ScrollShown(lc.e.id).Y
+		lo, hi := min(scroll, shown), max(scroll, shown)+view
+		first := max(0, min(n, int(math.Floor(float64(lo/rowH)))))
+		last := min(n, first+int(math.Ceil(float64((hi-lo)/rowH)))+1)
 		lc.Box("above", Style{H: Px(float32(first) * rowH)}, nil)
 		for i := first; i < last; i++ {
 			lc.Box(i, Style{W: Flex(1), H: Px(rowH)}, func(rc *Ctx) { row(rc, i) })
@@ -264,14 +266,16 @@ func (c *Ctx) Items(key any, st Style, n int, o ItemsOpts, item func(c *Ctx, i i
 			}
 		}
 		scroll = max(min(scroll, total-view), 0) // as the layout will clamp it
+		shown := lc.u.ScrollShown(id).Y
+		lo, hi := min(scroll, shown), max(scroll, shown)+view
 		first, last := n, n
 		var above, below, y float32
 		for i := range n {
 			h := height(i)
 			switch {
-			case y+h <= scroll:
+			case y+h <= lo:
 				above += h
-			case y < scroll+view:
+			case y < hi:
 				first, last = min(first, i), i+1
 			default:
 				below += h
@@ -415,6 +419,10 @@ func (c *Ctx) ScrollIntoView(box, target ID) {
 		return
 	}
 	s := c.u.Scroll(box)
+	// Where target will be once a gliding scroll gets where it's going.
+	lag := c.u.ScrollShown(box)
+	d := render.Point{X: lag.X - s.X, Y: lag.Y - s.Y}
+	tr = render.Rect{Min: render.Point{X: tr.Min.X + d.X, Y: tr.Min.Y + d.Y}, Max: render.Point{X: tr.Max.X + d.X, Y: tr.Max.Y + d.Y}}
 	switch {
 	case tr.Min.Y < br.Min.Y:
 		s.Y -= br.Min.Y - tr.Min.Y

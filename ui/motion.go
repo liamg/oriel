@@ -23,11 +23,28 @@ const (
 	motionSettleV = 0.05
 )
 
-// fx is how a node is drawn this frame besides its layout: faded, moved, its fill eased.
+// fx is how a node is drawn this frame besides its layout: faded, moved, its fill eased, its hover wash, and how far
+// its content has sunk under a press.
 type fx struct {
 	opacity float32 // 1 when not fading
 	shift   render.Point
 	fill    *render.Color
+	wash    render.Color
+	sink    float32
+}
+
+// ringState is the focus ring: the node it's on, where it glides from, and how it's drawn against that node's rect.
+type ringState struct {
+	id, parent ID
+	from       render.Rect
+	shown      render.Rect
+	delta      render.Rect // shown less the node's rect, corner by corner
+	in         float32     // 0..1 as it settles in
+}
+
+type easeState struct {
+	from, to float32
+	seen     int
 }
 
 type glideState struct{ from, to render.Point }
@@ -88,6 +105,68 @@ func (u *UI) motion(id ID, from, target float32) float32 {
 
 type motionKey struct{ kind string }
 
+type easeKey struct{ key any }
+
+// Ease glides a value to v on the motion spring, keyed by key under this node, and returns where it is now: a
+// meter's fill, a dial's arc. It starts at the first v it's given. A new v mid-glide sets off from where it is,
+// keeping its speed, so nothing queues.
+func (c *Ctx) Ease(key any, v float32) float32 {
+	return c.u.ease(childID(c.e.id, easeKey{key}), v, false)
+}
+
+// Snap puts the value Ease keys by key at v at once, and returns it: a move too small or too quick to glide.
+func (c *Ctx) Snap(key any, v float32) float32 {
+	return c.u.ease(childID(c.e.id, easeKey{key}), v, true)
+}
+
+func (u *UI) ease(id ID, v float32, snap bool) float32 {
+	if u.eases == nil {
+		u.eases = map[ID]*easeState{}
+	}
+	e, ok := u.eases[id]
+	if !ok || snap {
+		e = &easeState{from: v, to: v}
+		u.eases[id] = e
+	}
+	e.seen = u.frame
+	key := childID(id, motionKey{"ease"})
+	if snap {
+		delete(u.springs, key)
+	}
+	if e.to != v {
+		p := u.motion(key, 1, 1)
+		var speed float32 // in v's units a second
+		if sp, ok := u.springs[key]; ok {
+			speed = sp.v * (e.to - e.from)
+		}
+		e.from, e.to = e.from+(e.to-e.from)*p, v
+		sp := &spring{x: 0, at: u.now(), seen: u.frame}
+		if d := e.to - e.from; d != 0 {
+			sp.v = speed / d
+		}
+		u.springs[key] = sp
+	}
+	p := u.motion(key, 1, 1)
+	return e.from + (e.to-e.from)*p
+}
+
+// settled is how far the motion spring has come from rest towards 1, d after it set off: its step response.
+func (u *UI) settled(d time.Duration) float32 {
+	if u.opts.ReducedMotion || u.opts.MotionSpeed <= 0 || d < 0 {
+		if d < 0 {
+			return 0
+		}
+		return 1
+	}
+	wt := float64(motionOmega*u.opts.MotionSpeed) * d.Seconds()
+	x := float32(1 - (1+wt)*math.Exp(-wt))
+	if x > 1-motionSettle {
+		return 1
+	}
+	u.wakeAt(u.now().Add(time.Second / 120))
+	return x
+}
+
 // animate works out each node's motion for this frame, after layout: enters, glides, eased fills, and nodes that
 // have gone and are on their way out.
 func (u *UI) animate(prev map[ID]bool) {
@@ -139,9 +218,16 @@ func (u *UI) animate(prev map[ID]bool) {
 			c := easeColor(f.from, f.to, p)
 			e.fx.fill = &c
 		}
+		u.washes(id, e)
 		if s.Exit != nil {
 			exitable[id] = e
 			delete(u.exiting, id)
+		}
+	}
+	u.focusRing()
+	for id, x := range u.eases {
+		if x.seen != u.frame {
+			delete(u.eases, id)
 		}
 	}
 	for id := range u.glides {
@@ -169,6 +255,74 @@ func (u *UI) animate(prev map[ID]bool) {
 		x.e.fx.apply(x.tr, p)
 	}
 	u.exitable = exitable
+}
+
+// washes eases e's hover and press wash, and sinks its content while it's pressed if it asks to (Style.Sink).
+func (u *UI) washes(id ID, e *elem) {
+	s := e.style
+	hot := id != 0 && id == u.in.hot && !s.Disabled
+	pressed := hot && u.in.active == id
+	if (s.Interactive || s.Focusable) && !s.NoHover && s.Cursor == render.CursorPointer {
+		h := u.toward(childID(id, motionKey{"hover"}), hot)
+		p := u.toward(childID(id, motionKey{"press"}), pressed)
+		if h > 0 || p > 0 {
+			w := u.opts.Hover
+			w.A = uint8(math.Round(float64(w.A) * float64(h)))
+			if p > 0 {
+				w = easeColor(w, u.opts.Pressed, p)
+			}
+			e.fx.wash = w
+		}
+	}
+	if s.Sink {
+		e.fx.sink = u.toward(childID(id, motionKey{"sink"}), pressed)
+	}
+}
+
+// toward runs the 0..1 motion spring id towards on or off, and drops it once it's settled off.
+func (u *UI) toward(id ID, on bool) float32 {
+	sp, ok := u.springs[id]
+	if !on && (!ok || sp.x == 0 && sp.v == 0) {
+		delete(u.springs, id)
+		return 0
+	}
+	target := float32(0)
+	if on {
+		target = 1
+	}
+	return u.motion(id, 0, target)
+}
+
+// focusRing settles the focus ring in on a node focused from the keyboard, and glides it to the next one in the same
+// parent.
+func (u *UI) focusRing() {
+	e, ok := u.byID[u.in.focus]
+	if !ok || u.in.focus == 0 || !u.in.visible {
+		u.ring.id = 0
+		return
+	}
+	var parent ID
+	if e.parent != nil {
+		parent = e.parent.id
+	}
+	r := e.rect()
+	appear, glide := childID(0, motionKey{"ring"}), childID(0, motionKey{"ring-glide"})
+	if u.ring.id != e.id {
+		if u.ring.id != 0 && u.ring.parent == parent {
+			u.ring.from = u.ring.shown
+			u.springs[glide] = &spring{x: 0, at: u.now(), seen: u.frame}
+		} else {
+			u.ring.from = r
+			u.springs[appear] = &spring{x: 0, at: u.now(), seen: u.frame}
+			delete(u.springs, glide)
+		}
+		u.ring.id, u.ring.parent = e.id, parent
+	}
+	g := u.motion(glide, 1, 1)
+	u.ring.in = u.motion(appear, 0, 1)
+	u.ring.shown = render.Rect{Min: lerpPoint(u.ring.from.Min, r.Min, g), Max: lerpPoint(u.ring.from.Max, r.Max, g)}
+	u.ring.delta = render.Rect{Min: render.Point{X: u.ring.shown.Min.X - r.Min.X, Y: u.ring.shown.Min.Y - r.Min.Y},
+		Max: render.Point{X: u.ring.shown.Max.X - r.Max.X, Y: u.ring.shown.Max.Y - r.Max.Y}}
 }
 
 // insideExiting reports whether e is in a subtree already on its way out, which draws it.

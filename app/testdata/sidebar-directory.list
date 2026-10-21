@@ -99,9 +99,9 @@ clip 150,38 300x356 r 0
   clip 150,69 300x325 r 0
     rect 150,69 300x325 fill #0c0c0b
     clip 160,79 254x24 r 5
+      rect 352.9,79 61.100006x24 fill #1f1c0f
       text "CHANGED 0" @170,94.420006 #7c7566 JetBrains Mono 9.5
       text "UNCOMMITTED 0" @252.55,94.420006 #7c7566 JetBrains Mono 9.5
-      rect 352.9,79 61.100006x24 fill #1f1c0f
       text "ALL 2" @366.07498,94.420006 #ffd23f JetBrains Mono 9.5
     pop
     rect 160,79 254x24 radius 5 stroke 1 #332f27
@@ -118,13 +118,13 @@ clip 150,38 300x356 r 0
     clip 150,109 300x257 r 0
       rect 150,109 300x22 fill #1f1c0f
       rect 150,109 2x22 fill #ffd23f
-      text "▾" @162,124.54712 #ece6d8 Inter 12.5
+      path 3 segments stroke 1.3 #ece6d8
       rect 176,115 10x10 fill #ffd23fd9 radius 2
       clip 192,112.437744 242x15.124512 r 0
         text "blog" @192,124.54712 #ece6d8 Inter 12.5
         text "main" @224.875,123.78 #7c7566 JetBrains Mono 10.5
       pop
-      text "▸" @176,146.54712 #b3ab99 Inter 12.5
+      path 3 segments stroke 1.3 #b3ab99
       clip 190,134.43774 244x15.124512 r 0
         text "posts" @190,146.54712 #b3ab99 Inter 12.5
       pop

@@ -37,3 +37,7 @@ blue   = "#61afef"
 "syn.comment"  = "#5c6370"
 "syn.punct"    = "#abb2bf"
 "syn.variable" = "#e06c75"
+
+[component]
+"selection"      = "alpha(accent, 24%)"
+"text.selection" = "alpha(accent, 24%)"

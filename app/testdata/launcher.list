@@ -192,7 +192,6 @@ clip 170,105 1260x790 r 10
         text "Plan" @500,358.33377 #ffd23f Inter 13
         text "docs first, Start work later" @500,375.15952 #7c7566 JetBrains Mono 9.5
       pop
-      rect 488,388.00952 293x2 fill #ffd23f
       rect 781,335.74002 1x54.2695 fill #24221d
       clip 782,335.74002 293x54.2695 r 0
         text "Review PR" @794,358.33377 #ece6d8 Inter 13
@@ -320,3 +319,4 @@ clip 170,105 1260x790 r 10
   text "⌘↵" @1376.0469,868.42 #141006cc JetBrains Mono 9.5
 pop
 rect 170,105 1260x790 radius 10 stroke 1 #332f27
+rect 488,388.00952 293x2 fill #ffd23f

@@ -1,0 +1,12 @@
+== start
+rect 0,0 40x20 fill #282828
+rect 0,0 40x20 fill #ffffff
+text ok @0,11
+== mid
+rect 0,0 40x20 fill #282828
+rect 0,0 40x20 fill #ffffff
+text ok @0,11.80
+== settled
+rect 0,0 40x20 fill #282828
+rect 0,0 40x20 fill #ffffff
+text ok @0,12

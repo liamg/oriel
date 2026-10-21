@@ -260,8 +260,34 @@ func Badge(c *ui.Ctx, key any, n int, o BadgeOpts) {
 		text = "99+"
 	}
 	h := size + 5
+	ts := monoText(size, typeset.Bold, ink, 0)
+	// A new count rolls in from below as the old one goes up and out.
+	id := c.Next(key)
+	roll := ui.State[badgeRoll](c, ui.Child(id, "roll"))
+	if roll.text != text {
+		if roll.text != "" {
+			roll.old = roll.text
+			c.ResetMotion(badgeKey{id}, 0)
+		}
+		roll.text = text
+	}
+	p := c.Motion(badgeKey{id}, 1)
+	rolling := p < 1 && roll.old != ""
 	c.Box(key, ui.Style{H: ui.Px(h), Pad: ui.PadXY(4, 0), Radius: h / 2, Fill: fill, Cross: ui.Center, Main: ui.Center, Role: ui.RoleText,
-		Label: text}, func(c *ui.Ctx) {
-		c.Text("n", text, monoText(size, typeset.Bold, ink, 0))
+		Label: text, Clip: rolling, Enter: &ui.Transition{Fade: true, Shift: render.Point{Y: 3}}, Exit: fadeIn}, func(c *ui.Ctx) {
+		if !rolling {
+			c.Text("n", text, ts)
+			return
+		}
+		c.Box("n", ui.Style{Fade: 1}, func(c *ui.Ctx) { c.Text("t", text, ts) })
+		c.Column("roll", ui.Style{Z: ui.LayerUnder, Float: &ui.Float{Offset: render.Point{X: 4, Y: -h * p}}}, func(c *ui.Ctx) {
+			for i, t := range []string{roll.old, text} {
+				c.Row(i, ui.Style{H: ui.Px(h), Cross: ui.Center}, func(c *ui.Ctx) { c.Text("t", t, ts) })
+			}
+		})
 	})
 }
+
+type badgeRoll struct{ text, old string }
+
+type badgeKey struct{ id ui.ID }

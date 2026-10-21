@@ -78,6 +78,7 @@ Each ticket comes after everything it depends on; ties break by phase, then area
 30. [ED-10](ED-10-pcre2-regex-outside-the-vim-engine.md): PCRE2 regex outside the vim engine · after ED-3
 30. [ED-11](ED-11-languages-as-plugins-core-grammar-set-and-local-packs.md): Languages as plugins: a language contribution, a core grammar set, local grammar packs · after ED-6, FW-3
 30. [FW-13](FW-13-ui-motion-polish-subtle-animations-for-panels-menus-and-popups.md): UI motion polish: subtle animations for panels, menus, popups and toasts · after FW-5, FW-6, FW-9
+30. [FW-15](FW-15-motion-polish-round-two.md): Motion polish, round two: hover, focus, scrolls, controls and the editor cursor · after FW-13
 30. [FW-14](FW-14-loading-states-one-loader-and-one-widget.md): Loading states: one loader and one widget, used by every screen · after FW-6, FW-13, AI-4
 30. [ED-14](ED-14-highlight-queries-without-a-parent-walk-per-capture.md): Highlight queries without a parent walk per capture · after ED-6
 30. [ED-13](ED-13-editor-options-in-the-registry-and-editor-clipboard.md): Editor options in the registry: :set, the settings page, editor.clipboard · after ED-12, SH-12

@@ -22,8 +22,7 @@ const (
 	barInset      = 2
 	barMinThumb   = 24
 	barLinger     = 900 * time.Millisecond // shown after a scroll in BarsAuto
-	barFade       = 300 * time.Millisecond
-	barGrabMargin = 4 // the bar takes presses this far beyond its thumb's width
+	barGrabMargin = 4                      // the bar takes presses this far beyond its thumb's width
 )
 
 // barDrag is a scrollbar thumb being dragged.
@@ -77,7 +76,7 @@ func (u *UI) bars(id ID) (out [2]bar, ok [2]bool) {
 		thumbLen := max(barMinThumb, length*st.view[axis]/st.ext[axis])
 		thumbLen = min(thumbLen, length)
 		maxScroll := st.ext[axis] - st.view[axis]
-		at := (length - thumbLen) * st.scroll[axis] / maxScroll
+		at := (length - thumbLen) * max(0, min(st.shown[axis], maxScroll)) / maxScroll
 		thumb := track
 		if axis == 1 {
 			thumb.Min.Y, thumb.Max.Y = track.Min.Y+at, track.Min.Y+at+thumbLen
@@ -133,6 +132,7 @@ func (u *UI) barPress(p render.Point) bool {
 	}
 	st := u.state(id)
 	st.scrolledAt = u.now()
+	st.stopEasing()
 	switch {
 	case at < lo:
 		st.scroll[axis] = max(0, st.scroll[axis]-st.view[axis])
@@ -162,6 +162,7 @@ func (u *UI) barMove(p render.Point) bool {
 	}
 	if room := length - thumb; room > 0 {
 		st := u.state(d.id)
+		st.stopEasing()
 		st.scroll[d.axis] = max(0, min(b.max, (at-d.grab-start)/room*b.max))
 		st.scrolledAt = u.now()
 	}
@@ -169,7 +170,27 @@ func (u *UI) barMove(p render.Point) bool {
 	return true
 }
 
-// barAlpha is how much of a box's scrollbar shows now, 0 to 1.
+// barFade is a BarsAuto scrollbar fading in or out on the motion spring: whether it's wanted, since when, and from
+// how much it showed then.
+type barFade struct {
+	on   bool
+	at   time.Time
+	from float32
+}
+
+func (b barFade) alpha(u *UI) float32 {
+	if b.at.IsZero() {
+		return 0
+	}
+	to := float32(0)
+	if b.on {
+		to = 1
+	}
+	return b.from + (to-b.from)*u.settled(u.now().Sub(b.at))
+}
+
+// barAlpha is how much of a box's scrollbar shows now, 0 to 1. A BarsAuto bar fades in while the pointer is over its
+// box or it's dragged, and for a moment after the box scrolls, and fades out after.
 func (u *UI) barAlpha(id ID, r render.Rect) float32 {
 	switch u.barMode(id) {
 	case BarsHidden:
@@ -177,23 +198,16 @@ func (u *UI) barAlpha(id ID, r render.Rect) float32 {
 	case BarsAlways:
 		return 1
 	}
-	if (u.in.bar != nil && u.in.bar.id == id) || u.over(r) {
-		return 1
-	}
-	st := u.states[id]
-	if st == nil || st.scrolledAt.IsZero() {
-		return 0
-	}
-	since := u.now().Sub(st.scrolledAt)
-	switch {
-	case since < barLinger:
+	st := u.state(id)
+	on := (u.in.bar != nil && u.in.bar.id == id) || u.over(r)
+	if since := u.now().Sub(st.scrolledAt); !on && !st.scrolledAt.IsZero() && since < barLinger {
+		on = true
 		u.wakeAt(st.scrolledAt.Add(barLinger))
-		return 1
-	case since < barLinger+barFade:
-		u.wakeAt(u.now().Add(16 * time.Millisecond))
-		return 1 - float32(since-barLinger)/float32(barFade)
 	}
-	return 0
+	if on != st.bar.on {
+		st.bar = barFade{on: on, at: u.now(), from: st.bar.alpha(u)}
+	}
+	return st.bar.alpha(u)
 }
 
 func (u *UI) wakeAt(t time.Time) {

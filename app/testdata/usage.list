@@ -468,8 +468,8 @@ clip 224,38 1376x936 r 0
     rect 1133.2656,362.168 448.73438x306.71957 fill #0c0c0b radius 8 stroke 1 #24221d
     text "BURNED THE WEEKLY WINDOW" @1145.2656,386.588 #b3ab99 JetBrains Mono 9.5
     clip 1454.4,371.168 115.599976x24 r 5
-      text "5H" @1464.4,386.588 #7c7566 JetBrains Mono 9.5
       rect 1488.3,371.168 33.900024x24 fill #1f1c0f
+      text "5H" @1464.4,386.588 #7c7566 JetBrains Mono 9.5
       text "WK" @1498.3,386.588 #ffd23f JetBrains Mono 9.5
       text "OPUS" @1532.2001,386.588 #7c7566 JetBrains Mono 9.5
     pop

@@ -37,6 +37,7 @@ func HoverCard(c *ui.Ctx, key any, anchor ui.ID, o HoverCardOpts, body func(c *u
 	}
 	c.Column(key, ui.Style{W: w, Pad: ui.Pad(12), Gap: 8, Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 8, Z: ui.LayerPopup,
 		Interactive: true, Float: &ui.Float{To: anchor, At: render.Point{X: 1}, Offset: render.Point{X: 4, Y: -6}}, Role: ui.RoleGroup,
+		Enter: &ui.Transition{Fade: true, Shift: render.Point{X: -4}}, Exit: fadeIn,
 		Label: o.Label, Help: o.Help}, body)
 	return true
 }

@@ -1,0 +1,16 @@
+== start
+backdrop #060606
+== mid
+backdrop #060606
+opacity 0.80419856
+  rect 0,1.1748086 640x400 fill #060606
+  clip 0,1.1748086 640x400 r 0
+    text "Settings" @0,13.2841835 #ece6d8 Inter 12.5
+  pop
+pop
+== settled
+backdrop #060606
+rect 0,0 640x400 fill #060606
+clip 0,0 640x400 r 0
+  text "Settings" @0,12.109375 #ece6d8 Inter 12.5
+pop

@@ -168,3 +168,145 @@ func TestMotionSpeed(t *testing.T) {
 		t.Errorf("settling at speed 1 %v, 2 %v, 0 %v", one, two, off)
 	}
 }
+
+// The toolkit's own motion (FW-15): each starts, passes a midpoint and settles, and with reduced motion jumps.
+func TestToolkitMotion(t *testing.T) {
+	type scene struct {
+		name   string
+		build  func(st *toolkitScene) func(c *Ctx)
+		setup  func(m *motionCase, st *toolkitScene)
+		change func(m *motionCase, st *toolkitScene)
+	}
+	move := func(m *motionCase, x, y float32) {
+		m.u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: x, Y: y}})
+	}
+	clickable := func(s Style) Style {
+		s.Interactive, s.Cursor = true, render.CursorPointer
+		return s
+	}
+	scenes := []scene{
+		{"hover", func(*toolkitScene) func(c *Ctx) {
+			return func(c *Ctx) { c.Box("btn", clickable(box(40)), nil) }
+		}, nil, func(m *motionCase, _ *toolkitScene) { move(m, 5, 5) }},
+		{"press-sink", func(*toolkitScene) func(c *Ctx) {
+			return func(c *Ctx) {
+				s := clickable(box(40))
+				s.Sink = true
+				c.Box("btn", s, func(c *Ctx) { c.Text("t", "ok", TextStyle{}) })
+			}
+		}, func(m *motionCase, _ *toolkitScene) {
+			move(m, 5, 5)
+			m.step("hovered", 300*time.Millisecond)
+			m.out = nil
+		}, func(m *motionCase, _ *toolkitScene) {
+			m.u.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 5, Y: 5}, Buttons: render.ButtonPrimary})
+		}},
+		{"focus-ring", focusPair, nil, func(m *motionCase, _ *toolkitScene) { m.u.FocusNext(1) }},
+		{"focus-glide", focusPair, func(m *motionCase, _ *toolkitScene) {
+			m.u.FocusNext(1)
+			m.step("focused", 300*time.Millisecond)
+			m.out = nil
+		}, func(m *motionCase, _ *toolkitScene) { m.u.FocusNext(1) }},
+		{"tooltip", func(*toolkitScene) func(c *Ctx) {
+			return func(c *Ctx) {
+				s := box(40)
+				s.Tooltip = "Save"
+				c.Box("btn", s, nil)
+			}
+		}, nil, func(m *motionCase, _ *toolkitScene) {
+			move(m, 5, 5)
+			m.frame()
+			m.clk.advance(m.u.opts.TooltipDelay)
+		}},
+		{"scroll-to", func(st *toolkitScene) func(c *Ctx) {
+			return func(c *Ctx) {
+				st.id = c.Column("list", Style{W: Px(100), H: Px(60), ScrollY: true, Bars: BarsHidden}, func(c *Ctx) {
+					for i := range 12 {
+						c.Box(i, box(uint8(20*i)), nil)
+					}
+				})
+			}
+		}, nil, func(m *motionCase, st *toolkitScene) { m.u.ScrollTo(st.id, render.Point{Y: 120}) }},
+		{"ease-value", func(st *toolkitScene) func(c *Ctx) {
+			return func(c *Ctx) {
+				c.Box("bar", Style{W: Px(c.Ease("w", st.v)), H: Px(4), Fill: render.Color{R: 255, A: 255}}, nil)
+			}
+		}, func(_ *motionCase, st *toolkitScene) { st.v = 10 }, func(_ *motionCase, st *toolkitScene) { st.v = 110 }},
+	}
+	for _, sc := range scenes {
+		for _, reduced := range []bool{false, true} {
+			name := sc.name
+			if reduced {
+				name += "-reduced"
+			}
+			st := &toolkitScene{v: 10}
+			m := newMotion(t, reduced, sc.build(st))
+			if sc.setup != nil {
+				sc.setup(m, st)
+			}
+			m.frame()
+			sc.change(m, st)
+			m.step("start", 0)
+			m.step("mid", 60*time.Millisecond)
+			m.step("settled", 250*time.Millisecond)
+			got := m.golden("toolkit-" + name)
+			start := got[len("== start\n"):strings.Index(got, "== mid")]
+			settled := got[strings.LastIndex(got, "== settled\n")+len("== settled\n"):]
+			if m.u.animating {
+				t.Errorf("%s still moves after 310 ms", name)
+			}
+			if reduced && strings.TrimSpace(start) != strings.TrimSpace(settled) {
+				t.Errorf("%s: with reduced motion, the first frame isn't the settled one", name)
+			}
+			if !reduced && strings.TrimSpace(start) == strings.TrimSpace(settled) {
+				t.Errorf("%s doesn't move", name)
+			}
+		}
+	}
+}
+
+type toolkitScene struct {
+	id ID
+	v  float32
+}
+
+func focusPair(*toolkitScene) func(c *Ctx) {
+	return func(c *Ctx) {
+		c.Row("row", Style{Gap: 10, Pad: Pad(10)}, func(c *Ctx) {
+			for i := range 2 {
+				s := box(60)
+				s.Focusable = true
+				c.Box(i, s, nil)
+			}
+		})
+	}
+}
+
+// A ScrollTo glides, but Scroll reports where it's going at once, and the wheel takes over from where it's drawn.
+func TestScrollToGlides(t *testing.T) {
+	var id ID
+	m := newMotion(t, false, func(c *Ctx) {
+		id = c.Column("list", Style{W: Px(100), H: Px(60), ScrollY: true}, func(c *Ctx) {
+			for i := range 30 {
+				c.Box(i, box(10), nil)
+			}
+		})
+	})
+	m.u.ScrollTo(id, render.Point{Y: 200})
+	if got := m.u.Scroll(id).Y; got != 200 {
+		t.Errorf("Scroll is %v straight after ScrollTo, want 200", got)
+	}
+	m.step("mid", 40*time.Millisecond)
+	shown := m.u.ScrollShown(id).Y
+	if shown <= 140 || shown >= 200 {
+		t.Errorf("40 ms in, the scroll shows %v: want it between 140 (a view's length off) and 200", shown)
+	}
+	m.u.ScrollBy(id, 0, 5)
+	m.frame()
+	if got := m.u.Scroll(id).Y; got < shown+5-1 || got > shown+5+1 {
+		t.Errorf("the wheel mid-glide took the scroll to %v, want %v (from where it was drawn)", got, shown+5)
+	}
+	if m.u.ScrollShown(id) != m.u.Scroll(id) {
+		t.Error("the glide went on after the wheel")
+	}
+}

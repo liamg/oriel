@@ -36,7 +36,7 @@ func Ring(c *ui.Ctx, key any, o RingOpts) ui.ID {
 	if w == 0 {
 		w = 3
 	}
-	frac := min(max(o.Frac, 0), 1)
+	frac := float64(c.Ease(easedKey{key}, float32(min(max(o.Frac, 0), 1))))
 	tone := o.Tone
 	if tone == (color.NRGBA{}) {
 		tone = col(c, tRingArc)

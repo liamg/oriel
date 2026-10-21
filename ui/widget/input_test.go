@@ -62,7 +62,7 @@ func TestInputSelectionVisible(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						th, err := theme.Resolve(st, v)
+						th, err := theme.Resolve(st, theme.Effective(st, v))
 						if err != nil {
 							t.Fatal(err)
 						}
@@ -122,7 +122,7 @@ func TestSelectionsLint(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			th, err := theme.Resolve(st, v)
+			th, err := theme.Resolve(st, theme.Effective(st, v))
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -14,7 +14,7 @@ bg3 = "mix(bg2, bg4, 50%)"
 bg4 = "#174652"
 line  = "#073642"
 line2 = "#174652"
-fg  = "#93a1a1"
+fg  = "#a5b4b4" # base1 lifted a little, so text stays readable on a selection that shows
 fg2 = "#8c9d9f"
 fg3 = "#687e86"
 fg4 = "#586e75"
@@ -37,3 +37,7 @@ blue   = "#3698df"
 "syn.comment"  = "#586e75"
 "syn.punct"    = "#93a1a1"
 "syn.variable" = "#839496"
+
+[component]
+"selection"      = "alpha(accent, 34%)"
+"text.selection" = "alpha(accent, 34%)"

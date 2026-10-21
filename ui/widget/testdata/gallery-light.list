@@ -31,7 +31,7 @@ rect 20,152 250x200 fill #f3f1ec
 clip 20,152 250x200 r 0
   rect 20,152 250x22 fill #e1e8e7
   rect 20,152 2x22 fill #0a78a8
-  text "▸" @32,167.54712 #1b2129 Inter 12.5
+  path 3 segments stroke 1.3 #1b2129
   rect 46,158 10x10 fill #5cd2ffd9 radius 2
   clip 62,155.43774 192x15.124512 r 0
     text "internal" @62,167.54712 #1b2129 Inter 12.5

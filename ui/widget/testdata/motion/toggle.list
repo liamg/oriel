@@ -1,0 +1,12 @@
+== start
+backdrop #060606
+rect 0,0 32x18 fill #23211c radius 9
+rect 2,2 14x14 fill #ece6d8 radius 7
+== mid
+backdrop #060606
+rect 0,0 32x18 fill #d4af38 radius 9
+rect 13.25878,2 14x14 fill #ece6d8 radius 7
+== settled
+backdrop #060606
+rect 0,0 32x18 fill #ffd23f radius 9
+rect 16,2 14x14 fill #ece6d8 radius 7
