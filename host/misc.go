@@ -3,8 +3,11 @@ package host
 import (
 	"context"
 	"errors"
+	"maps"
 	"os"
+	"path/filepath"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 
@@ -89,6 +92,54 @@ func (w *Host) SampleLoad(ctx context.Context, every time.Duration) {
 			}()
 		}
 	}
+}
+
+// SweepSandboxes removes what sandboxes no session uses left behind, now and then every interval, until ctx ends.
+func (w *Host) SweepSandboxes(ctx context.Context, every time.Duration) {
+	defer w.recover("SweepSandboxes", nil)
+	if w.opts.Sandbox == nil {
+		return
+	}
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		func() {
+			defer w.recover("SweepSandboxes", nil)
+			for _, gone := range w.opts.Sandbox.Sweep(ctx, w.sandboxAttached, w.sandboxKnown) {
+				w.log.Info("sandbox sweep removed", "what", gone)
+			}
+		}()
+		select {
+		case <-ctx.Done():
+			return
+		case <-w.closed:
+			return
+		case <-t.C:
+		}
+	}
+}
+
+// sandboxAttached says whether a running agent's sandbox is root's.
+func (w *Host) sandboxAttached(root string) bool {
+	root = filepath.Clean(root)
+	w.mu.Lock()
+	live := slices.Collect(maps.Values(w.live))
+	w.mu.Unlock()
+	return slices.ContainsFunc(live, func(h *session) bool {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		b, ok := h.box.(*box)
+		return ok && filepath.Clean(b.root) == root
+	})
+}
+
+// sandboxKnown says whether a session, archived or not, runs its agent in root.
+func (w *Host) sandboxKnown(root string) bool {
+	root = filepath.Clean(root)
+	return slices.ContainsFunc(w.store.State().Sessions, func(se core.SessionState) bool {
+		d := agentDir(se)
+		return d != "" && filepath.Clean(d) == root
+	})
 }
 
 // Terminal is the agent's raw terminal: what it has shown, then what it shows, until ctx ends or the agent

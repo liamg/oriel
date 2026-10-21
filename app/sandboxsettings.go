@@ -78,6 +78,14 @@ func sandboxOptions(o registry.Options) []registry.OptionSpec {
 			Help: `Each container's memory cap in docker's units ("8g"); empty is 8g, "none" no cap.`},
 		{Name: "sandbox.pids_limit", Type: registry.Int, Default: 0, Min: -1, Max: 1 << 20, Scopes: user,
 			Help: "Each container's process cap; 0 is 4096, -1 no cap."},
+		{Name: "sandbox.go_cache_max", Type: registry.String, Default: "", Scopes: user,
+			Validate: func(v any) error {
+				if s := v.(string); s != "" && s != "none" && !memorySize.MatchString(s) {
+					return errors.New(`a size in docker's units ("20g"), or "none"`)
+				}
+				return nil
+			},
+			Help: `The cap on the sandboxes' shared Go build cache ("20g"): the hourly sweep removes the least recently used past it. Empty is 20g, "none" no cap.`},
 		{Name: "sandbox.backend", Type: registry.Enum, Values: offeredBackends(), Default: offeredBackends()[0], Scopes: user,
 			Help: "What confines the agent: a container engine; or seatbelt, macOS's own sandbox."},
 		{Name: "sandbox.loopback", Type: registry.Enum, Values: []string{sandbox.LoopbackAll, sandbox.LoopbackEphemeral, sandbox.LoopbackNone},
@@ -149,7 +157,7 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 	str := func(name string) string { s, _ := get(name).(string); return s }
 	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: str("sandbox.image"), ClaudeVersion: str("sandbox.claude_version"),
 		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: str("sandbox.memory"),
-		Loopback: str("sandbox.loopback")}
+		GoCacheMax: str("sandbox.go_cache_max"), Loopback: str("sandbox.loopback")}
 	cfg.Egress = sandbox.EgressRules(list("sandbox.egress"))
 	cfg.Rules = sandbox.PolicyRules(list("sandbox.rules"))
 	cfg.Servers, _ = mcpServers(get("sandbox.servers"))

@@ -271,6 +271,10 @@ func (fakeSandboxes) Open(context.Context, core.SessionState, host.Approve) (hos
 
 func (f fakeSandboxes) Backends() []string { return f.backends }
 
+func (fakeSandboxes) Sweep(context.Context, func(string) bool, func(string) bool) []string {
+	return nil
+}
+
 type fakeSandbox struct{}
 
 func (fakeSandbox) Exec() agent.Exec     { return nopExec{} }

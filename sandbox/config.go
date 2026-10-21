@@ -42,6 +42,8 @@ type Config struct {
 	Memory string `json:"memory,omitempty"`
 	// PidsLimit caps each container's processes (-1 for no cap).
 	PidsLimit int `json:"pidsLimit,omitempty"`
+	// GoCacheMax caps the sandboxes' Go build cache, in docker's units ("20g"); "" is DefaultGoCacheMax, "none" no cap.
+	GoCacheMax string `json:"goCacheMax,omitempty"`
 	// Loopback is which of the host's loopback ports a sandbox that shares the host's network may connect to:
 	// LoopbackAll (""), LoopbackEphemeral or LoopbackNone.
 	Loopback string `json:"loopback,omitempty"`

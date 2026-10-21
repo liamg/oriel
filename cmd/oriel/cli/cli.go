@@ -53,10 +53,11 @@ func newHost(home string, log *slog.Logger) (*host.Host, error) {
 	return w, nil
 }
 
-// startHost starts the session host's background work until ctx ends: the machine's load, the plan windows'
-// /usage probe, and the jobs' schedules.
+// startHost starts the session host's background work until ctx ends: the machine's load, the sandbox sweep, the plan
+// windows' /usage probe, and the jobs' schedules.
 func startHost(ctx context.Context, w *host.Host, log *slog.Logger) {
 	go w.SampleLoad(ctx, 5*time.Second)
+	go w.SweepSandboxes(ctx, time.Hour)
 	go func() {
 		if err := w.ReadUsage(ctx); err != nil {
 			log.Warn("usage", "err", err)

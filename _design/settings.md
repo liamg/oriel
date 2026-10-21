@@ -193,6 +193,7 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `sandbox.egress_proxy` | true: off allows every connection (still made from the host, so its VPN and tailnet reach the sandbox) | app | | AI-11 |
 | `sandbox.memory` | empty: 8g; `none` for no cap | app | | AI-11 |
 | `sandbox.pids_limit` | 0: 4096; -1 for no cap | app | | AI-11 |
+| `sandbox.go_cache_max` | empty: 20g, the cap on the sandboxes' shared Go build cache, trimmed least recently used first by the hourly sweep; `none` for no cap | app | | AI-11 |
 | `usage.accounts` | empty: names for the accounts plans belong to, account identity → label ("Work", "Personal"); unnamed, an account shows its email or organisation | app | | AI-12 |
 | `stats.split_sessions` | true: a multi-repo session's cost splits over its repos, each request charged to the repo it worked in; off, each repo is charged the whole session. The Stats page's toggle and the session tab's "count whole session in each" both set it | app | | AI-12 |
 | `hud.hold` | alt: the modifier that pulls the HUD down while held on its own (alt, ctrl, shift, super, off) | app | | SH-8 |
