@@ -29,6 +29,8 @@ type inlineNew struct {
 	anchor    text.AnchorID
 	draft     string
 	focus     bool
+	toAuthor  bool // a comment for the pull request's author, not a question for the agent
+	review    bool // the session is a review: it can be either
 }
 
 func (n *inlineNew) release() {
@@ -73,6 +75,9 @@ func anchoredLine(lines []string, a *core.Anchor) int {
 func (x *requests) newInline(a registry.Args) error {
 	st := x.state("")
 	n := &inlineNew{path: a.String("file"), line: a.Int("line") - 1, end: a.Int("end_line") - 1, focus: true}
+	if se, ok := x.front(); ok && se.PR != "" {
+		n.review, n.toAuthor = true, a.String("to") != "agent"
+	}
 	if n.path == "" {
 		if x.sh.editor == nil || x.sh.editor.e == nil {
 			return errors.New("no editor")
@@ -91,7 +96,7 @@ func (x *requests) newInline(a registry.Args) error {
 	}
 	if o := st.inline; o != nil && filepath.Clean(o.path) == filepath.Clean(n.path) && o.line == n.line && o.end == n.end {
 		n.release()
-		o.focus = true
+		o.focus, o.toAuthor = true, n.toAuthor
 		return nil
 	} else if o != nil {
 		o.release()
@@ -415,6 +420,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 			if t.Busy {
 				workingLine(c, "working", se, ui.Flex(1))
 			}
+			registry.DrawThreadFeet(h, c, string(se.ID), string(id), width-24)
 			if !t.Open() {
 				return
 			}
@@ -456,11 +462,24 @@ const commentLines = 8
 // inlineComposer is the card of a thread being opened on a line: ⏎ sends it, ⇧⏎ starts a new line, Escape drops it.
 func (x *requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, line int) {
 	th := c.Theme()
-	inlineCard(c, "New thread", func(c *ui.Ctx, width float32) {
+	title, label, hint := "New thread", "Ask about this line", "Ask the agent about this line"
+	if n.toAuthor {
+		title, label, hint = "Comment for the author", "Comment for the author", "A comment for the author, in your review"
+	}
+	inlineCard(c, title, func(c *ui.Ctx, width float32) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(theme.Accent)}, nil)
-			c.Text("t", "New thread", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			c.Text("l", fmt.Sprintf("· L%d", line+1), monoFont(10.5, th.C(theme.FgFaint)))
+			if n.review {
+				to := 1
+				if n.toAuthor {
+					to = 0
+				}
+				if widget.Segmented(c, "to", []string{"To the author", "Ask the agent"}, &to, widget.SegmentedOpts{Label: "Who it's for", Help: "agent/reviews#comments"}) {
+					n.toAuthor = to == 0
+				}
+			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("keys", "⏎ sends · ⇧⏎ new line · esc drops it", monoFont(10, th.C(theme.FgGhost)))
 		})
@@ -471,13 +490,16 @@ func (x *requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			} else if n.focus {
 				c.Focus(id)
 			}
-			r := widget.Input(c, "input", &n.draft, widget.InputOpts{Label: "Ask about this line", Placeholder: "Ask the agent about this line",
+			r := widget.Input(c, "input", &n.draft, widget.InputOpts{Label: label, Placeholder: hint,
 				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline"})
 			switch {
 			case r.Submitted && strings.TrimSpace(n.draft) != "":
 				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
 				if n.end > n.line {
 					a["end_line"] = line + 1 + n.end - n.line
+				}
+				if n.toAuthor {
+					a["outgoing"] = true
 				}
 				if err := x.h.Run(context.Background(), "request.comment", a); err != nil {
 					x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})

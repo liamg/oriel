@@ -51,6 +51,8 @@ type githubPlugin struct {
 	syncing    map[core.SessionID]bool
 	again      map[core.SessionID]bool // a sync asked for while one ran: fresh or not
 	forwarding map[string]bool         // comment IDs being posted
+	resolving  map[core.ThreadID]bool  // where each thread's resolve was last sent to its host
+	lastSync   map[core.SessionID]time.Time
 
 	editing map[string]*string // drafts being edited, by comment; on the loop
 }
@@ -70,7 +72,7 @@ func (x *githubPlugin) Activate(_ context.Context, h plugin.Host) error {
 		x.now = time.Now
 	}
 	x.mirrors, x.syncing, x.forwarding, x.editing = map[core.SessionID]githubMirror{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
-	x.again = map[core.SessionID]bool{}
+	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
 		Help: "GitHub orgs whose members' review comments the agent may read. Text from anyone else is hidden from it. Empty: the repository's owner."}))
@@ -99,8 +101,13 @@ func (x *githubPlugin) Activate(_ context.Context, h plugin.Host) error {
 	x.add(h.Contribute(registry.ThreadSource{Origin: core.OriginCodeHost, Title: "Review", Head: x.head, Comment: x.comment}))
 	x.add(h.View(GitHubStatusView, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return &ui.Func{Key: "github", Fn: x.statusSegment} })))
 	x.add(onDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
-		if ev, ok := ev.(core.SessionFocused); ok && ev.ID != "" {
-			x.sync(ev.ID, false)
+		switch ev := ev.(type) {
+		case core.SessionFocused:
+			if ev.ID != "" {
+				x.sync(ev.ID, false)
+			}
+		case core.ThreadUpdated:
+			h.Do(func() { x.resolveHost(ev.Session, ev.Thread) })
 		}
 	})))
 	x.poller.Add(1)
@@ -127,8 +134,78 @@ func (x *githubPlugin) poll() {
 			if id := x.sh.cfg.Store.Focus(); id != "" {
 				x.sync(id, false)
 			}
+			x.syncReviews()
 		}
 	}
+}
+
+// syncReviews syncs each open review session not in front every reviewPoll, so what its author pushes and says is
+// seen while the user is elsewhere.
+func (x *githubPlugin) syncReviews() {
+	focus := x.sh.cfg.Store.Focus()
+	for _, st := range x.sh.cfg.Store.State().Sessions {
+		if st.PR == "" || st.Archived || st.ID == focus || x.sh.prReview != nil && x.sh.prReview.ended(st.PR) {
+			continue
+		}
+		x.mu.Lock()
+		due := x.now().Sub(x.lastSync[st.ID]) >= reviewPoll
+		x.mu.Unlock()
+		if due {
+			x.sync(st.ID, false)
+		}
+	}
+}
+
+// resolveHost takes a thread's resolving or reopening in Oriel to the review thread it mirrors on its code host,
+// once for each change.
+func (x *githubPlugin) resolveHost(id core.SessionID, t core.Thread) {
+	g := t.Hosted
+	if g == nil || g.Root == 0 && g.Key == "" || t.Status == core.ThreadDismissed || t.Status == core.ThreadDeferred {
+		x.mu.Lock()
+		delete(x.resolving, t.ID)
+		x.mu.Unlock()
+		return
+	}
+	want := t.Status == core.ThreadResolved
+	x.mu.Lock()
+	sent, ok := x.resolving[t.ID]
+	if want == g.Resolved || ok && sent == want {
+		if want == g.Resolved {
+			delete(x.resolving, t.ID)
+		}
+		x.mu.Unlock()
+		return
+	}
+	x.resolving[t.ID] = want
+	x.mu.Unlock()
+	word := map[bool]string{true: "Resolving", false: "Reopening"}[want]
+	fail := func(err error) {
+		x.h.Notify(core.Notice{ID: "github.resolve", Severity: core.SevWarning, Session: id, Text: fmt.Sprintf("%s the thread on its code host: %v", word, err)})
+	}
+	if g.Host != "" {
+		if x.sh.ship == nil {
+			return
+		}
+		if se, ok := x.h.Session(id); ok {
+			if err := x.sh.ship.resolveHost(se.Snapshot(), t, want); err != nil {
+				fail(err)
+			}
+		}
+		return
+	}
+	c, err := x.client(id)
+	if err != nil {
+		return
+	}
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		ctx, cancel := context.WithTimeout(x.ctx, time.Minute)
+		defer cancel()
+		if err := c.ResolveGitHub(ctx, host.ResolveReq{Session: id, Thread: t.ID, Resolved: want}); err != nil {
+			fail(err)
+		}
+	}()
 }
 
 // wait is until every sync and forward started has finished.
@@ -186,6 +263,7 @@ func (x *githubPlugin) sync(id core.SessionID, fresh bool) {
 		}
 		x.mu.Lock()
 		delete(x.syncing, id)
+		x.lastSync[id] = x.now()
 		g := githubMirror{Mirror: m, at: x.now()}
 		if err != nil {
 			g = x.mirrors[id]
@@ -195,6 +273,13 @@ func (x *githubPlugin) sync(id core.SessionID, fresh bool) {
 		again, queued := x.again[id]
 		delete(x.again, id)
 		x.mu.Unlock()
+		if err == nil && x.sh.prReview != nil {
+			for _, pr := range m.PRs {
+				if head := pr.Head; head != "" {
+					x.h.Do(func() { x.sh.prReview.pushed(id, head) })
+				}
+			}
+		}
 		x.h.Redraw()
 		if queued {
 			x.sync(id, again)

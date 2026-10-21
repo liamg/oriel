@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"cmp"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -143,9 +144,12 @@ func (s *State) Ignored(path string) bool {
 	return false
 }
 
-// BaseRef is the branch Changed compares with: origin's default branch, else main or master if they're not
-// the branch checked out.
+// BaseRef is the branch Changed compares with: the one SetBase named for this worktree, else origin's default branch,
+// else main or master if they're not the branch checked out.
 func (r Repo) BaseRef(ctx context.Context, branch string) string {
+	if ref := r.setBase(ctx); ref != "" {
+		return ref
+	}
 	if out, err := r.git(ctx, "rev-parse", "--abbrev-ref", "origin/HEAD"); err == nil {
 		if ref := strings.TrimSpace(string(out)); ref != "" && ref != "origin/HEAD" {
 			return ref
@@ -654,4 +658,37 @@ func (r Repo) Discard(ctx context.Context, paths ...string) error {
 	}
 	_, err := r.git(ctx, append([]string{"restore", "--worktree", "--"}, tracked...)...)
 	return err
+}
+
+// SetBase names the branch this worktree's Changed compares with ("" to go back to the default): a pull request's
+// target, say. It's kept in the worktree's own git dir.
+func (r Repo) SetBase(ctx context.Context, ref string) error {
+	p, err := r.basePath(ctx)
+	if err != nil {
+		return err
+	}
+	if ref == "" {
+		if err := os.Remove(p); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	return os.WriteFile(p, []byte(ref+"\n"), 0o644)
+}
+
+func (r Repo) setBase(ctx context.Context) string {
+	p, err := r.basePath(ctx)
+	if err != nil {
+		return ""
+	}
+	b, _ := os.ReadFile(p)
+	return strings.TrimSpace(string(b))
+}
+
+func (r Repo) basePath(ctx context.Context) (string, error) {
+	out, err := r.git(ctx, "rev-parse", "--path-format=absolute", "--git-path", "oriel-base")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }

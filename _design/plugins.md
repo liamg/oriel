@@ -323,9 +323,20 @@ flowchart TB
 - GitHub review mirroring (RV-4; ui.md 06): the host answers `SyncGitHub` (`host.MirrorReq{Session, Fresh, Trust}`
   → `host.Mirror`: the PRs and each reviewer's state), `ForwardGitHub` (`host.ForwardReq` → the sent comment) and
   `EditDraft` (`host.DraftEditReq`). `gh.Client`
-  reads `ReviewComments`, `Reviews`, `IssueComments`, `ResolvedThreads` (GraphQL) and `OrgMember`, and posts
-  `ReplyReview` and `Comment`; `gh.ReviewStates` is where each reviewer stands; `gh/ghtest` fakes them all
-  (`AddReviewComment`, `AddReview`, `AddIssueComment`, `EditComment`, `Resolve`, `AddMember`, `SetLogin`).
+  reads `ReviewComments`, `Reviews`, `IssueComments`, `ResolvedThreads` (GraphQL), `OrgMember` and `Me`, posts
+  `ReplyReview` and `Comment`, and resolves or reopens a review thread (`ResolveThread`, GraphQL); `gh.ReviewStates` is
+  where each reviewer stands; `gh/ghtest` fakes them all (`AddReviewComment`, `AddReview`, `AddIssueComment`,
+  `EditComment`, `Resolve`, `Resolved`, `AddMember`, `SetLogin`). A review session's PR is mirrored too
+  (`MirrorPR.Head` is its head on GitHub): a posted comment joins the thread it was posted from (matched by the
+  `ReviewPick.Sent` text, file and line), and the user's own words aren't handed to the agent. `ResolveGitHub`
+  (`host.ResolveReq`) resolves or reopens a mirrored thread on GitHub as the user did in Oriel, and
+  `MarkHostResolved` records it (for another host's, after its `CodeHost.Resolve`). `SetReviewDraft`
+  (`core.ReviewDrafted`) keeps a review session's `SessionState.Review`: a `core.ReviewDraft` of `ReviewPick`s
+  (kept or dropped, the author's words, the user's severity, the thread a rewording was asked in, the text sent), the
+  summary, the summary request, and the `SentReview`s. `CommentReq.Outgoing` opens a `Thread.Outgoing`: the user's
+  comment for the PR's author, which the agent isn't given.
+- A `registry.ThreadFoot` (`thread.foot`) draws at the foot of every thread's card, between the lines and in
+  Requests (`DrawThreadFeet`): a review's Keep / Drop for its comments is one.
   Commands `github.sync`, `github.forward {thread, comment}`, `github.edit`, `github.draft.save {thread, comment,
   body}`; options `github.trusted_orgs`, `github.trusted_users`; the status segment `statusline.left.70-github`;
   theme tokens `github.accent`, `github.changes`, `github.approved`, `requests.avatar.github`, `requests.draft.bg`,
@@ -400,7 +411,10 @@ flowchart TB
   and `Delete` for a session); a job's key is its name, and a run's row is `host.RunOf(session)`. Commands: `jobs.open`, `:Jobs`, `jobs.new`, `jobs.edit`, `jobs.duplicate`,
   `jobs.save`, `jobs.run`, `jobs.delete`, `session.delete`, `jobs.form.save`; key modes `jobs` and `jobs.form`; theme
   tokens `jobs.run.running`, `jobs.run.done`, `jobs.run.blocked`, `jobs.run.stopped`. A kind's `PromptFile` writes its
-  prompt into the workspace as the session starts (the job kind's `JOB.md`).
+  prompt into the workspace as the session starts (the job kind's `JOB.md`). A kind's `Opens` (`host.KindCall`:
+  command, args) run when the window comes onto a session of it with nothing in its main area: started in front, or
+  opened the first time after starting in the background (`session.opens`, before `then`). The review kind's open the
+  Explorer on Changed and the review tab.
 - repos (SE-6–8): `core.State.Repos`, set by `core.ReposChanged {repos, added}`; `core.Repo` has `Source`, `Added`,
   `Used`. The host: `Repos`, `AddRepoPath`, `CloneRepo` (`CloneReq.Parent`, `Progress`), `CloneTarget`,
   `CloneParent`, `CheckRepoPath`, `RemoveRepo`, `ScanRepos`, `SetReposDir`, `RepoFacts`, `FetchRepo`,
@@ -1027,7 +1041,9 @@ type Host interface {
   gives `[]ReviewRequest`: the open PRs asking you and those you're part way
   through, each with its state (`new`, `re-requested`, `changes`, `commented`, `approved`), the team asked (`Via`),
   when, commits since your review, size and CI. `Lookup` gives a `ReviewDetail` (branches, mergeable, labels,
-  reviewers, body, files, checks, the clone URL for Add repo…); `Checkout` a `PRCheckout{Remote, Ref}`. `Takes` is the
+  reviewers, body, files, checks, the head's commit, its state (open, closed, merged), the clone URL for Add repo…); `Checkout` a `PRCheckout{Remote, Ref}`;
+  `Submit` posts the user's review from a review session (`ReviewSubmit{Event, Body, Commit, Comments}`, `SubmitReview`);
+  `Resolve` resolves or reopens a mirrored review thread on the host when the user does in Oriel (Lua `resolve`). `Takes` is the
   URLs it owns, `Secret` the one it needs first. Helpers: `ReviewSources` (the hosts with `Requested`),
   `CodeHostFor`, `RequestedReviews`, `LookupReview`, `CheckoutFor`, `SortReviews`; `ReviewRequest.Counts(teams)` is
   the pill's rule.
@@ -1057,7 +1073,7 @@ type Host interface {
 
 - **`registry.CodeHost`** (kind `code.host`) is a host's whole PR side; any func but the name may be nil, and what it
   would do isn't offered. `Sites` are its public servers (`Site{Host, API, Secret, Aliases}`; `Aliases` are other hostnames its remotes use for one, its ssh hosts: `ssh.dev.azure.com`, `ssh.github.com`, `altssh.gitlab.com`); `Path` matches a remote's path
-  on any of them (first group: the repo's name, `RepoAt`), `Takes` a PR URL's path (`TakesPath`), `Shape` a whole
+  on any of them (first group: the repo's name, `RepoAt`), `Takes` a PR URL's path (`TakesPath`; its last digits the number, `PRNumber`), `Shape` a whole
   remote that alone says it's this host's. `Setup` (`SiteSetup{API, Secret, TokenURL, TokenHelp, Probe}`, `{host}`
   replaced) makes a self-hosted site, `Allow(host, secret)` lets its plugin reach one. The review funcs take the
   `Site`; `HostSite` is a host at a site (`Key`, `Label`). `Words{Short, Long, Sigil}` is how it names one ("MR", "merge request", "!"); `Said()` fills

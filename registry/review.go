@@ -3,6 +3,7 @@ package registry
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -56,6 +57,8 @@ type ReviewDetail struct {
 	Request   ReviewRequest  `json:"request"`
 	Base      string         `json:"base,omitempty"`
 	Head      string         `json:"head,omitempty"`
+	Commit    string         `json:"commit,omitempty"`    // the head's commit
+	State     string         `json:"state,omitempty"`     // "open", "closed" or "merged"; "" unknown
 	Mergeable string         `json:"mergeable,omitempty"` // "yes", "conflicts", "yes · behind main"; "" unknown
 	Labels    []string       `json:"labels,omitempty"`
 	Reviewers []PRReviewer   `json:"reviewers,omitempty"`
@@ -112,6 +115,38 @@ func LookupReview(ctx context.Context, s HostSite, url string) (ReviewDetail, er
 	err := Call(func() (err error) { d, err = s.Lookup(ctx, s.Site, strings.TrimSpace(url)); return err })
 	d.Request.Source = s.Label()
 	return d, err
+}
+
+// ReviewSubmit is the user's review of a pull request: a verdict, a summary, and comments on its lines.
+type ReviewSubmit struct {
+	Event    string          `json:"event"` // VerdictApprove, VerdictChanges or VerdictComment
+	Body     string          `json:"body,omitempty"`
+	Commit   string          `json:"commit,omitempty"` // the head the review read; "" for the PR's head now
+	Comments []ReviewComment `json:"comments,omitempty"`
+}
+
+// The verdicts a review is submitted with.
+const (
+	VerdictApprove = "approve"
+	VerdictChanges = "changes"
+	VerdictComment = "comment"
+)
+
+// ReviewComment is a comment on lines of the new code (Old: the removed code): Line, or StartLine to Line.
+type ReviewComment struct {
+	Path      string `json:"path"`
+	Line      int    `json:"line"`
+	StartLine int    `json:"start_line,omitempty"`
+	Old       bool   `json:"old,omitempty"`
+	Body      string `json:"body"`
+}
+
+// SubmitReview posts the user's review of url's pull request to s.
+func SubmitReview(ctx context.Context, s HostSite, url string, r ReviewSubmit) error {
+	if s.Submit == nil {
+		return fmt.Errorf("%s can't take a review from Oriel", s.Label())
+	}
+	return Call(func() error { return s.Submit(ctx, s.Site, strings.TrimSpace(url), r) })
 }
 
 // CheckoutFor asks s where url's pull request is fetched from.

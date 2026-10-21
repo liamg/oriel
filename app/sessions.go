@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -143,6 +144,23 @@ func (x *sessions) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range []registry.Command{
 		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} leaves it behind the one in front; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.start(ctx, a); return err }},
+		{ID: "session.opens", Title: "Run session {id}'s kind's opening commands (KindSpec.Opens) when the window shows nothing in its main area: its first time in front",
+			Run: func(ctx registry.Ctx, a registry.Args) error {
+				se, ok := x.sh.cfg.Store.Session(core.SessionID(a.String("id")))
+				w, err := x.host()
+				if !ok || err != nil || len(x.h.Layout().Shown()) > 0 {
+					return nil
+				}
+				k, ok := w.Kinds().Get(se.Snapshot().Kind)
+				if !ok {
+					return nil
+				}
+				var errs []error
+				for _, o := range k.Opens {
+					errs = append(errs, x.h.Run(ctx, o.Command, o.Args))
+				}
+				return errors.Join(errs...)
+			}},
 		{ID: "session.open", Title: "Bring a session to the front: {id}, resuming it if it's stopped or archived; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
 				then, err := callsOf(a["then"])
@@ -314,7 +332,7 @@ func (x *sessions) comment(ctx registry.Ctx, a registry.Args) error {
 			return errors.New("the comment is empty")
 		}
 		req := host.CommentReq{Session: id, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
-			Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding")}
+			Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding"), Outgoing: a.Bool("outgoing")}
 		if ev.Thread == "" && ev.File != "" {
 			req.Anchor = x.anchor(id, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		}
@@ -487,6 +505,55 @@ func (x *sessions) prCheckout(ctx context.Context, spec *core.SessionSpec) error
 	return nil
 }
 
+// prName names a review that has no name after its pull request, as its host writes one: "api#812".
+func (x *sessions) prName(spec *core.SessionSpec) {
+	if spec.PR == "" || spec.Name != "" || spec.Title != "" || spec.PRRemote == "" {
+		return
+	}
+	src, ok := x.sh.sites.url(spec.PR)
+	if !ok {
+		return
+	}
+	_, p, _ := registry.ParseRemote(spec.PR)
+	n, ok := src.PRNumber(p)
+	if !ok {
+		return
+	}
+	repo := path.Base(strings.Trim(spec.PRRemote, "/"))
+	spec.Name, spec.Title = fmt.Sprintf("%s-%d", repo, n), src.Ref(repo, n)
+}
+
+// prContext tells a review's agent what its pull request is, as its host says: the title, who wrote it, and the
+// branch it merges into, which its diff and Changed are against.
+func (x *sessions) prContext(ctx context.Context, spec *core.SessionSpec) {
+	if spec.PR == "" || spec.Context != "" && spec.PRBase != "" {
+		return
+	}
+	src, ok := x.sh.sites.url(spec.PR)
+	if !ok || src.Lookup == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	d, err := registry.LookupReview(ctx, src, spec.PR)
+	if err != nil {
+		x.h.Log().Warn("review lookup", "pr", spec.PR, "err", err)
+		return
+	}
+	spec.PRBase = cmpOr(spec.PRBase, d.Base)
+	if spec.Context != "" {
+		return
+	}
+	var lines []string
+	if t := strings.TrimSpace(d.Request.Title); t != "" {
+		lines = append(lines, fmt.Sprintf("%q, by %s.", t, cmpOr(d.Request.Author, "someone")))
+	}
+	if d.Base != "" {
+		lines = append(lines, fmt.Sprintf("It merges %s into %s: diff against origin/%s.", cmpOr(d.Head, "its branch"), d.Base, d.Base))
+	}
+	spec.Context = strings.Join(lines, " ")
+}
+
 // start starts a session and brings it to the front, unless {background}.
 func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
 	then, err := callsOf(a["then"])
@@ -501,6 +568,8 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 	if err := x.prCheckout(ctx, &spec); err != nil {
 		return "", err
 	}
+	x.prName(&spec)
+	x.prContext(ctx, &spec)
 	id, err := w.Start(ctx, spec)
 	if err != nil {
 		return "", err
@@ -510,7 +579,7 @@ func (x *sessions) start(ctx context.Context, a registry.Args) (core.SessionID, 
 	if a.Bool("background") {
 		return id, nil
 	}
-	x.after(id, then)
+	x.after(id, append([]call{{command: "session.opens", args: registry.Args{"id": string(id)}}}, then...))
 	return id, x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 }
 
@@ -569,7 +638,7 @@ func (x *sessions) open(ctx context.Context, id core.SessionID, then []call) err
 		return fmt.Errorf("no session %q", id)
 	}
 	front := func() error {
-		x.after(id, then)
+		x.after(id, append([]call{{command: "session.opens", args: registry.Args{"id": string(id)}}}, then...))
 		return x.sh.cfg.Store.Apply(core.SessionFocused{ID: id})
 	}
 	if st := se.Snapshot(); st.Archived || (st.Agent.Provider != "" && !st.Agent.Running) {

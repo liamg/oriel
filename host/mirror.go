@@ -24,6 +24,7 @@ type mirrorMsg struct {
 	body    string
 	at      time.Time
 	trusted bool // the agent may read its text
+	own     bool // the user's own: not given to the agent as theirs to answer
 }
 
 // mirrored is a thread as its code host has it.
@@ -31,7 +32,8 @@ type mirrored struct {
 	ref    core.HostThread
 	anchor *core.Anchor
 	msgs   []mirrorMsg
-	res    *bool // resolved there; nil when not known
+	res    *bool         // resolved there; nil when not known
+	into   core.ThreadID // the session's thread it was posted from, which it joins
 }
 
 // applyMirror brings a PR's threads on host (GitHub when "") in line with threads, and dismisses its mirrored review
@@ -63,12 +65,23 @@ func (w *Host) applyMirror(id core.SessionID, host, repo string, pr int, threads
 		i := slices.IndexFunc(se.Threads, func(t core.Thread) bool { return same(t.Hosted, ref) })
 		var t core.Thread
 		fresh := i < 0
-		if fresh {
+		j := slices.IndexFunc(se.Threads, func(t core.Thread) bool { return m.into != "" && t.ID == m.into })
+		switch {
+		case fresh && j >= 0:
+			t = se.Threads[j]
+			t.Comments = slices.Clone(t.Comments)
+			t.Origin, t.Status, t.Outgoing = origin, core.ThreadOpen, false // posted: the author's answers are the agent's to read
+			for i := range t.Comments {
+				if t.Comments[i].Author == core.AuthorYou {
+					t.Comments[i].Delivered = true // what was posted is no request of the agent's
+				}
+			}
+		case fresh:
 			if len(m.msgs) == 0 {
 				continue
 			}
 			t = core.Thread{ID: core.ThreadID(newID(8)), Origin: origin, Status: core.ThreadOpen, Anchor: m.anchor, Created: now}
-		} else {
+		default:
 			t = se.Threads[i]
 			t.Comments = slices.Clone(t.Comments)
 			g := *t.Hosted
@@ -120,7 +133,7 @@ func mergeMsgs(t *core.Thread, msgs []mirrorMsg) {
 		i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return is(c, m) })
 		if i < 0 {
 			t.Comments = append(t.Comments, core.Comment{ID: newID(6), Author: core.AuthorHost, Name: m.user, Body: m.body, Time: m.at.UTC(),
-				GitHubID: m.num, HostID: m.key, Redacted: !m.trusted})
+				GitHubID: m.num, HostID: m.key, Redacted: !m.trusted, Delivered: m.own})
 			continue
 		}
 		c := &t.Comments[i]

@@ -40,10 +40,11 @@ type reviewsPage struct {
 
 // reviewDetail is a request as its source's lookup told it.
 type reviewDetail struct {
-	d     registry.ReviewDetail
-	err   string
-	done  bool
-	since time.Time
+	d          registry.ReviewDetail
+	err        string
+	done       bool
+	since      time.Time
+	refreshing bool // asked again, keeping d until the answer
 }
 
 func (x *reviewsPlugin) openPage(source string) error {

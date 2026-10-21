@@ -855,6 +855,9 @@ func (l *loop) draw() error {
 	if l.themeDirty.Swap(false) {
 		l.loadTheme()
 	}
+	if size.X <= 0 || size.Y <= 0 {
+		return nil // the window hasn't its size yet: its ResizeEvent draws the first frame
+	}
 	defer func() { l.win.SetCursor(l.ui.Cursor()) }()
 	return l.win.Frame(func(f render.Frame) {
 		f.Rect(render.Rect{Max: size}, render.Style{Fill: l.theme.C(theme.BgBase)})

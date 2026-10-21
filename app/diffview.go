@@ -222,10 +222,12 @@ func (x *diffPlugin) changes(c *ui.Ctx, st *diffState, files []gitx.FileState) {
 			})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Column("keys", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 5}, func(c *ui.Ctx) {
-			for i, pair := range [][2][2]string{{{"]h", "next hunk"}, {"r", "mark read"}}, {{"gc", "comment"}, {"?", "explain"}}} {
+			for i, pair := range [][2][2]string{{{"]h", "next hunk"}, {"r", "mark read"}}, {{"gc", "comment"}, {"ga", "ask"}}, {{"?", "explain"}}} {
 				c.Row(i, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 					for j, k := range pair {
-						keyHint(c, j, k[0], k[1])
+						if k[0] != "" {
+							keyHint(c, j, k[0], k[1])
+						}
 					}
 				})
 			}

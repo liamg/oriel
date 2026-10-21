@@ -321,13 +321,12 @@ func (w *Window) loop() {
 			start := time.Now()
 			var waited time.Duration
 			f.Begin(gtx.Ops, scale)
+			f.Rect(render.Rect{Max: size}, render.Style{Fill: w.opts.Background})
 			if l := w.latest.Load(); l != nil {
 				if l != shown {
 					shown, waited = l, start.Sub(time.Unix(0, w.handed.Load()))
 				}
 				l.Replay(f)
-			} else {
-				f.Rect(render.Rect{Max: size}, render.Style{Fill: w.opts.Background})
 			}
 			f.End()
 			e.Frame(gtx.Ops)

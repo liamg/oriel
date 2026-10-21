@@ -159,7 +159,7 @@ func (x *requests) Activate(_ context.Context, h plugin.Host) error {
 		return out
 	}
 	cmds := []registry.Command{
-		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}",
+		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.sh.sessions.comment(ctx, a) }},
 		{ID: "request.resolve", Title: "Resolve a request: {thread} of {id}, the one selected by default; or set its {status}: open, resolved, deferred, dismissed",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -201,7 +201,7 @@ func (x *requests) Activate(_ context.Context, h plugin.Host) error {
 			}},
 		{ID: "request.attach", Title: "Attach to the request being written: {items} ({path, line, text} each), or {text} with a {title}", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.attach(ctx, a) }},
-		{ID: "thread.new", Title: "Open a thread on {file}'s {line} through {end_line}, or the line at the cursor: ask the agent about it, between the lines",
+		{ID: "thread.new", Title: "Open a thread on {file}'s {line} through {end_line}, or the line at the cursor, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
 		{ID: "threads.toggle", Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
@@ -233,6 +233,7 @@ func (x *requests) Activate(_ context.Context, h plugin.Host) error {
 		Command: "thread.new"}))
 	x.add(h.Picker(x.threadsSource()))
 	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "<Leader>r", Command: "picker.open", Args: registry.Args{"source": "threads"}, Desc: "Threads"}))
+	x.add(h.Keymap(registry.Keymap{Mode: "n", Keys: "ga", Command: "thread.new", Args: registry.Args{"to": "agent"}, Desc: "Ask the agent about this line"}))
 	x.add(h.Decorations("threads", registry.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))
 	x.add(h.Decorations("agent.edits", registry.KeyedDecorations{Key: func(registry.DecorationCtx) any {
 		se, ok := x.front()
@@ -580,6 +581,8 @@ func statusLabel(se core.SessionState, t core.Thread) (string, theme.TokenID) {
 	switch {
 	case t.Btw:
 		return "btw", theme.FgFaint
+	case t.Outgoing:
+		return "for the author", theme.Accent
 	case len(t.Undelivered()) > 0:
 		return queuedLabel(se), tQueued
 	}

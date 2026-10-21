@@ -87,6 +87,24 @@ func (w *Host) PRReview(ctx context.Context, r PRReviewReq) (_ PRReview, err err
 	return out, nil
 }
 
+// PRSubmitReq is the user's review of a pull request on GitHub: In's event, body, head and comments.
+type PRSubmitReq struct {
+	URL   string         `json:"url"`
+	Host  string         `json:"host,omitempty"`
+	Token string         `json:"-"`
+	In    gh.ReviewInput `json:"in"`
+}
+
+// SubmitPRReview submits the user's review of a pull request: never an agent's (NoPosting).
+func (w *Host) SubmitPRReview(ctx context.Context, r PRSubmitReq) (err error) {
+	defer w.recover("SubmitPRReview", &err)
+	repo, n, err := gh.ParsePR(r.URL)
+	if err != nil {
+		return err
+	}
+	return w.githubOn(gitx.Repo{}, r.Host, r.Token).SubmitReview(ctx, repo, n, r.In)
+}
+
 // NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
 const NoPosting = "Oriel: agents never post to GitHub reviews. Answer the thread with mcp__oriel__reply: on a GitHub " +
 	"thread your reply is a draft, and the user forwards it."
@@ -119,6 +137,7 @@ type MirrorPR struct {
 	Number  int               `json:"number"`
 	URL     string            `json:"url,omitempty"`
 	Reviews map[string]string `json:"reviews,omitempty"`
+	Head    string            `json:"head,omitempty"` // a reviewed PR's head commit on GitHub
 }
 
 // ForwardReq forwards an agent's draft reply on a GitHub thread to GitHub.
@@ -140,6 +159,8 @@ type DraftEditReq struct {
 type mirrorState struct {
 	mu      sync.Mutex
 	members map[string]bool // org/login
+	mu2     sync.Mutex
+	me      string // the user's GitHub login
 }
 
 // postsReview says a tool call would post to a GitHub review: a review tool on any MCP server, or a gh command.
@@ -166,7 +187,8 @@ func (w *Host) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error
 	out := Mirror{Synced: w.opts.Now().UTC()}
 	kick := false
 	for _, p := range se.Projects {
-		if p.ReadOnly || p.Detached || p.Branch == "" {
+		reviewed := se.PR != "" && p.Detached && strings.HasPrefix(p.Base, "refs/oriel/pr/")
+		if !reviewed && (p.ReadOnly || p.Detached || p.Branch == "") {
 			continue
 		}
 		env, err := sandbox.GitEnv(p.Dir)
@@ -174,19 +196,28 @@ func (w *Host) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error
 			continue
 		}
 		repo := gitx.Repo{Dir: p.Dir, Env: env}
-		ghRepo, ok := gh.ParseRepo(repo.RemoteURL(ctx))
-		if !ok {
-			continue
+		var ghRepo gh.Repo
+		var pr *gh.PR
+		if reviewed {
+			if pr, ghRepo, err = w.reviewedPR(ctx, repo, se.PR); err != nil {
+				out.Errors = append(out.Errors, p.Name+": "+err.Error())
+				continue
+			}
+		} else {
+			var ok bool
+			if ghRepo, ok = gh.ParseRepo(repo.RemoteURL(ctx)); !ok {
+				continue
+			}
+			g := w.githubFor(ctx, se.ID, p.Name, repo, ghRepo, "", "", p.Branch, r.Fresh)
+			if g.err != "" {
+				out.Errors = append(out.Errors, p.Name+": "+g.err)
+				continue
+			}
+			if pr = g.pr; pr == nil {
+				continue
+			}
 		}
-		g := w.githubFor(ctx, se.ID, p.Name, repo, ghRepo, "", "", p.Branch, r.Fresh)
-		if g.err != "" {
-			out.Errors = append(out.Errors, p.Name+": "+g.err)
-			continue
-		}
-		if g.pr == nil {
-			continue
-		}
-		mp, k, err := w.mirrorPR(ctx, se.ID, p, repo, ghRepo, g.pr, r.Trust)
+		mp, k, err := w.mirrorPR(ctx, se.ID, p, repo, ghRepo, pr, r.Trust)
 		if err != nil {
 			out.Errors = append(out.Errors, p.Name+": "+err.Error())
 			continue
@@ -204,6 +235,19 @@ func (w *Host) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error
 	}
 	w.restatus(r.Session)
 	return out, nil
+}
+
+// reviewedPR is the pull request a review session reads, as GitHub has it now.
+func (w *Host) reviewedPR(ctx context.Context, repo gitx.Repo, url string) (*gh.PR, gh.Repo, error) {
+	ghRepo, n, err := gh.ParsePR(url)
+	if err != nil {
+		return nil, ghRepo, err
+	}
+	d, err := w.github(repo).PRDetails(ctx, ghRepo, n)
+	if err != nil {
+		return nil, ghRepo, err
+	}
+	return &gh.PR{Number: n, URL: url, Author: d.Author, SHA: d.HeadSHA}, ghRepo, nil
 }
 
 // mirrorPR brings one PR's review threads and conversation into the session; kick says the agent has something new.
@@ -226,14 +270,18 @@ func (w *Host) mirrorPR(ctx context.Context, id core.SessionID, p core.Project, 
 		resolved = nil // unknown: leave each thread's status as it is
 	}
 	states := gh.ReviewStates(reviews)
-	mp := MirrorPR{Project: p.Name, Repo: ghRepo.String(), Number: pr.Number, URL: pr.URL, Reviews: states}
+	mp := MirrorPR{Project: p.Name, Repo: ghRepo.String(), Number: pr.Number, URL: pr.URL, Reviews: states, Head: pr.SHA}
 	trusted := w.truster(ctx, c, ghRepo, trust)
-	msg := func(id int64, user, assoc, body string, at time.Time) mirrorMsg {
-		return mirrorMsg{num: id, user: user, body: body, at: at, trusted: trusted(user, assoc)}
-	}
 	se, err := w.session(id)
 	if err != nil {
 		return mp, false, err
+	}
+	me := ""
+	if se.PR != "" {
+		me = w.githubMe(ctx, c)
+	}
+	msg := func(id int64, user, assoc, body string, at time.Time) mirrorMsg {
+		return mirrorMsg{num: id, user: user, body: body, at: at, trusted: trusted(user, assoc), own: me != "" && user == me}
 	}
 
 	byRoot := map[int64][]gh.ReviewComment{}
@@ -273,7 +321,7 @@ func (w *Host) mirrorPR(ctx context.Context, id core.SessionID, p core.Project, 
 			res = &v
 		}
 		threads = append(threads, mirrored{ref: core.HostThread{Project: p.Name, Repo: mp.Repo, PR: pr.Number, Root: root, Reviewer: first.User,
-			State: states[first.User], URL: first.URL, Outdated: first.Line == 0}, anchor: a, msgs: msgs, res: res})
+			State: states[first.User], URL: first.URL, Outdated: first.Line == 0}, anchor: a, msgs: msgs, res: res, into: sentFrom(se, first)})
 	}
 
 	var convo []mirrorMsg
@@ -294,6 +342,33 @@ func (w *Host) mirrorPR(ctx context.Context, id core.SessionID, p core.Project, 
 	threads = append(threads, mirrored{ref: ref, msgs: convo})
 	kick, err := w.applyMirror(id, "", mp.Repo, pr.Number, threads)
 	return mp, kick, err
+}
+
+// sentFrom is the thread of the review's comment that GitHub's review comment c was posted from: the same words, on its
+// file and line.
+func sentFrom(se core.SessionState, c gh.ReviewComment) core.ThreadID {
+	if se.Review == nil || c.InReplyTo != 0 {
+		return ""
+	}
+	for id, pk := range se.Review.Picks {
+		if pk.Sent == "" || strings.TrimSpace(pk.Sent) != strings.TrimSpace(c.Body) {
+			continue
+		}
+		if t, ok := se.Thread(core.ThreadID(id)); ok && t.Hosted == nil && t.Anchor != nil && t.Anchor.File == c.Path {
+			return t.ID
+		}
+	}
+	return ""
+}
+
+// githubMe is who the user is on GitHub, asked once.
+func (w *Host) githubMe(ctx context.Context, c gh.Client) string {
+	w.mirror.mu2.Lock()
+	defer w.mirror.mu2.Unlock()
+	if w.mirror.me == "" {
+		w.mirror.me, _ = c.Me(ctx)
+	}
+	return w.mirror.me
 }
 
 // truster says whose text the agent may read: a trusted user, or a member of a trusted org (the repo's owner when
@@ -384,6 +459,64 @@ func (w *Host) EditDraft(r DraftEditReq) (err error) {
 			}
 		}
 		return fmt.Errorf("no comment %s in the thread", r.Comment)
+	})
+	return err
+}
+
+// SetReviewDraft keeps the review the user is writing of a review session's pull request.
+func (w *Host) SetReviewDraft(r core.ReviewDrafted) (err error) {
+	defer w.recover("SetReviewDraft", &err)
+	se, err := w.session(r.Session)
+	if err != nil {
+		return err
+	}
+	if se.PR == "" {
+		return fmt.Errorf("session %s isn't reviewing a pull request", r.Session)
+	}
+	return w.emit(r)
+}
+
+// ResolveReq resolves a thread mirrored from GitHub there too, or reopens it, as the user did in Oriel.
+type ResolveReq struct {
+	Session  core.SessionID `json:"session"`
+	Thread   core.ThreadID  `json:"thread"`
+	Resolved bool           `json:"resolved"`
+}
+
+// ResolveGitHub resolves or reopens a review thread on GitHub, and records that it is.
+func (w *Host) ResolveGitHub(ctx context.Context, r ResolveReq) (err error) {
+	defer w.recover("ResolveGitHub", &err)
+	se, err := w.session(r.Session)
+	if err != nil {
+		return err
+	}
+	t, ok := se.Thread(r.Thread)
+	if !ok || t.Hosted == nil || t.Hosted.Host != "" || t.Hosted.Root == 0 {
+		return fmt.Errorf("thread %s isn't a GitHub review thread", r.Thread)
+	}
+	_, _, repo, err := w.projectRepo(ctx, r.Session, t.Hosted.Project)
+	if err != nil {
+		return err
+	}
+	owner, name, _ := strings.Cut(t.Hosted.Repo, "/")
+	if err := w.github(repo).ResolveThread(ctx, gh.Repo{Owner: owner, Name: name}, t.Hosted.PR, t.Hosted.Root, r.Resolved); err != nil {
+		return err
+	}
+	return w.MarkHostResolved(r)
+}
+
+// MarkHostResolved records that a mirrored thread is resolved, or open, on its code host: once the user's resolve has
+// reached it.
+func (w *Host) MarkHostResolved(r ResolveReq) (err error) {
+	defer w.recover("MarkHostResolved", &err)
+	_, err = w.mutateThread(r.Session, r.Thread, func(t *core.Thread) error {
+		if t.Hosted == nil {
+			return fmt.Errorf("thread %s isn't from a code host", r.Thread)
+		}
+		g := *t.Hosted
+		g.Resolved = r.Resolved
+		t.Hosted = &g
+		return nil
 	})
 	return err
 }

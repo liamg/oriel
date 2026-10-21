@@ -118,19 +118,22 @@ type Touched struct {
 
 // Thread is a request: a comment and its replies, anchored to a place or to the whole change.
 type Thread struct {
-	ID       ThreadID     `json:"id"`
-	Anchor   *Anchor      `json:"anchor,omitempty"`
-	Title    string       `json:"title,omitempty"`
-	Status   ThreadStatus `json:"status"`
-	Urgent   bool         `json:"urgent,omitempty"`
-	Btw      bool         `json:"btw,omitempty"`    // a side question thread, answered by a fork
-	Busy     bool         `json:"busy,omitempty"`   // the agent has it and hasn't answered
-	Origin   string       `json:"origin,omitempty"` // where it came from: "" for Oriel, OriginGitHub
-	Hosted   *HostThread  `json:"github,omitempty"` // a review thread mirrored from the PR's code host
-	Comments []Comment    `json:"comments"`
-	Touched  []Touched    `json:"touched,omitempty"`
-	Created  time.Time    `json:"created,omitzero"`
-	Updated  time.Time    `json:"updated,omitzero"`
+	ID     ThreadID     `json:"id"`
+	Anchor *Anchor      `json:"anchor,omitempty"`
+	Title  string       `json:"title,omitempty"`
+	Status ThreadStatus `json:"status"`
+	Urgent bool         `json:"urgent,omitempty"`
+	Btw    bool         `json:"btw,omitempty"`    // a side question thread, answered by a fork
+	Busy   bool         `json:"busy,omitempty"`   // the agent has it and hasn't answered
+	Origin string       `json:"origin,omitempty"` // where it came from: "" for Oriel, OriginGitHub
+	Hosted *HostThread  `json:"github,omitempty"` // a review thread mirrored from the PR's code host
+	// Outgoing is the user's comment for a pull request's author, in the review they'll submit: not the agent's to
+	// answer.
+	Outgoing bool      `json:"outgoing,omitempty"`
+	Comments []Comment `json:"comments"`
+	Touched  []Touched `json:"touched,omitempty"`
+	Created  time.Time `json:"created,omitzero"`
+	Updated  time.Time `json:"updated,omitzero"`
 }
 
 // Last is the last thing said in the thread.
@@ -152,6 +155,9 @@ func (t Thread) AgentAnswered() bool {
 
 // Undelivered are your comments, and those mirrored from GitHub, the agent hasn't been given yet.
 func (t Thread) Undelivered() []Comment {
+	if t.Outgoing {
+		return nil
+	}
 	var out []Comment
 	for _, c := range t.Comments {
 		if (c.Author == AuthorYou || c.Author == AuthorHost) && !c.Delivered && !c.Btw {
@@ -163,7 +169,7 @@ func (t Thread) Undelivered() []Comment {
 
 // WaitsOnAgent reports whether the thread is the agent's to move.
 func (t Thread) WaitsOnAgent() bool {
-	if !t.Open() || t.Btw {
+	if !t.Open() || t.Btw || t.Outgoing {
 		return false
 	}
 	c, ok := t.Last()

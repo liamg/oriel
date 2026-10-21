@@ -138,6 +138,8 @@ Every option Oriel registers, so there is one place to look. A test checks it ag
 | `review.ai.model` | the model AI reviews run on; empty: the reviewer's default | app | | RV-3 |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | | RV-4 |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | | RV-4 |
+| `review.severity_badges` | `true`: each comment a review session posts is headed with a badge of its severity | app | | RV-9 |
+| `review.auto_rereview` | `true`: when the author pushes to a PR under review, fetch it and ask the agent to review what changed | app | | RV-9 |
 | `reviews.poll` | `5m`: how often every review source is asked for the pull requests waiting on your review | app | | RV-9 |
 | `reviews.count_teams` | `true`: a review asked of a team you're on counts toward the Reviews pill | app | | RV-9 |
 | `reviews.notify` | `true`: a notice when someone asks for your review | app | | RV-9 |

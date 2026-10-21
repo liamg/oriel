@@ -40,7 +40,7 @@ func (x *githubHost) Activate(_ context.Context, h plugin.Host) error {
 			Probe:     x.probe},
 		Tokens: registry.TokenSources{Env: []string{"GH_TOKEN", "GITHUB_TOKEN"}, HostedEnv: []string{"GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"},
 			Command: []string{"gh", "auth", "token", "--hostname", "{host}"}, Optional: true},
-		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout,
+		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
 		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Source: "builtin:github"}))
 	return nil
@@ -128,8 +128,11 @@ func (x *githubHost) lookup(ctx context.Context, s registry.Site, url string) (r
 	}
 	repo, n, _ := gh.ParsePR(url)
 	d := registry.ReviewDetail{Request: registry.ReviewRequest{URL: cmpOr(p.URL, url), Repo: repo.String(), Number: n, Title: p.Title, Author: p.Author,
-		Draft: p.Draft, Adds: p.Additions, Dels: p.Deletions, Files: p.ChangedFiles}, Base: p.Base, Head: p.Head, Labels: p.Labels, Body: p.Body,
-		Clone: "https://github.com/" + repo.String() + ".git"}
+		Draft: p.Draft, Adds: p.Additions, Dels: p.Deletions, Files: p.ChangedFiles}, Base: p.Base, Head: p.Head, Commit: p.HeadSHA, Labels: p.Labels, Body: p.Body,
+		Clone: "https://github.com/" + repo.String() + ".git", State: p.State}
+	if p.Merged {
+		d.State = "merged"
+	}
 	if p.Mergeable != nil {
 		d.Mergeable = "conflicts"
 		if *p.Mergeable {
@@ -159,6 +162,27 @@ func (x *githubHost) lookup(ctx context.Context, s registry.Site, url string) (r
 		d.Checks = append(d.Checks, checkOf(c))
 	}
 	return d, nil
+}
+
+// submit posts the user's review of a GitHub PR, its comments on the lines they're about.
+func (x *githubHost) submit(ctx context.Context, s registry.Site, url string, r registry.ReviewSubmit) error {
+	w, err := x.host()
+	if err != nil {
+		return err
+	}
+	event := map[string]string{registry.VerdictApprove: "APPROVE", registry.VerdictChanges: "REQUEST_CHANGES", registry.VerdictComment: "COMMENT"}[r.Event]
+	if event == "" {
+		return fmt.Errorf("no such review as %q", r.Event)
+	}
+	in := gh.ReviewInput{Event: event, Body: r.Body, Commit: r.Commit}
+	for _, c := range r.Comments {
+		side := "RIGHT"
+		if c.Old {
+			side = "LEFT"
+		}
+		in.Comments = append(in.Comments, gh.ReviewComment{Path: c.Path, Line: c.Line, OriginalLine: c.StartLine, Side: side, Body: c.Body})
+	}
+	return w.SubmitPRReview(ctx, host.PRSubmitReq{URL: url, Host: s.Host, Token: x.token(s), In: in})
 }
 
 // githubCheckout is where a review fetches a GitHub PR from: the repo its URL names, and pull/N/head.

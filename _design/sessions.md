@@ -222,7 +222,8 @@ type Sessions interface {
 - **Where things are**: workspaces in `~/.oriel/workspaces/<id>` with `.oriel-workspace.json` (crit's manifest,
   field for field); each session's event log, logs and drafts in `~/.oriel/sessions/<id>/`; registered repos in
   `~/.oriel/repos.json`. A session's id is its name, from the prompt (`eng-2231-fix-stale-usage-prices`), unique on
-  this machine.
+  this machine. A review is named after its pull request, as its host writes one (`customer-api#234`, id
+  `customer-api-234`).
 - **Only Oriel's own sessions are listed.** crit's workspaces aren't read: listed with Oriel's, they buried them, and
   each made a tab. A session once taken from crit (`Source: "crit"`) is dropped, with its log, on restore.
 - **Plan**: the repos are listed from the start and the agent reads the user's checkouts (protected from edits);
@@ -257,7 +258,35 @@ type Sessions interface {
 - **Direct** never makes a worktree or a workspace: the directory itself, git repo or not. **New repo** makes the repo from a template (`empty`, `go-module`, `go-cli`, or a
   git URL), commits it, registers it, and carries on as a plan for it. **Review** fetches `pull/<n>/head` from the
   registered repo whose remote matches the PR's URL, and pins a read-only worktree there. Since RV-3 it's AI-reviewed
-  as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails).
+  as it starts, by a model other than its agent's (`KindSpec.AutoReview`; `agents.md`, Guardrails). With no prompt, its
+  agent's review is its first request, "Review api#812" with the URL and, from the host's `Lookup`, the title, author
+  and the branch it merges into, so it's in Requests. Ship and Git aren't offered in it. Its Pull request tab
+  (`app/prreview.go`) is the user's review: the agent's open threads on lines and the AI review's open findings to
+  tick, a summary, and Comment / Request changes / Approve through the host's `Submit` (`review.pr.submit`); what's
+  posted is resolved or dismissed. `Host.UpdatePR` (`review.pr.fetch`) fetches the PR again (`SessionState.PRRef`,
+  else `pull/<n>/head`) and moves the pinned worktree and its `Commit` to the new head; `review.pr.recheck` asks the
+  agent to review the commits that brought. The worktree's Changed compares with the branch the PR merges into
+  (`SessionSpec.PRBase`, from `Lookup`; fetched to `origin/<base>` and kept with `gitx.Repo.SetBase`), so it holds
+  only the PR's files. A review started in front opens the Explorer on Changed and its Pull request tab
+  (`KindSpec.Opens`). A comment's row in the tab opens the diff at its line. When the agent resolves its request,
+  a notice says the review's done, with how many comments are to post, and opens the tab.
+  The rail's `review` entry (in place of the `pull-request` checklist, which a review hides) opens the tab, lit while
+  it shows, its badge the comments not triaged. The tab is a triage queue (`app/prreviewpage.go`, keys in `review.pr`
+  mode, listed along its foot): the agent's threads, the AI review's
+  findings (folded into the agent's thread within two lines of it) and the user's own (`Thread.Outgoing`, which `gc`
+  in a review opens; `ga` asks the agent anywhere), each kept, dropped or undecided, re-rated, reworded by the user or
+  by the agent in a rework request (`review.pr.pick`, `.severity`, `.edit`, `.rework`), all kept in
+  `SessionState.Review`. The agent drafts the summary on asking (`review.pr.summary`); the kept comments suggest the
+  verdict; a preview shows what's posted, each comment headed by its severity's badge (`review.severity_badges`).
+  Posted comments come back from GitHub into the threads they were sent from, listed under Sent with where they
+  stand; resolving one in Oriel resolves it on GitHub. Every open review session is synced every `reviewPoll` (2 min;
+  the one in front every 30 s); a push moves the checkout and, with `review.auto_rereview`, asks the agent for a
+  later round once its review is done (done: its request resolved, or answered with the agent stopped). Each comment's
+  card in the diff and in Requests, and each AI review finding's, ends with the review's foot (`registry.ThreadFoot`):
+  Keep, Drop (which resolves the thread; Keep reopens it), In the review; a review's findings offer no Fix. The
+  author's replies are a notice; a merged or closed PR (`ReviewDetail.State`) ends syncing and offers Archive this
+  review; a host without `Submit` says so in place of the verdicts. A review started in the background gets its
+  `Opens` the first time it's in front (`session.opens`).
 - **The launcher** (`ui.md` 04) lists the host's kinds marked `Launcher` (`host.Kinds`, `host.KindSpec`: title,
   `Desc`, `About`, `From`, `Launcher`): Work, Plan and Review PR built in, in that order, Work first and picked. A
   kind `session.new {kind}` names is listed too. It starts the chosen one through `session.start`; each kind's agent

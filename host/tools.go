@@ -160,12 +160,19 @@ var (
 	citesRun   = regexp.MustCompile(`run:([0-9a-f]{4,})`)
 )
 
-// evidence links a reply's test claims to the runs that back them; a claim with none is noted, not refused.
+// evidence links a reply's test claims to the runs that back them: those it cites, else the turn's last (the activity
+// block shows the rest). A claim with none is noted, not refused.
 func evidence(se core.SessionState, body string, runs []string) ([]core.Evidence, string) {
+	var cited []string
 	for _, m := range citesRun.FindAllStringSubmatch(body, -1) {
-		if !slices.Contains(runs, m[1]) {
-			runs = append(runs, m[1])
+		if !slices.Contains(cited, m[1]) {
+			cited = append(cited, m[1])
 		}
+	}
+	if len(cited) > 0 {
+		runs = cited
+	} else if len(runs) > 1 {
+		runs = runs[len(runs)-1:]
 	}
 	var out []core.Evidence
 	for _, id := range runs {

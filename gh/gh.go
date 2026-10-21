@@ -137,6 +137,10 @@ type Client interface {
 	IssueComments(ctx context.Context, repo Repo, number int) ([]IssueComment, error)
 	// ResolvedThreads says which review threads are resolved, by their first comment's ID.
 	ResolvedThreads(ctx context.Context, repo Repo, number int) (map[int64]bool, error)
+	// Me is the login the client is signed in as.
+	Me(ctx context.Context) (string, error)
+	// ResolveThread resolves the review thread that starts with comment root, or reopens it.
+	ResolveThread(ctx context.Context, repo Repo, number int, root int64, resolved bool) error
 	// ReplyReview replies in the review thread of comment to.
 	ReplyReview(ctx context.Context, repo Repo, number int, to int64, body string) (ReviewComment, error)
 	// Comment adds a comment to a PR's conversation.
@@ -150,6 +154,8 @@ type Client interface {
 	// PRDetails is a pull request in full; PRFiles, the files it changes.
 	PRDetails(ctx context.Context, repo Repo, number int) (PRDetails, error)
 	PRFiles(ctx context.Context, repo Repo, number int) ([]PRFile, error)
+	// SubmitReview submits the user's review of someone else's pull request.
+	SubmitReview(ctx context.Context, repo Repo, number int, in ReviewInput) error
 	// MergeState is what merging a PR now would meet; MergePR merges it, DeleteBranch deletes a branch.
 	MergeState(ctx context.Context, repo Repo, number int) (MergeState, error)
 	MergePR(ctx context.Context, repo Repo, number int, m Merge) error

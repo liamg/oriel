@@ -121,13 +121,19 @@ func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 	remote := func(project string) bool {
 		return r.sh.git.tree(projectsHere(h).dir(project)).remote != ""
 	}
+	// A review reads somebody else's PR: there's nothing of its own to commit or ship.
+	reviewing := func() bool {
+		se, ok := h.Session(h.State().Focus)
+		return ok && se.Kind() == core.KindReview
+	}
 	for _, p := range projectPanels {
 		e := registry.RailEntry{Name: p.name, Icon: p.icon, Title: p.title, Command: "view.toggle", Args: viewArgs(p.view, p.title, p.size),
 			Scope: registry.ScopeProjectEntry, Order: p.order}
 		switch p.name {
 		case "pull-request":
-			e.Shown = remote
+			e.Shown = func(project string) bool { return !reviewing() && remote(project) }
 		case "git":
+			e.Shown = func(string) bool { return !reviewing() }
 			// The session's uncommitted files; a project it only reads has none of its own.
 			e.Note = func(project string) string {
 				w := projectsHere(h)
@@ -182,7 +188,7 @@ func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 		if s.name == "ship" {
 			// Ship is the session's whole page: there's something to ship once a project has a remote.
 			e.Shown = func(string) bool {
-				return slices.ContainsFunc(projectsHere(h).projects, func(p core.Project) bool { return remote(p.Name) })
+				return !reviewing() && slices.ContainsFunc(projectsHere(h).projects, func(p core.Project) bool { return remote(p.Name) })
 			}
 		}
 		r.add(h.Contribute(e))

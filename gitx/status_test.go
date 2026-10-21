@@ -341,3 +341,47 @@ func mustFind(t *testing.T, fs []FileState, path string) FileState {
 	t.Fatalf("no %s in %s", path, rows(fs))
 	return FileState{}
 }
+
+// A worktree's SetBase is what its Changed compares with, over origin's default branch; "" goes back to it.
+// ref: oracle git
+func TestChangedAgainstTheBaseSet(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"old.txt": "x\n"})
+	r.Commit("Ada", "base")
+	r.Git("update-ref", "refs/remotes/origin/main", "HEAD")
+	r.Git("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	r.Git("checkout", "-q", "-b", "release")
+	r.Write(map[string]string{"release.txt": "x\n"})
+	r.Commit("Ada", "on release")
+	r.Git("update-ref", "refs/remotes/origin/release", "HEAD")
+	r.Git("checkout", "-q", "-b", "fix")
+	r.Write(map[string]string{"fix.txt": "x\n"})
+	r.Commit("Ada", "the fix")
+	ctx, repo := context.Background(), Repo{Dir: r.Dir}
+	changed := func() string {
+		st, err := repo.Status(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, f := range st.Files(Changed) {
+			got = append(got, f.Path)
+		}
+		return st.Base + ": " + strings.Join(got, " ")
+	}
+	if got := changed(); got != "origin/main: fix.txt release.txt" {
+		t.Errorf("by default %q", got)
+	}
+	if err := repo.SetBase(ctx, "origin/release"); err != nil {
+		t.Fatal(err)
+	}
+	if got := changed(); got != "origin/release: fix.txt" {
+		t.Errorf("with the base set %q", got)
+	}
+	if err := repo.SetBase(ctx, ""); err != nil {
+		t.Fatal(err)
+	}
+	if got := changed(); got != "origin/main: fix.txt release.txt" {
+		t.Errorf("with the base unset %q", got)
+	}
+}

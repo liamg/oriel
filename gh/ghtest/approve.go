@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/liamg/oriel/gh"
@@ -74,12 +75,25 @@ func (s *Server) prFiles(w http.ResponseWriter, r *http.Request) {
 	reply(w, 200, files)
 }
 
+// DiffLines are the lines of a PR's diff a review may comment on, "path:line"; comments elsewhere are refused.
+func (s *Server) DiffLines(repo string, number int, lines ...string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.diffLines[prKey(repo, number)] = lines
+}
+
 // submitReview takes the client's review: APPROVE at a commit, REQUEST_CHANGES or COMMENT.
 func (s *Server) submitReview(w http.ResponseWriter, r *http.Request) {
 	var in struct {
 		Event    string `json:"event"`
 		Body     string `json:"body"`
 		CommitID string `json:"commit_id"`
+		Comments []struct {
+			Path string `json:"path"`
+			Line int    `json:"line"`
+			Side string `json:"side"`
+			Body string `json:"body"`
+		} `json:"comments"`
 	}
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
 		reply(w, 422, map[string]string{"message": "Validation Failed"})
@@ -97,7 +111,17 @@ func (s *Server) submitReview(w http.ResponseWriter, r *http.Request) {
 		reply(w, 422, map[string]string{"message": "commit_id is not the pull request's head"})
 		return
 	}
+	for _, c := range in.Comments {
+		if !slices.Contains(s.diffLines[prKey(repoOf(r), num(r))], fmt.Sprintf("%s:%d", c.Path, c.Line)) {
+			reply(w, 422, map[string]any{"message": "Unprocessable Entity", "errors": []string{"Line could not be resolved"}})
+			return
+		}
+	}
 	rv := gh.Review{ID: s.id(), User: s.login, Association: "MEMBER", State: state, Body: in.Body, Submitted: s.tick(), Commit: in.CommitID}
+	for _, c := range in.Comments {
+		s.addReview(repoOf(r), num(r), gh.ReviewComment{User: s.login, Association: "MEMBER", Review: rv.ID, Path: c.Path, Line: c.Line,
+			OriginalLine: c.Line, Side: c.Side, Body: c.Body})
+	}
 	rv.URL = fmt.Sprintf("https://github.com/%s/pull/%d#pullrequestreview-%d", repoOf(r), num(r), rv.ID)
 	s.reviewed(repoOf(r), num(r), &rv)
 	reply(w, 200, map[string]any{"id": rv.ID, "state": state, "html_url": rv.URL})

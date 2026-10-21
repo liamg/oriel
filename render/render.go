@@ -54,7 +54,8 @@ type WindowOpts struct {
 	// Frame is where the window was when it last closed, from Placed, or zero. A backend that can place windows
 	// puts it there, fitted to the screens as they are now (PlaceWindow); one that can't takes its size.
 	Frame Rect
-	// Background fills the window until the app's first frame, so it doesn't open white.
+	// Background fills the window under the app's frames, so it's never white where they don't reach: before the
+	// first, or one drawn before the window had its size.
 	Background Color
 }
 

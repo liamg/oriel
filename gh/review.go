@@ -211,6 +211,65 @@ func (a API) ResolvedThreads(ctx context.Context, repo Repo, number int) (map[in
 	return res, nil
 }
 
+const threadIDsQuery = `query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100) { nodes { id comments(first: 1) { nodes { databaseId } } } } } } }`
+
+func (a API) ResolveThread(ctx context.Context, repo Repo, number int, root int64, resolved bool) error {
+	var ids struct {
+		Data struct {
+			Repository struct {
+				PullRequest struct {
+					ReviewThreads struct {
+						Nodes []struct {
+							ID       string `json:"id"`
+							Comments struct {
+								Nodes []struct {
+									DatabaseID int64 `json:"databaseId"`
+								} `json:"nodes"`
+							} `json:"comments"`
+						} `json:"nodes"`
+					} `json:"reviewThreads"`
+				} `json:"pullRequest"`
+			} `json:"repository"`
+		} `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	in := map[string]any{"query": threadIDsQuery, "variables": map[string]any{"owner": repo.Owner, "name": repo.Name, "number": number}}
+	if err := a.T.Do(ctx, "POST", "graphql", in, &ids); err != nil {
+		return err
+	}
+	if len(ids.Errors) > 0 {
+		return &Error{Status: 422, Message: ids.Errors[0].Message}
+	}
+	id := ""
+	for _, n := range ids.Data.Repository.PullRequest.ReviewThreads.Nodes {
+		if len(n.Comments.Nodes) > 0 && n.Comments.Nodes[0].DatabaseID == root {
+			id = n.ID
+		}
+	}
+	if id == "" {
+		return &Error{Status: 404, Message: fmt.Sprintf("no review thread starts with comment %d", root)}
+	}
+	op := "resolveReviewThread"
+	if !resolved {
+		op = "unresolveReviewThread"
+	}
+	var out struct {
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	in = map[string]any{"query": "mutation($id: ID!) { " + op + "(input: {threadId: $id}) { thread { isResolved } } }", "variables": map[string]any{"id": id}}
+	if err := a.T.Do(ctx, "POST", "graphql", in, &out); err != nil {
+		return err
+	}
+	if len(out.Errors) > 0 {
+		return &Error{Status: 422, Message: out.Errors[0].Message}
+	}
+	return nil
+}
+
 func (a API) ReplyReview(ctx context.Context, repo Repo, number int, to int64, body string) (ReviewComment, error) {
 	var out restReviewComment
 	err := a.T.Do(ctx, "POST", repoPath(repo, fmt.Sprintf("pulls/%d/comments/%d/replies", number, to)), map[string]any{"body": body}, &out)

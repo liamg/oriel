@@ -57,6 +57,7 @@ type shell struct {
 	explain     *explainPlugin
 	sessions    *sessions                    // the sessions; nil while it isn't active
 	ship        *shipPlugin                  // the Ship page; nil while it isn't active
+	prReview    *prReviewPlugin              // a review session's pull request tab
 	stats       *statsPlugin                 // what the sessions cost
 	hud         *hudPlugin                   // the HUD, and what every slot's indicators last built
 	inbox       *inboxPlugin                 // every card waiting on you, and those answered

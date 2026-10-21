@@ -378,7 +378,8 @@ results, failure block and tests panel are still to build on it.
 
 - The session host records the agent's runs (`test_run`, and shell commands that ran tests, parsed from their output) as
   `core.TestRun`s in the session, each with the transcript item that ran it (`TestRun.Item`), and links a reply's
-  claims to them (`Comment.Evidence`), flagging a "tests pass" with no passing run behind it (`agents.md`).
+  claims to them (`Comment.Evidence`: the runs a reply cites as `run:<id>`, else its turn's last; the rest are in its
+  activity block), flagging a "tests pass" with no passing run behind it (`agents.md`).
 - An evidence chip (✓ or ✕, the counts, `run <id>`) links to the run: in a reply and its activity block (the Requests
   view and threads between the lines), on the console's block for the call that ran it, and in the Tests panel's head
   (the latest agent run, beside the last run). A click runs `test.run.show {id, session}`: the `test.run` view, a main

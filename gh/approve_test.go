@@ -74,3 +74,38 @@ func TestParsePRURL(t *testing.T) {
 		}
 	}
 }
+
+// A review's comments go on the lines of the diff; when one isn't on it, GitHub refuses the review, so every comment
+// goes in its body instead.
+func TestSubmitReview(t *testing.T) {
+	for _, transport := range []string{"http", "cli"} {
+		t.Run(transport, func(t *testing.T) {
+			s := ghtest.New(t)
+			api := client(t, transport, s).(gh.API)
+			ctx := context.Background()
+			s.SetLogin("me")
+			pr := s.AddPR("acme/api", gh.PR{Title: "fix: rounding", Head: "round", Base: "main"})
+			s.SetPRSize("acme/api", pr.Number, ghtest.PRSize{Author: "priya", HeadSHA: "abc123"})
+			s.DiffLines("acme/api", pr.Number, "round.go:3")
+			on := gh.ReviewComment{Path: "round.go", Line: 3, Body: "Floor, not round."}
+			if err := api.SubmitReview(ctx, acme, pr.Number, gh.ReviewInput{Event: "REQUEST_CHANGES", Body: "See the comment.", Commit: "abc123",
+				Comments: []gh.ReviewComment{on}}); err != nil {
+				t.Fatal(err)
+			}
+			rs, cs := s.Reviews("acme/api", pr.Number), s.ReviewComments("acme/api", pr.Number)
+			if len(rs) != 1 || rs[0].State != gh.ReviewChangesRequested || rs[0].Body != "See the comment." || len(cs) != 1 ||
+				cs[0].Path != "round.go" || cs[0].Line != 3 || cs[0].Body != on.Body {
+				t.Fatalf("reviews %+v, comments %+v", rs, cs)
+			}
+			off := gh.ReviewComment{Path: "README.md", Line: 9, Body: "Say so here."}
+			if err := api.SubmitReview(ctx, acme, pr.Number, gh.ReviewInput{Event: "COMMENT", Body: "Two things.", Comments: []gh.ReviewComment{on, off}}); err != nil {
+				t.Fatal(err)
+			}
+			rs, cs = s.Reviews("acme/api", pr.Number), s.ReviewComments("acme/api", pr.Number)
+			want := "Two things.\n\n**`round.go:3`**\n\nFloor, not round.\n\n**`README.md:9`**\n\nSay so here."
+			if len(rs) != 2 || rs[1].Body != want || len(cs) != 1 {
+				t.Fatalf("a comment off the diff: reviews %+v, comments %+v", rs, cs)
+			}
+		})
+	}
+}
