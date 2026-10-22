@@ -120,6 +120,19 @@ func TestStateSnapshots(t *testing.T) {
 	}
 }
 
+// A frame a hovered control asks for now isn't held back to its tooltip's delay.
+func TestTooltipKeepsAnEarlierWake(t *testing.T) {
+	h := newHarness()
+	h.pointer(render.PointerMove, 20, 20)
+	paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
+		screen(c)
+		c.WakeAt(c.Now())
+	})
+	if got := h.u.NextFrame(); !got.Equal(h.clk.t) {
+		t.Errorf("next frame at %v, want now (%v)", got, h.clk.t)
+	}
+}
+
 func TestClicks(t *testing.T) {
 	h := newHarness()
 	click := func() bool {

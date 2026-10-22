@@ -352,7 +352,9 @@ func (u *UI) tooltip() {
 	}
 	due := in.hotAt.Add(u.opts.TooltipDelay)
 	if u.now().Before(due) {
-		u.wake = due
+		if u.wake.IsZero() || due.Before(u.wake) {
+			u.wake = due
+		}
 		return
 	}
 	at := in.pos
