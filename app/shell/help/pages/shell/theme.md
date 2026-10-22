@@ -17,8 +17,8 @@ overrides. Type to filter.
 
 ## Preview {#preview}
 
-The fixture workspace in your theme, or split against the theme yours extends. Click anything in it to pick
-what painted it.
+The fixture workspace in your theme, or split against the theme yours extends. Hover anything in it to see the
+token that painted it, outlined and named; click to pick it.
 
 ## Pick mode {#pick}
 

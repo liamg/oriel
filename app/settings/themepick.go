@@ -99,8 +99,7 @@ func (e *ThemeEditor) buildPick(c *ui.Ctx) {
 	if in.Pointer() != e.hoverAt {
 		e.hoverAt = in.Pointer()
 		name, r := probeAt(e.probe, e.probeTh, image.Pt(int(in.Pointer().X), int(in.Pointer().Y)))
-		e.hover = name
-		e.hoverR = render.Rect{Min: render.Point{X: float32(r.Min.X), Y: float32(r.Min.Y)}, Max: render.Point{X: float32(r.Max.X), Y: float32(r.Max.Y)}}
+		e.hover, e.hoverR = name, rectOf(r)
 	}
 	if in.Clicked && e.hover != "" {
 		e.choose(e.hover)
@@ -116,16 +115,26 @@ func (e *ThemeEditor) buildPick(c *ui.Ctx) {
 			Float: &ui.Float{Point: &top, Self: render.Point{X: .5}}}, func(c *ui.Ctx) {
 			c.Text("t", "PICK MODE · CLICK ANYTHING · ESC", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold, Tracking: .1}, Color: pink})
 		})
-		if e.hover == "" {
-			return
-		}
-		r := e.hoverR
-		at := r.Min
-		c.Box("outline", ui.Style{W: ui.Px(r.Dx() + 2), H: ui.Px(r.Dy() + 2), Stroke: pink, Border: 1, Radius: 3, Z: ui.LayerOverlay + 1,
-			Float: &ui.Float{Point: &render.Point{X: at.X - 1, Y: at.Y - 1}}}, nil)
-		tag := render.Point{X: at.X, Y: max(0, at.Y-18)}
-		c.Row("tag", ui.Style{Pad: ui.PadXY(6, 2), Fill: pink, Radius: 3, Z: ui.LayerOverlay + 2, Float: &ui.Float{Point: &tag}}, func(c *ui.Ctx) {
-			c.Text("n", e.hover, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.SemiBold}, Color: th.C(tThemePickInk)})
-		})
+		pickMark(c, th, e.hover, e.hoverR, render.Rect{Max: size}, ui.LayerOverlay+1)
+	})
+}
+
+func rectOf(r image.Rectangle) render.Rect {
+	return render.Rect{Min: render.Point{X: float32(r.Min.X), Y: float32(r.Min.Y)}, Max: render.Point{X: float32(r.Max.X), Y: float32(r.Max.Y)}}
+}
+
+// pickMark outlines r at z and tags it with name over that, above r while that stays inside bounds (window
+// coordinates). z 0 keeps the parent's layer.
+func pickMark(c *ui.Ctx, th *theme.Resolved, name string, r, bounds render.Rect, z int) {
+	if name == "" {
+		return
+	}
+	pink := th.C(tThemePick)
+	at := r.Min
+	c.Box("outline", ui.Style{W: ui.Px(r.Dx() + 2), H: ui.Px(r.Dy() + 2), Stroke: pink, Border: 1, Radius: 3, Z: z,
+		Float: &ui.Float{Point: &render.Point{X: at.X - 1, Y: at.Y - 1}}}, nil)
+	tag := render.Point{X: at.X, Y: max(bounds.Min.Y, at.Y-18)}
+	c.Row("tag", ui.Style{Pad: ui.PadXY(6, 2), Fill: pink, Radius: 3, Z: z + 1, Float: &ui.Float{Point: &tag}, Role: ui.RoleStatus, Label: name}, func(c *ui.Ctx) {
+		c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.SemiBold}, Color: th.C(tThemePickInk)})
 	})
 }

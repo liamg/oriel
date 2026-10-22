@@ -78,10 +78,27 @@ type ThemeEditor struct {
 	paintDur time.Duration
 }
 
-// fixture is the reference workspace (render/scenes) drawn in one theme, and its probe for picking.
+// fixture is the reference workspace (render/scenes) drawn in one theme, its probe for picking, and what's under
+// the pointer in it.
 type fixture struct {
-	canvas *scenes.Canvas
-	probe  *image.RGBA
+	canvas  *scenes.Canvas
+	probe   *image.RGBA
+	probeTh *theme.Resolved
+	hoverAt image.Point
+	hover   string
+	hoverR  image.Rectangle
+}
+
+// at reads what painted p in the fixture, drawing the probe on first use.
+func (f *fixture) at(sh typeset.Shaper, th *theme.Resolved, p image.Point) (string, image.Rectangle) {
+	if f.probe == nil {
+		f.probe, f.probeTh = probeFixture(sh, th)
+	}
+	if p != f.hoverAt {
+		f.hoverAt = p
+		f.hover, f.hoverR = probeAt(f.probe, f.probeTh, p)
+	}
+	return f.hover, f.hoverR
 }
 
 // Manifest loads it on the first use of one of its commands.
@@ -547,13 +564,13 @@ func (e *ThemeEditor) fixture(c *ui.Ctx, th *theme.Resolved) *fixture {
 		return f
 	}
 	clear(e.fixtures) // only the themes on screen now
-	f := &fixture{canvas: scenes.NewCanvas(c.Shaper(), th)}
+	f := &fixture{canvas: scenes.NewCanvas(c.Shaper(), th), hoverAt: image.Pt(-1, -1)}
 	e.fixtures[th] = f
 	return f
 }
 
 // probeFixture draws the fixture in th's probe theme on the CPU, for a click in the preview.
-func (e *ThemeEditor) probeFixture(sh typeset.Shaper, th *theme.Resolved) (*image.RGBA, *theme.Resolved) {
+func probeFixture(sh typeset.Shaper, th *theme.Resolved) (*image.RGBA, *theme.Resolved) {
 	p := theme.Probe(th)
 	var l render.List
 	cv := scenes.NewCanvas(sh, p)
@@ -567,8 +584,8 @@ type noBackdrop struct{ render.Frame }
 
 func (noBackdrop) Backdrop(render.Color) {}
 
-// preview is the fixture workspace (render/scenes) in the theme, or split against the base. A click picks what
-// painted the pixel.
+// preview is the fixture workspace (render/scenes) in the theme, or split against the base. What's under the pointer
+// is outlined and named; a click picks it.
 func (e *ThemeEditor) preview(c *ui.Ctx, th *theme.Resolved) {
 	themes := []*theme.Resolved{th}
 	if e.tab == 1 {
@@ -581,13 +598,15 @@ func (e *ThemeEditor) preview(c *ui.Ctx, th *theme.Resolved) {
 			f := e.fixture(c, t)
 			id := c.Next(i)
 			hit := c.Interaction(id)
-			if hit.Clicked {
-				if r, ok := c.Rect(id); ok {
-					img, p := e.probeFixture(c.Shaper(), t)
-					if name, _ := probeAt(img, p, image.Pt(int(hit.Pointer().X-r.Min.X), int(hit.Pointer().Y-r.Min.Y))); name != "" {
-						e.choose(name)
-					}
-				}
+			box, _ := c.Rect(id)
+			hover, hr := "", render.Rect{}
+			if hit.Hovered || hit.Clicked {
+				pt := hit.Pointer()
+				name, r := f.at(c.Shaper(), t, image.Pt(int(pt.X-box.Min.X), int(pt.Y-box.Min.Y)))
+				hover, hr = name, rectOf(r.Add(image.Pt(int(box.Min.X), int(box.Min.Y))))
+			}
+			if hit.Clicked && hover != "" {
+				e.choose(hover)
 			}
 			now := c.Now
 			c.Box(i, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Stroke: th.C(theme.LineStrong), Border: 1, Radius: 6, Clip: true, Interactive: true,
@@ -600,6 +619,7 @@ func (e *ThemeEditor) preview(c *ui.Ctx, th *theme.Resolved) {
 					fr.Pop()
 					e.paintDur = now().Sub(start)
 				})
+				pickMark(c, th, hover, hr, box, 0)
 			})
 		}
 	})
