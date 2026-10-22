@@ -42,7 +42,7 @@ func TestLogRecordsDrawOnlyWhileThePanelShows(t *testing.T) {
 }
 
 // longErr is a warning's err too long for its row: its end only shows once the row's expanded.
-const longErr = "claude: /usage typed 2 times but no plan windows came (a dialog may be in the way): context deadline exceeded; " +
+const longErr = "claude: /usage typed but no plan windows came: context deadline exceeded; " +
 	"$.session.usage() failed: Invalid time value; the screen ends: What's contributing to your limits usage? the very end"
 
 // An expanded record wraps its message and attributes to the panel's width, so all of them show.

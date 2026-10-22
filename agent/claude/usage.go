@@ -21,17 +21,11 @@ import (
 const (
 	probeTimeout = 40 * time.Second
 	probeAsk     = 500 * time.Millisecond // how often the mod is asked for the windows
-	probeTries   = 2                      // times /usage is typed; then the probe waits out probeTimeout
 )
-
-// probeRetype is how long /usage has to bring the windows before Escape clears what may be in the way and it's typed
-// again, once.
-var probeRetype = 15 * time.Second
 
 // ProbeError is why the /usage probe got no plan windows.
 type ProbeError struct {
 	Hello  bool   // claude said hello and /usage was typed; false: claude never got that far
-	Tries  int    // times /usage was typed
 	Screen string // the end of what claude last showed
 	Usage  string // why $.session.usage() last failed, when it did
 	Log    string // claude's debug log of the probe
@@ -39,7 +33,7 @@ type ProbeError struct {
 }
 
 func (e *ProbeError) Error() string {
-	msg := fmt.Sprintf("claude: /usage typed %d times but no plan windows came (a dialog may be in the way): %v", e.Tries, e.Err)
+	msg := fmt.Sprintf("claude: /usage typed but no plan windows came: %v", e.Err)
 	if !e.Hello {
 		msg = fmt.Sprintf("claude: the /usage session never started: %v", e.Err)
 	}
@@ -151,8 +145,7 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 	defer s.Close()
 	ask := time.NewTicker(probeAsk)
 	defer ask.Stop()
-	tries := 0
-	var typedAt time.Time
+	typed := false
 	for {
 		select {
 		case ev, ok := <-s.Events():
@@ -161,9 +154,9 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 			}
 			switch e := ev.(type) {
 			case agent.Ready:
-				if tries == 0 {
+				if !typed {
 					_, _ = s.term.Write([]byte("/usage\r"))
-					tries, typedAt = 1, time.Now()
+					typed = true
 				}
 			case agent.UsageUpdate:
 				s.quit()
@@ -177,20 +170,11 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 				return core.ProviderUsage{}, fmt.Errorf("claude: the /usage session exited: %s", e.Err)
 			}
 		case <-ask.C:
-			if tries == 0 {
-				continue
-			}
-			if tries < probeTries && time.Since(typedAt) >= probeRetype {
-				_, _ = s.term.Write([]byte("\x1b"))
-				time.Sleep(200 * time.Millisecond)
-				_, _ = s.term.Write([]byte("/usage\r"))
-				tries, typedAt = tries+1, time.Now()
-			}
-			if !s.queued("usage") {
+			if typed && !s.queued("usage") {
 				s.queueCmd(waitOut{Kind: "usage"})
 			}
 		case <-ctx.Done():
-			return core.ProviderUsage{}, &ProbeError{Hello: tries > 0, Tries: tries, Screen: s.lastScreen(), Usage: s.usageFailure(),
+			return core.ProviderUsage{}, &ProbeError{Hello: typed, Screen: s.lastScreen(), Usage: s.usageFailure(),
 				Log: latestLog(logs), Err: ctx.Err()}
 		}
 	}

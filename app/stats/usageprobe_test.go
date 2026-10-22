@@ -54,10 +54,10 @@ func TestUsageSaysWhyTheProbeFailed(t *testing.T) {
 		want  string
 	}{
 		{false, "Claude didn't start for the usage check"},
-		{true, "Claude didn't show usage: a dialog may be in the way"},
+		{true, "Claude started but reported no usage"},
 	} {
 		t.Run(tc.want, func(t *testing.T) {
-			probeErr := &claude.ProbeError{Hello: tc.hello, Tries: 3, Err: context.DeadlineExceeded}
+			probeErr := &claude.ProbeError{Hello: tc.hello, Err: context.DeadlineExceeded}
 			s, x := failingHost(t, probeErr)
 			s.Run("usage.open", nil)
 			s.Run("usage.refresh", nil)
@@ -86,9 +86,9 @@ func TestUsageSaysWhyTheProbeFailed(t *testing.T) {
 
 // The read when Oriel starts failing shows on the Usage page too, with no Refresh.
 func TestUsageShowsTheStartupReadsFailure(t *testing.T) {
-	s, _ := failingHost(t, &claude.ProbeError{Hello: true, Tries: 2, Err: context.DeadlineExceeded})
+	s, _ := failingHost(t, &claude.ProbeError{Hello: true, Err: context.DeadlineExceeded})
 	s.Run("usage.open", nil)
-	const want = "Claude didn't show usage: a dialog may be in the way"
+	const want = "Claude started but reported no usage"
 	deadline := time.Now().Add(10 * time.Second)
 	for s.Frame(); !strings.Contains(s.Text(), want) && time.Now().Before(deadline); s.Frame() {
 		s.RunQueued()
