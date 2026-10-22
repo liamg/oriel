@@ -42,11 +42,15 @@ async function abortTurn($: EngineInterface, st: State) {
   if (st.working && st.turnId) await $.turn.abort({ turnId: st.turnId }).catch(() => undefined)
 }
 
-// A side question, answered from a fork of the session: tool-less, and outside the main conversation.
+// A side question, answered from a fork of the session: tool-less, and outside the main conversation. With nothing
+// to fork yet (no turn finished since the start, a resume or /clear), the session's model answers it alone.
 async function fork($: EngineInterface, st: State, id: string, prompt: string) {
   let answer: Args
   try {
-    const r = await $.model.fork({ prompt })
+    let r = await $.model.fork({ prompt })
+    if (!r.isAnswered && r.reason === 'nothing-to-fork') {
+      r = await $.model.complete({ model: await $.session.model(), prompt, maxTokens: 16_000 })
+    }
     answer = r.isAnswered ? { id, answered: true, text: r.text } : { id, answered: false, reason: r.reason }
   } catch (err) {
     answer = { id, answered: false, reason: err instanceof Error ? err.message : String(err) }

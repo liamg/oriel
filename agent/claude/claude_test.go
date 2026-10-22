@@ -449,13 +449,14 @@ func TestMessagesFromTheLog(t *testing.T) {
 	}
 }
 
-func TestNoForkBeforeAnything(t *testing.T) {
+// With nothing to fork yet, the session's model answers alone.
+func TestForkBeforeAnything(t *testing.T) {
 	h := fakeHarness(t)
 	s := agenttest.Start(t, h)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	if _, err := s.S.Fork(ctx, agent.ForkSpec{Prompt: "why?"}); err != agent.ErrNoFork {
-		t.Errorf("fork = %v, want ErrNoFork", err)
+	if got, err := s.S.Fork(ctx, agent.ForkSpec{Prompt: "why?"}); err != nil || got != "complete: why?" {
+		t.Errorf("fork = %q, %v; want the model's answer alone", got, err)
 	}
 }
 
