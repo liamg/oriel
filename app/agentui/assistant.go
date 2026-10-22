@@ -40,9 +40,6 @@ const (
 //go:embed assistant.md
 var assistantPrompt string
 
-// assistantWeb are the provider tools the assistant may use without asking, with assistant.web on.
-var assistantWeb = []string{"WebSearch", "WebFetch"}
-
 // Assistant is Ori, the window's own agent: its window, its tools and the commands that drive it.
 type Assistant struct {
 	kit.Disposer
@@ -246,10 +243,7 @@ func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Age
 		return nil, err
 	}
 	spec := host.UtilitySpec{Name: kit.AssistantAgent, Provider: x.str("assistant.provider"), Model: x.str("assistant.model"),
-		Pack: x.Prompt(), Prompt: first}
-	if x.bool("assistant.web") {
-		spec.Allow = assistantWeb
-	}
+		Pack: x.Prompt(), Prompt: first, Web: x.bool("assistant.web")}
 	u, err := c.StartUtility(context.Background(), spec)
 	if err != nil {
 		return nil, err

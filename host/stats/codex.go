@@ -2,9 +2,8 @@ package stats
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
-
-	"github.com/liamg/oriel/agent/price"
 )
 
 // A Codex rollout: one {timestamp, type, payload} a line. Read here: the session's cwd (session_meta), each turn's
@@ -87,7 +86,7 @@ func (s *Scan) codex(r *rolloutLine) {
 			st.Total = t
 			tk := Tokens{Input: max(in-cached, 0), CacheRead: max(cached, 0), Output: out}
 			model := cmpOr(st.Model, "unknown")
-			s.request("", request{At: r.Timestamp, Model: model, Effort: st.Effort, Tokens: tk, Costs: tk.Of(price.RateFor(model, false))},
+			s.request("", request{At: r.Timestamp, Model: model, Effort: st.Effort, Tokens: tk, Costs: tk.Of(s.rate(model, false, tk))},
 				"", p.Info.Window)
 		}
 	case "response_item":
@@ -101,9 +100,37 @@ func (s *Scan) codex(r *rolloutLine) {
 			if json.Valid([]byte(in)) {
 				raw = json.RawMessage(in)
 			}
+			if p.Name == "apply_patch" {
+				raw = patchFiles(p.Input, raw)
+			}
 			s.call(p.CallID, p.Name, raw, r.Timestamp, st.Model, st.Effort)
 		case "function_call_output", "custom_tool_call_output":
 			s.result(p.CallID, false, r.Timestamp)
 		}
 	}
+}
+
+// patchFiles is an apply_patch call as the files it touches ({"files": [{"path": …}]}): its patch is the freeform
+// call's input, or the input in a function call's arguments.
+func patchFiles(input string, args json.RawMessage) json.RawMessage {
+	if input == "" {
+		var a struct {
+			Input string `json:"input"`
+		}
+		json.Unmarshal(args, &a)
+		input = a.Input
+	}
+	type file struct {
+		Path string `json:"path"`
+	}
+	var files []file
+	for line := range strings.Lines(input) {
+		for _, marker := range []string{"*** Add File: ", "*** Delete File: ", "*** Update File: "} {
+			if p, ok := strings.CutPrefix(strings.TrimRight(line, "\r\n"), marker); ok && strings.TrimSpace(p) != "" {
+				files = append(files, file{Path: strings.TrimSpace(p)})
+			}
+		}
+	}
+	b, _ := json.Marshal(map[string]any{"files": files})
+	return b
 }

@@ -1,7 +1,7 @@
 ---
 id: agent/launcher
 covers: [app.overlay.launcher]
-related: [agent/console, shell/start]
+related: [agent/console, shell/start, agent/plugins]
 ---
 
 # New session
@@ -36,7 +36,7 @@ any kind, and a plugin's kind is a mode here when it asks to be (`Launcher` on i
 
 Claude, Codex or another provider, with its model, effort and what's left of its plan; or no agent at all. An agent
 in a **Direct** session edits your real files. A provider that isn't signed in, or whose login has stopped working,
-says so instead of its plan.
+says so instead of its plan. A plugin can add an agent here, or take a built-in's place (`:help agent/plugins`).
 
 ## Repositories
 

@@ -94,6 +94,12 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Agent{a: a}
 		vm.Bind("agent", map[string]script.GoFunc{
+			"bridge": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.provider"); err != nil {
+					return nil, err
+				}
+				return nil, x.Bridge(c.Table(0), c.Where())
+			},
 			"explainer": func(c *script.Args) ([]any, error) {
 				if err := a.check("agent.read"); err != nil {
 					return nil, err
@@ -117,6 +123,12 @@ func (a *APIs) bind(vm *script.VM) {
 					return nil, err
 				}
 				return nil, x.Pack(c.String(0), c.Table(1), c.Where())
+			},
+			"provider": func(c *script.Args) ([]any, error) {
+				if err := a.check("agent.provider"); err != nil {
+					return nil, err
+				}
+				return nil, x.Provider(c.Table(0), c.Where())
 			},
 			"tool": func(c *script.Args) ([]any, error) {
 				if err := a.check("agent.tools"); err != nil {

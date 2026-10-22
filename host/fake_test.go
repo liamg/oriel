@@ -28,6 +28,7 @@ type rig struct {
 	more  []agent.Provider // beside the fake
 	tools []string         // the packs' tools
 	log   *slog.Logger     // the host's log; none if nil
+	bare  bool             // open the host with no providers of its own: the app's come later (SetProviders)
 }
 
 func newRig(t *testing.T, more ...agent.Provider) *rig {
@@ -52,9 +53,11 @@ func newRig(t *testing.T, more ...agent.Provider) *rig {
 func (r *rig) open() {
 	r.t.Helper()
 	providers := &agent.Providers{}
-	providers.Register(r.fake)
-	for _, p := range r.more {
-		providers.Register(p)
+	if !r.bare {
+		providers.Register(r.fake)
+		for _, p := range r.more {
+			providers.Register(p)
+		}
 	}
 	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: r.now, Log: r.log,
 		Packs: func(name string) (agent.Pack, bool) {

@@ -126,8 +126,8 @@ clip 44,38 1556x936 r 0
       text "Write to the agent: ⏎ sends" @78,919.5471 #7c7566 Inter 12.5
     pop
     rect 68,900 1177x30 radius 6 stroke 1 #332f27
-    rect 68,938 126.71875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "claude-opus-4-1 ▾" @78,955.36523 #ece6d8 Inter 12
+    rect 68,938 128.3125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "claude-opus-4-7 ▾" @78,955.36523 #ece6d8 Inter 12
     rect 492.935,942.73 73.130005x16.539978 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
     text "CONTAINER" @499.935,954.42 #b3ab99 JetBrains Mono 9.5
     text "@path names a file · ⏎ send · ⌘⏎ send now" @999,954.60004 #4f4a40 JetBrains Mono 10

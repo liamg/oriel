@@ -102,7 +102,7 @@ func (x *Plugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabSta
 		c.Text("n", name, kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		var meta []string
 		if a.Provider != "" {
-			meta = append(meta, strings.ToLower(kit.ProviderName(a.Provider)))
+			meta = append(meta, strings.ToLower(kit.ProviderName(x.h, a.Provider)))
 		}
 		if d.Origin == stats.OriginOutside {
 			meta = append(meta, "outside Oriel")
@@ -140,7 +140,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 	t := d.Totals
 	span := d.Last.Sub(d.First)
 	c.Row("tiles", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-		statsTile(c, "cost", "COST · EST.", kit.Money(t.Cost), "", func(c *ui.Ctx) {
+		costTile(c, kit.Money(t.Cost), d.Prices, func(c *ui.Ctx) {
 			if t.ActiveS > 0 {
 				dim(c, "s", kit.Money(t.Cost/(float64(t.ActiveS)/3600))+" / active hour")
 			}

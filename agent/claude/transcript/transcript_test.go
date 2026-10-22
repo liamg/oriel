@@ -173,13 +173,19 @@ func TestReadRecordsTheSessionFacts(t *testing.T) {
 	if u.First.IsZero() || u.Last.Sub(u.First) != 10*time.Minute {
 		t.Errorf("span = %v, want 10m", u.Last.Sub(u.First))
 	}
-	// Opus at $5 in, $25 out: 15 in, 1100 written for five minutes at 1.25×, 300900 read at 0.1×, 70 out.
-	want := (15*5 + 1100*5*1.25 + 300900*5*0.1 + 70*25) / 1e6
+	// Opus 5 at its list prices: 15 in at $5, 1100 written for five minutes at $6.25, 300900 read at $0.50, 70 out at $25.
+	// ref:   cost-dev/models.json
+	// quote: pb_anthropic_claude-opus-5_direct_realtime_global_usd_20260724","verified_at":"2026-07-24T00:00:00Z","source_id":"source:anthropic-pricing"},"prices":{"cache_write_1h_tokens_per_1000000":"10","cache_write_5m_tokens_per_1000000":"6.25","cached_input_tokens_per_1000000":"0.5","input_tokens_per_1000000":"5","output_tokens_per_1000000":"25"}
+	want := (15*5 + 1100*6.25 + 300900*0.5 + 70*25) / 1e6
 	if math.Abs(u.Cost-want) > 1e-9 {
 		t.Errorf("cost = %v, want %v", u.Cost, want)
 	}
 }
 
+// Sonnet 5 at its list prices: $2 in, $10 out, an hour's cache write $4, a read $0.20.
+//
+// ref:   cost-dev/models.json
+// quote: pb_anthropic_claude-sonnet-5_direct_realtime_global_usd_20260701","verified_at":"2026-08-27T00:00:00Z","source_id":"source:anthropic-pricing"},"prices":{"cache_write_1h_tokens_per_1000000":"4","cache_write_5m_tokens_per_1000000":"2.5","cached_input_tokens_per_1000000":"0.2","input_tokens_per_1000000":"2","output_tokens_per_1000000":"10"}
 func TestReadCountsAMessageOnce(t *testing.T) {
 	// One response, written as a record per block, each carrying the message's usage.
 	line := func(block string) string {
@@ -194,7 +200,7 @@ func TestReadCountsAMessageOnce(t *testing.T) {
 	if u.Requests != 1 || u.Input != 2 || u.Output != 7 || u.CacheCreate != 10 || u.CacheHour != 10 || u.CacheRead != 100 {
 		t.Errorf("usage = %+v, want one request's", u)
 	}
-	want := (2*3 + 10*3*2.0 + 100*3*0.1 + 7*15) / 1e6
+	want := (2*2 + 10*4 + 100*0.2 + 7*10) / 1e6
 	if math.Abs(u.Cost-want) > 1e-9 {
 		t.Errorf("cost = %v, want %v", u.Cost, want)
 	}

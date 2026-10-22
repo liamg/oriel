@@ -78,7 +78,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 		hist := x.usageHistory(u)
 		c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 			c.Row("h", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-				parts := []string{strings.ToUpper(kit.ProviderName(u.Provider)), x.accountLabel(u.Account, u.AccountName)}
+				parts := []string{strings.ToUpper(kit.ProviderName(x.h, u.Provider)), x.accountLabel(u.Account, u.AccountName)}
 				if u.Tier != "" {
 					parts = append(parts, strings.ToUpper(u.Tier))
 				}
@@ -142,7 +142,7 @@ func (x *Plugin) usageStrip(c *ui.Ctx) {
 	})
 	c.Row("usage", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
 		for i, u := range us {
-			title := kit.JoinParts("Usage", kit.ProviderName(u.Provider)+strings.TrimSuffix(" "+u.Tier, " "))
+			title := kit.JoinParts("Usage", kit.ProviderName(x.h, u.Provider)+strings.TrimSuffix(" "+u.Tier, " "))
 			kit.MissionCell(c, i, title, func(c *ui.Ctx) {
 				c.Row("w", ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 					for j, w := range u.Windows {

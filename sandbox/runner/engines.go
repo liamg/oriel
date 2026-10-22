@@ -124,11 +124,11 @@ func (b Engine) Launch(ctx context.Context, root, cwd string, argv []string, o s
 	if err != nil {
 		return sandbox.Command{}, err
 	}
-	cmd, err := Launch(ctx, root, cwd, argv, o)
+	cmd, needs, err := Launch(ctx, root, cwd, argv, o)
 	if err != nil {
 		return sandbox.Command{}, err
 	}
-	return sandbox.Command{Argv: cmd, Env: os.Environ()}, nil
+	return sandbox.Command{Argv: cmd, Env: os.Environ(), Needs: needs}, nil
 }
 
 func (b Engine) Stop(ctx context.Context, root string) error {

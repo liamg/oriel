@@ -153,21 +153,21 @@ type FxSession struct {
 }
 
 var FxSessions = []FxSession{
-	{Name: "search-api", Provider: "claude", Model: "claude-opus-4-1", Repos: []string{"api", "web"}, Weights: []int{5, 2},
+	{Name: "search-api", Provider: "claude", Model: "claude-opus-4-7", Repos: []string{"api", "web"}, Weights: []int{5, 2},
 		Days: []int{0, 1, 2, 3, 5, 6, 8, 9}, PerDay: 70},
-	{Name: "admin-filters", Provider: "claude", Model: "claude-opus-4-1", Repos: []string{"admin-ui", "api", "web"}, Weights: []int{4, 2, 1},
+	{Name: "admin-filters", Provider: "claude", Model: "claude-opus-4-7", Repos: []string{"admin-ui", "api", "web"}, Weights: []int{4, 2, 1},
 		Days: []int{0, 1, 4, 6, 7}, PerDay: 90},
 	{Name: "flaky-e2e-sweep", Provider: "codex", Model: "gpt-5-codex", Prompt: "Sweep the flaky e2e tests", Repos: []string{"web", "infra"},
 		Weights: []int{3, 2}, Days: []int{1, 3, 10, 12, 14, 16}, PerDay: 60},
-	{Name: "invoice-pdf", Provider: "claude", Model: "claude-sonnet-4-5", Repos: []string{"billing-ui"}, Weights: []int{1},
+	{Name: "invoice-pdf", Provider: "claude", Model: "claude-sonnet-4-6", Repos: []string{"billing-ui"}, Weights: []int{1},
 		Days: []int{3, 4, 5, 13, 14, 15, 17}, PerDay: 40},
-	{Name: "pricing-tiers", Provider: "claude", Model: "claude-opus-4-1", Repos: []string{"pricing"}, Weights: []int{1},
+	{Name: "pricing-tiers", Provider: "claude", Model: "claude-opus-4-7", Repos: []string{"pricing"}, Weights: []int{1},
 		Days: []int{18, 19, 20, 21, 23, 24, 25, 26, 27}, PerDay: 60},
-	{Name: "infra-certs", Provider: "claude", Model: "claude-sonnet-4-5", Repos: []string{"infra"}, Weights: []int{1},
+	{Name: "infra-certs", Provider: "claude", Model: "claude-sonnet-4-6", Repos: []string{"infra"}, Weights: []int{1},
 		Days: []int{11, 12, 22, 28}, PerDay: 30},
-	{Name: "web-nav", Provider: "claude", Model: "claude-opus-4-1", Repos: []string{"web", "admin-ui"}, Weights: []int{3, 1},
+	{Name: "web-nav", Provider: "claude", Model: "claude-opus-4-7", Repos: []string{"web", "admin-ui"}, Weights: []int{3, 1},
 		Days: []int{7, 8, 15, 16, 20, 21, 29}, PerDay: 50},
-	{Name: "pricing-rounding", Provider: "claude", Model: "claude-opus-4-1", Prompt: "Round invoice lines half-to-even",
+	{Name: "pricing-rounding", Provider: "claude", Model: "claude-opus-4-7", Prompt: "Round invoice lines half-to-even",
 		Repos: []string{"pricing", "billing-ui"}, Weights: []int{214, 101}},
 }
 
@@ -284,7 +284,7 @@ func roundingLog(rnd *rand.Rand, dirs map[string]string) []string {
 		}
 		out = append(out, Request(rnd, fx, dirs, at, ctx, k, false)...)
 		if k%17 == 5 {
-			agent := fmt.Sprintf(`{"type":"assistant","timestamp":%q,"isSidechain":true,"agentId":"a%d","message":{"id":"s%d","model":"claude-sonnet-4-5","content":[],"usage":{"input_tokens":2000,"output_tokens":900,"cache_read_input_tokens":25000}}}`,
+			agent := fmt.Sprintf(`{"type":"assistant","timestamp":%q,"isSidechain":true,"agentId":"a%d","message":{"id":"s%d","model":"claude-sonnet-4-6","content":[],"usage":{"input_tokens":2000,"output_tokens":900,"cache_read_input_tokens":25000}}}`,
 				at.Add(5*time.Second).Format(time.RFC3339), k/17, k)
 			out = append(out, agent)
 		}

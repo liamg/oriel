@@ -106,6 +106,22 @@ func TestStatsPageSnapshots(t *testing.T) {
 	s.WantFrame("COST PER SESSION PER DAY", "pricing-rounding", "search-api", "span several repos")
 }
 
+// Resting on the cost tile says where its prices come from: cost.dev's list, as last checked.
+//
+// ref:   cost-dev/models.json
+// quote: pb_mistral_mistral-large-4_direct_realtime_global_usd_20261020","verified_at":"2026-10-22T08:30:00Z"
+func TestCostTileSaysWhereThePricesCameFrom(t *testing.T) {
+	s, _, x := statsScene(t)
+	s.Press("<D-S>")
+	settle(s, x)
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint("COST · EST.")})
+	s.Frame()
+	s.Now = s.Now.Add(time.Second)
+	s.Frame()
+	s.Frame()
+	s.WantFrame("Prices from cost.dev, updated 22 Oct 2026")
+}
+
 // One session's stats as a main tab, from the session stats box's cost.
 func TestSessionStatsSnapshot(t *testing.T) {
 	s, r, x := statsScene(t)
@@ -218,7 +234,7 @@ func TestStatsEntryPoints(t *testing.T) {
 // The start view's links, each with its figure, open their pages.
 func TestStartViewLinks(t *testing.T) {
 	r := rig.NewStats(t)
-	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W)})
+	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W, r.Claude, r.Codex)})
 	x := apptest.PluginOf[*stats.Plugin](s, "stats")
 	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	settle(s, x)

@@ -45,7 +45,6 @@ func Health(ctx context.Context, cfg sandbox.Config, fix string) []sandbox.Probl
 			out = append(out, p)
 		}
 	}
-	out = append(out, sandbox.LoginProblems(cfg)...)
 	if p, ok := helperProblem(); !ok {
 		out = append(out, p)
 	}

@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,10 +17,13 @@ import (
 )
 
 // fakeCodex is `codex` for the tests: --version, and an app-server speaking protocol v2 that plays the
-// conformance scenarios (agenttest). FAKE_CODEX_ACCOUNT picks the login ("chatgpt" unless set; "none" for none).
+// conformance scenarios (agenttest), and "what are your instructions", which replies with the thread's developer
+// instructions. FAKE_CODEX_ACCOUNT picks the login ("chatgpt" unless set; "none" for none); FAKE_CODEX_MCP names
+// the MCP servers its config has, comma-separated; FAKE_CODEX_NO_TERMINALS=1 is a codex without the experimental
+// thread/backgroundTerminals/* methods.
 func fakeCodex(args []string) int {
 	if len(args) > 0 && args[0] == "--version" {
-		fmt.Println("codex-cli 0.99.0-fake")
+		fmt.Println("codex-cli 0.163.0")
 		return 0
 	}
 	f := &fake{home: os.Getenv("CODEX_HOME"), threads: map[string]*fakeThread{}}
@@ -42,17 +47,21 @@ type fake struct {
 }
 
 type fakeThread struct {
-	id        string
-	ephemeral bool
-	history   []string
+	id           string
+	ephemeral    bool
+	toolless     bool // a fork with every tool turned off, and its turn given no environment
+	history      []string
+	instructions string
 
 	mcp    *jsonrpc.Conn
 	mcpCmd *exec.Cmd
 
-	mu        sync.Mutex
-	turn      string
-	interrupt chan struct{}
-	steer     chan string
+	mu          sync.Mutex
+	turn        string
+	interrupt   chan struct{}
+	interrupted bool
+	steer       chan string
+	terminals   []map[string]any // its background terminals, as thread/backgroundTerminals/list says them
 }
 
 func (t *fakeThread) stopMCP() {
@@ -85,15 +94,25 @@ func (f *fake) save(t *fakeThread) {
 		return
 	}
 	os.MkdirAll(filepath.Join(f.home, "threads"), 0o755)
-	b, _ := json.Marshal(t.history)
+	b, _ := json.Marshal(savedThread{t.history, t.instructions})
 	os.WriteFile(f.path(t.id), b, 0o644)
+}
+
+type savedThread struct {
+	History      []string `json:"history"`
+	Instructions string   `json:"instructions"`
 }
 
 type fakeParams struct {
 	ThreadID       string                     `json:"threadId"`
 	TurnID         string                     `json:"turnId"`
 	ExpectedTurnID string                     `json:"expectedTurnId"`
+	ProcessID      string                     `json:"processId"`
+	Cursor         *string                    `json:"cursor"`
 	Ephemeral      bool                       `json:"ephemeral"`
+	Model          string                     `json:"model"`
+	Instructions   *string                    `json:"developerInstructions"`
+	Environments   *[]json.RawMessage         `json:"environments"`
 	Config         map[string]json.RawMessage `json:"config"`
 	Input          []struct {
 		Type string `json:"type"`
@@ -127,7 +146,26 @@ func (f *fake) handle(r *jsonrpc.Request) {
 			"id": "m", "model": "gpt-fake-codex", "displayName": "GPT Fake", "hidden": false, "isDefault": true,
 			"supportedReasoningEfforts": []map[string]any{{"reasoningEffort": "low", "description": ""}, {"reasoningEffort": "high", "description": ""}},
 			"defaultReasoningEffort":    "low",
+		}, {
+			"id": "l", "model": "gpt-6-luna", "displayName": "GPT-6-Luna", "hidden": false, "isDefault": false,
+			"supportedReasoningEfforts": []map[string]any{{"reasoningEffort": "low", "description": ""}},
+			"defaultReasoningEffort":    "low",
 		}}, "nextCursor": nil}, nil)
+	case "config/read":
+		servers := map[string]any{}
+		for _, name := range strings.Split(os.Getenv("FAKE_CODEX_MCP"), ",") {
+			if name != "" {
+				servers[name] = map[string]any{"command": name}
+			}
+		}
+		r.Reply(map[string]any{"config": map[string]any{"mcp_servers": servers}, "origins": map[string]any{}}, nil)
+	case "account/login/start":
+		id := f.id("login")
+		r.Reply(map[string]any{"type": "chatgpt", "loginId": id, "authUrl": "https://auth.example/" + id}, nil)
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			f.rpc.Notify("account/login/completed", map[string]any{"loginId": id, "success": true, "error": nil})
+		}()
 	case "thread/start", "thread/resume":
 		t := &fakeThread{id: p.ThreadID}
 		if r.Method == "thread/start" {
@@ -138,7 +176,16 @@ func (f *fake) handle(r *jsonrpc.Request) {
 				r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidRequest, Message: "no rollout for " + p.ThreadID})
 				return
 			}
-			json.Unmarshal(b, &t.history)
+			var saved savedThread
+			json.Unmarshal(b, &saved)
+			t.history, t.instructions = saved.History, saved.Instructions
+		}
+		if p.Instructions != nil {
+			t.instructions = strings.TrimSpace(t.instructions + "\n\n" + *p.Instructions)
+		}
+		model := p.Model
+		if model == "" {
+			model = "gpt-5.5"
 		}
 		go func() {
 			if err := f.startMCP(t, p.Config["mcp_servers.oriel"]); err != nil {
@@ -148,7 +195,7 @@ func (f *fake) handle(r *jsonrpc.Request) {
 			f.mu.Lock()
 			f.threads[t.id] = t
 			f.mu.Unlock()
-			r.Reply(map[string]any{"thread": map[string]any{"id": t.id}}, nil)
+			r.Reply(map[string]any{"thread": map[string]any{"id": t.id}, "model": model, "modelProvider": "openai"}, nil)
 			f.rpc.Notify("thread/started", map[string]any{"thread": map[string]any{"id": t.id}})
 		}()
 	case "thread/fork":
@@ -158,7 +205,12 @@ func (f *fake) handle(r *jsonrpc.Request) {
 			return
 		}
 		src.mu.Lock()
-		t := &fakeThread{id: f.id("fork"), ephemeral: p.Ephemeral, history: append([]string(nil), src.history...)}
+		off := func(key string) bool { return string(p.Config[key]) == "false" }
+		var oriel struct{ Enabled *bool }
+		json.Unmarshal(p.Config["mcp_servers.oriel"], &oriel)
+		t := &fakeThread{id: f.id("fork"), ephemeral: p.Ephemeral, history: append([]string(nil), src.history...),
+			toolless: off("features.shell_tool") && off("features.unified_exec") && string(p.Config["web_search"]) == `"disabled"` &&
+				oriel.Enabled != nil && !*oriel.Enabled}
 		src.mu.Unlock()
 		f.mu.Lock()
 		f.threads[t.id] = t
@@ -166,6 +218,8 @@ func (f *fake) handle(r *jsonrpc.Request) {
 		r.Reply(map[string]any{"thread": map[string]any{"id": t.id, "forkedFromId": src.id}}, nil)
 	case "thread/unsubscribe":
 		r.Reply(map[string]any{}, nil)
+	case "thread/backgroundTerminals/list", "thread/backgroundTerminals/terminate":
+		f.terminal(r, p)
 	case "turn/start":
 		t := f.thread(p.ThreadID)
 		if t == nil || len(p.Input) == 0 {
@@ -174,7 +228,10 @@ func (f *fake) handle(r *jsonrpc.Request) {
 		}
 		id := f.id("turn")
 		t.mu.Lock()
-		t.turn, t.interrupt, t.steer = id, make(chan struct{}), make(chan string, 1)
+		t.turn, t.interrupt, t.interrupted, t.steer = id, make(chan struct{}), false, make(chan string, 1)
+		if p.Environments == nil || len(*p.Environments) > 0 {
+			t.toolless = false
+		}
 		t.mu.Unlock()
 		r.Reply(map[string]any{"turn": map[string]any{"id": id, "status": "inProgress", "items": []any{}}}, nil)
 		go f.run(t, id, p.Input[0].Text)
@@ -185,9 +242,9 @@ func (f *fake) handle(r *jsonrpc.Request) {
 			return
 		}
 		t.mu.Lock()
-		if t.turn == p.TurnID && t.interrupt != nil {
+		if t.turn == p.TurnID && t.interrupt != nil && !t.interrupted {
 			close(t.interrupt)
-			t.interrupt = nil
+			t.interrupted = true
 		}
 		t.mu.Unlock()
 		r.Reply(map[string]any{}, nil)
@@ -213,6 +270,35 @@ func (f *fake) handle(r *jsonrpc.Request) {
 	default:
 		r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "fake codex: " + r.Method})
 	}
+}
+
+// terminal answers thread/backgroundTerminals/list a terminal a page, and terminate.
+func (f *fake) terminal(r *jsonrpc.Request, p fakeParams) {
+	t := f.thread(p.ThreadID)
+	if os.Getenv("FAKE_CODEX_NO_TERMINALS") == "1" || t == nil {
+		r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "fake codex: " + r.Method})
+		return
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if r.Method == "thread/backgroundTerminals/terminate" {
+		n := len(t.terminals)
+		t.terminals = slices.DeleteFunc(t.terminals, func(m map[string]any) bool { return m["processId"] == p.ProcessID })
+		r.Reply(map[string]any{"terminated": len(t.terminals) < n}, nil)
+		return
+	}
+	at := 0
+	if p.Cursor != nil {
+		at, _ = strconv.Atoi(*p.Cursor)
+	}
+	page := map[string]any{"data": []any{}, "nextCursor": nil}
+	if at < len(t.terminals) {
+		page["data"] = []any{t.terminals[at]}
+		if at+1 < len(t.terminals) {
+			page["nextCursor"] = strconv.Itoa(at + 1)
+		}
+	}
+	r.Reply(page, nil)
 }
 
 // startMCP launches the configured oriel MCP server, as codex does, with only the environment it names.
@@ -282,6 +368,8 @@ func (f *fake) run(t *fakeThread, turn, text string) {
 	status := "completed"
 	ctx := context.Background()
 	switch {
+	case strings.HasPrefix(t.id, "fork") && !t.toolless:
+		say("a fork with tools: " + text)
 	case strings.HasPrefix(t.id, "fork"):
 		say("fork: " + text)
 	case strings.HasSuffix(text, "say hello"):
@@ -361,6 +449,15 @@ func (f *fake) run(t *fakeThread, turn, text string) {
 		case <-time.After(time.Minute):
 		}
 		status = "interrupted"
+	case strings.HasSuffix(text, "start the dev server"):
+		t.mu.Lock()
+		t.terminals = append(t.terminals,
+			map[string]any{"itemId": f.id("cmd"), "processId": "1001", "command": "npm run dev", "cwd": "/w", "osPid": 4242, "cpuPercent": 1.5, "rssKb": 2048},
+			map[string]any{"itemId": f.id("cmd"), "processId": "1002", "command": "go run ./watch", "cwd": "/w", "osPid": nil, "cpuPercent": nil, "rssKb": nil})
+		t.mu.Unlock()
+		say("the dev server is running")
+	case strings.HasSuffix(text, "what are your instructions"):
+		say("instructions: " + t.instructions)
 	case strings.HasSuffix(text, "what did I say"):
 		if n := len(history); n >= 2 {
 			say("you said: " + history[n-2])

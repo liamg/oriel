@@ -95,7 +95,7 @@ func (e SessionArchived) Apply(s *State) error {
 	}
 	se.Archived = e.Archived
 	if e.Archived {
-		se.Agent.Running, se.Agent.Working, se.Agent.Background = false, false, nil
+		se.Agent.Running, se.Agent.Working, se.Agent.Background, se.Agent.Processes = false, false, nil, nil
 	}
 	return nil
 }

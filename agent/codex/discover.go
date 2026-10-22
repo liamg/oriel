@@ -23,8 +23,8 @@ func home() string {
 
 var _ agent.Discovered = (*Provider)(nil)
 
-// Discover is every rollout Codex keeps in its home, archived ones too: sessions/YYYY/MM/DD/rollout-<time>-<thread>.jsonl.
-// A compressed one (.jsonl.zst) isn't read.
+// Discover is every rollout Codex keeps in its home, archived ones too: sessions/YYYY/MM/DD/rollout-<time>-<thread>.jsonl,
+// or .jsonl.zst once Codex has compressed it; a plain one hides its compressed sibling.
 func (p *Provider) Discover() []agent.Transcript {
 	dir := home()
 	if dir == "" {
@@ -40,6 +40,11 @@ func (p *Provider) Discover() []agent.Transcript {
 			if !ok {
 				return nil
 			}
+			if plain, zst := strings.CutSuffix(path, ".zst"); zst {
+				if _, err := os.Stat(plain); err == nil {
+					return nil
+				}
+			}
 			fi, err := d.Info()
 			if err != nil {
 				return nil
@@ -51,13 +56,13 @@ func (p *Provider) Discover() []agent.Transcript {
 	return out
 }
 
-// threadOf is the thread a rollout's file name is of: rollout-YYYY-MM-DDThh-mm-ss-<thread>[_<rollout>].jsonl.
+// threadOf is the thread a rollout's file name is of: rollout-YYYY-MM-DDThh-mm-ss-<thread>[_<rollout>].jsonl[.zst].
 func threadOf(name string) (string, bool) {
 	core, ok := strings.CutPrefix(name, "rollout-")
 	if !ok {
 		return "", false
 	}
-	core, ok = strings.CutSuffix(core, ".jsonl")
+	core, ok = strings.CutSuffix(strings.TrimSuffix(core, ".zst"), ".jsonl")
 	if !ok || len(core) < 21 || core[19] != '-' {
 		return "", false
 	}

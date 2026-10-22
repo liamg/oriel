@@ -15,8 +15,9 @@ the sidebar, or `workspace.open` (with `{tab}` for one tab).
 branches and workspace stay as they are.
 
 The session, the sandbox's backend, container and image, and every directory the session uses: each project's
-checkout, the session's state, the scratchpad (Claude Code's temp dir), the sandbox's own directory, the agent's
-home, Claude's config, the transcripts and the shared Go cache. A directory the agent sees somewhere else says where
+checkout, the session's state, the scratchpad (the agent's temp dir), the sandbox's own directory, the agent's
+home, its config in this sandbox (Claude's `CLAUDE_CONFIG_DIR`, Codex's `CODEX_HOME`), what it writes back to your
+machine (Claude's transcripts) and the shared Go cache. A directory the agent sees somewhere else says where
 ("in the sandbox: /tmp/claude-501"). **Browse** opens it in Files; **Copy** copies its path. A running container's
 mounts follow, each read-only or read-write.
 

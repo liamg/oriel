@@ -118,6 +118,12 @@ Send prompts and comments to a session's agent, which can steer it. **High risk.
 Offer the listed tools to agents. Their output reaches the agent, so it's marked as plugin-provided in the
 transcript. **High risk.**
 
+## agent.provider {#agent-provider}
+
+Be an agent sessions run (`oriel.agent.provider`), or serve others' (`oriel.agent.bridge`): the agent is given your
+prompts and the session's tools, and acts in your workspaces. **Critical**. Outside a sandbox, each program it runs
+needs `exec` too.
+
 ## gate {#gate}
 
 `veto` and `decide` hooks: block commits and answer permission prompts. **Critical**: answering permission prompts

@@ -12,12 +12,13 @@
 //	"what did I say"       replies with the prompt before this one: after a resume, that proves the history came back
 //	"lose the login"       fails the turn with the provider's own signed-out error
 //
-// A fork replies "fork: " and its prompt.
+// A fork replies "fork: " and its prompt; a provider whose Features say it can't fork returns agent.ErrNoFork.
 package agenttest
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -52,6 +53,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("fork", func(t *testing.T) { fork(t, h) })
 	t.Run("resume", func(t *testing.T) { resume(t, h) })
 	t.Run("login expired", func(t *testing.T) { loginExpired(t, h) })
+	t.Run("pack", func(t *testing.T) { pack(t, h) })
 }
 
 // Echo is the tool every session is offered.
@@ -182,6 +184,9 @@ func permission(t *testing.T, h Harness, allow bool) {
 	if !strings.Contains(p.Summary+string(p.Input), "go test") {
 		t.Errorf("permission = %+v, want the command in it", p)
 	}
+	if !ruleAllows(p.Rule, p.Tool, "go test ./...") {
+		t.Errorf("permission rule = %q: \"Always\" would make a rule that doesn't allow the command asked about", p.Rule)
+	}
 	note := "use the Makefile target"
 	if err := s.S.Answer(context.Background(), p.ID, agent.Decision{Allow: allow, Note: note}); err != nil {
 		t.Fatal(err)
@@ -231,6 +236,13 @@ func fork(t *testing.T, h Harness) {
 	ctx, cancel := context.WithTimeout(context.Background(), h.Timeout)
 	defer cancel()
 	got, err := s.S.Fork(ctx, agent.ForkSpec{Prompt: "why decimal?"})
+	// A provider that says it can't fork refuses, rather than answering with its tools.
+	if f, ok := h.Provider.(agent.Featured); ok && !f.Features().Fork {
+		if !errors.Is(err, agent.ErrNoFork) {
+			t.Errorf("a provider that can't fork: Fork = %q, %v; want ErrNoFork", got, err)
+		}
+		return
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,6 +287,59 @@ func loginExpired(t *testing.T, h Harness) {
 		t.Errorf("AuthExpired = %+v says no way to sign in again", ev)
 	}
 	s.Wait("the turn to end", func(ev agent.Event) bool { _, ok := ev.(agent.TurnEnd); return ok })
+}
+
+// ruleAllows says rule, in Oriel's form (Tool, Tool(command) or Tool(prefix:*)), lets tool run command; "" is the
+// session host's to make.
+func ruleAllows(rule, tool, command string) bool {
+	if rule == "" {
+		return true
+	}
+	name, arg, hasArg := strings.Cut(rule, "(")
+	if name != tool {
+		return false
+	}
+	if !hasArg {
+		return true
+	}
+	arg, ok := strings.CutSuffix(arg, ")")
+	if !ok {
+		return false
+	}
+	if prefix, ok := strings.CutSuffix(arg, ":*"); ok {
+		return command == prefix || strings.HasPrefix(command, prefix+" ")
+	}
+	return command == arg
+}
+
+// packText is a pack as a kind's is written: a Claude skill file, frontmatter and all.
+const packText = "---\nname: conformance\ndescription: The conformance suite's pack.\n---\nYou are being tested for conformance.\n"
+
+// pack: the pack's instructions are never the user's message, nor said again when the session resumes.
+func pack(t *testing.T, h Harness) {
+	dir := t.TempDir()
+	withPack := h
+	withPack.Spec = func(t *testing.T, dir string) agent.StartSpec {
+		s := h.Spec(t, dir)
+		s.Pack = agent.Pack{Name: "conformance", Text: packText}
+		s.Prompt = "say hello"
+		return s
+	}
+	s := StartIn(t, withPack, dir, "")
+	s.Reply()
+	id := s.S.ID()
+	if err := s.S.Close(); err != nil {
+		t.Fatal(err)
+	}
+	r := StartIn(t, withPack, dir, id)
+	r.Send("say hello")
+	r.Reply()
+	for _, ev := range append(s.Events, r.Events...) {
+		if m, ok := ev.(agent.Message); ok && m.Role == core.ItemUser &&
+			(strings.Contains(m.Text, "being tested for conformance") || strings.Contains(m.Text, "name: conformance")) {
+			t.Errorf("the pack came as the user's message: %q", m.Text)
+		}
+	}
 }
 
 func describe(evs []agent.Event) string {

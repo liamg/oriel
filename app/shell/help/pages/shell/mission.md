@@ -26,6 +26,12 @@ tasks, context, change and how long it's been at its foot.
 When the agent's last turn left work running that will wake it again (a long test run, a background subagent), the
 card's foot says **+2 in background**; hover it for what each is. The session counts as working until that's done.
 
+## Running {#running}
+
+Processes the last turn left running that won't wake the agent (a dev server in one of Codex's background terminals)
+show as **+1 running**; hover it for their commands. They don't make the session working; the agent console's
+**RUNNING** list stops them.
+
 ## Opening a session {#open}
 
 `⏎`, or a click on a card's name, brings its session to the front, resuming its agent if it was stopped, and puts

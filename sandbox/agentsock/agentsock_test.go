@@ -64,7 +64,7 @@ func TestClientReachesTheGateway(t *testing.T) {
 	if err != nil || json.Unmarshal(raw, &res) != nil || res.Text() != "green" {
 		t.Fatalf("call %s %v", raw, err)
 	}
-	if ok, _, err := c.EgressDecide(ctx, "api.anthropic.com", 443); err != nil || !ok {
+	if ok, _, err := c.EgressDecide(ctx, "github.com", 443); err != nil || !ok {
 		t.Fatalf("decide %v %v", ok, err)
 	}
 	if ok, why, err := c.EgressDecide(ctx, "nowhere.example.com", 443); err != nil || ok || why != "nobody answered the card" {

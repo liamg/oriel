@@ -211,8 +211,11 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 			continue
 		}
 		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out", Time: time.Now(),
-			Text: kit.ProviderName(l.Provider) + " needs you to log in: " + l.Detail + "."}
+			Text: kit.ProviderName(x.h, l.Provider) + " needs you to log in: " + l.Detail + "."}
 		switch {
+		case l.Browser:
+			n.Text += " Log in opens its sign-in in your browser."
+			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login", Args: map[string]any{"provider": l.Provider}}}
 		case l.Terminal != "":
 			n.Text += " Log in opens its terminal with " + l.Terminal + " typed."
 			n.Actions = []core.Action{{Title: "Log in", Command: "agent.login", Args: map[string]any{"provider": l.Provider}}}
@@ -679,13 +682,18 @@ func (x *Sessions) fork(_ context.Context, r registry.ForkRequest) (string, erro
 	return w.Fork(core.SessionID(r.Session), r.Prompt)
 }
 
-// forker is who answers a session's side questions: "claude · fork, no tools".
+// forker is who answers a session's side questions: "claude · fork, no tools"; "" for an agent whose provider
+// says it can't fork without tools (agent.Features), which answers none.
 func (x *Sessions) forker(id string) string {
 	se, ok := x.h.Session(core.SessionID(id))
 	if !ok {
 		return ""
 	}
-	return cmp.Or(se.Snapshot().Agent.Provider, "the agent") + " · fork, no tools"
+	p := se.Snapshot().Agent.Provider
+	if f, known := kit.ProviderFeatures(x.h, p); known && !f.Fork {
+		return ""
+	}
+	return cmp.Or(p, "the agent") + " · fork, no tools"
 }
 
 // startWorkReq is session.start-work's args as the host's request: {clear} and {fresh} (both on unless false),

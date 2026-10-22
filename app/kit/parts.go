@@ -17,16 +17,13 @@ import (
 
 var TMeterContext = theme.Declare("agent.meter.context", "amber")
 
-func ProviderName(p string) string {
-	switch p {
-	case "claude":
-		return "Claude"
-	case "codex":
-		return "Codex"
-	case "":
-		return "Agent"
-	}
-	return strings.ToUpper(p[:1]) + p[1:]
+// ProviderName is what an agent provider is called, as its plugin registered it (registry.AgentProvider).
+func ProviderName(r registry.Contributions, p string) string { return registry.ProviderTitle(r, p) }
+
+// ProviderNameIn is ProviderName from the registry c is drawn with.
+func ProviderNameIn(c *ui.Ctx, p string) string {
+	r, _ := ui.Service[registry.Registry](c)
+	return registry.ProviderTitle(r, p)
 }
 
 // Tokens is a count as the session stats show it: 950, 38k, 1.42M.

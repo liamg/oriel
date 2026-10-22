@@ -160,7 +160,7 @@ clip 44,38 1556x936 r 0
     rect 1540.5469,282 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,299.36523 #4f4a40 Inter 12
     text "sandbox.claude_version" @332,349.93774 #ece6d8 JetBrains Mono 12.5
-    text "The Claude Code version a sandbox runs; empty runs the host's." @332,369.79712 #7c7566 Inter 12.5
+    text "The Claude Code version a container sandbox runs; empty runs the host's." @332,369.79712 #7c7566 Inter 12.5
     text "default" @1202.3906,358.78 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,340 200x30 fill #060606 radius 6
     clip 1324.5469,340 200x30 r 6

@@ -205,3 +205,39 @@ func TestALoginCheckOutlivesAFailedMark(t *testing.T) {
 		t.Fatal("checkLogin is still waiting")
 	}
 }
+
+// A provider that signs in from Oriel says so on its card; StartLogin opens its sign-in, and once it succeeds every
+// card goes and the sessions go on.
+func TestABrowserLoginClearsTheCards(t *testing.T) {
+	r := newRig(t)
+	r.fake.Has = &agent.Features{Login: true}
+	id, a := r.workSession("x")
+	a.WaitSent(t)
+	r.fake.SignIn(false)
+	a.Emit(agent.AuthExpired{Provider: "fake", Detail: "fake is signed out", Shell: "fake login"})
+	ask, _ := loginCard(r.eventually(id, "the login's card", flagged))
+	if !ask.Login.Browser {
+		t.Errorf("login = %+v, want it signed in from Oriel", ask.Login)
+	}
+	if p := r.w.ProviderInfo(context.Background()); !p[0].Has.Login || p[0].Has.Terminal {
+		t.Errorf("the provider has %+v", p[0].Has)
+	}
+	url, err := r.w.StartLogin(context.Background(), "fake")
+	if err != nil || url != agenttest.LoginURL {
+		t.Fatalf("StartLogin = %q, %v", url, err)
+	}
+	r.fake.FinishLogin(nil)
+	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
+	r.signedIn()
+}
+
+// A provider that doesn't sign in from Oriel can't be asked to.
+func TestStartLoginNeedsALoginStarter(t *testing.T) {
+	r := newRig(t)
+	if _, err := r.w.StartLogin(context.Background(), "fake"); err == nil {
+		t.Error("a provider without Login signed in from Oriel")
+	}
+	if _, err := r.w.StartLogin(context.Background(), "nobody"); err == nil {
+		t.Error("no provider signed in")
+	}
+}

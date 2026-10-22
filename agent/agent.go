@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/core"
 )
 
@@ -21,7 +22,6 @@ type Provider interface {
 	Start(ctx context.Context, s StartSpec) (Session, error)
 	Resume(ctx context.Context, id string, s StartSpec) (Session, error)
 	Usage(ctx context.Context) (core.ProviderUsage, error)
-	SandboxCredentials() []Mount
 }
 
 // Logged is a provider that keeps its own log of a session, which the worker's stats read (worker/stats). The
@@ -47,6 +47,106 @@ type Transcript struct {
 type Log struct {
 	Path   string
 	Format string
+}
+
+// Featured is a provider that says what its sessions can do past what every provider's must. One that isn't has
+// none of the Features.
+type Featured interface {
+	Features() Features
+}
+
+// Features are what a provider's sessions can do past Session's least.
+type Features struct {
+	Terminal bool // Session.Terminal is the agent's own terminal, which the user may watch and type in
+	Fork     bool // Fork answers from the session's context with no tools
+	Images   bool // Input.Images reach the agent as images, not as their paths
+	Sandbox  bool // it runs in a sandbox: it's Sandboxed
+	Login    bool // it signs in from Oriel: it's a LoginStarter
+	// StopProcesses says its sessions are ProcessStoppers: what a turn left Running can be stopped.
+	StopProcesses bool
+	// Notes is the file it reads standing instructions from at the root of where it starts ("CLAUDE.md"), which a
+	// workspace's notes are written to; AGENTS.md, which most agents read, if "".
+	Notes string
+}
+
+// FeaturesOf are p's Features.
+func FeaturesOf(p Provider) Features {
+	if f, ok := p.(Featured); ok {
+		return f.Features()
+	}
+	return Features{}
+}
+
+// LoginStarter is a provider that signs in from Oriel: in a browser it opens, with no terminal.
+type LoginStarter interface {
+	// StartLogin begins a sign-in. Its URL is where the user signs in; Done says how it ended.
+	StartLogin(ctx context.Context) (Login, error)
+}
+
+// Login is a sign-in under way.
+type Login struct {
+	URL  string
+	Done <-chan error // nil when it succeeded; closed or sent once
+}
+
+// Sandboxed is a provider whose agent can run in a sandbox: what it needs there past the workspace, which the
+// sandbox gives it wherever the backend puts it (a container, the OS's sandbox).
+type Sandboxed interface {
+	SandboxNeeds(ctx context.Context, at SandboxPlace) (SandboxNeeds, error)
+	// MCPServers are the MCP servers the user installed for it, which a sandbox's gateway carries in their place.
+	MCPServers() []MCPServer
+}
+
+// MCPServer is an MCP server the user installed for a provider.
+type MCPServer struct {
+	Name   string
+	Source string            // where it was found: "user", "plugin:<name>"
+	Config json.RawMessage   // in Claude's mcpServers form: { type, command, args, env, url, headers }
+	Vars   map[string]string // what its ${VAR}s stand for, past the environment
+}
+
+// SandboxPlace is where a sandbox runs a provider's agent.
+type SandboxPlace struct {
+	Root     string   // the workspace
+	Cwd      string   // where the agent starts
+	Dir      string   // the provider's own directory in this sandbox, kept between runs, which the agent may write
+	Home     string   // the agent's $HOME, as the agent sees it
+	Tmp      string   // the sandbox's temp directory on the host, which the session reads
+	OS, Arch string   // what the agent runs on: linux in a container, the host's under the OS's sandbox
+	Shared   bool     // the agent shares the host's filesystem layout and network (the OS's sandbox), not a container's
+	UID      int      // the user the agent runs as
+	StateDir string   // the session's StartSpec.StateDir
+	Environ  []string // the host's environment
+	Cache    string   // a directory the provider may keep downloads in, shared by every sandbox
+	// Report says what a slow step is doing ("Downloading Claude Code 2.1.300"), and why it's slow when that's worth
+	// saying: it happens once.
+	Report func(step, note string)
+	// Env is a host variable as the sandbox passes it on (its env settings): "" for one it doesn't. A provider
+	// reads the credentials it's handed outright here (an API key), which come before the host's login.
+	Env func(name string) string
+}
+
+// SandboxNeeds are what a provider's agent needs in a sandbox. Paths are the host's; a sandbox gives the agent each
+// at the same path unless a Mount says where.
+type SandboxNeeds struct {
+	Bins map[string]string // executables on the agent's PATH by name, each built for SandboxPlace.OS and Arch
+	// Tools are what a container installs for it with mise, as the projects' toolchains are, and puts on its PATH
+	// after theirs: "node@22", "npm:@google/gemini-cli@0.9.0". The OS's sandbox runs the host's.
+	Tools    []string
+	Mounts   []Mount           // host paths the agent sees (Sandbox the path it sees each at; Host's own if "")
+	Env      map[string]string // set for the agent
+	PassEnv  []string          // host variables it inherits by default, as names or NAME_* globs: OPENAI_*
+	SkipEnv  []string          // of those, ones it never inherits by default: a parent session's own
+	URLEnv   []string          // of its variables, the ones holding a URL whose localhost means the host
+	URLs     []string          // endpoints it reaches that its environment doesn't say (its own settings file)
+	Hosts    []string          // what it reaches on the network, allowed by default: api.openai.com, *.chatgpt.com
+	Problems []SandboxProblem  // what stops this one; a blocking one refuses the launch
+}
+
+// SandboxProblem is something stopping a provider's sandboxed agents, with what fixes it.
+type SandboxProblem struct {
+	Code, Message, Fix string
+	Blocking           bool
 }
 
 // Install is what Detect found.
@@ -93,6 +193,11 @@ type StartSpec struct {
 	StateDir string // where the provider may keep files for this session
 	Memory   string // the agent's memory directory, "" for the provider's own
 	NoMCP    bool   // start without the user's MCP servers
+	// NoWeb turns off the agent's own web tools that ask nobody (a search its model's host runs); those its gate
+	// asks about are the caller's to answer.
+	NoWeb bool
+	// Prices are what its turns' tokens are priced with; the vendored snapshot if nil.
+	Prices price.Books
 }
 
 // Policy is how much the agent's own gate asks.
@@ -112,6 +217,10 @@ const HookSocketEnv = "ORIEL_HOOK_SOCK"
 type Sandbox struct {
 	Name       string
 	GatewayMCP string // an MCP config file naming the gateway server
+	// HookSocket is where the agent finds HookSocketEnv's socket inside: a provider that names it in a config the
+	// agent reads (an MCP server's env) names this, and puts its own in the process's environment, which the
+	// sandbox carries in. oriel is on the agent's PATH.
+	HookSocket string
 }
 
 // Pack is a prompt pack: what a kind of session tells its agent (work, plan, review, job).
@@ -195,8 +304,8 @@ type Decision struct {
 type Event interface{ isEvent() }
 
 type (
-	// Ready says the session is up, with the provider's id for it.
-	Ready struct{ ID string }
+	// Ready says the session is up, with the provider's id for it, and the model it runs when it chose one itself.
+	Ready struct{ ID, Model string }
 	// TurnStart begins a turn.
 	TurnStart struct{}
 	// Message is the agent's prose, or the user's as the agent got it. Partial while it streams.
@@ -243,6 +352,9 @@ type (
 		// Background is the work the turn left running that will wake the agent again (shells, subagents), by what
 		// each is; while there is some, the work isn't done.
 		Background []core.BackgroundTask
+		// Running is what the turn left running that won't wake the agent: processes the user may want to stop (a
+		// dev server, a watcher), by ID when the session is a ProcessStopper.
+		Running []core.BackgroundTask
 	}
 	// Failure is a turn that failed after the provider's own retries.
 	Failure struct {

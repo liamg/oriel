@@ -21,12 +21,14 @@ import (
 )
 
 type Config struct {
-	Store      core.Store      // the materialised state, shared with the session host; Host's, else in-memory, if nil
-	Registry   uireg.Registry  // a fresh one if nil
-	Plugins    []plugin.Plugin // activated in order, after the built-ins
-	Logs       *Logs           // where log records go; a ring in memory if nil
-	ConfigDir  string          // ~/.config/oriel unless set; user themes live in its themes/
-	CrashDir   string          // crash reports are written to and offered from here; none if ""
+	Store    core.Store      // the materialised state, shared with the session host; Host's, else in-memory, if nil
+	Registry uireg.Registry  // a fresh one if nil
+	Plugins  []plugin.Plugin // activated in order, after the built-ins
+	// Agents are the agent providers' plugins (app/agents), activated before every other feature; none if nil.
+	Agents     []plugin.Plugin
+	Logs       *Logs  // where log records go; a ring in memory if nil
+	ConfigDir  string // ~/.config/oriel unless set; user themes live in its themes/
+	CrashDir   string // crash reports are written to and offered from here; none if ""
 	Version    string
 	Desktop    Desktop  // the clipboard and the browser; the window's, or the OS's, if nil
 	Debug      bool     // oriel --debug: the frame-time overlay

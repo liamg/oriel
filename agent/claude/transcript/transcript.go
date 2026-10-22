@@ -248,6 +248,7 @@ type Reader struct {
 	Path   string
 	Offset int64 // always at a line boundary
 	Usage  Usage
+	Prices price.Books // the snapshot's if nil
 
 	calls   map[string]call // tool_use id → the call, for its result's diff
 	lastMsg string          // the message whose usage was counted last
@@ -357,13 +358,17 @@ func (r *Reader) add(g usage, sign int64) {
 	u.CacheHour += sign * g.CacheCreation.Hour
 	u.CacheRead += sign * g.CacheRead
 	u.Output += sign * g.Output
-	u.Cost += float64(sign) * price.Tokens{
+	if r.Prices == nil {
+		r.Prices = price.Default()
+	}
+	t := price.Tokens{
 		Input:        g.Input,
 		CacheWrite5m: g.CacheCreate - g.CacheCreation.Hour,
 		CacheWrite1h: g.CacheCreation.Hour,
 		CacheRead:    g.CacheRead,
 		Output:       g.Output,
-	}.Cost(price.RateFor(u.Model, g.Speed == "fast"))
+	}
+	u.Cost += float64(sign) * t.Cost(r.Prices.Book().RateFor(u.Model, g.Speed == "fast", t.Prompt()))
 }
 
 // entries turns one record into its blocks.

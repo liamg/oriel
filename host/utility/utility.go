@@ -33,6 +33,8 @@ type UtilitySpec struct {
 	Prompt   string `json:"prompt"`             // the first turn
 	// Allow are the provider's own tools it may use without asking: WebSearch, WebFetch.
 	Allow []string `json:"allow,omitempty"`
+	// Web lets it reach the web with the provider's own tools for that (agent.WebTooled) without asking.
+	Web bool `json:"web,omitempty"`
 }
 
 // UtilityEvent is what a utility agent did.
@@ -109,6 +111,7 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 		Prompt:   spec.Prompt,
 		Tools:    x.deps.Tools(hostcore.ToolsReq{Agent: spec.Name}),
 		StateDir: filepath.Join(dir, "runs", id),
+		NoWeb:    !spec.Web,
 		Env:      []string{"ORIEL_UTILITY=" + spec.Name}})
 	if err != nil {
 		return err
@@ -122,6 +125,9 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 		delete(x.runs, id)
 		x.mu.Unlock()
 	}()
+	if spec.Web {
+		spec.Allow = append(slices.Clone(spec.Allow), agent.WebToolsOf(p)...)
+	}
 	if err := send(UtilityEvent{Type: "ready", ID: id, Provider: p.ID(), Model: model}); err != nil {
 		return err
 	}

@@ -55,10 +55,10 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	s.TypeInto("Prompt", "Bump every dependency in pricing that's behind.")
 	s.Click(apptest.Centre(s.Within("New job", "Save and run").Bounds), 0)
 	var se core.SessionState
-	s.Until("the run", func() bool {
+	s.Until("the run, with its prompt's thread", func() bool {
 		var ok bool
 		se, ok = jobRun(s.Store().State(), "sweep-stale-deps")
-		return ok
+		return ok && len(se.Threads) > 0
 	})
 	s.Until("the dialog closed", func() bool { _, _, open := x.Form(); return !open })
 	if se.Kind != core.KindJob || se.Agent.Provider != "fake" {

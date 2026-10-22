@@ -27,6 +27,13 @@ subagent, a monitor), the header says **working in the background** and the end 
 kind and what it's for. The threads that turn was handling stay busy and the session working until a turn ends with
 nothing left running.
 
+## Running {#running}
+
+What the agent's last turn left running that won't wake it (a dev server, a watcher: Codex's background terminals)
+is listed under **RUNNING** at the end of the transcript: each command, with its pid, CPU and memory when the
+provider says them. It doesn't keep the session working. **Stop** ends one, when the agent's provider can stop them
+(`agent.process.stop`). The list is what the last turn's end found running; it's cleared when the agent stops.
+
 ## Fork
 
 Asks the agent a side question ("btw"), answered from its context by a fork that has no tools and doesn't join the
@@ -46,7 +53,8 @@ the session says why.
 ## Raw terminal
 
 Opens the agent's own terminal as a terminal tab: what the CLI shows, and what you type
-goes to it. While the agent is still starting there is no terminal yet, and the tab says so.
+goes to it. While the agent is still starting there is no terminal yet, and the tab says so. An agent that has no
+terminal of its own (Codex runs as a server) has no **Raw terminal** button.
 
 ## Transcript
 

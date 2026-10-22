@@ -66,8 +66,13 @@ Oriel needs glibc 2.35 or later (Ubuntu 22.04, Debian 12, Fedora 36 and newer), 
 ## Prerequisites
 
 - `git`
-- The [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), installed and logged in. Oriel runs Claude
-  through it, on your own subscription.
+- An agent, installed and logged in, on your own subscription:
+  - the [`claude` CLI](https://docs.anthropic.com/en/docs/claude-code), which Oriel runs Claude through, and/or
+  - the [`codex` CLI](https://github.com/openai/codex), signed in with ChatGPT.
+
+  Any other agent comes in as a plugin: one that speaks the
+  [Agent Client Protocol](https://agentclientprotocol.com) (Gemini CLI, goose, opencode…) in a few lines of Lua,
+  or one of your own, a local model's included, over [Oriel's agent protocol](docs/agent-protocol.md).
 - Optional:
   - `gh`, logged in with `gh auth login`, to open and review pull requests
   - Docker or Podman, for sandboxed sessions
@@ -109,7 +114,6 @@ runs it from the next restart. Releases are signed, and a new version that fails
 
 - On macOS Oriel is self-signed, not notarised by Apple, hence the one-time `xattr` step.
 - On Linux there's no package (deb, rpm, Flatpak): just the archive above.
-- Claude is the main agent. Codex support is partial.
 - No Windows build.
 
 ## Reporting bugs

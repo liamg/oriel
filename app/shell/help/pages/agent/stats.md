@@ -7,7 +7,11 @@ related: [agent/usage, agent/console]
 # Stats
 
 What the agents cost and did, from their own transcripts. Every cost is **est.**: tokens are counted, and the cost is
-tokens × the price table, so a price change re-costs history.
+tokens × each model's list prices (input, output, cache reads and writes, fast mode and long prompts where they cost
+more), so a price change re-costs history. The prices are [cost.dev](https://cost.dev)'s: Oriel ships a copy, fetches
+the list again when it starts and once a day, and keeps the latest in `~/.oriel/prices.json`; offline, it uses the
+last one it had. Resting on **COST · EST.** says when cost.dev last updated them. A model the list doesn't price
+(one retired before it) costs nothing here rather than a guess.
 
 ## Global stats {#page}
 

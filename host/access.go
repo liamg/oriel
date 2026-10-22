@@ -23,11 +23,13 @@ type Access interface {
 	End(ctx context.Context, r EndReq) error
 	Configure(ctx context.Context, r ConfigureReq) error
 	Interrupt(id core.SessionID) error
+	StopProcess(ctx context.Context, id core.SessionID, process string) error
 	Rename(id core.SessionID, name string) error
 	Fork(id core.SessionID, prompt string) (string, error)
 	AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) error
 	Send(r SendReq) error
 	Answer(r AnswerReq) error
+	StartLogin(ctx context.Context, provider string) (string, error)
 	Ask(ctx context.Context, r AskReq) (Verdict, error)
 	Comment(ctx context.Context, r CommentReq) (core.ThreadID, error)
 	SetThread(r ThreadReq) error

@@ -161,6 +161,10 @@ type Options struct {
 	// Queue makes a send return once it's queued, rather than once it's written, so it never waits on the other
 	// side reading. Either way messages are written in the order sent.
 	Queue bool
+	// InOrder hands a call its result only once the handlers have seen what arrived before it, for a protocol whose
+	// notifications lead up to a result (ACP's session/update before session/prompt's answer). A handler that
+	// waits on a call of its own must then do so off the handler's goroutine.
+	InOrder bool
 }
 
 // Conn is one connection. It is safe for concurrent use. What it sends is written in order by a goroutine of its own.
@@ -192,8 +196,9 @@ type Conn struct {
 }
 
 type inbound struct {
-	m *Message
-	r *Request // nil for a notification
+	m        *Message
+	r        *Request      // nil for a notification
+	response chan *Message // a result to hand over in order (Options.InOrder)
 }
 
 // outgoing is a message queued to send, with its params still to marshal when they're given as a value.
@@ -304,9 +309,14 @@ func (c *Conn) receive(body []byte) {
 		ch := c.pending[key]
 		delete(c.pending, key)
 		c.mu.Unlock()
-		if ch != nil {
-			ch <- m
+		if ch == nil {
+			return
 		}
+		if c.opt.InOrder {
+			c.inbox <- inbound{m: m, response: ch}
+			return
+		}
+		ch <- m
 	case len(m.ID) == 0:
 		if c.opt.Cancel != nil && m.Method == c.opt.Cancel.Method {
 			c.cancelled(m.Params)
@@ -380,6 +390,10 @@ func (c *Conn) dispatch() {
 }
 
 func (c *Conn) handle(in inbound) {
+	if in.response != nil {
+		in.response <- in.m
+		return
+	}
 	if in.r == nil {
 		if c.h.Notify != nil {
 			c.h.Notify(in.m.Method, in.m.Params)

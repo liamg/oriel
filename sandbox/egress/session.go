@@ -55,6 +55,8 @@ type Session struct {
 	Settings func() [][]Rule
 	// Env are the endpoints the sandbox's environment points at (EnvRules).
 	Env func() []Rule
+	// Agent are what the agent's provider reaches (HostRules of agent.SandboxNeeds.Hosts); none if nil.
+	Agent func() []Rule
 	// Approver asks the user; nil refuses what no rule covers.
 	Approver Approver
 	// Open allows every destination, private addresses too, asking nobody: filtering is off, and the session only
@@ -161,9 +163,17 @@ func (s *Session) env() []Rule {
 	return withSource("the sandbox's environment", s.Env())
 }
 
+func (s *Session) agent() []Rule {
+	if s.Agent == nil {
+		return nil
+	}
+	return withSource("the agent's provider", s.Agent())
+}
+
 // Levels are the rules in force: the session's grants; the projects'
 // settings, then the user's; then the model and telemetry endpoints the
-// sandbox was given and the preset allowlist.
+// sandbox was given, what the agent's provider reaches and the preset
+// allowlist.
 func (s *Session) Levels() Levels {
 	var settings [][]Rule
 	if s.Settings != nil {
@@ -172,7 +182,7 @@ func (s *Session) Levels() Levels {
 	return Levels{
 		Session:  withSource("this session", s.Grants()),
 		Settings: settings,
-		Builtin:  append(s.env(), withSource("built-in list", DefaultAllow)...),
+		Builtin:  slices.Concat(s.env(), s.agent(), withSource("built-in list", DefaultAllow)),
 	}
 }
 

@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
@@ -30,6 +31,14 @@ func (w *Host) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
 func (w *Host) ReadUsage(ctx context.Context) (err error) {
 	defer w.recover("ReadUsage", &err)
 	return w.stats.ReadUsage(ctx)
+}
+
+// RefreshPrices keeps the price book fresh until ctx ends: cost.dev's list now, then once a day.
+func (w *Host) RefreshPrices(ctx context.Context) {
+	defer w.recover("RefreshPrices", nil)
+	t := time.NewTicker(10 * time.Minute)
+	defer t.Stop()
+	w.prices.Run(ctx, t.C)
 }
 
 // Search finds text in sessions' threads and transcripts: archived ones keep theirs, so they stay searchable.

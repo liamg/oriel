@@ -152,18 +152,19 @@ func hostScore(r Rule, host string) int {
 	return -1
 }
 
-// DefaultAllow is the preset allowlist.
+// HostRules allow hosts on 443: what an agent's provider says it reaches.
+func HostRules(hosts []string) []Rule {
+	rules := make([]Rule, len(hosts))
+	for i, h := range hosts {
+		rules[i] = Rule{Host: h, Port: 443, Allow: true}
+	}
+	return rules
+}
+
+// DefaultAllow is the preset allowlist: the toolchains' registries. What an agent itself reaches its provider
+// says (agent.SandboxNeeds.Hosts).
 var DefaultAllow = func() []Rule {
 	hosts := []string{
-		"api.anthropic.com",
-		"claude.ai",
-		"*.claude.ai",
-		"statsig.anthropic.com",
-		// Claude Code refreshes its login here; blocked, every request fails
-		// once the token expires.
-		"platform.claude.com",
-		"console.anthropic.com",
-		"mcp-proxy.anthropic.com",
 		"proxy.golang.org",
 		"sum.golang.org",
 		"storage.googleapis.com",
@@ -181,9 +182,5 @@ var DefaultAllow = func() []Rule {
 		"release-assets.githubusercontent.com",
 		"raw.githubusercontent.com",
 	}
-	rules := make([]Rule, len(hosts))
-	for i, h := range hosts {
-		rules[i] = Rule{Host: h, Port: 443, Allow: true}
-	}
-	return rules
+	return HostRules(hosts)
 }()

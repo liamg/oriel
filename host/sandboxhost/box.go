@@ -110,6 +110,10 @@ type Box struct {
 	approve hostcore.Approve
 	cfg     sandbox.Config
 	backend sandbox.Backend
+	// provider names the agent's provider, agent what says what it needs here (nil: nothing past the workspace).
+	provider string
+	agent    agent.Sandboxed
+	stateDir string
 
 	egress  *egress.Session
 	gateway *gateway.Gateway
@@ -121,6 +125,7 @@ type Box struct {
 	served     sync.WaitGroup
 	launched   bool
 	hook       string // the provider's hook socket on the host
+	lastNeeds  agent.SandboxNeeds
 	netShown   map[string]bool
 	mu         sync.Mutex
 	grantsMu   sync.Mutex // one change to the grants file at a time
@@ -129,7 +134,7 @@ type Box struct {
 
 // Open readies the sandbox for a session's workspace: its record and manifest, the egress session, the gateway,
 // the ssh-agent and the session socket. The backend confines the agent when it starts (Exec).
-func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostcore.Approve) (hostcore.Sandbox, error) {
+func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostcore.Approve, a hostcore.SandboxAgent) (hostcore.Sandbox, error) {
 	d, ok := s.host()
 	if !ok {
 		return nil, errors.New("the sandbox factory has no session host")
@@ -155,14 +160,19 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 	if err != nil {
 		return nil, err
 	}
-	b := &Box{f: s, d: d, id: se.ID, root: root, approve: approve, cfg: cfg, backend: backend}
+	b := &Box{f: s, d: d, id: se.ID, root: root, approve: approve, cfg: cfg, backend: backend, stateDir: a.StateDir}
+	if a.Provider != nil {
+		b.provider = a.Provider.ID()
+		b.agent, _ = a.Provider.(agent.Sandboxed)
+	}
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 	b.egress = &egress.Session{
 		GrantsPath: sandbox.EgressGrantsPath(root),
 		Settings:   b.egressSettings,
 		Env: func() []egress.Rule {
-			return egress.EnvRules(sandbox.EndpointEnv(os.Environ(), cfg.Env, sandbox.ClaudeSettings()))
+			return egress.EnvRules(sandbox.EndpointEnv(os.Environ(), cfg.Env, b.needs()))
 		},
+		Agent:    func() []egress.Rule { return egress.HostRules(b.needs().Hosts) },
 		Approver: b,
 		Open:     cfg.NoEgressProxy,
 		Always:   alwaysEgress,
@@ -171,8 +181,11 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 		},
 		Failed: b.netFailed,
 	}
-	home, _ := os.UserHomeDir()
-	up := &gateway.Upstreams{Servers: gateway.Discover(home, cfg.Servers, cfg.Hidden)}
+	var installed []agent.MCPServer
+	if b.agent != nil {
+		installed = b.agent.MCPServers()
+	}
+	up := &gateway.Upstreams{Servers: gateway.Discover(installed, cfg.Servers, cfg.Hidden)}
 	b.gateway = &gateway.Gateway{
 		Builtins: gateway.Builtins(gatewayHost{b}),
 		Up:       up,
@@ -220,7 +233,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 		b.Close()
 		return nil, err
 	}
-	b.mcp = filepath.Join(sandbox.ClaudeDir(root), "oriel-gw.json")
+	b.mcp = filepath.Join(sandbox.AgentDir(root, cmp.Or(b.provider, "agent")), "oriel-gw.json")
 	if err := writeGatewayMCP(b.mcp); err != nil {
 		b.Close()
 		return nil, err
@@ -325,7 +338,8 @@ func writeGatewayMCP(path string) error {
 }
 
 func (b *Box) Spec() *agent.Sandbox {
-	return &agent.Sandbox{Name: b.backend.Name() + ":" + sandbox.Key(b.root), GatewayMCP: b.mcp}
+	return &agent.Sandbox{Name: b.backend.Name() + ":" + sandbox.Key(b.root), GatewayMCP: b.mcp,
+		HookSocket: filepath.Join(b.backend.AgentRunDir(b.root), sandbox.HookSocket)}
 }
 
 func (b *Box) Exec() agent.Exec { return sandboxExec{b} }
@@ -554,7 +568,8 @@ func (b *Box) wrap(ctx context.Context, cmd *exec.Cmd) (*exec.Cmd, error) {
 	if cwd == "" {
 		cwd = b.root
 	}
-	o := sandbox.LaunchOptions{ModDir: pluginDir(argv), Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg}
+	o := sandbox.LaunchOptions{Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg, Provider: b.provider, Agent: b.agent,
+		StateDir: b.stateDir}
 	if hook := o.Extra[agent.HookSocketEnv]; hook != "" {
 		b.mu.Lock()
 		b.hook = hook
@@ -566,20 +581,18 @@ func (b *Box) wrap(ctx context.Context, cmd *exec.Cmd) (*exec.Cmd, error) {
 		return nil, fmt.Errorf("sandbox: %w", err)
 	}
 	b.mu.Lock()
-	b.launched = true
+	b.launched, b.lastNeeds = true, c.Needs
 	b.mu.Unlock()
 	out := exec.Command(c.Argv[0], c.Argv[1:]...)
-	out.Env, out.Dir = c.Env, c.Dir
+	out.Env, out.Dir, out.Stderr = c.Env, c.Dir, cmd.Stderr
 	return out, nil
 }
 
-func pluginDir(argv []string) string {
-	for i, a := range argv {
-		if a == "--plugin-dir" && i+1 < len(argv) {
-			return argv[i+1]
-		}
-	}
-	return ""
+// needs are what the agent's provider said it needs at its last launch.
+func (b *Box) needs() agent.SandboxNeeds {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.lastNeeds
 }
 
 // extraEnv is what a provider added to the environment: the sandbox gets that, not the host's own.

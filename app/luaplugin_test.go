@@ -59,6 +59,8 @@ own = oriel.read("notes.txt")`); err != "" {
 		`oriel.agent.pack("p", { prompt = "x" })`:                             `"agent.prompt"`,
 		`oriel.thread.list()`:                                                 `"agent.read"`,
 		`oriel.session.kind("k", {})`:                                         `"session.control"`,
+		`oriel.agent.provider{ name = "x", program = "bin/x" }`:               `"agent.provider"`,
+		`oriel.agent.bridge{ name = "x", program = "bin/x" }`:                 `"agent.provider"`,
 		`oriel.lsp.server{ name = "x", languages = {"go"}, cmd = {"gopls"} }`: `"exec"`,
 	} {
 		err := luaErr(t, vm, src)

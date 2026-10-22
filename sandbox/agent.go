@@ -1,6 +1,8 @@
 package sandbox
 
 import (
+	"cmp"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,8 +11,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox/egress"
 )
 
@@ -31,31 +33,20 @@ func GoCache() string { return filepath.Join(Base(), "cache", "go") }
 // HomeDir is root's sandbox home: the agent's $HOME.
 func HomeDir(root string) string { return filepath.Join(Dir(root), "home") }
 
-// Binds are the host paths every backend gives an agent in cwd: the
-// workspace, its Claude config, transcripts and attachments, the user's
-// read-only Claude files, the mod, each project's git directory and its memory. The Go
-// cache, home, temp and run dirs are the backend's to place.
-func Binds(root, cwd, modDir string) ([]Bind, error) {
-	claudeDir := ClaudeDir(root)
-	for _, d := range []string{HomeDir(root), claudeDir, RunDir(root), TmpDir(root), GoCache()} {
+// Binds are the host paths every backend gives an agent in cwd: the workspace, its attachments, each project's git
+// directory and its memory, and what the agent's provider needs (n.Mounts). The Go cache, home, temp and run dirs
+// are the backend's to place, and so are n's binaries.
+func Binds(root, cwd string, n agent.SandboxNeeds) ([]Bind, error) {
+	for _, d := range []string{HomeDir(root), RunDir(root), TmpDir(root), GoCache()} {
 		if err := os.MkdirAll(d, 0o700); err != nil {
 			return nil, err
 		}
 	}
 	same := func(p string, ro bool) Bind { return Bind{Host: p, Agent: p, ReadOnly: ro} }
-	b := []Bind{same(root, false), same(claudeDir, false)}
-	if modDir != "" {
-		b = append(b, same(modDir, true))
+	b := []Bind{same(root, false)}
+	for _, m := range n.Mounts {
+		b = append(b, Bind{Host: m.Host, Agent: cmp.Or(m.Sandbox, m.Host), ReadOnly: m.ReadOnly})
 	}
-	hostClaude := HostClaudeDir()
-	for _, f := range UserMounts(hostClaude) {
-		b = append(b, Bind{Host: filepath.Join(hostClaude, f), Agent: filepath.Join(claudeDir, f), ReadOnly: true})
-	}
-	transcripts := filepath.Join(hostClaude, "projects", ProjectDirName(cwd))
-	if err := os.MkdirAll(transcripts, 0o700); err != nil {
-		return nil, err
-	}
-	b = append(b, Bind{Host: transcripts, Agent: filepath.Join(claudeDir, "projects", ProjectDirName(cwd))})
 	// Pasted images: comments hand the agent their host paths.
 	if state, ok := StateDir(root); ok {
 		att := filepath.Join(state, "attachments")
@@ -145,12 +136,6 @@ var (
 	readOnlyGitFiles = []string{"config.worktree"}
 )
 
-// HostClaudeDir is the host's ~/.claude.
-func HostClaudeDir() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".claude")
-}
-
 // ProjectDirName is Claude Code's name for a cwd's transcript directory.
 func ProjectDirName(dir string) string {
 	var b strings.Builder
@@ -180,19 +165,50 @@ func CurrentIdentity() (Identity, error) {
 	return id, nil
 }
 
-// Prepare writes what an agent in cwd reads before it starts: its Claude
-// settings and sign-in, and its home's ssh config, shims and git config.
-func Prepare(root, cwd string, o LaunchOptions) error {
-	if err := PrepareClaude(root, cwd, ClaudeSettings(), o.ClaudeDefaults); err != nil {
-		return err
+// Needs are what the agent of o's provider needs in root's sandbox, at the place the backend puts it (OS, Arch,
+// Home, Shared, UID); the rest of the place is the sandbox's. A blocking problem refuses the launch.
+func Needs(ctx context.Context, root, cwd string, o LaunchOptions, at agent.SandboxPlace) (agent.SandboxNeeds, error) {
+	if o.Agent == nil {
+		return agent.SandboxNeeds{}, nil
 	}
-	if !OwnAuth(o.Environ, o.Config) {
-		if login, ok := HostLogin(); ok {
-			if err := SyncLogin(root, login); err != nil {
-				return err
-			}
+	at.Root, at.Cwd, at.Tmp, at.StateDir, at.Environ = root, cwd, TmpDir(root), o.StateDir, o.Environ
+	at.Dir, at.Cache = AgentDir(root, o.Provider), AgentCache(o.Provider)
+	at.Report = func(step, note string) { Report(ctx, Progress{Step: step, Note: note}) }
+	at.Env = func(name string) string { return passed(o.Environ, o.Config.Env, name) }
+	for _, d := range []string{at.Dir, at.Cache} {
+		if err := os.MkdirAll(d, 0o700); err != nil {
+			return agent.SandboxNeeds{}, err
 		}
 	}
+	n, err := o.Agent.SandboxNeeds(ctx, at)
+	if err != nil {
+		return n, err
+	}
+	n.Mounts = append([]agent.Mount{{Host: at.Dir}}, n.Mounts...)
+	for _, p := range n.Problems {
+		if p.Blocking {
+			return n, fmt.Errorf("%s: %s", p.Message, p.Fix)
+		}
+	}
+	return n, nil
+}
+
+// passed is name's value in environ when a sandbox would pass it on: always with no env settings, else when they
+// name it.
+func passed(environ, patterns []string, name string) string {
+	if patterns != nil && !matchAny(patterns, name) {
+		return ""
+	}
+	for _, kv := range environ {
+		if k, v, ok := strings.Cut(kv, "="); ok && k == name {
+			return v
+		}
+	}
+	return ""
+}
+
+// Prepare writes what an agent in root reads before it starts: its home's ssh config, shims and git config.
+func Prepare(root string) error {
 	home := HomeDir(root)
 	if err := writeSSH(filepath.Join(home, ".ssh")); err != nil {
 		return err
@@ -200,27 +216,28 @@ func Prepare(root, cwd string, o LaunchOptions) error {
 	return writeShims(home)
 }
 
-// AgentEnv is the environment every backend gives its agent: the host's
-// allowlisted variables, the session's, o.Extra and a Claude token, over
-// at, the backend's own places (HOME, PATH, the sockets). With rewrite,
-// localhost endpoints point at HostGateway.
-func AgentEnv(root string, o LaunchOptions, rewrite bool, at map[string]string) map[string]string {
-	env := HostEnv(o.Environ, o.Config.Env)
+// AgentEnv is the environment every backend gives its agent: the host's allowlisted variables (the env settings,
+// else the defaults and what n passes), n's own and o.Extra, over at, the backend's own places (HOME, PATH, the
+// sockets). With rewrite, localhost endpoints point at HostGateway.
+func AgentEnv(root string, o LaunchOptions, n agent.SandboxNeeds, rewrite bool, at map[string]string) map[string]string {
+	env := HostEnv(o.Environ, o.Config.Env, n)
 	if rewrite {
-		env = FilterEnv(o.Environ, o.Config.Env)
+		env = FilterEnv(o.Environ, o.Config.Env, n)
 	}
 	rec, _ := Load(root)
 	for k, v := range map[string]string{
-		"SHELL":             "/bin/bash",
-		"LANG":              "C.UTF-8",
-		"TERM":              "xterm-256color",
-		"COLORTERM":         "truecolor",
-		"CLAUDE_CONFIG_DIR": ClaudeDir(root),
-		"ORIEL_TOKEN":       rec.AgentToken,
-		"ORIEL_SANDBOX":     "1",
-		"IS_SANDBOX":        "1",
-		"MCP_TOOL_TIMEOUT":  strconv.Itoa(approvalMillis(o.Config)),
+		"SHELL":            "/bin/bash",
+		"LANG":             "C.UTF-8",
+		"TERM":             "xterm-256color",
+		"COLORTERM":        "truecolor",
+		"ORIEL_TOKEN":      rec.AgentToken,
+		"ORIEL_SANDBOX":    "1",
+		"IS_SANDBOX":       "1",
+		"MCP_TOOL_TIMEOUT": strconv.Itoa(approvalMillis(o.Config)),
 	} {
+		env[k] = v
+	}
+	for k, v := range n.Env {
 		env[k] = v
 	}
 	for k, v := range at {
@@ -228,13 +245,6 @@ func AgentEnv(root string, o LaunchOptions, rewrite bool, at map[string]string) 
 	}
 	for k, v := range o.Extra {
 		env[k] = v
-	}
-	if _, keyed := env["ANTHROPIC_API_KEY"]; !keyed {
-		if _, authed := env["ANTHROPIC_AUTH_TOKEN"]; !authed {
-			if tok := ClaudeToken(); tok != "" {
-				env["CLAUDE_CODE_OAUTH_TOKEN"] = tok
-			}
-		}
 	}
 	return env
 }
@@ -258,45 +268,6 @@ func HostPorts(env map[string]string) []int {
 	}
 	slices.Sort(out)
 	return out
-}
-
-// OwnAuth reports credentials a sandbox is handed outright, which come before
-// the host's login: a setup token, an API key or a key helper.
-func OwnAuth(environ []string, cfg Config) bool {
-	if ClaudeToken() != "" {
-		return true
-	}
-	env := HostEnv(environ, cfg.Env)
-	if env["ANTHROPIC_API_KEY"] != "" || env["ANTHROPIC_AUTH_TOKEN"] != "" {
-		return true
-	}
-	helper, _ := ClaudeSettings()["apiKeyHelper"].(string)
-	return strings.TrimSpace(helper) != ""
-}
-
-// LoginProblems are what stops a sandboxed agent signing in to Claude.
-func LoginProblems(cfg Config) []Problem {
-	if OwnAuth(os.Environ(), cfg) {
-		if age, ok := TokenAge(); ok && age > 330*24*time.Hour {
-			return []Problem{{Code: "claude-token-expiring",
-				Message: "The sandbox's Claude token is nearly a year old and will expire soon",
-				Fix:     "Run `claude setup-token` again and save the new token, or clear it with `oriel sandbox token --clear` to use this machine's own login."}}
-		}
-		return nil
-	}
-	login, ok := HostLogin()
-	if !ok {
-		return []Problem{{Code: "claude-token-missing", Blocking: true,
-			Message: "Sandboxed agents have no way to sign in to Claude",
-			Fix:     "Sign in with `claude` on this machine; sandboxes share that login."}}
-	}
-	SyncLogins(login)
-	if time.Until(login.Expiry()) <= 0 {
-		return []Problem{{Code: "claude-login-stale",
-			Message: "This machine's Claude login needs refreshing before sandboxed agents can use it",
-			Fix:     "Run `claude` on this machine once; sandboxes pick the fresh login up within a minute."}}
-	}
-	return nil
 }
 
 const sshMarker = "# written by oriel"

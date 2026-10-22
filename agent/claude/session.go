@@ -17,6 +17,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/claude/transcript"
+	"github.com/liamg/oriel/agent/eventq"
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/core"
 )
@@ -26,6 +27,7 @@ const waitPoll = 45 * time.Second
 
 // session is one interactive claude in a PTY, driven through the mod.
 type session struct {
+	prices price.Books
 	usage  *usageBook // its provider's
 	spec   agent.StartSpec
 	ctx    context.Context
@@ -36,7 +38,7 @@ type session struct {
 	dir    string // the socket's directory
 	temp   string // a state directory made for this session, removed on Close
 	tail   *tailer
-	events *queue
+	events *eventq.Queue
 	done   chan struct{} // closed once the process has exited
 
 	mu      sync.Mutex
@@ -61,7 +63,7 @@ func (s *session) ID() string {
 	return s.id
 }
 
-func (s *session) Events() <-chan agent.Event { return s.events.out }
+func (s *session) Events() <-chan agent.Event { return s.events.Out() }
 func (s *session) Terminal() agent.Terminal   { return s.term }
 
 // queueCmd hands the mod something to do at its next wait.
@@ -190,9 +192,9 @@ func (s *session) run() {
 	if err != nil {
 		ev.Err = err.Error()
 	}
-	s.events.push(ev)
+	s.events.Push(ev)
 	close(s.done)
-	s.events.close()
+	s.events.Close()
 }
 
 // push says ev, with the account a login event is about.
@@ -211,7 +213,7 @@ func (s *session) push(ev agent.Event) {
 		s.mu.Unlock()
 		ev = e
 	}
-	s.events.push(ev)
+	s.events.Push(ev)
 }
 
 // accountEnv is the environment claude signs in from: the host's for a sandbox, which signs in as the host does.
@@ -476,7 +478,7 @@ func (s *session) event(in eventIn) {
 		for _, t := range in.Background {
 			bg = append(bg, core.BackgroundTask{Kind: t.Type, Description: cmp.Or(t.Description, t.Command, t.Type)})
 		}
-		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage()), Background: bg})
+		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage(), s.prices.Book()), Background: bg})
 		s.planUsage(in.RateLimits)
 	case "usage":
 		s.planUsage(in.RateLimits)
@@ -521,7 +523,7 @@ func retryable(kind string) bool {
 }
 
 // turnUsageOf is what a turn used: the hook's own count when it has one, else the log's since the turn started.
-func turnUsageOf(in eventIn, base, now transcript.Usage) agent.Usage {
+func turnUsageOf(in eventIn, base, now transcript.Usage, prices *price.Book) agent.Usage {
 	u := agent.Usage{
 		Input:      now.Input - base.Input,
 		Output:     now.Output - base.Output,
@@ -538,8 +540,12 @@ func turnUsageOf(in eventIn, base, now transcript.Usage) agent.Usage {
 		if model == "" {
 			model = now.Model
 		}
+		var prompt int64
+		if c := in.Context; c != nil {
+			prompt = c.Tokens
+		}
 		u.Cost = price.Tokens{Input: t.Input, CacheWrite5m: t.CacheCreate, CacheRead: t.CacheRead, Output: t.Output}.
-			Cost(price.RateFor(model, false))
+			Cost(prices.RateFor(model, false, prompt))
 	}
 	if c := in.Context; c != nil && c.Window > 0 {
 		u.Context, u.ContextMax = int(c.Tokens), int(c.Window)
@@ -656,74 +662,6 @@ func rule(suggestions json.RawMessage) string {
 		}
 	}
 	return strings.Join(out, ", ")
-}
-
-// queue is an unbounded event queue in front of the Events channel, so nothing the session does waits on a reader.
-type queue struct {
-	mu     sync.Mutex
-	items  []agent.Event
-	signal chan struct{}
-	closed bool
-	out    chan agent.Event
-	stop   chan struct{}
-}
-
-func newQueue() *queue {
-	q := &queue{signal: make(chan struct{}, 1), out: make(chan agent.Event, 64), stop: make(chan struct{})}
-	go q.pump()
-	return q
-}
-
-func (q *queue) push(ev agent.Event) {
-	q.mu.Lock()
-	if !q.closed {
-		q.items = append(q.items, ev)
-	}
-	q.mu.Unlock()
-	select {
-	case q.signal <- struct{}{}:
-	default:
-	}
-}
-
-// close ends the channel once what's queued is delivered, or dropped if nobody is reading.
-func (q *queue) close() {
-	q.mu.Lock()
-	q.closed = true
-	q.mu.Unlock()
-	select {
-	case q.signal <- struct{}{}:
-	default:
-	}
-}
-
-func (q *queue) pump() {
-	for range q.signal {
-		for {
-			q.mu.Lock()
-			if len(q.items) == 0 {
-				closed := q.closed
-				q.mu.Unlock()
-				if closed {
-					close(q.out)
-					return
-				}
-				break
-			}
-			ev := q.items[0]
-			q.items = q.items[1:]
-			closed := q.closed
-			q.mu.Unlock()
-			if closed {
-				select {
-				case q.out <- ev:
-				case <-time.After(time.Second):
-				}
-				continue
-			}
-			q.out <- ev
-		}
-	}
 }
 
 // fromEntry is a log entry as an event.

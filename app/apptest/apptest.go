@@ -7,6 +7,8 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/app/agents"
 	"github.com/liamg/oriel/tools/perf"
 	"image/png"
 	"net"
@@ -545,9 +547,24 @@ func (s *Scene) ClickOn(label string) {
 // Config is the app's config, as Options.Config changes it.
 type Config = app.Config
 
-// Connect is a config change that gives the app a session host, and its store.
-func Connect(w *host.Host) func(*Config) {
-	return func(cfg *Config) { cfg.Host, cfg.Store = w, w.Store() }
+// Connect is a config change that gives the app a session host, and its store; builtin are as for Builtin.
+func Connect(w *host.Host, builtin ...agent.Provider) func(*Config) {
+	return func(cfg *Config) {
+		cfg.Host, cfg.Store = w, w.Store()
+		Builtin(builtin...)(cfg)
+	}
+}
+
+// Builtin is a config change that has the built-in providers' plugins (app/agents) register fakes in their place, by
+// ID.
+func Builtin(fakes ...agent.Provider) func(*Config) {
+	return func(cfg *Config) {
+		for _, p := range fakes {
+			if pl, ok := agents.For(p); ok {
+				cfg.Agents = append(cfg.Agents, pl)
+			}
+		}
+	}
 }
 
 // Within is the first node inside the one whose label starts with in whose own label starts with label.

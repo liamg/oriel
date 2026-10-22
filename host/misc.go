@@ -16,6 +16,7 @@ import (
 type ProviderInfo struct {
 	ID      string             `json:"id"`
 	Install agent.Install      `json:"install"`
+	Has     agent.Features     `json:"has"` // what its sessions can do past the least (agent.Featured)
 	Models  []agent.Model      `json:"models,omitempty"`
 	Usage   core.ProviderUsage `json:"usage,omitzero"`
 	Error   string             `json:"error,omitempty"`
@@ -33,7 +34,7 @@ func (w *Host) ProviderInfo(ctx context.Context) []ProviderInfo {
 	for i, p := range ps {
 		wg.Go(func() {
 			defer w.recover("ProviderInfo", nil)
-			info := ProviderInfo{ID: p.ID()}
+			info := ProviderInfo{ID: p.ID(), Has: agent.FeaturesOf(p)}
 			dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			inst, err := p.Detect(dctx)
 			cancel()
@@ -99,4 +100,35 @@ func (w *Host) SampleLoad(ctx context.Context, s *sysload.Sampler) {
 			}()
 		}
 	}
+}
+
+// SetProviders sets where the host finds providers past its own (Options.Providers): the app's registry
+// (registry.AgentProvider). The sessions handed over to a provider known only now are resumed, and every plan's
+// windows read; nil takes them away.
+func (w *Host) SetProviders(src func() []agent.Provider) {
+	defer w.recover("SetProviders", nil)
+	w.opts.Providers.SetSource(src)
+	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
+	if src == nil {
+		return
+	}
+	w.resumeHandedOver()
+	w.env.Go("usage", func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			select {
+			case <-w.closed:
+				cancel()
+			case <-ctx.Done():
+			}
+		}()
+		if err := w.ReadUsage(ctx); err != nil {
+			w.log.Warn("usage", "err", err)
+		}
+	})
+}
+
+func (w *Host) resumeHandedOver() {
+	w.run.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
 }

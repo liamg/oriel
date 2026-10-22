@@ -46,14 +46,14 @@ type usageProbeError struct{ msg, detail string }
 func (e *usageProbeError) Error() string { return e.msg }
 
 // usageError is err in words when a provider's probe read no windows, and err otherwise.
-func usageError(err error) error {
+func usageError(r registry.Contributions, err error) error {
 	var p agent.UsageProbeFailed
 	if !errors.As(err, &p) {
 		return err
 	}
-	msg := kit.ProviderName(p.Provider()) + " didn't start for the usage check"
+	msg := kit.ProviderName(r, p.Provider()) + " didn't start for the usage check"
 	if p.Started() {
-		msg = kit.ProviderName(p.Provider()) + " didn't show usage: a dialog may be in the way"
+		msg = kit.ProviderName(r, p.Provider()) + " didn't show usage: a dialog may be in the way"
 	}
 	return &usageProbeError{msg: msg, detail: err.Error()}
 }
@@ -235,7 +235,7 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 	th := c.Theme()
 	anchor := c.Next("usage")
 	out := len(x.h.State().SignedOut(u)) > 0
-	stroke, label := th.C(theme.LineStrong), cmp.Or(u.Plan, kit.ProviderName(u.Provider))+" usage"
+	stroke, label := th.C(theme.LineStrong), cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))+" usage"
 	if out {
 		stroke, label = th.C(theme.Error), label+", signed out"
 	}
@@ -287,7 +287,7 @@ func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 		hist := x.usageHistory(u)
 		c.Row(fmt.Sprint("p", i), ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			providerMark(c, u.Provider)
-			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
+			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			sub := x.accountLabel(u.Account, u.AccountName)
 			if u.Same(front) {
@@ -328,17 +328,18 @@ func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 	})
 }
 
-// providerMark is a provider's small square: its initial.
+// providerMark is a provider's small square: the letters and tone its plugin registered, else its initials.
 func providerMark(c *ui.Ctx, provider string) {
 	th := c.Theme()
-	letters, tone := strings.ToUpper(provider), th.C(theme.FgMuted)
-	switch provider {
-	case "claude":
-		letters, tone = "C", th.C(tUsageWeek)
-	case "codex":
-		letters = "CX"
-	default:
-		letters = kit.ProjectInitials(provider)
+	letters, tone := kit.ProjectInitials(provider), th.C(theme.FgMuted)
+	if r, ok := ui.Service[registry.Registry](c); ok {
+		if p, ok := r.Contribution("agent.provider", provider); ok {
+			ap, _ := p.(registry.AgentProvider)
+			letters = cmp.Or(ap.Mark, letters)
+			if ap.Tone != "" {
+				tone = th.C(theme.Declare(ap.Tone, theme.FgMuted.Name()))
+			}
+		}
 	}
 	c.Box("mark", ui.Style{W: ui.Px(18), H: ui.Px(18), Radius: 4, Fill: theme.WithAlpha(tone, .85), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", letters, kit.Mono(8.5, typeset.Bold, th.C(theme.BgBase)))
@@ -412,10 +413,10 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 func (x *Plugin) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Time) {
 	th := c.Theme()
 	hist := x.usageHistory(u)
-	c.Column(fmt.Sprint("prov", i), ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: cmp.Or(u.Plan, kit.ProviderName(u.Provider))}, func(c *ui.Ctx) {
+	c.Column(fmt.Sprint("prov", i), ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			providerMark(c, u.Provider)
-			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold},
+			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			if u.Tier != "" {
 				widget.Chip(c, "tier", u.Tier, th.C(tUsageWeek), "agent/usage#accounts")

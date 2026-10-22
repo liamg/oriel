@@ -393,7 +393,7 @@ func (x *Mission) cardHead(c *ui.Ctx, st core.State, se core.SessionState, tone 
 			widget.Chip(c, fmt.Sprint("chip", i), ch.Text, th.C(theme.FgMuted), cmp.Or(ch.Help, kit.MissionHelp+"#cards"))
 		}
 		if p := se.Agent.Provider; p != "" {
-			widget.Chip(c, "prov", kit.ProviderName(p), th.C(theme.FgMuted), kit.MissionHelp+"#cards")
+			widget.Chip(c, "prov", kit.ProviderName(x.h, p), th.C(theme.FgMuted), kit.MissionHelp+"#cards")
 		}
 		if hovered {
 			if widget.Button(c, "end", "End…", widget.ButtonOpts{Ghost: true, Help: kit.MissionHelp + "#keys"}) {
@@ -496,7 +496,8 @@ func firstLines(s string, n int) string {
 	return strings.Join(lines[:min(len(lines), n)], "\n")
 }
 
-// cardFoot is the session's tasks, what's running in the background, context, change and how long it's been.
+// cardFoot is the session's tasks, what's running in the background, the processes left running, context, change and
+// how long it's been.
 func (x *Mission) cardFoot(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	now := c.Now()
@@ -518,6 +519,15 @@ func (x *Mission) cardFoot(c *ui.Ctx, se core.SessionState) {
 			}
 			c.Box("bg", ui.Style{Tooltip: strings.Join(what, "\n"), Help: kit.MissionHelp + "#background"}, func(c *ui.Ctx) {
 				c.Text("t", fmt.Sprintf("+%d in background", len(bg)), kit.MonoFont(10, th.C(theme.StatusWorking)))
+			})
+		}
+		if ps := se.Agent.Processes; len(ps) > 0 {
+			var what []string
+			for _, t := range ps {
+				what = append(what, t.Description)
+			}
+			c.Box("running", ui.Style{Tooltip: strings.Join(what, "\n"), Help: kit.MissionHelp + "#running"}, func(c *ui.Ctx) {
+				c.Text("t", fmt.Sprintf("+%d running", len(ps)), kit.MonoFont(10, th.C(theme.FgFaint)))
 			})
 		}
 		if s := se.Agent.Stats; s.ContextMax > 0 {

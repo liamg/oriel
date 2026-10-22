@@ -326,3 +326,37 @@ func TestSendReturnsOnceWritten(t *testing.T) {
 		t.Errorf("written when Notify returned = %q", got)
 	}
 }
+
+// ref:   acp/docs/prompt-turn.mdx#Cancellation
+// quote: "it **MUST** ensure that it does so before responding to the `session/prompt` request"
+// InOrder: a call's result reaches its caller after the notifications sent before it have been handled.
+func TestInOrderResultsFollowTheirNotifications(t *testing.T) {
+	var mu sync.Mutex
+	var seen []string
+	client := Handlers{Notify: func(method string, _ json.RawMessage) {
+		time.Sleep(time.Millisecond)
+		mu.Lock()
+		seen = append(seen, method)
+		mu.Unlock()
+	}}
+	var server *Conn
+	serverH := Handlers{Request: func(r *Request) {
+		for i := 0; i < 20; i++ {
+			server.Notify("update", nil)
+		}
+		r.Reply("done", nil)
+	}}
+	ar, bw := io.Pipe()
+	br, aw := io.Pipe()
+	c := NewConn(ar, aw, client, Options{InOrder: true})
+	server = NewConn(br, bw, serverH, Options{})
+	t.Cleanup(func() { c.Close(); server.Close() })
+	if err := c.Call(context.Background(), "prompt", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) != 20 {
+		t.Errorf("the result came after %d of its 20 notifications", len(seen))
+	}
+}

@@ -17,8 +17,11 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/claude/claudebox"
 	"github.com/liamg/oriel/agent/claude/transcript"
+	"github.com/liamg/oriel/agent/eventq"
 	"github.com/liamg/oriel/agent/hostexec"
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/semver"
 )
@@ -28,8 +31,11 @@ type Provider struct {
 	Bin      string // claude; "" is claude on PATH
 	OrielBin string // the binary the mod runs as `<OrielBin> hook <op>`; "" is this executable
 	ProbeDir string // a folder of Oriel's that the /usage probe runs claude in; "" is one in the temp dir
+	// SandboxVersion is the Claude Code version a container sandbox runs; "" or nil runs the host's.
+	SandboxVersion func() string
 
 	usage usageBook
+	box   claudebox.Box
 }
 
 var _ agent.Provider = (*Provider)(nil)
@@ -267,24 +273,6 @@ func usageOf(rls []rateLimit) core.ProviderUsage {
 	return u
 }
 
-// userFiles are the parts of the host's Claude config a sandboxed agent reads.
-var userFiles = []string{"CLAUDE.md", "skills", "agents", "commands"}
-
-// SandboxCredentials are the host's Claude files a container needs, read-only. A Sandbox path is under
-// $CLAUDE_CONFIG_DIR, the agent's config directory in the container. The sign-in itself is the sandbox's to hand
-// over, stripped of its refresh token.
-func (*Provider) SandboxCredentials() []agent.Mount {
-	dir := transcript.ConfigDir(nil)
-	var out []agent.Mount
-	for _, f := range userFiles {
-		host := filepath.Join(dir, f)
-		if _, err := os.Stat(host); err == nil {
-			out = append(out, agent.Mount{Host: host, Sandbox: "$CLAUDE_CONFIG_DIR/" + f, ReadOnly: true})
-		}
-	}
-	return out
-}
-
 func (p *Provider) Start(ctx context.Context, s agent.StartSpec) (agent.Session, error) {
 	return p.start(ctx, s, "")
 }
@@ -470,7 +458,9 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	if spec.Sandbox != nil {
 		config = transcript.ConfigDir(nil)
 	}
+	prices := price.Or(spec.Prices)
 	s := &session{
+		prices: prices,
 		usage:  &p.usage,
 		spec:   spec,
 		ctx:    sctx,
@@ -480,8 +470,8 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 		ln:     ln,
 		dir:    dir,
 		temp:   temp,
-		tail:   newTailer(config, spec.Cwd, id, resume != ""),
-		events: newQueue(),
+		tail:   newTailer(config, spec.Cwd, id, resume != "", prices),
+		events: eventq.New(),
 		done:   make(chan struct{}),
 		id:     id,
 		wake:   make(chan struct{}, 1),
@@ -499,3 +489,8 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	go s.run()
 	return s, nil
 }
+
+var _ agent.WebTooled = (*Provider)(nil)
+
+// WebTools are Claude Code's tools that reach the web, which its gate asks about.
+func (*Provider) WebTools() []string { return []string{"WebSearch", "WebFetch"} }

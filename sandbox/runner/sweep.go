@@ -31,13 +31,13 @@ func Sweep(ctx context.Context, attached func(root string) bool) []string {
 	return append(out, sweepBuilds(ctx)...)
 }
 
-// buildKeep is how many of the newest oriel builds and Claude downloads stay,
+// buildKeep is how many of the newest oriel builds and of each agent's downloads stay,
 // so the next launch does not wait on a rebuild or a download.
 const buildKeep = 2
 
-// sweepBuilds removes Linux oriel builds and Claude downloads that no oriel
+// sweepBuilds removes Linux oriel builds and agents' downloads that no oriel
 // container mounts, beyond the newest buildKeep of each. A build is 20 MB and
-// a Claude download 240 MB, and both arrive often.
+// an agent's download 240 MB, and both arrive often.
 func sweepBuilds(ctx context.Context) []string {
 	ids, err := container.Run(ctx, "ps", "-q", "--filter", "label=oriel.root")
 	if err != nil {
@@ -62,10 +62,13 @@ func sweepBuilds(ctx context.Context) []string {
 			removed = append(removed, p)
 		}
 	}
-	claudes, _ := filepath.Glob(filepath.Join(sandbox.Base(), "claude", "*"))
-	for _, p := range staleBuilds(claudes, mounted, buildKeep) {
-		if os.RemoveAll(p) == nil {
-			removed = append(removed, p)
+	caches, _ := filepath.Glob(sandbox.AgentCache("*"))
+	for _, c := range caches {
+		downloads, _ := filepath.Glob(filepath.Join(c, "*"))
+		for _, p := range staleBuilds(downloads, mounted, buildKeep) {
+			if os.RemoveAll(p) == nil {
+				removed = append(removed, p)
+			}
 		}
 	}
 	return removed

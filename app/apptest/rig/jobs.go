@@ -20,7 +20,7 @@ import (
 // FakeSandboxes run a sandboxed agent the way the fake provider runs any: on nothing, offering the backends Offered.
 type FakeSandboxes struct{ Offered []string }
 
-func (FakeSandboxes) Open(context.Context, core.SessionState, host.Approve) (host.Sandbox, error) {
+func (FakeSandboxes) Open(context.Context, core.SessionState, host.Approve, host.SandboxAgent) (host.Sandbox, error) {
 	return FakeSandbox{}, nil
 }
 
@@ -143,7 +143,7 @@ func (r *Jobs) Run(job string, fx FxRun) core.SessionID {
 	for _, p := range se.Snapshot().Projects {
 		dirs[p.Name] = p.Dir
 	}
-	session := FxSession{Model: "claude-opus-4-1", Repos: fx.Repos, Weights: fx.Weights}
+	session := FxSession{Model: "claude-opus-4-7", Repos: fx.Repos, Weights: fx.Weights}
 	rnd := rand.New(rand.NewSource(fx.Start.Unix()))
 	var lines []string
 	n := int(fx.Took.Minutes()) * 3
@@ -195,7 +195,7 @@ func (r *Jobs) Build() {
 	sweep := "In api, web and pricing, bump every dependency that's behind on a minor or patch version. Keep major versions where they are.\n" +
 		"Run each repo's tests after bumping. If one bump breaks them, back that bump out and say why in the summary; don't fix code to fit it.\n" +
 		"Open one PR per repo titled `chore(deps): sweep`, linked to each other. Stop as blocked if a repo won't build before you start."
-	opus := host.Job{Provider: "claude", Model: "claude-opus-4-1", Effort: "high"}
+	opus := host.Job{Provider: "claude", Model: "claude-opus-4-7", Effort: "high"}
 	job := func(at time.Time, title, prompt, pin string, s host.Schedule) string {
 		j := opus
 		j.Title, j.Prompt, j.Sandbox, j.Schedule = title, prompt, pin, s

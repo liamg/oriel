@@ -5,8 +5,8 @@
 // This package is the host's facade: the API the app calls, each entry point recovering a panic into an error. The
 // work is done by its parts, each in a package of its own that sees the host only as a hostcore.State: worktree
 // (workspaces), agentrun (agents), sandboxhost (sandboxes), github (code hosts and the Ship page), repos, jobs,
-// utility, aireview, and persist (what's kept on disk). The parts never call each other; what one needs of another
-// it's given here, as a func.
+// utility, aireview, persist (what's kept on disk) and pricing (the price book). The parts never call each other;
+// what one needs of another it's given here, as a func.
 //
 // Lock order, outermost first: a session's agent's lock (agentrun), then the edit lock (State.Mutate), then the
 // store's. Every other lock (the runner's, the logs', the sandbox settings', the ship and mirror states') is held
@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
@@ -33,6 +34,7 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/host/jobs"
 	"github.com/liamg/oriel/host/persist"
+	"github.com/liamg/oriel/host/pricing"
 	"github.com/liamg/oriel/host/repos"
 	"github.com/liamg/oriel/host/sandboxhost"
 	"github.com/liamg/oriel/host/sysload"
@@ -62,6 +64,10 @@ type Options struct {
 	// KeyWait is how long a git operation that may need a security-key touch runs before its session asks for one;
 	// KeyWait (the constant) if 0, never if negative.
 	KeyWait time.Duration
+	// HTTP is the client the host's own requests go through (cost.dev's prices); http.DefaultClient if nil.
+	HTTP *http.Client
+	// PricesURL is where the price list is fetched from; cost.dev's (price.URL) if "".
+	PricesURL string
 }
 
 // Host hosts sessions.
@@ -75,6 +81,7 @@ type Host struct {
 
 	logs    *persist.Logs
 	stats   *persist.Stats
+	prices  *pricing.Pricing
 	repos   *repos.Registry
 	work    *worktree.Worktrees
 	run     *agentrun.Runner
@@ -111,7 +118,7 @@ func New(opts Options) (*Host, error) {
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
 	w.repos.Changed()
-	w.run.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
+	w.resumeHandedOver()
 	return w, nil
 }
 
@@ -150,7 +157,9 @@ func defaults(opts *Options) error {
 func (w *Host) parts() error {
 	st := state{w}
 	w.logs = persist.NewLogs(w.env, st)
-	w.stats = persist.NewStats(w.env, st, w.opts.Providers)
+	w.prices = pricing.New(w.env, pricing.Deps{Client: func() *http.Client { return w.opts.HTTP },
+		URL: func() string { return w.opts.PricesURL }})
+	w.stats = persist.NewStats(w.env, st, w.opts.Providers, w.prices.Book)
 	var err error
 	if w.repos, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
 		return err
@@ -167,7 +176,8 @@ func (w *Host) parts() error {
 		Record:         w.stats.Record,
 		UsageSampled:   w.stats.UsageSampled,
 		PROpen:         func(id core.SessionID, project, branch string) bool { return w.code.PROpen(id, project, branch) },
-		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) }})
+		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) },
+		Prices:         w.prices})
 	if w.boxes, err = sandboxhost.New(w.sandboxDeps()); err != nil {
 		return err
 	}

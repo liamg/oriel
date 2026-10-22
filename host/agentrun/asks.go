@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/guard"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/hostcore"
@@ -201,8 +202,7 @@ func (x *Runner) policy(id core.SessionID, ask core.Ask) (Verdict, bool) {
 }
 
 // NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
-const NoPosting = "Oriel: agents never post to GitHub reviews. Answer the thread with mcp__oriel__reply: on a GitHub " +
-	"thread your reply is a draft, and the user forwards it."
+const NoPosting = guard.NoPosting
 
 // postsReview says a tool call would post to a GitHub review: a review tool on any MCP server, or a gh command.
 func postsReview(tool string, input json.RawMessage) bool {

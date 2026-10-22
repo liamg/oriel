@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/agent/price"
 )
 
 // Session is a session as a query sees it: what it is, the repos it works in, and its logs' scans.
@@ -249,6 +251,21 @@ type Report struct {
 	Hours   [24]float64 `json:"hours"` // cost by hour of the day
 	Efforts []Effort    `json:"efforts"`
 	Origins []Origin    `json:"origins,omitempty"` // Oriel's, then outside's: those with any requests
+	Prices  Prices      `json:"prices,omitzero"`
+}
+
+// Prices are where the costs' prices come from.
+type Prices struct {
+	Source  string    `json:"source,omitempty"` // "cost.dev"
+	Updated time.Time `json:"updated,omitzero"` // when the source last published the list
+}
+
+// PricesOf says where b's prices come from.
+func PricesOf(b *price.Book) Prices {
+	if b == nil {
+		return Prices{}
+	}
+	return Prices{Source: price.Source, Updated: b.Generated()}
 }
 
 // step is the query's resolution in seconds.
@@ -733,6 +750,7 @@ type Detail struct {
 	Hours       [24]float64  `json:"hours"`
 	Efforts     []Effort     `json:"efforts"`
 	Costs       Costs        `json:"costs"`
+	Prices      Prices       `json:"prices,omitzero"`
 }
 
 // Detailed is s's stats, its days and hours in the zone offset seconds east of UTC. Each repo's share is of the cost

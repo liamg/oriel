@@ -1,0 +1,7 @@
+id          = "test/agent"
+version     = "0.1.0"
+description = "plugintest's agent plugin: a provider served by its own process over the Oriel agent protocol, and one in Claude's place"
+
+[permissions]
+"agent.provider" = { why = "Be an agent sessions run" }
+exec             = { commands = ["cat", "sh"], why = "The agent's terminal and the command it's allowed to run" }

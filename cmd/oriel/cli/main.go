@@ -75,6 +75,7 @@ func runApp(args []string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	startHost(ctx, w, log)
 	cfg.Host, cfg.Load = w, machineLoad
+	cfg.Agents = builtinAgents(home)
 	cfg.Logs.Router.Sessions = w.Logs()
 	be, err := gio.New()
 	if err != nil {

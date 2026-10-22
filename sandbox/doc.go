@@ -18,7 +18,9 @@
 //     Host git in the workspace runs through Git or GitEnv.
 //   - An egress.Session: GrantsPath EgressGrantsPath(root); Settings the
 //     projects' and user's EgressRules (with LoadAlways().Egress); Env
-//     egress.EnvRules(EndpointEnv(os.Environ(), cfg.Env, ClaudeSettings()));
+//     egress.EnvRules(EndpointEnv(os.Environ(), cfg.Env, needs)); Agent
+//     egress.HostRules(needs.Hosts), where needs are what the session's
+//     provider said its agent needs (agent.Sandboxed, through Needs);
 //     Always AddAlwaysEgress; SaveFailed tells the user an allow was not
 //     kept; Approver raises the network approval card and returns its
 //     answer (the connection is held meanwhile, up to Wait, 60s).
@@ -26,8 +28,9 @@
 //     worker's gateway.Host (commit, push, pull, fetch, PR, gh, repos,
 //     add_project, run on host, ssh_agent, request_host, and Approve, which
 //     raises the gateway approval card); Up the user's servers
-//     (gateway.Discover); Levels from GrantsPath(root), cfg.Projects[repo].Rules,
-//     cfg.Rules and LoadAlways().Rules; Grant, Always (AddAlwaysRules) and Log.
+//     (gateway.Discover over the provider's MCPServers); Levels from
+//     GrantsPath(root), cfg.Projects[repo].Rules, cfg.Rules and
+//     LoadAlways().Rules; Grant, Always (AddAlwaysRules) and Log.
 //     Approve on the Gateway is host.Approve; Timeout is cfg.ApprovalSecs.
 //   - An agentsock.SSHAgent, served at RunDir(root)/ssh-agent.sock; the
 //     host's SSHAgent method is its Grant.
@@ -35,12 +38,16 @@
 //   - agentsock.Serve(ctx, &agentsock.Handler{...}, SocketPath(root), portFile)
 //     with Token from Load(root).AgentToken; portFile is PortPath(root) when
 //     the backend ServesPort, else "".
-//   - Backend.Launch(ctx, root, cwd, argv, LaunchOptions{Config: cfg, ...})
-//     returns the command to run under the agent's PTY; the agent's MCP config
-//     names the gateway as {"oriel-gw":{"command":"oriel","args":["mcp"]}}.
+//   - Backend.Launch(ctx, root, cwd, argv, LaunchOptions{Config: cfg,
+//     Provider, Agent, ...}) asks the provider what its agent needs at the
+//     place the backend puts it (Needs: its binaries, mounts, env, hosts), and
+//     returns the command to run under the agent's PTY with those needs; the
+//     agent's MCP config names the gateway as
+//     {"oriel-gw":{"command":"oriel","args":["mcp"]}}.
 //   - The sandbox's oriel answers "mcp", "ssh-proxy" and "git-credential"
 //     (and, in docker's sidecar, "egress-proxy") through agentcmd.Main, and
-//     the Claude mod's "hook" through hookcall.Main. In docker it is
+//     the agents' "hook" (Claude's mod) through hookcall.Main, and "hook mcp"
+//     (Oriel's tools as an MCP server) through mcpstdio.Main. In docker it is
 //     runner.OrielBinary: cmd/oriel-sandbox built static for Linux, which the
 //     app embeds (package helper, `make helper`) and hands over with
 //     runner.SetHelper. Under seatbelt it is the running binary.

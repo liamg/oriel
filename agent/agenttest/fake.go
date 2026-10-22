@@ -28,6 +28,10 @@ type Fake struct {
 	// HoldClose is what a session's Close waits for: an agent slow to stop. Closing hears of each Close as it starts.
 	HoldClose chan struct{}
 	Closing   chan *FakeSession
+	// Has is what it says its sessions can do (agent.Features); a terminal and a tool-less fork if nil. With Login,
+	// StartLogin's sign-ins wait for FinishLogin.
+	Has *agent.Features
+	Web []string // its own tools that reach the web (agent.WebTooled); WebSearch if nil
 
 	mu        sync.Mutex
 	seq       int // sessions it has named
@@ -35,6 +39,7 @@ type Fake struct {
 	signedOut bool
 	logins    int // how many times it has signed in: its login's mark
 	refuse    error
+	login     chan error // the sign-in under way, when there is one
 }
 
 func NewFake() *Fake { return &Fake{Started: make(chan *FakeSession, 16)} }
@@ -90,7 +95,55 @@ func (f *Fake) Usage(context.Context) (core.ProviderUsage, error) {
 	return core.ProviderUsage{Provider: f.ID(), Account: f.Account}, nil
 }
 
-func (f *Fake) SandboxCredentials() []agent.Mount { return nil }
+func (f *Fake) Features() agent.Features {
+	if f.Has != nil {
+		return *f.Has
+	}
+	return agent.Features{Terminal: true, Fork: true}
+}
+
+func (f *Fake) WebTools() []string {
+	if f.Web != nil {
+		return f.Web
+	}
+	return []string{"WebSearch"}
+}
+
+// LoginURL is where the fake's sign-in says to go.
+const LoginURL = "https://fake.example/login"
+
+// StartLogin begins a sign-in, which FinishLogin ends.
+func (f *Fake) StartLogin(context.Context) (agent.Login, error) {
+	if !f.Features().Login {
+		return agent.Login{}, errors.New("fake: it doesn't sign in from Oriel")
+	}
+	done := make(chan error, 1)
+	f.mu.Lock()
+	f.login = done
+	f.mu.Unlock()
+	return agent.Login{URL: LoginURL, Done: done}, nil
+}
+
+// FinishLogin ends the sign-in under way: signed in afresh when err is nil.
+func (f *Fake) FinishLogin(err error) {
+	if err == nil {
+		f.SignIn(true)
+	}
+	f.mu.Lock()
+	done := f.login
+	f.login = nil
+	f.mu.Unlock()
+	if done != nil {
+		done <- err
+	}
+}
+
+// LoginStarted says a sign-in is under way.
+func (f *Fake) LoginStarted() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.login != nil
+}
 
 // Refuse makes Start and Resume fail with err while it isn't nil.
 func (f *Fake) Refuse(err error) {
@@ -179,6 +232,7 @@ type FakeSession struct {
 	interrupted int
 	closed      bool
 	answers     map[string]chan agent.Decision
+	stopped     []string
 }
 
 func (s *FakeSession) ID() string { return s.id }
@@ -202,6 +256,24 @@ func (s *FakeSession) Interrupts() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.interrupted
+}
+
+// StopProcess records the process it was asked to stop; with no StopProcesses in its Features it refuses.
+func (s *FakeSession) StopProcess(_ context.Context, id string) error {
+	if !s.fake.Features().StopProcesses {
+		return errors.New("fake: it doesn't stop processes")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stopped = append(s.stopped, id)
+	return nil
+}
+
+// Stopped are the processes it was asked to stop, in order.
+func (s *FakeSession) Stopped() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.Clone(s.stopped)
 }
 
 // Fork answers "fork says: " and the end of the prompt.

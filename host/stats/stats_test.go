@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/agent/price"
 )
 
 // asst is an assistant record of Claude Code's log: a message with its usage and content blocks.
@@ -70,8 +72,10 @@ func TestScanCountsTokensToolsAndCost(t *testing.T) {
 	if s.Tokens != want {
 		t.Errorf("tokens = %+v, want %+v", s.Tokens, want)
 	}
-	// Opus: $5/Mtok in, $25 out, a cache read a tenth of input, a 1h write twice it.
-	wantCost := (110*5 + 1000*5*1.25 + 50_000*5*2 + 3_000_000*5*0.1 + 220*25) / 1e6
+	// Opus 5 at its list prices.
+	// ref:   cost-dev/models.json
+	// quote: pb_anthropic_claude-opus-5_direct_realtime_global_usd_20260724","verified_at":"2026-07-24T00:00:00Z","source_id":"source:anthropic-pricing"},"prices":{"cache_write_1h_tokens_per_1000000":"10","cache_write_5m_tokens_per_1000000":"6.25","cached_input_tokens_per_1000000":"0.5","input_tokens_per_1000000":"5","output_tokens_per_1000000":"25"}
+	wantCost := (110*5 + 1000*6.25 + 50_000*10 + 3_000_000*0.5 + 220*25) / 1e6
 	if !near(s.Cost(), wantCost) {
 		t.Errorf("cost = %v, want %v", s.Cost(), wantCost)
 	}
@@ -344,16 +348,46 @@ func TestStoreRescansOnlyWhatWasAppended(t *testing.T) {
 	first := asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1000, 0, 0, 0)
 	p := write(t, first)
 	logs := []Log{{Path: p, Format: FormatClaude}}
-	if sc := NewStore(file).Scan("s", logs); sc[0].Requests != 1 {
+	if sc := NewStore(file, nil).Scan("s", logs); sc[0].Requests != 1 {
 		t.Fatalf("first scan: %d requests", sc[0].Requests)
 	}
 	// The same length, saying something else: a reread would count it.
 	b, _ := os.ReadFile(p)
 	os.WriteFile(p, []byte(strings.Replace(string(b), `"output_tokens":1000`, `"output_tokens":9999`, 1)), 0o644)
 	appendTo(t, p, asst("2026-10-01T09:01:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 0, 1, 0, 0, 0))
-	sc := NewStore(file).Scan("s", logs)
+	sc := NewStore(file, nil).Scan("s", logs)
 	if sc[0].Requests != 2 || sc[0].Tokens.Output != 1001 {
 		t.Errorf("after a restart: %d requests, %d output; want 2 and 1001", sc[0].Requests, sc[0].Tokens.Output)
+	}
+}
+
+// A log read at other prices is read again at the book's; one whose log is gone keeps the costs it had.
+//
+// ref:   cost-dev/models.json
+// quote: pb_anthropic_claude-opus-5_direct_realtime_global_usd_20260724","verified_at":"2026-07-24T00:00:00Z","source_id":"source:anthropic-pricing"},"prices":{"cache_write_1h_tokens_per_1000000":"10","cache_write_5m_tokens_per_1000000":"6.25","cached_input_tokens_per_1000000":"0.5","input_tokens_per_1000000":"5","output_tokens_per_1000000":"25"}
+func TestStoreRepricesWhenThePricesChange(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "stats.json")
+	kept := write(t, asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1_000_000, 0, 0, 0))
+	gone := write(t, asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1_000_000, 0, 0, 0))
+	logs := []Log{{Path: kept, Format: FormatClaude}, {Path: gone, Format: FormatClaude}}
+	book := price.Default()
+	prices := func() *price.Book { return book }
+	if sc := NewStore(file, prices).Scan("s", logs); !near(sc[0].Cost(), 25) || !near(sc[1].Cost(), 25) {
+		t.Fatalf("at the snapshot's prices: $%v and $%v, want $25 each", sc[0].Cost(), sc[1].Cost())
+	}
+	cheaper, err := price.Parse([]byte(`{"items":[{"id":"anthropic:claude-opus-5","prices":{"input_tokens_per_1000000":"1",` +
+		`"output_tokens_per_1000000":"2"}}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	book = cheaper
+	os.Remove(gone)
+	sc := NewStore(file, prices).Scan("s", logs)
+	if !near(sc[0].Cost(), 2) || sc[0].Requests != 1 {
+		t.Errorf("read again: $%v over %d requests, want $2 over 1", sc[0].Cost(), sc[0].Requests)
+	}
+	if !near(sc[1].Cost(), 25) || sc[1].Requests != 1 {
+		t.Errorf("its log gone: $%v over %d requests, want the $25 it had", sc[1].Cost(), sc[1].Requests)
 	}
 }
 

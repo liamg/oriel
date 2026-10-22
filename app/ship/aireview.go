@@ -368,7 +368,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 			case !inSession:
 				note = "AI review runs in a session: this repo isn't one's."
 			case reviewed && last.Running:
-				note = kit.ProviderName(last.Provider) + " is reviewing the change…"
+				note = kit.ProviderName(x.h, last.Provider) + " is reviewing the change…"
 			case !reviewed:
 				note = "No AI review yet. Review changes asks another model to read this change."
 			case last.Error != "":

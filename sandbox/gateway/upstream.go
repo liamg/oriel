@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -18,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
 
@@ -43,10 +43,9 @@ type rawServer struct {
 	Headers map[string]string `json:"headers"`
 }
 
-// Discover lists the MCP servers installed for the user: ~/.claude.json's
-// user scope, then enabled plugins, then oriel's own list. A repository's
-// .mcp.json is never read: a cloned repo must not get to run a server here.
-func Discover(home string, extra map[string]json.RawMessage, hidden []string) []Server {
+// Discover lists the MCP servers the user installed, as the providers found them (agent.Sandboxed's MCPServers),
+// then oriel's own list. The first of a name wins.
+func Discover(installed []agent.MCPServer, extra map[string]json.RawMessage, hidden []string) []Server {
 	var out []Server
 	seen := map[string]bool{}
 	add := func(name, source string, raw rawServer, vars map[string]string) {
@@ -61,23 +60,10 @@ func Discover(home string, extra map[string]json.RawMessage, hidden []string) []
 		seen[name] = true
 		out = append(out, s)
 	}
-	var state struct {
-		MCPServers map[string]rawServer `json:"mcpServers"`
-	}
-	claudeJSON := filepath.Join(home, ".claude.json")
-	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
-		claudeJSON = filepath.Join(dir, ".claude.json")
-	}
-	if b, err := os.ReadFile(claudeJSON); err == nil {
-		_ = json.Unmarshal(b, &state)
-	}
-	for _, name := range sortedKeys(state.MCPServers) {
-		add(name, "user", state.MCPServers[name], nil)
-	}
-	for _, p := range enabledPlugins(filepath.Join(home, ".claude")) {
-		servers := pluginServers(p.path)
-		for _, name := range sortedKeys(servers) {
-			add(name, "plugin:"+p.name, servers[name], map[string]string{"CLAUDE_PLUGIN_ROOT": p.path})
+	for _, m := range installed {
+		var raw rawServer
+		if json.Unmarshal(m.Config, &raw) == nil {
+			add(m.Name, m.Source, raw, m.Vars)
 		}
 	}
 	names := make([]string, 0, len(extra))
@@ -139,70 +125,6 @@ func expand(s string, vars map[string]string) string {
 		}
 		return p[3]
 	})
-}
-
-type plugin struct{ name, path string }
-
-// enabledPlugins are installed plugins the user's settings turn on.
-func enabledPlugins(claudeDir string) []plugin {
-	var settings struct {
-		EnabledPlugins map[string]bool `json:"enabledPlugins"`
-	}
-	if b, err := os.ReadFile(filepath.Join(claudeDir, "settings.json")); err == nil {
-		_ = json.Unmarshal(b, &settings)
-	}
-	var installed struct {
-		Plugins map[string]json.RawMessage `json:"plugins"`
-	}
-	if b, err := os.ReadFile(filepath.Join(claudeDir, "plugins", "installed_plugins.json")); err == nil {
-		_ = json.Unmarshal(b, &installed)
-	}
-	var out []plugin
-	for _, id := range sortedKeys(installed.Plugins) {
-		if !settings.EnabledPlugins[id] {
-			continue
-		}
-		for _, p := range installPaths(installed.Plugins[id]) {
-			name, _, _ := strings.Cut(id, "@")
-			out = append(out, plugin{name: name, path: p})
-		}
-	}
-	return out
-}
-
-// installPaths reads a plugin's install record, which is one install or a
-// list of them depending on the Claude Code version that wrote it.
-func installPaths(raw json.RawMessage) []string {
-	type install struct {
-		InstallPath string `json:"installPath"`
-	}
-	var one install
-	if json.Unmarshal(raw, &one) == nil && one.InstallPath != "" {
-		return []string{one.InstallPath}
-	}
-	var many []install
-	_ = json.Unmarshal(raw, &many)
-	var out []string
-	for _, i := range many {
-		if i.InstallPath != "" {
-			out = append(out, i.InstallPath)
-		}
-	}
-	return out[:min(len(out), 1)]
-}
-
-func pluginServers(dir string) map[string]rawServer {
-	out := map[string]rawServer{}
-	if b, err := os.ReadFile(filepath.Join(dir, ".mcp.json")); err == nil {
-		var wrapped struct {
-			MCPServers map[string]rawServer `json:"mcpServers"`
-		}
-		if json.Unmarshal(b, &wrapped) == nil && len(wrapped.MCPServers) > 0 {
-			return wrapped.MCPServers
-		}
-		_ = json.Unmarshal(b, &out)
-	}
-	return out
 }
 
 var badName = regexp.MustCompile(`[^A-Za-z0-9_-]+`)

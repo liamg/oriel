@@ -176,7 +176,7 @@ clip 224,38 1376x936 r 0
     rect 364.01562,134.3 59.98999x16.539993 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
     text "MAX 20×" @371.01562,145.99 #ff9b45 JetBrains Mono 9.5
     text "Work" @434.0056,146.35 #b3ab99 JetBrains Mono 10.5
-    text "claude-opus-4-1 · claude-sonnet-4-5 · 7 sessions" @470.3806,146.35 #7c7566 JetBrains Mono 10.5
+    text "claude-opus-4-7 · claude-sonnet-4-6 · 7 sessions" @470.3806,146.35 #7c7566 JetBrains Mono 10.5
     text "windows from /usage, through the Oriel mod · just now" @1264,146.17 #4f4a40 JetBrains Mono 10
     rect 242,162.14 438.66663x173.16798 fill #0c0c0b radius 8 stroke 1 #24221d
     text "5-HOUR WINDOW" @256,182.49 #b3ab99 JetBrains Mono 9.5

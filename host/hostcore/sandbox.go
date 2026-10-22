@@ -11,12 +11,19 @@ import (
 // approvals (a held connection, a held gateway call) come back through approve, which shows the user a card
 // and waits for the answer.
 type SandboxFactory interface {
-	Open(ctx context.Context, se core.SessionState, approve Approve) (Sandbox, error)
+	Open(ctx context.Context, se core.SessionState, approve Approve, a SandboxAgent) (Sandbox, error)
 	// Backends are the sandbox backends this machine can run.
 	Backends() []string
 	// Sweep removes what sandboxes no session uses left behind; attached reports whether root's agent is running,
 	// known whether a session still has root. It returns what it removed.
 	Sweep(ctx context.Context, attached, known func(root string) bool) []string
+}
+
+// SandboxAgent is the agent a sandbox opens for: its provider, which says what it needs there (agent.Sandboxed),
+// and the session's directory for it (agent.StartSpec.StateDir).
+type SandboxAgent struct {
+	Provider agent.Provider
+	StateDir string
 }
 
 // Approve puts an ask to the session's rules, the app's hooks, then the user, and waits for the answer.

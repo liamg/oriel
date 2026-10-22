@@ -188,7 +188,7 @@ func (x *Plugin) readUsage(ctx context.Context, _ func(string, float64)) (struct
 		x.history = fetched[[]core.ProviderUsage]{}
 		x.mu.Unlock()
 	})
-	return struct{}{}, usageError(err)
+	return struct{}{}, usageError(x.h, err)
 }
 
 // seen keeps the plan readings as they come, and notes when an agent did something that costs.
@@ -741,7 +741,7 @@ func (x *Plugin) accountLabel(account, name string) string {
 
 // accountTitle is an account as the Usage page's switcher names it: its label and plan.
 func (x *Plugin) accountTitle(u core.ProviderUsage) string {
-	return x.accountLabel(u.Account, u.AccountName) + " · " + cmp.Or(u.Plan, kit.ProviderName(u.Provider))
+	return x.accountLabel(u.Account, u.AccountName) + " · " + cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))
 }
 
 // openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel the Stats page found.

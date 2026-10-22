@@ -1,63 +1,37 @@
 package sandbox
 
 import (
+	"fmt"
 	"net/url"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox/egress"
 )
 
-// DefaultEnv is the host environment a sandbox inherits when settings name
-// none: Claude Code's own settings, the model endpoint and telemetry, never
-// credentials for anything else.
-var DefaultEnv = []string{
-	"ANTHROPIC_*",
-	"OTEL_*",
-	"DISABLE_*",
-	"CLAUDE_CODE_*",
-	"MAX_THINKING_TOKENS",
-	"MAX_MCP_OUTPUT_TOKENS",
-	"MCP_TIMEOUT",
-	"API_TIMEOUT_MS",
-	"BASH_DEFAULT_TIMEOUT_MS",
-	"BASH_MAX_TIMEOUT_MS",
-	"BASH_MAX_OUTPUT_LENGTH",
-}
-
-// sessionEnv is what a Claude Code session sets for its own processes, which
-// the defaults leave out: Oriel started from inside one isn't that session's
-// child. The sandbox's sign-in is Oriel's to hand over (AgentEnv).
-var sessionEnv = []string{
-	"CLAUDE_CODE_ENTRYPOINT",
-	"CLAUDE_CODE_EXECPATH",
-	"CLAUDE_CODE_SSE_PORT",
-	"CLAUDE_CODE_CHILD_SESSION",
-	"CLAUDE_CODE_SESSION_*",
-	"CLAUDE_CODE_MESSAGING_*",
-	"CLAUDE_CODE_OAUTH_TOKEN",
-}
+// DefaultEnv is the host environment every sandbox inherits when settings name none, past what its agent's
+// provider passes (agent.SandboxNeeds.PassEnv): telemetry, never credentials.
+var DefaultEnv = []string{"OTEL_*"}
 
 // HostGateway is how the container reaches the host.
 const HostGateway = egress.HostGateway
 
-// endpointVars hold URLs whose localhost means the host, not the container.
+// endpointVars hold URLs whose localhost means the host, not the container, past the provider's (URLEnv).
 var endpointVars = []string{
-	"ANTHROPIC_BASE_URL",
-	"ANTHROPIC_BEDROCK_BASE_URL",
-	"ANTHROPIC_VERTEX_BASE_URL",
 	"OTEL_EXPORTER_OTLP_ENDPOINT",
 	"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
 	"OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
 	"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
 }
 
-// FilterEnv keeps the entries of environ whose names match a pattern ("FOO"
-// or a "FOO_*" glob), with localhost endpoints pointed at the host.
-func FilterEnv(environ, patterns []string) map[string]string {
-	out := HostEnv(environ, patterns)
-	for _, k := range endpointVars {
+// FilterEnv keeps the entries of environ whose names match a pattern ("FOO" or a "FOO_*" glob), with localhost
+// endpoints pointed at the host. With no patterns, the defaults and what n passes.
+func FilterEnv(environ, patterns []string, n agent.SandboxNeeds) map[string]string {
+	out := HostEnv(environ, patterns, n)
+	for _, k := range append(slices.Clone(endpointVars), n.URLEnv...) {
 		if v, ok := out[k]; ok {
 			out[k] = RewriteLocalhost(v)
 		}
@@ -65,17 +39,17 @@ func FilterEnv(environ, patterns []string) map[string]string {
 	return out
 }
 
-// HostEnv keeps the entries of environ whose names match a pattern, as they
-// are: for an agent that shares the host's network.
-func HostEnv(environ, patterns []string) map[string]string {
+// HostEnv keeps the entries of environ whose names match a pattern, as they are: for an agent that shares the
+// host's network. With no patterns, the defaults and what n passes, less what n skips.
+func HostEnv(environ, patterns []string, n agent.SandboxNeeds) map[string]string {
 	defaults := patterns == nil
 	if defaults {
-		patterns = DefaultEnv
+		patterns = append(slices.Clone(DefaultEnv), n.PassEnv...)
 	}
 	out := map[string]string{}
 	for _, kv := range environ {
 		k, v, ok := strings.Cut(kv, "=")
-		if !ok || !matchAny(patterns, k) || defaults && matchAny(sessionEnv, k) {
+		if !ok || !matchAny(patterns, k) || defaults && matchAny(n.SkipEnv, k) {
 			continue
 		}
 		out[k] = v
@@ -83,16 +57,12 @@ func HostEnv(environ, patterns []string) map[string]string {
 	return out
 }
 
-// EndpointEnv is what the sandbox's endpoints are read from: environ filtered
-// by patterns, then the endpoints in the env block of Claude's settings, which
-// the agent sees over its process environment.
-func EndpointEnv(environ, patterns []string, settings map[string]any) map[string]string {
-	out := FilterEnv(environ, patterns)
-	env, _ := settings["env"].(map[string]any)
-	for _, k := range endpointVars {
-		if v, ok := env[k].(string); ok {
-			out[k] = RewriteLocalhost(v)
-		}
+// EndpointEnv is what the sandbox's endpoints are read from: environ filtered by patterns, then the endpoints n
+// names outside its environment, by their own keys.
+func EndpointEnv(environ, patterns []string, n agent.SandboxNeeds) map[string]string {
+	out := FilterEnv(environ, patterns, n)
+	for i, u := range n.URLs {
+		out[fmt.Sprintf("url:%d", i)] = RewriteLocalhost(u)
 	}
 	return out
 }

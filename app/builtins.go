@@ -23,8 +23,10 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	c := p.Config // the window's, as it is now
 	ed, gits := &editor.Editor{WorkDir: c.WorkDir, Files: c.Files, Clipboard: p.Clipboard, Tools: p.Tools}, &gitui.Git{}
 	st, voice := &stats.Plugin{}, &agentui.Voice{Config: cfg.Voice}
-	return []plugin.Plugin{
-		p.UI, p.Frames, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages"), CacheDir: c.CacheDir}, p.Themes, p.Layout, gits,
+	out := []plugin.Plugin{p.UI, p.Frames}
+	// The agent providers come before the plugins and config that may register their own under the same name.
+	out = append(out, cfg.Agents...)
+	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages"), CacheDir: c.CacheDir}, p.Themes, p.Layout, gits,
 		p.Rail, &gitui.Explorer{Git: gits}, p.Start, p.Overview, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
 		&stats.HUD{}, &agentui.Inbox{}, &appsessions.Mission{}, p.Omnibox, p.Picker, p.WhichKey, &settings.Consent{}, p.Help, p.Nav, p.Menus,
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir, WorkDir: c.WorkDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
@@ -43,5 +45,5 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &ship.GitHub{}, &settings.Secrets{},
 		&settings.Lua{Dir: c.ConfigDir}, &settings.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir, WorkDir: c.WorkDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
-	}
+	)
 }

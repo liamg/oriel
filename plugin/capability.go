@@ -17,6 +17,7 @@ const (
 	CapAgentRead      Capability = "agent.read"
 	CapAgentPrompt    Capability = "agent.prompt"
 	CapAgentTools     Capability = "agent.tools"
+	CapAgentProvider  Capability = "agent.provider"
 	CapGate           Capability = "gate"
 	CapSessionControl Capability = "session.control"
 	CapGit            Capability = "git"
@@ -59,6 +60,7 @@ var Capabilities = []CapInfo{
 	{CapAgentRead, RiskHigh, true, false, ""},
 	{CapAgentPrompt, RiskHigh, true, true, ""},
 	{CapAgentTools, RiskHigh, true, true, "tools"},
+	{CapAgentProvider, RiskCritical, true, true, ""},
 	{CapGate, RiskCritical, true, true, ""},
 	{CapSessionControl, RiskMedium, true, false, ""},
 	{CapGit, RiskHigh, true, false, ""},

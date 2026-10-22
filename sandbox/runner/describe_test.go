@@ -28,7 +28,7 @@ esac
 }
 
 // A workspace with no Dockerfile of its own runs the base image; its description says so, with what the running
-// container mounts and its last build's log.
+// container mounts, where it puts each host path it mounts elsewhere, and its last build's log.
 func TestDescribeTheBaseImage(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	ctx := container.WithEngine(context.Background(), describeEngine(t))
@@ -47,8 +47,8 @@ func TestDescribeTheBaseImage(t *testing.T) {
 	if len(d.Mounts) != 2 || d.Mounts[0] != want[0] || d.Mounts[1] != want[1] {
 		t.Errorf("mounts = %+v, want %+v", d.Mounts, want)
 	}
-	if d.Places[sandbox.TmpDir(root)] == "" {
-		t.Errorf("no place for the scratchpad: %v", d.Places)
+	if d.Places[sandbox.HomeDir(root)] == "" || d.Places["/c"] != "/a/c" {
+		t.Errorf("no place for the home, or for a mount elsewhere (an agent's scratchpad): %v", d.Places)
 	}
 }
 

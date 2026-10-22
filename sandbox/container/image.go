@@ -11,8 +11,8 @@ import (
 
 // BaseDockerfile is the default sandbox image: build tools, terraform, mise,
 // which installs each project's toolchains (see runner.Provision), and a
-// headless Chromium for screenshots and browser tests. claude and oriel are not
-// in it: both are mounted from the host at launch.
+// headless Chromium for screenshots and browser tests. oriel and the agent are
+// not in it: they're mounted from the host, or installed with mise, at launch.
 const BaseDockerfile = `FROM debian:bookworm-slim
 ARG MISE_VERSION=v2026.6.10
 ARG TERRAFORM_VERSION=1.16.4

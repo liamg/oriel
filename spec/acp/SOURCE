@@ -1,0 +1,8 @@
+source: https://github.com/zed-industries/agent-client-protocol (now agentclientprotocol/agent-client-protocol)
+branch: main
+commit: 8e29db79548af94b467dcbb0cc5ffacfe68c90ab (2026-10-22)
+path: schema/v1/{schema,meta}.json as schema/; docs/protocol/v1/{overview,initialization,session-setup,prompt-turn,
+  content,tool-calls,file-system,terminals,cancellation,agent-plan,transports,authentication,
+  session-config-options,elicitation}.mdx as docs/
+  (protocol version 1, the stable one)
+license: Apache-2.0 (see LICENSE)

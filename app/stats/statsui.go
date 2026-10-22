@@ -52,9 +52,26 @@ var kinds = []struct {
 
 // statsTile is a headline number: its label, value (with a smaller part after it) and a line under it.
 func statsTile(c *ui.Ctx, key any, label, value, small string, sub func(c *ui.Ctx)) {
+	tipTile(c, key, label, value, small, "", sub)
+}
+
+// costTile is the cost's tile, which says where its prices come from.
+func costTile(c *ui.Ctx, value string, p stats.Prices, sub func(c *ui.Ctx)) {
+	tip := ""
+	if p.Source != "" {
+		tip = "Prices from " + p.Source
+		if !p.Updated.IsZero() {
+			tip += ", updated " + p.Updated.Format("2 Jan 2006")
+		}
+	}
+	tipTile(c, "cost", "COST · EST.", value, "", tip, sub)
+}
+
+// tipTile is a statsTile with a tooltip.
+func tipTile(c *ui.Ctx, key any, label, value, small, tip string, sub func(c *ui.Ctx)) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 11, R: 11, T: 8, B: 9}, Gap: 6, Fill: th.C(kit.TStatsCard), Stroke: th.C(kit.TStatsCardLine),
-		Border: 1, Radius: 8, Clip: true, Role: ui.RoleGroup, Label: label + " " + value}, func(c *ui.Ctx) {
+		Border: 1, Radius: 8, Clip: true, Role: ui.RoleGroup, Label: label + " " + value, Tooltip: tip}, func(c *ui.Ctx) {
 		c.Text("l", label, kit.KickerFont(th.C(theme.FgFaint)))
 		c.Row("v", ui.Style{Gap: 4, Cross: ui.End}, func(c *ui.Ctx) {
 			c.Text("v", value, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 19, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})

@@ -3,6 +3,8 @@ package cli
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/app/agents"
+	"github.com/liamg/oriel/plugin"
 	"io"
 	"log/slog"
 	"os"
@@ -11,8 +13,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/claude"
-	"github.com/liamg/oriel/agent/codex"
 	"github.com/liamg/oriel/agent/hostexec"
+	"github.com/liamg/oriel/agent/mcptools/mcpstdio"
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/host"
@@ -32,11 +34,8 @@ func orielHome() string {
 // machineLoad reads the machine's load in-process, only while it's wanted, and says when it moves.
 var machineLoad = sysload.NewSampler(5*time.Second, nil)
 
-// newHost is the session host with the built-in providers and prompt packs.
+// newHost is the session host with the built-in prompt packs. Its agent providers are the app's (app/agents).
 func newHost(home string, log *slog.Logger) (*host.Host, error) {
-	providers := &agent.Providers{}
-	providers.Register(&claude.Provider{ProbeDir: filepath.Join(home, "probe")})
-	providers.Register(&codex.Provider{})
 	kinds := &packs.Set{}
 	if _, err := kinds.LoadDir(filepath.Join(app.DefaultConfigDir(), "agents")); err != nil {
 		log.Warn("prompt packs", "err", err)
@@ -50,7 +49,7 @@ func newHost(home string, log *slog.Logger) (*host.Host, error) {
 		}
 		return kinds.Get(name)
 	}
-	w, err := host.New(host.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version,
+	w, err := host.New(host.Options{Home: home, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version,
 		Load: machineLoad.Last})
 	if err != nil {
 		return nil, err
@@ -59,24 +58,23 @@ func newHost(home string, log *slog.Logger) (*host.Host, error) {
 	return w, nil
 }
 
-// startHost starts the session host's background work until ctx ends: the machine's load, the sandbox sweep, the plan
-// windows' /usage probe, and the jobs' schedules.
+// builtinAgents are the built-in agent providers' plugins: Claude's /usage probe runs in home's probe/.
+func builtinAgents(home string) []plugin.Plugin { return agents.Builtins(filepath.Join(home, "probe")) }
+
+// startHost starts the session host's background work until ctx ends: the machine's load, the sandbox sweep, the
+// jobs' schedules and the prices. The plan windows are read once the app gives the host its providers.
 func startHost(ctx context.Context, w *host.Host, log *slog.Logger) {
 	go machineLoad.Run(ctx)
 	go w.SampleLoad(ctx, machineLoad)
 	go w.SweepSandboxes(ctx, time.Hour)
-	go func() {
-		if err := w.ReadUsage(ctx); err != nil {
-			log.Warn("usage", "err", err)
-		}
-	}()
 	go w.RunSchedules(ctx, 30*time.Second)
+	go w.RefreshPrices(ctx)
 }
 
-// runHook is `oriel hook …`, which the agents' side of Oriel runs: Claude's mod, Codex's MCP server.
+// runHook is `oriel hook …`, which the agents' side of Oriel runs: Claude's mod, the MCP server of Oriel's tools.
 func runHook(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 1 && args[0] == "mcp" {
-		return codex.MCPMain(stdin, stdout, os.Environ())
+		return mcpstdio.Main(stdin, stdout, stderr, os.Environ())
 	}
 	return claude.HookMain(args, stdin, stdout, stderr)
 }

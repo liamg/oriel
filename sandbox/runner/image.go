@@ -90,9 +90,13 @@ func Describe(ctx context.Context, root string, cfg sandbox.Config) sandbox.Desc
 	if id, err := sandbox.CurrentIdentity(); err == nil {
 		d.Places = map[string]string{
 			sandbox.HomeDir(root): id.Home,
-			sandbox.TmpDir(root):  fmt.Sprintf("/tmp/claude-%d", id.UID),
 			sandbox.GoCache():     GoCacheDir,
 			toolchainDir():        MiseDir,
+		}
+	}
+	for _, m := range d.Mounts {
+		if _, ok := d.Places[m.Host]; !ok && m.Host != m.Agent && d.Places != nil {
+			d.Places[m.Host] = m.Agent
 		}
 	}
 	return d

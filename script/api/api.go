@@ -19,7 +19,7 @@ import (
 )
 
 // Version is oriel.api.version: a breaking change bumps its major.
-const Version = "0.5.0"
+const Version = "0.6.0"
 
 // futures are namespaces, or the rest of one, for features that aren't built yet: calling into one says what
 // it waits on, so a config written for them loads.
