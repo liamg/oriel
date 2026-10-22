@@ -107,9 +107,14 @@ type UI struct {
 	noHits    bool
 	animating bool
 	wake      time.Time
-	unfocused bool // the window hasn't the OS's focus (SetWindow)
-	hidden    bool // the window can't be seen
-	shown     bool // it showed again since the last frame
+	waker     *elem           // what asked for wake through Ctx.WakeAt
+	wakerAt   time.Time       // the time it asked for
+	loopWake  time.Time       // the next step of a loop that only repaints (Ctx.Animate)
+	looper    *elem           // what asked for it
+	loops     []time.Duration // each loop's step, in the last build
+	unfocused bool            // the window hasn't the OS's focus (SetWindow)
+	hidden    bool            // the window can't be seen
+	shown     bool            // it showed again since the last frame
 	clip      render.Clipboard
 	tracked   bool                 // the latest frame read where the pointer is (Interaction.Pointer)
 	regions   []render.Rect        // and asked whether it was in these
@@ -197,7 +202,7 @@ func New(sh typeset.Shaper, text TextStyle) *UI {
 // offsets, widget state, focus) and leaving u as it was. A widget's own state (State[T]) is shared, not copied.
 func (u *UI) Fork() *UI {
 	f := *u
-	f.byID, f.floats, f.hits = map[ID]*elem{}, nil, nil
+	f.byID, f.floats, f.hits, f.loops = map[ID]*elem{}, nil, nil, nil
 	f.arena, f.spare = [2]elemArena{}, spareMaps{}
 	f.layered, f.overlays = maps.Clone(u.layered), maps.Clone(u.overlays)
 	f.states = make(map[ID]*state, len(u.states))
@@ -244,7 +249,8 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.byID, u.spare.byID = fresh(u.spare.byID), prev
 	u.byID[0] = u.root
 	u.floats = u.floats[:0]
-	u.animating, u.wake = false, time.Time{}
+	u.animating, u.wake, u.waker = false, time.Time{}, nil
+	u.loopWake, u.looper, u.loops = time.Time{}, nil, u.loops[:0]
 	u.shown = false
 	u.tracked, u.regions = false, u.regions[:0]
 	build(&Ctx{u: u, e: u.root})

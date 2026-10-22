@@ -15,7 +15,7 @@ var tDots = theme.Declare("dots.fg", "status.working")
 // A wave crosses the dots once a dotsCycle in dotsSteps ticks: a frame a tick, not one a refresh.
 const (
 	dotsCycle = 1200 * time.Millisecond
-	dotsSteps = 12
+	dotsSteps = 9
 	dotsN     = 3
 )
 
@@ -38,13 +38,14 @@ func Dots(c *ui.Ctx, key any, o DotsOpts) ui.ID {
 	if tone == (color.NRGBA{}) {
 		tone = col(c, tDots)
 	}
-	phase, moving := c.Decorative(dotsCycle, dotsSteps)
-	if !moving {
-		phase = -1
-	}
+	loop := c.Animate(dotsCycle, dotsSteps)
 	w := size*dotsN + gap*(dotsN-1)
 	return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(size), Role: ui.RoleStatus, Label: o.Name, Help: o.Help, Keep: true}, func(c *ui.Ctx) {
 		c.Paint("dots", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
+			phase := -1.0
+			if loop.Moving() {
+				phase = loop.Phase()
+			}
 			for i := range dotsN {
 				x := r.Min.X + float32(i)*(size+gap)
 				in := render.Rect{Min: render.Point{X: x, Y: r.Min.Y}, Max: render.Point{X: x + size, Y: r.Min.Y + size}}

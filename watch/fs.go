@@ -108,7 +108,7 @@ func (m *Manager) events(fw *fswatch.Watcher) {
 				if ev.Err != nil {
 					n.fallback = true
 				}
-				n.stale([]string{ev.Path})
+				n.stale([]string{ev.Path}, ev.Path)
 				break
 			}
 		}

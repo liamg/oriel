@@ -216,6 +216,9 @@ func (b *kqueue) note(fd int, fflags uint32) []raw {
 	if fflags&goneNotes != 0 {
 		return []raw{{path: n.path, dir: n.dir, op: opRemoved}}
 	}
+	if !n.dir && fflags&(unix.NOTE_WRITE|unix.NOTE_EXTEND) == 0 {
+		return []raw{{path: n.path, op: opAttrib}}
+	}
 	if !n.dir {
 		return []raw{{path: n.path, op: opChanged}}
 	}

@@ -396,7 +396,7 @@ func (c *Ctx) HeldAlone() (render.Mods, time.Time) {
 // WakeAt asks for a frame at t, for a widget waiting on time (a toast's timeout).
 func (c *Ctx) WakeAt(t time.Time) {
 	if c.u.wake.IsZero() || t.Before(c.u.wake) {
-		c.u.wake = t
+		c.u.wake, c.u.waker, c.u.wakerAt = t, c.e, t
 	}
 }
 

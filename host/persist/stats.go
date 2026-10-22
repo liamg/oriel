@@ -106,6 +106,7 @@ func (s *Stats) Sessions(only core.SessionID, since time.Time) []stats.Session {
 	if only == "" || len(out) == 0 {
 		out = append(out, s.outside(only, since, own)...)
 	}
+	s.Store().Save()
 	return out
 }
 

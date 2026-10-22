@@ -3,7 +3,6 @@ package widget
 import (
 	"image/color"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
@@ -38,7 +37,7 @@ func TestSpinner(t *testing.T) {
 		t.Errorf("its accessible name: %+v", n)
 	}
 	before := start(h)
-	if next := h.u.NextFrame(); next.IsZero() || next.After(h.now.Add(100*time.Millisecond)) {
+	if next := h.u.NextFrame(); next.IsZero() || next.After(h.now.Add(spinnerTurn/spinnerSteps)) {
 		t.Errorf("a turning spinner asked for its next frame at %v (now %v)", next, h.now)
 	}
 	h.now = h.now.Add(spinnerTurn / 4)

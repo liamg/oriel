@@ -2,8 +2,10 @@ package ui
 
 import (
 	"cmp"
+	"fmt"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/liamg/oriel/render"
@@ -772,6 +774,28 @@ func (u *UI) now() time.Time {
 	return time.Now()
 }
 
+// WokenBy says what asked for the next frame in the last build: the keys down to the element whose WakeAt did,
+// "animation" for a spring, "toolkit" for the UI's own, or "" for nothing.
+func (u *UI) WokenBy() string {
+	by := u.waker
+	switch {
+	case u.animating:
+		return "animation"
+	case !u.loopWake.IsZero() && (u.wake.IsZero() || !u.wake.Before(u.loopWake)):
+		by = u.looper
+	case u.wake.IsZero():
+		return ""
+	case u.waker == nil || !u.wake.Equal(u.wakerAt):
+		return "toolkit"
+	}
+	var keys []string
+	for e := by; e != nil && e.parent != nil; e = e.parent {
+		keys = append(keys, fmt.Sprint(e.key))
+	}
+	slices.Reverse(keys)
+	return strings.Join(keys, "/")
+}
+
 // NextFrame is when the UI next needs a frame without any input: now while a spring is moving, at a
 // tooltip's delay, or zero when nothing is pending or the window is hidden.
 func (u *UI) NextFrame() time.Time {
@@ -783,6 +807,9 @@ func (u *UI) NextFrame() time.Time {
 	}
 	if u.animating {
 		return u.now()
+	}
+	if u.wake.IsZero() || !u.loopWake.IsZero() && u.loopWake.Before(u.wake) {
+		return u.loopWake
 	}
 	return u.wake
 }

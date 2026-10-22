@@ -44,6 +44,7 @@ type Watcher struct {
 	mu      sync.Mutex
 	roots   map[string]*root
 	pending map[string]error
+	seen    map[string]os.FileInfo // each file as it was at its last event, to tell a metadata-only one
 }
 
 // root is what the caller added.
@@ -63,6 +64,7 @@ type op int
 
 const (
 	opChanged op = iota
+	opAttrib     // a file's metadata, not its content
 	opCreated
 	opRemoved
 	opOverflow
@@ -98,7 +100,7 @@ func New() (*Watcher, error) {
 
 func newWatcher(b backend) *Watcher {
 	w := &Watcher{b: b, out: make(chan Event, 64), kick: make(chan struct{}, 1), done: make(chan struct{}),
-		roots: map[string]*root{}, pending: map[string]error{}}
+		roots: map[string]*root{}, pending: map[string]error{}, seen: map[string]os.FileInfo{}}
 	w.wg.Add(2)
 	go func() {
 		defer w.wg.Done()
@@ -160,6 +162,11 @@ func (w *Watcher) Remove(path string) error {
 	}
 	w.stopStream(r)
 	delete(w.roots, path)
+	for p := range w.seen {
+		if under(p, path) {
+			delete(w.seen, p)
+		}
+	}
 	w.prune()
 	return nil
 }
@@ -376,8 +383,17 @@ func (w *Watcher) handle(evs []raw) {
 				w.queue(p, nil)
 			}
 			continue
+		case opChanged:
+			if !e.dir {
+				w.unchanged(e.path)
+			}
+		case opAttrib:
+			if w.unchanged(e.path) {
+				continue
+			}
 		case opRemoved:
 			moved = true
+			delete(w.seen, e.path)
 			w.b.unwatchUnder(e.path)
 			// A file replaced by a rename is still there under a new inode.
 			if fi, err := os.Lstat(e.path); err == nil && fi.Mode().IsRegular() && w.wantFile(e.path) {
@@ -454,6 +470,12 @@ func (w *Watcher) handleStream(r *root, s *stream, evs []fsevent) {
 		if !ok || !inTree(r, p) {
 			continue
 		}
+		if e.flags&evItemIsFile != 0 {
+			same := w.unchanged(p)
+			if same && e.flags&(evItemCreated|evItemRemoved|evItemRenamed|evItemModified) == 0 {
+				continue
+			}
+		}
 		w.queue(p, nil)
 		// A folder moved in sends nothing for what it holds.
 		if p != r.path && e.flags&evItemIsDir != 0 && e.flags&(evItemCreated|evItemRenamed) != 0 {
@@ -462,6 +484,18 @@ func (w *Watcher) handleStream(r *root, s *stream, evs []fsevent) {
 			}
 		}
 	}
+}
+
+// unchanged says file p looks as it did at its last event, and keeps how it looks now; w.mu is held.
+func (w *Watcher) unchanged(p string) bool {
+	fi, err := os.Lstat(p)
+	if err != nil {
+		delete(w.seen, p)
+		return false
+	}
+	old, ok := w.seen[p]
+	w.seen[p] = fi
+	return ok && os.SameFile(old, fi) && old.Size() == fi.Size() && old.ModTime().Equal(fi.ModTime()) && old.Mode() == fi.Mode()
 }
 
 // resettle moves each root's anchor to where it is now, after folders came and went.

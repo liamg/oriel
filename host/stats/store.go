@@ -27,6 +27,7 @@ type Store struct {
 
 	mu       sync.Mutex
 	loaded   bool
+	dirty    bool // read since the stats file was last written
 	scans    map[string]*Scan // by session, then path: key(session, path)
 	snapshot *price.Book
 }
@@ -57,14 +58,14 @@ type cacheFile struct {
 	Scans   map[string]*Scan `json:"scans"`
 }
 
-// Scan brings session's logs up to date, reading only what each has had appended, and returns their scans.
+// Scan brings session's logs up to date, reading only what each has had appended, and returns their scans. Save
+// keeps what it read.
 func (s *Store) Scan(session string, logs []Log) []*Scan {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.load()
 	b := s.book()
 	var out []*Scan
-	changed := false
 	for _, l := range logs {
 		k := key(session, l.Path)
 		sc := s.scans[k]
@@ -75,14 +76,21 @@ func (s *Store) Scan(session string, logs []Log) []*Scan {
 		}
 		if err == nil && (fi.Size() != sc.Size || sc.Offset == 0) {
 			sc.Prices(b)
-			changed = sc.Read() || changed
+			s.dirty = sc.Read() || s.dirty
 		}
 		out = append(out, sc)
 	}
-	if changed {
-		s.save()
-	}
 	return out
+}
+
+// Save writes the stats file, if a Scan read anything since it was last written.
+func (s *Store) Save() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.dirty {
+		s.save()
+		s.dirty = false
+	}
 }
 
 // Scans are what was last read of session's logs, without reading them.

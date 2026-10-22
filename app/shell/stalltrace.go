@@ -24,6 +24,8 @@ type stallTrace struct {
 	n       int
 	written time.Time
 	wmu     sync.Mutex // a write, and stopping
+	stopped bool       // under wmu: writes still to come write nothing
+	writes  sync.WaitGroup
 }
 
 func startStallTrace(path string, log *slog.Logger) *stallTrace {
@@ -56,9 +58,12 @@ func (s *stallTrace) stalled() {
 		path = fmt.Sprintf("%s-%d%s", strings.TrimSuffix(path, ext), s.n, ext)
 	}
 	s.mu.Unlock()
-	go func() {
+	s.writes.Go(func() {
 		s.wmu.Lock()
 		defer s.wmu.Unlock()
+		if s.stopped {
+			return
+		}
 		f, err := os.Create(path)
 		if err == nil {
 			_, err = s.fr.WriteTo(f)
@@ -71,14 +76,17 @@ func (s *stallTrace) stalled() {
 			return
 		}
 		s.log.Warn("wrote the stall's trace", "path", path)
-	}()
+	})
 }
 
+// stop stops recording, once a write under way is done; writes asked for and not yet begun are dropped.
 func (s *stallTrace) stop() {
 	if s == nil {
 		return
 	}
 	s.wmu.Lock()
-	defer s.wmu.Unlock()
+	s.stopped = true
 	s.fr.Stop()
+	s.wmu.Unlock()
+	s.writes.Wait()
 }

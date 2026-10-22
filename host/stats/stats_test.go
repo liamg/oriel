@@ -348,9 +348,11 @@ func TestStoreRescansOnlyWhatWasAppended(t *testing.T) {
 	first := asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1000, 0, 0, 0)
 	p := write(t, first)
 	logs := []Log{{Path: p, Format: FormatClaude}}
-	if sc := NewStore(file, nil).Scan("s", logs); sc[0].Requests != 1 {
+	st := NewStore(file, nil)
+	if sc := st.Scan("s", logs); sc[0].Requests != 1 {
 		t.Fatalf("first scan: %d requests", sc[0].Requests)
 	}
+	st.Save()
 	// The same length, saying something else: a reread would count it.
 	b, _ := os.ReadFile(p)
 	os.WriteFile(p, []byte(strings.Replace(string(b), `"output_tokens":1000`, `"output_tokens":9999`, 1)), 0o644)
@@ -372,9 +374,11 @@ func TestStoreRepricesWhenThePricesChange(t *testing.T) {
 	logs := []Log{{Path: kept, Format: FormatClaude}, {Path: gone, Format: FormatClaude}}
 	book := price.Default()
 	prices := func() *price.Book { return book }
-	if sc := NewStore(file, prices).Scan("s", logs); !near(sc[0].Cost(), 25) || !near(sc[1].Cost(), 25) {
+	st := NewStore(file, prices)
+	if sc := st.Scan("s", logs); !near(sc[0].Cost(), 25) || !near(sc[1].Cost(), 25) {
 		t.Fatalf("at the snapshot's prices: $%v and $%v, want $25 each", sc[0].Cost(), sc[1].Cost())
 	}
+	st.Save()
 	cheaper, err := price.Parse([]byte(`{"items":[{"id":"anthropic:claude-opus-5","prices":{"input_tokens_per_1000000":"1",` +
 		`"output_tokens_per_1000000":"2"}}]}`))
 	if err != nil {
@@ -522,5 +526,28 @@ func TestAccountAtTheTime(t *testing.T) {
 	}
 	if d := Detailed(a, true, 0); d.Account != "u1/o-home" {
 		t.Errorf("the session's account now = %q", d.Account)
+	}
+}
+
+// Scans write nothing; one Save writes what they all read, and a Save with nothing new writes nothing.
+func TestStoreSavesOnce(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "stats.json")
+	st := NewStore(file, nil)
+	for i := range 3 {
+		p := write(t, asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1, 0, 0, 0))
+		st.Scan(fmt.Sprint("s", i), []Log{{Path: p, Format: FormatClaude}})
+	}
+	if _, err := os.Stat(file); err == nil {
+		t.Fatal("a scan wrote the stats file")
+	}
+	st.Save()
+	fi, err := os.Stat(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Remove(file)
+	st.Save()
+	if _, err := os.Stat(file); err == nil {
+		t.Fatalf("a save with nothing read wrote %d bytes again", fi.Size())
 	}
 }

@@ -239,3 +239,29 @@ func TestCloseClosesEvents(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A file's metadata changing with its content the same (its access time read) sends nothing after the first.
+func TestMetadataOnlyChangeIsQuiet(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "index")
+	write(t, f, "a\n")
+	w := start(t)
+	if err := w.Add(f); err != nil {
+		t.Fatal(err)
+	}
+	w.handle([]raw{{path: f, op: opAttrib}})
+	expect(t, w, f)
+	for range 3 {
+		w.handle([]raw{{path: f, op: opAttrib}})
+	}
+	if got := quiet(w, 300*time.Millisecond); len(got) != 0 {
+		t.Fatalf("events for metadata that didn't change: %v", got)
+	}
+	if err := os.Chmod(f, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	w.handle([]raw{{path: f, op: opAttrib}})
+	expect(t, w, f)
+	write(t, f, "b\n")
+	expect(t, w, f)
+}

@@ -398,6 +398,8 @@ type node struct {
 	first     time.Time // when it went stale, for a burst
 	last      time.Time // the latest change
 	changed   []string  // paths changed since its last read began
+	cause     string    // what last made it stale: a path, a source it reads from, or "refresh"
+	readCause string    // the cause of its last read; "poll" for a poll
 	reading   bool      // a read is running
 	lastStart time.Time // when the last read began
 	timer     *time.Timer
@@ -613,7 +615,11 @@ func (n *node) fire() {
 // read starts a read of n off the lock; m.mu is held.
 func (n *node) read() {
 	m := n.m
-	n.reading, n.dirty, n.urgent = true, false, false
+	n.readCause = n.cause
+	if !n.dirty {
+		n.readCause = "poll"
+	}
+	n.reading, n.dirty, n.urgent, n.cause = true, false, false, ""
 	n.lastStart = time.Now()
 	n.reads++
 	n.times = append(n.times, n.lastStart)
@@ -679,7 +685,7 @@ func (n *node) dirtyFrom(key string) {
 	if d == nil {
 		return
 	}
-	d.stale(nil)
+	d.stale(nil, n.spec.key)
 }
 
 // wakeDependents lets the sources that read n, and were waiting for it, read.
@@ -699,7 +705,7 @@ func (n *node) refresh() {
 		d.n.refresh()
 	}
 	n.urgent = true
-	n.stale(nil)
+	n.stale(nil, "refresh")
 }
 
 // busy says n, or what it reads from, is being read or is due a read; m.mu is held.
@@ -715,13 +721,13 @@ func (n *node) busy() bool {
 	return false
 }
 
-// stale marks n stale, with the paths that changed; m.mu is held.
-func (n *node) stale(paths []string) {
+// stale marks n stale, with the paths that changed and why; m.mu is held.
+func (n *node) stale(paths []string, cause string) {
 	now := time.Now()
 	if !n.dirty {
 		n.dirty, n.first = true, now
 	}
-	n.last = now
+	n.last, n.cause = now, cause
 	n.changed = append(n.changed, paths...)
 	if len(n.changed) > 4096 {
 		n.changed = n.changed[len(n.changed)-4096:]

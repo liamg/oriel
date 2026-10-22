@@ -264,6 +264,9 @@ func (x *Perf) oriel(c *ui.Ctx, s perfSnap) {
 			if f.Frames > 0 {
 				dim(c, "s", fmt.Sprintf("build p50 %s · p99 %s", ms(f.P50), ms(f.P99)))
 			}
+			if f.Wakes > 0 {
+				dim(c, "w", fmt.Sprintf("%d asked for by %s", f.Wakes, tail(f.Waker, 60)))
+			}
 		})
 		lag := "—"
 		if f.Lag > 0 {
@@ -346,7 +349,15 @@ func (x *Perf) sessions(c *ui.Ctx, s perfSnap, width float32) {
 		rows = append(rows, cells(name, status, fmt.Sprint(b.n), share(s, b.share), kit.Bytes(int64(b.rss))))
 	}
 	widget.Table(c, "sessions", rows, width, kit.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Sessions",
-		Align: []ui.Align{ui.Start, ui.Start, ui.End, ui.End, ui.End}})
+		Align: []ui.Align{ui.Start, ui.Start, ui.End, ui.End, ui.End, ui.Start}})
+}
+
+// tail is s cut to its last n runes, behind "…".
+func tail(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return "…" + string(r[len(r)-n+1:])
+	}
+	return s
 }
 
 func sessionNamed(st core.State, id core.SessionID) (core.SessionState, bool) {
@@ -426,7 +437,7 @@ func (x *Perf) watches(c *ui.Ctx, s perfSnap, width float32) {
 		c.Text("none", "Nothing is being kept fresh.", kit.UIFont(12, th.C(theme.FgFaint)))
 		return
 	}
-	rows := [][][]widget.Span{cells("Manager", "Source", "State", "Subscribers", "Reads/min", "Last read")}
+	rows := [][][]widget.Span{cells("Manager", "Source", "State", "Subscribers", "Reads/min", "Last read", "Why")}
 	for _, w := range s.watches {
 		var who []string
 		for _, sub := range w.Subs {
@@ -445,11 +456,7 @@ func (x *Perf) watches(c *ui.Ctx, s perfSnap, width float32) {
 		if w.Err != nil {
 			last = "failed: " + w.Err.Error()
 		}
-		key := w.Key
-		if r := []rune(key); len(r) > 70 {
-			key = "…" + string(r[len(r)-69:])
-		}
-		rows = append(rows, cells(w.manager, key, w.State, subs, fmt.Sprint(w.PerMin), last))
+		rows = append(rows, cells(w.manager, tail(w.Key, 70), w.State, subs, fmt.Sprint(w.PerMin), last, tail(cmp.Or(w.Cause, "—"), 60)))
 	}
 	widget.Table(c, "watches", rows, width, kit.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Watches",
 		Align: []ui.Align{ui.Start, ui.Start, ui.Start, ui.Start, ui.End, ui.End}})
