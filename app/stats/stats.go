@@ -784,17 +784,8 @@ func (x *Plugin) frontUsage() (core.ProviderUsage, bool) {
 	if len(us) == 0 {
 		return core.ProviderUsage{}, false
 	}
-	if se, ok := st.Session(st.Focus); ok {
-		s := se.Snapshot()
-		acct := ""
-		if n := len(s.Agent.Accounts); n > 0 {
-			acct = s.Agent.Accounts[n-1].Account
-		}
-		for _, v := range us {
-			if v.Provider == s.Agent.Provider && (acct == "" || v.Account == acct) {
-				return v, true
-			}
-		}
+	if u, ok := x.sessionUsage(us); ok {
+		return u, true
 	}
 	return us[0], true
 }

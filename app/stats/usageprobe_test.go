@@ -96,3 +96,52 @@ func TestUsageShowsTheStartupReadsFailure(t *testing.T) {
 	}
 	s.WantFrame(want)
 }
+
+// usageSlow is a provider whose read waits for release, then has its windows.
+type usageSlow struct {
+	*agenttest.Fake
+	release chan struct{}
+}
+
+func (f usageSlow) Usage(ctx context.Context) (core.ProviderUsage, error) {
+	select {
+	case <-f.release:
+	case <-ctx.Done():
+		return core.ProviderUsage{}, ctx.Err()
+	}
+	return core.ProviderUsage{Provider: "claude", Account: "u1", AccountName: "ada@acme.example", Plan: "Claude Max", Sampled: time.Now(),
+		Windows: []core.UsageWindow{{Name: "Current session", Used: .25, Length: 5 * time.Hour}}}, nil
+}
+
+// A provider being read shows on the Usage page before its windows come, then its windows do.
+func TestUsageShowsAProviderWhileItsRead(t *testing.T) {
+	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
+	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+	fake := agenttest.NewFake()
+	fake.Name = "claude"
+	slow := usageSlow{Fake: fake, release: make(chan struct{})}
+	providers := &agent.Providers{}
+	providers.Register(slow)
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: rig.NopExec{}, Load: rig.SteadyLoad})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { w.Close() })
+	s := apptest.New(t, apptest.Options{Config: apptest.Connect(w)})
+	s.Run("usage.open", nil)
+	wait := func(want string) {
+		t.Helper()
+		deadline := time.Now().Add(10 * time.Second)
+		for s.Frame(); !strings.Contains(s.Text(), want) && time.Now().Before(deadline); s.Frame() {
+			s.RunQueued()
+			time.Sleep(10 * time.Millisecond)
+		}
+		s.WantFrame(want)
+	}
+	wait("Reading Claude's plan windows…")
+	close(slow.release)
+	wait("Claude Max")
+	if strings.Contains(s.Text(), "Reading Claude's plan windows") {
+		t.Errorf("still reading once the windows came:\n%s", s.Text())
+	}
+}

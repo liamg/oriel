@@ -341,9 +341,11 @@ func (e UsageSampled) Apply(s *State) error {
 	return nil
 }
 
-// UsageRead is how a provider's read of its plan windows went: Failure is why it failed, nil when it didn't.
+// UsageRead is a provider's read of its plan windows starting (Reading), or how it went: Failure is why it failed,
+// nil when it didn't.
 type UsageRead struct {
 	Provider string        `json:"provider"`
+	Reading  bool          `json:"reading,omitempty"`
 	Failure  *UsageFailure `json:"failure,omitempty"`
 }
 
@@ -352,6 +354,11 @@ func (e UsageRead) Scope() SessionID { return "" }
 func (e UsageRead) Apply(s *State) error {
 	if e.Provider == "" {
 		return fmt.Errorf("usage read has no provider")
+	}
+	s.UsageReading = slices.DeleteFunc(slices.Clone(s.UsageReading), func(p string) bool { return p == e.Provider })
+	if e.Reading {
+		s.UsageReading = append(s.UsageReading, e.Provider)
+		return nil
 	}
 	s.UsageFailures = slices.DeleteFunc(slices.Clone(s.UsageFailures), func(f UsageFailure) bool { return f.Provider == e.Provider })
 	if e.Failure != nil {

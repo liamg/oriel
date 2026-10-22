@@ -115,12 +115,13 @@ clip 360,118 880x800 r 10
     text "·" @388,304.60156 #ece6d8 Inter 13.5
     text "The chips filter by severity; the box filters by text, or source:init.lua." @400.03125,304.60156 #ece6d8 Inter 13.5
     text "·" @388,326.93604 #ece6d8 Inter 13.5
-    text "Click an entry to open its stack trace and the source around the failing line." @400.03125,326.93604 #ece6d8 Inter 13.5
-    text "·" @388,349.2705 #ece6d8 Inter 13.5
-    text "Copy copies the open entry, or everything shown; Copy report copies a report for" @400.03125,349.2705 #ece6d8 Inter 13.5
-    text "a bug." @400.03125,368.60498 #ece6d8 Inter 13.5
-    text "·" @388,390.93945 #ece6d8 Inter 13.5
-    text ":Log level debug shows debug records from now on." @400.03125,390.93945 #ece6d8 Inter 13.5
+    text "Click an entry to open it: its whole text, wrapped, its stack trace and the source" @400.03125,326.93604 #ece6d8 Inter 13.5
+    text "around the failing line." @400.03125,346.2705 #ece6d8 Inter 13.5
+    text "·" @388,368.60498 #ece6d8 Inter 13.5
+    text "Copy copies the open entry, or everything shown; Copy report copies a report for" @400.03125,368.60498 #ece6d8 Inter 13.5
+    text "a bug. Right-click an entry and choose Copy to copy just that one." @400.03125,387.93945 #ece6d8 Inter 13.5
+    text "·" @388,410.27393 #ece6d8 Inter 13.5
+    text ":Log level debug shows debug records from now on." @400.03125,410.27393 #ece6d8 Inter 13.5
   pop
   rect 989,159 1x759 fill #24221d
   clip 990,159 250x759 r 0

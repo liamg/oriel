@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/agent"
@@ -100,32 +101,39 @@ func (s *Stats) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
 	return readUsage(s.usagePath(), r.Provider, r.Since)
 }
 
-// ReadUsage asks every provider for its plan's windows now, and reports each that's newer than the one held.
+// ReadUsage asks every provider for its plan's windows now, all at once, and reports each that's newer than the one
+// held.
 func (s *Stats) ReadUsage(ctx context.Context) error {
-	var errs []error
-	for _, p := range s.providers.List() {
-		cctx, cancel := context.WithTimeout(ctx, time.Minute)
-		u, err := p.Usage(cctx)
-		cancel()
-		_ = s.st.Emit(core.UsageRead{Provider: p.ID(), Failure: failure(err)})
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		if len(u.Windows) == 0 {
-			continue
-		}
-		if u.Provider == "" {
-			u.Provider = p.ID()
-		}
-		if !u.Sampled.IsZero() && slices.ContainsFunc(s.st.Snapshot().Usage, func(o core.ProviderUsage) bool {
-			return o.Same(u) && !o.Sampled.Before(u.Sampled)
-		}) {
-			continue
-		}
-		s.UsageSampled(u)
+	ps := s.providers.List()
+	errs := make([]error, len(ps))
+	var wg sync.WaitGroup
+	for i, p := range ps {
+		wg.Go(func() { errs[i] = s.readProvider(ctx, p) })
 	}
+	wg.Wait()
 	return errors.Join(errs...)
+}
+
+// readProvider asks p for its plan's windows, saying in the state that it's being read and how that went.
+func (s *Stats) readProvider(ctx context.Context, p agent.Provider) error {
+	_ = s.st.Emit(core.UsageRead{Provider: p.ID(), Reading: true})
+	cctx, cancel := context.WithTimeout(ctx, time.Minute)
+	u, err := p.Usage(cctx)
+	cancel()
+	_ = s.st.Emit(core.UsageRead{Provider: p.ID(), Failure: failure(err)})
+	if err != nil || len(u.Windows) == 0 {
+		return err
+	}
+	if u.Provider == "" {
+		u.Provider = p.ID()
+	}
+	if !u.Sampled.IsZero() && slices.ContainsFunc(s.st.Snapshot().Usage, func(o core.ProviderUsage) bool {
+		return o.Same(u) && !o.Sampled.Before(u.Sampled)
+	}) {
+		return nil
+	}
+	s.UsageSampled(u)
+	return nil
 }
 
 // failure is err as the state keeps it, nil for none.

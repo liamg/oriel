@@ -376,7 +376,11 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 			})
 			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
+				u, shown := x.usageAccount()
 				for i, f := range st.UsageFailures {
+					if shown && len(u.Windows) == 0 && f.Provider == u.Provider {
+						continue
+					}
 					c.Box(fmt.Sprint("fail", i), ui.Style{Tooltip: f.Err}, func(c *ui.Ctx) {
 						c.Text("t", failureText(x.h, f), kit.MonoFont(11, th.C(theme.Warn)))
 					})
@@ -384,12 +388,16 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 				if err := x.reading.State().Err; err != nil && len(st.UsageFailures) == 0 {
 					c.Text("err", "Couldn't read every provider's windows: "+err.Error(), kit.MonoFont(11, th.C(theme.Warn)))
 				}
-				if len(st.Usage) == 0 && x.reading.State().Phase != widget.Pending {
+				if !shown && x.reading.State().Phase != widget.Pending {
 					kit.Note(c, "none", "No plan windows read yet: they're read at start and with each session's turns, or Refresh.")
 				}
-				if u, ok := x.usageAccount(); ok {
+				if shown {
 					x.accountSwitch(c, u)
-					x.provider(c, 0, u, now)
+					if len(u.Windows) == 0 {
+						x.unread(c, u)
+					} else {
+						x.provider(c, 0, u, now)
+					}
 				}
 				c.Row("how", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 9), Gap: 6, Radius: 6, Stroke: th.C(theme.LineStrong), Border: 1}, func(c *ui.Ctx) {
 					c.Text("t", "How it's measured", kit.MonoFont(10.5, th.C(theme.Fg)))
@@ -809,27 +817,37 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 	})
 }
 
-// usageAccount is the account the Usage page shows: the one picked, else the session in front's.
+// usageAccount is the account the Usage page shows: the one picked, else the session in front's, else the first.
 func (x *Plugin) usageAccount() (core.ProviderUsage, bool) {
-	for _, u := range x.h.State().Usage {
+	us := x.pageAccounts()
+	if len(us) == 0 {
+		return core.ProviderUsage{}, false
+	}
+	for _, u := range us {
 		if x.acct != "" && accountKey(u) == x.acct {
 			return u, true
 		}
 	}
-	return x.frontUsage()
+	if u, ok := x.sessionUsage(us); ok {
+		return u, true
+	}
+	return us[0], true
 }
 
 // accountSwitch picks the account the page shows. Accounts' windows are separate limits, so there's no "all".
 func (x *Plugin) accountSwitch(c *ui.Ctx, cur core.ProviderUsage) {
-	us := slices.Clone(x.h.State().Usage)
+	us := x.pageAccounts()
 	if len(us) < 2 {
 		return
 	}
-	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int { return strings.Compare(a.Provider, b.Provider) })
 	var labels, tiers []string
 	at := 0
 	for i, u := range us {
-		labels = append(labels, strings.ToUpper(x.accountTitle(u)))
+		label := x.accountTitle(u)
+		if len(u.Windows) == 0 && u.Account == "" {
+			label = kit.ProviderName(x.h, u.Provider)
+		}
+		labels = append(labels, strings.ToUpper(label))
 		tiers = append(tiers, u.Tier)
 		if u.Same(cur) {
 			at = i

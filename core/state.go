@@ -18,6 +18,7 @@ type State struct {
 	Machine       MachineState    `json:"machine,omitzero"`
 	Usage         []ProviderUsage `json:"usage,omitempty"`         // each provider's plan windows
 	UsageFailures []UsageFailure  `json:"usageFailures,omitempty"` // the providers whose last read of them failed
+	UsageReading  []string        `json:"usageReading,omitempty"`  // the providers being read now
 	Repos         []Repo          `json:"repos,omitempty"`         // the registered checkouts
 }
 
@@ -151,6 +152,7 @@ func (s State) Clone() State {
 	s.Machine.SignedOut = slices.Clone(s.Machine.SignedOut)
 	s.Usage = slices.Clone(s.Usage)
 	s.UsageFailures = slices.Clone(s.UsageFailures)
+	s.UsageReading = slices.Clone(s.UsageReading)
 	s.Repos = slices.Clone(s.Repos)
 	return s
 }

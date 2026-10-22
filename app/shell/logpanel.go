@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"image/color"
@@ -42,7 +43,8 @@ type logPanel struct {
 	filter   string
 	open     string // the expanded row's key
 	goFrames bool
-	follow   bool // scroll the open row into view once it's laid out
+	follow   bool    // scroll the open row into view once it's laid out
+	width    float32 // the rows' width as last laid out
 	srcs     kit.FileSrcs
 	cache    logCache
 	shown    *kit.WhileShown // the ring's writes ask for frames while the panel is drawn
@@ -301,6 +303,9 @@ func (p *logPanel) build(c *ui.Ctx) {
 		})
 		rows := rows[max(0, len(rows)-500):]
 		rowsID, reveal := c.Next("rows"), -1
+		if r, ok := c.Rect(rowsID); ok && r.Dx() > 0 {
+			p.width = r.Dx()
+		}
 		if p.follow {
 			view, ok1 := c.Rect(rowsID)
 			row, ok2 := c.Rect(ui.Child(rowsID, p.open))
@@ -351,6 +356,7 @@ func (p *logPanel) row(c *ui.Ctx, r logRow) {
 	}
 	levelCol := map[slog.Level]theme.TokenID{slog.LevelError: theme.Error, slog.LevelWarn: theme.Warn, slog.LevelInfo: theme.FgFaint, slog.LevelDebug: theme.FgGhost}[bucket(r.level)]
 	c.Column(r.key, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
+		line := c.Next("line")
 		in := widget.Clickable(c, "line", ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(23), Pad: ui.Insets{R: 12}, Gap: 12, Cross: ui.Center, Fill: fill,
 			Help: "errors#log", Expanded: &open, Label: r.text}, func(c *ui.Ctx) {
 			edge := color.NRGBA{}
@@ -389,6 +395,9 @@ func (p *logPanel) row(c *ui.Ctx, r logRow) {
 				p.open = ""
 			}
 		}
+		if widget.ContextMenu(c, "menu", line, []widget.MenuItem{{Label: "Copy", Help: widget.ContextMenuHelp}}).Chosen == 0 {
+			kit.CopyText(p.h, r.plain())
+		}
 		if open {
 			p.detail(c, r)
 		}
@@ -418,8 +427,18 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 			loc = f.Loc()
 		}
 	}
+	var src *kit.SourceFile
+	if loc != "" {
+		src = p.source(loc)
+	}
+	// The text wraps to the left column: the row less its padding, beside the source when that shows.
+	width := cmp.Or(p.width, 900) - 86 - 12 - 16
+	if src != nil {
+		width = (width - 16) / 2.3
+	}
 	c.Row("detail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 86, T: 10, R: 12, B: 12}, Gap: 16}, func(c *ui.Ctx) {
-		c.Column("left", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
+		c.Column("left", ui.Style{W: ui.Flex(1), Gap: 6, Clip: true}, func(c *ui.Ctx) {
+			widget.Wrap(c, "text", kit.ExpandTabs(r.text), width, kit.Mono(11.5, typeset.Normal, th.C(theme.Fg)))
 			switch {
 			case len(frames) > 0:
 				c.Text("head", "TRACEBACK", kit.Mono(9.5, typeset.SemiBold, th.C(theme.FgFaint)))
@@ -431,11 +450,11 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 					if hasFileRef(ln) {
 						col = th.C(tLogSource)
 					}
-					c.Text(i, kit.ExpandTabs(ln), kit.Mono(11, typeset.Normal, col))
+					widget.Wrap(c, i, kit.ExpandTabs(ln), width, kit.Mono(11, typeset.Normal, col))
 				}
 			case r.rec != nil:
 				for i, a := range r.rec.Attrs {
-					c.Text(i, kit.ExpandTabs(a.Key+" = "+a.Value), kit.Mono(11, typeset.Normal, th.C(theme.FgMuted)))
+					widget.Wrap(c, i, kit.ExpandTabs(a.Key+" = "+a.Value), width, kit.Mono(11, typeset.Normal, th.C(theme.FgMuted)))
 				}
 			}
 			if len(actions) > 0 {
@@ -450,10 +469,8 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 				})
 			}
 		})
-		if loc != "" {
-			if f := p.source(loc); f != nil {
-				c.Column("source", ui.Style{W: ui.Flex(1.3)}, func(c *ui.Ctx) { f.Build(c, r.n) })
-			}
+		if src != nil {
+			c.Column("source", ui.Style{W: ui.Flex(1.3)}, func(c *ui.Ctx) { src.Build(c, r.n) })
 		}
 	})
 }
