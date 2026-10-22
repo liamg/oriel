@@ -1,5 +1,5 @@
 // Package agent defines the Provider interface and the shared turn and transcript types. Claude and Codex
-// implement it in subpackages; the session host and the UI can't tell them apart (agents.md).
+// implement it in subpackages; the session host and the UI can't tell them apart.
 package agent
 
 import (
@@ -67,7 +67,7 @@ type Model struct {
 	Efforts []string `json:"efforts,omitempty"`
 	Context int      `json:"context,omitempty"` // tokens
 	Default bool     `json:"default,omitempty"`
-	// Small is a quick, cheap model for utility agents (agents.md: the resident utility session).
+	// Small is a quick, cheap model for utility agents, such as the resident utility session.
 	Small bool `json:"small,omitempty"`
 }
 
@@ -92,9 +92,10 @@ type StartSpec struct {
 	Sandbox  *Sandbox
 	StateDir string // where the provider may keep files for this session
 	Memory   string // the agent's memory directory, "" for the provider's own
+	NoMCP    bool   // start without the user's MCP servers
 }
 
-// Policy is how much the agent's own gate asks (agents.md → Permissions).
+// Policy is how much the agent's own gate asks.
 type Policy string
 
 const (
@@ -293,6 +294,14 @@ func (e AuthExpired) Error() string {
 		return e.Detail
 	}
 	return e.Provider + " is signed out"
+}
+
+// UsageProbeFailed is an error from Usage whose probe read no windows. Started says the agent came up and was asked;
+// not started, it never got that far.
+type UsageProbeFailed interface {
+	error
+	Provider() string
+	Started() bool
 }
 
 // ErrNoFork is returned by Fork when there is nothing to fork from yet.

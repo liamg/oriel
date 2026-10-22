@@ -8,8 +8,8 @@ import (
 	"io"
 	"sync"
 
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp"
-	"github.com/liamg/oriel/lsp/jsonrpc"
 )
 
 // Recorder sits between a client and a real server and keeps the messages that pass, in the order the

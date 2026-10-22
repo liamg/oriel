@@ -13,7 +13,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 )
 
-// Store is where plugins are installed (catalog.md, Files on disk): <Dir>/<id>/<commit>/, read-only, with
+// Store is where plugins are installed: <Dir>/<id>/<commit>/, read-only, with
 // <Dir>/<id>/current a link to the active commit, so going back is cheap.
 type Store struct {
 	Dir string // ~/.local/share/oriel/plugins
@@ -26,21 +26,53 @@ func (s Store) Path(id, commit string) string {
 
 // Has says whether id's commit is installed.
 func (s Store) Has(id, commit string) bool {
-	_, err := os.Stat(filepath.Join(s.Path(id, commit), plugin.ManifestFile))
-	return commit != "" && err == nil
+	dir, err := s.commitDir(id, commit)
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(dir, plugin.ManifestFile))
+	return err == nil
+}
+
+// idDir is <Dir>/<id>, once id is <owner>/<name> and the path stays under Dir.
+func (s Store) idDir(id string) (string, error) {
+	if err := plugin.CheckID(id); err != nil {
+		return "", err
+	}
+	dir := filepath.Join(s.Dir, filepath.FromSlash(id))
+	if rel, err := filepath.Rel(s.Dir, dir); err != nil || !filepath.IsLocal(rel) || strings.Count(filepath.ToSlash(rel), "/") != 1 {
+		return "", fmt.Errorf("id %q isn't <owner>/<name>", id)
+	}
+	return dir, nil
+}
+
+// commitDir is <Dir>/<id>/<commit>, once both are names of their own.
+func (s Store) commitDir(id, commit string) (string, error) {
+	dir, err := s.idDir(id)
+	if err != nil {
+		return "", err
+	}
+	if !fs.ValidPath(commit) || strings.ContainsAny(commit, `/\`) || commit == "." || commit == "current" {
+		return "", fmt.Errorf("%s: commit %q isn't a commit", id, commit)
+	}
+	return filepath.Join(dir, commit), nil
 }
 
 // FetchGit installs id from a git repository at rev (a tag, branch or commit; the default branch if ""), and says
 // which commit that was. A commit already installed isn't fetched again. The checkout has no .git, is within
 // plugin.MaxSize, and must be the plugin it's installed as.
 func (s Store) FetchGit(ctx context.Context, id, url, rev string) (dir, commit string, err error) {
+	idDir, err := s.idDir(id)
+	if err != nil {
+		return "", "", err
+	}
 	if isCommit(rev) && s.Has(id, rev) {
 		return s.Path(id, rev), rev, s.activate(id, rev)
 	}
-	if err := os.MkdirAll(filepath.Join(s.Dir, filepath.FromSlash(id)), 0o755); err != nil {
+	if err := os.MkdirAll(idDir, 0o755); err != nil {
 		return "", "", err
 	}
-	tmp, err := os.MkdirTemp(filepath.Join(s.Dir, filepath.FromSlash(id)), ".fetch-")
+	tmp, err := os.MkdirTemp(idDir, ".fetch-")
 	if err != nil {
 		return "", "", err
 	}
@@ -64,7 +96,9 @@ func (s Store) FetchGit(ctx context.Context, id, url, rev string) (dir, commit s
 	if err := checkPlugin(work, id); err != nil {
 		return "", "", err
 	}
-	dir = s.Path(id, commit)
+	if dir, err = s.commitDir(id, commit); err != nil {
+		return "", "", err
+	}
 	if !s.Has(id, commit) {
 		os.RemoveAll(dir)
 		if err := os.Rename(work, dir); err != nil {
@@ -77,13 +111,18 @@ func (s Store) FetchGit(ctx context.Context, id, url, rev string) (dir, commit s
 
 // FetchArchive installs id's commit from a release archive (Unpack), checked against its sha256 first.
 func (s Store) FetchArchive(id, commit, archive string) (string, error) {
-	if s.Has(id, commit) {
-		return s.Path(id, commit), s.activate(id, commit)
-	}
-	if err := os.MkdirAll(filepath.Join(s.Dir, filepath.FromSlash(id)), 0o755); err != nil {
+	dir, err := s.commitDir(id, commit)
+	if err != nil {
 		return "", err
 	}
-	tmp, err := os.MkdirTemp(filepath.Join(s.Dir, filepath.FromSlash(id)), ".fetch-")
+	if s.Has(id, commit) {
+		return dir, s.activate(id, commit)
+	}
+	idDir := filepath.Dir(dir)
+	if err := os.MkdirAll(idDir, 0o755); err != nil {
+		return "", err
+	}
+	tmp, err := os.MkdirTemp(idDir, ".fetch-")
 	if err != nil {
 		return "", err
 	}
@@ -94,7 +133,6 @@ func (s Store) FetchArchive(id, commit, archive string) (string, error) {
 	if err := checkPlugin(tmp, id); err != nil {
 		return "", err
 	}
-	dir := s.Path(id, commit)
 	os.RemoveAll(dir)
 	if err := os.Rename(tmp, dir); err != nil {
 		return "", err
@@ -124,7 +162,11 @@ func checkPlugin(dir, id string) error {
 
 // activate points id's current link at commit.
 func (s Store) activate(id, commit string) error {
-	link := filepath.Join(s.Dir, filepath.FromSlash(id), "current")
+	dir, err := s.commitDir(id, commit)
+	if err != nil {
+		return err
+	}
+	link := filepath.Join(filepath.Dir(dir), "current")
 	if t, err := os.Readlink(link); err == nil && t == commit {
 		return nil
 	}
@@ -138,7 +180,10 @@ func (s Store) activate(id, commit string) error {
 
 // Remove deletes everything installed of id.
 func (s Store) Remove(id string) error {
-	dir := filepath.Join(s.Dir, filepath.FromSlash(id))
+	dir, err := s.idDir(id)
+	if err != nil {
+		return err
+	}
 	filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err == nil && d.IsDir() {
 			os.Chmod(p, 0o755)

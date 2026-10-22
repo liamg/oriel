@@ -3,6 +3,7 @@ package claude
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,14 +11,13 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/testhook"
 )
 
 // usageProbe is the provider with the fake claude, signed in to the fixture account; runs counts the claudes started,
 // and those that quit when asked.
-func usageProbe(t *testing.T) (p Provider, runs func() (started, quit int)) {
+func usageProbe(t *testing.T) (p *Provider, runs func() (started, quit int)) {
 	t.Helper()
-	resetUsage()
-	t.Cleanup(resetUsage)
 	p = fakeProvider(t)
 	env := fixtureConfig(t, nil)
 	t.Setenv("CLAUDE_CONFIG_DIR", strings.TrimPrefix(env[0], "CLAUDE_CONFIG_DIR="))
@@ -29,12 +29,6 @@ func usageProbe(t *testing.T) (p Provider, runs func() (started, quit int)) {
 		b, _ := os.ReadFile(file)
 		return bytes.Count(b, []byte("run\n")), bytes.Count(b, []byte("quit\n"))
 	}
-}
-
-func resetUsage() {
-	usage.mu.Lock()
-	usage.last, usage.probing = core.ProviderUsage{}, false
-	usage.mu.Unlock()
 }
 
 // trustedHere is whether .claude.json trusts dir, as Claude Code reads it.
@@ -107,14 +101,14 @@ func TestUsageNeverProbesTwiceAtOnce(t *testing.T) {
 func TestTheNewestReadingWins(t *testing.T) {
 	p, _ := usageProbe(t)
 	session := core.ProviderUsage{Provider: "claude", Sampled: time.Now().Add(time.Hour), Windows: []core.UsageWindow{{Name: "Current session", Used: .5}}}
-	remember(session)
+	p.usage.remember(session)
 	u, err := p.Usage(context.Background())
 	if err != nil || len(u.Windows) != 1 || u.Windows[0].Used != .5 {
 		t.Fatalf("with a newer session reading: %+v, %v", u, err)
 	}
-	resetUsage()
+	p.usage = usageBook{}
 	session.Sampled = time.Now().Add(-time.Hour)
-	remember(session)
+	p.usage.remember(session)
 	u, err = p.Usage(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -144,5 +138,47 @@ func TestUsageWithoutClaudeStartsNothing(t *testing.T) {
 	u, err := p.Usage(context.Background())
 	if started, _ := runs(); err != nil || len(u.Windows) != 0 || started != 0 {
 		t.Errorf("no claude: %+v, %v; %d claudes started", u, err, started)
+	}
+}
+
+func quickRetype(t *testing.T) { testhook.Set(t, &probeRetype, 500*time.Millisecond) }
+
+// A startup dialog that swallows the first /usage is closed with Escape, and /usage typed again.
+func TestUsageEscapesADialog(t *testing.T) {
+	p, _ := usageProbe(t)
+	quickRetype(t)
+	t.Setenv("ORIEL_FAKE_DIALOG", "escape")
+	u, err := p.Usage(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkProbed(t, u)
+}
+
+// A dialog Escape doesn't close ends the probe, after a few tries, with an error that says so.
+func TestUsageDialogInTheWay(t *testing.T) {
+	p, _ := usageProbe(t)
+	quickRetype(t)
+	t.Setenv("ORIEL_FAKE_DIALOG", "stuck")
+	_, err := p.Usage(context.Background())
+	var pe *ProbeError
+	if !errors.As(err, &pe) || !pe.Hello || pe.Tries != probeTries || !strings.Contains(err.Error(), "dialog") {
+		t.Fatalf("err = %v", err)
+	}
+	if !strings.Contains(pe.Screen, "New MCP server found in .mcp.json") {
+		t.Errorf("the error doesn't say what was on screen: %q", pe.Screen)
+	}
+}
+
+// A claude that never says hello ends the probe with an error that says it never started.
+func TestUsageNoHello(t *testing.T) {
+	p, _ := usageProbe(t)
+	t.Setenv("ORIEL_FAKE_NO_HELLO", "1")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_, err := p.Usage(ctx)
+	var pe *ProbeError
+	if !errors.As(err, &pe) || pe.Hello || pe.Tries != 0 || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v", err)
 	}
 }

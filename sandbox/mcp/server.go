@@ -1,14 +1,13 @@
 package mcp
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"slices"
 	"sync"
+
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // Handler supplies a server's tools.
@@ -25,85 +24,61 @@ type Server struct {
 	Instructions string
 
 	mu   sync.Mutex
-	conn *serverConn
-}
-
-type serverConn struct {
-	wmu sync.Mutex
-	w   io.Writer
-
-	mu      sync.Mutex
-	cancels map[string]context.CancelFunc
-}
-
-func (c *serverConn) write(m *message) {
-	m.JSONRPC = "2.0"
-	b, err := json.Marshal(m)
-	if err != nil {
-		return
-	}
-	b = append(b, '\n')
-	c.wmu.Lock()
-	defer c.wmu.Unlock()
-	_, _ = c.w.Write(b)
+	conn *jsonrpc.Conn
 }
 
 // Serve runs the server over r/w (newline-delimited JSON-RPC) until r hits EOF
 // or ctx ends. Requests are handled concurrently; in-flight calls are
-// cancelled when Serve returns.
+// cancelled when Serve returns. It doesn't close r or w.
 func (s *Server) Serve(ctx context.Context, r io.Reader, w io.Writer) error {
-	ctx, cancel := context.WithCancel(ctx)
-	var wg sync.WaitGroup
-	defer func() {
-		cancel()
-		wg.Wait()
-	}()
-
-	c := &serverConn{w: w, cancels: map[string]context.CancelFunc{}}
+	var (
+		mu      sync.Mutex
+		stopped bool
+		wg      sync.WaitGroup
+	)
+	request := func(req *jsonrpc.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		if stopped {
+			req.Reply(nil, ctx.Err())
+			return
+		}
+		wg.Go(func() {
+			hctx, stop := context.WithCancel(ctx)
+			defer context.AfterFunc(req.Context(), stop)()
+			defer stop()
+			req.Reply(s.handle(hctx, req.Method, req.Params))
+		})
+	}
+	conn := jsonrpc.NewConn(struct{ io.Reader }{r}, struct{ io.Writer }{w}, jsonrpc.Handlers{Request: request},
+		jsonrpc.Options{Version: "2.0", Cancel: cancel, ParseErrors: true})
 	s.mu.Lock()
-	s.conn = c
+	s.conn = conn
 	s.mu.Unlock()
 	defer func() {
 		s.mu.Lock()
-		if s.conn == c {
+		if s.conn == conn {
 			s.conn = nil
 		}
 		s.mu.Unlock()
 	}()
 
-	lines := make(chan []byte)
-	errc := make(chan error, 1)
-	go func() {
-		br := bufio.NewReader(r)
-		for {
-			line, err := br.ReadBytes('\n')
-			if len(bytes.TrimSpace(line)) > 0 {
-				select {
-				case lines <- line:
-				case <-ctx.Done():
-					return
-				}
-			}
-			if err != nil {
-				errc <- err
-				return
-			}
+	var err error
+	select {
+	case <-conn.Done():
+		if e := conn.Err(); e != jsonrpc.ErrClosed {
+			err = e
 		}
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case err := <-errc:
-			if errors.Is(err, io.EOF) {
-				return nil
-			}
-			return err
-		case line := <-lines:
-			s.dispatch(ctx, c, line, &wg)
-		}
+	case <-ctx.Done():
+		err = ctx.Err()
+		conn.Close()
 	}
+	mu.Lock()
+	stopped = true
+	mu.Unlock()
+	wg.Wait()
+	conn.Close()
+	return err
 }
 
 // NotifyToolsChanged tells the connected client the tool list changed. It is
@@ -113,74 +88,17 @@ func (s *Server) NotifyToolsChanged() {
 	c := s.conn
 	s.mu.Unlock()
 	if c != nil {
-		c.write(&message{Method: "notifications/tools/list_changed"})
+		c.Notify("notifications/tools/list_changed", nil)
 	}
 }
 
-func (s *Server) dispatch(ctx context.Context, c *serverConn, line []byte, wg *sync.WaitGroup) {
-	var m message
-	if err := json.Unmarshal(line, &m); err != nil {
-		c.write(&message{ID: json.RawMessage("null"), Error: &Error{Code: CodeParseError, Message: "parse error"}})
-		return
-	}
-	if m.Method == "" {
-		return
-	}
-	if m.ID == nil {
-		if m.Method == "notifications/cancelled" {
-			var p struct {
-				RequestID json.RawMessage `json:"requestId"`
-			}
-			if json.Unmarshal(m.Params, &p) == nil && p.RequestID != nil {
-				c.mu.Lock()
-				if f := c.cancels[idKey(p.RequestID)]; f != nil {
-					f()
-				}
-				c.mu.Unlock()
-			}
-		}
-		return
-	}
-
-	key := idKey(m.ID)
-	rctx, cancel := context.WithCancel(ctx)
-	c.mu.Lock()
-	c.cancels[key] = cancel
-	c.mu.Unlock()
-	wg.Go(func() {
-		defer func() {
-			c.mu.Lock()
-			delete(c.cancels, key)
-			c.mu.Unlock()
-			cancel()
-		}()
-		result, err := s.handle(rctx, &m)
-		resp := &message{ID: m.ID}
-		if err != nil {
-			var e *Error
-			if !errors.As(err, &e) {
-				e = &Error{Code: CodeInternalError, Message: err.Error()}
-			}
-			resp.Error = e
-		} else {
-			b, err := json.Marshal(result)
-			if err != nil {
-				resp.Error = &Error{Code: CodeInternalError, Message: err.Error()}
-			} else {
-				resp.Result = b
-			}
-		}
-		c.write(resp)
-	})
-}
-
-func (s *Server) handle(ctx context.Context, m *message) (any, error) {
-	switch m.Method {
+func (s *Server) handle(ctx context.Context, method string, params json.RawMessage) (any, error) {
+	switch method {
 	case "initialize":
 		var p struct {
 			ProtocolVersion string `json:"protocolVersion"`
 		}
-		_ = json.Unmarshal(m.Params, &p)
+		_ = json.Unmarshal(params, &p)
 		v := ProtocolVersion
 		if slices.Contains(knownVersions, p.ProtocolVersion) {
 			v = p.ProtocolVersion
@@ -209,7 +127,7 @@ func (s *Server) handle(ctx context.Context, m *message) (any, error) {
 		return listToolsResult{Tools: tools}, nil
 	case "tools/call":
 		var p callParams
-		if err := json.Unmarshal(m.Params, &p); err != nil || p.Name == "" {
+		if err := json.Unmarshal(params, &p); err != nil || p.Name == "" {
 			return nil, &Error{Code: CodeInvalidParams, Message: "invalid params"}
 		}
 		res, err := s.Handler.Call(ctx, p.Name, p.Arguments)
@@ -221,5 +139,5 @@ func (s *Server) handle(ctx context.Context, m *message) (any, error) {
 		}
 		return res, nil
 	}
-	return nil, &Error{Code: CodeMethodNotFound, Message: "method not found: " + m.Method}
+	return nil, &Error{Code: CodeMethodNotFound, Message: "method not found: " + method}
 }

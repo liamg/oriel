@@ -222,12 +222,20 @@ func TestGoDiscoverEdges(t *testing.T) {
 		"TestPositional/two",
 		"TestComputedName",
 		"TestComputedName/kept",
+		"TestAppended",
+		"TestAppended/literal",
+		"TestAppended/appended",
+		"TestAppended/second",
+		"TestAppended/positional",
 	}
 	if got := itemNames(items); !slices.Equal(got, want) {
 		t.Errorf("discovered %q\nwant       %q", got, want)
 	}
 	if it := itemNamed(t, items, "TestPositional/two"); it.Line+1 != 26 {
 		t.Errorf("TestPositional/two on line %d, want 26", it.Line+1)
+	}
+	if it := itemNamed(t, items, "TestAppended/second"); it.Line+1 != 46 || it.Kind != KindRow {
+		t.Errorf("TestAppended/second on line %d kind %s, want a row on line 46", it.Line+1, it.Kind)
 	}
 }
 

@@ -28,7 +28,7 @@ func (n network) Secrets() plugin.Secrets { return n.s }
 
 const hook = "https://hooks.slack.com/services/T000/B000/XXXXSECRET"
 
-// security.md → "Secrets never enter the plugin": the plugin names a secret, and "the host injects [it], and only if
+// Secrets never enter the plugin: the plugin names a secret, and "the host injects [it], and only if
 // the request goes to" the host it's bound to. A webhook's URL is its secret, so the plugin names it as the URL.
 func TestHTTPSecretsStayWithTheHost(t *testing.T) {
 	var got []*http.Request
@@ -172,4 +172,44 @@ func statMode(path string) (os.FileMode, error) {
 		return 0, err
 	}
 	return fi.Mode().Perm(), nil
+}
+
+// net is checked against the host a request goes to, so a redirect to another host meets it too.
+func TestHTTPRedirectMeetsTheNetGrant(t *testing.T) {
+	var hosts []string
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hosts = append(hosts, r.Host)
+		switch r.URL.Path {
+		case "/away":
+			http.Redirect(w, r, "https://evil.example/x", http.StatusFound)
+		case "/home":
+			http.Redirect(w, r, "https://api.linear.app/ok", http.StatusFound)
+		default:
+			w.Write([]byte("ok"))
+		}
+	}))
+	defer srv.Close()
+	ms := plugin.HostMethods(network{hosttest.Net(srv), &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "s.json")}})
+	g := plugin.NewGrants()
+	p := plugin.Caller{ID: "acme/x", Guard: g}
+	g.Grant(p.ID, []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{"api.linear.app"}}})
+	call := func(url string) (*plugin.HTTPResponse, error) {
+		raw, _ := json.Marshal(map[string]any{"url": url})
+		v, err := ms.Call(t.Context(), p, "http.request", raw)
+		if err != nil {
+			return nil, err
+		}
+		return v.(*plugin.HTTPResponse), nil
+	}
+	if res, err := call("https://api.linear.app/home"); err != nil || res.Body != "ok" {
+		t.Errorf("a redirect within the grant: %+v, %v", res, err)
+	}
+	hosts = nil
+	_, err := call("https://api.linear.app/away")
+	if err == nil || !strings.Contains(err.Error(), `"net" capability isn't declared for evil.example`) {
+		t.Errorf("a redirect to another host: %v", err)
+	}
+	if strings.Join(hosts, ",") != "api.linear.app" {
+		t.Errorf("requests went to %v", hosts)
+	}
 }

@@ -198,11 +198,13 @@ func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
 //oriel:api name=wasm cap=target
 type WASM struct{ a *APIs }
 
-//oriel:api doc="Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON (the ABI in plugins.md), mod:exports(), mod:close()." optional=opts returns=table
+//oriel:api doc="Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close()." optional=opts returns=table
 func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 	a := w.a
 	h := newHandlers(tableOf(opts["on"]))
-	mod, err := a.wasmHost().Load(context.Background(), a.Plugin, path, plugin.WASMOpts{
+	ctx, cancel := watchdog(script.LoadBudget)
+	defer cancel()
+	mod, err := a.wasmHost().Load(ctx, a.Plugin, path, plugin.WASMOpts{
 		Request: func(method string, params json.RawMessage) (any, bool, error) {
 			f := h.get(method)
 			if f == nil {
@@ -220,7 +222,7 @@ func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 			for i := 1; i < c.Len(); i++ {
 				args = append(args, c.Float(i))
 			}
-			ctx, cancel := watchdog()
+			ctx, cancel := watchdog(script.InterruptAfter)
 			defer cancel()
 			out, err := mod.Call(ctx, c.String(0), args...)
 			if err != nil {
@@ -233,7 +235,7 @@ func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 			return res, nil
 		})),
 		"request": script.GoFunc(script.Method(func(c *script.Args) ([]any, error) {
-			ctx, cancel := watchdog()
+			ctx, cancel := watchdog(script.InterruptAfter)
 			defer cancel()
 			raw, err := mod.Request(ctx, c.String(0), c.Any(1))
 			if err != nil {
@@ -252,9 +254,10 @@ func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 	}, nil
 }
 
-// watchdog is a module call's context: stopped past the VM's interrupt budget, as Lua is.
-func watchdog() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), script.InterruptAfter)
+// watchdog is a module call's context, stopped past budget as Lua is: InterruptAfter for a call, LoadBudget
+// for loading.
+func watchdog(budget time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), budget)
 }
 
 func tableOf(v any) script.Table {

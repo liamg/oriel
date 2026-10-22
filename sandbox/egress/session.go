@@ -62,6 +62,9 @@ type Session struct {
 	Open bool
 	// Always records an allow for good, on every machine when everywhere.
 	Always func(r Rule, everywhere bool) error
+	// SaveFailed is told when an allow from the card could not be kept: the connection still goes through, but
+	// the rule is gone with the session (or, for an always, the next one).
+	SaveFailed func(r Rule, err error)
 	// Changed is told when the session's rules change.
 	Changed func()
 	// Failed is told of each connection that never got through, with its reason.
@@ -301,21 +304,29 @@ func (s *Session) ask(key, host string, port int, a *ask) {
 	if n := strings.TrimSpace(ans.Note); n != "" {
 		why += ", who said: " + n
 	}
+	var saveErr error
 	switch ans.Key {
 	case Once:
 		ok, why = true, "allowed once on the card"
 	case ForSession:
 		ok, why = true, "allowed for the session on the card"
-		_ = s.UpdateGrants(func(rules []Rule) []Rule { return append(rules, rule) })
+		saveErr = s.UpdateGrants(func(rules []Rule) []Rule { return append(rules, rule) })
 	case Always, Everywhere:
 		ok, why = true, "allowed always on the card"
 		if s.Always != nil {
-			_ = s.Always(rule, ans.Key == Everywhere)
+			saveErr = s.Always(rule, ans.Key == Everywhere)
 		}
 	case AnyHost:
 		ok, why = true, "all hosts allowed for the session on the card"
-		_ = s.UpdateGrants(func(rules []Rule) []Rule { return append(rules, Rule{Host: "*", Allow: true}) })
+		rule = Rule{Host: "*", Allow: true}
+		saveErr = s.UpdateGrants(func(rules []Rule) []Rule { return append(rules, rule) })
 		s.allowWaiting(a)
+	}
+	if saveErr != nil {
+		why += ", but the rule was not saved: " + saveErr.Error()
+		if s.SaveFailed != nil {
+			s.SaveFailed(rule, saveErr)
+		}
 	}
 	private := ok && ans.Private && ans.Key != AnyHost
 	if private {

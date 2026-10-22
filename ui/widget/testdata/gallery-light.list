@@ -99,7 +99,11 @@ text "Hide this indicator" @564,244.54712 #a3a9b1 Inter 12.5
 text "Move to statusline…" @564,274.54712 #1b2129 Inter 12.5
 rect 20,368 120x24 fill #ebe8e1 radius 4
 rect 146,134 56x2 fill #0a78a8
-rect 32,229 60.25x1 fill #d1343f
+clip 20,152 250x200 r 0
+  clip 32,221.43774 137.03125x15.124512 r 0
+    rect 32,229 60.25x1 fill #d1343f
+  pop
+pop
 rect 564.5775,50 220x39.12451 fill #ebe8e1 radius 8 stroke 1 #c9c3b6
 text "A popover under its anchor." @576.5775,74.109375 #1b2129 Inter 12.5
 rect 80,380 250x107 fill #ebe8e1 radius 6 stroke 1 #c9c3b6

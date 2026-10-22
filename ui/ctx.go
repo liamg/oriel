@@ -82,6 +82,7 @@ func stackFloat(e *elem) {
 	if e.style.Float == nil || e.style.Z < 0 {
 		return
 	}
+	e.inlaid = e.style.Z < LayerPane
 	e.style.Z = max(e.style.Z, e.parent.layer())
 }
 
@@ -307,11 +308,28 @@ func State[T any](c *Ctx, id ID) *T {
 
 // Focus moves keyboard focus to id once the frame is built, without a focus ring: focus a widget moves itself isn't
 // the keyboard's. Of the frame's calls the one from the highest layer wins, and none from under the float that holds
-// focus: a page behind a dialog can't take it back.
-func (c *Ctx) Focus(id ID) {
-	z := c.e.layer()
-	if r := &c.u.in.ask; !r.set || z >= r.z {
-		*r = focusAsk{id: id, z: z, set: true}
+// focus: a page behind a dialog can't take it back. It's for widgets in the toolkit; a view declares its
+// Style.DefaultFocus, or asks once with RequestFocus.
+func (c *Ctx) Focus(id ID) { c.ask(focusAsk{id: id}) }
+
+// FocusInto is a transition into id, which just opened or was activated: once the frame is built, focus moves to
+// id's default target (Style.DefaultFocus), else to id if it takes focus; with neither yet, once one is built. Focus
+// already inside id stays.
+func (c *Ctx) FocusInto(id ID) { c.ask(focusAsk{id: id, into: true}) }
+
+// RequestFocus asks once for focus to move to id, when it's built. A press or a key since it was asked drops it.
+func (c *Ctx) RequestFocus(id ID) {
+	z, in := c.e.layer(), &c.u.in
+	if r := in.request; r.set && r.frame == c.u.frame && r.z > z {
+		return
+	}
+	in.request = focusAsk{id: id, z: z, set: true, touched: in.touched, frame: c.u.frame}
+}
+
+func (c *Ctx) ask(a focusAsk) {
+	a.z, a.set = c.e.layer(), true
+	if r := &c.u.in.ask; !r.set || a.z >= r.z {
+		*r = a
 	}
 }
 
@@ -328,8 +346,12 @@ func (e *elem) layer() int {
 // PassKeys hands keys id was given and doesn't take to the nearest node above it that takes keys, next frame.
 func (c *Ctx) PassKeys(id ID, keys []render.KeyEvent) { c.u.PassKeys(id, keys) }
 
-// Blur drops keyboard focus.
-func (c *Ctx) Blur() { c.u.in.focus = 0 }
+// Blur gives up keyboard focus to the default target of what holds it, short of the overlay it's on: Escape in a
+// field hands the keys back to its view.
+func (c *Ctx) Blur() { c.u.in.blurred, c.u.in.focus = c.u.in.focus, 0 }
+
+// Focused is the node with keyboard focus, or 0.
+func (c *Ctx) Focused() ID { return c.u.in.focus }
 
 // FocusNext moves keyboard focus to the next focusable node (back with -1), as last frame laid them out.
 func (c *Ctx) FocusNext(dir int) { c.u.FocusNext(dir) }

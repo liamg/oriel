@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// A pull request's review on GitHub (RV-4): the comments on its diff's lines and their replies, the reviews and
+// A pull request's review on GitHub: the comments on its diff's lines and their replies, the reviews and
 // their states, and its conversation; and the two ways Oriel answers there, as the user.
 
 // Review states, as GitHub names them.

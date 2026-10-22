@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// Grant is one declared capability: all of a plugin's are accepted together at install (security.md).
+// Grant is one declared capability: all of a plugin's are accepted together at install.
 type Grant struct {
 	Cap   Capability
 	Scope []string // hosts, paths, commands, tools or secret names, as the capability takes

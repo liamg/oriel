@@ -113,7 +113,7 @@ func (r *rig) thread(id core.SessionID, line int, body string, status core.Threa
 	return tid
 }
 
-// sessions.md, Plan → Start work: "Clear the plan's threads", on by default: the resolved ones go, and the deferred
+// Start work's "Clear the plan's threads", on by default: the resolved ones go, and the deferred
 // ones go too but are carried into the work prompt as a note, so nothing asked is lost. Kept, they stay as they are.
 func TestStartWorkClearsThePlansThreads(t *testing.T) {
 	r := newRig(t)
@@ -279,7 +279,7 @@ func TestStartWorkSandboxAndNetwork(t *testing.T) {
 	if ag := s.session(id).Agent; !ag.Sandboxed || ag.Network != "open" || ag.Policy != "light" {
 		t.Errorf("the agent after Start work: %+v", ag)
 	}
-	if box := s.keptBox(id); !box.cfg.NoEgressProxy {
+	if box := s.keptBox(id); !box.Config().NoEgressProxy {
 		t.Error("the open network still goes through the egress proxy")
 	}
 }

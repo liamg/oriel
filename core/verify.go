@@ -10,7 +10,7 @@ func init() {
 	RegisterEvent[Verified]("Verified")
 }
 
-// A verify quiz's results (agents.md, "Verify & raise"): every answer right or partly right, at least one wrong, or
+// A verify quiz's results: every answer right or partly right, at least one wrong, or
 // skipped by the user.
 const (
 	VerifyPassed  = "passed"

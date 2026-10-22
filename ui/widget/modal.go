@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"cmp"
 	"time"
 
 	"github.com/liamg/oriel/render"
@@ -36,7 +37,7 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 	}
 	if !st.shown {
 		st.shown = true
-		c.Focus(id)
+		c.FocusInto(id)
 	}
 	c.Box(struct{ k any }{key}, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Fill: col(c, tScrim), Z: ui.LayerDialog, Interactive: true,
 		Help: o.Help, Float: &ui.Float{Point: &render.Point{}}, Enter: fade, Exit: fade}, nil)
@@ -61,7 +62,7 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 type PageOpts struct {
 	Top     float32 // where it starts, under a title bar
 	Over    ui.ID   // the node it covers instead, as laid out last frame: the main area beside a sidebar
-	KeyMode string  // its keymap mode
+	KeyMode string  // its keymap mode; "page" when empty, so Escape always reaches it
 	Label   string  // its accessible name
 	Help    string
 }
@@ -75,7 +76,7 @@ type pagesState struct{ front ui.ID }
 type pageShown struct{ shown bool }
 
 // Page is a full-window page (settings, the theme editor) from Top down while *open, or over the node Over. It holds
-// keyboard focus, taking it back whenever nothing on it has it, and Escape, on the page or passed up from a control
+// keyboard focus (a trap), coming in at its Style.DefaultFocus, and Escape, on the page or passed up from a control
 // on it, closes it. One page is up at a time: opening one closes whichever was.
 func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 	id := c.Next(key)
@@ -99,12 +100,7 @@ func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 	}
 	c.Column(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
 		Enter: &ui.Transition{Fade: true, Shift: render.Point{Y: 6}}, Exit: fadeIn,
-		Focusable: true, KeyMode: o.KeyMode, Float: &ui.Float{Point: &at}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, func(c *ui.Ctx) {
-		if !c.FocusWithin(id) {
-			c.Focus(id)
-		}
-		body(c)
-	})
+		Focusable: true, KeyMode: cmp.Or(o.KeyMode, "page"), Float: &ui.Float{Point: &at}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, body)
 }
 
 // Toast is a notification card. It stays until dismissed, or for TTL when that's set.

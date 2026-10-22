@@ -112,9 +112,9 @@ func TestRegisterLanguage(t *testing.T) {
 	}
 }
 
-// RV-5, done when: "units are correct for fixtures in 4 languages". Each case is a line, found by its text, and the
-// breadcrumb of explain units around it (ui.md 07b: "the smallest syntax node that owns a change: a function, a
-// method, a case, an if, a loop, a closure, a type"), then the units owning a set of changed lines.
+// Units are correct for fixtures in 4 languages. Each case is a line, found by its text, and the breadcrumb of
+// explain units around it (a unit is the smallest syntax node that owns a change: a function, a method, a case, an
+// if, a loop, a closure, a type), then the units owning a set of changed lines.
 func TestUnitFixtures(t *testing.T) {
 	type at struct{ line, want string }
 	for _, c := range []struct {

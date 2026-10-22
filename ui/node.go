@@ -109,7 +109,7 @@ type Style struct {
 	Radius float32
 
 	// Scale draws the box and everything in it this many times bigger (its sizes, padding, gaps, radii and text), as a
-	// part with its own text size does (theming.md, "Sizes"); 0 is 1. It multiplies a scaled parent's.
+	// part with its own text size does; 0 is 1. It multiplies a scaled parent's.
 	Scale float32
 
 	Clip bool
@@ -133,7 +133,7 @@ type Style struct {
 	Z     int     // a float's layer (LayerPage…); one inside another float is at least that one's. Below 0 paints behind its parent's content
 	Fade  float32 // how faded it's drawn, 0 (opaque) to 1
 
-	// Motion (FW-13), on the motion spring: how the node comes in and goes (an Exit keeps it drawn, without input,
+	// Motion, on the motion spring: how the node comes in and goes (an Exit keeps it drawn, without input,
 	// until it's out), whether a move glides there, and whether a fill change eases.
 	Enter, Exit *Transition
 	Glide       bool
@@ -146,7 +146,7 @@ type Style struct {
 	NoHover     bool      // draws its own hover and press, so a clickable box doesn't get the toolkit's wash
 	Sink        bool      // its content sinks a pixel while it's pressed, as a button's does
 	Tooltip     string    // shown after the pointer rests on it
-	Help        string    // its help page and anchor, "hud/usage#weekly-window" (help.md)
+	Help        string    // its help page and anchor, "hud/usage#weekly-window"
 	Subject     string    // what it stands for to a right-click menu: "session:fix-login"
 	KeyMode     string    // when focused, keymaps in this mode come first and unmapped keys come to it
 	Text        bool      // typed characters insert text here, so dictation may type into it (UI.TakesText)
@@ -154,12 +154,22 @@ type Style struct {
 	Drag        *DragData // dragging it carries this, to a node that takes its kind (dnd.go)
 	Drop        []string  // the kinds of drag it takes; one let go over it is its Interaction's Dropped
 
+	// DefaultFocus marks where focus goes when what it's in opens or is activated (Ctx.FocusInto), or when an
+	// overlay over it closes and what had focus before is gone.
+	DefaultFocus bool
+
 	// Accessibility (a11y.go): a node with a Role is in the accessibility tree; one without is transparent.
 	Role     Role
 	Label    string // its accessible name; by default, the text inside it
 	Value    string // a text field's text, a slider's value
 	Selected bool
 	Expanded *bool // nil when it doesn't expand
+	Checked  *bool // a check box's state
+	// Selection is a text field's selection, or its caret.
+	Selection TextRange
+	// Actions are what it takes from assistive technology besides a click, focus and scroll; they reach it as
+	// Interaction.Access.
+	Actions []Action
 }
 
 // Float places a box against an anchor: the rect of the node with id To (from this frame's layout),
@@ -167,7 +177,8 @@ type Style struct {
 // goes on the anchor's corner At, plus Offset. A box anchored to a buffer position uses a Point
 // the editor publishes.
 // Layers are where floats paint, lowest first; a float in another float is at least at its layer, and over it. Add a
-// little to one (LayerOverlay + 1) to order floats within it.
+// little to one (LayerOverlay + 1) to order floats within it. A float under LayerPane is inlaid in its view: it's
+// clipped by the scrolling and clipping boxes it's in, up to the float holding them.
 const (
 	LayerUnder   = -1  // behind its parent's content: a selection under the text
 	LayerContent = 0   // in a view: highlights, a cursor

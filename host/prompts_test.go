@@ -4,12 +4,12 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -40,7 +40,7 @@ func TestTheUsersPromptsReachTheAgent(t *testing.T) {
 	}
 }
 
-// crit-reference.md, "Prompts page": Coding style is "also written into the generated CLAUDE.md". crit's
+// The Prompts page's Coding style is also written into the generated CLAUDE.md. crit's
 // WriteAgentNotes lists the projects and where their instructions are, then "## Coding style".
 func TestWorkspaceNotesCarryTheCodingStyle(t *testing.T) {
 	r := newRig(t)
@@ -66,7 +66,7 @@ func TestWorkspaceNotesCarryTheCodingStyle(t *testing.T) {
 			}
 		}
 	}
-	out, err := runGit(context.Background(), se.Dir, "status", "--porcelain")
+	out, err := gitx.Repo{Dir: se.Dir}.Run(context.Background(), "status", "--porcelain")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,20 +133,5 @@ func TestWorkspaceMemoryIsTheRepositorys(t *testing.T) {
 	}
 	if strings.Contains(notes, "@"+filepath.Join(sandbox.MemoryDir(r.repo.Dir), "MEMORY.md")) {
 		t.Errorf("notes import the primary's own index:\n%s", notes)
-	}
-}
-
-// The sandbox's manifest carries the memory directories, the primary's first, whichever order the projects are in.
-func TestManifestCarriesTheMemory(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	root := t.TempDir()
-	se := core.SessionState{Kind: core.KindWork, Dir: root, Projects: []core.Project{
-		{Name: "b", Repo: "/src/b", Dir: filepath.Join(root, "repos", "b")},
-		{Name: "a", Repo: "/src/a", Dir: filepath.Join(root, "repos", "a"), Primary: true},
-	}}
-	m := manifestOf(root, se).Memory
-	want := []sandbox.ProjectMemory{{Name: "a", Dir: sandbox.MemoryDir("/src/a")}, {Name: "b", Dir: sandbox.MemoryDir("/src/b")}}
-	if !slices.Equal(m, want) {
-		t.Errorf("memory = %+v, want %+v", m, want)
 	}
 }

@@ -42,7 +42,7 @@ func names(p HousekeepPlan) map[string]string {
 	return out
 }
 
-// repos-page.md, Housekeeping: merged branches and those whose upstream is gone; never the default or current
+// Housekeeping: merged branches and those whose upstream is gone; never the default or current
 // branch; a dirty worktree goes only when ticked.
 func TestHousekeeping(t *testing.T) {
 	r := newRig(t)
@@ -147,7 +147,7 @@ func TestHousekeepingKeepsSessionBranches(t *testing.T) {
 	}
 }
 
-// repos-page.md, Tags: pull first, annotated, only the new tag pushed; a failed push keeps the local tag.
+// Tags: pull first, annotated, only the new tag pushed; a failed push keeps the local tag.
 func TestTagPullsAndPushes(t *testing.T) {
 	r := newRig(t)
 	ctx := context.Background()

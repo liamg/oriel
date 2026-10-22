@@ -21,7 +21,7 @@ func TestLive(t *testing.T) {
 		t.Fatal(err)
 	}
 	h := agenttest.Harness{
-		Provider: Provider{OrielBin: exe},
+		Provider: &Provider{OrielBin: exe},
 		Spec: func(t *testing.T, dir string) agent.StartSpec {
 			return agent.StartSpec{StateDir: t.TempDir(), Model: "haiku"}
 		},
@@ -69,7 +69,7 @@ func TestLiveUsage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	u, err := Provider{OrielBin: exe, ProbeDir: t.TempDir()}.probe(context.Background())
+	u, err := (&Provider{OrielBin: exe, ProbeDir: t.TempDir()}).probe(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

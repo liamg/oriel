@@ -80,7 +80,7 @@ func drawScene(t *testing.T, s scenes.Scene, scale float32, v theme.Variant) *im
 func TestIDEMatchesTheMockup(t *testing.T) {
 	ide, _ := scenes.ByName("ide")
 	got := drawScene(t, ide, 1, theme.Dark)
-	d, side := Compare(readPNG(t, "../../_design/mockups/01-ide.png"), got)
+	d, side := Compare(readPNG(t, "../../testdata/mockups/01-ide.png"), got)
 	shot(t, "ide-1x.png", got)
 	shot(t, "ide-mockup-native-diff.png", side)
 	t.Logf("01-ide @1×: mean abs diff %.2f/255, %.2f%% of pixels off by more than 32/255", d.Mean, 100*d.Off)
@@ -105,7 +105,7 @@ func TestEveryScaleDraws(t *testing.T) {
 func TestIDELightMatchesTheMockup(t *testing.T) {
 	ide, _ := scenes.ByName("ide")
 	got := drawScene(t, ide, 1, theme.Light)
-	d, side := Compare(readPNG(t, "../../_design/mockups/17-light.png"), got)
+	d, side := Compare(readPNG(t, "../../testdata/mockups/17-light.png"), got)
 	shot(t, "ide-light-1x.png", got)
 	shot(t, "ide-light-mockup-native-diff.png", side)
 	t.Logf("17-light @1×: mean abs diff %.2f/255, %.2f%% of pixels off by more than 32/255", d.Mean, 100*d.Off)

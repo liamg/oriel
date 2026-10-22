@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"slices"
 	"sort"
 	"sync"
 
@@ -102,25 +103,25 @@ func (d *Document) Highlights(start, end int) ([]Span, error) {
 		}
 	}
 	d.mu.Unlock()
+	// Only spans within reach of [start, end) can land in it: the edits move text by at most reach.
+	reach := 0
+	for _, ch := range moving {
+		for _, r := range ch.Replaces {
+			reach += max(len(r.Text), r.Range.Len())
+		}
+	}
+	spans = within(spans, start-reach, end+reach)
 	if len(moving) > 0 {
-		// Only spans within reach of [start, end) can land in it: the edits move text by at most reach.
-		reach := 0
-		for _, ch := range moving {
-			for _, r := range ch.Replaces {
-				reach += max(len(r.Text), r.Range.Len())
-			}
-		}
-		lo := sort.Search(len(spans), func(i int) bool { return spans[i].Range.End > start-reach })
-		hi := sort.Search(len(spans), func(i int) bool { return spans[i].Range.Start >= end+reach })
-		spans = shiftSpans(spans[lo:max(lo, hi)], moving)
+		spans = within(shiftSpans(spans, moving), start, end)
 	}
-	var out []Span
-	for _, s := range spans {
-		if s.Range.End > start && s.Range.Start < end {
-			out = append(out, s)
-		}
-	}
-	return out, err
+	return slices.Clone(spans), err
+}
+
+// within is the spans that overlap [start, end), found by bisecting spans, which are in order and don't overlap.
+func within(spans []Span, start, end int) []Span {
+	lo := sort.Search(len(spans), func(i int) bool { return spans[i].Range.End > start })
+	hi := sort.Search(len(spans), func(i int) bool { return spans[i].Range.Start >= end })
+	return spans[lo:max(lo, hi)]
 }
 
 // Wait blocks until every queued change is parsed.

@@ -337,7 +337,7 @@ func TestGroupBySessionAndFilters(t *testing.T) {
 	}
 }
 
-// AI-12: the stats file keeps each log's offset, so a rescan, in this process or the next, reads only what was
+// The stats file keeps each log's offset, so a rescan, in this process or the next, reads only what was
 // appended. Rewriting what was already read proves it isn't read again.
 func TestStoreRescansOnlyWhatWasAppended(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "stats.json")
@@ -374,7 +374,7 @@ func TestDetail(t *testing.T) {
 	}
 }
 
-// AI-12: cost adds up across accounts, so a query counts them all; grouped or filtered by account, each is its own.
+// Cost adds up across accounts, so a query counts them all; grouped or filtered by account, each is its own.
 func TestGroupByAccount(t *testing.T) {
 	a, b := fixture(t, "a", "/ws/a"), fixture(t, "b", "/ws/b")
 	a.Accounts = []Account{{ID: "u1/o-work", Name: "ada@work.example"}}
@@ -403,7 +403,7 @@ func result(at, id string, isErr bool) string {
 	return user(at, fmt.Sprintf(`{"type":"tool_result","tool_use_id":%q,"is_error":%v}`, id, isErr))
 }
 
-// AI-14: the tools on the Stats page count only the calls inside the range, not the whole sessions they're in: a call
+// The tools on the Stats page count only the calls inside the range, not the whole sessions they're in: a call
 // is in the hour it was made, and its error and timing go with it, even when the result comes after the range ends.
 func TestToolsCountOnlyCallsInTheRange(t *testing.T) {
 	p := write(t,
@@ -434,7 +434,7 @@ func TestToolsCountOnlyCallsInTheRange(t *testing.T) {
 	}
 }
 
-// AI-14: the Active tile's "of Nh" is the wall-clock span of the range's sessions: on each day a session worked, its
+// The Active tile's "of Nh" is the wall-clock span of the range's sessions: on each day a session worked, its
 // first record to its last, added up. A night between two days isn't in it, nor what falls outside the range.
 func TestActiveSpanOfTheRange(t *testing.T) {
 	a := write(t,
@@ -465,7 +465,7 @@ func TestActiveSpanOfTheRange(t *testing.T) {
 	}
 }
 
-// AI-14: a session's history stays with the account it ran on at the time: a later login moves only what comes after.
+// A session's history stays with the account it ran on at the time: a later login moves only what comes after.
 func TestAccountAtTheTime(t *testing.T) {
 	a, b := fixture(t, "a", "/ws/a"), fixture(t, "b", "/ws/b")
 	oct2 := time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)

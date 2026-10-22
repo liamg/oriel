@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"io"
-	"os"
 	"os/exec"
-	"time"
+
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // Process is a running server: its stdio, and a way to wait for it or kill it.
@@ -26,45 +26,7 @@ func Exec(ctx context.Context, spec ServerSpec, root string, stderr io.Writer) (
 	}
 	cmd := exec.Command(spec.Cmd[0], spec.Cmd[1:]...)
 	cmd.Dir = root
-	cmd.Stderr = stderr
-	cmd.WaitDelay = time.Second // a grandchild holding stderr open doesn't hold up Wait
-	inR, inW, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	outR, outW, err := os.Pipe()
-	if err != nil {
-		inR.Close()
-		inW.Close()
-		return nil, err
-	}
-	cmd.Stdin, cmd.Stdout = inR, outW
-	if err := cmd.Start(); err != nil {
-		inR.Close()
-		inW.Close()
-		outR.Close()
-		outW.Close()
-		return nil, err
-	}
-	inR.Close()
-	outW.Close()
-	return &execProcess{cmd: cmd, in: inW, out: outR}, nil
-}
-
-type execProcess struct {
-	cmd *exec.Cmd
-	in  *os.File
-	out *os.File
-}
-
-func (p *execProcess) Read(b []byte) (int, error)  { return p.out.Read(b) }
-func (p *execProcess) Write(b []byte) (int, error) { return p.in.Write(b) }
-func (p *execProcess) Kill() error                 { return p.cmd.Process.Kill() }
-func (p *execProcess) Wait() error                 { return p.cmd.Wait() }
-
-func (p *execProcess) Close() error {
-	p.in.Close()
-	return p.out.Close()
+	return jsonrpc.StartStdio(cmd, stderr)
 }
 
 // Installed reports whether the spec can run: it connects some other way, or its command is on PATH.

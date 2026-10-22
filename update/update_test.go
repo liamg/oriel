@@ -84,6 +84,9 @@ func TestNewer(t *testing.T) {
 		{"1.8.0-nightly.20261016", "1.8.0-nightly.20261015", true},
 		{"1.8.0-nightly.20261015", "1.7.0", true},
 		{"1.0.0", "dev", false},
+		{"dev", "1.0.0", false},
+		{"0.1.0-rc.10", "0.1.0-rc.2", true},
+		{"0.1.0", "0.1.0-rc.2", true},
 	} {
 		if got := update.Newer(c.a, c.b); got != c.want {
 			t.Errorf("Newer(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
@@ -336,5 +339,79 @@ func TestGitHubPublicNeedsNoToken(t *testing.T) {
 	_, _, err := update.Check(ctx, &update.GitHub{Repo: "liamg/oriel", Base: srv.URL}, trust, update.Stable, "1.7.0")
 	if err == nil || !strings.Contains(err.Error(), "needs a GitHub token") {
 		t.Errorf("private without a token = %v", err)
+	}
+}
+
+// A rollback that can't happen leaves the new version running and nothing pending, rather than an outcome the
+// caller would re-exec onto: the same version, which would try again forever.
+func TestBootWithNoPreviousDoesNotAskForAReexec(t *testing.T) {
+	in := installer(t)
+	stage(t, in, "2.0.0", []byte("new"))
+	if err := in.Swap(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(in.Previous()); err != nil {
+		t.Fatal(err)
+	}
+	p, _ := in.Pending()
+	p.Boots = 1
+	b, _ := jsonOf(p)
+	if err := os.WriteFile(filepath.Join(in.Dir, "pending.json"), b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := in.Boot(context.Background(), func(context.Context) error { return nil })
+	if err == nil || out.RolledBack != nil {
+		t.Fatalf("Boot with no previous version = %+v, %v; want an error and no rollback", out, err)
+	}
+	if _, ok := in.Pending(); ok {
+		t.Error("the swap is still pending, so the next start fails the same way")
+	}
+	if b, _ := os.ReadFile(in.Target); string(b) != "new" {
+		t.Errorf("Target = %q", b)
+	}
+	out, err = in.Boot(context.Background(), func(context.Context) error { return errors.New("no window") })
+	if err != nil || out != (update.Outcome{}) {
+		t.Errorf("the next Boot = %+v, %v; want nothing pending", out, err)
+	}
+}
+
+// Two installs before a restart keep the version that last ran healthy as Previous, not the unconfirmed one.
+func TestSwapTwiceKeepsTheConfirmedPrevious(t *testing.T) {
+	in := installer(t)
+	stage(t, in, "2.0.0", []byte("new"))
+	if err := in.Swap(); err != nil {
+		t.Fatal(err)
+	}
+	stage(t, in, "2.0.1", []byte("newer"))
+	if err := in.Swap(); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(in.Previous()); string(b) != "old" {
+		t.Fatalf("Previous = %q, want the confirmed version", b)
+	}
+	if p, ok := in.Pending(); !ok || p.Version != "2.0.1" || p.Boots != 0 {
+		t.Fatalf("Pending = %+v, %v", p, ok)
+	}
+	fail := func(context.Context) error { return errors.New("no window") }
+	if out, err := in.Boot(context.Background(), fail); err != nil || out.RolledBack == nil {
+		t.Fatalf("Boot = %+v, %v", out, err)
+	}
+	if b, _ := os.ReadFile(in.Target); string(b) != "old" {
+		t.Errorf("Target = %q after the rollback, want old", b)
+	}
+
+	stage(t, in, "2.0.2", []byte("newest"))
+	if err := in.Swap(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := in.Boot(context.Background(), func(context.Context) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	stage(t, in, "2.0.3", []byte("next"))
+	if err := in.Swap(); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(in.Previous()); string(b) != "newest" {
+		t.Errorf("after a confirmed swap, Previous = %q, want newest", b)
 	}
 }

@@ -10,6 +10,24 @@ func init() {
 	RegisterEvent[HunksReviewed]("HunksReviewed")
 	RegisterEvent[LinesSeen]("LinesSeen")
 	RegisterEvent[CommitGateOverridden]("CommitGateOverridden")
+	RegisterEvent[PRPushed]("PRPushed")
+}
+
+// PRPushed says a session's pull request's head moved to Head, as its code host was last read: its author pushed.
+// It changes no state; plugins follow it (a review session offers the new commits).
+type PRPushed struct {
+	Session SessionID `json:"session"`
+	Project string    `json:"project,omitempty"`
+	Head    string    `json:"head"`
+}
+
+func (e PRPushed) Scope() SessionID { return e.Session }
+
+func (e PRPushed) Apply(s *State) error {
+	if e.Head == "" {
+		return fmt.Errorf("a pushed PR needs its head")
+	}
+	return nil
 }
 
 // Review is what of a file's change has been reviewed in a session: its changes marked by ID, a hash of what each
@@ -171,7 +189,7 @@ func (e LinesSeen) Apply(s *State) error {
 	return nil
 }
 
-// The commit gate (agents.md, "Guardrails"): how a commit is stopped while agent-written lines are unread. Hard
+// The commit gate: how a commit is stopped while agent-written lines are unread. Hard
 // blocks it until "commit anyway", soft asks once, off lets it through.
 const (
 	GateHard = "hard"

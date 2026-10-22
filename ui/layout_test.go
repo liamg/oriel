@@ -184,7 +184,7 @@ func TestScrollingBoxGrowsItsChildren(t *testing.T) {
 	}
 }
 
-// theming.md, "Sizes": a box's Scale draws its subtree that much bigger, sizes, padding, gaps, radii and text
+// A box's Scale draws its subtree that much bigger, sizes, padding, gaps, radii and text
 // alike, so a part with its own text size holds it; it multiplies a scaled parent's.
 func TestScaledSubtree(t *testing.T) {
 	u := newUI()

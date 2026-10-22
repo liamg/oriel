@@ -73,6 +73,17 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 	return nil
 }
 
+//oriel:api doc="Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now."
+func (r Root) Placeholder(name string, spec script.Table, fn *script.Fn, where string) error {
+	if fn == nil {
+		return fmt.Errorf("%s: no function", name)
+	}
+	lz := plugin.Lazy{Commands: strs(spec["commands"]), Events: strs(spec["events"]), Keys: strs(spec["keys"]),
+		Filetypes: strs(spec["filetypes"]), Omnibox: strs(spec["omnibox"]), Views: strs(spec["views"])}
+	r.a.own(r.a.Host.Placeholder(lz.Placeholder(r.a.Host, name, where, func() error { _, err := r.a.VM.Call(fn); return err })))
+	return nil
+}
+
 // verdict is what a Lua hook returned: false and a reason vetoes, a table rewrites the event, anything else decides.
 func verdict(out []any, ev any) registry.Verdict {
 	if len(out) == 0 || out[0] == nil || out[0] == true {

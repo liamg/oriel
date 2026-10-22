@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-// FW-13: "Nothing animates for longer than 250 ms."
+// Nothing animates for longer than 250 ms.
 func TestMotionSettlesWithin250ms(t *testing.T) {
 	if d := MotionFor(1); d > 250*time.Millisecond {
 		t.Errorf("the motion spring takes %v", d)
@@ -133,7 +133,7 @@ func TestTransitions(t *testing.T) {
 	}
 }
 
-// FW-13: "nothing delays input": a node coming in takes a click where it's laid out at once, and one going out
+// Nothing delays input: a node coming in takes a click where it's laid out at once, and one going out
 // takes none.
 func TestMotionDoesNotDelayInput(t *testing.T) {
 	show := true
@@ -169,7 +169,7 @@ func TestMotionSpeed(t *testing.T) {
 	}
 }
 
-// The toolkit's own motion (FW-15): each starts, passes a midpoint and settles, and with reduced motion jumps.
+// The toolkit's own motion: each starts, passes a midpoint and settles, and with reduced motion jumps.
 func TestToolkitMotion(t *testing.T) {
 	type scene struct {
 		name   string

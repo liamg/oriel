@@ -14,6 +14,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin/hosttest"
 )
 
@@ -41,6 +42,7 @@ type Linear struct {
 // New serves the recording until the test ends.
 func New(t *testing.T) *Linear {
 	t.Helper()
+	isolate.Test(t)
 	l := &Linear{t: t, issues: map[string]map[string]any{}}
 	l.assigned = l.load("assigned.json")
 	matches, _ := filepath.Glob(filepath.Join(dir(), "issue-*.json"))

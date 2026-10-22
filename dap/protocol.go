@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/liamg/oriel/lsp/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // Message is any DAP message as it arrives: a request, a response or an event.

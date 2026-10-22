@@ -1,0 +1,6 @@
+ghostty.txt: LICENSE of https://github.com/ghostty-org/ghostty at the commit fetch.sh pins
+uucode.txt: LICENSE.md, licenses/LICENSE_unicode and licenses/LICENSE_Bjoern_Hoehrmann of
+  https://github.com/jacobsandlund/uucode at the commit fetch.sh pins (Ghostty's Unicode tables)
+simdutf.txt: LICENSE-MIT of https://github.com/simdutf/simdutf (simdutf is Apache-2.0 OR MIT; 9.0.0 is amalgamated in
+  Ghostty's pkg/simdutf and built into the native library when simd is on)
+highway.txt: LICENSE-BSD3 of Highway at the commit Ghostty's pkg/highway/build.zig.zon pins (Apache-2.0 OR BSD-3-Clause)

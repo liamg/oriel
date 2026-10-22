@@ -12,7 +12,7 @@ func init() {
 	RegisterEvent[ProjectColoured]("ProjectColoured")
 }
 
-// ProjectUI is how the window shows a session's projects (ui.md 01h): the one open, the panel each had last, and
+// ProjectUI is how the window shows a session's projects: the one open, the panel each had last, and
 // colours chosen for them. The app keeps it; a sync of the session leaves it as it is.
 type ProjectUI struct {
 	Open    string            `json:"open,omitempty"`

@@ -12,6 +12,7 @@ func init() {
 	RegisterEvent[ProjectsChanged]("ProjectsChanged")
 	RegisterEvent[AgentChanged]("AgentChanged")
 	RegisterEvent[ThreadUpdated]("ThreadUpdated")
+	RegisterEvent[ThreadBusy]("ThreadBusy")
 	RegisterEvent[ThreadsRemoved]("ThreadsRemoved")
 	RegisterEvent[TaskChanged]("TaskChanged")
 	RegisterEvent[SubagentChanged]("SubagentChanged")
@@ -154,6 +155,29 @@ func (e ThreadUpdated) Apply(s *State) error {
 		return err
 	}
 	se.Threads = upsert(se.Threads, e.Thread, func(t Thread) bool { return t.ID == e.Thread.ID })
+	return nil
+}
+
+// ThreadBusy is a thread going busy, the agent having it, or idle again.
+type ThreadBusy struct {
+	Session SessionID `json:"session"`
+	Thread  ThreadID  `json:"thread"`
+	Busy    bool      `json:"busy,omitempty"`
+}
+
+func (e ThreadBusy) Scope() SessionID { return e.Session }
+
+func (e ThreadBusy) Apply(s *State) error {
+	se, err := s.mustSession(e.Session)
+	if err != nil {
+		return err
+	}
+	i := slices.IndexFunc(se.Threads, func(t Thread) bool { return t.ID == e.Thread })
+	if i < 0 {
+		return fmt.Errorf("no thread %s in %s", e.Thread, e.Session)
+	}
+	se.Threads = slices.Clone(se.Threads)
+	se.Threads[i].Busy = e.Busy
 	return nil
 }
 

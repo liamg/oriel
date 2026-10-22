@@ -16,7 +16,7 @@ import (
 //     CLAUDE_CONFIG_DIR: the record it wrote for a prompt sent with no login, and everything its screen showed from
 //     the start, and from the start through that send.
 
-// AI-13: an API error in the log that says to run /login raises AuthExpired with what it said, and how to sign in.
+// An API error in the log that says to run /login raises AuthExpired with what it said, and how to sign in.
 func TestAuthExpiredFromTheLog(t *testing.T) {
 	s := agenttest.Start(t, fakeHarness(t))
 	s.Send("lose the login")
@@ -34,7 +34,7 @@ func TestAuthExpiredFromTheLog(t *testing.T) {
 	}
 }
 
-// AI-13: the signed-out line on claude's screen raises AuthExpired, once while it stays; /login typed in the
+// The signed-out line on claude's screen raises AuthExpired, once while it stays; /login typed in the
 // terminal and a login's success raise AuthRestored.
 func TestAuthExpiredFromTheScreen(t *testing.T) {
 	s := agenttest.Start(t, fakeHarness(t))
@@ -59,7 +59,7 @@ func TestAuthExpiredFromTheScreen(t *testing.T) {
 	}
 }
 
-// AI-13: the screen reader finds the signed-out line in the recorded screens however the output is split, and
+// The screen reader finds the signed-out line in the recorded screens however the output is split, and
 // takes neither the error under a prompt ("Please run /login", which the log says) nor the agent's prose for it.
 func TestScreenSignedOut(t *testing.T) {
 	for _, file := range []string{"signed-out-start.pty", "signed-out-send.pty"} {
@@ -92,7 +92,7 @@ func TestScreenSignedOut(t *testing.T) {
 	}
 }
 
-// AI-13: the mod's api-error that says to run /login raises AuthExpired beside the failure.
+// The mod's api-error that says to run /login raises AuthExpired beside the failure.
 func TestAuthExpiredFromTheHook(t *testing.T) {
 	s := &session{events: newQueue()}
 	s.event(eventIn{Kind: "api-error", Error: "authentication_failed", Text: "OAuth token revoked · Please run /login"})
@@ -104,7 +104,7 @@ func TestAuthExpiredFromTheHook(t *testing.T) {
 	}
 }
 
-// SE-5: a login is back once a request after it went succeeds: the agent's next answer in the log raises
+// A login is back once a request after it went succeeds: the agent's next answer in the log raises
 // AuthRestored, once; answers while signed in don't.
 func TestAnAnswerAfterALostLoginRestoresIt(t *testing.T) {
 	s := agenttest.Start(t, fakeHarness(t))

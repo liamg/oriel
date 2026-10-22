@@ -9,7 +9,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// PL-4: a tool is offered to the agents it's for. One for no one in particular reaches every session's agent and no
+// A tool is offered to the agents it's for. One for no one in particular reaches every session's agent and no
 // utility agent; one for the assistant reaches only the assistant; one for work sessions only those.
 func TestAgentToolsAreOfferedToTheAgentsTheyreFor(t *testing.T) {
 	r := registry.New()
@@ -39,7 +39,7 @@ func TestAgentToolsAreOfferedToTheAgentsTheyreFor(t *testing.T) {
 	}
 }
 
-// crit-reference.md, "Assistant": "Confirmation cards". An act tool runs only once the agent's owner has the user's
+// Confirmation cards: an act tool runs only once the agent's owner has the user's
 // yes; what it did goes to the owner, and the agent reads its result.
 func TestActToolsWaitForTheOwnersYes(t *testing.T) {
 	r := registry.New()
@@ -85,7 +85,7 @@ func TestActToolsWaitForTheOwnersYes(t *testing.T) {
 	}
 }
 
-// PL-5: a feature adds its half to another tool's answer (crit's review_requests: "from GitHub and agentbus"). The
+// A feature adds its half to another tool's answer (crit's review_requests: "from GitHub and agentbus"). The
 // part isn't a tool of its own; the answer has each one's result under what it reads, and a part that fails says so
 // beside the rest.
 func TestAgentToolParts(t *testing.T) {
@@ -115,7 +115,7 @@ func TestAgentToolParts(t *testing.T) {
 	}
 }
 
-// DB-3: an act's Confirm may say the call is already granted, or refuse it, and the owner a call carries (a session's
+// An act's Confirm may say the call is already granted, or refuse it, and the owner a call carries (a session's
 // worker) is asked ahead of any registered for the agent.
 func TestConfirmGrantsRefusesOrAsksTheCallsOwner(t *testing.T) {
 	r := registry.New()

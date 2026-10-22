@@ -46,7 +46,7 @@ func write(t *testing.T, dir, name, text string) {
 	}
 }
 
-// crit-reference.md: "Commit and PR drafts written when the agent goes idle"; the pack's rule (parts/drafts.md):
+// Commit and PR drafts are written when the agent goes idle; the pack's rule (parts/drafts.md):
 // "Draft only what exists: no commit message for a clean worktree, no PR draft for a branch with no commits of its
 // own and nothing uncommitted", "Re-draft only when the code changed since your last draft". A turn that ends idle
 // with a draft missing or behind the code asks the agent once for that code, as a notice and not a thread.

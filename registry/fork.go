@@ -9,7 +9,7 @@ import (
 )
 
 // ForkRequest is a side question for a session's agent: answered from what it knows of the session, with no tools,
-// outside its conversation (agents.md: btw, explain, the verify quiz).
+// outside its conversation: btw, explain, the verify quiz.
 type ForkRequest struct {
 	Session string
 	Prompt  string
@@ -29,7 +29,7 @@ func (Forker) ContributionKind() string   { return "forker" }
 func (f Forker) ContributionName() string { return f.Name }
 
 // Forkers are the forkers by Order, then name.
-func Forkers(r Registry) []Forker {
+func Forkers(r Contributions) []Forker {
 	var out []Forker
 	for _, c := range r.Contributions("forker") {
 		out = append(out, c.(Forker))
@@ -52,7 +52,7 @@ func Fork(ctx context.Context, reg Registry, r ForkRequest) (string, Forker, err
 }
 
 // ForkLabel is who answers a session's side questions, "" when nothing can.
-func ForkLabel(reg Registry, session string) string {
+func ForkLabel(reg Contributions, session string) string {
 	fs := Forkers(reg)
 	if len(fs) == 0 || fs[0].Label == nil {
 		return ""

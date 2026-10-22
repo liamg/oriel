@@ -140,3 +140,33 @@ expect:
   |three
   four
 regs:   "" = "one\ntwo\n"
+
+=== a count too big for an int is capped, so N% fails rather than wrapping
+ref:    testdir/test_normal.vim#Test_normal_count_out_of_range
+quote:  normal 4444444444444444444| call assert_equal(999999999, v:count)
+given:
+  |one
+  two
+  three
+  four
+keys:   18446744073709551666%
+expect:
+  |one
+  two
+  three
+  four
+
+=== an operator's count times its motion's is capped too
+ref:    testdir/test_normal.vim#Test_normal_count_out_of_range
+quote:  normal 44444444444y44444444444| call assert_equal(999999999, v:count)
+given:
+  |one
+  two
+  three
+  four
+keys:   2d9223372036854775833%
+expect:
+  |one
+  two
+  three
+  four

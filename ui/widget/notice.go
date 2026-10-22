@@ -1,8 +1,11 @@
 package widget
 
 import (
+	"fmt"
 	"image/color"
+	"sort"
 	"strings"
+	"sync"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -15,7 +18,13 @@ var tLink = theme.Declare("link.fg", "accent")
 // Wrap adds text as lines no wider than width, breaking at spaces (and inside a word only when the word alone
 // is wider). It returns how many lines it added.
 func Wrap(c *ui.Ctx, key any, s string, width float32, ts ui.TextStyle) int {
-	lines := WrapLines(c.Shaper(), s, width, ts.Font)
+	wraps := ui.Keep(c, func() *wrapCache { return &wrapCache{cur: map[wrapKey][]string{}} })
+	k := wrapKey{c.Shaper(), s, width, ts.Font.Family, ts.Font.Weight, ts.Font.Italic, ts.Font.Size, ts.Font.Tracking, fmt.Sprint(ts.Font.Features)}
+	lines, ok := wraps.get(k)
+	if !ok {
+		lines = WrapLines(c.Shaper(), s, width, ts.Font)
+		wraps.put(k, lines)
+	}
 	c.Column(key, ui.Style{Gap: 3}, func(c *ui.Ctx) {
 		for i, ln := range lines {
 			c.Text(i, ln, ts)
@@ -24,36 +33,106 @@ func Wrap(c *ui.Ctx, key any, s string, width float32, ts ui.TextStyle) int {
 	return len(lines)
 }
 
-// WrapLines breaks s into lines that fit width, keeping its own newlines.
+// WrapLines breaks s into lines that fit width, keeping its own newlines. Each paragraph is shaped once and
+// its breaks found over the glyph advances; Wrap keeps the results, by text, width and font, for its UI.
 func WrapLines(sh typeset.Shaper, s string, width float32, f typeset.FontSpec) []string {
 	var out []string
-	fits := func(t string) bool { return sh.Shape(t, f).Advance <= width }
 	for _, para := range strings.Split(s, "\n") {
-		line := ""
-		for _, w := range strings.Fields(para) {
-			next := w
-			if line != "" {
-				next = line + " " + w
-			}
-			if fits(next) {
-				line = next
-				continue
-			}
-			if line != "" {
-				out = append(out, line)
-			}
-			for !fits(w) && len([]rune(w)) > 1 {
-				rs := []rune(w)
-				n := len(rs) - 1
-				for n > 1 && !fits(string(rs[:n])) {
-					n--
+		out = wrapPara(out, sh, strings.Join(strings.Fields(para), " "), width, f)
+	}
+	return out
+}
+
+type wrapKey struct {
+	sh       typeset.Shaper
+	text     string
+	width    float32
+	family   string
+	weight   typeset.Weight
+	italic   bool
+	size     float32
+	tracking float32
+	features string
+}
+
+// wrapCache is a UI's wrapped texts, in two generations, so a full cache drops what wasn't used recently.
+type wrapCache struct {
+	mu       sync.Mutex
+	cur, old map[wrapKey][]string
+}
+
+const maxWraps = 512
+
+func (w *wrapCache) get(k wrapKey) ([]string, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if v, ok := w.cur[k]; ok {
+		return v, true
+	}
+	v, ok := w.old[k]
+	if ok {
+		w.cur[k] = v
+	}
+	return v, ok
+}
+
+func (w *wrapCache) put(k wrapKey, v []string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if len(w.cur) >= maxWraps {
+		w.cur, w.old = map[wrapKey][]string{}, w.cur
+	}
+	w.cur[k] = v
+}
+
+// wrapPara appends the lines of p, whose words are single-spaced, to out.
+func wrapPara(out []string, sh typeset.Shaper, p string, width float32, f typeset.FontSpec) []string {
+	rs := []rune(p)
+	if len(rs) == 0 {
+		return append(out, "")
+	}
+	xs := typeset.PenXs(sh.Shape(p, f), len(rs))
+	fits := func(a, b int) bool { return xs[b]-xs[a] <= width }
+	for a := 0; a < len(rs); {
+		// The furthest word end that fits, checked against a real shape since kerning can cross a break.
+		end := -1
+		for b := a; b <= len(rs); b++ {
+			if b == len(rs) || rs[b] == ' ' {
+				if b > a && !fits(a, b) {
+					break
 				}
-				out = append(out, string(rs[:n]))
-				w = string(rs[n:])
+				end = b
 			}
-			line = w
 		}
-		out = append(out, line)
+		for end > a && sh.Shape(string(rs[a:end]), f).Advance > width {
+			e := end - 1
+			for e > a && rs[e] != ' ' {
+				e--
+			}
+			end = e
+		}
+		if end > a {
+			out = append(out, string(rs[a:end]))
+			a = end + 1
+			continue
+		}
+		// The word alone is too wide: break it after the most runes that fit, at least one.
+		wordEnd := a
+		for wordEnd < len(rs) && rs[wordEnd] != ' ' {
+			wordEnd++
+		}
+		n := sort.Search(wordEnd-a, func(n int) bool { return !fits(a, a+n+1) })
+		n = max(n, 1)
+		for n > 1 && sh.Shape(string(rs[a:a+n]), f).Advance > width {
+			n--
+		}
+		if a+n == wordEnd {
+			out = append(out, string(rs[a:wordEnd]))
+			a = wordEnd + 1
+			continue
+		}
+		out = append(out, string(rs[a:a+n]))
+		a += n
 	}
 	return out
 }
@@ -64,7 +143,7 @@ func Link(c *ui.Ctx, key any, label string, help string) bool {
 	in := c.Interaction(id)
 	passOn(c, id, in.Keys, activates)
 	fg := col(c, tLink)
-	c.Column(key, ui.Style{Gap: 1, Focusable: true, Cursor: render.CursorPointer, Help: help, KeyMode: "button", Role: ui.RoleButton,
+	c.Column(key, ui.Style{Gap: 1, Focusable: true, Cursor: render.CursorPointer, Help: help, KeyMode: "button", Role: ui.RoleLink,
 		Label: label}, func(c *ui.Ctx) {
 		c.Text("label", label, uiText(c, 12, typeset.Medium, fg))
 		c.Box("underline", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: alpha(fg, .7)}, nil)

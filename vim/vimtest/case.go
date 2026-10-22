@@ -1,4 +1,4 @@
-// Package vimtest runs vim keystroke cases (.vt files, see _design/testing.md) against an
+// Package vimtest runs vim keystroke cases (.vt files, see docs/architecture.md) against an
 // Engine, and checks their expectations against headless nvim in oracle mode.
 package vimtest
 

@@ -404,6 +404,7 @@ func (c *Client) Stop(ctx context.Context) error {
 func (c *Client) kill() {
 	c.proc.Kill()
 	c.proc.Close()
+	c.proc.Wait()
 }
 
 // call sends a request and decodes its response's body into out.
@@ -468,10 +469,10 @@ func (c *Client) send(command string, args any) (chan *Message, error) {
 	c.pending[seq] = ch
 	c.mu.Unlock()
 	body, err := json.Marshal(request{Seq: seq, Type: "request", Command: command, Arguments: args})
-	if err != nil {
-		return nil, err
+	if err == nil {
+		err = c.write(body)
 	}
-	if err := c.write(body); err != nil {
+	if err != nil {
 		c.mu.Lock()
 		delete(c.pending, seq)
 		c.mu.Unlock()

@@ -1,4 +1,4 @@
-package app
+package app_test
 
 import (
 	"log/slog"
@@ -8,17 +8,19 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/settings"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script"
-	"github.com/liamg/oriel/vim"
 )
 
 // eval is what a line of Lua returns in the config's VM, with L as oriel.
-func (s *errScene) eval(t *testing.T, line string) []any {
+func eval(s *apptest.Scene, t *testing.T, line string) []any {
 	t.Helper()
-	out, err := s.lua().vm.Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; return " + line)})
+	out, err := lua(s).VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; return " + line)})
 	if err != nil {
 		t.Fatalf("%s: %v", line, err)
 	}
@@ -26,9 +28,9 @@ func (s *errScene) eval(t *testing.T, line string) []any {
 }
 
 // evalErr is the error a line of Lua raises.
-func (s *errScene) evalErr(t *testing.T, line string) string {
+func evalErr(s *apptest.Scene, t *testing.T, line string) string {
 	t.Helper()
-	_, err := s.lua().vm.Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; " + line)})
+	_, err := lua(s).VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; " + line)})
 	if err == nil {
 		t.Fatalf("%s: no error", line)
 	}
@@ -38,17 +40,17 @@ func (s *errScene) evalErr(t *testing.T, line string) string {
 // L.regex is PCRE2 with string.find's conventions (docs/api.md), so for patterns both dialects read the same, Lua's
 // own string functions are the oracle.
 func TestLuaRegex(t *testing.T) {
-	s := luaScene(t, "")
+	s := apptest.LuaScene(t, "")
 	for _, c := range []struct{ pcre, lua, subject string }{
 		{"(b+)", "(b+)", "abbbc"},
 		{"b", "b", "abc"},
 		{"z", "z", "abc"},
 		{"^(a)(b)", "^(a)(b)", "abc"},
 	} {
-		got := s.eval(t, `{ L.regex.find("`+c.pcre+`", "`+c.subject+`") }`)
-		want := s.eval(t, `{ string.find("`+c.subject+`", "`+c.lua+`") }`)
-		if show(got[0]) != show(want[0]) {
-			t.Errorf("find(%q, %q) = %s, string.find gives %s", c.pcre, c.subject, show(got[0]), show(want[0]))
+		got := s.Lua(`{ L.regex.find("` + c.pcre + `", "` + c.subject + `") }`)
+		want := s.Lua(`{ string.find("` + c.subject + `", "` + c.lua + `") }`)
+		if settings.Show(got[0]) != settings.Show(want[0]) {
+			t.Errorf("find(%q, %q) = %s, string.find gives %s", c.pcre, c.subject, settings.Show(got[0]), settings.Show(want[0]))
 		}
 	}
 	for line, want := range map[string]string{
@@ -62,21 +64,21 @@ func TestLuaRegex(t *testing.T) {
 		`L.regex.replace("(\\w+)@", "x@ y@", "$1!")`:            `"x! y!"`,
 		`L.regex.find("(?<=a)b", "ab")`:                         "2",
 	} {
-		if got := show(s.eval(t, line)[0]); got != want {
+		if got := settings.Show(s.Lua(line)[0]); got != want {
 			t.Errorf("%s = %s, want %s", line, got, want)
 		}
 	}
-	if err := s.evalErr(t, `L.regex.find("(", "x")`); !strings.Contains(err, "oriel.regex.find") {
+	if err := s.LuaErr(`L.regex.find("(", "x")`); !strings.Contains(err, "oriel.regex.find") {
 		t.Errorf("a bad pattern's error: %s", err)
 	}
-	if err := s.evalErr(t, `L.regex.find("(?(1)a|b)", "x")`); !strings.Contains(err, "not supported") {
+	if err := s.LuaErr(`L.regex.find("(?(1)a|b)", "x")`); !strings.Contains(err, "not supported") {
 		t.Errorf("an unsupported feature's error: %s", err)
 	}
 }
 
 // The root functions: json, read, exec, cmd, notify, log.
 func TestLuaRootFunctions(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x" })
 `)
 	file := filepath.Join(t.TempDir(), "f.txt")
@@ -91,7 +93,7 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`(L.cmd("Remember", { x = 7 })) == nil`, "true"},
 		{`L.remembered`, "7"},
 	} {
-		if got := show(s.eval(t, c.line)[0]); got != c.want {
+		if got := settings.Show(s.Lua(c.line)[0]); got != c.want {
 			t.Errorf("%s = %s, want %s", c.line, got, c.want)
 		}
 	}
@@ -101,22 +103,22 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		`L.exec({})`:               "oriel.exec: no program",
 		`L.cmd("no.such.command")`: "oriel.cmd:",
 	} {
-		if err := s.evalErr(t, line); !strings.Contains(err, want) {
+		if err := s.LuaErr(line); !strings.Contains(err, want) {
 			t.Errorf("%s: %s, want %q in it", line, err, want)
 		}
 	}
 
-	s.eval(t, `L.notify("deployed", "warn")`)
-	n, ok := lastNotice(s.store.State(), "lua.")
+	s.Lua(`L.notify("deployed", "warn")`)
+	n, ok := apptest.LastNotice(s.Store().State(), "lua.")
 	if !ok || n.Text != "deployed" || n.Severity != core.SevWarning || n.Location != "test:1" {
 		t.Errorf("notify: %+v", n)
 	}
-	s.eval(t, `L.notify("bad", "error")`)
-	if n, _ := lastNotice(s.store.State(), "lua."); n.Severity != core.SevError {
+	s.Lua(`L.notify("bad", "error")`)
+	if n, _ := apptest.LastNotice(s.Store().State(), "lua."); n.Severity != core.SevError {
 		t.Errorf("notify at error: %+v", n)
 	}
-	s.eval(t, `L.log("from lua", "warn")`)
-	recs := s.sh.cfg.Logs.Ring.Records()
+	s.Lua(`L.log("from lua", "warn")`)
+	recs := s.Logs.Ring.Records()
 	if !slices.ContainsFunc(recs, func(r logs.Record) bool {
 		return r.Msg == "from lua" && r.Level == slog.LevelWarn && r.Source == "test:1"
 	}) {
@@ -126,38 +128,38 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 
 // L.diagnostics publishes into the registry's diagnostics, gone when the config reloads.
 func TestLuaDiagnostics(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severity = "warning", message = "unused" } })
 `)
-	ds, _ := s.reg.Diagnostics()
+	ds, _ := s.Registry().Diagnostics()
 	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "lint"}) {
 		t.Fatalf("diagnostics %+v", ds)
 	}
-	if got := show(s.eval(t, `L.diagnostics.list()[1].line`)[0]); got != "3" {
+	if got := settings.Show(s.Lua(`L.diagnostics.list()[1].line`)[0]); got != "3" {
 		t.Errorf("list's line %s", got)
 	}
-	if err := s.evalErr(t, `L.diagnostics.set("x", "/f", { 1 })`); !strings.Contains(err, "a diagnostic is a table") {
+	if err := s.LuaErr(`L.diagnostics.set("x", "/f", { 1 })`); !strings.Contains(err, "a diagnostic is a table") {
 		t.Errorf("a bad item: %s", err)
 	}
-	s.writeConfig(t, map[string]string{"init.lua": ""})
-	s.lua().reload(false)
-	if ds, _ := s.reg.Diagnostics(); len(ds) != 0 {
+	s.WriteConfig(map[string]string{"init.lua": ""})
+	s.ReloadLua()
+	if ds, _ := s.Registry().Diagnostics(); len(ds) != 0 {
 		t.Errorf("after a reload: %+v", ds)
 	}
 }
 
 // Options from Lua take each type's values, and say what's wrong with one that doesn't fit.
 func TestLuaOptionTypes(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.option.tabstop = 4
 L.option.expandtab = true
 L.option["ui.variant"] = "light"
 L.option["ui.variant"] = nil
 `)
-	if v, _ := s.option(t, "editor.tab_stop", registry.At{}); v != 4 {
+	if v, _ := s.Option("editor.tab_stop", registry.At{}); v != 4 {
 		t.Errorf("tabstop %v", v)
 	}
-	if v, _ := s.option(t, "editor.expand_tab", registry.At{}); v != true {
+	if v, _ := s.Option("editor.expand_tab", registry.At{}); v != true {
 		t.Errorf("expandtab %v", v)
 	}
 	for line, want := range map[string]string{
@@ -165,11 +167,11 @@ L.option["ui.variant"] = nil
 		`L.option.tabstop = 1.5`:    "tab_stop",
 		`L.option.expandtab = 3`:    "expand_tab",
 	} {
-		if err := s.evalErr(t, line); !strings.Contains(err, want) {
+		if err := s.LuaErr(line); !strings.Contains(err, want) {
 			t.Errorf("%s: %s", line, err)
 		}
 	}
-	if got := show(s.eval(t, `L.option.tabstop`)[0]); got != "4" {
+	if got := settings.Show(s.Lua(`L.option.tabstop`)[0]); got != "4" {
 		t.Errorf("reading L.option.tabstop: %s", got)
 	}
 }
@@ -177,7 +179,7 @@ L.option["ui.variant"] = nil
 // oriel.ui nodes build: rows, columns, text in each style, spacers, indicators with bars, lists through a row function,
 // and a built-in view by id.
 func TestLuaUINodes(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.statusline(function(w)
   return L.ui.row{
     L.ui.mode(),
@@ -193,54 +195,54 @@ end)
 `)
 	file := filepath.Join(t.TempDir(), "a.txt")
 	os.WriteFile(file, []byte("one\n"), 0o644)
-	s.run("editor.open", registry.Args{"path": file}) // the mode shows while an editor does
-	s.frame()
-	s.frame()
-	text := s.frameText()
+	s.Run("editor.open", registry.Args{"path": file}) // the mode shows while an editor does
+	s.Frame()
+	s.Frame()
+	text := s.Text()
 	for _, want := range []string{"NORMAL", "dim one", "42", "CTX", "90%", "DEPLOY", "2", "item a", "item b", "plain", "nested"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the status line lacks %q:\n%s", want, text)
 		}
 	}
-	if off := s.reg.TurnedOff(); len(off) != 0 {
+	if off := s.Registry().TurnedOff(); len(off) != 0 {
 		t.Errorf("turned off: %+v", off)
 	}
 }
 
 // A decoration provider in Lua marks lines in the editor: a sign and virtual text, 1-based, and a chip.
 func TestLuaDecorations(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.decor.provider("todo", function(buf, top, bottom)
   return { { line = 2, sign = "T", hl = "warn", text = "todo here" }, { line = 3, text = "x = 1", bg = "bg.raised" }, "not a table" }
 end)
 `)
 	file := filepath.Join(t.TempDir(), "a.txt")
 	os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644)
-	s.run("editor.open", registry.Args{"path": file})
-	s.frame()
-	s.frame()
-	ds := s.editor().decorations(mustPane(t, s), 0, 3, nil)
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Frame()
+	s.Frame()
+	ds := s.Decorations(0, 3)
 	if len(ds[1]) != 2 || ds[1][0].Text != "T" || ds[1][1].Text != "todo here" {
 		t.Errorf("line 2's decorations: %+v", ds)
 	}
 	if len(ds[2]) != 1 || ds[2][0].Text != "x = 1" || ds[2][0].Bg != "bg.raised" {
 		t.Errorf("line 3's chip: %+v", ds[2])
 	}
-	if !strings.Contains(s.frameText(), "todo here") {
-		t.Errorf("not drawn:\n%s", s.frameText())
+	if !strings.Contains(s.Text(), "todo here") {
+		t.Errorf("not drawn:\n%s", s.Text())
 	}
 }
 
 // HUD indicators and status rules are contributions their features will draw and ask; calling them gives what Lua made.
 func TestLuaTatAndStatusRule(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
   return L.ui.indicator{ label = "DEPLOY", value = 3 }
 end)
 L.status.rule(function(sess) if sess.red then return "error" end end)
 `)
-	var indicator registry.Indicator
-	for _, ind := range registry.Indicators(s.reg, registry.SlotTitleBar) {
+	var indicator uireg.Indicator
+	for _, ind := range uireg.Indicators(s.Registry(), uireg.SlotTitleBar) {
 		if ind.Name == "deploys" {
 			indicator = ind
 		}
@@ -251,7 +253,7 @@ L.status.rule(function(sess) if sess.red then return "error" end end)
 	if n, err := indicator.Build(nil); err != nil || n == nil {
 		t.Errorf("building it: %v", err)
 	}
-	rule := s.reg.Contributions("status.rule")[0].(registry.StatusRule)
+	rule := s.Registry().Contributions("status.rule")[0].(registry.StatusRule)
 	if v, err := rule.Rule(map[string]any{"red": true}); v != "error" || err != nil {
 		t.Errorf("rule on a red session: %q %v", v, err)
 	}
@@ -262,45 +264,64 @@ L.status.rule(function(sess) if sess.red then return "error" end end)
 
 // L.language adds a language the editor picks by extension.
 func TestLuaLanguage(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.language.add{ name = "mylang", extensions = { "myl" }, queries = { highlights = "(identifier) @variable" } }
 `)
-	langs, _ := s.reg.Languages()
+	langs, _ := s.Registry().Languages()
 	i := slices.IndexFunc(langs, func(l registry.Language) bool { return l.Name == "mylang" })
 	if i < 0 || !slices.Equal(langs[i].Extensions, []string{"myl"}) || langs[i].Queries["highlights"] == "" || langs[i].Source != "init.lua:2" {
 		t.Errorf("languages: %+v", langs)
 	}
-	if err := s.evalErr(t, `L.language.add{}`); !strings.Contains(err, "a language needs a name") {
+	if err := s.LuaErr(`L.language.add{}`); !strings.Contains(err, "a language needs a name") {
 		t.Errorf("no name: %s", err)
 	}
 }
 
-func mustPane(t *testing.T, s *errScene) vim.Pane {
-	t.Helper()
-	p, ok := s.editor().e.Pane(s.editor().e.WindowID())
-	if !ok {
-		t.Fatal("no pane")
-	}
-	return p
-}
-
 // L.coverage reads and publishes the registry's line coverage, gone when the config reloads.
 func TestLuaCoverage(t *testing.T) {
-	s := luaScene(t, `local L = oriel
+	s := apptest.LuaScene(t, `local L = oriel
 L.coverage.set("jest", "/p/a.ts", { [3] = 2, [5] = 0 })
 `)
-	if got := s.reg.CoverageFor("/p/a.ts"); len(got) != 2 || got[2] != 2 || got[4] != 0 {
+	if got := s.Registry().CoverageFor("/p/a.ts"); len(got) != 2 || got[2] != 2 || got[4] != 0 {
 		t.Fatalf("coverage %v", got)
 	}
-	if got := show(s.eval(t, `#L.coverage.lines("/p/a.ts", 1, 4)`)[0]); got != "1" {
+	if got := settings.Show(s.Lua(`#L.coverage.lines("/p/a.ts", 1, 4)`)[0]); got != "1" {
 		t.Errorf("lines 1–4: %s", got)
 	}
-	if got := show(s.eval(t, `L.coverage.lines("/p/a.ts", 1, 9)[2].hit`)[0]); got != "false" {
+	if got := settings.Show(s.Lua(`L.coverage.lines("/p/a.ts", 1, 9)[2].hit`)[0]); got != "false" {
 		t.Errorf("line 5's hit: %s", got)
 	}
-	s.writeConfig(t, map[string]string{"init.lua": ""})
-	s.lua().reload(false)
-	if got := s.reg.CoverageFor("/p/a.ts"); len(got) != 0 {
+	s.WriteConfig(map[string]string{"init.lua": ""})
+	s.ReloadLua()
+	if got := s.Registry().CoverageFor("/p/a.ts"); len(got) != 0 {
 		t.Errorf("after a reload: %v", got)
+	}
+}
+
+// A Lua sign carries a right-click menu like a built-in's: each item runs its command with its args, and one whose
+// command isn't there is left out.
+func TestLuaSignMenu(t *testing.T) {
+	s := apptest.LuaScene(t, `local L = oriel
+L.decor.provider("owners", function(buf, top, bottom)
+  return { { line = 2, sign = "◆", tooltip = "Owner", menu = {
+    { label = "Show owner", command = "owners.show", args = { who = "ana" } },
+    { label = "Missing", command = "owners.nothing" },
+  } } }
+end)
+`)
+	var got registry.Args
+	s.Registry().Command(registry.Command{ID: "owners.show", Run: func(_ registry.Ctx, a registry.Args) error { got = a; return nil }})
+	file := filepath.Join(t.TempDir(), "a.txt")
+	os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644)
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Frame()
+	s.Frame()
+	menu := s.RightClick(s.TextPoint("◆"))
+	if !strings.Contains(menu, "Show owner") || strings.Contains(menu, "Missing") {
+		t.Fatalf("the sign's menu:\n%s", menu)
+	}
+	s.ClickOn("Show owner")
+	if got.String("who") != "ana" {
+		t.Errorf("Show owner ran with %v", got)
 	}
 }

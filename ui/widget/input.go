@@ -2,12 +2,15 @@ package widget
 
 import (
 	"math"
+	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -32,6 +35,10 @@ type InputOpts struct {
 	// Secret shows each character as a dot, to the eye and to assistive technology, and won't copy or cut it: a
 	// token being pasted in. One line only.
 	Secret bool
+	// DefaultFocus makes it where focus goes when what it's in opens (ui.Style.DefaultFocus): a dialog's first field.
+	DefaultFocus bool
+	// Step makes it a number field that assistive technology can increment and decrement by Step.
+	Step float64
 }
 
 // Digits accepts what a whole number is typed with.
@@ -54,7 +61,41 @@ type inputState struct {
 	width          float32 // the width a multi-line field wrapped at, last frame
 	dragging       bool
 	focused        bool // last frame
+	undo, redo     []inputEdit
+	join           string // what the last edit was ("type", a dictation's), which the next of the same joins for undo
+	last           string // the text as the field last left it: when it's changed from outside, undo starts again
 }
+
+// fieldExtra is what a Prose adds to the field Input edits.
+type fieldExtra struct {
+	keys   []render.KeyEvent // the keys to edit with, in place of the field's own
+	edit   *fieldEdit        // made before the keys, through the edit path typing takes
+	muted  [2]int            // runes drawn in fg.muted: a phrase still being heard
+	stroke render.Color      // the border, when set
+	padR   float32           // room kept on the right, for inlay
+	inlay  func(c *ui.Ctx)   // built inside the field's box
+}
+
+// fieldEdit puts Insert in place of runes [From, To). Edits with the same Join undo together.
+type fieldEdit struct {
+	From, To int
+	Insert   string
+	Join     string
+}
+
+// inputEdit is a field as it was, for undo and redo.
+type inputEdit struct {
+	text           string
+	cursor, anchor int
+}
+
+// undoMax is how many edits a field can undo.
+const undoMax = 100
+
+var (
+	textActions   = []ui.Action{ui.ActionSetValue, ui.ActionSelect}
+	numberActions = append(slices.Clone(textActions), stepActions...)
+)
 
 // A multi-line field's line height and its padding above and below.
 const lineH, linesPadY = 18, 6
@@ -118,6 +159,13 @@ func lineOf(spans []span, i int) int {
 // forward by character, word or line. Enter submits, Escape cancels. A click puts the cursor where it lands. With
 // Lines it takes several lines (InputOpts.Lines). Its selection is painted in input.selection.
 func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
+	return field(c, key, text, o, nil)
+}
+
+func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputResult {
+	if x == nil {
+		x = &fieldExtra{}
+	}
 	id := c.Next(key)
 	in := c.Interaction(id)
 	st := ui.State[inputState](c, id)
@@ -125,6 +173,9 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	multi := o.Lines > 1 && !o.Secret
 	runes := []rune(*text)
 	st.cursor, st.anchor = clampInt(st.cursor, 0, len(runes)), clampInt(st.anchor, 0, len(runes))
+	if *text != st.last {
+		st.undo, st.redo, st.join = nil, nil, ""
+	}
 	var res InputResult
 	if o.SelectOnFocus && in.Focused && !st.focused && !in.Clicked && !in.Pressed {
 		st.anchor, st.cursor = 0, len(runes)
@@ -185,8 +236,49 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	}
 	st.dragging = in.Pressed
 	moved := in.Clicked || in.Pressed
+	// typable is what of s can be typed here.
+	typable := func(s string) []rune {
+		var add []rune
+		for _, r := range s {
+			if (r >= ' ' || multi && r == '\n') && (o.Accept == nil || o.Accept(r)) {
+				add = append(add, r)
+			}
+		}
+		return add
+	}
+	// replace puts add in place of runes [lo, hi), with the caret after it.
+	replace := func(lo, hi int, add []rune) {
+		runes = append(runes[:lo:lo], append(add, runes[hi:]...)...)
+		st.cursor, st.anchor = lo+len(add), lo+len(add)
+		res.Changed = true
+	}
+	now := func() inputEdit { return inputEdit{string(runes), st.cursor, st.anchor} }
+	restore := func(e inputEdit) {
+		runes, st.cursor, st.anchor, res.Changed = []rune(e.text), e.cursor, e.anchor, true
+	}
+	// record keeps before for undo if the text has changed since, unless this edit joins the last.
+	record := func(before inputEdit, join string) {
+		if string(runes) != before.text {
+			if join == "" || join != st.join {
+				st.undo = append(st.undo, before)
+				st.undo = st.undo[max(0, len(st.undo)-undoMax):]
+			}
+			st.redo = nil
+		}
+		st.join = join
+	}
+	keys := in.Keys
+	if x.keys != nil {
+		keys = x.keys
+	}
+	if e := x.edit; e != nil && !o.Disabled {
+		before := now()
+		replace(clampInt(e.From, 0, len(runes)), clampInt(e.To, 0, len(runes)), typable(e.Insert))
+		record(before, e.Join)
+		moved = true
+	}
 	if !o.Disabled {
-		for _, k := range in.Keys {
+		for _, k := range keys {
 			shift, mods := k.Mods&render.ModShift != 0, k.Mods&^render.ModShift
 			move := func(to int) {
 				st.cursor = clampInt(to, 0, len(runes))
@@ -195,25 +287,13 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 				}
 			}
 			lo, hi := min(st.cursor, st.anchor), max(st.cursor, st.anchor)
-			cut := func() {
-				runes = append(runes[:lo:lo], runes[hi:]...)
-				st.cursor, st.anchor = lo, lo
-				res.Changed = true
-			}
+			cut := func() { replace(lo, hi, nil) }
 			insert := func(s string) {
-				var add []rune
-				for _, r := range s {
-					if (r >= ' ' || multi && r == '\n') && (o.Accept == nil || o.Accept(r)) {
-						add = append(add, r)
-					}
+				if add := typable(s); len(add) > 0 {
+					replace(lo, hi, add)
 				}
-				if len(add) == 0 {
-					return
-				}
-				cut()
-				runes = append(runes[:lo:lo], append(add, runes[lo:]...)...)
-				st.cursor, st.anchor = lo+len(add), lo+len(add)
 			}
+			before, join := now(), ""
 			line := func() span {
 				ls := spans()
 				return ls[lineOf(ls, st.cursor)]
@@ -232,6 +312,18 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			}
 			moved = true
 			switch key {
+			case "undo", "redo":
+				from, to := &st.undo, &st.redo
+				if key == "redo" {
+					from, to = to, from
+				}
+				if n := len(*from); n > 0 {
+					*to = append(*to, now())
+					restore((*from)[n-1])
+					*from = (*from)[:n-1]
+				}
+				st.join = ""
+				continue
 			case "submit":
 				res.Submitted = true
 			case "newline":
@@ -309,13 +401,34 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			default:
 				if mods == 0 && utf8.RuneCountInString(k.Key) == 1 {
 					insert(k.Key)
+					join = "type"
 				}
 			}
+			record(before, join)
+		}
+		for _, a := range in.Access {
+			before := now()
+			switch a.Action {
+			case ui.ActionSetValue:
+				replace(0, len(runes), typable(a.Value))
+			case ui.ActionSelect:
+				st.anchor, st.cursor = clampInt(a.Selection.Start, 0, len(runes)), clampInt(a.Selection.End, 0, len(runes))
+			case ui.ActionIncrement, ui.ActionDecrement:
+				v, err := strconv.ParseFloat(strings.TrimSpace(string(runes)), 64)
+				if err != nil || o.Step <= 0 {
+					break
+				}
+				v += o.Step * float64(steps([]ui.AccessAction{a}))
+				replace(0, len(runes), typable(strconv.FormatFloat(snap(v, o.Step), 'f', -1, 64)))
+			}
+			record(before, "")
+			moved = true
 		}
 	}
-	if res.Changed || len(in.Keys) > 0 {
+	if res.Changed || len(keys) > 0 {
 		*text = string(runes)
 	}
+	st.last = *text
 
 	width := o.Width
 	if width == (ui.Size{}) {
@@ -328,6 +441,9 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	case in.Focused:
 		border = col(c, tInputFocus)
 	}
+	if x.stroke != (render.Color{}) {
+		border = x.stroke
+	}
 	fg := col(c, tInputFg)
 	if o.Disabled {
 		fg = col(c, tDisabledFg)
@@ -338,11 +454,19 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 	}
 	lo, hi := min(st.cursor, st.anchor), max(st.cursor, st.anchor)
 	focused := in.Focused
-	style := ui.Style{W: width, Fill: col(c, tInputBg), Stroke: border, Border: 1, Radius: 6, Clip: true, Focusable: true, Disabled: o.Disabled,
-		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Text: true, Role: ui.RoleTextBox, Label: o.Label, Value: shown(0, len(runes))}
+	actions := textActions
+	if o.Step > 0 {
+		actions = numberActions
+	}
+	if o.Disabled {
+		actions = nil
+	}
+	style := ui.Style{W: width, Fill: col(c, tInputBg), Stroke: border, Border: 1, Radius: 6, Clip: true, Focusable: true, DefaultFocus: o.DefaultFocus, Disabled: o.Disabled,
+		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Text: true, Role: ui.RoleTextBox, Label: o.Label, Value: shown(0, len(runes)),
+		Selection: ui.TextRange{Start: lo, End: hi}, Actions: actions}
 	if multi {
 		if r, ok := c.Rect(id); ok {
-			st.width = r.Dx() - 20
+			st.width = r.Dx() - 20 - x.padR
 		}
 		ls := spans()
 		rows := clampInt(len(ls), max(o.MinLines, 1), o.Lines)
@@ -359,6 +483,7 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 			c.ScrollTo(id, sc)
 		}
 		style.Dir, style.H, style.Pad, style.ScrollY = ui.Column, ui.Px(float32(rows)*lineH+2*linesPadY), ui.PadXY(10, linesPadY), true
+		style.Pad.R += x.padR
 		c.Box(key, style, func(rc *ui.Ctx) {
 			rc.Paint("text", ui.Flex(1), ui.Px(float32(len(ls))*lineH), func(f render.Frame, r render.Rect) {
 				if len(runes) == 0 && o.Placeholder != "" {
@@ -374,17 +499,30 @@ func Input(c *ui.Ctx, key any, text *string, o InputOpts) InputResult {
 						}
 						f.Rect(render.XYWH(r.Min.X+x0, y+1, x1-x0, 16), render.Style{Fill: col(c, tInputSelection)})
 					}
-					if sp.to > sp.from {
-						run := c.Shaper().Shape(string(runes[sp.from:sp.to]), font)
-						f.Glyphs(run, render.Point{X: r.Min.X, Y: y + lineH/2 + (run.Ascent-run.Descent)/2}, fg)
+					// A line is drawn in up to three runs: before, in and after the muted span.
+					cuts := []int{sp.from, clampInt(x.muted[0], sp.from, sp.to), clampInt(x.muted[1], sp.from, sp.to), sp.to}
+					for i := range 3 {
+						a, b := cuts[i], max(cuts[i], cuts[i+1])
+						if b <= a {
+							continue
+						}
+						tc := fg
+						if i == 1 {
+							tc = col(c, theme.FgMuted)
+						}
+						run := c.Shaper().Shape(string(runes[a:b]), font)
+						f.Glyphs(run, render.Point{X: r.Min.X + advance(sp.from, a), Y: y + lineH/2 + (run.Ascent-run.Descent)/2}, tc)
 					}
 				}
 				if focused {
 					k := lineOf(ls, st.cursor)
-					x := advance(ls[k].from, st.cursor)
-					f.Rect(render.XYWH(r.Min.X+x, r.Min.Y+float32(k)*lineH+1, 1, 16), render.Style{Fill: col(c, tInputCaret)})
+					cx := advance(ls[k].from, st.cursor)
+					f.Rect(render.XYWH(r.Min.X+cx, r.Min.Y+float32(k)*lineH+1, 1, 16), render.Style{Fill: col(c, tInputCaret)})
 				}
 			})
+			if x.inlay != nil {
+				x.inlay(rc)
+			}
 		})
 		return res
 	}
@@ -476,6 +614,10 @@ func editKey(key string, mods render.Mods) string {
 		return "cut"
 	case km{"v", platform.primary}:
 		return "paste"
+	case km{"z", platform.primary}:
+		return "undo"
+	case km{"Z", platform.primary}:
+		return "redo"
 	}
 	if platform.line != 0 {
 		switch k {

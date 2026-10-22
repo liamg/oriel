@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -149,23 +150,36 @@ func (c *Client) handle(m *message) {
 		return
 	}
 	if m.ID == nil {
-		if m.Method == "notifications/tools/list_changed" {
-			c.mu.Lock()
-			f := c.onTools
-			c.mu.Unlock()
-			if f != nil {
-				go f()
-			}
-		}
+		c.notified(m.Method)
 		return
 	}
 	resp := &message{JSONRPC: "2.0", ID: m.ID}
-	if m.Method == "ping" {
-		resp.Result = json.RawMessage("{}")
+	if res, err := c.answer(m.Method); err != nil {
+		errors.As(err, &resp.Error)
 	} else {
-		resp.Error = &Error{Code: CodeMethodNotFound, Message: "method not found: " + m.Method}
+		resp.Result, _ = json.Marshal(res)
 	}
 	go func() { _ = c.t.send(context.Background(), resp) }()
+}
+
+// answer is the reply to a request from the server.
+func (c *Client) answer(method string) (any, error) {
+	if method == "ping" {
+		return struct{}{}, nil
+	}
+	return nil, &Error{Code: CodeMethodNotFound, Message: "method not found: " + method}
+}
+
+func (c *Client) notified(method string) {
+	if method != "notifications/tools/list_changed" {
+		return
+	}
+	c.mu.Lock()
+	f := c.onTools
+	c.mu.Unlock()
+	if f != nil {
+		go f()
+	}
 }
 
 func clientVersion() string {

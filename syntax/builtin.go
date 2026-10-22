@@ -16,7 +16,7 @@ var grammarFS embed.FS
 //go:embed queries
 var queryFS embed.FS
 
-// core are the languages Oriel ships (ED-11), which builtin:languages registers as a plugin would: name, file
+// core are the languages Oriel ships, which builtin:languages registers as a plugin would: name, file
 // extensions, whole file names and #! interpreters. One with no grammar file is queries only, for inheriting.
 var core = []struct {
 	name                   string

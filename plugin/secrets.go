@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-// Secrets is where named secrets are kept (security.md, "Secrets never enter the plugin"). Plugins never read
+// Secrets is where named secrets are kept. Plugins never read
 // them: the host sends one only where the plugin's grant binds it.
 type Secrets interface {
 	Secret(name string) (string, bool)

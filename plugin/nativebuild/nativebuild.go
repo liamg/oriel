@@ -1,5 +1,5 @@
 // Package nativebuild is `oriel build --with`: a custom oriel binary with native plugins (Go packages whose init
-// calls plugin.Register) linked in, the way xcaddy builds Caddy (plugins.md, "Performance and native plugins").
+// calls plugin.Register) linked in, the way xcaddy builds Caddy.
 package nativebuild
 
 import (

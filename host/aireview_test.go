@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
@@ -34,10 +35,9 @@ func reviewer(t *testing.T, f *agenttest.Fake) *agenttest.FakeSession {
 	return s
 }
 
-// RV-3: agents.md, Guardrails, "Cross-model review. AI review runs on a different provider from the author by
-// default": the reviewer is the other provider, on the ai-review pack, given the branch's change and only read-only
-// tools; whatever it asks permission for is refused; each finding it reports is a session event as it comes, and the
-// review ends with its turn.
+// Cross-model review runs on a different provider from the author by default: the reviewer is the other provider,
+// on the ai-review pack, given the branch's change and only read-only tools; whatever it asks permission for is
+// refused; each finding it reports is a session event as it comes, and the review ends with its turn.
 func TestAIReviewRunsOnAnotherProvider(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4), Offers: []agent.Model{{ID: "gpt-5", Default: true}}}
 	r := newRig(t, codex)
@@ -98,7 +98,7 @@ func TestAIReviewRunsOnAnotherProvider(t *testing.T) {
 	}
 }
 
-// RV-3: with only the author's provider installed, the review falls back to it on a different model; with no other
+// With only the author's provider installed, the review falls back to it on a different model; with no other
 // model, on the same one, and says so.
 func TestAIReviewFallsBackToAnotherModel(t *testing.T) {
 	r := newRig(t)
@@ -131,7 +131,7 @@ func TestAIReviewFallsBackToAnotherModel(t *testing.T) {
 	}
 }
 
-// RV-3: "Re-review changes" reviews what changed since the last review's commit, telling the reviewer what it found
+// "Re-review changes" reviews what changed since the last review's commit, telling the reviewer what it found
 // before and what became of it; with nothing new it says so.
 func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
@@ -173,7 +173,7 @@ func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 	}
 }
 
-// RV-3: a reviewer that writes its findings as JSON instead of calling the tool still has them read; a reviewer that
+// A reviewer that writes its findings as JSON instead of calling the tool still has them read; a reviewer that
 // fails says why.
 func TestAIReviewReadsFindingsFromItsAnswer(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
@@ -205,31 +205,7 @@ func TestAIReviewReadsFindingsFromItsAnswer(t *testing.T) {
 	}
 }
 
-func TestParseFindings(t *testing.T) {
-	for _, tc := range []struct {
-		text string
-		want []core.Finding
-	}{
-		{`[{"severity":"blocker","title":"Data loss","file":"a.go:12-14"}]`, []core.Finding{{Severity: "critical", Title: "Data loss", File: "a.go", Line: 12}}},
-		{"Verdict.\n```\n{\"findings\":[{\"severity\":\"nit\",\"title\":\"Name\",\"path\":\"./b.go\",\"line\":4}]}\n```",
-			[]core.Finding{{Severity: "nit", Title: "Name", File: "b.go", Line: 4}}},
-		{"```json\n{\"findings\": []}\n```", nil},
-		{"No JSON here.", nil},
-	} {
-		got := ParseFindings(tc.text)
-		if len(got) != len(tc.want) {
-			t.Errorf("%q: %+v", tc.text, got)
-			continue
-		}
-		for i := range got {
-			if got[i] != tc.want[i] {
-				t.Errorf("%q: %+v, want %+v", tc.text, got[i], tc.want[i])
-			}
-		}
-	}
-}
-
-// RV-3: "→ Thread" and "Fix" turn a finding into a thread on its line for the author agent, rated as the finding,
+// "→ Thread" and "Fix" turn a finding into a thread on its line for the author agent, rated as the finding,
 // and the finding remembers its thread; dismissing one keeps it, set aside.
 func TestAFindingBecomesAThread(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
@@ -268,7 +244,7 @@ func TestAFindingBecomesAThread(t *testing.T) {
 	}
 }
 
-// RV-3: crit-reference.md, "review-PR with automatic AI review": a review session's change is reviewed as it starts.
+// A review session's change is reviewed by AI as it starts.
 func TestReviewSessionsReviewThemselves(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
@@ -293,5 +269,57 @@ func TestReviewSessionsReviewThemselves(t *testing.T) {
 	}
 	if l, ok := r.session(id).LastAIReview(); !ok || !l.Running {
 		t.Errorf("no review is running: %+v", l)
+	}
+}
+
+// panicky is a provider whose Start panics.
+type panicky struct{ *agenttest.Fake }
+
+func (panicky) Start(context.Context, agent.StartSpec) (agent.Session, error) {
+	panic("reviewer blew up")
+}
+
+// A reviewer that panics ends its review with the failure, and the host carries on.
+func TestAIReviewSurvivesAPanic(t *testing.T) {
+	r := newRig(t, panicky{&agenttest.Fake{Name: "codex"}})
+	id, _ := r.changed()
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+		t.Fatal(err)
+	}
+	se := r.eventually(id, "the review to end", func(se core.SessionState) bool { l, _ := se.LastAIReview(); return !l.Running })
+	if l, _ := se.LastAIReview(); !strings.Contains(l.Error, "reviewer blew up") {
+		t.Errorf("the review: %+v", l)
+	}
+}
+
+// Close waits for a running review to end, so how it ended is in its session's log.
+func TestCloseWaitsForAIReview(t *testing.T) {
+	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4), HoldClose: make(chan struct{}), Closing: make(chan *agenttest.FakeSession, 4)}
+	r := newRig(t, codex)
+	id, _ := r.changed()
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+		t.Fatal(err)
+	}
+	reviewer(t, codex)
+	closed := make(chan struct{})
+	go func() {
+		r.w.Close()
+		close(closed)
+	}()
+	select {
+	case <-codex.Closing:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the reviewer wasn't closed")
+	}
+	select {
+	case <-closed:
+		t.Error("Close returned while the review was still ending")
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(codex.HoldClose)
+	<-closed
+	r.open()
+	if l, _ := r.session(id).LastAIReview(); l.Running || l.Error != "Oriel stopped during the review" {
+		t.Errorf("the review after a restart: %+v", l)
 	}
 }

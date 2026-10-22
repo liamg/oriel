@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// LedgerCount is agent-written lines by how far they've been reviewed (agents.md, "Review ledger").
+// LedgerCount is agent-written lines by how far they've been reviewed.
 type LedgerCount struct {
 	Read, Skimmed, Unread int
 }
@@ -86,7 +86,7 @@ func (ReviewLedger) ContributionKind() string   { return "review.ledger" }
 func (l ReviewLedger) ContributionName() string { return l.Name }
 
 // LedgerOf is root's review ledger from the first ReviewLedger; ok is false when none is registered.
-func LedgerOf(r Registry, root string) (l Ledger, ok bool) {
+func LedgerOf(r Contributions, root string) (l Ledger, ok bool) {
 	var ls []ReviewLedger
 	for _, c := range r.Contributions("review.ledger") {
 		ls = append(ls, c.(ReviewLedger))
@@ -101,7 +101,7 @@ func LedgerOf(r Registry, root string) (l Ledger, ok bool) {
 	return l, err == nil
 }
 
-// A commit gate's modes (agents.md): hard blocks until "commit anyway", soft asks once, off lets it through.
+// A commit gate's modes: hard blocks until "commit anyway", soft asks once, off lets it through.
 const (
 	GateHard = "hard"
 	GateSoft = "soft"
@@ -155,7 +155,7 @@ type GateCheck struct {
 }
 
 // CheckCommit asks every commit gate about a commit, by Order; a gate that panics is left out.
-func CheckCommit(r Registry, c CommitCheck) []GateCheck {
+func CheckCommit(r Contributions, c CommitCheck) []GateCheck {
 	var gs []CommitGate
 	for _, x := range r.Contributions("commit.gate") {
 		gs = append(gs, x.(CommitGate))

@@ -43,6 +43,13 @@ type SlowFrameEvent struct{ Waited, Took time.Duration }
 // AppearanceEvent is the OS's light or dark preference, sent when a window opens and whenever it changes.
 type AppearanceEvent struct{ Dark bool }
 
+// FocusEvent is the window gaining or losing the OS's focus: another app came in front of it, or it came back.
+type FocusEvent struct{ Focused bool }
+
+// VisibleEvent is the window coming into or going out of sight: minimised, or (macOS) wholly covered. A hidden
+// window draws nothing; the app needn't build frames for it.
+type VisibleEvent struct{ Visible bool }
+
 // CloseRequestEvent is a held window asked to close (its close button, Quit): it stays open until the app calls
 // Close.
 type CloseRequestEvent struct{}
@@ -102,4 +109,6 @@ func (RedrawEvent) isEvent()       {}
 func (AppearanceEvent) isEvent()   {}
 func (DropEvent) isEvent()         {}
 func (CloseRequestEvent) isEvent() {}
+func (FocusEvent) isEvent()        {}
+func (VisibleEvent) isEvent()      {}
 func (SlowFrameEvent) isEvent()    {}

@@ -183,6 +183,8 @@ type TreeOpts struct {
 	KeyMode   string // the keymap mode it takes keys in, for keys its owner maps; "list" by default
 	// Trailing draws at the right of each row, before Mark: counts, bars, badges.
 	Trailing func(c *ui.Ctx, it TreeItem, selected bool)
+	// Select, when set, selects the item with this ID, opening the folders it's in: the owner sets it for a frame.
+	Select string
 }
 
 type TreeResult struct {
@@ -218,6 +220,9 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 	st := ui.State[treeState](c, id)
 	if st.open == nil {
 		st.open = map[string]bool{}
+	}
+	if o.Select != "" && openTo(roots, o.Select, st.open) {
+		st.selID = o.Select
 	}
 	var flat []flatItem
 	var walk func(items []TreeItem, depth, parent int)
@@ -368,6 +373,20 @@ func Tree(c *ui.Ctx, key any, roots []TreeItem, o TreeOpts) TreeResult {
 		st.selID = res.Selected
 	}
 	return res
+}
+
+// openTo opens the folders holding the item id, and says whether it's there.
+func openTo(items []TreeItem, id string, open map[string]bool) bool {
+	for _, it := range items {
+		if it.ID == id {
+			return true
+		}
+		if openTo(it.Children, id, open) {
+			open[it.ID] = true
+			return true
+		}
+	}
+	return false
 }
 
 // caretPainter draws a tree's caret, pointing right and turned a quarter down by turn (0..1) as its folder opens.

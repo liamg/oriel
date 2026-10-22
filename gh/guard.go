@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// An agent never posts to a pull request's review or conversation: it drafts, and the user forwards (agents.md,
-// ui.md 06). PostsReview and ReviewTool are how the guards around an agent recognise an attempt, whatever the shell
-// or the MCP server it comes through.
+// An agent never posts to a pull request's review or conversation: it drafts, and the user forwards. PostsReview and
+// ReviewTool are how the guards around an agent recognise an attempt, whatever the shell or the MCP server it comes
+// through.
 
 // reviewTools are the MCP tools, on any server, that write to a PR's review or conversation (GitHub's own server
 // names them so).

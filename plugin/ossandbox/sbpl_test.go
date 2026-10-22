@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// PL-2: the macOS profile, by its text. Seatbelt denies what no rule allows ("(deny default)"), so the profile is
+// The macOS profile, by its text. Seatbelt denies what no rule allows ("(deny default)"), so the profile is
 // right when it allows exactly the profile's paths, programs and ports beyond the system's.
 func TestSBPL(t *testing.T) {
 	p := Profile{Read: []string{"/plugins/acme/jira"}, Write: []string{"/src/work tree", `/odd"name`}, Exec: []string{"/plugins/acme/jira/bin/jira"}}

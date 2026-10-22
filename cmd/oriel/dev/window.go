@@ -214,7 +214,7 @@ func loop(w *app.Window, s scenes.Scene, auto bool) error {
 				kickLate = append(kickLate, t0.Sub(time.Unix(0, at)))
 			}
 			// The next frame is requested before Frame: Gio reads InvalidateCmd while it processes
-			// this frame, and one executed after Frame returns can be missed (see P0-4-gio.md).
+			// this frame, and one executed after Frame returns can be missed.
 			var ends bool
 			if auto {
 				p := script[pi]

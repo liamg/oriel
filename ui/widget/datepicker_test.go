@@ -33,7 +33,7 @@ func (f *pickerFixture) build(c *ui.Ctx) {
 
 var pickerSize = render.Point{X: 360, Y: 340}
 
-// AI-14: the keyboard picks a range: arrows move the day (a day across, a week up and down), ⏎ picks the start and
+// The keyboard picks a range: arrows move the day (a day across, a week up and down), ⏎ picks the start and
 // then the end, in either order; the calendar follows the day into another month. Escape cancels.
 func TestDatePickerKeys(t *testing.T) {
 	f := &pickerFixture{}
@@ -63,7 +63,7 @@ func TestDatePickerKeys(t *testing.T) {
 	}
 }
 
-// AI-14: two clicks pick a range; the arrows beside the month page through months.
+// Two clicks pick a range; the arrows beside the month page through months.
 func TestDatePickerMouse(t *testing.T) {
 	f := &pickerFixture{}
 	h := newHarness(t, theme.Dark, pickerSize, f.build)
@@ -83,7 +83,7 @@ func TestDatePickerMouse(t *testing.T) {
 	}
 }
 
-// AI-14: a range typed as 2026-09-01..2026-09-30 is picked with ⏎; one that doesn't parse isn't.
+// A range typed as 2026-09-01..2026-09-30 is picked with ⏎; one that doesn't parse isn't.
 func TestDatePickerTyped(t *testing.T) {
 	f := &pickerFixture{}
 	h := newHarness(t, theme.Dark, pickerSize, f.build)
@@ -110,7 +110,7 @@ func TestDatePickerSnapshot(t *testing.T) {
 	snapshot.GoldenPNG(t, "testdata/datepicker.png", raster.Render(h.list, pickerSize, 1, resolved(t, theme.Dark).C(theme.BgBase)), 0.02, 0.001)
 }
 
-// AI-14: a date select is a button showing its range that opens the picker in a popover under it; a pick closes it
+// A date select is a button showing its range that opens the picker in a popover under it; a pick closes it
 // and reports the range, Escape closes it with nothing picked.
 func TestDateSelect(t *testing.T) {
 	var r DateRange

@@ -1,4 +1,4 @@
-// Package depcheck checks every module the workspace requires against deps/allow.txt.
+// Package depcheck checks every module the workspace requires against the allowlist in allowed.txt.
 package depcheck
 
 import (
@@ -11,6 +11,9 @@ import (
 	"sort"
 	"strings"
 )
+
+// AllowedFile is the allowlist, relative to the repo root.
+const AllowedFile = "tools/depcheck/allowed.txt"
 
 // Workspace is the module path prefix of our own modules, which need no approval.
 const Workspace = "github.com/liamg/oriel"
@@ -45,7 +48,7 @@ func ParseAllowlist(r io.Reader) (Allowlist, error) {
 			continue
 		}
 		if len(f) != 2 || !majorRE.MatchString(f[1]) {
-			return nil, fmt.Errorf("allow.txt:%d: want \"module/path vN\", got %q", n, sc.Text())
+			return nil, fmt.Errorf("allowed.txt:%d: want \"module/path vN\", got %q", n, sc.Text())
 		}
 		if a[f[0]] == nil {
 			a[f[0]] = map[string]bool{}
@@ -115,7 +118,7 @@ func Check(allow Allowlist, mods []Module) []string {
 		}
 		seen[key] = true
 		if !allow[m.Path][m.Major()] {
-			problems = append(problems, fmt.Sprintf("%s %s (required by %s) is not in deps/allow.txt; get it approved in _design/deps.md first", m.Path, m.Version, m.From))
+			problems = append(problems, fmt.Sprintf("%s %s (required by %s) is not in tools/depcheck/allowed.txt; ask before adding it", m.Path, m.Version, m.From))
 		}
 	}
 	sort.Strings(problems)
@@ -124,7 +127,7 @@ func Check(allow Allowlist, mods []Module) []string {
 
 // Run checks every go.mod under root plus vendor/modules.txt.
 func Run(root string) ([]string, error) {
-	f, err := os.Open(filepath.Join(root, "deps", "allow.txt"))
+	f, err := os.Open(filepath.Join(root, AllowedFile))
 	if err != nil {
 		return nil, err
 	}

@@ -6,12 +6,12 @@ import (
 )
 
 // Consent is what installing or updating a plugin asks: every capability it declares beyond the always-allowed
-// ones, accepted together or not at all (security.md). An update lists its whole new set, with what's new marked.
+// ones, accepted together or not at all. An update lists its whole new set, with what's new marked.
 type Consent struct {
 	Plugin  Manifest
 	From    *Manifest // the version installed, for an update; nil for an install
 	Source  string    // where it comes from: a registry, a git URL, a directory
-	Badge   string    // who looked at its code: reviewed, trusted, unverified (catalog.md, Badges)
+	Badge   string    // who looked at its code: reviewed, trusted, unverified
 	Warning string    // said before anything else: an unverified source's "Nobody has reviewed this code."
 	Facts   []Fact    // what the installer knows of its provenance: commit, checksum, badge, deps
 	Rows    []ConsentRow
@@ -104,7 +104,7 @@ func (c Consent) Count(r Risk) int {
 	return n
 }
 
-// Lock is the grant as the lockfile records consent to it (catalog.md): "net:acme.atlassian.net" for each scope
+// Lock is the grant as the lockfile records consent to it: "net:acme.atlassian.net" for each scope
 // item, or the capability alone.
 func (g Grant) Lock() []string {
 	if len(g.Scope) == 0 {

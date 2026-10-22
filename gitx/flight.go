@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// Flight is a branch on its way to a pull request (ui.md 18): what it hasn't committed, how far its base has moved
+// Flight is a branch on its way to a pull request: what it hasn't committed, how far its base has moved
 // on, and what origin hasn't got.
 type Flight struct {
 	Branch      string

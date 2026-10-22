@@ -31,6 +31,19 @@ func TestCheckAddr(t *testing.T) {
 		{"169.254.169.254", false, false},
 		{"fe80::1", false, false},
 		{"0.0.0.0", false, false},
+		{"64:ff9b::7f00:1", false, false},
+		{"64:ff9b::a9fe:a9fe", false, false},
+		{"64:ff9b::a01:4e68", false, true},
+		{"64:ff9b::101:101", true, true},
+		{"64:ff9b:1::7f00:1", false, false},
+		{"64:ff9b:1::101:101", false, true},
+		{"2002:7f00:1::", false, false},
+		{"2002:a01:4e68::1", false, true},
+		{"2002:101:101::1", true, true},
+		{"2001:0:4136:e378:8000:63bf:80ff:fffe", false, false},
+		{"2001:0:4136:e378:8000:63bf:f5fe:b197", false, true},
+		{"::127.0.0.1", false, false},
+		{"::ffff:10.0.0.1", false, true},
 	} {
 		ip := netip.MustParseAddr(c.ip)
 		if got := CheckAddr(ip, Public) == nil; got != c.public {
@@ -38,6 +51,21 @@ func TestCheckAddr(t *testing.T) {
 		}
 		if got := CheckAddr(ip, Private) == nil; got != c.private {
 			t.Errorf("%s private: got %v", c.ip, got)
+		}
+	}
+}
+
+func TestDialControl(t *testing.T) {
+	check := DialControl(Public)
+	for addr, ok := range map[string]bool{
+		"1.1.1.1:443":            true,
+		"127.0.0.1:80":           false,
+		"[64:ff9b::7f00:1]:80":   false,
+		"[2002:a01:4e68::1]:443": false,
+		"localhost:80":           false,
+	} {
+		if got := check("tcp", addr, nil) == nil; got != ok {
+			t.Errorf("%s: allowed %v", addr, got)
 		}
 	}
 }

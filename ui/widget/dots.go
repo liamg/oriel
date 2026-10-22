@@ -27,7 +27,7 @@ type DotsOpts struct {
 }
 
 // Dots says someone is at work with no known end: three dots with a wave of brightness crossing them, a turn of
-// typing dots. With reduced motion they hold still.
+// typing dots. With reduced motion, or the window unfocused, they hold still.
 func Dots(c *ui.Ctx, key any, o DotsOpts) ui.ID {
 	size := o.Size
 	if size == 0 {
@@ -38,12 +38,9 @@ func Dots(c *ui.Ctx, key any, o DotsOpts) ui.ID {
 	if tone == (color.NRGBA{}) {
 		tone = col(c, tDots)
 	}
-	phase := -1.0
-	if !c.Still() {
-		tick := dotsCycle / dotsSteps
-		now := c.Now().Truncate(tick)
-		phase = float64(now.UnixNano()/int64(tick)%dotsSteps) / dotsSteps
-		c.WakeAt(now.Add(tick))
+	phase, moving := c.Decorative(dotsCycle, dotsSteps)
+	if !moving {
+		phase = -1
 	}
 	w := size*dotsN + gap*(dotsN-1)
 	return c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(size), Role: ui.RoleStatus, Label: o.Name, Help: o.Help, Keep: true}, func(c *ui.Ctx) {

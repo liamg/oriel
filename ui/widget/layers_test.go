@@ -150,8 +150,8 @@ func TestScrim(t *testing.T) {
 	}
 }
 
-// SE-5: "opening Jobs, Stats, Usage or Settings closes whichever is up, through widget.Page (one page at a time, a
-// general rule)".
+// Opening Jobs, Stats, Usage or Settings closes whichever is up, through widget.Page: one page at a time, as a
+// general rule.
 func TestOnePageAtATime(t *testing.T) {
 	var a, b bool
 	built := 0

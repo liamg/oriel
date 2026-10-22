@@ -111,7 +111,7 @@ func TestDeriveStatus(t *testing.T) {
 	}
 }
 
-// AI-13: the signed-out logins are the ones of an account's plan, by provider and account.
+// The signed-out logins are the ones of an account's plan, by provider and account.
 func TestSignedOut(t *testing.T) {
 	st := core.State{Machine: core.MachineState{
 		SignedOut: []core.Login{{Provider: "claude", Account: "u1/o1", Detail: "revoked"}, {Provider: "codex"}},
@@ -132,4 +132,28 @@ func snapshotOf(t *testing.T, st core.State) []byte {
 	s := New()
 	s.state = st
 	return snapshot(t, s)
+}
+
+// A thread going busy or idle is a small event of its own, not the whole thread again.
+func TestThreadBusy(t *testing.T) {
+	s := New()
+	for _, ev := range sessionEvents() {
+		if err := s.Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	busy := func() bool {
+		se, _ := s.State().Session("pricing")
+		th, _ := se.Snapshot().Thread("t1")
+		return th.Busy
+	}
+	if err := s.Apply(core.ThreadBusy{Session: "pricing", Thread: "t1", Busy: true}); err != nil || !busy() {
+		t.Fatalf("busy: %v, %v", busy(), err)
+	}
+	if err := s.Apply(core.ThreadBusy{Session: "pricing", Thread: "t1"}); err != nil || busy() {
+		t.Fatalf("idle: %v, %v", busy(), err)
+	}
+	if err := s.Apply(core.ThreadBusy{Session: "pricing", Thread: "nope"}); err == nil {
+		t.Error("an unknown thread went busy")
+	}
 }

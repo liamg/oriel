@@ -27,7 +27,8 @@ func Image(c *ui.Ctx, key any, img image.Image, w float32, o ImageOpts) ui.ID {
 		return c.Box(key, ui.Style{W: ui.Px(w)}, nil)
 	}
 	h := w * float32(b.Dy()) / float32(b.Dx())
-	return picture(c, key, w, h, func(f render.Frame, r render.Rect) { paintImage(f, img, r, r) }, LightboxItem{Image: img, Caption: o.Label}, o)
+	ic := imageCacheOf(c)
+	return picture(c, key, w, h, func(f render.Frame, r render.Rect) { ic.paint(f, img, r, r) }, LightboxItem{Image: img, Caption: o.Label}, o)
 }
 
 // Vector is a picture that draws itself at any size, as a diagram does: crisp however far the lightbox zooms it.
@@ -195,9 +196,9 @@ func groupIndex(list []groupImage, id ui.ID) int {
 	return -1
 }
 
-// paintImage draws img into d, a rect in the frame's logical pixels, as far as it shows in view: only the part in
-// view is scaled, so a large image zoomed far in costs no more than the view.
-func paintImage(f render.Frame, img image.Image, d, view render.Rect) {
+// paint draws img into d, a rect in the frame's logical pixels, as far as it shows in view: only the part in view
+// is scaled, so a large image zoomed far in costs no more than the view.
+func (ic *imageCache) paint(f render.Frame, img image.Image, d, view render.Rect) {
 	vis := render.Rect{
 		Min: render.Point{X: max(d.Min.X, view.Min.X), Y: max(d.Min.Y, view.Min.Y)},
 		Max: render.Point{X: min(d.Max.X, view.Max.X), Y: min(d.Max.Y, view.Max.Y)},
@@ -208,12 +209,12 @@ func paintImage(f render.Frame, img image.Image, d, view render.Rect) {
 	s := f.Scale()
 	w, h := int(d.Dx()*s+.5), int(d.Dy()*s+.5)
 	if vis == d {
-		f.Image(scaled(img, w, h), d.Min)
+		f.Image(ic.scaled(img, w, h), d.Min)
 		return
 	}
 	part := image.Rect(int(math.Floor(float64((vis.Min.X-d.Min.X)*s))), int(math.Floor(float64((vis.Min.Y-d.Min.Y)*s))),
 		int(math.Ceil(float64((vis.Max.X-d.Min.X)*s))), int(math.Ceil(float64((vis.Max.Y-d.Min.Y)*s))))
-	if out := scaledPart(img, w, h, part); out != nil {
+	if out := ic.scaledPart(img, w, h, part); out != nil {
 		f.Image(out, render.Point{X: d.Min.X + float32(part.Min.X)/s, Y: d.Min.Y + float32(part.Min.Y)/s})
 	}
 }
@@ -224,8 +225,18 @@ type scaleKey struct {
 	part image.Rectangle
 }
 
-// scales keeps whole images at the sizes they're drawn at; parts keeps the few parts of images drawn zoomed in.
-var scales, parts = newScaleCache(64), newScaleCache(4)
+// imageCache is a UI's images as drawn: scales keeps whole images at the sizes they're drawn at, parts the few
+// parts of images drawn zoomed in, and sources images converted to premultiplied RGBA at their own size.
+type imageCache struct {
+	scales, parts *scaleCache
+	sources       sourceCache
+}
+
+func imageCacheOf(c *ui.Ctx) *imageCache {
+	return ui.Keep(c, func() *imageCache {
+		return &imageCache{scales: newScaleCache(64), parts: newScaleCache(4), sources: sourceCache{m: map[image.Image]*image.RGBA{}}}
+	})
+}
 
 type scaleCache struct {
 	sync.Mutex
@@ -240,21 +251,21 @@ const maxPart = 8192 * 8192
 
 // scaled is img at w×h pixels, premultiplied: each pixel the average of the source pixels under it (the nearest one
 // when it's being enlarged). The same image at the same size is the same pointer, frame after frame.
-func scaled(img image.Image, w, h int) *image.RGBA {
+func (ic *imageCache) scaled(img image.Image, w, h int) *image.RGBA {
 	w, h = max(w, 1), max(h, 1)
-	return scaledPart(img, w, h, image.Rect(0, 0, w, h))
+	return ic.scaledPart(img, w, h, image.Rect(0, 0, w, h))
 }
 
 // scaledPart is the part of img scaled to w×h that's in part, as scaled draws it; nil when part is empty or too big.
-func scaledPart(img image.Image, w, h int, part image.Rectangle) *image.RGBA {
+func (ic *imageCache) scaledPart(img image.Image, w, h int, part image.Rectangle) *image.RGBA {
 	w, h = max(w, 1), max(h, 1)
 	part = part.Intersect(image.Rect(0, 0, w, h))
 	if part.Empty() || part.Dx()*part.Dy() > maxPart {
 		return nil
 	}
-	cache := scales
+	cache := ic.scales
 	if part != image.Rect(0, 0, w, h) {
-		cache = parts
+		cache = ic.parts
 	}
 	k := scaleKey{img, w, h, part}
 	cache.Lock()
@@ -262,7 +273,7 @@ func scaledPart(img image.Image, w, h int, part image.Rectangle) *image.RGBA {
 	if out, ok := cache.m[k]; ok {
 		return out
 	}
-	src := rgbaOf(img)
+	src := ic.sources.rgbaOf(img)
 	sw, sh := src.Rect.Dx(), src.Rect.Dy()
 	out := image.NewRGBA(image.Rect(0, 0, part.Dx(), part.Dy()))
 	for y := part.Min.Y; y < part.Max.Y; y++ {
@@ -289,27 +300,27 @@ func scaledPart(img image.Image, w, h int, part image.Rectangle) *image.RGBA {
 	return out
 }
 
-// sources are images converted to premultiplied RGBA at their own size, once each.
-var sources = struct {
+// sourceCache converts each image to premultiplied RGBA once.
+type sourceCache struct {
 	sync.Mutex
 	m map[image.Image]*image.RGBA
-}{m: map[image.Image]*image.RGBA{}}
+}
 
-func rgbaOf(img image.Image) *image.RGBA {
+func (sc *sourceCache) rgbaOf(img image.Image) *image.RGBA {
 	b := img.Bounds()
 	if r, ok := img.(*image.RGBA); ok && b.Min == (image.Point{}) {
 		return r
 	}
-	sources.Lock()
-	defer sources.Unlock()
-	if r, ok := sources.m[img]; ok {
+	sc.Lock()
+	defer sc.Unlock()
+	if r, ok := sc.m[img]; ok {
 		return r
 	}
 	r := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
 	draw.Draw(r, r.Rect, img, b.Min, draw.Src)
-	if len(sources.m) >= 16 {
-		clear(sources.m)
+	if len(sc.m) >= 16 {
+		clear(sc.m)
 	}
-	sources.m[img] = r
+	sc.m[img] = r
 	return r
 }

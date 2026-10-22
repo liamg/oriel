@@ -6,7 +6,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// FG-6: "before this ships" is a contribution point: gates by order, a kind naming its own gates, and one that
+// "Before this ships" is a contribution point: gates by order, a kind naming its own gates, and one that
 // panics or has nothing to say left out.
 func TestShipGates(t *testing.T) {
 	r := registry.New()
@@ -22,13 +22,13 @@ func TestShipGates(t *testing.T) {
 	if len(got) != 2 || got[0].Name != "plan" || got[1].Name != "tests" || got[1].Note != "go test · s1" {
 		t.Fatalf("gates %+v", got)
 	}
-	r.Contribute(registry.SessionKind{Name: "hotfix", Gates: []string{"tests"}})
+	r.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: registry.KindSpec{Kind: "hotfix"}, GateNames: []string{"tests"}}})
 	if got := registry.ShipGates(r, "s1", "hotfix"); len(got) != 1 || got[0].Name != "tests" {
 		t.Errorf("a kind's own gates: %+v", got)
 	}
 }
 
-// PL-9: a pull request's actions are contributions: each labels itself for the PR (nil leaves it out), sorted by
+// A pull request's actions are contributions: each labels itself for the PR (nil leaves it out), sorted by
 // Order, and runs its command with the PR's fields added to its args.
 func TestPRActions(t *testing.T) {
 	r := registry.New()

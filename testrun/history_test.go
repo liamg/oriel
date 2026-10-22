@@ -65,7 +65,7 @@ func TestRunFiltersFromARecordedRun(t *testing.T) {
 	}
 }
 
-// TestFlaky follows ide.md: flaky detection is "fails sometimes, passes on re-run".
+// TestFlaky: a flaky test fails sometimes and passes on re-run.
 func TestFlaky(t *testing.T) {
 	h := NewHistory(10)
 	h.Add(fakeRun("1", "c1", ByUser, map[string]Status{"rerun": StatusFailed, "fixed": StatusFailed, "mixed": StatusPassed, "broke": StatusPassed}))

@@ -5,9 +5,8 @@ import (
 	"testing"
 )
 
-// ui.md 05: "Readiness: Start work unlocks when every thread is resolved or deferred." The plan's own thread, where
-// the prompt and Start work are said, and side questions don't hold it up (sessions.md, As built: "Start work makes
-// the worktrees ... once every thread is resolved or deferred").
+// Start work unlocks when every thread is resolved or deferred. The plan's own thread, where the prompt and Start
+// work are said, and side questions don't hold it up.
 func TestWhatHoldsUpStartWork(t *testing.T) {
 	doc := &Anchor{Project: DocsProject, File: "PLAN.md", Line: 14}
 	se := SessionState{StartWork: true, Threads: []Thread{
@@ -40,7 +39,7 @@ func TestWhatHoldsUpStartWork(t *testing.T) {
 	}
 }
 
-// Start work clears a plan's threads (sessions.md, Plan → Start work): ThreadsRemoved takes them out of the state.
+// Start work clears a plan's threads: ThreadsRemoved takes them out of the state.
 func TestThreadsRemoved(t *testing.T) {
 	s := &State{Sessions: []SessionState{{ID: "s", Threads: []Thread{{ID: "a"}, {ID: "b"}, {ID: "c"}}}}}
 	if err := (ThreadsRemoved{Session: "s", Threads: []ThreadID{"a", "c"}}).Apply(s); err != nil {

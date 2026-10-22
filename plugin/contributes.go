@@ -15,10 +15,10 @@ import (
 	"github.com/liamg/oriel/toml"
 )
 
-// Platforms are the os/arch pairs a plugin can ship a process binary for (catalog.md, binaries).
+// Platforms are the os/arch pairs a plugin can ship a process binary for.
 var Platforms = []string{"darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"}
 
-// MaxSize is the most a plugin may be, unpacked (catalog.md, Assets).
+// MaxSize is the most a plugin may be, unpacked.
 const MaxSize = 20 << 20
 
 // EntryFile is a plugin's entry point; a data-only plugin has none.
@@ -27,7 +27,7 @@ const EntryFile = "init.lua"
 // AssetsDir holds a plugin's read-only files: oriel.asset reads under it.
 const AssetsDir = "assets"
 
-// Contributes is what a plugin registers by declaration alone, with no Lua (catalog.md, Assets): globs of its own
+// Contributes is what a plugin registers by declaration alone, with no Lua: globs of its own
 // files, and a directory of icons.
 type Contributes struct {
 	Themes, Fonts, Languages, Prompts, Help []string
@@ -278,7 +278,7 @@ func (ds disposables) Dispose() {
 	}
 }
 
-// ReadLanguagePack reads a grammar pack (editor.md, ED-11): language.toml (name, extensions, filenames, shebangs),
+// ReadLanguagePack reads a grammar pack: language.toml (name, extensions, filenames, shebangs),
 // grammar.wasm and queries/*.scm. Its name is the directory's unless language.toml names it.
 func ReadLanguagePack(dir string) (registry.Language, error) {
 	l := registry.Language{Name: filepath.Base(dir), Source: dir, Queries: map[string]string{}}

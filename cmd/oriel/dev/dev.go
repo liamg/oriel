@@ -1,5 +1,5 @@
-// Package dev is `oriel dev`: screenshots, mockup comparisons and the budget measurements from
-// shell.md, run against render/gio with the reference scenes.
+// Package dev is `oriel dev`: screenshots, mockup comparisons and the shell's budget measurements, run against
+// render/gio with the reference scenes.
 package dev
 
 import (

@@ -191,6 +191,15 @@ func (s *procStream) Err() error {
 	return s.err
 }
 
+// fail records why the stream ended, unless it was closed.
+func (s *procStream) fail(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err != nil && !s.closed && s.err == nil {
+		s.err = err
+	}
+}
+
 func (s *procStream) Close() error {
 	s.mu.Lock()
 	s.closed = true

@@ -25,7 +25,7 @@ var (
 	muted   = render.Color{R: 0x12, G: 0x12, B: 0x10, A: 255}
 )
 
-// button is a stand-in widget: it styles itself from its interaction, as FW-6's widgets will.
+// button is a stand-in widget: it styles itself from its interaction, as the toolkit's widgets do.
 func button(c *Ctx, key string, disabled bool) Interaction {
 	id := c.Next(key)
 	in := c.Interaction(id)
@@ -277,21 +277,14 @@ func TestHoverTargetsBudget(t *testing.T) {
 			}
 		})
 	}
-	// Each frame's time is its best over three runs of the same moves: one the scheduler preempted isn't slow,
-	// one that's slow every time is.
-	times := make([]time.Duration, 240)
-	for trial := range 3 {
-		for i := range times {
-			var l render.List
-			t0 := time.Now()
-			u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: float32(10 + i*5%1200), Y: float32(10 + i*3%500)}})
-			u.Frame(l.Record(1), render.Point{X: 1600, Y: 1000}, build)
-			_ = u.Cursor()
-			if d := time.Since(t0); trial == 0 || d < times[i] {
-				times[i] = d
-			}
-		}
-	}
+	// Each frame's time is its best over three runs of the same moves (perf.Times): one the scheduler preempted
+	// isn't slow, one that's slow every time is.
+	times := perf.Times(3, 240, nil, func(i int) {
+		var l render.List
+		u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: float32(10 + i*5%1200), Y: float32(10 + i*3%500)}})
+		u.Frame(l.Record(1), render.Point{X: 1600, Y: 1000}, build)
+		_ = u.Cursor()
+	})
 	slices.Sort(times)
 	p50, p99 := times[len(times)/2], times[len(times)*99/100]
 	t.Logf("200 hover targets: p50 %v, p99 %v per frame", p50, p99)
@@ -450,7 +443,7 @@ func TestPressedWithin(t *testing.T) {
 	}
 }
 
-// SH-8: a modifier held alone is held alone from when it went down until a key or a press joins it, or the set held
+// A modifier held alone is held alone from when it went down until a key or a press joins it, or the set held
 // changes; letting go of every modifier starts afresh.
 func TestHeldAlone(t *testing.T) {
 	h := newHarness()

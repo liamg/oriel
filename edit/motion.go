@@ -2,6 +2,7 @@ package edit
 
 import (
 	"fmt"
+	"slices"
 	"unicode"
 	"unicode/utf8"
 
@@ -133,31 +134,33 @@ func byteCol(line []byte, want int) int {
 func (e *Editor) Replace(s string, g text.UndoGroup) error {
 	cs := e.Cursors()
 	snap := e.Buf()
-	var rs []text.Replace
-	for _, c := range cs {
+	rs := make([]text.Replace, len(cs))
+	for i, c := range cs {
 		r, ok := c.Selection()
 		if !ok {
 			r = text.Range{Start: min(c.Off, snap.Len()), End: min(c.Off, snap.Len())}
 		}
-		rs = append(rs, text.Replace{Range: r, Text: []byte(s)})
+		rs[i] = text.Replace{Range: r, Text: []byte(s)}
 	}
-	sortReplaces(rs)
-	ch, err := e.Do(rs, g)
-	if err != nil {
+	order := make([]int, len(rs))
+	for i := range order {
+		order[i] = i
+	}
+	slices.SortStableFunc(order, func(a, b int) int { return rs[a].Range.Start - rs[b].Range.Start })
+	sorted := make([]text.Replace, len(rs))
+	for k, i := range order {
+		sorted[k] = rs[i]
+	}
+	if _, err := e.Do(sorted, g); err != nil {
 		return err
 	}
-	out := make([]Cursor, len(ch.Replaces))
-	for i, r := range ch.Replaces { // each in the text the ones before it left
-		out[i] = Cursor{Off: r.Range.Start + len(r.Text)}
+	out := make([]Cursor, len(cs))
+	shift := 0
+	for _, i := range order {
+		r := rs[i].Range
+		out[i] = Cursor{Off: r.Start + shift + len(s)}
+		shift += len(s) - (r.End - r.Start)
 	}
 	e.SetCursors(out)
 	return nil
-}
-
-func sortReplaces(rs []text.Replace) {
-	for i := 1; i < len(rs); i++ {
-		for j := i; j > 0 && rs[j].Range.Start < rs[j-1].Range.Start; j-- {
-			rs[j], rs[j-1] = rs[j-1], rs[j]
-		}
-	}
 }

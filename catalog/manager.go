@@ -11,7 +11,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 )
 
-// Badges say who looked at a plugin's code (catalog.md, Badges). Consent is the same whatever the badge.
+// Badges say who looked at a plugin's code. Consent is the same whatever the badge.
 const (
 	BadgeBuiltin    = "builtin"
 	BadgeBundled    = "bundled" // shipped in oriel's binary, as a plugin of its own
@@ -63,7 +63,7 @@ func (s Status) Ask() plugin.Consent {
 	return c
 }
 
-// Resolver finds a registry entry's version (PL-21): what to install, and from where.
+// Resolver finds a registry entry's version: what to install, and from where.
 type Resolver interface {
 	Resolve(ctx context.Context, e Entry, locked *Locked) (Resolution, error)
 }
@@ -81,8 +81,7 @@ type Resolution struct {
 	Platform string
 }
 
-// Manager installs what one settings.toml's [plugins] lists, keeps its lockfile, and says what may load
-// (catalog.md, "Install by editing the file").
+// Manager installs what one settings.toml's [plugins] lists, keeps its lockfile, and says what may load.
 type Manager struct {
 	Store    Store
 	Lock     string   // the lockfile's path: oriel-lock.toml next to the settings.toml

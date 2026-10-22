@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// MenuItem is an entry in the right-click menu: the built-ins' and plugins' alike (PL-13). It shows where When
+// MenuItem is an entry in the right-click menu: the built-ins' and plugins' alike. It shows where When
 // matches, in its Group, ordered by Order then label; Help is always last.
 type MenuItem struct {
 	Name    string // unique among menu items: "editor.copy-path", "init.lua:12"
@@ -73,7 +73,7 @@ func (m MenuItem) Matches(at MenuCtx) bool {
 }
 
 // MenuItems are r's menu items that apply at at, grouped and ordered, each fix with its explain twin after it.
-func MenuItems(r Registry, at MenuCtx) []MenuItem {
+func MenuItems(r Contributions, at MenuCtx) []MenuItem {
 	var out []MenuItem
 	for _, c := range r.Contributions("menu.item") {
 		m := c.(MenuItem)

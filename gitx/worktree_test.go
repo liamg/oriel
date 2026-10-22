@@ -130,3 +130,27 @@ func TestClone(t *testing.T) {
 		t.Errorf("cloning what isn't there: %v", err)
 	}
 }
+
+// git-merge(1): "--ff-only: Only update to the new history if there is no divergent local history." A branch
+// that can't be fast-forwarded is still the ref to cut from, and SyncBranch says why it isn't current.
+func TestSyncBranchSaysWhenItCantFastForward(t *testing.T) {
+	ctx := context.Background()
+	_, clone := upstream(t)
+	clone.Write(map[string]string{"b.txt": "mine\n"})
+	clone.Commit("Ada", "local")
+	r := gitx.Repo{Dir: clone.Dir}
+	ref, err := r.SyncBranch(ctx, "main")
+	if ref != "main" || err == nil || !strings.Contains(err.Error(), "merge") {
+		t.Errorf("checked out and diverged: %q, %v", ref, err)
+	}
+	clone.Git("checkout", "-q", "-b", "other")
+	ref, err = r.SyncBranch(ctx, "main")
+	if ref != "main" || err == nil {
+		t.Errorf("not checked out and diverged: %q, %v", ref, err)
+	}
+	clone.Git("checkout", "-q", "main")
+	clone.Git("reset", "-q", "--hard", "HEAD~1")
+	if ref, err := r.SyncBranch(ctx, "main"); ref != "main" || err != nil {
+		t.Errorf("behind origin: %q, %v", ref, err)
+	}
+}

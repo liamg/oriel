@@ -22,13 +22,13 @@ type Org interface {
 	Member(ctx context.Context, org, user string) (bool, error)
 }
 
-// PRCheck is the registry's CI on a pull request (catalog.md, "What the registry's CI checks"). Its fields that
+// PRCheck is the registry's CI on a pull request. Its fields that
 // reach outside are funcs, so a test can stand in for GitHub.
 type PRCheck struct {
 	Base, Head string // registry checkouts: the PR's base and its head
 	Author     string // who opened the PR
 	Org        Org
-	Allow      depcheck.Allowlist // Oriel's deps/allow.txt
+	Allow      depcheck.Allowlist // Oriel's tools/depcheck/allowed.txt
 	Go         string             // the go command; "go" if ""
 	// Fetch checks a plugin's repository out at a commit, into a directory of its own. Git over https if nil.
 	Fetch func(ctx context.Context, repo, commit string) (string, error)

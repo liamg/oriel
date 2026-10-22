@@ -14,6 +14,9 @@ import (
 	"time"
 )
 
+// waitDelay is how long a run waits, after its command exits, for children still holding its output.
+var waitDelay = 3 * time.Second
+
 // Request is a run to start.
 type Request struct {
 	Adapter   Adapter
@@ -76,12 +79,10 @@ func Start(ctx context.Context, req Request, emit func(Event)) (*Exec, error) {
 		c.Env = append(c.Env, expand(e))
 	}
 	killGroup(c)
-	c.WaitDelay = 3 * time.Second
-	stdout, err := c.StdoutPipe()
-	if err != nil {
-		cancel()
-		return nil, err
-	}
+	c.WaitDelay = waitDelay
+	pr, pw := io.Pipe()
+	var rawBuf bytes.Buffer
+	c.Stdout = io.MultiWriter(&rawBuf, pw) // copied by Wait, so WaitDelay bounds a child left holding it
 	var stderr bytes.Buffer
 	c.Stderr = &stderr
 	if cmd.Stderr {
@@ -116,18 +117,18 @@ func Start(ctx context.Context, req Request, emit func(Event)) (*Exec, error) {
 	go func() {
 		defer close(x.done)
 		defer os.RemoveAll(dir)
-		pr, pw := io.Pipe()
 		parsed := make(chan error, 1)
 		go func() {
 			err := req.Adapter.Parse(pr, send)
 			io.Copy(io.Discard, pr)
 			parsed <- err
 		}()
-		var rawBuf bytes.Buffer
-		io.Copy(pw, io.TeeReader(stdout, &rawBuf))
+		werr := c.Wait()
+		if errors.Is(werr, exec.ErrWaitDelay) {
+			werr = nil // it exited cleanly; a child kept its output open
+		}
 		pw.Close()
 		perr := <-parsed
-		werr := c.Wait()
 		mu.Lock()
 		run.Raw = rawBuf.String()
 		run.Stderr = stderr.String()

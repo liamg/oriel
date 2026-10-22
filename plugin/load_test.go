@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/ui"
 )
 
 // loop is a host loop run by hand: Do queues, drain runs what's queued.
@@ -50,6 +50,8 @@ func (l *loop) until(t *testing.T, ok func() bool) {
 		select {
 		case <-l.poke:
 			l.drain()
+		case <-time.After(5 * time.Millisecond):
+			l.drain()
 		case <-deadline:
 			t.Fatal("timed out")
 		}
@@ -69,12 +71,12 @@ func TestLoadLifecycle(t *testing.T) {
 		return v, nil
 	}, LoadOpts{Now: func() time.Time { return now }})
 
-	if s := l.State(); s.Phase != widget.Idle {
+	if s := l.State(); s.Phase != ui.Idle {
 		t.Fatalf("before Start: %v", s.Phase)
 	}
 	l.Start()
 	l.Start() // a second Start while one runs does nothing
-	if s := l.State(); s.Phase != widget.Pending || !s.Since.Equal(now) || s.Stale {
+	if s := l.State(); s.Phase != ui.Pending || !s.Since.Equal(now) || s.Stale {
 		t.Fatalf("after Start: %+v", s)
 	}
 	lp.until(t, func() bool { return l.State().Note != "" })
@@ -82,28 +84,28 @@ func TestLoadLifecycle(t *testing.T) {
 		t.Errorf("the report: %+v", s)
 	}
 	release <- ""
-	lp.until(t, func() bool { return l.State().Phase != widget.Pending })
-	if s := l.State(); s.Phase != widget.Failed || s.Err == nil || s.Err.Error() != "no agents" {
+	lp.until(t, func() bool { return l.State().Phase != ui.Pending })
+	if s := l.State(); s.Phase != ui.Failed || s.Err == nil || s.Err.Error() != "no agents" {
 		t.Fatalf("a failed first load: %+v", s)
 	}
 
 	l.Reload()
 	release <- "claude"
-	lp.until(t, func() bool { return l.State().Phase == widget.Ready })
+	lp.until(t, func() bool { return l.State().Phase == ui.Ready })
 	if v, ok := l.Value(); !ok || v != "claude" || l.State().Err != nil {
 		t.Fatalf("after Retry: %q %v %+v", v, ok, l.State())
 	}
 
 	l.Reload()
-	if s := l.State(); s.Phase != widget.Pending || !s.Stale {
+	if s := l.State(); s.Phase != ui.Pending || !s.Stale {
 		t.Errorf("a reload keeps the value on show: %+v", s)
 	}
 	if v, _ := l.Value(); v != "claude" {
 		t.Errorf("value while reloading: %q", v)
 	}
 	release <- ""
-	lp.until(t, func() bool { return l.State().Phase != widget.Pending })
-	if s := l.State(); s.Phase != widget.Ready || s.Err == nil {
+	lp.until(t, func() bool { return l.State().Phase != ui.Pending })
+	if s := l.State(); s.Phase != ui.Ready || s.Err == nil {
 		t.Errorf("a failed reload keeps the value and shows the error: %+v", s)
 	}
 	if v, _ := l.Value(); v != "claude" {
@@ -125,7 +127,7 @@ func TestLoadDropsStaleResults(t *testing.T) {
 	l.Reload()
 	second := <-calls
 	second <- 2
-	lp.until(t, func() bool { return l.State().Phase == widget.Ready })
+	lp.until(t, func() bool { return l.State().Phase == ui.Ready })
 	first <- 1
 	time.Sleep(20 * time.Millisecond)
 	lp.drain()
@@ -134,7 +136,7 @@ func TestLoadDropsStaleResults(t *testing.T) {
 	}
 
 	l.Reset()
-	if _, ok := l.Value(); ok || l.State().Phase != widget.Idle {
+	if _, ok := l.Value(); ok || l.State().Phase != ui.Idle {
 		t.Errorf("after Reset: %+v", l.State())
 	}
 }
@@ -146,7 +148,7 @@ func TestLoadTimeoutAndPanic(t *testing.T) {
 		select {}
 	}, LoadOpts{Timeout: 20 * time.Millisecond})
 	hang.Start()
-	lp.until(t, func() bool { return hang.State().Phase == widget.Failed })
+	lp.until(t, func() bool { return hang.State().Phase == ui.Failed })
 	if err := hang.State().Err; err == nil || err.Error() != "timed out after 20ms" {
 		t.Errorf("timeout: %v", err)
 	}
@@ -155,7 +157,7 @@ func TestLoadTimeoutAndPanic(t *testing.T) {
 		panic("boom")
 	}, LoadOpts{})
 	boom.Start()
-	lp.until(t, func() bool { return boom.State().Phase == widget.Failed })
+	lp.until(t, func() bool { return boom.State().Phase == ui.Failed })
 	if err := boom.State().Err; err == nil || err.Error() != "panic: boom" {
 		t.Errorf("panic: %v", err)
 	}

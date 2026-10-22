@@ -1,4 +1,4 @@
-// Package registrycmd is `oriel plugin registry`: what the plugin registry repo's CI runs (catalog.md). It's also
+// Package registrycmd is `oriel plugin registry`: what the plugin registry repo's CI runs. It's also
 // cmd/oriel-registry, which builds with no cgo, so CI needn't build the app.
 package registrycmd
 
@@ -27,8 +27,7 @@ oriel plugin registry index --key FILE [--registry OWNER/NAME] [--out DIR] [DIR]
                                          build the registry's index.json and sign it into index.sig
 oriel plugin registry keygen --out FILE  make a registry signing key: the private key into FILE, the public printed`
 
-// Run is `oriel plugin registry …`: what the registry repo's CI runs (catalog.md, "What the registry's CI
-// checks", "The index").
+// Run is `oriel plugin registry …`: what the registry repo's CI runs, checking PRs and building the signed index.
 func Run(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage:\n%s", Usage)
@@ -39,7 +38,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 	base := fs.String("base", "", "the registry checkout at the PR's base")
 	head := fs.String("head", ".", "the registry checkout at the PR's head")
 	author := fs.String("author", "", "the PR's author's GitHub login")
-	allow := fs.String("allow", "", "Oriel's deps/allow.txt (none: every dependency is outside it)")
+	allow := fs.String("allow", "", "Oriel's tools/depcheck/allowed.txt (none: every dependency is outside it)")
 	comment := fs.String("comment", "", "write the comment here as well")
 	keyFile := fs.String("key", "", "the registry's private key file; $ORIEL_REGISTRY_KEY when it's -")
 	registry := fs.String("registry", catalog.DefaultRepo, "the registry repo, owner/name")

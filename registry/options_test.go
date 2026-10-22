@@ -156,7 +156,7 @@ func TestOptionSources(t *testing.T) {
 	}
 }
 
-// settings.md, "Options": a list holds strings, and an option's own Validate refuses what its type can't say is wrong.
+// A list option holds strings, and an option's own Validate refuses what its type can't say is wrong.
 func TestOptionListAndValidate(t *testing.T) {
 	r := registry.New()
 	r.Option(registry.OptionSpec{Name: "sandbox.egress", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
@@ -183,7 +183,7 @@ func TestOptionListAndValidate(t *testing.T) {
 	}
 }
 
-// settings.md, "Options": a map holds strings by name, with labels for its two sides; ListOf and MapOf validate each
+// A map option holds strings by name, with labels for its two sides; ListOf and MapOf validate each
 // item or entry, so an editor can ask about one at a time.
 func TestOptionMapAndItemValidation(t *testing.T) {
 	r := registry.New()
@@ -270,5 +270,34 @@ func TestDurationDays(t *testing.T) {
 	}
 	if _, err := registry.ParseDuration("1.5d"); err == nil {
 		t.Error("1.5d parsed")
+	}
+}
+
+// An Int or Float option's own Validate is asked after its range.
+func TestOptionNumberValidate(t *testing.T) {
+	r := registry.New()
+	odd := func(v any) error {
+		if v.(int)%2 == 0 {
+			return errors.New("not odd")
+		}
+		return nil
+	}
+	r.Option(registry.OptionSpec{Name: "test.odd", Type: registry.Int, Default: 1, Scopes: registry.ScopeUser, Validate: odd})
+	if err := r.Options().Set("test.odd", registry.LayerUser, registry.At{}, 2); err == nil || !strings.Contains(err.Error(), "not odd") {
+		t.Errorf("Validate wasn't asked: %v", err)
+	}
+}
+
+// Registered hears each option as it's registered, until cancelled.
+func TestOptionRegistered(t *testing.T) {
+	r := registry.New()
+	heard := 0
+	cancel := r.Options().Registered(func() { heard++ })
+	r.Option(registry.OptionSpec{Name: "a.one", Type: registry.Bool, Default: false, Scopes: registry.ScopeUser})
+	r.Option(registry.OptionSpec{Name: "a.two", Type: registry.Bool, Default: false, Scopes: registry.ScopeUser})
+	cancel()
+	r.Option(registry.OptionSpec{Name: "a.three", Type: registry.Bool, Default: false, Scopes: registry.ScopeUser})
+	if heard != 2 {
+		t.Errorf("heard %d registrations, want 2", heard)
 	}
 }

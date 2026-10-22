@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/tools/perf"
@@ -45,11 +47,11 @@ func (c *counter) Activate(_ context.Context, h plugin.Host) error {
 	if err := h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 50*time.Millisecond); err != nil {
 		return err
 	}
-	view := app.RootView
+	view := kit.RootView
 	if c.tab {
 		view = "counter"
 	}
-	h.View(view, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	h.View(view, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		rows := []ui.Node{ui.TextNode(fmt.Sprintf("count %d", c.n))}
 		for _, s := range h.Sessions() {
 			rows = append(rows, ui.TextNode(fmt.Sprintf("%s %s", s.ID(), s.Status())))
@@ -212,7 +214,7 @@ func (b *booted) typeText(s string) {
 	}
 }
 
-// SH-14: :Keys and :Commands are pickers: they list with sources, filter, and run on Enter.
+// :Keys and :Commands are pickers: they list with sources, filter, and run on Enter.
 func TestKeysAndCommandsArePickers(t *testing.T) {
 	l := lister{ran: make(chan struct{}, 1)}
 	b := boot(t, l)
@@ -234,7 +236,7 @@ func TestKeysAndCommandsArePickers(t *testing.T) {
 	b.close(t)
 }
 
-// SH-14: a view in the layout closes from the keyboard: q in a view with no keys of its own, and ⌃W c.
+// A view in the layout closes from the keyboard: q in a view with no keys of its own, and ⌃W c.
 func TestViewsCloseFromTheKeyboard(t *testing.T) {
 	b := boot(t, &counter{tab: true}, opener{})
 	b.waitText(t, "count 0")
@@ -273,7 +275,7 @@ type pointy struct{}
 
 func (pointy) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.pointy"} }
 func (pointy) Activate(_ context.Context, h plugin.Host) error {
-	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	h.View(kit.RootView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Box{Key: "link", Style: ui.Style{W: ui.Px(100), H: ui.Px(20), Cursor: render.CursorPointer}}
 	}))
 	return nil
@@ -389,7 +391,7 @@ func (f *form) Activate(_ context.Context, h plugin.Host) error {
 	h.Command(registry.Command{ID: "form.save", Run: func(registry.Ctx, registry.Args) error { f.saved++; return nil }})
 	h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-s>", Command: "form.save"})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "h", Command: "form.save"}) // vim's h mustn't fire inside the input
-	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	h.View(kit.RootView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "form", Fn: func(c *ui.Ctx) {
 			widget.Input(c, "name", &f.text, widget.InputOpts{Width: ui.Px(300), Help: "test/form"})
 			c.Text("echo", "typed:"+f.text, ui.TextStyle{})
@@ -422,7 +424,7 @@ type panes struct{}
 func (panes) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.panes"} }
 func (panes) Activate(_ context.Context, h plugin.Host) error {
 	for _, name := range []string{"alpha", "beta"} {
-		h.View(name, registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("content of " + name) }))
+		h.View(name, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("content of " + name) }))
 	}
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "a", Command: "view.open", Args: registry.Args{"id": "alpha"}})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "b", Command: "view.open", Args: registry.Args{"id": "beta", "place": "split", "side": "right"}})
@@ -542,7 +544,7 @@ type menuView struct{}
 func (menuView) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.menu"} }
 func (menuView) Activate(_ context.Context, h plugin.Host) error {
 	items := []widget.MenuItem{{Label: "Close"}, {Label: "Close Others"}, {Label: "Close to the Right"}, {Label: "Close All"}}
-	h.View(app.RootView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	h.View(kit.RootView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "menu", Fn: func(c *ui.Ctx) { widget.Menu(c, "menu", items, widget.MenuOpts{}) }}
 	}))
 	return nil

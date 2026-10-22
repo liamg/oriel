@@ -9,7 +9,7 @@ import (
 	"unicode"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/script"
@@ -241,7 +241,7 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			c.Box(nil, ui.Style{W: ui.Flex(1)}, nil)
 		case "view":
 			if view, ok := a.Host.ViewByID(str(n, "id")); ok {
-				c.Node(view.Build(registry.ViewCtx{}))
+				c.Node(view.Build(uireg.ViewCtx{}))
 			}
 		case "indicator":
 			indicator(c, n, th)
@@ -258,8 +258,15 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			c.Box(key, ui.Style{W: ui.Px(220)}, func(c *ui.Ctx) {
 				lines, _ := n["lines"].(float64)
 				enter, _ := n["enter_submits"].(bool)
-				res := widget.Input(c, "in", &text, widget.InputOpts{Label: cmpOr(str(n, "label"), key), Placeholder: str(n, "placeholder"),
-					Help: "plugins/lua#ui", TabMoves: true, Lines: int(lines), EnterSubmits: enter})
+				label := cmpOr(str(n, "label"), key)
+				var res widget.InputResult
+				if lines > 1 {
+					res = widget.Prose(c, "in", &text, widget.ProseOpts{Label: label, Placeholder: str(n, "placeholder"),
+						Help: "plugins/lua#ui", TabMoves: true, Lines: int(lines), EnterSubmits: enter})
+				} else {
+					res = widget.Input(c, "in", &text, widget.InputOpts{Label: label, Placeholder: str(n, "placeholder"),
+						Help: "plugins/lua#ui", TabMoves: true, EnterSubmits: enter})
+				}
 				if res.Changed {
 					a.callback(n, "on_change", text)
 				}
@@ -402,8 +409,7 @@ func dnd(c *ui.Ctx, n script.Table, a *APIs) bool {
 	return true
 }
 
-// callback calls a node's function field with args, if it has one, and redraws: an error is a notice at its line,
-// as PL-12's are.
+// callback calls a node's function field with args, if it has one, and redraws: an error is a notice at its line.
 func (a *APIs) callback(n script.Table, field string, args ...any) {
 	fn, ok := n[field].(*script.Fn)
 	if !ok {

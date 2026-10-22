@@ -1,4 +1,4 @@
--- Azure DevOps as a code host (hosts.md): the pull requests asking for your review on the Reviews page, and a
+-- Azure DevOps as a code host: the pull requests asking for your review on the Reviews page, and a
 -- project's own raised, read and merged from the Ship page (oriel.code.host), on dev.azure.com and on an Azure DevOps
 -- Server you set up. Azure DevOps is reached by this plugin's process (bin/oriel-azure, built from
 -- integ/azure/cmd/oriel-azure), through Oriel, which holds each site's token: neither the process nor this Lua ever

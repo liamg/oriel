@@ -6,7 +6,7 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// SH-17: the open project, each project's last panel and colour are the session's, kept by events, and a
+// The open project, each project's last panel and colour are the session's, kept by events, and a
 // sync of the session leaves them be.
 func TestProjectFocusAndPanels(t *testing.T) {
 	s := New()

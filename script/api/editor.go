@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -66,7 +67,7 @@ func (a *APIs) truthy(fn *script.Fn, args ...any) bool {
 //oriel:api doc="Add a way to draw a buffer other than as text: { name, label, when = fn(path), comments, order, build = fn(ctx) }. ctx has path, name, lines (the buffer's text, a string a line) and width; ctx.block(from_line, to_line, fn) adds a block made from those source lines (1-based), drawn by fn(width), which returns oriel.ui nodes (or pass the nodes in place of fn). The file's threads show in the margin beside the block holding their line, and with comments a click on a block (or c on the selected one) opens a thread on its lines. editor.present { name } shows the focused window with it, and again shows the text."
 func (e Editor) Presenter(spec script.Table, where string) error {
 	builder, _ := spec["build"].(*script.Fn)
-	p := registry.BufferPresenter{Name: str(spec, "name"), Label: str(spec, "label"), Order: 50, Source: where}
+	p := uireg.BufferPresenter{Name: str(spec, "name"), Label: str(spec, "label"), Order: 50, Source: where}
 	if p.Name == "" || builder == nil {
 		return fmt.Errorf("a presenter needs a name and a build function")
 	}
@@ -78,7 +79,7 @@ func (e Editor) Presenter(spec script.Table, where string) error {
 		p.When = func(path string) bool { return e.a.truthy(fn, path) }
 	}
 	id := "presenter." + p.Name
-	p.Build = func(ctx *registry.PresentCtx) {
+	p.Build = func(ctx *uireg.PresentCtx) {
 		lines := make([]any, len(ctx.Lines))
 		for i, l := range ctx.Lines {
 			lines[i] = l
@@ -86,7 +87,7 @@ func (e Editor) Presenter(spec script.Table, where string) error {
 		t := script.Table{"path": ctx.Path, "name": ctx.Name, "lines": lines, "width": ctx.Width,
 			"block": script.GoFunc(func(a *script.Args) ([]any, error) {
 				body := a.Any(2)
-				b := ctx.Block(a.Int(0)-1, a.Int(1)-1, func(c *ui.Ctx, d registry.PresentDraw) {
+				b := ctx.Block(a.Int(0)-1, a.Int(1)-1, func(c *ui.Ctx, d uireg.PresentDraw) {
 					node := body
 					if fn, ok := body.(*script.Fn); ok {
 						out, err := e.a.VM.Call(fn, d.Width)
@@ -111,7 +112,7 @@ func (e Editor) Presenter(spec script.Table, where string) error {
 		_, err := e.a.VM.Call(builder, t)
 		e.a.Host.Report(registry.KindView, id, err)
 		if err != nil {
-			ctx.Block(0, len(ctx.Lines)-1, func(c *ui.Ctx, _ registry.PresentDraw) {
+			ctx.Block(0, len(ctx.Lines)-1, func(c *ui.Ctx, _ uireg.PresentDraw) {
 				c.Text("error", p.Name+": "+err.Error(), ui.TextStyle{Color: c.Theme().C(theme.Error)})
 			})
 		}

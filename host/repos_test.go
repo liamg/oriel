@@ -48,7 +48,10 @@ func TestReposFileReadsTheOldArray(t *testing.T) {
 	if err := r.w.RemoveRepo("pricing"); err != nil {
 		t.Fatal(err)
 	}
-	var f reposFile
+	var f struct {
+		Repos   []core.Repo `json:"repos"`
+		Ignored []string    `json:"ignored"`
+	}
 	b, _ := os.ReadFile(filepath.Join(r.home, "repos.json"))
 	if err := json.Unmarshal(b, &f); err != nil || len(f.Repos) != 0 || !slices.Equal(f.Ignored, []string{r.repo.Dir}) {
 		t.Fatalf("repos.json = %s (%v)", b, err)
@@ -125,7 +128,7 @@ func TestScanFindsSiblings(t *testing.T) {
 	if _, err := r.w.AddRepoPath(ctx, filepath.Join(src, "removed")); err != nil {
 		t.Fatal(err)
 	}
-	removed, _ := r.w.repos.find(filepath.Join(src, "removed"))
+	removed, _ := r.w.repos.Find(filepath.Join(src, "removed"))
 	if err := r.w.RemoveRepo(removed.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +158,7 @@ func TestScanFindsSiblings(t *testing.T) {
 	}
 }
 
-// add-repo.md: clones go where you choose; by default, the folder most known repos share.
+// Clones go where you choose; by default, the folder most known repos share.
 func TestCloneParent(t *testing.T) {
 	r := newRig(t)
 	ctx := context.Background()
@@ -198,7 +201,7 @@ func TestCloneParent(t *testing.T) {
 	}
 }
 
-// add-repo.md: the live check under the path field.
+// The live check under the path field.
 func TestCheckRepoPath(t *testing.T) {
 	r := newRig(t)
 	ctx := context.Background()

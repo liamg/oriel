@@ -14,14 +14,17 @@ import (
 	"github.com/liamg/oriel/agent/claude/transcript"
 	"github.com/liamg/oriel/agent/codex"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/host/stats"
 )
 
 // claudeLike is a fake that keeps and finds its logs where Claude Code does.
 type claudeLike struct{ *agenttest.Fake }
 
-func (claudeLike) Logs(cwd, session string) []agent.Log { return claude.Provider{}.Logs(cwd, session) }
-func (claudeLike) Discover() []agent.Transcript         { return claude.Provider{}.Discover() }
+func (claudeLike) Logs(cwd, session string) []agent.Log {
+	return (&claude.Provider{}).Logs(cwd, session)
+}
+func (claudeLike) Discover() []agent.Transcript { return (&claude.Provider{}).Discover() }
 
 // codexLike is a fake that finds its rollouts where Codex keeps them, and keeps no log the host reads: its sessions'
 // events are the host's record.
@@ -77,7 +80,7 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 	in := r.start(core.SessionSpec{Kind: core.KindWork, Name: "pricing-rounding", Provider: "claude", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	cl.WaitStarted(t)
 	se := r.eventually(in, "its agent's id", func(se core.SessionState) bool { return se.Agent.Session != "" })
-	writeLines(t, transcript.Path(config, agentDir(se), se.Agent.Session), claudeLog(at, agentDir(se), "round half to even")...)
+	writeLines(t, transcript.Path(config, hostcore.AgentDir(se), se.Agent.Session), claudeLog(at, hostcore.AgentDir(se), "round half to even")...)
 
 	cin := r.start(core.SessionSpec{Kind: core.KindWork, Name: "search-api", Provider: "codex", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	cs := cx.WaitStarted(t)
@@ -85,7 +88,7 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 	cs.Emit(agent.TurnStart{})
 	cs.Emit(agent.TurnEnd{Usage: agent.Usage{Input: 10, Output: 20}})
 	r.eventually(cin, "the turn's end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 1 })
-	writeLines(t, rolloutPath(codexHome, at, cse.Agent.Session), codexRollout(at, agentDir(cse), "count the calls")...)
+	writeLines(t, rolloutPath(codexHome, at, cse.Agent.Session), codexRollout(at, hostcore.AgentDir(cse), "count the calls")...)
 
 	web := namedRepo(t, "web")
 	writeLines(t, filepath.Join(config, "projects", transcript.Slug(web), "stray.jsonl"), claudeLog(at, filepath.Join(web, "src"), "tidy the css\nand the html")...)

@@ -4,9 +4,11 @@ import (
 	"cmp"
 	"slices"
 	"strings"
+
+	"github.com/liamg/oriel/core"
 )
 
-// ShipGate is one of the "before this ships" gates on the Ship page and the Raise PR tab (ui.md 18): the plan
+// ShipGate is one of the "before this ships" gates on the Ship page and the Raise PR tab: the plan
 // approved, threads resolved, the review ledger, tests run, the verify quiz, an AI review. Check runs on the app's
 // loop as the page is drawn, for a session, so it answers from what it has. Gates say where a change stands; what
 // stops a commit or a raise is a veto hook on ShipCommit or ShipRaise.
@@ -47,13 +49,11 @@ type ShipGateState struct {
 }
 
 // ShipGates are the gates for a session of kind, by Order, each with its state; one that panics or answers no state
-// is left out. A session kind that names its Gates (SessionKind) gets only those.
-func ShipGates(r Registry, session, kind string) []ShipGateState {
+// is left out. A session kind that names its Gates gets only those.
+func ShipGates(r Contributions, session, kind string) []ShipGateState {
 	var only []string
-	for _, c := range r.Contributions("session.kind") {
-		if k := c.(SessionKind); k.Name == kind && len(k.Gates) > 0 {
-			only = k.Gates
-		}
+	if k, ok := KindOf(r, core.Kind(kind)); ok {
+		Call(func() error { only = k.Gates(); return nil })
 	}
 	var gs []ShipGate
 	for _, c := range r.Contributions("ship.gate") {
@@ -90,7 +90,7 @@ func (p PullRequest) Args() Args {
 		"state": p.State, "draft": p.Draft, "merged": p.Merged}
 }
 
-// PRAction is a button on a raised PR, beside Ready for review and Open on GitHub (ui.md 18): the Ship page's
+// PRAction is a button on a raised PR, beside Ready for review and Open on GitHub: the Ship page's
 // PR step and the Pull request panel. Label names it for the PR, "" leaving it out; it runs on the app's loop as
 // the page is drawn. A click runs Command with Args and the PR's (PullRequest.Args).
 type PRAction struct {
@@ -126,7 +126,7 @@ func (a PRActionState) RunArgs() Args {
 }
 
 // PRActions are the actions for pr, by Order; one that panics or gives no label is left out.
-func PRActions(r Registry, pr PullRequest) []PRActionState {
+func PRActions(r Contributions, pr PullRequest) []PRActionState {
 	var as []PRAction
 	for _, c := range r.Contributions("ship.pr.action") {
 		if a := c.(PRAction); a.Label != nil {

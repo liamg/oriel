@@ -104,6 +104,23 @@ func TestSignatureLabelOffsets(t *testing.T) {
 	}
 }
 
+// ref: lsp/language/signatureHelp.md#textDocument_signatureHelp
+// quote: "Either a string or an inclusive start and exclusive end offsets within"
+func TestSignatureLabelOffsetsOutOfRange(t *testing.T) {
+	for _, enc := range []string{"utf-8", "utf-16"} {
+		caps := `{"signatureHelpProvider":{},"positionEncoding":"` + enc + `"}`
+		c, _, path := withDoc(t, caps, "f(\n", answer(`{"signatures":[{"label":"f(a, b)","parameters":[{"label":[4,2]},{"label":[-3,3]},{"label":[5,99]}]}]}`))
+		h, err := c.SignatureHelp(context.Background(), Loc{Path: path, Pos: pos(0, 2)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ps := h.Signatures[0].Params
+		if ps[0].Start != -1 || ps[0].Label != "" || ps[1].Label != "f(a" || ps[2].Label != "b)" {
+			t.Errorf("%s: params = %+v", enc, ps)
+		}
+	}
+}
+
 func TestHoverNull(t *testing.T) {
 	c, _, path := withDoc(t, `{"hoverProvider":true}`, "x\n", answer(`null`))
 	// ref: lsp/language/hover.md#textDocument_hover

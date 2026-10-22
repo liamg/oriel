@@ -15,8 +15,8 @@ func notice(id string, sev core.Severity, sess core.SessionID, at time.Duration)
 	return core.Notified{Notice: core.Notice{ID: id, Severity: sev, Source: "test", Session: sess, Text: id, Time: t0.Add(at)}}
 }
 
-// errors.md: "The same ID repeating collapses into one entry with a count, so a hook failing on every
-// keystroke is one row."
+// The same ID repeating collapses into one entry with a count, so a hook failing on every
+// keystroke is one row.
 func TestRepeatsCollapse(t *testing.T) {
 	s := New()
 	s.Apply(notice("other", core.SevInfo, "", 0))
@@ -73,8 +73,8 @@ func TestHistoryIsCapped(t *testing.T) {
 	}
 }
 
-// errors.md: "Errors from a session you're not looking at don't toast: they put an error mark on that
-// session's tab and wait in its log."
+// Errors from a session you're not looking at don't toast: they put an error mark on that
+// session's tab and wait in its log.
 func TestErrorInUnfocusedSessionMarksIt(t *testing.T) {
 	s := New()
 	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
@@ -96,7 +96,7 @@ func TestErrorInUnfocusedSessionMarksIt(t *testing.T) {
 	}
 }
 
-// errors.md: "The status line's ✕/⚠ counts are the focused session's plus Oriel's."
+// The status line's ✕/⚠ counts are the focused session's plus Oriel's.
 func TestCounts(t *testing.T) {
 	s := New()
 	s.Apply(core.SessionOpened{ID: "s1", Kind: core.KindWork, Status: core.StatusQuiet})
@@ -111,7 +111,7 @@ func TestCounts(t *testing.T) {
 	}
 }
 
-// errors.md: each notice "becomes a core event, Notified, so it lands in the event log"; replaying the log
+// Each notice becomes a core event, Notified, so it lands in the event log; replaying the log
 // rebuilds the history.
 func TestNotificationsReplay(t *testing.T) {
 	var log bytes.Buffer

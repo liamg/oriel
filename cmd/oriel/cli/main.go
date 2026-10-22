@@ -23,6 +23,7 @@ import (
 	"github.com/liamg/oriel/sandbox/helper"
 	"github.com/liamg/oriel/sandbox/runner"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/update"
 )
 
 var version = "dev"
@@ -59,13 +60,9 @@ func runApp(args []string) {
 	stopProfile := cpuProfile(cfg.CPUProfile)
 	cfg.Bundled = integ.Bundled()
 	cfg.Plugins = append(cfg.Plugins, plugin.Native()...)
-	appUpdates(&cfg)
 	home := orielHome()
-	if held, err = lock(home); err != nil {
-		fmt.Fprintln(os.Stderr, "oriel:", err)
-		os.Exit(1)
-	}
-	if err := oldWorker(home); err != nil {
+	in, _, _ := selfInstaller()
+	if err := claim(home, &cfg, in); err != nil {
 		fmt.Fprintln(os.Stderr, "oriel:", err)
 		os.Exit(1)
 	}
@@ -77,7 +74,7 @@ func runApp(args []string) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	startHost(ctx, w, log)
-	cfg.Host = w
+	cfg.Host, cfg.Load = w, machineLoad
 	cfg.Logs.Router.Sessions = w.Logs()
 	be, err := gio.New()
 	if err != nil {
@@ -85,18 +82,40 @@ func runApp(args []string) {
 		os.Exit(1)
 	}
 	go func() {
-		defer cfg.Logs.Close()
 		err := app.Run(context.Background(), be, cfg)
-		cancel()
-		w.Close()
-		stopProfile()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "oriel:", err)
-			os.Exit(1)
-		}
-		os.Exit(0)
+		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close() }, stopProfile))
 	}()
 	gio.Main()
+}
+
+// claim takes home for this process, then confirms or rolls back a pending update: only the Oriel holding the
+// lock may, or a second launch would count as the new version's start.
+func claim(home string, cfg *app.Config, in *update.Installer) error {
+	var err error
+	if held, err = lock(home); err != nil {
+		return err
+	}
+	if err := oldWorker(home); err != nil {
+		return err
+	}
+	if in != nil {
+		appUpdates(cfg, in)
+	}
+	return nil
+}
+
+// shutdown stops what's running once the window has closed, then the log, and is the exit code.
+func shutdown(err error, log io.Closer, stop ...func()) int {
+	for _, f := range stop {
+		f()
+	}
+	code := 0
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "oriel:", err)
+		code = 1
+	}
+	_ = log.Close()
+	return code
 }
 
 // cpuProfile starts a CPU profile into path, if there is one, and returns what stops it; ^C stops it and exits.

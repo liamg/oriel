@@ -24,7 +24,7 @@ func TestDiscoverFindsTranscripts(t *testing.T) {
 		}
 	}
 	got := map[string]int{}
-	for _, tr := range (Provider{}).Discover() {
+	for _, tr := range (&Provider{}).Discover() {
 		got[tr.Session] = len(tr.Logs)
 		if tr.Logs[0].Path != filepath.Join(dir, "projects", filepath.Base(filepath.Dir(tr.Logs[0].Path)), tr.Session+".jsonl") || tr.Modified.IsZero() {
 			t.Errorf("transcript = %+v", tr)

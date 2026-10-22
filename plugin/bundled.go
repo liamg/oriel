@@ -5,7 +5,7 @@ import (
 	"io/fs"
 )
 
-// Bundled is a plugin shipped inside oriel's binary (catalog.md, "Bundled plugins"): its files, and the mains its
+// Bundled is a plugin shipped inside oriel's binary: its files, and the mains its
 // process binaries run as, so it needs no install and no executable per platform.
 type Bundled struct {
 	FS fs.FS

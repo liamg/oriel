@@ -33,7 +33,7 @@ func TestParseWith(t *testing.T) {
 	}
 }
 
-// plugins.md: "oriel build --with github.com/someone/oriel-emacs@v1.2 compiles a custom oriel binary with those
+// "oriel build --with github.com/someone/oriel-emacs@v1.2 compiles a custom oriel binary with those
 // packages linked in, the way xcaddy does for Caddy": a main that runs oriel's Main and imports each package for its
 // init, and a go.mod replacing what comes from local directories (a checkout's go.work modules, each --with=dir).
 func TestMake(t *testing.T) {

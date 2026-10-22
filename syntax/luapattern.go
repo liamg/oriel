@@ -9,11 +9,69 @@ type luaPattern struct {
 	anchor bool
 }
 
+// compileLuaPattern returns nil for a pattern Lua would call malformed.
 func compileLuaPattern(p string) *luaPattern {
+	lp := &luaPattern{p: p}
 	if len(p) > 0 && p[0] == '^' {
-		return &luaPattern{p: p[1:], anchor: true}
+		lp = &luaPattern{p: p[1:], anchor: true}
 	}
-	return &luaPattern{p: p}
+	if !wellFormed(lp.p) {
+		return nil
+	}
+	return lp
+}
+
+// wellFormed reports whether p has none of the errors lstrlib.c raises: a trailing %, a set with no ], %b
+// without two characters, %f without a set.
+func wellFormed(p string) bool {
+	for i := 0; i < len(p); {
+		switch p[i] {
+		case '%':
+			if i+1 >= len(p) {
+				return false
+			}
+			switch p[i+1] {
+			case 'b':
+				if i+3 >= len(p) {
+					return false
+				}
+				i += 4
+				continue
+			case 'f':
+				i += 2
+				if i >= len(p) || p[i] != '[' {
+					return false
+				}
+				continue
+			}
+			i += 2
+		case '[':
+			j := i + 1
+			if j < len(p) && p[j] == '^' {
+				j++
+			}
+			for {
+				if j >= len(p) {
+					return false
+				}
+				c := p[j]
+				j++
+				if c == '%' && j < len(p) {
+					j++
+				}
+				if j >= len(p) {
+					return false
+				}
+				if p[j] == ']' {
+					break
+				}
+			}
+			i = j + 1
+		default:
+			i++
+		}
+	}
+	return true
 }
 
 // find reports whether the pattern matches anywhere in s (or at its start, when anchored).

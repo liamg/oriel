@@ -11,7 +11,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// The HUD's look (ui.md 10): a drawer of framed panels, and the indicators in every slot.
+// The HUD's look: a drawer of framed panels, and the indicators in every slot.
 var (
 	tIndicatorLabel   = theme.Declare("indicator.label", "fg.faint")
 	tIndicatorValue   = theme.Declare("indicator.value", "fg")
@@ -144,9 +144,6 @@ func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(c *ui.Ctx)) DrawerResult
 		Float: &ui.Float{Point: &at}, Interactive: true, NoHover: true, Focusable: o.Pinned, Trap: o.Pinned, KeyMode: o.KeyMode, Role: ui.RoleDialog, Label: o.Label,
 		Help: o.Help, Enter: &ui.Transition{Shift: render.Point{Y: -24}, Fade: true}, Exit: &ui.Transition{Shift: render.Point{Y: -24}, Fade: true}},
 		func(c *ui.Ctx) {
-			if o.Pinned && !c.FocusWithin(id) {
-				c.Focus(id)
-			}
 			c.Box("grid", ui.Style{Float: &ui.Float{Fill: true}, W: ui.Flex(1), H: ui.Flex(1), Z: ui.LayerUnder}, func(c *ui.Ctx) {
 				c.Paint("lines", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
 					var p render.Path

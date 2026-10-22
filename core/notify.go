@@ -13,7 +13,7 @@ func init() {
 	RegisterEvent[TabClosed]("TabClosed")
 }
 
-// Severity is how much a notice matters (errors.md).
+// Severity is how much a notice matters.
 type Severity string
 
 const (
@@ -162,7 +162,7 @@ func (e TabClosed) Apply(s *State) error {
 }
 
 // Counts is how many rows of the history are errors and warnings, among Oriel's and session's own.
-// That's the status line's ✕ and ⚠ (errors.md).
+// That's the status line's ✕ and ⚠.
 func (s State) Counts(session SessionID) (errors, warnings int) {
 	for _, n := range s.Notifications {
 		if n.Session != "" && n.Session != session {

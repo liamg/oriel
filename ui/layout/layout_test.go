@@ -18,7 +18,7 @@ var (
 	reqs  = ViewRef{ID: "requests"}
 )
 
-// start is the 24-layout mockup's arrangement: two files in main, the explorer docked left, problems and a
+// start is a typical arrangement: two files in main, the explorer docked left, problems and a
 // terminal in the bottom dock.
 func start(t *testing.T) *Root {
 	t.Helper()

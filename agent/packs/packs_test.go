@@ -17,7 +17,7 @@ var kinds = []core.Kind{
 	core.KindJob, core.KindNewRepo, core.KindDirect,
 }
 
-// builtins is how many packs are built in: a kind's each, and ai-review, which the AI review's reviewer runs on (RV-3).
+// builtins is how many packs are built in: a kind's each, and ai-review, which the AI review's reviewer runs on.
 var builtins = len(kinds) + 1
 
 func TestEveryKindHasAPack(t *testing.T) {
@@ -34,13 +34,13 @@ func TestEveryKindHasAPack(t *testing.T) {
 			t.Errorf("%q: empty text or tools", k)
 		}
 	}
-	if got := len(All()); got != builtins {
-		t.Errorf("All() has %d packs, want %d", got, builtins)
+	if got := len((&Set{}).All()); got != builtins {
+		t.Errorf("(&Set{}).All() has %d packs, want %d", got, builtins)
 	}
 }
 
 func TestFrontmatterParses(t *testing.T) {
-	for _, p := range All() {
+	for _, p := range (&Set{}).All() {
 		m, body, err := Parse(p.Text)
 		if err != nil {
 			t.Errorf("%s: %v", p.Name, err)
@@ -62,7 +62,7 @@ func TestFrontmatterParses(t *testing.T) {
 }
 
 func TestPacksNameOnlyTheirTools(t *testing.T) {
-	for _, p := range All() {
+	for _, p := range (&Set{}).All() {
 		for _, tool := range p.Tools {
 			if !slices.Contains(Tools, tool) {
 				t.Errorf("%s: Tools lists %q, which Oriel doesn't offer", p.Name, tool)
@@ -105,7 +105,7 @@ func TestDirectWarns(t *testing.T) {
 
 func TestNoCrit(t *testing.T) {
 	word := regexp.MustCompile(`(?i)\bcrit\b`)
-	for _, p := range All() {
+	for _, p := range (&Set{}).All() {
 		if loc := word.FindStringIndex(p.Text); loc != nil {
 			t.Errorf("%s mentions crit: %q", p.Name, p.Text[max(0, loc[0]-30):min(len(p.Text), loc[1]+30)])
 		}
@@ -113,28 +113,29 @@ func TestNoCrit(t *testing.T) {
 }
 
 func TestRegisterShadows(t *testing.T) {
-	builtin, _ := Get("work")
-	un1 := Register(agent.Pack{Name: "work", Text: "one", Tools: []string{"reply"}})
-	un2 := Register(agent.Pack{Name: "work", Text: "two"})
-	if p, _ := Get("work"); p.Text != "two" || p.Skill != "work" {
+	set := &Set{}
+	builtin, _ := set.Get("work")
+	un1 := set.Register(agent.Pack{Name: "work", Text: "one", Tools: []string{"reply"}})
+	un2 := set.Register(agent.Pack{Name: "work", Text: "two"})
+	if p, _ := set.Get("work"); p.Text != "two" || p.Skill != "work" {
 		t.Fatalf("got %q / %q, want the latest registration", p.Text, p.Skill)
 	}
 	un2()
-	if p, _ := Get("work"); p.Text != "one" {
+	if p, _ := set.Get("work"); p.Text != "one" {
 		t.Fatalf("after unregistering the latest, got %q", p.Text)
 	}
 	un1()
 	un1()
-	if p, _ := Get("work"); p.Text != builtin.Text {
+	if p, _ := set.Get("work"); p.Text != builtin.Text {
 		t.Fatal("unregistering every override didn't restore the built-in")
 	}
 
-	un := Register(agent.Pack{Name: "incident", Skill: "incident", Text: "x"})
-	if _, ok := Get("incident"); !ok || len(All()) != builtins+1 {
+	un := set.Register(agent.Pack{Name: "incident", Skill: "incident", Text: "x"})
+	if _, ok := set.Get("incident"); !ok || len(set.All()) != builtins+1 {
 		t.Fatal("a plugin's new kind isn't listed")
 	}
 	un()
-	if _, ok := Get("incident"); ok {
+	if _, ok := set.Get("incident"); ok {
 		t.Fatal("unregistered kind still listed")
 	}
 }
@@ -148,6 +149,7 @@ func TestGetReturnsACopy(t *testing.T) {
 }
 
 func TestLoadDirOverrides(t *testing.T) {
+	set := &Set{}
 	dir := t.TempDir()
 	write := func(name, s string) {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(s), 0o644); err != nil {
@@ -158,32 +160,33 @@ func TestLoadDirOverrides(t *testing.T) {
 	write("incident.md", "---\ndescription: an incident\ntools: reply, resolve\n---\n\n# Incident\n")
 	write("notes.txt", "ignored")
 
-	un, err := LoadDir(dir)
+	un, err := set.LoadDir(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, _ := Get("work")
+	p, _ := set.Get("work")
 	if !strings.Contains(p.Text, "# Mine") || !strings.Contains(p.Text, "mcp__oriel__task_add") {
 		t.Errorf("override not loaded or include not expanded: %q", p.Text)
 	}
 	if want := []string{"reply", "task_add", "task_update", "tasks"}; !slices.Equal(p.Tools, want) {
 		t.Errorf("tools from mentions: got %v, want %v", p.Tools, want)
 	}
-	inc, ok := Get("incident")
+	inc, ok := set.Get("incident")
 	if !ok || inc.Skill != "incident" || !slices.Equal(inc.Tools, []string{"reply", "resolve"}) {
 		t.Errorf("incident: %+v", inc)
 	}
 	un()
-	if p, _ := Get("work"); strings.Contains(p.Text, "# Mine") {
+	if p, _ := set.Get("work"); strings.Contains(p.Text, "# Mine") {
 		t.Error("unregister didn't restore the built-in")
 	}
-	if _, ok := Get("incident"); ok {
+	if _, ok := set.Get("incident"); ok {
 		t.Error("incident still registered")
 	}
 }
 
 func TestLoadDirMissingIsEmpty(t *testing.T) {
-	un, err := LoadDir(filepath.Join(t.TempDir(), "nope"))
+	set := &Set{}
+	un, err := set.LoadDir(filepath.Join(t.TempDir(), "nope"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,6 +194,7 @@ func TestLoadDirMissingIsEmpty(t *testing.T) {
 }
 
 func TestLoadDirRejectsBadFiles(t *testing.T) {
+	set := &Set{}
 	for name, src := range map[string]string{
 		"unclosed": "---\nname: x\n# x\n",
 		"include":  "# x\n<!-- include: nope -->\n",
@@ -198,10 +202,10 @@ func TestLoadDirRejectsBadFiles(t *testing.T) {
 		dir := t.TempDir()
 		os.WriteFile(filepath.Join(dir, "good.md"), []byte("# good\n"), 0o644)
 		os.WriteFile(filepath.Join(dir, "x.md"), []byte(src), 0o644)
-		if _, err := LoadDir(dir); err == nil {
+		if _, err := set.LoadDir(dir); err == nil {
 			t.Errorf("%s: no error", name)
 		}
-		if _, ok := Get("good"); ok {
+		if _, ok := set.Get("good"); ok {
 			t.Errorf("%s: a failed load registered packs", name)
 		}
 	}

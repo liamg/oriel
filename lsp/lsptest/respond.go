@@ -8,8 +8,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp"
-	"github.com/liamg/oriel/lsp/jsonrpc"
 )
 
 // Responder is a server that answers from a transcript in whatever order it's asked, as an editor asks: each request
@@ -67,9 +67,9 @@ func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 		}
 		switch {
 		case e.Dir == Send && m.IsRequest():
-			methods[m.ID.String()], params[m.ID.String()] = m.Method, m.Params
+			methods[jsonrpc.IDKey(m.ID)], params[jsonrpc.IDKey(m.ID)] = m.Method, m.Params
 		case e.Dir == Recv && m.IsResponse():
-			byID[m.ID.String()] = msg
+			byID[jsonrpc.IDKey(m.ID)] = msg
 		case e.Dir == Recv && m.Method == "textDocument/publishDiagnostics":
 			var p struct {
 				URI         string            `json:"uri"`

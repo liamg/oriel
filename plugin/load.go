@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/ui"
 )
 
 // Loop is what a Load needs of its host: a way back to the app's loop, and a frame.
@@ -24,7 +24,7 @@ type LoadOpts struct {
 	Now     func() time.Time // the clock loads are timed by; the window's (Host.UI) or time.Now when nil
 }
 
-// Load runs a fetch off the loop and tracks it for the widgets that draw it (widget.Async, widget.Busy). Its
+// Load runs a fetch off the loop and tracks it for the widgets that draw it (ui.Async, ui.Busy). Its
 // methods are called on the loop; a result lands there through Do. A result from a fetch started before the latest
 // Reload or Reset is dropped, and a reload keeps the last value until the new one arrives.
 type Load[T any] struct {
@@ -36,7 +36,7 @@ type Load[T any] struct {
 	cancel context.CancelFunc
 	val    T
 	has    bool
-	state  widget.LoadState
+	state  ui.LoadState
 }
 
 func NewLoad[T any](h Loop, fetch Fetcher[T], o LoadOpts) *Load[T] {
@@ -46,7 +46,7 @@ func NewLoad[T any](h Loop, fetch Fetcher[T], o LoadOpts) *Load[T] {
 // Start fetches when nothing has been loaded or asked for yet; otherwise it does nothing, so a view may call it every
 // frame.
 func (l *Load[T]) Start() {
-	if l.state.Phase == widget.Idle {
+	if l.state.Phase == ui.Idle {
 		l.Reload()
 	}
 }
@@ -63,11 +63,11 @@ func (l *Load[T]) Reload() {
 		ctx, cancel = context.WithTimeout(context.Background(), l.opts.Timeout)
 	}
 	l.cancel = cancel
-	l.state = widget.LoadState{Phase: widget.Pending, Since: l.now(), Err: l.state.Err, Stale: l.has, Progress: -1}
+	l.state = ui.LoadState{Phase: ui.Pending, Since: l.now(), Err: l.state.Err, Stale: l.has, Progress: -1}
 
 	report := func(note string, frac float64) {
 		l.h.Do(func() {
-			if l.gen == gen && l.state.Phase == widget.Pending {
+			if l.gen == gen && l.state.Phase == ui.Pending {
 				l.state.Note, l.state.Progress = note, frac
 			}
 		})
@@ -83,6 +83,11 @@ func (l *Load[T]) Reload() {
 
 // run is the fetch, ended by its context even if the fetch ignores it, and with a panic turned into an error.
 func (l *Load[T]) run(ctx context.Context, report func(string, float64)) (T, error) {
+	return runFetch(ctx, l.opts.Timeout, func(ctx context.Context) (T, error) { return l.fetch(ctx, report) })
+}
+
+// runFetch runs fetch until it returns or ctx ends, turning a panic into an error and a deadline into a timeout.
+func runFetch[T any](ctx context.Context, timeout time.Duration, fetch func(context.Context) (T, error)) (T, error) {
 	type result struct {
 		v   T
 		err error
@@ -94,26 +99,25 @@ func (l *Load[T]) run(ctx context.Context, report func(string, float64)) (T, err
 				done <- result{err: fmt.Errorf("panic: %v", p)}
 			}
 		}()
-		v, err := l.fetch(ctx, report)
+		v, err := fetch(ctx)
 		done <- result{v, err}
 	}()
 	select {
 	case r := <-done:
 		if r.err != nil && errors.Is(r.err, context.DeadlineExceeded) {
-			r.err = l.timedOut()
+			r.err = timedOut(timeout)
 		}
 		return r.v, r.err
 	case <-ctx.Done():
 		var zero T
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-			return zero, l.timedOut()
+			return zero, timedOut(timeout)
 		}
 		return zero, ctx.Err()
 	}
 }
 
-func (l *Load[T]) timedOut() error {
-	d := l.opts.Timeout
+func timedOut(d time.Duration) error {
 	if d >= time.Second {
 		d = d.Round(time.Second)
 	}
@@ -129,11 +133,11 @@ func (l *Load[T]) land(gen int, v T, err error) {
 	switch {
 	case err == nil:
 		l.val, l.has = v, true
-		l.state.Phase, l.state.Err = widget.Ready, nil
+		l.state.Phase, l.state.Err = ui.Ready, nil
 	case l.has:
-		l.state.Phase, l.state.Err = widget.Ready, err
+		l.state.Phase, l.state.Err = ui.Ready, err
 	default:
-		l.state.Phase, l.state.Err = widget.Failed, err
+		l.state.Phase, l.state.Err = ui.Failed, err
 	}
 }
 
@@ -146,7 +150,7 @@ func (l *Load[T]) Reset() {
 	l.gen++
 	var zero T
 	l.val, l.has = zero, false
-	l.state = widget.LoadState{}
+	l.state = ui.LoadState{}
 }
 
 // Set makes v the value now, as a finished load would, dropping any fetch running.
@@ -157,19 +161,22 @@ func (l *Load[T]) Set(v T) {
 	}
 	l.gen++
 	l.val, l.has = v, true
-	l.state = widget.LoadState{Phase: widget.Ready, Progress: -1}
+	l.state = ui.LoadState{Phase: ui.Ready, Progress: -1}
 }
 
 // Value is the last value loaded, and whether there's one.
 func (l *Load[T]) Value() (T, bool) { return l.val, l.has }
 
-func (l *Load[T]) State() widget.LoadState { return l.state }
+func (l *Load[T]) State() ui.LoadState { return l.state }
 
-func (l *Load[T]) now() time.Time {
-	if l.opts.Now != nil {
-		return l.opts.Now()
+func (l *Load[T]) now() time.Time { return loopNow(l.h, l.opts.Now) }
+
+// loopNow is now(), else the window's clock when h has a window, else time.Now.
+func loopNow(h Loop, now func() time.Time) time.Time {
+	if now != nil {
+		return now()
 	}
-	if h, ok := l.h.(interface{ UI() UIView }); ok {
+	if h, ok := h.(interface{ UI() UIView }); ok {
 		if u := h.UI(); u != nil {
 			return u.Now()
 		}

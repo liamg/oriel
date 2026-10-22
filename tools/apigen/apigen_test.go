@@ -10,7 +10,7 @@ import (
 // What's committed is what the annotations generate: run go generate ./script/api when this fails.
 func TestGeneratedIsCurrent(t *testing.T) {
 	root := filepath.Join("..", "..")
-	files, err := Generate(root, filepath.Join(root, "script", "api"), "0.4.0")
+	files, err := Generate(root, filepath.Join(root, "script", "api"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,8 +30,7 @@ func TestLuaName(t *testing.T) {
 	}
 }
 
-// security.md: "an API without a declared capability fails go generate, so no unguarded door can be added by
-// accident". A namespace's cap covers its functions; a function's overrides it.
+// An API without a declared capability fails generation, so no unguarded door can be added by accident. A namespace's cap covers its functions; a function's overrides it.
 func TestCapabilityRequired(t *testing.T) {
 	dir := t.TempDir()
 	src := `package api

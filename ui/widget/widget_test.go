@@ -445,7 +445,7 @@ func TestSegmented(t *testing.T) {
 	}
 }
 
-// AI-14: a segment can carry a badge after its label, a chip of its own: the account switcher's plan tier. A segment
+// A segment can carry a badge after its label, a chip of its own: the account switcher's plan tier. A segment
 // with none draws none, and the accessible name says the badge.
 func TestSegmentedBadges(t *testing.T) {
 	active := 0
@@ -716,6 +716,24 @@ func TestTreeSelectionFollowsItsItem(t *testing.T) {
 	h.frame()
 	if res.Selected != "a" {
 		t.Errorf("after b went, selected %q, want the row in its place", res.Selected)
+	}
+}
+
+// TreeOpts.Select selects an item from its owner, opening the folders it's in, and the user's selection then holds.
+func TestTreeSelect(t *testing.T) {
+	var res TreeResult
+	sel := "b2"
+	items := []TreeItem{{ID: "a", Label: "a"}, {ID: "b", Label: "b", Children: []TreeItem{{ID: "b1", Label: "b1"}, {ID: "b2", Label: "b2"}}}}
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		res = Tree(c, "tree", items, TreeOpts{Height: ui.Px(300), Help: "test/tree", Select: sel})
+		sel = ""
+	})
+	if res.Selected != "b2" {
+		t.Fatalf("selected %q", res.Selected)
+	}
+	h.frame()
+	if res.Selected != "b2" || !h.drew("b2") {
+		t.Errorf("a frame later, selected %q, drew %q", res.Selected, h.texts())
 	}
 }
 
@@ -1007,7 +1025,7 @@ func TestRichTonedCode(t *testing.T) {
 	}
 }
 
-// ED-15: a hover card shows while the pointer is on its anchor, stays while the pointer moves into it to read it, and
+// A hover card shows while the pointer is on its anchor, stays while the pointer moves into it to read it, and
 // goes when the pointer leaves both; it never takes focus, so keys still go where they went.
 func TestHoverCardFollowsThePointer(t *testing.T) {
 	var anchor, field ui.ID
@@ -1065,7 +1083,7 @@ func TestHoverCardFollowsThePointer(t *testing.T) {
 	}
 }
 
-// SE-5: "widget.Input gains Lines: wraps, grows to a max height then scrolls, ⏎ a new line, ⌘⏎ submits".
+// widget.Input with Lines wraps, grows to a max height then scrolls; ⏎ is a new line and ⌘⏎ submits.
 func TestInputLines(t *testing.T) {
 	text := ""
 	var id ui.ID
@@ -1123,7 +1141,7 @@ func TestInputLines(t *testing.T) {
 	}
 }
 
-// FG-6: a plain checkbox ticks and unticks on a click on it or its text, and with Space while focused.
+// A plain checkbox ticks and unticks on a click on it or its text, and with Space while focused.
 func TestCheckPlain(t *testing.T) {
 	on := true
 	var id ui.ID

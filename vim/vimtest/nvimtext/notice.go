@@ -18,6 +18,7 @@ var fixed = map[string]string{
 	"vim.no-alternate":         "E23: No alternate file",
 	"vim.rotate-split":         "E443: Cannot rotate when another window is split",
 	"vim.recursive-mapping":    "E223: Recursive mapping",
+	"vim.recursive-register":   "E223: Recursive mapping",
 	"vim.buffer-not-found":     "E92: Buffer %s not found",
 	"vim.no-buffer":            "E86: Buffer %s does not exist",
 	"vim.no-modified-buffer":   "E84: No modified buffer found",

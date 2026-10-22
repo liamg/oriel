@@ -1,0 +1,164 @@
+package agentui_test
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
+)
+
+// consoleScene is a session in front, with its console open: a Codex turn with reads, a search, edits,
+// subagents, a permission and a network ask, a queued message, and both providers' plan usage.
+func consoleScene(t *testing.T) *apptest.Scene {
+	t.Helper()
+	s := apptest.New(t, apptest.Options{})
+	s.Now = apptest.At(14, 30, 0)
+	ago := func(sec int) time.Time { return s.Now.Add(-time.Duration(sec) * time.Second) }
+	var read []string
+	for i := range 142 {
+		read = append(read, fmt.Sprintf("line %d", i))
+	}
+	se := core.SessionState{ID: "search-api", Name: "ENG-2231 search api", Kind: core.KindWork, Status: core.StatusPermission, Ticket: "ENG-2231",
+		Projects: []core.Project{{Name: "search-api", Dir: "/src/search-api", Branch: "rethink/search-endpoint", Primary: true}},
+		Agent: core.AgentState{Provider: "codex", Model: "gpt-5.5-codex", Effort: "high", Running: true, Working: true, TurnStarted: s.Now,
+			Policy: "light", Sandboxed: true, Network: "ask",
+			Queue: []string{"Also check @internal/api/usage/routes.go: the batch endpoint has its own limiter."},
+			Stats: core.Stats{Context: 118_000, ContextMax: 400_000, Input: 184_600, CacheRead: 1_235_400, Output: 38_000, Turns: 14, ToolCalls: 63,
+				Cost: 3.10, Running: 4320}},
+		Threads: []core.Thread{{ID: "t1", Status: core.ThreadOpen, Busy: true, Anchor: &core.Anchor{File: "internal/api/usage/handler.go", Line: 88},
+			Comments: []core.Comment{{ID: "c1", Author: core.AuthorYou, Body: "The 429 path never sets `Retry-After`. Add it from the limiter's reset time and cover it in the handler test."}}}},
+		Transcript: []core.Item{
+			{ID: "u", Kind: core.ItemUser, Time: ago(80), Text: "Requests to handle:\n\n1. internal/api/usage/handler.go:88\nThe 429 path never sets Retry-After.\nAdd it from the limiter's reset time."},
+			{ID: "a1", Kind: core.ItemAssistant, Time: ago(70), Text: "Reading the limiter to see what it exposes for the reset time."},
+			{ID: "r1", Kind: core.ItemTool, Tool: "Read", Title: "Read internal/ratelimit/limiter.go", Done: true, Output: strings.Join(read, "\n"),
+				Duration: 100, Time: ago(66)},
+			{ID: "g1", Kind: core.ItemTool, Tool: "Grep", Title: `Search "Reserve(" in internal/`, Done: true, Output: "a.go:1\nb.go:2\nc.go:3\nd.go:4",
+				Duration: 200, Time: ago(60)},
+			{ID: "th", Kind: core.ItemThinking, Time: ago(55), Text: "The reservation knows when it resets.\nUse that."},
+			{ID: "a2", Kind: core.ItemAssistant, Time: ago(50), Text: "`Reservation.ResetAt()` already exists. Writing the header from it:"},
+			{ID: "e1", Kind: core.ItemTool, Tool: "Edit", Title: "Edit internal/api/usage/handler.go", Done: true, Time: ago(45),
+				Diff: &core.FileDiff{Path: "internal/api/usage/handler.go", Added: 3, Removed: 1, Lines: []core.DiffLine{
+					{Op: " ", Old: 87, New: 87, Text: "\tif !res.OK() {"},
+					{Op: "-", Old: 88, Text: "\t\thttp.Error(w, \"rate limited\", http.StatusTooManyRequests)"},
+					{Op: "+", New: 88, Text: "\t\tsecs := int(math.Ceil(time.Until(res.ResetAt()).Seconds()))"},
+					{Op: "+", New: 89, Text: "\t\tw.Header().Set(\"Retry-After\", strconv.Itoa(max(secs, 1)))"},
+					{Op: "+", New: 90, Text: "\t\thttp.Error(w, \"rate limited\", http.StatusTooManyRequests)"},
+					{Op: " ", Old: 89, New: 91, Text: "\t\treturn"},
+				}}},
+			{ID: "e2", Kind: core.ItemTool, Tool: "Edit", Title: "Edit internal/api/usage/handler_test.go", Done: true, Time: ago(40),
+				Diff: &core.FileDiff{Path: "internal/api/usage/handler_test.go", Added: 18}},
+			{ID: "b1", Kind: core.ItemTool, Tool: "Bash", Title: "Bash go vet ./internal/api/...", Done: true, Output: "ok", Duration: 2300, Time: ago(30)},
+		},
+		Subagents: []core.Subagent{
+			{ID: "s1", Type: "explorer", Description: "Find every 429 path in the API and whether it sets Retry-After", Running: true, Started: ago(38), Tools: 11},
+			{ID: "s2", Type: "docs", Description: "Check the public API docs mention Retry-After", Running: true, Started: ago(12), Tools: 3},
+		},
+		Asks: []core.Ask{
+			{ID: "p1", Kind: core.AskPermission, Tool: "Bash", Summary: "go test ./internal/api/... -run TestUsage -count=1", Rule: "Bash(go test:*)",
+				Created: ago(5)},
+			{ID: "n1", Kind: core.AskNetwork, Host: "proxy.golang.org:443", Detail: "go mod download · first request from this workspace · egress proxy",
+				Created: ago(2)},
+		},
+		Rules: []string{"Bash(go vet:*)"},
+	}
+	for _, ev := range []core.Event{
+		core.SessionSynced{Session: se},
+		core.SessionFocused{ID: se.ID},
+		core.UsageSampled{Usage: core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro", Windows: []core.UsageWindow{
+			{Name: "5h window", Used: .22, Resets: s.Now.Add(3*time.Hour + 10*time.Minute)}, {Name: "weekly", Used: .48, Resets: s.Now.Add(50 * time.Hour)}}}},
+		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Plan: "Claude Max", Windows: []core.UsageWindow{
+			{Name: "5h window", Used: .38}, {Name: "weekly", Used: .71}}}},
+	} {
+		if err := s.Store().Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return s
+}
+
+// The console with its blocks, a permission and a network card where they arose, the
+// subagents, the composer's queue and the stats.
+func TestAgentConsoleSnapshot(t *testing.T) {
+	s := consoleScene(t)
+	s.Run("view.open", registry.Args{"id": kit.AgentConsoleView, "place": "tab", "title": "Agent"})
+	s.Frame()
+	s.Lint("the agent console")
+	s.Golden("agent-console")
+}
+
+// With the console hidden, every session's asks stack at the bottom right over the window, each with its
+// session's name: a permission, a network connection, a question and a gateway call, then a count of the rest; the
+// tabs count them.
+func TestAskCardsSnapshot(t *testing.T) {
+	s := consoleScene(t)
+	other := core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusNeedsYou,
+		Agent: core.AgentState{Provider: "claude", Running: true},
+		Asks: []core.Ask{
+			{ID: "q1", Kind: core.AskQuestion, Questions: []core.Question{{Question: "Is pricing.RoundMinor safe to call for JPY amounts, or does it assume 2 decimal places?",
+				Options: []string{"Safe: precision comes from the currency table", "Not yet: lands with rethink/rounding"}}}},
+			{ID: "g1", Kind: core.AskGateway, Tool: "git push", Summary: "git push origin rethink/rounding", Detail: "3 commits · +184 -22 · 0 unreviewed lines ✓",
+				Rule: "git push origin rethink/*"},
+			{ID: "n1", Kind: core.AskNetwork, Host: "proxy.golang.org:443", Detail: "requested by go mod download · CONNECT · no TLS interception"},
+			{ID: "p1", Kind: core.AskPermission, Tool: "Bash", Summary: "make e2e"},
+		}}
+	if err := s.Store().Apply(core.SessionSynced{Session: other}); err != nil {
+		t.Fatal(err)
+	}
+	s.Frame()
+	s.Lint("the ask cards")
+	s.Golden("ask-cards")
+}
+
+// A lost login's cards, over the window: Log in opens the agent's terminal; an agent with no terminal to type
+// it in says what to run. The title bar's indicator for the account is marked signed out.
+func TestLoginCardsSnapshot(t *testing.T) {
+	s := consoleScene(t)
+	claude := core.Login{Provider: "claude", Account: "u1/o1", Detail: "OAuth token revoked · Please run /login", Terminal: "/login",
+		Shell: "claude, then /login"}
+	codex := core.Login{Provider: "codex", Detail: "Your access token could not be refreshed", Shell: "codex login"}
+	for _, ev := range []core.Event{
+		core.MachineChanged{Machine: core.MachineState{Host: "mbp", SignedOut: []core.Login{claude, codex}}},
+		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "u1/o1", Plan: "Claude Max",
+			Windows: []core.UsageWindow{{Name: "Current session", Used: .38, Length: 5 * time.Hour}}}},
+		core.SessionSynced{Session: core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusNeedsYou,
+			Agent: core.AgentState{Provider: "claude", Running: true}, Asks: []core.Ask{{ID: "l1", Kind: core.AskLogin, Summary: claude.Detail, Login: &claude}}}},
+		core.SessionSynced{Session: core.SessionState{ID: "sweep-deps", Name: "sweep-deps", Kind: core.KindJob, Status: core.StatusNeedsYou,
+			Agent: core.AgentState{Provider: "codex", Running: true}, Asks: []core.Ask{{ID: "l2", Kind: core.AskLogin, Summary: codex.Detail, Login: &codex}}}},
+	} {
+		if err := s.Store().Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.Frame()
+	s.Lint("the login cards")
+	s.Golden("login-cards")
+}
+
+// A long session's transcript draws only its screenful, following its end, so a frame costs the same at its
+// three-thousandth block as at its tenth: the window stays quick with the console open behind the omnibox.
+func TestLongTranscriptDrawsWhatShows(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Size: render.Point{X: 1600, Y: 1000}})
+	var items []core.Item
+	for i := range 3000 {
+		items = append(items, core.Item{ID: fmt.Sprint("a", i), Kind: core.ItemAssistant, Text: fmt.Sprintf("step %d of the work", i)})
+	}
+	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusWorking,
+		Agent: core.AgentState{Provider: "claude", Running: true}, Transcript: items}})
+	s.Store().Apply(core.SessionFocused{ID: "w"})
+	s.Run("agent.console", nil)
+	s.Frame()
+	s.Frame()
+	text := s.Text()
+	if !strings.Contains(text, "step 2999 of the work") {
+		t.Errorf("the transcript doesn't show its end:\n%s", text)
+	}
+	if strings.Contains(text, "step 10 of the work") || strings.Count(text, " of the work") > 200 {
+		t.Errorf("the transcript drew %d blocks, past its screenful", strings.Count(text, " of the work"))
+	}
+}

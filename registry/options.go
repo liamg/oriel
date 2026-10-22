@@ -2,6 +2,7 @@ package registry
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -134,12 +135,16 @@ func (s OptionSpec) Check(v any) error {
 	case Int:
 		var n int
 		if n, ok = v.(int); ok {
-			return s.inRange(float64(n))
+			if err := s.inRange(float64(n)); err != nil {
+				return err
+			}
 		}
 	case Float:
 		var f float64
 		if f, ok = v.(float64); ok {
-			return s.inRange(f)
+			if err := s.inRange(f); err != nil {
+				return err
+			}
 		}
 	case String, Key:
 		_, ok = v.(string)
@@ -218,6 +223,8 @@ type Options interface {
 	Spec(name string) (OptionSpec, bool)            // by name or alias
 	Specs() []OptionSpec                            // sorted by name
 	Watch(name string, fn func()) (cancel func())
+	// Registered calls fn after each option is registered: a key a settings file had waiting may be one now.
+	Registered(fn func()) (cancel func())
 }
 
 type valueKey struct {
@@ -237,7 +244,9 @@ type options struct {
 	aliases map[string]string
 	values  map[valueKey]value
 	watches map[string]map[int]func()
+	added   map[int]func()
 	next    int
+	tokens  int64 // each spec's, in the order they came
 }
 
 func newOptions() *options {
@@ -415,15 +424,36 @@ func (o *options) Watch(name string, fn func()) (cancel func()) {
 	}
 }
 
+func (o *options) Registered(fn func()) (cancel func()) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.added == nil {
+		o.added = map[int]func(){}
+	}
+	id := o.next
+	o.next++
+	o.added[id] = fn
+	return func() {
+		o.mu.Lock()
+		defer o.mu.Unlock()
+		delete(o.added, id)
+	}
+}
+
 func (o *options) register(s OptionSpec) (Disposable, error) {
 	if err := s.Check(s.Default); err != nil {
 		return nil, fmt.Errorf("default: %w", err)
 	}
 	o.mu.Lock()
-	defer o.mu.Unlock()
-	tok := o.specs.push(s.Name, s)
+	o.tokens++
+	tok := o.specs.push(s.Name, s, o.tokens)
 	for _, a := range s.Aliases {
 		o.aliases[a] = s.Name
+	}
+	added := slices.Collect(maps.Values(o.added))
+	o.mu.Unlock()
+	for _, fn := range added {
+		fn()
 	}
 	return disposeOnce(func() {
 		o.mu.Lock()

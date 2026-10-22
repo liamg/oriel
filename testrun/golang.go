@@ -100,6 +100,7 @@ func (g *Go) Discover(src Source) []Item {
 	elems := byCapture(ms, "row.element")
 	fields := byCapture(ms, "struct.field")
 	keyed := byCapture(ms, "field.value")
+	appended := byCapture(ms, "append.row")
 
 	// Each test and static subtest's full name, by the range of its node; a dynamic t.Run's parent name too.
 	type found struct {
@@ -166,7 +167,7 @@ func (g *Go) Discover(src Source) []Item {
 			add(cl.n, c, name, append(append([]string(nil), pathOf(pname)...), sub), KindSubtest)
 			continue
 		}
-		for _, row := range goTableRows(cl.n, loops, tables, rows, elems, fields, keyed) {
+		for _, row := range goTableRows(cl.n, parent, loops, tables, rows, appended, elems, fields, keyed) {
 			name := namer.name(pname, row.name)
 			items = append(items, Item{Package: pkg, Name: name, Path: append(append([]string(nil), pathOf(pname)...), row.name), File: src.Path, Line: row.line, Kind: KindRow})
 		}
@@ -181,8 +182,9 @@ type goRow struct {
 }
 
 // goTableRows are the rows of the table a t.Run(tc.field, …) or t.Run(key, …) call ranges over, with the names
-// it gives them, for rows whose name is a string literal.
-func goTableRows(run node, loops, tables, rows, elems, fields, keyed []node) []goRow {
+// it gives them, for rows whose name is a string literal: the table's literal's, then those appended to it in fn
+// before the loop.
+func goTableRows(run, fn node, loops, tables, rows, appended, elems, fields, keyed []node) []goRow {
 	v, _ := run.m.Get("run.var")
 	field, byField := run.m.Get("run.field")
 	var loop node
@@ -214,13 +216,10 @@ func goTableRows(run node, loops, tables, rows, elems, fields, keyed []node) []g
 				break
 			}
 		}
-		if !ok {
-			return nil
-		}
 	}
 	var mine []node
 	for _, r := range rows {
-		if lit.Range.Start <= r.Range.Start && r.Range.End <= lit.Range.End {
+		if ok && lit.Range.Start <= r.Range.Start && r.Range.End <= lit.Range.End {
 			if len(mine) > 0 && mine[len(mine)-1].contains(r) {
 				continue
 			}
@@ -238,6 +237,25 @@ func goTableRows(run node, loops, tables, rows, elems, fields, keyed []node) []g
 			continue
 		}
 		if name, line, ok := goRowField(r, field.Text, lit, mine, elems, fields, keyed); ok {
+			out = append(out, goRow{name, line})
+		}
+	}
+	if byField {
+		out = append(out, goAppendedRows(field.Text, source.Text, fn, loop, lit, ok, appended, elems, fields, keyed)...)
+	}
+	return out
+}
+
+// goAppendedRows are the rows appended to the table named table in fn, after its literal (if found) and before loop.
+func goAppendedRows(field, table string, fn, loop, lit node, hasLit bool, appended, elems, fields, keyed []node) []goRow {
+	var out []goRow
+	for _, r := range appended {
+		into, _ := r.m.Get("append.into")
+		if into.Text != table || !fn.contains(r) || r.Range.End > loop.Range.Start || hasLit && r.Range.Start < lit.Range.End {
+			continue
+		}
+		al, _ := r.m.Get("append.literal")
+		if name, line, ok := goRowField(r, field, node{Capture: al}, []node{r}, elems, fields, keyed); ok {
 			out = append(out, goRow{name, line})
 		}
 	}
@@ -525,15 +543,15 @@ func goFrameLoc(test string, lines []string) *Loc {
 	for j := 0; j+1 < len(lines); j++ {
 		if strings.Contains(lines[j], "."+top+"(") || strings.Contains(lines[j], "."+top+".func") {
 			if m := goFrame.FindStringSubmatch(lines[j+1]); m != nil {
-				n, _ := strconv.Atoi(m[2])
-				return &Loc{File: m[1], Line: n - 1}
+				loc, _ := fileLine(m[1])
+				return loc
 			}
 		}
 	}
 	return nil
 }
 
-var goFrame = regexp.MustCompile(`^\t(.+\.go):(\d+)(?: \+0x[0-9a-f]+)?$`)
+var goFrame = regexp.MustCompile(`^\t(.+\.go:\d+)(?: \+0x[0-9a-f]+)?$`)
 
 // goFailure reads a failed test's output: a panic and where in the test it happened, or the first t.Error.
 func goFailure(test string, lines []string) *Failure {

@@ -1,5 +1,5 @@
 // Package input is the pluggable input engine: what turns keys into the editing primitives of package edit.
-// Vim is one engine, plain (CUA keys) another, and a plugin can register more, emacs for example (editor.md).
+// Vim is one engine, plain (CUA keys) another, and a plugin can register more, emacs for example.
 package input
 
 import "github.com/liamg/oriel/edit"

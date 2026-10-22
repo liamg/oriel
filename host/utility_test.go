@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 )
 
@@ -25,8 +26,8 @@ func nextUtility(t *testing.T, u *Utility) UtilityEvent {
 	return UtilityEvent{}
 }
 
-// agents.md: "Outside a session (the assistant …): a resident utility session. That's a hidden interactive claude
-// in a PTY with the Oriel mod, a small model, read-only tools, and a fresh context per task." It starts through the
+// Outside a session (the assistant …), a resident utility session: a hidden interactive claude in a PTY with the
+// Oriel mod, a small model, read-only tools, and a fresh context per task. It starts through the
 // provider like any session (so Claude is its interactive CLI), offered only the app's tools for it.
 func TestUtilityAgent(t *testing.T) {
 	r := newRig(t)
@@ -126,5 +127,23 @@ func TestSessionToolsAreAskedForByKind(t *testing.T) {
 	id, _ := r.workSession("Work")
 	if asked.Session != id || asked.Agent != string(core.KindWork) {
 		t.Errorf("asked for %+v", asked)
+	}
+}
+
+// A utility agent whose start panics fails to start; StartUtility doesn't wait on it forever.
+func TestUtilityAgentThatPanicsFailsToStart(t *testing.T) {
+	r := newRig(t, panicky{&agenttest.Fake{Name: "codex"}})
+	done := make(chan error, 1)
+	go func() {
+		_, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Provider: "codex", Pack: "p", Prompt: "hi"})
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Error("a utility agent whose start panicked started")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("StartUtility is still waiting")
 	}
 }

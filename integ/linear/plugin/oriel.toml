@@ -4,7 +4,6 @@ oriel       = ">=0.4"
 description = "Linear as a ticket tracker: your assigned tickets in the omnibox and for the assistant, Start work from a ticket, its state moved as the work goes, and the PR linked back"
 license     = "MIT"
 binaries    = ["darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"]
-lazy        = { events = ["SessionStart", "PrSeen"], omnibox = ["tickets"] }
 
 [contributes]
 icons = "icons/"

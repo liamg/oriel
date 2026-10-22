@@ -38,23 +38,21 @@ func busy(t testing.TB) (*harness, func()) {
 	return h, kick
 }
 
-// FW-13: "The frame budgets in rendering.md still hold with several things animating": a frame (build, layout and
+// The frame budgets still hold with several things animating: a frame (build, layout and
 // paint) stays under 4 ms of CPU.
 func TestAnimatingFrameBudget(t *testing.T) {
 	perf.Timed(t)
 	h, kick := busy(t)
-	var total time.Duration
 	const frames = 240
+	var times perf.Sampler
 	for i := range frames {
 		if i%20 == 0 {
 			kick()
 		}
 		h.now = h.now.Add(time.Second / 120)
-		start := time.Now()
-		h.frame()
-		total += time.Since(start)
+		times.Time(h.frame)
 	}
-	avg := total / frames
+	avg := perf.Mean(times.Times())
 	t.Logf("%v a frame with six things animating", avg)
 	if avg > 4*time.Millisecond {
 		t.Errorf("a frame takes %v; the budget is 4 ms", avg)

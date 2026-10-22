@@ -38,7 +38,7 @@ type SandboxPolicy struct {
 	Backend   string `json:"backend,omitempty"`   // the sandbox backend, one of the machine's Sandboxes; "" is sandbox.backend
 }
 
-// SessionSpec is what a new session starts from (sessions.md).
+// SessionSpec is what a new session starts from.
 type SessionSpec struct {
 	Kind   Kind   `json:"kind"`
 	Name   string `json:"name,omitempty"`  // derived from the prompt if empty

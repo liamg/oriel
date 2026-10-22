@@ -8,7 +8,7 @@ import (
 	"github.com/liamg/oriel/gitx/gittest"
 )
 
-// RV-3: the change a reviewer reads is from the merge-base to the work tree as it is, new files included, as git
+// The change a reviewer reads is from the merge-base to the work tree as it is, new files included, as git
 // diff writes it; a snapshot of the work tree is the next review's start, so a re-review reads only what changed
 // since, committed or not. The index isn't touched.
 // ref: oracle git

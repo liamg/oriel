@@ -13,7 +13,7 @@ const (
 	KindJob    Kind = "job"
 )
 
-// Status is a session's state at a glance, with the same colour everywhere (ui.md).
+// Status is a session's state at a glance, with the same colour everywhere.
 type Status string
 
 const (
@@ -56,6 +56,13 @@ type Session interface {
 type Event interface {
 	Scope() SessionID
 	Apply(s *State) error
+}
+
+// Logged is an event that's published and logged even when it leaves the state as it was: a plugin's own record.
+// Any other event that changes nothing is dropped.
+type Logged interface {
+	Event
+	Logged()
 }
 
 // Filter selects events for a subscription. The zero Filter matches everything.

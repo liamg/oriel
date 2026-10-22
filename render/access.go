@@ -30,16 +30,25 @@ const (
 	RoleStatus   Role = "status" // a polite live region: toasts, the statusline
 	RoleSlider   Role = "slider" // its Label carries the value
 	RoleImage    Role = "image"  // its Label says what it shows
+	RoleLink     Role = "link"
+	RoleCheckBox Role = "checkbox" // its state is Checked
 )
 
 // Action is something assistive technology asks a node to do.
 type Action string
 
 const (
-	ActionClick  Action = "click"
-	ActionFocus  Action = "focus"
-	ActionScroll Action = "scroll"
+	ActionClick     Action = "click"
+	ActionFocus     Action = "focus"
+	ActionScroll    Action = "scroll"
+	ActionIncrement Action = "increment" // a slider steps up
+	ActionDecrement Action = "decrement"
+	ActionSetValue  Action = "setvalue" // a textbox's text becomes AccessAction.Value
+	ActionSelect    Action = "select"   // a textbox's selection becomes AccessAction.Selection
 )
+
+// TextRange is a span of a textbox's Value, in runes from its start; an empty one is the caret.
+type TextRange struct{ Start, End int }
 
 // AccessNode is one node of the accessibility tree.
 type AccessNode struct {
@@ -54,6 +63,8 @@ type AccessNode struct {
 	Selected    bool
 	Modal       bool // a dialog that holds focus: readers stay inside it
 	Expanded    *bool
+	Checked     *bool     // a check box's state
+	Selection   TextRange // a textbox's selection, or its caret
 	Actions     []Action
 	Children    []*AccessNode
 }
@@ -111,7 +122,7 @@ func AccessDiff(prev, next *AccessNode) AccessUpdate {
 func sameNode(a, b *AccessNode) bool {
 	if a.Role != b.Role || a.Name != b.Name || a.Value != b.Value || a.Description != b.Description || a.Bounds != b.Bounds ||
 		a.Focused != b.Focused || a.Disabled != b.Disabled || a.Selected != b.Selected || a.Modal != b.Modal || !slices.Equal(a.Actions, b.Actions) ||
-		(a.Expanded == nil) != (b.Expanded == nil) || a.Expanded != nil && *a.Expanded != *b.Expanded || len(a.Children) != len(b.Children) {
+		!sameFlag(a.Expanded, b.Expanded) || !sameFlag(a.Checked, b.Checked) || a.Selection != b.Selection || len(a.Children) != len(b.Children) {
 		return false
 	}
 	for i := range a.Children {
@@ -121,6 +132,8 @@ func sameNode(a, b *AccessNode) bool {
 	}
 	return true
 }
+
+func sameFlag(a, b *bool) bool { return (a == nil) == (b == nil) && (a == nil || *a == *b) }
 
 // Dump writes the tree as a screen reader's outline: role, name, value and states, indented, for golden tests.
 func (n *AccessNode) Dump() string {
@@ -138,7 +151,8 @@ func (n *AccessNode) Dump() string {
 			on   bool
 			name string
 		}{{n.Focused, "focused"}, {n.Disabled, "disabled"}, {n.Selected, "selected"}, {n.Modal, "modal"}, {n.Expanded != nil && *n.Expanded, "expanded"},
-			{n.Expanded != nil && !*n.Expanded, "collapsed"}} {
+			{n.Expanded != nil && !*n.Expanded, "collapsed"}, {n.Checked != nil && *n.Checked, "checked"},
+			{n.Checked != nil && !*n.Checked, "unchecked"}} {
 			if st.on {
 				b.WriteString(" " + st.name)
 			}
@@ -157,8 +171,10 @@ func (n *AccessNode) Dump() string {
 
 // AccessAction is assistive technology asking node ID to do something.
 type AccessAction struct {
-	ID     uint64
-	Action Action
+	ID        uint64
+	Action    Action
+	Value     string    // for ActionSetValue
+	Selection TextRange // for ActionSelect
 }
 
 // Accessible is a Window a platform's screen reader can see: the app sends it the tree's changes after each

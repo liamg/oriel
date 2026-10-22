@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	goruntime "runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -38,9 +40,10 @@ const chunk = 1 << 20
 
 // Terminal is a term.Emulator.
 type Terminal struct {
-	mu   sync.Mutex
-	opts Options
-	m    machine
+	mu      sync.Mutex
+	waiting atomic.Int32 // goroutines waiting for mu, but for Write
+	opts    Options
+	m       machine
 
 	scan     term.MarkScanner
 	log      term.CommandLog
@@ -79,12 +82,43 @@ func New(cols, rows int, opts Options) (*Terminal, error) {
 	return t, nil
 }
 
-// Write feeds the program's output to the terminal.
+// slice is how much of a write is fed under one hold of the lock, so a reader waits on a slice, not the write.
+const slice = 4 << 10
+
+// Write feeds the program's output to the terminal. Only Write feeds it, from one goroutine: a reader between two
+// slices sees the first fed.
 func (t *Terminal) Write(p []byte) {
+	for len(p) > 0 {
+		n := min(len(p), slice)
+		if !t.feed(p[:n]) {
+			return
+		}
+		p = p[n:]
+		if len(p) > 0 && t.waiting.Load() > 0 {
+			t.yield()
+		}
+	}
+}
+
+// yield lets the goroutines waiting for mu take it first, for at most a millisecond.
+func (t *Terminal) yield() {
+	for until := time.Now().Add(time.Millisecond); t.waiting.Load() > 0 && time.Now().Before(until); {
+		goruntime.Gosched()
+	}
+}
+
+// lock is mu, for everything but Write, which lets those waiting in first.
+func (t *Terminal) lock() {
+	t.waiting.Add(1)
+	t.mu.Lock()
+	t.waiting.Add(-1)
+}
+
+func (t *Terminal) feed(p []byte) bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.closed {
-		return
+		return false
 	}
 	for len(p) > 0 {
 		n, mark, ok := t.scan.Next(p)
@@ -95,6 +129,7 @@ func (t *Terminal) Write(p []byte) {
 		p = p[n:]
 	}
 	t.drain()
+	return true
 }
 
 func (t *Terminal) write(p []byte) {
@@ -179,7 +214,7 @@ func (t *Terminal) Resize(cols, rows int) {
 	if cols <= 0 || rows <= 0 {
 		return
 	}
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	t.m.call("oriel_resize", uint64(cols), uint64(rows))
 	t.lines = nil
@@ -187,7 +222,7 @@ func (t *Terminal) Resize(cols, rows int) {
 }
 
 func (t *Terminal) Size() (cols, rows int) {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return 0, 0
@@ -206,7 +241,7 @@ func init() {
 
 // Grid is the viewport. While synchronized output holds the frame it stays as it was, until HoldTimeout passes.
 func (t *Terminal) Grid() term.Grid {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return term.Grid{}
@@ -280,7 +315,7 @@ func (t *Terminal) Cursor() (x, y int, shape term.Shape) {
 }
 
 func (t *Terminal) CursorState() term.CursorState {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return term.CursorState{}
@@ -296,7 +331,7 @@ func (t *Terminal) CursorState() term.CursorState {
 }
 
 func (t *Terminal) Title() string {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return ""
@@ -309,7 +344,7 @@ func (t *Terminal) Title() string {
 }
 
 func (t *Terminal) Cwd() string {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return ""
@@ -322,7 +357,7 @@ func (t *Terminal) Cwd() string {
 }
 
 func (t *Terminal) Mode(m term.Mode) bool {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return false
@@ -331,7 +366,7 @@ func (t *Terminal) Mode(m term.Mode) bool {
 }
 
 func (t *Terminal) AltScreen() bool {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return false
@@ -343,7 +378,7 @@ func (t *Terminal) AltScreen() bool {
 func (t *Terminal) altScreen() bool { return t.state().screen == 1 }
 
 func (t *Terminal) Held() bool {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return false
@@ -352,7 +387,7 @@ func (t *Terminal) Held() bool {
 }
 
 func (t *Terminal) Scroll(s term.Scroll) {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return
@@ -365,7 +400,7 @@ func (t *Terminal) Scroll(s term.Scroll) {
 }
 
 func (t *Terminal) Scrollbar() term.Scrollbar {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return term.Scrollbar{}
@@ -375,7 +410,7 @@ func (t *Terminal) Scrollbar() term.Scrollbar {
 }
 
 func (t *Terminal) Text(from, to term.Point) string {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return ""
@@ -388,7 +423,7 @@ func (t *Terminal) Text(from, to term.Point) string {
 }
 
 func (t *Terminal) Commands() []term.Command {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return nil
@@ -397,7 +432,7 @@ func (t *Terminal) Commands() []term.Command {
 }
 
 func (t *Terminal) EncodeKey(ev term.KeyEvent) []byte {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return nil
@@ -408,7 +443,7 @@ func (t *Terminal) EncodeKey(ev term.KeyEvent) []byte {
 }
 
 func (t *Terminal) Paste(text string) []byte {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return nil
@@ -430,7 +465,7 @@ type snapState struct {
 // Snapshot is the terminal's state: libghostty-vt's snapshot (screens, scrollback, modes, an unfinished sequence)
 // after our own (shell-integration marks).
 func (t *Terminal) Snapshot() ([]byte, error) {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return nil, errClosed
@@ -465,7 +500,7 @@ func (t *Terminal) Restore(snap []byte) error {
 		return fmt.Errorf("ghostty: snapshot: %w", err)
 	}
 	vt := snap[4+n:]
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return errClosed
@@ -484,7 +519,7 @@ func (t *Terminal) Restore(snap []byte) error {
 }
 
 func (t *Terminal) Close() error {
-	t.mu.Lock()
+	t.lock()
 	defer t.mu.Unlock()
 	if t.closed {
 		return nil

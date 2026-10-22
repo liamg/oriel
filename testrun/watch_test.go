@@ -18,7 +18,7 @@ func packagesOf(items []Item) []string {
 	return out
 }
 
-// TestGoWatchRerunsAffectedPackages is TR-4's "done when": a save re-runs only the affected packages in the Go
+// TestGoWatchRerunsAffectedPackages: a save re-runs only the affected packages in the Go
 // fixture, where c imports b, b imports a, and d imports none of them.
 //
 // ref: go/help-list.txt

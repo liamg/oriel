@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// TR-6: ide.md, "Wherever Oriel offers "ask the agent to fix" … it also offers **ask to explain**": a menu item
+// Wherever Oriel offers "ask the agent to fix" it also offers "ask to explain": a menu item
 // that runs agent.fix, a plugin's too, gets an explain twin right after it with the same args, and a Trouble that
 // says there's nothing hides both.
 func TestFixMenuItemsGetExplainTwins(t *testing.T) {

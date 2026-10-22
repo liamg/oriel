@@ -9,7 +9,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 )
 
-// Entry is one line of [plugins] (catalog.md): a plugin by id, from the registries in a semver range, or from a git
+// Entry is one line of [plugins]: a plugin by id, from the registries in a semver range, or from a git
 // repository or a local directory.
 type Entry struct {
 	ID      string
@@ -45,7 +45,7 @@ func ParseEntries(t map[string]any) ([]Entry, []error) {
 	var errs []error
 	for _, id := range sortedKeys(t) {
 		e := Entry{ID: id, Enabled: true}
-		if owner, name, ok := strings.Cut(id, "/"); !ok || owner == "" || name == "" || strings.Contains(name, "/") {
+		if plugin.CheckID(id) != nil {
 			errs = append(errs, fmt.Errorf("[plugins] %q isn't <owner>/<name>", id))
 			continue
 		}
@@ -69,8 +69,7 @@ func ParseEntries(t map[string]any) ([]Entry, []error) {
 				case "lazy":
 					var l map[string]any
 					if l, ok = x.(map[string]any); ok {
-						lz := plugin.Lazy{Commands: strs(l["commands"]), Events: strs(l["events"]), Keys: strs(l["keys"]),
-							Filetypes: strs(l["filetypes"]), Omnibox: strs(l["omnibox"])}
+						lz := plugin.ParseLazy(l)
 						e.Lazy = &lz
 					}
 				default:

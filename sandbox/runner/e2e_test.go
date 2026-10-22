@@ -304,35 +304,31 @@ func TestSandboxManifestIsHostOwned(t *testing.T) {
 	}
 }
 
-var (
-	e2eOrielOnce sync.Once
-	e2eOrielBin  string
-	e2eOrielErr  error
-)
+// e2eOriel builds oriel once for the containers to run: under go test the running binary is the test binary, which
+// must never be re-executed.
+var e2eOriel = sync.OnceValues(func() (string, error) {
+	dir, err := os.MkdirTemp("", "oriel-e2e-bin")
+	if err != nil {
+		return "", err
+	}
+	bin := filepath.Join(dir, "oriel")
+	_, file, _, _ := runtime.Caller(0)
+	cmd := exec.Command("go", "build", "-o", bin, "./cmd/oriel-sandbox")
+	cmd.Dir = filepath.Join(filepath.Dir(file), "..")
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=linux")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("building oriel: %v\n%s", err, out)
+	}
+	return bin, nil
+})
 
-// orielForContainer builds oriel once for the containers to run: under go test
-// the running binary is the test binary, which must never be re-executed.
 func orielForContainer(t *testing.T) string {
 	t.Helper()
-	e2eOrielOnce.Do(func() {
-		dir, err := os.MkdirTemp("", "oriel-e2e-bin")
-		if err != nil {
-			e2eOrielErr = err
-			return
-		}
-		e2eOrielBin = filepath.Join(dir, "oriel")
-		_, file, _, _ := runtime.Caller(0)
-		cmd := exec.Command("go", "build", "-o", e2eOrielBin, "./cmd/oriel-sandbox")
-		cmd.Dir = filepath.Join(filepath.Dir(file), "..")
-		cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=linux")
-		if out, err := cmd.CombinedOutput(); err != nil {
-			e2eOrielErr = fmt.Errorf("building oriel: %v\n%s", err, out)
-		}
-	})
-	if e2eOrielErr != nil {
-		t.Fatal(e2eOrielErr)
+	bin, err := e2eOriel()
+	if err != nil {
+		t.Fatal(err)
 	}
-	return e2eOrielBin
+	return bin
 }
 
 func mustHostClaude(t *testing.T) string {

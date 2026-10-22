@@ -9,7 +9,7 @@ import (
 	"github.com/liamg/oriel/text"
 )
 
-// Multi-cursor (ED-8), after vim-visual-multi: ⌃n selects the word under the cursor and then each next whole-word
+// Multi-cursor, after vim-visual-multi: ⌃n selects the word under the cursor and then each next whole-word
 // match, ⌃↓ and ⌃↑ add a cursor below or above. With regions selected (extend mode) c, s, d, x, I, A and o act on
 // all of them; with cursors, any normal-mode command runs at each one, and insert mode types at all of them. A
 // command and the typing after it undo as one step. ⇥ switches between regions and cursors, q skips a match, Q

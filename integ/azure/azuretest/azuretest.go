@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/integ/azure"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin/hosttest"
 )
 
@@ -61,6 +62,7 @@ type pr struct {
 
 // New serves the fake until the test ends.
 func New(t testing.TB) *Server {
+	isolate.Test(t)
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 57, repos: map[string]string{},
 		identities: map[string]azure.Identity{Me.UniqueName: Me}, policies: map[string][]string{}}
 	s.Server = httptest.NewTLSServer(http.HandlerFunc(s.serve))

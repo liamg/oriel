@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,10 +97,11 @@ func newHarness(t *testing.T) *harness {
 			h.session = append(h.session, rules...)
 			h.mu.Unlock()
 		},
-		Always: func(rules []Rule, _ bool) {
+		Always: func(rules []Rule, _ bool) error {
 			h.mu.Lock()
 			h.global = append(h.global, rules...)
 			h.mu.Unlock()
+			return nil
 		},
 	}
 	return h
@@ -193,7 +195,7 @@ func TestSettingsDenyBeatsSessionGrant(t *testing.T) {
 	}
 }
 
-// RV-4: "the agent never posts": a tool that posts to a GitHub review isn't offered, and a call to it is refused
+// The agent never posts: a tool that posts to a GitHub review isn't offered, and a call to it is refused
 // even when the user's rules allow every tool, without asking.
 func TestReviewPostingToolsAreNeverOffered(t *testing.T) {
 	h := newHarness(t)
@@ -236,7 +238,10 @@ func TestAlwaysAskIgnoresGrants(t *testing.T) {
 func TestEverywhereReachesTheStore(t *testing.T) {
 	h := newHarness(t)
 	var got bool
-	h.g.Always = func(_ []Rule, everywhere bool) { got = everywhere }
+	h.g.Always = func(_ []Rule, everywhere bool) error {
+		got = everywhere
+		return nil
+	}
 	h.answer = Answer{Decision: Once, Everywhere: true}
 	h.call(t, "aws__put_object")
 	if !got {
@@ -250,6 +255,17 @@ func TestAlwaysWritesGlobalRule(t *testing.T) {
 	h.call(t, "aws__put_object")
 	if len(h.global) != 2 {
 		t.Fatalf("global rules = %+v", h.global)
+	}
+}
+
+// An always allow that can't be kept still lets the call through, and its result says the rule wasn't saved.
+func TestAlwaysNotSavedSaysSo(t *testing.T) {
+	h := newHarness(t)
+	h.g.Always = func([]Rule, bool) error { return errors.New("disk full") }
+	h.answer = Answer{Decision: Once, Always: true}
+	out, ok := h.call(t, "aws__put_object")
+	if !ok || !strings.Contains(out, "not saved") || !strings.Contains(out, "disk full") {
+		t.Fatalf("the call said %q (ok %v)", out, ok)
 	}
 }
 

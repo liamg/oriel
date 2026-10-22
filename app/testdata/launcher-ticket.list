@@ -12,7 +12,6 @@ pop
 text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
 rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
 text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
-rect 0,38 1600x936 fill #060606
 clip 0,38 1600x936 r 0
   text "START" @265,283.41998 #7c7566 JetBrains Mono 9.5
   rect 265,296.27 520x66 fill #1d1a0f radius 10 stroke 1 #ffd23f73
@@ -121,10 +120,10 @@ clip 0,38 1600x936 r 0
   path 5 segments fill #ff8a1f
 pop
 rect 0,974 1600x26 fill #0c0c0b
-text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
-text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
-text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
-text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+text "✕" @0,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @11.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @32.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @43.78125,990.95996 #b3ab99 JetBrains Mono 11
 text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
 text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
 rect 0,0 1600x1000 fill #03050899
@@ -263,4 +262,8 @@ clip 170,105 1260x790 r 10
   text "⌘↵" @1376.0469,868.42 #141006cc JetBrains Mono 9.5
 pop
 rect 170,105 1260x790 radius 10 stroke 1 #332f27
-rect 488,492.97806 293x2 fill #ffd23f
+clip 170,158 929x676 r 0
+  clip 194,440.70856 881x54.2695 r 6
+    rect 488,492.97806 293x2 fill #ffd23f
+  pop
+pop

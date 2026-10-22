@@ -15,11 +15,3 @@ func (w *Host) recover(where string, err *error) {
 		}
 	}
 }
-
-// goSafe runs fn on its own goroutine, recovering a panic in it.
-func (w *Host) goSafe(where string, fn func()) {
-	go func() {
-		defer w.recover(where, nil)
-		fn()
-	}()
-}

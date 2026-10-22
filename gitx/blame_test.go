@@ -41,7 +41,7 @@ func TestBlameKinds(t *testing.T) {
 	}
 }
 
-// RV-2: agents.md, "it's recorded in a commit trailer (Unreviewed-Agent-Lines: 38)": CommitStaged commits what's
+// Unreviewed agent lines are recorded in a commit trailer (Unreviewed-Agent-Lines: 38): CommitStaged commits what's
 // staged and adds the trailer as git commit --trailer does; git reads it back as a trailer.
 // ref: oracle git
 func TestCommitStagedWithTrailer(t *testing.T) {
@@ -82,7 +82,7 @@ func TestBlameRunsOneGitPerFile(t *testing.T) {
 	r.Write(map[string]string{"a.txt": "one\n", "b.txt": "two\n"})
 	r.Commit("Ada", "both\n\nCo-Authored-By: Claude <noreply@anthropic.com>")
 	runs := gittest.CountGit(t)
-	repo := Repo{Dir: r.Dir}
+	repo := Repo{Dir: r.Dir, Cache: testCache(t)}
 	if _, err := repo.Blame(context.Background(), "a.txt", []byte("one\n")); err != nil {
 		t.Fatal(err)
 	}

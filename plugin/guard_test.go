@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// security.md → Capabilities: "Undeclared calls fail with a clear error naming the missing capability: never a
+// "Undeclared calls fail with a clear error naming the missing capability: never a
 // silent no-op". ui, theme and notify need no declaration ("no: always allowed").
 func TestGuardRejectsUndeclared(t *testing.T) {
 	work := t.TempDir()
@@ -108,7 +108,7 @@ func TestGuardCommands(t *testing.T) {
 	}
 }
 
-// catalog.md → Manifest, security.md → the [permissions] example and plugins.md's short form.
+// A full manifest, with [permissions] given as tables and in the short form (= true).
 func TestParseManifest(t *testing.T) {
 	m, err := ParseManifest([]byte(`
 id          = "acme/jira"

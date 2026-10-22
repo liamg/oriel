@@ -2,7 +2,6 @@ package registry
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -13,60 +12,103 @@ import (
 	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/theme"
-	"github.com/liamg/oriel/ui"
 )
 
-// Registry is where every tier contributes, and where contributions are looked up.
-// Registering an id that is already registered overrides it until the override is disposed.
+// Registry is where every tier contributes, and where contributions are looked up, one area each. Registering an
+// id that is already registered overrides it until the override is disposed. What's drawn (views, decorations,
+// pickers) is registry/uireg's, over these contributions.
 type Registry interface {
-	Command(c Command) Disposable
-	Keymap(k Keymap) Disposable
-	Option(o OptionSpec) Disposable // panics if the default doesn't fit the spec
-	View(id string, v View) Disposable
-	Theme(s theme.Source) Disposable
-	Language(l Language) Disposable
-	Hook(h Hook) Disposable
-	DeclareEvent(e EventInfo) Disposable
-	Contribute(c Contribution) Disposable
-	Input(e input.Engine) Disposable // an input engine the editor's input option can pick
-	Decorations(id string, p DecorationProvider) Disposable
-	Picker(s PickerSource) Disposable
-	HelpPages(s HelpSource) Disposable
-	HelpLive(name string, fn func(c *ui.Ctx)) Disposable
+	Commands
+	Keys
+	Inputs
+	Settings
+	Themes
+	Languages
+	Events
+	Contributions
+	Help
+	Diagnostics
+	Faults
+	// Placeholder stands for commands, keys, events, omnibox prefixes and contributions something provides when one
+	// is first used.
+	Placeholder(p Placeholder) Disposable
+	// Holder is what provides the placeholder standing for a contribution of kind and name, if one does: what opens
+	// a view calls it before it finds the view.
+	Holder(kind, name string) (provide func() error, ok bool)
+}
 
+// Commands are what runs by id.
+type Commands interface {
+	Command(c Command) Disposable
 	Run(ctx Ctx, id string, args Args) error
 	// Available says whether id would run with args: it's registered, not turned off, and its Available agrees.
 	// The rail and the start view dim what isn't; the omnibox leaves it out.
 	Available(id string, args Args) bool
-	Commands() []Command // the registration that wins for each id, sorted by id
-	Keymaps() []Keymap   // the registration that wins for each mode and keys, sorted by mode, then keys
+	Commands() []Command // the registration that wins for each id, sorted by id; shared, not to be changed
+}
+
+// Keys are the keymaps.
+type Keys interface {
+	Keymap(k Keymap) Disposable
+	Keymaps() []Keymap // the registration that wins for each mode and keys, sorted by mode, then keys
+	// KeymapsFor is Keymaps' entries that run command, in the same order; shared, not to be changed.
+	KeymapsFor(command string) []Keymap
 	// Lookup finds the mapping for keys in the first of modes that has one, and whether any of modes has a longer
 	// mapping that starts with keys.
 	Lookup(modes []string, keys []string) (exact *Keymap, more bool)
-	ViewByID(id string) (View, bool)
-	Views() []string                     // every registered view id, sorted
-	ViewSource(id string) (string, bool) // who registered the view that wins id
-	Themes() ([]theme.Source, int)       // in registration order, a later theme with the same name winning; and a generation that moves when they change
-	Languages() ([]Language, int)        // the language that wins each name, in the order they were registered, and a generation
-	Hooks() []HookInfo                   // by event, then priority
-	Events() []EventInfo                 // declared events, by name
+}
+
+// Inputs are the input engines the editor's input option can pick.
+type Inputs interface {
+	Input(e input.Engine) Disposable
+	InputByID(id string) (input.Engine, bool)
+	Inputs() []string // engine ids, sorted
+}
+
+// Settings are the options.
+type Settings interface {
+	Option(o OptionSpec) Disposable // panics if the default doesn't fit the spec
+	Options() Options
+}
+
+// Themes are the themes.
+type Themes interface {
+	Theme(s theme.Source) Disposable
+	Themes() ([]theme.Source, int) // in registration order, a later theme with the same name winning; and a generation that moves when they change
+}
+
+// Languages are the languages files are read as.
+type Languages interface {
+	Language(l Language) Disposable
+	Languages() ([]Language, int) // the language that wins each name, in the order they were registered, and a generation
+}
+
+// Events are the hooks and the events they hear.
+type Events interface {
+	Hook(h Hook) Disposable
+	DeclareEvent(e EventInfo) Disposable
+	Hooks() []HookInfo   // by event, then priority
+	Events() []EventInfo // declared events, by name
 	// Fire runs event's hooks (registry/hook.go): a veto or decision, and the hooks' errors.
 	Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error)
-	Contributions(kind string) []Contribution // by name
-	ContributionsGen() int                    // a generation that moves whenever a contribution comes or goes
-	InputByID(id string) (input.Engine, bool)
-	DecorationProviders() []NamedProvider // the winning provider for each id, sorted by id
-	// DecorationsChanged says provider id's decorations have changed, so Decorate asks it again everywhere.
-	DecorationsChanged(id string)
-	// Decorate is every provider's decorations of ctx's lines [Top, Bottom), by line, each line's in priority order:
-	// what a provider gave last, until its inputs change (DecorationProvider). One that panics is turned off.
-	Decorate(ctx DecorationCtx) map[int][]Decoration
-	Pickers() []PickerSource // the winning source for each id, by Order then id
-	HelpSources() ([]HelpSource, int)
-	HelpLiveByName(name string) (func(c *ui.Ctx), bool)
-	Inputs() []string // engine ids, sorted
-	Options() Options
+}
 
+// Contributions are anything else registered by kind and name.
+type Contributions interface {
+	Contribute(c Contribution) Disposable
+	Contributions(kind string) []Contribution            // by name; shared, not to be changed
+	Contribution(kind, name string) (Contribution, bool) // the one that wins name
+	ContributionsGen() int                               // a generation that moves whenever a contribution comes or goes
+}
+
+// Help are the help pages.
+type Help interface {
+	HelpPages(s HelpSource) Disposable
+	HelpSources() ([]HelpSource, int)
+}
+
+// Diagnostics are the problems and line coverage found in files.
+type Diagnostics interface {
 	// SetDiagnostics replaces owner's diagnostics for file (an absolute path); nil clears them.
 	SetDiagnostics(owner, file string, ds []Diagnostic)
 	// Diagnostics are every diagnostic by file, then line, and a generation that moves when they change;
@@ -77,7 +119,10 @@ type Registry interface {
 	SetCoverage(owner, file string, hits map[int]int)
 	ClearCoverage(owner string)
 	CoverageFor(file string) map[int]int // every owner's, a line keeping its largest count
+}
 
+// Faults are the contributions turned off, and their failures.
+type Faults interface {
 	// OnFault hears about every contribution turned off: one that panicked, or kept failing.
 	OnFault(fn func(Fault)) Disposable
 	// OnFailure hears about every contribution's error, and warnings: a hook over its time budget.
@@ -87,7 +132,8 @@ type Registry interface {
 	// TurnOff turns a contribution off with the error that caused it; TurnOn turns it back on.
 	TurnOff(kind, id string, err error)
 	TurnOn(kind, id string)
-	TurnedOff() []Off // sorted by kind, then id
+	IsOff(kind, id string) error // why it's turned off; nil while it's on
+	TurnedOff() []Off            // sorted by kind, then id
 }
 
 type Disposable interface{ Dispose() }
@@ -142,7 +188,9 @@ type Command struct {
 	// Available says whether the command can run with args now; nil means it always can. view.open of a view
 	// nobody has registered can't.
 	Available func(args Args) bool
-	Source    string // who registered it: "builtin:git", "init.lua:14", a plugin's id
+	// When makes it available only while the session in front's kind can do this (registry.FrontCan).
+	When   Capability
+	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 
 // Keymap binds keys, in vim notation, to a command in one mode. One with no command names a group of the
@@ -158,60 +206,6 @@ type Keymap struct {
 	// (vim's <nowait>): a key layer's "[" over the editor's "[c".
 	Nowait bool
 }
-
-type View interface {
-	Build(ctx ViewCtx) ui.Node // pure: state in, tree out
-}
-
-// ViewCtx is what a view is built with: the window's size and, for a view open in the layout, which instance
-// of it this is, the project it's for, and whether it has focus.
-type ViewCtx struct {
-	Width, Height float32
-	Instance      string
-	Focused       bool
-	Project       string // the project the instance was opened for (view.open's project); "" for a session's view
-}
-
-// EdgeToEdge is a view drawn right to its pane's edges, with no padding around it: an editor, a terminal.
-type EdgeToEdge interface {
-	EdgeToEdge()
-}
-
-// Titled is a view whose instances name themselves, for their tabs: an editor names its buffer.
-type Titled interface {
-	Title(instance string) string
-}
-
-// Moded is a view with a mode of its own the status line's mode chip shows while it has focus: a terminal's
-// TERMINAL or TERM-NORMAL. Style is a theme token for the chip.
-type Moded interface {
-	ModeLabel(instance string) (label, style string)
-}
-
-// Marked is a view whose instances carry a small marker on their tabs: an editor's file's git status letter. Style
-// is a theme token.
-type Marked interface {
-	Mark(instance string) (text, style string)
-}
-
-// Shown is a view that a slot drawing it (the diff's columns) leaves out while it has nothing for an instance, so
-// the slot can give the room to the rest: the AI review outside a session.
-type Shown interface {
-	Shown(instance string) bool
-}
-
-// Persisted is a view whose instances come back when the app starts again on the same directory: the layout keeps
-// each one's state, and Revive makes a new instance from it, which takes the old one's place.
-type Persisted interface {
-	Persist(instance string) (state json.RawMessage, ok bool)
-	Revive(state json.RawMessage) (instance string, err error)
-}
-
-type ViewFunc func(ViewCtx) ui.Node
-
-func (f ViewFunc) Build(ctx ViewCtx) ui.Node { return f(ctx) }
-
-var tokens atomic.Int64
 
 type entry[T any] struct {
 	token int64
@@ -230,8 +224,8 @@ func (s stacks[K, T]) top(k K) (T, bool) {
 	return es[len(es)-1].value, true
 }
 
-func (s stacks[K, T]) push(k K, v T) int64 {
-	tok := tokens.Add(1)
+// push adds v for k as tok, a token unique in its registry.
+func (s stacks[K, T]) push(k K, v T, tok int64) int64 {
 	s[k] = append(s[k], entry[T]{tok, v})
 	return tok
 }
@@ -257,25 +251,19 @@ const sep = "\x00"
 type keymapKey struct{ mode, seq string }
 
 type reg struct {
-	mu         sync.Mutex
-	commands   stacks[string, Command]
-	keymaps    stacks[keymapKey, Keymap]
-	sorted     []Keymap          // Keymaps, until one is added or removed
-	prefixes   map[keymapKey]int // how many mapped sequences in a mode extend each proper prefix
-	views      stacks[string, View]
-	inputs     stacks[string, input.Engine]
-	decor      stacks[string, DecorationProvider]
-	decorGen   map[string]int
-	decorCache decorCache
+	tokens   atomic.Int64 // each registration's, in the order they came
+	mu       sync.Mutex
+	commands stacks[string, Command]
+	keymaps  stacks[keymapKey, Keymap]
+	sorted   []Keymap            // Keymaps, until one is added or removed
+	byCmd    map[string][]Keymap // KeymapsFor, made with sorted
+	prefixes map[keymapKey]int   // how many mapped sequences in a mode extend each proper prefix
+	inputs   stacks[string, input.Engine]
 	// what the list methods give, made again after a registration changes them; nil until asked
 	cmdList    []Command
-	pickerList []PickerSource
-	decorList  []NamedProvider
 	contribBy  map[string][]Contribution
-	pickers    stacks[string, PickerSource]
 	help       []entry[HelpSource]
 	helpGen    int
-	live       stacks[string, func(c *ui.Ctx)]
 	themes     []entry[theme.Source]
 	themeGen   int
 	languages  stacks[string, Language]
@@ -289,6 +277,7 @@ type reg struct {
 	diagGen    int
 	diagIdx    *diagIndex
 	cover      map[diagKey]map[int]int
+	holders    []*placeholder
 }
 
 func New() Registry {
@@ -296,14 +285,9 @@ func New() Registry {
 		commands:  stacks[string, Command]{},
 		keymaps:   stacks[keymapKey, Keymap]{},
 		prefixes:  map[keymapKey]int{},
-		views:     stacks[string, View]{},
 		inputs:    stacks[string, input.Engine]{},
-		decor:     stacks[string, DecorationProvider]{},
-		decorGen:  map[string]int{},
-		pickers:   stacks[string, PickerSource]{},
 		languages: stacks[string, Language]{},
 		contribs:  stacks[string, Contribution]{},
-		live:      stacks[string, func(c *ui.Ctx)]{},
 		options:   newOptions(),
 	}
 	for _, o := range builtinOptions {
@@ -324,7 +308,7 @@ var builtinOptions = []OptionSpec{
 func (r *reg) Command(c Command) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	tok := r.commands.push(c.ID, c)
+	tok := r.commands.push(c.ID, c, r.tokens.Add(1))
 	r.cmdList = nil
 	return disposeOnce(func() {
 		r.mu.Lock()
@@ -335,15 +319,7 @@ func (r *reg) Command(c Command) Disposable {
 }
 
 func (r *reg) Keymap(k Keymap) Disposable {
-	var seq []string
-	leader, _, _ := r.options.Get("keymap.leader", At{})
-	for _, t := range keymap.Parse(k.Keys) {
-		if t == "<Leader>" {
-			seq = append(seq, keymap.Parse(leader.(string))...)
-		} else {
-			seq = append(seq, t)
-		}
-	}
+	seq := r.keySeq(k.Keys)
 	k.Keys = keymap.Format(seq)
 	key := keymapKey{k.Mode, strings.Join(seq, sep)}
 
@@ -352,7 +328,7 @@ func (r *reg) Keymap(k Keymap) Disposable {
 	if _, ok := r.keymaps.top(key); !ok {
 		r.addPrefixes(k.Mode, seq, 1)
 	}
-	tok := r.keymaps.push(key, k)
+	tok := r.keymaps.push(key, k, r.tokens.Add(1))
 	r.sorted = nil
 	return disposeOnce(func() {
 		r.mu.Lock()
@@ -382,21 +358,10 @@ func (r *reg) Option(o OptionSpec) Disposable {
 	return d
 }
 
-func (r *reg) View(id string, v View) Disposable {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	tok := r.views.push(id, v)
-	return disposeOnce(func() {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		r.views.remove(id, tok)
-	})
-}
-
 func (r *reg) Input(e input.Engine) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	tok := r.inputs.push(e.ID(), e)
+	tok := r.inputs.push(e.ID(), e, r.tokens.Add(1))
 	return disposeOnce(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
@@ -424,7 +389,7 @@ func (r *reg) Inputs() []string {
 func (r *reg) Theme(s theme.Source) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	tok := tokens.Add(1)
+	tok := r.tokens.Add(1)
 	r.themes = append(r.themes, entry[theme.Source]{tok, s})
 	r.themeGen++
 	return disposeOnce(func() {
@@ -457,7 +422,13 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 	c, ok := r.commands.top(id)
 	r.mu.Unlock()
 	if !ok {
-		return fmt.Errorf("no command %q", id)
+		if ph := r.commandHolder(id); ph != nil {
+			if err := r.provide(ph); err != nil {
+				return err
+			}
+			return r.run(ctx, id, args)
+		}
+		return &NoCommandError{ID: id}
 	}
 	if c.Run == nil {
 		return fmt.Errorf("command %q has no Run", id)
@@ -476,7 +447,13 @@ func (r *reg) Available(id string, args Args) bool {
 	r.mu.Lock()
 	c, ok := r.commands.top(id)
 	r.mu.Unlock()
+	if !ok && r.commandHolder(id) != nil {
+		return true
+	}
 	if !ok || c.Run == nil || r.faults.isOff(KindCommand, id) != nil {
+		return false
+	}
+	if c.When != "" && !FrontCan(r, c.When) {
 		return false
 	}
 	if c.Available == nil {
@@ -499,26 +476,44 @@ func (r *reg) Commands() []Command {
 		slices.SortFunc(out, func(a, b Command) int { return strings.Compare(a.ID, b.ID) })
 		r.cmdList = out
 	}
-	return slices.Clone(r.cmdList)
+	return r.cmdList[:len(r.cmdList):len(r.cmdList)]
 }
 
 func (r *reg) Keymaps() []Keymap {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.sorted == nil {
-		r.sorted = make([]Keymap, 0, len(r.keymaps))
-		for k := range r.keymaps {
-			km, _ := r.keymaps.top(k)
-			r.sorted = append(r.sorted, km)
-		}
-		slices.SortFunc(r.sorted, func(a, b Keymap) int {
-			if c := strings.Compare(a.Mode, b.Mode); c != 0 {
-				return c
-			}
-			return strings.Compare(a.Keys, b.Keys)
-		})
-	}
+	r.sortKeymaps()
 	return slices.Clone(r.sorted)
+}
+
+func (r *reg) KeymapsFor(command string) []Keymap {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.sortKeymaps()
+	ks := r.byCmd[command]
+	return ks[:len(ks):len(ks)]
+}
+
+// sortKeymaps makes sorted and byCmd again after a keymap came or went; r.mu is held.
+func (r *reg) sortKeymaps() {
+	if r.sorted != nil {
+		return
+	}
+	r.sorted = make([]Keymap, 0, len(r.keymaps))
+	for k := range r.keymaps {
+		km, _ := r.keymaps.top(k)
+		r.sorted = append(r.sorted, km)
+	}
+	slices.SortFunc(r.sorted, func(a, b Keymap) int {
+		if c := strings.Compare(a.Mode, b.Mode); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Keys, b.Keys)
+	})
+	r.byCmd = map[string][]Keymap{}
+	for _, km := range r.sorted {
+		r.byCmd[km.Command] = append(r.byCmd[km.Command], km)
+	}
 }
 
 func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
@@ -581,39 +576,4 @@ func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	return exact, more
 }
 
-// ViewByID returns the view under a guard: a panic while it builds turns it off instead of escaping.
-func (r *reg) ViewByID(id string) (View, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	v, ok := r.views.top(id)
-	if !ok {
-		return nil, false
-	}
-	return guardedView{r, id, v}, true
-}
-
 func (r *reg) Options() Options { return r.options }
-
-func (r *reg) Views() []string {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	out := make([]string, 0, len(r.views))
-	for id := range r.views {
-		out = append(out, id)
-	}
-	slices.Sort(out)
-	return out
-}
-
-func (r *reg) ViewSource(id string) (string, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	v, ok := r.views.top(id)
-	if !ok {
-		return "", false
-	}
-	if sv, ok := v.(interface{ ViewSource() string }); ok {
-		return sv.ViewSource(), true
-	}
-	return "", true
-}

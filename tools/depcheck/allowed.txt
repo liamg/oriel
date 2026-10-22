@@ -1,0 +1,25 @@
+# Modules Oriel may require (direct and indirect, as built: go.mod and vendor/modules.txt): module path, then major
+# version. make depcheck fails on any module not listed here.
+#
+# Policy: the Go standard library, golang.org/x/* and github.com/liamg/* are free to use. A module maintained by a
+# large, accountable organisation may be added with its reason. Anything else is asked for first, with what it does,
+# who maintains it, the size of its own tree and the cost of writing it ourselves. Approving a module approves its tree.
+
+# Go team
+golang.org/x/exp/shiny v0
+golang.org/x/image v0
+golang.org/x/net v0
+golang.org/x/sys v0
+golang.org/x/text v0
+
+# Gio and its tree (render/gio); godbus for the Linux IME and AT-SPI
+gioui.org v0
+gioui.org/shader v1
+github.com/go-text/typesetting v0
+github.com/godbus/dbus/v5 v5
+
+# WASM runtime (syntax, term)
+github.com/tetratelabs/wazero v1
+
+# Lua VM (script)
+github.com/yuin/gopher-lua v1

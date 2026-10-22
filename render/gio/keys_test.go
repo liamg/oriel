@@ -38,7 +38,7 @@ func TestTranslate(t *testing.T) {
 	}
 }
 
-// SH-8: a modifier going down or up is the set held now, so ⌥ held alone can pull the HUD down; losing focus lets go of
+// A modifier going down or up is the set held now, so ⌥ held alone can pull the HUD down; losing focus lets go of
 // them all.
 func TestTranslateMods(t *testing.T) {
 	var down render.Mods

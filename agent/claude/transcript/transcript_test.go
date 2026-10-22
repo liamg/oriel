@@ -338,7 +338,7 @@ func TestQuestions(t *testing.T) {
 	}
 }
 
-// AI-13: an API error Claude Code writes in the agent's place is marked with its type. The records are Claude Code
+// An API error Claude Code writes in the agent's place is marked with its type. The records are Claude Code
 // 2.1.296's own (../testdata): a revoked login on a crit sandbox, and a send with no login at all.
 func TestAPIErrors(t *testing.T) {
 	for file, text := range map[string]string{

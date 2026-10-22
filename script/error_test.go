@@ -44,7 +44,7 @@ func locs(fs []Frame) []string {
 	return out
 }
 
-// errors.md: "A chunk loads with its source name, so every error says `init.lua:14` or `lua/my/tickets.lua:8`,
+// "A chunk loads with its source name, so every error says `init.lua:14` or `lua/my/tickets.lua:8`,
 // not `[string]`."
 func TestErrorLocations(t *testing.T) {
 	vm, _ := config(t, map[string]string{
@@ -74,7 +74,7 @@ func TestErrorLocations(t *testing.T) {
 	}
 }
 
-// errors.md: "Frames inside the `oriel` API show the API call (`oriel.agent.tool`), not Go internals; Go frames are
+// "Frames inside the `oriel` API show the API call (`oriel.agent.tool`), not Go internals; Go frames are
 // behind "show Go frames"."
 func TestErrorThroughAPI(t *testing.T) {
 	vm, _ := config(t, nil)

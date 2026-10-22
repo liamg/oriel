@@ -39,8 +39,8 @@ func problems(err error) []string {
 	return out
 }
 
-// PL-19 done when: "pack rejects a plugin with an undeclared capability". catalog.md: pack "checks that each
-// statically visible oriel.* call's capability is declared", through an alias as plugins write it (local L =
+// Pack rejects a plugin with an undeclared capability: it checks that each statically visible oriel.* call's
+// capability is declared, through an alias as plugins write it (local L =
 // oriel), and the plugin's own process needs no exec grant.
 func TestPackRejectsUndeclared(t *testing.T) {
 	dir := writeFiles(t, map[string]string{
@@ -67,7 +67,7 @@ local other = oriel.process.spawn("/usr/bin/git")
 	}
 }
 
-// PL-19 done when: pack rejects "one over the size limit". catalog.md: "Each plugin can be at most 20 MB, unpacked."
+// Pack rejects a plugin over the size limit: each plugin can be at most 20 MB, unpacked.
 func TestPackRejectsOversize(t *testing.T) {
 	dir := writeFiles(t, map[string]string{
 		"oriel.toml": "id = \"acme/big\"\nversion = \"1.0.0\"\n[contributes]\nfonts = [\"assets/fonts/*.ttf\"]\n",
@@ -84,7 +84,7 @@ func TestPackRejectsOversize(t *testing.T) {
 
 var sha = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
-// PL-19 done when: pack "prints sha256s for a good one". A data-only plugin is one archive; the archive is
+// Pack prints sha256s for a good plugin. A data-only plugin is one archive; the archive is
 // reproducible, so the registry's CI can build it again and match.
 func TestPackGood(t *testing.T) {
 	dir := writeFiles(t, map[string]string{

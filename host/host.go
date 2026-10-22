@@ -1,31 +1,44 @@
-// Package host is the session host: workspaces and worktrees, agents, PTYs (architecture.md). It runs in the
+// Package host is the session host: workspaces and worktrees, agents, PTYs (docs/architecture.md). It runs in the
 // app's process. It is the source of truth for session state: every change is a core event, applied to the store
 // it shares with the app, and kept in a log per session so it survives a restart.
+//
+// This package is the host's facade: the API the app calls, each entry point recovering a panic into an error. The
+// work is done by its parts, each in a package of its own that sees the host only as a hostcore.State: worktree
+// (workspaces), agentrun (agents), sandboxhost (sandboxes), github (code hosts and the Ship page), repos, jobs,
+// utility, aireview, and persist (what's kept on disk). The parts never call each other; what one needs of another
+// it's given here, as a func.
+//
+// Lock order, outermost first: a session's agent's lock (agentrun), then the edit lock (State.Mutate), then the
+// store's. Every other lock (the runner's, the logs', the sandbox settings', the ship and mirror states') is held
+// only while its own fields are read or written, never while calling out.
 package host
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
-	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/gh"
-	"github.com/liamg/oriel/host/stats"
+	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/host/aireview"
+	"github.com/liamg/oriel/host/github"
+	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/host/jobs"
+	"github.com/liamg/oriel/host/persist"
+	"github.com/liamg/oriel/host/repos"
+	"github.com/liamg/oriel/host/sandboxhost"
 	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/host/utility"
+	"github.com/liamg/oriel/host/worktree"
 	"github.com/liamg/oriel/sandbox"
-	"github.com/liamg/oriel/testrun"
 )
 
 // Options configure a host.
@@ -36,7 +49,7 @@ type Options struct {
 	OrielBin  string     // the oriel binary the agents' hooks run; os.Executable() if ""
 	Log       *slog.Logger
 	Now       func() time.Time
-	Load      func() sysload.Reading // the machine's load; sysload.Read if nil
+	Load      func() sysload.Reading // the machine's load; a sysload.Reader of its own if nil
 	Version   string
 	// Sandbox makes the container, gateway and egress proxy for a session that asks for one; nil refuses.
 	Sandbox SandboxFactory
@@ -56,56 +69,57 @@ type Host struct {
 	opts  Options
 	store *eventstore.Store
 	log   *slog.Logger
-	kinds *Kinds
+	env   hostcore.Env
+	kinds kinds
+	edit  sync.Mutex // one read-modify-write of a session's state at a time (State.Mutate)
 
-	edit      sync.Mutex // one read-modify-write of a session's state at a time
-	testsOnce sync.Once
-	testSet   *testrun.Set
+	logs    *persist.Logs
+	stats   *persist.Stats
+	repos   *repos.Registry
+	work    *worktree.Worktrees
+	run     *agentrun.Runner
+	boxes   *sandboxhost.Boxes
+	code    *github.GitHub
+	jobs    *jobs.Jobs
+	utility *utility.Utilities
+	reviews *aireview.Reviews
 
-	statsOnce sync.Once
-	statsData *stats.Store
-	statsMu   sync.Mutex // the stats store, and the events records it reads
-	usageMu   sync.Mutex
-
-	jobsMu sync.Mutex // the jobs' files, and when the schedules last ran
-
-	utility utilities
-
-	shipOnce sync.Once
-	mirror   mirrorState // GitHub review mirroring
-	ship     *shipState
-
-	mu       sync.Mutex
-	recs     map[core.SessionID]*sessionLog
-	live     map[core.SessionID]*session // the sessions with an agent running or starting
-	app      App
-	repos    *repoList
-	sessLogs logs.Dirs
-	open     map[core.SessionID]logs.SessionLog
-	loginMu  sync.Mutex
-	lost     map[string]*lostLogin // logins gone, by provider and account
-	// sandboxCfg is the sandbox settings the app last sent.
-	sandboxCfg sandbox.Config
-	// prompts is the user's versions of the prompts the app last sent; promptsSent, whether it has.
-	prompts     prompts.Overrides
-	promptsSent bool
-	closed      chan struct{}
-	starts      sync.WaitGroup // agents starting off their callers (host.startAside)
-	stopOnce    sync.Once
-	closeErr    error
-}
-
-type sessionLog struct {
-	f   *os.File
-	rec *core.Recorder
+	closed   chan struct{}
+	going    sync.WaitGroup // the env's goroutines (hostcore.Env.Go)
+	stopOnce sync.Once
+	closeErr error
 }
 
 // New starts a host: it reads back every session it had.
 func New(opts Options) (*Host, error) {
+	if err := defaults(&opts); err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(filepath.Join(opts.Home, "sessions"), 0o700); err != nil {
+		return nil, err
+	}
+	w := &Host{opts: opts, store: eventstore.New(), log: opts.Log, closed: make(chan struct{})}
+	w.env = hostcore.Env{Home: opts.Home, Log: opts.Log, Now: func() time.Time { return w.opts.Now() }, Closed: w.closed, Work: &w.going}
+	if err := w.parts(); err != nil {
+		return nil, err
+	}
+	if err := w.logs.Restore(w.store); err != nil {
+		return nil, err
+	}
+	w.stats.RestoreUsage()
+	w.store.Subscribe(core.Filter{}, w.logs.Record)
+	w.settle()
+	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
+	w.repos.Changed()
+	w.run.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
+	return w, nil
+}
+
+func defaults(opts *Options) error {
 	if opts.Home == "" {
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		opts.Home = filepath.Join(home, ".oriel")
 	}
@@ -119,7 +133,7 @@ func New(opts Options) (*Host, error) {
 		opts.Now = time.Now
 	}
 	if opts.Load == nil {
-		opts.Load = sysload.Read
+		opts.Load = sysload.NewReader().Read
 	}
 	if opts.OrielBin == "" {
 		opts.OrielBin, _ = os.Executable()
@@ -129,188 +143,100 @@ func New(opts Options) (*Host, error) {
 			opts.ReposDir = filepath.Join(home, "src")
 		}
 	}
-	if err := os.MkdirAll(filepath.Join(opts.Home, "sessions"), 0o700); err != nil {
-		return nil, err
+	return nil
+}
+
+// parts makes the host's parts, each given what it needs of the others.
+func (w *Host) parts() error {
+	st := state{w}
+	w.logs = persist.NewLogs(w.env, st)
+	w.stats = persist.NewStats(w.env, st, w.opts.Providers)
+	var err error
+	if w.repos, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
+		return err
 	}
-	w := &Host{opts: opts, store: eventstore.New(), log: opts.Log, kinds: builtinKinds(),
-		recs: map[core.SessionID]*sessionLog{}, live: map[core.SessionID]*session{}, open: map[core.SessionID]logs.SessionLog{},
-		repos: &repoList{path: filepath.Join(opts.Home, "repos.json"), now: opts.Now, scanned: map[string]bool{}}, sessLogs: logs.Dirs{Root: filepath.Join(opts.Home, "sessions")},
-		closed: make(chan struct{})}
-	if err := w.repos.load(); err != nil {
-		return nil, err
+	w.work = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.repos.Resolve, AddRepo: w.repos.Add,
+		Repos: w.repos.Repos, ReposDir: w.repos.Dir})
+	w.run = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
+		Exec:           func() agent.Exec { return w.opts.Exec },
+		Sandbox:        func() hostcore.SandboxFactory { return w.opts.Sandbox },
+		Packs:          w.opts.Packs,
+		KeyWait:        func() time.Duration { return w.opts.KeyWait },
+		Repos:          w.repos.Repos,
+		AccountOf:      w.stats.AccountOf,
+		Record:         w.stats.Record,
+		UsageSampled:   w.stats.UsageSampled,
+		PROpen:         func(id core.SessionID, project, branch string) bool { return w.code.PROpen(id, project, branch) },
+		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) }})
+	if w.boxes, err = sandboxhost.New(w.sandboxDeps()); err != nil {
+		return err
 	}
-	if err := w.loadSandboxConfig(); err != nil {
-		return nil, err
+	w.code = github.New(w.env, st, github.Deps{Kinds: &w.kinds, Keyed: w.run.Keyed, Wake: w.run.Wake,
+		Client:        func() func(string, []string) gh.Client { return w.opts.GitHub },
+		BranchRenamed: worktree.BranchRenamed})
+	w.jobs = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
+		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxes.Config().Default != "host" }})
+	w.utility = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
+		Tools: w.run.AppTools, SignedOut: w.run.SignedOut})
+	w.reviews = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
+		Pack: func(name string) (agent.Pack, bool) {
+			if w.opts.Packs == nil {
+				return agent.Pack{}, false
+			}
+			return w.run.Pack(name)
+		},
+		Protected: w.run.Protected, SignedOut: w.run.SignedOut})
+	return nil
+}
+
+// sandboxDeps are what the host's sandboxes need of it.
+func (w *Host) sandboxDeps() sandboxhost.Deps {
+	return sandboxhost.Deps{Env: w.env, State: state{w},
+		Keyed: func(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
+			return w.run.Keyed(ctx, id, what, project, fn)
+		},
+		Config:   func() sandbox.Config { return w.boxes.Config() },
+		Factory:  func() hostcore.SandboxFactory { return w.opts.Sandbox },
+		Live:     func(id core.SessionID) hostcore.Sandbox { return w.run.Sandbox(id) },
+		Running:  func() []hostcore.Sandbox { return w.run.Sandboxes() },
+		Repos:    func() []core.Repo { return w.repos.Repos() },
+		AddRepo:  w.AddRepo,
+		Note:     func(id core.SessionID, it core.Item) { w.run.AppendItem(id, it) },
+		SetAgent: func(id core.SessionID, fn func(a *core.AgentState)) { w.run.SetAgent(id, fn) },
+		RestartWhenIdle: func(id core.SessionID, sb hostcore.Sandbox, why string, done <-chan struct{}) {
+			w.run.RestartWhenIdle(id, sb, why, done)
+		}}
+}
+
+// settle puts back what the last process left running when it ended without handing over.
+func (w *Host) settle() {
+	w.run.Settle()
+	for _, se := range w.store.State().Sessions {
+		w.reviews.Settle(se)
 	}
-	w.loadPrompts()
-	if err := w.restore(); err != nil {
-		return nil, err
-	}
-	w.restoreUsage()
-	w.store.Subscribe(core.Filter{}, w.record)
-	w.settle()
-	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
-	w.reposChanged()
-	w.resumeHandedOver()
-	return w, nil
 }
 
 // HandOver stops every agent for the next start to resume, then closes the host: Oriel quitting.
 func (w *Host) HandOver() {
 	defer w.recover("HandOver", nil)
-	w.mu.Lock()
-	live := make([]*session, 0, len(w.live))
-	for _, h := range w.live {
-		live = append(live, h)
-	}
-	w.mu.Unlock()
-	// Together: each stop takes its sandbox down, which takes a while.
-	var wg sync.WaitGroup
-	for _, h := range live {
-		wg.Go(func() {
-			defer w.recover("HandOver", nil)
-			h.stop("Oriel quit", core.StoppedByHandOver)
-		})
-	}
-	wg.Wait()
+	w.run.HandOver()
 	w.Close()
-}
-
-// resumeHandedOver starts again the agents the last process handed over, or had running when it crashed.
-func (w *Host) resumeHandedOver() {
-	for _, se := range w.store.State().Sessions {
-		if by := se.Agent.StoppedBy; !se.Agent.Running && (by == core.StoppedByHandOver || by == core.StoppedByCrash) {
-			w.goSafe("resume", func() {
-				if err := w.Resume(context.Background(), se.ID); err != nil {
-					w.log.Warn("resume after the last run", "session", se.ID, "by", by, "err", err)
-				}
-			})
-		}
-	}
 }
 
 // Store is the session host's state, which the app shares.
 func (w *Host) Store() core.Store { return w.store }
 
-// Kinds is the session kinds the host starts: built-ins, and any a plugin adds.
-func (w *Host) Kinds() *Kinds { return w.kinds }
-
-func (w *Host) sessionDir(id core.SessionID) string {
-	return filepath.Join(w.opts.Home, "sessions", string(id))
-}
-
-// restore replays each session's log, dropping crit's workspaces. A log that stops early (a torn last line) keeps
-// what it had.
-func (w *Host) restore() error {
-	entries, err := os.ReadDir(filepath.Join(w.opts.Home, "sessions"))
-	if err != nil {
-		return err
-	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		id := core.SessionID(e.Name())
-		path := filepath.Join(w.sessionDir(id), "events.jsonl")
-		f, err := os.Open(path)
-		if err != nil {
-			continue
-		}
-		n, err := core.ReplayCount(bufio.NewReader(f), w.store)
-		f.Close()
-		if se, ok := w.store.State().Session(id); ok && se.Snapshot().Source == "crit" {
-			_ = w.store.Apply(core.SessionClosed{ID: id})
-			_ = os.RemoveAll(w.sessionDir(id))
-			continue
-		}
-		if err != nil {
-			w.log.Warn("session log stops early", "session", id, "after", n, "err", err)
-			if err := w.compact(id); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := w.openLog(id, n); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// settle puts back what the last process left running when it ended without handing over: those agents stopped
-// with it (StoppedByCrash), and nobody is asked anything: its agents' asks are closed, and its questions dismissed.
-func (w *Host) settle() {
-	for _, n := range w.store.State().Notifications {
-		if n.Session != "" && n.Severity == core.SevQuestion && !n.Dismissed {
-			_ = w.store.Apply(core.Dismissal(n))
-		}
-	}
-	for _, se := range w.store.State().Sessions {
-		if se.Agent.Running || se.Agent.Working || se.Agent.Starting != nil || len(se.Asks) > 0 {
-			a := se.Agent
-			a.Stopped(core.StoppedByCrash, w.opts.Now())
-			_ = w.store.Apply(core.AgentChanged{ID: se.ID, Agent: a})
-			for _, ask := range se.Asks {
-				_ = w.store.Apply(core.AskClosed{Session: se.ID, ID: ask.ID, Decision: "gone"})
-			}
-			w.restatus(se.ID)
-		}
-		for _, rv := range se.AIReviews {
-			if rv.Running {
-				rv.Running, rv.Ended, rv.Error = false, w.opts.Now().UTC(), "Oriel ended during the review"
-				_ = w.store.Apply(core.AIReviewChanged{Session: se.ID, Review: rv})
-			}
-		}
-	}
-}
-
-// compact rewrites a session's log as the one event that makes it as it is now.
-func (w *Host) compact(id core.SessionID) error {
-	se, ok := w.store.State().Session(id)
-	path := filepath.Join(w.sessionDir(id), "events.jsonl")
-	_ = os.Rename(path, path+".broken")
-	if !ok {
-		return nil
-	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
-	if err != nil {
-		return err
-	}
-	rec := core.NewRecorder(f)
-	rec.Record(core.SessionSynced{Session: se.Snapshot()})
-	w.recs[id] = &sessionLog{f: f, rec: rec}
-	return rec.Err()
-}
-
-func (w *Host) openLog(id core.SessionID, seq uint64) error {
-	if err := os.MkdirAll(w.sessionDir(id), 0o700); err != nil {
-		return err
-	}
-	f, err := os.OpenFile(filepath.Join(w.sessionDir(id), "events.jsonl"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
-	if err != nil {
-		return err
-	}
-	w.recs[id] = &sessionLog{f: f, rec: core.ResumeRecorder(f, seq)}
-	return nil
-}
-
-// record keeps every session event in its session's log.
-func (w *Host) record(ev core.Event) {
-	id := ev.Scope()
-	if id == "" {
-		return
-	}
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	l := w.recs[id]
-	if l == nil {
-		if err := w.openLog(id, 0); err != nil {
-			w.log.Error("session log", "session", id, "err", err)
-			return
-		}
-		l = w.recs[id]
-	}
-	l.rec.Record(ev)
+// Close stops every agent, without handing them over, and closes the logs. Only the first call does anything.
+func (w *Host) Close() error {
+	w.stopOnce.Do(func() {
+		defer w.recover("Close", &w.closeErr)
+		close(w.closed)
+		w.run.Close()
+		w.reviews.Wait()
+		w.going.Wait()
+		w.closeErr = errors.Join(w.closeErr, w.logs.Close())
+	})
+	return w.closeErr
 }
 
 // emit applies an event to the host's state.
@@ -331,110 +257,23 @@ func (w *Host) session(id core.SessionID) (core.SessionState, error) {
 	return se.Snapshot(), nil
 }
 
-// restatus sets a session's status from what's in it.
-func (w *Host) restatus(id core.SessionID) {
-	se, err := w.session(id)
+func (w *Host) restatus(id core.SessionID) { hostcore.Restatus(state{w}, id) }
+
+// state is the host as its parts see it.
+type state struct{ w *Host }
+
+func (s state) Snapshot() core.State { return s.w.store.State() }
+
+func (s state) Session(id core.SessionID) (core.SessionState, error) { return s.w.session(id) }
+
+func (s state) Emit(ev core.Event) error { return s.w.emit(ev) }
+
+func (s state) Mutate(id core.SessionID, fn func(se core.SessionState) error) error {
+	s.w.edit.Lock()
+	defer s.w.edit.Unlock()
+	se, err := s.w.session(id)
 	if err != nil {
-		return
+		return err
 	}
-	if s := core.DeriveStatus(se); s != se.Status {
-		_ = w.emit(core.SessionStatusChanged{ID: id, Status: s})
-	}
-}
-
-// Close stops every agent, without handing them over, and closes the logs. Only the first call does anything.
-func (w *Host) Close() error {
-	w.stopOnce.Do(func() {
-		defer w.recover("Close", &w.closeErr)
-		close(w.closed)
-		w.mu.Lock()
-		live := make([]*session, 0, len(w.live))
-		for _, h := range w.live {
-			live = append(live, h)
-		}
-		w.mu.Unlock()
-		for _, h := range live {
-			h.stop("the session host closed", "")
-		}
-		w.starts.Wait()
-		w.mu.Lock()
-		defer w.mu.Unlock()
-		for _, l := range w.recs {
-			w.closeErr = errors.Join(w.closeErr, l.f.Close())
-		}
-		for _, l := range w.open {
-			w.closeErr = errors.Join(w.closeErr, l.Close())
-		}
-	})
-	return w.closeErr
-}
-
-// Search finds text in sessions' threads and transcripts: archived ones keep theirs, so they stay searchable.
-func (w *Host) Search(q SearchReq) (out []Hit) {
-	defer w.recover("Search", nil)
-	needle := strings.ToLower(strings.TrimSpace(q.Query))
-	if needle == "" {
-		return nil
-	}
-	for _, se := range w.store.State().Sessions {
-		if se.Archived && !q.Archived {
-			continue
-		}
-		for _, t := range se.Threads {
-			for _, c := range t.Comments {
-				if strings.Contains(strings.ToLower(c.Body), needle) {
-					out = append(out, Hit{Session: se.ID, Thread: t.ID, Text: snippet(c.Body, needle)})
-				}
-			}
-		}
-		for _, it := range w.transcript(se.ID) {
-			if strings.Contains(strings.ToLower(it.Text), needle) {
-				out = append(out, Hit{Session: se.ID, Item: it.ID, Text: snippet(it.Text, needle)})
-			}
-		}
-	}
-	return out
-}
-
-// transcript is a session's whole transcript from its log, which keeps more than its state does.
-func (w *Host) transcript(id core.SessionID) []core.Item {
-	f, err := os.Open(filepath.Join(w.sessionDir(id), "events.jsonl"))
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	var items []core.Item
-	seen := map[string]int{}
-	sc := bufio.NewScanner(f)
-	sc.Buffer(make([]byte, 64<<10), 16<<20)
-	for sc.Scan() {
-		line := sc.Bytes()
-		if !strings.Contains(string(line), `"TranscriptAppended"`) {
-			continue
-		}
-		var rec struct {
-			Event core.TranscriptAppended `json:"event"`
-		}
-		if json.Unmarshal(line, &rec) != nil {
-			continue
-		}
-		for _, it := range rec.Event.Items {
-			if i, ok := seen[it.ID]; ok && it.ID != "" {
-				items[i] = it
-				continue
-			}
-			seen[it.ID] = len(items)
-			items = append(items, it)
-		}
-	}
-	return items
-}
-
-func snippet(s, needle string) string {
-	i := strings.Index(strings.ToLower(s), needle)
-	if i < 0 {
-		return s
-	}
-	from, to := max(0, i-40), min(len(s), i+len(needle)+40)
-	return strings.TrimSpace(strings.ReplaceAll(s[from:to], "\n", " "))
+	return fn(se)
 }

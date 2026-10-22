@@ -2,8 +2,8 @@ package registry
 
 import "strings"
 
-// Trouble is something gone wrong that the agent can be asked to fix or to explain (ide.md, "Explain sits next to
-// fix everywhere"): a failing test, a diagnostic, a failed command, a red CI check, a conflict. Every "ask to fix"
+// Trouble is something gone wrong that the agent can be asked to fix or to explain: a
+// failing test, a diagnostic, a failed command, a red CI check, a conflict. Every "ask to fix"
 // is FixCommand with its Args, and its twin is ExplainCommand with the same Args.
 type Trouble struct {
 	Kind    string // "test-failure", "diagnostic", "command", "ci-failure", "conflict"

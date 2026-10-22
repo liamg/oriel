@@ -6,8 +6,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-
-	"github.com/liamg/oriel/ui"
 )
 
 // Kinds of contribution a fault can come from.
@@ -45,7 +43,7 @@ type Fault struct {
 	Errors int    // the errors in a row that turned it off; 0 for a panic
 }
 
-// FailLimit is how many errors in a row turn a hook, view or decoration provider off (errors.md).
+// FailLimit is how many errors in a row turn a hook, view or decoration provider off.
 const FailLimit = 3
 
 // Failure is a contribution's error, or a warning about it: a hook over its time budget.
@@ -100,7 +98,7 @@ func (f *faults) isOff(kind, id string) error {
 func (r *reg) OnFault(fn func(Fault)) Disposable {
 	r.faults.mu.Lock()
 	defer r.faults.mu.Unlock()
-	tok := tokens.Add(1)
+	tok := r.tokens.Add(1)
 	r.faults.subs = append(r.faults.subs, entry[func(Fault)]{tok, fn})
 	return disposeOnce(func() {
 		r.faults.mu.Lock()
@@ -113,7 +111,7 @@ func (r *reg) OnFault(fn func(Fault)) Disposable {
 func (r *reg) OnFailure(fn func(Failure)) Disposable {
 	r.faults.mu.Lock()
 	defer r.faults.mu.Unlock()
-	tok := tokens.Add(1)
+	tok := r.tokens.Add(1)
 	r.faults.fsubs = append(r.faults.fsubs, entry[func(Failure)]{tok, fn})
 	return disposeOnce(func() {
 		r.faults.mu.Lock()
@@ -176,6 +174,8 @@ func (r *reg) TurnOn(kind, id string) {
 	delete(r.faults.inARow, offKey{kind, id})
 }
 
+func (r *reg) IsOff(kind, id string) error { return r.faults.isOff(kind, id) }
+
 func (r *reg) TurnedOff() []Off {
 	r.faults.mu.Lock()
 	defer r.faults.mu.Unlock()
@@ -199,74 +199,18 @@ func (r *reg) sourceOf(kind, id string) string {
 		defer r.mu.Unlock()
 		c, _ := r.commands.top(id)
 		return c.Source
-	case KindView:
-		src, _ := r.ViewSource(id)
-		return src
 	case KindHook:
 		r.hooks.mu.Lock()
 		defer r.hooks.mu.Unlock()
 		if e := r.hooks.byID[id]; e != nil {
 			return e.h.Source
 		}
-	}
-	return ""
-}
-
-// guardedView turns its view off when it panics, building or drawing; a view that's off draws a placeholder.
-type guardedView struct {
-	r  *reg
-	id string
-	v  View
-}
-
-func (g guardedView) Build(vc ViewCtx) ui.Node {
-	if err := g.r.faults.isOff(KindView, g.id); err != nil {
-		return offNode(g.id, err)
-	}
-	var n ui.Node
-	if err := Call(func() error { n = g.v.Build(vc); return nil }); err != nil {
-		g.r.TurnOff(KindView, g.id, err)
-		return offNode(g.id, err)
-	}
-	f, ok := n.(*ui.Func)
-	if !ok {
-		return n
-	}
-	return &ui.Func{Key: f.Key, Fn: func(c *ui.Ctx) {
-		c.Guard("guard", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Dir: ui.Column}, f.Fn, func(c *ui.Ctx, v any, stack []byte) {
-			err := &Panic{Value: v, Stack: stack}
-			g.r.TurnOff(KindView, g.id, err)
-			c.Node(offNode(g.id, err))
-		})
-	}}
-}
-
-func (g guardedView) Unwrap() View { return g.v }
-
-// As is v as a T, looking through the guard around it: As[EdgeToEdge](view).
-func As[T any](v View) (T, bool) {
-	for {
-		if t, ok := v.(T); ok {
-			return t, true
-		}
-		u, ok := v.(interface{ Unwrap() View })
-		if !ok {
-			var zero T
-			return zero, false
-		}
-		v = u.Unwrap()
-	}
-}
-
-func (g guardedView) Title(instance string) (title string) {
-	t, ok := As[Titled](g.v)
-	if !ok {
 		return ""
 	}
-	Call(func() error { title = t.Title(instance); return nil })
-	return title
-}
-
-func offNode(id string, err error) ui.Node {
-	return ui.TextNode(fmt.Sprintf("view %s is turned off: %v", id, err))
+	if c, ok := r.Contribution(kind, id); ok {
+		if s, ok := c.(Sourced); ok {
+			return s.ContributionSource()
+		}
+	}
+	return ""
 }

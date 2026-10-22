@@ -50,7 +50,11 @@ func Check(c *ui.Ctx, key any, st CheckState, o CheckOpts) bool {
 	if st == CheckOn {
 		fg = on
 	}
-	in := Clickable(c, key, ui.Style{Dir: ui.Row, Gap: 6, Cross: ui.Center, Focusable: true, Disabled: o.Disabled, Selected: st == CheckOn,
+	var checked *bool // mixed is neither
+	if st != CheckMixed {
+		checked = new(st == CheckOn)
+	}
+	in := Clickable(c, key, ui.Style{Dir: ui.Row, Gap: 6, Cross: ui.Center, Focusable: true, Disabled: o.Disabled, Role: ui.RoleCheckBox, Checked: checked,
 		Label: name, Tooltip: o.Tooltip, Help: o.Help}, func(c *ui.Ctx) {
 		box := ui.Style{W: ui.Px(13), H: ui.Px(13), Radius: 3, Border: 1, Stroke: col(c, tCheckBorder), Main: ui.Center, Cross: ui.Center, Clip: true, EaseFill: true}
 		switch st {

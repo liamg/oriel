@@ -13,7 +13,7 @@ type mapping struct {
 	noremap bool
 }
 
-// maxMapDepth stops a mapping that maps to itself, as 'maxmapdepth'.
+// maxMapDepth stops a mapping or register that runs itself, as 'maxmapdepth'.
 const maxMapDepth = 1000
 
 func mapKey(keys []string) string { return strings.Join(keys, "\x00") }

@@ -1,4 +1,4 @@
-// Package scenes draws the reference screens (01-ide and the budget scenes from shell.md) through
+// Package scenes draws the reference screens (01-ide and the frame-budget scenes) through
 // render.Frame, so any backend can be checked against the mockups and measured.
 package scenes
 

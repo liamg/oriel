@@ -16,6 +16,8 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/host/persist"
 	"github.com/liamg/oriel/host/stats"
 )
 
@@ -90,7 +92,7 @@ func statsHost(t *testing.T) (*Host, *loggedFake) {
 
 func near(a, b float64) bool { return math.Abs(a-b) < 1e-6 }
 
-// AI-12: a host with fixture transcripts for two multi-repo sessions answers stats.query grouped by repo with the
+// A host with fixture transcripts for two multi-repo sessions answers stats.query grouped by repo with the
 // split rule, and by session; a rescan reads only what was appended.
 func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	w, f := statsHost(t)
@@ -110,8 +112,8 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	a := start("pricing-rounding", pricing, billing)
 	b := start("search-api", api, billing)
 	// a: 3 file calls in pricing, 1 in billing-ui. b: 1 in api, 1 in billing-ui.
-	f.logs[agentDir(a)] = fixtureLog(t, []string{a.Projects[0].Dir, a.Projects[1].Dir}, []int{3, 1})
-	f.logs[agentDir(b)] = fixtureLog(t, []string{b.Projects[0].Dir, b.Projects[1].Dir}, []int{1, 1})
+	f.logs[hostcore.AgentDir(a)] = fixtureLog(t, []string{a.Projects[0].Dir, a.Projects[1].Dir}, []int{3, 1})
+	f.logs[hostcore.AgentDir(b)] = fixtureLog(t, []string{b.Projects[0].Dir, b.Projects[1].Dir}, []int{1, 1})
 
 	q := stats.Query{From: time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC), To: time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC), Split: true}
 	r := w.StatsQuery(q)
@@ -134,7 +136,7 @@ func TestStatsQueryGroupsByRepoAndSession(t *testing.T) {
 	}
 
 	// A rescan reads only what was appended: the bytes already read are rewritten and don't count again.
-	p := f.logs[agentDir(a)]
+	p := f.logs[hostcore.AgentDir(a)]
 	body, _ := os.ReadFile(p)
 	body = []byte(strings.Replace(string(body), `"output_tokens":120000`, `"output_tokens":999999`, 1))
 	body = append(body, []byte(`{"type":"assistant","timestamp":"2026-10-03T09:00:00Z","message":{"id":"m3","model":"claude-opus-5","content":[],"usage":{"input_tokens":0,"output_tokens":40000}}}`+"\n")...)
@@ -200,7 +202,7 @@ func TestUsageSurvivesRestart(t *testing.T) {
 	work.Sampled, work.Windows = r.now().Add(time.Hour), []core.UsageWindow{{Name: "weekly", Used: .3}}
 	r.w.usageSampled(work)
 	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-home", Sampled: r.now(), Windows: []core.UsageWindow{{Name: "weekly", Used: .7}}})
-	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-old", Sampled: r.now().Add(-usageKeep - time.Hour),
+	r.w.usageSampled(core.ProviderUsage{Provider: "claude", Account: "u1/o-old", Sampled: r.now().Add(-persist.UsageKeep - time.Hour),
 		Windows: []core.UsageWindow{{Name: "weekly", Used: .9}}})
 	r.setNow(r.now().Add(2 * time.Hour))
 	r.restart()
@@ -213,12 +215,12 @@ func TestUsageSurvivesRestart(t *testing.T) {
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("usage after restart = %v, want %v", got, want)
 	}
-	if h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude", Since: r.now().Add(-usageKeep)}); len(h) != 3 {
+	if h := r.w.UsageHistory(UsageHistoryReq{Provider: "claude", Since: r.now().Add(-persist.UsageKeep)}); len(h) != 3 {
 		t.Errorf("restoring wrote the readings again: %d kept", len(h))
 	}
 }
 
-// AI-14: a session records the account it ran on when it starts, and on a login change it sees: a later login
+// A session records the account it ran on when it starts, and on a login change it sees: a later login
 // doesn't move its history to the new account, and a session started after it is the new account's.
 func TestSessionKeepsTheAccountItRanOn(t *testing.T) {
 	r := newRig(t)

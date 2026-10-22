@@ -9,7 +9,7 @@ import (
 	"github.com/liamg/oriel/gh/ghtest"
 )
 
-// hosts.md, "The merge guard": GitHub's blockers come from one read: unresolved review threads, changes still
+// The merge guard: GitHub's blockers come from one read: unresolved review threads, changes still
 // requested, draft, conflicts and mergeStateStatus, with the methods the repo allows and the viewer's default. "With
 // sha set to the head we showed, so a push after you looked fails instead of merging unseen code."
 func TestMergeStateAndMerge(t *testing.T) {

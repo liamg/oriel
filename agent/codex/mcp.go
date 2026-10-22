@@ -14,7 +14,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/agent/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // SockEnv names the unix socket `oriel hook mcp` dials to reach the session's tools.

@@ -9,9 +9,11 @@ import (
 
 // Roles and actions are render's, so a backend's bridge can read the tree without ui.
 type (
-	Role       = render.Role
-	Action     = render.Action
-	AccessNode = render.AccessNode
+	Role         = render.Role
+	Action       = render.Action
+	AccessNode   = render.AccessNode
+	AccessAction = render.AccessAction
+	TextRange    = render.TextRange
 )
 
 const (
@@ -35,10 +37,16 @@ const (
 	RoleStatus   = render.RoleStatus
 	RoleSlider   = render.RoleSlider
 	RoleImage    = render.RoleImage
+	RoleLink     = render.RoleLink
+	RoleCheckBox = render.RoleCheckBox
 
-	ActionClick  = render.ActionClick
-	ActionFocus  = render.ActionFocus
-	ActionScroll = render.ActionScroll
+	ActionClick     = render.ActionClick
+	ActionFocus     = render.ActionFocus
+	ActionScroll    = render.ActionScroll
+	ActionIncrement = render.ActionIncrement
+	ActionDecrement = render.ActionDecrement
+	ActionSetValue  = render.ActionSetValue
+	ActionSelect    = render.ActionSelect
 )
 
 // AccessTree is the latest frame's accessibility tree, rooted at a window.
@@ -72,8 +80,8 @@ func (u *UI) accessNode(e *elem) *AccessNode {
 	s := e.style
 	n := &AccessNode{
 		ID: uint64(e.id), Role: s.Role, Name: s.Label, Value: s.Value, Description: s.Help,
-		Bounds: e.rect(), Disabled: s.Disabled, Selected: s.Selected, Expanded: s.Expanded, Modal: s.Trap,
-		Focused: u.in.focus == e.id && e.id != 0,
+		Bounds: e.rect(), Disabled: s.Disabled, Selected: s.Selected, Expanded: s.Expanded, Checked: s.Checked, Modal: s.Trap,
+		Focused: u.in.focus == e.id && e.id != 0, Selection: s.Selection,
 	}
 	if n.Name == "" && s.Role != RoleTextBox {
 		n.Name = textOf(e)
@@ -87,6 +95,7 @@ func (u *UI) accessNode(e *elem) *AccessNode {
 	if s.ScrollX || s.ScrollY {
 		n.Actions = append(n.Actions, ActionScroll)
 	}
+	n.Actions = append(n.Actions, s.Actions...)
 	return n
 }
 
@@ -108,14 +117,16 @@ func textOf(e *elem) string {
 	return strings.Join(parts, " ")
 }
 
-// Act does what assistive technology asks of id: a click (as if pressed and released on it), focus, or
-// nothing for an action the node doesn't have. It takes effect on the next frame.
-func (u *UI) Act(id ID, a Action) bool {
+// Act does what assistive technology asks: a click (as if pressed and released on the node), focus, or one of
+// the node's Style.Actions, which it reads from its Interaction; nothing for an action the node doesn't have. It
+// takes effect on the next frame.
+func (u *UI) Act(a AccessAction) bool {
+	id := ID(a.ID)
 	f, ok := u.flags[id]
 	if !ok || f.disabled {
 		return false
 	}
-	switch a {
+	switch a.Action {
 	case ActionClick:
 		if !f.interactive {
 			return false
@@ -133,7 +144,13 @@ func (u *UI) Act(id ID, a Action) bool {
 		}
 		u.Focus(id)
 	default:
-		return false
+		if !slices.Contains(f.actions, a.Action) {
+			return false
+		}
+		if u.in.access == nil {
+			u.in.access = map[ID][]AccessAction{}
+		}
+		u.in.access[id] = append(u.in.access[id], a)
 	}
 	return true
 }

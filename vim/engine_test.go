@@ -3,12 +3,12 @@ package vim_test
 import (
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/vimreg"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/vim"
-	"github.com/liamg/oriel/vim/vimreg"
 	"github.com/liamg/oriel/vim/vimtest"
 	"github.com/liamg/oriel/vim/vimtest/nvimtext"
 )
@@ -25,7 +25,7 @@ func (t *testEngine) Load(b vimtest.Buffer) error {
 	buf := text.New([]byte(strings.Join(b.Lines, "\n")), text.Author{})
 	t.ed = edit.New(buf, text.Author{Kind: text.User})
 	t.e = vim.New(t.ed)
-	// The engine's options come from the registry, as they do in the IDE (ED-13).
+	// The engine's options come from the registry, as they do in the IDE.
 	r := registry.New()
 	vimreg.Register(r)
 	t.e.SetSettings(vimreg.Settings{Options: r.Options()})

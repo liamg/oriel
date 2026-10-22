@@ -7,8 +7,8 @@ var native struct {
 	list []Plugin
 }
 
-// Register adds a native plugin: a Go package linked in with `oriel build --with`, calling this from its init
-// (plugins.md, "Performance and native plugins"). It runs as you, unrestricted.
+// Register adds a native plugin: a Go package linked in with `oriel build --with`, calling this from its init.
+// It runs as you, unrestricted.
 func Register(e Plugin) {
 	native.mu.Lock()
 	defer native.mu.Unlock()

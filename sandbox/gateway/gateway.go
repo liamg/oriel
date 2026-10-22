@@ -78,7 +78,7 @@ type Gateway struct {
 	// Grant records session grants; Always records lasting ones, for every
 	// machine when everywhere is set.
 	Grant  func(rules []Rule)
-	Always func(rules []Rule, everywhere bool)
+	Always func(rules []Rule, everywhere bool) error
 	Log    func(Entry)
 	// Timeout bounds the wait on the user. Zero means ten minutes.
 	Timeout time.Duration
@@ -206,7 +206,13 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 			}
 			return mcp.TextResult(msg, true), nil
 		}
-		g.remember(req, ans)
+		if saveErr := g.remember(req, ans); saveErr != nil {
+			defer func() {
+				if err == nil {
+					res = notSaved(res, name, saveErr)
+				}
+			}()
+		}
 		ctx = context.WithValue(ctx, answerKey{}, ans)
 	default:
 		entry.Decision = Allow
@@ -215,6 +221,13 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 		return b.Run(ctx, args)
 	}
 	return g.Up.Call(ctx, *up, args)
+}
+
+// notSaved adds to a call's result that the user's always allow for it was not kept.
+func notSaved(res mcp.CallResult, name string, err error) mcp.CallResult {
+	note := mcp.TextResult("oriel: the user allowed "+name+" always, but the rule was not saved: "+err.Error(), false)
+	res.Content = append(res.Content, note.Content...)
+	return res
 }
 
 type answerKey struct{}
@@ -239,13 +252,13 @@ func (g *Gateway) ask(ctx context.Context, req Request) (Answer, error) {
 	return g.Approve(ctx, req)
 }
 
-// remember turns a session or always answer into rules.
-func (g *Gateway) remember(req Request, ans Answer) {
+// remember turns a session or always answer into rules. The error is an always rule that couldn't be saved.
+func (g *Gateway) remember(req Request, ans Answer) error {
 	if ans.Everywhere {
 		ans.Always = true
 	}
 	if ans.Decision != Session && !ans.Always {
-		return
+		return nil
 	}
 	var rules []Rule
 	if ans.Server && req.Server != "" {
@@ -261,14 +274,15 @@ func (g *Gateway) remember(req Request, ans Answer) {
 		}
 	}
 	if req.AlwaysAsk {
-		return
+		return nil
 	}
 	if ans.Decision == Session && g.Grant != nil {
 		g.Grant(rules)
 	}
 	if ans.Always && g.Always != nil {
-		g.Always(rules, ans.Everywhere)
+		return g.Always(rules, ans.Everywhere)
 	}
+	return nil
 }
 
 func (g *Gateway) levels() Levels {

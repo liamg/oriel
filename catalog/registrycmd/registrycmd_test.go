@@ -11,8 +11,7 @@ import (
 	"github.com/liamg/oriel/catalog"
 )
 
-// catalog.md, The index: "On merge, CI flattens every plugin.toml into index.json and signs it into index.sig
-// (ed25519)."
+// On merge, CI flattens every plugin.toml into index.json and signs it into index.sig (ed25519).
 //
 // ref:   go/src/crypto/ed25519/ed25519.go#Verify
 // quote: "Verify reports whether sig is a valid signature of message by publicKey."

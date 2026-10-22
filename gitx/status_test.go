@@ -77,7 +77,7 @@ func rows(fs []FileState) string {
 	return strings.Join(out, "\n")
 }
 
-// FG-1: "fixture repos produce the expected markers". git is the oracle: each marker is what git status and git diff
+// Fixture repos produce the expected markers. git is the oracle: each marker is what git status and git diff
 // say about the fixture.
 // ref: oracle git
 func TestStatusScopes(t *testing.T) {

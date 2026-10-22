@@ -26,9 +26,8 @@ func Parse(s string) (Version, error) {
 // ParsePartial reads 1, 1.2 or 1.2.3 (with a pre-release), and says how many parts it had.
 func ParsePartial(s string) (Version, int, error) {
 	t := strings.TrimPrefix(strings.TrimSpace(s), "v")
-	t, pre, hasPre := strings.Cut(t, "-")
 	t, _, _ = strings.Cut(t, "+")
-	pre, _, _ = strings.Cut(pre, "+")
+	t, pre, hasPre := strings.Cut(t, "-")
 	parts := strings.Split(t, ".")
 	if len(parts) > 3 || t == "" || hasPre && pre == "" {
 		return Version{}, 0, fmt.Errorf("%q isn't a version", s)

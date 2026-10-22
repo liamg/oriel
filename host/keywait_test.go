@@ -35,7 +35,7 @@ func keyAsk(se core.SessionState) (core.Ask, bool) {
 	return core.Ask{}, false
 }
 
-// SH-9 (crit's security-key prompt): a commit that has waited on signing past KeyWait asks its session for a touch,
+// A commit that has waited on signing past KeyWait asks its session for a touch,
 // and the ask goes when the commit ends.
 func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 	r := newRig(t)
@@ -59,7 +59,7 @@ func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 	r.eventually(id, "the key ask gone", func(se core.SessionState) bool { _, ok := keyAsk(se); return !ok })
 }
 
-// SH-9: Cancel on the key's card (a deny) stops the operation waiting on it.
+// Cancel on the key's card (a deny) stops the operation waiting on it.
 func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
 	r := newRig(t)
 	r.w.opts.KeyWait = 50 * time.Millisecond

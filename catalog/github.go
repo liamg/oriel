@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"strings"
 	"time"
@@ -82,7 +83,8 @@ func (g GitHub) Asset(ctx context.Context, repo, tag, name string) ([]byte, erro
 	return g.asset(ctx, rel, name)
 }
 
-// LatestAsset reads the asset name of repo's newest release that has it: the registry's index.
+// LatestAsset reads the asset name of repo's newest release that has it: the registry's index. With no such
+// release, or no repo to see, the error is fs.ErrNotExist.
 func (g GitHub) LatestAsset(ctx context.Context, repo, name string) ([]byte, error) {
 	var rels []ghRelease
 	if err := g.json(ctx, "/repos/"+repo+"/releases?per_page=20", &rels); err != nil {
@@ -98,7 +100,7 @@ func (g GitHub) LatestAsset(ctx context.Context, repo, name string) ([]byte, err
 			}
 		}
 	}
-	return nil, fmt.Errorf("%s has no release with %s", repo, name)
+	return nil, fmt.Errorf("%s has no release with %s: %w", repo, name, fs.ErrNotExist)
 }
 
 func (g GitHub) asset(ctx context.Context, rel ghRelease, name string) ([]byte, error) {
@@ -158,6 +160,9 @@ func (g GitHub) json(ctx context.Context, url string, v any) error {
 		return err
 	}
 	defer r.Body.Close()
+	if r.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("%s: GitHub answered %s: %w", url, r.Status, fs.ErrNotExist)
+	}
 	if r.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s: GitHub answered %s", url, r.Status)
 	}

@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// sessions.md, "Repos": repos.clone clones a URL into the repos directory and registers it;
+// repos.clone clones a URL into the repos directory and registers it;
 // a clone that fails says what git said.
 func TestCloneRegistersTheRepo(t *testing.T) {
 	r := newRig(t)
@@ -26,8 +26,8 @@ func TestCloneRegistersTheRepo(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(repo.Path, "round.go")); err != nil {
 		t.Errorf("the clone has no files: %v", err)
 	}
-	if got, ok := r.w.repos.find("pricing"); !ok || got.Path != repo.Path {
-		t.Errorf("not registered: %+v", r.w.repos.all())
+	if got, ok := r.w.repos.Find("pricing"); !ok || got.Path != repo.Path {
+		t.Errorf("not registered: %+v", r.w.repos.Repos())
 	}
 	again, err := r.w.CloneRepo(ctx, CloneReq{URL: bare})
 	if err != nil || again.ID != repo.ID {

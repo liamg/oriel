@@ -31,7 +31,7 @@ type clip struct{ s string }
 func (c *clip) Read(bool) (string, bool) { return c.s, c.s != "" }
 func (c *clip) Write(_ bool, s string)   { c.s = s }
 
-// editor.md: "plain (CUA keys: ⌘C, ⌘V, shift-select, for people who don't use vim)".
+// The plain engine: CUA keys (⌘C, ⌘V, shift-select), for people who don't use vim.
 func TestPlainKeys(t *testing.T) {
 	for _, tt := range []struct{ name, given, keys, want string }{
 		{"typing inserts", "ab|c", "xy", "abxy|c"},

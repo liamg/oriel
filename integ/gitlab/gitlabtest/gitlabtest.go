@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin/hosttest"
 )
 
@@ -109,6 +110,7 @@ type GitLab struct {
 // New serves an empty gitlab.com until the test ends; its users are you, mkhan and priya-k.
 func New(t testing.TB) *GitLab {
 	t.Helper()
+	isolate.Test(t)
 	g := &GitLab{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 100, users: []string{Me, "mkhan", "priya-k"},
 		projects: map[string]*project{}, hosts: []string{"gitlab.com"},
 		members: map[string]int{}}

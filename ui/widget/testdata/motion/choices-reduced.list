@@ -15,7 +15,9 @@ clip 0,0 400x37.729492 r 6
   pop
 pop
 rect 0,0 400x37.729492 radius 6 stroke 1 #24221d
-rect 267.33334,35.729492 132.66666x2 fill #ffd23f
+clip 0,0 400x37.729492 r 6
+  rect 267.33334,35.729492 132.66666x2 fill #ffd23f
+pop
 == mid
 backdrop #060606
 clip 0,0 400x37.729492 r 6
@@ -33,7 +35,9 @@ clip 0,0 400x37.729492 r 6
   pop
 pop
 rect 0,0 400x37.729492 radius 6 stroke 1 #24221d
-rect 267.33334,35.729492 132.66666x2 fill #ffd23f
+clip 0,0 400x37.729492 r 6
+  rect 267.33334,35.729492 132.66666x2 fill #ffd23f
+pop
 == settled
 backdrop #060606
 clip 0,0 400x37.729492 r 6
@@ -51,4 +55,6 @@ clip 0,0 400x37.729492 r 6
   pop
 pop
 rect 0,0 400x37.729492 radius 6 stroke 1 #24221d
-rect 267.33334,35.729492 132.66666x2 fill #ffd23f
+clip 0,0 400x37.729492 r 6
+  rect 267.33334,35.729492 132.66666x2 fill #ffd23f
+pop

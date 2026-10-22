@@ -94,7 +94,7 @@ func (in *Installer) stage(ctx context.Context, m Manifest, a Artifact, r io.Rea
 	if a.Kind == KindBundle && in.Exe == "" {
 		return errors.New("a bundle needs the installer's Exe")
 	}
-	if a.Kind != KindBundle && a.Kind != KindBinary {
+	if a.Kind != KindBundle && a.Kind != KindBinary && a.Kind != KindArchive {
 		return fmt.Errorf("unknown artifact kind %q", a.Kind)
 	}
 	if err := os.MkdirAll(in.Dir, 0o755); err != nil {
@@ -109,9 +109,15 @@ func (in *Installer) stage(ctx context.Context, m Manifest, a Artifact, r io.Rea
 		return err
 	}
 	p.report(Step{Stage: StageExtract, Detail: a.Name})
-	if a.Kind == KindBinary {
+	switch a.Kind {
+	case KindBinary:
 		err = os.WriteFile(tmp, body, 0o755)
-	} else {
+	case KindArchive:
+		var exe []byte
+		if exe, err = archiveBinary(body); err == nil {
+			err = os.WriteFile(tmp, exe, 0o755)
+		}
+	default:
 		err = untar(body, tmp)
 	}
 	if err != nil {
@@ -218,6 +224,32 @@ func untar(body []byte, dir string) error {
 	}
 }
 
+// archiveBinary is the executable in a Linux archive: oriel, at its top or in its one top directory.
+func archiveBinary(body []byte) ([]byte, error) {
+	zr, err := gzip.NewReader(bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	tr := tar.NewReader(zr)
+	for {
+		h, err := tr.Next()
+		if err == io.EOF {
+			return nil, errors.New("the archive has no oriel")
+		}
+		if err != nil {
+			return nil, err
+		}
+		parts := strings.Split(strings.TrimPrefix(h.Name, "./"), "/")
+		if h.Typeflag != tar.TypeReg || parts[len(parts)-1] != "oriel" || len(parts) > 2 {
+			continue
+		}
+		if h.Size <= 0 || h.Size > maxArtifact {
+			return nil, fmt.Errorf("the archive's oriel has a bad size %d", h.Size)
+		}
+		return io.ReadAll(io.LimitReader(tr, h.Size))
+	}
+}
+
 // ProbeVersion runs exe version and fails unless it starts and prints version.
 func ProbeVersion(ctx context.Context, exe, version string) error {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
@@ -248,29 +280,38 @@ func (in *Installer) Staged() (string, bool) {
 }
 
 // Swap puts the staged version in Target's place, keeping the one it replaces as Previous, and records the swap as
-// pending until Boot confirms it. Target is never missing: the new copy is moved beside it first, and a failed
+// pending until Boot confirms it. While an earlier swap is still pending, Previous stays the version before it and
+// the unconfirmed one is dropped. Target is never missing: the new copy is moved beside it first, and a failed
 // rename puts the old one back.
 func (in *Installer) Swap() error {
 	version, ok := in.Staged()
 	if !ok {
 		return errors.New("nothing is staged")
 	}
-	next, prev := in.sibling(".next"), in.Previous()
+	next, keep := in.sibling(".next"), in.Previous()
+	if _, pending := in.Pending(); pending {
+		if _, err := os.Stat(keep); err == nil {
+			keep = in.sibling(".old")
+		}
+	}
 	if err := os.RemoveAll(next); err != nil {
 		return err
 	}
 	if err := move(in.stagedPath(), next); err != nil {
 		return err
 	}
-	if err := os.RemoveAll(prev); err != nil {
+	if err := os.RemoveAll(keep); err != nil {
 		return err
 	}
-	if err := os.Rename(in.Target, prev); err != nil {
+	if err := os.Rename(in.Target, keep); err != nil {
 		return err
 	}
 	if err := os.Rename(next, in.Target); err != nil {
-		_ = os.Rename(prev, in.Target)
+		_ = os.Rename(keep, in.Target)
 		return err
+	}
+	if keep != in.Previous() {
+		_ = os.RemoveAll(keep)
 	}
 	_ = os.Remove(in.stagedInfo())
 	return writeJSON(in.pendingPath(), Pending{Version: version, Swapped: time.Now()})
@@ -338,29 +379,37 @@ func (in *Installer) Rollback(reason string) (Rollback, error) {
 
 // Boot is what a start of Oriel runs first. After a swap, the new version gets one start to pass health: if it
 // fails, or a start before this one never reported (it crashed or hung), the previous version is put back and the
-// caller re-execs onto it. With nothing pending it does nothing.
+// caller re-execs onto it. A rollback that can't be done keeps the new version and forgets the swap, so the next
+// start doesn't fail the same way. With nothing pending it does nothing.
 func (in *Installer) Boot(ctx context.Context, health func(context.Context) error) (Outcome, error) {
 	p, ok := in.Pending()
 	if !ok {
 		return Outcome{}, nil
 	}
 	if p.Boots > 0 {
-		rb, err := in.Rollback("it never reported healthy after its restart")
-		return Outcome{RolledBack: &rb}, err
+		return in.bootRollback("it never reported healthy after its restart")
 	}
 	p.Boots++
 	if err := writeJSON(in.pendingPath(), p); err != nil {
 		return Outcome{}, err
 	}
 	if err := health(ctx); err != nil {
-		rb, rerr := in.Rollback("its health check failed: " + err.Error())
-		return Outcome{RolledBack: &rb}, rerr
+		return in.bootRollback("its health check failed: " + err.Error())
 	}
 	if err := os.Remove(in.pendingPath()); err != nil {
 		return Outcome{}, err
 	}
 	_ = os.Remove(in.lastPath())
 	return Outcome{Confirmed: p.Version}, nil
+}
+
+func (in *Installer) bootRollback(reason string) (Outcome, error) {
+	rb, err := in.Rollback(reason)
+	if rb.At.IsZero() {
+		_ = os.Remove(in.pendingPath())
+		return Outcome{}, fmt.Errorf("can't roll back (%s): %w", reason, err)
+	}
+	return Outcome{RolledBack: &rb}, err
 }
 
 func writeJSON(path string, v any) error {

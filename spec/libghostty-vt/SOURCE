@@ -1,0 +1,4 @@
+source: https://github.com/ghostty-org/ghostty
+commit: 80456f05732a68b3fed99eb7396eddf8b7981080 (the commit term/ghostty/fetch.sh pins)
+path: src/terminal/stream_terminal.zig (its render hold docs cover synchronized output, DEC mode 2026), LICENSE
+license: MIT (see LICENSE)

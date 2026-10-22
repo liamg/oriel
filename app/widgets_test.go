@@ -1,37 +1,36 @@
-package app
+package app_test
 
 import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// pointerSurfaces read clicks themselves: the pointer's position is what they're about, not a control.
+// pointerSurfaces read clicks themselves: the pointer's position is what they're about, not a control. Each is
+// "dir.Type.func", dir its package's under app/.
 var pointerSurfaces = map[string]bool{
-	"editorPlugin.paneView": true, // the editor's text: a click places the cursor
-	"themeEditor.buildPick": true, // pick mode: a click picks whatever's under it
-	"themeEditor.preview":   true, // the preview: a click picks the token under it
+	"editor.Editor.paneView":         true, // the editor's text: a click places the cursor
+	"settings.ThemeEditor.buildPick": true, // pick mode: a click picks whatever's under it
+	"settings.ThemeEditor.preview":   true, // the preview: a click picks the token under it
 }
 
 // AGENTS.md: views compose ui/widget, so nothing here reads a click off an Interaction itself; a control goes
 // through widget.Clickable or a widget built on it.
 func TestViewsUseWidgetsForClicks(t *testing.T) {
-	files, _ := filepath.Glob("*.go")
+	files := sourceFiles(t, ".")
 	fset := token.NewFileSet()
 	for _, name := range files {
-		if strings.HasSuffix(name, "_test.go") {
-			continue
-		}
 		f, err := parser.ParseFile(fset, name, nil, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
 		for _, d := range f.Decls {
 			fn, ok := d.(*ast.FuncDecl)
-			if !ok || fn.Body == nil || pointerSurfaces[funcName(fn)] {
+			if !ok || fn.Body == nil || pointerSurfaces[qualified(name, fn)] {
 				continue
 			}
 			fromInteraction := map[string]bool{}
@@ -60,6 +59,41 @@ func TestViewsUseWidgetsForClicks(t *testing.T) {
 	}
 }
 
+// sourceFiles are the Go files, tests and testdata left out, under each of roots: "." is the app and every package
+// under it (app/shell, app/kit, each app/<feature>).
+func sourceFiles(t *testing.T, roots ...string) []string {
+	t.Helper()
+	var files []string
+	for _, root := range roots {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() && d.Name() == "testdata" {
+				return filepath.SkipDir
+			}
+			if !d.IsDir() && strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go") {
+				files = append(files, path)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return files
+}
+
+// qualified is fn as "dir.Type.func" (or "dir.func"), dir the last element of its file's directory: "editor" for
+// app/editor, "app" for the app's own.
+func qualified(file string, fn *ast.FuncDecl) string {
+	dir := filepath.Base(filepath.Dir(file))
+	if dir == "." {
+		dir = "app"
+	}
+	return dir + "." + funcName(fn)
+}
+
 func isInteractionCall(e ast.Expr) bool {
 	call, ok := e.(*ast.CallExpr)
 	if !ok {
@@ -85,16 +119,9 @@ func funcName(fn *ast.FuncDecl) string {
 
 // A float's Z is a named layer (ui.LayerPage, ui.LayerOverlay + 1…), never a bare number.
 func TestFloatsUseLayers(t *testing.T) {
-	var files []string
-	for _, dir := range []string{".", "../ui", "../ui/widget", "../ui/layout"} {
-		fs, _ := filepath.Glob(filepath.Join(dir, "*.go"))
-		files = append(files, fs...)
-	}
+	files := sourceFiles(t, ".", "../ui")
 	fset := token.NewFileSet()
 	for _, name := range files {
-		if strings.HasSuffix(name, "_test.go") {
-			continue
-		}
 		f, err := parser.ParseFile(fset, name, nil, 0)
 		if err != nil {
 			t.Fatal(err)

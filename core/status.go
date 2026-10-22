@@ -1,6 +1,6 @@
 package core
 
-// DeriveStatus is a session's status from what's in it, by crit's rules (crit-reference.md → Status colours):
+// DeriveStatus is a session's status from what's in it, by crit's rules:
 // a question, a lost login, a security-key touch or a permission waits on you first; then the agent at work; then a reply you haven't answered, or
 // work queued for an agent that isn't running; then work queued for one that is.
 func DeriveStatus(se SessionState) Status {

@@ -31,7 +31,7 @@ func collect(t *testing.T, q Query, engine Engine) []string {
 	t.Helper()
 	var mu sync.Mutex
 	var out []string
-	err := run(context.Background(), q, engine, func(ms []Match) {
+	err := NewTools().run(context.Background(), q, engine, func(ms []Match) {
 		mu.Lock()
 		defer mu.Unlock()
 		for _, m := range ms {
@@ -45,10 +45,10 @@ func collect(t *testing.T, q Query, engine Engine) []string {
 	return out
 }
 
-// ripgrep and the Go matcher find the same lines and spans: both are PCRE2 (ED-10's note on FG-3), binary files are
+// ripgrep and the Go matcher find the same lines and spans: both are PCRE2, binary files are
 // skipped, and the excluded files are left out.
 func TestEnginesAgree(t *testing.T) {
-	if _, ok := Ripgrep(); !ok {
+	if _, ok := NewTools().Ripgrep(); !ok {
 		t.Skip("rg isn't installed")
 	}
 	dir := fixture(t)
@@ -87,7 +87,7 @@ func TestExcludeAndSpans(t *testing.T) {
 func TestBadPattern(t *testing.T) {
 	dir := fixture(t)
 	for _, e := range []Engine{Go, Auto} {
-		if err := run(context.Background(), Query{Dir: dir, Pattern: `(unclosed`}, e, func([]Match) {}); err == nil {
+		if err := NewTools().run(context.Background(), Query{Dir: dir, Pattern: `(unclosed`}, e, func([]Match) {}); err == nil {
 			t.Errorf("engine %v: no error for a bad pattern", e)
 		}
 	}
@@ -98,7 +98,7 @@ func TestBadPattern(t *testing.T) {
 func TestPlanAndApply(t *testing.T) {
 	dir := fixture(t)
 	var ms []Match
-	run(context.Background(), Query{Dir: dir, Pattern: `Round(\w*)\(`, Exclude: []string{"gen/api.pb.go"}}, Auto, func(b []Match) { ms = append(ms, b...) })
+	NewTools().run(context.Background(), Query{Dir: dir, Pattern: `Round(\w*)\(`, Exclude: []string{"gen/api.pb.go"}}, Auto, func(b []Match) { ms = append(ms, b...) })
 	plan, err := Plan(Query{Dir: dir, Pattern: `Round(\w*)\(`}, "Rounded$1(", ms, nil)
 	if err != nil {
 		t.Fatal(err)

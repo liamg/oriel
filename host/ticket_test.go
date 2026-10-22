@@ -7,9 +7,8 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// crit-reference → Linear: "Start work from a ticket: the ticket, its comments and attachments become the plan
-// prompt". ui.md 04: "the ticket, comments and attachments go to the agent as context". The prompt stays the
-// session's own; the ticket's text follows it in the first request.
+// Starting work from a ticket: the ticket, its comments and attachments go to the agent as context. The prompt stays
+// the session's own; the ticket's text follows it in the first request.
 func TestTicketContextGoesWithThePrompt(t *testing.T) {
 	r := newRig(t)
 	ctx := "## ENG-2231 · Search API returns stale results after a reindex\n\n### Comments\n\n**Ana:** Repro attached."

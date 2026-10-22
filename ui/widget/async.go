@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// Policy is how a section behaves while its data loads (ui.md, "Loading"). The question that picks one: what goes
+// Policy is how a section behaves while its data loads. The question that picks one: what goes
 // wrong if the user acts before the data arrives?
 type Policy int
 

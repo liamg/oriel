@@ -167,7 +167,7 @@ func (t *Typesetter) shapeSegment(run *Run, runes []rune, start, end int, face *
 	out := t.shaper.Shape(in)
 	track := f.Tracking * f.Size
 	for i, g := range out.Glyphs {
-		run.Glyphs = append(run.Glyphs, Glyph{Face: face, ID: GlyphID(g.GlyphID), X: run.Advance + fx(g.XOffset), Y: -fx(g.YOffset)})
+		run.Glyphs = append(run.Glyphs, Glyph{Face: face, ID: GlyphID(g.GlyphID), X: run.Advance + fx(g.XOffset), Y: -fx(g.YOffset), Rune: g.ClusterIndex})
 		run.Advance += fx(g.XAdvance)
 		// Tracking goes after each cluster, not inside it.
 		if i == len(out.Glyphs)-1 || out.Glyphs[i+1].ClusterIndex != g.ClusterIndex {

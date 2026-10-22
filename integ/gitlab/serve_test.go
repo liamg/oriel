@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/integ/gitlab/gitlabtest"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -60,8 +60,8 @@ func keyed(t *testing.T, g *gitlabtest.GitLab) *jsonrpc.Conn {
 	return serving(t, host{client: g.Client(), secrets: secrets})
 }
 
-// api.md, "Lua": a code host's requested lists the merge requests asking you, with where you are with each; RV-11:
-// "merge requests asking you, their state and checkout (merge-requests/N/head), its token a secret".
+// A code host's requested lists the merge requests asking you, with where you are with each (docs/api.md,
+// oriel.code.host): their state and checkout (merge-requests/N/head), its token a secret.
 func TestServeReviewsThroughTheHost(t *testing.T) {
 	g := gitlabtest.New(t)
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
@@ -125,8 +125,8 @@ func TestServeReviewsThroughTheHost(t *testing.T) {
 	}
 }
 
-// hosts.md: a code host raises, edits, readies and merges; "With sha set to the head we showed, so a push after you
-// looked fails". GitLab's blockers: unresolved resolvable discussions, a draft, a conflict, missing approvals.
+// A code host raises, edits, readies and merges, with sha set to the head we showed, so a push after you looked
+// fails. GitLab's blockers: unresolved resolvable discussions, a draft, a conflict, missing approvals.
 func TestServeShipThroughTheHost(t *testing.T) {
 	g := gitlabtest.New(t)
 	g.AddProject("acme/api", "merge", "default_on")
@@ -207,7 +207,7 @@ func TestFailLine(t *testing.T) {
 	}
 }
 
-// hosts.md, self-hosted sites: a site is { host, api, secret }; its calls go to its API with its own token, granted
+// Self-hosted sites: a site is { host, api, secret }; its calls go to its API with its own token, granted
 // to its host at run time. A probe tells a GitLab from another server, without a token.
 func TestServeASelfHostedSite(t *testing.T) {
 	g := gitlabtest.New(t)

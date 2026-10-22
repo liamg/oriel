@@ -8,7 +8,7 @@ import (
 	"github.com/liamg/oriel/gh/ghtest"
 )
 
-// crit-reference.md, "PR lists": "Mine and review-requested". GitHub's issue search finds them across repositories
+// The PR lists are mine and review-requested. GitHub's issue search finds them across repositories
 // (author:@me, review-requested:@me), the most recently updated first.
 func TestSearchPRs(t *testing.T) {
 	for _, transport := range []string{"http", "cli"} {

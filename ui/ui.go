@@ -6,10 +6,11 @@
 package ui
 
 import (
+	"cmp"
 	"fmt"
-	"hash/fnv"
 	"maps"
 	"math"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -33,7 +34,8 @@ const (
 
 type elem struct {
 	id     ID
-	name   string
+	key    any    // its key among its siblings, made unique (nextKey)
+	base   dupKey // the key it was built from, which its duplicates share
 	kind   kind
 	style  Style
 	text   string
@@ -45,10 +47,11 @@ type elem struct {
 	scale  float32 // what it and its subtree are drawn at (Style.Scale, times its parent's); 0 is 1
 
 	controls bool // it or something in it can be clicked or focused, or keeps its width (Style.Keep)
+	inlaid   bool // a float built under LayerPane: part of its view, so clipped as the view is
 
 	pos, size [2]float32
-	content   [2]float32 // children's extent, for scrolling
-	keys      map[string]int
+	content   [2]float32     // children's extent, for scrolling
+	keys      map[dupKey]int // how many children were built from each key, once there are dupIndex of them
 	fx        fx
 }
 
@@ -89,6 +92,8 @@ type UI struct {
 	flags   map[ID]flags // from the latest frame, which input resolves against
 	parents map[ID]ID
 
+	overlays map[ID]bool // the floats over the flow (Z above 0) last frame drew
+
 	theme *theme.Resolved
 
 	in        input
@@ -102,11 +107,64 @@ type UI struct {
 	noHits    bool
 	animating bool
 	wake      time.Time
+	unfocused bool // the window hasn't the OS's focus (SetWindow)
+	hidden    bool // the window can't be seen
+	shown     bool // it showed again since the last frame
 	clip      render.Clipboard
-	tracked   bool          // the latest frame read where the pointer is (Interaction.Pointer)
-	regions   []render.Rect // and asked whether it was in these
-	sel       *textSel      // the text selected (Style.Selectable)
-	selLast   ID            // the Selectable box last pressed in, which ⌘A selects all of
+	tracked   bool                 // the latest frame read where the pointer is (Interaction.Pointer)
+	regions   []render.Rect        // and asked whether it was in these
+	sel       *textSel             // the text selected (Style.Selectable)
+	selLast   ID                   // the Selectable box last pressed in, which ⌘A selects all of
+	services  map[reflect.Type]any // Provide's, by type
+
+	arena [2]elemArena // the nodes of this frame and the last, by the frame's parity
+	spare spareMaps    // last frame's maps, cleared and filled again by the next
+}
+
+// spareMaps are per-frame maps kept from the frame before last, to fill again rather than make.
+type spareMaps struct {
+	byID     map[ID]*elem
+	parents  map[ID]ID
+	overlays map[ID]bool
+	layered  map[int]bool
+	exitable map[ID]*elem
+}
+
+const arenaSlab = 256
+
+// elemArena hands out a frame's nodes from slabs kept from frame to frame. A node lasts until the arena is reset,
+// two frames on; what must outlive that (a node on its way out) is detached.
+type elemArena struct {
+	slabs [][]elem
+	n     int
+}
+
+func (a *elemArena) reset() { a.n = 0 }
+
+// get is a cleared node, keeping the room its last use made for children.
+func (a *elemArena) get() *elem {
+	i := a.n / arenaSlab
+	if i == len(a.slabs) {
+		a.slabs = append(a.slabs, make([]elem, arenaSlab))
+	}
+	e := &a.slabs[i][a.n%arenaSlab]
+	a.n++
+	kids, keys := e.kids[:0], e.keys
+	clear(keys)
+	*e = elem{kids: kids, keys: keys}
+	return e
+}
+
+// newElem is a node from this frame's arena.
+func (u *UI) newElem() *elem { return u.arena[u.frame%2].get() }
+
+// fresh is m emptied, or a new map when there's none.
+func fresh[K comparable, V any](m map[K]V) map[K]V {
+	if m == nil {
+		return map[K]V{}
+	}
+	clear(m)
+	return m
 }
 
 type flags struct {
@@ -121,6 +179,7 @@ type flags struct {
 	parent                           ID
 	drag                             *DragData
 	drop                             []string
+	actions                          []Action
 }
 
 type hit struct {
@@ -139,6 +198,8 @@ func New(sh typeset.Shaper, text TextStyle) *UI {
 func (u *UI) Fork() *UI {
 	f := *u
 	f.byID, f.floats, f.hits = map[ID]*elem{}, nil, nil
+	f.arena, f.spare = [2]elemArena{}, spareMaps{}
+	f.layered, f.overlays = maps.Clone(u.layered), maps.Clone(u.overlays)
 	f.states = make(map[ID]*state, len(u.states))
 	for id, st := range u.states {
 		c := *st
@@ -157,7 +218,7 @@ func (u *UI) Fork() *UI {
 		f.eases[id] = &c
 	}
 	f.parents = maps.Clone(u.parents)
-	f.in.clicks, f.in.doubles, f.in.keys, f.in.context, f.in.wheel, f.in.claimed, f.in.help = nil, nil, nil, nil, nil, nil, ""
+	f.in.clicks, f.in.doubles, f.in.keys, f.in.context, f.in.wheel, f.in.claimed, f.in.access, f.in.help = nil, nil, nil, nil, nil, nil, nil, ""
 	return &f
 }
 
@@ -175,22 +236,23 @@ func (u *UI) Frame(f render.Frame, size render.Point, build func(c *Ctx)) {
 
 // Layout builds and lays out a frame without painting it.
 func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
-	prev := make(map[ID]bool, len(u.byID))
-	for id := range u.byID {
-		prev[id] = true
-	}
+	prev := u.byID
 	u.frame++
-	u.root = &elem{name: "root", style: Style{Dir: Column, W: Px(size.X), H: Px(size.Y)}}
-	u.byID = map[ID]*elem{0: u.root}
+	u.arena[u.frame%2].reset()
+	u.root = u.newElem()
+	u.root.style = Style{Dir: Column, W: Px(size.X), H: Px(size.Y)}
+	u.byID, u.spare.byID = fresh(u.spare.byID), prev
+	u.byID[0] = u.root
 	u.floats = u.floats[:0]
 	u.animating, u.wake = false, time.Time{}
+	u.shown = false
 	u.tracked, u.regions = false, u.regions[:0]
 	build(&Ctx{u: u, e: u.root})
 	u.settleFocus()
 	if u.in.pending() {
 		u.wake = u.now() // what the input changed shows next frame
 	}
-	u.in.clicks, u.in.doubles, u.in.keys, u.in.context, u.in.wheel, u.in.claimed, u.in.dropped = nil, nil, nil, nil, nil, nil, nil
+	u.in.clicks, u.in.doubles, u.in.keys, u.in.context, u.in.wheel, u.in.claimed, u.in.dropped, u.in.access = nil, nil, nil, nil, nil, nil, nil, nil
 	u.bubble()
 	u.tooltip()
 	u.dragShown()
@@ -199,7 +261,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 		u.grow(u.root, axis)
 	}
 	u.place(u.root, 0, 0)
-	layered := map[int]bool{}
+	layered := fresh(u.spare.layered)
 	for i := 0; i < len(u.floats); i++ {
 		u.placeFloat(u.floats[i])
 		layered[u.floats[i].style.Z] = true
@@ -209,7 +271,13 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 			u.wakeAt(u.now()) // what was built asked about this layer (Layered), and it came or went
 		}
 	}
-	u.layered, u.asked = layered, nil
+	u.spare.layered, u.layered, u.asked = u.layered, layered, nil
+	u.overlays, u.spare.overlays = fresh(u.spare.overlays), u.overlays
+	for _, e := range u.floats {
+		if e.style.Z > 0 {
+			u.overlays[e.id] = true
+		}
+	}
 	u.selFrame()
 	u.selScroll()
 	u.animate(prev)
@@ -242,10 +310,10 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
 				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
-				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop}
+				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop, actions: s.Actions}
 		}
 	}
-	u.parents = map[ID]ID{}
+	u.parents, u.spare.parents = fresh(u.spare.parents), u.parents
 	for id, e := range u.byID {
 		if e.parent != nil {
 			u.parents[id] = e.parent.id
@@ -380,14 +448,52 @@ func (u *UI) Hit(p render.Point) []ID {
 }
 
 func childID(parent ID, key any) ID {
-	h := fnv.New64a()
-	var b [8]byte
+	h := uint64(fnvBasis)
 	for i := range 8 {
-		b[i] = byte(parent >> (8 * i))
+		h = fnvByte(h, byte(parent>>(8*i)))
 	}
-	h.Write(b[:])
-	fmt.Fprintf(h, "%T:%v", key, key)
-	return ID(h.Sum64())
+	return ID(hashKey(h, key))
+}
+
+const (
+	fnvBasis = 14695981039346656037
+	fnvPrime = 1099511628211
+)
+
+func fnvByte(h uint64, b byte) uint64 { return (h ^ uint64(b)) * fnvPrime }
+
+func fnvString(h uint64, s string) uint64 {
+	for i := 0; i < len(s); i++ {
+		h = fnvByte(h, s[i])
+	}
+	return h
+}
+
+func fnvUint(h uint64, v uint64) uint64 {
+	for i := range 8 {
+		h = fnvByte(h, byte(v>>(8*i)))
+	}
+	return h
+}
+
+// hashKey folds key into h by its type and value, each type under a tag of its own so keys of different types
+// don't meet.
+func hashKey(h uint64, key any) uint64 {
+	switch k := key.(type) {
+	case string:
+		return fnvString(fnvByte(h, 's'), k)
+	case int:
+		return fnvUint(fnvByte(h, 'i'), uint64(k))
+	case ID:
+		return fnvUint(fnvByte(h, 'd'), uint64(k))
+	case motionKey:
+		return fnvString(fnvByte(h, 'm'), k.kind)
+	case animKey:
+		return hashKey(fnvByte(h, 'a'), k.key)
+	case easeKey:
+		return hashKey(fnvByte(h, 'e'), k.key)
+	}
+	return fnvString(fnvByte(h, 'f'), fmt.Sprintf("%T:%v", key, key))
 }
 
 func keyName(key any) string {
@@ -400,33 +506,76 @@ func keyName(key any) string {
 	return fmt.Sprint(key)
 }
 
+// name is e's key, as Dump shows it.
+func (e *elem) name() string {
+	if e.parent == nil {
+		return "root"
+	}
+	return keyName(e.key)
+}
+
+// dupKey is a child's key as its siblings' duplicates are counted.
+type dupKey struct {
+	s   string
+	i   int
+	num bool
+}
+
+func dupOf(key any) dupKey {
+	switch k := key.(type) {
+	case string:
+		return dupKey{s: k}
+	case int:
+		return dupKey{i: k, num: true}
+	}
+	return dupKey{s: fmt.Sprint(key)}
+}
+
+// dupIndex is how many children an elem has before it counts their keys in a map rather than by looking.
+const dupIndex = 8
+
+// built is how many of e's children were built from d.
+func (e *elem) built(d dupKey) int {
+	if e.keys != nil {
+		return e.keys[d]
+	}
+	n := 0
+	for _, k := range e.kids {
+		if k.base == d {
+			n++
+		}
+	}
+	return n
+}
+
 // nextKey is the key the next child of e built from key gets: key itself, its index when nil, or key#n for
 // the nth duplicate among its siblings.
-func (e *elem) nextKey(key any) (any, string) {
+func (e *elem) nextKey(key any) (any, dupKey) {
 	if key == nil {
 		key = len(e.kids)
 	}
-	name := keyName(key)
-	if n := e.keys[name]; n > 0 {
+	d := dupOf(key)
+	if n := e.built(d); n > 0 {
 		key = fmt.Sprintf("%v#%d", key, n)
-		name = fmt.Sprintf("%s#%d", name, n)
 	}
-	return key, name
+	return key, d
 }
 
 // add appends a child built from key to e, giving it an id unique among its siblings.
 func (u *UI) add(e *elem, key any, k kind) *elem {
-	base := key
-	if base == nil {
-		base = len(e.kids)
-	}
-	key, name := e.nextKey(key)
-	if e.keys == nil {
-		e.keys = map[string]int{}
-	}
-	e.keys[keyName(base)]++
-	c := &elem{id: childID(e.id, key), name: name, kind: k, parent: e, scale: e.scale}
+	key, d := e.nextKey(key)
+	c := u.newElem()
+	c.id, c.key, c.base, c.kind, c.parent, c.scale = childID(e.id, key), key, d, k, e, e.scale
 	e.kids = append(e.kids, c)
+	switch {
+	case e.keys != nil:
+		e.keys[d]++
+	case len(e.kids) >= dupIndex:
+		e.keys = make(map[dupKey]int, 2*dupIndex)
+		for _, k := range e.kids {
+			e.keys[k.base]++
+		}
+	}
 	u.byID[c.id] = c
 	st := u.state(c.id)
 	st.seen = u.frame
@@ -466,7 +615,15 @@ func (e *elem) scrolls(axis int) bool {
 	return e.style.ScrollY
 }
 
+// flow is e's children that aren't floats: e.kids itself when none is, so it's not to be changed.
 func (e *elem) flow() []*elem {
+	floats := false
+	for _, c := range e.kids {
+		floats = floats || c.style.Float != nil
+	}
+	if !floats {
+		return e.kids
+	}
 	var out []*elem
 	for _, c := range e.kids {
 		if c.style.Float == nil {
@@ -646,12 +803,15 @@ func (u *UI) share(e *elem, kids []*elem, axis int, inner float32) {
 			left -= c.size[axis]
 		}
 	}
+	if len(growing) == 0 {
+		return
+	}
 	// With room for each one's content, none gets less: its content is its Min. A box that scrolls needs none.
-	need := map[*elem]float32{}
+	need := make([]float32, len(growing))
 	var total float32
-	for _, c := range growing {
+	for i, c := range growing {
 		if !c.scrolls(axis) {
-			need[c] = c.size[axis]
+			need[i] = c.size[axis]
 			total += c.size[axis]
 		}
 	}
@@ -670,12 +830,13 @@ func (u *UI) share(e *elem, kids []*elem, axis int, inner float32) {
 		for i := 0; i < len(growing); i++ {
 			c := growing[i]
 			s := c.sz(axis)
-			s.Min = max(s.Min, need[c])
+			s.Min = max(s.Min, need[i])
 			want := max(left, 0) * s.Value / weight
 			if got := s.clamp(want); got != want {
 				c.size[axis] = got
 				left -= got
 				growing = slices.Delete(growing, i, i+1)
+				need = slices.Delete(need, i, i+1)
 				frozen = true
 				break
 			}
@@ -904,7 +1065,8 @@ func (u *UI) overTrap(id, t ID) bool {
 	return ok && id != 0 && e.layer() > u.flags[t].z
 }
 
-// Paint draws the latest layout: the flow, then floats in Z order, each float outside its parent's clip.
+// Paint draws the latest layout: the flow, then floats in Z order, each outside its parent's clip but for one inlaid
+// in its view (under LayerPane), which keeps the view's clips.
 // Hover then follows whatever is now under a pointer that hasn't moved.
 func (u *UI) Paint(f render.Frame) {
 	defer func() {
@@ -912,8 +1074,14 @@ func (u *UI) Paint(f render.Frame) {
 			u.setHot(u.topInteractive(u.in.pos))
 		}
 		// While a trap is up, focus can't leave it, other than for a float layered over it: a window kept on top.
+		// Coming in from outside, it goes to the trap's default target; dropped inside it (Escape in a field), to the
+		// trap itself.
 		if t := u.trap(); t != 0 && !u.within(u.in.focus, t) && !u.overTrap(u.in.focus, t) {
-			u.in.focus, u.in.visible = t, false
+			to := cmp.Or(u.defaultIn(t), t)
+			if n := len(u.in.trail); u.in.focus == 0 && n > 0 && u.within(u.in.trail[n-1], t) {
+				to = t
+			}
+			u.in.focus, u.in.visible = to, false
 		}
 	}()
 	u.hits = u.hits[:0]
@@ -928,7 +1096,7 @@ func (u *UI) Paint(f render.Frame) {
 	floats := u.paintOrder()
 	for _, e := range floats {
 		if e.style.Z >= 0 {
-			u.paint(f, e, full)
+			u.paintFloat(f, e, full)
 		}
 	}
 	// What's on its way out is drawn last, in Z order, and takes no input.
@@ -947,6 +1115,29 @@ func (u *UI) Paint(f render.Frame) {
 		u.paint(f, e, full)
 	}
 	u.noHits = false
+}
+
+// paintFloat paints a float outside its parent's clip; an inlaid one stays inside the clips of the view it's in.
+func (u *UI) paintFloat(f render.Frame, e *elem, clip render.Rect) {
+	var clips []*elem
+	for p := e; p.inlaid; {
+		for p = p.parent; p != nil && p.style.Float == nil; p = p.parent {
+			if s := p.style; s.Clip || s.ScrollX || s.ScrollY {
+				clips = append(clips, p)
+			}
+		}
+		if p == nil {
+			break
+		}
+	}
+	for _, p := range slices.Backward(clips) {
+		f.PushClip(p.rect(), p.style.Radius)
+		clip = intersect(clip, p.rect())
+	}
+	u.paint(f, e, clip)
+	for range clips {
+		f.Pop()
+	}
 }
 
 func (e *elem) rect() render.Rect { return render.XYWH(e.pos[0], e.pos[1], e.size[0], e.size[1]) }
@@ -1052,7 +1243,7 @@ func (u *UI) Dump() string {
 	var b strings.Builder
 	var walk func(e *elem, depth int)
 	walk = func(e *elem, depth int) {
-		fmt.Fprintf(&b, "%s%s %s %s", strings.Repeat("  ", depth), [...]string{"box", "text", "paint"}[e.kind], e.name, fmtRect(e.rect()))
+		fmt.Fprintf(&b, "%s%s %s %s", strings.Repeat("  ", depth), [...]string{"box", "text", "paint"}[e.kind], e.name(), fmtRect(e.rect()))
 		if e.kind == kText {
 			fmt.Fprintf(&b, " %q", e.text)
 		}
@@ -1111,7 +1302,7 @@ func (u *UI) Overflowing() []string {
 		l, r := e.pos[0], e.pos[0]+e.run.Advance
 		for a := e.parent; a != nil && !a.style.ScrollX; a = a.parent {
 			if l < a.pos[0]+a.style.Pad.L-slack || r > a.pos[0]+a.size[0]-a.style.Pad.R+slack {
-				out = append(out, fmt.Sprintf("%q (%s–%s) past %s (%s)", e.text, num(l), num(r), a.name, fmtRect(a.rect())))
+				out = append(out, fmt.Sprintf("%q (%s–%s) past %s (%s)", e.text, num(l), num(r), a.name(), fmtRect(a.rect())))
 				break
 			}
 			if a.style.Float != nil {

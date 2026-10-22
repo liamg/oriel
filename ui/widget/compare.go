@@ -51,6 +51,7 @@ func Compare(c *ui.Ctx, key any, before, after image.Image, w float32, o Compare
 			st.at += .05
 		}
 	}
+	st.at += .05 * float32(steps(in.Access))
 	passOn(c, id, in.Keys, func(k render.KeyEvent) bool { return hasKey([]render.KeyEvent{k}, "Left", "Right", "h", "l") })
 	st.at = max(0, min(st.at, 1))
 	bb, ab := before.Bounds(), after.Bounds()
@@ -61,15 +62,17 @@ func Compare(c *ui.Ctx, key any, before, after image.Image, w float32, o Compare
 	at := st.at
 	bg, line, ink := col(c, tCompareBg), col(c, tCompareDivider), col(c, tCompareHandle)
 	c.Box(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Clip: true, Interactive: true, Focusable: true, KeyMode: "compare", Cursor: render.CursorResizeCol,
-		NoHover: true, Role: ui.RoleSlider, Label: o.Label, Value: fmt.Sprintf("%d%%", int(math.Round(float64(at*100)))), Help: o.Help}, func(c *ui.Ctx) {
+		NoHover: true, Role: ui.RoleSlider, Label: o.Label, Value: fmt.Sprintf("%d%%", int(math.Round(float64(at*100)))), Help: o.Help,
+		Actions: stepActions}, func(c *ui.Ctx) {
+		ic := imageCacheOf(c)
 		c.Paint("px", ui.Px(w), ui.Px(h), func(f render.Frame, r render.Rect) {
 			split := r.Min.X + at*r.Dx()
 			f.Rect(r, render.Style{Fill: bg})
-			paintImage(f, after, render.XYWH(r.Min.X, r.Min.Y, aw, ah), r)
+			ic.paint(f, after, render.XYWH(r.Min.X, r.Min.Y, aw, ah), r)
 			left := render.Rect{Min: r.Min, Max: render.Point{X: split, Y: r.Max.Y}}
 			f.PushClip(left, 0)
 			f.Rect(left, render.Style{Fill: bg})
-			paintImage(f, before, render.XYWH(r.Min.X, r.Min.Y, bw, bh), r)
+			ic.paint(f, before, render.XYWH(r.Min.X, r.Min.Y, bw, bh), r)
 			f.Pop()
 			f.Rect(render.XYWH(split-1, r.Min.Y, 2, r.Dy()), render.Style{Fill: line})
 			mid := r.Min.Y + r.Dy()/2

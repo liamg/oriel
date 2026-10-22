@@ -7,17 +7,20 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"runtime/debug"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	lua "github.com/yuin/gopher-lua"
 )
 
-// The watchdog (scripting.md, "Execution model"): a call that runs past WarnAfter is reported as slow, and one past
+// The watchdog: a call that runs past WarnAfter is reported as slow, and one past
 // InterruptAfter is stopped with an error. Loading a config gets LoadBudget.
 var (
 	WarnAfter      = 50 * time.Millisecond
@@ -56,6 +59,7 @@ type Stat struct {
 // VM is one Lua state, on the UI loop: calls into it are synchronous and never overlap.
 type VM struct {
 	mu      sync.Mutex
+	owner   atomic.Uint64 // the goroutine holding mu, 0 when free
 	L       *lua.LState
 	stats   map[string]*stat
 	OnSlow  func(source string, took time.Duration) // a call past WarnAfter
@@ -162,10 +166,31 @@ func (vm *VM) guard(budget time.Duration, fn func() error) error {
 	return vm.luaError(err)
 }
 
+// lock takes mu for this goroutine, and returns its unlock.
+func (vm *VM) lock() func() {
+	vm.mu.Lock()
+	vm.owner.Store(goid())
+	return func() {
+		vm.owner.Store(0)
+		vm.mu.Unlock()
+	}
+}
+
+// goid is the calling goroutine's id.
+func goid() uint64 {
+	var buf [64]byte
+	b := buf[:runtime.Stack(buf[:], false)]
+	b = b[len("goroutine "):]
+	if i := strings.IndexByte(string(b), ' '); i >= 0 {
+		b = b[:i]
+	}
+	id, _ := strconv.ParseUint(string(b), 10, 64)
+	return id
+}
+
 // Load runs a chunk: a config file, a line typed at :lua.
 func (vm *VM) Load(c Chunk) error {
-	vm.mu.Lock()
-	defer vm.mu.Unlock()
+	defer vm.lock()()
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
 		return &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
@@ -178,8 +203,7 @@ func (vm *VM) Load(c Chunk) error {
 
 // Eval runs a chunk and returns what it returns: the :lua REPL tries "return <line>" first.
 func (vm *VM) Eval(c Chunk) ([]any, error) {
-	vm.mu.Lock()
-	defer vm.mu.Unlock()
+	defer vm.lock()()
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
 		return nil, &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
@@ -201,11 +225,11 @@ func (vm *VM) Eval(c Chunk) ([]any, error) {
 }
 
 // Call calls a Lua function with Go values, and returns what it returns as Go values. Calls from inside a Lua
-// call (a Go function calling back into Lua) run on the same state.
+// call (a Go function calling back into Lua) run on the same state; a call from another goroutine waits.
 func (vm *VM) Call(fn *Fn, args ...any) ([]any, error) {
-	nested := !vm.mu.TryLock()
+	nested := vm.owner.Load() == goid()
 	if !nested {
-		defer vm.mu.Unlock()
+		defer vm.lock()()
 	}
 	start := time.Now()
 	call := func() error {
@@ -311,7 +335,7 @@ func (vm *VM) namespace(ns string) *lua.LTable {
 }
 
 // Future makes oriel.<ns> a namespace for a feature that isn't here yet: calling anything in it is an error that
-// says which ticket brings it, rather than the config failing to load.
+// says what it waits on, rather than the config failing to load.
 func (vm *VM) Future(ns, ticket string) {
 	t := vm.namespace(ns)
 	mt := vm.L.NewTable()

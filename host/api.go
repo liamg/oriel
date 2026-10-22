@@ -3,9 +3,20 @@ package host
 import (
 	"encoding/json"
 
-	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/host/aireview"
+	"github.com/liamg/oriel/host/github"
+	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/host/jobs"
+	"github.com/liamg/oriel/host/persist"
+	"github.com/liamg/oriel/host/repos"
+	"github.com/liamg/oriel/host/sandboxhost"
+	"github.com/liamg/oriel/host/utility"
+	"github.com/liamg/oriel/host/worktree"
 )
+
+// The host's API types live with the part that does the work; these are their names here, where the app finds them.
 
 // EndReq ends a session: archived, or deleted.
 type EndReq struct {
@@ -15,145 +26,174 @@ type EndReq struct {
 	DeleteBranch bool           `json:"deleteBranch,omitempty"` // each project's local branch goes too
 }
 
-// StartWorkReq is Start work on a plan, and how; its zero value is the Start work dialog's defaults.
-type StartWorkReq struct {
-	Session core.SessionID `json:"session"`
-	// KeepThreads leaves the plan's threads as they are; otherwise every one but the plan's own goes, the open and
-	// deferred ones carried into the work prompt as a note.
-	KeepThreads bool `json:"keepThreads,omitempty"`
-	// KeepConversation keeps the plan's agent and its context; otherwise a fresh one starts on the work pack.
-	KeepConversation bool              `json:"keepConversation,omitempty"`
-	Branches         map[string]string `json:"branches,omitempty"` // a project's branch, by its name; its planned one if absent
-	Sandbox          *bool             `json:"sandbox,omitempty"`  // nil keeps the session's
-	Network          string            `json:"network,omitempty"`  // ask or open; "" keeps the session's
-	Model            string            `json:"model,omitempty"`    // a new model runs at Effort, or its default
-	Effort           string            `json:"effort,omitempty"`
-}
+// Shared by the parts.
+type (
+	SandboxFactory = hostcore.SandboxFactory
+	Approve        = hostcore.Approve
+	Approval       = hostcore.Approval
+	Sandbox        = hostcore.Sandbox
+	ToolsReq       = hostcore.ToolsReq
+	Draft          = hostcore.Draft
+)
 
-// ConfigureReq switches a session's agent to another model or effort, keeping its conversation.
-type ConfigureReq struct {
-	Session core.SessionID `json:"session"`
-	Model   string         `json:"model,omitempty"`  // "" keeps the agent's; a new model runs at Effort, or its default
-	Effort  string         `json:"effort,omitempty"` // "" keeps the agent's, or a new model's default
-}
+// Agents.
+type (
+	App          = agentrun.App
+	StartWorkReq = agentrun.StartWorkReq
+	ConfigureReq = agentrun.ConfigureReq
+	CommentReq   = agentrun.CommentReq
+	ThreadReq    = agentrun.ThreadReq
+	AnswerReq    = agentrun.AnswerReq
+	AskReq       = agentrun.AskReq
+	SendReq      = agentrun.SendReq
+	TermReq      = agentrun.TermReq
+	ToolCall     = agentrun.ToolCall
+	Decide       = agentrun.Decide
+	Verdict      = agentrun.Verdict
+)
 
-// CommentReq is a comment from the user: on a thread, or opening one (with Anchor, or none for the whole change).
-type CommentReq struct {
-	Session core.SessionID `json:"session"`
-	Thread  core.ThreadID  `json:"thread,omitempty"`
-	Anchor  *core.Anchor   `json:"anchor,omitempty"`
-	Title   string         `json:"title,omitempty"`
-	Body    string         `json:"body"`
-	Images  []string       `json:"images,omitempty"`
-	Urgent  bool           `json:"urgent,omitempty"` // interrupts the turn
-	Btw     bool           `json:"btw,omitempty"`    // a side question, answered by a fork
-	// Status opens a new thread in this status rather than open; one that isn't open stays with the user, as a
-	// note pinned to its anchor.
-	Status   core.ThreadStatus `json:"status,omitempty"`
-	Severity string            `json:"severity,omitempty"` // a new thread's rating, as a review finding's (core.Severities)
-	Finding  string            `json:"finding,omitempty"`  // the AI review finding a new thread is opened from
-	// Outgoing opens a comment for a pull request's author, in the review the user will submit: the agent isn't
-	// asked to answer it.
-	Outgoing bool `json:"outgoing,omitempty"`
-}
+// Workspaces.
+type (
+	Manifest      = worktree.Manifest
+	ManifestEntry = worktree.ManifestEntry
+	ManifestPR    = worktree.ManifestPR
+	NextPRReq     = worktree.NextPRReq
+	PRMove        = worktree.PRMove
+)
 
-// AIReviewReq asks for an AI review of a session's change (agents.md, Guardrails: cross-model review).
-type AIReviewReq struct {
-	Session  core.SessionID `json:"session"`
-	Provider string         `json:"provider,omitempty"` // the reviewer's; "" for one other than the author's
-	Model    string         `json:"model,omitempty"`    // "" for the provider's default
-	// Full reviews the whole change since the base; otherwise a session reviewed before has what changed since.
-	Full bool `json:"full,omitempty"`
-	// Pack is the reviewer's prompt, when it isn't the built-in ai-review pack: the user's own.
-	Pack string `json:"pack,omitempty"`
-}
+// Sandboxes.
+type (
+	Permissions    = sandboxhost.Permissions
+	ToolPermission = sandboxhost.ToolPermission
+	Workspace      = sandboxhost.Workspace
+	WorkspacePath  = sandboxhost.WorkspacePath
+)
 
-// ThreadReq changes a thread's status: resolve, reopen, defer, dismiss.
-type ThreadReq struct {
-	Session core.SessionID    `json:"session"`
-	Thread  core.ThreadID     `json:"thread"`
-	Status  core.ThreadStatus `json:"status,omitempty"`
-	Urgent  *bool             `json:"urgent,omitempty"`
-}
+// Code hosts and the Ship page.
+type (
+	Ship            = github.Ship
+	ShipFile        = github.ShipFile
+	ShipCommit      = github.ShipCommit
+	ShipReq         = github.ShipReq
+	ShipRef         = github.ShipRef
+	ShipCommitReq   = github.ShipCommitReq
+	DraftReq        = github.DraftReq
+	RenameReq       = github.RenameReq
+	PRsReq          = github.PRsReq
+	ReviewQueueReq  = github.ReviewQueueReq
+	PRReview        = github.PRReview
+	PRReviewReq     = github.PRReviewReq
+	PRSubmitReq     = github.PRSubmitReq
+	Trust           = github.Trust
+	MirrorReq       = github.MirrorReq
+	Mirror          = github.Mirror
+	MirrorPR        = github.MirrorPR
+	ForwardReq      = github.ForwardReq
+	ForwardedReq    = github.ForwardedReq
+	DraftEditReq    = github.DraftEditReq
+	ResolveReq      = github.ResolveReq
+	GitHubReq       = github.GitHubReq
+	GitHubChecks    = github.GitHubChecks
+	MirrorReviewReq = github.MirrorReviewReq
+	ReviewThread    = github.ReviewThread
+	ReviewComment   = github.ReviewComment
+)
 
-// AnswerReq answers an ask: allow, always, deny (with a note for the agent), or a question's answers.
-type AnswerReq struct {
-	Session  core.SessionID    `json:"session"`
-	Ask      string            `json:"ask"`
-	Decision string            `json:"decision"` // allow, always, deny, answer; recheck for a login
-	Note     string            `json:"note,omitempty"`
-	Answers  map[string]string `json:"answers,omitempty"`
-	Scope    string            `json:"scope,omitempty"` // a network rule's host pattern
-}
+// Repos.
+type (
+	RepoCheck     = repos.RepoCheck
+	CloneReq      = repos.CloneReq
+	CloneTarget   = repos.CloneTarget
+	RepoFacts     = repos.RepoFacts
+	StaleBranch   = repos.StaleBranch
+	HousekeepPlan = repos.HousekeepPlan
+	HousekeepReq  = repos.HousekeepReq
+	Cleaned       = repos.Cleaned
+	TagPreview    = repos.TagPreview
+	TagReq        = repos.TagReq
+	Tagged        = repos.Tagged
+)
 
-// AskReq is something the app asks the user for a session, as its agent's own gate would: an agent tool that asks
-// first. The session's rules and the policy hooks answer before the user sees a card; "always" adds Ask.Rule.
-type AskReq struct {
-	Session core.SessionID `json:"session"`
-	Ask     core.Ask       `json:"ask"`
-}
+// Jobs, utility agents, AI reviews, stats.
+type (
+	Job             = jobs.Job
+	Schedule        = jobs.Schedule
+	Run             = jobs.Run
+	UtilitySpec     = utility.UtilitySpec
+	UtilityEvent    = utility.UtilityEvent
+	UtilityReq      = utility.UtilityReq
+	Utility         = utility.Utility
+	AIReviewReq     = aireview.AIReviewReq
+	StatsSessionReq = persist.StatsSessionReq
+	UsageHistoryReq = persist.UsageHistoryReq
+	SearchReq       = persist.SearchReq
+	Hit             = persist.Hit
+)
 
-// SendReq is a message to the agent outside any thread: the console's composer.
-type SendReq struct {
-	Session core.SessionID `json:"session"`
-	Text    string         `json:"text"`
-	Images  []string       `json:"images,omitempty"`
-	Urgent  bool           `json:"urgent,omitempty"`
-}
+const (
+	DraftByYou    = hostcore.DraftByYou
+	AIReviewPack  = aireview.AIReviewPack
+	BatchLead     = agentrun.BatchLead
+	NoticeLead    = agentrun.NoticeLead
+	NoPosting     = agentrun.NoPosting
+	KeyWait       = agentrun.KeyWait
+	GatewayServer = sandboxhost.GatewayServer
+	ManifestFile  = worktree.ManifestFile
+	ReposDir      = worktree.ReposDir
 
-type TermReq struct {
-	Session core.SessionID `json:"session"`
-	Data    []byte         `json:"data,omitempty"`
-	Cols    int            `json:"cols,omitempty"`
-	Rows    int            `json:"rows,omitempty"`
-}
+	SourceSession  = sandboxhost.SourceSession
+	SourceProject  = sandboxhost.SourceProject
+	SourceSettings = sandboxhost.SourceSettings
+	SourceAlways   = sandboxhost.SourceAlways
+	SourceReadOnly = sandboxhost.SourceReadOnly
+	SourceDefault  = sandboxhost.SourceDefault
+	SourceOriel    = sandboxhost.SourceOriel
 
-type SearchReq struct {
-	Query    string `json:"query"`
-	Archived bool   `json:"archived,omitempty"` // archived sessions too
-}
+	WhyMerged = repos.WhyMerged
+	WhyGone   = repos.WhyGone
 
-// Hit is a match in a session's threads or transcript.
-type Hit struct {
-	Session core.SessionID `json:"session"`
-	Thread  core.ThreadID  `json:"thread,omitempty"`
-	Item    string         `json:"item,omitempty"`
-	Text    string         `json:"text"`
-}
+	EveryWeekday = jobs.EveryWeekday
+	EveryWeek    = jobs.EveryWeek
+	EveryDays    = jobs.EveryDays
+	RunRunning   = jobs.RunRunning
+	RunDone      = jobs.RunDone
+	RunBlocked   = jobs.RunBlocked
+	RunStopped   = jobs.RunStopped
+	RunSkipped   = jobs.RunSkipped
+)
 
-// ProviderInfo is a provider as the launcher shows it.
-type ProviderInfo struct {
-	ID      string             `json:"id"`
-	Install agent.Install      `json:"install"`
-	Models  []agent.Model      `json:"models,omitempty"`
-	Usage   core.ProviderUsage `json:"usage,omitzero"`
-	Error   string             `json:"error,omitempty"`
-}
+var (
+	// NotesFiles are the agent notes generated at a workspace's root: CLAUDE.md for Claude, AGENTS.md for Codex.
+	NotesFiles = hostcore.NotesFiles
+	// Templates a new repo can start from, besides any git URL (a GitHub template repo).
+	Templates = worktree.Templates
+	// ErrKeyCancelled is a git operation stopped from its security-key card.
+	ErrKeyCancelled = agentrun.ErrKeyCancelled
+)
 
-// ToolsReq asks the app for the tools it offers an agent: a session's (Agent is its kind), or a utility agent's (no
-// Session; Agent is its name).
-type ToolsReq struct {
-	Session core.SessionID `json:"session,omitempty"`
-	Agent   string         `json:"agent,omitempty"`
-}
+// Sanitise reduces a string to a name safe for a directory and a git branch.
+func Sanitise(s string) string { return hostcore.Sanitise(s) }
 
-// ToolCall is an agent calling a tool the app offers.
-type ToolCall struct {
-	Session core.SessionID  `json:"session,omitempty"`
-	Agent   string          `json:"agent,omitempty"`
-	Tool    string          `json:"tool"`
-	Args    json.RawMessage `json:"args"`
-}
+// BranchName is <you>/<ticket>-<slug>.
+func BranchName(you, ticket, slug string) string { return worktree.BranchName(you, ticket, slug) }
 
-// Decide asks the app's policy hooks about an ask before it reaches the user (layer 2).
-type Decide struct {
-	Session core.SessionID `json:"session"`
-	Ask     core.Ask       `json:"ask"`
-}
+// LoadManifest reads root's manifest; ok is false when root isn't a workspace.
+func LoadManifest(root string) (Manifest, bool) { return worktree.LoadManifest(root) }
 
-// Verdict is what the policy hooks said: allow, deny, or "" to ask the user.
-type Verdict struct {
-	Decision string `json:"decision,omitempty"`
-	Note     string `json:"note,omitempty"`
-	By       string `json:"by,omitempty"`
-}
+// CloneName is the folder a clone of url is named by default: its last part, with .git dropped.
+func CloneName(url string) string { return repos.CloneName(url) }
+
+// JobOf is the saved job a session is a run of; "" for any other session.
+func JobOf(se core.SessionState) string { return jobs.JobOf(se) }
+
+// RunOf reads a job session's run from its request thread.
+func RunOf(se core.SessionState) Run { return jobs.RunOf(se) }
+
+// ParseFindings reads the findings a reviewer wrote as JSON in its answer.
+func ParseFindings(text string) []core.Finding { return aireview.ParseFindings(text) }
+
+// Redacted stands in for the text of a GitHub comment whose author isn't trusted.
+func Redacted(author string) string { return agentrun.Redacted(author) }
+
+// RuleFor is the rule "Always" makes of a tool call.
+func RuleFor(tool string, input json.RawMessage) string { return agentrun.RuleFor(tool, input) }

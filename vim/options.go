@@ -21,6 +21,7 @@ type OptionDef struct {
 	Kind    string   // "bool", "int", "string" or "enum"
 	Values  []string // an enum's
 	Default any
+	Min     int // an int's least value
 	Scope   OptionScope
 	Help    string
 	get     func(o *Options) any
@@ -34,7 +35,7 @@ func OptionDefs() []OptionDef {
 		{Name: "shiftwidth", Short: "sw", Kind: "int", Default: d.ShiftWidth, Scope: BufferOption,
 			Help: "Columns an indent step (>>, <<, ⌃T) takes.",
 			get:  func(o *Options) any { return o.ShiftWidth }, set: func(o *Options, v any) { o.ShiftWidth = v.(int) }},
-		{Name: "tabstop", Short: "ts", Kind: "int", Default: d.TabStop, Scope: BufferOption,
+		{Name: "tabstop", Short: "ts", Kind: "int", Default: d.TabStop, Min: 1, Scope: BufferOption,
 			Help: "Columns a tab takes.",
 			get:  func(o *Options) any { return o.TabStop }, set: func(o *Options, v any) { o.TabStop = v.(int) }},
 		{Name: "expandtab", Short: "et", Kind: "bool", Default: d.ExpandTab, Scope: BufferOption,
@@ -76,6 +77,20 @@ func OptionDefs() []OptionDef {
 	}
 }
 
+// Check says why v isn't a value d can hold.
+func (d OptionDef) Check(v any) error {
+	if d.Kind == "int" {
+		n, ok := v.(int)
+		if !ok {
+			return fmt.Errorf("%s: want a number, got %v", d.Name, v)
+		}
+		if n < d.Min {
+			return fmt.Errorf("%s: must be at least %d", d.Name, d.Min)
+		}
+	}
+	return nil
+}
+
 func optionDef(name string) (OptionDef, bool) {
 	for _, d := range OptionDefs() {
 		if d.Name == name || d.Short != "" && d.Short == name {
@@ -107,7 +122,7 @@ func (e *Engine) loadOptions() {
 	}
 	o := DefaultOptions()
 	for _, d := range OptionDefs() {
-		if v, ok := e.settings.Get(d.Name, e.buffer.name, e.windowKey()); ok {
+		if v, ok := e.settings.Get(d.Name, e.buffer.name, e.windowKey()); ok && d.Check(v) == nil {
 			d.set(&o, v)
 		}
 	}
@@ -144,7 +159,7 @@ func (e *Engine) setValue(d OptionDef, arg, val string, hasVal, on bool, op byte
 		case '^':
 			n = cur * n
 		}
-		if d.Name == "tabstop" && n <= 0 {
+		if n < d.Min {
 			return nil, fmt.Errorf("E487: Argument must be positive: %s", arg)
 		}
 		return n, nil

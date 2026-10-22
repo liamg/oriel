@@ -1,5 +1,5 @@
 // Package settingsfile is what the app and a worker share about settings.toml files: the trust a project's file
-// needs before it applies, and how a file's keys spell option names (settings.md).
+// needs before it applies, and how a file's keys spell option names.
 package settingsfile
 
 import (

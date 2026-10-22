@@ -31,13 +31,9 @@ type SessionState struct {
 	Projects   []Project      `json:"projects,omitempty"`
 	Prompt     string         `json:"prompt,omitempty"`
 	Ticket     string         `json:"ticket,omitempty"`
-	PR         string         `json:"pr,omitempty"`
-	PRRef      string         `json:"prRef,omitempty"`  // where a review fetches its PR from, when not GitHub's pull/N/head
 	Source     string         `json:"source,omitempty"` // "crit" for a crit workspace, which the session host drops
-	Job        string         `json:"job,omitempty"`    // the saved job this session is a run of
 	Created    time.Time      `json:"created,omitzero"`
 	Archived   bool           `json:"archived,omitempty"`
-	Unplanned  bool           `json:"unplanned,omitempty"` // work started with no plan or ticket
 	StartWork  bool           `json:"startWork,omitempty"` // its worktrees come at Start work: a plan
 	Started    bool           `json:"started,omitempty"`   // a plan session whose work has started
 	Past       []PastPR       `json:"past,omitempty"`
@@ -54,10 +50,11 @@ type SessionState struct {
 	Overrides  []GateOverride `json:"overrides,omitempty"`  // commits made past the gate
 	AIReviews  []AIReview     `json:"aiReviews,omitempty"`
 	Findings   []Finding      `json:"findings,omitempty"` // the AI reviews' findings
-	Review     *ReviewDraft   `json:"review,omitempty"`   // a review session's review, as the user is writing it
 	// Verifications are the verify quizzes taken before raising its PRs, the last one standing.
 	Verifications []Verification `json:"verifications,omitempty"`
 	ProjectUI     ProjectUI      `json:"projectUI,omitzero"`
+
+	data KindData // its kind's own: Data, DataOf
 }
 
 // MachineState is this machine as the session host reads it: what it runs, and its load.

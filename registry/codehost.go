@@ -370,7 +370,7 @@ type MergeOpts struct {
 var ErrNotOffered = errors.New("the code host doesn't offer that")
 
 // CodeHosts are the hosts by Order, then name.
-func CodeHosts(r Registry) []CodeHost {
+func CodeHosts(r Contributions) []CodeHost {
 	var out []CodeHost
 	for _, c := range r.Contributions("code.host") {
 		out = append(out, c.(CodeHost))
@@ -382,7 +382,7 @@ func CodeHosts(r Registry) []CodeHost {
 }
 
 // HostByName is the host named name.
-func HostByName(r Registry, name string) (CodeHost, bool) {
+func HostByName(r Contributions, name string) (CodeHost, bool) {
 	for _, h := range CodeHosts(r) {
 		if h.Name == name {
 			return h, true

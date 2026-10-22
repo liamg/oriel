@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// RV-1: marks of reviewed hunks are session events: they replay from the log, add and take off per change, and
+// Marks of reviewed hunks are session events: they replay from the log, add and take off per change, and
 // leave older copies of the state alone.
 func TestHunksReviewed(t *testing.T) {
 	var log bytes.Buffer
@@ -56,8 +56,8 @@ func TestHunksReviewed(t *testing.T) {
 	}
 }
 
-// RV-2: agents.md, "Every agent-written line is unread until you've seen it in the diff (scrolled past it, or marked
-// its hunk reviewed)": lines seen are session events too, a line read stays read, and a marked change reads all
+// Every agent-written line is unread until you've seen it in the diff (scrolled past it, or marked its hunk
+// reviewed): lines seen are session events too, a line read stays read, and a marked change reads all
 // its lines. A commit made past the gate is kept in the session.
 func TestLinesSeenAndGateOverrides(t *testing.T) {
 	var log bytes.Buffer
@@ -106,7 +106,7 @@ func TestLinesSeenAndGateOverrides(t *testing.T) {
 	}
 }
 
-// RV-2: PLAN.md, "Commit gate: hard for work and plan sessions … soft for jobs, off for reviews and direct sessions".
+// The commit gate is hard for work and plan sessions, soft for jobs, off for reviews and direct sessions.
 func TestDefaultGate(t *testing.T) {
 	for k, want := range map[core.Kind]string{core.KindWork: "hard", core.KindPlan: "hard", core.KindJob: "soft",
 		core.KindReview: "off", core.KindDirect: "off"} {

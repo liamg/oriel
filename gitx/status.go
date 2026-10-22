@@ -13,7 +13,7 @@ import (
 	"sync"
 )
 
-// Scope is which changes a list of files is about (ui.md 01c).
+// Scope is which changes a list of files is about.
 type Scope int
 
 const (
@@ -172,11 +172,6 @@ type mergeBase struct {
 	ref, full, short string
 }
 
-var mergeBases = struct {
-	sync.Mutex
-	by map[mergeBaseKey]mergeBase
-}{by: map[mergeBaseKey]mergeBase{}}
-
 // mergeBase is where HEAD left base: of origin's base and the local branch of its name, the later merge-base, so
 // a stale origin doesn't put years of others' work in Changed. It's worked out again only when HEAD or either
 // branch moves.
@@ -194,11 +189,14 @@ func (r Repo) mergeBase(ctx context.Context, head, base, branch string) (mergeBa
 		return mergeBase{}, false
 	}
 	k := mergeBaseKey{dir: r.Dir, head: head, refs: string(out)}
-	mergeBases.Lock()
-	mb, ok := mergeBases.by[k]
-	mergeBases.Unlock()
-	if ok {
-		return mb, mb.full != ""
+	var mb mergeBase
+	if c := r.Cache; c != nil {
+		c.mu.Lock()
+		cached, ok := c.mergeBases[k]
+		c.mu.Unlock()
+		if ok {
+			return cached, cached.full != ""
+		}
 	}
 	for _, ref := range refs {
 		b, err := r.git(ctx, "merge-base", "HEAD", ref)
@@ -218,12 +216,14 @@ func (r Repo) mergeBase(ctx context.Context, head, base, branch string) (mergeBa
 			mb.short = strings.TrimSpace(string(b))
 		}
 	}
-	mergeBases.Lock()
-	if len(mergeBases.by) > 256 {
-		clear(mergeBases.by)
+	if c := r.Cache; c != nil {
+		c.mu.Lock()
+		if len(c.mergeBases) > 256 {
+			clear(c.mergeBases)
+		}
+		c.mergeBases[k] = mb
+		c.mu.Unlock()
 	}
-	mergeBases.by[k] = mb
-	mergeBases.Unlock()
 	return mb, mb.full != ""
 }
 
@@ -527,7 +527,7 @@ func countLines(path string) (int, bool) {
 	return n, false
 }
 
-// Status is a work tree's status kept up to date: what explorer scopes and gutters read (ide.md). Refresh reads
+// Status is a work tree's status kept up to date: what explorer scopes and gutters read. Refresh reads
 // it again; watchers hear which paths' states changed.
 type Status struct {
 	repo    Repo

@@ -3,6 +3,7 @@ package sandbox
 import (
 	"context"
 	"errors"
+	"github.com/liamg/oriel/internal/testhook"
 	"slices"
 	"strings"
 	"testing"
@@ -43,9 +44,7 @@ func TestBackendRegistry(t *testing.T) {
 
 // The default is the most preferred backend this machine can run: orbstack when docker isn't set up.
 func TestDefaultBackendPrefersAvailable(t *testing.T) {
-	old := Preference
-	t.Cleanup(func() { Preference = old })
-	Preference = []string{"test-docker", "test-orbstack", "test-podman"}
+	testhook.Set(t, &Preference, []string{"test-docker", "test-orbstack", "test-podman"})
 	Register(testBackend{name: "test-docker", err: errors.New("no daemon")})
 	Register(testBackend{name: "test-podman"})
 	Register(testBackend{name: "test-orbstack"})

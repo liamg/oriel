@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/registry"
 )
 

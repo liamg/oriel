@@ -14,7 +14,7 @@ type Version = semver.Version
 // ParseVersion reads a full version: major, minor and patch.
 func ParseVersion(s string) (Version, error) { return semver.Parse(s) }
 
-// Range is a set of versions, as a [plugins] entry names it (catalog.md), in node-semver's syntax: "*", "^0.4",
+// Range is a set of versions, as a [plugins] entry names it, in node-semver's syntax: "*", "^0.4",
 // "~1.2", "1.x", ">=0.9 <2", "1.2.3 || ^2", or an exact "1.2.3". Hyphen ranges aren't supported.
 type Range struct {
 	src  string

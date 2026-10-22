@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// PL-2, security.md → "Where a plugin runs": process plugins get "Landlock + seccomp on Linux … scoped to the
+// Process plugins get "Landlock + seccomp on Linux … scoped to the
 // worktree and the declared fs, net, exec grants". Live, against this kernel.
 func TestLandlockConfines(t *testing.T) {
 	if err := Available(); err != nil {

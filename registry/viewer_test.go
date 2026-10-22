@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// plugins.md, file viewers: "the first viewer by `Order`, then name, whose `When` claims a file shows it"; one that
+// File viewers: "the first viewer by `Order`, then name, whose `When` claims a file shows it"; one that
 // panics is passed over.
 func TestViewerForAFile(t *testing.T) {
 	r := registry.New()

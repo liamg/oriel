@@ -28,7 +28,7 @@ const releaseRepo = "liamg/oriel"
 const healthWait = 2 * time.Minute
 
 // selfInstaller is the installed copy of Oriel this process runs from: the .app bundle on macOS when it's in one,
-// else the binary. Its updates are staged in the state directory (distribution.md).
+// else the binary. Its updates are staged in the state directory.
 func selfInstaller() (*update.Installer, string, error) {
 	exe, err := os.Executable()
 	if err == nil {
@@ -37,12 +37,21 @@ func selfInstaller() (*update.Installer, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	in := &update.Installer{Target: exe, Dir: filepath.Join(logs.StateDir(), "updates")}
+	in, kind := installerFor(exe, runtime.GOOS, filepath.Join(logs.StateDir(), "updates"))
+	return in, kind, nil
+}
+
+// installerFor is the installer for the executable exe on goos, and the kind of artifact it updates from.
+func installerFor(exe, goos, dir string) (*update.Installer, string) {
+	in := &update.Installer{Target: exe, Dir: dir}
 	if bundle, inner, ok := appBundle(exe); ok {
 		in.Target, in.Exe = bundle, inner
-		return in, update.KindBundle, nil
+		return in, update.KindBundle
 	}
-	return in, update.KindBinary, nil
+	if goos == "linux" {
+		return in, update.KindArchive
+	}
+	return in, update.KindBinary
 }
 
 // appBundle splits /Applications/Oriel.app/Contents/MacOS/oriel into the bundle and the executable inside it.
@@ -80,11 +89,7 @@ func newUpdater(src update.Source) (*update.Updater, error) {
 
 // appUpdates sets cfg up to update Oriel, and confirms or rolls back a swap: a new version must open its window
 // within healthWait, and one that doesn't, or crashed on the start before, is replaced by the previous one.
-func appUpdates(cfg *app.Config) {
-	in, _, err := selfInstaller()
-	if err != nil {
-		return
-	}
+func appUpdates(cfg *app.Config, in *update.Installer) {
 	started := make(chan struct{})
 	cfg.Started = func() { close(started) }
 	go func() {

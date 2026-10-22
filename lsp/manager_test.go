@@ -52,8 +52,8 @@ func TestBuiltins(t *testing.T) {
 			t.Errorf("%s: invalid JSON", s.Name)
 		}
 	}
-	// ide.md: "Built in: gopls, typescript-language-server or vtsls, pyright or basedpyright, rust-analyzer, clangd,
-	// lua-language-server, yaml/json-ls, bash-ls, terraform-ls."
+	// Built in: gopls, typescript-language-server or vtsls, pyright or basedpyright, rust-analyzer, clangd,
+	// lua-language-server, yaml/json-ls, bash-ls, terraform-ls.
 	for _, n := range []string{"gopls", "typescript-language-server", "vtsls", "pyright", "basedpyright", "rust-analyzer", "clangd",
 		"lua-language-server", "yaml-language-server", "vscode-json-language-server", "bash-language-server", "terraform-ls"} {
 		if !names[n] {

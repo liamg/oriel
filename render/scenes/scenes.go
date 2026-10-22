@@ -146,7 +146,7 @@ func Scroll(c *Canvas, st *State) {
 	}
 }
 
-// TextSampler shows the text-quality cases from shell.md: ligatures, italics, emoji and CJK
+// TextSampler shows the text-quality cases: ligatures, italics, emoji and CJK
 // fallback, hairlines, and code at every size the UI uses.
 func TextSampler(c *Canvas, _ *State) {
 	c.Fill(Rect{0, 0, IDEWidth, IDEHeight}, c.p.bg0)

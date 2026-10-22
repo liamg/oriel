@@ -35,22 +35,8 @@ func TestParseMeminfo(t *testing.T) {
 	}
 }
 
-func TestParseVMStat(t *testing.T) {
-	s := `Mach Virtual Memory Statistics: (page size of 16384 bytes)
-Pages free:                               12345.
-Pages active:                            100.
-Pages inactive:                           999.
-Pages wired down:                          50.
-Pages occupied by compressor:              10.
-`
-	used, ok := parseVMStat(s)
-	if !ok || used != 160*16384 {
-		t.Fatalf("got %d ok %v", used, ok)
-	}
-}
-
 func TestRead(t *testing.T) {
-	r := Read()
+	r := NewReader().Read()
 	if r.Cores < 1 {
 		t.Fatalf("cores %d", r.Cores)
 	}

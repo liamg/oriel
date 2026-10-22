@@ -1,5 +1,5 @@
 #!/bin/sh
-# Makes the self-signed code-signing identity release.yml signs Oriel.app with (distribution.md, option B): a
+# Makes the self-signed code-signing identity release.yml signs Oriel.app with: a
 # 20-year certificate named "Oriel Self-Signed" and its key, as a password-protected .p12. Run it once and keep the
 # .p12 and its password somewhere safe: a new certificate is a new identity, so macOS asks again for every privacy
 # and keychain grant.

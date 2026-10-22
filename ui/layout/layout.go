@@ -1,4 +1,4 @@
-// Package layout is the one tree every view lives in (ui.md 01d): splits and tab groups in main, docks on
+// Package layout is the one tree every view lives in: splits and tab groups in main, docks on
 // the left, right and bottom edges, floats, and a drop-down. Any view can be moved to any placement; zoom
 // fills the window with one and restores the exact tree after. The model is plain data, saved and restored
 // as JSON; View draws it with ui, with tabs you drag onto drop targets.
@@ -56,7 +56,8 @@ type Node struct {
 	Active  int       `json:"active,omitempty"`
 }
 
-func (n *Node) leaf() bool { return n.Split == "" }
+// IsLeaf says n holds tabs rather than other nodes.
+func (n *Node) IsLeaf() bool { return n.Split == "" }
 
 type Dock struct {
 	Leaf *Node   `json:"leaf"`
@@ -110,7 +111,7 @@ func (r *Root) Shown() []ViewRef {
 	var out []ViewRef
 	var walk func(n *Node)
 	walk = func(n *Node) {
-		if n.leaf() {
+		if n.IsLeaf() {
 			if len(n.Tabs) > 0 {
 				out = append(out, n.Tabs[n.Active])
 			}
@@ -161,7 +162,7 @@ func (r *Root) leaves() []*Node {
 	var out []*Node
 	var walk func(n *Node)
 	walk = func(n *Node) {
-		if n.leaf() {
+		if n.IsLeaf() {
 			out = append(out, n)
 			return
 		}
@@ -212,7 +213,7 @@ func (r *Root) Row(v ViewRef) (row []ViewRef, at int, ok bool) {
 		return nil, 0, false
 	}
 	for _, k := range parent.Kids {
-		if k.leaf() && len(k.Tabs) > 0 {
+		if k.IsLeaf() && len(k.Tabs) > 0 {
 			row = append(row, k.Tabs[k.Active])
 		} else {
 			row = append(row, ViewRef{})
@@ -372,14 +373,14 @@ func (r *Root) mainLeaf(beside *ViewRef) *Node {
 }
 
 func firstLeaf(n *Node) *Node {
-	for !n.leaf() {
+	for !n.IsLeaf() {
 		n = n.Kids[0]
 	}
 	return n
 }
 
 func (r *Root) leafIn(n *Node, v ViewRef) *Node {
-	if n.leaf() {
+	if n.IsLeaf() {
 		if slices.Contains(n.Tabs, v) {
 			return n
 		}
@@ -420,7 +421,8 @@ func (r *Root) split(target *Node, side Side, add *Node) {
 	*target = Node{Split: axis, Kids: kids, Weights: []float32{1, 1}}
 }
 
-func (r *Root) inMain(l *Node) bool {
+// InMain says leaf l is in the main area, not a dock or a float.
+func (r *Root) InMain(l *Node) bool {
 	if l == r.Main {
 		return true
 	}
@@ -429,7 +431,7 @@ func (r *Root) inMain(l *Node) bool {
 }
 
 func (r *Root) parentOf(n, target *Node) (*Node, int) {
-	if n.leaf() {
+	if n.IsLeaf() {
 		return nil, -1
 	}
 	for i, k := range n.Kids {
@@ -659,7 +661,7 @@ func (r *Root) Dump() string {
 	}
 	var node func(n *Node, depth int)
 	node = func(n *Node, depth int) {
-		if n.leaf() {
+		if n.IsLeaf() {
 			w(depth, "leaf %s", tabs(n))
 			return
 		}

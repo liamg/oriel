@@ -15,10 +15,11 @@ import (
 )
 
 // Repo is a git work tree, read by running git in it. Env is added to git's environment: a sandboxed workspace's
-// guard (sandbox.GitEnv).
+// guard (sandbox.GitEnv). Cache, if set, keeps what's read between calls.
 type Repo struct {
-	Dir string
-	Env []string
+	Dir   string
+	Env   []string
+	Cache *Cache
 }
 
 // IsRepo reports whether dir is the top of a work tree.
@@ -31,17 +32,34 @@ func (r Repo) git(ctx context.Context, args ...string) ([]byte, error) {
 	return r.gitEnv(ctx, nil, args...)
 }
 
-// gitEnv is git with more environment.
+// gitEnv is git with more environment. A git that finds the index locked by another, briefly, is run again.
 func (r Repo) gitEnv(ctx context.Context, env []string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", r.Dir, "--no-pager"}, args...)...)
-	cmd.Env = append(append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...), env...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(stderr.String()))
+	for wait := 20 * time.Millisecond; ; wait *= 2 {
+		cmd := exec.CommandContext(ctx, "git", append([]string{"-C", r.Dir, "--no-pager"}, args...)...)
+		cmd.Env = append(append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...), env...)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		out, err := cmd.Output()
+		if err == nil {
+			return out, nil
+		}
+		if !indexLocked(stderr.String()) || wait > lockWait {
+			return nil, fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(stderr.String()))
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
 	}
-	return out, nil
+}
+
+// lockWait is about how long a git waits for another to let go of the index.
+const lockWait = 2 * time.Second
+
+// indexLocked says git failed because another git holds the index.
+func indexLocked(stderr string) bool {
+	return strings.Contains(stderr, "index.lock") && strings.Contains(stderr, "File exists")
 }
 
 // Files are the work tree's files that git doesn't ignore, tracked or not, sorted.

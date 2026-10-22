@@ -35,7 +35,7 @@ end)
 `
 		files["init.lua"] = fmt.Sprintf(`local L = oriel
 
--- The plugin's own process: no exec grant needed, OS-sandboxed (catalog.md).
+-- The plugin's own process: no exec grant needed, OS-sandboxed.
 local proc = L.process.spawn("bin/%s")
 
 L.command(%q, function()

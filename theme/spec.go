@@ -129,7 +129,7 @@ func (l *Layer) decode(prefix string, m map[string]any) error {
 	return nil
 }
 
-// tokenKeys flattens a table's keys: TOML reads bg.base = … as a nested table, theming.md writes it dotted.
+// tokenKeys flattens a table's keys: TOML reads bg.base = … as a nested table, theme files write it dotted.
 // A table holding color or on is a value.
 func tokenKeys(prefix string, m map[string]any, fn func(name string, v any) error) error {
 	keys := make([]string, 0, len(m))

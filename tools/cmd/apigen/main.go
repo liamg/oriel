@@ -12,9 +12,8 @@ import (
 
 func main() {
 	root := flag.String("root", "../..", "the repository's root, from the API's directory")
-	version := flag.String("version", "0.4.0", "oriel.api.version")
 	flag.Parse()
-	files, err := apigen.Generate(*root, ".", *version)
+	files, err := apigen.Generate(*root, ".")
 	if err == nil {
 		err = apigen.Write(files)
 	}

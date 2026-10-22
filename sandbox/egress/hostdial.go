@@ -11,6 +11,7 @@ import (
 	"net/netip"
 	"net/url"
 	"strconv"
+	"syscall"
 	"time"
 )
 
@@ -39,10 +40,34 @@ var privateNets = []netip.Prefix{
 	netip.MustParsePrefix("fc00::/7"),
 }
 
+var (
+	nat64      = netip.MustParsePrefix("64:ff9b::/96")
+	nat64Local = netip.MustParsePrefix("64:ff9b:1::/48")
+	sixToFour  = netip.MustParsePrefix("2002::/16")
+	teredo     = netip.MustParsePrefix("2001::/32")
+	v4Compat   = netip.MustParsePrefix("::/96")
+)
+
 // CheckAddr refuses an address scope may not reach. Loopback, link-local
-// (cloud metadata) and unspecified addresses are never reachable.
+// (cloud metadata) and unspecified addresses are never reachable, nor is an
+// IPv6 address that carries one of them (NAT64, 6to4, Teredo).
 func CheckAddr(ip netip.Addr, scope Scope) error {
 	ip = ip.Unmap()
+	if err := checkOne(ip, scope); err != nil {
+		return err
+	}
+	if v4, ok := embeddedV4(ip); ok {
+		if err := checkOne(v4, scope); err != nil {
+			return fmt.Errorf("%s carries %s: %w", ip, v4, err)
+		}
+	}
+	if nat64Local.Contains(ip) && scope != Private {
+		return fmt.Errorf("%s is a local NAT64 address: allow the host with private network access to reach it", ip)
+	}
+	return nil
+}
+
+func checkOne(ip netip.Addr, scope Scope) error {
 	switch {
 	case ip.IsLoopback(), ip.IsLinkLocalUnicast(), ip.IsLinkLocalMulticast(),
 		ip.IsUnspecified(), ip.IsMulticast():
@@ -54,6 +79,35 @@ func CheckAddr(ip netip.Addr, scope Scope) error {
 		}
 	}
 	return nil
+}
+
+// embeddedV4 is the IPv4 address an IPv6 transition address leads to.
+func embeddedV4(ip netip.Addr) (netip.Addr, bool) {
+	if !ip.Is6() {
+		return netip.Addr{}, false
+	}
+	b := ip.As16()
+	switch {
+	case nat64.Contains(ip), nat64Local.Contains(ip), v4Compat.Contains(ip):
+		return netip.AddrFrom4([4]byte(b[12:16])), true
+	case sixToFour.Contains(ip):
+		return netip.AddrFrom4([4]byte(b[2:6])), true
+	case teredo.Contains(ip):
+		return netip.AddrFrom4([4]byte{^b[12], ^b[13], ^b[14], ^b[15]}), true
+	}
+	return netip.Addr{}, false
+}
+
+// DialControl is a net.Dialer Control that refuses an address scope may not reach, so a dialer checks the
+// address it actually connects to.
+func DialControl(scope Scope) func(network, address string, c syscall.RawConn) error {
+	return func(_, address string, _ syscall.RawConn) error {
+		ap, err := netip.ParseAddrPort(address)
+		if err != nil {
+			return fmt.Errorf("%s is not an address the sandbox dials: %w", address, err)
+		}
+		return CheckAddr(ap.Addr(), scope)
+	}
 }
 
 // Resolver looks up a host's addresses.

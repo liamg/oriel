@@ -54,7 +54,7 @@ func Tokens() []Token {
 	return append([]Token(nil), tokens...)
 }
 
-// Semantic tokens: what every component reads (theming.md).
+// Semantic tokens: what every component reads.
 var (
 	BgBase    = Declare("bg.base", "bg0")
 	BgSurface = Declare("bg.surface", "bg1")
@@ -79,6 +79,8 @@ var (
 	Warn  = Declare("warn", "amber")
 	Error = Declare("error", "red")
 	OK    = Declare("ok", "green")
+
+	Recording = Declare("recording", "amber") // a field being dictated into
 
 	StatusNeedsYou   = Declare("status.needs_you", "red")
 	StatusPermission = Declare("status.permission", "violet")

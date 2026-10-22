@@ -1,6 +1,6 @@
-// Package voice is dictation: audio from the microphone through a recorder it runs (mic.go), split into phrases
-// at its pauses (listen.go) and turned into text by a local whisper.cpp server or an OpenAI-compatible endpoint;
-// an optional wake word (wake.go); and speech for replies (speak.go). Ported from crit's internal/voice and
+// Package voice is dictation: audio from the microphone (capture.go, or a recorder it runs: mic.go), split into
+// phrases at its pauses (listen.go) and turned into text by whisper.cpp, built in (native.go) or as a whisper-server it
+// runs, or by an OpenAI-compatible endpoint; and speech for replies (speak.go). Ported from crit's internal/voice and
 // web/static/voice.js.
 package voice
 
@@ -18,7 +18,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -50,8 +49,8 @@ type Settings struct {
 	URL   string
 }
 
-// Whisper runs one resident whisper-server, started on first use and stopped
-// when idle.
+// Whisper keeps one model resident, loaded on first use and dropped when idle: in the whisper.cpp built into Oriel,
+// else in a whisper-server it runs.
 type Whisper struct {
 	// Dir holds the models; ~/.oriel/whisper.
 	Dir string
@@ -62,16 +61,26 @@ type Whisper struct {
 	// LookPath and Spawn are swapped in tests.
 	LookPath func(string) (string, error)
 	Spawn    func(bin, model string) (url string, stop func(), err error)
+	// Metered says the OS counts the network as metered; the background download waits for another network.
+	Metered func() bool
+	// Net is what models are downloaded with; a client with connect and header timeouts if nil.
+	Net *http.Client
+
+	load func(path string) (engine, error) // loadEngine, swapped in tests
 
 	reqMu   sync.Mutex // one transcription at a time
 	mu      sync.Mutex
-	url     string
+	url     string // the server's, while one runs
+	eng     engine // the model in this process, while loaded
 	model   string
+	gen     int // counts loads, so a reaper knows its own
 	stop    func()
 	lastUse time.Time
 
-	dlMu sync.Mutex
-	dl   map[string]*download
+	dlMu      sync.Mutex
+	dl        map[string]*download
+	listeners map[int]func()
+	nextL     int
 }
 
 // New is a Whisper with the real binary, models in ~/.oriel/whisper.
@@ -83,6 +92,8 @@ func New(settings func() Settings) *Whisper {
 		Settings: settings,
 		LookPath: lookWhisper,
 		Spawn:    spawn,
+		Metered:  Metered,
+		load:     loadEngine,
 	}
 }
 
@@ -100,21 +111,15 @@ func lookWhisper(string) (string, error) {
 
 // Installed reports whether transcription can run here at all.
 func (w *Whisper) Installed() bool {
-	if w.Settings().URL != "" {
+	if w.Settings().URL != "" || w.load != nil {
 		return true
 	}
 	_, err := w.LookPath("whisper-server")
 	return err == nil
 }
 
-// DefaultModel is the model for this machine: small.en where Metal makes it
-// cheap, base.en on CPU.
-func DefaultModel() string {
-	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-		return "small.en"
-	}
-	return "base.en"
-}
+// DefaultModel is the model an empty voice.model means, on every machine.
+func DefaultModel() string { return "base.en" }
 
 // ModelPath resolves a setting to a file: a name like "base.en" lives in Dir.
 func (w *Whisper) ModelPath(name string) (path, resolved string) {
@@ -136,95 +141,123 @@ func (w *Whisper) Transcribe(ctx context.Context, wav []byte, prompt string) (st
 	if st.URL != "" {
 		return openAI(ctx, st.URL, wav, prompt)
 	}
-	base, err := w.ensure(st.Model)
+	base, eng, err := w.ensure(st.Model)
 	if err != nil {
 		return "", err
 	}
-	text, err := post(ctx, base+"/inference", wav, map[string]string{
-		"response_format": "json",
-		"temperature":     "0.0",
-		"prompt":          prompt,
-	})
+	var text string
+	if eng != nil {
+		var samples []float32
+		if samples, err = decodeWAV(wav); err == nil {
+			text, err = eng.transcribe(ctx, samples, prompt)
+			text = Clean(text)
+		}
+	} else {
+		text, err = post(ctx, base+"/inference", wav, map[string]string{
+			"response_format": "json",
+			"temperature":     "0.0",
+			"prompt":          prompt,
+		})
+	}
 	w.mu.Lock()
 	w.lastUse = time.Now()
 	w.mu.Unlock()
 	return text, err
 }
 
-// ensure starts whisper-server for the configured model, or reuses the one
-// already running.
-func (w *Whisper) ensure(setting string) (string, error) {
+// ensure loads the configured model, in this process or in a whisper-server, or reuses the one loaded: the server's
+// URL, or the engine.
+func (w *Whisper) ensure(setting string) (string, engine, error) {
 	path, name := w.ModelPath(setting)
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.url != "" && w.model == path {
+	if w.stop != nil && w.model == path {
 		w.lastUse = time.Now()
-		return w.url, nil
+		return w.url, w.eng, nil
 	}
-	bin, err := w.LookPath("whisper-server")
-	if err != nil {
-		return "", ErrNoBinary
+	bin := ""
+	if w.load == nil {
+		var err error
+		if bin, err = w.LookPath("whisper-server"); err != nil {
+			return "", nil, ErrNoBinary
+		}
 	}
 	if _, err := os.Stat(path); err != nil {
 		if st, ok := w.DownloadState(name); ok && !st.Done {
-			return "", &DownloadingError{Status: st}
+			return "", nil, &DownloadingError{Status: st}
 		}
-		return "", &NoModelError{Name: name, Path: path}
+		return "", nil, &NoModelError{Name: name, Path: path}
 	}
-	if w.stop != nil {
-		w.stop()
-		w.url, w.stop = "", nil
+	w.unload()
+	if w.load != nil {
+		eng, err := w.load(path)
+		if err != nil {
+			return "", nil, err
+		}
+		w.eng, w.stop = eng, eng.close
+	} else {
+		url, stop, err := w.Spawn(bin, path)
+		if err != nil {
+			return "", nil, err
+		}
+		w.url, w.stop = url, stop
 	}
-	url, stop, err := w.Spawn(bin, path)
-	if err != nil {
-		return "", err
-	}
-	w.url, w.model, w.stop, w.lastUse = url, path, stop, time.Now()
-	go w.reap(url)
-	return url, nil
+	w.gen++
+	w.model, w.lastUse = path, time.Now()
+	go w.reap(w.gen)
+	return w.url, w.eng, nil
 }
 
-// reap stops the server once it has gone unused for Idle.
-func (w *Whisper) reap(url string) {
+// unload drops the model loaded; w.mu is held.
+func (w *Whisper) unload() {
+	if w.stop != nil {
+		w.stop()
+	}
+	w.url, w.eng, w.stop, w.model = "", nil, nil, ""
+}
+
+// reap drops the model once it has gone unused for Idle.
+func (w *Whisper) reap(gen int) {
 	tick := w.Idle / 10
 	if tick < 10*time.Millisecond {
 		tick = 10 * time.Millisecond
 	}
 	for {
 		time.Sleep(tick)
-		w.mu.Lock()
-		if w.url != url {
-			w.mu.Unlock()
-			return
+		if !w.reqMu.TryLock() {
+			continue // transcribing
 		}
-		if time.Since(w.lastUse) >= w.Idle {
-			w.stop()
-			w.url, w.stop = "", nil
-			w.mu.Unlock()
-			return
+		w.mu.Lock()
+		done := w.gen != gen || w.stop == nil
+		if !done && time.Since(w.lastUse) >= w.Idle {
+			w.unload()
+			done = true
 		}
 		w.mu.Unlock()
+		w.reqMu.Unlock()
+		if done {
+			return
+		}
 	}
 }
 
-// Running reports whether the resident server is up.
+// Running reports whether a model is loaded.
 func (w *Whisper) Running() bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return w.url != ""
+	return w.stop != nil
 }
 
-// Close stops the server.
+// Close drops the model.
 func (w *Whisper) Close() {
 	if w == nil {
 		return
 	}
+	w.reqMu.Lock()
+	defer w.reqMu.Unlock()
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.stop != nil {
-		w.stop()
-	}
-	w.url, w.stop = "", nil
+	w.unload()
 }
 
 // spawn starts whisper-server on a free loopback port and waits for it to

@@ -42,7 +42,7 @@ func TestGuardRails(t *testing.T) {
 		{"git push on the host", spec, "Bash", `{"command":"git push"}`, "", ""},
 		{"a quoted git push is an argument", sandboxed, "Bash", `{"command":"echo 'git push'"}`, "", ""},
 		{"git status in a sandbox", sandboxed, "Bash", `{"command":"git status"}`, "", ""},
-		// RV-4: the agent never posts to a review, on the host or in a sandbox, by gh or by MCP.
+		// The agent never posts to a review, on the host or in a sandbox, by gh or by MCP.
 		{"a review reply by gh api on the host", spec, "Bash", `{"command":"gh api repos/acme/api/pulls/7/comments/9/replies -f body=Agreed"}`, "deny", "never post"},
 		{"a review by gh in a sandbox", sandboxed, "Bash", `{"command":"gh pr review 7 --approve"}`, "deny", "never post"},
 		{"a GitHub MCP review reply", spec, "mcp__github__add_reply_to_pull_request_comment", `{}`, "deny", "never post"},
@@ -114,6 +114,10 @@ func TestArgs(t *testing.T) {
 	want = []string{"--plugin-dir", "/m", "--permission-mode", "default", "--model", "haiku", "--session-id", "s1", "/oriel:assistant what needs me?"}
 	if !slices.Equal(a, want) || slices.Contains(a, "-p") || slices.Contains(a, "--print") {
 		t.Errorf("the assistant = %q\nwant %q", a, want)
+	}
+	a, _ = args(agent.StartSpec{NoMCP: true}, "/m", "s1", "")
+	if j := strings.Join(a, " "); !strings.Contains(j, `--mcp-config {"mcpServers":{}} --strict-mcp-config`) {
+		t.Errorf("no MCP = %q", a)
 	}
 }
 
@@ -334,7 +338,7 @@ func TestDetect(t *testing.T) {
 	if err := os.WriteFile(bin, []byte("#!/bin/sh\necho '2.1.296 (Claude Code)'\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	in, err := Provider{Bin: bin}.Detect(context.Background())
+	in, err := (&Provider{Bin: bin}).Detect(context.Background())
 	if err != nil || in.Version != "2.1.296" || in.LoggedIn || in.Note == "" {
 		t.Fatalf("signed out: %+v, %v", in, err)
 	}
@@ -342,15 +346,15 @@ func TestDetect(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cfg, ".credentials.json"), []byte(creds), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	in, _ = Provider{Bin: bin}.Detect(context.Background())
+	in, _ = (&Provider{Bin: bin}).Detect(context.Background())
 	if !in.LoggedIn || in.Account != "Claude Max" || in.Note != "" || in.Login == "" || strings.Contains(in.Login, "tok") {
 		t.Fatalf("signed in: %+v", in)
 	}
-	// SE-5: a new token on disk is a new login.
+	// A new token on disk is a new login.
 	if err := os.WriteFile(filepath.Join(cfg, ".credentials.json"), []byte(strings.Replace(creds, "tok", "tok2", 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if again, _ := (Provider{Bin: bin}).Detect(context.Background()); !again.LoggedIn || again.Login == in.Login {
+	if again, _ := (&Provider{Bin: bin}).Detect(context.Background()); !again.LoggedIn || again.Login == in.Login {
 		t.Errorf("a new token: %+v, was %+v", again, in)
 	}
 	if err := os.WriteFile(filepath.Join(cfg, ".credentials.json"), []byte(creds), 0o600); err != nil {
@@ -359,10 +363,10 @@ func TestDetect(t *testing.T) {
 	if err := os.WriteFile(bin, []byte("#!/bin/sh\necho '2.0.1 (Claude Code)'\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if in, _ = (Provider{Bin: bin}).Detect(context.Background()); !strings.Contains(in.Note, "too old") {
+	if in, _ = (&Provider{Bin: bin}).Detect(context.Background()); !strings.Contains(in.Note, "too old") {
 		t.Errorf("an old claude: %+v", in)
 	}
-	if in, _ = (Provider{Bin: filepath.Join(cfg, "none")}).Detect(context.Background()); in.Note == "" {
+	if in, _ = (&Provider{Bin: filepath.Join(cfg, "none")}).Detect(context.Background()); in.Note == "" {
 		t.Errorf("no claude: %+v", in)
 	}
 }
@@ -379,7 +383,7 @@ func TestLoginFromTheAccountWhenTheTokenIsInTheKeychain(t *testing.T) {
 }
 
 func TestModels(t *testing.T) {
-	ms, _ := Provider{}.Models(context.Background())
+	ms, _ := (&Provider{}).Models(context.Background())
 	defaults := 0
 	for _, m := range ms {
 		if m.Default {
@@ -402,7 +406,7 @@ func TestSandboxCredentials(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	got := Provider{}.SandboxCredentials()
+	got := (&Provider{}).SandboxCredentials()
 	if len(got) != 2 || got[0].Host != filepath.Join(cfg, "skills") || got[0].Sandbox != "$CLAUDE_CONFIG_DIR/skills" || !got[0].ReadOnly {
 		t.Errorf("mounts = %+v", got)
 	}
@@ -426,7 +430,9 @@ func TestTurnUsageAndPlanWindows(t *testing.T) {
 	if len(up.Usage.Windows) != 1 || up.Usage.Windows[0].Name != "Current session" || up.Usage.Windows[0].Used != 0.125 {
 		t.Errorf("windows = %+v", up.Usage)
 	}
-	got, _ := Provider{}.Usage(context.Background())
+	p := h.Provider.(*Provider)
+	p.Bin = filepath.Join(t.TempDir(), "none") // no probe: the session's reading
+	got, _ := p.Usage(context.Background())
 	if got.Provider != "claude" || len(got.Windows) != 1 || got.Windows[0].Resets.IsZero() {
 		t.Errorf("Usage = %+v", got)
 	}
@@ -517,7 +523,7 @@ func fakeHarness(t *testing.T) agenttest.Harness {
 	}
 }
 
-// AI-12: a plan belongs to an account: who Claude is signed in as tells a company subscription from a personal one.
+// A plan belongs to an account: who Claude is signed in as tells a company subscription from a personal one.
 func TestAccount(t *testing.T) {
 	cfg := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
@@ -559,7 +565,7 @@ func fixtureConfig(t *testing.T, edit func(file string, v map[string]any)) []str
 	return []string{"CLAUDE_CONFIG_DIR=" + cfg}
 }
 
-// AI-14: the account is read from the state file's oauthAccount by the keys Claude Code writes.
+// The account is read from the state file's oauthAccount by the keys Claude Code writes.
 func TestAccountFromTheFixture(t *testing.T) {
 	env := fixtureConfig(t, nil)
 	if id, name := account(env); id != "11111111-1111-4111-8111-111111111111/22222222-2222-4222-8222-222222222222" || name != "ada@acme.example" {
@@ -567,7 +573,7 @@ func TestAccountFromTheFixture(t *testing.T) {
 	}
 }
 
-// AI-14: the plan's tier, for its chip, from the provider's own account data: the credentials' subscriptionType and
+// The plan's tier, for its chip, from the provider's own account data: the credentials' subscriptionType and
 // rateLimitTier, else (the token in the Keychain) oauthAccount's organizationType and organizationRateLimitTier. A
 // plan Claude Code doesn't name has no tier, rather than a guess.
 func TestPlanTier(t *testing.T) {
@@ -617,11 +623,27 @@ func TestPlanTier(t *testing.T) {
 	}
 }
 
-// AI-14: Usage carries the plan and its tier, from the fixture account.
+// Usage carries the plan and its tier, from the fixture account.
 func TestUsageCarriesTheTier(t *testing.T) {
 	p, _ := usageProbe(t)
 	u, _ := p.Usage(context.Background())
 	if u.Plan != "Claude Max" || u.Tier != "Max 20×" || u.AccountName != "ada@acme.example" {
 		t.Errorf("usage = %+v", u)
+	}
+}
+
+// ref:   semver/semver.md#Semantic Versioning Specification (SemVer)
+// quote: "Major, minor, and patch versions are always compared numerically."
+func TestVersionLess(t *testing.T) {
+	for _, tc := range []struct {
+		a, b string
+		want bool
+	}{
+		{"2.1.283", "2.1.284", true}, {"2.1.284", "2.1.284", false}, {"2.10.0", "2.9.9", false},
+		{"2.1", "2.1.284", true}, {"3", "2.1.284", false}, {"2.1.284", "2", false},
+	} {
+		if got := versionLess(tc.a, tc.b); got != tc.want {
+			t.Errorf("versionLess(%q, %q) = %v, want %v", tc.a, tc.b, got, tc.want)
+		}
 	}
 }

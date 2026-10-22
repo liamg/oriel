@@ -76,7 +76,7 @@ func TestDiffLinesMatchesGit(t *testing.T) {
 	}
 }
 
-// FG-2: "staging a hunk matches git apply --cached": each hunk, staged alone, leaves the index as git apply --cached
+// Staging a hunk matches git apply --cached: each hunk, staged alone, leaves the index as git apply --cached
 // leaves it with git's patch for that hunk.
 // ref: oracle git
 func TestStageHunkMatchesGitApply(t *testing.T) {

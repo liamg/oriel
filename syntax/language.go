@@ -12,7 +12,7 @@ import (
 
 // Language is a tree-sitter grammar, built to WASM with grammars/shim.c, its queries, and the files it's for. One
 // with no grammar is a set of queries other languages inherit, like nvim-treesitter's "ecma". Languages come in a
-// Set: the IDE's is the registry's language contributions (ED-11).
+// Set: the IDE's is the registry's language contributions.
 type Language struct {
 	Name       string
 	Extensions []string               // with the dot: ".go"

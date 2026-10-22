@@ -26,6 +26,7 @@ const waitPoll = 45 * time.Second
 
 // session is one interactive claude in a PTY, driven through the mod.
 type session struct {
+	usage  *usageBook // its provider's
 	spec   agent.StartSpec
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -49,7 +50,8 @@ type session struct {
 	seq     int
 	base    transcript.Usage // the tally when the running turn started
 	screen  screen
-	out     bool // its login has been said to be gone, and not seen back
+	shown   string // the end of the terminal's text, for saying what was on screen
+	out     bool   // its login has been said to be gone, and not seen back
 	once    sync.Once
 }
 
@@ -237,6 +239,7 @@ func loginLost(detail string) agent.AuthExpired {
 
 // watchScreen reads the terminal for the login going, once while it stays gone, and coming back.
 func (s *session) watchScreen(p []byte) {
+	s.keepShown(p)
 	says, ok := s.screen.read(p)
 	if !ok {
 		return
@@ -250,6 +253,29 @@ func (s *session) watchScreen(p []byte) {
 	if says.signedIn {
 		s.push(agent.AuthRestored{Provider: "claude"})
 	}
+}
+
+// shownMax is how much of the terminal's text keepShown keeps.
+const shownMax = 400
+
+// keepShown keeps the end of the terminal's text, its whitespace collapsed.
+func (s *session) keepShown(p []byte) {
+	t := strings.Join(strings.Fields(plain(p)), " ")
+	if t == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.shown = strings.TrimSpace(s.shown + " " + t)
+	if len(s.shown) > shownMax {
+		s.shown = strings.ToValidUTF8(s.shown[len(s.shown)-shownMax:], "")
+	}
+}
+
+func (s *session) lastScreen() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.shown
 }
 
 // serve answers the mod's hook calls.
@@ -412,6 +438,13 @@ func (s *session) wait(ctx context.Context) waitOut {
 	}
 }
 
+// queued is whether a command of kind waits for the mod.
+func (s *session) queued(kind string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return slices.ContainsFunc(s.cmds, func(c waitOut) bool { return c.Kind == kind })
+}
+
 func (s *session) requeue(c waitOut) {
 	s.mu.Lock()
 	s.cmds = append([]waitOut{c}, s.cmds...)
@@ -474,7 +507,7 @@ func (s *session) planUsage(rls []rateLimit) {
 	u := usageOf(rls)
 	u.Account, u.AccountName = account(s.accountEnv())
 	u.Plan, u.Tier = planOf(s.accountEnv())
-	remember(u)
+	s.usage.remember(u)
 	s.push(agent.UsageUpdate{Usage: u})
 }
 
