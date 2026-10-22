@@ -177,9 +177,9 @@ func (f *fake) poll(turns chan<- string) {
 				f.mu.Lock()
 				replied := f.replied
 				f.mu.Unlock()
-				a := forkAnswerIn{ID: w.ID, Answered: replied, Text: "fork: " + w.Prompt}
+				a := forkAnswerIn{ID: w.ID, Answered: true, Text: "fork: " + w.Prompt}
 				if !replied {
-					a = forkAnswerIn{ID: w.ID, Reason: "nothing-to-fork"}
+					a.Text = "complete: " + w.Prompt
 				}
 				_ = f.hook("fork-answer", a, nil)
 			}()
