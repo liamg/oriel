@@ -395,6 +395,29 @@ func (s *Scene) Frames(n int) {
 	}
 }
 
+// SignOnRow is the line number num drawn in the gutter and the sign drawn on its row.
+func (s *Scene) SignOnRow(num, sign string) (n, g *render.Op) {
+	s.T.Helper()
+	ops := s.List().Ops
+	for i, op := range ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == num {
+			n = &ops[i]
+		}
+		if op.Kind == render.OpGlyphs && op.Run.Text == sign && n != nil && op.At.Y > n.At.Y-8 && op.At.Y < n.At.Y+8 {
+			return n, &ops[i]
+		}
+	}
+	s.T.Fatalf("no %q and %q on one row", num, sign)
+	return nil, nil
+}
+
+// SignPoint is the middle of the sign drawn on the row numbered num.
+func (s *Scene) SignPoint(num, sign string) render.Point {
+	s.T.Helper()
+	_, g := s.SignOnRow(num, sign)
+	return render.Point{X: g.At.X + g.Run.Advance/2, Y: g.At.Y - g.Run.Ascent/2}
+}
+
 // ClickText clicks the middle of the first run of text that reads text.
 func (s *Scene) ClickText(text string) {
 	s.T.Helper()

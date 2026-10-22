@@ -307,7 +307,7 @@ func (x *Plugin) explainUnit(a registry.Args) error {
 	}
 	var path string
 	var buf *text.Buffer
-	at := 0
+	at, line := 0, 0
 	if f := a.String("file"); f != "" {
 		fs, ok := ed.Buffer(f)
 		if !ok {
@@ -315,7 +315,8 @@ func (x *Plugin) explainUnit(a registry.Args) error {
 		}
 		path, buf = f, fs.Text
 		snap := buf.Snapshot()
-		at = firstNonBlank(snap, min(max(a.Int("line")-1, 0), snap.Lines()-1))
+		line = min(max(a.Int("line")-1, 0), snap.Lines()-1)
+		at = firstNonBlank(snap, line)
 	} else {
 		b, ok := ed.Current()
 		if !ok || b.Path == "" {
@@ -323,6 +324,7 @@ func (x *Plugin) explainUnit(a registry.Args) error {
 		}
 		path, buf = b.Path, b.Text
 		snap, cur := buf.Snapshot(), b.Cursor
+		line = cur.Line
 		at = max(snap.LineStart(cur.Line)+min(cur.Col, len(snap.Line(cur.Line))), firstNonBlank(snap, cur.Line))
 		if cd := x.card; cd != nil && cd.buf == buf && cd.sel < cd.units {
 			if r, ok := cd.rangeOf(cd.sel); ok && r.Start <= at && at <= r.End {
@@ -332,12 +334,28 @@ func (x *Plugin) explainUnit(a registry.Args) error {
 		}
 	}
 	units := x.unitsNow(path, buf)
-	i := text.Innermost(units, text.Range{Start: at, End: at})
+	i := unitOnLine(units, buf.Snapshot(), line, at)
 	if i < 0 {
 		return errors.New("no code unit here: select some code, and ␣e explains the selection")
 	}
 	x.openCard(path, buf, units, text.UnitPath(units, i), nil, "")
 	return nil
+}
+
+// unitOnLine is the smallest unit around at, or the first starting on line from at when that one starts on an
+// earlier line or there's none: a Go type's unit starts at its name, after the type keyword.
+func unitOnLine(units []text.Unit, snap text.Snapshot, line, at int) int {
+	i := text.Innermost(units, text.Range{Start: at, End: at})
+	if i >= 0 && units[i].Range.Start >= snap.LineStart(line) {
+		return i
+	}
+	end := snap.LineStart(line) + len(snap.Line(line))
+	for j, u := range units {
+		if u.Range.Start >= at && u.Range.Start <= end && (i < 0 || units[i].Range.End >= u.Range.End) {
+			return j
+		}
+	}
+	return i
 }
 
 // current is the editor's current window's buffer.
