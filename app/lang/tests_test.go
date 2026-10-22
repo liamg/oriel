@@ -15,7 +15,6 @@ import (
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -53,26 +52,10 @@ func TestTestGutter(t *testing.T) {
 // wantSignBesideNumber checks the sign drawn on the row numbered num starts after the number ends.
 func wantSignBesideNumber(t *testing.T, s *apptest.Scene, num, sign string) {
 	t.Helper()
-	n, g := signOnRow(t, s, num, sign)
+	n, g := s.SignOnRow(num, sign)
 	if end := n.At.X + n.Run.Advance; g.At.X < end {
 		t.Errorf("the sign at x=%.1f covers the number, which ends at x=%.1f", g.At.X, end)
 	}
-}
-
-// signOnRow is the line number num drawn in the gutter and the sign drawn on its row.
-func signOnRow(t *testing.T, s *apptest.Scene, num, sign string) (n, g *render.Op) {
-	t.Helper()
-	ops := s.List().Ops
-	for i, op := range ops {
-		if op.Kind == render.OpGlyphs && op.Run.Text == num {
-			n = &ops[i]
-		}
-		if op.Kind == render.OpGlyphs && op.Run.Text == sign && n != nil && op.At.Y > n.At.Y-8 && op.At.Y < n.At.Y+8 {
-			return n, &ops[i]
-		}
-	}
-	t.Fatalf("no %q and %q on one row", num, sign)
-	return nil, nil
 }
 
 // ␣tr runs the nearest test; it shows ✓ and its duration on its line, and the status line counts it.
@@ -304,13 +287,6 @@ func treeRows(its []widget.TreeItem, glyphs bool) string {
 	return strings.Join(out, " ")
 }
 
-// signPoint is the middle of the sign drawn on the row numbered num.
-func signPoint(t *testing.T, s *apptest.Scene, num, sign string) render.Point {
-	t.Helper()
-	_, g := signOnRow(t, s, num, sign)
-	return render.Point{X: g.At.X + g.Run.Advance/2, Y: g.At.Y - g.Run.Ascent/2}
-}
-
 // Right-click ▶ opens Run test, Debug test, Run with coverage, Run file; its tooltip names them.
 func TestTestSignMenu(t *testing.T) {
 	s, _ := testsScene(t)
@@ -319,7 +295,7 @@ func TestTestSignMenu(t *testing.T) {
 	if i < 0 || ds[i].Tooltip != "Run · ⇧ debug · right-click for more" {
 		t.Fatalf("the ▶ on line 14: %+v", ds)
 	}
-	menu := s.RightClick(signPoint(t, s, "14", "▶"))
+	menu := s.RightClick(s.SignPoint("14", "▶"))
 	for _, want := range []string{"Run test", "Debug test", "Run with coverage", "Run file"} {
 		if !strings.Contains(menu, want) {
 			t.Errorf("the ▶ menu lacks %q:\n%s", want, menu)
@@ -332,7 +308,7 @@ func TestTestSignMenu(t *testing.T) {
 		t.Fatalf("the run: %+v", r)
 	}
 
-	s.RightClick(signPoint(t, s, "8", "▶"))
+	s.RightClick(s.SignPoint("8", "▶"))
 	s.ClickOn("Run file")
 	runDone(t, s)
 	if r, _ := testsOf(s).History().Last(testrun.ByUser); r == nil || r.Trigger != "file" || len(r.Scope) < 3 {
@@ -362,7 +338,7 @@ func TestTestSignMenuWithoutDebug(t *testing.T) {
 	if strings.Contains(ds[i].Tooltip, "debug") {
 		t.Errorf("the tooltip offers debugging: %q", ds[i].Tooltip)
 	}
-	menu := s.RightClick(signPoint(t, s, "4", "▶"))
+	menu := s.RightClick(s.SignPoint("4", "▶"))
 	if !strings.Contains(menu, "Run test") || strings.Contains(menu, "Debug test") {
 		t.Errorf("the ▶ menu of a cargo test:\n%s", menu)
 	}

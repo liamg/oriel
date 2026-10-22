@@ -33,13 +33,6 @@ func inlineValue(s *apptest.Scene, line int) string {
 	return ""
 }
 
-// clickSign clicks the sign on the row numbered num, with mods held.
-func clickSign(t *testing.T, s *apptest.Scene, num, sign string, mods render.Mods) {
-	t.Helper()
-	_, g := signOnRow(t, s, num, sign)
-	s.Click(render.Point{X: g.At.X + g.Run.Advance/2, Y: g.At.Y - g.Run.Ascent/2}, mods)
-}
-
 // ⇧ on a table row's ▶ debugs just that row; paused, the frame's variables show after the lines that name
 // them, and follow the frame selected.
 func TestDebugTestCase(t *testing.T) {
@@ -50,7 +43,7 @@ func TestDebugTestCase(t *testing.T) {
 
 	// ref: go/help-testflag.txt
 	// quote: "Each of these flags is also recognized with an optional 'test.' prefix,"
-	clickSign(t, s, "14", "▶", render.ModShift)
+	s.Click(s.SignPoint("14", "▶"), render.ModShift)
 	pausedAt(t, s, "pricing.roundHalfEven", 8)
 	if cfg := x.Launched(); !slices.Equal(cfg.Args, []string{"-test.v", "-test.run", `^TestRoundHalfEven$/^-2\.5$`}) || cfg.Extra["mode"] != "test" {
 		t.Errorf("launched %+v, want the -2.5 row alone", cfg)
@@ -141,7 +134,7 @@ func TestDebugPytestCase(t *testing.T) {
 
 	// ref: pytest/doc/en/explanation/goodpractices.rst
 	// quote: "command line arguments can be used in any combination of directories, file names or node ids."
-	clickSign(t, s, "9", "▶", render.ModShift)
+	s.Click(s.SignPoint("9", "▶"), render.ModShift)
 	pausedAt(t, s, "round_half_even", 7)
 	if cfg := x.Launched(); !slices.Equal(cfg.Args, []string{filepath.Join(root, "test_pricing.py") + "::test_round_half_even[-2.5]"}) ||
 		cfg.Extra["module"] != "pytest" {
@@ -165,7 +158,7 @@ func TestDebugFromSignMenu(t *testing.T) {
 	s, root, finish := pricingScene(t, "testdata/dap/go-test.jsonl")
 	x := debugOf(s)
 	s.Run("debug.breakpoint.set", registry.Args{"file": filepath.Join(root, "round.go"), "line": 9})
-	s.RightClick(signPoint(t, s, "14", "▶"))
+	s.RightClick(s.SignPoint("14", "▶"))
 	s.ClickOn("Debug test")
 	pausedAt(t, s, "pricing.roundHalfEven", 8)
 	if cfg := x.Launched(); !slices.Equal(cfg.Args, []string{"-test.v", "-test.run", `^TestRoundHalfEven$/^-2\.5$`}) || cfg.Extra["mode"] != "test" {

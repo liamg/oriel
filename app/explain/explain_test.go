@@ -264,3 +264,32 @@ func TestRequestThisNamesTheSelection(t *testing.T) {
 		t.Fatalf("Review this outside a unit: %v", args)
 	}
 }
+
+// A Go type's ? and ␣e on its type keyword explain the type, though its unit starts at the name after the keyword.
+func TestExplainAGoType(t *testing.T) {
+	s, f, round := explainScene(t)
+	path := filepath.Join(filepath.Dir(round), "money.go")
+	if err := os.WriteFile(path, []byte("package pricing\n\n// Money is an amount in a currency.\ntype Money struct {\n\tCurrency string\n\tV        Decimal\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s.Run("editor.open", registry.Args{"path": path})
+	s.WaitSyntax()
+	settle(s)
+	if _, ok := unitMarks(s)[4]; !ok {
+		t.Fatalf("no ? on type Money's line: %v", unitMarks(s))
+	}
+	s.Click(s.SignPoint("4", "?"), 0)
+	settle(s)
+	wantText(t, s, "the ?'s card", "EXPLAIN", "type Money", "Answer 1 (brief)")
+	if reqs := f.Asked(); len(reqs) != 1 || reqs[0].Kind != "unit" || !strings.Contains(reqs[0].Subject, "type Money") {
+		t.Fatalf("the ? asked %+v", reqs)
+	}
+
+	s.Run("explain.close", nil)
+	cursorTo(s, 4)
+	explainKeys(s, "<Space>e")
+	if reqs := f.Asked(); len(reqs) != 1 {
+		t.Errorf("␣e on type asked %+v, want the cached answer", reqs[1:])
+	}
+	wantText(t, s, "␣e's card", "type Money", "Answer 1 (brief)")
+}
