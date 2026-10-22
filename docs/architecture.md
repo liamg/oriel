@@ -22,6 +22,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State |
 | `sandbox` | sandbox backends, the gateway, egress, the static Linux helper the app embeds |
 | `gitx`, `gh` | git and GitHub |
+| `watch` | freshness managers: sources kept up to date only while something subscribes; `watch/gitsrc`, a work tree's git status as sources |
 | `integ/*` | code hosts and trackers (GitLab, Azure, Linear) |
 | `registry` | the contribution registry, pure: commands, keymaps, options, events and hooks, kinds, services, help; `registry/uireg` is what's drawn (views, decorations, pickers, the rail…); `registry/lang` holds language servers and debug adapters |
 | `plugin` | the plugin host: manifests, process RPC, wasm, permissions, `plugin.Load` |
@@ -72,6 +73,18 @@ What crosses features is a service, a command, a hook event or a core event, nev
 offers a typed service with `registry.Service{Name, Impl}` and others find it with `registry.ServiceOf[T]`; the
 built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and `host.Access`. A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
+
+## Freshness
+
+Nothing polls or watches on its own. What a feature wants kept up to date is a source (`watch.Source`: files, a work
+tree's git status in parts, a pull request, a stats query), and the feature subscribes to it with a `watch.Need`: how
+stale a reading may be, and what it wants while the window is behind another app (pause, the default; slow; keep).
+A manager (`watch.Manager`) holds one reading per source, watches its files or polls it at the tightest need among its
+subscriptions, re-reads a source derived from others only when their readings change, and with no subscribers lets it
+go. Each session that isn't archived has a manager, and the app has one for what's no session's; `app/watches` makes
+them, hands them the window's focus, and offers them as the `watches` service, with the sources Lua names
+(`oriel.subscribe`, `oriel.source`). A view subscribes while it's drawn (the git trees, the stats); a plugin that must
+hear in the background (pull requests' approvals) asks to keep. The Performance page lists every source and who holds it.
 
 ## Plugins
 

@@ -20,6 +20,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/watch"
 )
 
 // reviewsSoon is how old a source's list may be when the Reviews page opens before it's asked again.
@@ -35,7 +36,7 @@ type Reviews struct {
 	h      plugin.Host
 	ctx    context.Context
 	cancel context.CancelFunc
-	poller sync.WaitGroup
+	subs   kit.Subs // the lists' poll, from the app's manager
 
 	mu      sync.Mutex
 	lists   map[string]*reviewList   // by source
@@ -95,8 +96,7 @@ func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.AgentTool{Name: "review_requests", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "reviews",
 		Source: "builtin:reviews", Run: x.toolReviewRequests,
 		Desc: "Pull requests waiting on the user's review, from every code host (GitHub…), oldest ask first, then those they're part way through: number, title, repo, url, author, source, state (new, re-requested, changes, commented), the team asked if not them, draft, when asked, and the session on it if there is one."}))
-	x.poller.Add(1)
-	go x.poll()
+	x.poll()
 	return nil
 }
 
@@ -168,25 +168,32 @@ func (x *Reviews) keymaps() []registry.Keymap {
 
 func (x *Reviews) Deactivate(ctx context.Context) error {
 	x.cancel()
-	x.poller.Wait()
+	x.subs.Close()
 	return x.Disposer.Deactivate(ctx)
 }
 
-// reviewsCheck is how often the sources' lists are checked for being older than reviews.poll.
+// reviewsCheck is how often the sources' lists are checked for being older than reviews.poll; behind another app,
+// every kit.UnfocusedPoll.
 const reviewsCheck = 15 * time.Second
 
-// poll asks each source again once its list is older than reviews.poll; behind another app, the lists are checked
-// less often.
+// poll keeps the sources' lists fresh: a subscription to the app's manager whose read asks each source again once
+// its list is older than reviews.poll.
 func (x *Reviews) poll() {
-	defer x.poller.Done()
-	ask := func() {
-		for _, s := range kit.SitesOf(x.h).ReviewSources() {
-			kit.SitesOf(x.h).Warm(x.ctx, s)
-			x.fresh(s, x.pollEvery())
-		}
+	m := kit.ManagerFor(x.h, "")
+	if m == nil {
+		return
 	}
-	ask()
-	kit.PollEvery(x.ctx, x.h, reviewsCheck, kit.UnfocusedPoll, true, ask)
+	need := watch.Need{MaxAge: reviewsCheck, Background: watch.Slow, Slow: kit.UnfocusedPoll}
+	x.subs.Hold("reviews", m, need, func() kit.Closer {
+		src := kit.Every("reviews.requested", func(ctx context.Context) error {
+			for _, s := range kit.SitesOf(x.h).ReviewSources() {
+				kit.SitesOf(x.h).Warm(ctx, s)
+				x.fresh(s, x.pollEvery())
+			}
+			return nil
+		}, nil)
+		return watch.Subscribe(m, src, need, "reviews: requested")
+	})
 }
 
 // tooOld says r was asked longer ago than reviews.max_age; one with no time asked never is.

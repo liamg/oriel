@@ -24,7 +24,7 @@ import (
 // the session host (host.ShipRead) and its code host (codehost.go), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
 // the same way; the gates are ShipGate contributions, and ShipCommit and ShipRaise hooks can stop a step.
 
-// shipPoll is how often the session in front is read again while nothing else asks.
+// shipPoll is the most often the session in front's git is read again as it changes.
 const shipPoll = 10 * time.Second
 
 // ShipCommit is the ShipCommit hook's event: a commit about to be made from the Ship page. A veto stops it, its
@@ -59,7 +59,8 @@ type Ship struct {
 	cancel    context.CancelFunc
 	busy      sync.WaitGroup // reads and steps
 	saving    sync.WaitGroup // drafts the user typed, on their way to the session host
-	poller    sync.WaitGroup
+	subs      kit.Subs       // what it reads, from the sessions' managers (shipwatch.go)
+	budget    kit.Budget     // background PR polls' requests
 
 	mu       sync.Mutex
 	reports  map[core.SessionID]*shipReport
@@ -118,39 +119,30 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.shadowEntries()
 	x.commands()
 	x.views()
+	x.budget.PerHour = prBudget
 	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.SessionFocused:
 			if ev.ID != "" {
-				x.refresh(ev.ID, false)
+				x.refresh(ev.ID, false) // coming to the front: read now, whatever the subscriptions last read
 			}
+			x.follow()
 		case core.ProjectsChanged:
 			x.refresh(ev.ID, false)
+			x.follow()
+		case core.SessionOpened, core.SessionArchived, core.SessionClosed:
+			x.follow()
 		}
 	})))
-	if id := x.focused(); id != "" {
-		x.refresh(id, false)
-	}
-	x.poller.Add(1)
-	go x.poll()
+	x.follow()
 	return nil
 }
 
 func (x *Ship) Deactivate(ctx context.Context) error {
 	x.cancel()
-	x.poller.Wait()
+	x.subs.Close()
 	x.busy.Wait()
 	return x.Disposer.Deactivate(ctx)
-}
-
-// poll reads the session in front again every shipPoll, slower while the window is behind another app.
-func (x *Ship) poll() {
-	defer x.poller.Done()
-	kit.PollEvery(x.ctx, x.h, shipPoll, kit.UnfocusedPoll, true, func() {
-		if id := x.focused(); id != "" {
-			x.refresh(id, false)
-		}
-	})
 }
 
 func (x *Ship) focused() core.SessionID { return x.h.State().Focus }
@@ -359,6 +351,12 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n int, fresh bool) {
 	}
 	seen, merged, asks := x.newPRs(id, ships)
 	x.mu.Unlock()
+	x.fire(id, seen, merged, asks)
+	x.h.Redraw()
+}
+
+// fire fires PrSeen and PrMerged for what a read found new, asks about the next PR, and follows the PRs open now.
+func (x *Ship) fire(id core.SessionID, seen []kit.PrSeen, merged []kit.PrMerged, asks []shipRead) {
 	if len(seen)+len(merged)+len(asks) > 0 {
 		x.h.Do(func() {
 			for _, ev := range seen {
@@ -372,7 +370,9 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n int, fresh bool) {
 			}
 		})
 	}
-	x.h.Redraw()
+	if x.ctx.Err() == nil {
+		x.follow()
+	}
 }
 
 // newPRs are the PRs in ships not seen before, as PrSeen events, and those not seen merged before, as PrMerged

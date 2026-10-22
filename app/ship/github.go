@@ -21,10 +21,12 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/watch"
 )
 
 // GitHub review mirroring: the session's PRs' reviews are synced into threads by the session host
-// (SyncGitHub), every githubPoll for the session in front and on demand. Their cards are this ThreadSource's: the
+// (SyncGitHub), every githubPoll for the session in front, every reviewPoll for open review sessions behind it (each a
+// subscription to its session's manager), and on demand. Their cards are this ThreadSource's: the
 // GitHub header, and under the agent's draft reply ↗ Forward to GitHub and Edit. Only a forward posts, with the
 // user's own gh. The status line says where the reviewers stand.
 
@@ -47,14 +49,16 @@ type GitHub struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	busy   sync.WaitGroup
-	poller sync.WaitGroup
+	subs   kit.Subs   // the syncs it keeps, from the sessions' managers
+	budget kit.Budget // review sessions' syncs, behind the one in front
 
 	mu         sync.Mutex
 	mirrors    map[core.SessionID]githubMirror
 	syncing    map[core.SessionID]bool
-	again      map[core.SessionID]bool // a sync asked for while one ran: fresh or not
-	forwarding map[string]bool         // comment IDs being posted
-	resolving  map[core.ThreadID]bool  // where each thread's resolve was last sent to its host
+	synced     map[core.SessionID]chan struct{} // closed when the sync running ends
+	again      map[core.SessionID]bool          // a sync asked for while one ran: fresh or not
+	forwarding map[string]bool                  // comment IDs being posted
+	resolving  map[core.ThreadID]bool           // where each thread's resolve was last sent to its host
 	lastSync   map[core.SessionID]time.Time
 
 	editing map[string]*string // drafts being edited, by comment; on the loop
@@ -100,12 +104,15 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 			if ev.ID != "" {
 				x.sync(ev.ID, false)
 			}
+			x.follow()
+		case core.SessionOpened, core.SessionArchived, core.SessionClosed:
+			x.follow()
 		case core.ThreadUpdated:
 			h.Do(func() { x.resolveHost(ev.Session, ev.Thread) })
 		}
 	})))
-	x.poller.Add(1)
-	go x.poll()
+	x.budget.PerHour = githubBudget
+	x.follow()
 	return nil
 }
 
@@ -131,41 +138,88 @@ func (x *GitHub) commands() []registry.Command {
 
 func (x *GitHub) Deactivate(ctx context.Context) error {
 	x.cancel()
-	x.poller.Wait()
+	x.subs.Close()
 	x.busy.Wait()
 	return x.Disposer.Deactivate(ctx)
-}
-
-// poll syncs the session in front every githubPoll, slower while the window is behind another app.
-func (x *GitHub) poll() {
-	defer x.poller.Done()
-	kit.PollEvery(x.ctx, x.h, githubPoll, kit.UnfocusedPoll, true, func() {
-		if id := x.h.State().Focus; id != "" {
-			x.sync(id, false)
-		}
-		x.syncReviews()
-	})
 }
 
 // reviewPoll is how often a review session not in front is synced with its pull request.
 const reviewPoll = 2 * time.Minute
 
-// syncReviews syncs each open review session not in front every reviewPoll, so what its author pushes and says is
-// seen while the user is elsewhere.
-func (x *GitHub) syncReviews() {
-	focus := x.h.State().Focus
-	for _, st := range x.h.State().Sessions {
-		pr := kit.ReviewedPR(x.h, st)
-		if m, ok := x.mirror(st.ID); pr == "" || st.Archived || st.ID == focus || ok && m.ended() {
+// githubRequests is about how many requests a sync makes; githubBudget the requests an hour review sessions' syncs
+// may make together.
+const (
+	githubRequests = 5
+	githubBudget   = 1000
+)
+
+// follow subscribes to the syncs it keeps: the session in front's every githubPoll, and each open review session's
+// behind it every reviewPoll, so what its author pushes and says is seen while the user is elsewhere.
+func (x *GitHub) follow() {
+	st := x.h.State()
+	keep := map[string]bool{}
+	for _, se := range st.Sessions {
+		front := se.ID == st.Focus
+		if se.Archived {
 			continue
 		}
-		x.mu.Lock()
-		due := x.now().Sub(x.lastSync[st.ID]) >= reviewPoll
-		x.mu.Unlock()
-		if due {
-			x.sync(st.ID, false)
+		if !front {
+			if m, ok := x.mirror(se.ID); kit.ReviewedPR(x.h, se) == "" || ok && m.ended() {
+				continue
+			}
 		}
+		m := kit.ManagerFor(x.h, se.ID)
+		if m == nil {
+			continue
+		}
+		id := se.ID
+		key := "github.sync:" + string(id)
+		need := watch.Need{MaxAge: githubPoll, Background: watch.Slow, Slow: kit.UnfocusedPoll}
+		if !front {
+			need = watch.Need{MaxAge: reviewPoll, Background: watch.Slow, Slow: kit.UnfocusedPoll}
+		}
+		keep[key] = true
+		x.subs.Hold(key, m, need, func() kit.Closer {
+			src := kit.Every(key, func(ctx context.Context) error { return x.syncWait(ctx, id) }, func(maxAge time.Duration) time.Duration {
+				if maxAge < reviewPoll {
+					return maxAge
+				}
+				return x.budget.Interval(maxAge)
+			})
+			return budgetedSync{watch.Subscribe(m, src, need, "github: review sync"), x.budget.Use(key, githubRequests)}
+		})
 	}
+	x.subs.Only(keep)
+}
+
+// budgetedSync is a sync's subscription, counted against the budget until it's closed.
+type budgetedSync struct {
+	watch.Sub[time.Time]
+	release func()
+}
+
+func (b budgetedSync) Close() {
+	b.Sub.Close()
+	b.release()
+}
+
+// syncWait syncs the session, or joins the sync running, and waits for it.
+func (x *GitHub) syncWait(ctx context.Context, id core.SessionID) error {
+	x.sync(id, false)
+	x.mu.Lock()
+	done := x.synced[id]
+	x.mu.Unlock()
+	if done == nil {
+		return nil
+	}
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
+	if m, ok := x.mirror(id); ok && m.err != "" {
+		return errors.New(m.err)
+	}
+	return nil
 }
 
 // resolveHost takes a thread's resolving or reopening in Oriel to the review thread it mirrors on its code host,
@@ -252,6 +306,11 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		return
 	}
 	x.syncing[id] = true
+	if x.synced == nil {
+		x.synced = map[core.SessionID]chan struct{}{}
+	}
+	done := make(chan struct{})
+	x.synced[id] = done
 	x.mu.Unlock()
 	trust := x.trust()
 	x.busy.Add(1)
@@ -266,6 +325,8 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		}
 		x.mu.Lock()
 		delete(x.syncing, id)
+		delete(x.synced, id)
+		close(done)
 		x.lastSync[id] = x.now()
 		g := githubMirror{Mirror: m, at: x.now()}
 		if err != nil {
@@ -287,6 +348,8 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		x.h.Redraw()
 		if queued {
 			x.sync(id, again)
+		} else if x.ctx.Err() == nil && g.ended() {
+			x.follow() // its PRs are all closed: stop syncing it
 		}
 	}()
 }

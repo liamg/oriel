@@ -20,6 +20,7 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/watch"
 )
 
 // Stats and Usage: the session stats tab, the global Stats page and the Usage page, built on what
@@ -103,9 +104,11 @@ type Plugin struct {
 	details  map[string]fetched[stats.Detail] // by session and split
 	history  fetched[[]core.ProviderUsage]
 	inflight map[string]time.Time   // when each fetch running started
+	subs     kit.Subs               // the reads frames keep asking for, from the app's manager
+	used     map[string]bool        // the reads asked for since the last frame
+	forced   map[string]bool        // reads to ask again however young their answer: a retry, or agents moving on
 	live     []core.ProviderUsage   // readings since the history was fetched, from UsageSampled
 	reading  *plugin.Load[struct{}] // Refresh's read of every provider's windows
-	changed  time.Time              // when an agent last did something that costs: answers fetched before are stale
 }
 
 // liveAfter is how soon a report is asked for again once the agents it counts have moved on.
@@ -126,7 +129,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.burnWin = map[string]int{}
 	x.reports = map[string]fetched[stats.Report]{}
 	x.details = map[string]fetched[stats.Detail]{}
-	x.inflight = map[string]time.Time{}
+	x.inflight, x.used, x.forced = map[string]time.Time{}, map[string]bool{}, map[string]bool{}
 	x.reading = plugin.NewLoad(h, x.readUsage, plugin.LoadOpts{Timeout: 2 * time.Minute, Now: func() time.Time { return x.Now() }})
 	x.Add(h.Option(registry.OptionSpec{Name: SplitOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Split a multi-repo session's cost over its repos, each request charged to the repo its file tool calls worked in. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
@@ -147,6 +150,8 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, x.seen)))
 	x.Add(h.Picker(pagesSource(h)))
+	x.Add(kit.OnDispose(h.Framed(x.framed)))
+	x.Add(kit.OnDispose(x.subs.Close))
 	return nil
 }
 
@@ -202,9 +207,7 @@ func (x *Plugin) seen(ev core.Event) {
 		}
 		x.mu.Unlock()
 	case core.AgentChanged, core.TranscriptAppended, core.ThreadUpdated, core.SessionOpened:
-		x.mu.Lock()
-		x.changed = x.Now()
-		x.mu.Unlock()
+		x.fresher()
 	}
 }
 
@@ -532,24 +535,22 @@ func fetchState(since time.Time, have bool, err error) widget.LoadState {
 	return widget.LoadState{Phase: widget.Ready, Err: err}
 }
 
-// report is q's answer as last read, asking again when it's old or missing.
+// report is q's answer as last read, read through the app's manager while frames ask for it.
 func (x *Plugin) report(q stats.Query) (stats.Report, reportMeta) {
 	key := queryKey(q)
-	w, _ := kit.SessionHost(x.h)
-	x.mu.Lock()
-	f, ok := x.reports[key]
-	since := x.inflight[key]
-	var meta reportMeta
-	if ok && f.err == nil {
-		meta.at = f.at
-	}
-	old := !ok || x.Now().Sub(f.at) > kit.RefetchAfter || f.at.Before(x.changed) && x.Now().Sub(f.at) > liveAfter
-	x.mu.Unlock()
-	if old && w != nil && since.IsZero() {
-		since = x.fetch(key, func() (any, error) { return w.StatsQuery(q), nil }, func(v any, err error, at time.Time) {
+	var since time.Time
+	if w, _ := kit.SessionHost(x.h); w != nil {
+		since = x.keep(key, "report", func() time.Time { return x.reports[key].at }, func() (any, error) { return w.StatsQuery(q), nil }, func(v any, err error, at time.Time) {
 			r, _ := v.(stats.Report)
 			x.reports[key] = fetched[stats.Report]{v: r, at: at, err: err}
 		})
+	}
+	x.mu.Lock()
+	f, ok := x.reports[key]
+	x.mu.Unlock()
+	var meta reportMeta
+	if ok && f.err == nil {
+		meta.at = f.at
 	}
 	meta.state = fetchState(since, ok && f.err == nil, f.err)
 	if !ok || f.err != nil {
@@ -558,33 +559,84 @@ func (x *Plugin) report(q stats.Query) (stats.Report, reportMeta) {
 	return f.v, meta
 }
 
-// retryReport forgets q's answer, so the next frame asks again.
+// retryReport forgets q's answer and reads it again.
 func (x *Plugin) retryReport(q stats.Query) {
+	key := queryKey(q)
 	x.mu.Lock()
-	delete(x.reports, queryKey(q))
+	delete(x.reports, key)
+	x.forced[key] = true
 	x.mu.Unlock()
+	x.subs.Refresh(key)
 	x.h.Redraw()
 }
 
-// fetch asks the session host in the background, and stores its answer on the app's loop. It returns when it
-// started.
-func (x *Plugin) fetch(key string, ask func() (any, error), store func(any, error, time.Time)) time.Time {
-	since := x.Now()
+// statsNeed is how fresh what the stats show is kept: a minute old at most, nothing behind another app.
+var statsNeed = watch.Need{MaxAge: kit.RefetchAfter}
+
+// keep has key read through the app's manager for as long as frames keep asking for it: at once, then every
+// kit.RefetchAfter, and sooner once agents have moved on (seen). A read skips asking while the answer kept (cached,
+// x.mu held) is younger than kit.RefetchAfter, unless a retry forced it. ask runs off the loop; store keeps its
+// answer on the loop, x.mu held. It answers when the read running started, zero with none running.
+func (x *Plugin) keep(key, what string, cached func() time.Time, ask func() (any, error), store func(any, error, time.Time)) time.Time {
 	x.mu.Lock()
-	x.inflight[key] = since
+	x.used[key] = true
 	x.mu.Unlock()
-	go func() {
-		v, err := ask()
-		x.h.Do(func() {
-			at := x.Now()
+	m := kit.ManagerFor(x.h, "")
+	if m == nil {
+		return time.Time{}
+	}
+	x.subs.Hold(key, m, statsNeed, func() kit.Closer {
+		src := kit.Every("stats:"+key, func(context.Context) error {
 			x.mu.Lock()
-			store(v, err, at)
-			delete(x.inflight, key)
+			forced := x.forced[key]
+			delete(x.forced, key)
+			if at := cached(); !forced && !at.IsZero() && x.Now().Sub(at) < kit.RefetchAfter {
+				x.mu.Unlock()
+				return nil // the answer kept is young enough
+			}
+			x.inflight[key] = x.Now()
 			x.mu.Unlock()
-		})
-		x.h.Redraw()
-	}()
-	return since
+			v, err := ask()
+			x.h.Do(func() {
+				at := x.Now()
+				x.mu.Lock()
+				store(v, err, at)
+				delete(x.inflight, key)
+				x.mu.Unlock()
+			})
+			x.h.Redraw()
+			return err
+		}, nil)
+		return watch.Subscribe(m, src, statsNeed, "stats: "+what)
+	})
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return x.inflight[key]
+}
+
+// framed lets go of the reads no frame asked for since the last.
+func (x *Plugin) framed() {
+	x.mu.Lock()
+	used := x.used
+	x.used = map[string]bool{}
+	x.mu.Unlock()
+	x.subs.Only(used)
+}
+
+// fresher reads again what's older than liveAfter: the agents it counts have moved on.
+func (x *Plugin) fresher() {
+	x.mu.Lock()
+	var stale []string
+	for key, f := range x.reports {
+		if x.Now().Sub(f.at) > liveAfter && x.inflight[key].IsZero() {
+			stale = append(stale, key)
+			x.forced[key] = true
+		}
+	}
+	x.mu.Unlock()
+	for _, key := range stale {
+		x.subs.Refresh(key)
+	}
 }
 
 // detail is a session's stats once read.
@@ -603,41 +655,50 @@ func (x *Plugin) detail(id core.SessionID) (stats.Detail, bool) {
 	return d, s.Phase == widget.Ready || s.Stale
 }
 
-// detailLoad is a session's stats, asked for again when old (an Oriel session's, or one outside Oriel), and its load.
+// detailLoad is a session's stats (an Oriel session's, or one outside Oriel), read while frames ask, and its load.
 func (x *Plugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) {
 	key := x.detailKey(id)
-	x.mu.Lock()
-	f, ok := x.details[key]
-	since := x.inflight[key]
-	x.mu.Unlock()
-	if w, _ := kit.SessionHost(x.h); (!ok || x.Now().Sub(f.at) > kit.RefetchAfter) && since.IsZero() && w != nil {
+	var since time.Time
+	if w, _ := kit.SessionHost(x.h); w != nil {
 		req := host.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
-		since = x.fetch(key, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
+		since = x.keep(key, "session", func() time.Time { return x.details[key].at }, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
 			d, _ := v.(stats.Detail)
-			if err == nil || !ok {
+			if _, had := x.details[key]; err == nil || !had {
 				x.details[key] = fetched[stats.Detail]{v: d, at: at, err: err}
 			}
 		})
 	}
+	x.mu.Lock()
+	f, ok := x.details[key]
+	x.mu.Unlock()
 	return f.v, fetchState(since, ok && f.err == nil, f.err)
 }
 
 func (x *Plugin) detailKey(id core.SessionID) string { return fmt.Sprintf("%s|%v", id, x.split()) }
 
-// retryDetail forgets a session's failed answer, so the next frame asks again.
+// retryDetail forgets a session's failed answer and reads it again.
 func (x *Plugin) retryDetail(id core.SessionID) {
+	key := x.detailKey(id)
 	x.mu.Lock()
-	delete(x.details, x.detailKey(id))
+	delete(x.details, key)
+	x.forced[key] = true
 	x.mu.Unlock()
+	x.subs.Refresh(key)
 	x.h.Redraw()
 }
 
 // usageHistory is the readings of an account's plan over the last week, oldest first.
 func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
-	w, _ := kit.SessionHost(x.h)
+	if w, _ := kit.SessionHost(x.h); w != nil {
+		x.keep("usage.history", "usage history", func() time.Time { return x.history.at }, func() (any, error) {
+			return w.UsageHistory(host.UsageHistoryReq{Since: x.Now().Add(-8 * 24 * time.Hour)}), nil
+		}, func(v any, err error, at time.Time) {
+			h, _ := v.([]core.ProviderUsage)
+			x.history = fetched[[]core.ProviderUsage]{v: h, at: at, err: err}
+		})
+	}
 	x.mu.Lock()
 	var out []core.ProviderUsage
-	old := x.history.at.IsZero() || x.Now().Sub(x.history.at) > kit.RefetchAfter
 	var last time.Time
 	for _, u := range x.history.v {
 		if u.Same(acct) {
@@ -652,16 +713,7 @@ func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 			out = append(out, u)
 		}
 	}
-	busy := !x.inflight["usage.history"].IsZero()
 	x.mu.Unlock()
-	if old && !busy && w != nil {
-		since := x.Now().Add(-8 * 24 * time.Hour)
-		x.fetch("usage.history", func() (any, error) { return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil },
-			func(v any, err error, at time.Time) {
-				h, _ := v.([]core.ProviderUsage)
-				x.history = fetched[[]core.ProviderUsage]{v: h, at: at, err: err}
-			})
-	}
 	slices.SortStableFunc(out, func(a, b core.ProviderUsage) int { return a.Sampled.Compare(b.Sampled) })
 	return out
 }

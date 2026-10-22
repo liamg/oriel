@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/app/stats"
+	"github.com/liamg/oriel/app/watches"
 	"github.com/liamg/oriel/plugin"
 )
 
@@ -23,7 +24,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	c := p.Config // the window's, as it is now
 	ed, gits := &editor.Editor{WorkDir: c.WorkDir, Files: c.Files, Clipboard: p.Clipboard, Tools: p.Tools}, &gitui.Git{}
 	st, voice := &stats.Plugin{}, &agentui.Voice{Config: cfg.Voice}
-	out := []plugin.Plugin{p.UI, p.Frames}
+	out := []plugin.Plugin{p.UI, p.Frames, &watches.Watches{Timing: cfg.WatchTiming}}
 	// The agent providers come before the plugins and config that may register their own under the same name.
 	out = append(out, cfg.Agents...)
 	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages"), CacheDir: c.CacheDir}, p.Themes, p.Layout, gits,

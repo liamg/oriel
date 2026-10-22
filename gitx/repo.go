@@ -206,3 +206,29 @@ func Root(ctx context.Context, dir string) (string, bool) {
 	}
 	return filepath.FromSlash(strings.TrimSpace(string(out))), true
 }
+
+// Dirs are a work tree's git folder, and the repository's own that holds its refs: the same but for a linked
+// worktree.
+func Dirs(root string) (dir, common string) {
+	dir = filepath.Join(root, ".git")
+	b, err := os.ReadFile(dir)
+	if err != nil {
+		return dir, dir
+	}
+	line, ok := strings.CutPrefix(strings.TrimSpace(string(b)), "gitdir:")
+	if !ok {
+		return dir, dir
+	}
+	dir = strings.TrimSpace(line)
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(root, dir)
+	}
+	common = dir
+	if c, err := os.ReadFile(filepath.Join(dir, "commondir")); err == nil {
+		common = strings.TrimSpace(string(c))
+		if !filepath.IsAbs(common) {
+			common = filepath.Join(dir, common)
+		}
+	}
+	return dir, filepath.Clean(common)
+}

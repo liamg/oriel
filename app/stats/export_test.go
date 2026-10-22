@@ -1,6 +1,8 @@
 package stats
 
 import (
+	"maps"
+	"slices"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -28,8 +30,15 @@ func (m *Machine) LoadOf() []float64                       { return m.loadOf() }
 // ForgetReports drops every report read, so the next frame asks again.
 func (x *Plugin) ForgetReports() {
 	x.mu.Lock()
-	defer x.mu.Unlock()
+	keys := slices.Collect(maps.Keys(x.reports))
 	clear(x.reports)
+	for _, k := range keys {
+		x.forced[k] = true
+	}
+	x.mu.Unlock()
+	for _, k := range keys {
+		x.subs.Refresh(k)
+	}
 }
 
 // FailDetail makes a session's stats a read that failed with err at at.

@@ -20,6 +20,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/watch"
 )
 
 // PerfHelp is the Performance page's help.
@@ -60,6 +61,13 @@ type perfSnap struct {
 	diskTotal   uint64
 	diskAt      time.Time
 	diskErr     string
+	watches     []watchStat // the freshness managers' sources, app's first
+}
+
+// watchStat is a manager's source, as the Watches table lists it.
+type watchStat struct {
+	manager string // the session's name, or "app"
+	watch.SourceStat
 }
 
 // Manifest loads it on the first use of one of its commands: a click on the status line's CPU.
@@ -134,6 +142,7 @@ func (x *Perf) run(ctx context.Context, frames *kit.FrameLog, dir string) {
 		s.procs, s.loads = sysload.Loads(prev, fam, now.Sub(prevAt)), prev != nil
 		prev, prevAt = fam, now
 		s.heap, s.goMem, s.gcs, s.goroutines = goRuntime()
+		s.watches = x.watchStats()
 		if frames != nil {
 			s.frames = frames.Stats(now, perfFrames)
 		}
@@ -212,6 +221,7 @@ func (x *Perf) page(c *ui.Ctx) {
 			x.machine(c, s)
 			x.sessions(c, s, width)
 			x.processes(c, s, width)
+			x.watches(c, s, width)
 		})
 	})
 }
@@ -383,4 +393,64 @@ func cells(texts ...string) [][]widget.Span {
 		out[i] = []widget.Span{{Text: strings.TrimSpace(t)}}
 	}
 	return out
+}
+
+// watchStats are the sources every freshness manager keeps: the app's, then each open session's.
+func (x *Perf) watchStats() []watchStat {
+	w, ok := registry.WatchesOf(x.h)
+	if !ok {
+		return nil
+	}
+	var out []watchStat
+	add := func(name string, id core.SessionID) {
+		if m := w.For(id); m != nil {
+			for _, st := range m.Stats() {
+				out = append(out, watchStat{manager: name, SourceStat: st})
+			}
+		}
+	}
+	add("app", "")
+	for _, se := range x.h.State().Sessions {
+		if !se.Archived {
+			add(cmp.Or(se.Name, string(se.ID)), se.ID)
+		}
+	}
+	return out
+}
+
+// watches are what the freshness managers keep fresh, who for, and how often they read it.
+func (x *Perf) watches(c *ui.Ctx, s perfSnap, width float32) {
+	th := c.Theme()
+	perfHeading(c, "watch.h", fmt.Sprintf("WATCHES · %d", len(s.watches)))
+	if len(s.watches) == 0 {
+		c.Text("none", "Nothing is being kept fresh.", kit.UIFont(12, th.C(theme.FgFaint)))
+		return
+	}
+	rows := [][][]widget.Span{cells("Manager", "Source", "State", "Subscribers", "Reads/min", "Last read")}
+	for _, w := range s.watches {
+		var who []string
+		for _, sub := range w.Subs {
+			if !sub.Held {
+				who = append(who, sub.Label)
+			}
+		}
+		subs := strings.Join(who, ", ")
+		if held := len(w.Subs) - len(who); held > 0 {
+			subs = strings.TrimPrefix(subs+fmt.Sprintf(", read by %d", held), ", ")
+		}
+		last := "—"
+		if !w.LastRead.IsZero() {
+			last = kit.AgoText(time.Now(), w.LastRead)
+		}
+		if w.Err != nil {
+			last = "failed: " + w.Err.Error()
+		}
+		key := w.Key
+		if r := []rune(key); len(r) > 70 {
+			key = "…" + string(r[len(r)-69:])
+		}
+		rows = append(rows, cells(w.manager, key, w.State, subs, fmt.Sprint(w.PerMin), last))
+	}
+	widget.Table(c, "watches", rows, width, kit.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Watches",
+		Align: []ui.Align{ui.Start, ui.Start, ui.Start, ui.Start, ui.End, ui.End}})
 }

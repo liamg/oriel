@@ -83,6 +83,7 @@ func TestExplorerMarkers(t *testing.T) {
 		}
 		return "(no " + name + ")"
 	}
+	s.Until("the line counts", func() bool { s.Frame(); return strings.HasPrefix(after("round.go"), "+4") })
 	if got := after("round.go"); !strings.HasPrefix(got, "+4 M") {
 		t.Errorf("round.go is followed by %q, want +4 and M", got)
 	}

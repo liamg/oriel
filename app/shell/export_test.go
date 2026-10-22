@@ -70,9 +70,6 @@ func SetKeys(h *Headless, r *registry.Resolver) { h.sh.keys = r }
 
 // What fork F1's moved tests read and set of the shell.
 
-// NewWindowFocus is a window's focus, as the OS gives it, for a poll to follow.
-func NewWindowFocus() *windowFocus { return newWindowFocus() }
-
 func (f *windowFocus) Now() (bool, <-chan struct{}) { return f.now() }
 func (f *windowFocus) Set(on bool) bool             { return f.set(on) }
 
