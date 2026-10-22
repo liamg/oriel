@@ -2,7 +2,7 @@
 //
 // Gio stencils every path and every image drawn under a scale on every frame, so text goes
 // through a glyph atlas, rounded rects, borders and glows are baked 9-slices drawn at whole
-// pixels, and no image is ever drawn scaled (rendering.md).
+// pixels, and no image is ever drawn scaled.
 package gio
 
 import (

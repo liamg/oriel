@@ -4,11 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"maps"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -111,11 +111,6 @@ func (r Repo) Blame(ctx context.Context, path string, contents []byte) ([]BlameL
 // emailFresh is how long a repo's user.email is kept before it's read again.
 const emailFresh = 30 * time.Second
 
-var emails = struct {
-	sync.Mutex
-	by map[string]email
-}{by: map[string]email{}}
-
 type email struct {
 	addr string
 	read time.Time
@@ -123,45 +118,46 @@ type email struct {
 
 // userEmail is the repo's user.email, lowercased; "" without one.
 func (r Repo) userEmail(ctx context.Context) string {
-	emails.Lock()
-	e, ok := emails.by[r.Dir]
-	emails.Unlock()
-	if ok && time.Since(e.read) < emailFresh {
-		return e.addr
+	c := r.Cache
+	if c != nil {
+		c.mu.Lock()
+		e, ok := c.emails[r.Dir]
+		c.mu.Unlock()
+		if ok && time.Since(e.read) < emailFresh {
+			return e.addr
+		}
 	}
-	e = email{read: time.Now()}
+	e := email{read: time.Now()}
 	if b, err := r.git(ctx, "config", "user.email"); err == nil {
 		e.addr = strings.ToLower(strings.TrimSpace(string(b)))
 	}
-	emails.Lock()
-	emails.by[r.Dir] = e
-	emails.Unlock()
+	if c != nil {
+		c.mu.Lock()
+		c.emails[r.Dir] = e
+		c.mu.Unlock()
+	}
 	return e.addr
 }
 
 // maxTrailers is how many commits' Co-Authored-By readings are kept.
 const maxTrailers = 1 << 16
 
-// trailers holds, by commit hash, whether its message has a Co-Authored-By naming an agent: a commit's message never
-// changes, so each is read once.
-var trailers = struct {
-	sync.Mutex
-	agent map[string]bool
-}{agent: map[string]bool{}}
-
 // coAuthoredByAgent is which of hashes have a Co-Authored-By trailer naming an agent, reading only those not read before.
 func (r Repo) coAuthoredByAgent(ctx context.Context, hashes []string) map[string]bool {
 	out := map[string]bool{}
-	var unread []string
-	trailers.Lock()
-	for _, h := range hashes {
-		if a, ok := trailers.agent[h]; ok {
-			out[h] = a
-		} else {
-			unread = append(unread, h)
+	unread := hashes
+	if c := r.Cache; c != nil {
+		unread = nil
+		c.mu.Lock()
+		for _, h := range hashes {
+			if a, ok := c.trailers[h]; ok {
+				out[h] = a
+			} else {
+				unread = append(unread, h)
+			}
 		}
+		c.mu.Unlock()
 	}
-	trailers.Unlock()
 	if len(unread) == 0 {
 		return out
 	}
@@ -177,14 +173,17 @@ func (r Repo) coAuthoredByAgent(ctx context.Context, hashes []string) map[string
 		}
 		read[h] = coAuthoredAgent(body)
 	}
-	trailers.Lock()
-	if len(trailers.agent)+len(read) > maxTrailers {
-		clear(trailers.agent)
-	}
 	for h, a := range read {
-		trailers.agent[h], out[h] = a, a
+		out[h] = a
 	}
-	trailers.Unlock()
+	if c := r.Cache; c != nil {
+		c.mu.Lock()
+		if len(c.trailers)+len(read) > maxTrailers {
+			clear(c.trailers)
+		}
+		maps.Copy(c.trailers, read)
+		c.mu.Unlock()
+	}
 	return out
 }
 

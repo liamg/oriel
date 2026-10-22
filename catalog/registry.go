@@ -17,7 +17,7 @@ import (
 	"github.com/liamg/oriel/toml"
 )
 
-// The registry repo's layout and the files its CI publishes (catalog.md, "The registry repo").
+// The registry repo's layout and the files its CI publishes.
 const (
 	PluginsDir  = "plugins"     // plugins/<owner>/<name>/plugin.toml
 	PluginFile  = "plugin.toml" //
@@ -151,7 +151,7 @@ func ReadListings(root string) (map[string]Listing, error) {
 	return out, nil
 }
 
-// Index is what the registry publishes: every listing, flattened, signed as a whole (catalog.md, The index).
+// Index is what the registry publishes: every listing, flattened, signed as a whole.
 type Index struct {
 	Registry string    `json:"registry"` // owner/name of the registry repo
 	Built    time.Time `json:"built"`

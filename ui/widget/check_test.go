@@ -35,7 +35,7 @@ func TestCheck(t *testing.T) {
 		t.Fatalf("a click on a mixed box left it %v", st)
 	}
 	h.frame()
-	if n := h.access(id); n == nil || !n.Selected || n.Name != "Mark reviewed" {
+	if n := h.access(id); n == nil || n.Role != ui.RoleCheckBox || n.Checked == nil || !*n.Checked || n.Name != "Mark reviewed" {
 		t.Errorf("its accessible state: %+v", n)
 	}
 	if !h.drew("✓") {

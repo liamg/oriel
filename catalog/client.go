@@ -1,11 +1,13 @@
 package catalog
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +17,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 )
 
-// defaultKey is liamg/oriel-plugins' public key, embedded in the binary (catalog.md, "More than one registry"); a
+// defaultKey is liamg/oriel-plugins' public key, embedded in the binary; a
 // build can set it with -ldflags "-X github.com/liamg/oriel/catalog.defaultKey=ed25519:…".
 var defaultKey = "ed25519:b5021d4a041cf659010987e4099d7b6d566ed9575149e32d33b43b6c9b199038"
 
@@ -34,11 +36,12 @@ type Source struct {
 	Key  PublicKey
 }
 
-// Client fetches, verifies and caches each registry's index (catalog.md, The index). A fetch that fails, or an
+// Client fetches, verifies and caches each registry's index. A fetch that fails, or an
 // index whose signature doesn't verify, leaves the last verified one cached in use.
 type Client struct {
 	Sources []Source
-	// Fetch reads one asset of a registry's newest release: index.json and index.sig.
+	// Fetch reads one asset of a registry's newest release: index.json and index.sig. fs.ErrNotExist for index.json
+	// is a registry with no index yet.
 	Fetch func(ctx context.Context, repo, name string) ([]byte, error)
 	Cache string // where verified indexes are kept: <Cache>/<owner>/<name>/
 
@@ -47,6 +50,9 @@ type Client struct {
 	errs    map[string]error // why the last fetch of a repo's index failed
 	fetched time.Time
 }
+
+// errNoIndex is a registry that hasn't published an index: it lists nothing yet, which isn't a failure.
+var errNoIndex = errors.New("no index yet")
 
 // Refresh fetches every registry's index, and says what went wrong with each that failed.
 func (c *Client) Refresh(ctx context.Context) error {
@@ -57,7 +63,16 @@ func (c *Client) Refresh(ctx context.Context) error {
 		if c.indexes == nil {
 			c.indexes, c.errs = map[string]Index{}, map[string]error{}
 		}
-		if err != nil {
+		if errors.Is(err, errNoIndex) {
+			delete(c.errs, s.Repo)
+			if _, ok := c.indexes[s.Repo]; !ok {
+				ix, cerr := c.cached(s)
+				if cerr != nil {
+					ix = Index{Registry: s.Repo}
+				}
+				c.indexes[s.Repo] = ix
+			}
+		} else if err != nil {
 			c.errs[s.Repo] = err
 			errs = append(errs, fmt.Errorf("%s: %w", s.Repo, err))
 			if _, ok := c.indexes[s.Repo]; !ok {
@@ -80,6 +95,9 @@ func (c *Client) fetch(ctx context.Context, s Source) (Index, error) {
 		return Index{}, errors.New("no key to check its index with: give it one in [registry] keys")
 	}
 	body, err := c.Fetch(ctx, s.Repo, IndexFile)
+	if errors.Is(err, fs.ErrNotExist) || err == nil && len(bytes.TrimSpace(body)) == 0 {
+		return Index{}, errNoIndex
+	}
 	if err != nil {
 		return Index{}, err
 	}
@@ -91,6 +109,13 @@ func (c *Client) fetch(ctx context.Context, s Source) (Index, error) {
 	if err != nil {
 		return Index{}, err
 	}
+	if ix.Registry != s.Repo {
+		return Index{}, fmt.Errorf("the index is %s's, not this registry's", ix.Registry)
+	}
+	if last, ok := c.lastSeen(s); ok && ix.Built.Before(last.Built) {
+		return Index{}, fmt.Errorf("the index was built %s, before the one already seen (%s)",
+			ix.Built.UTC().Format(time.RFC3339), last.Built.UTC().Format(time.RFC3339))
+	}
 	if c.Cache != "" {
 		dir := filepath.Join(c.Cache, filepath.FromSlash(s.Repo))
 		if err := os.MkdirAll(dir, 0o755); err == nil {
@@ -99,6 +124,17 @@ func (c *Client) fetch(ctx context.Context, s Source) (Index, error) {
 		}
 	}
 	return ix, nil
+}
+
+// lastSeen is the newest index of s's already accepted: in use, or in the cache.
+func (c *Client) lastSeen(s Source) (Index, bool) {
+	c.mu.Lock()
+	ix, ok := c.indexes[s.Repo]
+	c.mu.Unlock()
+	if cached, err := c.cached(s); err == nil && (!ok || cached.Built.After(ix.Built)) {
+		ix, ok = cached, true
+	}
+	return ix, ok
 }
 
 // cached is the index last fetched for s, verified again.
@@ -171,7 +207,7 @@ func (c *Client) All() []Found {
 	return out
 }
 
-// RegistryResolver resolves registry entries against a Client (catalog.md, Updates): reviewed versions in the range, or a
+// RegistryResolver resolves registry entries against a Client: reviewed versions in the range, or a
 // trusted plugin's tags once trusted_hold has passed; yanked versions aren't offered, and a revoked one is
 // refused. What the lockfile pins stays unless Updates is "auto" or Update asks for the newest.
 type RegistryResolver struct {
@@ -271,16 +307,16 @@ func (r *RegistryResolver) Resolve(ctx context.Context, e Entry, locked *Locked)
 	}
 	id, version, tag, repo := e.ID, res.Version, pick.tag, f.RepoName()
 	res.Fetch = func(ctx context.Context) (string, string, error) {
+		if sum == "" {
+			return "", "", nil // nothing to check an archive against: the commit is cloned
+		}
 		b, err := r.GitHub.Asset(ctx, repo, tag, ArchiveName(id, version, r.Platform))
 		if err != nil {
-			if sum != "" {
-				return "", "", fmt.Errorf("%s %s's %s archive: %w", id, version, r.Platform, err)
-			}
-			return "", "", nil
+			return "", "", fmt.Errorf("%s %s's %s archive: %w", id, version, r.Platform, err)
 		}
 		got := sha256.Sum256(b)
 		have := "sha256:" + hex.EncodeToString(got[:])
-		if sum != "" && have != sum {
+		if have != sum {
 			return "", "", fmt.Errorf("%s %s's %s archive is %s, not %s as recorded", id, version, r.Platform, have, sum)
 		}
 		tmp, err := os.CreateTemp(r.Temp, "oriel-plugin-*.tar.gz")

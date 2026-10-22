@@ -71,7 +71,7 @@ func testSums(t *testing.T, files ...packFile) PackSums {
 	return s
 }
 
-// PL-3: a pack that matches the checksum list installs into <dir>/<name>, as ED-11's languages directory reads it.
+// A pack that matches the checksum list installs into <dir>/<name>, as the languages directory reads it.
 func TestPackInstall(t *testing.T) {
 	sums := testSums(t, gox...)
 	dir := t.TempDir()
@@ -104,7 +104,7 @@ func TestPackInstall(t *testing.T) {
 	}
 }
 
-// PL-3 / deps.md: only a pack that matches the shipped checksum list installs; anything else writes nothing.
+// Only a pack that matches the shipped checksum list installs; anything else writes nothing.
 func TestPackInstallRefusesMismatches(t *testing.T) {
 	sums := testSums(t, gox...)
 	tampered := slices.Clone(gox)

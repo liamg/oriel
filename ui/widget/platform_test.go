@@ -3,6 +3,7 @@ package widget
 import (
 	"testing"
 
+	"github.com/liamg/oriel/internal/testhook"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -24,9 +25,7 @@ func TestInputEditingKeys(t *testing.T) {
 		{"linux", render.ModCtrl, render.ModCtrl, []render.KeyEvent{{Key: "Home"}}, nil},
 	} {
 		t.Run(tc.goos, func(t *testing.T) {
-			was := platform
-			platform = platformMods(tc.goos)
-			t.Cleanup(func() { platform = was })
+			testhook.Set(t, &platform, platformMods(tc.goos))
 			text := ""
 			var id ui.ID
 			clip := &testClip{}

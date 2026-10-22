@@ -65,7 +65,7 @@ func screen(g term.Grid) []string {
 	return out
 }
 
-// Grid marks the rows that changed since the last call (_design/ide.md: damage tracking per row). Marking is
+// Grid marks the rows that changed since the last call (damage tracking per row). Marking is
 // conservative: the row the cursor left counts as changed too.
 func TestDirtyRows(t *testing.T) {
 	e := mustNew(t, 10, 4, Options{})
@@ -122,7 +122,7 @@ func shown(e *Terminal) map[string]any {
 	}
 }
 
-// Snapshot on reconnect (FG-4): a terminal restored from another's snapshot shows the same thing, and the next bytes
+// Snapshot on reconnect: a terminal restored from another's snapshot shows the same thing, and the next bytes
 // (which may finish a sequence the snapshot caught half-way) leave both the same.
 func TestSnapshotRestore(t *testing.T) {
 	var stream bytes.Buffer
@@ -228,8 +228,8 @@ func TestPaste(t *testing.T) {
 	}
 }
 
-// ref:   contour/synchronized-output.md#Timeout
-// quote: "So far there is no real concensus if and if so how long a timeout should be. The toolkit/application implementer should keep this in mind."
+// ref:   libghostty-vt/stream_terminal.zig
+// quote: "The caller must use a timeout so that a program that never"
 func TestHoldTimeout(t *testing.T) {
 	now := time.Unix(0, 0)
 	e := mustNew(t, 10, 1, Options{HoldTimeout: time.Second, Now: func() time.Time { return now }})

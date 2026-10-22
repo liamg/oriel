@@ -48,16 +48,23 @@ type record struct {
 // Recorder writes every event it is given as a line of JSON. Subscribe its Record to a new store with the
 // zero Filter, so the log holds every event from the start and Replay can rebuild the state.
 type Recorder struct {
-	mu  sync.Mutex
-	w   io.Writer
-	seq uint64
-	err error
+	mu    sync.Mutex
+	w     io.Writer
+	seq   uint64
+	err   error
+	vault *Vault
 }
 
 func NewRecorder(w io.Writer) *Recorder { return &Recorder{w: w} }
 
 // ResumeRecorder carries on a log that already holds seq events, so it still replays.
 func ResumeRecorder(w io.Writer, seq uint64) *Recorder { return &Recorder{w: w, seq: seq} }
+
+// Keep puts the text sealed events take out of the log in v; without one it's dropped.
+func (r *Recorder) Keep(v *Vault) *Recorder {
+	r.vault = v
+	return r
+}
 
 func (r *Recorder) Record(ev Event) {
 	r.mu.Lock()
@@ -74,6 +81,13 @@ func (r *Recorder) write(ev Event) error {
 	eventsMu.RUnlock()
 	if !ok {
 		return fmt.Errorf("core: event type %T is not registered", ev)
+	}
+	if s, ok := ev.(Sealed); ok {
+		var texts map[string]string
+		ev, texts = s.Seal()
+		if r.vault != nil && len(texts) > 0 {
+			_ = r.vault.Put(texts)
+		}
 	}
 	b, err := json.Marshal(ev)
 	if err != nil {
@@ -103,7 +117,10 @@ func Replay(r io.Reader, s Store) error {
 }
 
 // ReplayCount is Replay, and how many events it applied.
-func ReplayCount(r io.Reader, s Store) (uint64, error) {
+func ReplayCount(r io.Reader, s Store) (uint64, error) { return ReplayVault(r, s, nil) }
+
+// ReplayVault is ReplayCount, with the text sealed events left out of the log put back from v.
+func ReplayVault(r io.Reader, s Store, v *Vault) (uint64, error) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64<<10), 16<<20)
 	var seq uint64
@@ -126,7 +143,11 @@ func ReplayCount(r io.Reader, s Store) (uint64, error) {
 		if err := json.Unmarshal(rec.Event, p.Interface()); err != nil {
 			return seq, fmt.Errorf("event %d (%s): %w", seq, rec.Type, err)
 		}
-		if err := s.Apply(p.Elem().Interface().(Event)); err != nil {
+		ev := p.Elem().Interface().(Event)
+		if sealed, ok := ev.(Sealed); ok && v != nil {
+			ev = sealed.Unseal(v.Get)
+		}
+		if err := s.Apply(ev); err != nil {
 			return seq, fmt.Errorf("event %d (%s): %w", seq, rec.Type, err)
 		}
 	}

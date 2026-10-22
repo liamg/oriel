@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call: # release.yml runs it before building
 
 permissions:
   contents: read
@@ -24,7 +25,9 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
       - run: make check
-      - name: Install delve and debugpy, so the dap tests run live too (DB-1)
+        env:
+          ORIEL_LEAK_DENYLIST: ${{ vars.ORIEL_LEAK_DENYLIST }}
+      - name: Install delve and debugpy, so the dap tests run live too
         shell: bash
         run: |
           go install github.com/go-delve/delve/cmd/dlv@v1.27.2
@@ -36,8 +39,13 @@ jobs:
       - name: make test (under Xvfb on Linux, for render/gio's window test)
         shell: bash
         run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else make test; fi
+      - name: Snapshot and lag suites with the frame-path I/O check
+        shell: bash
+        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else make test-framecheck; fi
+      - name: Race detector on the packages where it's quick
+        if: runner.os == 'Linux'
+        run: go test -race -shuffle=on ./text/... ./toml/... ./semver/... ./regex/... ./update/... ./registry/... ./core/... ./lsp/... ./dap/... ./fswatch/... ./gitx/...
       - run: make build
-      - run: go vet -tags spike ./cmd/oriel-spike
       - name: Install nvim for the oracle
         shell: bash
         run: |
@@ -53,7 +61,7 @@ jobs:
 
   grammars:
     # The tree-sitter grammars and grammar packs are rebuilt from their pinned sources and must match what's
-    # committed (deps.md); the packs the binary's PACKS.SHA256SUMS lists are published as an artifact.
+    # committed; the packs the binary's PACKS.SHA256SUMS lists are published as an artifact.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,7 +74,7 @@ jobs:
       - run: syntax/grammars/build.sh
       # The .wasm.gz bytes depend on gzip's version; what's built is checked by its checksums, and the Go tests
       # check that what's embedded decompresses to the same.
-      - run: git diff --exit-code -- syntax/grammars/SHA256SUMS syntax/grammars/manifest.tsv syntax/grammars/PACKS.SHA256SUMS syntax/grammars/packs.tsv syntax/grammars/packs
+      - run: git diff --exit-code -- syntax/grammars/SHA256SUMS syntax/grammars/manifest.tsv syntax/grammars/licenses syntax/grammars/PACKS.SHA256SUMS syntax/grammars/packs.tsv syntax/grammars/packs
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: grammar-packs
@@ -77,7 +85,7 @@ jobs:
 
   ghostty:
     # libghostty-vt is rebuilt from its pinned commit: the wasm must match what's committed, and the native library
-    # (not committed) must pass the same suite (deps.md).
+    # (not committed) must pass the same suite.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -94,6 +102,22 @@ jobs:
         with:
           go-version: "1.26.x"
       - run: make test-vt
+
+  whisper:
+    # whisper.cpp is built from its pinned release (voice/native/build.sh) and transcribes a clip with tiny.en.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: voice/native/build.sh linux_amd64
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+      - name: Download the tiny.en model
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/ggml-tiny.en.bin" https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.en.bin
+          echo "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f  $RUNNER_TEMP/ggml-tiny.en.bin" | sha256sum -c -
+          echo "ORIEL_WHISPER_MODEL=$RUNNER_TEMP/ggml-tiny.en.bin" >> "$GITHUB_ENV"
+      - run: make test-voice
 
   vulncheck:
     runs-on: ubuntu-latest

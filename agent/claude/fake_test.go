@@ -109,6 +109,10 @@ func fakeClaude(args []string) int {
 		return 1
 	}
 	fmt.Printf("fake claude %s in %s\r\n", f.id, cwd)
+	if os.Getenv("ORIEL_FAKE_NO_HELLO") == "1" {
+		note("run")
+		time.Sleep(time.Hour)
+	}
 
 	var hello struct{ Tools []toolSpec }
 	if err := f.hook("hello", map[string]any{"sessionId": f.id, "cwd": cwd}, &hello); err != nil {
@@ -185,14 +189,25 @@ func (f *fake) poll(turns chan<- string) {
 
 // terminal answers what's typed into it: /login signs in, as claude's does once you're through its steps; /usage
 // reads the plan's windows; /exit quits. ORIEL_FAKE_RUNS gets a line as it starts and as it quits; with
-// ORIEL_FAKE_SIGNED_OUT=1 it starts on the signed-out screen.
+// ORIEL_FAKE_SIGNED_OUT=1 it starts on the signed-out screen. ORIEL_FAKE_DIALOG starts it under a dialog that
+// swallows what's typed: "escape" until Escape closes it, "stuck" for good.
 func (f *fake) terminal() {
 	note("run")
 	if os.Getenv("ORIEL_FAKE_SIGNED_OUT") == "1" {
 		os.Stdout.Write(recordedSignedOut)
 	}
+	dialog := os.Getenv("ORIEL_FAKE_DIALOG")
+	if dialog != "" {
+		os.Stdout.WriteString("\x1b[1mNew MCP server found in .mcp.json\x1b[0m\r\n")
+	}
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
+		if dialog == "escape" && strings.Contains(sc.Text(), "\x1b") {
+			dialog = ""
+		}
+		if dialog != "" {
+			continue
+		}
 		switch strings.Trim(sc.Text(), " \x1b") {
 		case "/login":
 			os.Stdout.WriteString("\x1b[38;2;78;186;101mLogin successful. Press \x1b[1mEnter\x1b[22m to continue…\x1b[39m\r\n")
@@ -375,7 +390,7 @@ func (f *fake) turn(text string) {
 }
 
 // fakeHarness starts the provider against the fake, in a HOME of its own.
-func fakeProvider(t *testing.T) Provider {
+func fakeProvider(t *testing.T) *Provider {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("CLAUDE_CONFIG_DIR", "")
@@ -383,5 +398,5 @@ func fakeProvider(t *testing.T) Provider {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Provider{Bin: exe, OrielBin: exe}
+	return &Provider{Bin: exe, OrielBin: exe}
 }

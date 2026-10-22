@@ -1,5 +1,5 @@
 // Package theme resolves layered theme files (palette, semantic, component and syntax tokens) into the
-// flat colour table widgets read each frame (theming.md). Colour maths follows CSS Color 4.
+// flat colour table widgets read each frame. Colour maths follows CSS Color 4.
 package theme
 
 import (

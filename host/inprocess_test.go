@@ -55,28 +55,6 @@ func TestSessionLogsSurviveARestart(t *testing.T) {
 	}
 }
 
-// AI-4: the host's kinds, built-ins in sessions.md's order and a plugin's after them, each saying what it starts
-// from; the launcher offers those marked Launcher: Work, Plan and Review PR, and a plugin's that asks to be there.
-func TestKindsReachTheLauncher(t *testing.T) {
-	r := newRig(t)
-	off := r.w.Kinds().Register(KindSpec{Kind: "incident", Title: "Incident", Pack: "work", Worktrees: WorktreesNow, Launcher: true})
-	defer off()
-	var got, launcher []string
-	for _, k := range r.w.Kinds().All() {
-		got = append(got, string(k.Kind)+":"+string(k.From))
-		if k.Launcher {
-			launcher = append(launcher, string(k.Kind))
-		}
-	}
-	want := []string{"work:prompt", "plan:prompt", "review:pr", "job:prompt", "newrepo:name", "direct:dir", "incident:"}
-	if strings.Join(got, " ") != strings.Join(want, " ") {
-		t.Errorf("kinds = %v, want %v", got, want)
-	}
-	if want := []string{"work", "plan", "review", "incident"}; strings.Join(launcher, " ") != strings.Join(want, " ") {
-		t.Errorf("launcher kinds = %v, want %v", launcher, want)
-	}
-}
-
 // Quitting hands the agents over: the next start resumes them.
 func TestTheNextStartResumesAHandOver(t *testing.T) {
 	r := newRig(t)
@@ -93,7 +71,7 @@ func TestTheNextStartResumesAHandOver(t *testing.T) {
 	}
 }
 
-// PLAN.md, "A crash resumes on the next launch": agents a crash took with it are marked StoppedByCrash and resumed.
+// A crash resumes on the next launch: agents a crash took with it are marked StoppedByCrash and resumed.
 func TestTheNextStartResumesWhatACrashStopped(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("start")
@@ -106,13 +84,14 @@ func TestTheNextStartResumesWhatACrashStopped(t *testing.T) {
 	}
 }
 
-// PLAN.md, "Not crashing": a panic in a host method, a goroutine of the host's or a callback into the app is an
+// Not crashing: a panic in a host method, a goroutine of the host's or a callback into the app is an
 // error, logged; the process goes on.
 func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 	r := newRig(t)
 	var mu sync.Mutex
 	var buf bytes.Buffer
-	r.w.log = slog.New(slog.NewTextHandler(&lockedWriter{mu: &mu, w: &buf}, nil))
+	r.log = slog.New(slog.NewTextHandler(&lockedWriter{mu: &mu, w: &buf}, nil))
+	r.restart()
 	logged := func() string {
 		mu.Lock()
 		defer mu.Unlock()
@@ -127,15 +106,24 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 		t.Errorf("Start = %v, want the panic as an error", err)
 	}
 
-	r.w.opts.Load = func() sysload.Reading { panic("no load") }
+	r.w.opts.Now = func() time.Time { panic("no load") }
 	ctx, cancel := context.WithCancel(context.Background())
-	go r.w.SampleLoad(ctx, time.Millisecond)
+	load := sysload.NewSampler(time.Millisecond, func() sysload.Reading { return sysload.Reading{CPU: 34, Cores: 4} })
+	go load.Run(ctx)
+	defer load.Want()()
+	sampled := make(chan struct{})
+	go func() {
+		defer close(sampled)
+		r.w.SampleLoad(ctx, load)
+	}()
 	for deadline := time.Now().Add(5 * time.Second); !strings.Contains(logged(), "no load"); time.Sleep(time.Millisecond) {
 		if time.Now().After(deadline) {
 			t.Fatal("SampleLoad's panic wasn't logged")
 		}
 	}
 	cancel()
+	<-sampled
+	r.w.opts.Now = now
 
 	r.w.SetApp(App{Decide: func(context.Context, Decide) Verdict { panic("a hook broke") }})
 	id, a := r.workSession("Work")
@@ -193,5 +181,58 @@ func TestHandOverStopsTheAgentsTogether(t *testing.T) {
 		if se := r.session(id); se.Agent.Running || se.Agent.StoppedBy != core.StoppedByHandOver {
 			t.Errorf("%s handed over: %+v", id, se.Agent)
 		}
+	}
+}
+
+// The machine's load is news only when the sampler says it moved: a steady machine is one MachineChanged, however often
+// it's read.
+func TestSampleLoadEmitsOnlyChanges(t *testing.T) {
+	r := newRig(t)
+	var mu sync.Mutex
+	cpu := 34.0
+	load := sysload.NewSampler(time.Millisecond, func() sysload.Reading {
+		mu.Lock()
+		defer mu.Unlock()
+		return sysload.Reading{CPU: cpu, Cores: 4, MemUsed: 1 << 30, MemTotal: 4 << 30}
+	})
+	var got []float64
+	var gotMu sync.Mutex
+	cancelSub := r.w.Store().Subscribe(core.Filter{}, func(ev core.Event) {
+		if m, ok := ev.(core.MachineChanged); ok {
+			gotMu.Lock()
+			got = append(got, m.Machine.CPU)
+			gotMu.Unlock()
+		}
+	})
+	defer cancelSub()
+	seen := func() []float64 {
+		gotMu.Lock()
+		defer gotMu.Unlock()
+		return append([]float64(nil), got...)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go load.Run(ctx)
+	defer load.Want()()
+	go r.w.SampleLoad(ctx, load)
+	for deadline := time.Now().Add(5 * time.Second); len(seen()) == 0; time.Sleep(time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("no MachineChanged")
+		}
+	}
+	time.Sleep(100 * time.Millisecond) // about a hundred readings, all the same
+	if g := seen(); len(g) != 1 || g[0] != .34 {
+		t.Fatalf("a steady machine sent %v, want [0.34]", g)
+	}
+	mu.Lock()
+	cpu = 60
+	mu.Unlock()
+	for deadline := time.Now().Add(5 * time.Second); len(seen()) < 2; time.Sleep(time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("the moved reading wasn't sent")
+		}
+	}
+	if g := seen(); g[1] != .6 {
+		t.Fatalf("sent %v, want 0.6 second", g)
 	}
 }

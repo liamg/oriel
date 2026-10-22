@@ -5,7 +5,8 @@ package mcp
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // ProtocolVersion is the MCP revision we advertise.
@@ -86,37 +87,13 @@ type ServerInfo struct {
 }
 
 // Error is a JSON-RPC error.
-type Error struct {
-	Code    int             `json:"code"`
-	Message string          `json:"message"`
-	Data    json.RawMessage `json:"data,omitempty"`
-}
+type Error = jsonrpc.Error
 
-func (e *Error) Error() string {
-	return fmt.Sprintf("mcp: %s (code %d)", e.Message, e.Code)
-}
+// message is any JSON-RPC 2.0 message.
+type message = jsonrpc.Message
 
-// message is any JSON-RPC 2.0 message. A request has Method and ID, a
-// notification Method only, a response ID and Result or Error.
-type message struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method,omitempty"`
-	Params  json.RawMessage `json:"params,omitempty"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *Error          `json:"error,omitempty"`
-}
-
-func (m *message) isResponse() bool { return m.Method == "" && m.ID != nil }
-
-// idKey normalises an id for map lookup.
-func idKey(id json.RawMessage) string {
-	var buf bytes.Buffer
-	if json.Compact(&buf, id) != nil {
-		return string(id)
-	}
-	return buf.String()
-}
+// cancel is MCP's cancellation notification.
+var cancel = &jsonrpc.Cancel{Method: "notifications/cancelled", Field: "requestId"}
 
 type initializeResult struct {
 	ProtocolVersion string          `json:"protocolVersion"`

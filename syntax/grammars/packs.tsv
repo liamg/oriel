@@ -1,4 +1,4 @@
-# Grammar packs (PL-3) built by build.sh: name, repository, revision, directory in it, sha256 of the source tarball.
+# Grammar packs built by build.sh: name, repository, revision, directory in it, sha256 of the source tarball.
 # Revisions follow nvim-treesitter's parsers.lua at the commit the queries are from; "queries" is that commit, whose
 # runtime/queries/<name>/ give each pack its highlights, folds and injections.
 queries	nvim-treesitter/nvim-treesitter	f603a2f4da48728f80257fb5fbb90145fd1dc173	runtime/queries	c080a1fb914d7ec8da5790076585dadc4de16d3a550ad0794d4eb9e766f0e967

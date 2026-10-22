@@ -41,14 +41,14 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ws.Sandboxed || !ws.Running || ws.Backend != "fake" || ws.Image != "img:1" || !ws.Rebuild || ws.Root != b.root {
+	if !ws.Sandboxed || !ws.Running || ws.Backend != "fake" || ws.Image != "img:1" || !ws.Rebuild || ws.Root != b.Root() {
 		t.Errorf("workspace = %+v", ws)
 	}
-	if c, err := s.w.SandboxShell(context.Background(), id, ""); err != nil || len(c.Argv) != 3 || c.Argv[2] != b.root {
+	if c, err := s.w.SandboxShell(context.Background(), id, ""); err != nil || len(c.Argv) != 3 || c.Argv[2] != b.Root() {
 		t.Errorf("the sandbox's shell = %+v, %v", c, err)
 	}
 	i := slices.IndexFunc(ws.Paths, func(p WorkspacePath) bool { return p.Name == "Scratchpad" })
-	if i < 0 || ws.Paths[i].Host != sandbox.TmpDir(b.root) || ws.Paths[i].Agent != "/tmp/claude-1" {
+	if i < 0 || ws.Paths[i].Host != sandbox.TmpDir(b.Root()) || ws.Paths[i].Agent != "/tmp/claude-1" {
 		t.Errorf("paths = %+v", ws.Paths)
 	}
 	if len(ws.Paths) == 0 || ws.Paths[0].Host == "" || ws.Paths[0].Name == "Scratchpad" {
@@ -57,7 +57,7 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	if err := s.w.RebuildSandbox(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
-	if got := <-ib.rebuilt; got != b.root {
+	if got := <-ib.rebuilt; got != b.Root() {
 		t.Errorf("rebuilt %q", got)
 	}
 	for deadline := time.Now().Add(5 * time.Second); s.w.boxOf(id) == b || s.w.boxOf(id) == nil; time.Sleep(5 * time.Millisecond) {
@@ -94,10 +94,10 @@ func TestOpenNetworkStillGoesThroughTheHost(t *testing.T) {
 		Sandbox: core.SandboxPolicy{Container: true, Network: "open"}})
 	s.agent()
 	b := s.keptBox(id)
-	if !b.egress.Open {
+	if !b.Egress().Open {
 		t.Fatal("an open session's egress isn't open")
 	}
-	if b.egress.Decide(context.Background(), "litellm.internal.example.io", 443) != egress.Allow {
+	if b.Egress().Decide(context.Background(), "litellm.internal.example.io", 443) != egress.Allow {
 		t.Error("an open session refused a host")
 	}
 	if se := s.session(id); len(se.Asks) != 0 {
@@ -116,7 +116,7 @@ func TestPlanSessionReadsItsCheckouts(t *testing.T) {
 		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
 	s.agent()
 	b := s.keptBox(id)
-	m, ok := sandbox.LoadManifest(b.root)
+	m, ok := sandbox.LoadManifest(b.Root())
 	if !ok || !slices.Contains(m.Reads, s.repo.Dir) {
 		t.Errorf("the manifest reads %v, want the checkout %s (projects %+v)", m.Reads, s.repo.Dir, m.Projects)
 	}

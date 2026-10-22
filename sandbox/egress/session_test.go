@@ -3,6 +3,7 @@ package egress
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -386,7 +387,7 @@ func TestProxyAsksTheSession(t *testing.T) {
 	}
 }
 
-// agents.md, "Permissions: three layers": a layer-3 denial is "an ordinary tool error", and its message says who
+// A layer-3 permission denial is an ordinary tool error, and its message says who
 // denied it and what to do instead, for the agent to read.
 func TestProxyRefusalSaysWhoAndWhy(t *testing.T) {
 	s, c := newSession(t)
@@ -427,16 +428,39 @@ func TestOpenSessionAllowsEverything(t *testing.T) {
 	s, c := newSession(t)
 	s.Open = true
 	s.Resolver = resolveTo{netip.MustParseAddr("10.1.3.31")}
-	if !allow(s, "litellm.internal.dev.infracost.io", 443) {
+	if !allow(s, "llm.internal.example.com", 443) {
 		t.Fatal("an open session refused a destination")
 	}
 	if c.open() != 0 {
 		t.Error("an open session asked")
 	}
-	if s.scope("litellm.internal.dev.infracost.io:443") != Private {
+	if s.scope("llm.internal.example.com:443") != Private {
 		t.Error("an open session's dial can't reach a private address")
 	}
 	if allow(s, HostGateway, 5432) {
 		t.Error("an open session reached a host port it wasn't given")
+	}
+}
+
+// An allow the card could not save still lets the connection through, but says so, and tells SaveFailed.
+func TestEgressCardSaveFailure(t *testing.T) {
+	for _, key := range []string{ForSession, Always, AnyHost} {
+		s, c := newSession(t)
+		s.GrantsPath = filepath.Join(t.TempDir(), "missing", "egress.json")
+		s.Always = func(Rule, bool) error { return errors.New("disk full") }
+		var failed []error
+		s.SaveFailed = func(_ Rule, err error) { failed = append(failed, err) }
+		done := make(chan bool, 1)
+		go func() { done <- allow(s, "x.example.com", 443) }()
+		c.answer(t, Answer{Key: key})
+		if !<-done {
+			t.Fatalf("%s: refused", key)
+		}
+		if len(failed) != 1 {
+			t.Fatalf("%s: SaveFailed told %d times", key, len(failed))
+		}
+		if why := s.Why("x.example.com", 443); !strings.Contains(why, "not saved") {
+			t.Errorf("%s: why = %q", key, why)
+		}
 	}
 }

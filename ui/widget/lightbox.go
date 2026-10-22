@@ -195,7 +195,8 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 	c.Box(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Fill: col(c, tLightboxScrim), Z: ui.LayerDialog, Float: &ui.Float{Point: &render.Point{}},
 		Interactive: true, Focusable: true, Trap: true, KeyMode: "lightbox", Wheel: true, Cursor: cursor, NoHover: true, Enter: fade, Exit: fade,
 		Role: ui.RoleDialog, Label: caption, Help: o.Help, Tooltip: tip}, func(c *ui.Ctx) {
-		c.Paint("img", ui.Px(size.X), ui.Px(size.Y), func(f render.Frame, r render.Rect) { paintItem(f, it, d, r) })
+		ic := imageCacheOf(c)
+		c.Paint("img", ui.Px(size.X), ui.Px(size.Y), func(f render.Frame, r render.Rect) { paintItem(ic, f, it, d, r) })
 		c.Box("close", ui.Style{Float: &ui.Float{At: render.Point{X: 1}, Self: render.Point{X: 1}, Offset: render.Point{X: -16, Y: 14}}}, func(c *ui.Ctx) {
 			if lightboxButton(c, "x", "✕", "Close", "Close (Esc)", false, fg, chrome, o.Help) {
 				closeIt()
@@ -226,9 +227,9 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 
 // paintItem draws an item into d, as far as it shows in view: an image's pixels scaled, or a vector drawn at d's size
 // over its fill.
-func paintItem(f render.Frame, it LightboxItem, d, view render.Rect) {
+func paintItem(ic *imageCache, f render.Frame, it LightboxItem, d, view render.Rect) {
 	if it.Image != nil {
-		paintImage(f, it.Image, d, view)
+		ic.paint(f, it.Image, d, view)
 		return
 	}
 	if it.Vector == nil || it.Vector.Draw == nil {

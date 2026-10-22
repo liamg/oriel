@@ -81,7 +81,7 @@ type CloseHolder interface {
 }
 
 // Zoomer is a window that can zoom: z multiplies its device scale, so everything drawn in logical pixels grows
-// together and the window's logical size shrinks to match (theming.md, "Sizes").
+// together and the window's logical size shrinks to match.
 type Zoomer interface {
 	SetZoom(z float32)
 }

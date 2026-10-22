@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// RV-7: side questions go to the first forker by order, which says who answered.
+// Side questions go to the first forker by order, which says who answered.
 func TestFork(t *testing.T) {
 	r := registry.New()
 	if _, _, err := registry.Fork(context.Background(), r, registry.ForkRequest{Session: "s1", Prompt: "why?"}); err == nil {

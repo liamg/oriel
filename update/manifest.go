@@ -8,15 +8,18 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/semver"
 )
 
-// Artifact kinds: the executable alone (Linux), or a macOS .app bundle as a .tar.gz.
+// Artifact kinds: the executable alone, a macOS .app bundle as a .tar.gz, or Linux's .tar.gz holding the executable
+// (with its .desktop file, icon and notices, which the updater leaves alone).
 const (
-	KindBinary = "binary"
-	KindBundle = "bundle"
+	KindBinary  = "binary"
+	KindBundle  = "bundle"
+	KindArchive = "archive"
 )
 
 // Channels a release is published on.
@@ -36,9 +39,9 @@ type Manifest struct {
 
 // Artifact is one downloadable file of a release.
 type Artifact struct {
-	Name     string `json:"name"`     // the file's name in the release, e.g. oriel-linux-amd64
+	Name     string `json:"name"`     // the file's name in the release, e.g. oriel-0.5.0-linux-amd64.tar.gz
 	Platform string `json:"platform"` // GOOS/GOARCH
-	Kind     string `json:"kind"`     // KindBinary or KindBundle
+	Kind     string `json:"kind"`     // KindBinary, KindBundle or KindArchive
 	Size     int64  `json:"size"`
 	SHA256   string `json:"sha256"` // hex
 }
@@ -120,52 +123,15 @@ func ReleaseKeys(s string) ([]ed25519.PublicKey, error) {
 }
 
 // Newer says whether version a is newer than b. Versions are semver, with or without a leading v; a pre-release
-// (1.8.0-nightly.20261015) comes before its release.
-func Newer(a, b string) bool { return compareVersions(a, b) > 0 }
-
-func compareVersions(a, b string) int {
-	ac, ap, _ := strings.Cut(strings.TrimPrefix(a, "v"), "-")
-	bc, bp, _ := strings.Cut(strings.TrimPrefix(b, "v"), "-")
-	if c := compareDotted(ac, bc); c != 0 {
-		return c
+// (1.8.0-nightly.20261015) comes before its release. A version that doesn't parse ("dev") is never newer or older.
+func Newer(a, b string) bool {
+	av, err := semver.Parse(a)
+	if err != nil {
+		return false
 	}
-	switch {
-	case ap == bp:
-		return 0
-	case ap == "":
-		return 1
-	case bp == "":
-		return -1
+	bv, err := semver.Parse(b)
+	if err != nil {
+		return false
 	}
-	return compareDotted(ap, bp)
-}
-
-// compareDotted compares dot-separated parts: numerically where both are numbers, as text otherwise.
-func compareDotted(a, b string) int {
-	as, bs := strings.Split(a, "."), strings.Split(b, ".")
-	for i := 0; i < len(as) || i < len(bs); i++ {
-		var x, y string
-		if i < len(as) {
-			x = as[i]
-		}
-		if i < len(bs) {
-			y = bs[i]
-		}
-		xn, xerr := strconv.Atoi(x)
-		yn, yerr := strconv.Atoi(y)
-		switch {
-		case x == y:
-			continue
-		case xerr == nil && yerr == nil:
-			if xn < yn {
-				return -1
-			}
-			return 1
-		case x < y:
-			return -1
-		default:
-			return 1
-		}
-	}
-	return 0
+	return av.Compare(bv) > 0
 }

@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/integ/azure"
 	"github.com/liamg/oriel/integ/azure/azuretest"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -65,9 +65,9 @@ func fixture(t *testing.T) (*azuretest.Server, *jsonrpc.Conn, *plugin.SecretFile
 	return az, serving(t, host{client: az.Client(), secrets: secrets}), secrets
 }
 
-// hosts.md, "The interface": "Every func but Requested may be nil… Review side: Requested, Lookup, Checkout." The
-// requests asking you come from every organisation the plugin has learned of; your vote is the state, a team's ask
-// is via the team. security.md: the token goes only to Azure DevOps, as HTTP Basic's password.
+// The review side: Requested, Lookup, Checkout. The requests asking you come from every organisation the plugin has
+// learned of; your vote is the state, a team's ask is via the team. The token goes only to Azure DevOps, as HTTP
+// Basic's password.
 func TestReviewRequests(t *testing.T) {
 	az, conn, secrets := fixture(t)
 	ctx := t.Context()
@@ -134,9 +134,9 @@ func TestReviewRequests(t *testing.T) {
 	}
 }
 
-// hosts.md, "The interface", Ship side and Merge side: a branch's PR raised, edited, made ready, its reviewers
-// asked by name, its checks; the methods a policy allows; blockers ("active comment threads… draft (hard)… conflicts
-// (hard)"); and the merge at the head the user saw, refused once the source has moved on.
+// The ship and merge side: a branch's PR raised, edited, made ready, its reviewers asked by name, its checks; the
+// methods a policy allows; blockers ("active comment threads… draft (hard)… conflicts (hard)"); and the merge at the
+// head the user saw, refused once the source has moved on.
 func TestShipAndMerge(t *testing.T) {
 	az, conn, secrets := fixture(t)
 	secrets.SetSecret(azure.Secret, azuretest.Token)

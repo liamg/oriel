@@ -77,6 +77,11 @@ func (e *Engine) playRegister(reg rune, count int) {
 		keys = append(keys, "<CR>")
 	}
 	e.feed(func() {
+		if e.playing >= maxMapDepth {
+			e.notify(errRecursiveRegister.with())
+			e.failed = true
+			return
+		}
 		e.playing++
 		defer func() { e.playing-- }()
 		for range count {

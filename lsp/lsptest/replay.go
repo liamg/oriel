@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp"
-	"github.com/liamg/oriel/lsp/jsonrpc"
 )
 
 // Fake is a server that replays a transcript. It sends the server's messages in the recorded order, and before
@@ -94,7 +94,7 @@ func (f *Fake) serve(conn net.Conn, root string) {
 		}
 	}()
 	var pending []received
-	ids := map[string]*jsonrpc.ID{} // recorded request id → the live one
+	ids := map[string]json.RawMessage{} // recorded request id → the live one
 	closed := false
 	for i, e := range f.t.Entries {
 		var rec jsonrpc.Message
@@ -105,7 +105,7 @@ func (f *Fake) serve(conn net.Conn, root string) {
 		if e.Dir == Recv {
 			body := concrete(e.Msg, root)
 			if rec.IsResponse() {
-				live, ok := ids[rec.ID.String()]
+				live, ok := ids[jsonrpc.IDKey(rec.ID)]
 				if !ok {
 					f.fail("entry %d: response to request %s the client never sent", i, rec.ID)
 					return
@@ -126,7 +126,7 @@ func (f *Fake) serve(conn net.Conn, root string) {
 		for {
 			if j := match(pending, rec, want); j >= 0 {
 				if rec.IsRequest() {
-					ids[rec.ID.String()] = pending[j].msg.ID
+					ids[jsonrpc.IDKey(rec.ID)] = pending[j].msg.ID
 				}
 				pending = append(pending[:j], pending[j+1:]...)
 				break
@@ -172,7 +172,7 @@ func match(pending []received, rec jsonrpc.Message, want []byte) int {
 		m := p.msg
 		switch {
 		case rec.IsResponse():
-			if m.IsResponse() && m.ID.String() == rec.ID.String() {
+			if m.IsResponse() && jsonrpc.IDKey(m.ID) == jsonrpc.IDKey(rec.ID) {
 				return j
 			}
 		case m.Method == rec.Method && m.IsRequest() == rec.IsRequest() && sameJSON(m.Params, w.Params):

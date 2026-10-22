@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/internal/isolate"
 )
 
 // Server is the fake. Its methods seed it and read back what was done to it.
@@ -49,6 +50,7 @@ type Server struct {
 
 // New starts a fake GitHub that closes with the test.
 func New(t testing.TB) *Server {
+	isolate.Test(t)
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{},
 		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
 		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{}, diffLines: map[string][]string{},

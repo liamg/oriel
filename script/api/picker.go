@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/ui"
 )
@@ -17,7 +18,7 @@ import (
 //oriel:api name=picker cap=ui
 type Picker struct{ a *APIs }
 
-//oriel:api doc="A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes."
+//oriel:api doc="A source of results for the omnibox and the pickers: { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes."
 func (p Picker) Source(spec script.Table, where string) error {
 	a := p.a
 	id := str(spec, "id")
@@ -25,25 +26,25 @@ func (p Picker) Source(spec script.Table, where string) error {
 	if id == "" || items == nil {
 		return errors.New("a picker source needs an id and items")
 	}
-	s := registry.PickerSource{ID: id, Title: cmpOr(str(spec, "title"), id), Prefix: str(spec, "prefix"), Order: 50, Source: where}
+	s := uireg.PickerSource{ID: id, Title: cmpOr(str(spec, "title"), id), Prefix: str(spec, "prefix"), Order: 50, Source: where}
 	if o, ok := spec["order"].(float64); ok {
 		s.Order = int(o)
 	}
 	s.PickerOnly, _ = spec["picker_only"].(bool)
-	s.Items = func(_ registry.Ctx, query string) []registry.PickerItem {
+	s.Items = func(_ registry.Ctx, query string) []uireg.PickerItem {
 		out, err := a.VM.Call(items, query)
 		if err != nil {
 			a.Host.Report("picker", id, err)
 			return nil
 		}
 		list, _ := first(out).([]any)
-		var res []registry.PickerItem
+		var res []uireg.PickerItem
 		for _, v := range list {
 			t, ok := v.(script.Table)
 			if !ok {
 				continue
 			}
-			it := registry.PickerItem{ID: str(t, "id"), Label: str(t, "label"), Detail: str(t, "detail"), Note: str(t, "note"),
+			it := uireg.PickerItem{ID: str(t, "id"), Label: str(t, "label"), Detail: str(t, "detail"), Note: str(t, "note"),
 				Icon: str(t, "icon"), IconStyle: str(t, "icon_style"), Badge: str(t, "badge"), BadgeStyle: str(t, "badge_style"),
 				Key: str(t, "key"), Boost: int(num(t["boost"])), Data: t}
 			res = append(res, it)
@@ -62,13 +63,13 @@ func (p Picker) Source(spec script.Table, where string) error {
 		}
 	}
 	if run, ok := spec["run"].(*script.Fn); ok {
-		s.Run = func(_ registry.Ctx, it registry.PickerItem) error {
+		s.Run = func(_ registry.Ctx, it uireg.PickerItem) error {
 			_, err := a.VM.Call(run, it.Data)
 			return err
 		}
 	}
 	if prev, ok := spec["preview"].(*script.Fn); ok {
-		s.Preview = func(it registry.PickerItem) ui.Node {
+		s.Preview = func(it uireg.PickerItem) ui.Node {
 			out, err := a.VM.Call(prev, it.Data)
 			if err != nil {
 				a.Host.Report("picker", id, err)

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Language is a language contribution (ED-11): a tree-sitter grammar built to WASM and its queries, and the files
+// Language is a language contribution: a tree-sitter grammar built to WASM and its queries, and the files
 // it's for. A later registration of a name shadows the earlier until it's disposed; one with no Grammar is queries
 // for others to inherit.
 type Language struct {
@@ -21,7 +21,7 @@ type Language struct {
 func (r *reg) Language(l Language) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	tok := r.languages.push(l.Name, l)
+	tok := r.languages.push(l.Name, l, r.tokens.Add(1))
 	r.langGen++
 	return disposeOnce(func() {
 		r.mu.Lock()

@@ -6,9 +6,11 @@ import (
 	"errors"
 	"slices"
 	"strings"
+
+	"github.com/liamg/oriel/text"
 )
 
-// ExplainRequest is something to explain (ide.md, "Explain sits next to fix everywhere"): what kind of thing it is,
+// ExplainRequest is something to explain: what kind of thing it is,
 // a line naming it, and everything an explainer needs to know about it.
 type ExplainRequest struct {
 	Kind    string // "test-failure", "diagnostic", "selection", "unit", "change"
@@ -21,7 +23,7 @@ type ExplainRequest struct {
 	Format string
 }
 
-// How deep an explanation goes (ui.md 07b): brief by default, detailed on demand, and why · history, whose Context
+// How deep an explanation goes: brief by default, detailed on demand, and why · history, whose Context
 // carries the blame, the commits, the PR and the threads that touched it.
 const (
 	ExplainBrief    = "brief"
@@ -75,7 +77,7 @@ func (Explainer) ContributionKind() string   { return "explainer" }
 func (e Explainer) ContributionName() string { return e.Name }
 
 // Explainers are the explainers by Order, then name.
-func Explainers(r Registry) []Explainer {
+func Explainers(r Contributions) []Explainer {
 	var out []Explainer
 	for _, c := range r.Contributions("explainer") {
 		out = append(out, c.(Explainer))
@@ -105,12 +107,15 @@ type EditorAction struct {
 	Source  string
 }
 
-// EditorWindow is the editor window an action is drawn in: its id, file, and the presenter showing it ("" while
-// it's text).
+// EditorWindow is an editor window: its id, file, the presenter showing it ("" while it's text), and its cursor.
 type EditorWindow struct {
 	ID        string
 	Path      string
 	Presenter string
+	Cursor    text.Pos
+	Top       int          // the first line it shows, 0-based
+	Text      *text.Buffer // the buffer it shows
+	Caret     uint64       // the ui.ID its cursor was drawn as last frame, for popups at the cursor; 0 before
 }
 
 // Shown is whether the action is on in w, and the icon and label it shows then.
@@ -132,7 +137,7 @@ func (EditorAction) ContributionKind() string   { return "editor.action" }
 func (a EditorAction) ContributionName() string { return a.Name }
 
 // EditorActions are the actions for a file, by Order.
-func EditorActions(r Registry, path string) []EditorAction {
+func EditorActions(r Contributions, path string) []EditorAction {
 	var out []EditorAction
 	for _, c := range r.Contributions("editor.action") {
 		a := c.(EditorAction)

@@ -1,0 +1,202 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1353.2438x38 r 0
+pop
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
+rect 0,38 44x936 fill #0c0c0b
+clip 0,38 43x936 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  path 7 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 9.5,208 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments fill #060606
+  path 6 segments stroke 1.4 #ffd23f
+  effect glow 18.9,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  effect glow 22.8,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  path 2 segments stroke 0.8 #ffd23f
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
+rect 43,38 1x936 fill #24221d
+rect 44,38 1556x936 fill #060606
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+rect 44,38 1556x936 fill #060606
+clip 44,38 1556x936 r 0
+  text "SETTINGS" @60,67.96 #ffd23f JetBrains Mono 11
+  rect 139.07,49 420x30 fill #060606 radius 6
+  clip 139.07,49 420x30 r 6
+    text "sandbox.servers" @149.07,68.54712 #ece6d8 Inter 12.5
+  pop
+  rect 139.07,49 420x30 radius 6 stroke 1 #332f27
+  text "EDITING" @1196.19,67.42 #7c7566 JetBrains Mono 9.5
+  clip 1261.5,52 185.09998x24 r 5
+    rect 1261.5,52 47.80005x24 fill #1f1c0f
+    text "USER" @1271.5,67.42 #ffd23f JetBrains Mono 9.5
+    text "PROJECT" @1319.3,67.42 #7c7566 JetBrains Mono 9.5
+    text "SESSION" @1387.95,67.42 #7c7566 JetBrains Mono 9.5
+  pop
+  rect 1261.5,52 185.09998x24 radius 5 stroke 1 #332f27
+  clip 1460.6,52 123.400024x24 r 5
+    rect 1460.6,52 75.599976x24 fill #1f1c0f
+    text "CONTROLS" @1470.6,67.42 #ffd23f JetBrains Mono 9.5
+    text "TOML" @1546.2,67.42 #7c7566 JetBrains Mono 9.5
+  pop
+  rect 1460.6,52 123.400024x24 radius 5 stroke 1 #332f27
+  rect 44,90 1556x1 fill #24221d
+  rect 44,91 240x853 fill #0c0c0b
+  clip 44,91 240x853 r 0
+    text "SECTIONS" @52,112.69 #7c7566 JetBrains Mono 9.5
+    text "assistant" @62,144.26901 #b3ab99 Inter 13
+    text "debug" @62,174.26901 #b3ab99 Inter 13
+    text "editor" @62,204.26901 #b3ab99 Inter 13
+    text "files" @62,234.26901 #b3ab99 Inter 13
+    text "git" @62,264.269 #b3ab99 Inter 13
+    text "hud" @62,294.269 #b3ab99 Inter 13
+    text "keymap" @62,324.269 #b3ab99 Inter 13
+    text "lsp" @62,354.269 #b3ab99 Inter 13
+    text "markdown" @62,384.269 #b3ab99 Inter 13
+    text "mission" @62,414.269 #b3ab99 Inter 13
+    text "plugins" @62,444.269 #b3ab99 Inter 13
+    text "repos" @62,474.269 #b3ab99 Inter 13
+    text "review" @62,504.269 #b3ab99 Inter 13
+    text "sandbox" @62,534.26904 #b3ab99 Inter 13
+    text "● 1" @248,533.1401 #ffd23f JetBrains Mono 10
+    text "secrets" @62,564.26904 #b3ab99 Inter 13
+    text "sidebar" @62,594.26904 #b3ab99 Inter 13
+    text "stats" @62,624.26904 #b3ab99 Inter 13
+    text "terminal" @62,654.26904 #b3ab99 Inter 13
+    text "ui" @62,684.26904 #b3ab99 Inter 13
+    text "updates" @62,714.26904 #b3ab99 Inter 13
+    text "usage" @62,744.26904 #b3ab99 Inter 13
+    text "voice" @62,774.26904 #b3ab99 Inter 13
+    text "whichkey" @62,804.26904 #b3ab99 Inter 13
+  pop
+  rect 284,91 1x853 fill #24221d
+  clip 285,91 1315x853 r 0
+    text "1 matching \"sandbox.servers\"" @313,131.54785 #ece6d8 Inter 18
+    rect 313,165.87451 3x36 fill #ffd23f radius 2
+    text "sandbox.servers" @332,169.75 #ece6d8 JetBrains Mono 12.5
+    text "Extra MCP servers for the gateway, by name: an https URL, or a command line (\"npx -y" @332,189.60938 #7c7566 Inter 12.5
+    text "@foo/mcp\")." @332,207.73389 #7c7566 Inter 12.5
+    text "user" @1222.1719,187.65453 #7c7566 JetBrains Mono 10.5
+    text "2 servers" @1404.3125,188.42163 #b3ab99 Inter 12.5
+    rect 1471.8594,170.87451 52.6875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Edit…" @1481.8594,188.23975 #ece6d8 Inter 12
+    rect 1540.5469,170.87451 31.453125x26 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,188.23975 #ece6d8 Inter 12
+  pop
+  rect 44,944 1556x30 fill #0c0c0b stroke 1 #24221d
+  text "writing to ~/.config/oriel/settings.toml" @60,962.78 #7c7566 JetBrains Mono 10.5
+  rect 1381.375,946 50.78125x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Undo" @1391.375,963.36523 #4f4a40 Inter 12
+  rect 1444.1562,946 68.5x26 radius 6 stroke 1 #332f27
+  text "Reset all" @1454.1562,963.36523 #ece6d8 Inter 12
+  text "esc close" @1524.6562,962.78 #7c7566 JetBrains Mono 10.5
+pop
+rect 0,0 1600x1000 fill #030508b8
+rect 480,364.5752 640x270.8496 fill #0c0c0b radius 10
+clip 480,364.5752 640x270.8496 r 10
+  text "sandbox.servers" @496,389.3042 #ece6d8 Inter 13
+  rect 1076,376.9752 28x15.200012 fill #121210 radius 4 stroke 1 #332f27
+  text "esc" @1081,388.1752 #7c7566 JetBrains Mono 10
+  rect 480,404.5752 640x1 fill #24221d
+  text "NAME" @496,431.2652 #7c7566 JetBrains Mono 9.5
+  text "SERVER" @674,431.2652 #7c7566 JetBrains Mono 9.5
+  rect 496,442.1152 170x30 fill #060606 radius 6
+  clip 496,442.1152 170x30 r 6
+    text "docs" @506,461.66232 #ece6d8 Inter 12.5
+  pop
+  rect 496,442.1152 170x30 radius 6 stroke 1 #332f27
+  rect 674,442.1152 402x30 fill #060606 radius 6
+  clip 674,442.1152 402x30 r 6
+    text "https://docs.example.com/mcp" @684,461.66232 #ece6d8 Inter 12.5
+  pop
+  rect 674,442.1152 402x30 radius 6 stroke 1 #332f27
+  text "✕" @1090.7031,461.0752 #7c7566 JetBrains Mono 11
+  rect 496,480.1152 170x30 fill #060606 radius 6
+  clip 496,480.1152 170x30 r 6
+    text "linear" @506,499.66232 #ece6d8 Inter 12.5
+  pop
+  rect 496,480.1152 170x30 radius 6 stroke 1 #332f27
+  rect 674,480.1152 402x30 fill #060606 radius 6
+  clip 674,480.1152 402x30 r 6
+    text "npx -y linear-mcp" @684,499.66232 #ece6d8 Inter 12.5
+  pop
+  rect 674,480.1152 402x30 radius 6 stroke 1 #332f27
+  text "✕" @1090.7031,499.0752 #7c7566 JetBrains Mono 11
+  rect 496,524.1152 170x30 fill #060606 radius 6
+  clip 496,524.1152 170x30 r 6
+    text "Git Hub" @506,543.6623 #ece6d8 Inter 12.5
+  pop
+  rect 496,524.1152 170x30 radius 6 stroke 1 #ff5f6d
+  rect 674,524.1152 378.73438x30 fill #060606 radius 6
+  clip 674,524.1152 378.73438x30 r 6
+    text "https://api.example.com/mcp" @684,543.6623 #ece6d8 Inter 12.5
+    rect 864.1406,531.1152 1x16 fill #ffd23f
+  pop
+  rect 674,524.1152 378.73438x30 radius 6 stroke 1 #ff5f6d
+  rect 670,520.1152 386.73438x38 radius 10 stroke 2 #ffd23f
+  rect 1060.7344,526.1152 43.265625x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Add" @1070.7344,543.4804 #4f4a40 Inter 12
+  text "\"Git Hub\": a server's name is lower case letters, digits, - and _" @496,567.7714 #ff5f6d Inter 11
+  rect 480,586.4248 640x1 fill #24221d
+  rect 987.3281,598.4248 59.828125x26 radius 6 stroke 1 #332f27
+  text "Cancel" @997.3281,615.79004 #ece6d8 Inter 12
+  rect 1055.1562,598.4248 48.84375x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Save" @1065.1562,615.79004 #4f4a40 Inter 12
+pop
+rect 480,364.5752 640x270.8496 radius 10 stroke 1 #332f27

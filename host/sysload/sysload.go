@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 // Reading is one sample of the machine.
@@ -19,10 +21,21 @@ type Reading struct {
 	Err      string  `json:"err,omitempty"`
 }
 
+// Reader samples the machine, each CPU reading over the time since its last.
+type Reader struct {
+	mu    sync.Mutex
+	last  cpuTimes
+	at    time.Time
+	carry tickCarry // the platform's counters carried past their wrap
+}
+
+// NewReader is a Reader with no reading yet.
+func NewReader() *Reader { return &Reader{} }
+
 // Read samples the machine.
-func Read() Reading {
+func (x *Reader) Read() Reading {
 	r := Reading{Cores: runtime.NumCPU()}
-	cpu, err := readCPU()
+	cpu, err := x.readCPU()
 	if err != nil {
 		r.Err = err.Error()
 	}
@@ -37,6 +50,31 @@ func Read() Reading {
 
 // cpuTimes are cumulative counters: busy and total ticks since boot.
 type cpuTimes struct{ busy, total uint64 }
+
+// stale is how old the previous sample may be before a fresh pair is taken:
+// a difference over longer than this is not "now".
+const stale = 30 * time.Second
+
+// readCPU is the busy share since the previous call, or over a short pause
+// when there is none recent enough.
+func (x *Reader) readCPU() (float64, error) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	now, err := ticks(&x.carry)
+	if err != nil {
+		return 0, err
+	}
+	if time.Since(x.at) > stale {
+		x.last = now
+		time.Sleep(250 * time.Millisecond)
+		if now, err = ticks(&x.carry); err != nil {
+			return 0, err
+		}
+	}
+	p := busyPercent(x.last, now)
+	x.last, x.at = now, time.Now()
+	return p, nil
+}
 
 func busyPercent(a, b cpuTimes) float64 {
 	if b.total <= a.total || b.busy < a.busy {
@@ -98,35 +136,4 @@ func parseMeminfo(s string) (used, total uint64, ok bool) {
 		return 0, 0, false
 	}
 	return total - avail, total, true
-}
-
-// parseVMStat reads macOS's vm_stat: in use is active, wired and compressed.
-func parseVMStat(s string) (used uint64, ok bool) {
-	page := uint64(4096)
-	var pages uint64
-	for line := range strings.Lines(s) {
-		if i := strings.Index(line, "page size of "); i >= 0 {
-			f := strings.Fields(line[i+len("page size of "):])
-			if len(f) > 0 {
-				if n, err := strconv.ParseUint(f[0], 10, 64); err == nil {
-					page = n
-				}
-			}
-			continue
-		}
-		name, val, found := strings.Cut(line, ":")
-		if !found {
-			continue
-		}
-		switch strings.TrimSpace(name) {
-		case "Pages active", "Pages wired down", "Pages occupied by compressor":
-			n, err := strconv.ParseUint(strings.TrimSuffix(strings.TrimSpace(val), "."), 10, 64)
-			if err != nil {
-				return 0, false
-			}
-			pages += n
-			ok = true
-		}
-	}
-	return pages * page, ok
 }

@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// PLAN.md, "Only one Oriel at a time": a second Oriel on the same home is refused while the first holds the lock,
+// Only one Oriel at a time: a second Oriel on the same home is refused while the first holds the lock,
 // and the OS lets it go when the first ends.
 func TestOnlyOneOrielAtATime(t *testing.T) {
 	if os.Getenv("ORIEL_LOCK_HOME") != "" {
@@ -46,7 +46,7 @@ func TestOnlyOneOrielAtATime(t *testing.T) {
 	}
 }
 
-// PLAN.md, Risks: an `oriel worker` from an earlier release still answering on worker.sock stops the app; a
+// An `oriel worker` from an earlier release still answering on worker.sock stops the app; a
 // socket nothing answers on is deleted.
 func TestAnOldWorkerStopsTheApp(t *testing.T) {
 	home, err := os.MkdirTemp("", "oh") // a unix socket's path is short

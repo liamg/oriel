@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// RV-7: a verify quiz's result is a session event: it replays from the log, the last one stands, and a result
+// A verify quiz's result is a session event: it replays from the log, the last one stands, and a result
 // that's none of passed, failed or skipped is refused.
 func TestVerified(t *testing.T) {
 	var log bytes.Buffer

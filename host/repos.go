@@ -1,370 +1,97 @@
 package host
 
 import (
-	"bytes"
-	"cmp"
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
-	"slices"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gitx"
 )
-
-// repoList is the checkouts the host knows, kept in repos.json, and the paths the user removed.
-type repoList struct {
-	path    string
-	now     func() time.Time
-	mu      sync.Mutex
-	list    []core.Repo
-	ignored []string
-	scanned map[string]bool // parents discovery has read since the host started
-	dir     string          // repos.dir, when set
-}
-
-// reposFile is repos.json.
-type reposFile struct {
-	Repos   []core.Repo `json:"repos"`
-	Ignored []string    `json:"ignored,omitempty"`
-}
-
-func (r *repoList) load() error {
-	b, err := os.ReadFile(r.path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if b = bytes.TrimSpace(b); len(b) > 0 && b[0] == '[' {
-		return json.Unmarshal(b, &r.list)
-	}
-	var f reposFile
-	if err := json.Unmarshal(b, &f); err != nil {
-		return err
-	}
-	r.list, r.ignored = f.Repos, f.Ignored
-	return nil
-}
-
-func (r *repoList) all() []core.Repo {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return slices.Clone(r.list)
-}
-
-func (r *repoList) save() error {
-	b, err := json.MarshalIndent(reposFile{Repos: r.list, Ignored: r.ignored}, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(r.path), 0o700); err != nil {
-		return err
-	}
-	return os.WriteFile(r.path, append(b, '\n'), 0o600)
-}
-
-// add registers the checkout at path, or returns it if it's already registered; added says whether it's new. A
-// path added by hand is no longer ignored.
-func (r *repoList) add(ctx context.Context, path string, src core.RepoSource) (_ core.Repo, added bool, _ error) {
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return core.Repo{}, false, err
-	}
-	top, err := gitx.TopLevel(ctx, abs)
-	if err != nil {
-		return core.Repo{}, false, fmt.Errorf("%s is not a git repository", path)
-	}
-	top = gitx.Repo{Dir: top}.MainClone(ctx)
-	g := gitx.Repo{Dir: top}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if i := slices.IndexFunc(r.list, func(x core.Repo) bool { return x.Path == top }); i >= 0 {
-		return r.list[i], false, nil
-	}
-	if src == core.RepoDiscovered && slices.Contains(r.ignored, top) {
-		return core.Repo{}, false, fmt.Errorf("%s was removed", top)
-	}
-	r.ignored = slices.DeleteFunc(r.ignored, func(p string) bool { return p == top })
-	id := core.RepoID(Sanitise(filepath.Base(top)))
-	for n := 2; slices.ContainsFunc(r.list, func(x core.Repo) bool { return x.ID == id }); n++ {
-		id = core.RepoID(fmt.Sprintf("%s-%d", Sanitise(filepath.Base(top)), n))
-	}
-	repo := core.Repo{ID: id, Path: top, Remote: g.RemoteURL(ctx), BaseBranch: g.DefaultBranch(ctx), Source: src,
-		Added: r.now().UTC()}
-	r.list = append(r.list, repo)
-	return repo, true, r.save()
-}
-
-// remove unregisters a repo and ignores its path from now on.
-func (r *repoList) remove(id core.RepoID) (core.Repo, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	i := slices.IndexFunc(r.list, func(x core.Repo) bool { return x.ID == id })
-	if i < 0 {
-		return core.Repo{}, fmt.Errorf("no repo %q", id)
-	}
-	repo := r.list[i]
-	r.list = slices.Delete(slices.Clone(r.list), i, i+1)
-	if !slices.Contains(r.ignored, repo.Path) {
-		r.ignored = append(r.ignored, repo.Path)
-	}
-	return repo, r.save()
-}
-
-// used marks a repo as just used by a session.
-func (r *repoList) used(id core.RepoID) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	i := slices.IndexFunc(r.list, func(x core.Repo) bool { return x.ID == id })
-	if i < 0 {
-		return nil
-	}
-	r.list = slices.Clone(r.list)
-	r.list[i].Used = r.now().UTC()
-	return r.save()
-}
-
-func (r *repoList) isIgnored(path string) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return slices.Contains(r.ignored, path)
-}
-
-// find resolves a registered repo by ID, or by its path.
-func (r *repoList) find(ref string) (core.Repo, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	for _, x := range r.list {
-		if string(x.ID) == ref || x.Path == ref {
-			return x, true
-		}
-	}
-	return core.Repo{}, false
-}
-
-// reposChanged tells the store the list as it is now.
-func (w *Host) reposChanged(added ...core.RepoID) {
-	_ = w.emit(core.ReposChanged{Repos: w.repos.all(), Added: added})
-}
-
-// addRepo registers a checkout, telling the store when it's new.
-func (w *Host) addRepo(ctx context.Context, path string, src core.RepoSource) (core.Repo, error) {
-	r, added, err := w.repos.add(ctx, path, src)
-	if err == nil && added {
-		w.reposChanged(r.ID)
-	}
-	return r, err
-}
-
-// resolveRepo finds a repo by ID or path for a session, registering a path it hasn't seen, and marks it used.
-func (w *Host) resolveRepo(ctx context.Context, ref string) (core.Repo, error) {
-	r, ok := w.repos.find(ref)
-	if !ok {
-		if !filepath.IsAbs(ref) && ref != "." && filepath.Base(ref) == ref {
-			return core.Repo{}, fmt.Errorf("no repo %q: add its checkout (repos.add {path}) or clone it (repos.clone {url})", ref)
-		}
-		var err error
-		if r, err = w.addRepo(ctx, ref, core.RepoSession); err != nil {
-			return core.Repo{}, err
-		}
-	}
-	if err := w.repos.used(r.ID); err != nil {
-		w.log.Warn("repos.json", "err", err)
-	}
-	w.reposChanged()
-	return r, nil
-}
-
-// Repos is the registered checkouts.
-func (w *Host) Repos() []core.Repo { return w.repos.all() }
 
 // AddRepoPath registers the checkout at path, or returns it if it's already registered.
 func (w *Host) AddRepoPath(ctx context.Context, path string) (_ core.Repo, err error) {
 	defer w.recover("AddRepoPath", &err)
-	return w.addRepo(ctx, path, core.RepoAdded)
+	return w.repos.AddRepoPath(ctx, path)
 }
 
-// RemoveRepo unregisters a repo, leaving its files, and keeps discovery from adding it back. A live session with a
-// worktree of it stops it.
+// RemoveRepo unregisters a repo, leaving its files, and keeps discovery from adding it back.
 func (w *Host) RemoveRepo(id core.RepoID) (err error) {
 	defer w.recover("RemoveRepo", &err)
-	r, ok := w.repos.find(string(id))
-	if !ok {
-		return fmt.Errorf("no repo %q", id)
-	}
-	for _, se := range w.store.State().Sessions {
-		if se.Archived {
-			continue
-		}
-		if slices.ContainsFunc(se.Projects, func(p core.Project) bool { return p.Repo == r.Path || p.Dir == r.Path }) {
-			return fmt.Errorf("session %s has a worktree of %s: archive it first", cmp.Or(se.Name, string(se.ID)), r.ID)
-		}
-	}
-	if _, err := w.repos.remove(r.ID); err != nil {
-		return err
-	}
-	w.reposChanged()
-	return nil
-}
-
-// RepoCheck is what a path would add, as the Add repo dialog shows it while it's typed.
-type RepoCheck struct {
-	Path     string      `json:"path"`               // the checkout it adds: a worktree's main clone
-	Worktree bool        `json:"worktree,omitempty"` // the path is a worktree of Path
-	Branch   string      `json:"branch,omitempty"`
-	Remote   string      `json:"remote,omitempty"`
-	Known    core.RepoID `json:"known,omitempty"` // already registered as this
-	Error    string      `json:"error,omitempty"`
-}
-
-// CheckRepoPath says what adding the checkout at path would do, without adding it.
-func (w *Host) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
-	defer w.recover("CheckRepoPath", nil)
-	abs, err := filepath.Abs(p)
-	if err != nil {
-		return RepoCheck{Error: err.Error()}
-	}
-	top, err := gitx.TopLevel(ctx, abs)
-	if err != nil {
-		return RepoCheck{Error: "not a git repository"}
-	}
-	main := gitx.Repo{Dir: top}.MainClone(ctx)
-	g := gitx.Repo{Dir: main}
-	c = RepoCheck{Path: main, Worktree: main != top, Remote: g.RemoteURL(ctx)}
-	c.Branch, _ = g.Run(ctx, "branch", "--show-current")
-	c.Branch = strings.TrimSpace(c.Branch)
-	if r, ok := w.repos.find(main); ok {
-		c.Known = r.ID
-	}
-	return c
-}
-
-// CloneReq is repos.clone: a URL, the folder its checkout goes in, and its name there.
-type CloneReq struct {
-	URL    string `json:"url"`
-	Parent string `json:"parent,omitempty"` // CloneParent if ""
-	Name   string `json:"name,omitempty"`   // the URL's last part if ""
-	// Progress has git's progress lines as the clone runs.
-	Progress func(line string) `json:"-"`
-}
-
-// CloneTarget is where a clone would go, and what's there now.
-type CloneTarget struct {
-	Dir    string `json:"dir"`
-	Name   string `json:"name"`
-	Exists bool   `json:"exists,omitempty"` // something is at Dir
-	Same   bool   `json:"same,omitempty"`   // it's a clone of the URL: it's added as it is
-}
-
-// CloneName is the folder a clone of url is named by default: its last part, with .git dropped.
-func CloneName(url string) string {
-	return Sanitise(strings.TrimSuffix(path.Base(strings.TrimRight(strings.ReplaceAll(strings.TrimSpace(url), ":", "/"), "/")), ".git"))
-}
-
-// CloneParent is the folder clones go in by default: the one most known repos share, else the repos directory.
-func (w *Host) CloneParent() string {
-	n := map[string]int{}
-	best := ""
-	for _, r := range w.repos.all() {
-		p := filepath.Dir(r.Path)
-		if within(p, w.opts.Home) {
-			continue
-		}
-		n[p]++
-		if n[p] > n[best] || n[p] == n[best] && p < best {
-			best = p
-		}
-	}
-	return cmp.Or(best, w.reposDir())
-}
-
-// SetReposDir sets where clones and new repos go when nothing else says (repos.dir); "" puts back the default.
-func (w *Host) SetReposDir(dir string) {
-	w.repos.mu.Lock()
-	defer w.repos.mu.Unlock()
-	w.repos.dir = expandHome(strings.TrimSpace(dir))
-}
-
-func (w *Host) reposDir() string {
-	w.repos.mu.Lock()
-	defer w.repos.mu.Unlock()
-	return cmp.Or(w.repos.dir, w.opts.ReposDir)
+	return w.repos.RemoveRepo(id)
 }
 
 // CloneTarget says where a clone would go and what's there.
-func (w *Host) CloneTarget(ctx context.Context, r CloneReq) (CloneTarget, error) {
-	url := strings.TrimSpace(r.URL)
-	name := Sanitise(r.Name)
-	if name == "" {
-		name = CloneName(url)
-	}
-	if name == "" {
-		return CloneTarget{}, fmt.Errorf("can't name a checkout of %s: give it a name", url)
-	}
-	parent := cmp.Or(expandHome(strings.TrimSpace(r.Parent)), w.CloneParent())
-	t := CloneTarget{Dir: filepath.Join(parent, name), Name: name}
-	if _, err := os.Stat(t.Dir); err == nil {
-		t.Exists = true
-		t.Same = gitx.IsRepo(t.Dir) && (gitx.Repo{Dir: t.Dir}).RemoteURL(ctx) == url
-	}
-	return t, nil
+func (w *Host) CloneTarget(ctx context.Context, r CloneReq) (_ CloneTarget, err error) {
+	defer w.recover("CloneTarget", &err)
+	return w.repos.CloneTarget(ctx, r)
 }
 
 // CloneRepo clones a repo with the user's own git and credentials, and registers it. A checkout already there of
 // the same URL is registered as it is. Cancelling ctx stops the clone and takes away what it made.
 func (w *Host) CloneRepo(ctx context.Context, r CloneReq) (_ core.Repo, err error) {
 	defer w.recover("CloneRepo", &err)
-	url := strings.TrimSpace(r.URL)
-	if url == "" {
-		return core.Repo{}, errors.New("clone what? No URL")
-	}
-	t, err := w.CloneTarget(ctx, r)
-	if err != nil {
-		return core.Repo{}, err
-	}
-	if t.Exists {
-		if t.Same {
-			return w.addRepo(ctx, t.Dir, core.RepoCloned)
-		}
-		return core.Repo{}, fmt.Errorf("%s is already there and isn't a clone of %s: give the clone another name", t.Dir, url)
-	}
-	if err := gitx.CloneProgress(ctx, url, t.Dir, r.Progress); err != nil {
-		_ = os.RemoveAll(t.Dir)
-		if needsCredentials(err.Error()) {
-			err = fmt.Errorf("%w (it clones with this machine's git credentials: set them up)", err)
-		}
-		return core.Repo{}, err
-	}
-	return w.addRepo(ctx, t.Dir, core.RepoCloned)
+	return w.repos.CloneRepo(ctx, r)
 }
 
-// needsCredentials says whether git's message is about credentials it didn't have.
-func needsCredentials(msg string) bool {
-	for _, s := range []string{"Permission denied", "could not read Username", "Authentication failed", "terminal prompts disabled"} {
-		if strings.Contains(msg, s) {
-			return true
-		}
-	}
-	return false
+// ScanRepos registers the siblings of the known repos: for each folder one sits in, the git repos directly in it
+// that are their own main clone. A folder read before is skipped unless all is set; removed repos stay removed.
+func (w *Host) ScanRepos(ctx context.Context, all bool) (_ []core.Repo, err error) {
+	defer w.recover("ScanRepos", &err)
+	return w.repos.ScanRepos(ctx, all)
 }
 
-// expandHome expands a leading ~.
-func expandHome(p string) string {
-	if p == "~" || strings.HasPrefix(p, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(home, p[1:])
-		}
-	}
-	return p
+// RepoFacts reads a checkout's facts.
+func (w *Host) RepoFacts(ctx context.Context, id core.RepoID) (_ RepoFacts, err error) {
+	defer w.recover("RepoFacts", &err)
+	return w.repos.RepoFacts(ctx, id)
 }
+
+// FetchRepo fetches a checkout's remote, pruning branches it deleted.
+func (w *Host) FetchRepo(ctx context.Context, id core.RepoID) (err error) {
+	defer w.recover("FetchRepo", &err)
+	return w.repos.FetchRepo(ctx, id)
+}
+
+// Housekeeping reads what a checkout has to clean: local branches merged into its default, or whose upstream was
+// deleted, and worktrees whose directory is gone. Never the default branch or the checkout's own.
+func (w *Host) Housekeeping(ctx context.Context, req HousekeepReq) (_ HousekeepPlan, err error) {
+	defer w.recover("Housekeeping", &err)
+	return w.repos.Housekeeping(ctx, req)
+}
+
+// Housekeep deletes the branches asked for, each with its worktree, and prunes stale worktrees if asked.
+func (w *Host) Housekeep(ctx context.Context, req HousekeepReq) (_ []Cleaned, err error) {
+	defer w.recover("Housekeep", &err)
+	return w.repos.Housekeep(ctx, req)
+}
+
+// TagPreview reads a checkout's branches and tags, and the commit branch ("" for the default) is at.
+func (w *Host) TagPreview(ctx context.Context, id core.RepoID, branch string) (_ TagPreview, err error) {
+	defer w.recover("TagPreview", &err)
+	return w.repos.TagPreview(ctx, id, branch)
+}
+
+// Tag makes an annotated tag on a branch: fast-forwarded first if asked, and pushed (that tag alone) if asked.
+func (w *Host) Tag(ctx context.Context, req TagReq) (_ Tagged, err error) {
+	defer w.recover("Tag", &err)
+	return w.repos.Tag(ctx, req)
+}
+
+// PushTag pushes one tag to a checkout's origin.
+func (w *Host) PushTag(ctx context.Context, id core.RepoID, name string) (err error) {
+	defer w.recover("PushTag", &err)
+	return w.repos.PushTag(ctx, id, name)
+}
+
+// Repos is the registered checkouts.
+func (w *Host) Repos() []core.Repo { return w.repos.Repos() }
+
+// CheckRepoPath says what adding the checkout at path would do, without adding it.
+func (w *Host) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
+	defer w.recover("CheckRepoPath", nil)
+	return w.repos.CheckRepoPath(ctx, p)
+}
+
+// CloneParent is the folder clones go in by default: the one most known repos share, else the repos directory.
+func (w *Host) CloneParent() string { return w.repos.CloneParent() }
+
+// SetReposDir sets where clones and new repos go when nothing else says (repos.dir); "" puts back the default.
+func (w *Host) SetReposDir(dir string) { w.repos.SetReposDir(dir) }

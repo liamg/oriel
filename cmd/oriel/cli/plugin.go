@@ -26,7 +26,7 @@ oriel plugin publish [--registry OWNER/NAME] [DIR]
                                          propose DIR's tagged version to the registry: a PR through gh
 ` + registrycmd.Usage
 
-// runPlugin is `oriel plugin …` (catalog.md, Publishing).
+// runPlugin is `oriel plugin …`, for publishing plugins.
 func runPlugin(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		return fmt.Errorf("usage:\n%s", pluginUsage)

@@ -1,4 +1,4 @@
-// Package ossandbox confines a plugin's process with the OS (security.md, "Where a plugin runs"): Landlock and a
+// Package ossandbox confines a plugin's process with the OS: Landlock and a
 // seccomp filter on Linux, a sandbox-exec profile on macOS. A confined process reads, writes and runs only what its
 // Profile lists, beyond what any program needs from the system, and has no network unless it lists ports.
 //

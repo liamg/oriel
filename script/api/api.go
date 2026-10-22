@@ -1,4 +1,4 @@
-// Package api is the oriel.* Lua API (scripting.md), over the same host a Go plugin gets. Each namespace is a type
+// Package api is the oriel.* Lua API, over the same host a Go plugin gets. Each namespace is a type
 // annotated //oriel:api name=…, and each function a method annotated //oriel:api doc=…; tools/cmd/apigen generates
 // the VM glue (zz_bind.go), the LuaLS types (script/types/oriel.d.lua) and the reference (docs/api.md) from them.
 package api
@@ -18,14 +18,14 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// Version is oriel.api.version: a breaking change bumps its major (scripting.md, "Stability").
+// Version is oriel.api.version: a breaking change bumps its major.
 const Version = "0.5.0"
 
-// futures are namespaces, or the rest of one, for features that aren't built yet: calling into one says which
-// ticket brings it, so a config written for them loads (PL-1).
+// futures are namespaces, or the rest of one, for features that aren't built yet: calling into one says what
+// it waits on, so a config written for them loads.
 var futures = map[string]string{
-	"http":  "AI-7 (network approvals)", // what oriel.http lacks yet: request is here, a blocking get isn't
-	"async": "a later ticket (timers, processes and RPC from Lua)",
+	"http":  "network approvals", // what oriel.http lacks yet: request is here, a blocking get isn't
+	"async": "a later release (timers, processes and RPC from Lua)",
 }
 
 // APIs is the API for one VM over a host. What a config registers is kept, so a reload drops it all first.

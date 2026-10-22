@@ -56,7 +56,7 @@ func (e *PackError) Error() string {
 	return strings.Join(lines, "\n")
 }
 
-// Pack checks the plugin in dir and builds its release archives (catalog.md, Publishing): its manifest is valid,
+// Pack checks the plugin in dir and builds its release archives: its manifest is valid,
 // it has an entry point or contributes something, each statically visible oriel.* call's capability is declared,
 // and each archive is within plugin.MaxSize unpacked. A plugin with binaries gets an archive a platform: a Go
 // plugin's commands (cmd/*) are built with -trimpath, so the registry's CI can build them again and match;

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/liamg/oriel/internal/testhook"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -19,9 +20,8 @@ func modelServer(t *testing.T, body []byte, hash string) *Whisper {
 		_, _ = w.Write(body)
 	}))
 	t.Cleanup(src.Close)
-	oldBase, oldHash := ModelBase, ModelSHA256
-	ModelBase, ModelSHA256 = src.URL, map[string]string{"base.en": hash}
-	t.Cleanup(func() { ModelBase, ModelSHA256 = oldBase, oldHash })
+	testhook.Set(t, &ModelBase, src.URL)
+	testhook.Set(t, &ModelSHA256, map[string]string{"base.en": hash})
 	return &Whisper{Dir: t.TempDir()}
 }
 
@@ -94,15 +94,16 @@ func TestDownloadStalls(t *testing.T) {
 	}))
 	defer src.Close()
 	defer close(release)
-	oldBase, oldHash, oldStall := ModelBase, ModelSHA256, stallAfter
-	ModelBase, ModelSHA256, stallAfter = src.URL, map[string]string{"base.en": "ab"}, 50*time.Millisecond
-	defer func() { ModelBase, ModelSHA256, stallAfter = oldBase, oldHash, oldStall }()
+	testhook.Set(t, &ModelBase, src.URL)
+	testhook.Set(t, &ModelSHA256, map[string]string{"base.en": "ab"})
+	testhook.Set(t, &stallAfter, 50*time.Millisecond)
 	w := &Whisper{Dir: t.TempDir()}
 	st := waitDownload(t, w)
 	if !strings.Contains(st.Error, "stalled") {
 		t.Fatalf("error %q", st.Error)
 	}
-	if left, _ := os.ReadDir(w.Dir); len(left) != 0 {
-		t.Fatalf("left behind: %v", left)
+	// What arrived is kept for the next download to resume.
+	if part, _ := os.ReadFile(filepath.Join(w.Dir, "ggml-base.en.bin.part")); string(part) != "some" {
+		t.Fatalf("part %q", part)
 	}
 }

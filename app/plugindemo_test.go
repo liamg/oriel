@@ -1,4 +1,4 @@
-package app
+package app_test
 
 import (
 	"os"
@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 )
@@ -75,42 +77,42 @@ func TestPluginDemo(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "internal", "pricing", "round.go")
 	os.MkdirAll(filepath.Dir(p), 0o755)
-	os.WriteFile(p, []byte(roundGo()), 0o644)
-	s := newScene(t, "", dir, mockupSize)
-	s.run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
-	s.writeConfig(t, map[string]string{"init.lua": demoPlugin})
-	s.lua().reload(false)
-	if x := s.lua(); x.err != nil {
-		t.Fatal(x.err)
+	os.WriteFile(p, []byte(rig.RoundGo()), 0o644)
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	s.Run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
+	s.WriteConfig(map[string]string{"init.lua": demoPlugin})
+	s.ReloadLua()
+	if x := lua(s); x.Err() != nil {
+		t.Fatal(x.Err())
 	}
-	s.run("Deploys", nil)
-	s.run("view.open", registry.Args{"id": "dashboard", "place": "split", "side": "right", "title": "Dashboard"})
-	s.frame()
-	s.frame()
-	text := s.frameText()
+	s.Run("Deploys", nil)
+	s.Run("view.open", registry.Args{"id": "dashboard", "place": "split", "side": "right", "title": "Dashboard"})
+	s.Frame()
+	s.Frame()
+	text := s.Text()
 	for _, want := range []string{"DEPLOYS", "pricing", "prod · 4m", "Roll back", "Deploy all", "Dashboard", "DEPLOY", "CI", "✓ main"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the window lacks %q:\n%s", want, text)
 		}
 	}
-	if off := s.reg.TurnedOff(); len(off) != 0 {
+	if off := s.Registry().TurnedOff(); len(off) != 0 {
 		t.Fatalf("turned off: %+v", off)
 	}
-	b := s.access("Roll back") // pricing's, the first
+	b := s.Node("Roll back") // pricing's, the first
 	if b == nil {
 		t.Fatal("no Roll back button")
 	}
-	s.click(centre(b.Bounds))
-	s.frame()
-	if n, _ := lastNotice(s.store.State(), "lua."); n.Text != "rolling back pricing" {
+	s.Click(apptest.Centre(b.Bounds), 0)
+	s.Frame()
+	if n, _ := apptest.LastNotice(s.Store().State(), "lua."); n.Text != "rolling back pricing" {
 		t.Errorf("the click didn't run the plugin's function: %+v", n)
 	}
-	if !strings.Contains(s.frameText(), "Rolled back") {
-		t.Errorf("the panel didn't redraw with the plugin's state:\n%s", s.frameText())
+	if !strings.Contains(s.Text(), "Rolled back") {
+		t.Errorf("the panel didn't redraw with the plugin's state:\n%s", s.Text())
 	}
-	for _, n := range s.store.State().Notifications {
-		s.store.Apply(core.Dismissal(n))
+	for _, n := range s.Store().State().Notifications {
+		s.Store().Apply(core.Dismissal(n))
 	}
-	s.waitHighlights()
-	s.golden("plugin-demo")
+	s.WaitHighlights()
+	s.Golden("plugin-demo")
 }

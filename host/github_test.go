@@ -36,9 +36,9 @@ func githubThreads(se core.SessionState) []core.Thread {
 	return out
 }
 
-// RV-4 done when: "the agent never posts; the user's forward does". crit-reference: "Reviewer comments become
-// `origin: github` threads. The agent drafts replies, and the user forwards them. Echo reconciliation"; "PR and comment
-// text from outside the trusted orgs and users is redacted for the agent".
+// The agent never posts; the user's forward does. Reviewer comments become `origin: github` threads, the agent
+// drafts replies and the user forwards them, with echo reconciliation; PR and comment text from outside the trusted
+// orgs and users is redacted for the agent.
 func TestGitHubReviewMirror(t *testing.T) {
 	r := newRig(t)
 	hub := ghtest.New(t)
@@ -186,7 +186,7 @@ func TestGitHubReviewMirror(t *testing.T) {
 	}
 }
 
-// RV-4: a permission ask to post to a review is refused before the user or a rule can allow it.
+// A permission ask to post to a review is refused before the user or a rule can allow it.
 func TestAgentAskingToPostAReviewIsRefused(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("start")
@@ -209,7 +209,7 @@ func TestAgentAskingToPostAReviewIsRefused(t *testing.T) {
 	}
 }
 
-// The assistant's my_prs and review_requests read GitHub through the user's gh (crit-reference.md, "PR lists").
+// The assistant's my_prs and review_requests read GitHub through the user's gh.
 func TestSearchPRs(t *testing.T) {
 	r := newRig(t)
 	hub := ghtest.New(t)
@@ -288,5 +288,64 @@ func TestReviewSessionMirrorsItsPR(t *testing.T) {
 	}
 	if th, _ := r.session(id).Thread(mine); !hub.Resolved(root.ID) || !th.Hosted.Resolved {
 		t.Errorf("resolved on GitHub %v, recorded %+v", hub.Resolved(root.ID), th.Hosted)
+	}
+}
+
+// slowReviews is a GitHub whose review comments for one repo wait for hold.
+type slowReviews struct {
+	gh.Client
+	repo    string
+	waiting chan struct{}
+	hold    chan struct{}
+}
+
+func (c slowReviews) ReviewComments(ctx context.Context, repo gh.Repo, number int) ([]gh.ReviewComment, error) {
+	if repo.Name == c.repo {
+		c.waiting <- struct{}{}
+		<-c.hold
+	}
+	return c.Client.ReviewComments(ctx, repo, number)
+}
+
+// A sync waiting on GitHub doesn't hold up another session's.
+func TestASlowSyncDoesNotBlockAnother(t *testing.T) {
+	r := newRig(t)
+	hub := ghtest.New(t)
+	slow := slowReviews{Client: hub.Client(), repo: "pricing", waiting: make(chan struct{}, 1), hold: make(chan struct{})}
+	r.w.opts.GitHub = func(string, []string) gh.Client { return slow }
+	ctx := context.Background()
+	sessionOn := func(name string) core.SessionID {
+		co, _ := githubRepo(t, name, map[string]string{"a.go": "package a\n"})
+		id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "work", Repos: []core.RepoID{core.RepoID(co.Dir)}})
+		hub.AddPR("acme/"+name, gh.PR{Title: "feat", Head: r.session(id).Branch, Base: "main"})
+		return id
+	}
+	held, free := sessionOn("pricing"), sessionOn("billing")
+	done := make(chan error, 1)
+	go func() {
+		_, err := r.w.SyncGitHub(ctx, MirrorReq{Session: held})
+		done <- err
+	}()
+	<-slow.waiting
+	synced := make(chan error, 1)
+	go func() {
+		_, err := r.w.SyncGitHub(ctx, MirrorReq{Session: free})
+		synced <- err
+	}()
+	select {
+	case err := <-synced:
+		if err != nil {
+			t.Error(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Error("a sync waited on another's GitHub")
+		close(slow.hold)
+		<-synced
+		<-done
+		return
+	}
+	close(slow.hold)
+	if err := <-done; err != nil {
+		t.Error(err)
 	}
 }

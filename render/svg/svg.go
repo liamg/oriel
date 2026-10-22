@@ -10,6 +10,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/liamg/oriel/render"
 )
@@ -19,6 +20,15 @@ type Doc struct {
 	Size  render.Point // its own size, in logical pixels
 	view  render.Rect
 	items []item
+
+	mu    sync.Mutex
+	drawn []drawnAt // the paths placed for the rects drawn into lately, the latest last
+}
+
+// drawnAt is each item's path placed into r; nil for items that aren't paths.
+type drawnAt struct {
+	r     render.Rect
+	paths []*render.Path
 }
 
 type itemKind uint8

@@ -3,7 +3,7 @@ package theme
 import "testing"
 
 // Pick-to-override writes the smallest diff: a value changes in place, a new key goes after its table's last key,
-// and only a table that doesn't exist yet is added (theming.md, "Edits are overrides").
+// and only a table that doesn't exist yet is added.
 func TestOverrideWritesTheSmallestDiff(t *testing.T) {
 	const base = `name = "mine"
 extends = "oriel"

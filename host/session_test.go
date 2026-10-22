@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func (r *rig) workSession(prompt string) (core.SessionID, *agenttest.FakeSession
 	return id, r.agent()
 }
 
-// AI-5 done when: a comment reaches the agent within 1 s.
+// A comment reaches the agent within 1 s.
 func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Negative values round the wrong way")
@@ -57,7 +58,7 @@ func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
 	}
 }
 
-// agents.md → Comments to agent: mid-turn a comment waits for the turn's end; an urgent one interrupts it.
+// Mid-turn a comment waits for the turn's end; an urgent one interrupts it.
 func TestCommentsWaitForTheTurnUnlessUrgent(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("start")
@@ -124,7 +125,7 @@ func TestTheAgentRepliesWithActivityAndEvidence(t *testing.T) {
 	}
 }
 
-// TR-5: a "tests pass" with no run behind it is flagged; one citing a run links it.
+// A "tests pass" with no run behind it is flagged; one citing a run links it.
 func TestClaimsWithoutEvidenceAreFlagged(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Fix it")
@@ -172,7 +173,7 @@ func TestEvidenceIsTheLastRun(t *testing.T) {
 	}
 }
 
-// TR-5: a test_run call's transcript item links to the run it recorded, so the console's block can show it.
+// A test_run call's transcript item links to the run it recorded, so the console's block can show it.
 func TestTestRunCallsLinkTheirRun(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Fix it")
@@ -209,7 +210,7 @@ func TestTasksFollowTheirThreads(t *testing.T) {
 	}
 }
 
-// agents.md → Permissions, three layers: rules and the app's hooks answer first; the user only when neither does.
+// Permissions, three layers: rules and the app's hooks answer first; the user only when neither does.
 func TestPermissionLayers(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Run things")
@@ -261,7 +262,7 @@ func TestPermissionLayers(t *testing.T) {
 	}
 }
 
-// DB-3: the app asks for a session's agent (a tool that asks first) through the same layers: a card, "always" making
+// The app asks for a session's agent (a tool that asks first) through the same layers: a card, "always" making
 // a rule that answers the next at once, and a deny's note.
 func TestTheAppAsksThroughTheSessionsLayers(t *testing.T) {
 	r := newRig(t)
@@ -338,7 +339,7 @@ func TestBtwIsAnsweredByAFork(t *testing.T) {
 	a.NoneSent(t)
 }
 
-// RV-5: Pin as note is a thread opened resolved; it stays with the user and never reaches the agent.
+// Pin as note is a thread opened resolved; it stays with the user and never reaches the agent.
 func TestAThreadOpenedResolvedIsANote(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Work")
@@ -376,7 +377,7 @@ func TestConsoleMessagesQueueUntilTheTurnEnds(t *testing.T) {
 	}
 }
 
-// SE-2: after a restart nothing runs; resuming starts the agent by its own id, so the conversation carries on.
+// After a restart nothing runs; resuming starts the agent by its own id, so the conversation carries on.
 func TestResumeAfterRestartUsesTheAgentsID(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Work")
@@ -422,7 +423,7 @@ func TestStartSpecCarriesThePackToolsAndGuards(t *testing.T) {
 	}
 }
 
-// LS-3's way in: the app offers tools of its own (LSP lookups), and calls go back to it.
+// The app offers tools of its own (LSP lookups), and calls go back to it.
 func TestAppToolsReachTheAgent(t *testing.T) {
 	r := newRig(t)
 	r.w.SetApp(App{
@@ -461,12 +462,28 @@ func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
 	if se.Status != core.StatusWorking || len(se.Agent.Background) != 1 {
 		t.Errorf("status %s, background %q", se.Status, se.Agent.Background)
 	}
+	var mu sync.Mutex
+	var idle []core.Event
+	stop := r.w.store.Subscribe(core.Filter{Session: id}, func(ev core.Event) {
+		switch ev.(type) {
+		case core.ThreadBusy, core.ThreadUpdated:
+			mu.Lock()
+			idle = append(idle, ev)
+			mu.Unlock()
+		}
+	})
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the woken turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 3 })
+	stop()
 	se = r.session(id)
 	if th, _ := se.Thread(tid); th.Busy || len(se.Agent.Background) != 0 {
 		t.Errorf("after the background work: busy %v, background %q", th.Busy, se.Agent.Background)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if want := (core.ThreadBusy{Session: id, Thread: tid}); len(idle) != 1 || idle[0] != want {
+		t.Errorf("the thread went idle with %#v, want only %#v", idle, want)
 	}
 }
 

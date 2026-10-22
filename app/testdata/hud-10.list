@@ -219,7 +219,7 @@ clip 397.1875,52 369.1875x192.79999 r 0
   text "MEM" @409.1875,132.10953 #b3ab99 JetBrains Mono 10
   rect 445.1875,125.50953 80x5.9999924 fill #24221d radius 2
   rect 445.1875,125.50953 27.5x5.9999924 fill #4cc9f0 radius 2
-  text "11.0G" @533.1875,132.28954 #ece6d8 JetBrains Mono 10.5
+  text "11.0 GB" @533.1875,132.28954 #ece6d8 JetBrains Mono 10.5
   path 10 segments stroke 1.5 #4cc9f0
 pop
 rect 397.1875,52 369.1875x192.79999 stroke 1 #24221d
@@ -340,11 +340,23 @@ clip 800,256.8 386x142.25952 r 0
   text "passed" @1134.4375,342.78 #7c7566 JetBrains Mono 10.5
 pop
 rect 800,256.8 386x142.25952 stroke 1 #24221d
-path 6 segments stroke 1 #ffd23f99
-path 6 segments stroke 1 #ffd23f99
-path 6 segments stroke 1 #ffd23f99
-path 6 segments stroke 1 #ffd23f99
-path 6 segments stroke 1 #ffd23f99
-path 6 segments stroke 1 #ffd23f99
+clip 16,52 369.1875x192.79999 r 0
+  path 6 segments stroke 1 #ffd23f99
+pop
+clip 397.1875,52 369.1875x192.79999 r 0
+  path 6 segments stroke 1 #ffd23f99
+pop
+clip 778.375,52 369.1875x192.79999 r 0
+  path 6 segments stroke 1 #ffd23f99
+pop
+clip 1159.5625,52 424.4375x192.79999 r 0
+  path 6 segments stroke 1 #ffd23f99
+pop
+clip 16,256.8 772x142.25952 r 0
+  path 6 segments stroke 1 #ffd23f99
+pop
+clip 800,256.8 386x142.25952 r 0
+  path 6 segments stroke 1 #ffd23f99
+pop
 rect 672.72,413.0595 254.56006x20.540009 fill #060606f7 radius 6 stroke 1 #ffd23f59
 text "⌥ RELEASE TO HIDE · CLICK TO PIN" @682.72,426.7495 #ffd23f JetBrains Mono 9.5

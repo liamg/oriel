@@ -1,7 +1,9 @@
 package script
 
 import (
+	"github.com/liamg/oriel/internal/testhook"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -31,11 +33,9 @@ func TestLoadAndCall(t *testing.T) {
 	}
 }
 
-// scripting.md: "A watchdog warns, then interrupts, a script that runs past 50 ms."
+// A watchdog warns, then interrupts, a script that runs past 50 ms.
 func TestWatchdog(t *testing.T) {
-	old := InterruptAfter
-	InterruptAfter = 100 * time.Millisecond
-	defer func() { InterruptAfter = old }()
+	testhook.Set(t, &InterruptAfter, 100*time.Millisecond)
 	vm := New()
 	defer vm.Close()
 	var slow string
@@ -64,7 +64,7 @@ func TestWatchdog(t *testing.T) {
 func TestFutureAndMetatable(t *testing.T) {
 	vm := New()
 	defer vm.Close()
-	vm.Future("ledger", "RV-2")
+	vm.Future("ledger", "the review ledger")
 	store := map[string]any{}
 	vm.Metatable("option", func(_ *Args, k string) (any, error) { return store[k], nil }, func(a *Args, k string, v any) error {
 		store[k] = v
@@ -78,10 +78,52 @@ func TestFutureAndMetatable(t *testing.T) {
 		t.Errorf("store %v", store)
 	}
 	_, err := vm.Eval(Chunk{Name: "x", Source: []byte("return oriel.ledger.unread('p')")})
-	if err == nil || !strings.Contains(err.Error(), "oriel.ledger.unread isn't available until RV-2") {
+	if err == nil || !strings.Contains(err.Error(), "oriel.ledger.unread isn't available until the review ledger") {
 		t.Errorf("calling a future API: %v", err)
 	}
 	if keys := vm.Keys(""); strings.Join(keys, ",") != "ledger,option" {
 		t.Errorf("keys %v", keys)
+	}
+}
+
+// A call from another goroutine waits for the one running; only a call back from inside it nests.
+func TestCallFromAnotherGoroutineWaits(t *testing.T) {
+	vm := New()
+	defer vm.Close()
+	started, release := make(chan struct{}), make(chan struct{})
+	var marked atomic.Bool
+	vm.Bind("", map[string]GoFunc{
+		"block": func(a *Args) ([]any, error) {
+			close(started)
+			<-release
+			return vm.Call(a.Fn(0))
+		},
+		"mark": func(a *Args) ([]any, error) { marked.Store(true); return nil, nil },
+	})
+	fns, err := vm.Eval(Chunk{Name: "x", Source: []byte("return function() return oriel.block(function() return 7 end) end, function() oriel.mark() end")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	outer := make(chan []any)
+	go func() {
+		out, _ := vm.Call(fns[0].(*Fn))
+		outer <- out
+	}()
+	<-started
+	other := make(chan error)
+	go func() {
+		_, err := vm.Call(fns[1].(*Fn))
+		other <- err
+	}()
+	time.Sleep(50 * time.Millisecond)
+	if marked.Load() {
+		t.Error("a call from another goroutine ran while the VM was busy")
+	}
+	close(release)
+	if out := <-outer; len(out) != 1 || out[0] != 7.0 {
+		t.Errorf("nested call: %v", out)
+	}
+	if err := <-other; err != nil || !marked.Load() {
+		t.Errorf("waiting call: %v, ran %v", err, marked.Load())
 	}
 }

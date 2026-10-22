@@ -45,3 +45,18 @@ func TestBump(t *testing.T) {
 		}
 	}
 }
+
+// ref:   semver/semver.md#Semantic Versioning Specification (SemVer)
+// quote: "Build metadata MAY be denoted by appending a plus sign and a series of dot"
+func TestParseBuildMetadataWithHyphen(t *testing.T) {
+	for in, want := range map[string]Version{
+		"1.0.0+build-1":                  {1, 0, 0, ""},
+		"1.0.0+21AF26D3----117B344092BD": {1, 0, 0, ""},
+		"1.0.0-alpha+exp-sha":            {1, 0, 0, "alpha"},
+		"1.0.0-x-y-z+b-1":                {1, 0, 0, "x-y-z"},
+	} {
+		if v, err := Parse(in); err != nil || v != want {
+			t.Errorf("Parse(%q) = %+v, %v; want %+v", in, v, err, want)
+		}
+	}
+}

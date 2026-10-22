@@ -15,11 +15,13 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/sandboxhost"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -94,7 +96,7 @@ func newSandboxRig(t *testing.T) *sandboxRig {
 	return s
 }
 
-func (s *sandboxRig) sandboxed() (core.SessionID, *agent.StartSpec, *box) {
+func (s *sandboxRig) sandboxed() (core.SessionID, *agent.StartSpec, *sandboxhost.Box) {
 	s.t.Helper()
 	id := s.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
 		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
@@ -104,14 +106,10 @@ func (s *sandboxRig) sandboxed() (core.SessionID, *agent.StartSpec, *box) {
 
 // keptBox is the sandbox a session keeps for its agent, once start has kept it: the fake agent starts inside launch,
 // before then.
-func (r *rig) keptBox(id core.SessionID) *box {
+func (r *rig) keptBox(id core.SessionID) *sandboxhost.Box {
 	r.t.Helper()
-	h, _ := r.w.sessionFor(id, false)
 	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(time.Millisecond) {
-		h.mu.Lock()
-		b, ok := h.box.(*box)
-		h.mu.Unlock()
-		if ok {
+		if b := r.w.boxOf(id); b != nil {
 			return b
 		}
 		if time.Now().After(deadline) {
@@ -202,7 +200,7 @@ func TestSandboxBackendPerSession(t *testing.T) {
 func TestSandboxSpecNamesTheGateway(t *testing.T) {
 	s := newSandboxRig(t)
 	_, spec, b := s.sandboxed()
-	if spec.Sandbox == nil || spec.Sandbox.Name != "fake:"+sandbox.Key(b.root) {
+	if spec.Sandbox == nil || spec.Sandbox.Name != "fake:"+sandbox.Key(b.Root()) {
 		t.Fatalf("spec.Sandbox = %+v", spec.Sandbox)
 	}
 	data, err := os.ReadFile(spec.Sandbox.GatewayMCP)
@@ -219,10 +217,10 @@ func TestSandboxSpecNamesTheGateway(t *testing.T) {
 	if gw := cfg.MCPServers["oriel-gw"]; gw.Command != "oriel" || len(gw.Args) != 1 || gw.Args[0] != "mcp" {
 		t.Errorf("gateway MCP config = %s", data)
 	}
-	if !sandbox.Enabled(b.root) {
+	if !sandbox.Enabled(b.Root()) {
 		t.Error("the workspace has no sandbox record")
 	}
-	if m, _ := sandbox.LoadManifest(b.root); len(m.Projects) != 1 || filepath.IsAbs(m.Projects[0].Dir) {
+	if m, _ := sandbox.LoadManifest(b.Root()); len(m.Projects) != 1 || filepath.IsAbs(m.Projects[0].Dir) {
 		t.Errorf("manifest = %+v", m)
 	}
 }
@@ -299,13 +297,13 @@ func TestSandboxCarriesTheHookSocket(t *testing.T) {
 			t.Errorf("%s: %q", how, got)
 		}
 	}
-	mounted, err := net.Dial("unix", filepath.Join(sandbox.RunDir(b.root), "hook.sock"))
+	mounted, err := net.Dial("unix", filepath.Join(sandbox.RunDir(b.Root()), "hook.sock"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	roundTrip("the run dir's socket", mounted)
-	rec, _ := sandbox.Load(b.root)
-	raw, err := net.Dial("unix", sandbox.SocketPath(b.root))
+	rec, _ := sandbox.Load(b.Root())
+	raw, err := net.Dial("unix", sandbox.SocketPath(b.Root()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -316,13 +314,13 @@ func TestSandboxCarriesTheHookSocket(t *testing.T) {
 	roundTrip("the relay's route", relayed)
 }
 
-// agents.md → Permissions, layer 3: an unknown host's connection is held while the user decides.
+// Permissions, layer 3: an unknown host's connection is held while the user decides.
 func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { io.WriteString(w, "upstream") }))
 	defer up.Close()
-	proxy := httptest.NewServer(&egress.Proxy{Decider: b.egress})
+	proxy := httptest.NewServer(&egress.Proxy{Decider: b.Egress()})
 	defer proxy.Close()
 	paddr := strings.TrimPrefix(proxy.URL, "http://")
 	host := strings.TrimPrefix(up.URL, "http://")
@@ -386,7 +384,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 func TestNetworkFailuresReachTheTranscript(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	proxy := httptest.NewServer(&egress.Proxy{Decider: b.egress, Log: b.egress.Record})
+	proxy := httptest.NewServer(&egress.Proxy{Decider: b.Egress(), Log: b.Egress().Record})
 	defer proxy.Close()
 	paddr := strings.TrimPrefix(proxy.URL, "http://")
 	up := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
@@ -414,7 +412,7 @@ func TestNetworkFailuresReachTheTranscript(t *testing.T) {
 	}
 
 	// Allowed but unreachable: an error, for a destination not shown yet.
-	if err := b.egress.SetRule("127.0.0.1", 1, true, false); err != nil {
+	if err := b.Egress().SetRule("127.0.0.1", 1, true, false); err != nil {
 		t.Fatal(err)
 	}
 	if code, _ := get(t, paddr, "http://127.0.0.1:1"); code != http.StatusBadGateway {
@@ -436,13 +434,13 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	id, _, b := s.sandboxed()
 	ctx := context.Background()
 	done := make(chan bool, 1)
-	go func() { done <- b.egress.Allow(ctx, "pkgs.mirror.test", 443) }()
+	go func() { done <- b.Egress().Allow(ctx, "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
 	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test"})
 	if !<-done {
 		t.Fatal("not allowed")
 	}
-	if !b.egress.Allow(ctx, "cdn.mirror.test", 443) {
+	if !b.Egress().Allow(ctx, "cdn.mirror.test", 443) {
 		t.Error("the scope didn't cover cdn.mirror.test")
 	}
 	if a := sandbox.LoadAlways().Egress; len(a) != 1 || a[0].Host != "*.mirror.test" {
@@ -462,7 +460,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 
 	call := func(tool string, args any) chan mcp.CallResult {
 		ch := make(chan mcp.CallResult, 1)
-		go func() { ch <- gatewayCall(t, b.root, tool, args) }()
+		go func() { ch <- gatewayCall(t, b.Root(), tool, args) }()
 		return ch
 	}
 
@@ -502,7 +500,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 		t.Errorf("the remote's %s: %q %v", p.Branch, out, err)
 	}
 	// Always: the next push needs no card.
-	if r := gatewayCall(t, b.root, "oriel__push", map[string]any{}); r.IsError {
+	if r := gatewayCall(t, b.Root(), "oriel__push", map[string]any{}); r.IsError {
 		t.Errorf("second push = %q", r.Text())
 	}
 	if len(s.session(id).Asks) != 0 {
@@ -525,16 +523,16 @@ func TestPolicyHooksAnswerSandboxAsks(t *testing.T) {
 		}
 		return Verdict{}
 	}})
-	if !b.egress.Allow(context.Background(), "pkgs.mirror.test", 443) {
+	if !b.Egress().Allow(context.Background(), "pkgs.mirror.test", 443) {
 		t.Error("the hook's allow didn't let the connection through")
 	}
-	if b.egress.Allow(context.Background(), "tracker.test", 443) {
+	if b.Egress().Allow(context.Background(), "tracker.test", 443) {
 		t.Error("the hook's deny let the connection through")
 	}
-	if why := b.egress.Why("tracker.test", 443); !strings.Contains(why, "init.lua") || !strings.Contains(why, "no telemetry") {
+	if why := b.Egress().Why("tracker.test", 443); !strings.Contains(why, "init.lua") || !strings.Contains(why, "no telemetry") {
 		t.Errorf("the refusal's reason %q doesn't name the hook and its note", why)
 	}
-	if r := gatewayCall(t, b.root, "oriel__push", map[string]any{}); !r.IsError || !strings.Contains(r.Text(), "init.lua denied oriel__push") ||
+	if r := gatewayCall(t, b.Root(), "oriel__push", map[string]any{}); !r.IsError || !strings.Contains(r.Text(), "init.lua denied oriel__push") ||
 		!strings.Contains(r.Text(), "pushes go through CI") {
 		t.Errorf("push = %q, want who denied it and why", r.Text())
 	}
@@ -547,7 +545,7 @@ func TestRequestHostRefusalHolds(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
 	res := make(chan mcp.CallResult, 1)
-	go func() { res <- gatewayCall(t, b.root, "oriel__request_host", map[string]any{"why": "needs docker"}) }()
+	go func() { res <- gatewayCall(t, b.Root(), "oriel__request_host", map[string]any{"why": "needs docker"}) }()
 	ask := s.waitAsk(id, core.AskGateway)
 	if ask.Tool != "oriel__request_host" || !strings.Contains(ask.Summary, "needs docker") {
 		t.Fatalf("ask = %+v", ask)
@@ -556,7 +554,7 @@ func TestRequestHostRefusalHolds(t *testing.T) {
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "refused") {
 		t.Errorf("deny = %q", r.Text())
 	}
-	if r := gatewayCall(t, b.root, "oriel__request_host", map[string]any{"why": "again"}); !r.IsError || !strings.Contains(r.Text(), "already refused") {
+	if r := gatewayCall(t, b.Root(), "oriel__request_host", map[string]any{"why": "again"}); !r.IsError || !strings.Contains(r.Text(), "already refused") {
 		t.Errorf("again = %q", r.Text())
 	}
 }
@@ -569,13 +567,13 @@ func TestReposListsWhatCouldJoin(t *testing.T) {
 	if _, err := s.w.addRepo(context.Background(), other, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
-	r := gatewayCall(t, b.root, "oriel__repos", map[string]any{})
+	r := gatewayCall(t, b.Root(), "oriel__repos", map[string]any{})
 	if r.IsError || !strings.Contains(r.Text(), other) || strings.Contains(r.Text(), s.repo.Dir+"\n") {
 		t.Errorf("repos = %q", r.Text())
 	}
 }
 
-// agents.md, "Sandbox settings": the app sends the sandbox.* options as a sandbox.Config; the host keeps it across
+// The app sends the sandbox.* options as a sandbox.Config; the host keeps it across
 // a restart, and a session's sandbox runs on it, with its repos' own rules.
 func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
 	s := newSandboxRig(t)
@@ -590,8 +588,8 @@ func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
 	s.f.Attach(s.w)
 	s.w.opts.Sandbox = s.f
 	_, spec, b := s.sandboxed()
-	if b.cfg.Memory != "2g" || b.cfg.PidsLimit != 512 || b.gateway.Timeout != 90*time.Second || len(b.cfg.Env) != 1 {
-		t.Errorf("the sandbox runs on %+v", b.cfg)
+	if b.Config().Memory != "2g" || b.Config().PidsLimit != 512 || b.Gateway().Timeout != 90*time.Second || len(b.Config().Env) != 1 {
+		t.Errorf("the sandbox runs on %+v", b.Config())
 	}
 	p, err := spec.Exec.Start(context.Background(), exec.Command("claude"))
 	if err != nil {
@@ -603,7 +601,7 @@ func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
 		t.Errorf("the container launches with %+v", o.Config)
 	}
 	var hosts []string
-	for _, layer := range b.egressSettings() {
+	for _, layer := range b.EgressSettings() {
 		for _, r := range layer {
 			hosts = append(hosts, r.Host)
 		}
@@ -611,12 +609,12 @@ func TestSandboxRunsOnTheConfigTheAppSent(t *testing.T) {
 	if !slices.Contains(hosts, "proxy.golang.org") || !slices.Contains(hosts, "registry.npmjs.org") {
 		t.Errorf("the egress rules are %v", hosts)
 	}
-	if l := b.gatewayLevels(); !slices.ContainsFunc(l.Global, func(r gateway.Rule) bool { return r.Tool == "oriel__push" && r.Action == "deny" }) {
+	if l := b.GatewayLevels(); !slices.ContainsFunc(l.Global, func(r gateway.Rule) bool { return r.Tool == "oriel__push" && r.Action == "deny" }) {
 		t.Errorf("the gateway's global rules are %+v", l.Global)
 	}
 }
 
-// settings.md, "sandbox.servers": a server the app sent reaches the gateway beside the ones Claude Code has.
+// sandbox.servers: a server the app sent reaches the gateway beside the ones Claude Code has.
 func TestGatewaySeesConfiguredServers(t *testing.T) {
 	s := newSandboxRig(t)
 	cfg := sandbox.Config{Servers: map[string]json.RawMessage{}}
@@ -633,7 +631,7 @@ func TestGatewaySeesConfiguredServers(t *testing.T) {
 	}
 	_, _, b := s.sandboxed()
 	var got []string
-	for _, sv := range b.gateway.Up.Servers {
+	for _, sv := range b.Gateway().Up.Servers {
 		got = append(got, sv.Name+" "+sv.Type+" "+sv.URL+sv.Command+" "+strings.Join(sv.Args, " "))
 	}
 	if !slices.Contains(got, "docs http https://docs.example.com/mcp ") || slices.ContainsFunc(got, func(s string) bool { return strings.HasPrefix(s, "linear") }) {
@@ -643,7 +641,7 @@ func TestGatewaySeesConfiguredServers(t *testing.T) {
 	s.w.SetSandboxConfig(cfg)
 	_, _, b = s.sandboxed()
 	got = nil
-	for _, sv := range b.gateway.Up.Servers {
+	for _, sv := range b.Gateway().Up.Servers {
 		got = append(got, sv.Name+" "+sv.Type+" "+sv.URL+sv.Command+" "+strings.Join(sv.Args, " "))
 	}
 	if !slices.Contains(got, "linear stdio npx -y linear-mcp --flag") {
@@ -760,11 +758,118 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 		t.Error("the session's block is still there")
 	}
 
-	b.egress.Record(egress.Event{Host: "example.com", Port: 443, Proto: "tls"})
+	b.Egress().Record(egress.Event{Host: "example.com", Port: 443, Proto: "tls"})
 	if p, _ = s.w.Permissions(ctx, id); len(p.Conns) != 1 || p.Conns[0].Host != "example.com" {
 		t.Errorf("conns = %+v", p.Conns)
 	}
 	if err := s.w.SetToolRule(id, gateway.Prefix+"push", "maybe"); err == nil {
 		t.Error("a bad action was taken")
 	}
+}
+
+// Grants made together are all kept, and a reader never sees the file half-written.
+func TestGrantsTogetherAreAllKept(t *testing.T) {
+	s := newSandboxRig(t)
+	id, _, b := s.sandboxed()
+	done := make(chan struct{})
+	torn := make(chan string, 1)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			default:
+			}
+			if data, err := os.ReadFile(sandbox.GrantsPath(b.Root())); err == nil && !json.Valid(data) {
+				select {
+				case torn <- string(data):
+				default:
+				}
+			}
+		}
+	}()
+	var wg sync.WaitGroup
+	for i := range 20 {
+		wg.Go(func() { b.Grant([]gateway.Rule{{Tool: fmt.Sprintf("tool%d", i), Action: gateway.Allow}}) })
+	}
+	wg.Go(func() {
+		if err := s.w.SetToolRule(id, "set", gateway.Deny); err != nil {
+			t.Error(err)
+		}
+	})
+	wg.Wait()
+	close(done)
+	if got := b.Grants(); len(got) != 21 {
+		t.Errorf("%d grants kept of 21: %+v", len(got), got)
+	}
+	select {
+	case data := <-torn:
+		t.Errorf("a reader saw the grants half-written: %q", data)
+	default:
+	}
+}
+
+// Restarts asked for during a turn restart the agent once, when it ends; one stopped meanwhile isn't restarted.
+func TestSandboxRestartsOnceWhenIdle(t *testing.T) {
+	s := newSandboxRig(t)
+	id := s.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
+		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
+	a := s.agent()
+	b := s.keptBox(id)
+	a.Emit(agent.TurnStart{})
+	s.eventually(id, "working", func(se core.SessionState) bool { return se.Agent.Working })
+	if err := s.w.RestartSandbox(id); err != nil {
+		t.Fatal(err)
+	}
+	b.RestartWhenIdle("again")
+	a.Emit(agent.TurnEnd{})
+	a = s.agent()
+	select {
+	case <-s.fake.Started:
+		t.Error("the agent restarted twice")
+	case <-time.After(1500 * time.Millisecond):
+	}
+
+	b = s.keptBox(id)
+	a.Emit(agent.TurnStart{})
+	s.eventually(id, "working", func(se core.SessionState) bool { return se.Agent.Working })
+	b.RestartWhenIdle("again")
+	if err := s.w.Stop(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-s.fake.Started:
+		t.Error("a stopped agent restarted")
+	case <-time.After(1500 * time.Millisecond):
+	}
+}
+
+// An "always" allow for the network that can't be saved still lets the connection through, and the transcript says
+// it wasn't kept.
+func TestAlwaysNotSavedReachesTheTranscript(t *testing.T) {
+	s := newSandboxRig(t)
+	id, _, b := s.sandboxed()
+	if err := os.MkdirAll(filepath.Join(sandbox.Base(), "always.json"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	notSaved := func(what string) {
+		t.Helper()
+		s.eventually(id, what+" not saved, in the transcript", func(se core.SessionState) bool {
+			for _, it := range se.Transcript {
+				if it.Kind == core.ItemError && strings.Contains(it.Text, what) && strings.Contains(it.Text, "not saved") {
+					return true
+				}
+			}
+			return false
+		})
+	}
+
+	done := make(chan bool, 1)
+	go func() { done <- b.Egress().Allow(context.Background(), "pkgs.mirror.test", 443) }()
+	ask := s.waitAsk(id, core.AskNetwork)
+	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
+	if !<-done {
+		t.Fatal("not allowed")
+	}
+	notSaved("pkgs.mirror.test")
 }

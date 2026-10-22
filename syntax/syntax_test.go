@@ -126,7 +126,7 @@ func forFile(path string) (*Language, bool) {
 	return Builtin().Language(filepath.Base(name))
 }
 
-// ED-11: "Every core grammar has a highlight golden fixture that parses cleanly."
+// Every core grammar has a highlight golden fixture that parses cleanly.
 func TestEveryGrammarHasAFixture(t *testing.T) {
 	covered := map[string]bool{}
 	for _, f := range fixtures() {
@@ -212,7 +212,7 @@ func TestIncrementalMatchesFullParse(t *testing.T) {
 // TestIncrementalReparseBudget is the ticket's budget: typing a character into an identifier
 // in a 600-line Go file reparses in under 1.5 ms (the median of 50 edits, the best of a few rounds). Bigger files parse off the
 // keystroke path, in a Document (TestDocumentNeverBlocksTyping).
-// reparseBudget is editor.md's: an edit in a 600-line file reparses within it.
+// reparseBudget: an edit in a 600-line file reparses within it.
 const reparseBudget = 1500 * time.Microsecond
 
 func TestIncrementalReparseBudget(t *testing.T) {
@@ -228,13 +228,12 @@ func TestIncrementalReparseBudget(t *testing.T) {
 	best := time.Duration(math.MaxInt64)
 	var worst time.Duration
 	for round := range 5 {
-		var times []time.Duration
+		var reparses perf.Sampler
 		for i := range 50 {
 			ch := typeInIdentifier(t, buf, lines/4+i*(lines/100)+round)
-			start := time.Now()
-			p.Update(ch)
-			times = append(times, time.Since(start))
+			reparses.Time(func() { p.Update(ch) })
 		}
+		times := reparses.Times()
 		sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
 		best, worst = min(best, times[len(times)/2]), max(worst, times[len(times)-1])
 		if best < reparseBudget {

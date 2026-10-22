@@ -30,6 +30,7 @@ type Fake struct {
 	Closing   chan *FakeSession
 
 	mu        sync.Mutex
+	seq       int // sessions it has named
 	resumed   []string
 	signedOut bool
 	logins    int // how many times it has signed in: its login's mark
@@ -147,17 +148,12 @@ func (f *Fake) Resumed() []string {
 	return slices.Clone(f.resumed)
 }
 
-var fakeSeq struct {
-	sync.Mutex
-	n int
-}
-
 func (f *Fake) open(s agent.StartSpec, id string) *FakeSession {
 	if id == "" {
-		fakeSeq.Lock()
-		fakeSeq.n++
-		id = "fake-" + time.Now().Format("150405") + "-" + string(rune('a'+fakeSeq.n%26))
-		fakeSeq.Unlock()
+		f.mu.Lock()
+		f.seq++
+		id = "fake-" + time.Now().Format("150405") + "-" + string(rune('a'+f.seq%26))
+		f.mu.Unlock()
 	}
 	fs := &FakeSession{id: id, Spec: s, ev: make(chan agent.Event, 256), Sent: make(chan agent.Input, 64),
 		answers: map[string]chan agent.Decision{}, fake: f}

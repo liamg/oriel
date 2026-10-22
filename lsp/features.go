@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
-	"github.com/liamg/oriel/lsp/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp/protocol"
 	"github.com/liamg/oriel/lsp/snippet"
 	"github.com/liamg/oriel/text"
@@ -285,15 +285,18 @@ func (c *Client) param(label string, p protocol.ParameterInformation) Param {
 	if json.Unmarshal(p.Label, &off) != nil {
 		return out
 	}
-	out.Start, out.End = byteOffset(label, c.enc, off[0]), byteOffset(label, c.enc, off[1])
-	out.Label = label[out.Start:out.End]
+	start, end := byteOffset(label, c.enc, off[0]), byteOffset(label, c.enc, off[1])
+	if start > end {
+		return out
+	}
+	out.Start, out.End, out.Label = start, end, label[start:end]
 	return out
 }
 
-// byteOffset converts an offset into s in the encoding to bytes.
+// byteOffset converts an offset into s in the encoding to bytes, clamped to s.
 func byteOffset(s, enc string, n int) int {
 	if enc == protocol.UTF8 {
-		return min(n, len(s))
+		return max(0, min(n, len(s)))
 	}
 	units := 0
 	for i, r := range s {

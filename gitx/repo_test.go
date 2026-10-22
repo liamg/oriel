@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/gitx/gittest"
 )
 
 // fixture is a repo with commits by two authors, an ignored file, an untracked one, and a branch one ahead of its
@@ -90,5 +92,19 @@ func TestNoUpstream(t *testing.T) {
 	exec.Command("git", "-C", r.Dir, "branch", "--unset-upstream").Run()
 	if ab, err := r.AheadBehind(context.Background()); err != nil || ab.Upstream != "" {
 		t.Errorf("AheadBehind with no upstream = %+v, %v", ab, err)
+	}
+}
+
+// A write that finds the index locked by another git waits for it to let go, rather than failing.
+func TestWriteWaitsForTheIndexLock(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"a.txt": "a\n"})
+	lock := filepath.Join(r.Dir, ".git", "index.lock")
+	if err := os.WriteFile(lock, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	time.AfterFunc(150*time.Millisecond, func() { os.Remove(lock) })
+	if err := (Repo{Dir: r.Dir}).Stage(context.Background(), "a.txt"); err != nil {
+		t.Fatalf("staging past a lock let go: %v", err)
 	}
 }

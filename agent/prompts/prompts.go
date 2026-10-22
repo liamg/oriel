@@ -13,7 +13,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/packs"
@@ -47,6 +46,10 @@ type Def struct {
 	File string
 }
 
+// A Def is a contribution: a plugin registers its prompts with its window (Prepare checks one first).
+func (d Def) ContributionKind() string { return "prompt" }
+func (d Def) ContributionName() string { return d.ID }
+
 // Var is a placeholder and what's put there.
 type Var struct {
 	Name string
@@ -55,11 +58,6 @@ type Var struct {
 
 //go:embed defaults/*.md
 var defaultFiles embed.FS
-
-var (
-	mu         sync.Mutex
-	registered []*Def
-)
 
 var builtin = mustLoad()
 
@@ -71,23 +69,22 @@ func mustLoad() []Def {
 	return out
 }
 
-// Defs is every prompt, in the page's order: the defaults, the packs, their parts, then those registered.
-func Defs() []Def {
+// Defs is every prompt, in the page's order: the defaults, the packs, their parts, then those registered (a
+// window's contributions).
+func Defs(registered ...Def) []Def {
 	out := slices.Clone(builtin)
 	out = append(out, packDefs()...)
-	mu.Lock()
-	defer mu.Unlock()
 	for _, d := range registered {
 		if !slices.ContainsFunc(out, func(o Def) bool { return o.ID == d.ID }) {
-			out = append(out, *d)
+			out = append(out, d)
 		}
 	}
 	return out
 }
 
-// Lookup finds a prompt by id.
-func Lookup(id string) (Def, bool) {
-	for _, d := range Defs() {
+// Lookup finds a prompt by id, built in or among those registered.
+func Lookup(id string, registered ...Def) (Def, bool) {
+	for _, d := range Defs(registered...) {
 		if d.ID == id {
 			return d, true
 		}
@@ -95,13 +92,14 @@ func Lookup(id string) (Def, bool) {
 	return Def{}, false
 }
 
-// Register adds a prompt to the page until unregistered: a plugin's own. An id already taken is refused.
-func Register(d Def) (unregister func(), err error) {
+// Prepare is d ready to register beside those already registered: its file, group and label filled in. One with
+// no id or text, or an id already taken, is refused.
+func Prepare(d Def, registered ...Def) (Def, error) {
 	if d.ID == "" || strings.TrimSpace(d.Default) == "" {
-		return nil, errors.New("a prompt needs an id and its default text")
+		return Def{}, errors.New("a prompt needs an id and its default text")
 	}
-	if _, ok := Lookup(d.ID); ok {
-		return nil, fmt.Errorf("there's a prompt %q already", d.ID)
+	if _, ok := Lookup(d.ID, registered...); ok {
+		return Def{}, fmt.Errorf("there's a prompt %q already", d.ID)
 	}
 	if d.File == "" {
 		d.File = filepath.Join("prompts", d.ID+".md")
@@ -112,15 +110,7 @@ func Register(d Def) (unregister func(), err error) {
 	if d.Label == "" {
 		d.Label = d.ID
 	}
-	e := &d
-	mu.Lock()
-	registered = append(registered, e)
-	mu.Unlock()
-	return sync.OnceFunc(func() {
-		mu.Lock()
-		defer mu.Unlock()
-		registered = slices.DeleteFunc(registered, func(x *Def) bool { return x == e })
-	}), nil
+	return d, nil
 }
 
 // packDefs are the built-in packs and the parts they include, as prompts.
@@ -163,12 +153,13 @@ func heading(text, prefix, or string) string {
 // Overrides are the user's own versions, by prompt id. A prompt they left alone isn't there.
 type Overrides map[string]string
 
-// Text is the prompt as it stands: the user's version when there's one, else the default. An unknown id is "".
-func (o Overrides) Text(id string) string {
+// Text is the prompt as it stands: the user's version when there's one, else the default, of the built-ins or
+// those registered. An unknown id is "".
+func (o Overrides) Text(id string, registered ...Def) string {
 	if s, ok := o[id]; ok && strings.TrimSpace(s) != "" {
 		return s
 	}
-	d, _ := Lookup(id)
+	d, _ := Lookup(id, registered...)
 	return d.Default
 }
 
@@ -180,8 +171,8 @@ func (o Overrides) Style() string { return strings.TrimSpace(o.Text(StyleID)) }
 
 // Render is the prompt with each {{name}} replaced by vars[name], and {{style}} by the coding style unless vars
 // gives one. A placeholder with no value is left as written, so a typo shows.
-func (o Overrides) Render(id string, vars map[string]string) string {
-	return o.fill(o.Text(id), id, vars)
+func (o Overrides) Render(id string, vars map[string]string, registered ...Def) string {
+	return o.fill(o.Text(id, registered...), id, vars)
 }
 
 func (o Overrides) fill(text, id string, vars map[string]string) string {
@@ -240,12 +231,16 @@ func (o Overrides) partsCustom(src string) bool {
 	return false
 }
 
-// Store keeps the user's versions as files under a config dir, one per prompt they changed (Def.File).
-type Store struct{ Dir string }
+// Store keeps the user's versions as files under a config dir, one per prompt they changed (Def.File), of the
+// built-ins and those Registered.
+type Store struct {
+	Dir        string
+	Registered []Def
+}
 
 // Path is where a prompt's version is kept.
 func (s Store) Path(id string) (string, error) {
-	d, ok := Lookup(id)
+	d, ok := Lookup(id, s.Registered...)
 	if !ok {
 		return "", fmt.Errorf("no prompt %q", id)
 	}
@@ -255,7 +250,7 @@ func (s Store) Path(id string) (string, error) {
 // Load reads the user's versions. A file that's empty, or the same as the default, isn't one.
 func (s Store) Load() Overrides {
 	out := Overrides{}
-	for _, d := range Defs() {
+	for _, d := range Defs(s.Registered...) {
 		b, err := os.ReadFile(filepath.Join(s.Dir, d.File))
 		if err != nil {
 			continue
@@ -269,7 +264,7 @@ func (s Store) Load() Overrides {
 
 // Set keeps the user's version of a prompt. Text that's empty or the default is a reset: the file goes.
 func (s Store) Set(id, text string) error {
-	d, ok := Lookup(id)
+	d, ok := Lookup(id, s.Registered...)
 	if !ok {
 		return fmt.Errorf("no prompt %q", id)
 	}

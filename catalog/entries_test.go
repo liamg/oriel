@@ -8,8 +8,8 @@ import (
 	"github.com/liamg/oriel/toml"
 )
 
-// catalog.md, [plugins]: "A string is a semver range resolved through the registries. A table with git or path is a
-// source outside them."
+// In [plugins], a string is a semver range resolved through the registries; a table with git or path is a source
+// outside them.
 func TestParseEntries(t *testing.T) {
 	doc, err := toml.Parse([]byte(`[plugins]
 "acme/jira"      = "^0.4"
@@ -51,7 +51,7 @@ func TestParseEntries(t *testing.T) {
 	}
 }
 
-// catalog.md, the lockfile: source, version, commit, badge, capabilities and archives, by id. A write changes only
+// The lockfile records source, version, commit, badge, capabilities and archives, by id. A write changes only
 // the plugins that changed.
 func TestLockRoundTrip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), LockFile)

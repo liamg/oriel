@@ -333,7 +333,7 @@ func (e *Engine) shift(v *view, r oprange, right bool, amount int) {
 		}
 		ind := v.indentEnd(l)
 		width := v.vcol(l, ind)
-		sw := e.opts.ShiftWidth
+		sw := e.opts.shiftWidth()
 		if right {
 			width += sw * amount
 		} else {

@@ -4,7 +4,7 @@
 # $WASI_SDK_PATH (default /opt/wasi-sdk). SHA256SUMS is of the uncompressed .wasm; CI rebuilds and checks it
 # matches (gzip's own bytes vary with its version, so they aren't compared).
 #
-# Then each grammar pack in packs.tsv (PL-3): <name>.tar.gz in $PACKS_OUT (default packs-out, not committed),
+# Then each grammar pack in packs.tsv: <name>.tar.gz in $PACKS_OUT (default packs-out, not committed),
 # holding <name>/language.toml (from packs/), grammar.wasm, and the queries at the pinned nvim-treesitter commit
 # with its licence. PACKS.SHA256SUMS lists every file of every pack; the binary embeds it and installs only packs
 # that match. "build.sh packs" builds the packs alone.
@@ -35,12 +35,24 @@ compile() { # name grammar-directory runtime-directory output
 		-o "$4" "${files[@]}"
 }
 
-IFS=$'\t' read -r _ repo rev sub sum < <(grep '^runtime	' manifest.tsv)
-rt="$(fetch "$repo" "$rev" "$sum")/$sub"
+licence() { # repo source-directory: copies its licence to licenses/<owner>_<repo>.txt
+	local f=("$2"/LICENSE*)
+	cp "${f[0]}" "licenses/$(echo "$1" | tr / _).txt"
+}
+
+IFS=$'\t' read -r _ repo rev sub sum _ < <(grep '^runtime	' manifest.tsv)
+rtsrc=$(fetch "$repo" "$rev" "$sum")
+rt="$rtsrc/$sub"
 
 if [ "${1:-}" != packs ]; then
-	grep -v '^#' manifest.tsv | grep -v '^runtime	' | while IFS=$'\t' read -r name repo rev sub sum; do
+	mkdir -p licenses
+	licence "$repo" "$rtsrc"
+	rtlic="licenses/$(echo "$repo" | tr / _).txt"
+	printf '\n%s\nlib/src/unicode/LICENSE:\n\n' "$(printf -- '-%.0s' $(seq 72))" >>"$rtlic"
+	cat "$rt/src/unicode/LICENSE" >>"$rtlic"
+	grep -v '^#' manifest.tsv | grep -v '^runtime	' | while IFS=$'\t' read -r name repo rev sub sum _; do
 		src=$(fetch "$repo" "$rev" "$sum")
+		licence "$repo" "$src"
 		compile "$name" "$src/$sub" "$rt" "$work/$name.wasm"
 		gzip -9 -n -c "$work/$name.wasm" >"$name.wasm.gz"
 		echo "built $name.wasm.gz"

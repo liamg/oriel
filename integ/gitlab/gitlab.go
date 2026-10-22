@@ -1,4 +1,4 @@
-// Package gitlab is the GitLab plugin's process: GitLab as a code host (hosts.md), gitlab.com or a self-hosted site,
+// Package gitlab is the GitLab plugin's process: GitLab as a code host, gitlab.com or a self-hosted site,
 // its merge requests asking for your review, and a project's merge request raised, read and merged, over its REST API.
 // It never holds a token: each request goes through the host's http.request, which adds the site's only for its host.
 package gitlab

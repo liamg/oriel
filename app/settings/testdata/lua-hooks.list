@@ -1,0 +1,252 @@
+backdrop #060606
+rect 0,0 1400x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 671.2438x38 r 0
+pop
+text "✕ deploys: init.lua:65: oriel.http.get isn't available until network approvals" @788.1813,10.2 #ff5f6d JetBrains Mono 10
+text "INBOX" @1288.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1339.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1346.15,12.69 #b3ab99 JetBrains Mono 9.5
+rect 0,38 44x847.48 fill #0c0c0b
+clip 0,38 43x847.48 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  path 7 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 9.5,208 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments fill #060606
+  path 6 segments stroke 1.4 #ffd23f
+  effect glow 18.9,832.38 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  effect glow 22.8,832.38 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  path 2 segments stroke 0.8 #ffd23f
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
+rect 43,38 1x847.48 fill #24221d
+rect 44,38 1356x847.48 fill #060606
+rect 44,625.48 716x260 fill #0c0c0b
+clip 44,625.48 716x260 r 0
+  rect 44,625.48 716x30 fill #0c0c0b
+  rect 44,625.48 716x2 fill #ffd23f
+  text "LUA" @58,645.08 #7c7566 JetBrains Mono 10
+  text "✕" @740.7031,645.43994 #7c7566 JetBrains Mono 11
+  rect 44,655.48 716x1 fill #24221d
+  clip 44,656.48 716x229 r 0
+    text ":LUA" @68,686.68 #ffd23f JetBrains Mono 10
+    text "REPL · oriel api 0.5.0" @102,688.72 #7c7566 JetBrains Mono 12
+    text "⇥ complete · ↵ eval · ↑ history" @507.95312,688.72 #4f4a40 JetBrains Mono 12
+    clip 68,698.32 668x109.32001 r 0
+      text "› oriel.api.version" @68,710.56 #ece6d8 JetBrains Mono 12
+      text "\"0.5.0\"" @68,730.4 #b3ab99 JetBrains Mono 12
+      text "› #oriel.ui.row{}.children" @68,750.24 #ece6d8 JetBrains Mono 12
+      text "0" @68,770.08 #b3ab99 JetBrains Mono 12
+      text "› oriel.ledger.unread('pricing')" @68,789.92 #ece6d8 JetBrains Mono 12
+      text "0" @68,809.76 #b3ab99 JetBrains Mono 12
+    pop
+    text "›" @68,832.96 #ffd23f JetBrains Mono 12
+    rect 83.203125,813.64 652.7969x30 fill #060606 radius 6
+    clip 83.203125,813.64 652.7969x30 r 6
+      text "oriel.agent.to" @93.203125,833.18713 #ece6d8 Inter 12.5
+    pop
+    rect 83.203125,813.64 652.7969x30 radius 6 stroke 1 #332f27
+    text "tool" @68,861.88 #7c7566 JetBrains Mono 12
+  pop
+pop
+rect 760,38 640x847.48 fill #0c0c0b
+clip 760,38 640x847.48 r 0
+  rect 760,38 640x30 fill #0c0c0b
+  text "HOOKS" @774,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @1380.7031,57.96 #7c7566 JetBrains Mono 11
+  rect 760,68 640x1 fill #24221d
+  clip 760,69 640x816.48 r 0
+    clip 770,79 620x796.48 r 0
+      text ":HOOKS" @784,99.2 #ffd23f JetBrains Mono 10
+      text "13 hooks · 11 events" @830,99.71 #7c7566 JetBrains Mono 10.5
+      text "EVENT" @784,118.55 #7c7566 JetBrains Mono 9.5
+      text "HOOK" @932,118.55 #7c7566 JetBrains Mono 9.5
+      text "KIND" @1110,118.55 #7c7566 JetBrains Mono 9.5
+      text "SOURCE" @1198,118.55 #7c7566 JetBrains Mono 9.5
+      text "P99" @1406,118.55 #7c7566 JetBrains Mono 9.5
+      text "BufRead" @784,143.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,131.81 170x15.179993 r 0
+        text "files outside the sess…" @932,143.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "REWRITE" @1110,142.82 #b98aff JetBrains Mono 9.5
+      clip 1198,132.14 200x14.520004 r 0
+        text "builtin:sessions" @1198,143.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,143.36 #4f4a40 JetBrains Mono 11
+      text "BufWritePost" @784,173.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,161.81 170x15.179993 r 0
+        text "tell the language serv…" @932,173.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,172.81999 #b98aff JetBrains Mono 9.5
+      clip 1198,162.14 200x14.520004 r 0
+        text "builtin:lsp" @1198,173.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,173.36 #4f4a40 JetBrains Mono 11
+      text "BufWritePost" @784,203.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,191.81 170x15.179993 r 0
+        text "send the prompts to th…" @932,203.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,202.81999 #b98aff JetBrains Mono 9.5
+      clip 1198,192.14 200x14.520004 r 0
+        text "builtin:prompts" @1198,203.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,203.36 #4f4a40 JetBrains Mono 11
+      text "BufWritePre" @784,233.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,221.81 170x15.179993 r 0
+        text "—" @932,233.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,232.81999 #b98aff JetBrains Mono 9.5
+      clip 1198,222.14 200x14.520004 r 0
+        text "init.lua:21" @1198,233.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,233.36 #4f4a40 JetBrains Mono 11
+      text "CommentSend" @784,263.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,251.81 170x15.179993 r 0
+        text "—" @932,263.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,262.81998 #b98aff JetBrains Mono 9.5
+      clip 1198,252.14 200x14.520004 r 0
+        text "init.lua:29" @1198,263.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,263.36 #4f4a40 JetBrains Mono 11
+      text "Commit" @784,293.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,281.81 170x15.179993 r 0
+        text "—" @932,293.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "—" @1110,292.82 #b98aff JetBrains Mono 9.5
+      clip 1198,282.13998 200x14.519989 r 0
+        text "init.lua:23" @1198,293.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,293.36 #4f4a40 JetBrains Mono 11
+      text "Permission" @784,323.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,311.81 170x15.179993 r 0
+        text "—" @932,323.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "DECIDE" @1110,322.82 #b98aff JetBrains Mono 9.5
+      clip 1198,312.13998 200x14.519989 r 0
+        text "init.lua:34" @1198,323.36 #ffd23f JetBrains Mono 11
+      pop
+      text "<1ms" @1406,323.36 #b3ab99 JetBrains Mono 11
+      text "PrMerged" @784,353.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,341.81 170x15.179993 r 0
+        text "the ticket's tracker m…" @932,353.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "OBSERVE" @1110,352.82 #b98aff JetBrains Mono 9.5
+      clip 1198,342.13998 200x14.519989 r 0
+        text "builtin:tickets" @1198,353.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,353.36 #4f4a40 JetBrains Mono 11
+      text "PrMerged" @784,383.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,371.81 170x15.179993 r 0
+        text "archive the session on…" @932,383.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "OBSERVE" @1110,382.82 #b98aff JetBrains Mono 9.5
+      clip 1198,372.13998 200x14.519989 r 0
+        text "builtin:sessionend" @1198,383.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,383.36 #4f4a40 JetBrains Mono 11
+      text "PrPushed" @784,413.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,401.81 170x15.179993 r 0
+        text "fetch a reviewed PR it…" @932,413.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "OBSERVE" @1110,412.82 #b98aff JetBrains Mono 9.5
+      clip 1198,402.13998 200x14.519989 r 0
+        text "builtin:pr-review" @1198,413.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,413.36 #4f4a40 JetBrains Mono 11
+      text "PrSeen" @784,443.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,431.81 170x15.179993 r 0
+        text "the ticket's tracker l…" @932,443.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "OBSERVE" @1110,442.82 #b98aff JetBrains Mono 9.5
+      clip 1198,432.13998 200x14.519989 r 0
+        text "builtin:tickets" @1198,443.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,443.36 #4f4a40 JetBrains Mono 11
+      text "SessionStart" @784,473.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,461.81 170x15.179993 r 0
+        text "the ticket's tracker m…" @932,473.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "OBSERVE" @1110,472.82 #b98aff JetBrains Mono 9.5
+      clip 1198,462.13998 200x14.519989 r 0
+        text "builtin:tickets" @1198,473.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,473.36 #4f4a40 JetBrains Mono 11
+      text "ShipRaise" @784,503.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,491.81 170x15.179993 r 0
+        text "verify notes" @932,503.54 #b3ab99 JetBrains Mono 11.5
+      pop
+      text "REWRITE" @1110,502.82 #b98aff JetBrains Mono 9.5
+      clip 1198,492.13998 200x14.519989 r 0
+        text "builtin:verify" @1198,503.36 #ffd23f JetBrains Mono 11
+      pop
+      text "—" @1406,503.36 #4f4a40 JetBrains Mono 11
+      text "set before anything registered them: agent (init.lua:6), relativenumber (init.lua:4)" @784,528.11005 #7c7566 JetBrains Mono 10.5
+    pop
+  pop
+pop
+text "" @12,896.69995 #b3ab99 JetBrains Mono 11
+text "CTX" @36,896.52 #7c7566 JetBrains Mono 10.5
+text "LEDGER" @67.78125,896.52 #7c7566 JetBrains Mono 10.5
+rect 113.34375,890.74 44x4 fill #24221d radius 2
+rect 113.34375,890.74 44x4 fill #ff9b45 radius 2
+text "100%" @163.34375,896.52 #ece6d8 JetBrains Mono 10.5
+rect 944,12 440x96.43408 fill #121210 radius 8 stroke 1 #ff5f6d8c
+rect 958,27.154785 7x7 fill #ff5f6d radius 3.5
+text "ERROR" @973,34.074783 #ff5f6d JetBrains Mono 9.5
+text "core" @1017.65,34.074783 #7c7566 JetBrains Mono 9.5
+text "✕" @1361.4062,34.65625 #7c7566 Inter 11
+text "init.lua:65: oriel.http.get isn't available until network approvals" @958,58.418945 #ece6d8 Inter 12.5
+text "Open at line" @958,86.79932 #ffd23f Inter 12
+rect 958,90.69385 68.515625x1 fill #ffd23fb3
+rect 1036.5156,70.43408 84.875x26 fill #191815 radius 6 stroke 1 #332f27
+text "Show trace" @1046.5156,87.79932 #ece6d8 Inter 12

@@ -315,9 +315,6 @@ func MapEditor(c *ui.Ctx, key any, open *bool, m map[string]string, o MapEditorO
 		c.Column("card", ui.Style{W: ui.Px(w), Fill: col(c, tModalBg), Stroke: col(c, tModalBorder), Border: 1, Radius: 10, Clip: true,
 			Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Enter: riseIn, Exit: fade, Trap: true, Focusable: true, Interactive: true,
 			KeyMode: "modal", Help: o.Help, Role: ui.RoleDialog, Label: o.Title}, func(c *ui.Ctx) {
-			if !c.FocusWithin(card) {
-				c.Focus(card)
-			}
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(16, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("title", o.Title, uiText(c, 13, typeset.SemiBold, col(c, tModalTitle)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)

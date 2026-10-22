@@ -5,10 +5,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/liamg/oriel/vim/vimregex"
+	"github.com/liamg/oriel/regex/vimregex"
 )
 
-// Options are the engine's options that change how keys edit text (editor.md: options live at the layer they affect).
+// Options are the engine's options that change how keys edit text (options live at the layer they affect).
 type Options struct {
 	ShiftWidth int
 	TabStop    int
@@ -25,6 +25,14 @@ type Options struct {
 	Wrap          bool
 	SideScroll    int // 'sidescroll'
 	SideScrollOff int // 'sidescrolloff'
+}
+
+// shiftWidth is 'shiftwidth', or 'tabstop' when it's 0.
+func (o Options) shiftWidth() int {
+	if o.ShiftWidth == 0 {
+		return o.TabStop
+	}
+	return o.ShiftWidth
 }
 
 // DefaultOptions are nvim's defaults.

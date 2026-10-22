@@ -395,12 +395,28 @@ func argRune(k string) (rune, bool) {
 	return r, true
 }
 
+// maxCount is the largest count, as vim caps it.
+const maxCount = 999999999
+
+// mulCount is a count typed after another: their product, capped at maxCount.
+func mulCount(a, b int) int {
+	a = max(a, 1)
+	if b > 0 && a >= maxCount/b {
+		return maxCount
+	}
+	return a * b
+}
+
 func parse(keys []string, visual bool) (c cmd, st status) {
 	i := 0
 	readCount := func() (int, bool) {
 		n, any := 0, false
 		for i < len(keys) && isDigit(keys[i]) && (keys[i] != "0" || any) {
-			n = n*10 + int(keys[i][0]-'0')
+			if n >= maxCount/10 {
+				n = maxCount
+			} else {
+				n = n*10 + int(keys[i][0]-'0')
+			}
 			any = true
 			i++
 		}
@@ -408,7 +424,7 @@ func parse(keys []string, visual bool) (c cmd, st status) {
 	}
 	for {
 		if n, ok := readCount(); ok {
-			c.count = max(c.count, 1) * n
+			c.count = mulCount(c.count, n)
 			continue
 		}
 		if i < len(keys) && keys[i] == `"` {
@@ -482,7 +498,7 @@ func parse(keys []string, visual bool) (c cmd, st status) {
 		c.body = append(c.body, k)
 		n2, got := readCount()
 		if got {
-			c.count = max(c.count, 1) * n2
+			c.count = mulCount(c.count, n2)
 		}
 		m, st := key()
 		if st != complete {

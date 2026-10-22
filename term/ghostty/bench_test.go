@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/tools/perf"
 )
@@ -59,11 +58,11 @@ func BenchmarkParse(b *testing.B) {
 	}
 }
 
-// budget is the parse throughput _design/ide.md asks for. The native core, which the desktop app runs, must meet it.
+// budget is the parse throughput the terminal needs. The native core, which the desktop app runs, must meet it.
 const budget = 200e6
 
 // wasmFloor is what the wasm core (the worker's, and any build without cgo) must keep: under wazero it parses about
-// 80 MB/s of this stream, under budget, a deviation accepted in FG-4 for builds that can't link the native core.
+// 80 MB/s of this stream, under budget, an accepted deviation for builds that can't link the native core.
 const wasmFloor = 40e6
 
 func TestParseThroughputBudget(t *testing.T) {
@@ -76,12 +75,8 @@ func TestParseThroughputBudget(t *testing.T) {
 		t.Run(be, func(t *testing.T) {
 			e := mustNew(t, 120, 40, Options{Backend: be})
 			write(e, p[:4<<20], 64<<10)
-			best := 0.0
-			for range 3 {
-				start := time.Now()
-				write(e, p, 64<<10)
-				best = max(best, float64(len(p))/time.Since(start).Seconds())
-			}
+			took := perf.Times(3, 1, nil, func(int) { write(e, p, 64<<10) })[0] // the best of three
+			best := float64(len(p)) / took.Seconds()
 			t.Logf("%s parse throughput %.0f MB/s (budget %.0f MB/s)", be, best/1e6, budget/1e6)
 			want := budget
 			if be == "wasm" {

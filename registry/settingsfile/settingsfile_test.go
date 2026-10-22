@@ -9,7 +9,7 @@ import (
 	"github.com/liamg/oriel/toml"
 )
 
-// settings.md, "Project trust": a project file applies once trusted, by its SHA-256 in trusted.toml, so a change
+// A project file applies once trusted, by its SHA-256 in trusted.toml, so a change
 // needs trusting again.
 func TestTrust(t *testing.T) {
 	dir := t.TempDir()

@@ -90,7 +90,7 @@ func (t TicketTracker) Takes(key string) bool {
 func (t TicketTracker) Label() string { return cmp.Or(t.Title, t.Name) }
 
 // TicketTrackers are the trackers by Order, then name.
-func TicketTrackers(r Registry) []TicketTracker {
+func TicketTrackers(r Contributions) []TicketTracker {
 	var out []TicketTracker
 	for _, c := range r.Contributions("ticket.tracker") {
 		out = append(out, c.(TicketTracker))
@@ -102,7 +102,7 @@ func TicketTrackers(r Registry) []TicketTracker {
 }
 
 // TrackerFor is the first tracker that takes key; ok is false when none does.
-func TrackerFor(r Registry, key string) (TicketTracker, bool) {
+func TrackerFor(r Contributions, key string) (TicketTracker, bool) {
 	for _, t := range TicketTrackers(r) {
 		if t.Lookup != nil && t.Takes(key) {
 			return t, true

@@ -21,39 +21,72 @@ import (
 const (
 	probeTimeout = 40 * time.Second
 	probeAsk     = 500 * time.Millisecond // how often the mod is asked for the windows
+	probeTries   = 4                      // times /usage is typed before giving up
 )
 
-var usage struct {
+// probeRetype is how long /usage has to bring the windows before Escape clears what may be in the way and it's typed
+// again.
+var probeRetype = 4 * time.Second
+
+// ProbeError is why the /usage probe got no plan windows.
+type ProbeError struct {
+	Hello  bool   // claude said hello and /usage was typed; false: claude never got that far
+	Tries  int    // times /usage was typed
+	Screen string // the end of what claude last showed
+	Err    error
+}
+
+func (e *ProbeError) Error() string {
+	msg := fmt.Sprintf("claude: /usage typed %d times but no plan windows came (a dialog may be in the way): %v", e.Tries, e.Err)
+	if !e.Hello {
+		msg = fmt.Sprintf("claude: the /usage session never started: %v", e.Err)
+	}
+	if e.Screen != "" {
+		msg += "; the screen ends: " + e.Screen
+	}
+	return msg
+}
+
+func (e *ProbeError) Unwrap() error { return e.Err }
+
+func (e *ProbeError) Provider() string { return "claude" }
+
+func (e *ProbeError) Started() bool { return e.Hello }
+
+var _ agent.UsageProbeFailed = (*ProbeError)(nil)
+
+// usageBook is a Provider's readings of the plan's windows.
+type usageBook struct {
 	mu      sync.Mutex
 	last    core.ProviderUsage // the newest reading, a session's or a probe's
 	probing bool
 }
 
 // remember keeps a reading of the plan's windows for Usage, unless a newer one is kept.
-func remember(u core.ProviderUsage) {
-	usage.mu.Lock()
-	defer usage.mu.Unlock()
-	if !u.Sampled.Before(usage.last.Sampled) {
-		usage.last = u
+func (b *usageBook) remember(u core.ProviderUsage) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if !u.Sampled.Before(b.last.Sampled) {
+		b.last = u
 	}
 }
 
 // readUsage probes /usage when claude is installed and no probe is running. Signed out, there's no reading and no error.
-func (p Provider) readUsage(ctx context.Context) error {
+func (p *Provider) readUsage(ctx context.Context) error {
 	if _, err := exec.LookPath(p.bin()); err != nil {
 		return nil
 	}
-	usage.mu.Lock()
-	if usage.probing {
-		usage.mu.Unlock()
+	p.usage.mu.Lock()
+	if p.usage.probing {
+		p.usage.mu.Unlock()
 		return nil
 	}
-	usage.probing = true
-	usage.mu.Unlock()
+	p.usage.probing = true
+	p.usage.mu.Unlock()
 	defer func() {
-		usage.mu.Lock()
-		usage.probing = false
-		usage.mu.Unlock()
+		p.usage.mu.Lock()
+		p.usage.probing = false
+		p.usage.mu.Unlock()
 	}()
 	_, err := p.probe(ctx)
 	if errors.As(err, new(agent.AuthExpired)) {
@@ -62,7 +95,7 @@ func (p Provider) readUsage(ctx context.Context) error {
 	return err
 }
 
-func (p Provider) probeDir() string {
+func (p *Provider) probeDir() string {
 	if p.ProbeDir != "" {
 		return p.ProbeDir
 	}
@@ -70,7 +103,7 @@ func (p Provider) probeDir() string {
 }
 
 // probe runs the hidden session until its mod reports the plan's windows.
-func (p Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
+func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
 	dir := p.probeDir()
@@ -82,7 +115,7 @@ func (p Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 		return core.ProviderUsage{}, err
 	}
 	defer os.RemoveAll(state)
-	sess, err := p.start(ctx, agent.StartSpec{Cwd: dir, StateDir: state}, "")
+	sess, err := p.start(ctx, agent.StartSpec{Cwd: dir, StateDir: state, NoMCP: true}, "")
 	if err != nil {
 		return core.ProviderUsage{}, err
 	}
@@ -90,7 +123,8 @@ func (p Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 	defer s.Close()
 	ask := time.NewTicker(probeAsk)
 	defer ask.Stop()
-	typed := false
+	tries := 0
+	var typedAt time.Time
 	for {
 		select {
 		case ev, ok := <-s.Events():
@@ -99,8 +133,10 @@ func (p Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 			}
 			switch e := ev.(type) {
 			case agent.Ready:
-				_, _ = s.term.Write([]byte("/usage\r"))
-				typed = true
+				if tries == 0 {
+					_, _ = s.term.Write([]byte("/usage\r"))
+					tries, typedAt = 1, time.Now()
+				}
 			case agent.UsageUpdate:
 				s.quit()
 				return e.Usage, nil
@@ -113,11 +149,23 @@ func (p Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 				return core.ProviderUsage{}, fmt.Errorf("claude: the /usage session exited: %s", e.Err)
 			}
 		case <-ask.C:
-			if typed {
+			if tries == 0 {
+				continue
+			}
+			if time.Since(typedAt) >= probeRetype {
+				if tries == probeTries {
+					return core.ProviderUsage{}, &ProbeError{Hello: true, Tries: tries, Screen: s.lastScreen(), Err: errors.New("no windows in time")}
+				}
+				_, _ = s.term.Write([]byte("\x1b"))
+				time.Sleep(200 * time.Millisecond)
+				_, _ = s.term.Write([]byte("/usage\r"))
+				tries, typedAt = tries+1, time.Now()
+			}
+			if !s.queued("usage") {
 				s.queueCmd(waitOut{Kind: "usage"})
 			}
 		case <-ctx.Done():
-			return core.ProviderUsage{}, fmt.Errorf("claude: no plan windows from /usage: %w", ctx.Err())
+			return core.ProviderUsage{}, &ProbeError{Hello: tries > 0, Tries: tries, Screen: s.lastScreen(), Err: ctx.Err()}
 		}
 	}
 }

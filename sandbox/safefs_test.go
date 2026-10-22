@@ -3,6 +3,7 @@ package sandbox
 import (
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -130,5 +131,60 @@ func TestSetNoSignIn(t *testing.T) {
 	}
 	if got := LoadAlways().NoSignIn; len(got) != 0 {
 		t.Fatalf("NoSignIn = %v, want none", got)
+	}
+}
+
+// flip swaps path between a real entry (made by mk) and a link to target until stop closes.
+func flip(t *testing.T, path, target string, mk func() error, stop chan struct{}) *sync.WaitGroup {
+	t.Helper()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		tmp := path + ".link"
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			_ = os.Symlink(target, tmp)
+			_ = os.RemoveAll(path)
+			_ = os.Rename(tmp, path)
+			_ = os.Remove(path)
+			_ = mk()
+		}
+	}()
+	return &wg
+}
+
+func TestReadFileRefusesALinkSwappedIn(t *testing.T) {
+	root, outside := sandboxed(t)
+	f := filepath.Join(root, "f")
+	stop := make(chan struct{})
+	wg := flip(t, f, outside, func() error { return os.WriteFile(f, []byte("inside"), 0o644) }, stop)
+	defer wg.Wait()
+	defer close(stop)
+	for i := range 20000 {
+		if b, err := ReadFile(f); err == nil && string(b) == "host secret" {
+			t.Fatalf("read through a link swapped in after %d tries", i)
+		}
+	}
+}
+
+func TestWriteFileRefusesADirectorySwappedForALink(t *testing.T) {
+	root, outside := sandboxed(t)
+	away := filepath.Dir(outside)
+	dir := filepath.Join(root, "dir")
+	stop := make(chan struct{})
+	wg := flip(t, dir, away, func() error { return os.Mkdir(dir, 0o755) }, stop)
+	for range 20000 {
+		_ = WriteFile(root, filepath.Join(dir, "x"), []byte("x"), 0o644)
+	}
+	close(stop)
+	wg.Wait()
+	ents, _ := os.ReadDir(away)
+	if len(ents) != 1 {
+		t.Fatalf("wrote outside the workspace through a swapped link: %d entries", len(ents))
 	}
 }

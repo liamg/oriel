@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// PL-2, live on macOS: sandbox-exec with the generated profile lets the process read and write its paths, and
+// Live on macOS: sandbox-exec with the generated profile lets the process read and write its paths, and
 // nothing else.
 func TestSandboxExecConfines(t *testing.T) {
 	if err := Available(); err != nil {
@@ -31,7 +31,7 @@ func TestSandboxExecConfines(t *testing.T) {
 	expect(t, ops[4:5], run(t, p, ops[4:5]...), true)
 }
 
-// PL-19's spike (catalog.md, Risks): a binary Oriel downloads is only ad-hoc signed and isn't quarantined. It's
+// A binary Oriel downloads is only ad-hoc signed and isn't quarantined. It's
 // fetched over HTTP as an install fetches an archive, signed ad hoc again, and must still run under sandbox-exec.
 func TestDownloadedAdhocBinaryRuns(t *testing.T) {
 	if err := Available(); err != nil {

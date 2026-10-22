@@ -36,7 +36,7 @@ func TestShotDrawsTheRecordedFrame(t *testing.T) {
 	}
 }
 
-// theming.md, "Sizes": a zoom multiplies the device scale, so the app lays out at the window's size over it.
+// A zoom multiplies the device scale, so the app lays out at the window's size over it.
 func TestZoomScalesTheWindow(t *testing.T) {
 	be := New()
 	w, _ := be.NewWindow(render.WindowOpts{Width: 1500, Height: 900})

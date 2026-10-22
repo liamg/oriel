@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// RV-3: AI reviews and their findings are session events: a finding is replaced by ID (dismissed, turned into a
+// AI reviews and their findings are session events: a finding is replaced by ID (dismissed, turned into a
 // thread), the gate reads what's still open, and the log replays to the same state.
 func TestAIReviewFindings(t *testing.T) {
 	var log bytes.Buffer

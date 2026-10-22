@@ -251,6 +251,12 @@ func (v sessionView) Tasks() []Task          { return slices.Clone(v.s.Tasks) }
 func (v sessionView) Agent() AgentState      { return v.s.Agent }
 func (v sessionView) Snapshot() SessionState { return v.s }
 
+// InPlace says the session works in the directory itself rather than in a workspace of worktrees: a direct one.
+func (s SessionState) InPlace() bool {
+	p, ok := s.Primary()
+	return ok && s.Dir != "" && p.Repo == "" && p.Dir == s.Dir
+}
+
 // Primary is the session's first project, or its primary one: where a relative path means.
 func (s SessionState) Primary() (Project, bool) {
 	for _, p := range s.Projects {

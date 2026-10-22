@@ -12,8 +12,8 @@ import (
 	"github.com/liamg/oriel/agent/packs"
 )
 
-// crit-reference.md, "Prompts page": "editable prompts, including Coding style (also written into the generated
-// CLAUDE.md). Only overrides are stored." Oriel's are the coding style, the side requests (explain, the verify quiz,
+// The Prompts page has editable prompts, including Coding style (also written into the generated CLAUDE.md), and
+// stores only overrides. Oriel's are the coding style, the side requests (explain, the verify quiz,
 // redrafts), each pack and each part packs include.
 var placeholder = regexp.MustCompile(`\{\{(\w+)\}\}`)
 
@@ -158,24 +158,22 @@ func TestPacksTakeTheUsersVersions(t *testing.T) {
 
 func TestRender(t *testing.T) {
 	o := Overrides{StyleID: "Be brief."}
-	unregister, err := Register(Def{ID: "test.greet", Label: "Greet", Help: "a test's", Default: "Hello {{name}}, {{nmae}}. {{style}}"})
+	greet, err := Prepare(Def{ID: "test.greet", Label: "Greet", Help: "a test's", Default: "Hello {{name}}, {{nmae}}. {{style}}"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer unregister()
-	if _, err := Register(Def{ID: "test.greet", Default: "x"}); err == nil {
+	if _, err := Prepare(Def{ID: "test.greet", Default: "x"}, greet); err == nil {
 		t.Error("a second prompt took the same id")
 	}
-	if got := o.Render("test.greet", map[string]string{"name": "Ada"}); got != "Hello Ada, {{nmae}}. Be brief." {
+	if got := o.Render("test.greet", map[string]string{"name": "Ada"}, greet); got != "Hello Ada, {{nmae}}. Be brief." {
 		t.Errorf("rendered %q", got)
 	}
-	d, _ := Lookup("test.greet")
+	d, _ := Lookup("test.greet", greet)
 	if d.Group != "Plugins" || d.File != filepath.Join("prompts", "test.greet.md") {
 		t.Errorf("a registered prompt: %+v", d)
 	}
-	unregister()
 	if _, ok := Lookup("test.greet"); ok {
-		t.Error("unregistered, it's still on the page")
+		t.Error("a prompt not registered is on the page")
 	}
 }
 

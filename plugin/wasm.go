@@ -10,8 +10,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -20,7 +20,7 @@ import (
 // WASMPages is the most memory a module may have, in 64 KiB pages: 64 MiB.
 const WASMPages = 1024
 
-// WASM runs WASM plugins in wazero (plugins.md, "Four tiers"). A module has no way out but the host functions
+// WASM runs WASM plugins in wazero. A module has no way out but the host functions
 // it imports from "oriel", each checked by the guard, and WASI with no files, environment or sockets (its
 // stdout and stderr go to the plugin's log).
 //

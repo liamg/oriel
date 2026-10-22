@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // fakeCodex is `codex` for the tests: --version, and an app-server speaking protocol v2 that plays the

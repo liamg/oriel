@@ -1,5 +1,5 @@
 // Package codex is the Codex agent.Provider: `codex app-server` (protocol v2, JSON-RPC over JSONL on stdio),
-// signed in with ChatGPT so turns are billed to the plan (agents.md, spikes/P0-5-codex-billing.md).
+// signed in with ChatGPT so turns are billed to the plan.
 package codex
 
 import (
@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // AllowAPIKey, set to 1 in StartSpec.Env, lets a session run on an API-key login, billed per token.

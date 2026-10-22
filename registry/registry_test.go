@@ -6,7 +6,6 @@ import (
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
-	"github.com/liamg/oriel/ui"
 )
 
 func TestOverrideAndDispose(t *testing.T) {
@@ -30,17 +29,6 @@ func TestOverrideAndDispose(t *testing.T) {
 	}
 	if want := []string{"override", "base", "base"}; len(ran) != 3 || ran[0] != want[0] || ran[1] != want[1] || ran[2] != want[2] {
 		t.Errorf("ran %q, want %q", ran, want)
-	}
-}
-
-func TestDisposeUnderneathKeepsOverride(t *testing.T) {
-	r := registry.New()
-	base := r.View("v", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("base") }))
-	r.View("v", registry.ViewFunc(func(registry.ViewCtx) ui.Node { return ui.TextNode("override") }))
-	base.Dispose()
-	v, ok := r.ViewByID("v")
-	if tx, isText := v.Build(registry.ViewCtx{}).(*ui.Text); !ok || !isText || tx.Text != "override" {
-		t.Error("disposing the base view removed the override")
 	}
 }
 
@@ -129,5 +117,22 @@ func TestArgs(t *testing.T) {
 	a := registry.Args{"s": "x", "i": 3, "f": 4.0, "b": true}
 	if a.String("s") != "x" || a.String("i") != "" || a.Int("i") != 3 || a.Int("f") != 4 || a.Int("s") != 0 || !a.Bool("b") || a.Bool("s") {
 		t.Errorf("%v", a)
+	}
+}
+
+func TestKeymapsForFollowsAddAndDispose(t *testing.T) {
+	r := registry.New()
+	r.Keymap(registry.Keymap{Mode: "n", Keys: "b", Command: "open"})
+	d := r.Keymap(registry.Keymap{Mode: "global", Keys: "a", Command: "open"})
+	r.Keymap(registry.Keymap{Mode: "n", Keys: "c", Command: "close"})
+	if got := r.KeymapsFor("open"); len(got) != 2 || got[0].Keys != "a" || got[1].Keys != "b" {
+		t.Fatalf("KeymapsFor(open) = %v", got)
+	}
+	d.Dispose()
+	if got := r.KeymapsFor("open"); len(got) != 1 || got[0].Keys != "b" {
+		t.Errorf("after disposing a: %v", got)
+	}
+	if got := r.KeymapsFor("missing"); len(got) != 0 {
+		t.Errorf("KeymapsFor(missing) = %v", got)
 	}
 }

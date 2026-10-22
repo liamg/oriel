@@ -22,7 +22,7 @@ import (
 //go:embed grammars/PACKS.SHA256SUMS
 var packSumsSrc []byte
 
-// PackLimit is the most a grammar pack may hold, unpacked: a plugin's limit (catalog.md).
+// PackLimit is the most a grammar pack may hold, unpacked, the same as a plugin's.
 const PackLimit = 20 << 20
 
 // ErrPackMismatch is a pack that isn't exactly what the checksum list says (errors.Is).
@@ -39,7 +39,7 @@ var packs = sync.OnceValue(func() PackSums {
 	return s
 })
 
-// Packs is the checksum list the binary ships: the only packs it installs (deps.md).
+// Packs is the checksum list the binary ships: the only packs it installs.
 func Packs() PackSums { return packs() }
 
 // ParsePackSums reads a list in sha256sum's form, one "<sha256>  <pack>/<file>" a line.

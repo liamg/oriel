@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/update"
 )
 
@@ -19,6 +22,20 @@ func TestAppBundle(t *testing.T) {
 	}
 	if _, _, ok := appBundle("/usr/local/bin/oriel"); ok {
 		t.Error("a plain binary is a bundle")
+	}
+}
+
+// What a copy updates from: Oriel.app from its bundle, a Linux binary from the release's archive, a Mac binary alone.
+func TestInstallerFor(t *testing.T) {
+	for _, c := range []struct{ exe, goos, target, kind string }{
+		{"/Applications/Oriel.app/Contents/MacOS/oriel", "darwin", "/Applications/Oriel.app", update.KindBundle},
+		{"/usr/local/bin/oriel", "darwin", "/usr/local/bin/oriel", update.KindBinary},
+		{"/home/u/.local/bin/oriel", "linux", "/home/u/.local/bin/oriel", update.KindArchive},
+	} {
+		in, kind := installerFor(c.exe, c.goos, "/state/updates")
+		if in.Target != c.target || kind != c.kind || in.Dir != "/state/updates" {
+			t.Errorf("installerFor(%q, %s) = %+v, %s; want %s, %s", c.exe, c.goos, in, kind, c.target, c.kind)
+		}
 	}
 }
 
@@ -66,5 +83,71 @@ func TestUpdateSelf(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(in.Target); string(b) != string(body) {
 		t.Fatalf("installed %q", b)
+	}
+}
+
+// A second Oriel, refused the lock, leaves the first's pending update alone: only the one holding it runs Boot.
+func TestBootRunsOnlyUnderTheLock(t *testing.T) {
+	home, root := t.TempDir(), t.TempDir()
+	in := &update.Installer{Target: filepath.Join(root, "oriel"), Dir: filepath.Join(root, "updates"),
+		Probe: func(context.Context, string, string) error { return nil }}
+	if err := os.WriteFile(in.Target, []byte("old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := []byte("new")
+	a := update.Describe("oriel", update.Platform(), update.KindBinary, body)
+	if err := in.Stage(context.Background(), update.Manifest{Version: "2.0.0"}, a, bytes.NewReader(body)); err != nil {
+		t.Fatal(err)
+	}
+	if err := in.Swap(); err != nil {
+		t.Fatal(err)
+	}
+	first, err := lock(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg app.Config
+	if err := claim(home, &cfg, in); !errors.Is(err, ErrRunning) {
+		t.Fatalf("claim with the lock held = %v", err)
+	}
+	if p, ok := in.Pending(); !ok || p.Boots != 0 {
+		t.Fatalf("a refused start booted the update: %+v, %v", p, ok)
+	}
+	first.Close()
+
+	if err := claim(home, &cfg, in); err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+	cfg.Started()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if _, ok := in.Pending(); !ok {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the start holding the lock never confirmed the update")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if b, _ := os.ReadFile(in.Target); string(b) != "new" {
+		t.Errorf("Target = %q", b)
+	}
+}
+
+type closer struct{ closed *[]string }
+
+func (c closer) Close() error { *c.closed = append(*c.closed, "logs"); return nil }
+
+// The log is closed, after everything that may still log, before the app exits.
+func TestShutdownClosesTheLogLast(t *testing.T) {
+	var got []string
+	stop := func() { got = append(got, "host") }
+	if code := shutdown(nil, closer{&got}, stop); code != 0 || strings.Join(got, ",") != "host,logs" {
+		t.Errorf("shutdown = %d, %q", code, got)
+	}
+	got = nil
+	if code := shutdown(errors.New("boom"), closer{&got}, stop); code != 1 || strings.Join(got, ",") != "host,logs" {
+		t.Errorf("shutdown with an error = %d, %q", code, got)
 	}
 }

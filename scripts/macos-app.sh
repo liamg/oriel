@@ -1,5 +1,5 @@
 #!/bin/sh
-# Assembles and signs Oriel.app (distribution.md): make app runs it after make build.
+# Assembles and signs Oriel.app: make app runs it after make build.
 #
 #	scripts/macos-app.sh APP EXE ICNS VERSION IDENTITY
 #
@@ -29,6 +29,7 @@ rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$exe" "$app/Contents/MacOS/oriel"
 cp "$icns" "$app/Contents/Resources/oriel.icns"
+cp "$here/../LICENSE" "$here/../THIRD_PARTY_NOTICES" "$app/Contents/Resources/"
 cat >"$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -32,6 +32,7 @@ type Interaction struct {
 	Mods          render.Mods       // the modifiers held at its last press
 	Dropped       *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
 	DragOver      bool              // a drag of a kind it takes is over it now
+	Access        []AccessAction    // what assistive technology asked of it since the last frame, of its Style.Actions
 
 	pos render.Point
 	u   *UI
@@ -106,8 +107,14 @@ type input struct {
 	help    string // a help page asked for since the last frame
 	dnd     *dragging
 	dropped map[ID]DragData
+	access  map[ID][]AccessAction    // UI.Act's actions for widgets, by node
 	passed  map[ID][]render.KeyEvent // keys a node was given and didn't take, by that node
-	ask     focusAsk                 // Ctx.Focus's, this frame
+	ask     focusAsk                 // Ctx.Focus's or Ctx.FocusInto's, this frame
+	request focusAsk                 // Ctx.RequestFocus's, until its target is built or the user moves on
+	touched int                      // presses and keys so far: a request asked before the latest is stale
+	trail   []ID                     // what held focus before, latest last: focus goes back there when an overlay closes
+	settled ID                       // focus as the last frame left it
+	blurred ID                       // what Ctx.Blur took focus from, this frame
 	bar     *barDrag                 // a scrollbar thumb being dragged
 	held    render.Mods              // the modifier keys down
 	heldAt  time.Time                // when the set held last changed
@@ -115,30 +122,214 @@ type input struct {
 }
 
 type focusAsk struct {
-	id  ID
-	z   int // the layer it was asked from
-	set bool
+	id      ID
+	z       int // the layer it was asked from
+	set     bool
+	into    bool // a transition into id: focus goes to its default target
+	touched int  // input.touched when it was asked
+	frame   int  // the frame it was asked in
 }
 
-// settleFocus moves focus where this frame asked, unless what has it is in a higher layer and still there.
+// trailMax is how much of what held focus before is remembered.
+const trailMax = 32
+
+// settleFocus moves focus where this frame asked, unless what has it is in a higher layer and still there. When what
+// had focus is gone and nothing asked, focus goes back to what held it before an overlay that closed, or else to the
+// default target of the nearest container still there.
 func (u *UI) settleFocus() {
-	a := u.in.ask
-	u.in.ask = focusAsk{}
-	if !a.set {
+	in := &u.in
+	u.noteFocus()
+	lost := in.focus != 0 && !u.alive(in.focus)
+	a := in.ask
+	in.ask = focusAsk{}
+	r := in.request
+	_, built := u.byID[r.id]
+	if r.set && (r.touched != in.touched || !built && r.into) {
+		in.request, r = focusAsk{}, focusAsk{}
+	}
+	ready := r.set && built && !(r.into && u.defaultIn(r.id) == 0)
+	if ready {
+		in.request = focusAsk{}
+	}
+	request := func() bool {
+		if !ready {
+			return false
+		}
+		if u.applyFocus(r, lost) {
+			return true
+		}
+		in.request = r // under what holds focus: it waits for that to close
+		return false
+	}
+	ask := func() bool { return a.set && u.applyFocus(a, lost) }
+	var moved bool
+	if a.z > r.z {
+		moved = ask() || request()
+	} else {
+		moved = request() || ask()
+	}
+	switch {
+	case !moved && lost:
+		u.restoreFocus()
+	case !moved && in.focus == 0 && in.blurred != 0:
+		in.focus = u.containerDefault(in.blurred)
+	}
+	in.blurred = 0
+	u.noteFocus()
+}
+
+// containerDefault is where focus goes when from gives it up: the default target of the nearest container of it, but
+// from, short of the overlay it's on; or nothing.
+func (u *UI) containerDefault(from ID) ID {
+	e, ok := u.byID[from]
+	if !ok {
+		return 0
+	}
+	for e = e.parent; e != nil; e = e.parent {
+		if t := u.defaultIn(e.id); t != 0 && t != from {
+			return t
+		}
+		if e.style.Focusable && !e.style.Disabled && e.id != 0 {
+			return e.id
+		}
+		if e.style.Float != nil && e.style.Z > 0 {
+			return 0
+		}
+	}
+	return 0
+}
+
+// noteFocus adds what held focus to the trail when focus has moved on from it.
+func (u *UI) noteFocus() {
+	in := &u.in
+	if in.focus == in.settled {
 		return
 	}
+	if in.settled != 0 {
+		in.trail = append(slices.DeleteFunc(in.trail, func(id ID) bool { return id == in.settled }), in.settled)
+		if len(in.trail) > trailMax {
+			in.trail = in.trail[len(in.trail)-trailMax:]
+		}
+	}
+	in.settled = in.focus
+}
+
+// applyFocus moves focus as a asks; it says whether a was honoured.
+func (u *UI) applyFocus(a focusAsk, lost bool) bool {
+	in := &u.in
+	target := a.id
+	if a.into {
+		if !lost && in.focus != 0 && in.focus != a.id && u.builtWithin(in.focus, a.id) {
+			return true
+		}
+		target = u.defaultIn(a.id)
+		if target == 0 {
+			if _, built := u.byID[a.id]; built {
+				// Nothing in it takes focus yet: it may be loading. Focus goes there when it does, unless the user
+				// moves on first; until then it stays where it is.
+				in.request = focusAsk{id: a.id, z: a.z, set: true, into: true, touched: in.touched}
+			}
+			return true
+		}
+	}
+	z := a.z
 	if e, ok := u.byID[a.id]; ok {
-		a.z = max(a.z, e.layer())
+		z = max(z, e.layer())
 	}
-	if e, ok := u.byID[u.in.focus]; ok && u.in.focus != 0 && e.layer() > a.z {
-		return
+	if e, ok := u.byID[target]; ok && target != 0 {
+		z = max(z, e.layer())
 	}
-	u.in.focus, u.in.visible = a.id, false
+	if e, ok := u.byID[in.focus]; ok && !lost && in.focus != 0 && e.layer() > z {
+		return false
+	}
+	in.focus, in.visible = target, false
+	return true
+}
+
+// restoreFocus finds focus a home after what had it went: what held it before, when it was on an overlay that's
+// closed; otherwise the default target of the nearest container of it that's still there.
+func (u *UI) restoreFocus() {
+	in := &u.in
+	gone := in.focus
+	in.focus, in.visible = 0, false
+	for id := gone; id != 0; id = u.parents[id] {
+		if u.overlays[id] {
+			if _, open := u.byID[id]; !open {
+				for i := len(in.trail) - 1; i >= 0; i-- {
+					if u.alive(in.trail[i]) {
+						in.focus, in.trail = in.trail[i], in.trail[:i]
+						return
+					}
+				}
+			}
+			break
+		}
+	}
+	for id := u.parents[gone]; ; id = u.parents[id] {
+		if _, ok := u.byID[id]; ok {
+			for e := u.byID[id]; e != nil; e = e.parent {
+				if t := u.defaultIn(e.id); t != 0 {
+					in.focus = t
+					return
+				}
+			}
+			return
+		}
+		if id == 0 {
+			return
+		}
+	}
+}
+
+// alive says id is built this frame and enabled, so it can hold focus.
+func (u *UI) alive(id ID) bool {
+	e, ok := u.byID[id]
+	return ok && !e.style.Disabled
+}
+
+// builtWithin is Within for this frame's tree, as it's built.
+func (u *UI) builtWithin(id, root ID) bool {
+	for e := u.byID[id]; e != nil; e = e.parent {
+		if e.id == root {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultIn is where focus goes on entering id: the DefaultFocus node in it on the highest layer, the first built
+// of those; else id itself if it takes focus; else nothing.
+func (u *UI) defaultIn(id ID) ID {
+	root, ok := u.byID[id]
+	if !ok {
+		return 0
+	}
+	var best *elem
+	var walk func(e *elem)
+	walk = func(e *elem) {
+		for _, k := range e.kids {
+			if k.style.Disabled {
+				continue
+			}
+			if k.style.DefaultFocus && (best == nil || k.layer() > best.layer()) {
+				best = k
+			}
+			walk(k)
+		}
+	}
+	walk(root)
+	switch {
+	case best != nil:
+		return best.id
+	case root.style.Focusable && !root.style.Disabled && id != 0:
+		return id
+	}
+	return 0
 }
 
 // pending reports whether input arrived for this frame's widgets to read.
 func (in *input) pending() bool {
-	return len(in.clicks) > 0 || len(in.keys) > 0 || len(in.context) > 0 || len(in.wheel) > 0 || len(in.dropped) > 0
+	return len(in.clicks) > 0 || len(in.keys) > 0 || len(in.context) > 0 || len(in.wheel) > 0 || len(in.dropped) > 0 || len(in.access) > 0
 }
 
 // Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame. It reports whether the
@@ -321,12 +512,14 @@ func (u *UI) Interaction(id ID) Interaction {
 		it.Dropped = &d
 	}
 	it.DragOver = in.dnd != nil && in.dnd.moving && in.dnd.target == id
+	it.Access = in.access[id]
 	return it
 }
 
 // Key gives a key to the focused node, for its next frame. It reports whether the focused node takes keys
 // (it has a KeyMode); if not, nothing does.
 func (u *UI) Key(ev render.KeyEvent) bool {
+	u.in.touched++
 	if u.selKey(ev) {
 		return true
 	}
@@ -357,6 +550,7 @@ func (u *UI) Mods(m render.Mods) {
 // Chord says a key went down: the modifiers held are part of a chord now, not held alone. A press does too.
 // With none held there's no chord.
 func (u *UI) Chord() {
+	u.in.touched++
 	if u.in.held != 0 {
 		u.in.chorded = true
 	}
@@ -476,7 +670,7 @@ func (u *UI) HelpRequest() (string, bool) {
 }
 
 // WithoutHelp lists interactive nodes in the latest frame that have no help id, themselves or above them:
-// help.md's lint.
+// the help lint.
 func (u *UI) WithoutHelp() []ID {
 	var out []ID
 	for id, f := range u.flags {
@@ -565,6 +759,9 @@ func (u *UI) Cursor() render.Cursor {
 // SetClock replaces time.Now, for tests.
 func (u *UI) SetClock(now func() time.Time) { u.clock = now }
 
+// Frames is how many frames have been built.
+func (u *UI) Frames() int { return u.frame }
+
 // Now is the time on the UI's clock: the frame's, a test's fixed one.
 func (u *UI) Now() time.Time { return u.now() }
 
@@ -576,8 +773,14 @@ func (u *UI) now() time.Time {
 }
 
 // NextFrame is when the UI next needs a frame without any input: now while a spring is moving, at a
-// tooltip's delay, or zero when nothing is pending.
+// tooltip's delay, or zero when nothing is pending or the window is hidden.
 func (u *UI) NextFrame() time.Time {
+	switch {
+	case u.hidden:
+		return time.Time{}
+	case u.shown:
+		return u.now()
+	}
 	if u.animating {
 		return u.now()
 	}

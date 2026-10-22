@@ -5,7 +5,8 @@ import (
 	"testing"
 )
 
-// settings.md, "sandbox.*": a network rule is "allow|deny host[:port] [private]", a gateway rule "allow|ask|deny tool".
+// docs/configuration.md, sandbox.*: a network rule is "allow|deny host[:port] [private]", a gateway rule
+// "allow|ask|deny tool".
 func TestRulesReadFromTheirStringForm(t *testing.T) {
 	for _, tt := range []struct {
 		in   string
@@ -52,7 +53,7 @@ func TestRulesReadFromTheirStringForm(t *testing.T) {
 	}
 }
 
-// settings.md, "sandbox.servers": a server is an https URL (the HTTP transport) or a command line (stdio), read into
+// sandbox.servers: a server is an https URL (the HTTP transport) or a command line (stdio), read into
 // Claude's mcpServers form.
 func TestServersReadFromTheirStringForm(t *testing.T) {
 	for in, want := range map[string]string{

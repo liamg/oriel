@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// ui.md 04: "A pasted ticket ID expands into a card": the first tracker by order whose keys take it looks it up.
+// A pasted ticket ID expands into a card: the first tracker by order whose keys take it looks it up.
 func TestTicketTrackers(t *testing.T) {
 	r := registry.New()
 	if _, ok := registry.TrackerFor(r, "ENG-2231"); ok {

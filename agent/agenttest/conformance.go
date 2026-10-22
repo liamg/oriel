@@ -1,5 +1,5 @@
-// Package agenttest is the provider conformance suite (agents.md → Interface, testing.md → agent/*): every
-// provider runs it against a fake of its CLI that plays the scenarios below, and on demand against the real one.
+// Package agenttest is the provider conformance suite: every provider runs it against a fake of its CLI that plays
+// the scenarios below, and on demand against the real one.
 //
 // The fakes answer these prompts, and no others:
 //
@@ -25,6 +25,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/isolate"
 )
 
 // Harness starts the provider under test.
@@ -84,6 +85,7 @@ func Start(t *testing.T, h Harness) *Session {
 // StartIn starts a session in dir, resuming id when it isn't "".
 func StartIn(t *testing.T, h Harness, dir, id string) *Session {
 	t.Helper()
+	isolate.Test(t)
 	spec := h.Spec(t, dir)
 	spec.Cwd = dir
 	spec.Tools = append(spec.Tools, Echo)
@@ -261,7 +263,7 @@ func resume(t *testing.T, h Harness) {
 	}
 }
 
-// loginExpired: a signed-out error raises AuthExpired, naming the provider and how to sign in again (AI-13).
+// loginExpired: a signed-out error raises AuthExpired, naming the provider and how to sign in again.
 func loginExpired(t *testing.T, h Harness) {
 	s := Start(t, h)
 	s.Send("lose the login")

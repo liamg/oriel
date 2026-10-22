@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/internal/testhook"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -55,9 +56,7 @@ func TestInputSelectionVisible(t *testing.T) {
 			for _, v := range []theme.Variant{theme.Dark, theme.Light} {
 				for _, lines := range []int{0, 4} {
 					t.Run(fmt.Sprintf("%s/%s/%s/%d-lines", goos, src.Name(), v, lines), func(t *testing.T) {
-						was := platform
-						platform = platformMods(goos)
-						t.Cleanup(func() { platform = was })
+						testhook.Set(t, &platform, platformMods(goos))
 						st, err := theme.Stack(theme.Builtins(), src.Name())
 						if err != nil {
 							t.Fatal(err)

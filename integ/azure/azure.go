@@ -1,6 +1,6 @@
 // Package azure is the Azure DevOps plugin's process: the pull requests asking for your review and a project's own,
-// raised, read and merged, over Azure DevOps' REST API (hosts.md). It never holds the token: each request goes
-// through the host's http.request, which adds it only for Azure DevOps' hosts (security.md).
+// raised, read and merged, over Azure DevOps' REST API. It never holds the token: each request goes
+// through the host's http.request, which adds it only for Azure DevOps' hosts.
 package azure
 
 import (

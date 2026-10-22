@@ -95,11 +95,13 @@ func Script(parts ...[][]float32) [][]float32 {
 	return out
 }
 
-// Transcriber hears a word for every Per of loud audio in a clip (Word, "la" by default), or says Text.
+// Transcriber hears a word for every Per of loud audio in a clip (Word, "la" by default), or says Text; or, with
+// Say, says each of its lines in turn, the last again once they run out.
 type Transcriber struct {
 	Word string
 	Per  time.Duration // 200 ms by default
 	Text func(heard string) string
+	Say  []string
 	Err  error
 
 	mu      sync.Mutex
@@ -109,9 +111,13 @@ type Transcriber struct {
 func (f *Transcriber) Transcribe(_ context.Context, wav []byte, prompt string) (string, error) {
 	f.mu.Lock()
 	f.Prompts = append(f.Prompts, prompt)
+	n := len(f.Prompts)
 	f.mu.Unlock()
 	if f.Err != nil {
 		return "", f.Err
+	}
+	if len(f.Say) > 0 {
+		return f.Say[min(n, len(f.Say))-1], nil
 	}
 	loud := 0
 	for i := 44; i+voice.FrameSamples*2 <= len(wav); i += voice.FrameSamples * 2 {
@@ -130,8 +136,8 @@ func (f *Transcriber) Transcribe(_ context.Context, wav []byte, prompt string) (
 	if word == "" {
 		word = "la"
 	}
-	n := int(time.Duration(loud) * 20 * time.Millisecond / per)
-	heard := strings.TrimSpace(strings.Repeat(word+" ", n))
+	words := int(time.Duration(loud) * 20 * time.Millisecond / per)
+	heard := strings.TrimSpace(strings.Repeat(word+" ", words))
 	if f.Text != nil {
 		return f.Text(heard), nil
 	}

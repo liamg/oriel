@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,7 +12,7 @@ import (
 	"github.com/liamg/oriel/toml"
 )
 
-// ManifestFile is a plugin's manifest, at its root (catalog.md).
+// ManifestFile is a plugin's manifest, at its root.
 const ManifestFile = "oriel.toml"
 
 // Manifest is what a plugin says about itself. Built-ins fill in only ID.
@@ -22,21 +23,21 @@ type Manifest struct {
 	Description string
 	License     string
 	Icon        string
-	Runs        string   // app, session or both (security.md); app when ""
+	Runs        string   // app, session or both; app when ""
 	Lazy        Lazy     // when to load it; at start when empty
 	Binaries    []string // the os/arch pairs it ships a process binary for
 	Permissions []Grant  // what it declares, sorted by capability
 	Contributes Contributes
 }
 
-// Lazy is what loads a plugin that isn't loaded at start.
-type Lazy struct {
-	Commands, Events, Keys, Filetypes, Omnibox []string
-}
-
-// Empty is a plugin loaded at start.
-func (l Lazy) Empty() bool {
-	return len(l.Commands)+len(l.Events)+len(l.Keys)+len(l.Filetypes)+len(l.Omnibox) == 0
+// CheckID says why id isn't <owner>/<name>: two plain path elements, neither "." nor "..".
+func CheckID(id string) error {
+	owner, name, ok := strings.Cut(id, "/")
+	if !ok || !fs.ValidPath(id) || strings.Contains(name, "/") || strings.Contains(id, `\`) ||
+		owner == "." || owner == ".." || name == "." || name == ".." {
+		return fmt.Errorf("id %q isn't <owner>/<name>", id)
+	}
+	return nil
 }
 
 // LoadManifest reads dir's oriel.toml.
@@ -57,8 +58,8 @@ func ParseManifest(src []byte) (Manifest, error) {
 	v := doc.Value()
 	m := Manifest{ID: tstr(v["id"]), Version: tstr(v["version"]), Oriel: tstr(v["oriel"]), Description: tstr(v["description"]),
 		License: tstr(v["license"]), Icon: tstr(v["icon"]), Runs: tstr(v["runs"]), Binaries: tstrs(v["binaries"])}
-	if owner, name, ok := strings.Cut(m.ID, "/"); !ok || owner == "" || name == "" || strings.Contains(name, "/") {
-		return m, fmt.Errorf("oriel.toml: id %q isn't <owner>/<name>", m.ID)
+	if err := CheckID(m.ID); err != nil {
+		return m, fmt.Errorf("oriel.toml: %w", err)
 	}
 	if m.Version != "" {
 		if _, err := ParseVersion(m.Version); err != nil {
@@ -81,8 +82,7 @@ func ParseManifest(src []byte) (Manifest, error) {
 		}
 	}
 	if l, ok := v["lazy"].(map[string]any); ok {
-		m.Lazy = Lazy{Commands: tstrs(l["commands"]), Events: tstrs(l["events"]), Keys: tstrs(l["keys"]),
-			Filetypes: tstrs(l["filetypes"]), Omnibox: tstrs(l["omnibox"])}
+		m.Lazy = ParseLazy(l)
 	}
 	if p, ok := v["permissions"].(map[string]any); ok {
 		if m.Permissions, err = permissions("", p); err != nil {

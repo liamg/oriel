@@ -51,8 +51,8 @@ func taggedPlugin(t *testing.T, manifest string) (dir, commit string) {
 
 const jiraManifest = "id = \"acme/jira\"\nversion = \"0.4.2\"\ndescription = \"Jira tickets in Oriel\"\n"
 
-// PL-17 done when: "Against a fake GitHub, publishing a new version and a new plugin each open a PR with the right
-// plugin.toml diff." catalog.md: publish "reads oriel.toml and the current tag, then opens the PR through gh (fork
+// Against a fake GitHub, publishing a new version and a new plugin each open a PR with the right plugin.toml diff.
+// Publish "reads oriel.toml and the current tag, then opens the PR through gh (fork
 // and branch, as Homebrew's bump-formula-pr does)", and "A new plugin always starts with a reviewed PR."
 func TestPublish(t *testing.T) {
 	dir, commit := taggedPlugin(t, jiraManifest)
@@ -94,8 +94,7 @@ reviewed = "` + prURL + `"
 	}
 }
 
-// PL-17 done when: "On a trusted plugin, publish opens no PR." catalog.md: "For a trusted plugin it checks the tag
-// and says there's nothing to publish."
+// On a trusted plugin, publish opens no PR: it checks the tag and says there's nothing to publish.
 func TestPublishTrusted(t *testing.T) {
 	dir, _ := taggedPlugin(t, jiraManifest)
 	gh := &fakeRegistrar{listings: map[string]string{"acme/jira": "repo = \"github.com/acme/oriel-jira\"\ntrusted = true\n"}}

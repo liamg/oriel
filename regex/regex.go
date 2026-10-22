@@ -1,5 +1,5 @@
 // Package regex is PCRE2's pattern syntax over text, for everything that isn't the vim engine: project search and
-// replace, the plain engine's find, plugins and Lua (editor.md, "Regex"). It's a second parser on the vim engine's
+// replace, the plain engine's find, plugins and Lua. It's a second parser on the vim engine's
 // backtracking matcher (vimregex): look-around, back references, atomic groups and possessive quantifiers, named
 // groups, \K, Unicode properties. Recursion, conditionals, verbs and callouts aren't supported (IsUnsupported).
 package regex
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/liamg/oriel/vim/vimregex"
+	"github.com/liamg/oriel/regex/vimregex"
 )
 
 // Flags are the options PCRE2 takes outside the pattern: i, m, s, x, xx and n.
@@ -115,9 +115,9 @@ func (r *Regex) find(sub *subject, from int, notEmpty bool) ([]int, error) {
 }
 
 // MatchString reports whether s has a match.
-func (r *Regex) MatchString(s string) bool {
-	loc, _ := r.FindIndex(s, 0)
-	return loc != nil
+func (r *Regex) MatchString(s string) (bool, error) {
+	loc, err := r.FindIndex(s, 0)
+	return loc != nil, err
 }
 
 // FindAllIndex is every match in s, up to n (all when n < 0), as FindIndex gives each. After an empty match the

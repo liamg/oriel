@@ -95,7 +95,7 @@ func unset(name string) error {
 }
 
 // Fetch makes r's request for p once the guard allows each secret it names to go to the request's host. A
-// request carrying a secret goes over https only and doesn't follow redirects; no error or answer carries the
+// request carrying a secret goes over https only and doesn't follow redirects, and each redirect meets the net grant; no error or answer carries the
 // secret's value.
 func Fetch(ctx context.Context, n Network, p Caller, r HTTPRequest) (*HTTPResponse, error) {
 	u, err := requestURL(n, r)
@@ -150,8 +150,21 @@ func Fetch(ctx context.Context, n Network, p Caller, r HTTPRequest) (*HTTPRespon
 		req.Header.Set("Authorization", v)
 	}
 	c := *n.Net()
-	if len(secrets) > 0 {
-		c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	next := c.CheckRedirect
+	c.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(secrets) > 0 {
+			return http.ErrUseLastResponse
+		}
+		if err := p.Check(CapNet, req.URL.Host); err != nil {
+			return err
+		}
+		if next != nil {
+			return next(req, via)
+		}
+		if len(via) >= 10 {
+			return errors.New("stopped after 10 redirects")
+		}
+		return nil
 	}
 	resp, err := c.Do(req)
 	if err != nil {

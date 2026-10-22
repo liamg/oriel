@@ -42,7 +42,7 @@ func gitPatch(t *testing.T, r *gittest.Repo, n string, path string) string {
 	return b.String()
 }
 
-// RV-1: the diff view's hunks are git's, with git's context and line numbers: changes within twice the context share
+// The diff view's hunks are git's, with git's context and line numbers: changes within twice the context share
 // a hunk.
 // ref: oracle git
 func TestUnifiedMatchesGit(t *testing.T) {

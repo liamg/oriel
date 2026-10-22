@@ -84,9 +84,12 @@ type noted struct {
 
 func (n noted) Scope() core.SessionID     { return n.Session }
 func (n noted) Apply(s *core.State) error { return nil }
+func (noted) Logged()                     {}
+
+// Event types are registered as their package starts, as a plugin's are.
+func init() { core.RegisterEvent[noted]("test.Noted") }
 
 func TestPluginEventsReplay(t *testing.T) {
-	core.RegisterEvent[noted]("test.Noted")
 	var log bytes.Buffer
 	a := New()
 	a.Subscribe(core.Filter{}, core.NewRecorder(&log).Record)

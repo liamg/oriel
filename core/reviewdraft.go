@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"maps"
 	"slices"
 	"time"
@@ -69,7 +70,12 @@ func (e ReviewDrafted) Apply(s *State) error {
 	if err != nil {
 		return err
 	}
+	rd, ok := DataOf[ReviewData](*se)
+	if !ok {
+		return fmt.Errorf("%s isn't a review", e.Session)
+	}
 	d := e.Draft.Clone()
-	se.Review = &d
+	rd.Draft = &d
+	se.SetData(rd)
 	return nil
 }

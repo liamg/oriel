@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// ui.md, "Reviews page": "new: asked, no review from you yet. Counts." "re-requested … Counts." "team ask: counts
+// Reviews page: "new: asked, no review from you yet. Counts." "re-requested … Counts." "team ask: counts
 // unless reviews.count_teams is off." "changes requested / commented … Doesn't count" "draft: listed last, never counts."
 func TestReviewCounts(t *testing.T) {
 	for _, c := range []struct {
@@ -32,7 +32,7 @@ func TestReviewCounts(t *testing.T) {
 	}
 }
 
-// ui.md, "Reviews page": "Groups: Waiting on you (oldest ask first), then In progress." "draft: listed last".
+// Reviews page: "Groups: Waiting on you (oldest ask first), then In progress." "draft: listed last".
 func TestSortReviews(t *testing.T) {
 	at := func(h int) time.Time { return time.Date(2026, 10, 19, h, 0, 0, 0, time.UTC) }
 	rs := []registry.ReviewRequest{
@@ -55,7 +55,7 @@ func TestSortReviews(t *testing.T) {
 	}
 }
 
-// hosts.md: a host's site is found by hostname, the repo by the remote's path, a PR by its URL's path;
+// A host's site is found by hostname, the repo by the remote's path, a PR by its URL's path;
 // RequestedReviews fills in Source and State, and a panicking host is an error.
 func TestCodeHostSites(t *testing.T) {
 	r := registry.New()

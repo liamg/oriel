@@ -346,7 +346,7 @@ func (Shaper) Shape(text string, f typeset.FontSpec) *typeset.Run {
 	adv := f.Size * 0.6
 	run := &typeset.Run{Text: text, Font: f, Ascent: f.Size * 1.1, Descent: f.Size * 0.3, Glyphs: make([]typeset.Glyph, 0, utf8.RuneCountInString(text))}
 	for _, r := range text {
-		run.Glyphs = append(run.Glyphs, typeset.Glyph{ID: typeset.GlyphID(r), X: run.Advance})
+		run.Glyphs = append(run.Glyphs, typeset.Glyph{ID: typeset.GlyphID(r), X: run.Advance, Rune: len(run.Glyphs)})
 		run.Advance += adv
 	}
 	return run

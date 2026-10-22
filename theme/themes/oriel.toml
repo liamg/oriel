@@ -1,5 +1,5 @@
 # Oriel's built-in theme: black, yellow and a little orange; and a light variant.
-# Values are the mockups' (_design/mockups/src/base.css and 17-light.html).
+# Values match the reference mockups (testdata/mockups).
 name = "oriel"
 
 [syntax]

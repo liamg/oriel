@@ -6,7 +6,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// RV-2: the review ledger is a query any feature asks (the Explorer, the summary, the Ship page): the first
+// The review ledger is a query any feature asks (the Explorer, the summary, the Ship page): the first
 // ReviewLedger by Order answers, a plugin's shadowing the built-in.
 func TestLedgerOf(t *testing.T) {
 	r := registry.New()
@@ -37,7 +37,7 @@ func TestLedgerOf(t *testing.T) {
 	}
 }
 
-// RV-2: every commit path asks the same gates; a gate that panics is left out, the rest answer by Order.
+// Every commit path asks the same gates; a gate that panics is left out, the rest answer by Order.
 func TestCheckCommit(t *testing.T) {
 	r := registry.New()
 	r.Contribute(registry.CommitGate{Name: "ledger", Order: 10, Check: func(c registry.CommitCheck) registry.GateResult {

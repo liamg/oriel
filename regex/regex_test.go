@@ -1,7 +1,9 @@
 package regex
 
 import (
+	"errors"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -49,5 +51,17 @@ func TestUnsupported(t *testing.T) {
 	}
 	if _, err := Compile(`a{5,4}`, Flags{}); err == nil || IsUnsupported(err) {
 		t.Errorf("a bad quantifier: %v", err)
+	}
+}
+
+// A match past the budget is an error, not a miss.
+func TestMatchStringTooComplex(t *testing.T) {
+	re := MustCompile(`(a*)*b`, Flags{})
+	ok, err := re.MatchString(strings.Repeat("a", 60))
+	if ok || !errors.Is(err, ErrTooComplex) {
+		t.Errorf("MatchString = %v, %v; want ErrTooComplex", ok, err)
+	}
+	if ok, err := re.MatchString("aab"); !ok || err != nil {
+		t.Errorf("MatchString(aab) = %v, %v", ok, err)
 	}
 }

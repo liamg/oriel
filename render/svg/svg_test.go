@@ -6,6 +6,8 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -165,5 +167,74 @@ func TestNotSVG(t *testing.T) {
 		if _, err := Parse([]byte(s)); err == nil {
 			t.Errorf("%q parsed", s)
 		}
+	}
+}
+
+// pathFrame keeps the paths drawn into it, and ignores the rest.
+type pathFrame struct {
+	render.Frame
+	paths []render.Path
+}
+
+func (p *pathFrame) Path(q *render.Path, _ render.Style) { p.paths = append(p.paths, *q) }
+func (p *pathFrame) PushClip(render.Rect, float32)       {}
+func (p *pathFrame) Pop()                                {}
+func (p *pathFrame) Rect(render.Rect, render.Style)      {}
+
+func manyPaths(n int) []byte {
+	var b strings.Builder
+	b.WriteString(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">`)
+	for i := range n {
+		x := i % 20 * 20
+		y := i / 20 * 20
+		b.WriteString(`<path fill="#c33" stroke="#000" d="M` + strconv.Itoa(x) + ` ` + strconv.Itoa(y) + ` l10 0 l0 10 q-5 5 -10 0 z"/>`)
+	}
+	b.WriteString(`</svg>`)
+	return []byte(b.String())
+}
+
+func TestDrawReusesPathsForTheSameRect(t *testing.T) {
+	d, err := Parse(manyPaths(200))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r1 := render.Rect{Max: render.Point{X: 200, Y: 200}}
+	r2 := render.Rect{Min: render.Point{X: 10, Y: 5}, Max: render.Point{X: 810, Y: 805}}
+	fresh := func(r render.Rect) []render.Path {
+		d, _ := Parse(manyPaths(200))
+		var f pathFrame
+		d.Draw(&f, r, nil)
+		return f.paths
+	}
+	for _, r := range []render.Rect{r1, r2, r1, r2} {
+		var f pathFrame
+		d.Draw(&f, r, nil)
+		want := fresh(r)
+		if len(f.paths) != len(want) {
+			t.Fatalf("%d paths, want %d", len(f.paths), len(want))
+		}
+		for i := range want {
+			if !slices.Equal(f.paths[i].Segs, want[i].Segs) {
+				t.Fatalf("path %d at %v differs from a fresh draw", i, r)
+			}
+		}
+	}
+	f := &pathFrame{paths: make([]render.Path, 0, 400)}
+	if n := testing.AllocsPerRun(20, func() { f.paths = f.paths[:0]; d.Draw(f, r1, nil) }); n > 0 {
+		t.Fatalf("drawing again at the same rect allocates %v times", n)
+	}
+}
+
+func BenchmarkDraw(b *testing.B) {
+	d, err := Parse(manyPaths(400))
+	if err != nil {
+		b.Fatal(err)
+	}
+	f := &pathFrame{paths: make([]render.Path, 0, 400)}
+	r := render.Rect{Max: render.Point{X: 800, Y: 800}}
+	b.ReportAllocs()
+	for b.Loop() {
+		f.paths = f.paths[:0]
+		d.Draw(f, r, nil)
 	}
 }

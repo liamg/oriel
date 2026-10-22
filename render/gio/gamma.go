@@ -85,7 +85,7 @@ func luma(c color.NRGBA) float64 {
 }
 
 // solid remaps a translucent fill's alpha so Gio's linear-light blending over the backdrop matches CSS's
-// sRGB blending (rendering.md, "Blending"), for the channel where the two differ most.
+// sRGB blending, for the channel where the two differ most.
 func (f *Frame) solid(v color.NRGBA) color.NRGBA {
 	if v.A == 255 || v.A == 0 {
 		return v

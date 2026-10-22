@@ -1,6 +1,7 @@
 // Command release makes a signed release of what's in a directory, as release.yml publishes it: each
-// oriel-<goos>-<goarch> binary and oriel-<goos>-<goarch>.app.tar.gz macOS bundle as an artifact, with manifest.json
-// and manifest.sig (update module). Anything else there (the DMGs) isn't the updater's, and isn't listed. The ed25519 key is
+// oriel-<version>-linux-<arch>.tar.gz archive, oriel-<goos>-<goarch> binary and oriel-<goos>-<goarch>.app.tar.gz
+// macOS bundle as an artifact, with manifest.json and manifest.sig (update package). Anything else there (the DMGs,
+// another version's archive) isn't the updater's, and isn't listed. The ed25519 key is
 // ORIEL_RELEASE_KEY, hex: a 32-byte seed or a 64-byte private key.
 //
 //	go run ./tools/cmd/release -version v0.5.0 -in dist -out release [-notes notes.md]
@@ -23,7 +24,7 @@ import (
 
 func main() {
 	version := flag.String("version", "", "the release's version tag: v0.5.0, or v0.5.0-rc.1 for nightly")
-	in := flag.String("in", "dist", "the directory of oriel-<goos>-<goarch> binaries and .app.tar.gz bundles")
+	in := flag.String("in", "dist", "the directory of Linux archives, oriel-<goos>-<goarch> binaries and .app.tar.gz bundles")
 	out := flag.String("out", "release", "where the release is written")
 	notes := flag.String("notes", "", "a markdown file of release notes")
 	genkey := flag.Bool("genkey", false, "print a new key pair and exit")
@@ -81,7 +82,7 @@ func run(version, in, out, notesFile string, key ed25519.PrivateKey, now time.Ti
 	}
 	files := map[string][]byte{}
 	for _, e := range entries {
-		platform, kind, ok := artifactOf(e.Name())
+		platform, kind, ok := artifactOf(e.Name(), version)
 		if !ok || e.IsDir() {
 			continue
 		}
@@ -93,7 +94,7 @@ func run(version, in, out, notesFile string, key ed25519.PrivateKey, now time.Ti
 		files[e.Name()] = b
 	}
 	if len(m.Artifacts) == 0 {
-		return fmt.Errorf("no oriel-<goos>-<goarch> artifacts in %s", in)
+		return fmt.Errorf("no oriel artifacts for %s in %s", version, in)
 	}
 	rel, err := update.Sign(key, m)
 	if err != nil {
@@ -102,11 +103,18 @@ func run(version, in, out, notesFile string, key ed25519.PrivateKey, now time.Ti
 	return update.Write(out, rel, files)
 }
 
-// artifactOf reads oriel-<goos>-<goarch> (a binary) or oriel-<goos>-<goarch>.app.tar.gz (a bundle).
-func artifactOf(name string) (platform, kind string, ok bool) {
+// artifactOf reads oriel-<version>-linux-<arch>.tar.gz (an archive), oriel-<goos>-<goarch> (a binary) or
+// oriel-<goos>-<goarch>.app.tar.gz (a bundle). version is the release's tag, whose v the archive's name drops.
+func artifactOf(name, version string) (platform, kind string, ok bool) {
 	kind = update.KindBinary
 	if base, found := strings.CutSuffix(name, ".app.tar.gz"); found {
 		name, kind = base, update.KindBundle
+	} else if base, found := strings.CutSuffix(name, ".tar.gz"); found {
+		arch, ok := strings.CutPrefix(base, "oriel-"+strings.TrimPrefix(version, "v")+"-linux-")
+		if !ok || arch == "" || strings.ContainsAny(arch, "-.") {
+			return "", "", false
+		}
+		return "linux/" + arch, update.KindArchive, true
 	}
 	rest, ok := strings.CutPrefix(name, "oriel-")
 	if !ok {

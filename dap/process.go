@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // Process is a running adapter: a connection to it, and a way to wait for it or kill it.
@@ -54,50 +54,11 @@ func command(spec AdapterSpec, dir string, vars map[string]string) *exec.Cmd {
 	}
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
-	cmd.WaitDelay = time.Second // a grandchild holding a pipe open doesn't hold up Wait
 	return cmd
 }
 
 func execStdio(spec AdapterSpec, dir string, stderr io.Writer) (Process, error) {
-	cmd := command(spec, dir, nil)
-	cmd.Stderr = stderr
-	inR, inW, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	outR, outW, err := os.Pipe()
-	if err != nil {
-		inR.Close()
-		inW.Close()
-		return nil, err
-	}
-	cmd.Stdin, cmd.Stdout = inR, outW
-	if err := cmd.Start(); err != nil {
-		inR.Close()
-		inW.Close()
-		outR.Close()
-		outW.Close()
-		return nil, err
-	}
-	inR.Close()
-	outW.Close()
-	return &stdioProcess{cmd: cmd, in: inW, out: outR}, nil
-}
-
-type stdioProcess struct {
-	cmd *exec.Cmd
-	in  *os.File
-	out *os.File
-}
-
-func (p *stdioProcess) Read(b []byte) (int, error)  { return p.out.Read(b) }
-func (p *stdioProcess) Write(b []byte) (int, error) { return p.in.Write(b) }
-func (p *stdioProcess) Kill() error                 { return p.cmd.Process.Kill() }
-func (p *stdioProcess) Wait() error                 { return p.cmd.Wait() }
-
-func (p *stdioProcess) Close() error {
-	p.in.Close()
-	return p.out.Close()
+	return jsonrpc.StartStdio(command(spec, dir, nil), stderr)
 }
 
 // execReverse listens, starts the adapter with the address, and takes the connection it makes.
@@ -109,11 +70,10 @@ func execReverse(ctx context.Context, spec AdapterSpec, dir string, stderr io.Wr
 	defer ln.Close()
 	cmd := command(spec, dir, map[string]string{"${addr}": ln.Addr().String()})
 	cmd.Stdout, cmd.Stderr = stderr, stderr
-	if err := cmd.Start(); err != nil {
+	p, err := jsonrpc.Spawn(cmd)
+	if err != nil {
 		return nil, err
 	}
-	exited := make(chan error, 1)
-	go func() { exited <- cmd.Wait() }()
 	type accepted struct {
 		c   net.Conn
 		err error
@@ -124,7 +84,7 @@ func execReverse(ctx context.Context, spec AdapterSpec, dir string, stderr io.Wr
 		got <- accepted{c, err}
 	}()
 	fail := func(err error) (Process, error) {
-		cmd.Process.Kill()
+		p.Kill()
 		return nil, err
 	}
 	select {
@@ -132,9 +92,10 @@ func execReverse(ctx context.Context, spec AdapterSpec, dir string, stderr io.Wr
 		if a.err != nil {
 			return fail(a.err)
 		}
-		return &netProcess{Conn: a.c, cmd: cmd, exited: exited}, nil
-	case err := <-exited:
-		return nil, fmt.Errorf("dap: %s exited before connecting: %v", spec.Name, err)
+		p.Connect(a.c)
+		return p, nil
+	case <-p.Exited():
+		return nil, fmt.Errorf("dap: %s exited before connecting: %v", spec.Name, p.Wait())
 	case <-ctx.Done():
 		return fail(ctx.Err())
 	case <-time.After(connectTimeout):
@@ -152,46 +113,31 @@ func execTCP(ctx context.Context, spec AdapterSpec, dir string, stderr io.Writer
 	ln.Close()
 	cmd := command(spec, dir, map[string]string{"${port}": port})
 	cmd.Stdout, cmd.Stderr = stderr, stderr
-	if err := cmd.Start(); err != nil {
+	p, err := jsonrpc.Spawn(cmd)
+	if err != nil {
 		return nil, err
 	}
-	exited := make(chan error, 1)
-	go func() { exited <- cmd.Wait() }()
 	deadline := time.Now().Add(connectTimeout)
 	for {
 		var d net.Dialer
 		c, err := d.DialContext(ctx, "tcp", "127.0.0.1:"+port)
 		if err == nil {
-			return &netProcess{Conn: c, cmd: cmd, exited: exited}, nil
+			p.Connect(c)
+			return p, nil
 		}
 		select {
-		case err := <-exited:
-			return nil, fmt.Errorf("dap: %s exited before listening: %v", spec.Name, err)
+		case <-p.Exited():
+			return nil, fmt.Errorf("dap: %s exited before listening: %v", spec.Name, p.Wait())
 		case <-ctx.Done():
-			cmd.Process.Kill()
+			p.Kill()
 			return nil, ctx.Err()
 		case <-time.After(50 * time.Millisecond):
 		}
 		if time.Now().After(deadline) {
-			cmd.Process.Kill()
+			p.Kill()
 			return nil, fmt.Errorf("dap: %s didn't listen on %s in %v", spec.Name, port, connectTimeout)
 		}
 	}
-}
-
-type netProcess struct {
-	net.Conn
-	cmd    *exec.Cmd
-	exited chan error
-	once   sync.Once
-	err    error
-}
-
-func (p *netProcess) Kill() error { return p.cmd.Process.Kill() }
-
-func (p *netProcess) Wait() error {
-	p.once.Do(func() { p.err = <-p.exited })
-	return p.err
 }
 
 // Installed reports whether the spec can run: it connects some other way, its probe succeeds, or its command is on

@@ -1,4 +1,4 @@
-# :set on the engine's options, which the IDE keeps in its registry (options.txt, ED-13).
+# :set on the engine's options, which the IDE keeps in its registry (options.txt).
 
 === :set sw+= adds to a number option
 ref:    nvim/options.txt *:set+=*
@@ -73,4 +73,32 @@ given:  |x
 keys:   :set sw=8 ts=8 noet<CR>:set invet<CR>>>
 expect:
   |        x
+mode:   normal
+
+=== :set sw=-1 is refused
+ref:    nvim/options.txt *:set=*
+quote:  Set string or number option to {value}.
+given:  |x
+keys:   :set sw=-1<CR>>>
+expect:
+  |	x
+msg:    "E487: Argument must be positive: sw=-1"
+mode:   normal
+
+=== :set ts=0 is refused
+ref:    nvim/options.txt *:set=*
+quote:  Set string or number option to {value}.
+given:  |x
+keys:   :set ts=0<CR>
+expect: |x
+msg:    "E487: Argument must be positive: ts=0"
+mode:   normal
+
+=== sw=0 indents by tabstop
+ref:    nvim/options.txt *'shiftwidth'*
+quote:  When zero the 'tabstop' value will be used.
+given:  |x
+keys:   :set sw=0 ts=4 et<CR>>>
+expect:
+  |    x
 mode:   normal

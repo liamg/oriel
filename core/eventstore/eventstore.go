@@ -2,6 +2,7 @@
 package eventstore
 
 import (
+	"reflect"
 	"slices"
 	"sync"
 
@@ -51,16 +52,21 @@ func (s *Store) Session(id core.SessionID) (core.Session, bool) {
 }
 
 // Apply applies ev to a copy of the state and keeps it only if ev applied cleanly. Then it calls every
-// matching subscriber, in the order they subscribed. Subscribers must not call Apply themselves.
+// matching subscriber, in the order they subscribed, with the event's times in UTC. An event that leaves the state as it was is dropped, unless
+// it's core.Logged. Subscribers must not call Apply themselves.
 func (s *Store) Apply(ev core.Event) error {
 	s.apply.Lock()
 	defer s.apply.Unlock()
 
+	ev = core.InUTC(ev)
 	s.mu.RLock()
 	next := s.state.Clone()
 	s.mu.RUnlock()
 	if err := ev.Apply(&next); err != nil {
 		return err
+	}
+	if _, logged := ev.(core.Logged); !logged && unchanged(s.State(), next) {
+		return nil
 	}
 	next.Seq++
 	next.Sessions, next.Notifications = slices.Clip(next.Sessions), slices.Clip(next.Notifications) // a reader's append copies
@@ -86,6 +92,9 @@ func (s *Store) Apply(ev core.Event) error {
 	}
 	return nil
 }
+
+// unchanged is whether next is was: slices and maps it shares with was compare at once.
+func unchanged(was, next core.State) bool { return reflect.DeepEqual(was, next) }
 
 func (s *Store) Subscribe(filter core.Filter, fn func(core.Event)) (cancel func()) {
 	s.mu.Lock()

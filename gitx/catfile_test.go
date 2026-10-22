@@ -3,8 +3,13 @@ package gitx
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/gitx/gittest"
 )
@@ -22,7 +27,7 @@ func TestFileAtReadsThroughOneGit(t *testing.T) {
 	r.Commit("Ada", "base")
 	hash := strings.TrimSpace(r.Git("rev-parse", "--short", "HEAD"))
 	runs := gittest.CountGit(t)
-	repo := Repo{Dir: r.Dir}
+	repo := Repo{Dir: r.Dir, Cache: testCache(t)}
 	for p := range files {
 		got, ok := repo.FileAt(context.Background(), hash, p)
 		if want := r.Git("cat-file", "blob", hash+":"+p); !ok || string(got) != want {
@@ -37,5 +42,76 @@ func TestFileAtReadsThroughOneGit(t *testing.T) {
 	}
 	if n := runs() - len(files); n > 1 {
 		t.Errorf("%d files read with %d gits", len(files)+2, n)
+	}
+}
+
+// A git that never answers holds up neither the call whose ctx ends nor one waiting behind it.
+func TestObjectStopsWithCtx(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("a shell script as git")
+	}
+	bin := t.TempDir()
+	if err := os.WriteFile(filepath.Join(bin, "git"), []byte("#!/bin/sh\nexec sleep 30\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	repo := Repo{Dir: t.TempDir(), Cache: testCache(t)}
+	ask := func(d time.Duration) chan error {
+		ch := make(chan error, 1)
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), d)
+			defer cancel()
+			_, _, err := repo.object(ctx, "0123456789:a.txt")
+			ch <- err
+		}()
+		return ch
+	}
+	first := ask(2 * time.Second)
+	time.Sleep(50 * time.Millisecond)
+	second := ask(100 * time.Millisecond)
+	select {
+	case err := <-second:
+		if err == nil {
+			t.Error("a read behind a hung git had no error")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("a read waiting behind a hung git outlived its ctx")
+	}
+	select {
+	case err := <-first:
+		if err == nil {
+			t.Error("a read from a hung git had no error")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("a read from a hung git outlived its ctx")
+	}
+}
+
+// testCache is a Cache closed when the test ends.
+func testCache(t *testing.T) *Cache {
+	c := NewCache()
+	t.Cleanup(c.Close)
+	return c
+}
+
+// Closing the cache stops its cat-file, and a Repo on it reads without one after.
+func TestCacheCloseStopsItsGit(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"a.txt": "a\n"})
+	r.Commit("Ada", "base")
+	hash := strings.TrimSpace(r.Git("rev-parse", "HEAD"))
+	c := NewCache()
+	repo := Repo{Dir: r.Dir, Cache: c}
+	if got, ok := repo.FileAt(context.Background(), hash, "a.txt"); !ok || string(got) != "a\n" {
+		t.Fatalf("%q %v", got, ok)
+	}
+	b := c.batch(r.Dir + "\x00")
+	proc := b.cmd.Process
+	c.Close()
+	if b.cmd != nil || proc.Signal(syscall.Signal(0)) == nil {
+		t.Error("the cat-file still runs after Close")
+	}
+	if got, ok := repo.FileAt(context.Background(), hash, "a.txt"); !ok || string(got) != "a\n" {
+		t.Errorf("after Close: %q %v", got, ok)
 	}
 }

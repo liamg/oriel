@@ -28,7 +28,7 @@ type header struct {
 	aot                bool
 }
 
-// Kinds of table, which decide how a table may be extended (toml.md, "Table").
+// Kinds of table, which decide how a table may be extended.
 type tkind int
 
 const (

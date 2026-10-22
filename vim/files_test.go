@@ -283,8 +283,8 @@ func (c *fakeClipboard) Write(primary bool, s string) {
 	}
 }
 
-// editor.md: "y, d, c, x and p use the system clipboard through the IDE's clipboard service, as nvim with
-// clipboard=unnamedplus"; named registers stay the engine's.
+// y, d, c, x and p use the system clipboard through the IDE's clipboard service, as nvim with
+// clipboard=unnamedplus; named registers stay the engine's.
 func TestClipboard(t *testing.T) {
 	s := newSession(t, t.TempDir())
 	clip := &fakeClipboard{}

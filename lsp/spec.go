@@ -9,7 +9,7 @@ import (
 )
 
 // ServerSpec is a language server: the languages it serves, how to start it, how to find a project's root,
-// and what to tell it. The app registers these as registry.LSPServer contributions; the two types have the
+// and what to tell it. The app registers these as lang.LSPServer (registry/lang) contributions; the two types have the
 // same fields, so each converts to the other.
 type ServerSpec struct {
 	Name     string          // "gopls"; also the diagnostics' owner and the log source

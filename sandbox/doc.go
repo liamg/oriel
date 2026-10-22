@@ -19,8 +19,9 @@
 //   - An egress.Session: GrantsPath EgressGrantsPath(root); Settings the
 //     projects' and user's EgressRules (with LoadAlways().Egress); Env
 //     egress.EnvRules(EndpointEnv(os.Environ(), cfg.Env, ClaudeSettings()));
-//     Always AddAlwaysEgress; Approver raises the network approval card and
-//     returns its answer (the connection is held meanwhile, up to Wait, 60s).
+//     Always AddAlwaysEgress; SaveFailed tells the user an allow was not
+//     kept; Approver raises the network approval card and returns its
+//     answer (the connection is held meanwhile, up to Wait, 60s).
 //   - A gateway.Gateway: Builtins gateway.Builtins(host), where host is the
 //     worker's gateway.Host (commit, push, pull, fetch, PR, gh, repos,
 //     add_project, run on host, ssh_agent, request_host, and Approve, which

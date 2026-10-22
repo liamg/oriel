@@ -270,7 +270,7 @@ clip 44,38 1176x936 r 0
           path 6 segments fill #4cc9f0b7
           path 6 segments fill #4cc9f0b7
           text "Claude is working" @159,606.8821 #b3ab99 Inter 12
-          text "· 0:41" @270.32812,606.2969 #7c7566 JetBrains Mono 10.5
+          text "· 41s" @270.32812,606.2969 #7c7566 JetBrains Mono 10.5
           rect 124,625.7766 756x30 fill #060606 radius 6
           clip 124,625.7766 756x30 r 6
             text "Reply…" @134,645.3237 #7c7566 Inter 12.5
@@ -446,8 +446,224 @@ text "Go · utf-8 · LF" @1344.7812,984.71 #b3ab99 JetBrains Mono 10.5
 text "wrap" @1459.6875,990.78 #7c7566 JetBrains Mono 10.5
 text "46:11" @1502.0625,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 57%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
-rect 22.09375,217 13.40625x13.5 fill #ff9b45 radius 6.75
-text "4" @26.09375,226.81 #141006 JetBrains Mono 8.5
-text "▪" @93.296875,282.77 #4cc9f0 JetBrains Mono 13.5
-rect 196.0625,270 8.40625x19 fill #ffd23f
-text ":" @196.0625,283.77 #141006 JetBrains Mono 13.5
+clip 0,38 43x936 r 0
+  rect 22.09375,217 13.40625x13.5 fill #ff9b45 radius 6.75
+  text "4" @26.09375,226.81 #141006 JetBrains Mono 8.5
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+        text "▪" @93.296875,282.77 #4cc9f0 JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+        clip 112,294 780x371.7766 r 6
+          clip 124,625.7766 756x30 r 6
+            rect 864.3333,636.7766 3.333313x6.25 radius 1.6666666 stroke 1.25 #7c7566
+            path 5 segments stroke 1.25 #7c7566
+          pop
+        pop
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+      pop
+    pop
+  pop
+pop
+clip 44,38 1176x936 r 0
+  clip 44,69 1176x905 r 0
+    clip 44,69 1176x905 r 0
+      clip 44,95 1176x879 r 0
+        rect 196.0625,270 8.40625x19 fill #ffd23f
+        text ":" @196.0625,283.77 #141006 JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop

@@ -11,8 +11,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -32,7 +32,7 @@ type Caller struct {
 // EnvData names the plugin's data directory in its processes' environment.
 const EnvData = "ORIEL_PLUGIN_DATA"
 
-// Trusted is your own config, which may do anything and runs unsandboxed (security.md).
+// Trusted is your own config, which may do anything and runs unsandboxed.
 func (p Caller) Trusted() bool { return p.Guard == nil }
 
 // Check asks the guard whether p may use c on target.
@@ -69,8 +69,8 @@ func (p Caller) Own(path string) bool {
 // CodeNotDeclared is the JSON-RPC error code of a call the plugin's manifest doesn't allow.
 const CodeNotDeclared = -32001
 
-// Method is a host function a process or WASM plugin calls by name, with JSON params (plugins.md: one
-// declaration, every binding). Cap is checked before Run, against Target's answer.
+// Method is a host function a process or WASM plugin calls by name, with JSON params: one
+// declaration, every binding. Cap is checked before Run, against Target's answer.
 type Method struct {
 	Name   string
 	Cap    Capability

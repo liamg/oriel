@@ -1,4 +1,4 @@
--- GitLab as a code host (hosts.md), gitlab.com and the self-hosted sites Oriel sets up with you: its merge requests
+-- GitLab as a code host, gitlab.com and the self-hosted sites Oriel sets up with you: its merge requests
 -- asking for your review list on the Reviews page, and a project whose origin is on one raises, reads and merges its
 -- merge request from the Ship page (oriel.code.host). Every call names its site. GitLab is reached by this plugin's process (bin/oriel-gitlab, built from
 -- integ/gitlab/cmd/oriel-gitlab), through Oriel, which holds the token: neither the process nor this Lua sees it.

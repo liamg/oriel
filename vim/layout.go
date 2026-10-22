@@ -5,7 +5,7 @@ import "slices"
 // WindowID names a window to the layout.
 type WindowID int
 
-// Layout is where the windows are on screen. The IDE gives the engine its own layout tree (FW-9), so :split
+// Layout is where the windows are on screen. The IDE gives the engine its own layout tree, so :split
 // and CTRL-W change what the UI shows and a drag in the UI is what the engine sees; without one, the engine
 // lays its windows out over nvim's default screen, as vim does.
 type Layout interface {

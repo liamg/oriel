@@ -2,6 +2,7 @@ package text
 
 import (
 	"bytes"
+	"github.com/liamg/oriel/internal/testhook"
 	"math/rand/v2"
 	"slices"
 	"testing"
@@ -297,9 +298,9 @@ func (h *harness) queries() {
 
 // withLimits shrinks the rope's node sizes so that small texts build deep trees.
 func withLimits(t testing.TB, leaf, minLeafSize, kids int) {
-	ml, mn, mk := maxLeaf, minLeaf, maxKids
-	maxLeaf, minLeaf, maxKids = leaf, minLeafSize, kids
-	t.Cleanup(func() { maxLeaf, minLeaf, maxKids = ml, mn, mk })
+	testhook.Set(t, &maxLeaf, leaf)
+	testhook.Set(t, &minLeaf, minLeafSize)
+	testhook.Set(t, &maxKids, kids)
 }
 
 func TestBufferMatchesModel(t *testing.T) {

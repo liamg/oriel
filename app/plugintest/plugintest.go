@@ -1,6 +1,6 @@
 // Package plugintest drives a plugin through the real app in a test: Oriel's built-ins with no window, drawn a frame
 // at a time at a size, on a clock the test sets, with the plugin loaded from its directory under the grants it's
-// given (plugins.md, "Testing a plugin").
+// given.
 package plugintest
 
 import (
@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/hosttest"
 	"github.com/liamg/oriel/plugin/ossandbox"
@@ -42,6 +43,7 @@ type App struct {
 // New starts the app with a home, config and state directory of the test's, and stops it when the test ends.
 func New(t testing.TB, o Options) *App {
 	t.Helper()
+	isolate.Test(t)
 	if o.Size == (render.Point{}) {
 		o.Size = render.Point{X: 1600, Y: 1000}
 	}

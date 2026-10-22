@@ -8,9 +8,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/edit"
+	"github.com/liamg/oriel/regex/vimregex"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/text"
-	"github.com/liamg/oriel/vim/vimregex"
 )
 
 // exRange is the lines an ex command works on, 0-based and inclusive.
@@ -397,32 +397,6 @@ func (e *Engine) parseAddress(v *view, s string, cur int) (int, string, bool, er
 			}
 			n, s = l, rest
 		}
-	case false:
-		pat, rest, _ := parseSearch(s[1:], s[0])
-		if pat == "" {
-			pat = e.search.pat
-		}
-		re, err := e.compile(pat)
-		if err != nil {
-			return 0, s, false, err
-		}
-		e.search = lastSearch{pat: pat, fwd: s[0] == '/', set: true, subPat: e.search.subPat}
-		from := Pos{cur, v.lineLen(cur)}
-		if s[0] == '?' {
-			from = Pos{cur, 0}
-		}
-		m, ok, _ := e.findPattern(v, re, from, s[0] == '/', 1, false)
-		if !ok || (s[0] == '/' && m.Start.Line == cur) || (s[0] == '?' && m.Start.Line == cur) {
-			// The search starts on the line after (or before) the cursor line.
-			m2, ok2 := e.searchLine(v, re, cur, s[0] == '/')
-			if !ok2 {
-				return 0, s, false, errPatternNotFound.with(pat)
-			}
-			n = m2
-		} else {
-			n = m.Start.Line
-		}
-		s, got = rest, true
 	case s[0] == '\\' && len(s) > 1 && (s[1] == '/' || s[1] == '?' || s[1] == '&'):
 		if !e.search.set {
 			return 0, s, false, errNoPrevPattern.with()

@@ -1,0 +1,5 @@
+{"seq":1,"type":"SessionSynced","event":{"session":{"id":"rv","kind":"review","status":"quiet","pr":"https://github.com/acme/api/pull/7","prRef":"merge-requests/7/head","review":{"summary":"looks fine","sent":[{"verdict":"approve","at":"2026-01-02T03:04:05Z"}]}}}}
+{"seq":2,"type":"SessionSynced","event":{"session":{"id":"jb","kind":"job","status":"quiet","job":"sweep stale deps"}}}
+{"seq":3,"type":"SessionSynced","event":{"session":{"id":"wk","kind":"work","status":"quiet","ticket":"","unplanned":true}}}
+{"seq":4,"type":"SessionSynced","event":{"session":{"id":"pl","kind":"plan","status":"quiet","ticket":"ENG-1"}}}
+{"seq":5,"type":"SessionSynced","event":{"session":{"id":"in","kind":"incident","status":"quiet","data":{"pager":"P-9"}}}}

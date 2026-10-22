@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"github.com/liamg/oriel/internal/testhook"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,9 +20,7 @@ func engineHost(t *testing.T, clis ...string) string {
 	t.Setenv("PATH", bin)
 	t.Setenv("DOCKER_HOST", "")
 	t.Setenv("XDG_RUNTIME_DIR", "")
-	old := dockerSockets
-	dockerSockets = []string{"var-run/docker.sock", ".docker/run/docker.sock"}
-	t.Cleanup(func() { dockerSockets = old })
+	testhook.Set(t, &dockerSockets, []string{"var-run/docker.sock", ".docker/run/docker.sock"})
 	return home
 }
 

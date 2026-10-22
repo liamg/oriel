@@ -940,7 +940,7 @@ func (e *Engine) blockOp(v *view, op string, c cmd) {
 		e.cur = startPos
 	case ">", "<":
 		var rs []text.Replace
-		amount := e.opts.ShiftWidth * c.count1()
+		amount := e.opts.shiftWidth() * c.count1()
 		for _, sp := range spans {
 			l := v.line(sp.line)
 			if sp.from >= len(l) {

@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/sandbox/agentcmd"
 )
 
@@ -28,12 +29,16 @@ func orielHome() string {
 	return filepath.Join(home, ".oriel")
 }
 
+// machineLoad reads the machine's load in-process, only while it's wanted, and says when it moves.
+var machineLoad = sysload.NewSampler(5*time.Second, nil)
+
 // newHost is the session host with the built-in providers and prompt packs.
 func newHost(home string, log *slog.Logger) (*host.Host, error) {
 	providers := &agent.Providers{}
-	providers.Register(claude.Provider{ProbeDir: filepath.Join(home, "probe")})
+	providers.Register(&claude.Provider{ProbeDir: filepath.Join(home, "probe")})
 	providers.Register(&codex.Provider{})
-	if _, err := packs.LoadDir(filepath.Join(app.DefaultConfigDir(), "agents")); err != nil {
+	kinds := &packs.Set{}
+	if _, err := kinds.LoadDir(filepath.Join(app.DefaultConfigDir(), "agents")); err != nil {
 		log.Warn("prompt packs", "err", err)
 	}
 	sandboxes := host.NewSandboxFactory(nil)
@@ -43,9 +48,10 @@ func newHost(home string, log *slog.Logger) (*host.Host, error) {
 			p, err := packs.FromText(src, name)
 			return p, err == nil
 		}
-		return packs.Get(name)
+		return kinds.Get(name)
 	}
-	w, err := host.New(host.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version})
+	w, err := host.New(host.Options{Home: home, Providers: providers, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version,
+		Load: machineLoad.Last})
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +62,8 @@ func newHost(home string, log *slog.Logger) (*host.Host, error) {
 // startHost starts the session host's background work until ctx ends: the machine's load, the sandbox sweep, the plan
 // windows' /usage probe, and the jobs' schedules.
 func startHost(ctx context.Context, w *host.Host, log *slog.Logger) {
-	go w.SampleLoad(ctx, 5*time.Second)
+	go machineLoad.Run(ctx)
+	go w.SampleLoad(ctx, machineLoad)
 	go w.SweepSandboxes(ctx, time.Hour)
 	go func() {
 		if err := w.ReadUsage(ctx); err != nil {

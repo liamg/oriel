@@ -10,9 +10,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -49,7 +51,7 @@ func (v View) Override(id string, fn *script.Fn, where string) error {
 	if fn == nil {
 		return fmt.Errorf("%s: no function", id)
 	}
-	v.a.own(v.a.Host.View(id, registry.SourcedView{Source: where, View: registry.ViewFunc(func(vc registry.ViewCtx) ui.Node {
+	v.a.own(v.a.Host.View(id, uireg.SourcedView{Source: where, View: uireg.ViewFunc(func(vc uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: id, Fn: func(c *ui.Ctx) {
 			out, err := v.a.VM.Call(fn, v.a.viewCtx(vc))
 			v.a.Host.Report(registry.KindView, id, err)
@@ -66,7 +68,7 @@ func (v View) Override(id string, fn *script.Fn, where string) error {
 }
 
 // viewCtx is what a Lua view gets: the window's size, the instance and the project it was opened for, and the session in front.
-func (a *APIs) viewCtx(vc registry.ViewCtx) script.Table {
+func (a *APIs) viewCtx(vc uireg.ViewCtx) script.Table {
 	t := script.Table{"width": vc.Width, "height": vc.Height, "instance": vc.Instance, "project": vc.Project}
 	sess := script.Table{}
 	here := a.Host.Here()
@@ -80,9 +82,9 @@ func (a *APIs) viewCtx(vc registry.ViewCtx) script.Table {
 //oriel:api name=decor cap=ui
 type Decor struct{ a *APIs }
 
-//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name)."
+//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, and menu = { { label, command, args } } is what a right-click on it offers). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name)."
 func (d Decor) Provider(name string, fn *script.Fn) error {
-	d.a.own(d.a.Host.Decorations(name, registry.DecorationFunc(func(ctx registry.DecorationCtx) []registry.Decoration {
+	d.a.own(d.a.Host.Decorations(name, uireg.DecorationFunc(func(ctx uireg.DecorationCtx) []uireg.Decoration {
 		out, err := d.a.VM.Call(fn, ctx.Name, ctx.Top+1, ctx.Bottom+1)
 		d.a.Host.Report(registry.KindDecoration, name, err)
 		if err != nil {
@@ -92,7 +94,7 @@ func (d Decor) Provider(name string, fn *script.Fn) error {
 			return nil
 		}
 		items, _ := out[0].([]any)
-		var ds []registry.Decoration
+		var ds []uireg.Decoration
 		for _, it := range items {
 			t, ok := it.(script.Table)
 			if !ok {
@@ -100,15 +102,28 @@ func (d Decor) Provider(name string, fn *script.Fn) error {
 			}
 			line, _ := t["line"].(float64)
 			if s := str(t, "sign"); s != "" {
-				ds = append(ds, registry.Decoration{Kind: registry.Sign, Line: int(line) - 1, Text: s, Style: str(t, "hl")})
+				ds = append(ds, luaSign(t, int(line)-1, s))
 			}
 			if s := str(t, "text"); s != "" {
-				ds = append(ds, registry.Decoration{Kind: registry.VirtualText, Line: int(line) - 1, Text: s, Style: str(t, "hl"), Bg: str(t, "bg")})
+				ds = append(ds, uireg.Decoration{Kind: uireg.VirtualText, Line: int(line) - 1, Text: s, Style: str(t, "hl"), Bg: str(t, "bg")})
 			}
 		}
 		return ds
 	})))
 	return nil
+}
+
+// luaSign is a Lua decoration's sign: its command, tooltip and right-click menu.
+func luaSign(t script.Table, line int, text string) uireg.Decoration {
+	d := uireg.Decoration{Kind: uireg.Sign, Line: line, Text: text, Style: str(t, "hl"), Command: str(t, "command"),
+		Args: registry.Args(tableOf(t["args"])), Tooltip: str(t, "tooltip")}
+	items, _ := t["menu"].([]any)
+	for _, it := range items {
+		if m, ok := it.(script.Table); ok {
+			d.Menu = append(d.Menu, uireg.SignItem{Label: str(m, "label"), Command: str(m, "command"), Args: registry.Args(tableOf(m["args"]))})
+		}
+	}
+	return d
 }
 
 //oriel:api doc="Says the decorations provider name gives have changed, so it's asked again: what they're made from moved."
@@ -342,10 +357,26 @@ func (g Agent) Pack(name string, spec script.Table, where string) error {
 //oriel:api name=session cap=session.control
 type Session struct{ a *APIs }
 
-//oriel:api doc="A kind of session: { pack, gates, status }."
+//oriel:api doc="A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), gate (hard, soft or off), needs_repo, launcher, order, prompt_file, auto_review, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base)."
 func (s Session) Kind(name string, spec script.Table, where string) error {
-	s.a.own(s.a.Host.Contribute(registry.SessionKind{Name: name, Pack: str(spec, "pack"), Gates: strs(spec["gates"]), Status: str(spec, "status"),
-		Source: where}))
+	k, err := luaKind(s.a, name, spec)
+	if err != nil {
+		return err
+	}
+	s.a.own(s.a.Host.Contribute(registry.KindEntry{SessionKind: k, Source: where}))
+	return nil
+}
+
+//oriel:api doc="Chips for every session's mission-control card, after its kind's: fn(session) returns a list of texts or { text, help, link }."
+func (s Session) Chips(name string, fn *script.Fn, where string) error {
+	s.a.own(s.a.Host.Contribute(registry.CardChips{Name: name, Source: where, Chips: func(se core.SessionState) []registry.Chip {
+		out, err := s.a.VM.Call(fn, sessionTable(se))
+		s.a.Host.Report(registry.KindView, "session.chips."+name, err)
+		if err != nil || len(out) == 0 {
+			return nil
+		}
+		return chipsOf(out[0])
+	}}))
 	return nil
 }
 
@@ -359,7 +390,7 @@ func (h HUD) Indicator(name string, opts script.Table, build any, where string) 
 	if fn == nil {
 		h.a.setIndicator(name, build)
 	}
-	ind := registry.Indicator{Name: name, Slot: str(opts, "slot"), Title: str(opts, "title"), Help: str(opts, "help"), Every: every,
+	ind := uireg.Indicator{Name: name, Slot: str(opts, "slot"), Title: str(opts, "title"), Help: str(opts, "help"), Every: every,
 		On: strs(opts["on"]), Source: where,
 		Build: func(registry.Ctx) (ui.Node, error) {
 			v, set := h.a.takeIndicator(name, fn != nil)
@@ -463,7 +494,7 @@ func (Regex) Match(pat, s, flags string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return re.MatchString(s), nil
+	return re.MatchString(s)
 }
 
 //oriel:api doc="Every match of pat in s, each { start, finish, groups }." optional=flags returns=table

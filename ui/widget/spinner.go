@@ -29,7 +29,7 @@ type SpinnerOpts struct {
 }
 
 // Spinner says something is in progress with no known end: a quarter arc going round a faint track. With reduced
-// motion it holds still.
+// motion, or the window unfocused, it holds still.
 func Spinner(c *ui.Ctx, key any, o SpinnerOpts) ui.ID {
 	size := o.Size
 	if size == 0 {
@@ -41,13 +41,7 @@ func Spinner(c *ui.Ctx, key any, o SpinnerOpts) ui.ID {
 		tone = col(c, tSpinnerArc)
 	}
 	track := col(c, tSpinnerTrack)
-	turn := 0.0
-	if !c.Still() {
-		tick := spinnerTurn / spinnerSteps
-		now := c.Now().Truncate(tick)
-		turn = float64(now.UnixNano()/int64(tick)%spinnerSteps) / spinnerSteps
-		c.WakeAt(now.Add(tick))
-	}
+	turn, _ := c.Decorative(spinnerTurn, spinnerSteps)
 	return c.Box(key, ui.Style{W: ui.Px(size), H: ui.Px(size), Role: ui.RoleStatus, Label: o.Name, Help: o.Help, Keep: true}, func(c *ui.Ctx) {
 		c.Paint("arc", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
 			in := render.Rect{Min: render.Point{X: r.Min.X + w/2, Y: r.Min.Y + w/2}, Max: render.Point{X: r.Max.X - w/2, Y: r.Max.Y - w/2}}

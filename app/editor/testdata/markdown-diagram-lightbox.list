@@ -1,0 +1,268 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1353.2438x38 r 0
+  rect 102.9375,0 120.546875x38 fill #121210
+  rect 102.9375,0 120.546875x2 fill #ffd23f
+  rect 114.9375,16 8x8 fill #4cc9f0 radius 4
+  text "notes" @129.9375,24.365234 #ece6d8 Inter 12
+  text "work" @168.48438,23.599998 #7c7566 JetBrains Mono 10
+  text "⌘1" @199.48438,23.42 #4f4a40 JetBrains Mono 9.5
+  rect 223.48438,0 1x38 fill #24221d
+pop
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
+rect 0,38 44x936 fill #0c0c0b
+clip 0,38 43x936 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  path 7 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  rect 9.5,208 24x1 fill #332f27
+  path 5 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments fill #060606
+  path 6 segments stroke 1.4 #ffd23f
+  effect glow 18.9,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  effect glow 22.8,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  path 2 segments stroke 0.8 #ffd23f
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
+rect 43,38 1x936 fill #24221d
+rect 44,38 1556x936 fill #060606
+clip 44,38 1556x936 r 0
+  rect 44,38 1556x30 fill #0c0c0b
+  clip 44,38 1556x30 r 0
+    rect 44,38 113.109375x30 fill #121210
+    rect 44,38 113.109375x2 fill #ffd23f
+    text "DESIGN.md" @58,58.365234 #ece6d8 Inter 12
+    text "✕" @137.8125,57.96 #7c7566 JetBrains Mono 11
+  pop
+  rect 44,68 1556x1 fill #24221d
+  clip 44,69 1556x905 r 0
+    rect 44,69 1556x905 fill #060606
+    clip 44,69 1556x905 r 0
+      text "DESIGN.md" @58,85.96 #b3ab99 JetBrains Mono 11
+      rect 1511,73 36x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      text "Edit" @1517,85.6 #ffd23f JetBrains Mono 10
+      rect 1553,73 33x18 fill #1f1c0f radius 4 stroke 1 #ffd23f73
+      path 8 segments stroke 1.25 #ffd23f
+      text "1" @1574,85.6 #ffd23f JetBrains Mono 10
+      clip 44,95 1556x879 r 0
+        text "DESIGN.MD" @114,140.69 #ff9b45 JetBrains Mono 9.5
+        text "Rounding" @114,181.092 #ece6d8 Space Grotesk 28
+        text "Flow · Delivery · Later" @114,209.97801 #7c7566 JetBrains Mono 10.5
+        rect 114,256.41266 14x2 fill #ff9b45
+        text "Flow" @140,263.59674 #ece6d8 Inter 17
+        text "5" @83.40625,290.40732 #4f4a40 JetBrains Mono 10.5
+        rect 100,275.69733 2x433.77826 fill #ffd23f
+        rect 114,277.69733 760x429.77826 fill #0c0c0b radius 6 stroke 1 #332f27
+        text "MERMAID · FLOWCHART" @128,301.38733 #7c7566 JetBrains Mono 9.5
+        path 2 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        path 3 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        path 3 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        path 2 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        path 2 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        rect 440.83203,318.23734 110.71875x38 fill #121210 radius 5 stroke 1 #332f27
+        text "Usage meter" @456.83203,341.96634 #ece6d8 Inter 13
+        path 9 segments fill #121210 stroke 1 #332f27
+        text "Tiered plan?" @458.22266,447.6282 #ece6d8 Inter 13
+        rect 354.72656,551.4756 128.65625x38 fill #121210 radius 5 stroke 1 #332f27
+        text "Round each tier" @370.72656,575.2046 #ece6d8 Inter 13
+        rect 513.3828,551.4756 119.890625x38 fill #121210 radius 5 stroke 1 #332f27
+        text "Round the line" @529.3828,575.2046 #ece6d8 Inter 13
+        path 7 segments fill #121210 stroke 1 #332f27
+        path 3 segments stroke 1 #332f27
+        text "Invoice" @473.97266,674.2046 #ece6d8 Inter 13
+        rect 442.88867,505.56107 29.46875x17.91452 fill #0c0c0b radius 8 stroke 1 #24221d
+        text "Yes" @446.88867,518.70166 #b3ab99 Inter 11.5
+        rect 522.63477,505.56107 24.25x17.91452 fill #0c0c0b radius 8 stroke 1 #24221d
+        text "No" @526.63477,518.70166 #b3ab99 Inter 11.5
+        image 360x120 @114,717.4756
+        rect 114,872.76025 14x2 fill #ff9b45
+        text "Delivery" @140,879.94434 #ece6d8 Inter 17
+        rect 114,894.0449 760x371.92773 fill #0c0c0b radius 6 stroke 1 #332f27
+        text "MERMAID · SEQUENCE" @128,917.7349 #7c7566 JetBrains Mono 9.5
+        path 64 segments stroke 1 #332f27
+        path 64 segments stroke 1 #332f27
+        rect 569.46875,1040.229 10x195.74365 fill #2e2812 radius 2 stroke 1 #332f27
+        rect 498.46875,1066.229 175.0625x87.91455 radius 6 stroke 1 #332f27
+        path 8 segments fill #121210 stroke 1 #332f27
+        text "LOOP" @506.46878,1079.919 #7c7566 JetBrains Mono 9.5
+        rect 547.78876,1068.229 88.75x16.539917 fill #0c0c0b radius 3
+        text "[Each invoice]" @551.78876,1080.6823 #7c7566 Inter 11.5
+        text "Close the month" @425.5703,1035.4551 #b3ab99 Inter 11.5
+        path 2 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        text "Round lines" @587.46875,1107.3696 #b3ab99 Inter 11.5
+        path 6 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        text "Totals" @454.54688,1219.1987 #b3ab99 Inter 11.5
+        path 60 segments stroke 1.3 #bb9b31
+        path 5 segments fill #bb9b31 stroke 0.6 #bb9b31
+        path 10 segments fill #221910 stroke 1 #5a3a1e
+        text "half-even" @601.46875,1185.2842 #b3ab99 Inter 11.5
+        path 6 segments fill #121210 stroke 1.3 #ece6d8
+        path 8 segments stroke 1.3 #ece6d8
+        text "Finance" @350.21875,986.17865 #ece6d8 Inter 13
+        rect 514.46875,964.5849 120x33.729492 fill #121210 radius 6 stroke 1 #332f27
+        text "Billing" @556.0781,986.17865 #ece6d8 Inter 13
+        rect 114,1301.2573 14x2 fill #ff9b45
+        text "Later" @140,1308.4414 #ece6d8 Inter 17
+        rect 114,1322.542 760x97.06006 fill #0c0c0b radius 6 stroke 1 #332f27
+        text "MERMAID · GANTT ISN'T DRAWN" @128,1346.2319 #7c7566 JetBrains Mono 9.5
+        text "gantt" @128,1364.322 #b3ab99 JetBrains Mono 12
+        text "  title Rollout" @128,1383.162 #b3ab99 JetBrains Mono 12
+        text "  Ship :a1, 2026-11-01, 3d" @128,1402.002 #b3ab99 JetBrains Mono 12
+        rect 114,1429.602 760x78.21997 fill #0c0c0b radius 6 stroke 1 #332f27
+        text "MERMAID · CAN'T READ LINE 2" @128,1453.292 #7c7566 JetBrains Mono 9.5
+        text "flowchart LR" @128,1471.3821 #b3ab99 JetBrains Mono 12
+        text "  A --> " @128,1490.222 #b3ab99 JetBrains Mono 12
+        rect 880,95 1x1462.822 fill #24221d
+        rect 901,275 480x130.64404 fill #0c0c0b radius 6
+        clip 901,275 480x130.64404 r 6
+          rect 913,288.5 7x7 fill #7c7566 radius 3.5
+          text "Thread" @928,296.54712 #ece6d8 Inter 12.5
+          text "· L5 ·" @980.9531,295.78 #7c7566 JetBrains Mono 10.5
+          rect 1028.5156,283.73 40.28003x16.540009 fill #7c756612 radius 10 stroke 1 #7c756659
+          text "OPEN" @1035.5156,295.42 #7c7566 JetBrains Mono 9.5
+          text "resolve" @1282.625,295.36523 #ffd23f Inter 12
+          rect 1282.625,299.25977 42.375x1 fill #ffd23fb3
+          text "t:t000" @1333,295.6 #4f4a40 JetBrains Mono 10
+          rect 901,309 480x1 fill #332f27
+          rect 913,320 28x28 fill #ff9b45 radius 6
+          text "L" @923.335,337.42 #141006 JetBrains Mono 9.5
+          text "Liam" @951,331.625 #ece6d8 Inter 12
+          text "1m" @986.625,330.67978 #4f4a40 JetBrains Mono 9.5
+          text "Should tiers round first?" @951,350.6289 #b3ab99 Inter 12.5
+          rect 913,365.64404 456x30 fill #060606 radius 6
+          clip 913,365.64404 456x30 r 6
+            text "Reply…" @923,385.19116 #7c7566 Inter 12.5
+          pop
+          rect 913,365.64404 456x30 radius 6 stroke 1 #332f27
+        pop
+        rect 901,275 480x130.64404 radius 6 stroke 1 #332f27
+      pop
+      rect 1592,97 6x525.7817 fill #ece6d838 radius 3
+    pop
+  pop
+pop
+rect 0,974 1600x26 fill #0c0c0b
+rect 0,974 78.97624x26 fill #ffd23f
+text "PREVIEW" @12,990.78 #141006 JetBrains Mono 10.5
+text "✕" @94.97624,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @106.56999,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @127.16374,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @138.75749,990.95996 #b3ab99 JetBrains Mono 11
+text "Markdown · utf-8 · LF" @1325,984.71 #b3ab99 JetBrains Mono 10.5
+text "wrap" @1479.4688,990.78 #7c7566 JetBrains Mono 10.5
+text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
+text "≡ 2%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
+clip 0,38 43x936 r 0
+  rect 22.09375,217 13.40625x13.5 fill #ff9b45 radius 6.75
+  text "1" @26.09375,226.81 #141006 JetBrains Mono 8.5
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        clip 901,275 480x130.64404 r 6
+          clip 913,365.64404 456x30 r 6
+            rect 1353.3334,376.64404 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
+            path 5 segments stroke 1.25 #7c7566
+          pop
+        pop
+      pop
+    pop
+  pop
+pop
+rect 0,0 1600x1000 fill #05070aeb
+clip 0,0 1600x1000 r 0
+  rect 501.45312,104.76172 597.09375x786.47656 fill #0c0c0b radius 10
+  path 2 segments stroke 2.6 #bb9b31
+  path 5 segments fill #bb9b31 stroke 1.2 #bb9b31
+  path 3 segments stroke 2.6 #bb9b31
+  path 5 segments fill #bb9b31 stroke 1.2 #bb9b31
+  path 3 segments stroke 2.6 #bb9b31
+  path 5 segments fill #bb9b31 stroke 1.2 #bb9b31
+  path 2 segments stroke 2.6 #bb9b31
+  path 5 segments fill #bb9b31 stroke 1.2 #bb9b31
+  path 2 segments stroke 2.6 #bb9b31
+  path 5 segments fill #bb9b31 stroke 1.2 #bb9b31
+  rect 693.66406,124.76172 221.4375x76 fill #121210 radius 10 stroke 2 #332f27
+  text "Usage meter" @725.65625,172.21973 #ece6d8 Inter 26
+  path 9 segments fill #121210 stroke 2 #332f27
+  text "Tiered plan?" @728.4453,383.54346 #ece6d8 Inter 26
+  rect 521.4531,591.2383 257.3125x76 fill #121210 radius 10 stroke 2 #332f27
+  text "Round each tier" @553.4453,638.6963 #ece6d8 Inter 26
+  rect 838.7656,591.2383 239.78125x76 fill #121210 radius 10 stroke 2 #332f27
+  text "Round the line" @870.78125,638.6963 #ece6d8 Inter 26
+  path 7 segments fill #121210 stroke 2 #332f27
+  path 3 segments stroke 2 #332f27
+  text "Invoice" @759.9531,836.6963 #ece6d8 Inter 26
+  rect 697.77734,499.40918 58.9375x35.8291 fill #0c0c0b radius 16 stroke 2 #24221d
+  text "Yes" @706.66797,525.6904 #b3ab99 Inter 23
+  rect 857.26953,499.40918 48.5x35.8291 fill #0c0c0b radius 16 stroke 2 #24221d
+  text "No" @865.95703,525.6904 #b3ab99 Inter 23
+pop
+rect 1550,14 34x34 fill #00000099 radius 17
+text "✕" @1561.8984,37.184082 #eceef2 Inter 17
+rect 16,483 34x34 fill #00000099 radius 17
+text "‹" @29.601562,506.18408 #eceef259 Inter 17
+rect 1550,483 34x34 fill #00000099 radius 17
+text "›" @1563.6016,506.18408 #eceef2 Inter 17
+rect 468.23438,956.8755 663.53125x27.124512 fill #00000099 radius 6
+text "Flowchart: Usage meter, Tiered plan?, Round each tier, Round the line, Invoice" @480.23438,974.98486 #eceef2 Inter 12.5
+text "1 / 3" @980.4844,974.3977 #a3a9b3 JetBrains Mono 11
+text "283×377 · 200%" @1027.4531,974.3977 #a3a9b3 JetBrains Mono 11

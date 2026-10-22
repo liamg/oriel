@@ -198,7 +198,7 @@ type contextState struct {
 }
 
 // ContextMenu opens items where target is right-clicked. If target (or what it's in) has a help id, the
-// last item is always Help for it (help.md).
+// last item is always Help for it.
 func ContextMenu(c *ui.Ctx, key any, target ui.ID, items []MenuItem) ContextResult {
 	res := ContextResult{Chosen: -1}
 	id := c.Next(key)

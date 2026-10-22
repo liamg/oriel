@@ -11,15 +11,12 @@ import (
 
 type memClip struct{ text string }
 
-// focusClicked is whether selScene's focusable control got its click.
-var focusClicked bool
-
 func (c *memClip) SetClipboard(s string)         { c.text = s }
 func (c *memClip) ReadClipboard() (string, bool) { return c.text, c.text != "" }
 
 // selScene is a Selectable column of two lines, the second of two text nodes with a gap between, and a button under
 // them; the headless shaper is fixed-pitch, 6 wide a character at size 10.
-func selScene(t *testing.T) (*UI, *memClip, func(), *bool) {
+func selScene(t *testing.T) (*UI, *memClip, func(), *selClicks) {
 	t.Helper()
 	u := newUI()
 	st, err := theme.Stack(theme.Builtins(), "oriel")
@@ -33,8 +30,7 @@ func selScene(t *testing.T) (*UI, *memClip, func(), *bool) {
 	u.SetTheme(th)
 	clip := &memClip{}
 	u.SetClipboard(clip)
-	clicked := false
-	focusClicked = false
+	clicked := &selClicks{}
 	frame := func() {
 		u.Frame(new(render.List).Record(1), render.Point{X: 400, Y: 300}, func(c *Ctx) {
 			c.Column("page", Style{W: Px(300), Selectable: true}, func(c *Ctx) {
@@ -44,20 +40,23 @@ func selScene(t *testing.T) (*UI, *memClip, func(), *bool) {
 					c.Text("b", "line", body)
 				})
 				if c.Interaction(c.Box("button", Style{W: Px(60), H: Px(20), Interactive: true}, nil)).Clicked {
-					clicked = true
+					clicked.button = true
 				}
 				// A focusable control, as widget.Button is, with a label of its own.
 				fb := c.Next("focusable")
 				if c.Interaction(fb).Clicked {
-					focusClicked = true
+					clicked.focusable = true
 				}
 				c.Row("focusable", Style{W: Px(60), H: Px(20), Focusable: true, KeyMode: "button"}, func(c *Ctx) { c.Text("t", "Hide", body) })
 			})
 		})
 	}
 	frame()
-	return u, clip, frame, &clicked
+	return u, clip, frame, clicked
 }
+
+// selClicks are which of selScene's controls got their click: the button, the focusable control.
+type selClicks struct{ button, focusable bool }
 
 func press(u *UI, frame func(), p render.Point, mods render.Mods) {
 	u.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonPrimary, Mods: mods})
@@ -100,7 +99,7 @@ func TestSelectableText(t *testing.T) {
 	button := render.Point{X: 10, Y: 38}
 	press(u, frame, button, 0)
 	release(u, frame, button)
-	if !*clicked {
+	if !clicked.button {
 		t.Error("the button in the selectable box didn't get its click")
 	}
 	if u.SelectedText() != "" {
@@ -114,8 +113,8 @@ func TestSelectableText(t *testing.T) {
 	release(u, frame, label)
 	press(u, frame, label, 0)
 	release(u, frame, label)
-	if !focusClicked || u.SelectedText() != "" {
-		t.Errorf("a focusable control's label selected %q (clicked %v)", u.SelectedText(), focusClicked)
+	if !clicked.focusable || u.SelectedText() != "" {
+		t.Errorf("a focusable control's label selected %q (clicked %v)", u.SelectedText(), clicked.focusable)
 	}
 }
 

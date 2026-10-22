@@ -1,4 +1,4 @@
-// Package assistant is the conversation behind Oriel's assistant (ui.md 11, crit-reference.md "Assistant"): one
+// Package assistant is the conversation behind Oriel's assistant: one
 // conversation at a time with a utility agent, fed typed or spoken turns, whose replies, progress, confirmations and
 // actions are kept as the log the drawer draws. The agent itself is behind Agent: a utility session.
 package assistant
@@ -137,6 +137,7 @@ type Conversation struct {
 	asks    map[string]chan bool
 	undo    map[string]func(context.Context) error
 	stop    chan struct{}
+	reaper  *time.Timer // set to the idle deadline once a turn ends
 }
 
 type turn struct {
@@ -144,12 +145,10 @@ type turn struct {
 	voice bool
 }
 
-// New is a conversation that starts its agent with start, with its idle reaper running.
+// New is a conversation that starts its agent with start; one left idle ends.
 func New(start Starter) *Conversation {
-	c := &Conversation{Start: start, Idle: 15 * time.Minute, ConfirmWait: 2 * time.Minute, UndoWait: 10 * time.Second,
+	return &Conversation{Start: start, Idle: 15 * time.Minute, ConfirmWait: 2 * time.Minute, UndoWait: 10 * time.Second,
 		Now: time.Now, asks: map[string]chan bool{}, undo: map[string]func(context.Context) error{}, stop: make(chan struct{})}
-	go c.reap()
-	return c
 }
 
 // Log is the conversation so far, and whether a turn is running.
@@ -260,6 +259,9 @@ func (c *Conversation) Confirm(ctx context.Context, tool, line string, card any)
 	defer c.mu.Unlock()
 	if _, waiting := c.asks[id]; waiting {
 		delete(c.asks, id)
+		if !c.busy && c.agent != nil {
+			c.reapAfterLocked(c.Idle - c.Now().Sub(c.last))
+		}
 	} else if ans == NoAnswer || ans == Dropped {
 		// Answered as it timed out: the answer stands.
 		if yes, ok := <-ch; ok {
@@ -383,6 +385,9 @@ func (c *Conversation) Close() {
 	case <-c.stop:
 	default:
 		close(c.stop)
+	}
+	if c.reaper != nil {
+		c.reaper.Stop()
 	}
 	c.endLocked()
 }
@@ -536,31 +541,54 @@ func (c *Conversation) signal(gen int, s Signal) {
 		}
 		c.last = c.Now()
 		c.busy = false
+		c.reapAfterLocked(c.Idle)
 		c.changedLocked()
 		c.nextLocked()
 	}
 }
 
-// reap ends a conversation left idle.
-func (c *Conversation) reap() {
-	t := time.NewTicker(time.Second)
-	defer t.Stop()
-	for {
-		select {
-		case <-c.stop:
-			return
-		case <-t.C:
-		}
-		c.ReapIdle()
+// SetIdle changes how long a quiet conversation lasts: one waiting now ends at the new deadline.
+func (c *Conversation) SetIdle(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if d == c.Idle {
+		return
+	}
+	c.Idle = d
+	if c.agent != nil && !c.busy && len(c.asks) == 0 {
+		c.reapAfterLocked(d - c.Now().Sub(c.last))
 	}
 }
+
+// reapAfterLocked sets the reaper to check the conversation after d.
+func (c *Conversation) reapAfterLocked(d time.Duration) {
+	select {
+	case <-c.stop:
+		return
+	default:
+	}
+	d = max(d, minReap)
+	if c.reaper == nil {
+		c.reaper = time.AfterFunc(d, c.ReapIdle)
+		return
+	}
+	c.reaper.Reset(d)
+}
+
+// minReap keeps a clock that doesn't move (a test's) from checking without pause.
+const minReap = 50 * time.Millisecond
 
 // ReapIdle ends the conversation if it has been idle for Idle: the next turn starts a fresh one.
 func (c *Conversation) ReapIdle() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.agent != nil && !c.busy && len(c.asks) == 0 && c.Now().Sub(c.last) >= c.Idle {
-		c.endLocked()
-		c.emitLocked(Entry{Kind: KindDivider, Text: "new conversation"})
+	if c.agent == nil || c.busy || len(c.asks) > 0 {
+		return // what ends the turn or the question sets the reaper again
 	}
+	if left := c.Idle - c.Now().Sub(c.last); left > 0 {
+		c.reapAfterLocked(left)
+		return
+	}
+	c.endLocked()
+	c.emitLocked(Entry{Kind: KindDivider, Text: "new conversation"})
 }

@@ -72,7 +72,7 @@ func TestATurnEndingWithWorkOwedIsToldToCarryOn(t *testing.T) {
 	}
 }
 
-// SE-2: an agent started again after a restart, with work it owed and nothing new for it, is told it was cut off and
+// An agent started again after a restart, with work it owed and nothing new for it, is told it was cut off and
 // to carry on; with nothing owed it's left alone.
 func TestAResumedAgentCarriesOnWithWorkOwed(t *testing.T) {
 	r := newRig(t)

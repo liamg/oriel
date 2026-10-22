@@ -40,6 +40,7 @@ type Glyph struct {
 	Face *Face // nil from shapers without real fonts
 	ID   GlyphID
 	X, Y float32
+	Rune int // index in the run's text, in runes, of the first rune of the glyph's cluster
 }
 
 // Run is a line of shaped text, in logical pixels.

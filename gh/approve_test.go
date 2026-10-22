@@ -9,7 +9,7 @@ import (
 	"github.com/liamg/oriel/gh/ghtest"
 )
 
-// PL-5: what agentbus's review requests read of GitHub (crit's PRSizeOf, ReadPRFacts, Login) and its auto-approval
+// What agentbus's review requests read of GitHub (crit's PRSizeOf, ReadPRFacts, Login) and its auto-approval
 // (crit's ApproveAt: at the head that was read, with no body), over the REST API and through gh.
 func TestReviewRequestReads(t *testing.T) {
 	for _, transport := range []string{"http", "cli"} {

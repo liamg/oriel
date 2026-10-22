@@ -2,7 +2,10 @@ package testrun
 
 import (
 	"context"
+	"github.com/liamg/oriel/internal/testhook"
+	"io"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -95,5 +98,37 @@ func TestExecTimeout(t *testing.T) {
 	r, ok := run.Result(slowItem(root)[0].Key())
 	if !ok || r.Status != StatusTimedOut || r.Failure == nil || r.Failure.Reason != ReasonTimeout {
 		t.Errorf("TestSlow = %+v", r)
+	}
+}
+
+// shell is an adapter that runs a shell line and reads nothing from it.
+type shell struct {
+	Go
+	line string
+}
+
+func (s *shell) Command(Workspace, []Item, Mode) (Cmd, error) {
+	return Cmd{Args: []string{"sh", "-c", s.line}}, nil
+}
+func (*shell) Parse(r io.Reader, _ func(Event)) error { _, err := io.Copy(io.Discard, r); return err }
+
+// os/exec: "If WaitDelay is non-zero, ... Wait ... closes the I/O pipes after the command exits" — a child left
+// holding the runner's stdout doesn't keep the run going.
+func TestExecEndsWhenAChildHoldsStdout(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("a shell line")
+	}
+	testhook.Set(t, &waitDelay, 200*time.Millisecond)
+	x, err := Start(context.Background(), Request{Adapter: &shell{line: "echo hi; sleep 5 &"}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-x.Done():
+	case <-time.After(3 * time.Second):
+		t.Fatal("the run waited on a child holding its stdout")
+	}
+	if run, _ := x.Wait(); run.Raw != "hi\n" || run.Status == StatusError {
+		t.Errorf("raw = %q, status %s", run.Raw, run.Status)
 	}
 }

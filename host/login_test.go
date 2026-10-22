@@ -3,10 +3,12 @@ package host
 import (
 	"context"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 )
 
@@ -24,7 +26,7 @@ func flagged(se core.SessionState) bool {
 	return ok && se.Status == core.StatusNeedsYou
 }
 
-// AI-13 done when: a session whose login goes flags every session on the machine and account: needs you, with the
+// A session whose login goes flags every session on the machine and account: needs you, with the
 // login's card; the host says it's signed out; a login clears every flag and the sessions go on.
 func TestALostLoginFlagsEverySession(t *testing.T) {
 	r := newRig(t)
@@ -81,7 +83,7 @@ func TestALostLoginFlagsEverySession(t *testing.T) {
 	}
 }
 
-// AI-13: the card's Check again keeps it while the provider is still signed out, and clears it once it isn't.
+// The card's Check again keeps it while the provider is still signed out, and clears it once it isn't.
 func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("x")
@@ -113,7 +115,7 @@ func (r *rig) signedIn() {
 	}
 }
 
-// AI-13: an agent that can't start for want of a login (Codex's) flags its session, and starts once signed in.
+// An agent that can't start for want of a login (Codex's) flags its session, and starts once signed in.
 func TestAnAgentRefusedForItsLoginStartsOnceSignedIn(t *testing.T) {
 	r := newRig(t)
 	r.fake.SignIn(false)
@@ -138,7 +140,7 @@ func TestAnAgentRefusedForItsLoginStartsOnceSignedIn(t *testing.T) {
 	r.eventually(id, "the card to go", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok && se.Agent.Running })
 }
 
-// SE-5 done when: "Check again with a revoked token on disk stays signed out against a fake provider". The provider's
+// Check again with a revoked token on disk stays signed out against a fake provider. The provider's
 // files still hold the login the API refused, so it stays signed out until there's a new one, or one is seen to work.
 func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
 	r := newRig(t)
@@ -172,4 +174,34 @@ func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
 	r.eventually(id, "the login's card", flagged)
 	a.Emit(agent.AuthRestored{Provider: "fake", Account: "u1"})
 	r.eventually(id, "the card to go once a login worked", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
+}
+
+// detectPanics is a provider whose first Detect panics.
+type detectPanics struct {
+	*agenttest.Fake
+	calls atomic.Int32
+}
+
+func (p *detectPanics) Detect(ctx context.Context) (agent.Install, error) {
+	if p.calls.Add(1) == 1 {
+		panic("detect blew up")
+	}
+	return p.Fake.Detect(ctx)
+}
+
+// A check of a lost login doesn't wait forever on reading which login was refused, when that read failed.
+func TestALoginCheckOutlivesAFailedMark(t *testing.T) {
+	p := &detectPanics{Fake: &agenttest.Fake{Name: "flaky"}}
+	r := newRig(t, p)
+	r.w.run.LoginLost("", agent.AuthExpired{Provider: "flaky", Account: "u1", Detail: "gone"})
+	for p.calls.Load() == 0 {
+		time.Sleep(time.Millisecond)
+	}
+	done := make(chan bool)
+	go func() { done <- r.w.run.CheckLogin("flaky", false) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("checkLogin is still waiting")
+	}
 }

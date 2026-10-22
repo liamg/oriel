@@ -31,7 +31,7 @@ func (p Problem) String() string {
 }
 
 // Undeclared are the statically visible oriel.* uses in the plugin's Lua (init.lua and lua/) whose capability its
-// manifest doesn't declare (catalog.md, oriel plugin pack). A use is oriel.ns.fn, or the same through a local
+// manifest doesn't declare. A use is oriel.ns.fn, or the same through a local
 // alias (local L = oriel). A path-taking function given a literal relative path is the plugin's own file and needs
 // nothing.
 func Undeclared(dir string, m plugin.Manifest) ([]Problem, error) {

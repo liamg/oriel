@@ -1,6 +1,6 @@
 package plugin
 
-// Capability is something a plugin may do, declared in its manifest's [permissions] (security.md).
+// Capability is something a plugin may do, declared in its manifest's [permissions].
 type Capability string
 
 const (
@@ -44,7 +44,7 @@ type CapInfo struct {
 	Scope  string // "hosts", "paths", "commands", "tools", "names"
 }
 
-// Capabilities is every capability, in security.md's order.
+// Capabilities is every capability, in the order consent lists them.
 var Capabilities = []CapInfo{
 	{CapUI, RiskLow, false, false, ""},
 	{CapTheme, RiskLow, false, false, ""},

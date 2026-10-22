@@ -40,7 +40,7 @@ func film(h *harness, change func()) string {
 	return b.String()
 }
 
-// FW-13: each animation is a spring the test steps through: the start, a midpoint and the settled frame are display
+// Each animation is a spring the test steps through: the start, a midpoint and the settled frame are display
 // list snapshots; with reduced motion each starts where it settles; and nothing is still moving after 250 ms.
 func TestWidgetMotion(t *testing.T) {
 	type scene struct {
@@ -166,7 +166,7 @@ func buttonScene(s *motionState) func(c *ui.Ctx) {
 	}
 }
 
-// FW-13: "a key pressed mid-animation acts at once": the list's selection moves on the key, the highlight follows.
+// A key pressed mid-animation acts at once: the list's selection moves on the key, the highlight follows.
 func TestKeysActMidAnimation(t *testing.T) {
 	s := &motionState{}
 	var id ui.ID

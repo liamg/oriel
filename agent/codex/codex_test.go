@@ -15,8 +15,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // TestMain makes the test binary the fake codex (`app-server`, `--version`) and `oriel hook mcp` when run so.
@@ -154,7 +154,7 @@ func TestRefusesAPIKey(t *testing.T) {
 	}
 }
 
-// AI-13: a session that can't start for want of a login says so as AuthExpired, with the command that signs in.
+// A session that can't start for want of a login says so as AuthExpired, with the command that signs in.
 func TestStartSignedOutIsAuthExpired(t *testing.T) {
 	p := fakeProvider(t)
 	dir := t.TempDir()

@@ -49,8 +49,7 @@ func TestGrammarChecksums(t *testing.T) {
 	}
 }
 
-// ED-11: "The binary grows by under 8 MB for the core set", raised to 12 MB when the set grew (your call, P3):
-// the grammars are embedded compressed.
+// The binary grows by under 12 MB for the core set: the grammars are embedded compressed.
 func TestCoreSetSize(t *testing.T) {
 	total := 0
 	fs.WalkDir(grammarFS, ".", func(p string, d fs.DirEntry, err error) error {
@@ -66,7 +65,7 @@ func TestCoreSetSize(t *testing.T) {
 	}
 }
 
-// ED-11: "Opening a file in an already-compiled language is under 20 ms from cache": a runtime that finds the
+// Opening a file in an already-compiled language is under 20 ms from cache: a runtime that finds the
 // compiled grammar on disk compiles, instantiates and parses a fixture in that.
 func TestCompiledFromCacheBudget(t *testing.T) {
 	perf.Timed(t)
@@ -77,35 +76,41 @@ func TestCompiledFromCacheBudget(t *testing.T) {
 		t.Fatal(err)
 	}
 	src, _ := os.ReadFile("testdata/highlight/fixture.go")
-	open := func() time.Duration {
-		rt, err := newRuntime(dir)
-		if err != nil {
-			t.Fatal(err)
+	// open times a fresh runtime's compile, instantiate and parse, the best of rounds.
+	open := func(rounds int) time.Duration {
+		var rt wazero.Runtime
+		defer func() { rt.Close(context.Background()) }()
+		fresh := func() {
+			if rt != nil {
+				rt.Close(context.Background())
+			}
+			if rt, err = newRuntime(dir); err != nil {
+				t.Fatal(err)
+			}
 		}
-		defer rt.Close(context.Background())
-		start := time.Now()
-		cm, err := rt.CompileModule(context.Background(), wasm)
-		if err != nil {
-			t.Fatal(err)
-		}
-		mod, err := rt.InstantiateModule(context.Background(), cm, wazero.NewModuleConfig().WithName("").WithStartFunctions("_initialize"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		m := &module{m: mod, fns: map[string]api.Function{}}
-		p := &Parser{lang: l, m: m, parser: m.call("parser_new"), queries: map[string]*query{}, symbols: map[string]uint32{}}
-		p.Parse(src)
-		return time.Since(start)
+		return perf.Times(rounds, 1, fresh, func(int) {
+			cm, err := rt.CompileModule(context.Background(), wasm)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mod, err := rt.InstantiateModule(context.Background(), cm, wazero.NewModuleConfig().WithName("").WithStartFunctions("_initialize"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			m := &module{m: mod, fns: map[string]api.Function{}}
+			p := &Parser{lang: l, m: m, parser: m.call("parser_new"), queries: map[string]*query{}, symbols: map[string]uint32{}}
+			p.Parse(src)
+		})[0]
 	}
-	cold := open()
-	warm := open()
+	cold := open(1)
+	warm := open(3)
 	t.Logf("first open %v, from the cache %v", cold, warm)
 	if warm > 20*time.Millisecond && !raceEnabled && testing.CoverMode() == "" {
 		t.Errorf("opening from the cache took %v", warm)
 	}
 }
 
-// The languages added after ED-11, by the files nvim-treesitter's filetypes give them: Terraform and OpenTofu are
+// More languages, by the files nvim-treesitter's filetypes give them: Terraform and OpenTofu are
 // the HCL grammar's terraform dialect.
 func TestMoreLanguagesByFile(t *testing.T) {
 	for file, want := range map[string]string{

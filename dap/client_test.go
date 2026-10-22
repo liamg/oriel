@@ -243,3 +243,41 @@ func TestRequestsMatchSchema(t *testing.T) {
 		}
 	}
 }
+
+// waited is an adapter that answers initialize with a failure, and records whether it was waited for.
+type waited struct {
+	net.Conn
+	waited chan struct{}
+}
+
+func (p *waited) Kill() error { return nil }
+func (p *waited) Wait() error { close(p.waited); return nil }
+
+// A Start that fails reaps the adapter it launched.
+func TestFailedStartWaitsForTheAdapter(t *testing.T) {
+	a, b := net.Pipe()
+	p := &waited{Conn: a, waited: make(chan struct{})}
+	go func() {
+		r := bufio.NewReader(b)
+		body, err := dap.ReadFrame(r)
+		if err != nil {
+			return
+		}
+		var m dap.Message
+		json.Unmarshal(body, &m)
+		res, _ := json.Marshal(map[string]any{"seq": 1, "type": "response", "request_seq": m.Seq, "command": m.Command, "success": false, "message": "no"})
+		dap.WriteFrame(b, res)
+		io.Copy(io.Discard, b)
+	}()
+	launch := func(context.Context, dap.AdapterSpec, string, io.Writer) (dap.Process, error) { return p, nil }
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := dap.Start(ctx, dap.AdapterSpec{Name: "fake", Type: "fake"}, dap.LaunchConfig{}, dap.Options{Launch: launch}); err == nil {
+		t.Fatal("Start succeeded")
+	}
+	select {
+	case <-p.waited:
+	default:
+		t.Error("the adapter was never waited for")
+	}
+}

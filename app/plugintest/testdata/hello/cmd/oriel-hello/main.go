@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 func main() {

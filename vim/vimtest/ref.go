@@ -1,6 +1,7 @@
 package vimtest
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -26,7 +27,7 @@ func (c Case) RequireRef(t testing.TB) {
 func (c Case) CheckRef() error {
 	ref := strings.TrimSpace(c.Ref)
 	if ref == "" {
-		return errors.New("no ref: every case cites a source (see _design/testing.md)")
+		return errors.New("no ref: every case cites a source (see docs/architecture.md, Testing)")
 	}
 	if rest, ok := strings.CutPrefix(ref, "oracle"); ok {
 		if !strings.HasPrefix(strings.TrimSpace(rest), "nvim v") {
@@ -167,19 +168,19 @@ func specFile(name string) (string, error) {
 	return string(b), nil
 }
 
-// RepoRoot walks up from the working directory to the directory holding go.work.
+// RepoRoot walks up from the working directory to the directory holding Oriel's go.mod.
 func RepoRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.work")); err == nil {
+		if b, err := os.ReadFile(filepath.Join(dir, "go.mod")); err == nil && bytes.HasPrefix(b, []byte("module github.com/liamg/oriel\n")) {
 			return dir, nil
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", errors.New("no go.work above the working directory")
+			return "", errors.New("no Oriel go.mod above the working directory")
 		}
 		dir = parent
 	}

@@ -13,7 +13,7 @@ import (
 // LockFile is the lockfile's name, next to the settings.toml whose [plugins] it locks.
 const LockFile = "oriel-lock.toml"
 
-// Locked is what oriel-lock.toml records of one plugin (catalog.md): where it came from, the exact version and
+// Locked is what oriel-lock.toml records of one plugin: where it came from, the exact version and
 // commit, its badge, the capabilities you accepted, as plugin.Lock writes them, and its archives' sha256s.
 type Locked struct {
 	Source       string

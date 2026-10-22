@@ -370,7 +370,7 @@ func jsParse(r io.Reader, emit func(Event)) error {
 }
 
 var (
-	jsStackPath = regexp.MustCompile(`^\s*at (?:.*?\()?(?:file://)?([^\s()]+):(\d+):(\d+)\)?$`)
+	jsStackPath = regexp.MustCompile(`^\s*at (?:.*?\()?(?:file://)?([^\s()]+:\d+:\d+)\)?$`)
 	jsTimeout   = regexp.MustCompile(`(?i)timed out|exceeded timeout`)
 )
 
@@ -392,12 +392,14 @@ func jsFailure(msg, file string, reason Reason) *Failure {
 	var fallback *Loc
 	for _, l := range lines {
 		m := jsStackPath.FindStringSubmatch(l)
-		if m == nil || strings.Contains(m[1], "/node_modules/") || strings.HasPrefix(m[1], "node:") {
+		if m == nil {
 			continue
 		}
-		n, _ := strconv.Atoi(m[2])
-		loc := &Loc{File: m[1], Line: n - 1}
-		if m[1] == file {
+		loc, _ := fileLine(m[1])
+		if loc == nil || strings.Contains(loc.File, "/node_modules/") || strings.HasPrefix(loc.File, "node:") {
+			continue
+		}
+		if loc.File == file {
 			f.Loc = loc
 			break
 		}

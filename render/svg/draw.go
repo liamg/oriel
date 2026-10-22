@@ -19,6 +19,7 @@ func (d *Doc) Draw(f render.Frame, r render.Rect, sh typeset.Shaper) {
 	tr := func(p render.Point) render.Point {
 		return render.Point{X: off.X + (p.X-d.view.Min.X)*k, Y: off.Y + (p.Y-d.view.Min.Y)*k}
 	}
+	placed := d.placed(r, tr)
 	f.PushClip(r, 0)
 	defer f.Pop()
 	for i := range d.items {
@@ -41,14 +42,7 @@ func (d *Doc) Draw(f render.Frame, r render.Rect, sh typeset.Shaper) {
 				s.Stroke, s.Width = it.stroke.c, max(it.width*k, .5)
 			}
 			if s.Fill.A > 0 || s.Stroke.A > 0 {
-				p := &render.Path{Segs: make([]render.Seg, len(it.path.Segs))}
-				for j, sg := range it.path.Segs {
-					for n := range sg.Pts {
-						sg.Pts[n] = tr(sg.Pts[n])
-					}
-					p.Segs[j] = sg
-				}
-				f.Path(p, s)
+				f.Path(placed[i], s)
 			}
 		case itemText:
 			if it.fill.none || it.fill.c.A == 0 || sh == nil {
@@ -73,6 +67,42 @@ func (d *Doc) Draw(f render.Frame, r render.Rect, sh typeset.Shaper) {
 			f.Pop()
 		}
 	}
+}
+
+// maxDrawn is how many rects a Doc keeps its placed paths for: a picture and its lightbox, a few zoom steps.
+const maxDrawn = 4
+
+// placed is each path item's path moved into r by tr, made once per rect and kept.
+func (d *Doc) placed(r render.Rect, tr func(render.Point) render.Point) []*render.Path {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for i, at := range d.drawn {
+		if at.r == r {
+			copy(d.drawn[i:], d.drawn[i+1:])
+			d.drawn[len(d.drawn)-1] = at
+			return at.paths
+		}
+	}
+	paths := make([]*render.Path, len(d.items))
+	for i := range d.items {
+		it := &d.items[i]
+		if it.kind != itemPath {
+			continue
+		}
+		p := &render.Path{Segs: make([]render.Seg, len(it.path.Segs))}
+		for j, sg := range it.path.Segs {
+			for n := range sg.Pts {
+				sg.Pts[n] = tr(sg.Pts[n])
+			}
+			p.Segs[j] = sg
+		}
+		paths[i] = p
+	}
+	if len(d.drawn) == maxDrawn {
+		d.drawn = d.drawn[1:]
+	}
+	d.drawn = append(d.drawn, drawnAt{r, paths})
+	return paths
 }
 
 // snap rounds a font size to a quarter pixel, so a few sizes are shaped rather than one per zoom step.

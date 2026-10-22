@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// security.md's example [permissions], with mockup 29's gate.
+// A manifest declaring most kinds of capability, a gate among them.
 const jiraManifest = `id = "acme/jira"
 version = "0.4.2"
 runs = "both"
@@ -29,7 +29,7 @@ func manifest(t *testing.T, src string) Manifest {
 	return m
 }
 
-// security.md: "At install, Oriel lists every capability the plugin declares beyond the always-allowed ones, each
+// "At install, Oriel lists every capability the plugin declares beyond the always-allowed ones, each
 // with Oriel's own explanation and risk level, and the plugin's reason if the manifest gives one."
 func TestConsentListsEveryShownCapability(t *testing.T) {
 	c := Ask(manifest(t, jiraManifest), nil)
@@ -71,7 +71,7 @@ func TestConsentListsEveryShownCapability(t *testing.T) {
 	}
 }
 
-// security.md: "A plugin that only needs ui and theme installs with no prompt."
+// "A plugin that only needs ui and theme installs with no prompt."
 func TestConsentSilentForAlwaysAllowed(t *testing.T) {
 	for _, src := range []string{
 		"id = \"me/theme\"\n",
@@ -83,7 +83,7 @@ func TestConsentSilentForAlwaysAllowed(t *testing.T) {
 	}
 }
 
-// security.md: "An update that adds capabilities is the same choice again: accept the update with its new list, or
+// "An update that adds capabilities is the same choice again: accept the update with its new list, or
 // stay on the current version. Removing capabilities applies silently."
 func TestConsentUpdateDiff(t *testing.T) {
 	old := manifest(t, `id = "acme/jira"
@@ -141,7 +141,7 @@ gate = true
 	}
 }
 
-// catalog.md's lockfile records consent as "net:acme.atlassian.net", "secrets:JIRA_TOKEN@acme.atlassian.net",
+// The lockfile records consent as "net:acme.atlassian.net", "secrets:JIRA_TOKEN@acme.atlassian.net",
 // "editor.read": a plugin whose lock entry covers its capabilities activates without asking.
 func TestConsentLockForm(t *testing.T) {
 	m := manifest(t, jiraManifest)

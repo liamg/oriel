@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/plugin/hosttest"
 )
 
-// PL-2, security.md → Enforcement by tier: WASM has "only host functions; each checks the grant". A module's
+// WASM has "only host functions; each checks the grant". A module's
 // call to the host goes through the guard, and an undeclared one is an error naming the capability.
 func TestWASMPlugin(t *testing.T) {
 	dir := t.TempDir()

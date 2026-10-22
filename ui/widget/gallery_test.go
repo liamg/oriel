@@ -121,7 +121,7 @@ func TestModalSnapshots(t *testing.T) {
 	}
 }
 
-// Every interactive node in the gallery has a help id (help.md's lint).
+// Every interactive node in the gallery has a help id (the help lint).
 func TestEveryControlHasHelp(t *testing.T) {
 	h, g := setup(t, theme.Dark)
 	g.modalOpen = true

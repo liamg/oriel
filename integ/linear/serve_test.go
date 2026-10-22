@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -52,8 +52,8 @@ func serving(t *testing.T, h host) *jsonrpc.Conn {
 	return conn
 }
 
-// security.md: "The plugin calls oriel.http.get(url, { auth = "LINEAR_TOKEN" }); the host injects the header" — the
-// process asks the host for each request, and the key goes only to api.linear.app.
+// The plugin calls oriel.http.get(url, { auth = "LINEAR_TOKEN" }) and the host injects the header: the process asks
+// the host for each request, and the key goes only to api.linear.app.
 func TestServeThroughTheHost(t *testing.T) {
 	l := lineartest.New(t)
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}

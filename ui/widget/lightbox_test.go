@@ -80,9 +80,9 @@ func (h *harness) clickImage(id ui.ID) {
 	}
 }
 
-// rendering.md, "Images": "a click on it shows it in the lightbox (`widget.Lightbox`, at `LayerDialog`): large over a
+// A click on an image shows it in the lightbox (`widget.Lightbox`, at `LayerDialog`): large over a
 // scrim, fit to the window. Escape, a click on the scrim or on the fitted image, or its ✕ closes it; ← and → move
-// between the images of its group, counted n / m under it with its caption."
+// between the images of its group, counted n / m under it with its caption.
 func TestLightboxOpensAndCloses(t *testing.T) {
 	h, ids := lightboxScene(t, gradient(400, 200), gradient(300, 300))
 	h.clickImage(ids[0])
@@ -162,9 +162,9 @@ func (h *harness) wheel(p render.Point, dy float32) {
 	h.frame()
 }
 
-// rendering.md, "Images": "The wheel zooms around the pointer, a drag pans the zoomed image, a double-click or 0 fits
+// The wheel zooms around the pointer, a drag pans the zoomed image, a double-click or 0 fits
 // it again and 1 shows it at its own size. Only the part in view is scaled, so zooming far into a large image costs
-// no more than the window."
+// no more than the window.
 func TestLightboxZoomsAndPans(t *testing.T) {
 	h, ids := lightboxScene(t, gradient(2000, 1000), gradient(10, 10))
 	h.clickImage(ids[0])
@@ -225,7 +225,7 @@ func TestLightboxZoomsAndPans(t *testing.T) {
 	}
 }
 
-// rendering.md, "Images": "With `ImageOpts.Zoom` it takes the pointer cursor and an edge while hovered".
+// With `ImageOpts.Zoom` an image takes the pointer cursor and an edge while hovered.
 func TestZoomableImageHover(t *testing.T) {
 	h, ids := lightboxScene(t, gradient(400, 200), gradient(300, 300))
 	x, y := mid(h.rect(ids[0]))
@@ -264,7 +264,7 @@ func TestLightboxOverAPage(t *testing.T) {
 	}
 }
 
-// rendering.md, "Images": a vector (a diagram) is zoomable like an image, in its document's group, and draws itself at
+// A vector (a diagram) is zoomable like an image, in its document's group, and draws itself at
 // the size the lightbox shows it, so it stays sharp however far it's zoomed.
 func TestLightboxVector(t *testing.T) {
 	var drawn []render.Rect

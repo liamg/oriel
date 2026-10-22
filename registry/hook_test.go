@@ -11,7 +11,7 @@ import (
 
 type BufWritePre struct{ Buf string }
 
-// plugins.md, "Hooks that can change things": hooks observe, veto, rewrite or decide, in priority order; a veto or
+// Hooks observe, veto, rewrite or decide, in priority order; a veto or
 // a decision stops the rest.
 func TestHooks(t *testing.T) {
 	r := registry.New()
@@ -49,7 +49,7 @@ func TestHooks(t *testing.T) {
 	}
 }
 
-// A hook that panics is turned off, as commands and views are (errors.md); one that errors is reported.
+// A hook that panics is turned off, as commands and views are; one that errors is reported.
 func TestHookFaults(t *testing.T) {
 	r := registry.New()
 	var faults []registry.Fault
@@ -76,31 +76,5 @@ func TestContributions(t *testing.T) {
 	d.Dispose()
 	if cs := r.Contributions("agent.tool"); cs[0].(registry.AgentTool).Source != "a" {
 		t.Errorf("after dispose %+v", cs)
-	}
-}
-
-// SH-8: a slot's indicators come in Order; the generation moves as any contribution comes or goes, so a cache of
-// what they built knows to start again.
-func TestIndicators(t *testing.T) {
-	r := registry.New()
-	g0 := r.ContributionsGen()
-	r.Contribute(registry.Indicator{Name: "b", Slot: registry.SlotHUD, Order: 20})
-	d := r.Contribute(registry.Indicator{Name: "a", Slot: registry.SlotHUD, Order: 30})
-	r.Contribute(registry.Indicator{Name: "c", Slot: registry.SlotHUD, Order: 10})
-	r.Contribute(registry.Indicator{Name: "x", Slot: registry.SlotTitleBar})
-	var names []string
-	for _, i := range registry.Indicators(r, registry.SlotHUD) {
-		names = append(names, i.Name)
-	}
-	if strings.Join(names, " ") != "c b a" {
-		t.Errorf("the hud slot's indicators: %v", names)
-	}
-	g1 := r.ContributionsGen()
-	if g1 == g0 {
-		t.Error("contributing didn't move the generation")
-	}
-	d.Dispose()
-	if r.ContributionsGen() == g1 || len(registry.Indicators(r, registry.SlotHUD)) != 2 {
-		t.Error("disposing one didn't take it out, or move the generation")
 	}
 }

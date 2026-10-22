@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/lsp/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp/protocol"
 	"github.com/liamg/oriel/text"
 )
@@ -39,9 +39,9 @@ func newServer(t *testing.T, caps string) *server {
 
 func (s *server) launch(ctx context.Context, spec ServerSpec, root string, stderr io.Writer) (Process, error) {
 	a, b := net.Pipe()
-	s.conn = jsonrpc.NewConn(b, jsonrpc.Handlers{
-		Request: func(ctx context.Context, method string, params json.RawMessage) (any, error) {
-			s.keep(jsonrpc.Message{Method: method, Params: params, ID: &jsonrpc.ID{}})
+	s.conn = NewConn(b, jsonrpc.Handlers{
+		Request: jsonrpc.Answer(func(ctx context.Context, method string, params json.RawMessage) (any, error) {
+			s.keep(jsonrpc.Message{Method: method, Params: params, ID: json.RawMessage("0")})
 			switch method {
 			case "initialize":
 				return json.RawMessage(`{"capabilities":` + s.caps + `}`), nil
@@ -52,7 +52,7 @@ func (s *server) launch(ctx context.Context, spec ServerSpec, root string, stder
 				return s.answer(method, params)
 			}
 			return nil, nil
-		},
+		}),
 		Notify: func(method string, params json.RawMessage) {
 			s.keep(jsonrpc.Message{Method: method, Params: params})
 			if method == "initialized" {
@@ -357,6 +357,55 @@ func TestDidSaveAndClose(t *testing.T) {
 	}
 }
 
+// DidSave is a document notification like the others: it waits its turn behind one being sent.
+func TestDidSaveWaitsForSendOrder(t *testing.T) {
+	c, s, buf, path := open(t, `{"textDocumentSync":{"openClose":true,"change":2,"save":{}}}`, "abc")
+	c.sendMu.Lock()
+	saved := make(chan error, 1)
+	go func() { saved <- c.DidSave(path, buf.Snapshot()) }()
+	select {
+	case <-saved:
+		c.sendMu.Unlock()
+		t.Fatal("DidSave sent while another document notification held the order")
+	case <-time.After(50 * time.Millisecond):
+	}
+	c.sendMu.Unlock()
+	if err := <-saved; err != nil {
+		t.Fatal(err)
+	}
+	s.last("textDocument/didSave")
+}
+
+// Diagnostics sent while initialize is answered are read with the encoding without racing its write (run with -race).
+func TestDiagnosticsDuringInitialize(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "a.go")
+	if err := os.WriteFile(path, []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := newServer(t, `{"positionEncoding":"utf-8"}`)
+	sets := make(chan DiagnosticSet, 8)
+	launch := s.launch
+	opts := Options{OnDiagnostics: func(d DiagnosticSet) { sets <- d }, Launch: func(ctx context.Context, spec ServerSpec, root string, stderr io.Writer) (Process, error) {
+		p, err := launch(ctx, spec, root, stderr)
+		s.conn.Notify("textDocument/publishDiagnostics", json.RawMessage(`{"uri":"`+string(URI(path))+`","diagnostics":[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"message":"m"}]}`))
+		return p, err
+	}}
+	c, err := Start(context.Background(), ServerSpec{Name: "fake"}, t.TempDir(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		c.Shutdown(ctx)
+	})
+	select {
+	case <-sets:
+	case <-time.After(5 * time.Second):
+		t.Fatal("no diagnostics")
+	}
+}
+
 // ref: lsp/language/publishDiagnostics.md#textDocument_publishDiagnostics
 // quote: "Diagnostics notifications are sent from the server to the client to signal results of validation runs."
 func TestPublishDiagnostics(t *testing.T) {
@@ -510,6 +559,25 @@ func TestServerRequests(t *testing.T) {
 	var e *jsonrpc.Error
 	if err := s.call("unknown/request", nil, nil); !errors.As(err, &e) || e.Code != jsonrpc.MethodNotFound {
 		t.Errorf("unknown request = %v", err)
+	}
+}
+
+// ref: lsp/specification.md#dollarRequests
+// quote: "If a server or client receives a request starting with '\\$/' it must error the request with error code `MethodNotFound` (e.g. `-32601`)."
+func TestDollarRequestsAreMethodNotFound(t *testing.T) {
+	a, b := net.Pipe()
+	answers := NewConn(a, jsonrpc.Handlers{Request: jsonrpc.Answer(func(context.Context, string, json.RawMessage) (any, error) {
+		return "ok", nil
+	})})
+	asks := NewConn(b, jsonrpc.Handlers{})
+	t.Cleanup(func() { answers.Close(); asks.Close() })
+	var got string
+	if err := asks.Call(context.Background(), "x", nil, &got); err != nil || got != "ok" {
+		t.Fatalf("x = %q, %v", got, err)
+	}
+	var e *jsonrpc.Error
+	if err := asks.Call(context.Background(), "$/x", nil, nil); !errors.As(err, &e) || e.Code != jsonrpc.MethodNotFound {
+		t.Errorf("$/x = %v", err)
 	}
 }
 

@@ -74,6 +74,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return nil, x.On(c.String(0), c.Any(1), c.Any(2), c.Where())
 			},
+			"placeholder": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Placeholder(c.String(0), c.Table(1), c.Fn(2), c.Where())
+			},
 			"read": func(c *script.Args) ([]any, error) {
 				return x.Read(c.String(0))
 			},
@@ -417,6 +423,12 @@ func (a *APIs) bind(vm *script.VM) {
 	{
 		x := Session{a: a}
 		vm.Bind("session", map[string]script.GoFunc{
+			"chips": func(c *script.Args) ([]any, error) {
+				if err := a.check("session.control"); err != nil {
+					return nil, err
+				}
+				return nil, x.Chips(c.String(0), c.Fn(1), c.Where())
+			},
 			"kind": func(c *script.Args) ([]any, error) {
 				if err := a.check("session.control"); err != nil {
 					return nil, err

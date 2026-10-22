@@ -11,8 +11,8 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// errors.md: "Secrets never reach a log: values from the secrets store (security.md) and tokens in URLs are
-// redacted before a record is written."
+// Secrets never reach a log: values from the secrets store and tokens in URLs are redacted before a record is
+// written.
 func TestRedact(t *testing.T) {
 	r := NewRedactor()
 	r.Add("lin_api_abcdef123456")
@@ -104,8 +104,7 @@ func TestFileRotates(t *testing.T) {
 	}
 }
 
-// errors.md: a session log "lives with the session, survives a restart, and is archived with
-// the session". A notice goes to exactly one log, by its source.
+// A session log lives with the session, survives a restart, and is archived with the session. A notice goes to exactly one log, by its source.
 func TestSessionLogSurvivesRestart(t *testing.T) {
 	root := t.TempDir()
 	var oriel []Record
@@ -158,7 +157,7 @@ func TestSessionLogSkipsTornLine(t *testing.T) {
 	}
 }
 
-// errors.md: "LSP servers', DAP adapters' and process plugins' stderr are captured as records with their source."
+// LSP servers', DAP adapters' and process plugins' stderr are captured as records with their source.
 func TestLinesCapturesStderr(t *testing.T) {
 	ring := NewRing(10)
 	w := &Lines{Log: slog.New(NewHandler(ring, nil, nil)).With("source", "lsp:gopls"), Level: slog.LevelWarn}

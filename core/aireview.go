@@ -28,7 +28,7 @@ func SeverityRank(s string) int {
 	return len(Severities)
 }
 
-// AIReview is one run of the cross-model AI review over a session's change (agents.md, Guardrails).
+// AIReview is one run of the cross-model AI review over a session's change.
 type AIReview struct {
 	ID       string            `json:"id"`
 	Provider string            `json:"provider"` // the reviewer's

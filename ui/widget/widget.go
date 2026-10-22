@@ -1,6 +1,6 @@
 // Package widget is the toolkit's widgets: buttons, chips, inputs, lists, trees, tabs, menus, context menus,
 // popovers, modals, toasts and sliders. They're built only on ui's public API, as a plugin's widgets would be, and
-// paint with theme tokens they declare (theming.md).
+// paint with theme tokens they declare.
 package widget
 
 import (
@@ -69,7 +69,7 @@ func init() { theme.Readable("input.selection", "input.bg", 1.5) }
 
 func col(c *ui.Ctx, id theme.TokenID) color.NRGBA { return c.Theme().C(id) }
 
-// The widgets' motion (FW-13): what fades, and where from.
+// The widgets' motion: what fades, and where from.
 var (
 	fade    = &ui.Transition{Fade: true}
 	dropIn  = &ui.Transition{Fade: true, Shift: render.Point{Y: -4}} // a menu or popover, from its anchor above

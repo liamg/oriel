@@ -38,43 +38,50 @@ var builtin, sources = loadBuiltin()
 
 type entry struct{ p agent.Pack }
 
-var (
-	mu        sync.Mutex
-	overrides []*entry
-)
-
-// Get returns the pack for a session kind: the latest registration, else the built-in.
+// Get returns the built-in pack for a session kind.
 func Get(kind string) (agent.Pack, bool) {
-	mu.Lock()
-	defer mu.Unlock()
-	return get(kind)
-}
-
-func get(kind string) (agent.Pack, bool) {
-	for _, e := range slices.Backward(overrides) {
-		if e.p.Name == kind {
-			return clone(e.p), true
-		}
-	}
 	p, ok := builtin[kind]
 	return clone(p), ok
 }
 
+// Set is the built-in packs with those registered over them: the user's agents/, a plugin's. The zero Set is the
+// built-ins alone.
+type Set struct {
+	mu        sync.Mutex
+	overrides []*entry
+}
+
+// Get returns the pack for a session kind: the latest registration, else the built-in.
+func (s *Set) Get(kind string) (agent.Pack, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.get(kind)
+}
+
+func (s *Set) get(kind string) (agent.Pack, bool) {
+	for _, e := range slices.Backward(s.overrides) {
+		if e.p.Name == kind {
+			return clone(e.p), true
+		}
+	}
+	return Get(kind)
+}
+
 // All returns the pack for every kind, built-in or registered, by name.
-func All() []agent.Pack {
-	mu.Lock()
-	defer mu.Unlock()
+func (s *Set) All() []agent.Pack {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	var names []string
 	for n := range builtin {
 		names = append(names, n)
 	}
-	for _, e := range overrides {
+	for _, e := range s.overrides {
 		names = append(names, e.p.Name)
 	}
 	slices.Sort(names)
 	var out []agent.Pack
 	for _, n := range slices.Compact(names) {
-		p, _ := get(n)
+		p, _ := s.get(n)
 		out = append(out, p)
 	}
 	return out
@@ -82,18 +89,18 @@ func All() []agent.Pack {
 
 // Register adds a pack, shadowing any built-in or earlier registration of the same name until it is unregistered.
 // An empty Skill is the pack's Name.
-func Register(p agent.Pack) (unregister func()) {
+func (s *Set) Register(p agent.Pack) (unregister func()) {
 	if p.Skill == "" {
 		p.Skill = p.Name
 	}
 	e := &entry{clone(p)}
-	mu.Lock()
-	overrides = append(overrides, e)
-	mu.Unlock()
+	s.mu.Lock()
+	s.overrides = append(s.overrides, e)
+	s.mu.Unlock()
 	return sync.OnceFunc(func() {
-		mu.Lock()
-		defer mu.Unlock()
-		overrides = slices.DeleteFunc(overrides, func(x *entry) bool { return x == e })
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.overrides = slices.DeleteFunc(s.overrides, func(x *entry) bool { return x == e })
 	})
 }
 
@@ -101,7 +108,7 @@ func Register(p agent.Pack) (unregister func()) {
 // markdown: frontmatter (name, description, tools) and body, with the include lines expanded, from dir/parts/
 // first. Without a name the file's is used; without tools, the Oriel tools its text names. A missing dir loads
 // nothing; a bad file loads nothing.
-func LoadDir(dir string) (unregister func(), err error) {
+func (s *Set) LoadDir(dir string) (unregister func(), err error) {
 	ents, err := os.ReadDir(dir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return func() {}, nil
@@ -131,7 +138,7 @@ func LoadDir(dir string) (unregister func(), err error) {
 	}
 	var uns []func()
 	for _, p := range ps {
-		uns = append(uns, Register(p))
+		uns = append(uns, s.Register(p))
 	}
 	return func() {
 		for _, un := range slices.Backward(uns) {

@@ -85,3 +85,13 @@ func TestLuaPatternsOracle(t *testing.T) {
 func luaQuote(s string) string {
 	return "\"" + strings.NewReplacer("\\", "\\\\", "\"", "\\\"", "\t", "\\t", "\n", "\\n").Replace(s) + "\""
 }
+
+// Patterns Lua refuses as malformed (string.find raises "malformed pattern (ends with '%')", "missing ']'",
+// "unbalanced pattern", "missing '[' after '%f' in pattern") don't compile, so their predicate never matches.
+func TestLuaPatternsMalformed(t *testing.T) {
+	for _, p := range []string{"a%", "%", "[%a]%", "[a", "[a%", "[]", "%b(", "%fx"} {
+		if lp := compileLuaPattern(p); lp != nil {
+			t.Errorf("compileLuaPattern(%q) compiled", p)
+		}
+	}
+}

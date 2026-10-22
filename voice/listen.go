@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,15 +16,11 @@ type Tuning struct {
 	Floor     time.Duration // the noise floor is measured over the first stretch
 	Speech    time.Duration // energy above the floor this long is speech
 	Preroll   time.Duration // audio kept before speech starts
-	WakeGap   time.Duration // quiet before a wake word, so one mid-sentence isn't a call
-	WakeCheck time.Duration // how much of an utterance is heard for the wake word
-	WakeCap   time.Duration // an utterance after the wake word ends by this
 }
 
 // Defaults are crit's.
 var Defaults = Tuning{Tick: time.Second, Pause: 600 * time.Millisecond, PhraseCap: 20 * time.Second, Floor: 300 * time.Millisecond,
-	Speech: 150 * time.Millisecond, Preroll: 300 * time.Millisecond, WakeGap: 700 * time.Millisecond, WakeCheck: 1500 * time.Millisecond,
-	WakeCap: 10 * time.Second}
+	Speech: 150 * time.Millisecond, Preroll: 300 * time.Millisecond}
 
 const minThreshold = 0.012
 
@@ -36,6 +33,9 @@ type ListenOpts struct {
 	// speech begins within it; Max stops it after this long regardless. 0 is never.
 	EndAfterSilence, StartTimeout, Max time.Duration
 	OnState                            func(state string) // "hearing", once speech begins
+	// OnLevel is the mic's loudness in [0, 1] in steps of 1/LevelSteps, each time it changes: 0 below the speech
+	// threshold, so a quiet mic calls nothing.
+	OnLevel func(level float64)
 	// OnText is each pass at the phrase: its text so far, which replaces the last pass's; final commits it, and
 	// the next phrase starts after it.
 	OnText func(text string, final bool)
@@ -59,6 +59,7 @@ type Dictation struct {
 	floor                 []float64
 	thresh                float64
 	elapsed, tick         float64
+	level                 atomic.Uint64 // math.Float64bits of the level
 
 	jobs     chan job
 	idle     chan struct{} // closed once the last pass is done
@@ -97,6 +98,37 @@ func (d *Dictation) signal(ch chan struct{}) {
 	select {
 	case ch <- struct{}{}:
 	case <-d.done:
+	}
+}
+
+// Level is the mic's loudness now, as OnLevel last had it.
+func (d *Dictation) Level() float64 { return math.Float64frombits(d.level.Load()) }
+
+// LevelSteps is how finely the level moves.
+const LevelSteps = 8
+
+// loudness maps a frame's energy to [0, 1]: -50 dBFS to -10 dBFS, nothing at or under thresh.
+func loudness(e, thresh float64) float64 {
+	if e <= thresh {
+		return 0
+	}
+	return max(0, min(1, (20*math.Log10(e)+50)/40))
+}
+
+// meter moves the level towards the frame's loudness, up at once and down by a step a frame, and reports a change.
+func (d *Dictation) meter(e float64) {
+	prev := d.Level()
+	target := math.Round(loudness(e, d.thresh)*LevelSteps) / LevelSteps
+	next := target
+	if target < prev {
+		next = max(target, prev-1.0/LevelSteps)
+	}
+	if next == prev {
+		return
+	}
+	d.level.Store(math.Float64bits(next))
+	if d.o.OnLevel != nil {
+		d.o.OnLevel(next)
 	}
 }
 
@@ -144,6 +176,12 @@ loop:
 		}
 	}
 	_ = d.s.Close()
+	if d.Level() != 0 {
+		d.level.Store(0)
+		if d.o.OnLevel != nil {
+			d.o.OnLevel(0)
+		}
+	}
 	streamErr := d.s.Err()
 	if reason != "cancelled" {
 		d.send(true)
@@ -186,6 +224,7 @@ func (d *Dictation) frame(f []float32, t Tuning) string {
 		d.thresh = max(minThreshold, sum/float64(len(d.floor))*3)
 		d.floor = nil
 	}
+	d.meter(e)
 	d.phrase = append(d.phrase, f)
 	d.phraseMs += fms
 	if e > d.thresh {

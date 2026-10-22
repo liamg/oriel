@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// The annotation house style (ui.md: explain, :Inspect): a numbered diamond, an angled leader line, and a
+// The annotation house style (explain, :Inspect): a numbered diamond, an angled leader line, and a
 // clipped-corner card.
 var (
 	tAnnotationBg    = theme.Declare("annotation.bg", "bg.surface")

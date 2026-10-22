@@ -68,7 +68,7 @@ func TestRowsDisabled(t *testing.T) {
 	}
 }
 
-// SE-5: "clicking a run row selects it; Open/Resume open it": with ClickSelects a click selects, Enter still opens.
+// Clicking a run row selects it; Open/Resume open it: with ClickSelects a click selects, Enter still opens.
 func TestRowsClickSelects(t *testing.T) {
 	sel, opened := 0, -1
 	var id ui.ID

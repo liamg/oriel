@@ -54,7 +54,7 @@ func (b *Backend) invalidate() {
 	defer b.mu.Unlock()
 	for _, w := range b.windows {
 		w.redraw.Store(true)
-		w.win.Invalidate()
+		w.wake()
 	}
 }
 
@@ -70,6 +70,9 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 		opts = append(opts, app.Size(unit.Dp(o.Width), unit.Dp(o.Height)))
 	}
 	w.win.Option(opts...)
+	w.active.Store(true)
+	w.ax = newAccess(w.accessGeom)
+	w.ax.bridge = newAccessBridge(w.ax)
 	b.mu.Lock()
 	b.windows = append(b.windows, w)
 	b.mu.Unlock()
@@ -96,6 +99,7 @@ type Window struct {
 	events chan render.Event // to the app, in order
 	queue  chan render.Event // from the event loop, which never blocks on the app
 	latest atomic.Pointer[render.List]
+	spare  *render.List // a frame recorded the same as latest, never handed over: the next records into it
 	handed atomic.Int64 // when latest was handed over, in unix nanoseconds
 	redraw atomic.Bool
 	scale  atomic.Value // float32: the display's density times the zoom
@@ -107,6 +111,26 @@ type Window struct {
 	read   atomic.Pointer[string] // what the clipboard held when last read
 	ask    atomic.Bool            // read the clipboard on the next frame
 	held   atomic.Bool            // a request to close goes to the app
+	active atomic.Bool            // the window has the keyboard
+	vis    visibility
+	owed   atomic.Bool // a wake-up held while the window was hidden
+	ax     *access
+}
+
+var _ render.Accessible = (*Window)(nil)
+
+// UpdateAccess hands the tree's changes to the platform's screen reader bridge, which uses them only once one asks.
+func (w *Window) UpdateAccess(u render.AccessUpdate) { w.ax.bridge.update(w.ax.tree.apply(u)) }
+
+func (w *Window) AccessActions() <-chan render.AccessAction { return w.ax.actions }
+
+func (w *Window) accessGeom() accessGeom {
+	dpi := w.dpi.Load().(float32)
+	g := accessGeom{Scale: w.Scale(), Dpi: dpi, Active: w.active.Load()}
+	if r, ok := w.pl.frame(dpi); ok {
+		g.Origin = render.Point{X: r.Min.X * dpi, Y: r.Min.Y * dpi}
+	}
+	return g
 }
 
 func (w *Window) ReadClipboard() (string, bool) {
@@ -182,15 +206,30 @@ func (w *Window) Close() {
 }
 
 func (w *Window) Frame(fn func(render.Frame)) error {
-	l := new(render.List)
+	l := w.spare
+	if l == nil {
+		l = new(render.List)
+	}
+	l.Ops = l.Ops[:0]
 	fn(l.Record(w.Scale()))
 	if old := w.latest.Load(); old != nil && l.Same(old) {
+		w.spare = l
 		return nil // nothing changed: no need to draw it again
 	}
+	w.spare = nil
 	w.latest.Store(l)
 	w.handed.Store(time.Now().UnixNano())
-	w.win.Invalidate()
+	w.wake()
 	return nil
+}
+
+// wake asks Gio for a frame, or holds the ask while the window is hidden.
+func (w *Window) wake() {
+	if w.vis.hidden() {
+		w.owed.Store(true)
+		return
+	}
+	w.win.Invalidate()
 }
 
 // A frame is slow when it waits past slowWait for the window to start on it, or takes past slowDraw to draw and present.
@@ -224,7 +263,7 @@ func (w *Window) loop() {
 		close(w.queue)
 		mu.Unlock()
 	}()
-	stop := watchAppearance(func(dark bool) {
+	stop, recheck := watchAppearance(osDark, appearanceEvery, func(dark bool) {
 		mu.Lock()
 		defer mu.Unlock()
 		if !closed {
@@ -232,6 +271,7 @@ func (w *Window) loop() {
 		}
 	})
 	defer stop()
+	defer appearanceSignals(recheck)()
 	side := &sideWatcher{on: func(ev render.Event) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -240,6 +280,18 @@ func (w *Window) loop() {
 		}
 	}}
 	defer side.close()
+	w.vis.tell = func(hidden bool) {
+		mu.Lock()
+		if !closed {
+			w.post(render.VisibleEvent{Visible: !hidden})
+		}
+		mu.Unlock()
+		if !hidden && w.owed.Swap(false) {
+			go w.win.Invalidate()
+		}
+	}
+	occl := &occlusionWatcher{on: w.vis.occlude}
+	defer occl.close()
 	hover := &hoverWatcher{}
 	defer hover.close()
 	var ops op.Ops
@@ -251,7 +303,9 @@ func (w *Window) loop() {
 	var slowSent time.Time
 	var down render.Mods // the modifier keys held
 	viewed, placed := false, false
+	focused := true
 	defer w.pl.close()
+	defer w.ax.bridge.close()
 	for {
 		switch e := w.win.Event().(type) {
 		case app.DestroyEvent:
@@ -335,8 +389,19 @@ func (w *Window) loop() {
 				w.post(render.SlowFrameEvent{Waited: waited, Took: took})
 			}
 		default:
+			if ev, ok := focusChange(e, &focused); ok {
+				w.post(ev)
+				w.active.Store(focused)
+				w.ax.bridge.activate(focused)
+				if focused {
+					recheck()
+				}
+			}
+			w.vis.config(e)
+			occl.view(e)
 			side.view(e)
 			hover.view(e)
+			w.ax.bridge.view(e)
 			if w.pl.view(e) {
 				viewed = true
 			}

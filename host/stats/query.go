@@ -346,233 +346,276 @@ func Run(q Query, sessions []Session) Report {
 	if q.Group == "" {
 		q.Group = ByRepo
 	}
-	r := Report{Points: q.Points()}
-	groups := map[string]*Group{}
-	models := map[string]*Model{}
-	efforts := map[string]*Effort{}
-	tools := map[string]*ToolRow{}
-	origins := map[string]*Origin{}
-	var samples = map[string][]int64{}
-	zone := time.FixedZone("", q.Offset)
-	n := int64(len(r.Points))
-	from, to := q.From.Unix()/3600, (q.To.Unix()+3599)/3600
-	plen := q.To.Sub(q.From)
-	pfrom, pto := q.From.Add(-plen).Unix()/3600, from
+	t := newTally(q)
 	for _, s := range sessions {
-		shares := s.Shares()
-		w := q.weight(s, shares)
-		if w == 0 {
-			continue
+		t.session(s)
+	}
+	return t.report()
+}
+
+// tally is a Report as Run builds it, a session at a time.
+type tally struct {
+	q       Query
+	r       Report
+	groups  map[string]*Group
+	models  map[string]*Model
+	efforts map[string]*Effort
+	tools   map[string]*ToolRow
+	origins map[string]*Origin
+	samples map[string][]int64
+	zone    *time.Location
+	n       int64
+	// from and to are the query's hours, pfrom and pto the period before it's compared with.
+	from, to, pfrom, pto int64
+}
+
+func newTally(q Query) *tally {
+	t := &tally{q: q, r: Report{Points: q.Points()}, groups: map[string]*Group{}, models: map[string]*Model{},
+		efforts: map[string]*Effort{}, tools: map[string]*ToolRow{}, origins: map[string]*Origin{}, samples: map[string][]int64{},
+		zone: time.FixedZone("", q.Offset)}
+	t.n = int64(len(t.r.Points))
+	t.from, t.to = q.From.Unix()/3600, (q.To.Unix()+3599)/3600
+	plen := q.To.Sub(q.From)
+	t.pfrom, t.pto = q.From.Add(-plen).Unix()/3600, t.from
+	return t
+}
+
+// partsOf is how a slot of s's is shared between the query's groups.
+func (t *tally) partsOf(s Session, shares []Share) func(sl *Slot, w float64) []part {
+	q := t.q
+	switch q.Group {
+	case ByRepo:
+		return func(sl *Slot, _ float64) []part {
+			var out []part
+			for _, sh := range s.charged(sl, shares, q.Split) {
+				if q.has("repo", sh.Repo) {
+					out = append(out, part{key: sh.Repo, label: sh.Repo, w: sh.Share})
+				}
+			}
+			if len(shares) == 0 && len(q.Filters["repo"]) == 0 {
+				out = append(out, part{key: "", label: "no repo", w: 1})
+			}
+			return out
 		}
-		var parts func(sl *Slot, w float64) []part
-		switch q.Group {
-		case ByRepo:
-			parts = func(sl *Slot, _ float64) []part {
-				var out []part
-				for _, sh := range s.charged(sl, shares, q.Split) {
-					if q.has("repo", sh.Repo) {
-						out = append(out, part{key: sh.Repo, label: sh.Repo, w: sh.Share})
-					}
-				}
-				if len(shares) == 0 && len(q.Filters["repo"]) == 0 {
-					out = append(out, part{key: "", label: "no repo", w: 1})
-				}
-				return out
-			}
-		case BySession:
-			var repos []string
-			for _, rp := range s.Repos {
-				repos = append(repos, rp.Name)
-			}
-			parts = func(_ *Slot, w float64) []part {
-				return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, origin: originOf(s), w: w}}
-			}
-		case ByOrigin:
-			parts = func(_ *Slot, w float64) []part {
-				return []part{{key: originOf(s), label: originLabel(originOf(s)), w: w}}
-			}
-		case ByKind:
-			parts = func(_ *Slot, w float64) []part { return []part{{key: s.Kind, label: cmpOr(s.Kind, "none"), w: w}} }
-		case ByProvider:
-			parts = func(_ *Slot, w float64) []part {
-				return []part{{key: s.Provider, label: cmpOr(s.Provider, "none"), w: w}}
-			}
-		case ByAccount:
-			parts = func(sl *Slot, w float64) []part {
-				a := s.accountAt(sl.Hour)
-				return []part{{key: a.ID, label: cmpOr(a.Name, a.ID, "unknown account"), w: w}}
-			}
-		case ByModel:
-			parts = func(sl *Slot, w float64) []part {
-				if sl.Model == "" {
-					return nil
-				}
-				return []part{{key: sl.Model, label: sl.Model, w: w}}
-			}
-		case ByDay:
-			parts = func(sl *Slot, w float64) []part {
-				d := time.Unix(sl.Hour*3600, 0).In(zone).Format("2006-01-02")
-				return []part{{key: d, label: d, w: w}}
-			}
+	case BySession:
+		var repos []string
+		for _, rp := range s.Repos {
+			repos = append(repos, rp.Name)
 		}
-		o := origins[originOf(s)]
-		if o == nil {
-			o = &Origin{Name: originOf(s)}
-			origins[o.Name] = o
+		return func(_ *Slot, w float64) []part {
+			return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, origin: originOf(s), w: w}}
 		}
-		counted, prev := false, false
-		span, pspan := spans{}, spans{}
-		for _, sc := range s.Scans {
-			for _, sl := range sc.Slots {
-				if !q.keeps(s, sl.Hour, sl.Model) {
-					continue
-				}
-				w := q.slotWeight(s, sl, shares, w)
-				if w == 0 {
-					continue
-				}
-				if sl.Hour >= pfrom && sl.Hour < pto {
-					if sl.Requests > 0 {
-						prev = true
-					}
-					add(&r.Prev, sl, w)
-					pspan.add(q, sl)
-				}
-				if sl.Hour < from || sl.Hour >= to {
-					continue
-				}
-				if sl.Requests > 0 {
-					counted = true
-				}
-				span.add(q, sl)
-				end := time.Unix((sl.Hour+1)*3600, 0)
-				if sc.Last.Before(end) {
-					end = sc.Last
-				}
-				add(&r.Totals, sl, w)
-				o.Requests += round(float64(sl.Requests) * w)
-				o.Tokens = o.Tokens.Add(scale(sl.Tokens, w), 1)
-				o.Cost += sl.Costs.Total() * w
-				cost := sl.Costs.Total()
-				if sl.Model != "" {
-					r.Tokens = r.Tokens.Add(scale(sl.Tokens, w), 1)
-					r.Costs = r.Costs.Add(sl.Costs, w)
-					m := models[sl.Model]
-					if m == nil {
-						m = &Model{Name: sl.Model}
-						models[sl.Model] = m
-					}
-					m.Requests += round(float64(sl.Requests) * w)
-					m.Sidechain += round(float64(sl.Sidechain) * w)
-					m.Tokens += round(float64(sl.Tokens.Total()) * w)
-					m.Cost += cost * w
-					if sl.Effort != "" {
-						e := efforts[sl.Effort]
-						if e == nil {
-							e = &Effort{Name: sl.Effort}
-							efforts[sl.Effort] = e
-						}
-						e.Requests += round(float64(sl.Requests) * w)
-						e.Cost += cost * w
-					}
-					r.Hours[time.Unix(sl.Hour*3600, 0).In(zone).Hour()] += cost * w
-				}
-				i := q.index(sl.Hour*3600) - q.index(q.From.Unix())
-				for _, p := range parts(sl, w) {
-					g := groups[p.key]
-					if g == nil {
-						g = &Group{Key: p.key, Label: p.label, Repos: p.repos, Origin: p.origin, Series: make([]float64, n),
-							Used: make([]int64, n), sessions: map[string]bool{}}
-						groups[p.key] = g
-					}
-					g.Requests += round(float64(sl.Requests) * p.w)
-					g.Tokens += round(float64(sl.Tokens.Total()) * p.w)
-					g.Cost += cost * p.w
-					if i >= 0 && i < n {
-						g.Series[i] += cost * p.w
-						g.Used[i] += round(float64(sl.Tokens.Total()) * p.w)
-					}
-					if sl.Requests > 0 {
-						g.sessions[s.ID] = true
-						if end.After(g.Last) {
-							g.Last = end
-						}
-					}
-				}
+	case ByOrigin:
+		return func(_ *Slot, w float64) []part {
+			return []part{{key: originOf(s), label: originLabel(originOf(s)), w: w}}
+		}
+	case ByKind:
+		return func(_ *Slot, w float64) []part { return []part{{key: s.Kind, label: cmpOr(s.Kind, "none"), w: w}} }
+	case ByProvider:
+		return func(_ *Slot, w float64) []part {
+			return []part{{key: s.Provider, label: cmpOr(s.Provider, "none"), w: w}}
+		}
+	case ByAccount:
+		return func(sl *Slot, w float64) []part {
+			a := s.accountAt(sl.Hour)
+			return []part{{key: a.ID, label: cmpOr(a.Name, a.ID, "unknown account"), w: w}}
+		}
+	case ByModel:
+		return func(sl *Slot, w float64) []part {
+			if sl.Model == "" {
+				return nil
 			}
+			return []part{{key: sl.Model, label: sl.Model, w: w}}
 		}
-		if prev {
-			r.Prev.Sessions++
-			r.Prev.SpanS += round(float64(pspan.secs()) * w)
+	case ByDay:
+		return func(sl *Slot, w float64) []part {
+			d := time.Unix(sl.Hour*3600, 0).In(t.zone).Format("2006-01-02")
+			return []part{{key: d, label: d, w: w}}
 		}
-		if !counted {
-			continue
-		}
-		r.Totals.Sessions++
-		o.Sessions++
-		r.Totals.SpanS += round(float64(span.secs()) * w)
-		if len(s.Repos) > 1 {
-			r.Totals.MultiRepo++
-		}
-		r.Totals.Pairs += max(1, len(s.Repos))
-		for _, sc := range s.Scans {
-			used := map[string]bool{}
-			for _, ts := range sc.ToolSlots {
-				if ts.Hour < from || ts.Hour >= to || !q.keeps(s, ts.Hour, ts.Model) {
-					continue
-				}
-				row := tools[ts.Name]
-				if row == nil {
-					row = &ToolRow{Name: ts.Name}
-					tools[ts.Name] = row
-				}
-				row.Calls += round(float64(ts.Calls) * w)
-				row.Errors += round(float64(ts.Errors) * w)
-				for i, b := range ts.Buckets {
-					row.Buckets[i] += round(float64(b) * w)
-				}
-				used[ts.Name] = true
+	}
+	return nil
+}
+
+// session adds a session's slots and tool calls, at its weight in the query.
+func (t *tally) session(s Session) {
+	q := t.q
+	shares := s.Shares()
+	w := q.weight(s, shares)
+	if w == 0 {
+		return
+	}
+	parts := t.partsOf(s, shares)
+	o := t.origins[originOf(s)]
+	if o == nil {
+		o = &Origin{Name: originOf(s)}
+		t.origins[o.Name] = o
+	}
+	counted, prev := false, false
+	span, pspan := spans{}, spans{}
+	for _, sc := range s.Scans {
+		for _, sl := range sc.Slots {
+			w := q.slotWeight(s, sl, shares, w)
+			if w == 0 || !q.keeps(s, sl.Hour, sl.Model) {
+				continue
 			}
-			for name := range used {
-				if t := sc.Tools[name]; t != nil {
-					samples[name] = append(samples[name], t.Samples...)
-				}
+			if sl.Hour >= t.pfrom && sl.Hour < t.pto {
+				prev = prev || sl.Requests > 0
+				add(&t.r.Prev, sl, w)
+				pspan.add(q, sl)
+			}
+			if sl.Hour < t.from || sl.Hour >= t.to {
+				continue
+			}
+			counted = counted || sl.Requests > 0
+			span.add(q, sl)
+			end := time.Unix((sl.Hour+1)*3600, 0)
+			if sc.Last.Before(end) {
+				end = sc.Last
+			}
+			t.slot(s, sl, o, w, end, parts)
+		}
+	}
+	if prev {
+		t.r.Prev.Sessions++
+		t.r.Prev.SpanS += round(float64(pspan.secs()) * w)
+	}
+	if !counted {
+		return
+	}
+	t.r.Totals.Sessions++
+	o.Sessions++
+	t.r.Totals.SpanS += round(float64(span.secs()) * w)
+	if len(s.Repos) > 1 {
+		t.r.Totals.MultiRepo++
+	}
+	t.r.Totals.Pairs += max(1, len(s.Repos))
+	t.toolCalls(s, w)
+}
+
+// slot adds one of s's slots in the query's period, at weight w, its requests ending by end.
+func (t *tally) slot(s Session, sl *Slot, o *Origin, w float64, end time.Time, parts func(sl *Slot, w float64) []part) {
+	add(&t.r.Totals, sl, w)
+	o.Requests += round(float64(sl.Requests) * w)
+	o.Tokens = o.Tokens.Add(scale(sl.Tokens, w), 1)
+	o.Cost += sl.Costs.Total() * w
+	cost := sl.Costs.Total()
+	if sl.Model != "" {
+		t.model(sl, w)
+	}
+	i := t.q.index(sl.Hour*3600) - t.q.index(t.q.From.Unix())
+	for _, p := range parts(sl, w) {
+		g := t.groups[p.key]
+		if g == nil {
+			g = &Group{Key: p.key, Label: p.label, Repos: p.repos, Origin: p.origin, Series: make([]float64, t.n),
+				Used: make([]int64, t.n), sessions: map[string]bool{}}
+			t.groups[p.key] = g
+		}
+		g.Requests += round(float64(sl.Requests) * p.w)
+		g.Tokens += round(float64(sl.Tokens.Total()) * p.w)
+		g.Cost += cost * p.w
+		if i >= 0 && i < t.n {
+			g.Series[i] += cost * p.w
+			g.Used[i] += round(float64(sl.Tokens.Total()) * p.w)
+		}
+		if sl.Requests > 0 {
+			g.sessions[s.ID] = true
+			if end.After(g.Last) {
+				g.Last = end
 			}
 		}
 	}
-	for _, g := range groups {
+}
+
+// model adds a model's slot to its model, its effort and the hour of day.
+func (t *tally) model(sl *Slot, w float64) {
+	cost := sl.Costs.Total()
+	t.r.Tokens = t.r.Tokens.Add(scale(sl.Tokens, w), 1)
+	t.r.Costs = t.r.Costs.Add(sl.Costs, w)
+	m := t.models[sl.Model]
+	if m == nil {
+		m = &Model{Name: sl.Model}
+		t.models[sl.Model] = m
+	}
+	m.Requests += round(float64(sl.Requests) * w)
+	m.Sidechain += round(float64(sl.Sidechain) * w)
+	m.Tokens += round(float64(sl.Tokens.Total()) * w)
+	m.Cost += cost * w
+	if sl.Effort != "" {
+		e := t.efforts[sl.Effort]
+		if e == nil {
+			e = &Effort{Name: sl.Effort}
+			t.efforts[sl.Effort] = e
+		}
+		e.Requests += round(float64(sl.Requests) * w)
+		e.Cost += cost * w
+	}
+	t.r.Hours[time.Unix(sl.Hour*3600, 0).In(t.zone).Hour()] += cost * w
+}
+
+// toolCalls adds a counted session's tool calls in the query's period.
+func (t *tally) toolCalls(s Session, w float64) {
+	for _, sc := range s.Scans {
+		used := map[string]bool{}
+		for _, ts := range sc.ToolSlots {
+			if ts.Hour < t.from || ts.Hour >= t.to || !t.q.keeps(s, ts.Hour, ts.Model) {
+				continue
+			}
+			row := t.tools[ts.Name]
+			if row == nil {
+				row = &ToolRow{Name: ts.Name}
+				t.tools[ts.Name] = row
+			}
+			row.Calls += round(float64(ts.Calls) * w)
+			row.Errors += round(float64(ts.Errors) * w)
+			for i, b := range ts.Buckets {
+				row.Buckets[i] += round(float64(b) * w)
+			}
+			used[ts.Name] = true
+		}
+		for name := range used {
+			if tl := sc.Tools[name]; tl != nil {
+				t.samples[name] = append(t.samples[name], tl.Samples...)
+			}
+		}
+	}
+}
+
+// report is the tally, its rows in order.
+func (t *tally) report() Report {
+	r := t.r
+	for _, g := range t.groups {
 		g.Sessions = len(g.sessions)
 		if g.Requests > 0 || g.Cost > 0 {
 			r.Groups = append(r.Groups, *g)
 		}
 	}
 	slices.SortFunc(r.Groups, func(a, b Group) int {
-		if q.Group == ByDay {
+		if t.q.Group == ByDay {
 			return strings.Compare(a.Key, b.Key)
 		}
 		return cmp.Or(cmp.Compare(b.Cost, a.Cost), strings.Compare(a.Key, b.Key))
 	})
 	for _, name := range []string{OriginOriel, OriginOutside} {
-		if o := origins[name]; o != nil && o.Requests > 0 {
+		if o := t.origins[name]; o != nil && o.Requests > 0 {
 			r.Origins = append(r.Origins, *o)
 		}
 	}
-	for _, m := range models {
+	for _, m := range t.models {
 		if m.Requests > 0 {
 			r.Models = append(r.Models, *m)
 		}
 	}
 	slices.SortFunc(r.Models, func(a, b Model) int { return cmp.Or(cmp.Compare(b.Cost, a.Cost), strings.Compare(a.Name, b.Name)) })
-	for _, e := range efforts {
+	for _, e := range t.efforts {
 		r.Efforts = append(r.Efforts, *e)
 	}
 	SortEfforts(r.Efforts)
-	for name, t := range tools {
-		if t.Calls == 0 {
+	for name, tr := range t.tools {
+		if tr.Calls == 0 {
 			continue
 		}
-		t.P50 = median(samples[name])
-		r.Tools = append(r.Tools, *t)
+		tr.P50 = median(t.samples[name])
+		r.Tools = append(r.Tools, *tr)
 	}
 	slices.SortFunc(r.Tools, func(a, b ToolRow) int { return cmp.Or(cmp.Compare(b.Calls, a.Calls), strings.Compare(a.Name, b.Name)) })
 	return r

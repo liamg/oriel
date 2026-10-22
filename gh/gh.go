@@ -112,8 +112,8 @@ type NewPR struct {
 	Draft                   bool
 }
 
-// Client is what Oriel asks of GitHub (ui.md 18, 06): the PR for a branch, opening and editing one, its reviewers,
-// the checks on a ref, and its review: read, and answered as the user.
+// Client is what Oriel asks of GitHub for the Ship page and review mirroring: the PR for a branch, opening and
+// editing one, its reviewers, the checks on a ref, and its review: read, and answered as the user.
 type Client interface {
 	// PRForBranch is the branch's pull request: its open one, else the newest; nil when it has none.
 	PRForBranch(ctx context.Context, repo Repo, branch string) (*PR, error)

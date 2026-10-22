@@ -13,8 +13,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/hostexec"
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 func (p *Provider) Start(ctx context.Context, s agent.StartSpec) (agent.Session, error) {

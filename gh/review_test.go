@@ -8,7 +8,7 @@ import (
 	"github.com/liamg/oriel/gh/ghtest"
 )
 
-// RV-4: a PR's review read as Oriel mirrors it (line comments and their replies, reviews and their states, the
+// A PR's review read as Oriel mirrors it (line comments and their replies, reviews and their states, the
 // conversation, resolved threads, org membership), and the user's replies posted, over the REST API and through gh.
 func TestReviewMirrorReads(t *testing.T) {
 	for _, transport := range []string{"http", "cli"} {

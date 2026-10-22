@@ -103,8 +103,7 @@ func jiraListing(versions ...[2]string) string {
 	return s
 }
 
-// PL-16 done when: "A fixture PR for a new version gets the comment with the right capability diff." catalog.md:
-// "CI's comment leads with the capability diff and links the GitHub compare. Any gate capability is called out."
+// A fixture PR for a new version gets the comment with the right capability diff. "CI's comment leads with the capability diff and links the GitHub compare. Any gate capability is called out."
 func TestPRCommentCapabilityDiff(t *testing.T) {
 	repo := newFakeRepo(t, [][2]string{{"0.4.1", jira041}, {"0.4.2", jira042}})
 	gh := fakeGitHub{repos: map[string]fakeRepo{"github.com/acme/oriel-jira": repo}}
@@ -137,8 +136,7 @@ func TestPRCommentCapabilityDiff(t *testing.T) {
 	}
 }
 
-// PL-16 done when: "A PR for acme/* from someone outside acme fails the owner check." catalog.md: "the PR author is
-// that owner or a member of the org", and "The path matches the repo owner".
+// A PR for acme/* from someone outside acme fails the owner check: "the PR author is that owner or a member of the org", and "The path matches the repo owner".
 func TestPROwnerCheck(t *testing.T) {
 	repo := newFakeRepo(t, [][2]string{{"0.4.1", jira041}})
 	gh := fakeGitHub{repos: map[string]fakeRepo{"github.com/acme/oriel-jira": repo}, members: map[string][]string{"acme": {"alice"}}}
@@ -160,7 +158,7 @@ func TestPROwnerCheck(t *testing.T) {
 	}
 }
 
-// catalog.md: "The tag points at the recorded commit", and "Revoking any version of a trusted plugin also needs
+// "The tag points at the recorded commit", and "Revoking any version of a trusted plugin also needs
 // trusted removed in the same PR."
 func TestPRTagAndRevocation(t *testing.T) {
 	repo := newFakeRepo(t, [][2]string{{"0.4.1", jira041}, {"0.4.2", jira042}})

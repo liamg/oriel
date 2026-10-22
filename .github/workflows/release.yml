@@ -1,7 +1,9 @@
 name: release
 
-# A v-tag makes a release: the app for each platform, each with its Linux sandbox helper embedded (make build), and
-# a manifest signed for the updater (distribution.md). A tag with a "-" (v0.5.0-rc.1) is a pre-release, on nightly.
+# A v-tag makes a release, once ci.yml passes on it: the app for each platform, each with its Linux sandbox helper
+# embedded (make build), and a manifest signed for the updater. A tag with a "-" (v0.5.0-rc.1) is a pre-release, on
+# nightly. Linux ships oriel-<version>-linux-<arch>.tar.gz (scripts/linux-archive.sh); macOS a DMG, the binary and
+# Oriel.app as a .tar.gz.
 #
 # Needs the repository secret ORIEL_RELEASE_KEY (the ed25519 key, hex) and the variable ORIEL_RELEASE_PUBKEYS (its
 # public half, hex; two, comma-separated, during a rotation), which the builds trust. Oriel.app is signed with the
@@ -21,7 +23,27 @@ env:
   GH_REPO: ${{ github.repository }}
 
 jobs:
+  preflight:
+    # A build without the public keys can never update itself, and a release without the key can't be signed.
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          PUBKEYS: ${{ vars.ORIEL_RELEASE_PUBKEYS }}
+          KEY: ${{ secrets.ORIEL_RELEASE_KEY }}
+        run: |
+          ok=true
+          if [ -z "$PUBKEYS" ]; then echo "::error::the repository variable ORIEL_RELEASE_PUBKEYS is empty"; ok=false; fi
+          if [ -z "$KEY" ]; then echo "::error::the repository secret ORIEL_RELEASE_KEY is empty"; ok=false; fi
+          $ok
+
+  tests:
+    needs: preflight
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   draft:
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - run: |
@@ -35,21 +57,22 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             zig: zig-x86_64-linux-0.16.0
             sum: 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
           - arch: arm64
-            runner: ubuntu-24.04-arm
+            runner: ubuntu-22.04-arm
             zig: zig-aarch64-linux-0.16.0
             sum: ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17
+    # 22.04 builds against glibc 2.35, the oldest the binary then runs on.
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26.x"
-      - name: Install Gio's Linux deps
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev
+      - name: Install Gio's Linux deps, and cmake for whisper.cpp
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev
       - name: Install zig 0.16.0
         run: |
           curl -sSfL -o zig.tar.xz "https://ziglang.org/download/0.16.0/${{ matrix.zig }}.tar.xz"
@@ -57,9 +80,12 @@ jobs:
           mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
           echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
       - run: term/ghostty/native/build.sh linux_${{ matrix.arch }}
+      - run: voice/native/build.sh linux_${{ matrix.arch }}
       - run: make build VERSION="$TAG" RELEASE_KEYS="${{ vars.ORIEL_RELEASE_PUBKEYS }}"
-      - run: |
-          mkdir dist && mv bin/oriel "dist/oriel-linux-${{ matrix.arch }}"
+      - name: Pack and upload the archive
+        run: |
+          ./bin/oriel dev icon bin/oriel.iconset
+          scripts/linux-archive.sh dist bin/oriel bin/oriel.iconset/icon_128x128@2x.png "$TAG" ${{ matrix.arch }}
           gh release upload "$TAG" dist/*
 
   macos:
@@ -79,6 +105,7 @@ jobs:
           mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
           echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
       - run: term/ghostty/native/build.sh darwin_arm64 darwin_amd64
+      - run: voice/native/build.sh darwin_arm64 darwin_amd64
       - name: Import the signing identity
         # The self-signed identity (scripts/macos-signing-cert.sh) goes into a keychain of its own for this job.
         # Without it the app is signed ad hoc, and macOS asks again for its privacy and keychain grants after
@@ -124,7 +151,7 @@ jobs:
         run: if [ -n "${KEYCHAIN:-}" ]; then security delete-keychain "$KEYCHAIN"; fi
 
   publish:
-    # The manifest lists every binary and bundle with its sha256, signed; then the draft goes out. The DMGs
+    # The manifest lists every archive, binary and bundle with its sha256, signed; then the draft goes out. The DMGs
     # (Oriel-*.dmg) are for first install, not the updater, so they aren't downloaded or listed.
     needs: [linux, macos]
     runs-on: ubuntu-latest

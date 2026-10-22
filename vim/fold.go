@@ -631,10 +631,7 @@ func buildFolds(levels, starts []int, d, from, to int) []*fold {
 // taking the lower level of the lines around them.
 func (e *Engine) indentLevels(v *view) ([]int, []int) {
 	n := v.lines()
-	sw := e.opts.ShiftWidth
-	if sw <= 0 {
-		sw = 8
-	}
+	sw := e.opts.shiftWidth()
 	levels := make([]int, n)
 	starts := make([]int, n)
 	for l := range n {

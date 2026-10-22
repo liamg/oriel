@@ -59,6 +59,21 @@
   name: (identifier) @table.name
   value: (expression_list . (composite_literal) @table.literal .))
 
+; tests = append(tests, row{…}, …): each literal appended is a row of tests
+(assignment_statement
+  left: (expression_list . (identifier) @append.into .)
+  right: (expression_list
+    .
+    (call_expression
+      function: (identifier) @_append
+      arguments: (argument_list
+        .
+        (identifier)
+        (composite_literal
+          body: (literal_value) @append.row) @append.literal))
+    .)
+  (#eq? @_append "append"))
+
 ; a table's rows, and the fields of its row type in order
 (composite_literal
   body: (literal_value

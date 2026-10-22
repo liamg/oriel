@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/ui"
@@ -29,6 +31,9 @@ func bootWith(t *testing.T, cfg app.Config) *booted {
 	}
 	if cfg.ConfigDir == "" {
 		cfg.ConfigDir = t.TempDir()
+	}
+	if cfg.WorkDir == "" {
+		cfg.WorkDir = t.TempDir() // a workspace: the counter may be its root view
 	}
 	b := &booted{store: cfg.Store, done: make(chan error, 1)}
 	go func() { b.done <- app.Run(ctx, be, cfg) }()
@@ -79,15 +84,14 @@ func (b *buggy) Activate(ctx context.Context, h plugin.Host) error {
 		return nil
 	}})
 	h.Keymap(registry.Keymap{Mode: "n", Keys: "b", Command: "buggy.boom"})
-	h.View("buggy.view", registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	h.View("buggy.view", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Fn: func(c *ui.Ctx) { panic("buggy view") }}
 	}))
 	return nil
 }
 
-// errors.md: "Every call into a plugin, hook, view, provider or command runs under recover. A panic becomes an
-// error notice with the Go stack as its detail, the offending contribution is turned off as above, and the app
-// keeps running."
+// Every call into a plugin, hook, view, provider or command runs under recover. A panic becomes an error notice
+// with the Go stack as its detail, the offending contribution is turned off, and the app keeps running.
 func TestPanickingCommandAndViewTurnOff(t *testing.T) {
 	b, _ := bootGrab(t, app.Config{Plugins: []plugin.Plugin{&buggy{counter{tab: true}}}},
 		registry.Keymap{Keys: "V", Command: "view.open", Args: registry.Args{"id": "buggy.view"}},
@@ -147,7 +151,7 @@ func bootGrab(t *testing.T, cfg app.Config, keys ...registry.Keymap) (*booted, p
 	return bootWith(t, cfg), g.h
 }
 
-// errors.md: "The same ID repeating collapses into one entry with a count".
+// The same ID repeating collapses into one entry with a count.
 func TestRepeatedNoticeIsOneRowAndOneToast(t *testing.T) {
 	b, h := bootGrab(t, app.Config{Plugins: []plugin.Plugin{&counter{}}})
 	b.waitText(t, "count 0")
@@ -176,8 +180,8 @@ func (b *booted) lastFrame(t *testing.T, want string) headless.Frame {
 	return f
 }
 
-// errors.md: "Errors from a session you're not looking at don't toast: they put an error mark on that session's
-// tab and wait in its log."
+// Errors from a session you're not looking at don't toast: they put an error mark on that session's tab and wait
+// in its log.
 func TestErrorInUnfocusedSessionDoesntToast(t *testing.T) {
 	b, h := bootGrab(t, app.Config{Plugins: []plugin.Plugin{&counter{}}})
 	b.waitText(t, "count 0")
@@ -213,7 +217,7 @@ func TestCrashReportOfferedOnNextLaunch(t *testing.T) {
 	b, h := bootGrab(t, cfg)
 	b.waitText(t, "count 0")
 	h.Log().Info("token lin_api_secret_value in use")
-	h.View(app.StatusLineView, registry.ViewFunc(func(registry.ViewCtx) ui.Node {
+	h.View(kit.StatusLineView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Paint{W: ui.Px(10), H: ui.Px(10), Fn: func(render.Frame, render.Rect) { panic("index out of range [12] with length 12") }}
 	}))
 	b.win.Send(render.KeyEvent{Key: "x"})
@@ -246,7 +250,7 @@ func TestCrashReportOfferedOnNextLaunch(t *testing.T) {
 	b2.close(t)
 }
 
-// errors.md: "Secrets never reach a log". Redacted in the panel, the file and the report.
+// Secrets never reach a log: redacted in the panel, the file and the report.
 func TestSecretsAreRedacted(t *testing.T) {
 	dir := t.TempDir()
 	cfg := app.Config{Plugins: []plugin.Plugin{&counter{tab: true}}}

@@ -141,8 +141,8 @@ var optionTypes = map[string]registry.OptionType{"bool": registry.Bool, "int": r
 var zeros = map[registry.OptionType]any{registry.Bool: false, registry.Int: 0, registry.Float: 0.0, registry.String: "", registry.Duration: time.Duration(0),
 	registry.Key: "", registry.List: []string{}, registry.Map: map[string]string{}, registry.Table: map[string]any{}}
 
-// declare registers an option from oriel.option{ name, type, default, help, values, min, max, step, follows, section, on_change } (catalog.md,
-// "Plugin options"). A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
+// declare registers an option from oriel.option{ name, type, default, help, values, min, max, step, follows, section, on_change }.
+// A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
 func (a *APIs) declare(t script.Table, where string) error {
 	name := str(t, "name")
 	typ, ok := optionTypes[cmpOr(str(t, "type"), "string")]

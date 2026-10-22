@@ -447,8 +447,7 @@ func (p *Pytest) Parse(r io.Reader, emit func(Event)) error {
 				// A traceback's last frame, and its error.
 				for _, l := range strings.Split(e.Longrepr, "\n") {
 					if m := pyFrame.FindStringSubmatch(l); m != nil {
-						n, _ := strconv.Atoi(m[2])
-						f.Loc = &Loc{File: m[1], Line: n - 1}
+						f.Loc, _ = fileLine(m[1])
 					} else if m := pyErrorLine.FindStringSubmatch(l); m != nil {
 						f.Message = m[1]
 					}
@@ -487,7 +486,7 @@ func (p *Pytest) Parse(r io.Reader, emit func(Event)) error {
 
 var (
 	pyErrorLine = regexp.MustCompile(`^E\s+(.*)$`)
-	pyFrame     = regexp.MustCompile(`^(\S+\.py):(\d+): `)
+	pyFrame     = regexp.MustCompile(`^(\S+\.py:\d+): `)
 )
 
 func pytestFailure(e pytestEvent, root string) *Failure {

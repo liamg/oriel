@@ -37,7 +37,7 @@ func flightFixture(t *testing.T) (work, upstream *gittest.Repo) {
 	return work, upstream
 }
 
-// ui.md 18: "A flight checklist per project: uncommitted → behind base → unpushed → PR". Read against a fixture repo.
+// A flight checklist per project: uncommitted → behind base → unpushed → PR. Read against a fixture repo.
 func TestFlightReadsEachStep(t *testing.T) {
 	ctx := context.Background()
 	work, upstream := flightFixture(t)
@@ -186,7 +186,7 @@ func TestPushAfterRebase(t *testing.T) {
 
 func itoa(n int) string { return strconv.Itoa(n) }
 
-// AI-10: a draft is stale once the code moved on. The fingerprint follows the work tree's code, untracked files
+// A draft is stale once the code moved on. The fingerprint follows the work tree's code, untracked files
 // included, and one taken from the merge base holds still when that work is committed.
 func TestFingerprintFollowsTheCode(t *testing.T) {
 	ctx := context.Background()

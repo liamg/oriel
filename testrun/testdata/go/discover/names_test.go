@@ -37,3 +37,16 @@ func TestComputedName(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {})
 	}
 }
+
+func TestAppended(t *testing.T) {
+	type row struct{ name string }
+	cases := []row{{name: "literal"}}
+	cases = append(cases, row{name: "appended"})
+	cases = append(cases,
+		row{name: "second"},
+		struct{ name string }{"positional"},
+	)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {})
+	}
+}

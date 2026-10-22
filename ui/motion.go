@@ -16,7 +16,7 @@ type Transition struct {
 
 // The motion spring: critically damped at ω = 45 rad/s, so a move from 0 to 1 is within 2% by 130 ms and settled
 // (under 0.002 away, moving under 0.05 a second) by about 210 ms; Options.MotionSpeed scales it. Every motion
-// in the UI (FW-13) is this spring on a 0..1 progress.
+// in the UI is this spring on a 0..1 progress.
 const (
 	motionOmega   = 45
 	motionSettle  = 0.002
@@ -169,17 +169,21 @@ func (u *UI) settled(d time.Duration) float32 {
 
 // animate works out each node's motion for this frame, after layout: enters, glides, eased fills, and nodes that
 // have gone and are on their way out.
-func (u *UI) animate(prev map[ID]bool) {
+func (u *UI) animate(prev map[ID]*elem) {
 	if u.glides == nil {
 		u.glides, u.fills, u.exiting = map[ID]*glideState{}, map[ID]*fillState{}, map[ID]*exiting{}
 	}
-	exitable := map[ID]*elem{}
+	exitable := u.spare.exitable
+	if exitable == nil {
+		exitable = map[ID]*elem{}
+	}
+	clear(exitable)
 	for id, e := range u.byID {
 		s := e.style
 		e.fx = fx{opacity: 1}
 		if s.Enter != nil {
 			from := float32(1)
-			if !prev[id] {
+			if prev[id] == nil {
 				from = 0
 			}
 			p := u.motion(childID(id, motionKey{"enter"}), from, 1)
@@ -190,7 +194,7 @@ func (u *UI) animate(prev map[ID]bool) {
 			g, ok := u.glides[id]
 			key := childID(id, motionKey{"glide"})
 			switch {
-			case !ok || !prev[id]:
+			case !ok || prev[id] == nil:
 				g = &glideState{from: at, to: at}
 				u.glides[id] = g
 			case g.to != at:
@@ -206,7 +210,7 @@ func (u *UI) animate(prev map[ID]bool) {
 			f, ok := u.fills[id]
 			key := childID(id, motionKey{"fill"})
 			switch {
-			case !ok || !prev[id]:
+			case !ok || prev[id] == nil:
 				f = &fillState{from: s.Fill, to: s.Fill}
 				u.fills[id] = f
 			case f.to != s.Fill:
@@ -242,7 +246,7 @@ func (u *UI) animate(prev map[ID]bool) {
 	}
 	for id, e := range u.exitable {
 		if _, still := u.byID[id]; !still && !u.insideExiting(e) {
-			u.exiting[id] = &exiting{e: e, tr: *e.style.Exit}
+			u.exiting[id] = &exiting{e: e.detach(), tr: *e.style.Exit}
 		}
 	}
 	for id, x := range u.exiting {
@@ -254,7 +258,19 @@ func (u *UI) animate(prev map[ID]bool) {
 		x.e.fx = fx{opacity: 1}
 		x.e.fx.apply(x.tr, p)
 	}
-	u.exitable = exitable
+	u.spare.exitable, u.exitable = u.exitable, exitable
+}
+
+// detach is a copy of e and what's in it off the frame's arena, to draw for as long as it takes to leave.
+func (e *elem) detach() *elem {
+	c := *e
+	c.parent, c.keys = nil, nil
+	c.kids = make([]*elem, len(e.kids))
+	for i, k := range e.kids {
+		c.kids[i] = k.detach()
+		c.kids[i].parent = &c
+	}
+	return &c
 }
 
 // washes eases e's hover and press wash, and sinks its content while it's pressed if it asks to (Style.Sink).

@@ -11,7 +11,7 @@ import (
 	"github.com/liamg/oriel/vim"
 )
 
-// Multi-cursor (ED-8) is Oriel's own, after vim-visual-multi: nvim has none, so there's no oracle for these.
+// Multi-cursor is Oriel's own, after vim-visual-multi: nvim has none, so there's no oracle for these.
 
 func multiEngine(t *testing.T, body string, line, col int) *vim.Engine {
 	t.Helper()

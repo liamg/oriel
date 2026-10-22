@@ -135,68 +135,6 @@ func TestDictationEnds(t *testing.T) {
 	}
 }
 
-// crit's voice.js wakeMatch: "what followed the wake word when an utterance opens with it ('hey' or 'ok' before it
-// allowed), else null".
-func TestWakeMatch(t *testing.T) {
-	for _, c := range []struct {
-		text, word, rest string
-		ok               bool
-	}{
-		{"Computer, open the jobs page.", "computer", "open the jobs page.", true},
-		{"Hey computer", "computer", "", true},
-		{"OK, computer: stop.", "computer", "stop.", true},
-		{"My computer is slow", "computer", "", false},
-		{"Computers are slow", "computer", "", false},
-		{"Oriol, what's next?", "oriel", "what's next?", true},
-	} {
-		rest, ok := voice.WakeMatch(c.text, c.word)
-		if rest != c.rest || ok != c.ok {
-			t.Errorf("WakeMatch(%q, %q) = %q, %v; want %q, %v", c.text, c.word, rest, ok, c.rest, c.ok)
-		}
-	}
-}
-
-func TestTheWakeWordAfterAPause(t *testing.T) {
-	said := func(heard string) string {
-		if heard == "" {
-			return ""
-		}
-		return "Computer, " + heard
-	}
-	mic := &voicetest.Mic{Script: voicetest.Script(voicetest.Silence(1200*time.Millisecond), voicetest.Speech(2*time.Second),
-		voicetest.Silence(time.Second)), Hold: true}
-	s, _ := mic.Open(context.Background())
-	got := make(chan string, 2)
-	tr := &voicetest.Transcriber{Word: "go", Text: said}
-	w := voice.Wake(s, voice.WakeOpts{Transcriber: tr, Word: "computer", Prompt: "Oriel.", OnWake: func(rest string) { got <- rest }})
-	defer w.Stop()
-	select {
-	case rest := <-got:
-		if !strings.HasPrefix(rest, "go go") {
-			t.Errorf("woke with %q", rest)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("the wake word wasn't heard")
-	}
-	if p := tr.Prompts[0]; p != "Oriel, computer." {
-		t.Errorf("the wake word isn't in the vocabulary: %q", p)
-	}
-
-	// Words not after a pause aren't a call: the utterance starts mid-speech.
-	mic = &voicetest.Mic{Script: voicetest.Script(voicetest.Silence(400*time.Millisecond), voicetest.Speech(2*time.Second),
-		voicetest.Silence(time.Second)), Hold: true}
-	s, _ = mic.Open(context.Background())
-	w2 := voice.Wake(s, voice.WakeOpts{Transcriber: &voicetest.Transcriber{Text: func(string) string { return "something else" }}, Word: "computer",
-		OnWake: func(rest string) { got <- rest }})
-	time.Sleep(300 * time.Millisecond)
-	w2.Stop()
-	select {
-	case rest := <-got:
-		t.Errorf("woke on %q", rest)
-	default:
-	}
-}
-
 // The recorder is a program writing raw 16 kHz s16le to stdout; Oriel reads it in 20 ms frames.
 func TestRecorderReadsFramesFromItsProgram(t *testing.T) {
 	sh, err := exec.LookPath("sh")

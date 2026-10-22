@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// A ring is a countdown dial (ui.md 10, "18m" before the next meeting): a track all round, an arc in the tone from
+// A ring is a countdown dial (the HUD's "18m" before the next meeting): a track all round, an arc in the tone from
 // twelve o'clock clockwise to Frac of the way, and the label in the middle; it reads as the label and the share.
 func TestRing(t *testing.T) {
 	violet := color.NRGBA{R: 0xb9, G: 0x8a, B: 0xff, A: 0xff}

@@ -29,8 +29,8 @@ func Toggle(c *ui.Ctx, key any, on bool, o ToggleOpts) bool {
 		track, side = col(c, tToggleOn), ui.End
 	}
 	c.Row(key, ui.Style{W: ui.Px(32), H: ui.Px(18), Pad: ui.Pad(2), Main: side, Radius: 9, Fill: track, EaseFill: true, Interactive: true, Focusable: true,
-		Disabled: o.Disabled, Cursor: render.CursorPointer, KeyMode: "button", Help: o.Help, Role: ui.RoleButton, Label: o.Label,
-		Selected: on}, func(c *ui.Ctx) {
+		Disabled: o.Disabled, Cursor: render.CursorPointer, KeyMode: "button", Help: o.Help, Role: ui.RoleCheckBox, Label: o.Label,
+		Checked: &on}, func(c *ui.Ctx) {
 		c.Box("knob", ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 7, Fill: col(c, tToggleKnob), Glide: true}, nil)
 	})
 	return !o.Disabled && (in.Clicked || pressedKey(in.Keys))

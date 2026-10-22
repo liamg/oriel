@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// catalog.md, Publishing: oriel plugin pack "builds the release archives and prints their sha256s"; oriel plugin
-// init starts a plugin that pack takes as it is.
+// oriel plugin pack builds the release archives and prints their sha256s; oriel plugin init starts a plugin that
+// pack takes as it is.
 func TestPluginPackAndInit(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "oriel-greet")
 	var out, errs bytes.Buffer

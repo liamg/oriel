@@ -16,3 +16,6 @@ func osDark() (dark, ok bool) {
 	}
 	return strings.TrimSpace(string(out)) == "Dark", true
 }
+
+// appearanceSignals has no notification to listen to: gio passes on none, so the poll and refocus read it.
+func appearanceSignals(func()) (stop func()) { return func() {} }

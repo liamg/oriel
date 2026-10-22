@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -77,11 +76,12 @@ func TestPaintOrderAndClipping(t *testing.T) {
 
 func TestHit(t *testing.T) {
 	u := newUI()
-	var outer, inner, float ID
+	var outer, inner, float, inlaid ID
 	build := func(c *Ctx) {
 		outer = c.Box("outer", Style{W: Px(100), H: Px(100), Clip: true}, func(c *Ctx) {
 			inner = c.Box("inner", Style{W: Px(300), H: Px(50)}, nil)
-			float = c.Box("float", Style{W: Px(20), H: Px(20), Float: &Float{Point: &render.Point{X: 90, Y: 10}}}, nil)
+			float = c.Box("float", Style{W: Px(20), H: Px(20), Z: LayerPopup, Float: &Float{Point: &render.Point{X: 90, Y: 10}}}, nil)
+			inlaid = c.Box("inlaid", Style{W: Px(20), H: Px(20), Z: LayerContent, Float: &Float{Point: &render.Point{X: 90, Y: 60}}}, nil)
 		})
 	}
 	paintOps(u, render.Point{X: 400, Y: 400}, build)
@@ -92,7 +92,9 @@ func TestHit(t *testing.T) {
 		{render.Point{X: 10, Y: 10}, []ID{inner, outer}},
 		{render.Point{X: 95, Y: 15}, []ID{float, inner, outer}},
 		{render.Point{X: 150, Y: 10}, nil},         // inner reaches here, but outer clips it
-		{render.Point{X: 105, Y: 15}, []ID{float}}, // floats aren't clipped by their parent
+		{render.Point{X: 105, Y: 15}, []ID{float}}, // floats over the content aren't clipped by their parent
+		{render.Point{X: 95, Y: 65}, []ID{inlaid, outer}},
+		{render.Point{X: 105, Y: 65}, nil}, // one inlaid in it is
 		{render.Point{X: 10, Y: 70}, []ID{outer}},
 	} {
 		if got := u.Hit(tt.p); !slices.Equal(got, tt.want) {
@@ -153,7 +155,7 @@ func TestListBuildsOnlyVisibleRows(t *testing.T) {
 }
 
 // A 10k-row list scrolled a row per frame must build, lay out and paint well inside the 4 ms frame
-// budget at 120 Hz (rendering.md).
+// budget at 120 Hz.
 func TestListScrollBudget(t *testing.T) {
 	perf.Timed(t)
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
@@ -170,27 +172,15 @@ func TestListScrollBudget(t *testing.T) {
 		})
 	}
 	id := childID(0, "list")
-	// The best p99 of a few rounds: a round the scheduler preempted under a parallel test load can't fail the
-	// budget, and a slow frame still fails every round.
-	best := time.Duration(math.MaxInt64)
-	for range 3 {
-		var times []time.Duration
-		for range 240 {
-			var l render.List
-			t0 := time.Now()
-			u.Frame(l.Record(1), size, build)
-			times = append(times, time.Since(t0))
-			u.ScrollBy(id, 0, 21)
-		}
-		slices.Sort(times)
-		p50, p99 := times[len(times)/2], times[len(times)*99/100]
-		t.Logf("10k-row list, 48 rows in view: p50 %v, p99 %v per frame", p50, p99)
-		if best = min(best, p99); best <= 4*time.Millisecond {
-			break
-		}
-	}
-	if best > 4*time.Millisecond {
-		t.Errorf("p99 %v per frame, budget 4ms", best)
+	times := perf.Times(3, 240, func() { u.ScrollBy(id, 0, -1e9) }, func(int) {
+		var l render.List
+		u.Frame(l.Record(1), size, build)
+		u.ScrollBy(id, 0, 21)
+	})
+	p50, p99 := perf.Pct(times, 50), perf.Pct(times, 99)
+	t.Logf("10k-row list, 48 rows in view: p50 %v, p99 %v per frame", p50, p99)
+	if p99 > 4*time.Millisecond {
+		t.Errorf("p99 %v per frame, budget 4ms", p99)
 	}
 }
 

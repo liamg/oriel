@@ -15,6 +15,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.notify(msg, lvl)", Doc: "Tell the user something, through the one path every notice takes: level is info, warn or error.", Cap: "ui"},
 		{Call: "oriel.now()", Doc: "The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown.", Cap: "ui"},
 		{Call: "oriel.on(event, opts?, fn)", Doc: "Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.", Cap: "ui"},
+		{Call: "oriel.placeholder(name, spec, fn)", Doc: "Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now.", Cap: "ui"},
 		{Call: "oriel.read(path)", Doc: "A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.", Cap: "target"},
 		{Call: "oriel.statusline(fn)", Doc: "Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session.", Cap: "ui"},
 	},
@@ -34,7 +35,7 @@ var Reference = map[string][]RefFunc{
 	},
 	"decor": {
 		{Call: "oriel.decor.changed(name)", Doc: "Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.", Cap: "ui"},
-		{Call: "oriel.decor.provider(name, fn)", Doc: "Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg } (1-based lines; bg draws the text as a chip on that colour). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).", Cap: "ui"},
+		{Call: "oriel.decor.provider(name, fn)", Doc: "Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, and menu = { { label, command, args } } is what a right-click on it offers). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).", Cap: "ui"},
 	},
 	"diagnostics": {
 		{Call: "oriel.diagnostics.list()", Doc: "Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.", Cap: "ui"},
@@ -78,7 +79,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.overview.add(spec)", Doc: "Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick.", Cap: "ui"},
 	},
 	"picker": {
-		{Call: "oriel.picker.source(spec)", Doc: "A source of results for the omnibox and the pickers (ui.md 02): { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.", Cap: "ui"},
+		{Call: "oriel.picker.source(spec)", Doc: "A source of results for the omnibox and the pickers: { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label and detail, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.", Cap: "ui"},
 	},
 	"place": {
 		{Call: "oriel.place.add(spec)", Doc: "Add a full-window page to the window's history, which nav.back and nav.forward (and the mouse's side buttons) go through with the session in front: { name, title, command, args, shown = fn(), close = fn() }. shown says it's showing now, command with args opens it, and close puts it away.", Cap: "ui"},
@@ -99,7 +100,8 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.secret.has(name)", Doc: "Whether a secret the plugin declares (permissions.secrets) is set: a bool, never its value. Use it to keep the plugin's entries hidden until its key is set: shown = function() return oriel.secret.has('LINEAR_TOKEN') end.", Cap: "target"},
 	},
 	"session": {
-		{Call: "oriel.session.kind(name, spec)", Doc: "A kind of session: { pack, gates, status }.", Cap: "session.control"},
+		{Call: "oriel.session.chips(name, fn)", Doc: "Chips for every session's mission-control card, after its kind's: fn(session) returns a list of texts or { text, help, link }.", Cap: "session.control"},
+		{Call: "oriel.session.kind(name, spec)", Doc: "A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), gate (hard, soft or off), needs_repo, launcher, order, prompt_file, auto_review, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).", Cap: "session.control"},
 	},
 	"ship": {
 		{Call: "oriel.ship.action(spec)", Doc: "Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).", Cap: "ui"},
@@ -148,6 +150,6 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.view.override(id, fn)", Doc: "Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes.", Cap: "ui"},
 	},
 	"wasm": {
-		{Call: "oriel.wasm.load(path, opts?)", Doc: "Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON (the ABI in plugins.md), mod:exports(), mod:close().", Cap: "target"},
+		{Call: "oriel.wasm.load(path, opts?)", Doc: "Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close().", Cap: "target"},
 	},
 }

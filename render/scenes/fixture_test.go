@@ -45,7 +45,7 @@ func rasterise(t *testing.T, v theme.Variant, name string, scale float32) *image
 
 // The fixture workspace (01-ide) drawn on the CPU against the mockups it reproduces, in each built-in variant.
 // A pixel counts as off past deltaE OK 0.1, well past one JND (0.02): what's left is glyphs this machine has no
-// font for, Chrome's rounded mono advances and the terminal's ligatures (spikes/P0-4-gio.md).
+// font for, Chrome's rounded mono advances and the terminal's ligatures.
 func TestFixtureAgainstTheMockups(t *testing.T) {
 	for _, tt := range []struct {
 		v      theme.Variant
@@ -56,7 +56,7 @@ func TestFixtureAgainstTheMockups(t *testing.T) {
 		{theme.Dark, "01-ide.png", 0.025, 0.06},
 		{theme.Light, "17-light.png", 0.025, 0.06},
 	} {
-		want, err := snapshot.ReadPNG(filepath.Join("..", "..", "_design", "mockups", tt.mockup))
+		want, err := snapshot.ReadPNG(filepath.Join("..", "..", "testdata", "mockups", tt.mockup))
 		if err != nil {
 			t.Fatal(err)
 		}

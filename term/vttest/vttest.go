@@ -178,7 +178,7 @@ func unquote(s string) (string, error) {
 func (c Case) Run(t *testing.T, mk func(cols, rows int, reply func([]byte)) term.Emulator) {
 	t.Helper()
 	if c.Ref == "" || c.Quote == "" {
-		t.Fatalf("%s:%d: every case cites a source with a ref and a quote (_design/testing.md)", c.File, c.Line)
+		t.Fatalf("%s:%d: every case cites a source with a ref and a quote (docs/architecture.md, \"Testing\")", c.File, c.Line)
 	}
 	if c.Cols == 0 {
 		t.Fatalf("%s:%d: no size", c.File, c.Line)

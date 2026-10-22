@@ -79,8 +79,8 @@ mode:   1003 off
 mode:   1006 on
 
 === synchronized output keeps the last frame while it's on
-ref:    contour/synchronized-output.md#Semantics
-quote:  "When the synchronization mode is enabled following render calls will keep rendering the last rendered state. The terminal Emulator keeps processing incoming text and sequences."
+ref:    libghostty-vt/stream_terminal.zig
+quote:  "use a hold so that the user never sees a half-drawn frame."
 size:   10x1
 setup:  "abc"
 input:  "\x1b[?2026hXYZ"
@@ -91,8 +91,8 @@ mode:   2026 on
 cursor: 6,0
 
 === ending synchronized output shows the latest state
-ref:    contour/synchronized-output.md#Using the feature
-quote:  "Use `CSI ? 2026 l` when done with your current frame rendering, implicitly updating the render state by reading out the latest grid buffer state."
+ref:    libghostty-vt/stream_terminal.zig
+quote:  "when VT input resets the mode, on a full reset, and on a resize"
 size:   10x1
 setup:  "abc"
 input:  "\x1b[?2026hXYZ\x1b[?2026l"

@@ -50,7 +50,7 @@ func TestActionCard(t *testing.T) {
 	}
 }
 
-// SH-9: a dismissable card's ✕, or Escape while it has focus, dismisses it; a countdown shows its ring and the time
+// A dismissable card's ✕, or Escape while it has focus, dismisses it; a countdown shows its ring and the time
 // left.
 func TestActionCardDismissAndCountdown(t *testing.T) {
 	var id ui.ID

@@ -30,21 +30,23 @@ func Slider(c *ui.Ctx, key any, v *float64, o SliderOpts) bool {
 		t := float64((in.Pointer().X - r.Min.X) / r.Dx())
 		*v = o.Min + math.Max(0, math.Min(1, t))*span
 	}
+	step := o.Step
+	if step == 0 {
+		step = span / 100
+	}
 	for _, k := range in.Keys {
-		step := o.Step
-		if step == 0 {
-			step = span / 100
-		}
+		by := step
 		if k.Mods == render.ModShift {
-			step *= 10
+			by *= 10
 		}
 		switch k.Key {
 		case "h", "Left":
-			*v -= step
+			*v -= by
 		case "l", "Right":
-			*v += step
+			*v += by
 		}
 	}
+	*v += step * float64(steps(in.Access))
 	if o.Step > 0 && *v != old {
 		*v = snap(*v, o.Step)
 	}
@@ -58,10 +60,27 @@ func Slider(c *ui.Ctx, key any, v *float64, o SliderOpts) bool {
 		border = col(c, tInputFocus)
 	}
 	c.Box(key, ui.Style{W: o.Width, H: ui.Px(12), Interactive: true, Focusable: true, KeyMode: "slider", Cursor: render.CursorPointer,
-		Help: o.Help, Role: ui.RoleSlider, Label: fmt.Sprintf("%s %.3g", o.Label, *v)}, func(c *ui.Ctx) {
+		Help: o.Help, Role: ui.RoleSlider, Label: fmt.Sprintf("%s %.3g", o.Label, *v), Actions: stepActions}, func(c *ui.Ctx) {
 		c.Paint("track", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) { paintSlider(f, r, t, o.Track, bg, fg, border) })
 	})
 	return *v != old
+}
+
+// stepActions are what a control that steps takes from assistive technology.
+var stepActions = []ui.Action{ui.ActionIncrement, ui.ActionDecrement}
+
+// steps is how far assistive technology stepped a control: up one for each increment, down one for each decrement.
+func steps(acts []ui.AccessAction) int {
+	n := 0
+	for _, a := range acts {
+		switch a.Action {
+		case ui.ActionIncrement:
+			n++
+		case ui.ActionDecrement:
+			n--
+		}
+	}
+	return n
 }
 
 // snap rounds v to a multiple of step, to step's decimal places.

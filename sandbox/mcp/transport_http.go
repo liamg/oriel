@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 // DialHTTP speaks the Streamable HTTP transport to url. hdr is added to every
@@ -193,11 +195,11 @@ func statusErr(resp *http.Response) error {
 // readResponse finds the response to id in a JSON or SSE body, dispatching
 // anything else it carries.
 func (t *httpTransport) readResponse(resp *http.Response, id json.RawMessage) (*message, error) {
-	want := idKey(id)
+	want := jsonrpc.IDKey(id)
 	var found *message
 	take := func(data []byte) bool {
 		for _, m := range decodeMessages(data) {
-			if m.isResponse() && idKey(m.ID) == want {
+			if m.IsResponse() && jsonrpc.IDKey(m.ID) == want {
 				found = m
 			} else {
 				t.handle(m)

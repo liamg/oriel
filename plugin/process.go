@@ -16,8 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/plugin/ossandbox"
 )
 
@@ -36,7 +36,10 @@ type SpawnOpts struct {
 	Stderr  io.Writer       // its stderr; the plugin's log ("plugin:<id>") by default
 }
 
-// Processes runs process plugins (plugins.md, "Four tiers"): a child speaking JSON-RPC 2.0 over stdio, one
+// maxRequests is how many of a plugin's calls to the host run at once.
+const maxRequests = 64
+
+// Processes runs process plugins: a child speaking JSON-RPC 2.0 over stdio, one
 // message per line, each call it makes to the host checked by the guard. A plugin's process is confined by
 // ossandbox to what its grants allow; your own config's runs as you, and so does a bundled plugin's (oriel itself).
 type Processes struct {
@@ -104,10 +107,12 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 	if err != nil {
 		return nil, err
 	}
-	stdout, err := cmd.StdoutPipe()
+	// Wait doesn't close a pipe of ours, so the reader gets everything written before the exit.
+	stdout, w, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
+	cmd.Stdout = w
 	stderr := o.Stderr
 	var lines *logs.Lines
 	if stderr == nil {
@@ -119,16 +124,22 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 		}
 	}
 	cmd.Stderr = stderr
-	if err := cmd.Start(); err != nil {
+	err = cmd.Start()
+	w.Close()
+	if err != nil {
+		stdout.Close()
 		if tmp != "" {
 			os.RemoveAll(tmp)
 		}
 		return nil, err
 	}
 	pr := &Process{Plugin: p.ID, Path: path, Started: time.Now(), cmd: cmd, done: make(chan struct{}), stopper: ps.StopAfter}
+	running := make(chan struct{}, maxRequests)
 	pr.conn = jsonrpc.NewConn(stdout, stdin, jsonrpc.Handlers{
 		Request: func(r *jsonrpc.Request) {
+			running <- struct{}{}
 			go func() {
+				defer func() { <-running }()
 				if o.Request != nil {
 					if res, ok, err := o.Request(r.Method, r.Params); ok {
 						r.Reply(res, err)
@@ -158,6 +169,10 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 	ps.mu.Unlock()
 	go func() {
 		err := cmd.Wait()
+		select {
+		case <-pr.conn.Done():
+		case <-time.After(pr.stopAfter()):
+		}
 		pr.conn.Close()
 		if lines != nil {
 			lines.Close()
@@ -320,17 +335,20 @@ func (pr *Process) Err() error {
 // Stop closes its stdin, which a plugin takes as the end, and kills it if it hasn't gone a little later.
 func (pr *Process) Stop() error {
 	pr.conn.Close()
-	wait := pr.stopper
-	if wait == 0 {
-		wait = 2 * time.Second
-	}
 	select {
 	case <-pr.done:
-	case <-time.After(wait):
+	case <-time.After(pr.stopAfter()):
 		pr.cmd.Process.Kill()
 		<-pr.done
 	}
 	return nil
+}
+
+func (pr *Process) stopAfter() time.Duration {
+	if pr.stopper == 0 {
+		return 2 * time.Second
+	}
+	return pr.stopper
 }
 
 func cmpOr(a, b string) string {

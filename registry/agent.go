@@ -11,7 +11,7 @@ import (
 )
 
 // AgentTools are the agent tools (contrib.go), by name.
-func AgentTools(r Registry) []AgentTool {
+func AgentTools(r Contributions) []AgentTool {
 	var out []AgentTool
 	for _, c := range r.Contributions("agent.tool") {
 		out = append(out, c.(AgentTool))
@@ -57,8 +57,8 @@ func SessionOf(ctx Ctx) string {
 	return id
 }
 
-// PermissionEvent is what the "Permission" hooks see before an ask reaches the user (agents.md → Permissions,
-// layer 2). A Decide hook answers with "allow" or "deny", or a PermissionVerdict to give the agent a reason.
+// PermissionEvent is what the "Permission" hooks see before an ask reaches the user. A
+// Decide hook answers with "allow" or "deny", or a PermissionVerdict to give the agent a reason.
 type PermissionEvent struct {
 	Session string `json:"session"`
 	Kind    string `json:"kind"` // permission, network, gateway
@@ -84,12 +84,12 @@ func (t AgentTool) OfferedTo(agent string, utility bool) bool {
 }
 
 // AgentToolsFor are the agent tools offered to an agent (OfferedTo), by name; not the parts other tools' answers add.
-func AgentToolsFor(r Registry, agent string, utility bool) []AgentTool {
+func AgentToolsFor(r Contributions, agent string, utility bool) []AgentTool {
 	return slices.DeleteFunc(AgentTools(r), func(t AgentTool) bool { return t.Adds != "" || !t.OfferedTo(agent, utility) })
 }
 
 // AgentToolParts are the parts added to tool's answer (AgentTool.Adds) for an agent, by name.
-func AgentToolParts(r Registry, tool, agent string, utility bool) []AgentTool {
+func AgentToolParts(r Contributions, tool, agent string, utility bool) []AgentTool {
 	return slices.DeleteFunc(AgentTools(r), func(t AgentTool) bool { return t.Adds != tool || !t.OfferedTo(agent, utility) })
 }
 
@@ -165,7 +165,7 @@ type ownerKey struct{}
 func WithOwner(ctx Ctx, o AgentOwner) Ctx { return context.WithValue(ctx, ownerKey{}, o) }
 
 // OwnerOf is the owner of an agent, if it has one.
-func OwnerOf(r Registry, agent string) (AgentOwner, bool) {
+func OwnerOf(r Contributions, agent string) (AgentOwner, bool) {
 	for _, c := range r.Contributions("agent.owner") {
 		if o := c.(AgentOwner); o.Agent == agent {
 			return o, true

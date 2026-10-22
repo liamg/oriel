@@ -9,6 +9,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/jsonrpc"
 )
 
 type fakeHandler struct {
@@ -73,7 +75,7 @@ func servePipe(t *testing.T, s *Server) *pipeConn {
 				continue
 			}
 			c.mu.Lock()
-			ch := c.waiting[idKey(m.ID)]
+			ch := c.waiting[jsonrpc.IDKey(m.ID)]
 			c.mu.Unlock()
 			if ch == nil {
 				t.Errorf("unexpected response %s", line)
@@ -101,7 +103,7 @@ func servePipe(t *testing.T, s *Server) *pipeConn {
 func (c *pipeConn) start(id, method, params string) chan *message {
 	ch := make(chan *message, 1)
 	c.mu.Lock()
-	c.waiting[idKey(json.RawMessage(id))] = ch
+	c.waiting[jsonrpc.IDKey(json.RawMessage(id))] = ch
 	c.mu.Unlock()
 	line := `{"jsonrpc":"2.0","id":` + id + `,"method":"` + method + `"`
 	if params != "" {

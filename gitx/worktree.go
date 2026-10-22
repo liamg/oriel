@@ -68,35 +68,39 @@ func (r Repo) SyncedBase(ctx context.Context) string {
 	if def == "" || def == "HEAD" {
 		return r.DefaultBranch(ctx)
 	}
-	if ref := r.SyncBranch(ctx, def); ref != "" {
+	if ref, _ := r.SyncBranch(ctx, def); ref != "" {
 		return ref
 	}
 	return r.DefaultBranch(ctx)
 }
 
 // SyncBranch brings one branch up to date with origin and returns the ref to cut from: the local branch,
-// fast-forwarded where git allows, or origin's when there is no local one. "" when neither exists.
-func (r Repo) SyncBranch(ctx context.Context, name string) string {
+// fast-forwarded where git allows, or origin's when there is no local one. "" when neither exists. The error says
+// why a local branch couldn't be fast-forwarded; its ref is still returned.
+func (r Repo) SyncBranch(ctx context.Context, name string) (string, error) {
 	name = strings.TrimPrefix(strings.TrimSpace(name), "origin/")
 	if name == "" || name == "HEAD" {
-		return ""
+		return "", nil
 	}
 	if !r.HasBranch(ctx, name) {
 		r.fetch(ctx, name)
 		if _, err := r.git(ctx, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/"+name); err == nil {
-			return "origin/" + name
+			return "origin/" + name, nil
 		}
-		return ""
+		return "", nil
 	}
 	if wt := r.BranchWorktree(ctx, name); wt != "" {
 		r.fetch(ctx, name)
-		_, _ = Repo{Dir: wt}.git(ctx, "merge", "--ff-only", "origin/"+name)
-		return name
+		if _, err := r.git(ctx, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/"+name); err != nil {
+			return name, nil
+		}
+		_, err := Repo{Dir: wt}.git(ctx, "merge", "--ff-only", "origin/"+name)
+		return name, err
 	}
-	if !r.fetch(ctx, name+":"+name) {
-		r.fetch(ctx, name)
+	if !r.fetch(ctx, name+":"+name) && r.fetch(ctx, name) {
+		return name, fmt.Errorf("%s can't be fast-forwarded to origin/%s", name, name)
 	}
-	return name
+	return name, nil
 }
 
 func (r Repo) fetch(ctx context.Context, refspec string) bool {

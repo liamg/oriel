@@ -12,7 +12,7 @@ import (
 )
 
 // AdapterSpec is a debug adapter: the languages it debugs, how to start it and reach it, and the launch arguments
-// every config for it starts from. The app registers these as registry.DebugAdapter contributions; the two types
+// every config for it starts from. The app registers these as lang.DebugAdapter (registry/lang) contributions; the two types
 // have the same fields, so each converts to the other.
 type AdapterSpec struct {
 	Name     string   // "dlv"; also the log source

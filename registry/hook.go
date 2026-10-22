@@ -2,7 +2,6 @@ package registry
 
 import (
 	"fmt"
-	"path"
 	"reflect"
 	"slices"
 	"sort"
@@ -11,7 +10,7 @@ import (
 	"time"
 )
 
-// Hook kinds (plugins.md, "Hooks that can change things"). A hook's result says which it did; Kind is what it was
+// Hook kinds. A hook's result says which it did; Kind is what it was
 // registered as, for :Hooks.
 const (
 	Observe = "observe"
@@ -152,6 +151,7 @@ func p99(ts []time.Duration) time.Duration {
 // errors is reported (FailLimit in a row turn it off); the errors are returned with the verdict, which the others
 // still decide. A hook over its time budget is a warning.
 func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
+	r.provideEvent(event, subject)
 	r.hooks.mu.Lock()
 	var run []*hookEntry
 	for _, id := range r.hooks.order {
@@ -159,12 +159,8 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 		if e.h.Event != event || e.h.Fn == nil || r.faults.isOff(KindHook, id) != nil {
 			continue
 		}
-		if e.h.Pattern != "" {
-			if ok, _ := path.Match(e.h.Pattern, path.Base(subject)); !ok {
-				if ok, _ := path.Match(e.h.Pattern, subject); !ok {
-					continue
-				}
-			}
+		if !matchSubject(e.h.Pattern, subject) {
+			continue
 		}
 		run = append(run, e)
 	}

@@ -1,5 +1,5 @@
 // Package logs is where Oriel's and each session's log records go: slog handlers for an in-memory ring and a
-// rotating file, per-session logs that outlive a restart, and redaction before anything is written (errors.md).
+// rotating file, per-session logs that outlive a restart, and redaction before anything is written.
 package logs
 
 import (

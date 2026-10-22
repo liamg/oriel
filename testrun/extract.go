@@ -18,7 +18,7 @@ var (
 	rustLeft   = regexp.MustCompile("^\\s*left:\\s*`?(.*?)`?,?$")
 	rustRight  = regexp.MustCompile("^\\s*right:\\s*`?(.*?)`?$")
 	pyAssertEq = regexp.MustCompile(`^(?:E\s+)?(?:AssertionError: )?assert (.+?) == (.+?)$`)
-	goFileLine = regexp.MustCompile(`^\s+([\w.\-/]+\.go):(\d+): (.*)$`)
+	goFileLine = regexp.MustCompile(`^\s+([\w.\-/]+\.go:\d+): (.*)$`)
 )
 
 // wantGot fills in f's Want and Got from output lines, when they show them.
@@ -71,8 +71,8 @@ func wantGot(f *Failure, lines []string) {
 func goLoc(lines []string) (*Loc, string) {
 	for _, l := range lines {
 		if m := goFileLine.FindStringSubmatch(l); m != nil {
-			n, _ := strconv.Atoi(m[2])
-			return &Loc{File: m[1], Line: n - 1}, m[3]
+			loc, _ := fileLine(m[1])
+			return loc, m[2]
 		}
 	}
 	return nil, ""

@@ -18,7 +18,7 @@ func fill(w, h int, c color.NRGBA) *image.NRGBA {
 	return img
 }
 
-// editor.md, "Images": "a Slider (the two overlaid, a draggable divider with the old left of it and the new right)".
+// A Slider: the two overlaid, a draggable divider with the old left of it and the new right.
 // The two are drawn at one scale.
 func TestCompareDivider(t *testing.T) {
 	red, blue := color.NRGBA{R: 255, A: 255}, color.NRGBA{B: 255, A: 255}

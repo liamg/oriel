@@ -29,53 +29,53 @@ func there(path string) bool {
 func TestAgentExitEmptiesSandboxTmp(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	fill(t, filepath.Join(sandbox.TmpDir(b.root), "scratchpad", "notes.md"))
-	fill(t, filepath.Join(sandbox.HomeDir(b.root), ".cache", "go-build", "x"))
+	fill(t, filepath.Join(sandbox.TmpDir(b.Root()), "scratchpad", "notes.md"))
+	fill(t, filepath.Join(sandbox.HomeDir(b.Root()), ".cache", "go-build", "x"))
 	if err := s.w.Stop(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
-	if entries, _ := os.ReadDir(sandbox.TmpDir(b.root)); len(entries) != 0 {
+	if entries, _ := os.ReadDir(sandbox.TmpDir(b.Root())); len(entries) != 0 {
 		t.Errorf("tmp still holds %v", entries)
 	}
-	if !there(filepath.Join(sandbox.HomeDir(b.root), ".cache", "go-build", "x")) {
+	if !there(filepath.Join(sandbox.HomeDir(b.Root()), ".cache", "go-build", "x")) {
 		t.Error("stopping took the home's caches")
 	}
 }
 
-// sessions.md, "Ending a session": archiving empties the sandbox's temp and home caches and keeps the rest, so a
+// Archiving a session empties the sandbox's temp and home caches and keeps the rest, so a
 // reopen works.
 func TestArchiveCleansTheSandbox(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	fill(t, filepath.Join(sandbox.TmpDir(b.root), "scratchpad", "notes.md"))
-	fill(t, filepath.Join(sandbox.HomeDir(b.root), ".npm", "x"))
-	fill(t, filepath.Join(sandbox.HomeDir(b.root), ".gitconfig"))
+	fill(t, filepath.Join(sandbox.TmpDir(b.Root()), "scratchpad", "notes.md"))
+	fill(t, filepath.Join(sandbox.HomeDir(b.Root()), ".npm", "x"))
+	fill(t, filepath.Join(sandbox.HomeDir(b.Root()), ".gitconfig"))
 	if err := s.w.End(context.Background(), EndReq{Session: id, Discard: true}); err != nil {
 		t.Fatal(err)
 	}
-	if entries, _ := os.ReadDir(sandbox.TmpDir(b.root)); len(entries) != 0 {
+	if entries, _ := os.ReadDir(sandbox.TmpDir(b.Root())); len(entries) != 0 {
 		t.Errorf("tmp still holds %v", entries)
 	}
-	if there(filepath.Join(sandbox.HomeDir(b.root), ".npm")) {
+	if there(filepath.Join(sandbox.HomeDir(b.Root()), ".npm")) {
 		t.Error("the home's caches stayed")
 	}
-	if !there(filepath.Join(sandbox.HomeDir(b.root), ".gitconfig")) || !sandbox.Managed(b.root) {
+	if !there(filepath.Join(sandbox.HomeDir(b.Root()), ".gitconfig")) || !sandbox.Managed(b.Root()) {
 		t.Error("archiving took what a reopen needs")
 	}
 }
 
-// sessions.md, "Ending a session": deleting removes the sandbox's directory with the workspace.
+// Deleting a session removes the sandbox's directory with the workspace.
 func TestDeleteRemovesTheSandbox(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	if !there(sandbox.Dir(b.root)) {
+	if !there(sandbox.Dir(b.Root())) {
 		t.Fatal("the session has no sandbox dir")
 	}
 	if err := s.w.End(context.Background(), EndReq{Session: id, Delete: true}); err != nil {
 		t.Fatal(err)
 	}
-	if there(sandbox.Dir(b.root)) {
-		t.Errorf("%s is still there", sandbox.Dir(b.root))
+	if there(sandbox.Dir(b.Root())) {
+		t.Errorf("%s is still there", sandbox.Dir(b.Root()))
 	}
 }
 
@@ -84,7 +84,7 @@ func TestDeleteRemovesTheSandbox(t *testing.T) {
 func TestSweepRunsOnATimer(t *testing.T) {
 	s := newSandboxRig(t)
 	_, _, b := s.sandboxed()
-	s.root = b.root
+	s.root = b.Root()
 	orphan := filepath.Join(t.TempDir(), "gone")
 	if _, err := sandbox.Create(orphan, sandbox.ModeSandbox); err != nil {
 		t.Fatal(err)
@@ -106,7 +106,7 @@ func TestSweepRunsOnATimer(t *testing.T) {
 	if there(sandbox.Dir(orphan)) {
 		t.Error("the orphan sandbox stayed")
 	}
-	if !there(sandbox.Dir(b.root)) {
+	if !there(sandbox.Dir(b.Root())) {
 		t.Error("the sweep took a live session's sandbox")
 	}
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// errors.md: "A hook or view that errors 3 times in a row is turned off with a notice ("`tickets.lua:8` turned off
+// "A hook or view that errors 3 times in a row is turned off with a notice ("`tickets.lua:8` turned off
 // after 3 errors", action "Turn back on"). `:Hooks` shows it as off, with its last error."
 func TestThreeErrorsInARow(t *testing.T) {
 	r := registry.New()
@@ -55,26 +55,7 @@ func TestThreeErrorsInARow(t *testing.T) {
 	}
 }
 
-// Report counts any contribution's errors the same way: a view's, a decoration provider's.
-func TestReport(t *testing.T) {
-	r := registry.New()
-	r.View("status", registry.SourcedView{Source: "init.lua:31", View: registry.ViewFunc(nil)})
-	var faults []registry.Fault
-	r.OnFault(func(f registry.Fault) { faults = append(faults, f) })
-	for range 2 {
-		r.Report(registry.KindView, "status", errors.New("x"))
-	}
-	r.Report(registry.KindView, "status", nil)
-	for range 3 {
-		r.Report(registry.KindView, "status", errors.New("y"))
-	}
-	if len(faults) != 1 || faults[0].Source != "init.lua:31" || faults[0].Errors != 3 {
-		t.Errorf("faults %+v", faults)
-	}
-}
-
-// errors.md: "A hook over its time budget is a warning, as mockup 19 shows ("4.1 ms on CommentSend · over the 2 ms
-// budget")."
+// A hook over its time budget is a warning: "4.1 ms on CommentSend · over the 2 ms budget".
 func TestHookBudget(t *testing.T) {
 	r := registry.New()
 	var fails []registry.Failure

@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/fsx"
 	"github.com/liamg/oriel/regex"
 )
 
@@ -50,20 +51,32 @@ const (
 
 const maxMatches = 10000
 
+// Tools are the search tools on the machine, each found the first time it's asked for.
+type Tools struct {
+	ripgrep func() (string, bool)
+}
+
+// NewTools finds the tools on PATH as it is when each is first asked for.
+func NewTools() *Tools {
+	return &Tools{ripgrep: sync.OnceValues(func() (string, bool) {
+		p, err := exec.LookPath("rg")
+		if err != nil {
+			return "", false
+		}
+		out, err := exec.Command(p, "--pcre2-version").Output()
+		return p, err == nil && bytes.Contains(out, []byte("PCRE2"))
+	})}
+}
+
 // Ripgrep is rg's path, if it's installed with PCRE2.
-var Ripgrep = sync.OnceValues(func() (string, bool) {
-	p, err := exec.LookPath("rg")
-	if err != nil {
-		return "", false
-	}
-	out, err := exec.Command(p, "--pcre2-version").Output()
-	return p, err == nil && bytes.Contains(out, []byte("PCRE2"))
-})
+func (t *Tools) Ripgrep() (string, bool) { return t.ripgrep() }
 
 // Run streams q's matches to emit, in batches, until it's done or ctx is.
-func Run(ctx context.Context, q Query, emit func([]Match)) error { return run(ctx, q, Auto, emit) }
+func (t *Tools) Run(ctx context.Context, q Query, emit func([]Match)) error {
+	return t.run(ctx, q, Auto, emit)
+}
 
-func run(ctx context.Context, q Query, e Engine, emit func([]Match)) error {
+func (t *Tools) run(ctx context.Context, q Query, e Engine, emit func([]Match)) error {
 	re, err := regex.Compile(q.Pattern, regex.Flags{Caseless: q.IgnoreCase})
 	if err != nil {
 		return err
@@ -71,14 +84,14 @@ func run(ctx context.Context, q Query, e Engine, emit func([]Match)) error {
 	if q.Max == 0 {
 		q.Max = maxMatches
 	}
-	if _, ok := Ripgrep(); e == Rg || e == Auto && ok {
-		return runRg(ctx, q, emit)
+	if _, ok := t.Ripgrep(); e == Rg || e == Auto && ok {
+		return t.runRg(ctx, q, emit)
 	}
 	return runGo(ctx, q, re, emit)
 }
 
-func runRg(ctx context.Context, q Query, emit func([]Match)) error {
-	rg, ok := Ripgrep()
+func (t *Tools) runRg(ctx context.Context, q Query, emit func([]Match)) error {
+	rg, ok := t.Ripgrep()
 	if !ok {
 		return errors.New("rg isn't installed")
 	}
@@ -290,7 +303,7 @@ func Plan(q Query, repl string, matches []Match, read func(path string) ([]byte,
 			old, ok = read(path)
 		}
 		if !ok {
-			if old, err = os.ReadFile(filepath.Join(q.Dir, path)); err != nil {
+			if old, err = fsx.ReadFile(filepath.Join(q.Dir, path)); err != nil {
 				return nil, err
 			}
 		}

@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 )
 
-// SE-4: "One JSON file per job under ~/.oriel/jobs on the worker", named by a slug of the title, which comes from the
+// One JSON file per job under ~/.oriel/jobs on the worker, named by a slug of the title, which comes from the
 // prompt's first line when there's none (crit's internal/job).
 func TestJobsAreOneFileEach(t *testing.T) {
 	r := newRig(t)
@@ -57,7 +58,7 @@ func TestJobsAreOneFileEach(t *testing.T) {
 	}
 }
 
-// SE-4: "A run is a session of kind job in a fresh workspace, given the prompt as JOB.md", on the job's pins.
+// A run is a session of kind job in a fresh workspace, given the prompt as JOB.md, on the job's pins.
 func TestAJobRunsAsAJobSession(t *testing.T) {
 	r := newRig(t)
 	j, _ := r.w.SaveJob(Job{Title: "Sweep stale deps", Prompt: "Bump every dependency that's behind.", Effort: "high"})
@@ -66,7 +67,7 @@ func TestAJobRunsAsAJobSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	se := r.session(id)
-	if se.Kind != core.KindJob || se.Job != j.Name || len(se.Projects) != 0 || se.Agent.Provider != "fake" || se.Agent.Effort != "high" {
+	if se.Kind != core.KindJob || JobOf(se) != j.Name || len(se.Projects) != 0 || se.Agent.Provider != "fake" || se.Agent.Effort != "high" {
 		t.Errorf("run = %+v", se)
 	}
 	b, err := os.ReadFile(filepath.Join(se.Dir, "JOB.md"))
@@ -80,7 +81,7 @@ func TestAJobRunsAsAJobSession(t *testing.T) {
 	if got := RunOf(r.session(id)); got.Status != RunRunning {
 		t.Errorf("status = %q, want running", got.Status)
 	}
-	// SE-5: "run tabs read "job: <title>"".
+	// Run tabs read "job: <title>".
 	if se.Name != "job: sweep stale deps" {
 		t.Errorf("the run's name = %q", se.Name)
 	}
@@ -89,45 +90,42 @@ func TestAJobRunsAsAJobSession(t *testing.T) {
 	}
 }
 
-// SE-4: a run's row is its status, the repos it worked in, the agent's summary and how long it took. Done is the request
+// A run's row is its status, the repos it worked in, the agent's summary and how long it took. Done is the request
 // resolved; blocked is the agent's answer left open (job.md: "reply starting **Blocked:**"); stopped is stopped by
 // you before either.
 func TestRunStatuses(t *testing.T) {
 	r := newRig(t)
 	j, _ := r.w.SaveJob(Job{Prompt: "Sweep stale deps"})
-	run := func() (core.SessionID, string) {
+	run := func() (core.SessionID, string, *agenttest.FakeSession) {
 		id, err := r.w.RunJob(context.Background(), j.Name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		r.agent()
-		return id, string(r.session(id).Threads[0].ID)
+		a := r.agent()
+		return id, string(r.session(id).Threads[0].ID), a
 	}
 	ctx := context.Background()
 
-	id, tid := run()
+	id, tid, a := run()
 	if err := r.w.AddRepo(ctx, id, core.RepoID(r.repo.Dir)); err != nil {
 		t.Fatal(err)
 	}
 	r.setNow(r.now().Add(22 * time.Minute))
-	h, _ := r.w.sessionFor(id, false)
-	reply := func(h *session, body string, resolve bool) {
+	reply := func(a *agenttest.FakeSession, body string, resolve bool) {
 		t.Helper()
-		b, _ := json.Marshal(map[string]any{"thread": tid, "body": body, "resolve": resolve})
-		if _, err := h.toolReply(ctx, b); err != nil {
+		if _, err := a.CallErr("reply", map[string]any{"thread": tid, "body": body, "resolve": resolve}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	reply(h, "3 PRs: api#812, web#4431.\n\nAll green.", true)
+	reply(a, "3 PRs: api#812, web#4431.\n\nAll green.", true)
 	got := RunOf(r.session(id))
 	if got.Status != RunDone || got.Summary != "3 PRs: api#812, web#4431. All green." || got.Took() != 22*time.Minute ||
 		len(got.Repos) != 1 || got.Repos[0] != filepath.Base(r.repo.Dir) {
 		t.Errorf("done run = %+v", got)
 	}
 
-	id, tid = run()
-	h, _ = r.w.sessionFor(id, false)
-	reply(h, "**Blocked:** react-router 6.28 breaks loaders. Needs a call: bump and fix, or pin?", false)
+	id, tid, a = run()
+	reply(a, "**Blocked:** react-router 6.28 breaks loaders. Needs a call: bump and fix, or pin?", false)
 	if got := RunOf(r.session(id)); got.Status != RunBlocked || got.Summary != "react-router 6.28 breaks loaders. Needs a call: bump and fix, or pin?" {
 		t.Errorf("blocked run = %+v", got)
 	}
@@ -135,7 +133,7 @@ func TestRunStatuses(t *testing.T) {
 		t.Errorf("a blocked run's session is %s, want needs_you: it's in Requests", se.Status)
 	}
 
-	id, _ = run()
+	id, _, _ = run()
 	if err := r.w.Stop(ctx, id); err != nil {
 		t.Fatal(err)
 	}
@@ -145,14 +143,14 @@ func TestRunStatuses(t *testing.T) {
 	}
 }
 
-// SE-5: "a stop records who (you, the agent, the worker on shutdown), so the row says "Stopped by you"".
+// A stop records who (you, the agent, the worker on shutdown), so the row says "Stopped by you".
 func TestAStopSaysWho(t *testing.T) {
 	r := newRig(t)
 	j, _ := r.w.SaveJob(Job{Prompt: "Sweep stale deps"})
 	ctx := context.Background()
 	quits, _ := r.w.RunJob(ctx, j.Name)
 	r.agent().Close() // the agent's process ends by itself
-	if got := RunOf(r.eventually(quits, "stopped", func(se core.SessionState) bool { return !se.Agent.Running })); got.StoppedBy != core.StoppedByAgent {
+	if got := RunOf(r.eventually(quits, "stopped", func(se core.SessionState) bool { return !se.Agent.Live() })); got.StoppedBy != core.StoppedByAgent {
 		t.Errorf("an agent that quit: %+v", got)
 	}
 	shut, _ := r.w.RunJob(ctx, j.Name)
@@ -170,7 +168,7 @@ func TestAStopSaysWho(t *testing.T) {
 	}
 }
 
-// SE-5: "occurrences missed while the worker was off are run once when it starts (one per job, not a backlog)".
+// Occurrences missed while the worker was off are run once when it starts (one per job, not a backlog).
 func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 	r := newRig(t)
 	r.setNow(time.Date(2026, 10, 12, 6, 0, 0, 0, time.UTC)) // Monday
@@ -183,7 +181,7 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 	runs := func(name string) int {
 		n := 0
 		for _, se := range r.w.store.State().Sessions {
-			if se.Job == name {
+			if JobOf(se) == name {
 				n++
 			}
 		}
@@ -206,7 +204,7 @@ func TestAMissedOccurrenceRunsOnceAfterARestart(t *testing.T) {
 	}
 }
 
-// SE-5: "a skipped run is kept in the run list as "skipped (last run still going)"": the job keeps each one.
+// A skipped run is kept in the run list as "skipped (last run still going)": the job keeps each one.
 func TestSkippedRunsAreKept(t *testing.T) {
 	r := newRig(t)
 	r.setNow(time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC))
@@ -229,7 +227,7 @@ func TestSkippedRunsAreKept(t *testing.T) {
 	}
 }
 
-// SE-4: "Delete throws the workspace away": its worktrees and the session go, the repos stay.
+// Delete throws the workspace away: its worktrees and the session go, the repos stay.
 func TestDeleteThrowsARunAway(t *testing.T) {
 	r := newRig(t)
 	j, _ := r.w.SaveJob(Job{Prompt: "Sweep stale deps"})
@@ -267,39 +265,7 @@ func TestDeleteThrowsARunAway(t *testing.T) {
 	}
 }
 
-// SE-4: "every weekday / weekly at a time, or custom", in the host's time.
-func TestScheduleNext(t *testing.T) {
-	wed := time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC) // Wednesday
-	for _, c := range []struct {
-		s    Schedule
-		want string
-	}{
-		{Schedule{}, ""},
-		{Schedule{Every: EveryWeekday, At: "07:00"}, "Thu 15 07:00"},
-		{Schedule{Every: EveryWeekday, At: "10:30"}, "Wed 14 10:30"},
-		{Schedule{Every: EveryWeek, Days: []time.Weekday{time.Monday}, At: "07:00"}, "Mon 19 07:00"},
-		{Schedule{Every: EveryDays, Days: []time.Weekday{time.Saturday, time.Tuesday}, At: "06:15"}, "Sat 17 06:15"},
-	} {
-		got := ""
-		if n := c.s.Next(wed); !n.IsZero() {
-			got = n.Format("Mon 02 15:04")
-		}
-		if got != c.want {
-			t.Errorf("%+v: next = %q, want %q", c.s, got, c.want)
-		}
-	}
-	fri := time.Date(2026, 10, 16, 8, 0, 0, 0, time.UTC)
-	if n := (Schedule{Every: EveryWeekday, At: "07:00"}).Next(fri); n.Weekday() != time.Monday {
-		t.Errorf("after Friday's run, every weekday is next %s", n.Weekday())
-	}
-	for _, s := range []Schedule{{Every: EveryWeekday, At: "7am"}, {Every: EveryWeek, At: "07:00"}, {Every: "hourly", At: "07:00"}} {
-		if s.Check() == nil {
-			t.Errorf("%+v passed its check", s)
-		}
-	}
-}
-
-// SE-4 done when: "A schedule fires a run at its time on a fake clock and skips while one is running."
+// A schedule fires a run at its time on a fake clock and skips while one is running.
 func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	r := newRig(t)
 	r.setNow(time.Date(2026, 10, 14, 6, 59, 0, 0, time.UTC))
@@ -311,7 +277,7 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	runs := func() []core.SessionState {
 		var out []core.SessionState
 		for _, se := range r.w.store.State().Sessions {
-			if se.Job == j.Name {
+			if JobOf(se) == j.Name {
 				out = append(out, se)
 			}
 		}

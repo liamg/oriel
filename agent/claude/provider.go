@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/liamg/oriel/agent/claude/transcript"
 	"github.com/liamg/oriel/agent/hostexec"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/semver"
 )
 
 // Provider is Claude Code, run as an interactive claude in a PTY with Oriel's mod: the subscription's way in.
@@ -28,9 +28,11 @@ type Provider struct {
 	Bin      string // claude; "" is claude on PATH
 	OrielBin string // the binary the mod runs as `<OrielBin> hook <op>`; "" is this executable
 	ProbeDir string // a folder of Oriel's that the /usage probe runs claude in; "" is one in the temp dir
+
+	usage usageBook
 }
 
-var _ agent.Provider = Provider{}
+var _ agent.Provider = (*Provider)(nil)
 
 // minVersion is the oldest Claude Code with the function hooks the mod uses.
 const minVersion = "2.1.284"
@@ -38,18 +40,18 @@ const minVersion = "2.1.284"
 // The PTY's size until a view says otherwise.
 const cols, rows = 200, 50
 
-func (Provider) ID() string { return "claude" }
+func (*Provider) ID() string { return "claude" }
 
-func (p Provider) bin() string {
+func (p *Provider) bin() string {
 	if p.Bin != "" {
 		return p.Bin
 	}
 	return "claude"
 }
 
-var semver = regexp.MustCompile(`\d+\.\d+\.\d+`)
+var versionPattern = regexp.MustCompile(`\d+\.\d+\.\d+`)
 
-func (p Provider) Detect(ctx context.Context) (agent.Install, error) {
+func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 	in := agent.Install{Bin: p.bin()}
 	path, err := exec.LookPath(p.bin())
 	if err != nil {
@@ -66,7 +68,7 @@ func (p Provider) Detect(ctx context.Context) (agent.Install, error) {
 		in.Note = "claude --version failed: " + err.Error()
 		return in, nil
 	}
-	in.Version = semver.FindString(string(out))
+	in.Version = versionPattern.FindString(string(out))
 	if in.Version == "" {
 		in.Note = fmt.Sprintf("Could not read a version from claude --version: %q.", strings.TrimSpace(string(out)))
 		return in, nil
@@ -84,15 +86,9 @@ func (p Provider) Detect(ctx context.Context) (agent.Install, error) {
 }
 
 func versionLess(a, b string) bool {
-	pa, pb := strings.Split(a, "."), strings.Split(b, ".")
-	for i := range 3 {
-		x, _ := strconv.Atoi(pa[i])
-		y, _ := strconv.Atoi(pb[i])
-		if x != y {
-			return x < y
-		}
-	}
-	return false
+	x, _, errA := semver.ParsePartial(a)
+	y, _, errB := semver.ParsePartial(b)
+	return errA == nil && errB == nil && x.Compare(y) < 0
 }
 
 // login reads the sign-in from Claude's files, without asking the network (subscription), else an API key. mark
@@ -200,7 +196,7 @@ func plan(kind string) string {
 
 var efforts = []string{"low", "medium", "high", "xhigh", "max"}
 
-func (Provider) Models(context.Context) ([]agent.Model, error) {
+func (*Provider) Models(context.Context) ([]agent.Model, error) {
 	return []agent.Model{
 		{ID: "opus", Name: "Opus", Efforts: efforts, Context: 200_000, Default: true},
 		{ID: "opus[1m]", Name: "Opus (1M context)", Efforts: efforts, Context: 1_000_000},
@@ -212,11 +208,11 @@ func (Provider) Models(context.Context) ([]agent.Model, error) {
 
 // Usage reads the plan's windows with the /usage probe, and answers with the newest reading: the probe's, or a
 // session's mod's ($.session.usage()) if that's newer.
-func (p Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
+func (p *Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
 	err := p.readUsage(ctx)
-	usage.mu.Lock()
-	u := usage.last
-	usage.mu.Unlock()
+	p.usage.mu.Lock()
+	u := p.usage.last
+	p.usage.mu.Unlock()
 	u.Provider = "claude"
 	u.Plan, u.Tier = planOf(nil)
 	u.Account, u.AccountName = account(nil)
@@ -224,7 +220,7 @@ func (p Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
 }
 
 // Logs are a session's log and its subagents' logs, where the host keeps them (a sandbox writes through a mount).
-func (Provider) Logs(cwd, session string) []agent.Log {
+func (*Provider) Logs(cwd, session string) []agent.Log {
 	if session == "" {
 		return nil
 	}
@@ -277,7 +273,7 @@ var userFiles = []string{"CLAUDE.md", "skills", "agents", "commands"}
 // SandboxCredentials are the host's Claude files a container needs, read-only. A Sandbox path is under
 // $CLAUDE_CONFIG_DIR, the agent's config directory in the container. The sign-in itself is the sandbox's to hand
 // over, stripped of its refresh token.
-func (Provider) SandboxCredentials() []agent.Mount {
+func (*Provider) SandboxCredentials() []agent.Mount {
 	dir := transcript.ConfigDir(nil)
 	var out []agent.Mount
 	for _, f := range userFiles {
@@ -289,11 +285,11 @@ func (Provider) SandboxCredentials() []agent.Mount {
 	return out
 }
 
-func (p Provider) Start(ctx context.Context, s agent.StartSpec) (agent.Session, error) {
+func (p *Provider) Start(ctx context.Context, s agent.StartSpec) (agent.Session, error) {
 	return p.start(ctx, s, "")
 }
 
-func (p Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (agent.Session, error) {
+func (p *Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (agent.Session, error) {
 	if id == "" {
 		return nil, errors.New("claude: no session id to resume")
 	}
@@ -336,8 +332,11 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 	if s.Effort != "" {
 		a = append(a, "--effort", s.Effort)
 	}
-	if s.Sandbox != nil && s.Sandbox.GatewayMCP != "" {
+	switch {
+	case s.Sandbox != nil && s.Sandbox.GatewayMCP != "":
 		a = append(a, "--mcp-config", s.Sandbox.GatewayMCP, "--strict-mcp-config")
+	case s.NoMCP:
+		a = append(a, "--mcp-config", `{"mcpServers":{}}`, "--strict-mcp-config")
 	}
 	// A sandbox's settings.json has it already.
 	if s.Memory != "" && s.Sandbox == nil {
@@ -385,7 +384,7 @@ func newUUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
-func (p Provider) start(ctx context.Context, spec agent.StartSpec, resume string) (_ agent.Session, err error) {
+func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume string) (_ agent.Session, err error) {
 	if spec.Cwd == "" {
 		return nil, errors.New("claude: no directory to start in")
 	}
@@ -452,7 +451,7 @@ func (p Provider) start(ctx context.Context, spec agent.StartSpec, resume string
 		agent.HookSocketEnv+"="+sockPath(dir),
 		"ORIEL_BIN="+orielBin,
 	)
-	if spec.Sandbox != nil {
+	if spec.Sandbox != nil || spec.NoMCP {
 		cmd.Env = append(cmd.Env, "ENABLE_CLAUDEAI_MCP_SERVERS=false")
 	}
 	cmd.Env = append(cmd.Env, spec.Env...)
@@ -472,6 +471,7 @@ func (p Provider) start(ctx context.Context, spec agent.StartSpec, resume string
 		config = transcript.ConfigDir(nil)
 	}
 	s := &session{
+		usage:  &p.usage,
 		spec:   spec,
 		ctx:    sctx,
 		cancel: cancel,

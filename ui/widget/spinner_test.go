@@ -56,3 +56,25 @@ func TestSpinner(t *testing.T) {
 		t.Error("with reduced motion the arc moved")
 	}
 }
+
+// Decorative motion stops while the window is behind another app: the spinner, dots, an open-ended bar and a
+// skeleton ask for no frames.
+func TestDecorativeWidgetsRestUnfocused(t *testing.T) {
+	h := motionHarness(t, false, func(c *ui.Ctx) {
+		c.Column("col", ui.Style{}, func(c *ui.Ctx) {
+			Spinner(c, "spin", SpinnerOpts{})
+			Dots(c, "dots", DotsOpts{})
+			ProgressBar(c, "bar", ProgressOpts{Frac: -1})
+			Skeleton(c, "skel", SkeletonOpts{})
+		})
+	})
+	h.frame()
+	if h.u.NextFrame().IsZero() {
+		t.Fatal("focused, nothing asked for a frame")
+	}
+	h.u.SetWindow(false, true)
+	h.frame()
+	if next := h.u.NextFrame(); !next.IsZero() {
+		t.Fatalf("unfocused, a frame was asked for at %v", next)
+	}
+}

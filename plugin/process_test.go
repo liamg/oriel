@@ -16,8 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/agent/jsonrpc"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/plugin/ossandbox"
 )
 
@@ -34,7 +34,8 @@ func TestMain(m *testing.M) {
 }
 
 // fakePlugin answers over stdio: echo returns its params, host asks the host {method, params}, read reads a file
-// itself (to see the sandbox), and it says hello on stderr.
+// itself (to see the sandbox), bye sends n notifications and its answer then exits, flood makes n calls to the host
+// at once, and it says hello on stderr.
 func fakePlugin() {
 	fmt.Fprintln(os.Stderr, "fake plugin up")
 	var conn *jsonrpc.Conn
@@ -63,6 +64,27 @@ func fakePlugin() {
 					a.Path = filepath.Join(os.Getenv(EnvData), "kept")
 				}
 				r.Reply(a.Path, os.WriteFile(a.Path, []byte("kept"), 0o600))
+			case "bye":
+				var n int
+				json.Unmarshal(r.Params, &n)
+				pad := strings.Repeat("x", 4096)
+				for i := range n {
+					conn.Notify("note", map[string]any{"i": i, "pad": pad})
+				}
+				r.Reply("bye", nil)
+				os.Exit(0)
+			case "flood":
+				var a struct {
+					N      int
+					Method string
+				}
+				json.Unmarshal(r.Params, &a)
+				var wg sync.WaitGroup
+				for range a.N {
+					wg.Go(func() { conn.CallRaw(context.Background(), a.Method, nil) })
+				}
+				wg.Wait()
+				r.Reply(a.N, nil)
 			default:
 				r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: r.Method})
 			}
@@ -121,7 +143,7 @@ func call(t *testing.T, pr *Process, method string, params any) (string, error) 
 	return string(raw), err
 }
 
-// PL-2: a process plugin speaks JSON-RPC over stdio, its stderr goes to its log as lines ("plugin:<id>"), and
+// A process plugin speaks JSON-RPC over stdio, its stderr goes to its log as lines ("plugin:<id>"), and
 // each call it makes to the host goes through the guard: an undeclared one fails naming the capability.
 func TestProcessPlugin(t *testing.T) {
 	if err := ossandbox.Available(); err != nil {
@@ -209,7 +231,7 @@ func TestProcessDataDir(t *testing.T) {
 	}
 }
 
-// catalog.md: "Spawning the plugin's own binary or loading its own .wasm needs no exec grant. Running anything
+// "Spawning the plugin's own binary or loading its own .wasm needs no exec grant. Running anything
 // else does." A link out of its directory isn't its own.
 func TestSpawnNeedsExecForOthers(t *testing.T) {
 	tool, err := exec.LookPath("true")
@@ -297,5 +319,81 @@ func TestBundledProgramRunsAsOriel(t *testing.T) {
 	defer pr.Stop()
 	if got, err := call(t, pr, "read", map[string]string{"path": outside}); err != nil || got != `"seen"` {
 		t.Errorf("the bundled program was confined: %s, %v", got, err)
+	}
+}
+
+// What a plugin writes before it exits all arrives: its last notifications and its answer.
+func TestProcessExitKeepsItsLastWords(t *testing.T) {
+	self, _ := os.Executable()
+	for range 5 {
+		var mu sync.Mutex
+		notes := 0
+		ps := testProcesses(&syncBuf{})
+		pr, err := ps.Spawn(Caller{ID: "init.lua"}, self, SpawnOpts{Env: []string{fakeEnv + "=1"},
+			Notify: func(string, json.RawMessage) (any, bool, error) {
+				mu.Lock()
+				notes++
+				mu.Unlock()
+				return nil, true, nil
+			}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := call(t, pr, "bye", 200)
+		<-pr.Done()
+		mu.Lock()
+		n := notes
+		mu.Unlock()
+		if err != nil || got != `"bye"` || n != 200 {
+			t.Fatalf("its answer %s, %v; %d notifications of 200", got, err, n)
+		}
+	}
+}
+
+// A plugin's calls to the host run at most maxRequests at a time; the rest wait their turn.
+func TestProcessRequestsAreBounded(t *testing.T) {
+	self, _ := os.Executable()
+	var mu sync.Mutex
+	active, most := 0, 0
+	release := make(chan struct{})
+	ps := testProcesses(&syncBuf{})
+	pr, err := ps.Spawn(Caller{ID: "init.lua"}, self, SpawnOpts{Env: []string{fakeEnv + "=1"},
+		Request: func(string, json.RawMessage) (any, bool, error) {
+			mu.Lock()
+			active++
+			most = max(most, active)
+			mu.Unlock()
+			<-release
+			mu.Lock()
+			active--
+			mu.Unlock()
+			return nil, true, nil
+		}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pr.Stop()
+	done := make(chan error, 1)
+	go func() {
+		_, err := call(t, pr, "flood", map[string]any{"n": maxRequests + 50, "method": "wait"})
+		done <- err
+	}()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		mu.Lock()
+		a := active
+		mu.Unlock()
+		if a >= maxRequests || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	time.Sleep(100 * time.Millisecond)
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if most != maxRequests {
+		t.Errorf("%d requests ran at once, want %d", most, maxRequests)
 	}
 }

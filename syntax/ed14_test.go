@@ -25,7 +25,7 @@ func manyDecls() []byte {
 	return []byte(b.String())
 }
 
-// ED-14: a highlight query costs what its range holds, wherever it is: tree-sitter doesn't step over every
+// A highlight query costs what its range holds, wherever it is: tree-sitter doesn't step over every
 // top-level declaration before it, nor walk down from the root for each capture's parent. Each chunk the parser
 // queries stays under 2 ms, so the wasm call never holds up the Go runtime for longer.
 func TestHighlightQueryBudget(t *testing.T) {
@@ -41,16 +41,10 @@ func TestHighlightQueryBudget(t *testing.T) {
 		}
 		defer p.Close()
 		p.Parse(src)
-		p.Highlights(at, at+16<<10) // compile the query
-		best := time.Hour
-		for range 5 {
-			start := time.Now()
-			if _, err := p.Highlights(at, at+16<<10); err != nil {
-				t.Fatal(err)
-			}
-			best = min(best, time.Since(start))
+		if _, err := p.Highlights(at, at+16<<10); err != nil { // compiles the query
+			t.Fatal(err)
 		}
-		return best
+		return perf.Times(5, 1, nil, func(int) { p.Highlights(at, at+16<<10) })[0]
 	}
 	big := manyDecls()
 	inBig := time16(big, len(big)/2)
@@ -65,30 +59,21 @@ func TestHighlightQueryBudget(t *testing.T) {
 	p.Parse(big)
 	mid := len(big) / 2
 	p.Highlights(mid, mid+highlightChunk)
-	// Each chunk's time is its best over repeated runs, for up to 3 s: a chunk that's slow every time is slow,
-	// one the scheduler preempted, or that ran while every core was busy, isn't.
-	var best []time.Duration
-	deadline := time.Now().Add(3 * time.Second)
-	for trial := 0; trial < 3 || (slices.Max(best) > 2*time.Millisecond && time.Now().Before(deadline)); trial++ {
-		i := 0
-		for at := mid; at < mid+64<<10; at += highlightChunk {
-			for _, kind := range []string{"highlights", "injections"} {
-				start := time.Now()
-				p.run(kind, at, at+highlightChunk)
-				d := time.Since(start)
-				if trial == 0 {
-					best = append(best, d)
-				} else {
-					best[i] = min(best[i], d)
-				}
-				i++
-			}
-		}
-		if trial >= 2 {
-			time.Sleep(20 * time.Millisecond)
+	// Each chunk's time is its best over three runs (perf.Times): a chunk that's slow every time is slow, one the
+	// scheduler preempted, or that ran while every core was busy, isn't.
+	type query struct {
+		kind string
+		at   int
+	}
+	var queries []query
+	for at := mid; at < mid+64<<10; at += highlightChunk {
+		for _, kind := range []string{"highlights", "injections"} {
+			queries = append(queries, query{kind, at})
 		}
 	}
-	worst := slices.Max(best)
+	worst := slices.Max(perf.Times(3, len(queries), nil, func(i int) {
+		p.run(queries[i].kind, queries[i].at, queries[i].at+highlightChunk)
+	}))
 	t.Logf("a %d-byte chunk's query takes at worst %v", highlightChunk, worst)
 	if worst > 2*time.Millisecond {
 		t.Errorf("a chunk's query took %v; the budget is 2 ms", worst)

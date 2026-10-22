@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp"
-	"github.com/liamg/oriel/lsp/jsonrpc"
 )
 
 const sample = `{"server":"fake","version":"1.0"}
@@ -51,7 +51,7 @@ func client(t *testing.T, f *Fake, root string, h jsonrpc.Handlers) *jsonrpc.Con
 	if err != nil {
 		t.Fatal(err)
 	}
-	return jsonrpc.NewConn(p, h)
+	return lsp.NewConn(p, h)
 }
 
 func TestReplay(t *testing.T) {
@@ -59,7 +59,7 @@ func TestReplay(t *testing.T) {
 	f := NewFake(tr, 5*time.Second)
 	shown := make(chan string, 1)
 	c := client(t, f, "/live/root", jsonrpc.Handlers{
-		Request: func(ctx context.Context, method string, params json.RawMessage) (any, error) { return []any{nil}, nil },
+		Request: jsonrpc.Answer(func(ctx context.Context, method string, params json.RawMessage) (any, error) { return []any{nil}, nil }),
 		Notify:  func(method string, params json.RawMessage) { shown <- method },
 	})
 	ctx := context.Background()

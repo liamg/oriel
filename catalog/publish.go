@@ -39,7 +39,7 @@ type Published struct {
 	File                []byte // the plugin.toml it proposed
 }
 
-// Publish proposes the plugin in o.Dir's current tag to the registry (catalog.md, Publishing): it reads oriel.toml
+// Publish proposes the plugin in o.Dir's current tag to the registry: it reads oriel.toml
 // and the tag at HEAD, packs it as the registry's CI will, and opens a PR that adds a [[versions]] entry, or the
 // plugin.toml of a new plugin. A trusted plugin has nothing to publish: its tag is checked and Oriel follows it.
 func Publish(ctx context.Context, o PublishOpts) (Published, error) {

@@ -24,32 +24,18 @@ var (
 	tButtonBusyFg  = theme.Declare("button.busy.fg", "fg.muted")
 )
 
-// Phase is where a load is.
-type Phase int
-
-const (
-	Idle Phase = iota
-	Pending
-	Ready
-	Failed
+// Phase and LoadState live in ui, below the loaders that report them.
+type (
+	Phase     = ui.Phase
+	LoadState = ui.LoadState
 )
 
-func (p Phase) String() string {
-	return [...]string{"idle", "pending", "ready", "failed"}[p]
-}
-
-// LoadState is what a widget reads of a load, however it's fetched.
-type LoadState struct {
-	Phase    Phase
-	Since    time.Time // when the current load started
-	Err      error     // the last failure, kept while a reload runs
-	Stale    bool      // Pending with an older value still shown
-	Progress float64   // 0..1 when known; 0 or below when not
-	Note     string    // what it's doing now: "probing codex"
-}
-
-// Loading reports whether s has nothing to show yet: not started, or on its first load.
-func (s LoadState) Loading() bool { return s.Phase == Idle || s.Phase == Pending && !s.Stale }
+const (
+	Idle    = ui.Idle
+	Pending = ui.Pending
+	Ready   = ui.Ready
+	Failed  = ui.Failed
+)
 
 // Elapsed is how long the current load has run.
 func Elapsed(now, since time.Time) string {
@@ -124,8 +110,8 @@ type ProgressOpts struct {
 
 const progressSweep = 1500 * time.Millisecond
 
-// ProgressBar is a loading bar: filled to Frac, or sliding when the end isn't known. With reduced motion a bar with
-// no known end is a still, striped one.
+// ProgressBar is a loading bar: filled to Frac, or sliding when the end isn't known. With reduced motion, or the window
+// unfocused (ui.Ctx.Decorative), a bar with no known end is a still, striped one.
 func ProgressBar(c *ui.Ctx, key any, o ProgressOpts) ui.ID {
 	h := o.Height
 	if h == 0 {
@@ -149,14 +135,11 @@ func ProgressBar(c *ui.Ctx, key any, o ProgressOpts) ui.ID {
 	if o.Frac >= 0 {
 		o.Frac = float64(c.Ease(easedKey{key}, float32(math.Min(o.Frac, 1))))
 	}
-	still := c.Still()
-	phase := 0.0
-	if o.Frac < 0 && !still {
-		tick := progressSweep / 30
-		now := c.Now().Truncate(tick)
-		phase = float64(now.UnixNano()%int64(progressSweep)) / float64(progressSweep)
-		c.WakeAt(now.Add(tick))
+	phase, moving := 0.0, false
+	if o.Frac < 0 {
+		phase, moving = c.Decorative(progressSweep, 30)
 	}
+	still := !moving
 	return c.Column(key, ui.Style{W: w, Gap: 4, Role: ui.RoleStatus, Label: strings.TrimSpace(o.Label + " " + value), Help: o.Help}, func(c *ui.Ctx) {
 		if h >= 6 && o.Label != "" {
 			c.Row("label", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
@@ -210,15 +193,11 @@ type SkeletonOpts struct {
 const skeletonPulse = 1600 * time.Millisecond
 
 // Skeleton is grey placeholders in the shape of what's coming: rows of text, or Count blocks of Block. The fill
-// pulses gently, and holds still with reduced motion.
+// pulses gently, and holds still with reduced motion or the window unfocused.
 func Skeleton(c *ui.Ctx, key any, o SkeletonOpts) ui.ID {
 	fill := col(c, tSkeletonFill)
-	if !c.Still() {
-		tick := skeletonPulse / 16
-		now := c.Now().Truncate(tick)
-		ph := float64(now.UnixNano()%int64(skeletonPulse)) / float64(skeletonPulse)
+	if ph, moving := c.Decorative(skeletonPulse, 16); moving {
 		fill = alpha(fill, .7+.3*(1+math.Cos(2*math.Pi*ph))/2)
-		c.WakeAt(now.Add(tick))
 	}
 	gap := o.Gap
 	if gap == 0 {

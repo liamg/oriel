@@ -189,7 +189,7 @@ func TestConfirmations(t *testing.T) {
 	}
 }
 
-// ui.md 11: "Every action has an undo with a countdown."
+// Every action has an undo with a countdown.
 func TestActionsCanBeUndoneForAWhile(t *testing.T) {
 	r := newRig(t)
 	now := time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC)
@@ -273,5 +273,38 @@ func TestInterrupt(t *testing.T) {
 	r.until("stopped", func(_ []Entry, busy bool) bool { return !busy })
 	if a.stops != 1 {
 		t.Errorf("interrupts: %d", a.stops)
+	}
+}
+
+// An idle conversation ends at its deadline, from a timer set to it rather than a once-a-second check.
+func TestIdleConversationEndsOnTime(t *testing.T) {
+	r := newRig(t)
+	r.c.Now = time.Now
+	r.c.Idle = 100 * time.Millisecond
+	r.c.Say("hi", false)
+	_, a := r.started()
+	a.sig <- Signal{Kind: TurnEnded}
+	r.until("idle", func(_ []Entry, busy bool) bool { return !busy })
+	ended := time.Now()
+	r.until("reaped", func([]Entry, bool) bool { return a.isClosed() })
+	if took := time.Since(ended); took > 600*time.Millisecond {
+		t.Errorf("reaped %v after the turn, want about 100ms", took)
+	}
+}
+
+// Shortening Idle while a conversation waits re-arms its reaper to the new deadline, rather than the old one.
+func TestShorterIdleRearmsTheReaper(t *testing.T) {
+	r := newRig(t)
+	r.c.Now = time.Now
+	r.c.SetIdle(time.Hour)
+	r.c.Say("hi", false)
+	_, a := r.started()
+	a.sig <- Signal{Kind: TurnEnded}
+	r.until("idle", func(_ []Entry, busy bool) bool { return !busy })
+	r.c.SetIdle(100 * time.Millisecond)
+	shortened := time.Now()
+	r.until("reaped", func([]Entry, bool) bool { return a.isClosed() })
+	if took := time.Since(shortened); took > 600*time.Millisecond {
+		t.Errorf("reaped %v after Idle was shortened, want about 100ms", took)
 	}
 }

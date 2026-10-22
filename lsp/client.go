@@ -9,10 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/lsp/jsonrpc"
+	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp/protocol"
 	"github.com/liamg/oriel/text"
 )
@@ -97,6 +98,7 @@ type Client struct {
 	proc Process
 	conn *jsonrpc.Conn
 
+	// Set by initialize under mu; read freely once Start returns.
 	caps    protocol.ServerCapabilities
 	enc     string
 	sync    protocol.TextDocumentSync
@@ -136,14 +138,14 @@ func Start(ctx context.Context, spec ServerSpec, root string, opts Options) (*Cl
 		stderr = io.Discard
 	}
 	c := &Client{spec: spec, root: root, opts: opts, docs: map[string]*document{}, diags: map[string]DiagnosticSet{},
-		work: map[string]*Work{}, regs: map[string]json.RawMessage{}, done: make(chan struct{}),
+		work: map[string]*Work{}, regs: map[string]json.RawMessage{}, done: make(chan struct{}), enc: protocol.UTF16,
 		status: Status{Server: spec.Name, Root: root, State: Starting}}
 	proc, err := launch(ctx, spec, root, stderr)
 	if err != nil {
 		return nil, fmt.Errorf("lsp: starting %s: %w", spec.Name, err)
 	}
 	c.proc = proc
-	c.conn = jsonrpc.NewConn(proc, jsonrpc.Handlers{Request: c.handleRequest, Notify: c.handleNotify})
+	c.conn = NewConn(proc, jsonrpc.Handlers{Request: jsonrpc.Answer(c.handleRequest), Notify: c.handleNotify})
 	go c.watch()
 	c.notifyStatus()
 	if err := c.initialize(ctx); err != nil {
@@ -173,15 +175,16 @@ func (c *Client) initialize(ctx context.Context) error {
 	if err := c.conn.Call(ctx, "initialize", params, &res); err != nil {
 		return err
 	}
+	c.mu.Lock()
 	c.caps = res.Capabilities
-	c.enc = res.Capabilities.PositionEncoding
-	if c.enc == "" {
-		c.enc = protocol.UTF16
+	if res.Capabilities.PositionEncoding != "" {
+		c.enc = res.Capabilities.PositionEncoding
 	}
 	c.sync = protocol.DecodeSync(res.Capabilities.TextDocumentSync)
 	if res.ServerInfo != nil {
 		c.version = res.ServerInfo.Version
 	}
+	c.mu.Unlock()
 	if err := c.conn.Notify("initialized", struct{}{}); err != nil {
 		return err
 	}
@@ -379,6 +382,8 @@ func incremental(before text.Snapshot, enc string, rs []text.Replace) ([]protoco
 
 // DidSave tells the server a document was saved.
 func (c *Client) DidSave(path string, s text.Snapshot) error {
+	c.sendMu.Lock()
+	defer c.sendMu.Unlock()
 	c.mu.Lock()
 	_, open := c.docs[path]
 	c.mu.Unlock()
@@ -441,6 +446,24 @@ func (c *Client) Registrations() map[string]json.RawMessage {
 		out[k] = v
 	}
 	return out
+}
+
+// NewConn is a connection speaking LSP's base protocol over rwc: Content-Length framing, "jsonrpc": "2.0", and
+// $/cancelRequest. A request whose method starts with "$/" is answered with MethodNotFound.
+func NewConn(rwc io.ReadWriteCloser, h jsonrpc.Handlers) *jsonrpc.Conn {
+	if req := h.Request; req != nil {
+		h.Request = func(r *jsonrpc.Request) {
+			// ref: lsp/specification.md#dollarRequests
+			// quote: "If a server or client receives a request starting with '\\$/' it must error the request with error code `MethodNotFound` (e.g. `-32601`)."
+			if strings.HasPrefix(r.Method, "$/") {
+				r.Reply(nil, jsonrpc.ErrMethodNotFound)
+				return
+			}
+			req(r)
+		}
+	}
+	return jsonrpc.NewConn(rwc, rwc, h, jsonrpc.Options{Framing: jsonrpc.Headers, Version: "2.0", Queue: true,
+		Cancel: &jsonrpc.Cancel{Method: "$/cancelRequest", Field: "id"}})
 }
 
 func (c *Client) handleRequest(ctx context.Context, method string, params json.RawMessage) (any, error) {
@@ -615,11 +638,14 @@ func percent(p *uint32) int {
 
 // conv converts what the server sends to Oriel's positions, reading files that aren't open as it needs them.
 func (c *Client) conv() *converter {
-	return &converter{c: c, snaps: map[string]*text.Snapshot{}}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return &converter{c: c, enc: c.enc, snaps: map[string]*text.Snapshot{}}
 }
 
 type converter struct {
 	c     *Client
+	enc   string
 	snaps map[string]*text.Snapshot // nil: couldn't read
 }
 
@@ -650,7 +676,7 @@ func (v *converter) snap(path string) *text.Snapshot {
 
 func (v *converter) pos(path string, p protocol.Position) text.Pos {
 	if s := v.snap(path); s != nil {
-		return fromProto(*s, v.c.enc, p)
+		return fromProto(*s, v.enc, p)
 	}
 	return rawPos(p)
 }

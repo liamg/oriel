@@ -71,8 +71,8 @@ func client(t *testing.T, transport string, s *ghtest.Server) gh.Client {
 
 var acme = gh.Repo{Owner: "acme", Name: "api"}
 
-// FG-6 done when: "flows tested against fixture repos and a fake GitHub": the PR for a branch, opening one,
-// editing it, its reviewers, out of draft, its checks and a failing one's log, over the REST API and through gh.
+// Flows tested against a fake GitHub: the PR for a branch, opening one, editing it, its reviewers, out of draft, its
+// checks and a failing one's log, over the REST API and through gh.
 func TestPullRequestFlow(t *testing.T) {
 	for _, transport := range []string{"http", "cli"} {
 		t.Run(transport, func(t *testing.T) {

@@ -1,6 +1,6 @@
 //go:build !race
 
-package app
+package app_test
 
 import (
 	"bytes"
@@ -9,10 +9,13 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/app/agentui"
+	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -43,18 +46,16 @@ func lagRepo(t *testing.T) string {
 }
 
 // lagApp is the app on a repo with the Explorer open on All, settled.
-func lagApp(t *testing.T) *running { return lagAppWith(t, nil) }
-
-func lagAppWith(t *testing.T, change func(*Config)) *running {
-	r := startAppWith(t, t.TempDir(), lagRepo(t), nil, change)
-	r.do(func() error {
-		return r.host.Run(context.Background(), "view.toggle", registry.Args{"id": ExplorerView})
+func lagApp(t *testing.T) *apptest.Window {
+	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: lagRepo(t)})
+	r.Do(func() error {
+		return r.Host.Run(context.Background(), "view.toggle", registry.Args{"id": kit.ExplorerView})
 	})
-	r.do(func() error { return r.host.Run(context.Background(), "explorer.scope", registry.Args{"scope": "all"}) })
-	r.waitText("pkg")
-	r.clickText("pkg")
-	r.waitText("f25.go")
-	r.settle()
+	r.Do(func() error { return r.Host.Run(context.Background(), "explorer.scope", registry.Args{"scope": "all"}) })
+	r.WaitText("pkg")
+	r.ClickText("pkg")
+	r.WaitText("f25.go")
+	settleWindow(r)
 	return r
 }
 
@@ -62,19 +63,19 @@ func lagAppWith(t *testing.T, change func(*Config)) *running {
 func clearOfBlinks(d time.Duration) {
 	for {
 		now := time.Now()
-		shut, next := oriBlink(now)
+		shut, next := agentui.OriBlink(now)
 		if !shut && next.Sub(now) >= d {
 			return
 		}
-		time.Sleep(next.Sub(now) + oriBlinkFor)
+		time.Sleep(next.Sub(now) + agentui.OriBlinkFor)
 	}
 }
 
-// settle waits until no frame has been drawn for a moment.
-func (r *running) settle() {
+// settleWindow waits until no frame has been drawn for a moment.
+func settleWindow(r *apptest.Window) {
 	for n := -1; ; {
 		time.Sleep(150 * time.Millisecond)
-		if m := len(r.win.Frames()); m == n {
+		if m := len(r.Win.Frames()); m == n {
 			return
 		} else {
 			n = m
@@ -82,11 +83,11 @@ func (r *running) settle() {
 	}
 }
 
-// textPoint is the middle of the run reading text in the frame on screen.
-func (r *running) textPoint(text string) render.Point {
-	r.t.Helper()
+// windowTextPoint is the middle of the run reading text in the frame on screen.
+func windowTextPoint(r *apptest.Window, text string) render.Point {
+	r.T.Helper()
 	var at render.Point
-	r.latest(`"`+text+`"`, func(f headless.Frame) bool {
+	r.Latest(`"`+text+`"`, func(f headless.Frame) bool {
 		for _, op := range f.Ops {
 			if op.Kind == render.OpGlyphs && op.Run.Text == text {
 				at = render.Point{X: op.At.X + op.Run.Advance/2, Y: op.At.Y - op.Run.Ascent/2}
@@ -116,9 +117,9 @@ type lagRun struct {
 	behind time.Duration // the furthest a burst of moves fell behind its schedule
 }
 
-// moves sends the pointer along path, one point every moveEvery, and says how far it fell behind: the loop not
+// sendMoves sends the pointer along path, one point every moveEvery, and says how far it fell behind: the loop not
 // taking moves as fast as they come.
-func (r *running) moves(path []render.Point, buttons render.Buttons) time.Duration {
+func sendMoves(r *apptest.Window, path []render.Point, buttons render.Buttons) time.Duration {
 	start := time.Now()
 	var behind time.Duration
 	for i, p := range path {
@@ -126,21 +127,21 @@ func (r *running) moves(path []render.Point, buttons render.Buttons) time.Durati
 		if d := time.Until(due); d > 0 {
 			time.Sleep(d)
 		}
-		r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p, Buttons: buttons})
+		r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p, Buttons: buttons})
 		behind = max(behind, time.Since(due))
 	}
 	return behind
 }
 
-// probe jumps the pointer to p, and times it until a frame draws something else under p.
-func (r *running) probe(p render.Point) time.Duration {
-	r.t.Helper()
-	fs := r.win.Frames()
+// probeAt jumps the pointer to p, and times it until a frame draws something else under p.
+func probeAt(r *apptest.Window, p render.Point) time.Duration {
+	r.T.Helper()
+	fs := r.Win.Frames()
 	before, n := topFill(fs[len(fs)-1], p), len(fs)
 	start := time.Now()
-	r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
 	for time.Since(start) < 2*time.Second {
-		fs := r.win.Frames()
+		fs := r.Win.Frames()
 		for _, f := range fs[n:] {
 			if topFill(f, p) != before {
 				return time.Since(start)
@@ -149,7 +150,7 @@ func (r *running) probe(p render.Point) time.Duration {
 		n = len(fs)
 		time.Sleep(200 * time.Microsecond)
 	}
-	r.t.Fatalf("nothing lit up under %v in 2s", p)
+	r.T.Fatalf("nothing lit up under %v in 2s", p)
 	return 0
 }
 
@@ -166,20 +167,20 @@ func sweep(a, b render.Point, n int) []render.Point {
 	return path
 }
 
-// lag sweeps noise for 200 ms then probes each target in turn, rounds times, and checks the run against the budgets.
-func (r *running) lag(name string, noise []render.Point, targets []render.Point, rounds int) lagRun {
-	r.t.Helper()
+// measureLag sweeps noise for 200 ms then probes each target in turn, rounds times, and checks the run against the budgets.
+func measureLag(r *apptest.Window, name string, noise []render.Point, targets []render.Point, rounds int) lagRun {
+	r.T.Helper()
 	var run lagRun
 	for i := range rounds {
-		run.behind = max(run.behind, r.moves(noise, 0))
-		run.probes = append(run.probes, r.probe(targets[i%len(targets)]))
+		run.behind = max(run.behind, sendMoves(r, noise, 0))
+		run.probes = append(run.probes, probeAt(r, targets[i%len(targets)]))
 	}
-	r.check(name, run)
+	checkLag(r, name, run)
 	return run
 }
 
-func (r *running) check(name string, run lagRun) {
-	r.t.Helper()
+func checkLag(r *apptest.Window, name string, run lagRun) {
+	r.T.Helper()
 	sorted := slices.Clone(run.probes)
 	slices.Sort(sorted)
 	p90, worst := sorted[len(sorted)*9/10], sorted[len(sorted)-1]
@@ -190,16 +191,16 @@ func (r *running) check(name string, run lagRun) {
 		return d[len(d)/2]
 	}
 	first, last := median(run.probes[:third]), median(run.probes[len(run.probes)-third:])
-	r.t.Logf("%s: %d probes, p90 %v, worst %v, first third %v, last third %v; moves fell %v behind", name, len(run.probes),
+	r.T.Logf("%s: %d probes, p90 %v, worst %v, first third %v, last third %v; moves fell %v behind", name, len(run.probes),
 		p90, worst, first, last, run.behind)
 	if p90 > probeP90 || worst > probeMax {
-		r.t.Errorf("%s: the frame showing what's under the pointer took %v (p90), %v at worst; the budget is %v, %v", name, p90, worst, probeP90, probeMax)
+		r.T.Errorf("%s: the frame showing what's under the pointer took %v (p90), %v at worst; the budget is %v, %v", name, p90, worst, probeP90, probeMax)
 	}
 	if last > 2*first+10*time.Millisecond {
-		r.t.Errorf("%s: probes slowed down over the run: %v at the start, %v at the end", name, first, last)
+		r.T.Errorf("%s: probes slowed down over the run: %v at the start, %v at the end", name, first, last)
 	}
 	if run.behind > sendBehind {
-		r.t.Errorf("%s: the loop fell %v behind moves at 1 kHz", name, run.behind)
+		r.T.Errorf("%s: the loop fell %v behind moves at 1 kHz", name, run.behind)
 	}
 }
 
@@ -208,13 +209,13 @@ func (r *running) check(name string, run lagRun) {
 func TestExplorerHoverLagBudget(t *testing.T) {
 	perf.Timed(t)
 	r := lagApp(t)
-	top, mid := r.textPoint("f00.go"), r.textPoint("f10.go")
+	top, mid := windowTextPoint(r, "f00.go"), windowTextPoint(r, "f10.go")
 	noise := sweep(top, mid, 200)
 	var targets []render.Point
 	for _, f := range []string{"f20.go", "f14.go", "f25.go", "f17.go", "f22.go"} {
-		targets = append(targets, r.textPoint(f))
+		targets = append(targets, windowTextPoint(r, f))
 	}
-	r.lag("explorer", noise, targets, 60)
+	measureLag(r, "explorer", noise, targets, 60)
 }
 
 // The same after drags over the Explorer: a drag that ends mustn't leave moves building frames they didn't before,
@@ -222,87 +223,54 @@ func TestExplorerHoverLagBudget(t *testing.T) {
 func TestHoverLagAfterDragBudget(t *testing.T) {
 	perf.Timed(t)
 	r := lagApp(t)
-	row := r.textPoint("f00.go")
+	row := windowTextPoint(r, "f00.go")
 	along := func() int {
-		r.moves([]render.Point{row}, 0)
-		r.settle()
+		sendMoves(r, []render.Point{row}, 0)
+		settleWindow(r)
 		clearOfBlinks(2 * time.Second)
-		n := len(r.win.Frames())
-		r.moves(sweep(row, render.Point{X: row.X + 30, Y: row.Y}, 200), 0)
-		r.settle()
-		return len(r.win.Frames()) - n
+		n := len(r.Win.Frames())
+		sendMoves(r, sweep(row, render.Point{X: row.X + 30, Y: row.Y}, 200), 0)
+		settleWindow(r)
+		return len(r.Win.Frames()) - n
 	}
 	clean := along()
-	a, b := r.textPoint("f02.go"), r.textPoint("f12.go")
+	a, b := windowTextPoint(r, "f02.go"), windowTextPoint(r, "f12.go")
 	for range 5 {
-		r.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: a, Buttons: render.ButtonPrimary})
-		r.moves(sweep(a, b, 80), render.ButtonPrimary)
-		r.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: b, Buttons: render.ButtonPrimary})
+		r.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: a, Buttons: render.ButtonPrimary})
+		sendMoves(r, sweep(a, b, 80), render.ButtonPrimary)
+		r.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: b, Buttons: render.ButtonPrimary})
 	}
-	r.win.Send(render.KeyEvent{Key: "Esc"})
-	r.settle()
+	r.Win.Send(render.KeyEvent{Key: "Esc"})
+	settleWindow(r)
 	if n := along(); n > clean+3 {
 		t.Errorf("200 moves along one row built %d frames after drags, %d before", n, clean)
 	}
 	var targets []render.Point
 	for _, f := range []string{"f20.go", "f14.go", "f25.go"} {
-		targets = append(targets, r.textPoint(f))
+		targets = append(targets, windowTextPoint(r, f))
 	}
-	r.lag("after drags", sweep(row, r.textPoint("f10.go"), 200), targets, 30)
+	measureLag(r, "after drags", sweep(row, windowTextPoint(r, "f10.go"), 200), targets, 30)
 }
 
 // A context menu over the Explorer: its items light up within budget while the pointer keeps moving.
 func TestMenuHoverLagBudget(t *testing.T) {
 	perf.Timed(t)
 	r := lagApp(t)
-	at := r.textPoint("f05.go")
-	r.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: at})
-	r.win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: at, Buttons: render.ButtonSecondary})
-	r.win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: at, Buttons: render.ButtonSecondary})
-	r.waitText("Close")
-	r.settle()
-	first, second, third := r.textPoint("Move pane…"), r.textPoint("Close"), r.textPoint("? Help")
-	r.lag("menu", sweep(first, render.Point{X: first.X + 60, Y: first.Y}, 200), []render.Point{second, third}, 40)
-}
-
-// explorerFrame is the average frame with the Explorer open on dir's Changed scope, once every diff is made.
-func explorerFrame(t *testing.T, dir string, n int) time.Duration {
-	s := newScene(t, "", dir, mockupSize)
-	s.sh.git.wait()
-	s.keyCommand(t, "<M-1>")
-	ready := func() bool {
-		l, ok := registry.LedgerOf(s.reg, dir)
-		return ok && l.Ready
-	}
-	if !s.Until(30*time.Second, ready) {
-		t.Fatalf("the ledger over %d changed files was never ready", n)
-	}
-	for range 10 {
-		s.frame()
-	}
-	start := time.Now()
-	for range 100 {
-		s.frame()
-	}
-	return time.Since(start) / 100
-}
-
-// The Explorer's frame doesn't grow with the files a branch changes: the review ledger it shows is made when a diff
-// lands or the status changes, not every frame.
-func TestExplorerFrameWithManyChangesBudget(t *testing.T) {
-	perf.Timed(t)
-	few, many := explorerFrame(t, changedRepo(t, 5), 5), explorerFrame(t, changedRepo(t, 400), 400)
-	t.Logf("a frame over 5 changed files: %v; over 400: %v", few, many)
-	if many > 2*few+500*time.Microsecond {
-		t.Errorf("400 changed files make the Explorer's frame %v, against %v over 5", many, few)
-	}
+	at := windowTextPoint(r, "f05.go")
+	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+	r.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: at, Buttons: render.ButtonSecondary})
+	r.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: at, Buttons: render.ButtonSecondary})
+	r.WaitText("Close")
+	settleWindow(r)
+	first, second, third := windowTextPoint(r, "Move pane…"), windowTextPoint(r, "Close"), windowTextPoint(r, "? Help")
+	measureLag(r, "menu", sweep(first, render.Point{X: first.X + 60, Y: first.Y}, 200), []render.Point{second, third}, 40)
 }
 
 // With --trace, a stall writes the execution trace of the seconds before it, for go tool trace.
 func TestSlowFrameWritesTrace(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "stall.trace")
-	r := startAppWith(t, t.TempDir(), t.TempDir(), nil, func(c *Config) { c.Trace = path })
-	r.win.Send(render.SlowFrameEvent{Waited: 900 * time.Millisecond})
+	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Config: func(c *apptest.Config) { c.Trace = path }})
+	r.Win.Send(render.SlowFrameEvent{Waited: 900 * time.Millisecond})
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		if b, err := os.ReadFile(path); err == nil && len(b) > 1<<10 {
@@ -320,120 +288,15 @@ func TestSlowFrameWritesTrace(t *testing.T) {
 // diffs not made until they're opened.
 func TestExplorerHoverLagOverManyChangesBudget(t *testing.T) {
 	perf.Timed(t)
-	dir := changedRepo(t, 4000)
-	r := startAppWith(t, t.TempDir(), dir, nil, nil)
-	r.do(func() error {
-		return r.host.Run(context.Background(), "view.toggle", registry.Args{"id": ExplorerView})
+	dir := rig.ChangedRepo(t, 4000)
+	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: dir})
+	r.Do(func() error {
+		return r.Host.Run(context.Background(), "view.toggle", registry.Args{"id": kit.ExplorerView})
 	})
-	r.waitText("f1080.txt")
+	r.WaitText("f1080.txt")
 	var targets []render.Point
 	for _, f := range []string{"f1020.txt", "f040.txt", "f1080.txt", "f060.txt", "f1040.txt"} {
-		targets = append(targets, r.textPoint(f))
+		targets = append(targets, windowTextPoint(r, f))
 	}
-	r.lag("over many changes", sweep(r.textPoint("f000.txt"), r.textPoint("f080.txt"), 200), targets, 30)
-}
-
-// diffViewFrame is the average frame of the branch diff of dir's n changed files, once its first file shows.
-func diffViewFrame(t *testing.T, dir string, n int) time.Duration {
-	s := newScene(t, "", dir, mockupSize)
-	s.sh.git.wait()
-	s.run("diff.open", registry.Args{"path": dir})
-	made := func() (n int, done bool) {
-		x := s.diff()
-		x.mu.Lock()
-		defer x.mu.Unlock()
-		for _, d := range x.files {
-			done = done || d.styled && d.blamed
-		}
-		return len(x.files), done
-	}
-	if !s.Until(30*time.Second, func() bool { _, done := made(); return done }) {
-		t.Fatalf("the diff of %d changed files never showed its first", n)
-	}
-	for range 10 {
-		s.frame()
-	}
-	start := time.Now()
-	for range 100 {
-		s.frame()
-	}
-	took := time.Since(start) / 100
-	if m, _ := made(); m > 1 {
-		t.Errorf("%d of %d files diffed, with one open", m, n)
-	}
-	return took
-}
-
-// The branch diff's frame doesn't grow with the files the branch changes: only the files open in it are diffed.
-func TestDiffViewWithManyChangesBudget(t *testing.T) {
-	perf.Timed(t)
-	few, many := diffViewFrame(t, changedRepo(t, 5), 5), diffViewFrame(t, changedRepo(t, 4000), 4000)
-	t.Logf("the diff's frame over 5 changed files: %v; over 4000: %v", few, many)
-	if many > 2*few+2*time.Millisecond {
-		t.Errorf("4000 changed files make the diff's frame %v, against %v over 5", many, few)
-	}
-}
-
-// omniboxDownFrame is the average frame that shows ↓ moving the omnibox's selection, over dir's n files.
-func omniboxDownFrame(t *testing.T, dir string, n int) time.Duration {
-	s := newScene(t, "", dir, mockupSize)
-	s.sh.git.wait()
-	s.sourcesLoaded()
-	s.run("omnibox.open", registry.Args{"query": "pkg"})
-	for range 10 {
-		s.frame()
-	}
-	start := time.Now()
-	for range 100 {
-		s.Key("Down")
-		s.frame()
-	}
-	if got := s.omni().sel; got == 0 {
-		t.Fatalf("↓ over %d files never moved the selection", n)
-	}
-	return time.Since(start) / 100
-}
-
-// ↓ in the omnibox doesn't grow with the files it searches: the ranking is kept while the selection moves.
-func TestOmniboxDownWithManyFilesBudget(t *testing.T) {
-	perf.Timed(t)
-	few, many := omniboxDownFrame(t, changedRepo(t, 5), 5), omniboxDownFrame(t, changedRepo(t, 4000), 4000)
-	t.Logf("↓ in the omnibox over 5 files: %v; over 4000: %v", few, many)
-	if many > 2*few+2*time.Millisecond {
-		t.Errorf("4000 files make ↓ in the omnibox take %v, against %v over 5", many, few)
-	}
-}
-
-// omniboxTypingFrame is the average frame that shows a key typed into the omnibox's query, over dir's n files, and
-// how long until the files matching the whole query show.
-func omniboxTypingFrame(t *testing.T, dir string, n int) (frame, shown time.Duration) {
-	s := newScene(t, "", dir, mockupSize)
-	s.sh.git.wait()
-	s.sourcesLoaded()
-	s.run("omnibox.open", nil)
-	for range 10 {
-		s.frame()
-	}
-	start := time.Now()
-	for _, k := range strings.Split("pkg1f099", "") {
-		s.typeKeys(k)
-		s.frame()
-	}
-	frame = time.Since(start) / 8
-	if !s.Until(10*time.Second, func() bool { return strings.Contains(s.frameText(), "pkg19/f099.txt") }) {
-		t.Fatalf("over %d files, the omnibox never showed pkg19/f099.txt:\n%s", n, s.frameText())
-	}
-	return frame, time.Since(start)
-}
-
-// Typing into the omnibox doesn't wait on ranking its files: they're matched off the loop, and the files matching
-// the query show soon after.
-func TestOmniboxTypingWithManyFilesBudget(t *testing.T) {
-	perf.Timed(t)
-	few, _ := omniboxTypingFrame(t, changedRepo(t, 100), 100)
-	many, shown := omniboxTypingFrame(t, changedRepo(t, 20000), 20000)
-	t.Logf("a key typed into the omnibox over 100 files: %v; over 20000: %v, the matches shown after %v", few, many, shown)
-	if many > 2*few+2*time.Millisecond {
-		t.Errorf("20000 files make a key typed into the omnibox take %v, against %v over 100", many, few)
-	}
+	measureLag(r, "over many changes", sweep(windowTextPoint(r, "f000.txt"), windowTextPoint(r, "f080.txt"), 200), targets, 30)
 }

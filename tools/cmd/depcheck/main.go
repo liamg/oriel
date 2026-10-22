@@ -1,4 +1,4 @@
-// Command depcheck fails if the workspace requires a module that deps/allow.txt doesn't approve.
+// Command depcheck fails if the workspace requires a module that tools/depcheck/allowed.txt doesn't approve.
 package main
 
 import (

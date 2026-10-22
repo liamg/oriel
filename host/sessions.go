@@ -1,63 +1,19 @@
 package host
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
-	"os"
-	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
-	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/host/worktree"
 )
 
 var _ core.Sessions = (*Host)(nil)
 
-func (w *Host) workspacesDir() string { return filepath.Join(w.opts.Home, "workspaces") }
-
-// freshName is a session name from the prompt that no session or directory is using yet.
-func (w *Host) freshName(spec core.SessionSpec) string {
-	base := Sanitise(spec.Name)
-	if base == "" {
-		base = trimWords(Sanitise(core.Summary(spec.Prompt)), 5)
-	}
-	if t := Sanitise(spec.Ticket); t != "" && !strings.HasPrefix(base, t) {
-		base = strings.Trim(t+"-"+base, "-")
-	}
-	if base == "" {
-		base = string(spec.Kind)
-	}
-	st := w.store.State()
-	out := base
-	for n := 2; n < 1000; n++ {
-		_, taken := st.Session(core.SessionID(out))
-		if _, err := os.Stat(filepath.Join(w.workspacesDir(), out)); err == nil {
-			taken = true
-		}
-		if _, err := os.Stat(w.sessionDir(core.SessionID(out))); err == nil {
-			taken = true
-		}
-		if !taken {
-			break
-		}
-		out = fmt.Sprintf("%s-%d", base, n)
-	}
-	return out
-}
-
-func firstLine(s string) string {
-	line, _, _ := strings.Cut(strings.TrimSpace(s), "\n")
-	return line
-}
-
-// Start starts a session of the spec's kind (sessions.md → Kinds).
+// Start starts a session of the spec's kind.
 func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.SessionID, err error) {
 	defer w.recover("Start", &err)
 	k, ok := w.kinds.Get(spec.Kind)
@@ -78,322 +34,20 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	if b := spec.Sandbox.Backend; b != "" && spec.Sandbox.Container && !slices.Contains(w.opts.Sandbox.Backends(), b) {
 		return "", fmt.Errorf("this machine can't run a %s sandbox", b)
 	}
-	name := w.freshName(spec)
-	id := core.SessionID(name)
-	se := core.SessionState{ID: id, Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Prompt: spec.Prompt, Ticket: spec.Ticket,
-		PR: spec.PR, PRRef: spec.PRRef, Job: spec.Job, Created: w.opts.Now().UTC(), Unplanned: spec.Kind == core.KindWork && spec.Ticket == "",
-		StartWork: k.Worktrees == WorktreesStartWork || k.Worktrees == WorktreesInit, CommitGate: k.Gate,
-		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: gate(spec),
-			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network, Backend: spec.Sandbox.Backend}}
-	branch := spec.Branch
-	if branch == "" {
-		branch = BranchName(whoAmI(ctx), spec.Ticket, name)
-	}
-	switch k.Worktrees {
-	case WorktreesNone:
-		err = w.startInPlace(ctx, &se, spec)
-	case WorktreesInit:
-		err = w.startNewRepo(ctx, &se, spec, branch)
-	default:
-		err = w.startWorkspace(ctx, &se, spec, k, branch)
-	}
+	se, err := w.work.New(ctx, spec, k)
 	if err != nil {
 		return "", err
-	}
-	if p := strings.TrimSpace(spec.Prompt); k.PromptFile != "" && se.Dir != "" && p != "" {
-		if err := os.WriteFile(filepath.Join(se.Dir, k.PromptFile), []byte(p+"\n"), 0o644); err != nil {
-			return "", err
-		}
 	}
 	se.Status = core.DeriveStatus(se)
 	if err := w.emit(core.SessionSynced{Session: se}); err != nil {
 		return "", err
 	}
 	if k.AutoReview {
-		if _, err := w.AIReview(context.WithoutCancel(ctx), AIReviewReq{Session: id}); err != nil {
-			w.log.Warn("AI review", "session", id, "err", err)
+		if _, err := w.reviews.AIReview(context.WithoutCancel(ctx), AIReviewReq{Session: se.ID}); err != nil {
+			w.log.Warn("AI review", "session", se.ID, "err", err)
 		}
 	}
-	p, body := strings.TrimSpace(spec.Prompt), firstRequest(spec)
-	if k.From == FromPR && p == "" {
-		// The review is the agent's request, so it's one the user sees in Requests.
-		p = "Review " + cmp.Or(spec.Title, "the pull request")
-		body = strings.TrimSpace(fmt.Sprintf("%s: %s\n\n%s", p, spec.PR, body))
-	}
-	if body != "" {
-		if _, err := w.Comment(ctx, CommentReq{Session: id, Title: core.Summary(cmp.Or(p, body)), Body: body}); err != nil {
-			return id, err
-		}
-	} else if spec.Provider != "" {
-		w.sessionOf(id).startAside()
-	}
-	return id, nil
-}
-
-// firstRequest is what the agent is first asked: the prompt, then what came with it.
-func firstRequest(spec core.SessionSpec) string {
-	p, c := strings.TrimSpace(spec.Prompt), strings.TrimSpace(spec.Context)
-	switch {
-	case c == "":
-		return p
-	case p == "":
-		return c
-	}
-	return p + "\n\n" + c
-}
-
-// gate is the agent's own gate for a spec: the light gate inside a sandbox by default (agents.md).
-func gate(spec core.SessionSpec) string {
-	if spec.Sandbox.Gate != "" {
-		return spec.Sandbox.Gate
-	}
-	if spec.Sandbox.Container {
-		return "light"
-	}
-	return "ask"
-}
-
-// startInPlace is a direct session: the directory itself, never a worktree.
-func (w *Host) startInPlace(ctx context.Context, se *core.SessionState, spec core.SessionSpec) error {
-	if spec.Dir == "" {
-		return errors.New("a direct session needs a directory")
-	}
-	dir, err := filepath.Abs(spec.Dir)
-	if err != nil {
-		return err
-	}
-	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
-		return fmt.Errorf("%s is not a directory", spec.Dir)
-	}
-	se.Dir = dir
-	p := core.Project{Name: filepath.Base(dir), Dir: dir, Primary: true}
-	if top, err := gitx.TopLevel(ctx, dir); err == nil && top == dir {
-		p.Branch, _ = gitx.Repo{Dir: dir}.Branch(ctx)
-		se.Branch = p.Branch
-	}
-	se.Projects = []core.Project{p}
-	return nil
-}
-
-// startWorkspace makes the workspace and each repo's worktree the kind calls for.
-func (w *Host) startWorkspace(ctx context.Context, se *core.SessionState, spec core.SessionSpec, k KindSpec, branch string) error {
-	root := filepath.Join(w.workspacesDir(), string(se.ID))
-	m := Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(spec.Kind), Ticket: spec.Ticket, Model: spec.Model}
-	if err := newWorkspace(ctx, root, m); err != nil {
-		return err
-	}
-	se.Dir = root
-	repos := slices.Clone(spec.Repos)
-	if k.Worktrees == WorktreesPR {
-		r, err := w.prRepo(ctx, spec)
-		if err != nil {
-			return w.undo(root, err)
-		}
-		repos = []core.RepoID{r.ID}
-	}
-	for _, ref := range repos {
-		r, err := w.resolveRepo(ctx, string(ref))
-		if err != nil {
-			return w.undo(root, err)
-		}
-		switch k.Worktrees {
-		case WorktreesStartWork:
-			// Until Start work, the plan reads the checkout itself; the guard rails keep the agent out of it.
-			se.Projects = append(se.Projects, core.Project{Name: uniqueProjectName(m, r.Path), Repo: r.Path, Dir: r.Path,
-				Primary: len(se.Projects) == 0, ReadOnly: true, Branch: branch})
-			m.Projects = append(m.Projects, ManifestEntry{Name: se.Projects[len(se.Projects)-1].Name, Repo: r.Path, Dir: r.Path, Primary: len(m.Projects) == 0})
-		case WorktreesPR:
-			if _, err := w.addPRProject(ctx, root, &m, r, spec); err != nil {
-				return w.undo(root, err)
-			}
-		default:
-			if _, err := addProject(ctx, root, &m, r.Path, branch, spec.Base, false); err != nil {
-				return w.undo(root, err)
-			}
-		}
-	}
-	if k.Worktrees != WorktreesStartWork {
-		se.Projects = m.projects(root)
-	}
-	if p, ok := se.Primary(); ok && p.Branch != "" {
-		se.Branch = p.Branch
-	}
-	if k.Worktrees != WorktreesStartWork {
-		return saveManifest(root, m)
-	}
-	return nil
-}
-
-// undo takes away a workspace that failed half-made.
-func (w *Host) undo(root string, err error) error {
-	if m, ok := LoadManifest(root); ok {
-		for _, p := range m.Projects {
-			if !filepath.IsAbs(p.Dir) {
-				_ = gitx.Repo{Dir: p.Repo}.RemoveWorktree(context.Background(), filepath.Join(root, p.Dir), true)
-			}
-		}
-	}
-	_ = os.RemoveAll(root)
-	return err
-}
-
-// prRepo is the registered repo whose remote is the PR's: spec.PRRemote, else the GitHub repo its URL names.
-func (w *Host) prRepo(ctx context.Context, spec core.SessionSpec) (core.Repo, error) {
-	want := strings.TrimSpace(spec.PRRemote)
-	if want == "" {
-		pr, _, err := gh.ParsePR(spec.PR)
-		if err != nil {
-			return core.Repo{}, err
-		}
-		want = pr.String()
-	}
-	if len(spec.Repos) > 0 {
-		return w.resolveRepo(ctx, string(spec.Repos[0]))
-	}
-	want = strings.ToLower(want)
-	for _, r := range w.repos.all() {
-		if strings.Contains(strings.ToLower(remotePath(r.Remote)), want) {
-			return r, nil
-		}
-	}
-	return core.Repo{}, fmt.Errorf("no registered repo has %s as its remote: add its checkout first", want)
-}
-
-func remotePath(remote string) string {
-	if u, err := url.Parse(remote); err == nil && u.Host != "" {
-		return strings.TrimSuffix(strings.TrimPrefix(u.Path, "/"), ".git")
-	}
-	if _, p, ok := strings.Cut(remote, ":"); ok {
-		return strings.TrimSuffix(p, ".git")
-	}
-	return remote
-}
-
-// addPRProject fetches the PR's head (spec.PRRef, else GitHub's pull/N/head) and pins a worktree there.
-func (w *Host) addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, spec core.SessionSpec) (ManifestEntry, error) {
-	from, ref, err := prRefs(spec.PR, spec.PRRef, root)
-	if err != nil {
-		return ManifestEntry{}, err
-	}
-	if err := fetchPR(ctx, r.Path, from, ref); err != nil {
-		return ManifestEntry{}, err
-	}
-	p, err := addProject(ctx, root, m, r.Path, "", ref, true)
-	if err != nil || spec.PRBase == "" {
-		return p, err
-	}
-	base := spec.PRBase
-	if _, err := (gitx.Repo{Dir: r.Path}).Run(ctx, "fetch", "--quiet", "origin", "+refs/heads/"+base+":refs/remotes/origin/"+base); err != nil {
-		return p, nil // Changed compares with the default branch
-	}
-	return p, gitx.Repo{Dir: filepath.Join(root, p.Dir)}.SetBase(ctx, "origin/"+base)
-}
-
-// prRefs are where a review's PR is fetched from (from, else GitHub's pull/N/head) and the ref it's kept at.
-func prRefs(url, from, root string) (string, string, error) {
-	if from = strings.TrimSpace(from); from != "" {
-		return from, "refs/oriel/pr/" + filepath.Base(root), nil
-	}
-	_, n, err := gh.ParsePR(url)
-	if err != nil {
-		return "", "", err
-	}
-	return fmt.Sprintf("pull/%d/head", n), fmt.Sprintf("refs/oriel/pr/%d", n), nil
-}
-
-func fetchPR(ctx context.Context, repo, from, ref string) error {
-	if _, err := (gitx.Repo{Dir: repo}).Run(ctx, "fetch", "--quiet", "origin", "+"+from+":"+ref); err != nil {
-		return fmt.Errorf("fetching %s: %w", from, err)
-	}
-	return nil
-}
-
-// PRMove is a review's project moved on to its pull request's new head: Commits on from From to To, one for a
-// force-push that rewrote it.
-type PRMove struct {
-	From    string `json:"from"`
-	To      string `json:"to"`
-	Commits int    `json:"commits"`
-}
-
-// UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
-// the projects that moved.
-func (w *Host) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]PRMove, err error) {
-	defer w.recover("UpdatePR", &err)
-	se, err := w.session(id)
-	if err != nil {
-		return nil, err
-	}
-	if se.PR == "" {
-		return nil, fmt.Errorf("session %s isn't reviewing a pull request", id)
-	}
-	from, ref, err := prRefs(se.PR, se.PRRef, se.Dir)
-	if err != nil {
-		return nil, err
-	}
-	moved := map[string]PRMove{}
-	projects := slices.Clone(se.Projects)
-	for i, p := range projects {
-		if !p.Detached || p.Repo == "" || p.Base != ref {
-			continue
-		}
-		if err := fetchPR(ctx, p.Repo, from, ref); err != nil {
-			return nil, fmt.Errorf("%s: %w", p.Name, err)
-		}
-		g := gitx.Repo{Dir: p.Dir}
-		head, err := g.Run(ctx, "rev-parse", ref)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", p.Name, err)
-		}
-		head = strings.TrimSpace(head)
-		if head == p.Commit {
-			continue
-		}
-		n := 1
-		if out, err := g.Run(ctx, "rev-list", "--count", p.Commit+".."+head); err == nil {
-			if c, _ := strconv.Atoi(strings.TrimSpace(out)); c > 0 {
-				n = c
-			}
-		}
-		if _, err := g.Run(ctx, "checkout", "--quiet", "--detach", head); err != nil {
-			return nil, fmt.Errorf("%s: %w", p.Name, err)
-		}
-		projects[i].Commit, moved[p.Name] = head, PRMove{From: p.Commit, To: head, Commits: n}
-	}
-	if len(moved) == 0 {
-		return moved, nil
-	}
-	if err := w.emit(core.ProjectsChanged{ID: se.ID, Branch: se.Branch, Projects: projects, Past: se.Past, Started: se.Started}); err != nil {
-		return nil, err
-	}
-	w.saveProjects(se.ID)
-	return moved, nil
-}
-
-// startNewRepo makes a repo from a template, registers it, and carries on as a plan for it.
-func (w *Host) startNewRepo(ctx context.Context, se *core.SessionState, spec core.SessionSpec, branch string) error {
-	parent := spec.Dir
-	if parent == "" {
-		parent = w.reposDir()
-	}
-	dir := filepath.Join(parent, string(se.ID))
-	if spec.Name != "" {
-		dir = filepath.Join(parent, Sanitise(spec.Name))
-	}
-	if _, err := os.Stat(dir); err == nil {
-		return fmt.Errorf("%s already exists", dir)
-	}
-	if err := initRepo(ctx, dir, spec.Template, filepath.Base(dir), whoAmI(ctx)); err != nil {
-		_ = os.RemoveAll(dir)
-		return err
-	}
-	r, err := w.addRepo(ctx, dir, core.RepoSession)
-	if err != nil {
-		return err
-	}
-	spec.Repos = []core.RepoID{r.ID}
-	k, _ := w.kinds.Get(core.KindPlan)
-	return w.startWorkspace(ctx, se, spec, k, branch)
+	return se.ID, w.run.Begin(ctx, se.ID, spec, k)
 }
 
 // Resume starts the session's agent again: by its own id when it had one, so the conversation carries on.
@@ -404,7 +58,7 @@ func (w *Host) Resume(ctx context.Context, id core.SessionID) (err error) {
 		return err
 	}
 	if se.Archived {
-		if err := w.reopen(ctx, se); err != nil {
+		if err := worktree.Reopen(ctx, se); err != nil {
 			return err
 		}
 		if err := w.emit(core.SessionArchived{ID: id}); err != nil {
@@ -415,8 +69,7 @@ func (w *Host) Resume(ctx context.Context, id core.SessionID) (err error) {
 		w.restatus(id)
 		return nil
 	}
-	_, err = w.sessionFor(id, true)
-	return err
+	return w.run.Resume(id)
 }
 
 // Stop stops the session's agent. Its threads wait for it.
@@ -425,9 +78,7 @@ func (w *Host) Stop(_ context.Context, id core.SessionID) (err error) {
 	if _, err := w.session(id); err != nil {
 		return err
 	}
-	if h, _ := w.sessionFor(id, false); h != nil {
-		h.stop("stopped", core.StoppedByYou)
-	}
+	w.run.Stop(id, "stopped", core.StoppedByYou)
 	return nil
 }
 
@@ -435,6 +86,13 @@ func (w *Host) Stop(_ context.Context, id core.SessionID) (err error) {
 // uncommitted work are refused: removing them would lose it.
 func (w *Host) Archive(ctx context.Context, id core.SessionID) error {
 	return w.End(ctx, EndReq{Session: id})
+}
+
+// Delete throws a session away: its agent stops, its worktrees go with whatever is in them, then its workspace and
+// its log. The repos themselves are never touched. A direct session's directory isn't Oriel's to remove, so it's
+// refused.
+func (w *Host) Delete(ctx context.Context, id core.SessionID) error {
+	return w.End(ctx, EndReq{Session: id, Delete: true})
 }
 
 // End archives or deletes a session, as r says.
@@ -449,179 +107,32 @@ func (w *Host) End(ctx context.Context, r EndReq) (err error) {
 	} else {
 		err = w.archive(ctx, se, r.Discard)
 	}
-	if err != nil || !r.DeleteBranch || se.Kind == core.KindDirect {
+	if err != nil || !r.DeleteBranch || !w.kinds.Spec(se).Can(core.OwnsBranch) {
 		return err
 	}
-	var failed []string
-	for _, p := range worktrees(se) {
-		if p.Branch == "" || p.Detached {
-			continue
-		}
-		g := gitx.Repo{Dir: p.Repo}
-		if p.Branch == strings.TrimPrefix(g.DefaultBranch(ctx), "origin/") || !g.HasBranch(ctx, p.Branch) {
-			continue
-		}
-		if err := g.DeleteBranch(ctx, p.Branch, true); err != nil {
-			failed = append(failed, fmt.Sprintf("%s: %v", p.Name, err))
-		}
-	}
-	if len(failed) > 0 {
-		return fmt.Errorf("the branches stayed: %s", strings.Join(failed, "; "))
-	}
-	return nil
-}
-
-// worktrees are the session's projects that are worktrees Oriel made.
-func worktrees(se core.SessionState) []core.Project {
-	var out []core.Project
-	for _, p := range se.Projects {
-		if p.Repo != "" && p.Dir != p.Repo {
-			out = append(out, p)
-		}
-	}
-	return out
+	return worktree.DeleteBranches(ctx, se)
 }
 
 func (w *Host) archive(ctx context.Context, se core.SessionState, discard bool) error {
-	id := se.ID
-	if se.Kind != core.KindDirect && !discard {
-		for _, p := range worktrees(se) {
-			if (gitx.Repo{Dir: p.Dir}).Dirty(ctx) {
-				return fmt.Errorf("%s has uncommitted work: commit or discard it first", p.Name)
-			}
+	if !discard {
+		if err := worktree.CheckClean(ctx, se); err != nil {
+			return err
 		}
 	}
-	if h, _ := w.sessionFor(id, false); h != nil {
-		h.stop("archived", core.StoppedByYou)
-	}
-	if root := agentDir(se); root != "" {
-		if err := sandbox.Clean(root); err != nil {
-			w.log.Warn("archive: sandbox cleanup", "session", id, "err", err)
-		}
-	}
-	if se.Kind != core.KindDirect {
-		for _, p := range worktrees(se) {
-			if err := (gitx.Repo{Dir: p.Repo}).RemoveWorktree(ctx, p.Dir, discard); err != nil && !errors.Is(err, os.ErrNotExist) {
-				if _, serr := os.Stat(p.Dir); serr == nil {
-					return err
-				}
-			}
-		}
-	}
-	if err := w.emit(core.SessionArchived{ID: id, Archived: true}); err != nil {
-		return err
-	}
-	w.restatus(id)
-	return nil
+	w.run.Stop(se.ID, "archived", core.StoppedByYou)
+	return w.work.Archive(ctx, se, discard)
 }
 
-// reopen makes an archived session's worktrees again, on their branches, or pinned where they were.
-func (w *Host) reopen(ctx context.Context, se core.SessionState) error {
-	if se.Kind == core.KindDirect {
-		return nil
+func (w *Host) delete(ctx context.Context, se core.SessionState) error {
+	if !w.kinds.Spec(se).Can(core.Delete) {
+		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", se.ID)
 	}
-	for _, p := range worktrees(se) {
-		if _, err := os.Stat(p.Dir); err == nil {
-			continue
-		}
-		g := gitx.Repo{Dir: p.Repo}
-		_ = g.PruneWorktrees(ctx)
-		var err error
-		switch {
-		case p.Detached:
-			err = g.AddWorktree(ctx, p.Dir, "", p.Commit)
-		case g.HasBranch(ctx, p.Branch):
-			err = g.CheckoutWorktree(ctx, p.Dir, p.Branch)
-		default:
-			err = fmt.Errorf("its branch %s is gone", p.Branch)
-		}
-		if err != nil {
-			return fmt.Errorf("%s: %w", p.Name, err)
-		}
-	}
-	return nil
-}
-
-// NextPRReq moves one project of a session on from its PR: Done is that PR as its code host has it, and Head the
-// commit it was at, whose commits count as the PR's even once it's squashed and its branch deleted.
-type NextPRReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Done    core.PastPR    `json:"done,omitzero"`
-	Head    string         `json:"head,omitempty"`
-}
-
-// NextPR moves a project onto a fresh branch cut from its updated base, keeping the branch it leaves as a past PR.
-// It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.
-func (w *Host) NextPR(ctx context.Context, r NextPRReq) (err error) {
-	defer w.recover("NextPR", &err)
-	se, p, repo, err := w.projectRepo(ctx, r.Session, r.Project)
-	if err != nil {
+	w.run.Stop(se.ID, "deleted", "")
+	if err := w.work.Delete(ctx, se); err != nil {
 		return err
 	}
-	if p.Repo == "" || p.Dir == p.Repo {
-		return fmt.Errorf("%s has no worktree of this session's to move on", p.Name)
-	}
-	branch, err := ownBranch(p)
-	if err != nil {
-		return err
-	}
-	if repo.Dirty(ctx) {
-		return fmt.Errorf("%s has uncommitted changes on %s: commit or discard them first", p.Name, branch)
-	}
-	main := gitx.Repo{Dir: p.Repo}
-	base := main.SyncedBase(ctx)
-	n, err := leftBehind(ctx, repo, branch, base, r.Head)
-	if err != nil {
-		return fmt.Errorf("%s: %w", p.Name, err)
-	}
-	if n > 0 {
-		return fmt.Errorf("%s has %d commit%s on %s that aren't pushed or on %s: push them, or drop them, first",
-			p.Name, n, plural(n), branch, strings.TrimPrefix(base, "origin/"))
-	}
-	fresh := main.FreshBranch(ctx, BranchName(whoAmI(ctx), se.Ticket, string(se.ID))+"-next")
-	if _, err := repo.Run(ctx, "checkout", "--quiet", "-b", fresh, base); err != nil {
-		return fmt.Errorf("%s: %w", p.Name, err)
-	}
-	done := r.Done
-	done.Project, done.Branch, done.Closed = p.Name, branch, w.opts.Now().UTC()
-	projects := slices.Clone(se.Projects)
-	for i := range projects {
-		if projects[i].Name == p.Name {
-			projects[i].Branch, projects[i].Base = fresh, base
-		}
-	}
-	b := se.Branch
-	if pp, ok := (core.SessionState{Projects: projects}).Primary(); ok {
-		b = pp.Branch
-	}
-	if err := w.emit(core.ProjectsChanged{ID: se.ID, Branch: b, Projects: projects, Past: append(slices.Clone(se.Past), done), Started: se.Started}); err != nil {
-		return err
-	}
-	for _, kind := range []string{"commit", "pr"} {
-		w.dropDraft(se.ID, p.Name, kind)
-	}
-	w.writeNotes(se.ID)
-	w.saveProjects(se.ID)
-	return nil
-}
-
-// leftBehind counts the commits on branch that are on none of base, origin's copy of it, or head.
-func leftBehind(ctx context.Context, repo gitx.Repo, branch, base, head string) (int, error) {
-	args := []string{"rev-list", "--count", branch, "--not"}
-	for _, ref := range []string{base, "refs/remotes/origin/" + branch, head} {
-		if ref == "" {
-			continue
-		}
-		if _, err := repo.Run(ctx, "rev-parse", "--verify", "--quiet", ref+"^{commit}"); err == nil {
-			args = append(args, ref)
-		}
-	}
-	out, err := repo.Run(ctx, args...)
-	if err != nil {
-		return 0, err
-	}
-	return strconv.Atoi(strings.TrimSpace(out))
+	w.run.Forget(se.ID)
+	return w.logs.Forget(se.ID)
 }
 
 // StartWork makes a plan's worktrees and tells its agent to implement the plan (05-plan), as r asks: on the branches
@@ -629,209 +140,37 @@ func leftBehind(ctx context.Context, repo gitx.Repo, branch, base, head string) 
 // work pack unless its conversation is kept, on the sandbox, network, model and effort given.
 func (w *Host) StartWork(ctx context.Context, r StartWorkReq) (err error) {
 	defer w.recover("StartWork", &err)
-	id := r.Session
-	se, err := w.session(id)
+	se, err := w.session(r.Session)
 	if err != nil {
 		return err
 	}
-	switch {
-	case !se.StartWork:
-		return errors.New("this session has no plan to start work on")
-	case se.Started:
-		return errors.New("work has already started")
-	}
-	if held := se.Holding(); len(held) > 0 {
-		return fmt.Errorf("%q is still open: resolve or defer it first", held[0].Heading())
-	}
-	for name, b := range r.Branches {
-		if !slices.ContainsFunc(se.Projects, func(p core.Project) bool { return p.Name == name && p.ReadOnly && p.Repo != "" }) {
-			return fmt.Errorf("no project %q waits on Start work for its worktree", name)
-		}
-		if err := gitx.ValidBranch(ctx, b); err != nil {
-			return fmt.Errorf("%s: %w", name, err)
-		}
+	if err := worktree.CanStartWork(ctx, se, r.Branches); err != nil {
+		return err
 	}
 	if r.Sandbox != nil && *r.Sandbox && w.opts.Sandbox == nil {
 		return errors.New("this machine can't run a sandbox")
 	}
-	m, ok := LoadManifest(se.Dir)
-	if !ok {
-		m = Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
-	}
-	m.Projects = nil
-	var projects []core.Project
-	for _, p := range se.Projects {
-		if !p.ReadOnly || p.Repo == "" {
-			projects = append(projects, p)
-			continue
-		}
-		branch := p.Branch
-		if b := r.Branches[p.Name]; b != "" {
-			branch = b
-		}
-		e, err := addProject(ctx, se.Dir, &m, p.Repo, branch, "", false)
-		if err != nil {
-			return err
-		}
-		projects = append(projects, core.Project{Name: e.Name, Repo: e.Repo, Dir: filepath.Join(se.Dir, e.Dir), Branch: e.Branch, Base: e.Base, Primary: e.Primary})
-	}
-	m.WorkStartedAt = w.opts.Now().UTC()
-	if err := saveManifest(se.Dir, m); err != nil {
+	prompt, err := w.work.StartWork(ctx, se, r.Branches, r.KeepThreads)
+	if err != nil {
 		return err
 	}
-	branch := se.Branch
-	if p, ok := (core.SessionState{Projects: projects}).Primary(); ok {
-		branch = p.Branch
-	}
-	if err := w.emit(core.ProjectsChanged{ID: id, Branch: branch, Projects: projects, Past: se.Past, Started: true}); err != nil {
+	w.run.WriteNotes(se.ID)
+	if err := w.run.WorkAgent(se.ID, r, "start work"); err != nil {
 		return err
 	}
-	w.writeNotes(id)
-	prompt := startWorkPrompt(projects)
-	if !r.KeepThreads {
-		note, err := w.clearPlanThreads(se)
-		if err != nil {
-			return err
-		}
-		prompt += note
-	}
-	if err := w.workAgent(id, r, "start work"); err != nil {
-		return err
-	}
-	_, err = w.Comment(ctx, CommentReq{Session: id, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
+	_, err = w.run.Comment(ctx, CommentReq{Session: se.ID, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
 	return err
 }
-
-// clearPlanThreads takes away every thread but the plan's own, and returns the open and deferred ones as a note for
-// the work prompt.
-func (w *Host) clearPlanThreads(se core.SessionState) (string, error) {
-	plan := se.PlanThread()
-	var gone []core.ThreadID
-	var b strings.Builder
-	for _, t := range se.Threads {
-		if t.ID == plan {
-			continue
-		}
-		gone = append(gone, t.ID)
-		if t.Btw || (!t.Open() && t.Status != core.ThreadDeferred) || len(t.Comments) == 0 {
-			continue
-		}
-		if b.Len() == 0 {
-			b.WriteString("\n\nThese threads from planning weren't settled, so they come with the work:\n\n")
-		}
-		status := string(t.Status)
-		if t.Open() {
-			status = string(core.ThreadOpen)
-		}
-		fmt.Fprintf(&b, "- %s(%s): %s", threadPlace(t), status, oneLine(t.Comments[0].Body))
-		if last, _ := t.Last(); len(t.Comments) > 1 && !last.Progress {
-			fmt.Fprintf(&b, " Last: %s", oneLine(last.Body))
-		}
-		b.WriteString("\n")
-	}
-	if len(gone) == 0 {
-		return "", nil
-	}
-	return b.String(), w.emit(core.ThreadsRemoved{Session: se.ID, Threads: gone})
-}
-
-// threadPlace is where a thread is, as the work prompt names it: `PLAN.md:14` , or nothing for the whole change.
-func threadPlace(t core.Thread) string {
-	if t.Anchor == nil || t.Anchor.File == "" {
-		return ""
-	}
-	return fmt.Sprintf("`%s:%d` ", t.Anchor.File, t.Anchor.Line)
-}
-
-func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // Configure restarts the session's agent on another model or effort, its conversation kept. It refuses mid-turn,
 // which a restart would cut off.
 func (w *Host) Configure(ctx context.Context, r ConfigureReq) (err error) {
 	defer w.recover("Configure", &err)
-	se, err := w.session(r.Session)
-	if err != nil {
+	running, err := w.run.Configure(r)
+	if err != nil || !running {
 		return err
-	}
-	switch {
-	case se.Agent.Provider == "":
-		return errors.New("this session has no agent")
-	case se.Agent.Working:
-		return errors.New("switch when the agent is idle")
-	}
-	running := se.Agent.Live()
-	if err := w.workAgent(r.Session, StartWorkReq{Model: r.Model, Effort: r.Effort, KeepConversation: true}, "switching model"); err != nil {
-		return err
-	}
-	if !running {
-		return nil
 	}
 	return w.Resume(ctx, r.Session)
-}
-
-// workAgent readies the session's agent: on the model, effort, sandbox and network r gives, restarted fresh on the
-// work pack unless its conversation is kept, and restarted by its own id when only those changed; why is the stop's.
-func (w *Host) workAgent(id core.SessionID, r StartWorkReq, why string) error {
-	se, err := w.session(id)
-	if err != nil {
-		return err
-	}
-	a := se.Agent
-	if a.Provider == "" {
-		return nil
-	}
-	if r.Model != "" && r.Model != a.Model {
-		a.Model, a.Effort = r.Model, ""
-	}
-	if r.Effort != "" {
-		a.Effort = r.Effort
-	}
-	if r.Sandbox != nil && *r.Sandbox != a.Sandboxed {
-		was := core.SessionSpec{Sandbox: core.SandboxPolicy{Container: a.Sandboxed}}
-		if a.Policy == gate(was) {
-			a.Policy = gate(core.SessionSpec{Sandbox: core.SandboxPolicy{Container: *r.Sandbox}})
-		}
-		a.Sandboxed = *r.Sandbox
-	}
-	if r.Network != "" {
-		a.Network = r.Network
-	}
-	if !r.KeepConversation {
-		a.Session, a.Pack = "", "work"
-	}
-	if a.Model == se.Agent.Model && a.Effort == se.Agent.Effort && a.Sandboxed == se.Agent.Sandboxed && a.Network == se.Agent.Network &&
-		a.Session == se.Agent.Session && a.Pack == se.Agent.Pack {
-		return nil
-	}
-	if h, _ := w.sessionFor(id, false); h != nil {
-		h.stop(why, "")
-	}
-	w.edit.Lock()
-	defer w.edit.Unlock()
-	se, err = w.session(id)
-	if err != nil {
-		return err
-	}
-	a.Running, a.Working, a.TurnStarted, a.Queue = se.Agent.Running, se.Agent.Working, se.Agent.TurnStarted, se.Agent.Queue
-	return w.emit(core.AgentChanged{ID: id, Agent: a})
-}
-
-// startWorkPrompt tells the agent the plan is approved, and where to implement it (crit's plan.startwork).
-func startWorkPrompt(projects []core.Project) string {
-	var b strings.Builder
-	b.WriteString("**Start work**: the plan is approved as it stands. Implement it here, in this workspace.\n\n")
-	b.WriteString("The plan is the docs at the workspace root (`PLAN.md` and the rest). Read them first: they are the whole plan.\n\n")
-	if len(projects) == 0 {
-		b.WriteString("There are no projects yet: add the repositories the plan needs, then implement it in them.\n\n")
-	} else {
-		b.WriteString("Edit inside these worktrees, not their original checkouts:\n\n")
-		for _, p := range projects {
-			fmt.Fprintf(&b, "- `%s`: %s (branch `%s`)\n", p.Dir, p.Repo, p.Branch)
-		}
-		b.WriteString("\n")
-	}
-	b.WriteString("Reply here with anything that deviates from the plan.")
-	return b.String()
 }
 
 // AddRepo brings another repo into a session, on the session's branch.
@@ -841,137 +180,38 @@ func (w *Host) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) 
 	if err != nil {
 		return err
 	}
-	if se.Kind == core.KindDirect {
-		return fmt.Errorf("a %s session has no workspace to add a repo to", se.Kind)
+	if !w.kinds.Spec(se).Can(core.AddProjects) {
+		return fmt.Errorf("a %s session can't have repos added", se.Kind)
 	}
-	r, err := w.resolveRepo(ctx, string(ref))
+	r, p, err := w.work.AddRepo(ctx, se, ref)
 	if err != nil {
 		return err
 	}
-	if slices.ContainsFunc(se.Projects, func(p core.Project) bool { return p.Repo == r.Path }) {
-		return fmt.Errorf("%s is already in this session", r.ID)
-	}
-	k, _ := w.kinds.Get(se.Kind)
-	m, ok := LoadManifest(se.Dir)
-	if !ok {
-		m = Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
-	}
-	branch := se.Branch
-	if branch == "" {
-		branch = BranchName(whoAmI(ctx), se.Ticket, string(se.ID))
-	}
-	projects := slices.Clone(se.Projects)
-	switch {
-	case k.Worktrees == WorktreesStartWork && !se.Started:
-		projects = append(projects, core.Project{Name: uniqueProjectName(m, r.Path), Repo: r.Path, Dir: r.Path, ReadOnly: true, Branch: branch, Primary: len(projects) == 0})
-	default:
-		e, err := addProject(ctx, se.Dir, &m, r.Path, branch, "", false)
-		if err != nil {
-			return err
-		}
-		if err := saveManifest(se.Dir, m); err != nil {
-			return err
-		}
-		projects = append(projects, core.Project{Name: e.Name, Repo: e.Repo, Dir: filepath.Join(se.Dir, e.Dir), Branch: e.Branch, Base: e.Base,
-			Primary: len(projects) == 0, Detached: e.Detached, Commit: e.Commit, ReadOnly: e.Detached})
-	}
-	b := se.Branch
-	if b == "" {
-		b = branch
-	}
-	if err := w.emit(core.ProjectsChanged{ID: id, Branch: b, Projects: projects, Past: se.Past, Started: se.Started}); err != nil {
-		return err
-	}
-	w.writeNotes(id)
-	if h, _ := w.sessionFor(id, false); h != nil {
-		h.note(fmt.Sprintf("The repo %s joined this session at %s.", r.ID, projects[len(projects)-1].Dir))
-	}
+	w.run.WriteNotes(id)
+	w.run.Note(id, fmt.Sprintf("The repo %s joined this session at %s.", r.ID, p.Dir))
 	return nil
 }
 
-// saveProjects writes a workspace's projects back to its manifest.
-func (w *Host) saveProjects(id core.SessionID) {
-	se, err := w.session(id)
-	if err != nil {
-		return
+// NextPR moves a project onto a fresh branch cut from its updated base, keeping the branch it leaves as a past PR.
+// It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.
+func (w *Host) NextPR(ctx context.Context, r NextPRReq) (err error) {
+	defer w.recover("NextPR", &err)
+	if err := w.work.NextPR(ctx, r); err != nil {
+		return err
 	}
-	m, ok := LoadManifest(se.Dir)
-	if !ok {
-		return
-	}
-	for i, e := range m.Projects {
-		for _, p := range se.Projects {
-			if p.Name == e.Name {
-				m.Projects[i].Branch, m.Projects[i].Base, m.Projects[i].Commit = p.Branch, p.Base, p.Commit
-			}
-		}
-		m.Projects[i].Past = nil
-		for _, pr := range se.Past {
-			if pr.Project == e.Name {
-				m.Projects[i].Past = append(m.Projects[i].Past, ManifestPR{Branch: pr.Branch, Number: pr.Number, URL: pr.URL, Title: pr.Title, State: pr.State, ClosedAt: pr.Closed})
-			}
-		}
-	}
-	_ = saveManifest(se.Dir, m)
+	w.run.WriteNotes(r.Session)
+	return nil
+}
+
+// UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
+// the projects that moved.
+func (w *Host) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]PRMove, err error) {
+	defer w.recover("UpdatePR", &err)
+	return w.work.UpdatePR(ctx, id)
 }
 
 // Rename names a session.
 func (w *Host) Rename(id core.SessionID, name string) (err error) {
 	defer w.recover("Rename", &err)
 	return w.emit(core.SessionRenamed{ID: id, Name: strings.TrimSpace(name)})
-}
-
-// Delete throws a session away: its agent stops, its worktrees go with whatever is in them, then its workspace and
-// its log. The repos themselves are never touched. A direct session's directory isn't Oriel's to remove, so it's
-// refused.
-func (w *Host) Delete(ctx context.Context, id core.SessionID) error {
-	return w.End(ctx, EndReq{Session: id, Delete: true})
-}
-
-func (w *Host) delete(ctx context.Context, se core.SessionState) error {
-	id := se.ID
-	if se.Kind == core.KindDirect {
-		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", id)
-	}
-	if h, _ := w.sessionFor(id, false); h != nil {
-		h.stop("deleted", "")
-	}
-	for _, p := range worktrees(se) {
-		if err := (gitx.Repo{Dir: p.Repo}).RemoveWorktree(ctx, p.Dir, true); err != nil {
-			if _, serr := os.Stat(p.Dir); serr == nil {
-				return fmt.Errorf("%s: %w", p.Name, err)
-			}
-		}
-	}
-	if se.Dir != "" && within(se.Dir, w.workspacesDir()) {
-		if err := os.RemoveAll(se.Dir); err != nil {
-			return err
-		}
-	}
-	if root := agentDir(se); root != "" {
-		if err := sandbox.Remove(root); err != nil {
-			w.log.Warn("delete: sandbox", "session", id, "err", err)
-		}
-	}
-	if err := w.emit(core.SessionClosed{ID: id}); err != nil {
-		return err
-	}
-	w.mu.Lock()
-	if l := w.recs[id]; l != nil {
-		_ = l.f.Close()
-		delete(w.recs, id)
-	}
-	if l := w.open[id]; l != nil {
-		_ = l.Close()
-		delete(w.open, id)
-	}
-	delete(w.live, id)
-	w.mu.Unlock()
-	return os.RemoveAll(w.sessionDir(id))
-}
-
-// within says whether path is under dir.
-func within(path, dir string) bool {
-	rel, err := filepath.Rel(dir, path)
-	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }

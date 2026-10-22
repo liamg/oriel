@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// catalog.md, "[contributes]": themes, fonts, icons, languages, prompts and help, as globs of the plugin's own files.
+// [contributes] lists themes, fonts, icons, languages, prompts and help, as globs of the plugin's own files.
 func TestManifestContributes(t *testing.T) {
 	m, err := ParseManifest([]byte(`id = "acme/dusk"
 version = "1.0.0"
@@ -43,7 +43,7 @@ help      = ["assets/help/*.md"]
 	}
 }
 
-// catalog.md: "oriel.asset(\"icons/x.svg\") needs no capability: it's the plugin's own directory" — under assets/,
+// "oriel.asset(\"icons/x.svg\") needs no capability: it's the plugin's own directory" — under assets/,
 // and a link can't lead out of it.
 func TestAsset(t *testing.T) {
 	dir := t.TempDir()

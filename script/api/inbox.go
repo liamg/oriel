@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/ui"
 )
@@ -17,7 +18,7 @@ type Inbox struct{ a *APIs }
 
 //oriel:api doc="Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } } }. An action runs its command or its function and answers the card: it goes to the inbox's history."
 func (i Inbox) Add(card script.Table, where string) error {
-	c := registry.InboxCard{ID: str(card, "id"), Type: str(card, "type"), Title: str(card, "title"), Sub: str(card, "sub"), Group: str(card, "group"),
+	c := uireg.InboxCard{ID: str(card, "id"), Type: str(card, "type"), Title: str(card, "title"), Sub: str(card, "sub"), Group: str(card, "group"),
 		Session: str(card, "session"), Icon: str(card, "icon"), Tone: str(card, "tone"), Kicker: str(card, "kicker"), Detail: str(card, "detail"),
 		Code: str(card, "code"), Note: str(card, "note"), Created: time.Now()}
 	if u := i.a.Host.UI(); u != nil {
@@ -39,7 +40,7 @@ func (i Inbox) Add(card script.Table, where string) error {
 		if !ok {
 			continue
 		}
-		a := registry.InboxAction{Label: str(t, "label"), Key: str(t, "key"), Command: str(t, "command")}
+		a := uireg.InboxAction{Label: str(t, "label"), Key: str(t, "key"), Command: str(t, "command")}
 		a.Primary, _ = t["primary"].(bool)
 		if args, ok := t["args"].(script.Table); ok {
 			a.Args = registry.Args(args)
@@ -75,7 +76,7 @@ func (i Inbox) Add(card script.Table, where string) error {
 	defer i.a.mu.Unlock()
 	if i.a.inbox == nil {
 		i.a.inbox = &luaInbox{}
-		i.a.owned = append(i.a.owned, i.a.Host.Contribute(registry.InboxSource{Name: "lua:" + i.a.Plugin.ID, Cards: i.a.inbox.list, Source: where}))
+		i.a.owned = append(i.a.owned, i.a.Host.Contribute(uireg.InboxSource{Name: "lua:" + i.a.Plugin.ID, Cards: i.a.inbox.list, Source: where}))
 	}
 	i.a.inbox.put(c)
 	i.a.Host.Redraw()
@@ -97,13 +98,13 @@ func (i Inbox) Remove(id string) error {
 // luaInbox is a VM's inbox cards.
 type luaInbox struct {
 	mu    sync.Mutex
-	cards []registry.InboxCard
+	cards []uireg.InboxCard
 }
 
-func (in *luaInbox) put(c registry.InboxCard) {
+func (in *luaInbox) put(c uireg.InboxCard) {
 	in.mu.Lock()
 	defer in.mu.Unlock()
-	if j := slices.IndexFunc(in.cards, func(x registry.InboxCard) bool { return x.ID == c.ID }); j >= 0 {
+	if j := slices.IndexFunc(in.cards, func(x uireg.InboxCard) bool { return x.ID == c.ID }); j >= 0 {
 		c.Created = in.cards[j].Created
 		in.cards[j] = c
 		return
@@ -114,10 +115,10 @@ func (in *luaInbox) put(c registry.InboxCard) {
 func (in *luaInbox) drop(id string) {
 	in.mu.Lock()
 	defer in.mu.Unlock()
-	in.cards = slices.DeleteFunc(in.cards, func(x registry.InboxCard) bool { return x.ID == id })
+	in.cards = slices.DeleteFunc(in.cards, func(x uireg.InboxCard) bool { return x.ID == id })
 }
 
-func (in *luaInbox) list() []registry.InboxCard {
+func (in *luaInbox) list() []uireg.InboxCard {
 	in.mu.Lock()
 	defer in.mu.Unlock()
 	return slices.Clone(in.cards)

@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// editor.md, "Images and mermaid diagrams in markdown, drawn in place": an image is drawn at the width it's given, its
+// Images in markdown are drawn in place: an image is drawn at the width it's given, its
 // shape kept, in the device's pixels.
 func TestImage(t *testing.T) {
 	src := image.NewNRGBA(image.Rect(0, 0, 400, 200))
