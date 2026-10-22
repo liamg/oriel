@@ -52,9 +52,9 @@ dock left open=true [*explorer]
 dock bottom open=true [*problems]
 focus terminal#1
 === the left window edge at 5,300
-lit 0,0 250x800 fill #241f0d radius 6 stroke 1.5 #ffd23f
+lit 0,0 250x30 radius 6 stroke 1.5 #ffd23f
 
-label "Dock left"
+label "Tab with explorer"
 main
   leaf [*editor#round.go editor#round_test.go]
 dock left open=true [explorer *terminal#1]
@@ -80,9 +80,9 @@ dock left open=true [*explorer]
 dock bottom open=true [problems *terminal#1]
 focus terminal#1
 === the left dock at 120,300
-lit 0,0 250x800 fill #241f0d radius 6 stroke 1.5 #ffd23f
+lit 0,0 250x30 radius 6 stroke 1.5 #ffd23f
 
-label "Dock left"
+label "Tab with explorer"
 main
   leaf [*editor#round.go editor#round_test.go]
 dock left open=true [explorer *terminal#1]

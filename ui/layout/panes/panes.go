@@ -2,6 +2,7 @@ package panes
 
 import (
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/render"
@@ -64,8 +65,12 @@ type spot struct {
 	label  string
 }
 
-// tabRow is a leaf's tab strip and the last tab in it.
-type tabRow struct{ id, last ui.ID }
+// tabRow is a leaf's tab strip and the last tab in it. head is how wide a dock's header would be as a tab, 0 for
+// a strip of tabs.
+type tabRow struct {
+	id, last ui.ID
+	head     float32
+}
 
 // viewState is what View keeps between frames.
 type viewState struct {
@@ -83,6 +88,7 @@ type viewState struct {
 	edits  []func()                 // changes to the tree, made once it's drawn
 	bodies map[ui.ID]layout.ViewRef // this frame's panes' content nodes
 	focus  *layout.ViewRef          // r.Focus as the last frame left it
+	body   ui.ID                    // the focused view's content node in the last frame
 	held   ui.ID                    // keyboard focus as the last frame left it
 }
 
@@ -125,6 +131,7 @@ func View(c *ui.Ctx, key any, r *layout.Root, panes *Panes, content Content) boo
 		}
 	}
 	st.held = c.Focused()
+	had := st.body != 0 && c.FocusWithin(st.body)
 	st.bodies = map[ui.ID]layout.ViewRef{}
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tPaneBg), Help: HelpPane}, func(c *ui.Ctx) {
@@ -175,7 +182,7 @@ func View(c *ui.Ctx, key any, r *layout.Root, panes *Panes, content Content) boo
 			}
 		}
 	})
-	enter(c, r, st)
+	enter(c, r, st, had)
 	for _, edit := range st.edits {
 		edit()
 		changed = true
@@ -185,18 +192,25 @@ func View(c *ui.Ctx, key any, r *layout.Root, panes *Panes, content Content) boo
 }
 
 // enter moves keyboard focus into the focused view's pane when r.Focus moved since last frame, once that pane is
-// built.
-func enter(c *ui.Ctx, r *layout.Root, st *viewState) {
-	if sameRef(r.Focus, st.focus) {
-		return
-	}
+// built, or when the focused view, holding keyboard focus, moved to another pane.
+func enter(c *ui.Ctx, r *layout.Root, st *viewState, had bool) {
+	var body ui.ID
 	if r.Focus != nil {
-		var body ui.ID
 		for b, v := range st.bodies {
 			if v == *r.Focus {
 				body = b
 			}
 		}
+	}
+	last := st.body
+	st.body = body
+	if sameRef(r.Focus, st.focus) {
+		if had && body != 0 && body != last {
+			c.FocusInto(body)
+		}
+		return
+	}
+	if r.Focus != nil {
 		if body == 0 && r.Find(*r.Focus) != nil {
 			return
 		}
@@ -470,7 +484,11 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 		d := st.drag
 		st.drag = nil
 		if d.moving && d.spot.ok {
-			st.edits = append(st.edits, func() { r.Drop(v, d.spot.target) })
+			st.edits = append(st.edits, func() {
+				if r.Drop(v, d.spot.target) == nil {
+					st.focus = nil // the dropped view takes keyboard focus where it lands
+				}
+			})
 			return false
 		}
 		if in.Clicked {
@@ -503,8 +521,16 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 	if st.tip != nil {
 		tip = st.tip(v)
 	}
-	if tip == "" && c.Shaper().Shape(title, tabFont).Advance > tabMaxW {
+	adv := c.Shaper().Shape(title, tabFont).Advance
+	if tip == "" && adv > tabMaxW {
 		tip = title
+	}
+	if head {
+		s.head = 14 + min(adv, tabMaxW) + 7 + closeSide + 6
+		if led {
+			s.head += 7 + 7
+		}
+		st.strips[l] = s
 	}
 	var mark string
 	var markTone render.Color
@@ -564,7 +590,14 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 	size := c.Size()
 	dock := func(e layout.Edge, rc render.Rect) spot {
-		return spot{ok: true, target: layout.Target{Dock: e}, lit: rc, area: rc, label: "Dock " + string(e)}
+		s := spot{ok: true, target: layout.Target{Dock: e}, lit: rc, area: rc, label: "Dock " + string(e)}
+		// An open dock with tabs takes the view as one more tab: show it as one.
+		if d := r.Docks[e]; d.Open && len(d.Leaf.Tabs) > 0 && (st.drag == nil || !slices.Contains(d.Leaf.Tabs, st.drag.view)) {
+			if strip, slot, ok := tabSlot(c, st, d.Leaf); ok {
+				s.lit, s.slot, s.label = strip, slot, "Tab with "+tabName(st, d.Leaf.Tabs[d.Leaf.Active])
+			}
+		}
+		return s
 	}
 	switch {
 	case p.X < edgeBand:
@@ -619,20 +652,33 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 		if beside != nil {
 			s.label = "Tab with " + tabName(st, *beside)
 		}
-		// A new tab goes on the end of the strip: light the strip, and the slot it would take.
-		if row, ok := st.strips[l]; ok {
-			if sr, ok := c.Rect(row.id); ok {
-				s.lit = sr
-				x := sr.Min.X
-				if last, ok := c.Rect(row.last); ok && len(l.Tabs) > 0 {
-					x = min(last.Max.X, sr.Max.X-slotW)
-				}
-				s.slot = render.XYWH(max(x, sr.Min.X), sr.Min.Y, min(slotW, sr.Dx()), sr.Dy())
-			}
+		if strip, slot, ok := tabSlot(c, st, l); ok {
+			s.lit, s.slot = strip, slot
 		}
 		return s
 	}
 	return float()
+}
+
+// tabSlot is l's tab strip and the slot on the end of it a new tab would take.
+func tabSlot(c *ui.Ctx, st *viewState, l *layout.Node) (strip, slot render.Rect, ok bool) {
+	row, ok := st.strips[l]
+	if !ok {
+		return strip, slot, false
+	}
+	strip, ok = c.Rect(row.id)
+	if !ok {
+		return strip, slot, false
+	}
+	x := strip.Min.X
+	if last, ok := c.Rect(row.last); ok && len(l.Tabs) > 0 {
+		end := last.Max.X
+		if row.head > 0 {
+			end = last.Min.X + row.head
+		}
+		x = min(end, strip.Max.X-slotW)
+	}
+	return strip, render.XYWH(max(x, strip.Min.X), strip.Min.Y, min(slotW, strip.Dx()), strip.Dy()), true
 }
 
 // slotW is the width of the slot a tab dropped on a strip would take.

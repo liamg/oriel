@@ -186,3 +186,69 @@ func TestOnShow(t *testing.T) {
 		t.Errorf("shown = %v, want a b a b", got)
 	}
 }
+
+// A view moved or dropped anywhere stays open: OnClose hears only of a view closed.
+func TestMovesDoNotClose(t *testing.T) {
+	r := start(t)
+	var closed []string
+	r.OnClose(func(v ViewRef) { closed = append(closed, v.String()) })
+	f := render.XYWH(1, 2, 300, 200)
+	for _, err := range []error{
+		r.Drop(code, Target{Dock: Bottom}),
+		r.Drop(code, Target{Dock: Right}),
+		r.Drop(code, Target{Float: &f}),
+		r.Drop(code, Target{Beside: &test, Zone: ZoneRight}),
+		r.Drop(code, Target{Beside: &test, Zone: ZoneCenter}),
+		r.Drop(code, Target{Beside: &code, Zone: ZoneBottom}),
+		r.Move(code, DropDown, Opts{}),
+		r.Move(code, Tab, Opts{}),
+	} {
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(closed) > 0 {
+		t.Errorf("moves closed %v", closed)
+	}
+	r.Close(code)
+	if strings.Join(closed, " ") != code.String() {
+		t.Errorf("closed = %v, want %s", closed, code)
+	}
+}
+
+// A drop where the view already is leaves the tree as it was, and shows the view.
+func TestDropInPlace(t *testing.T) {
+	split := func(r *Root) { r.Move(test, Split, Opts{Side: SideRight}) }
+	for _, tc := range []struct {
+		name  string
+		setup func(r *Root)
+		v     ViewRef
+		t     Target
+	}{
+		{"a lone tab on its own leaf's middle", split, test, Target{Beside: &test, Zone: ZoneCenter}},
+		{"a tab on its own leaf's middle, by another tab there", nil, test, Target{Beside: &code, Zone: ZoneCenter}},
+		{"a docked view on its own dock", nil, probs, Target{Dock: Bottom}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := start(t)
+			if tc.setup != nil {
+				tc.setup(r)
+			}
+			// The tree, without which tabs are in front or focused.
+			tree := func() string {
+				d := strings.ReplaceAll(r.Dump(), "*", "")
+				return d[:strings.Index(d, "focus ")]
+			}
+			before := tree()
+			if err := r.Drop(tc.v, tc.t); err != nil {
+				t.Fatal(err)
+			}
+			if got := tree(); got != before {
+				t.Errorf("the drop moved it:\n%s\nwas:\n%s", got, before)
+			}
+			if w := r.Find(tc.v); w.Leaf.Tabs[w.Leaf.Active] != tc.v || *r.Focus != tc.v {
+				t.Errorf("%s isn't in front:\n%s", tc.v, r.Dump())
+			}
+		})
+	}
+}
