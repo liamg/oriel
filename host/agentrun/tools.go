@@ -58,8 +58,7 @@ func (x *Runner) tools(h *session) []agent.Tool {
 	return own
 }
 
-// toolReply is the agent answering a thread: its reply carries what it did since its last one, and the test runs
-// that back what it claims.
+// toolReply is the agent answering a thread: its reply carries the test runs that back what it claims.
 func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, error) {
 	a := hostcore.ParseArgs(raw)
 	body := strings.TrimSpace(a.Str("body"))
@@ -76,15 +75,14 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	}
 	working, resolve := a.Bool("working"), a.Bool("resolve")
 	h.mu.Lock()
-	activity, runs := h.activity, h.runs
+	runs := h.runs
 	if !working {
-		h.activity, h.runs = nil, nil
+		h.runs = nil
 	}
 	h.mu.Unlock()
 	c := core.Comment{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: h.r.env.Now().UTC(),
 		Progress: working, Model: modelLabel(se.Agent), Draft: t.Hosted != nil && !working}
 	if !working {
-		c.Activity = activity
 		c.Evidence, c.Unbacked = evidence(se, body, runs)
 	}
 	_, err = h.r.mutateThread(h.id, t.ID, func(t *core.Thread) error {
@@ -117,8 +115,8 @@ var (
 	citesRun   = regexp.MustCompile(`run:([0-9a-f]{4,})`)
 )
 
-// evidence links a reply's test claims to the runs that back them: those it cites, else the turn's last (the activity
-// block shows the rest). A claim with none is noted, not refused.
+// evidence links a reply's test claims to the runs that back them: those it cites, else the turn's last. A claim with
+// none is noted, not refused.
 func evidence(se core.SessionState, body string, runs []string) ([]core.Evidence, string) {
 	var cited []string
 	for _, m := range citesRun.FindAllStringSubmatch(body, -1) {

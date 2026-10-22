@@ -382,8 +382,8 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 	})
 }
 
-// comment is one message: who said it and when, its body as markdown, and for the agent's, what it did on the way
-// (the activity block) and the runs behind what it claims (evidence chips).
+// comment is one message: who said it and when, its body as markdown, and for the agent's, a warning when it claims
+// what no run backs.
 func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm core.Comment, width float32) {
 	th := c.Theme()
 	src, sourced := uireg.ThreadSourceFor(x.h, t.Origin)
@@ -426,61 +426,16 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 						c.Text("t", "pasted · "+filepath.Base(img), kit.MonoFont(10.5, th.C(theme.FgFaint)))
 					})
 			}
-			if len(cm.Activity) > 0 {
-				x.activity(c, se, cm.Activity, inner)
-			}
-			if len(cm.Evidence) > 0 || cm.Unbacked != "" {
-				c.Row("evidence", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-					for i, e := range cm.Evidence {
-						kit.EvidenceChip(c, i, x.h, se.ID, e.Ref, e.Label, e.OK)
-					}
-					if cm.Unbacked != "" {
-						c.Text("unbacked", "⚠ "+cm.Unbacked, kit.MonoFont(10.5, th.C(tReqUnbacked)))
-					}
-				})
+			if cm.Unbacked != "" {
+				unbacked(c, cm.Unbacked)
 			}
 		})
 	})
 }
 
-// activity is a reply's activity block: each edit, lookup and run, with its diff or run a click away.
-func (x *Requests) activity(c *ui.Ctx, se core.SessionState, acts []core.Activity, width float32) {
-	th := c.Theme()
-	c.Column("activity", ui.Style{W: ui.Px(width), Gap: 6}, func(c *ui.Ctx) {
-		c.Text("k", "ACTIVITY", kit.KickerFont(th.C(theme.FgFaint)))
-		c.Column("rows", ui.Style{W: ui.Flex(1), Fill: th.C(tBlockBg), Stroke: th.C(tBlockLine), Border: 1, Radius: 6, Clip: true}, func(c *ui.Ctx) {
-			for i, a := range acts {
-				if i > 0 {
-					c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
-				}
-				c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(12, 0), Gap: 10, Cross: ui.Center, Role: ui.RoleListItem, Label: a.Title},
-					func(c *ui.Ctx) {
-						glyph, tone := "✓", th.C(kit.TToolOK)
-						if a.Failed {
-							glyph, tone = "✕", th.C(kit.TToolFailed)
-						}
-						c.Text("g", glyph, kit.MonoFont(11.5, tone))
-						verb, rest, _ := strings.Cut(a.Title, " ")
-						c.Text("v", verb, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-						c.Text("r", relTo(se, rest), kit.MonoFont(11.5, th.C(theme.FgMuted)))
-						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-						if a.Kind == "edit" && (a.Added > 0 || a.Removed > 0) {
-							widget.DiffStat(c, "s", a.Added, a.Removed, widget.DiffStatOpts{})
-						}
-						if a.Run != "" {
-							if r, ok := se.Run(a.Run); ok {
-								kit.EvidenceChip(c, "run", x.h, se.ID, r.ID, kit.RunLabel(r), r.OK)
-							}
-						}
-						if a.Kind == "edit" && a.Path != "" {
-							if widget.Link(c, "view", "view", "agent/requests#activity") {
-								x.run("editor.open", registry.Args{"path": kit.AnchorPath(se, &core.Anchor{File: a.Path})})
-							}
-						}
-					})
-			}
-		})
-	})
+// unbacked flags a reply's claim that no run backs: "says tests pass, but ran none".
+func unbacked(c *ui.Ctx, why string) {
+	c.Text("unbacked", "⚠ "+why, kit.MonoFont(10.5, c.Theme().C(tReqUnbacked)))
 }
 
 // composer is where you write to the request: what's attached, the text, its ways of going, and Send.

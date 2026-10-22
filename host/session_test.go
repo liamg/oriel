@@ -84,7 +84,7 @@ func TestCommentsWaitForTheTurnUnlessUrgent(t *testing.T) {
 	}
 }
 
-func TestTheAgentRepliesWithActivityAndEvidence(t *testing.T) {
+func TestTheAgentRepliesWithEvidence(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Fix rounding")
 	a.WaitSent(t)
@@ -109,9 +109,6 @@ func TestTheAgentRepliesWithActivityAndEvidence(t *testing.T) {
 	c, _ := th.Last()
 	if c.Author != core.AuthorAgent || c.Model != "m1 · high" || c.Unbacked != "" {
 		t.Fatalf("reply = %+v", c)
-	}
-	if len(c.Activity) != 2 || c.Activity[0].Kind != "edit" || c.Activity[0].Added != 7 || c.Activity[1].Kind != "test" || c.Activity[1].Run != run.ID {
-		t.Errorf("activity = %+v", c.Activity)
 	}
 	if len(c.Evidence) != 1 || c.Evidence[0].Ref != run.ID || !c.Evidence[0].OK {
 		t.Errorf("evidence = %+v", c.Evidence)
@@ -148,7 +145,7 @@ func TestClaimsWithoutEvidenceAreFlagged(t *testing.T) {
 	}
 }
 
-// A turn's failed runs on the way are its activity; its evidence is the run it ended on.
+// A turn's evidence is the run it ended on, not the failed ones on the way.
 func TestEvidenceIsTheLastRun(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Fix it")
@@ -165,9 +162,6 @@ func TestEvidenceIsTheLastRun(t *testing.T) {
 	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Fixed: tests pass."})
 	th, _ := r.session(id).Thread(core.ThreadID(tid))
 	c, _ := th.Last()
-	if len(c.Activity) != 3 {
-		t.Errorf("activity = %+v", c.Activity)
-	}
 	if len(c.Evidence) != 1 || !c.Evidence[0].OK || c.Evidence[0].Ref != r.session(id).Runs[2].ID || c.Unbacked != "" {
 		t.Errorf("evidence = %+v, unbacked %q", c.Evidence, c.Unbacked)
 	}

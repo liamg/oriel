@@ -1,6 +1,7 @@
 package agentrun
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -87,7 +88,6 @@ func (h *session) toolTestRun(ctx context.Context, raw json.RawMessage) (string,
 		tr.Thread = h.delivered[0]
 	}
 	h.runs = append(h.runs, tr.ID)
-	h.activity = append(h.activity, core.Activity{Kind: "test", Title: "test_run " + p.Name, Run: tr.ID, Failed: !tr.OK})
 	h.mu.Unlock()
 	if err := h.r.st.Emit(core.TestRunRecorded{Session: h.id, Run: tr}); err != nil {
 		return "", err
@@ -141,45 +141,22 @@ func testRunFrom(call agent.ToolCall, res agent.ToolResult, now time.Time) (core
 	return r, true
 }
 
-// activityFor is a tool call as one line of a reply's activity block.
-func activityFor(call agent.ToolCall, res agent.ToolResult) (core.Activity, bool) {
-	a := hostcore.ParseArgs(call.Input)
+// editOf is the file a tool call edited, and the lines it added and removed.
+func editOf(call agent.ToolCall, res agent.ToolResult) (path string, added, removed int, ok bool) {
 	tool := call.Tool
 	if i := strings.LastIndex(tool, "__"); i >= 0 {
 		tool = tool[i+2:]
 	}
-	act := core.Activity{Title: toolTitle(call.Tool, call.Input), Failed: res.IsError}
-	switch {
-	case tool == "Edit" || tool == "Write" || tool == "MultiEdit" || tool == "NotebookEdit" || tool == "fileChange" || tool == "apply_patch":
-		act.Kind = "edit"
-		act.Path = a.Str("file_path")
-		if act.Path == "" {
-			act.Path = a.Str("path")
-		}
-		if d := res.Diff; d != nil {
-			act.Added, act.Removed = d.Added, d.Removed
-			if act.Path == "" {
-				act.Path = d.Path
-			}
-		}
-	case tool == "Read":
-		act.Kind = "read"
-		act.Path = a.Str("file_path")
-	case tool == "Grep" || tool == "Glob" || tool == "webSearch" || tool == "WebSearch":
-		act.Kind = "search"
-	case strings.HasPrefix(tool, "lsp_"):
-		act.Kind = "lsp"
-	case tool == "Bash" || tool == "commandExecution" || tool == "shell":
-		act.Kind = "shell"
-		if testCommand.MatchString(a.Str("command")) {
-			act.Kind = "test"
-		}
-	case tool == "test_run":
-		return core.Activity{}, false // it records its own
-	case tool == "reply" || tool == "thread" || tool == "resolve" || tool == "tasks" || strings.HasPrefix(tool, "task_"):
-		return core.Activity{}, false
+	switch tool {
+	case "Edit", "Write", "MultiEdit", "NotebookEdit", "fileChange", "apply_patch":
 	default:
-		act.Kind = "tool"
+		return "", 0, 0, false
 	}
-	return act, true
+	a := hostcore.ParseArgs(call.Input)
+	path = cmp.Or(a.Str("file_path"), a.Str("path"))
+	if d := res.Diff; d != nil {
+		added, removed = d.Added, d.Removed
+		path = cmp.Or(path, d.Path)
+	}
+	return path, added, removed, path != ""
 }

@@ -408,12 +408,8 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 						if sourced && src.Comment != nil {
 							src.Comment(c, string(se.ID), string(id), cm.ID, inner)
 						}
-						if len(cm.Evidence) > 0 {
-							c.Row("ev", ui.Style{Gap: 6}, func(c *ui.Ctx) {
-								for i, e := range cm.Evidence {
-									kit.EvidenceChip(c, i, h, se.ID, e.Ref, e.Label, e.OK)
-								}
-							})
+						if cm.Unbacked != "" {
+							unbacked(c, cm.Unbacked)
 						}
 					})
 				})

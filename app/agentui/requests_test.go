@@ -118,9 +118,9 @@ func runIn(f headless.Frame, s string) (render.Op, bool) {
 	return render.Op{}, false
 }
 
-// Replies render as markdown with activity blocks; the reply's "tests pass" links to the
-// run behind it, in the request and in the console, and the link opens the run.
-func TestRepliesRenderAsMarkdownWithActivity(t *testing.T) {
+// Replies render as markdown with no activity or run chips (those stay in the console, where a run opens); only a
+// "tests pass" with no run behind it is flagged.
+func TestRepliesRenderAsMarkdownFlaggingUnbackedClaims(t *testing.T) {
 	r, a, _ := requestsSession(t)
 	newRequest(t, r, a, "Negative values round the wrong way")
 	th := threadWith(t, r, "Negative values round the wrong way")
@@ -135,21 +135,27 @@ func TestRepliesRenderAsMarkdownWithActivity(t *testing.T) {
 		return s != nil && len(s.Snapshot().Runs) == 1
 	})
 	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Right: `Floor` rounds toward -∞.\n\n- made the negative cases table-driven\n- checked the `RoundMinor` callers\n\nThe tests pass."})
-	f := r.Latest("the reply as markdown, with its activity and evidence", func(f headless.Frame) bool {
-		return apptest.HasAll(f.Text(), "Right:", "rounds toward -∞.", "•", "made the negative cases table-driven", "Edit", "round.go", "+7", "-1",
-			"2 passed", "The tests pass.")
+	f := r.Latest("the reply as markdown", func(f headless.Frame) bool {
+		return apptest.HasAll(f.Text(), "Right:", "rounds toward -∞.", "•", "made the negative cases table-driven", "The tests pass.")
 	})
+	for _, not := range []string{"ACTIVITY", "2 passed", "says tests pass"} {
+		if strings.Contains(f.Text(), not) {
+			t.Errorf("the backed reply shows %q", not)
+		}
+	}
 	if op, ok := runIn(f, "Floor"); !ok || op.Run.Font.Family != typeset.Mono {
 		t.Errorf("inline code isn't a mono run of its own: %+v", op.Run)
 	}
-	r.ClickText("2 passed")
-	r.WaitFrame("the run it links to", func(s string) bool {
-		return apptest.HasAll(s, "go test ./internal/pricing/", "--- PASS: TestRoundHalfEven (0.00s)", "BY AGENT")
-	})
+	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Tidied the table; tests pass."})
+	r.WaitText("⚠ says tests pass, but no passing test run backs it")
 
 	r.TypeKeys("<D-A>")
 	r.WaitText("SESSION STATS")
 	r.WaitFrame("the console's evidence on the test run", func(s string) bool { return apptest.HasAll(s, "go test ./internal/pricing/", "2 passed") })
+	r.ClickText("2 passed")
+	r.WaitFrame("the run it links to", func(s string) bool {
+		return apptest.HasAll(s, "go test ./internal/pricing/", "--- PASS: TestRoundHalfEven (0.00s)", "BY AGENT")
+	})
 
 	r.Do(func() error { return r.Host.Run(context.Background(), "tests.open", nil) })
 	r.WaitFrame("the agent's run in the Tests panel", func(s string) bool { return apptest.HasAll(s, "TESTS", "AGENT", "2 passed") })
