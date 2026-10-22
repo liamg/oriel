@@ -115,7 +115,7 @@ func (x *Sessions) commands() []registry.Command {
 		return ok && has(nil) && se.Snapshot().Planning()
 	}
 	return []registry.Command{
-		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} leaves it behind the one in front; {then} is a list of {command, args} run once the window is on it",
+		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} opens its tab behind the one in front; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: x.startCommand},
 		{ID: "session.opens", Title: "Run session {id}'s kind's opening commands (KindSpec.Opens) when the window shows nothing in its main area: its first time in front",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -428,11 +428,11 @@ func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID,
 	return id, nil
 }
 
-// front brings a started session to the front, unless a says {background}, and runs a's {then} once the window is
-// on it.
+// front brings a started session to the front, or with {background} opens its tab behind the one in front, and runs
+// a's {then} once the window is on it.
 func (x *Sessions) front(id core.SessionID, a registry.Args) error {
 	if a.Bool("background") {
-		return nil
+		return x.h.Apply(core.TabOpened{ID: id})
 	}
 	then, _ := kit.CallsOf(a["then"])
 	kit.After(x.h, id, append([]kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(id)}}}, then...))

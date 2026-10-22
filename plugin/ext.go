@@ -40,7 +40,7 @@ type Host interface {
 	// Dismiss takes down the toasts of the notices with id: a problem that's gone. Their rows stay in the history.
 	Dismiss(id string)
 	State() core.State // as it stands, read-only: notification history, focus, sessions
-	// Apply applies an event to the state, the one way to change it: core.SessionFocused, core.TabClosed.
+	// Apply applies an event to the state, the one way to change it: core.SessionFocused, core.TabOpened, core.TabClosed.
 	Apply(ev core.Event) error
 	// Subscribe calls fn with every event the filter matches, from whichever goroutine applied it; Do gets back
 	// to the loop. cancel stops it.

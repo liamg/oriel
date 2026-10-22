@@ -60,7 +60,7 @@ when the agent resolves its request, a **Review done** notice says how many comm
 **Your review** lists every comment the review can post, worst first: the agent's threads on lines, the AI review's
 findings (one row, tagged *agent + AI review*, where both found the same lines), and your own. Each is undecided
 until you keep or drop it; those rated medium or worse, and yours, go unless you drop them. The line above says how
-many you've triaged. Click a row to select it (again to show it in the diff), or use its ⋯ menu. The keys are
+many you've triaged. **Jump to code** (or a row's `file:line`) shows it at its line in the diff; click the rest of the row to select it (again to show it), or use its ⋯ menu. The keys are
 along the bottom of the tab, and `F1` on a row opens this page; with a row selected:
 
 | Key | Does |
@@ -74,7 +74,8 @@ along the bottom of the tab, and `F1` on a row opens this page; with a row selec
 | `S` | ask the agent to draft the summary (`review.pr.summary`) |
 
 You can triage as you read, too: every comment's card in the diff and in Requests (and every AI review finding's)
-ends with **YOUR REVIEW**: its severity, whether it goes to the author, **Keep**, **Drop** and **In the review ↗**.
+ends with **YOUR REVIEW**: its severity, whether it goes to the author, **Keep**, **Drop** and **In the review ↗**, and,
+away from the diff, **Jump to code**.
 A dropped comment's thread is resolved, so Requests holds only what's left; keeping it again reopens it. In a review
 the AI review's findings don't offer **Fix**: the PR isn't yours to change.
 
@@ -100,7 +101,8 @@ at the commit the review read. A comment the host won't put on the diff goes in 
 ### After it's sent {#after}
 
 The comments come back from GitHub as its review threads, each in the thread it was posted from, and **Sent** lists
-them with where each stands: *waiting on author*, *author replied*, *code changed* or *resolved*. The author's
+them with where each stands: *waiting on author*, *author replied*, *code changed* or *resolved*, each with
+**Jump to code**. The author's
 replies reach the agent, which can draft an answer for you to forward; it never posts. Resolving a thread in Oriel
 resolves it on GitHub too, and reopening it reopens it there (a code host plugin's `resolve` does the same for its
 host).

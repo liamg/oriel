@@ -5,12 +5,14 @@ package review
 import (
 	"cmp"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -328,10 +330,14 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 				c.RequestFocus(c.Next("go"))
 				f.focus = false
 			}
+			widget.Chip(c, "sev", strings.ToUpper(kit.SeverityShort(cmp.Or(it.severity(), "note"))), kit.SeverityTone(th, it.severity()), prReviewHelp)
+			at := widget.Clickable(c, "at", ui.Style{Role: ui.RoleLink, Label: "Show " + place, Tooltip: "Show it in the diff", Help: prReviewKeysHelp},
+				func(c *ui.Ctx) { c.Text("t", place, kit.MonoFont(11, th.C(theme.Accent))) })
+			if at.Clicked {
+				x.run("review.pr.show", registry.Args{"id": string(se.ID), "item": it.id})
+			}
 			in := widget.Clickable(c, "go", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Focusable: true, KeyMode: PRReviewKeyMode, Role: ui.RoleButton,
-				Label: "Show " + place, Tooltip: "Select it; again to show it in the diff", Help: prReviewKeysHelp}, func(c *ui.Ctx) {
-				widget.Chip(c, "sev", strings.ToUpper(kit.SeverityShort(cmp.Or(it.severity(), "note"))), kit.SeverityTone(th, it.severity()), prReviewHelp)
-				c.Text("at", place, kit.MonoFont(11, th.C(theme.Accent)))
+				Label: "Select " + place, Tooltip: "Select it; again to show it in the diff", Help: prReviewKeysHelp}, func(c *ui.Ctx) {
 				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 					tone := theme.Fg
 					if it.pick.State == core.PickDrop {
@@ -348,6 +354,9 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 					x.run("review.pr.show", registry.Args{"id": string(se.ID), "item": it.id})
 				}
 				f.sel = it.id
+			}
+			if widget.Button(c, "code", "Jump to code", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
+				x.run("review.pr.show", registry.Args{"id": string(se.ID), "item": it.id})
 			}
 			x.itemMenu(c, se, it)
 		})
@@ -509,6 +518,10 @@ func (x *PRReview) sent(c *ui.Ctx, se core.SessionState, width float32) {
 				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 					c.Text("t", cmp.Or(s.thread.Title, firstWords(s.posted)), kit.UIFont(12.5, th.C(theme.Fg)))
 				})
+				if widget.Button(c, "code", "Jump to code", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
+					x.run("diff.open", registry.Args{"path": filepath.Join(reviewDir(se, s.thread.Anchor.Project), filepath.FromSlash(s.thread.Anchor.File)),
+						"line": s.thread.Anchor.Line})
+				}
 			})
 		}
 	})
@@ -578,8 +591,8 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 }
 
 // foot is a review comment's place in the review, under its card in the diff and in Requests: whether it goes to the
-// author, and keep, drop and rate it there and then.
-func (x *PRReview) foot(c *ui.Ctx, session, thread string, width float32) {
+// author, and keep, drop and rate it there and then; away from the code, a jump to it.
+func (x *PRReview) foot(c *ui.Ctx, session, thread string, where uireg.ThreadWhere, width float32) {
 	ref, ok := x.h.Session(core.SessionID(session))
 	if !ok {
 		return
@@ -635,6 +648,9 @@ func (x *PRReview) foot(c *ui.Ctx, session, thread string, width float32) {
 			if widget.Button(c, "tab", "In the review ↗", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
 				x.form(se.ID).sel = it.id
 				x.run("ship.pr.open", nil)
+			}
+			if where != uireg.ThreadInCode && widget.Button(c, "code", "Jump to code", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
+				x.run("review.pr.show", a(nil))
 			}
 		})
 }
