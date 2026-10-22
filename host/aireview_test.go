@@ -3,6 +3,7 @@ package host
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -296,6 +297,8 @@ func TestAIReviewSurvivesAPanic(t *testing.T) {
 func TestCloseWaitsForAIReview(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4), HoldClose: make(chan struct{}), Closing: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
+	release := sync.OnceFunc(func() { close(codex.HoldClose) })
+	t.Cleanup(release) // a failure before the release mustn't leave the host's Close waiting
 	id, _ := r.changed()
 	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
 		t.Fatal(err)
@@ -316,7 +319,7 @@ func TestCloseWaitsForAIReview(t *testing.T) {
 		t.Error("Close returned while the review was still ending")
 	case <-time.After(100 * time.Millisecond):
 	}
-	close(codex.HoldClose)
+	release()
 	<-closed
 	r.open()
 	if l, _ := r.session(id).LastAIReview(); l.Running || l.Error != "Oriel stopped during the review" {

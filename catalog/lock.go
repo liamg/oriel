@@ -28,6 +28,7 @@ type Locked struct {
 type Lock struct {
 	Path string
 	doc  *toml.Document
+	read []byte // the file as loaded or last saved; nil when there was none
 }
 
 // LoadLock reads the lockfile at path; one that isn't there is empty.
@@ -40,7 +41,7 @@ func LoadLock(path string) (*Lock, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Lock{Path: path, doc: doc}, nil
+	return &Lock{Path: path, doc: doc, read: src}, nil
 }
 
 // IDs are the plugins it locks, sorted.
@@ -105,18 +106,31 @@ func (l *Lock) Delete(id string) error {
 	return l.doc.Delete(id)
 }
 
-// Save writes the lockfile; an empty one is removed.
+// Save writes the lockfile; an empty one is removed. A lock unchanged since it was read leaves the file alone, so
+// it never clobbers a write made since.
 func (l *Lock) Save() error {
 	if len(l.doc.Value()) == 0 {
+		if l.read == nil {
+			return nil
+		}
 		if err := os.Remove(l.Path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
+		l.read = nil
+		return nil
+	}
+	b := l.doc.Bytes()
+	if l.read != nil && slices.Equal(b, l.read) {
 		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(l.Path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(l.Path, l.doc.Bytes(), 0o644)
+	if err := os.WriteFile(l.Path, b, 0o644); err != nil {
+		return err
+	}
+	l.read = b
+	return nil
 }
 
 func equalLocked(a, b Locked) bool {

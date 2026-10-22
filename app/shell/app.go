@@ -140,7 +140,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 
 	place := windowPlace{path: filepath.Join(cfg.StateDir, "window.json")}
 	first, _ := chosenTheme(cfg.Registry, false)
-	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel", Width: 1280, Height: 800, Frame: place.load(), Background: first.C(theme.BgBase)})
+	// Quitting hands the agents over first, so a close is held from the start.
+	w, err := be.NewWindow(render.WindowOpts{Title: "Oriel", Width: 1280, Height: 800, Frame: place.load(), Background: first.C(theme.BgBase),
+		HoldClose: cfg.Host != nil})
 	if err != nil {
 		return err
 	}
@@ -151,8 +153,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 		}
 	}()
 	sh.closeWin = w.Close
-	if ch, ok := w.(render.CloseHolder); ok && cfg.Host != nil {
-		ch.HoldClose(true) // quitting hands the agents over first
+	if _, ok := w.(render.CloseHolder); ok && cfg.Host != nil {
+		sh.holdsClose = true
 	}
 	sh.desktop = cfg.Desktop
 	if sh.desktop == nil {

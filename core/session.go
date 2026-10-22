@@ -102,9 +102,9 @@ func (a *AgentState) RanOn(at time.Time, account, name string) {
 // Live says the agent is up or on its way: running, or starting.
 func (a AgentState) Live() bool { return a.Running || a.Starting != nil }
 
-// Stopped is the agent stopped at t by by; one that wasn't running keeps who stopped it.
+// Stopped is the agent stopped at t by by; one that wasn't running or starting keeps who stopped it.
 func (a *AgentState) Stopped(by string, t time.Time) {
-	if a.Running && by != "" {
+	if a.Live() && by != "" {
 		a.StoppedBy, a.StoppedAt = by, t.UTC()
 	}
 	a.Running, a.Working, a.Starting, a.Background, a.Processes = false, false, nil, nil, nil

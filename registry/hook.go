@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
 	"slices"
@@ -74,7 +75,17 @@ type hooks struct {
 	next   int
 }
 
-var hookOptions = struct{ budget time.Duration }{2 * time.Millisecond}
+// hookBudget is how long a hook may take before it's a warning: hooks.budget, kept off the hot path's allocations.
+func (r *reg) hookBudget() time.Duration {
+	if d := time.Duration(r.budget.Load()); d > 0 {
+		return d
+	}
+	v, _, _ := r.Options().Get("hooks.budget", At{})
+	d, _ := v.(time.Duration)
+	d = cmp.Or(d, 2*time.Millisecond)
+	r.budget.Store(int64(d))
+	return d
+}
 
 func (r *reg) Hook(h Hook) Disposable {
 	r.hooks.mu.Lock()
@@ -198,8 +209,8 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 		} else {
 			r.Report(KindHook, e.id, err)
 		}
-		if err == nil && took > hookOptions.budget {
-			r.warn(KindHook, e.id, fmt.Errorf("%.1fms on %s · over the %v budget", float64(took.Microseconds())/1000, event, hookOptions.budget))
+		if budget := r.hookBudget(); err == nil && took > budget {
+			r.warn(KindHook, e.id, fmt.Errorf("%.1fms on %s · over the %v budget", float64(took.Microseconds())/1000, event, budget))
 		}
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s hook from %s: %w", event, e.h.Source, err))

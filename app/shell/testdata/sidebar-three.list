@@ -288,16 +288,41 @@ clip 524,38 236x356 r 0
       text "usage.proto" @627.9375,85.96 #b3ab99 JetBrains Mono 11
       clip 524,95 236x299 r 0
         text "1" @563.59375,116.36 #7c7566 JetBrains Mono 13.5
-        text "package usage.v1;" @592,116.36 #ece6d8 JetBrains Mono 13.5
+        text "package" @592,116.36 #c792ff JetBrains Mono 13.5
+        text " " @650.84375,116.36 #ece6d8 JetBrains Mono 13.5
+        text "usage" @659.25,116.36 #d6dde6 JetBrains Mono 13.5
+        text "." @701.28125,116.36 #89ddff JetBrains Mono 13.5
+        text "v1" @709.6875,116.36 #d6dde6 JetBrains Mono 13.5
+        text ";" @726.5,116.36 #89ddff JetBrains Mono 13.5
         text "2" @563.59375,137.36 #4f4a40 JetBrains Mono 13.5
         text "3" @563.59375,158.36 #4f4a40 JetBrains Mono 13.5
-        text "message Filter {" @592,158.36 #ece6d8 JetBrains Mono 13.5
+        text "message" @592,158.36 #c792ff JetBrains Mono 13.5
+        text " " @650.84375,158.36 #ece6d8 JetBrains Mono 13.5
+        text "Filter" @659.25,158.36 #ffcf5c JetBrains Mono 13.5
+        text " " @709.6875,158.36 #ece6d8 JetBrains Mono 13.5
+        text "{" @718.09375,158.36 #89ddff JetBrains Mono 13.5
         text "4" @563.59375,179.36 #4f4a40 JetBrains Mono 13.5
-        text "  string field = 1;" @592,179.36 #ece6d8 JetBrains Mono 13.5
+        text "  " @592,179.36 #ece6d8 JetBrains Mono 13.5
+        text "string" @608.8125,179.36 #ffcf5c JetBrains Mono 13.5
+        text " " @659.25,179.36 #ece6d8 JetBrains Mono 13.5
+        text "field" @667.65625,179.36 #ece6d8 JetBrains Mono 13.5
+        text " " @709.6875,179.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @718.09375,179.36 #89ddff JetBrains Mono 13.5
+        text " " @726.5,179.36 #ece6d8 JetBrains Mono 13.5
+        text "1" @734.90625,179.36 #ff9e64 JetBrains Mono 13.5
+        text ";" @743.3125,179.36 #89ddff JetBrains Mono 13.5
         text "5" @563.59375,200.36 #4f4a40 JetBrains Mono 13.5
-        text "  string needle = 2;" @592,200.36 #ece6d8 JetBrains Mono 13.5
+        text "  " @592,200.36 #ece6d8 JetBrains Mono 13.5
+        text "string" @608.8125,200.36 #ffcf5c JetBrains Mono 13.5
+        text " " @659.25,200.36 #ece6d8 JetBrains Mono 13.5
+        text "needle" @667.65625,200.36 #ece6d8 JetBrains Mono 13.5
+        text " " @718.09375,200.36 #ece6d8 JetBrains Mono 13.5
+        text "=" @726.5,200.36 #89ddff JetBrains Mono 13.5
+        text " " @734.90625,200.36 #ece6d8 JetBrains Mono 13.5
+        text "2" @743.3125,200.36 #ff9e64 JetBrains Mono 13.5
+        text ";" @751.71875,200.36 #89ddff JetBrains Mono 13.5
         text "6" @563.59375,221.36 #4f4a40 JetBrains Mono 13.5
-        text "}" @592,221.36 #ece6d8 JetBrains Mono 13.5
+        text "}" @592,221.36 #89ddff JetBrains Mono 13.5
       pop
     pop
   pop

@@ -62,6 +62,7 @@ type LoggedFake struct {
 	mu    sync.Mutex
 	logs  map[string]string
 	found []agent.Transcript
+	held  chan struct{} // what Discover waits for to close
 }
 
 // NewLoggedFake is a LoggedFake with no logs yet.
@@ -83,7 +84,22 @@ func (f *LoggedFake) Found(t agent.Transcript) {
 	f.found = append(f.found, t)
 }
 
+// HoldScans keeps Discover, and so every stats scan, waiting until release is called.
+func (f *LoggedFake) HoldScans() (release func()) {
+	ch := make(chan struct{})
+	f.mu.Lock()
+	f.held = ch
+	f.mu.Unlock()
+	return sync.OnceFunc(func() { close(ch) })
+}
+
 func (f *LoggedFake) Discover() []agent.Transcript {
+	f.mu.Lock()
+	held := f.held
+	f.mu.Unlock()
+	if held != nil {
+		<-held
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return slices.Clone(f.found)

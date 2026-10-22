@@ -101,7 +101,7 @@ func (x *PRReview) submit(ctx registry.Ctx, a registry.Args) error {
 		func(ctx registry.Ctx, _ struct{}) error {
 			f.body, f.seen = "", ""
 			x.forget(reviewPR(se))
-			x.setDraft(se.ID, func(d *core.ReviewDraft) {
+			saved := x.setDraft(se.ID, func(d *core.ReviewDraft) {
 				for i, it := range sent {
 					p := d.Picks[it.id]
 					p.State, p.Sent = core.PickKeep, comments[i].Body
@@ -116,9 +116,17 @@ func (x *PRReview) submit(ctx registry.Ctx, a registry.Args) error {
 					errs = append(errs, x.h.Run(ctx, "review.ai.dismiss", registry.Args{"id": string(se.ID), "finding": it.finding}))
 				}
 			}
-			if a := (registry.Args{"id": string(se.ID)}); x.h.Available("github.sync", a) {
-				errs = append(errs, x.h.Run(ctx, "github.sync", a))
-			}
+			// The sync links the posted comments to their threads by the sent bodies the draft keeps, so it waits for them.
+			x.busy.Add(1)
+			go func() {
+				defer x.busy.Done()
+				<-saved
+				x.h.Do(func() {
+					if a := (registry.Args{"id": string(se.ID)}); x.h.Available("github.sync", a) {
+						x.run("github.sync", a)
+					}
+				})
+			}()
 			x.h.Notify(core.Notice{ID: "review.pr.submit", Severity: core.SevInfo,
 				Text: fmt.Sprintf("%s on %s, with %s.", sentWord(verdict), src.Label(), kit.Counted(len(sent), "comment"))})
 			return errors.Join(errs...)

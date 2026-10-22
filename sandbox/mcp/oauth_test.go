@@ -234,12 +234,20 @@ func TestOAuth(t *testing.T) {
 	}
 
 	// Revoked access token: 401, refresh, retry.
+	revoked, _ := store.Load()
 	as.revoke(false)
 	if _, err := c.CallTool(ctx, "x", nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, authz, refreshes := as.counts(); authz != 1 || refreshes != 2 {
 		t.Fatalf("after 401: authorizes=%d refreshes=%d", authz, refreshes)
+	}
+	// Another request's 401 on the same token takes the token refreshed since.
+	if tok, err := o.Unauthorized(ctx, revoked.AccessToken, ""); err != nil || tok == revoked.AccessToken {
+		t.Fatalf("a second 401 on the revoked token = %q, %v", tok, err)
+	}
+	if _, _, refreshes := as.counts(); refreshes != 2 {
+		t.Fatalf("a second 401 on the revoked token refreshed again: refreshes=%d", refreshes)
 	}
 
 	// Refresh token revoked too: full flow again, reusing the registration.

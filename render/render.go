@@ -57,6 +57,8 @@ type WindowOpts struct {
 	// Background fills the window under the app's frames, so it's never white where they don't reach: before the
 	// first, or one drawn before the window had its size.
 	Background Color
+	// HoldClose holds a close from the start, as CloseHolder does, on a backend that can.
+	HoldClose bool
 }
 
 // Placed is a window that knows where it is: its frame in logical pixels, from the main screen's top left. ok is

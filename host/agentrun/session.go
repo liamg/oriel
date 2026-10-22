@@ -103,16 +103,17 @@ func (h *session) start() error {
 			return nil
 		})
 	}
-	h.mu.Unlock()
-	if first.text != "" {
-		hostcore.Restatus(h.r.st, h.id)
-	}
+	// Running is set with h.mu held, so a stop that takes h.sess can't land before it and be undone by it.
 	acct, name := h.r.deps.AccountOf(h.snapshot().Agent.Provider)
 	now := h.r.env.Now().UTC()
 	h.setAgent(func(a *core.AgentState) {
 		a.Running, a.Starting, a.Error, a.StoppedBy, a.StoppedAt = true, nil, "", "", time.Time{}
 		a.RanOn(now, acct, name)
 	})
+	h.mu.Unlock()
+	if first.text != "" {
+		hostcore.Restatus(h.r.st, h.id)
+	}
 	if resumed {
 		// After "The agent exited", the transcript says it's back.
 		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: now, Text: "The agent started again, resuming its conversation"})

@@ -70,6 +70,9 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 		opts = append(opts, app.Size(unit.Dp(o.Width), unit.Dp(o.Height)))
 	}
 	w.win.Option(opts...)
+	if o.HoldClose {
+		w.HoldClose(true)
+	}
 	w.active.Store(true)
 	w.ax = newAccess(w.accessGeom)
 	w.ax.bridge = newAccessBridge(w.ax)

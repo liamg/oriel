@@ -252,6 +252,7 @@ type keymapKey struct{ mode, seq string }
 
 type reg struct {
 	tokens   atomic.Int64 // each registration's, in the order they came
+	budget   atomic.Int64 // hooks.budget, read once each time it may have changed; 0 until then
 	mu       sync.Mutex
 	commands stacks[string, Command]
 	keymaps  stacks[keymapKey, Keymap]
@@ -293,6 +294,9 @@ func New() Registry {
 	for _, o := range builtinOptions {
 		r.Option(o)
 	}
+	stale := func() { r.budget.Store(0) }
+	r.options.Watch("hooks.budget", stale)
+	r.options.Registered(stale)
 	return r
 }
 
@@ -303,6 +307,8 @@ var builtinOptions = []OptionSpec{
 		Help: "Stop waiting for the rest of a mapped key sequence after keymap.timeoutlen."},
 	{Name: "keymap.timeoutlen", Type: Duration, Default: time.Second, Scopes: ScopeUser, Aliases: []string{"timeoutlen", "tm"}, Source: "builtin:registry",
 		Help: "How long to wait for a mapped key sequence to complete."},
+	{Name: "hooks.budget", Type: Duration, Default: 2 * time.Millisecond, Scopes: ScopeUser, Source: "builtin:registry",
+		Help: "How long a hook may take before it's a warning: hooks run on the hot path."},
 }
 
 func (r *reg) Command(c Command) Disposable {

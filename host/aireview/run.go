@@ -144,6 +144,11 @@ func (r *aiReviewRun) converse(ctx context.Context, sess agent.Session) ([]strin
 	for {
 		select {
 		case <-ctx.Done():
+			select {
+			case <-r.x.env.Closed: // closing ends ctx too
+				return said, "Oriel stopped during the review"
+			default:
+			}
 			return said, "the reviewer took too long"
 		case <-r.x.env.Closed:
 			return said, "Oriel stopped during the review"

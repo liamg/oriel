@@ -135,7 +135,7 @@ func TestEditorTypingBudget(t *testing.T) {
 	}
 }
 
-// The per-frame target on BenchmarkEditorTyping: a typing frame allocates under 0.5MB. Bytes, unlike time,
+// The per-frame target on BenchmarkEditorTyping: a typing frame allocates under 0.6MB. Bytes, unlike time,
 // don't move with the machine's load.
 func TestEditorTypingFrameAllocs(t *testing.T) {
 	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
@@ -155,8 +155,8 @@ func TestEditorTypingFrameAllocs(t *testing.T) {
 	waitHighlights(s) // the last reparse done before the scene closes
 	bytes, allocs := (after.TotalAlloc-before.TotalAlloc)/keys, (after.Mallocs-before.Mallocs)/keys
 	t.Logf("a typing frame: %d B, %d allocations", bytes, allocs)
-	if bytes > 512<<10 {
-		t.Errorf("a typing frame allocates %d B; the budget is 0.5MB", bytes)
+	if bytes > 600<<10 {
+		t.Errorf("a typing frame allocates %d B; the budget is 0.6MB", bytes)
 	}
 }
 

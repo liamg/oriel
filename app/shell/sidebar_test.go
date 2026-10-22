@@ -124,6 +124,7 @@ func TestSidebarSnapshots(t *testing.T) {
 		s.Run("editor.open", registry.Args{"path": filepath.Join(ps[0].Dir, "src/components/FilterBar.tsx")})
 		s.Run("editor.open", registry.Args{"path": filepath.Join(ps[1].Dir, "proto/usage.proto")})
 		s.SettleGit()
+		s.WaitHighlights()
 		s.Golden("sidebar-three")
 		text := s.Text()
 		for _, want := range []string{"PROJECTS", "admin-ui", "eng-2310", "↑2", "4 changed", "no PR", "api", "rate-limits", "#790",
@@ -153,6 +154,7 @@ func TestSidebarSnapshots(t *testing.T) {
 		s := sessionScene(t, core.KindWork, ps[:1], sidebarSize)
 		s.Run("sidebar.form", registry.Args{"form": "wide"})
 		s.Run("project.panel", registry.Args{"name": "explorer"})
+		s.SettleGit()
 		s.Golden("sidebar-one")
 		text := s.Text()
 		if !strings.Contains(text, "ADMIN-UI") || strings.Contains(text, "⌃1") {
