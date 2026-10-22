@@ -281,6 +281,22 @@ func (s *session) lastScreen() string {
 	return s.shown
 }
 
+// unreadEvent notes a usage report that didn't decode as why there's no reading: the mod sent it, so it's said.
+func (s *session) unreadEvent(body json.RawMessage, err error) {
+	if k, _ := decode[struct {
+		Kind string `json:"kind"`
+	}](body); k.Kind != "usage" {
+		return
+	}
+	s.mu.Lock()
+	raw := string(body)
+	if len(raw) > 600 {
+		raw = strings.ToValidUTF8(raw[:600], "") + "…"
+	}
+	s.usageErr = fmt.Sprintf("its report didn't decode (%v): %s", err, raw)
+	s.mu.Unlock()
+}
+
 func (s *session) usageFailure() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -351,6 +367,7 @@ func (s *session) handle(ctx context.Context, op string, body json.RawMessage) (
 	case opEvent:
 		in, err := decode[eventIn](body)
 		if err != nil {
+			s.unreadEvent(body, err)
 			return nil, nil, err
 		}
 		s.event(in)

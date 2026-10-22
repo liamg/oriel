@@ -43,7 +43,7 @@ func failureText(r registry.Contributions, f core.UsageFailure) string {
 	name := kit.ProviderName(r, f.Provider)
 	switch {
 	case f.Probe && f.Started:
-		return name + " didn't show usage: a dialog may be in the way"
+		return name + " started but reported no usage"
 	case f.Probe:
 		return name + " didn't start for the usage check"
 	}

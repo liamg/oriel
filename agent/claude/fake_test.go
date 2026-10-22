@@ -182,6 +182,9 @@ func (f *fake) poll(turns chan<- string) {
 			if fails != "" {
 				rls = []any{}
 			}
+			if read && os.Getenv("ORIEL_FAKE_USAGE_ODD") == "1" { // a shape Oriel doesn't read: resetsAt in seconds
+				rls = []any{map[string]any{"kind": "five_hour", "percentUsed": 12.5, "resetsAt": 1760464800}}
+			}
 			go func() { _ = f.hook("event", map[string]any{"kind": "usage", "rateLimits": rls, "error": fails}, nil) }()
 		case "fork":
 			go func() {
@@ -199,9 +202,9 @@ func (f *fake) poll(turns chan<- string) {
 }
 
 // terminal answers what's typed into it: /login signs in, as claude's does once you're through its steps; /usage
-// reads the plan's windows; /exit quits. ORIEL_FAKE_RUNS gets a line as it starts and as it quits; with
-// ORIEL_FAKE_SIGNED_OUT=1 it starts on the signed-out screen. ORIEL_FAKE_DIALOG starts it under a dialog that
-// swallows what's typed: "escape" until Escape closes it, "stuck" for good.
+// reads the plan's windows; /exit quits. ORIEL_FAKE_RUNS gets a line as it starts, as /usage is typed and as it quits;
+// with ORIEL_FAKE_SIGNED_OUT=1 it starts on the signed-out screen. ORIEL_FAKE_DIALOG starts it under a dialog that
+// swallows what's typed.
 func (f *fake) terminal() {
 	note("run")
 	if os.Getenv("ORIEL_FAKE_SIGNED_OUT") == "1" {
@@ -213,8 +216,8 @@ func (f *fake) terminal() {
 	}
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
-		if dialog == "escape" && strings.Contains(sc.Text(), "\x1b") {
-			dialog = ""
+		if strings.Trim(sc.Text(), " \x1b") == "/usage" {
+			note("usage")
 		}
 		if dialog != "" {
 			continue

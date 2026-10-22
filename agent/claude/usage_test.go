@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/internal/testhook"
 )
 
 // usageProbe is the provider with the fake claude, signed in to the fixture account; runs counts the claudes started,
@@ -143,33 +142,20 @@ func TestUsageWithoutClaudeStartsNothing(t *testing.T) {
 	}
 }
 
-func quickRetype(t *testing.T) { testhook.Set(t, &probeRetype, 500*time.Millisecond) }
-
-// A startup dialog that swallows the first /usage is closed with Escape, and /usage typed again.
-func TestUsageEscapesADialog(t *testing.T) {
-	p, _ := usageProbe(t)
-	quickRetype(t)
-	t.Setenv("ORIEL_FAKE_DIALOG", "escape")
-	u, err := p.Usage(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkProbed(t, u)
-}
-
-// A dialog Escape doesn't close ends the probe when its time is up, /usage typed no more than probeTries times, with
-// an error that says so.
+// A dialog that swallows /usage ends the probe when its time is up, /usage typed once, with an error that says what
+// was on screen and where claude's debug log is.
 func TestUsageDialogInTheWay(t *testing.T) {
 	p, _ := usageProbe(t)
-	quickRetype(t)
 	t.Setenv("ORIEL_FAKE_DIALOG", "stuck")
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 	_, err := p.Usage(ctx)
 	var pe *ProbeError
-	if !errors.As(err, &pe) || !pe.Hello || pe.Tries != probeTries || !errors.Is(err, context.DeadlineExceeded) ||
-		!strings.Contains(err.Error(), "dialog") {
+	if !errors.As(err, &pe) || !pe.Hello || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v", err)
+	}
+	if b, _ := os.ReadFile(os.Getenv("ORIEL_FAKE_RUNS")); bytes.Count(b, []byte("usage\n")) != 1 {
+		t.Errorf("/usage typed %d times", bytes.Count(b, []byte("usage\n")))
 	}
 	if !strings.Contains(pe.Screen, "New MCP server found in .mcp.json") {
 		t.Errorf("the error doesn't say what was on screen: %q", pe.Screen)
@@ -187,7 +173,7 @@ func TestUsageNoHello(t *testing.T) {
 	defer cancel()
 	_, err := p.Usage(ctx)
 	var pe *ProbeError
-	if !errors.As(err, &pe) || pe.Hello || pe.Tries != 0 || !errors.Is(err, context.DeadlineExceeded) {
+	if !errors.As(err, &pe) || pe.Hello || !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("err = %v", err)
 	}
 }
@@ -231,5 +217,18 @@ func TestUsageWhileAProbeFailsSaysWhy(t *testing.T) {
 	<-first
 	if started, _ := runs(); started != 1 {
 		t.Errorf("%d claudes started", started)
+	}
+}
+
+// A usage report Oriel can't decode ends the probe with an error that says so, and what the mod sent.
+func TestUsageSaysWhenTheReportDidntDecode(t *testing.T) {
+	p, _ := usageProbe(t)
+	t.Setenv("ORIEL_FAKE_USAGE_ODD", "1")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := p.Usage(ctx)
+	var pe *ProbeError
+	if !errors.As(err, &pe) || !strings.Contains(pe.Usage, "didn't decode") || !strings.Contains(pe.Usage, `"resetsAt":1760464800`) {
+		t.Fatalf("err = %v", err)
 	}
 }
