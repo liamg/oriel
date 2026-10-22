@@ -3,7 +3,6 @@ package shell
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"slices"
 
 	"github.com/liamg/oriel/app/kit"
@@ -20,8 +19,6 @@ import (
 // The HUD's panels, each contributed by the plugin that owns its data, as indicators in the hud slot.
 // They read the store as they're drawn, so a store event that redraws the window shows them changed; what the store
 // doesn't keep (the machine's recent load, the burn's readings, today's totals) their owners gather from its events.
-
-var tHUDLogSource = theme.Declare("hud.log.source", "violet")
 
 // --- Sessions (the session tabs) ---
 
@@ -80,50 +77,4 @@ func (t *sessionTabs) sessionsPanel(c *ui.Ctx, h plugin.Host) {
 			h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID)})
 		}
 	}
-}
-
-// --- Logs (the notices) ---
-
-// logsPanel is the log's tail, newest first: info and up, from every source.
-func (n *notices) logsPanel(c *ui.Ctx) {
-	th := c.Theme()
-	var rows []logRow // newest first
-	for _, r := range slices.Backward(n.panel.rows(n.h.State())) {
-		if len(rows) == 11 {
-			break
-		}
-		if bucket(r.level) >= slog.LevelInfo {
-			rows = append(rows, r)
-		}
-	}
-	c.Row("chips", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-		widget.Chip(c, "all", "all processes", th.C(theme.FgMuted), "")
-		widget.Chip(c, "lvl", "info+", th.C(theme.FgMuted), "")
-		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-	})
-	tags := map[slog.Level]struct {
-		tag string
-		tok theme.TokenID
-	}{slog.LevelError: {"ERR", theme.Error}, slog.LevelWarn: {"WRN", theme.Warn}, slog.LevelInfo: {"INF", theme.StatusWorking}}
-	c.Column("lines", ui.Style{W: ui.Flex(1), Gap: 1, Clip: true}, func(c *ui.Ctx) {
-		for i, r := range rows {
-			tg := tags[bucket(r.level)]
-			c.Row(len(rows)-1-i, ui.Style{W: ui.Flex(1), H: ui.Px(16), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: r.plain()}, func(c *ui.Ctx) {
-				c.Text("t", r.time.Local().Format("15:04:05.000"), kit.MonoFont(10.5, th.C(theme.FgGhost)))
-				c.Text("l", tg.tag, kit.Mono(10.5, typeset.SemiBold, th.C(tg.tok)))
-				c.Row("s", ui.Style{W: ui.Px(110), Clip: true}, func(c *ui.Ctx) {
-					c.Text("s", where(r), kit.MonoFont(10.5, th.C(tHUDLogSource)))
-				})
-				c.Row("m", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-					c.Text("m", kit.FirstLine(r.text), kit.MonoFont(10.5, th.C(theme.FgMuted)))
-				})
-			})
-		}
-	})
-	c.Row("foot", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		if widget.Link(c, "open", "Open the log ↗", kit.HUDHelp+"#logs") {
-			n.h.Run(context.Background(), "Log", nil)
-		}
-	})
 }

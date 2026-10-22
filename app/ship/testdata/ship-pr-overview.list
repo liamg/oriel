@@ -69,21 +69,41 @@ clip 0,38 223x936 r 0
     rect 205,250.84001 6x6.0000153 fill #4cc9f0 radius 3
   pop
   rect 10,270.44 203x1 fill #332f27
-  path 5 segments stroke 1.25 #7c7566
-  path 5 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
   text "Requests" @33,292.30524 #b3ab99 Inter 12
   rect 199.59375,280.94 13.40625x14 fill #ff9b45 radius 7
   text "3" @203.59375,291.18 #141006 JetBrains Mono 9
-  path 4 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
   text "Debug" @33,315.30524 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 3 segments stroke 1.25 #7c7566
-  path 3 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
   text "Ship" @33,338.30524 #b3ab99 Inter 12
   rect 10,807.00006 203x1 fill #332f27
   path 2 segments stroke 1.25 #4f4a40
   path 2 segments stroke 1.25 #4f4a40
+  path 4 segments stroke 1.25 #4f4a40
   path 2 segments stroke 1.25 #4f4a40
   path 2 segments stroke 1.25 #4f4a40
   path 2 segments stroke 1.25 #4f4a40
@@ -104,10 +124,11 @@ clip 0,38 223x936 r 0
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   text "Usage" @33,897.8653 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 3 segments stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
   text "Jobs" @33,920.8653 #b3ab99 Inter 12
   path 6 segments fill #060606
   path 6 segments stroke 1.1374999 #ffd23f

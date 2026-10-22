@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -280,6 +281,44 @@ func TestLuaInboxCards(t *testing.T) {
 	s.Run("inbox.open", nil)
 	s.Frame()
 	s.Node("Deploy api to prod? (answered)")
+}
+
+// A notice that asks something (a question) is an inbox card, whoever sent it: stacked while it
+// waits, answered by its actions, then history. One that only tells stays a toast.
+func TestNoticesThatAskAreInboxCards(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	var started []string
+	s.Registry().Command(registry.Command{ID: "reviews.start-background", Run: func(_ registry.Ctx, a registry.Args) error {
+		started = append(started, a.String("url"))
+		return nil
+	}})
+	s.Host().Notify(core.Notice{ID: "reviews.asked:u1", Severity: core.SevQuestion, Source: "plugin:reviews", Title: "Review requested",
+		Text: "mkhan asked you to review api#812", Actions: []core.Action{{Title: "Start review", Command: "reviews.start-background", Args: map[string]any{"url": "u1"}}}})
+	s.Host().Notify(core.Notice{ID: "saved", Severity: core.SevInfo, Source: "plugin:x", Text: "Saved the thing"})
+	s.Frame()
+	s.Frame()
+	var titles []string
+	for _, c := range uireg.InboxCards(s.Registry()) {
+		titles = append(titles, c.Title)
+	}
+	if !slices.Contains(titles, "mkhan asked you to review api#812") || slices.Contains(titles, "Saved the thing") {
+		t.Fatalf("the inbox's cards: %q", titles)
+	}
+	s.WantFrame("REVIEW REQUESTED")
+	if n := s.Count("mkhan asked you to review api#812"); n != 1 {
+		t.Errorf("the review request shows %d times, not once as a stacked card", n)
+	}
+	s.ClickTop("Start review")
+	s.Frame()
+	if len(started) != 1 || started[0] != "u1" {
+		t.Fatalf("Start review ran the command with %v", started)
+	}
+	if strings.Contains(s.Text(), "mkhan asked you") {
+		t.Error("the answered card is still stacked")
+	}
+	s.Run("inbox.open", nil)
+	s.Frame()
+	s.Node("mkhan asked you to review api#812 (answered)")
 }
 
 // Sessions' tabs with their badges, a security-key touch at the top, the stack of a network and a

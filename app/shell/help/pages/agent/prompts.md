@@ -12,7 +12,7 @@ improves the prompts you left alone.
 
 ## The Prompts page {#page}
 
-`:Prompts`, **Prompts** on the start view, or the omnibox: the prompts on the left by group, the selected one on the
+`:Prompts`, the **prompts** section of Settings, or the omnibox: the prompts on the left by group, the selected one on the
 right. `esc` or **Close** closes it.
 
 ## The list {#list}

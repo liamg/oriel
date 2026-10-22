@@ -38,6 +38,12 @@ Plugins put what goes with the inbox at the foot of the Inbox panel: agentbus's 
 **INBOX** in the title bar counts the cards waiting on you; a click opens the panel. Each session's tab counts its
 own, in the colour of the first.
 
+## Notices {#notices}
+
+A notice that asks you something (a question) is a card rather than a toast: a review request, or
+any plugin's. It stacks while it waits and goes to the history once you answer or dismiss it. Notices that only tell
+you something stay toasts, and are kept in the log.
+
 ## Adding cards {#plugins}
 
 Cards come from inbox sources (`uireg.InboxSource`): the asks of every session are one; a plugin adds its own with

@@ -69,11 +69,20 @@ func (x *Prompts) Activate(_ context.Context, h plugin.Host) error {
 		return registry.Verdict{}, nil
 	}}))
 	x.Add(h.Contribute(kit.PagePlace("prompts", "Prompts", "prompts.open", &x.open)))
-	x.Add(h.Contribute(uireg.StartEntry{Name: "prompts", Icon: "prompts", Title: "Prompts", Desc: "The coding style and what each kind of session tells its agent",
-		Command: "prompts.open", Order: 95, Link: true}))
+	x.Add(h.Contribute(uireg.SettingsSection{Name: "prompts", Build: x.section, Source: "builtin:prompts"}))
 	x.Add(h.View(kit.OverlayPrefix+"prompts", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "prompts", Fn: x.page} })))
 	x.changed() // the session host has the user's prompts from the start
 	return nil
+}
+
+// section is the settings page's way to the Prompts page.
+func (x *Prompts) section(c *ui.Ctx) {
+	widget.Wrap(c, "about", "The coding style, and what each kind of session tells its agent.", 700, kit.UIFont(12.5, c.Theme().C(theme.FgFaint)))
+	c.Row("open", ui.Style{Pad: ui.Insets{T: 8}}, func(c *ui.Ctx) {
+		if widget.Button(c, "open", "Open Prompts", widget.ButtonOpts{Primary: true, Help: "agent/prompts"}) {
+			x.openPage("")
+		}
+	})
 }
 
 func (x *Prompts) commands() []registry.Command {

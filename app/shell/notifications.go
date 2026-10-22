@@ -163,8 +163,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.Add(h.View("statusline.left.50-counts", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "status", Fn: n.status}
 	})}))
-	n.Add(h.Contribute(uireg.Indicator{Name: "logs", Slot: uireg.SlotHUD, Order: 50, Span: 2, Title: "Logs", Help: kit.HUDHelp + "#logs",
-		Note: func() string { return "tail" }, Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "logs", Fn: n.logsPanel}, nil }}))
+	n.Add(h.Contribute(uireg.InboxSource{Name: "notices", Cards: n.inboxCards, Source: "builtin:notices"}))
 	n.Add(h.View("log", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "log", Fn: n.panel.build}
 	})))
@@ -195,7 +194,7 @@ func (n *notices) toasts(c *ui.Ctx) {
 	now := c.Now()
 	var due []core.Notification
 	for _, row := range st.Notifications {
-		if row.Dismissed || row.Severity == core.SevError && row.Session != "" && row.Session != st.Focus {
+		if row.Dismissed || asks(row) || row.Severity == core.SevError && row.Session != "" && row.Session != st.Focus {
 			continue
 		}
 		if ttl := toastTTL(row); ttl > 0 {
@@ -271,6 +270,36 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	case res.Closed:
 		n.h.Apply(core.Dismissal(row))
 	}
+}
+
+// asks says a notice waits on an answer: a question. It's an inbox card, not a toast.
+func asks(n core.Notification) bool { return n.Severity == core.SevQuestion }
+
+// inboxCards are the notices that ask: stacked while they wait, history once answered or dismissed.
+func (n *notices) inboxCards() []uireg.InboxCard {
+	var out []uireg.InboxCard
+	for _, row := range n.h.State().Notifications {
+		if !asks(row) {
+			continue
+		}
+		card := uireg.InboxCard{ID: fmt.Sprint(row.Seq), Type: "notice", Mine: true, Session: string(row.Session), Icon: "!",
+			Tone: "accent", Kicker: titleOf(row), Title: row.Text, Sub: row.Source, Detail: row.Detail, Created: row.Time,
+			Interrupt: !row.Dismissed, Done: row.Dismissed}
+		answer := func() { n.h.Apply(core.Dismissal(row)) }
+		for _, a := range row.Actions {
+			card.Actions = append(card.Actions, uireg.InboxAction{Label: a.Title, Primary: len(card.Actions) == 0, Run: func() {
+				if err := n.h.Run(context.Background(), a.Command, registry.Args(a.Args)); err != nil {
+					n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
+				}
+				answer()
+			}})
+		}
+		if !slices.ContainsFunc(row.Actions, func(a core.Action) bool { return a.Command == "notice.dismiss" }) {
+			card.Actions = append(card.Actions, uireg.InboxAction{Label: "Dismiss", Run: answer})
+		}
+		out = append(out, card)
+	}
+	return out
 }
 
 // status is the status line's ✕/⚠ counts: the focused session's and Oriel's. A click opens the log there.

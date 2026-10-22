@@ -110,8 +110,6 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 		Doc: "A session's pull request read as merged, the first time Oriel sees it so, whoever merged it; the subject is its URL. open is how many of the session's other PRs are still open. { session, project, ticket, number, url, title, open }"}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
-	x.Add(h.Contribute(uireg.Indicator{Name: "ci", Slot: uireg.SlotHUD, Order: 70, Title: "CI queue", Help: kit.HUDHelp + "#ci", Note: x.ciNote,
-		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "ci", Fn: x.ciPanel}, nil }}))
 	x.Add(h.Contribute(uireg.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
 	x.Add(h.Contribute(registry.Service{Name: registry.ShipsService, Impl: ships{x}, Source: "builtin:ship"}))
 	x.Add(h.Contribute(registry.CardChips{Name: "pr", Chips: x.prChips, Source: "builtin:ship"}))

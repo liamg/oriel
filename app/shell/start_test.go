@@ -196,12 +196,15 @@ func TestStartViewFits(t *testing.T) {
 		if !tt.tabs {
 			continue
 		}
-		for range 4 {
+		// j moves through the cards and the links to the first recent.
+		for range 20 {
 			s.Run("start.next", nil)
+			s.Frame()
+			s.Frame()
+			if text = s.Text(); strings.Contains(text, "notes") {
+				break
+			}
 		}
-		s.Frame()
-		s.Frame()
-		text = s.Text()
 		if !strings.Contains(text, "notes") || strings.Contains(text, "Open Directory") {
 			t.Errorf("at %v wide, selecting a recent didn't switch to its tab:\n%s", tt.width, text)
 		}
@@ -234,6 +237,33 @@ func TestStartViewHover(t *testing.T) {
 	s.Frame()
 	if !s.StartCard("Open Directory").Selected || s.StartCard("Settings").Selected {
 		t.Error("k didn't move the selection off the hovered card")
+	}
+}
+
+// A link is a row like the cards: the pointer on it selects it and nothing else, and the keys reach it.
+func TestStartViewHoverLink(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	for i, title := range []string{"Plugin page", "Another page"} {
+		s.Host().Contribute(uireg.StartEntry{Name: fmt.Sprintf("p%d", i), Icon: "jobs", Title: title, Command: "settings.open", Order: 200 + i, Link: true})
+	}
+	s.Frame()
+	s.Frame()
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: apptest.Centre(s.StartCard("Another page").Bounds)})
+	s.Frame()
+	s.Frame()
+	if !s.StartCard("Another page").Selected {
+		t.Error("hovering a link didn't select it")
+	}
+	for _, other := range []string{"Open Directory", "Settings", "Plugin page"} {
+		if s.StartCard(other).Selected {
+			t.Errorf("%s stays selected with the pointer on a link", other)
+		}
+	}
+	s.Run("start.prev", nil)
+	s.Frame()
+	s.Frame()
+	if !s.StartCard("Plugin page").Selected || s.StartCard("Another page").Selected {
+		t.Error("k didn't move from one link to the one before")
 	}
 }
 
