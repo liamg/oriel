@@ -34,6 +34,7 @@ type ProbeError struct {
 	Tries  int    // times /usage was typed
 	Screen string // the end of what claude last showed
 	Usage  string // why $.session.usage() last failed, when it did
+	Log    string // claude's debug log of the probe
 	Err    error
 }
 
@@ -47,6 +48,9 @@ func (e *ProbeError) Error() string {
 	}
 	if e.Screen != "" {
 		msg += "; the screen ends: " + e.Screen
+	}
+	if e.Log != "" {
+		msg += "; claude's debug log: " + e.Log
 	}
 	return msg
 }
@@ -132,7 +136,14 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 		return core.ProviderUsage{}, err
 	}
 	defer os.RemoveAll(state)
-	sess, err := p.start(ctx, agent.StartSpec{Cwd: dir, StateDir: state, NoMCP: true}, "")
+	// Claude Code's own debug log of the last probe, for when it reads no windows.
+	logs := filepath.Join(dir, "debug")
+	_ = os.RemoveAll(logs)
+	if err := os.MkdirAll(logs, 0o755); err != nil { // claude writes to the path itself unless it's a folder
+		return core.ProviderUsage{}, err
+	}
+	sess, err := p.start(ctx, agent.StartSpec{Cwd: dir, StateDir: state, NoMCP: true,
+		Env: []string{"DEBUG=1", "CLAUDE_CODE_DEBUG_LOGS_DIR=" + logs}}, "")
 	if err != nil {
 		return core.ProviderUsage{}, err
 	}
@@ -179,9 +190,18 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 				s.queueCmd(waitOut{Kind: "usage"})
 			}
 		case <-ctx.Done():
-			return core.ProviderUsage{}, &ProbeError{Hello: tries > 0, Tries: tries, Screen: s.lastScreen(), Usage: s.usageFailure(), Err: ctx.Err()}
+			return core.ProviderUsage{}, &ProbeError{Hello: tries > 0, Tries: tries, Screen: s.lastScreen(), Usage: s.usageFailure(),
+				Log: latestLog(logs), Err: ctx.Err()}
 		}
 	}
+}
+
+// latestLog is the debug log claude wrote last in dir, which it links as latest; dir when there's no link.
+func latestLog(dir string) string {
+	if p, err := filepath.EvalSymlinks(filepath.Join(dir, "latest")); err == nil {
+		return p
+	}
+	return dir
 }
 
 // quit closes the Usage tab and types /exit, giving claude a moment to go before Close kills it.

@@ -1,7 +1,11 @@
 package host
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +19,7 @@ type usageStub struct {
 	*agenttest.Fake
 	mu    sync.Mutex
 	u     core.ProviderUsage
+	err   error
 	reads int
 }
 
@@ -28,7 +33,7 @@ func (s *usageStub) Usage(context.Context) (core.ProviderUsage, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.reads++
-	return s.u, nil
+	return s.u, s.err
 }
 
 func (s *usageStub) set(u core.ProviderUsage) {
@@ -79,5 +84,24 @@ func TestReadUsageKeepsTheNewestReading(t *testing.T) {
 	}
 	if got := usedNow(r.w, "claude"); got != .6 {
 		t.Errorf("a newer reading: %v", got)
+	}
+}
+
+// A provider whose windows couldn't be read is logged by name, with why.
+func TestReadUsageLogsWhichProviderFailed(t *testing.T) {
+	claude := newUsageStub("claude")
+	claude.err = errors.New("no windows in time")
+	r := newRig(t, claude)
+	var mu sync.Mutex
+	var buf bytes.Buffer
+	r.log = slog.New(slog.NewTextHandler(&lockedWriter{mu: &mu, w: &buf}, nil))
+	r.restart()
+	if err := r.w.ReadUsage(context.Background()); err == nil {
+		t.Fatal("no error")
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if out := buf.String(); !strings.Contains(out, `msg="claude's plan windows couldn't be read"`) || !strings.Contains(out, `err="no windows in time"`) {
+		t.Errorf("logged:\n%s", out)
 	}
 }

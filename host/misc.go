@@ -123,9 +123,7 @@ func (w *Host) SetProviders(src func() []agent.Provider) {
 			case <-ctx.Done():
 			}
 		}()
-		if err := w.ReadUsage(ctx); err != nil {
-			w.log.Warn("usage", "err", err)
-		}
+		_ = w.ReadUsage(ctx) // each provider's failure is logged and kept in the state
 	})
 }
 

@@ -108,6 +108,13 @@ func fakeClaude(args []string) int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
+	// Debugging, Claude Code logs into CLAUDE_CODE_DEBUG_LOGS_DIR, under an id of its own, and links the log as latest.
+	if dir := os.Getenv("CLAUDE_CODE_DEBUG_LOGS_DIR"); dir != "" && os.Getenv("DEBUG") == "1" {
+		_ = os.MkdirAll(dir, 0o755)
+		log := filepath.Join(dir, "debug-"+f.id+".txt")
+		_ = os.WriteFile(log, []byte("[DEBUG] fake claude started\n"), 0o644)
+		_ = os.Symlink(log, filepath.Join(dir, "latest"))
+	}
 	fmt.Printf("fake claude %s in %s\r\n", f.id, cwd)
 	if os.Getenv("ORIEL_FAKE_NO_HELLO") == "1" {
 		note("run")

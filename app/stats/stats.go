@@ -187,9 +187,6 @@ func (x *Plugin) readUsage(ctx context.Context, _ func(string, float64)) (struct
 		return struct{}{}, errors.New("there are no sessions in this window")
 	}
 	err := w.ReadUsage(ctx)
-	if err != nil {
-		x.h.Log().Warn("usage", "err", err)
-	}
 	x.h.Do(func() {
 		x.mu.Lock()
 		x.history = fetched[[]core.ProviderUsage]{}

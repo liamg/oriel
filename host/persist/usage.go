@@ -121,6 +121,9 @@ func (s *Stats) readProvider(ctx context.Context, p agent.Provider) error {
 	u, err := p.Usage(cctx)
 	cancel()
 	_ = s.st.Emit(core.UsageRead{Provider: p.ID(), Failure: failure(err)})
+	if err != nil {
+		s.env.Log.Warn(p.ID()+"'s plan windows couldn't be read", "provider", p.ID(), "err", err)
+	}
 	if err != nil || len(u.Windows) == 0 {
 		return err
 	}
