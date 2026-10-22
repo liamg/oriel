@@ -71,7 +71,7 @@ func TestUsageWithoutASession(t *testing.T) {
 	}
 }
 
-// A call while a probe runs has the last reading, and starts no second claude.
+// A call while a probe runs waits for its reading, and starts no second claude.
 func TestUsageNeverProbesTwiceAtOnce(t *testing.T) {
 	p, runs := usageProbe(t)
 	first := make(chan error, 1)
@@ -86,9 +86,11 @@ func TestUsageNeverProbesTwiceAtOnce(t *testing.T) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	if _, err := p.Usage(context.Background()); err != nil {
+	u, err := p.Usage(context.Background())
+	if err != nil {
 		t.Fatal(err)
 	}
+	checkProbed(t, u)
 	if err := <-first; err != nil {
 		t.Fatal(err)
 	}
@@ -197,5 +199,34 @@ func TestUsageSaysWhySessionUsageFailed(t *testing.T) {
 	var pe *ProbeError
 	if !errors.As(err, &pe) || pe.Usage != "Invalid time value" || !strings.Contains(err.Error(), "$.session.usage() failed: Invalid time value") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+// A call while a probe runs that fails has the probe's error, not an empty reading.
+func TestUsageWhileAProbeFailsSaysWhy(t *testing.T) {
+	p, runs := usageProbe(t)
+	t.Setenv("ORIEL_FAKE_USAGE_FAILS", "Invalid time value")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	first := make(chan error, 1)
+	go func() {
+		_, err := p.Usage(ctx)
+		first <- err
+	}()
+	deadline := time.Now().Add(20 * time.Second)
+	for started, _ := runs(); started == 0; started, _ = runs() {
+		if time.Now().After(deadline) {
+			t.Fatal("no probe started")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	_, err := p.Usage(context.Background())
+	var pe *ProbeError
+	if !errors.As(err, &pe) || pe.Usage != "Invalid time value" {
+		t.Errorf("the second call's err = %v", err)
+	}
+	<-first
+	if started, _ := runs(); started != 1 {
+		t.Errorf("%d claudes started", started)
 	}
 }
