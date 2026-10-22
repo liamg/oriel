@@ -36,18 +36,6 @@ type Anchor struct {
 	After   []string `json:"after,omitempty"`
 }
 
-// Activity is one thing the agent did on the way to a reply: an edit, a lookup, a test run.
-type Activity struct {
-	Kind    string `json:"kind"` // edit, read, search, lsp, test, shell, tool
-	Title   string `json:"title"`
-	Path    string `json:"path,omitempty"`
-	Added   int    `json:"added,omitempty"`
-	Removed int    `json:"removed,omitempty"`
-	Run     string `json:"run,omitempty"` // a TestRun's ID
-	Failed  bool   `json:"failed,omitempty"`
-	Item    string `json:"item,omitempty"` // the transcript item it came from
-}
-
 // Evidence backs a claim in a reply: "tests pass" links to the run that showed it.
 type Evidence struct {
 	Kind  string `json:"kind"` // test-run
@@ -69,7 +57,6 @@ type Comment struct {
 	Images    []string   `json:"images,omitempty"`
 	Model     string     `json:"model,omitempty"` // the agent's model and effort when it wrote this
 	Severity  string     `json:"severity,omitempty"`
-	Activity  []Activity `json:"activity,omitempty"`
 	Evidence  []Evidence `json:"evidence,omitempty"`
 	Unbacked  string     `json:"unbacked,omitempty"` // a claim with no evidence: "says tests pass, but ran none"
 	// Draft is an agent's reply not sent where the thread came from: the user forwards it (a GitHub thread's).

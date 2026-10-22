@@ -244,46 +244,11 @@ clip 364,38 1236x936 r 0
       rect 454,516.83795 65.625x17.840027 fill #161615 radius 3
       text "Truncate" @458,530.07794 #ece6d8 JetBrains Mono 12
       text "with sign handling, and the negative cases are in the table now." @523.28125,530.48694 #ece6d8 Inter 13
-      text "ACTIVITY" @454,552.368 #7c7566 JetBrains Mono 9.5
-      rect 454,561.21796 797x123 fill #0c0c0b radius 6
-      clip 454,561.21796 797x123 r 6
-        text "✓" @466,580.3579 #4fe0a0 JetBrains Mono 11.5
-        text "Edit" @483.20312,580.7651 #ece6d8 Inter 12.5
-        text "internal/pricing/round.go" @517.1875,580.3579 #b3ab99 JetBrains Mono 11.5
-        text "+7" @1169.7031,579.998 #4fe0a0 JetBrains Mono 10.5
-        text "-1" @1188.8906,579.998 #ff5f6d JetBrains Mono 10.5
-        text "view" @1212.0781,579.5832 #ffd23f Inter 12
-        rect 1212.0781,583.4777 26.921875x1 fill #ffd23fb3
-        rect 454,591.21796 797x1 fill #24221d
-        text "✓" @466,611.3579 #4fe0a0 JetBrains Mono 11.5
-        text "Edit" @483.20312,611.7651 #ece6d8 Inter 12.5
-        text "internal/pricing/round_test.go" @517.1875,611.3579 #b3ab99 JetBrains Mono 11.5
-        text "+18" @1182.2969,610.998 #4fe0a0 JetBrains Mono 10.5
-        text "view" @1212.0781,610.5832 #ffd23f Inter 12
-        rect 1212.0781,614.4777 26.921875x1 fill #ffd23fb3
-        rect 454,622.21796 797x1 fill #24221d
-        text "✓" @466,642.3579 #4fe0a0 JetBrains Mono 11.5
-        text "References" @483.20312,642.7651 #ece6d8 Inter 12.5
-        text "RoundMinor" @565.3125,642.3579 #b3ab99 JetBrains Mono 11.5
-        rect 454,653.21796 797x1 fill #24221d
-        text "✓" @466,673.3579 #4fe0a0 JetBrains Mono 11.5
-        text "Bash" @483.20312,673.7651 #ece6d8 Inter 12.5
-        text "go test ./internal/pricing/" @524.3281,673.3579 #b3ab99 JetBrains Mono 11.5
-        rect 1099.0625,659.21796 139.9375x20 fill #4fe0a014 radius 10 stroke 1 #4fe0a066
-        text "✓" @1106.0625,672.998 #4fe0a0 JetBrains Mono 10.5
-        text "14 passed" @1118.6562,672.998 #4fe0a0 JetBrains Mono 10.5
-        text "run 40ab" @1184,672.818 #7c7566 JetBrains Mono 10
-      pop
-      rect 454,561.21796 797x123 radius 6 stroke 1 #24221d
-      rect 454,692.21796 139.9375x20 fill #4fe0a014 radius 10 stroke 1 #4fe0a066
-      text "✓" @461,705.998 #4fe0a0 JetBrains Mono 10.5
-      text "14 passed" @473.59375,705.998 #4fe0a0 JetBrains Mono 10.5
-      text "run 40ab" @538.9375,705.818 #7c7566 JetBrains Mono 10
       path 6 segments fill #4cc9f0b7
       path 6 segments fill #4cc9f0b7
       path 6 segments fill #4cc9f0b7
-      text "Claude is working" @447,747.84296 #b3ab99 Inter 12
-      text "· 41s" @558.3281,747.25775 #7c7566 JetBrains Mono 10.5
+      text "Claude is working" @447,570.303 #b3ab99 Inter 12
+      text "· 41s" @558.3281,569.7178 #7c7566 JetBrains Mono 10.5
     pop
     rect 364,855 935x1 fill #24221d
     rect 412,870 839x90 fill #0c0c0b radius 8 stroke 1 #332f27

@@ -119,11 +119,6 @@ func (h *session) toolResult(ev agent.ToolResult, now time.Time) {
 	if strings.HasSuffix(call.Tool, "test_run") {
 		h.linkRun(ev)
 	}
-	act, ok := activityFor(call, ev)
-	if !ok {
-		return
-	}
-	act.Item = ev.ID
 	if run, ok := testRunFrom(call, ev, now); ok {
 		run.ID, run.By, run.Item = hostcore.NewID(4), "agent", ev.ID
 		h.mu.Lock()
@@ -133,19 +128,19 @@ func (h *session) toolResult(ev agent.ToolResult, now time.Time) {
 		h.runs = append(h.runs, run.ID)
 		h.mu.Unlock()
 		_ = h.r.st.Emit(core.TestRunRecorded{Session: h.id, Run: run})
-		act.Run, act.Failed = run.ID, !run.OK
+	}
+	path, added, removed, ok := editOf(call, ev)
+	if !ok {
+		return
 	}
 	h.mu.Lock()
-	h.activity = append(h.activity, act)
 	threads := slices.Clone(h.delivered)
 	h.mu.Unlock()
-	if act.Kind == "edit" && act.Path != "" {
-		for _, tid := range threads {
-			_, _ = h.r.mutateThread(h.id, tid, func(t *core.Thread) error {
-				t.Touched = touch(t.Touched, h.r.projectOf(h.id, act.Path), act.Path, act.Added, act.Removed)
-				return nil
-			})
-		}
+	for _, tid := range threads {
+		_, _ = h.r.mutateThread(h.id, tid, func(t *core.Thread) error {
+			t.Touched = touch(t.Touched, h.r.projectOf(h.id, path), path, added, removed)
+			return nil
+		})
 	}
 }
 

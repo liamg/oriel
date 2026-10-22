@@ -35,15 +35,10 @@ what you pasted, and the agent's replies. **Open in editor** goes to the anchor;
 completes the tasks it asked for. At the right: where it is and who has it, the files it changed, the tasks and
 requests it spawned, and other requests about the same file.
 
-## Activity
-
-What the agent did on the way to a reply: each edit (with its lines added and removed, and **view** to open the file),
-lookup and test run.
-
 ## Evidence
 
-A reply that says the tests pass links to the run behind it: ✓ or ✕, its counts and its id. A click opens the run:
-the command, who ran it, what failed and what it printed. A claim with no passing run behind it is flagged ⚠.
+A reply that says the tests pass with no passing run behind it is flagged ⚠. The runs themselves are in the agent
+console, where a click opens one: the command, who ran it, what failed and what it printed.
 
 ## Composer
 

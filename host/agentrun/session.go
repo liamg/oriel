@@ -33,7 +33,6 @@ type session struct {
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
 	held         []core.ThreadID // threads given to turns that left background work running: busy until it's done
-	activity     []core.Activity // what the agent did since it last replied
 	runs         []string        // test runs since it last replied
 	calls        map[string]agent.ToolCall
 	items        map[string]core.Item
