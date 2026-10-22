@@ -12,6 +12,22 @@ name = "oriel"
 "@punctuation" = "syn.punct"
 "@operator"    = "syn.punct"
 "@variable"    = "syn.variable"
+"@character"   = "syn.number"
+"@label"       = "syn.type"
+"@tag"           = "syn.keyword"
+"@tag.attribute" = "syn.type"
+"@tag.delimiter" = "syn.punct"
+"@markup.heading"       = { fg = "syn.function", bold = true }
+"@markup.strong"        = { bold = true }
+"@markup.italic"        = { italic = true }
+"@markup.underline"     = { underline = true }
+"@markup.strikethrough" = "syn.comment"
+"@markup.quote"         = { fg = "syn.comment", italic = true }
+"@markup.raw"           = "syn.string"
+"@markup.list"          = "syn.keyword"
+"@markup.link"          = "syn.punct"
+"@markup.link.label"    = "syn.function"
+"@markup.link.url"      = { fg = "syn.string", underline = true }
 
 [dark.palette]
 bg0 = "#060606"

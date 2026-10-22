@@ -43,7 +43,8 @@ func (x *Editor) path(p vim.Pane) string {
 	return path
 }
 
-// presentIn shows window with the presenter name, or as text again when it shows it already.
+// presentIn shows window with the presenter name (the first that takes its file when name is ""), or as text again
+// when it shows it already.
 func (x *Editor) presentIn(window, name string) error {
 	id, err := x.windowID(window)
 	if err != nil {
@@ -55,7 +56,11 @@ func (x *Editor) presentIn(window, name string) error {
 		return nil
 	}
 	if name == "" {
-		return nil
+		prs := uireg.Presenters(x.h, x.path(p))
+		if len(prs) == 0 {
+			return nil
+		}
+		name = prs[0].Name
 	}
 	pr, ok := uireg.PresenterNamed(x.h, name)
 	if !ok {
