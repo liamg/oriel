@@ -22,6 +22,10 @@ extern char *orielAXSubstring(uintptr_t h, uint64_t id, long loc, long len);
 
 static const void *orielAXKey = &orielAXKey;
 
+// orielAXViews is each bridge's view, held weakly and only touched on the main thread, so a block queued for a view
+// AppKit has since freed finds nil.
+static NSMapTable<NSNumber *, NSView *> *orielAXViews;
+
 static NSString *orielTake(char *s) {
 	if (s == NULL) {
 		return nil;
@@ -329,6 +333,10 @@ static void orielAXOverride(Class sub, Class base, SEL sel, IMP imp, const char 
 static void orielAXAttach(uintptr_t viewRef, uintptr_t h) {
 	NSView *view = (__bridge NSView *)(void *)viewRef;
 	dispatch_async(dispatch_get_main_queue(), ^{
+		if (orielAXViews == nil) {
+			orielAXViews = [NSMapTable strongToWeakObjectsMapTable];
+		}
+		[orielAXViews setObject:view forKey:@(h)];
 		objc_setAssociatedObject(view, orielAXKey, @(h), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 		Class base = object_getClass(view);
 		if (strncmp(class_getName(base), "OrielAX_", 8) == 0) {
@@ -350,10 +358,10 @@ static void orielAXAttach(uintptr_t viewRef, uintptr_t h) {
 	});
 }
 
-static void orielAXDetach(uintptr_t viewRef) {
-	NSView *view = (__bridge NSView *)(void *)viewRef;
+// orielAXDetach forgets h's view without touching it: the window's loop ends while AppKit is freeing the view.
+static void orielAXDetach(uintptr_t h) {
 	dispatch_async(dispatch_get_main_queue(), ^{
-		objc_setAssociatedObject(view, orielAXKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+		[orielAXViews removeObjectForKey:@(h)];
 	});
 }
 
@@ -373,10 +381,13 @@ static void orielAXRelease(uintptr_t el) {
 	});
 }
 
-static void orielAXPost(uintptr_t viewRef, uintptr_t h, uint64_t node, int kind, char *text) {
-	NSView *view = (__bridge NSView *)(void *)viewRef;
+static void orielAXPost(uintptr_t h, uint64_t node, int kind, char *text) {
 	NSString *s = orielTake(text);
 	dispatch_async(dispatch_get_main_queue(), ^{
+		NSView *view = [orielAXViews objectForKey:@(h)];
+		if (view == nil) {
+			return;
+		}
 		id target = view;
 		if (node != 0) {
 			uintptr_t el = orielAXElementOf(h, node);
@@ -493,7 +504,7 @@ func (b *appkitBridge) update(c accessChange) {
 		if n.Text != "" {
 			text = C.CString(n.Text) // freed by orielAXPost
 		}
-		C.orielAXPost(C.uintptr_t(v), C.uintptr_t(b.h), C.uint64_t(n.ID), C.int(n.Kind), text)
+		C.orielAXPost(C.uintptr_t(b.h), C.uint64_t(n.ID), C.int(n.Kind), text)
 	}
 }
 
@@ -501,9 +512,7 @@ func (b *appkitBridge) activate(bool) {}
 
 func (b *appkitBridge) close() {
 	appkitBridges.Delete(b.h)
-	if v := b.nsview.Load(); v != 0 {
-		C.orielAXDetach(C.uintptr_t(v))
-	}
+	C.orielAXDetach(C.uintptr_t(b.h))
 	b.els.clear()
 }
 
