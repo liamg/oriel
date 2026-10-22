@@ -195,7 +195,7 @@ func (x *Plugin) readUsage(ctx context.Context, _ func(string, float64)) (struct
 		x.history = fetched[[]core.ProviderUsage]{}
 		x.mu.Unlock()
 	})
-	return struct{}{}, usageError(x.h, err)
+	return struct{}{}, err
 }
 
 // seen keeps the plan readings as they come, and notes when an agent did something that costs.

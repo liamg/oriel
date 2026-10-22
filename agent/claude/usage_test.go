@@ -155,14 +155,18 @@ func TestUsageEscapesADialog(t *testing.T) {
 	checkProbed(t, u)
 }
 
-// A dialog Escape doesn't close ends the probe, after a few tries, with an error that says so.
+// A dialog Escape doesn't close ends the probe when its time is up, /usage typed no more than probeTries times, with
+// an error that says so.
 func TestUsageDialogInTheWay(t *testing.T) {
 	p, _ := usageProbe(t)
 	quickRetype(t)
 	t.Setenv("ORIEL_FAKE_DIALOG", "stuck")
-	_, err := p.Usage(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	_, err := p.Usage(ctx)
 	var pe *ProbeError
-	if !errors.As(err, &pe) || !pe.Hello || pe.Tries != probeTries || !strings.Contains(err.Error(), "dialog") {
+	if !errors.As(err, &pe) || !pe.Hello || pe.Tries != probeTries || !errors.Is(err, context.DeadlineExceeded) ||
+		!strings.Contains(err.Error(), "dialog") {
 		t.Fatalf("err = %v", err)
 	}
 	if !strings.Contains(pe.Screen, "New MCP server found in .mcp.json") {
@@ -179,6 +183,19 @@ func TestUsageNoHello(t *testing.T) {
 	_, err := p.Usage(ctx)
 	var pe *ProbeError
 	if !errors.As(err, &pe) || pe.Hello || pe.Tries != 0 || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+// $.session.usage() failing ends the probe at its time with an error that says what it failed with.
+func TestUsageSaysWhySessionUsageFailed(t *testing.T) {
+	p, _ := usageProbe(t)
+	t.Setenv("ORIEL_FAKE_USAGE_FAILS", "Invalid time value")
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := p.Usage(ctx)
+	var pe *ProbeError
+	if !errors.As(err, &pe) || pe.Usage != "Invalid time value" || !strings.Contains(err.Error(), "$.session.usage() failed: Invalid time value") {
 		t.Fatalf("err = %v", err)
 	}
 }

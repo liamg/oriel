@@ -171,7 +171,11 @@ func (f *fake) poll(turns chan<- string) {
 			if read {
 				rls = fakeRateLimits
 			}
-			go func() { _ = f.hook("event", map[string]any{"kind": "usage", "rateLimits": rls}, nil) }()
+			fails := os.Getenv("ORIEL_FAKE_USAGE_FAILS")
+			if fails != "" {
+				rls = []any{}
+			}
+			go func() { _ = f.hook("event", map[string]any{"kind": "usage", "rateLimits": rls, "error": fails}, nil) }()
 		case "fork":
 			go func() {
 				f.mu.Lock()

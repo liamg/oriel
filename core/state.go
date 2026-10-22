@@ -16,8 +16,9 @@ type State struct {
 	Tabs          []SessionID     `json:"tabs,omitempty"`  // the sessions open in the window, in the order they opened
 	Notifications []Notification  `json:"notifications"`   // oldest first
 	Machine       MachineState    `json:"machine,omitzero"`
-	Usage         []ProviderUsage `json:"usage,omitempty"` // each provider's plan windows
-	Repos         []Repo          `json:"repos,omitempty"` // the registered checkouts
+	Usage         []ProviderUsage `json:"usage,omitempty"`         // each provider's plan windows
+	UsageFailures []UsageFailure  `json:"usageFailures,omitempty"` // the providers whose last read of them failed
+	Repos         []Repo          `json:"repos,omitempty"`         // the registered checkouts
 }
 
 type SessionState struct {
@@ -105,6 +106,14 @@ type ProviderUsage struct {
 	Source      string        `json:"source,omitempty"` // where the windows are read from: "Codex's account/rateLimits/read"
 }
 
+// UsageFailure is why a provider's last read of its plan windows failed.
+type UsageFailure struct {
+	Provider string `json:"provider"`
+	Err      string `json:"err"`
+	Probe    bool   `json:"probe,omitempty"`   // its probe ran and read no windows
+	Started  bool   `json:"started,omitempty"` // the probe's agent came up and was asked
+}
+
 // Same says whether u and o are the same account's plan.
 func (u ProviderUsage) Same(o ProviderUsage) bool {
 	return u.Provider == o.Provider && u.Account == o.Account
@@ -141,6 +150,7 @@ func (s State) Clone() State {
 	}
 	s.Machine.SignedOut = slices.Clone(s.Machine.SignedOut)
 	s.Usage = slices.Clone(s.Usage)
+	s.UsageFailures = slices.Clone(s.UsageFailures)
 	s.Repos = slices.Clone(s.Repos)
 	return s
 }

@@ -21,6 +21,7 @@ func init() {
 	RegisterEvent[TranscriptAppended]("TranscriptAppended")
 	RegisterEvent[TestRunRecorded]("TestRunRecorded")
 	RegisterEvent[UsageSampled]("UsageSampled")
+	RegisterEvent[UsageRead]("UsageRead")
 	RegisterEvent[MachineChanged]("MachineChanged")
 	RegisterEvent[RuleAdded]("RuleAdded")
 }
@@ -337,6 +338,27 @@ func (e UsageSampled) Apply(s *State) error {
 	}
 	u := e.Usage
 	s.Usage = upsert(s.Usage, u, func(o ProviderUsage) bool { return o.Same(u) })
+	return nil
+}
+
+// UsageRead is how a provider's read of its plan windows went: Failure is why it failed, nil when it didn't.
+type UsageRead struct {
+	Provider string        `json:"provider"`
+	Failure  *UsageFailure `json:"failure,omitempty"`
+}
+
+func (e UsageRead) Scope() SessionID { return "" }
+
+func (e UsageRead) Apply(s *State) error {
+	if e.Provider == "" {
+		return fmt.Errorf("usage read has no provider")
+	}
+	s.UsageFailures = slices.DeleteFunc(slices.Clone(s.UsageFailures), func(f UsageFailure) bool { return f.Provider == e.Provider })
+	if e.Failure != nil {
+		f := *e.Failure
+		f.Provider = e.Provider
+		s.UsageFailures = append(s.UsageFailures, f)
+	}
 	return nil
 }
 

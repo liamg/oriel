@@ -41,20 +41,21 @@ type session struct {
 	events *eventq.Queue
 	done   chan struct{} // closed once the process has exited
 
-	mu      sync.Mutex
-	id      string
-	ready   bool
-	working bool
-	cmds    []waitOut
-	wake    chan struct{}
-	asks    map[string]chan agent.Decision // permissions and questions waiting on Answer
-	forks   map[string]chan forkAnswerIn
-	seq     int
-	base    transcript.Usage // the tally when the running turn started
-	screen  screen
-	shown   string // the end of the terminal's text, for saying what was on screen
-	out     bool   // its login has been said to be gone, and not seen back
-	once    sync.Once
+	mu       sync.Mutex
+	id       string
+	ready    bool
+	working  bool
+	cmds     []waitOut
+	wake     chan struct{}
+	asks     map[string]chan agent.Decision // permissions and questions waiting on Answer
+	forks    map[string]chan forkAnswerIn
+	seq      int
+	base     transcript.Usage // the tally when the running turn started
+	screen   screen
+	shown    string // the end of the terminal's text, for saying what was on screen
+	usageErr string // why $.session.usage() last failed; "" when it didn't
+	out      bool   // its login has been said to be gone, and not seen back
+	once     sync.Once
 }
 
 func (s *session) ID() string {
@@ -280,6 +281,12 @@ func (s *session) lastScreen() string {
 	return s.shown
 }
 
+func (s *session) usageFailure() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.usageErr
+}
+
 // serve answers the mod's hook calls.
 func (s *session) serve() {
 	for {
@@ -481,6 +488,9 @@ func (s *session) event(in eventIn) {
 		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage(), s.prices.Book()), Background: bg})
 		s.planUsage(in.RateLimits)
 	case "usage":
+		s.mu.Lock()
+		s.usageErr = in.Error
+		s.mu.Unlock()
 		s.planUsage(in.RateLimits)
 	case "subagent-start":
 		s.push(agent.Subagent{ID: in.ID, Description: in.Description, Type: in.Type, Prompt: in.Prompt})

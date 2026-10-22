@@ -71,7 +71,7 @@ type eventIn struct {
 	Type        string `json:"type,omitempty"`
 	Prompt      string `json:"prompt,omitempty"`
 	Text        string `json:"text,omitempty"`
-	// api-error
+	// api-error; usage: why $.session.usage() failed
 	Error string `json:"error,omitempty"`
 }
 
