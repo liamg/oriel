@@ -36,7 +36,7 @@ func Terms(list string) []string {
 	return out
 }
 
-// Files lists root's tracked files, without vendor/.
+// Files lists root's tracked files, without vendor/ and this package, which names the built-in terms.
 func Files(root string) ([]string, error) {
 	out, err := exec.Command("git", "-C", root, "ls-files", "-z").Output()
 	if err != nil {
@@ -44,7 +44,7 @@ func Files(root string) ([]string, error) {
 	}
 	var files []string
 	for f := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
-		if f != "" && !strings.HasPrefix(f, "vendor/") {
+		if f != "" && !strings.HasPrefix(f, "vendor/") && !strings.HasPrefix(f, "tools/leakcheck/") {
 			files = append(files, f)
 		}
 	}

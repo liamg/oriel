@@ -26,7 +26,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
       - run: make check
         env:
-          ORIEL_LEAK_DENYLIST: ${{ vars.ORIEL_LEAK_DENYLIST }}
+          ORIEL_LEAK_DENYLIST: ${{ secrets.ORIEL_LEAK_DENYLIST }}
       - name: Install delve and debugpy, so the dap tests run live too
         shell: bash
         run: |

@@ -105,7 +105,7 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
 - Kind special cases are at 0: code asks a session's kind (`registry.Can`, `Label`, `Chips`, kind-scoped
   contributions) rather than comparing `core.Kind*` or reading another kind's data. A kind's own files say so with a
   `//oriel:kind <kind>` line, and only they may name it (`docs/architecture.md`, "Sessions and kinds").
-- `make leakcheck` refuses private names in tracked files; CI passes the names in `ORIEL_LEAK_DENYLIST`.
+- `make leakcheck` refuses private names in tracked files; CI passes the names in the `ORIEL_LEAK_DENYLIST` secret.
 - Package-level state is at 0 (`tools/ratchet/state.go`): a package-level var that's written after it's declared,
   or holds a lock, an atomic, a channel or a pointer to something made, is shared by every app and test in the
   process. Put it on the instance that owns it (the app, a plugin, the host, a client, a UI with `ui.Keep`) and
