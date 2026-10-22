@@ -93,6 +93,8 @@ func (s editors) Window(id string) (registry.EditorWindow, bool) {
 
 func (s editors) Mode() string { return s.x.e.Mode() }
 
+func (s editors) Recording() (rune, bool) { return s.x.recording() }
+
 func (s editors) At(at registry.At) registry.At {
 	e := s.x.e
 	at.Buffer, at.Window = e.Name(), strconv.Itoa(int(e.WindowID()))
