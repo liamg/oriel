@@ -3,6 +3,7 @@
 package sessions
 
 import (
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -22,8 +23,17 @@ func (k registryKinds) Kind(kind core.Kind) (core.KindSpec, bool) {
 	return sk.Spec(), true
 }
 
+// registryProviders are the agent providers registered with the app, by Order.
+func registryProviders(r registry.Contributions) []agent.Provider {
+	var out []agent.Provider
+	for _, p := range registry.AgentProviders(r) {
+		out = append(out, p.Provider)
+	}
+	return out
+}
+
 // contributeKinds registers the work and direct kinds and the Sessions and host services, and gives the host the
-// registry's kinds.
+// registry's kinds and agent providers.
 func (x *Sessions) contributeKinds(h plugin.Host) {
 	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.WorkKind}, Source: "builtin:sessions"}))
 	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.DirectKind}, Source: "builtin:sessions"}))
@@ -49,6 +59,8 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 		x.Add(h.Contribute(registry.Service{Name: registry.HostService, Impl: host.Access(w), Source: "builtin:sessions"}))
 		w.SetKinds(registryKinds{h})
 		x.Add(kit.OnDispose(func() { w.SetKinds(nil) }))
+		w.SetProviders(func() []agent.Provider { return registryProviders(h) })
+		x.Add(kit.OnDispose(func() { w.SetProviders(nil) }))
 	}
 }
 

@@ -59,10 +59,10 @@ func sandboxedSessionOn(t *testing.T, backend sandbox.Backend) (*apptest.Window,
 	return r, lw, se.Snapshot()
 }
 
-// The Permissions view lists the rules in force with their sources (the model's endpoint among them), sets the
+// The Permissions view lists the rules in force with their sources (an endpoint the sandbox's environment points at among them), sets the
 // session's own, and shows the connections the sandbox reported, each of which can be blocked from its row.
 func TestPermissionsViewShowsRulesAndConnections(t *testing.T) {
-	t.Setenv("ANTHROPIC_BASE_URL", "http://litellm.tail1234.ts.net:4000")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://litellm.tail1234.ts.net:4000")
 	r, lw, se := sandboxedSession(t)
 	r.TypeKeys("<D-A>")
 	r.ClickText("Permissions and connections ›")
@@ -71,9 +71,9 @@ func TestPermissionsViewShowsRulesAndConnections(t *testing.T) {
 			"hosts the agent needs", "built-in list", "anything else", "TOOLS")
 	})
 	r.ClickText("Show")
-	r.WaitText("api.anthropic.com:443")
+	r.WaitText("github.com:443")
 	r.ClickText("Hide")
-	r.WaitGone("api.anthropic.com:443")
+	r.WaitGone("github.com:443")
 
 	r.ClickText("host or host:port, *.example.com")
 	r.TypeText("tracker.example.com:443")

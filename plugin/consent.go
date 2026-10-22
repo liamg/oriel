@@ -42,7 +42,7 @@ func groupOf(c Capability) string {
 		return Groups[0]
 	case CapInputObserve, CapFSRead, CapFSWrite, CapExec, CapClipboard:
 		return Groups[2]
-	case CapGate:
+	case CapGate, CapAgentProvider:
 		return Groups[3]
 	}
 	return Groups[1]
@@ -179,6 +179,8 @@ func Explain(g Grant) string {
 		return "send prompts and comments to a session's agent, which can steer it"
 	case CapAgentTools:
 		return "offer " + scope + " to agents; tool output reaches the agent"
+	case CapAgentProvider:
+		return "be an agent sessions run: it's given your prompts and acts in your workspaces"
 	case CapGate:
 		return "veto and decide hooks: block commits and answer permission prompts automatically"
 	case CapSessionControl:

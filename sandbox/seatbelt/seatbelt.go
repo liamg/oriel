@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -18,6 +17,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentcmd"
 	"github.com/liamg/oriel/sandbox/agentsock"
@@ -57,19 +57,19 @@ func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, 
 	if err := Available(); err != nil {
 		return sandbox.Command{}, err
 	}
-	return s.command(root, cwd, argv, o)
+	return s.command(ctx, root, cwd, argv, o)
 }
 
 // Shell is a shell under root's profile, as the agent runs.
-func (s *Seatbelt) Shell(_ context.Context, root, cwd string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) Shell(ctx context.Context, root, cwd string, o sandbox.LaunchOptions) (sandbox.Command, error) {
 	if err := Available(); err != nil {
 		return sandbox.Command{}, err
 	}
-	return s.command(root, cwd, sandbox.ShellArgv, o)
+	return s.command(ctx, root, cwd, sandbox.ShellArgv, o)
 }
 
 // command writes root's profile and returns the agent's command under it.
-func (s *Seatbelt) command(root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) command(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
 	if rec, ok := sandbox.Load(root); !ok || !rec.Sandboxed() {
 		return sandbox.Command{}, errors.New("this workspace is not sandboxed")
 	}
@@ -77,20 +77,24 @@ func (s *Seatbelt) command(root, cwd string, argv []string, o sandbox.LaunchOpti
 	if err != nil {
 		return sandbox.Command{}, err
 	}
-	if err := sandbox.Prepare(root, cwd, o); err != nil {
-		return sandbox.Command{}, err
-	}
-	binds, err := sandbox.Binds(root, cwd, o.ModDir)
-	if err != nil {
-		return sandbox.Command{}, err
-	}
-	bin, reads, err := binDir(root)
-	if err != nil {
-		return sandbox.Command{}, err
-	}
 	home, run := sandbox.HomeDir(root), sandbox.RunDir(root)
+	needs, err := sandbox.Needs(ctx, root, cwd, o, agent.SandboxPlace{OS: runtime.GOOS, Arch: runtime.GOARCH, Home: home, UID: id.UID, Shared: true})
+	if err != nil {
+		return sandbox.Command{}, err
+	}
+	if err := sandbox.Prepare(root); err != nil {
+		return sandbox.Command{}, err
+	}
+	binds, err := sandbox.Binds(root, cwd, needs)
+	if err != nil {
+		return sandbox.Command{}, err
+	}
+	bin, reads, err := binDir(root, needs.Bins)
+	if err != nil {
+		return sandbox.Command{}, err
+	}
 	hostHome, _ := os.UserHomeDir()
-	hostPath := sandbox.HostEnv(o.Environ, []string{"PATH"})["PATH"]
+	hostPath := sandbox.HostEnv(o.Environ, []string{"PATH"}, needs)["PATH"]
 	reads = append(reads, toolchains(hostHome, hostPath)...)
 
 	p := loopback(o.Config.Loopback)
@@ -118,7 +122,7 @@ func (s *Seatbelt) command(root, cwd string, argv []string, o sandbox.LaunchOpti
 	}
 	p = real(p)
 
-	env := sandbox.AgentEnv(root, o, false, map[string]string{
+	env := sandbox.AgentEnv(root, o, needs, false, map[string]string{
 		"HOME":          home,
 		"USER":          id.Name,
 		"LOGNAME":       id.Name,
@@ -146,7 +150,7 @@ func (s *Seatbelt) command(root, cwd string, argv []string, o sandbox.LaunchOpti
 	if err := os.WriteFile(profile, []byte(SBPL(p)), 0o600); err != nil {
 		return sandbox.Command{}, err
 	}
-	return sandbox.Command{Argv: append([]string{sandboxExec, "-f", profile}, argv...), Env: environ(env), Dir: cwd}, nil
+	return sandbox.Command{Argv: append([]string{sandboxExec, "-f", profile}, argv...), Env: environ(env), Dir: cwd, Needs: needs}, nil
 }
 
 func (s *Seatbelt) Stop(_ context.Context, root string) error {
@@ -165,13 +169,8 @@ func (*Seatbelt) Health(_ context.Context, cfg sandbox.Config) []sandbox.Problem
 			Fix: "Set sandbox.backend to docker."}}
 	}
 	var out []sandbox.Problem
-	if _, err := exec.LookPath("claude"); err != nil {
-		out = append(out, sandbox.Problem{Code: "claude-missing", Blocking: true,
-			Message: "claude is not installed on this machine", Fix: "Install Claude Code; seatbelt sandboxes run the host's."})
-	}
 	var unused []string
-	for name, set := range map[string]bool{"sandbox.image": cfg.Image != "", "sandbox.claude_version": cfg.ClaudeVersion != "",
-		"sandbox.memory": cfg.Memory != "", "sandbox.pids_limit": cfg.PidsLimit != 0} {
+	for name, set := range map[string]bool{"sandbox.image": cfg.Image != "", "sandbox.memory": cfg.Memory != "", "sandbox.pids_limit": cfg.PidsLimit != 0} {
 		if set {
 			unused = append(unused, name)
 		}
@@ -182,7 +181,7 @@ func (*Seatbelt) Health(_ context.Context, cfg sandbox.Config) []sandbox.Problem
 			Message: strings.Join(unused, ", ") + " only apply to docker sandboxes",
 			Fix:     "Clear them, or set sandbox.backend to docker."})
 	}
-	return append(out, sandbox.LoginProblems(cfg)...)
+	return out
 }
 
 // Sweep has nothing to do: a sandbox's proxy goes with Stop, or with this process.
@@ -238,9 +237,9 @@ func (s *Seatbelt) proxy(root string) (int, error) {
 	return p.port, nil
 }
 
-// binDir is root's directory of the host's oriel and claude, first on the agent's PATH after the shims, with the
-// paths the agent must read to run them.
-func binDir(root string) (string, []string, error) {
+// binDir is root's directory of the host's oriel and the agent's binaries, first on the agent's PATH after the
+// shims, with the paths the agent must read to run them.
+func binDir(root string, bins map[string]string) (string, []string, error) {
 	bin := filepath.Join(sandbox.Dir(root), "bin")
 	if err := os.MkdirAll(bin, 0o700); err != nil {
 		return "", nil, err
@@ -250,8 +249,8 @@ func binDir(root string) (string, []string, error) {
 		return "", nil, err
 	}
 	targets := map[string]string{"oriel": self}
-	if c, err := exec.LookPath("claude"); err == nil {
-		targets["claude"] = c
+	for name, path := range bins {
+		targets[name] = path
 	}
 	var reads []string
 	for name, target := range targets {

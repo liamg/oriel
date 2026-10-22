@@ -14,8 +14,10 @@ the agent console open, so you can read what led to the ask before you answer it
 ## Permission
 
 The agent wants to run a command or use a tool. **Allow once** (`y`) lets this call through; **Always in this
-workspace** (`a`) also makes the rule shown at the right, so the same kind of call goes through from now on;
-**Deny** (`n`) refuses it, and the agent reads that as the tool's result.
+workspace** (`a`) also makes the rule shown at the right, so the same kind of call goes through from now on, after a
+restart too: `Bash(go test:*)` for commands starting `go test`, `Edit` for edits; **Deny** (`n`) refuses it, and the
+agent reads that as the tool's result. Whatever the agent, it never posts to a code review, and an edit of your own
+checkout is refused before you're asked.
 
 ## Deny with a note
 
@@ -39,10 +41,10 @@ The agent asks something with options: click one to answer. Where it takes sever
 ## Login
 
 The agent's login stopped working: an expired or revoked login, or none. Every session with that provider waits on
-this card, and a notice says what to do. **Log in** (`l`) opens the agent's own terminal with its login command typed
-(`/login` for Claude); finish signing in there. An agent with no login command of its own (Codex) says what to run in
-a terminal (`codex login`). Once you're signed in the cards go by themselves, and the sessions carry on; **Check
-again** (`c`) looks now.
+this card, and a notice says what to do. For a provider that signs in from Oriel (Codex), **Log in** (`l`) opens its
+sign-in in your browser. Otherwise it opens the agent's own terminal with its login command typed (`/login` for
+Claude); finish signing in there. An agent with neither says what to run in a terminal. Once you're signed in the
+cards go by themselves, and the sessions carry on; **Check again** (`c`) looks now.
 
 ## Security key {#key}
 

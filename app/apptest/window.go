@@ -406,7 +406,23 @@ func AgentWindow(t *testing.T) (*Window, *agenttest.FakeSession, *rig.Host) {
 // AgentWindowOn is AgentWindow on the host given.
 func AgentWindowOn(t *testing.T, h *rig.Host) (*Window, *agenttest.FakeSession, *rig.Host) {
 	t.Helper()
-	w := NewWindow(t, WindowOptions{State: t.TempDir(), Config: Connect(h.W)})
+	return AgentWindowWith(t, h, WindowOptions{})
+}
+
+// AgentWindowWith is AgentWindowOn with the window's options: its plugins, a config change past the host's.
+func AgentWindowWith(t *testing.T, h *rig.Host, o WindowOptions) (*Window, *agenttest.FakeSession, *rig.Host) {
+	t.Helper()
+	more := o.Config
+	o.Config = func(c *app.Config) {
+		Connect(h.W)(c)
+		if more != nil {
+			more(c)
+		}
+	}
+	if o.State == "" {
+		o.State = t.TempDir()
+	}
+	w := NewWindow(t, o)
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	w.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": h.Repo})
 	a := h.Fake.WaitStarted(t)

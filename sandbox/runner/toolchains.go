@@ -42,6 +42,22 @@ func validTool(t Tool) bool {
 	return toolName.MatchString(t.Name) && toolVersion.MatchString(t.Version)
 }
 
+// agentTool is a tool an agent's provider names: a mise backend's too (npm:@google/gemini-cli), at a version.
+var agentTool = regexp.MustCompile(`^(?:[a-z][a-z0-9-]*:)?@?[A-Za-z0-9][A-Za-z0-9._/-]{0,80}@[A-Za-z0-9][A-Za-z0-9._+-]{0,40}$`)
+
+// agentTools are the tools an agent's provider asks a container for (agent.SandboxNeeds.Tools), each name@version.
+func agentTools(names []string) ([]Tool, error) {
+	var out []Tool
+	for _, n := range names {
+		if !agentTool.MatchString(n) {
+			return nil, fmt.Errorf("the agent asks for %q, which isn't a mise tool at a version (node@22, npm:@google/gemini-cli@0.9.0)", n)
+		}
+		i := strings.LastIndex(n, "@")
+		out = append(out, Tool{Name: n[:i], Version: n[i+1:]})
+	}
+	return out, nil
+}
+
 // DetectTools works out the toolchains a project needs: from its mise or asdf
 // config when it has one, else from Go, Node and Python metadata. Only names
 // and versions are taken; nothing in the project is run.

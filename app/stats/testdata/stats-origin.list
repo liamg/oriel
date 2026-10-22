@@ -460,11 +460,11 @@ clip 224,38 1376x936 r 0
       rect 836.2247,632.044 34.087097x14 fill #b3ab9980
       rect 872.31177,632.044 21.688232x14 fill #b3ab9952
     pop
-    text "claude-opus-4-1" @592,668.00397 #ece6d8 JetBrains Mono 11
+    text "claude-opus-4-7" @592,668.00397 #ece6d8 JetBrains Mono 11
     text "1,937" @743.03125,668.00397 #b3ab99 JetBrains Mono 11
     text "165M" @801.625,668.00397 #b3ab99 JetBrains Mono 11
     text "$186.79" @847.84375,668.00397 #ece6d8 JetBrains Mono 11
-    text "claude-sonnet-4-5" @592,696.00397 #ece6d8 JetBrains Mono 11
+    text "claude-sonnet-4-6" @592,696.00397 #ece6d8 JetBrains Mono 11
     text "527" @756.21875,696.00397 #b3ab99 JetBrains Mono 11
     text "32M" @808.21875,696.00397 #b3ab99 JetBrains Mono 11
     text "$26.29" @854.4375,696.00397 #ece6d8 JetBrains Mono 11

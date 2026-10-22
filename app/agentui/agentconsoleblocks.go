@@ -16,6 +16,7 @@ const (
 	blockItem
 	blockSubagents
 	blockBackground
+	blockProcesses
 	blockFork
 )
 
@@ -32,6 +33,7 @@ type blocksKey struct {
 	asks                            *core.Ask
 	nAsks                           int
 	starting, subagents, background bool
+	processes                       bool
 	forks                           int
 }
 
@@ -43,11 +45,11 @@ type consoleBlocks struct {
 	keys   []string // the blocks' keys, the lead's left out
 }
 
-// of are the blocks of se and of forks side answers: its items, its asks where they arose, its subagents and background
-// tasks, and the lead when there's nothing yet or it's starting.
+// of are the blocks of se and of forks side answers: its items, its asks where they arose, its subagents, background
+// tasks and running processes, and the lead when there's nothing yet or it's starting.
 func (l *consoleBlocks) of(se core.SessionState, forks int) []consoleBlock {
 	k := blocksKey{nItems: len(se.Transcript), nAsks: len(se.Asks), starting: se.Agent.Starting != nil, subagents: len(se.Subagents) > 0,
-		background: len(se.Agent.Background) > 0, forks: forks}
+		background: len(se.Agent.Background) > 0, processes: len(se.Agent.Processes) > 0, forks: forks}
 	if k.nItems > 0 {
 		k.items = &se.Transcript[0]
 	}
@@ -79,6 +81,9 @@ func (l *consoleBlocks) of(se core.SessionState, forks int) []consoleBlock {
 	}
 	if k.background {
 		bs = append(bs, consoleBlock{key: "background", kind: blockBackground})
+	}
+	if k.processes {
+		bs = append(bs, consoleBlock{key: "processes", kind: blockProcesses})
 	}
 	emitAsks(time.Time{})
 	for i := range forks {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -18,6 +17,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/jsonrpc"
+	"github.com/liamg/oriel/semver"
 )
 
 // AllowAPIKey, set to 1 in StartSpec.Env, lets a session run on an API-key login, billed per token.
@@ -27,6 +27,10 @@ const AllowAPIKey = "ORIEL_CODEX_ALLOW_API_KEY"
 type Provider struct {
 	Bin      string // codex; "" finds it on PATH
 	OrielBin string // the binary that serves `hook mcp`; "" is this one
+	// ReleasesAPI is where a sandbox's codex is downloaded from: GitHub's API for openai/codex if "".
+	ReleasesAPI string
+
+	downloads sync.Mutex // one download at a time
 }
 
 var _ agent.Provider = (*Provider)(nil)
@@ -50,18 +54,31 @@ func (p *Provider) orielBin() string {
 	return "oriel"
 }
 
-// Detect finds the binary and its version, then asks a short-lived app-server who is signed in.
+// minVersion is the release the app-server protocol vendored in spec/codex is from (rust-v0.163.0).
+const minVersion = "0.163.0"
+
+// Features: a tool-less fork (Session.Fork), images as images, signing in from Oriel, a sandbox, and stopping the
+// background terminals a turn leaves running. It has no terminal of its own here.
+func (p *Provider) Features() agent.Features {
+	return agent.Features{Fork: true, Images: true, Login: true, Sandbox: true, StopProcesses: true}
+}
+
+var _ agent.Featured = (*Provider)(nil)
+
+// Detect finds the binary and its version, then asks a short-lived app-server who is signed in. A codex that isn't
+// installed is a Note, not an error.
 func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 	path, err := exec.LookPath(p.bin())
 	if err != nil {
-		return agent.Install{}, fmt.Errorf("codex isn't installed: %w", err)
+		return agent.Install{Bin: p.bin(), Note: "Codex is not installed, or not on PATH."}, nil
 	}
 	in := agent.Install{Bin: path}
 	vctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	out, err := exec.CommandContext(vctx, path, "--version").Output()
 	if err != nil {
-		return in, fmt.Errorf("codex --version: %w", err)
+		in.Note = "codex --version failed: " + err.Error()
+		return in, nil
 	}
 	in.Version = parseVersion(string(out))
 	actx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -79,7 +96,19 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 	}
 	in.LoggedIn = acct.Account != nil
 	in.Account, in.Note = acct.describe()
+	if in.LoggedIn {
+		in.Login = loginMark(home())
+	}
+	if versionLess(in.Version, minVersion) {
+		in.Note = fmt.Sprintf("Codex %s is too old for Oriel, which needs %s or newer: update codex.", in.Version, minVersion)
+	}
 	return in, nil
+}
+
+func versionLess(a, b string) bool {
+	x, _, errA := semver.ParsePartial(a)
+	y, _, errB := semver.ParsePartial(b)
+	return errA == nil && errB == nil && x.Compare(y) < 0
 }
 
 // parseVersion takes "codex-cli 0.98.0" to "0.98.0".
@@ -91,8 +120,12 @@ func parseVersion(s string) string {
 	return f[len(f)-1]
 }
 
-// Models asks the app-server for its models, falling back to the ones known to exist.
+// Models asks the app-server for its models, falling back to the catalog's. A model the catalog knows takes its
+// context window and size from there: model/list says neither.
 func (p *Provider) Models(ctx context.Context) ([]agent.Model, error) {
+	if _, err := exec.LookPath(p.bin()); err != nil {
+		return staticModels, nil
+	}
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	c, err := p.short(ctx)
@@ -121,28 +154,67 @@ func (p *Provider) Models(ctx context.Context) ([]agent.Model, error) {
 		for _, e := range m.SupportedReasoningEfforts {
 			am.Efforts = append(am.Efforts, e.ReasoningEffort)
 		}
+		if i := slices.IndexFunc(staticModels, func(s agent.Model) bool { return s.ID == m.Model }); i >= 0 {
+			am.Context, am.Small = staticModels[i].Context, staticModels[i].Small
+		}
 		out = append(out, am)
 	}
 	return out, nil
 }
 
+// staticModels are the listed models of Codex's bundled catalog (codex-rs/models-manager/models.json), by its
+// priority: the first is the default, and the fast, affordable one is the small model.
 var staticModels = []agent.Model{
-	{ID: "gpt-5.5-codex", Name: "GPT-5.5-Codex", Efforts: []string{"minimal", "low", "medium", "high"}, Default: true},
-	{ID: "gpt-5.5", Name: "GPT-5.5", Efforts: []string{"minimal", "low", "medium", "high"}},
+	{ID: "gpt-6.1-sol", Name: "GPT-6.1-Sol", Efforts: effortsUltra, Context: 272_000, Default: true},
+	{ID: "gpt-6-astra", Name: "GPT-6-Astra", Efforts: effortsUltra, Context: 272_000},
+	{ID: "gpt-6-sol", Name: "GPT-6-Sol", Efforts: effortsUltra, Context: 272_000},
+	{ID: "gpt-6-luna", Name: "GPT-6-Luna", Efforts: effortsMax, Context: 272_000, Small: true},
+	{ID: "gpt-5.6-sol", Name: "GPT-5.6-Sol", Efforts: effortsUltra, Context: 272_000},
+	{ID: "gpt-5.6-terra", Name: "GPT-5.6-Terra", Efforts: effortsUltra, Context: 272_000},
+	{ID: "gpt-5.6-luna", Name: "GPT-5.6-Luna", Efforts: effortsMax, Context: 272_000},
+	{ID: "gpt-5.5", Name: "GPT-5.5", Efforts: []string{"low", "medium", "high", "xhigh"}, Context: 272_000},
 }
 
-// Usage reads the plan's rate limits from a short-lived app-server.
+var (
+	effortsMax   = []string{"low", "medium", "high", "xhigh", "max"}
+	effortsUltra = []string{"low", "medium", "high", "xhigh", "max", "ultra"}
+)
+
+// ProbeError is why Usage read no windows.
+type ProbeError struct {
+	Up  bool // the app-server came up and was asked
+	Err error
+}
+
+func (e *ProbeError) Error() string {
+	if !e.Up {
+		return "codex: the app-server for the usage check didn't start: " + e.Err.Error()
+	}
+	return "codex: account/rateLimits/read: " + e.Err.Error()
+}
+
+func (e *ProbeError) Unwrap() error    { return e.Err }
+func (e *ProbeError) Provider() string { return "codex" }
+func (e *ProbeError) Started() bool    { return e.Up }
+
+var _ agent.UsageProbeFailed = (*ProbeError)(nil)
+
+// Usage reads the plan's rate limits from a short-lived app-server. With codex not installed there is nothing to
+// read, and nothing went wrong.
 func (p *Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
+	if _, err := exec.LookPath(p.bin()); err != nil {
+		return core.ProviderUsage{Provider: "codex"}, nil
+	}
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	c, err := p.short(ctx)
 	if err != nil {
-		return core.ProviderUsage{}, err
+		return core.ProviderUsage{}, &ProbeError{Err: err}
 	}
 	defer c.close()
 	var r struct{ RateLimits rateLimits }
 	if err := c.rpc.Call(ctx, "account/rateLimits/read", nil, &r); err != nil {
-		return core.ProviderUsage{}, err
+		return core.ProviderUsage{}, &ProbeError{Up: true, Err: err}
 	}
 	u := r.RateLimits.usage(time.Now())
 	if acct, err := readAccount(ctx, c.rpc); err == nil {
@@ -152,25 +224,25 @@ func (p *Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
 	return u, nil
 }
 
-// userFiles are the parts of the host's Codex home a sandboxed agent reads.
-var userFiles = []string{"AGENTS.md", "prompts", "skills"}
+var _ agent.Logged = (*Provider)(nil)
 
-// SandboxCredentials are the host's Codex files a container needs, read-only, under $CODEX_HOME in the
-// container. The sign-in (auth.json) is the sandbox's to hand over.
-func (p *Provider) SandboxCredentials() []agent.Mount {
-	dir := home()
-	if dir == "" {
+// Logs are a thread's rollouts in Codex's home, where the stats read each request.
+func (p *Provider) Logs(cwd, session string) []agent.Log {
+	if session == "" {
 		return nil
 	}
-	var out []agent.Mount
-	for _, f := range userFiles {
-		host := filepath.Join(dir, f)
-		if _, err := os.Stat(host); err == nil {
-			out = append(out, agent.Mount{Host: host, Sandbox: "$CODEX_HOME/" + f, ReadOnly: true})
+	var out []agent.Log
+	for _, t := range p.Discover() {
+		if t.Session == session {
+			out = append(out, t.Logs...)
 		}
 	}
+	slices.SortFunc(out, func(a, b agent.Log) int { return strings.Compare(a.Path, b.Path) })
 	return out
 }
+
+// userFiles are the parts of the host's Codex home a sandboxed agent reads.
+var userFiles = []string{"AGENTS.md", "prompts", "skills"}
 
 // shortServer is an app-server started for one question.
 type shortServer struct {
@@ -179,6 +251,11 @@ type shortServer struct {
 }
 
 func (p *Provider) short(ctx context.Context) (*shortServer, error) {
+	return p.serve(ctx, jsonrpc.Handlers{})
+}
+
+// serve starts an app-server that lives as long as ctx, with h answering what it sends.
+func (p *Provider) serve(ctx context.Context, h jsonrpc.Handlers) (*shortServer, error) {
 	cmd := exec.CommandContext(ctx, p.bin(), "app-server")
 	in, err := cmd.StdinPipe()
 	if err != nil {
@@ -191,7 +268,7 @@ func (p *Provider) short(ctx context.Context) (*shortServer, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-	s := &shortServer{cmd: cmd, rpc: jsonrpc.NewConn(out, in, jsonrpc.Handlers{}, jsonrpc.Options{})}
+	s := &shortServer{cmd: cmd, rpc: jsonrpc.NewConn(out, in, h, jsonrpc.Options{})}
 	if err := initialize(ctx, s.rpc); err != nil {
 		s.close()
 		return nil, err
@@ -343,16 +420,17 @@ func (r rateLimits) usage(now time.Time) core.ProviderUsage {
 	return u
 }
 
-// windowName is "5h" for the short window and "weekly" for the long one, by length when Codex says it.
+// windowName is a window as Claude's are named: "Current session" for the five-hour one, "Current week" for the
+// week's, by length when Codex says it.
 func windowName(mins *int64, i int) string {
 	if mins == nil {
-		return []string{"5h", "weekly"}[i]
+		return []string{"Current session", "Current week"}[i]
 	}
 	switch m := *mins; {
 	case m == 300:
-		return "5h"
+		return "Current session"
 	case m == 7*24*60:
-		return "weekly"
+		return "Current week"
 	case m%(24*60) == 0:
 		return fmt.Sprintf("%dd", m/(24*60))
 	case m%60 == 0:

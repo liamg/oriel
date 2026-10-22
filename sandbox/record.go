@@ -72,6 +72,32 @@ func Dir(root string) string { return filepath.Join(Base(), Key(root)) }
 
 func recordPath(root string) string { return filepath.Join(Dir(root), "record.json") }
 
+// AgentDir is a provider's own directory in root's sandbox: its config, at the same path inside.
+func AgentDir(root, provider string) string { return filepath.Join(Dir(root), provider) }
+
+// AgentCache is where a provider keeps what every sandbox shares: its downloads.
+func AgentCache(provider string) string { return filepath.Join(Base(), "agents", provider) }
+
+// Roots are the workspaces of every sandbox on this machine.
+func Roots() []string {
+	ents, err := os.ReadDir(Base())
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, e := range ents {
+		b, err := os.ReadFile(filepath.Join(Base(), e.Name(), "record.json"))
+		if err != nil {
+			continue
+		}
+		var r Record
+		if json.Unmarshal(b, &r) == nil && r.Root != "" {
+			out = append(out, r.Root)
+		}
+	}
+	return out
+}
+
 // ManifestPath is the authoritative copy of the workspace manifest.
 func ManifestPath(root string) string { return filepath.Join(Dir(root), "manifest.json") }
 

@@ -1,52 +1,23 @@
-// Package price is the price table every cost estimate uses: dollars per million tokens, by model family.
+// Package price is what every cost estimate prices tokens with: a Book of models' list prices, in dollars per
+// million tokens, read from cost.dev's model list. The snapshot vendored with Oriel (spec/cost-dev) is the default;
+// the session host keeps a fresher one (host/pricing).
 package price
 
-import "strings"
-
-// Published list prices, US dollars per million tokens. Only the family in the model's name is matched: the APIs
-// price a tier, not a point release. Fast mode is its own tier. A more specific family comes before one it contains.
-var prices = []struct {
-	family          string
-	in, out         float64
-	fastIn, fastOut float64
-}{
-	{family: "fable", in: 10, out: 50},
-	{family: "mythos", in: 10, out: 50},
-	{family: "opus", in: 5, out: 25, fastIn: 10, fastOut: 50},
-	{family: "sonnet", in: 3, out: 15},
-	{family: "haiku", in: 1, out: 5},
-	// OpenAI's: unverified list prices, not yet checked against OpenAI's pricing page.
-	{family: "gpt-5-nano", in: 0.05, out: 0.4},
-	{family: "gpt-5-mini", in: 0.25, out: 2},
-	{family: "gpt-5", in: 1.25, out: 10},
+// Rate is what a model's tokens cost, per million, by kind.
+type Rate struct {
+	In, Out      float64
+	CacheRead    float64
+	CacheWrite5m float64
+	CacheWrite1h float64
 }
 
-// Cache multipliers over the input price: a five-minute write, an hour-long one, and a read.
+// Cache multipliers over the input price, for a model whose list doesn't price that kind: a read, a five-minute
+// write and an hour-long one.
 const (
+	mulRead    = 0.1
 	mulWrite5m = 1.25
 	mulWrite1h = 2.0
-	mulRead    = 0.1
 )
-
-// Rate is what a model costs, per million tokens.
-type Rate struct {
-	In, Out float64
-}
-
-// RateFor is model's price, or a zero Rate for a model with no known price.
-func RateFor(model string, fast bool) Rate {
-	m := strings.ToLower(model)
-	for _, p := range prices {
-		if !strings.Contains(m, p.family) {
-			continue
-		}
-		if fast && p.fastIn > 0 {
-			return Rate{In: p.fastIn, Out: p.fastOut}
-		}
-		return Rate{In: p.in, Out: p.out}
-	}
-	return Rate{}
-}
 
 // Tokens is one request's tokens, by how they're priced.
 type Tokens struct {
@@ -96,9 +67,9 @@ func (t Tokens) Of(r Rate) Costs {
 	return Costs{
 		Input:        float64(t.Input) * r.In / m,
 		Output:       float64(t.Output) * r.Out / m,
-		CacheRead:    float64(t.CacheRead) * r.In * mulRead / m,
-		CacheWrite5m: float64(t.CacheWrite5m) * r.In * mulWrite5m / m,
-		CacheWrite1h: float64(t.CacheWrite1h) * r.In * mulWrite1h / m,
+		CacheRead:    float64(t.CacheRead) * r.CacheRead / m,
+		CacheWrite5m: float64(t.CacheWrite5m) * r.CacheWrite5m / m,
+		CacheWrite1h: float64(t.CacheWrite1h) * r.CacheWrite1h / m,
 	}
 }
 

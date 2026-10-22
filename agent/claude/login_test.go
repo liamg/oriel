@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
+	"github.com/liamg/oriel/agent/eventq"
 )
 
 // The recordings in testdata are Claude Code 2.1.296's own:
@@ -94,12 +95,12 @@ func TestScreenSignedOut(t *testing.T) {
 
 // The mod's api-error that says to run /login raises AuthExpired beside the failure.
 func TestAuthExpiredFromTheHook(t *testing.T) {
-	s := &session{events: newQueue()}
+	s := &session{events: eventq.New()}
 	s.event(eventIn{Kind: "api-error", Error: "authentication_failed", Text: "OAuth token revoked · Please run /login"})
-	if f, ok := (<-s.events.out).(agent.Failure); !ok || f.Retryable {
+	if f, ok := (<-s.events.Out()).(agent.Failure); !ok || f.Retryable {
 		t.Errorf("first = %+v, want a failure", f)
 	}
-	if a, ok := (<-s.events.out).(agent.AuthExpired); !ok || a.Detail != "OAuth token revoked · Please run /login" {
+	if a, ok := (<-s.events.Out()).(agent.AuthExpired); !ok || a.Detail != "OAuth token revoked · Please run /login" {
 		t.Errorf("then %+v, want AuthExpired", a)
 	}
 }

@@ -102,16 +102,31 @@ func (x *Runner) WriteNotes(id core.SessionID) {
 	}
 	o, _ := x.Prompts()
 	text := agentNotes(se, o.Style())
+	files := x.notesFiles()
 	if gitDir := filepath.Join(se.Dir, ".git"); isDir(gitDir) {
-		if err := excludeIn(gitDir, hostcore.NotesFiles...); err != nil {
+		if err := excludeIn(gitDir, files...); err != nil {
 			x.env.Log.Warn("agent notes", "session", id, "err", err)
 		}
 	}
-	for _, name := range hostcore.NotesFiles {
+	for _, name := range files {
 		if err := writeIfChanged(filepath.Join(se.Dir, name), text); err != nil {
 			x.env.Log.Warn("agent notes", "session", id, "err", err)
 		}
 	}
+}
+
+// notesFiles are the files the notes go in: AGENTS.md, and each provider's own (agent.Features.Notes).
+func (x *Runner) notesFiles() []string {
+	out := []string{"AGENTS.md"}
+	if x.deps.Providers == nil {
+		return out
+	}
+	for _, p := range x.deps.Providers.List() {
+		if n := agent.FeaturesOf(p).Notes; n != "" && !slices.Contains(out, n) {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 func agentNotes(se core.SessionState, style string) string {
@@ -150,6 +165,7 @@ func agentNotes(se core.SessionState, style string) string {
 			b.WriteString("- A memory about " + m.Name + " goes in `" + m.Dir + "`.\n")
 		}
 		b.WriteString("- Anything else goes in your own memory directory.\n\n")
+		b.WriteString("Read each of these memory indexes before you start (an agent that imports @ files has them already):\n\n")
 		for _, m := range mem[1:] {
 			b.WriteString("@" + filepath.Join(m.Dir, "MEMORY.md") + "\n")
 		}

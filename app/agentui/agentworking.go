@@ -20,7 +20,7 @@ func workingLine(c *ui.Ctx, key any, se core.SessionState, width ui.Size) {
 		return
 	}
 	th := c.Theme()
-	who := kit.ProviderName(a.Provider) + " is working"
+	who := kit.ProviderNameIn(c, a.Provider) + " is working"
 	c.Row(key, ui.Style{W: width, Gap: 10, Cross: ui.Center, Pad: ui.PadXY(2, 4)}, func(c *ui.Ctx) {
 		widget.Dots(c, "dots", widget.DotsOpts{Tone: th.C(theme.StatusWorking), Name: who, Help: workingHelp})
 		c.Text("who", who, kit.UIFont(12, th.C(theme.FgMuted)))

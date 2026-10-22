@@ -34,6 +34,8 @@ type SpawnOpts struct {
 	Notify  Handler         // its notifications, the result dropped
 	Exit    func(err error) // once it has stopped, with why: nil for a clean exit
 	Stderr  io.Writer       // its stderr; the plugin's log ("plugin:<id>") by default
+	// Cancel is its protocol's notification that cancels a request, sent for a call whose context ends.
+	Cancel *jsonrpc.Cancel
 }
 
 // maxRequests is how many of a plugin's calls to the host run at once.
@@ -163,7 +165,7 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 				ps.Methods.Call(context.Background(), p, method, params)
 			}
 		},
-	}, jsonrpc.Options{Version: "2.0"})
+	}, jsonrpc.Options{Version: "2.0", Cancel: o.Cancel})
 	ps.mu.Lock()
 	ps.procs = append(ps.procs, pr)
 	ps.mu.Unlock()

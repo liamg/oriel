@@ -250,6 +250,19 @@ func TestMissionCardShowsBackgroundWork(t *testing.T) {
 	s.WantFrame("+2 in background")
 }
 
+// A session whose last turn left processes running that won't wake it says how many at its card's foot, as it works
+// on.
+func TestMissionCardShowsRunningProcesses(t *testing.T) {
+	s, _ := missionScene(t)
+	openMission(t, s)
+	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "deps-sweep", Name: "deps sweep", Kind: core.KindJob, Status: core.StatusWorking,
+		Agent: core.AgentState{Provider: "codex", Running: true, Working: true, Processes: []core.BackgroundTask{
+			{ID: "1001", Kind: "terminal", Description: "npm run dev"}}}}})
+	s.Frame()
+	s.Frame()
+	s.WantFrame("+1 running")
+}
+
 // Allow/Deny works from the card: a waiting session's card is the inbox's card for its ask, and its
 // buttons answer that ask through ask.answer; `a` allows the selected card's; nothing is stacked over the window twice.
 func TestMissionAllowDenyFromTheCard(t *testing.T) {

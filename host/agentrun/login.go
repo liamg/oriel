@@ -3,6 +3,7 @@ package agentrun
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -54,6 +55,10 @@ func (x *Runner) LostLogins() []core.Login {
 // and from, the one it went in, waits on a card until it's back.
 func (x *Runner) LoginLost(from core.SessionID, ev agent.AuthExpired) {
 	l := core.Login{Provider: ev.Provider, Account: ev.Account, Detail: ev.Detail, Terminal: ev.Terminal, Shell: ev.Shell}
+	if p, ok := x.deps.Providers.Get(ev.Provider); ok {
+		_, starts := p.(agent.LoginStarter)
+		l.Browser = starts && agent.FeaturesOf(p).Login
+	}
 	key := ev.Provider + "\x00" + ev.Account
 	x.loginMu.Lock()
 	if x.lost == nil {
@@ -132,6 +137,31 @@ func (h *session) askLogin(key string) {
 			}
 		}
 	}()
+}
+
+// StartLogin begins provider's sign-in from Oriel (agent.LoginStarter), and returns where the user signs in. Once it
+// succeeds the provider's flags clear, as Check again would.
+func (x *Runner) StartLogin(ctx context.Context, provider string) (string, error) {
+	p, ok := x.deps.Providers.Get(provider)
+	if !ok {
+		return "", fmt.Errorf("no agent provider %q", provider)
+	}
+	ls, ok := p.(agent.LoginStarter)
+	if !ok || !agent.FeaturesOf(p).Login {
+		return "", fmt.Errorf("%s doesn't sign in from Oriel", provider)
+	}
+	l, err := ls.StartLogin(ctx)
+	if err != nil {
+		return "", err
+	}
+	x.env.Go("a sign-in", func() {
+		if err := <-l.Done; err != nil {
+			x.env.Log.Warn("agent sign-in", "provider", provider, "err", err)
+			return
+		}
+		x.CheckLogin(provider, true)
+	})
+	return l.URL, nil
 }
 
 // detect asks the provider what's installed and who's signed in.

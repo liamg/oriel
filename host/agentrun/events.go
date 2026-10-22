@@ -1,6 +1,7 @@
 package agentrun
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -19,7 +20,12 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 	now := x.env.Now().UTC()
 	switch ev := ev.(type) {
 	case agent.Ready:
-		h.setAgent(func(a *core.AgentState) { a.Session = ev.ID })
+		h.setAgent(func(a *core.AgentState) {
+			a.Session = ev.ID
+			if a.Model == "" {
+				a.Model = ev.Model
+			}
+		})
 	case agent.TurnStart:
 		h.r.deps.Record(h.snapshot(), stats.Event{At: now, Kind: "turn"})
 		h.mu.Lock()
@@ -239,7 +245,7 @@ func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 	}
 	h.setAgent(func(a *core.AgentState) {
 		a.Working = false
-		a.Background = ev.Background
+		a.Background, a.Processes = ev.Background, ev.Running
 		a.Stats.Turns++
 		u := ev.Usage
 		a.Stats.Input += u.Input
@@ -286,7 +292,7 @@ func toolTitle(tool string, input json.RawMessage) string {
 			return "Bash " + firstLine(c)
 		}
 	case "Read", "Edit", "Write", "MultiEdit", "NotebookEdit":
-		return tool + " " + str("file_path")
+		return tool + " " + cmp.Or(str("file_path"), str("notebook_path"), str("path"), firstPath(in["files"]))
 	case "Grep":
 		return fmt.Sprintf("Search %q", str("pattern"))
 	case "Glob":
@@ -299,6 +305,22 @@ func toolTitle(tool string, input json.RawMessage) string {
 		return "Edit " + str("path")
 	}
 	return name
+}
+
+// firstPath is the path of the first of a list of files: [{"path": …}, …] or [path, …].
+func firstPath(files any) string {
+	list, _ := files.([]any)
+	if len(list) == 0 {
+		return ""
+	}
+	switch f := list[0].(type) {
+	case string:
+		return f
+	case map[string]any:
+		p, _ := f["path"].(string)
+		return p
+	}
+	return ""
 }
 
 func firstLine(s string) string {

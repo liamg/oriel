@@ -60,6 +60,7 @@ type AgentState struct {
 	Pack        string           `json:"pack,omitempty"`       // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
 	Queue       []string         `json:"queue,omitempty"`      // messages waiting for the turn to end
 	Background  []BackgroundTask `json:"background,omitempty"` // work the last turn left running, which will wake it again
+	Processes   []BackgroundTask `json:"processes,omitempty"`  // what the last turn left running that won't wake it
 	Stats       Stats            `json:"stats,omitzero"`
 	// StoppedBy is who stopped it, while it's stopped: StoppedByYou, StoppedByAgent, StoppedByCrash or StoppedByHandOver.
 	StoppedBy string    `json:"stoppedBy,omitempty"`
@@ -68,10 +69,15 @@ type AgentState struct {
 	Accounts []AccountAt `json:"accounts,omitempty"`
 }
 
-// BackgroundTask is work a turn left running that will wake the agent again: a shell, subagent, monitor or workflow.
+// BackgroundTask is work a turn left running: a shell, subagent, monitor or workflow, or a process (a dev server).
+// ID, PID, CPU and Memory are what's known of a process, when they are.
 type BackgroundTask struct {
-	Kind        string `json:"kind,omitempty"`
-	Description string `json:"description"`
+	ID          string  `json:"id,omitempty"` // the provider's own, to stop it by
+	Kind        string  `json:"kind,omitempty"`
+	Description string  `json:"description"`
+	PID         int     `json:"pid,omitempty"`
+	CPU         float64 `json:"cpu,omitempty"`    // percent of a core
+	Memory      int64   `json:"memory,omitempty"` // resident, in bytes
 }
 
 // AccountAt is a provider's account (ProviderUsage.Account, and AccountName) a session ran on from At.
@@ -101,7 +107,7 @@ func (a *AgentState) Stopped(by string, t time.Time) {
 	if a.Running && by != "" {
 		a.StoppedBy, a.StoppedAt = by, t.UTC()
 	}
-	a.Running, a.Working, a.Starting, a.Background = false, false, nil, nil
+	a.Running, a.Working, a.Starting, a.Background, a.Processes = false, false, nil, nil, nil
 }
 
 // Who stopped an agent.
@@ -187,6 +193,7 @@ type Login struct {
 	Detail   string `json:"detail,omitempty"`   // what the provider said: "OAuth token revoked · Please run /login"
 	Terminal string `json:"terminal,omitempty"` // typed into the agent's own terminal, signs in: "/login"
 	Shell    string `json:"shell,omitempty"`    // run in a shell, signs in: "codex login"
+	Browser  bool   `json:"browser,omitempty"`  // Oriel signs it in, in a browser it opens (agent.LoginStarter)
 }
 
 // Ask is something waiting on the user: a permission, a question, a held connection or gateway call.

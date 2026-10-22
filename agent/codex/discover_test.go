@@ -15,6 +15,8 @@ import (
 // quote: "let (thread_id, rollout_id) = ids.split_once('_').unwrap_or((ids, ids));"
 // ref:   codex/codex-rs/rollout/src/lib.rs
 // quote: "pub const ARCHIVED_SESSIONS_SUBDIR: &str = \"archived_sessions\";"
+// ref:   codex/codex-rs/rollout/src/compression.rs
+// quote: "Returns the existing rollout path, preferring the plain `.jsonl` file over"
 func TestDiscoverFindsRollouts(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CODEX_HOME", dir)
@@ -22,7 +24,9 @@ func TestDiscoverFindsRollouts(t *testing.T) {
 		"sessions/2026/10/01/rollout-2026-10-01T09-00-00-0199a213-81c0-7800-8aa1-bbab2a035a53.jsonl":                                      "0199a213-81c0-7800-8aa1-bbab2a035a53",
 		"sessions/2026/10/02/rollout-2026-10-02T10-30-00-0199a213-81c0-7800-8aa1-bbab2a035a54_0199a213-81c0-7800-8aa1-bbab2a035a99.jsonl": "0199a213-81c0-7800-8aa1-bbab2a035a54",
 		"archived_sessions/rollout-2026-09-01T08-00-00-0199a213-81c0-7800-8aa1-bbab2a035a55.jsonl":                                        "0199a213-81c0-7800-8aa1-bbab2a035a55",
-		"sessions/2026/10/01/rollout-2026-10-01T09-00-00-0199a213-81c0-7800-8aa1-bbab2a035a56.jsonl.zst":                                  "",
+		"sessions/2026/10/01/rollout-2026-10-01T09-00-00-0199a213-81c0-7800-8aa1-bbab2a035a56.jsonl.zst":                                  "0199a213-81c0-7800-8aa1-bbab2a035a56",
+		"sessions/2026/10/03/rollout-2026-10-03T09-00-00-0199a213-81c0-7800-8aa1-bbab2a035a57.jsonl":                                      "0199a213-81c0-7800-8aa1-bbab2a035a57",
+		"sessions/2026/10/03/rollout-2026-10-03T09-00-00-0199a213-81c0-7800-8aa1-bbab2a035a57.jsonl.zst":                                  "",
 		"sessions/2026/10/01/notes.jsonl": "",
 		"history.jsonl":                   "",
 	}
@@ -45,7 +49,33 @@ func TestDiscoverFindsRollouts(t *testing.T) {
 		got = append(got, tr.Session)
 	}
 	slices.Sort(got)
-	if len(got) != 3 {
-		t.Errorf("found %v, want the three rollouts", got)
+	if len(got) != 5 {
+		t.Errorf("found %v, want the five rollouts", got)
+	}
+}
+
+// A thread's rollout that Codex has compressed since, once a week cold, is its log still, at its compressed path.
+//
+// ref:   codex/codex-rs/rollout/src/compression.rs
+// quote: "Opens a rollout line reader that transparently handles plain `.jsonl` and `.jsonl.zst` files."
+// ref:   codex/codex-rs/rollout/src/compression.rs
+// quote: "const MIN_ROLLOUT_AGE: Duration = Duration::from_secs(7 * 24 * 60 * 60);"
+func TestLogsFollowCompression(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CODEX_HOME", dir)
+	id := "0199a213-81c0-7800-8aa1-bbab2a035a53"
+	p := filepath.Join(dir, "sessions/2026/10/01/rollout-2026-10-01T09-00-00-"+id+".jsonl")
+	os.MkdirAll(filepath.Dir(p), 0o755)
+	if err := os.WriteFile(p, []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if logs := (&Provider{}).Logs("/w", id); len(logs) != 1 || logs[0].Path != p {
+		t.Fatalf("logs = %+v", logs)
+	}
+	if err := os.Rename(p, p+".zst"); err != nil {
+		t.Fatal(err)
+	}
+	if logs := (&Provider{}).Logs("/w", id); len(logs) != 1 || logs[0].Path != p+".zst" || logs[0].Format != "codex" {
+		t.Fatalf("logs once compressed = %+v", logs)
 	}
 }

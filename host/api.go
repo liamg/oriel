@@ -32,6 +32,7 @@ type (
 	Approve        = hostcore.Approve
 	Approval       = hostcore.Approval
 	Sandbox        = hostcore.Sandbox
+	SandboxAgent   = hostcore.SandboxAgent
 	ToolsReq       = hostcore.ToolsReq
 	Draft          = hostcore.Draft
 )

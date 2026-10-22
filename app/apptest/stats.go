@@ -48,7 +48,7 @@ func StatsScene(t *testing.T) (*Scene, *rig.Stats, *stats.Plugin) {
 	if se, ok := r.W.Store().Session(r.IDs["pricing-rounding"]); ok {
 		work = kit.SessionDir(se.Snapshot()) // the window a session in front opens on
 	}
-	s := New(t, Options{Config: func(cfg *Config) { Connect(r.W)(cfg); cfg.WorkDir = work }})
+	s := New(t, Options{Config: func(cfg *Config) { Connect(r.W, r.Claude, r.Codex)(cfg); cfg.WorkDir = work }})
 	s.Now = rig.StatsNow
 	x := PluginOf[*stats.Plugin](s, "stats")
 	x.Now, x.Loc = func() time.Time { return s.Now }, time.UTC

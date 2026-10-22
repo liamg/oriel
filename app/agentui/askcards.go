@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -60,7 +61,7 @@ func askGroup(k core.AskKind) string {
 
 // askRow is an ask as a row of the Inbox panel: its title, and what it's about.
 func (x *Console) askRow(se core.SessionState, a core.Ask) (title, sub string) {
-	prov := kit.ProviderName(se.Agent.Provider)
+	prov := kit.ProviderName(x.h, se.Agent.Provider)
 	switch a.Kind {
 	case core.AskPermission:
 		return "Permission: " + a.Tool + "(" + cmp.Or(a.Summary, kit.MainInput(a.Input)) + ")", strings.ToLower(prov)
@@ -149,7 +150,7 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 	if kicker {
 		k.o.Kicker = kit.Label(se) + " · " + string(a.Kind)
 	}
-	prov := kit.ProviderName(se.Agent.Provider)
+	prov := kit.ProviderName(x.h, se.Agent.Provider)
 	switch a.Kind {
 	case core.AskPermission:
 		k.permission(se, a, prov)
@@ -158,7 +159,7 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 	case core.AskGateway:
 		x.gatewayCard(k, se, a, kicker)
 	case core.AskLogin:
-		k.login(se, a, kicker)
+		k.login(x.h, se, a, kicker)
 	case core.AskKey:
 		x.keyCard(k, se, a)
 	case core.AskQuestion:
@@ -282,20 +283,24 @@ func (x *Console) gatewayCard(k *askCardParts, se core.SessionState, a core.Ask,
 	k.add("Deny", "n", false, registry.Args{"decision": "deny"})
 }
 
-func (k *askCardParts) login(se core.SessionState, a core.Ask, kicker bool) {
+func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a core.Ask, kicker bool) {
 	l := core.Login{Provider: se.Agent.Provider}
 	if a.Login != nil {
 		l = *a.Login
 	}
-	k.o.Title = kit.ProviderName(l.Provider) + " needs you to log in"
+	k.o.Title = kit.ProviderName(r, l.Provider) + " needs you to log in"
 	k.o.Detail = l.Detail
 	if !kicker {
 		k.o.Kicker = "login"
 	}
-	if canLogIn(l) {
+	switch {
+	case l.Browser:
+		k.o.Note = "opens its sign-in in your browser"
+		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
+	case canLogIn(l):
 		k.o.Note = "opens its terminal with " + l.Terminal
 		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
-	} else if l.Shell != "" {
+	case l.Shell != "":
 		k.o.Note = "run " + l.Shell + " in a terminal"
 	}
 	k.add("Check again", "c", !canLogIn(l), registry.Args{"decision": "recheck"})
@@ -317,8 +322,8 @@ func (x *Console) questionCard(k *askCardParts, se core.SessionState, a core.Ask
 	}
 }
 
-// canLogIn is a login the app signs in again itself: the agent's own terminal.
-func canLogIn(l core.Login) bool { return l.Terminal != "" }
+// canLogIn is a login the app signs in again itself: in a browser it opens, or the agent's own terminal.
+func canLogIn(l core.Login) bool { return l.Browser || l.Terminal != "" }
 
 // loginWaiting is the session waiting on a login, and its ask: session {id}, else the one in front, else any
 // waiting on {provider}'s login.
@@ -352,14 +357,32 @@ func (x *Console) loginWaiting(a registry.Args) (core.SessionState, core.Login, 
 	return core.SessionState{}, core.Login{}, false
 }
 
-// logIn signs an agent in again: its own terminal, opened with the provider's login typed; for an agent with no
-// terminal to type it in, it says what to run.
+// logIn signs an agent in again: its provider's sign-in, opened in the browser, or its own terminal, opened with
+// the provider's login typed; for an agent with neither, it says what to run.
 func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 	se, l, ok := x.loginWaiting(a)
 	if !ok {
 		return errors.New("no agent is waiting on a login")
 	}
-	if !canLogIn(l) {
+	switch {
+	case l.Browser:
+		c, err := x.client(se.ID)
+		if err != nil {
+			return err
+		}
+		go func() {
+			url, err := c.StartLogin(context.Background(), l.Provider)
+			x.h.Do(func() {
+				if err == nil {
+					err = kit.OpenURL(x.h, url)
+				}
+				if err != nil {
+					x.h.Notify(core.Notice{ID: "agent.login", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
+				}
+			})
+		}()
+		return nil
+	case !canLogIn(l):
 		return fmt.Errorf("run %s in a terminal", cmp.Or(l.Shell, "the agent's login"))
 	}
 	return x.rawTerminal(ctx, se.ID, l.Terminal+"\r")

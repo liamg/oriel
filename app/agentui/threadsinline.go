@@ -175,13 +175,13 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 			byLine[line] = append(byLine[line], t)
 			continue
 		}
-		id, tok := t.ID, groupTone(se, t)
+		id, tok := t.ID, groupTone(x.h, se, t)
 		reveal := x.reveal == id
 		if reveal {
 			x.reveal = ""
 		}
 		if !present {
-			_, sign := statusLabel(se, t)
+			_, sign := statusLabel(x.h, se, t)
 			out = append(out, uireg.Decoration{Kind: uireg.Sign, Line: line, Text: "▪", Style: sign.Name(), Priority: 20, Command: "request.open",
 				Args: registry.Args{"thread": string(id)}, Tooltip: t.Heading()})
 		}
@@ -223,11 +223,11 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 }
 
 // groupTone is a thread's colour beside its lines: its state's, the accent while it's simply open.
-func groupTone(se core.SessionState, t core.Thread) theme.TokenID {
+func groupTone(r registry.Contributions, se core.SessionState, t core.Thread) theme.TokenID {
 	if kit.GroupOf(t) == kit.GroupOpen {
 		return theme.Accent
 	}
-	_, tok := statusLabel(se, t)
+	_, tok := statusLabel(r, se, t)
 	return tok
 }
 
@@ -280,7 +280,7 @@ func (x *Requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 // says whether the line was clicked, to unfold the thread for reading without reopening it.
 func foldedThread(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread, line int) (unfold bool) {
 	th := c.Theme()
-	_, tok := statusLabel(se, t)
+	_, tok := statusLabel(h, se, t)
 	c.Row("folded", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center, Radius: 6, Stroke: th.C(tReqThreadBd), Border: 1,
 		Role: ui.RoleGroup, Label: "Thread " + t.Heading()}, func(c *ui.Ctx) {
 		unfold = widget.Clickable(c, "unfold", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 8, Cross: ui.Center, Focusable: true, Role: ui.RoleButton,
@@ -346,7 +346,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 		title = src.Title
 	}
 	inlineCard(c, title+" "+t.Heading(), func(c *ui.Ctx, width float32) {
-		word, tok := statusLabel(se, t)
+		word, tok := statusLabel(h, se, t)
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			if !t.Open() && o.Fold != nil && widget.IconButton(c, "fold", "", widget.IconButtonOpts{Label: "Collapse the thread",
 				Help: "agent/requests#inline", Size: 18, Icon: func(c *ui.Ctx, fg render.Color) {
@@ -394,7 +394,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 						c.Row("who", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 							name := cmp.Or(cm.Name, "you")
 							if cm.Author == core.AuthorAgent {
-								name = kit.ProviderName(cm.Name)
+								name = kit.ProviderNameIn(c, cm.Name)
 							}
 							c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 							if when := commentWhen(c.Now(), cm, t.Origin); when != "" {

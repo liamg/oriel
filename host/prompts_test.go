@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -40,10 +41,12 @@ func TestTheUsersPromptsReachTheAgent(t *testing.T) {
 	}
 }
 
-// The Prompts page's Coding style is also written into the generated CLAUDE.md. crit's
-// WriteAgentNotes lists the projects and where their instructions are, then "## Coding style".
+// The Prompts page's Coding style is also written into the generated notes: AGENTS.md, and the file each provider
+// reads its own from (CLAUDE.md here). crit's WriteAgentNotes lists the projects and where their instructions are,
+// then "## Coding style".
 func TestWorkspaceNotesCarryTheCodingStyle(t *testing.T) {
 	r := newRig(t)
+	r.fake.Has = &agent.Features{Terminal: true, Fork: true, Notes: "CLAUDE.md"}
 	r.repo.Write(map[string]string{"CLAUDE.md": "repo rules\n"})
 	r.repo.Commit("Ada", "rules")
 	if err := r.w.SetPrompts(prompts.Overrides{prompts.StyleID: "Tabs, never spaces.\n"}); err != nil {
@@ -53,7 +56,7 @@ func TestWorkspaceNotesCarryTheCodingStyle(t *testing.T) {
 	se := r.session(id)
 	p, _ := se.Primary()
 	rel, _ := filepath.Rel(se.Dir, p.Dir)
-	for _, name := range NotesFiles {
+	for _, name := range []string{"AGENTS.md", "CLAUDE.md"} {
 		b, err := os.ReadFile(filepath.Join(se.Dir, name))
 		if err != nil {
 			t.Fatal(err)
@@ -109,7 +112,7 @@ func TestWorkspaceMemoryIsTheRepositorys(t *testing.T) {
 		t.Errorf("memory = %q, want %q", a.Spec.Memory, want)
 	}
 	se := r.session(id)
-	b, _ := os.ReadFile(filepath.Join(se.Dir, "CLAUDE.md"))
+	b, _ := os.ReadFile(filepath.Join(se.Dir, "AGENTS.md"))
 	if strings.Contains(string(b), "## Memory") {
 		t.Errorf("one project's notes have memory lines:\n%s", b)
 	}
@@ -121,8 +124,11 @@ func TestWorkspaceMemoryIsTheRepositorys(t *testing.T) {
 		t.Fatal(err)
 	}
 	se = r.session(id)
-	b, _ = os.ReadFile(filepath.Join(se.Dir, "CLAUDE.md"))
+	b, _ = os.ReadFile(filepath.Join(se.Dir, "AGENTS.md"))
 	notes := string(b)
+	if !strings.Contains(notes, "Read each of these memory indexes before you start") {
+		t.Errorf("notes don't say to read the indexes, for an agent that doesn't import them:\n%s", notes)
+	}
 	for _, p := range se.Projects {
 		if want := "- A memory about " + p.Name + " goes in `" + sandbox.MemoryDir(p.Repo) + "`."; !strings.Contains(notes, want) {
 			t.Errorf("notes haven't %q:\n%s", want, notes)

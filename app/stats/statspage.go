@@ -324,7 +324,7 @@ func (x *Plugin) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 	t, p := r.Totals, r.Prev
 	days := int(math.Round(q.To.Sub(q.From).Hours() / 24))
 	c.Row("tiles", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-		statsTile(c, "cost", "COST · EST.", kit.Money(t.Cost), "", func(c *ui.Ctx) {
+		costTile(c, kit.Money(t.Cost), r.Prices, func(c *ui.Ctx) {
 			delta(c, "d", t.Cost, p.Cost)
 			if p.Cost > 0 {
 				dim(c, "s", fmt.Sprintf("vs prev %dd %s", days, kit.Money(p.Cost)))

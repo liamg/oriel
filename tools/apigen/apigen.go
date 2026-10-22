@@ -1,7 +1,7 @@
 // Package apigen generates the oriel.* Lua API from annotated Go: the VM glue, the
 // LuaLS types and the reference, from one source so they can't drift apart.
 //
-//	//oriel:api name=keymap cap=ui              on a type: a namespace (empty for oriel's own functions)
+//	//oriel:api name=keymap cap=ui doc="…"      on a type: a namespace (empty for oriel's own functions), and its intro
 //	//oriel:api doc="…" optional=a,b returns=t  on its methods: a function
 //
 // cap is the capability a plugin needs to call a function, on its namespace or, overriding it, on the
@@ -307,6 +307,9 @@ func Docs(nss []Namespace, version string) []byte {
 			name = "oriel." + ns.Name
 		}
 		fmt.Fprintf(&b, "\n## %s\n\n", name)
+		if ns.Doc != "" {
+			fmt.Fprintf(&b, "%s\n\n", ns.Doc)
+		}
 		for _, f := range ns.Funcs {
 			var ps []string
 			for _, p := range f.Params {

@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
 
@@ -291,26 +291,18 @@ func TestDecideSpecificity(t *testing.T) {
 	}
 }
 
+// The servers the providers found come first, then oriel's own list; a ${VAR:-default} expands, and SSE servers,
+// hidden ones and a second of a name aren't carried.
 func TestDiscover(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("CLAUDE_CONFIG_DIR", "")
-	write := func(p, body string) {
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
-			t.Fatal(err)
-		}
+	installed := []agent.MCPServer{
+		{Name: "aws", Source: "user", Config: json.RawMessage(`{"command":"aws-mcp","env":{"R":"${REGION:-eu}"}}`)},
+		{Name: "old", Source: "user", Config: json.RawMessage(`{"type":"sse","url":"x"}`)},
+		{Name: "linear", Source: "plugin:linear", Config: json.RawMessage(`{"type":"http","url":"${ROOT}/mcp"}`),
+			Vars: map[string]string{"ROOT": "https://mcp.linear.app"}},
+		{Name: "aws", Source: "codex", Config: json.RawMessage(`{"command":"other"}`)},
+		{Name: "hiddenone", Source: "user", Config: json.RawMessage(`{"command":"x"}`)},
 	}
-	plug := filepath.Join(home, ".claude", "plugins", "cache", "linear")
-	write(filepath.Join(home, ".claude.json"), `{"mcpServers":{"aws":{"command":"aws-mcp","env":{"R":"${REGION:-eu}"}},"old":{"type":"sse","url":"x"}},
-		"projects":{"/x":{"mcpServers":{"repo":{"command":"evil"}}}}}`)
-	write(filepath.Join(home, ".claude", "settings.json"), `{"enabledPlugins":{"linear@official":true,"off@official":false}}`)
-	write(filepath.Join(home, ".claude", "plugins", "installed_plugins.json"),
-		`{"plugins":{"linear@official":[{"installPath":"`+plug+`"}],"off@official":[{"installPath":"/nope"}]}}`)
-	write(filepath.Join(plug, ".mcp.json"), `{"linear":{"type":"http","url":"https://mcp.linear.app/mcp"}}`)
-
-	got := Discover(home, map[string]json.RawMessage{"extra": json.RawMessage(`{"command":"x"}`)}, []string{"hiddenone"})
+	got := Discover(installed, map[string]json.RawMessage{"extra": json.RawMessage(`{"command":"x"}`)}, []string{"hiddenone"})
 	var names []string
 	for _, s := range got {
 		names = append(names, s.Name+"/"+s.Source)
@@ -319,8 +311,8 @@ func TestDiscover(t *testing.T) {
 	if strings.Join(names, " ") != want {
 		t.Fatalf("got %v want %s", names, want)
 	}
-	if got[0].Env["R"] != "eu" {
-		t.Errorf("env default not expanded: %v", got[0].Env)
+	if got[0].Env["R"] != "eu" || got[0].Command != "aws-mcp" {
+		t.Errorf("aws = %+v", got[0])
 	}
 	if got[1].URL != "https://mcp.linear.app/mcp" {
 		t.Errorf("plugin url = %q", got[1].URL)

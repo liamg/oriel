@@ -57,3 +57,21 @@ func TestToolchainsInstallFromTheBaseImage(t *testing.T) {
 		}
 	}
 }
+
+// An agent's provider names its tools as mise does, a backend's too; anything else, which could reach mise as a flag
+// or a path, is refused.
+func TestAgentTools(t *testing.T) {
+	got, err := agentTools([]string{"node@22", "npm:@google/gemini-cli@0.9.0", "cargo:goose-cli@1.2.3"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Tool{{"node", "22"}, {"npm:@google/gemini-cli", "0.9.0"}, {"cargo:goose-cli", "1.2.3"}}
+	if !slices.Equal(got, want) {
+		t.Errorf("tools = %v", got)
+	}
+	for _, bad := range []string{"node", "--yes@1", "../x@1", "npm:@g/x@1;rm", "node@"} {
+		if _, err := agentTools([]string{bad}); err == nil {
+			t.Errorf("%q was taken", bad)
+		}
+	}
+}

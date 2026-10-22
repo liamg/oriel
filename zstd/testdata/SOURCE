@@ -1,0 +1,22 @@
+The .zst fixtures were made with the zstd CLI v1.5.7, built from facebook/zstd at the commit spec/zstd/SOURCE names:
+
+  rollout.jsonl.1.zst               zstd -1 rollout.jsonl
+  rollout.jsonl.3.zst               zstd -3 rollout.jsonl (Codex's level)
+  rollout.jsonl.19.zst              zstd -19 rollout.jsonl
+  rollout.jsonl.long.zst            zstd -19 --long rollout.jsonl
+  rollout.jsonl.fast5.zst           zstd --fast=5 rollout.jsonl
+  rollout.jsonl.wlog10.zst          zstd -3 --zstd=wlog=10 rollout.jsonl (a 1KB window)
+  rollout.jsonl.stream-long.zst     zstd -3 --long=27 - < rollout.jsonl (no content size, a 128MB window)
+  rollout.jsonl.stream-nocheck.zst  zstd -3 --no-check - < rollout.jsonl (no content size, no checksum)
+  random.bin.3.zst                  zstd -3 random.bin
+  rle300k.3.zst                     zstd -3 of 300000 bytes of "a"
+  empty.3.zst                       zstd -3 of an empty file
+  <name>.3.zst, <name>.19.zst       zstd -3 and -19 of spec/zstd/facebook-zstd/tests/golden-compression/<name>
+                                    (-3 only for PR-3517-block-splitter-corruption-test)
+
+rollout.jsonl is a made-up Codex rollout ({timestamp, type, payload} lines) whose tool outputs are excerpts of the
+Rust sources under spec/codex; random.bin is 40000 bytes from Python's random.Random(1).
+
+golden.sha256 is the sha256 of what zstd -dc gives for each frame in spec/zstd/facebook-zstd/tests/golden-decompression.
+
+xxh64.txt is XXH64 (seed 0) by xxHash's reference code, lib/common/xxhash.h in the same zstd source.

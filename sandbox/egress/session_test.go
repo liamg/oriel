@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/netip"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -75,10 +76,10 @@ func TestNetworkLogSaysWhy(t *testing.T) {
 
 	// A built-in destination is decided by its rule; the reason is the
 	// session's own, whatever the sender claims.
-	if !allow(s, "API.Anthropic.com.", 443) {
+	if !allow(s, "GitHub.com.", 443) {
 		t.Fatal("decide: refused")
 	}
-	s.Record(Event{Host: "api.anthropic.com", Port: 443, Allowed: true, Proto: "tls", BytesUp: 10, BytesDown: 20, Millis: 1500, Reason: "trust me"})
+	s.Record(Event{Host: "github.com", Port: 443, Allowed: true, Proto: "tls", BytesUp: 10, BytesDown: 20, Millis: 1500, Reason: "trust me"})
 	s.Record(Event{Host: "github.com", Port: 22, Allowed: true, Proto: "ssh"})
 
 	conns := s.Conns()
@@ -95,21 +96,21 @@ func TestNetworkLogSaysWhy(t *testing.T) {
 
 func TestNetworkRuleHoldsForTheSession(t *testing.T) {
 	s, _ := newSession(t)
-	if !allow(s, "api.anthropic.com", 443) {
+	if !allow(s, "github.com", 443) {
 		t.Fatal("allowed by the built-in list to begin with")
 	}
-	if err := s.SetRule("api.anthropic.com", 443, false, false); err != nil {
+	if err := s.SetRule("github.com", 443, false, false); err != nil {
 		t.Fatal(err)
 	}
-	if allow(s, "api.anthropic.com", 443) {
+	if allow(s, "github.com", 443) {
 		t.Error("blocked from the page, still allowed")
 	}
-	s.Record(Event{Host: "api.anthropic.com", Port: 443})
+	s.Record(Event{Host: "github.com", Port: 443})
 	if c := s.Conns()[0]; c.Reason != "rule: this session" {
 		t.Errorf("reason: %+v", c)
 	}
-	_ = s.SetRule("api.anthropic.com", 443, true, false)
-	if !allow(s, "api.anthropic.com", 443) || len(s.Grants()) != 1 {
+	_ = s.SetRule("github.com", 443, true, false)
+	if !allow(s, "github.com", 443) || len(s.Grants()) != 1 {
 		t.Errorf("allowed again, one rule kept: %+v", s.Grants())
 	}
 }
@@ -462,5 +463,24 @@ func TestEgressCardSaveFailure(t *testing.T) {
 		if why := s.Why("x.example.com", 443); !strings.Contains(why, "not saved") {
 			t.Errorf("%s: why = %q", key, why)
 		}
+	}
+}
+
+// What the agent's provider reaches is allowed without asking, under the user's rules: a setting that blocks one of
+// its hosts still blocks it.
+func TestTheAgentsHostsAreAllowed(t *testing.T) {
+	s, _ := newSession(t)
+	s.Agent = func() []Rule { return HostRules([]string{"*.chatgpt.com"}) }
+	if !allow(s, "ab.chatgpt.com", 443) {
+		t.Error("the provider's host was refused")
+	}
+	if r := s.Levels().Builtin; !slices.ContainsFunc(r, func(r Rule) bool { return r.Host == "*.chatgpt.com" && r.Source == "the agent's provider" }) {
+		t.Errorf("built-in rules = %+v", r)
+	}
+	s.Settings = func() [][]Rule {
+		return [][]Rule{{{Host: "ab.chatgpt.com", Port: 443, Allow: false, Source: "settings"}}}
+	}
+	if allow(s, "ab.chatgpt.com", 443) {
+		t.Error("a setting's block didn't hold over the provider's host")
 	}
 }

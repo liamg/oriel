@@ -76,15 +76,23 @@ func (x *Boxes) Workspace(ctx context.Context, id core.SessionID) (Workspace, er
 	if state, ok := sandbox.StateDir(root); ok {
 		ws.Paths = append(ws.Paths, WorkspacePath{Name: "State", Host: state, Note: "the session's comments, drafts and attachments"})
 	}
-	transcripts := filepath.Join(sandbox.HostClaudeDir(), "projects", sandbox.ProjectDirName(root))
-	for _, p := range []WorkspacePath{
-		{Name: "Scratchpad", Host: sandbox.TmpDir(root), Note: "Claude Code's temp dir"},
+	paths := []WorkspacePath{
+		{Name: "Scratchpad", Host: sandbox.TmpDir(root), Note: "the agent's temp dir"},
 		{Name: "Sandbox", Host: sandbox.Dir(root), Note: "the sandbox's record, sockets and grants"},
 		{Name: "Home", Host: sandbox.HomeDir(root), Note: "the agent's $HOME"},
-		{Name: "Claude config", Host: sandbox.ClaudeDir(root)},
-		{Name: "Transcripts", Host: transcripts},
-		{Name: "Go cache", Host: sandbox.GoCache(), Note: "shared by every sandbox"},
-	} {
+	}
+	if p := se.Agent.Provider; p != "" {
+		paths = append(paths, WorkspacePath{Name: "Agent config", Host: sandbox.AgentDir(root, p), Note: p + "'s own, in this sandbox"})
+	}
+	if b != nil {
+		for _, m := range b.needs().Mounts {
+			if !m.ReadOnly && m.Host != sandbox.AgentDir(root, se.Agent.Provider) {
+				paths = append(paths, WorkspacePath{Name: filepath.Base(m.Host), Host: m.Host, Note: "written back by the agent"})
+			}
+		}
+	}
+	paths = append(paths, WorkspacePath{Name: "Go cache", Host: sandbox.GoCache(), Note: "shared by every sandbox"})
+	for _, p := range paths {
 		p.Agent = ws.Places[p.Host]
 		ws.Paths = append(ws.Paths, p)
 	}

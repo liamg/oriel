@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -454,7 +455,7 @@ func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
 		t.Errorf("the thread stopped being busy with the suite still running")
 	}
 	if se.Status != core.StatusWorking || len(se.Agent.Background) != 1 {
-		t.Errorf("status %s, background %q", se.Status, se.Agent.Background)
+		t.Errorf("status %s, background %+v", se.Status, se.Agent.Background)
 	}
 	var mu sync.Mutex
 	var idle []core.Event
@@ -472,12 +473,90 @@ func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
 	stop()
 	se = r.session(id)
 	if th, _ := se.Thread(tid); th.Busy || len(se.Agent.Background) != 0 {
-		t.Errorf("after the background work: busy %v, background %q", th.Busy, se.Agent.Background)
+		t.Errorf("after the background work: busy %v, background %+v", th.Busy, se.Agent.Background)
 	}
 	mu.Lock()
 	defer mu.Unlock()
 	if want := (core.ThreadBusy{Session: id, Thread: tid}); len(idle) != 1 || idle[0] != want {
 		t.Errorf("the thread went idle with %#v, want only %#v", idle, want)
+	}
+}
+
+// What a turn leaves running that won't wake the agent (a dev server in a Codex background terminal) is shown, not
+// waited on: the turn's threads go idle, so the agent is told to carry on with what it owes. Stopping one reaches the
+// provider and takes it off the list, and the agent stopping clears it.
+func TestRunningProcessesDontHoldTheTurn(t *testing.T) {
+	r := newRig(t)
+	r.fake.Has = &agent.Features{StopProcesses: true}
+	id, a := r.workSession("start the dev server")
+	a.WaitSent(t)
+	var tid core.ThreadID
+	r.eventually(id, "the agent to have the thread", func(se core.SessionState) bool {
+		if len(se.Threads) == 0 || !se.Threads[0].Busy {
+			return false
+		}
+		tid = se.Threads[0].ID
+		return true
+	})
+	a.Emit(agent.TurnStart{})
+	idle := make(chan core.Event, 8)
+	stop := r.w.store.Subscribe(core.Filter{Session: id}, func(ev core.Event) {
+		if b, ok := ev.(core.ThreadBusy); ok {
+			idle <- b
+		}
+	})
+	defer stop()
+	running := []core.BackgroundTask{{ID: "1001", Kind: "terminal", Description: "npm run dev", PID: 4242}, {ID: "1002", Kind: "terminal", Description: "go run ./watch"}}
+	a.Emit(agent.TurnEnd{Running: running})
+	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 1 })
+	select {
+	case ev := <-idle:
+		if want := (core.ThreadBusy{Session: id, Thread: tid}); ev != want {
+			t.Errorf("the thread changed with %#v, want %#v", ev, want)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the thread stayed busy while the dev server ran")
+	}
+	if in := a.WaitSent(t); in.Text == "" {
+		t.Error("the agent wasn't told to carry on")
+	}
+	if se := r.session(id); !slices.Equal(se.Agent.Processes, running) || len(se.Agent.Background) != 0 {
+		t.Errorf("processes %+v, background %+v", se.Agent.Processes, se.Agent.Background)
+	}
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{Running: running})
+	r.eventually(id, "the carry-on to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 2 })
+	if err := r.w.StopProcess(context.Background(), id, "1001"); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.Stopped(); !slices.Equal(got, []string{"1001"}) {
+		t.Errorf("the provider was asked to stop %v", got)
+	}
+	if got := r.session(id).Agent.Processes; !slices.Equal(got, running[1:]) {
+		t.Errorf("after the stop, processes %+v", got)
+	}
+	if err := r.w.Stop(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	r.eventually(id, "the agent to stop", func(se core.SessionState) bool { return !se.Agent.Running })
+	if got := r.session(id).Agent.Processes; len(got) != 0 {
+		t.Errorf("a stopped agent still lists %+v", got)
+	}
+	if err := r.w.StopProcess(context.Background(), id, "1002"); err == nil {
+		t.Error("a stopped agent stopped a process")
+	}
+}
+
+// A provider that can't stop processes says so.
+func TestStopProcessNeedsAProviderThatCan(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("start")
+	a.WaitSent(t)
+	if err := r.w.StopProcess(context.Background(), id, "1001"); err == nil {
+		t.Error("a provider that can't stop processes stopped one")
+	}
+	if got := a.Stopped(); len(got) != 0 {
+		t.Errorf("stopped %v", got)
 	}
 }
 
@@ -506,5 +585,26 @@ func TestConfigureSwitchesTheModel(t *testing.T) {
 	}
 	if se := r.session(id); se.Agent.Model != "m2" || se.Agent.Effort != "low" {
 		t.Errorf("the session's agent: %+v", se.Agent)
+	}
+}
+
+// An edit's title names its file however the provider's input does: file_path, path, or its first of files.
+func TestEditTitlesNameTheFile(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Edit things")
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	for i, in := range []string{`{"file_path":"a.go"}`, `{"path":"b.go"}`, `{"files":[{"path":"c.go","kind":"update"},{"path":"d.go"}]}`} {
+		a.Emit(agent.ToolCall{ID: fmt.Sprint("e", i), Tool: "Edit", Input: json.RawMessage(in)})
+	}
+	se := r.eventually(id, "the edits", func(se core.SessionState) bool { return len(se.Transcript) >= 3 })
+	var titles []string
+	for _, it := range se.Transcript {
+		if it.Kind == core.ItemTool {
+			titles = append(titles, it.Title)
+		}
+	}
+	if strings.Join(titles, "|") != "Edit a.go|Edit b.go|Edit c.go" {
+		t.Errorf("titles = %q", titles)
 	}
 }

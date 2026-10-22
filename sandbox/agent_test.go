@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/liamg/oriel/agent"
 )
 
 func gitT(t *testing.T, dir string, args ...string) {
@@ -75,7 +77,7 @@ func TestBindsReadTheCheckouts(t *testing.T) {
 	if err := SaveManifest(root, Manifest{Reads: []string{repo}}); err != nil {
 		t.Fatal(err)
 	}
-	binds, err := Binds(root, root, "")
+	binds, err := Binds(root, root, agent.SandboxNeeds{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +103,7 @@ func TestBindsGiveTheRepositorysMemory(t *testing.T) {
 	if err := SaveManifest(root, Manifest{Memory: []ProjectMemory{{Name: "oriel", Dir: mem}}}); err != nil {
 		t.Fatal(err)
 	}
-	binds, err := Binds(root, root, "")
+	binds, err := Binds(root, root, agent.SandboxNeeds{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +122,7 @@ func TestBindsWithNoProjectsGiveNoMemory(t *testing.T) {
 	if _, err := Create(root, ModeSandbox); err != nil {
 		t.Fatal(err)
 	}
-	binds, err := Binds(root, root, "")
+	binds, err := Binds(root, root, agent.SandboxNeeds{})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,10 +1,11 @@
 package runner
 
 import (
-	"github.com/liamg/oriel/internal/testhook"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/liamg/oriel/internal/testhook"
 )
 
 // engineHost is a home directory and a PATH holding only the given CLIs, with no DOCKER_HOST.

@@ -248,7 +248,7 @@ clip 224,38 1376x936 r 0
     text "sandbox" @578,143.92 #4fe0a0 JetBrains Mono 9.5
     text "pinned" @633,144.46 #4f4a40 JetBrains Mono 11
     text "·" @680.5625,144.46 #4f4a40 JetBrains Mono 11
-    text "claude claude-opus-4-1 high" @695.15625,144.46 #ece6d8 JetBrains Mono 11
+    text "claude claude-opus-4-7 high" @695.15625,144.46 #ece6d8 JetBrains Mono 11
     text "·" @881.1875,144.46 #4f4a40 JetBrains Mono 11
     text "8 runs: 5 done, 1 blocked, 1 stopped, 1 running" @895.78125,144.46 #7c7566 JetBrains Mono 11
     text "·" @1213.6875,144.46 #4f4a40 JetBrains Mono 11

@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/sandbox"
@@ -32,7 +32,6 @@ func TestSandboxOptionsAreDeclared(t *testing.T) {
 	}{
 		{"sandbox.default", registry.Enum, "sandbox", false},
 		{"sandbox.image", registry.String, "", true},
-		{"sandbox.claude_version", registry.String, "", false},
 		{"sandbox.env", registry.List, []string{}, false},
 		{"sandbox.egress", registry.List, []string{}, true},
 		{"sandbox.rules", registry.List, []string{}, true},
@@ -146,7 +145,9 @@ func waitSandbox(t *testing.T, lw *rig.Host, what string, ok func(sandbox.Config
 // item, ✕ to remove it, a field to add one, each item checked as it's typed) or, where the option offers choices, a
 // multi-select; and sandbox.servers in a dialog.
 func TestSettingsSandboxSection(t *testing.T) {
-	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	claude := agenttest.NewFake()
+	claude.Name = "claude"
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Config: apptest.Builtin(claude)})
 	path := filepath.Join(s.ConfigDir, "settings.toml")
 	rig.WriteFile(t, path, "[sandbox]\nmemory = \"4g\"\negress = [\"allow proxy.golang.org\", \"allow *.github.com:443\"]\n"+
 		"servers = { docs = \"https://docs.example.com/mcp\", linear = \"npx -y linear-mcp\" }\n")

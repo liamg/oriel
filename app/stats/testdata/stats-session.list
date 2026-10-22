@@ -150,7 +150,7 @@ clip 224,38 1376x936 r 0
     rect 224,69 1376x42 fill #0c0c0b
     text "STATS" @242,94.844 #ece6d8 Space Grotesk 14
     text "pricing-rounding" @296.70624,94.32 #ece6d8 JetBrains Mono 12
-    text "claude · Work · claude-opus-4-1 high · today 09:12 – 12:16 · live" @423.95624,93.96 #7c7566 JetBrains Mono 11
+    text "claude · Work · claude-opus-4-7 high · today 09:12 – 12:16 · live" @423.95624,93.96 #7c7566 JetBrains Mono 11
     clip 1308.3967,78 123.400024x24 r 5
       rect 1308.3967,78 61.69995x24 fill #1f1c0f
       text "$ COST" @1318.3967,93.420006 #ffd23f JetBrains Mono 9.5
@@ -468,12 +468,12 @@ clip 224,38 1376x936 r 0
       text "MODELS" @1179,370.004 #7c7566 JetBrains Mono 9.5
       text "req · tokens · cost" @1456,370.18402 #4f4a40 JetBrains Mono 10
       rect 1179,387.184 8x8 fill #b3ab99bf radius 2
-      text "claude-opus-4-1" @1195,395.14398 #ece6d8 JetBrains Mono 11
+      text "claude-opus-4-7" @1195,395.14398 #ece6d8 JetBrains Mono 11
       text "290" @1432.2188,395.14398 #b3ab99 JetBrains Mono 11
       text "30M" @1484.2188,395.14398 #b3ab99 JetBrains Mono 11
       text "$31.27" @1530.4375,395.14398 #ece6d8 JetBrains Mono 11
       rect 1179,415.184 8x8 fill #b3ab9980 radius 2
-      text "claude-sonnet-4-5" @1195,423.14398 #ece6d8 JetBrains Mono 11
+      text "claude-sonnet-4-6" @1195,423.14398 #ece6d8 JetBrains Mono 11
       text "subagents" @1315.0938,422.784 #4f4a40 JetBrains Mono 10
       text "17" @1438.8125,423.14398 #b3ab99 JetBrains Mono 11
       text "474k" @1477.625,423.14398 #b3ab99 JetBrains Mono 11

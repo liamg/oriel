@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 )
@@ -44,6 +45,8 @@ func codexLog(t *testing.T) string {
 //
 // ref:   codex/codex-rs/protocol/src/protocol.rs
 // quote: "pub fn non_cached_input(&self) -> i64 { (self.input_tokens - self.cached_input()).max(0) }"
+// ref:   cost-dev/models.json
+// quote: pb_openai_gpt-5_direct_realtime_global_usd_20260814","verified_at":"2026-08-14T12:42:53Z","source_id":"source:openai-pricing"},"prices":{"cached_input_tokens_per_1000000":"0.125","input_tokens_per_1000000":"1.25","output_tokens_per_1000000":"10"}
 func TestCodexRollout(t *testing.T) {
 	s := New(codexLog(t), FormatCodex)
 	s.Read()
@@ -54,7 +57,7 @@ func TestCodexRollout(t *testing.T) {
 	if s.Tokens != want {
 		t.Errorf("tokens = %+v, want %+v", s.Tokens, want)
 	}
-	// gpt-5: $1.25/Mtok in, $10 out, a cache read a tenth of input.
+	// gpt-5: $1.25/Mtok in, $10 out, a cache read $0.125.
 	if wantCost := (900_000*1.25 + 600_000*0.125 + 150_000*10) / 1e6; !near(s.Cost(), wantCost) {
 		t.Errorf("cost = %v, want %v", s.Cost(), wantCost)
 	}
@@ -130,5 +133,26 @@ func TestOrigin(t *testing.T) {
 	}
 	if d := Detailed(out, true, 0); d.Origin != OriginOutside || d.Name != "claude:b" {
 		t.Errorf("detail = %q %q", d.Origin, d.Name)
+	}
+}
+
+// A Codex apply_patch says where the session worked: each file its patch adds, updates or deletes.
+//
+// ref:   codex/codex-rs/apply-patch/src/parser.rs
+// quote: "pub(crate) const ADD_FILE_MARKER: &str = \"*** Add File: \"; pub(crate) const DELETE_FILE_MARKER: &str = \"*** Delete File: \"; pub(crate) const UPDATE_FILE_MARKER: &str = \"*** Update File: \";"
+func TestCodexPatchTouchesFiles(t *testing.T) {
+	patch := "*** Begin Patch\n*** Update File: web/a.go\n@@\n-x\n+y\n*** Add File: /w/api/b.go\n+z\n*** End Patch\n"
+	in, _ := json.Marshal(patch)
+	args, _ := json.Marshal(map[string]string{"input": patch})
+	argsIn, _ := json.Marshal(string(args))
+	s := New(write(t,
+		rollout("2026-10-01T09:00:00.000Z", "session_meta", `{"id":"T1","timestamp":"2026-10-01T09:00:00.000Z","cwd":"/w/api"}`),
+		rollout("2026-10-01T09:00:01.000Z", "turn_context", `{"cwd":"/w/api","model":"gpt-5-codex","effort":"high"}`),
+		rollout("2026-10-01T09:00:05.000Z", "response_item", `{"type":"custom_tool_call","name":"apply_patch","input":`+string(in)+`,"call_id":"c1"}`),
+		rollout("2026-10-01T09:00:06.000Z", "response_item", `{"type":"function_call","name":"apply_patch","arguments":`+string(argsIn)+`,"call_id":"c2"}`),
+	), FormatCodex)
+	s.Read()
+	if s.Paths["/w/api/web/a.go"] != 2 || s.Paths["/w/api/b.go"] != 2 || len(s.Paths) != 2 {
+		t.Errorf("paths = %v", s.Paths)
 	}
 }

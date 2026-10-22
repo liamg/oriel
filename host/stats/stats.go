@@ -9,8 +9,6 @@ package stats
 import (
 	"bytes"
 	"encoding/json"
-	"io"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -53,7 +51,7 @@ func bucketOf(ms int64) int {
 
 // FileTools are the tools whose calls say where a session worked: a multi-repo session's cost is charged by them.
 var FileTools = map[string]bool{"Read": true, "Edit": true, "MultiEdit": true, "Write": true, "NotebookEdit": true, "Grep": true,
-	"Glob": true}
+	"Glob": true, "apply_patch": true}
 
 type (
 	Tokens = price.Tokens
@@ -179,6 +177,10 @@ type Scan struct {
 	LastMsg string             `json:"lastMsg,omitempty"`
 	LastReq *request           `json:"lastReq,omitempty"`
 	Codex   *codexState        `json:"codex,omitempty"`
+	// Priced is the version of the book the costs are at.
+	Priced string `json:"priced,omitempty"`
+
+	prices *price.Book // the snapshot's if nil
 }
 
 // Pending is a tool call waiting for its result.
@@ -206,6 +208,17 @@ func New(path, format string) *Scan {
 	return &Scan{Path: path, Format: format}
 }
 
+// Prices sets what the reads from now on price tokens with.
+func (s *Scan) Prices(b *price.Book) { s.prices, s.Priced = b, b.Version() }
+
+// rate is what a request's tokens cost on model.
+func (s *Scan) rate(model string, fast bool, t Tokens) price.Rate {
+	if s.prices == nil {
+		s.prices = price.Default()
+	}
+	return s.prices.RateFor(model, fast, t.Prompt())
+}
+
 func (s *Scan) ensure() {
 	if s.Slots == nil {
 		s.Slots = map[string]*Slot{}
@@ -231,28 +244,19 @@ func (s *Scan) ensure() {
 // shrunk is read again from the start.
 func (s *Scan) Read() bool {
 	s.ensure()
-	f, err := os.Open(s.Path)
+	data, size, shrunk, err := tail(s.Path, s.Offset)
 	if err != nil {
 		return false
 	}
-	defer f.Close()
-	fi, err := f.Stat()
-	if err != nil {
-		return false
-	}
-	if fi.Size() < s.Offset {
-		*s = Scan{Path: s.Path, Format: s.Format}
+	if shrunk {
+		*s = Scan{Path: s.Path, Format: s.Format, Priced: s.Priced, prices: s.prices}
 		s.ensure()
+		if data, size, _, err = tail(s.Path, 0); err != nil {
+			return false
+		}
 	}
-	s.Size = fi.Size()
-	if fi.Size() <= s.Offset {
-		return false
-	}
-	if _, err := f.Seek(s.Offset, io.SeekStart); err != nil {
-		return false
-	}
-	data, err := io.ReadAll(f)
-	if err != nil {
+	s.Size = size
+	if len(data) == 0 {
 		return false
 	}
 	end := bytes.LastIndexByte(data, '\n')
@@ -366,7 +370,7 @@ func (s *Scan) claude(r *record) {
 	}
 	if r.Type == "assistant" && r.Message.Usage != nil {
 		g := r.Message.Usage
-		rate := price.RateFor(model, g.Speed == "fast")
+		rate := s.rate(model, g.Speed == "fast", g.tokens())
 		s.request(r.Message.ID, request{At: r.Timestamp, Model: model, Effort: r.Effort, Tokens: g.tokens(), Costs: g.tokens().Of(rate),
 			Sidechain: agent != ""}, agent, transcript.ContextWindow(model, g.tokens().Prompt()))
 	}
@@ -436,7 +440,7 @@ func (s *Scan) event(ev Event) {
 		}
 	case "request":
 		model = ModelName(ev.Model)
-		s.request("", request{At: ev.At, Model: model, Effort: ev.Effort, Tokens: ev.Tokens, Costs: ev.Tokens.Of(price.RateFor(model, false)),
+		s.request("", request{At: ev.At, Model: model, Effort: ev.Effort, Tokens: ev.Tokens, Costs: ev.Tokens.Of(s.rate(model, false, ev.Tokens)),
 			Sidechain: ev.Agent != ""}, ev.Agent, ev.Window)
 	case "tool":
 		s.call(ev.ID, ev.Name, ev.Input, ev.At, model, ev.Effort)

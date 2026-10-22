@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -177,8 +178,18 @@ func TestRegistered(t *testing.T) {
 	}
 }
 
+// needer is a provider whose agent needs a binary on its PATH and a host directory at another path.
+type needer struct{ bin, host, at string }
+
+func (n needer) SandboxNeeds(_ context.Context, at agent.SandboxPlace) (agent.SandboxNeeds, error) {
+	return agent.SandboxNeeds{Bins: map[string]string{"agent": n.bin}, Mounts: []agent.Mount{{Host: n.host, Sandbox: filepath.Join(at.Dir, n.at)}},
+		Env: map[string]string{"AGENT_HOME": at.Dir}}, nil
+}
+
+func (needer) MCPServers() []agent.MCPServer { return nil }
+
 // The command: the workspace and its git directory writable, git's own files read-only, the rest of home hidden,
-// Claude's transcripts linked to the host's, and the network through the proxy.
+// what the agent's provider needs linked where it asked, and the network through the proxy.
 func TestCommand(t *testing.T) {
 	home, err := os.MkdirTemp("/tmp", "sb")
 	if err != nil {
@@ -198,7 +209,19 @@ func TestCommand(t *testing.T) {
 	}
 	s := &Seatbelt{}
 	defer s.Stop(context.Background(), root)
-	c, err := s.command(root, root, []string{"claude"}, sandbox.LaunchOptions{Environ: []string{"PATH=/usr/bin", "SECRET=x"}})
+	transcripts := filepath.Join(home, ".agent", "projects")
+	if err := os.MkdirAll(transcripts, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(home, "bin", "agent")
+	if err := os.MkdirAll(filepath.Dir(bin), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	c, err := s.command(context.Background(), root, root, []string{"claude"}, sandbox.LaunchOptions{Environ: []string{"PATH=/usr/bin", "SECRET=x"},
+		Provider: "agent", Agent: needer{bin: bin, host: transcripts, at: "projects"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,6 +234,7 @@ func TestCommand(t *testing.T) {
 		env[k] = v
 	}
 	if env["HOME"] != sandbox.HomeDir(root) || env["ORIEL_SOCKET"] != sandbox.SocketPath(root) || env["SECRET"] != "" ||
+		env["AGENT_HOME"] != sandbox.AgentDir(root, "agent") ||
 		!strings.HasPrefix(env["HTTPS_PROXY"], "http://127.0.0.1:") || !strings.HasSuffix(env["PATH"], ":/usr/bin") {
 		t.Errorf("env %v", env)
 	}
@@ -233,9 +257,11 @@ func TestCommand(t *testing.T) {
 			t.Errorf("the profile lacks %s:\n%s", want, profile)
 		}
 	}
-	transcripts := filepath.Join(sandbox.ClaudeDir(root), "projects", sandbox.ProjectDirName(root))
-	if got, _ := os.Readlink(transcripts); got != filepath.Join(home, ".claude", "projects", sandbox.ProjectDirName(root)) {
-		t.Errorf("transcripts link to %q", got)
+	if got, _ := os.Readlink(filepath.Join(sandbox.AgentDir(root, "agent"), "projects")); got != transcripts {
+		t.Errorf("the agent's projects link to %q", got)
+	}
+	if got, _ := os.Readlink(filepath.Join(sandbox.Dir(root), "bin", "agent")); got != real(bin) {
+		t.Errorf("the agent's binary links to %q", got)
 	}
 }
 

@@ -11,9 +11,11 @@ type ProjectMemory struct {
 	Dir  string `json:"dir"`
 }
 
-// MemoryDir is Claude Code's memory directory for a repository on the host, which every session in it shares.
+// MemoryDir is the memory directory for a repository on the host, which every session in it shares: where Claude
+// Code's auto memory keeps it, so a session outside Oriel reads it too.
 func MemoryDir(repo string) string {
-	return filepath.Join(HostClaudeDir(), "projects", ProjectDirName(filepath.Clean(repo)), "memory")
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".claude", "projects", ProjectDirName(filepath.Clean(repo)), "memory")
 }
 
 // MemoryDirs are root's projects' memory directories, the primary's first; none for a workspace with no projects.

@@ -47,7 +47,7 @@ func TestUtilityAgent(t *testing.T) {
 		t.Error("a utility agent named ../x started")
 	}
 	u, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "what needs me?",
-		Allow: []string{"WebSearch"}})
+		Web: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,8 @@ func TestUtilityAgent(t *testing.T) {
 		}
 	}
 
-	// It may search the web; anything else it asks for is refused, and nobody answers its questions.
+	// It may search the web with the provider's own web tools; anything else it asks for is refused, and nobody
+	// answers its questions.
 	if d := <-fs.Ask(agent.Permission{ID: "p1", Tool: "WebSearch"}); !d.Allow {
 		t.Error("WebSearch was refused")
 	}

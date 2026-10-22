@@ -7,13 +7,17 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/eventq"
 	"github.com/liamg/oriel/agent/hostexec"
-	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/agent/packs"
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/jsonrpc"
 )
 
@@ -29,7 +33,7 @@ func (p *Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (ag
 }
 
 // gate is the approval policy and sandbox mode for a policy. In a sandbox there's no approval: the sandbox and its
-// gateway are the gate.
+// gateway are the gate. Outside one every command asks; under PolicyLight the session accepts the edits itself.
 func gate(s agent.StartSpec) (approval, sandbox string, err error) {
 	if s.Sandbox != nil {
 		switch s.Policy {
@@ -38,41 +42,37 @@ func gate(s agent.StartSpec) (approval, sandbox string, err error) {
 		}
 	}
 	switch s.Policy {
-	case agent.PolicyAsk, "":
+	case agent.PolicyAsk, agent.PolicyLight, "":
 		return "untrusted", "workspace-write", nil
-	case agent.PolicyLight:
-		return "on-request", "workspace-write", nil
 	case agent.PolicyBypass:
-		if s.Sandbox == nil {
-			return "", "", errors.New("codex: bypass is only for a sandboxed session: outside one, nothing would gate the agent")
-		}
-		return "never", "danger-full-access", nil
+		return "", "", errors.New("codex: bypass is only for a sandboxed session: outside one, nothing would gate the agent")
 	}
 	return "", "", fmt.Errorf("codex: unknown policy %q", s.Policy)
 }
 
 type session struct {
-	p     *Provider
-	spec  agent.StartSpec
-	proc  agent.Process
-	rpc   *jsonrpc.Conn
-	tools *toolServer
-	errs  *tail
+	p      *Provider
+	spec   agent.StartSpec
+	prices price.Books
+	proc   agent.Process
+	rpc    *jsonrpc.Conn
+	tools  *toolServer
+	errs   *tail
+	events *eventq.Queue
 
-	events   chan agent.Event
-	emu      sync.RWMutex
-	closed   bool
 	closing  chan struct{}
 	finished chan struct{}
 	once     sync.Once
 
 	mu       sync.Mutex
 	id       string
+	model    string // what the thread runs on, as codex said
 	turn     string
-	history  bool // the thread has a turn to fork from
-	preamble string
-	held     string // a denial's note that missed its turn, said with the next prompt
+	ended    string // the last turn that completed
+	history  bool   // the thread has a turn to fork from
+	held     string // a note that missed its turn, said with the next prompt
 	failed   bool   // this turn has reported its Failure
+	out      bool   // its login was said to be gone, and hasn't been seen back
 	base     tokens // the thread's total when this turn started
 	total    tokens
 	last     tokens
@@ -80,6 +80,9 @@ type session struct {
 	partial  map[string]string
 	started  map[string]bool
 	changes  map[string][]fileChange
+	calls    map[string]item // MCP tool calls under way, by item
+	children map[string]bool // the threads of the subagents it spawned
+	user     []string        // the MCP servers codex's own config has
 	pending  map[string]func(agent.Decision) error
 	forks    map[string]*forkTurn
 	limits   rateLimits
@@ -101,36 +104,45 @@ type forkTurn struct {
 	done chan struct{}
 }
 
+func newSession(p *Provider, spec agent.StartSpec) *session {
+	return &session{p: p, spec: spec, prices: price.Or(spec.Prices), events: eventq.New(), closing: make(chan struct{}), finished: make(chan struct{}),
+		partial: map[string]string{}, started: map[string]bool{}, changes: map[string][]fileChange{},
+		calls: map[string]item{}, children: map[string]bool{},
+		pending: map[string]func(agent.Decision) error{}, forks: map[string]*forkTurn{}}
+}
+
 func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume string) (agent.Session, error) {
 	approval, sandbox, err := gate(spec)
 	if err != nil {
 		return nil, err
 	}
+	ex := spec.Exec
+	bin := p.bin()
+	if ex == nil {
+		ex = hostexec.Exec{}
+		if bin, err = exec.LookPath(bin); err != nil {
+			return nil, fmt.Errorf("codex isn't installed: %w", err)
+		}
+	}
 	tools, err := serveTools(spec.Tools)
 	if err != nil {
 		return nil, fmt.Errorf("codex: serving Oriel's tools: %w", err)
 	}
-	cmd := exec.Command(p.bin(), "app-server")
+	cmd := exec.Command(bin, "app-server")
 	cmd.Dir = spec.Cwd
 	cmd.Env = append(os.Environ(), spec.Env...)
+	if spec.Sandbox != nil {
+		cmd.Env = append(cmd.Env, agent.HookSocketEnv+"="+tools.path)
+	}
 	errs := &tail{}
 	cmd.Stderr = errs
-	ex := spec.Exec
-	if ex == nil {
-		ex = hostexec.Exec{}
-	}
 	proc, err := ex.Start(ctx, cmd)
 	if err != nil {
 		tools.Close()
 		return nil, fmt.Errorf("codex app-server: %w", err)
 	}
-	s := &session{
-		p: p, spec: spec, proc: proc, tools: tools, errs: errs,
-		events: make(chan agent.Event, 256), closing: make(chan struct{}), finished: make(chan struct{}),
-		preamble: spec.Pack.Text,
-		partial:  map[string]string{}, started: map[string]bool{}, changes: map[string][]fileChange{},
-		pending: map[string]func(agent.Decision) error{}, forks: map[string]*forkTurn{},
-	}
+	s := newSession(p, spec)
+	s.proc, s.tools, s.errs = proc, tools, errs
 	s.rpc = jsonrpc.NewConn(proc.Stdout(), proc.Stdin(), jsonrpc.Handlers{Request: s.onRequest, Notify: s.onNotify}, jsonrpc.Options{})
 	go s.wait()
 	fail := func(err error) (agent.Session, error) {
@@ -150,8 +162,17 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	if err := requireChatGPT(acct, spec.Env); err != nil {
 		return fail(err)
 	}
+	s.mu.Lock()
 	s.acct = acct
-	cfg, err := s.config()
+	s.mu.Unlock()
+	user, err := s.userServers(ctx)
+	if err != nil && s.strict() {
+		return fail(err)
+	}
+	s.mu.Lock()
+	s.user = user
+	s.mu.Unlock()
+	cfg, err := s.config(user)
 	if err != nil {
 		return fail(err)
 	}
@@ -166,11 +187,14 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	if resume != "" {
 		method = "thread/resume"
 		params["threadId"] = resume
+	} else if in := instructions(spec); in != "" {
+		params["developerInstructions"] = in
 	}
 	var r struct {
 		Thread struct {
 			ID string `json:"id"`
 		} `json:"thread"`
+		Model string `json:"model"`
 	}
 	if err := s.rpc.Call(ctx, method, params, &r); err != nil {
 		return fail(fmt.Errorf("codex %s: %w", method, err))
@@ -180,9 +204,13 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	}
 	s.mu.Lock()
 	s.id = r.Thread.ID
+	s.model = r.Model
+	if s.model == "" {
+		s.model = spec.Model
+	}
 	s.history = resume != ""
 	s.mu.Unlock()
-	s.emit(agent.Ready{ID: r.Thread.ID})
+	s.emit(agent.Ready{ID: r.Thread.ID, Model: r.Model})
 	if spec.Prompt != "" {
 		if err := s.Send(ctx, agent.Input{Text: spec.Prompt}); err != nil {
 			return fail(err)
@@ -191,15 +219,77 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	return s, nil
 }
 
-// config is the thread's config overrides: Oriel's tools as the MCP server oriel, and the sandbox's gateway.
-func (s *session) config() (map[string]any, error) {
+// instructions are what a new thread is told before anything is said, as its developer instructions: the pack's
+// body, and where its memory is. Codex keeps them with the thread, so a resumed one has them already.
+func instructions(spec agent.StartSpec) string {
+	var parts []string
+	if _, body, err := packs.Parse(spec.Pack.Text); err == nil && strings.TrimSpace(body) != "" {
+		parts = append(parts, strings.TrimSpace(body))
+	}
+	if spec.Memory != "" {
+		m := "## Memory\n\nYour memory directory is " + spec.Memory + ": keep what's worth remembering across " +
+			"sessions there, a file for each memory, with an index of them in " + filepath.Join(spec.Memory, "MEMORY.md") + "."
+		if b, err := os.ReadFile(filepath.Join(spec.Memory, "MEMORY.md")); err == nil && strings.TrimSpace(string(b)) != "" {
+			m += " The index as it is now:\n\n" + strings.TrimSpace(string(b))
+		}
+		parts = append(parts, m)
+	}
+	return strings.Join(parts, "\n\n")
+}
+
+// strict says the user's own MCP servers are left out: the gateway stands in for them, or none are wanted.
+func (s *session) strict() bool {
+	return s.spec.NoMCP || s.spec.Sandbox != nil && s.spec.Sandbox.GatewayMCP != ""
+}
+
+// userServers are the MCP servers codex's own config gives a thread in the session's directory.
+func (s *session) userServers(ctx context.Context) ([]string, error) {
+	params := map[string]any{}
+	if s.spec.Cwd != "" {
+		params["cwd"] = s.spec.Cwd
+	}
+	var r struct {
+		Config struct {
+			MCPServers map[string]json.RawMessage `json:"mcp_servers"`
+		} `json:"config"`
+	}
+	if err := s.rpc.Call(ctx, "config/read", params, &r); err != nil {
+		return nil, fmt.Errorf("codex config/read: %w", err)
+	}
+	var out []string
+	for name := range r.Config.MCPServers {
+		out = append(out, name)
+	}
+	slices.Sort(out)
+	return out, nil
+}
+
+// config is the thread's config overrides: Oriel's tools as the MCP server oriel (in a sandbox, the oriel on its PATH
+// at the socket's path there), the sandbox's gateway, web search off with NoWeb, and with strict the user's own
+// servers (user) and ChatGPT's apps turned off.
+func (s *session) config(user []string) (map[string]any, error) {
+	bin, sock := s.p.orielBin(), s.tools.path
+	if s.spec.Sandbox != nil {
+		bin, sock = "oriel", s.spec.Sandbox.HookSocket
+	}
 	cfg := map[string]any{
 		"mcp_servers.oriel": map[string]any{
-			"command":                     s.p.orielBin(),
+			"command":                     bin,
 			"args":                        []string{"hook", "mcp"},
-			"env":                         map[string]string{SockEnv: s.tools.path},
+			"env":                         map[string]string{SockEnv: sock},
 			"default_tools_approval_mode": "approve",
 		},
+	}
+	if s.spec.NoWeb {
+		cfg["web_search"] = "disabled"
+	}
+	if s.strict() {
+		cfg["features.apps"] = false
+		for _, name := range user {
+			if name != "oriel" {
+				cfg["mcp_servers."+name+".enabled"] = false
+			}
+		}
 	}
 	if s.spec.Sandbox == nil || s.spec.Sandbox.GatewayMCP == "" {
 		return cfg, nil
@@ -222,6 +312,7 @@ func (s *session) config() (map[string]any, error) {
 		return nil, fmt.Errorf("codex: the gateway's MCP config: %w", err)
 	}
 	for name, m := range f.MCPServers {
+		delete(cfg, "mcp_servers."+name+".enabled")
 		c := map[string]any{}
 		if m.URL != "" {
 			c["url"] = m.URL
@@ -263,24 +354,11 @@ func (s *session) wait() {
 		}
 	}
 	s.emit(ex)
-	s.emu.Lock()
-	s.closed = true
-	close(s.events)
-	s.emu.Unlock()
+	s.events.Close()
 	close(s.finished)
 }
 
-func (s *session) emit(ev agent.Event) {
-	s.emu.RLock()
-	defer s.emu.RUnlock()
-	if s.closed {
-		return
-	}
-	select {
-	case s.events <- ev:
-	case <-s.closing:
-	}
-}
+func (s *session) emit(ev agent.Event) { s.events.Push(ev) }
 
 func (s *session) ID() string {
 	s.mu.Lock()
@@ -288,7 +366,7 @@ func (s *session) ID() string {
 	return s.id
 }
 
-func (s *session) Events() <-chan agent.Event { return s.events }
+func (s *session) Events() <-chan agent.Event { return s.events.Out() }
 
 func (s *session) Terminal() agent.Terminal { return nil }
 
@@ -310,10 +388,6 @@ func (s *session) Send(ctx context.Context, in agent.Input) error {
 		text = s.held + "\n\n" + text
 		s.held = ""
 	}
-	if s.preamble != "" {
-		text = s.preamble + "\n\n" + text
-		s.preamble = ""
-	}
 	s.mu.Unlock()
 	input := []map[string]any{{"type": "text", "text": text}}
 	for _, img := range in.Images {
@@ -334,6 +408,11 @@ func (s *session) Send(ctx context.Context, in agent.Input) error {
 	if err := s.rpc.Call(ctx, "turn/start", params, &r); err != nil {
 		return fmt.Errorf("codex turn/start: %w", err)
 	}
+	s.mu.Lock()
+	if s.turn == "" && r.Turn.ID != "" && r.Turn.ID != s.ended {
+		s.turn = r.Turn.ID
+	}
+	s.mu.Unlock()
 	return nil
 }
 
@@ -347,11 +426,50 @@ func (s *session) Interrupt(ctx context.Context) error {
 	return s.rpc.Call(ctx, "turn/interrupt", map[string]any{"threadId": id, "turnId": turn}, nil)
 }
 
+// forkOff are the features that give a thread tools (codex-rs/core/config.schema.json), all off for a fork.
+var forkOff = []string{"shell_tool", "unified_exec", "view_image", "image_generation", "multi_agent", "collab", "apps",
+	"memory_tool", "js_repl", "browser_use", "computer_use", "web_search", "web_search_request", "tool_search",
+	"request_permissions_tool", "goals", "plugins"}
+
+// forkConfig is a fork's config overrides: no web search, none of forkOff, and every MCP server off, Oriel's too.
+func (s *session) forkConfig() (map[string]any, error) {
+	s.mu.Lock()
+	user := s.user
+	s.mu.Unlock()
+	base, err := s.config(user)
+	if err != nil {
+		return nil, err
+	}
+	cfg := map[string]any{"web_search": "disabled"}
+	for _, f := range forkOff {
+		cfg["features."+f] = false
+	}
+	for k, v := range base {
+		m, ok := v.(map[string]any)
+		if !ok || !strings.HasPrefix(k, "mcp_servers.") {
+			continue
+		}
+		off := map[string]any{"enabled": false}
+		for mk, mv := range m {
+			off[mk] = mv
+		}
+		off["enabled"] = false
+		cfg[k] = off
+	}
+	for _, name := range user {
+		if _, ok := cfg["mcp_servers."+name]; !ok {
+			cfg["mcp_servers."+name+".enabled"] = false
+		}
+	}
+	return cfg, nil
+}
+
 // forkInstructions keep a side question to talking.
 const forkInstructions = "This is a side question about the conversation so far. Answer it from what you already " +
 	"know, briefly, without running commands or changing files."
 
-// Fork answers a side question on an ephemeral fork of the thread, which nothing is saved to.
+// Fork answers a side question on an ephemeral fork of the thread, which nothing is saved to: read-only, asking
+// nothing, with its tools turned off (forkConfig) and its turn given no environment to run them in.
 func (s *session) Fork(ctx context.Context, f agent.ForkSpec) (string, error) {
 	s.mu.Lock()
 	id, ok := s.id, s.history
@@ -364,9 +482,13 @@ func (s *session) Fork(ctx context.Context, f agent.ForkSpec) (string, error) {
 			ID string `json:"id"`
 		} `json:"thread"`
 	}
-	err := s.rpc.Call(ctx, "thread/fork", map[string]any{
+	cfg, err := s.forkConfig()
+	if err != nil {
+		return "", err
+	}
+	err = s.rpc.Call(ctx, "thread/fork", map[string]any{
 		"threadId": id, "ephemeral": true, "approvalPolicy": "never", "sandbox": "read-only",
-		"developerInstructions": forkInstructions,
+		"developerInstructions": forkInstructions, "config": cfg,
 	}, &r)
 	if err != nil {
 		return "", fmt.Errorf("codex thread/fork: %w", err)
@@ -386,7 +508,8 @@ func (s *session) Fork(ctx context.Context, f agent.ForkSpec) (string, error) {
 		}()
 	}()
 	input := []map[string]any{{"type": "text", "text": f.Prompt}}
-	if err := s.rpc.Call(ctx, "turn/start", map[string]any{"threadId": r.Thread.ID, "input": input}, nil); err != nil {
+	turn := map[string]any{"threadId": r.Thread.ID, "input": input, "environments": []any{}}
+	if err := s.rpc.Call(ctx, "turn/start", turn, nil); err != nil {
 		return "", fmt.Errorf("codex turn/start: %w", err)
 	}
 	select {
@@ -423,9 +546,8 @@ func (s *session) ask(answer func(agent.Decision) error) string {
 	return id
 }
 
-// tell sends a denial's note to the turn that was denied, or holds it for the next prompt.
-func (s *session) tell(threadID, turnID, note string) {
-	text := "Denied by the user: " + note
+// tell says text to the turn it's about, or holds it for the next prompt.
+func (s *session) tell(threadID, turnID, text string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	err := s.rpc.Call(ctx, "turn/steer", map[string]any{
@@ -435,124 +557,5 @@ func (s *session) tell(threadID, turnID, note string) {
 		s.mu.Lock()
 		s.held = text
 		s.mu.Unlock()
-	}
-}
-
-func (s *session) onRequest(r *jsonrpc.Request) {
-	var p struct {
-		ThreadID  string `json:"threadId"`
-		TurnID    string `json:"turnId"`
-		ItemID    string `json:"itemId"`
-		Command   string `json:"command"`
-		Cwd       string `json:"cwd"`
-		Reason    string `json:"reason"`
-		GrantRoot string `json:"grantRoot"`
-		Questions []struct {
-			ID       string `json:"id"`
-			Header   string `json:"header"`
-			Question string `json:"question"`
-			Options  []struct {
-				Label string `json:"label"`
-			} `json:"options"`
-		} `json:"questions"`
-		ServerName string `json:"serverName"`
-		Message    string `json:"message"`
-	}
-	json.Unmarshal(r.Params, &p)
-	main := p.ThreadID == s.ID()
-	switch r.Method {
-	case "item/commandExecution/requestApproval", "item/fileChange/requestApproval":
-		if !main {
-			r.Reply(map[string]any{"decision": "decline"}, nil)
-			return
-		}
-		perm := agent.Permission{Tool: "Bash", Summary: p.Command, Rule: "`" + p.Command + "` for the rest of this session"}
-		in := map[string]any{"command": p.Command, "cwd": p.Cwd}
-		if r.Method == "item/fileChange/requestApproval" {
-			s.mu.Lock()
-			var paths []string
-			for _, c := range s.changes[p.ItemID] {
-				paths = append(paths, c.Path)
-			}
-			s.mu.Unlock()
-			perm.Tool, perm.Summary = "Edit", strings.Join(paths, ", ")
-			perm.Rule = "edits to " + perm.Summary + " for the rest of this session"
-			in = map[string]any{"files": paths}
-			if p.GrantRoot != "" {
-				in["grantRoot"] = p.GrantRoot
-				perm.Rule = "writes under " + p.GrantRoot + " for the rest of this session"
-				if perm.Summary == "" {
-					perm.Summary = "write under " + p.GrantRoot
-				}
-			}
-		}
-		if p.Reason != "" {
-			in["reason"] = p.Reason
-		}
-		perm.Input = jsonOf(in)
-		perm.ID = s.ask(func(d agent.Decision) error {
-			decision := "decline"
-			switch {
-			case d.Allow && d.Always:
-				decision = "acceptForSession"
-			case d.Allow:
-				decision = "accept"
-			}
-			if err := r.Reply(map[string]any{"decision": decision}, nil); err != nil {
-				return err
-			}
-			if !d.Allow && d.Note != "" {
-				s.tell(p.ThreadID, p.TurnID, d.Note)
-			}
-			return nil
-		})
-		s.emit(perm)
-	case "item/tool/requestUserInput":
-		if !main {
-			r.Reply(map[string]any{"answers": map[string]any{}}, nil)
-			return
-		}
-		q := agent.Question{}
-		for _, pq := range p.Questions {
-			cq := core.Question{Header: pq.Header, Question: pq.Question}
-			for _, o := range pq.Options {
-				cq.Options = append(cq.Options, o.Label)
-			}
-			q.Questions = append(q.Questions, cq)
-		}
-		qs := p.Questions
-		q.ID = s.ask(func(d agent.Decision) error {
-			answers := map[string]any{}
-			for _, pq := range qs {
-				for _, key := range []string{pq.Question, pq.ID, pq.Header} {
-					if a, ok := d.Answers[key]; ok && key != "" {
-						answers[pq.ID] = map[string]any{"answers": []string{a}}
-						break
-					}
-				}
-			}
-			return r.Reply(map[string]any{"answers": answers}, nil)
-		})
-		s.emit(q)
-	case "mcpServer/elicitation/request":
-		if p.ServerName == "oriel" {
-			r.Reply(map[string]any{"action": "accept", "content": map[string]any{}}, nil)
-			return
-		}
-		if !main {
-			r.Reply(map[string]any{"action": "decline"}, nil)
-			return
-		}
-		perm := agent.Permission{Tool: "mcp__" + p.ServerName, Summary: p.Message, Input: r.Params,
-			Rule: "this request from " + p.ServerName}
-		perm.ID = s.ask(func(d agent.Decision) error {
-			if d.Allow {
-				return r.Reply(map[string]any{"action": "accept", "content": map[string]any{}}, nil)
-			}
-			return r.Reply(map[string]any{"action": "decline"}, nil)
-		})
-		s.emit(perm)
-	default:
-		r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "oriel doesn't answer " + r.Method})
 	}
 }

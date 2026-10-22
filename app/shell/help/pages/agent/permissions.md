@@ -28,8 +28,9 @@ sets this session's own rule for the tool, or drops it.
 ## Network {#network}
 
 The network rules in force, most local first: this session's, project settings, your settings, what you allowed
-always, the endpoints the sandbox's environment points at (the model's `ANTHROPIC_BASE_URL`, which may reach private
-and tailnet addresses), and the built-in list. The most specific rule for a destination wins. Anything else asks
+always, the endpoints the sandbox's environment points at (the model's, such as `ANTHROPIC_BASE_URL` or
+`OPENAI_BASE_URL`, which may reach private and tailnet addresses), what the session's agent itself reaches (Claude's
+`api.anthropic.com`, Codex's `chatgpt.com`: its provider says), and the built-in list. The most specific rule for a destination wins. Anything else asks
 you. Type a host (`api.example.com`, `*.example.com`, `host:443`) to allow or block it for the session; a session's
 own rule has **Remove**. From Lua or a keymap, `permissions.net` takes `private = true` to let an allow reach LAN and
 tailnet addresses.

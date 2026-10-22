@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/container"
 )
@@ -25,7 +26,7 @@ func TestMountsShareAttachments(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(run, "oriel.sock"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	m, err := Mounts(root, root, sandbox.Identity{Home: "/home/u", UID: 501}, "/bin/claude", "/bin/oriel", "")
+	m, err := Mounts(root, root, sandbox.Identity{Home: "/home/u", UID: 501}, agent.SandboxNeeds{Bins: map[string]string{"claude": "/bin/claude"}}, "/bin/oriel")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +61,7 @@ func TestMountsShareGoCache(t *testing.T) {
 		if err := os.WriteFile(sandbox.SocketPath(root), nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		m, err := Mounts(root, root, id, "/bin/claude", "/bin/oriel", "")
+		m, err := Mounts(root, root, id, agent.SandboxNeeds{Bins: map[string]string{"claude": "/bin/claude"}}, "/bin/oriel")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -79,7 +80,7 @@ func TestMountsShareGoCache(t *testing.T) {
 	if fi, err := os.Stat(sources[0]); err != nil || !fi.IsDir() {
 		t.Fatalf("go cache dir: %v", err)
 	}
-	env := agentEnv(t.TempDir(), id, sandbox.LaunchOptions{Environ: []string{"GOMODCACHE=/host/mod"}})
+	env := agentEnv(t.TempDir(), id, sandbox.LaunchOptions{Environ: []string{"GOMODCACHE=/host/mod"}}, agent.SandboxNeeds{})
 	if env["GOMODCACHE"] != GoCacheDir+"/mod" || env["GOCACHE"] != GoCacheDir+"/build" {
 		t.Fatalf("GOMODCACHE=%q GOCACHE=%q", env["GOMODCACHE"], env["GOCACHE"])
 	}

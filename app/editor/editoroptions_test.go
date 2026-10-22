@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/registry"
 )
@@ -79,7 +80,10 @@ func TestEditorClipboardOption(t *testing.T) {
 
 // docs/configuration.md, "Option list": every registered option has a row, and every row names a registered option.
 func TestOptionList(t *testing.T) {
-	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Size: apptest.MockupSize})
+	claude, codex := agenttest.NewFake(), agenttest.NewFake()
+	claude.Name, codex.Name = "claude", "codex"
+	// The built-in providers' plugins register options of their own.
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Size: apptest.MockupSize, Config: apptest.Builtin(claude, codex)})
 	f, err := os.Open(filepath.Join("..", "..", "docs", "configuration.md"))
 	if err != nil {
 		t.Fatal(err)

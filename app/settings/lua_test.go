@@ -83,7 +83,7 @@ L.on("CommentSend", function(ev) ev.body = ev.body:upper(); return ev end)
 	x.Eval("oriel.api.version")
 	x.Eval("oriel.nope()")
 	texts, kinds := x.Repl()
-	if texts[1] != "2" || texts[3] != `"0.5.0"` || kinds[5] != 2 {
+	if texts[1] != "2" || texts[3] != `"0.6.0"` || kinds[5] != 2 {
 		t.Errorf("repl %q %v", texts, kinds)
 	}
 	if names := x.Complete("oriel.ke"); !slices.Equal(names, []string{"keymap"}) {

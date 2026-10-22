@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/claude/transcript"
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/fswatch"
 )
 
@@ -24,6 +25,7 @@ const (
 type tailer struct {
 	mu     sync.Mutex
 	config string
+	prices price.Books
 	cwd    string
 	id     string
 	main   *transcript.Reader
@@ -37,8 +39,8 @@ type tailer struct {
 	watcher  func() (*fswatch.Watcher, error)
 }
 
-func newTailer(config, cwd, id string, resume bool) *tailer {
-	t := &tailer{config: config, cwd: cwd, id: id, subs: map[string]*transcript.Reader{}, skip: map[string]int64{},
+func newTailer(config, cwd, id string, resume bool, prices price.Books) *tailer {
+	t := &tailer{config: config, prices: prices, cwd: cwd, id: id, subs: map[string]*transcript.Reader{}, skip: map[string]int64{},
 		moved: make(chan struct{}, 1), watcher: fswatch.New}
 	if resume {
 		p := transcript.Path(config, cwd, id)
@@ -201,13 +203,13 @@ func (t *tailer) flush(emit func(agent.Event)) {
 		if _, err := os.Stat(p); err != nil {
 			return
 		}
-		t.main = &transcript.Reader{Path: p, Offset: t.skip[p]}
+		t.main = &transcript.Reader{Path: p, Offset: t.skip[p], Prices: t.prices}
 	}
 	t.emit(t.main.Read(), emit)
 	for _, p := range transcript.Subagents(t.main.Path) {
 		r := t.subs[p]
 		if r == nil {
-			r = &transcript.Reader{Path: p, Offset: t.skip[p]}
+			r = &transcript.Reader{Path: p, Offset: t.skip[p], Prices: t.prices}
 			t.subs[p] = r
 		}
 		t.emit(r.Read(), emit)

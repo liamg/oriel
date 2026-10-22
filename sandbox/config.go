@@ -3,8 +3,6 @@ package sandbox
 import (
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,8 +17,6 @@ type Config struct {
 	Backend string `json:"backend,omitempty"`
 	// Image replaces the base image for every project.
 	Image string `json:"image,omitempty"`
-	// ClaudeVersion pins the agent's Claude Code: "" runs the host's.
-	ClaudeVersion string `json:"claudeVersion,omitempty"`
 	// Env names the host variables a sandbox inherits; nil means the defaults.
 	Env []string `json:"env,omitempty"`
 	// Rules are the global gateway rules.
@@ -94,24 +90,6 @@ func (c Config) SandboxDefault() string {
 		return ModeHost
 	}
 	return ModeSandbox
-}
-
-// ClaudeSettings reads the host's ~/.claude/settings.json; a missing or
-// unreadable file is an empty map.
-func ClaudeSettings() map[string]any {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return map[string]any{}
-	}
-	b, err := os.ReadFile(filepath.Join(home, ".claude", "settings.json"))
-	if err != nil || strings.TrimSpace(string(b)) == "" {
-		return map[string]any{}
-	}
-	var m map[string]any
-	if json.Unmarshal(b, &m) != nil || m == nil {
-		return map[string]any{}
-	}
-	return m
 }
 
 // ParseEgressRule reads a network rule written "allow|deny host[:port] [private]": "allow *.golang.org:443".

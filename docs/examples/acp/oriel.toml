@@ -1,0 +1,9 @@
+id          = "example/gemini"
+version     = "0.1.0"
+oriel       = ">=0.6"
+description = "Gemini CLI as an agent sessions run, through the bundled Agent Client Protocol bridge"
+license     = "MIT"
+
+[permissions]
+"agent.provider" = { why = "Gemini CLI as an agent sessions run" }
+exec             = { commands = ["gemini"], why = "Run Gemini CLI, which speaks ACP with --experimental-acp" }

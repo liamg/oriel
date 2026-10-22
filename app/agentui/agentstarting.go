@@ -23,7 +23,7 @@ func startingCard(c *ui.Ctx, key any, se core.SessionState, width float32) {
 	c.Column(key, ui.Style{W: ui.Px(width), Pad: ui.PadXY(14, 12), Gap: 6, Fill: th.C(tBlockBg), Stroke: th.C(tBlockLine), Border: 1, Radius: 6,
 		Role: ui.RoleStatus, Label: s.Step, Help: kit.StartingHelp}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			widget.Spinner(c, "spin", widget.SpinnerOpts{Tone: th.C(theme.StatusWorking), Name: "starting " + kit.ProviderName(se.Agent.Provider),
+			widget.Spinner(c, "spin", widget.SpinnerOpts{Tone: th.C(theme.StatusWorking), Name: "starting " + kit.ProviderNameIn(c, se.Agent.Provider),
 				Help: kit.StartingHelp})
 			c.Text("step", s.Step+"…", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -32,6 +32,6 @@ func startingCard(c *ui.Ctx, key any, se core.SessionState, width float32) {
 		if s.Note != "" {
 			widget.Wrap(c, "note", s.Note, width-28, kit.UIFont(12.5, th.C(theme.FgMuted)))
 		}
-		c.Text("then", kit.ProviderName(se.Agent.Provider)+" gets your request once it's up.", kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("then", kit.ProviderNameIn(c, se.Agent.Provider)+" gets your request once it's up.", kit.UIFont(12, th.C(theme.FgFaint)))
 	})
 }

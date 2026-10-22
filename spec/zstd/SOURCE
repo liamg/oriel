@@ -1,0 +1,13 @@
+source: https://www.rfc-editor.org/rfc/rfc8878.txt (RFC 8878, Zstandard Compression and the 'application/zstd' Media Type)
+ref: fetched 2026-10-22
+path: rfc8878.txt
+license: IETF Trust Legal Provisions (BCP 78), as the RFC's Copyright Notice states
+
+source: https://github.com/facebook/zstd
+ref: v1.5.7
+commit: f8745da6ff1ad1e7bab384bd1f9d742439278e99
+path: facebook-zstd/tests/golden-decompression (frames that decode), facebook-zstd/tests/golden-decompression-errors
+  (frames that don't), facebook-zstd/tests/golden-compression (inputs, compressed into zstd/testdata),
+  facebook-zstd/tests/cli-tests/decompression/{golden,detectErrors}.sh (how zstd's own tests use them),
+  facebook-zstd/doc/zstd_compression_format.md (the format as zstd documents it, with the RFC's errata fixed)
+license: BSD-3-Clause (see facebook-zstd/LICENSE)

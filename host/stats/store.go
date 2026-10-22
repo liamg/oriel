@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/liamg/oriel/agent/price"
 )
 
 // cacheVersion changes with the shape of a scan: a stats file from another is dropped and the logs read again.
@@ -18,17 +20,35 @@ type Log struct {
 }
 
 // Store keeps every session's scans, and keeps them in a stats file, so a restart reads only what's been written
-// since rather than every log again.
+// since rather than every log again. A log read at other prices than the book's is read again, if it's still there.
 type Store struct {
-	file string
+	file   string
+	prices func() *price.Book
 
-	mu     sync.Mutex
-	loaded bool
-	scans  map[string]*Scan // by session, then path: key(session, path)
+	mu       sync.Mutex
+	loaded   bool
+	scans    map[string]*Scan // by session, then path: key(session, path)
+	snapshot *price.Book
 }
 
-// NewStore keeps its scans in file; "" keeps them in memory only.
-func NewStore(file string) *Store { return &Store{file: file, scans: map[string]*Scan{}} }
+// NewStore keeps its scans in file ("" keeps them in memory only), priced with the book prices gives (the
+// snapshot's if nil).
+func NewStore(file string, prices func() *price.Book) *Store {
+	return &Store{file: file, prices: prices, scans: map[string]*Scan{}}
+}
+
+// book is the prices to read with.
+func (s *Store) book() *price.Book {
+	if s.prices != nil {
+		if b := s.prices(); b != nil {
+			return b
+		}
+	}
+	if s.snapshot == nil {
+		s.snapshot = price.Default()
+	}
+	return s.snapshot
+}
 
 func key(session, path string) string { return session + "\x00" + path }
 
@@ -42,16 +62,19 @@ func (s *Store) Scan(session string, logs []Log) []*Scan {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.load()
+	b := s.book()
 	var out []*Scan
 	changed := false
 	for _, l := range logs {
 		k := key(session, l.Path)
 		sc := s.scans[k]
-		if sc == nil {
+		fi, err := statLog(l.Path)
+		if sc == nil || err == nil && sc.Priced != b.Version() {
 			sc = New(l.Path, l.Format)
 			s.scans[k] = sc
 		}
-		if fi, err := os.Stat(l.Path); err == nil && fi.Size() != sc.Size || sc.Offset == 0 {
+		if err == nil && (fi.Size() != sc.Size || sc.Offset == 0) {
+			sc.Prices(b)
 			changed = sc.Read() || changed
 		}
 		out = append(out, sc)

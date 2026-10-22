@@ -35,7 +35,7 @@ func appendLog(t *testing.T, p, s string) {
 func tailing(t *testing.T, watcher func() (*fswatch.Watcher, error)) (*tailer, string, <-chan agent.Event) {
 	t.Helper()
 	config := t.TempDir()
-	tl := newTailer(config, "/w/api", "s1", false)
+	tl := newTailer(config, "/w/api", "s1", false, nil)
 	if watcher != nil {
 		tl.watcher = watcher
 	}

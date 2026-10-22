@@ -7,12 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/container"
 )
@@ -45,49 +47,54 @@ const ContainerSocket = ContainerRunDir + "/oriel.sock"
 func SocketsMount(e container.Engine) bool { return runtime.GOOS == "linux" && !e.VM }
 
 // Launch readies root's sandbox for an agent in cwd running argv, and returns
-// the command to run under the PTY in its place.
-func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) ([]string, error) {
+// the command to run under the PTY in its place, with what the agent's
+// provider said it needs.
+func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) ([]string, agent.SandboxNeeds, error) {
 	engine := container.EngineOf(ctx)
 	rec, ok := sandbox.Load(root)
 	if !ok || !rec.Sandboxed() {
-		return nil, errors.New("this workspace is not sandboxed")
+		return nil, agent.SandboxNeeds{}, errors.New("this workspace is not sandboxed")
 	}
 	st := startSteps("sandbox launch " + filepath.Base(root))
 	defer st.Done()
 	cfg := o.Config
 	id, err := sandbox.CurrentIdentity()
 	if err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
 	image, err := Image(ctx, root, cfg)
 	if err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
 	st.Mark("image")
 	markImageUsed(image)
 	if err := writeUsers(ctx, root, image, id); err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
 	st.Mark("users")
-	claudeBin, err := ClaudeBinary(ctx, cfg.ClaudeVersion)
+	needs, err := sandbox.Needs(ctx, root, cwd, o, agent.SandboxPlace{OS: "linux", Arch: runtime.GOARCH, Home: id.Home, UID: id.UID})
 	if err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
-	st.Mark("claude binary")
+	st.Mark("agent's needs")
 	orielBin, err := OrielBinary()
 	if err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
-	if err := sandbox.Prepare(root, cwd, o); err != nil {
-		return nil, err
+	if err := sandbox.Prepare(root); err != nil {
+		return nil, agent.SandboxNeeds{}, err
 	}
-	mounts, err := Mounts(root, cwd, id, claudeBin, orielBin, o.ModDir)
+	mounts, err := Mounts(root, cwd, id, needs, orielBin)
 	if err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
-	bins, err := Provision(ctx, id, workspaceTools(root))
+	tools, err := agentTools(needs.Tools)
 	if err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
+	}
+	bins, err := Provision(ctx, id, append(workspaceTools(root), tools...))
+	if err != nil {
+		return nil, agent.SandboxNeeds{}, err
 	}
 	st.Mark("toolchains")
 	if len(bins) > 0 {
@@ -108,20 +115,20 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 		Memory:    cfg.Memory,
 		PidsLimit: cfg.PidsLimit,
 	}
-	env := agentEnv(root, id, o)
+	env := agentEnv(root, id, o, needs)
 	if len(bins) > 0 {
 		env["PATH"] = strings.Join(bins, ":") + ":" + env["PATH"]
 	}
 	// One container per agent run, gone when the agent exits; a leftover
 	// from a run that was killed hard goes first.
 	if err := container.Remove(ctx, spec.Name); err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
 	// Every connection leaves through the sidecar, filtering on or off: it has the host dial, so what only the host
 	// reaches (a VPN, a tailnet, its private DNS) reaches the sandbox too. With filtering off it allows everything.
-	hostPorts := sandbox.HostPorts(sandbox.EndpointEnv(o.Environ, cfg.Env, sandbox.ClaudeSettings()))
+	hostPorts := sandbox.HostPorts(sandbox.EndpointEnv(o.Environ, cfg.Env, needs))
 	if err := ensureProxy(ctx, root, image, orielBin, id, hostPorts); err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
 	st.Mark("egress proxy")
 	spec.Network = NetworkName(root)
@@ -132,16 +139,16 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 	env["NO_PROXY"] = "localhost,127.0.0.1"
 	env["no_proxy"] = env["NO_PROXY"]
 	if err := container.PrepareMountpoints(spec.Mounts); err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
 	st.Mark("files")
 	envFile := filepath.Join(sandbox.Dir(root), "agent.env")
 	if err := os.WriteFile(envFile, []byte(sandbox.EnvFile(env)), 0o600); err != nil {
-		return nil, err
+		return nil, agent.SandboxNeeds{}, err
 	}
 	spec.Workdir = cwd
 	spec.Entrypoint, spec.Command = argv[0], argv[1:]
-	return spec.InteractiveArgv(engine, envFile), nil
+	return spec.InteractiveArgv(engine, envFile), needs, nil
 }
 
 // Stop removes root's containers and network. The workspace is untouched.
@@ -155,8 +162,8 @@ func Stop(ctx context.Context, root string) error {
 	return err
 }
 
-func agentEnv(root string, id sandbox.Identity, o sandbox.LaunchOptions) map[string]string {
-	return sandbox.AgentEnv(root, o, true, map[string]string{
+func agentEnv(root string, id sandbox.Identity, o sandbox.LaunchOptions, n agent.SandboxNeeds) map[string]string {
+	return sandbox.AgentEnv(root, o, n, true, map[string]string{
 		"HOME":          id.Home,
 		"USER":          id.Name,
 		"LOGNAME":       id.Name,
@@ -173,9 +180,9 @@ func mustToken(root string) string {
 	return r.AgentToken
 }
 
-// Mounts is everything root's container sees of the host.
-func Mounts(root, cwd string, id sandbox.Identity, claudeBin, orielBin, modDir string) ([]container.Mount, error) {
-	binds, err := sandbox.Binds(root, cwd, modDir)
+// Mounts is everything root's container sees of the host: n's binaries in /usr/local/bin beside oriel.
+func Mounts(root, cwd string, id sandbox.Identity, n agent.SandboxNeeds, orielBin string) ([]container.Mount, error) {
+	binds, err := sandbox.Binds(root, cwd, n)
 	if err != nil {
 		return nil, err
 	}
@@ -184,10 +191,11 @@ func Mounts(root, cwd string, id sandbox.Identity, claudeBin, orielBin, modDir s
 		{Source: sandbox.HomeDir(root), Target: id.Home},
 		{Source: filepath.Join(dir, "etc", "passwd"), Target: "/etc/passwd", ReadOnly: true},
 		{Source: filepath.Join(dir, "etc", "group"), Target: "/etc/group", ReadOnly: true},
-		{Source: claudeBin, Target: "/usr/local/bin/claude", ReadOnly: true},
 		{Source: orielBin, Target: "/usr/local/bin/oriel", ReadOnly: true},
-		{Source: sandbox.TmpDir(root), Target: fmt.Sprintf("/tmp/claude-%d", id.UID)},
 		{Source: sandbox.GoCache(), Target: GoCacheDir},
+	}
+	for _, name := range slices.Sorted(maps.Keys(n.Bins)) {
+		m = append(m, container.Mount{Source: n.Bins[name], Target: "/usr/local/bin/" + name, ReadOnly: true})
 	}
 	run, err := runMounts(context.Background(), root, id, false)
 	if err != nil {
@@ -242,13 +250,4 @@ func imageUsers(ctx context.Context, image string) (passwd, group string, err er
 		_ = os.WriteFile(cache, []byte(out), 0o600)
 	}
 	return p, g, nil
-}
-
-// hostClaude is the host's claude binary, symlinks resolved.
-func hostClaude() (string, error) {
-	p, err := exec.LookPath("claude")
-	if err != nil {
-		return "", errors.New("claude is not installed on this machine")
-	}
-	return filepath.EvalSymlinks(p)
 }

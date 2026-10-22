@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
@@ -35,6 +36,7 @@ type Stats struct {
 	env       hostcore.Env
 	st        hostcore.State
 	providers *agent.Providers
+	prices    func() *price.Book
 
 	once    sync.Once
 	data    *stats.Store
@@ -42,14 +44,22 @@ type Stats struct {
 	usageMu sync.Mutex
 }
 
-// NewStats keeps stats under env's home.
-func NewStats(env hostcore.Env, st hostcore.State, providers *agent.Providers) *Stats {
-	return &Stats{env: env, st: st, providers: providers}
+// NewStats keeps stats under env's home, priced with the book prices gives.
+func NewStats(env hostcore.Env, st hostcore.State, providers *agent.Providers, prices func() *price.Book) *Stats {
+	return &Stats{env: env, st: st, providers: providers, prices: prices}
+}
+
+// pricedBy is where the costs come from.
+func (s *Stats) pricedBy() stats.Prices {
+	if s.prices == nil {
+		return stats.Prices{}
+	}
+	return stats.PricesOf(s.prices())
 }
 
 // Store is the stats' store of scanned logs.
 func (s *Stats) Store() *stats.Store {
-	s.once.Do(func() { s.data = stats.NewStore(filepath.Join(s.env.Home, "stats.json")) })
+	s.once.Do(func() { s.data = stats.NewStore(filepath.Join(s.env.Home, "stats.json"), s.prices) })
 	return s.data
 }
 
@@ -162,7 +172,7 @@ func (s *Stats) outside(only core.SessionID, since time.Time, own owned) []stats
 				ss.Repos = []stats.Repo{{Name: filepath.Base(root), Dir: root}}
 				ss.Name = cmp.Or(ss.Name, filepath.Base(main.Cwd))
 			}
-			ss.Name = cmp.Or(ss.Name, strings.TrimSuffix(filepath.Base(main.Path), ".jsonl"))
+			ss.Name = cmp.Or(ss.Name, strings.TrimSuffix(strings.TrimSuffix(filepath.Base(main.Path), ".zst"), ".jsonl"))
 			if acct, name := s.AccountOf(p.ID()); acct != "" {
 				ss.Accounts = []stats.Account{{ID: acct, Name: name}}
 			}
@@ -202,6 +212,7 @@ func (s *Stats) Query(q stats.Query) stats.Report {
 	// A log last written before the period the query compares with has nothing in it.
 	r := stats.Run(q, s.Sessions("", q.From.Add(-q.To.Sub(q.From))))
 	r.Scanned = s.env.Now().UTC()
+	r.Prices = s.pricedBy()
 	return r
 }
 
@@ -214,9 +225,11 @@ func (s *Stats) Session(r StatsSessionReq) (stats.Detail, error) {
 		if _, err := s.st.Session(r.Session); err != nil {
 			return stats.Detail{}, err
 		}
-		return stats.Detail{Session: string(r.Session)}, nil
+		return stats.Detail{Session: string(r.Session), Prices: s.pricedBy()}, nil
 	}
-	return stats.Detailed(ss[0], r.Split, r.Offset), nil
+	d := stats.Detailed(ss[0], r.Split, r.Offset)
+	d.Prices = s.pricedBy()
+	return d, nil
 }
 
 // Record adds an agent event to the session's record, for a provider that keeps no log of its own.

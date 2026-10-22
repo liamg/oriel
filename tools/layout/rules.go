@@ -26,13 +26,13 @@ var Rules = []Rule{
 	{From: []string{"registry/lang"}, Never: []string{"ui", "render"}},
 	// The session host's parts meet only in its facade, each seeing the host as a host/hostcore State.
 	apart("host/agentrun"), apart("host/aireview"), apart("host/github"), apart("host/jobs"), apart("host/persist"),
-	apart("host/repos"), apart("host/sandboxhost"), apart("host/utility"), apart("host/worktree"),
+	apart("host/pricing"), apart("host/repos"), apart("host/sandboxhost"), apart("host/utility"), apart("host/worktree"),
 	{From: []string{"host/hostcore", "host/hosttest"}, Never: hostParts},
 }
 
 // hostParts are the session host's parts (docs/architecture.md, "Layering").
-var hostParts = []string{"host/agentrun", "host/aireview", "host/github", "host/jobs", "host/persist", "host/repos",
-	"host/sandboxhost", "host/utility", "host/worktree"}
+var hostParts = []string{"host/agentrun", "host/aireview", "host/github", "host/jobs", "host/persist", "host/pricing",
+	"host/repos", "host/sandboxhost", "host/utility", "host/worktree"}
 
 // apart keeps a part of the host from reaching any other.
 func apart(part string) Rule {

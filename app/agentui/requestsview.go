@@ -195,7 +195,7 @@ func (x *Requests) listRow(c *ui.Ctx, se core.SessionState, st *requestsState, t
 				c.Text("t", t.Heading(), kit.UIFont(13, title))
 			})
 			c.Box("p", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {
-				if p := preview(se, t); p != "" && g != kit.GroupResolved {
+				if p := preview(x.h, se, t); p != "" && g != kit.GroupResolved {
 					c.Text("t", p, kit.UIFont(12, th.C(theme.FgFaint)))
 				}
 			})
@@ -274,7 +274,7 @@ func (x *Requests) requestHeader(c *ui.Ctx, se core.SessionState, t core.Thread,
 		title, word, tok := "New request", "draft", theme.FgFaint
 		if has {
 			title = t.Heading()
-			word, tok = statusLabel(se, t)
+			word, tok = statusLabel(x.h, se, t)
 		}
 		c.Box("dot", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 4, Fill: th.C(tok)}, nil)
 		c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 15, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
@@ -394,7 +394,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 			c.Row("who", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				name := cmp.Or(cm.Name, "you")
 				if cm.Author == core.AuthorAgent {
-					name = kit.ProviderName(cm.Name)
+					name = kit.ProviderName(x.h, cm.Name)
 				}
 				c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 				if when := commentWhen(c.Now(), cm, t.Origin); when != "" {
@@ -492,7 +492,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			var who []string
 			if se.Agent.Provider != "" {
-				who = append(who, strings.ToLower(kit.ProviderName(se.Agent.Provider)))
+				who = append(who, strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)))
 			}
 			if se.Agent.Model != "" {
 				who = append(who, se.Agent.Model)
@@ -533,7 +533,7 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 					opened += " · " + cm.Name
 				}
 				kit.Stat(c, "opened", "opened", opened, fg)
-				word, tok := statusLabel(se, t)
+				word, tok := statusLabel(x.h, se, t)
 				if kit.GroupOf(t) == kit.GroupWorking && se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 					d := now.Sub(se.Agent.TurnStarted)
 					word = fmt.Sprintf("working · %d:%02d", int(d.Minutes()), int(d.Seconds())%60)
@@ -599,7 +599,7 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 // threadLink is another request as a row that opens it.
 func (x *Requests) threadLink(c *ui.Ctx, se core.SessionState, t core.Thread) {
 	th := c.Theme()
-	_, tok := statusLabel(se, t)
+	_, tok := statusLabel(x.h, se, t)
 	if widget.Clickable(c, "t."+string(t.ID), ui.Style{Dir: ui.Row, W: ui.Flex(1), Gap: 8, Cross: ui.Center, Label: t.Heading(), Help: "agent/requests#request"},
 		func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(tok)}, nil)
@@ -678,11 +678,11 @@ func (x *Requests) summaryRow(c *ui.Ctx, se core.SessionState, t core.Thread, no
 	case kit.GroupResolved:
 		note = []string{"resolved", kit.Ago(now, t.Updated)}
 	case kit.GroupWorking:
-		note = []string{threadPlace(t), strings.ToLower(kit.ProviderName(se.Agent.Provider)) + " working", kit.Ago(now, t.Updated)}
+		note = []string{threadPlace(t), strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)) + " working", kit.Ago(now, t.Updated)}
 	case kit.GroupNeedsYou:
 		note = []string{threadPlace(t), "awaiting you", kit.Ago(now, t.Updated)}
 	default:
-		word, _ := statusLabel(se, t)
+		word, _ := statusLabel(x.h, se, t)
 		note = []string{threadPlace(t), word, kit.Ago(now, t.Updated)}
 	}
 	if widget.Clickable(c, string(t.ID), ui.Style{Dir: ui.Column, W: ui.Flex(1), Pad: ui.PadXY(12, 9), Gap: 4, Role: ui.RoleListItem, Label: t.Heading(),

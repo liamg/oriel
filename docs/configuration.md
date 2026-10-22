@@ -200,8 +200,8 @@ Every option Oriel registers. A test checks this table against the registry.
 | `sandbox.backend` | `docker`, `orbstack`, `colima` or `podman`: each agent runs in a container on that engine; or `seatbelt`, macOS's own sandbox with the host's toolchains. Only those installed are offered; the default is the first of those, in that order | app | |
 | `sandbox.loopback` | `all`: the host's loopback ports a `seatbelt` sandbox may connect to; `ephemeral`, only 49152–65535 (servers on port 0, not services on fixed ports); or `none`, only its proxy | app | |
 | `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | |
-| `sandbox.claude_version` | empty: the host's Claude Code | app | |
-| `sandbox.env` | empty: the default host variables a sandbox inherits (`sandbox.DefaultEnv`: Claude Code's own, `ANTHROPIC_*`, `CLAUDE_CODE_*`, `OTEL_*`, `DISABLE_*` and its timeouts and token limits, less what a Claude Code session sets for itself); the page offers the host's | app | |
+| `sandbox.claude_version` | empty: the host's Claude Code; a container sandbox downloads the version named (registered by the Claude plugin) | app | |
+| `sandbox.env` | empty: the default host variables a sandbox inherits: `OTEL_*` (`sandbox.DefaultEnv`) and what the session's agent passes, Claude's own (`ANTHROPIC_*`, `CLAUDE_CODE_*`, `DISABLE_*` and its timeouts and token limits, less what a Claude Code session sets for itself) or Codex's (`OPENAI_*`, `CODEX_*`); the page offers the host's | app | |
 | `sandbox.egress` | empty: network rules, `allow\|deny host[:port] [private]`; a project's add to it | app | |
 | `sandbox.rules` | empty: gateway rules, `allow\|ask\|deny tool`; a project's add to it | app | |
 | `sandbox.approval_timeout` | 0: ten minutes | app | |

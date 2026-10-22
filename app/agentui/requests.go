@@ -544,10 +544,10 @@ func threadPlace(t core.Thread) string {
 }
 
 // statusLabel is a request's chip: who has it and what it's doing.
-func statusLabel(se core.SessionState, t core.Thread) (string, theme.TokenID) {
+func statusLabel(r registry.Contributions, se core.SessionState, t core.Thread) (string, theme.TokenID) {
 	switch g := kit.GroupOf(t); g {
 	case kit.GroupWorking:
-		return kit.ProviderName(se.Agent.Provider) + " · working", theme.StatusWorking
+		return kit.ProviderName(r, se.Agent.Provider) + " · working", theme.StatusWorking
 	case kit.GroupNeedsYou:
 		return "needs you", theme.StatusNeedsYou
 	case kit.GroupResolved:
@@ -573,7 +573,7 @@ func queuedLabel(se core.SessionState) string {
 }
 
 // preview is the list's second line for a request: the last word in it.
-func preview(se core.SessionState, t core.Thread) string {
+func preview(r registry.Contributions, se core.SessionState, t core.Thread) string {
 	c, ok := t.Last()
 	if !ok {
 		return ""
@@ -584,7 +584,7 @@ func preview(se core.SessionState, t core.Thread) string {
 	case c.Author == core.AuthorYou && !c.Delivered && se.Agent.Working:
 		return "queued · sends when the current turn ends"
 	case c.Author == core.AuthorAgent:
-		return kit.ProviderName(cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
+		return kit.ProviderName(r, cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
 	}
 	return core.Summary(c.Body)
 }
@@ -597,7 +597,7 @@ func avatar(c *ui.Ctx, key any, cm core.Comment) {
 	tone, label := th.C(tReqAvatarYou), cmp.Or(kit.Initials(cm.Name), "U")
 	switch cm.Author {
 	case core.AuthorAgent:
-		tone, label = th.C(tReqAvatarAI), strings.ToUpper(kit.ProviderName(cm.Name)[:1])
+		tone, label = th.C(tReqAvatarAI), strings.ToUpper(kit.ProviderNameIn(c, cm.Name)[:1])
 	case core.AuthorHost:
 		tone, label = th.C(kit.TAvatarGitHub), cmp.Or(kit.Initials(strings.NewReplacer("-", " ", "_", " ", ".", " ").Replace(cm.Name)), "GH")
 	}

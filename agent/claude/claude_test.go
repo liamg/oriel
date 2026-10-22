@@ -398,20 +398,6 @@ func TestModels(t *testing.T) {
 	}
 }
 
-func TestSandboxCredentials(t *testing.T) {
-	cfg := t.TempDir()
-	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
-	for _, d := range []string{"skills", "agents"} {
-		if err := os.Mkdir(filepath.Join(cfg, d), 0o755); err != nil {
-			t.Fatal(err)
-		}
-	}
-	got := (&Provider{}).SandboxCredentials()
-	if len(got) != 2 || got[0].Host != filepath.Join(cfg, "skills") || got[0].Sandbox != "$CLAUDE_CONFIG_DIR/skills" || !got[0].ReadOnly {
-		t.Errorf("mounts = %+v", got)
-	}
-}
-
 // A turn's end carries what it used, and the plan's windows reach Usage.
 func TestTurnUsageAndPlanWindows(t *testing.T) {
 	h := fakeHarness(t)
@@ -446,7 +432,7 @@ func TestTurnEndCarriesBackgroundWork(t *testing.T) {
 	s.Send("test in the background")
 	end := s.Wait("the turn's end", func(ev agent.Event) bool { _, ok := ev.(agent.TurnEnd); return ok }).(agent.TurnEnd)
 	if len(end.Background) != 1 || end.Background[0] != (core.BackgroundTask{Kind: "shell", Description: "Run the suite"}) {
-		t.Errorf("background = %q", end.Background)
+		t.Errorf("background = %+v", end.Background)
 	}
 }
 

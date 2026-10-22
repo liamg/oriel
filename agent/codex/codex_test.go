@@ -6,15 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/jsonrpc"
 )
@@ -97,24 +100,102 @@ func TestTurnEvents(t *testing.T) {
 		end.Usage.Duration != 12*time.Millisecond {
 		t.Errorf("usage = %+v", end.Usage)
 	}
-	if usage == nil || usage.Usage.Provider != "codex" || len(usage.Usage.Windows) != 1 || usage.Usage.Windows[0].Name != "5h" {
+	if usage == nil || usage.Usage.Provider != "codex" || len(usage.Usage.Windows) != 1 || usage.Usage.Windows[0].Name != "Current session" {
 		t.Errorf("usage update = %+v", usage)
+	}
+	// The turn is priced at the model thread/start said the thread runs on, which the fake's is gpt-5.5.
+	// ref:   codex/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+	// quote: "pub struct ThreadStartResponse { pub thread: Thread, pub model: String,"
+	want := price.Tokens{Input: 15, CacheRead: 5, Output: 10}.Cost(price.Default().RateFor("gpt-5.5", false, 0))
+	if want == 0 || end.Usage.Cost != want {
+		t.Errorf("cost = %v, want %v", end.Usage.Cost, want)
 	}
 }
 
-// The pack's text comes before the first prompt, once.
-func TestPackPreamble(t *testing.T) {
+// A turn on GPT-6 is priced at its listed rates, from the book the session was given, and the snapshot's without one.
+//
+// ref:   cost-dev/models.json
+// quote: pb_openai_gpt-6.1-sol_direct_realtime_global_usd_20260929","verified_at":"2026-09-29T00:00:00Z","source_id":"source:openai-pricing","has_usage_based_tiers":true},"prices":{"cache_write_5m_tokens_per_1000000":"2.5","cached_input_tokens_per_1000000":"0.1","input_tokens_per_1000000":"2","output_tokens_per_1000000":"10"}
+func TestGPT6TurnIsPriced(t *testing.T) {
+	cheap, err := price.Parse([]byte(`{"items":[{"id":"openai:gpt-6.1-sol","prices":{"input_tokens_per_1000000":"1000000",` +
+		`"output_tokens_per_1000000":"0","cached_input_tokens_per_1000000":"0"}}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		prices price.Books
+		want   float64
+	}{
+		{nil, (15*2 + 5*0.1 + 10*10) / 1e6},
+		{cheap, 15},
+	} {
+		h := agenttest.Harness{Provider: fakeProvider(t), Timeout: 20 * time.Second, Spec: func(t *testing.T, dir string) agent.StartSpec {
+			sp := fakeSpec(t, dir)
+			sp.Model, sp.Prices = "gpt-6.1-sol", c.prices
+			return sp
+		}}
+		s := agenttest.Start(t, h)
+		s.Send("say hello")
+		s.Reply()
+		var end agent.TurnEnd
+		for _, ev := range s.Events {
+			if e, ok := ev.(agent.TurnEnd); ok {
+				end = e
+			}
+		}
+		if math.Abs(end.Usage.Cost-c.want) > 1e-12 {
+			t.Errorf("prices %v: cost = %v, want %v", c.prices != nil, end.Usage.Cost, c.want)
+		}
+	}
+}
+
+// The pack's body, without its frontmatter, is the thread's developer instructions: said once, as the thread starts,
+// and kept by codex when it resumes, so never sent again nor shown as the user's.
+//
+// ref:   codex/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+// quote: "pub base_instructions: Option<String>, #[ts(optional = nullable)] pub developer_instructions: Option<String>,"
+func TestPackInstructions(t *testing.T) {
 	h := agenttest.Harness{Provider: fakeProvider(t), Spec: func(t *testing.T, dir string) agent.StartSpec {
 		s := fakeSpec(t, dir)
-		s.Pack = agent.Pack{Name: "work", Text: "You are working on a ticket."}
+		s.Pack = agent.Pack{Name: "work", Text: "---\nname: work\ndescription: Work on a ticket.\n---\nYou are working on a ticket.\n"}
 		s.Prompt = "say hello"
 		return s
 	}, Timeout: 20 * time.Second}
-	s := agenttest.Start(t, h)
+	dir := t.TempDir()
+	s := agenttest.StartIn(t, h, dir, "")
 	s.Reply()
-	s.Send("what did I say")
-	if got := s.Reply(); !strings.Contains(got, "You are working on a ticket.\n\nsay hello") {
+	s.Send("what are your instructions")
+	if got := s.Reply(); got != "instructions: You are working on a ticket." {
 		t.Errorf("reply = %q", got)
+	}
+	id := s.S.ID()
+	s.S.Close()
+	resumed := h
+	resumed.Spec = func(t *testing.T, dir string) agent.StartSpec { sp := h.Spec(t, dir); sp.Prompt = ""; return sp }
+	r := agenttest.StartIn(t, resumed, dir, id)
+	r.Send("what are your instructions")
+	if got := r.Reply(); got != "instructions: You are working on a ticket." {
+		t.Errorf("resumed, the reply is %q: the instructions were sent again", got)
+	}
+	for _, ev := range s.Events {
+		if m, ok := ev.(agent.Message); ok && m.Role == core.ItemUser && m.Text != "say hello" && m.Text != "what are your instructions" {
+			t.Errorf("the user said %q", m.Text)
+		}
+	}
+}
+
+// The memory directory, and its index as it is, are in the instructions.
+func TestMemoryInstructions(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "MEMORY.md"), []byte("- [tests](tests.md): run them with make\n"), 0o644)
+	in := instructions(agent.StartSpec{Pack: agent.Pack{Text: "Be brief."}, Memory: dir})
+	for _, want := range []string{"Be brief.", "Your memory directory is " + dir, "- [tests](tests.md): run them with make"} {
+		if !strings.Contains(in, want) {
+			t.Errorf("instructions = %q, want %q", in, want)
+		}
+	}
+	if in := instructions(agent.StartSpec{}); in != "" {
+		t.Errorf("no pack and no memory: %q", in)
 	}
 }
 
@@ -201,19 +282,23 @@ func TestDetectModelsUsage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if in.Version != "0.99.0-fake" || !in.LoggedIn || in.Account != "chatgpt" || in.Note != "" {
+	if in.Version != "0.163.0" || !in.LoggedIn || in.Account != "chatgpt" || in.Note != "" {
 		t.Errorf("install = %+v", in)
 	}
 	models, err := p.Models(context.Background())
-	if err != nil || len(models) != 1 || models[0].ID != "gpt-fake-codex" || !models[0].Default || strings.Join(models[0].Efforts, ",") != "low,high" {
+	if err != nil || len(models) != 2 || models[0].ID != "gpt-fake-codex" || !models[0].Default || strings.Join(models[0].Efforts, ",") != "low,high" {
 		t.Errorf("models = %+v, %v", models, err)
+	}
+	// model/list says no context window and no size: the catalog's model takes them from there.
+	if m := models[1]; m.ID != "gpt-6-luna" || !m.Small || m.Context != 272_000 || models[0].Small || models[0].Context != 0 {
+		t.Errorf("models = %+v", models)
 	}
 	u, err := p.Usage(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if u.Plan != "ChatGPT Pro" || u.Tier != "Pro" || len(u.Windows) != 2 || u.Windows[0].Name != "5h" || u.Windows[0].Used != 0.12 ||
-		u.Windows[1].Name != "weekly" || !u.Windows[1].Resets.Equal(time.Unix(1700500000, 0)) {
+	if u.Plan != "ChatGPT Pro" || u.Tier != "Pro" || len(u.Windows) != 2 || u.Windows[0].Name != "Current session" || u.Windows[0].Used != 0.12 ||
+		u.Windows[1].Name != "Current week" || !u.Windows[1].Resets.Equal(time.Unix(1700500000, 0)) {
 		t.Errorf("usage = %+v", u)
 	}
 }
@@ -226,8 +311,8 @@ func TestRateLimits(t *testing.T) {
 	now := time.Unix(50, 0)
 	u := r.usage(now)
 	want := core.ProviderUsage{Provider: "codex", Plan: "ChatGPT Pro Lite", Tier: "Pro Lite", Credits: "12.50", Sampled: now, Source: "Codex's account/rateLimits/read", Windows: []core.UsageWindow{
-		{Name: "5h", Used: 0.5, Resets: time.Unix(100, 0), Length: 5 * time.Hour},
-		{Name: "weekly", Used: 0.05, Resets: time.Unix(200, 0), Length: 7 * 24 * time.Hour},
+		{Name: "Current session", Used: 0.5, Resets: time.Unix(100, 0), Length: 5 * time.Hour},
+		{Name: "Current week", Used: 0.05, Resets: time.Unix(200, 0), Length: 7 * 24 * time.Hour},
 	}}
 	if b, w := jsonOf(u), jsonOf(want); string(b) != string(w) {
 		t.Errorf("usage = %s\nwant    %s", b, w)
@@ -242,7 +327,7 @@ func TestRateLimits(t *testing.T) {
 	// Without lengths, the first window is the 5-hour one.
 	var bare rateLimits
 	json.Unmarshal([]byte(`{"primary":{"usedPercent":1},"secondary":{"usedPercent":2},"credits":{"hasCredits":false,"unlimited":true}}`), &bare)
-	if b := bare.usage(now); b.Windows[0].Name != "5h" || b.Windows[1].Name != "weekly" || b.Credits != "unlimited" || b.Plan != "" || b.Tier != "" {
+	if b := bare.usage(now); b.Windows[0].Name != "Current session" || b.Windows[1].Name != "Current week" || b.Credits != "unlimited" || b.Plan != "" || b.Tier != "" {
 		t.Errorf("bare = %+v", b)
 	}
 	if n := windowName(new(int64(1440)), 0); n != "1d" {
@@ -250,6 +335,10 @@ func TestRateLimits(t *testing.T) {
 	}
 }
 
+// Outside a sandbox every command asks ("untrusted"); a light session accepts its edits itself (TestLightPolicy).
+//
+// ref:   codex/codex-rs/protocol/src/protocol.rs
+// quote: "Internal policy for projects marked untrusted. Commands require"
 func TestGate(t *testing.T) {
 	for _, tc := range []struct {
 		policy            agent.Policy
@@ -259,7 +348,7 @@ func TestGate(t *testing.T) {
 	}{
 		{agent.PolicyAsk, false, "untrusted", "workspace-write", false},
 		{"", false, "untrusted", "workspace-write", false},
-		{agent.PolicyLight, false, "on-request", "workspace-write", false},
+		{agent.PolicyLight, false, "untrusted", "workspace-write", false},
 		{agent.PolicyBypass, false, "", "", true},
 		{agent.PolicyBypass, true, "never", "danger-full-access", false},
 		{agent.PolicyLight, true, "never", "danger-full-access", false},
@@ -286,50 +375,6 @@ func TestParseDiff(t *testing.T) {
 	}
 	if a := parseDiff("n.go", "add", "one\ntwo\n"); a.Added != 2 || a.Lines[1].New != 2 || a.Lines[1].Op != "+" {
 		t.Errorf("add = %+v", a)
-	}
-}
-
-// A file change's approval names its files, taken from the item that started it.
-func TestFileChangePermission(t *testing.T) {
-	s := &session{events: make(chan agent.Event, 16), closing: make(chan struct{}), id: "th",
-		partial: map[string]string{}, started: map[string]bool{}, changes: map[string][]fileChange{},
-		pending: map[string]func(agent.Decision) error{}, forks: map[string]*forkTurn{}}
-	s.onNotify("item/started", json.RawMessage(`{"threadId":"th","turnId":"tu","item":{"type":"fileChange","id":"fc","status":"inProgress",
-		"changes":[{"path":"a.go","kind":{"type":"update","move_path":null},"diff":"@@ -1 +1 @@\n-a\n+b\n"}]}}`))
-	call := (<-s.events).(agent.ToolCall)
-	if call.Tool != "Edit" || call.ID != "fc" || !strings.Contains(string(call.Input), "a.go") {
-		t.Errorf("call = %+v", call)
-	}
-	ar, aw := io.Pipe()
-	br, bw := io.Pipe()
-	s.rpc = jsonrpc.NewConn(ar, bw, jsonrpc.Handlers{Request: s.onRequest}, jsonrpc.Options{})
-	codex := jsonrpc.NewConn(br, aw, jsonrpc.Handlers{}, jsonrpc.Options{})
-	defer s.rpc.Close()
-	defer codex.Close()
-	answer := make(chan string, 1)
-	go func() {
-		var r struct{ Decision string }
-		codex.Call(context.Background(), "item/fileChange/requestApproval", map[string]any{"threadId": "th", "turnId": "tu", "itemId": "fc", "startedAtMs": 1}, &r)
-		answer <- r.Decision
-	}()
-	p := (<-s.events).(agent.Permission)
-	if p.Tool != "Edit" || p.Summary != "a.go" || !strings.Contains(p.Rule, "a.go") {
-		t.Errorf("permission = %+v", p)
-	}
-	if err := s.Answer(context.Background(), p.ID, agent.Decision{Allow: true, Always: true}); err != nil {
-		t.Fatal(err)
-	}
-	if d := <-answer; d != "acceptForSession" {
-		t.Errorf("decision = %q", d)
-	}
-	if err := s.Answer(context.Background(), p.ID, agent.Decision{Allow: true}); err == nil {
-		t.Error("answered twice")
-	}
-	s.onNotify("item/completed", json.RawMessage(`{"threadId":"th","turnId":"tu","item":{"type":"fileChange","id":"fc","status":"completed",
-		"changes":[{"path":"a.go","kind":{"type":"update"},"diff":"@@ -1 +1 @@\n-a\n+b\n"}]}}`))
-	res := (<-s.events).(agent.ToolResult)
-	if res.Diff == nil || res.Diff.Path != "a.go" || res.Diff.Added != 1 || res.Diff.Removed != 1 || res.IsError {
-		t.Errorf("result = %+v", res)
 	}
 }
 
@@ -416,23 +461,78 @@ func TestMCPMainWithoutSocket(t *testing.T) {
 	}
 }
 
-func TestGatewayConfig(t *testing.T) {
-	f := filepath.Join(t.TempDir(), "gw.json")
-	os.WriteFile(f, []byte(`{"mcpServers":{"gw":{"type":"http","url":"http://gw/mcp","headers":{"X":"y"}},"local":{"command":"x","args":["a"]}}}`), 0o644)
-	s := &session{p: &Provider{OrielBin: "/bin/oriel"}, tools: &toolServer{path: "/tmp/s.sock"},
-		spec: agent.StartSpec{Sandbox: &agent.Sandbox{GatewayMCP: f}}}
-	cfg, err := s.config()
-	if err != nil {
+// lastTurnEnd is the last TurnEnd s has said.
+func lastTurnEnd(s *agenttest.Session) agent.TurnEnd {
+	var end agent.TurnEnd
+	for _, ev := range s.Events {
+		if e, ok := ev.(agent.TurnEnd); ok {
+			end = e
+		}
+	}
+	return end
+}
+
+// The background terminals a turn leaves running end it as Running, not as Background: codex's don't wake the
+// model. Every page of the list is read, and a terminal stops by its process id.
+//
+// ref:   codex/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+// quote: "pub struct ThreadBackgroundTerminal { pub item_id: String, pub process_id: String, pub command: String, pub cwd: LegacyAppPathString, pub os_pid: Option<u32>, pub cpu_percent: Option<f64>, pub rss_kb: Option<u64>, }"
+//
+// ref:   codex/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+// quote: "/// Opaque cursor to pass to the next call to continue after the last item. /// If None, there are no more items to return. pub next_cursor: Option<String>,"
+//
+// ref:   codex/codex-rs/app-server-protocol/src/protocol/v2/thread.rs
+// quote: "pub struct ThreadBackgroundTerminalsTerminateParams { pub thread_id: String, pub process_id: String, }"
+func TestBackgroundTerminalsAreRunning(t *testing.T) {
+	if !fakeProvider(t).Features().StopProcesses {
+		t.Error("codex doesn't say it stops processes")
+	}
+	h := agenttest.Harness{Provider: fakeProvider(t), Spec: fakeSpec, Timeout: 20 * time.Second}
+	s := agenttest.Start(t, h)
+	s.Send("start the dev server")
+	s.Reply()
+	end := lastTurnEnd(s)
+	want := []core.BackgroundTask{
+		{ID: "1001", Kind: "terminal", Description: "npm run dev", PID: 4242, CPU: 1.5, Memory: 2048 << 10},
+		{ID: "1002", Kind: "terminal", Description: "go run ./watch"},
+	}
+	if !slices.Equal(end.Running, want) || len(end.Background) != 0 {
+		t.Fatalf("running %+v, background %+v; want running %+v", end.Running, end.Background, want)
+	}
+	ps := s.S.(agent.ProcessStopper)
+	if err := ps.StopProcess(context.Background(), "1001"); err != nil {
 		t.Fatal(err)
 	}
-	b, _ := json.Marshal(cfg)
-	for _, want := range []string{
-		`"mcp_servers.oriel":{"args":["hook","mcp"],"command":"/bin/oriel","default_tools_approval_mode":"approve","env":{"ORIEL_HOOK_SOCK":"/tmp/s.sock"}}`,
-		`"mcp_servers.gw":{"http_headers":{"X":"y"},"url":"http://gw/mcp"}`,
-		`"mcp_servers.local":{"args":["a"],"command":"x"}`,
-	} {
-		if !strings.Contains(string(b), want) {
-			t.Errorf("config = %s\nwant %s", b, want)
-		}
+	if err := ps.StopProcess(context.Background(), "1001"); err == nil {
+		t.Error("stopping a process that's gone said nothing")
+	}
+	s.Send("say hello")
+	s.Reply()
+	if got := lastTurnEnd(s).Running; !slices.Equal(got, want[1:]) {
+		t.Errorf("after stopping 1001, running %+v; want %+v", got, want[1:])
+	}
+}
+
+// A codex without the experimental background terminal methods ends its turns with nothing running, and says why
+// it can't stop one.
+//
+// ref:   codex/codex-rs/app-server-protocol/src/protocol/common.rs
+// quote: "#[experimental(\"thread/backgroundTerminals/list\")] ThreadBackgroundTerminalsList => \"thread/backgroundTerminals/list\" {"
+func TestNoBackgroundTerminalsOnAnOlderCodex(t *testing.T) {
+	h := agenttest.Harness{Provider: fakeProvider(t), Spec: func(t *testing.T, dir string) agent.StartSpec {
+		sp := fakeSpec(t, dir)
+		sp.Env = append(sp.Env, "FAKE_CODEX_NO_TERMINALS=1")
+		return sp
+	}, Timeout: 20 * time.Second}
+	s := agenttest.Start(t, h)
+	s.Send("start the dev server")
+	if got := s.Reply(); got != "the dev server is running" {
+		t.Errorf("reply = %q", got)
+	}
+	if end := lastTurnEnd(s); len(end.Running) != 0 {
+		t.Errorf("running %+v, want none", end.Running)
+	}
+	if err := s.S.(agent.ProcessStopper).StopProcess(context.Background(), "1001"); err == nil || !strings.Contains(err.Error(), "update codex") {
+		t.Errorf("stop = %v", err)
 	}
 }

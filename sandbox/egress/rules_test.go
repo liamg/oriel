@@ -52,10 +52,8 @@ func TestDefaultAllow(t *testing.T) {
 		port  int
 		allow bool
 	}{
-		{"api.anthropic.com", 443, true},
-		{"foo.claude.ai", 443, true},
-		{"platform.claude.com", 443, true},
-		{"console.anthropic.com", 443, true},
+		// An agent's own endpoints are its provider's to allow.
+		{"api.anthropic.com", 443, false},
 		{"github.com", 443, true},
 		// GitHub release downloads redirect here; a blocked one fails every
 		// release asset a plugin or a tool installer fetches.

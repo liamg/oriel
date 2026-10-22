@@ -36,6 +36,13 @@ func (w *Host) Answer(r AnswerReq) (err error) {
 	return w.run.Answer(r)
 }
 
+// StartLogin signs provider in from Oriel, where it can (agent.LoginStarter): the URL to open in a browser. Its
+// lost-login cards clear once the sign-in succeeds.
+func (w *Host) StartLogin(ctx context.Context, provider string) (_ string, err error) {
+	defer w.recover("StartLogin", &err)
+	return w.run.StartLogin(ctx, provider)
+}
+
 // Ask is the app asking the user for a session's agent, as its own gate would (an agent tool that asks first).
 func (w *Host) Ask(ctx context.Context, r AskReq) (_ Verdict, err error) {
 	defer w.recover("Ask", &err)
@@ -52,6 +59,12 @@ func (w *Host) Send(r SendReq) (err error) {
 func (w *Host) Fork(id core.SessionID, prompt string) (_ string, err error) {
 	defer w.recover("Fork", &err)
 	return w.run.Fork(id, prompt)
+}
+
+// StopProcess stops a process the agent's last turn left running, by its ID; an error if its provider can't.
+func (w *Host) StopProcess(ctx context.Context, id core.SessionID, process string) (err error) {
+	defer w.recover("StopProcess", &err)
+	return w.run.StopProcess(ctx, id, process)
 }
 
 // Interrupt stops the turn the agent is on.

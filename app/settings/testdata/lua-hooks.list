@@ -79,11 +79,11 @@ clip 44,625.48 716x260 r 0
   rect 44,655.48 716x1 fill #24221d
   clip 44,656.48 716x229 r 0
     text ":LUA" @68,686.68 #ffd23f JetBrains Mono 10
-    text "REPL · oriel api 0.5.0" @102,688.72 #7c7566 JetBrains Mono 12
+    text "REPL · oriel api 0.6.0" @102,688.72 #7c7566 JetBrains Mono 12
     text "⇥ complete · ↵ eval · ↑ history" @507.95312,688.72 #4f4a40 JetBrains Mono 12
     clip 68,698.32 668x109.32001 r 0
       text "› oriel.api.version" @68,710.56 #ece6d8 JetBrains Mono 12
-      text "\"0.5.0\"" @68,730.4 #b3ab99 JetBrains Mono 12
+      text "\"0.6.0\"" @68,730.4 #b3ab99 JetBrains Mono 12
       text "› #oriel.ui.row{}.children" @68,750.24 #ece6d8 JetBrains Mono 12
       text "0" @68,770.08 #b3ab99 JetBrains Mono 12
       text "› oriel.ledger.unread('pricing')" @68,789.92 #ece6d8 JetBrains Mono 12

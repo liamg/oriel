@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
@@ -31,6 +32,8 @@ type Runner struct {
 
 	loginMu sync.Mutex
 	lost    map[string]*lostLogin // logins gone, by provider and account
+
+	resumed map[core.SessionID]bool // the sessions handed over that ResumeHandedOver has resumed
 
 	testsOnce sync.Once
 	testSet   *testrun.Set
@@ -60,6 +63,8 @@ type Deps struct {
 	PROpen func(id core.SessionID, project, branch string) bool
 	// MachineChanged reports the machine's state again: its lost logins have changed.
 	MachineChanged func()
+	// Prices are what agents' turns are priced with.
+	Prices price.Books
 }
 
 // New runs st's sessions' agents.
@@ -254,10 +259,14 @@ func (x *Runner) RestartWhenIdle(id core.SessionID, sb hostcore.Sandbox, why str
 	})
 }
 
-// ResumeHandedOver starts again the agents the last process handed over, or had running when it crashed.
+// ResumeHandedOver starts again the agents the last process handed over, or had running when it crashed, once each
+// and only once its provider is known: it's called again as providers arrive.
 func (x *Runner) ResumeHandedOver(resume func(id core.SessionID) error) {
 	for _, se := range x.st.Snapshot().Sessions {
 		if by := se.Agent.StoppedBy; !se.Agent.Running && (by == core.StoppedByHandOver || by == core.StoppedByCrash) {
+			if !x.claimResume(se) {
+				continue
+			}
 			x.env.Go("resume", func() {
 				if err := resume(se.ID); err != nil {
 					x.env.Log.Warn("resume after the last run", "session", se.ID, "by", by, "err", err)
@@ -265,6 +274,23 @@ func (x *Runner) ResumeHandedOver(resume func(id core.SessionID) error) {
 			})
 		}
 	}
+}
+
+// claimResume says se's agent is to be resumed now: its provider is known, and it hasn't been already.
+func (x *Runner) claimResume(se core.SessionState) bool {
+	if _, ok := x.deps.Providers.Get(se.Agent.Provider); !ok && se.Agent.Provider != "" {
+		return false
+	}
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if x.resumed[se.ID] {
+		return false
+	}
+	if x.resumed == nil {
+		x.resumed = map[core.SessionID]bool{}
+	}
+	x.resumed[se.ID] = true
+	return true
 }
 
 // Settle puts back what the last process left running when it ended without handing over: those agents stopped

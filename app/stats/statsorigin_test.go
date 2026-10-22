@@ -23,7 +23,7 @@ import (
 // outside gives the rig's Claude a transcript no Oriel session owns: a week of work in api, run in a terminal.
 func outside(t *testing.T, r *rig.Stats) string {
 	t.Helper()
-	fx := rig.FxSession{Name: "lint-rules", Provider: "claude", Model: "claude-sonnet-4-5", Repos: []string{"api"}, Weights: []int{1}, PerDay: 40}
+	fx := rig.FxSession{Name: "lint-rules", Provider: "claude", Model: "claude-sonnet-4-6", Repos: []string{"api"}, Weights: []int{1}, PerDay: 40}
 	dirs := map[string]string{"api": filepath.Join(r.Repos["api"], "cmd")}
 	rnd := rand.New(rand.NewSource(99))
 	lines := []string{fmt.Sprintf(`{"type":"user","timestamp":%q,"cwd":%q,"message":{"role":"user","content":[{"type":"text","text":"Try the new lint rules"}]}}`,

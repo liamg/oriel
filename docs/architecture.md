@@ -18,8 +18,8 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `testrun` | test discovery and runner adapters (go, pytest, vitest/jest, cargo), results, coverage |
 | `term` | the terminal model behind `term.Emulator`; `term/ghostty` (libghostty-vt, wasm or native), `term/pty` |
 | `core` | sessions, workspaces, threads, tasks and the typed events that change them: pure state and logic |
-| `agent` | the `Provider` interface and transcript types; `agent/claude`, `agent/codex`; `agent/agenttest` (the conformance suite and a fake provider) |
-| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`), each seeing the host only as a `host/hostcore` State |
+| `agent` | the `Provider` interface, its optional ones (`Featured`, `Sandboxed`, `LoginStarter`, `Logged`, `Discovered`) and transcript types; `agent/claude` (and `agent/claude/claudebox`, what it needs in a sandbox), `agent/codex`; `agent/rpcagent` (the Oriel agent protocol: any provider over JSON-RPC, for plugins), `agent/acp` (any Agent Client Protocol agent), `agent/mcptools` (a session's tools as the MCP server oriel); `agent/price` (a `Book` of models' list prices, read from cost.dev's model list, with the snapshot vendored in `spec/cost-dev` as its default: every cost estimate prices tokens with one, a provider with `StartSpec.Prices`); `agent/agenttest` (the conformance suite, a fake provider and one that plays the suite) |
+| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State |
 | `sandbox` | sandbox backends, the gateway, egress, the static Linux helper the app embeds |
 | `gitx`, `gh` | git and GitHub |
 | `integ/*` | code hosts and trackers (GitLab, Azure, Linear) |
@@ -30,6 +30,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `render` | display lists and the backend interface; `render/gio` (the window), `render/raster` (CPU drawing), `render/typeset`, `render/headless` and `render/snapshot` (tests) |
 | `ui` | the immediate-mode toolkit: layout, input routing, focus, accessibility; `ui/widget` (every control), `ui/layout` (the window's tree of views as data) |
 | `theme`, `toml` | theme files and token resolution; a round-tripping TOML 1.0 editor for settings and themes |
+| `zstd` | a Zstandard (RFC 8878) decoder: whole buffers or streamed within a frame's window; Codex's compressed rollouts |
 | `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` |
 | `assistant`, `voice`, `update` | the assistant's conversation; dictation; signed self-update |
 | `cmd/oriel` | the binary and its subcommands |
@@ -83,7 +84,8 @@ changes state through its `plugin.Host` (`State`, `Apply`).
 
 An installed plugin always enters through Lua, which starts its processes and wasm modules. Hooks can observe, veto,
 rewrite or decide an event. Plugins are tested through the real app with `app/plugintest`. The Lua API is in
-[api.md](api.md).
+[api.md](api.md). A plugin brings an agent with a process speaking the Oriel agent protocol
+([agent-protocol.md](agent-protocol.md)), or an Agent Client Protocol agent through the bundled ACP bridge.
 
 ## Sessions and kinds
 
@@ -96,8 +98,26 @@ plugin that owns it. Code asks the kind (`registry.Can`, `Label`, `Chips`, kind-
 comparing `core.Kind*` values or reading another kind's data. A kind's own files say so with a `//oriel:kind <kind>`
 line, and only they may name it.
 
+## Agent providers
+
+An agent provider (Claude, Codex, or a plugin's) is an `agent.Provider`, registered by its plugin as a
+`registry.AgentProvider`: its name, title and square, and the provider. The built-ins are plugins too (`app/agents`),
+so a plugin registering a provider under the same name replaces one. The sessions plugin gives the session host the
+registry's providers (`host.SetProviders`); a session handed over when Oriel quit resumes once its provider is back.
+A plugin's provider that isn't Go is an `rpcagent.Client`: the whole provider, sessions and all, over the Oriel agent
+protocol ([agent-protocol.md](agent-protocol.md)) to the plugin's process, whose agent's processes run through the
+session's own exec, in its sandbox when it has one.
+
+What a provider can do past `agent.Session`'s least it says (`agent.Features`: a terminal, a tool-less fork, images,
+a sandbox, signing in from Oriel, its notes file), and the app offers only that. Nothing outside a provider's own
+package names it.
+
 Claude runs as its interactive CLI in a PTY, with Oriel's mod for hooks, never `claude -p` (that path is billed per
 token). Codex runs as `codex app-server` over stdio.
+
+A sandbox knows no provider: each backend asks the session's provider what its agent needs where the backend puts it
+(`agent.Sandboxed`: its binary for that platform, its config and sign-in in a directory of its own, the host
+variables and endpoints it inherits, the hosts it reaches, the user's MCP servers for the gateway), and gives it that.
 
 ## Rendering and the toolkit
 

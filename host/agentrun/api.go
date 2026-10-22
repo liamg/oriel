@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 )
 
@@ -60,6 +62,29 @@ func (x *Runner) Fork(id core.SessionID, prompt string) (_ string, err error) {
 		return "", errors.New("the session's agent isn't running")
 	}
 	return h.fork(prompt)
+}
+
+// StopProcess stops a process the agent's last turn left running (AgentState.Processes), by its ID.
+func (x *Runner) StopProcess(ctx context.Context, id core.SessionID, process string) error {
+	h, _ := x.sessionFor(id, false)
+	if h == nil || !h.running() {
+		return errors.New("the agent isn't running")
+	}
+	h.mu.Lock()
+	sess := h.sess
+	h.mu.Unlock()
+	ps, ok := sess.(agent.ProcessStopper)
+	if !ok {
+		se, _ := x.st.Session(id)
+		return fmt.Errorf("%s can't stop the processes it leaves running", se.Agent.Provider)
+	}
+	if err := ps.StopProcess(ctx, process); err != nil {
+		return err
+	}
+	h.setAgent(func(a *core.AgentState) {
+		a.Processes = slices.DeleteFunc(slices.Clone(a.Processes), func(t core.BackgroundTask) bool { return t.ID == process })
+	})
+	return nil
 }
 
 // Interrupt stops the turn the agent is on.

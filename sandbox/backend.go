@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/liamg/oriel/agent"
 )
 
 // Backend confines an agent to its workspace: a container (docker, or an
@@ -73,26 +75,28 @@ type Description struct {
 	Places map[string]string
 }
 
-// Command is a process to start: the agent in its sandbox.
+// Command is a process to start: the agent in its sandbox, and what its provider said it needs there.
 type Command struct {
-	Argv []string
-	Env  []string
-	Dir  string
+	Argv  []string
+	Env   []string
+	Dir   string
+	Needs agent.SandboxNeeds
 }
 
 // LaunchOptions are the host facts a launch needs.
 type LaunchOptions struct {
-	// ModDir is the oriel mod, readable for --plugin-dir.
-	ModDir string
 	// Environ is the environment the sandbox's allowlist picks from.
 	Environ []string
 	// Extra env the agent always gets (ORIEL_SPAWNED and friends).
 	Extra map[string]string
 	// Config is the sandbox's settings.
 	Config Config
-	// ClaudeDefaults are settings the sandbox's Claude gets where the host's
-	// settings leave them out.
-	ClaudeDefaults map[string]any
+	// Provider names the agent's provider, and its directory in the sandbox; Agent is what says what it needs
+	// there, nil for an agent that needs nothing past the workspace.
+	Provider string
+	Agent    agent.Sandboxed
+	// StateDir is the session's directory for its provider (agent.StartSpec.StateDir).
+	StateDir string
 }
 
 // Problem is something stopping sandboxed agents on this machine, with what

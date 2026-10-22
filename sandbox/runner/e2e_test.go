@@ -23,12 +23,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/term/pty"
-
+	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/container"
 	"github.com/liamg/oriel/sandbox/egress"
+	"github.com/liamg/oriel/term/pty"
 )
 
 // These run real containers: go test -tags docker ./sandbox/runner/
@@ -48,8 +48,8 @@ func newFixture(t *testing.T, cfg sandbox.Config) fixture {
 	if _, err := container.Ping(context.Background()); err != nil {
 		t.Skip(err)
 	}
-	if _, err := hostClaude(); err != nil {
-		t.Skip(err)
+	if _, err := exec.LookPath("claude"); err != nil {
+		t.Skip("claude is not installed on this machine")
 	}
 	t.Setenv("ORIEL_SANDBOX_BIN", orielForContainer(t))
 	// Under the real HOME: Docker Desktop shares /Users but not the temp
@@ -117,7 +117,8 @@ func (f fixture) run(t *testing.T, script string, environ ...string) string {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	argv, err := Launch(ctx, f.root, f.root, []string{"bash", "-c", script}, sandbox.LaunchOptions{Environ: environ, Config: f.cfg})
+	argv, _, err := Launch(ctx, f.root, f.root, []string{"bash", "-c", script}, sandbox.LaunchOptions{Environ: environ, Config: f.cfg,
+		Provider: "claude", Agent: &claude.Provider{}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +168,7 @@ test -S /run/oriel/oriel.sock -o -d /run/oriel && echo run=mounted
 	if strings.Contains(out, "secret") {
 		t.Errorf("GH_TOKEN leaked into the sandbox:\n%s", out)
 	}
-	host, _ := claudeVersion(mustHostClaude(t))
+	host := hostClaudeVersion(t)
 	if !strings.Contains(out, "claude="+host) {
 		t.Errorf("want claude %s in:\n%s", host, out)
 	}
@@ -331,12 +332,13 @@ func orielForContainer(t *testing.T) string {
 	return bin
 }
 
-func mustHostClaude(t *testing.T) string {
-	p, err := hostClaude()
+// hostClaudeVersion is the host's claude's version, which the sandbox runs.
+func hostClaudeVersion(t *testing.T) string {
+	out, err := exec.Command("claude", "--version").Output()
 	if err != nil {
-		t.Skip(err)
+		t.Skip("claude is not installed on this machine")
 	}
-	return p
+	return strings.Fields(string(out))[0]
 }
 
 func mustGit(t *testing.T, dir string, args ...string) {

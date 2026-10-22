@@ -54,7 +54,11 @@ func (f fakeBackend) Launch(ctx context.Context, root, cwd string, argv []string
 		sandbox.Report(ctx, sandbox.Progress{Step: "Building the sandbox image", Note: "Only the first time"})
 		<-f.s.hold
 	}
-	return sandbox.Command{Argv: []string{"echo", "in the container"}, Env: os.Environ()}, nil
+	needs, err := sandbox.Needs(ctx, root, cwd, o, agent.SandboxPlace{OS: "linux", Arch: "amd64", Home: "/home/agent"})
+	if err != nil {
+		return sandbox.Command{}, err
+	}
+	return sandbox.Command{Argv: []string{"sh", "-c", "echo in the container; echo its stderr >&2"}, Env: os.Environ(), Needs: needs}, nil
 }
 
 func (fakeBackend) Available() error { return nil }
@@ -74,7 +78,7 @@ func (fakeBackend) AgentRunDir(string) string { return "/run/oriel" }
 
 func (fakeBackend) ServesPort() bool { return false }
 
-func newSandboxRig(t *testing.T) *sandboxRig {
+func newSandboxRig(t *testing.T, more ...agent.Provider) *sandboxRig {
 	t.Helper()
 	// The session socket lives under $HOME; a short one keeps its path under the unix limit.
 	home, err := os.MkdirTemp("/tmp", "oh")
@@ -83,7 +87,7 @@ func newSandboxRig(t *testing.T) *sandboxRig {
 	}
 	t.Cleanup(func() { os.RemoveAll(home) })
 	t.Setenv("HOME", home)
-	r := newRig(t)
+	r := newRig(t, more...)
 	remote := filepath.Join(t.TempDir(), "origin.git")
 	r.repo.Git("init", "-q", "--bare", remote)
 	r.repo.Git("remote", "add", "origin", remote)
@@ -225,25 +229,27 @@ func TestSandboxSpecNamesTheGateway(t *testing.T) {
 	}
 }
 
-// The provider's command runs in the container: runner.Launch gets the agent's argv and the env the provider
-// added, and the docker command it returns is what runs.
+// The provider's command runs in the container: runner.Launch gets the agent's argv, its provider and the env the
+// provider added, and the docker command it returns is what runs, its stderr the provider's.
 func TestSandboxExecRunsTheLaunchCommand(t *testing.T) {
 	s := newSandboxRig(t)
 	_, spec, _ := s.sandboxed()
 	cmd := exec.Command("claude", "--plugin-dir", "/state/claude-mod", "--permission-mode", "bypassPermissions")
 	cmd.Env = append(os.Environ(), "ORIEL_HOOK_SOCK=/tmp/oriel-1/hook.sock", "ORIEL_BIN=/home/me/bin/oriel")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	p, err := spec.Exec.Start(context.Background(), cmd)
 	if err != nil {
 		t.Fatal(err)
 	}
 	out, _ := io.ReadAll(p.Stdout())
 	p.Wait()
-	if strings.TrimSpace(string(out)) != "in the container" {
-		t.Errorf("ran %q", out)
+	if strings.TrimSpace(string(out)) != "in the container" || strings.TrimSpace(stderr.String()) != "its stderr" {
+		t.Errorf("ran %q, stderr %q", out, stderr.String())
 	}
 	argv, o := <-s.launched, <-s.opts
-	if argv[0] != "claude" || o.ModDir != "/state/claude-mod" {
-		t.Errorf("argv %v, mod %q", argv, o.ModDir)
+	if argv[0] != "claude" || o.Provider != "fake" || o.StateDir != spec.StateDir || o.StateDir == "" {
+		t.Errorf("argv %v, provider %q, state %q", argv, o.Provider, o.StateDir)
 	}
 	if o.Extra["ORIEL_HOOK_SOCK"] != "/run/oriel/hook.sock" || o.Extra["ORIEL_BIN"] != "oriel" || o.Extra["PATH"] != "" {
 		t.Errorf("extra env = %v", o.Extra)
@@ -698,7 +704,7 @@ func TestStartDoesNotWaitForTheSandbox(t *testing.T) {
 // session's own rules set from it.
 func TestPermissionsListRulesAndConnections(t *testing.T) {
 	s := newSandboxRig(t)
-	t.Setenv("ANTHROPIC_BASE_URL", "http://litellm.tail1234.ts.net:4000")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://litellm.tail1234.ts.net:4000")
 	id, _, b := s.sandboxed()
 	ctx := context.Background()
 
@@ -716,8 +722,8 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 	if r, ok := hostRule(p, "litellm.tail1234.ts.net", 4000); !ok || !r.Allow || !r.Private || r.Source != "the sandbox's environment" {
 		t.Errorf("the API endpoint = %+v, %v", r, ok)
 	}
-	if r, ok := hostRule(p, "api.anthropic.com", 443); !ok || r.Source != "built-in list" {
-		t.Errorf("api.anthropic.com = %+v, %v", r, ok)
+	if r, ok := hostRule(p, "github.com", 443); !ok || r.Source != "built-in list" {
+		t.Errorf("github.com = %+v, %v", r, ok)
 	}
 	push := func(p Permissions) ToolPermission {
 		i := slices.IndexFunc(p.Tools, func(tp ToolPermission) bool { return tp.Name == gateway.Prefix+"push" })

@@ -78,7 +78,8 @@ type consoleState struct {
 	focusNow string // an input to focus next frame: "note", "fork"
 	chosen   map[string]map[int][]string
 	typed    map[string]string
-	layout   consoleBlocks // the transcript's blocks, as last laid out
+	layout   consoleBlocks   // the transcript's blocks, as last laid out
+	stopping map[string]bool // the processes being stopped, by session/id
 }
 
 type forkAnswer struct {
@@ -93,7 +94,7 @@ func (x *Console) Manifest() plugin.Manifest { return plugin.Manifest{ID: "agent
 func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*consoleState{}
-	for _, c := range x.commands() {
+	for _, c := range append(x.commands(), x.processCommands()...) {
 		x.Add(h.Command(c))
 	}
 	for _, k := range x.keymaps() {
@@ -189,9 +190,10 @@ func (x *Console) commands() []registry.Command {
 				}
 				return x.fork(session(a), prompt)
 			}},
-		{ID: "agent.terminal", Title: "Show the raw terminal of {id}'s agent, or the session in front's", Available: inFront,
-			Run: func(ctx registry.Ctx, a registry.Args) error { return x.rawTerminal(ctx, session(a), "") }},
-		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its own terminal with the login typed",
+		{ID: "agent.terminal", Title: "Show the raw terminal of {id}'s agent, or the session in front's",
+			Available: func(a registry.Args) bool { return inFront(a) && x.hasTerminal(session(a)) },
+			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.rawTerminal(ctx, session(a), "") }},
+		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its sign-in in the browser, or its own terminal with the login typed",
 			Available: func(a registry.Args) bool { _, _, ok := x.loginWaiting(a); return ok },
 			Run:       x.logIn},
 		{ID: "ask.answer", Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope}, {answers}",
@@ -244,7 +246,7 @@ type consoleView struct{ x *Console }
 
 func (v consoleView) Title(string) string {
 	if se, ok := v.x.front(); ok && se.Agent.Provider != "" {
-		return "Agent · " + kit.ProviderName(se.Agent.Provider)
+		return "Agent · " + kit.ProviderName(v.x.h, se.Agent.Provider)
 	}
 	return "Agent"
 }
@@ -267,7 +269,7 @@ func (x *Console) state(id core.SessionID) *consoleState {
 	}
 	st := x.by[id]
 	if st == nil {
-		st = &consoleState{flip: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: kit.Scroll{Follow: true}}
+		st = &consoleState{flip: map[string]bool{}, stopping: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: kit.Scroll{Follow: true}}
 		x.by[id] = st
 	}
 	return st
@@ -438,11 +440,24 @@ func (x *Console) fork(id core.SessionID, prompt string) error {
 	return nil
 }
 
+// hasTerminal says id's agent has a terminal of its own to show: no only when its provider says so (agent.Features).
+func (x *Console) hasTerminal(id core.SessionID) bool {
+	se, ok := x.h.Session(id)
+	if !ok {
+		return true
+	}
+	f, known := kit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
+	return !known || f.Terminal
+}
+
 // rawTerminal shows the agent's own terminal, streamed from the session host, in a terminal view, and types into it.
 func (x *Console) rawTerminal(ctx registry.Ctx, id core.SessionID, typed string) error {
 	if se, ok := x.h.Session(id); ok {
+		if !x.hasTerminal(id) {
+			return fmt.Errorf("%s has no terminal of its own", kit.ProviderName(x.h, se.Snapshot().Agent.Provider))
+		}
 		if a := se.Snapshot().Agent; a.Starting != nil {
-			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", kit.ProviderName(a.Provider), a.Starting.Step)
+			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", kit.ProviderName(x.h, a.Provider), a.Starting.Step)
 		}
 	}
 	c, err := x.client(id)
@@ -519,7 +534,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	a := se.Agent
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(16, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		name := kit.ProviderName(a.Provider)
+		name := kit.ProviderName(x.h, a.Provider)
 		c.Box("badge", ui.Style{W: ui.Px(22), H: ui.Px(22), Radius: 5, Fill: th.C(theme.BgOverlay), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", strings.ToUpper(name[:min(2, len(name))]), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold},
 				Color: th.C(theme.Fg)})
@@ -548,7 +563,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 		if widget.Button(c, "interrupt", "Interrupt", widget.ButtonOpts{Key: "esc", Disabled: !a.Working, Help: "agent/console#interrupt"}) {
 			x.run(ctx, "session.interrupt", nil)
 		}
-		if widget.Button(c, "raw", "Raw terminal", widget.ButtonOpts{Help: "agent/console#raw-terminal"}) {
+		if x.hasTerminal(se.ID) && widget.Button(c, "raw", "Raw terminal", widget.ButtonOpts{Help: "agent/console#raw-terminal"}) {
 			x.run(ctx, "agent.terminal", nil)
 		}
 	})
@@ -619,6 +634,8 @@ func (x *Console) transcript(c *ui.Ctx, se core.SessionState, st *consoleState, 
 			x.subagents(c, se, width, st.sel == "subagents")
 		case blockBackground:
 			x.background(c, se, width, st.sel == "background")
+		case blockProcesses:
+			x.processes(c, se, st, width, st.sel == "processes")
 		case blockFork:
 			x.forkCard(c, b.key, st.forks[b.at], width, st.sel == b.key)
 		}

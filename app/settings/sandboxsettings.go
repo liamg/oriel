@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -30,9 +31,9 @@ func parsed[T any](parse func(string) (T, error)) func(any) error {
 }
 
 // sandboxOptions are the sandbox's settings (docs/configuration.md). A project's file may add its own network and
-// gateway rules and image; the rest are yours alone. o is where sandbox.servers is read for the servers a sandbox
-// could hide.
-func sandboxOptions(o registry.Options, available func() []string) []registry.OptionSpec {
+// gateway rules and image; the rest are yours alone. o is where sandbox.servers is read, and r's agent providers
+// are asked, for the servers a sandbox could hide.
+func sandboxOptions(o registry.Options, r registry.Contributions, available func() []string) []registry.OptionSpec {
 	offered := offeredBackends(available)
 	user, project := registry.ScopeUser, registry.ScopeUser|registry.ScopeProject
 	return []registry.OptionSpec{
@@ -40,8 +41,6 @@ func sandboxOptions(o registry.Options, available func() []string) []registry.Op
 			Help: "Where a new session's agent runs: on this machine (host) or in a container (sandbox). The launcher's Sandbox toggle starts here."},
 		{Name: "sandbox.image", Type: registry.String, Default: "", Scopes: project,
 			Help: "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo."},
-		{Name: "sandbox.claude_version", Type: registry.String, Default: "", Scopes: user,
-			Help: "The Claude Code version a sandbox runs; empty runs the host's."},
 		{Name: "sandbox.env", Type: registry.List, Default: []string{}, Scopes: user, Choices: envNames,
 			Help: "The host's environment variables a sandbox inherits, by name; empty means the defaults."},
 		{Name: "sandbox.egress", Type: registry.List, Default: []string{}, Scopes: project, Validate: parsed(sandbox.ParseEgressRule),
@@ -58,7 +57,7 @@ func sandboxOptions(o registry.Options, available func() []string) []registry.Op
 			Help: "How long a held gateway call waits for you; 0 is ten minutes."},
 		{Name: "sandbox.auto_allow_read_only", Type: registry.Bool, Default: false, Scopes: user,
 			Help: "Allow the upstream MCP tools that say they only read, without asking."},
-		{Name: "sandbox.hidden_servers", Type: registry.List, Default: []string{}, Scopes: user, Choices: func() []string { return upstreamNames(o) },
+		{Name: "sandbox.hidden_servers", Type: registry.List, Default: []string{}, Scopes: user, Choices: func() []string { return upstreamNames(o, r) },
 			Help: "Upstream MCP servers a sandbox never sees, by name."},
 		{Name: "sandbox.servers", Type: registry.Map, Default: map[string]string{}, Scopes: user, KeyLabel: "name", ValueLabel: "server",
 			Validate: registry.MapOf(func(name, server string) error {
@@ -121,13 +120,19 @@ func envNames() []string {
 	return out
 }
 
-// upstreamNames are the MCP servers the gateway finds on this machine, sandbox.servers' among them.
-func upstreamNames(o registry.Options) []string {
-	home, _ := os.UserHomeDir()
+// upstreamNames are the MCP servers the gateway finds on this machine: those the user installed for each agent
+// provider, and sandbox.servers'.
+func upstreamNames(o registry.Options, r registry.Contributions) []string {
 	m, _, _ := o.Get("sandbox.servers", registry.At{})
 	servers, _ := mcpServers(m)
+	var installed []agent.MCPServer
+	for _, p := range registry.AgentProviders(r) {
+		if s, ok := p.Provider.(agent.Sandboxed); ok {
+			installed = append(installed, s.MCPServers()...)
+		}
+	}
 	var out []string
-	for _, s := range gateway.Discover(home, servers, nil) {
+	for _, s := range gateway.Discover(installed, servers, nil) {
 		out = append(out, s.Name)
 	}
 	return out
@@ -159,7 +164,7 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 		return slices.Clone(l)
 	}
 	str := func(name string) string { s, _ := get(name).(string); return s }
-	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: str("sandbox.image"), ClaudeVersion: str("sandbox.claude_version"),
+	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: str("sandbox.image"),
 		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: str("sandbox.memory"),
 		GoCacheMax: str("sandbox.go_cache_max"), Loopback: str("sandbox.loopback")}
 	cfg.Egress = sandbox.EgressRules(list("sandbox.egress"))
@@ -227,7 +232,7 @@ func (x *SandboxSettings) Manifest() plugin.Manifest { return plugin.Manifest{ID
 func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.kick = h, make(chan struct{}, 1)
 	o := h.Options()
-	for _, sp := range sandboxOptions(o, x.Backends) {
+	for _, sp := range sandboxOptions(o, h, x.Backends) {
 		x.Add(h.Option(sp))
 		x.Add(kit.OnDispose(o.Watch(sp.Name, x.send)))
 	}

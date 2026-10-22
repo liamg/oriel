@@ -849,7 +849,7 @@ func (v diffView) Revive(state json.RawMessage) (string, error) {
 // agentName is what the authorship box calls the agent of root's session.
 func (x *Diff) agentName(root string) string {
 	if se, _, ok := x.session(root); ok && se.Agent.Provider != "" {
-		return kit.ProviderName(se.Agent.Provider)
+		return kit.ProviderName(x.h, se.Agent.Provider)
 	}
 	return "Agent"
 }
