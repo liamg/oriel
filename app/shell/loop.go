@@ -36,6 +36,7 @@ type loop struct {
 	sh        *shell
 	debug     bool
 	frameTime time.Duration // the last frame's build and record, for the debug overlay
+	built     time.Time     // when the last frame was built, not only painted again
 
 	reg   uireg.Registry
 	store core.Store
@@ -142,8 +143,9 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 			l.themeDirty.Store(true)
 			t.pace.Ask()
 		case now := <-timer.C:
-			l.run(ctx, l.keys.Timeout(now))
-			t.pace.Ask() // and a frame, for a spring or a tooltip that was due
+			acts := l.keys.Timeout(now)
+			l.run(ctx, acts)
+			l.ask(&t, len(acts) == 0, now) // and a frame, for a spring, a tooltip or a loop's step that was due
 		case ev, ok := <-w.Events():
 			if !ok {
 				return nil
@@ -193,6 +195,15 @@ func (l *loop) frame(ctx context.Context, t *turn) (drawn bool, err error) {
 	if due, _ := t.pace.Due(time.Now()); !due || l.hidden {
 		return false, nil
 	}
+	if !t.pace.Full() {
+		l.timed(func() { err = l.repaint() })
+		if err != nil {
+			return false, err
+		}
+		t.pace.Drew(time.Now())
+		sh.frames.Add(time.Now(), l.frameTime, 0, l.ui.WokenBy())
+		return true, nil
+	}
 	sh.seeNav(l.reg, l.ui.Now())
 	l.timed(func() { err = l.draw() })
 	if err != nil {
@@ -208,7 +219,7 @@ func (l *loop) frame(ctx context.Context, t *turn) (drawn bool, err error) {
 	if moved {
 		lag = l.input.drawn
 	}
-	sh.frames.Add(time.Now(), l.frameTime, lag)
+	sh.frames.Add(time.Now(), l.frameTime, lag, l.ui.WokenBy())
 	// Keys typed behind ones the editor has taken in the frame: looked up, or passed on raw while it's mid-command.
 	if acts := l.keys.Pump(sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
 		l.run(ctx, acts)
@@ -233,7 +244,7 @@ func (l *loop) arm(timer *time.Timer, t *turn) {
 		if u.After(now) {
 			d = earliest(d, u)
 		} else {
-			t.pace.Ask()
+			l.ask(t, true, now)
 		}
 	}
 	if _, at := t.pace.Due(now); !at.IsZero() && !l.hidden {
@@ -245,6 +256,20 @@ func (l *loop) arm(timer *time.Timer, t *turn) {
 	}
 	timer.Reset(time.Until(d))
 }
+
+// ask asks for the frame the UI wants at now: painted again when it only steps decorative loops and paint is all that
+// changed, built otherwise, and built anyway once a repaint has stood for longest.
+func (l *loop) ask(t *turn, paintOnly bool, now time.Time) {
+	if paintOnly && l.ui.Repaintable(now) && now.Sub(l.built) < repaintLongest {
+		t.pace.AskRepaint()
+		return
+	}
+	t.pace.Ask()
+}
+
+// repaintLongest is the longest a frame's build stands while loops repaint it: what changed without asking for a
+// frame shows by then.
+const repaintLongest = 500 * time.Millisecond
 
 func earliest(a, b time.Time) time.Time {
 	if a.IsZero() || b.Before(a) {
@@ -546,6 +571,18 @@ func (l *loop) draw() error {
 				frameOverlay(c, l.frameTime, l.input.drawn)
 			}
 		})
+		l.frameTime = time.Since(start)
+		l.built = start
+	})
+}
+
+// repaint paints the last frame's layout again, for decorative loops' next steps.
+func (l *loop) repaint() error {
+	size := l.win.Size()
+	return l.win.Frame(func(f render.Frame) {
+		f.Rect(render.Rect{Max: size}, render.Style{Fill: l.theme.C(theme.BgBase)})
+		start := time.Now()
+		l.ui.Repaint(f)
 		l.frameTime = time.Since(start)
 	})
 }

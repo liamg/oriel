@@ -166,7 +166,7 @@ func (h *Headless) Frame() {
 	h.ui.Frame(h.list.Record(h.zoomed()), h.size, func(c *ui.Ctx) {
 		buildWindow(c, h.sh.cfg.Registry, h.size, frameWindow(h.host.State(), h.sh.cfg.WorkDir))
 	})
-	h.sh.frames.Add(time.Now(), time.Since(start), 0)
+	h.sh.frames.Add(time.Now(), time.Since(start), 0, h.ui.WokenBy())
 }
 
 // List is the last frame's display list.

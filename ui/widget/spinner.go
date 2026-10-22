@@ -18,7 +18,7 @@ var (
 // The spinner goes round once a spinnerTurn in spinnerSteps ticks: a frame a tick, not one a refresh.
 const (
 	spinnerTurn  = 1200 * time.Millisecond
-	spinnerSteps = 12
+	spinnerSteps = 9
 )
 
 type SpinnerOpts struct {
@@ -41,12 +41,12 @@ func Spinner(c *ui.Ctx, key any, o SpinnerOpts) ui.ID {
 		tone = col(c, tSpinnerArc)
 	}
 	track := col(c, tSpinnerTrack)
-	turn, _ := c.Decorative(spinnerTurn, spinnerSteps)
+	turn := c.Animate(spinnerTurn, spinnerSteps)
 	return c.Box(key, ui.Style{W: ui.Px(size), H: ui.Px(size), Role: ui.RoleStatus, Label: o.Name, Help: o.Help, Keep: true}, func(c *ui.Ctx) {
 		c.Paint("arc", ui.Flex(1), ui.Flex(1), func(f render.Frame, r render.Rect) {
 			in := render.Rect{Min: render.Point{X: r.Min.X + w/2, Y: r.Min.Y + w/2}, Max: render.Point{X: r.Max.X - w/2, Y: r.Max.Y - w/2}}
 			f.Path(render.Ellipse(in), render.Style{Stroke: track, Width: w})
-			f.Path(arcFrom(in, turn, .25), render.Style{Stroke: tone, Width: w})
+			f.Path(arcFrom(in, turn.Phase(), .25), render.Style{Stroke: tone, Width: w})
 		})
 	})
 }

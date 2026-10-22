@@ -24,7 +24,7 @@ const (
 	oriBlinkCycle  = 16 * time.Second
 	OriBlinkFor    = 140 * time.Millisecond
 	oriGlanceEvery = 1400 * time.Millisecond
-	oriGlanceSteps = 21 // 15 a second
+	oriGlanceSteps = 11 // 8 a second
 )
 
 // oriBlinks are when it blinks in each oriBlinkCycle: unevenly, and now and then twice.
@@ -54,12 +54,12 @@ func ori(c *ui.Ctx, key any, size float32, m oriMood) {
 	th := c.Theme()
 	ring, face, eye, smile, lit := th.C(tOriRing), th.C(tOriFace), th.C(tOriEye), th.C(tOriSmile), th.C(tOriLit)
 	now := c.Now()
-	glance, blink := float32(0), false
+	var glance ui.Loop
+	blink := false
 	switch {
 	case m.still:
 	case m.busy:
-		phase, _ := c.Decorative(oriGlanceEvery, oriGlanceSteps)
-		glance = float32(math.Sin(phase * 2 * math.Pi))
+		glance = c.Animate(oriGlanceEvery, oriGlanceSteps)
 	case !c.Still() && c.WindowFocused() && c.WindowVisible():
 		var next time.Time
 		blink, next = OriBlink(now)
@@ -77,8 +77,9 @@ func ori(c *ui.Ctx, key any, size float32, m oriMood) {
 		if blink {
 			h = .5
 		}
+		look := float32(math.Sin(glance.Phase() * 2 * math.Pi))
 		for _, x := range []float32{5.4, 9.3} {
-			e := box(x+glance*1.1, 7.7-h/2, 1.3, h)
+			e := box(x+look*1.1, 7.7-h/2, 1.3, h)
 			f.Effect(render.Glow, e, 2*u, theme.WithAlpha(eye, .45))
 			var p render.Path // a path, not a rect, so the bars aren't snapped to pixels, as the logo's isn't
 			p.MoveTo(e.Min).LineTo(render.Point{X: e.Max.X, Y: e.Min.Y}).LineTo(e.Max).LineTo(render.Point{X: e.Min.X, Y: e.Max.Y}).Close()

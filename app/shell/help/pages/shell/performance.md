@@ -15,7 +15,7 @@ samples every 2 seconds while it's up, and nothing while it's closed. Escape or 
 - **Memory**: what's resident, with the Go heap's live objects and all the Go runtime holds.
 - **Goroutines**, and how many garbage collections have run.
 - **Frames**: how many the window drew a second over the last 5 seconds, and how long one took to build (p50, p99).
-  An idle window draws none.
+  An idle window draws none; what asks for the most frames (a spinner, a progress bar) is named by its keys.
 - **Pointer lag**: how far behind the pointer the frames were, from a move to a frame built with it.
 
 ## This machine {#machine}
@@ -35,5 +35,5 @@ What Oriel keeps up to date in the background, and who for. Each session has a f
 its own; a view, a panel or a plugin subscribes to a source (a work tree's git status, a pull request's checks,
 files) and the manager watches or polls it only while something does. **Watches** lists each source: its manager, its
 state (*watching* files, *polling*, *paused* behind another app, *reading*, or *idle* as it's let go), who subscribes
-(a source read from another counts as one), how many times it was read in the last minute, and when it was last
-read. An idle window reads nothing: a source that reads every few seconds with nothing changing is a bug.
+(a source read from another counts as one), how many times it was read in the last minute, when it was last
+read, and why: the file that changed, the source it reads from, a *refresh* or a *poll*. An idle window reads nothing: a source that reads every few seconds with nothing changing is a bug.

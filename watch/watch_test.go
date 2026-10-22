@@ -244,3 +244,26 @@ func TestFilesSourceSaysWhatChanged(t *testing.T) {
 	write(t, filepath.Join(dir, "x"), "1")
 	eventually(t, "x", func() bool { v, _, _ := s.Get(); return len(v) == 1 && v[0] == filepath.Join(dir, "x") })
 }
+
+// Stats say what made each source read last: the path that changed, or the source it reads from.
+func TestStatsSayWhyASourceRead(t *testing.T) {
+	m := manager(t, Options{})
+	dir := t.TempDir()
+	f := filepath.Join(dir, "a.txt")
+	write(t, f, "a")
+	src, reads := counted("files", false, Files{Path: f})
+	derived := Derive("derived", src, func(n int) (int, error) { return n, nil })
+	s := Subscribe(m, derived, Need{}, "test")
+	defer s.Close()
+	eventually(t, "the first read", func() bool { _, _, ok := s.Get(); return ok })
+	write(t, f, "b")
+	eventually(t, "the change", func() bool { return reads.Load() == 2 })
+	eventually(t, "the derived read", func() bool { v, _, _ := s.Get(); return v == 2 })
+	why := map[string]string{}
+	for _, st := range m.Stats() {
+		why[st.Key] = st.Cause
+	}
+	if why["files"] != f || why["derived"] != "files" {
+		t.Fatalf("causes %v, want files from %s and derived from files", why, f)
+	}
+}

@@ -135,11 +135,11 @@ func ProgressBar(c *ui.Ctx, key any, o ProgressOpts) ui.ID {
 	if o.Frac >= 0 {
 		o.Frac = float64(c.Ease(easedKey{key}, float32(math.Min(o.Frac, 1))))
 	}
-	phase, moving := 0.0, false
+	var loop ui.Loop
 	if o.Frac < 0 {
-		phase, moving = c.Decorative(progressSweep, 30)
+		loop = c.Animate(progressSweep, 12)
 	}
-	still := !moving
+	still := !loop.Moving()
 	return c.Column(key, ui.Style{W: w, Gap: 4, Role: ui.RoleStatus, Label: strings.TrimSpace(o.Label + " " + value), Help: o.Help}, func(c *ui.Ctx) {
 		if h >= 6 && o.Label != "" {
 			c.Row("label", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
@@ -169,7 +169,7 @@ func ProgressBar(c *ui.Ctx, key any, o ProgressOpts) ui.ID {
 			default:
 				// A third of the track, eased from one end to the other and back.
 				seg := r.Dx() / 3
-				t := (1 - math.Cos(2*math.Pi*phase)) / 2
+				t := (1 - math.Cos(2*math.Pi*loop.Phase())) / 2
 				x := r.Min.X + float32(t)*(r.Dx()-seg)
 				f.Rect(render.Rect{Min: render.Point{X: x, Y: r.Min.Y}, Max: render.Point{X: x + seg, Y: r.Max.Y}}, render.Style{Fill: tone, Radius: rad})
 			}

@@ -16,7 +16,8 @@ type SourceStat struct {
 	Reads    int // since it was first read
 	PerMin   int // reads begun in the last minute
 	Err      error
-	Stale    bool // changed since its last read began
+	Stale    bool   // changed since its last read began
+	Cause    string // what made it read last: a changed path, a source it reads from, "refresh" or "poll"
 }
 
 // SubStat is one subscription to a source.
@@ -34,7 +35,8 @@ func (m *Manager) Stats() []SourceStat {
 	cut := time.Now().Add(-time.Minute)
 	var out []SourceStat
 	for _, n := range m.nodes {
-		st := SourceStat{Key: n.spec.key, Need: n.need, LastRead: n.at, Reads: n.reads, Err: n.err, Stale: n.dirty}
+		st := SourceStat{Key: n.spec.key, Need: n.need, LastRead: n.at, Reads: n.reads, Err: n.err, Stale: n.dirty,
+			Cause: n.readCause}
 		for _, t := range n.times {
 			if t.After(cut) {
 				st.PerMin++
