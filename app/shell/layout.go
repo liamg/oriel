@@ -329,13 +329,13 @@ func (l *layoutPlugin) moveMenu(c *ui.Ctx, h plugin.Host) {
 	for i, p := range movePlacements {
 		items[i] = widget.MenuItem{Label: p.label, Shortcut: p.keys, Help: panes.HelpPane}
 	}
-	at := render.Point{X: c.Size().X - 340, Y: 40}
+	at := widget.AreaFloat(c, widget.AreaMain, render.Point{X: 1}, render.Point{}, render.Point{X: -340, Y: 2})
 	menu := ui.Child(c.Next("move"), "menu")
 	if !l.asked {
 		l.asked = true
 		c.RequestFocus(menu)
 	}
-	c.Box("move", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
+	c.Box("move", ui.Style{Z: ui.LayerPopup, Float: at}, func(c *ui.Ctx) {
 		chosen, closed := widget.Menu(c, "menu", items, widget.MenuOpts{Width: 320, Help: panes.HelpPane})
 		switch {
 		case closed:

@@ -8,7 +8,6 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
-	"github.com/liamg/oriel/ui"
 )
 
 // OnLoop runs fn on the app's loop and waits for it: an agent tool's way in from the session host's goroutine.
@@ -47,9 +46,6 @@ func (d *Disposer) Deactivate(context.Context) error {
 	*d = nil
 	return nil
 }
-
-// MainArea is the frame's main area, which pages lie over.
-func MainArea() ui.ID { return ui.Child(ui.Child(ui.Child(0, "shell"), "main"), "area") }
 
 // PagePlace is a page shown while *open, as a place in the window's history.
 func PagePlace(name, title, command string, open *bool) uireg.Place {

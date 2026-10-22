@@ -187,7 +187,7 @@ func (x *Tickets) pageView(c *ui.Ctx) {
 		return
 	}
 	rows := x.pageRows()
-	widget.Page(c, "tickets", &x.page.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: TicketsKeyMode, Label: x.pageTitle() + " page", Help: ticketsHelp},
+	widget.Page(c, "tickets", &x.page.open, widget.PageOpts{KeyMode: TicketsKeyMode, Label: x.pageTitle() + " page", Help: ticketsHelp},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			x.pageHeader(c)

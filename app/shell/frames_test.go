@@ -1,11 +1,13 @@
 package shell_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/registry/uireg"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -182,4 +185,59 @@ func TestDockedViewsArePagesOnHome(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Every page covers the frame's title bar and main area, whoever builds it, beside the rail: the session tabs never sit
+// over a page as if it were theirs. On Home, with no rail, it covers the window down to the status line.
+func TestPagesCoverTheTitleBar(t *testing.T) {
+	under := apptest.MockupSize.Y - kit.StatusH
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.Frame()
+	// Performance and the theme editor load on their first command, so they aren't places yet.
+	places := []uireg.Place{{Name: "perf", Command: "perf.open"}, {Name: "theme", Command: "theme.edit"}}
+	for _, c := range s.Registry().Contributions("place") {
+		places = append(places, c.(uireg.Place))
+	}
+	if len(places) < 10 {
+		t.Fatalf("only %d places", len(places))
+	}
+	for _, p := range places {
+		t.Run(p.Name, func(t *testing.T) {
+			s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+			s.Frame()
+			s.Run(p.Command, p.Args)
+			for range 4 {
+				s.Frame()
+			}
+			if !s.Shown(p.Name) {
+				t.Fatalf("%s didn't open %s", p.Command, p.Name)
+			}
+			want := render.Rect{Min: render.Point{X: kit.RailW}, Max: render.Point{X: apptest.MockupSize.X, Y: under}}
+			if got := pageRects(s.Access()); !slices.Contains(got, want) {
+				t.Errorf("%s's page isn't over %v; dialogs at %v", p.Name, want, got)
+			}
+		})
+	}
+	home := apptest.New(t, apptest.Options{})
+	home.Frame()
+	home.Run("settings.open", nil)
+	for range 4 {
+		home.Frame()
+	}
+	want := render.Rect{Max: render.Point{X: apptest.MockupSize.X, Y: under}}
+	if got := pageRects(home.Access()); !slices.Contains(got, want) {
+		t.Errorf("on Home, settings isn't over %v; dialogs at %v", want, got)
+	}
+}
+
+// pageRects is where every dialog in the tree lies.
+func pageRects(n *render.AccessNode) []render.Rect {
+	var out []render.Rect
+	if n.Role == render.RoleDialog {
+		out = append(out, n.Bounds)
+	}
+	for _, k := range n.Children {
+		out = append(out, pageRects(k)...)
+	}
+	return out
 }

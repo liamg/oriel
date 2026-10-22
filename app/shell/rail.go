@@ -536,6 +536,12 @@ func noteOf(row sideRow) string {
 
 func (r *rail) activate(w kit.Here, row sideRow) {
 	ctx := context.Background()
+	if placeShown(r.h) {
+		closePlaces(r.h)
+		if row.kind != rowProject && active(r.h, row.entry, row.scope) {
+			return
+		}
+	}
 	var err error
 	switch row.kind {
 	case rowProject:

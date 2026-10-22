@@ -204,7 +204,7 @@ func (x *Prompts) page(c *ui.Ctx) {
 	}
 	o := x.o
 	defs := prompts.Defs(kit.Prompts(x.h)...)
-	widget.Page(c, "prompts", &x.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: PromptsKeyMode, Label: "Prompts page", Help: promptsHelp + "#page"},
+	widget.Page(c, "prompts", &x.open, widget.PageOpts{KeyMode: PromptsKeyMode, Label: "Prompts page", Help: promptsHelp + "#page"},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			x.header(c, o)

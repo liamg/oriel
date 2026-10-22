@@ -376,7 +376,7 @@ func (e *ThemeEditor) build(c *ui.Ctx) {
 	if e.picked == "" {
 		e.choose("accent")
 	}
-	widget.Page(c, "theme", &e.open, widget.PageOpts{Top: kit.TitleH, KeyMode: "theme", Label: "Theme editor", Help: "shell/theme"}, func(c *ui.Ctx) {
+	widget.Page(c, "theme", &e.open, widget.PageOpts{KeyMode: "theme", Label: "Theme editor", Help: "shell/theme"}, func(c *ui.Ctx) {
 		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			e.tokens(c, th)
 			c.Box("d1", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)

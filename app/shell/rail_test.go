@@ -74,6 +74,44 @@ func TestRailTogglesAView(t *testing.T) {
 	}
 }
 
+// A click on an entry beside a page puts the page away, then does what the entry does; a panel already showing
+// stays, rather than toggling off under it.
+func TestRailClosesThePage(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	pinged := 0
+	s.Host().Command(registry.Command{ID: "test.ping", Run: func(registry.Ctx, registry.Args) error { pinged++; return nil }})
+	s.Host().Contribute(uireg.RailEntry{Name: "ping", Icon: "◆", Title: "Ping", Command: "test.ping", Order: 36})
+	s.Host().Contribute(laterEntry)
+	s.Registry().View("later", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.TextNode("the later view") }))
+	s.Frame()
+	stats := func() {
+		t.Helper()
+		s.Run("stats.open", nil)
+		s.Frame()
+		s.Frame()
+		if !s.Shown("stats") {
+			t.Fatal("no stats page")
+		}
+	}
+	stats()
+	s.Click(apptest.Centre(s.Node("Ping").Bounds), 0)
+	s.Frame()
+	if s.Shown("stats") || pinged != 1 {
+		t.Errorf("after a click on Ping, the stats page is up: %v, pinged %d times", s.Shown("stats"), pinged)
+	}
+	later := apptest.Centre(s.Node("Later").Bounds)
+	s.Click(later, 0)
+	stats()
+	s.Click(later, 0)
+	s.Frame()
+	if s.Shown("stats") {
+		t.Error("a click on Later left the stats page up")
+	}
+	if v := s.Host().Layout().Visible(); len(v) != 1 || v[0].ID != "later" {
+		t.Errorf("the click beside the page toggled its panel: the layout shows %v", v)
+	}
+}
+
 // A plugin's entry, from Go or Lua, appears in order, badges, and goes when disposed.
 func TestRailPluginEntries(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})

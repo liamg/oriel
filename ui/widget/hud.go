@@ -117,9 +117,8 @@ func Panel(c *ui.Ctx, key any, o PanelOpts, body func(c *ui.Ctx)) ui.ID {
 }
 
 type DrawerOpts struct {
-	Top     float32 // where it hangs from: under the title bar
-	Pinned  bool    // it stays until closed: it takes focus, and its grab says how to close it
-	Grab    string  // the tab under its edge: "⌥ RELEASE TO HIDE · CLICK TO PIN"
+	Pinned  bool   // it stays until closed: it takes focus, and its grab says how to close it
+	Grab    string // the tab under its edge: "⌥ RELEASE TO HIDE · CLICK TO PIN"
 	Label   string
 	Help    string
 	KeyMode string
@@ -131,14 +130,14 @@ type DrawerResult struct {
 	Grabbed bool // its grab tab was clicked
 }
 
-// Drawer is a sheet pulled down over the window from Top, as wide as it, as tall as body: the HUD. A pinned one
-// holds keyboard focus while nothing in it has it, a page under it included (it's a focus trap); Escape there or on
-// something in it closes it (KeyMode's keys).
+// Drawer is a sheet pulled down over the window from under its AreaTop, as wide as it, as tall as body: the HUD. A
+// pinned one holds keyboard focus while nothing in it has it, a page under it included (it's a focus trap); Escape
+// there or on something in it closes it (KeyMode's keys).
 func Drawer(c *ui.Ctx, key any, o DrawerOpts, body func(c *ui.Ctx)) DrawerResult {
 	id := c.Next(key)
 	res := DrawerResult{Pressed: c.PressedWithin(id)}
 	size := c.Size()
-	at := render.Point{Y: o.Top}
+	at := render.Point{Y: AreaOr(c, AreaTop).Max.Y}
 	edge, glow, grid := col(c, tDrawerEdge), col(c, tDrawerGlow), col(c, tDrawerGrid)
 	c.Column(key, ui.Style{W: ui.Px(size.X), Pad: ui.Insets{L: 16, T: 14, R: 16, B: 14}, Gap: 12, Fill: col(c, tDrawerBg), Z: ui.LayerDialog,
 		Float: &ui.Float{Point: &at}, Interactive: true, NoHover: true, Focusable: o.Pinned, Trap: o.Pinned, KeyMode: o.KeyMode, Role: ui.RoleDialog, Label: o.Label,

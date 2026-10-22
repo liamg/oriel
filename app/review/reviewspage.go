@@ -206,7 +206,7 @@ func (x *Reviews) pageView(c *ui.Ctx) {
 		return
 	}
 	rows := x.pageRows()
-	widget.Page(c, "reviews", &x.page.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: ReviewsKeyMode, Label: x.pageTitle() + " page", Help: reviewsHelp},
+	widget.Page(c, "reviews", &x.page.open, widget.PageOpts{KeyMode: ReviewsKeyMode, Label: x.pageTitle() + " page", Help: reviewsHelp},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			x.pageHeader(c, rows)

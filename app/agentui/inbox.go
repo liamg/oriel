@@ -322,8 +322,8 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 		}
 	}
 	if len(banner) > 0 {
-		top := render.Point{X: c.Size().X / 2, Y: kit.TitleH + 10}
-		c.Column("banner", ui.Style{W: ui.Px(440), Gap: 8, Z: ui.LayerToast, Float: &ui.Float{Point: &top, Self: render.Point{X: .5}},
+		top := widget.AreaFloat(c, widget.AreaTop, render.Point{X: .5, Y: 1}, render.Point{X: .5}, render.Point{Y: 10})
+		c.Column("banner", ui.Style{W: ui.Px(440), Gap: 8, Z: ui.LayerToast, Float: top,
 			Role: ui.RoleGroup, Label: "Needs you now"}, func(c *ui.Ctx) {
 			for _, r := range banner {
 				x.card(c, r, true)
@@ -333,15 +333,15 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 	if len(stack) == 0 {
 		return
 	}
-	corner := render.Point{X: c.Size().X - 16, Y: c.Size().Y - 36}
+	corner := widget.AreaFloat(c, widget.AreaMain, render.Point{X: 1, Y: 1}, render.Point{X: 1, Y: 1}, render.Point{X: -16, Y: -10})
 	if x.panelShown() {
 		x.mu.Lock()
-		if x.panelLeft > 0 {
-			corner.X = min(corner.X, x.panelLeft-16)
+		if main, ok := widget.AreaRect(c, widget.AreaMain); ok && x.panelLeft > 0 {
+			corner.Offset.X = min(corner.Offset.X, x.panelLeft-16-main.Max.X)
 		}
 		x.mu.Unlock()
 	}
-	c.Column("asks", ui.Style{W: ui.Px(440), Gap: 8, Z: ui.LayerToast, Float: &ui.Float{Point: &corner, Self: render.Point{X: 1, Y: 1}},
+	c.Column("asks", ui.Style{W: ui.Px(440), Gap: 8, Z: ui.LayerToast, Float: corner,
 		Role: ui.RoleGroup, Label: "Waiting on you"}, func(c *ui.Ctx) {
 		for _, r := range stack[:min(len(stack), maxInterrupts)] {
 			x.card(c, r, true)

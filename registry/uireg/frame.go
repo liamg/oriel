@@ -19,7 +19,7 @@ type Area int
 const (
 	AreaTop    Area = iota // across the top: the title bar
 	AreaLeft               // down the left, beside the main region: the rail
-	AreaMain               // what's left; pages lie over it
+	AreaMain               // what's left; pages cover it and the top
 	AreaBottom             // along the bottom: the status line
 	AreaOver               // floats over everything: notifications
 )

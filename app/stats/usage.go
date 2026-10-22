@@ -350,7 +350,7 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 	if !x.usageOpen || c.Theme().IsProbe() {
 		return
 	}
-	widget.Page(c, "usage", &x.usageOpen, widget.PageOpts{Over: kit.MainArea(), KeyMode: UsageKeyMode, Label: "Usage", Help: "agent/usage"},
+	widget.Page(c, "usage", &x.usageOpen, widget.PageOpts{KeyMode: UsageKeyMode, Label: "Usage", Help: "agent/usage"},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			st := x.h.State()

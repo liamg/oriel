@@ -71,7 +71,7 @@ func home(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 		title = cmp.Or(t.Title(ref.Instance), title)
 	}
 	open := true
-	widget.Page(c, "view", &open, widget.PageOpts{Over: kit.MainArea(), Label: title + " page", Help: "shell/start"}, func(c *ui.Ctx) {
+	widget.Page(c, "view", &open, widget.PageOpts{Label: title + " page", Help: "shell/start"}, func(c *ui.Ctx) {
 		th := c.Theme()
 		c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(kit.TStatsHead)}, func(c *ui.Ctx) {
 			c.Text("h", strings.ToUpper(title), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold,
@@ -107,7 +107,7 @@ func frameWindow(st core.State, dir string) uireg.Window {
 }
 
 // buildWindow is the window: win's frame, its top regions over its left ones beside the main area, its bottom ones
-// under them, and its over regions and every app.overlay.* view floating over it all.
+// under them, each a widget.Area, and its over regions and every app.overlay.* view floating over it all.
 func buildWindow(c *ui.Ctx, reg uireg.Registry, size render.Point, win uireg.Window) {
 	f, _ := uireg.FrameFor(reg, win)
 	vc := uireg.ViewCtx{Width: size.X, Height: size.Y, Session: win.Session}
@@ -122,14 +122,22 @@ func buildWindow(c *ui.Ctx, reg uireg.Registry, size render.Point, win uireg.Win
 		}
 	}
 	c.Column("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-		region(c, uireg.AreaTop, ui.Style{W: ui.Flex(1)})
-		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-			region(c, uireg.AreaLeft, ui.Style{H: ui.Flex(1)})
-			c.Row("area", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-				region(c, uireg.AreaMain, ui.Style{W: ui.Flex(1), H: ui.Flex(1)})
+		widget.Area(c, widget.AreaPage, "paged", ui.Style{Dir: ui.Column, W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+			widget.Area(c, widget.AreaTop, "top", ui.Style{Dir: ui.Column, W: ui.Flex(1)}, func(c *ui.Ctx) {
+				region(c, uireg.AreaTop, ui.Style{W: ui.Flex(1)})
+			})
+			c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+				widget.Area(c, widget.AreaSide, "side", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
+					region(c, uireg.AreaLeft, ui.Style{H: ui.Flex(1)})
+				})
+				widget.Area(c, widget.AreaMain, "area", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+					region(c, uireg.AreaMain, ui.Style{W: ui.Flex(1), H: ui.Flex(1)})
+				})
 			})
 		})
-		region(c, uireg.AreaBottom, ui.Style{W: ui.Flex(1)})
+		widget.Area(c, widget.AreaBottom, "bottom", ui.Style{Dir: ui.Column, W: ui.Flex(1)}, func(c *ui.Ctx) {
+			region(c, uireg.AreaBottom, ui.Style{W: ui.Flex(1)})
+		})
 	})
 	over := ui.Style{W: ui.Px(0), H: ui.Px(0)} // its content floats
 	region(c, uireg.AreaOver, over)

@@ -69,34 +69,26 @@ func TestLogoBlinksUnderThePointer(t *testing.T) {
 }
 
 // A click on the logo opens the About card under it: the version and how updates stand, Copy report, Help and
-// Website. Escape and its ✕ put it away, opened alone and over Settings.
+// Website. Escape and its ✕ put it away.
 func TestLogoOpensTheAboutCard(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	x := apptest.PluginOf[*settings.About](s, "about")
-	for _, over := range []string{"", "Settings"} {
-		for _, how := range []string{"Esc", "✕"} {
-			if over == "Settings" {
-				s.Run("Settings", nil)
-			}
-			s.Frame()
-			s.Click(apptest.Centre(s.Within("Sessions", "Oriel").Bounds), 0)
-			s.Frame()
-			s.Frame()
-			if !s.Has("ORIEL", "Updates are off in this build", "Copy report", "Help", "Website") {
-				t.Fatalf("over %q, the About card:\n%s", over, s.Text())
-			}
-			if how == "Esc" {
-				s.Type("Esc")
-			} else {
-				s.Click(apptest.Centre(s.Within("About Oriel", "Close").Bounds), 0)
-			}
-			s.Frame()
-			if x.Open() || strings.Contains(s.Text(), "Copy report") {
-				t.Fatalf("over %q, %s didn't put the About card away", over, how)
-			}
-			if over == "Settings" {
-				s.Close("settings")
-			}
+	for _, how := range []string{"Esc", "✕"} {
+		s.Frame()
+		s.Click(apptest.Centre(s.Within("Sessions", "Oriel").Bounds), 0)
+		s.Frame()
+		s.Frame()
+		if !s.Has("ORIEL", "Updates are off in this build", "Copy report", "Help", "Website") {
+			t.Fatalf("the About card:\n%s", s.Text())
+		}
+		if how == "Esc" {
+			s.Type("Esc")
+		} else {
+			s.Click(apptest.Centre(s.Within("About Oriel", "Close").Bounds), 0)
+		}
+		s.Frame()
+		if x.Open() || strings.Contains(s.Text(), "Copy report") {
+			t.Fatalf("%s didn't put the About card away", how)
 		}
 	}
 	s.Lint("the title bar")

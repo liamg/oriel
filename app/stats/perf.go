@@ -187,7 +187,7 @@ func (x *Perf) page(c *ui.Ctx) {
 	}
 	x.shown.Keep()
 	s := x.sample()
-	widget.Page(c, "perf", &x.open, widget.PageOpts{Over: kit.MainArea(), Label: "Performance", Help: PerfHelp}, func(c *ui.Ctx) {
+	widget.Page(c, "perf", &x.open, widget.PageOpts{Label: "Performance", Help: PerfHelp}, func(c *ui.Ctx) {
 		th := c.Theme()
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", "Performance", kit.UIFont(16, th.C(theme.Fg)))

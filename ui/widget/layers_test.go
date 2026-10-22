@@ -28,21 +28,46 @@ func TestSelectInAPage(t *testing.T) {
 	}
 }
 
-// A page over a node covers that node's rect, leaving what's beside it.
-func TestPageOverANode(t *testing.T) {
-	open := true
-	var main, page ui.ID
+// A page covers the frame's page area, beside its side area and over what's above that; with neither, the window.
+func TestPageCoversThePageArea(t *testing.T) {
+	open, framed := true, true
+	var page, top ui.ID
 	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
-		c.Row("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-			c.Box("side", ui.Style{W: ui.Px(100), H: ui.Flex(1)}, nil)
-			main = c.Box("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, nil)
+		c.Column("shell", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+			body := func(c *ui.Ctx) {
+				c.Box("top", ui.Style{W: ui.Flex(1), H: ui.Px(30)}, nil)
+				c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+					side := ui.Style{W: ui.Px(100), H: ui.Flex(1)}
+					if framed {
+						Area(c, AreaSide, "side", side, nil)
+					} else {
+						c.Box("side", side, nil)
+					}
+					page, top = c.Next("page"), c.Next(struct{ k any }{"page"})
+					Page(c, "page", &open, PageOpts{Help: "test/page"}, func(c *ui.Ctx) {})
+				})
+			}
+			if framed {
+				Area(c, AreaPage, "area", ui.Style{Dir: ui.Column, W: ui.Flex(1), H: ui.Flex(1)}, body)
+			} else {
+				c.Column("area", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, body)
+			}
+			c.Box("status", ui.Style{W: ui.Flex(1), H: ui.Px(20)}, nil)
 		})
-		page = c.Next("page")
-		Page(c, "page", &open, PageOpts{Over: main, Help: "test/page"}, func(c *ui.Ctx) {})
 	})
 	h.frame()
-	if p, m := h.rect(page), h.rect(main); p != m || p.Min.X != 100 {
-		t.Errorf("page %v, want the main box's %v", p, m)
+	h.frame()
+	if p, want := h.rect(page), (render.Rect{Min: render.Point{X: 100}, Max: render.Point{X: small.X, Y: small.Y - 20}}); p != want {
+		t.Errorf("page %v, want %v: beside the side area, from the top of the page area", p, want)
+	}
+	if r, want := h.rect(top), (render.Rect{Max: render.Point{X: 100, Y: 30}}); r != want {
+		t.Errorf("over the side area, the page covers %v, want %v", r, want)
+	}
+	framed = false
+	h.frame()
+	h.frame()
+	if p := h.rect(page); p != (render.Rect{Max: small}) {
+		t.Errorf("with no page area, page %v, want the window %v", p, small)
 	}
 }
 
