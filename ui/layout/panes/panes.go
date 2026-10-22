@@ -503,6 +503,9 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 	if st.tip != nil {
 		tip = st.tip(v)
 	}
+	if tip == "" && c.Shaper().Shape(title, tabFont).Advance > tabMaxW {
+		tip = title
+	}
 	var mark string
 	var markTone render.Color
 	if st.mark != nil {
@@ -535,7 +538,9 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 			if led {
 				c.Box("lead", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 1, Fill: lead}, nil)
 			}
-			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: fg})
+			c.Row("t", ui.Style{W: ui.Size{Kind: ui.Fit}.Clamp(0, tabMaxW)}, func(c *ui.Ctx) {
+				c.Text("t", title, ui.TextStyle{Font: tabFont, Color: fg})
+			})
 			if mark != "" {
 				c.Text("mark", mark, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold}, Color: markTone})
 			}
@@ -632,6 +637,11 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 
 // slotW is the width of the slot a tab dropped on a strip would take.
 const slotW = 140
+
+// tabMaxW is the widest a tab's title runs before it's cut with "…".
+const tabMaxW = 240
+
+var tabFont = typeset.FontSpec{Family: typeset.UI, Size: 12}
 
 func tabName(st *viewState, v layout.ViewRef) string {
 	if st.title != nil {

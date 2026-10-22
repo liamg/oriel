@@ -632,3 +632,46 @@ func TestFixedViewDoesNotMove(t *testing.T) {
 		t.Errorf("after Drop:\n%s", h.r.Dump())
 	}
 }
+
+// A view whose title runs long, a request named after its whole prompt, gets a tab of bounded width, its title cut
+// with "…" and whole in its tooltip.
+func TestLongTitleIsCut(t *testing.T) {
+	h := newHarness(t)
+	long := strings.Repeat("we need a nicer readme image ", 4)
+	h.panes.Title = func(v layout.ViewRef) string {
+		if v == reqs {
+			return long
+		}
+		return ""
+	}
+	if err := h.r.Open(reqs, layout.Tab, layout.Opts{}); err != nil {
+		t.Fatal(err)
+	}
+	h.r.Focus = &reqs
+	h.frame()
+	h.frame()
+	var at render.Point
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && h.isTab(op) && strings.HasPrefix(op.Run.Text, "we need") {
+			if !strings.HasSuffix(op.Run.Text, "…") {
+				t.Errorf("the long title isn't cut: %q", op.Run.Text)
+			}
+			if w := op.Run.Advance; w > tabMaxW {
+				t.Errorf("the title is %.0fpx wide, want at most %d", w, tabMaxW)
+			}
+			at = render.Point{X: op.At.X + 10, Y: op.At.Y - 4}
+		}
+	}
+	if at == (render.Point{}) {
+		t.Fatal("no tab for the long title")
+	}
+	h.ptr(render.PointerMove, at)
+	h.now = h.now.Add(time.Second)
+	h.frame()
+	h.frame()
+	if !slices.ContainsFunc(h.list.Ops, func(op render.Op) bool {
+		return op.Kind == render.OpGlyphs && !h.isTab(op) && strings.Contains(op.Run.Text, "readme image we need")
+	}) {
+		t.Error("hovering the cut tab doesn't show its whole title")
+	}
+}
