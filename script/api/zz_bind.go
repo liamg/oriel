@@ -83,11 +83,30 @@ func (a *APIs) bind(vm *script.VM) {
 			"read": func(c *script.Args) ([]any, error) {
 				return x.Read(c.String(0))
 			},
+			"source": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Source(c.String(0), c.Table(1), c.Where())
+			},
+			"sources": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return []any{x.Sources()}, nil
+			},
 			"statusline": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
 				return nil, x.Statusline(c.Fn(0), c.Where())
+			},
+			"subscribe": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				v, err := x.Subscribe(c.String(0), c.Table(1))
+				return []any{v}, err
 			},
 		})
 	}

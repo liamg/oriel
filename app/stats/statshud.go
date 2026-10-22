@@ -214,8 +214,8 @@ func (x *Plugin) todayPanel(c *ui.Ctx) {
 			}
 		}
 		for _, p := range s.Projects {
-			if p.Dir == "" || seen[p.Dir] {
-				continue
+			if s.Archived || p.Dir == "" || seen[p.Dir] {
+				continue // an archived session's work trees aren't read
 			}
 			seen[p.Dir] = true
 			if l, ok := registry.LedgerOf(x.h, p.Dir); ok {

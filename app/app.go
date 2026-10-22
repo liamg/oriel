@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/watch"
 )
 
 type Config struct {
@@ -56,6 +57,8 @@ type Config struct {
 	ImageNet *http.Client
 	// FSWatch starts the OS's file watchers; fswatch.New if nil.
 	FSWatch func() (*fswatch.Watcher, error)
+	// WatchTiming is how the freshness managers (package watch) settle changes and let go; the defaults when zero.
+	WatchTiming watch.Timing
 	// SandboxBackends are the sandbox backends this machine can run, the default first; sandbox.AvailableBackends
 	// if nil.
 	SandboxBackends func() []string

@@ -159,7 +159,10 @@ type GitTrees interface {
 type GitTree interface {
 	Root() string       // the repo's root; "" outside a repo, or until it's found
 	State() *gitx.State // the last status read; nil outside a repo, or before the first
-	Remote() string     // origin's URL
+	// Counted is State with each file's line counts, read only while something keeps asking for them, frame to
+	// frame; State until they're first read.
+	Counted() *gitx.State
+	Remote() string // origin's URL
 	// Status is the repo's status as it's read and watched: its Repo for git's other calls; nil outside a repo.
 	Status() *gitx.Status
 	Rel(path string) string // a path relative to the repo's root, as git names it

@@ -414,8 +414,11 @@ func (v explorerView) Build(vc uireg.ViewCtx) ui.Node {
 
 func (e *Explorer) build(c *ui.Ctx) {
 	th := c.Theme()
-	st := e.git().state()
 	sc := e.scope()
+	st := e.git().state()
+	if e.cols.lines || sc != gitx.All {
+		st = e.git().withCounts()
+	}
 	var x *explorerIndex
 	if st != nil {
 		x = e.indexFor(st)

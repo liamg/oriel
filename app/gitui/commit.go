@@ -155,7 +155,7 @@ func (g *Git) commit(root string, a registry.Args, started time.Time) error {
 		}()
 		return nil
 	}
-	if st == nil {
+	if st == nil || t.busy() {
 		return later()
 	}
 	all, _ := a["all"].(bool)

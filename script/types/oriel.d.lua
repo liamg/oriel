@@ -104,9 +104,24 @@ function oriel.placeholder(name, spec, fn) end
 ---@return string?,string?
 function oriel.read(path) end
 
+--- Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick.
+---@param name string
+---@param spec? table
+function oriel.source(name, spec) end
+
+--- The names of the sources oriel.subscribe takes.
+---@return table
+function oriel.sources() end
+
 --- Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session.
 ---@param fn function
 function oriel.statusline(fn) end
+
+--- Subscribe to a source's readings, kept fresh by a freshness manager while the subscription lasts and read by nothing once no one subscribes: name is a source (oriel.sources() lists them: files, git.status, git.counted, git.remote, and plugins' own). spec: session ('current' by default, a session id, or 'app' for the app's own manager), the source's arguments (dir for git.*, path and tree for files), max_age (seconds, or a duration such as '5m': how stale a reading may be; 0 reads a watched source as soon as its changes settle), background ('pause' by default: nothing while the window is behind another app, then one catch-up read; 'slow', every slow seconds; 'keep'), on_change = fn(reading, err). Returns a handle: h:get() (the latest reading, or nil and why), h:pause(), h:resume(), h:refresh(), h:close(). It ends with the plugin.
+---@param name string
+---@param spec table
+---@return table
+function oriel.subscribe(name, spec) end
 
 ---@class oriel.agent
 oriel.agent = {}

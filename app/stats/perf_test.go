@@ -13,8 +13,8 @@ import (
 	"github.com/liamg/oriel/host/sysload"
 )
 
-// The status line's CPU opens the Performance page: Oriel's own load and frames, the machine's, and the processes
-// Oriel started, by the session each runs for. Escape closes it.
+// The status line's CPU opens the Performance page: Oriel's own load and frames, the machine's, the processes
+// Oriel started, by the session each runs for, and what the freshness managers keep fresh. Escape closes it.
 func TestCPUOpensThePerformancePage(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	s.Now = apptest.At(14, 0, 0)
@@ -38,7 +38,8 @@ func TestCPUOpensThePerformancePage(t *testing.T) {
 		return strings.Contains(text, "oriel (this window)") && strings.Contains(text, "sleep 30") && !strings.Contains(text, "—\nof a core")
 	})
 	text := s.Text()
-	for _, want := range []string{"ORIEL", "GOROUTINES", "FRAMES", "THIS MACHINE", "34%", "DISK FREE", "SESSIONS", "perf-session", "PROCESSES"} {
+	for _, want := range []string{"ORIEL", "GOROUTINES", "FRAMES", "THIS MACHINE", "34%", "DISK FREE", "SESSIONS", "perf-session", "PROCESSES",
+		"WATCHES", "reviews.requested"} {
 		if !strings.Contains(text, want) {
 			t.Errorf("the page lacks %q:\n%s", want, text)
 		}

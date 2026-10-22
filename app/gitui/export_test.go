@@ -9,7 +9,7 @@ import (
 // What the package's outside tests read and set of its plugins.
 
 func (g *Git) Wait()                 { g.wait() }
-func (g *Git) Unread(dir string)     { g.status = gitx.NewStatus(gitx.Repo{Dir: dir}) }
+func (g *Git) Unread(dir string)     { g.unread(dir) }
 func (x *Diff) Wait()                { x.wait() }
 func (e *Explorer) Wait()            { e.wait() }
 func (e *Explorer) Selected() string { return e.selected }

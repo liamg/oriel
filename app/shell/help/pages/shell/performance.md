@@ -28,3 +28,12 @@ memory, and the space free on the disk the window's directory is on, read every 
 **Processes** lists Oriel and every process under it, heaviest first: agents, language servers, terminals, git. CPU
 is a share of one core since the sample before. A process an agent started carries its session, and **Sessions** adds
 up each session's. An agent in a container isn't Oriel's child, so it doesn't show.
+
+## Watches {#watches}
+
+What Oriel keeps up to date in the background, and who for. Each session has a freshness manager, and the app one of
+its own; a view, a panel or a plugin subscribes to a source (a work tree's git status, a pull request's checks,
+files) and the manager watches or polls it only while something does. **Watches** lists each source: its manager, its
+state (*watching* files, *polling*, *paused* behind another app, *reading*, or *idle* as it's let go), who subscribes
+(a source read from another counts as one), how many times it was read in the last minute, and when it was last
+read. An idle window reads nothing: a source that reads every few seconds with nothing changing is a bug.
