@@ -89,7 +89,7 @@ func (x *Watches) manager(name string) *watch.Manager {
 		start = w.FSWatch
 	}
 	log := x.h.Log()
-	m := watch.New(watch.Options{Name: name, Watch: start, Timing: x.Timing, Log: log.Warn, Polls: kit.PollsOf(x.h)})
+	m := watch.New(watch.Options{Name: name, Watch: start, Timing: x.Timing, Log: log.Debug, Polls: kit.PollsOf(x.h)})
 	on, _ := x.h.WindowFocus()
 	m.SetFocused(on)
 	return m

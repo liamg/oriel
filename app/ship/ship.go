@@ -89,6 +89,7 @@ type shipReport struct {
 	failed  map[string]string // project → why its last step failed
 	started int               // reads started; a read older than the one last kept is dropped
 	kept    int
+	fixed   bool // a Fixture's: reads don't replace it
 }
 
 func (x *Ship) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ship"} }
@@ -317,8 +318,10 @@ func (x *Ship) reading(id core.SessionID) (*shipReport, int) {
 		r = &shipReport{doing: map[string]string{}, failed: map[string]string{}}
 		x.reports[id] = r
 	}
-	r.loading = true
-	r.started++
+	if !r.fixed {
+		r.loading = true
+		r.started++
+	}
 	return r, r.started
 }
 
@@ -336,6 +339,10 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n int, fresh bool) {
 		cancel()
 	}
 	x.mu.Lock()
+	if r.fixed {
+		x.mu.Unlock()
+		return
+	}
 	if n == r.started {
 		r.loading = false
 	}
@@ -747,7 +754,7 @@ func (x *Ship) prChips(se core.SessionState) []registry.Chip {
 type Read = shipRead
 
 // Fixture makes what Ship last read of session id's projects fn of it, loading or not, with no step running or
-// failed: a showcase or a test drawn with no code host.
+// failed, and keeps it over later reads: a showcase or a test drawn with no code host.
 func (x *Ship) Fixture(id core.SessionID, loading bool, fn func([]Read) []Read) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
@@ -755,5 +762,5 @@ func (x *Ship) Fixture(id core.SessionID, loading bool, fn func([]Read) []Read) 
 	if r := x.reports[id]; r != nil {
 		ships = r.ships
 	}
-	x.reports[id] = &shipReport{ships: fn(ships), loading: loading, doing: map[string]string{}, failed: map[string]string{}}
+	x.reports[id] = &shipReport{ships: fn(ships), loading: loading, doing: map[string]string{}, failed: map[string]string{}, fixed: true}
 }

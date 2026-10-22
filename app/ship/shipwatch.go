@@ -137,9 +137,9 @@ func (x *Ship) readPRs(ctx context.Context, id core.SessionID) {
 	x.mirrorReviews(ctx, id, ships, false)
 	x.mu.Lock()
 	r = x.reports[id]
-	if r == nil || r.loading {
+	if r == nil || r.loading || r.fixed {
 		x.mu.Unlock()
-		return // a whole read is under way: it has the PRs too
+		return // a whole read is under way, with the PRs too; or a fixture's in place
 	}
 	r.ships, r.read = ships, time.Now()
 	seen, merged, asks := x.newPRs(id, ships)

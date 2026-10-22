@@ -2,6 +2,9 @@ package apptest
 
 import (
 	"testing"
+	"time"
+
+	"github.com/liamg/oriel/app/editor"
 
 	"github.com/liamg/oriel/gitx/gittest"
 )
@@ -36,10 +39,11 @@ func ExplorerRepo(t *testing.T) *gittest.Repo {
 	return r
 }
 
-// ExplorerScene is the app on ExplorerRepo, its status read.
+// ExplorerScene is the app on ExplorerRepo, its status read, its inline blame's clock two weeks after its commits.
 func ExplorerScene(t *testing.T) (*Scene, *gittest.Repo) {
 	r := ExplorerRepo(t)
 	s := New(t, Options{WorkDir: r.Dir})
+	PluginOf[*editor.GitSigns](s, "gitsigns").Now = func() time.Time { return r.When.Add(14 * 24 * time.Hour) }
 	s.WaitGit()
 	s.Frame()
 	return s, r
