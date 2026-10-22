@@ -348,7 +348,7 @@ func (x *Plugin) pin(ctx registry.Ctx) error {
 		"status": string(core.ThreadResolved)})
 }
 
-// requestThis writes a request about the selection, or the unit at the cursor.
+// requestThis writes a request about the selection, the unit at the cursor, or the cursor's place.
 func (x *Plugin) requestThis(ctx registry.Ctx, what string) error {
 	ed, ok := registry.EditorsOf(x.h)
 	if !ok {
@@ -360,20 +360,24 @@ func (x *Plugin) requestThis(ctx registry.Ctx, what string) error {
 	}
 	path, snap := b.Path, b.Text.Snapshot()
 	r, ok := ed.Selection()
-	name := "this code"
+	name, at := "the selection", kit.Place{}
 	if ok {
+		at = kit.PlaceOf(snap, r)
 		x.leaveVisual()
 	} else {
 		units := x.unitsNow(path, b.Text)
 		cur := b.Cursor
 		i := text.Innermost(units, text.Range{Start: firstNonBlank(snap, cur.Line), End: firstNonBlank(snap, cur.Line)})
-		if i < 0 {
-			return errors.New("no code unit here: select some code first")
+		if i >= 0 {
+			r, name = units[i].Range, units[i].Label(snap.Bytes())
+			start, end := spanLines(snap, r)
+			at = kit.Place{Line: start + 1, EndLine: end + 1}
+		} else {
+			r, name, at = text.Range{Start: snap.LineStart(cur.Line), End: snap.LineEnd(cur.Line)}, "the code at the cursor", kit.PlaceAt(snap, cur)
 		}
-		r, name = units[i].Range, units[i].Label(snap.Bytes())
 	}
-	start, end := spanLines(snap, r)
-	where := fmt.Sprintf("%s:%d-%d", x.relName(path), start+1, end+1)
+	start, _ := spanLines(snap, r)
+	where := x.relName(path) + ":" + at.String()
 	prompt, ok := map[string]string{
 		"review":   "Review %s (%s): what's wrong with it, or could be better?",
 		"tests":    "Write tests for %s (%s).",
@@ -382,6 +386,9 @@ func (x *Plugin) requestThis(ctx registry.Ctx, what string) error {
 	if !ok {
 		return fmt.Errorf("no request %q: review, tests or refactor", what)
 	}
-	return x.h.Run(ctx, "request.new", registry.Args{"text": fmt.Sprintf(prompt, name, where),
-		"context": fmt.Sprintf("%s\n```\n%s```", where, codeOf(snap, r)), "file": path, "line": start + 1})
+	attached := fmt.Sprintf("%s\n```\n%s```", where, codeOf(snap, r))
+	if at.Col > 0 && at.EndCol > 0 {
+		attached += fmt.Sprintf("\nthe selection:\n```\n%s\n```", snap.Slice(r))
+	}
+	return x.h.Run(ctx, "request.new", registry.Args{"text": fmt.Sprintf(prompt, name, where), "context": attached, "file": path, "line": start + 1})
 }

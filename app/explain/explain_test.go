@@ -241,3 +241,26 @@ func TestExplainAnsweredByTheSessionsFork(t *testing.T) {
 	r.ClickText("Ask a follow-up")
 	r.WaitFrame("the request being written, with the explanation", func(s string) bool { return apptest.HasAll(s, "Write a request", "context") })
 }
+
+// Review this names the selection by its first and last characters and attaches what's selected; with nothing
+// selected outside any unit, it names the cursor's place.
+func TestRequestThisNamesTheSelection(t *testing.T) {
+	s, _, _ := explainScene(t)
+	var args []registry.Args
+	s.Registry().Command(registry.Command{ID: "request.new", Run: func(_ registry.Ctx, a registry.Args) error {
+		args = append(args, a)
+		return nil
+	}})
+	cursorTo(s, 21)
+	s.EditorKeys("0fcvt(")
+	s.Run("request.this", registry.Args{"what": "review"})
+	if len(args) != 1 || !strings.Contains(args[0].String("text"), "Review the selection (round.go:21:11-21:28)") ||
+		!strings.Contains(args[0].String("context"), "the selection:\n```\ncurrency.Precision\n```") {
+		t.Fatalf("Review this on a selection: %v", args)
+	}
+	cursorTo(s, 2)
+	s.Run("request.this", registry.Args{"what": "review"})
+	if len(args) != 2 || !strings.Contains(args[1].String("text"), "Review the code at the cursor (round.go:2:1)") {
+		t.Fatalf("Review this outside a unit: %v", args)
+	}
+}

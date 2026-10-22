@@ -30,8 +30,10 @@ type Anchor struct {
 	File    string   `json:"file"` // relative to the project
 	Line    int      `json:"line"` // 1-based
 	EndLine int      `json:"endLine,omitempty"`
-	Side    string   `json:"side,omitempty"` // "old" for removed code in a diff
-	Text    string   `json:"text,omitempty"` // the anchored lines when it was made, so it can follow edits
+	Col     int      `json:"col,omitempty"`    // 1-based, in characters: where on Line, if it's a point or a span within lines
+	EndCol  int      `json:"endCol,omitempty"` // the span's last character, on EndLine (Line without one)
+	Side    string   `json:"side,omitempty"`   // "old" for removed code in a diff
+	Text    string   `json:"text,omitempty"`   // the anchored lines when it was made, so it can follow edits
 	Before  []string `json:"before,omitempty"`
 	After   []string `json:"after,omitempty"`
 }

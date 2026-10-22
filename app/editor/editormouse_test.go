@@ -8,7 +8,9 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/ui"
 )
 
 // charAt is the middle of column col of the editor line that reads line, in the frame drawn.
@@ -203,5 +205,46 @@ func TestEditorWrapsLongLines(t *testing.T) {
 	s.Frame()
 	if editorOf(s).Current().Wrap() || len(rows()) != 1 {
 		t.Errorf("editor.wrap.toggle didn't turn wrap off: %d rows", len(rows()))
+	}
+}
+
+// A click lands on the character under the pointer with a block between the lines above it.
+func TestEditorClickBelowABlock(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "a.txt"), []byte("first\nsecond line\nthird\nfourth\nfifth\nsixth\n"), 0o644)
+	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1200, Y: 800}})
+	open(s, t, "a.txt")
+	s.Registry().Decorations("test.block", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration {
+		return []uireg.Decoration{{Kind: uireg.Block, Line: 0, Node: ui.ColumnNode(ui.TextNode("a card"), ui.TextNode("of three"), ui.TextNode("lines"))}}
+	}))
+	s.Frame()
+	s.Frame()
+	s.Click(charAt(s, t, "second line", 7), 0)
+	if got := engine(s).Cursor(); got.Line != 1 || got.Col != 7 {
+		t.Errorf("a click on %q put the cursor at %+v, want line 1 col 7", "second line", got)
+	}
+}
+
+// options.txt 'mousemodel' popup_setpos: "the cursor will be moved to the position where the mouse was clicked, and
+// thus the selected operation will act upon the clicked object. If clicking inside a selection, that selection will
+// be acted upon, i.e. no cursor move."
+func TestEditorRightClickPlacesTheCursor(t *testing.T) {
+	s := editorMouseScene(t)
+	e := engine(s)
+	s.RightClick(charAt(s, t, "second line", 7))
+	s.Press("<Esc>")
+	if got := e.Cursor(); got.Line != 1 || got.Col != 7 {
+		t.Errorf("a right-click put the cursor at %+v, want line 1 col 7", got)
+	}
+	s.Drag(charAt(s, t, "round half even", 6), charAt(s, t, "round half even", 9))
+	s.RightClick(charAt(s, t, "round half even", 7))
+	s.Press("<Esc>")
+	if got := e.Cursor(); got.Line != 0 || got.Col != 9 {
+		t.Errorf("a right-click inside the selection moved the cursor to %+v", got)
+	}
+	s.Drag(charAt(s, t, "round half even", 6), charAt(s, t, "round half even", 9))
+	s.RightClick(charAt(s, t, "second line", 2))
+	if e.Mode() != "normal" {
+		t.Errorf("a right-click outside the selection left the editor in %s", e.Mode())
 	}
 }

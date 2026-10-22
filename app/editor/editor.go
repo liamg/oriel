@@ -58,7 +58,8 @@ type Editor struct {
 	present map[vim.WindowID]*windowPresent // the windows a presenter draws
 
 	fileHost  *editorHost
-	previewed kit.FilePreview // the file a picker last previewed
+	lineTops  map[vim.WindowID][]lineTop // where a window's lines were drawn last frame, below the blocks between them
+	previewed kit.FilePreview            // the file a picker last previewed
 
 	now          time.Time   // the frame's, for decorations
 	drawing      input.State // the engine of the pane being drawn
@@ -75,6 +76,7 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 		x.dir, _ = os.Getwd()
 	}
 	x.docs, x.rows, x.blockPx = map[*text.Buffer]*highlighter{}, map[vim.WindowID]int{}, map[vim.WindowID]float32{}
+	x.lineTops = map[vim.WindowID][]lineTop{}
 	x.disk.asked = map[int]time.Time{}
 	x.maps = map[string]registry.Disposable{}
 	x.inputs = map[vim.WindowID]paneInput{}

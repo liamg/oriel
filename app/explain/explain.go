@@ -191,7 +191,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "view.toggle", registry.Args{"id": ChangedUnitsView, "place": "dock", "edge": "right", "size": 350, "title": "Changed units"})
 			}},
-		{ID: "request.this", Title: "Write a request about the selection, or the unit at the cursor: {what} is review, tests or refactor",
+		{ID: "request.this", Title: "Write a request about the selection, the unit at the cursor, or the cursor's place: {what} is review, tests or refactor",
 			Available: func(registry.Args) bool { return h.Available("request.new", nil) },
 			Run:       func(ctx registry.Ctx, a registry.Args) error { return x.requestThis(ctx, a.String("what")) }},
 	} {

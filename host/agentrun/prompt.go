@@ -168,7 +168,13 @@ func where(se core.SessionState, t core.Thread) string {
 	if a.Line <= 0 {
 		return a.File
 	}
-	if a.EndLine > a.Line {
+	end := max(a.EndLine, a.Line)
+	switch {
+	case a.Col > 0 && a.EndCol > 0:
+		return fmt.Sprintf("%s:%d:%d-%d:%d", a.File, a.Line, a.Col, end, a.EndCol)
+	case a.Col > 0:
+		return fmt.Sprintf("%s:%d:%d", a.File, a.Line, a.Col)
+	case a.EndLine > a.Line:
 		return fmt.Sprintf("%s:%d-%d", a.File, a.Line, a.EndLine)
 	}
 	return a.File + ":" + strconv.Itoa(a.Line)

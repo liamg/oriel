@@ -56,7 +56,8 @@ A side question, answered by a fork of the agent that has no tools and doesn't j
 
 ## Between the lines {#inline}
 
-**Ask about this…** in the editor's right-click menu (or `thread.new`) opens a thread on the cursor's line: `⏎` sends
+**Ask about this…** in the editor's right-click menu (or `thread.new`) opens a thread on the selection, or on the place
+clicked, and the agent is told its line and column (`round.go:4:7`, or `round.go:3:6-4:2` for a selection): `⏎` sends
 it, `⇧⏎` starts a new line, `Esc` drops it. Open threads show under their line with the agent's state, and take replies there
 the same way.
 
