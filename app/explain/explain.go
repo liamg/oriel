@@ -27,12 +27,13 @@ import (
 const ExplainKeyMode = "explain"
 
 var (
-	tExplainMark   = theme.Declare("explain.mark", "accent")
-	tExplainMarkOn = theme.Declare("explain.mark.on", "accent.strong")
-	tExplainUnitBg = theme.DeclareOn("explain.unit.bg", "alpha(accent, 5%)", "bg.base")
-	tExplainEdge   = theme.Declare("explain.unit.edge", "alpha(accent, 70%)")
-	tExplainCardBg = theme.DeclareOn("explain.card.bg", "alpha(accent, 4%)", "bg.base")
-	tExplainCardBd = theme.Declare("explain.card.border", "alpha(accent, 35%)")
+	tExplainMark      = theme.Declare("explain.mark", "accent")
+	tExplainMarkOn    = theme.Declare("explain.mark.on", "accent.strong")
+	tExplainMarkQuiet = theme.Declare("explain.mark.unchanged", "fg.ghost")
+	tExplainUnitBg    = theme.DeclareOn("explain.unit.bg", "alpha(accent, 5%)", "bg.base")
+	tExplainEdge      = theme.Declare("explain.unit.edge", "alpha(accent, 70%)")
+	tExplainCardBg    = theme.DeclareOn("explain.card.bg", "alpha(accent, 4%)", "bg.base")
+	tExplainCardBd    = theme.Declare("explain.card.border", "alpha(accent, 35%)")
 )
 
 // explainDepths are the card's depths, in its strip's order.

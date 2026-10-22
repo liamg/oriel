@@ -460,6 +460,7 @@ clip 44,38 1176x936 r 0
   clip 44,69 1176x905 r 0
     clip 44,69 1176x905 r 0
       clip 44,95 1176x879 r 0
+        text "?" @93.296875,135.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -492,6 +493,7 @@ clip 44,38 1176x936 r 0
   clip 44,69 1176x905 r 0
     clip 44,69 1176x905 r 0
       clip 44,95 1176x879 r 0
+        text "?" @93.296875,219.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -500,6 +502,7 @@ clip 44,38 1176x936 r 0
   clip 44,69 1176x905 r 0
     clip 44,69 1176x905 r 0
       clip 44,95 1176x879 r 0
+        text "?" @93.296875,240.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -539,6 +542,7 @@ clip 44,38 1176x936 r 0
   clip 44,69 1176x905 r 0
     clip 44,69 1176x905 r 0
       clip 44,95 1176x879 r 0
+        text "?" @93.296875,661.54663 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop

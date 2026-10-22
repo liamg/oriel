@@ -379,6 +379,7 @@ clip 0,0 856x354 r 0
   clip 0,31 856x323 r 0
     clip 0,31 856x323 r 0
       clip 0,57 856x297 r 0
+        text "?" @49.296875,97.770004 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -411,6 +412,16 @@ clip 0,0 856x354 r 0
   clip 0,31 856x323 r 0
     clip 0,31 856x323 r 0
       clip 0,57 856x297 r 0
+        text "?" @49.296875,181.77 #4f4a40 JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop
+clip 0,0 856x354 r 0
+  clip 0,31 856x323 r 0
+    clip 0,31 856x323 r 0
+      clip 0,57 856x297 r 0
+        text "?" @49.296875,202.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -427,6 +438,7 @@ clip 0,0 856x354 r 0
   clip 0,31 856x323 r 0
     clip 0,31 856x323 r 0
       clip 0,57 856x297 r 0
+        text "?" @49.296875,244.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -435,14 +447,7 @@ clip 0,0 856x354 r 0
   clip 0,31 856x323 r 0
     clip 0,31 856x323 r 0
       clip 0,57 856x297 r 0
-      pop
-    pop
-  pop
-pop
-clip 0,0 856x354 r 0
-  clip 0,31 856x323 r 0
-    clip 0,31 856x323 r 0
-      clip 0,57 856x297 r 0
+        text "?" @49.296875,265.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -483,6 +488,7 @@ clip 0,355 856x354 r 0
   clip 0,386 856x323 r 0
     clip 0,386 856x323 r 0
       clip 0,412 856x297 r 0
+        text "?" @49.296875,452.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -515,6 +521,16 @@ clip 0,355 856x354 r 0
   clip 0,386 856x323 r 0
     clip 0,386 856x323 r 0
       clip 0,412 856x297 r 0
+        text "?" @49.296875,536.77 #4f4a40 JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop
+clip 0,355 856x354 r 0
+  clip 0,386 856x323 r 0
+    clip 0,386 856x323 r 0
+      clip 0,412 856x297 r 0
+        text "?" @49.296875,557.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -531,6 +547,7 @@ clip 0,355 856x354 r 0
   clip 0,386 856x323 r 0
     clip 0,386 856x323 r 0
       clip 0,412 856x297 r 0
+        text "?" @49.296875,599.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -539,14 +556,7 @@ clip 0,355 856x354 r 0
   clip 0,386 856x323 r 0
     clip 0,386 856x323 r 0
       clip 0,412 856x297 r 0
-      pop
-    pop
-  pop
-pop
-clip 0,355 856x354 r 0
-  clip 0,386 856x323 r 0
-    clip 0,386 856x323 r 0
-      clip 0,412 856x297 r 0
+        text "?" @49.296875,620.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop

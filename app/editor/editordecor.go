@@ -47,10 +47,13 @@ const (
 )
 
 // signs draws a line's gutter signs, between its number and its text. A block sign (the git bar) has a fixed place
-// at the column's right edge, so a run of them lines up whatever else a line has; the rest sit centred left of it.
+// at the column's right edge, so a run of them lines up whatever else a line has; of the rest, the one with the
+// highest priority sits centred left of it, the others in its menu (uireg.TopSign).
 func (x *Editor) signs(c *ui.Ctx, ds []uireg.Decoration, gw float32, m kit.PaneMetrics) {
 	c.Row("signs", ui.Style{W: ui.Px(signColW), H: ui.Flex(1), Pad: ui.Insets{R: signBarW}, Cross: ui.Center, Main: ui.Center,
 		Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
+		var room [2]uireg.Decoration
+		rest := room[:0]
 		for i, d := range ds {
 			if d.Kind != uireg.Sign {
 				continue
@@ -61,7 +64,10 @@ func (x *Editor) signs(c *ui.Ctx, ds []uireg.Decoration, gw float32, m kit.PaneM
 					Float: &ui.Float{Offset: render.Point{X: signColW - w*m.CharW, Y: (1 - h) * m.LineH}}}, nil)
 				continue
 			}
-			kit.DrawSign(c, x.h, i, d, m.Font.Size)
+			rest = append(rest, d)
+		}
+		if d, ok := uireg.TopSign(rest); ok {
+			kit.DrawSign(c, x.h, "sign", d, m.Font.Size)
 		}
 	})
 }

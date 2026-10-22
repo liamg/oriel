@@ -113,13 +113,13 @@ at the cursor, `␣tO` the whole run's, and `␣ta` follows the running test's a
 
 ## Explain by code unit {#explain}
 
-A `?` in the gutter marks each code unit the branch changed: the smallest function, method, type, `case`, `if`, loop
-or closure that owns a change against the branch's base (tree-sitter finds them, in every language with a units
-query). Click it, or put the cursor in a unit and press `␣e`, to explain it in a card under the unit. The card's
-breadcrumb (`func roundHalfEven › switch diff › case 0`) shows where you are; click a crumb, or press `[` and `]`
-while the cursor is in the unit, to widen and narrow along the syntax tree, and `␣e` again widens. In Visual mode
-`␣e` explains the selection. **Brief**, **detailed** and **why · history** (which adds git blame, the commits, the
-session's PR and the threads on those lines) ask again at another depth.
+A `?` in the gutter marks every code unit: each function, method, type, `case`, `if`, loop or closure (tree-sitter finds
+them, in every language with a units query). It's brighter on the units the branch changed: the smallest one owning each
+change against the branch's base. Click it, or put the cursor in a unit and press `␣e`, to explain it in a card under
+the unit. The card's breadcrumb (`func roundHalfEven › switch diff › case 0`) shows where you are; click a crumb, or
+press `[` and `]` while the cursor is in the unit, to widen and narrow along the syntax tree, and `␣e` again widens. In
+Visual mode `␣e` explains the selection. **Brief**, **detailed** and **why · history** (which adds git blame, the
+commits, the session's PR and the threads on those lines) ask again at another depth.
 
 Answers come from the first explainer: the session's agent, forked without tools, so nothing changes. They're
 cached by the unit's text: an edit inside the unit marks the card **changed since it was explained**, with

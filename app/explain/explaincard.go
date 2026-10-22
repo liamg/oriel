@@ -3,6 +3,7 @@ package explain
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
@@ -34,28 +35,37 @@ func (x *Plugin) decorationKey(ctx uireg.DecorationCtx) any {
 	return k
 }
 
-// decorations put a ? beside each unit the branch changed, and the card between the lines under what it explains,
-// with those lines marked.
+// decorations put a ? beside every unit, brighter on those the branch changed, and the card between the lines under
+// what it explains, with those lines marked.
 func (x *Plugin) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	if ctx.Buffer == nil {
 		return nil
 	}
 	var out []uireg.Decoration
 	if fu := x.bufferUnits(ctx.Path, ctx.Buffer, ctx.FileBytes); fu != nil {
-		for _, i := range fu.owners {
-			u := fu.units[i]
-			line := lineAt(fu.src, u.Range.Start)
+		for i, u := range fu.units {
+			line := fu.lines[i]
 			if line < ctx.Top || line >= ctx.Bottom {
 				continue
 			}
 			st := x.unitStatus(ctx.Path, u, fu.hashes[i])
 			tok := map[string]theme.TokenID{"open": tExplainMarkOn, "explained": tUnitsDone, "changed": tUnitsChanged}[st]
-			if tok == 0 {
+			switch {
+			case tok != 0:
+			case slices.Contains(fu.owners, i):
 				tok = tExplainMark
+			default:
+				tok = tExplainMarkQuiet
 			}
 			word, _ := unitStatusWord(st)
-			out = append(out, uireg.Decoration{Kind: uireg.Sign, Line: line, Text: "?", Style: tok.Name(), Priority: 15, Command: "explain.unit",
-				Args: registry.Args{"file": ctx.Path, "line": line + 1}, Tooltip: "Explain " + u.Label(fu.src) + " · " + word})
+			d := uireg.Decoration{Kind: uireg.Sign, Line: line, Text: "?", Style: tok.Name(), Priority: 15, Command: "explain.unit",
+				Args: registry.Args{"file": ctx.Path, "line": line + 1}, Tooltip: "Explain " + fu.labels[i] + " · " + word}
+			switch j := len(out) - 1; {
+			case j < 0 || out[j].Line != line:
+				out = append(out, d)
+			case out[j].Style == tExplainMarkQuiet.Name():
+				out[j] = d
+			}
 		}
 	}
 	cd := x.card

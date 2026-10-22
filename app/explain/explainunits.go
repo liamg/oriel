@@ -1,6 +1,7 @@
 package explain
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
@@ -33,6 +34,8 @@ type fileUnits struct {
 	gen     int    // the base's
 	src     []byte
 	units   []text.Unit
+	lines   []int    // each unit's first line, 0-based
+	labels  []string // each unit's label
 	owners  []int    // the units owning a change, by index
 	hashes  []string // each unit's content hash
 	hunks   int
@@ -116,8 +119,16 @@ func changedRanges(src []byte, hunks []gitx.Hunk) []text.Range {
 // computeUnits are src's units and the ones base→file touches: file is src as it would be written.
 func (x *Plugin) computeUnits(path string, src, file, base []byte, haveBase bool) *fileUnits {
 	fu := &fileUnits{src: src, units: x.parseUnits(path, src)}
+	line, at := 0, 0
 	for _, u := range fu.units {
 		fu.hashes = append(fu.hashes, unitHash(u.Kind, src[u.Range.Start:u.Range.End]))
+		if u.Range.Start < at {
+			line, at = 0, 0
+		}
+		line += bytes.Count(src[at:min(u.Range.Start, len(src))], []byte{'\n'})
+		at = min(u.Range.Start, len(src))
+		fu.lines = append(fu.lines, line)
+		fu.labels = append(fu.labels, u.Label(src))
 	}
 	if haveBase {
 		hunks := gitx.DiffLines(base, file)
