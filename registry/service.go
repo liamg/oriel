@@ -90,6 +90,8 @@ type Editors interface {
 	Window(id string) (EditorWindow, bool)
 	Buffers() []EditorBuffer // the listed buffers that hold files
 	Mode() string            // the current window's mode: "normal", "insert", "visual"…
+	// Recording is the register vim's q is recording into, as typed ('A' appends to a).
+	Recording() (rune, bool)
 	// At is at with the current buffer and window, and the cursor's file and line, for reading options.
 	At(at At) At
 	// Pending is the focused editor's engine waiting for more keys: vim's g, z or a count, emacs's C-x.

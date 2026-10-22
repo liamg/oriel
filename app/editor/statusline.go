@@ -59,7 +59,22 @@ func (x *Editor) modeSegment(c *ui.Ctx) {
 						Weight: typeset.Bold, Tracking: .12}, Color: th.C(tModeFg)})
 				})
 		}
+		if r, ok := x.recording(); ok {
+			c.Row("rec", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(10, 0), Cross: ui.Center, Fill: th.C(tModeRecording), Role: ui.RoleStatus,
+				Label: "Recording"}, func(c *ui.Ctx) {
+				c.Text("r", "REC @"+string(r), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Bold,
+					Tracking: .12}, Color: th.C(tModeFg)})
+			})
+		}
 	})
+}
+
+// recording is the register q is recording into, while the current window takes vim keys.
+func (x *Editor) recording() (rune, bool) {
+	if x.e == nil || !isVim(x.inputFor(x.current())) {
+		return 0, false
+	}
+	return x.e.Recording()
 }
 
 // shown reports whether any editor window is in the layout.

@@ -179,3 +179,6 @@ func rawToKeys(s string) []string {
 	}
 	return out
 }
+
+// Recording is the register q is recording into, as typed: 'A' while appending to a.
+func (e *Engine) Recording() (rune, bool) { return e.recReg, e.recReg != 0 }
