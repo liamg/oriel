@@ -925,6 +925,7 @@ clip 44,38 606x936 r 0
   clip 44,69 606x905 r 0
     clip 44,69 606x905 r 0
       clip 44,95 606x879 r 0
+        text "?" @93.296875,912.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop

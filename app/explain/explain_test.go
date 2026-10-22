@@ -16,19 +16,28 @@ import (
 	"github.com/liamg/oriel/text"
 )
 
-// A ? on the smallest unit owning each change (one hunk can touch three units, and one unit can span two hunks); ␣e
-// explains the unit at the cursor in a card under it with its breadcrumb; [ and ] widen and narrow, ␣e again widens,
-// and the depths ask again.
+// A ? on every unit, and the brighter one on the smallest unit owning each change (one hunk can touch three units, and
+// one unit can span two hunks); ␣e explains the unit at the cursor in a card under it with its breadcrumb; [ and ]
+// widen and narrow, ␣e again widens, and the depths ask again.
 // ref: oracle git
 func TestExplainByUnit(t *testing.T) {
 	s, f, _ := explainScene(t)
-	var lines []int
-	for l := range unitMarks(s) {
+	var lines, changed []int
+	for l, st := range unitMarks(s) {
 		lines = append(lines, l)
+		if st == explain.MarkBranch() {
+			changed = append(changed, l)
+		} else if st != explain.MarkUnchanged() {
+			t.Errorf("line %d's ? is %q", l, st)
+		}
 	}
 	slices.Sort(lines)
-	if want := []int{4, 8, 11, 12, 22}; !slices.Equal(lines, want) {
-		t.Fatalf("? on lines %v, want %v (func roundHalfEven, the switch, case 0, the if in it, if !ok)", lines, want)
+	slices.Sort(changed)
+	if want := []int{4, 8, 9, 11, 12, 20, 22, 28}; !slices.Equal(lines, want) {
+		t.Fatalf("? on lines %v, want %v (every unit)", lines, want)
+	}
+	if want := []int{4, 8, 11, 12, 22}; !slices.Equal(changed, want) {
+		t.Fatalf("changed ? on lines %v, want %v (func roundHalfEven, the switch, case 0, the if in it, if !ok)", changed, want)
 	}
 	if !strings.Contains(s.Text(), "explain by unit") || !strings.Contains(s.Text(), "5 changed units · 3 hunks") {
 		t.Errorf("the editor's explain action:\n%s", s.Text())

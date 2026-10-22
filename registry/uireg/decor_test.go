@@ -1,6 +1,7 @@
 package uireg_test
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -54,4 +55,30 @@ func TestDecorateAsksAgainOnlyWhenSomethingChanged(t *testing.T) {
 	step("before the refresh", 5)
 	now = now.Add(time.Second)
 	step("at the refresh", 6)
+}
+
+// A line with room for one sign shows the one with the highest priority, and its menu offers each of the others'
+// commands and menus.
+func TestTopSignKeepsTheOthersInItsMenu(t *testing.T) {
+	q := uireg.Decoration{Kind: uireg.Sign, Text: "?", Priority: 15, Command: "explain.unit", Tooltip: "Explain f"}
+	run := uireg.Decoration{Kind: uireg.Sign, Text: "▶", Priority: 20, Command: "test.run", Menu: []uireg.SignItem{{Label: "Debug", Command: "test.debug"}}}
+	bp := uireg.Decoration{Kind: uireg.Sign, Text: "●", Priority: 10, Menu: []uireg.SignItem{{Label: "Remove", Command: "debug.remove"}}}
+	d, ok := uireg.TopSign([]uireg.Decoration{q, run, bp})
+	if !ok || d.Text != "▶" || d.Command != "test.run" {
+		t.Fatalf("top sign %q %q", d.Text, d.Command)
+	}
+	var got []string
+	for _, it := range d.Menu {
+		got = append(got, it.Label+"="+it.Command)
+	}
+	want := []string{"Debug=test.debug", "Remove=debug.remove", "Explain f=explain.unit"}
+	if !slices.Equal(got, want) {
+		t.Errorf("menu %v, want %v", got, want)
+	}
+	if len(run.Menu) != 1 {
+		t.Errorf("the ▶'s own menu changed: %v", run.Menu)
+	}
+	if _, ok := uireg.TopSign(nil); ok {
+		t.Error("a top sign of none")
+	}
 }

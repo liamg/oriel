@@ -1,6 +1,7 @@
 package uireg
 
 import (
+	"cmp"
 	"slices"
 	"sync"
 	"time"
@@ -61,6 +62,36 @@ type SignItem struct {
 	Label   string
 	Command string
 	Args    registry.Args
+}
+
+// TopSign is the sign drawn when a line has room for one, of signs: the one with the highest priority, the latest
+// of equals, with each of the others' commands and menus added to its menu, so none is out of reach.
+func TopSign(signs []Decoration) (Decoration, bool) {
+	top := -1
+	for i, d := range signs {
+		if top < 0 || d.Priority >= signs[top].Priority {
+			top = i
+		}
+	}
+	if top < 0 {
+		return Decoration{}, false
+	}
+	d := signs[top]
+	if len(signs) == 1 {
+		return d, true
+	}
+	d.Menu = slices.Clone(d.Menu)
+	for i := len(signs) - 1; i >= 0; i-- {
+		o := signs[i]
+		if i == top {
+			continue
+		}
+		if o.Command != "" {
+			d.Menu = append(d.Menu, SignItem{Label: cmp.Or(o.Tooltip, o.Command), Command: o.Command, Args: o.Args})
+		}
+		d.Menu = append(d.Menu, o.Menu...)
+	}
+	return d, true
 }
 
 // DecorationCtx is the buffer a provider decorates and the lines in view, [Top, Bottom), and where it's drawn: the

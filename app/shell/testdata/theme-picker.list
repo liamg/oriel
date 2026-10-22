@@ -261,6 +261,7 @@ clip 0,0 1600x974 r 0
   clip 0,31 1600x943 r 0
     clip 0,31 1600x943 r 0
       clip 0,57 1600x917 r 0
+        text "?" @49.296875,97.770004 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -293,6 +294,16 @@ clip 0,0 1600x974 r 0
   clip 0,31 1600x943 r 0
     clip 0,31 1600x943 r 0
       clip 0,57 1600x917 r 0
+        text "?" @49.296875,181.77 #4f4a40 JetBrains Mono 13.5
+      pop
+    pop
+  pop
+pop
+clip 0,0 1600x974 r 0
+  clip 0,31 1600x943 r 0
+    clip 0,31 1600x943 r 0
+      clip 0,57 1600x917 r 0
+        text "?" @49.296875,202.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -309,6 +320,7 @@ clip 0,0 1600x974 r 0
   clip 0,31 1600x943 r 0
     clip 0,31 1600x943 r 0
       clip 0,57 1600x917 r 0
+        text "?" @49.296875,244.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
@@ -317,14 +329,7 @@ clip 0,0 1600x974 r 0
   clip 0,31 1600x943 r 0
     clip 0,31 1600x943 r 0
       clip 0,57 1600x917 r 0
-      pop
-    pop
-  pop
-pop
-clip 0,0 1600x974 r 0
-  clip 0,31 1600x943 r 0
-    clip 0,31 1600x943 r 0
-      clip 0,57 1600x917 r 0
+        text "?" @49.296875,265.77 #4f4a40 JetBrains Mono 13.5
       pop
     pop
   pop
