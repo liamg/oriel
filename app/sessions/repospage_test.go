@@ -138,7 +138,7 @@ func reposScene(t *testing.T) *apptest.Scene { return apptest.ReposScene(t) }
 func TestReposPageLayout(t *testing.T) {
 	s := reposScene(t)
 	s.Lint("the repos page")
-	s.WantFrame("REPOS", "2 repos · 1 found", "+ Add repo", "Scan for repos", "pricing", "billing", "FOUND", "Reveal",
+	s.WantFrame("REPOS", "2 repos", "+ Add repo", "Scan for repos", "pricing", "billing", "FOUND", "Reveal",
 		"Remove", "New session", "STATS", "HOUSEKEEPING", "liam/eng-2190-usage-cache", "MERGED", "TAGS", "latest v0.4.2", "New tag…")
 	s.ClickTop("New tag…")
 	s.Until("the tag form", func() bool { return strings.Contains(s.Text(), "Create tag v0.4.3") })

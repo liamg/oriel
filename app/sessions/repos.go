@@ -157,22 +157,13 @@ func (x *Repos) commands() []registry.Command {
 // repos are the registered repos, as the store has them.
 func (x *Repos) repos() []core.Repo { return x.h.State().Repos }
 
-// count is the start page's figure: how many repos, and how many found.
+// count is the start page's figure: how many repos.
 func (x *Repos) count() string {
 	rs := x.repos()
 	if len(rs) == 0 {
 		return ""
 	}
-	found := 0
-	for _, r := range rs {
-		if isFound(r) {
-			found++
-		}
-	}
-	if found == 0 {
-		return kit.Counted(len(rs), "repo")
-	}
-	return fmt.Sprintf("%s · %d found", kit.Counted(len(rs), "repo"), found)
+	return kit.Counted(len(rs), "repo")
 }
 
 // isFound says whether discovery added r and no session has used it yet.
