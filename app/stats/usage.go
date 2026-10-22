@@ -2,14 +2,12 @@ package stats
 
 import (
 	"cmp"
-	"errors"
 	"fmt"
 	"math"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
@@ -40,22 +38,16 @@ type reading struct {
 	used float64
 }
 
-// usageProbeError is a reading whose probe read no windows, said in words; detail is what the providers said.
-type usageProbeError struct{ msg, detail string }
-
-func (e *usageProbeError) Error() string { return e.msg }
-
-// usageError is err in words when a provider's probe read no windows, and err otherwise.
-func usageError(r registry.Contributions, err error) error {
-	var p agent.UsageProbeFailed
-	if !errors.As(err, &p) {
-		return err
+// failureText is why a provider's last read got no windows, in words.
+func failureText(r registry.Contributions, f core.UsageFailure) string {
+	name := kit.ProviderName(r, f.Provider)
+	switch {
+	case f.Probe && f.Started:
+		return name + " didn't show usage: a dialog may be in the way"
+	case f.Probe:
+		return name + " didn't start for the usage check"
 	}
-	msg := kit.ProviderName(r, p.Provider()) + " didn't start for the usage check"
-	if p.Started() {
-		msg = kit.ProviderName(r, p.Provider()) + " didn't show usage: a dialog may be in the way"
-	}
-	return &usageProbeError{msg: msg, detail: err.Error()}
+	return "Couldn't read " + name + "'s windows: " + f.Err
 }
 
 // windowRead is a plan window as the page reads it: how fast it's going and where that takes it.
@@ -384,15 +376,13 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 			})
 			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
-				if err := x.reading.State().Err; err != nil {
-					var pe *usageProbeError
-					if errors.As(err, &pe) {
-						c.Box("err", ui.Style{Tooltip: pe.detail}, func(c *ui.Ctx) {
-							c.Text("t", pe.msg, kit.MonoFont(11, th.C(theme.Warn)))
-						})
-					} else {
-						c.Text("err", "Couldn't read every provider's windows: "+err.Error(), kit.MonoFont(11, th.C(theme.Warn)))
-					}
+				for i, f := range st.UsageFailures {
+					c.Box(fmt.Sprint("fail", i), ui.Style{Tooltip: f.Err}, func(c *ui.Ctx) {
+						c.Text("t", failureText(x.h, f), kit.MonoFont(11, th.C(theme.Warn)))
+					})
+				}
+				if err := x.reading.State().Err; err != nil && len(st.UsageFailures) == 0 {
+					c.Text("err", "Couldn't read every provider's windows: "+err.Error(), kit.MonoFont(11, th.C(theme.Warn)))
 				}
 				if len(st.Usage) == 0 && x.reading.State().Phase != widget.Pending {
 					kit.Note(c, "none", "No plan windows read yet: they're read at start and with each session's turns, or Refresh.")

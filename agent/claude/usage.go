@@ -21,18 +21,19 @@ import (
 const (
 	probeTimeout = 40 * time.Second
 	probeAsk     = 500 * time.Millisecond // how often the mod is asked for the windows
-	probeTries   = 4                      // times /usage is typed before giving up
+	probeTries   = 2                      // times /usage is typed; then the probe waits out probeTimeout
 )
 
 // probeRetype is how long /usage has to bring the windows before Escape clears what may be in the way and it's typed
-// again.
-var probeRetype = 4 * time.Second
+// again, once.
+var probeRetype = 15 * time.Second
 
 // ProbeError is why the /usage probe got no plan windows.
 type ProbeError struct {
 	Hello  bool   // claude said hello and /usage was typed; false: claude never got that far
 	Tries  int    // times /usage was typed
 	Screen string // the end of what claude last showed
+	Usage  string // why $.session.usage() last failed, when it did
 	Err    error
 }
 
@@ -40,6 +41,9 @@ func (e *ProbeError) Error() string {
 	msg := fmt.Sprintf("claude: /usage typed %d times but no plan windows came (a dialog may be in the way): %v", e.Tries, e.Err)
 	if !e.Hello {
 		msg = fmt.Sprintf("claude: the /usage session never started: %v", e.Err)
+	}
+	if e.Usage != "" {
+		msg += "; $.session.usage() failed: " + e.Usage
 	}
 	if e.Screen != "" {
 		msg += "; the screen ends: " + e.Screen
@@ -152,10 +156,7 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 			if tries == 0 {
 				continue
 			}
-			if time.Since(typedAt) >= probeRetype {
-				if tries == probeTries {
-					return core.ProviderUsage{}, &ProbeError{Hello: true, Tries: tries, Screen: s.lastScreen(), Err: errors.New("no windows in time")}
-				}
+			if tries < probeTries && time.Since(typedAt) >= probeRetype {
 				_, _ = s.term.Write([]byte("\x1b"))
 				time.Sleep(200 * time.Millisecond)
 				_, _ = s.term.Write([]byte("/usage\r"))
@@ -165,7 +166,7 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 				s.queueCmd(waitOut{Kind: "usage"})
 			}
 		case <-ctx.Done():
-			return core.ProviderUsage{}, &ProbeError{Hello: tries > 0, Tries: tries, Screen: s.lastScreen(), Err: ctx.Err()}
+			return core.ProviderUsage{}, &ProbeError{Hello: tries > 0, Tries: tries, Screen: s.lastScreen(), Usage: s.usageFailure(), Err: ctx.Err()}
 		}
 	}
 }

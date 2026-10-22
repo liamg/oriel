@@ -84,10 +84,17 @@ async function poll($: EngineInterface, st: State) {
   }
 }
 
-// The plan's windows as Claude Code holds them now: none until a request or /usage has read them.
+// The plan's windows as Claude Code holds them now: none until a request or /usage has read them. error is why
+// $.session.usage() failed.
 async function reportUsage($: EngineInterface, st: State) {
-  const u = await $.session.usage().catch(() => undefined)
-  await event($, st, { kind: 'usage', rateLimits: u?.rateLimits ?? [] })
+  let rateLimits: unknown[] = []
+  let error = ''
+  try {
+    rateLimits = (await $.session.usage()).rateLimits ?? []
+  } catch (err) {
+    error = err instanceof Error ? err.message : String(err)
+  }
+  await event($, st, { kind: 'usage', rateLimits, error })
 }
 
 async function reportTurnEnd($: EngineInterface, st: State, e: Args) {

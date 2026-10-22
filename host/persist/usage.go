@@ -11,6 +11,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 )
 
@@ -106,6 +107,7 @@ func (s *Stats) ReadUsage(ctx context.Context) error {
 		cctx, cancel := context.WithTimeout(ctx, time.Minute)
 		u, err := p.Usage(cctx)
 		cancel()
+		_ = s.st.Emit(core.UsageRead{Provider: p.ID(), Failure: failure(err)})
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -124,6 +126,19 @@ func (s *Stats) ReadUsage(ctx context.Context) error {
 		s.UsageSampled(u)
 	}
 	return errors.Join(errs...)
+}
+
+// failure is err as the state keeps it, nil for none.
+func failure(err error) *core.UsageFailure {
+	if err == nil {
+		return nil
+	}
+	f := &core.UsageFailure{Err: err.Error()}
+	var p agent.UsageProbeFailed
+	if errors.As(err, &p) {
+		f.Probe, f.Started = true, p.Started()
+	}
+	return f
 }
 
 // UsageSampled reports a plan reading, and keeps it.
