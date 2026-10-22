@@ -428,7 +428,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 			if t.Busy {
 				workingLine(c, "working", se, ui.Flex(1))
 			}
-			uireg.DrawThreadFeet(h, c, string(se.ID), string(id), width-24)
+			uireg.DrawThreadFeet(h, c, string(se.ID), string(id), uireg.ThreadInCode, width-24)
 			if !t.Open() {
 				return
 			}

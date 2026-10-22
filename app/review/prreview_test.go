@@ -144,8 +144,8 @@ func TestReviewSessionPRTab(t *testing.T) {
 		t.Fatalf("the user's comment for the author went to the agent: %+v", th)
 	}
 
-	// Triage with keys: a click selects a row, 2 rates it, y keeps it, e edits its words; a second click shows it.
-	s.Click(apptest.Centre(s.Node("Show bucket.go:1").Bounds), 0)
+	// Triage with keys: a click selects a row, 2 rates it, y keeps it, e edits its words; a click on a row's place shows it.
+	s.Click(apptest.Centre(s.Node("Select bucket.go:1").Bounds), 0)
 	s.WantFrame("j k", "keep", "drop", "severity", "reword", "show in diff")
 	if m := s.KeyModes()[0]; m != review.PRReviewKeyMode {
 		t.Fatalf("the selected comment takes keys in %q", m)
@@ -156,7 +156,7 @@ func TestReviewSessionPRTab(t *testing.T) {
 		p := pick("Name the package for what it limits.")
 		return p.State == core.PickKeep && p.Severity == "high"
 	})
-	s.Click(apptest.Centre(s.Node("Show bucket.go:1").Bounds), 0)
+	s.Click(apptest.Centre(s.Node("Select bucket.go:1").Bounds), 0)
 	s.Press("e")
 	s.Until("its words open to edit", func() bool { return strings.Contains(s.Text(), "The reviewer's words") })
 	s.TypeInto("What the author gets", " Ratelimit, say.")
@@ -164,11 +164,15 @@ func TestReviewSessionPRTab(t *testing.T) {
 	s.UntilState("the words the author gets", func(core.State) bool {
 		return pick("Name the package for what it limits.").Body == "Name the package for what it limits. Ratelimit, say."
 	})
-	s.Click(apptest.Centre(s.Node("Show bucket.go:1").Bounds), 0)
+	s.Click(apptest.Centre(s.Node("Show bucket.go:3").Bounds), 0)
 	s.Until("the comment's line in the diff", func() bool { return strings.Contains(s.Text(), "hunks reviewed") })
 
-	// In the diff, each comment's card says where it stands in the review, and drops (or keeps) it there.
+	// In the diff, each comment's card says where it stands in the review, and drops (or keeps) it there; it's already
+	// at its code, so it has no jump to it.
 	s.WantFrame("YOUR REVIEW", "In the review ↗")
+	if strings.Contains(s.Text(), "Jump to code") {
+		t.Error("a comment's card in the diff offers to jump to its code")
+	}
 	s.ClickText("Drop")
 	var dropped core.Thread
 	s.UntilState("a comment dropped from its card, its thread resolved", func(st core.State) bool {
@@ -186,6 +190,14 @@ func TestReviewSessionPRTab(t *testing.T) {
 	s.UntilState("kept again, its thread open", func(st core.State) bool {
 		th := thread(st, dropped.Comments[0].Body)
 		return th.Open() && pick(dropped.Comments[0].Body).State == core.PickKeep
+	})
+
+	// In Requests, a comment's card jumps to its code.
+	s.Run("request.open", registry.Args{"thread": string(dropped.ID)})
+	s.Until("the comment in Requests", func() bool { return strings.Contains(s.Text(), "Open in editor ↗") })
+	s.ClickText("Jump to code")
+	s.Until("its line in the diff", func() bool {
+		return !strings.Contains(s.Text(), "Open in editor ↗") && strings.Contains(s.Text(), "hunks reviewed")
 	})
 
 	// The rail's Review entry brings the tab back.

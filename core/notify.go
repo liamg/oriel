@@ -10,6 +10,7 @@ func init() {
 	RegisterEvent[Notified]("Notified")
 	RegisterEvent[NoticeDismissed]("NoticeDismissed")
 	RegisterEvent[SessionFocused]("SessionFocused")
+	RegisterEvent[TabOpened]("TabOpened")
 	RegisterEvent[TabClosed]("TabClosed")
 }
 
@@ -135,12 +136,31 @@ func (e SessionFocused) Apply(s *State) error {
 			return fmt.Errorf("no session %s", e.ID)
 		}
 		se.Unseen = 0
-		if !slices.Contains(s.Tabs, e.ID) {
-			s.Tabs = append(slices.Clip(s.Tabs), e.ID)
-		}
+		s.openTab(e.ID)
 	}
 	s.Focus = e.ID
 	return nil
+}
+
+// TabOpened opens a tab for a session, behind the one in front.
+type TabOpened struct {
+	ID SessionID `json:"id"`
+}
+
+func (e TabOpened) Scope() SessionID { return e.ID }
+
+func (e TabOpened) Apply(s *State) error {
+	if s.session(e.ID) == nil {
+		return fmt.Errorf("no session %s", e.ID)
+	}
+	s.openTab(e.ID)
+	return nil
+}
+
+func (s *State) openTab(id SessionID) {
+	if !slices.Contains(s.Tabs, id) {
+		s.Tabs = append(slices.Clip(s.Tabs), id)
+	}
 }
 
 // TabClosed closes a session's tab; the session stays. Closing the one in front leaves nothing in front.

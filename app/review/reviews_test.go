@@ -202,7 +202,7 @@ func TestReviewsNoticeOnANewAsk(t *testing.T) {
 }
 
 // A new ask's toast stays until answered: Ignore puts it away, and Start review in background starts a review of it
-// on the default agent, behind the session in front, with a notice to open it.
+// on the default agent, in a tab behind the session in front, with a notice to open it.
 func TestReviewsNoticeStartsAReviewBehind(t *testing.T) {
 	s, lw, hub, _ := reviewScene(t)
 	x := reviewsOf(s)
@@ -252,9 +252,9 @@ func TestReviewsNoticeStartsAReviewBehind(t *testing.T) {
 	}
 	front := s.Store().State().Focus
 	s.ClickText("Start review in background")
-	s.UntilState("the review", func(core.State) bool {
+	s.UntilState("the review in a tab", func(st core.State) bool {
 		se, ok := review.PRSession(s.Host(), pr.URL)
-		return ok && se.Snapshot().Kind == core.KindReview
+		return ok && se.Snapshot().Kind == core.KindReview && slices.Contains(st.Tabs, se.ID())
 	})
 	st := s.Store().State()
 	se, _ := review.PRSession(s.Host(), pr.URL)

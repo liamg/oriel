@@ -489,7 +489,7 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 						run("review.ai.dismiss", nil)
 					}
 				})
-				uireg.DrawThreadFeet(x.h, c, string(se.ID), f.ID, width)
+				uireg.DrawThreadFeet(x.h, c, string(se.ID), f.ID, uireg.ThreadInFinding, width)
 			})
 		})
 	})

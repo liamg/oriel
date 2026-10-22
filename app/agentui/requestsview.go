@@ -253,7 +253,7 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 							workingLine(c, "working", se, ui.Px(width))
 						}
 						if has {
-							uireg.DrawThreadFeet(x.h, c, string(se.ID), string(t.ID), width)
+							uireg.DrawThreadFeet(x.h, c, string(se.ID), string(t.ID), uireg.ThreadInRequest, width)
 						}
 						startingCard(c, "starting", se, width)
 					})
