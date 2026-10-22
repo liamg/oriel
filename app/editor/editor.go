@@ -251,7 +251,7 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			x.e.MultiVertical(-1)
 			return nil
 		}},
-		{ID: "editor.present", Title: "Show a {window} (the focused one by default) with the presenter {name}, or as text again when it shows it already",
+		{ID: "editor.present", Title: "Show a {window} (the focused one by default) with the presenter {name} (the first that takes its file by default), or as text again when it shows it already",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.presentIn(str(a, "window"), str(a, "name")) }},
 		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
@@ -266,6 +266,9 @@ func (x *Editor) keymaps() []registry.Keymap {
 		out = append(out, registry.Keymap{Mode: "n", Keys: k.keys, Command: "picker.open", Args: registry.Args{"source": k.source}, Desc: k.desc})
 	}
 	out = append(out, registry.Keymap{Mode: "n", Keys: "<Leader>*", Command: "editor.grep-word", Desc: "Grep the word under the cursor"})
+	for _, mode := range []string{"n", kit.PresentKeyMode} {
+		out = append(out, registry.Keymap{Mode: mode, Keys: "<Leader>cp", Command: "editor.present", Desc: "Preview the file, or edit it again"})
+	}
 	out = append(out, []registry.Keymap{
 		{Mode: "n", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},
 		{Mode: "x", Keys: "<D-a>", Command: "editor.select-all", Desc: "Select all"},

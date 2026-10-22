@@ -153,13 +153,14 @@ Explain this change asks for a new one. **Discard** throws it away now.
 
 ## Presentations {#present}
 
-A file can be shown as something other than its text: a markdown file as a document (its **Preview** button, or
-`:MarkdownPreview`), or as a plugin's presenter draws it (`editor.present`). The file stays open and editable, and
+A file can be shown as something other than its text: a markdown file as a document (its **Preview** button,
+`:MarkdownPreview`, or `␣cp`), or as a plugin's presenter draws it (`editor.present`; `␣cp` takes the first that
+takes the file). The file stays open and editable, and
 the presentation follows its text, so two windows on one file can show it both ways at once. The file's threads sit
 in the margin beside the blocks they're about. `j`/`k` move between blocks, `c` or `⏎` (or a click) opens a thread on a
 block's lines, and `o` goes to its source. A table's rows are blocks of their own here: a thread on a row's line
 sits beside that row. A `mermaid` fence (a flowchart or a sequence diagram) is drawn as its diagram, scaled
-to the column; click it to zoom it, with the document's images. **Edit** shows the text again, where you were.
+to the column; click it to zoom it, with the document's images. **Edit** (or `␣cp` again) shows the text again, where you were.
 
 ## Threads in a file {#threads}
 

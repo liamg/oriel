@@ -136,7 +136,7 @@ func (e Editor) Viewer(spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api doc="Show the focused editor window with the presenter name, or as text again when it shows it already."
+//oriel:api doc="Show the focused editor window with the presenter name (the first that takes its file when name is empty), or as text again when it shows it already."
 func (e Editor) Present(name string) error {
 	return e.a.Host.Run(context.Background(), "editor.present", registry.Args{"name": name})
 }

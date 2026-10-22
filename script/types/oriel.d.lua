@@ -211,7 +211,7 @@ oriel.editor = {}
 ---@param spec table
 function oriel.editor.action(spec) end
 
---- Show the focused editor window with the presenter name, or as text again when it shows it already.
+--- Show the focused editor window with the presenter name (the first that takes its file when name is empty), or as text again when it shows it already.
 ---@param name string
 function oriel.editor.present(name) end
 

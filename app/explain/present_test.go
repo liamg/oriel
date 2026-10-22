@@ -259,3 +259,29 @@ oriel.editor.action{ name = "csv.table", label = "Table", label_on = "Edit", com
 		t.Errorf("the Lua action didn't present the file, or its label didn't follow:\n%s", text)
 	}
 }
+
+// ␣cp shows the focused window with the first presenter that takes its file, and as text again; a file none takes
+// stays as text.
+func TestPresentKey(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.editor.presenter{ name = "csv", label = "Table",
+  when = function(path) return path:match("%.csv$") ~= nil end,
+  build = function(ctx) ctx.block(1, #ctx.lines, function() return oriel.ui.text("a table") end) end }`)
+	dir := s.Editor().Dir()
+	os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644)
+	os.WriteFile(filepath.Join(dir, "prices.csv"), []byte("sku,price\nA-1,10\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "plain.txt"), []byte("just text\n"), 0o644)
+	for _, c := range []struct{ file, presenter string }{{"notes.md", "markdown"}, {"prices.csv", "csv"}, {"plain.txt", ""}} {
+		s.Run("editor.open", registry.Args{"path": c.file})
+		s.Frames(2)
+		s.Press("<Space>cp")
+		s.Frames(3)
+		if got := s.EditorWindow().Presenter; got != c.presenter {
+			t.Errorf("␣cp on %s presented %q, not %q", c.file, got, c.presenter)
+		}
+		s.Press("<Space>cp")
+		s.Frames(3)
+		if got := s.EditorWindow().Presenter; got != "" {
+			t.Errorf("␣cp again on %s left it presented with %q", c.file, got)
+		}
+	}
+}
