@@ -344,7 +344,7 @@ func (r *Root) open(v ViewRef, p Placement, o Opts) error {
 	default:
 		return fmt.Errorf("unknown placement %q", p)
 	}
-	if o.Fixed {
+	if o.Fixed && !r.IsFixed(v) {
 		r.Fixed = append(r.Fixed, v)
 	}
 	r.Focus = &v
@@ -473,11 +473,24 @@ func (r *Root) Find(v ViewRef) *Where {
 	return nil
 }
 
-// Close removes v, tidying away an empty leaf, split or float.
+// Close removes v, tidying away an empty leaf, split or float, and tells OnClose.
 func (r *Root) Close(v ViewRef) {
+	if !r.detach(v) {
+		return
+	}
+	r.Fixed = slices.DeleteFunc(r.Fixed, func(f ViewRef) bool { return f == v })
+	for _, fn := range r.onClose {
+		if fn != nil {
+			fn(v)
+		}
+	}
+}
+
+// detach takes v out of the tree as Close does, but v stays open: it's being moved.
+func (r *Root) detach(v ViewRef) bool {
 	w := r.Find(v)
 	if w == nil {
-		return
+		return false
 	}
 	l := w.Leaf
 	i := slices.Index(l.Tabs, v)
@@ -501,7 +514,6 @@ func (r *Root) Close(v ViewRef) {
 	if r.Zoomed != nil && *r.Zoomed == v {
 		r.Zoomed = nil
 	}
-	r.Fixed = slices.DeleteFunc(r.Fixed, func(f ViewRef) bool { return f == v })
 	if r.Focus != nil && *r.Focus == v {
 		r.Focus = nil
 		if len(l.Tabs) > 0 {
@@ -511,11 +523,7 @@ func (r *Root) Close(v ViewRef) {
 			r.Focus = &shown[0]
 		}
 	}
-	for _, fn := range r.onClose {
-		if fn != nil {
-			fn(v)
-		}
-	}
+	return true
 }
 
 // prune takes an empty leaf out of main, collapsing a split left with one child.
@@ -539,7 +547,7 @@ func (r *Root) Move(v ViewRef, p Placement, o Opts) error {
 	if p == Split && o.Beside != nil && *o.Beside == v {
 		o.Beside = nil
 	}
-	r.Close(v)
+	r.detach(v)
 	return r.Open(v, p, o)
 }
 
@@ -567,6 +575,10 @@ func (r *Root) Drop(v ViewRef, t Target) error {
 	if r.IsFixed(v) {
 		return fmt.Errorf("%s is fixed", v)
 	}
+	if r.dropsInPlace(v, t) {
+		r.Show(v)
+		return nil
+	}
 	switch {
 	case t.Dock != "":
 		return r.Move(v, Docked, Opts{Edge: t.Dock})
@@ -583,12 +595,24 @@ func (r *Root) Drop(v ViewRef, t Target) error {
 			return nil
 		}
 		leaf := w.Leaf
-		r.Close(v)
+		r.detach(v)
 		r.split(leaf, side, &Node{Tabs: []ViewRef{v}})
 		r.Focus = &v
 		return nil
 	}
 	return r.Move(v, Split, Opts{Side: side, Beside: t.Beside})
+}
+
+// dropsInPlace says dropping v at t would leave it where it is: on its own dock, or on its own leaf's middle.
+func (r *Root) dropsInPlace(v ViewRef, t Target) bool {
+	w := r.Find(v)
+	switch {
+	case w == nil || t.Float != nil:
+		return false
+	case t.Dock != "":
+		return w.Placement == Docked && w.Edge == t.Dock
+	}
+	return (t.Zone == ZoneCenter || t.Zone == "") && t.Beside != nil && slices.Contains(w.Leaf.Tabs, *t.Beside)
 }
 
 // ToggleZoom fills the window with v, or restores the layout if v is zoomed. The tree isn't touched, so
