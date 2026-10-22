@@ -28,11 +28,29 @@ var icons = map[string]func(p *iconPen){
 		p.curve(11.5, 7.3, 11.5, 10, 4.5, 9, 4.5, 10.7)
 	},
 	"requests": func(p *iconPen) {
-		p.poly(true, 8, 1.5, 14.5, 8, 8, 14.5, 1.5, 8)
-		p.poly(true, 8, 5, 11, 8, 8, 11, 5, 8)
+		p.line(4.5, 2.5, 11.5, 2.5)
+		p.curve(11.5, 2.5, 13, 2.5, 14, 3.5, 14, 5)
+		p.line(14, 5, 14, 8.5)
+		p.curve(14, 8.5, 14, 10, 13, 11, 11.5, 11)
+		p.poly(false, 11.5, 11, 7.5, 11, 4.5, 14, 4.5, 11)
+		p.curve(4.5, 11, 3, 11, 2, 10, 2, 8.5)
+		p.line(2, 8.5, 2, 5)
+		p.curve(2, 5, 2, 3.5, 3, 2.5, 4.5, 2.5)
+		for _, x := range []float32{5.3, 8, 10.7} {
+			p.circle(x, 6.75, .35)
+		}
 	},
 	"debug": func(p *iconPen) {
-		p.poly(true, 4, 2.5, 13.5, 8, 4, 13.5)
+		p.ellipse(8, 9.5, 3.5, 4.5)
+		p.curve(5.6, 6, 5.6, 2.8, 10.4, 2.8, 10.4, 6)
+		p.line(6.6, 3.6, 5, 1.8)
+		p.line(9.4, 3.6, 11, 1.8)
+		p.line(8, 6.5, 8, 14)
+		for _, s := range []float32{-1, 1} {
+			p.line(8+s*3.4, 8.2, 8+s*6, 6.8)
+			p.line(8+s*3.5, 10.5, 8+s*6, 10.5)
+			p.line(8+s*3.1, 12.5, 8+s*5.5, 14.3)
+		}
 	},
 	"tests": func(p *iconPen) {
 		p.poly(false, 2.5, 8.5, 6.5, 12.5, 13.5, 3.5)
@@ -57,10 +75,10 @@ var icons = map[string]func(p *iconPen){
 		p.poly(false, 9.8, 3.7, 8, 5.5, 9.8, 7.3)
 	},
 	"ship": func(p *iconPen) {
-		p.line(2, 5.5, 12, 5.5)
-		p.line(2, 10.5, 12, 10.5)
-		p.poly(false, 10, 3, 13.5, 5.5, 10, 8)
-		p.poly(false, 10, 8, 13.5, 10.5, 10, 13)
+		p.poly(true, 1.5, 10.5, 14.5, 10.5, 12.5, 14, 3.5, 14)
+		p.line(8, 1.5, 8, 10.5)
+		p.poly(true, 8, 2, 13, 8.5, 8, 8.5)
+		p.poly(true, 6.5, 4, 6.5, 8.5, 3, 8.5)
 	},
 	"plus": func(p *iconPen) {
 		p.line(8, 3, 8, 13)
@@ -74,7 +92,14 @@ var icons = map[string]func(p *iconPen){
 		p.poly(false, 12.6, 2.5, 12.6, 5.8, 9.4, 5.8)
 	},
 	"agent": func(p *iconPen) {
-		p.poly(false, 5, 3, 10.5, 8, 5, 13)
+		p.poly(true, 3, 5, 13, 5, 13, 14, 3, 14)
+		p.line(8, 5, 8, 3)
+		p.circle(8, 2.2, .8)
+		p.circle(6, 8.8, .9)
+		p.circle(10, 8.8, .9)
+		p.line(6, 11.6, 10, 11.6)
+		p.line(1.2, 8, 1.2, 11)
+		p.line(14.8, 8, 14.8, 11)
 	},
 	"stats": func(p *iconPen) {
 		p.line(3.5, 13.5, 3.5, 9)
@@ -92,18 +117,28 @@ var icons = map[string]func(p *iconPen){
 		p.line(8, 7.5, 8, 14.5)
 	},
 	"repos": func(p *iconPen) {
-		p.line(3, 4, 13, 4)
-		p.line(3, 4, 3, 7)
-		p.line(13, 4, 13, 7)
-		p.line(3, 7, 13, 7)
-		p.line(3, 9.5, 13, 9.5)
-		p.line(3, 12, 13, 12)
+		p.poly(false, 3, 13, 3, 3.5)
+		p.curve(3, 3.5, 3, 2.3, 3.8, 1.5, 5, 1.5)
+		p.poly(false, 5, 1.5, 13, 1.5, 13, 11, 5, 11)
+		p.curve(5, 11, 3.8, 11, 3, 11.8, 3, 12.8)
+		p.curve(3, 12.8, 3, 13.8, 3.8, 14.5, 5, 14.5)
+		p.line(5, 14.5, 13, 14.5)
+		p.line(6.5, 4.5, 10.5, 4.5)
 	},
 	"jobs": func(p *iconPen) {
-		p.line(2.5, 4, 10, 4)
-		p.line(2.5, 8, 8, 8)
-		p.line(2.5, 12, 10, 12)
-		p.poly(false, 11, 6, 13.5, 8, 11, 10)
+		p.poly(true, 1.5, 5, 14.5, 5, 14.5, 13.5, 1.5, 13.5)
+		p.poly(false, 5.5, 5, 5.5, 2.5, 10.5, 2.5, 10.5, 5)
+		p.line(1.5, 9, 6.8, 9)
+		p.line(9.2, 9, 14.5, 9)
+		p.poly(true, 6.8, 7.8, 9.2, 7.8, 9.2, 10.3, 6.8, 10.3)
+	},
+	"plugins": func(p *iconPen) {
+		p.line(6, 1.5, 6, 4.5)
+		p.line(10, 1.5, 10, 4.5)
+		p.poly(false, 3.5, 7.5, 3.5, 4.5, 12.5, 4.5, 12.5, 7.5)
+		p.curve(12.5, 7.5, 12.5, 10, 10.5, 11, 8, 11)
+		p.curve(8, 11, 5.5, 11, 3.5, 10, 3.5, 7.5)
+		p.line(8, 11, 8, 14.5)
 	},
 	"prompts": func(p *iconPen) {
 		p.poly(true, 3, 1.5, 10, 1.5, 13, 4.5, 13, 14.5, 3, 14.5)
@@ -206,8 +241,10 @@ func (p *iconPen) poly(closed bool, xy ...float32) {
 	p.f.Path(&path, p.style)
 }
 
-func (p *iconPen) circle(x, y, rad float32) {
-	a, b := p.pt(x-rad, y-rad), p.pt(x+rad, y+rad)
+func (p *iconPen) circle(x, y, rad float32) { p.ellipse(x, y, rad, rad) }
+
+func (p *iconPen) ellipse(x, y, rx, ry float32) {
+	a, b := p.pt(x-rx, y-ry), p.pt(x+rx, y+ry)
 	p.f.Path(render.Ellipse(render.Rect{Min: a, Max: b}), p.style)
 }
 

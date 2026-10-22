@@ -14,7 +14,7 @@ them here or by hand; both apply at once, and a change here rewrites only its ow
 
 One per option prefix (`editor`, `ui`, `whichkey`), or the section a plugin gives. The dot counts the options
 set away from their default. A few sections aren't options: **secrets** lists the secrets your plugins declare, to
-set, replace or clear ([secrets](plugins/secrets#settings)).
+set, replace or clear ([secrets](plugins/secrets#settings)), and **prompts** opens the [Prompts](agent/prompts) page.
 
 ## Search {#search}
 

@@ -44,31 +44,52 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
   rect 9.5,208 24x1 fill #332f27
-  path 5 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
   path 5 segments stroke 1.4545455 #7c7566
   path 4 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 2 segments stroke 1.4545455 #4f4a40
-  path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 3 segments stroke 1.4545455 #7c7566
-  path 3 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 3 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
   path 6 segments fill #060606
   path 6 segments stroke 1.4 #ffd23f
   effect glow 18.9,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
@@ -176,20 +197,20 @@ clip 44,38 1556x936 r 0
   text "Usage" @486.14062,647.6773 #ece6d8 Inter 12
   text "wk 71%" @529.5,646.9121 #7c7566 JetBrains Mono 10
   rect 583.5,630.3121 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 5 segments stroke 1.25 #ffd23f
+  path 4 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 3 segments stroke 1.25 #ffd23f
+  path 5 segments stroke 1.25 #ffd23f
   text "Jobs" @612.5,647.6773 #ece6d8 Inter 12
-  rect 658.21875,630.3121 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 6 segments stroke 1.25 #ffd23f
+  rect 658.21875,630.3121 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 4 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  text "Prompts" @687.21875,647.6773 #ece6d8 Inter 12
-  rect 287,664.3121 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  text "…" @297,680.9841 #ffd23f JetBrains Mono 10.200001
-  text "Plugins" @316,681.6773 #ece6d8 Inter 12
+  text "Plugins" @687.21875,647.6773 #ece6d8 Inter 12
   text "RECENT" @897,311.46207 #7c7566 JetBrains Mono 9.5
   text "↵ open · ⌫ forget" @1251.0469,311.97208 #7c7566 JetBrains Mono 10
   text "SESSIONS" @909,342.66208 #7c7566 JetBrains Mono 9.5

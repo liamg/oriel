@@ -94,6 +94,7 @@ clip 0,38 1600x936 r 0
   rect 615.5,678.27 117.59375x26 fill #0c0c0b radius 13 stroke 1 #24221d
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
+  path 4 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
@@ -101,20 +102,20 @@ clip 0,38 1600x936 r 0
   text "Repos" @644.5,695.63525 #ece6d8 Inter 12
   text "1 repo" @687.09375,694.87006 #7c7566 JetBrains Mono 10
   rect 265,712.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 5 segments stroke 1.25 #ffd23f
+  path 4 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  path 2 segments stroke 1.25 #ffd23f
-  path 3 segments stroke 1.25 #ffd23f
+  path 5 segments stroke 1.25 #ffd23f
   text "Jobs" @294,729.63525 #ece6d8 Inter 12
-  rect 339.71875,712.27 86.5x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  path 6 segments stroke 1.25 #ffd23f
+  rect 339.71875,712.27 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 4 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
   path 2 segments stroke 1.25 #ffd23f
-  text "Prompts" @368.71875,729.63525 #ece6d8 Inter 12
-  rect 434.21875,712.27 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
-  text "…" @444.21875,728.942 #ffd23f JetBrains Mono 10.200001
-  text "Plugins" @463.21875,729.63525 #ece6d8 Inter 12
+  text "Plugins" @368.71875,729.63525 #ece6d8 Inter 12
   effect glow 1159,372.72998 39x150 blur 4 #ff8a1f4d
   path 6 segments stroke 24 #ffd23f
   path 5 segments fill #ff8a1f

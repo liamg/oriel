@@ -12,7 +12,7 @@ directories you've opened lately.
 - **New Session** opens the launcher, and **Resume a Session** picks a session.
 - **Open Directory** opens a directory as it is: no worktree, no new branch. Type a path, pick a recent or a repo
   under your home directory, or choose **Browse…** for the system's folder chooser. `oriel <dir>` does the same.
-- `j` and `k` move, `↵` runs, `⌫` forgets a recent directory; so does the `✕` that shows on one under the pointer.
+- `j` and `k` move through the actions, the links under them and the recents (so does the pointer), `↵` runs, `⌫` forgets a recent directory; so does the `✕` that shows on one under the pointer.
   A forgotten directory stays gone until you open it again.
 - Plugins add their own actions with `oriel.start.add`.
 - Only the start view's own keys work here: its rows', and its actions' and links' (⌘N, ⌘O, ⇧⌘O, ⌘, and the pages').

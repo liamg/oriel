@@ -13,7 +13,7 @@ and the log, where all of it stays.
 
 A toast is a notice while it's fresh. Info goes after 3 seconds, a warning after 8 (or stays while the pointer is on
 it), and an error stays until you dismiss it or open its details. An error from a session that isn't in front
-doesn't toast: it marks that session's tab instead.
+doesn't toast: it marks that session's tab instead. A notice that asks you something (a question) is an [inbox](shell/inbox#notices) card instead.
 
 - Click an action to do it, or **Details** (**Show trace** for an error with a trace) to open the log at that
   entry.

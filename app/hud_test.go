@@ -18,7 +18,7 @@ import (
 )
 
 // The HUD drawer held down over the editor: plan usage with its projections, the machine, the
-// sessions by status, today's figures with a plugin's next meeting, the log's tail and the CI queue.
+// sessions by status, and today's figures with a plugin's next meeting.
 func TestHUDSnapshot(t *testing.T) {
 	s, r, _ := apptest.StatsScene(t)
 	if err := os.WriteFile(filepath.Join(s.ConfigDir, "init.lua"), []byte(`local L = oriel
@@ -62,5 +62,5 @@ L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
 	s.SettleStats()
 	s.Lint("the HUD")
 	s.Golden("hud-10")
-	s.WantFrame("PLAN USAGE", "2 accounts", "5H", "WK", "38%", "71%", "THIS MACHINE", "mbp", "15m", "SESSIONS", "open", "need you", "TODAY", "since 00:00", "TOKENS", "COST", "CACHE", "THREADS", "REVIEWED", "UNREAD", "NEXT MEETING · 14:30", "Pricing sync", "LOGS", "ALL PROCESSES", "INFO+", "gateway", "allow git fetch origin — policy: repo-default", "CI QUEUE", "3 PRs", "#4419 billing-export", "e2e ✕", "#4421 pricing", "1/2 · 4m", "#4417 dash-filters", "passed", "⌥ RELEASE TO HIDE · CLICK TO PIN", "⌥ HUD", "CPU")
+	s.WantFrame("PLAN USAGE", "2 accounts", "5H", "WK", "38%", "71%", "THIS MACHINE", "mbp", "15m", "SESSIONS", "open", "need you", "TODAY", "since 00:00", "TOKENS", "COST", "CACHE", "THREADS", "REVIEWED", "UNREAD", "NEXT MEETING · 14:30", "Pricing sync", "⌥ RELEASE TO HIDE · CLICK TO PIN", "⌥ HUD", "CPU")
 }

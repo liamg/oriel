@@ -8,7 +8,6 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/stats"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
@@ -37,7 +36,7 @@ func TestHUDHoldReleasePin(t *testing.T) {
 	if !hudDown(s) {
 		t.Fatalf("⌥ held alone didn't bring the HUD down:\n%s", s.Text())
 	}
-	s.WantFrame("THIS MACHINE", "SESSIONS", "TODAY", "LOGS", "PLAN USAGE", "CI QUEUE")
+	s.WantFrame("THIS MACHINE", "SESSIONS", "TODAY", "PLAN USAGE")
 	s.Lint("the HUD held down")
 	s.Hold(0, 0)
 	if hudDown(s) {
@@ -57,7 +56,7 @@ func TestHUDHoldReleasePin(t *testing.T) {
 
 	// Held, then clicked: pinned, it stays after ⌥ is let go, and Escape puts it away.
 	s.Hold(render.ModAlt, 300*time.Millisecond)
-	s.Click(render.Point{X: 800, Y: 200}, 0)
+	s.Click(render.Point{X: 800, Y: 100}, 0)
 	s.Hold(0, 0)
 	if !hud(s).Pinned() || !hudDown(s) {
 		t.Fatalf("a click on the held HUD didn't pin it: pinned %v", hud(s).Pinned())
@@ -98,7 +97,7 @@ func TestHUDAfterTyping(t *testing.T) {
 	s.Now = apptest.At(14, 0, 0)
 	s.Frame()
 	s.UI().Chord() // a key typed, as the window's loop does
-	s.Click(render.Point{X: 800, Y: 200}, 0)
+	s.Click(render.Point{X: 800, Y: 100}, 0)
 	s.Hold(render.ModAlt, 300*time.Millisecond)
 	if !hudDown(s) {
 		t.Fatalf("⌥ held after typing didn't bring the HUD down:\n%s", s.Text())
@@ -184,7 +183,4 @@ L.hud.indicator("meeting", { slot = "hud.today" }, L.ui.indicator{ label = "NEXT
 	if !strings.Contains(s.FullText(), "1 need you") && !strings.Contains(s.Text(), "1\nneed you") {
 		t.Errorf("the Sessions panel didn't count the session that needs you:\n%s", s.Text())
 	}
-	s.Logs.Router.Write(logs.Record{Time: s.Now, Level: 0, Source: "gateway", Msg: "allow git fetch origin"})
-	s.Frame()
-	s.WantFrame("allow git fetch origin")
 }

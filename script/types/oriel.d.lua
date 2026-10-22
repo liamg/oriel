@@ -78,7 +78,7 @@ function oriel.load(fn, opts) end
 ---@param lvl string
 function oriel.log(msg, lvl) end
 
---- Tell the user something, through the one path every notice takes: level is info, warn or error.
+--- Tell the user something, through the one path every notice takes: level is info, warn, error or question (it waits in the inbox until dismissed).
 ---@param msg string
 ---@param lvl string
 function oriel.notify(msg, lvl) end

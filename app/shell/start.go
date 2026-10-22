@@ -255,9 +255,10 @@ func (sh *shell) reopenOn(to reopenTo) error {
 	return nil
 }
 
-// startRow is one selectable row: an action, or a recent session or directory.
+// startRow is one selectable row: an action or a link, or a recent session or directory.
 type startRow struct {
 	entry   *uireg.StartEntry
+	link    bool
 	session *core.SessionState
 	dir     string
 	recent  startDir // a directory's
@@ -266,19 +267,28 @@ type startRow struct {
 	forget  func()
 }
 
+// rows are the view's rows in the order the keys move through them: the action cards, the links under them, then
+// the recent sessions and directories.
 func (s *start) rows(h plugin.Host) (actions, recent []startRow) {
+	var links []startRow
 	for _, e := range uireg.StartEntries(h) {
 		e := e
-		if e.Link || e.Unlisted {
+		ok := h.Available(e.Command, e.Args)
+		if e.Unlisted || e.Link && !ok {
 			continue
 		}
-		ok := h.Available(e.Command, e.Args)
-		actions = append(actions, startRow{entry: &e, ok: ok, run: func() {
+		r := startRow{entry: &e, link: e.Link, ok: ok, run: func() {
 			if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
 				h.Log().Error("start", "entry", e.Name, "err", err)
 			}
-		}})
+		}}
+		if e.Link {
+			links = append(links, r)
+		} else {
+			actions = append(actions, r)
+		}
 	}
+	actions = append(actions, links...)
 	sessions := slices.Clone(h.State().Sessions)
 	sessions = slices.DeleteFunc(sessions, func(se core.SessionState) bool { return se.Archived })
 	slices.SortStableFunc(sessions, func(a, b core.SessionState) int { return b.Created.Compare(a.Created) })
@@ -367,13 +377,17 @@ func (s *start) content(c *ui.Ctx, h plugin.Host, actions, recent []startRow, na
 				if !narrow {
 					kit.Caption(c, "cap", "Start")
 				}
-				for i, r := range actions {
+				links := slices.IndexFunc(actions, func(r startRow) bool { return r.link })
+				if links < 0 {
+					links = len(actions)
+				}
+				for i, r := range actions[:links] {
 					if s.action(c, h, i, r) && r.ok {
 						s.sel = i
 						r.run()
 					}
 				}
-				startLinks(c, h)
+				s.links(c, links, actions[links:])
 			})
 		}
 		recentCol := func(c *ui.Ctx, st ui.Style) {
@@ -505,35 +519,36 @@ func (s *start) action(c *ui.Ctx, h plugin.Host, i int, r startRow) bool {
 	return in.Clicked
 }
 
-// startLinks are the link entries under the actions, each a page with its figure.
-func startLinks(c *ui.Ctx, h plugin.Host) {
-	th := c.Theme()
-	var links []uireg.StartEntry
-	for _, e := range uireg.StartEntries(h) {
-		if e.Link && !e.Unlisted && h.Available(e.Command, e.Args) {
-			links = append(links, e)
-		}
-	}
+// links are the link entries under the actions, rows from..., each a page with its figure.
+func (s *start) links(c *ui.Ctx, from int, links []startRow) {
 	if len(links) == 0 {
 		return
 	}
+	th := c.Theme()
 	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 2}, Wrap: true}, func(c *ui.Ctx) {
-		for _, e := range links {
+		for i, r := range links {
+			e, n := r.entry, from+i
 			note := ""
 			if e.Note != nil {
 				registry.Call(func() error { note = e.Note(); return nil })
 			}
-			if widget.Clickable(c, e.Name, ui.Style{Dir: ui.Row, H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 7, Cross: ui.Center, Radius: 13,
-				Fill: th.C(tStartCard), Stroke: th.C(tStartCardLine), Border: 1, Label: e.Title, Tooltip: e.Desc, Help: "shell/start#links"}, func(c *ui.Ctx) {
-				icon(c, "icon", e.Icon, 12, th.C(theme.Accent))
-				c.Text("t", e.Title, kit.UIFont(12, th.C(theme.Fg)))
-				if note != "" {
-					c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
-				}
-			}).Clicked {
-				if err := h.Run(context.Background(), e.Command, e.Args); err != nil {
-					h.Log().Error("start", "link", e.Name, "err", err)
-				}
+			fill, line := th.C(tStartCard), th.C(tStartCardLine)
+			if n == s.sel {
+				fill, line = th.C(tStartCardOn), th.C(tStartLineOn)
+			}
+			in := widget.Clickable(c, e.Name, ui.Style{Dir: ui.Row, H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 7, Cross: ui.Center, Radius: 13,
+				Fill: fill, Stroke: line, Border: 1, NoHover: true, Label: e.Title, Tooltip: e.Desc, Selected: n == s.sel, Help: "shell/start#links"},
+				func(c *ui.Ctx) {
+					icon(c, "icon", e.Icon, 12, th.C(theme.Accent))
+					c.Text("t", e.Title, kit.UIFont(12, th.C(theme.Fg)))
+					if note != "" {
+						c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+					}
+				})
+			s.hover(c, n, in)
+			if in.Clicked {
+				s.sel = n
+				r.run()
 			}
 		}
 	})

@@ -104,7 +104,7 @@ func verdict(out []any, ev any) registry.Verdict {
 	}
 }
 
-//oriel:api doc="Tell the user something, through the one path every notice takes: level is info, warn or error." optional=level
+//oriel:api doc="Tell the user something, through the one path every notice takes: level is info, warn, error or question (it waits in the inbox until dismissed)." optional=level
 func (r Root) Notify(msg string, lvl string, where string) {
 	sev := core.SevInfo
 	switch level(lvl) {
@@ -112,6 +112,8 @@ func (r Root) Notify(msg string, lvl string, where string) {
 		sev = core.SevWarning
 	case "error":
 		sev = core.SevError
+	case "question":
+		sev = core.SevQuestion
 	}
 	r.a.Host.Notify(core.Notice{ID: "lua." + where, Severity: sev, Text: msg, Location: where})
 }

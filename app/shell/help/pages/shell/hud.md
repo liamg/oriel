@@ -7,7 +7,7 @@ related: [agent/usage, shell/mission, errors, plugins/lua]
 # The HUD
 
 The control room as an instrument cluster, over whatever you're doing: plan usage, this machine, sessions by status,
-today's figures, the log's tail and the CI queue. Nothing here is a separate screen.
+and today's figures. Nothing here is a separate screen.
 
 ## Holding it down {#hold}
 
@@ -42,15 +42,6 @@ what it's running, when it replied. Click one to bring it to the front.
 
 Since midnight: tokens, cost, the share served from the cache, requests opened, and the agent lines
 reviewed and still unread. Plugins add lines under it in the `hud.today` slot.
-
-## Logs {#logs}
-
-The log's last lines, info and up, from every source, newest first. **Open the log** shows all of it.
-
-## CI queue {#ci}
-
-The pull requests of the sessions' projects, failing first, with their checks: how many are done and for how long
-they've run, the first that failed, or passed.
 
 ## Indicators {#indicators}
 
