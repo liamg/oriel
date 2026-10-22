@@ -124,7 +124,7 @@ func (x *Editor) wrapSegment(c *ui.Ctx) {
 	if on {
 		tok, tip = kit.TStatusStrong, "Long lines wrap: click to stop wrapping them"
 	}
-	in := widget.Clickable(c, "wrap", ui.Style{H: ui.Flex(1), Cross: ui.Center, Role: ui.RoleButton, Label: "Wrap", Tooltip: tip,
+	in := widget.Clickable(c, "wrap", ui.Style{Dir: ui.Row, H: ui.Flex(1), Cross: ui.Center, Role: ui.RoleButton, Label: "Wrap", Tooltip: tip,
 		Help: "editor/pane#wrap"}, func(c *ui.Ctx) {
 		c.Text("t", "wrap", kit.StatusText(c, tok))
 	})
