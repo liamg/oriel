@@ -1,10 +1,11 @@
 // Command leakcheck fails if a tracked file holds a private name: the built-in terms plus ORIEL_LEAK_DENYLIST
-// (one per line), which CI sets from a repository variable.
+// (one per line), which CI sets from a repository secret. A hit names the term by its number, so logs don't print it.
 package main
 
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/liamg/oriel/tools/layout"
 	"github.com/liamg/oriel/tools/leakcheck"
@@ -29,7 +30,7 @@ func main() {
 		os.Exit(2)
 	}
 	for _, h := range hits {
-		fmt.Fprintln(os.Stderr, h)
+		fmt.Fprintf(os.Stderr, "%s:%d: denylist term %d\n", h.File, h.Line, slices.Index(terms, h.Term)+1)
 	}
 	if len(hits) > 0 {
 		os.Exit(1)
