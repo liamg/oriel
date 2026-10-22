@@ -56,7 +56,8 @@ they've run, the first that failed, or passed.
 
 Indicators are small live readouts in fixed slots: the title bar's right (`titlebar.right`), the status line's sides
 (`statusline.left`, `statusline.right`), the HUD's panels (`hud`) and the Today panel (`hud.today`). The status line's
-**CPU** shows this machine's, in the warning colour from 80%.
+**CPU** shows this machine's, all of it, in the warning colour from 80%. Click it for the
+[Performance](shell/performance) page: what Oriel and the processes it started cost.
 
 ## From Lua {#lua}
 

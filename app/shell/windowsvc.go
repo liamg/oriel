@@ -41,6 +41,8 @@ func (w window) Dir() string { return w.sh.cfg.WorkDir }
 
 func (w window) Polls() *kit.PollSet { return w.sh.polls }
 
+func (w window) Frames() *kit.FrameLog { return &w.sh.frames }
+
 func (w window) FSWatch() (*fswatch.Watcher, error) {
 	if w.sh.cfg.FSWatch != nil {
 		return w.sh.cfg.FSWatch()

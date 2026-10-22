@@ -162,9 +162,11 @@ func (h *Headless) Frame() {
 	defer fsx.Enter()()
 	h.sh.seeNav(h.sh.cfg.Registry, h.ui.Now())
 	h.list = new(render.List)
+	start := time.Now()
 	h.ui.Frame(h.list.Record(h.zoomed()), h.size, func(c *ui.Ctx) {
 		buildWindow(c, h.sh.cfg.Registry, h.size, frameWindow(h.host.State(), h.sh.cfg.WorkDir))
 	})
+	h.sh.frames.Add(time.Now(), time.Since(start), 0)
 }
 
 // List is the last frame's display list.

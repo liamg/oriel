@@ -86,6 +86,8 @@ type Window interface {
 	LaunchedEmpty() bool
 	// Polls are the periods of the window's periodic work while it runs, for the idle budget.
 	Polls() *PollSet
+	// Frames are the frames the window has drawn lately.
+	Frames() *FrameLog
 	// FSWatch starts one of the OS's file watchers (fswatch.New, unless the config gives another).
 	FSWatch() (*fswatch.Watcher, error)
 }

@@ -36,7 +36,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&lang.Terminals{CacheDir: c.CacheDir, WorkDir: c.WorkDir, SavedAt: c.DirState("terminals"), Clipboard: p.Clipboard},
 		&settings.Plugin{ConfigDir: c.ConfigDir, WorkDir: c.WorkDir}, &ship.CodeSites{}, &appsessions.Sessions{Host: c.Host, ConfigDir: c.ConfigDir},
 		p.Quit, &settings.SandboxSettings{WorkDir: c.WorkDir, Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
-		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &appsessions.Jobs{}, &appsessions.Repos{}, &stats.Machine{Load: cfg.Load},
+		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &appsessions.Jobs{}, &appsessions.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
 		&settings.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, agentui.NewVoiceEntries(voice), voice,
 		&agentui.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &appsessions.Tickets{}, &review.Reviews{}, &ship.GitHubHost{},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},

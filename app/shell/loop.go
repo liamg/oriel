@@ -199,9 +199,15 @@ func (l *loop) frame(ctx context.Context, t *turn) (drawn bool, err error) {
 	}
 	t.pace.Drew(time.Now())
 	sh.framed.Fire()
+	moved := !l.input.oldest.IsZero()
 	if l.input.built() {
 		l.stalls.stalled()
 	}
+	lag := time.Duration(0)
+	if moved {
+		lag = l.input.drawn
+	}
+	sh.frames.Add(time.Now(), l.frameTime, lag)
 	// Keys typed behind ones the editor has taken in the frame: looked up, or passed on raw while it's mid-command.
 	if acts := l.keys.Pump(sh.keyModes(), time.Now()); len(acts) > 0 || l.keys.Queued() {
 		l.run(ctx, acts)
