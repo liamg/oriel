@@ -614,7 +614,7 @@ clip 20,109.110016 816x516.78 r 8
   pop
   text "builtin:editor" @729.6875,505.03 #ffd23f JetBrains Mono 11
   clip 160,512.99 220x15.179993 r 0
-    text "and 126 more" @160,524.72 #4f4a40 JetBrains Mono 11.5
+    text "and 127 more" @160,524.72 #4f4a40 JetBrains Mono 11.5
   pop
   clip 392,512.99 418x15.179993 r 0
     text ":Keys lists them" @392,524.72 #4f4a40 JetBrains Mono 11.5
