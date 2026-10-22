@@ -174,6 +174,9 @@ func TestUsageDialogInTheWay(t *testing.T) {
 	if !strings.Contains(pe.Screen, "New MCP server found in .mcp.json") {
 		t.Errorf("the error doesn't say what was on screen: %q", pe.Screen)
 	}
+	if b, rerr := os.ReadFile(pe.Log); rerr != nil || !strings.Contains(string(b), "fake claude started") || !strings.Contains(err.Error(), "claude's debug log: "+pe.Log) {
+		t.Errorf("the error's debug log %q: %v", pe.Log, rerr)
+	}
 }
 
 // A claude that never says hello ends the probe with an error that says it never started.
