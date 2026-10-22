@@ -1,10 +1,12 @@
 package shell_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/render"
 )
 
 // A record written while the log panel shows is listed in it.
@@ -37,4 +39,60 @@ func TestLogRecordsDrawOnlyWhileThePanelShows(t *testing.T) {
 	r.WaitText("written while the panel is closed")
 	log.Info("written while it shows")
 	r.WaitText("written while it shows")
+}
+
+// longErr is a warning's err too long for its row: its end only shows once the row's expanded.
+const longErr = "claude: /usage typed 2 times but no plan windows came (a dialog may be in the way): context deadline exceeded; " +
+	"$.session.usage() failed: Invalid time value; the screen ends: What's contributing to your limits usage? the very end"
+
+// An expanded record wraps its message and attributes to the panel's width, so all of them show.
+func TestLogRowExpandedWraps(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.Run("Log", nil)
+	s.Logs.Logger("core").Warn("usage", "err", longErr)
+	s.Frame()
+	s.Frame()
+	if strings.Contains(s.Text(), "the very end") {
+		t.Fatal("the folded row already shows the end of its err")
+	}
+	s.ClickOn("usage")
+	s.WantFrame("the very end")
+}
+
+// Copy on a record's context menu copies the record.
+func TestLogRowCopiesFromItsMenu(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.Run("Log", nil)
+	s.Logs.Logger("core").Warn("usage", "err", longErr)
+	s.Frame()
+	s.Frame()
+	if menu := s.RightClick(s.TextPoint("usage")); !strings.Contains(menu, "Copy") {
+		t.Fatalf("the row's menu:\n%s", menu)
+	}
+	item := menuItem(s.Access(), "Copy")
+	if item == nil {
+		t.Fatal("no Copy in the menu")
+	}
+	s.Click(apptest.Centre(item.Bounds), 0)
+	s.Frame()
+	s.RunQueued()
+	if got, _ := s.Desktop.ReadClipboard(); !strings.Contains(got, "WARN") || !strings.Contains(got, "err="+longErr) {
+		t.Errorf("copied %q", got)
+	}
+}
+
+// menuItem is the menu item named label under n.
+func menuItem(n *render.AccessNode, label string) *render.AccessNode {
+	if n == nil {
+		return nil
+	}
+	if n.Role == render.RoleMenuItem && n.Name == label {
+		return n
+	}
+	for _, k := range n.Children {
+		if f := menuItem(k, label); f != nil {
+			return f
+		}
+	}
+	return nil
 }

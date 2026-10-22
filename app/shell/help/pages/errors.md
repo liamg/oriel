@@ -25,8 +25,9 @@ doesn't toast: it marks that session's tab instead. A notice that asks you somet
 last, in three scopes: Oriel's, the session in front, and all of them together.
 
 - The chips filter by severity; the box filters by text, or `source:init.lua`.
-- Click an entry to open its stack trace and the source around the failing line.
-- **Copy** copies the open entry, or everything shown; **Copy report** copies a report for a bug.
+- Click an entry to open it: its whole text, wrapped, its stack trace and the source around the failing line.
+- **Copy** copies the open entry, or everything shown; **Copy report** copies a report for a bug. Right-click an
+  entry and choose **Copy** to copy just that one.
 - `:Log level debug` shows debug records from now on.
 
 {{keys "Log"}}
