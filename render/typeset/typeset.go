@@ -1,6 +1,11 @@
 // Package typeset shapes text into glyph runs and rasterises glyphs, independent of the backend.
 package typeset
 
+import (
+	"iter"
+	"unicode/utf8"
+)
+
 // Weight is a CSS font weight; 0 means Normal.
 type Weight int
 
@@ -50,6 +55,47 @@ type Run struct {
 	Glyphs          []Glyph
 	Advance         float32
 	Ascent, Descent float32 // both positive
+}
+
+// Carets yields the pen's place at each cluster boundary of the run, as a byte offset into Text and an x across it,
+// from (0, 0) to (len(Text), Advance).
+func (r *Run) Carets() iter.Seq2[int, float32] {
+	return func(yield func(int, float32) bool) {
+		if !yield(0, 0) {
+			return
+		}
+		b, n := 0, 0 // a byte offset into Text and its index in runes
+		for i, g := range r.Glyphs {
+			if i > 0 && g.Rune == r.Glyphs[i-1].Rune {
+				continue
+			}
+			for n < g.Rune && b < len(r.Text) {
+				_, w := utf8.DecodeRuneInString(r.Text[b:])
+				b, n = b+w, n+1
+			}
+			if b == 0 || b == len(r.Text) {
+				continue
+			}
+			if !yield(b, g.X) {
+				return
+			}
+		}
+		if len(r.Text) > 0 {
+			yield(len(r.Text), r.Advance)
+		}
+	}
+}
+
+// CaretX is the x across the run of the cluster boundary at or before byte offset off.
+func (r *Run) CaretX(off int) float32 {
+	x := float32(0)
+	for b, cx := range r.Carets() {
+		if b > off {
+			break
+		}
+		x = cx
+	}
+	return x
 }
 
 type Shaper interface {

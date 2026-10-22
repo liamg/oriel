@@ -62,6 +62,7 @@ type shell struct {
 	launchDone  bool                         // the window has started once: mission control opens at launch only
 	focus       *windowFocus                 // whether the window has the OS's focus
 	framed      kit.Signals                  // after each frame is drawn, on the loop
+	frames      kit.FrameLog                 // the frames drawn: how long each took
 	claims      sync.Map                     // Host.Claim's keys held
 	teardowns   plugin.Teardowns             // stopped plugins' slow cleanup, off the loop
 }

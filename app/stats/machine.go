@@ -169,7 +169,7 @@ func (x *Machine) strip(c *ui.Ctx) {
 	})
 }
 
-// status is the status line's: the machine's CPU.
+// status is the status line's: the machine's CPU, which opens the Performance page.
 func (x *Machine) status(c *ui.Ctx) {
 	x.shown.Keep()
 	th := c.Theme()
@@ -181,5 +181,10 @@ func (x *Machine) status(c *ui.Ctx) {
 	if m.CPU >= .8 {
 		o.Dot, o.Tone = th.C(theme.Warn), th.C(theme.Warn)
 	}
-	widget.Indicator(c, "cpu", o)
+	if widget.Clickable(c, "cpu", ui.Style{Radius: 4, Label: fmt.Sprintf("CPU %d%%, Performance", kit.Pct(m.CPU)),
+		Help: PerfHelp}, func(c *ui.Ctx) { widget.Indicator(c, "i", o) }).Clicked {
+		if err := x.h.Run(context.Background(), "perf.open", nil); err != nil {
+			x.h.Log().Error("machine", "command", "perf.open", "err", err)
+		}
+	}
 }

@@ -272,3 +272,29 @@ func TestShapeEmpty(t *testing.T) {
 		t.Errorf("empty run %+v: no glyphs, no advance, but the font's ascent", r)
 	}
 }
+
+// A run's carets sit at each cluster boundary, where the shaped prefix up to it ends, and never inside a cluster.
+func TestCarets(t *testing.T) {
+	ts := newTS(t, nil)
+	for _, f := range []FontSpec{{Family: Mono, Size: 13}, {Family: UI, Size: 13, Tracking: 0.05}} {
+		for _, text := range []string{"", "a", "round half even", "héllo → wörld", "éx"} {
+			run := ts.Shape(text, f)
+			var offs []int
+			for b, x := range run.Carets() {
+				offs = append(offs, b)
+				if want := ts.Shape(text[:b], f).Advance; math.Abs(float64(x-want)) > 0.5 {
+					t.Errorf("%s %q: caret at %d is at x %v, its prefix ends at %v", f.Family, text, b, x, want)
+				}
+				if got := run.CaretX(b); got != x {
+					t.Errorf("%s %q: CaretX(%d) = %v, want %v", f.Family, text, b, got, x)
+				}
+			}
+			if text == "éx" && slices.Contains(offs, 1) {
+				t.Errorf("%s: a caret between e and its combining accent: %v", f.Family, offs)
+			}
+			if offs[0] != 0 || offs[len(offs)-1] != len(text) {
+				t.Errorf("%s %q: carets %v don't run from 0 to %d", f.Family, text, offs, len(text))
+			}
+		}
+	}
+}

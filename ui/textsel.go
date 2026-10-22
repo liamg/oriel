@@ -100,24 +100,19 @@ func (u *UI) selAt(texts []*elem, p render.Point) (selPos, bool) {
 	return selPos{best.id, u.offsetAt(best, p.X-best.rect().Min.X)}, true
 }
 
-// offsetAt is the byte offset of the character boundary in e's text nearest x across it.
+// offsetAt is the byte offset of the cluster boundary in e's text nearest x across it.
 func (u *UI) offsetAt(e *elem, x float32) int {
-	s := e.run.Text
 	best, bestD := 0, float32(-1)
-	for i := 0; ; {
-		d := u.sh.Shape(s[:i], e.ts.Font).Advance - x
+	for b, cx := range e.run.Carets() {
+		d := cx - x
 		if d < 0 {
 			d = -d
 		}
 		if bestD < 0 || d < bestD {
-			best, bestD = i, d
+			best, bestD = b, d
 		}
-		if i >= len(s) {
-			return best
-		}
-		_, n := utf8.DecodeRuneInString(s[i:])
-		i += n
 	}
+	return best
 }
 
 // selPress starts a selection at a primary press on selectable text, extending it with Shift, or selecting the word
@@ -303,8 +298,7 @@ func (u *UI) paintSel(f render.Frame, e *elem, r render.Rect) {
 	if !ok || u.theme == nil {
 		return
 	}
-	x0 := u.sh.Shape(e.run.Text[:lo], e.ts.Font).Advance
-	x1 := u.sh.Shape(e.run.Text[:hi], e.ts.Font).Advance
+	x0, x1 := e.run.CaretX(lo), e.run.CaretX(hi)
 	f.Rect(render.Rect{Min: render.Point{X: r.Min.X + x0, Y: r.Min.Y}, Max: render.Point{X: r.Min.X + x1, Y: r.Max.Y}},
 		render.Style{Fill: u.theme.C(tSelection)})
 }
