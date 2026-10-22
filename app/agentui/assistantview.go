@@ -41,9 +41,9 @@ func (x *Assistant) window(c *ui.Ctx) {
 	if !x.open {
 		return
 	}
-	size := c.Size()
-	w, h := min(460, size.X-kit.RailW-24), min(620, size.Y-kit.TitleH-kit.StatusH-24)
-	def := render.Rect{Min: render.Point{X: kit.RailW + 12, Y: size.Y - kit.StatusH - 12 - h}}
+	main := widget.AreaOr(c, widget.AreaMain)
+	w, h := min(460, main.Dx()-24), min(620, main.Dy()-24)
+	def := render.Rect{Min: render.Point{X: main.Min.X + 12, Y: main.Max.Y - 12 - h}}
 	def.Max = render.Point{X: def.Min.X + w, Y: def.Min.Y + h}
 	log, busy := x.conv.Log()
 	if len(log) > 0 {

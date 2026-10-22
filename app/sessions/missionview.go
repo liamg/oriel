@@ -66,7 +66,7 @@ func (x *Mission) page(c *ui.Ctx) {
 			inline[r.Card.Key()] = true
 		}
 	}
-	widget.Page(c, "mission", &x.open, widget.PageOpts{Top: kit.TitleH, KeyMode: MissionKeyMode, Label: "Mission control", Help: kit.MissionHelp + "#page"},
+	widget.Page(c, "mission", &x.open, widget.PageOpts{KeyMode: MissionKeyMode, Label: "Mission control", Help: kit.MissionHelp + "#page"},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			x.header(c, st)

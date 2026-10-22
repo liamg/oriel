@@ -60,10 +60,8 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 }
 
 type PageOpts struct {
-	Top     float32 // where it starts, under a title bar
-	Over    ui.ID   // the node it covers instead, as laid out last frame: the main area beside a sidebar
-	KeyMode string  // its keymap mode; "page" when empty, so Escape always reaches it
-	Label   string  // its accessible name
+	KeyMode string // its keymap mode; "page" when empty, so Escape always reaches it
+	Label   string // its accessible name
 	Help    string
 }
 
@@ -75,9 +73,10 @@ type pagesState struct{ front ui.ID }
 // pageShown marks a page that was up last frame.
 type pageShown struct{ shown bool }
 
-// Page is a full-window page (settings, the theme editor) from Top down while *open, or over the node Over. It holds
-// keyboard focus (a trap), coming in at its Style.DefaultFocus, and Escape, on the page or passed up from a control
-// on it, closes it. One page is up at a time: opening one closes whichever was.
+// Page is a full-window page (settings, the theme editor) over the window's AreaPage while *open, beside its AreaSide
+// when that's showing, and over what's above that. It holds keyboard focus (a trap), coming in at its
+// Style.DefaultFocus, and Escape, on the page or passed up from a control on it, closes it. One page is up at a time:
+// opening one closes whichever was.
 func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 	id := c.Next(key)
 	pages := ui.State[pagesState](c, ui.Child(0, pagesKey{}))
@@ -92,15 +91,22 @@ func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 		*open, shown.shown = false, false
 		return
 	}
-	size := c.Size()
-	at := render.Point{Y: o.Top}
-	w, h := size.X, size.Y-o.Top
-	if r, ok := c.Rect(o.Over); o.Over != 0 && ok {
-		at, w, h = r.Min, r.Dx(), r.Dy()
+	if areaPending(c, AreaPage) {
+		c.WakeAt(c.Now()) // it's drawn once it knows where
+		return
 	}
-	c.Column(key, ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
+	r := AreaOr(c, AreaPage)
+	if side, ok := AreaRect(c, AreaSide); ok && side.Dx() > 0 && side.Min.X == r.Min.X {
+		r.Min.X = side.Max.X
+		if side.Min.Y > r.Min.Y {
+			over := render.Rect{Min: render.Point{X: side.Min.X, Y: r.Min.Y}, Max: render.Point{X: side.Max.X, Y: side.Min.Y}}
+			c.Box(struct{ k any }{key}, ui.Style{W: ui.Px(over.Dx()), H: ui.Px(over.Dy()), Z: ui.LayerPage, Fill: col(c, tPageBg), Interactive: true,
+				Help: o.Help, Float: &ui.Float{Point: &over.Min}, Exit: fadeIn}, nil)
+		}
+	}
+	c.Column(key, ui.Style{W: ui.Px(r.Dx()), H: ui.Px(r.Dy()), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
 		Enter: &ui.Transition{Fade: true, Shift: render.Point{Y: 6}}, Exit: fadeIn,
-		Focusable: true, KeyMode: cmp.Or(o.KeyMode, "page"), Float: &ui.Float{Point: &at}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, body)
+		Focusable: true, KeyMode: cmp.Or(o.KeyMode, "page"), Float: &ui.Float{Point: &r.Min}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, body)
 }
 
 // Toast is a notification card. It stays until dismissed, or for TTL when that's set.

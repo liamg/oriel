@@ -145,7 +145,7 @@ func (x *Repos) page(c *ui.Ctx) {
 	if _, ok := x.find(string(x.sel)); !ok && len(rows) > 0 {
 		x.sel = rows[0].ID
 	}
-	widget.Page(c, "repos", &x.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: ReposKeyMode, Label: "Repos page", Help: "agent/repos#page"}, func(c *ui.Ctx) {
+	widget.Page(c, "repos", &x.open, widget.PageOpts{KeyMode: ReposKeyMode, Label: "Repos page", Help: "agent/repos#page"}, func(c *ui.Ctx) {
 		th := c.Theme()
 		x.header(c)
 		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {

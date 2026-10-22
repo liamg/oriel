@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 type loop struct {
@@ -567,9 +568,9 @@ func shotOf(u *ui.UI, reg uireg.Registry, size render.Point, th *theme.Resolved,
 
 // frameOverlay is --debug's frame time and how far the pointer was behind, at the bottom right.
 func frameOverlay(c *ui.Ctx, d, behind time.Duration) {
-	at := render.Point{X: c.Size().X - 8, Y: c.Size().Y - 30}
+	at := widget.AreaFloat(c, widget.AreaMain, render.Point{X: 1, Y: 1}, render.Point{X: 1, Y: 1}, render.Point{X: -8, Y: -4})
 	c.Box("frametime", ui.Style{Pad: ui.PadXY(6, 2), Radius: 4, Fill: c.Theme().C(theme.BgOverlay), Z: ui.LayerTooltip,
-		Float: &ui.Float{Point: &at, Self: render.Point{X: 1, Y: 1}}}, func(c *ui.Ctx) {
+		Float: at}, func(c *ui.Ctx) {
 		c.Text(nil, fmt.Sprintf("frame %.2f ms · pointer %d ms", float64(d.Microseconds())/1000, behind.Milliseconds()), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10},
 			Color: c.Theme().C(theme.Brand)})
 	})

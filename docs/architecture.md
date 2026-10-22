@@ -129,7 +129,9 @@ variables and endpoints it inherits, the hosts it reaches, the user's MCP server
   - Floats sit on named layers (`ui.LayerPage`, `ui.LayerDialog`…), never numeric `Z`. One under `ui.LayerPane` is
     inlaid in its view and clipped as the view is, so it scrolls out with it.
   - A full-window page is `widget.Page`; a dialog is `widget.Scrim`. Every closable surface has Escape and a visible
-    close.
+    close. A page doesn't choose where it lies: it covers the frame's title bar and main area, beside the rail.
+  - Nothing floating assumes the frame's sizes: the frame lays out its regions as `widget.Area`s (page, top, side,
+    main, bottom), and a page, the HUD's drawer or a window asks `widget.AreaRect` where one is.
   - Focus has one owner, the toolkit. A view marks its default target and moves focus on purpose with
     `Ctx.RequestFocus`.
   - Text never runs out of its box: a row too narrow cuts its text with "…". Strips of tabs scroll sideways

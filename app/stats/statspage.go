@@ -39,7 +39,7 @@ func (x *Plugin) page(c *ui.Ctx) {
 	}
 	x.hovering = -1
 	defer func() { x.hover = x.hovering }()
-	widget.Page(c, "stats", &x.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: StatsKeyMode, Label: "Stats", Help: "agent/stats#page"},
+	widget.Page(c, "stats", &x.open, widget.PageOpts{KeyMode: StatsKeyMode, Label: "Stats", Help: "agent/stats#page"},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			x.header(c, q, r, meta)

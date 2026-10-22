@@ -59,7 +59,7 @@ func (s *Plugin) build(c *ui.Ctx) {
 			rows = append(rows, sp)
 		}
 	}
-	po := widget.PageOpts{Over: kit.MainArea(), KeyMode: "settings", Label: "Settings", Help: "shell/settings"}
+	po := widget.PageOpts{KeyMode: "settings", Label: "Settings", Help: "shell/settings"}
 	widget.Page(c, "settings", &s.open, po, func(c *ui.Ctx) {
 		s.header(c, th)
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)

@@ -212,7 +212,7 @@ func (x *HUD) drawer(c *ui.Ctx) {
 	if x.pinned {
 		grab = "PINNED · ESC OR CLICK TO PUT AWAY"
 	}
-	res := widget.Drawer(c, "hud", widget.DrawerOpts{Top: kit.TitleH, Pinned: x.pinned, Grab: grab, Label: "HUD", Help: kit.HUDHelp, KeyMode: HUDKeyMode},
+	res := widget.Drawer(c, "hud", widget.DrawerOpts{Pinned: x.pinned, Grab: grab, Label: "HUD", Help: kit.HUDHelp, KeyMode: HUDKeyMode},
 		x.panels)
 	switch {
 	case res.Grabbed && x.pinned:

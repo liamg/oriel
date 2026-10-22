@@ -339,7 +339,7 @@ func (x *Catalog) pageView(c *ui.Ctx) {
 			x.fetch()
 		}
 	}
-	widget.Page(c, "plugins", &x.page.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: PluginsKeyMode, Label: "Plugins page", Help: pluginsHelp},
+	widget.Page(c, "plugins", &x.page.open, widget.PageOpts{KeyMode: PluginsKeyMode, Label: "Plugins page", Help: pluginsHelp},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			rows := x.rows()

@@ -51,21 +51,23 @@ func TestPanel(t *testing.T) {
 	}
 }
 
-// A drawer hangs from Top across the window; a press anywhere in it is reported, and so is a click on its grab. A
+// A drawer hangs from the bottom of the window's top area, across the window; a press anywhere in it is reported, and so is a click on its grab. A
 // pinned one takes focus, so its keys work, and gives it back to nothing in particular when it goes.
 func TestDrawer(t *testing.T) {
 	pinned := false
 	var id, inner, grab ui.ID
 	var res DrawerResult
 	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		Area(c, AreaTop, "top", ui.Style{W: ui.Flex(1), H: ui.Px(38)}, nil)
 		id = c.Next("hud")
-		res = Drawer(c, "hud", DrawerOpts{Top: 38, Pinned: pinned, Grab: "CLICK TO PIN", Label: "HUD", Help: "test/hud", KeyMode: "hud"}, func(c *ui.Ctx) {
+		res = Drawer(c, "hud", DrawerOpts{Pinned: pinned, Grab: "CLICK TO PIN", Label: "HUD", Help: "test/hud", KeyMode: "hud"}, func(c *ui.Ctx) {
 			inner = c.Next("b")
 			Clickable(c, "b", ui.Style{W: ui.Px(60), H: ui.Px(20), Help: "test/hud"}, nil)
 			c.Box("body", ui.Style{W: ui.Flex(1), H: ui.Px(200)}, nil)
 		})
 		grab = ui.Child(id, "grab")
 	})
+	h.frame()
 	h.frame()
 	r := h.rect(id)
 	if r.Min.Y != 38 || r.Dx() != small.X {
@@ -76,8 +78,9 @@ func TestDrawer(t *testing.T) {
 	}
 	pressed, grabbed := false, false
 	h.build = func(c *ui.Ctx) {
+		Area(c, AreaTop, "top", ui.Style{W: ui.Flex(1), H: ui.Px(38)}, nil)
 		id = c.Next("hud")
-		res = Drawer(c, "hud", DrawerOpts{Top: 38, Pinned: pinned, Grab: "CLICK TO PIN", Help: "test/hud", KeyMode: "hud"}, func(c *ui.Ctx) {
+		res = Drawer(c, "hud", DrawerOpts{Pinned: pinned, Grab: "CLICK TO PIN", Help: "test/hud", KeyMode: "hud"}, func(c *ui.Ctx) {
 			inner = c.Next("b")
 			Clickable(c, "b", ui.Style{W: ui.Px(60), H: ui.Px(20), Help: "test/hud"}, nil)
 			c.Box("body", ui.Style{W: ui.Flex(1), H: ui.Px(200)}, nil)

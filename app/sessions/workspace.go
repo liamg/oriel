@@ -248,7 +248,7 @@ func (x *Workspace) page(c *ui.Ctx) {
 	if !x.open || c.Theme().IsProbe() {
 		return
 	}
-	widget.Page(c, "workspace", &x.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: WorkspaceKeyMode, Label: "Workspace page", Help: workspaceHelp},
+	widget.Page(c, "workspace", &x.open, widget.PageOpts{KeyMode: WorkspaceKeyMode, Label: "Workspace page", Help: workspaceHelp},
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			se, ok := x.h.State().Session(x.h.State().Focus)

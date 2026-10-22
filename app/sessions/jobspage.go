@@ -34,7 +34,7 @@ func (x *Jobs) page(c *ui.Ctx) {
 		return
 	}
 	rows := x.rows()
-	widget.Page(c, "jobs", &x.open, widget.PageOpts{Over: kit.MainArea(), KeyMode: JobsKeyMode, Label: "Jobs page", Help: "agent/jobs#page"}, func(c *ui.Ctx) {
+	widget.Page(c, "jobs", &x.open, widget.PageOpts{KeyMode: JobsKeyMode, Label: "Jobs page", Help: "agent/jobs#page"}, func(c *ui.Ctx) {
 		th := c.Theme()
 		x.header(c, rows)
 		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
