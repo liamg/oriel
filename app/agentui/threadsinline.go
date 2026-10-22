@@ -25,15 +25,16 @@ import (
 // inlineNew is a thread being opened between the editor's lines (or beside a presentation's block), not sent yet.
 // One opened by place has no buffer until its file is next decorated.
 type inlineNew struct {
-	path      string
-	line, end int    // 0-based; end is the last line of a range, or -1
-	text      string // the first line, as it was
-	buf       *text.Buffer
-	anchor    text.AnchorID
-	draft     string
-	focus     bool
-	toAuthor  bool // a comment for the pull request's author, not a question for the agent
-	review    bool // the session is a review: it can be either
+	path        string
+	line, end   int    // 0-based; end is the last line of a range, or -1
+	col, endCol int    // 1-based characters on line and end (line without a range), or 0
+	text        string // the first line, as it was
+	buf         *text.Buffer
+	anchor      text.AnchorID
+	draft       string
+	focus       bool
+	toAuthor    bool // a comment for the pull request's author, not a question for the agent
+	review      bool // the session is a review: it can be either
 }
 
 func (n *inlineNew) release() {
@@ -73,15 +74,16 @@ func anchoredLine(lines []string, a *core.Anchor) int {
 	return min(want, len(lines)-1)
 }
 
-// newInline opens a thread on {file}'s {line} (1-based) through {end_line}, or on the cursor's line: a composer between
-// the lines, sent with ⏎.
+// newInline opens a thread on {file}'s {line}:{col} (1-based) through {end_line}:{end_col}, or on the editor's
+// selection or cursor: a composer between the lines, sent with ⏎.
 func (x *Requests) newInline(a registry.Args) error {
 	st := x.state("")
-	n := &inlineNew{path: a.String("file"), line: a.Int("line") - 1, end: a.Int("end_line") - 1, focus: true}
+	n := &inlineNew{path: a.String("file"), line: a.Int("line") - 1, end: a.Int("end_line") - 1, col: a.Int("col"), endCol: a.Int("end_col"),
+		focus: true}
 	if se, ok := x.front(); ok && kit.ReviewedPR(x.h, se) != "" {
 		n.review, n.toAuthor = true, a.String("to") != "agent"
 	}
-	if n.path == "" {
+	if n.line < 0 {
 		ed, ok := registry.EditorsOf(x.h)
 		if !ok {
 			return errors.New("no editor")
@@ -90,15 +92,24 @@ func (x *Requests) newInline(a registry.Args) error {
 		if !ok || b.Path == "" {
 			return errors.New("the editor has no file here")
 		}
+		if n.path != "" && filepath.Clean(n.path) != filepath.Clean(b.Path) {
+			return errors.New("thread.new needs a line")
+		}
 		snap := b.Text.Snapshot()
-		n.path, n.line, n.end, n.buf = b.Path, b.Cursor.Line, -1, b.Text
+		n.path, n.buf = b.Path, b.Text
+		at := kit.PlaceAt(snap, b.Cursor)
+		if r, ok := ed.Selection(); ok {
+			at = kit.PlaceOf(snap, r)
+		}
+		n.line, n.end, n.col, n.endCol = at.Line-1, at.EndLine-1, at.Col, at.EndCol
 		n.text = string(snap.Line(n.line))
 		n.anchor = n.buf.Anchor(snap.LineStart(n.line), text.Left)
 	}
 	if n.line < 0 {
 		return errors.New("thread.new needs a line")
 	}
-	if o := st.inline; o != nil && filepath.Clean(o.path) == filepath.Clean(n.path) && o.line == n.line && o.end == n.end {
+	if o := st.inline; o != nil && filepath.Clean(o.path) == filepath.Clean(n.path) && o.line == n.line && o.end == n.end &&
+		o.col == n.col && o.endCol == n.endCol {
 		n.release()
 		o.focus, o.toAuthor = true, n.toAuthor
 		return nil
@@ -493,6 +504,12 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
 				if n.end > n.line {
 					a["end_line"] = line + 1 + n.end - n.line
+				}
+				if n.col > 0 {
+					a["col"] = n.col
+				}
+				if n.endCol > 0 {
+					a["end_col"] = n.endCol
 				}
 				if n.toAuthor {
 					a["outgoing"] = true

@@ -125,7 +125,8 @@ Answers come from the first explainer: the session's agent, forked without tools
 cached by the unit's text: an edit inside the unit marks the card **changed since it was explained**, with
 **refresh**; edits elsewhere keep it. **Ask a follow-up** writes a request with the explanation attached, and **Pin
 as note** keeps it as a resolved thread on those lines. The right-click menu has **Explain this**, and **Review
-this**, **Write tests for this** and **Refactor this…**, which start a request about the selection or the unit.
+this**, **Write tests for this** and **Refactor this…**, which start a request about the selection, the unit, or the
+place clicked. A right-click moves the cursor to where it's clicked, unless that's inside the selection.
 
 {{keys "explain.*"}}
 

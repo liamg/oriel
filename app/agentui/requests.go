@@ -168,7 +168,7 @@ func (x *Requests) commands() []registry.Command {
 		return out
 	}
 	return []registry.Command{
-		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
+		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} ({col} through {end_line}:{end_col}) or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.commentOn(ctx, a) }},
 		{ID: "request.resolve", Title: "Resolve a request: {thread} of {id}, the one selected by default; or set its {status}: open, resolved, deferred, dismissed",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -210,7 +210,7 @@ func (x *Requests) commands() []registry.Command {
 			}},
 		{ID: "request.attach", Title: "Attach to the request being written: {items} ({path, line, text} each), or {text} with a {title}", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.attach(ctx, a) }},
-		{ID: "thread.new", Title: "Open a thread on {file}'s {line} through {end_line}, or the line at the cursor, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
+		{ID: "thread.new", Title: "Open a thread on {file}'s {line}:{col} through {end_line}:{end_col}, or the selection, or the cursor's place, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
 		{ID: "threads.toggle", Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
@@ -640,6 +640,7 @@ func (x *Requests) commentOn(ctx registry.Ctx, a registry.Args) error {
 		Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding"), Outgoing: a.Bool("outgoing")}
 	if ev.Thread == "" && ev.File != "" {
 		req.Anchor = anchorIn(se, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
+		req.Anchor.Col, req.Anchor.EndCol = a.Int("col"), a.Int("end_col")
 	}
 	_, err = w.Comment(ctx, req)
 	return err

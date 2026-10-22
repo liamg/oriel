@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -147,6 +148,10 @@ func (x *Editor) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Interactio
 		d = &paneDrag{}
 		x.drags[p.ID()] = d
 	}
+	if in.Context != nil {
+		pos, _ := x.posAt(p, r, *in.Context, m)
+		x.contextPress(p, st, pos)
+	}
 	pressed := in.Held || in.Clicked
 	if !pressed {
 		d.held = false
@@ -231,17 +236,43 @@ func (x *Editor) press(p vim.Pane, st input.State, d *paneDrag, pos vim.Pos, mod
 	d.moved = false
 }
 
+// contextPress is a right-click at pos ('mousemodel' "popup_setpos"): the cursor goes there, so the menu acts on what
+// was clicked, unless it's inside the selection.
+func (x *Editor) contextPress(p vim.Pane, st input.State, pos vim.Pos) {
+	if r, ok := visualRange(x.e, p); ok && p.Current() {
+		if off := p.Buf().LineStart(pos.Line) + pos.Col; off >= r.Start && off < r.End {
+			return
+		}
+	}
+	x.e.EnterWindow(p.ID())
+	if isVim(st) {
+		x.e.Deselect()
+	}
+	x.e.SetCursor(pos)
+}
+
+// lineTop is where a line was drawn: its first row's top.
+type lineTop struct {
+	line int
+	y    float32
+}
+
 // posAt is the buffer position under at, and the line it's on.
 func (x *Editor) posAt(p vim.Pane, r render.Rect, at render.Point, m kit.PaneMetrics) (vim.Pos, int) {
 	row := int(math.Floor(float64((at.Y - r.Min.Y - kit.CodePadT) / m.LineH)))
 	line := p.Top()
-	for row > 0 && line < p.Buf().Lines()-1 {
-		n := p.RowsOf(line)
-		if row < n {
-			break
+	if tops := x.lineTops[p.ID()]; len(tops) > 0 && tops[0].line == line {
+		i := max(sort.Search(len(tops), func(i int) bool { return tops[i].y > at.Y })-1, 0)
+		line, row = tops[i].line, int(math.Floor(float64((at.Y-tops[i].y)/m.LineH)))
+	} else {
+		for row > 0 && line < p.Buf().Lines()-1 {
+			n := p.RowsOf(line)
+			if row < n {
+				break
+			}
+			row -= n
+			line = p.NextRow(line)
 		}
-		row -= n
-		line = p.NextRow(line)
 	}
 	line = min(line, p.Buf().Lines()-1)
 	g := rowSegs(p, line, m)
@@ -354,6 +385,7 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 	th := c.Theme()
 	code, haveCode := c.Rect(c.ID())
 	var blockPx float32
+	tops := x.lineTops[p.ID()][:0]
 	revealTo := -1 // the top line that would show a block that wants revealing whole
 	snap := p.Buf()
 	rows := x.rows[p.ID()]
@@ -382,6 +414,9 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 	numStyle := ui.TextStyle{Font: x.pane.Font, Color: th.C(kit.TGutterFg)}
 	for row := 0; row < rows && line < snap.Lines(); {
 		rowID := c.Next(line)
+		if r, ok := c.Rect(rowID); ok {
+			tops = append(tops, lineTop{line, r.Min.Y})
+		}
 		foldEnd, folded := p.Fold(line)
 		ds := decor[line]
 		bg, edge := lineBg(th, ds)
@@ -447,7 +482,7 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 		row += len(segs)
 		line = p.NextRow(line)
 	}
-	x.blockPx[p.ID()] = blockPx
+	x.blockPx[p.ID()], x.lineTops[p.ID()] = blockPx, tops
 	if revealTo > p.Top() {
 		x.e.ScrollTo(p.ID(), revealTo)
 		x.h.Redraw()

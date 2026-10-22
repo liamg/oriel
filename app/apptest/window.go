@@ -299,6 +299,15 @@ func (w *Window) Click(p render.Point) {
 	w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonPrimary})
 }
 
+// RightClickText right-clicks the middle of the first run of text in the frame on screen.
+func (w *Window) RightClickText(text string) {
+	w.T.Helper()
+	p := w.textAt(text, false)
+	w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+	w.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonSecondary})
+	w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonSecondary})
+}
+
 // textAt is the middle of a run of text in the frame on screen: the first, or with last the last, the one on top.
 func (w *Window) textAt(text string, last bool) render.Point {
 	w.T.Helper()

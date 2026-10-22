@@ -222,6 +222,46 @@ func TestInlineThreadsInTheEditor(t *testing.T) {
 	}
 }
 
+// "Ask about this…" on a right-click opens a thread on the line clicked, wherever the cursor was.
+func TestAskAboutThisFromTheMenu(t *testing.T) {
+	r, a, _ := apptest.AgentWindow(t)
+	dir := projectDir(t, r)
+	path := filepath.Join(dir, "notes.txt")
+	os.WriteFile(path, []byte("rounding\n\nties go to even\nfloor goes down\n"), 0o644)
+	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	r.WaitText("floor goes down")
+	r.RightClickText("floor goes down")
+	r.WaitText("Ask about this…")
+	r.ClickTop("Ask about this…")
+	r.WaitText("New thread")
+	r.TypeText("which way for negatives?")
+	r.WaitText("which way for negatives?")
+	r.TypeKeys("<CR>")
+	if in := a.WaitSent(t); !strings.Contains(in.Text, "notes.txt:4:") {
+		t.Errorf("the agent got %q", in.Text)
+	}
+}
+
+// A thread opened on a selection is about its first through last characters.
+func TestThreadOnASelection(t *testing.T) {
+	r, a, _ := apptest.AgentWindow(t)
+	dir := projectDir(t, r)
+	path := filepath.Join(dir, "notes.txt")
+	os.WriteFile(path, []byte("rounding\n\nties go to even\nfloor goes down\n"), 0o644)
+	r.Do(func() error { return r.Host.Run(context.Background(), "editor.open", registry.Args{"path": path}) })
+	r.WaitText("floor goes down")
+	r.TypeKeys("3G0wvj")
+	r.WaitFrame("the selection to line 4", func(s string) bool { return strings.Contains(s, "VISUAL") && strings.Contains(s, "\n4:") })
+	r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) })
+	r.WaitText("New thread")
+	r.TypeText("why these?")
+	r.WaitText("why these?")
+	r.TypeKeys("<CR>")
+	if in := a.WaitSent(t); !strings.Contains(in.Text, "notes.txt:3:6-4:6") {
+		t.Errorf("the agent got %q", in.Text)
+	}
+}
+
 // ⌃a in a picker attaches the item to the request being written, and ␣r picks a thread.
 func TestPickersAttachAndPickThreads(t *testing.T) {
 	r, a, _ := requestsSession(t)
