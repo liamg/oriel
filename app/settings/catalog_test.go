@@ -39,6 +39,7 @@ func catalogScene(t *testing.T) (s *apptest.Scene, settingsFile, lock, data stri
 	t.Helper()
 	data = rig.WritableAfter(t, t.TempDir())
 	s = apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.DataDir = data }})
+	syncPlugins(s) // the sync at start is done before the test writes the files it would read
 	return s, filepath.Join(s.ConfigDir, "settings.toml"), filepath.Join(s.ConfigDir, catalog.LockFile), data
 }
 

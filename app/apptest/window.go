@@ -96,7 +96,7 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	g := &grab{keys: o.Keys, setup: o.Setup}
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
-	cfg := app.Config{Store: w.Store, ConfigDir: w.ConfigDir, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: OfflineNet(t), ImageNet: OfflineNet(t), SandboxBackends: Backends,
+	cfg := app.Config{Store: w.Store, Registry: testRegistry(), ConfigDir: w.ConfigDir, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: OfflineNet(t), ImageNet: OfflineNet(t), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
 	if o.Config != nil {
 		o.Config(&cfg)
@@ -158,7 +158,7 @@ func (w *Window) Do(fn func() error) error {
 	select {
 	case err := <-got:
 		return err
-	case <-time.After(5 * time.Second):
+	case <-time.After(Timeout):
 		w.T.Fatal("the loop never ran it")
 	}
 	return nil
@@ -172,10 +172,10 @@ func (w *Window) Run(id string, a registry.Args) {
 	}
 }
 
-// WaitFor polls ok, on the loop, for up to 5s.
+// WaitFor polls ok, on the loop, for up to Timeout.
 func (w *Window) WaitFor(what string, ok func() bool) {
 	w.T.Helper()
-	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(10 * time.Millisecond) {
+	for deadline := time.Now().Add(Timeout); ; time.Sleep(10 * time.Millisecond) {
 		var done bool
 		w.Do(func() error { done = ok(); return nil })
 		if done {
@@ -190,7 +190,7 @@ func (w *Window) WaitFor(what string, ok func() bool) {
 // WaitFile waits for the file name, under Dir, to read want.
 func (w *Window) WaitFile(name, want string) {
 	w.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	var got []byte
 	for time.Now().Before(deadline) {
 		got, _ = os.ReadFile(filepath.Join(w.Dir, name))
@@ -243,7 +243,7 @@ func (w *Window) TypeText(s string) {
 // WaitFrame waits for a frame whose text satisfies ok, and answers that text.
 func (w *Window) WaitFrame(what string, ok func(string) bool) string {
 	w.T.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	f, err := w.Win.WaitFrame(ctx, func(f headless.Frame) bool { return ok(f.Text()) })
 	if err != nil {
@@ -267,7 +267,7 @@ func (w *Window) WaitText(s string) string {
 // ok, and returns it: unlike WaitFrame, not one drawn before.
 func (w *Window) Latest(what string, ok func(headless.Frame) bool) headless.Frame {
 	w.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	seen := -1
 	for {
 		fs := w.Win.Frames()
@@ -361,7 +361,7 @@ func (w *Window) Access(label string) *render.AccessNode {
 // same place two frames running.
 func (w *Window) ClickAccess(label string) {
 	w.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	var last *render.AccessNode
 	for {
 		found := w.lastAccess(label)
@@ -462,10 +462,10 @@ func ConsoleWindow(t *testing.T) (*Window, *agenttest.FakeSession, *rig.Host) {
 	return w, a, h
 }
 
-// WaitAccess polls ok, for up to 5s, while the window draws: what the accessibility tree says, say.
+// WaitAccess polls ok, for up to Timeout, while the window draws: what the accessibility tree says, say.
 func (w *Window) WaitAccess(what string, ok func(w *Window) bool) {
 	w.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for !ok(w) {
 		if time.Now().After(deadline) {
 			w.T.Fatalf("never: %s", what)

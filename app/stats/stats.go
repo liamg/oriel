@@ -103,7 +103,9 @@ type Plugin struct {
 	reports  map[string]fetched[stats.Report] // by query
 	details  map[string]fetched[stats.Detail] // by session and split
 	history  fetched[[]core.ProviderUsage]
-	inflight map[string]time.Time   // when each fetch running started
+	inflight map[string]time.Time   // when each fetch running was asked for
+	asked    map[string]time.Time   // when each read subscribed but not yet run was asked for
+	clock    time.Time              // Now, as the last frame that asked for a read saw it: the time reads off the loop go by
 	subs     kit.Subs               // the reads frames keep asking for, from the app's manager
 	used     map[string]bool        // the reads asked for since the last frame
 	forced   map[string]bool        // reads to ask again however young their answer: a retry, or agents moving on
@@ -129,7 +131,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.burnWin = map[string]int{}
 	x.reports = map[string]fetched[stats.Report]{}
 	x.details = map[string]fetched[stats.Detail]{}
-	x.inflight, x.used, x.forced = map[string]time.Time{}, map[string]bool{}, map[string]bool{}
+	x.inflight, x.asked, x.used, x.forced = map[string]time.Time{}, map[string]time.Time{}, map[string]bool{}, map[string]bool{}
 	x.reading = plugin.NewLoad(h, x.readUsage, plugin.LoadOpts{Timeout: 2 * time.Minute, Now: func() time.Time { return x.Now() }})
 	x.Add(h.Option(registry.OptionSpec{Name: SplitOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Split a multi-repo session's cost over its repos, each request charged to the repo its file tool calls worked in. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
@@ -576,25 +578,33 @@ var statsNeed = watch.Need{MaxAge: kit.RefetchAfter}
 // keep has key read through the app's manager for as long as frames keep asking for it: at once, then every
 // kit.RefetchAfter, and sooner once agents have moved on (seen). A read skips asking while the answer kept (cached,
 // x.mu held) is younger than kit.RefetchAfter, unless a retry forced it. ask runs off the loop; store keeps its
-// answer on the loop, x.mu held. It answers when the read running started, zero with none running.
+// answer on the loop, x.mu held. It answers when the read running, or about to run, was asked for; zero with none.
 func (x *Plugin) keep(key, what string, cached func() time.Time, ask func() (any, error), store func(any, error, time.Time)) time.Time {
 	x.mu.Lock()
 	x.used[key] = true
+	x.clock = x.Now()
 	x.mu.Unlock()
 	m := kit.ManagerFor(x.h, "")
 	if m == nil {
 		return time.Time{}
 	}
 	x.subs.Hold(key, m, statsNeed, func() kit.Closer {
+		x.mu.Lock()
+		if at := cached(); x.forced[key] || at.IsZero() || x.clock.Sub(at) >= kit.RefetchAfter {
+			x.asked[key] = x.clock
+		}
+		x.mu.Unlock()
 		src := kit.Every("stats:"+key, func(context.Context) error {
 			x.mu.Lock()
+			asked := x.asked[key]
+			delete(x.asked, key)
 			forced := x.forced[key]
 			delete(x.forced, key)
-			if at := cached(); !forced && !at.IsZero() && x.Now().Sub(at) < kit.RefetchAfter {
+			if at := cached(); !forced && !at.IsZero() && x.clock.Sub(at) < kit.RefetchAfter {
 				x.mu.Unlock()
 				return nil // the answer kept is young enough
 			}
-			x.inflight[key] = x.Now()
+			x.inflight[key] = cmp.Or(asked, x.clock)
 			x.mu.Unlock()
 			v, err := ask()
 			x.h.Do(func() {
@@ -611,7 +621,10 @@ func (x *Plugin) keep(key, what string, cached func() time.Time, ask func() (any
 	})
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return x.inflight[key]
+	if at, ok := x.inflight[key]; ok {
+		return at
+	}
+	return x.asked[key]
 }
 
 // framed lets go of the reads no frame asked for since the last.
@@ -640,11 +653,12 @@ func (x *Plugin) fresher() {
 }
 
 // detail is a session's stats once read.
-// Busy says whether a read it asked the session host for is still out.
+// Busy says whether a read it asked the session host for is still out, or about to be.
 func (x *Plugin) Busy() bool {
 	x.mu.Lock()
-	defer x.mu.Unlock()
-	return len(x.inflight) > 0
+	n := len(x.inflight)
+	x.mu.Unlock()
+	return n > 0 || x.subs.Busy()
 }
 
 // Session is a session's stats, once they've been read (kit.Stats).
@@ -691,7 +705,10 @@ func (x *Plugin) retryDetail(id core.SessionID) {
 func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 	if w, _ := kit.SessionHost(x.h); w != nil {
 		x.keep("usage.history", "usage history", func() time.Time { return x.history.at }, func() (any, error) {
-			return w.UsageHistory(host.UsageHistoryReq{Since: x.Now().Add(-8 * 24 * time.Hour)}), nil
+			x.mu.Lock()
+			since := x.clock.Add(-8 * 24 * time.Hour)
+			x.mu.Unlock()
+			return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil
 		}, func(v any, err error, at time.Time) {
 			h, _ := v.([]core.ProviderUsage)
 			x.history = fetched[[]core.ProviderUsage]{v: h, at: at, err: err}

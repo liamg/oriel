@@ -3,6 +3,7 @@ package shell_test
 import (
 	"context"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -141,6 +142,8 @@ func TestQuitDialogSnapshot(t *testing.T) {
 func TestQuitShowsTheShutdown(t *testing.T) {
 	r, lw, _ := quitScene(t, nil)
 	lw.Fake.HoldClose = make(chan struct{})
+	release := sync.OnceFunc(func() { close(lw.Fake.HoldClose) })
+	t.Cleanup(release) // a failure before the release mustn't leave the host's Close waiting
 	r.Win.RequestClose()
 	r.WaitFrame("the shutdown", func(s string) bool {
 		return apptest.HasAll(s, "SHUTTING DOWN", "Stopping 1 agent", "rounding")
@@ -151,7 +154,7 @@ func TestQuitShowsTheShutdown(t *testing.T) {
 	if strings.Contains(f.Text(), "Search sessions, commands") {
 		t.Error("the omnibox opened over the shutdown")
 	}
-	close(lw.Fake.HoldClose)
+	release()
 	r.WaitExit()
 	if !handedOver(lw) {
 		t.Error("the agent wasn't handed over")

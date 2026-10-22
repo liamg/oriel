@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/tools/perf"
 )
 
 var wrapFont = typeset.FontSpec{Family: typeset.UI, Size: 12.5}
@@ -53,7 +54,8 @@ func TestWrapLinesFitsWidth(t *testing.T) {
 	}
 }
 
-func TestWrapLinesLongTokenIsFast(t *testing.T) {
+func TestWrapLinesLongTokenBudget(t *testing.T) {
+	perf.Timed(t)
 	ts := bundled(t)
 	for _, n := range []int{4000, 10000} {
 		tok := strings.Repeat("QmFzZTY0IGJsb2Ig", n/16+1)[:n]

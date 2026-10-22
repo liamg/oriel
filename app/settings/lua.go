@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
@@ -47,6 +48,7 @@ type Lua struct {
 	Dir  string
 	vm   *script.VM
 	apis *api.APIs
+	mu   sync.Mutex // sum: the file watch reads it off the loop
 	sum  [32]byte
 	err  error
 	good bool // the config running loaded without an error
@@ -156,13 +158,21 @@ func (x *Lua) sources() [32]byte {
 }
 
 // Changed says whether the config's files changed since it last loaded.
-func (x *Lua) Changed() bool { return x.sources() != x.sum }
+func (x *Lua) Changed() bool {
+	sum := x.sources()
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return sum != x.sum
+}
 
 // Reload loads the config again, in a new VM. One that loads replaces the config running, and a toast says what
 // changed. One that fails leaves the last good config running, and a notice and a diagnostic say where it failed;
 // with no good config to keep (at startup), what ran before the error stays.
 func (x *Lua) Reload(toast bool) {
-	x.sum = x.sources()
+	sum := x.sources()
+	x.mu.Lock()
+	x.sum = sum
+	x.mu.Unlock()
 	vm := script.New(filepath.Join(x.Dir, "lua"))
 	vm.OnSlow = func(src string, took time.Duration) {
 		x.h.Log().Warn("slow Lua", "function", src, "took", took)

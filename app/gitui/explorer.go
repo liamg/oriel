@@ -379,9 +379,17 @@ func (e *Explorer) scope() gitx.Scope {
 	return gitx.All
 }
 
+// shown is the status the Explorer shows: with line counts while it shows them.
+func (e *Explorer) shown() *gitx.State {
+	if e.cols.lines || e.scope() != gitx.All {
+		return e.git().withCounts()
+	}
+	return e.git().state()
+}
+
 // selectedFile is the selected row's file, in the scope showing.
 func (e *Explorer) selectedFile() (gitx.FileState, bool) {
-	st := e.git().state()
+	st := e.shown()
 	if st == nil {
 		return gitx.FileState{}, false
 	}
@@ -415,10 +423,7 @@ func (v explorerView) Build(vc uireg.ViewCtx) ui.Node {
 func (e *Explorer) build(c *ui.Ctx) {
 	th := c.Theme()
 	sc := e.scope()
-	st := e.git().state()
-	if e.cols.lines || sc != gitx.All {
-		st = e.git().withCounts()
-	}
+	st := e.shown()
 	var x *explorerIndex
 	if st != nil {
 		x = e.indexFor(st)

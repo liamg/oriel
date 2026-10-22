@@ -198,19 +198,24 @@ func (g *Git) tree(dir string) *gitTree {
 	}
 	t := &gitTree{g: g, work: dir, asked: g.now()}
 	g.others[dir] = t
-	done := g.start()
+	g.busy.Add(1)
+	g.running.Add(1)
 	go func() {
-		defer done()
+		defer g.busy.Done()
 		root, ok := gitx.Root(context.Background(), dir)
-		g.mu.Lock()
-		if ok {
-			t.found(root)
-		}
-		t.ready = true
-		g.mu.Unlock()
-		if ok {
-			t.status.Watch(func([]string) { g.h.Redraw() })
-		}
+		// The loop reads the tree's fields unlocked, so they're set there; Busy holds until they are.
+		g.h.Do(func() {
+			defer g.running.Add(-1)
+			g.mu.Lock()
+			if ok {
+				t.found(root)
+			}
+			t.ready = true
+			g.mu.Unlock()
+			if ok {
+				t.status.Watch(func([]string) { g.h.Redraw() })
+			}
+		})
 		g.h.Redraw()
 	}()
 	return t
@@ -282,13 +287,13 @@ func (g *Git) wait() {
 	}
 }
 
-// reading says a subscribed tree is being read, or is about to be.
+// reading says a subscribed tree, or its line counts, is being read or is about to be.
 func (g *Git) reading() bool {
 	for _, t := range append(g.trees(), &g.gitTree) {
 		t.mu.Lock()
-		sub := t.sub
+		sub, counts := t.sub, t.counts
 		t.mu.Unlock()
-		if sub.Valid() && sub.Busy() {
+		if sub.Valid() && sub.Busy() || counts.Valid() && counts.Busy() {
 			return true
 		}
 	}
@@ -387,9 +392,9 @@ func (t *gitTree) subscribe() {
 	label := "git: " + t.src.Root
 	t.sub = watch.Subscribe(m, t.src.Status(), treeNeed, label)
 	t.remote = watch.Subscribe(m, t.src.Remote(), treeNeed, label)
-	sub, h := t.sub, t.g.h
+	sub, status, h := t.sub, t.status, t.g.h
 	sub.OnChange(func() {
-		t.sync(sub)
+		t.sync(sub, status)
 		h.Redraw()
 	})
 	t.remote.OnChange(h.Redraw)
@@ -410,7 +415,7 @@ func (t *gitTree) unsubscribe() {
 }
 
 // sync hands status sub's latest reading, unless it has it, or a later one, already.
-func (t *gitTree) sync(sub watch.Sub[*gitx.State]) {
+func (t *gitTree) sync(sub watch.Sub[*gitx.State], status *gitx.Status) {
 	t.syncMu.Lock()
 	defer t.syncMu.Unlock()
 	st, at, ok := sub.Get()
@@ -428,7 +433,7 @@ func (t *gitTree) sync(sub watch.Sub[*gitx.State]) {
 	}
 	t.mu.Unlock()
 	if newer {
-		t.status.Set(st)
+		status.Set(st)
 	}
 }
 
@@ -509,7 +514,7 @@ func (t *gitTree) state() *gitx.State {
 	sub := t.sub
 	t.mu.Unlock()
 	if sub.Valid() {
-		t.sync(sub)
+		t.sync(sub, t.status)
 	}
 	return t.status.State()
 }

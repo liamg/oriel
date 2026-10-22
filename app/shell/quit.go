@@ -77,7 +77,7 @@ func (sh *shell) requestQuit() {
 		r.hidden = false
 		return
 	}
-	if !kit.HasSessions(sh.cfg.Registry) {
+	if !sh.holdsClose && !kit.HasSessions(sh.cfg.Registry) {
 		sh.closeWindow()
 		return
 	}
@@ -124,14 +124,27 @@ func (r *quitDrain) stoppingNow() []core.SessionID {
 }
 
 func (sh *shell) handOver(r *quitDrain) error {
-	w, err := kit.SessionHost(sh.cfg.Registry)
-	if err != nil {
-		return nil
-	}
 	wait := time.NewTimer(time.Until(r.deadline))
 	defer wait.Stop()
 	tick := kit.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
+	// A quit as the window opens waits for the sessions plugin to bring the host's calls.
+	w, err := kit.SessionHost(sh.cfg.Registry)
+	for err != nil && sh.holdsClose {
+		select {
+		case <-r.now:
+			return nil
+		case <-r.cancel:
+			return errQuitCancelled
+		case <-wait.C:
+			return nil
+		case <-tick.C:
+		}
+		w, err = kit.SessionHost(sh.cfg.Registry)
+	}
+	if err != nil {
+		return nil
+	}
 	if busy := r.poll(w, sh.store.State()); len(busy) == 0 && len(r.jobs) > 0 {
 		r.confirm.Store(true)
 		sh.poke()

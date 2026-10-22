@@ -106,27 +106,28 @@ clip 44,0 1556x974 r 0
     text "editor" @62,166.26901 #b3ab99 Inter 13
     text "files" @62,196.26901 #b3ab99 Inter 13
     text "git" @62,226.26901 #b3ab99 Inter 13
-    text "hud" @62,256.269 #b3ab99 Inter 13
-    text "keymap" @62,286.269 #b3ab99 Inter 13
-    text "lsp" @62,316.269 #b3ab99 Inter 13
-    text "markdown" @62,346.269 #b3ab99 Inter 13
-    text "mission" @62,376.269 #b3ab99 Inter 13
-    text "plugins" @62,406.269 #b3ab99 Inter 13
-    text "repos" @62,436.269 #b3ab99 Inter 13
-    text "review" @62,466.269 #b3ab99 Inter 13
-    text "sandbox" @62,496.269 #b3ab99 Inter 13
-    text "secrets" @62,526.26904 #b3ab99 Inter 13
-    text "sidebar" @62,556.26904 #b3ab99 Inter 13
-    text "stats" @62,586.26904 #b3ab99 Inter 13
-    text "terminal" @62,616.26904 #b3ab99 Inter 13
-    rect 52,627.54004 224x28 fill #1f1c0f radius 5
-    text "ui" @62,646.26904 #ece6d8 Inter 13
-    text "● 2" @248,645.1401 #ffd23f JetBrains Mono 10
-    text "updates" @62,676.26904 #b3ab99 Inter 13
-    text "usage" @62,706.26904 #b3ab99 Inter 13
-    text "voice" @62,736.26904 #b3ab99 Inter 13
-    text "whichkey" @62,766.26904 #b3ab99 Inter 13
-    text "● 1" @248,765.1401 #ffd23f JetBrains Mono 10
+    text "hooks" @62,256.269 #b3ab99 Inter 13
+    text "hud" @62,286.269 #b3ab99 Inter 13
+    text "keymap" @62,316.269 #b3ab99 Inter 13
+    text "lsp" @62,346.269 #b3ab99 Inter 13
+    text "markdown" @62,376.269 #b3ab99 Inter 13
+    text "mission" @62,406.269 #b3ab99 Inter 13
+    text "plugins" @62,436.269 #b3ab99 Inter 13
+    text "repos" @62,466.269 #b3ab99 Inter 13
+    text "review" @62,496.269 #b3ab99 Inter 13
+    text "sandbox" @62,526.26904 #b3ab99 Inter 13
+    text "secrets" @62,556.26904 #b3ab99 Inter 13
+    text "sidebar" @62,586.26904 #b3ab99 Inter 13
+    text "stats" @62,616.26904 #b3ab99 Inter 13
+    text "terminal" @62,646.26904 #b3ab99 Inter 13
+    rect 52,657.54004 224x28 fill #1f1c0f radius 5
+    text "ui" @62,676.26904 #ece6d8 Inter 13
+    text "● 2" @248,675.1401 #ffd23f JetBrains Mono 10
+    text "updates" @62,706.26904 #b3ab99 Inter 13
+    text "usage" @62,736.26904 #b3ab99 Inter 13
+    text "voice" @62,766.26904 #b3ab99 Inter 13
+    text "whichkey" @62,796.26904 #b3ab99 Inter 13
+    text "● 1" @248,795.1401 #ffd23f JetBrains Mono 10
   pop
   rect 284,53 1x891 fill #24221d
   clip 285,53 1315x891 r 0

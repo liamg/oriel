@@ -49,6 +49,18 @@ var MockupSize = render.Point{X: 1600, Y: 1000}
 // Timeout is how long Run, Press and Until wait.
 var Timeout = 15 * time.Second
 
+// HookBudget is the hooks.budget a test's app starts with: looser than the real one, so a hook slowed by the tests
+// running alongside isn't a warning in the frame. TestHookBudget holds the real one.
+const HookBudget = 10 * time.Millisecond
+
+// testRegistry is the registry a test's app starts with.
+func testRegistry() uireg.Registry {
+	r := uireg.New()
+	r.Option(registry.OptionSpec{Name: "hooks.budget", Type: registry.Duration, Default: HookBudget, Scopes: registry.ScopeUser,
+		Source: "builtin:apptest", Help: "How long a hook may take before it's a warning: hooks run on the hot path."})
+	return r
+}
+
 // InitLua is the init.lua a scene's config starts with: a keymap, a mode's key and a Permission hook.
 const InitLua = `local L = oriel
 L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
@@ -135,7 +147,7 @@ func New(t testing.TB, o Options) *Scene {
 	os.MkdirAll(conf, 0o755)
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644)
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
-	cfg := app.Config{Store: eventstore.New(), Registry: uireg.New(), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
+	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
 		Version: "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: OfflineNet(t), ImageNet: cmp.Or(o.ImageNet, OfflineNet(t)), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
 	if o.Config != nil {
@@ -699,9 +711,10 @@ func (s *Scene) WriteConfig(files map[string]string) {
 	}
 }
 
-// WaitGit waits for the git work running off the loop, as the GitTrees service says.
+// WaitGit waits for the git work running off the loop, as the GitTrees service says, running what it hands the loop.
 func (s *Scene) WaitGit() {
 	for kit.GitOf(s.Registry()).Busy() {
+		s.RunQueued()
 		time.Sleep(time.Millisecond)
 	}
 }
@@ -721,6 +734,7 @@ func (s *Scene) SettleGit() {
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		s.Frame()
+		s.RunQueued()
 		if !kit.GitOf(s.Registry()).Busy() && s.gitRead() {
 			s.Frame()
 			return

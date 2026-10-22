@@ -139,7 +139,7 @@ func (t *httpTransport) do(ctx context.Context, method string, body []byte) (*ht
 	}
 	wa := resp.Header.Get("WWW-Authenticate")
 	_ = resp.Body.Close()
-	if token, err = t.auth.Unauthorized(ctx, wa); err != nil {
+	if token, err = t.auth.Unauthorized(ctx, token, wa); err != nil {
 		return nil, fmt.Errorf("mcp: authorization: %w", err)
 	}
 	return t.doOnce(ctx, method, body, token)

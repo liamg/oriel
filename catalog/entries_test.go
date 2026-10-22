@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -88,5 +89,31 @@ func TestLockRoundTrip(t *testing.T) {
 	}
 	if _, err := LoadLock(path); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// Saving a lock nothing changed leaves the file as it is now, whoever wrote it since it was read.
+func TestLockUnchangedLeavesTheFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), LockFile)
+	for _, before := range []string{"", "[\"me/wip\"]\nsource = \"path:~/src/wip\"\n"} {
+		if before != "" {
+			if err := os.WriteFile(path, []byte(before), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		l, err := LoadLock(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		since := "[\"acme/hi\"]\nsource = \"path:~/src/hi\"\n"
+		if err := os.WriteFile(path, []byte(since), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := l.Save(); err != nil {
+			t.Fatal(err)
+		}
+		if b, _ := os.ReadFile(path); string(b) != since {
+			t.Errorf("read as %q, saved unchanged: the file is %q, want %q", before, b, since)
+		}
 	}
 }

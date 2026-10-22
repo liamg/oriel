@@ -12,7 +12,9 @@ import (
 // The Stats page's first load is skeleton charts, never a page of zeros, with Scanning in its
 // header; once the answer lands the charts draw.
 func TestStatsPageLoadsWithASkeleton(t *testing.T) {
-	s, _, x := statsScene(t)
+	s, r, x := statsScene(t)
+	release := r.Claude.HoldScans()
+	t.Cleanup(release)
 	s.Run("stats.open", nil)
 	s.Frame()
 	s.Now = s.Now.Add(time.Second)
@@ -24,6 +26,7 @@ func TestStatsPageLoadsWithASkeleton(t *testing.T) {
 	if text := s.Text(); strings.Contains(text, "$0.00") {
 		t.Errorf("the page drew zeros while loading:\n%s", text)
 	}
+	release()
 	settle(s, x)
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()

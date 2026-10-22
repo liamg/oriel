@@ -210,7 +210,9 @@ func TestManager(t *testing.T) {
 	if len(stderrFor) != 2 || stderrFor[0] != "fake "+filepath.Join(dir, "a") {
 		t.Errorf("stderr asked for %q", stderrFor)
 	}
-	if again, err := m.Open(ctx, filepath.Join(dir, "a", "2.go"), "go", snap("two")); again != a1 || err != nil || f.server(0).count("textDocument/didOpen") != 2 {
+	again, err := m.Open(ctx, filepath.Join(dir, "a", "2.go"), "go", snap("two"))
+	f.server(0).nth("textDocument/didOpen", 2)
+	if again != a1 || err != nil || f.server(0).count("textDocument/didOpen") != 2 {
 		t.Errorf("opening an open document again = %p, %v, %d opens", again, err, f.server(0).count("textDocument/didOpen"))
 	}
 	if c, ok := m.Client(filepath.Join(dir, "a", "2.go")); !ok || c != a1 {

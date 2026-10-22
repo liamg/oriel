@@ -37,6 +37,7 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 		size:   render.Point{X: o.Width, Y: o.Height},
 		events: make(chan render.Event, 64),
 		done:   make(chan struct{}),
+		held:   o.HoldClose,
 	}
 	if w.size == (render.Point{}) {
 		w.size = render.Point{X: 1280, Y: 800}

@@ -243,10 +243,13 @@ func (x *PRReview) draft(se core.SessionState) core.ReviewDraft {
 }
 
 // setDraft changes the session's review draft, and keeps it in the session off the loop; a later change's save wins.
-func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) {
+// The channel closes once the save is done.
+func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) <-chan struct{} {
+	done := make(chan struct{})
 	se, ok := x.h.Session(id)
 	if !ok {
-		return
+		close(done)
+		return done
 	}
 	d := x.draft(se.Snapshot()).Clone()
 	fn(&d)
@@ -255,11 +258,13 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) {
 	n := x.seq
 	w, err := kit.SessionHost(x.h)
 	if err != nil {
-		return
+		close(done)
+		return done
 	}
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
+		defer close(done)
 		x.mu.Lock()
 		defer x.mu.Unlock()
 		if x.saved[id] > n {
@@ -270,6 +275,7 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) {
 			x.h.Notify(core.Notice{ID: "review.pr.draft", Severity: core.SevError, Text: err.Error()})
 		}
 	}()
+	return done
 }
 
 func (x *PRReview) setPick(id core.SessionID, item string, fn func(p *core.ReviewPick)) {

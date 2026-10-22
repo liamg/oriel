@@ -24,9 +24,10 @@ import (
 type TokenSource interface {
 	// Token returns the current access token ("" if none yet).
 	Token(ctx context.Context) (string, error)
-	// Unauthorized is called with a 401's WWW-Authenticate header. It obtains
-	// a fresh token (by refresh or the full flow) and returns it.
-	Unauthorized(ctx context.Context, wwwAuthenticate string) (string, error)
+	// Unauthorized is called with the token a 401 rejected and its
+	// WWW-Authenticate header. It obtains a fresh token (by refresh or the
+	// full flow) and returns it.
+	Unauthorized(ctx context.Context, rejected, wwwAuthenticate string) (string, error)
 }
 
 // TokenStore persists an OAuth client registration and its tokens.
@@ -143,11 +144,16 @@ func (o *OAuth) Token(ctx context.Context) (string, error) {
 	return a.AccessToken, nil
 }
 
-// Unauthorized refreshes the token, or failing that runs the full flow.
-func (o *OAuth) Unauthorized(ctx context.Context, wwwAuthenticate string) (string, error) {
+// Unauthorized refreshes the token, or failing that runs the full flow. A
+// token newer than the one rejected (another request's refresh) is used as is.
+func (o *OAuth) Unauthorized(ctx context.Context, rejected, wwwAuthenticate string) (string, error) {
 	o.flow.Lock()
 	defer o.flow.Unlock()
-	if a, _ := o.load(); a.RefreshToken != "" && a.TokenEndpoint != "" {
+	a, _ := o.load()
+	if a.AccessToken != "" && a.AccessToken != rejected {
+		return a.AccessToken, nil
+	}
+	if a.RefreshToken != "" && a.TokenEndpoint != "" {
 		if na, err := o.refresh(ctx, a); err == nil {
 			return na.AccessToken, nil
 		}
