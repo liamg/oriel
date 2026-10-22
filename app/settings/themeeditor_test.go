@@ -68,6 +68,53 @@ func TestThemePickMode(t *testing.T) {
 	}
 }
 
+// The preview outlines and names the token under the pointer, a click picks that token, and the mark goes when
+// the pointer leaves.
+func TestThemePreviewHover(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.Run("theme.select", registry.Args{"name": "accent"})
+	s.Frame()
+	s.Frame()
+	preview := s.Node("Preview in oriel").Bounds
+	tag := func() *render.AccessNode {
+		var find func(n *render.AccessNode) *render.AccessNode
+		find = func(n *render.AccessNode) *render.AccessNode {
+			if n.Role == render.RoleStatus && n.Bounds.Min.Y >= preview.Min.Y-1 && n.Bounds.Min.X >= preview.Min.X && n.Bounds.Min.X < preview.Max.X {
+				return n
+			}
+			for _, k := range n.Children {
+				if f := find(k); f != nil {
+					return f
+				}
+			}
+			return nil
+		}
+		return find(s.Access())
+	}
+	move := func(p render.Point) {
+		s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+		s.Frame()
+		s.Frame()
+	}
+	at := render.Point{X: preview.Min.X + 200, Y: preview.Min.Y + 120}
+	move(at)
+	n := tag()
+	if n == nil || n.Name == "" {
+		t.Fatalf("nothing named under the pointer in the preview:\n%s", s.Text())
+	}
+	if _, ok := s.UI().Theme().Link(n.Name); !ok && !strings.HasPrefix(n.Name, "palette:") && !strings.HasPrefix(n.Name, "@") {
+		t.Errorf("the tag %q isn't a token", n.Name)
+	}
+	s.Click(at, 0)
+	if te := themeEditor(s); te.Picked() != n.Name {
+		t.Errorf("clicked under %q, picked %q", n.Name, te.Picked())
+	}
+	move(render.Point{X: 5, Y: preview.Min.Y + 5})
+	if n := tag(); n != nil {
+		t.Errorf("a tag outside the preview: %q", n.Name)
+	}
+}
+
 // Edits go into a local theme that extends the built-in one, as the smallest diff; undo and reset take them back.
 func TestThemeEditorWritesOverrides(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
