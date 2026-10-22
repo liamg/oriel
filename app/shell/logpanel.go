@@ -437,8 +437,10 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 		width = (width - 16) / 2.3
 	}
 	c.Row("detail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 86, T: 10, R: 12, B: 12}, Gap: 16}, func(c *ui.Ctx) {
-		c.Column("left", ui.Style{W: ui.Flex(1), Gap: 6, Clip: true}, func(c *ui.Ctx) {
-			widget.Wrap(c, "text", kit.ExpandTabs(r.text), width, kit.Mono(11.5, typeset.Normal, th.C(theme.Fg)))
+		c.Column("left", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
+			if text, font := kit.ExpandTabs(r.text), kit.Mono(11.5, typeset.Normal, th.C(theme.Fg)); p.cut(c, r, text, font.Font) {
+				widget.Wrap(c, "text", text, width, font)
+			}
 			switch {
 			case len(frames) > 0:
 				c.Text("head", "TRACEBACK", kit.Mono(9.5, typeset.SemiBold, th.C(theme.FgFaint)))
@@ -473,6 +475,20 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 			c.Column("source", ui.Style{W: ui.Flex(1.3)}, func(c *ui.Ctx) { src.Build(c, r.n) })
 		}
 	})
+}
+
+// cut says whether r's text doesn't fit on its folded row: the row less its edge, time, level, where, count, gaps
+// and padding.
+func (p *logPanel) cut(c *ui.Ctx, r logRow, text string, f typeset.FontSpec) bool {
+	if strings.Contains(text, "\n") {
+		return true
+	}
+	sh := c.Shaper()
+	room := cmp.Or(p.width, 900) - 2 - 44 - 230 - 4*12 - 12 - sh.Shape("00:00:00", kit.Mono(11, typeset.Normal, color.NRGBA{}).Font).Advance
+	if r.count > 1 {
+		room -= 12 + 12 + sh.Shape(fmt.Sprintf("×%d", r.count), kit.Mono(9.5, typeset.Normal, color.NRGBA{}).Font).Advance
+	}
+	return sh.Shape(text, f).Advance > room
 }
 
 func hasFileRef(s string) bool {

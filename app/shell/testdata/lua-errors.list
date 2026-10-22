@@ -269,28 +269,24 @@ clip 44,514 1356x360 r 0
       pop
       rect 1354,595.23 24x14.539978 fill #191815 radius 8
       text "×3" @1360,605.92 #7c7566 JetBrains Mono 9.5
-      clip 140,624 531.3044x133.90002 r 0
-        text "init.lua:7: attempt to index a non-table object(nil) with key 'match' ·" @140,635.73 #ece6d8 JetBrains Mono 11.5
-        text "Permission hook turned off after 3 errors" @140,653.91 #ece6d8 JetBrains Mono 11.5
-        text "TRACEBACK" @140,673.05 #7c7566 JetBrains Mono 9.5
-        rect 140,681.9 531.3044x19 fill #121210 radius 3
-        clip 146,684.14 180x14.52002 r 0
-          text "init.lua:7" @146,695.36 #ffd23f JetBrains Mono 11
-        pop
-        clip 338,684.14 327.30438x14.52002 r 0
-          text "in main chunk" @338,695.36 #b3ab99 JetBrains Mono 11
-        pop
-        clip 146,703.14 180x14.52002 r 0
-          text "oriel.on" @146,714.36 #ffd23f JetBrains Mono 11
-        pop
-        clip 338,703.14 327.30438x14.52002 r 0
-          text "dispatch · Permission" @338,714.36 #b3ab99 JetBrains Mono 11
-        pop
-        rect 140,731.9 89.046875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-        text "Open at line" @150,749.26526 #141006 Inter 12
-        rect 237.04688,731.9 95.640625x26 fill #191815 radius 6 stroke 1 #332f27
-        text "Turn back on" @247.04688,749.26526 #ece6d8 Inter 12
+      text "TRACEBACK" @140,633.69 #7c7566 JetBrains Mono 9.5
+      rect 140,642.54 531.3044x19 fill #121210 radius 3
+      clip 146,644.77997 180x14.52002 r 0
+        text "init.lua:7" @146,655.99994 #ffd23f JetBrains Mono 11
       pop
+      clip 338,644.77997 327.30438x14.52002 r 0
+        text "in main chunk" @338,655.99994 #b3ab99 JetBrains Mono 11
+      pop
+      clip 146,663.77997 180x14.52002 r 0
+        text "oriel.on" @146,674.99994 #ffd23f JetBrains Mono 11
+      pop
+      clip 338,663.77997 327.30438x14.52002 r 0
+        text "dispatch · Permission" @338,674.99994 #b3ab99 JetBrains Mono 11
+      pop
+      rect 140,692.54 89.046875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+      text "Open at line" @150,709.9052 #141006 Inter 12
+      rect 237.04688,692.54 95.640625x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Turn back on" @247.04688,709.9052 #ece6d8 Inter 12
       rect 687.3044,624 690.6956x120 fill #060606 radius 6
       clip 687.3044,624 690.6956x120 r 6
         text "~/.config/oriel/init.lua" @697.3044,639.78 #7c7566 JetBrains Mono 10.5
