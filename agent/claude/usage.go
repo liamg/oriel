@@ -63,7 +63,13 @@ var _ agent.UsageProbeFailed = (*ProbeError)(nil)
 type usageBook struct {
 	mu      sync.Mutex
 	last    core.ProviderUsage // the newest reading, a session's or a probe's
-	probing bool
+	probing *probeRun          // the probe running, nil when none is
+}
+
+// probeRun is a probe that callers arriving while it runs wait on: done closes once err is set.
+type probeRun struct {
+	done chan struct{}
+	err  error
 }
 
 // remember keeps a reading of the plan's windows for Usage, unless a newer one is kept.
@@ -75,27 +81,34 @@ func (b *usageBook) remember(u core.ProviderUsage) {
 	}
 }
 
-// readUsage probes /usage when claude is installed and no probe is running. Signed out, there's no reading and no error.
+// readUsage probes /usage when claude is installed, or waits for the probe already running. Signed out, there's no
+// reading and no error.
 func (p *Provider) readUsage(ctx context.Context) error {
 	if _, err := exec.LookPath(p.bin()); err != nil {
 		return nil
 	}
 	p.usage.mu.Lock()
-	if p.usage.probing {
+	if run := p.usage.probing; run != nil {
 		p.usage.mu.Unlock()
-		return nil
+		select {
+		case <-run.done:
+			return run.err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
-	p.usage.probing = true
+	run := &probeRun{done: make(chan struct{})}
+	p.usage.probing = run
 	p.usage.mu.Unlock()
-	defer func() {
-		p.usage.mu.Lock()
-		p.usage.probing = false
-		p.usage.mu.Unlock()
-	}()
 	_, err := p.probe(ctx)
 	if errors.As(err, new(agent.AuthExpired)) {
-		return nil
+		err = nil
 	}
+	p.usage.mu.Lock()
+	p.usage.probing = nil
+	p.usage.mu.Unlock()
+	run.err = err
+	close(run.done)
 	return err
 }
 
