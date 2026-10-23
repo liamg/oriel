@@ -41,6 +41,9 @@ type Fn struct {
 	Source string // where it was defined: "init.lua:14"
 }
 
+// ErrClosed is a call into a VM after Close: a callback that outlived its plugin or config.
+var ErrClosed = errors.New("the Lua state is closed")
+
 // Table is a Lua table with string keys, as Go sees it.
 type Table = map[string]any
 
@@ -68,6 +71,7 @@ type VM struct {
 	paths   []string
 	raised  raised                // the API function that raised the error being unwound
 	kept    map[string]lua.LValue // State's tables, by key
+	closed  bool
 }
 
 // raised is an oriel API function's error: its name, and the Go stack it came from.
@@ -139,8 +143,16 @@ func atEOF(msg, chunk string, src []byte) string {
 	return strings.Replace(msg, chunk+" at EOF", fmt.Sprintf("%s line:%d at EOF", chunk, n), 1)
 }
 
-// Close frees the state.
-func (vm *VM) Close() { vm.L.Close() }
+// Close frees the state, once a call running on another goroutine returns. Calls after it fail with ErrClosed.
+func (vm *VM) Close() {
+	if vm.owner.Load() != goid() {
+		defer vm.lock()()
+	}
+	if !vm.closed {
+		vm.closed = true
+		vm.L.Close()
+	}
+}
 
 // Interrupt stops whatever is running, with reason as its error.
 func (vm *VM) Interrupt(reason string) {
@@ -191,6 +203,9 @@ func goid() uint64 {
 // Load runs a chunk: a config file, a line typed at :lua.
 func (vm *VM) Load(c Chunk) error {
 	defer vm.lock()()
+	if vm.closed {
+		return ErrClosed
+	}
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
 		return &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
@@ -204,6 +219,9 @@ func (vm *VM) Load(c Chunk) error {
 // Eval runs a chunk and returns what it returns: the :lua REPL tries "return <line>" first.
 func (vm *VM) Eval(c Chunk) ([]any, error) {
 	defer vm.lock()()
+	if vm.closed {
+		return nil, ErrClosed
+	}
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
 		return nil, &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
@@ -230,6 +248,9 @@ func (vm *VM) Call(fn *Fn, args ...any) ([]any, error) {
 	nested := vm.owner.Load() == goid()
 	if !nested {
 		defer vm.lock()()
+	}
+	if vm.closed {
+		return nil, ErrClosed
 	}
 	start := time.Now()
 	call := func() error {

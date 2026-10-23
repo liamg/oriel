@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/testhook"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/script"
@@ -45,5 +46,28 @@ func TestWASMLoadIsWatchdogged(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("loading a module that never returns wasn't stopped")
+	}
+}
+
+type noticeHost struct {
+	plugin.Host
+	notices []core.Notice
+}
+
+func (h *noticeHost) Notify(n core.Notice) { h.notices = append(h.notices, n) }
+
+// A process's answer that comes after its plugin was unloaded is dropped, not called into the closed VM.
+func TestCallbackAfterClose(t *testing.T) {
+	vm := script.New()
+	fns, err := vm.Eval(script.Chunk{Name: "x", Source: []byte("return function() end")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := &noticeHost{}
+	a := &APIs{VM: vm, Host: h}
+	vm.Close()
+	a.later(fns[0].(*script.Fn), nil, "context canceled")
+	if len(h.notices) != 0 {
+		t.Errorf("notices %+v", h.notices)
 	}
 }

@@ -216,7 +216,7 @@ func (a *APIs) await(ctx context.Context, fn *script.Fn, args ...any) (any, erro
 // An error in it is shown, and fails the calls still awaiting the plugin: their answer would have come from it.
 func (a *APIs) later(fn *script.Fn, args ...any) {
 	_, err := a.VM.Call(fn, args...)
-	if err == nil {
+	if err == nil || errors.Is(err, script.ErrClosed) {
 		return
 	}
 	nt := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
