@@ -1,6 +1,7 @@
 package script
 
 import (
+	"errors"
 	"github.com/liamg/oriel/internal/testhook"
 	"strings"
 	"sync/atomic"
@@ -126,4 +127,29 @@ func TestCallFromAnotherGoroutineWaits(t *testing.T) {
 	if err := <-other; err != nil || !marked.Load() {
 		t.Errorf("waiting call: %v, ran %v", err, marked.Load())
 	}
+}
+
+// A callback held past its VM's close, as a process's late answer is, fails with ErrClosed.
+func TestCallAfterClose(t *testing.T) {
+	vm := New()
+	var reported *Error
+	vm.OnError = func(e *Error) { reported = e }
+	fns, err := vm.Eval(Chunk{Name: "x", Source: []byte("return function() return 1 end")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vm.Close()
+	if _, err := vm.Call(fns[0].(*Fn)); !errors.Is(err, ErrClosed) {
+		t.Errorf("a call after close: %v", err)
+	}
+	if _, err := vm.Eval(Chunk{Name: "x", Source: []byte("return 1")}); !errors.Is(err, ErrClosed) {
+		t.Errorf("an eval after close: %v", err)
+	}
+	if err := vm.Load(Chunk{Name: "x", Source: []byte("x = 1")}); !errors.Is(err, ErrClosed) {
+		t.Errorf("a load after close: %v", err)
+	}
+	if reported != nil {
+		t.Errorf("a call after close was reported: %v", reported)
+	}
+	vm.Close()
 }
