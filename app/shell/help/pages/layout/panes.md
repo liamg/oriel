@@ -19,11 +19,12 @@ Drag the line between two panes to resize them. `⌃W =` evens them out.
 
 ## Drag and drop {#drag-and-drop}
 
-Drag a tab onto another pane's edge to split it, onto its middle to join its tabs, or onto a window edge to dock it.
+Drag a tab onto another pane's edge to split it, onto its middle or its tab strip to join its tabs, or onto a window
+edge to dock it. A floating pane's tab strip takes the tab too.
 
 While you drag, the target lights up and a label says what letting go does: *Split right*, *Tab with main.go*,
-*Dock bottom*. Joining a pane's tabs, or a dock that already has views, lights its tab strip and shows the new tab's
-slot at the end. Over a floating
-pane the drop floats, shown as a dashed outline.
+*Dock bottom*. Joining a pane's tabs, or a dock that already has views, outlines its tab strip, shows the new tab's
+slot at the end and lights the body where its content will show. Over the rest of a floating pane the drop floats,
+shown as a dashed outline.
 
 {{keys "layout.*"}}
