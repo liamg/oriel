@@ -562,7 +562,8 @@ const (
 	ZoneBottom Zone = "bottom"
 )
 
-// Target is where a dragged view lands: a zone of a main leaf (by a view in it), a dock, or a float.
+// Target is where a dragged view lands: a zone of a leaf (by a view in it; only a main leaf splits), a dock, or a
+// float.
 type Target struct {
 	Beside *ViewRef     `json:"beside,omitempty"` // a view in the leaf dropped on; nil drops on main's first leaf
 	Zone   Zone         `json:"zone,omitempty"`
@@ -585,6 +586,13 @@ func (r *Root) Drop(v ViewRef, t Target) error {
 	case t.Float != nil:
 		return r.Move(v, Floating, Opts{Rect: *t.Float})
 	case t.Zone == ZoneCenter || t.Zone == "":
+		if w := r.besideOff(t.Beside); w != nil {
+			r.detach(v)
+			w.Leaf.add(v)
+			r.Focus = &v
+			r.shown(v)
+			return nil
+		}
 		return r.Move(v, Tab, Opts{Beside: t.Beside})
 	}
 	side := map[Zone]Side{ZoneLeft: SideLeft, ZoneRight: SideRight, ZoneTop: SideUp, ZoneBottom: SideDown}[t.Zone]
@@ -601,6 +609,17 @@ func (r *Root) Drop(v ViewRef, t Target) error {
 		return nil
 	}
 	return r.Move(v, Split, Opts{Side: side, Beside: t.Beside})
+}
+
+// besideOff is where beside is when that's a float or the drop-down: a drop on its middle joins its tabs there.
+func (r *Root) besideOff(beside *ViewRef) *Where {
+	if beside == nil {
+		return nil
+	}
+	if w := r.Find(*beside); w != nil && (w.Placement == Floating || w.Placement == DropDown) {
+		return w
+	}
+	return nil
 }
 
 // dropsInPlace says dropping v at t would leave it where it is: on its own dock, or on its own leaf's middle.

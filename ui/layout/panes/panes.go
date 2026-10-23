@@ -54,13 +54,14 @@ type drag struct {
 	spot   spot
 }
 
-// spot is where a drag would drop and how it's shown: the rect lit, the slot a new tab would take, and the area
-// the label names it in.
+// spot is where a drag would drop and how it's shown: the rect lit, the slot a new tab would take, the body its
+// content would fill, and the area the label names it in.
 type spot struct {
 	ok     bool
 	target layout.Target
 	lit    render.Rect
 	slot   render.Rect
+	body   render.Rect
 	area   render.Rect
 	label  string
 }
@@ -593,8 +594,9 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 		s := spot{ok: true, target: layout.Target{Dock: e}, lit: rc, area: rc, label: "Dock " + string(e)}
 		// An open dock with tabs takes the view as one more tab: show it as one.
 		if d := r.Docks[e]; d.Open && len(d.Leaf.Tabs) > 0 && (st.drag == nil || !slices.Contains(d.Leaf.Tabs, st.drag.view)) {
-			if strip, slot, ok := tabSlot(c, st, d.Leaf); ok {
-				s.lit, s.slot, s.label = strip, slot, "Tab with "+tabName(st, d.Leaf.Tabs[d.Leaf.Active])
+			if t, ok := tabSpot(c, st, d.Leaf, rc); ok {
+				t.target, t.label = s.target, "Tab with "+tabName(st, d.Leaf.Tabs[d.Leaf.Active])
+				return t
 			}
 		}
 		return s
@@ -616,9 +618,26 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 		f := render.XYWH(p.X-200, p.Y-15, 640, 400)
 		return spot{ok: true, target: layout.Target{Float: &f}, lit: f, area: f, label: "Float"}
 	}
+	// joins is a drop on l's tab strip: one more tab there.
+	joins := func(l *layout.Node, rc render.Rect) (spot, bool) {
+		if len(l.Tabs) == 0 {
+			return spot{}, false
+		}
+		strip, ok := c.Rect(st.strips[l].id)
+		if !ok || !in(p, strip) {
+			return spot{}, false
+		}
+		s, ok := tabSpot(c, st, l, rc)
+		b := l.Tabs[l.Active]
+		s.target, s.label = layout.Target{Beside: &b, Zone: layout.ZoneCenter}, "Tab with "+tabName(st, b)
+		return s, ok
+	}
 	// A float or the drop-down sits over main.
 	for l, id := range st.leaves {
 		if rc, ok := c.Rect(id); ok && in(p, rc) && !r.InMain(l) {
+			if s, ok := joins(l, rc); ok {
+				return s
+			}
 			return float()
 		}
 	}
@@ -626,6 +645,9 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 		rc, ok := c.Rect(id)
 		if !ok || !in(p, rc) {
 			continue
+		}
+		if s, ok := joins(l, rc); ok {
+			return s
 		}
 		var beside *layout.ViewRef
 		if len(l.Tabs) > 0 {
@@ -648,16 +670,27 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 			return split(layout.ZoneBottom, "Split below", render.XYWH(rc.Min.X, rc.Min.Y+h/2, w, h/2))
 		}
 		s := split(layout.ZoneCenter, "Tab", rc)
-		s.area = rc
 		if beside != nil {
 			s.label = "Tab with " + tabName(st, *beside)
 		}
-		if strip, slot, ok := tabSlot(c, st, l); ok {
-			s.lit, s.slot = strip, slot
+		if t, ok := tabSpot(c, st, l, rc); ok {
+			t.target, t.label = s.target, s.label
+			return t
 		}
 		return s
 	}
 	return float()
+}
+
+// tabSpot shows a drop joining l's tabs, l drawn at rc: its strip outlined with the new tab's slot on the end, and
+// the body under it lit where the tab's content would show.
+func tabSpot(c *ui.Ctx, st *viewState, l *layout.Node, rc render.Rect) (spot, bool) {
+	strip, slot, ok := tabSlot(c, st, l)
+	if !ok {
+		return spot{}, false
+	}
+	body := render.Rect{Min: render.Point{X: rc.Min.X, Y: strip.Max.Y + 1}, Max: rc.Max}
+	return spot{ok: true, lit: strip, slot: slot, body: body, area: body}, true
 }
 
 // tabSlot is l's tab strip and the slot on the end of it a new tab would take.
@@ -738,6 +771,10 @@ func indicator(c *ui.Ctx, st *viewState, d *drag) {
 		}
 		c.Box("drop", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Fill: fill, Stroke: edge, Border: 1.5, Radius: 6,
 			Float: &ui.Float{Point: &at}, Help: HelpDrop}, nil)
+	}
+	if b := s.body; b != (render.Rect{}) {
+		c.Box("body", ui.Style{W: ui.Px(b.Dx()), H: ui.Px(b.Dy()), Z: ui.LayerDrag, Fill: th.C(tDrop), Stroke: theme.WithAlpha(edge, .5),
+			Border: 1, Radius: 6, Float: &ui.Float{Point: &b.Min}}, nil)
 	}
 	font := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(tTabFgOn)}
 	name := strings.TrimSpace(tabName(st, d.view))

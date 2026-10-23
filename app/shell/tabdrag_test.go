@@ -116,6 +116,13 @@ func TestTabDragKeepsTheView(t *testing.T) {
 		{"the console split beside it, then a.go clicked", []func(*apptest.Scene){
 			dragTab("Agent", mainAt(.9, .5)), func(s *apptest.Scene) { s.Click(tabPoint(s, "a.go"), 0); s.Frames(2) }},
 			"leaf [*agent.console]"},
+		{"split right, then onto the other's tab strip", []func(*apptest.Scene){
+			dragTab("a.go", mainAt(.9, .5)), dragTab("a.go", func(s *apptest.Scene) render.Point { return tabPoint(s, "b.go") })},
+			"leaf [editor#2 *editor#1]"},
+		{"onto a float's tab strip", []func(*apptest.Scene){
+			dragTab("b.go", func(s *apptest.Scene) render.Point { return render.Point{X: 600, Y: 10} }),
+			dragTab("a.go", func(s *apptest.Scene) render.Point { return tabPoint(s, "b.go") })},
+			"[editor#2 *editor#1]\n"},
 		{"onto its own leaf's middle: stays", []func(*apptest.Scene){dragTab("a.go", mainAt(.5, .5))}, "leaf [*editor#1 editor#2]"},
 	}
 	for _, f := range flows {
@@ -156,10 +163,10 @@ func TestKeyMovesKeepTheKeys(t *testing.T) {
 	}
 }
 
-// Held over a dock with views in it, a tab shows as one more tab there, not as the dock taken over.
-func TestTabHeldOverADockShowsAsATab(t *testing.T) {
-	s := tabDragScene(t)
-	from, to := tabPoint(s, "a.go"), centreOf("Bottom dock")(s)
+// holdTab presses name's tab and holds it over the point at gives, without letting go.
+func holdTab(s *apptest.Scene, name string, at func(s *apptest.Scene) render.Point) {
+	s.T.Helper()
+	from, to := tabPoint(s, name), at(s)
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: from})
 	s.Frame()
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: from, Buttons: render.ButtonPrimary})
@@ -168,6 +175,24 @@ func TestTabHeldOverADockShowsAsATab(t *testing.T) {
 		s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
 		s.Frame()
 	}
+}
+
+// Held over another pane's tab strip, a tab shows as one more tab there, not as a split.
+func TestTabHeldOverATabStripShowsAsATab(t *testing.T) {
+	s := tabDragScene(t)
+	s.Run("editor.open", registry.Args{"path": "a.go"})
+	s.Frames(2)
+	dragTab("a.go", mainAt(.9, .5))(s)
+	holdTab(s, "a.go", func(s *apptest.Scene) render.Point { return tabPoint(s, "b.go") })
+	if text := s.Text(); !strings.Contains(text, "Tab with b.go") || strings.Contains(text, "Split") {
+		t.Errorf("the drop isn't shown as a tab:\n%s", text)
+	}
+}
+
+// Held over a dock with views in it, a tab shows as one more tab there, not as the dock taken over.
+func TestTabHeldOverADockShowsAsATab(t *testing.T) {
+	s := tabDragScene(t)
+	holdTab(s, "a.go", centreOf("Bottom dock"))
 	if text := s.Text(); !strings.Contains(text, "Tab with Agent") || strings.Contains(text, "Dock bottom") {
 		t.Errorf("the drop isn't shown as a tab:\n%s", text)
 	}
