@@ -202,11 +202,7 @@ func (x *Terminals) Deactivate(ctx context.Context) error {
 		if snap, err := t.emu.Snapshot(); err == nil {
 			x.saved[id] = snap
 		}
-		t.src.Close()
-		if p, ok := t.src.(*pty.PTY); ok && p.Cmd().Process != nil {
-			p.Cmd().Process.Kill()
-		}
-		t.emu.Close()
+		t.stop()
 	}
 	x.storeSaved()
 	x.busy.Wait()
@@ -412,11 +408,24 @@ func (x *Terminals) start(a registry.Args, sb *sandbox.Command) (string, error) 
 	}
 	t.src = src
 	x.mu.Lock()
+	before := x.terms[id]
 	x.terms[id] = t
 	x.mu.Unlock()
+	if before != nil {
+		before.stop()
+	}
 	x.busy.Add(1)
 	go x.read(t)
 	return id, nil
+}
+
+// stop ends t's source, and its program if it started one, so its reader returns.
+func (t *terminal) stop() {
+	t.src.Close()
+	if p, ok := t.src.(*pty.PTY); ok && p.Cmd().Process != nil {
+		p.Cmd().Process.Kill()
+	}
+	t.emu.Close()
 }
 
 // read feeds the program's output to the VT until it exits.
