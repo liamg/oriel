@@ -562,7 +562,6 @@ func (s *start) recent(c *ui.Ctx, n int, r startRow) bool {
 	if on {
 		fill = th.C(tStartRecentOn)
 	}
-	at := kit.Ago(time.Now(), r.recent.At)
 	in := widget.Clickable(c, fmt.Sprint("dir", n), ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12, Cross: ui.Center, Fill: fill,
 		Radius: 8, NoHover: true, Label: filepath.Base(r.dir), Selected: on, Help: "shell/start"}, func(c *ui.Ctx) {
 		git := r.recent.git
@@ -584,7 +583,7 @@ func (s *start) recent(c *ui.Ctx, n int, r startRow) bool {
 			c.Text("path", sub, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgFaint)})
 		})
 		if !widget.PointerIn(c) {
-			c.Text("at", at, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgGhost)})
+			widget.Ago(c, "at", r.recent.At, widget.AgoOpts{Text: ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgGhost)}, Now: time.Now()})
 		} else if widget.IconButton(c, "forget", "✕", widget.IconButtonOpts{Label: "Forget " + filepath.Base(r.dir), Help: "shell/start"}) {
 			r.forget()
 		}
@@ -622,7 +621,7 @@ func (s *start) recentSession(c *ui.Ctx, n int, r startRow) bool {
 			c.Text("path", sessionMeta(*se), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgFaint)})
 		})
 		if !se.Created.IsZero() {
-			c.Text("at", kit.Ago(c.Now(), se.Created), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgGhost)})
+			widget.Ago(c, "at", se.Created, widget.AgoOpts{Text: ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgGhost)}})
 		}
 	})
 	s.hover(c, n, in)

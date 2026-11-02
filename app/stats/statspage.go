@@ -122,11 +122,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 		case meta.state.Phase == widget.Pending:
 			widget.Busy(c, "scanned", meta.state, widget.BusyOpts{Label: "Scanning", Size: 11, Help: "agent/stats#page"})
 		case !meta.at.IsZero():
-			read := "scanned " + kit.Ago(x.Now(), meta.at) + " ago"
-			if kit.Ago(x.Now(), meta.at) == "now" {
-				read = "scanned just now"
-			}
-			c.Text("scanned", read, kit.MonoFont(11, th.C(theme.FgFaint)))
+			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.Now()})
 		}
 		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
 			x.run("stats.session", registry.Args{"id": one[0]})
@@ -634,7 +630,9 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 			kit.TextCell(c, 2, cols[2].W, fmt.Sprint(days), muted)
 			kit.TextCell(c, 3, cols[3].W, kit.Count(g.Requests), muted)
 			kit.TextCell(c, 4, cols[4].W, kit.Money(g.Cost), fg)
-			kit.TextCell(c, 5, cols[5].W, x.lastActive(g), muted)
+			kit.Cell(c, 5, cols[5].W, false, func(c *ui.Ctx) {
+				widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.Now()})
+			})
 			return
 		}
 		kit.TextCell(c, 1, cols[1].W, fmt.Sprint(g.Sessions), muted)
@@ -646,7 +644,9 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 			share = g.Cost / r.Totals.Cost
 		}
 		kit.Cell(c, 5, cols[5].W, true, func(c *ui.Ctx) { shareBar(c, "share", share, tone, 90, fmt.Sprintf("%.1f%%", share*100)) })
-		kit.TextCell(c, 6, cols[6].W, x.lastActive(g), muted)
+		kit.Cell(c, 6, cols[6].W, false, func(c *ui.Ctx) {
+			widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.Now()})
+		})
 		kit.Cell(c, 7, cols[7].W, false, func(c *ui.Ctx) {
 			widget.Chart(c, "spark", []widget.ChartSeries{{Name: g.Label, Values: g.Series, Tone: tone}}, widget.ChartOpts{Kind: widget.ChartSpark,
 				Width: ui.Px(120), Highlight: -1, Label: g.Label + " by day", Help: "agent/stats#table"})
@@ -660,16 +660,6 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 		x.sel = i
 		x.drill(g)
 	}
-}
-
-func (x *Plugin) lastActive(g stats.Group) string {
-	if g.Last.IsZero() {
-		return ""
-	}
-	if a := kit.Ago(x.Now(), g.Last); a != "now" {
-		return a + " ago"
-	}
-	return "now"
 }
 
 // tokensByKind is the tokens and their cost by kind, with a strip of the cost.

@@ -90,7 +90,7 @@ clip 0,38 223x936 r 0
   path 6 segments stroke 1.25 #7c7566
   text "Requests" @33,292.30524 #b3ab99 Inter 12
   rect 199.59375,280.94 13.40625x14 fill #ff9b45 radius 7
-  text "3" @203.59375,291.18 #141006 JetBrains Mono 9
+  text "1" @203.59375,291.18 #141006 JetBrains Mono 9
   rect 0,299.44 223x23 fill #1f1c0f
   rect 0,299.44 2x23 fill #ffd23f
   path 6 segments stroke 1.25 #ffd23f

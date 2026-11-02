@@ -17,6 +17,9 @@ import (
 // DoubleClick is how close together clicks come to count as a double (or triple) click.
 const DoubleClick = 400 * time.Millisecond
 
+// clickSlop is how far the pointer may drift between the presses of a double or triple click.
+const clickSlop = 4
+
 type Interaction struct {
 	Hovered bool // the pointer is over it, and it's the topmost interactive node there
 	Inside  bool // the pointer is over it or over something interactive inside it: a row with a button in it
@@ -25,16 +28,18 @@ type Interaction struct {
 	Clicked bool // pressed and released on it since the last frame
 	// DoubleClicked is a click that came within DoubleClick of the one before it, on the same node.
 	DoubleClicked bool
-	Focused       bool
-	FocusVisible  bool // focused from the keyboard, so it draws a focus ring
-	Disabled      bool
-	Keys          []render.KeyEvent // keys typed at it since the last frame, while focused
-	Context       *render.Point     // where it was right-clicked since the last frame
-	Scroll        render.Point      // wheel movement over it since the last frame, for a box with Wheel
-	Mods          render.Mods       // the modifiers held at its last press
-	Dropped       *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
-	DragOver      bool              // a drag of a kind it takes is over it now
-	Access        []AccessAction    // what assistive technology asked of it since the last frame, of its Style.Actions
+	// Presses counts its last press and those quickly before it in the same place: 2 for a double click, 3 for a triple.
+	Presses      int
+	Focused      bool
+	FocusVisible bool // focused from the keyboard, so it draws a focus ring
+	Disabled     bool
+	Keys         []render.KeyEvent // keys typed at it since the last frame, while focused
+	Context      *render.Point     // where it was right-clicked since the last frame
+	Scroll       render.Point      // wheel movement over it since the last frame, for a box with Wheel
+	Mods         render.Mods       // the modifiers held at its last press
+	Dropped      *DragData         // a drag let go over it since the last frame, of a kind it takes (Style.Drop)
+	DragOver     bool              // a drag of a kind it takes is over it now
+	Access       []AccessAction    // what assistive technology asked of it since the last frame, of its Style.Actions
 
 	pos render.Point
 	u   *UI
@@ -90,38 +95,44 @@ func defaultOptions(text TextStyle) Options {
 }
 
 type input struct {
-	pos     render.Point
-	inside  bool
-	hot     ID
-	hotAt   time.Time
-	active  ID // pressed
-	focus   ID
-	visible bool // focus came from the keyboard
-	clicks  map[ID]bool
-	doubles map[ID]bool // the clicks in clicks that complete a double-click
-	lastID  ID          // the last click, for a double-click
-	lastAt  time.Time
-	keys    map[ID][]render.KeyEvent
-	context map[ID]render.Point
-	claimed map[ID]bool
-	wheel   map[ID]render.Point
-	mods    render.Mods
-	help    string // a help page asked for since the last frame
-	dnd     *dragging
-	dropped map[ID]DragData
-	access  map[ID][]AccessAction    // UI.Act's actions for widgets, by node
-	passed  map[ID][]render.KeyEvent // keys a node was given and didn't take, by that node
-	ask     focusAsk                 // Ctx.Focus's or Ctx.FocusInto's, this frame
-	request focusAsk                 // Ctx.RequestFocus's, until its target is built or the user moves on
-	touched int                      // presses and keys so far: a request asked before the latest is stale
-	lastText time.Time               // when a key was last typed into a text field
-	trail   []ID                     // what held focus before, latest last: focus goes back there when an overlay closes
-	settled ID                       // focus as the last frame left it
-	blurred ID                       // what Ctx.Blur took focus from, this frame
-	bar     *barDrag                 // a scrollbar thumb being dragged
-	held    render.Mods              // the modifier keys down
-	heldAt  time.Time                // when the set held last changed
-	chorded bool                     // a key or button went down while they were held
+	pos      render.Point
+	inside   bool
+	hot      ID
+	hotAt    time.Time
+	tip      ID // the node whose tooltip is under the pointer
+	tipAt    time.Time
+	active   ID // pressed
+	focus    ID
+	visible  bool // focus came from the keyboard
+	clicks   map[ID]bool
+	doubles  map[ID]bool // the clicks in clicks that complete a double-click
+	lastID   ID          // the last click, for a double-click
+	lastAt   time.Time
+	presses  int // the last press, and those quickly before it in the same place on the same node
+	pressID  ID
+	pressAt  time.Time
+	pressPt  render.Point
+	keys     map[ID][]render.KeyEvent
+	context  map[ID]render.Point
+	claimed  map[ID]bool
+	wheel    map[ID]render.Point
+	mods     render.Mods
+	help     string // a help page asked for since the last frame
+	dnd      *dragging
+	dropped  map[ID]DragData
+	access   map[ID][]AccessAction    // UI.Act's actions for widgets, by node
+	passed   map[ID][]render.KeyEvent // keys a node was given and didn't take, by that node
+	ask      focusAsk                 // Ctx.Focus's or Ctx.FocusInto's, this frame
+	request  focusAsk                 // Ctx.RequestFocus's, until its target is built or the user moves on
+	touched  int                      // presses and keys so far: a request asked before the latest is stale
+	lastText time.Time                // when a key was last typed into a text field
+	trail    []ID                     // what held focus before, latest last: focus goes back there when an overlay closes
+	settled  ID                       // focus as the last frame left it
+	blurred  ID                       // what Ctx.Blur took focus from, this frame
+	bar      *barDrag                 // a scrollbar thumb being dragged
+	held     render.Mods              // the modifier keys down
+	heldAt   time.Time                // when the set held last changed
+	chorded  bool                     // a key or button went down while they were held
 }
 
 type focusAsk struct {
@@ -340,12 +351,12 @@ func (in *input) pending() bool {
 // hovered, Interaction.Pointer, the regions it tested) doesn't need one.
 func (u *UI) Pointer(ev render.PointerEvent) bool {
 	in := &u.in
-	from, inside0, hot := in.pos, in.inside, in.hot
+	from, inside0, hot, tip := in.pos, in.inside, in.hot, in.tip
 	u.pointer(ev)
 	if ev.Kind != render.PointerMove || ev.Buttons != 0 || in.active != 0 || in.bar != nil || in.dnd != nil {
 		return true
 	}
-	if u.tracked || in.hot != hot || in.inside != inside0 {
+	if u.tracked || in.hot != hot || in.tip != tip || in.inside != inside0 {
 		return true
 	}
 	for _, r := range u.regions {
@@ -362,6 +373,7 @@ func (u *UI) pointer(ev render.PointerEvent) {
 	case render.PointerLeave:
 		in.inside = false
 		u.setHot(0)
+		u.setTip(0)
 		return
 	case render.PointerScroll:
 		in.pos, in.inside = ev.Pos, true
@@ -381,6 +393,7 @@ func (u *UI) pointer(ev render.PointerEvent) {
 		return
 	}
 	u.setHot(u.topInteractive(ev.Pos))
+	u.setTip(u.topTip(ev.Pos))
 	u.dragPointer(ev)
 	switch ev.Kind {
 	case render.PointerMove:
@@ -397,6 +410,7 @@ func (u *UI) pointer(ev render.PointerEvent) {
 			return
 		}
 		u.Chord()
+		u.countPress(ev.Pos)
 		u.selPress(ev)
 		in.active, in.mods = in.hot, ev.Mods
 		// A press focuses the nearest focusable node at or above what's pressed, or nothing.
@@ -446,6 +460,29 @@ func (u *UI) setHot(id ID) {
 	}
 }
 
+func (u *UI) setTip(id ID) {
+	if id != u.in.tip {
+		u.in.tip, u.in.tipAt = id, u.now()
+	}
+}
+
+// topTip is the topmost node at p with a tooltip, down to the topmost interactive one: text with a tooltip in a
+// clickable row shows it, and the row still takes the click.
+func (u *UI) topTip(p render.Point) ID {
+	for _, id := range u.Hit(p) {
+		f := u.flags[id]
+		switch {
+		case f.disabled:
+			return 0
+		case f.tooltip != "":
+			return id
+		case f.interactive:
+			return 0
+		}
+	}
+	return 0
+}
+
 // topInteractive is the topmost interactive, enabled node at p in the latest frame.
 func (u *UI) topInteractive(p render.Point) ID {
 	for _, id := range u.Hit(p) {
@@ -486,6 +523,26 @@ func (u *UI) scrollAt(p render.Point, d render.Point) {
 	}
 }
 
+// countPress counts a primary press at p into the run of quick presses in one place on one node.
+func (u *UI) countPress(p render.Point) {
+	in := &u.in
+	now := u.now()
+	d := render.Point{X: p.X - in.pressPt.X, Y: p.Y - in.pressPt.Y}
+	if in.presses > 0 && in.pressID == in.hot && now.Sub(in.pressAt) < DoubleClick && d.X*d.X+d.Y*d.Y <= clickSlop*clickSlop {
+		in.presses++
+	} else {
+		in.presses = 1
+	}
+	in.pressID, in.pressAt, in.pressPt = in.hot, now, p
+}
+
+func (in *input) pressCount(id ID) int {
+	if id == 0 || in.pressID != id {
+		return 0
+	}
+	return in.presses
+}
+
 // Interaction reports id's state.
 func (u *UI) Interaction(id ID) Interaction {
 	f := u.flags[id]
@@ -500,6 +557,7 @@ func (u *UI) Interaction(id ID) Interaction {
 		Held:          in.active == id && id != 0,
 		Clicked:       in.clicks[id],
 		DoubleClicked: in.doubles[id],
+		Presses:       in.pressCount(id),
 		Focused:       in.focus == id && id != 0,
 		FocusVisible:  in.focus == id && in.visible && id != 0,
 		Keys:          in.keys[id],

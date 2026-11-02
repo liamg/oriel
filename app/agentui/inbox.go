@@ -314,7 +314,8 @@ func (x *Inbox) waitingCount() int {
 // overlay is the banner cards at the top and the stack at the bottom right.
 func (x *Inbox) overlay(c *ui.Ctx) {
 	all := slices.DeleteFunc(x.stacked(), func(r *inboxRow) bool {
-		if !r.shown.IsZero() {
+		if !r.shown.IsZero() || r.card.Dialog { // a dialog answers what was just done: it shows at once
+			r.shown = cmp.Or(r.shown, c.Now())
 			return false
 		}
 		if last := c.LastTyped(); !last.IsZero() && c.Now().Sub(last) < typingPause {
@@ -328,9 +329,11 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	var banner, stack []*inboxRow
+	var banner, stack, dialog []*inboxRow
 	for _, r := range all {
-		if r.card.Banner || r.card.Top {
+		if r.card.Dialog {
+			dialog = append(dialog, r)
+		} else if r.card.Banner || r.card.Top {
 			banner = append(banner, r)
 		} else {
 			stack = append(stack, r)
@@ -344,6 +347,9 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 				x.card(c, r, true)
 			}
 		})
+	}
+	if len(dialog) > 0 {
+		x.dialog(c, dialog[0])
 	}
 	if len(stack) == 0 {
 		return
@@ -375,6 +381,16 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 			})
 		}
 	})
+}
+
+// dialog draws a Dialog card in the middle of the window; closing it dismisses it.
+func (x *Inbox) dialog(c *ui.Ctx, r *inboxRow) {
+	k := r.card.Key()
+	if widget.Dialog(c, "dialog", widget.DialogOpts{Label: cmp.Or(r.card.Kicker, r.card.Title), Help: inboxHelp + "#dialogs"}, func(c *ui.Ctx) {
+		x.card(c, r, true)
+	}) {
+		x.dismiss(k)
+	}
 }
 
 // card draws a row's card: stacked, with its ✕; or in the panel.
@@ -612,7 +628,7 @@ func (x *Inbox) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
 				c.Text("sub", r.card.Sub, kit.MonoFont(10, sub))
 			}
 		})
-		c.Text("when", kit.Ago(now, r.when()), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5}, Color: th.C(theme.FgGhost)})
+		widget.Ago(c, "when", r.when(), widget.AgoOpts{Text: ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5}, Color: th.C(theme.FgGhost)}})
 	}).Clicked
 }
 

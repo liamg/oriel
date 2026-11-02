@@ -281,19 +281,23 @@ clip 170,105 1260x790 r 10
   rect 1116,204.54 298x52.32451 fill #0c0c0b radius 8
   clip 1116,204.54 298x52.32451 r 8
     text "Round minor units half-even, per currency…" @1128,226.64937 #ece6d8 Inter 12.5
-    text "plan · pricing · 2h" @1128,243.8645 #7c7566 JetBrains Mono 10
+    text "plan" @1128,243.8645 #7c7566 JetBrains Mono 10
+    text " · pricing" @1152,243.8645 #7c7566 JetBrains Mono 10
+    text " · 2h" @1212,243.8645 #7c7566 JetBrains Mono 10
   pop
   rect 1116,204.54 298x52.32451 radius 8 stroke 1 #24221d
   rect 1116,264.8645 298x52.324524 fill #0c0c0b radius 8
   clip 1116,264.8645 298x52.324524 r 8
     text "Sweep stale deps, keep major versions" @1128,286.97388 #ece6d8 Inter 12.5
-    text "job · 1d" @1128,304.18903 #7c7566 JetBrains Mono 10
+    text "job" @1128,304.18903 #7c7566 JetBrains Mono 10
+    text " · 1d" @1146,304.18903 #7c7566 JetBrains Mono 10
   pop
   rect 1116,264.8645 298x52.324524 radius 8 stroke 1 #24221d
   rect 1116,325.18903 298x52.324524 fill #0c0c0b radius 8
   clip 1116,325.18903 298x52.324524 r 8
     text "Show me how auth works end to end" @1128,347.2984 #ece6d8 Inter 12.5
-    text "review · 2d" @1128,364.51355 #7c7566 JetBrains Mono 10
+    text "review" @1128,364.51355 #7c7566 JetBrains Mono 10
+    text " · 2d" @1164,364.51355 #7c7566 JetBrains Mono 10
   pop
   rect 1116,325.18903 298x52.324524 radius 8 stroke 1 #24221d
   rect 1116,704.7 298x113.29999 radius 8 stroke 1 #24221d

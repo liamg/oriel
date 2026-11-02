@@ -397,27 +397,37 @@ clip 1220,38 380x936 r 0
       text "2 resolved" @1522.0625,91.23 #7c7566 JetBrains Mono 11
       rect 1232,116.90475 7x7 fill #4cc9f0 radius 3.5
       text "Negative values round the wrong way" @1248,125.13375 #ece6d8 Inter 13
-      text "round.go:46 · claude working · 1m" @1248,142.9795 #7c7566 JetBrains Mono 10.5
+      text "round.go:46" @1248,142.9795 #7c7566 JetBrains Mono 10.5
+      text " · claude working" @1320.5312,142.9795 #7c7566 JetBrains Mono 10.5
+      text " · 1m" @1432.625,142.9795 #7c7566 JetBrains Mono 10.5
       rect 1220,155.12949 380x1 fill #24221d
       rect 1232,169.49423 7x7 fill #ff5f6d radius 3.5
       text "Move currency precision table to config?" @1248,177.72324 #ece6d8 Inter 13
-      text "PLAN.md:22 · awaiting you · 4m" @1248,195.56898 #7c7566 JetBrains Mono 10.5
+      text "PLAN.md:22" @1248,195.56898 #7c7566 JetBrains Mono 10.5
+      text " · awaiting you" @1313.9375,195.56898 #7c7566 JetBrains Mono 10.5
+      text " · 4m" @1412.8438,195.56898 #7c7566 JetBrains Mono 10.5
       rect 1220,207.719 380x1 fill #24221d
       rect 1232,222.08374 7x7 fill #7c7566 radius 3.5
       text "Add a fuzz test for RoundMinor" @1248,230.31274 #ece6d8 Inter 13
-      text "whole change · queued · 2m" @1248,248.1585 #7c7566 JetBrains Mono 10.5
+      text "whole change" @1248,248.1585 #7c7566 JetBrains Mono 10.5
+      text " · queued" @1327.125,248.1585 #7c7566 JetBrains Mono 10.5
+      text " · 2m" @1386.4688,248.1585 #7c7566 JetBrains Mono 10.5
       rect 1220,260.30847 380x1 fill #24221d
       rect 1232,274.67322 7x7 fill #7c7566 radius 3.5
       text "btw — why decimal and not big.Rat?" @1248,282.90222 #ece6d8 Inter 13
-      text "whole change · btw · 9m" @1248,300.74796 #7c7566 JetBrains Mono 10.5
+      text "whole change" @1248,300.74796 #7c7566 JetBrains Mono 10.5
+      text " · btw" @1327.125,300.74796 #7c7566 JetBrains Mono 10.5
+      text " · 9m" @1366.6875,300.74796 #7c7566 JetBrains Mono 10.5
       rect 1220,312.89798 380x1 fill #24221d
       rect 1232,327.26273 7x7 fill #4fe0a0 radius 3.5
       text "Use banker's rounding for JPY" @1248,335.49173 #b3ab99 Inter 13
-      text "resolved · 12m" @1248,353.33746 #4f4a40 JetBrains Mono 10.5
+      text "resolved" @1248,353.33746 #4f4a40 JetBrains Mono 10.5
+      text " · 12m" @1300.75,353.33746 #4f4a40 JetBrains Mono 10.5
       rect 1220,365.4875 380x1 fill #24221d
       rect 1232,379.85223 7x7 fill #4fe0a0 radius 3.5
       text "Rename Mode → RoundingMode" @1248,388.08124 #b3ab99 Inter 13
-      text "resolved · 19m" @1248,405.92697 #4f4a40 JetBrains Mono 10.5
+      text "resolved" @1248,405.92697 #4f4a40 JetBrains Mono 10.5
+      text " · 19m" @1300.75,405.92697 #4f4a40 JetBrains Mono 10.5
       rect 1220,418.07697 380x1 fill #24221d
       text "TASKS" @1236,442.76697 #7c7566 JetBrains Mono 9.5
       text "2/5" @1566,442.76697 #4f4a40 JetBrains Mono 9.5
@@ -467,7 +477,7 @@ text "46:11" @1502.0625,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 57%" @1551.0312,984.71 #b3ab99 JetBrains Mono 10.5
 clip 0,38 43x936 r 0
   rect 22.09375,251 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "4" @26.09375,260.81 #141006 JetBrains Mono 8.5
+  text "1" @26.09375,260.81 #141006 JetBrains Mono 8.5
 pop
 clip 44,38 1176x936 r 0
   clip 44,69 1176x905 r 0

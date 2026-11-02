@@ -59,6 +59,24 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 	})
 }
 
+type DialogOpts struct {
+	Width float32 // 440 by default
+	Label string  // its accessible name
+	Help  string
+}
+
+// Dialog draws body, which brings its own chrome (a card), in the middle of the window over a scrim, holding keyboard
+// focus inside it. It reports Escape, or a click on the scrim: the caller closes it.
+func Dialog(c *ui.Ctx, key any, o DialogOpts, body func(c *ui.Ctx)) (closed bool) {
+	closed = hasKey(c.Interaction(ui.Child(c.Next(struct{ k any }{key}), "box")).Keys, "Esc")
+	size := c.Size()
+	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
+	return Scrim(c, struct{ k any }{key}, ScrimOpts{Z: ui.LayerDialog, Fill: col(c, tScrim), Help: o.Help}, func(c *ui.Ctx) {
+		c.Column("box", ui.Style{W: ui.Px(cmp.Or(o.Width, 440)), Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Enter: riseIn, Exit: fade,
+			Trap: true, Focusable: true, Interactive: true, KeyMode: "modal", Help: o.Help, Role: ui.RoleDialog, Label: o.Label}, body)
+	}) || closed
+}
+
 type PageOpts struct {
 	KeyMode string // its keymap mode; "page" when empty, so Escape always reaches it
 	Label   string // its accessible name

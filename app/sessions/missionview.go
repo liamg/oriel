@@ -236,7 +236,9 @@ func (x *Mission) queueSection(c *ui.Ctx, key, title, note string, tone render.C
 					Help: kit.MissionHelp + "#queue"}, func(c *ui.Ctx) {
 					c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 					c.Row("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 12, T: 10, B: 10}, Gap: 10}, func(c *ui.Ctx) {
-						c.Row("age", ui.Style{W: ui.Px(30)}, func(c *ui.Ctx) { c.Text("t", kit.Ago(now, it.at), kit.MonoFont(10, th.C(tMissionQueueOld))) })
+						c.Row("age", ui.Style{W: ui.Px(30)}, func(c *ui.Ctx) {
+							widget.Ago(c, "t", it.at, widget.AgoOpts{Text: kit.MonoFont(10, th.C(tMissionQueueOld))})
+						})
 						c.Column("text", ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 							widget.Wrap(c, "title", it.title, missionQueueW-80, kit.UIFont(12.5, th.C(theme.Fg)))
 							if it.sub != "" {
@@ -546,7 +548,8 @@ func (x *Mission) cardFoot(c *ui.Ctx, se core.SessionState) {
 				}
 			}
 			if !at.IsZero() {
-				when = kit.Ago(now, at)
+				widget.Ago(c, "when", at, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgGhost))})
+				return
 			}
 		}
 		c.Text("when", when, kit.MonoFont(10, th.C(theme.FgGhost)))

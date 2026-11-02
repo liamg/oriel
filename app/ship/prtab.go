@@ -283,7 +283,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 					c.Row("by", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Text("n", cmp.Or(cm.Name, string(cm.Author)), kit.Mono(11, typeset.SemiBold, th.C(theme.Fg)))
 						if !cm.Time.IsZero() {
-							c.Text("at", kit.Ago(c.Now(), cm.Time), kit.MonoFont(10, th.C(theme.FgFaint)))
+							widget.Ago(c, "at", cm.Time, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint))})
 						}
 					})
 					kit.MarkdownTextIn(c, x.h, "body", cm.Body, width, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))

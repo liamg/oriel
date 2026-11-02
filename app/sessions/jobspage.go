@@ -170,11 +170,11 @@ func (x *Jobs) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 					c.Text("w", "never run · saved "+r.job.CreatedAt.In(x.loc).Format("Jan 2"), kit.MonoFont(10, th.C(theme.FgFaint)))
 				default:
 					widget.Chip(c, "st", last.run.Status, th.C(runTone(last.run.Status)), "agent/jobs#runs")
-					when := x.when(last.se.Created)
 					if last.run.Status == host.RunRunning {
-						when = "started " + kit.Ago(x.now(), last.se.Created) + " ago"
+						widget.Ago(c, "w", last.se.Created, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint)), Long: true, Prefix: "started ", Now: x.now()})
+					} else {
+						x.when(c, "w", last.se.Created, kit.MonoFont(10, th.C(theme.FgFaint)))
 					}
-					c.Text("w", when, kit.MonoFont(10, th.C(theme.FgFaint)))
 				}
 				pinChip(c, "pin", r.job.Sandbox)
 				if r.job.Schedule.Every != "" {
@@ -201,20 +201,21 @@ func pinChip(c *ui.Ctx, key any, sandbox string) {
 	})
 }
 
-// when is a run's start as the rows show it: "today 07:14", "yesterday 16:40", "Oct 11 · 3d ago".
-func (x *Jobs) when(t time.Time) string {
+// when draws when a run started: "today 12:13", "yesterday 09:00", "Oct 7 · 3d ago", "Oct 7".
+func (x *Jobs) when(c *ui.Ctx, key string, t time.Time, ts ui.TextStyle) {
 	now := x.now().In(x.loc)
 	t = t.In(x.loc)
 	day := func(t time.Time) time.Time { return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, x.loc) }
 	switch d := day(now).Sub(day(t)); {
 	case d <= 0:
-		return "today " + t.Format("15:04")
+		c.Text(key, "today "+t.Format("15:04"), ts)
 	case d <= 24*time.Hour:
-		return "yesterday " + t.Format("15:04")
+		c.Text(key, "yesterday "+t.Format("15:04"), ts)
 	case d < 7*24*time.Hour:
-		return t.Format("Jan 2") + " · " + kit.Ago(now, t) + " ago"
+		widget.Ago(c, key, t, widget.AgoOpts{Text: ts, Long: true, Prefix: t.Format("Jan 2") + " · ", Now: now})
+	default:
+		c.Text(key, t.Format("Jan 2"), ts)
 	}
-	return t.Format("Jan 2")
 }
 
 // started is a run's start in the runs table: "today 12:13", "Oct 7 · 07:00".

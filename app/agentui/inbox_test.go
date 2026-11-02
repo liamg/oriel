@@ -364,3 +364,54 @@ func TestInboxSnapshot(t *testing.T) {
 	s.Lint("the inbox")
 	s.Golden("inbox-12")
 }
+
+// A notice that confirms what you just did is a dialog in the middle of the window, over the rest, not a card in the
+// stack at the bottom right. Its action answers it; Escape cancels it.
+func TestConfirmNoticesAreCentredDialogs(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	var discarded int
+	s.Registry().Command(registry.Command{ID: "test.discard", Run: func(registry.Ctx, registry.Args) error { discarded++; return nil }})
+	ask := func() {
+		s.Host().Notify(core.Notice{ID: "test.discard", Severity: core.SevQuestion, Confirm: true, Source: "test", Title: "Discard changes?",
+			Text: "Throw away the unstaged changes to a.go?", Actions: []core.Action{{Title: "Discard", Command: "test.discard"},
+				{Title: "Keep", Command: "notice.dismiss", Args: map[string]any{"id": "test.discard"}}}})
+		s.Frame()
+		s.Frame()
+	}
+	ask()
+	d := s.NodeRole(render.RoleDialog, "Discard changes?")
+	if !d.Modal {
+		t.Error("the dialog doesn't hold focus")
+	}
+	win, box := apptest.Centre(render.Rect{Max: apptest.MockupSize}), apptest.Centre(d.Bounds)
+	if dx, dy := box.X-win.X, box.Y-win.Y; dx < -2 || dx > 2 || dy < -2 || dy > 2 {
+		t.Errorf("the dialog's centre is %v, the window's %v", box, win)
+	}
+	if n := s.Count("Throw away the unstaged changes to a.go?"); n != 1 {
+		t.Errorf("the question shows %d times, not once in its dialog", n)
+	}
+
+	s.ClickTop("Discard")
+	s.Frame()
+	if discarded != 1 {
+		t.Fatalf("Discard ran %d times", discarded)
+	}
+	if s.FindRole(render.RoleDialog, "Discard changes?") != nil {
+		t.Error("the answered dialog stayed")
+	}
+
+	ask()
+	s.Type("Esc")
+	s.Frame()
+	if s.FindRole(render.RoleDialog, "Discard changes?") != nil {
+		t.Error("Escape didn't close the dialog")
+	}
+	if discarded != 1 {
+		t.Error("Escape discarded")
+	}
+	for _, n := range s.Store().State().Notifications {
+		if n.ID == "test.discard" && !n.Dismissed {
+			t.Error("Escape left the question waiting")
+		}
+	}
+}

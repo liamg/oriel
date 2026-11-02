@@ -284,8 +284,11 @@ func (n *notices) inboxCards() []uireg.InboxCard {
 		}
 		card := uireg.InboxCard{ID: fmt.Sprint(row.Seq), Type: "notice", Mine: true, Session: string(row.Session), Icon: "!",
 			Tone: "accent", Kicker: titleOf(row), Title: row.Text, Sub: row.Source, Detail: row.Detail, Created: row.Time,
-			Interrupt: !row.Dismissed, Done: row.Dismissed}
+			Interrupt: !row.Dismissed, Dialog: row.Confirm, Done: row.Dismissed}
 		answer := func() { n.h.Apply(core.Dismissal(row)) }
+		if row.Confirm {
+			card.Dismissed = answer // closing a confirm is its no
+		}
 		for _, a := range row.Actions {
 			card.Actions = append(card.Actions, uireg.InboxAction{Label: a.Title, Primary: len(card.Actions) == 0, Run: func() {
 				if err := n.h.Run(context.Background(), a.Command, registry.Args(a.Args)); err != nil {

@@ -505,7 +505,7 @@ func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p h
 			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
 			c.Text("n", kit.Counted(g.n, "connection"), kit.MonoFont(10.5, th.C(theme.FgMuted)))
 			c.Text("bytes", "↑"+kit.Bytes(g.up)+" ↓"+kit.Bytes(g.down), kit.MonoFont(10.5, th.C(theme.FgMuted)))
-			c.Text("last", kit.Ago(now, g.last), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			widget.Ago(c, "last", g.last, widget.AgoOpts{Text: kit.MonoFont(10.5, th.C(theme.FgFaint))})
 			act(c, g.host, g.port, g.allowed)
 		})
 	}

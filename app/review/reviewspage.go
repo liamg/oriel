@@ -245,14 +245,11 @@ func (x *Reviews) pageHeader(c *ui.Ctx, rows []reviewRow) {
 				at = t
 			}
 		}
+		parts := []widget.AgoPart{{Text: meta}}
 		if !at.IsZero() {
-			if when := kit.Ago(c.Now(), at); when == "now" {
-				meta += " · updated just now"
-			} else {
-				meta += " · updated " + when + " ago"
-			}
+			parts = append(parts, widget.AgoPart{Text: "updated ", At: at, Long: true})
 		}
-		c.Text("m", meta, kit.MonoFont(11, th.C(theme.FgFaint)))
+		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint))}, parts...)
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.page.err != "" {
 			c.Text("err", x.page.err, kit.MonoFont(11, th.C(theme.Error)))
@@ -485,7 +482,7 @@ func (x *Reviews) reviewRowView(c *ui.Ctx, r reviewRow, many bool) {
 				c.Row("l1", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 					c.Box("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", q.Title, kit.UIFont(13, th.C(theme.Fg))) })
 					if !q.Asked.IsZero() {
-						c.Text("age", kit.Ago(c.Now(), q.Asked), kit.MonoFont(10, th.C(theme.FgFaint)))
+						widget.Ago(c, "age", q.Asked, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint))})
 					}
 				})
 				c.Row("l2", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -557,28 +554,22 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 	})
 	c.Row("meta", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 		widget.Chip(c, "st", stateLabel(r), kit.TokenColour(th, stateTone(r), th.C(theme.Accent)), help)
-		parts := []string{q.Key()}
+		parts := []widget.AgoPart{{Text: q.Key()}}
 		if q.Author != "" {
 			wants := q.Author
 			if done && full.Head != "" {
 				wants += " wants to merge " + full.Head + " → " + cmp.Or(full.Base, "?")
 			}
-			parts = append(parts, wants)
+			parts = append(parts, widget.AgoPart{Text: wants})
 		}
 		if !q.Asked.IsZero() {
-			when := kit.Ago(c.Now(), q.Asked)
-			asked := "asked you " + when + " ago"
-			if when == "now" {
-				asked = "asked you just now"
-			}
+			asked := widget.AgoPart{Text: "asked you ", At: q.Asked, Long: true, Suffix: ", directly"}
 			if q.Via != "" {
-				asked = strings.Replace(asked, "you", q.Via, 1)
-			} else {
-				asked += ", directly"
+				asked.Text, asked.Suffix = "asked "+q.Via+" ", ""
 			}
 			parts = append(parts, asked)
 		}
-		c.Text("m", strings.Join(parts, " · "), kit.MonoFont(11, th.C(theme.FgMuted)))
+		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(11, th.C(theme.FgMuted))}, parts...)
 	})
 	c.Row("cards", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 		reviewCard(c, "status", "STATUS", ui.Flex(1), func(c *ui.Ctx) {

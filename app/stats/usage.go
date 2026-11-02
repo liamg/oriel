@@ -314,9 +314,7 @@ func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 		c.Text("t", "click for Usage", kit.MonoFont(10, th.C(theme.FgFaint)))
 		kit.Keycap(c, "k", kit.BoundKey(x.h, "usage.open", nil))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		if !read.IsZero() {
-			c.Text("r", "read "+kit.AgoText(now, read)+" · no tokens spent", kit.MonoFont(10, th.C(theme.FgFaint)))
-		}
+		widget.Ago(c, "r", read, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint)), Long: true, Prefix: "read ", Suffix: " · no tokens spent", Now: now})
 	})
 }
 
@@ -359,9 +357,7 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 				c.Text("m", fmt.Sprintf("plan windows · %s · %s", kit.Counted(len(st.Usage), "account"),
 					now.In(x.Loc).Format("Mon Jan 2 15:04")), kit.MonoFont(11, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				if !read.IsZero() {
-					c.Text("read", "read "+kit.AgoText(now, read), kit.MonoFont(11, th.C(theme.FgFaint)))
-				}
+				widget.Ago(c, "read", read, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "read ", Now: now})
 				reading := x.reading.State()
 				if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Busy: reading.Phase == widget.Pending, BusyLabel: "Refreshing",
 					Help: "agent/usage#burned"}) {
@@ -423,7 +419,7 @@ func (x *Plugin) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Time)
 			c.Text("m", x.providerLine(u), kit.MonoFont(10.5, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if u.Source != "" {
-				c.Text("src", "windows from "+u.Source+" · "+kit.AgoText(now, u.Sampled), kit.MonoFont(10, th.C(theme.FgGhost)))
+				widget.AgoLine(c, "src", widget.AgoLineOpts{Text: kit.MonoFont(10, th.C(theme.FgGhost)), Now: now}, widget.AgoPart{Text: "windows from " + u.Source}, widget.AgoPart{At: u.Sampled, Long: true})
 			}
 		})
 		c.Row("windows", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {

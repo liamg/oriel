@@ -239,10 +239,6 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-clip 0,38 43x936 r 0
-  rect 22.09375,251 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "1" @26.09375,260.81 #141006 JetBrains Mono 8.5
-pop
 rect 580,48 440x196.5045 fill #0c0c0b radius 8 stroke 1 #b98aff8c
 text "ENG-2231 SEARCH API · PERMISSION" @594,72.42 #b98aff JetBrains Mono 9.5
 text "sandbox · network ask" @854,72.42 #7c7566 JetBrains Mono 9.5

@@ -21,7 +21,7 @@ func (x *Ship) mergeDefault(_ registry.Ctx, se core.SessionState, p string, a re
 		return fmt.Errorf("%s has no local default branch to merge into", p)
 	}
 	if !a.Bool("confirm") {
-		x.h.Notify(core.Notice{ID: "ship.merge-default", Severity: core.SevQuestion, Session: se.ID, Title: "Merge into " + s.Default + "?",
+		x.h.Notify(core.Notice{ID: "ship.merge-default", Severity: core.SevQuestion, Confirm: true, Session: se.ID, Title: "Merge into " + s.Default + "?",
 			Text: fmt.Sprintf("Merge %s's commits into %s in %s, here, without a PR? %s isn't pushed; uncommitted changes stay on %s.",
 				s.Branch, s.Default, p, s.Default, s.Branch),
 			Actions: []core.Action{

@@ -93,4 +93,5 @@ gateway, and every rule "Always in this workspace" made.
 
 A tool call's **⤢**, and an ask's **Details**, open it in full in a dialog: the whole command, its input as JSON, and
 its status. A call still running shows a spinner until its result lands, then the result; an ask's dialog answers it
-as its card does. Escape or ✕ closes it.
+as its card does. Its title says how long ago it ran ("5m"); rest the pointer on that for the full time. Escape or ✕
+closes it.

@@ -89,11 +89,12 @@ func (x *Console) detailView() uireg.View {
 					Radius: 10, Clip: true, Trap: true, Interactive: true, Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}},
 					Role: ui.RoleDialog, Label: "Details", Help: "agent/console#details"}, func(c *ui.Ctx) {
 					c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(48), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-						title := "Ask · " + string(ask.Kind)
+						title, at := "Ask · "+string(ask.Kind), ask.Created
 						if d.item != "" {
-							title = "Tool call · " + cmp.Or(it.Tool, "tool")
+							title, at = "Tool call · "+cmp.Or(it.Tool, "tool"), it.Time
 						}
 						c.Text("t", strings.ToUpper(title), kit.MonoFont(11, th.C(theme.FgMuted)))
+						widget.Ago(c, "ago", at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint))})
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 						if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close", Help: "agent/console#details"}) {
 							x.detail = nil

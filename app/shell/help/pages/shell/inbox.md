@@ -44,6 +44,12 @@ A notice that asks you something (a question) is a card rather than a toast: a r
 any plugin's. It stacks while it waits and goes to the history once you answer or dismiss it. Notices that only tell
 you something stay toasts, and are kept in the log.
 
+## Dialogs {#dialogs}
+
+A question that confirms something you just did (**Merge into main…**, discarding changes) is a dialog in the middle
+of the window, not a card in the stack. Its buttons answer it; Escape or a click outside cancels it. A notice asks
+this way when it sets `Confirm`; an inbox card when it sets `Dialog`.
+
 ## Adding cards {#plugins}
 
 Cards come from inbox sources (`uireg.InboxSource`): the asks of every session are one; a plugin adds its own with

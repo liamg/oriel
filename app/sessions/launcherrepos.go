@@ -159,7 +159,7 @@ func (x *Launcher) repoRow(c *ui.Ctx, r core.Repo) {
 			case isFound(r):
 				widget.Chip(c, "chip", "found", th.C(tRepoFound), "agent/launcher#repositories")
 			case !r.Used.IsZero():
-				c.Text("t", "used "+kit.AgoText(time.Now(), r.Used), kit.MonoFont(10, th.C(theme.FgGhost)))
+				widget.Ago(c, "t", r.Used, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgGhost)), Long: true, Prefix: "used ", Now: time.Now()})
 			}
 		})
 	})

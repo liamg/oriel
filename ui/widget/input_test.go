@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/internal/testhook"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
@@ -131,5 +133,48 @@ func TestSelectionsLint(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// A double click in a field selects the word under it, a triple click its line; the pointer may drift a little
+// between the clicks, and a slow second click is a click of its own.
+func TestInputMultiClickSelects(t *testing.T) {
+	text := "round half even\nsecond line"
+	var id ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Column("col", ui.Style{Pad: ui.Pad(10), W: ui.Px(300)}, func(c *ui.Ctx) {
+			id = c.Next("q")
+			Input(c, "q", &text, InputOpts{Label: "Q", Lines: 4, Help: "test/input"})
+		})
+	})
+	selected := func() string {
+		s := h.access(id).Selection
+		lo, hi := min(s.Start, s.End), max(s.Start, s.End)
+		return string([]rune(text)[lo:hi])
+	}
+	r := h.rect(id)
+	ts, err := typeset.NewBundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	x, y := r.Min.X+10+ts.Shape("round ha", typeset.FontSpec{Family: typeset.UI, Size: 12.5}).Advance, r.Min.Y+14
+	h.click(x, y)
+	if got := selected(); got != "" {
+		t.Fatalf("one click selected %q", got)
+	}
+	h.click(x+2, y+1)
+	if got := selected(); got != "half" {
+		t.Errorf("a double click selected %q, want \"half\"", got)
+	}
+	h.click(x+1, y)
+	if got := selected(); got != "round half even\n" {
+		t.Errorf("a triple click selected %q, want the line", got)
+	}
+	h.now = h.now.Add(time.Second)
+	h.click(x, y)
+	h.now = h.now.Add(time.Second)
+	h.click(x, y)
+	if got := selected(); got != "" {
+		t.Errorf("two slow clicks selected %q", got)
 	}
 }

@@ -118,7 +118,7 @@ once nothing in its worktrees is uncommitted.
 ## Merge into main, without a PR {#merge-default}
 
 **⋯ → Merge into main…** on the Git panel (`ship.merge-default`) merges the branch's commits into the repo's default
-branch (origin's, as a local branch: `main` here) on this machine, after asking. It's a fast-forward where it can be,
+branch (origin's, as a local branch: `main` here) on this machine, after asking in a dialog in the middle of the window. It's a fast-forward where it can be,
 else a merge commit; one that would conflict is refused, naming the files, and nothing changes. Where `main` is checked
 out (your own checkout, say), that checkout moves to it, and only when it has no uncommitted changes. Nothing is
 pushed: push `main` yourself when you're ready. Uncommitted work on the branch stays where it is.

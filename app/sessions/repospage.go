@@ -336,7 +336,7 @@ func (x *Repos) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			}
 		})
 		f, _ := d.facts.Value()
-		var line []string
+		var line []widget.AgoPart
 		if f.Branch != "" {
 			on := "on " + f.Branch
 			if t := f.Tracking; t.Upstream != "" {
@@ -347,21 +347,21 @@ func (x *Repos) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 					on += fmt.Sprintf(" ↓%d behind %s", t.Behind, t.Upstream)
 				}
 			}
-			line = append(line, on)
+			line = append(line, widget.AgoPart{Text: on})
 		}
 		if !f.Last.When.IsZero() {
-			line = append(line, "last commit "+kit.AgoText(time.Now(), f.Last.When)+" by "+f.Last.Author)
+			line = append(line, widget.AgoPart{Text: "last commit ", At: f.Last.When, Long: true, Suffix: " by " + f.Last.Author})
 		}
 		if !r.Added.IsZero() {
-			line = append(line, "added "+r.Added.Local().Format("Jan 2"))
+			line = append(line, widget.AgoPart{Text: "added " + r.Added.Local().Format("Jan 2")})
 		}
 		if !r.Used.IsZero() {
-			line = append(line, "used "+kit.AgoText(time.Now(), r.Used))
+			line = append(line, widget.AgoPart{Text: "used ", At: r.Used, Long: true})
 		}
 		if d.busy == "" && d.note != "" {
-			line = append(line, d.note)
+			line = append(line, widget.AgoPart{Text: d.note})
 		}
-		c.Text("l2", strings.Join(line, " · "), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+		widget.AgoLine(c, "l2", widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgMuted)), Now: time.Now()}, line...)
 	})
 }
 
@@ -526,11 +526,9 @@ func housekeepBranch(c *ui.Ctx, b host.StaleBranch, d *repoDetail) {
 			widget.Chip(c, "why", b.Why, tone, "agent/repos#housekeeping")
 		})
 		housekeepCol(c, "t", ui.Flex(1.4), cmp.Or(kit.TildePath(b.Worktree), "none"), kit.MonoFont(11, th.C(theme.FgMuted)))
-		when := ""
-		if !b.When.IsZero() {
-			when = kit.AgoText(time.Now(), b.When)
-		}
-		housekeepCol(c, "a", ui.Px(80), when, kit.MonoFont(11, th.C(theme.FgMuted)))
+		c.Row("a", ui.Style{W: ui.Px(80), Clip: true}, func(c *ui.Ctx) {
+			widget.Ago(c, "t", b.When, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgMuted)), Long: true, Now: time.Now()})
+		})
 		c.Row("n", ui.Style{W: ui.Flex(1.6), Gap: 6, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 			res, done := d.results[b.Name]
 			switch {

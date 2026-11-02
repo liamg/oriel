@@ -500,7 +500,8 @@ func (x *PRReview) sent(c *ui.Ctx, se core.SessionState, width float32) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Column("sent", ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 				for i, r := range reviewDraft(se).Sent {
-					c.Text(i, fmt.Sprintf("%s · %s · %s", sentWord(r.Verdict), kit.Counted(r.Comments, "comment"), kit.Ago(kit.WindowNow(x.h), r.At)), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+					widget.AgoLine(c, i, widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgMuted))},
+						widget.AgoPart{Text: sentWord(r.Verdict)}, widget.AgoPart{Text: kit.Counted(r.Comments, "comment")}, widget.AgoPart{At: r.At})
 				}
 			})
 			if widget.Button(c, "archive", "Archive this review", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {

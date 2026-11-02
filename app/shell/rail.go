@@ -181,7 +181,7 @@ func (r *rail) entries(h plugin.Host) {
 				n := 0
 				if se, ok := h.Session(h.State().Focus); ok {
 					for _, t := range se.Threads() {
-						if t.Open() {
+						if kit.GroupOf(t) == kit.GroupNeedsYou {
 							n++
 						}
 					}

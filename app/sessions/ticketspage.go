@@ -218,16 +218,11 @@ func (x *Tickets) pageHeader(c *ui.Ctx) {
 				at = t
 			}
 		}
-		meta := fmt.Sprintf("%d assigned", n)
+		meta := []widget.AgoPart{{Text: fmt.Sprintf("%d assigned", n)}}
 		if !at.IsZero() {
-			when := kit.Ago(c.Now(), at)
-			if when == "now" {
-				meta += " · updated just now"
-			} else {
-				meta += " · updated " + when + " ago"
-			}
+			meta = append(meta, widget.AgoPart{Text: "updated ", At: at, Long: true})
 		}
-		c.Text("m", meta, kit.MonoFont(11, th.C(theme.FgFaint)))
+		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint))}, meta...)
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.page.err != "" {
 			c.Text("err", x.page.err, kit.MonoFont(11, th.C(theme.Error)))

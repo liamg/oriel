@@ -124,7 +124,8 @@ rect 0,0 1600x974 fill #060606
 clip 0,0 1600x974 r 0
   rect 0,0 1600x42 fill #0c0c0b
   text "REVIEWS" @18,25.844 #ece6d8 Space Grotesk 14
-  text "3 waiting on you · 1 in progress · updated just now" @91.62312,24.96 #7c7566 JetBrains Mono 11
+  text "3 waiting on you · 1 in progress" @91.62312,24.96 #7c7566 JetBrains Mono 11
+  text " · updated just now" @302.6231,24.96 #7c7566 JetBrains Mono 11
   clip 1183.0981,9 230.94873x24 r 5
     rect 1183.0981,9 60.766235x24 fill #1f1c0f
     text "all" @1193.0981,24.42 #ffd23f JetBrains Mono 9.5
@@ -225,7 +226,9 @@ clip 0,0 1600x974 r 0
     text "↵" @1558.0469,73.42 #141006cc JetBrains Mono 9.5
     rect 459,95 33.70999x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
     text "NEW" @466,106.69 #b98aff JetBrains Mono 9.5
-    text "acme/api#790 · mkhan wants to merge mk/search-ratelimit → main · asked you just now, directly" @499.71,107.23 #b3ab99 JetBrains Mono 11
+    text "acme/api#790" @499.71,107.23 #b3ab99 JetBrains Mono 11
+    text " · mkhan wants to merge mk/search-ratelimit → main" @578.83496,107.23 #b3ab99 JetBrains Mono 11
+    text " · asked you just now, directly" @908.52246,107.23 #b3ab99 JetBrains Mono 11
     rect 459,123.54 851x100.1 radius 6 stroke 1 #24221d
     text "STATUS" @471,143.23001 #7c7566 JetBrains Mono 9.5
     text "CHECKS" @471,163.77 #7c7566 JetBrains Mono 9.5

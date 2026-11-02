@@ -421,14 +421,24 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 		c.Text(key, s, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold, Tracking: .16},
 			Color: th.C(theme.FgFaint)})
 	}
-	row := func(c *ui.Ctx, key any, label, value string, tone render.Color, lead func(c *ui.Ctx)) {
+	// row is a label and its value at the right: value, or how long ago at was.
+	row := func(c *ui.Ctx, key any, label, value string, at time.Time, tone render.Color, lead func(c *ui.Ctx)) {
+		if !at.IsZero() {
+			value = kit.Ago(now, at)
+		}
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: label + " " + value}, func(c *ui.Ctx) {
 			if lead != nil {
 				lead(c)
 			}
 			c.Text("l", label, kit.MonoFont(11, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Box("value", ui.Style{Keep: true}, func(c *ui.Ctx) { c.Text("v", value, kit.Mono(11, typeset.SemiBold, tone)) })
+			c.Box("value", ui.Style{Keep: true}, func(c *ui.Ctx) {
+				if !at.IsZero() {
+					widget.Ago(c, "v", at, widget.AgoOpts{Text: kit.Mono(11, typeset.SemiBold, tone)})
+					return
+				}
+				c.Text("v", value, kit.Mono(11, typeset.SemiBold, tone))
+			})
 		})
 	}
 	c.Column("side", ui.Style{W: ui.Px(width), H: ui.Flex(1), Gap: 9, Clip: true}, func(c *ui.Ctx) {
@@ -448,10 +458,10 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 
 // sideList is what it can do, its sources and how fresh each is, and what it did lately.
 func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, heading func(c *ui.Ctx, key any, s string),
-	row func(c *ui.Ctx, key any, label, value string, tone render.Color, lead func(c *ui.Ctx))) {
+	row func(c *ui.Ctx, key any, label, value string, at time.Time, tone render.Color, lead func(c *ui.Ctx))) {
 	th := c.Theme()
 	heading(c, "can", "WHAT IT CAN DO")
-	row(c, "never", "edit code, run commands, post anywhere", "never", th.C(tAsstNever), nil)
+	row(c, "never", "edit code, run commands, post anywhere", "never", time.Time{}, th.C(tAsstNever), nil)
 	for _, t := range registry.AgentToolsFor(x.h, kit.AssistantAgent, true) {
 		if t.ReadOnly || t.Name == "reply" {
 			continue
@@ -460,18 +470,14 @@ func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, he
 		if t.Confirm != nil {
 			value, tone = "asks first", th.C(tAsstAsks)
 		}
-		row(c, "can."+t.Name, strings.ReplaceAll(t.Name, "_", " "), value, tone, nil)
+		row(c, "can."+t.Name, strings.ReplaceAll(t.Name, "_", " "), value, time.Time{}, tone, nil)
 	}
 
 	c.Box("gap1", ui.Style{H: ui.Px(6)}, nil)
 	heading(c, "src", "SOURCES")
 	read := x.lastRead(log)
 	for _, s := range x.sources() {
-		fresh := "—"
-		if at, ok := read[s]; ok {
-			fresh = kit.Ago(now, at)
-		}
-		row(c, "src."+s, s, fresh, th.C(theme.FgMuted), func(c *ui.Ctx) {
+		row(c, "src."+s, s, "—", read[s], th.C(theme.FgMuted), func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(theme.OK)}, nil)
 		})
 	}
@@ -479,7 +485,7 @@ func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, he
 	if x.bool("assistant.web") {
 		web = "on"
 	}
-	row(c, "src.web", "web search", web, th.C(theme.FgMuted), func(c *ui.Ctx) {
+	row(c, "src.web", "web search", web, time.Time{}, th.C(theme.FgMuted), func(c *ui.Ctx) {
 		tone := th.C(theme.FgGhost)
 		if web == "on" {
 			tone = th.C(theme.OK)
@@ -499,7 +505,7 @@ func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, he
 		if e.Undone {
 			mark, tone = "↶", th.C(theme.FgFaint)
 		}
-		row(c, fmt.Sprint("act", e.Seq), e.Text, kit.Ago(now, e.At), th.C(theme.FgFaint), func(c *ui.Ctx) { c.Text("m", mark, kit.Mono(11, typeset.Bold, tone)) })
+		row(c, fmt.Sprint("act", e.Seq), e.Text, "", e.At, th.C(theme.FgFaint), func(c *ui.Ctx) { c.Text("m", mark, kit.Mono(11, typeset.Bold, tone)) })
 	}
 	if n == 0 {
 		c.Text("none", "nothing yet", kit.MonoFont(11, th.C(theme.FgGhost)))

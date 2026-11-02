@@ -231,10 +231,6 @@ text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
 text "CPU" @1538.4375,984.71 #7c7566 JetBrains Mono 10.5
 text "34%" @1564.2188,984.71 #ece6d8 JetBrains Mono 10.5
-clip 0,38 43x936 r 0
-  rect 22.09375,335 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "1" @26.09375,344.81003 #141006 JetBrains Mono 8.5
-pop
 clip 44,38 1556x936 r 0
   clip 44,69 1556x905 r 0
     clip 68,900 1177x30 r 6

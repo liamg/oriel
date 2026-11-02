@@ -138,7 +138,7 @@ func (g *Git) commands() []registry.Command {
 					for i, p := range ps {
 						ps[i] = g.holding(p).rel(p)
 					}
-					h.Notify(core.Notice{ID: "git.discard", Severity: core.SevQuestion, Title: "Discard changes?",
+					h.Notify(core.Notice{ID: "git.discard", Severity: core.SevQuestion, Confirm: true, Title: "Discard changes?",
 						Text: "Throw away the unstaged changes to " + strings.Join(ps, ", ") + "? Untracked files are deleted.",
 						Actions: []core.Action{
 							{Title: "Discard", Command: "git.discard", Args: map[string]any{"path": ps, "confirm": true}},

@@ -314,7 +314,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 			if e.parent != nil {
 				parent = e.parent.id
 			}
-			u.flags[id] = flags{interactive: s.Interactive || s.Focusable || s.Tooltip != "", focusable: s.Focusable, disabled: s.Disabled,
+			u.flags[id] = flags{interactive: s.Interactive || s.Focusable, focusable: s.Focusable, disabled: s.Disabled,
 				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
 				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop, actions: s.Actions}
 		}
@@ -343,14 +343,14 @@ func (u *UI) Layered(z int) bool {
 	return u.layered[z]
 }
 
-// tooltip shows the hovered node's tooltip once the pointer has rested on it for the delay.
+// tooltip shows the tooltip under the pointer once the pointer has rested on it for the delay.
 func (u *UI) tooltip() {
 	in := &u.in
-	tip := u.flags[in.hot].tooltip
+	tip := u.flags[in.tip].tooltip
 	if tip == "" || !in.inside || in.active != 0 {
 		return
 	}
-	due := in.hotAt.Add(u.opts.TooltipDelay)
+	due := in.tipAt.Add(u.opts.TooltipDelay)
 	if u.now().Before(due) {
 		if u.wake.IsZero() || due.Before(u.wake) {
 			u.wake = due
@@ -1080,6 +1080,7 @@ func (u *UI) Paint(f render.Frame) {
 	defer func() {
 		if u.in.inside {
 			u.setHot(u.topInteractive(u.in.pos))
+			u.setTip(u.topTip(u.in.pos))
 		}
 		// While a trap is up, focus can't leave it, other than for a float layered over it: a window kept on top.
 		// Coming in from outside, it goes to the trap's default target; dropped inside it (Escape in a field), to the

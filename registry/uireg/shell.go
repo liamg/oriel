@@ -24,7 +24,7 @@ type RailEntry struct {
 	Command string
 	Args    registry.Args
 	Scope   string     // ScopeProjectEntry, ScopeSessionEntry or ScopeGlobalEntry; "" is the session's
-	Badge   func() int // a count shown as a pill; nil or 0 for none
+	Badge   func() int // how many things there want you, as a pill; nil or 0 for none. Never what's only in progress.
 	// BadgeTone is the pill's colour, a theme token; "" is rail.badge.
 	BadgeTone string
 	// Note is dim text at the entry's right, for a project ("" for a session or global entry): "4", "48 ✓", "$18.40 today".

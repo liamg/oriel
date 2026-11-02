@@ -199,12 +199,12 @@ func (x *Requests) listRow(c *ui.Ctx, se core.SessionState, st *requestsState, t
 					c.Text("t", p, kit.UIFont(12, th.C(theme.FgFaint)))
 				}
 			})
-			meta := []string{threadPlace(t), msgs(len(t.Comments)), kit.Ago(now, t.Updated)}
+			meta := []widget.AgoPart{{Text: threadPlace(t)}, {Text: msgs(len(t.Comments))}, {At: t.Updated}}
 			if t.Btw {
-				meta = []string{"btw", kit.Ago(now, t.Updated)}
+				meta = []widget.AgoPart{{Text: "btw"}, {At: t.Updated}}
 			}
 			c.Box("m", ui.Style{Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {
-				c.Text("t", strings.Join(meta, " · "), kit.MonoFont(10.5, th.C(theme.FgGhost)))
+				widget.AgoLine(c, "t", widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgGhost))}, meta...)
 			})
 		})
 	}).Clicked {
@@ -408,9 +408,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					commentMenu(c, x.h, t, cm, hover)
 				}()
 				c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-				if when := commentWhen(c.Now(), cm, t.Origin); when != "" {
-					c.Text("t", when, kit.MonoFont(10, th.C(theme.FgGhost)))
-				}
+				commentWhen(c, cm, t.Origin, kit.MonoFont(10, th.C(theme.FgGhost)))
 				if cm.Redacted {
 					widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 				}
@@ -578,11 +576,11 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 			}
 			kit.Section(c, "this", "This request", "", func(c *ui.Ctx) {
 				kit.Stat(c, "anchor", "anchor", threadPlace(t), fg)
-				opened := kit.Ago(now, t.Created)
+				by := ""
 				if cm, ok := firstComment(t); ok && cm.Name != "" {
-					opened += " · " + cm.Name
+					by = " · " + cm.Name
 				}
-				kit.Stat(c, "opened", "opened", opened, fg)
+				kit.StatAgo(c, "opened", "opened", t.Created, by, fg)
 				word, tok := statusLabel(x.h, se, t)
 				if kit.GroupOf(t) == kit.GroupWorking && se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 					d := now.Sub(se.Agent.TurnStarted)
@@ -723,18 +721,19 @@ func (x *Requests) summaryRow(c *ui.Ctx, se core.SessionState, t core.Thread, no
 	if g == kit.GroupResolved {
 		title, meta = th.C(theme.FgMuted), th.C(theme.FgGhost)
 	}
-	var note []string
+	var note []widget.AgoPart
 	switch g {
 	case kit.GroupResolved:
-		note = []string{"resolved", kit.Ago(now, t.Updated)}
+		note = []widget.AgoPart{{Text: "resolved"}}
 	case kit.GroupWorking:
-		note = []string{threadPlace(t), strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)) + " working", kit.Ago(now, t.Updated)}
+		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)) + " working"}}
 	case kit.GroupNeedsYou:
-		note = []string{threadPlace(t), "awaiting you", kit.Ago(now, t.Updated)}
+		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: "awaiting you"}}
 	default:
 		word, _ := statusLabel(x.h, se, t)
-		note = []string{threadPlace(t), word, kit.Ago(now, t.Updated)}
+		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: word}}
 	}
+	note = append(note, widget.AgoPart{At: t.Updated})
 	if widget.Clickable(c, string(t.ID), ui.Style{Dir: ui.Column, W: ui.Flex(1), Pad: ui.PadXY(12, 9), Gap: 4, Role: ui.RoleListItem, Label: t.Heading(),
 		Help: "agent/requests#summary"}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{Gap: 9, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -742,7 +741,7 @@ func (x *Requests) summaryRow(c *ui.Ctx, se core.SessionState, t core.Thread, no
 			c.Text("t", t.Heading(), kit.UIFont(13, title))
 		})
 		c.Box("m", ui.Style{Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {
-			c.Text("t", strings.Join(note, " · "), kit.MonoFont(10.5, meta))
+			widget.AgoLine(c, "t", widget.AgoLineOpts{Text: kit.MonoFont(10.5, meta)}, note...)
 		})
 	}).Clicked {
 		x.run("request.open", registry.Args{"thread": string(t.ID)})

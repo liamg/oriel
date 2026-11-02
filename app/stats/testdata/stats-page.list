@@ -95,8 +95,6 @@ clip 0,38 223x936 r 0
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   text "Requests" @33,292.30524 #b3ab99 Inter 12
-  rect 199.59375,280.94 13.40625x14 fill #ff9b45 radius 7
-  text "1" @203.59375,291.18 #141006 JetBrains Mono 9
   path 5 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
@@ -430,7 +428,7 @@ clip 224,0 1376x974 r 0
       text "32.3%" @1283,485.804 #b3ab99 JetBrains Mono 11
     pop
     clip 1330,474.58398 90x14.519989 r 0
-      text "now" @1394.2188,485.804 #b3ab99 JetBrains Mono 11
+      text "just now" @1361.25,485.804 #b3ab99 JetBrains Mono 11
     pop
     clip 1420,473.844 130x16 r 0
       path 30 segments stroke 1.5 #4cc9f0
@@ -552,7 +550,7 @@ clip 224,0 1376x974 r 0
       text "10.5%" @1283,605.80396 #b3ab99 JetBrains Mono 11
     pop
     clip 1330,594.584 90x14.52002 r 0
-      text "now" @1394.2188,605.80396 #b3ab99 JetBrains Mono 11
+      text "just now" @1361.25,605.80396 #b3ab99 JetBrains Mono 11
     pop
     clip 1420,593.844 130x16 r 0
       path 30 segments stroke 1.5 #b98aff

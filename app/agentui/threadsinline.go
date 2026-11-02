@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -413,9 +412,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 								name = kit.ProviderNameIn(c, cm.Name)
 							}
 							c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-							if when := commentWhen(c.Now(), cm, t.Origin); when != "" {
-								c.Text("t", when, kit.MonoFont(9.5, th.C(theme.FgGhost)))
-							}
+							commentWhen(c, cm, t.Origin, kit.MonoFont(9.5, th.C(theme.FgGhost)))
 							if cm.Redacted {
 								widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 							}
@@ -449,24 +446,25 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 }
 
 // commentWhen is the small text after a comment's author: how long ago, where it came from, and whether it was sent.
-func commentWhen(now time.Time, cm core.Comment, origin string) string {
-	var parts []string
+func commentWhen(c *ui.Ctx, cm core.Comment, origin string, ts ui.TextStyle) {
+	var parts []widget.AgoPart
 	switch {
 	case cm.Draft:
-		return "draft · not sent"
+		parts = append(parts, widget.AgoPart{Text: "draft · not sent"})
 	case !cm.Time.IsZero():
-		parts = append(parts, kit.Ago(now, cm.Time))
+		parts = append(parts, widget.AgoPart{At: cm.Time})
 	}
 	switch {
+	case cm.Draft:
 	case cm.Author == core.AuthorHost:
-		parts = append(parts, origin)
+		parts = append(parts, widget.AgoPart{Text: origin})
 	case !cm.Sent.IsZero():
-		parts = append(parts, "sent to "+origin)
+		parts = append(parts, widget.AgoPart{Text: "sent to " + origin})
 	}
-	if cm.Edited {
-		parts = append(parts, "edited")
+	if cm.Edited && !cm.Draft {
+		parts = append(parts, widget.AgoPart{Text: "edited"})
 	}
-	return strings.Join(parts, " · ")
+	widget.AgoLine(c, "t", widget.AgoLineOpts{Text: ts}, parts...)
 }
 
 // commentLines is how many lines a comment's field grows to before it scrolls.

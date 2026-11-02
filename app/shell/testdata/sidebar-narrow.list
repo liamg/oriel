@@ -164,7 +164,3 @@ text "0" @59.78125,410.96 #b3ab99 JetBrains Mono 11
 clip 0,38 43x356 r 0
   rect 32,95.5 7x7 fill #ff5f6d radius 3.5
 pop
-clip 0,38 43x356 r 0
-  rect 22.09375,369 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "3" @26.09375,378.81003 #141006 JetBrains Mono 8.5
-pop

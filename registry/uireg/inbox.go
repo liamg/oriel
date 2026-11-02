@@ -41,7 +41,10 @@ type InboxCard struct {
 	// Top puts an interrupting card at the top of the window with the banners, where it's seen, rather than in the
 	// stack at the bottom right; unlike a banner, a surface that draws it itself (mission control) still takes it.
 	Top bool
-	Done      bool // history: nothing waits on it; it never stacks or counts
+	// Dialog draws a waiting card in the middle of the window over a scrim, holding focus: a confirm of what the user
+	// just did. Escape or a click on the scrim dismisses it.
+	Dialog bool
+	Done   bool // history: nothing waits on it; it never stacks or counts
 
 	// The card's face: Kicker, Title, Detail, Code, Body, Actions and Note in a widget.ActionCard. Draw, when set,
 	// draws the whole card instead.

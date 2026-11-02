@@ -130,8 +130,6 @@ type paneDrag struct {
 	held, gutter bool
 	at           vim.Pos // where the press put the cursor: the Visual area's other end
 	pressed      vim.Pos // the character pressed on: a drag starts once the pointer leaves it
-	last         time.Time
-	lastAt       vim.Pos
 	clicks       int
 	moved        bool
 }
@@ -165,13 +163,7 @@ func (x *Editor) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Interactio
 		if d.gutter {
 			return
 		}
-		now := c.Now()
-		if now.Sub(d.last) < ui.DoubleClick && pos == d.lastAt {
-			d.clicks++
-		} else {
-			d.clicks = 1
-		}
-		d.last, d.lastAt, d.pressed = now, pos, pos
+		d.clicks, d.pressed = max(in.Presses, 1), pos
 		x.press(p, st, d, pos, in.Mods)
 	} else if !d.gutter && isVim(st) && (d.moved || pos != d.pressed) && pos != x.e.Cursor() {
 		if !d.moved {

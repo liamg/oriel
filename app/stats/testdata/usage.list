@@ -95,8 +95,6 @@ clip 0,38 223x936 r 0
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   text "Requests" @33,292.30524 #b3ab99 Inter 12
-  rect 199.59375,280.94 13.40625x14 fill #ff9b45 radius 7
-  text "1" @203.59375,291.18 #141006 JetBrains Mono 9
   path 5 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
@@ -206,7 +204,8 @@ clip 224,0 1376x974 r 0
     text "MAX 20×" @371.01562,107.990005 #ff9b45 JetBrains Mono 9.5
     text "Work" @434.0056,108.35 #b3ab99 JetBrains Mono 10.5
     text "claude-opus-4-7 · claude-sonnet-4-6 · 7 sessions" @470.3806,108.35 #7c7566 JetBrains Mono 10.5
-    text "windows from /usage, through the Oriel mod · just now" @1264,108.17 #4f4a40 JetBrains Mono 10
+    text "windows from /usage, through the Oriel mod" @1264,108.17 #4f4a40 JetBrains Mono 10
+    text " · just now" @1516,108.17 #4f4a40 JetBrains Mono 10
     rect 242,124.14 438.66663x173.16798 fill #0c0c0b radius 8 stroke 1 #24221d
     text "5-HOUR WINDOW" @256,144.49 #b3ab99 JetBrains Mono 9.5
     text "resets 14:40" @507.0104,144.85 #ece6d8 JetBrains Mono 10.5

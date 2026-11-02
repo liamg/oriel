@@ -759,18 +759,16 @@ func (x *Launcher) side(c *ui.Ctx) {
 			c.Text("none", "Prompts you start sessions with show here.", kit.UIFont(12, th.C(theme.FgFaint)))
 		}
 		for _, se := range sessions[:min(len(sessions), 5)] {
-			meta := []string{string(se.Kind)}
+			meta := []widget.AgoPart{{Text: string(se.Kind)}}
 			for _, p := range se.Projects {
-				meta = append(meta, p.Name)
+				meta = append(meta, widget.AgoPart{Text: p.Name})
 			}
-			if !se.Created.IsZero() {
-				meta = append(meta, kit.Ago(c.Now(), se.Created))
-			}
+			meta = append(meta, widget.AgoPart{At: se.Created})
 			if widget.Clickable(c, "recent."+string(se.ID), ui.Style{Dir: ui.Column, W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4, Fill: th.C(tLaunchCard),
 				Stroke: th.C(tLaunchCardLine), Border: 1, Radius: 8, Clip: true, Label: kit.FirstLine(se.Prompt), Help: "agent/launcher#recent-prompts"},
 				func(c *ui.Ctx) {
 					c.Text("p", kit.FirstLine(se.Prompt), kit.UIFont(12.5, th.C(theme.Fg)))
-					c.Text("m", strings.Join(meta, " · "), kit.MonoFont(10, th.C(theme.FgFaint)))
+					widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint))}, meta...)
 				}).Clicked {
 				x.reuse(se)
 			}

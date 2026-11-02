@@ -278,12 +278,12 @@ func shipCard(c *ui.Ctx, open bool, head func(c *ui.Ctx), body func(c *ui.Ctx)) 
 }
 
 // stepTitle is a step's name and the dim note after it.
-func stepTitle(c *ui.Ctx, title, note string) {
+func stepTitle(c *ui.Ctx, title, note string, at ...widget.AgoPart) {
 	th := c.Theme()
 	c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 	c.Row("note", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		if note != "" {
-			c.Text("n", note, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		if note != "" || len(at) > 0 {
+			widget.AgoLine(c, "n", widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgFaint))}, append([]widget.AgoPart{{Text: note}}, at...)...)
 		}
 	})
 }
@@ -416,11 +416,11 @@ func (x *Ship) behind(c *ui.Ctx, se core.SessionState, s shipRead) {
 	th := c.Theme()
 	base := cmp.Or(s.Base, "base")
 	if s.Behind == 0 {
-		note := ""
+		var rebased []widget.AgoPart
 		if !s.Synced.IsZero() {
-			note = "rebased " + kit.AgoText(c.Now(), s.Synced)
+			rebased = append(rebased, widget.AgoPart{Text: "rebased ", At: s.Synced, Long: true})
 		}
-		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Up to date with "+base, note) }, nil)
+		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Up to date with "+base, "", rebased...) }, nil)
 		return
 	}
 	shipCard(c, false, func(c *ui.Ctx) {

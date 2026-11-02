@@ -731,7 +731,7 @@ func (o *overview) activity(ctx registry.Ctx, dir string) (ui.Node, error) {
 				c.Box("rule", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: th.C(theme.LineStrong)}, nil)
 				c.Column("text", ui.Style{Gap: 3}, func(c *ui.Ctx) {
 					c.Text("subject", last.Subject, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(theme.FgMuted)})
-					c.Text("meta", fmt.Sprintf("%s · %s · %s ago", last.Hash, last.Author, kit.Ago(o.now(), last.When)), faint)
+					widget.Ago(c, "meta", last.When, widget.AgoOpts{Text: faint, Long: true, Now: o.now(), Prefix: last.Hash + " · " + last.Author + " · "})
 				})
 			})
 		})

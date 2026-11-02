@@ -230,10 +230,6 @@ text "Markdown · utf-8 · LF" @1325,984.71 #b3ab99 JetBrains Mono 10.5
 text "wrap" @1479.4688,990.78 #7c7566 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 2%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
-clip 0,38 43x936 r 0
-  rect 22.09375,251 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "1" @26.09375,260.81 #141006 JetBrains Mono 8.5
-pop
 clip 44,38 1556x936 r 0
   clip 44,69 1556x905 r 0
     clip 44,69 1556x905 r 0

@@ -95,6 +95,18 @@ func TestSelectableText(t *testing.T) {
 	if !u.Key(render.KeyEvent{Key: "C", Mods: render.ModCtrl | render.ModShift}) || clip.text != "half" {
 		t.Errorf("⌃⇧C copied %q", clip.text)
 	}
+	press(u, frame, render.Point{X: at.X + 2, Y: at.Y + 1}, 0)
+	release(u, frame, at)
+	if got := u.SelectedText(); got != "round half even" {
+		t.Errorf("a triple click, the pointer moved a little, selected %q", got)
+	}
+	for range 2 {
+		press(u, frame, render.Point{X: 87, Y: 7}, 0)
+		release(u, frame, render.Point{X: 87, Y: 7})
+	}
+	if got := u.SelectedText(); got != "even" {
+		t.Errorf("a double click on another word selected %q", got)
+	}
 
 	button := render.Point{X: 10, Y: 38}
 	press(u, frame, button, 0)

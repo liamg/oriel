@@ -642,3 +642,36 @@ func TestDoubleClick(t *testing.T) {
 		t.Errorf("a click on another node after one on save: double %v", quit.DoubleClicked)
 	}
 }
+
+// Text with a tooltip in a clickable row shows its tooltip once the pointer rests on it, and a click on it is the row's.
+func TestTooltipInAClickableRow(t *testing.T) {
+	clk := &clock{t: time.Unix(1000, 0)}
+	u := newUI()
+	u.SetClock(clk.now)
+	var row Interaction
+	frame := func() string {
+		return describe(paintOps(u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
+			id := c.Next("row")
+			row = c.Interaction(id)
+			c.Row("row", Style{W: Px(200), H: Px(30), Interactive: true}, func(c *Ctx) {
+				c.Box("age", Style{W: Px(40), H: Px(20), Tooltip: "Mon 2 Nov 2026, 14:03:12"}, func(c *Ctx) { c.Text("t", "5m", body) })
+			})
+		}))
+	}
+	frame()
+	if !u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 10, Y: 10}}) {
+		t.Error("a move onto text with a tooltip doesn't ask for a frame")
+	}
+	frame()
+	clk.advance(time.Second)
+	if !strings.Contains(frame(), "14:03:12") {
+		t.Error("no tooltip over the text")
+	}
+	u.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: render.Point{X: 10, Y: 10}, Buttons: render.ButtonPrimary})
+	frame()
+	u.Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: render.Point{X: 10, Y: 10}, Buttons: render.ButtonPrimary})
+	frame()
+	if !row.Clicked {
+		t.Error("a click on the text with a tooltip wasn't the row's")
+	}
+}

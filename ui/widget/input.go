@@ -87,6 +87,7 @@ type inputState struct {
 	hasGoal        bool
 	width          float32 // the width a multi-line field wrapped at, last frame
 	dragging       bool
+	presses        int  // the press the drag began with: 2 holds a word, 3 a line
 	focused        bool // last frame
 	undo, redo     []inputEdit
 	join           string // what the last edit was ("type", a dictation's), which the next of the same joins for undo
@@ -259,10 +260,22 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 			} else {
 				at = nearest(span{0, len(runes)}, in.Pointer().X-r.Min.X-10+st.scroll)
 			}
-			st.cursor, st.hasGoal = at, false
-			// The press anchors a selection (Shift keeps the old anchor); dragging extends it.
-			if !st.dragging && in.Mods&render.ModShift == 0 {
-				st.anchor = at
+			fresh := !st.dragging
+			switch {
+			case fresh && in.Presses == 2 && !o.Secret:
+				st.anchor, st.cursor = wordAt(runes, at)
+			case fresh && in.Presses >= 2:
+				st.anchor, st.cursor = lineAt(runes, at, multi)
+			case !st.dragging || st.presses < 2:
+				st.cursor = at
+				// The press anchors a selection (Shift keeps the old anchor); dragging extends it.
+				if fresh && in.Mods&render.ModShift == 0 {
+					st.anchor = at
+				}
+			}
+			st.hasGoal = false
+			if fresh {
+				st.presses = in.Presses
 			}
 		}
 	}
@@ -700,6 +713,46 @@ func wordRight(rs []rune, i int) int {
 		i++
 	}
 	return i
+}
+
+// wordAt is the word around i: its run of word characters, else the run of spaces there, else the one character.
+func wordAt(rs []rune, i int) (int, int) {
+	if i == len(rs) && i > 0 {
+		i--
+	}
+	if i >= len(rs) {
+		return i, i
+	}
+	same := func(r rune) bool { return isWord(r) == isWord(rs[i]) && unicode.IsSpace(r) == unicode.IsSpace(rs[i]) }
+	if !isWord(rs[i]) && !unicode.IsSpace(rs[i]) {
+		return i, i + 1
+	}
+	lo, hi := i, i
+	for lo > 0 && same(rs[lo-1]) {
+		lo--
+	}
+	for hi < len(rs) && same(rs[hi]) {
+		hi++
+	}
+	return lo, hi
+}
+
+// lineAt is the line around i, between newlines, its newline included; a single-line field's whole text.
+func lineAt(rs []rune, i int, multi bool) (int, int) {
+	if !multi {
+		return 0, len(rs)
+	}
+	lo, hi := i, i
+	for lo > 0 && rs[lo-1] != '\n' {
+		lo--
+	}
+	for hi < len(rs) && rs[hi] != '\n' {
+		hi++
+	}
+	if hi < len(rs) {
+		hi++
+	}
+	return lo, hi
 }
 
 func isWord(r rune) bool { return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) }

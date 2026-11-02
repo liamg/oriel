@@ -25,8 +25,6 @@ type textSel struct {
 	anchor, focus selPos
 	held          bool
 	clicks        int
-	last          time.Time
-	lastAt        render.Point
 	order         map[ID]int // this frame's text nodes in scope, in the order they were built
 	texts         []*elem
 	anchorAt      int // the anchor's place in that order when last built: which edge it holds at once scrolled away
@@ -130,16 +128,15 @@ func (u *UI) selPress(ev render.PointerEvent) {
 		u.sel = nil
 		return
 	}
-	now := u.now()
 	if s := u.sel; s != nil && s.scope == scope && ev.Mods&render.ModShift != 0 {
 		s.focus, s.held = at, true
 		return
 	}
-	clicks := 1
-	if s := u.sel; s != nil && s.scope == scope && now.Sub(s.last) < DoubleClick && s.lastAt == ev.Pos {
-		clicks = s.clicks + 1
+	clicks := u.in.presses
+	if s := u.sel; s == nil || s.scope != scope {
+		clicks = 1
 	}
-	s := &textSel{scope: scope, anchor: at, focus: at, held: true, clicks: clicks, last: now, lastAt: ev.Pos}
+	s := &textSel{scope: scope, anchor: at, focus: at, held: true, clicks: clicks}
 	u.sel = s
 	e := u.byID[at.id]
 	switch {
