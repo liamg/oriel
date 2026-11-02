@@ -14,7 +14,9 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
+	"github.com/liamg/oriel/agent/claude/claudebox"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/hookcall"
 )
 
@@ -332,6 +334,7 @@ func TestAgentDefaultsNeverOverrideTheUser(t *testing.T) {
 
 func TestDetect(t *testing.T) {
 	cfg := t.TempDir()
+	t.Setenv("HOME", t.TempDir())
 	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
 	t.Setenv("ANTHROPIC_API_KEY", "")
 	bin := filepath.Join(t.TempDir(), "claude")
@@ -368,6 +371,46 @@ func TestDetect(t *testing.T) {
 	}
 	if in, _ = (&Provider{Bin: filepath.Join(cfg, "none")}).Detect(context.Background()); in.Note == "" {
 		t.Errorf("no claude: %+v", in)
+	}
+}
+
+// With the token in the Keychain, Detect marks it from there, read afresh each time, and hands it to the
+// sandboxes: so a login renewed on the host tells from the one that was refused.
+func TestDetectMarksTheKeychainsToken(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	cfg := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", cfg)
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	if err := os.WriteFile(filepath.Join(cfg, ".claude.json"), []byte(`{"oauthAccount":{"organizationType":"claude_max"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(t.TempDir(), "claude")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\necho '2.1.296 (Claude Code)'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(home, "ws")
+	if _, err := sandbox.Create(root, sandbox.ModeSandbox); err != nil {
+		t.Fatal(err)
+	}
+	tok := "k1"
+	p := &Provider{Bin: bin}
+	p.box.Keychain = func(context.Context) ([]byte, error) {
+		return json.Marshal(map[string]any{"claudeAiOauth": map[string]any{"accessToken": tok,
+			"expiresAt": time.Now().Add(time.Hour).UnixMilli()}})
+	}
+	first, _ := p.Detect(context.Background())
+	if !first.LoggedIn || first.Login == "" {
+		t.Fatalf("signed in: %+v", first)
+	}
+	tok = "k2"
+	again, _ := p.Detect(context.Background())
+	if again.Login == "" || again.Login == first.Login {
+		t.Errorf("a renewed token: %q, was %q", again.Login, first.Login)
+	}
+	b, _ := os.ReadFile(filepath.Join(claudebox.Dir(root), ".credentials.json"))
+	if !strings.Contains(string(b), `"k2"`) {
+		t.Errorf("the sandbox holds %s", b)
 	}
 }
 

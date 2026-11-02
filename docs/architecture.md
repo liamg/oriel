@@ -131,6 +131,8 @@ token). Codex runs as `codex app-server` over stdio.
 A sandbox knows no provider: each backend asks the session's provider what its agent needs where the backend puts it
 (`agent.Sandboxed`: its binary for that platform, its config and sign-in in a directory of its own, the host
 variables and endpoints it inherits, the hosts it reaches, the user's MCP servers for the gateway), and gives it that.
+A sandboxed Claude gets the host's sign-in without its refresh token. While one runs, the provider hands every sandbox
+the host's sign-in each minute, and near its end runs the host's own claude to renew it (`claudebox.Box.KeepLogins`).
 
 ## Rendering and the toolkit
 

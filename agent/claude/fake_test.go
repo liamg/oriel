@@ -6,6 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -412,5 +413,7 @@ func fakeProvider(t *testing.T) *Provider {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &Provider{Bin: exe, OrielBin: exe}
+	p := &Provider{Bin: exe, OrielBin: exe}
+	p.box.Keychain = func(context.Context) ([]byte, error) { return nil, errors.New("no keychain in tests") }
+	return p
 }
