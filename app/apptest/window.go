@@ -503,7 +503,7 @@ func (w *Window) ScrollAt(text string, dy float32) {
 }
 
 // ReviewWindow is a work session on the fake whose worktree changes round.go from a committed base, with a second
-// provider, codex, installed to review it; the diff of the change is open.
+// provider, codex, picked to review it; the diff of the change is open.
 func ReviewWindow(t *testing.T) (*Window, *agenttest.FakeSession, *agenttest.Fake, *rig.Host) {
 	t.Helper()
 	author := agenttest.NewFake()
@@ -511,6 +511,11 @@ func ReviewWindow(t *testing.T) (*Window, *agenttest.FakeSession, *agenttest.Fak
 	lw := rig.NewHost(t, author, codex)
 	lw.Fake = author
 	r, a, _ := AgentWindowOn(t, lw)
+	if err := r.Do(func() error {
+		return r.Host.Options().Set("review.ai.provider", registry.LayerUser, registry.At{}, "codex")
+	}); err != nil {
+		t.Fatal(err)
+	}
 	se, _ := r.Store.Session("w")
 	p, _ := se.Snapshot().Primary()
 	dir := p.Dir
@@ -522,7 +527,7 @@ func ReviewWindow(t *testing.T) (*Window, *agenttest.FakeSession, *agenttest.Fak
 	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
 	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": dir}) })
 	r.WaitFrame("the diff with the AI review column", func(s string) bool {
-		return HasAll(s, "func roundHalfEven", "AI REVIEW", "No AI review yet.", "REVIEWER", "Review changes", "Prompt…")
+		return HasAll(s, "func roundHalfEven", "AI REVIEW", "No AI review yet.", "REVIEWER", "Codex", "Review changes", "Prompt…")
 	})
 	return r, a, codex, lw
 }

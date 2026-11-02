@@ -1,4 +1,4 @@
-// Package aireview reviews a session's change with an agent other than the session's own.
+// Package aireview reviews a session's change with a short-lived reviewer agent.
 package aireview
 
 import (
@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -30,7 +29,7 @@ const aiReviewDiffMax = 120_000
 // AIReviewReq asks for a cross-model AI review of a session's change.
 type AIReviewReq struct {
 	Session  core.SessionID `json:"session"`
-	Provider string         `json:"provider,omitempty"` // the reviewer's; "" for one other than the author's
+	Provider string         `json:"provider,omitempty"` // the reviewer's; "" for the session agent's
 	Model    string         `json:"model,omitempty"`    // "" for the provider's default
 	// Full reviews the whole change since the base; otherwise a session reviewed before has what changed since.
 	Full bool `json:"full,omitempty"`
@@ -76,9 +75,8 @@ func (x *Reviews) Settle(se core.SessionState) {
 	}
 }
 
-// AIReview reviews a session's change with an agent other than the session's own: a
-// different provider from the author's by default, else the author's provider on another model. The reviewer is a
-// short-lived session of the provider on the ai-review pack, which reads but changes nothing, and reports each finding
+// AIReview reviews a session's change on the session agent's provider and model unless the request picks one. The
+// reviewer is a short-lived session of the provider on the ai-review pack, which reads but changes nothing, and reports each finding
 // with its finding tool. It runs in the background; its findings are session events as they come.
 func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
 	se, err := x.st.Session(r.Session)
@@ -96,7 +94,6 @@ func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
 		return "", err
 	}
 	rv := core.AIReview{ID: hostcore.NewID(4), Provider: p.ID(), Model: model, Author: x.authorLabel(ctx, se), Started: x.env.Now().UTC(), Running: true}
-	rv.Cross = rv.Provider != se.Agent.Provider || model != x.authorModel(ctx, se)
 	last, _ := se.LastAIReview()
 	change, err := changeOf(ctx, se, &rv, last, r.Full)
 	if err != nil {
@@ -195,8 +192,8 @@ func changeOf(ctx context.Context, se core.SessionState, rv *core.AIReview, last
 	return change.String(), nil
 }
 
-// reviewer is the provider and model that review a session's change: the request's, else the first installed
-// provider other than the author's at its default model, else the author's provider on a model other than its own.
+// reviewer is the provider and model that review a session's change: the request's, else the session agent's.
+// A session with no agent is reviewed by the first signed-in provider at its default model.
 func (x *Reviews) reviewer(ctx context.Context, se core.SessionState, r AIReviewReq) (agent.Provider, string, error) {
 	if r.Provider != "" {
 		p, ok := x.deps.Providers.Get(r.Provider)
@@ -205,40 +202,15 @@ func (x *Reviews) reviewer(ctx context.Context, se core.SessionState, r AIReview
 		}
 		return p, cmp.Or(r.Model, hostcore.DefaultModel(ctx, p)), nil
 	}
-	author := se.Agent.Provider
-	var mine agent.Provider
+	if p, ok := x.deps.Providers.Get(se.Agent.Provider); ok {
+		return p, cmp.Or(r.Model, x.authorModel(ctx, se)), nil
+	}
 	for _, p := range x.deps.Providers.List() {
-		if x.deps.SignedOut(p.ID()) || !hostcore.SignedIn(ctx, p) {
-			continue
-		}
-		if p.ID() != author {
+		if !x.deps.SignedOut(p.ID()) && hostcore.SignedIn(ctx, p) {
 			return p, cmp.Or(r.Model, hostcore.DefaultModel(ctx, p)), nil
 		}
-		mine = p
 	}
-	if mine == nil {
-		return nil, "", errors.New("no agent provider is installed and signed in to review with")
-	}
-	if r.Model != "" {
-		return mine, r.Model, nil
-	}
-	own := x.authorModel(ctx, se)
-	ms, _ := mine.Models(ctx)
-	slices.SortStableFunc(ms, func(a, b agent.Model) int {
-		switch {
-		case a.Default && !b.Default:
-			return -1
-		case b.Default && !a.Default:
-			return 1
-		}
-		return 0
-	})
-	for _, m := range ms {
-		if m.ID != own {
-			return mine, m.ID, nil
-		}
-	}
-	return mine, own, nil
+	return nil, "", errors.New("no agent provider is installed and signed in to review with")
 }
 
 // authorModel is the model the session's agent runs on: its own, else its provider's default.
@@ -270,7 +242,7 @@ func reviewPrompt(se core.SessionState, rv core.AIReview, change string) string 
 	case reviewing:
 		b.WriteString(intro)
 	case rv.Author != "":
-		fmt.Fprintf(&b, "Review this change. %s wrote it; you're the second opinion.\n\n", rv.Author)
+		fmt.Fprintf(&b, "Review this change. %s wrote it.\n\n", rv.Author)
 	default:
 		b.WriteString("Review this change.\n\n")
 	}

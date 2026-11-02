@@ -36,14 +36,13 @@ func reviewer(t *testing.T, f *agenttest.Fake) *agenttest.FakeSession {
 	return s
 }
 
-// Cross-model review runs on a different provider from the author by default: the reviewer is the other provider,
-// on the ai-review pack, given the branch's change and only read-only tools; whatever it asks permission for is
+// A review on a picked provider: the reviewer is that provider, on the ai-review pack, given the branch's change and only read-only tools; whatever it asks permission for is
 // refused; each finding it reports is a session event as it comes, and the review ends with its turn.
-func TestAIReviewRunsOnAnotherProvider(t *testing.T) {
+func TestAIReviewRunsOnThePickedProvider(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4), Offers: []agent.Model{{ID: "gpt-5", Default: true}}}
 	r := newRig(t, codex)
 	id, wt := r.changed()
-	rid, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id})
+	rid, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +64,7 @@ func TestAIReviewRunsOnAnotherProvider(t *testing.T) {
 		t.Errorf("the reviewer's tools: %v", tools)
 	}
 	se := r.session(id)
-	if got, ok := se.LastAIReview(); !ok || got.ID != rid || !got.Running || got.Provider != "codex" || !got.Cross || got.Since() != base {
+	if got, ok := se.LastAIReview(); !ok || got.ID != rid || !got.Running || got.Provider != "codex" || got.Since() != base {
 		t.Fatalf("the review while running: %+v", got)
 	}
 	denied := rv.Ask(agent.Permission{ID: "p1", Tool: "Bash", Summary: "go test ./..."})
@@ -99,26 +98,26 @@ func TestAIReviewRunsOnAnotherProvider(t *testing.T) {
 	}
 }
 
-// With only the author's provider installed, the review falls back to it on a different model; with no other
-// model, on the same one, and says so.
-func TestAIReviewFallsBackToAnotherModel(t *testing.T) {
-	r := newRig(t)
+// By default the reviewer is the session's own agent, on its model, even with another provider installed; a
+// request's model wins.
+func TestAIReviewRunsOnTheSessionAgent(t *testing.T) {
+	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4), Offers: []agent.Model{{ID: "gpt-5", Default: true}}}
+	r := newRig(t, codex)
 	r.fake.Offers = []agent.Model{{ID: "m1", Default: true}, {ID: "m2"}}
 	id, _ := r.changed()
 	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, r.fake)
-	if rv.Spec.Model != "m2" {
-		t.Errorf("the reviewer runs on %q, want m2", rv.Spec.Model)
+	if rv.Spec.Model != "m1" {
+		t.Errorf("the reviewer runs on %q, want m1", rv.Spec.Model)
 	}
 	rv.Emit(agent.TurnEnd{})
 	se := r.eventually(id, "the review to end", func(se core.SessionState) bool { l, _ := se.LastAIReview(); return !l.Running })
-	if l, _ := se.LastAIReview(); l.Provider != "fake" || l.Model != "m2" || !l.Cross {
+	if l, _ := se.LastAIReview(); l.Provider != "fake" || l.Model != "m1" {
 		t.Errorf("the review: %+v", l)
 	}
-	r.fake.Offers = nil
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Full: true}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Model: "m2", Full: true}); err != nil {
 		t.Fatal(err)
 	}
 	rv = reviewer(t, r.fake)
@@ -127,8 +126,8 @@ func TestAIReviewFallsBackToAnotherModel(t *testing.T) {
 		l, _ := se.LastAIReview()
 		return len(se.AIReviews) == 2 && !l.Running
 	})
-	if l, _ := se.LastAIReview(); l.Model != "m1" || l.Cross {
-		t.Errorf("with one model: %+v", l)
+	if l, _ := se.LastAIReview(); l.Provider != "fake" || l.Model != "m2" {
+		t.Errorf("with a model asked for: %+v", l)
 	}
 }
 
@@ -138,7 +137,7 @@ func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
 	id, wt := r.changed()
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, codex)
@@ -156,7 +155,7 @@ func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 	wt.Write(map[string]string{"currency.go": "package pricing\n\nvar half = 5\n"})
 	wt.Commit("Claude", "currency")
 	wt.Write(map[string]string{"tiers.go": "package pricing\n"})
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv = reviewer(t, codex)
@@ -169,7 +168,7 @@ func TestAIReReviewIsSinceTheLastReview(t *testing.T) {
 		l, _ := se.LastAIReview()
 		return len(se.AIReviews) == 2 && !l.Running
 	})
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err == nil || !strings.Contains(err.Error(), "nothing has changed") {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"}); err == nil || !strings.Contains(err.Error(), "nothing has changed") {
 		t.Errorf("a re-review with nothing new: %v", err)
 	}
 }
@@ -180,7 +179,7 @@ func TestAIReviewReadsFindingsFromItsAnswer(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, codex)
@@ -191,7 +190,7 @@ func TestAIReviewReadsFindingsFromItsAnswer(t *testing.T) {
 	if f := se.Findings[0]; f.Severity != "medium" || f.Line != 31 || f.Body != "The table covers JPY and USD only." {
 		t.Errorf("finding: %+v", f)
 	}
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Full: true}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex", Full: true}); err != nil {
 		t.Fatal(err)
 	}
 	rv = reviewer(t, codex)
@@ -212,7 +211,7 @@ func TestAFindingBecomesAThread(t *testing.T) {
 	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
 	r := newRig(t, codex)
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	rv := reviewer(t, codex)
@@ -245,34 +244,6 @@ func TestAFindingBecomesAThread(t *testing.T) {
 	}
 }
 
-// A review session's change is reviewed by AI as it starts.
-func TestReviewSessionsReviewThemselves(t *testing.T) {
-	codex := &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}
-	r := newRig(t, codex)
-	ctx := context.Background()
-	origin := r.repo
-	origin.Git("checkout", "-q", "-b", "feature")
-	origin.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() { /* pr */ }\n"})
-	origin.Commit("Bob", "the PR")
-	origin.Git("update-ref", "refs/pull/7/head", strings.TrimSpace(origin.Git("rev-parse", "HEAD")))
-	origin.Git("checkout", "-q", "main")
-	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
-	clone.Git("clone", "-q", origin.Dir, ".")
-	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
-		t.Fatal(err)
-	}
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", Provider: "fake",
-		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
-	rv := reviewer(t, codex)
-	if !strings.Contains(rv.Spec.Prompt, "Review this pull request (https://github.com/acme/pricing/pull/7)") ||
-		!strings.Contains(rv.Spec.Prompt, "/* pr */") {
-		t.Errorf("the automatic review's prompt:\n%s", rv.Spec.Prompt)
-	}
-	if l, ok := r.session(id).LastAIReview(); !ok || !l.Running {
-		t.Errorf("no review is running: %+v", l)
-	}
-}
-
 // panicky is a provider whose Start panics.
 type panicky struct{ *agenttest.Fake }
 
@@ -284,7 +255,7 @@ func (panicky) Start(context.Context, agent.StartSpec) (agent.Session, error) {
 func TestAIReviewSurvivesAPanic(t *testing.T) {
 	r := newRig(t, panicky{&agenttest.Fake{Name: "codex"}})
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.eventually(id, "the review to end", func(se core.SessionState) bool { l, _ := se.LastAIReview(); return !l.Running })
@@ -300,7 +271,7 @@ func TestCloseWaitsForAIReview(t *testing.T) {
 	release := sync.OnceFunc(func() { close(codex.HoldClose) })
 	t.Cleanup(release) // a failure before the release mustn't leave the host's Close waiting
 	id, _ := r.changed()
-	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id}); err != nil {
+	if _, err := r.w.AIReview(context.Background(), AIReviewReq{Session: id, Provider: "codex"}); err != nil {
 		t.Fatal(err)
 	}
 	reviewer(t, codex)

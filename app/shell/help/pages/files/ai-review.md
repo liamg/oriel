@@ -6,18 +6,16 @@ related: [files/diff, agent/requests]
 
 # AI review
 
-A second opinion on the session's change from another model: by default a different provider from the agent that
-wrote it (Codex reviews Claude's work, and the other way round), or the same provider on another model when only one
-is installed. The reviewer reads the change and the code around it and changes nothing; whatever else it asks to do
+A review of the session's change by a short-lived agent, on the session agent's provider and model unless you pick
+another. The reviewer reads the change and the code around it and changes nothing; whatever else it asks to do
 is refused. Its findings show in the column at the diff's right, worst first.
 
 ## Reviewer {#reviewer}
 
 The header names the reviewer and the commit the change was read from. **Review changes** runs a review
 (`review.ai.run`); once there's been one, **Re-review changes** reads only what changed since, committed or not, and
-tells the reviewer what it found before. The foot says whether the reviewer is a different model from the author.
-`review.ai.provider` and `review.ai.model` pick the reviewer yourself. A review session (a pull request) is reviewed
-as it starts.
+tells the reviewer what it found before. The foot names the reviewer. `review.ai.provider` and `review.ai.model` pick
+it yourself.
 
 ## Severity {#severity}
 

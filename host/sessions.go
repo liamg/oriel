@@ -42,11 +42,6 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 	if err := w.emit(core.SessionSynced{Session: se}); err != nil {
 		return "", err
 	}
-	if k.AutoReview {
-		if _, err := w.reviews.AIReview(context.WithoutCancel(ctx), AIReviewReq{Session: se.ID}); err != nil {
-			w.log.Warn("AI review", "session", se.ID, "err", err)
-		}
-	}
 	if err := w.run.Begin(ctx, se.ID, spec, k); err != nil {
 		return se.ID, err
 	}

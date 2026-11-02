@@ -22,7 +22,7 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// AIReviewView is the AI review's column at the diff's right: the findings of a review by another model.
+// AIReviewView is the AI review's column at the diff's right: the findings of a review agent.
 const AIReviewView = kit.DiffRight + "50-ai-review"
 
 var (
@@ -51,9 +51,9 @@ func (x *AIReview) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
 		Scopes: registry.ScopeUser,
-		Help:   "The provider AI reviews run on: claude, codex; auto, one other than the session agent's (the author's), else the author's on another model."}))
+		Help:   "The provider AI reviews run on: claude, codex; auto, the session agent's."}))
 	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.model", Type: registry.String, Default: "default", Choices: func() []string { return []string{"default"} },
-		Scopes: registry.ScopeUser, Help: "The model AI reviews run on: default, the reviewer's default; or a model's name."}))
+		Scopes: registry.ScopeUser, Help: "The model AI reviews run on: default, the session agent's (or the picked provider's default); or a model's name."}))
 	x.Add(h.Contribute(registry.ShipGate{Name: "ai-review", Title: "AI review", Order: 60, Check: x.shipGate, Source: "builtin:ai-review"}))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -81,7 +81,7 @@ func (x *AIReview) commands() []registry.Command {
 		}
 	}
 	return []registry.Command{
-		{ID: "review.ai.run", Title: "AI review the change of session {id} (the one in front by default): what changed since the last review, or all of it with {full}; on another model than the author's",
+		{ID: "review.ai.run", Title: "AI review the change of session {id} (the one in front by default): what changed since the last review, or all of it with {full}",
 			Available: has, Run: func(_ registry.Ctx, a registry.Args) error { return x.run(a) }},
 		{ID: "review.ai.thread", Title: "Turn the AI review's {finding} into a thread on its line, for the session's agent to answer", Available: has,
 			Run: finding(func(ctx context.Context, se core.SessionState, f core.Finding, _ registry.Args) error {
@@ -372,7 +372,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 			case reviewed && last.Running:
 				note = kit.ProviderName(x.h, last.Provider) + " is reviewing the change…"
 			case !reviewed:
-				note = "No AI review yet. Review changes asks another model to read this change."
+				note = "No AI review yet. Review changes asks an agent to read this change."
 			case last.Error != "":
 				note = "The review failed: " + last.Error
 			case len(se.Findings) == 0:
@@ -392,9 +392,9 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 			c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("k", "REVIEWER", kit.KickerFont(th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				what := "different model from the author"
-				if reviewed && !last.Cross {
-					what = "same model as the author"
+				what := "the session's agent"
+				if v, _, _ := x.h.Options().Get("review.ai.provider", registry.At{}); v != "auto" && v != nil {
+					what = kit.ProviderName(x.h, fmt.Sprint(v))
 				}
 				c.Text("what", what, kit.MonoFont(10, th.C(theme.FgGhost)))
 			})

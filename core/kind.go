@@ -56,8 +56,6 @@ type KindSpec struct {
 	// session.start.
 	Launcher bool `json:"launcher,omitempty"`
 	Order    int  `json:"order,omitempty"` // the launcher's order: the built-ins are 10 to 60
-	// AutoReview runs an AI review of the change as the session starts (AIReview): a review of a pull request.
-	AutoReview bool `json:"autoReview,omitempty"`
 	// PromptFile is a file at the workspace root the prompt is written to as the session starts: a job's JOB.md.
 	PromptFile string `json:"promptFile,omitempty"`
 	// Opens are commands run once the window is on a new session of the kind, before session.start's own then.

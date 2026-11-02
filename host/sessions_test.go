@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
@@ -222,7 +221,7 @@ func TestReviewComparesWithThePRBase(t *testing.T) {
 // the diff"): a review's agent is refused a comment anywhere else, and told which lines it can use.
 // ref: oracle git
 func TestReviewCommentsStayInTheDiff(t *testing.T) {
-	r := newRig(t, &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}) // the AI review's reviewer
+	r := newRig(t)
 	r.tools = []string{"comment"}
 	ctx := context.Background()
 	origin := r.repo
@@ -239,9 +238,12 @@ func TestReviewCommentsStayInTheDiff(t *testing.T) {
 	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
-	r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRBase: "main", Provider: "fake",
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRBase: "main", Provider: "fake",
 		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
 	a := r.agent()
+	if rvs := r.session(id).AIReviews; len(rvs) != 0 {
+		t.Errorf("a review session ran an AI review too: %+v", rvs)
+	}
 	for _, ok := range []map[string]any{
 		{"file": "long.go", "line": 10, "body": "Why?"},
 		{"file": "long.go", "line": 7, "end_line": 13, "body": "The context."},
