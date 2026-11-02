@@ -163,41 +163,46 @@ clip 224,38 250x936 r 0
   clip 224,69 250x905 r 0
     clip 234,79 230x885 r 0
       clip 246,89 206x15.729492 r 0
-        text "Not raised" @246,101.59375 #ece6d8 Inter 13
+        text "feat(search): back off on 429 …" @246,101.59375 #ece6d8 Inter 13
       pop
-      clip 246,108.72949 206x13.860001 r 0
-        text "rethink/search-endpoint → main…" @246,119.43949 #7c7566 JetBrains Mono 10.5
+      rect 246,110.459496 66.56x16.54 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
+      text "DRAFTING" @253,122.1495 #ff9b45 JetBrains Mono 9.5
+      clip 318.56,111.79949 107.44x13.860001 r 0
+        text "2 commits" @318.56,122.50949 #7c7566 JetBrains Mono 10.5
       pop
-      text "!" @246,153.13661 #ff9b45 Inter 12.5
-      clip 268,141.02724 104x15.124512 r 0
-        text "Committed" @268,153.13661 #b3ab99 Inter 12.5
+      text "↻" @436.75,122.68949 #7c7566 JetBrains Mono 11
+      clip 246,132.72949 206x13.860001 r 0
+        text "rethink/search-endpoint → main" @246,143.4395 #7c7566 JetBrains Mono 10.5
       pop
-      text "3 files left" @380,152.18948 #7c7566 JetBrains Mono 10
-      text "!" @246,181.13661 #ff9b45 Inter 12.5
-      clip 268,169.02724 128x15.124512 r 0
-        text "Up to date with main" @268,181.13661 #b3ab99 Inter 12.5
+      rect 246,160.5895 206x124.740005 fill #060606 radius 6
+      clip 246,160.5895 206x124.740005 r 6
+        text "BRANCH" @256,178.2795 #7c7566 JetBrains Mono 9.5
+        text "!" @256,198.6766 #ff9b45 Inter 12.5
+        clip 278,186.56723 76.875x15.124512 r 0
+          text "Committed" @278,198.6766 #ece6d8 Inter 12.5
+        pop
+        text "3 files left" @362.875,197.9095 #ff9b45 JetBrains Mono 10.5
+        text "!" @256,222.6766 #ff9b45 Inter 12.5
+        clip 278,210.56723 70.28125x15.124512 r 0
+          text "Up to date" @278,222.6766 #ece6d8 Inter 12.5
+        pop
+        text "4 behind main" @356.28125,221.9095 #ff9b45 JetBrains Mono 10.5
+        text "!" @256,246.6766 #ff9b45 Inter 12.5
+        clip 278,234.56723 96.65625x15.124512 r 0
+          text "Pushed" @278,246.6766 #ece6d8 Inter 12.5
+        pop
+        text "2 to push" @382.65625,245.9095 #ff9b45 JetBrains Mono 10.5
+        rect 246,261.1295 206x1 fill #24221d
+        clip 246,262.1295 206x23.200012 r 0
+          text "git read 4s ago" @256,277.3295 #7c7566 JetBrains Mono 10
+        pop
       pop
-      text "4 behind" @404,180.18948 #7c7566 JetBrains Mono 10
-      text "!" @246,209.13661 #ff9b45 Inter 12.5
-      clip 268,197.02724 122x15.124512 r 0
-        text "Pushed" @268,209.13661 #b3ab99 Inter 12.5
-      pop
-      text "2 to push" @398,208.18948 #7c7566 JetBrains Mono 10
-      text "●" @246,237.13661 #ff9b45 Inter 12.5
-      clip 268,225.02724 128x15.124512 r 0
-        text "PR" @268,237.13661 #b3ab99 Inter 12.5
-      pop
-      text "drafting" @404,236.18948 #7c7566 JetBrains Mono 10
-      text "○" @246,265.1366 #7c7566 Inter 12.5
-      clip 268,253.02724 176x15.124496 r 0
-        text "Checks" @268,265.1366 #b3ab99 Inter 12.5
-      pop
-      text "" @452,264.18948 #7c7566 JetBrains Mono 10
-      rect 246,288.58948 70.140625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-      text "Raise PR" @256,305.9547 #141006 Inter 12
-      rect 324.14062,288.58948 55.828125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Ship ⇉" @334.14062,305.9547 #ece6d8 Inter 12
-      text "opens the Raise PR tab →" @246,328.7895 #4f4a40 JetBrains Mono 10
+      rect 246,160.5895 206x124.740005 radius 6 stroke 1 #332f27
+      rect 246,297.3295 70.140625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+      text "Raise PR" @256,314.69473 #141006 Inter 12
+      rect 324.14062,297.3295 55.828125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Ship ⇉" @334.14062,314.69473 #ece6d8 Inter 12
+      text "opens the Raise PR tab →" @246,337.5295 #4f4a40 JetBrains Mono 10
     pop
   pop
 pop

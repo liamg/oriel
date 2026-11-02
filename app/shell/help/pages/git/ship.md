@@ -8,7 +8,7 @@ related: [shell/rail, agent/requests, files/explorer]
 
 Each project's way from uncommitted work to a merged pull request: **uncommitted → behind its base → unpushed → PR →
 checks**. **Ship** in the sidebar is the session's page, every project side by side; a project's **Pull request**
-panel is the same checklist, a line a step, in the dock. Every step runs with your own
+panel is the same in the dock. Every step runs with your own
 git and your code host's account: the agent can draft a commit or a PR, never send one. The PR's steps work on any code
 host a plugin brings (GitHub is built in; GitLab and Azure DevOps are bundled), in its own words: **Raise MR** on GitLab.
 
@@ -83,6 +83,17 @@ lists the others.
 The PR's number, title and state, its reviewers, **Ready for review** for a draft, **Merge…**, and **Open on GitHub ↗**
 (or the project's code host). Plugins add buttons beside them (`oriel.ship.action`), such as one that asks your team's
 chat to take a look.
+
+The **Pull request** panel in the dock reads top to bottom:
+
+- **Header**: the title, a state chip (open, draft, merged, closed, drafting, not raised), the number and commits, and
+  the branch it merges into. **↻** reads it again: fetches origin and asks the code host.
+- **Checks**: one line for all of them (all passed, how many fail, how many run, none reported), then each failing or
+  running check. The footer says when the code host was last asked and at which commit (`checked 28s ago · at
+  c3f1a9e`); it turns amber when the answer is stale, red with why when the host couldn't be reached.
+- **Reviews**: each reviewer and where they stand: approved, changes, commented or waiting.
+- **Branch**: committed, up to date with the base, pushed, and **On origin**: **new commits** when the PR's head isn't
+  the commit checked out and nothing here waits to be pushed (someone else pushed). The footer says when git was read.
 
 Once a project's PR is raised, its tab (**Open PR** on the Pull request panel) is the PR as it stands: its title, its
 link (click it to open the PR in the browser) with **Copy link** to share it, the checks as they run, the description

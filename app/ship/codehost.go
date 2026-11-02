@@ -29,6 +29,8 @@ type shipRead struct {
 	Checks    []registry.Check
 	FailLine  string // what the first failing check's log says
 	HostError string
+	GitRead   time.Time // when git was read
+	PRRead    time.Time // when the code host was last asked; zero if never
 }
 
 // codeRepo is the project as its code host's funcs are asked about it.
@@ -61,7 +63,7 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 	out := make([]shipRead, len(ships))
 	var wg sync.WaitGroup
 	for i, s := range ships {
-		out[i] = shipRead{Ship: s}
+		out[i] = shipRead{Ship: s, GitRead: x.Clock()}
 		hs, repo, ok := kit.SitesOf(x.h).Remote(s.Origin)
 		if !ok {
 			hostname, _, parsed := registry.ParseRemote(s.Origin)
@@ -89,7 +91,7 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 		go func() {
 			defer wg.Done()
 			g := x.prFor(ctx, id, out[i], fresh)
-			out[i].PR, out[i].Checks, out[i].FailLine, out[i].HostError = g.pr, g.checks, g.failLine, g.err
+			out[i].PR, out[i].Checks, out[i].FailLine, out[i].HostError, out[i].PRRead = g.pr, g.checks, g.failLine, g.err, g.at
 			if g.err != "" && kit.SitesOf(x.h).Refuse(hs, errors.New(g.err)) {
 				out[i].Unkeyed = !kit.SitesOf(x.h).Keyed(hs)
 				x.cache.mu.Lock()
@@ -364,6 +366,12 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 			x.h.Log().Debug("ship", "threads", s.Project, "err", err)
 			continue
 		}
+		x.mu.Lock()
+		if x.reviewed == nil {
+			x.reviewed = map[string]map[string]string{}
+		}
+		x.reviewed[pr.URL] = reviewStates(ts)
+		x.mu.Unlock()
 		req := host.MirrorReviewReq{Session: id, Project: s.Project, Host: h.Name, Repo: s.Repo, PR: pr.Number, URL: pr.URL}
 		for _, t := range ts {
 			rt := host.ReviewThread{Key: t.ID, Path: t.Path, Line: t.Line, Old: t.Old, Outdated: t.Outdated, Resolved: t.Resolved,

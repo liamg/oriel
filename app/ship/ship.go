@@ -70,6 +70,7 @@ type Ship struct {
 	movedOn  map[string]bool // the merged PRs whose next PR has been started or asked about, by URL
 	cache    prCache
 	mirrored map[core.SessionID]time.Time // when each session's reviews were last mirrored from a code host
+	reviewed map[string]map[string]string // each PR's reviewers' latest verdicts, by URL, from its mirrored threads
 
 	// On the loop: what's typed, by session/project.
 	commits  map[string]*commitForm
@@ -616,8 +617,10 @@ func (x *Ship) shadowEntries() {
 			switch {
 			case !ok:
 				return ""
+			case s.PR.Open() && !s.PR.Draft:
+				return fmt.Sprintf("%s%d", s.words().Sigil, s.PR.Number)
 			case s.PR != nil:
-				return fmt.Sprintf("#%d", s.PR.Number)
+				return fmt.Sprintf("%s%d %s", s.words().Sigil, s.PR.Number, prStateWord(s.PR))
 			case !x.prForm(w.Session.ID, s).edited && s.PRDraft.Empty():
 				return "not raised"
 			}

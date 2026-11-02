@@ -178,7 +178,8 @@ func TestShipFlow(t *testing.T) {
 	s.Run("project.open", registry.Args{"project": "web-dashboard"})
 	s.Run("project.panel", registry.Args{"name": "pull-request"})
 	s.Frame()
-	s.WantFrame("feat(web): show the wait", "Committed", "Up to date with main", "Pushed", "PR open", "Checks", "1 of 3 failing", "Open PR")
+	s.WantFrame("feat(web): show the wait", "OPEN", "CHECKS", "1 of 3 failing", "unit (shard 1/2)", "e2e · chromium", "checked", "REVIEWS",
+		"BRANCH", "Committed", "clean", "Up to date", "with main", "Pushed", "yes", "git read", "Open PR")
 	s.Lint("the Pull request panel")
 
 	// Fix CI with agent writes a request with the failing line attached.
@@ -188,10 +189,10 @@ func TestShipFlow(t *testing.T) {
 	// A PR closed on GitHub reads as closed, not open, and can still be opened.
 	hub.ClosePR("acme/web-dashboard", webPRs[0].Number)
 	s.Run("ship.refresh", nil)
-	shipSettle(s, t, "the closed PR", func() bool { return strings.Contains(s.Text(), "PR closed") })
-	s.WantFrame("PR closed", "Open PR")
+	shipSettle(s, t, "the closed PR", func() bool { return strings.Contains(s.Text(), "CLOSED") })
+	s.WantFrame("CLOSED", "Open PR")
 	for line := range strings.Lines(s.Text()) {
-		if strings.TrimSpace(line) == "PR open" {
+		if strings.TrimSpace(line) == "OPEN" {
 			t.Error("the checklist still says the closed PR is open")
 		}
 	}
