@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
@@ -214,6 +215,56 @@ func TestReviewComparesWithThePRBase(t *testing.T) {
 	}
 	if st.Base != "origin/release" || strings.Join(got, " ") != "round.go" {
 		t.Errorf("Changed is %v against %q, want [round.go] against origin/release", got, st.Base)
+	}
+}
+
+// GitHub takes a review comment only on a line of the PR's diff ("pull_request_review_thread.line must be part of
+// the diff"): a review's agent is refused a comment anywhere else, and told which lines it can use.
+// ref: oracle git
+func TestReviewCommentsStayInTheDiff(t *testing.T) {
+	r := newRig(t, &agenttest.Fake{Name: "codex", Started: make(chan *agenttest.FakeSession, 4)}) // the AI review's reviewer
+	r.tools = []string{"comment"}
+	ctx := context.Background()
+	origin := r.repo
+	long := strings.Repeat("// pad\n", 20)
+	origin.Write(map[string]string{"long.go": long})
+	origin.Commit("Ada", "long")
+	origin.Git("checkout", "-q", "-b", "feature")
+	origin.Write(map[string]string{"long.go": strings.Repeat("// pad\n", 9) + "// pr\n" + strings.Repeat("// pad\n", 10)})
+	origin.Commit("Bob", "the PR")
+	origin.Git("update-ref", "refs/pull/7/head", strings.TrimSpace(origin.Git("rev-parse", "HEAD")))
+	origin.Git("checkout", "-q", "main")
+	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
+	clone.Git("clone", "-q", origin.Dir, ".")
+	if _, err := r.w.addRepo(ctx, clone.Dir, core.RepoAdded); err != nil {
+		t.Fatal(err)
+	}
+	r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://github.com/acme/pricing/pull/7", PRBase: "main", Provider: "fake",
+		Repos: []core.RepoID{core.RepoID(clone.Dir)}})
+	a := r.agent()
+	for _, ok := range []map[string]any{
+		{"file": "long.go", "line": 10, "body": "Why?"},
+		{"file": "long.go", "line": 7, "end_line": 13, "body": "The context."},
+		{"file": "long.go", "line": 10, "side": "old", "body": "Was this needed?"},
+		{"body": "A general one."},
+	} {
+		if _, err := a.CallErr("comment", ok); err != nil {
+			t.Errorf("%v: %v", ok, err)
+		}
+	}
+	for _, bad := range []map[string]any{
+		{"file": "long.go", "line": 2, "body": "Outside the hunk."},
+		{"file": "long.go", "line": 12, "end_line": 15, "body": "Runs past it."},
+		{"file": "round.go", "line": 3, "body": "Not in the PR."},
+	} {
+		_, err := a.CallErr("comment", bad)
+		if err == nil || !strings.Contains(err.Error(), "isn't in the pull request's diff") {
+			t.Errorf("%v: %v, want refused", bad, err)
+		}
+	}
+	if _, err := a.CallErr("comment", map[string]any{"file": "long.go", "line": 2, "body": "x"}); err == nil ||
+		!strings.Contains(err.Error(), "lines 7-13") {
+		t.Errorf("the refusal names the diff's lines: %v", err)
 	}
 }
 

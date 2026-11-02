@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/liamg/oriel/agent"
@@ -179,7 +181,7 @@ func (h *session) toolResolve(ctx context.Context, raw json.RawMessage) (string,
 	return "resolved", h.r.SetThread(ThreadReq{Session: h.id, Thread: t.ID, Status: core.ThreadResolved})
 }
 
-func (h *session) toolComment(_ context.Context, raw json.RawMessage) (string, error) {
+func (h *session) toolComment(ctx context.Context, raw json.RawMessage) (string, error) {
 	a := hostcore.ParseArgs(raw)
 	body := strings.TrimSpace(a.Str("body"))
 	if body == "" {
@@ -197,12 +199,74 @@ func (h *session) toolComment(_ context.Context, raw json.RawMessage) (string, e
 		line := max(1, a.Int("line"))
 		t.Anchor = &core.Anchor{Project: a.Str("project"), File: f, Line: line, EndLine: a.Int("end_line"), Side: a.Str("side")}
 		t.Anchor.Text = hostcore.AnchorText(se, t.Anchor)
+		if h.r.deps.Kinds.Spec(se).Can(core.CommentsInDiff) {
+			if err := h.inDiff(ctx, se, t.Anchor); err != nil {
+				return "", err
+			}
+		}
 	}
 	if err := h.r.st.Emit(core.ThreadUpdated{Session: h.id, Thread: t}); err != nil {
 		return "", err
 	}
 	hostcore.Restatus(h.r.st, h.id)
 	return string(t.ID), nil
+}
+
+// inDiff refuses a line comment on lines the pull request's diff doesn't show, which its review can't hold.
+func (h *session) inDiff(ctx context.Context, se core.SessionState, a *core.Anchor) error {
+	project := a.Project
+	if p, ok := se.Primary(); ok && project == "" {
+		project = p.Name
+	}
+	_, p, repo, err := hostcore.ProjectRepo(ctx, h.r.st, h.r.deps.Kinds, h.id, project)
+	if err != nil {
+		return err
+	}
+	base := p.Base
+	if p.Detached {
+		base = "" // the base the review's worktree was given
+	}
+	files, err := repo.ReviewLines(ctx, base)
+	if err != nil {
+		return nil // nothing to check against: the comment stands
+	}
+	const instead = "Comment only on lines the diff shows (changed lines and the 3 lines around them), or put this in a general comment with no file."
+	lines, ok := files[strings.TrimPrefix(a.File, "./")]
+	if !ok {
+		return fmt.Errorf("%s isn't in the pull request's diff. %s", a.File, instead)
+	}
+	side := "RIGHT"
+	if a.Side == "old" {
+		side = "LEFT"
+	}
+	for n := a.Line; n <= max(a.Line, a.EndLine); n++ {
+		if !lines[side][n] {
+			return fmt.Errorf("line %d of %s isn't in the pull request's diff, which shows %s there. %s", n, a.File, lineRanges(lines[side]), instead)
+		}
+	}
+	return nil
+}
+
+// lineRanges writes a set of line numbers as runs: "lines 3-9, 40-52".
+func lineRanges(lines map[int]bool) string {
+	ns := slices.Sorted(maps.Keys(lines))
+	if len(ns) == 0 {
+		return "no lines on that side"
+	}
+	var runs []string
+	for i := 0; i < len(ns); {
+		j := i
+		for j+1 < len(ns) && ns[j+1] == ns[j]+1 {
+			j++
+		}
+		run := strconv.Itoa(ns[i])
+		if j > i {
+			run += "-" + strconv.Itoa(ns[j])
+		}
+		runs = append(runs, run)
+		i = j + 1
+	}
+	return "lines " + strings.Join(runs, ", ")
 }
 
 func (h *session) toolTaskAdd(_ context.Context, raw json.RawMessage) (string, error) {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/gitx"
 )
 
 // A PR as a review request reads it on the fake: its author, size, head and files; who the client is; and the
@@ -83,7 +84,7 @@ func (s *Server) onDiff(repo string, number int, path, side string, line int) bo
 	}
 	for _, f := range s.sizes[prKey(repo, number)].Files {
 		if f.Path == path && f.Patch != "" {
-			return gh.PatchLines(f.Patch)[side][line]
+			return gitx.PatchLines(f.Patch)[side][line]
 		}
 	}
 	return false
