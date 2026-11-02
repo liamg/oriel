@@ -71,10 +71,15 @@ type Inbox struct {
 
 // inboxRow is a card as the inbox last had it, and whether its source has let it go (answered: history now).
 type inboxRow struct {
-	card uireg.InboxCard
-	seen time.Time
-	gone bool
+	card  uireg.InboxCard
+	seen  time.Time
+	shown time.Time // when it first went over the window: once typing paused
+	gone  bool
 }
+
+// typingPause is how long typing must stop before a card goes over the window, so it doesn't cover the text being
+// written or catch a key meant for it.
+const typingPause = 1200 * time.Millisecond
 
 func (r *inboxRow) waiting() bool { return !r.gone && !r.card.Done }
 
@@ -308,14 +313,24 @@ func (x *Inbox) waitingCount() int {
 
 // overlay is the banner cards at the top and the stack at the bottom right.
 func (x *Inbox) overlay(c *ui.Ctx) {
-	all := x.stacked()
+	all := slices.DeleteFunc(x.stacked(), func(r *inboxRow) bool {
+		if !r.shown.IsZero() {
+			return false
+		}
+		if last := c.LastTyped(); !last.IsZero() && c.Now().Sub(last) < typingPause {
+			c.WakeAt(last.Add(typingPause))
+			return true
+		}
+		r.shown = c.Now()
+		return false
+	})
 	if len(all) == 0 {
 		return
 	}
 	th := c.Theme()
 	var banner, stack []*inboxRow
 	for _, r := range all {
-		if r.card.Banner {
+		if r.card.Banner || r.card.Top {
 			banner = append(banner, r)
 		} else {
 			stack = append(stack, r)
@@ -343,10 +358,15 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 	}
 	c.Column("asks", ui.Style{W: ui.Px(440), Gap: 8, Z: ui.LayerToast, Float: corner,
 		Role: ui.RoleGroup, Label: "Waiting on you"}, func(c *ui.Ctx) {
-		for _, r := range stack[:min(len(stack), maxInterrupts)] {
+		// While a card waits at the top, the stack holds back to a count: one thing at a time, and nothing over it.
+		shown := maxInterrupts
+		if len(banner) > 0 {
+			shown = 0
+		}
+		for _, r := range stack[:min(len(stack), shown)] {
 			x.card(c, r, true)
 		}
-		if n := len(stack) - maxInterrupts; n > 0 {
+		if n := len(stack) - shown; n > 0 {
 			c.Row("more", ui.Style{W: ui.Flex(1), Main: ui.End, Cross: ui.Center, Gap: 8}, func(c *ui.Ctx) {
 				c.Text("t", fmt.Sprintf("+%d more waiting", n), kit.MonoFont(10, th.C(theme.FgFaint)))
 				if widget.Button(c, "open", "Open the inbox", widget.ButtonOpts{Ghost: true, Key: kit.BoundKey(x.h, "inbox.open", nil), Help: inboxHelp}) {

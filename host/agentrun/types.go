@@ -54,6 +54,7 @@ type ThreadReq struct {
 	Thread  core.ThreadID     `json:"thread"`
 	Status  core.ThreadStatus `json:"status,omitempty"`
 	Urgent  *bool             `json:"urgent,omitempty"`
+	Title   string            `json:"title,omitempty"`
 }
 
 // AnswerReq answers an ask: allow, always, deny (with a note for the agent), or a question's answers.

@@ -111,6 +111,9 @@ type Thread struct {
 	Urgent bool         `json:"urgent,omitempty"`
 	Btw    bool         `json:"btw,omitempty"`    // a side question thread, answered by a fork
 	Busy   bool         `json:"busy,omitempty"`   // the agent has it and hasn't answered
+	// Active says the agent is on it now, not only handed it with others: its working reply, a task of it started,
+	// or the only one it was handed. Several can be, as subagents work.
+	Active bool `json:"active,omitempty"`
 	Origin string       `json:"origin,omitempty"` // where it came from: "" for Oriel, OriginGitHub
 	Hosted *HostThread  `json:"github,omitempty"` // a review thread mirrored from the PR's code host
 	// Outgoing is the user's comment for a pull request's author, in the review they'll submit: not the agent's to
@@ -146,7 +149,7 @@ func (t Thread) Undelivered() []Comment {
 	}
 	var out []Comment
 	for _, c := range t.Comments {
-		if (c.Author == AuthorYou || c.Author == AuthorHost) && !c.Delivered && !c.Btw {
+		if (c.Author == AuthorYou || c.Author == AuthorHost) && !c.Delivered && !c.Btw && !c.Redacted {
 			out = append(out, c)
 		}
 	}
@@ -158,10 +161,15 @@ func (t Thread) WaitsOnAgent() bool {
 	if !t.Open() || t.Btw || t.Outgoing {
 		return false
 	}
-	c, ok := t.Last()
-	if !ok {
+	// An untrusted author's comment is never the agent's to answer.
+	i := len(t.Comments) - 1
+	for i >= 0 && t.Comments[i].Redacted {
+		i--
+	}
+	if i < 0 {
 		return false
 	}
+	c := t.Comments[i]
 	if c.Author == AuthorAgent {
 		return c.Progress
 	}

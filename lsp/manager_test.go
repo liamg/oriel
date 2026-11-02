@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/lsp/protocol"
 	"github.com/liamg/oriel/text"
@@ -300,5 +301,47 @@ func TestSpecForPrefersInstalled(t *testing.T) {
 	}
 	if _, ok := m.SpecFor("python"); ok {
 		t.Error("SpecFor(python) found a server none of which is installed")
+	}
+}
+
+// A server still starting as the manager shuts down (a window switching sessions) is shut down once it's up, not
+// left running; and none starts after.
+func TestShutdownStopsAServerStillStarting(t *testing.T) {
+	dir := t.TempDir()
+	touch(t, filepath.Join(dir, "go.mod"))
+	f := &fleet{t: t, caps: `{"textDocumentSync":2}`}
+	gate := make(chan struct{})
+	spec := ServerSpec{Name: "fake", Language: []string{"go"}, Cmd: []string{"fake"}, Roots: []string{"go.mod"}}
+	m := NewManager(ManagerOptions{
+		Servers:   func() []ServerSpec { return []ServerSpec{spec} },
+		Installed: func(ServerSpec) bool { return true },
+		Client: Options{Launch: func(ctx context.Context, s ServerSpec, root string, stderr io.Writer) (Process, error) {
+			<-gate
+			return f.launch(ctx, s, root, stderr)
+		}},
+	})
+	warmed := make(chan error, 1)
+	go func() { _, err := m.Warm(context.Background(), "go", dir); warmed <- err }()
+	for {
+		m.mu.Lock()
+		n := len(m.starts)
+		m.mu.Unlock()
+		if n == 1 {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if err := m.Shutdown(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	close(gate)
+	if err := <-warmed; !errors.Is(err, ErrShutDown) {
+		t.Errorf("a server that came up after the shutdown: %v", err)
+	}
+	if n := f.server(0).count("shutdown"); n != 1 {
+		t.Errorf("it was asked to shut down %d times", n)
+	}
+	if _, err := m.Warm(context.Background(), "go", dir); !errors.Is(err, ErrShutDown) {
+		t.Errorf("a server started after the shutdown: %v", err)
 	}
 }

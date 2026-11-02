@@ -39,6 +39,33 @@ type InputOpts struct {
 	DefaultFocus bool
 	// Step makes it a number field that assistive technology can increment and decrement by Step.
 	Step float64
+	// Files takes what a paste offers besides text (copied files, a picture) and files dropped on the field, and
+	// returns the text that goes in their place. Without it a paste is text only, and the field takes no drops.
+	Files func(Pasted) string
+}
+
+// Pasted is what a paste or a drop gives a field besides text.
+type Pasted struct {
+	Paths []string // files copied in the file manager, or dropped
+	Image []byte   // a copied picture, as PNG
+}
+
+// pasteFiles is what o.Files makes of the clipboard: copied files, else a picture when there's no text.
+func pasteFiles(c *ui.Ctx, o InputOpts) (string, bool) {
+	fc, ok := c.Clipboard().(render.ClipboardFiles)
+	if o.Files == nil || !ok {
+		return "", false
+	}
+	if paths := fc.ReadClipboardFiles(); len(paths) > 0 {
+		return o.Files(Pasted{Paths: paths}), true
+	}
+	if _, text := c.Clipboard().ReadClipboard(); text {
+		return "", false
+	}
+	if png, ok := fc.ReadClipboardImage(); ok {
+		return o.Files(Pasted{Image: png}), true
+	}
+	return "", false
 }
 
 // Digits accepts what a whole number is typed with.
@@ -64,6 +91,7 @@ type inputState struct {
 	undo, redo     []inputEdit
 	join           string // what the last edit was ("type", a dictation's), which the next of the same joins for undo
 	last           string // the text as the field last left it: when it's changed from outside, undo starts again
+	drawn          bool   // it has been drawn before
 }
 
 // fieldExtra is what a Prose adds to the field Input edits.
@@ -175,7 +203,11 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 	st.cursor, st.anchor = clampInt(st.cursor, 0, len(runes)), clampInt(st.anchor, 0, len(runes))
 	if *text != st.last {
 		st.undo, st.redo, st.join = nil, nil, ""
+		if st.drawn { // text put in from outside since (a message brought back to edit): its caret goes to the end
+			st.cursor, st.anchor = len(runes), len(runes)
+		}
 	}
+	st.drawn = true
 	var res InputResult
 	if o.SelectOnFocus && in.Focused && !st.focused && !in.Clicked && !in.Pressed {
 		st.anchor, st.cursor = 0, len(runes)
@@ -276,6 +308,14 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 		replace(clampInt(e.From, 0, len(runes)), clampInt(e.To, 0, len(runes)), typable(e.Insert))
 		record(before, e.Join)
 		moved = true
+	}
+	if d := in.Dropped; d != nil && o.Files != nil && !o.Disabled {
+		if paths, ok := d.Data.([]string); ok && d.Kind == "file" {
+			before := now()
+			replace(min(st.cursor, st.anchor), max(st.cursor, st.anchor), typable(o.Files(Pasted{Paths: paths})))
+			record(before, "")
+			moved = true
+		}
 	}
 	if !o.Disabled {
 		for _, k := range keys {
@@ -385,7 +425,9 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 					}
 				}
 			case "paste":
-				if s, ok := c.Clipboard().ReadClipboard(); ok {
+				if s, ok := pasteFiles(c, o); ok {
+					insert(s)
+				} else if s, ok := c.Clipboard().ReadClipboard(); ok {
 					insert(s)
 				}
 			case "delete-back", "delete-word-back", "delete-line-back":
@@ -464,6 +506,9 @@ func field(c *ui.Ctx, key any, text *string, o InputOpts, x *fieldExtra) InputRe
 	style := ui.Style{W: width, Fill: col(c, tInputBg), Stroke: border, Border: 1, Radius: 6, Clip: true, Focusable: true, DefaultFocus: o.DefaultFocus, Disabled: o.Disabled,
 		Cursor: render.CursorText, Help: o.Help, KeyMode: mode, Text: true, Role: ui.RoleTextBox, Label: o.Label, Value: shown(0, len(runes)),
 		Selection: ui.TextRange{Start: lo, End: hi}, Actions: actions}
+	if o.Files != nil && !o.Disabled {
+		style.Drop = []string{"file"}
+	}
 	if multi {
 		if r, ok := c.Rect(id); ok {
 			st.width = r.Dx() - 20 - x.padR

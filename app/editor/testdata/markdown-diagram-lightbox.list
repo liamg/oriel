@@ -30,7 +30,18 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -42,17 +53,6 @@ clip 0,38 43x936 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -191,8 +191,8 @@ clip 44,38 1556x936 r 0
         text "flowchart LR" @128,1471.3821 #b3ab99 JetBrains Mono 12
         text "  A --> " @128,1490.222 #b3ab99 JetBrains Mono 12
         rect 880,95 1x1462.822 fill #24221d
-        rect 901,275 480x130.64404 fill #0c0c0b radius 6
-        clip 901,275 480x130.64404 r 6
+        rect 901,275 480x134.12451 fill #0c0c0b radius 6
+        clip 901,275 480x134.12451 r 6
           rect 913,288.5 7x7 fill #7c7566 radius 3.5
           text "Thread" @928,296.54712 #ece6d8 Inter 12.5
           text "· L5 ·" @980.9531,295.78 #7c7566 JetBrains Mono 10.5
@@ -204,16 +204,16 @@ clip 44,38 1556x936 r 0
           rect 901,309 480x1 fill #332f27
           rect 913,320 28x28 fill #ff9b45 radius 6
           text "L" @923.335,337.42 #141006 JetBrains Mono 9.5
-          text "Liam" @951,331.625 #ece6d8 Inter 12
-          text "1m" @986.625,330.67978 #4f4a40 JetBrains Mono 9.5
-          text "Should tiers round first?" @951,350.6289 #b3ab99 Inter 12.5
-          rect 913,365.64404 456x30 fill #060606 radius 6
-          clip 913,365.64404 456x30 r 6
-            text "Reply…" @923,385.19116 #7c7566 Inter 12.5
+          text "Liam" @951,333.36523 #ece6d8 Inter 12
+          text "1m" @986.625,332.42 #4f4a40 JetBrains Mono 9.5
+          text "Should tiers round first?" @951,354.10938 #b3ab99 Inter 12.5
+          rect 913,369.1245 456x30 fill #060606 radius 6
+          clip 913,369.1245 456x30 r 6
+            text "Reply…" @923,388.67163 #7c7566 Inter 12.5
           pop
-          rect 913,365.64404 456x30 radius 6 stroke 1 #332f27
+          rect 913,369.1245 456x30 radius 6 stroke 1 #332f27
         pop
-        rect 901,275 480x130.64404 radius 6 stroke 1 #332f27
+        rect 901,275 480x134.12451 radius 6 stroke 1 #332f27
       pop
       rect 1592,97 6x525.7817 fill #ece6d838 radius 3
     pop
@@ -231,16 +231,16 @@ text "wrap" @1479.4688,990.78 #7c7566 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 2%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
 clip 0,38 43x936 r 0
-  rect 22.09375,217 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "1" @26.09375,226.81 #141006 JetBrains Mono 8.5
+  rect 22.09375,251 13.40625x13.5 fill #ff9b45 radius 6.75
+  text "1" @26.09375,260.81 #141006 JetBrains Mono 8.5
 pop
 clip 44,38 1556x936 r 0
   clip 44,69 1556x905 r 0
     clip 44,69 1556x905 r 0
       clip 44,95 1556x879 r 0
-        clip 901,275 480x130.64404 r 6
-          clip 913,365.64404 456x30 r 6
-            rect 1353.3334,376.64404 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
+        clip 901,275 480x134.12451 r 6
+          clip 913,369.1245 456x30 r 6
+            rect 1353.3334,380.1245 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
             path 5 segments stroke 1.25 #7c7566
           pop
         pop

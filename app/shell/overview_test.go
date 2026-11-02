@@ -200,3 +200,17 @@ func TestOverviewLuaPanel(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 }
+
+// A directory's README shows under its card's panels, as markdown.
+func TestOverviewShowsTheReadme(t *testing.T) {
+	s := overviewScene(t, func(home string) string {
+		dir := filepath.Join(home, "pricing")
+		os.MkdirAll(dir, 0o755)
+		os.WriteFile(filepath.Join(dir, "README.md"), []byte("# Pricing\n\nRounds **money** the way finance wants.\n"), 0o644)
+		return dir
+	})
+	s.Until("the README", func() bool { return s.Has("README.MD", "Pricing", "Rounds", "money", "the way finance wants.") })
+	if s.Has("**money**") {
+		t.Errorf("the README isn't rendered:\n%s", s.Text())
+	}
+}

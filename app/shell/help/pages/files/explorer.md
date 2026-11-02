@@ -30,6 +30,12 @@ you've read them all) and **diag** (error and warning counts). Folders show a do
 changed files are under them. **Changed only** (`⌥C`) narrows All to the changed files. **Hidden files** shows dot
 files (and what's under dot directories) that haven't changed; a changed one always shows.
 
+## Scratchpad {#scratchpad}
+
+In All, a sandboxed session's **scratchpad** sits under the repo: the agent's temp dir, where it keeps screenshots,
+notes and other scratch files. Folders read as they open, and what the agent adds shows as it lands; a file opens as
+any other.
+
 ## Keys {#keys}
 
 In Uncommitted, fugitive's keys: `s` stages the file (or unstages a staged one), `u` unstages, `x` discards its

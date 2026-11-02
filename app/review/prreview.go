@@ -63,6 +63,7 @@ type reviewForm struct {
 	body    string    // the summary, as typed
 	typed   time.Time // when it last changed, for saving it once typing stops
 	seen    string    // the summary as last drawn
+	auto    string    // the summary autoSummary last wrote, which follows the comments until the user changes it
 	moved   host.PRMove
 	sel     string // the item selected
 	editing string // the item whose words are being edited

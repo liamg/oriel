@@ -47,7 +47,13 @@ func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.Session
 			w.log.Warn("AI review", "session", se.ID, "err", err)
 		}
 	}
-	return se.ID, w.run.Begin(ctx, se.ID, spec, k)
+	if err := w.run.Begin(ctx, se.ID, spec, k); err != nil {
+		return se.ID, err
+	}
+	if spec.AutoName && !w.opts.NoAutoName && spec.Title == "" && strings.TrimSpace(spec.Prompt) != "" {
+		w.env.Go("naming a session", func() { w.autoName(se.ID, se.Name, spec.Prompt) })
+	}
+	return se.ID, nil
 }
 
 // Resume starts the session's agent again: by its own id when it had one, so the conversation carries on.

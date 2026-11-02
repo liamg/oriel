@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -99,7 +101,7 @@ func (x *PRReview) submit(ctx registry.Ctx, a registry.Args) error {
 			return struct{}{}, registry.SubmitReview(ctx, src, reviewPR(se), r)
 		},
 		func(ctx registry.Ctx, _ struct{}) error {
-			f.body, f.seen = "", ""
+			f.body, f.seen, f.auto = "", "", ""
 			x.forget(reviewPR(se))
 			saved := x.setDraft(se.ID, func(d *core.ReviewDraft) {
 				for i, it := range sent {
@@ -140,3 +142,31 @@ func prVerdictWord(v string) string {
 func sentWord(v string) string {
 	return map[string]string{registry.VerdictApprove: "Approved", registry.VerdictChanges: "Changes requested", registry.VerdictComment: "Review posted"}[v]
 }
+
+// autoSummary is the summary a review starts with, until the user writes their own: "LGTM" with no comment kept, else
+// how many issues of each severity, worst first ("1 high, 2 medium issues.").
+func autoSummary(items []reviewItem) string {
+	counts := map[string]int{}
+	n := 0
+	for _, it := range items {
+		if it.kept() {
+			counts[cmp.Or(it.severity(), "other")]++
+			n++
+		}
+	}
+	if n == 0 {
+		return "LGTM"
+	}
+	var parts []string
+	for _, sev := range append(slices.Clone(core.Severities), "other") {
+		if counts[sev] > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", counts[sev], sev))
+		}
+	}
+	return strings.Join(parts, ", ") + map[bool]string{true: " issue.", false: " issues."}[n == 1]
+}
+
+var autoSummaryRe = regexp.MustCompile(`^(LGTM|(\d+ [a-z]+, )*\d+ [a-z]+ issues?\.)$`)
+
+// isAutoSummary says s is one autoSummary wrote, which follows the comments kept until the user changes it.
+func isAutoSummary(s string) bool { return autoSummaryRe.MatchString(strings.TrimSpace(s)) }

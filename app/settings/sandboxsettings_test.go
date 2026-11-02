@@ -31,17 +31,17 @@ func TestSandboxOptionsAreDeclared(t *testing.T) {
 		project bool
 	}{
 		{"sandbox.default", registry.Enum, "sandbox", false},
-		{"sandbox.image", registry.String, "", true},
+		{"sandbox.image", registry.String, "base", true},
 		{"sandbox.env", registry.List, []string{}, false},
 		{"sandbox.egress", registry.List, []string{}, true},
 		{"sandbox.rules", registry.List, []string{}, true},
-		{"sandbox.approval_timeout", registry.Duration, time.Duration(0), false},
+		{"sandbox.approval_timeout", registry.Duration, 10 * time.Minute, false},
 		{"sandbox.auto_allow_read_only", registry.Bool, false, false},
 		{"sandbox.hidden_servers", registry.List, []string{}, false},
 		{"sandbox.egress_proxy", registry.Bool, true, false},
-		{"sandbox.memory", registry.String, "", false},
-		{"sandbox.pids_limit", registry.Int, 0, false},
-		{"sandbox.go_cache_max", registry.String, "", false},
+		{"sandbox.memory", registry.String, "8g", false},
+		{"sandbox.pids_limit", registry.Int, 4096, false},
+		{"sandbox.go_cache_max", registry.String, "20g", false},
 		{"sandbox.servers", registry.Map, map[string]string{}, false},
 	} {
 		sp, ok := o.Spec(tt.name)

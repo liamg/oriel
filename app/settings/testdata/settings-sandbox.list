@@ -23,7 +23,18 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -35,17 +46,6 @@ clip 0,38 43x936 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -141,14 +141,15 @@ clip 44,0 1556x974 r 0
     text "sandbox" @62,556.26904 #ece6d8 Inter 13
     text "● 3" @248,555.1401 #ffd23f JetBrains Mono 10
     text "secrets" @62,586.26904 #b3ab99 Inter 13
-    text "sidebar" @62,616.26904 #b3ab99 Inter 13
-    text "stats" @62,646.26904 #b3ab99 Inter 13
-    text "terminal" @62,676.26904 #b3ab99 Inter 13
-    text "ui" @62,706.26904 #b3ab99 Inter 13
-    text "updates" @62,736.26904 #b3ab99 Inter 13
-    text "usage" @62,766.26904 #b3ab99 Inter 13
-    text "voice" @62,796.26904 #b3ab99 Inter 13
-    text "whichkey" @62,826.26904 #b3ab99 Inter 13
+    text "sessions" @62,616.26904 #b3ab99 Inter 13
+    text "sidebar" @62,646.26904 #b3ab99 Inter 13
+    text "stats" @62,676.26904 #b3ab99 Inter 13
+    text "terminal" @62,706.26904 #b3ab99 Inter 13
+    text "ui" @62,736.26904 #b3ab99 Inter 13
+    text "updates" @62,766.26904 #b3ab99 Inter 13
+    text "usage" @62,796.26904 #b3ab99 Inter 13
+    text "voice" @62,826.26904 #b3ab99 Inter 13
+    text "whichkey" @62,856.26904 #b3ab99 Inter 13
   pop
   rect 284,53 1x891 fill #24221d
   clip 285,53 1315x891 r 0
@@ -156,11 +157,11 @@ clip 44,0 1556x974 r 0
     rect 1474.3594,74 97.640625x26 radius 6 stroke 1 #332f27
     text "Reset section" @1484.3594,91.365234 #ece6d8 Inter 12
     text "sandbox.approval_timeout" @332,131.93774 #ece6d8 JetBrains Mono 12.5
-    text "How long a held gateway call waits for you; 0 is ten minutes." @332,151.79712 #7c7566 Inter 12.5
+    text "How long a held gateway call waits for you." @332,151.79712 #7c7566 Inter 12.5
     text "default" @1202.3906,140.78001 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,122 200x30 fill #060606 radius 6
     clip 1324.5469,122 200x30 r 6
-      text "0s" @1334.5469,141.54712 #ece6d8 Inter 12.5
+      text "10m0s" @1334.5469,141.54712 #ece6d8 Inter 12.5
     pop
     rect 1324.5469,122 200x30 radius 6 stroke 1 #332f27
     rect 1540.5469,124 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
@@ -244,10 +245,11 @@ clip 44,0 1556x974 r 0
     text "↺" @1550.5469,645.11426 #4f4a40 Inter 12
     text "sandbox.go_cache_max" @332,695.499 #ece6d8 JetBrains Mono 12.5
     text "The cap on the sandboxes' shared Go build cache (\"20g\"): the hourly sweep removes the" @332,715.3584 #7c7566 Inter 12.5
-    text "least recently used past it. Empty is 20g, \"none\" no cap." @332,733.4829 #7c7566 Inter 12.5
+    text "least recently used past it; \"none\" for no cap." @332,733.4829 #7c7566 Inter 12.5
     text "default" @1202.3906,713.40356 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,694.62354 200x30 fill #060606 radius 6
     clip 1324.5469,694.62354 200x30 r 6
+      text "20g" @1334.5469,714.17065 #ece6d8 Inter 12.5
     pop
     rect 1324.5469,694.62354 200x30 radius 6 stroke 1 #332f27
     rect 1540.5469,696.62354 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
@@ -260,10 +262,11 @@ clip 44,0 1556x974 r 0
     rect 1540.5469,765.49805 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,782.8633 #4f4a40 Inter 12
     text "sandbox.image" @332,833.4358 #ece6d8 JetBrains Mono 12.5
-    text "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo." @332,853.29517 #7c7566 Inter 12.5
+    text "The image sandboxes run: base builds Oriel's base image. A project's applies to its repo." @332,853.29517 #7c7566 Inter 12.5
     text "default" @1202.3906,842.2781 #7c7566 JetBrains Mono 10.5
     rect 1324.5469,823.49805 200x30 fill #060606 radius 6
     clip 1324.5469,823.49805 200x30 r 6
+      text "base" @1334.5469,843.04517 #ece6d8 Inter 12.5
     pop
     rect 1324.5469,823.49805 200x30 radius 6 stroke 1 #332f27
     rect 1540.5469,825.49805 31.453125x26 fill #191815 radius 6 stroke 1 #332f27

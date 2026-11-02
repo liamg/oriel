@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,6 +26,10 @@ func usageProbe(t *testing.T) (p *Provider, runs func() (started, quit int)) {
 	file := filepath.Join(t.TempDir(), "runs")
 	t.Setenv("ORIEL_FAKE_RUNS", file)
 	p.ProbeDir = filepath.Join(t.TempDir(), "probe")
+	// The usage API refuses, so the probe reads the windows whatever sign-in this machine has.
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { http.Error(w, "no", http.StatusUnauthorized) }))
+	t.Cleanup(api.Close)
+	p.UsageURL = api.URL
 	return p, func() (int, int) {
 		b, _ := os.ReadFile(file)
 		return bytes.Count(b, []byte("run\n")), bytes.Count(b, []byte("quit\n"))

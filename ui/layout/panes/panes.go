@@ -101,11 +101,11 @@ type dockResize struct {
 }
 
 type resize struct {
-	split *layout.Node
-	i     int // the splitter between kid i and i+1
-	from  render.Point
-	w0    []float32
-	span  float32
+	box  ui.ID // the split's box: by its place in the tree, so a layout made again mid-drag is the same split
+	i    int   // the splitter between kid i and i+1
+	from render.Point
+	w0   []float32
+	span float32
 }
 
 // View draws r: docks, main's splits and tab groups, floats and the drop-down, with each pane's content
@@ -341,17 +341,19 @@ func node(c *ui.Ctx, r *layout.Root, st *viewState, n *layout.Node, content Cont
 		main = func(w float32) ui.Style { return ui.Style{W: ui.Flex(1), H: ui.Flex(w)} }
 		bar = ui.Style{W: ui.Flex(1), H: ui.Px(1), Cursor: render.CursorResizeRow}
 	}
-	id := box(n, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+	// Keyed by its place, not its node: the layout can be made again while a splitter is dragged.
+	id := c.Next("split")
+	box("split", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		for i, k := range n.Kids {
 			if i > 0 {
-				changed = splitter(c, st, n, i-1, bar) || changed
+				changed = splitter(c, st, n, id, i-1, bar) || changed
 			}
 			c.Column(i, main(n.Weights[i]), func(c *ui.Ctx) {
 				changed = node(c, r, st, k, content) || changed
 			})
 		}
 	})
-	if st.resize != nil && st.resize.split == n {
+	if st.resize != nil && st.resize.box == id {
 		if rc, ok := c.Rect(id); ok {
 			st.resize.span = rc.Dx()
 			if n.Split == layout.Vertical {
@@ -363,17 +365,17 @@ func node(c *ui.Ctx, r *layout.Root, st *viewState, n *layout.Node, content Cont
 }
 
 // splitter is the 1px line between two kids, with a grab area either side of it, dragged to move the split.
-func splitter(c *ui.Ctx, st *viewState, n *layout.Node, i int, s ui.Style) bool {
+func splitter(c *ui.Ctx, st *viewState, n *layout.Node, box ui.ID, i int, s ui.Style) bool {
 	key := struct{ i int }{i}
 	id := c.Next(key)
 	in := c.Interaction(id)
 	changed := false
 	if in.Held {
 		if st.resize == nil {
-			st.resize = &resize{split: n, i: i, from: in.Pointer(), w0: append([]float32(nil), n.Weights...)}
+			st.resize = &resize{box: box, i: i, from: in.Pointer(), w0: append([]float32(nil), n.Weights...)}
 		}
 		rs := st.resize
-		if rs.split == n && rs.i == i && rs.span > 0 {
+		if rs.box == box && rs.i == i && rs.span > 0 && len(n.Weights) == len(rs.w0) {
 			d := in.Pointer().X - rs.from.X
 			if n.Split == layout.Vertical {
 				d = in.Pointer().Y - rs.from.Y
@@ -389,7 +391,7 @@ func splitter(c *ui.Ctx, st *viewState, n *layout.Node, i int, s ui.Style) bool 
 				changed = true
 			}
 		}
-	} else if st.resize != nil && st.resize.split == n && st.resize.i == i {
+	} else if st.resize != nil && st.resize.box == box && st.resize.i == i {
 		st.resize = nil
 	}
 	s.Fill = c.Theme().C(tDivider)

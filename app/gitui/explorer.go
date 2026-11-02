@@ -52,6 +52,8 @@ type Explorer struct {
 		key   explorerRowsKey
 		items []widget.TreeItem
 	}
+	scratch *kit.DirTree                          // the agent's scratchpad, under All
+	pads    *plugin.Cache[core.SessionID, string] // each session's scratchpad on this machine; "" for none
 }
 
 // explorerRowsKey is what a scope's rows are built from, so they're built again only when it changes.
@@ -211,6 +213,7 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 		k.Mode = ExplorerKeyMode
 		e.Add(h.Keymap(k))
 	}
+	e.watchScratch()
 	e.Add(h.View(kit.ExplorerView, explorerView{e}))
 	if st := e.Git.status; st != nil {
 		e.Add(kit.OnDispose(st.Watch(func([]string) {
@@ -466,6 +469,9 @@ func (e *Explorer) build(c *ui.Ctx) {
 		if res.Activated != "" {
 			e.activate(res.Activated, sc)
 		}
+		if res.Toggled != "" {
+			e.scratch.Opened(res.Toggled, scratchID)
+		}
 		if s, ok := e.hunksLoading(sc); ok {
 			c.Row("hunks", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 6)}, func(c *ui.Ctx) {
 				widget.Async(c, "wait", s, widget.AsyncOpts{Label: "Reading " + filepath.Base(e.hunks.path) + "'s hunks", Help: "files/explorer#keys"}, nil)
@@ -544,6 +550,10 @@ func (e *Explorer) footer(c *ui.Ctx, sc gitx.Scope) {
 
 // activate opens a row: in Changed its diff, elsewhere the file.
 func (e *Explorer) activate(id string, sc gitx.Scope) {
+	if strings.HasPrefix(id, scratchID) {
+		e.openScratch(id)
+		return
+	}
 	_, p, _ := strings.Cut(id, "\x00")
 	ctx := context.Background()
 	var err error
@@ -578,6 +588,9 @@ func (e *Explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.Tree
 	}
 	if e.rows.key != key || e.rows.items == nil {
 		e.rows.key, e.rows.items = key, e.buildItems(c.Theme(), st, sc)
+	}
+	if it, ok := e.scratchRoot(c, sc); ok {
+		return append(slices.Clip(e.rows.items), it)
 	}
 	return e.rows.items
 }

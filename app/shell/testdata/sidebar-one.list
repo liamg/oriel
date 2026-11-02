@@ -48,7 +48,19 @@ clip 0,38 149x356 r 0
   text "Pull request" @33,155.86523 #b3ab99 Inter 12
   path 3 segments stroke 1.25 #7c7566
   text "Tests" @33,178.86523 #b3ab99 Inter 12
-  rect 10,191 129x1 fill #332f27
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Debug" @33,201.86523 #b3ab99 Inter 12
+  rect 10,214 129x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -60,21 +72,9 @@ clip 0,38 149x356 r 0
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
-  text "Requests" @33,212.86523 #b3ab99 Inter 12
-  rect 125.59375,201.5 13.40625x14 fill #ff9b45 radius 7
-  text "3" @129.59375,211.73999 #141006 JetBrains Mono 9
-  path 6 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  text "Debug" @33,235.86523 #b3ab99 Inter 12
+  text "Requests" @33,235.86523 #b3ab99 Inter 12
+  rect 125.59375,224.5 13.40625x14 fill #ff9b45 radius 7
+  text "3" @129.59375,234.73999 #141006 JetBrains Mono 9
   path 5 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 4 segments stroke 1.25 #7c7566

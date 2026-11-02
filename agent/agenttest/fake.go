@@ -233,9 +233,23 @@ type FakeSession struct {
 	closed      bool
 	answers     map[string]chan agent.Decision
 	stopped     []string
+	quiet       bool
 }
 
 func (s *FakeSession) ID() string { return s.id }
+
+// Quiet makes the session say it no longer hears from its agent (agent.Responsive).
+func (s *FakeSession) Quiet() {
+	s.mu.Lock()
+	s.quiet = true
+	s.mu.Unlock()
+}
+
+func (s *FakeSession) Responsive() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return !s.quiet
+}
 
 func (s *FakeSession) Send(_ context.Context, in agent.Input) error {
 	s.Sent <- in

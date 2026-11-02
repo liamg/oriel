@@ -12,7 +12,7 @@ in that session you haven't seen yet.
 
 - Click a tab, or press `⌘1` to `⌘9`, to bring that session to the front.
 - Its `✕` closes the tab only: the session carries on, and the omnibox or mission control brings it back.
-- Right-click a tab for **Close tab** and **End session…**.
+- Right-click a tab for **Rename…** (edit the name in the tab; ⏎ keeps it, Escape drops it), **Close tab** and **End session…**.
 
 {{keys "session.*"}}
 
@@ -26,7 +26,7 @@ commits not pushed, an open pull request (it stays open on its host), an agent m
 - **Delete**: the worktrees, workspace and log go, with everything in them. The repos themselves stay. A direct
   session's directory isn't Oriel's, so it can only be archived.
 - With uncommitted work, Archive becomes **Discard and archive**.
-- **Delete the branches too** deletes each project's local branch; the remote's stays.
+- **Delete the local branches too** deletes each project's local branch; remote branches, a pull request's included, stay.
 
 `⌘↵` ends it, `Esc` cancels. Archiving offers **Undo** in its notice while the branches are still there.
 

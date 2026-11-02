@@ -20,6 +20,8 @@ import (
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/layout/panes"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // The requests' views: the list, one request's conversation, and the summary at the right.
@@ -55,6 +57,7 @@ var groupTokens = []theme.TokenID{theme.StatusWorking, theme.StatusNeedsYou, the
 // Requests is the Requests view, a request's conversation and composer, threads between the editor's lines,
 // the threads picker, the summary at the IDE's right, and the request.* commands they all run.
 type Requests struct {
+	md mdViewer // comment.markdown's dialog
 	kit.Disposer
 	h  plugin.Host
 	by map[core.SessionID]*requestsState
@@ -77,7 +80,8 @@ type draft struct {
 	text          string
 	urgent, btw   bool
 	attach        []attachment
-	compose, done bool // focus its input next frame; it was just sent
+	compose, done bool   // focus its input next frame; it was just sent
+	editing       string // the queued comment it stands in for, while one is being edited
 }
 
 // attachment is context given to a request: a place in a file, or text (a terminal's output, a failure).
@@ -114,6 +118,7 @@ type requestsState struct {
 	convo     kit.Scroll
 	focusList bool
 	inline    *inlineNew
+	rename    widget.Rename // the selected request's name, being edited in its header
 }
 
 func (x *Requests) Manifest() plugin.Manifest { return plugin.Manifest{ID: "requests"} }
@@ -127,6 +132,9 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
+	x.Add(h.View(kit.OverlayPrefix+"comment-markdown", x.mdViewer()))
+	x.Add(h.Contribute(registry.MenuItem{Name: "request.rename", Label: "Rename…", Group: "pane", Order: 80,
+		When: registry.MenuWhen{View: RequestView, Help: panes.HelpTab}, Command: "request.rename", Source: "builtin:requests"}))
 	x.Add(h.Contribute(registry.MenuItem{Name: "requests.ask", Label: "Ask about this…", Group: "agent", Order: 10, When: registry.MenuWhen{View: kit.EditorView},
 		Command: "thread.new"}))
 	x.Add(h.Picker(x.threadsSource()))
@@ -170,6 +178,40 @@ func (x *Requests) commands() []registry.Command {
 	return []registry.Command{
 		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} ({col} through {end_line}:{end_col}) or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.commentOn(ctx, a) }},
+		{ID: "request.rename", Title: "Rename a request: {thread} of {id}, the one selected by default, to {name}; with no {name}, edit it in its header",
+			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
+				a = selected(a)
+				if a.String("thread") == "" {
+					return errors.New("no request is selected")
+				}
+				if name := strings.TrimSpace(a.String("name")); name != "" {
+					se, w, err := kit.SessionArgs(x.h, a)
+					if err != nil {
+						return err
+					}
+					return w.SetThread(host.ThreadReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Title: name})
+				}
+				se, ok := x.front()
+				if !ok {
+					return errors.New("no session is in front")
+				}
+				st := x.state(se.ID)
+				t, ok := se.Thread(core.ThreadID(a.String("thread")))
+				if !ok {
+					return fmt.Errorf("no request %q", a.String("thread"))
+				}
+				st.sel, st.writing = t.ID, false
+				st.rename.Start(t.Heading())
+				return x.h.Run(ctx, "view.open", registry.Args{"id": RequestView, "place": "tab"})
+			}},
+		{ID: "request.edit-queued", Title: "Change a comment of yours the agent hasn't had yet: {comment} of {thread} to {body}; with no {body}, edit it in the composer",
+			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, false) }},
+		{ID: "request.delete-queued", Title: "Delete a comment of yours the agent hasn't had yet: {comment} of {thread}; the ones after it stay",
+			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, true) }},
+		{ID: "comment.markdown", Title: "Show a comment's markdown as written: {body}, headed {title}", Run: func(_ registry.Ctx, a registry.Args) error {
+			x.md = mdViewer{title: a.String("title"), body: a.String("body"), open: true}
+			return nil
+		}},
 		{ID: "request.resolve", Title: "Resolve a request: {thread} of {id}, the one selected by default; or set its {status}: open, resolved, deferred, dismissed",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				a = selected(a)
@@ -186,11 +228,13 @@ func (x *Requests) commands() []registry.Command {
 			}},
 		{ID: "request.new", Title: "Write a new request: {text} to start from, {context} attached, about {file}:{line} or the whole change", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.newRequest(ctx, a) }},
-		{ID: "request.open", Title: "Open a request: {thread}, the one selected by default, in the main area", Available: inFront,
-			Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "request.open", Title: "Open a request: {thread}, the one selected by default, or with {first} the session's first, in the main area",
+			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				st := x.state("")
 				if t := a.String("thread"); t != "" {
 					st.sel, st.writing = core.ThreadID(t), false
+				} else if se, ok := x.front(); ok && a.Bool("first") && len(se.Threads) > 0 {
+					st.sel, st.writing = se.Threads[0].ID, false
 				}
 				return x.openRequest(ctx)
 			}},
@@ -471,6 +515,13 @@ func (x *Requests) send(ctx context.Context, st *requestsState, id core.ThreadID
 	if body == "" {
 		return nil
 	}
+	if d.editing != "" {
+		if err := x.h.Run(ctx, "request.edit-queued", registry.Args{"thread": string(id), "comment": d.editing, "body": body}); err != nil {
+			return err
+		}
+		*d = draft{done: true}
+		return nil
+	}
 	a := registry.Args{"body": body, "urgent": urgent || d.urgent, "btw": d.btw}
 	if id != newKey {
 		a["thread"] = string(id)
@@ -547,6 +598,9 @@ func threadPlace(t core.Thread) string {
 func statusLabel(r registry.Contributions, se core.SessionState, t core.Thread) (string, theme.TokenID) {
 	switch g := kit.GroupOf(t); g {
 	case kit.GroupWorking:
+		if !t.Active {
+			return kit.ProviderName(r, se.Agent.Provider) + " · has it", tQueued // handed it with others, not on it yet
+		}
 		return kit.ProviderName(r, se.Agent.Provider) + " · working", theme.StatusWorking
 	case kit.GroupNeedsYou:
 		return "needs you", theme.StatusNeedsYou
@@ -637,7 +691,8 @@ func (x *Requests) commentOn(ctx registry.Ctx, a registry.Args) error {
 		return errors.New("the comment is empty")
 	}
 	req := host.CommentReq{Session: se.ID, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
-		Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding"), Outgoing: a.Bool("outgoing")}
+		Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding"), Outgoing: a.Bool("outgoing"),
+		Images: kit.LocalImages(ev.Body)}
 	if ev.Thread == "" && ev.File != "" {
 		req.Anchor = anchorIn(se, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		req.Anchor.Col, req.Anchor.EndCol = a.Int("col"), a.Int("end_col")
@@ -667,4 +722,39 @@ func anchorIn(st core.SessionState, file string, line, end int, text string) *co
 		an.Project, an.File = core.DocsProject, filepath.ToSlash(rel)
 	}
 	return an
+}
+
+// editQueued deletes a queued comment, changes it to {body}, or with no body puts it in the composer to edit.
+func (x *Requests) editQueued(_ registry.Ctx, a registry.Args, del bool) error {
+	se, w, err := kit.SessionArgs(x.h, a)
+	if err != nil {
+		return err
+	}
+	r := host.QueuedReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Comment: a.String("comment"), Body: a.String("body"), Delete: del}
+	if del || r.Body != "" {
+		return w.EditQueued(r)
+	}
+	t, ok := se.Thread(r.Thread)
+	if !ok {
+		return fmt.Errorf("no request %q", r.Thread)
+	}
+	i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return c.ID == r.Comment })
+	if i < 0 || t.Comments[i].Delivered {
+		return errors.New("that comment isn't queued: the agent has it")
+	}
+	st := x.state(se.ID)
+	st.sel, st.writing = t.ID, false
+	d := x.draftFor(st, t.ID)
+	*d = draft{text: t.Comments[i].Body, editing: r.Comment, compose: true}
+	return x.h.Run(context.Background(), "view.open", registry.Args{"id": RequestView, "place": "tab"})
+}
+
+// lastQueued is the newest comment of yours in t the agent hasn't had, or "".
+func lastQueued(t core.Thread) string {
+	for i := len(t.Comments) - 1; i >= 0; i-- {
+		if c := t.Comments[i]; c.Author == core.AuthorYou && !c.Delivered && !c.Btw {
+			return c.ID
+		}
+	}
+	return ""
 }

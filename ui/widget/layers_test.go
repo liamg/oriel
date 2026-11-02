@@ -175,6 +175,35 @@ func TestScrim(t *testing.T) {
 	}
 }
 
+// AGENTS.md: a closable surface closes with Escape. With focus on a button in the dialog, which doesn't take Escape,
+// the key reaches the scrim, which closes it.
+func TestScrimClosesOnEscapeFromAControl(t *testing.T) {
+	open := true
+	var button ui.ID
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		if !open {
+			return
+		}
+		if Scrim(c, "scrim", ScrimOpts{Z: ui.LayerDialog, Help: "test/scrim"}, func(c *ui.Ctx) {
+			c.Box("dialog", ui.Style{W: ui.Px(200), H: ui.Px(100), Interactive: true, Float: &ui.Float{Point: &render.Point{X: 100, Y: 100}}},
+				func(c *ui.Ctx) {
+					button = c.Next("ok")
+					Button(c, "ok", "OK", ButtonOpts{Help: "test/scrim"})
+				})
+		}) {
+			open = false
+		}
+	})
+	h.u.Focus(button)
+	h.frame()
+	h.u.Key(render.KeyEvent{Key: "Esc"})
+	h.frame()
+	h.frame()
+	if open {
+		t.Error("Escape on a button in the dialog didn't close it")
+	}
+}
+
 // Opening Jobs, Stats, Usage or Settings closes whichever is up, through widget.Page: one page at a time, as a
 // general rule.
 func TestOnePageAtATime(t *testing.T) {

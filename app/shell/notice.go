@@ -222,6 +222,20 @@ func (d osDesktop) ReadClipboard() (string, bool) {
 	return d.clip.ReadClipboard()
 }
 
+func (d osDesktop) ReadClipboardFiles() []string {
+	if f, ok := d.clip.(render.ClipboardFiles); ok {
+		return f.ReadClipboardFiles()
+	}
+	return nil
+}
+
+func (d osDesktop) ReadClipboardImage() ([]byte, bool) {
+	if f, ok := d.clip.(render.ClipboardFiles); ok {
+		return f.ReadClipboardImage()
+	}
+	return nil, false
+}
+
 func (d osDesktop) OpenURL(url string) error {
 	name := "xdg-open"
 	if runtime.GOOS == "darwin" {

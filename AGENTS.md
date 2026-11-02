@@ -77,11 +77,11 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
   ourselves is the default alternative. `vendor/` is committed and checked (`make vendor-check`); native and wasm
   parts are built from pinned sources, never downloaded prebuilt.
 - **Claude is driven through its interactive CLI in a PTY with hooks, never `claude -p`** (that path is billed per
-  token, while the interactive CLI uses the user's subscription). The one probe allowed is the hidden `/usage` read
-  when Oriel starts: an interactive `claude` with Oriel's mod, typed `/usage`, whose mod reports
-  `$.session.usage()`. A slash command runs inside Claude Code and sends nothing to the model, so it bills nothing;
-  `claude -p "/usage"` gives no percentages. The windows are read as data from the mod, never off the screen;
-  otherwise they come from live sessions.
+  token, while the interactive CLI uses the user's subscription). The plan's windows are read from the usage API
+  Claude Code's own `/usage` reads (`api/oauth/usage`, with its sign-in's token: it asks no model, so it bills
+  nothing); when that can't be used, from the hidden `/usage` read: an interactive `claude` with Oriel's mod, typed
+  `/usage`, whose mod reports `$.session.usage()`. `claude -p "/usage"` gives no percentages. The windows are read as
+  data, never off the screen; otherwise they come from live sessions.
 - **Platforms.** macOS (primary) and Linux, from the start. No platform-specific code without the other platform's equivalent or a build tag.
 - **Interfaces at seams.** Follow the module layout and layering in `docs/architecture.md`, which `tools/layout`
   enforces: `text`, `edit`, `vim`, `syntax`, `lsp`, `dap`, `core`, `agent` and `term` never reach `ui` or `render`.

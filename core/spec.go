@@ -63,6 +63,8 @@ type SessionSpec struct {
 	Sandbox  SandboxPolicy `json:"sandbox,omitzero"`
 	Template string        `json:"template,omitempty"` // new repo kind
 	Job      string        `json:"job,omitempty"`      // the saved job this is a run of
+	// AutoName has a small model name the session and its first request from the prompt, once it has started.
+	AutoName bool `json:"autoName,omitempty"`
 }
 
 // Sessions starts and moves sessions; the session host implements it.

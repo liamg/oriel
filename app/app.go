@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -59,6 +60,9 @@ type Config struct {
 	FSWatch func() (*fswatch.Watcher, error)
 	// WatchTiming is how the freshness managers (package watch) settle changes and let go; the defaults when zero.
 	WatchTiming watch.Timing
+	// LanguageServers says which language servers may start, of those installed; every one if nil. Tests keep the
+	// machine's own (gopls…) out, and run the recorded ones they register.
+	LanguageServers func(lsp.ServerSpec) bool
 	// SandboxBackends are the sandbox backends this machine can run, the default first; sandbox.AvailableBackends
 	// if nil.
 	SandboxBackends func() []string

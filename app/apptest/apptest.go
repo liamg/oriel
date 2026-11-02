@@ -102,11 +102,15 @@ func OfflineWhisper(t testing.TB) *voice.Whisper {
 // Desktop is a clipboard in memory, and a browser that opens nothing but notes what it was asked to.
 type Desktop struct {
 	Text   string
+	Files  []string // copied in the file manager
+	Image  []byte   // a copied picture, as PNG
 	Opened []string
 }
 
-func (d *Desktop) SetClipboard(s string)         { d.Text = s }
-func (d *Desktop) ReadClipboard() (string, bool) { return d.Text, d.Text != "" }
+func (d *Desktop) SetClipboard(s string)              { d.Text, d.Files, d.Image = s, nil, nil }
+func (d *Desktop) ReadClipboard() (string, bool)      { return d.Text, d.Text != "" }
+func (d *Desktop) ReadClipboardFiles() []string       { return d.Files }
+func (d *Desktop) ReadClipboardImage() ([]byte, bool) { return d.Image, len(d.Image) > 0 }
 func (d *Desktop) OpenURL(u string) error {
 	d.Opened = append(d.Opened, u)
 	return nil
@@ -148,7 +152,8 @@ func New(t testing.TB, o Options) *Scene {
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644)
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
 	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
-		Version: "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: OfflineNet(t), ImageNet: cmp.Or(o.ImageNet, OfflineNet(t)), SandboxBackends: Backends,
+		LanguageServers: TestServers,
+		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: OfflineNet(t), ImageNet: cmp.Or(o.ImageNet, OfflineNet(t)), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
 	if o.Config != nil {
 		o.Config(&cfg)

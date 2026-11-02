@@ -44,6 +44,8 @@ type (
 	ConfigureReq = agentrun.ConfigureReq
 	CommentReq   = agentrun.CommentReq
 	ThreadReq    = agentrun.ThreadReq
+	QueuedReq    = agentrun.QueuedReq
+	UnqueueReq   = agentrun.UnqueueReq
 	AnswerReq    = agentrun.AnswerReq
 	AskReq       = agentrun.AskReq
 	SendReq      = agentrun.SendReq
@@ -192,9 +194,6 @@ func RunOf(se core.SessionState) Run { return jobs.RunOf(se) }
 
 // ParseFindings reads the findings a reviewer wrote as JSON in its answer.
 func ParseFindings(text string) []core.Finding { return aireview.ParseFindings(text) }
-
-// Redacted stands in for the text of a GitHub comment whose author isn't trusted.
-func Redacted(author string) string { return agentrun.Redacted(author) }
 
 // RuleFor is the rule "Always" makes of a tool call.
 func RuleFor(tool string, input json.RawMessage) string { return agentrun.RuleFor(tool, input) }

@@ -50,8 +50,9 @@ A review session's agent gets its review as a request, **Review api#812**, so it
 starts at once, while you read, on the PR's head, read-only, and leaves its findings as threads on their lines; the
 AI review runs beside it. Ship and Git aren't offered: there's nothing of yours to commit or ship.
 
-The session opens on the **Explorer** in Changed, which compares with the branch the PR merges into, so it lists
-only the PR's files, and on its **Review** tab. The sidebar's **Review** entry (the pull request icon, in place of
+The session opens on the **Requests** panel with the review's own request in front, so you see the agent review as
+it goes, and its **Review** tab behind it. The **Explorer** is set to Changed, which compares with the branch the PR
+merges into, so it lists only the PR's files. The sidebar's **Review** entry (the pull request icon, in place of
 Raise PR's checklist) opens the tab again, is lit while it's showing, and counts the comments still to triage. The tab's top line says where the agent and the AI review are;
 when the agent resolves its request, a **Review done** notice says how many comments it has for you to triage.
 
@@ -116,8 +117,8 @@ When the author replies on a comment you posted, a notice says so, with the firs
 merged or closed, the tab says so, nothing more can be posted, and syncing stops; **Archive this review** (there, or
 under **Sent** once you've posted) puts the session away.
 
-A review the assistant started in the background opens on its Explorer and tab the first time you bring it to the
-front. If the agent answers its request without resolving it, the review counts as done once it stops.
+A review the assistant started in the background opens the same way, on its Requests panel and request, the first
+time you bring it to the front. If the agent answers its request without resolving it, the review counts as done once it stops.
 
 The PR's description, files, checks and reviewers are on the tab too, as its host has them. A code host that can't
 take a review from Oriel (no `submit`) says so where the verdicts would be, with **Open in** it.

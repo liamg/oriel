@@ -28,6 +28,8 @@ import (
 	"github.com/liamg/oriel/term/pty"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui/layout"
+	"github.com/liamg/oriel/ui/layout/panes"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -67,9 +69,11 @@ type TermSource interface {
 
 // terminal is one: its program, its VT, and the vim engine terminal-normal mode reads the scrollback with.
 type terminal struct {
-	id  string
-	cmd []string
-	own bool // a program it started, rather than a source it was given: it can start again
+	id     string
+	cmd    []string
+	name   string        // the user's name for it, in place of the program's
+	rename widget.Rename // its name being edited, over it
+	own    bool          // a program it started, rather than a source it was given: it can start again
 	// sandboxed says it runs in the session's sandbox, beside its agent: a shell of the backend's, not cmd's program.
 	sandboxed bool
 	emu       term.Emulator
@@ -105,8 +109,8 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	if x.CacheDir != "" {
 		ghostty.SetCacheDir(filepath.Join(x.CacheDir, "wasm"))
 	}
-	x.Add(h.Option(registry.OptionSpec{Name: "terminal.shell", Type: registry.String, Default: "", Scopes: registry.ScopeUser | registry.ScopeProject,
-		Help: "The program a new terminal runs; your $SHELL if empty."}))
+	x.Add(h.Option(registry.OptionSpec{Name: "terminal.shell", Type: registry.String, Default: "$SHELL", Scopes: registry.ScopeUser | registry.ScopeProject,
+		Help: "The program a new terminal runs, with its arguments; $VARS expand, so $SHELL is your login shell."}))
 	open := func(place, side string) func(registry.Ctx, registry.Args) error {
 		return func(ctx registry.Ctx, a registry.Args) error {
 			if a == nil {
@@ -185,6 +189,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: "<C-Esc>", Command: "term.normal", Desc: "Terminal-normal mode"}))
 	x.Add(h.Keymap(registry.Keymap{Mode: TerminalKeyMode, Keys: `<C-\><C-n>`, Command: "term.normal", Desc: "Terminal-normal mode"}))
 	x.Add(h.Contribute(registry.RawKeys{Mode: TerminalKeyMode}))
+	x.renaming(h)
 	x.Add(h.Contribute(registry.MenuItem{Name: "term.fix", Label: "Ask the agent to fix the failed command", Group: "agent", Order: 10,
 		When: registry.MenuWhen{View: TerminalView}, Command: registry.FixCommand, Trouble: x.failedCommand, Source: "builtin:terminal"}))
 	x.Add(h.View(TerminalView, terminalView{x}))
@@ -277,8 +282,8 @@ func (x *Terminals) sandboxed(a registry.Args) (host.Access, core.SessionID, boo
 // shell is what a new terminal runs: terminal.shell, else $SHELL, else sh.
 func (x *Terminals) shell() []string {
 	if v, _, err := x.h.Options().Get("terminal.shell", x.h.Here()); err == nil {
-		if s, _ := v.(string); strings.TrimSpace(s) != "" {
-			return strings.Fields(s)
+		if s, _ := v.(string); strings.TrimSpace(os.ExpandEnv(s)) != "" {
+			return strings.Fields(os.ExpandEnv(s))
 		}
 	}
 	if s := os.Getenv("SHELL"); s != "" {
@@ -613,6 +618,12 @@ func (t *terminal) exitDots() map[int]string {
 
 // title is the tab's: the program, and the directory the shell says it's in.
 func (t *terminal) title() string {
+	if t.name != "" {
+		if t.done {
+			return t.name + " (exited)"
+		}
+		return t.name
+	}
 	name := filepath.Base(t.cmd[0])
 	if t.sandboxed {
 		name = "sandbox"
@@ -627,4 +638,29 @@ func (t *terminal) title() string {
 		name += " (exited)"
 	}
 	return name
+}
+
+// renaming is Rename… on a terminal's tab, and term.rename behind it.
+func (x *Terminals) renaming(h plugin.Host) {
+	x.Add(h.Command(registry.Command{ID: "term.rename", Title: "Rename terminal {instance}, the one in front by default, to {name}; with no {name}, edit it over the terminal; an empty one puts back the program's",
+		Run: func(_ registry.Ctx, a registry.Args) error {
+			t := x.focusedOrLast()
+			if i := a.String("instance"); i != "" {
+				t = x.get(i)
+			}
+			if t == nil {
+				return errors.New("no terminal is open")
+			}
+			if name, ok := a["name"].(string); ok {
+				t.name = strings.TrimSpace(name)
+				return nil
+			}
+			t.rename.Start(t.title())
+			return nil
+		}}))
+	x.Add(h.Contribute(registry.MenuItem{Name: "term.rename", Label: "Rename…", Group: "pane", Order: 80,
+		When: registry.MenuWhen{View: TerminalView, Help: panes.HelpTab}, Source: "builtin:terminal",
+		Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
+			return h.Run(ctx, "term.rename", registry.Args{"instance": at.Instance})
+		}}))
 }

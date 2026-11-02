@@ -241,7 +241,7 @@ clip 170,105 1260x790 r 10
         text "cloud" @223,637.74945 #ece6d8 JetBrains Mono 11.5
       pop
       clip 386,626.3495 66.125x14.52002 r 0
-        text "/tmp/Test…" @386,637.56946 #7c7566 JetBrains Mono 11
+        text "/private/…" @386,637.56946 #7c7566 JetBrains Mono 11
       pop
       text "main" @464.125,637.3895 #7c7566 JetBrains Mono 10.5
       rect 194,647.6095 428.5x28 fill #1a180e
@@ -254,7 +254,7 @@ clip 170,105 1260x790 r 10
         text "pricing" @223,665.74945 #ece6d8 JetBrains Mono 11.5
       pop
       clip 386,654.3495 66.125x14.52002 r 0
-        text "/tmp/Test…" @386,665.56946 #7c7566 JetBrains Mono 11
+        text "/private/…" @386,665.56946 #7c7566 JetBrains Mono 11
       pop
       text "main" @464.125,665.3895 #7c7566 JetBrains Mono 10.5
     pop

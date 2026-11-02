@@ -22,7 +22,7 @@ var ceilings = map[string]int{
 	"functions over 120 lines in host/":    0,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
-	"RequestFocus calls outside ui/":       40,
+	"RequestFocus calls outside ui/":       39,
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
 	"tests writing package-level vars":     0,

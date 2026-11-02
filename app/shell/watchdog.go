@@ -2,9 +2,11 @@ package shell
 
 import (
 	"bytes"
+	"fmt"
 	"log/slog"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -21,11 +23,14 @@ type watchdog struct {
 	mu    sync.Mutex
 	timer *time.Timer
 	turn  uint64
+	began time.Time     // when the turn began
+	cpu0  time.Duration // the process's CPU time then
+	cpu   func() time.Duration
 }
 
 // startWatchdog is a watchdog on the calling goroutine, the loop's.
 func startWatchdog(log *slog.Logger, limit time.Duration) *watchdog {
-	w := &watchdog{log: log, limit: limit, gid: goroutineHeader()}
+	w := &watchdog{log: log, limit: limit, gid: goroutineHeader(), cpu: cpuTime}
 	w.timer = time.AfterFunc(time.Hour, func() {})
 	w.timer.Stop()
 	return w
@@ -42,6 +47,7 @@ func (w *watchdog) enter() {
 	w.mu.Lock()
 	w.turn++
 	turn := w.turn
+	w.began, w.cpu0 = time.Now(), w.cpu()
 	w.timer.Stop()
 	w.timer = time.AfterFunc(w.limit, func() { w.held(turn) })
 	w.mu.Unlock()
@@ -77,11 +83,33 @@ func (w *watchdog) held(turn uint64) {
 	buf = buf[:runtime.Stack(buf, true)]
 	w.mu.Lock()
 	still := w.turn == turn
+	began, cpu0 := w.began, w.cpu0
 	w.mu.Unlock()
 	if !still {
 		return
 	}
-	w.log.Warn("loop held up", "over", w.limit, "stack", loopStack(buf, w.gid))
+	stack := loopStack(buf, w.gid)
+	if share, busy := w.starved(stack, began, cpu0); busy {
+		// The loop was waiting for a core, and Oriel was using little of one: the machine is busy, not Oriel.
+		w.log.Debug("loop held up by a busy machine", "over", w.limit, "oriel_cpu", fmt.Sprintf("%.0f%%", share*100))
+		return
+	}
+	w.log.Warn("loop held up", "over", w.limit, "stack", stack)
+}
+
+// starvedShare is the most of one core Oriel may have used through a hold-up for it to be the machine's doing.
+const starvedShare = 0.5
+
+// starved says the loop was held up by the machine rather than its own work: it was runnable, waiting to be run,
+// while the process used under starvedShare of a core since the turn began. share is what it used.
+func (w *watchdog) starved(stack string, began time.Time, cpu0 time.Duration) (share float64, busy bool) {
+	wall := time.Since(began)
+	if wall <= 0 || w.cpu == nil {
+		return 0, false
+	}
+	share = float64(w.cpu()-cpu0) / float64(wall)
+	head, _, _ := strings.Cut(stack, "\n")
+	return share, strings.Contains(head, "[runnable]") && share < starvedShare
 }
 
 // loopStack is the stack in an all-goroutines dump whose header starts with gid.

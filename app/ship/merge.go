@@ -75,16 +75,10 @@ func (a *mergeAsk) hard() []registry.MergeBlocker {
 }
 
 func (x *Ship) activateMerge(h plugin.Host) {
-	x.Add(h.Option(registry.OptionSpec{Name: "ship.merge_method", Section: "git", Type: registry.String, Default: "",
-		Choices: func() []string { return []string{registry.MergeSquash, registry.MergeCommit, registry.MergeRebase} },
-		Validate: func(v any) error {
-			if s, _ := v.(string); s != "" && s != registry.MergeSquash && s != registry.MergeCommit && s != registry.MergeRebase {
-				return fmt.Errorf("a merge method is squash, merge or rebase, not %q", s)
-			}
-			return nil
-		},
+	x.Add(h.Option(registry.OptionSpec{Name: "ship.merge_method", Section: "git", Type: registry.Enum,
+		Values: []string{"repo", registry.MergeSquash, registry.MergeCommit, registry.MergeRebase}, Default: "repo",
 		Scopes: registry.ScopeUser | registry.ScopeProject,
-		Help:   "How Merge… merges a pull request: squash, merge or rebase. Unset, the repo's own default, else squash, else what the repo allows."}))
+		Help:   "How Merge… merges a pull request: squash, merge or rebase; repo, the repo's own default, else squash, else what it allows."}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrMerge", Fired: true, Payload: PrMerge{},
 		Doc: "A pull request about to be merged from the Ship page; a veto's reason is shown as one more reason to wait, which the user can still merge past. { session, project, number, url, title, method }"}))
 	open := func(registry.Args) bool { return x.merging != nil }
@@ -164,7 +158,7 @@ func (x *Ship) readMerge(a *mergeAsk) {
 			a.pr, a.methods, a.blockers = pr, methods.Allowed, blockers
 			v, _, _ := x.h.Options().Get("ship.merge_method", registry.At{Project: sessionProjectDir(se, p), Session: string(se.ID)})
 			want, _ := v.(string)
-			pick := methods.Pick(want)
+			pick := methods.Pick(kit.Unless(want, "repo"))
 			a.method = max(0, slices.Index(a.methods, pick))
 			ev := &PrMerge{Session: string(se.ID), Project: p, Number: pr.Number, URL: pr.URL, Title: pr.Title, Method: pick}
 			if v, _ := x.h.Fire(context.Background(), "PrMerge", pr.URL, ev); v.Veto {
@@ -200,7 +194,25 @@ func (x *Ship) mergeRead(ctx context.Context, se core.SessionState, s shipRead, 
 			return registry.PR{}, methods, nil, err
 		}
 	}
+	if !slices.ContainsFunc(blockers, func(b registry.MergeBlocker) bool { return b.Kind == registry.BlockThreads }) {
+		blockers = append(blockers, mirroredBlockers(se, s.Project, pr.Number)...)
+	}
 	return *pr, methods, append(blockers, x.sessionBlockers(se, s)...), nil
+}
+
+// mirroredBlockers are a PR's reviewer threads the session mirrors from its code host and that aren't resolved there:
+// what a host whose Blockers don't count them (a plugin's, say) still has unresolved.
+func mirroredBlockers(se core.SessionState, project string, pr int) []registry.MergeBlocker {
+	n := 0
+	for _, t := range se.Threads {
+		if h := t.Hosted; h != nil && !t.Outgoing && h.PR == pr && (h.Project == "" || h.Project == project) && !h.Resolved && t.Open() {
+			n++
+		}
+	}
+	if n == 0 {
+		return nil
+	}
+	return []registry.MergeBlocker{{Kind: registry.BlockThreads, Count: n, Text: kit.Counted(n, "reviewer comment") + " unresolved"}}
 }
 
 // sessionBlockers are what Oriel knows stands in a PR's way: its checks, the PRs before it in the session's merge

@@ -95,6 +95,13 @@ type Clipboard interface {
 	ReadClipboard() (string, bool)
 }
 
+// ClipboardFiles is a clipboard that also holds what a paste of something other than text offers: the paths of
+// files copied in the OS's file manager, or a picture as PNG. Each reads the clipboard as it is now.
+type ClipboardFiles interface {
+	ReadClipboardFiles() []string
+	ReadClipboardImage() ([]byte, bool)
+}
+
 // Frame is one frame's drawing. Rects and fills snap to device pixels; paths and lines don't,
 // so a 0.5 px hairline stays 0.5 px.
 type Frame interface {

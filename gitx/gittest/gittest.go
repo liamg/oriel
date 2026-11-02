@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	_ "github.com/liamg/oriel/internal/isolate" // TMPDIR as git names it
 )
 
 // Repo is a fixture work tree in a temporary directory, with git's global and system config out of the way.

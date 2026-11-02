@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/gitui"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render"
@@ -17,6 +18,7 @@ import (
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/sandbox"
 )
 
 func explorerRepo(t *testing.T) *gittest.Repo { return apptest.ExplorerRepo(t) }
@@ -367,4 +369,27 @@ func TestExplorerScrolls(t *testing.T) {
 	if text := s.Text(); strings.Contains(text, "f000.go") || !strings.Contains(text, "f040.go") {
 		t.Errorf("the wheel didn't scroll the tree:\n%s", text)
 	}
+}
+
+// A sandboxed session's scratchpad (the agent's temp dir: its screenshots, its notes) is one more root in All,
+// under the repo, browsed like it and opened from it.
+func TestExplorerShowsTheScratchpad(t *testing.T) {
+	s, _, se := apptest.SandboxedScene(t, rig.EchoBackend{})
+	root := se.Dir
+	if p, ok := se.Primary(); root == "" && ok {
+		root = p.Dir
+	}
+	shots := filepath.Join(sandbox.TmpDir(root), "shots")
+	os.MkdirAll(shots, 0o700)
+	os.WriteFile(filepath.Join(sandbox.TmpDir(root), "notes.md"), []byte("hi\n"), 0o600)
+	os.WriteFile(filepath.Join(shots, "login.png"), []byte("png"), 0o600)
+	s.Press("<M-3>")
+	s.Until("the scratchpad in All, open", func() bool { return s.Has("scratchpad", "the agent's temp dir", "shots", "notes.md") })
+	s.ClickText("shots")
+	s.Until("a folder in it", func() bool { return s.Has("login.png") })
+	s.ClickText("notes.md")
+	s.Until("the file open", func() bool {
+		w, ok := s.Editor().Window("")
+		return ok && w.Path == filepath.Join(sandbox.TmpDir(root), "notes.md")
+	})
 }

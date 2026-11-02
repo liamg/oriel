@@ -784,6 +784,13 @@ func (x *Plugin) frontUsage() (core.ProviderUsage, bool) {
 	if u, ok := x.sessionUsage(us); ok {
 		return u, true
 	}
+	used := usedProviders(st, x.Now())
+	if i := slices.IndexFunc(us, func(u core.ProviderUsage) bool { return used[u.Provider] }); i >= 0 {
+		return us[i], true
+	}
+	if len(used) > 0 {
+		return core.ProviderUsage{}, false // the plans in use weren't read: not another's in their place
+	}
 	return us[0], true
 }
 

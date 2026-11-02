@@ -38,6 +38,9 @@ type InboxCard struct {
 	// everything (a security-key touch). Otherwise it's only in the Inbox panel.
 	Interrupt bool
 	Banner    bool
+	// Top puts an interrupting card at the top of the window with the banners, where it's seen, rather than in the
+	// stack at the bottom right; unlike a banner, a surface that draws it itself (mission control) still takes it.
+	Top bool
 	Done      bool // history: nothing waits on it; it never stacks or counts
 
 	// The card's face: Kicker, Title, Detail, Code, Body, Actions and Note in a widget.ActionCard. Draw, when set,

@@ -133,10 +133,18 @@ func (x *Runner) Close() {
 	x.starts.Wait()
 }
 
-// Resume starts session id's agent if it isn't running: by its own id when it had one, so the conversation carries on.
+// Resume starts session id's agent if it isn't running, by its own id when it had one so the conversation carries
+// on, and hands it what's waiting. One running that has stopped answering is started again.
 func (x *Runner) Resume(id core.SessionID) error {
-	_, err := x.sessionFor(id, true)
-	return err
+	h := x.sessionOf(id)
+	if h.unresponsive() {
+		h.stop("it stopped answering", "")
+	}
+	if err := h.start(); err != nil {
+		return err
+	}
+	h.kick()
+	return nil
 }
 
 // Stop stops session id's agent, if it runs; by is who did (core.StoppedByYou…), "" for a stop that isn't one.

@@ -125,6 +125,7 @@ type Entry struct {
 	// APIError is the type of an API error Claude Code wrote in the agent's place ("authentication_failed"),
 	// "unknown" when it gave none; "" for anything else.
 	APIError string
+	Model    string // the model that wrote an assistant's entry: "claude-opus-5-5"
 }
 
 // record is the part of a log line read here.
@@ -407,7 +408,7 @@ func (r *Reader) entries(rec record) []Entry {
 			if t == "" || (rec.Type == "user" && strings.HasPrefix(t, "<")) {
 				continue
 			}
-			e := Entry{Kind: Text, Role: rec.Type, ID: ref(rec.UUID, i), Text: t, Agent: agent, At: at}
+			e := Entry{Kind: Text, Role: rec.Type, ID: ref(rec.UUID, i), Text: t, Agent: agent, At: at, Model: rec.Message.Model}
 			if rec.IsAPIError {
 				e.APIError = cmp.Or(rec.Error, "unknown")
 			}
@@ -421,7 +422,8 @@ func (r *Reader) entries(rec record) []Entry {
 				r.calls = map[string]call{}
 			}
 			r.calls[b.ID] = call{name: b.Name, input: b.Input}
-			out = append(out, Entry{Kind: ToolUse, Role: "assistant", ID: b.ID, Tool: b.Name, Input: b.Input, Agent: agent, At: at})
+			out = append(out, Entry{Kind: ToolUse, Role: "assistant", ID: b.ID, Tool: b.Name, Input: b.Input, Agent: agent, At: at,
+				Model: rec.Message.Model})
 		case "tool_result":
 			c := r.calls[b.ToolUseID]
 			delete(r.calls, b.ToolUseID)

@@ -30,7 +30,18 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -42,17 +53,6 @@ clip 0,38 43x936 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -167,9 +167,9 @@ clip 44,38 1556x936 r 0
         pop
         rect 114,234.81244 760x150.54886 radius 4 stroke 1 #332f27
         text "After the table." @114,409.40817 #ece6d8 Inter 14.5
-        rect 880,95 1x459.12854 fill #24221d
-        rect 901,268 480x228.12854 fill #0c0c0b radius 6
-        clip 901,268 480x228.12854 r 6
+        rect 880,95 1x462.609 fill #24221d
+        rect 901,268 480x231.60901 fill #0c0c0b radius 6
+        clip 901,268 480x231.60901 r 6
           rect 913,281.5 7x7 fill #7c7566 radius 3.5
           text "Thread" @928,289.54712 #ece6d8 Inter 12.5
           text "· L7 ·" @980.9531,288.78 #7c7566 JetBrains Mono 10.5
@@ -181,33 +181,33 @@ clip 44,38 1556x936 r 0
           rect 901,302 480x1 fill #332f27
           rect 913,313 28x28 fill #ff9b45 radius 6
           text "L" @923.335,330.42 #141006 JetBrains Mono 9.5
-          text "Liam" @951,324.625 #ece6d8 Inter 12
-          text "1m" @986.625,323.67978 #4f4a40 JetBrains Mono 9.5
-          text "Which do we keep?" @951,343.6289 #b3ab99 Inter 12.5
-          clip 951,354.64404 141.25x89.4845 r 4
-            rect 952,355.64404 139.25x27.124512 fill #121111
-            text "Mode" @962,373.75342 #ece6d8 Inter 12.5
-            rect 1037.625,355.64404 1x27.124512 fill #24221d
-            text "Keep" @1048.625,373.75342 #ece6d8 Inter 12.5
-            rect 952,382.76855 139.25x1 fill #24221d
-            rect 962,389.76855 65.625x17.179993 fill #161615 radius 3
-            text "HalfEven" @966,402.49857 #ece6d8 JetBrains Mono 11.5
-            rect 1037.625,383.76855 1x29.179993 fill #24221d
-            text "yes" @1054.0625,401.87793 #b3ab99 Inter 12.5
-            rect 952,412.94855 139.25x1 fill #24221d
-            rect 962,419.94855 51.21875x17.179993 fill #161615 radius 3
-            text "HalfUp" @966,432.67856 #ece6d8 JetBrains Mono 11.5
-            rect 1037.625,413.94855 1x29.179993 fill #24221d
-            text "no" @1057.1953,432.05792 #b3ab99 Inter 12.5
+          text "Liam" @951,326.36523 #ece6d8 Inter 12
+          text "1m" @986.625,325.42 #4f4a40 JetBrains Mono 9.5
+          text "Which do we keep?" @951,347.10938 #b3ab99 Inter 12.5
+          clip 951,358.1245 141.25x89.4845 r 4
+            rect 952,359.1245 139.25x27.124512 fill #121111
+            text "Mode" @962,377.2339 #ece6d8 Inter 12.5
+            rect 1037.625,359.1245 1x27.124512 fill #24221d
+            text "Keep" @1048.625,377.2339 #ece6d8 Inter 12.5
+            rect 952,386.24902 139.25x1 fill #24221d
+            rect 962,393.24902 65.625x17.179993 fill #161615 radius 3
+            text "HalfEven" @966,405.97903 #ece6d8 JetBrains Mono 11.5
+            rect 1037.625,387.24902 1x29.179993 fill #24221d
+            text "yes" @1054.0625,405.3584 #b3ab99 Inter 12.5
+            rect 952,416.42902 139.25x1 fill #24221d
+            rect 962,423.42902 51.21875x17.179993 fill #161615 radius 3
+            text "HalfUp" @966,436.15903 #ece6d8 JetBrains Mono 11.5
+            rect 1037.625,417.42902 1x29.179993 fill #24221d
+            text "no" @1057.1953,435.5384 #b3ab99 Inter 12.5
           pop
-          rect 951,354.64404 141.25x89.4845 radius 4 stroke 1 #332f27
-          rect 913,456.12854 456x30 fill #060606 radius 6
-          clip 913,456.12854 456x30 r 6
-            text "Reply…" @923,475.67566 #7c7566 Inter 12.5
+          rect 951,358.1245 141.25x89.4845 radius 4 stroke 1 #332f27
+          rect 913,459.609 456x30 fill #060606 radius 6
+          clip 913,459.609 456x30 r 6
+            text "Reply…" @923,479.15613 #7c7566 Inter 12.5
           pop
-          rect 913,456.12854 456x30 radius 6 stroke 1 #332f27
+          rect 913,459.609 456x30 radius 6 stroke 1 #332f27
         pop
-        rect 901,268 480x228.12854 radius 6 stroke 1 #332f27
+        rect 901,268 480x231.60901 radius 6 stroke 1 #332f27
       pop
     pop
   pop
@@ -224,8 +224,8 @@ text "wrap" @1479.4688,990.78 #7c7566 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 9%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
 clip 0,38 43x936 r 0
-  rect 22.09375,217 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "1" @26.09375,226.81 #141006 JetBrains Mono 8.5
+  rect 22.09375,251 13.40625x13.5 fill #ff9b45 radius 6.75
+  text "1" @26.09375,260.81 #141006 JetBrains Mono 8.5
 pop
 clip 44,38 1556x936 r 0
   clip 44,69 1556x905 r 0
@@ -260,9 +260,9 @@ clip 44,38 1556x936 r 0
   clip 44,69 1556x905 r 0
     clip 44,69 1556x905 r 0
       clip 44,95 1556x879 r 0
-        clip 901,268 480x228.12854 r 6
-          clip 913,456.12854 456x30 r 6
-            rect 1353.3334,467.12854 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
+        clip 901,268 480x231.60901 r 6
+          clip 913,459.609 456x30 r 6
+            rect 1353.3334,470.609 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566
             path 5 segments stroke 1.25 #7c7566
           pop
         pop

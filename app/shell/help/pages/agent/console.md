@@ -88,3 +88,9 @@ What lets the agent through without asking: its own gate (edits automatic, shell
 gateway, and every rule "Always in this workspace" made.
 
 {{keys "agent.*"}}
+
+## Details {#details}
+
+A tool call's **⤢**, and an ask's **Details**, open it in full in a dialog: the whole command, its input as JSON, and
+its status. A call still running shows a spinner until its result lands, then the result; an ask's dialog answers it
+as its card does. Escape or ✕ closes it.

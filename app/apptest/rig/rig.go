@@ -148,7 +148,7 @@ func NewStats(t *testing.T) *Stats {
 	providers := &agent.Providers{}
 	providers.Register(r.Claude)
 	providers.Register(r.Codex)
-	w, err := host.New(host.Options{Home: r.Home, Providers: providers, Exec: NopExec{}, Load: SteadyLoad,
+	w, err := host.New(host.Options{Home: r.Home, Providers: providers, Exec: NopExec{}, Load: SteadyLoad, NoAutoName: true,
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -471,6 +471,7 @@ func NewHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *Host {
 		o.Home = t.TempDir()
 	}
 	o.Providers = providers
+	o.NoAutoName = true
 	if o.Exec == nil {
 		o.Exec = NopExec{}
 	}

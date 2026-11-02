@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
@@ -643,5 +644,48 @@ func TestRedactedBodyStaysOutOfTheLog(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "redacted.json")); !os.IsNotExist(err) {
 		t.Errorf("the vault outlived the session: %v", err)
+	}
+}
+
+// A session started from a request with AutoName is named by a small model, and its first request shares the name.
+func TestAutoNameNamesTheSessionAndItsRequest(t *testing.T) {
+	r := newRig(t)
+	r.fake.Offers = []agent.Model{{ID: "big", Default: true}, {ID: "small", Small: true}}
+	prompt := "when i add a new session with a request, the request shows everywhere"
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: prompt, AutoName: true, Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	namer := r.fake.WaitStarted(t)
+	if namer.Spec.Model != "small" || namer.Spec.Pack.Skill != "namer" {
+		t.Errorf("the namer started with %+v", namer.Spec)
+	}
+	if in := namer.WaitSent(t); in.Text != prompt {
+		t.Errorf("the namer was asked %q", in.Text)
+	}
+	namer.Emit(agent.TurnStart{})
+	namer.Emit(agent.Message{Text: "\"Tidy request titles.\""})
+	namer.Emit(agent.TurnEnd{})
+	se := r.eventually(id, "the name", func(se core.SessionState) bool {
+		return se.Name == "Tidy request titles" && len(se.Threads) == 1 && se.Threads[0].Title == "Tidy request titles"
+	})
+	if se.ID != id {
+		t.Errorf("the id changed: %s", se.ID)
+	}
+}
+
+// A name the user gave meanwhile stays.
+func TestAutoNameKeepsARename(t *testing.T) {
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Fix stale search results", AutoName: true, Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	namer := r.fake.WaitStarted(t)
+	namer.WaitSent(t)
+	if err := r.w.Rename(id, "mine"); err != nil {
+		t.Fatal(err)
+	}
+	namer.Emit(agent.Message{Text: "Search freshness"})
+	namer.Emit(agent.TurnEnd{})
+	r.eventually(id, "the request named", func(se core.SessionState) bool {
+		return len(se.Threads) == 1 && se.Threads[0].Title == "Search freshness"
+	})
+	if se := r.session(id); se.Name != "mine" {
+		t.Errorf("the session is named %q", se.Name)
 	}
 }

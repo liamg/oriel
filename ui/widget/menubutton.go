@@ -1,6 +1,8 @@
 package widget
 
 import (
+	"cmp"
+
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
 )
@@ -12,6 +14,8 @@ type MenuButtonOpts struct {
 	Size  float32 // the button's side; 20 if 0
 	Width float32 // the menu's; 220 if 0
 	Help  string
+	// Hidden keeps the button's room but doesn't draw it, unless its menu is open: a "⋯" that shows on hover.
+	Hidden bool
 }
 
 type menuButtonState struct{ open bool }
@@ -23,6 +27,11 @@ func MenuButton(c *ui.Ctx, key any, items []MenuItem, o MenuButtonOpts) int {
 	id := c.Next(key)
 	st := ui.State[menuButtonState](c, id)
 	btn := c.Next(struct{ k any }{key})
+	if o.Hidden && !st.open {
+		side := cmp.Or(o.Size, 20)
+		c.Box(struct{ k any }{key}, ui.Style{W: ui.Px(side), H: ui.Px(side)}, nil)
+		return -1
+	}
 	if IconButton(c, struct{ k any }{key}, o.Glyph, IconButtonOpts{Label: o.Label, Help: o.Help, Size: o.Size, Icon: o.Icon, On: st.open}) {
 		st.open = !st.open
 		if st.open {

@@ -52,8 +52,9 @@ type ProseOpts struct {
 	Disabled     bool
 	Invalid      bool
 	DefaultFocus bool
-	KeyMode      string // its keymap mode; "input" by default
-	TabMoves     bool   // Tab and ⇧Tab move focus on (InputOpts.TabMoves)
+	KeyMode      string              // its keymap mode; "input" by default
+	TabMoves     bool                // Tab and ⇧Tab move focus on (InputOpts.TabMoves)
+	Files        func(Pasted) string // pasted and dropped files and pictures (InputOpts.Files)
 }
 
 // micReturn is how long after the last key the mic comes back.
@@ -91,7 +92,8 @@ func Prose(c *ui.Ctx, key any, text *string, o ProseOpts) InputResult {
 		lines = 6
 	}
 	io := InputOpts{Label: o.Label, Placeholder: o.Placeholder, Help: o.Help, Width: o.Width, Lines: lines, MinLines: o.MinLines,
-		EnterSubmits: o.EnterSubmits, Disabled: o.Disabled, Invalid: o.Invalid, DefaultFocus: o.DefaultFocus, KeyMode: o.KeyMode, TabMoves: o.TabMoves}
+		EnterSubmits: o.EnterSubmits, Disabled: o.Disabled, Invalid: o.Invalid, DefaultFocus: o.DefaultFocus, KeyMode: o.KeyMode, TabMoves: o.TabMoves,
+		Files: o.Files}
 	st := ui.State[proseState](c, ui.Child(id, proseKey{}))
 	d, ok := ui.Service[Dictator](c)
 	if !ok || o.Disabled {

@@ -114,6 +114,7 @@ type input struct {
 	ask     focusAsk                 // Ctx.Focus's or Ctx.FocusInto's, this frame
 	request focusAsk                 // Ctx.RequestFocus's, until its target is built or the user moves on
 	touched int                      // presses and keys so far: a request asked before the latest is stale
+	lastText time.Time               // when a key was last typed into a text field
 	trail   []ID                     // what held focus before, latest last: focus goes back there when an overlay closes
 	settled ID                       // focus as the last frame left it
 	blurred ID                       // what Ctx.Blur took focus from, this frame
@@ -534,6 +535,9 @@ func (u *UI) Key(ev render.KeyEvent) bool {
 	}
 	u.in.keys[id] = append(u.in.keys[id], ev)
 	u.in.visible = true
+	if u.flags[id].text {
+		u.in.lastText = u.now()
+	}
 	return true
 }
 

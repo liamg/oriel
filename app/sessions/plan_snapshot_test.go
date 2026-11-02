@@ -78,7 +78,7 @@ func planScene(t *testing.T) *apptest.Scene {
 					{ID: "c3", Author: core.AuthorYou, Name: liam, Delivered: true, Time: ago(12 * time.Minute), Body: "Where does precision come from?"},
 					{ID: "c4", Author: core.AuthorAgent, Name: "claude", Time: ago(4 * time.Second), Body: "Moved it to `currency.go`: edited."},
 				}},
-			{ID: "3c4d5e6f", Status: core.ThreadOpen, Busy: true, Created: ago(time.Minute), Updated: ago(time.Second),
+			{ID: "3c4d5e6f", Status: core.ThreadOpen, Busy: true, Active: true, Created: ago(time.Minute), Updated: ago(time.Second),
 				Anchor: doc("PLAN.md", 31, "- Historical invoices must not change: only new invoices round this way."),
 				Comments: []core.Comment{
 					{ID: "c5", Author: core.AuthorYou, Name: liam, Delivered: true, Time: ago(time.Minute), Body: "How do we guarantee this? A flag on the invoice?"},

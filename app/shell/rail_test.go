@@ -125,7 +125,7 @@ func TestRailPluginEntries(t *testing.T) {
 	for _, e := range uireg.RailEntries(s.Registry()) {
 		names = append(names, e.Name)
 	}
-	if got, want := strings.Join(names, " "), "repos reviews explorer stats search usage git jobs pull-request requests review plan-docs debug tests ship tickets inbox assistant settings"; got != want {
+	if got, want := strings.Join(names, " "), "repos reviews explorer stats search usage git jobs pull-request requests review plan-docs tests debug ship tickets inbox assistant settings"; got != want {
 		t.Errorf("rail = %q, want %q", got, want)
 	}
 	if !strings.Contains("\n"+s.Text()+"\n", "\n7\n") {

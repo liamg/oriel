@@ -246,6 +246,10 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 			kept++
 		}
 	}
+	if f.body == f.auto || f.auto == "" && (f.body == "" || isAutoSummary(f.body)) {
+		f.body = autoSummary(items)
+		f.auto = f.body
+	}
 	reviewCard(c, "review", "YOUR REVIEW", ui.Flex(1), func(c *ui.Ctx) {
 		c.Row("state", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
@@ -572,14 +576,25 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 						kit.MarkdownText(c, x.h, "b", comments[i].Body, w-48, kit.UIFont(12.5, th.C(theme.Fg)))
 					})
 				}
-				c.Text("note", "A comment the host won't place on the diff's lines goes in the summary instead.", kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("note", "A comment off the diff's lines goes on its file; one on a file the PR doesn't change, in the summary.", kit.MonoFont(10, th.C(theme.FgFaint)))
 			})
 			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			// An approval's summary on a review that isn't one asks first: it says the opposite of the verdict.
+			odd := f.preview != registry.VerdictApprove && strings.EqualFold(strings.TrimRight(strings.TrimSpace(f.body), ".!"), "LGTM")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 10, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
+				if odd {
+					c.Row("odd", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+						c.Text("t", "Are you sure? The summary says LGTM, but this isn't an approval.", kit.UIFont(12, th.C(theme.Warn)))
+					})
+				}
 				if widget.Button(c, "back", "Back", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					f.preview = ""
 				}
-				if widget.Button(c, "post", "Post: "+sentWord(f.preview), widget.ButtonOpts{Primary: true, Help: prReviewHelp}) {
+				label := "Post: " + sentWord(f.preview)
+				if odd {
+					label = "Post anyway"
+				}
+				if widget.Button(c, "post", label, widget.ButtonOpts{Primary: true, Help: prReviewHelp}) {
 					x.run("review.pr.submit", registry.Args{"id": string(se.ID), "verdict": f.preview})
 				}
 			})

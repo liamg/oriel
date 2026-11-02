@@ -49,10 +49,11 @@ func (x *AIReview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ai-r
 
 func (x *AIReview) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.String, Default: "", Scopes: registry.ScopeUser,
-		Help: "The provider AI reviews run on: claude, codex; empty for one other than the session agent's (the author's), else the author's on another model."}))
-	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.model", Type: registry.String, Default: "", Scopes: registry.ScopeUser,
-		Help: "The model AI reviews run on; empty for the reviewer's default."}))
+	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
+		Scopes: registry.ScopeUser,
+		Help:   "The provider AI reviews run on: claude, codex; auto, one other than the session agent's (the author's), else the author's on another model."}))
+	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.model", Type: registry.String, Default: "default", Choices: func() []string { return []string{"default"} },
+		Scopes: registry.ScopeUser, Help: "The model AI reviews run on: default, the reviewer's default; or a model's name."}))
 	x.Add(h.Contribute(registry.ShipGate{Name: "ai-review", Title: "AI review", Order: 60, Check: x.shipGate, Source: "builtin:ai-review"}))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -194,7 +195,8 @@ func (x *AIReview) run(a registry.Args) error {
 	if x.asked[se.ID] {
 		return nil
 	}
-	req := host.AIReviewReq{Session: se.ID, Provider: opt("review.ai.provider"), Model: opt("review.ai.model"), Full: a.Bool("full")}
+	req := host.AIReviewReq{Session: se.ID, Provider: kit.Unless(opt("review.ai.provider"), "auto"), Model: kit.Unless(opt("review.ai.model"), "default"),
+		Full: a.Bool("full")}
 	if b, err := os.ReadFile(x.promptPath()); err == nil {
 		p, err := packs.FromText(string(b), host.AIReviewPack)
 		if err != nil {

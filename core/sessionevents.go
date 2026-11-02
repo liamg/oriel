@@ -179,6 +179,9 @@ func (e ThreadBusy) Apply(s *State) error {
 	}
 	se.Threads = slices.Clone(se.Threads)
 	se.Threads[i].Busy = e.Busy
+	if !e.Busy {
+		se.Threads[i].Active = false
+	}
 	return nil
 }
 

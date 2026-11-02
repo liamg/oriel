@@ -61,17 +61,27 @@ clip 0,38 223x936 r 0
   text "Git" @54,172.58524 #b3ab99 Inter 12
   path 3 segments stroke 1.25 #7c7566
   text "Tests" @54,195.58524 #b3ab99 Inter 12
-  text "▸" @10,218.94 #7c7566 JetBrains Mono 11
-  rect 25,210.98 8x8 fill #b98aff radius 2
-  text "billing-ui" @39,218.94 #b3ab99 JetBrains Mono 11
-  rect 196.1875,208.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
-  text "⌃2" @200.1875,218.22 #7c7566 JetBrains Mono 9
-  clip 10,224.24 205x13.199997 r 0
-    text "tester/pricing-rounding" @25,234.44 #7c7566 JetBrains Mono 10
-    text "·" @167,234.44 #7c7566 JetBrains Mono 10
-    text "clean" @177,234.44 #7c7566 JetBrains Mono 10
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Debug" @54,218.58524 #b3ab99 Inter 12
+  text "▸" @10,241.94 #7c7566 JetBrains Mono 11
+  rect 25,233.98 8x8 fill #b98aff radius 2
+  text "billing-ui" @39,241.94 #b3ab99 JetBrains Mono 11
+  rect 196.1875,231.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
+  text "⌃2" @200.1875,241.22 #7c7566 JetBrains Mono 9
+  clip 10,247.24 205x13.199997 r 0
+    text "tester/pricing-rounding" @25,257.44 #7c7566 JetBrains Mono 10
   pop
-  rect 10,247.44 203x1 fill #332f27
+  rect 10,270.44 203x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -83,21 +93,9 @@ clip 0,38 223x936 r 0
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
-  text "Requests" @33,269.30524 #b3ab99 Inter 12
-  rect 199.59375,257.94 13.40625x14 fill #ff9b45 radius 7
-  text "1" @203.59375,268.18 #141006 JetBrains Mono 9
-  path 6 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  text "Debug" @33,292.30524 #b3ab99 Inter 12
+  text "Requests" @33,292.30524 #b3ab99 Inter 12
+  rect 199.59375,280.94 13.40625x14 fill #ff9b45 radius 7
+  text "1" @203.59375,291.18 #141006 JetBrains Mono 9
   path 5 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
@@ -186,11 +184,11 @@ clip 16,52 369.1875x192.79999 r 0
   text "CLAUDE" @326.76752,95.89 #ffd23f JetBrains Mono 9.5
   text "5H" @28,117.45 #b3ab99 JetBrains Mono 10.5
   rect 60,110.67 187.6875x6 fill #24221d radius 2
-  clip 131.32126,110.67 62.622864x6 r 0
+  clip 131.32124,110.67 62.62288x6 r 0
     path 36 segments stroke 1.5 #7a6522
   pop
   rect 193.44412,107.67 1x12 fill #b3ab99
-  rect 60,110.67 71.32126x6 fill #ffd23f radius 2
+  rect 60,110.67 71.32124x6 fill #ffd23f radius 2
   text "38%" @257.6875,117.45 #ece6d8 JetBrains Mono 10.5
   text "→71% at reset" @287.46875,117.45 #7c7566 JetBrains Mono 10.5
   text "WK" @28,137.31 #b3ab99 JetBrains Mono 10.5
@@ -211,20 +209,20 @@ clip 16,52 369.1875x192.79999 r 0
   text "CODEX" @333.3375,171.69 #ffd23f JetBrains Mono 9.5
   text "5H" @28,193.25 #b3ab99 JetBrains Mono 10.5
   rect 60,186.46999 187.6875x6 fill #24221d radius 2
-  clip 101.291245,186.46999 1.5565796x6 r 0
+  clip 101.29125,186.46999 1.556572x6 r 0
     path 4 segments stroke 1.5 #7a6522
   pop
   rect 102.347824,183.46999 1x12 fill #b3ab99
-  rect 60,186.46999 41.291245x6 fill #ffd23f radius 2
+  rect 60,186.46999 41.291252x6 fill #ffd23f radius 2
   text "22%" @257.6875,193.25 #ece6d8 JetBrains Mono 10.5
   text "→23% at reset" @287.46875,193.25 #7c7566 JetBrains Mono 10.5
   text "WK" @28,213.11 #b3ab99 JetBrains Mono 10.5
   rect 60,206.32999 220.65625x6 fill #24221d radius 2
-  clip 165.91501,206.32999 13.060684x6 r 0
+  clip 165.915,206.32999 13.060699x6 r 0
     path 10 segments stroke 1.5 #7a6522
   pop
   rect 178.4757,203.32999 1x12 fill #b3ab99
-  rect 60,206.32999 105.91501x6 fill #ff9b45 radius 2
+  rect 60,206.32999 105.91499x6 fill #ff9b45 radius 2
   text "48%" @290.65625,213.11 #ece6d8 JetBrains Mono 10.5
   text "→54% Thu" @320.4375,213.11 #7c7566 JetBrains Mono 10.5
   text "resets 3h09m" @60,231.95001 #4f4a40 JetBrains Mono 9.5

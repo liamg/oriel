@@ -29,11 +29,13 @@ type session struct {
 	working      bool // a turn is running, or one was just asked for
 	interrupting bool
 	relogin      bool // a turn stopped for a lost login: told to carry on once it's back
+	stale        bool // the agent lost what only a restart brings back: restarted once its turn ends
 	refused      bool // the agent couldn't start for a lost login: started once it's back
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
 	held         []core.ThreadID // threads given to turns that left background work running: busy until it's done
-	runs         []string        // test runs since it last replied
+	runs         []string        // the turn's test runs
+	model        string          // the model the agent last ran as, by its tool calls: "claude-opus-5-5"
 	calls        map[string]agent.ToolCall
 	items        map[string]core.Item
 	waiting      map[string]chan AnswerReq // asks the user hasn't answered
@@ -238,6 +240,31 @@ func (x *Runner) Protected(se core.SessionState) []string {
 		}
 	}
 	return out
+}
+
+func (h *session) ranModel() string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.model
+}
+
+// restart stops the agent and starts it again on its conversation, off the caller.
+func (h *session) restart(why string) {
+	h.r.starts.Go(func() {
+		defer h.r.env.Recover("restarting an agent", nil)
+		h.stop(why, "")
+		if err := h.start(); err != nil {
+			h.r.env.Log.Warn("the agent didn't start again", "session", h.id, "why", why, "err", err)
+		}
+	})
+}
+
+// unresponsive says the agent runs but its session has stopped hearing from it.
+func (h *session) unresponsive() bool {
+	h.mu.Lock()
+	r, ok := h.sess.(agent.Responsive)
+	h.mu.Unlock()
+	return ok && !r.Responsive()
 }
 
 // stop stops the agent, and its threads wait for it to come back; by is who did (core.StoppedByYou…), "" for a stop that isn't one: a restart, a delete.

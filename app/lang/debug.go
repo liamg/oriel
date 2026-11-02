@@ -185,7 +185,7 @@ func DebugEntries() *kit.Entries {
 			{Name: "DebugStopped", Fired: true, Payload: DebugStopped{}, Doc: "The debuggee stopped: at a breakpoint, after a step, on an exception or a pause."},
 			{Name: "DebugEnded", Fired: true, Payload: DebugEnded{}, Doc: "A debug session ended."},
 		},
-		Contribs: append(adapters, uireg.RailEntry{Name: "debug", Icon: "debug", Title: "Debug", Command: "view.toggle", Args: debugViewArgs(), Order: 50}),
+		Contribs: append(adapters, uireg.RailEntry{Name: "debug", Icon: "debug", Title: "Debug", Command: "view.toggle", Args: debugViewArgs(), Scope: uireg.ScopeProjectEntry, Order: 55}),
 		Keymaps:  []registry.Keymap{{Mode: "global", Keys: "<D-D>", Command: "view.toggle", Args: debugViewArgs(), Desc: "Debug"}},
 	}
 }

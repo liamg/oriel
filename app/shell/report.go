@@ -61,6 +61,7 @@ type shell struct {
 	holdsClose  bool                         // a close waits for the session host's hand-over
 	relaunch    atomic.Pointer[func() error] // starts Oriel again once the window has closed: an update's restart
 	launchDone  bool                         // the window has started once: mission control opens at launch only
+	crashSeen   bool                         // the last run's crash report has been offered: once a launch, not each reopen
 	focus       *windowFocus                 // whether the window has the OS's focus
 	framed      kit.Signals                  // after each frame is drawn, on the loop
 	frames      kit.FrameLog                 // the frames drawn: how long each took

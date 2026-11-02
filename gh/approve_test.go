@@ -2,7 +2,9 @@ package gh_test
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/liamg/oriel/gh"
@@ -107,5 +109,60 @@ func TestSubmitReview(t *testing.T) {
 				t.Fatalf("a comment off the diff: reviews %+v, comments %+v", rs, cs)
 			}
 		})
+	}
+}
+
+// One comment GitHub won't put on the diff no longer moves every comment into the body: each is placed by the PR's
+// patches. A comment in a hunk goes on its line; elsewhere in a changed file, on the file; on a file the PR doesn't
+// change, in the body.
+func TestSubmitReviewPlacesEachComment(t *testing.T) {
+	for _, transport := range []string{"http", "cli"} {
+		t.Run(transport, func(t *testing.T) {
+			s := ghtest.New(t)
+			api := client(t, transport, s).(gh.API)
+			s.SetLogin("me")
+			pr := s.AddPR("acme/api", gh.PR{Title: "fix: rounding", Head: "round", Base: "main"})
+			patch := "@@ -10,4 +10,5 @@ func Round() {\n ctx := 1\n-old := 2\n+n := 2\n+m := 3\n keep := 4\n end := 5"
+			s.SetPRSize("acme/api", pr.Number, ghtest.PRSize{Author: "priya", HeadSHA: "abc123",
+				Files: []gh.PRFile{{Path: "round.go", Additions: 2, Deletions: 1, Patch: patch}}})
+			inHunk := gh.ReviewComment{Path: "round.go", Line: 11, Body: "Name it."}
+			removed := gh.ReviewComment{Path: "round.go", Line: 11, Side: "LEFT", Body: "Why remove it?"}
+			ranged := gh.ReviewComment{Path: "round.go", Line: 12, OriginalLine: 3, Body: "From the top."}
+			offHunk := gh.ReviewComment{Path: "round.go", Line: 40, Body: "This too."}
+			unchanged := gh.ReviewComment{Path: "README.md", Line: 9, Body: "Say so here."}
+			err := api.SubmitReview(context.Background(), acme, pr.Number, gh.ReviewInput{Event: "COMMENT", Body: "Some things.", Commit: "abc123",
+				Comments: []gh.ReviewComment{inHunk, removed, ranged, offHunk, unchanged}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			rs, cs := s.Reviews("acme/api", pr.Number), s.ReviewComments("acme/api", pr.Number)
+			if want := "Some things.\n\n**`README.md:9`**\n\nSay so here."; len(rs) != 1 || rs[0].Body != want {
+				t.Fatalf("reviews %+v", rs)
+			}
+			var got []string
+			for _, c := range cs {
+				got = append(got, fmt.Sprintf("%s:%d:%s %s", c.Path, c.Line, c.Side, c.Body))
+			}
+			want := []string{"round.go:11:RIGHT Name it.", "round.go:11:LEFT Why remove it?", "round.go:12:RIGHT From the top.",
+				"round.go:0:RIGHT **Line 40**\n\nThis too."}
+			if !slices.Equal(got, want) {
+				t.Errorf("comments\n%q\nwant\n%q", got, want)
+			}
+		})
+	}
+}
+
+// GitHub patches are unified diff: a patch's hunks are unified diff, "@@ -old,n +new,m @@" then context, - and + lines.
+func TestPatchLines(t *testing.T) {
+	l := gh.PatchLines("@@ -1,2 +1,3 @@\n a\n-b\n+c\n+d\n\\ No newline at end of file\n@@ -20 +21,2 @@\n x\n+y")
+	for side, want := range map[string][]int{"RIGHT": {1, 2, 3, 21, 22}, "LEFT": {1, 2, 20}} {
+		var got []int
+		for n := range l[side] {
+			got = append(got, n)
+		}
+		slices.Sort(got)
+		if !slices.Equal(got, want) {
+			t.Errorf("%s: %v, want %v", side, got, want)
+		}
 	}
 }

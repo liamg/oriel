@@ -73,6 +73,8 @@ type eventIn struct {
 	Text        string `json:"text,omitempty"`
 	// api-error; usage: why $.session.usage() failed
 	Error string `json:"error,omitempty"`
+	// tools-lost: Oriel's MCP servers the CLI has dropped
+	Servers []string `json:"servers,omitempty"`
 }
 
 // backgroundTask is one of the Stop hook's background_tasks: a shell, subagent, monitor or workflow still running.

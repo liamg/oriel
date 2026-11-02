@@ -25,7 +25,18 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -37,17 +48,6 @@ clip 0,38 43x936 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -631,6 +631,9 @@ text "✕" @87.1225,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @98.71625,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @119.31,990.95996 #ff9b45 JetBrains Mono 11
 text "1" @130.90375,990.95996 #b3ab99 JetBrains Mono 11
+text "go" @153.4975,990.78 #b3ab99 JetBrains Mono 10.5
+text "◌" @172.685,990.78 #7c7566 JetBrains Mono 10.5
+text "starting" @185.27875,990.78 #b3ab99 JetBrains Mono 10.5
 text "CI" @1267.8125,990.95996 #b3ab99 JetBrains Mono 11
 text "✓ main" @1293,990.95996 #4fe0a0 JetBrains Mono 11
 text "Go · utf-8 · LF" @1364.5625,984.71 #b3ab99 JetBrains Mono 10.5

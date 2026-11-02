@@ -399,14 +399,12 @@ func (x *Launcher) build(c *ui.Ctx) {
 	th := c.Theme()
 	size := c.Size()
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
-	box := c.Next("box")
-	for _, k := range c.Interaction(box).Keys {
-		if kit.Notation(k) == "<Esc>" {
-			x.close()
-			return
-		}
-	}
+	escaped := false
 	if widget.Scrim(c, "launcher", widget.ScrimOpts{Z: ui.LayerDialog, Fill: th.C(kit.TScrimOmni), Help: "agent/launcher"}, func(c *ui.Ctx) {
+		// Escape on the box, or passed up to it from a control in it (a card, a button).
+		for _, k := range c.Interaction(c.Next("box")).Keys {
+			escaped = escaped || kit.Notation(k) == "<Esc>"
+		}
 		c.Column("box", ui.Style{W: ui.Px(min(1260, size.X-32)), H: ui.Px(min(790, size.Y-32)), Fill: th.C(kit.TOmniBg), Stroke: th.C(kit.TOmniBorder),
 			Border: 1, Radius: 10, Clip: true, Trap: true, Interactive: true, Focusable: true, KeyMode: LauncherKeyMode,
 			Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Role: ui.RoleDialog, Label: "New session", Help: "agent/launcher"},
@@ -421,7 +419,7 @@ func (x *Launcher) build(c *ui.Ctx) {
 				c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 				x.footer(c)
 			})
-	}) {
+	}) || escaped {
 		x.close()
 	}
 }

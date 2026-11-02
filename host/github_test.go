@@ -82,15 +82,17 @@ func TestGitHubReviewMirror(t *testing.T) {
 		t.Errorf("reviewer's comment %+v", c)
 	}
 
-	// It reaches the agent like any comment; the untrusted author's text doesn't.
+	// It reaches the agent like any comment; the agent isn't told of the untrusted author's at all.
 	batch := a.WaitSent(t).Text
-	for _, want := range []string{`origin="github"`, `by="priya-k"`, "Can this return an error instead?", `redacted="true"`, string(review.ID)} {
+	for _, want := range []string{`origin="github"`, `by="priya-k"`, "Can this return an error instead?", string(review.ID)} {
 		if !strings.Contains(batch, want) {
 			t.Errorf("batch lacks %q:\n%s", want, batch)
 		}
 	}
-	if strings.Contains(batch, "push to main") {
-		t.Errorf("an untrusted author's text reached the agent:\n%s", batch)
+	for _, not := range []string{"push to main", "mallory", "redacted"} {
+		if strings.Contains(batch, not) {
+			t.Errorf("the batch tells the agent of the untrusted comment (%q):\n%s", not, batch)
+		}
 	}
 
 	// The agent's reply is a draft, and nothing reaches GitHub.
@@ -276,10 +278,11 @@ func TestReviewSessionMirrorsItsPR(t *testing.T) {
 		t.Fatal(err)
 	}
 	th, _ = r.session(id).Thread(mine)
-	if u := th.Undelivered(); len(u) != 1 || u[0].Name != "bob" {
-		t.Errorf("the agent is handed %+v, want the author's reply alone", u)
+	// bob isn't a trusted sender: the user sees the reply, and the agent isn't told of it.
+	if u := th.Undelivered(); len(u) != 0 {
+		t.Errorf("the agent is handed %+v, want nothing", u)
 	}
-	if c, _ := th.Last(); c.Name != "bob" || c.Body != "Renamed it." {
+	if c, _ := th.Last(); c.Name != "bob" || c.Body != "Renamed it." || !c.Redacted {
 		t.Errorf("the author's reply %+v", c)
 	}
 

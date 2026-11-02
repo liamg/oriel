@@ -31,7 +31,7 @@ func consoleScene(t *testing.T) *apptest.Scene {
 			Queue: []string{"Also check @internal/api/usage/routes.go: the batch endpoint has its own limiter."},
 			Stats: core.Stats{Context: 118_000, ContextMax: 400_000, Input: 184_600, CacheRead: 1_235_400, Output: 38_000, Turns: 14, ToolCalls: 63,
 				Cost: 3.10, Running: 4320}},
-		Threads: []core.Thread{{ID: "t1", Status: core.ThreadOpen, Busy: true, Anchor: &core.Anchor{File: "internal/api/usage/handler.go", Line: 88},
+		Threads: []core.Thread{{ID: "t1", Status: core.ThreadOpen, Busy: true, Active: true, Anchor: &core.Anchor{File: "internal/api/usage/handler.go", Line: 88},
 			Comments: []core.Comment{{ID: "c1", Author: core.AuthorYou, Body: "The 429 path never sets `Retry-After`. Add it from the limiter's reset time and cover it in the handler test."}}}},
 		Transcript: []core.Item{
 			{ID: "u", Kind: core.ItemUser, Time: ago(80), Text: "Requests to handle:\n\n1. internal/api/usage/handler.go:88\nThe 429 path never sets Retry-After.\nAdd it from the limiter's reset time."},

@@ -468,12 +468,13 @@ func (x *Plugin) chart(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 		if q.Group == stats.BySession {
 			c.Row("legend", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.legend(c, series, 4) })
 		}
-		if hl >= 0 && hl < len(r.Groups) && r.Totals.Cost > 0 {
-			g := r.Groups[hl]
-			c.Row("pick", ui.Style{W: ui.Flex(1), Main: ui.End, H: ui.Px(12)}, func(c *ui.Ctx) {
+		// The hovered series' line keeps its place empty, so hovering never moves the chart under the pointer.
+		c.Row("pick", ui.Style{W: ui.Flex(1), Main: ui.End, H: ui.Px(12)}, func(c *ui.Ctx) {
+			if hl >= 0 && hl < len(r.Groups) && r.Totals.Cost > 0 {
+				g := r.Groups[hl]
 				c.Text("t", fmt.Sprintf("%s · %s · %.1f%%", g.Label, kit.Money(g.Cost), g.Cost/r.Totals.Cost*100), kit.MonoFont(10, tones[hl]))
-			})
-		}
+			}
+		})
 		res := widget.Chart(c, "c", series, widget.ChartOpts{Height: 140, Labels: dayLabels(r.Points), YTicks: 3, YFormat: axisMoney, Format: kit.Money, Hover: true, Highlight: hl, Title: func(i int) string {
 			if i < len(r.Points) {
 				return r.Points[i].Format("Mon Jan 2")

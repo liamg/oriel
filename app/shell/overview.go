@@ -68,6 +68,12 @@ type card struct {
 	header *cardHeader
 	panels map[string]*panelResult
 	since  time.Time // when its header was asked for
+	readme readme
+}
+
+// readme is a directory's README, shown under its card's panels.
+type readme struct {
+	name, text string
 }
 
 type cardHeader struct {
@@ -188,6 +194,10 @@ func (o *overview) card(dir string) *card {
 	o.cards[dir] = cd
 	delete(o.scans, dir)
 	o.computeNew(dir, cd)
+	go func() {
+		r := readReadme(dir)
+		o.h.Do(func() { cd.readme = r })
+	}()
 	if cd.git {
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
@@ -251,7 +261,38 @@ func (o *overview) cardView(c *ui.Ctx, dir string) {
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		o.panels(c, dir, cd)
+		if cd.readme.text != "" {
+			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			width := float32(800)
+			if r, ok := c.Rect(c.Next("readme")); ok {
+				width = r.Dx() - 36
+			}
+			c.Column("readme", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 10, Role: ui.RoleRegion, Label: cd.readme.name}, func(c *ui.Ctx) {
+				kit.Caption(c, "title", cd.readme.name)
+				kit.MarkdownTextIn(c, o.h, "md", cd.readme.text, width, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{Dir: dir,
+					Group: "readme:" + dir, Help: "shell/overview"})
+			})
+		}
 	})
+}
+
+// readmeMax is the most of a README the overview reads.
+const readmeMax = 256 << 10
+
+// readReadme is dir's README, by the names it's usually given; none when there isn't one.
+func readReadme(dir string) readme {
+	for _, name := range []string{"README.md", "readme.md", "Readme.md", "README.markdown", "README"} {
+		f, err := os.Open(filepath.Join(dir, name))
+		if err != nil {
+			continue
+		}
+		b, err := io.ReadAll(io.LimitReader(f, readmeMax))
+		f.Close()
+		if err == nil && len(bytes.TrimSpace(b)) > 0 {
+			return readme{name: name, text: string(b)}
+		}
+	}
+	return readme{}
 }
 
 // panels are dir's card's panels, side by side.

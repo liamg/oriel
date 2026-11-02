@@ -28,7 +28,7 @@ import (
 type UtilitySpec struct {
 	Name     string `json:"name"`               // what it's for ("assistant"): its folder, and who the app's tools are for
 	Provider string `json:"provider,omitempty"` // "" for the first installed and signed in
-	Model    string `json:"model,omitempty"`    // "" for the provider's small model, else its default
+	Model    string `json:"model,omitempty"`    // "" or "small" for the provider's small model, "default" for its default
 	Pack     string `json:"pack"`               // what it's told: a Claude skill, Codex's first message
 	Prompt   string `json:"prompt"`             // the first turn
 	// Allow are the provider's own tools it may use without asking: WebSearch, WebFetch.
@@ -216,7 +216,11 @@ func (x *Utilities) utilityProvider(ctx context.Context, spec UtilitySpec) (agen
 			return nil, "", errors.New("no agent provider is installed and signed in")
 		}
 	}
-	if spec.Model != "" {
+	switch spec.Model {
+	case "", "small":
+	case "default":
+		return p, hostcore.DefaultModel(ctx, p), nil
+	default:
 		return p, spec.Model, nil
 	}
 	ms, _ := p.Models(ctx)

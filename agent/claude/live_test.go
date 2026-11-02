@@ -2,6 +2,7 @@ package claude
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -83,5 +84,19 @@ func TestLiveUsage(t *testing.T) {
 	}
 	if !weekly {
 		t.Errorf("no weekly window: %+v", u.Windows)
+	}
+}
+
+// ORIEL_LIVE=1: the plan's windows from the real usage API, with this machine's Claude sign-in.
+func TestLiveUsageAPI(t *testing.T) {
+	if os.Getenv("ORIEL_LIVE") != "1" {
+		t.Skip("set ORIEL_LIVE=1 to read the real usage API")
+	}
+	u, ok, err := (&Provider{}).apiUsage(context.Background(), http.DefaultClient, UsageAPI)
+	if !ok || err != nil || len(u.Windows) == 0 {
+		t.Fatalf("ok %v, err %v, usage %+v", ok, err, u)
+	}
+	for _, w := range u.Windows {
+		t.Logf("%s: %.0f%%, resets %s", w.Name, w.Used*100, w.Resets.Local().Format("Mon 15:04"))
 	}
 }

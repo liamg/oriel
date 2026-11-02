@@ -48,8 +48,10 @@ type memDesktop struct {
 	opened []string
 }
 
-func (c *memDesktop) SetClipboard(s string)         { c.text = s }
-func (c *memDesktop) ReadClipboard() (string, bool) { return c.text, c.text != "" }
+func (c *memDesktop) SetClipboard(s string)              { c.text = s }
+func (c *memDesktop) ReadClipboard() (string, bool)      { return c.text, c.text != "" }
+func (c *memDesktop) ReadClipboardFiles() []string       { return nil }
+func (c *memDesktop) ReadClipboardImage() ([]byte, bool) { return nil, false }
 func (c *memDesktop) OpenURL(u string) error {
 	c.opened = append(c.opened, u)
 	return nil

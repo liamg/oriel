@@ -122,8 +122,8 @@ func TestTerminalSnapshotOnReopen(t *testing.T) {
 // In a terminal, ⌃ keys are the program's: the window's ⌃W and ⌃J chords don't take them, though ⌘ chords still
 // work; ⌃Esc and ⌃\ ⌃N, keymaps like any other, leave for terminal-normal mode.
 func TestTerminalKeepsControlKeys(t *testing.T) {
-	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "stty raw -echo; dd bs=1 count=1 2>/dev/null | od -An -c; exec cat"}})
-	s.Frame()
+	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "stty raw -echo; echo ready; dd bs=1 count=1 2>/dev/null | od -An -c; exec cat"}})
+	waitTerm(t, s, "ready") // a key before the tty is raw is the line discipline's
 	for _, k := range []string{"<C-w>", "<C-j>", "<C-a>"} {
 		if slices.Contains(s.KeyModesFor(k), "global") {
 			t.Errorf("%s reaches the global maps in a terminal: %v", k, s.KeyModesFor(k))
@@ -229,4 +229,20 @@ func charAt(t *testing.T, s *apptest.Scene, line string, col int) render.Point {
 	}
 	t.Fatalf("no line %q in the frame:\n%s", line, s.Text())
 	return render.Point{}
+}
+
+// Right-click a terminal's tab, Rename…, type, ⏎: the tab has the name; an empty name puts back the program's.
+func TestTerminalRenames(t *testing.T) {
+	s := termScene(t, registry.Args{"cmd": []string{"sh"}, "env": []string{"PS1=$ "}, "bang": true})
+	waitTerm(t, s, "$")
+	s.Until("the tab", func() bool { return s.Has("sh") })
+	s.RightClick(s.TextPoint("sh"))
+	s.Until("the menu", func() bool { return s.Has("Rename…") })
+	s.ClickText("Rename…")
+	s.Until("the name field", func() bool { return s.Find("Terminal name") != nil })
+	s.Type("d", "b", " ", "s", "h", "e", "l", "l")
+	s.Press("<CR>")
+	s.Until("the tab named", func() bool { return s.Has("db shell") && s.Find("Terminal name") == nil })
+	s.Run("term.rename", registry.Args{"instance": "1", "name": ""})
+	s.Until("the program's name back", func() bool { return !s.Has("db shell") })
 }

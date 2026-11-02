@@ -381,6 +381,9 @@ func (c *Ctx) Frame() int { return c.u.frame }
 // Now is the UI's clock.
 func (c *Ctx) Now() time.Time { return c.u.now() }
 
+// LastTyped is when a key was last typed into a text field, on the UI's clock; zero before any.
+func (c *Ctx) LastTyped() time.Time { return c.u.in.lastText }
+
 // Held is the modifier keys held now.
 func (c *Ctx) Held() render.Mods { return c.u.in.held }
 

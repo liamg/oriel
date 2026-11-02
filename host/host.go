@@ -68,6 +68,8 @@ type Options struct {
 	HTTP *http.Client
 	// PricesURL is where the price list is fetched from; cost.dev's (price.URL) if "".
 	PricesURL string
+	// NoAutoName never starts the agent that names a session (SessionSpec.AutoName): for fakes that script each start.
+	NoAutoName bool
 }
 
 // Host hosts sessions.

@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/agentrun"
 )
 
 // workSession starts a work session with the fake agent, and returns it once the agent has its first batch.
@@ -606,5 +607,174 @@ func TestEditTitlesNameTheFile(t *testing.T) {
 	}
 	if strings.Join(titles, "|") != "Edit a.go|Edit b.go|Edit c.go" {
 		t.Errorf("titles = %q", titles)
+	}
+}
+
+// Resuming a session whose agent runs but has stopped answering starts it again on its conversation, and hands it
+// what waits: a request left queued behind a turn the old one never ended.
+func TestResumeRestartsAnAgentThatStoppedAnswering(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Negative values round the wrong way")
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
+	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "and the zero case"}); err != nil {
+		t.Fatal(err)
+	}
+	a.NoneSent(t)
+
+	if err := r.w.Resume(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	a.NoneSent(t) // still answering: it carries on with its turn
+
+	a.Quiet()
+	if err := r.w.Resume(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	again := r.agent()
+	if !a.Closed() {
+		t.Error("the quiet agent wasn't stopped")
+	}
+	if rs := r.fake.Resumed(); len(rs) == 0 || rs[len(rs)-1] != a.ID() {
+		t.Errorf("it wasn't resumed on its conversation: %q", rs)
+	}
+	got := again.WaitSent(t)
+	if !strings.Contains(got.Text, "and the zero case") {
+		t.Errorf("the agent started again was handed %q", got.Text)
+	}
+}
+
+// An agent that lost what only a restart brings back (an MCP server its CLI dropped) is started again on its
+// conversation once its turn ends.
+func TestAStaleAgentRestartsAfterItsTurn(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Negative values round the wrong way")
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
+	a.Emit(agent.Stale{Why: "its CLI dropped oriel-gw"})
+	time.Sleep(100 * time.Millisecond)
+	if a.Closed() {
+		t.Fatal("restarted mid-turn")
+	}
+	answered(r, id, a)
+	a.Emit(agent.TurnEnd{})
+	again := r.agent()
+	if !a.Closed() || again == a {
+		t.Error("the stale agent wasn't started again")
+	}
+	r.eventually(id, "running again", func(se core.SessionState) bool { return se.Agent.Running && !se.Agent.Working })
+}
+
+// Every reply in a turn is backed by the turn's runs, not only the first; and a run that passed tests backs a claim
+// though other packages in it failed.
+func TestEvidenceBacksEveryReplyOfTheTurn(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Fix it")
+	a.WaitSent(t)
+	tid := string(r.session(id).Threads[0].ID)
+	other, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "and this"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.Emit(agent.TurnStart{})
+	test, _ := json.Marshal(map[string]string{"command": "go test ./..."})
+	a.Emit(agent.ToolCall{ID: "c1", Tool: "Bash", Input: test})
+	a.Emit(agent.ToolResult{ID: "c1", Output: "ok  \tpricing\t0.01s\n--- FAIL: TestSnapshot (0.00s)\nFAIL\tui\t0.01s\n", IsError: true})
+	r.eventually(id, "the run", func(se core.SessionState) bool { return len(se.Runs) == 1 })
+	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Fixed: pricing's tests pass."})
+	a.Call(t, "reply", map[string]any{"thread": string(other), "body": "Done too; the tests pass."})
+	for _, th := range []core.ThreadID{core.ThreadID(tid), other} {
+		t2, _ := r.session(id).Thread(th)
+		if c, _ := t2.Last(); c.Unbacked != "" || len(c.Evidence) != 1 {
+			t.Errorf("%s: evidence %+v, unbacked %q", th, c.Evidence, c.Unbacked)
+		}
+	}
+	a.Emit(agent.TurnEnd{})
+	r.eventually(id, "the turn's end", func(se core.SessionState) bool { return !se.Agent.Working })
+	a.Emit(agent.TurnStart{})
+	r.eventually(id, "the next turn", func(se core.SessionState) bool { return se.Agent.Working })
+	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Still: tests pass."})
+	t3, _ := r.session(id).Thread(core.ThreadID(tid))
+	if c, _ := t3.Last(); c.Unbacked == "" {
+		t.Error("a claim in a turn with no runs of its own wasn't flagged")
+	}
+}
+
+// A reply carries the model the agent ran as, by name with its version, once its tool calls have said it.
+func TestReplyNamesTheModelItRanAs(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Fix it")
+	a.WaitSent(t)
+	tid := string(r.session(id).Threads[0].ID)
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.ToolCall{ID: "c1", Tool: "Read", Model: "claude-opus-5-5", Input: json.RawMessage(`{}`)})
+	r.eventually(id, "the call", func(se core.SessionState) bool {
+		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "c1" })
+	})
+	a.Call(t, "reply", map[string]any{"thread": tid, "body": "Done."})
+	th, _ := r.session(id).Thread(core.ThreadID(tid))
+	if c, _ := th.Last(); c.Model != "Opus 5.5 · high" {
+		t.Errorf("the reply's model is %q", c.Model)
+	}
+	for id, want := range map[string]string{"claude-opus-5-5": "Opus 5.5", "claude-sonnet-4-5-20250929": "Sonnet 4.5", "claude-haiku-5": "Haiku 5", "gpt-5": ""} {
+		if got := agentrun.ModelName(id); got != want {
+			t.Errorf("ModelName(%q) = %q, want %q", id, got, want)
+		}
+	}
+}
+
+// Requests handed over together are the agent's, but only the one it says it's on is active: a working reply, or a
+// task of it started. One handed over alone is active at once.
+func TestOnlyTheRequestTheAgentIsOnIsActive(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("first")
+	a.WaitSent(t)
+	first := r.session(id).Threads[0].ID
+	if th, _ := r.session(id).Thread(first); !th.Busy || !th.Active {
+		t.Errorf("a request handed over alone: busy %v, active %v", th.Busy, th.Active)
+	}
+	a.Emit(agent.TurnStart{})
+	b, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "second"})
+	c, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "third"})
+	a.Call(t, "reply", map[string]any{"thread": string(first), "body": "Done.", "resolve": true})
+	a.Emit(agent.TurnEnd{})
+	a.WaitSent(t)
+	for _, tid := range []core.ThreadID{b, c} {
+		if th, _ := r.session(id).Thread(tid); !th.Busy || th.Active {
+			t.Errorf("%s handed over with another: busy %v, active %v", tid, th.Busy, th.Active)
+		}
+	}
+	a.Call(t, "reply", map[string]any{"thread": string(c), "body": "On it.", "working": true})
+	out := a.Call(t, "task_add", map[string]any{"subject": "second", "thread": string(b)})
+	a.Call(t, "task_update", map[string]any{"id": strings.TrimSuffix(strings.Fields(out)[1], ""), "status": "in_progress"})
+	for _, tid := range []core.ThreadID{b, c} {
+		if th, _ := r.session(id).Thread(tid); !th.Active {
+			t.Errorf("%s the agent is on isn't active", tid)
+		}
+	}
+}
+
+// A call of Oriel's own reply says which request it answered and how it began, and opens on what it said: not
+// "reply", then "replied".
+func TestOrielToolCallsSayWhatTheyDid(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Negative values round the wrong way")
+	a.WaitSent(t)
+	tid := string(r.session(id).Threads[0].ID)
+	in, _ := json.Marshal(map[string]any{"thread": tid, "body": "Fixed: `Floor` rounds toward -∞.\n\nmore", "resolve": true})
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.ToolCall{ID: "r1", Tool: "mcp__oriel__reply", Input: in})
+	a.Emit(agent.ToolResult{ID: "r1", Output: "replied"})
+	se := r.eventually(id, "the call done", func(se core.SessionState) bool {
+		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "r1" && it.Done })
+	})
+	it := se.Transcript[slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == "r1" })]
+	if want := "Reply and resolve on “Negative values round the wrong way”: Fixed: `Floor` rounds toward -∞."; it.Title != want {
+		t.Errorf("title %q, want %q", it.Title, want)
+	}
+	if !strings.HasPrefix(it.Output, "Fixed: `Floor` rounds toward -∞.") || !strings.HasSuffix(it.Output, "→ replied") {
+		t.Errorf("output %q", it.Output)
 	}
 }

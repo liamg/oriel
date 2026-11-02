@@ -190,24 +190,27 @@ func (x *Runner) markRefused(l *lostLogin) {
 	x.loginMu.Unlock()
 }
 
-// CheckLogin asks the provider whether it's signed in, and clears its flags if it is: with a login other than the
-// one refused, unless seen says a login has just worked.
+// CheckLogin asks the provider whether it's signed in, and clears its flags if it is, with a login other than the one
+// refused. seen says a login has just worked (an agent's request was answered), which is proof enough: the provider's
+// files may not show it, as a sandbox's /login signs in only there.
 func (x *Runner) CheckLogin(provider string, seen bool) bool {
+	if seen {
+		x.loginBack(provider)
+		return true
+	}
 	in, ok := x.detect(provider)
 	if !ok || !in.LoggedIn {
 		x.env.Log.Info("agent login checked: still signed out", "provider", provider, "note", in.Note)
 		return false
 	}
-	if !seen {
-		for _, l := range x.lostOf(provider) {
-			<-l.marked
-			x.loginMu.Lock()
-			refused := l.refused
-			x.loginMu.Unlock()
-			if refused != "" && (in.Login == "" || in.Login == refused) {
-				x.env.Log.Info("agent login checked: the login on disk is the one refused", "provider", provider)
-				return false
-			}
+	for _, l := range x.lostOf(provider) {
+		<-l.marked
+		x.loginMu.Lock()
+		refused := l.refused
+		x.loginMu.Unlock()
+		if refused != "" && (in.Login == "" || in.Login == refused) {
+			x.env.Log.Info("agent login checked: the login on disk is the one refused", "provider", provider)
+			return false
 		}
 	}
 	x.loginBack(provider)

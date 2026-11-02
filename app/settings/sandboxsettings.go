@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/container"
 	"github.com/liamg/oriel/sandbox/gateway"
 )
 
@@ -39,22 +40,22 @@ func sandboxOptions(o registry.Options, r registry.Contributions, available func
 	return []registry.OptionSpec{
 		{Name: "sandbox.default", Type: registry.Enum, Values: []string{"host", "sandbox"}, Default: "sandbox", Scopes: user,
 			Help: "Where a new session's agent runs: on this machine (host) or in a container (sandbox). The launcher's Sandbox toggle starts here."},
-		{Name: "sandbox.image", Type: registry.String, Default: "", Scopes: project,
-			Help: "The image sandboxes run; empty builds Oriel's base image. A project's applies to its repo."},
+		{Name: "sandbox.image", Type: registry.String, Default: baseImage, Scopes: project,
+			Help: "The image sandboxes run: base builds Oriel's base image. A project's applies to its repo."},
 		{Name: "sandbox.env", Type: registry.List, Default: []string{}, Scopes: user, Choices: envNames,
 			Help: "The host's environment variables a sandbox inherits, by name; empty means the defaults."},
 		{Name: "sandbox.egress", Type: registry.List, Default: []string{}, Scopes: project, Validate: parsed(sandbox.ParseEgressRule),
 			Help: `Network rules over the preset allowlist, each "allow|deny host[:port] [private]": "allow *.golang.org:443". A project's apply to its sessions.`},
 		{Name: "sandbox.rules", Type: registry.List, Default: []string{}, Scopes: project, Validate: parsed(sandbox.ParsePolicyRule),
 			Help: `Gateway rules, each "allow|ask|deny tool", the tool a name or a glob: "deny oriel__push". A project's apply to its sessions.`},
-		{Name: "sandbox.approval_timeout", Type: registry.Duration, Default: time.Duration(0), Scopes: user,
+		{Name: "sandbox.approval_timeout", Type: registry.Duration, Default: 10 * time.Minute, Scopes: user,
 			Validate: func(v any) error {
-				if v.(time.Duration) < 0 {
-					return errors.New("a wait can't be negative")
+				if v.(time.Duration) <= 0 {
+					return errors.New("a wait must be longer than nothing")
 				}
 				return nil
 			},
-			Help: "How long a held gateway call waits for you; 0 is ten minutes."},
+			Help: "How long a held gateway call waits for you."},
 		{Name: "sandbox.auto_allow_read_only", Type: registry.Bool, Default: false, Scopes: user,
 			Help: "Allow the upstream MCP tools that say they only read, without asking."},
 		{Name: "sandbox.hidden_servers", Type: registry.List, Default: []string{}, Scopes: user, Choices: func() []string { return upstreamNames(o, r) },
@@ -70,24 +71,30 @@ func sandboxOptions(o registry.Options, r registry.Contributions, available func
 			Help: `Extra MCP servers for the gateway, by name: an https URL, or a command line ("npx -y @foo/mcp").`},
 		{Name: "sandbox.egress_proxy", Type: registry.Bool, Default: true, Scopes: user,
 			Help: "Filter a container's network through the egress proxy; off allows every connection."},
-		{Name: "sandbox.memory", Type: registry.String, Default: "", Scopes: user,
+		{Name: "sandbox.memory", Type: registry.String, Default: defaultMemory, Scopes: user,
 			Validate: func(v any) error {
-				if s := v.(string); s != "" && s != "none" && !memorySize.MatchString(s) {
+				if s := v.(string); s != "none" && !memorySize.MatchString(s) {
 					return errors.New(`a size in docker's units ("8g"), or "none"`)
 				}
 				return nil
 			},
-			Help: `Each container's memory cap in docker's units ("8g"); empty is 8g, "none" no cap.`},
-		{Name: "sandbox.pids_limit", Type: registry.Int, Default: 0, Min: -1, Max: 1 << 20, Scopes: user,
-			Help: "Each container's process cap; 0 is 4096, -1 no cap."},
-		{Name: "sandbox.go_cache_max", Type: registry.String, Default: "", Scopes: user,
+			Help: `Each container's memory cap in docker's units ("8g"), or "none" for no cap.`},
+		{Name: "sandbox.pids_limit", Type: registry.Int, Default: defaultPids, Min: -1, Max: 1 << 20, Scopes: user,
 			Validate: func(v any) error {
-				if s := v.(string); s != "" && s != "none" && !memorySize.MatchString(s) {
+				if v.(int) == 0 {
+					return errors.New("a cap of 0 processes runs nothing: -1 for no cap")
+				}
+				return nil
+			},
+			Help: "Each container's process cap; -1 for no cap."},
+		{Name: "sandbox.go_cache_max", Type: registry.String, Default: defaultGoCache, Scopes: user,
+			Validate: func(v any) error {
+				if s := v.(string); s != "none" && !memorySize.MatchString(s) {
 					return errors.New(`a size in docker's units ("20g"), or "none"`)
 				}
 				return nil
 			},
-			Help: `The cap on the sandboxes' shared Go build cache ("20g"): the hourly sweep removes the least recently used past it. Empty is 20g, "none" no cap.`},
+			Help: `The cap on the sandboxes' shared Go build cache ("20g"): the hourly sweep removes the least recently used past it; "none" for no cap.`},
 		{Name: "sandbox.backend", Type: registry.Enum, Values: offered, Default: offered[0], Scopes: user,
 			Help: "What confines the agent: a container engine; or seatbelt, macOS's own sandbox."},
 		{Name: "sandbox.loopback", Type: registry.Enum, Values: []string{sandbox.LoopbackAll, sandbox.LoopbackEphemeral, sandbox.LoopbackNone},
@@ -95,6 +102,14 @@ func sandboxOptions(o registry.Options, r registry.Contributions, available func
 			Help: "The host's loopback ports a seatbelt sandbox may connect to: all; ephemeral, not services on fixed ports; or none."},
 	}
 }
+
+// The sandbox's own defaults, as the settings show them.
+const (
+	baseImage      = "base"
+	defaultMemory  = container.DefaultMemory
+	defaultGoCache = "20g" // sandbox.DefaultGoCacheMax
+	defaultPids    = container.DefaultPidsLimit
+)
 
 // offeredBackends are the sandbox backends this machine can run (available), the default first; docker and the
 // rest when it can run none.
@@ -164,9 +179,10 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 		return slices.Clone(l)
 	}
 	str := func(name string) string { s, _ := get(name).(string); return s }
-	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: str("sandbox.image"),
-		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: str("sandbox.memory"),
-		GoCacheMax: str("sandbox.go_cache_max"), Loopback: str("sandbox.loopback")}
+	// The settings' defaults are the sandbox's own, which it takes as nothing set: seatbelt warns only of what is.
+	cfg := sandbox.Config{Default: str("sandbox.default"), Backend: str("sandbox.backend"), Image: kit.Unless(str("sandbox.image"), baseImage),
+		Env: list("sandbox.env"), Hidden: list("sandbox.hidden_servers"), Memory: kit.Unless(str("sandbox.memory"), defaultMemory),
+		GoCacheMax: kit.Unless(str("sandbox.go_cache_max"), defaultGoCache), Loopback: str("sandbox.loopback")}
 	cfg.Egress = sandbox.EgressRules(list("sandbox.egress"))
 	cfg.Rules = sandbox.PolicyRules(list("sandbox.rules"))
 	cfg.Servers, _ = mcpServers(get("sandbox.servers"))
@@ -176,7 +192,9 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 	}
 	d, _ := get("sandbox.approval_timeout").(time.Duration)
 	cfg.ApprovalSecs = int(d / time.Second)
-	cfg.PidsLimit, _ = get("sandbox.pids_limit").(int)
+	if n, _ := get("sandbox.pids_limit").(int); n != defaultPids {
+		cfg.PidsLimit = n
+	}
 	for _, root := range roots {
 		at := registry.At{Project: root}
 		egress, _ := o.Lookup("sandbox.egress", registry.LayerProject, at)
@@ -185,6 +203,7 @@ func sandboxConfig(o registry.Options, roots []string) sandbox.Config {
 		e, _ := egress.([]string)
 		r, _ := rules.([]string)
 		i, _ := image.(string)
+		i = kit.Unless(i, baseImage)
 		p, ok := sandbox.NewProjectConfig(e, r, i)
 		if !ok {
 			continue

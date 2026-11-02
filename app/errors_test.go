@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
@@ -26,6 +27,9 @@ func bootWith(t *testing.T, cfg app.Config) *booted {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
+	if cfg.LanguageServers == nil {
+		cfg.LanguageServers = apptest.TestServers
+	}
 	if cfg.Store == nil {
 		cfg.Store = eventstore.New()
 	}

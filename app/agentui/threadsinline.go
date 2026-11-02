@@ -394,15 +394,20 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 		c.Column("comments", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12}, func(c *ui.Ctx) {
 			for _, cm := range t.Comments {
 				inner := width - 62
-				row := ui.Style{W: ui.Flex(1), Gap: 10}
+				row := ui.Style{W: ui.Flex(1), Gap: 10, Interactive: true} // so the pointer over it shows its ⋯
 				if cm.Draft {
 					row.Pad, row.Fill, row.Stroke, row.Border, row.Radius = ui.Pad(8), th.C(tReqDraftBg), th.C(tReqDraftBd), 1, 6
 					inner -= 18
 				}
 				c.Row(cm.ID, row, func(c *ui.Ctx) {
+					hover := widget.PointerIn(c)
 					avatar(c, "av", cm)
 					c.Column("in", ui.Style{W: ui.Px(inner), Gap: 4}, func(c *ui.Ctx) {
-						c.Row("who", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+						c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+							defer func() {
+								c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+								commentMenu(c, h, t, cm, hover)
+							}()
 							name := cmp.Or(cm.Name, "you")
 							if cm.Author == core.AuthorAgent {
 								name = kit.ProviderNameIn(c, cm.Name)
@@ -436,7 +441,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 				c.RequestFocus(c.Next("reply"))
 			}
 			if widget.Prose(c, "reply", reply, widget.ProseOpts{Label: "Reply to the thread", Placeholder: "Reply…", Lines: commentLines, EnterSubmits: true,
-				Help: "agent/requests#inline"}).Submitted {
+				Help: "agent/requests#inline", Files: kit.PastedFiles(h, se.ID)}).Submitted {
 				send()
 			}
 		})
@@ -497,8 +502,12 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 				c.RequestFocus(id)
 				n.focus = false
 			}
+			var files func(widget.Pasted) string
+			if se, ok := x.front(); ok && !n.toAuthor {
+				files = kit.PastedFiles(x.h, se.ID)
+			}
 			r := widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
-				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline"})
+				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files})
 			switch {
 			case r.Submitted && strings.TrimSpace(n.draft) != "":
 				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}

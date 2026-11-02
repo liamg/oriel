@@ -1,6 +1,7 @@
 package ghtest
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -75,6 +76,37 @@ func (s *Server) prFiles(w http.ResponseWriter, r *http.Request) {
 	reply(w, 200, files)
 }
 
+// onDiff says a review comment may sit on line of path: one DiffLines names, or one in the hunks of the file's patch.
+func (s *Server) onDiff(repo string, number int, path, side string, line int) bool {
+	if slices.Contains(s.diffLines[prKey(repo, number)], fmt.Sprintf("%s:%d", path, line)) {
+		return true
+	}
+	for _, f := range s.sizes[prKey(repo, number)].Files {
+		if f.Path == path && f.Patch != "" {
+			return gh.PatchLines(f.Patch)[side][line]
+		}
+	}
+	return false
+}
+
+// fileComment takes a review comment on a file as a whole (subject_type file), as GitHub's pulls/{n}/comments does.
+func (s *Server) fileComment(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Body        string `json:"body"`
+		CommitID    string `json:"commit_id"`
+		Path        string `json:"path"`
+		SubjectType string `json:"subject_type"`
+	}
+	if json.NewDecoder(r.Body).Decode(&in) != nil || in.SubjectType != "file" || in.CommitID == "" || in.Path == "" {
+		reply(w, 422, map[string]string{"message": "Validation Failed"})
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	c := s.addReview(repoOf(r), num(r), gh.ReviewComment{User: s.login, Association: "MEMBER", Path: in.Path, Body: in.Body})
+	reply(w, 201, map[string]any{"id": c.ID})
+}
+
 // DiffLines are the lines of a PR's diff a review may comment on, "path:line"; comments elsewhere are refused.
 func (s *Server) DiffLines(repo string, number int, lines ...string) {
 	s.mu.Lock()
@@ -89,10 +121,11 @@ func (s *Server) submitReview(w http.ResponseWriter, r *http.Request) {
 		Body     string `json:"body"`
 		CommitID string `json:"commit_id"`
 		Comments []struct {
-			Path string `json:"path"`
-			Line int    `json:"line"`
-			Side string `json:"side"`
-			Body string `json:"body"`
+			Path      string `json:"path"`
+			Line      int    `json:"line"`
+			Side      string `json:"side"`
+			StartLine int    `json:"start_line"`
+			Body      string `json:"body"`
 		} `json:"comments"`
 	}
 	if json.NewDecoder(r.Body).Decode(&in) != nil {
@@ -112,7 +145,7 @@ func (s *Server) submitReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, c := range in.Comments {
-		if !slices.Contains(s.diffLines[prKey(repoOf(r), num(r))], fmt.Sprintf("%s:%d", c.Path, c.Line)) {
+		if !s.onDiff(repoOf(r), num(r), c.Path, cmp.Or(c.Side, "RIGHT"), c.Line) {
 			reply(w, 422, map[string]any{"message": "Unprocessable Entity", "errors": []string{"Line could not be resolved"}})
 			return
 		}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -41,6 +42,7 @@ type PRFile struct {
 	Previous  string `json:"previous_filename,omitempty"`
 	Additions int    `json:"additions,omitempty"`
 	Deletions int    `json:"deletions,omitempty"`
+	Patch     string `json:"patch,omitempty"` // its unified diff; none for a binary or very large file
 }
 
 // ParsePRURL reads https://github.com/owner/name/pull/123.
@@ -118,9 +120,16 @@ type ReviewInput struct {
 	Comments []ReviewComment // Path, Line, Side and Body; OriginalLine, when set, is where a range starts
 }
 
-// SubmitReview submits a review with its comments on lines. A comment GitHub won't put on the diff (its line isn't
-// in it) fails the whole review, so then every comment goes in the body instead, under its file and line.
+// SubmitReview submits a review with its comments on the lines they're about. GitHub refuses a whole review for one
+// comment off the diff's hunks, so each comment is checked against the PR's patches first: one in a hunk goes on its
+// line (a range starting outside the hunk keeps its last line); one elsewhere in a file the PR changes goes on the
+// file, headed with its line; one on a file the PR doesn't change goes in the body. Only when GitHub still refuses
+// does every comment go in the body.
 func (a API) SubmitReview(ctx context.Context, repo Repo, number int, in ReviewInput) error {
+	inline, onFile, inBody := in.Comments, []ReviewComment(nil), []ReviewComment(nil)
+	if files, err := a.PRFiles(ctx, repo, number); err == nil && len(files) > 0 {
+		inline, onFile, inBody = placeComments(files, in.Comments)
+	}
 	post := func(body string, comments []ReviewComment) error {
 		req := map[string]any{"event": in.Event, "body": body}
 		if in.Commit != "" {
@@ -139,17 +148,95 @@ func (a API) SubmitReview(ctx context.Context, repo Repo, number int, in ReviewI
 		}
 		return a.T.Do(ctx, "POST", repoPath(repo, fmt.Sprintf("pulls/%d/reviews", number)), req, nil)
 	}
-	err := post(in.Body, in.Comments)
+	err := post(withComments(in.Body, inBody), inline)
 	var e *Error
-	if err == nil || len(in.Comments) == 0 || !errors.As(err, &e) || e.Status != 422 {
+	if err != nil && len(inline) > 0 && errors.As(err, &e) && e.Status == 422 {
+		return post(withComments(in.Body, in.Comments), nil)
+	}
+	if err != nil || len(onFile) == 0 {
 		return err
 	}
+	commit := in.Commit
+	if commit == "" {
+		d, err := a.PRDetails(ctx, repo, number)
+		if err != nil {
+			return err
+		}
+		commit = d.HeadSHA
+	}
+	var errs []error
+	for _, c := range onFile {
+		req := map[string]any{"body": fmt.Sprintf("**Line %d**\n\n%s", c.Line, c.Body), "commit_id": commit, "path": c.Path, "subject_type": "file"}
+		errs = append(errs, a.T.Do(ctx, "POST", repoPath(repo, fmt.Sprintf("pulls/%d/comments", number)), req, nil))
+	}
+	return errors.Join(errs...)
+}
+
+// withComments is body with comments after it, each under its file and line.
+func withComments(body string, comments []ReviewComment) string {
 	var b strings.Builder
-	b.WriteString(strings.TrimSpace(in.Body))
-	for _, c := range in.Comments {
+	b.WriteString(strings.TrimSpace(body))
+	for _, c := range comments {
 		fmt.Fprintf(&b, "\n\n**`%s:%d`**\n\n%s", c.Path, c.Line, c.Body)
 	}
-	return post(strings.TrimSpace(b.String()), nil)
+	return strings.TrimSpace(b.String())
+}
+
+// placeComments sorts comments by where GitHub takes them: on their lines, on their files, or in the review's body. A
+// file whose patch GitHub doesn't send (binary, too large, past the first 100) is tried on its lines.
+func placeComments(files []PRFile, comments []ReviewComment) (inline, onFile, inBody []ReviewComment) {
+	hunks := map[string]map[string]map[int]bool{}
+	for _, f := range files {
+		hunks[f.Path] = nil
+		if f.Patch != "" {
+			hunks[f.Path] = PatchLines(f.Patch)
+		}
+	}
+	for _, c := range comments {
+		lines, changed := hunks[c.Path]
+		side := cmp.Or(c.Side, "RIGHT")
+		switch {
+		case !changed && len(files) < 100:
+			inBody = append(inBody, c)
+		case lines == nil || lines[side][c.Line]:
+			if lines != nil && c.OriginalLine > 0 && !lines[side][c.OriginalLine] {
+				c.OriginalLine = 0
+			}
+			inline = append(inline, c)
+		default:
+			onFile = append(onFile, c)
+		}
+	}
+	return inline, onFile, inBody
+}
+
+var hunkHeader = regexp.MustCompile(`^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
+
+// PatchLines are the lines of a patch a review comment can sit on, by side: RIGHT the new file's, LEFT the old's.
+func PatchLines(patch string) map[string]map[int]bool {
+	out := map[string]map[int]bool{"RIGHT": {}, "LEFT": {}}
+	old, nw := 0, 0
+	for _, ln := range strings.Split(patch, "\n") {
+		if m := hunkHeader.FindStringSubmatch(ln); m != nil {
+			old, _ = strconv.Atoi(m[1])
+			nw, _ = strconv.Atoi(m[2])
+			continue
+		}
+		switch {
+		case nw == 0 && old == 0, strings.HasPrefix(ln, "\\"):
+		case strings.HasPrefix(ln, "+"):
+			out["RIGHT"][nw] = true
+			nw++
+		case strings.HasPrefix(ln, "-"):
+			out["LEFT"][old] = true
+			old++
+		default:
+			out["RIGHT"][nw], out["LEFT"][old] = true, true
+			nw++
+			old++
+		}
+	}
+	return out
 }
 
 // Green says whether every check passed (or was skipped); none at all isn't green.

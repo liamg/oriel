@@ -75,13 +75,13 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Contribute(d))
 	}
 	for _, o := range []registry.OptionSpec{
-		{Name: "assistant.provider", Type: registry.String, Default: "",
-			Help: "The agent the assistant runs on: claude or codex. Empty picks the first installed and signed in."},
-		{Name: "assistant.model", Type: registry.String, Default: "",
-			Help: "The assistant's model. Empty is the provider's small model (Claude's Haiku), else its default."},
+		{Name: "assistant.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
+			Help: "The agent the assistant runs on: claude or codex; auto picks the first installed and signed in."},
+		{Name: "assistant.model", Type: registry.String, Default: "small", Choices: func() []string { return []string{"small", "default"} },
+			Help: "The assistant's model: small, the provider's small model (Claude's Haiku); default, its default; or a model's name."},
 		{Name: "assistant.web", Type: registry.Bool, Default: true,
 			Help: "Let the assistant search the web, for news and anything happening in the world."},
-		{Name: "assistant.idle", Type: registry.Int, Default: 15, Min: 1, Max: 24 * 60,
+		{Name: "assistant.idle", Type: registry.Int, Default: 15, Min: 1, Max: 24 * 60, Step: 5,
 			Help: "Minutes of quiet after which a conversation ends; the next starts afresh."},
 	} {
 		o.Scopes = registry.ScopeUser
@@ -242,7 +242,7 @@ func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Age
 	if err != nil {
 		return nil, err
 	}
-	spec := host.UtilitySpec{Name: kit.AssistantAgent, Provider: x.str("assistant.provider"), Model: x.str("assistant.model"),
+	spec := host.UtilitySpec{Name: kit.AssistantAgent, Provider: kit.Unless(x.str("assistant.provider"), "auto"), Model: x.str("assistant.model"),
 		Pack: x.Prompt(), Prompt: first, Web: x.bool("assistant.web")}
 	u, err := c.StartUtility(context.Background(), spec)
 	if err != nil {

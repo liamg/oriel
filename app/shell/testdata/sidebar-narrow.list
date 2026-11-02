@@ -42,9 +42,20 @@ clip 0,38 43x356 r 0
   path 3 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 6.5,296 30x24 fill #191917 radius 6
-  text "WE" @15.5,311.6 #4fe0a0 JetBrains Mono 10
-  rect 9.5,326 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 6.5,330 30x24 fill #191917 radius 6
+  text "WE" @15.5,345.6 #4fe0a0 JetBrains Mono 10
+  rect 9.5,360 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -56,17 +67,6 @@ clip 0,38 43x356 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 5 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 4 segments stroke 1.4545455 #7c7566
@@ -165,6 +165,6 @@ clip 0,38 43x356 r 0
   rect 32,95.5 7x7 fill #ff5f6d radius 3.5
 pop
 clip 0,38 43x356 r 0
-  rect 22.09375,335 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "3" @26.09375,344.81003 #141006 JetBrains Mono 8.5
+  rect 22.09375,369 13.40625x13.5 fill #ff9b45 radius 6.75
+  text "3" @26.09375,378.81003 #141006 JetBrains Mono 8.5
 pop

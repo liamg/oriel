@@ -174,6 +174,13 @@ func TestARevokedLoginStaysSignedOutUntilANewOne(t *testing.T) {
 	r.eventually(id, "the login's card", flagged)
 	a.Emit(agent.AuthRestored{Provider: "fake", Account: "u1"})
 	r.eventually(id, "the card to go once a login worked", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
+
+	// Even when the provider's files say signed out, as a sandbox's /login leaves the host's.
+	a.RevokeLogin("OAuth token revoked · Please run /login")
+	r.eventually(id, "the login's card", flagged)
+	r.fake.SignIn(false)
+	a.Emit(agent.AuthRestored{Provider: "fake", Account: "u1"})
+	r.eventually(id, "the card to go, signed out on disk", func(se core.SessionState) bool { _, ok := loginCard(se); return !ok })
 }
 
 // detectPanics is a provider whose first Detect panics.

@@ -45,7 +45,7 @@ func RoundGo() string {
 func RequestsSession(now time.Time, dir string) core.SessionState {
 	ago := func(min int) time.Time { return now.Add(-time.Duration(min) * time.Minute) }
 	liam := "Liam Galvin"
-	t1 := core.Thread{ID: "7d45e1a0", Title: "Negative values round the wrong way", Status: core.ThreadOpen, Busy: true, Created: ago(4), Updated: ago(1),
+	t1 := core.Thread{ID: "7d45e1a0", Title: "Negative values round the wrong way", Status: core.ThreadOpen, Busy: true, Active: true, Created: ago(4), Updated: ago(1),
 		Anchor: &core.Anchor{Project: "pricing", File: "internal/pricing/round.go", Line: 46, Text: "    case 0:"},
 		Comments: []core.Comment{
 			{ID: "c1", Author: core.AuthorYou, Name: liam, Time: ago(4), Delivered: true, Images: []string{"invoice-diff.png"},

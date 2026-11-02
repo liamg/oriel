@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,6 +34,9 @@ type Provider struct {
 	ProbeDir string // a folder of Oriel's that the /usage probe runs claude in; "" is one in the temp dir
 	// SandboxVersion is the Claude Code version a container sandbox runs; "" or nil runs the host's.
 	SandboxVersion func() string
+	// UsageURL is where the plan's windows are read first (UsageAPI if ""), with HTTP (http.DefaultClient if nil).
+	UsageURL string
+	HTTP     *http.Client
 
 	usage usageBook
 	box   claudebox.Box
@@ -212,10 +216,23 @@ func (*Provider) Models(context.Context) ([]agent.Model, error) {
 	}, nil
 }
 
-// Usage reads the plan's windows with the /usage probe, and answers with the newest reading: the probe's, or a
-// session's mod's ($.session.usage()) if that's newer.
+// Usage reads the plan's windows from the usage API with the host's sign-in, else with the /usage probe, and answers
+// with the newest reading: that, or a session's mod's ($.session.usage()) if that's newer.
 func (p *Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
-	err := p.readUsage(ctx)
+	client := p.HTTP
+	if client == nil {
+		client = http.DefaultClient
+	}
+	var err error
+	if u, ok, aerr := p.apiUsage(ctx, client, cmpOr(p.UsageURL, UsageAPI)); ok && aerr == nil {
+		p.usage.mu.Lock()
+		if u.Sampled.After(p.usage.last.Sampled) {
+			p.usage.last = u
+		}
+		p.usage.mu.Unlock()
+	} else {
+		err = p.readUsage(ctx)
+	}
 	p.usage.mu.Lock()
 	u := p.usage.last
 	p.usage.mu.Unlock()
@@ -477,6 +494,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 		wake:   make(chan struct{}, 1),
 		asks:   map[string]chan agent.Decision{},
 		forks:  map[string]chan forkAnswerIn{},
+		heard:  time.Now(),
 	}
 	if submitsFirst(spec, resume) {
 		s.cmds = append(s.cmds, waitOut{Kind: "submit", Text: strings.TrimSpace(spec.Prompt)})

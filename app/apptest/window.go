@@ -96,7 +96,7 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	g := &grab{keys: o.Keys, setup: o.Setup}
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
-	cfg := app.Config{Store: w.Store, Registry: testRegistry(), ConfigDir: w.ConfigDir, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: OfflineNet(t), ImageNet: OfflineNet(t), SandboxBackends: Backends,
+	cfg := app.Config{Store: w.Store, Registry: testRegistry(), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: OfflineNet(t), ImageNet: OfflineNet(t), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
 	if o.Config != nil {
 		o.Config(&cfg)
@@ -327,10 +327,22 @@ func (w *Window) textAt(text string, last bool) render.Point {
 	return at
 }
 
+// TextPoint is the middle of the first run of text in the frame on screen.
+func (w *Window) TextPoint(text string) render.Point {
+	w.T.Helper()
+	return w.textAt(text, false)
+}
+
 // ClickText clicks the middle of the first run of text in the frame on screen.
 func (w *Window) ClickText(text string) {
 	w.T.Helper()
 	w.Click(w.textAt(text, false))
+}
+
+// DropFiles drops files from the OS's file manager on the middle of the first run of text in the frame.
+func (w *Window) DropFiles(text string, paths ...string) {
+	w.T.Helper()
+	w.Win.Send(render.DropEvent{Pos: w.textAt(text, false), Paths: paths})
 }
 
 // ClickTop clicks the middle of the last run of text drawn in the frame on screen: the one on top.

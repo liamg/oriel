@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/review"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -102,6 +103,12 @@ func TestReviewSessionPRTab(t *testing.T) {
 		}
 	}
 
+	// It opens on the Requests panel with the review's request in front, its review tab behind.
+	s.Until("the Requests panel and the review's request", func() bool {
+		return s.Showing(kit.RequestsView) && s.Showing(kit.RequestView) && strings.Contains(s.Text(), "Review "+ref)
+	})
+	s.Run("ship.pr.open", nil)
+	s.Run("view.open", registry.Args{"id": kit.ExplorerView, "place": "dock", "edge": "left", "alone": true, "fixed": true})
 	a := lw.Fake.WaitStarted(t)
 	for a.Spec.Pack.Name != "review" {
 		a = lw.Fake.WaitStarted(t) // the AI review's reviewer starts first
@@ -326,8 +333,8 @@ func TestReviewSessionPRTab(t *testing.T) {
 	s.Until("the composer, asking the agent", func() bool { return strings.Contains(s.Text(), "New thread") })
 }
 
-// A review the assistant started behind the one in front opens on its Explorer and tab the first time it's brought
-// to the front.
+// A review the assistant started behind the one in front opens on its Requests panel and request the first time
+// it's brought to the front.
 func TestReviewStartedBehindOpensWhenShown(t *testing.T) {
 	s, _, _, _, id, _ := prReviewScene(t, true)
 	if s.Store().State().Focus == id {
@@ -335,8 +342,30 @@ func TestReviewStartedBehindOpensWhenShown(t *testing.T) {
 	}
 	s.Run("session.open", registry.Args{"id": string(id)})
 	s.Until("the window on the review", s.Reopen)
-	s.Until("its Explorer and tab", func() bool {
-		text := s.Text()
-		return strings.Contains(text, "YOUR REVIEW") && strings.Contains(text, "CHANGED 1")
+	s.Until("its Requests panel and request", func() bool {
+		return s.Showing(kit.RequestsView) && s.Showing(kit.RequestView) && strings.Contains(s.Text(), "Review api#")
 	})
+}
+
+// With nothing kept the summary starts as LGTM; posting it as anything but an approval asks first.
+func TestLGTMOnAReviewThatIsntAnApprovalAsks(t *testing.T) {
+	s, lw, _, _, id, _ := prReviewScene(t, false)
+	a := lw.Fake.WaitStarted(t)
+	for a.Spec.Pack.Name != "review" {
+		a = lw.Fake.WaitStarted(t)
+	}
+	s.Until("the review's request", func() bool { return s.Showing(kit.RequestView) })
+	s.Run("ship.pr.open", nil)
+	s.Until("the review tab, its summary LGTM", func() bool { return s.Has("YOUR REVIEW", "LGTM") })
+	s.ClickText("Comment…")
+	s.Until("the question", func() bool {
+		return s.Has("Are you sure? The summary says LGTM, but this isn't an approval.", "Post anyway")
+	})
+	s.ClickText("Back")
+	s.Until("the preview closed", func() bool { return !s.Has("Post anyway") })
+	s.Run("review.pr.preview", registry.Args{"id": string(id), "verdict": "approve"})
+	s.Until("the approval's preview", func() bool { return s.Has("Post: Approved") })
+	if s.Has("Are you sure?") {
+		t.Error("an approval's LGTM asked")
+	}
 }

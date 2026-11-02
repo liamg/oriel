@@ -322,6 +322,18 @@ func TestLauncherCloses(t *testing.T) {
 		close()
 		r.WaitGone("NEW SESSION")
 	}
+	// With focus on a control in it rather than a field (a kind's card, a button), Escape still closes it.
+	r.TypeKeys("<D-n>")
+	r.Latest("the launcher again", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
+	r.ClickTop("Work")
+	r.TypeKeys("<Esc>")
+	r.WaitGone("NEW SESSION")
+
+	// Opened from the tab strip's +, a click that leaves focus on the button behind the scrim, Escape still closes it.
+	r.ClickTop("+")
+	r.Latest("the launcher from +", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
+	r.TypeKeys("<Esc>")
+	r.WaitGone("NEW SESSION")
 }
 
 // The launcher's sandbox type: offered when this machine can run more than one backend, and the session runs in the
@@ -445,5 +457,24 @@ func TestDefaultAgent(t *testing.T) {
 		if p, m := kit.DefaultAgent(st, tt.ps); p != tt.provider || m != tt.model {
 			t.Errorf("%s: %s %s, want %s %s", tt.name, p, m, tt.provider, tt.model)
 		}
+	}
+}
+
+// In a session, with what's in front holding focus (the agent's console, the editor), the launcher opened from the
+// tab strip's + still closes on Escape: the key is the dialog's, not what's behind its scrim.
+func TestLauncherClosesFromThePlusInASession(t *testing.T) {
+	r, _, _ := apptest.AgentWindow(t)
+	r.Run("view.open", registry.Args{"id": "log", "place": "dock", "edge": "bottom", "title": "Docked log", "size": 300})
+	r.WaitText("DOCKED LOG")
+	for _, focus := range []string{"", "<D-1>"} {
+		if focus != "" {
+			r.TypeKeys(focus)
+		}
+		b := r.Access("New session").Bounds
+		r.Click(render.Point{X: (b.Min.X + b.Max.X) / 2, Y: (b.Min.Y + b.Max.Y) / 2})
+		r.Latest("the launcher from +", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
+		r.TypeKeys("<Esc>")
+		r.WaitGone("NEW SESSION")
+		r.WaitText("DOCKED LOG") // the docked view behind it stays
 	}
 }

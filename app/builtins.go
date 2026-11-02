@@ -32,7 +32,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&stats.HUD{}, &agentui.Inbox{}, &appsessions.Mission{}, p.Omnibox, p.Picker, p.WhichKey, &settings.Consent{}, p.Help, p.Nav, p.Menus,
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir, WorkDir: c.WorkDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},
-		&editor.Search{Editor: ed, Tools: p.Tools}, &lang.LSP{WorkDir: c.WorkDir, Version: c.Version, Logger: c.Logs.Logger},
+		&editor.Search{Editor: ed, Tools: p.Tools}, &lang.LSP{WorkDir: c.WorkDir, Version: c.Version, Logger: c.Logs.Logger, Servers: cfg.LanguageServers},
 		lang.TestsEntries(), &lang.Tests{HistoryFile: c.DirState("tests")}, lang.DebugEntries(),
 		&lang.Debug{WorkDir: c.WorkDir, StateFile: c.DirState("debug"), Logger: c.Logs.Logger},
 		&explain.Plugin{}, &explain.Walkthrough{WorkDir: c.WorkDir, ConfigDir: c.ConfigDir},

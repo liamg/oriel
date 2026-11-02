@@ -8,6 +8,8 @@ related: [layout/panes, editor/pane]
 
 `:term` opens a shell docked at the bottom; `:term!` opens one in the main area, `:vterm` and `:sterm` in a split.
 A terminal is a pane like any other: `⌃W M` moves it, `⌃W Z` zooms it, `` ⌃` `` drops it down from the top.
+Right-click its tab for **Rename…** (`term.rename`): a name of your own in place of the program's; an empty one puts
+the program's back.
 
 Keys go to the program, every ⌃ key included (`⌃W` deletes a word in the shell); ⌘ shortcuts still work. `⌃Esc`
 (or vim's `⌃\ ⌃N`) switches to **terminal-normal** mode, where vim's motions, search, Visual mode and yank work over

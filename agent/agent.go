@@ -273,6 +273,12 @@ type Session interface {
 	Close() error
 }
 
+// Responsive is a session that can say whether it still hears from its agent: one that has gone quiet is restarted
+// when the user resumes it.
+type Responsive interface {
+	Responsive() bool
+}
+
 // Terminal is a session's raw terminal, which any number of views may watch.
 type Terminal interface {
 	Write(p []byte) (int, error)
@@ -319,6 +325,7 @@ type (
 	// ToolCall is the agent calling a tool.
 	ToolCall struct {
 		ID, Tool string
+		Model    string // the model that made the call, when the provider says: "claude-opus-5-5"
 		Input    json.RawMessage
 		Agent    string
 	}
@@ -376,6 +383,9 @@ type (
 	AuthRestored struct{ Provider, Account string }
 	// Exited is the provider process gone.
 	Exited struct{ Err string }
+	// Stale is a session that has lost what only a restart brings back (an MCP server its CLI dropped): it's
+	// restarted, its conversation resumed, once its turn ends.
+	Stale struct{ Why string }
 )
 
 // Usage is what a turn used.
@@ -398,6 +408,7 @@ func (TurnEnd) isEvent()      {}
 func (Failure) isEvent()      {}
 func (UsageUpdate) isEvent()  {}
 func (Exited) isEvent()       {}
+func (Stale) isEvent()        {}
 func (AuthExpired) isEvent()  {}
 func (AuthRestored) isEvent() {}
 

@@ -3,6 +3,7 @@ package agentrun
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -33,6 +34,9 @@ func renderBatch(se core.SessionState, threads []core.Thread, fresh map[string]b
 		b.WriteString(BatchLead + "\n\n")
 	}
 	for _, t := range threads {
+		if hidden(t) {
+			continue
+		}
 		renderThread(&b, se, t, fresh, false)
 		b.WriteString("\n")
 	}
@@ -41,7 +45,7 @@ func renderBatch(se core.SessionState, threads []core.Thread, fresh map[string]b
 	}
 	open := 0
 	for _, t := range se.Threads {
-		if t.Open() && !t.Btw {
+		if t.Open() && !t.Btw && !hidden(t) {
 			open++
 		}
 	}
@@ -49,6 +53,11 @@ func renderBatch(se core.SessionState, threads []core.Thread, fresh map[string]b
 		fmt.Fprintf(&b, "\n%d open thread%s in all.\n", open, plural(open))
 	}
 	return strings.TrimSpace(b.String())
+}
+
+// hidden says the agent isn't told of t at all: every comment in it is an untrusted author's.
+func hidden(t core.Thread) bool {
+	return len(t.Comments) > 0 && !slices.ContainsFunc(t.Comments, func(c core.Comment) bool { return !c.Redacted })
 }
 
 // renderThreadFull is one thread, nothing clipped: the thread tool's answer.
@@ -84,7 +93,7 @@ func renderThread(b *strings.Builder, se core.SessionState, t core.Thread, fresh
 		fmt.Fprintf(b, "<anchor>%s</anchor>\n", escapeBody(strings.TrimSpace(t.Anchor.Text)))
 	}
 	for _, c := range t.Comments {
-		if c.Btw {
+		if c.Btw || c.Redacted {
 			continue
 		}
 		renderComment(b, c, origin, fresh[c.ID], full)
@@ -118,10 +127,6 @@ func renderComment(b *strings.Builder, c core.Comment, origin string, isNew, ful
 		attrs = append(attrs, [2]string{"progress", "true"})
 	}
 	body := strings.TrimSpace(c.Body)
-	if c.Redacted {
-		attrs = append(attrs, [2]string{"redacted", "true"})
-		body = Redacted(c.Name)
-	}
 	if !full && c.Author == core.AuthorAgent {
 		body = clip(body)
 	}
@@ -137,13 +142,6 @@ func renderComment(b *strings.Builder, c core.Comment, origin string, isNew, ful
 		fmt.Fprintf(b, "<image path=%s/>\n", attr(img))
 	}
 	b.WriteString("</comment>\n")
-}
-
-// Redacted stands in for the text of a GitHub comment whose author isn't trusted (crit's trusted orgs): the agent
-// never reads it, so it can't be steered by it.
-func Redacted(author string) string {
-	return "[redacted: " + author + " isn't in the trusted GitHub orgs or users, so Oriel doesn't show you their text. " +
-		"The user can read it in Oriel; ask them in your draft reply what they want done.]"
 }
 
 func clip(body string) string {

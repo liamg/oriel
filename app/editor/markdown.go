@@ -102,6 +102,10 @@ func mdBlocks(src string) []mdBlock {
 			if m[2][0] >= '0' && m[2][0] <= '9' {
 				b.Mark = m[2]
 			}
+			// GFM's task list items: "- [ ] todo", "- [x] done".
+			if box, rest, ok := taskBox(b.Text); ok {
+				b.Mark, b.Text = box, rest
+			}
 			for i+1 < len(lines) && strings.HasPrefix(lines[i+1], "  ") && !listItem.MatchString(lines[i+1]) && strings.TrimSpace(lines[i+1]) != "" {
 				i++
 				b.Text += " " + strings.TrimSpace(lines[i])
@@ -479,4 +483,15 @@ func mdPicture(pics *kit.Pictures, src, dir string) (pc *kit.Picture, why string
 		return pc, pc.Err.Error()
 	}
 	return pc, ""
+}
+
+// taskBox reads a task list item's box: ○ for "[ ] ", ✓ for "[x] ", and the text after it.
+func taskBox(text string) (box, rest string, ok bool) {
+	switch {
+	case strings.HasPrefix(text, "[ ] "):
+		return "○", text[4:], true
+	case strings.HasPrefix(text, "[x] "), strings.HasPrefix(text, "[X] "):
+		return "✓", text[4:], true
+	}
+	return "", text, false
 }

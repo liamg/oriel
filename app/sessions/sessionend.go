@@ -340,7 +340,7 @@ func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.
 	if a.deleteBranch {
 		st2 = widget.CheckOn
 	}
-	if registry.Can(x.h, se.Kind, core.OwnsBranch) && widget.Check(c, "branch", st2, widget.CheckOpts{Text: "Delete the branches too", Help: kit.EndHelp,
+	if registry.Can(x.h, se.Kind, core.OwnsBranch) && widget.Check(c, "branch", st2, widget.CheckOpts{Text: "Delete the local branches too (remote branches stay)", Help: kit.EndHelp,
 		Tooltip: "Each project's local branch; the remote's stays"}) {
 		a.deleteBranch = !a.deleteBranch
 	}

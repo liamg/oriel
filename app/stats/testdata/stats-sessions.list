@@ -60,17 +60,29 @@ clip 0,38 223x936 r 0
   text "Git" @54,172.58524 #b3ab99 Inter 12
   path 3 segments stroke 1.25 #7c7566
   text "Tests" @54,195.58524 #b3ab99 Inter 12
-  text "▸" @10,218.94 #7c7566 JetBrains Mono 11
-  rect 25,210.98 8x8 fill #b98aff radius 2
-  text "billing-ui" @39,218.94 #b3ab99 JetBrains Mono 11
-  rect 196.1875,208.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
-  text "⌃2" @200.1875,218.22 #7c7566 JetBrains Mono 9
-  clip 10,224.24 205x13.199997 r 0
-    text "tester/pricing-rounding" @25,234.44 #7c7566 JetBrains Mono 10
-    text "·" @167,234.44 #7c7566 JetBrains Mono 10
-    text "clean" @177,234.44 #7c7566 JetBrains Mono 10
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Debug" @54,218.58524 #b3ab99 Inter 12
+  text "▸" @10,241.94 #7c7566 JetBrains Mono 11
+  rect 25,233.98 8x8 fill #b98aff radius 2
+  text "billing-ui" @39,241.94 #b3ab99 JetBrains Mono 11
+  rect 196.1875,231.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
+  text "⌃2" @200.1875,241.22 #7c7566 JetBrains Mono 9
+  clip 10,247.24 205x13.199997 r 0
+    text "tester/pricing-rounding" @25,257.44 #7c7566 JetBrains Mono 10
+    text "·" @167,257.44 #7c7566 JetBrains Mono 10
+    text "clean" @177,257.44 #7c7566 JetBrains Mono 10
   pop
-  rect 10,247.44 203x1 fill #332f27
+  rect 10,270.44 203x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -82,21 +94,9 @@ clip 0,38 223x936 r 0
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
-  text "Requests" @33,269.30524 #b3ab99 Inter 12
-  rect 199.59375,257.94 13.40625x14 fill #ff9b45 radius 7
-  text "1" @203.59375,268.18 #141006 JetBrains Mono 9
-  path 6 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  text "Debug" @33,292.30524 #b3ab99 Inter 12
+  text "Requests" @33,292.30524 #b3ab99 Inter 12
+  rect 199.59375,280.94 13.40625x14 fill #ff9b45 radius 7
+  text "1" @203.59375,291.18 #141006 JetBrains Mono 9
   path 5 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
@@ -270,7 +270,7 @@ clip 224,0 1376x974 r 0
       text "$17.02 / active hour" @1378,164.88399 #7c7566 JetBrains Mono 10
     pop
     rect 1367,98 215x78.784 radius 8 stroke 1 #24221d
-    rect 242,188.784 659.75x233.91998 fill #0c0c0b radius 8 stroke 1 #24221d
+    rect 242,188.784 659.75x253.91998 fill #0c0c0b radius 8 stroke 1 #24221d
     text "COST PER SESSION PER DAY" @254,207.804 #b3ab99 JetBrains Mono 9.5
     text "top 6 · the rest as other" @439.92004,207.984 #4f4a40 JetBrains Mono 10
     rect 254,221.91399 8x8 fill #4cc9f0 radius 2
@@ -287,71 +287,71 @@ clip 224,0 1376x974 r 0
     text "flaky-e2e-sweep" @338.15625,249.554 #b3ab99 JetBrains Mono 10.5
     rect 449.0625,241.77399 8x8 fill #504e49 radius 2
     text "other · 2" @462.0625,249.554 #b3ab99 JetBrains Mono 10.5
-    rect 290,400.704 599.75x0.5 fill #24221d
-    text "$0" @273.1875,398.704 #4f4a40 JetBrains Mono 9
-    rect 290,354.03735 599.75x0.5 fill #24221d
-    text "$20" @267.78125,357.62735 #4f4a40 JetBrains Mono 9
-    rect 290,307.37067 599.75x0.5 fill #24221d
-    text "$40" @267.78125,310.96066 #4f4a40 JetBrains Mono 9
-    rect 290,260.704 599.75x0.5 fill #24221d
-    text "$60" @267.78125,264.294 #4f4a40 JetBrains Mono 9
-    rect 332.78217,394.7217 14.394012x5.9823 fill #4cc9f0
-    rect 352.77383,386.55017 14.394012x14.153839 fill #4cc9f0
-    rect 372.7655,391.2007 14.394012x9.503296 fill #4cc9f0
-    rect 392.75717,390.2186 14.394012x10.485413 fill #4cc9f0
-    rect 412.74884,391.52228 14.394012x9.181732 fill #4cc9f0
-    rect 452.73218,386.69406 14.394012x14.009949 fill #4cc9f0
-    rect 472.72382,381.97165 14.394012x18.73236 fill #4cc9f0
-    rect 492.7155,384.32193 14.394012x16.38208 fill #4cc9f0
-    rect 512.70715,381.94644 14.393982x18.757568 fill #4cc9f0
-    rect 692.6322,390.03705 14.393982x10.666962 fill #b98aff
-    rect 712.62384,392.31445 14.393982x8.389557 fill #b98aff
-    rect 752.6072,385.6508 14.393982x15.053223 fill #b98aff
-    rect 772.5988,385.2047 14.393982x15.499298 fill #b98aff
-    rect 812.58215,383.98056 14.393982x16.72345 fill #b98aff
-    rect 832.57385,379.9297 14.393982x20.774323 fill #b98aff
-    rect 852.5655,392.4682 14.393982x8.235809 fill #b98aff
-    rect 872.5572,396.7567 14.393982x3.9472961 fill #b98aff
-    rect 872.5572,322.71777 14.393982x74.03894 fill #4fe0a0
-    rect 732.6155,389.43094 14.393982x11.273071 fill #ff9b45
-    rect 752.6072,357.83154 14.393982x27.819244 fill #ff9b45
-    rect 792.59045,388.12155 14.393982x12.5824585 fill #ff9b45
-    rect 852.5655,382.6332 14.393982x9.834991 fill #ff9b45
-    rect 872.5572,310.84192 14.393982x11.8758545 fill #ff9b45
-    rect 292.79883,388.86978 14.394012x11.8342285 fill #ff7ad6
-    rect 452.73218,375.95337 14.394012x10.740692 fill #ff7ad6
-    rect 472.72382,368.24844 14.394012x13.723206 fill #ff7ad6
-    rect 552.6905,387.05627 14.393982x13.647736 fill #ff7ad6
-    rect 572.6821,390.51614 14.393982x10.187866 fill #ff7ad6
-    rect 712.62384,384.83432 14.393982x7.480133 fill #ff7ad6
-    rect 732.6155,384.0393 14.393982x5.391632 fill #ff7ad6
-    rect 552.6905,383.07922 14.393982x3.9770508 fill #5c8dff
-    rect 592.6738,395.34387 14.393982x5.360138 fill #5c8dff
-    rect 632.65717,391.7748 14.393982x8.929199 fill #5c8dff
-    rect 672.6405,394.51917 14.393982x6.184845 fill #5c8dff
-    rect 812.58215,376.91803 14.393982x7.0625305 fill #5c8dff
-    rect 852.5655,375.12308 14.393982x7.510132 fill #5c8dff
-    rect 312.7905,397.33777 14.394012x3.3662415 fill #504e49
-    rect 432.74048,397.57733 14.394012x3.1266785 fill #504e49
-    rect 532.69885,394.3437 14.393982x6.360321 fill #504e49
-    rect 572.6821,387.068 14.393982x3.4481506 fill #504e49
-    rect 592.6738,389.10886 14.393982x6.235016 fill #504e49
-    rect 612.6655,395.103 14.393982x5.601013 fill #504e49
-    rect 632.65717,387.33517 14.393982x4.439636 fill #504e49
-    rect 652.6488,398.04074 14.393982x2.663269 fill #504e49
-    rect 772.5988,380.08182 14.393982x5.1228943 fill #504e49
-    rect 792.59045,385.8894 14.393982x2.2321472 fill #504e49
-    rect 812.58215,373.10202 14.393982x3.8160095 fill #504e49
-    text "Sep 15" @283.77707,411.884 #4f4a40 JetBrains Mono 9
-    text "Sep 18" @343.75208,411.884 #4f4a40 JetBrains Mono 9
-    text "Sep 21" @403.72708,411.884 #4f4a40 JetBrains Mono 9
-    text "Sep 24" @463.7021,411.884 #4f4a40 JetBrains Mono 9
-    text "Sep 27" @523.67706,411.884 #4f4a40 JetBrains Mono 9
-    text "Sep 30" @583.6521,411.884 #4f4a40 JetBrains Mono 9
-    text "Oct 3" @646.3302,411.884 #4f4a40 JetBrains Mono 9
-    text "Oct 6" @706.3052,411.884 #4f4a40 JetBrains Mono 9
-    text "Oct 9" @766.2802,411.884 #4f4a40 JetBrains Mono 9
-    text "Oct 12" @823.55206,411.884 #4f4a40 JetBrains Mono 9
+    rect 290,420.70398 599.75x0.5 fill #24221d
+    text "$0" @273.1875,418.70398 #4f4a40 JetBrains Mono 9
+    rect 290,374.03732 599.75x0.5 fill #24221d
+    text "$20" @267.78125,377.62732 #4f4a40 JetBrains Mono 9
+    rect 290,327.37064 599.75x0.5 fill #24221d
+    text "$40" @267.78125,330.96063 #4f4a40 JetBrains Mono 9
+    rect 290,280.70398 599.75x0.5 fill #24221d
+    text "$60" @267.78125,284.29398 #4f4a40 JetBrains Mono 9
+    rect 332.78217,414.72168 14.394012x5.9823 fill #4cc9f0
+    rect 352.77383,406.55014 14.394012x14.153839 fill #4cc9f0
+    rect 372.7655,411.20068 14.394012x9.503296 fill #4cc9f0
+    rect 392.75717,410.21857 14.394012x10.485413 fill #4cc9f0
+    rect 412.74884,411.52225 14.394012x9.181732 fill #4cc9f0
+    rect 452.73218,406.69403 14.394012x14.009949 fill #4cc9f0
+    rect 472.72382,401.97162 14.394012x18.73236 fill #4cc9f0
+    rect 492.71548,404.3219 14.394012x16.38208 fill #4cc9f0
+    rect 512.70715,401.9464 14.393982x18.757568 fill #4cc9f0
+    rect 692.63214,410.03702 14.393982x10.666962 fill #b98aff
+    rect 712.62384,412.31442 14.393982x8.389557 fill #b98aff
+    rect 752.6072,405.65076 14.393982x15.053223 fill #b98aff
+    rect 772.5988,405.20468 14.393982x15.499298 fill #b98aff
+    rect 812.58215,403.98053 14.393982x16.72345 fill #b98aff
+    rect 832.57385,399.92963 14.393982x20.774353 fill #b98aff
+    rect 852.5655,412.46817 14.393982x8.235809 fill #b98aff
+    rect 872.5572,416.75668 14.393982x3.9472961 fill #b98aff
+    rect 872.5572,342.71774 14.393982x74.03894 fill #4fe0a0
+    rect 732.6155,409.4309 14.393982x11.273071 fill #ff9b45
+    rect 752.6072,377.8315 14.393982x27.819244 fill #ff9b45
+    rect 792.5905,408.12152 14.393982x12.5824585 fill #ff9b45
+    rect 852.5655,402.63318 14.393982x9.834991 fill #ff9b45
+    rect 872.5572,330.8419 14.393982x11.8758545 fill #ff9b45
+    rect 292.79883,408.86975 14.394012x11.8342285 fill #ff7ad6
+    rect 452.73218,395.95334 14.394012x10.740692 fill #ff7ad6
+    rect 472.72382,388.2484 14.394012x13.723206 fill #ff7ad6
+    rect 552.6905,407.05624 14.393982x13.647736 fill #ff7ad6
+    rect 572.6822,410.5161 14.393982x10.187866 fill #ff7ad6
+    rect 712.62384,404.8343 14.393982x7.480133 fill #ff7ad6
+    rect 732.6155,404.03928 14.393982x5.391632 fill #ff7ad6
+    rect 552.6905,403.0792 14.393982x3.9770508 fill #5c8dff
+    rect 592.6738,415.34384 14.393982x5.360138 fill #5c8dff
+    rect 632.65717,411.77478 14.393982x8.929199 fill #5c8dff
+    rect 672.6405,414.51913 14.393982x6.184845 fill #5c8dff
+    rect 812.58215,396.91803 14.393982x7.0625 fill #5c8dff
+    rect 852.5655,395.12305 14.393982x7.510132 fill #5c8dff
+    rect 312.7905,417.33774 14.394012x3.3662415 fill #504e49
+    rect 432.7405,417.5773 14.394012x3.1266785 fill #504e49
+    rect 532.69885,414.34366 14.393982x6.360321 fill #504e49
+    rect 572.6822,407.06796 14.393982x3.4481506 fill #504e49
+    rect 592.6738,409.10883 14.393982x6.235016 fill #504e49
+    rect 612.6655,415.10297 14.393982x5.601013 fill #504e49
+    rect 632.65717,407.33514 14.393982x4.439636 fill #504e49
+    rect 652.6488,418.0407 14.393982x2.663269 fill #504e49
+    rect 772.5988,400.0818 14.393982x5.1228943 fill #504e49
+    rect 792.5905,405.88937 14.393982x2.2321472 fill #504e49
+    rect 812.58215,393.102 14.393982x3.81604 fill #504e49
+    text "Sep 15" @283.77707,431.88397 #4f4a40 JetBrains Mono 9
+    text "Sep 18" @343.75208,431.88397 #4f4a40 JetBrains Mono 9
+    text "Sep 21" @403.72708,431.88397 #4f4a40 JetBrains Mono 9
+    text "Sep 24" @463.7021,431.88397 #4f4a40 JetBrains Mono 9
+    text "Sep 27" @523.67706,431.88397 #4f4a40 JetBrains Mono 9
+    text "Sep 30" @583.6521,431.88397 #4f4a40 JetBrains Mono 9
+    text "Oct 3" @646.3302,431.88397 #4f4a40 JetBrains Mono 9
+    text "Oct 6" @706.30524,431.88397 #4f4a40 JetBrains Mono 9
+    text "Oct 9" @766.2802,431.88397 #4f4a40 JetBrains Mono 9
+    text "Oct 12" @823.55206,431.88397 #4f4a40 JetBrains Mono 9
     rect 913.75,188.784 668.25x338.2 fill #0c0c0b radius 8 stroke 1 #24221d
     text "SESSIONS" @925.75,207.804 #b3ab99 JetBrains Mono 9.5
     text "8 sessions · sorted by cost" @994.39,207.984 #4f4a40 JetBrains Mono 10
@@ -654,7 +654,7 @@ clip 224,0 1376x974 r 0
     text "cost by hour · local" @1450,558.184 #4f4a40 JetBrains Mono 10
     rect 1268,656.684 302x0.5 fill #24221d
     rect 1383.0117,636.91266 9.060059x20.271362 fill #ffd23f
-    rect 1395.5951,612.9376 9.060059x44.2464 fill #ffd23f
+    rect 1395.5951,612.9377 9.060059x44.246338 fill #ffd23f
     rect 1408.1783,601.5749 9.060059x55.60913 fill #ffd23f
     rect 1420.7617,611.1992 9.060059x45.984802 fill #ffd23f
     rect 1433.3451,636.5479 9.060059x20.636108 fill #ffd23f
@@ -665,6 +665,6 @@ clip 224,0 1376x974 r 0
     text "06" @1344.3854,668.364 #4f4a40 JetBrains Mono 9
     text "12" @1419.8854,668.364 #4f4a40 JetBrains Mono 9
     text "18" @1495.3854,668.364 #4f4a40 JetBrains Mono 9
-    text "23" @1558.302,668.364 #4f4a40 JetBrains Mono 9
+    text "23" @1558.3021,668.364 #4f4a40 JetBrains Mono 9
   pop
 pop

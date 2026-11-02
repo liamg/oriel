@@ -29,6 +29,12 @@ func (l Login) Expiry() time.Time {
 	return time.UnixMilli(int64(ms))
 }
 
+// AccessToken is the sign-in's OAuth access token.
+func (l Login) AccessToken() string {
+	tok, _ := l["accessToken"].(string)
+	return tok
+}
+
 // stripped is the credentials document a sandbox gets: the access token
 // without the refresh token, so the sandbox can never rotate the host's.
 func (l Login) stripped() ([]byte, error) {

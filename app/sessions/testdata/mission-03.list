@@ -43,7 +43,18 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -55,17 +66,6 @@ clip 0,38 43x936 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -406,6 +406,8 @@ clip 44,0 1556x974 r 0
     text "Deny with note…" @478.82812,525.23376 #ece6d8 Inter 12
     rect 581.8594,513.3685 20x15 radius 3 stroke 1 #ece6d866
     text "⇧n" @585.8594,524.2885 #ece6d8cc JetBrains Mono 9.5
+    rect 619.8594,507.86853 59.125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Details" @629.8594,525.23376 #ece6d8 Inter 12
     text "1h" @744.15625,568.104 #4f4a40 JetBrains Mono 10
     rect 365,601.26 7x7 fill #4cc9f0 radius 3.5
     text "WORKING" @382,608.912 #ece6d8 Space Grotesk 12
@@ -490,6 +492,8 @@ clip 44,0 1556x974 r 0
     text "Deny" @481.40625,1003.6977 #ece6d8 Inter 12
     rect 517.2344,991.83246 14x15 radius 3 stroke 1 #ece6d866
     text "n" @521.2344,1002.75244 #ece6d8cc JetBrains Mono 9.5
+    rect 549.2344,986.33246 59.125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Details" @559.2344,1003.6977 #ece6d8 Inter 12
     text "1h" @736.6666,1098.8679 #4f4a40 JetBrains Mono 10
   pop
   rect 44,878 1556x1 fill #24221d

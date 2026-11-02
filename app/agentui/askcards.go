@@ -36,10 +36,12 @@ func (x *Console) askCards() []uireg.InboxCard {
 		for _, a := range se.Asks {
 			card := uireg.InboxCard{ID: string(se.ID) + "/" + a.ID, Type: string(a.Kind), Group: askGroup(a.Kind), Mine: true, Session: string(se.ID),
 				Icon: string(a.Kind), Tone: askTone(a.Kind).Name(), Created: a.Created,
-				Interrupt: se.ID != st.Focus || !inConsole || a.Kind == core.AskKey, Banner: a.Kind == core.AskKey,
+				Interrupt: se.ID != st.Focus || !inConsole || a.Kind == core.AskKey,
 				Draw: func(c *ui.Ctx, key string, p uireg.CardPlace) {
 					x.askCard(c, key, se, a, p.Stacked, false, p.Dismiss)
 				}}
+			// Over the window, key touches, permissions and the gateway's (run on host…) come at the top, where they're seen.
+			card.Top = a.Kind == core.AskKey || a.Kind == core.AskPermission || a.Kind == core.AskGateway
 			title, sub := x.askRow(se, a)
 			card.Title, card.Sub = title, kit.JoinParts(sub, kit.Label(se))
 			out = append(out, card)
@@ -164,6 +166,9 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 		x.keyCard(k, se, a)
 	case core.AskQuestion:
 		x.questionCard(k, se, a, st, prov)
+	}
+	if x.detail == nil || x.detail.ask != a.ID {
+		k.action(widget.CardAction{Label: "Details"}, askAct{cmd: "agent.console.details", args: registry.Args{"item": ""}})
 	}
 	// A card away from its session's console can take you there, for the context to decide on.
 	if kicker && (a.Kind == core.AskPermission || a.Kind == core.AskNetwork || a.Kind == core.AskGateway || a.Kind == core.AskQuestion) {

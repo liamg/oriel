@@ -162,6 +162,9 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 			if hasOutput && isShell(it.Tool) {
 				c.Text("fold", map[bool]string{true: "▾", false: "▸"}[open], kit.MonoFont(11, th.C(theme.FgFaint)))
 			}
+			if widget.IconButton(c, "expand", "⤢", widget.IconButtonOpts{Label: "Show in full", Help: "agent/console#details", Size: 18}) {
+				x.run(context.Background(), "agent.console.details", registry.Args{"id": string(se.ID), "item": it.ID})
+			}
 		}).Clicked {
 			st.toggle(k)
 		}

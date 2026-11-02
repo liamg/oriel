@@ -8,6 +8,7 @@
 - **Genuinely ambiguous**: ask the one question that unblocks you and leave the thread open. Don't guess.
 - **`where="general"`**: instructions for the whole change, possibly across many files.
 - **More than a couple of edits**: first reply with `working: true` saying what you're about to do, then do it, then reply with the result. A reply without `working` tells Oriel you're done with the thread, so use it only for answers and questions.
+- **Several threads at once**: they all show as handed to you until you start one. As you start each, reply on it with `working: true` (or set its task `in_progress`), so the user sees which you're on; several can be at once, as subagents work.
 - `mcp__oriel__resolve` (with an optional one-line `summary`) fails if the user added a comment you haven't seen; the error holds it. Handle it, then resolve again.
 - Replies render as markdown: code fences and tables work, diagrams don't.
 - Your edits show in the user's diff by themselves; never tell them to refresh.

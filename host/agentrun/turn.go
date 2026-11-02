@@ -113,7 +113,7 @@ func (h *session) give(se core.SessionState, t handout) {
 				th.Comments[i].Delivered = true
 			}
 		}
-		th.Busy = true
+		th.Busy, th.Active = true, len(t.threads) == 1
 		th.Updated = h.r.env.Now().UTC()
 		_ = h.r.st.Emit(core.ThreadUpdated{Session: h.id, Thread: th})
 	}
@@ -130,7 +130,7 @@ func (h *session) send(sess agent.Session, in agent.Input, threads []core.Thread
 		h.mu.Unlock()
 		for _, tid := range threads {
 			_, _ = h.r.mutateThread(h.id, tid, func(t *core.Thread) error {
-				t.Busy = false
+				t.Busy, t.Active = false, false
 				for i := range t.Comments {
 					t.Comments[i].Delivered = t.Comments[i].Delivered && t.Comments[i].Author == core.AuthorAgent
 				}

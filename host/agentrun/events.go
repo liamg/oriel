@@ -29,7 +29,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 	case agent.TurnStart:
 		h.r.deps.Record(h.snapshot(), stats.Event{At: now, Kind: "turn"})
 		h.mu.Lock()
-		h.working, h.turnAt = true, now
+		h.working, h.turnAt, h.runs = true, now, nil // a turn's claims are backed by its own runs
 		h.mu.Unlock()
 		h.setAgent(func(a *core.AgentState) { a.Working, a.TurnStarted, a.Error = true, now, "" })
 	case agent.Message:
@@ -48,8 +48,11 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 			Effort: se.Agent.Effort, Cwd: hostcore.AgentDir(se)})
 		h.mu.Lock()
 		h.calls[ev.ID] = ev
+		if ev.Model != "" && ev.Agent == "" {
+			h.model = ev.Model
+		}
 		h.mu.Unlock()
-		it := core.Item{ID: ev.ID, Kind: core.ItemTool, Tool: ev.Tool, Input: string(ev.Input), Title: toolTitle(ev.Tool, ev.Input),
+		it := core.Item{ID: ev.ID, Kind: core.ItemTool, Tool: ev.Tool, Input: string(ev.Input), Title: toolTitleIn(se, ev.Tool, ev.Input),
 			Agent: ev.Agent, Time: now}
 		h.appendItem(it)
 		h.setAgent(func(a *core.AgentState) { a.Stats.ToolCalls++ })
@@ -89,6 +92,15 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		if x.SignedOut(ev.Provider) {
 			x.env.Go("a login check", func() { x.CheckLogin(ev.Provider, true) })
 		}
+	case agent.Stale:
+		h.mu.Lock()
+		working := h.working
+		h.stale = working
+		h.mu.Unlock()
+		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: now, Text: "Restarting the agent: " + ev.Why})
+		if !working {
+			h.restart(ev.Why)
+		}
 	case agent.Exited:
 		if ev.Err != "" {
 			h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Text: "The agent exited: " + ev.Err, Time: now})
@@ -118,6 +130,9 @@ func (h *session) toolResult(ev agent.ToolResult, now time.Time) {
 		it = core.Item{ID: ev.ID, Kind: core.ItemTool, Tool: call.Tool, Time: now}
 	}
 	it.Done, it.Output, it.IsError, it.Diff = true, clipOutput(ev.Output), ev.IsError, ev.Diff
+	if body := saidIn(call); body != "" && !ev.IsError {
+		it.Output = clipOutput(body + "\n\n→ " + ev.Output) // what was said, then Oriel's "replied"
+	}
 	if !it.Time.IsZero() {
 		it.Duration = now.Sub(it.Time).Milliseconds()
 	}
@@ -233,6 +248,10 @@ func (h *session) subagentTool(id string) {
 func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 	h.mu.Lock()
 	h.working, h.interrupting = false, false
+	if h.stale {
+		h.stale = false
+		defer h.restart("it lost its tools")
+	}
 	started := h.turnAt
 	delivered := append(h.held, h.delivered...)
 	h.held, h.delivered = nil, nil
@@ -278,6 +297,27 @@ func clipOutput(s string) string {
 }
 
 // toolTitle is a tool call in one line, as the console shows it: "Read internal/ratelimit/limiter.go".
+// toolTitleIn is toolTitle with the thread an Oriel tool names given by its heading, not its id.
+func toolTitleIn(se core.SessionState, tool string, input json.RawMessage) string {
+	title := toolTitle(tool, input)
+	var in struct {
+		Thread string `json:"thread"`
+	}
+	if json.Unmarshal(input, &in) == nil && in.Thread != "" {
+		if t, ok := se.Thread(core.ThreadID(in.Thread)); ok {
+			title = strings.Replace(title, "t:"+in.Thread, "“"+clipTitle(t.Heading(), 48)+"”", 1)
+		}
+	}
+	return title
+}
+
+func clipTitle(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n-1]) + "…"
+	}
+	return s
+}
+
 func toolTitle(tool string, input json.RawMessage) string {
 	var in map[string]any
 	_ = json.Unmarshal(input, &in)
@@ -304,6 +344,9 @@ func toolTitle(tool string, input json.RawMessage) string {
 	case "fileChange":
 		return "Edit " + str("path")
 	}
+	if strings.HasPrefix(tool, "mcp__oriel__") {
+		return orielToolTitle(name, str, in)
+	}
 	return name
 }
 
@@ -326,4 +369,64 @@ func firstPath(files any) string {
 func firstLine(s string) string {
 	line, _, _ := strings.Cut(strings.TrimSpace(s), "\n")
 	return line
+}
+
+// orielToolTitle is what a call of one of Oriel's own tools did, in words: which thread it answered and how it began.
+func orielToolTitle(name string, str func(string) string, in map[string]any) string {
+	thread := func() string {
+		if t := str("thread"); t != "" {
+			return " t:" + t
+		}
+		return ""
+	}
+	said := func() string {
+		if b := firstLine(str("body")); b != "" {
+			return ": " + clipTitle(b, 80)
+		}
+		return ""
+	}
+	switch name {
+	case "reply":
+		verb := "Reply"
+		switch {
+		case in["working"] == true:
+			verb = "Progress note"
+		case in["resolve"] == true:
+			verb = "Reply and resolve"
+		}
+		return verb + " on" + thread() + said()
+	case "resolve":
+		return "Resolve" + thread()
+	case "thread":
+		return "Read" + thread()
+	case "comment":
+		at := str("file")
+		if l, ok := in["line"].(float64); ok && at != "" {
+			at += fmt.Sprintf(":%d", int(l))
+		}
+		return strings.TrimSpace("Comment "+at) + said()
+	case "task_add":
+		return "Add task: " + str("subject")
+	case "task_update":
+		return "Task " + str("id") + " → " + str("status")
+	case "test_run":
+		return strings.TrimSpace("Run tests " + cmp.Or(str("filter"), str("dir")))
+	case "commit_draft":
+		return "Draft the commit message: " + firstLine(str("message"))
+	case "pr_draft":
+		return "Draft the PR: " + str("title")
+	}
+	return name
+}
+
+// saidIn is what a call of Oriel's reply or comment said, for its block to show; "" for any other call.
+func saidIn(call agent.ToolCall) string {
+	if call.Tool != "mcp__oriel__reply" && call.Tool != "mcp__oriel__comment" {
+		return ""
+	}
+	var in struct {
+		Body string `json:"body"`
+	}
+	_ = json.Unmarshal(call.Input, &in)
+	return strings.TrimSpace(in.Body)
 }

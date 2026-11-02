@@ -2,6 +2,7 @@ package isolate
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -41,4 +42,18 @@ func TestTestGivesItsOwnHome(t *testing.T) {
 	if h, _ := os.UserHomeDir(); h != outer {
 		t.Fatalf("HOME %s after; %s before", h, outer)
 	}
+}
+
+// A test's temporary directories and HOME are named as git and the OS give them back (macOS's /var is
+// /private/var), so a path a test builds compares equal to one the code under test reads.
+func TestTestsPathsHaveNoSymlinks(t *testing.T) {
+	t.Run("a", func(t *testing.T) {
+		Test(t)
+		home, _ := os.UserHomeDir()
+		for _, p := range []string{t.TempDir(), os.TempDir(), home} {
+			if real, err := filepath.EvalSymlinks(p); err != nil || real != filepath.Clean(p) {
+				t.Errorf("%s resolves to %s (%v)", p, real, err)
+			}
+		}
+	})
 }

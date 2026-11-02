@@ -56,15 +56,27 @@ clip 0,38 223x936 r 0
   text "Git" @54,172.58524 #b3ab99 Inter 12
   path 3 segments stroke 1.25 #7c7566
   text "Tests" @54,195.58524 #b3ab99 Inter 12
-  text "▸" @10,218.94 #7c7566 JetBrains Mono 11
-  rect 25,210.98 8x8 fill #b98aff radius 2
-  text "billing-ui" @39,218.94 #b3ab99 JetBrains Mono 11
-  rect 196.1875,208.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
-  text "⌃2" @200.1875,218.22 #7c7566 JetBrains Mono 9
-  clip 10,224.24 205x13.199997 r 0
-    text "rethink/rounding" @25,234.44 #7c7566 JetBrains Mono 10
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Debug" @54,218.58524 #b3ab99 Inter 12
+  text "▸" @10,241.94 #7c7566 JetBrains Mono 11
+  rect 25,233.98 8x8 fill #b98aff radius 2
+  text "billing-ui" @39,241.94 #b3ab99 JetBrains Mono 11
+  rect 196.1875,231.04001 18.8125x13.880005 radius 3 stroke 1 #332f27
+  text "⌃2" @200.1875,241.22 #7c7566 JetBrains Mono 9
+  clip 10,247.24 205x13.199997 r 0
+    text "rethink/rounding" @25,257.44 #7c7566 JetBrains Mono 10
   pop
-  rect 10,247.44 203x1 fill #332f27
+  rect 10,270.44 203x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
   path 2 segments stroke 1.25 #7c7566
@@ -76,25 +88,13 @@ clip 0,38 223x936 r 0
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
   path 6 segments stroke 1.25 #7c7566
-  text "Requests" @33,269.30524 #b3ab99 Inter 12
-  rect 0,276.44 223x23 fill #1f1c0f
-  rect 0,276.44 2x23 fill #ffd23f
+  text "Requests" @33,292.30524 #b3ab99 Inter 12
+  rect 0,299.44 223x23 fill #1f1c0f
+  rect 0,299.44 2x23 fill #ffd23f
   path 6 segments stroke 1.25 #ffd23f
   path 3 segments stroke 1.25 #ffd23f
   path 3 segments stroke 1.25 #ffd23f
-  text "Plan docs" @33,292.30524 #ece6d8 Inter 12
-  path 6 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  path 2 segments stroke 1.25 #7c7566
-  text "Debug" @33,315.30524 #b3ab99 Inter 12
+  text "Plan docs" @33,315.30524 #ece6d8 Inter 12
   rect 10,807.00006 203x1 fill #332f27
   path 2 segments stroke 1.25 #4f4a40
   path 2 segments stroke 1.25 #4f4a40
@@ -259,7 +259,7 @@ clip 484,38 1116x936 r 0
       rect 608.42096,635.73816 109.1875x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
       text "usage.Meter" @624.42096,659.46716 #ece6d8 Inter 13
       rect 777.60846,635.73816 117.46869x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
-      text "pricing.Round" @793.6084,659.46716 #ece6d8 Inter 13
+      text "pricing.Round" @793.60846,659.46716 #ece6d8 Inter 13
       rect 955.07715,635.73816 116.421875x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
       text "billing.Invoice" @971.07715,659.46716 #ece6d8 Inter 13
       rect 554,725.0228 14x2 fill #ff9b45

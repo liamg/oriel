@@ -6,6 +6,7 @@ import (
 	"cmp"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -15,6 +16,19 @@ import (
 var started sync.Map // test name → true, while that test runs
 
 var userHome = os.Getenv("HOME") // the HOME the test binary started with: the user's
+
+// init names TMPDIR as the OS gives it back (macOS's /var is /private/var), so every t.TempDir in a binary that
+// links this package compares equal to the paths git and the code under test read. On macOS it's /tmp: the per-user
+// TMPDIR is long enough to cut a path in a frame and to pass the unix socket limit.
+func init() {
+	dir := os.TempDir()
+	if runtime.GOOS == "darwin" {
+		dir = "/tmp"
+	}
+	if real, err := filepath.EvalSymlinks(dir); err == nil {
+		os.Setenv("TMPDIR", real)
+	}
+}
 
 // Test gives t a temporary directory (TMPDIR) and, unless a harness already gave it one, a short HOME of its own, so
 // nothing it keeps under HOME reaches the user's and a socket under it fits the unix limit; it puts the XDG directories back under that HOME, keeps the Go caches where they were, and fails it if it leaves
@@ -59,7 +73,11 @@ func keepGoCaches(t testing.TB) {
 
 // shortDir is a directory of t's own under /tmp, removed when it ends: t.TempDir's paths are too long for a socket.
 func shortDir(t testing.TB) string {
-	dir, err := os.MkdirTemp("/tmp", "oh")
+	tmp, err := filepath.EvalSymlinks("/tmp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir, err := os.MkdirTemp(tmp, "oh")
 	if err != nil {
 		t.Fatal(err)
 	}

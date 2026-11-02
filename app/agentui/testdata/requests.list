@@ -39,20 +39,6 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
-  rect -0.5,221 2x18 fill #ffd23f radius 1
-  rect 5.5,214 32x32 fill #1f1c0f radius 7
-  path 2 segments stroke 1.4545455 #ffd23f
-  path 2 segments stroke 1.4545455 #ffd23f
-  path 2 segments stroke 1.4545455 #ffd23f
-  path 2 segments stroke 1.4545455 #ffd23f
-  path 4 segments stroke 1.4545455 #ffd23f
-  path 2 segments stroke 1.4545455 #ffd23f
-  path 2 segments stroke 1.4545455 #ffd23f
-  path 2 segments stroke 1.4545455 #ffd23f
-  path 6 segments stroke 1.4545455 #ffd23f
-  path 6 segments stroke 1.4545455 #ffd23f
-  path 6 segments stroke 1.4545455 #ffd23f
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -64,6 +50,20 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
+  rect -0.5,255 2x18 fill #ffd23f radius 1
+  rect 5.5,248 32x32 fill #1f1c0f radius 7
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 4 segments stroke 1.4545455 #ffd23f
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 2 segments stroke 1.4545455 #ffd23f
+  path 6 segments stroke 1.4545455 #ffd23f
+  path 6 segments stroke 1.4545455 #ffd23f
+  path 6 segments stroke 1.4545455 #ffd23f
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -187,9 +187,8 @@ clip 364,38 1236x936 r 0
   clip 364,69 1236x905 r 0
     rect 364,69 1236x905 fill #060606
     rect 388,91 8x8 fill #4cc9f0 radius 4
-    text "Negative values round the wrong way" @406,100.45654 #ece6d8 Inter 15
-    rect 690.1094,86.729996 119.119995x16.54 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
-    text "CLAUDE · WORKING" @697.1094,98.42 #4cc9f0 JetBrains Mono 9.5
+    rect 406,86.729996 119.119995x16.54 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
+    text "CLAUDE · WORKING" @413,98.42 #4cc9f0 JetBrains Mono 9.5
     rect 1305.6406,82 113.546875x26 fill #191815 radius 6 stroke 1 #332f27
     text "Open in editor ↗" @1315.6406,99.365234 #ece6d8 Inter 12
     rect 1429.1875,82 71.296875x26 fill #191815 radius 6 stroke 1 #332f27
@@ -219,57 +218,57 @@ clip 364,38 1236x936 r 0
       rect 412,142 839x117 radius 6 stroke 1 #24221d
       rect 412,279 28x28 fill #ff9b45 radius 6
       text "LG" @418.67,296.42 #141006 JetBrains Mono 9.5
-      text "Liam Galvin" @454,291.59375 #ece6d8 Inter 13
-      text "4m" @534.7969,290.46475 #4f4a40 JetBrains Mono 10
-      text "Ties go to even, but what about negative values?" @454,316.3785 #ece6d8 Inter 13
-      rect 758.71875,302.7295 36.8125x17.839996 fill #161615 radius 3
-      text "-2.5" @762.71875,315.96948 #ece6d8 JetBrains Mono 12
-      text "should give" @799.1875,316.3785 #ece6d8 Inter 13
-      rect 873.65625,302.7295 22.40625x17.839996 fill #161615 radius 3
-      text "-2" @877.65625,315.96948 #ece6d8 JetBrains Mono 12
-      text ", and" @896.0625,316.3785 #ece6d8 Inter 13
-      rect 930.0625,302.7295 44.015625x17.839996 fill #161615 radius 3
-      text "Floor" @934.0625,315.96948 #ece6d8 JetBrains Mono 12
-      text "goes the wrong way for negatives." @977.7344,316.3785 #ece6d8 Inter 13
-      text "While you're in here:" @454,341.16324 #ece6d8 Inter 13
-      text "•" @458,364.89273 #ece6d8 Inter 13
-      text "make the negative cases table-driven alongside the positive ones" @473.3125,364.89273 #ece6d8 Inter 13
-      text "•" @458,388.62222 #ece6d8 Inter 13
-      text "check" @473.3125,389.6775 #ece6d8 Inter 13
-      rect 514.21875,376.02847 80.03125x17.839996 fill #161615 radius 3
-      text "RoundMinor" @518.21875,389.26846 #ece6d8 JetBrains Mono 12
-      text "callers in" @597.90625,389.6775 #ece6d8 Inter 13
-      rect 656.4219,376.02847 137.65625x17.839996 fill #161615 radius 3
-      text "billing/invoice.go" @660.4219,389.26846 #ece6d8 JetBrains Mono 12
-      text "— I suspect they pre-round" @797.7344,389.6775 #ece6d8 Inter 13
-      text "•" @458,414.46222 #ece6d8 Inter 13
-      text "don't change the exported signature" @473.3125,414.46222 #ece6d8 Inter 13
-      rect 454,425.59796 184.84375x25.859985 radius 6 stroke 1 #24221d
-      text "pasted · invoice-diff.png" @464,442.30795 #7c7566 JetBrains Mono 10.5
-      rect 412,471.45795 28x28 fill #ff8a1f radius 6
-      text "C" @422.335,488.87796 #141006 JetBrains Mono 9.5
-      text "Claude" @454,484.45694 #ece6d8 Inter 13
-      text "2m" @506.20312,483.32797 #4f4a40 JetBrains Mono 10
-      rect 526.2031,471.45795 86.27002x16.540009 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-      text "OPUS · HIGH" @533.2031,483.14795 #b3ab99 JetBrains Mono 9.5
-      text "Right —" @454,509.64697 #ece6d8 Inter 13
-      rect 505.73438,495.99796 44.015625x17.839996 fill #161615 radius 3
-      text "Floor" @509.73438,509.23795 #ece6d8 JetBrains Mono 12
-      text "rounds toward -∞, so" @553.40625,509.64697 #ece6d8 Inter 13
-      rect 690.2969,495.99796 36.8125x17.839996 fill #161615 radius 3
-      text "-2.5" @694.2969,509.23795 #ece6d8 JetBrains Mono 12
-      text "floors to" @730.7656,509.64697 #ece6d8 Inter 13
-      rect 785.4375,495.99796 22.40625x17.839996 fill #161615 radius 3
-      text "-3" @789.4375,509.23795 #ece6d8 JetBrains Mono 12
-      text "and the tie check then picks the odd neighbour. Switching to" @811.5,509.64697 #ece6d8 Inter 13
-      rect 454,516.83795 65.625x17.840027 fill #161615 radius 3
-      text "Truncate" @458,530.07794 #ece6d8 JetBrains Mono 12
-      text "with sign handling, and the negative cases are in the table now." @523.28125,530.48694 #ece6d8 Inter 13
+      text "Liam Galvin" @454,292.729 #ece6d8 Inter 13
+      text "4m" @534.7969,291.6 #4f4a40 JetBrains Mono 10
+      text "Ties go to even, but what about negative values?" @454,318.64902 #ece6d8 Inter 13
+      rect 758.71875,305 36.8125x17.839996 fill #161615 radius 3
+      text "-2.5" @762.71875,318.24 #ece6d8 JetBrains Mono 12
+      text "should give" @799.1875,318.64902 #ece6d8 Inter 13
+      rect 873.65625,305 22.40625x17.839996 fill #161615 radius 3
+      text "-2" @877.65625,318.24 #ece6d8 JetBrains Mono 12
+      text ", and" @896.0625,318.64902 #ece6d8 Inter 13
+      rect 930.0625,305 44.015625x17.839996 fill #161615 radius 3
+      text "Floor" @934.0625,318.24 #ece6d8 JetBrains Mono 12
+      text "goes the wrong way for negatives." @977.7344,318.64902 #ece6d8 Inter 13
+      text "While you're in here:" @454,343.43375 #ece6d8 Inter 13
+      text "•" @458,367.16324 #ece6d8 Inter 13
+      text "make the negative cases table-driven alongside the positive ones" @473.3125,367.16324 #ece6d8 Inter 13
+      text "•" @458,390.89273 #ece6d8 Inter 13
+      text "check" @473.3125,391.948 #ece6d8 Inter 13
+      rect 514.21875,378.29898 80.03125x17.839996 fill #161615 radius 3
+      text "RoundMinor" @518.21875,391.53897 #ece6d8 JetBrains Mono 12
+      text "callers in" @597.90625,391.948 #ece6d8 Inter 13
+      rect 656.4219,378.29898 137.65625x17.839996 fill #161615 radius 3
+      text "billing/invoice.go" @660.4219,391.53897 #ece6d8 JetBrains Mono 12
+      text "— I suspect they pre-round" @797.7344,391.948 #ece6d8 Inter 13
+      text "•" @458,416.73273 #ece6d8 Inter 13
+      text "don't change the exported signature" @473.3125,416.73273 #ece6d8 Inter 13
+      rect 454,427.86847 184.84375x25.859985 radius 6 stroke 1 #24221d
+      text "pasted · invoice-diff.png" @464,444.57846 #7c7566 JetBrains Mono 10.5
+      rect 412,473.72845 28x28 fill #ff8a1f radius 6
+      text "C" @422.335,491.14847 #141006 JetBrains Mono 9.5
+      text "Claude" @454,487.45746 #ece6d8 Inter 13
+      text "2m" @506.20312,486.32846 #4f4a40 JetBrains Mono 10
+      rect 526.2031,474.45847 86.27002x16.540009 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+      text "OPUS · HIGH" @533.2031,486.14847 #b3ab99 JetBrains Mono 9.5
+      text "Right —" @454,513.37744 #ece6d8 Inter 13
+      rect 505.73438,499.72845 44.015625x17.840027 fill #161615 radius 3
+      text "Floor" @509.73438,512.96844 #ece6d8 JetBrains Mono 12
+      text "rounds toward -∞, so" @553.40625,513.37744 #ece6d8 Inter 13
+      rect 690.2969,499.72845 36.8125x17.840027 fill #161615 radius 3
+      text "-2.5" @694.2969,512.96844 #ece6d8 JetBrains Mono 12
+      text "floors to" @730.7656,513.37744 #ece6d8 Inter 13
+      rect 785.4375,499.72845 22.40625x17.840027 fill #161615 radius 3
+      text "-3" @789.4375,512.96844 #ece6d8 JetBrains Mono 12
+      text "and the tie check then picks the odd neighbour. Switching to" @811.5,513.37744 #ece6d8 Inter 13
+      rect 454,520.5685 65.625x17.840027 fill #161615 radius 3
+      text "Truncate" @458,533.8085 #ece6d8 JetBrains Mono 12
+      text "with sign handling, and the negative cases are in the table now." @523.28125,534.21747 #ece6d8 Inter 13
       path 6 segments fill #4cc9f0b7
       path 6 segments fill #4cc9f0b7
       path 6 segments fill #4cc9f0b7
-      text "Claude is working" @447,570.303 #b3ab99 Inter 12
-      text "· 41s" @558.3281,569.7178 #7c7566 JetBrains Mono 10.5
+      text "Claude is working" @447,574.03345 #b3ab99 Inter 12
+      text "· 41s" @558.3281,573.44824 #7c7566 JetBrains Mono 10.5
     pop
     rect 364,855 935x1 fill #24221d
     rect 412,870 839x90 fill #0c0c0b radius 8 stroke 1 #332f27
@@ -334,8 +333,8 @@ text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
 clip 0,38 43x936 r 0
-  rect 22.09375,217 13.40625x13.5 fill #ff9b45 radius 6.75
-  text "4" @26.09375,226.81 #141006 JetBrains Mono 8.5
+  rect 22.09375,251 13.40625x13.5 fill #ff9b45 radius 6.75
+  text "4" @26.09375,260.81 #141006 JetBrains Mono 8.5
 pop
 clip 364,38 1236x936 r 0
   clip 364,69 1236x905 r 0

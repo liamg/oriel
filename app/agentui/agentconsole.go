@@ -58,6 +58,7 @@ type Console struct {
 
 	by        map[core.SessionID]*consoleState
 	providers *plugin.Load[[]host.ProviderInfo] // the agents and their models, asked for once a composer shows
+	detail    *detailOpen                       // the details dialog, while it's open
 }
 
 // consoleState is one session's console: what's selected, folded, typed.
@@ -94,9 +95,10 @@ func (x *Console) Manifest() plugin.Manifest { return plugin.Manifest{ID: "agent
 func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*consoleState{}
-	for _, c := range append(x.commands(), x.processCommands()...) {
+	for _, c := range append(x.commands(), append(x.processCommands(), x.detailCommand())...) {
 		x.Add(h.Command(c))
 	}
+	x.Add(h.View(kit.OverlayPrefix+"console-detail", x.detailView()))
 	for _, k := range x.keymaps() {
 		x.Add(h.Keymap(k))
 	}
@@ -127,6 +129,14 @@ func (x *Console) commands() []registry.Command {
 		{ID: "agent.console", Title: "Show the agent console of the session in front, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", open)
 		}},
+		{ID: "agent.unqueue", Title: "Take a message out of {id}'s queue before the agent gets it: the one at {index}, still {text}",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				c, err := x.client(session(a))
+				if err != nil {
+					return err
+				}
+				return c.Unqueue(host.UnqueueReq{Session: session(a), Index: a.Int("index"), Text: a.String("text")})
+			}},
 		{ID: "agent.console.show", Title: "Show {id}'s agent console: its session in front, and the console open on it",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "session.open", registry.Args{"id": string(session(a)),
@@ -678,7 +688,20 @@ func (x *Console) composer(c *ui.Ctx, se core.SessionState, st *consoleState) {
 		for i, q := range se.Agent.Queue {
 			c.Row(fmt.Sprint("q", i), ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				widget.Chip(c, "chip", "queued", th.C(tQueued), "agent/console#composer")
-				c.Text("t", kit.FirstLine(q), kit.UIFont(12, th.C(theme.FgMuted)))
+				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+					c.Text("t", kit.FirstLine(q), kit.UIFont(12, th.C(theme.FgMuted)))
+				})
+				// Edit takes it out of the queue into the composer, to send again once changed.
+				if widget.Link(c, "edit", "edit", "agent/console#composer") {
+					if err := x.h.Run(context.Background(), "agent.unqueue", registry.Args{"id": string(se.ID), "index": i, "text": q}); err == nil {
+						st.draft, st.compose = strings.TrimSpace(q+"\n"+st.draft), true
+					} else {
+						x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error()})
+					}
+				}
+				if widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Cancel queued: " + kit.FirstLine(q), Help: "agent/console#composer", Size: 18}) {
+					x.run(context.Background(), "agent.unqueue", registry.Args{"id": string(se.ID), "index": i, "text": q})
+				}
 			})
 		}
 		if st.forking {

@@ -1,10 +1,12 @@
 package shell
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"image/color"
 	"slices"
+	"strings"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -50,7 +52,9 @@ func statusWord(s core.Session) string {
 // sessionTabs is the titlebar with a tab per session open in the window, in the order they opened; ⌘1–9 focus them.
 type sessionTabs struct {
 	kit.Disposer
-	sh *shell
+	sh       *shell
+	renaming core.SessionID // the session whose tab is being renamed
+	rename   widget.Rename
 }
 
 func (t *sessionTabs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sessiontabs"} }
@@ -80,6 +84,23 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 		t.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<D-%d>", n), Command: "session.focus", Args: registry.Args{"n": n},
 			Desc: fmt.Sprintf("Session %d", n)}))
 	}
+	t.Add(h.Command(registry.Command{ID: "session.tab.rename", Title: "Rename session {id}, or the one in front, in its tab",
+		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 0 },
+		Run: func(_ registry.Ctx, a registry.Args) error {
+			id := core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus)))
+			s, ok := h.Session(id)
+			if !ok {
+				return fmt.Errorf("no session %q", id)
+			}
+			t.renaming = id
+			t.rename.Start(s.Name())
+			return nil
+		}}))
+	t.Add(h.Contribute(registry.MenuItem{Name: "session.tab.rename", Label: "Rename…", Group: "session", Order: 5,
+		When: registry.MenuWhen{Subject: kit.SessionSubject, Help: "shell/tabs"}, Source: "builtin:sessiontabs",
+		Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
+			return h.Run(ctx, "session.tab.rename", registry.Args{"id": strings.TrimPrefix(at.Subject, kit.SessionSubject)})
+		}}))
 	t.Add(h.Picker(sessionsSource(h)))
 	t.Add(h.Contribute(uireg.Indicator{Name: "sessions", Slot: uireg.SlotHUD, Order: 30, Title: "Sessions", Help: kit.HUDHelp + "#sessions",
 		Note: func() string { return kit.Counted(len(h.State().Sessions), "session") },
@@ -150,7 +171,11 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 			c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
 			c.Row("body", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(12, 0), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Box("dot", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 4, Fill: dot, Role: ui.RoleText, Label: string(s.Status())}, nil)
-				c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: name})
+				if t.renaming == s.ID() {
+					t.nameField(c, h, s)
+				} else {
+					c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: name})
+				}
 				if w := statusWord(s); w != "" {
 					c.Text("mini", w, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.Medium}, Color: th.C(tTabMini)})
 				}
@@ -180,6 +205,19 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 	})
 	if in.Clicked {
 		h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID())})
+	}
+}
+
+// nameField edits s's name in its tab: ⏎ renames it, Escape leaves it as it was.
+func (t *sessionTabs) nameField(c *ui.Ctx, h plugin.Host, s core.Session) {
+	name, done := widget.RenameField(c, "rename", &t.rename, widget.InputOpts{Label: "Rename " + s.Name(), Width: ui.Px(180), Help: "shell/tabs"})
+	if !t.rename.On {
+		t.renaming = ""
+	}
+	if done && name != "" && name != s.Name() {
+		if err := h.Run(context.Background(), "session.rename", registry.Args{"id": string(s.ID()), "name": name}); err != nil {
+			h.Notify(core.Notice{ID: "session.rename", Severity: core.SevError, Source: "sessiontabs", Text: err.Error()})
+		}
 	}
 }
 

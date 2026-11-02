@@ -236,14 +236,14 @@ func TestSidebarSwitchesProjects(t *testing.T) {
 	}
 	// From the keyboard: the focused sidebar's j/k move over headers and entries, ⏎ opens.
 	s.Click(apptest.Centre(s.Node("admin-ui").Bounds), 0)
-	for range 6 {
+	for range 7 {
 		s.UI().Key(render.KeyEvent{Key: "j"})
 		s.Frame()
 	}
 	s.UI().Key(render.KeyEvent{Key: "CR"})
 	s.Frame()
 	if got := openProject(s); got != "api" {
-		t.Errorf("j ×6 ⏎ from admin-ui, over its five entries to api, opened %q", got)
+		t.Errorf("j ×7 ⏎ from admin-ui, over its six entries to api, opened %q", got)
 	}
 }
 

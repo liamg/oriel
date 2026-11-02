@@ -52,17 +52,18 @@ func hudDivider(c *ui.Ctx, key any) {
 func (x *Plugin) usagePanel(c *ui.Ctx) {
 	th := c.Theme()
 	now := x.Now()
-	front, _ := x.frontUsage()
-	us := slices.Clone(x.h.State().Usage)
-	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int {
-		switch {
-		case a.Same(front):
-			return -1
-		case b.Same(front):
-			return 1
-		}
-		return 0
-	})
+	us, failed := x.hudUsage()
+	for i, f := range failed {
+		c.Row(fmt.Sprint("failed", i), ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Text("t", strings.ToUpper(kit.ProviderName(x.h, f.Provider)), kit.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
+			c.Row("e", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+				c.Text("e", "plan couldn't be read", kit.MonoFont(10.5, th.C(theme.Warn)))
+			})
+		})
+	}
+	if len(us) == 0 && len(failed) > 0 {
+		return
+	}
 	if len(us) == 0 {
 		if st := x.reading.State(); st.Phase == widget.Pending {
 			widget.Busy(c, "none", st, widget.BusyOpts{Label: "Reading the plans", Size: 10.5, Help: "agent/usage"})
@@ -129,17 +130,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 // usageStrip is mission control's: each account's windows, the account in front first.
 func (x *Plugin) usageStrip(c *ui.Ctx) {
 	th := c.Theme()
-	front, _ := x.frontUsage()
-	us := slices.Clone(x.h.State().Usage)
-	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int {
-		switch {
-		case a.Same(front):
-			return -1
-		case b.Same(front):
-			return 1
-		}
-		return 0
-	})
+	us, _ := x.hudUsage()
 	c.Row("usage", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
 		for i, u := range us {
 			title := kit.JoinParts("Usage", kit.ProviderName(x.h, u.Provider)+strings.TrimSuffix(" "+u.Tier, " "))
@@ -248,4 +239,55 @@ func (x *Plugin) todayPanel(c *ui.Ctx) {
 			}
 		}
 	}
+}
+
+// usedWithin is how recently a provider must have run a session for the HUD to show its plan.
+const usedWithin = 14 * 24 * time.Hour
+
+// hudUsage are the plans the HUD and mission control show, the account in front first: those of the providers
+// sessions have run on lately, when any have; every plan read, when none have. failed are the providers in use whose
+// plan couldn't be read, so one that didn't read isn't simply missing.
+func (x *Plugin) hudUsage() (us []core.ProviderUsage, failed []core.UsageFailure) {
+	st := x.h.State()
+	front, _ := x.frontUsage()
+	used := usedProviders(st, x.Now())
+	for _, u := range st.Usage {
+		if len(used) == 0 || used[u.Provider] {
+			us = append(us, u)
+		}
+	}
+	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int {
+		switch {
+		case a.Same(front):
+			return -1
+		case b.Same(front):
+			return 1
+		}
+		return 0
+	})
+	for _, f := range st.UsageFailures {
+		if used[f.Provider] && !slices.ContainsFunc(us, func(u core.ProviderUsage) bool { return u.Provider == f.Provider }) {
+			failed = append(failed, f)
+		}
+	}
+	return us, failed
+}
+
+// usedProviders are the providers a session has run on within usedWithin of now.
+func usedProviders(st core.State, now time.Time) map[string]bool {
+	out := map[string]bool{}
+	for _, se := range st.Sessions {
+		p := se.Agent.Provider
+		if p == "" {
+			continue
+		}
+		ats := []time.Time{se.Created, se.Agent.TurnStarted}
+		for _, a := range se.Agent.Accounts {
+			ats = append(ats, a.At)
+		}
+		if last := slices.MaxFunc(ats, time.Time.Compare); now.Sub(last) < usedWithin {
+			out[p] = true
+		}
+	}
+	return out
 }

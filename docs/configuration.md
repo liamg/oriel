@@ -152,8 +152,8 @@ Every option Oriel registers. A test checks this table against the registry.
 | `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | |
 | `ledger.gate` | `auto`: the commit gate by the session's kind (hard for work, plan and a new repo, soft for jobs, off for the rest); `hard`, `soft` or `off`; a project's `.oriel/settings.toml` overrides it for its repo | app | |
-| `review.ai.provider` | the provider AI reviews run on; empty: one other than the session agent's, else the author's on another model | app | |
-| `review.ai.model` | the model AI reviews run on; empty: the reviewer's default | app | |
+| `review.ai.provider` | `auto`: one other than the session agent's, else the author's on another model; or `claude`, `codex` | app | |
+| `review.ai.model` | `default`: the reviewer's default; or a model's name | app | |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | |
 | `review.severity_badges` | `true`: each comment a review session posts is headed with a badge of its severity | app | |
@@ -165,9 +165,9 @@ Every option Oriel registers. A test checks this table against the registry.
 | `code.hosts` | `{}`: which code host a self-hosted server is, by hostname (`gitlab`, `github`, `azure`, `none`); filled in as Oriel finds out or asks; user and project | app | |
 | `code.trusted_users` | `[]`: logins on a code host other than GitHub whose review comments the agent may read, beside the repo's members | app | |
 | `code.api` | `{}`: a self-hosted server's API URL, by hostname, where it isn't the host's usual one | app | |
-| `ship.merge_method` | empty: how Merge… merges, `squash`, `merge` or `rebase` when the repo allows it; empty is the repo's own default, else squash; user and project | app | |
+| `ship.merge_method` | `repo`: the repo's own default, else squash; or `squash`, `merge`, `rebase` when the repo allows it; user and project | app | |
 | `session.archive_on_merge` | false: archive a session by itself once every one of its PRs is merged and its worktrees are clean; user and project | app | |
-| `terminal.shell` | empty: your $SHELL | app | |
+| `terminal.shell` | `$SHELL`: the program a new terminal runs, with its arguments; `$VARS` expand | app | |
 | `plugins` | `{}`: the installed plugins by id, a table; user and project | app | |
 | `registry.sources` | `["liamg/oriel-plugins"]`: the plugin registries in order; an id in more than one comes from the first | app | |
 | `registry.keys` | `{}`: each registry's `ed25519:<hex>` key; the default registry's is built in | app | |
@@ -200,34 +200,35 @@ Every option Oriel registers. A test checks this table against the registry.
 | `repos.tag.push` | `true`: New tag pushes the tag, and only it | app | |
 | `sandbox.backend` | `docker`, `orbstack`, `colima` or `podman`: each agent runs in a container on that engine; or `seatbelt`, macOS's own sandbox with the host's toolchains. Only those installed are offered; the default is the first of those, in that order | app | |
 | `sandbox.loopback` | `all`: the host's loopback ports a `seatbelt` sandbox may connect to; `ephemeral`, only 49152–65535 (servers on port 0, not services on fixed ports); or `none`, only its proxy | app | |
-| `sandbox.image` | empty: Oriel's base image; a project's applies to its repo | app | |
+| `sandbox.image` | `base`: Oriel's base image; or an image's name; a project's applies to its repo | app | |
 | `sandbox.claude_version` | empty: the host's Claude Code; a container sandbox downloads the version named (registered by the Claude plugin) | app | |
 | `sandbox.env` | empty: the default host variables a sandbox inherits: `OTEL_*` (`sandbox.DefaultEnv`) and what the session's agent passes, Claude's own (`ANTHROPIC_*`, `CLAUDE_CODE_*`, `DISABLE_*` and its timeouts and token limits, less what a Claude Code session sets for itself) or Codex's (`OPENAI_*`, `CODEX_*`); the page offers the host's | app | |
 | `sandbox.egress` | empty: network rules, `allow\|deny host[:port] [private]`; a project's add to it | app | |
 | `sandbox.rules` | empty: gateway rules, `allow\|ask\|deny tool`; a project's add to it | app | |
-| `sandbox.approval_timeout` | 0: ten minutes | app | |
+| `sandbox.approval_timeout` | 10m: how long a held gateway call waits for you | app | |
 | `sandbox.auto_allow_read_only` | false | app | |
 | `sandbox.hidden_servers` | empty; the page offers the servers the gateway finds | app | |
 | `sandbox.servers` | empty: extra MCP servers for the gateway, name → an https URL or a command line | app | |
 | `sandbox.egress_proxy` | true: off allows every connection (still made from the host, so its VPN and tailnet reach the sandbox) | app | |
-| `sandbox.memory` | empty: 8g; `none` for no cap | app | |
-| `sandbox.pids_limit` | 0: 4096; -1 for no cap | app | |
-| `sandbox.go_cache_max` | empty: 20g, the cap on the sandboxes' shared Go build cache, trimmed least recently used first by the hourly sweep; `none` for no cap | app | |
+| `sandbox.memory` | `8g`; `none` for no cap | app | |
+| `sandbox.pids_limit` | 4096; -1 for no cap | app | |
+| `sandbox.go_cache_max` | `20g`: the cap on the sandboxes' shared Go build cache, trimmed least recently used first by the hourly sweep; `none` for no cap | app | |
 | `usage.accounts` | empty: names for the accounts plans belong to, account identity → label ("Work", "Personal"); unnamed, an account shows its email or organisation | app | |
 | `stats.split_sessions` | true: a multi-repo session's cost splits over its repos, each request charged to the repo it worked in; off, each repo is charged the whole session. The Stats page's toggle and the session tab's "count whole session in each" both set it | app | |
 | `hud.hold` | alt: the modifier that pulls the HUD down while held on its own (alt, ctrl, shift, super, off) | app | |
 | `hud.hold_delay` | 250: milliseconds the hold key is held alone before the HUD comes down, so a chord doesn't flash it | app | |
+| `sessions.auto_name` | true: a small model (Claude's Haiku) names a session started from a request, and the request; off, the name is the request's first words | app | |
 | `mission.at_launch` | true: started with nothing open and sessions there, open mission control over the session that was in front | app | |
 | `updates.mode` | `automatic`: updates as Oriel starts, and installs a release that comes out while it runs for the next restart; `ask` downloads it and offers it in a notice; `manual` only checks on `:UpdateCheck` | app | |
 | `updates.channel` | `stable`; or `nightly`, pre-releases too | app | |
 | `voice.dictation` | true: every long text field (`widget.Prose`) has a mic, and ⌘⇧Space (Ctrl⇧Space elsewhere) in one dictates; false takes the mics away | app | |
-| `voice.model` | the Whisper model: `base.en`, `small.en`, `medium.en` or a path to a ggml model; empty is `base.en` everywhere, downloaded in the background when Oriel starts with `voice.dictation` on (unless the OS says the network is metered) | app | |
+| `voice.model` | the Whisper model: `base.en`, `small.en`, `medium.en` or a path to a ggml model; `base.en` by default, downloaded in the background when Oriel starts with `voice.dictation` on (unless the OS says the network is metered) | app | |
 | `voice.url` | an OpenAI-compatible transcription endpoint used instead of a local whisper-server; empty uses whisper-server | app | |
-| `voice.recorder` | the program that captures audio: `pw-record`, `parecord`, `arecord` (Linux), `rec` (sox), `ffmpeg`; empty captures in Oriel (Core Audio on macOS, PulseAudio or PipeWire on Linux), else the first installed | app | |
+| `voice.recorder` | `oriel`: Oriel captures it (Core Audio on macOS, PulseAudio or PipeWire on Linux); or a program: `pw-record`, `parecord`, `arecord` (Linux), `rec` (sox), `ffmpeg` | app | |
 | `voice.speech` | `system` (say, spd-say or espeak), `piper` or `off`: how replies are spoken | app | |
 | `voice.piper_voice` | a Piper voice's name in `~/.oriel/piper`; empty uses the first there | app | |
-| `assistant.provider` | empty: the first agent installed and signed in; `claude` or `codex` | app | |
-| `assistant.model` | empty: the provider's small model (Claude's Haiku), else its default | app | |
+| `assistant.provider` | `auto`: the first agent installed and signed in; or `claude`, `codex` | app | |
+| `assistant.model` | `small`: the provider's small model (Claude's Haiku); `default`, its default; or a model's name | app | |
 | `assistant.web` | true: the assistant may search the web (the provider's WebSearch and WebFetch) | app | |
 | `assistant.idle` | 15: minutes of quiet before a conversation ends and the next starts afresh | app | |
 | `debug.agent.read` | allow: agents may read the paused stack, frames and variables (allow, ask or off) | app | |

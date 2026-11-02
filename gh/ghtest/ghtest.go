@@ -67,6 +67,7 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("POST /graphql", s.graphql)
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}/comments", s.listReviewComments)
 	mux.HandleFunc("POST /repos/{owner}/{name}/pulls/{num}/comments/{id}/replies", s.reply)
+	mux.HandleFunc("POST /repos/{owner}/{name}/pulls/{num}/comments", s.fileComment)
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls/{num}/reviews", s.listReviews)
 	mux.HandleFunc("GET /repos/{owner}/{name}/issues/{num}/comments", s.listIssueComments)
 	mux.HandleFunc("POST /repos/{owner}/{name}/issues/{num}/comments", s.addIssueComment)

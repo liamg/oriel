@@ -35,7 +35,9 @@ type CodeHost struct {
 	Requested func(ctx context.Context, s Site) ([]ReviewRequest, error) // open pull requests asking you, and those you're part way through
 	Lookup    func(ctx context.Context, s Site, url string) (ReviewDetail, error)
 	Checkout  func(ctx context.Context, s Site, url string) (PRCheckout, error)
-	Submit    func(ctx context.Context, s Site, url string, r ReviewSubmit) error // the user's review of someone else's
+	// Submit posts the user's review of someone else's PR. Each of r.Comments goes on its lines, or as near as the host
+	// takes it (on its file); never all of them in the review's body because one can't go on its line.
+	Submit func(ctx context.Context, s Site, url string, r ReviewSubmit) error
 
 	ForBranch        func(ctx context.Context, r CodeRepo, branch string) (*PR, error) // the branch's newest PR, open first; nil for none
 	Create           func(ctx context.Context, r CodeRepo, pr NewPR) (*PR, error)

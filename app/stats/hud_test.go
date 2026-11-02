@@ -184,3 +184,27 @@ L.hud.indicator("meeting", { slot = "hud.today" }, L.ui.indicator{ label = "NEXT
 		t.Errorf("the Sessions panel didn't count the session that needs you:\n%s", s.Text())
 	}
 }
+
+// The HUD's plan usage is that of the providers sessions run on lately: a plan of one not used in weeks stays out,
+// and one in use whose plan couldn't be read says so rather than going missing.
+func TestHUDUsageIsOfTheProvidersInUse(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	s.Now = apptest.At(14, 0, 0)
+	apptest.PluginOf[*stats.Plugin](s, "stats").Now = func() time.Time { return s.Now }
+	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Created: s.Now.Add(-time.Hour),
+		Agent: core.AgentState{Provider: "claude"}}})
+	codex := core.ProviderUsage{Provider: "codex", Account: "me@x", Sampled: s.Now,
+		Windows: []core.UsageWindow{{Name: "5h", Used: .4, Resets: s.Now.Add(time.Hour)}}}
+	s.Store().Apply(core.UsageSampled{Usage: codex})
+	s.Store().Apply(core.UsageRead{Provider: "claude", Failure: &core.UsageFailure{Err: "no plan windows came"}})
+	s.Run("hud.toggle", nil)
+	s.Until("the HUD", func() bool { return hudDown(s) })
+	s.Until("claude's unread plan", func() bool { return s.Has("plan couldn't be read") })
+	if s.Has("me@x") || s.Has("40%") {
+		t.Errorf("the HUD shows codex's plan, unused:\n%s", s.Text())
+	}
+	s.Store().Apply(core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Account: "liam", AccountName: "liam@x", Sampled: s.Now,
+		Windows: []core.UsageWindow{{Name: "5h", Used: .2, Resets: s.Now.Add(time.Hour)}}}})
+	s.Store().Apply(core.UsageRead{Provider: "claude"})
+	s.Until("claude's plan", func() bool { return s.Has("liam@x") && !s.Has("plan couldn't be read") })
+}

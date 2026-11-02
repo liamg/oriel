@@ -174,14 +174,22 @@ type ScrimOpts struct {
 }
 
 // Scrim is a float over the whole window, under the dialog body builds in it. It reports a click on the scrim itself,
-// which closes the dialog; the dialog is Interactive, so a click on it isn't one.
+// or an Escape that nothing in the dialog took (passed up from a focused button, a card), either of which closes the
+// dialog; the dialog is Interactive, so a click on it isn't one.
 func Scrim(c *ui.Ctx, key any, o ScrimOpts, body func(c *ui.Ctx)) bool {
-	clicked := c.Interaction(c.Next(key)).Clicked
+	in := c.Interaction(c.Next(key))
+	closed := in.Clicked
+	for _, k := range in.Keys {
+		closed = closed || k.Key == "Esc" && k.Mods == 0
+	}
 	size := c.Size()
-	c.Box(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: o.Z, Fill: o.Fill, Interactive: true, Help: o.Help,
+	c.Box(key, ui.Style{W: ui.Px(size.X), H: ui.Px(size.Y), Z: o.Z, Fill: o.Fill, Interactive: true, Help: o.Help, KeyMode: ScrimKeyMode,
 		Float: &ui.Float{Point: &render.Point{}}}, body)
-	return clicked
+	return closed
 }
+
+// ScrimKeyMode is a scrim's: the keys a dialog over it doesn't take reach it.
+const ScrimKeyMode = "scrim"
 
 // ContextMenuHelp is the context menu's own help page.
 const ContextMenuHelp = "ui/context-menu"

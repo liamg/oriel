@@ -4,6 +4,7 @@ package headless
 import (
 	"context"
 	"image"
+	"path/filepath"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -91,12 +92,15 @@ type Window struct {
 	access  map[uint64]*render.AccessNode
 	actions chan render.AccessAction
 	clip    string
+	files   []string // copied in the file manager
+	image   []byte   // a copied picture
 }
 
 var (
-	_ render.Accessible = (*Window)(nil)
-	_ render.Clipboard  = (*Window)(nil)
-	_ render.Placed     = (*Window)(nil)
+	_ render.Accessible     = (*Window)(nil)
+	_ render.Clipboard      = (*Window)(nil)
+	_ render.ClipboardFiles = (*Window)(nil)
+	_ render.Placed         = (*Window)(nil)
 )
 
 // Opts is what the window was opened with.
@@ -119,7 +123,37 @@ func (w *Window) Placement() (render.Rect, bool) {
 func (w *Window) SetClipboard(text string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.clip = text
+	w.clip, w.files, w.image = text, nil, nil
+}
+
+// CopyFiles puts files on the clipboard, as a file manager's copy does, with their names as its text.
+func (w *Window) CopyFiles(paths ...string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	names := make([]string, len(paths))
+	for i, p := range paths {
+		names[i] = filepath.Base(p)
+	}
+	w.clip, w.files, w.image = strings.Join(names, "\n"), paths, nil
+}
+
+// CopyImage puts a picture on the clipboard, as a screenshot's copy does.
+func (w *Window) CopyImage(png []byte) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.clip, w.files, w.image = "", nil, png
+}
+
+func (w *Window) ReadClipboardFiles() []string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.files
+}
+
+func (w *Window) ReadClipboardImage() ([]byte, bool) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.image, len(w.image) > 0
 }
 
 func (w *Window) ReadClipboard() (string, bool) {

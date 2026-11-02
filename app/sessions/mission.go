@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/term"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // Mission control: every session as a card, grouped by status or repo, over the window under the
@@ -47,9 +48,8 @@ type Mission struct {
 	launch  time.Time          // when it started, for the sessions there were at launch
 
 	focusFilter bool
-	focusName   bool // the rename field asks for focus
 	renaming    core.SessionID
-	name        string
+	rename      widget.Rename
 	queueOpen   string // a card without a session, open under its queue row
 	err         string
 
@@ -185,10 +185,12 @@ func (x *Mission) commands() []registry.Command {
 				if name, ok := a["name"].(string); ok {
 					return h.Run(ctx, "session.rename", registry.Args{"id": string(id), "name": name})
 				}
-				x.renaming, x.name, x.focusName = id, "", true
+				x.renaming = id
+				name := ""
 				if se, ok := h.State().Session(id); ok {
-					x.name = se.Name()
+					name = se.Name()
 				}
+				x.rename.Start(name)
 				return nil
 			}},
 		{ID: "mission.new", Title: "Start a new session: the launcher", Run: func(ctx registry.Ctx, _ registry.Args) error {

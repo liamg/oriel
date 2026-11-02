@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -31,8 +30,6 @@ const (
 	wsEvery = 3 * time.Second
 	// wsLogTail is how much of a build log the page shows: its end.
 	wsLogTail = 256 << 10
-	// wsDirMax is how many entries of a directory the file list shows.
-	wsDirMax = 500
 )
 
 // The Workspace page's tabs, by their name in workspace.open.
@@ -54,7 +51,7 @@ type Workspace struct {
 	open bool
 	tab  int
 	by   map[core.SessionID]*wsState
-	dirs *plugin.Cache[string, []wsEntry] // directories' entries, read off the loop
+	dirs *kit.DirTree // the files tab's folders
 }
 
 // wsState is one session's page: its reads, and what's picked.
@@ -63,11 +60,7 @@ type wsState struct {
 	log        *plugin.Load[string]
 	read       time.Time
 	logRead    time.Time
-	dir        int                  // the files tab's directory, of wsBrowsable
-	entries    map[string][]wsEntry // the directories read so far
-	wanted     map[string]bool      // directories being read
-	reads      int                  // moves each time entries does
-	tree       wsTree               // the files tab's rows, as last built
+	dir        int // the files tab's directory, of wsBrowsable
 	rebuilding bool
 	logSel     int
 	renaming   bool   // the overview's name is an input
@@ -75,28 +68,12 @@ type wsState struct {
 	focusName  bool   // the input takes focus next frame
 }
 
-// wsEntry is a directory entry as the files tab shows it.
-type wsEntry struct {
-	name string
-	dir  bool
-	size int64 // -1 when it couldn't be read
-}
-
-// wsTree is the files tab's rows, and what they were built from.
-type wsTree struct {
-	root  string
-	reads int
-	th    *theme.Resolved
-	items []widget.TreeItem
-}
-
 func (x *Workspace) Manifest() plugin.Manifest { return plugin.Manifest{ID: "workspace"} }
 
 func (x *Workspace) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*wsState{}
-	x.dirs = plugin.NewCache(h, func(_ context.Context, dir string) ([]wsEntry, error) { return readDir(dir), nil },
-		plugin.CacheOpts[string, []wsEntry]{MaxEntries: 64})
+	x.dirs = kit.NewDirTree(h)
 	x.Add(kit.OnDispose(x.dirs.Close))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -157,7 +134,7 @@ func (x *Workspace) state(id core.SessionID) *wsState {
 	if st != nil {
 		return st
 	}
-	st = &wsState{entries: map[string][]wsEntry{}, wanted: map[string]bool{}}
+	st = &wsState{}
 	st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.Workspace, error) {
 		w, _ := kit.SessionHost(x.h)
 		if w == nil {
@@ -512,22 +489,11 @@ func (x *Workspace) files(c *ui.Ctx, st *wsState, ws host.Workspace) {
 		}
 		c.Row("path", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.TildePath(root.Host), kit.MonoFont(11, th.C(theme.FgFaint))) })
 		if widget.Button(c, "reload", "Refresh", widget.ButtonOpts{Ghost: true, Help: workspaceHelp}) {
-			for dir := range st.entries {
-				x.dirs.Invalidate(dir)
-			}
-			clear(st.entries)
-			st.reads++
+			x.dirs.Refresh()
 		}
 	})
-	for dir := range st.wanted {
-		x.readDir(st, dir)
-	}
-	if t, cur := st.tree, x.h.CurrentTheme(); t.items == nil || t.root != root.Host || t.reads != st.reads || t.th != cur {
-		st.tree = wsTree{root: root.Host, th: cur, items: x.dirItems(st, root.Host, 0)}
-		st.tree.reads = st.reads // dirItems reads the root if it hasn't been
-	}
-	items := st.tree.items
-	if len(items) == 0 && st.wanted[root.Host] {
+	items, loading := x.dirs.Items(root.Host, "")
+	if len(items) == 0 && loading {
 		return
 	}
 	if len(items) == 0 {
@@ -536,85 +502,12 @@ func (x *Workspace) files(c *ui.Ctx, st *wsState, ws host.Workspace) {
 	}
 	res := widget.Tree(c, "tree", items, widget.TreeOpts{Height: ui.Flex(1), Label: root.Name, Help: workspaceHelp})
 	if res.Toggled != "" {
-		x.readDir(st, res.Toggled)
+		x.dirs.Opened(res.Toggled, "")
 	}
-	if res.Activated != "" && !strings.HasSuffix(res.Activated, wsMore) {
+	if p := x.dirs.Path(res.Activated, ""); p != "" {
 		x.open = false
-		x.run("editor.open", registry.Args{"path": res.Activated})
+		x.run("editor.open", registry.Args{"path": p})
 	}
-}
-
-// wsMore marks the row standing for what a directory holds past wsDirMax, or before it's read.
-const wsMore = "\x00more"
-
-// dirItems are dir's entries as tree items, folders first; a folder not read yet holds one placeholder, so it shows
-// its caret.
-func (x *Workspace) dirItems(st *wsState, dir string, depth int) []widget.TreeItem {
-	es, ok := st.entries[dir]
-	if !ok {
-		if depth > 0 {
-			return []widget.TreeItem{{ID: dir + wsMore, Label: "…"}}
-		}
-		es = x.readDir(st, dir)
-	}
-	th := x.h.CurrentTheme()
-	var out []widget.TreeItem
-	for i, e := range es {
-		if i == wsDirMax {
-			out = append(out, widget.TreeItem{ID: dir + wsMore, Label: fmt.Sprintf("%d more", len(es)-wsDirMax)})
-			break
-		}
-		p := filepath.Join(dir, e.name)
-		it := widget.TreeItem{ID: p, Label: e.name}
-		if e.dir {
-			it.Children = x.dirItems(st, p, depth+1)
-			if len(it.Children) == 0 {
-				it.Note = "empty"
-			}
-		} else if e.size >= 0 {
-			it.Note = kit.Bytes(e.size)
-		}
-		if th != nil && strings.HasPrefix(e.name, ".") {
-			it.Tone = th.C(theme.FgFaint)
-		}
-		out = append(out, it)
-	}
-	return out
-}
-
-// readDir takes dir's entries into st once they're read, off the loop; until then it's wanted.
-func (x *Workspace) readDir(st *wsState, dir string) []wsEntry {
-	es, ls := x.dirs.Get(dir)
-	if ls.Phase != ui.Ready && ls.Phase != ui.Failed {
-		st.wanted[dir] = true
-		return nil
-	}
-	delete(st.wanted, dir)
-	st.entries[dir] = es
-	st.reads++
-	return es
-}
-
-// readDir is dir's entries, folders first, the sizes of the first wsDirMax with them.
-func readDir(dir string) []wsEntry {
-	des, _ := os.ReadDir(dir)
-	slices.SortStableFunc(des, func(a, b os.DirEntry) int {
-		if a.IsDir() != b.IsDir() {
-			if a.IsDir() {
-				return -1
-			}
-			return 1
-		}
-		return strings.Compare(a.Name(), b.Name())
-	})
-	es := make([]wsEntry, len(des))
-	for i, d := range des {
-		es[i] = wsEntry{name: d.Name(), dir: d.IsDir(), size: -1}
-		if fi, err := d.Info(); err == nil && !d.IsDir() && i < wsDirMax {
-			es[i].size = fi.Size()
-		}
-	}
-	return es
 }
 
 func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws host.Workspace) {

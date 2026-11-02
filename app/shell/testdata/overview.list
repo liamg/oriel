@@ -23,7 +23,18 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -35,17 +46,6 @@ clip 0,38 43x936 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -91,10 +91,10 @@ pop
 rect 43,38 1x936 fill #24221d
 rect 44,38 1556x936 fill #060606
 clip 44,38 1556x936 r 0
-  rect 78,64 1488x296.2875 fill #0c0c0b radius 12
-  clip 78,64 1488x296.2875 r 12
+  rect 78,64 1488x438.47498 fill #0c0c0b radius 12
+  clip 78,64 1488x438.47498 r 12
     text "usage" @96,95.712 #ece6d8 Space Grotesk 18
-    text "~/src/usage" @168.05624,93.444 #7c7566 JetBrains Mono 11
+    text "~/src/usage" @168.05626,93.444 #7c7566 JetBrains Mono 11
     rect 1410.5469,85.98399 7x7 fill #4cc9f0 radius 3.5
     text "fix/stale-results" @1425.5469,93.624 #b3ab99 JetBrains Mono 11.5
     rect 78,114.968 1488x1 fill #24221d
@@ -204,27 +204,27 @@ clip 44,38 1556x936 r 0
       rect 585.4314,236.368 12x12 fill #191815 radius 2
       rect 585.4314,251.368 12x11.999985 fill #191815 radius 2
       rect 585.4314,266.36798 12x12 fill #191815 radius 2
-      rect 601.27454,176.368 12x12 fill #191815 radius 2
-      rect 601.27454,191.368 12x12 fill #191815 radius 2
-      rect 601.27454,206.368 12x12 fill #ffd23f radius 2
-      rect 601.27454,221.368 12x12 fill #191815 radius 2
-      rect 601.27454,236.368 12x12 fill #191815 radius 2
-      rect 601.27454,251.368 12x11.999985 fill #191815 radius 2
-      rect 601.27454,266.36798 12x12 fill #191815 radius 2
-      rect 617.1177,176.368 12x12 fill #191815 radius 2
-      rect 617.1177,191.368 12x12 fill #ffd23f radius 2
-      rect 617.1177,206.368 12x12 fill #191815 radius 2
-      rect 617.1177,221.368 12x12 fill #191815 radius 2
-      rect 617.1177,236.368 12x12 fill #191815 radius 2
-      rect 617.1177,251.368 12x11.999985 fill #ffd23f radius 2
-      rect 617.1177,266.36798 12x12 fill #191815 radius 2
-      rect 632.9608,176.368 12x12 fill #191815 radius 2
-      rect 632.9608,191.368 12x12 fill #191815 radius 2
-      rect 632.9608,206.368 12x12 fill #191815 radius 2
-      rect 632.9608,221.368 12x12 fill #191815 radius 2
-      rect 632.9608,236.368 12x12 fill #ffd23f radius 2
-      rect 632.9608,251.368 12x11.999985 fill #191815 radius 2
-      rect 632.9608,266.36798 12x12 fill #191815 radius 2
+      rect 601.2745,176.368 12x12 fill #191815 radius 2
+      rect 601.2745,191.368 12x12 fill #191815 radius 2
+      rect 601.2745,206.368 12x12 fill #ffd23f radius 2
+      rect 601.2745,221.368 12x12 fill #191815 radius 2
+      rect 601.2745,236.368 12x12 fill #191815 radius 2
+      rect 601.2745,251.368 12x11.999985 fill #191815 radius 2
+      rect 601.2745,266.36798 12x12 fill #191815 radius 2
+      rect 617.1176,176.368 12x12 fill #191815 radius 2
+      rect 617.1176,191.368 12x12 fill #ffd23f radius 2
+      rect 617.1176,206.368 12x12 fill #191815 radius 2
+      rect 617.1176,221.368 12x12 fill #191815 radius 2
+      rect 617.1176,236.368 12x12 fill #191815 radius 2
+      rect 617.1176,251.368 12x11.999985 fill #ffd23f radius 2
+      rect 617.1176,266.36798 12x12 fill #191815 radius 2
+      rect 632.96075,176.368 12x12 fill #191815 radius 2
+      rect 632.96075,191.368 12x12 fill #191815 radius 2
+      rect 632.96075,206.368 12x12 fill #191815 radius 2
+      rect 632.96075,221.368 12x12 fill #191815 radius 2
+      rect 632.96075,236.368 12x12 fill #ffd23f radius 2
+      rect 632.96075,251.368 12x11.999985 fill #191815 radius 2
+      rect 632.96075,266.36798 12x12 fill #191815 radius 2
       rect 648.8039,176.368 12x12 fill #191815 radius 2
       rect 648.8039,191.368 12x12 fill #191815 radius 2
       rect 648.8039,206.368 12x12 fill #ffd23f radius 2
@@ -316,41 +316,41 @@ clip 44,38 1556x936 r 0
       rect 838.9216,236.368 12x12 fill #191815 radius 2
       rect 838.9216,251.368 12x11.999985 fill #191815 radius 2
       rect 838.9216,266.36798 12x12 fill #191815 radius 2
-      rect 854.76465,176.368 12x12 fill #191815 radius 2
-      rect 854.76465,191.368 12x12 fill #ffd23f radius 2
-      rect 854.76465,206.368 12x12 fill #191815 radius 2
-      rect 854.76465,221.368 12x12 fill #191815 radius 2
-      rect 854.76465,236.368 12x12 fill #191815 radius 2
-      rect 854.76465,251.368 12x11.999985 fill #191815 radius 2
-      rect 854.76465,266.36798 12x12 fill #191815 radius 2
-      rect 870.6078,176.368 12x12 fill #ffd23f radius 2
-      rect 870.6078,191.368 12x12 fill #191815 radius 2
-      rect 870.6078,206.368 12x12 fill #191815 radius 2
-      rect 870.6078,221.368 12x12 fill #191815 radius 2
-      rect 870.6078,236.368 12x12 fill #ffd23f radius 2
-      rect 870.6078,251.368 12x11.999985 fill #191815 radius 2
-      rect 870.6078,266.36798 12x12 fill #191815 radius 2
-      rect 886.4509,176.368 12x12 fill #191815 radius 2
-      rect 886.4509,191.368 12x12 fill #191815 radius 2
-      rect 886.4509,206.368 12x12 fill #191815 radius 2
-      rect 886.4509,221.368 12x12 fill #ffd23f radius 2
-      rect 886.4509,236.368 12x12 fill #191815 radius 2
-      rect 886.4509,251.368 12x11.999985 fill #191815 radius 2
-      rect 886.4509,266.36798 12x12 fill #191815 radius 2
-      rect 902.29407,176.368 12x12 fill #191815 radius 2
-      rect 902.29407,191.368 12x12 fill #ffd23f radius 2
-      rect 902.29407,206.368 12x12 fill #191815 radius 2
-      rect 902.29407,221.368 12x12 fill #191815 radius 2
-      rect 902.29407,236.368 12x12 fill #191815 radius 2
-      rect 902.29407,251.368 12x11.999985 fill #191815 radius 2
-      rect 902.29407,266.36798 12x12 fill #191815 radius 2
-      rect 918.1372,176.368 12x12 fill #ffd23f radius 2
-      rect 918.1372,191.368 12x12 fill #191815 radius 2
-      rect 918.1372,206.368 12x12 fill #191815 radius 2
-      rect 918.1372,221.368 12x12 fill #191815 radius 2
-      rect 918.1372,236.368 12x12 fill #191815 radius 2
-      rect 918.1372,251.368 12x11.999985 fill #191815 radius 2
-      rect 918.1372,266.36798 12x12 fill #191815 radius 2
+      rect 854.7647,176.368 12x12 fill #191815 radius 2
+      rect 854.7647,191.368 12x12 fill #ffd23f radius 2
+      rect 854.7647,206.368 12x12 fill #191815 radius 2
+      rect 854.7647,221.368 12x12 fill #191815 radius 2
+      rect 854.7647,236.368 12x12 fill #191815 radius 2
+      rect 854.7647,251.368 12x11.999985 fill #191815 radius 2
+      rect 854.7647,266.36798 12x12 fill #191815 radius 2
+      rect 870.60785,176.368 12x12 fill #ffd23f radius 2
+      rect 870.60785,191.368 12x12 fill #191815 radius 2
+      rect 870.60785,206.368 12x12 fill #191815 radius 2
+      rect 870.60785,221.368 12x12 fill #191815 radius 2
+      rect 870.60785,236.368 12x12 fill #ffd23f radius 2
+      rect 870.60785,251.368 12x11.999985 fill #191815 radius 2
+      rect 870.60785,266.36798 12x12 fill #191815 radius 2
+      rect 886.451,176.368 12x12 fill #191815 radius 2
+      rect 886.451,191.368 12x12 fill #191815 radius 2
+      rect 886.451,206.368 12x12 fill #191815 radius 2
+      rect 886.451,221.368 12x12 fill #ffd23f radius 2
+      rect 886.451,236.368 12x12 fill #191815 radius 2
+      rect 886.451,251.368 12x11.999985 fill #191815 radius 2
+      rect 886.451,266.36798 12x12 fill #191815 radius 2
+      rect 902.2941,176.368 12x12 fill #191815 radius 2
+      rect 902.2941,191.368 12x12 fill #ffd23f radius 2
+      rect 902.2941,206.368 12x12 fill #191815 radius 2
+      rect 902.2941,221.368 12x12 fill #191815 radius 2
+      rect 902.2941,236.368 12x12 fill #191815 radius 2
+      rect 902.2941,251.368 12x11.999985 fill #191815 radius 2
+      rect 902.2941,266.36798 12x12 fill #191815 radius 2
+      rect 918.13727,176.368 12x12 fill #ffd23f radius 2
+      rect 918.13727,191.368 12x12 fill #191815 radius 2
+      rect 918.13727,206.368 12x12 fill #191815 radius 2
+      rect 918.13727,221.368 12x12 fill #191815 radius 2
+      rect 918.13727,236.368 12x12 fill #191815 radius 2
+      rect 918.13727,251.368 12x11.999985 fill #191815 radius 2
+      rect 918.13727,266.36798 12x12 fill #191815 radius 2
       rect 933.98035,176.368 12x12 fill #191815 radius 2
       rect 933.98035,191.368 12x12 fill #191815 radius 2
       rect 933.98035,206.368 12x12 fill #191815 radius 2
@@ -544,9 +544,16 @@ clip 44,38 1556x936 r 0
       text "12" @1534.8125,250.28801 #7c7566 JetBrains Mono 10.5
       text "+ 1 more · 5 people" @1284,275.218 #7c7566 JetBrains Mono 10.5
     pop
+    rect 78,360.2875 1488x1 fill #24221d
+    text "README.MD" @96,384.9775 #7c7566 JetBrains Mono 9.5
+    text "Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words." @96,410.42126 #b3ab99 Inter 13
+    text "Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words." @96,429.15076 #b3ab99 Inter 13
+    text "Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words." @96,447.88025 #b3ab99 Inter 13
+    text "Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words. Some words." @96,466.60974 #b3ab99 Inter 13
+    text "Some words. Some words." @96,485.33923 #b3ab99 Inter 13
   pop
-  rect 78,64 1488x296.2875 radius 12 stroke 1 #24221d
-  text "open a file with ␣␣ · search with ␣ / · everything with ⌘K" @630.78125,393.5075 #4f4a40 JetBrains Mono 11
+  rect 78,64 1488x438.47498 radius 12 stroke 1 #24221d
+  text "open a file with ␣␣ · search with ␣ / · everything with ⌘K" @630.78125,535.69495 #4f4a40 JetBrains Mono 11
 pop
 rect 0,974 1600x26 fill #0c0c0b
 text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11

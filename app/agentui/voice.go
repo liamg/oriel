@@ -117,16 +117,16 @@ func voiceOptions() []registry.OptionSpec {
 	out := []registry.OptionSpec{
 		{Name: "voice.dictation", Type: registry.Bool, Default: true,
 			Help: "Dictation into long text fields: the mic in each, or ⌘⇧Space (Ctrl⇧Space elsewhere) in one. Off, no field has a mic."},
-		{Name: "voice.model", Type: registry.String, Default: "", Choices: func() []string { return []string{"base.en", "small.en", "medium.en"} },
-			Help: "The Whisper model: base.en, small.en, medium.en or a path to a ggml model. Empty is " + voice.DefaultModel() + ", downloaded in the background when Oriel starts."},
+		{Name: "voice.model", Type: registry.String, Default: voice.DefaultModel(), Choices: func() []string { return []string{"base.en", "small.en", "medium.en"} },
+			Help: "The Whisper model: base.en, small.en, medium.en or a path to a ggml model, downloaded in the background when Oriel starts."},
 		{Name: "voice.url", Type: registry.String, Default: "", Validate: func(v any) error {
 			if s := v.(string); s != "" && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 				return errors.New("the transcription URL must be http:// or https://")
 			}
 			return nil
 		}, Help: "An OpenAI-compatible transcription endpoint used instead of Whisper on this machine: the server, or its /v1/audio/transcriptions."},
-		{Name: "voice.recorder", Type: registry.String, Default: "", Choices: voice.RecorderNames,
-			Help: "A program to capture audio with: one of " + strings.Join(voice.RecorderNames(), ", ") + ". Empty captures in Oriel, else uses the first installed."},
+		{Name: "voice.recorder", Type: registry.String, Default: "oriel", Choices: func() []string { return append([]string{"oriel"}, voice.RecorderNames()...) },
+			Help: "What captures audio: oriel, Oriel itself; or one of " + strings.Join(voice.RecorderNames(), ", ") + "."},
 		{Name: "voice.speech", Type: registry.Enum, Values: []string{"system", "piper", "off"}, Default: "system",
 			Help: "How replies are spoken: system (say, spd-say or espeak), piper (a voice in ~/.oriel/piper), or off."},
 		{Name: "voice.piper_voice", Type: registry.String, Default: "", Choices: func() []string { return voice.Piper{Dir: piperDir()}.Voices() },
@@ -195,7 +195,7 @@ func (x *Voice) mic() voice.Mic {
 	if m := x.Config.Mic; m != nil {
 		return m
 	}
-	return voice.Microphone{Recorder: x.str("voice.recorder")}
+	return voice.Microphone{Recorder: kit.Unless(x.str("voice.recorder"), "oriel")}
 }
 
 func (x *Voice) transcriber() voice.Transcriber {

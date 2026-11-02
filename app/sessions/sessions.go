@@ -50,6 +50,8 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(kit.OnDispose(func() { w.SetApp(host.App{}) }))
 	}
 	x.contributeKinds(h)
+	x.Add(h.Option(registry.OptionSpec{Name: autoNameOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
+		Help: "Name a session started from a request, and the request, with a small model (Claude's Haiku). Off, the name is the request's first words."}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
 	if x.Host != nil {
@@ -372,6 +374,9 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 	}()
 }
 
+// autoNameOption has a small model name the sessions started from a request.
+const autoNameOption = "sessions.auto_name"
+
 // start starts a session and brings it to the front, unless {background}.
 func (x *Sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
 	id, err := x.launch(ctx, a)
@@ -410,6 +415,9 @@ func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID,
 		return "", err
 	}
 	spec := kit.SpecFrom(a)
+	if on, _, _ := x.h.Options().Get(autoNameOption, registry.At{}); on == true && spec.Name == "" {
+		spec.AutoName = true
+	}
 	w, err := x.host()
 	if err != nil {
 		return "", err

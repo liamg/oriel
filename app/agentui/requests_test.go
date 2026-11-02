@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -119,7 +121,7 @@ func runIn(f headless.Frame, s string) (render.Op, bool) {
 }
 
 // Replies render as markdown with no activity or run chips (those stay in the console, where a run opens); only a
-// "tests pass" with no run behind it is flagged.
+// "tests pass" with no run of its turn behind it is flagged.
 func TestRepliesRenderAsMarkdownFlaggingUnbackedClaims(t *testing.T) {
 	r, a, _ := requestsSession(t)
 	newRequest(t, r, a, "Negative values round the wrong way")
@@ -146,6 +148,11 @@ func TestRepliesRenderAsMarkdownFlaggingUnbackedClaims(t *testing.T) {
 	if op, ok := runIn(f, "Floor"); !ok || op.Run.Font.Family != typeset.Mono {
 		t.Errorf("inline code isn't a mono run of its own: %+v", op.Run)
 	}
+	// A later turn that ran no tests isn't backed by this one's.
+	a.Emit(agent.TurnEnd{})
+	r.UntilState("the turn's end", func(st core.State) bool { s, _ := st.Session("w"); return s != nil && !s.Snapshot().Agent.Working })
+	a.Emit(agent.TurnStart{})
+	r.UntilState("the next turn", func(st core.State) bool { s, _ := st.Session("w"); return s != nil && s.Snapshot().Agent.Working })
 	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Tidied the table; tests pass."})
 	r.WaitText("⚠ says tests pass, but no passing test run backs it")
 
@@ -353,4 +360,216 @@ func TestRequestScrollsBack(t *testing.T) {
 	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Reply number 30."})
 	time.Sleep(200 * time.Millisecond)
 	r.Latest("the first reply still in view", func(f headless.Frame) bool { return inView(f, "Reply number 00.") })
+}
+
+// A picture pasted into the composer goes in as a markdown image of a copy in the session's agent folder: the thread
+// shows it, and the agent is handed it. A file dropped from outside the session goes in as a link to a copy there; a
+// file copied from the session's own project is linked where it is.
+func TestComposerTakesPastedPicturesAndFiles(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	r.ClickText("New request")
+	r.WaitText("Write a request")
+	r.ClickText("Write a request")
+	r.TypeText("this looks off ")
+	paste := "<C-v>"
+	if runtime.GOOS == "darwin" {
+		paste = "<D-v>"
+	}
+	r.Win.CopyImage(rig.PNG(t, rig.Photo(40, 30)))
+	r.TypeKeys(paste)
+	inFrame := func(what string) {
+		t.Helper()
+		r.WaitFrame(what, func(s string) bool { return strings.Contains(strings.ReplaceAll(s, "\n", ""), what) })
+	}
+	inFrame("![image](")
+
+	outside := filepath.Join(t.TempDir(), "notes.txt")
+	os.WriteFile(outside, []byte("hi"), 0o644)
+	r.DropFiles("this looks off ", outside)
+	inFrame("[notes.txt](")
+	own := filepath.Join(projectDir(t, r), "round.go")
+	os.WriteFile(own, []byte("package pricing\n"), 0o644)
+	r.Win.CopyFiles(own)
+	r.TypeKeys(paste)
+	inFrame("[round.go](" + own + ")")
+	r.TypeKeys("<CR>")
+
+	in := a.WaitSent(t)
+	var th core.Thread
+	r.UntilState("the request", func(st core.State) bool {
+		se, _ := st.Session("w")
+		for _, x := range se.Snapshot().Threads {
+			if len(x.Comments) > 0 && strings.HasPrefix(x.Comments[0].Body, "this looks off") {
+				th = x
+				return true
+			}
+		}
+		return false
+	})
+	cm := th.Comments[0]
+	if len(cm.Images) != 1 || !strings.Contains(cm.Images[0], filepath.Join("agent", "attachments")) {
+		t.Fatalf("images: %q, body %q", cm.Images, cm.Body)
+	}
+	if b, err := os.ReadFile(cm.Images[0]); err != nil || len(b) == 0 {
+		t.Errorf("the picture wasn't kept: %v", err)
+	}
+	if !strings.Contains(in.Text, `<image path="`+cm.Images[0]+`"/>`) && !strings.Contains(in.Text, "<image path="+cm.Images[0]+"/>") {
+		t.Errorf("the agent wasn't handed the picture:\n%s", in.Text)
+	}
+	copied := regexp.MustCompile(`\[notes\.txt\]\(([^)]+)\)`).FindStringSubmatch(cm.Body)
+	if copied == nil || copied[1] == outside {
+		t.Fatalf("the dropped file wasn't copied: %q", cm.Body)
+	}
+	if b, _ := os.ReadFile(copied[1]); string(b) != "hi" {
+		t.Errorf("the copy holds %q", b)
+	}
+	r.WaitFrame("the picture in the thread", func(s string) bool { return !strings.Contains(s, "pasted ·") })
+}
+
+// Right-click a session's tab or a request's tab, Rename…, type, ⏎: the session or the request has the new name.
+func TestRenameFromTabMenus(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	newRequest(t, r, a, "Negative values round the wrong way")
+	th := threadWith(t, r, "Negative values round the wrong way")
+
+	r.RightClickText("w")
+	r.WaitText("Rename…")
+	r.ClickTop("Rename…")
+	r.TypeKeys("<D-a>")
+	r.TypeText("Rounding")
+	r.TypeKeys("<CR>")
+	r.UntilState("the session renamed", func(st core.State) bool {
+		se, _ := st.Session("w")
+		return se != nil && se.Name() == "Rounding"
+	})
+
+	r.WaitText("Negative values round the wrong …") // the request's tab
+	r.RightClickText("Negative values round the wrong …")
+	r.WaitText("Rename…")
+	r.ClickTop("Rename…")
+	r.TypeKeys("<D-a>")
+	r.TypeText("Negatives round down")
+	r.TypeKeys("<CR>")
+	r.UntilState("the request renamed", func(st core.State) bool {
+		se, _ := st.Session("w")
+		t, ok := se.Snapshot().Thread(th.ID)
+		return ok && t.Title == "Negatives round down"
+	})
+}
+
+// A comment's ⋯, shown under the pointer: Copy takes its text as it reads, Copy as markdown its source, and View
+// markdown shows the source in a dialog.
+func TestCommentMenu(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	newRequest(t, r, a, "Round **half** to `even`")
+	r.WaitText("half")
+	p := r.TextPoint("half")
+	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+	r.WaitText("⋯")
+	r.ClickAccess("Comment actions")
+	r.WaitText("Copy as markdown")
+	r.ClickTop("Copy")
+	waitClip(t, r, "Round half to even")
+	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+	r.WaitText("⋯")
+	r.ClickAccess("Comment actions")
+	r.ClickTop("Copy as markdown")
+	waitClip(t, r, "Round **half** to `even`")
+	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+	r.WaitText("⋯")
+	r.ClickAccess("Comment actions")
+	r.ClickTop("View markdown")
+	r.WaitText("Round **half** to `even`")
+	r.TypeKeys("<Esc>")
+	r.WaitGone("Round **half** to `even`")
+}
+
+// waitClip waits for the clipboard to hold want.
+func waitClip(t *testing.T, r *apptest.Window, want string) {
+	t.Helper()
+	for deadline := time.Now().Add(5 * time.Second); r.Win.Clipboard() != want; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("the clipboard holds %q, want %q", r.Win.Clipboard(), want)
+		}
+	}
+}
+
+// A closed request's comments say what became of them: an old progress note isn't "working on it", and a comment the
+// agent never had says it was never sent rather than "queued".
+func TestClosedRequestsChipsAreNotStale(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	th := core.Thread{ID: "t1", Status: core.ThreadResolved, Comments: []core.Comment{
+		{ID: "c1", Author: core.AuthorYou, Body: "fix the rounding", Delivered: true},
+		{ID: "c2", Author: core.AuthorAgent, Name: "fake", Body: "on it", Progress: true},
+		{ID: "c3", Author: core.AuthorYou, Body: "and the zero case"},
+		{ID: "c4", Author: core.AuthorAgent, Name: "fake", Body: "Done."},
+	}}
+	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Agent: core.AgentState{Provider: "fake"},
+		Threads: []core.Thread{th}}})
+	s.Store().Apply(core.SessionFocused{ID: "w"})
+	s.Run("request.open", registry.Args{"thread": "t1"})
+	s.Until("the request", func() bool { return s.Has("and the zero case", "Done.") })
+	if s.Has("WORKING ON IT") || s.Has("QUEUED") {
+		t.Errorf("a closed request shows live chips:\n%s", s.Text())
+	}
+	if !s.Has("NEVER SENT: CLOSED FIRST") {
+		t.Errorf("the comment the agent never had doesn't say so:\n%s", s.Text())
+	}
+}
+
+// A message still queued behind the agent's turn: ⋯ Edit puts it back in the composer and sending replaces it; ↑ in
+// an empty composer does the same for the last one; ⋯ Delete takes out that one alone.
+func TestQueuedMessagesEditAndDelete(t *testing.T) {
+	r, a, _ := requestsSession(t)
+	newRequest(t, r, a, "Negative values round the wrong way")
+	th := threadWith(t, r, "Negative values round the wrong way")
+	selectAll := "<C-a>"
+	if runtime.GOOS == "darwin" {
+		selectAll = "<D-a>"
+	}
+	a.Emit(agent.TurnStart{})
+	r.WaitText("FAKE · WORKING")
+	for _, m := range []string{"check the zero case", "and the docs"} {
+		r.ClickText("Reply, or ask more")
+		r.TypeText(m)
+		r.TypeKeys("<CR>")
+		r.WaitText(m)
+	}
+	comments := func(st core.State) []string {
+		var out []string
+		se, _ := st.Session("w")
+		t2, _ := se.Snapshot().Thread(th.ID)
+		for _, c := range t2.Comments {
+			out = append(out, c.Body)
+		}
+		return out
+	}
+	menu := func(text, item string) {
+		t.Helper()
+		r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: r.TextPoint(text)})
+		r.WaitText("⋯")
+		r.ClickAccess("Comment actions")
+		r.WaitText(item)
+		r.ClickTop(item)
+	}
+	menu("check the zero case", "Edit")
+	r.WaitText("Editing your queued message: send replaces it")
+	r.TypeKeys(selectAll)
+	r.TypeText("check zero and -0")
+	r.TypeKeys("<CR>")
+	r.UntilState("the edit", func(st core.State) bool { c := comments(st); return len(c) == 3 && c[1] == "check zero and -0" })
+
+	r.ClickText("Reply, or ask more")
+	r.TypeKeys("<Up>")
+	r.WaitText("Editing your queued message: send replaces it")
+	r.TypeKeys(selectAll)
+	r.TypeText("and the README")
+	r.TypeKeys("<CR>")
+	r.UntilState("the last one edited", func(st core.State) bool { c := comments(st); return len(c) == 3 && c[2] == "and the README" })
+
+	menu("check zero and -0", "Delete")
+	r.UntilState("the one deleted", func(st core.State) bool {
+		c := comments(st)
+		return len(c) == 2 && c[1] == "and the README"
+	})
 }

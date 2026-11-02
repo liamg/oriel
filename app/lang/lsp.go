@@ -41,6 +41,7 @@ type LSP struct {
 	WorkDir string                           // the project the window is open on
 	Version string                           // Oriel's, as servers are told it
 	Logger  func(source string) *slog.Logger // a server's stderr goes to the log as source
+	Servers func(lsp.ServerSpec) bool        // which servers may start, of those installed; every one if nil
 	h       plugin.Host
 	m       *lsp.Manager
 	work    kit.Work
@@ -89,7 +90,12 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 		s.Source = "builtin:lsp"
 		x.Add(h.Contribute(reglang.LSPServer(s)))
 	}
+	installed := lsp.Installed
+	if allow := x.Servers; allow != nil {
+		installed = func(s lsp.ServerSpec) bool { return allow(s) && lsp.Installed(s) }
+	}
 	x.m = lsp.NewManager(lsp.ManagerOptions{
+		Installed: installed,
 		Servers: func() []lsp.ServerSpec {
 			var out []lsp.ServerSpec
 			for _, s := range reglang.LSPServers(h) {

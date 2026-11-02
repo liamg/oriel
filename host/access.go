@@ -33,11 +33,14 @@ type Access interface {
 	Ask(ctx context.Context, r AskReq) (Verdict, error)
 	Comment(ctx context.Context, r CommentReq) (core.ThreadID, error)
 	SetThread(r ThreadReq) error
+	EditQueued(r QueuedReq) error
+	Unqueue(r UnqueueReq) error
 	Workspace(ctx context.Context, id core.SessionID) (Workspace, error)
 	Terminal(ctx context.Context, id core.SessionID) (<-chan []byte, error)
 	TermInput(r TermReq) error
 	ProviderInfo(ctx context.Context) []ProviderInfo
 	StartUtility(ctx context.Context, spec UtilitySpec) (*Utility, error)
+	Attach(r AttachReq) (string, error)
 	SetPrompts(o prompts.Overrides) error
 	HandOver()
 

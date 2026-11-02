@@ -75,21 +75,18 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	}
 	working, resolve := a.Bool("working"), a.Bool("resolve")
 	h.mu.Lock()
-	runs := h.runs
-	if !working {
-		h.runs = nil
-	}
+	runs := slices.Clone(h.runs)
 	h.mu.Unlock()
 	c := core.Comment{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: h.r.env.Now().UTC(),
-		Progress: working, Model: modelLabel(se.Agent), Draft: t.Hosted != nil && !working}
+		Progress: working, Model: modelLabel(se.Agent, h.ranModel()), Draft: t.Hosted != nil && !working}
 	if !working {
 		c.Evidence, c.Unbacked = evidence(se, body, runs)
 	}
 	_, err = h.r.mutateThread(h.id, t.ID, func(t *core.Thread) error {
 		t.Comments = append(t.Comments, c)
-		t.Busy = working
+		t.Busy, t.Active = working, working
 		if resolve {
-			t.Status, t.Busy = core.ThreadResolved, false
+			t.Status, t.Busy, t.Active = core.ThreadResolved, false, false
 		}
 		return nil
 	})
@@ -124,13 +121,16 @@ func evidence(se core.SessionState, body string, runs []string) ([]core.Evidence
 			cited = append(cited, m[1])
 		}
 	}
+	// The reply shows the runs it cites, else the turn's last; a claim is backed by any of them, else any of the turn's
+	// that passed tests, so a reply after another one, or after a run whose other packages failed, isn't flagged.
+	shown, backing := runs, runs
 	if len(cited) > 0 {
-		runs = cited
+		shown, backing = cited, cited
 	} else if len(runs) > 1 {
-		runs = runs[len(runs)-1:]
+		shown = runs[len(runs)-1:]
 	}
 	var out []core.Evidence
-	for _, id := range runs {
+	for _, id := range shown {
 		r, ok := se.Run(id)
 		if !ok {
 			continue
@@ -144,7 +144,7 @@ func evidence(se core.SessionState, body string, runs []string) ([]core.Evidence
 	if !claimsPass.MatchString(body) {
 		return out, ""
 	}
-	if !slices.ContainsFunc(out, func(e core.Evidence) bool { return e.OK }) {
+	if !slices.ContainsFunc(backing, func(id string) bool { r, ok := se.Run(id); return ok && (r.OK || r.Passed > 0) }) {
 		return out, "says tests pass, but no passing test run backs it"
 	}
 	return out, ""
@@ -192,7 +192,7 @@ func (h *session) toolComment(_ context.Context, raw json.RawMessage) (string, e
 	now := h.r.env.Now().UTC()
 	t := core.Thread{ID: core.ThreadID(hostcore.NewID(8)), Status: core.ThreadOpen, Created: now, Updated: now,
 		Comments: []core.Comment{{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body, Time: now,
-			Severity: a.Str("severity"), Model: modelLabel(se.Agent), Delivered: true}}}
+			Severity: a.Str("severity"), Model: modelLabel(se.Agent, h.ranModel()), Delivered: true}}}
 	if f := a.Str("file"); f != "" {
 		line := max(1, a.Int("line"))
 		t.Anchor = &core.Anchor{Project: a.Str("project"), File: f, Line: line, EndLine: a.Int("end_line"), Side: a.Str("side")}
@@ -249,6 +249,12 @@ func (h *session) toolTaskUpdate(_ context.Context, raw json.RawMessage) (string
 	}
 	if err := h.r.st.Emit(core.TaskChanged{Session: h.id, Task: t}); err != nil {
 		return "", err
+	}
+	if t.Status == core.TaskInProgress && t.Thread != "" {
+		_, _ = h.r.mutateThread(h.id, t.Thread, func(th *core.Thread) error {
+			th.Active = th.Busy
+			return nil
+		})
 	}
 	return "task " + t.ID + " " + string(t.Status), nil
 }

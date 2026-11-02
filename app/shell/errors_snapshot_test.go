@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 )
 
 const luaTrace = `stack traceback:
@@ -195,4 +196,45 @@ func TestLogRowClickExpands(t *testing.T) {
 	if shell.LogOpenRow(s.Headless) != "" {
 		t.Error("a second click didn't fold it")
 	}
+}
+
+// The crash report is offered once a launch: a session switch, which starts every plugin again, doesn't offer it again.
+func TestCrashOfferedOnceALaunch(t *testing.T) {
+	dir, a, b := t.TempDir(), t.TempDir(), t.TempDir()
+	if _, err := shell.WriteCrash(dir, shell.Crash{Time: apptest.At(18, 42, 0), Version: "v0.4.2", Panic: "boom", Report: "panic: boom"}); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{CrashDir: dir, WorkDir: a})
+	s.Frame()
+	if !strings.Contains(s.Text(), "Oriel quit unexpectedly last time") {
+		t.Fatalf("no crash report at launch:\n%s", s.Text())
+	}
+	s.ClickText("Close")
+	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "billing", Name: "billing", Kind: core.KindWork, Status: core.StatusQuiet, Dir: b}})
+	s.Store().Apply(core.SessionFocused{ID: "billing"})
+	reopened := false
+	for range 3 {
+		s.RunQueued()
+		reopened = s.Reopen() || reopened
+	}
+	if !reopened {
+		t.Fatal("the window didn't reopen on the session")
+	}
+	s.Frame()
+	if strings.Contains(s.Text(), "Oriel quit unexpectedly last time") {
+		t.Errorf("crash report offered again after a reopen:\n%s", s.Text())
+	}
+}
+
+// A toast that goes by itself can still be closed before its time, by its ✕.
+func TestTimedToastCloses(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	s.Store().Apply(core.Notified{Notice: core.Notice{ID: "saved", Severity: core.SevInfo, Source: "core", Text: "Saved the thing", Time: s.Now}})
+	s.Until("the toast", func() bool { return s.Has("Saved the thing") })
+	b := s.FindRole(render.RoleButton, "Dismiss")
+	if b == nil {
+		t.Fatalf("the timed toast has no ✕:\n%s", s.Text())
+	}
+	s.Click(render.Point{X: (b.Bounds.Min.X + b.Bounds.Max.X) / 2, Y: (b.Bounds.Min.Y + b.Bounds.Max.Y) / 2}, 0)
+	s.Until("the toast gone", func() bool { return !s.Has("Saved the thing") })
 }

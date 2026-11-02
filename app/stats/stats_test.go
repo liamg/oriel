@@ -546,3 +546,22 @@ func TestUsageTierChip(t *testing.T) {
 		t.Error("the switcher gave Codex's account a badge")
 	}
 }
+
+// Hovering the chart or a row names the series over the chart without moving anything: what's under the pointer
+// stays under it, frame after frame.
+func TestStatsHoverKeepsTheLayout(t *testing.T) {
+	s, _, x := statsScene(t)
+	s.Press("<D-S>")
+	settle(s, x)
+	chart := s.Node("Cost per repo per day").Bounds
+	for y := chart.Min.Y; y < chart.Max.Y+120; y += 6 {
+		p := render.Point{X: (chart.Min.X + chart.Max.X) / 2, Y: y}
+		s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+		for range 3 {
+			s.Frame()
+		}
+		if got := s.Node("Cost per repo per day").Bounds; got != chart {
+			t.Fatalf("hovering %v moved the chart from %v to %v", p, chart, got)
+		}
+	}
+}

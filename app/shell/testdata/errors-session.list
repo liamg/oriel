@@ -29,7 +29,18 @@ clip 0,38 43x936 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 3 segments stroke 1.4545455 #7c7566
-  rect 9.5,208 24x1 fill #332f27
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -41,17 +52,6 @@ clip 0,38 43x936 r 0
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
-  path 6 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
-  path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #4f4a40
   path 2 segments stroke 1.4545455 #4f4a40
   path 4 segments stroke 1.4545455 #4f4a40
@@ -263,9 +263,10 @@ text "✕" @16,990.95996 #ff5f6d JetBrains Mono 11
 text "1" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #ff9b45 JetBrains Mono 11
 text "1" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-rect 1144,12 440x60.664513 fill #121210 radius 8 stroke 1 #ff9b458c
-rect 1158,26.77 7x7 fill #ff9b45 radius 3.5
-text "GOPLS RESTARTED" @1173,33.69 #ff9b45 JetBrains Mono 9.5
-text "lsp · pricing-rounding" @1290.95,33.69 #7c7566 JetBrains Mono 9.5
-text "1s" @1558,33.69 #7c7566 JetBrains Mono 9.5
-text "exited (signal: killed) · restarted in 0.4s" @1158,57.649376 #ece6d8 Inter 12.5
+rect 1144,12 440x61.434082 fill #121210 radius 8 stroke 1 #ff9b458c
+rect 1158,27.154785 7x7 fill #ff9b45 radius 3.5
+text "GOPLS RESTARTED" @1173,34.074783 #ff9b45 JetBrains Mono 9.5
+text "lsp · pricing-rounding" @1290.95,34.074783 #7c7566 JetBrains Mono 9.5
+text "1s" @1539.4062,34.074783 #7c7566 JetBrains Mono 9.5
+text "✕" @1561.4062,34.65625 #7c7566 Inter 11
+text "exited (signal: killed) · restarted in 0.4s" @1158,58.418945 #ece6d8 Inter 12.5

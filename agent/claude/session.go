@@ -52,9 +52,10 @@ type session struct {
 	seq      int
 	base     transcript.Usage // the tally when the running turn started
 	screen   screen
-	shown    string // the end of the terminal's text, for saying what was on screen
-	usageErr string // why $.session.usage() last failed; "" when it didn't
-	out      bool   // its login has been said to be gone, and not seen back
+	shown    string    // the end of the terminal's text, for saying what was on screen
+	usageErr string    // why $.session.usage() last failed; "" when it didn't
+	out      bool      // its login has been said to be gone, and not seen back
+	heard    time.Time // the mod's last call: it long-polls, so it calls at least each waitPoll
 	once     sync.Once
 }
 
@@ -65,7 +66,17 @@ func (s *session) ID() string {
 }
 
 func (s *session) Events() <-chan agent.Event { return s.events.Out() }
-func (s *session) Terminal() agent.Terminal   { return s.term }
+
+// quiet is how long the mod may go without a call before the session counts as not answering: a few polls.
+const quiet = 3*waitPoll + 15*time.Second
+
+// Responsive says the mod has called lately: since the start, at the latest.
+func (s *session) Responsive() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.heard.IsZero() || time.Since(s.heard) < quiet
+}
+func (s *session) Terminal() agent.Terminal { return s.term }
 
 // queueCmd hands the mod something to do at its next wait.
 func (s *session) queueCmd(c ...waitOut) {
@@ -351,6 +362,9 @@ func decode[T any](body json.RawMessage) (T, error) {
 
 // handle answers one hook call. undo puts back what a call took when its answer couldn't be delivered.
 func (s *session) handle(ctx context.Context, op string, body json.RawMessage) (out any, undo func(), err error) {
+	s.mu.Lock()
+	s.heard = time.Now()
+	s.mu.Unlock()
 	switch op {
 	case opHello:
 		in, err := decode[helloIn](body)
@@ -516,6 +530,8 @@ func (s *session) event(in eventIn) {
 	case "subagent-end":
 		s.tail.flush(s.push)
 		s.push(agent.Subagent{ID: in.ID, Done: true, Result: in.Text})
+	case "tools-lost":
+		s.push(agent.Stale{Why: "its CLI dropped " + strings.Join(in.Servers, ", ")})
 	case "api-error":
 		msg := in.Error
 		if in.Text != "" {
@@ -711,7 +727,7 @@ func fromEntry(e transcript.Entry) agent.Event {
 		}
 		return agent.Message{ID: e.ID, Role: core.ItemSystem, Text: "The " + e.Tool + " plugin: " + e.Text, Agent: e.Agent}
 	case transcript.ToolUse:
-		return agent.ToolCall{ID: e.ID, Tool: e.Tool, Input: e.Input, Agent: e.Agent}
+		return agent.ToolCall{ID: e.ID, Tool: e.Tool, Input: e.Input, Agent: e.Agent, Model: e.Model}
 	case transcript.ToolResult:
 		return agent.ToolResult{ID: e.ID, Output: e.Text, IsError: e.IsError, Diff: e.Diff}
 	}

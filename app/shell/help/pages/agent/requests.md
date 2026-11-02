@@ -30,10 +30,20 @@ Starts a request that isn't anchored to a line (`⌘N` in the list). It goes to 
 
 ## Request
 
-The anchored code at the top, where it is now (it follows edits), then the conversation: your prompt as markdown with
+Its tab carries its name; the header shows only its state. Right-click the tab for **Rename…**, which edits the name
+in the header. A session started from a request is named by a small model
+(Claude's Haiku), and its first request shares the name; `sessions.auto_name` turns that off. The anchored code at the top, where it is now (it follows edits), then the conversation: your prompt as markdown with
 what you pasted, and the agent's replies. **Open in editor** goes to the anchor; **Resolve** closes the request and
 completes the tasks it asked for. At the right: where it is and who has it, the files it changed, the tasks and
 requests it spawned, and other requests about the same file.
+
+## Comments {#comments}
+
+A comment's **⋯**, at its top right while the pointer is over it: **Copy** takes its text as it reads, **Copy as
+markdown** its source, and **View markdown** shows the source in a dialog. While a message of yours waits for the agent
+(queued), the menu also has **Edit**, which puts it back in the composer (sending replaces it, the messages after it
+staying where they are), and **Delete**, which takes out that message alone. `↑` in an empty composer edits your last
+queued message.
 
 ## Evidence
 
@@ -45,6 +55,11 @@ console, where a click opens one: the command, who ran it, what failed and what 
 Write to the request: `⏎` sends, `⇧⏎` starts a new line, and the agent gets it at once when it's idle, or when its turn ends. **@ FILE** and
 **# SYMBOL** open a picker, where `⌃a` attaches what you pick; a terminal's output and a failing test attach the same
 way. `⌘⏎` sends now, interrupting the turn.
+
+Paste a screenshot (`⌘V`) and it goes in as a markdown image: the thread shows it and the agent is handed it. Paste
+files copied in Finder or the file manager, or drop them on the box, and each goes in as a link; a picture goes in as
+an image. A file from outside the session is copied into the session's agent folder first, so a sandboxed agent can
+read it too. Threads between the editor's lines take them the same way.
 
 ## Urgent
 

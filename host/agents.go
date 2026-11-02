@@ -18,10 +18,24 @@ func (w *Host) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err 
 	return w.run.Comment(ctx, r)
 }
 
-// SetThread changes a thread's status. Resolving one completes the tasks it asked for.
+// SetThread changes a thread's status or title. Resolving one completes the tasks it asked for.
 func (w *Host) SetThread(r ThreadReq) (err error) {
 	defer w.recover("SetThread", &err)
 	return w.run.SetThread(r)
+}
+
+// EditQueued changes or deletes a comment of the user's the agent hasn't been given yet.
+func (w *Host) EditQueued(r QueuedReq) (err error) {
+	defer w.recover("EditQueued", &err)
+	err = w.run.EditQueued(r)
+	w.restatus(r.Session)
+	return err
+}
+
+// Unqueue takes a message for the agent out of the queue before it's sent.
+func (w *Host) Unqueue(r UnqueueReq) (err error) {
+	defer w.recover("Unqueue", &err)
+	return w.run.Unqueue(r)
 }
 
 // SetTask adds or changes a task from the app.

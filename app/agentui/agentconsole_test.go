@@ -304,3 +304,100 @@ func TestConsoleScrollsBack(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 	r.Latest("the start still in view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
 }
+
+// A tool call's ⤢ and an ask's Details open it in full: the whole command, its input, a spinner until its result
+// lands, then the result; an ask's dialog answers it as its card does.
+func TestDetailsShowCallsAndAsksInFull(t *testing.T) {
+	r, a, _ := apptest.ConsoleWindow(t)
+	long := "go test ./internal/api/... -run 'TestUsage|TestLimits|TestRetryAfter|TestBurst|TestWindowReset|TestQuota' -count=1 -v"
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.ToolCall{ID: "t1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": long})})
+	r.WaitText("Bash")
+	r.ClickAccess("Show in full")
+	r.WaitText("TOOL CALL · BASH")
+	r.WaitText("waiting for the result…")
+	r.WaitFrame("the whole command", func(s string) bool {
+		return strings.Contains(strings.ReplaceAll(s, "\n", ""), "TestQuota' -count=1 -v")
+	})
+	a.Emit(agent.ToolResult{ID: "t1", Output: "ok  \tapi\t0.4s\n"})
+	r.WaitText("RESULT")
+	r.WaitGone("waiting for the result…")
+	r.TypeKeys("<Esc>")
+	r.WaitGone("TOOL CALL · BASH")
+
+	allow := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": long})})
+	r.WaitText("Fake wants to run a command")
+	r.ClickText("Details")
+	r.WaitText("ASK · PERMISSION")
+	r.WaitText("INPUT")
+	r.ClickTop("Allow once")
+	if d := waitDecision(t, allow); !d.Allow {
+		t.Errorf("the dialog's Allow once answered %+v", d)
+	}
+	r.WaitGone("ASK · PERMISSION")
+}
+
+// A message queued behind the agent's turn has a ✕ that takes it back before the agent gets it; the rest still go.
+func TestQueuedConsoleMessageCancels(t *testing.T) {
+	r, a, _ := apptest.ConsoleWindow(t)
+	a.Emit(agent.TurnStart{})
+	r.WaitText("WORKING")
+	r.TypeKeys("i")
+	for _, m := range []string{"also check routes.go", "and the middleware"} {
+		r.TypeText(m)
+		r.TypeKeys("<CR>")
+		r.WaitText(m)
+	}
+	r.WaitFrame("both queued", func(s string) bool { return strings.Count(s, "QUEUED") == 2 })
+	r.ClickAccess("Cancel queued: also check routes.go")
+	r.WaitGone("also check routes.go")
+	a.Emit(agent.TurnEnd{})
+	if in := a.WaitSent(t); in.Text != "and the middleware" {
+		t.Errorf("sent %q", in.Text)
+	}
+	a.NoneSent(t)
+}
+
+// A queued message's edit takes it out of the queue into the composer, focused, to send again once changed.
+func TestQueuedConsoleMessageEdits(t *testing.T) {
+	r, a, _ := apptest.ConsoleWindow(t)
+	a.Emit(agent.TurnStart{})
+	r.WaitText("WORKING")
+	r.TypeKeys("i")
+	r.TypeText("also check routes.go")
+	r.TypeKeys("<CR>")
+	r.WaitText("QUEUED")
+	r.ClickText("edit")
+	r.WaitGone("QUEUED")
+	r.TypeText(" and the tests")
+	r.TypeKeys("<CR>")
+	r.WaitText("QUEUED")
+	a.Emit(agent.TurnEnd{})
+	if in := a.WaitSent(t); in.Text != "also check routes.go and the tests" {
+		t.Errorf("sent %q", in.Text)
+	}
+}
+
+// A permission that comes while you type in a text field waits for you to stop before it goes over the window, at
+// the top: it doesn't cover what you're writing or catch a key meant for it.
+func TestAskWaitsForTypingToStop(t *testing.T) {
+	r, a, _ := apptest.ConsoleWindow(t)
+	r.TypeKeys("<D-A>")
+	r.WaitGone("SESSION STATS")
+	r.TypeKeys("<D-R>")
+	r.ClickText("New request")
+	r.WaitText("Write a request")
+	r.ClickText("Write a request")
+	r.TypeText("round")
+	r.WaitText("round")
+	a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "curl example.com"})})
+	for _, ch := range " half even" {
+		r.TypeText(string(ch))
+		time.Sleep(80 * time.Millisecond)
+		if fs := r.Win.Frames(); len(fs) > 0 && strings.Contains(fs[len(fs)-1].Text(), "$ curl example.com") {
+			t.Fatal("the card went over the window while typing")
+		}
+	}
+	r.WaitFrame("the card, once typing stopped", func(s string) bool { return apptest.HasAll(s, "W · PERMISSION", "$ curl example.com") })
+	r.WaitText("round half even") // nothing typed went anywhere else
+}

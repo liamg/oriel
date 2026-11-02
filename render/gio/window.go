@@ -20,6 +20,7 @@ import (
 	"gioui.org/unit"
 
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/osclip"
 	"github.com/liamg/oriel/render/typeset"
 )
 
@@ -144,6 +145,12 @@ func (w *Window) ReadClipboard() (string, bool) {
 }
 
 var _ render.Clipboard = (*Window)(nil)
+
+var _ render.ClipboardFiles = (*Window)(nil)
+
+func (w *Window) ReadClipboardFiles() []string { return osclip.Files() }
+
+func (w *Window) ReadClipboardImage() ([]byte, bool) { return osclip.Image() }
 
 // SetClipboard puts text on the system clipboard on the next frame.
 func (w *Window) SetClipboard(text string) {
@@ -297,6 +304,11 @@ func (w *Window) loop() {
 	defer occl.close()
 	hover := &hoverWatcher{}
 	defer hover.close()
+	drops := &dropWatcher{on: func(paths []string, x, y float64) {
+		size := w.Size()
+		w.post(render.DropEvent{Pos: render.Point{X: float32(x) * size.X, Y: float32(y) * size.Y}, Paths: paths})
+	}}
+	defer drops.close()
 	var ops op.Ops
 	f := NewFrame()
 	tag := new(int)
@@ -404,6 +416,7 @@ func (w *Window) loop() {
 			occl.view(e)
 			side.view(e)
 			hover.view(e)
+			drops.view(e)
 			w.ax.bridge.view(e)
 			if w.pl.view(e) {
 				viewed = true

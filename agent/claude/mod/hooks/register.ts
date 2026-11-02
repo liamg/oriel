@@ -16,6 +16,8 @@ type State = {
   subagents: Set<string>
   // background is the work the turn ending left running, from its Stop hook: it wakes the session again.
   background: unknown[]
+  // servers are Oriel's MCP servers the session has had (oriel-gw, from mcp__oriel-gw__…).
+  servers: Set<string>
 }
 
 // clip bounds what an event carries: Oriel shows it, it doesn't need it whole.
@@ -58,9 +60,52 @@ async function fork($: EngineInterface, st: State, id: string, prompt: string) {
   await host($, st, 'fork-answer', answer)
 }
 
+// connect says hello to Oriel and registers the tools it offers.
+async function connect($: EngineInterface, st: State) {
+  const out = await host($, st, 'hello', { sessionId: st.sessionId, cwd: st.cwd })
+  const tools = Array.isArray(out?.tools) ? (out.tools as Args[]) : []
+  for (const t of tools) {
+    const name = String(t.name)
+    const reg = await $.tool
+      .register({
+        name,
+        description: String(t.description ?? ''),
+        inputSchema: (t.inputSchema as Record<string, unknown>) ?? { type: 'object' },
+      })
+      .catch(() => undefined)
+    st.tools.set(reg?.tool ?? `mcp__oriel__${name}`, name)
+  }
+}
+
+// servers are the MCP servers named in tool names: mcp__<server>__<tool>.
+function servers(names: string[]): Set<string> {
+  const out = new Set<string>()
+  for (const n of names) {
+    const m = /^mcp__(.+?)__/.exec(n)
+    if (m) out.add(m[1])
+  }
+  return out
+}
+
+// heal puts back what Claude Code dropped (a /login reconnects every MCP server): Oriel's own tools are registered
+// again; an Oriel server that's gone only a restart brings back, so Oriel is told.
+async function heal($: EngineInterface, st: State) {
+  const names = await $.tool
+    .list()
+    .then(ts => ts.map(t => t.name))
+    .catch(() => undefined)
+  if (!names) return
+  if ([...st.tools.keys()].some(n => !names.includes(n))) await connect($, st)
+  const now = servers(names)
+  const lost = [...st.servers].filter(s => !now.has(s))
+  for (const s of now) if (s.startsWith('oriel-')) st.servers.add(s)
+  if (lost.length > 0) await event($, st, { kind: 'tools-lost', servers: lost })
+}
+
 // poll long-polls Oriel for what to do next: a prompt to submit, a turn to abort, a question to fork.
 async function poll($: EngineInterface, st: State) {
   for (;;) {
+    await heal($, st)
     const out = await host($, st, 'wait', {}, 90_000)
     if (!out) {
       await $.clock.sleep(5_000)
@@ -129,6 +174,7 @@ export function register(on: On): void {
     tools: new Map(),
     subagents: new Set(),
     background: [],
+    servers: new Set(),
   }
 
   on('session.start', async ($, e, next) => {
@@ -139,19 +185,7 @@ export function register(on: On): void {
     st.sessionId = await $.session.id()
     st.bin = (await $.env.get('ORIEL_BIN')) || 'oriel'
     st.sock = (await $.env.get('ORIEL_HOOK_SOCK')) || ''
-    const out = await host($, st, 'hello', { sessionId: st.sessionId, cwd: st.cwd })
-    const tools = Array.isArray(out?.tools) ? (out.tools as Args[]) : []
-    for (const t of tools) {
-      const name = String(t.name)
-      const reg = await $.tool
-        .register({
-          name,
-          description: String(t.description ?? ''),
-          inputSchema: (t.inputSchema as Record<string, unknown>) ?? { type: 'object' },
-        })
-        .catch(() => undefined)
-      st.tools.set(reg?.tool ?? `mcp__oriel__${name}`, name)
-    }
+    await connect($, st)
     void poll($, st)
     return r
   })

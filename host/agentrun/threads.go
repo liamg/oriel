@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -91,11 +92,14 @@ func (x *Runner) SetThread(r ThreadReq) (err error) {
 		if r.Status != "" {
 			t.Status = r.Status
 			if r.Status != core.ThreadOpen {
-				t.Busy = false
+				t.Busy, t.Active = false, false
 			}
 		}
 		if r.Urgent != nil {
 			t.Urgent = *r.Urgent
+		}
+		if r.Title != "" {
+			t.Title = r.Title
 		}
 		return nil
 	})
@@ -149,7 +153,7 @@ func (x *Runner) answerBtw(id core.SessionID, tid core.ThreadID) {
 	}
 	_, _ = x.mutateThread(id, tid, func(t *core.Thread) error {
 		t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: body,
-			Time: x.env.Now().UTC(), Btw: true, Model: modelLabel(se.Agent)})
+			Time: x.env.Now().UTC(), Btw: true, Model: modelLabel(se.Agent, "")})
 		return nil
 	})
 	hostcore.Restatus(x.st, id)
@@ -181,8 +185,27 @@ func btwPrompt(t core.Thread) string {
 	return strings.Join(parts, "\n\n")
 }
 
-func modelLabel(a core.AgentState) string {
-	return strings.TrimSpace(strings.Join(slices.DeleteFunc([]string{a.Model, a.Effort}, func(s string) bool { return s == "" }), " · "))
+func modelLabel(a core.AgentState, ran string) string {
+	model := a.Model
+	if name := ModelName(ran); name != "" {
+		model = name
+	}
+	return strings.TrimSpace(strings.Join(slices.DeleteFunc([]string{model, a.Effort}, func(s string) bool { return s == "" }), " · "))
+}
+
+var modelID = regexp.MustCompile(`^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?$`)
+
+// ModelName is a model's id as people say it: claude-opus-5-5 is "Opus 5.5"; "" for an id it can't read.
+func ModelName(id string) string {
+	m := modelID.FindStringSubmatch(id)
+	if m == nil {
+		return ""
+	}
+	name := strings.ToUpper(m[1][:1]) + m[1][1:] + " " + m[2]
+	if m[3] != "" {
+		name += "." + m[3]
+	}
+	return name
 }
 
 // SetTask adds or changes a task from the app.

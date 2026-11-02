@@ -39,6 +39,7 @@ type Manager struct {
 	clients map[clientKey]*Client
 	starts  map[clientKey]*start
 	docs    map[string]*openDoc
+	closed  bool // shut down: a server still starting is stopped as it comes up, and none starts after
 }
 
 type clientKey struct{ server, root string }
@@ -58,6 +59,9 @@ type openDoc struct {
 func NewManager(o ManagerOptions) *Manager {
 	return &Manager{opts: o, clients: map[clientKey]*Client{}, starts: map[clientKey]*start{}, docs: map[string]*openDoc{}}
 }
+
+// ErrShutDown is a server asked for after the manager has shut down.
+var ErrShutDown = errors.New("the language servers have shut down")
 
 // SpecFor picks the server for a file of a language: the first by Order that serves it and is installed.
 func (m *Manager) SpecFor(language string) (ServerSpec, bool) {
@@ -112,6 +116,10 @@ func (m *Manager) Warm(ctx context.Context, language, root string) (*Client, err
 // client returns the running client for key, starting one if there's none or it has exited.
 func (m *Manager) client(ctx context.Context, spec ServerSpec, key clientKey) (*Client, error) {
 	m.mu.Lock()
+	if m.closed {
+		m.mu.Unlock()
+		return nil, ErrShutDown
+	}
 	if c := m.clients[key]; c != nil && !exited(c) {
 		m.mu.Unlock()
 		return c, nil
@@ -157,6 +165,16 @@ func (m *Manager) start(spec ServerSpec, key clientKey, st *start) {
 	cancel()
 	m.mu.Lock()
 	delete(m.starts, key)
+	if m.closed && err == nil {
+		m.mu.Unlock()
+		sctx, scancel := context.WithTimeout(context.Background(), 2*time.Second)
+		_ = c.Shutdown(sctx)
+		scancel()
+		c, err = nil, ErrShutDown
+		st.c, st.err = c, err
+		close(st.done)
+		return
+	}
 	var reopen []string
 	if err == nil {
 		m.clients[key] = c
@@ -263,6 +281,9 @@ func (m *Manager) Restart(ctx context.Context, c *Client) (*Client, error) {
 
 // Shutdown stops every server.
 func (m *Manager) Shutdown(ctx context.Context) error {
+	m.mu.Lock()
+	m.closed = true
+	m.mu.Unlock()
 	var errs []error
 	for _, c := range m.Clients() {
 		if !exited(c) {

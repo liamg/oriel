@@ -364,16 +364,10 @@ func (x *Mission) cardHead(c *ui.Ctx, st core.State, se core.SessionState, tone 
 	c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		kit.HUDDot(c, "dot", tone)
 		if x.renaming == se.ID {
-			if x.focusName {
-				x.focusName = false
-				c.RequestFocus(c.Next("rename"))
+			if name, done := widget.RenameField(c, "rename", &x.rename, widget.InputOpts{Label: "Rename " + name, Help: kit.MissionHelp + "#keys"}); done {
+				x.run("session.rename", registry.Args{"id": string(se.ID), "name": name})
 			}
-			r := widget.Input(c, "rename", &x.name, widget.InputOpts{Label: "Rename " + name, SelectOnFocus: true, Help: kit.MissionHelp + "#keys"})
-			switch {
-			case r.Submitted:
-				x.renaming = ""
-				x.run("session.rename", registry.Args{"id": string(se.ID), "name": strings.TrimSpace(x.name)})
-			case r.Cancelled:
+			if !x.rename.On {
 				x.renaming = ""
 			}
 			return

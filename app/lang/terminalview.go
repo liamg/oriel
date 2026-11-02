@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/term"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 var (
@@ -95,6 +96,19 @@ func (v terminalView) Build(vc uireg.ViewCtx) ui.Node {
 		t := v.x.get(vc.Instance)
 		if t == nil {
 			c.Text("gone", "this terminal has closed", ui.TextStyle{})
+			return
+		}
+		if t.rename.On {
+			c.Column("renamed", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+				c.Row("rename", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 6), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+					c.Text("k", "Name", kit.MonoFont(10.5, c.Theme().C(theme.FgFaint)))
+					if name, done := widget.RenameField(c, "name", &t.rename, widget.InputOpts{Label: "Terminal name", Width: ui.Px(320),
+						Help: "terminal"}); done {
+						t.name = name
+					}
+				})
+				v.x.draw(c, t)
+			})
 			return
 		}
 		v.x.draw(c, t)

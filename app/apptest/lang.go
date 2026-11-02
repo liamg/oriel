@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/lang"
+	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 )
@@ -118,3 +119,7 @@ func TermScene(t *testing.T, args registry.Args) *Scene {
 	s.Frame()
 	return s
 }
+
+// TestServers are the language servers a test's app may start: those the test registers (a recorded server), never
+// the machine's own built-in ones, which are slow and differ from one machine to the next.
+func TestServers(s lsp.ServerSpec) bool { return s.Source != "builtin:lsp" }

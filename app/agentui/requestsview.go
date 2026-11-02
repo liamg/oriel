@@ -271,13 +271,18 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 func (x *Requests) requestHeader(c *ui.Ctx, se core.SessionState, t core.Thread, has bool) {
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(24, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		title, word, tok := "New request", "draft", theme.FgFaint
+		// The tab names the request, so the header shows only its state, and its name while it's being renamed.
+		word, tok := "draft", theme.FgFaint
 		if has {
-			title = t.Heading()
 			word, tok = statusLabel(x.h, se, t)
 		}
 		c.Box("dot", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 4, Fill: th.C(tok)}, nil)
-		c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 15, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
+		if st := x.state(se.ID); st.rename.On && has {
+			if name, done := widget.RenameField(c, "name", &st.rename, widget.InputOpts{Label: "Request name", Width: ui.Px(420),
+				Help: "agent/requests#request"}); done && name != "" {
+				x.run("request.rename", registry.Args{"thread": string(t.ID), "name": name})
+			}
+		}
 		widget.Chip(c, "status", word, th.C(tok), "agent/requests#request")
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if !has {
@@ -387,15 +392,21 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm core.Comment, width float32) {
 	th := c.Theme()
 	src, sourced := uireg.ThreadSourceFor(x.h, t.Origin)
-	c.Row(cm.ID, ui.Style{W: ui.Px(width), Gap: 14, Role: ui.RoleListItem, Label: cmp.Or(cm.Name, string(cm.Author))}, func(c *ui.Ctx) {
+	// Interactive, so the pointer over it is seen: its ⋯ shows then.
+	c.Row(cm.ID, ui.Style{W: ui.Px(width), Gap: 14, Interactive: true, Role: ui.RoleListItem, Label: cmp.Or(cm.Name, string(cm.Author))}, func(c *ui.Ctx) {
+		hover := widget.PointerIn(c)
 		avatar(c, "av", cm)
 		inner := width - 42
 		c.Column("in", ui.Style{W: ui.Px(inner), Gap: 8}, func(c *ui.Ctx) {
-			c.Row("who", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				name := cmp.Or(cm.Name, "you")
 				if cm.Author == core.AuthorAgent {
 					name = kit.ProviderName(x.h, cm.Name)
 				}
+				defer func() {
+					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+					commentMenu(c, x.h, t, cm, hover)
+				}()
 				c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 				if when := commentWhen(c.Now(), cm, t.Origin); when != "" {
 					c.Text("t", when, kit.MonoFont(10, th.C(theme.FgGhost)))
@@ -409,18 +420,27 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 				if cm.Btw {
 					widget.Chip(c, "btw", "btw", th.C(theme.Accent), "agent/requests#btw")
 				}
-				if cm.Progress {
+				// A progress note is "working on it" only while it's the agent's last word on an open request.
+				if cm.Progress && t.Open() && lastAgentComment(t) == cm.ID {
 					widget.Chip(c, "progress", "working on it", th.C(theme.StatusWorking), "agent/requests#request")
 				}
 				if cm.Author == core.AuthorYou && !cm.Delivered && !cm.Btw && se.Agent.Provider != "" {
-					widget.Chip(c, "queued", queuedLabel(se), th.C(tQueued), "agent/requests#request")
+					if t.Open() {
+						widget.Chip(c, "queued", queuedLabel(se), th.C(tQueued), "agent/requests#request")
+					} else {
+						widget.Chip(c, "unsent", "never sent: closed first", th.C(theme.FgFaint), "agent/requests#request")
+					}
 				}
 			})
 			kit.MarkdownTextIn(c, x.h, "body", cm.Body, inner, kit.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
 			if sourced && src.Comment != nil {
 				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
 			}
+			shown := kit.LocalImages(cm.Body)
 			for i, img := range cm.Images {
+				if slices.Contains(shown, img) {
+					continue
+				}
 				c.Row(fmt.Sprint("img", i), ui.Style{Pad: ui.PadXY(10, 6), Gap: 8, Radius: 6, Stroke: th.C(tBlockLine), Border: 1, Cross: ui.Center},
 					func(c *ui.Ctx) {
 						c.Text("t", "pasted · "+filepath.Base(img), kit.MonoFont(10.5, th.C(theme.FgFaint)))
@@ -431,6 +451,16 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 			}
 		})
 	})
+}
+
+// lastAgentComment is the id of the agent's last comment in t, or "".
+func lastAgentComment(t core.Thread) string {
+	for i := len(t.Comments) - 1; i >= 0; i-- {
+		if t.Comments[i].Author == core.AuthorAgent {
+			return t.Comments[i].ID
+		}
+	}
+	return ""
 }
 
 // unbacked flags a reply's claim that no run backs: "says tests pass, but ran none".
@@ -458,6 +488,24 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			})
 		}
 		in := c.Next("input")
+		// ↑ in an empty composer edits your last message the agent hasn't had yet.
+		if t, ok := se.Thread(id); ok && d.text == "" && d.editing == "" && t.Open() {
+			for _, k := range c.Interaction(in).Keys {
+				if k.Key == "Up" && k.Mods == 0 {
+					if q := lastQueued(t); q != "" {
+						x.run("request.edit-queued", registry.Args{"thread": string(t.ID), "comment": q})
+					}
+				}
+			}
+		}
+		if d.editing != "" {
+			c.Row("editing", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Text("t", "Editing your queued message: send replaces it", kit.MonoFont(10.5, th.C(tQueued)))
+				if widget.Link(c, "cancel", "cancel", "agent/requests#composer") {
+					*d = draft{}
+				}
+			})
+		}
 		if d.compose {
 			c.RequestFocus(in)
 			d.compose = false
@@ -467,12 +515,14 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			placeholder = "Reply, or ask more"
 		}
 		r := widget.Prose(c, "input", &d.text, widget.ProseOpts{Label: "Write to the request", Placeholder: placeholder, KeyMode: RequestComposerKeyMode,
-			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer"})
+			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: kit.PastedFiles(x.h, se.ID)})
 		switch {
 		case r.Submitted:
 			if err := x.send(context.Background(), st, id, false); err != nil {
 				x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
 			}
+		case r.Cancelled && d.editing != "":
+			*d = draft{}
 		case r.Cancelled:
 			st.focusList = true
 		}

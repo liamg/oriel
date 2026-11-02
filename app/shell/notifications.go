@@ -89,7 +89,8 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir)})
 		}
 	}))
-	if n.sh.cfg.CrashDir != "" {
+	if n.sh.cfg.CrashDir != "" && !n.sh.crashSeen {
+		n.sh.crashSeen = true
 		n.crashes = PendingCrashes(n.sh.cfg.CrashDir)
 		n.modal = len(n.crashes) > 0
 	}
@@ -233,10 +234,9 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	if row.Session != "" {
 		o.Source += " · " + string(row.Session)
 	}
+	o.Close = true // any toast can go before its time
 	if ttl := toastTTL(row); ttl > 0 {
 		o.Age = fmt.Sprintf("%ds", int(now.Sub(row.Time).Seconds()))
-	} else {
-		o.Close = true
 	}
 	if row.Count > 1 {
 		o.Hint = fmt.Sprintf("×%d", row.Count)
