@@ -101,7 +101,15 @@ func goroutines() []goroutine {
 	return out
 }
 
-// framework says the goroutine is the runtime's or the test framework's.
+// framework says the goroutine is the runtime's or the test framework's: a C thread's, back in C, has no Go frames.
 func framework(stack string) bool {
-	return slices.ContainsFunc(ignored, func(f string) bool { return strings.Contains(stack, f) })
+	return cThread(stack) || slices.ContainsFunc(ignored, func(f string) bool { return strings.Contains(stack, f) })
+}
+
+// cThread says the goroutine is the one a C thread that called into Go keeps: locked to it, and only runtime.goexit.
+func cThread(stack string) bool {
+	head, rest, _ := strings.Cut(strings.TrimSpace(stack), "\n")
+	fn, _, _ := strings.Cut(rest, "\n")
+	return strings.Contains(head, "locked to thread") && strings.HasPrefix(fn, "runtime.goexit(") &&
+		strings.Count(rest, "\n") <= 1
 }
