@@ -2,6 +2,7 @@ package claudebox
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -59,17 +61,33 @@ func parseLogin(b []byte) (Login, bool) {
 	return l, true
 }
 
-// Box is what Claude's sandboxes on this machine share: the Keychain's sign-in as last read, and one download at a
-// time. A Provider owns one.
+// Box is what Claude's sandboxes on this machine share: the Keychain's sign-in as last read, one download at a
+// time, and the keeper of their sign-ins (KeepLogins). A Provider owns one.
 type Box struct {
+	// Keychain reads Claude Code's sign-in from the Keychain; nil runs macOS's security.
+	Keychain func(ctx context.Context) ([]byte, error)
+	// KeepEvery is how often KeepLogins hands the sandboxes the host's sign-in; 0 is a minute.
+	KeepEvery time.Duration
+
 	keychainMu    sync.Mutex
 	keychainLogin Login
 	downloads     sync.Mutex
+
+	keepMu    sync.Mutex
+	keepers   int
+	stopKeep  context.CancelFunc
+	keepDone  chan struct{}
+	refreshed time.Time
 }
 
 // HostLogin reads this machine's Claude sign-in: the credentials file, or the
 // macOS Keychain where Claude Code keeps it there.
-func (x *Box) HostLogin() (Login, bool) {
+func (x *Box) HostLogin() (Login, bool) { return x.hostLogin(false) }
+
+// FreshHostLogin is HostLogin read again from the Keychain, for when it may have just changed.
+func (x *Box) FreshHostLogin() (Login, bool) { return x.hostLogin(true) }
+
+func (x *Box) hostLogin(fresh bool) (Login, bool) {
 	if home, err := os.UserHomeDir(); err == nil {
 		if b, err := os.ReadFile(filepath.Join(home, ".claude", credentialsFile)); err == nil {
 			if l, ok := parseLogin(b); ok {
@@ -77,18 +95,24 @@ func (x *Box) HostLogin() (Login, bool) {
 			}
 		}
 	}
-	if runtime.GOOS != "darwin" {
+	if x.Keychain == nil && runtime.GOOS != "darwin" {
 		return nil, false
 	}
 	x.keychainMu.Lock()
 	defer x.keychainMu.Unlock()
 	// The host only rewrites it near expiry, so ask the Keychain again then.
-	if x.keychainLogin != nil && time.Until(x.keychainLogin.Expiry()) > 10*time.Minute {
+	if !fresh && x.keychainLogin != nil && time.Until(x.keychainLogin.Expiry()) > 10*time.Minute {
 		return x.keychainLogin, true
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	b, err := exec.CommandContext(ctx, "security", "find-generic-password", "-s", "Claude Code-credentials", "-w").Output()
+	read := x.Keychain
+	if read == nil {
+		read = func(ctx context.Context) ([]byte, error) {
+			return exec.CommandContext(ctx, "security", "find-generic-password", "-s", "Claude Code-credentials", "-w").Output()
+		}
+	}
+	b, err := read(ctx)
 	if err != nil {
 		return nil, false
 	}
@@ -97,6 +121,88 @@ func (x *Box) HostLogin() (Login, bool) {
 		x.keychainLogin = l
 	}
 	return l, ok
+}
+
+// refreshBefore is how near its end the host's sign-in is renewed: claude renews one this close as it starts.
+const refreshBefore = 5 * time.Minute
+
+// refreshGap is the least time between two renewals, so one that fails isn't tried again every tick.
+const refreshGap = 2 * time.Minute
+
+// KeepLogins keeps every sandbox on this machine signed in while it's held: each KeepEvery it hands them the host's
+// sign-in, and when that is near its end it runs refresh first (the host's own claude, which renews it). Sandboxes
+// have no refresh token, so nothing else renews it. The last release stops it.
+func (x *Box) KeepLogins(refresh func(context.Context)) (release func()) {
+	x.keepMu.Lock()
+	x.keepers++
+	if x.keepers == 1 {
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		x.stopKeep, x.keepDone = cancel, done
+		go func() {
+			defer close(done)
+			x.keep(ctx, refresh)
+		}()
+	}
+	x.keepMu.Unlock()
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			x.keepMu.Lock()
+			x.keepers--
+			var stop context.CancelFunc
+			var done chan struct{}
+			if x.keepers == 0 {
+				stop, done = x.stopKeep, x.keepDone
+				x.stopKeep, x.keepDone = nil, nil
+			}
+			x.keepMu.Unlock()
+			if stop != nil {
+				stop()
+				<-done
+			}
+		})
+	}
+}
+
+func (x *Box) keep(ctx context.Context, refresh func(context.Context)) {
+	t := time.NewTicker(cmp.Or(x.KeepEvery, time.Minute))
+	defer t.Stop()
+	for {
+		x.keepOnce(ctx, refresh)
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
+}
+
+// keepOnce hands every sandbox the host's sign-in, renewed first when it's near its end.
+func (x *Box) keepOnce(ctx context.Context, refresh func(context.Context)) {
+	if ownAuth(agent.SandboxPlace{Env: os.Getenv}, Settings()) {
+		return
+	}
+	l, ok := x.HostLogin()
+	if !ok {
+		return
+	}
+	x.keepMu.Lock()
+	renew := time.Until(l.Expiry()) < refreshBefore && time.Since(x.refreshed) >= refreshGap
+	if renew {
+		x.refreshed = time.Now()
+	}
+	x.keepMu.Unlock()
+	if renew {
+		refresh(ctx)
+		if ctx.Err() != nil {
+			return
+		}
+		if l, ok = x.FreshHostLogin(); !ok {
+			return
+		}
+	}
+	SyncLogins(l)
 }
 
 // SyncLogin gives root's sandbox the host's sign-in. A sign-in made inside the

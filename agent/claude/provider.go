@@ -84,6 +84,16 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 		return in, nil
 	}
 	in.LoggedIn, in.Account, in.Login = login(nil)
+	// The Keychain holds the token where the files don't: read it afresh, so a login renewed since tells, and hand it
+	// to the sandboxes.
+	if in.LoggedIn && in.Account != "apiKey" {
+		if l, ok := p.box.FreshHostLogin(); ok {
+			if in.Login == "" {
+				in.Login = tokenMark(l.AccessToken())
+			}
+			claudebox.SyncLogins(l)
+		}
+	}
 	switch {
 	case versionLess(in.Version, minVersion):
 		in.Note = fmt.Sprintf("Claude Code %s is too old for Oriel, which needs %s or newer: run claude update.", in.Version, minVersion)
@@ -115,7 +125,8 @@ func login(env []string) (ok bool, account, mark string) {
 
 // subscription is the plan Claude's files record and whether they record a sign-in: the credentials file's
 // subscriptionType and rateLimitTier (Linux), with a mark of its token, else oauthAccount's organizationType and
-// organizationRateLimitTier in the state file (macOS keeps the token in the Keychain, so there's no mark).
+// organizationRateLimitTier in the state file (macOS keeps the token in the Keychain, so there's no mark: Detect
+// reads it there).
 func subscription(env []string) (kind, limit, mark string, ok bool) {
 	var cred struct {
 		OAuth struct {
@@ -126,8 +137,7 @@ func subscription(env []string) (kind, limit, mark string, ok bool) {
 	}
 	if b, err := os.ReadFile(filepath.Join(transcript.ConfigDir(env), ".credentials.json")); err == nil &&
 		json.Unmarshal(b, &cred) == nil && cred.OAuth.Token != "" {
-		sum := sha256.Sum256([]byte(cred.OAuth.Token))
-		return cred.OAuth.Subscription, cred.OAuth.Tier, hex.EncodeToString(sum[:8]), true
+		return cred.OAuth.Subscription, cred.OAuth.Tier, tokenMark(cred.OAuth.Token), true
 	}
 	var state struct {
 		Account *struct {
@@ -139,6 +149,12 @@ func subscription(env []string) (kind, limit, mark string, ok bool) {
 		return strings.TrimPrefix(state.Account.OrgType, "claude_"), state.Account.Tier, "", true
 	}
 	return "", "", "", false
+}
+
+// tokenMark tells one token from the next without holding it.
+func tokenMark(tok string) string {
+	sum := sha256.Sum256([]byte(tok))
+	return hex.EncodeToString(sum[:8])
 }
 
 // planOf is the plan Claude is signed in to ("Claude Max") and its tier, for its chip ("Max 20×"); "" for what
@@ -501,6 +517,9 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	}
 	s.term.watch = s.watchScreen
 	s.tail.answered = s.answered
+	if spec.Sandbox != nil {
+		s.keep = p.box.KeepLogins(func(ctx context.Context) { _ = p.readUsage(ctx) })
+	}
 	go s.term.drain()
 	go s.serve()
 	go s.tail.follow(s.done, s.push)

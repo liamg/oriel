@@ -40,6 +40,7 @@ type session struct {
 	tail   *tailer
 	events *eventq.Queue
 	done   chan struct{} // closed once the process has exited
+	keep   func()        // lets go of the sandboxes' login keeper (claudebox.Box.KeepLogins); nil on the host
 
 	mu       sync.Mutex
 	id       string
@@ -197,6 +198,9 @@ func (s *session) Close() error {
 func (s *session) run() {
 	err := s.pty.Wait()
 	s.cancel()
+	if s.keep != nil {
+		s.keep()
+	}
 	_ = s.ln.Close()
 	_ = os.RemoveAll(s.dir)
 	s.tail.flush(s.push)
@@ -214,6 +218,10 @@ func (s *session) push(ev agent.Event) {
 	switch e := ev.(type) {
 	case agent.AuthExpired:
 		e.Account, _ = account(s.accountEnv())
+		// A sandbox signs in as the host does: a /login typed in it would sign in that sandbox alone.
+		if s.spec.Sandbox != nil {
+			e.Terminal = ""
+		}
 		s.mu.Lock()
 		s.out = true
 		s.mu.Unlock()

@@ -35,6 +35,25 @@ func TestAuthExpiredFromTheLog(t *testing.T) {
 	}
 }
 
+// A sandboxed claude signs in as the host does, so its lost login says to sign in on the host, not with /login in
+// its own terminal (which would sign in that sandbox alone).
+func TestSandboxedAuthExpiredSignsInOnTheHost(t *testing.T) {
+	h := fakeHarness(t)
+	spec := h.Spec
+	h.Spec = func(t *testing.T, dir string) agent.StartSpec {
+		s := spec(t, dir)
+		s.Sandbox = &agent.Sandbox{Name: "box"}
+		return s
+	}
+	s := agenttest.Start(t, h)
+	s.Send("lose the login")
+	ev := s.Wait("AuthExpired", func(ev agent.Event) bool { _, ok := ev.(agent.AuthExpired); return ok }).(agent.AuthExpired)
+	if ev.Terminal != "" || ev.Shell != "claude, then /login" {
+		t.Errorf("AuthExpired = %+v", ev)
+	}
+	s.Reply()
+}
+
 // The signed-out line on claude's screen raises AuthExpired, once while it stays; /login typed in the
 // terminal and a login's success raise AuthRestored.
 func TestAuthExpiredFromTheScreen(t *testing.T) {
