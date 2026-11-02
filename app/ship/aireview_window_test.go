@@ -99,7 +99,7 @@ func TestAIReviewFilterAndDismiss(t *testing.T) {
 	r.WaitText("Historic invoices re-rounded")
 	r.ClickText("1 HIGH")
 	r.WaitText("Magic number 2")
-	r.ClickAccess("Dismiss")
+	r.ClickAccessIn("high: Historic invoices re-rounded", "Dismiss")
 	r.WaitFrame("one dismissed", func(s string) bool {
 		return strings.Contains(s, "1 dismissed") && strings.Count(s, "Historic invoices re-rounded")+strings.Count(s, "Magic number 2") == 1
 	})

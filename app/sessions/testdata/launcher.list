@@ -227,11 +227,11 @@ clip 170,105 1260x790 r 10
     pop
     rect 875,433.2095 200x60.929504 radius 8 stroke 1 #24221d
     text "REPOSITORIES" @194,566.4295 #7c7566 JetBrains Mono 9.5
-    text "one worktree each · same branch" @436.5,566.6095 #7c7566 JetBrains Mono 10
-    rect 538.4531,585.6095 84.046875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "+ Add repo" @548.4531,602.97473 #ece6d8 Inter 12
-    clip 194,619.6095 428.5x56 r 6
-      rect 194,619.6095 428.5x28 fill #1a180e
+    text "one worktree each · same branch" @456.09375,566.6095 #7c7566 JetBrains Mono 10
+    rect 558.0469,585.6095 84.046875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "+ Add repo" @568.0469,602.97473 #ece6d8 Inter 12
+    clip 194,619.6095 448.09375x56 r 6
+      rect 194,619.6095 448.09375x28 fill #1a180e
       clip 204,626.0195 170x15.179993 r 0
         rect 204,627.1095 13x13 fill #4fe0a026 radius 3
         clip 204,627.1095 13x13 r 3
@@ -240,11 +240,11 @@ clip 170,105 1260x790 r 10
         rect 204,627.1095 13x13 radius 3 stroke 1 #4fe0a0
         text "cloud" @223,637.74945 #ece6d8 JetBrains Mono 11.5
       pop
-      clip 386,626.3495 66.125x14.52002 r 0
-        text "/private/…" @386,637.56946 #7c7566 JetBrains Mono 11
+      clip 386,626.3495 85.71875x14.52002 r 0
+        text "~/src/cloud" @386,637.56946 #7c7566 JetBrains Mono 11
       pop
-      text "main" @464.125,637.3895 #7c7566 JetBrains Mono 10.5
-      rect 194,647.6095 428.5x28 fill #1a180e
+      text "main" @483.71875,637.3895 #7c7566 JetBrains Mono 10.5
+      rect 194,647.6095 448.09375x28 fill #1a180e
       clip 204,654.0195 170x15.179993 r 0
         rect 204,655.1095 13x13 fill #4fe0a026 radius 3
         clip 204,655.1095 13x13 r 3
@@ -253,27 +253,27 @@ clip 170,105 1260x790 r 10
         rect 204,655.1095 13x13 radius 3 stroke 1 #4fe0a0
         text "pricing" @223,665.74945 #ece6d8 JetBrains Mono 11.5
       pop
-      clip 386,654.3495 66.125x14.52002 r 0
-        text "/private/…" @386,665.56946 #7c7566 JetBrains Mono 11
+      clip 386,654.3495 85.71875x14.52002 r 0
+        text "~/src/pricing" @386,665.56946 #7c7566 JetBrains Mono 11
       pop
-      text "main" @464.125,665.3895 #7c7566 JetBrains Mono 10.5
+      text "main" @483.71875,665.3895 #7c7566 JetBrains Mono 10.5
     pop
-    rect 194,619.6095 428.5x56 radius 6 stroke 1 #24221d
+    rect 194,619.6095 448.09375x56 radius 6 stroke 1 #24221d
     text "2 selected" @194,693.8095 #4f4a40 JetBrains Mono 10
     text "Branch" @194,724.35657 #b3ab99 Inter 12.5
-    rect 247.48438,704.80945 375.01562x30 fill #060606 radius 6
-    clip 247.48438,704.80945 375.01562x30 r 6
+    rect 247.48438,704.80945 394.60938x30 fill #060606 radius 6
+    clip 247.48438,704.80945 394.60938x30 r 6
       text "named from the ticket and prompt" @257.48438,724.35657 #7c7566 Inter 12.5
     pop
-    rect 247.48438,704.80945 375.01562x30 radius 6 stroke 1 #332f27
-    text "RUNS IN" @646.5,566.0995 #7c7566 JetBrains Mono 9.5
-    rect 646.5,586.94946 32x18 fill #ffd23f radius 9
-    rect 662.5,588.94946 14x14 fill #ece6d8 radius 7
-    text "Sandbox" @688.5,600.4966 #ece6d8 Inter 12.5
+    rect 247.48438,704.80945 394.60938x30 radius 6 stroke 1 #332f27
+    text "RUNS IN" @666.09375,566.0995 #7c7566 JetBrains Mono 9.5
+    rect 666.09375,586.94946 32x18 fill #ffd23f radius 9
+    rect 682.09375,588.94946 14x14 fill #ece6d8 radius 7
+    text "Sandbox" @708.09375,600.4966 #ece6d8 Inter 12.5
     text "container · gateway for git & gh" @883,599.5495 #7c7566 JetBrains Mono 10
-    rect 646.5,614.94946 32x18 fill #23211c radius 9
-    rect 648.5,616.94946 14x14 fill #ece6d8 radius 7
-    text "Open network" @688.5,628.4966 #ece6d8 Inter 12.5
+    rect 666.09375,614.94946 32x18 fill #23211c radius 9
+    rect 668.09375,616.94946 14x14 fill #ece6d8 radius 7
+    text "Open network" @708.09375,628.4966 #ece6d8 Inter 12.5
     text "ask per new host when off" @925,627.5495 #7c7566 JetBrains Mono 10
   pop
   rect 1099,158 1x676 fill #24221d

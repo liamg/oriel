@@ -117,6 +117,7 @@ func TestTreeStream(t *testing.T) {
 		t.Fatalf("events from skipped or outside paths: %v", got)
 	}
 
+	write(t, filepath.Join(real, "src", "main.go"), "// more\n")
 	f.emit(fsevent{filepath.Join(real, "src", "main.go"), evItemModified | evItemIsFile})
 	expect(t, w, filepath.Join(root, "src", "main.go"))
 

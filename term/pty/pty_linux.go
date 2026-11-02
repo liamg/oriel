@@ -31,3 +31,6 @@ func open() (master, slave *os.File, err error) {
 	}
 	return master, os.NewFile(uintptr(sfd), name), nil
 }
+
+// hangup is closing the terminal's: the kernel sends SIGHUP as Close ends a Read in progress.
+func (p *PTY) hangup() {}

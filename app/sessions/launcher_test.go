@@ -256,16 +256,16 @@ func TestLauncherSnapshot(t *testing.T) {
 	claude, codex := agenttest.NewFake(), agenttest.NewFake()
 	claude.Name, codex.Name = "claude", "codex"
 	lw := rig.NewHost(t, claude, codex)
+	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
+	// Under the scene's HOME, the repos' paths read the same on every machine.
 	cloud := filepath.Join(t.TempDir(), "cloud")
 	rig.Git(t, filepath.Dir(cloud), "init", "-q", "-b", "main", cloud)
 	rig.Git(t, cloud, "commit", "-q", "--allow-empty", "-m", "first")
-	c := lw.W
-	for _, r := range []string{cloud, lw.Repo} {
-		if _, err := c.AddRepoPath(context.Background(), r); err != nil {
+	for _, r := range []string{rig.HomeClone(t, cloud, "cloud"), rig.HomeClone(t, lw.Repo, "pricing")} {
+		if _, err := lw.W.AddRepoPath(context.Background(), r); err != nil {
 			t.Fatal(err)
 		}
 	}
-	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	s.Now = apptest.At(14, 30, 0)
 	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	ago := func(h int) time.Time { return s.Now.Add(-time.Duration(h) * time.Hour) }

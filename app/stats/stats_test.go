@@ -31,9 +31,10 @@ func statsOf(s *apptest.Scene) *stats.Plugin {
 	return x
 }
 
-// settle draws frames until every answer the stats asked for is in.
+// settle draws frames until every answer the stats asked for, and the sidebar's git status, is in.
 func settle(s *apptest.Scene, x *stats.Plugin) {
 	s.T.Helper()
+	s.SettleGit()
 	deadline := time.Now().Add(20 * time.Second)
 	for time.Now().Before(deadline) {
 		s.Frame()

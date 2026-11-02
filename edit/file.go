@@ -176,6 +176,10 @@ func (f *File) Empty() bool {
 	return f.New || f.Size == 0 || f.Format.BOM && f.Size == int64(len(bom))
 }
 
+// racyWindow is how long after a file's mtime a write may leave the same mtime: a coarse clock tick, or a file
+// system that keeps whole seconds. Within it, the bytes are compared even when size and mtime match.
+const racyWindow = 2 * time.Second
+
 // ChangedOnDisk reports whether the file on disk is no longer what f last read or wrote: its size or
 // time changed and so did its bytes, or it was deleted.
 func (f *File) ChangedOnDisk() (bool, error) {
@@ -189,7 +193,7 @@ func (f *File) ChangedOnDisk() (bool, error) {
 	if f.New {
 		return true, nil
 	}
-	if st.Size() == f.Size && st.ModTime().Equal(f.ModTime) {
+	if st.Size() == f.Size && st.ModTime().Equal(f.ModTime) && time.Since(f.ModTime) >= racyWindow {
 		return false, nil
 	}
 	b, err := os.ReadFile(f.Path)

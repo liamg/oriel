@@ -80,6 +80,8 @@ clip 0,38 223x936 r 0
   text "⌃2" @200.1875,241.22 #7c7566 JetBrains Mono 9
   clip 10,247.24 205x13.199997 r 0
     text "tester/pricing-rounding" @25,257.44 #7c7566 JetBrains Mono 10
+    text "·" @167,257.44 #7c7566 JetBrains Mono 10
+    text "clean" @177,257.44 #7c7566 JetBrains Mono 10
   pop
   rect 10,270.44 203x1 fill #332f27
   path 2 segments stroke 1.25 #7c7566

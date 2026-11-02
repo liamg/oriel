@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	_ "github.com/liamg/oriel/internal/isolate" // TMPDIR as FSEvents names it
 )
 
 func start(t *testing.T) *Watcher {
@@ -168,8 +170,11 @@ func TestTree(t *testing.T) {
 	write(t, filepath.Join(root, "node_modules", "x", "y.js"), "more")
 	write(t, filepath.Join(root, ".git", "objects", "ab", "cd"), "more")
 	write(t, filepath.Join(root, ".git", "objects", "ef", "01"), "new")
-	if got := quiet(w, 300*time.Millisecond); len(got) != 0 {
-		t.Fatalf("events from skipped folders: %v", got)
+	// FSEvents may still report the writes made just before the watch; only the skipped folders must stay quiet.
+	for _, p := range quiet(w, 300*time.Millisecond) {
+		if strings.Contains(p, "/node_modules/") || strings.Contains(p, "/.git/objects/") {
+			t.Fatalf("an event from a skipped folder: %s", p)
+		}
 	}
 
 	write(t, filepath.Join(root, "src", "main.go"), "// more\n")
@@ -240,7 +245,8 @@ func TestCloseClosesEvents(t *testing.T) {
 	}
 }
 
-// A file's metadata changing with its content the same (its access time read) sends nothing after the first.
+// A file's metadata changing with its content the same (its access time read) sends nothing: not even the first,
+// as the file is known from when its watch began.
 func TestMetadataOnlyChangeIsQuiet(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "index")
@@ -249,8 +255,6 @@ func TestMetadataOnlyChangeIsQuiet(t *testing.T) {
 	if err := w.Add(f); err != nil {
 		t.Fatal(err)
 	}
-	w.handle([]raw{{path: f, op: opAttrib}})
-	expect(t, w, f)
 	for range 3 {
 		w.handle([]raw{{path: f, op: opAttrib}})
 	}

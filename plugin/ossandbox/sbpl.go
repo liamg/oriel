@@ -21,6 +21,7 @@ func SBPL(p Profile) string {
 	b.WriteString("(version 1)\n(deny default)\n")
 	b.WriteString("(allow process-fork)\n(allow signal (target same-sandbox))\n(allow process-info* (target same-sandbox))\n")
 	b.WriteString("(allow sysctl-read)\n(allow file-read-metadata)\n")
+	b.WriteString("(allow file-read-data (literal \"/\"))\n") // a Go program lists / as it starts, or aborts
 	b.WriteString("(allow mach-lookup (global-name \"com.apple.system.opendirectoryd.libinfo\") (global-name \"com.apple.system.notification_center\"))\n")
 	b.WriteString("(allow file-write-data (literal \"/dev/null\"))\n")
 	rule(&b, "allow file-read*", sbplRead, false)

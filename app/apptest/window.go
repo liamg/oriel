@@ -373,10 +373,17 @@ func (w *Window) Access(label string) *render.AccessNode {
 // same place two frames running.
 func (w *Window) ClickAccess(label string) {
 	w.T.Helper()
+	w.ClickAccessIn("", label)
+}
+
+// ClickAccessIn is ClickAccess for the control named label inside the node named within: one card's button of
+// several. An empty within is the whole tree.
+func (w *Window) ClickAccessIn(within, label string) {
+	w.T.Helper()
 	deadline := time.Now().Add(Timeout)
 	var last *render.AccessNode
 	for {
-		found := w.lastAccess(label)
+		found := w.lastAccess(within, label)
 		settled := found != nil && last != nil && found.Bounds == last.Bounds
 		last = found
 		if settled {
@@ -384,26 +391,27 @@ func (w *Window) ClickAccess(label string) {
 			return
 		}
 		if time.Now().After(deadline) {
-			w.T.Fatalf("nothing named %q to click", label)
+			w.T.Fatalf("nothing named %q in %q to click", label, within)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 }
 
-// lastAccess is the last node of the accessibility tree on screen named label, or nil.
-func (w *Window) lastAccess(label string) *render.AccessNode {
+// lastAccess is the last node on screen named label inside a node named within (anywhere when within is empty), or nil.
+func (w *Window) lastAccess(within, label string) *render.AccessNode {
 	var found *render.AccessNode
-	var find func(n *render.AccessNode)
-	find = func(n *render.AccessNode) {
-		if n.Name == label {
+	var find func(n *render.AccessNode, in bool)
+	find = func(n *render.AccessNode, in bool) {
+		in = in || within == "" || n.Name == within
+		if in && n.Name == label {
 			found = n
 		}
 		for _, k := range n.Children {
-			find(k)
+			find(k, in)
 		}
 	}
 	if tr := w.Win.Access(); tr != nil {
-		find(tr)
+		find(tr, false)
 	}
 	return found
 }

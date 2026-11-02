@@ -27,13 +27,17 @@ func TestTestGivesItsOwnTempDir(t *testing.T) {
 // the Go caches stay where they were.
 func TestTestGivesItsOwnHome(t *testing.T) {
 	outer, _ := os.UserHomeDir()
-	cache, _ := os.UserCacheDir()
+	want := os.Getenv("GOCACHE")
+	if want == "" {
+		cache, _ := os.UserCacheDir()
+		want = filepath.Join(cache, "go-build")
+	}
 	var inner string
 	t.Run("a", func(t *testing.T) {
 		Test(t)
 		inner, _ = os.UserHomeDir()
-		if gc := os.Getenv("GOCACHE"); gc == "" || !strings.HasPrefix(gc, cache) {
-			t.Errorf("GOCACHE %q, not under %s", gc, cache)
+		if gc := os.Getenv("GOCACHE"); gc != want {
+			t.Errorf("GOCACHE %q, want %q", gc, want)
 		}
 	})
 	if inner == outer || strings.HasPrefix(inner, outer+string(os.PathSeparator)+"Library") {

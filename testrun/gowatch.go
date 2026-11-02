@@ -55,6 +55,14 @@ func modStamp(root string) [32]byte {
 	return s
 }
 
+// realDir is dir with its symlinks followed, as far as it can be: go list and the saved file may name it differently.
+func realDir(dir string) string {
+	if r, err := filepath.EvalSymlinks(dir); err == nil {
+		return r
+	}
+	return dir
+}
+
 // graph is the workspace's packages, listed again when go.mod or go.work changed or when force is set.
 func (g *Go) packageGraph(ws Workspace, force bool) (*goGraph, error) {
 	g.graph.mu.Lock()
@@ -92,7 +100,7 @@ func (g *Go) packageGraph(ws Workspace, force bool) (*goGraph, error) {
 		gr.pkgs = append(gr.pkgs, p)
 	}
 	for i := range gr.pkgs {
-		gr.byDir[gr.pkgs[i].Dir] = &gr.pkgs[i]
+		gr.byDir[realDir(gr.pkgs[i].Dir)] = &gr.pkgs[i]
 		gr.byIP[gr.pkgs[i].ImportPath] = &gr.pkgs[i]
 	}
 	g.graph.by[ws.Root] = gr
@@ -119,7 +127,7 @@ func (g *Go) Affected(ws Workspace, file string) ([]Item, error) {
 	if !strings.HasSuffix(file, ".go") {
 		return nil, nil
 	}
-	dir := filepath.Dir(file)
+	dir := realDir(filepath.Dir(file))
 	changed := gr.byDir[dir]
 	if changed == nil {
 		// A package that's new since the graph was listed.

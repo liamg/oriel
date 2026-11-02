@@ -1,6 +1,7 @@
 package rig
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -14,6 +15,22 @@ func Git(t testing.TB, dir string, args ...string) string {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 	return string(out)
+}
+
+// HomeClone clones repo to ~/src/name, so its path reads the same on every machine (~/src/name), and answers it.
+func HomeClone(t testing.TB, repo, name string) string {
+	t.Helper()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := filepath.Join(home, "src")
+	if err := os.MkdirAll(src, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(src, name)
+	Git(t, src, "clone", "-q", repo, dir)
+	return dir
 }
 
 // WriteFiles writes files, by their paths in dir.

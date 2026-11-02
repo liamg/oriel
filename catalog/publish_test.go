@@ -34,6 +34,7 @@ func taggedPlugin(t *testing.T, manifest string) (dir, commit string) {
 	t.Helper()
 	bare := t.TempDir()
 	git(t, bare, "init", "-q", "--bare")
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull) // the user's own rewrites (pushInsteadOf) would reach the real GitHub
 	t.Setenv("GIT_CONFIG_COUNT", "1")
 	t.Setenv("GIT_CONFIG_KEY_0", "url."+bare+".insteadOf")
 	t.Setenv("GIT_CONFIG_VALUE_0", "https://github.com/acme/oriel-jira")

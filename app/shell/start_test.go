@@ -170,6 +170,7 @@ func addRecents(s *apptest.Scene) {
 		}
 		shell.AddRecent(s.Headless, p, time.Now().Add(-d.ago))
 	}
+	s.SettleReads()
 }
 
 // The start view fits the window: the columns shrink, and when both won't fit, Start and Recent become tabs.

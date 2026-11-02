@@ -20,7 +20,7 @@ func gitT(t *testing.T, dir string, args ...string) {
 }
 
 func TestGitBindsGuardHostGit(t *testing.T) {
-	repo, wt := t.TempDir(), filepath.Join(t.TempDir(), "wt")
+	repo, wt := resolved(t.TempDir()), filepath.Join(resolved(t.TempDir()), "wt") // as git names them
 	gitT(t, repo, "init", "-q")
 	gitT(t, repo, "commit", "-q", "--allow-empty", "-m", "x")
 	gitT(t, repo, "worktree", "add", "-q", wt)

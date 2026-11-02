@@ -113,14 +113,22 @@ func WorktreeAdmin(repo, wt string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("no worktrees in %s: %w", repo, err)
 	}
-	want := filepath.Join(wt, ".git")
+	want := resolved(filepath.Join(wt, ".git"))
 	for _, e := range ents {
 		b, err := os.ReadFile(filepath.Join(base, e.Name(), "gitdir"))
-		if err == nil && filepath.Clean(strings.TrimSpace(string(b))) == want {
+		if err == nil && resolved(strings.TrimSpace(string(b))) == want {
 			return filepath.Join(base, e.Name()), nil
 		}
 	}
 	return "", fmt.Errorf("%s is not a worktree of %s", wt, repo)
+}
+
+// resolved is path with its symlinks followed, or cleaned when it can't be: git may write either form.
+func resolved(path string) string {
+	if r, err := filepath.EvalSymlinks(path); err == nil {
+		return r
+	}
+	return filepath.Clean(path)
 }
 
 // checkWorktreeConfig vets the per-worktree config, which sits in the admin
