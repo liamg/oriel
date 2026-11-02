@@ -87,7 +87,7 @@ func (r Repo) ancestor(ctx context.Context, a, b string) bool {
 
 // mergeTree writes the tree merging theirs into ours, without a work tree, or names the files it conflicts in.
 func (r Repo) mergeTree(ctx context.Context, ours, theirs string) (tree string, conflicts []string, err error) {
-	cmd := exec.CommandContext(ctx, "git", "-C", r.Dir, "merge-tree", "--write-tree", "--name-only", "--no-messages", ours, theirs)
+	cmd := command(ctx, "-C", r.Dir, "merge-tree", "--write-tree", "--name-only", "--no-messages", ours, theirs)
 	cmd.Env = append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...)
 	out, err := cmd.Output()
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")

@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -21,7 +20,7 @@ func CloneProgress(ctx context.Context, url, dir string, progress func(line stri
 	if progress != nil {
 		args = []string{"clone", "--progress"}
 	}
-	cmd := exec.CommandContext(ctx, "git", append(args, "--", url, dir)...)
+	cmd := command(ctx, append(args, "--", url, dir)...)
 	cmd.Env = append(os.Environ(), "LC_ALL=C", "GIT_TERMINAL_PROMPT=0")
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
