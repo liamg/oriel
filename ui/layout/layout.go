@@ -569,6 +569,9 @@ type Target struct {
 	Zone   Zone         `json:"zone,omitempty"`
 	Dock   Edge         `json:"dock,omitempty"`
 	Float  *render.Rect `json:"float,omitempty"`
+	// Index, joining a leaf's tabs, is the slot the view takes: before the tab at Index there now, or at the end.
+	// In the view's own leaf it reorders its tabs. nil puts a new tab at the end and leaves the view's own place.
+	Index *int `json:"index,omitempty"`
 }
 
 // Drop moves v to t, unless it's fixed.
@@ -576,6 +579,59 @@ func (r *Root) Drop(v ViewRef, t Target) error {
 	if r.IsFixed(v) {
 		return fmt.Errorf("%s is fixed", v)
 	}
+	next, ok := r.slot(t)
+	if err := r.drop(v, t); err != nil || !ok {
+		return err
+	}
+	if w := r.Find(v); w != nil {
+		w.Leaf.place(v, next)
+	}
+	return nil
+}
+
+// slot is the view a drop at t goes in front of, nil for the end; false when t names no slot.
+func (r *Root) slot(t Target) (*ViewRef, bool) {
+	if t.Index == nil || t.Float != nil || t.Zone != ZoneCenter && t.Zone != "" {
+		return nil, false
+	}
+	var l *Node
+	switch {
+	case t.Dock != "":
+		if d, ok := r.Docks[t.Dock]; ok {
+			l = d.Leaf
+		}
+	case t.Beside != nil:
+		if w := r.Find(*t.Beside); w != nil {
+			l = w.Leaf
+		}
+	}
+	if l == nil {
+		return nil, false
+	}
+	if i := *t.Index; i >= 0 && i < len(l.Tabs) {
+		v := l.Tabs[i]
+		return &v, true
+	}
+	return nil, true
+}
+
+// place moves v, one of n's tabs, in front of next (to the end when next is nil or not in n), and shows it.
+func (n *Node) place(v ViewRef, next *ViewRef) {
+	if next != nil && *next == v {
+		return
+	}
+	n.Tabs = slices.DeleteFunc(n.Tabs, func(t ViewRef) bool { return t == v })
+	i := len(n.Tabs)
+	if next != nil {
+		if j := slices.Index(n.Tabs, *next); j >= 0 {
+			i = j
+		}
+	}
+	n.Tabs = slices.Insert(n.Tabs, i, v)
+	n.Active = i
+}
+
+func (r *Root) drop(v ViewRef, t Target) error {
 	if r.dropsInPlace(v, t) {
 		r.Show(v)
 		return nil
