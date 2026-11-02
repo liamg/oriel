@@ -675,3 +675,72 @@ func TestLongTitleIsCut(t *testing.T) {
 		t.Error("hovering the cut tab doesn't show its whole title")
 	}
 }
+
+// A tab dragged along its own tab strip moves to the slot under the pointer: in main and in a dock.
+func TestDragReordersTabs(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		v, onto layout.ViewRef
+		leaf    func(r *layout.Root) *layout.Node
+		want    string
+	}{
+		{"main", test, code, func(r *layout.Root) *layout.Node { return r.Main }, "editor#round_test.go editor#round.go"},
+		{"dock", term, probs, func(r *layout.Root) *layout.Node { return r.Docks[layout.Bottom].Leaf }, "terminal#1 problems"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHarness(t)
+			from := h.tabAt(tc.v)
+			to := h.tabAt(tc.onto)
+			to.X -= 6 // the front half of the tab
+			h.held = true
+			h.ptr(render.PointerMove, from)
+			h.ptr(render.PointerPress, from)
+			h.ptr(render.PointerMove, render.Point{X: from.X - 10, Y: from.Y})
+			h.ptr(render.PointerMove, to)
+			h.ptr(render.PointerMove, to)
+			if got := h.dropLabel(); got != "Move tab" {
+				t.Errorf("label %q", got)
+			}
+			bg := h.u.Theme().C(theme.BgBase)
+			snapshot.GoldenPNG(t, "testdata/drag-reorder-"+tc.name+".png", raster.Render(h.list, screen, 1, bg), 0.02, 0.001)
+			h.held = false
+			h.ptr(render.PointerRelease, to)
+			h.frame()
+			l := tc.leaf(h.r)
+			var got []string
+			for _, v := range l.Tabs {
+				got = append(got, v.String())
+			}
+			if strings.Join(got, " ") != tc.want {
+				t.Errorf("tabs %v, want %s", got, tc.want)
+			}
+			if l.Tabs[l.Active] != tc.v {
+				t.Errorf("%s isn't in front:\n%s", tc.v, h.r.Dump())
+			}
+		})
+	}
+}
+
+// A tab dragged onto another group's tab strip, between two tabs, joins it there.
+func TestDragIntoTabsBetween(t *testing.T) {
+	h := newHarness(t)
+	from := h.tabAt(term)
+	to := h.tabAt(test)
+	to.X -= 6
+	h.held = true
+	h.ptr(render.PointerMove, from)
+	h.ptr(render.PointerPress, from)
+	h.ptr(render.PointerMove, render.Point{X: from.X + 10, Y: from.Y - 10})
+	h.ptr(render.PointerMove, to)
+	h.ptr(render.PointerMove, to)
+	h.held = false
+	h.ptr(render.PointerRelease, to)
+	h.frame()
+	var got []string
+	for _, v := range h.r.Main.Tabs {
+		got = append(got, v.String())
+	}
+	if want := "editor#round.go terminal#1 editor#round_test.go"; strings.Join(got, " ") != want {
+		t.Errorf("tabs %v, want %s", got, want)
+	}
+}

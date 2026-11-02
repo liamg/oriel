@@ -252,3 +252,45 @@ func TestDropInPlace(t *testing.T) {
 		})
 	}
 }
+
+// A drop with an Index puts the view in that slot of the leaf it joins, before the tab there: in its own leaf, a
+// reorder.
+func TestDropAtIndex(t *testing.T) {
+	at := func(i int) *int { return &i }
+	for _, tc := range []struct {
+		name string
+		v    ViewRef
+		t    Target
+		leaf func(r *Root) *Node
+		want string
+	}{
+		{"to the front of its own leaf", test, Target{Beside: &code, Zone: ZoneCenter, Index: at(0)}, mainOf, "editor#round_test.go editor#round.go"},
+		{"to the end of its own leaf", code, Target{Beside: &code, Zone: ZoneCenter, Index: at(2)}, mainOf, "editor#round_test.go editor#round.go"},
+		{"to its own slot", code, Target{Beside: &test, Zone: ZoneCenter, Index: at(1)}, mainOf, "editor#round.go editor#round_test.go"},
+		{"between another leaf's tabs", term, Target{Beside: &code, Zone: ZoneCenter, Index: at(1)}, mainOf,
+			"editor#round.go terminal#1 editor#round_test.go"},
+		{"to the front of its own dock", term, Target{Dock: Bottom, Index: at(0)}, bottomOf, "terminal#1 problems"},
+		{"to the front of another dock", code, Target{Dock: Bottom, Index: at(0)}, bottomOf, "editor#round.go problems terminal#1"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := start(t)
+			if err := r.Drop(tc.v, tc.t); err != nil {
+				t.Fatal(err)
+			}
+			l := tc.leaf(r)
+			var got []string
+			for _, v := range l.Tabs {
+				got = append(got, v.String())
+			}
+			if strings.Join(got, " ") != tc.want {
+				t.Errorf("tabs %v, want %s", got, tc.want)
+			}
+			if l.Tabs[l.Active] != tc.v || *r.Focus != tc.v {
+				t.Errorf("%s isn't in front:\n%s", tc.v, r.Dump())
+			}
+		})
+	}
+}
+
+func mainOf(r *Root) *Node   { return r.Main }
+func bottomOf(r *Root) *Node { return r.Docks[Bottom].Leaf }

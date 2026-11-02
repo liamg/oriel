@@ -11,7 +11,8 @@ and a drop-down.
 
 ## Tabs {#tabs}
 
-A pane can hold several views as tabs. Click one to show it; drag it elsewhere to move it.
+A pane can hold several views as tabs. Click one to show it; drag it along its tab strip to reorder the tabs, or
+elsewhere to move it.
 
 ## Splits {#splits}
 
@@ -23,8 +24,9 @@ Drag a tab onto another pane's edge to split it, onto its middle or its tab stri
 edge to dock it. A floating pane's tab strip takes the tab too.
 
 While you drag, the target lights up and a label says what letting go does: *Split right*, *Tab with main.go*,
-*Dock bottom*. Joining a pane's tabs, or a dock that already has views, outlines its tab strip, shows the new tab's
-slot at the end and lights the body where its content will show. Over the rest of a floating pane the drop floats,
+*Dock bottom*, *Move tab*. Joining a pane's tabs, or a dock that already has views, outlines its tab strip, shows the
+new tab's slot and lights the body where its content will show. Over a tab strip, the tab goes where the pointer is,
+shown by a bar between two tabs; over the body, it goes at the end. Over the rest of a floating pane the drop floats,
 shown as a dashed outline.
 
 {{keys "layout.*"}}

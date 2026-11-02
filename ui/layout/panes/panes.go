@@ -54,22 +54,24 @@ type drag struct {
 	spot   spot
 }
 
-// spot is where a drag would drop and how it's shown: the rect lit, the slot a new tab would take, the body its
-// content would fill, and the area the label names it in.
+// spot is where a drag would drop and how it's shown: the rect lit, the slot a new tab would take (or the caret
+// between tabs it would go), the body its content would fill, and the area the label names it in.
 type spot struct {
 	ok     bool
 	target layout.Target
 	lit    render.Rect
 	slot   render.Rect
+	caret  render.Rect
 	body   render.Rect
 	area   render.Rect
 	label  string
 }
 
-// tabRow is a leaf's tab strip and the last tab in it. head is how wide a dock's header would be as a tab, 0 for
+// tabRow is a leaf's tab strip and its tabs, in order. head is how wide a dock's header would be as a tab, 0 for
 // a strip of tabs.
 type tabRow struct {
 	id, last ui.ID
+	tabs     []ui.ID
 	head     float32
 }
 
@@ -469,6 +471,7 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 	st.tabs[id] = v
 	s := st.strips[l]
 	s.last = id
+	s.tabs = append(s.tabs, id)
 	st.strips[l] = s
 	in := c.Interaction(id)
 	changed := false
@@ -594,6 +597,11 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 	size := c.Size()
 	dock := func(e layout.Edge, rc render.Rect) spot {
 		s := spot{ok: true, target: layout.Target{Dock: e}, lit: rc, area: rc, label: "Dock " + string(e)}
+		if d := r.Docks[e]; d.Open && len(d.Leaf.Tabs) > 0 {
+			if t, ok := onStrip(c, st, d.Leaf, rc, p, s.target); ok {
+				return t
+			}
+		}
 		// An open dock with tabs takes the view as one more tab: show it as one.
 		if d := r.Docks[e]; d.Open && len(d.Leaf.Tabs) > 0 && (st.drag == nil || !slices.Contains(d.Leaf.Tabs, st.drag.view)) {
 			if t, ok := tabSpot(c, st, d.Leaf, rc); ok {
@@ -625,14 +633,8 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 		if len(l.Tabs) == 0 {
 			return spot{}, false
 		}
-		strip, ok := c.Rect(st.strips[l].id)
-		if !ok || !in(p, strip) {
-			return spot{}, false
-		}
-		s, ok := tabSpot(c, st, l, rc)
 		b := l.Tabs[l.Active]
-		s.target, s.label = layout.Target{Beside: &b, Zone: layout.ZoneCenter}, "Tab with "+tabName(st, b)
-		return s, ok
+		return onStrip(c, st, l, rc, p, layout.Target{Beside: &b, Zone: layout.ZoneCenter})
 	}
 	// A float or the drop-down sits over main.
 	for l, id := range st.leaves {
@@ -682,6 +684,47 @@ func target(c *ui.Ctx, r *layout.Root, st *viewState, p render.Point) spot {
 		return s
 	}
 	return float()
+}
+
+// onStrip is a drop at p on l's tab strip, l drawn at rc: it joins l's tabs as t, in the slot under p. On the
+// dragged view's own strip it moves its tab there.
+func onStrip(c *ui.Ctx, st *viewState, l *layout.Node, rc render.Rect, p render.Point, t layout.Target) (spot, bool) {
+	row, ok := st.strips[l]
+	if !ok || row.head > 0 || len(row.tabs) == 0 || st.drag == nil {
+		return spot{}, false
+	}
+	strip, ok := c.Rect(row.id)
+	if !ok || !in(p, strip) {
+		return spot{}, false
+	}
+	i, x := len(row.tabs), strip.Min.X
+	for j, id := range row.tabs {
+		tr, ok := c.Rect(id)
+		if !ok {
+			continue
+		}
+		if p.X < tr.Min.X+tr.Dx()/2 {
+			i, x = j, tr.Min.X
+			break
+		}
+		x = tr.Max.X
+	}
+	t.Index = &i
+	x = min(max(x, strip.Min.X+4), strip.Max.X-4) // clear of the strip's outline
+	caret := render.XYWH(x-1, strip.Min.Y+4, 2, strip.Dy()-8)
+	body := render.Rect{Min: render.Point{X: rc.Min.X, Y: strip.Max.Y + 1}, Max: rc.Max}
+	if slices.Contains(l.Tabs, st.drag.view) {
+		return spot{ok: true, target: t, lit: strip, caret: caret, area: body, label: "Move tab"}, true
+	}
+	s, ok := tabSpot(c, st, l, rc)
+	if !ok {
+		return spot{}, false
+	}
+	if i < len(row.tabs) {
+		s.slot, s.caret = render.Rect{}, caret
+	}
+	s.target, s.label = t, "Tab with "+tabName(st, l.Tabs[l.Active])
+	return s, true
 }
 
 // tabSpot shows a drop joining l's tabs, l drawn at rc: its strip outlined with the new tab's slot on the end, and
@@ -768,11 +811,14 @@ func indicator(c *ui.Ctx, st *viewState, d *drag) {
 		})
 		// A lit tab strip is only outlined, so its tabs still show beside the slot.
 		fill := th.C(tDrop)
-		if s.slot != (render.Rect{}) {
+		if s.slot != (render.Rect{}) || s.caret != (render.Rect{}) {
 			fill = render.Color{}
 		}
 		c.Box("drop", ui.Style{W: ui.Px(w), H: ui.Px(h), Z: ui.LayerDrag, Fill: fill, Stroke: edge, Border: 1.5, Radius: 6,
 			Float: &ui.Float{Point: &at}, Help: HelpDrop}, nil)
+	}
+	if k := s.caret; k != (render.Rect{}) {
+		c.Box("caret", ui.Style{W: ui.Px(k.Dx()), H: ui.Px(k.Dy()), Z: ui.LayerDrag + 1, Fill: edge, Radius: 1, Float: &ui.Float{Point: &k.Min}}, nil)
 	}
 	if b := s.body; b != (render.Rect{}) {
 		c.Box("body", ui.Style{W: ui.Px(b.Dx()), H: ui.Px(b.Dy()), Z: ui.LayerDrag, Fill: th.C(tDrop), Stroke: theme.WithAlpha(edge, .5),
