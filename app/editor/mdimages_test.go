@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/editor"
 	"github.com/liamg/oriel/registry"
 )
@@ -135,5 +136,25 @@ func TestMarkdownPreviewImages(t *testing.T) {
 	s.Frames(2)
 	if !drew(s, "1 / 2") || !drew(s, "256×256") {
 		t.Errorf("← doesn't go to the logo:\n%s", s.Text())
+	}
+}
+
+// A PNG that says 144 DPI or more, as a Retina screenshot does, is drawn at the size it was on screen: 2 pixels a point
+// at 144 DPI. One at 72 or 96 DPI, or that says none, is a pixel a point.
+func TestMarkdownImageDensity(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "retina.png"), rig.PNGAtDPI(t, photo(400, 200), 144), 0o644)
+	os.WriteFile(filepath.Join(dir, "windows.png"), rig.PNGAtDPI(t, photo(400, 200), 96), 0o644)
+	os.WriteFile(filepath.Join(dir, "plain.png"), editor.PNGBytes(t, photo(400, 200)), 0o644)
+	os.WriteFile(filepath.Join(dir, "README.md"), []byte("![retina](retina.png)\n\n![windows](windows.png)\n\n![plain](plain.png)\n"), 0o644)
+	s := threadsSceneWith(t, apptest.Options{WorkDir: dir})
+	s.Run("editor.open", registry.Args{"path": "README.md"})
+	s.Frames(3)
+	s.Run("MarkdownPreview", nil)
+	s.Frames(4)
+	for name, want := range map[string]float32{"retina": 200, "windows": 400, "plain": 400} {
+		if b := s.NodeRole("image", name).Bounds; b.Dx() != want || b.Dy() != want/2 {
+			t.Errorf("%s is %v×%v, want %v×%v", name, b.Dx(), b.Dy(), want, want/2)
+		}
 	}
 }

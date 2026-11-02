@@ -2,9 +2,12 @@ package rig
 
 import (
 	"bytes"
+	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"testing"
 )
 
@@ -34,4 +37,17 @@ func PNG(t *testing.T, img image.Image) []byte {
 		t.Fatal(err)
 	}
 	return b.Bytes()
+}
+
+// PNGAtDPI is img encoded as a PNG whose pHYs chunk says dpi.
+func PNGAtDPI(t *testing.T, img image.Image, dpi float64) []byte {
+	t.Helper()
+	b := PNG(t, img)
+	ppm := uint32(math.Round(dpi / 0.0254))
+	data := append(binary.BigEndian.AppendUint32(binary.BigEndian.AppendUint32(nil, ppm), ppm), 1)
+	chunk := append(binary.BigEndian.AppendUint32(nil, uint32(len(data))), "pHYs"...)
+	chunk = append(chunk, data...)
+	chunk = binary.BigEndian.AppendUint32(chunk, crc32.ChecksumIEEE(chunk[4:]))
+	ihdr := 8 + 12 + 13
+	return bytes.Join([][]byte{b[:ihdr], chunk, b[ihdr:]}, nil)
 }

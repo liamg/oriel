@@ -359,8 +359,8 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 		var nat render.Point
 		switch {
 		case p.img != nil:
-			b := p.img.Bounds()
-			nat = render.Point{X: float32(b.Dx()), Y: float32(b.Dy())}
+			b, d := p.img.Bounds(), max(pc.Density, 1)
+			nat = render.Point{X: float32(b.Dx()) / d, Y: float32(b.Dy()) / d}
 		case p.doc != nil:
 			nat = p.doc.Size
 		}

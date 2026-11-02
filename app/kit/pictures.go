@@ -128,6 +128,7 @@ type Picture struct {
 	Img     image.Image
 	Doc     *svg.Doc
 	Format  string
+	Density float32 // its pixels per point, as its file says: 2 for a Retina screenshot; 0 when it doesn't say
 	Err     error
 	Loading bool
 	Src     string    // a remote one's URL
@@ -192,6 +193,9 @@ func decoded(b []byte) (*Picture, error) {
 		pc.Doc, pc.Err = svg.Parse(b)
 	} else {
 		pc.Img, pc.Format, pc.Err = DecodeImage(b)
+		if pc.Format == "png" {
+			pc.Density = pngDensity(b)
+		}
 	}
 	if pc.Err != nil {
 		return nil, pc.Err
