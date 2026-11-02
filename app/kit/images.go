@@ -9,6 +9,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
+	"math"
 	"path/filepath"
 	"strings"
 
@@ -86,4 +87,26 @@ func decodeICO(b []byte) (image.Image, error) {
 		return nil, fmt.Errorf("an icon's bitmap: %w", err)
 	}
 	return img, nil
+}
+
+// pngDensity is a PNG's pixels per point from its pHYs chunk: a whole number for 144 DPI and up, else 0. 72 and 96
+// DPI are both a screen's own pixels, so only a Retina-style density counts.
+func pngDensity(b []byte) float32 {
+	const sig = 8
+	for i := sig; i+8 <= len(b); {
+		n, typ := int(binary.BigEndian.Uint32(b[i:])), string(b[i+4:i+8])
+		data := b[i+8:]
+		if n < 0 || n > len(data) || typ == "IDAT" {
+			return 0
+		}
+		if typ == "pHYs" && n >= 9 && data[8] == 1 {
+			dpi := float64(binary.BigEndian.Uint32(data)) * 0.0254
+			if dpi < 140 {
+				return 0
+			}
+			return float32(math.Round(dpi / 72))
+		}
+		i += 12 + n
+	}
+	return 0
 }

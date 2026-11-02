@@ -249,8 +249,8 @@ func newScaleCache(n int) *scaleCache { return &scaleCache{m: map[scaleKey]*imag
 // maxPart is the most pixels a scaled image or part may have.
 const maxPart = 8192 * 8192
 
-// scaled is img at w×h pixels, premultiplied: each pixel the average of the source pixels under it (the nearest one
-// when it's being enlarged). The same image at the same size is the same pointer, frame after frame.
+// scaled is img at w×h pixels, premultiplied: shrunk with a Catmull-Rom filter, or enlarged to the nearest source
+// pixel. The same image at the same size is the same pointer, frame after frame.
 func (ic *imageCache) scaled(img image.Image, w, h int) *image.RGBA {
 	w, h = max(w, 1), max(h, 1)
 	return ic.scaledPart(img, w, h, image.Rect(0, 0, w, h))
@@ -274,24 +274,11 @@ func (ic *imageCache) scaledPart(img image.Image, w, h int, part image.Rectangle
 		return out
 	}
 	src := ic.sources.rgbaOf(img)
-	sw, sh := src.Rect.Dx(), src.Rect.Dy()
-	out := image.NewRGBA(image.Rect(0, 0, part.Dx(), part.Dy()))
-	for y := part.Min.Y; y < part.Max.Y; y++ {
-		y0, y1 := y*sh/h, max((y+1)*sh/h, y*sh/h+1)
-		for x := part.Min.X; x < part.Max.X; x++ {
-			x0, x1 := x*sw/w, max((x+1)*sw/w, x*sw/w+1)
-			var sum [4]int
-			for sy := y0; sy < y1; sy++ {
-				row := src.Pix[sy*src.Stride:]
-				for sx := x0; sx < x1; sx++ {
-					p := row[sx*4 : sx*4+4]
-					sum[0], sum[1], sum[2], sum[3] = sum[0]+int(p[0]), sum[1]+int(p[1]), sum[2]+int(p[2]), sum[3]+int(p[3])
-				}
-			}
-			n := (y1 - y0) * (x1 - x0)
-			d := out.Pix[(y-part.Min.Y)*out.Stride+(x-part.Min.X)*4:]
-			d[0], d[1], d[2], d[3] = uint8(sum[0]/n), uint8(sum[1]/n), uint8(sum[2]/n), uint8(sum[3]/n)
-		}
+	var out *image.RGBA
+	if w < src.Rect.Dx() || h < src.Rect.Dy() {
+		out = shrink(src, w, h, part)
+	} else {
+		out = enlarge(src, w, h, part)
 	}
 	if len(cache.m) >= cache.size {
 		clear(cache.m)
@@ -299,6 +286,103 @@ func (ic *imageCache) scaledPart(img image.Image, w, h int, part image.Rectangle
 	cache.m[k] = out
 	return out
 }
+
+// enlarge is the part of src scaled up to w×h, each pixel the nearest source pixel's.
+func enlarge(src *image.RGBA, w, h int, part image.Rectangle) *image.RGBA {
+	sw, sh := src.Rect.Dx(), src.Rect.Dy()
+	out := image.NewRGBA(image.Rect(0, 0, part.Dx(), part.Dy()))
+	for y := part.Min.Y; y < part.Max.Y; y++ {
+		row := src.Pix[(y*sh/h)*src.Stride:]
+		d := out.Pix[(y-part.Min.Y)*out.Stride:]
+		for x := part.Min.X; x < part.Max.X; x++ {
+			copy(d[(x-part.Min.X)*4:(x-part.Min.X)*4+4], row[(x*sw/w)*4:])
+		}
+	}
+	return out
+}
+
+// shrink is the part of src scaled down to w×h through a Catmull-Rom filter widened to the scale, one axis at a time,
+// which keeps small text sharper than averaging.
+func shrink(src *image.RGBA, w, h int, part image.Rectangle) *image.RGBA {
+	xs, ys := filterTaps(src.Rect.Dx(), w, part.Min.X, part.Max.X), filterTaps(src.Rect.Dy(), h, part.Min.Y, part.Max.Y)
+	top, bottom := math.MaxInt, 0
+	for _, t := range ys {
+		top, bottom = min(top, t.from), max(bottom, t.from+len(t.w))
+	}
+	// rows are the source rows the part reads, each already filtered across.
+	pw := part.Dx()
+	rows := make([]float32, (bottom-top)*pw*4)
+	for sy := top; sy < bottom; sy++ {
+		in, o := src.Pix[sy*src.Stride:], rows[(sy-top)*pw*4:]
+		for x, t := range xs {
+			var sum [4]float32
+			for i, k := range t.w {
+				p := in[(t.from+i)*4:]
+				sum[0], sum[1], sum[2], sum[3] = sum[0]+k*float32(p[0]), sum[1]+k*float32(p[1]), sum[2]+k*float32(p[2]), sum[3]+k*float32(p[3])
+			}
+			copy(o[x*4:x*4+4], sum[:])
+		}
+	}
+	out := image.NewRGBA(image.Rect(0, 0, pw, part.Dy()))
+	for y, t := range ys {
+		d := out.Pix[y*out.Stride:]
+		for x := range pw {
+			var sum [4]float32
+			for i, k := range t.w {
+				r := rows[((t.from+i-top)*pw+x)*4:]
+				sum[0], sum[1], sum[2], sum[3] = sum[0]+k*r[0], sum[1]+k*r[1], sum[2]+k*r[2], sum[3]+k*r[3]
+			}
+			a := clampByte(sum[3])
+			d[x*4], d[x*4+1], d[x*4+2], d[x*4+3] = min(clampByte(sum[0]), a), min(clampByte(sum[1]), a), min(clampByte(sum[2]), a), a
+		}
+	}
+	return out
+}
+
+// taps are the source pixels one output pixel reads along an axis, from from, and their weights.
+type taps struct {
+	from int
+	w    []float32
+}
+
+// filterTaps are the taps of output pixels lo to hi of n along an axis src pixels long, through a Catmull-Rom filter
+// widened by the scale. Weights past an edge go to the edge pixel.
+func filterTaps(src, n, lo, hi int) []taps {
+	scale := max(float64(src)/float64(n), 1)
+	support := 2 * scale
+	out := make([]taps, hi-lo)
+	for o := lo; o < hi; o++ {
+		centre := (float64(o)+.5)*scale - .5
+		first, last := int(math.Ceil(centre-support)), int(math.Floor(centre+support))
+		from, to := max(first, 0), min(last, src-1)
+		ws := make([]float64, to-from+1)
+		var sum float64
+		for i := first; i <= last; i++ {
+			k := catmullRom((float64(i) - centre) / scale)
+			ws[min(max(i, 0), src-1)-from] += k
+			sum += k
+		}
+		t := taps{from: from, w: make([]float32, len(ws))}
+		for i, k := range ws {
+			t.w[i] = float32(k / sum)
+		}
+		out[o-lo] = t
+	}
+	return out
+}
+
+func catmullRom(x float64) float64 {
+	x = math.Abs(x)
+	switch {
+	case x < 1:
+		return (1.5*x-2.5)*x*x + 1
+	case x < 2:
+		return ((-.5*x+2.5)*x-4)*x + 2
+	}
+	return 0
+}
+
+func clampByte(v float32) uint8 { return uint8(min(max(v+.5, 0), 255)) }
 
 // sourceCache converts each image to premultiplied RGBA once.
 type sourceCache struct {

@@ -65,3 +65,37 @@ func TestImage(t *testing.T) {
 		}
 	}
 }
+
+// A shrunk image keeps a thin line where it was and still dark; flat colour stays exact, and a part is as the whole.
+func TestImageShrink(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 40, 4))
+	for y := range 4 {
+		for x := range 40 {
+			v := uint8(255)
+			if x == 21 {
+				v = 0
+			}
+			src.SetRGBA(x, y, color.RGBA{v, v, v, 255})
+		}
+	}
+	ic := &imageCache{scales: newScaleCache(4), parts: newScaleCache(4), sources: sourceCache{m: map[image.Image]*image.RGBA{}}}
+	out := ic.scaled(src, 20, 2)
+	darkest := 0
+	for x := range 20 {
+		if out.RGBAAt(x, 1).R < out.RGBAAt(darkest, 1).R {
+			darkest = x
+		}
+	}
+	if c := out.RGBAAt(darkest, 1); darkest != 10 || c.R > 160 {
+		t.Errorf("the darkest pixel is %d at %v, want 10 at 160 or darker", darkest, c.R)
+	}
+	if c := out.RGBAAt(2, 1); c.R != 255 || c.A != 255 {
+		t.Errorf("white away from the line is %v", c)
+	}
+	whole, part := ic.scaled(src, 20, 2), ic.scaledPart(src, 20, 2, image.Rect(8, 0, 13, 2))
+	for x := 8; x < 13; x++ {
+		if whole.RGBAAt(x, 1) != part.RGBAAt(x-8, 1) {
+			t.Errorf("a part's pixel %d is %v, the whole's %v", x, part.RGBAAt(x-8, 1), whole.RGBAAt(x, 1))
+		}
+	}
+}
