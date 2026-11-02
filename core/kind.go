@@ -37,6 +37,8 @@ const (
 	NextPR      Capability = "next-pr"      // once its PR is done with, it moves on to a fresh branch
 	Delete      Capability = "delete"       // its workspace is Oriel's, to delete
 	OwnsBranch  Capability = "owns-branch"  // Oriel made its branches: it names, renames and deletes them
+	// CommentsInDiff keeps its agent's line comments on lines of its pull request's diff, as GitHub's review takes them.
+	CommentsInDiff Capability = "comments-in-diff"
 )
 
 // KindSpec is a kind of session as data: what it starts from and what its agent is told.

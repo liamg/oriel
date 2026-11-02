@@ -151,18 +151,3 @@ func TestSubmitReviewPlacesEachComment(t *testing.T) {
 		})
 	}
 }
-
-// GitHub patches are unified diff: a patch's hunks are unified diff, "@@ -old,n +new,m @@" then context, - and + lines.
-func TestPatchLines(t *testing.T) {
-	l := gh.PatchLines("@@ -1,2 +1,3 @@\n a\n-b\n+c\n+d\n\\ No newline at end of file\n@@ -20 +21,2 @@\n x\n+y")
-	for side, want := range map[string][]int{"RIGHT": {1, 2, 3, 21, 22}, "LEFT": {1, 2, 20}} {
-		var got []int
-		for n := range l[side] {
-			got = append(got, n)
-		}
-		slices.Sort(got)
-		if !slices.Equal(got, want) {
-			t.Errorf("%s: %v, want %v", side, got, want)
-		}
-	}
-}

@@ -6,9 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/liamg/oriel/gitx"
 )
 
 // What reviewing someone else's PR on their asking needs (crit's gh, for agentbus): who the user is, a PR's size and
@@ -189,7 +190,7 @@ func placeComments(files []PRFile, comments []ReviewComment) (inline, onFile, in
 	for _, f := range files {
 		hunks[f.Path] = nil
 		if f.Patch != "" {
-			hunks[f.Path] = PatchLines(f.Patch)
+			hunks[f.Path] = gitx.PatchLines(f.Patch)
 		}
 	}
 	for _, c := range comments {
@@ -208,35 +209,6 @@ func placeComments(files []PRFile, comments []ReviewComment) (inline, onFile, in
 		}
 	}
 	return inline, onFile, inBody
-}
-
-var hunkHeader = regexp.MustCompile(`^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
-
-// PatchLines are the lines of a patch a review comment can sit on, by side: RIGHT the new file's, LEFT the old's.
-func PatchLines(patch string) map[string]map[int]bool {
-	out := map[string]map[int]bool{"RIGHT": {}, "LEFT": {}}
-	old, nw := 0, 0
-	for _, ln := range strings.Split(patch, "\n") {
-		if m := hunkHeader.FindStringSubmatch(ln); m != nil {
-			old, _ = strconv.Atoi(m[1])
-			nw, _ = strconv.Atoi(m[2])
-			continue
-		}
-		switch {
-		case nw == 0 && old == 0, strings.HasPrefix(ln, "\\"):
-		case strings.HasPrefix(ln, "+"):
-			out["RIGHT"][nw] = true
-			nw++
-		case strings.HasPrefix(ln, "-"):
-			out["LEFT"][old] = true
-			old++
-		default:
-			out["RIGHT"][nw], out["LEFT"][old] = true, true
-			nw++
-			old++
-		}
-	}
-	return out
 }
 
 // Green says whether every check passed (or was skipped); none at all isn't green.

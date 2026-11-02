@@ -14,6 +14,7 @@ The request follows these instructions and names the PR and its base.
 
 1. Read the whole change (`git diff <base>...HEAD` and `git log` in the worktree) and the code around it. `mcp__oriel__lsp_definition` and `mcp__oriel__lsp_references` follow definitions and callers.
 2. For every genuine issue (bugs, edge cases, security problems, misleading names, dead code), `mcp__oriel__comment` on the line with `file`, `line`, `severity` and `body`; `end_line` for a range, `side: "old"` for removed code, `project` when there are several.
+   Comment only on lines the diff shows: changed lines and the three lines of context around them. GitHub can't hold a comment anywhere else, so the tool refuses it and names the lines it can use. An issue the change causes in code it doesn't touch (a caller it breaks, say) goes on the changed line that causes it, naming the other place, or in a general comment with no `file`.
 3. Reply on the request thread with a one-paragraph verdict, and resolve it.
 
 Find out rather than report doubt: when you don't understand something, follow the definitions, callers and history until you do. A finding says what is wrong; never list what you're unsure of or couldn't check.

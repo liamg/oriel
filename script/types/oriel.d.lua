@@ -389,7 +389,7 @@ oriel.session = {}
 ---@param fn function
 function oriel.session.chips(name, fn) end
 
---- A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), gate (hard, soft or off), needs_repo, launcher, order, prompt_file, auto_review, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).
+--- A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), gate (hard, soft or off), needs_repo, launcher, order, prompt_file, auto_review, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).
 ---@param name string
 ---@param spec table
 function oriel.session.kind(name, spec) end
