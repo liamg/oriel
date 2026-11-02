@@ -37,6 +37,7 @@ type Ship struct {
 	Commits   int          `json:"commits,omitempty"` // on the branch since its base
 	Unpushed  []ShipCommit `json:"unpushed,omitempty"`
 	Pushed    bool         `json:"pushed,omitempty"`
+	Head      string       `json:"head,omitempty"`     // the commit checked out
 	Replaced  int          `json:"replaced,omitempty"` // commits on origin's branch a rebase rewrote: the next push replaces them
 	Synced    time.Time    `json:"synced,omitzero"`    // when it was last rebased onto its base from here
 	// CommitDraft is the commit message drafted for it (Body), PRDraft the pull request's.
@@ -207,6 +208,7 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 		s.Files = append(s.Files, ShipFile{Path: fs.Path, Code: string(fs.Code), Add: fs.Add, Del: fs.Del, Binary: fs.Binary})
 	}
 	s.Behind, s.Conflicts, s.Commits, s.Pushed, s.Replaced = f.Behind, f.Conflicts, len(f.Commits), f.Pushed, f.Replaced
+	s.Head, _ = repo.Head(ctx)
 	if s.Base != "" && repo.HasBranch(ctx, s.Base) {
 		if mb, err := repo.MergeBaseOf(ctx, "HEAD", "refs/heads/"+s.Base); err == nil {
 			if n, err := repo.CountCommits(ctx, mb, "refs/remotes/origin/"+s.Base); err == nil {

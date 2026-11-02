@@ -116,9 +116,10 @@ func (x *Ship) readPRs(ctx context.Context, id core.SessionID) {
 	x.mu.Lock()
 	r := x.reports[id]
 	var base []host.Ship
+	var gitRead []time.Time
 	if r != nil {
 		for _, s := range r.ships {
-			base = append(base, s.Ship)
+			base, gitRead = append(base, s.Ship), append(gitRead, s.GitRead)
 		}
 	}
 	x.mu.Unlock()
@@ -129,6 +130,9 @@ func (x *Ship) readPRs(ctx context.Context, id core.SessionID) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	ships := x.withPRs(ctx, id, base, false)
+	for i := range ships {
+		ships[i].GitRead = gitRead[i]
+	}
 	for _, s := range ships {
 		if strings.Contains(strings.ToLower(s.HostError), "rate limit") {
 			x.budget.Limited()

@@ -350,9 +350,9 @@ clip 224,38 1376x936 r 0
       rect 802.5,276 462.5x36 radius 6 stroke 1 #332f27
       rect 773.5,333 18x18 radius 9 stroke 1 #ff9b45
       text "4" @779.5,345.42 #ff9b45 JetBrains Mono 9.5
-      rect 782,351 1x347.5791 fill #332f27
-      rect 802.5,324 462.5x372.5791 fill #060606 radius 6
-      clip 802.5,324 462.5x372.5791 r 6
+      rect 782,351 1x368.77905 fill #332f27
+      rect 802.5,324 462.5x393.77905 fill #060606 radius 6
+      clip 802.5,324 462.5x393.77905 r 6
         clip 814.5,334.43774 383.65002x15.124512 r 0
           text "#812 · feat(search): back off on 429 using Retry-After" @814.5,346.54712 #ece6d8 Inter 12.5
         pop
@@ -395,25 +395,28 @@ clip 224,38 1376x936 r 0
           text "preview deploy" @836.5,586.9053 #b3ab99 Inter 12
         pop
         text "queued" @1213.4375,586.32007 #7c7566 JetBrains Mono 10.5
-        clip 814.5,601.54004 438.5x14.519531 r 0
-          text "REVIEWERS" @814.5,612.2198 #7c7566 JetBrains Mono 9.5
-          text "none yet" @890.47003,613.16504 #7c7566 Inter 12
+        clip 814.5,601.54004 438.5x13.200012 r 0
+          text "checked 28s ago · at c3f1a9e" @814.5,611.74005 #7c7566 JetBrains Mono 10
         pop
-        clip 814.5,624.0596 438.5x28.519531 r 5
-          text "⟷" @824.5,642.6846 #b98aff Inter 12
-          text "depends on search-api PR (not raised) · merge order: searc…" @853.5,642.09937 #b3ab99 JetBrains Mono 10.5
+        clip 814.5,622.74 438.5x14.519531 r 0
+          text "REVIEWERS" @814.5,633.41974 #7c7566 JetBrains Mono 9.5
+          text "none yet" @890.47003,634.365 #7c7566 Inter 12
         pop
-        rect 814.5,624.0596 438.5x28.519531 radius 5 stroke 1 #332f27
-        rect 814.5,660.5791 117.421875x26 fill #191815 radius 6 stroke 1 #332f27
-        text "Ready for review" @824.5,677.94434 #ece6d8 Inter 12
-        rect 939.9219,660.5791 60.453125x26 fill #191815 radius 6 stroke 1 #332f27
-        text "Edit PR" @949.9219,677.94434 #ece6d8 Inter 12
-        rect 1008.375,660.5791 68.046875x26 fill #191815 radius 6 stroke 1 #332f27
-        text "Merge…" @1018.375,677.94434 #ece6d8 Inter 12
-        rect 1129.0469,660.5791 123.953125x26 fill #191815 radius 6 stroke 1 #332f27
-        text "Open on GitHub ↗" @1139.0469,677.94434 #ece6d8 Inter 12
+        clip 814.5,645.2595 438.5x28.519531 r 5
+          text "⟷" @824.5,663.8845 #b98aff Inter 12
+          text "depends on search-api PR (not raised) · merge order: searc…" @853.5,663.2993 #b3ab99 JetBrains Mono 10.5
+        pop
+        rect 814.5,645.2595 438.5x28.519531 radius 5 stroke 1 #332f27
+        rect 814.5,681.77905 117.421875x26 fill #191815 radius 6 stroke 1 #332f27
+        text "Ready for review" @824.5,699.1443 #ece6d8 Inter 12
+        rect 939.9219,681.77905 60.453125x26 fill #191815 radius 6 stroke 1 #332f27
+        text "Edit PR" @949.9219,699.1443 #ece6d8 Inter 12
+        rect 1008.375,681.77905 68.046875x26 fill #191815 radius 6 stroke 1 #332f27
+        text "Merge…" @1018.375,699.1443 #ece6d8 Inter 12
+        rect 1129.0469,681.77905 123.953125x26 fill #191815 radius 6 stroke 1 #332f27
+        text "Open on GitHub ↗" @1139.0469,699.1443 #ece6d8 Inter 12
       pop
-      rect 802.5,324 462.5x372.5791 radius 6 stroke 1 #8f5829
+      rect 802.5,324 462.5x393.77905 radius 6 stroke 1 #8f5829
     pop
     rect 1289,124 1x840 fill #24221d
     rect 1290,124 300x840 fill #0c0c0b

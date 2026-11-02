@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -76,6 +77,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 		prStateChip(c, s.PR)
 	}, func(c *ui.Ctx) {
 		x.checks(c, s)
+		c.Row("fresh", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { checksFoot(c, s) })
 		x.reviewersLine(c, s, s.PR.Reviewers, s.Owners)
 		x.links(c, se, s)
 		c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
@@ -148,8 +150,10 @@ func prStateTone(c *ui.Ctx, word string) color.NRGBA {
 		return th.C(theme.StatusPermission)
 	case "closed":
 		return th.C(theme.FgFaint)
-	case "draft":
+	case "draft", "not raised":
 		return th.C(theme.FgMuted)
+	case "drafting":
+		return th.C(tShipTodo)
 	}
 	return th.C(theme.OK)
 }
@@ -199,34 +203,40 @@ func (x *Ship) checks(c *ui.Ctx, s shipRead) {
 	kit.SectionCap(c, fmt.Sprintf("CHECKS · %d OF %d", pass, len(s.Checks)))
 	now := c.Now()
 	for i, ch := range s.Checks {
-		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			took := ""
-			if d := ch.Took(now); d > 0 {
-				took = kit.Duration(d)
-			}
-			glyph, tone, note := "✓", th.C(theme.OK), took
-			switch ch.State {
-			case registry.CheckFailed:
-				glyph, tone = "✗", th.C(theme.Error)
-			case registry.CheckSkipped:
-				glyph, tone = "–", th.C(theme.FgFaint)
-			case registry.CheckRunning, registry.CheckQueued:
-				glyph, tone = "◌", th.C(tShipCI)
-				note = "queued"
-				if ch.State == registry.CheckRunning {
-					note = strings.TrimSpace("running " + took)
-				}
-			}
-			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(12, tone)) })
-			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", ch.Name, kit.UIFont(12, th.C(theme.FgMuted))) })
-			c.Text("d", note, kit.MonoFont(10.5, th.C(theme.FgFaint)))
-		})
+		checkRow(c, i, ch, now)
 	}
 	if s.FailLine != "" {
 		c.Row("fail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Clip: true}, func(c *ui.Ctx) {
 			c.Text("f", s.FailLine, kit.MonoFont(10.5, th.C(theme.Error)))
 		})
 	}
+}
+
+// checkRow is a check: its state's glyph, its name, and how long it took or has run.
+func checkRow(c *ui.Ctx, key any, ch registry.Check, now time.Time) {
+	th := c.Theme()
+	c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+		took := ""
+		if d := ch.Took(now); d > 0 {
+			took = kit.Duration(d)
+		}
+		glyph, tone, note := "✓", th.C(theme.OK), took
+		switch ch.State {
+		case registry.CheckFailed:
+			glyph, tone = "✗", th.C(theme.Error)
+		case registry.CheckSkipped:
+			glyph, tone = "–", th.C(theme.FgFaint)
+		case registry.CheckRunning, registry.CheckQueued:
+			glyph, tone = "◌", th.C(tShipCI)
+			note = "queued"
+			if ch.State == registry.CheckRunning {
+				note = strings.TrimSpace("running " + took)
+			}
+		}
+		c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(12, tone)) })
+		c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", ch.Name, kit.UIFont(12, th.C(theme.FgMuted))) })
+		c.Text("d", note, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+	})
 }
 
 // reviewersLine is who reviews: each with their kit.Initials, CODEOWNERS' marked.
