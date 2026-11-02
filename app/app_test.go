@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -79,13 +80,14 @@ func boot(t *testing.T, plugins ...plugin.Plugin) *booted {
 
 func bootIn(t *testing.T, configDir string, plugins ...plugin.Plugin) *booted {
 	t.Helper()
+	isolate.Test(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
 	b := &booted{store: eventstore.New(), done: make(chan error, 1)}
 	go func() {
 		// A directory is open: the start view keeps to its own keys (TestStartViewKeepsToItsOwnKeys).
-		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Plugins: plugins, ConfigDir: configDir, WorkDir: t.TempDir()})
+		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Plugins: plugins, ConfigDir: configDir, StateDir: t.TempDir(), WorkDir: t.TempDir()})
 	}()
 	select {
 	case b.win = <-be.Windows():

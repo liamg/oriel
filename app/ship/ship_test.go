@@ -351,6 +351,22 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	s.WantFrame("DRAFTED BY FAKE")
 }
 
+// A draft saved after the code last changed fills the commit box with no refresh: the save, not the worktree, is
+// what changed.
+func TestShipShowsADraftSavedAfterTheCode(t *testing.T) {
+	s, lw, _, se, _ := shipScene(t)
+	x := shipOf(s)
+	agent := lw.Fake.WaitStarted(t)
+	s.Run("ship.open", nil)
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
+	shipSettle(s, t, "the change", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) > 0 })
+	shipIdle(s)
+
+	agent.Call(t, "commit_draft", map[string]any{"project": "search-api", "message": "feat(api): two routes"})
+	shipSettle(s, t, "the draft", func() bool { return s.Node("Commit message").Value == "feat(api): two routes" })
+	s.WantFrame("DRAFTED BY FAKE")
+}
+
 // A project's Git panel, in a directory opened directly: its branch, the commit box, rename and push, with no
 // agent to draft or redraft.
 func TestGitPanelInAnOpenedDirectory(t *testing.T) {

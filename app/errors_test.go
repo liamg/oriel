@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -24,6 +25,7 @@ import (
 
 func bootWith(t *testing.T, cfg app.Config) *booted {
 	t.Helper()
+	isolate.Test(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	t.Cleanup(cancel)
 	be := headless.New()
@@ -35,6 +37,9 @@ func bootWith(t *testing.T, cfg app.Config) *booted {
 	}
 	if cfg.ConfigDir == "" {
 		cfg.ConfigDir = t.TempDir()
+	}
+	if cfg.StateDir == "" {
+		cfg.StateDir = t.TempDir()
 	}
 	if cfg.WorkDir == "" {
 		cfg.WorkDir = t.TempDir() // a workspace: the counter may be its root view

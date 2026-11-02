@@ -302,9 +302,13 @@ func (h *session) toolDraft(kind string) func(context.Context, json.RawMessage) 
 			return fmt.Sprintf("Not saved: the user wrote %s's %s themselves. Leave it.", p.Name, hostcore.DraftNoun[kind]), nil
 		}
 		code := hostcore.DraftCode(ctx, repo, repo.FlightBase(ctx, p.Base), kind)
+		title, body := a.Str("title"), a.Str("body")
 		if kind == "commit" {
-			return "saved", h.r.env.WriteDraft(h.id, p.Name, kind, "", a.Str("message"), se.Agent.Provider, code)
+			title, body = "", a.Str("message")
 		}
-		return "saved", h.r.env.WriteDraft(h.id, p.Name, kind, a.Str("title"), a.Str("body"), se.Agent.Provider, code)
+		if err := h.r.env.WriteDraft(h.id, p.Name, kind, title, body, se.Agent.Provider, code); err != nil {
+			return "", err
+		}
+		return "saved", h.r.st.Emit(core.DraftSaved{Session: h.id, Project: p.Name, Kind: kind})
 	}
 }

@@ -130,6 +130,8 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 		case core.ProjectsChanged:
 			x.refresh(ev.ID, false)
 			x.follow()
+		case core.DraftSaved:
+			x.refresh(ev.Session, false)
 		case core.SessionOpened, core.SessionArchived, core.SessionClosed:
 			x.follow()
 		}

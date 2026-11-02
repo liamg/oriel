@@ -24,6 +24,7 @@ func init() {
 	RegisterEvent[UsageRead]("UsageRead")
 	RegisterEvent[MachineChanged]("MachineChanged")
 	RegisterEvent[RuleAdded]("RuleAdded")
+	RegisterEvent[DraftSaved]("DraftSaved")
 }
 
 // upsert is xs with x in place of the element same matches, or with x added: a new slice, never xs changed.
@@ -402,6 +403,25 @@ func (e RuleAdded) Apply(s *State) error {
 	}
 	if !slices.Contains(se.Rules, e.Rule) {
 		se.Rules = append(slices.Clone(se.Rules), e.Rule)
+	}
+	return nil
+}
+
+// DraftSaved says the agent saved a project's commit message or PR draft. It changes no state, so it's Logged; the
+// Ship page reads the drafts again.
+type DraftSaved struct {
+	Session SessionID `json:"session"`
+	Project string    `json:"project"`
+	Kind    string    `json:"kind"` // "commit" or "pr"
+}
+
+func (e DraftSaved) Scope() SessionID { return e.Session }
+
+func (DraftSaved) Logged() {}
+
+func (e DraftSaved) Apply(s *State) error {
+	if e.Kind != "commit" && e.Kind != "pr" {
+		return fmt.Errorf("no draft kind %q", e.Kind)
 	}
 	return nil
 }
