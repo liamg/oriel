@@ -6,7 +6,6 @@ import (
 	"context"
 	"maps"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -46,7 +45,7 @@ func isAgent(s string) bool {
 
 // Blame is who last changed each line of contents, path's text in a buffer (saved or not), by git blame --contents.
 func (r Repo) Blame(ctx context.Context, path string, contents []byte) ([]BlameLine, error) {
-	cmd := exec.CommandContext(ctx, "git", "-C", r.Dir, "--no-pager", "blame", "--porcelain", "--contents", "-", "--", path)
+	cmd := command(ctx, "-C", r.Dir, "--no-pager", "blame", "--porcelain", "--contents", "-", "--", path)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C")
 	cmd.Stdin = bytes.NewReader(contents)
 	out, err := cmd.Output()

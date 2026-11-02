@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -349,7 +348,7 @@ func (r Repo) writeIndex(ctx context.Context, path, contents string, keep bool) 
 	} else if st, err := os.Stat(filepath.Join(r.Dir, path)); err == nil && st.Mode()&0o111 != 0 {
 		mode = "100755"
 	}
-	cmd := exec.CommandContext(ctx, "git", "-C", r.Dir, "hash-object", "-w", "--stdin", "--path="+path)
+	cmd := command(ctx, "-C", r.Dir, "hash-object", "-w", "--stdin", "--path="+path)
 	cmd.Env = append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C")
 	cmd.Stdin = strings.NewReader(contents)
 	out, err := cmd.Output()

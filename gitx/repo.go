@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -20,6 +21,8 @@ type Repo struct {
 	Dir   string
 	Env   []string
 	Cache *Cache
+
+	gitRunning func() bool // gitRunning if nil
 }
 
 // IsRepo reports whether dir is the top of a work tree.
@@ -32,10 +35,20 @@ func (r Repo) git(ctx context.Context, args ...string) ([]byte, error) {
 	return r.gitEnv(ctx, nil, args...)
 }
 
-// gitEnv is git with more environment. A git that finds the index locked by another, briefly, is run again.
+// command is git, stopped by SIGTERM when ctx ends: a killed git can't remove its lock files.
+func command(ctx context.Context, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
+	cmd.WaitDelay = 5 * time.Second
+	return cmd
+}
+
+// gitEnv is git with more environment. A git that finds the index locked by another, briefly, is run again; one
+// that finds a stale lock removes it first.
 func (r Repo) gitEnv(ctx context.Context, env []string, args ...string) ([]byte, error) {
+	cleared := false
 	for wait := 20 * time.Millisecond; ; wait *= 2 {
-		cmd := exec.CommandContext(ctx, "git", append([]string{"-C", r.Dir, "--no-pager"}, args...)...)
+		cmd := command(ctx, append([]string{"-C", r.Dir, "--no-pager"}, args...)...)
 		cmd.Env = append(append(append(os.Environ(), "GIT_OPTIONAL_LOCKS=0", "LC_ALL=C"), r.Env...), env...)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -43,7 +56,12 @@ func (r Repo) gitEnv(ctx context.Context, env []string, args ...string) ([]byte,
 		if err == nil {
 			return out, nil
 		}
-		if !indexLocked(stderr.String()) || wait > lockWait {
+		lock := indexLock(stderr.String())
+		if lock != "" && wait > lockWait && !cleared && r.removeStaleLock(lock) {
+			cleared, wait = true, 10*time.Millisecond
+			continue
+		}
+		if lock == "" || wait > lockWait {
 			return nil, fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(stderr.String()))
 		}
 		select {
@@ -57,9 +75,47 @@ func (r Repo) gitEnv(ctx context.Context, env []string, args ...string) ([]byte,
 // lockWait is about how long a git waits for another to let go of the index.
 const lockWait = 2 * time.Second
 
-// indexLocked says git failed because another git holds the index.
-func indexLocked(stderr string) bool {
-	return strings.Contains(stderr, "index.lock") && strings.Contains(stderr, "File exists")
+// staleLock is how old a lock is, with no git running, before it's taken as left behind.
+const staleLock = time.Minute
+
+// indexLock is the lock git failed on because another git holds the index, or "".
+func indexLock(stderr string) string {
+	if !strings.Contains(stderr, "File exists") {
+		return ""
+	}
+	_, rest, ok := strings.Cut(stderr, "'")
+	lock, _, ok2 := strings.Cut(rest, "'")
+	if !ok || !ok2 || filepath.Base(lock) != "index.lock" {
+		return ""
+	}
+	return lock
+}
+
+// removeStaleLock removes lock if it's old and no git is running to hold it, and says if it did.
+func (r Repo) removeStaleLock(lock string) bool {
+	running := r.gitRunning
+	if running == nil {
+		running = gitRunning
+	}
+	st, err := os.Stat(lock)
+	if err != nil || time.Since(st.ModTime()) < staleLock || running() {
+		return false
+	}
+	return os.Remove(lock) == nil
+}
+
+// gitRunning says a git process is running on this machine, or that it can't tell.
+func gitRunning() bool {
+	out, err := exec.Command("ps", "-A", "-o", "comm=").Output()
+	if err != nil {
+		return true
+	}
+	for _, l := range strings.Split(string(out), "\n") {
+		if filepath.Base(strings.TrimSpace(l)) == "git" {
+			return true
+		}
+	}
+	return false
 }
 
 // Files are the work tree's files that git doesn't ignore, tracked or not, sorted.
@@ -129,7 +185,7 @@ func (r Repo) commit(ctx context.Context, message string, trailers, paths []stri
 	if len(paths) > 0 {
 		args = append(append(args, "--"), paths...)
 	}
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := command(ctx, args...)
 	cmd.Env = append(append(os.Environ(), "LC_ALL=C"), r.Env...)
 	cmd.Stdin = strings.NewReader(message)
 	if out, err := cmd.CombinedOutput(); err != nil {
