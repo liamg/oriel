@@ -36,3 +36,11 @@ func open() (master, slave *os.File, err error) {
 	}
 	return master, os.NewFile(uintptr(sfd), name), nil
 }
+
+// hangup sends SIGHUP to the terminal's foreground group, as the kernel would on it closing: a blocking Read in
+// progress holds the terminal open, so closing it alone sends nothing.
+func (p *PTY) hangup() {
+	if pg, err := unix.IoctlGetInt(int(p.f.Fd()), unix.TIOCGPGRP); err == nil && pg > 0 {
+		_ = unix.Kill(-pg, unix.SIGHUP)
+	}
+}

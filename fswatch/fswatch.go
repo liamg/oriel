@@ -233,13 +233,19 @@ func (w *Watcher) settle(r *root, announce bool) error {
 				w.queue(p, nil)
 			}
 			if !e.IsDir() {
-				if err := w.b.watchFile(p); err != nil {
+				if err := w.watchFile(p); err != nil {
 					return err
 				}
 			}
 		}
 	case statErr == nil:
-		return w.b.watchFile(r.path)
+		return w.watchFile(r.path)
+	default:
+		// Made since it was looked for, while its folder's watch began: that watch won't report it.
+		if fi, err := os.Stat(r.path); err == nil && !fi.IsDir() {
+			w.queue(r.path, nil)
+			return w.watchFile(r.path)
+		}
 	}
 	return nil
 }
@@ -269,7 +275,7 @@ func (w *Watcher) walk(r *root, dir string, announce bool) error {
 			return w.b.watchDir(p)
 		}
 		if d.Type().IsRegular() {
-			return w.b.watchFile(p)
+			return w.watchFile(p)
 		}
 		return nil
 	})
@@ -397,7 +403,7 @@ func (w *Watcher) handle(evs []raw) {
 			w.b.unwatchUnder(e.path)
 			// A file replaced by a rename is still there under a new inode.
 			if fi, err := os.Lstat(e.path); err == nil && fi.Mode().IsRegular() && w.wantFile(e.path) {
-				_ = w.b.watchFile(e.path)
+				_ = w.watchFile(e.path)
 			}
 		case opCreated:
 			if e.dir {
@@ -410,7 +416,7 @@ func (w *Watcher) handle(evs []raw) {
 					}
 				}
 			} else if w.wantFile(e.path) {
-				_ = w.b.watchFile(e.path)
+				_ = w.watchFile(e.path)
 			}
 		}
 		if w.relevant(e.path) {
@@ -432,7 +438,7 @@ func (w *Watcher) startStream(r *root) bool {
 	if err != nil {
 		real = r.path
 	}
-	s := &stream{real: real}
+	s := &stream{real: real, since: time.Now()}
 	stop, err := tb.watchTree(real, excludes(r.path, real, r.skip, maxExclude), func(evs []fsevent) {
 		w.handleStream(r, s, evs)
 	})
@@ -470,6 +476,9 @@ func (w *Watcher) handleStream(r *root, s *stream, evs []fsevent) {
 		if !ok || !inTree(r, p) {
 			continue
 		}
+		if w.before(s, p, e.flags) {
+			continue
+		}
 		if e.flags&evItemIsFile != 0 {
 			same := w.unchanged(p)
 			if same && e.flags&(evItemCreated|evItemRemoved|evItemRenamed|evItemModified) == 0 {
@@ -484,6 +493,30 @@ func (w *Watcher) handleStream(r *root, s *stream, evs []fsevent) {
 			}
 		}
 	}
+}
+
+// before says event e for p tells of what happened before stream s began: a file not changed since, or a folder
+// made before that hasn't moved. What a folder holds tells of its own changes. w.mu is held.
+func (w *Watcher) before(s *stream, p string, flags uint32) bool {
+	fi, err := os.Lstat(p)
+	switch {
+	case err != nil:
+		return false
+	case flags&evItemIsDir != 0:
+		return flags&evItemRenamed == 0 && madeAt(fi).Before(s.since)
+	case changedAt(fi).Before(s.since):
+		w.seen[p] = fi
+		return true
+	}
+	return false
+}
+
+// watchFile watches file p, keeping how it looks now so a metadata-only event on it is told apart; w.mu is held.
+func (w *Watcher) watchFile(p string) error {
+	if fi, err := os.Lstat(p); err == nil {
+		w.seen[p] = fi
+	}
+	return w.b.watchFile(p)
 }
 
 // unchanged says file p looks as it did at its last event, and keeps how it looks now; w.mu is held.

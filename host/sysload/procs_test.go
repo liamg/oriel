@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -48,12 +49,26 @@ func TestLoads(t *testing.T) {
 	}
 }
 
+// sleeperEnv makes this test binary a child that sleeps: macOS hides the environment of its own binaries (sleep).
+const sleeperEnv = "SYSLOAD_TEST_SLEEPER"
+
+func TestSleeper(t *testing.T) {
+	if os.Getenv(sleeperEnv) == "" {
+		t.Skip("only a child of TestFamily")
+	}
+	time.Sleep(30 * time.Second)
+}
+
 // A child started with a session's variable is in this process's family, with its command line and session.
 func TestFamily(t *testing.T) {
-	cmd := exec.Command("sleep", "30")
-	cmd.Env = append(os.Environ(), SessionEnv+"=s-123")
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(self, "-test.run=^TestSleeper$")
+	cmd.Env = append(os.Environ(), SessionEnv+"=s-123", sleeperEnv+"=1")
 	if err := cmd.Start(); err != nil {
-		t.Skip("no sleep:", err)
+		t.Fatal(err)
 	}
 	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait() })
 	time.Sleep(50 * time.Millisecond) // the exec lands, so the child shows its own command
@@ -68,7 +83,7 @@ func TestFamily(t *testing.T) {
 	if i < 0 {
 		t.Fatalf("no child %d in %+v", cmd.Process.Pid, fam)
 	}
-	if c := fam[i]; c.Command != "sleep 30" || c.Session != "s-123" {
+	if c := fam[i]; c.Command != strings.Join(cmd.Args, " ") || c.Session != "s-123" {
 		t.Errorf("the child reads %q in session %q", c.Command, c.Session)
 	}
 }

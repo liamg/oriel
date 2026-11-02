@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // treeBackend watches a whole tree with one OS handle (FSEvents), rather than one per folder and file.
@@ -37,7 +38,8 @@ const maxExclude = 8
 
 // stream is a tree root watched by a treeBackend.
 type stream struct {
-	real    string // the root with symlinks resolved, as the OS reports it
+	real    string    // the root with symlinks resolved, as the OS reports it
+	since   time.Time // when it began: FSEvents still reports changes made just before
 	stop    func()
 	stopped bool
 }

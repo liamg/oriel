@@ -101,9 +101,8 @@ func planScene(t *testing.T) *apptest.Scene {
 func TestPlanSnapshot(t *testing.T) {
 	s := planScene(t)
 	s.Run("plan.open", nil)
-	s.Frame()
-	s.Frame()
-	s.Frame()
+	s.SettleReads()
+	s.Frames(6) // each margin card settles a frame after the one above it
 	s.Lint("the plan view")
 	s.Golden("plan")
 	text := s.Text()
@@ -126,9 +125,8 @@ func TestPlanSnapshot(t *testing.T) {
 func TestPlanThreadsSitBesideTheirLines(t *testing.T) {
 	s := planScene(t)
 	s.Run("plan.open", nil)
-	for range 4 {
-		s.Frame()
-	}
+	s.SettleReads()
+	s.Frames(2)
 	for _, pair := range [][2]string{{"Round each line", "Is half-even"}, {"Historical invoices", "How do we guarantee"}} {
 		line, ok1 := s.TextStart(pair[0])
 		card, ok2 := s.TextStart(pair[1])

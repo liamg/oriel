@@ -86,7 +86,10 @@ func (p *PTY) Cmd() *exec.Cmd { return p.cmd }
 
 // Close closes the terminal; the program gets SIGHUP. On Linux it also interrupts a Read in progress; on macOS that
 // Read returns once the program has gone.
-func (p *PTY) Close() error { return p.f.Close() }
+func (p *PTY) Close() error {
+	p.hangup()
+	return p.f.Close()
+}
 
 func setSize(f *os.File, cols, rows int) error {
 	if cols <= 0 || rows <= 0 || cols > 0xffff || rows > 0xffff {

@@ -487,7 +487,7 @@ func TestSidebarAddsAProject(t *testing.T) {
 	r.ClickAccess("Add a project")
 	r.WaitText("ADD A PROJECT")
 	r.TypeText(billing)
-	r.WaitText("Add " + billing)
+	r.WaitAccess("the row adding billing", func(w *apptest.Window) bool { return w.Access("Add "+billing) != nil }) // its text may be cut
 	r.TypeKeys("<CR>")
 	st := rig.WaitState(t, r.Store, "billing in the session", func(st core.State) bool {
 		se, ok := st.Session("rounding")

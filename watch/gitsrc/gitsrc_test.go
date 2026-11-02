@@ -43,6 +43,24 @@ func eventually(t *testing.T, what string, ok func() bool) {
 	}
 }
 
+// settle waits out the reads FSEvents brings on as a watch begins: it may report the setup's changes, made just
+// before.
+func (r *rig) settle(t *testing.T) {
+	t.Helper()
+	last := r.runs()
+	for deadline := time.Now().Add(5 * time.Second); ; {
+		time.Sleep(300 * time.Millisecond)
+		n := r.runs()
+		if n == last {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("git still running %d times in 300ms", n-last)
+		}
+		last = n
+	}
+}
+
 func (r *rig) quiet(t *testing.T, what string, d time.Duration) {
 	t.Helper()
 	before := r.runs()
@@ -91,6 +109,7 @@ func TestAFileChangeRunsTwoGits(t *testing.T) {
 	r.repo.Git("worktree", "add", "-q", "-b", "other", other)
 	s := watch.Subscribe(r.m, r.tree.Status(), watch.Need{}, "test")
 	eventually(t, "a status", func() bool { _, _, ok := s.Get(); return ok })
+	r.settle(t)
 	r.quiet(t, "with nothing changed", time.Second)
 
 	before, refs := r.runs(), r.runs("rev-parse")

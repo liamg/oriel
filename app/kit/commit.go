@@ -7,7 +7,6 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -19,7 +18,7 @@ const (
 
 // RecordOverrides puts a commit made past gates in the session's log (a notice) and its state; outside a session,
 // in Oriel's log. busy waits for the host's records.
-func RecordOverrides(h plugin.Host, busy *sync.WaitGroup, se core.SessionState, project string, inSession bool, hash, message string, held []registry.GateCheck) {
+func RecordOverrides(h plugin.Host, busy Counter, se core.SessionState, project string, inSession bool, hash, message string, held []registry.GateCheck) {
 	subject, _, _ := strings.Cut(strings.TrimSpace(message), "\n")
 	short := hash[:min(len(hash), 7)]
 	for _, c := range held {

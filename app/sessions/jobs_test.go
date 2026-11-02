@@ -237,6 +237,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: apptest.Centre(s.Within(row.Name, "Cost").Bounds)})
 	s.Frame()
 	s.Frame()
+	s.SettleGit()
 	s.Lint("the jobs page")
 	s.Golden("jobs-page")
 	s.WantFrame("JOBS", "6 jobs · 1 running · 12 runs", "Sweep stale deps, keep major versions", "Morning CI triage on my open PRs",

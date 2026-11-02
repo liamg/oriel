@@ -131,10 +131,11 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 	change, secrets := linearConfig(t, l)
 	secrets.SetSecret("LINEAR_TOKEN", lineartest.Key)
 	lw := rig.NewHost(t)
-	if _, err := lw.W.AddRepoPath(context.Background(), lw.Repo); err != nil {
+	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { apptest.Connect(lw.W)(cfg); change(cfg) }})
+	// Under the scene's HOME, the repo's path reads the same on every machine.
+	if _, err := lw.W.AddRepoPath(context.Background(), rig.HomeClone(t, lw.Repo, "pricing")); err != nil {
 		t.Fatal(err)
 	}
-	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { apptest.Connect(lw.W)(cfg); change(cfg) }})
 	s.Now = apptest.At(14, 30, 0)
 	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)

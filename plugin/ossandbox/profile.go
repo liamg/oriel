@@ -106,13 +106,18 @@ func runs(p Profile) []string {
 		}
 	}
 	for _, e := range p.Exec {
-		add(e)
-		for _, i := range interpreters(e) {
+		for _, i := range append([]string{e}, interpreters(e)...) {
 			add(i)
+			if _, err := os.Lstat(shVariant); err == nil && i == "/bin/sh" {
+				add(shVariant)
+			}
 		}
 	}
 	return out
 }
+
+// shVariant is the shell macOS's /bin/sh runs, as a link to it.
+const shVariant = "/private/var/select/sh"
 
 func encode(p Profile) string {
 	b, _ := json.Marshal(p)

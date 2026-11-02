@@ -11,6 +11,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -86,7 +87,8 @@ func num(v float32) string { return strconv.FormatFloat(float64(v), 'f', -1, 32)
 
 func hex(c color.NRGBA) string { return theme.Hex(c) }
 
-// Golden compares got with the file at path, or writes it when updating.
+// Golden compares got with the file at path, or writes it when updating. Numbers within float32 rounding of each
+// other match: the last digit of a float32 can differ between platforms.
 func Golden(t testing.TB, path string, got []byte) {
 	t.Helper()
 	if Update() {
@@ -97,9 +99,30 @@ func Golden(t testing.TB, path string, got []byte) {
 	if err != nil {
 		t.Fatalf("%v (ORIEL_UPDATE=1 writes it)", err)
 	}
-	if !bytes.Equal(got, want) {
+	if !bytes.Equal(got, want) && !sameText(string(want), string(got)) {
 		t.Errorf("%s differs:\n%s", path, lineDiff(string(want), string(got)))
 	}
+}
+
+var number = regexp.MustCompile(`-?[0-9]+(\.[0-9]+)?`)
+
+// sameText says a and b differ at most in numbers that are within float32 rounding of each other.
+func sameText(a, b string) bool {
+	if number.ReplaceAllString(a, "0") != number.ReplaceAllString(b, "0") {
+		return false
+	}
+	na, nb := number.FindAllString(a, -1), number.FindAllString(b, -1)
+	for i := range na {
+		if na[i] == nb[i] {
+			continue
+		}
+		x, err1 := strconv.ParseFloat(na[i], 64)
+		y, err2 := strconv.ParseFloat(nb[i], 64)
+		if err1 != nil || err2 != nil || math.Abs(x-y) > 1e-6*max(1, math.Abs(x)) {
+			return false
+		}
+	}
+	return true
 }
 
 func write(t testing.TB, path string, b []byte) {

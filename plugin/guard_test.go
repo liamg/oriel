@@ -11,7 +11,7 @@ import (
 // "Undeclared calls fail with a clear error naming the missing capability: never a
 // silent no-op". ui, theme and notify need no declaration ("no: always allowed").
 func TestGuardRejectsUndeclared(t *testing.T) {
-	work := t.TempDir()
+	work := RealPath(t.TempDir()) // as callers check paths
 	g := NewGrants()
 	g.Places = func(name string) []string {
 		if name == "worktree" {

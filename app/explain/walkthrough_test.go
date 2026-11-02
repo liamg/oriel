@@ -195,6 +195,7 @@ func TestExplainChangeSnapshot(t *testing.T) {
 	walkSettle(s)
 	walkKeys(s, "<Right>")
 	walkSettle(s)
+	s.SettleGit()
 	s.Golden("explain-change")
 }
 
