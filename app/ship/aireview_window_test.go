@@ -45,11 +45,9 @@ func above(f headless.Frame, a, b string) bool {
 	return oka && okb && ya < yb
 }
 
-// Cross-model AI review: Codex reviews Claude's work (or the other way round), with findings sorted by severity, in
-// the diff's right column. Review changes runs it on the other provider; the header names the
-// reviewer and the commit, chips count each severity, the cards sit worst first with their kicker, title, place
-// and body, and a finding about a repo the session hasn't got offers Add project. The foot says the reviewer is a
-// different model from the author.
+// AI review on the provider the user picked, with findings sorted by severity, in the diff's right column. The header
+// names the reviewer and the commit, chips count each severity, the cards sit worst first with their kicker, title,
+// place and body, and a finding about a repo the session hasn't got offers Add project. The foot names the reviewer.
 func TestAIReviewColumn(t *testing.T) {
 	r, _, codex, _ := apptest.ReviewWindow(t)
 	base := strings.TrimSpace(rig.Git(t, r.ProjectDir("w"), "rev-parse", "--short", "HEAD"))
@@ -74,7 +72,7 @@ func TestAIReviewColumn(t *testing.T) {
 	f := r.Latest("the findings", func(f headless.Frame) bool {
 		return apptest.HasAll(f.Text(), "CODEX · GPT-5", "since "+base, "1 HIGH", "2 MED", "1 LOW", "HIGH", "CORRECTNESS",
 			"Historic invoices re-rounded", "regenerate", "billing/invoice.go:118", "Regenerate()", "No test for BHD (3 dp) ties", "round_test.go:31",
-			"Exported signature change", "Add project", "→ Thread", "Fix", "Dismiss", "different model from the author", "Re-review changes")
+			"Exported signature change", "Add project", "→ Thread", "Fix", "Dismiss", "Re-review changes")
 	})
 	if !above(f, "Historic invoices re-rounded", "No test for BHD (3 dp) ties") ||
 		!above(f, "Exported signature change", "Magic number 2 for default precision") {
@@ -250,7 +248,7 @@ func aiReviewScene(t *testing.T) *apptest.Scene {
 		core.SessionSynced{Session: core.SessionState{ID: "pricing-rounding", Kind: core.KindWork,
 			Projects: []core.Project{{Name: "pricing", Dir: r.Dir, Primary: true}}, Agent: core.AgentState{Provider: "claude"}}},
 		core.SessionFocused{ID: "pricing-rounding"},
-		core.AIReviewChanged{Session: "pricing-rounding", Review: core.AIReview{ID: "r1", Provider: "codex", Model: "gpt-5", Cross: true,
+		core.AIReviewChanged{Session: "pricing-rounding", Review: core.AIReview{ID: "r1", Provider: "codex", Model: "gpt-5",
 			Projects: []core.ReviewedProject{{Project: "pricing", Since: "a3f9e1"}}}},
 		core.FindingsRecorded{Session: "pricing-rounding", Findings: []core.Finding{
 			f("f1", "high", "correctness", "Historic invoices re-rounded on regenerate", "billing/invoice.go", 118,

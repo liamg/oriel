@@ -21,7 +21,6 @@ func luaKind(a *APIs, name string, spec script.Table) (registry.Kind, error) {
 		PromptFile: str(spec, "prompt_file"), Order: 100}, GateNames: strs(spec["gates"])}
 	k.NeedsRepo, _ = spec["needs_repo"].(bool)
 	k.Launcher, _ = spec["launcher"].(bool)
-	k.AutoReview, _ = spec["auto_review"].(bool)
 	if o, ok := spec["order"].(float64); ok {
 		k.Order = int(o)
 	}

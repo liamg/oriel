@@ -28,13 +28,12 @@ func SeverityRank(s string) int {
 	return len(Severities)
 }
 
-// AIReview is one run of the cross-model AI review over a session's change.
+// AIReview is one run of the AI review over a session's change.
 type AIReview struct {
 	ID       string            `json:"id"`
 	Provider string            `json:"provider"` // the reviewer's
 	Model    string            `json:"model,omitempty"`
 	Author   string            `json:"author,omitempty"` // the session agent's provider and model it reviewed: "claude · opus"
-	Cross    bool              `json:"cross,omitempty"`  // a different model from the author's
 	Projects []ReviewedProject `json:"projects,omitempty"`
 	Started  time.Time         `json:"started,omitzero"`
 	Ended    time.Time         `json:"ended,omitzero"`

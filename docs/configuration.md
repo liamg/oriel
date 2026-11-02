@@ -152,8 +152,8 @@ Every option Oriel registers. A test checks this table against the registry.
 | `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | |
 | `ledger.gate` | `auto`: the commit gate by the session's kind (hard for work, plan and a new repo, soft for jobs, off for the rest); `hard`, `soft` or `off`; a project's `.oriel/settings.toml` overrides it for its repo | app | |
-| `review.ai.provider` | `auto`: one other than the session agent's, else the author's on another model; or `claude`, `codex` | app | |
-| `review.ai.model` | `default`: the reviewer's default; or a model's name | app | |
+| `review.ai.provider` | `auto`: the session agent's; or `claude`, `codex` | app | |
+| `review.ai.model` | `default`: the session agent's, or the picked provider's default; or a model's name | app | |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | |
 | `review.severity_badges` | `true`: each comment a review session posts is headed with a badge of its severity | app | |
