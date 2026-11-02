@@ -2,6 +2,8 @@ package runner
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -172,8 +174,22 @@ func sweepSidecars(ctx context.Context) []string {
 
 // launchedWithin reports a launch of root's sandbox in the last d.
 func launchedWithin(root string, d time.Duration) bool {
-	fi, err := os.Stat(filepath.Join(sandbox.Dir(root), "agent.env"))
+	fi, err := os.Stat(launchStamp(root))
 	return err == nil && time.Since(fi.ModTime()) < d
+}
+
+// launchStamp is the file whose time says when root's sandbox was last launched: the agent's env file, written as
+// a launch ends.
+func launchStamp(root string) string { return filepath.Join(sandbox.Dir(root), "agent.env") }
+
+// markLaunch says root's sandbox is launching, before a launch touches its sidecar or network, so a sweep meanwhile
+// leaves them be.
+func markLaunch(root string) error {
+	now := time.Now()
+	if err := os.Chtimes(launchStamp(root), now, now); !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	return os.WriteFile(launchStamp(root), nil, 0o600)
 }
 
 func imageStamps() string { return filepath.Join(sandbox.Base(), "cache", "images") }

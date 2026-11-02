@@ -105,3 +105,33 @@ func TestStaleBuilds(t *testing.T) {
 		t.Fatalf("staleBuilds = %v, want %v", got, want)
 	}
 }
+
+// A launch is marked before it touches the sidecar or the network, so a sweep while it's under way leaves them be;
+// the agent's env from the last launch is kept until the launch writes its own.
+func TestMarkLaunchKeepsALaunchsSidecar(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	root := t.TempDir()
+	if _, err := sandbox.Create(root, sandbox.ModeSandbox); err != nil {
+		t.Fatal(err)
+	}
+	if launchedWithin(root, launchGrace) {
+		t.Fatal("never launched, but launching")
+	}
+	if err := markLaunch(root); err != nil || !launchedWithin(root, launchGrace) {
+		t.Fatalf("a first launch isn't marked: %v", err)
+	}
+	old := time.Now().Add(-time.Hour)
+	if err := os.WriteFile(launchStamp(root), []byte("A=1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_ = os.Chtimes(launchStamp(root), old, old)
+	if launchedWithin(root, launchGrace) {
+		t.Fatal("an hour-old launch counts as under way")
+	}
+	if err := markLaunch(root); err != nil || !launchedWithin(root, launchGrace) {
+		t.Fatalf("a launch again isn't marked: %v", err)
+	}
+	if b, _ := os.ReadFile(launchStamp(root)); string(b) != "A=1\n" {
+		t.Errorf("the last launch's env = %q", b)
+	}
+}

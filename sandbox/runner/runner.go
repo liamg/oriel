@@ -55,6 +55,9 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 	if !ok || !rec.Sandboxed() {
 		return nil, agent.SandboxNeeds{}, errors.New("this workspace is not sandboxed")
 	}
+	if err := markLaunch(root); err != nil {
+		return nil, agent.SandboxNeeds{}, err
+	}
 	st := startSteps("sandbox launch " + filepath.Base(root))
 	defer st.Done()
 	cfg := o.Config
@@ -142,7 +145,7 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 		return nil, agent.SandboxNeeds{}, err
 	}
 	st.Mark("files")
-	envFile := filepath.Join(sandbox.Dir(root), "agent.env")
+	envFile := launchStamp(root)
 	if err := os.WriteFile(envFile, []byte(sandbox.EnvFile(env)), 0o600); err != nil {
 		return nil, agent.SandboxNeeds{}, err
 	}
