@@ -2,6 +2,8 @@ package sandbox
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -20,7 +22,8 @@ func (a *asks) SandboxNeeds(_ context.Context, at agent.SandboxPlace) (agent.San
 
 func (*asks) MCPServers() []agent.MCPServer { return nil }
 
-// A provider is asked at its own directory in the sandbox, which the agent always gets, and sees only the host
+// A provider is asked at its own directory in the sandbox, which the agent always gets with the session's pasted
+// files, and sees only the host
 // variables the sandbox would pass on; a blocking problem refuses the launch with its fix.
 func TestNeedsAskTheProviderAtItsDirectory(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -29,21 +32,28 @@ func TestNeedsAskTheProviderAtItsDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := &asks{needs: agent.SandboxNeeds{Mounts: []agent.Mount{{Host: "/h/x", Sandbox: "/a/x"}}}}
-	o := LaunchOptions{Provider: "codex", Agent: p, StateDir: "/state", Environ: []string{"OPENAI_API_KEY=k", "GITHUB_TOKEN=g"},
+	o := LaunchOptions{Provider: "codex", Agent: p, StateDir: filepath.Join(root, "state"), Environ: []string{"OPENAI_API_KEY=k", "GITHUB_TOKEN=g"},
 		Config: Config{Env: []string{"OPENAI_*"}}}
 	n, err := Needs(context.Background(), root, root, o, agent.SandboxPlace{OS: "linux", Arch: "arm64"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if p.got.Dir != AgentDir(root, "codex") || p.got.Root != root || p.got.StateDir != "/state" || p.got.OS != "linux" ||
+	if p.got.Dir != AgentDir(root, "codex") || p.got.Root != root || p.got.StateDir != o.StateDir || p.got.OS != "linux" ||
 		p.got.Cache != AgentCache("codex") || p.got.Tmp != TmpDir(root) {
 		t.Errorf("asked at %+v", p.got)
 	}
 	if p.got.Env("OPENAI_API_KEY") != "k" || p.got.Env("GITHUB_TOKEN") != "" {
 		t.Errorf("the provider sees variables the sandbox wouldn't pass")
 	}
-	if len(n.Mounts) != 2 || n.Mounts[0] != (agent.Mount{Host: AgentDir(root, "codex")}) {
+	if len(n.Mounts) != 3 || n.Mounts[0] != (agent.Mount{Host: AgentDir(root, "codex")}) {
 		t.Errorf("mounts = %+v", n.Mounts)
+	}
+	att := AttachmentsDir(o.StateDir)
+	if n.Mounts[2] != (agent.Mount{Host: att, ReadOnly: true}) {
+		t.Errorf("the session's attachments aren't mounted: %+v", n.Mounts)
+	}
+	if fi, err := os.Stat(att); err != nil || !fi.IsDir() {
+		t.Errorf("the attachments folder wasn't made before the launch: %v", err)
 	}
 	p.needs.Problems = []agent.SandboxProblem{{Code: "x", Message: "not signed in", Fix: "sign in", Blocking: true}}
 	if _, err := Needs(context.Background(), root, root, o, agent.SandboxPlace{}); err == nil || !strings.Contains(err.Error(), "sign in") {

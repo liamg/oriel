@@ -165,6 +165,9 @@ func CurrentIdentity() (Identity, error) {
 	return id, nil
 }
 
+// AttachmentsDir is where the files pasted for a session's agent are kept, under its stateDir; every sandbox mounts it.
+func AttachmentsDir(stateDir string) string { return filepath.Join(stateDir, "attachments") }
+
 // Needs are what the agent of o's provider needs in root's sandbox, at the place the backend puts it (OS, Arch,
 // Home, Shared, UID); the rest of the place is the sandbox's. A blocking problem refuses the launch.
 func Needs(ctx context.Context, root, cwd string, o LaunchOptions, at agent.SandboxPlace) (agent.SandboxNeeds, error) {
@@ -185,6 +188,13 @@ func Needs(ctx context.Context, root, cwd string, o LaunchOptions, at agent.Sand
 		return n, err
 	}
 	n.Mounts = append([]agent.Mount{{Host: at.Dir}}, n.Mounts...)
+	if o.StateDir != "" {
+		dir := AttachmentsDir(o.StateDir)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return n, err
+		}
+		n.Mounts = append(n.Mounts, agent.Mount{Host: dir, ReadOnly: true})
+	}
 	for _, p := range n.Problems {
 		if p.Blocking {
 			return n, fmt.Errorf("%s: %s", p.Message, p.Fix)

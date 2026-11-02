@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/sandbox"
 )
 
 // maxAttach is the largest file a session's agent is handed.
@@ -34,7 +35,7 @@ func (w *Host) Attach(r AttachReq) (_ string, err error) {
 	if name == "" {
 		return "", errors.New("an attachment needs a name or a path")
 	}
-	dir := filepath.Join(w.env.SessionDir(r.Session), "agent", "attachments")
+	dir := sandbox.AttachmentsDir(filepath.Join(w.env.SessionDir(r.Session), "agent"))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
