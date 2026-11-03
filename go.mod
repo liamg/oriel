@@ -15,6 +15,6 @@ require (
 require (
 	gioui.org/shader v1.0.9 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 )
