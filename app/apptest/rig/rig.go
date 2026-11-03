@@ -148,7 +148,7 @@ func NewStats(t *testing.T) *Stats {
 	providers := &agent.Providers{}
 	providers.Register(r.Claude)
 	providers.Register(r.Codex)
-	w, err := host.New(host.Options{Home: r.Home, Providers: providers, Exec: NopExec{}, Load: SteadyLoad, NoAutoName: true,
+	w, err := host.New(host.Options{Home: r.Home, Providers: providers, Exec: NopExec{}, Load: SteadyLoad, NoAutoName: true, HTTP: isolate.Net(t),
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -478,6 +478,9 @@ func NewHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *Host {
 	o.Packs = func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }
 	if o.Load == nil {
 		o.Load = SteadyLoad
+	}
+	if o.HTTP == nil {
+		o.HTTP = isolate.Net(t)
 	}
 	if o.GitHub == nil {
 		hub := ghtest.New(t) // never the user's own gh

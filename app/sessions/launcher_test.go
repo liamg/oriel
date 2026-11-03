@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
@@ -402,7 +403,7 @@ func TestLauncherWaitsForTheProbe(t *testing.T) {
 
 // A probe that finds no agents says so, with Retry; No agent is there to pick, but not picked.
 func TestLauncherProbeFails(t *testing.T) {
-	w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad})
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad, HTTP: isolate.Net(t)})
 	if err != nil {
 		t.Fatal(err)
 	}

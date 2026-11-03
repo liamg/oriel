@@ -6,14 +6,11 @@ package apptest
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/agents"
 	"github.com/liamg/oriel/tools/perf"
 	"image/png"
-	"net"
 	"net/http"
-	"net/netip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -77,25 +74,10 @@ end)
 // Backends are the sandbox backends a scene's machine offers, whatever this one has.
 func Backends() []string { return []string{"docker", "seatbelt"} }
 
-// OfflineNet is the HTTP a scene's plugins get unless the test gives its own: loopback only, so no test reaches the
-// network; its connections close when the test ends.
-func OfflineNet(t testing.TB) *http.Client {
-	tr := &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-		host, _, _ := net.SplitHostPort(addr)
-		if ip, err := netip.ParseAddr(host); host != "localhost" && (err != nil || !ip.IsLoopback()) {
-			return nil, fmt.Errorf("tests don't reach the network: %s", addr)
-		}
-		var d net.Dialer
-		return d.DialContext(ctx, network, addr)
-	}}
-	t.Cleanup(tr.CloseIdleConnections)
-	return &http.Client{Transport: tr}
-}
-
 // OfflineWhisper is dictation's engine with its models in a directory of the test's, downloaded offline.
 func OfflineWhisper(t testing.TB) *voice.Whisper {
 	w := voice.New(nil)
-	w.Dir, w.Net = t.TempDir(), OfflineNet(t)
+	w.Dir, w.Net = t.TempDir(), isolate.Net(t)
 	return w
 }
 
@@ -158,7 +140,7 @@ func New(t testing.TB, o Options) *Scene {
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
 	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
 		LanguageServers: TestServers,
-		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: OfflineNet(t), ImageNet: cmp.Or(o.ImageNet, OfflineNet(t)), SandboxBackends: Backends,
+		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t), ImageNet: cmp.Or(o.ImageNet, isolate.Net(t)), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
 	if o.Config != nil {
 		o.Config(&cfg)

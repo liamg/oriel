@@ -1,10 +1,14 @@
 package isolate
 
 import (
+	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/liamg/oriel/gh"
 )
 
 func TestTestGivesItsOwnTempDir(t *testing.T) {
@@ -60,4 +64,41 @@ func TestTestsPathsHaveNoSymlinks(t *testing.T) {
 			}
 		}
 	})
+}
+
+// A test never reaches the user's own credentials: no GitHub token from the environment, gh's sign-in or git's
+// credential helper.
+func TestTestHidesTheUsersTokens(t *testing.T) {
+	Test(t)
+	if tok := gh.TokenFor(context.Background(), "github.com"); tok != "" {
+		t.Errorf("a GitHub token (%d bytes) is reachable from a test: %s", len(tok), tokenSource(t))
+	}
+	if err := exec.Command("security", "find-generic-password", "-s", "Claude Code-credentials", "-w").Run(); err == nil {
+		t.Error("the Keychain is readable from a test")
+	}
+	for _, v := range credentialVars {
+		if os.Getenv(v) != "" {
+			t.Errorf("$%s is set in a test", v)
+		}
+	}
+}
+
+// tokenSource says where a token came from, without its value.
+func tokenSource(t *testing.T) string {
+	var from []string
+	for _, v := range []string{"GH_TOKEN", "GITHUB_TOKEN"} {
+		if os.Getenv(v) != "" {
+			from = append(from, v)
+		}
+	}
+	if out, err := exec.Command("gh", "auth", "token").Output(); err == nil && len(strings.TrimSpace(string(out))) > 0 {
+		from = append(from, "gh auth token")
+	}
+	cmd := exec.Command("git", "credential", "fill")
+	cmd.Stdin = strings.NewReader("protocol=https\nhost=github.com\n\n")
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	if out, err := cmd.Output(); err == nil && strings.Contains(string(out), "password=") {
+		from = append(from, "git credential")
+	}
+	return strings.Join(from, ", ")
 }

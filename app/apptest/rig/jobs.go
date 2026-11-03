@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/internal/isolate"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/internal/isolate"
 )
 
 // FakeSandboxes run a sandboxed agent the way the fake provider runs any: on nothing, offering the backends Offered.
@@ -85,7 +85,7 @@ func NewJobs(t *testing.T, sandboxes ...string) *Jobs {
 	}
 	providers := &agent.Providers{}
 	providers.Register(r.Claude)
-	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: NopExec{}, Load: SteadyLoad, Now: r.Clock.Now, NoAutoName: true,
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: NopExec{}, Load: SteadyLoad, Now: r.Clock.Now, NoAutoName: true, HTTP: isolate.Net(t),
 		Sandbox: FakeSandboxes{sandboxes}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
