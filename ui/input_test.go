@@ -675,3 +675,32 @@ func TestTooltipInAClickableRow(t *testing.T) {
 		t.Error("a click on the text with a tooltip wasn't the row's")
 	}
 }
+
+// A drag measures from where the press went down: on a busy machine the pointer can be well along before the first
+// frame built after the press, and a drag that started from there would come up short.
+func TestPressedAtIsWhereThePressWentDown(t *testing.T) {
+	h := newHarness()
+	at := func() (render.Point, bool, bool) {
+		var in Interaction
+		paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
+			c.Row("bar", Style{Pad: Pad(10), Gap: 10}, func(c *Ctx) { in = button(c, "save", false) })
+		})
+		p, ok := in.PressedAt()
+		return p, ok, in.Held
+	}
+	if _, ok, _ := at(); ok {
+		t.Error("pressed at somewhere before any press")
+	}
+	h.pointer(render.PointerMove, 20, 20)
+	h.frame()
+	h.pointer(render.PointerPress, 20, 20)
+	h.pointer(render.PointerMove, 40, 22) // no frame between the press and the moves
+	h.pointer(render.PointerMove, 60, 24)
+	if p, ok, held := at(); !ok || !held || p != (render.Point{X: 20, Y: 20}) {
+		t.Errorf("held, pressed at %v %v (held %v), want {20 20}", p, ok, held)
+	}
+	h.pointer(render.PointerRelease, 60, 24)
+	if p, ok, _ := at(); !ok || p != (render.Point{X: 20, Y: 20}) {
+		t.Errorf("released, pressed at %v %v, want {20 20}", p, ok)
+	}
+}

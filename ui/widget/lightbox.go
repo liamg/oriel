@@ -163,7 +163,11 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 	if in.Held {
 		p := in.Pointer()
 		if !st.held {
-			st.held, st.moved, st.from, st.start = true, false, p, st.off
+			from, ok := in.PressedAt()
+			if !ok {
+				from = p
+			}
+			st.held, st.moved, st.from, st.start = true, false, from, st.off
 		}
 		if abs(p.X-st.from.X)+abs(p.Y-st.from.Y) > 3 {
 			st.moved = true

@@ -181,7 +181,11 @@ func windowPartDrag(c *ui.Ctx, st *WindowState, part windowPart, view, minSize r
 	case in.Held:
 		p := in.Pointer()
 		if st.grab == nil || st.grab.part != part {
-			st.grab = &windowGrab{part: part, from: p, rect0: st.Rect}
+			from, ok := in.PressedAt()
+			if !ok {
+				from = p
+			}
+			st.grab = &windowGrab{part: part, from: from, rect0: st.Rect}
 		}
 		if r := fitWindow(dragWindow(st.grab, p, minSize, view), minSize, view); r != st.Rect {
 			st.Rect, moved = r, true
