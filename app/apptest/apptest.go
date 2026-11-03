@@ -699,12 +699,15 @@ func (s *Scene) UntilState(what string, ok func(core.State) bool) core.State {
 }
 
 // Reopen does what the window does when it's asked to open on another directory (a session's): it moves onto it,
-// underneath the plugins. It says whether it was asked.
+// underneath the plugins, and lets git read its work tree, which it finds off the loop. It says whether it was asked.
 func (s *Scene) Reopen() bool {
 	s.T.Helper()
 	asked, err := s.Headless.Reopen()
 	if err != nil {
 		s.T.Fatal(err)
+	}
+	if asked {
+		s.SettleGit()
 	}
 	return asked
 }
