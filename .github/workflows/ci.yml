@@ -72,6 +72,32 @@ jobs:
           echo "ORIEL_NVIM=$RUNNER_TEMP/$asset/bin/nvim" >> "$GITHUB_ENV"
       - run: make oracle
 
+  diag-budget:
+    # TEMPORARY: why TestCompiledFromCacheBudget runs slow on the ubuntu-latest runner. Remove before merging.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.10"
+      - name: The machine
+        run: |
+          nproc; lscpu | grep -E 'Model name|MHz|^CPU\(s\)|Hypervisor|Virtualization' || true
+          echo "TMPDIR=${TMPDIR:-unset} RUNNER_TEMP=$RUNNER_TEMP"; df -hT /tmp "$RUNNER_TEMP" || true
+          mount | grep -E ' /tmp | / ' || true
+          dd if=/dev/zero of=/tmp/dd.bin bs=1M count=64 conv=fsync 2>&1 | tail -1
+          sync; echo 3 | sudo tee /proc/sys/vm/drop_caches >/dev/null || true
+          dd if=/tmp/dd.bin of=/dev/null bs=1M 2>&1 | tail -1; rm -f /tmp/dd.bin
+      - name: Each stage of a cached open, and the budget test with a CPU profile
+        run: |
+          ORIEL_DIAG=1 go test ./syntax/ -run 'TestZZDiagCachedOpenStages$' -count=3 -v | grep -E 'round 0|best of|cache dir'
+          go test ./syntax/ -run 'TestCompiledFromCacheBudget$' -count=10 -v -cpuprofile "$RUNNER_TEMP/cpu.out" | grep -E 'first open|took'
+          go tool pprof -top -nodecount=35 syntax.test "$RUNNER_TEMP/cpu.out" 2>/dev/null | head -45 || go tool pprof -top -nodecount=35 "$RUNNER_TEMP/cpu.out" | head -45
+      - name: The same with the cache on a RAM disk
+        run: |
+          sudo mkdir -p /mnt/ram && sudo mount -t tmpfs -o size=256m tmpfs /mnt/ram && sudo chmod 1777 /mnt/ram
+          TMPDIR=/mnt/ram ORIEL_DIAG=1 go test ./syntax/ -run 'TestZZDiagCachedOpenStages$' -count=3 -v | grep -E 'best of|cache dir'
+
   grammars:
     # The tree-sitter grammars and grammar packs are rebuilt from their pinned sources and must match what's
     # committed; the packs the binary's PACKS.SHA256SUMS lists are published as an artifact.
