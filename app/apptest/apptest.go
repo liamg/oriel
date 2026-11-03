@@ -6,7 +6,6 @@ package apptest
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"image/png"
 	"net/http"
 	"os"
@@ -19,7 +18,6 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/agents"
-	"github.com/liamg/oriel/app/explain"
 	"github.com/liamg/oriel/tools/perf"
 
 	"github.com/liamg/oriel/registry/uireg"
@@ -270,21 +268,6 @@ func (s *Scene) Golden(name string) {
 	}
 }
 
-// SettleDrawn waits for the work off the loop that adds to what a frame shows, the window's reads and the gutter's
-// explain marks, then draws twice: a snapshot is of the frame as it settles however loaded the machine. What the
-// test has queued itself, a move for one, it leaves to the test.
-func (s *Scene) SettleDrawn() {
-	s.T.Helper()
-	s.SettleReads()
-	if p, ok := s.Plugin("explain"); ok {
-		if e, ok := p.(*explain.Plugin); ok {
-			e.Wait()
-		}
-	}
-	s.Frame()
-	s.Frame()
-}
-
 // Shot draws two frames and writes the second to $ORIEL_SHOTS/name.png: a screenshot for the docs.
 func (s *Scene) Shot(name string) {
 	s.T.Helper()
@@ -437,22 +420,6 @@ func (s *Scene) ClickText(text string) {
 	s.T.Helper()
 	s.drawn(text)
 	s.Click(s.TextPoint(text), 0)
-}
-
-// drawn waits for a frame with a run of text reading text, as someone waits for what they mean to click to show.
-func (s *Scene) drawn(text string) {
-	s.T.Helper()
-	s.Until(fmt.Sprintf("%q drawn", text), func() bool {
-		if s.List() == nil {
-			return false
-		}
-		for _, op := range s.List().Ops {
-			if op.Kind == render.OpGlyphs && op.Run.Text == text {
-				return true
-			}
-		}
-		return false
-	})
 }
 
 // ClickTop clicks the run of text reading text painted last, on top of any other, and draws a frame.

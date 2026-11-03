@@ -118,7 +118,8 @@ jobs:
       - name: The wasm built is the one committed, or a known variant of it (term/ghostty/wasm/VARIANTS)
         run: |
           built=$(cut -d' ' -f1 term/ghostty/wasm/SHA256SUMS)
-          git checkout -- term/ghostty/wasm/SHA256SUMS
+          cp term/ghostty/wasm/oriel-vt.wasm.gz "$RUNNER_TEMP/oriel-vt-built.wasm.gz"
+          git checkout -- term/ghostty/wasm/SHA256SUMS term/ghostty/wasm/oriel-vt.wasm.gz # the tests after are of the committed one
           if grep -q "^$built " term/ghostty/wasm/SHA256SUMS; then exit 0; fi
           if grep -q "^$built " term/ghostty/wasm/VARIANTS; then echo "a known variant: $(grep "^$built " term/ghostty/wasm/VARIANTS)"; exit 0; fi
           echo "built $built: neither the committed wasm nor a known variant"; exit 1
@@ -127,7 +128,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: oriel-vt-mismatch
-          path: term/ghostty/wasm/oriel-vt.wasm.gz
+          path: ${{ runner.temp }}/oriel-vt-built.wasm.gz
       - run: term/ghostty/native/build.sh linux_amd64
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:

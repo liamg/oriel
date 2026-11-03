@@ -68,6 +68,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 		t.Fatalf("the jobs: %+v", js)
 	}
 	a := lw.Fake.WaitStarted(t)
+	a.WaitSent(t) // the prompt reaches the agent before it can answer it
 	s.Until("the running row", func() bool { return strings.Contains(s.Text(), "RUNNING") })
 
 	ctx := context.Background()
