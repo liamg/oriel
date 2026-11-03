@@ -707,9 +707,31 @@ func (s *Scene) Reopen() bool {
 		s.T.Fatal(err)
 	}
 	if asked {
+		s.arrived()
 		s.SettleGit()
 	}
 	return asked
+}
+
+// arrived waits for the window to lay out the directory it moved onto, once what holds it lets go.
+func (s *Scene) arrived() {
+	s.T.Helper()
+	w, ok := kit.WindowOf(s.Registry())
+	if !ok {
+		return
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		s.RunQueued()
+		if w.Arrived() {
+			s.Frame()
+			return
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatal("the window never laid out the directory it moved onto")
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 // Retheme resolves ui.theme and ui.variant, as the window does when a theme changes.

@@ -60,6 +60,13 @@ func (w window) AfterReopen(session core.SessionID, calls []kit.Call) {
 	w.sh.afterOpen = &afterOpen{session: session, calls: calls}
 }
 
+func (w window) Arrived() bool {
+	a := &w.sh.holds
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.done
+}
+
 func (w window) LaunchedEmpty() bool {
 	if w.sh.launchDone {
 		return false

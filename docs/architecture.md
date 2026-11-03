@@ -87,7 +87,8 @@ breakpoints or saved terminal screens), so coming back finds it. One that must s
 does it on `DirChanged` (`kit.OnDirChanged`; `oriel.on("DirChanged", fn)` in Lua), which fires once the window is on
 the new directory and before its layout comes back; a view opened from that hook is replaced by the layout, so open
 one later. The layout waits behind the opening cover for what the new directory's views need: a plugin still reading
-it takes `Window.Hold` in the hook and lets go once it has it (two seconds at most). A file kept per directory (the
+it takes `Window.Hold` in the hook and lets go once it has it (two seconds at most), and `Window.Arrived` says the
+layout is back. A file kept per directory (the
 layout, the sidebar, the debugger's breakpoints, saved terminal screens, the tests' runs) is a `kit.StateFile`: read
 through the freshness manager, handed to the plugin as it starts and again as the window moves (holding the
 window until then), written off the loop, and read again when something else changes it. A project's own plugins (its settings' `[plugins]`) run while the window is on the project, starting and

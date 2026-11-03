@@ -87,6 +87,9 @@ type Window interface {
 	// directory's views need is being read (a StateFile). The opening cover stays up meanwhile; a hold not let go in
 	// a couple of seconds is let go of. Release once, from any goroutine.
 	Hold() (release func())
+	// Arrived says the directory the window is on is laid out: nothing holds it any more, and the cover is down. A
+	// view opened from now on stays.
+	Arrived() bool
 	// AfterReopen runs calls once the window has moved onto session's directory.
 	AfterReopen(session core.SessionID, calls []Call)
 	// LaunchedEmpty says, the first time it's asked, whether the window started with nothing open; false after.
