@@ -2,7 +2,9 @@ package kit
 
 import (
 	"bytes"
+	"context"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/watch"
@@ -20,9 +22,10 @@ type StateFileOpts struct {
 }
 
 // StateFile is a file a plugin keeps for the directory the window is on: a debugger's breakpoints, a directory's
-// saved terminal screens. It's read through the app's freshness manager (watch.File), never on the loop, and
-// written off it. It follows the window as it moves, holding the window's arrival on a directory (Window.Hold) until
-// that directory's file is read and handed to Load. A reading that's one of its own writes isn't handed back.
+// saved terminal screens. It's read through the app's freshness manager (watch.File) and written off the loop. Made
+// as its plugin starts, it hands Load the file before it returns, so the plugin starts with its state; as the window
+// moves it follows, holding the window's arrival on a directory (Window.Hold) until that directory's file is read
+// and handed to Load. A reading that's one of its own writes, or the one last handed over, isn't handed back.
 type StateFile struct {
 	h     plugin.Host
 	o     StateFileOpts
@@ -35,9 +38,15 @@ type StateFile struct {
 	path    string // the file followed now
 	gen     int    // which subscription is the one followed now
 	sub     watch.Sub[[]byte]
-	release func()   // the window's hold, until the file followed now is first read
-	wrote   [][]byte // the last few writes, not handed back as changes
+	release func()    // the window's hold, until the file followed now is first read
+	wrote   [][]byte  // the last few writes, not handed back as changes
+	handed  []byte    // the reading last handed to Load
+	hasRead bool      // one has been, for the file followed now
+	since   time.Time // when it began following it: its first reading is one read since
 }
+
+// firstReadLongest is how long a StateFile made as its plugin starts waits for its file.
+const firstReadLongest = time.Second
 
 // NewStateFile follows the window's directory's file for h.
 func NewStateFile(h plugin.Host, o StateFileOpts) *StateFile {
@@ -45,7 +54,16 @@ func NewStateFile(h plugin.Host, o StateFileOpts) *StateFile {
 	if f.m = ManagerFor(h, ""); f.m == nil {
 		f.m, f.own = watch.New(watch.Options{Name: "state", Polls: PollsOf(h)}), true
 	}
-	f.follow()
+	gen := f.follow()
+	f.mu.Lock()
+	sub := f.sub
+	f.mu.Unlock()
+	if sub.Valid() {
+		ctx, cancel := context.WithTimeout(context.Background(), firstReadLongest)
+		sub.Fresh(ctx)
+		cancel()
+		f.reading(gen)
+	}
 	f.moved = OnDirChanged(h, "the "+o.Name+" kept for the directory", func(DirChanged) { f.leave() }).Dispose
 	return f
 }
@@ -62,6 +80,13 @@ func (f *StateFile) Write(data []byte) {
 	if path != "" {
 		f.w.Write(path, data)
 	}
+}
+
+// Path is the file followed now: the directory the window is on's; "" for none.
+func (f *StateFile) Path() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.path
 }
 
 // Wait waits for the writes under way.
@@ -96,8 +121,9 @@ func (f *StateFile) leave() {
 	f.follow()
 }
 
-// follow subscribes to the file of the directory the window is on, holding its arrival until the first reading.
-func (f *StateFile) follow() {
+// follow subscribes to the file of the directory the window is on, holding its arrival until the first reading. It
+// answers which subscription that is.
+func (f *StateFile) follow() int {
 	path := ""
 	if f.o.Path != nil {
 		path = f.o.Path()
@@ -110,13 +136,17 @@ func (f *StateFile) follow() {
 	old, oldRelease := f.sub, f.release
 	f.gen++
 	gen := f.gen
-	f.path, f.sub, f.release, f.wrote = path, watch.Sub[[]byte]{}, release, nil
+	f.path, f.sub, f.release, f.wrote, f.handed, f.hasRead, f.since = path, watch.Sub[[]byte]{}, release, nil, nil, false, time.Now()
 	if path != "" {
 		f.sub = watch.SubscribeFunc(f.m, watch.File(path), watch.Need{Background: watch.Keep}, f.o.Name, func() {
 			f.h.Do(func() { f.reading(gen) })
 		})
 	}
+	sub := f.sub
 	f.mu.Unlock()
+	if sub.Valid() {
+		sub.Refresh() // a reading kept from before may be older than the file: the first one handed over is read now
+	}
 	if old.Valid() {
 		old.Close()
 	}
@@ -126,6 +156,7 @@ func (f *StateFile) follow() {
 	if path == "" && f.o.Load != nil {
 		f.o.Load(nil)
 	}
+	return gen
 }
 
 // reading hands Load the file's latest reading, on the loop, unless it's of a file left since or one of its own
@@ -137,11 +168,17 @@ func (f *StateFile) reading(gen int) {
 		return
 	}
 	data, _, ok := f.sub.Get()
+	if !f.hasRead {
+		data, _, ok = f.sub.Since(f.since)
+	}
 	release := f.release
 	f.release = nil
-	mine := release == nil && ok && f.isMine(data)
+	same := ok && f.hasRead && (bytes.Equal(data, f.handed) || f.isMine(data))
+	if ok && !same {
+		f.handed, f.hasRead = bytes.Clone(data), true
+	}
 	f.mu.Unlock()
-	if ok && !mine && f.o.Load != nil {
+	if ok && !same && f.o.Load != nil {
 		f.o.Load(data)
 	}
 	if release != nil {
