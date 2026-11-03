@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -40,7 +41,7 @@ type Tests struct {
 	kit.Disposer
 	HistoryFile func() string // where the runs are kept for the window's directory
 	h           plugin.Host
-	historyFrom string // the file the runs came from: the directory's the window is on
+	state       *kit.StateFile // the runs of the directory the window is on
 
 	set     *testrun.Set
 	history *testrun.History
@@ -58,7 +59,6 @@ type Tests struct {
 	byKey    map[string]testrun.Item   // scanned by key, made when asked for
 	pkgs     map[string]bool
 	work     kit.Work
-	saving   sync.Mutex // held while the history is written
 
 	panel testsPanel
 }
@@ -98,7 +98,8 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.set = testrun.Builtin()
 	x.Add(kit.OnDispose(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.found = map[*text.Buffer]*discovery{}
-	x.loadHistory()
+	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.HistoryFile, Load: x.loadHistory})
+	x.Add(kit.OnDispose(x.state.Close))
 	// The files git sees change are read again, in whichever work tree the window is on.
 	x.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
 		for _, p := range paths {
@@ -110,7 +111,6 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 		x.scanGen++
 		x.scanned, x.byKey, x.pkgs, x.last = nil, nil, nil, nil
 		x.mu.Unlock()
-		x.loadHistory()
 		h.Do(x.scan) // off the loop: the hook only notes the move
 	}))
 	x.Add(h.Decorations("tests", uireg.DecorationFunc(x.decorations)))
@@ -310,23 +310,16 @@ func (x *Tests) Running() bool {
 	return x.exec != nil
 }
 
-func (x *Tests) historyPath() string { return x.historyFrom }
-
-// loadHistory reads the runs kept for the window's directory.
-func (x *Tests) loadHistory() {
-	x.history, x.historyFrom = testrun.NewHistory(20), ""
-	if x.HistoryFile != nil {
-		x.historyFrom = x.HistoryFile()
-	}
-	if x.historyFrom == "" {
+// loadHistory takes the runs kept for the window's directory: none for nil.
+func (x *Tests) loadHistory(b []byte) {
+	x.history = testrun.NewHistory(20)
+	if b == nil {
 		return
 	}
-	if f, err := os.Open(x.historyFrom); err == nil {
-		if hs, err := testrun.LoadHistory(f); err == nil {
-			x.history = hs
-		}
-		f.Close()
+	if hs, err := testrun.LoadHistory(bytes.NewReader(b)); err == nil {
+		x.history = hs
 	}
+	x.h.Redraw()
 }
 
 func (x *Tests) workspace() testrun.Workspace { return testrun.Workspace{Root: editorDir(x.h)} }
@@ -674,23 +667,12 @@ func (x *Tests) start(req testrun.Request) error {
 	return nil
 }
 
-// saveHistory writes the history off the loop, one write at a time.
+// saveHistory keeps the runs for the window's directory, off the loop.
 func (x *Tests) saveHistory() {
-	path, history := x.historyFrom, x.history
-	if path == "" {
-		return
+	var b bytes.Buffer
+	if err := x.history.Save(&b); err == nil {
+		x.state.Write(b.Bytes())
 	}
-	x.work.Go(func(context.Context) {
-		x.saving.Lock()
-		defer x.saving.Unlock()
-		os.MkdirAll(filepath.Dir(path), 0o755)
-		f, err := os.Create(path)
-		if err != nil {
-			return
-		}
-		defer f.Close()
-		history.Save(f)
-	})
 }
 
 // nextFailure goes to the next failing test's assertion, in any file.
