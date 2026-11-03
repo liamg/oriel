@@ -182,7 +182,7 @@ func (w *Window) WaitFor(what string, ok func() bool) {
 			return
 		}
 		if time.Now().After(deadline) {
-			w.T.Fatalf("waiting for %s", what)
+			w.T.Fatalf("waiting for %s%s", what, rig.Stuck())
 		}
 	}
 }
@@ -252,7 +252,7 @@ func (w *Window) WaitFrame(what string, ok func(string) bool) string {
 		if len(fs) > 0 {
 			last = fs[len(fs)-1].Text()
 		}
-		w.T.Fatalf("no frame with %s (%d frames); notices %q; last frame:\n%s", what, len(fs), rig.NoticeTexts(w.Store.State().Notifications), last)
+		w.T.Fatalf("no frame with %s (%d frames); notices %q; last frame:\n%s%s", what, len(fs), rig.NoticeTexts(w.Store.State().Notifications), last, rig.Stuck())
 	}
 	return f.Text()
 }
@@ -280,7 +280,7 @@ func (w *Window) Latest(what string, ok func(headless.Frame) bool) headless.Fram
 			if fs := w.Win.Frames(); len(fs) > 0 {
 				last = fs[len(fs)-1].Text()
 			}
-			w.T.Fatalf("the frame on screen never had %s; it is:\n%s", what, last)
+			w.T.Fatalf("the frame on screen never had %s; it is:\n%s%s", what, last, rig.Stuck())
 		}
 		time.Sleep(40 * time.Millisecond)
 	}
@@ -391,7 +391,7 @@ func (w *Window) ClickAccessIn(within, label string) {
 			return
 		}
 		if time.Now().After(deadline) {
-			w.T.Fatalf("nothing named %q in %q to click", label, within)
+			w.T.Fatalf("nothing named %q in %q to click%s", label, within, rig.Stuck())
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
@@ -488,7 +488,7 @@ func (w *Window) WaitAccess(what string, ok func(w *Window) bool) {
 	deadline := time.Now().Add(Timeout)
 	for !ok(w) {
 		if time.Now().After(deadline) {
-			w.T.Fatalf("never: %s", what)
+			w.T.Fatalf("never: %s%s", what, rig.Stuck())
 		}
 		time.Sleep(20 * time.Millisecond)
 	}

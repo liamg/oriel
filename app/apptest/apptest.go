@@ -217,7 +217,7 @@ func (s *Scene) Type(keys ...string) {
 func (s *Scene) Until(what string, ok func() bool) {
 	s.T.Helper()
 	if !s.Headless.Until(Timeout, ok) {
-		s.T.Fatalf("waiting for %s:\n%s", what, s.Text())
+		s.T.Fatalf("waiting for %s:\n%s%s", what, s.Text(), rig.Stuck())
 	}
 }
 
