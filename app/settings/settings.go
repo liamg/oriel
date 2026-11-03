@@ -66,7 +66,8 @@ type Plugin struct {
 	trustPath     string
 	watch         *kit.PathWatch // the files, for hand edits
 	loadMu        sync.Mutex
-	specs         int // how many options there were at the last read
+	specs         int      // how many options there were at the last read
+	work          kit.Work // a move's swap of project files, off the loop
 
 	open    bool
 	query   string
@@ -116,7 +117,11 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		s.watch.Add(s.project.path)
 	}
 	s.loadAll()
-	s.Add(kit.OnDirChanged(h, "the project settings of the directory", func(kit.DirChanged) { s.follow() }))
+	// The swap waits for a read under way, so it's off the loop.
+	s.Add(kit.OnDirChanged(h, "the project settings of the directory", func(kit.DirChanged) {
+		s.work.Go(func(context.Context) { s.follow() })
+	}))
+	s.Add(kit.OnDispose(s.work.Stop))
 	s.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced:
@@ -171,11 +176,11 @@ func (s *Plugin) commands() []registry.Command {
 
 func (s *Plugin) files() []*settingsFile {
 	out := []*settingsFile{s.user}
+	s.othersMu.Lock()
+	defer s.othersMu.Unlock()
 	if s.project != nil {
 		out = append(out, s.project)
 	}
-	s.othersMu.Lock()
-	defer s.othersMu.Unlock()
 	for _, root := range slices.Sorted(maps.Keys(s.others)) {
 		out = append(out, s.others[root])
 	}
@@ -438,10 +443,13 @@ func (s *Plugin) fileFor(scope int) (*settingsFile, error) {
 	case 0:
 		return s.user, nil
 	case 1:
-		if s.project == nil {
+		s.othersMu.Lock()
+		project := s.project
+		s.othersMu.Unlock()
+		if project == nil {
 			return nil, fmt.Errorf("no project is open")
 		}
-		return s.project, nil
+		return project, nil
 	}
 	return nil, nil
 }
