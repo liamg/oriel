@@ -33,6 +33,7 @@ func updatesOf(s *apptest.Scene) *settings.Update {
 func TestUpdateCardUpdatesAndRestarts(t *testing.T) {
 	r := rig.NewReleases(t)
 	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup() // up to date as it started: the release comes out after, for the check asked for
 	r.Publish("2.0.0", "## Highlights\n\n- Faster session start\n- **Rollback** on a failed health check")
 
 	s.Run("UpdateCheck", nil)
