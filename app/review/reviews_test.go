@@ -163,7 +163,10 @@ func TestReviewsPageActivity(t *testing.T) {
 func TestReviewsAddRepo(t *testing.T) {
 	s, _, _, _ := reviewScene(t)
 	s.Run("reviews.open", nil)
-	s.Until("the detail", func() bool { return strings.Contains(s.Text(), "no checkout of acme/api is registered") })
+	// The request says it has no checkout at once; Add repo comes with the PR's detail, once its host has answered.
+	s.Until("the detail", func() bool {
+		return strings.Contains(s.Text(), "no checkout of acme/api is registered") && strings.Contains(s.Text(), "Add repo…")
+	})
 	s.ClickText("Add repo…")
 	s.Until("the clone target", func() bool {
 		s.Now = s.Now.Add(100 * time.Millisecond)

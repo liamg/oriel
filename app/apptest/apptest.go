@@ -6,6 +6,7 @@ package apptest
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"image/png"
 	"net/http"
 	"os"
@@ -434,12 +435,30 @@ func (s *Scene) SignPoint(num, sign string) render.Point {
 // ClickText clicks the middle of the first run of text that reads text.
 func (s *Scene) ClickText(text string) {
 	s.T.Helper()
+	s.drawn(text)
 	s.Click(s.TextPoint(text), 0)
+}
+
+// drawn waits for a frame with a run of text reading text, as someone waits for what they mean to click to show.
+func (s *Scene) drawn(text string) {
+	s.T.Helper()
+	s.Until(fmt.Sprintf("%q drawn", text), func() bool {
+		if s.List() == nil {
+			return false
+		}
+		for _, op := range s.List().Ops {
+			if op.Kind == render.OpGlyphs && op.Run.Text == text {
+				return true
+			}
+		}
+		return false
+	})
 }
 
 // ClickTop clicks the run of text reading text painted last, on top of any other, and draws a frame.
 func (s *Scene) ClickTop(text string) {
 	s.T.Helper()
+	s.drawn(text)
 	p, ok := s.TextAt(text)
 	if !ok {
 		s.T.Fatalf("no %q in the frame", text)
