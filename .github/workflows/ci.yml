@@ -36,12 +36,13 @@ jobs:
           echo "a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947  debugpy.whl" | shasum -a 256 -c -
           mkdir -p "$RUNNER_TEMP/py" && unzip -q debugpy.whl -d "$RUNNER_TEMP/py"
           echo "PYTHONPATH=$RUNNER_TEMP/py" >> "$GITHUB_ENV"
+      # macOS runners have three cores: two test packages at once, so their windows don't starve each other.
       - name: make test (under Xvfb on Linux, for render/gio's window test)
         shell: bash
-        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else make test; fi
+        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else GOFLAGS=-p=2 make test; fi
       - name: Snapshot and lag suites with the frame-path I/O check
         shell: bash
-        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else make test-framecheck; fi
+        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else GOFLAGS=-p=2 make test-framecheck; fi
       - name: Race detector on the packages where it's quick
         if: runner.os == 'Linux'
         run: go test -race -shuffle=on ./text/... ./toml/... ./semver/... ./regex/... ./update/... ./registry/... ./core/... ./lsp/... ./dap/... ./fswatch/... ./gitx/...
