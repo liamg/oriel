@@ -36,6 +36,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `assistant`, `voice`, `update` | the assistant's conversation; dictation; signed self-update |
 | `cmd/oriel` | the binary and its subcommands |
 | `tools` | checks run by tests and CI: `layout`, `ratchet`, `depcheck`, `refcheck`, `leakcheck`, `framecheck`, `apigen`, `notices`, `perf` |
+| `third_party` | dependencies `go.mod` replaces with a patched copy, each saying why in its `PATCHED.md` (wazero: its file cache read buffered); dropped once a release has the fix |
 
 ## Layering
 
