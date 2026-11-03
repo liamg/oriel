@@ -49,7 +49,7 @@ type Terminals struct {
 	SavedAt   func() string  // where the screens are kept for the window's directory
 	Clipboard edit.Clipboard // the system clipboard, for copying from the scrollback
 	h         plugin.Host
-	savedFrom string // the file the screens came from: the directory's the window is on
+	state     *kit.StateFile // the saved screens of the directory the window is on
 
 	mu    sync.Mutex
 	terms map[string]*terminal
@@ -103,12 +103,11 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	if x.terms == nil {
 		x.terms = map[string]*terminal{}
 	}
-	if x.saved == nil {
-		x.saved = map[string][]byte{}
-		x.loadSaved()
-	}
+	x.saved = map[string][]byte{}
 	x.mu.Unlock()
-	x.Add(kit.OnDirChanged(h, "the terminals for the directory", func(kit.DirChanged) { x.follow() }))
+	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.SavedAt, Load: x.loadSaved,
+		Leave: func() []byte { x.keepAll(); return x.savedJSON() }})
+	x.Add(kit.OnDispose(x.state.Close))
 	if x.CacheDir != "" {
 		ghostty.SetCacheDir(filepath.Join(x.CacheDir, "wasm"))
 	}
@@ -203,21 +202,16 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 // their programs.
 func (x *Terminals) Deactivate(ctx context.Context) error {
 	x.keepAll()
+	if b := x.savedJSON(); b != nil {
+		x.state.Write(b)
+	}
 	x.busy.Wait()
 	x.paced.Stop()
 	return x.Disposer.Deactivate(ctx)
 }
 
-// follow moves the terminals onto the window's new directory: those of the one it left keep their screens and stop,
-// as when the app stops, and the new directory's saved screens come in, for its terminals as its layout brings them
-// back.
-func (x *Terminals) follow() {
-	x.keepAll()
-	x.saved = map[string][]byte{}
-	x.loadSaved()
-}
-
-// keepAll keeps every terminal's screen in the directory's saved screens, and stops their programs.
+// keepAll keeps every terminal's screen in the directory's saved screens, and stops their programs: as the app stops,
+// and as the window leaves their directory (whose saved screens bring them back with its layout).
 func (x *Terminals) keepAll() {
 	x.mu.Lock()
 	terms := x.terms
@@ -229,30 +223,27 @@ func (x *Terminals) keepAll() {
 		}
 		t.stop()
 	}
-	x.storeSaved()
 }
 
-func (x *Terminals) savedPath() string { return x.savedFrom }
-
-func (x *Terminals) loadSaved() {
-	x.savedFrom = ""
-	if x.SavedAt != nil {
-		x.savedFrom = x.SavedAt()
+// loadSaved takes the screens kept for the window's directory: none for nil.
+func (x *Terminals) loadSaved(b []byte) {
+	saved := map[string][]byte{}
+	if b != nil {
+		json.Unmarshal(b, &saved)
 	}
-	if p := x.savedPath(); p != "" {
-		if b, err := os.ReadFile(p); err == nil {
-			json.Unmarshal(b, &x.saved)
-		}
-	}
+	x.saved = saved
 }
 
-func (x *Terminals) storeSaved() {
-	if p := x.savedPath(); p != "" && len(x.saved) > 0 {
-		os.MkdirAll(filepath.Dir(p), 0o755)
-		if b, err := json.Marshal(x.saved); err == nil {
-			os.WriteFile(p, b, 0o600)
-		}
+// savedJSON is the screens kept, to write; nil for none.
+func (x *Terminals) savedJSON() []byte {
+	if len(x.saved) == 0 {
+		return nil
 	}
+	b, err := json.Marshal(x.saved)
+	if err != nil {
+		return nil
+	}
+	return b
 }
 
 func (x *Terminals) get(id string) *terminal {

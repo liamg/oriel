@@ -103,7 +103,12 @@ func TestShellIntegration(t *testing.T) {
 
 // Snapshot on reconnect: the terminals' screens come back when the app starts again on the same directory.
 func TestTerminalSnapshotOnReopen(t *testing.T) {
-	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "printf 'kept across restarts\\n'; exec cat"}})
+	state := t.TempDir() // where the directory's screens are kept
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Config: func(c *apptest.Config) { c.StateDir = state }})
+	s.Frame()
+	s.Run("term.open", registry.Args{"cmd": []string{"sh", "-c", "printf 'kept across restarts\\n'; exec cat"}})
+	s.Frame()
+	s.Frame()
 	waitTerm(t, s, "kept across restarts")
 	x := termsOf(s)
 	if err := x.Deactivate(t.Context()); err != nil {
