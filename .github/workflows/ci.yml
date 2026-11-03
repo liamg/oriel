@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           uptime
-          ps -eo pid,ppid,pcpu,pmem,etime,args --sort=-pcpu | head -25
+          if [ "$RUNNER_OS" = macOS ]; then ps -Aro pid,ppid,pcpu,pmem,etime,command | head -25; else ps -eo pid,ppid,pcpu,pmem,etime,args --sort=-pcpu | head -25; fi
       - name: Snapshot and lag suites with the frame-path I/O check
         shell: bash
         run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else GOFLAGS=-p=2 make test-framecheck; fi
