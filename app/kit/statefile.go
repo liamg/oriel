@@ -120,6 +120,9 @@ func (f *StateFile) leave() {
 // follow subscribes to the file of the directory the window is on, holding its arrival until the first reading. It
 // answers which subscription that is.
 func (f *StateFile) follow() int {
+	// A write under way may be to the file it's about to read (the window back on a directory it just left): what
+	// it reads is what was written, not what was there before.
+	f.w.Wait()
 	path := ""
 	if f.o.Path != nil {
 		path = f.o.Path()
