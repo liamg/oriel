@@ -163,6 +163,9 @@ A sandbox knows no provider: each backend asks the session's provider what its a
 variables and endpoints it inherits, the hosts it reaches, the user's MCP servers for the gateway), and gives it that.
 A sandboxed Claude gets the host's sign-in without its refresh token. While one runs, the provider hands every sandbox
 the host's sign-in each minute, and near its end runs the host's own claude to renew it (`claudebox.Box.KeepLogins`).
+A sandboxed agent signs in only on the host: its login card runs the provider's `HostCommand` in a host terminal,
+never its own; a sandbox problem that a sign-in fixes (`SandboxProblem.SignIn`) raises the same card; and a sandboxed
+agent that loses its sign-in is started once again on the host's, handed over afresh, before the card asks.
 
 ## Rendering and the toolkit
 

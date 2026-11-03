@@ -193,7 +193,15 @@ type Login struct {
 	Detail   string `json:"detail,omitempty"`   // what the provider said: "OAuth token revoked · Please run /login"
 	Terminal string `json:"terminal,omitempty"` // typed into the agent's own terminal, signs in: "/login"
 	Shell    string `json:"shell,omitempty"`    // run in a shell, signs in: "codex login"
-	Browser  bool   `json:"browser,omitempty"`  // Oriel signs it in, in a browser it opens (agent.LoginStarter)
+	// HostCommand runs on the host, in a terminal, and signs in there, and so every sandbox sharing its sign-in.
+	HostCommand []string `json:"hostCommand,omitempty"`
+	Browser     bool     `json:"browser,omitempty"` // Oriel signs it in, in a browser it opens (agent.LoginStarter)
+}
+
+// Same says l and o are the same login, with the same ways to sign in.
+func (l Login) Same(o Login) bool {
+	return l.Provider == o.Provider && l.Account == o.Account && l.Detail == o.Detail && l.Terminal == o.Terminal &&
+		l.Shell == o.Shell && l.Browser == o.Browser && slices.Equal(l.HostCommand, o.HostCommand)
 }
 
 // Ask is something waiting on the user: a permission, a question, a held connection or gateway call.

@@ -159,8 +159,8 @@ func (x *Box) Problems(at agent.SandboxPlace, pinned string) []agent.SandboxProb
 	login, ok := x.HostLogin()
 	if !ok {
 		return append(out, agent.SandboxProblem{Code: "claude-token-missing", Blocking: true,
-			Message: "Sandboxed agents have no way to sign in to Claude",
-			Fix:     "Sign in with `claude` on this machine; sandboxes share that login."})
+			Message: "Claude isn't signed in on this machine, and sandboxes share its sign-in",
+			Fix:     "Run `claude auth login` on this machine; sandboxes share that login.", SignIn: []string{"claude", "auth", "login"}})
 	}
 	SyncLogins(login)
 	if time.Until(login.Expiry()) <= 0 {

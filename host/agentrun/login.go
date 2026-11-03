@@ -54,7 +54,8 @@ func (x *Runner) LostLogins() []core.Login {
 // LoginLost flags a provider's login as gone: the machine's state says so, and every session here with that provider's agent,
 // and from, the one it went in, waits on a card until it's back.
 func (x *Runner) LoginLost(from core.SessionID, ev agent.AuthExpired) {
-	l := core.Login{Provider: ev.Provider, Account: ev.Account, Detail: ev.Detail, Terminal: ev.Terminal, Shell: ev.Shell}
+	l := core.Login{Provider: ev.Provider, Account: ev.Account, Detail: ev.Detail, Terminal: ev.Terminal, Shell: ev.Shell,
+		HostCommand: ev.HostCommand}
 	if p, ok := x.deps.Providers.Get(ev.Provider); ok {
 		_, starts := p.(agent.LoginStarter)
 		l.Browser = starts && agent.FeaturesOf(p).Login
@@ -65,7 +66,7 @@ func (x *Runner) LoginLost(from core.SessionID, ev agent.AuthExpired) {
 		x.lost = map[string]*lostLogin{}
 	}
 	old := x.lost[key]
-	changed := old == nil || old.login != l
+	changed := old == nil || !old.login.Same(l)
 	if old == nil {
 		nl := &lostLogin{login: l, asks: map[core.SessionID]*loginAsk{}, marked: make(chan struct{})}
 		x.lost[key] = nl
@@ -86,6 +87,32 @@ func (x *Runner) LoginLost(from core.SessionID, ev agent.AuthExpired) {
 			h.askLogin(key)
 		}
 	}
+}
+
+// retryLogin starts a sandboxed agent that lost its sign-in again, once, on the host's handed over afresh, and says
+// whether it does: the sandbox's copy may be one the host has renewed since, which the API answers as revoked. A turn
+// it was in carries on.
+func (h *session) retryLogin(ev agent.AuthExpired) bool {
+	if !h.snapshot().Agent.Sandboxed {
+		return false
+	}
+	h.mu.Lock()
+	if h.loginRetried {
+		h.mu.Unlock()
+		return false
+	}
+	h.loginRetried = true
+	relogin := h.relogin
+	h.relogin = false
+	h.mu.Unlock()
+	h.r.env.Go("a sandbox's sign-in again", func() {
+		h.r.detect(ev.Provider) // reads the host's sign-in afresh and hands it to the sandboxes
+		h.restart("its sign-in, handed over again from this machine")
+		if relogin {
+			h.note(carryOn)
+		}
+	})
+	return true
 }
 
 // askLogins puts the card of each of provider's lost logins on the session.
@@ -118,6 +145,9 @@ func (h *session) askLogin(key string) {
 	l.asks[h.id] = mine
 	login := l.login
 	x.loginMu.Unlock()
+	if h.snapshot().Agent.Sandboxed {
+		login.Terminal = "" // its terminal is the sandbox's, whose sign-in is the host's: signing in there forks it
+	}
 	go func() {
 		defer x.env.Recover("a login ask", nil)
 		defer func() {

@@ -3,6 +3,8 @@ package claude
 import (
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -23,8 +25,8 @@ func TestAuthExpiredFromTheLog(t *testing.T) {
 	s.Send("lose the login")
 	ev := s.Wait("AuthExpired", func(ev agent.Event) bool { _, ok := ev.(agent.AuthExpired); return ok }).(agent.AuthExpired)
 	want := agent.AuthExpired{Provider: "claude", Detail: "OAuth token revoked · Please run /login", Terminal: "/login",
-		Shell: "claude, then /login"}
-	if ev != want {
+		Shell: "claude auth login", HostCommand: []string{"claude", "auth", "login"}}
+	if !reflect.DeepEqual(ev, want) {
 		t.Errorf("AuthExpired = %+v, want %+v", ev, want)
 	}
 	s.Reply()
@@ -48,7 +50,7 @@ func TestSandboxedAuthExpiredSignsInOnTheHost(t *testing.T) {
 	s := agenttest.Start(t, h)
 	s.Send("lose the login")
 	ev := s.Wait("AuthExpired", func(ev agent.Event) bool { _, ok := ev.(agent.AuthExpired); return ok }).(agent.AuthExpired)
-	if ev.Terminal != "" || ev.Shell != "claude, then /login" {
+	if ev.Terminal != "" || !slices.Equal(ev.HostCommand, []string{"claude", "auth", "login"}) {
 		t.Errorf("AuthExpired = %+v", ev)
 	}
 	s.Reply()
