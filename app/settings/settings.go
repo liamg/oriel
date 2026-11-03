@@ -99,11 +99,13 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	s.h = h
 	conf := s.ConfigDir
 	s.files, s.filesDone = kit.FileManager(h, "settings", SettingsPoll)
-	s.user = s.track(&settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser})
 	s.trustPath = filepath.Join(conf, "trusted.toml")
+	s.othersMu.Lock() // a file's first reading may load them all already
+	s.user = s.track(&settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser})
 	if root := kit.WindowDir(h); root != "" {
 		s.project = s.projectFile(root)
 	}
+	s.othersMu.Unlock()
 	s.Add(h.Contribute(kit.PagePlace("settings", "Settings", "settings.open", &s.open)))
 	for _, c := range s.commands() {
 		s.Add(h.Command(c))
@@ -218,9 +220,9 @@ func (s *Plugin) commands() []registry.Command {
 }
 
 func (s *Plugin) allFiles() []*settingsFile {
-	out := []*settingsFile{s.user}
 	s.othersMu.Lock()
 	defer s.othersMu.Unlock()
+	out := []*settingsFile{s.user}
 	if s.project != nil {
 		out = append(out, s.project)
 	}
