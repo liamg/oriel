@@ -136,16 +136,22 @@ func SandboxSettings(host, defaults map[string]any, helperFiles map[string]strin
 	return out
 }
 
-// SandboxState is the sandbox's .claude.json: first-run screens done and cwds
-// trusted, since nobody is at the terminal to click through them. The host's
-// own "seen it" flags come along, so a nudge the user dismissed there does
-// not stall an agent here.
-func SandboxState(cwds []string, host map[string]any) map[string]any {
+// SandboxState is the sandbox's .claude.json: first-run screens done and cwds trusted, since nobody is at the
+// terminal to click through them. Every notice its Claude Code shows once is marked seen (seen), whether or not the
+// host's user has seen it, and the host's own "seen it" flags come along too.
+func SandboxState(cwds []string, host map[string]any, seen Seen) map[string]any {
 	out := map[string]any{}
 	for k, v := range host {
 		if seenFlag(k) {
 			out[k] = v
 		}
+	}
+	for _, k := range seen.Flags {
+		out[k] = true
+	}
+	if seen.Version != "" {
+		out["lastReleaseNotesSeen"] = seen.Version
+		out["lastOnboardingVersion"] = seen.Version
 	}
 	projects := map[string]any{}
 	for _, d := range cwds {
@@ -178,7 +184,7 @@ func seenFlag(k string) bool {
 }
 
 // Prepare writes root's sandbox's Claude config for an agent in cwd.
-func Prepare(root, cwd string, host, defaults map[string]any) error {
+func Prepare(root, cwd string, host, defaults map[string]any, seen Seen) error {
 	dir := Dir(root)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
@@ -208,7 +214,7 @@ func Prepare(root, cwd string, host, defaults map[string]any) error {
 			_ = json.Unmarshal(b, &hostState)
 		}
 	}
-	state := SandboxState([]string{cwd}, hostState)
+	state := SandboxState([]string{cwd}, hostState, seen)
 	if cur, err := os.ReadFile(filepath.Join(dir, ".claude.json")); err == nil {
 		var m map[string]any
 		if json.Unmarshal(cur, &m) == nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -69,7 +70,8 @@ func (x *Box) Needs(ctx context.Context, at agent.SandboxPlace, modDir, pinned s
 	}
 	n.Bins = map[string]string{"claude": bin}
 	settings := Settings()
-	if err := Prepare(at.Root, at.Cwd, settings, nil); err != nil {
+	seen := x.SeenFor(bin, at.Shared || runtime.GOOS == at.OS && runtime.GOARCH == at.Arch)
+	if err := Prepare(at.Root, at.Cwd, settings, nil, seen); err != nil {
 		return n, err
 	}
 	if !ownAuth(at, settings) {

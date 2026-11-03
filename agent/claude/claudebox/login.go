@@ -73,10 +73,12 @@ type Box struct {
 	keychainLogin Login
 	downloads     sync.Mutex
 
-	keepMu    sync.Mutex
-	keepers   int
-	stopKeep  context.CancelFunc
-	keepDone  chan struct{}
+	keepMu   sync.Mutex
+	keepers  int
+	stopKeep context.CancelFunc
+	keepDone chan struct{}
+
+	seen      seenCache // what each Claude Code binary has sandboxes told they've seen
 	refreshed time.Time
 }
 

@@ -52,7 +52,7 @@ func TestPrepareWritesThePrimarysMemory(t *testing.T) {
 	if err := sandbox.SaveManifest(root, m); err != nil {
 		t.Fatal(err)
 	}
-	if err := Prepare(root, root, map[string]any{"autoMemoryDirectory": "/elsewhere"}, nil); err != nil {
+	if err := Prepare(root, root, map[string]any{"autoMemoryDirectory": "/elsewhere"}, nil, Seen{}); err != nil {
 		t.Fatal(err)
 	}
 	b, err := os.ReadFile(filepath.Join(Dir(root), "settings.json"))
