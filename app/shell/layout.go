@@ -58,7 +58,13 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	l.root.OnShow(func(layout.ViewRef) { closePlaces(h) })
 	l.Add(h.DeclareEvent(registry.EventInfo{Name: registry.EventName[kit.DirChanged](), Fired: true, Payload: kit.DirChanged{},
 		Doc: "The window moved onto another directory, as a session in another one came to the front; plugins live on across it, and one that keeps something per directory swaps it here. The new directory's layout comes back after its hooks, in place of any view one opens. { dir, was, session }"}))
-	h.Do(l.arrive) // once every plugin has registered its views
+	h.Do(func() { // once every plugin has registered its views, and what they hold it for is read
+		if l.sh != nil {
+			l.sh.arriveWhenReady()
+		} else {
+			l.arrive()
+		}
+	})
 	l.panes = l.newPanes(h)
 	for _, c := range l.commands(h) {
 		l.Add(h.Command(c))

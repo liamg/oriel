@@ -83,6 +83,10 @@ type Window interface {
 	Dir() string
 	// Reopen moves the window onto dir, as session's ("" for none).
 	Reopen(dir string, session core.SessionID) error
+	// Hold keeps the window from laying out the directory it's moving onto, or starting on, until release: what that
+	// directory's views need is being read (a StateFile). The opening cover stays up meanwhile; a hold not let go in
+	// a couple of seconds is let go of. Release once, from any goroutine.
+	Hold() (release func())
 	// AfterReopen runs calls once the window has moved onto session's directory.
 	AfterReopen(session core.SessionID, calls []Call)
 	// LaunchedEmpty says, the first time it's asked, whether the window started with nothing open; false after.

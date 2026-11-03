@@ -39,6 +39,8 @@ func (w window) IconImage(name string, col render.Color) image.Image {
 
 func (w window) Dir() string { return w.sh.workDir() }
 
+func (w window) Hold() (release func()) { return w.sh.hold() }
+
 func (w window) Polls() *kit.PollSet { return w.sh.polls }
 
 func (w window) Frames() *kit.FrameLog { return &w.sh.frames }

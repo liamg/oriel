@@ -2,8 +2,10 @@ package shell_test
 
 import (
 	"context"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -91,4 +93,42 @@ func TestFollowingASessionKeepsThePluginsRunning(t *testing.T) {
 			t.Errorf("following sessions raised a %s from %s: %s: %s", n.Severity, n.Source, n.Title, n.Text)
 		}
 	}
+}
+
+// holding takes Window.Hold as the window moves, and lets the test release it.
+type holding struct {
+	release chan func()
+}
+
+func (p *holding) Manifest() plugin.Manifest        { return plugin.Manifest{ID: "test/holding"} }
+func (p *holding) Deactivate(context.Context) error { return nil }
+func (p *holding) Activate(_ context.Context, h plugin.Host) error {
+	kit.OnDirChanged(h, "holds the window", func(kit.DirChanged) {
+		w, _ := kit.WindowOf(h)
+		p.release <- w.Hold()
+	})
+	return nil
+}
+
+// A plugin still reading what the new directory's views need holds the window behind the opening cover, and the
+// directory is laid out once it lets go.
+func TestAMoveWaitsForWhatHoldsIt(t *testing.T) {
+	p := &holding{release: make(chan func(), 1)}
+	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{p}})
+	dir := t.TempDir()
+	if err := r.Do(func() error {
+		w, _ := kit.WindowOf(r.Host)
+		return w.Reopen(dir, "")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	release := <-p.release
+	r.WaitText("Opening")
+	time.Sleep(300 * time.Millisecond)
+	r.Do(func() error { r.Host.Redraw(); return nil })
+	if fs := r.Win.Frames(); !strings.Contains(fs[len(fs)-1].Text(), "Opening") {
+		t.Fatal("the window laid the directory out while a plugin held it")
+	}
+	release()
+	r.WaitGone("Opening")
 }

@@ -370,7 +370,6 @@ func (h *Headless) Reopen() (bool, error) {
 	default:
 		return false, nil
 	}
-	h.sh.heading.Store(nil)
 	h.sh.move(context.Background(), to)
 	return true, nil
 }
