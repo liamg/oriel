@@ -104,21 +104,39 @@ func Golden(t testing.TB, path string, got []byte) {
 	}
 }
 
-var number = regexp.MustCompile(`-?[0-9]+(\.[0-9]+)?`)
+var number = regexp.MustCompile(`#[0-9a-fA-F]+|-?[0-9]+(\.[0-9]+)?`)
 
-// sameText says a and b differ at most in numbers that are within float32 rounding of each other.
+// sameText says a and b differ at most in numbers that are within float32 rounding of each other. A number is held
+// to the scale of the largest on its line, since a size inherits the rounding of the coordinates it came from; hex
+// colours must match exactly.
 func sameText(a, b string) bool {
 	if number.ReplaceAllString(a, "0") != number.ReplaceAllString(b, "0") {
 		return false
 	}
+	la, lb := strings.Split(a, "\n"), strings.Split(b, "\n")
+	for i := range la {
+		if la[i] != lb[i] && !sameLine(la[i], lb[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func sameLine(a, b string) bool {
 	na, nb := number.FindAllString(a, -1), number.FindAllString(b, -1)
+	scale := 1.0
+	for _, s := range na {
+		if v, err := strconv.ParseFloat(s, 64); err == nil {
+			scale = max(scale, math.Abs(v))
+		}
+	}
 	for i := range na {
 		if na[i] == nb[i] {
 			continue
 		}
 		x, err1 := strconv.ParseFloat(na[i], 64)
 		y, err2 := strconv.ParseFloat(nb[i], 64)
-		if err1 != nil || err2 != nil || math.Abs(x-y) > 1e-6*max(1, math.Abs(x)) {
+		if err1 != nil || err2 != nil || math.Abs(x-y) > 1e-6*scale {
 			return false
 		}
 	}
