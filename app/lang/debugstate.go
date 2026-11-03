@@ -102,51 +102,34 @@ type debugState struct {
 	Watches     []string                     `json:"watches"`
 }
 
-func (x *Debug) load() {
-	x.statePath = ""
-	if x.StateFile != nil {
-		x.statePath = x.StateFile()
-	}
-	path := x.statePath
-	if path == "" {
-		return
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return
-	}
+// load takes the breakpoints and watches kept for the window's directory: none for nil.
+func (x *Debug) load(b []byte) {
 	var st debugState
-	if json.Unmarshal(b, &st) == nil {
-		if st.Breakpoints != nil {
-			x.bps = st.Breakpoints
-		}
-		x.watches = st.Watches
+	if b != nil && json.Unmarshal(b, &st) != nil {
+		return
 	}
+	x.bps, x.watches = map[string][]debugBreakpoint{}, st.Watches
+	if st.Breakpoints != nil {
+		x.bps = st.Breakpoints
+	}
+	x.changed()
 }
 
-// save writes the breakpoints and watches, off the loop.
+// save keeps the breakpoints and watches for the window's directory, off the loop.
 func (x *Debug) save() {
-	path := x.statePath
-	if path == "" {
-		return
-	}
 	b, _ := json.Marshal(debugState{Breakpoints: x.bps, Watches: x.watches})
-	x.writes.Write(path, b)
+	x.state.Write(b)
 }
 
 // dir is the directory debugged: the window's project.
 func (x *Debug) dir() string { return editorDir(x.h) }
 
-// follow moves the debugger onto the window's new directory: a session running stops, as it did when the window
-// left its directory, and the new directory's breakpoints and watches come in for the last one's.
+// follow stops a debug session running as the window leaves its directory; the new directory's breakpoints and
+// watches come in through the state file.
 func (x *Debug) follow() {
 	if x.sess != nil && x.sess.state != debugEnded {
 		_ = x.stopSession(nil)
 	}
-	x.save()
-	x.bps, x.watches = map[string][]debugBreakpoint{}, nil
-	x.load()
-	x.changed()
 }
 
 // configs are the launch configs in .oriel/debug.toml, as [[debug]] tables.
