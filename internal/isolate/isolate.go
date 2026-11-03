@@ -23,16 +23,12 @@ var started sync.Map // test name → true, while that test runs
 var userHome = os.Getenv("HOME") // the HOME the test binary started with: the user's
 
 // init names TMPDIR as the OS gives it back (macOS's /var is /private/var), so every t.TempDir in a binary that
-// links this package compares equal to the paths git and the code under test read. On macOS it's under /tmp, as the
-// per-user TMPDIR is long enough to cut a path in a frame and to pass the unix socket limit, in a folder Spotlight
-// leaves alone (.noindex): it indexes every file the tests make otherwise, and starves them.
+// links this package compares equal to the paths git and the code under test read. On macOS it's /tmp: the per-user
+// TMPDIR is long enough to cut a path in a frame and to pass the unix socket limit.
 func init() {
 	dir := os.TempDir()
 	if runtime.GOOS == "darwin" {
-		dir = "/tmp/o.noindex"
-		if err := os.MkdirAll(dir, 0o777); err != nil {
-			dir = "/tmp"
-		}
+		dir = "/tmp"
 	}
 	if real, err := filepath.EvalSymlinks(dir); err == nil {
 		os.Setenv("TMPDIR", real)
