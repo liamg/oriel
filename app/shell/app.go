@@ -235,7 +235,8 @@ func (p *running) deactivate(ctx context.Context) (err error) {
 }
 
 // reopen moves the window onto to's directory: Open Directory, or another session in front.
-func (p *running) reopen(to reopenTo, _ *slog.Logger) error {
+func (p *running) reopen(to reopenTo, log *slog.Logger) error {
+	p.sh.traceMove(log, to)
 	p.sh.move(p.ctx, to)
 	if to.session == "" && to.dir != "" {
 		p.sh.recents.add(to.dir, time.Now())
@@ -251,10 +252,17 @@ func (sh *shell) move(ctx context.Context, to reopenTo) {
 	if sh.layout != nil && sh.layout.h != nil {
 		sh.layout.leave()
 	}
+	m := sh.moving
+	if m != nil {
+		m.left = time.Now()
+	}
 	sh.cfg.WorkDir, sh.cfg.Files, sh.openedFor = to.dir, nil, to.session
 	dir := to.dir
 	sh.dir.Store(&dir)
 	sh.cfg.Registry.Fire(ctx, registry.EventName[kit.DirChanged](), to.dir, &kit.DirChanged{Dir: to.dir, Was: was, Session: string(to.session)})
+	if m != nil {
+		m.fired = time.Now()
+	}
 	sh.arriveWhenReady()
 }
 
@@ -300,6 +308,9 @@ func (sh *shell) arriveWhenReady() {
 	a.gen++
 	a.done = false
 	g, held := a.gen, a.n > 0
+	if sh.moving != nil {
+		sh.moving.held = held
+	}
 	if held {
 		a.timer = time.AfterFunc(holdLongest, func() { sh.do(func() { sh.arrived(g) }) })
 	}
@@ -325,9 +336,14 @@ func (sh *shell) arrived(g int) {
 	}
 	a.mu.Unlock()
 	sh.heading.Store(nil)
+	m := sh.moving
+	if m != nil {
+		m.arrived = time.Now()
+	}
 	if sh.layout != nil && sh.layout.h != nil {
 		sh.layout.arrive()
 	}
+	sh.laid(m)
 }
 
 // do runs fn on the loop, as a plugin host's Do does.

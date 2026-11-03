@@ -51,6 +51,7 @@ type shell struct {
 	reopen      chan reopenTo            // the directory for the loop to start again on: Open Directory's, or a session's
 	heading     atomic.Pointer[reopenTo] // where the window is going, for the opening view, until it's laid out there
 	holds       arrival                  // what laying out the directory the window is on waits for (Window.Hold)
+	moving      *moveTrace               // the move under way, timed for the log; on the loop
 	recents     *recents
 	secretsOnce sync.Once
 	secrets     plugin.Secrets               // the store plugins' requests take secrets from, each one handed out redacted from the logs
