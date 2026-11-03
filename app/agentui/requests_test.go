@@ -470,11 +470,13 @@ func TestCommentMenu(t *testing.T) {
 	r.WaitText("Copy as markdown")
 	r.ClickTop("Copy")
 	waitClip(t, r, "Round half to even")
+	r.WaitGone("Copy as markdown") // the menu gone, not fading out under the next click
 	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
 	r.WaitText("⋯")
 	r.ClickAccess("Comment actions")
 	r.ClickTop("Copy as markdown")
 	waitClip(t, r, "Round **half** to `even`")
+	r.WaitGone("Copy as markdown")
 	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
 	r.WaitText("⋯")
 	r.ClickAccess("Comment actions")
