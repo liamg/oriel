@@ -362,12 +362,14 @@ func (st *diffState) revealSel(c *ui.Ctx, bodyID ui.ID, at int) {
 	}
 	_, laid := c.Rect(id)
 	making := st.open[st.sel.file] && st.drawn[st.sel.file] == nil // the diff's arrival draws the next frame
+	arrived := st.making && !making                                // laid out last frame, before its diff
+	st.making = making
 	if !making {
 		st.tries++
 	}
 	switch {
 	case ok && laid && st.whole():
-		st.reveal = making || !st.atTop(c, bodyID) && st.tries < revealFrames
+		st.reveal = making || arrived || !st.atTop(c, bodyID) && st.tries < revealFrames
 	case ok && laid && st.centre:
 		c.CentreInView(bodyID, id)
 		st.reveal = false
@@ -384,7 +386,7 @@ func (st *diffState) revealSel(c *ui.Ctx, bodyID ui.ID, at int) {
 		c.WakeAt(c.Now())
 	}
 	if !st.reveal {
-		st.tries, st.centre = 0, false
+		st.tries, st.centre, st.making = 0, false, false
 	}
 }
 
