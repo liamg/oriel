@@ -25,6 +25,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/toml"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/watch"
 )
 
 // SettingsPoll is how often the settings files are read for hand edits when the OS can't watch them.
@@ -42,8 +43,10 @@ type settingsFile struct {
 	layer registry.Layer
 	at    registry.At
 	trust bool
+	sub   watch.Sub[[]byte] // its contents, from the app's freshness manager
 
 	mu        sync.Mutex
+	wrote     time.Time // when the page last wrote it: a reading begun before is older than what it applied
 	loaded    bool
 	hash      [32]byte
 	applied   map[string]bool // the options it set
@@ -64,7 +67,8 @@ type Plugin struct {
 	othersMu      sync.Mutex
 	others        map[string]*settingsFile // other projects' files, by root: the repos of this machine's sessions
 	trustPath     string
-	watch         *kit.PathWatch // the files, for hand edits
+	files         *watch.Manager // reads the files, and again on hand edits
+	filesDone     func()
 	loadMu        sync.Mutex
 	specs         int      // how many options there were at the last read
 	work          kit.Work // a move's swap of project files, off the loop
@@ -94,10 +98,11 @@ func (s *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "settin
 func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	s.h = h
 	conf := s.ConfigDir
-	s.user = &settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser}
+	s.files, s.filesDone = kit.FileManager(h, "settings", SettingsPoll)
+	s.user = s.track(&settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser})
 	s.trustPath = filepath.Join(conf, "trusted.toml")
 	if root := kit.WindowDir(h); root != "" {
-		s.project = projectFile(root)
+		s.project = s.projectFile(root)
 	}
 	s.Add(h.Contribute(kit.PagePlace("settings", "Settings", "settings.open", &s.open)))
 	for _, c := range s.commands() {
@@ -107,30 +112,68 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	s.Add(h.View(kit.OverlayPrefix+"settings", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "settings", Fn: s.build}
 	})))
-	s.watch = kit.WatchPaths(h, SettingsPoll, func() {
-		if s.loadAll() {
-			h.Redraw()
-		}
-	})
-	s.watch.Add(s.user.path)
-	if s.project != nil {
-		s.watch.Add(s.project.path)
-	}
-	s.loadAll()
-	// The swap waits for a read under way, so it's off the loop.
+	s.addOthers()
+	s.Reload() // the plugins after it start with the values the files hold
+	// The swap waits for a read under way, so it's off the loop; the window waits behind its cover for the new
+	// project's values.
 	s.Add(kit.OnDirChanged(h, "the project settings of the directory", func(kit.DirChanged) {
-		s.work.Go(func(context.Context) { s.follow() })
+		release := func() {}
+		if w, ok := kit.WindowOf(h); ok {
+			release = w.Hold()
+		}
+		s.work.Go(func(ctx context.Context) {
+			defer release()
+			s.follow(ctx)
+		})
 	}))
 	s.Add(kit.OnDispose(s.work.Stop))
 	s.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced:
-			s.watch.Kick() // a session's project may have a file of its own
+			s.kick() // a session's project may have a file of its own
 		}
 	})))
-	s.Add(kit.OnDispose(h.Options().Registered(s.watch.Kick))) // a new option may take a key the files had waiting
-	s.Add(kit.OnDispose(s.watch.Close))
+	s.Add(kit.OnDispose(h.Options().Registered(s.kick))) // a new option may take a key the files had waiting
+	s.Add(kit.OnDispose(s.untrack))
 	return nil
+}
+
+// track subscribes to f's contents: each new reading loads the files again.
+func (s *Plugin) track(f *settingsFile) *settingsFile {
+	f.sub = watch.SubscribeFunc(s.files, watch.File(f.path), watch.Need{}, "settings", s.kick)
+	return f
+}
+
+// untrack ends the files' subscriptions, once the loads under way are done.
+func (s *Plugin) untrack() {
+	s.work.Stop()
+	for _, f := range s.allFiles() {
+		f.sub.Close()
+	}
+	s.filesDone()
+}
+
+// kick loads the files again off the loop, redrawing when a value changed.
+func (s *Plugin) kick() {
+	s.work.Go(func(context.Context) {
+		if s.loadAll() {
+			s.h.Redraw()
+		}
+	})
+}
+
+// fileReadLongest is how long a read of the files waits for a file.
+const fileReadLongest = time.Second
+
+// fresh waits for a reading of each of files begun now.
+func (s *Plugin) fresh(ctx context.Context, files ...*settingsFile) {
+	ctx, cancel := context.WithTimeout(ctx, fileReadLongest)
+	defer cancel()
+	var wg sync.WaitGroup
+	for _, f := range files {
+		wg.Go(func() { f.sub.Fresh(ctx) })
+	}
+	wg.Wait()
 }
 
 func (s *Plugin) commands() []registry.Command {
@@ -174,7 +217,7 @@ func (s *Plugin) commands() []registry.Command {
 	}
 }
 
-func (s *Plugin) files() []*settingsFile {
+func (s *Plugin) allFiles() []*settingsFile {
 	out := []*settingsFile{s.user}
 	s.othersMu.Lock()
 	defer s.othersMu.Unlock()
@@ -188,13 +231,13 @@ func (s *Plugin) files() []*settingsFile {
 }
 
 // projectFile is a project's settings file, for the roots of this machine's sessions besides the window's own.
-func projectFile(root string) *settingsFile {
-	return &settingsFile{path: filepath.Join(root, ".oriel", "settings.toml"), layer: registry.LayerProject, at: registry.At{Project: root}, trust: true}
+func (s *Plugin) projectFile(root string) *settingsFile {
+	return s.track(&settingsFile{path: filepath.Join(root, ".oriel", "settings.toml"), layer: registry.LayerProject, at: registry.At{Project: root}, trust: true})
 }
 
 // follow makes the window's new directory's project file the project layer the page edits: the one it left stays
 // with the other projects', its values still applying to it.
-func (s *Plugin) follow() {
+func (s *Plugin) follow(ctx context.Context) {
 	root := kit.WindowDir(s.h)
 	s.loadMu.Lock()
 	s.othersMu.Lock()
@@ -210,13 +253,18 @@ func (s *Plugin) follow() {
 			s.project = f
 			delete(s.others, root)
 		} else {
-			s.project = projectFile(root)
-			s.watch.Add(s.project.path)
+			s.project = s.projectFile(root)
 		}
 	}
+	project := s.project
 	s.othersMu.Unlock()
 	s.loadMu.Unlock()
-	s.watch.Kick() // reads the new project's file off the loop
+	if project != nil {
+		s.fresh(ctx, project)
+	}
+	if s.loadAll() {
+		s.h.Redraw()
+	}
 }
 
 // addOthers reads the project files of repos sessions here work in, so their project values apply to them.
@@ -231,14 +279,17 @@ func (s *Plugin) addOthers() {
 		if s.others == nil {
 			s.others = map[string]*settingsFile{}
 		}
-		s.others[root] = projectFile(root)
-		s.watch.Add(s.others[root].path)
+		s.others[root] = s.projectFile(root)
 	}
 }
 
 // loadAll reads each file that changed since it was last read, and reports whether any did.
 // Reload reads the settings files again, as a change to one does; it says whether any value changed.
-func (s *Plugin) Reload() bool { return s.loadAll() }
+func (s *Plugin) Reload() bool {
+	s.addOthers()
+	s.fresh(context.Background(), s.allFiles()...)
+	return s.loadAll()
+}
 
 func (s *Plugin) loadAll() bool {
 	s.loadMu.Lock()
@@ -247,14 +298,14 @@ func (s *Plugin) loadAll() bool {
 	// Options registered since (a plugin's) may now take keys that were unknown: read the files again.
 	if n := len(s.h.Options().Specs()); n != s.specs {
 		s.specs = n
-		for _, f := range s.files() {
+		for _, f := range s.allFiles() {
 			f.mu.Lock()
 			f.loaded = f.loaded && len(f.unknown) == 0
 			f.mu.Unlock()
 		}
 	}
 	changed := false
-	for _, f := range s.files() {
+	for _, f := range s.allFiles() {
 		if s.load(f) {
 			changed = true
 		}
@@ -270,11 +321,28 @@ func fileKeys(o registry.Options, m map[string]any) []settingsfile.Key {
 	})
 }
 
+// load applies f's latest reading, unless it's the one applied already; it says whether it applied one.
 func (s *Plugin) load(f *settingsFile) bool {
-	src, err := os.ReadFile(f.path)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return false
+	f.mu.Lock()
+	since := f.wrote
+	f.mu.Unlock()
+	src, err, ok := f.sub.Since(since)
+	if !ok || err != nil {
+		return false // not read yet, or it couldn't be: the last good values stay
 	}
+	return s.loadSrc(f, src)
+}
+
+// written applies src, just written to f by the page, without waiting for f's reading of it.
+func (s *Plugin) written(f *settingsFile, src []byte) {
+	f.mu.Lock()
+	f.wrote = time.Now()
+	f.mu.Unlock()
+	s.loadSrc(f, src)
+}
+
+// loadSrc applies src as f's contents, unless they're what it applied already.
+func (s *Plugin) loadSrc(f *settingsFile, src []byte) bool {
 	h := sha256.Sum256(src)
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -401,7 +469,7 @@ func (s *Plugin) trust() settingsfile.Trust { return settingsfile.Trust{Path: s.
 
 func (s *Plugin) trustFile(path string) error {
 	var f *settingsFile
-	for _, x := range s.files() {
+	for _, x := range s.allFiles() {
 		if x.trust && x.path == path {
 			f = x
 		}
@@ -419,7 +487,7 @@ func (s *Plugin) trustFile(path string) error {
 	f.mu.Lock()
 	f.loaded = false
 	f.mu.Unlock()
-	s.load(f)
+	s.written(f, src)
 	return nil
 }
 
@@ -592,7 +660,7 @@ func (s *Plugin) resetWhere(keep func(registry.OptionSpec) bool, scope int) erro
 // or as its name's tables.
 func (s *Plugin) write(f *settingsFile, sp registry.OptionSpec, fn func(doc *toml.Document, p []string) error) error {
 	o := s.h.Options()
-	err := s.edit(f.path, true, func(doc *toml.Document) error {
+	src, err := s.edit(f.path, true, func(doc *toml.Document) error {
 		p := strings.Split(sp.Name, ".")
 		for _, e := range fileKeys(o, doc.Value()) {
 			if other, ok := o.Spec(e.Name); ok && other.Name == sp.Name {
@@ -610,35 +678,36 @@ func (s *Plugin) write(f *settingsFile, sp registry.OptionSpec, fn func(doc *tom
 			return err
 		}
 	}
-	s.load(f)
+	s.written(f, src)
 	return nil
 }
 
-// edit rewrites the TOML file at path with fn, refusing one that doesn't parse. With undo, the old file is kept.
-func (s *Plugin) edit(path string, undo bool, fn func(doc *toml.Document) error) error {
+// edit rewrites the TOML file at path with fn, refusing one that doesn't parse, and gives what the file holds
+// after. With undo, the old file is kept.
+func (s *Plugin) edit(path string, undo bool, fn func(doc *toml.Document) error) ([]byte, error) {
 	src, err := os.ReadFile(path)
 	had := err == nil
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
+		return nil, err
 	}
 	doc, err := toml.Parse(src)
 	if err != nil {
-		return fmt.Errorf("%s doesn't parse (%v), so nothing was written", path, err)
+		return nil, fmt.Errorf("%s doesn't parse (%v), so nothing was written", path, err)
 	}
 	if err := fn(doc); err != nil {
-		return err
+		return nil, err
 	}
 	out := doc.Bytes()
 	if string(out) == string(src) {
-		return nil
+		return src, nil
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+		return nil, err
 	}
 	if undo {
 		s.undo = append(s.undo, settingsUndo{path: path, src: src, had: had})
 	}
-	return os.WriteFile(path, out, 0o644)
+	return out, os.WriteFile(path, out, 0o644)
 }
 
 func (s *Plugin) undoLast() error {
@@ -657,12 +726,15 @@ func (s *Plugin) undoLast() error {
 	if err != nil {
 		return err
 	}
-	for _, f := range s.files() {
+	for _, f := range s.allFiles() {
 		if f.path == u.path {
 			if f.trust {
 				s.trustFile(f.path)
 			}
-			s.load(f)
+			if !u.had {
+				u.src = nil
+			}
+			s.written(f, u.src)
 		}
 	}
 	return nil

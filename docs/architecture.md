@@ -86,7 +86,11 @@ are safe off the loop. What it keeps per directory it keeps by directory (a lang
 breakpoints or saved terminal screens), so coming back finds it. One that must swap something as the window moves
 does it on `DirChanged` (`kit.OnDirChanged`; `oriel.on("DirChanged", fn)` in Lua), which fires once the window is on
 the new directory and before its layout comes back; a view opened from that hook is replaced by the layout, so open
-one later. A project's own plugins (its settings' `[plugins]`) run while the window is on the project, starting and
+one later. The layout waits behind the opening cover for what the new directory's views need: a plugin still reading
+it takes `Window.Hold` in the hook and lets go once it has it (two seconds at most). A file kept per directory (the
+layout, the sidebar, the debugger's breakpoints, saved terminal screens, the tests' runs) is a `kit.StateFile`: read
+through the freshness manager, handed to the plugin as it starts and again as the window moves (holding the
+window until then), written off the loop, and read again when something else changes it. A project's own plugins (its settings' `[plugins]`) run while the window is on the project, starting and
 stopping as it comes and goes.
 
 What a plugin remembers per session across restarts (a panel's scope, that a kind's opening commands have run) it
@@ -104,6 +108,12 @@ go. Each session that isn't archived has a manager, and the app has one for what
 them, hands them the window's focus, and offers them as the `watches` service, with the sources Lua names
 (`oriel.subscribe`, `oriel.source`). A view subscribes while it's drawn (the git trees, the stats); a plugin that must
 hear in the background (pull requests' approvals) asks to keep. The Performance page lists every source and who holds it.
+
+A file's contents are `watch.File`, so a file is read in one place however many want it: the settings files, and the
+state files kept per directory (`kit.StateFile`). A reader that must start from what's on disk now (the settings as
+the app starts, a directory's state as the window arrives) asks `Sub.Fresh`, which waits for a reading begun after it
+asked; `Sub.Since` is the latest reading begun after a time, so a writer's own write isn't undone by an older read.
+`kit.FileManager` is the app's manager, or one of a plugin's own when there's no window to share one.
 
 ## Plugins
 

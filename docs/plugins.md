@@ -38,8 +38,10 @@ hook's event names its session; `oriel.session.kept("", key)` is the session in 
 
 When the window moves, the `DirChanged` hook fires with `{ dir, was, session }`, once it's on the new directory and
 before that directory's layout comes back (a view opened from the hook is replaced by it, so open one later). Use it
-to swap something you keep per directory. A plugin listed in a project's own settings (`[plugins]` in
-`.oriel/settings.toml`) runs only while the window is on that project.
+to swap something you keep per directory. The new directory's layout waits, behind the opening cover, until the
+built-ins have read what they keep for it (its settings, layout and saved terminals), so it comes back whole. A
+plugin listed in a project's own settings (`[plugins]` in `.oriel/settings.toml`) runs only while the window is on
+that project.
 
 ## The manifest
 
