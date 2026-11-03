@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/fswatch"
 )
@@ -92,10 +93,20 @@ func (m *Manager) unwatch(n *node) {
 	n.watching = nil
 }
 
+// changeClockSlack is how far a file's change time may fall behind the clock a read's start is taken by.
+const changeClockSlack = 50 * time.Millisecond
+
 // events marks stale the sources whose files changed.
 func (m *Manager) events(fw *fswatch.Watcher) {
 	defer m.wg.Done()
 	for ev := range fw.Events() {
+		// A change the last read began well after is in its reading already: told late (macOS's events come in
+		// batches, later still on a busy machine), it isn't read again. Well after, as a file's times come from a
+		// coarse clock a few ms behind this one.
+		at, known := time.Time{}, false
+		if ev.Err == nil {
+			at, known = fswatch.ChangedAt(ev.Path)
+		}
 		m.mu.Lock()
 		for _, n := range m.nodes {
 			if !n.held || len(n.watching) == 0 {
@@ -107,6 +118,9 @@ func (m *Manager) events(fw *fswatch.Watcher) {
 				}
 				if ev.Err != nil {
 					n.fallback = true
+				}
+				if known && n.has && !n.dirty && !n.reading && at.Before(n.lastStart.Add(-changeClockSlack)) {
+					break
 				}
 				n.stale([]string{ev.Path}, ev.Path)
 				break
