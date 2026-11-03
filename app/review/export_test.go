@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 )
@@ -47,3 +48,17 @@ var (
 	PRProject   = prProject
 	PRSession   = prSession
 )
+
+// PRDetail is the pull request at url as the review page last read it: asked for the first time it's wanted.
+func (x *PRReview) PRDetail(url string) (state string, done bool) {
+	s, _ := kitSites(x).URL(url)
+	d := x.detail(s, url)
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return d.d.State, d.done
+}
+
+// RefreshPR asks the host for it again.
+func (x *PRReview) RefreshPR(url string) { x.refresh(url) }
+
+func kitSites(x *PRReview) registry.CodeSites { return kit.SitesOf(x.h) }
