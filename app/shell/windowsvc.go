@@ -112,3 +112,8 @@ func (sh *shell) workDir() string {
 	}
 	return ""
 }
+
+// dirState is a state file kept for the directory the window is on now (Config.DirState), from any goroutine.
+func (sh *shell) dirState(name string) string {
+	return dirStateFor(sh.cfg.StateDir, sh.workDir(), name)
+}

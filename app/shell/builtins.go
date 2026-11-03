@@ -15,12 +15,7 @@ import (
 func (sh *shell) parts() Parts {
 	sh.layout = &layoutPlugin{sh: sh}
 	cfg := sh.cfg
-	dirState := func(name string) string {
-		c := sh.cfg
-		c.WorkDir = sh.workDir()
-		return c.DirState(name)
-	}
-	return Parts{Config: cfg, DirState: dirState, Clipboard: desktopClipboard{&sh.desktop}, Pictures: sh.reads.Pictures, Tools: sh.tools,
+	return Parts{Config: cfg, DirState: sh.dirState, Clipboard: desktopClipboard{&sh.desktop}, Pictures: sh.reads.Pictures, Tools: sh.tools,
 		UI: &uiOptions{}, Frames: &frames{}, Themes: &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, Layout: sh.layout,
 		Rail: &rail{sh: sh}, Start: &start{sh: sh}, Overview: &overview{sh: sh}, Introspect: &introspect{configDir: cfg.ConfigDir},
 		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh}, Omnibox: &omnibox{}, Picker: &picker{}, WhichKey: &whichKey{},

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"strings"
 
@@ -65,23 +64,17 @@ type rail struct {
 	sh     *shell
 	h      plugin.Host
 	sel    int
-	form   string // the window's own: "wide" or "narrow"; "" follows sidebar.form
-	writer stateWriter
-	counts []railCount // the git entries' notes, by the state they were counted in
+	form   string         // the window's own: "wide" or "narrow"; "" follows sidebar.form
+	state  *kit.StateFile // the form, kept for the window's directory
+	counts []railCount    // the git entries' notes, by the state they were counted in
 }
 
-// loadForm reads the form the window's directory's sidebar was left in.
-func (r *rail) loadForm() {
+// loadForm takes the form the window's directory's sidebar was left in: none for nil.
+func (r *rail) loadForm(b []byte) {
 	r.form = ""
-	path := r.sh.cfg.DirState("sidebar")
-	if path == "" {
-		return
-	}
-	if b, err := os.ReadFile(path); err == nil {
-		var st sidebarState
-		if json.Unmarshal(b, &st) == nil {
-			r.form = st.Form
-		}
+	var st sidebarState
+	if b != nil && json.Unmarshal(b, &st) == nil {
+		r.form = st.Form
 	}
 }
 
@@ -122,12 +115,9 @@ var projectPanels = []struct {
 
 func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 	r.h = h
-	r.loadForm()
-	r.Add(kit.OnDirChanged(h, "the sidebar's form for the directory", func(kit.DirChanged) {
-		r.writer.flush()
-		r.sel = 0
-		r.loadForm()
-	}))
+	r.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "sidebar", Path: func() string { return r.sh.dirState("sidebar") }, Load: r.loadForm})
+	r.Add(kit.OnDispose(r.state.Close))
+	r.Add(kit.OnDirChanged(h, "the sidebar's selection is of its directory", func(kit.DirChanged) { r.sel = 0 }))
 	r.Add(h.Option(registry.OptionSpec{Name: "sidebar.form", Type: registry.Enum, Values: []string{"auto", "wide", "narrow"}, Default: "auto",
 		Scopes: registry.ScopeUser, Help: "How a window's project sidebar starts: wide, narrow (an icon strip), or auto, wide with two or more projects. «/» switch a window's, which it remembers."}))
 	r.entries(h)
@@ -250,19 +240,14 @@ func (r *rail) commands(h plugin.Host) []registry.Command {
 					return fmt.Errorf("a sidebar is wide or narrow, not %q", f)
 				}
 				r.form = f
-				if path := r.sh.cfg.DirState("sidebar"); path != "" {
-					b, _ := json.Marshal(sidebarState{Form: f})
-					r.writer.write(path, b)
-				}
+				b, _ := json.Marshal(sidebarState{Form: f})
+				r.state.Write(b)
 				return nil
 			}},
 	}
 }
 
-func (r *rail) Deactivate(ctx context.Context) error {
-	r.writer.flush()
-	return r.Disposer.Deactivate(ctx)
-}
+func (r *rail) Deactivate(ctx context.Context) error { return r.Disposer.Deactivate(ctx) }
 
 // target is the project a project.open names: by name, or by its place (1-based).
 func (r *rail) target(a registry.Args) (core.Project, bool) {

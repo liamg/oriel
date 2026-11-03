@@ -17,15 +17,18 @@ import (
 )
 
 // DirState is a state file for the directory the app is open on, name-<hash of the directory>.json; "" without one.
-func (cfg Config) DirState(name string) string {
-	if cfg.StateDir == "" || cfg.WorkDir == "" {
+func (cfg Config) DirState(name string) string { return dirStateFor(cfg.StateDir, cfg.WorkDir, name) }
+
+// dirStateFor is the state file name for dir, under stateDir; "" without either.
+func dirStateFor(stateDir, dir, name string) string {
+	if stateDir == "" || dir == "" {
 		return ""
 	}
 	sum := 0
-	for _, r := range cfg.WorkDir {
+	for _, r := range dir {
 		sum = sum*31 + int(r)
 	}
-	return filepath.Join(cfg.StateDir, fmt.Sprintf("%s-%x.json", name, uint32(sum)))
+	return filepath.Join(stateDir, fmt.Sprintf("%s-%x.json", name, uint32(sum)))
 }
 
 // savedLayout is the layout as it comes back when the app starts again on the same directory: the
