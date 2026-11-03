@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
 )
 
@@ -95,4 +97,30 @@ func TestGitStatusPollsWithoutAWatch(t *testing.T) {
 	})
 	os.WriteFile(filepath.Join(repo.Dir, "new.go"), []byte("package main\n"), 0o644)
 	waitGit(t, s, "new.go", func() bool { _, ok := gitOf(s).State().File("new.go"); return ok })
+}
+
+// The work tree the window leaves keeps its status: back on it, the status is there at once, before git is asked
+// again or its root looked for.
+func TestTheWindowsTreeKeepsItsStatusAcrossAMove(t *testing.T) {
+	s, repo := gitScene(t)
+	var back *gitx.State
+	cancel := kit.OnDirChanged(s.Registry(), "the window's tree on the way back", func(ev kit.DirChanged) {
+		if ev.Dir == repo.Dir {
+			back = kit.GitOf(s.Registry()).Tree("").State()
+		}
+	})
+	defer cancel.Dispose()
+	move := func(to string) {
+		t.Helper()
+		win, _ := kit.WindowOf(s.Registry())
+		if err := win.Reopen(to, ""); err != nil {
+			t.Fatal(err)
+		}
+		s.Reopen()
+	}
+	move(t.TempDir())
+	move(repo.Dir)
+	if back == nil || back.Branch != "main" {
+		t.Errorf("back on the repo, its status is %+v", back)
+	}
 }

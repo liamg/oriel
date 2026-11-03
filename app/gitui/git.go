@@ -35,8 +35,11 @@ type Git struct {
 	busy    sync.WaitGroup
 	running atomic.Int32 // the work busy waits on
 
-	mu     sync.Mutex
-	others map[string]*gitTree // by the directory asked for
+	mu        sync.Mutex
+	others    map[string]*gitTree    // by the directory asked for
+	parked    map[string]*parkedTree // the work trees the window has left, by root
+	parkOrder []string               // parked's roots, the longest left first
+	roots     map[string]string      // the root of each directory the window has been on: "" outside a repo
 	// watchers follow the window's work tree (WatchWindow); unwatch stops its status calling them.
 	watchers map[int]func(root string, paths []string)
 	nextW    int
@@ -74,14 +77,16 @@ func (g *Git) Manifest() plugin.Manifest { return plugin.Manifest{ID: "git"} }
 
 func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 	g.h = h
-	g.others = map[string]*gitTree{}
+	g.others, g.parked, g.roots = map[string]*gitTree{}, map[string]*parkedTree{}, map[string]string{}
 	g.gitTree = gitTree{g: g, held: true}
 	g.Add(h.Contribute(registry.Service{Name: registry.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
 	g.watchers = map[int]func(string, []string){}
 	if root, ok := g.findRoot(ctx, h.Here().Project); ok {
+		g.rememberRoot(h.Here().Project, root)
 		g.hold(root)
 	}
 	g.Add(kit.OnDispose(func() { g.release() }))
+	g.Add(kit.OnDispose(g.closeParked))
 	g.Add(kit.OnDispose(g.told.Stop))
 	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) { g.follow() }))
 	for _, c := range g.commands() {
@@ -105,7 +110,9 @@ func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
 // hold reads the work tree at root as the window's, for good: Tree("") is it until the window moves (DirChanged).
 // Its changes redraw and go to the WatchWindow watchers.
 func (g *Git) hold(root string) {
-	g.gitTree.found(root)
+	if !g.unpark(root) {
+		g.gitTree.found(root)
+	}
 	g.unwatch = g.status.Watch(func(paths []string) {
 		g.h.Redraw()
 		g.notify(root, paths)
@@ -125,12 +132,20 @@ func (g *Git) release() {
 // follow moves the window's work tree onto the directory it's moved to. git finds its root off the loop: until it
 // has, the window's tree is none, and its watchers hear of the new one once it's held.
 func (g *Git) follow() {
+	g.park()
 	g.release()
 	dir := g.h.Here().Project
 	g.gitTree.reset(dir, g.now())
 	if dir == "" {
 		g.gitTree.ready = true
 		g.notify("", nil)
+		return
+	}
+	if root, ok := g.knownRoot(dir); ok { // been here: its root, and its status if it's parked, are at hand
+		g.hold(root)
+		g.ready = true
+		g.notify(g.root(), nil)
+		g.h.Redraw()
 		return
 	}
 	g.busy.Add(1)
@@ -144,6 +159,7 @@ func (g *Git) follow() {
 				return
 			}
 			if ok {
+				g.rememberRoot(dir, root)
 				g.hold(root)
 			}
 			g.ready = true
