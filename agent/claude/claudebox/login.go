@@ -80,21 +80,43 @@ type Box struct {
 	refreshed time.Time
 }
 
-// HostLogin reads this machine's Claude sign-in: the credentials file, or the
-// macOS Keychain where Claude Code keeps it there.
+// HostLogin reads this machine's Claude sign-in: the credentials file's, or the macOS Keychain's where Claude Code
+// keeps it there; with both, the newer, as a file left behind holds a token rotated away since.
 func (x *Box) HostLogin() (Login, bool) { return x.hostLogin(false) }
 
 // FreshHostLogin is HostLogin read again from the Keychain, for when it may have just changed.
 func (x *Box) FreshHostLogin() (Login, bool) { return x.hostLogin(true) }
 
 func (x *Box) hostLogin(fresh bool) (Login, bool) {
-	if home, err := os.UserHomeDir(); err == nil {
-		if b, err := os.ReadFile(filepath.Join(home, ".claude", credentialsFile)); err == nil {
-			if l, ok := parseLogin(b); ok {
-				return l, true
-			}
+	file, inFile := fileLogin()
+	key, inKeychain := x.keychain(fresh)
+	switch {
+	case inFile && inKeychain:
+		if key.Expiry().After(file.Expiry()) {
+			return key, true
 		}
+		return file, true
+	case inKeychain:
+		return key, true
 	}
+	return file, inFile
+}
+
+// fileLogin is the sign-in in the host's ~/.claude credentials file.
+func fileLogin() (Login, bool) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, false
+	}
+	b, err := os.ReadFile(filepath.Join(home, ".claude", credentialsFile))
+	if err != nil {
+		return nil, false
+	}
+	return parseLogin(b)
+}
+
+// keychain is the sign-in in the macOS Keychain, as last read unless fresh.
+func (x *Box) keychain(fresh bool) (Login, bool) {
 	if x.Keychain == nil && runtime.GOOS != "darwin" {
 		return nil, false
 	}
