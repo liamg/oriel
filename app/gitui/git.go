@@ -41,6 +41,7 @@ type Git struct {
 	watchers map[int]func(root string, paths []string)
 	nextW    int
 	unwatch  func()
+	told     kit.Serial // the watchers' calls, off the loop
 
 	ask *commitAsk // the commit dialog, while it's open
 }
@@ -81,6 +82,7 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 		g.hold(root)
 	}
 	g.Add(kit.OnDispose(func() { g.release() }))
+	g.Add(kit.OnDispose(g.told.Stop))
 	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) { g.follow() }))
 	for _, c := range g.commands() {
 		g.Add(h.Command(c))
@@ -159,9 +161,12 @@ func (g *Git) notify(root string, paths []string) {
 		fns = append(fns, fn)
 	}
 	g.mu.Unlock()
-	for _, fn := range fns {
-		fn(root, paths)
-	}
+	// Off the loop and in order: a status is often set in a frame's build, and a watcher reads files.
+	g.told.Do(func() {
+		for _, fn := range fns {
+			fn(root, paths)
+		}
+	})
 }
 
 // watchWindow adds a WatchWindow watcher.

@@ -157,7 +157,7 @@ type GitTrees interface {
 	Busy() bool // git work, or a tree's read, is running off the loop
 	// WatchWindow calls fn with the window's work tree's root and the paths its status saw change, for whichever
 	// directory the window is on: it carries on as the window moves, calling fn once with no paths when it's on
-	// another tree (root "" outside a repo). Cancel stops it.
+	// another tree (root "" outside a repo). fn is called off the loop, one call at a time, in order. Cancel stops it.
 	WatchWindow(fn func(root string, paths []string)) (cancel func())
 }
 
