@@ -40,6 +40,12 @@ jobs:
       - name: make test (under Xvfb on Linux, for render/gio's window test)
         shell: bash
         run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else GOFLAGS=-p=2 make test; fi
+      - name: TEMPORARY what's running when make test fails
+        if: failure()
+        shell: bash
+        run: |
+          uptime
+          ps -eo pid,ppid,pcpu,pmem,etime,args --sort=-pcpu | head -25
       - name: Snapshot and lag suites with the frame-path I/O check
         shell: bash
         run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else GOFLAGS=-p=2 make test-framecheck; fi
