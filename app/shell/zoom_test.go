@@ -58,6 +58,7 @@ func TestZoomedIDESnapshot(t *testing.T) {
 	s.Run("view.toggle", registry.Args{"id": kit.ExplorerView, "place": "dock", "edge": "left"})
 	s.Run("editor.open", registry.Args{"path": filepath.Join(r.Dir, "internal", "pricing", "round.go")})
 	s.WaitHighlights()
+	s.SettleSigns() // the gutter's signs and the line's blame, which come off the loop
 	s.Golden("ide-zoom")
 }
 
