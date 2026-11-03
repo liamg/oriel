@@ -3,6 +3,7 @@ package apptest
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -308,23 +309,59 @@ func (w *Window) RightClickText(text string) {
 	w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonSecondary})
 }
 
-// textAt is the middle of a run of text in the frame on screen: the first, or with last the last, the one on top.
+// textAt is the middle of a run of text in the frame on screen, once it's settled there: the first, or with last
+// the last, the one on top.
 func (w *Window) textAt(text string, last bool) render.Point {
 	w.T.Helper()
-	var at render.Point
-	w.Latest(`"`+text+`" to click`, func(f headless.Frame) bool {
+	return Settled(w, `"`+text+`" to click`, func(f headless.Frame) (render.Point, bool) {
+		var at render.Point
 		found := false
 		for _, op := range f.Ops {
 			if op.Kind == render.OpGlyphs && op.Run.Text == text {
 				at, found = render.Point{X: op.At.X + op.Run.Advance/2, Y: op.At.Y - op.Run.Ascent/2}, true
 				if !last {
-					return true
+					break
 				}
 			}
 		}
-		return found
+		return at, found
 	})
-	return at
+}
+
+// settleIdle is how long a window that draws nothing new has to show a thing in one place for it to count as settled.
+const settleIdle = 200 * time.Millisecond
+
+// Settled waits for find to give the same answer in a later frame than it first did, or for settleIdle with no new
+// frame: where a thing has stopped moving, as a person waits for a card to land before clicking it. A slow machine
+// draws an animation's frames far apart, and a click aimed where a sliding button was lands where it isn't.
+func Settled[T comparable](w *Window, what string, find func(headless.Frame) (T, bool)) T {
+	w.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	var prev T
+	prevFrames, seen := -1, false
+	var since time.Time
+	for {
+		fs := w.Win.Frames()
+		if len(fs) > 0 {
+			v, ok := find(fs[len(fs)-1])
+			switch {
+			case !ok:
+				seen = false
+			case seen && v == prev && (len(fs) > prevFrames || time.Since(since) >= settleIdle):
+				return v
+			case !seen || v != prev:
+				prev, prevFrames, since, seen = v, len(fs), time.Now(), true
+			}
+		}
+		if time.Now().After(deadline) {
+			last := ""
+			if len(fs) > 0 {
+				last = fs[len(fs)-1].Text()
+			}
+			w.T.Fatalf("%s never settled on screen; it is:\n%s%s", what, last, rig.Stuck())
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 }
 
 // TextPoint is the middle of the first run of text in the frame on screen.
@@ -369,8 +406,8 @@ func (w *Window) Access(label string) *render.AccessNode {
 	return found
 }
 
-// ClickAccess clicks the control named label, found in the window's accessibility tree where it's settled: in the
-// same place two frames running.
+// ClickAccess clicks the control named label, found in the window's accessibility tree where it's settled
+// (settled).
 func (w *Window) ClickAccess(label string) {
 	w.T.Helper()
 	w.ClickAccessIn("", label)
@@ -380,21 +417,14 @@ func (w *Window) ClickAccess(label string) {
 // several. An empty within is the whole tree.
 func (w *Window) ClickAccessIn(within, label string) {
 	w.T.Helper()
-	deadline := time.Now().Add(Timeout)
-	var last *render.AccessNode
-	for {
-		found := w.lastAccess(within, label)
-		settled := found != nil && last != nil && found.Bounds == last.Bounds
-		last = found
-		if settled {
-			w.Click(Centre(found.Bounds))
-			return
+	at := Settled(w, fmt.Sprintf("%q in %q to click", label, within), func(headless.Frame) (render.Rect, bool) {
+		n := w.lastAccess(within, label)
+		if n == nil {
+			return render.Rect{}, false
 		}
-		if time.Now().After(deadline) {
-			w.T.Fatalf("nothing named %q in %q to click%s", label, within, rig.Stuck())
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+		return n.Bounds, true
+	})
+	w.Click(Centre(at))
 }
 
 // lastAccess is the last node on screen named label inside a node named within (anywhere when within is empty), or nil.
