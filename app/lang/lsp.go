@@ -173,8 +173,11 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "When language servers start: project, as soon as a project with their root files (go.mod, Cargo.toml…) opens, so the first request doesn't wait; or file, when one of their files first opens."}))
 	h.Do(x.warm) // once every plugin has contributed its servers
-	// The servers started for the directory the window left keep running, for its buffers still open.
-	x.Add(kit.OnDirChanged(h, "language servers for the directory", func(kit.DirChanged) { x.warm() }))
+	// The servers started for the directory the window left keep running, for its buffers still open; finding the
+	// new one's reads the disk, so it's off the loop.
+	x.Add(kit.OnDirChanged(h, "language servers for the directory", func(kit.DirChanged) {
+		x.work.Go(func(context.Context) { x.warm() })
+	}))
 	x.Add(h.Contribute(registry.InspectSection{Name: "LANGUAGE SERVER", Order: 30, Rows: x.inspectRows, Source: "builtin:lsp"}))
 	x.Add(h.Picker(x.callsSource()))
 	x.Add(h.View(kit.OverlayPrefix+"lsp", lspOverlay{x}))

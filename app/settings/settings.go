@@ -211,9 +211,7 @@ func (s *Plugin) follow() {
 	}
 	s.othersMu.Unlock()
 	s.loadMu.Unlock()
-	if s.loadAll() {
-		s.h.Redraw()
-	}
+	s.watch.Kick() // reads the new project's file off the loop
 }
 
 // addOthers reads the project files of repos sessions here work in, so their project values apply to them.
