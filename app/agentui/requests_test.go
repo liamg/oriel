@@ -445,6 +445,7 @@ func TestRenameFromTabMenus(t *testing.T) {
 	})
 
 	r.WaitText("Negative values round the wrong …") // the request's tab
+	r.WaitGone("Rename…")                           // the tab menu gone, not fading out under the next one
 	r.RightClickText("Negative values round the wrong …")
 	r.WaitText("Rename…")
 	r.ClickTop("Rename…")
