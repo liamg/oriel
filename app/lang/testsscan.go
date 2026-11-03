@@ -2,14 +2,13 @@ package lang
 
 import (
 	"context"
-	"path/filepath"
 	"unicode"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/testrun"
 )
 
-// scan finds every test in the workspace off the loop, then follows the files git sees change.
+// scan finds every test in the workspace off the loop; the files git sees change after are read again as they do.
 func (x *Tests) scan() {
 	ws := x.workspace()
 	if ws.Root == "" {
@@ -40,14 +39,7 @@ func (x *Tests) scan() {
 		x.mu.Unlock()
 		x.h.Redraw()
 	})
-	if st := kit.GitOf(x.h).Tree("").Status(); st != nil {
-		root := st.Repo().Dir
-		x.unwatch = st.Watch(func(paths []string) {
-			for _, p := range paths {
-				x.rescan(filepath.Join(root, filepath.FromSlash(p)))
-			}
-		})
-	}
+
 }
 
 // rescan reads one file's tests again from disk; a file that's gone has none.

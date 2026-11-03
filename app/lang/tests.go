@@ -55,7 +55,6 @@ type Tests struct {
 	scanned  map[string][]testrun.Item // every test found in the workspace, by file
 	scanFrom time.Time                 // when the workspace scan began
 	scanGen  int                       // which scan is the window's directory's: one of a directory left is dropped
-	unwatch  func()                    // stops following the work tree's changes
 	byKey    map[string]testrun.Item   // scanned by key, made when asked for
 	pkgs     map[string]bool
 	work     kit.Work
@@ -100,15 +99,19 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(kit.OnDispose(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.found = map[*text.Buffer]*discovery{}
 	x.loadHistory()
-	x.Add(kit.OnDispose(func() { x.stopWatching() }))
+	// The files git sees change are read again, in whichever work tree the window is on.
+	x.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
+		for _, p := range paths {
+			x.rescan(filepath.Join(root, filepath.FromSlash(p)))
+		}
+	})))
 	x.Add(kit.OnDirChanged(h, "the tests of the directory", func(kit.DirChanged) {
-		x.stopWatching()
 		x.mu.Lock()
 		x.scanGen++
 		x.scanned, x.byKey, x.pkgs, x.last = nil, nil, nil, nil
 		x.mu.Unlock()
 		x.loadHistory()
-		h.Do(x.scan) // once git holds the new directory's tree
+		h.Do(x.scan) // off the loop: the hook only notes the move
 	}))
 	x.Add(h.Decorations("tests", uireg.DecorationFunc(x.decorations)))
 	for _, c := range x.commands() {
@@ -323,14 +326,6 @@ func (x *Tests) loadHistory() {
 			x.history = hs
 		}
 		f.Close()
-	}
-}
-
-// stopWatching stops following the work tree's changes.
-func (x *Tests) stopWatching() {
-	if x.unwatch != nil {
-		x.unwatch()
-		x.unwatch = nil
 	}
 }
 

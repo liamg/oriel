@@ -70,23 +70,17 @@ type bufHunks struct {
 
 func (g *GitSigns) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gitsigns"} }
 
-// watchStatus has the window's work tree's changes read the bases and blames again, and answers how to stop.
-func (g *GitSigns) watchStatus() func() {
-	st := kit.GitOf(g.h).Tree("").Status()
-	if st == nil {
-		return func() {}
+// stale has the bases and blames read again: the window's work tree changed, or is another.
+func (g *GitSigns) stale() {
+	g.mu.Lock()
+	for _, b := range g.bases {
+		b.loaded = false
 	}
-	return st.Watch(func([]string) {
-		g.mu.Lock()
-		for _, b := range g.bases {
-			b.loaded = false
-		}
-		for _, b := range g.blames {
-			b.loaded = false
-		}
-		g.mu.Unlock()
-		g.h.DecorationsChanged("git.hunks")
-	})
+	for _, b := range g.blames {
+		b.loaded = false
+	}
+	g.mu.Unlock()
+	g.h.DecorationsChanged("git.hunks")
 }
 
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
@@ -97,12 +91,7 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	g.bases, g.blames, g.hunks, g.previews = map[string]*gitBase{}, map[string]*gitBlame{}, map[*text.Buffer]*bufHunks{}, map[string]int{}
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
-	unwatch := g.watchStatus()
-	g.Add(kit.OnDispose(func() { unwatch() }))
-	g.Add(kit.OnDirChanged(h, "git signs' work tree", func(kit.DirChanged) {
-		unwatch()
-		h.Do(func() { unwatch = g.watchStatus() }) // once git holds the new directory's tree
-	}))
+	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(string, []string) { g.stale() })))
 	for _, c := range []registry.Command{
 		{ID: "git.hunk.stage", Title: "Stage the hunk under the cursor", Run: g.cmd(g.stage)},
 		{ID: "git.hunk.unstage", Title: "Unstage the staged hunk at the cursor", Run: g.cmd(g.unstage)},

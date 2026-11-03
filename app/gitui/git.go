@@ -37,6 +37,10 @@ type Git struct {
 
 	mu     sync.Mutex
 	others map[string]*gitTree // by the directory asked for
+	// watchers follow the window's work tree (WatchWindow); unwatch stops its status calling them.
+	watchers map[int]func(root string, paths []string)
+	nextW    int
+	unwatch  func()
 
 	ask *commitAsk // the commit dialog, while it's open
 }
@@ -72,13 +76,12 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 	g.others = map[string]*gitTree{}
 	g.gitTree = gitTree{g: g, held: true}
 	g.Add(h.Contribute(registry.Service{Name: registry.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
-	g.hold(ctx)
-	g.Add(kit.OnDispose(g.gitTree.unsubscribe))
-	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) {
-		g.gitTree.unsubscribe()
-		g.gitTree = gitTree{g: g, held: true}
-		g.hold(context.Background())
-	}))
+	g.watchers = map[int]func(string, []string){}
+	if root, ok := g.findRoot(ctx, h.Here().Project); ok {
+		g.hold(root)
+	}
+	g.Add(kit.OnDispose(func() { g.release() }))
+	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) { g.follow() }))
 	for _, c := range g.commands() {
 		g.Add(h.Command(c))
 	}
@@ -87,17 +90,90 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 	return nil
 }
 
-// hold reads the window's directory's work tree, for good: Tree("") is it until the window moves (DirChanged), and a
-// plugin watching its Status watches it again then.
-func (g *Git) hold(ctx context.Context) {
-	h := g.h
-	g.work, g.ready, g.asked = h.Here().Project, true, g.now()
-	if dir := g.work; dir != "" {
-		if root, ok := gitx.Root(ctx, dir); ok {
-			g.gitTree.found(root)
-			g.status.Watch(func([]string) { h.Redraw() })
-			g.gitTree.subscribe()
-		}
+// findRoot is the root of the work tree dir is in, and the window's tree set up for it.
+func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
+	g.gitTree = gitTree{g: g, held: true, work: dir, ready: true, asked: g.now()}
+	if dir == "" {
+		return "", false
+	}
+	return gitx.Root(ctx, dir)
+}
+
+// hold reads the work tree at root as the window's, for good: Tree("") is it until the window moves (DirChanged).
+// Its changes redraw and go to the WatchWindow watchers.
+func (g *Git) hold(root string) {
+	g.gitTree.found(root)
+	g.unwatch = g.status.Watch(func(paths []string) {
+		g.h.Redraw()
+		g.notify(root, paths)
+	})
+	g.gitTree.subscribe()
+}
+
+// release lets go of the window's work tree.
+func (g *Git) release() {
+	g.gitTree.unsubscribe()
+	if g.unwatch != nil {
+		g.unwatch()
+		g.unwatch = nil
+	}
+}
+
+// follow moves the window's work tree onto the directory it's moved to. git finds its root off the loop: until it
+// has, the window's tree is none, and its watchers hear of the new one once it's held.
+func (g *Git) follow() {
+	g.release()
+	dir := g.h.Here().Project
+	g.gitTree = gitTree{g: g, held: true, work: dir, asked: g.now()}
+	if dir == "" {
+		g.gitTree.ready = true
+		g.notify("", nil)
+		return
+	}
+	g.busy.Add(1)
+	g.running.Add(1)
+	go func() {
+		defer g.busy.Done()
+		root, ok := gitx.Root(context.Background(), dir)
+		g.h.Do(func() {
+			defer g.running.Add(-1)
+			if g.work != dir { // moved on again while it looked
+				return
+			}
+			if ok {
+				g.hold(root)
+			}
+			g.ready = true
+			g.notify(g.root(), nil)
+			g.h.Redraw()
+		})
+	}()
+}
+
+// notify hands the WatchWindow watchers a change to the window's work tree at root.
+func (g *Git) notify(root string, paths []string) {
+	g.mu.Lock()
+	fns := make([]func(string, []string), 0, len(g.watchers))
+	for _, fn := range g.watchers {
+		fns = append(fns, fn)
+	}
+	g.mu.Unlock()
+	for _, fn := range fns {
+		fn(root, paths)
+	}
+}
+
+// watchWindow adds a WatchWindow watcher.
+func (g *Git) watchWindow(fn func(root string, paths []string)) func() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	id := g.nextW
+	g.nextW++
+	g.watchers[id] = fn
+	return func() {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		delete(g.watchers, id)
 	}
 }
 
@@ -516,6 +592,9 @@ func (s gitTrees) Holding(p string) registry.GitTree     { return s.g.holding(p)
 func (s gitTrees) Do(fn func(ctx context.Context) error) { s.g.async(fn) }
 func (s gitTrees) Reload()                               { s.g.reload() }
 func (s gitTrees) Busy() bool                            { return s.g.running.Load() > 0 || s.g.reading() }
+func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {
+	return s.g.watchWindow(fn)
+}
 
 // state is the last status read, nil outside a repo or before the first.
 func (t *gitTree) state() *gitx.State {
