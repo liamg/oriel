@@ -114,7 +114,7 @@ func threadCard() ui.Node {
 func TestDecoratedEditorAgainstTheMockup(t *testing.T) {
 	s := editorScene(t)
 	s.Registry().Decorations("test.mockup", uireg.DecorationFunc(mockupDecorations))
-	s.Frame()
+	s.SettleGit() // the gutter's git marks, which come off the loop
 	s.Frame()
 	s.Golden("editor-decorated")
 	img := raster.Render(s.List(), s.Size(), 1, s.UI().Theme().C(theme.BgBase))
