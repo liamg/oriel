@@ -364,6 +364,27 @@ func Settled[T comparable](w *Window, what string, find func(headless.Frame) (T,
 	}
 }
 
+// Hover rests the pointer on the first run of text until until is on screen, pointing at it again whenever it moves
+// first: what shows on hover goes when the thing under the pointer slides away, as a list still settling moves it.
+func (w *Window) Hover(text, until string) {
+	w.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	var at render.Point
+	for {
+		if p := w.textAt(text, false); p != at {
+			at = p
+			w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+		}
+		if fs := w.Win.Frames(); len(fs) > 0 && strings.Contains(fs[len(fs)-1].Text(), until) {
+			return
+		}
+		if time.Now().After(deadline) {
+			w.T.Fatalf("hovering %q never showed %q%s", text, until, rig.Stuck())
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
 // TextPoint is the middle of the first run of text in the frame on screen.
 func (w *Window) TextPoint(text string) render.Point {
 	w.T.Helper()
