@@ -35,10 +35,10 @@ type Catalog struct {
 	// ConfigDir and the window's directory hold the settings files, DataDir the installed plugins, StateDir their
 	// data; CacheDir is DataDir/cache if "".
 	ConfigDir, DataDir, StateDir, CacheDir string
-	Bundled                                         []plugin.Bundled // shipped in the binary
-	Self                                            []string         // the command that runs oriel itself, for bundled plugins' processes; this executable if nil
-	h                                               plugin.Host
-	work                                            kit.Work // every goroutine it starts, stopped with it
+	Bundled                                []plugin.Bundled // shipped in the binary
+	Self                                   []string         // the command that runs oriel itself, for bundled plugins' processes; this executable if nil
+	h                                      plugin.Host
+	work                                   kit.Work // every goroutine it starts, stopped with it
 
 	mu       sync.Mutex
 	syncing  bool
