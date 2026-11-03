@@ -1,0 +1,361 @@
+=== 0 goes to the first character of the line
+ref:    motion.txt *0*
+quote:  "To the first character of the line.  |exclusive| motion."
+given:
+    ab|c
+keys:   0
+expect:
+  |  abc
+
+=== d0 deletes back to the start of the line, not the cursor character (exclusive)
+ref:    motion.txt *0*
+quote:  "To the first character of the line.  |exclusive| motion."
+given:  ab|cd
+keys:   d0
+expect: |cd
+regs:   "" = "ab"
+
+=== ^ goes to the first non-blank character
+ref:    motion.txt *^*
+quote:  "To the first non-blank character of the line."
+given:
+    ab|c
+keys:   ^
+expect:
+    |abc
+
+=== ^ ignores a count
+ref:    motion.txt *^*
+quote:  "Any count is ignored."
+given:
+    a|bc
+  def
+keys:   3^
+expect:
+    |abc
+  def
+
+=== ^ from before the first non-blank moves right
+ref:    motion.txt *^*
+quote:  "To the first non-blank character of the line."
+given:
+  |   abc
+keys:   ^
+expect:
+     |abc
+
+=== ^ on a line of only blanks goes to the last blank
+ref:    motion.txt *^*
+quote:  "To the first non-blank character of the line."
+given:
+   |  
+  x
+keys:   ^
+expect:
+    | 
+  x
+
+=== d^ deletes back to the first non-blank (exclusive)
+ref:    motion.txt *^*
+quote:  "|exclusive| motion."
+given:
+    abc|d
+keys:   d^
+expect:
+    |d
+regs:   "" = "abc"
+
+=== $ goes to the last character of the line
+ref:    motion.txt *$*
+quote:  "To the end of the line."
+given:  |abc
+keys:   $
+expect: ab|c
+
+=== $ lands on a wide last character
+ref:    motion.txt *$*
+quote:  "To the end of the line."
+given:  |a漢字
+keys:   $
+expect: a漢|字
+
+=== $ on an empty line stays in column 0
+ref:    motion.txt *$*
+quote:  "To the end of the line."
+given:
+  |
+  abc
+keys:   $
+expect:
+  |
+  abc
+
+=== 2$ goes to the end of the next line
+ref:    motion.txt *$*
+quote:  "When a count is given also go [count - 1] lines downward, or as far is possible."
+given:
+  |ab
+  cde
+  f
+keys:   2$
+expect:
+  ab
+  cd|e
+  f
+
+=== 9$ goes as far down as possible
+ref:    motion.txt *$*
+quote:  "When a count is given also go [count - 1] lines downward, or as far is possible."
+given:
+  |ab
+  cde
+keys:   9$
+expect:
+  ab
+  cd|e
+
+=== 2$ on the last line is an error and does not move
+ref:    motion.txt *$*
+quote:  "If a count of 2 or larger is given and the cursor is on the last line, that is an error and the cursor doesn't move."
+given:
+  ab
+  c|de
+keys:   2$
+expect:
+  ab
+  c|de
+
+=== d$ deletes to the end of the line, including the last character (inclusive)
+ref:    motion.txt *$*
+quote:  "|inclusive| motion."
+given:  a|bcd
+keys:   d$
+expect: |a
+regs:   "" = "bcd"
+
+=== d2$ deletes to the end of the next line
+ref:    motion.txt *$*
+quote:  "When a count is given also go [count - 1] lines downward"
+given:
+  a|bc
+  def
+  ghi
+keys:   d2$
+expect:
+  |a
+  ghi
+regs:   "" = "bc\ndef"
+
+=== g_ goes to the last non-blank character
+ref:    motion.txt *g_*
+quote:  "To the last non-blank character of the line"
+given:
+  |abc  
+  x
+keys:   g_
+expect:
+  ab|c  
+  x
+
+=== 2g_ goes to the last non-blank of the next line
+ref:    motion.txt *g_*
+quote:  "To the last non-blank character of the line and [count - 1] lines downward |inclusive|."
+given:
+  |abc
+  de  
+keys:   2g_
+expect:
+  abc
+  d|e  
+
+
+=== dg_ deletes up to and including the last non-blank, keeping trailing blanks
+ref:    motion.txt *g_*
+quote:  "[count - 1] lines downward |inclusive|."
+given:
+  a|bc  
+  x
+keys:   dg_
+expect:
+  a|  
+  x
+regs:   "" = "bc"
+
+=== 4| goes to screen column 4
+ref:    motion.txt *bar*
+quote:  "To screen column [count] in the current line."
+given:  |abcdef
+keys:   4|
+expect: abc|def
+
+=== | without a count goes to the first column
+ref:    motion.txt *bar*
+quote:  "To screen column [count] in the current line."
+given:  abc|def
+keys:   |
+expect: |abcdef
+
+=== | with a column past the end goes to the last character
+ref:    motion.txt *bar*
+quote:  "To screen column [count] in the current line."
+given:  |abc
+keys:   99|
+expect: ab|c
+
+=== | counts screen columns, so a tab covers several
+ref:    motion.txt *bar*
+quote:  "To screen column [count] in the current line."
+given:
+  |	abc
+keys:   10|
+expect:
+  	a|bc
+
+=== | onto the middle of a tab lands on the tab
+ref:    motion.txt *bar*
+quote:  "To screen column [count] in the current line."
+given:
+  	ab|c
+keys:   3|
+expect:
+  |	abc
+
+=== | counts a wide character as two screen columns
+ref:    motion.txt *bar*
+quote:  "To screen column [count] in the current line."
+given:  |漢字ab
+keys:   3|
+expect: 漢|字ab
+
+=== d| deletes back to the column, not the cursor character (exclusive)
+ref:    motion.txt *bar*
+quote:  "|exclusive| motion."
+given:  abcde|f
+keys:   d3|
+expect: ab|f
+regs:   "" = "cde"
+
+=== - goes to the first non-blank of the line above
+ref:    motion.txt *-*
+quote:  "[count] lines upward, on the first non-blank character |linewise|."
+given:
+    abc
+  de|f
+keys:   -
+expect:
+    |abc
+  def
+
+=== 2- with a count
+ref:    motion.txt *-*
+quote:  "[count] lines upward, on the first non-blank character"
+given:
+  one
+  two
+  thr|ee
+keys:   2-
+expect:
+  |one
+  two
+  three
+
+=== - on the first line does not move
+ref:    motion.txt *-*
+quote:  "[count] lines upward, on the first non-blank character"
+given:
+  o|ne
+  two
+keys:   -
+expect:
+  o|ne
+  two
+
+=== + goes to the first non-blank of the line below
+ref:    motion.txt *<CR>*
+quote:  "[count] lines downward, on the first non-blank character |linewise|."
+given:
+  a|bc
+    def
+keys:   +
+expect:
+  abc
+    |def
+
+=== <CR> with a count, like +
+ref:    motion.txt *<CR>*
+quote:  "[count] lines downward, on the first non-blank character"
+given:
+  a|bc
+  def
+    ghi
+keys:   2<CR>
+expect:
+  abc
+  def
+    |ghi
+
+=== + on the last line does not move
+ref:    motion.txt *<CR>*
+quote:  "[count] lines downward, on the first non-blank character"
+given:
+  one
+  t|wo
+keys:   +
+expect:
+  one
+  t|wo
+
+=== _ goes to the first non-blank of the current line
+ref:    motion.txt *_*
+quote:  "[count] - 1 lines downward, on the first non-blank character |linewise|."
+given:
+    ab|c
+  def
+keys:   _
+expect:
+    |abc
+  def
+
+=== 2_ goes to the first non-blank of the next line
+ref:    motion.txt *_*
+quote:  "[count] - 1 lines downward, on the first non-blank character"
+given:
+  a|bc
+    def
+keys:   2_
+expect:
+  abc
+    |def
+
+=== d+ deletes the current and next line (linewise)
+ref:    motion.txt *<CR>*
+quote:  "[count] lines downward, on the first non-blank character |linewise|."
+given:
+  a|bc
+  def
+  ghi
+keys:   d+
+expect: g|hi
+regs:   "" = "abc\ndef\n"
+
+=== d- deletes the current and previous line (linewise)
+ref:    motion.txt *-*
+quote:  "[count] lines upward, on the first non-blank character |linewise|."
+given:
+  abc
+  def
+  g|hi
+keys:   d-
+expect: a|bc
+regs:   "" = "def\nghi\n"
+
+=== d2_ deletes two lines (linewise)
+ref:    motion.txt *_*
+quote:  "[count] - 1 lines downward, on the first non-blank character |linewise|."
+given:
+  a|bc
+  def
+  ghi
+keys:   d2_
+expect: g|hi
+regs:   "" = "abc\ndef\n"

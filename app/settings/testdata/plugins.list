@@ -1,0 +1,242 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1353.2438x38 r 0
+pop
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
+clip 0,38 1600x936 r 0
+  text "START" @265,300.41998 #7c7566 JetBrains Mono 9.5
+  opacity 0.42000002
+    rect 265,313.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
+    rect 281,327.27 38x38 fill #1f1c0f radius 9
+    path 2 segments stroke 1.6363636 #7c7566
+    path 2 segments stroke 1.6363636 #7c7566
+    clip 335,329.0405 390.8125x34.458984 r 0
+      text "New Session" @335,342.603 #ece6d8 Inter 14
+      rect 430.71875,330.57022 37.225006x13.880005 radius 8 stroke 1 #332f27
+      text "SOON" @436.71875,340.7502 #7c7566 JetBrains Mono 9
+      text "A new session on a repository, with its own branch and worktree" @335,360.60495 #7c7566 Inter 12
+    pop
+    rect 741.8125,337.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
+    text "⌘N" @748.8125,350.22998 #b3ab99 JetBrains Mono 11
+  pop
+  opacity 0.42000002
+    rect 265,389.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
+    rect 281,403.27 38x38 fill #1f1c0f radius 9
+    path 2 segments stroke 1.6363636 #7c7566
+    path 2 segments stroke 1.6363636 #7c7566
+    path 2 segments stroke 1.6363636 #7c7566
+    path 2 segments stroke 1.6363636 #7c7566
+    path 3 segments stroke 1.6363636 #7c7566
+    clip 335,405.0405 390.8125x34.458984 r 0
+      text "Resume a Session" @335,418.603 #ece6d8 Inter 14
+      rect 466.21875,406.57022 37.225006x13.880005 radius 8 stroke 1 #332f27
+      text "SOON" @472.21875,416.7502 #7c7566 JetBrains Mono 9
+      text "Pick up an existing session where it was left" @335,436.60495 #7c7566 Inter 12
+    pop
+    rect 741.8125,413.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
+    text "⌘O" @748.8125,426.22998 #b3ab99 JetBrains Mono 11
+  pop
+  rect 265,465.27 520x66.00003 fill #1d1a0f radius 10 stroke 1 #ffd23f73
+  rect 281,479.27 38x38.00003 fill #1f1c0f radius 9
+  path 6 segments stroke 1.6363636 #ffd23f
+  path 6 segments stroke 1.6363636 #ffd23f
+  path 6 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 3 segments stroke 1.6363636 #ffd23f
+  path 3 segments stroke 1.6363636 #ffd23f
+  clip 335,481.0405 384.21875x34.459015 r 0
+    text "Reviews" @335,494.603 #ece6d8 Inter 14
+    text "Pull requests that ask for your review" @335,512.605 #7c7566 Inter 12
+  pop
+  rect 735.21875,489.00998 33.78125x18.519989 fill #121210 radius 4 stroke 1 #332f27
+  text "⇧⌘V" @742.21875,502.22998 #b3ab99 JetBrains Mono 11
+  rect 265,541.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
+  rect 281,555.27 38x38 fill #1f1c0f radius 9
+  path 7 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  clip 335,557.0405 384.21875x34.458984 r 0
+    text "Open Directory" @335,570.603 #ece6d8 Inter 14
+    text "Open a directory as it is: no worktree, no new branch" @335,588.605 #7c7566 Inter 12
+  pop
+  rect 735.21875,565.01 33.78125x18.52002 fill #121210 radius 4 stroke 1 #332f27
+  text "⇧⌘O" @742.21875,578.23 #b3ab99 JetBrains Mono 11
+  rect 265,617.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
+  rect 281,631.27 38x38 fill #1f1c0f radius 9
+  path 6 segments stroke 1.6363636 #ffd23f
+  path 6 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  clip 335,633.0405 390.8125x34.458984 r 0
+    text "Settings" @335,646.603 #ece6d8 Inter 14
+    text "Theme, keys, editor and everything else" @335,664.605 #7c7566 Inter 12
+  pop
+  rect 741.8125,641.01 27.1875x18.52002 fill #121210 radius 4 stroke 1 #332f27
+  text "⌘," @748.8125,654.23 #b3ab99 JetBrains Mono 11
+  rect 265,695.27 67.609375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  text "Stats" @294,712.63525 #ece6d8 Inter 12
+  rect 340.60938,695.27 75.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  text "Usage" @369.60938,712.63525 #ece6d8 Inter 12
+  rect 423.96875,695.27 66.71875x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 5 segments stroke 1.25 #ffd23f
+  path 4 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 5 segments stroke 1.25 #ffd23f
+  text "Jobs" @452.96875,712.63525 #ece6d8 Inter 12
+  rect 498.6875,695.27 80.359375x26 fill #0c0c0b radius 13 stroke 1 #24221d
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 4 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  path 2 segments stroke 1.25 #ffd23f
+  text "Plugins" @527.6875,712.63525 #ece6d8 Inter 12
+  effect glow 1159,389.72998 39x150 blur 4 #ff8a1f4d
+  path 6 segments stroke 24 #ffd23f
+  path 5 segments fill #ff8a1f
+pop
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @0,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @11.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @32.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @43.78125,990.95996 #b3ab99 JetBrains Mono 11
+rect 0,0 1600x974 fill #060606
+clip 0,0 1600x974 r 0
+  text "Plugins" @18,32.228 #ece6d8 Space Grotesk 18
+  rect 95.15625,12 259x28 fill #0c0c0b
+  text "INSTALLED 80" @107.15625,28.599998 #ece6d8 JetBrains Mono 10
+  text "UPDATES 0" @207.15625,28.599998 #7c7566 JetBrains Mono 10
+  text "REGISTRY" @286.15625,28.599998 #7c7566 JetBrains Mono 10
+  rect 1183.4062,11 300x30 fill #060606 radius 6
+  clip 1183.4062,11 300x30 r 6
+    text "acme" @1193.4062,30.54712 #ece6d8 Inter 12.5
+  pop
+  rect 1183.4062,11 300x30 radius 6 stroke 1 #332f27
+  rect 1497.4062,13 84.59375x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Close" @1507.4062,30.365234 #ece6d8 Inter 12
+  rect 1546,18.5 26x15 radius 3 stroke 1 #ece6d866
+  text "esc" @1550,29.419998 #ece6d8cc JetBrains Mono 9.5
+  rect 0,52 1600x1 fill #24221d
+  clip 18,63 260x12.540001 r 0
+    text "PLUGIN" @18,72.69 #7c7566 JetBrains Mono 9.5
+  pop
+  clip 290,63 378.5x12.540001 r 0
+    text "CONTRIBUTES" @290,72.69 #7c7566 JetBrains Mono 9.5
+  pop
+  clip 680.5,63 378.5x12.540001 r 0
+    text "PERMISSIONS" @680.5,72.69 #7c7566 JetBrains Mono 9.5
+  pop
+  clip 1071,63 90x12.540001 r 0
+    text "RUNS" @1071,72.69 #7c7566 JetBrains Mono 9.5
+  pop
+  clip 0,81.54 1179x863.46 r 0
+    clip 18,90.54 260x32.739998 r 0
+      rect 18,93.91 26x26 fill #121210 radius 6
+      text "D" @26.664062,111.27524 #ece6d8 Inter 12
+      clip 54,90.54 151.34062x32.739998 r 0
+        text "dusk" @54,103.539 #ece6d8 Inter 13
+        text "1.0.0" @89.640625,102.409996 #7c7566 JetBrains Mono 10
+        rect 125.640625,90.54 79.7x16.54 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
+        text "UNVERIFIED" @132.64062,102.23 #ff9b45 JetBrains Mono 9.5
+        text "acme/dusk · loaded" @54,120.28 #7c7566 JetBrains Mono 10
+      pop
+    pop
+    clip 290,98.64 378.5x16.54 r 0
+      rect 290,98.64 53.419983x16.54 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+      text "THEMES" @297,110.33 #b3ab99 JetBrains Mono 9.5
+    pop
+    clip 680.5,99.979996 378.5x13.860001 r 0
+      text "none" @680.5,110.689995 #b3ab99 JetBrains Mono 10.5
+    pop
+    clip 1071,100.64 90x12.540001 r 0
+      text "DATA" @1071,110.33 #ffd23f JetBrains Mono 9.5
+    pop
+    clip 18,141.28 260x32.73999 r 0
+      rect 18,144.65 26x26 fill #121210 radius 6
+      text "H" @26.523438,162.01523 #ece6d8 Inter 12
+      clip 54,141.28 151.075x32.73999 r 0
+        text "hello" @54,154.279 #ece6d8 Inter 13
+        text "0.3.1" @89.375,153.15 #7c7566 JetBrains Mono 10
+        rect 125.375,141.28 79.7x16.539993 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
+        text "UNVERIFIED" @132.375,152.97 #ff9b45 JetBrains Mono 9.5
+        text "acme/hello · loaded" @54,171.01999 #7c7566 JetBrains Mono 10
+      pop
+    pop
+    clip 290,149.38 378.5x16.539993 r 0
+      rect 290,149.38 73.130005x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+      text "1 COMMAND" @297,161.07 #b3ab99 JetBrains Mono 9.5
+      rect 369.13,149.38 66.56x16.539993 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
+      text "1 OPTION" @376.13,161.07 #b3ab99 JetBrains Mono 9.5
+    pop
+    clip 680.5,150.72 378.5x13.860001 r 0
+      text "net:api.example.com" @680.5,161.43001 #b3ab99 JetBrains Mono 10.5
+    pop
+    clip 1071,151.38 90x12.539993 r 0
+      text "LUA" @1071,161.07 #ffd23f JetBrains Mono 9.5
+    pop
+  pop
+  rect 1179,53 1x892 fill #24221d
+  rect 1180,53 420x892 fill #0c0c0b
+  clip 1180,53 420x892 r 0
+    clip 1198,71 292.30005x37.219376 r 0
+      text "dusk" @1198,86.5 #ece6d8 Inter 16
+      text "acme/dusk · 1.0.0 · data" @1198,105.069374 #7c7566 JetBrains Mono 10.5
+    pop
+    rect 1502.3,81.33969 79.69995x16.54 fill #ff9b4512 radius 10 stroke 1 #ff9b4559
+    text "UNVERIFIED" @1509.3,93.02969 #ff9b45 JetBrains Mono 9.5
+    text "MANIFEST · CONTRIBUTIONS" @1198,129.90938 #7c7566 JetBrains Mono 9.5
+    text "runs" @1198,148.46938 #7c7566 JetBrains Mono 10.5
+    clip 1562.2188,137.75937 19.78125x13.860001 r 0
+      text "app" @1562.2188,148.46938 #ece6d8 JetBrains Mono 10.5
+    pop
+    text "source" @1198,167.32939 #7c7566 JetBrains Mono 10.5
+    clip 1456.7188,156.61938 125.28125x13.860001 r 0
+      text "path:~/plugins/dusk" @1456.7188,167.32939 #ece6d8 JetBrains Mono 10.5
+    pop
+    text "contributes" @1198,186.18938 #7c7566 JetBrains Mono 10.5
+    clip 1542.4375,175.47937 39.5625x13.860001 r 0
+      text "themes" @1542.4375,186.18938 #ece6d8 JetBrains Mono 10.5
+    pop
+    text "GRANTED" @1198,211.02937 #7c7566 JetBrains Mono 9.5
+    text "ui, themes, notifications" @1198,229.58937 #7c7566 JetBrains Mono 10.5
+    clip 1542.4375,218.87936 39.5625x13.860001 r 0
+      text "always" @1542.4375,229.58937 #ece6d8 JetBrains Mono 10.5
+    pop
+    text "PROVENANCE" @1198,254.42937 #7c7566 JetBrains Mono 9.5
+    text "path" @1198,272.98935 #7c7566 JetBrains Mono 10.5
+    clip 1489.6875,262.27936 92.3125x13.859985 r 0
+      text "~/plugins/dusk" @1489.6875,272.98935 #ece6d8 JetBrains Mono 10.5
+    pop
+    text "badge" @1198,291.84937 #7c7566 JetBrains Mono 10.5
+    clip 1516.0625,281.13937 65.9375x13.859985 r 0
+      text "unverified" @1516.0625,291.84937 #ece6d8 JetBrains Mono 10.5
+    pop
+    text "⚠ Not in any registry. Nobody has reviewed this code." @1198,318.62436 #ff9b45 Inter 12
+    rect 1198,339.5189 69.78125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Uninstall" @1208,356.88412 #ece6d8 Inter 12
+  pop
+  rect 0,945 1600x1 fill #24221d
+  text "80 installed · 74 running · 6 waiting for first use · 0 updates" @18,963.78 #7c7566 JetBrains Mono 10.5
+  text "~/.config/oriel/settings.toml" @1390.7812,963.78 #7c7566 JetBrains Mono 10.5
+pop
+rect 107.15625,38 84x2 fill #ffd23f

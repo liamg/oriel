@@ -1,0 +1,14 @@
+id          = "liamg/gitlab"
+version     = "0.1.0"
+oriel       = ">=0.4"
+description = "GitLab as a code host: merge requests waiting on your review, and a project's merge request raised, checked and merged from the Ship page"
+license     = "MIT"
+binaries    = ["darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"]
+
+[contributes]
+icons = "icons/"
+
+[permissions]
+net     = { hosts = ["gitlab.com"], why = "Read and raise your merge requests, through GitLab's API" }
+secrets = { GITLAB_TOKEN = "gitlab.com", why = "Your GitLab personal access token (api scope), sent only to gitlab.com" }
+exec    = { commands = ["glab"], why = "Read the token glab is logged in with, for a GitLab server you use" }

@@ -1,0 +1,18 @@
+# A tier's price, in pence.
+type Tier {
+  name: String!
+  pence: Int!
+  features: [String!]
+}
+
+type Query {
+  tier(name: String!): Tier
+  tiers(first: Int = 10): [Tier!]!
+}
+
+query PricedTiers($first: Int) {
+  tiers(first: $first) {
+    name
+    pence
+  }
+}

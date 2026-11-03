@@ -1,0 +1,175 @@
+=== diw deletes the word under the cursor
+ref:    motion.txt *iw*
+quote:  select [count] words (see |word|).
+given:  foo b|ar baz
+keys:   diw
+expect: foo | baz
+regs:   "" = "bar"   "- = "bar"   "1 = (unset)
+undo:   foo |bar baz
+dot:    foo|baz
+
+=== daw deletes the word and the white space after it
+ref:    motion.txt *o_object-select*
+quote:  "For the \"a\" commands: The operator applies to the object and the white space after the object."
+given:  foo b|ar baz
+keys:   daw
+expect: foo |baz
+regs:   "" = "bar "
+undo:   foo |bar baz
+dot:    fo|o
+
+=== daw on the last word takes the white space before it
+ref:    motion.txt *o_object-select*
+quote:  If there is no white space after the object or when the cursor was in the white space before the object, the white space before the object is included.
+given:  foo b|ar
+keys:   daw
+expect: fo|o
+regs:   "" = " bar"
+
+=== diw on white space deletes only the white space
+ref:    motion.txt *o_object-select*
+quote:  If the cursor was on white space, the operator applies to the white space.
+given:  foo|   bar
+keys:   diw
+expect: foo|bar
+regs:   "" = "   "
+
+=== daw on white space deletes it and the word after
+ref:    motion.txt *o_object-select*
+quote:  when the cursor was in the white space before the object, the white space before the object is included.
+given:  foo|   bar baz
+keys:   daw
+expect: foo| baz
+regs:   "" = "   bar"
+
+=== d2aw deletes two words and the trailing white space
+ref:    motion.txt *aw*
+quote:  Leading or trailing white space is included, but not counted.
+given:  |a b c d e
+keys:   d2aw
+expect: |c d e
+regs:   "" = "a b "
+dot:    |e
+
+=== d3iw counts the white space between words
+ref:    motion.txt *iw*
+quote:  White space between words is counted too.
+given:  |foo bar baz
+keys:   d3iw
+expect: | baz
+regs:   "" = "foo bar"
+
+=== diw on punctuation deletes only the punctuation word
+ref:    motion.txt *word*
+quote:  or a sequence of other non-blank characters, separated with white space
+given:  foo|..bar
+keys:   diw
+expect: foo|bar
+regs:   "" = ".."
+
+=== diw on a single-character word at the end of the line
+ref:    motion.txt *iw*
+quote:  "\"inner word\", select [count] words"
+given:
+  foo |x
+keys:   diw
+expect:
+  foo| 
+regs:   "" = "x"
+
+=== daw on the only word after indentation keeps the indentation
+ref:    motion.txt *aw*
+quote:  Leading or trailing white space is included, but not counted.
+given:
+    f|oo
+keys:   daw
+expect:
+   | 
+regs:   "" = "foo"
+
+=== daw on the first word of a line takes the white space after it
+ref:    motion.txt *o_object-select*
+quote:  The operator applies to the object and the white space after the object.
+given:  |foo bar
+keys:   daw
+expect: |bar
+regs:   "" = "foo "
+
+=== diW deletes a WORD including punctuation
+ref:    motion.txt *iW*
+quote:  "\"inner WORD\", select [count] WORDs (see |WORD|)."
+given:  a f|oo.bar b
+keys:   diW
+expect: a | b
+regs:   "" = "foo.bar"
+
+=== daW deletes a WORD and the white space after it
+ref:    motion.txt *aW*
+quote:  "\"a WORD\", select [count] WORDs (see |WORD|)."
+given:  a f|oo.bar b
+keys:   daW
+expect: a |b
+regs:   "" = "foo.bar "
+
+=== daW on the last WORD takes the white space before it
+ref:    motion.txt *aW*
+quote:  Leading or trailing white space is included, but not counted.
+given:  a f|oo.bar
+keys:   daW
+expect: |a
+regs:   "" = " foo.bar"
+
+=== d2aW deletes two WORDs
+ref:    motion.txt *aW*
+quote:  select [count] WORDs
+given:  |a.b c,d e
+keys:   d2aW
+expect: |e
+regs:   "" = "a.b c,d "
+
+=== ciw replaces the word and leaves insert mode at the change
+ref:    motion.txt *iw*
+quote:  "\"inner word\", select [count] words"
+given:  foo b|ar baz
+keys:   ciwxy<Esc>
+expect: foo x|y baz
+mode:   normal
+regs:   "" = "bar"
+undo:   foo |bar baz
+
+=== caw replaces the word and its trailing white space
+ref:    motion.txt *aw*
+quote:  "\"a word\", select [count] words"
+given:  foo b|ar baz
+keys:   cawX<Esc>
+expect: foo |Xbaz
+regs:   "" = "bar "
+
+=== yiw yanks the word and moves to its start
+ref:    motion.txt *iw*
+quote:  "\"inner word\", select [count] words"
+given:  foo ba|r baz
+keys:   yiw
+expect: foo |bar baz
+regs:   "" = "bar"   "0 = "bar"
+
+=== yaw yanks the word with its trailing space
+ref:    motion.txt *aw*
+quote:  "\"a word\", select [count] words"
+given:  foo ba|r baz
+keys:   yaw
+expect: foo |bar baz
+regs:   "0 = "bar "
+
+=== diw on an empty line does nothing visible
+ref:    motion.txt *word*
+quote:  An empty line is also considered to be a word.
+given:
+  foo
+  |
+  bar
+keys:   diw
+expect:
+  foo
+  |
+  bar

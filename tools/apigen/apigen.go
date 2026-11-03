@@ -1,0 +1,436 @@
+// Package apigen generates the oriel.* Lua API from annotated Go: the VM glue, the
+// LuaLS types and the reference, from one source so they can't drift apart.
+//
+//	//oriel:api name=keymap cap=ui doc="…"      on a type: a namespace (empty for oriel's own functions), and its intro
+//	//oriel:api doc="…" optional=a,b returns=t  on its methods: a function
+//
+// cap is the capability a plugin needs to call a function, on its namespace or, overriding it, on the
+// function; cap=target means the function checks its own, against what it's called on (a path, a program). Every
+// function has one, or generation fails, so no door is added unguarded. A parameter named where is the calling Lua
+// line, not an argument.
+package apigen
+
+import (
+	"bytes"
+	"fmt"
+	"go/ast"
+	"go/format"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"unicode"
+)
+
+// Func is one API function.
+type Func struct {
+	Go, Lua  string
+	Doc      string
+	Params   []Param
+	Results  []string // Go types
+	Optional map[string]bool
+	Returns  string // the Lua return type, when annotated
+	Cap      string // the capability the glue checks; "target" when the function checks its own
+}
+
+// CapTarget is a function that checks its capability itself, against its target.
+const CapTarget = "target"
+
+// Param is a function's parameter.
+type Param struct{ Name, Type string }
+
+// Namespace is an annotated type and its functions.
+type Namespace struct {
+	Type, Name string
+	Doc        string
+	Cap        string // its functions' capability, unless one says otherwise
+	Funcs      []Func
+}
+
+var attrRe = regexp.MustCompile(`(\w+)=("([^"]*)"|\S*)`)
+
+func attrs(line string) map[string]string {
+	out := map[string]string{}
+	for _, m := range attrRe.FindAllStringSubmatch(line, -1) {
+		v := m[2]
+		if strings.HasPrefix(v, `"`) {
+			v = m[3]
+		}
+		out[m[1]] = v
+	}
+	return out
+}
+
+func annotation(g *ast.CommentGroup) (map[string]string, bool) {
+	if g == nil {
+		return nil, false
+	}
+	for _, c := range g.List {
+		if rest, ok := strings.CutPrefix(c.Text, "//oriel:api"); ok {
+			return attrs(rest), true
+		}
+	}
+	return nil, false
+}
+
+// Parse reads the annotated namespaces in the Go files of dir.
+func Parse(dir string) ([]Namespace, error) {
+	fset := token.NewFileSet()
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil {
+		return nil, err
+	}
+	byType := map[string]*Namespace{}
+	var funcs []*ast.FuncDecl
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") || strings.HasPrefix(filepath.Base(f), "zz_") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, f, nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range file.Decls {
+			switch d := d.(type) {
+			case *ast.GenDecl:
+				a, ok := annotation(d.Doc)
+				if !ok {
+					continue
+				}
+				for _, s := range d.Specs {
+					if ts, ok := s.(*ast.TypeSpec); ok {
+						byType[ts.Name.Name] = &Namespace{Type: ts.Name.Name, Name: a["name"], Doc: a["doc"], Cap: a["cap"]}
+					}
+				}
+			case *ast.FuncDecl:
+				funcs = append(funcs, d)
+			}
+		}
+	}
+	for _, d := range funcs {
+		a, ok := annotation(d.Doc)
+		if !ok || d.Recv == nil {
+			continue
+		}
+		recv := exprString(d.Recv.List[0].Type)
+		ns, ok := byType[strings.TrimPrefix(recv, "*")]
+		if !ok {
+			return nil, fmt.Errorf("%s.%s is annotated, but %s isn't a namespace", recv, d.Name.Name, recv)
+		}
+		fn := Func{Go: d.Name.Name, Lua: luaName(d.Name.Name), Doc: a["doc"], Returns: a["returns"], Optional: map[string]bool{},
+			Cap: cmpOr(a["cap"], ns.Cap)}
+		if fn.Cap == "" {
+			return nil, fmt.Errorf("%s.%s declares no capability: add cap=… to it or to %s", recv, d.Name.Name, ns.Type)
+		}
+		for _, o := range strings.Split(a["optional"], ",") {
+			if o != "" {
+				fn.Optional[o] = true
+			}
+		}
+		for _, p := range d.Type.Params.List {
+			for _, n := range p.Names {
+				fn.Params = append(fn.Params, Param{Name: n.Name, Type: exprString(p.Type)})
+			}
+		}
+		if d.Type.Results != nil {
+			for _, r := range d.Type.Results.List {
+				n := max(1, len(r.Names))
+				for range n {
+					fn.Results = append(fn.Results, exprString(r.Type))
+				}
+			}
+		}
+		ns.Funcs = append(ns.Funcs, fn)
+	}
+	var out []Namespace
+	for _, ns := range byType {
+		sort.Slice(ns.Funcs, func(i, j int) bool { return ns.Funcs[i].Lua < ns.Funcs[j].Lua })
+		out = append(out, *ns)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+}
+
+func cmpOr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
+}
+
+func exprString(e ast.Expr) string {
+	var b bytes.Buffer
+	format.Node(&b, token.NewFileSet(), e)
+	return b.String()
+}
+
+// luaName is a Go name as the API spells it: FindAll → find_all, JSON → json.
+func luaName(s string) string {
+	var b strings.Builder
+	rs := []rune(s)
+	for i, r := range rs {
+		if unicode.IsUpper(r) {
+			if i > 0 && (unicode.IsLower(rs[i-1]) || i+1 < len(rs) && unicode.IsLower(rs[i+1]) && unicode.IsUpper(rs[i-1])) {
+				b.WriteByte('_')
+			}
+			r = unicode.ToLower(r)
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+var getters = map[string]string{"string": "String", "int": "Int", "float64": "Float", "bool": "Bool", "any": "Any",
+	"*script.Fn": "Fn", "script.Table": "Table", "[]string": "Strings"}
+
+var luaTypes = map[string]string{"string": "string", "int": "integer", "float64": "number", "bool": "boolean", "any": "any",
+	"*script.Fn": "function", "script.Table": "table", "[]string": "string|string[]", "[]any": "any"}
+
+// Bind is the VM glue: zz_bind.go.
+func Bind(pkg string, nss []Namespace) ([]byte, error) {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "// Code generated by tools/cmd/apigen from the //oriel:api annotations; DO NOT EDIT.\n\npackage %s\n\n", pkg)
+	b.WriteString("import \"github.com/liamg/oriel/script\"\n\n")
+	b.WriteString("func (a *APIs) bind(vm *script.VM) {\n")
+	for _, ns := range nss {
+		fmt.Fprintf(&b, "\t{\n\t\tx := %s{a: a}\n\t\tvm.Bind(%q, map[string]script.GoFunc{\n", ns.Type, ns.Name)
+		for _, f := range ns.Funcs {
+			var args []string
+			i := 0
+			for _, p := range f.Params {
+				if p.Name == "where" && p.Type == "string" {
+					args = append(args, "c.Where()")
+					continue
+				}
+				g, ok := getters[p.Type]
+				if !ok {
+					return nil, fmt.Errorf("%s.%s: can't take a %s", ns.Type, f.Go, p.Type)
+				}
+				args = append(args, fmt.Sprintf("c.%s(%d)", g, i))
+				i++
+			}
+			call := fmt.Sprintf("x.%s(%s)", f.Go, strings.Join(args, ", "))
+			// A []any is several values when the returns say so ("string,integer", "string..."), else one list.
+			multi := strings.Contains(f.Returns, ",") || strings.HasSuffix(f.Returns, "...")
+			var body string
+			switch {
+			case len(f.Results) == 0:
+				body = call + "\n\t\t\t\treturn nil, nil"
+			case len(f.Results) == 1 && f.Results[0] == "error":
+				body = "return nil, " + call
+			case len(f.Results) == 1 && f.Results[0] == "[]any" && multi:
+				body = "return " + call + ", nil"
+			case len(f.Results) == 1:
+				body = "return []any{" + call + "}, nil"
+			case len(f.Results) == 2 && f.Results[1] == "error" && f.Results[0] == "[]any" && multi:
+				body = "return " + call
+			case len(f.Results) == 2 && f.Results[1] == "error":
+				body = "v, err := " + call + "\n\t\t\t\treturn []any{v}, err"
+			default:
+				return nil, fmt.Errorf("%s.%s: can't return %v", ns.Type, f.Go, f.Results)
+			}
+			if f.Cap != CapTarget {
+				body = fmt.Sprintf("if err := a.check(%q); err != nil {\n\t\t\t\t\treturn nil, err\n\t\t\t\t}\n\t\t\t\t", f.Cap) + body
+			}
+			fmt.Fprintf(&b, "\t\t\t%q: func(c *script.Args) ([]any, error) {\n\t\t\t\t%s\n\t\t\t},\n", f.Lua, body)
+		}
+		b.WriteString("\t\t})\n\t}\n")
+	}
+	b.WriteString("}\n")
+	return format.Source(b.Bytes())
+}
+
+// Types are the LuaLS annotations: oriel.d.lua.
+func Types(nss []Namespace, version string) []byte {
+	var b strings.Builder
+	fmt.Fprintf(&b, "---@meta\n-- Generated by tools/cmd/apigen from the //oriel:api annotations; do not edit.\n-- oriel.api.version %s\n\n", version)
+	b.WriteString("---@class oriel\n")
+	for _, ns := range nss {
+		if ns.Name != "" {
+			fmt.Fprintf(&b, "---@field %s oriel.%s\n", ns.Name, ns.Name)
+		}
+	}
+	b.WriteString("---@field option table<string, any>|fun(spec: table) Your settings, by name or vim alias, as init.lua sets them; called with { name, type, default, help, values, min, max, section, on_change = fn(value) }, it declares one (a plugin's are named plugin.<name>.…)\n")
+	b.WriteString("---@field buffer_option table<string, any> The current buffer's settings\n")
+	b.WriteString("---@field session_option table<string, any> The current session's settings\n")
+	b.WriteString("---@field platform string The OS Oriel runs on: darwin or linux\n")
+	b.WriteString("---@field api { version: string }\noriel = {}\n\n")
+	for _, ns := range nss {
+		table := "oriel"
+		if ns.Name != "" {
+			table = "oriel." + ns.Name
+			fmt.Fprintf(&b, "---@class %s\noriel.%s = {}\n\n", table, ns.Name)
+		}
+		for _, f := range ns.Funcs {
+			fmt.Fprintf(&b, "--- %s\n", f.Doc)
+			var names []string
+			for _, p := range f.Params {
+				if p.Name == "where" && p.Type == "string" {
+					continue
+				}
+				opt := ""
+				if f.Optional[p.Name] {
+					opt = "?"
+				}
+				fmt.Fprintf(&b, "---@param %s%s %s\n", p.Name, opt, luaTypes[p.Type])
+				names = append(names, p.Name)
+			}
+			ret := f.Returns
+			if ret == "" {
+				for _, r := range f.Results {
+					if r != "error" {
+						ret = luaTypes[r]
+					}
+				}
+			}
+			if ret != "" {
+				fmt.Fprintf(&b, "---@return %s\n", ret)
+			}
+			fmt.Fprintf(&b, "function %s.%s(%s) end\n\n", table, f.Lua, strings.Join(names, ", "))
+		}
+	}
+	return []byte(b.String())
+}
+
+// Docs is the reference: docs/api.md.
+func Docs(nss []Namespace, version string) []byte {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# The oriel.* Lua API\n\nGenerated by `tools/cmd/apigen` from the `//oriel:api` annotations in `script/api`; do not edit.\nVersion %s. Licensed under the Apache License 2.0 ([examples/LICENSE](examples/LICENSE)).\n\n"+
+		"A Lua or WASM plugin that uses only this API isn't required to be AGPL: license it as you like. A native (Go) "+
+		"plugin built into Oriel becomes part of it, and is AGPL-3.0-or-later as Oriel is ([CONTRIBUTING.md](../CONTRIBUTING.md)).\n", version)
+	for _, ns := range nss {
+		name := "oriel"
+		if ns.Name != "" {
+			name = "oriel." + ns.Name
+		}
+		fmt.Fprintf(&b, "\n## %s\n\n", name)
+		if ns.Doc != "" {
+			fmt.Fprintf(&b, "%s\n\n", ns.Doc)
+		}
+		for _, f := range ns.Funcs {
+			var ps []string
+			for _, p := range f.Params {
+				if p.Name == "where" {
+					continue
+				}
+				n := p.Name
+				if f.Optional[p.Name] {
+					n += "?"
+				}
+				ps = append(ps, n)
+			}
+			fmt.Fprintf(&b, "- `%s.%s(%s)` (%s): %s\n", name, f.Lua, strings.Join(ps, ", "), capDoc(f.Cap), f.Doc)
+		}
+	}
+	return []byte(b.String())
+}
+
+// capDoc is what a function needs, as the reference says it.
+func capDoc(c string) string {
+	if c == CapTarget {
+		return "capability by target"
+	}
+	return "`" + c + "`"
+}
+
+// Reference is the reference as Go, for help pages to show (zz_reference.go): each namespace's calls and docs.
+func Reference(pkg string, nss []Namespace) []byte {
+	var b strings.Builder
+	fmt.Fprintf(&b, "// Code generated by tools/cmd/apigen from the //oriel:api annotations; DO NOT EDIT.\n\npackage %s\n\n", pkg)
+	b.WriteString("// Reference is each namespace's functions, as docs/api.md lists them, by namespace (\"\" for oriel itself).\n")
+	b.WriteString("var Reference = map[string][]RefFunc{\n")
+	for _, ns := range nss {
+		name := "oriel"
+		if ns.Name != "" {
+			name = "oriel." + ns.Name
+		}
+		fmt.Fprintf(&b, "\t%q: {\n", ns.Name)
+		for _, f := range ns.Funcs {
+			var ps []string
+			for _, p := range f.Params {
+				if p.Name == "where" {
+					continue
+				}
+				n := p.Name
+				if f.Optional[p.Name] {
+					n += "?"
+				}
+				ps = append(ps, n)
+			}
+			fmt.Fprintf(&b, "\t\t{Call: %q, Doc: %q, Cap: %q},\n", fmt.Sprintf("%s.%s(%s)", name, f.Lua, strings.Join(ps, ", ")), f.Doc, f.Cap)
+		}
+		b.WriteString("\t},\n")
+	}
+	b.WriteString("}\n")
+	return []byte(b.String())
+}
+
+// Generate writes the files for the API in apiDir, under root.
+func Generate(root, apiDir string) (map[string][]byte, error) {
+	nss, err := Parse(apiDir)
+	if err != nil {
+		return nil, err
+	}
+	version, err := Version(apiDir)
+	if err != nil {
+		return nil, err
+	}
+	bind, err := Bind("api", nss)
+	if err != nil {
+		return nil, err
+	}
+	return map[string][]byte{
+		filepath.Join(apiDir, "zz_bind.go"):                   bind,
+		filepath.Join(apiDir, "zz_reference.go"):              Reference("api", nss),
+		filepath.Join(root, "script", "types", "oriel.d.lua"): Types(nss, version),
+		filepath.Join(root, "docs", "api.md"):                 Docs(nss, version),
+	}, nil
+}
+
+// Write writes what Generate makes.
+func Write(files map[string][]byte) error {
+	for p, b := range files {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(p, b, 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Version is the API's const Version in dir.
+func Version(dir string) (string, error) {
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil {
+		return "", err
+	}
+	fset := token.NewFileSet()
+	for _, f := range files {
+		file, err := parser.ParseFile(fset, f, nil, 0)
+		if err != nil {
+			return "", err
+		}
+		for _, d := range file.Decls {
+			g, ok := d.(*ast.GenDecl)
+			if !ok || g.Tok != token.CONST {
+				continue
+			}
+			for _, sp := range g.Specs {
+				v := sp.(*ast.ValueSpec)
+				for i, n := range v.Names {
+					if n.Name == "Version" && i < len(v.Values) {
+						if lit, ok := v.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+							return strings.Trim(lit.Value, "`\""), nil
+						}
+					}
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("apigen: no const Version in %s", dir)
+}

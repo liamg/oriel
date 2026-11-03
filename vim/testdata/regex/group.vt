@@ -1,0 +1,110 @@
+# Groups, backreferences, alternation \| and concat \&.
+
+=== \(\) groups and \1 \2 swap them in the replacement
+ref:    change.txt *s/\\*
+quote:  :s/\([abc]\)\([efg]\)/\2\1/g	 modifies "af fa bg" to "fa fa gb"
+given:  |af fa bg
+keys:   :s/\([abc]\)\([efg]\)/\2\1/g<CR>
+expect: |fa fa gb
+
+=== \1 in a pattern matches the same text again
+ref:    pattern.txt */\1*
+quote:  Example: "\([a-z]\).\1" matches "ata", "ehe", "tot", etc.
+given:  |abc ata
+keys:   :s/\([a-z]\).\1/(&)/g<CR>
+expect: |abc (ata)
+
+=== \2 in a pattern uses the second group
+ref:    pattern.txt */\2*
+quote:  Like "\1", but uses second sub-expression,
+given:  |ab-ba ab-ab
+keys:   :s/\(a\)\(b\)-\2\1/(&)/g<CR>
+expect: |(ab-ba) ab-ab
+
+=== \9 refers to the ninth group
+ref:    pattern.txt */\9*
+quote:  Like "\1", but uses ninth sub-expression.
+given:  |abcdefghi
+keys:   :s/\(a\)\(b\)\(c\)\(d\)\(e\)\(f\)\(g\)\(h\)\(i\)/\9\8\1/<CR>
+expect: |iha
+
+=== groups are numbered by where \( comes, not what matched first
+ref:    pattern.txt */\9*
+quote:  The numbering of groups is done based on which "\(" comes first in the pattern (going left to right), NOT based on what is matched first.
+given:  |ab
+keys:   :s/\(\(a\)b\)/\2-\1/<CR>
+expect: |a-ab
+
+=== a repeated group keeps its last match
+ref:    change.txt *s/\\*
+quote:  :s/\(\(a[a-d] \)*\)/\2/      modifies "aa ab x" to "ab x"
+given:  |aa ab x
+keys:   :s/\(\(a[a-d] \)*\)/\2/<CR>
+expect: |ab x
+
+=== a group in an alternative that did not match is empty
+ref:    change.txt *s/\\*
+quote:  :s/\([ab]\)\|\([cd]\)/\1x/g   modifies "a b c d"  to "ax bx x x"
+given:  |a b c d
+keys:   :s/\([ab]\)\|\([cd]\)/\1x/g<CR>
+expect: |ax bx x x
+
+=== \%(\) groups without counting
+ref:    pattern.txt */\%(\)*
+quote:  Just like \(\), but without counting it as a sub-expression.
+given:  |ab
+keys:   :s/\%(a\)\(b\)/\1/<CR>
+expect: |b
+
+=== ^ inside \( is start-of-line
+ref:    pattern.txt */\(*
+quote:  E.g., "\(^a\)" matches 'a' at the start of a line.
+given:  |aba
+keys:   :s/\(^a\)/(&)/g<CR>
+expect: |(a)ba
+
+=== \| matches either branch
+ref:    pattern.txt */bar*
+quote:  Example: "foo\|beep" matches "foo" and matches "beep".
+given:  |foo x beep
+keys:   :s/foo\|beep/(&)/g<CR>
+expect: |(foo) x (beep)
+
+=== \| uses the first branch that matches, not the longest
+ref:    pattern.txt */bar*
+quote:  If more than one branch matches, the first one is used.
+given:  |foobar
+keys:   :s/foo\|foobar/(&)/<CR>
+expect: |(foo)bar
+
+=== \| inside a group
+ref:    pattern.txt */bar*
+quote:  A pattern is one or more branches, separated by "\|".
+given:  |cat cut cot
+keys:   :s/c\(a\|o\)t/(&)/g<CR>
+expect: |(cat) cut (cot)
+
+=== \& matches the last concat where all match
+ref:    pattern.txt */\&*
+quote:  "\"foobeep\\&...\" matches \"foo\" in \"foobeep\"."
+given:  |foobeep
+keys:   :s/foobeep\&.../(&)/<CR>
+expect: |(foo)beep
+
+=== \& requires every concat to match
+ref:    pattern.txt */\&*
+quote:  "\".*Peter\\&.*Bob\" matches in a line containing both \"Peter\" and \"Bob\""
+given:
+  |Bob only
+  Bob and Peter
+keys:   :%s/.*Peter\&.*Bob/X/<CR>
+expect:
+  Bob only
+  |X and Peter
+
+=== \& is the same as \@=
+ref:    pattern.txt */zero-width*
+quote:  Note that using "\&" works the same as using "\@=": "foo\&.." is the same as "\(foo\)\@=..".
+given:  |fox foo
+keys:   :s/foo\&../(&)/<CR>
+expect: |fox (fo)o

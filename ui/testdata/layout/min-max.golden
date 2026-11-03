@@ -1,0 +1,8 @@
+box root 0,0 400x300
+  box capped 0,0 300x10
+    box max60 0,0 60x0
+    box rest 60,0 120x0
+    box rest2 180,0 120x0
+  box floored 0,10 100x10
+    box fixed 0,10 90x0
+    box min30 90,10 30x0

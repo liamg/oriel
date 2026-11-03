@@ -1,0 +1,4 @@
+source: https://github.com/kovidgoyal/kitty
+commit: 5bf3c2dc676efd5c4b4526eb135c922701565707
+path: docs/underlines.rst, LICENSE
+license: GPL-3.0 (see LICENSE)

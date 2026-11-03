@@ -1,0 +1,126 @@
+{
+ "data": {
+  "viewer": {
+   "id": "0f3a9c2e-7b1d-4e8f-9a6c-2d5b8e1f0001"
+  },
+  "issue": {
+   "id": "a3f9e2c1-0d44-4b7e-8f61-2c5d9b7e2231",
+   "identifier": "ENG-2231",
+   "title": "Search API returns stale results after a reindex",
+   "url": "https://linear.app/acme/issue/ENG-2231/search-api-returns-stale-results-after-a-reindex",
+   "description": "Customers who rebuild their index see last week's results from /v1/search for up to 24h. Reported by 3 accounts; repro steps and a HAR attached.\n\nSteps:\n1. Rebuild an org's index\n2. GET /v1/search\n3. Results are the old index's until the nightly job runs",
+   "priorityLabel": "High",
+   "state": {
+    "name": "Todo",
+    "type": "unstarted"
+   },
+   "project": {
+    "name": "Usage"
+   },
+   "assignee": {
+    "id": "0f3a9c2e-7b1d-4e8f-9a6c-2d5b8e1f0001",
+    "name": "Liam Galvin"
+   },
+   "comments": {
+    "nodes": [
+     {
+      "body": "Seen on acme-co too: their invoice preview was right, /v1/usage wasn't.",
+      "createdAt": "2026-10-13T09:12:40.000Z",
+      "user": {
+       "name": "Ana Ruiz",
+       "displayName": "ana"
+      }
+     },
+     {
+      "body": "Repro in staging: org 4f1, plan moved at 08:55, usage still on Pro prices at 09:40.",
+      "createdAt": "2026-10-13T09:58:02.000Z",
+      "user": {
+       "name": "Ben Ito",
+       "displayName": "ben"
+      }
+     },
+     {
+      "body": "Probably the result cache in search-api. It's keyed by org, not org + index version.",
+      "createdAt": "2026-10-14T11:20:15.000Z",
+      "user": {
+       "name": "Priya Kaur",
+       "displayName": "priya"
+      }
+     },
+     {
+      "body": "Please keep the response shape: the CLI pins it.",
+      "createdAt": "2026-10-14T15:47:31.000Z",
+      "user": {
+       "name": "Ana Ruiz",
+       "displayName": "ana"
+      }
+     }
+    ]
+   },
+   "attachments": {
+    "nodes": [
+     {
+      "title": "search-stale-results.har",
+      "subtitle": "412 KB",
+      "url": "https://uploads.linear.app/1a2b3c/search-stale-results.har",
+      "createdAt": "2026-10-13T09:58:40.000Z"
+     },
+     {
+      "title": "#4398 fix(search): key result cache by index version",
+      "subtitle": "acme/cloud",
+      "url": "https://github.com/acme/cloud/pull/4398",
+      "createdAt": "2026-10-14T16:02:11.000Z"
+     }
+    ]
+   },
+   "team": {
+    "states": {
+     "nodes": [
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a01",
+       "name": "Backlog",
+       "type": "backlog",
+       "position": 0
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a02",
+       "name": "Todo",
+       "type": "unstarted",
+       "position": 1
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a03",
+       "name": "In Progress",
+       "type": "started",
+       "position": 2
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a04",
+       "name": "In Review",
+       "type": "started",
+       "position": 3
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a05",
+       "name": "Done",
+       "type": "completed",
+       "position": 4
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a06",
+       "name": "Canceled",
+       "type": "canceled",
+       "position": 5
+      },
+      {
+       "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a07",
+       "name": "Duplicate",
+       "type": "canceled",
+       "position": 6
+      }
+     ]
+    }
+   }
+  }
+ }
+}

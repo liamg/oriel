@@ -1,0 +1,99 @@
+   1 | # Shapes
+     | ^^^^^^^^ markup.heading.1
+   2 | 
+   3 | Some *emphasis*, **strong** and `code`, with a [link](https://example.com).
+     |      ^^^^^^^^^^ markup.italic
+     |                  ^^^^^^^^^^ markup.strong
+     |                                 ^^^^^^ markup.raw
+     |                                                ^ markup.link
+     |                                                 ^^^^ markup.link.label
+     |                                                     ^^ markup.link
+     |                                                       ^^^^^^^^^^^^^^^^^^^ markup.link.url
+     |                                                                          ^ markup.link
+   4 | 
+   5 | ## Circles
+     | ^^^^^^^^^^ markup.heading.2
+   6 | 
+   7 | - a list item
+     | ^^ markup.list
+   8 | - another, with ~~strike~~ text
+     | ^^ markup.list
+     |                 ^^^^^^^^^^ markup.strikethrough
+   9 |   1. nested
+     | ^^ punctuation.special
+     |   ^^^ markup.list
+  10 |   2. ordered
+     | ^^ punctuation.special
+     |   ^^^ markup.list
+  11 | 
+  12 | > A quote with _emphasis_.
+     | ^^ punctuation.special
+     |   ^^^^^^^^^^^^^ markup.quote
+     |                ^^^^^^^^^^ markup.italic
+     |                          ^ markup.quote
+  13 | 
+  14 | ```go
+     | ^^^ markup.raw.block
+     |    ^^ label
+  15 | func Area(r float64) float64 { return math.Pi * r * r }
+     | ^^^^ keyword.function
+     |     ^ markup.raw.block
+     |      ^^^^ function
+     |          ^ punctuation.bracket
+     |           ^ variable.parameter
+     |            ^ markup.raw.block
+     |             ^^^^^^^ type.builtin
+     |                    ^ punctuation.bracket
+     |                     ^ markup.raw.block
+     |                      ^^^^^^^ type.builtin
+     |                             ^ markup.raw.block
+     |                              ^ punctuation.bracket
+     |                               ^ markup.raw.block
+     |                                ^^^^^^ keyword.return
+     |                                      ^ markup.raw.block
+     |                                       ^^^^ variable
+     |                                           ^ punctuation.delimiter
+     |                                            ^^ property
+     |                                              ^ markup.raw.block
+     |                                               ^ operator
+     |                                                ^ markup.raw.block
+     |                                                 ^ variable
+     |                                                  ^ markup.raw.block
+     |                                                   ^ operator
+     |                                                    ^ markup.raw.block
+     |                                                     ^ variable
+     |                                                      ^ markup.raw.block
+     |                                                       ^ punctuation.bracket
+  16 | ```
+     | ^^^ markup.raw.block
+  17 | 
+  18 | | Shape  | Sides |
+     | ^ punctuation.special
+     |   ^^^^^^^ markup.heading
+     |          ^ punctuation.special
+     |            ^^^^^^ markup.heading
+     |                  ^ punctuation.special
+  19 | | ------ | ----: |
+     | ^ punctuation.special
+     |   ^^^^^^ punctuation.special
+     |          ^ punctuation.special
+     |            ^^^^^ punctuation.special
+     |                  ^ punctuation.special
+  20 | | square | 4     |
+     | ^ punctuation.special
+     |          ^ punctuation.special
+     |                  ^ punctuation.special
+  21 | 
+  22 | Setext heading
+     | ^^^^^^^^^^^^^^ markup.heading.2
+  23 | --------------
+     | ^^^^^^^^^^^^^^ markup.heading.2
+  24 | 
+  25 | A line with a hard break\
+  26 | and an ![image](pic.png "title").
+     |        ^^ markup.link
+     |          ^^^^^ markup.link.label
+     |               ^^ markup.link
+     |                 ^^^^^^^ markup.link.url
+     |                         ^^^^^^^ markup.link.label
+     |                                ^ markup.link

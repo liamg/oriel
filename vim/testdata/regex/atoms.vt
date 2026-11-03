@@ -1,0 +1,267 @@
+# Ordinary atoms: . \_. \n, anchors, word boundaries, \zs \ze, escapes and numbered characters.
+
+=== . matches any character
+ref:    pattern.txt */.*
+quote:  Matches any single character, but not an end-of-line.
+given:  |abc a-c ac
+keys:   :s/a.c/(&)/g<CR>
+expect: |(abc) (a-c) ac
+
+=== . does not match an end-of-line
+ref:    pattern.txt */.*
+quote:  Matches any single character, but not an end-of-line.
+given:
+  |ab
+  c
+keys:   :%s/b.c/X/e<CR>
+expect:
+  |ab
+  c
+
+=== \_. matches an end-of-line
+ref:    pattern.txt */\_.*
+quote:  Matches any single character or end-of-line.
+given:
+  |ab
+  c
+keys:   :%s/b\_.c/X/<CR>
+expect:
+  |aX
+
+=== & keeps a matched line break in the replacement
+ref:    pattern.txt */\_.*
+quote:  Matches any single character or end-of-line.
+given:
+  |a
+  b
+keys:   :%s/a\_.b/(&)/<CR>
+expect:
+  (a
+  |b)
+
+=== \n matches an end-of-line
+ref:    pattern.txt */\n*
+quote:  matches an end-of-line
+given:
+  |a
+  b
+  c
+keys:   :%s/a\nb/X/<CR>
+expect:
+  |X
+  c
+
+=== \_s matches white space and line breaks
+ref:    pattern.txt */\_*
+quote:  Where "x" is any of the characters above: The character class with end-of-line added
+given:
+  |a
+    b
+keys:   :%s/a\_s\+b/X/<CR>
+expect:
+  |X
+
+=== ^ at the start of a pattern is start-of-line
+ref:    pattern.txt */^*
+quote:  At beginning of pattern or after "\|", "\(", "\%(" or "\n": matches start-of-line; at other positions, matches literal '^'.
+given:  |aa
+keys:   :s/^a/(&)/g<CR>
+expect: |(a)a
+
+=== ^ elsewhere is a literal caret
+ref:    pattern.txt */^*
+quote:  At beginning of pattern or after "\|", "\(", "\%(" or "\n": matches start-of-line; at other positions, matches literal '^'.
+given:  |a\^b
+keys:   :s/a^b/(&)/<CR>
+expect: |(a\^b)
+
+=== ^ after \| is start-of-line
+ref:    pattern.txt */^*
+quote:  At beginning of pattern or after "\|", "\(", "\%(" or "\n": matches start-of-line; at other positions, matches literal '^'.
+given:  |abxa
+keys:   :s/x\|^a/(&)/g<CR>
+expect: |(a)b(x)a
+
+=== \^ is a literal caret at the start
+ref:    pattern.txt */\^*
+quote:  Matches literal '^'.  Can be used at any position in the pattern, but not inside [].
+given:  |x\^y
+keys:   :s/\^/(&)/<CR>
+expect: |x(\^)y
+
+=== $ at the end of a pattern is end-of-line
+ref:    pattern.txt */$*
+quote:  At end of pattern or in front of "\|", "\)" or "\n" ('magic' on): matches end-of-line <EOL>; at other positions, matches literal '$'.
+given:  |aa
+keys:   :s/a$/(&)/<CR>
+expect: |a(a)
+
+=== $ elsewhere is a literal dollar
+ref:    pattern.txt */$*
+quote:  At end of pattern or in front of "\|", "\)" or "\n" ('magic' on): matches end-of-line <EOL>; at other positions, matches literal '$'.
+given:  |a$b
+keys:   :s/a$b/(&)/<CR>
+expect: |(a$b)
+
+=== $ in front of \| is end-of-line
+ref:    pattern.txt */$*
+quote:  At end of pattern or in front of "\|", "\)" or "\n" ('magic' on): matches end-of-line <EOL>; at other positions, matches literal '$'.
+given:  |aba
+keys:   :s/a$\|b/(&)/g<CR>
+expect: |a(b)(a)
+
+=== \$ is a literal dollar at the end
+ref:    pattern.txt */\$*
+quote:  Matches literal '$'.  Can be used at any position in the pattern, but not inside [].
+given:  |x$y
+keys:   :s/\$/(&)/<CR>
+expect: |x($)y
+
+=== \_^ matches start-of-line anywhere in the pattern
+ref:    pattern.txt */\_^*
+quote:  \_s*\_^foo	white space and blank lines and then "foo" at start-of-line
+given:
+  |a
+
+  foo
+keys:   :%s/a\_s*\_^foo/X/<CR>
+expect:
+  |X
+
+=== \_$ matches end-of-line anywhere in the pattern
+ref:    pattern.txt */\_$*
+quote:  foo\_$\_s*	"foo" at end-of-line and following white space and blank lines
+given:
+  |foo
+
+    bar
+keys:   :%s/foo\_$\_s*/X/<CR>
+expect:
+  |Xbar
+
+=== \< matches at the start of a word
+ref:    pattern.txt */\<*
+quote:  Matches the beginning of a word: The next char is the first char of a word.
+given:  |aa ba a
+keys:   :s/\<a/(&)/g<CR>
+expect: |(a)a ba (a)
+
+=== \> matches at the end of a word
+ref:    pattern.txt */\>*
+quote:  Matches the end of a word: The previous char is the last char of a word.
+given:  |aa ab a
+keys:   :s/a\>/(&)/g<CR>
+expect: |a(a) ab (a)
+
+=== \< treats _ as a keyword character
+ref:    pattern.txt */\<*
+quote:  The 'iskeyword' option specifies what is a word character.
+given:  |a_b b-b
+keys:   :s/\<b/(&)/g<CR>
+expect: |a_b (b)-(b)
+
+=== \zs sets the start of the match
+ref:    pattern.txt */\zs*
+quote:  matches an "if" at the start of a line, ignoring white space.
+given:  |  if x if
+keys:   :s/^\s*\zsif/(&)/g<CR>
+expect:
+    |(if) x if
+
+=== \zs used several times: the last one counts
+ref:    pattern.txt */\zs*
+quote:  Finds the third occurrence of "Fab".
+given:  |Fab Fab Fab Fab
+keys:   :s/\(.\{-}\zsFab\)\{3}/(&)/<CR>
+expect: |Fab Fab (Fab) Fab
+
+=== \zs moves where a search lands
+ref:    pattern.txt */\zs*
+quote:  sets the start of the match there: The next char is the first char of the whole match.
+given:  |x foobar
+keys:   /foo\zsbar<CR>
+expect: x foo|bar
+
+=== \ze sets the end of the match
+ref:    pattern.txt */\ze*
+quote:  Example: "end\ze\(if\|for\)" matches the "end" in "endif" and "endfor".
+given:  |endif endfor endwhile
+keys:   :s/end\ze\(if\|for\)/(&)/g<CR>
+expect: |(end)if (end)for endwhile
+
+=== \t matches a tab
+ref:    pattern.txt */\t*
+quote:  matches <Tab>
+given:  |a	b
+keys:   :s/\t/T/<CR>
+expect: |aTb
+
+=== \%x matches a character by hex number
+ref:    pattern.txt */\%x*
+quote:  Matches the character specified with up to two hexadecimal characters.
+given:  |zAz
+keys:   :s/\%x41/(&)/<CR>
+expect: |z(A)z
+
+=== \%d matches a character by decimal number
+ref:    pattern.txt */\%d*
+quote:  Matches the character specified with a decimal number.
+given:  |bab
+keys:   :s/\%d97/(&)/<CR>
+expect: |b(a)b
+
+=== \%o matches a character by octal number
+ref:    pattern.txt */\%d*
+quote:  Matches the character specified with an octal number up to 0o377.
+given:  |zAz
+keys:   :s/\%o101/(&)/<CR>
+expect: |z(A)z
+
+=== \%u matches a multibyte character by number
+ref:    pattern.txt */\%d*
+quote:  Matches the character specified with up to four hexadecimal characters.
+given:  |cafe café
+keys:   :s/\%u00e9/(&)/<CR>
+expect: |cafe caf(é)
+
+=== ~ matches the last substitute string
+ref:    pattern.txt */~*
+quote:  matches the last given substitute string
+given:  |b X
+keys:   :s/b/X/<CR>:s/~/(&)/<CR>
+expect: |(X) X
+
+=== \~ is a literal tilde in magic mode
+ref:    pattern.txt */\v*
+quote:  ~	   ~	    \~	     \~		latest substitute string
+given:  |a~b
+keys:   :s/\~/(&)/<CR>
+expect: |a(~)b
+
+=== \%[] matches as much of the sequence as it can
+ref:    pattern.txt */\%[]*
+quote:  matches "r", "re", "rea" or "read".  The longest that matches is used.
+given:  |rex
+keys:   :s/r\%[ead]/(&)/<CR>
+expect: |(re)x
+
+=== \%[] always matches, even with none of the atoms
+ref:    pattern.txt */\%[]*
+quote:  A sequence of optionally matched atoms.  This always matches.
+given:  |r read rx
+keys:   :s/\<r\%[ead]\>/(&)/g<CR>
+expect: |(r) (read) rx
+
+=== \%[] with a collection inside
+ref:    pattern.txt */\%[]*
+quote:  Matches the words "r", "re", "ro", "rea", "roa", "read" and "road".
+given:  |road rod read
+keys:   :s/\<r\%[[eo]ad]\>/(&)/g<CR>
+expect: |(road) rod (read)
+
+=== \%[] can match brackets with [[] and []]
+ref:    pattern.txt */\%[]*
+quote:  matches "index" "index[", "index[0" and "index[0]".
+given:  |index\[0\] index\[1\]
+keys:   :s/index\%[[[]0[]]]/(&)/g<CR>
+expect: |(index\[0\]) (index\[)1\]

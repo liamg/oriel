@@ -1,0 +1,19 @@
+== start
+clip 0,0 100x60
+rect 0,0 40x20 fill #3c3c3c
+rect 0,20 40x20 fill #505050
+rect 0,40 40x20 fill #646464
+pop
+== mid
+clip 0,0 100x60
+rect 0,-8.25 40x20 fill #646464
+rect 0,11.75 40x20 fill #787878
+rect 0,31.75 40x20 fill #8c8c8c
+rect 0,51.75 40x20 fill #a0a0a0
+pop
+== settled
+clip 0,0 100x60
+rect 0,0 40x20 fill #787878
+rect 0,20 40x20 fill #8c8c8c
+rect 0,40 40x20 fill #a0a0a0
+pop

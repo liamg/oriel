@@ -1,0 +1,12 @@
+== start
+backdrop #060606
+== mid
+backdrop #060606
+opacity 0.80419856
+  rect 63.216793,0 200x39.12451 fill #121210 radius 8 stroke 1 #332f27
+  text "08a47ca" @75.2168,24.109375 #ece6d8 Inter 12.5
+pop
+== settled
+backdrop #060606
+rect 64,0 200x39.12451 fill #121210 radius 8 stroke 1 #332f27
+text "08a47ca" @76,24.109375 #ece6d8 Inter 12.5

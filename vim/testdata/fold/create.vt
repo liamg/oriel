@@ -1,0 +1,320 @@
+# Creating and deleting folds (manual method unless a case sets one). Fold state is
+# observed through motions: j and k move over a closed fold as if it were one line.
+
+=== zfj creates a closed fold that j moves over
+ref:    fold.txt *zf*
+quote:  The new fold will be closed for the "manual" method.
+given:
+  |one
+  two
+  three
+  four
+keys:   zfjj
+expect:
+  one
+  two
+  |three
+  four
+
+=== zf leaves the cursor on the first line of the fold
+ref:    fold.txt *zf*
+quote:  Operator to create a fold.
+given:
+  one
+  two
+  |three
+  four
+keys:   zfk
+expect:
+  one
+  |two
+  three
+  four
+
+=== zf2j folds three lines
+ref:    fold.txt *zf*
+quote:  zf{motion} or {Visual}zf Operator to create a fold.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   zf2jj
+expect:
+  one
+  two
+  three
+  |four
+  five
+
+=== zfap folds a paragraph
+ref:    fold.txt *zf*
+quote:  zf{motion} or {Visual}zf Operator to create a fold.
+given:
+  |one
+  two
+  
+  four
+keys:   zfapj
+expect:
+  one
+  two
+  
+  |four
+
+=== {Visual}zf folds the selected lines
+ref:    fold.txt *zf*
+quote:  zf{motion} or {Visual}zf Operator to create a fold.
+given:
+  one
+  |two
+  three
+  four
+keys:   Vjzfggjj
+expect:
+  one
+  two
+  three
+  |four
+mode:   normal
+
+=== zf sets foldenable
+ref:    fold.txt *zf*
+quote:  'foldenable' will be set.
+given:
+  |one
+  two
+  three
+keys:   zizfjj
+expect:
+  one
+  two
+  |three
+
+=== zF with a count folds that many lines
+ref:    fold.txt *zF*
+quote:  Create a fold for [count] lines. Works like "zf".
+given:
+  |one
+  two
+  three
+  four
+keys:   3zFj
+expect:
+  one
+  two
+  three
+  |four
+
+=== zF without a count folds one line
+ref:    fold.txt *zF*
+quote:  Create a fold for [count] lines.
+given:
+  |one
+  two
+  three
+keys:   zFj
+expect:
+  one
+  |two
+  three
+
+=== :{range}fold creates a closed fold
+ref:    fold.txt *:fold*
+quote:  Create a fold for the lines in {range}. Works like "zf".
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,3fold<CR>jj
+expect:
+  one
+  two
+  three
+  |four
+
+=== :fold does not move the cursor
+ref:    fold.txt *:fold*
+quote:  Create a fold for the lines in {range}.
+given:
+  |one
+  two
+  three
+keys:   :2,3fold<CR>
+expect:
+  |one
+  two
+  three
+
+=== zf over an existing closed fold includes it whole
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   zfjkzfjzojj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== zd deletes the fold under the cursor
+ref:    fold.txt *zd*
+quote:  Delete one fold at the cursor. When the cursor is on a folded line, that fold is deleted.
+given:
+  |one
+  two
+  three
+keys:   zfjzdj
+expect:
+  one
+  |two
+  three
+
+=== zd moves nested folds one level up
+ref:    fold.txt *zd*
+quote:  Nested folds are moved one level up.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zdggjjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== zD deletes nested folds too
+ref:    fold.txt *zD*
+quote:  Delete folds recursively at the cursor.
+given:
+  one
+  two
+  |three
+  four
+  five
+  six
+keys:   :3,4fold<CR>:2,5fold<CR>zDggjjj
+expect:
+  one
+  two
+  three
+  |four
+  five
+  six
+
+=== {Visual}zd deletes folds in the selection
+ref:    fold.txt *zd*
+quote:  In Visual mode one level of all folds (partially) in the selected area are deleted.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :2,3fold<CR>:5,6fold<CR>VGzdggjjjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+mode:   normal
+
+=== zE eliminates every fold
+ref:    fold.txt *zE*
+quote:  Eliminate all folds in the window.
+given:
+  |one
+  two
+  three
+  four
+  five
+  six
+keys:   :2,3fold<CR>:5,6fold<CR>zEjjjj
+expect:
+  one
+  two
+  three
+  four
+  |five
+  six
+
+=== zd with no fold is an error
+ref:    fold.txt *E490*
+quote:  All folding commands start with "z".
+given:
+  |one
+  two
+keys:   zd
+expect:
+  |one
+  two
+msg:    E490: No fold found
+
+=== zf with foldmethod indent is an error
+ref:    fold.txt *zf*
+quote:  This only works when 'foldmethod' is "manual" or "marker".
+given:
+  |one
+  two
+keys:   :set fdm=indent<CR>zfj
+expect:
+  one
+  |two
+msg:    E350: Cannot create fold with current 'foldmethod'
+
+=== zE with foldmethod indent is an error
+ref:    fold.txt *zE*
+quote:  This only works when 'foldmethod' is "manual" or "marker".
+given:
+  |one
+  two
+keys:   :set fdm=indent<CR>zE
+expect:
+  |one
+  two
+msg:    E352: Cannot erase folds with current 'foldmethod'
+
+=== zf with foldmethod marker appends markers
+ref:    fold.txt *fold-create-marker*
+quote:  Vim will append the start and end marker, as specified with 'foldmarker'. The markers are appended to the end of the line.
+given:
+  |one
+  two
+  three
+keys:   :set fdm=marker<CR>zfj
+expect:
+  |one{{{
+  two}}}
+  three
+
+=== zd with foldmethod marker removes the markers
+ref:    fold.txt *fold-delete-marker*
+quote:  "\"zd\" can be used to delete a fold defined by markers.  Vim will delete the markers for you."
+given:
+  |one{{{
+  two}}}
+  three
+keys:   :set fdm=marker<CR>zd
+expect:
+  |one
+  two
+  three

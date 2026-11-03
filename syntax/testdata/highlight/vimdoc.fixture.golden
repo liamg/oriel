@@ -1,0 +1,27 @@
+   1 | *oriel.txt*	The Oriel editor
+     | ^^^^^^^^^^^ label
+   2 | 
+   3 | INTRODUCTION					*oriel-intro*
+     | ^^^^^^^^^^^^ markup.heading.3
+     |                  ^^^^^^^^^^^^^ label
+   4 | 
+   5 | Oriel is an editor. See |oriel-options| for settings.
+     |                         ^^^^^^^^^^^^^^^ markup.link
+   6 | 
+   7 |   :Settings		Open the settings page.
+   8 | 
+   9 | OPTIONS						*oriel-options*
+     | ^^^^^^^ markup.heading.3
+     |              ^^^^^^^^^^^^^^^ label
+  10 | 
+  11 | 'tabstop' 'ts'		number	(default 8)
+     |  ^^^^^^^ markup.link
+     |            ^^ markup.link
+  12 | 	Columns a tab takes. >
+     |                       ^ markup.raw
+  13 | 		:set ts=4
+     | ^^^^^^^^^^^ markup.raw.block
+  14 | <
+     | ^ markup.raw
+  15 |  vim:tw=78:ts=8:ft=help:norl:
+     |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ keyword.directive

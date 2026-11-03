@@ -1,0 +1,11 @@
+Each built-in theme's palette licence, from its upstream repository's default branch (fetched 2026-10-21):
+catppuccin.txt  github.com/catppuccin/palette LICENSE
+dracula.txt     github.com/dracula/dracula-theme LICENSE
+everforest.txt  github.com/sainnhe/everforest LICENSE
+gruvbox.txt     github.com/morhetz/gruvbox: no licence file; README and package.json say MIT
+kanagawa.txt    github.com/rebelot/kanagawa.nvim LICENSE
+nord.txt        github.com/nordtheme/nord license
+one-dark.txt    github.com/atom/atom LICENSE.md
+rose-pine.txt   github.com/rose-pine/neovim LICENSE
+solarized.txt   github.com/altercation/solarized LICENSE
+tokyonight.txt  github.com/folke/tokyonight.nvim LICENSE

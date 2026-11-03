@@ -1,0 +1,10 @@
+source: https://cost.dev, https://api.cost.dev/v1/models
+ref: GET https://api.cost.dev/v1/models, fetched 2026-10-22, the whole response as served (one page: 104 models;
+  the endpoint has no cursor and ignores ?limit)
+  data_version: git_commit e7025b9c0ab66f589f342d1625d657346b7cf0e8,
+  artifact_hash sha256:e1d44d99fdd284cad55d92ffc5f4da6570cbe70a04b8db13bc2386d9a3ef5d7d,
+  generated_at 2026-10-22T08:20:09.326997234Z
+  ETag "sha256:e1d44d99fdd284cad55d92ffc5f4da6570cbe70a04b8db13bc2386d9a3ef5d7d" (If-None-Match answers 304;
+  If-Modified-Since is ignored); Cache-Control: public, max-age=60
+path: models.json
+license: none stated

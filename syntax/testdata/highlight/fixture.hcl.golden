@@ -1,0 +1,67 @@
+   1 | // A Nomad job.
+     | ^^^^^^^^^^^^^^^ comment
+   2 | job "web" {
+     | ^^^ keyword
+     |     ^^^^^ string
+     |           ^ punctuation.bracket
+   3 |   datacenters = ["dc1"]
+     |   ^^^^^^^^^^^ variable.member
+     |               ^ none
+     |                 ^ punctuation.bracket
+     |                  ^^^^^ string
+     |                       ^ punctuation.bracket
+   4 |   type        = "service"
+     |   ^^^^ variable.member
+     |               ^ none
+     |                 ^^^^^^^^^ string
+   5 | 
+   6 |   group "app" {
+     |   ^^^^^ type
+     |         ^^^^^ string
+     |               ^ punctuation.bracket
+   7 |     count = 3
+     |     ^^^^^ variable.member
+     |           ^ none
+     |             ^ number
+   8 |     task "server" {
+     |     ^^^^ type
+     |          ^^^^^^^^ string
+     |                   ^ punctuation.bracket
+   9 |       driver = "docker"
+     |       ^^^^^^ variable.member
+     |              ^ none
+     |                ^^^^^^^^ string
+  10 |       config {
+     |       ^^^^^^ type
+     |              ^ punctuation.bracket
+  11 |         image = "nginx:1.27"
+     |         ^^^^^ variable.member
+     |               ^ none
+     |                 ^^^^^^^^^^^^ string
+  12 |         ports = ["http"]
+     |         ^^^^^ variable.member
+     |               ^ none
+     |                 ^ punctuation.bracket
+     |                  ^^^^^^ string
+     |                        ^ punctuation.bracket
+  13 |       }
+     |       ^ punctuation.bracket
+  14 |       resources {
+     |       ^^^^^^^^^ type
+     |                 ^ punctuation.bracket
+  15 |         cpu    = 500
+     |         ^^^ variable.member
+     |                ^ none
+     |                  ^^^ number
+  16 |         memory = 256
+     |         ^^^^^^ variable.member
+     |                ^ none
+     |                  ^^^ number
+  17 |       }
+     |       ^ punctuation.bracket
+  18 |     }
+     |     ^ punctuation.bracket
+  19 |   }
+     |   ^ punctuation.bracket
+  20 | }
+     | ^ punctuation.bracket

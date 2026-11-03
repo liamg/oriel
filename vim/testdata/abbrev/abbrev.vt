@@ -1,0 +1,280 @@
+# Abbreviations (map.txt, *abbreviations*) and the commands that define and remove them.
+
+=== an abbreviation expands on <Space>
+ref:    nvim/map.txt *abbreviations*
+quote:  "\"hh<Space>\" is expanded to \"hello<Space>\""
+given:  |
+keys:   :iab hh hello<CR>ihh world<Esc>
+expect: hello worl|d
+mode:   normal
+
+=== <C-]> expands without inserting a character
+ref:    nvim/map.txt *abbreviations*
+quote:  "\"hh<C-]>\" is expanded to \"hello\""
+given:  |
+keys:   :iab hh hello<CR>ihh<C-]>!<Esc>
+expect: hello|!
+mode:   normal
+
+=== i_CTRL-] triggers an abbreviation
+ref:    nvim/insert.txt *i_CTRL-]*
+quote:  Trigger abbreviation, without inserting a character.
+given:  |
+keys:   :iab hh hello<CR>ihh<C-]><Esc>
+expect: hell|o
+mode:   normal
+
+=== <Esc> ending Insert mode expands
+ref:    nvim/map.txt *abbreviations*
+quote:  This can also be the <Esc> that ends Insert mode
+given:  |
+keys:   :iab hh hello<CR>ihh<Esc>
+expect: hell|o
+mode:   normal
+
+=== a non-keyword character expands and is inserted after
+ref:    nvim/map.txt *abbreviations*
+quote:  The non-keyword character which ends the abbreviation is inserted after the expanded abbreviation.
+given:  |
+keys:   :iab hh hello<CR>ihh.<Esc>
+expect: hello|.
+mode:   normal
+
+=== <CR> expands before the line break
+ref:    nvim/map.txt *abbreviations*
+quote:  An abbreviation is only recognized when you type a non-keyword character.
+given:  |
+keys:   :iab hh hello<CR>ihh<CR>x<Esc>
+expect:
+  hello
+  |x
+mode:   normal
+
+=== a keyword character doesn't expand
+ref:    nvim/map.txt *abbreviations*
+quote:  An abbreviation is only recognized when you type a non-keyword character.
+given:  |
+keys:   :iab hh hello<CR>ihhh -<Esc>
+expect: hhh |-
+mode:   normal
+
+=== full-id: expanded after a space
+ref:    nvim/map.txt *abbreviations*
+quote:  "\" foo{CURSOR}\"   is expanded to \" four old otters\""
+given:  |
+keys:   :ab foo four old otters<CR>i foo<Esc>
+expect:
+   four old otter|s
+mode:   normal
+
+=== full-id: not expanded at the end of a longer word
+ref:    nvim/map.txt *abbreviations*
+quote:  "\"barfoo{CURSOR}\"  is not expanded"
+given:  |
+keys:   :ab foo four old otters<CR>ibarfoo -<Esc>
+expect: barfoo |-
+mode:   normal
+
+=== full-id: not expanded at the start of a longer word
+ref:    nvim/map.txt *abbreviations*
+quote:  "\" foobar{CURSOR}\" is not expanded"
+given:  |
+keys:   :ab foo four old otters<CR>i foobar -<Esc>
+expect:
+   foobar |-
+mode:   normal
+
+=== full-id: expanded where the insertion starts after a keyword
+ref:    nvim/map.txt *abbreviations*
+quote:  In front of the match is a non-keyword character, or this is where the line or insertion starts.
+given:  ba|r
+keys:   :iab foo X<CR>afoo -<Esc>
+expect: barX |-
+mode:   normal
+
+=== full-id of one character isn't expanded after punctuation
+ref:    nvim/map.txt *abbreviations*
+quote:  When the abbreviation is only one character, it is not recognized if there is a non-keyword character in front of it, other than a space or a tab.
+given:  |
+keys:   :iab x why<CR>i.x -<Esc>
+expect: .x |-
+mode:   normal
+
+=== full-id of one character is expanded after a space
+ref:    nvim/map.txt *abbreviations*
+quote:  When the abbreviation is only one character, it is not recognized if there is a non-keyword character in front of it, other than a space or a tab.
+given:  |
+keys:   :iab x why<CR>i( x -<Esc>
+expect: ( why |-
+mode:   normal
+
+=== full-id of several characters is expanded after punctuation
+ref:    nvim/map.txt *abbreviations*
+quote:  In front of the match is a non-keyword character, or this is where the line or insertion starts.
+given:  |
+keys:   :iab hh hello<CR>i(hh)<Esc>
+expect: (hello|)
+mode:   normal
+
+=== end-id: expanded at the start of the line
+ref:    nvim/map.txt *abbreviations*
+quote:  "\"#i{CURSOR}\"   is expanded to \"#include\""
+given:  |
+keys:   :ab #i #include<CR>i#i -<Esc>
+expect: #include |-
+mode:   normal
+
+=== end-id: not expanded after a non-keyword character
+ref:    nvim/map.txt *abbreviations*
+quote:  "\">#i{CURSOR}\"   is not expanded"
+given:  |
+keys:   :ab #i #include<CR>i>#i -<Esc>
+expect: >#i |-
+mode:   normal
+
+=== end-id: expanded after a keyword character
+ref:    nvim/map.txt *abbreviations*
+quote:  In front of the match is a keyword character, or a space or a tab, or this is where the line or insertion starts.
+given:  |
+keys:   :ab #i #include<CR>ia#i -<Esc>
+expect: a#include |-
+mode:   normal
+
+=== non-id: not expanded after a keyword
+ref:    nvim/map.txt *abbreviations*
+quote:  "\"test;;\"   is not expanded"
+given:  |
+keys:   :ab ;; <lt>endofline><CR>itest;;<Esc>
+expect: test;|;
+mode:   normal
+
+=== non-id: expanded after a space
+ref:    nvim/map.txt *abbreviations*
+quote:  "\"test ;;\"   is expanded to \"test <endofline>\""
+given:  |
+keys:   :ab ;; <lt>endofline><CR>itest ;;<Esc>
+expect: test <endofline|>
+mode:   normal
+
+=== non-id: expanded by <C-]>
+ref:    nvim/map.txt *abbreviations*
+quote:  An exception to this is the character <C-]>, which is used to expand an abbreviation without inserting any extra characters.
+given:  |
+keys:   :ab def# XX<CR>ix def#<C-]>-<Esc>
+expect: x XX|-
+mode:   normal
+
+=== non-id: <Space> doesn't expand it
+ref:    oracle nvim v0.11.7
+given:  |
+keys:   :ab def# XX<CR>ix def# -<Esc>
+expect: x def# |-
+mode:   normal
+
+=== CTRL-V before the trigger avoids the expansion
+ref:    nvim/map.txt *abbreviations*
+quote:  To avoid the abbreviation in Insert mode: Type CTRL-V before the character that would trigger the abbreviation.
+given:  |
+keys:   :iab hh hello<CR>ihh<C-v><Space>x<Esc>
+expect: hh |x
+mode:   normal
+
+=== typing the abbreviation in two inserts avoids it
+ref:    nvim/map.txt *abbreviations*
+quote:  Or type part of the abbreviation, exit insert mode with <Esc>, re-enter insert mode with "a" and type the rest.
+given:  |
+keys:   :iab hh hello<CR>ih<Esc>ah -<Esc>
+expect: hh |-
+mode:   normal
+
+=== abbreviations aren't recursive
+ref:    nvim/map.txt *abbreviations*
+quote:  You can use ":ab f f-o-o" without any problem.
+given:  |
+keys:   :ab f f-o-o<CR>if -<Esc>
+expect: f-o-o |-
+mode:   normal
+
+=== an abbreviation works in Replace mode
+ref:    nvim/map.txt *abbreviations*
+quote:  Abbreviations are used in Insert mode, Replace mode and Command-line mode.
+given:  |abcdefghij
+keys:   :iab hh hello<CR>Rhh <Esc>
+expect: hello| ghij
+mode:   normal
+
+=== :ab abbreviations apply on the command line
+ref:    nvim/map.txt *abbreviations*
+quote:  Abbreviations are used in Insert mode, Replace mode and Command-line mode.
+given:
+  |a1
+  a2
+keys:   :ab ss s/a/b/<CR>:ss<CR>
+expect:
+  |b1
+  a2
+mode:   normal
+
+=== :iab abbreviations don't apply on the command line
+ref:    nvim/map.txt *:iabbrev*
+quote:  same as ":ab", but for Insert mode only.
+given:  |abc
+keys:   :iab xx normal x<CR>:xx<CR>
+expect: |abc
+mode:   normal
+
+=== :iab replaces an existing abbreviation
+ref:    nvim/map.txt *:abbreviate-verbose*
+quote:  If {lhs} already existed it is replaced with the new {rhs}.
+given:  |
+keys:   :iab hh hello<CR>:iab hh howdy<CR>ihh<Esc>
+expect: howd|y
+mode:   normal
+
+=== :iunabbrev removes an abbreviation
+ref:    nvim/map.txt *:iunabbrev*
+quote:  Same as ":una", but for insert mode only.
+given:  |
+keys:   :iab hh hello<CR>:iuna hh<CR>ihh -<Esc>
+expect: hh |-
+mode:   normal
+
+=== :unabbreviate by the rhs removes it
+ref:    nvim/map.txt *:unabbreviate*
+quote:  If none is found, remove abbreviations in which {lhs} matches with the {rhs}.
+given:  |
+keys:   :ab hh hello<CR>:una hello<CR>ihh -<Esc>
+expect: hh |-
+mode:   normal
+
+=== :abclear removes all abbreviations
+ref:    nvim/map.txt *:abclear*
+quote:  Remove all abbreviations.
+given:  |
+keys:   :iab hh hello<CR>:ab tt there<CR>:abclear<CR>ihh tt -<Esc>
+expect: hh tt |-
+mode:   normal
+
+=== :iabclear removes the Insert mode abbreviations
+ref:    nvim/map.txt *:iabclear*
+quote:  Remove all abbreviations for Insert mode.
+given:  |
+keys:   :iab hh hello<CR>:iabclear<CR>ihh -<Esc>
+expect: hh |-
+mode:   normal
+
+=== an abbreviation can be mapped through
+ref:    nvim/map.txt *abbreviations*
+quote:  But abbreviations can be mapped.
+given:  |
+keys:   :imap Q hello<CR>:iab hh Q<CR>ihh -<Esc>
+expect: hello |-
+mode:   normal
+
+=== :inoreabbrev isn't mapped
+ref:    nvim/map.txt *:inoreabbrev*
+quote:  same as ":ab", but for Insert mode only and no remapping for this {rhs}
+given:  |
+keys:   :imap Q hello<CR>:inorea hh Q<CR>ihh -<Esc>
+expect: Q |-
+mode:   normal

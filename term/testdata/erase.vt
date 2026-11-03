@@ -1,0 +1,153 @@
+# ED and EL. Ghostty's validation scripts, delivered through a tty ("\n" as "\r\n"); "_" is a blank and "c" the
+# cursor. Their screens show the top rows; the rest are blank.
+
+=== ED 0 erases below
+ref:    xterm/ctlseqs.txt CSI Ps J
+quote:  "Ps = 0  -> Erase Below (default)."
+ref:    ghostty/csi/ed.mdx#ED V-1: Simple Erase Below
+quote:  "|ABC_____| |Dc______| |________|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2;2H\x1b[0J"
+screen:
+  |ABC     |
+  |D       |
+  |        |
+  |        |
+cursor: 1,1
+
+=== ED fills with the background colour
+ref:    ghostty/csi/ed.mdx#ED V-2: Erase Below SGR State
+quote:  "All the cells right and below of the cursor should be colored red."
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2;2H\x1b[41m\x1b[0J"
+screen:
+  |ABC     |
+  |D       |
+  |        |
+  |        |
+cell:   0,1 text="D" bg=default
+cell:   1,1 bg=1
+cell:   7,1 bg=1
+cell:   0,2 bg=1
+cell:   7,3 bg=1
+
+=== ED erases the whole of a wide character it starts in
+ref:    ghostty/csi/ed.mdx#ED V-3: Erase Below Multi-Cell Character
+quote:  "|AB橋C___| |DE_c____| |________|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JAB橋C\r\nDE橋F\r\nGH橋I\r\n\x1b[2;4H\x1b[0J"
+screen:
+  |AB橋C   |
+  |DE      |
+  |        |
+  |        |
+cursor: 3,1
+
+=== ED 1 erases above
+ref:    xterm/ctlseqs.txt CSI Ps J
+quote:  "Ps = 1  -> Erase Above."
+ref:    ghostty/csi/ed.mdx#ED V-4: Simple Erase Above
+quote:  "|________| |_cF_____| |GHI_____|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2;2H\x1b[1J"
+screen:
+  |        |
+  |  F     |
+  |GHI     |
+  |        |
+cursor: 1,1
+
+=== ED 2 erases all
+ref:    xterm/ctlseqs.txt CSI Ps J
+quote:  "Ps = 2  -> Erase All."
+ref:    ghostty/csi/ed.mdx#ED V-5: Simple Erase Complete
+quote:  "|________| |_c______| |________|"
+size:   8x4
+input:  "\x1b[1;1H\x1b[0JABC\r\nDEF\r\nGHI\r\n\x1b[2;2H\x1b[2J"
+screen:
+  |        |
+  |        |
+  |        |
+  |        |
+cursor: 1,1
+
+=== EL 0 erases to the right
+ref:    xterm/ctlseqs.txt CSI Ps K
+quote:  "Ps = 0  -> Erase to Right (default)."
+ref:    ghostty/csi/el.mdx#EL V-1: Simple Erase Right
+quote:  "|ABc_____|"
+size:   8x1
+input:  "ABCDE\x1b[3G\x1b[0K"
+screen:
+  |AB      |
+cursor: 2,0
+
+=== EL unsets pending wrap
+ref:    ghostty/csi/el.mdx#EL V-2: Erase Right Resets Pending Wrap
+quote:  "|_______X|"
+size:   8x1
+input:  "\x1b[8GA\x1b[0KX"
+screen:
+  |       X|
+cursor: 7,0
+
+=== EL fills with the background colour
+ref:    ghostty/csi/el.mdx#EL V-3: Erase Right SGR State
+quote:  "The cells from `c` onwards should have a red background all the way to the right edge of the screen."
+size:   8x1
+input:  "ABC\x1b[2G\x1b[41m\x1b[0K"
+screen:
+  |A       |
+cell:   0,0 bg=default
+cell:   1,0 bg=1
+cell:   7,0 bg=1
+
+=== EL erases the whole of a wide character it starts in
+ref:    ghostty/csi/el.mdx#EL V-4: Erase Right Multi-cell Character
+quote:  "|AB_c____|"
+size:   8x1
+input:  "AB橋DE\x1b[4G\x1b[0K"
+screen:
+  |AB      |
+cursor: 3,0
+
+=== EL 1 erases to the left, the cursor's cell included
+ref:    xterm/ctlseqs.txt CSI Ps K
+quote:  "Ps = 1  -> Erase to Left."
+ref:    ghostty/csi/el.mdx#EL V-8: Simple Erase Left
+quote:  "|__cDE___|"
+size:   8x1
+input:  "ABCDE\x1b[3G\x1b[1K"
+screen:
+  |   DE   |
+cursor: 2,0
+
+=== EL 1 erases the whole of a wide character it ends in
+ref:    ghostty/csi/el.mdx#EL V-10: Erase Left Multi-cell Character
+quote:  "|__c_DE__|"
+size:   8x1
+input:  "AB橋DE\x1b[3G\x1b[1K"
+screen:
+  |    DE  |
+cursor: 2,0
+
+=== EL 2 erases the line
+ref:    xterm/ctlseqs.txt CSI Ps K
+quote:  "Ps = 2  -> Erase All."
+ref:    ghostty/csi/el.mdx#EL V-12: Simple Erase Complete
+quote:  "|__c_______|"
+size:   10x1
+input:  "ABCDE\x1b[3G\x1b[2K"
+screen:
+  |          |
+cursor: 2,0
+
+=== EL 2 fills the line with the background colour
+ref:    ghostty/csi/el.mdx#EL V-13: Erase Complete SGR State
+quote:  "The entire line should have a red background."
+size:   8x1
+input:  "ABC\x1b[2G\x1b[41m\x1b[2K"
+screen:
+  |        |
+cell:   0,0 bg=1
+cell:   7,0 bg=1

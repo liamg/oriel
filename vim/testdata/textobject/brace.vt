@@ -1,0 +1,211 @@
+=== di{ deletes inside the braces on one line
+ref:    motion.txt *iB*
+quote:  "\"inner Block\", select [count] Blocks, from \"[count] [{\" to the matching '}', excluding the '{' and '}'"
+given:  x = {a|b}
+keys:   di{
+expect: x = {|}
+regs:   "" = "ab"
+
+=== da{ deletes the braces too
+ref:    motion.txt *aB*
+quote:  including the '{' and '}'
+given:  x = {a|b};
+keys:   da{
+expect: x = |;
+regs:   "" = "{ab}"
+
+=== diB is the same as di{
+ref:    motion.txt *iB*
+quote:  "\"inner Block\", select [count] Blocks"
+given:  {a|b}
+keys:   diB
+expect: {|}
+regs:   "" = "ab"
+
+=== daB is the same as da{
+ref:    motion.txt *aB*
+quote:  "\"a Block\", select [count] Blocks"
+given:  x{a|b}y
+keys:   daB
+expect: x|y
+regs:   "" = "{ab}"
+
+=== di} is the same as di{
+ref:    motion.txt *iB*
+quote:  "\"inner Block\", select [count] Blocks"
+given:  {a|b}
+keys:   di}
+expect: {|}
+regs:   "" = "ab"
+
+=== di{ on a multi-line block deletes the inner lines linewise
+ref:    motion.txt *iB*
+quote:  excluding the '{' and '}'
+given:
+  if x {
+    |a
+    b
+  }
+keys:   di{
+expect:
+  if x {
+  |}
+regs:   "" = "  a\n  b\n"   "1 = "  a\n  b\n"
+undo:
+  if x {
+  |  a
+    b
+  }
+
+=== da{ on a multi-line block is charwise from brace to brace
+ref:    motion.txt *aB*
+quote:  including the '{' and '}'
+given:
+  if x {
+    |a
+  }
+  y
+keys:   da{
+expect:
+  if x| 
+  y
+regs:   "" = "{\n  a\n}"
+
+=== ci{ on a multi-line block leaves an empty line to type on
+ref:    motion.txt *iB*
+quote:  excluding the '{' and '}'
+given:
+  f {
+    |a
+  }
+keys:   ci{x<Esc>
+expect:
+  f {
+    |x
+  }
+regs:   "" = "  a\n"
+
+=== d2i{ deletes inside the second enclosing block
+ref:    motion.txt *iB*
+quote:  select [count] Blocks
+given:  {a {b|c} d}
+keys:   d2i{
+expect: {|}
+regs:   "" = "a {bc} d"
+
+=== di{ before a block on the line finds the next {, like di(
+ref:    oracle nvim v0.11.7
+given:  a |b {c}
+keys:   di{
+expect: a b {|}
+regs:   "" = "c"
+
+=== di{ with no braces on the line does nothing
+ref:    motion.txt *iB*
+quote:  "from \"[count] [{\" to the matching '}'"
+given:  a |b c
+keys:   di{
+expect: a |b c
+regs:   "" = (unset)
+
+=== di{ on an empty block does nothing
+ref:    motion.txt *iB*
+quote:  "It's an error to select an empty inner block like \"{}\"."
+given:  {|}
+keys:   di{
+expect: {|}
+
+=== yi{ on a multi-line block yanks the inner lines
+ref:    motion.txt *iB*
+quote:  excluding the '{' and '}'
+given:
+  {
+    a
+    |b
+  }
+keys:   yi{
+expect:
+  {
+  |  a
+    b
+  }
+regs:   "0 = "  a\n  b\n"
+
+=== di[ deletes inside the brackets
+ref:    motion.txt *i[*
+quote:  "\"inner [] block\", select [count] '[' ']' blocks."
+given:  x\[1, |2\]
+keys:   di[
+expect: x\[|\]
+regs:   "" = "1, 2"
+
+=== da[ deletes the brackets too
+ref:    motion.txt *a[*
+quote:  The enclosed text is selected, including the '[' and ']'.
+given:  x\[1, |2\] y
+keys:   da[
+expect: x| y
+regs:   "" = "[1, 2]"
+
+=== di] is the same as di[
+ref:    motion.txt *i[*
+quote:  excluding the '[' and ']'
+given:  \[a|b\]
+keys:   di]
+expect: \[|\]
+regs:   "" = "ab"
+
+=== da] is the same as da[
+ref:    motion.txt *a[*
+quote:  including the '[' and ']'
+given:  x\[a|b\]y
+keys:   da]
+expect: x|y
+regs:   "" = "[ab]"
+
+=== d2i[ deletes inside the second enclosing brackets
+ref:    motion.txt *i[*
+quote:  This goes backwards to the [count] unclosed '[', and finds the matching ']'.
+given:  \[a \[|b\] c\]
+keys:   d2i[
+expect: \[|\]
+regs:   "" = "a [b] c"
+
+=== di[ on empty brackets does nothing
+ref:    motion.txt *i[*
+quote:  "It's an error to select an empty inner block like \"[]\"."
+given:  x\[|\]
+keys:   di[
+expect: x\[|\]
+
+=== di< deletes inside the angle brackets
+ref:    motion.txt *i<*
+quote:  "\"inner <> block\", select [count] <> blocks"
+given:  List<Str|ing> x
+keys:   di<
+expect: List<|> x
+regs:   "" = "String"
+
+=== da< deletes the angle brackets too
+ref:    motion.txt *a<*
+quote:  including the '<' and '>'.
+given:  List<Str|ing> x
+keys:   da<
+expect: List| x
+regs:   "" = "<String>"
+
+=== di> is the same as di<
+ref:    motion.txt *i<*
+quote:  excluding the '<' and '>'.
+given:  <a|b>
+keys:   di>
+expect: <|>
+regs:   "" = "ab"
+
+=== d2i< deletes inside the second enclosing angle brackets
+ref:    motion.txt *i<*
+quote:  "from the [count]'th unmatched '<' backwards to the matching '>'"
+given:  A<B<|C>>
+keys:   d2i<
+expect: A<|>
+regs:   "" = "B<C>"

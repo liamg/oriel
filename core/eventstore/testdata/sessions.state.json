@@ -1,0 +1,16 @@
+{
+  "seq": 7,
+  "sessions": [
+    {
+      "id": "s1",
+      "kind": "work",
+      "status": "permission"
+    },
+    {
+      "id": "s3",
+      "kind": "plan",
+      "status": "needs_you"
+    }
+  ],
+  "notifications": []
+}

@@ -1,0 +1,9 @@
+id          = "liamg/acp"
+version     = "0.1.0"
+oriel       = ">=0.6"
+description = "The Agent Client Protocol bridge: any ACP agent (Gemini CLI, goose, opencode, claude-code-acp…) as an agent sessions run, for the plugins that name it with acp = { command = … }"
+license     = "MIT"
+binaries    = ["darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"]
+
+[permissions]
+"agent.provider" = { why = "Serve the ACP agents other plugins configure; what they run is held to those plugins' grants" }

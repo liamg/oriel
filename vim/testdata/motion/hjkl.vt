@@ -1,0 +1,318 @@
+=== h moves one character left
+ref:    motion.txt *<BS>*
+quote:  "[count] characters to the left.  |exclusive| motion."
+given:  ab|c
+keys:   h
+expect: a|bc
+mode:   normal
+
+=== 3h with a count
+ref:    motion.txt *<BS>*
+quote:  "[count] characters to the left."
+given:  abc|def
+keys:   3h
+expect: |abcdef
+
+=== h with a count larger than the column stops at the first column
+ref:    motion.txt *left-right-motions*
+quote:  "They stop at the first column and at the end of the line"
+given:  ab|cd
+keys:   9h
+expect: |abcd
+
+=== h at the first column does not wrap to the previous line
+ref:    motion.txt *left-right-motions*
+quote:  "They stop at the first column and at the end of the line"
+given:
+  abc
+  |def
+keys:   h
+expect:
+  abc
+  |def
+
+=== <BS> at the first column wraps to the previous line ('whichwrap' has b)
+ref:    options.txt *'whichwrap'*
+quote:  "b    <BS>	 Normal and Visual"
+given:
+  abc
+  |def
+keys:   <BS>
+expect:
+  ab|c
+  def
+
+=== l moves one character right
+ref:    motion.txt *<Space>*
+quote:  "[count] characters to the right.  |exclusive| motion."
+given:  a|bc
+keys:   l
+expect: ab|c
+
+=== l on the last character stays put
+ref:    motion.txt *left-right-motions*
+quote:  "They stop at the first column and at the end of the line"
+given:
+  ab|c
+  def
+keys:   l
+expect:
+  ab|c
+  def
+
+=== l with a count larger than the line stops on the last character
+ref:    motion.txt *<Space>*
+quote:  "[count] characters to the right."
+given:  |abcd
+keys:   9l
+expect: abc|d
+
+=== l steps over a two-byte character
+ref:    motion.txt *<Space>*
+quote:  "[count] characters to the right."
+given:  |éa
+keys:   l
+expect: é|a
+
+=== 2l steps over two wide characters
+ref:    motion.txt *<Space>*
+quote:  "[count] characters to the right."
+given:  |漢字x
+keys:   2l
+expect: 漢字|x
+
+=== h steps back over a wide character
+ref:    motion.txt *<BS>*
+quote:  "[count] characters to the left."
+given:  漢字|x
+keys:   h
+expect: 漢|字x
+
+=== d2h deletes the two characters before the cursor (exclusive)
+ref:    motion.txt *<BS>*
+quote:  "[count] characters to the left.  |exclusive| motion."
+given:  abc|d
+keys:   d2h
+expect: a|d
+regs:   "" = "bc"
+
+=== dl on the last character deletes it
+ref:    motion.txt *<Space>*
+quote:  "[count] characters to the right.  |exclusive| motion."
+given:  ab|c
+keys:   dl
+expect: a|b
+regs:   "" = "c"
+
+=== j moves down in the same column
+ref:    motion.txt *CTRL-N*
+quote:  "[count] lines downward |linewise|."
+given:
+  a|bc
+  def
+keys:   j
+expect:
+  abc
+  d|ef
+
+=== k moves up in the same column
+ref:    motion.txt *CTRL-P*
+quote:  "[count] lines upward |linewise|."
+given:
+  abc
+  de|f
+keys:   k
+expect:
+  ab|c
+  def
+
+=== 2j with a count
+ref:    motion.txt *CTRL-N*
+quote:  "[count] lines downward"
+given:
+  |one
+  two
+  three
+keys:   2j
+expect:
+  one
+  two
+  |three
+
+=== j with a count past the end goes to the last line
+ref:    motion.txt *go*
+quote:  "They stop when reaching the first or the last line."
+given:
+  |one
+  two
+  three
+keys:   9j
+expect:
+  one
+  two
+  |three
+
+=== k with a count past the start goes to the first line
+ref:    motion.txt *go*
+quote:  "They stop when reaching the first or the last line."
+given:
+  one
+  two
+  t|hree
+keys:   9k
+expect:
+  o|ne
+  two
+  three
+
+=== j on the last line does not move
+ref:    motion.txt *go*
+quote:  "They stop when reaching the first or the last line."
+given:
+  one
+  t|wo
+keys:   j
+expect:
+  one
+  t|wo
+
+=== k on the first line does not move
+ref:    motion.txt *go*
+quote:  "They stop when reaching the first or the last line."
+given:
+  o|ne
+  two
+keys:   k
+expect:
+  o|ne
+  two
+
+=== j onto a shorter line clamps to its last character
+ref:    motion.txt *go*
+quote:  "The first two commands put the cursor in the same column (if possible)"
+given:
+  abc|def
+  ab
+keys:   j
+expect:
+  abcdef
+  a|b
+
+=== j through a shorter line remembers the column
+ref:    motion.txt *go*
+quote:  "put the cursor in the same column (if possible) as it was after the last command that changed the column"
+given:
+  abc|def
+  ab
+  abcdef
+keys:   jj
+expect:
+  abcdef
+  ab
+  abc|def
+
+=== j through an empty line remembers the column
+ref:    motion.txt *go*
+quote:  "put the cursor in the same column (if possible) as it was after the last command that changed the column"
+given:
+  ab|c
+
+  abc
+keys:   jj
+expect:
+  abc
+
+  ab|c
+
+=== h resets the remembered column
+ref:    motion.txt *go*
+quote:  "as it was after the last command that changed the column"
+given:
+  abc|def
+  abcdef
+keys:   hj
+expect:
+  abcdef
+  ab|cdef
+
+=== j after $ stays at the end of each line
+ref:    motion.txt *go*
+quote:  "except after the \"$\" command, then the cursor will be put on the last character of the line."
+given:
+  |ab
+  abcdef
+  abcd
+keys:   $jj
+expect:
+  ab
+  abcdef
+  abc|d
+
+=== k after $ goes to the end of a longer line
+ref:    motion.txt *go*
+quote:  "except after the \"$\" command, then the cursor will be put on the last character of the line."
+given:
+  abcdef
+  |ab
+keys:   $k
+expect:
+  abcde|f
+  ab
+
+=== j keeps the screen column across wide characters
+ref:    motion.txt *go*
+quote:  "The first two commands put the cursor in the same column (if possible)"
+given:
+  ab|c
+  漢字x
+keys:   j
+expect:
+  abc
+  漢|字x
+
+=== j from a wide character lands on the same screen column
+ref:    motion.txt *go*
+quote:  "The first two commands put the cursor in the same column (if possible)"
+given:
+  漢|字x
+  abcde
+keys:   j
+expect:
+  漢字x
+  ab|cde
+
+=== dj deletes the current and next line (linewise)
+ref:    motion.txt *CTRL-N*
+quote:  "[count] lines downward |linewise|."
+given:
+  one
+  t|wo
+  three
+  four
+keys:   dj
+expect:
+  one
+  f|our
+regs:   "" = "two\nthree\n"
+
+=== dk deletes the current and previous line (linewise)
+ref:    motion.txt *CTRL-P*
+quote:  "[count] lines upward |linewise|."
+given:
+  one
+  two
+  t|hree
+keys:   dk
+expect: o|ne
+regs:   "" = "two\nthree\n"
+
+=== dj on the last line deletes nothing
+ref:    motion.txt *go*
+quote:  "They stop when reaching the first or the last line."
+given:
+  one
+  t|wo
+keys:   dj
+expect:
+  one
+  t|wo

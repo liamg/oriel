@@ -1,0 +1,12 @@
+== start
+backdrop #060606
+== mid
+backdrop #060606
+opacity 0.80419856
+  rect 0,0.5874043 13.40625x14 fill #ff9b45 radius 7
+  text "3" @4,10.827404 #141006 JetBrains Mono 9
+pop
+== settled
+backdrop #060606
+rect 0,0 13.40625x14 fill #ff9b45 radius 7
+text "3" @4,10.24 #141006 JetBrains Mono 9

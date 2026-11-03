@@ -1,0 +1,6 @@
+# Grammar packs built by build.sh: name, repository, revision, directory in it, sha256 of the source tarball.
+# Revisions follow nvim-treesitter's parsers.lua at the commit the queries are from; "queries" is that commit, whose
+# runtime/queries/<name>/ give each pack its highlights, folds and injections.
+queries	nvim-treesitter/nvim-treesitter	f603a2f4da48728f80257fb5fbb90145fd1dc173	runtime/queries	c080a1fb914d7ec8da5790076585dadc4de16d3a550ad0794d4eb9e766f0e967
+haskell	tree-sitter-grammars/tree-sitter-haskell	98aedbd2d6947a168ba3ba3755d70b0cb6b78395	.	9ec2e94f66cf6923cfe07b55eef534b22f55f9fa2e8284e699dbc564949ccde2
+dart	UserNobody14/tree-sitter-dart	be07cf7118d3dba06236a3f19541685a68209934	.	b126efb8dfeeba8b71f0c6ae1f0cd09cf8b205560786b31d44cc16b283e782f2

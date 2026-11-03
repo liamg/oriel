@@ -1,0 +1,56 @@
+=== dis deletes the sentence under the cursor
+ref:    motion.txt *is*
+quote:  "\"inner sentence\", select [count] sentences"
+given:  One two.  Th|ree four.  Five.
+keys:   dis
+expect: One two.  |  Five.
+regs:   "" = "Three four."
+
+=== das deletes the sentence and the white space after it
+ref:    motion.txt *as*
+quote:  "\"a sentence\", select [count] sentences"
+given:  One two.  Th|ree four.  Five.
+keys:   das
+expect: One two.  |Five.
+regs:   "" = "Three four.  "
+undo:   One two.  |Three four.  Five.
+
+=== das on the last sentence takes the white space before it
+ref:    motion.txt *o_object-select*
+quote:  If there is no white space after the object or when the cursor was in the white space before the object, the white space before the object is included.
+given:  One two.  Th|ree four.
+keys:   das
+expect: One two|.
+regs:   "" = "  Three four."
+
+=== dis on the white space between sentences deletes the white space
+ref:    motion.txt *o_object-select*
+quote:  If the cursor was on white space, the operator applies to the white space.
+given:  One two. |  Three.
+keys:   dis
+expect: One two.|Three.
+regs:   "" = "   "
+
+=== d2as deletes two sentences
+ref:    motion.txt *as*
+quote:  select [count] sentences
+given:  |One.  Two.  Three.
+keys:   d2as
+expect: |Three.
+regs:   "" = "One.  Two.  "
+
+=== a sentence may end at ! or ?
+ref:    motion.txt *sentence*
+quote:  A sentence is defined as ending at a '.', '!' or '?' followed by either the end of a line, or by a space or tab.
+given:  Why? Be|cause! Done.
+keys:   dis
+expect: Why? | Done.
+regs:   "" = "Because!"
+
+=== cis replaces the sentence
+ref:    motion.txt *is*
+quote:  select [count] sentences
+given:  One. Tw|o. Three.
+keys:   cisX.<Esc>
+expect: One. X|. Three.
+regs:   "" = "Two."

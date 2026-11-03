@@ -1,0 +1,202 @@
+   1 | """Areas of shapes."""
+     | ^^^^^^^^^^^^^^^^^^^^^^ string.documentation
+   2 | from __future__ import annotations
+     | ^^^^ keyword.import
+     |      ^^^^^^^^^^ module.builtin
+     |                 ^^^^^^ keyword.import
+     |                        ^^^^^^^^^^^ variable
+   3 | 
+   4 | import math
+     | ^^^^^^ keyword.import
+     |        ^^^^ module
+   5 | from dataclasses import dataclass
+     | ^^^^ keyword.import
+     |      ^^^^^^^^^^^ module
+     |                  ^^^^^^ keyword.import
+     |                         ^^^^^^^^^ variable
+   6 | 
+   7 | 
+   8 | @dataclass
+     | ^^^^^^^^^^ attribute
+   9 | class Circle:
+     | ^^^^^ keyword.type
+     |       ^^^^^^ type
+     |             ^ punctuation.delimiter
+  10 |     radius: float = 1.0
+     |     ^^^^^^ variable.member
+     |           ^ punctuation.delimiter
+     |             ^^^^^ type.builtin
+     |                   ^ operator
+     |                     ^^^ number.float
+  11 | 
+  12 |     def area(self) -> float:
+     |     ^^^ keyword.function
+     |         ^^^^ function.method
+     |             ^ punctuation.bracket
+     |              ^^^^ variable.builtin
+     |                  ^ punctuation.bracket
+     |                    ^^ operator
+     |                       ^^^^^ type.builtin
+     |                            ^ punctuation.delimiter
+  13 |         return math.pi * self.radius**2
+     |         ^^^^^^ keyword.return
+     |                ^^^^ variable
+     |                    ^ punctuation.delimiter
+     |                     ^^ variable.member
+     |                        ^ operator
+     |                          ^^^^ variable.builtin
+     |                              ^ punctuation.delimiter
+     |                               ^^^^^^ variable.member
+     |                                     ^^ operator
+     |                                       ^ number
+  14 | 
+  15 | 
+  16 | def total(shapes: list[Circle], *, scale: int = 1) -> float:
+     | ^^^ keyword.function
+     |     ^^^^^ function
+     |          ^ punctuation.bracket
+     |           ^^^^^^ variable.parameter
+     |                 ^ punctuation.delimiter
+     |                   ^^^^ type.builtin
+     |                       ^ punctuation.bracket
+     |                        ^^^^^^ type
+     |                              ^ punctuation.bracket
+     |                               ^ punctuation.delimiter
+     |                                 ^ operator
+     |                                  ^ punctuation.delimiter
+     |                                    ^^^^^ variable.parameter
+     |                                         ^ punctuation.delimiter
+     |                                           ^^^ type.builtin
+     |                                               ^ operator
+     |                                                 ^ number
+     |                                                  ^ punctuation.bracket
+     |                                                    ^^ operator
+     |                                                       ^^^^^ type.builtin
+     |                                                            ^ punctuation.delimiter
+  17 |     """Sum the areas."""
+     |     ^^^^^^^^^^^^^^^^^^^^ string.documentation
+  18 |     result = 0.0
+     |     ^^^^^^ variable
+     |            ^ operator
+     |              ^^^ number.float
+  19 |     for i, s in enumerate(shapes):
+     |     ^^^ keyword.repeat
+     |         ^ variable
+     |          ^ punctuation.delimiter
+     |            ^ variable
+     |              ^^ keyword.operator
+     |                 ^^^^^^^^^ function.builtin
+     |                          ^ punctuation.bracket
+     |                           ^^^^^^ variable
+     |                                 ^ punctuation.bracket
+     |                                  ^ punctuation.delimiter
+  20 |         if s.area() < 0:
+     |         ^^ keyword.conditional
+     |            ^ variable
+     |             ^ punctuation.delimiter
+     |              ^^^^ function.method.call
+     |                  ^^ punctuation.bracket
+     |                     ^ operator
+     |                       ^ number
+     |                        ^ punctuation.delimiter
+  21 |             raise ValueError(f"shape {i} is negative: {s!r}")
+     |             ^^^^^ keyword.exception
+     |                   ^^^^^^^^^^ constructor
+     |                             ^ punctuation.bracket
+     |                              ^^^^^^^^ string
+     |                                      ^ punctuation.special
+     |                                       ^ string
+     |                                        ^ punctuation.special
+     |                                         ^^^^^^^^^^^^^^ string
+     |                                                       ^ punctuation.special
+     |                                                        ^ string
+     |                                                         ^^ function.macro
+     |                                                           ^ punctuation.special
+     |                                                            ^ string
+     |                                                             ^ punctuation.bracket
+  22 |         result += s.area() * scale
+     |         ^^^^^^ variable
+     |                ^^ operator
+     |                   ^ variable
+     |                    ^ punctuation.delimiter
+     |                     ^^^^ function.method.call
+     |                         ^^ punctuation.bracket
+     |                            ^ operator
+     |                              ^^^^^ variable
+  23 |     match result:
+     |     ^^^^^ keyword.conditional
+     |           ^^^^^^ variable
+     |                 ^ punctuation.delimiter
+  24 |         case 0:
+     |         ^^^^ keyword.conditional
+     |              ^ number
+     |               ^ punctuation.delimiter
+  25 |             return 0.0
+     |             ^^^^^^ keyword.return
+     |                    ^^^ number.float
+  26 |         case _:
+     |         ^^^^ keyword.conditional
+     |              ^ character.special
+     |               ^ punctuation.delimiter
+  27 |             pass
+     |             ^^^^ keyword
+  28 |     squares = [x * x for x in range(3) if x]
+     |     ^^^^^^^ variable
+     |             ^ operator
+     |               ^ punctuation.bracket
+     |                ^ variable
+     |                  ^ operator
+     |                    ^ variable
+     |                      ^^^ keyword.repeat
+     |                          ^ variable
+     |                            ^^ keyword.operator
+     |                               ^^^^^ function.builtin
+     |                                    ^ punctuation.bracket
+     |                                     ^ number
+     |                                      ^ punctuation.bracket
+     |                                        ^^ keyword.conditional
+     |                                           ^ variable
+     |                                            ^ punctuation.bracket
+  29 |     fn = lambda x: x + 1  # noqa
+     |     ^^ variable
+     |        ^ operator
+     |          ^^^^^^ keyword.function
+     |                 ^ variable.parameter
+     |                  ^ punctuation.delimiter
+     |                    ^ variable
+     |                      ^ operator
+     |                        ^ number
+     |                           ^^^^^^ comment
+  30 |     return result if result else None
+     |     ^^^^^^ keyword.return
+     |            ^^^^^^ variable
+     |                   ^^ keyword.conditional
+     |                      ^^^^^^ variable
+     |                             ^^^^ keyword.conditional
+     |                                  ^^^^ constant.builtin
+  31 | 
+  32 | 
+  33 | async def main() -> None:
+     | ^^^^^ keyword.coroutine
+     |       ^^^ keyword.function
+     |           ^^^^ function
+     |               ^^ punctuation.bracket
+     |                  ^^ operator
+     |                     ^^^^ constant.builtin
+     |                         ^ punctuation.delimiter
+  34 |     async with open("x") as f:
+     |     ^^^^^ keyword.coroutine
+     |           ^^^^ keyword
+     |                ^^^^ function.builtin
+     |                    ^ punctuation.bracket
+     |                     ^^^ string
+     |                        ^ punctuation.bracket
+     |                          ^^ keyword
+     |                             ^ variable
+     |                              ^ punctuation.delimiter
+  35 |         await f.read()
+     |         ^^^^^ keyword.coroutine
+     |               ^ variable
+     |                ^ punctuation.delimiter
+     |                 ^^^^ function.method.call
+     |                     ^^ punctuation.bracket

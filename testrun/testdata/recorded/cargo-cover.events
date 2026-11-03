@@ -1,0 +1,43 @@
+{"kind":"output","line":"info: cargo-llvm-cov currently setting cfg(coverage); you can opt-out it by passing --no-cfg-coverage"}
+{"kind":"output","line":"    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.00s"}
+{"kind":"output","package":"lib","line":"     Running unittests src/lib.rs (target/llvm-cov-target/debug/deps/basic-5aec12ec0fa00873)"}
+{"kind":"output","package":"lib"}
+{"kind":"started","package":"lib"}
+{"kind":"started","package":"lib","test":"tests::ignored"}
+{"kind":"skipped","package":"lib","test":"tests::ignored"}
+{"kind":"started","package":"lib","test":"shapes::tests::square"}
+{"kind":"passed","package":"lib","test":"shapes::tests::square"}
+{"kind":"started","package":"lib","test":"tests::fails"}
+{"kind":"started","package":"lib","test":"tests::inner::deep"}
+{"kind":"passed","package":"lib","test":"tests::inner::deep"}
+{"kind":"started","package":"lib","test":"tests::panics"}
+{"kind":"started","package":"lib","test":"tests::passes"}
+{"kind":"passed","package":"lib","test":"tests::passes"}
+{"kind":"started","package":"lib","test":"tests::should_panic"}
+{"kind":"passed","package":"lib","test":"tests::should_panic"}
+{"kind":"output","package":"lib"}
+{"kind":"output","package":"lib"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"about to add"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"thread 'tests::fails' panicked at src/lib.rs:26:9:"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"assertion `left == right` failed"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"  left: 4"}
+{"kind":"output","package":"lib","test":"tests::fails","line":" right: 5"}
+{"kind":"output","package":"lib","test":"tests::fails","line":"note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace"}
+{"kind":"output","package":"lib","test":"tests::fails"}
+{"kind":"output","package":"lib","test":"tests::panics","line":"thread 'tests::panics' panicked at src/lib.rs:32:18:"}
+{"kind":"output","package":"lib","test":"tests::panics","line":"index out of bounds: the len is 0 but the index is 3"}
+{"kind":"output","package":"lib","test":"tests::panics"}
+{"kind":"output","package":"lib","test":"tests::panics"}
+{"kind":"output","package":"lib","line":"    tests::fails"}
+{"kind":"output","package":"lib","line":"    tests::panics"}
+{"kind":"output","package":"lib"}
+{"kind":"failed","package":"lib","test":"tests::fails","failure":{"reason":"assert","message":"assertion `left == right` failed\n  left: 4\n right: 5","want":"5","got":"4","loc":{"file":"src/lib.rs","line":25}}}
+{"kind":"failed","package":"lib","test":"tests::panics","failure":{"reason":"panic","message":"index out of bounds: the len is 0 but the index is 3","loc":{"file":"src/lib.rs","line":31}}}
+{"kind":"failed","package":"lib","failure":{"reason":"assert"}}
+{"kind":"output","package":"lib"}
+{"kind":"output","package":"lib","line":"error: test failed, to rerun pass `--lib`"}
+{"kind":"output","package":"lib","line":"error: 1 target failed:"}
+{"kind":"output","package":"lib","line":"    `--lib`"}
+{"kind":"output","package":"lib","line":"warning: process didn't exit successfully: `$TOOLS/rustup/toolchains/1.83.0-x86_64-unknown-linux-gnu/bin/cargo test --no-fail-fast --manifest-path $ROOT/Cargo.toml --target-dir $ROOT/target/llvm-cov-target --lib` (exit status: 101)"}
+{"kind":"output","package":"lib"}
+{"kind":"output","package":"lib","line":"    Finished report saved to $RUNDIR/llvm-cov.json"}

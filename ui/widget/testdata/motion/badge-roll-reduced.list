@@ -1,0 +1,12 @@
+== start
+backdrop #060606
+rect 0,0 18.8125x14 fill #ff9b45 radius 7
+text "12" @4,10.24 #141006 JetBrains Mono 9
+== mid
+backdrop #060606
+rect 0,0 18.8125x14 fill #ff9b45 radius 7
+text "12" @4,10.24 #141006 JetBrains Mono 9
+== settled
+backdrop #060606
+rect 0,0 18.8125x14 fill #ff9b45 radius 7
+text "12" @4,10.24 #141006 JetBrains Mono 9

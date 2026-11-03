@@ -1,0 +1,312 @@
+# The indent and marker fold methods, and switching between methods.
+
+=== foldmethod indent closes every fold at foldlevel 0
+ref:    fold.txt *fold-indent*
+quote:  The folds are automatically defined by the indent of the lines.
+given:
+  |a
+    b
+      c
+    d
+  e
+keys:   :set fdm=indent sw=2<CR>jj
+expect:
+  a
+    b
+      c
+    d
+  |e
+
+=== foldmethod indent nests deeper indents
+ref:    fold.txt *fold-indent*
+quote:  A sequence of lines with the same or higher fold level form a fold, with the lines with a higher level forming a nested fold.
+given:
+  |a
+    b
+      c
+      d
+    e
+  f
+keys:   :set fdm=indent sw=2<CR>jzojj
+expect:
+  a
+    b
+      c
+      d
+  |  e
+  f
+
+=== foldmethod indent uses shiftwidth
+ref:    fold.txt *fold-indent*
+quote:  The foldlevel is computed from the indent of the line, divided by the 'shiftwidth' (rounded down).
+given:
+  |a
+    b
+      c
+    d
+  e
+keys:   :set fdm=indent sw=4<CR>jzojj
+expect:
+  a
+    b
+      c
+  |  d
+  e
+
+=== zR opens every indent fold
+ref:    fold.txt *zR*
+quote:  Open all folds.
+given:
+  |a
+    b
+      c
+    d
+keys:   :set fdm=indent sw=2<CR>zRjj
+expect:
+  a
+    b
+  |    c
+    d
+
+=== foldlevel 1 leaves indent folds of level 1 open
+ref:    options.txt *'foldlevel'*
+quote:  Sets the fold level: Folds with a higher level will be closed.
+given:
+  |a
+    b
+      c
+      d
+    e
+  f
+keys:   :set fdm=indent sw=2 fdl=1<CR>jjjj
+expect:
+  a
+    b
+      c
+      d
+    e
+  |f
+
+=== empty lines take the lower fold level around them
+ref:    fold.txt *fold-indent*
+quote:  Some lines are ignored and get the fold level of the line above or below it, whichever is lower.
+given:
+  |a
+    b
+  
+    c
+  d
+keys:   :set fdm=indent sw=2<CR>jj
+expect:
+  a
+    b
+  
+    c
+  |d
+
+=== an empty line between indent levels ends the fold
+ref:    fold.txt *fold-indent*
+quote:  These are empty or white lines and lines starting with a character in 'foldignore'.
+given:
+  |a
+    b
+  
+  c
+keys:   :set fdm=indent sw=2<CR>jj
+expect:
+  a
+    b
+  |
+  c
+
+=== dd on an indent fold deletes the block
+ref:    fold.txt *fold-behavior*
+quote:  When using an operator, a closed fold is included as a whole.
+given:
+  a
+  |  b
+      c
+  d
+keys:   :set fdm=indent sw=2<CR>dd
+expect:
+  a
+  |d
+
+=== numbered markers start folds of that level
+ref:    fold.txt *{{{*
+quote:  A fold starts at a "{{{" marker. The following number specifies the fold level.
+given:
+  |a {{{1
+  b
+  c {{{1
+  d
+  e
+keys:   :set fdm=marker<CR>j
+expect:
+  a {{{1
+  b
+  |c {{{1
+  d
+  e
+
+=== a higher numbered marker starts a nested fold
+ref:    fold.txt *{{{*
+quote:  If a marker with a higher fold level is found, a nested fold is started.
+given:
+  |a {{{1
+  b
+  c {{{2
+  d
+  e {{{1
+  f
+keys:   :set fdm=marker<CR>zojjj
+expect:
+  a {{{1
+  b
+  c {{{2
+  d
+  |e {{{1
+  f
+
+=== a lower numbered marker ends the nested folds
+ref:    fold.txt *{{{*
+quote:  If a marker with a lower fold level is found, all folds up to and including this level end and a fold with the specified level starts.
+given:
+  |a {{{1
+  b {{{2
+  c {{{3
+  d
+  e {{{1
+  f
+keys:   :set fdm=marker<CR>j
+expect:
+  a {{{1
+  b {{{2
+  c {{{3
+  d
+  |e {{{1
+  f
+
+=== matching marker pairs nest
+ref:    fold.txt *{{{*
+quote:  Each "{{{" increases the fold level by one, each "}}}" decreases the fold level by one.
+given:
+  |a {{{
+  b
+  c {{{
+  d
+  }}}
+  e }}}
+  f
+keys:   :set fdm=marker<CR>zojjj
+expect:
+  a {{{
+  b
+  c {{{
+  d
+  }}}
+  |e }}}
+  f
+
+=== a closed marker fold covers both markers
+ref:    fold.txt *{{{*
+quote:  Each "{{{" increases the fold level by one, each "}}}" decreases the fold level by one.
+given:
+  |a {{{
+  b
+  }}}
+  c
+keys:   :set fdm=marker<CR>j
+expect:
+  a {{{
+  b
+  }}}
+  |c
+
+=== a numbered end marker ends the fold of that level
+ref:    fold.txt *{{{*
+quote:  You can use "}}}" with a digit to indicate the level of the fold that ends.
+given:
+  |a {{{1
+  b {{{2
+  c }}}2
+  d
+  e
+keys:   :set fdm=marker<CR>zojjj
+expect:
+  a {{{1
+  b {{{2
+  c }}}2
+  d
+  |e
+
+=== a marker with level zero is ignored
+ref:    fold.txt *{{{*
+quote:  A zero cannot be used (a marker with level zero is ignored).
+given:
+  |a {{{0
+  b
+  c
+keys:   :set fdm=marker<CR>j
+expect:
+  a {{{0
+  |b
+  c
+
+=== zj moves to the next marker fold
+ref:    fold.txt *zj*
+quote:  Move downwards to the start of the next fold.
+given:
+  |a
+  b {{{
+  c }}}
+  d
+keys:   :set fdm=marker<CR>zj
+expect:
+  a
+  |b {{{
+  c }}}
+  d
+
+=== setting foldmethod indent replaces manual folds
+ref:    fold.txt *fold-methods*
+quote:  When setting 'foldmethod' to a value other than "manual", all folds are deleted and new ones created.
+given:
+  |one
+  two
+  three
+keys:   zfj:set fdm=indent<CR>j
+expect:
+  one
+  |two
+  three
+
+=== switching to manual keeps the folds
+ref:    fold.txt *fold-methods*
+quote:  Switching to the "manual" method doesn't remove the existing folds.
+given:
+  |a
+    b
+    c
+  d
+keys:   :set fdm=indent sw=2<CR>:set fdm=manual<CR>jj
+expect:
+  a
+    b
+    c
+  |d
+
+=== zd on a fold kept from indent deletes it
+ref:    fold.txt *fold-methods*
+quote:  This can be used to first define the folds automatically and then change them manually.
+given:
+  |a
+    b
+    c
+  d
+keys:   :set fdm=indent sw=2<CR>:set fdm=manual<CR>jzdj
+expect:
+  a
+    b
+  |  c
+  d

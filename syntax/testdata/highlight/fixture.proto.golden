@@ -1,0 +1,103 @@
+   1 | syntax = "proto3";
+     | ^^^^^^ keyword
+     |        ^ operator
+     |          ^^^^^^^^ string.special
+     |                  ^ punctuation.delimiter
+   2 | 
+   3 | package pricing.v1;
+     | ^^^^^^^ keyword.import
+     |         ^^^^^^^ variable
+     |                ^ punctuation.delimiter
+     |                 ^^ variable.member
+     |                   ^ punctuation.delimiter
+   4 | 
+   5 | import "google/protobuf/timestamp.proto";
+     | ^^^^^^ keyword.import
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string
+     |                                         ^ punctuation.delimiter
+   6 | 
+   7 | // A tier's price, in pence.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   8 | message Tier {
+     | ^^^^^^^ keyword.type
+     |         ^^^^ type
+     |              ^ punctuation.bracket
+   9 |   string name = 1;
+     |   ^^^^^^ type
+     |          ^^^^ property
+     |               ^ operator
+     |                 ^ number
+     |                  ^ punctuation.delimiter
+  10 |   int32 pence = 2;
+     |   ^^^^^ type
+     |         ^^^^^ property
+     |               ^ operator
+     |                 ^ number
+     |                  ^ punctuation.delimiter
+  11 |   repeated string features = 3;
+     |   ^^^^^^^^ keyword.modifier
+     |            ^^^^^^ type
+     |                   ^^^^^^^^ property
+     |                            ^ operator
+     |                              ^ number
+     |                               ^ punctuation.delimiter
+  12 |   google.protobuf.Timestamp updated = 4;
+     |   ^^^^^^ type
+     |         ^ punctuation.delimiter
+     |          ^^^^^^^^ type
+     |                  ^ punctuation.delimiter
+     |                   ^^^^^^^^^ type
+     |                             ^^^^^^^ property
+     |                                     ^ operator
+     |                                       ^ number
+     |                                        ^ punctuation.delimiter
+  13 | }
+     | ^ punctuation.bracket
+  14 | 
+  15 | enum Interval {
+     | ^^^^ keyword.type
+     |      ^^^^^^^^ type
+     |               ^ punctuation.bracket
+  16 |   INTERVAL_UNSPECIFIED = 0;
+     |   ^^^^^^^^^^^^^^^^^^^^ constant
+     |                        ^ operator
+     |                          ^ number
+     |                           ^ punctuation.delimiter
+  17 |   INTERVAL_MONTH = 1;
+     |   ^^^^^^^^^^^^^^ constant
+     |                  ^ operator
+     |                    ^ number
+     |                     ^ punctuation.delimiter
+  18 | }
+     | ^ punctuation.bracket
+  19 | 
+  20 | service Prices {
+     | ^^^^^^^ keyword.type
+     |         ^^^^^^ type
+     |                ^ punctuation.bracket
+  21 |   rpc GetTier(GetTierRequest) returns (Tier);
+     |   ^^^ keyword.function
+     |       ^^^^^^^ type
+     |              ^ punctuation.bracket
+     |               ^^^^^^^^^^^^^^ type
+     |                             ^ punctuation.bracket
+     |                               ^^^^^^^ keyword.return
+     |                                       ^ punctuation.bracket
+     |                                        ^^^^ type
+     |                                            ^ punctuation.bracket
+     |                                             ^ punctuation.delimiter
+  22 | }
+     | ^ punctuation.bracket
+  23 | 
+  24 | message GetTierRequest {
+     | ^^^^^^^ keyword.type
+     |         ^^^^^^^^^^^^^^ type
+     |                        ^ punctuation.bracket
+  25 |   string name = 1;
+     |   ^^^^^^ type
+     |          ^^^^ property
+     |               ^ operator
+     |                 ^ number
+     |                  ^ punctuation.delimiter
+  26 | }
+     | ^ punctuation.bracket

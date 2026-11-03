@@ -1,0 +1,219 @@
+# :normal and :{range}normal (various.txt), with macros.
+
+=== :normal runs Normal mode commands
+ref:    nvim/various.txt *:normal*
+quote:  Execute Normal mode commands {commands}.
+given:  |abcdef
+keys:   :normal 2x<CR>
+expect: |cdef
+mode:   normal
+
+=== :norm runs keys like they are typed
+ref:    nvim/various.txt *:normal*
+quote:  {commands} are executed like they are typed.
+given:  |one two three
+keys:   :norm wdw<CR>
+expect: one |three
+mode:   normal
+
+=== :normal finishes an unfinished insert as if <Esc> was typed
+ref:    nvim/various.txt *:normal*
+quote:  If {commands} does not finish a command, the last one will be aborted as if <Esc> or <C-C> was typed.
+given:  |x
+keys:   :normal Afoo<CR>
+expect: xfo|o
+mode:   normal
+
+=== :normal drops an unfinished operator
+ref:    nvim/various.txt *:normal*
+quote:  If {commands} does not finish a command, the last one will be aborted as if <Esc> or <C-C> was typed.
+given:  |one two
+keys:   :normal d<CR>
+expect: |one two
+mode:   normal
+
+=== :normal stops at the first error
+ref:    nvim/various.txt *:normal*
+quote:  Execution stops when an error is encountered.
+given:  |abcd
+keys:   :normal fzx<CR>
+expect: |abcd
+mode:   normal
+
+=== u undoes all of :normal at once
+ref:    nvim/various.txt *:normal*
+quote:  For undo all commands are undone together.
+given:  |abcdef
+keys:   :normal xxx<CR>
+expect: |def
+undo:   |abcdef
+mode:   normal
+
+=== :normal uses mappings
+ref:    nvim/various.txt *:normal*
+quote:  If the [!] is given, mappings will not be used.
+given:
+  |abc
+  two
+keys:   :nmap x dd<CR>:normal x<CR>
+expect: |two
+mode:   normal
+
+=== :normal! ignores mappings
+ref:    nvim/various.txt *:normal*
+quote:  If the [!] is given, mappings will not be used.
+given:
+  |abc
+  two
+keys:   :nmap x dd<CR>:normal! x<CR>
+expect:
+  |bc
+  two
+mode:   normal
+
+=== :normal 1 x starts with a space through a count
+ref:    nvim/various.txt *:normal*
+quote:  {commands} cannot start with a space.  Put a count of 1 (one) before it, "1 " is one space.
+given:  |abc
+keys:   :normal 1 x<CR>
+expect: a|c
+mode:   normal
+
+=== :normal runs a macro
+ref:    nvim/various.txt *:normal*
+quote:  Execute Normal mode commands {commands}.
+given:  |abcdef
+keys:   qaxq:normal 2@a<CR>
+expect: |def
+mode:   normal
+
+=== :normal runs an Ex command finished with <CR>
+ref:    nvim/various.txt *:normal*
+quote:  A ":" command must be completed as well.
+given:
+  |a1
+  a2
+keys:   :exe "normal :s/a/b/\<lt>CR>j"<CR>
+expect:
+  b1
+  |a2
+mode:   normal
+
+=== :normal drops an unfinished : command
+ref:    nvim/various.txt *:normal*
+quote:  A ":" command must be completed as well.
+given:  |a1
+keys:   :normal :s/a/b/<CR>
+expect: |a1
+mode:   normal
+
+=== :%normal runs the keys on every line
+ref:    nvim/various.txt *:normal-range*
+quote:  Execute Normal mode commands {commands} for each line in the {range}.
+given:
+  |one
+  two
+  three
+keys:   :%normal A;<CR>
+expect:
+  one;
+  two;
+  three|;
+mode:   normal
+
+=== :{range}normal starts each line at the first column
+ref:    nvim/various.txt *:normal-range*
+quote:  Before executing the {commands}, the cursor is positioned in the first column of the range, for each line.
+given:
+  abc
+  a|bc
+  abc
+  abc
+keys:   :2,3normal x<CR>
+expect:
+  abc
+  bc
+  |bc
+  abc
+mode:   normal
+
+=== :{range}normal with a count
+ref:    nvim/various.txt *:normal-range*
+quote:  Otherwise it's the same as the ":normal" command without a range.
+given:
+  |abcd
+  abcd
+keys:   :%normal 2x<CR>
+expect:
+  cd
+  |cd
+mode:   normal
+
+=== :{range}normal! ignores mappings on every line
+ref:    nvim/various.txt *:normal-range*
+quote:  Execute Normal mode commands {commands} for each line in the {range}.
+given:
+  |abc
+  abc
+keys:   :nmap x dd<CR>:%normal! x<CR>
+expect:
+  bc
+  |bc
+mode:   normal
+
+=== :{range}normal runs a macro on every line
+ref:    nvim/various.txt *:normal-range*
+quote:  Execute Normal mode commands {commands} for each line in the {range}.
+given:
+  |one
+  two
+  three
+keys:   qaI- <Esc>q:2,$normal @a<CR>
+expect:
+  - one
+  - two
+  -| three
+mode:   normal
+
+=== an error on one line of :{range}normal doesn't stop the others
+ref:    nvim/various.txt *:normal-range*
+quote:  Otherwise it's the same as the ":normal" command without a range.
+given:
+  |a.b
+  ab
+  a.b
+keys:   :%normal f.x<CR>
+expect:
+  ab
+  ab
+  a|b
+mode:   normal
+
+=== :'<,'>normal runs on the lines of the Visual area
+ref:    nvim/various.txt *:normal-range*
+quote:  Execute Normal mode commands {commands} for each line in the {range}.
+given:
+  |one
+  two
+  three
+keys:   Vj:normal I#<CR>
+expect:
+  #one
+  |#two
+  three
+mode:   normal
+
+=== u undoes all lines of :{range}normal at once
+ref:    nvim/various.txt *:normal*
+quote:  For undo all commands are undone together.
+given:
+  |abc
+  abc
+keys:   :%normal x<CR>
+expect:
+  bc
+  |bc
+undo:
+  |abc
+  abc
+mode:   normal

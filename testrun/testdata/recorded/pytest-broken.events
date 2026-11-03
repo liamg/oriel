@@ -1,0 +1,21 @@
+{"kind":"build-failed","package":"tests/test_broken_import.py","time":"2026-10-13T20:31:22.143661056Z","failure":{"reason":"build","message":"ModuleNotFoundError: No module named 'not_a_module_anywhere'","loc":{"file":"tests/test_broken_import.py","line":0}}}
+{"kind":"output","line":"============================= test session starts =============================="}
+{"kind":"output","line":"platform linux -- Python 3.11.2, pytest-8.3.4, pluggy-1.6.0"}
+{"kind":"output","line":"rootdir: $ROOT"}
+{"kind":"output","line":"configfile: pytest.ini"}
+{"kind":"output","line":"plugins: cov-6.0.0"}
+{"kind":"output","line":"collected 0 items / 1 error"}
+{"kind":"output","line":"==================================== ERRORS ===================================="}
+{"kind":"output","line":"_________________ ERROR collecting tests/test_broken_import.py _________________"}
+{"kind":"output","line":"ImportError while importing test module '$ROOT/tests/test_broken_import.py'."}
+{"kind":"output","line":"Hint: make sure your test modules/packages have valid Python names."}
+{"kind":"output","line":"Traceback:"}
+{"kind":"output","line":"/usr/lib/python3.11/importlib/__init__.py:126: in import_module"}
+{"kind":"output","line":"    return _bootstrap._gcd_import(name[level:], package, level)"}
+{"kind":"output","line":"tests/test_broken_import.py:1: in <module>"}
+{"kind":"output","line":"    import not_a_module_anywhere"}
+{"kind":"output","line":"E   ModuleNotFoundError: No module named 'not_a_module_anywhere'"}
+{"kind":"output","line":"=========================== short test summary info ============================"}
+{"kind":"output","line":"ERROR tests/test_broken_import.py"}
+{"kind":"output","line":"!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!"}
+{"kind":"output","line":"=============================== 1 error in 0.07s ==============================="}

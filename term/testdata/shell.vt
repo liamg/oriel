@@ -1,0 +1,68 @@
+# Shell integration with OSC 133 (FinalTerm's semantic prompts): commands are marked where each mark arrives, in
+# screen rows counted from the top of the scrollback, and keep their place as the screen scrolls.
+
+=== a command's prompt, input, output and end
+ref:    semantic-prompts/semantic-prompts.md#Commands
+quote:  "Then start a new command, and enter prompt mode: Subsequent text"
+ref:    semantic-prompts/semantic-prompts.md#Commands
+quote:  "End of prompt and start of user input, terminated"
+ref:    semantic-prompts/semantic-prompts.md#Commands
+quote:  "> End of input, and start of output."
+ref:    semantic-prompts/semantic-prompts.md#Commands
+quote:  "Otherwise, it must be an integer code, where `0` means the command > succeeded, and other values indicate failure."
+size:   20x6
+input:  "\x1b]133;A\x07$ \x1b]133;B\x07false\r\n\x1b]133;C\x07\x1b]133;D;1\x07"
+input:  "\x1b]133;A\x07$ \x1b]133;B\x07ls\r\n\x1b]133;C\x07one\r\ntwo\r\n\x1b]133;D;0\x07"
+input:  "\x1b]133;A\x07$ "
+screen:
+  |$ false             |
+  |$ ls                |
+  |one                 |
+  |two                 |
+  |$                   |
+  |                    |
+commands:
+  A=0,0 B=2,0 C=0,1 D=0,1 exit=1
+  A=0,1 B=2,1 C=0,2 D=0,4 exit=0
+  A=0,4 B=- C=- D=-
+output: "one\ntwo"
+
+=== a command ended without an exit code
+ref:    semantic-prompts/semantic-prompts.md#Commands
+quote:  "The _exit-code_ need not be specified if if there are no _options_, > or if the command was cancelled (no `OSC \"133;C\"`),"
+size:   20x3
+input:  "\x1b]133;A\x07$ \x1b]133;B\x07sle^C\r\n\x1b]133;D\x07"
+commands:
+  A=0,0 B=2,0 C=- D=0,1
+output: ""
+
+=== marks follow their lines into the scrollback
+ref:    semantic-prompts/semantic-prompts.md#Commands
+quote:  "> End of input, and start of output."
+ref:    ghostty/esc/ind.mdx#Index (IND)
+quote:  "If the scroll region is the full terminal screen and the terminal is on the [primary screen](#TODO), this may create scrollback."
+size:   10x3
+input:  "\x1b]133;A\x07$ \x1b]133;B\x07seq\r\n\x1b]133;C\x071\r\n2\r\n3\r\n4\r\n\x1b]133;D;0\x07\x1b]133;A\x07$ "
+screen:
+  |3         |
+  |4         |
+  |$         |
+history:
+  $ seq
+  1
+  2
+commands:
+  A=0,0 B=2,0 C=0,1 D=0,5 exit=0
+  A=0,5 B=- C=- D=-
+output: "1\n2\n3\n4"
+
+=== a mark split across writes
+ref:    semantic-prompts/semantic-prompts.md#Commands
+quote:  "> End of input, and start of output."
+size:   10x3
+setup:  "\x1b]133;A\x07$ \x1b]1"
+input:  "33;B\x07x\r\n\x1b]13"
+input:  "3;C\x07y\r\n\x1b]133;D;7\x1b\\"
+commands:
+  A=0,0 B=2,0 C=0,1 D=0,2 exit=7
+output: "y"

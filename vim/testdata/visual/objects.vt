@@ -1,0 +1,175 @@
+# Text objects in Visual mode: selecting, growing the area, and changing its mode.
+
+=== viw selects the word
+ref:    motion.txt *v_iw*
+quote:  "\"inner word\", select [count] words (see |word|)."
+given:  foo b|ar baz
+keys:   viw
+expect: foo [ba|r] baz
+mode:   visual
+
+=== iw again extends over the white space
+ref:    motion.txt *v_object-select*
+quote:  "For non-block objects the area is extended by one object or the white space up to the next object, or both for the \"a\" objects."
+given:  foo b|ar baz
+keys:   viwiw
+expect: foo [bar| ]baz
+mode:   visual
+
+=== iw three times reaches the next word
+ref:    motion.txt *v_object-select*
+quote:  "For non-block objects the area is extended by one object or the white space up to the next object, or both for the \"a\" objects."
+given:  foo b|ar baz
+keys:   viwiwiw
+expect: foo [bar ba|z]
+mode:   visual
+
+=== v3iw counts white space as a word
+ref:    motion.txt *v_iw*
+quote:  "White space between words is counted too"
+given:  |foo bar baz
+keys:   v3iw
+expect: [foo ba|r] baz
+mode:   visual
+
+=== iw extends backwards over the next word when the cursor is at the start
+ref:    motion.txt *v_object-select*
+quote:  "The direction in which this happens depends on which side of the Visual area the cursor is."
+given:  foo bar |baz
+keys:   vlhhiw
+expect: foo [|bar ^b]az
+mode:   visual
+
+=== vaw selects the word and the white space after it
+ref:    motion.txt *v_aw*
+quote:  "Leading or trailing white space is included, but not counted."
+given:  foo |bar baz
+keys:   vaw
+expect: foo [bar| ]baz
+mode:   visual
+
+=== aw again adds the next word
+ref:    motion.txt *v_object-select*
+quote:  "For non-block objects the area is extended by one object or the white space up to the next object, or both for the \"a\" objects."
+given:  one |two three four
+keys:   vawaw
+expect: one [two three| ]four
+mode:   visual
+
+=== iw in linewise Visual switches to charwise
+ref:    motion.txt *v_iw*
+quote:  "When used in Visual linewise mode \"iw\" switches to Visual characterwise mode."
+given:  foo |bar baz
+keys:   Viw
+expect: foo [ba|r] baz
+mode:   visual
+
+=== aw in linewise Visual switches to charwise
+ref:    motion.txt *v_aw*
+quote:  "When used in Visual linewise mode \"aw\" switches to Visual characterwise mode."
+given:  foo |bar baz
+keys:   Vaw
+expect: foo [bar| ]baz
+mode:   visual
+
+=== vip makes the area linewise
+ref:    motion.txt *v_ip*
+quote:  "When used in Visual mode it is made linewise."
+given:
+  one
+  t|wo
+  
+  three
+keys:   vip
+expect:
+  one
+  |two
+  
+  three
+mode:   visual-line
+
+=== vipd deletes the paragraph's lines
+ref:    motion.txt *v_ip*
+quote:  "\"inner paragraph\", select [count] paragraphs (see |paragraph|)."
+given:
+  one
+  t|wo
+  
+  three
+keys:   vipd
+expect:
+  |
+  three
+regs:   "" = "one\ntwo\n"
+
+=== ip again adds the blank lines after the paragraph
+ref:    motion.txt *v_object-select*
+quote:  "For non-block objects the area is extended by one object or the white space up to the next object, or both for the \"a\" objects."
+given:
+  o|ne
+  two
+  
+  
+  three
+keys:   vipipd
+expect:
+  |three
+regs:   "" = "one\ntwo\n\n\n"
+
+=== vap includes the blank lines after the paragraph
+ref:    motion.txt *v_ap*
+quote:  "When used in Visual mode it is made linewise."
+given:
+  o|ne
+  
+  two
+keys:   vapd
+expect:
+  |two
+regs:   "" = "one\n\n"
+
+=== vi( selects inside the parentheses
+ref:    motion.txt *v_i(*
+quote:  "When used in Visual mode it is made characterwise."
+given:  f(a(b|c)d)
+keys:   vi(
+expect: f(a([b|c])d)
+mode:   visual
+
+=== i( again selects the enclosing block's inside
+ref:    motion.txt *v_object-select*
+quote:  "For the block objects the block is extended one level outwards."
+given:  f(a(b|c)d)
+keys:   vi(i(
+expect: f([a(bc)|d])
+mode:   visual
+
+=== v2i( selects the inside of the second enclosing block
+ref:    motion.txt *v_ib*
+quote:  "\"inner block\", select [count] blocks, from \"[count] [(\" to the matching ')', excluding the '(' and ')' (see |[(|)."
+given:  f(a(b|c)d)
+keys:   v2i(
+expect: f([a(bc)|d])
+mode:   visual
+
+=== va( again selects the enclosing block
+ref:    motion.txt *v_object-select*
+quote:  "For the block objects the block is extended one level outwards."
+given:  f(a(b|c)d)
+keys:   va(a(
+expect: f[(a(bc)d|)]
+mode:   visual
+
+=== vi( in linewise Visual makes the area charwise
+ref:    motion.txt *v_i(*
+quote:  "When used in Visual mode it is made characterwise."
+given:
+  f(
+  |a
+  )
+keys:   Vi(y
+expect:
+  f(
+  |a
+  )
+regs:   "" = "a\n"

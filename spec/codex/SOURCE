@@ -1,0 +1,18 @@
+source: https://github.com/openai/codex (the Codex CLI's Rust source)
+ref: 83086188ae0614bd882818ff1aa23f3194962012 (rust-v0.163.0, 2026-10-15)
+path: codex-rs/rollout/src/{lib,list,rollout_file_name}.rs (where rollouts live and their names),
+  codex-rs/rollout/src/compression.rs (cold rollouts compressed to .jsonl.zst, and read either way),
+  codex-rs/history/src/rollout_payload.rs (a rollout line: {timestamp, type, payload}),
+  codex-rs/protocol/src/protocol.rs (SessionMeta, TurnContextItem, EventMsg, TokenUsage),
+  codex-rs/protocol/src/approvals.rs (ExecPolicyAmendment),
+  codex-rs/app-server-protocol/src/protocol/common.rs (the app-server's methods and notifications),
+  codex-rs/app-server-protocol/src/protocol/v2/{account,item,thread,shared,config,mcp}.rs (their params and answers),
+  codex-rs/login/src/{auth/storage,token_data}.rs (auth.json),
+  codex-rs/apply-patch/src/parser.rs (the apply_patch format),
+  codex-rs/models-manager/models.json (the bundled model catalog),
+  codex-rs/core/config.schema.json (config.toml's keys),
+  .github/workflows/rust-release.yml (the release's binary archives),
+  codex-cli/bin/codex.js (the npm package's launcher, and where it keeps the native binary);
+  the rest is linked, not vendored: codex-rs/protocol/src/models.rs (ResponseItem: function_call, custom_tool_call
+  and their outputs)
+license: Apache-2.0 (see LICENSE)

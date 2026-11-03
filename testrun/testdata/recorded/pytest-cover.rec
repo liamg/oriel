@@ -1,0 +1,30 @@
+#oriel-record args: $TOOLS/py/bin/python -m pytest -p oriel_pytest --cov=$ROOT --cov-report=json:$RUNDIR/coverage.json $ROOT/tests/test_calc.py::test_pass
+#oriel-record env: PYTHONPATH=$RUNDIR
+#oriel-record env: COVERAGE_FILE=$RUNDIR/.coverage
+#oriel-record version: $TOOLS/py/bin/python --version: Python 3.11.2
+#oriel-record version: $TOOLS/py/bin/python -m pytest --version: pytest 8.3.4
+#oriel-record version: $TOOLS/py/bin/python -c import pytest_cov, coverage; print('pytest-cov', pytest_cov.__version__, 'coverage', coverage.__version__): pytest-cov 6.0.0 coverage 7.6.10
+#oriel-record platform: linux/amd64
+#oriel-record exit: 0
+
+@@oriel-event {"event":"sessionstart","rootdir":"$ROOT","time":1791924351.019357}
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-8.3.4, pluggy-1.6.0
+rootdir: $ROOT
+configfile: pytest.ini
+plugins: cov-6.0.0
+collected 1 item
+
+tests/test_calc.py 
+@@oriel-event {"event":"start","nodeid":"tests/test_calc.py::test_pass","location":["tests/test_calc.py",5,"test_pass"],"time":1791924351.0470395}
+.
+@@oriel-event {"event":"result","nodeid":"tests/test_calc.py::test_pass","duration":0.000844024121761322,"outcome":"passed","when":"call","sections":[],"time":1791924351.0482225}
+                                                     [100%]
+@@oriel-event {"event":"sessionfinish","exitstatus":0,"time":1791924351.0607736}
+
+
+---------- coverage: platform linux, python 3.11.2-final-0 -----------
+Coverage JSON written to file $RUNDIR/coverage.json
+
+
+============================== 1 passed in 0.03s ===============================

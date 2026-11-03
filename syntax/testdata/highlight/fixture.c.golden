@@ -1,0 +1,129 @@
+   1 | #include <stdio.h>
+     | ^^^^^^^^ keyword.import
+     |          ^^^^^^^^^ string
+   2 | 
+   3 | #define MAX 10
+     | ^^^^^^^ keyword.directive.define
+     |         ^^^ constant.macro
+     |             ^^ variable
+   4 | 
+   5 | typedef struct point {
+     | ^^^^^^^ keyword.type
+     |         ^^^^^^ keyword.type
+     |                ^^^^^ type
+     |                      ^ punctuation.bracket
+   6 | 	int x, y;
+     |  ^^^ type.builtin
+     |      ^ property
+     |       ^ punctuation.delimiter
+     |         ^ property
+     |          ^ punctuation.delimiter
+   7 | } point;
+     | ^ punctuation.bracket
+     |   ^^^^^ type.definition
+     |        ^ punctuation.delimiter
+   8 | 
+   9 | /* Sum the points' x. */
+     | ^^^^^^^^^^^^^^^^^^^^^^^^ comment
+  10 | static int sum(const point *ps, int n) {
+     | ^^^^^^ keyword.modifier
+     |        ^^^ type.builtin
+     |            ^^^ function
+     |               ^ punctuation.bracket
+     |                ^^^^^ keyword.modifier
+     |                      ^^^^^ type
+     |                            ^^^ variable.parameter
+     |                               ^ punctuation.delimiter
+     |                                 ^^^ type.builtin
+     |                                     ^ variable.parameter
+     |                                      ^ punctuation.bracket
+     |                                        ^ punctuation.bracket
+  11 | 	int total = 0;
+     |  ^^^ type.builtin
+     |      ^^^^^ variable
+     |            ^ operator
+     |              ^ number
+     |               ^ punctuation.delimiter
+  12 | 	for (int i = 0; i < n && i < MAX; i++) {
+     |  ^^^ keyword.repeat
+     |      ^ punctuation.bracket
+     |       ^^^ type.builtin
+     |           ^ variable
+     |             ^ operator
+     |               ^ number
+     |                ^ punctuation.delimiter
+     |                  ^ variable
+     |                    ^ operator
+     |                      ^ variable
+     |                        ^^ operator
+     |                           ^ variable
+     |                             ^ operator
+     |                               ^^^ constant
+     |                                  ^ punctuation.delimiter
+     |                                    ^ variable
+     |                                     ^^ operator
+     |                                       ^ punctuation.bracket
+     |                                         ^ punctuation.bracket
+  13 | 		total += ps[i].x;
+     |   ^^^^^ variable
+     |         ^^ operator
+     |            ^^ variable
+     |              ^ punctuation.bracket
+     |               ^ variable
+     |                ^ punctuation.bracket
+     |                 ^ punctuation.delimiter
+     |                  ^ property
+     |                   ^ punctuation.delimiter
+  14 | 	}
+     |  ^ punctuation.bracket
+  15 | 	return total;
+     |  ^^^^^^ keyword.return
+     |         ^^^^^ variable
+     |              ^ punctuation.delimiter
+  16 | }
+     | ^ punctuation.bracket
+  17 | 
+  18 | int main(void) {
+     | ^^^ type.builtin
+     |     ^^^^ function
+     |         ^ punctuation.bracket
+     |          ^^^^ type.builtin
+     |              ^ punctuation.bracket
+     |                ^ punctuation.bracket
+  19 | 	point ps[] = {{1, 2}, {3, 4}};
+     |  ^^^^^ type
+     |        ^^ variable
+     |          ^^ punctuation.bracket
+     |             ^ operator
+     |               ^^ punctuation.bracket
+     |                 ^ number
+     |                  ^ punctuation.delimiter
+     |                    ^ number
+     |                     ^ punctuation.bracket
+     |                      ^ punctuation.delimiter
+     |                        ^ punctuation.bracket
+     |                         ^ number
+     |                          ^ punctuation.delimiter
+     |                            ^ number
+     |                             ^^ punctuation.bracket
+     |                               ^ punctuation.delimiter
+  20 | 	printf("%d\n", sum(ps, 2));
+     |  ^^^^^^ function.call
+     |        ^ punctuation.bracket
+     |         ^^^ string
+     |            ^^ string.escape
+     |              ^ string
+     |               ^ punctuation.delimiter
+     |                 ^^^ function.call
+     |                    ^ punctuation.bracket
+     |                     ^^ variable
+     |                       ^ punctuation.delimiter
+     |                         ^ number
+     |                          ^^ punctuation.bracket
+     |                            ^ punctuation.delimiter
+  21 | 	return 0;
+     |  ^^^^^^ keyword.return
+     |         ^ number
+     |          ^ punctuation.delimiter
+  22 | }
+     | ^ punctuation.bracket

@@ -1,0 +1,94 @@
+   1 | package pricing;
+     | ^^^^^^^ keyword.import
+     |         ^^^^^^^ variable
+     |                ^ punctuation.delimiter
+   2 | 
+   3 | import java.util.List;
+     | ^^^^^^ keyword.import
+     |        ^^^^ variable
+     |            ^ punctuation.delimiter
+     |             ^^^^ variable
+     |                 ^ punctuation.delimiter
+     |                  ^^^^ type
+     |                      ^ punctuation.delimiter
+   4 | 
+   5 | /** Rounds prices. */
+     | ^^^^^^^^^^^^^^^^^^^^^ comment.documentation
+   6 | public final class Round {
+     | ^^^^^^ keyword.modifier
+     |        ^^^^^ keyword.modifier
+     |              ^^^^^ keyword.type
+     |                    ^^^^^ type
+     |                          ^ punctuation.bracket
+   7 |     private static final int SCALE = 2;
+     |     ^^^^^^^ keyword.modifier
+     |             ^^^^^^ keyword.modifier
+     |                    ^^^^^ keyword.modifier
+     |                          ^^^ type.builtin
+     |                              ^^^^^ constant
+     |                                    ^ operator
+     |                                      ^ number
+     |                                       ^ punctuation.delimiter
+   8 | 
+   9 |     @Override
+     |     ^^^^^^^^^ attribute
+  10 |     public String toString() {
+     |     ^^^^^^ keyword.modifier
+     |            ^^^^^^ type
+     |                   ^^^^^^^^ function.method
+     |                           ^^ punctuation.bracket
+     |                              ^ punctuation.bracket
+  11 |         return "Round(" + SCALE + ")";
+     |         ^^^^^^ keyword.return
+     |                ^^^^^^^^ string
+     |                         ^ operator
+     |                           ^^^^^ constant
+     |                                 ^ operator
+     |                                   ^^^ string
+     |                                      ^ punctuation.delimiter
+  12 |     }
+     |     ^ punctuation.bracket
+  13 | 
+  14 |     public static long total(List<Long> prices) {
+     |     ^^^^^^ keyword.modifier
+     |            ^^^^^^ keyword.modifier
+     |                   ^^^^ type.builtin
+     |                        ^^^^^ function.method
+     |                             ^ punctuation.bracket
+     |                              ^^^^ type
+     |                                  ^ punctuation.bracket
+     |                                   ^^^^ type
+     |                                       ^ punctuation.bracket
+     |                                         ^^^^^^ variable.parameter
+     |                                               ^ punctuation.bracket
+     |                                                 ^ punctuation.bracket
+  15 |         long sum = 0;
+     |         ^^^^ type.builtin
+     |              ^^^ variable
+     |                  ^ operator
+     |                    ^ number
+     |                     ^ punctuation.delimiter
+  16 |         for (long p : prices) {
+     |         ^^^ keyword.repeat
+     |             ^ punctuation.bracket
+     |              ^^^^ type.builtin
+     |                   ^ variable
+     |                     ^ operator
+     |                       ^^^^^^ variable
+     |                             ^ punctuation.bracket
+     |                               ^ punctuation.bracket
+  17 |             sum += p;
+     |             ^^^ variable
+     |                 ^^ operator
+     |                    ^ variable
+     |                     ^ punctuation.delimiter
+  18 |         }
+     |         ^ punctuation.bracket
+  19 |         return sum;
+     |         ^^^^^^ keyword.return
+     |                ^^^ variable
+     |                   ^ punctuation.delimiter
+  20 |     }
+     |     ^ punctuation.bracket
+  21 | }
+     | ^ punctuation.bracket

@@ -1,0 +1,125 @@
+backdrop #060606
+rect 0,0 1400x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1153.2438x38 r 0
+pop
+text "INBOX" @1288.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1339.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1346.15,12.69 #b3ab99 JetBrains Mono 9.5
+rect 0,38 44x836 fill #0c0c0b
+clip 0,38 43x836 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  path 7 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 6 segments fill #060606
+  path 6 segments stroke 1.4 #ffd23f
+  effect glow 18.9,820.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  effect glow 22.8,820.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  path 2 segments stroke 0.8 #ffd23f
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
+rect 43,38 1x836 fill #24221d
+rect 44,38 1356x836 fill #060606
+rect 44,38 400x836 fill #0c0c0b
+clip 44,38 400x836 r 0
+  rect 44,38 400x30 fill #0c0c0b
+  rect 44,38 400x2 fill #ffd23f
+  text "TICKETS" @58,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @424.70312,57.96 #7c7566 JetBrains Mono 11
+  rect 44,68 400x1 fill #24221d
+  clip 44,69 400x805 r 0
+    text "TICKETS" @68,104.22 #ffd23f JetBrains Mono 11
+    text "ENG-1 fix rounding" @68,126.740005 #ece6d8 JetBrains Mono 11
+    text "a note" @68,149.26001 #ece6d8 JetBrains Mono 11
+  pop
+pop
+rect 1000,38 400x836 fill #0c0c0b
+clip 1000,38 400x836 r 0
+  rect 1000,38 400x30 fill #0c0c0b
+  text "BOARD" @1014,57.600002 #7c7566 JetBrains Mono 10
+  text "✕" @1380.7031,57.96 #7c7566 JetBrains Mono 11
+  rect 1000,68 400x1 fill #24221d
+  clip 1000,69 400x805 r 0
+    text "BOARD" @1024,104.22 #ffd23f JetBrains Mono 11
+    text "Doing ← drop here" @1024,126.740005 #ece6d8 JetBrains Mono 11
+    text "got nothing" @1024,149.26001 #ece6d8 JetBrains Mono 11
+  pop
+pop
+rect 0,874 1400x26 fill #0c0c0b
+text "✕" @16,890.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,890.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,890.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,890.95996 #b3ab99 JetBrains Mono 11
+rect 1021,112.520004 358x20.520004 fill #ffd23f24 radius 6 stroke 2 #ffd23f
+rect 1092.0469,133.13 51.609375x21.91455 fill #191815 radius 4 stroke 1 #ffd23f
+text "ENG-1" @1100.0469,148.27063 #ece6d8 Inter 11.5

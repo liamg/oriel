@@ -1,0 +1,4 @@
+source: https://github.com/nextest-rs/nextest
+ref: cargo-nextest-0.9.87
+path: site/src/docs/machine-readable/libtest-json.md
+license: MIT or Apache-2.0 (see LICENSE-MIT, LICENSE-APACHE)

@@ -1,0 +1,12 @@
+== start
+rect 10,10 40x20 fill #3c3c3c
+rect 6,6 48x28 stroke 2 #ffd23f
+rect 60,10 40x20 fill #3c3c3c
+== mid
+rect 10,10 40x20 fill #3c3c3c
+rect 6,6 48x28 stroke 2 #ffd23f
+rect 60,10 40x20 fill #3c3c3c
+== settled
+rect 10,10 40x20 fill #3c3c3c
+rect 6,6 48x28 stroke 2 #ffd23f
+rect 60,10 40x20 fill #3c3c3c

@@ -1,0 +1,25 @@
+box root 0,0 400x300
+  box pane 0,0 100x100 scroll=0,50
+    box 0 0,-50 100x30
+    box 1 0,-20 100x30
+    box 2 0,10 100x30
+    box 3 0,40 100x30
+    box 4 0,70 100x30
+    box 5 0,100 100x30
+    box 6 0,130 100x30
+    box 7 0,160 100x30
+    box 8 0,190 100x30
+    box 9 0,220 100x30
+--- scrolled past the end
+box root 0,0 400x300
+  box pane 0,0 100x100 scroll=0,200
+    box 0 0,-200 100x30
+    box 1 0,-170 100x30
+    box 2 0,-140 100x30
+    box 3 0,-110 100x30
+    box 4 0,-80 100x30
+    box 5 0,-50 100x30
+    box 6 0,-20 100x30
+    box 7 0,10 100x30
+    box 8 0,40 100x30
+    box 9 0,70 100x30

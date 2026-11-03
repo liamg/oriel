@@ -1,0 +1,77 @@
+   1 | # frozen_string_literal: true
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   2 | 
+   3 | module Pricing
+     | ^^^^^^ keyword
+     |        ^^^^^^^ type
+   4 |   class Tier
+     |   ^^^^^ keyword.type
+     |         ^^^^ type
+   5 |     attr_reader :name
+     |     ^^^^^^^^^^^ function.builtin
+     |                 ^^^^^ string.special.symbol
+   6 | 
+   7 |     def initialize(name, rate: 1.5)
+     |     ^^^ keyword.function
+     |         ^^^^^^^^^^ function
+     |                   ^ punctuation.bracket
+     |                    ^^^^ variable.parameter
+     |                        ^ punctuation.delimiter
+     |                          ^^^^ variable.parameter
+     |                              ^ operator
+     |                                ^^^ number.float
+     |                                   ^ punctuation.bracket
+   8 |       @name = name
+     |       ^^^^^ variable.member
+     |             ^ operator
+     |               ^^^^ variable
+   9 |       @rate = rate
+     |       ^^^^^ variable.member
+     |             ^ operator
+     |               ^^^^ variable
+  10 |     end
+     |     ^^^ keyword.function
+  11 | 
+  12 |     def price(base)
+     |     ^^^ keyword.function
+     |         ^^^^^ function
+     |              ^ punctuation.bracket
+     |               ^^^^ variable.parameter
+     |                   ^ punctuation.bracket
+  13 |       (base * @rate).round(2)
+     |       ^ punctuation.bracket
+     |        ^^^^ variable
+     |             ^ operator
+     |               ^^^^^ variable.member
+     |                    ^ punctuation.bracket
+     |                     ^ punctuation.delimiter
+     |                      ^^^^^ function.call
+     |                           ^ punctuation.bracket
+     |                            ^ number
+     |                             ^ punctuation.bracket
+  14 |     end
+     |     ^^^ keyword.function
+  15 |   end
+     |   ^^^ keyword
+  16 | end
+     | ^^^ keyword
+  17 | 
+  18 | puts Pricing::Tier.new("gold").price(10) if __FILE__ == $PROGRAM_NAME
+     | ^^^^ function.call
+     |      ^^^^^^^ type
+     |             ^^ punctuation.delimiter
+     |               ^^^^ type
+     |                   ^ punctuation.delimiter
+     |                    ^^^ function.call
+     |                       ^ punctuation.bracket
+     |                        ^^^^^^ string
+     |                              ^ punctuation.bracket
+     |                               ^ punctuation.delimiter
+     |                                ^^^^^ function.call
+     |                                     ^ punctuation.bracket
+     |                                      ^^ number
+     |                                        ^ punctuation.bracket
+     |                                          ^^ keyword.conditional
+     |                                             ^^^^^^^^ constant.builtin
+     |                                                      ^^ operator
+     |                                                         ^^^^^^^^^^^^^ variable

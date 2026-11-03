@@ -1,0 +1,250 @@
+=== a delete into a named register also fills the unnamed register
+ref:    change.txt *quote_quote*
+quote:  "regardless of whether or not a specific register was used (e.g. \"xdd)."
+given:
+  one
+  |two
+keys:   "add
+expect: |one
+regs:   "a = "two\n"   "" = "two\n"   "1 = "two\n"   "0 = (unset)
+
+=== a yank into a named register leaves "0 alone
+ref:    change.txt *quote2*
+quote:  "Numbered register 0 contains the text from the most recent yank command, unless the command specified another register with [\"x]."
+given:  |foo bar
+keys:   "ayw
+expect: |foo bar
+regs:   "a = "foo "   "" = "foo "   "0 = (unset)
+
+=== ""yw yanks into the unnamed register and "0
+ref:    change.txt *quote_quote*
+quote:  "Additionally you can access it with the name '\"'."
+given:  |foo bar
+keys:   ""yw
+expect: |foo bar
+regs:   "" = "foo "   "0 = "foo "
+
+=== a delete does not change "0
+ref:    change.txt *quote2*
+quote:  "Numbered register 0 contains the text from the most recent yank command"
+given:
+  |one
+  two
+keys:   yyjdd
+expect: |one
+regs:   "0 = "one\n"   "1 = "two\n"   "" = "two\n"
+
+=== "0p puts the last yank after a delete
+ref:    change.txt *quote2*
+quote:  "Numbered register 0 contains the text from the most recent yank command"
+given:  |foo bar
+keys:   yiwwdiw"0P
+expect:
+  foofo|o 
+regs:   "" = "bar"   "- = "bar"
+
+=== successive line deletes shift "1 into "2 and "3
+ref:    change.txt *quote2*
+quote:  "With each successive deletion or change, Vim shifts the previous contents of register 1 into register 2, 2 into 3, and so forth"
+given:
+  |one
+  two
+  three
+  four
+keys:   dddddd
+expect: |four
+regs:   "1 = "three\n"   "2 = "two\n"   "3 = "one\n"   "4 = (unset)
+
+=== the tenth delete drops what was in "9
+ref:    change.txt *quote2*
+quote:  "losing the previous contents of register 9."
+given:
+  |1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+  10
+  11
+keys:   dddddddddddddddddddd
+expect: |11
+regs:   "1 = "10\n"   "9 = "2\n"
+
+=== a small delete goes to "- and does not shift the numbered registers
+ref:    change.txt *quote-*
+quote:  "This register contains text from commands that delete less than one line, except when the command specifies a register with [\"x]."
+given:
+  |one
+  two words
+keys:   dddw
+expect: |words
+regs:   "- = "two "   "1 = "one\n"   "2 = (unset)   "" = "two "
+
+=== a small delete into a named register leaves "- alone
+ref:    change.txt *quote-*
+quote:  "except when the command specifies a register with [\"x]."
+given:  |foo bar
+keys:   "adw
+expect: |bar
+regs:   "a = "foo "   "- = (unset)   "1 = (unset)
+
+=== a line delete into a named register still fills "1
+ref:    change.txt *quote2*
+quote:  "Numbered register 1 contains the text deleted by the most recent delete or change command (even when the command specified another register)"
+given:
+  |one
+  two
+keys:   "bdd
+expect: |two
+regs:   "b = "one\n"   "1 = "one\n"
+
+=== d% within a line fills both "1 and "-
+ref:    change.txt *quote2*
+quote:  "An exception is made for the delete operator with these movement commands: |%|, |(|, |)|, |`|, |/|, |?|, |n|, |N|, |{| and |}|. Register \"1 is always used then (this is Vi compatible). The \"- register is used as well if the delete is within a line."
+given:  x|(a) y
+keys:   d%
+expect: x| y
+regs:   "1 = "(a)"   "- = "(a)"
+
+=== a change of a line goes to "1
+ref:    change.txt *quote2*
+quote:  "Numbered register 1 contains the text deleted by the most recent delete or change command"
+given:
+  |one
+  two
+keys:   ccx<Esc>
+expect:
+  |x
+  two
+regs:   "1 = "one\n"   "- = (unset)
+
+=== "A appends to a charwise register
+ref:    change.txt *quote_alpha*
+quote:  "Specify them as lowercase letters to replace their previous contents or as uppercase letters to append to their previous contents."
+given:  |foo bar baz
+keys:   "ayww"Ayw
+expect: foo |bar baz
+regs:   "a = "foo bar "   "" = "foo bar "
+
+=== "A appends lines to a linewise register
+ref:    change.txt *quote_alpha*
+quote:  "as uppercase letters to append to their previous contents."
+given:
+  |one
+  two
+  three
+keys:   "add"Add
+expect: |three
+regs:   "a = "one\ntwo\n"   "" = "one\ntwo\n"
+
+=== "A appending a line to a charwise register makes it linewise
+ref:    change.txt *quote_alpha*
+quote:  "as uppercase letters to append to their previous contents."
+given:
+  |foo bar
+  two
+keys:   "aywj"Ayy
+expect:
+  foo bar
+  |two
+regs:   "a = "foo \ntwo\n"
+
+=== "A on an empty register just sets it
+ref:    change.txt *quote_alpha*
+quote:  "as uppercase letters to append to their previous contents."
+given:  |foo bar
+keys:   "Ayw
+expect: |foo bar
+regs:   "a = "foo "
+
+=== "Ap puts the register a
+ref:    intro.txt *[quotex]*
+quote:  "The uppercase and lowercase letter designate the same register"
+given:  |ab
+keys:   "aylx"AP
+expect: |ab
+regs:   "a = "a"
+
+=== "_dd leaves every register alone
+ref:    change.txt *quote_*
+quote:  "When writing to this register, nothing happens. This can be used to delete text without affecting the normal registers."
+given:
+  |foo bar
+  two
+keys:   yiwj"_dd
+expect: |foo bar
+regs:   "" = "foo"   "0 = "foo"   "1 = (unset)   "- = (unset)
+dot:    |
+
+=== "_x leaves "- alone
+ref:    change.txt *quote_*
+quote:  "This can be used to delete text without affecting the normal registers."
+given:  |abc
+keys:   x"_x
+expect: |c
+regs:   "" = "a"   "- = "a"
+
+=== "_p puts nothing
+ref:    change.txt *quote_*
+quote:  "When reading from this register, nothing is returned."
+given:  |abc
+keys:   yl"_p
+expect: |abc
+
+=== a count before the register and the operator multiply
+ref:    motion.txt *operator-doubled*
+quote:  "A count before and after the first character is multiplied"
+given:
+  |1
+  2
+  3
+  4
+  5
+  6
+  7
+keys:   2"a3yy
+expect:
+  |1
+  2
+  3
+  4
+  5
+  6
+  7
+regs:   "a = "1\n2\n3\n4\n5\n6\n"   "0 = (unset)
+
+=== the register after the count, then 2dw
+ref:    intro.txt *[quotex]*
+quote:  "An optional register designation where text can be stored."
+given:  |a b c d
+keys:   "q2dw
+expect: |c d
+regs:   "q = "a b "   "" = "a b "
+
+=== a delete after a yank changes the unnamed register but not "0
+ref:    change.txt *quote_quote*
+quote:  "Vim uses the contents of the unnamed register for any put command (p or P) which does not specify a register."
+given:  |ab
+keys:   ylxp
+expect: b|a
+regs:   "" = "a"   "0 = "a"   "- = "a"
+
+=== X fills the small delete register
+ref:    change.txt *quote-*
+quote:  "This register contains text from commands that delete less than one line"
+given:  ab|c
+keys:   2X
+expect: |c
+regs:   "- = "ab"   "1 = (unset)
+
+=== s fills the small delete register
+ref:    change.txt *quote-*
+quote:  "This register contains text from commands that delete less than one line"
+given:  |abc
+keys:   2sx<Esc>
+expect: |xc
+regs:   "- = "ab"   "" = "ab"   "1 = (unset)

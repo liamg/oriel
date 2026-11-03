@@ -1,0 +1,98 @@
+package registry
+
+import (
+	"cmp"
+	"slices"
+)
+
+// Diagnostic severities, as LSP's.
+const (
+	SevError   = "error"
+	SevWarning = "warning"
+	SevInfo    = "info"
+	SevHint    = "hint"
+)
+
+// Diagnostic is a problem at a place in a file: a Lua error, a language server's, a linter's. The editor marks it
+// on its line and Problems lists it.
+type Diagnostic struct {
+	File     string // absolute
+	Line     int    // 0-based
+	From, To int    // byte columns; To 0 is the end of the line
+	Severity string
+	Message  string
+	Owner    string // who published it: "lua", "gopls"
+}
+
+type diagKey struct{ owner, file string }
+
+func (r *reg) SetDiagnostics(owner, file string, ds []Diagnostic) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.diags == nil {
+		r.diags = map[diagKey][]Diagnostic{}
+	}
+	k := diagKey{owner, file}
+	if len(ds) == 0 {
+		if _, ok := r.diags[k]; !ok {
+			return
+		}
+		delete(r.diags, k)
+	} else {
+		out := make([]Diagnostic, len(ds))
+		for i, d := range ds {
+			d.File, d.Owner = file, owner
+			out[i] = d
+		}
+		r.diags[k] = out
+	}
+	r.diagGen++
+}
+
+// diagIndex is every diagnostic sorted, and by file, as of a generation.
+type diagIndex struct {
+	gen    int
+	all    []Diagnostic
+	byFile map[string][]Diagnostic
+}
+
+// index is the diagnostics' index, made again when they've changed. r.mu is held.
+func (r *reg) index() *diagIndex {
+	if x := r.diagIdx; x != nil && x.gen == r.diagGen {
+		return x
+	}
+	x := &diagIndex{gen: r.diagGen, byFile: map[string][]Diagnostic{}}
+	for _, ds := range r.diags {
+		x.all = append(x.all, ds...)
+	}
+	sortDiagnostics(x.all)
+	x.all = slices.Clip(x.all)
+	for i := 0; i < len(x.all); {
+		j := i + 1
+		for j < len(x.all) && x.all[j].File == x.all[i].File {
+			j++
+		}
+		x.byFile[x.all[i].File] = x.all[i:j:j]
+		i = j
+	}
+	r.diagIdx = x
+	return x
+}
+
+func (r *reg) Diagnostics() ([]Diagnostic, int) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.index().all, r.diagGen
+}
+
+func (r *reg) DiagnosticsFor(file string) []Diagnostic {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.index().byFile[file]
+}
+
+func sortDiagnostics(ds []Diagnostic) {
+	slices.SortStableFunc(ds, func(a, b Diagnostic) int {
+		return cmp.Or(cmp.Compare(a.File, b.File), cmp.Compare(a.Line, b.Line), cmp.Compare(a.From, b.From), cmp.Compare(a.Owner, b.Owner))
+	})
+}

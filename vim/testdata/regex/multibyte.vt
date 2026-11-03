@@ -1,0 +1,71 @@
+# Multibyte text: . and multis count characters, not bytes.
+
+=== . matches one multibyte character
+ref:    pattern.txt *pattern-multibyte*
+quote:  Patterns will also work with multibyte characters, mostly as you would expect.
+given:  |aéc
+keys:   :s/a.c/(&)/<CR>
+expect: |(aéc)
+
+=== . matches one CJK character
+ref:    pattern.txt *pattern-multibyte*
+quote:  Patterns will also work with multibyte characters, mostly as you would expect.
+given:  |漢字x
+keys:   :s/漢./(&)/<CR>
+expect: |(漢字)x
+
+=== \{n} counts characters
+ref:    pattern.txt *pattern-multibyte*
+quote:  Patterns will also work with multibyte characters, mostly as you would expect.
+given:  |漢字かな
+keys:   :s/.\{3}/(&)/<CR>
+expect: |(漢字か)な
+
+=== a collection holds multibyte characters
+ref:    pattern.txt */[]*
+quote:  [А-яЁё]		Russian alphabet (with utf-8 and cp1251)
+given:  |Ёж z
+keys:   :s/[А-яЁё]\+/(&)/<CR>
+expect: |(Ёж) z
+
+=== [^] matches a multibyte character
+ref:    pattern.txt *E944*
+quote:  "\"[^xyz]\" matches anything but 'x', 'y' and 'z'."
+given:  |x漢y
+keys:   :s/[^xy]/(&)/g<CR>
+expect: |x(漢)y
+
+=== \S\+ spans CJK characters
+ref:    pattern.txt */\S*
+quote:  non-whitespace character; opposite of \s
+given:  |漢字 かな
+keys:   :s/\S\+/(&)/g<CR>
+expect: |(漢字) (かな)
+
+=== \< finds a word boundary between CJK and ASCII
+ref:    pattern.txt */\<*
+quote:  Matches the beginning of a word: The next char is the first char of a word.
+given:  |漢字abc
+keys:   :s/\<a/(&)/<CR>
+expect: |漢字(a)bc
+
+=== \a does not match a multibyte letter
+ref:    pattern.txt */\P*
+quote:  NOTE: the above also work for multibyte characters.  The ones below only match ASCII characters, as indicated by the range.
+given:  |éa
+keys:   :s/\a/(&)/g<CR>
+expect: |é(a)
+
+=== \%u matches a CJK character
+ref:    pattern.txt */\%d*
+quote:  Matches the character specified with up to four hexadecimal characters.
+given:  |a漢b
+keys:   :s/\%u6f22/(&)/<CR>
+expect: |a(漢)b
+
+=== a search lands on a CJK character
+ref:    pattern.txt */*
+quote:  Search forward for the [count]'th occurrence of {pattern} |exclusive|.
+given:  |漢字 漢字
+keys:   /字<CR>
+expect: 漢|字 漢字

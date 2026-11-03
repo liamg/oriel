@@ -1,0 +1,186 @@
+=== di( deletes inside the parentheses
+ref:    motion.txt *ib*
+quote:  "\"inner block\", select [count] blocks, from \"[count] [(\" to the matching ')', excluding the '(' and ')'"
+given:  f(a, |b) x
+keys:   di(
+expect: f(|) x
+regs:   "" = "a, b"
+undo:   f(|a, b) x
+
+=== da( deletes the parentheses too, but no white space around them
+ref:    motion.txt *ab*
+quote:  including the '(' and ')' (see |[(|). Does not include white space outside of the parenthesis.
+given:  f (a, |b) x
+keys:   da(
+expect: f | x
+regs:   "" = "(a, b)"
+
+=== dib is the same as di(
+ref:    motion.txt *ib*
+quote:  "\"inner block\", select [count] blocks"
+given:  f(a|b)
+keys:   dib
+expect: f(|)
+regs:   "" = "ab"
+
+=== dab is the same as da(
+ref:    motion.txt *ab*
+quote:  "\"a block\", select [count] blocks"
+given:  f(a|b)
+keys:   dab
+expect: |f
+regs:   "" = "(ab)"
+
+=== di) is the same as di(
+ref:    motion.txt *ib*
+quote:  "\"inner block\", select [count] blocks"
+given:  f(a|b)
+keys:   di)
+expect: f(|)
+regs:   "" = "ab"
+
+=== da) is the same as da(
+ref:    motion.txt *ab*
+quote:  "\"a block\", select [count] blocks"
+given:  x(a|b)y
+keys:   da)
+expect: x|y
+regs:   "" = "(ab)"
+
+=== di( with the cursor on the opening parenthesis
+ref:    motion.txt *o_object-select*
+quote:  The operator applies to the block where the cursor is in, or the block on which the cursor is on one of the braces.
+given:  f|(ab) x
+keys:   di(
+expect: f(|) x
+regs:   "" = "ab"
+
+=== di( with the cursor on the closing parenthesis
+ref:    motion.txt *o_object-select*
+quote:  or the block on which the cursor is on one of the braces.
+given:  f(ab|) x
+keys:   di(
+expect: f(|) x
+regs:   "" = "ab"
+
+=== di( picks the innermost block around the cursor
+ref:    motion.txt *ib*
+quote:  "from \"[count] [(\" to the matching ')'"
+given:  (a (b|c) d)
+keys:   di(
+expect: (a (|) d)
+regs:   "" = "bc"
+
+=== di( outside a nested block uses the enclosing one
+ref:    motion.txt *ib*
+quote:  "from \"[count] [(\" to the matching ')'"
+given:  (a (bc) |d)
+keys:   di(
+expect: (|)
+regs:   "" = "a (bc) d"
+
+=== d2i( selects the second enclosing block
+ref:    motion.txt *ib*
+quote:  select [count] blocks
+given:  (a (b|c) d)
+keys:   d2i(
+expect: (|)
+regs:   "" = "a (bc) d"
+
+=== d2a( deletes the second enclosing block with its parentheses
+ref:    motion.txt *ab*
+quote:  select [count] blocks
+given:  x(a (b|c) d)y
+keys:   d2a(
+expect: x|y
+regs:   "" = "(a (bc) d)"
+
+=== d3i( with too few enclosing blocks does nothing
+ref:    motion.txt *ib*
+quote:  select [count] blocks
+given:  (a (b|c) d)
+keys:   d3i(
+expect: (a (b|c) d)
+
+=== di( on an empty block does nothing
+ref:    motion.txt *ib*
+quote:  "It's an error to select an empty inner block like \"()\"."
+given:  f(|)
+keys:   di(
+expect: f(|)
+regs:   "" = (unset)
+
+=== da( on an empty block deletes the parentheses
+ref:    motion.txt *ab*
+quote:  including the '(' and ')'
+given:  f(|) x
+keys:   da(
+expect: f| x
+regs:   "" = "()"
+
+=== di( before a block on the line finds the next (
+ref:    motion.txt *ib*
+quote:  "If the cursor is not inside a () block, then find the next \"(\"."
+given:  |x = f(ab)
+keys:   di(
+expect: x = f(|)
+regs:   "" = "ab"
+
+=== di( with no parentheses on the line does nothing
+ref:    motion.txt *ib*
+quote:  "If the cursor is not inside a () block, then find the next \"(\"."
+given:  foo |bar
+keys:   di(
+expect: foo |bar
+regs:   "" = (unset)
+
+=== di( after the last block on the line does nothing
+ref:    motion.txt *ib*
+quote:  "If the cursor is not inside a () block"
+given:  f(ab) |x
+keys:   di(
+expect: f(ab) |x
+
+=== ci( replaces the inside of the block
+ref:    motion.txt *ib*
+quote:  excluding the '(' and ')'
+given:  f(a|b, c)
+keys:   ci(x<Esc>
+expect: f(|x)
+mode:   normal
+regs:   "" = "ab, c"
+dot:    f(|x)
+
+=== yi( yanks the inside and moves to its start
+ref:    motion.txt *ib*
+quote:  excluding the '(' and ')'
+given:  f(ab|c)
+keys:   yi(
+expect: f(|abc)
+regs:   "0 = "abc"
+
+=== ya( yanks the block and moves to the opening parenthesis
+ref:    motion.txt *ab*
+quote:  including the '(' and ')'
+given:  f(ab|c)
+keys:   ya(
+expect: f|(abc)
+regs:   "0 = "(abc)"
+
+=== di( over several lines is charwise when the parentheses share lines with text
+ref:    motion.txt *ib*
+quote:  excluding the '(' and ')'
+given:
+  f(a,
+    |b)
+keys:   di(
+expect: f(|)
+regs:   "" = "a,\n  b"
+
+=== an escaped parenthesis is skipped when cpo has no M
+ref:    options.txt *cpo-M*
+quote:  When excluded, "%" matching will take backslashes into account.
+given:  (a \) |b)
+keys:   di(
+expect: (|)
+regs:   "" = "a \\) b"

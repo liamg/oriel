@@ -1,0 +1,4 @@
+source: https://github.com/rust-lang/reference
+commit: 2dafab96d919d6ab2884488e970bf95610ff83eb
+path: src/attributes/testing.md
+license: MIT or Apache-2.0 (see LICENSE-MIT, LICENSE-APACHE)

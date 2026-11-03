@@ -1,0 +1,6 @@
+box root 0,0 400x300
+  box row 0,0 400x40
+    box fixed 10,10 50x20
+    text label 65,10 18x14 "abc"
+    box one 88,10 99x10
+    box two 192,10 198x10

@@ -1,0 +1,175 @@
+# Recording with q{reg} and replaying with @{reg} (repeat.txt, complex-repeat).
+
+=== qa records keys and @a replays them
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:  |abcdef
+keys:   qaxq@a
+expect: |cdef
+regs:   "a = "x"
+mode:   normal
+
+=== the q that stops recording isn't stored
+ref:    nvim/repeat.txt *q*
+quote:  The 'q' that stops recording is not stored in the register
+given:  |one two three
+keys:   qadwq
+expect: |two three
+regs:   "a = "dw"
+mode:   normal
+
+=== recording leaves the unnamed register to the commands it records
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:  |one two three
+keys:   qadwq
+expect: |two three
+regs:   "" = "one "   "- = "one "
+mode:   normal
+
+=== recording an insert keeps the <Esc>
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:
+  |one
+  two
+keys:   qaI- <Esc>jq@a
+expect:
+  - one
+  -| two
+regs:   "a = "I- \x1bj"
+mode:   normal
+
+=== recording an Ex command keeps the <CR>
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:
+  |a1
+  a2
+  a3
+keys:   qa:s/a/b/<CR>jq@a
+expect:
+  b1
+  b2
+  |a3
+regs:   "a = ":s/a/b/\rj"
+mode:   normal
+
+=== q in Insert mode is just a character
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:  |x
+keys:   qaiq<Esc>q
+expect: |qx
+regs:   "a = "iq\x1b"
+mode:   normal
+
+=== qA appends to the recording in a
+ref:    nvim/repeat.txt *q*
+quote:  (uppercase to append)
+given:  |abcdefgh
+keys:   qaxqqAxq@a
+expect: |efgh
+regs:   "a = "xx"
+mode:   normal
+
+=== qA appends a recording to a yanked word
+ref:    nvim/repeat.txt *q*
+quote:  (uppercase to append)
+given:  |foo bar
+keys:   "ayiwqA$q
+expect: foo ba|r
+regs:   "a = "foo$"
+mode:   normal
+
+=== qA appends a recording to a yanked line before its newline
+ref:    nvim/repeat.txt *q*
+quote:  (uppercase to append)
+given:
+  |one
+  two
+keys:   "ayyqAjq
+expect:
+  one
+  |two
+regs:   "a = "onej\n"
+mode:   normal
+
+=== qaq empties register a
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:  |foo bar
+keys:   "ayiwqaq
+expect: |foo bar
+regs:   "a = ""
+mode:   normal
+
+=== q1 records into a numbered register
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:  |abcd
+keys:   q1xq@1
+expect: |cd
+regs:   "1 = "x"
+mode:   normal
+
+=== a count typed while recording is recorded
+ref:    nvim/repeat.txt *q*
+quote:  Record typed characters into register {0-9a-zA-Z"}
+given:  |abcdefgh
+keys:   qa2xq@a
+expect: |efgh
+regs:   "a = "2x"
+mode:   normal
+
+=== a count before q is kept and applies to the key after the replay
+ref:    nvim/repeat.txt *q*
+quote:  Stops recording.
+given:  |abcdefgh
+keys:   qax3q@ax
+expect: |fgh
+regs:   "a = "x3"
+mode:   normal
+
+=== a put of the recorded register gives the keys as text
+ref:    nvim/repeat.txt *q*
+quote:  the put will paste the recorded macro
+given:  |one two
+keys:   qadwq"aP
+expect: d|wtwo
+regs:   "a = "dw"
+mode:   normal
+
+=== q is disabled while executing a register
+ref:    nvim/repeat.txt *q*
+quote:  The 'q' command is disabled while executing a register
+given:  |qbxq abc
+keys:   "ay4lw@a
+expect: |bxq abc
+regs:   "b = (unset)
+mode:   normal
+
+=== q inside :normal records nothing
+ref:    nvim/repeat.txt *q*
+quote:  it doesn't work inside a mapping and |:normal|.
+given:  |abc
+keys:   :normal qbxq<CR>
+expect: |bc
+regs:   "b = ""
+mode:   normal
+
+=== Q replays the last recorded register
+ref:    nvim/repeat.txt *Q*
+quote:  Repeat the last recorded register [count] times.
+given:  |abcdefgh
+keys:   qaxqQ
+expect: |cdefgh
+mode:   normal
+
+=== 2Q replays the last recorded register twice
+ref:    nvim/repeat.txt *Q*
+quote:  Repeat the last recorded register [count] times.
+given:  |abcdefgh
+keys:   qbxq2Q
+expect: |defgh
+mode:   normal

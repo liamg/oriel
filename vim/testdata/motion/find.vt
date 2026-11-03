@@ -1,0 +1,204 @@
+=== f moves onto the next occurrence of the character
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right.  The cursor is placed on {char} |inclusive|."
+given:  |a-b-c
+keys:   f-
+expect: a|-b-c
+
+=== 2f goes to the second occurrence
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:  |a-b-c
+keys:   2f-
+expect: a-b|-c
+
+=== f ignores the character under the cursor
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:  |-a-b
+keys:   f-
+expect: -a|-b
+
+=== f with no match does not move
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:  a|bc
+keys:   fz
+expect: a|bc
+
+=== f with a count larger than the matches does not move
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:  |a-b-c
+keys:   3f-
+expect: |a-b-c
+
+=== f does not search past the end of the line
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:
+  |abc
+  xyz
+keys:   fx
+expect:
+  |abc
+  xyz
+
+=== f finds a wide character
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:  |a漢b漢
+keys:   2f漢
+expect: a漢b|漢
+
+=== f<Space> finds a space
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:  |foo bar
+keys:   f<Space>
+expect: foo| bar
+
+=== df deletes through the found character (inclusive)
+ref:    motion.txt *f*
+quote:  "The cursor is placed on {char} |inclusive|."
+given:  |abc)x
+keys:   df)
+expect: |x
+regs:   "" = "abc)"
+
+=== df with no match deletes nothing
+ref:    motion.txt *f*
+quote:  "To [count]'th occurrence of {char} to the right."
+given:  |abc
+keys:   dfz
+expect: |abc
+
+=== F moves onto the previous occurrence
+ref:    motion.txt *F*
+quote:  "To the [count]'th occurrence of {char} to the left. The cursor is placed on {char} |exclusive|."
+given:  a-b-|c
+keys:   F-
+expect: a-b|-c
+
+=== 2F goes to the second occurrence to the left
+ref:    motion.txt *F*
+quote:  "To the [count]'th occurrence of {char} to the left."
+given:  a-b-|c
+keys:   2F-
+expect: a|-b-c
+
+=== F with no match does not move
+ref:    motion.txt *F*
+quote:  "To the [count]'th occurrence of {char} to the left."
+given:  ab|c
+keys:   Fz
+expect: ab|c
+
+=== dF deletes back to the found character, not the cursor character (exclusive)
+ref:    motion.txt *F*
+quote:  "The cursor is placed on {char} |exclusive|."
+given:  ab-cd|e
+keys:   dF-
+expect: ab|e
+regs:   "" = "-cd"
+
+=== t moves to just before the character
+ref:    motion.txt *t*
+quote:  "Till before [count]'th occurrence of {char} to the right.  The cursor is placed on the character left of {char} |inclusive|."
+given:  |ab-c
+keys:   t-
+expect: a|b-c
+
+=== t right in front of the character does not move
+ref:    motion.txt *t*
+quote:  "Till before [count]'th occurrence of {char} to the right."
+given:  |a-b
+keys:   t-
+expect: |a-b
+
+=== 2t with a count
+ref:    motion.txt *t*
+quote:  "Till before [count]'th occurrence of {char} to the right."
+given:  |a-b-c
+keys:   2t-
+expect: a-|b-c
+
+=== dt deletes up to but not including the character
+ref:    motion.txt *t*
+quote:  "The cursor is placed on the character left of {char} |inclusive|."
+given:  |abc)x
+keys:   dt)
+expect: |)x
+regs:   "" = "abc"
+
+=== T moves to just after the previous occurrence
+ref:    motion.txt *T*
+quote:  "Till after [count]'th occurrence of {char} to the left.  The cursor is placed on the character right of {char} |exclusive|."
+given:  a-bc|d
+keys:   T-
+expect: a-|bcd
+
+=== dT deletes back to just after the character (exclusive)
+ref:    motion.txt *T*
+quote:  "The cursor is placed on the character right of {char} |exclusive|."
+given:  a-bc|d
+keys:   dT-
+expect: a-|d
+regs:   "" = "bc"
+
+=== ; repeats the last f
+ref:    motion.txt *;*
+quote:  "Repeat latest f, t, F or T [count] times."
+given:  |a-b-c-d
+keys:   f-;
+expect: a-b|-c-d
+
+=== ; with a count
+ref:    motion.txt *;*
+quote:  "Repeat latest f, t, F or T [count] times."
+given:  |a-b-c-d
+keys:   f-2;
+expect: a-b-c|-d
+
+=== , repeats the last f in the opposite direction
+ref:    motion.txt *,*
+quote:  "Repeat latest f, t, F or T in opposite direction [count] times."
+given:  |a-b-c
+keys:   f-;,
+expect: a|-b-c
+
+=== , after F searches forward
+ref:    motion.txt *,*
+quote:  "Repeat latest f, t, F or T in opposite direction [count] times."
+given:  a-b|-c-d
+keys:   F-,
+expect: a-b|-c-d
+
+=== , after T moves forward like t
+ref:    motion.txt *,*
+quote:  "Repeat latest f, t, F or T in opposite direction [count] times."
+given:  a-b|cd-e
+keys:   T-,
+expect: a-bc|d-e
+
+=== ; after t skips the character it stands in front of
+ref:    options.txt *cpo-;*
+quote:  "When not included, the cursor would skip over it and jump to the following occurrence."
+given:  |a-b-c
+keys:   t-;
+expect: a-|b-c
+
+=== ; with no further match does not move
+ref:    motion.txt *;*
+quote:  "Repeat latest f, t, F or T [count] times."
+given:  |a-b
+keys:   f-;
+expect: a|-b
+
+=== d; deletes through the repeated find (inclusive)
+ref:    motion.txt *;*
+quote:  "Repeat latest f, t, F or T [count] times."
+given:  |a-b-c
+keys:   f-d;
+expect: a|c
+regs:   "" = "-b-"

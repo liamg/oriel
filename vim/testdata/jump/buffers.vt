@@ -1,0 +1,372 @@
+# The jumplist across buffers: each entry is in a buffer, commands that edit another buffer are jumps,
+# and CTRL-O / CTRL-I go back to the buffer an entry is in. The given buffer is buffer 1; others are made
+# with :enew, or :e of a file that doesn't exist. `jumps:` writes an entry in another buffer as line:col@N.
+
+=== :e of another file is a jump: CTRL-O goes back to the buffer it left
+ref:    motion.txt *jump-motions*
+quote:  "\"L\", \"M\", \"H\" and the commands that start editing a new file."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :e jumpnew.txt<CR><C-o>
+expect:
+  one
+  two
+  th|ree
+  four
+bufs:   1% 2#
+jumps:  3:2 1:0@2
+
+=== CTRL-I goes forward again to the other buffer
+ref:    motion.txt *CTRL-I*
+quote:  "Go to [count] newer cursor position in jump list"
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :e jumpnew.txt<CR><C-o><C-i>
+expect: |
+bufs:   1# 2%
+
+=== :enew is a jump
+ref:    motion.txt *jump-motions*
+quote:  "\"L\", \"M\", \"H\" and the commands that start editing a new file."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR><C-o>
+expect:
+  one
+  t|wo
+  three
+bufs:   1% 2#
+
+=== the jumplist shows entries in another buffer with their buffer
+ref:    motion.txt *jumplist*
+quote:  "The \"file/text\" column shows the file name, or the text at the jump if it is in the current file"
+given:
+  o|ne
+  two
+  three
+  four
+keys:   G:enew<CR>
+expect: |
+jumps:  1:1@1 4:1@1
+
+=== :b N is a jump
+ref:    motion.txt *jump-motions*
+quote:  "\"L\", \"M\", \"H\" and the commands that start editing a new file."
+given:
+  one
+  two
+  th|ree
+keys:   :enew<CR>ix<CR>y<CR>z<Esc>:b 1<CR><C-o>
+expect:
+  x
+  y
+  |z
+bufs:   1# 2%
+
+=== :bnext and :bprevious are jumps
+ref:    motion.txt *jump-motions*
+quote:  "\"L\", \"M\", \"H\" and the commands that start editing a new file."
+given:
+  one
+  two
+  th|ree
+keys:   :enew<CR>ix<CR>y<Esc>:bnext<CR>:bprevious<CR><C-o><C-o>
+expect:
+  one
+  two
+  th|ree
+bufs:   1% 2#
+jumps:  3:2 2:0@2
+
+=== CTRL-^ is a jump
+ref:    motion.txt *jump-motions*
+quote:  "\"L\", \"M\", \"H\" and the commands that start editing a new file."
+given:
+  one
+  two
+  th|ree
+keys:   :enew<CR>ix<CR>y<Esc><C-^><C-o>
+expect:
+  x
+  |y
+bufs:   1# 2%
+
+=== a quickfix jump to another buffer is a jump
+ref:    motion.txt *jump-motions*
+quote:  "\"L\", \"M\", \"H\" and the commands that start editing a new file."
+given:
+  one
+  two
+  th|ree
+keys:   :file x.txt<CR>:enew<CR>ia<CR>b<Esc>:cexpr ["x.txt:1:2:first"]<CR><C-o>
+expect:
+  a
+  |b
+bufs:   1# 2%
+
+=== CTRL-O within the other buffer, then back to the first
+ref:    motion.txt *jumplist*
+quote:  "With more CTRL-O commands you will go to lines 70 and 1."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<CR>b<CR>c<Esc>gg<C-o><C-o><C-o>
+expect:
+  one
+  t|wo
+  three
+bufs:   1% 2#
+
+=== a count to CTRL-O crosses buffers
+ref:    motion.txt *CTRL-O*
+quote:  "Go to [count] Older cursor position in jump list"
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<CR>b<CR>c<Esc>gg2<C-o>
+expect:
+  one
+  t|wo
+  three
+
+=== the same line in two buffers is two entries
+ref:    motion.txt *jumplist*
+quote:  "If the same line was already in the jump list, it is removed."
+given:
+  |one
+  two
+  three
+keys:   :enew<CR>:b 1<CR>G
+expect:
+  one
+  two
+  |three
+jumps:  1:0@2 1:0
+
+=== CTRL-O does not go back to a wiped out buffer
+ref:    windows.txt *:bwipeout*
+quote:  "All marks in this buffer become invalid, option settings are lost, the jumplist and tagstack data will be purged, etc."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<CR>b<Esc>:bwipeout! 1<CR><C-o>
+expect:
+  a
+  |b
+bufs:   2%
+
+=== CTRL-O does not go back to a deleted buffer
+ref:    nvim/options.txt *'jumpoptions'*
+quote:  "clean Remove unloaded buffers from the jumplist."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<CR>b<Esc>:bdelete! 1<CR><C-o>
+expect:
+  a
+  |b
+bufs:   2%
+
+=== CTRL-O does not go back to an unloaded buffer
+ref:    nvim/options.txt *'jumpoptions'*
+quote:  "clean Remove unloaded buffers from the jumplist."
+given:
+  one
+  t|wo
+  three
+keys:   :file x.txt<CR>:enew<CR>ia<CR>b<Esc>:bunload! 1<CR><C-o>
+expect:
+  a
+  |b
+bufs:   1# 2%
+
+=== CTRL-O passes over the entries of a deleted buffer
+ref:    nvim/options.txt *'jumpoptions'*
+quote:  "clean Remove unloaded buffers from the jumplist."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<Esc>:enew<CR>:bdelete! 1<CR><C-o><C-o>
+expect: |a
+bufs:   2% 3#
+
+=== :b with the current buffer is not a jump
+ref:    motion.txt *jump-motions*
+quote:  "\"L\", \"M\", \"H\" and the commands that start editing a new file."
+given:
+  one
+  t|wo
+  three
+keys:   :b 1<CR>
+expect:
+  one
+  t|wo
+  three
+jumps:
+
+=== entries follow changes made to their buffer in another window
+ref:    motion.txt *jumplist*
+quote:  "The line numbers will be adjusted for deleted and inserted lines."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>:enew<CR><C-w>jggdd<C-w>k<C-o>
+expect:
+  two
+  th|ree
+win:    1/2
+
+=== CTRL-W ^ copies the jumplist into the new window
+ref:    motion.txt *jumplist*
+quote:  "When you split a window, the jumplist will be copied to the new window."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<Esc>G<C-w>^
+expect:
+  one
+  t|wo
+  three
+jumps:  2:1 1:0@2
+marks:  ''=1:0
+win:    1/2
+
+=== CTRL-W ^ itself is not a jump
+ref:    oracle nvim v0.11.7
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<Esc><C-w>^
+expect:
+  one
+  t|wo
+  three
+jumps:
+win:    1/2
+
+=== :sbuffer copies the jumplist, then jumps
+ref:    windows.txt *:sbuffer*
+quote:  "Split window and edit buffer [N] from the buffer list."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<Esc>:sb 1<CR>
+expect:
+  one
+  t|wo
+  three
+jumps:  2:1 1:0@2
+marks:  ''=1:0
+win:    1/2
+
+=== :new copies the jumplist, then jumps
+ref:    windows.txt *:new*
+quote:  "Create a new window and start editing an empty file in it."
+given:
+  one
+  t|wo
+  three
+keys:   G:new<CR>
+expect: |
+jumps:  2:1@1 3:1@1
+marks:  ''=1:0
+win:    1/2
+
+# Editing another buffer (:e, :enew, CTRL-^, a jump back to it) starts its previous context mark at the
+# first line, as vim's do_ecmd() does; :b keeps the mark.
+=== after :enew the previous context mark is the first line
+ref:    oracle nvim v0.11.7
+given:
+  one
+  two
+  t|hree
+  four
+keys:   :enew<CR>ia<CR>bc<Esc>``
+expect:
+  |a
+  bc
+marks:  ''=2:1
+jumps:  3:1@1 2:1
+
+=== after CTRL-^ the previous context mark is the first line
+ref:    oracle nvim v0.11.7
+given:
+  one
+  two
+  t|hree
+  four
+keys:   :enew<CR>ia<CR>bc<Esc><C-^>``
+expect:
+  |one
+  two
+  three
+  four
+marks:  ''=3:1
+
+=== after CTRL-O to another buffer the previous context mark is the first line
+ref:    oracle nvim v0.11.7
+given:
+  one
+  t|wo
+  three
+keys:   G:enew<CR>ia<CR>b<CR>c<Esc>:b 1<CR><C-o>
+expect:
+  a
+  b
+  |c
+marks:  ''=1:0
+
+=== :b sets the previous context mark where the cursor was
+ref:    oracle nvim v0.11.7
+given:
+  one
+  two
+  t|hree
+  four
+keys:   :enew<CR>ia<CR>bc<Esc>:b 1<CR>``
+expect:
+  one
+  t|wo
+  three
+  four
+marks:  ''=3:1
+jumps:  2:1@2 3:1
+
+=== CTRL-O to another buffer fails when the current one can't be abandoned
+ref:    nvim/options.txt *'hidden'*
+quote:  "When off a buffer is unloaded (including loss of undo information) when it is |abandon|ed."
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<Esc>:set nohidden<CR><C-o>
+expect: |a
+msg:    E37: No write since last change (add ! to override)
+jumps:  2:1@1 1:0
+
+=== a CTRL-O that failed still moved along the list
+ref:    oracle nvim v0.11.7
+given:
+  one
+  t|wo
+  three
+keys:   :enew<CR>ia<Esc>:set nohidden<CR><C-o>:set hidden<CR><C-o>
+expect: |a
+jumps:  2:1@1 1:0

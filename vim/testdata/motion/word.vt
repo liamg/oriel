@@ -1,0 +1,281 @@
+=== w stops where keyword characters meet punctuation
+ref:    motion.txt *word*
+quote:  "A word consists of a sequence of letters, digits and underscores, or a sequence of other non-blank characters, separated with white space"
+given:  |foo.bar
+keys:   w
+expect: foo|.bar
+
+=== w treats underscores and digits as keyword characters
+ref:    motion.txt *word*
+quote:  "A word consists of a sequence of letters, digits and underscores"
+given:  |foo_1 bar
+keys:   w
+expect: foo_1 |bar
+
+=== w stops at an empty line
+ref:    motion.txt *word*
+quote:  "An empty line is also considered to be a word."
+given:
+  foo |bar
+
+  baz
+keys:   w
+expect:
+  foo bar
+  |
+  baz
+
+=== w treats é as a keyword character
+ref:    motion.txt *word*
+quote:  "A word consists of a sequence of letters, digits and underscores"
+given:  |éa b
+keys:   w
+expect: éa |b
+
+=== w stops where the Unicode character class changes
+ref:    motion.txt *word*
+quote:  "For characters above 255, a word ends when the Unicode character class changes"
+given:  |漢字abc
+keys:   w
+expect: 漢字|abc
+
+=== w on the last word goes to the last character
+ref:    motion.txt *w*
+quote:  "[count] words forward."
+given:  foo |bar
+keys:   w
+expect: foo ba|r
+
+=== dw on the last word of a line stops at the end of the line
+ref:    motion.txt *WORD*
+quote:  "When using the \"w\" motion in combination with an operator and the last word moved over is at the end of a line, the end of that word becomes the end of the operated text, not the first word in the next line."
+given:
+  foo.|bar
+  baz
+keys:   dw
+expect:
+  foo|.
+  baz
+regs:   "" = "bar"
+
+=== d2w across a line break stops at the end of the line
+ref:    motion.txt *WORD*
+quote:  "the end of that word becomes the end of the operated text, not the first word in the next line."
+given:
+  a |b c
+  d
+keys:   d2w
+expect:
+  a| 
+  d
+regs:   "" = "b c"
+
+=== dw deletes up to the next word, excluding it (exclusive)
+ref:    motion.txt *w*
+quote:  "[count] words forward.  |exclusive| motion."
+given:  x|foo bar
+keys:   dw
+expect: x|bar
+regs:   "" = "foo "
+
+=== W skips over punctuation
+ref:    motion.txt *W*
+quote:  "[count] WORDS forward."
+given:  |foo.bar baz
+keys:   W
+expect: foo.bar |baz
+
+=== 2W crosses a line break
+ref:    motion.txt *WORD*
+quote:  "A WORD consists of a sequence of non-blank characters, separated with white space."
+given:
+  |a.b c-d
+  e+f
+keys:   2W
+expect:
+  a.b c-d
+  |e+f
+
+=== e goes to the end of the word
+ref:    motion.txt *e*
+quote:  "Forward to the end of word [count] |inclusive|."
+given:  |foo bar
+keys:   e
+expect: fo|o bar
+
+=== e from the end of a word goes to the end of the next
+ref:    motion.txt *e*
+quote:  "Forward to the end of word [count]"
+given:  fo|o bar
+keys:   e
+expect: foo ba|r
+
+=== e stops at punctuation
+ref:    motion.txt *e*
+quote:  "Forward to the end of word [count]"
+given:  |foo.bar
+keys:   e
+expect: fo|o.bar
+
+=== e does not stop in an empty line
+ref:    motion.txt *e*
+quote:  "Does not stop in an empty line."
+given:
+  fo|o
+
+  bar
+keys:   e
+expect:
+  foo
+
+  ba|r
+
+=== 3e with a count
+ref:    motion.txt *e*
+quote:  "Forward to the end of word [count]"
+given:  |ab cd ef gh
+keys:   3e
+expect: ab cd e|f gh
+
+=== e on the last word of the buffer does not move
+ref:    motion.txt *e*
+quote:  "Forward to the end of word [count]"
+given:  foo ba|r
+keys:   e
+expect: foo ba|r
+
+=== de deletes through the end of the word (inclusive)
+ref:    motion.txt *e*
+quote:  "Forward to the end of word [count] |inclusive|."
+given:  x|foo bar
+keys:   de
+expect: x| bar
+regs:   "" = "foo"
+
+=== E goes to the end of the WORD
+ref:    motion.txt *E*
+quote:  "Forward to the end of WORD [count] |inclusive|."
+given:  |a.b c
+keys:   E
+expect: a.|b c
+
+=== b goes to the start of the word
+ref:    motion.txt *b*
+quote:  "[count] words backward.  |exclusive| motion."
+given:  foo ba|r
+keys:   b
+expect: foo |bar
+
+=== b from the start of a word goes to the previous word
+ref:    motion.txt *b*
+quote:  "[count] words backward."
+given:  foo |bar
+keys:   b
+expect: |foo bar
+
+=== b stops at punctuation
+ref:    motion.txt *b*
+quote:  "[count] words backward."
+given:  foo.ba|r
+keys:   2b
+expect: foo|.bar
+
+=== b crosses a line break
+ref:    motion.txt *b*
+quote:  "[count] words backward."
+given:
+  foo bar
+  |baz
+keys:   b
+expect:
+  foo |bar
+  baz
+
+=== b stops at an empty line
+ref:    motion.txt *word*
+quote:  "An empty line is also considered to be a word."
+given:
+  foo
+
+  |bar
+keys:   b
+expect:
+  foo
+  |
+  bar
+
+=== b at the start of the buffer does not move
+ref:    motion.txt *b*
+quote:  "[count] words backward."
+given:  |foo bar
+keys:   b
+expect: |foo bar
+
+=== b over wide characters stops at the class change
+ref:    motion.txt *word*
+quote:  "For characters above 255, a word ends when the Unicode character class changes"
+given:  ab漢字|x
+keys:   b
+expect: ab|漢字x
+
+=== db deletes back to the start of the word, not the cursor character (exclusive)
+ref:    motion.txt *b*
+quote:  "[count] words backward.  |exclusive| motion."
+given:  foo ba|r
+keys:   db
+expect: foo |r
+regs:   "" = "ba"
+
+=== B skips back over punctuation
+ref:    motion.txt *B*
+quote:  "[count] WORDS backward."
+given:  x foo.ba|r
+keys:   B
+expect: x |foo.bar
+
+=== ge goes to the end of the previous word
+ref:    motion.txt *ge*
+quote:  "Backward to the end of word [count] |inclusive|."
+given:  foo b|ar
+keys:   ge
+expect: fo|o bar
+
+=== ge stops at the end of punctuation
+ref:    motion.txt *ge*
+quote:  "Backward to the end of word [count]"
+given:  foo.b|ar
+keys:   ge
+expect: foo|.bar
+
+=== 2ge crosses a line break
+ref:    motion.txt *ge*
+quote:  "Backward to the end of word [count]"
+given:
+  ab cd
+  e|f
+keys:   2ge
+expect:
+  a|b cd
+  ef
+
+=== ge in the first word goes to the start of the buffer
+ref:    motion.txt *ge*
+quote:  "Backward to the end of word [count]"
+given:  fo|o bar
+keys:   ge
+expect: |foo bar
+
+=== dge deletes from the previous word end through the cursor (inclusive)
+ref:    motion.txt *ge*
+quote:  "Backward to the end of word [count] |inclusive|."
+given:  foo b|ar
+keys:   dge
+expect: fo|r
+regs:   "" = "o ba"
+
+=== gE goes to the end of the previous WORD
+ref:    motion.txt *gE*
+quote:  "Backward to the end of WORD [count] |inclusive|."
+given:  a.b c|d
+keys:   gE
+expect: a.|b cd

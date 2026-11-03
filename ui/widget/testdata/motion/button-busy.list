@@ -1,0 +1,24 @@
+== start
+backdrop #060606
+rect 0,0 68.609375x26 fill #191815 radius 6 stroke 1 #332f27
+text "Push" @27,17.365234 #b3ab99 Inter 12
+rect 44.609375,5.5 14x15 radius 3 stroke 1 #ece6d866
+text "p" @48.609375,16.42 #ece6d8cc JetBrains Mono 9.5
+== mid
+backdrop #060606
+rect 0,0 68.609375x26 fill #191815 radius 6 stroke 1 #332f27
+opacity 0.80419856
+  path 6 segments stroke 1.5 #232220
+  path 25 segments stroke 1.5 #b3ab99
+pop
+text "Push" @27,17.365234 #b3ab99 Inter 12
+opacity 0.19580138
+  rect 44.609375,5.5 14x15 radius 3 stroke 1 #ece6d866
+  text "p" @48.609375,16.42 #ece6d8cc JetBrains Mono 9.5
+pop
+== settled
+backdrop #060606
+rect 0,0 68.609375x26 fill #191815 radius 6 stroke 1 #332f27
+path 6 segments stroke 1.5 #232220
+path 25 segments stroke 1.5 #b3ab99
+text "Push" @27,17.365234 #b3ab99 Inter 12

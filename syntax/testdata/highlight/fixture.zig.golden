@@ -1,0 +1,161 @@
+   1 | const std = @import("std");
+     | ^^^^^ keyword
+     |       ^^^ module
+     |           ^ operator
+     |             ^^^^^^^ keyword.import
+     |                    ^ punctuation.bracket
+     |                     ^^^^^ string
+     |                          ^ punctuation.bracket
+     |                           ^ punctuation.delimiter
+   2 | 
+   3 | /// A tier's price, in pence.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   4 | const Tier = struct {
+     | ^^^^^ keyword
+     |       ^^^^ type
+     |            ^ operator
+     |              ^^^^^^ keyword.type
+     |                     ^ punctuation.bracket
+   5 |     name: []const u8,
+     |     ^^^^ variable.member
+     |         ^ punctuation.delimiter
+     |           ^^ punctuation.bracket
+     |             ^^^^^ keyword
+     |                   ^^ type.builtin
+     |                     ^ punctuation.delimiter
+   6 |     pence: u32,
+     |     ^^^^^ variable.member
+     |          ^ punctuation.delimiter
+     |            ^^^ type.builtin
+     |               ^ punctuation.delimiter
+   7 | };
+     | ^ punctuation.bracket
+     |  ^ punctuation.delimiter
+   8 | 
+   9 | fn priceFor(tier: Tier, qty: u32) u32 {
+     | ^^ keyword.function
+     |    ^^^^^^^^ function
+     |            ^ punctuation.bracket
+     |             ^^^^ variable.parameter
+     |                 ^ punctuation.delimiter
+     |                   ^^^^ type
+     |                       ^ punctuation.delimiter
+     |                         ^^^ variable.parameter
+     |                            ^ punctuation.delimiter
+     |                              ^^^ type.builtin
+     |                                 ^ punctuation.bracket
+     |                                   ^^^ type.builtin
+     |                                       ^ punctuation.bracket
+  10 |     const total = tier.pence * qty;
+     |     ^^^^^ keyword
+     |           ^^^^^ variable
+     |                 ^ operator
+     |                   ^^^^ variable
+     |                       ^ punctuation.delimiter
+     |                        ^^^^^ variable.member
+     |                              ^ operator
+     |                                ^^^ variable
+     |                                   ^ punctuation.delimiter
+  11 |     if (qty >= 100) return total * 9 / 10;
+     |     ^^ keyword.conditional
+     |        ^ punctuation.bracket
+     |         ^^^ variable
+     |             ^^ operator
+     |                ^^^ number
+     |                   ^ punctuation.bracket
+     |                     ^^^^^^ keyword.return
+     |                            ^^^^^ variable
+     |                                  ^ operator
+     |                                    ^ number
+     |                                      ^ operator
+     |                                        ^^ number
+     |                                          ^ punctuation.delimiter
+  12 |     return total;
+     |     ^^^^^^ keyword.return
+     |            ^^^^^ variable
+     |                 ^ punctuation.delimiter
+  13 | }
+     | ^ punctuation.bracket
+  14 | 
+  15 | pub fn main() !void {
+     | ^^^ keyword.modifier
+     |     ^^ keyword.function
+     |        ^^^^ function
+     |            ^^ punctuation.bracket
+     |               ^ operator
+     |                ^^^^ type.builtin
+     |                     ^ punctuation.bracket
+  16 |     const tiers = [_]Tier{ .{ .name = "basic", .pence = 100 }, .{ .name = "pro", .pence = 450 } };
+     |     ^^^^^ keyword
+     |           ^^^^^ variable
+     |                 ^ operator
+     |                   ^ punctuation.bracket
+     |                    ^ variable.builtin
+     |                     ^ punctuation.bracket
+     |                      ^^^^ type
+     |                          ^ punctuation.bracket
+     |                            ^ punctuation.delimiter
+     |                             ^ punctuation.bracket
+     |                               ^ punctuation.delimiter
+     |                                ^^^^ variable.member
+     |                                     ^ operator
+     |                                       ^^^^^^^ string
+     |                                              ^ punctuation.delimiter
+     |                                                ^ punctuation.delimiter
+     |                                                 ^^^^^ variable.member
+     |                                                       ^ operator
+     |                                                         ^^^ number
+     |                                                             ^ punctuation.bracket
+     |                                                              ^ punctuation.delimiter
+     |                                                                ^ punctuation.delimiter
+     |                                                                 ^ punctuation.bracket
+     |                                                                   ^ punctuation.delimiter
+     |                                                                    ^^^^ variable.member
+     |                                                                         ^ operator
+     |                                                                           ^^^^^ string
+     |                                                                                ^ punctuation.delimiter
+     |                                                                                  ^ punctuation.delimiter
+     |                                                                                   ^^^^^ variable.member
+     |                                                                                         ^ operator
+     |                                                                                           ^^^ number
+     |                                                                                               ^ punctuation.bracket
+     |                                                                                                 ^ punctuation.bracket
+     |                                                                                                  ^ punctuation.delimiter
+  17 |     for (tiers) |t| {
+     |     ^^^ keyword.repeat
+     |         ^ punctuation.bracket
+     |          ^^^^^ variable
+     |               ^ punctuation.bracket
+     |                 ^ punctuation.bracket
+     |                  ^ variable.parameter
+     |                   ^ punctuation.bracket
+     |                     ^ punctuation.bracket
+  18 |         std.debug.print("{s}: {d}\n", .{ t.name, priceFor(t, 120) });
+     |         ^^^ variable
+     |            ^ punctuation.delimiter
+     |             ^^^^^ variable.member
+     |                  ^ punctuation.delimiter
+     |                   ^^^^^ function.call
+     |                        ^ punctuation.bracket
+     |                         ^^^^^^^^^ string
+     |                                  ^^ string.escape
+     |                                    ^ string
+     |                                     ^ punctuation.delimiter
+     |                                       ^ punctuation.delimiter
+     |                                        ^ punctuation.bracket
+     |                                          ^ variable
+     |                                           ^ punctuation.delimiter
+     |                                            ^^^^ variable.member
+     |                                                ^ punctuation.delimiter
+     |                                                  ^^^^^^^^ function.call
+     |                                                          ^ punctuation.bracket
+     |                                                           ^ variable
+     |                                                            ^ punctuation.delimiter
+     |                                                              ^^^ number
+     |                                                                 ^ punctuation.bracket
+     |                                                                   ^^ punctuation.bracket
+     |                                                                     ^ punctuation.delimiter
+  19 |     }
+     |     ^ punctuation.bracket
+  20 | }
+     | ^ punctuation.bracket

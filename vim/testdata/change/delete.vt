@@ -1,0 +1,277 @@
+=== dd deletes the line into the unnamed and "1 registers
+ref:    change.txt *dd*
+quote:  "Delete [count] lines [into register x] |linewise|."
+given:
+  one
+  |two
+  three
+keys:   dd
+expect:
+  one
+  |three
+regs:   "" = "two\n"   "1 = "two\n"
+undo:
+  one
+  |two
+  three
+dot:
+  |one
+
+=== 2dd with a count
+ref:    change.txt *dd*
+quote:  "Delete [count] lines"
+given:
+  |one
+  two
+  three
+keys:   2dd
+expect: |three
+
+=== x deletes the character under the cursor into the small delete register
+ref:    change.txt *x*
+quote:  "Delete [count] characters under and after the cursor [into register x] (not |linewise|)."
+given:  f|oo
+keys:   x
+expect: f|o
+regs:   "" = "o"   "- = "o"
+dot:    |f
+
+=== 10x past the end of the line deletes to the end
+ref:    change.txt *x*
+quote:  "Delete [count] characters under and after the cursor"
+given:  ab|cd
+keys:   10x
+expect: a|b
+regs:   "" = "cd"   "- = "cd"   "1 = (unset)
+
+=== x on an empty line does nothing
+ref:    change.txt *x*
+quote:  "Delete [count] characters under and after the cursor"
+given:
+  foo
+  |
+  bar
+keys:   x
+expect:
+  foo
+  |
+  bar
+regs:   "" = (unset)
+
+=== x deletes a whole multibyte character
+ref:    change.txt *x*
+quote:  "Delete [count] characters under and after the cursor"
+given:  |é漢字
+keys:   2x
+expect: |字
+regs:   "" = "é漢"   "- = "é漢"
+undo:   |é漢字
+dot:    |
+
+=== X deletes the character before the cursor
+ref:    change.txt *X*
+quote:  "Delete [count] characters before the cursor [into register x] (not |linewise|)."
+given:  fo|ob
+keys:   X
+expect: f|ob
+regs:   "" = "o"   "- = "o"
+dot:    |ob
+
+=== 3X stops at the start of the line
+ref:    change.txt *X*
+quote:  "Delete [count] characters before the cursor"
+given:  a|bc
+keys:   3X
+expect: |bc
+regs:   "" = "a"
+
+=== X in the first column does nothing
+ref:    change.txt *X*
+quote:  "Delete [count] characters before the cursor"
+given:  |abc
+keys:   X
+expect: |abc
+regs:   "" = (unset)
+
+=== dw deletes a word and the white space after it
+ref:    change.txt *d*
+quote:  "Delete text that {motion} moves over [into register x]."
+given:  |foo bar
+keys:   dw
+expect: |bar
+regs:   "" = "foo "   "- = "foo "   "1 = (unset)
+undo:   |foo bar
+dot:    |
+
+=== dw on the last word of a line does not join the next line
+ref:    change.txt *d*
+quote:  "Delete text that {motion} moves over [into register x]."
+given:
+  foo |bar
+  baz
+keys:   dw
+expect:
+  foo| 
+  baz
+regs:   "" = "bar"
+
+=== 2d3w deletes six words
+ref:    motion.txt *motion-count-multiplied*
+quote:  "For example: \"2d3w\" deletes six words."
+given:  |a b c d e f g h
+keys:   2d3w
+expect: |g h
+regs:   "" = "a b c d e f "   "- = "a b c d e f "
+
+=== d$ deletes to the end of the line and leaves the cursor on the new last character
+ref:    change.txt *d*
+quote:  "Delete text that {motion} moves over"
+given:  fo|o bar
+keys:   d$
+expect: f|o
+regs:   "" = "o bar"
+
+=== D is d$
+ref:    change.txt *D*
+quote:  "Delete the characters under the cursor until the end of the line"
+given:  foo |bar
+keys:   D
+expect:
+  foo| 
+regs:   "" = "bar"   "- = "bar"
+dot:    fo|o
+
+=== 2D also deletes the next line, charwise, into "1
+ref:    change.txt *D*
+quote:  "Delete the characters under the cursor until the end of the line and [count]-1 more lines [into register x]; synonym for \"d$\". (not |linewise|)"
+given:
+  ab|c
+  def
+  ghi
+keys:   2D
+expect:
+  a|b
+  ghi
+regs:   "" = "c\ndef"   "1 = "c\ndef"   "- = (unset)
+undo:
+  ab|c
+  def
+  ghi
+
+=== dj deletes two lines linewise
+ref:    change.txt *d*
+quote:  "Delete text that {motion} moves over [into register x]."
+given:
+  one
+  t|wo
+  three
+  four
+keys:   dj
+expect:
+  one
+  f|our
+regs:   "" = "two\nthree\n"   "1 = "two\nthree\n"
+
+=== dd on the last line moves the cursor up
+ref:    change.txt *dd*
+quote:  "Delete [count] lines [into register x] |linewise|."
+given:
+  one
+  t|wo
+keys:   dd
+expect: o|ne
+
+=== dd on the only line leaves an empty buffer
+ref:    change.txt *dd*
+quote:  "Delete [count] lines [into register x] |linewise|."
+given:  fo|o
+keys:   dd
+expect: |
+regs:   "" = "foo\n"   "1 = "foo\n"
+undo:   fo|o
+
+=== 5dd with fewer lines left deletes to the end of the buffer
+ref:    change.txt *dd*
+quote:  "Delete [count] lines"
+given:
+  one
+  |two
+  three
+keys:   5dd
+expect: |one
+regs:   "1 = "two\nthree\n"
+
+=== dd on an empty buffer
+ref:    change.txt *dd*
+quote:  "Delete [count] lines"
+given:  |
+keys:   dd
+expect: |
+regs:   "" = "\n"
+
+=== dd keeps the cursor column because 'startofline' is off
+ref:    nvim/vim_diff.txt *nvim-defaults*
+quote:  "'startofline' is disabled"
+given:
+  on|e
+      two
+keys:   dd
+expect:
+    |  two
+
+=== 2d3d deletes six lines
+ref:    motion.txt *operator-doubled*
+quote:  "A count before and after the first character is multiplied"
+given:
+  |1
+  2
+  3
+  4
+  5
+  6
+  7
+keys:   2d3d
+expect: |7
+regs:   "" = "1\n2\n3\n4\n5\n6\n"
+
+=== d across lines from the first non-blank to the end becomes linewise
+ref:    change.txt *d-special*
+quote:  "there are only blanks before the start and there are no non-blanks after the end of the motion, the delete becomes linewise."
+given:
+  a
+    |foo
+  bar
+  c
+keys:   d2e
+expect:
+  a
+  |c
+regs:   "" = "  foo\nbar\n"   "1 = "  foo\nbar\n"
+
+=== d0 in the first column deletes nothing
+ref:    change.txt *d*
+quote:  "Delete text that {motion} moves over"
+given:  |foo
+keys:   d0
+expect: |foo
+regs:   "" = (unset)
+
+=== db deletes backwards and leaves the cursor at the start
+ref:    motion.txt *operator-resulting-pos*
+quote:  "After applying the operator the cursor is mostly left at the start of the text that was operated upon."
+given:  foo ba|r
+keys:   db
+expect: foo |r
+regs:   "" = "ba"
+
+=== 2dd on the last line fails
+ref:    change.txt *dd*
+quote:  "Delete [count] lines"
+given:
+  one
+  |two
+keys:   2dd
+expect:
+  one
+  |two
+regs:   "" = (unset)   "1 = (unset)

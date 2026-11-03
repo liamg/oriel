@@ -1,0 +1,30 @@
+== start
+backdrop #060606
+clip 0,0 205.1x24 r 5
+  rect 0,0 40.85x24 fill #1f1c0f
+  text "ALL" @9.999999,15.42 #7c7566 JetBrains Mono 9.5
+  text "OPEN" @50.85,15.42 #7c7566 JetBrains Mono 9.5
+  text "DRAFT" @98.65,15.42 #ffd23f JetBrains Mono 9.5
+  text "MERGED" @153.40001,15.42 #7c7566 JetBrains Mono 9.5
+pop
+rect 0,0 205.1x24 radius 5 stroke 1 #332f27
+== mid
+backdrop #060606
+clip 0,0 205.1x24 r 5
+  rect 69.93138,0 52.028366x24 fill #1f1c0f
+  text "ALL" @9.999999,15.42 #7c7566 JetBrains Mono 9.5
+  text "OPEN" @50.85,15.42 #7c7566 JetBrains Mono 9.5
+  text "DRAFT" @98.65,15.42 #ffd23f JetBrains Mono 9.5
+  text "MERGED" @153.40001,15.42 #7c7566 JetBrains Mono 9.5
+pop
+rect 0,0 205.1x24 radius 5 stroke 1 #332f27
+== settled
+backdrop #060606
+clip 0,0 205.1x24 r 5
+  rect 88.65,0 54.750008x24 fill #1f1c0f
+  text "ALL" @9.999999,15.42 #7c7566 JetBrains Mono 9.5
+  text "OPEN" @50.85,15.42 #7c7566 JetBrains Mono 9.5
+  text "DRAFT" @98.65,15.42 #ffd23f JetBrains Mono 9.5
+  text "MERGED" @153.40001,15.42 #7c7566 JetBrains Mono 9.5
+pop
+rect 0,0 205.1x24 radius 5 stroke 1 #332f27

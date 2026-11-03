@@ -1,0 +1,15 @@
+*oriel.txt*	The Oriel editor
+
+INTRODUCTION					*oriel-intro*
+
+Oriel is an editor. See |oriel-options| for settings.
+
+  :Settings		Open the settings page.
+
+OPTIONS						*oriel-options*
+
+'tabstop' 'ts'		number	(default 8)
+	Columns a tab takes. >
+		:set ts=4
+<
+ vim:tw=78:ts=8:ft=help:norl:

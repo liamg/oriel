@@ -1,0 +1,40 @@
+{"kind":"started","package":"$ROOT/test/math.test.ts","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"passes","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"passes","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"fails","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"fails","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"equals an object","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"equals an object","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"throws","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"throws","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"times out","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"times out","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"skipped","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"skipped","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"later","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"later","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested pass","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested pass","time":"2026-10-13T20:35:53.298Z","elapsed":1211173}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested fail","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested fail","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"parallel > a","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"parallel > a","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"parallel > b","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"parallel > b","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"add(1, 1) -> 2","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"add(1, 1) -> 2","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"add(2, 2) -> 5","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"add(2, 2) -> 5","time":"2026-10-13T20:35:53.298Z","elapsed":6090076,"failure":{"reason":"assert","message":"AssertionError: expected 4 to be 5 // Object.is equality","want":"5","got":"4","loc":{"file":"$ROOT/test/math.test.ts","line":48}}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"object 1 + 2","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"object 1 + 2","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"object +0 + +0","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"object +0 + +0","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"suite x > works","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"suite x > works","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"suite y > works","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"suite y > works","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"word hi","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"word hi","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"word two words","time":"2026-10-13T20:35:53.298Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"word two words","time":"2026-10-13T20:35:53.298Z","message":"skipped"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","time":"2026-10-13T20:35:53.298Z","failure":{"reason":"assert"}}

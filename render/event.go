@@ -1,0 +1,114 @@
+package render
+
+import "time"
+
+type Event interface{ isEvent() }
+
+type Mods uint8
+
+const (
+	ModShift Mods = 1 << iota
+	ModCtrl
+	ModAlt
+	ModSuper
+)
+
+// KeyEvent is a key press. Key is a printable character, or a key name from vim's key notation without the <>:
+// "Esc", "CR", "Tab", "BS", "Up", "F1".
+type KeyEvent struct {
+	Key  string
+	Mods Mods
+}
+
+// ModsEvent is the modifier keys held now, sent when one goes down or comes up, and with none when the window loses
+// focus: a modifier held on its own (hold ⌥ for the HUD).
+type ModsEvent struct{ Mods Mods }
+
+// ResizeEvent reports a new window size in logical pixels.
+type ResizeEvent struct{ Size Point }
+
+// RedrawEvent asks for a new frame: something the last one drew has changed, such as a font landing.
+type RedrawEvent struct{}
+
+// DropEvent is files dropped on the window from outside it, at Pos.
+type DropEvent struct {
+	Pos   Point
+	Paths []string
+}
+
+// SlowFrameEvent is a frame the window was slow to put on screen: Waited from the app handing it over to the window
+// starting on it, Took to draw and present it. A backend sends one past its own threshold, at most once a second.
+type SlowFrameEvent struct{ Waited, Took time.Duration }
+
+// AppearanceEvent is the OS's light or dark preference, sent when a window opens and whenever it changes.
+type AppearanceEvent struct{ Dark bool }
+
+// FocusEvent is the window gaining or losing the OS's focus: another app came in front of it, or it came back.
+type FocusEvent struct{ Focused bool }
+
+// VisibleEvent is the window coming into or going out of sight: minimised, or (macOS) wholly covered. A hidden
+// window draws nothing; the app needn't build frames for it.
+type VisibleEvent struct{ Visible bool }
+
+// CloseRequestEvent is a held window asked to close (its close button, Quit): it stays open until the app calls
+// Close.
+type CloseRequestEvent struct{}
+
+type PointerKind uint8
+
+const (
+	PointerMove PointerKind = iota
+	PointerPress
+	PointerRelease
+	PointerScroll
+	PointerLeave // the pointer left the window
+)
+
+type Buttons uint8
+
+const (
+	ButtonPrimary Buttons = 1 << iota
+	ButtonSecondary
+	ButtonTertiary
+)
+
+// PointerEvent is the mouse or trackpad, in logical pixels. Buttons is the button pressed or released,
+// or those held during a move; Scroll is the distance a scroll moves the content's view. At is when it happened, as
+// near as the backend can tell, or zero.
+type PointerEvent struct {
+	Kind    PointerKind
+	Pos     Point
+	Buttons Buttons
+	Scroll  Point
+	Mods    Mods
+	At      time.Time
+}
+
+// Cursor is the pointer's shape.
+type Cursor uint8
+
+const (
+	CursorDefault Cursor = iota
+	CursorPointer
+	CursorText
+	CursorNotAllowed
+	CursorGrab
+	CursorResizeCol
+	CursorResizeRow
+	CursorCrosshair
+	CursorGrabbing
+	CursorResizeNWSE // a corner dragged on the top-left to bottom-right diagonal
+	CursorResizeNESW
+)
+
+func (KeyEvent) isEvent()          {}
+func (ModsEvent) isEvent()         {}
+func (PointerEvent) isEvent()      {}
+func (ResizeEvent) isEvent()       {}
+func (RedrawEvent) isEvent()       {}
+func (AppearanceEvent) isEvent()   {}
+func (DropEvent) isEvent()         {}
+func (CloseRequestEvent) isEvent() {}
+func (FocusEvent) isEvent()        {}
+func (VisibleEvent) isEvent()      {}
+func (SlowFrameEvent) isEvent()    {}

@@ -1,0 +1,15 @@
+package greet
+
+import "strconv"
+
+// Welcome greets everyone.
+func Welcome(names []string) string {
+	out := ""
+	for _, n := range names {
+		out += greeting(n)
+	}
+
+	size:=len(out)
+	label := "🎉 party" + greting("x")
+	return out + shout("é") + label + strconv.Itoa(size)
+}

@@ -1,0 +1,104 @@
+# :set on the engine's options, which the IDE keeps in its registry (options.txt).
+
+=== :set sw+= adds to a number option
+ref:    nvim/options.txt *:set+=*
+quote:  Add the {value} to a number option
+given:  |x
+keys:   :set sw=2 et<CR>:set sw+=2<CR>>>
+expect:
+  |    x
+mode:   normal
+
+=== :set sw-= subtracts from it
+ref:    nvim/options.txt *:set-=*
+quote:  Subtract the {value} from a number option
+given:  |x
+keys:   :set sw=6 et<CR>:set sw-=4<CR>>>
+expect:
+  |  x
+mode:   normal
+
+=== :set sw^= multiplies it
+ref:    nvim/options.txt *:set^=*
+quote:  Multiply the {value} to a number option
+given:  |x
+keys:   :set sw=3 et<CR>:set sw^=2<CR>>>
+expect:
+  |      x
+mode:   normal
+
+=== :set noet goes back to tabs
+ref:    nvim/options.txt *'expandtab'*
+quote:  Spaces are used in indents with the '>' and '<' commands
+given:  |x
+keys:   :set sw=8 et<CR>:set noet<CR>>>
+expect:
+  |	x
+mode:   normal
+
+=== :set ic makes a search ignore case
+ref:    nvim/options.txt *'ignorecase'*
+quote:  Ignore case in search patterns
+given:
+  |a
+  FOO
+keys:   :set ic<CR>/foo<CR>
+expect:
+  a
+  |FOO
+mode:   normal
+
+=== :set ts makes an indent of tabs at that width
+ref:    nvim/options.txt *'tabstop'*
+quote:  Number of spaces that a <Tab> in the file counts for.
+given:  |x
+keys:   :set ts=4 sw=8 noet<CR>>>
+expect:
+  |		x
+mode:   normal
+
+=== :set et! inverts a toggle option
+ref:    nvim/options.txt *:set-!*
+quote:  Toggle option: Invert value.
+given:  |x
+keys:   :set sw=8 et<CR>:set et!<CR>>>
+expect:
+  |	x
+mode:   normal
+
+=== :set invet inverts it too
+ref:    nvim/options.txt *:set-inv*
+quote:  Toggle option: Invert value.
+given:  |x
+keys:   :set sw=8 ts=8 noet<CR>:set invet<CR>>>
+expect:
+  |        x
+mode:   normal
+
+=== :set sw=-1 is refused
+ref:    nvim/options.txt *:set=*
+quote:  Set string or number option to {value}.
+given:  |x
+keys:   :set sw=-1<CR>>>
+expect:
+  |	x
+msg:    "E487: Argument must be positive: sw=-1"
+mode:   normal
+
+=== :set ts=0 is refused
+ref:    nvim/options.txt *:set=*
+quote:  Set string or number option to {value}.
+given:  |x
+keys:   :set ts=0<CR>
+expect: |x
+msg:    "E487: Argument must be positive: ts=0"
+mode:   normal
+
+=== sw=0 indents by tabstop
+ref:    nvim/options.txt *'shiftwidth'*
+quote:  When zero the 'tabstop' value will be used.
+given:  |x
+keys:   :set sw=0 ts=4 et<CR>>>
+expect:
+  |    x
+mode:   normal

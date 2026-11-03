@@ -1,0 +1,11 @@
+feat(regex): PCRE2 outside the vim engine
+
+The vim engine keeps its own dialect.
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch master
+# Changes to be committed:
+#	modified:   regex/regex.go
+#

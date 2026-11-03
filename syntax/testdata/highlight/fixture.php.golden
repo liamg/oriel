@@ -1,0 +1,117 @@
+   1 | <?php
+     | ^^^^^ punctuation.bracket
+   2 | 
+   3 | namespace Pricing;
+     | ^^^^^^^^^ keyword.type
+     |           ^^^^^^^ module
+     |                  ^ punctuation.delimiter
+   4 | 
+   5 | // A tier's price, in pence.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   6 | final class Tier
+     | ^^^^^ keyword.modifier
+     |       ^^^^^ keyword.type
+     |             ^^^^ type
+   7 | {
+     | ^ punctuation.bracket
+   8 |     public function __construct(public string $name, public int $pence) {}
+     |     ^^^^^^ keyword.modifier
+     |            ^^^^^^^^ keyword.function
+     |                     ^^^^^^^^^^^ constructor
+     |                                ^ punctuation.bracket
+     |                                 ^^^^^^ keyword.modifier
+     |                                        ^^^^^^ type.builtin
+     |                                               ^^^^^ variable
+     |                                                    ^ punctuation.delimiter
+     |                                                      ^^^^^^ keyword.modifier
+     |                                                             ^^^ type.builtin
+     |                                                                 ^^^^^^ variable
+     |                                                                       ^ punctuation.bracket
+     |                                                                         ^^ punctuation.bracket
+   9 | }
+     | ^ punctuation.bracket
+  10 | 
+  11 | function priceFor(Tier $tier, int $qty = 1): int
+     | ^^^^^^^^ keyword.function
+     |          ^^^^^^^^ function
+     |                  ^ punctuation.bracket
+     |                   ^^^^ type
+     |                        ^^^^^ variable.parameter
+     |                             ^ punctuation.delimiter
+     |                               ^^^ type.builtin
+     |                                   ^^^^ variable.parameter
+     |                                        ^ operator
+     |                                          ^ number
+     |                                           ^ punctuation.bracket
+     |                                            ^ punctuation.delimiter
+     |                                              ^^^ type.builtin
+  12 | {
+     | ^ punctuation.bracket
+  13 |     $total = $tier->pence * $qty;
+     |     ^^^^^^ variable
+     |            ^ operator
+     |              ^^^^^ variable
+     |                   ^^ operator
+     |                     ^^^^^ variable.member
+     |                           ^ operator
+     |                             ^^^^ variable
+     |                                 ^ punctuation.delimiter
+  14 |     return $qty >= 100 ? (int) ($total * 0.9) : $total;
+     |     ^^^^^^ keyword.return
+     |            ^^^^ variable
+     |                 ^^ operator
+     |                    ^^^ number
+     |                        ^ keyword.conditional.ternary
+     |                          ^ punctuation.bracket
+     |                           ^^^ type.builtin
+     |                              ^ punctuation.bracket
+     |                                ^ punctuation.bracket
+     |                                 ^^^^^^ variable
+     |                                        ^ operator
+     |                                          ^^^ number.float
+     |                                             ^ punctuation.bracket
+     |                                               ^ keyword.conditional.ternary
+     |                                                 ^^^^^^ variable
+     |                                                       ^ punctuation.delimiter
+  15 | }
+     | ^ punctuation.bracket
+  16 | 
+  17 | foreach ([new Tier('basic', 100), new Tier('pro', 450)] as $t) {
+     | ^^^^^^^ keyword.repeat
+     |         ^^ punctuation.bracket
+     |           ^^^ keyword
+     |               ^^^^ constructor
+     |                   ^ punctuation.bracket
+     |                    ^^^^^^^ string
+     |                           ^ punctuation.delimiter
+     |                             ^^^ number
+     |                                ^ punctuation.bracket
+     |                                 ^ punctuation.delimiter
+     |                                   ^^^ keyword
+     |                                       ^^^^ constructor
+     |                                           ^ punctuation.bracket
+     |                                            ^^^^^ string
+     |                                                 ^ punctuation.delimiter
+     |                                                   ^^^ number
+     |                                                      ^^ punctuation.bracket
+     |                                                         ^^ keyword.operator
+     |                                                            ^^ variable
+     |                                                              ^ punctuation.bracket
+     |                                                                ^ punctuation.bracket
+  18 |     echo "{$t->name}: " . priceFor($t, 120) . "\n";
+     |     ^^^^ keyword
+     |          ^^^^^^^^^^^^^^ string
+     |                         ^ operator
+     |                           ^^^^^^^^ function.call
+     |                                   ^ punctuation.bracket
+     |                                    ^^ variable
+     |                                      ^ punctuation.delimiter
+     |                                        ^^^ number
+     |                                           ^ punctuation.bracket
+     |                                             ^ operator
+     |                                               ^ string
+     |                                                ^^ string.escape
+     |                                                  ^ string
+     |                                                   ^ punctuation.delimiter
+  19 | }
+     | ^ punctuation.bracket

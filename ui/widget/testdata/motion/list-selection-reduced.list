@@ -1,0 +1,36 @@
+== start
+backdrop #060606
+clip 0,0 640x200 r 0
+  rect 0,66 640x22 fill #1f1c0f
+  rect 0,66 2x22 fill #ffd23f
+  text "one" @2,15.547119 #ece6d8 Inter 12.5
+  text "two" @2,37.54712 #ece6d8 Inter 12.5
+  text "three" @2,59.54712 #ece6d8 Inter 12.5
+  text "four" @2,81.54712 #ece6d8 Inter 12.5
+  text "five" @2,103.54712 #ece6d8 Inter 12.5
+  text "six" @2,125.54712 #ece6d8 Inter 12.5
+pop
+== mid
+backdrop #060606
+clip 0,0 640x200 r 0
+  rect 0,66 640x22 fill #1f1c0f
+  rect 0,66 2x22 fill #ffd23f
+  text "one" @2,15.547119 #ece6d8 Inter 12.5
+  text "two" @2,37.54712 #ece6d8 Inter 12.5
+  text "three" @2,59.54712 #ece6d8 Inter 12.5
+  text "four" @2,81.54712 #ece6d8 Inter 12.5
+  text "five" @2,103.54712 #ece6d8 Inter 12.5
+  text "six" @2,125.54712 #ece6d8 Inter 12.5
+pop
+== settled
+backdrop #060606
+clip 0,0 640x200 r 0
+  rect 0,66 640x22 fill #1f1c0f
+  rect 0,66 2x22 fill #ffd23f
+  text "one" @2,15.547119 #ece6d8 Inter 12.5
+  text "two" @2,37.54712 #ece6d8 Inter 12.5
+  text "three" @2,59.54712 #ece6d8 Inter 12.5
+  text "four" @2,81.54712 #ece6d8 Inter 12.5
+  text "five" @2,103.54712 #ece6d8 Inter 12.5
+  text "six" @2,125.54712 #ece6d8 Inter 12.5
+pop

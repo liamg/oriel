@@ -1,0 +1,5 @@
+source: https://github.com/pytest-dev/pytest
+ref: 8.3.4
+path: doc/en/reference/reference.rst, doc/en/explanation/goodpractices.rst, doc/en/example/parametrize.rst,
+  src/_pytest/hookspec.py
+license: MIT (see LICENSE)

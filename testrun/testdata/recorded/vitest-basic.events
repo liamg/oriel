@@ -1,0 +1,40 @@
+{"kind":"started","package":"$ROOT/test/math.test.ts","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"passes","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"passes","time":"2026-10-13T20:35:52.281Z","elapsed":1000239}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"fails","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"fails","time":"2026-10-13T20:35:52.281Z","elapsed":5574942,"failure":{"reason":"assert","message":"AssertionError: expected 4 to be 5 // Object.is equality","want":"5","got":"4","loc":{"file":"$ROOT/test/math.test.ts","line":9}}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"equals an object","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"equals an object","time":"2026-10-13T20:35:52.281Z","elapsed":1875898,"failure":{"reason":"assert","message":"AssertionError: expected { total: 2 } to deeply equal { total: 3 }","want":"{ total: 3 }","got":"{ total: 2 }","loc":{"file":"$ROOT/test/math.test.ts","line":13}}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"throws","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"throws","time":"2026-10-13T20:35:52.281Z","elapsed":336950,"failure":{"reason":"panic","message":"Error: boom","loc":{"file":"$ROOT/test/math.test.ts","line":17}}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"times out","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"times out","time":"2026-10-13T20:35:52.281Z","elapsed":101307340,"failure":{"reason":"timeout","message":"Error: Test timed out in 100ms."}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"skipped","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"skipped","time":"2026-10-13T20:35:52.281Z","message":"skipped"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"later","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"skipped","package":"$ROOT/test/math.test.ts","test":"later","time":"2026-10-13T20:35:52.281Z","message":"todo"}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested pass","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested pass","time":"2026-10-13T20:35:52.281Z","elapsed":643499}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested fail","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"outer > inner > nested fail","time":"2026-10-13T20:35:52.281Z","elapsed":1764653,"failure":{"reason":"assert","message":"AssertionError: expected 2 to be 3 // Object.is equality","want":"3","got":"2","loc":{"file":"$ROOT/test/math.test.ts","line":34}}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"parallel > a","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"parallel > a","time":"2026-10-13T20:35:52.281Z","elapsed":801581}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"parallel > b","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"parallel > b","time":"2026-10-13T20:35:52.281Z","elapsed":676290}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"add(1, 1) -> 2","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"add(1, 1) -> 2","time":"2026-10-13T20:35:52.281Z","elapsed":625615}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"add(2, 2) -> 5","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"add(2, 2) -> 5","time":"2026-10-13T20:35:52.281Z","elapsed":1611694,"failure":{"reason":"assert","message":"AssertionError: expected 4 to be 5 // Object.is equality","want":"5","got":"4","loc":{"file":"$ROOT/test/math.test.ts","line":48}}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"object 1 + 2","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"object 1 + 2","time":"2026-10-13T20:35:52.281Z","elapsed":415160}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"object +0 + +0","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"object +0 + +0","time":"2026-10-13T20:35:52.281Z","elapsed":1705718,"failure":{"reason":"assert","message":"AssertionError: expected +0 to be 1 // Object.is equality","want":"1","got":"+0","loc":{"file":"$ROOT/test/math.test.ts","line":55}}}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"suite x > works","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"suite x > works","time":"2026-10-13T20:35:52.281Z","elapsed":561172}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"suite y > works","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"suite y > works","time":"2026-10-13T20:35:52.281Z","elapsed":404890}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"word hi","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"passed","package":"$ROOT/test/math.test.ts","test":"word hi","time":"2026-10-13T20:35:52.281Z","elapsed":713909}
+{"kind":"started","package":"$ROOT/test/math.test.ts","test":"word two words","time":"2026-10-13T20:35:52.281Z"}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","test":"word two words","time":"2026-10-13T20:35:52.281Z","elapsed":1573477,"failure":{"reason":"assert","message":"AssertionError: expected 'two words' not to be 'two words' // Object.is equality","loc":{"file":"$ROOT/test/math.test.ts","line":65}}}
+{"kind":"failed","package":"$ROOT/test/math.test.ts","time":"2026-10-13T20:35:52.281Z","failure":{"reason":"assert"}}

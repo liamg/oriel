@@ -1,0 +1,86 @@
+name: sandbox-image
+
+# Publishes the sandbox's base image (sandbox/container BaseDockerfile) to ghcr.io/liamg/oriel-sandbox, tagged with
+# the hash Oriel names it by, for amd64 and arm64: Oriel pulls it rather than building it. An image already there
+# is left as it is. release.yml calls it for the digest its builds pin.
+#
+# The first push creates the package, private; make it public once in its settings so Oriel can pull it.
+
+on:
+  push:
+    branches: [main]
+    paths: [sandbox/container/image.go]
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      digest:
+        description: the published image's digest, sha256:…
+        value: ${{ jobs.publish.outputs.digest }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.ref.outputs.ref }}
+      exists: ${{ steps.ref.outputs.exists }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+      - id: ref
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          ref=$(go run ./tools/cmd/sandboximage)
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          if docker manifest inspect "$ref" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: tag
+    if: needs.tag.outputs.exists != 'true'
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+      - env:
+          REF: ${{ needs.tag.outputs.ref }}
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          go run ./tools/cmd/sandboximage -dir "$RUNNER_TEMP/image"
+          docker build --pull -t "$REF-${{ matrix.arch }}" "$RUNNER_TEMP/image"
+          docker push "$REF-${{ matrix.arch }}"
+
+  publish:
+    # One tag for both architectures, and its digest.
+    needs: [tag, build]
+    if: ${{ !cancelled() && needs.tag.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+    steps:
+      - id: digest
+        env:
+          REF: ${{ needs.tag.outputs.ref }}
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if [ "${{ needs.tag.outputs.exists }}" != true ]; then
+            docker buildx imagetools create -t "$REF" "$REF-amd64" "$REF-arm64"
+          fi
+          digest=$(docker buildx imagetools inspect "$REF" --format '{{json .Manifest}}' | jq -r .digest)
+          case "$digest" in sha256:*) ;; *) echo "::error::no digest for $REF"; exit 1 ;; esac
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"

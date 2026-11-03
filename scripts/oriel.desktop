@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Oriel
+GenericName=IDE
+Comment=A vim-first IDE built around AI sessions
+Exec=oriel
+Icon=oriel
+Terminal=false
+Categories=Development;IDE;TextEditor;
+StartupWMClass=oriel

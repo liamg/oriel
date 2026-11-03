@@ -1,0 +1,6 @@
+== start
+rect 0,0 110x4 fill #ff0000
+== mid
+rect 0,0 110x4 fill #ff0000
+== settled
+rect 0,0 110x4 fill #ff0000

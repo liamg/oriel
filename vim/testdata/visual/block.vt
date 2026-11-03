@@ -1,0 +1,429 @@
+# Blockwise Visual mode. The harness reads back only a charwise selection, so block cases
+# check the cursor and mode, or end in Normal mode after an operator.
+
+=== CTRL-V starts blockwise Visual mode
+ref:    visual.txt *CTRL-V*
+quote:  "Start Visual mode blockwise."
+given:
+  a|bc
+  def
+keys:   <C-v>jl
+expect:
+  abc
+  de|f
+mode:   visual-block
+
+=== CTRL-V in blockwise Visual stops Visual mode
+ref:    visual.txt *v_CTRL-V*
+quote:  "new mode after typing:"
+given:
+  |abc
+  def
+keys:   <C-v>j<C-v>
+expect:
+  abc
+  |def
+mode:   normal
+
+=== v in blockwise Visual switches to charwise
+ref:    visual.txt *v_v*
+quote:  "new mode after typing:"
+given:
+  |abc
+  def
+keys:   <C-v>jlv
+expect:
+  [abc
+  d|e]f
+mode:   visual
+
+=== V in blockwise Visual switches to linewise
+ref:    visual.txt *v_V*
+quote:  "new mode after typing:"
+given:
+  |abc
+  def
+keys:   <C-v>jV
+expect:
+  abc
+  |def
+mode:   visual-line
+
+=== o in a block goes to the opposite corner
+ref:    visual.txt *v_o*
+quote:  "Go to Other end of highlighted text"
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jlo
+expect:
+  a|bcd
+  efgh
+mode:   visual-block
+
+=== O in a block goes to the other corner in the same line
+ref:    visual.txt *v_O*
+quote:  "This is like \"o\", but in Visual block mode the cursor moves to the other corner in the same line."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jlO
+expect:
+  abcd
+  e|fgh
+mode:   visual-block
+
+=== O then a motion moves the block's other side
+ref:    visual.txt *v_O*
+quote:  "This is like \"o\", but in Visual block mode the cursor moves to the other corner in the same line."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jlOhd
+expect:
+  |d
+  h
+
+=== Esc in a block leaves the cursor at the corner it was on
+ref:    visual.txt *v_<Esc>*
+quote:  "In Visual mode: Stop Visual mode."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jlo<Esc>
+expect:
+  a|bcd
+  efgh
+mode:   normal
+
+=== block d deletes the rectangle
+ref:    change.txt *v_d*
+quote:  "Delete the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  a|bcd
+  efgh
+  ijkl
+keys:   <C-v>jld
+expect:
+  a|d
+  eh
+  ijkl
+regs:   "" = "bc\nfg"
+
+=== block y yanks the rectangle and goes to its top left
+ref:    change.txt *v_y*
+quote:  "Yank the highlighted text [into register x] (for {Visual} see |Visual-mode|)."
+given:
+  abcd
+  efgh
+  ijk|l
+keys:   <C-v>khy
+expect:
+  abcd
+  ef|gh
+  ijkl
+regs:   "0 = "gh\nkl"
+
+=== a yanked block is put as a block
+ref:    change.txt *blockwise-register*
+quote:  "If you use a blockwise Visual mode command to get the text into the register, the block of text will be inserted before (\"P\") or after (\"p\") the cursor column in the current and next lines."
+given:
+  |abcd
+  efgh
+keys:   <C-v>jld$p
+expect:
+  cd|ab
+  ghef
+
+=== a charwise register is put in every line of the block
+ref:    change.txt *blockwise-put*
+quote:  "When a register contains text from one line (characterwise), using a blockwise Visual selection, putting that register will paste that text repeatedly in each of the selected lines, thus replacing the blockwise selected region by multiple copies of the register text."
+given:
+  |TEXT
+  aaavvaaa
+  bbbvvbbb
+  cccvvccc
+keys:   yiwj3l<C-v>2jlp
+expect:
+  TEXT
+  aaaTEX|Taaa
+  bbbTEXTbbb
+  cccTEXTccc
+
+=== block D deletes to the end of each line
+ref:    change.txt *v_b_D*
+quote:  "In Visual block mode, \"D\" deletes the highlighted text plus all text until the end of the line."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jD
+expect:
+  |a
+  e
+
+=== $ in a block reaches the end of every line
+ref:    visual.txt *v_$*
+quote:  "When the \"$\" command is used with blockwise Visual mode, the right end of the highlighted text will be determined by the longest highlighted line."
+given:
+  a|bcdef
+  gh
+  ijkl
+keys:   <C-v>2j$y
+expect:
+  a|bcdef
+  gh
+  ijkl
+regs:   "0 = "bcdef\nh\njkl"
+
+=== $ in a block then d
+ref:    visual.txt *v_$*
+quote:  "When the \"$\" command is used with blockwise Visual mode, the right end of the highlighted text will be determined by the longest highlighted line."
+given:
+  a|bcdef
+  gh
+  ijkl
+keys:   <C-v>$2jd
+expect:
+  |a
+  g
+  i
+
+=== block I inserts on every line
+ref:    visual.txt *v_b_I*
+quote:  "With a blockwise selection, I{string}<ESC> will insert {string} at the start of block on every line of the block, provided that the line extends into the block."
+given:
+  a|bcd
+  efgh
+  ijkl
+keys:   <C-v>jlIXY<Esc>
+expect:
+  a|XYbcd
+  eXYfgh
+  ijkl
+
+=== block I leaves short lines alone
+ref:    visual.txt *v_b_I*
+quote:  "Thus lines that are short will remain unmodified."
+given:
+  ab|cd
+  a
+  abcd
+keys:   <C-v>2jIX<Esc>
+expect:
+  ab|Xcd
+  a
+  abXcd
+
+=== block I splits a tab
+ref:    visual.txt *v_b_I*
+quote:  "TABs are split to retain visual columns."
+given:
+  abcd|efghij
+  	x
+  abcdefghij
+keys:   <C-v>2jIX<Esc>
+expect:
+  abcd|Xefghij
+      X    x
+  abcdXefghij
+
+=== block A appends after the block on every line
+ref:    visual.txt *v_b_A*
+quote:  "With a blockwise selection, A{string}<ESC> will append {string} to the end of block on every line of the block."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jlAX<Esc>
+expect:
+  a|bcXd
+  efgXh
+
+=== block A pads short lines
+ref:    visual.txt *v_b_A*
+quote:  "In this case the string is appended to the end of the block on each line, and whitespace is inserted to pad to the end-of-block column."
+given:
+  ab|cd
+  a
+  abcd
+keys:   <C-v>2jAX<Esc>
+expect:
+  ab|cXd
+  a  X
+  abcXd
+
+=== block $A appends at the end of every line
+ref:    visual.txt *v_b_A*
+quote:  "In this case the string is appended to the end of each line."
+given:
+  a|bcdef
+  gh
+  ijkl
+keys:   <C-v>2j$AX<Esc>
+expect:
+  a|bcdefX
+  ghX
+  ijklX
+
+=== the blockwise example: fo<C-v>3jISTRING<Esc>
+ref:    visual.txt *v_b_I_example*
+quote:  "fo<C-v>3jISTRING<ESC>"
+given:
+  |abcdefghijklmnopqrstuvwxyz
+  abc		defghijklmnopqrstuvwxyz
+  abcdef  ghi		jklmnopqrstuvwxyz
+  abcdefghijklmnopqrstuvwxyz
+keys:   fo<C-v>3jISTRING<Esc>
+expect:
+  abcdefghijklmn|STRINGopqrstuvwxyz
+  abc	      STRING  defghijklmnopqrstuvwxyz
+  abcdef  ghi   STRING  	jklmnopqrstuvwxyz
+  abcdefghijklmnSTRINGopqrstuvwxyz
+
+=== block c replaces the block on every line
+ref:    visual.txt *v_b_c*
+quote:  "When you hit <Esc>, the same string is inserted in all previously selected lines."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jlcXY<Esc>
+expect:
+  aX|Yd
+  eXYh
+regs:   "" = "bc\nfg"
+
+=== block C changes to the end of every line
+ref:    visual.txt *v_b_C*
+quote:  "Like using \"c\", but the selection is extended until the end of the line for all lines."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jCX<Esc>
+expect:
+  a|X
+  eX
+
+=== block r replaces every character in the block
+ref:    visual.txt *v_b_r*
+quote:  "Every screen char in the highlighted region is replaced with the same char, ie TABs are split and the virtual whitespace is replaced, maintaining screen layout."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jlrx
+expect:
+  a|xxd
+  exxh
+
+=== block r splits a tab
+ref:    visual.txt *v_b_r*
+quote:  "Every screen char in the highlighted region is replaced with the same char, ie TABs are split and the virtual whitespace is replaced, maintaining screen layout."
+given:
+  ab|cdefgh
+  	x
+  abcdefgh
+keys:   <C-v>2jllrX
+expect:
+  ab|XXXfgh
+    XXX   x
+  abXXXfgh
+
+=== block > shifts from the block's left side
+ref:    visual.txt *v_b_>*
+quote:  "The LHS of the block determines the point from which to apply a right shift, and padding includes TABs optimally according to 'ts' and 'et'."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>j>
+expect:
+  a|	 bcd
+  e	 fgh
+
+=== block < shifts up to the block's left side
+ref:    visual.txt *v_b_<*
+quote:  "The LHS of the block determines the point up to which to shift left."
+given:
+  a|           bcd
+  e           fgh
+keys:   <C-v>j<
+expect:
+  a|   bcd
+  e   fgh
+
+=== block 2> shifts two shiftwidths
+ref:    change.txt *v_>*
+quote:  "Shift the highlighted lines [count] 'shiftwidth' rightwards (for {Visual} see |Visual-mode|)."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>j2>
+expect:
+  a|		 bcd
+  e		 fgh
+
+=== block ~ switches case in the block only
+ref:    change.txt *v_~*
+quote:  "Switch case of highlighted text (for {Visual} see |Visual-mode|)."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jl~
+expect:
+  a|BCd
+  eFGh
+
+=== block U uppercases the block only
+ref:    change.txt *v_U*
+quote:  "Make highlighted text uppercase (for {Visual} see |Visual-mode|)."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jU
+expect:
+  a|Bcd
+  eFgh
+
+=== block J joins the lines
+ref:    change.txt *v_J*
+quote:  "Join the highlighted lines, with a minimum of two lines."
+given:
+  a|bc
+  def
+  ghi
+keys:   <C-v>jJ
+expect:
+  abc| def
+  ghi
+
+=== block on multibyte characters
+ref:    visual.txt *visual-block*
+quote:  "With CTRL-V (blockwise Visual mode) the highlighted text will be a rectangle between start position and the cursor."
+given:
+  |äöüx
+  abcd
+keys:   <C-v>jld
+expect:
+  |üx
+  cd
+regs:   "" = "äö\nab"
+
+=== gv reselects a block
+ref:    visual.txt *gv*
+quote:  "Start Visual mode with the same area as the previous area and the same mode."
+given:
+  a|bcd
+  efgh
+keys:   <C-v>jl<Esc>gggvd
+expect:
+  a|d
+  eh
+
+=== '< and '> after a block are the corners that define it
+ref:    motion.txt *'<*
+quote:  "For block mode it may also be the last character in the first line (to be able to define the block)."
+given:
+  abc|d
+  efgh
+keys:   <C-v>jhh<Esc>
+expect:
+  abcd
+  e|fgh
+marks:  <=1:3 >=2:1

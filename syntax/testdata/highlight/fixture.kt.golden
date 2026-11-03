@@ -1,0 +1,130 @@
+   1 | package pricing
+     | ^^^^^^^ keyword
+     |         ^^^^^^^ module
+   2 | 
+   3 | import kotlin.math.roundToInt
+     | ^^^^^^ keyword.import
+     |        ^^^^^^ variable
+     |               ^^^^ variable
+     |                    ^^^^^^^^^^ function
+   4 | 
+   5 | // A tier's price, in pence.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   6 | data class Tier(val name: String, val pence: Int)
+     | ^^^^ keyword.modifier
+     |      ^^^^^ keyword.type
+     |            ^^^^ type
+     |                ^ punctuation.bracket
+     |                 ^^^ keyword
+     |                    ^^^^^ constructor
+     |                         ^ punctuation.delimiter
+     |                          ^^^^^^^ constructor
+     |                                 ^ punctuation.delimiter
+     |                                  ^ constructor
+     |                                   ^^^ keyword
+     |                                      ^^^^^^ constructor
+     |                                            ^ punctuation.delimiter
+     |                                             ^^^^ constructor
+     |                                                 ^ punctuation.bracket
+   7 | 
+   8 | fun priceFor(tier: Tier, qty: Int = 1): Int {
+     | ^^^ keyword.function
+     |     ^^^^^^^^ function
+     |             ^ punctuation.bracket
+     |              ^^^^ variable.parameter
+     |                  ^ punctuation.delimiter
+     |                    ^^^^ type
+     |                        ^ punctuation.delimiter
+     |                          ^^^ variable.parameter
+     |                             ^ punctuation.delimiter
+     |                               ^^^ type.builtin
+     |                                   ^ operator
+     |                                     ^ number
+     |                                      ^ punctuation.bracket
+     |                                       ^ punctuation.delimiter
+     |                                         ^^^ type.builtin
+     |                                             ^ punctuation.bracket
+   9 |     val total = tier.pence * qty
+     |     ^^^ keyword
+     |         ^^^^^ variable
+     |               ^ operator
+     |                 ^^^^ variable
+     |                     ^ punctuation.delimiter
+     |                      ^^^^^ variable.member
+     |                            ^ operator
+     |                              ^^^ variable
+  10 |     return when {
+     |     ^^^^^^ keyword.return
+     |            ^^^^ keyword.conditional
+     |                 ^ punctuation.bracket
+  11 |         qty >= 100 -> (total * 0.9).roundToInt()
+     |         ^^^ variable
+     |             ^^ operator
+     |                ^^^ number
+     |                    ^^ operator
+     |                       ^ punctuation.bracket
+     |                        ^^^^^ variable
+     |                              ^ operator
+     |                                ^^^ number.float
+     |                                   ^ punctuation.bracket
+     |                                    ^ punctuation.delimiter
+     |                                     ^^^^^^^^^^ function.call
+     |                                               ^^ punctuation.bracket
+  12 |         else -> total
+     |         ^^^^ keyword.conditional
+     |              ^^ operator
+     |                 ^^^^^ variable
+  13 |     }
+     |     ^ punctuation.bracket
+  14 | }
+     | ^ punctuation.bracket
+  15 | 
+  16 | fun main() {
+     | ^^^ keyword.function
+     |     ^^^^ function
+     |         ^^ punctuation.bracket
+     |            ^ punctuation.bracket
+  17 |     val tiers = listOf(Tier("basic", 100), Tier("pro", 450))
+     |     ^^^ keyword
+     |         ^^^^^ variable
+     |               ^ operator
+     |                 ^^^^^^ function.builtin
+     |                       ^ punctuation.bracket
+     |                        ^^^^ function.call
+     |                            ^ punctuation.bracket
+     |                             ^^^^^^^ string
+     |                                    ^ punctuation.delimiter
+     |                                      ^^^ number
+     |                                         ^ punctuation.bracket
+     |                                          ^ punctuation.delimiter
+     |                                            ^^^^ function.call
+     |                                                ^ punctuation.bracket
+     |                                                 ^^^^^ string
+     |                                                      ^ punctuation.delimiter
+     |                                                        ^^^ number
+     |                                                           ^^ punctuation.bracket
+  18 |     for (t in tiers) {
+     |     ^^^ keyword.repeat
+     |         ^ punctuation.bracket
+     |          ^ variable
+     |            ^^ operator
+     |               ^^^^^ variable
+     |                    ^ punctuation.bracket
+     |                      ^ punctuation.bracket
+  19 |         println("${t.name}: ${priceFor(t, 120)}")
+     |         ^^^^^^^ function.builtin
+     |                ^ punctuation.bracket
+     |                 ^ string
+     |                  ^^ punctuation.special
+     |                    ^^^^^^ none
+     |                          ^ punctuation.special
+     |                           ^^ string
+     |                             ^^ punctuation.special
+     |                               ^^^^^^^^^^^^^^^^ none
+     |                                               ^ punctuation.special
+     |                                                ^ string
+     |                                                 ^ punctuation.bracket
+  20 |     }
+     |     ^ punctuation.bracket
+  21 | }
+     | ^ punctuation.bracket

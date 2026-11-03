@@ -1,0 +1,6 @@
+source: https://github.com/vim/vim
+ref: v9.2.1176
+commit: 7eb646597d6b6be42f5941cf194938afa3af5208
+path: src/testdir/{test_normal,test_textobjects,test_undo,test_put,test_registers,test_marks,test_jumplist,test_join,test_visual,test_increment}.vim
+license: Vim license (see ../uganda.txt)
+use: mined into vim/testdata/mined/*.vt by vim/vimtest/mine; never run as Vimscript

@@ -1,0 +1,658 @@
+# Ex ranges typed from normal mode (cmdline.txt *cmdline-ranges*).
+
+=== :N deletes an absolute line number
+ref:    cmdline.txt *E1247*
+quote:  an absolute line number
+given:
+  |one
+  two
+  three
+  four
+keys:   :3d<CR>
+expect:
+  one
+  two
+  |four
+mode:   normal
+
+=== :N alone moves the cursor to that line
+ref:    motion.txt *:[range]*
+quote:  Set the cursor on the last line number in [range].
+given:
+  |one
+    two
+  three
+keys:   :2<CR>
+expect:
+  one
+  |  two
+  three
+mode:   normal
+
+=== :. is the cursor line
+ref:    cmdline.txt *:.*
+quote:  the current line
+given:
+  one
+  t|wo
+  three
+keys:   :.d<CR>
+expect:
+  one
+  |three
+mode:   normal
+
+=== :$ is the last line
+ref:    cmdline.txt *:$*
+quote:  the last line of the buffer
+given:
+  |one
+  two
+  three
+keys:   :$d<CR>
+expect:
+  one
+  |two
+mode:   normal
+
+=== :% deletes every line
+ref:    cmdline.txt *:%*
+quote:  equal to 1,$ (the entire buffer)
+given:
+  one
+  |two
+  three
+keys:   :%d<CR>
+expect: |
+mode:   normal
+
+=== :N,M deletes a range and reports the lines
+ref:    options.txt *'report'*
+quote:  When the number of changed lines is more than 'report' a message will be given for most ":" commands.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :2,4d<CR>
+expect:
+  one
+  |five
+msg:    3 fewer lines
+mode:   normal
+
+=== two deleted lines are not reported
+ref:    options.txt *'report'*
+quote:  When the number of changed lines is more than 'report' a message will be given for most ":" commands.
+given:
+  |one
+  two
+  three
+  four
+keys:   :2,3d<CR>
+expect:
+  one
+  |four
+msg:    ""
+mode:   normal
+
+=== :'a,'b uses mark lines
+ref:    cmdline.txt *:'x*
+quote:  the line of the position of mark x
+given:
+  one
+  t|wo
+  three
+  four
+  five
+keys:   majjmbgg:'a,'bd<CR>
+expect:
+  one
+  |five
+mode:   normal
+
+=== an unset mark in a range is an error
+ref:    motion.txt *E20*
+quote:  Marks
+given:
+  |one
+  two
+keys:   :'q,.d<CR>
+expect:
+  |one
+  two
+msg:    E20: Mark not set
+mode:   normal
+
+=== :/pat/ is the next matching line
+ref:    cmdline.txt *:/*
+quote:  the next line where {pattern} matches
+given:
+  |foo one
+  two
+  foo three
+  four
+keys:   :/foo/d<CR>
+expect:
+  foo one
+  two
+  |four
+mode:   normal
+
+=== :/pat/ skips a match in the cursor line
+ref:    cmdline.txt *:?*
+quote:  Note: "next line" and "previous line" do not include matches appearing in the current line.
+given:
+  one
+  |foo two
+  three
+  foo four
+keys:   :/foo/d<CR>
+expect:
+  one
+  foo two
+  |three
+mode:   normal
+
+=== :/pat/ wraps around the end of the buffer
+ref:    cmdline.txt *:/*
+quote:  the next line where {pattern} matches
+given:
+  foo one
+  two
+  |three
+keys:   :/foo/d<CR>
+expect:
+  |two
+  three
+mode:   normal
+
+=== :?pat? is the previous matching line
+ref:    cmdline.txt *:?*
+quote:  the previous line where {pattern} matches
+given:
+  foo one
+  foo two
+  three
+  |four
+keys:   :?foo?d<CR>
+expect:
+  foo one
+  |three
+  four
+mode:   normal
+
+=== :/pat/ without a match is an error
+ref:    pattern.txt *E486*
+quote:  Pattern not found
+given:
+  |one
+  two
+keys:   :/nothere/d<CR>
+expect:
+  |one
+  two
+msg:    "E486: Pattern not found: nothere"
+mode:   normal
+
+=== :/pat/+1 is the line after the match
+ref:    cmdline.txt *:range-pattern*
+quote:  the line below the next line containing "that"
+given:
+  |one
+  that
+  three
+  four
+keys:   :/that/+1d<CR>
+expect:
+  one
+  that
+  |four
+mode:   normal
+
+=== :/pat1//pat2/ searches from the first match
+ref:    cmdline.txt *:range-pattern*
+quote:  Find line containing "pat2" after line containing "pat1", without moving the cursor.
+given:
+  |one
+  pat2 early
+  pat1
+  three
+  pat2 late
+keys:   :/pat1//pat2/d<CR>
+expect:
+  one
+  pat2 early
+  pat1
+  |three
+mode:   normal
+
+=== :\/ is the next line matching the last search
+ref:    cmdline.txt *:?*
+quote:  the next line where the most recent search pattern matches
+given:
+  |one
+  foo
+  three
+  foo
+keys:   /foo<CR>gg:\/d<CR>
+expect:
+  one
+  |three
+  foo
+mode:   normal
+
+=== :\? is the previous line matching the last search
+ref:    cmdline.txt *:?*
+quote:  the previous line where the most recent search pattern matches
+given:
+  |foo
+  two
+  foo
+  four
+keys:   /foo<CR>G:\?d<CR>
+expect:
+  foo
+  two
+  |four
+mode:   normal
+
+=== :\& is the next line matching the last substitute pattern
+ref:    cmdline.txt *:?*
+quote:  the next line where the most recent substitute pattern matches
+given:
+  |bar
+  one
+  bar
+  two
+keys:   :s/bar/baz/<CR>:\&d<CR>
+expect:
+  baz
+  one
+  |two
+mode:   normal
+
+=== :.+N is relative to the cursor line
+ref:    cmdline.txt *:range-offset*
+quote:  That value is added or subtracted from the preceding line number.
+given:
+  |one
+  two
+  three
+  four
+keys:   :.+2d<CR>
+expect:
+  one
+  two
+  |four
+mode:   normal
+
+=== :- alone is the line above
+ref:    cmdline.txt *:range-offset*
+quote:  If there is nothing before the '+' or '-', for the first line number in [range] the current line is used as the relative starting point.
+given:
+  one
+  two
+  |three
+keys:   :-d<CR>
+expect:
+  one
+  |three
+mode:   normal
+
+=== :++ counts each plus as one
+ref:    cmdline.txt *:range-offset*
+quote:  If the number is omitted, +1 is used for each '+' and -1 for each '-' so, e.g., 'x++ and 'x+2 are synonymous.
+given:
+  |one
+  two
+  three
+  four
+keys:   :++d<CR>
+expect:
+  one
+  two
+  |four
+mode:   normal
+
+=== :-,. is the line before to the cursor line
+ref:    cmdline.txt *:range-offset*
+quote:  So, -,. means, "the line before the current line to the current line".
+given:
+  one
+  two
+  |three
+  four
+keys:   :-,.d<CR>
+expect:
+  one
+  |four
+mode:   normal
+
+=== :$-1 counts back from the last line
+ref:    cmdline.txt *:range-offset*
+quote:  That value is added or subtracted from the preceding line number.
+given:
+  |one
+  two
+  three
+  four
+keys:   :$-1d<CR>
+expect:
+  one
+  two
+  |four
+mode:   normal
+
+=== :'a+1 is the line after a mark
+ref:    cmdline.txt *:range-offset*
+quote:  So, for example, 'x+2 is two lines after the line containing mark x.
+given:
+  |one
+  two
+  three
+  four
+keys:   ma:'a+2d<CR>
+expect:
+  one
+  two
+  |four
+mode:   normal
+
+=== a comma searches the second address from the cursor
+ref:    cmdline.txt *:,*
+quote:  from line 4 till match with "this line" after the cursor line.
+given:
+  a x
+  b
+  c
+  |d x
+  e
+  f x
+keys:   :2,/x/d<CR>
+expect:
+  |a x
+msg:    5 fewer lines
+mode:   normal
+
+=== a semicolon searches the second address from the first
+ref:    cmdline.txt *:;*
+quote:  When separated with ';' the cursor position will be set to that line before interpreting the next line specifier.
+given:
+  a x
+  b
+  c
+  |d x
+  e
+  f x
+keys:   :2;/x/d<CR>
+expect:
+  a x
+  |e
+  f x
+msg:    3 fewer lines
+mode:   normal
+
+=== a semicolon makes an offset relative to the first address
+ref:    cmdline.txt *:;*
+quote:  When separated with ';' the cursor position will be set to that line before interpreting the next line specifier.
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :3;+1d<CR>
+expect:
+  one
+  two
+  |five
+mode:   normal
+
+=== 0;/pat/ also matches in the first line
+ref:    cmdline.txt *:range-pattern*
+quote:  the first line containing "that", also matches in the first line.
+given:
+  that
+  two
+  |three
+  that
+keys:   :0;/that/d<CR>
+expect:
+  |two
+  three
+  that
+mode:   normal
+
+=== 1;/pat/ skips the first line
+ref:    cmdline.txt *:range-pattern*
+quote:  the first line after line 1 containing "that"
+given:
+  that
+  two
+  |three
+  that
+  five
+keys:   :1;/that/d<CR>
+expect:
+  |five
+msg:    4 fewer lines
+mode:   normal
+
+=== extra comma-separated addresses drop the leftmost
+ref:    cmdline.txt *:,*
+quote:  If more line specifiers are given than required for the command, when comma separated, the leftmost one(s) will be ignored
+given:
+  |one
+  two
+  three
+  four
+keys:   :1,2,3d<CR>
+expect:
+  one
+  |four
+mode:   normal
+
+=== extra semicolon-separated addresses are summed
+ref:    cmdline.txt *:,*
+quote:  When semicolon separated, the leftmost specifier to the penultimate one are summed
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :1;+1;+1d<CR>
+expect:
+  one
+  |four
+  five
+mode:   normal
+
+=== a count after the command counts from the last address
+ref:    cmdline.txt *:range-pattern*
+quote:  This count is used as the number of lines to be used, starting with the line given in the last line specifier (the default is the cursor line).
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :2d 3<CR>
+expect:
+  one
+  |five
+mode:   normal
+
+=== a count after a range starts at the range's last line
+ref:    cmdline.txt *:range-pattern*
+quote:  This count is used as the number of lines to be used, starting with the line given in the last line specifier (the default is the cursor line).
+given:
+  |one
+  two
+  three
+  four
+  five
+keys:   :1,2d 2<CR>
+expect:
+  one
+  |four
+  five
+mode:   normal
+
+=== a count before : becomes .,.+(count-1)
+ref:    cmdline.txt *N:*
+quote:  The "count" lines at and after the cursor.
+given:
+  one
+  |two
+  three
+  four
+  five
+keys:   3:d<CR>
+expect:
+  one
+  |five
+mode:   normal
+
+=== :'<,'> is the last visual area
+ref:    cmdline.txt *:'<*
+quote:  the first line of the most recently
+given:
+  one
+  t|wo
+  three
+  four
+  five
+keys:   vj<Esc>gg:'<,'>d<CR>
+expect:
+  one
+  |four
+  five
+mode:   normal
+
+=== : in visual mode starts with '<,'>
+ref:    cmdline.txt *v_:*
+quote:  Starts a command-line with the Visual selected lines as a range.
+given:
+  one
+  t|wo
+  three
+  four
+keys:   Vj:d<CR>
+expect:
+  one
+  |four
+mode:   normal
+
+=== :* is the last visual area
+ref:    cmdline.txt *:star*
+quote:  When Visual mode was already ended, a short way to use the Visual area for a range is `:*`.
+given:
+  one
+  |two
+  three
+  four
+keys:   vj<Esc>G:*d<CR>
+expect:
+  one
+  |four
+mode:   normal
+
+=== :0 is taken as line 1 by :d
+ref:    cmdline.txt *:range-pattern*
+quote:  When using a 0 (zero) this is interpreted as a 1 by most commands.
+given:
+  one
+  |two
+  three
+keys:   :0d<CR>
+expect:
+  |two
+  three
+mode:   normal
+
+=== a line number past the end is an error
+ref:    cmdline.txt *E16*
+quote:  Some Ex commands accept a line range in front of them.
+given:
+  |one
+  two
+keys:   :5d<CR>
+expect:
+  |one
+  two
+msg:    "E16: Invalid range"
+mode:   normal
+
+=== an offset past the end is an error
+ref:    cmdline.txt *E16*
+quote:  Some Ex commands accept a line range in front of them.
+given:
+  one
+  |two
+keys:   :.+3d<CR>
+expect:
+  one
+  |two
+msg:    "E16: Invalid range"
+mode:   normal
+
+=== :N past the end moves to the last line
+ref:    motion.txt *:[range]*
+quote:  Set the cursor on the last line number in [range].
+given:
+  |one
+  two
+  three
+keys:   :9<CR>
+expect:
+  one
+  two
+  |three
+mode:   normal
+
+=== a backwards range asks to swap
+ref:    cmdline.txt *E493*
+quote:  If this is not the case, Vim will ask you if it should swap the line numbers.
+given:
+  |one
+  two
+  three
+  four
+keys:   :3,2d<CR>y
+expect:
+  one
+  |four
+mode:   normal
+
+=== a backwards range is not swapped when declined
+ref:    cmdline.txt *E493*
+quote:  If this is not the case, Vim will ask you if it should swap the line numbers.
+given:
+  |one
+  two
+  three
+  four
+keys:   :3,2d<CR>n
+expect:
+  |one
+  two
+  three
+  four
+mode:   normal
+
+=== :silent swaps a backwards range without asking
+ref:    cmdline.txt *E493*
+quote:  You can use ":silent" before a command to avoid the question, the range will always be swapped then.
+given:
+  |one
+  two
+  three
+  four
+keys:   :silent 3,2d<CR>
+expect:
+  one
+  |four
+mode:   normal

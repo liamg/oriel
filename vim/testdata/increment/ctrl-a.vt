@@ -1,0 +1,432 @@
+# CTRL-A and CTRL-X in Normal mode (change.txt, "Adding and subtracting").
+
+=== CTRL-A adds one to the number under the cursor
+ref:    nvim/change.txt *CTRL-A*
+quote:  Add [count] to the number or alphabetic character at or after the cursor.
+given:  foo |7 bar
+keys:   <C-a>
+expect: foo |8 bar
+mode:   normal
+
+=== CTRL-A on the middle of a number adds to the whole number
+ref:    nvim/change.txt *CTRL-A*
+quote:  Add [count] to the number or alphabetic character at or after the cursor.
+given:  x 1|29 y
+keys:   <C-a>
+expect: x 13|0 y
+mode:   normal
+
+=== CTRL-A uses the number after the cursor
+ref:    nvim/change.txt *CTRL-A*
+quote:  Add [count] to the number or alphabetic character at or after the cursor.
+given:  |item 41 of 50
+keys:   <C-a>
+expect: item 4|2 of 50
+mode:   normal
+
+=== CTRL-A with no number after the cursor does nothing
+ref:    nvim/change.txt *CTRL-A*
+quote:  Add [count] to the number or alphabetic character at or after the cursor.
+given:  12 a|bc
+keys:   <C-a>
+expect: 12 a|bc
+mode:   normal
+
+=== a count adds that much
+ref:    nvim/change.txt *CTRL-A*
+quote:  Add [count] to the number or alphabetic character at or after the cursor.
+given:  |7
+keys:   5<C-a>
+expect: 1|2
+mode:   normal
+
+=== CTRL-X subtracts one
+ref:    nvim/change.txt *CTRL-X*
+quote:  Subtract [count] from the number or alphabetic character at or after the cursor.
+given:  |10
+keys:   <C-x>
+expect: |9
+mode:   normal
+
+=== a count subtracts that much
+ref:    nvim/change.txt *CTRL-X*
+quote:  Subtract [count] from the number or alphabetic character at or after the cursor.
+given:  |100
+keys:   25<C-x>
+expect: 7|5
+mode:   normal
+
+=== CTRL-X below zero gives a negative number
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  The CTRL-A and CTRL-X commands work for (signed) decimal numbers
+given:  |0
+keys:   <C-x>
+expect: -|1
+mode:   normal
+
+=== CTRL-A on a negative number counts the sign
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  For decimals a leading negative sign is considered for incrementing or decrementing
+given:  |-5
+keys:   <C-a>
+expect: -|4
+mode:   normal
+
+=== CTRL-A takes a negative number through zero
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  For decimals a leading negative sign is considered for incrementing or decrementing
+given:  |-1
+keys:   2<C-a>
+expect: |1
+mode:   normal
+
+=== CTRL-A with the cursor on the minus sign
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  For decimals a leading negative sign is considered for incrementing or decrementing
+given:  x |-10
+keys:   <C-a>
+expect: x -|9
+mode:   normal
+
+=== a minus after a letter is still a sign
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Using CTRL-A on "14" in "Carbon-14" results in "Carbon-15" (without "blank" it would become "Carbon-13").
+given:  |Carbon-14
+keys:   <C-a>
+expect: Carbon-1|3
+mode:   normal
+
+=== a minus after a digit is a sign too
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Using CTRL-X on "2020" in "9-2020" results in "9-2019" (without "unsigned" it would become "9-2021").
+given:  9-|2020
+keys:   <C-x>
+expect: 9-202|1
+mode:   normal
+
+=== x-1 counts the minus sign
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Using CTRL-A on "14" in "Carbon-14" results in "Carbon-15" (without "blank" it would become "Carbon-13").
+given:  |x-1
+keys:   <C-a>
+expect: x|0
+mode:   normal
+
+=== with unsigned in 'nrformats' the minus is ignored
+ref:    nvim/options.txt *octal-nrformats*
+quote:  If included, numbers are recognized as unsigned. Thus a leading dash or negative sign won't be considered as part of the number.
+given:  9-|2020
+keys:   :set nf+=unsigned<CR><C-x>
+expect: 9-201|9
+mode:   normal
+
+=== with blank in 'nrformats' a minus after a letter isn't a sign
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Using CTRL-A on "14" in "Carbon-14" results in "Carbon-15"
+given:  |Carbon-14
+keys:   :set nf+=blank<CR><C-a>
+expect: Carbon-1|5
+mode:   normal
+
+=== letters aren't incremented by default
+ref:    nvim/options.txt *'nrformats'*
+quote:  alpha	If included, single alphabetical characters will be incremented or decremented.
+given:  |abc
+keys:   <C-a>
+expect: |abc
+mode:   normal
+
+=== with alpha in 'nrformats' a letter is incremented
+ref:    nvim/options.txt *'nrformats'*
+quote:  single alphabetical characters will be incremented or decremented.
+given:  |a)
+keys:   :set nf+=alpha<CR><C-a>
+expect: |b)
+mode:   normal
+
+=== with alpha in 'nrformats' z stays z
+ref:    nvim/options.txt *'nrformats'*
+quote:  alpha	If included, single alphabetical characters will be incremented or decremented.
+given:  |z
+keys:   :set nf+=alpha<CR><C-a>
+expect: |z
+mode:   normal
+
+=== with alpha in 'nrformats' a number after the cursor still wins over a later letter
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  When 'nrformats' includes "alpha", Vim will change the alphabetic character under or after the cursor.
+given:  |-x 5
+keys:   :set nf+=alpha<CR><C-a>
+expect: -|y 5
+mode:   normal
+
+=== hex numbers are incremented in hex
+ref:    nvim/options.txt *octal-nrformats*
+quote:  hex If included, numbers starting with "0x" or "0X" will be considered to be hexadecimal.
+given:  |0x0f
+keys:   <C-a>
+expect: 0x1|0
+mode:   normal
+
+=== hex keeps leading zeros
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Example: Using CTRL-X on "0x100" results in "0x0ff".
+given:  |0x100
+keys:   <C-x>
+expect: 0x0f|f
+mode:   normal
+
+=== hex follows the case of the rightmost letter
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  The case of the rightmost letter in the number determines the case of the resulting hexadecimal number.
+given:  |0xaF
+keys:   <C-a>
+expect: 0xB|0
+mode:   normal
+
+=== 0X keeps its case
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  When 'nrformats' includes "hex", Vim assumes numbers starting with '0x' or '0X' are hexadecimal.
+given:  |0Xff
+keys:   <C-a>
+expect: 0X10|0
+mode:   normal
+
+=== hex with no letter is lower case by default
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  If there is no letter in the current number, Vim uses the previously detected case.
+given:  |0x9
+keys:   <C-a>
+expect: 0x|a
+mode:   normal
+
+=== hex ignores a minus sign
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  for binary, octal and hex values, it won't be considered.
+given:  |-0x10
+keys:   <C-a>
+expect: -0x1|1
+mode:   normal
+
+=== CTRL-A with the cursor on the x of a hex number
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  When 'nrformats' includes "hex", Vim assumes numbers starting with '0x' or '0X' are hexadecimal.
+given:  0|x1f
+keys:   <C-a>
+expect: 0x2|0
+mode:   normal
+
+=== without hex in 'nrformats' 0x10 is a decimal 0
+ref:    nvim/options.txt *octal-nrformats*
+quote:  hex If included, numbers starting with "0x" or "0X" will be considered to be hexadecimal.
+given:  |0x10
+keys:   :set nf-=hex<CR><C-a>
+expect: |1x10
+mode:   normal
+
+=== binary numbers are incremented in binary
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  When 'nrformats' includes "bin", Vim assumes numbers starting with '0b' or '0B' are binary.
+given:  |0b11
+keys:   <C-a>
+expect: 0b10|0
+mode:   normal
+
+=== binary keeps leading zeros
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Example: Using CTRL-X on "0b1000" subtracts one, resulting in "0b0111".
+given:  |0b1000
+keys:   <C-x>
+expect: 0b011|1
+mode:   normal
+
+=== 0B keeps its case
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  When 'nrformats' includes "bin", Vim assumes numbers starting with '0b' or '0B' are binary.
+given:  |0B101
+keys:   <C-a>
+expect: 0B11|0
+mode:   normal
+
+=== a hex number with b in it stays hex
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  CTRL-A on "0x0b11" results in "0x0b12", not "0x0b100".
+given:  |0x0b11
+keys:   <C-a>
+expect: 0x0b1|2
+mode:   normal
+
+=== leading zeros stay decimal without octal in 'nrformats'
+ref:    nvim/options.txt *octal-nrformats*
+quote:  octal If included, numbers that start with a zero will be considered to be octal.
+given:  |007
+keys:   <C-a>
+expect: 00|8
+mode:   normal
+
+=== a decimal number keeps its width
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  For numbers with leading zeros (including all octal and hexadecimal numbers), Vim preserves the number of characters in the number when possible.
+given:  |0099
+keys:   <C-a>
+expect: 010|0
+mode:   normal
+
+=== a decimal number keeps its width going down
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  Vim preserves the number of characters in the number when possible.
+given:  |0100
+keys:   <C-x>
+expect: 009|9
+mode:   normal
+
+=== with octal in 'nrformats' 007 becomes 010
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Example: Using CTRL-A on "007" results in "010".
+given:  |007
+keys:   :set nf+=octal<CR><C-a>
+expect: 01|0
+mode:   normal
+
+=== with octal in 'nrformats' 0077 becomes 0100
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  CTRL-A on "0077" results in "0100"
+given:  |0077
+keys:   :set nf+=octal<CR><C-a>
+expect: 010|0
+mode:   normal
+
+=== with octal in 'nrformats' a number with an 8 is decimal and loses its zeros
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  leading zeros are removed to avoid that the result may be recognized as an octal number.
+given:  |0089
+keys:   :set nf+=octal<CR><C-a>
+expect: 9|0
+mode:   normal
+
+=== a number too big for 64 bits is rounded down and not changed
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  E.g. CTRL-X on 18446744073709551616 results in 18446744073709551615.
+given:  |18446744073709551616
+keys:   <C-x>
+expect: 1844674407370955161|5
+mode:   normal
+
+=== a much bigger number is rounded down the same way
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  Same for larger numbers, such as 18446744073709551618.
+given:  |18446744073709551618
+keys:   <C-a>
+expect: 1844674407370955161|5
+mode:   normal
+
+=== CTRL-A goes past the largest signed 64-bit number
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  The CTRL-A and CTRL-X commands work for (signed) decimal numbers
+given:  |9223372036854775807
+keys:   <C-a>
+expect: 922337203685477580|8
+mode:   normal
+
+=== CTRL-X goes past the smallest signed 64-bit number
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  The CTRL-A and CTRL-X commands work for (signed) decimal numbers
+given:  |-9223372036854775808
+keys:   <C-x>
+expect: -922337203685477580|9
+mode:   normal
+
+=== CTRL-A on 2^64-1 wraps to the negative of it
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Using CTRL-X on "0" or CTRL-A on "18446744073709551615" (2^64 - 1) has no effect, overflow is prevented.
+given:  |18446744073709551615
+keys:   <C-a>
+expect: -1844674407370955161|5
+mode:   normal
+
+=== CTRL-X on minus 2^64-1 wraps to 2^64-1
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  The CTRL-A and CTRL-X commands work for (signed) decimal numbers
+given:  |-18446744073709551615
+keys:   <C-x>
+expect: 1844674407370955161|5
+mode:   normal
+
+=== CTRL-A on the largest 64-bit hex number wraps to zero
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  Vim preserves the number of characters in the number when possible.
+given:  |0xffffffffffffffff
+keys:   <C-a>
+expect: 0x000000000000000|0
+mode:   normal
+
+=== a hex number too big for 64 bits is rounded down and not changed
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  When the number under the cursor is too big to fit into 64 bits, it will be rounded off to the nearest number that can be represented, and the addition/subtraction is skipped.
+given:  |0x10000000000000000
+keys:   <C-a>
+expect: 0x0fffffffffffffff|f
+mode:   normal
+
+=== with unsigned the largest number doesn't wrap
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Using CTRL-X on "0" or CTRL-A on "18446744073709551615" (2^64 - 1) has no effect, overflow is prevented.
+given:  |18446744073709551615
+keys:   :set nf+=unsigned<CR><C-a>
+expect: 1844674407370955161|5
+mode:   normal
+
+=== with unsigned 0 doesn't go below zero
+ref:    nvim/options.txt *octal-nrformats*
+quote:  Using CTRL-X on "0" or CTRL-A on "18446744073709551615" (2^64 - 1) has no effect, overflow is prevented.
+given:  |0
+keys:   :set nf+=unsigned<CR><C-x>
+expect: |0
+mode:   normal
+
+=== . repeats CTRL-A with its count
+ref:    repeat.txt *.*
+quote:  Without a count, the count of the last change is used.
+given:  |10
+keys:   5<C-a>
+expect: 1|5
+dot:    2|0
+mode:   normal
+
+=== . with a count replaces the CTRL-A count
+ref:    repeat.txt *.*
+quote:  If you enter a count, it will replace the last one.
+given:  |10
+keys:   5<C-a>2.
+expect: 1|7
+mode:   normal
+
+=== . repeats CTRL-X on another number
+ref:    repeat.txt *.*
+quote:  Simple changes can be repeated with the "." command.
+given:  |5 and 9
+keys:   <C-x>w.
+expect: 4 and |8
+mode:   normal
+
+=== u undoes CTRL-A
+ref:    nvim/change.txt *CTRL-A*
+quote:  Add [count] to the number or alphabetic character at or after the cursor.
+given:  |99
+keys:   <C-a>
+expect: 10|0
+undo:   |99
+mode:   normal
+
+=== CTRL-A in a macro numbers a list
+ref:    nvim/change.txt *v_g_CTRL-X*
+quote:  The CTRL-A command is very useful in a macro.
+given:  |1. item
+keys:   qaYp<C-a>q3@a
+expect:
+  1. item
+  2. item
+  3. item
+  4. item
+  |5. item
+mode:   normal

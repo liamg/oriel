@@ -1,0 +1,11 @@
+/bin/
+*.test
+*.failed.png
+*.prof
+cover.out
+syntax/grammars/packs-out/
+sandbox/helper/bin/*
+!sandbox/helper/bin/README
+
+# signing identities (scripts/macos-signing-cert.sh)
+*.p12

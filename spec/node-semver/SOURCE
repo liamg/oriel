@@ -1,0 +1,4 @@
+source: https://github.com/npm/node-semver
+ref: README.md on the main branch, fetched 2026-10-15
+path: README.md (the range syntax: caret, tilde and X-ranges, prerelease tags)
+license: ISC (see LICENSE)

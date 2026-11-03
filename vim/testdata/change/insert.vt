@@ -1,0 +1,189 @@
+=== i stays in insert mode with the cursor after the typed text
+ref:    insert.txt *i*
+quote:  "Insert text before the cursor [count] times."
+given:  a|bc
+keys:   ixy
+expect: axy|bc
+mode:   insert
+
+=== i then <Esc> leaves the cursor on the last typed character
+ref:    insert.txt *i_<Esc>*
+quote:  "End insert or Replace mode, go back to Normal mode."
+given:  a|bc
+keys:   ixy<Esc>
+expect: ax|ybc
+mode:   normal
+regs:   ". = "xy"
+undo:   a|bc
+dot:    axx|yybc
+
+=== i<Esc> in the first column does not move
+ref:    insert.txt *i_<Esc>*
+quote:  "End insert or Replace mode, go back to Normal mode."
+given:  |abc
+keys:   i<Esc>
+expect: |abc
+
+=== 3i repeats the text after <Esc>
+ref:    insert.txt *i*
+quote:  "Insert text before the cursor [count] times."
+given:  |ab
+keys:   3ix<Esc>
+expect: xx|xab
+undo:   |ab
+
+=== a appends after the cursor
+ref:    insert.txt *a*
+quote:  "Append text after the cursor [count] times."
+given:  |abc
+keys:   axy<Esc>
+expect: ax|ybc
+dot:    axyx|ybc
+
+=== a on the last character appends at the end
+ref:    insert.txt *a*
+quote:  "Append text after the cursor [count] times."
+given:  ab|c
+keys:   ax<Esc>
+expect: abc|x
+
+=== a on an empty line inserts in the first column
+ref:    insert.txt *a*
+quote:  "If the cursor is in the first column of an empty line Insert starts there."
+given:  |
+keys:   ax<Esc>
+expect: |x
+
+=== a after a multibyte character
+ref:    insert.txt *a*
+quote:  "Append text after the cursor [count] times."
+given:  |漢字
+keys:   aé<Esc>
+expect: 漢|é字
+
+=== A appends at the end of the line
+ref:    insert.txt *A*
+quote:  "Append text at the end of the line [count] times."
+given:  |abc
+keys:   Axy<Esc>
+expect: abcx|y
+dot:    abcxyx|y
+
+=== 2A appends twice
+ref:    insert.txt *A*
+quote:  "Append text at the end of the line [count] times."
+given:  |ab
+keys:   2Acd<Esc>
+expect: abcdc|d
+
+=== I inserts before the first non-blank
+ref:    insert.txt *I*
+quote:  "Insert text before the first non-blank in the line [count] times."
+given:
+      fo|o
+keys:   Ix<Esc>
+expect:
+      |xfoo
+undo:
+      |foo
+
+=== o opens a line below
+ref:    insert.txt *o*
+quote:  "Begin a new line below the cursor and insert text, repeat [count] times."
+given:
+  f|oo
+  bar
+keys:   oxy<Esc>
+expect:
+  foo
+  x|y
+  bar
+undo:
+  f|oo
+  bar
+
+=== o keeps the indent with 'autoindent'
+ref:    insert.txt *o*
+quote:  "Begin a new line below the cursor and insert text"
+given:
+      |foo
+keys:   ox<Esc>
+expect:
+      foo
+      |x
+
+=== o on the last line
+ref:    insert.txt *o*
+quote:  "Begin a new line below the cursor and insert text"
+given:
+  a
+  |b
+keys:   oc<Esc>
+expect:
+  a
+  b
+  |c
+
+=== 3o opens three lines
+ref:    insert.txt *o*
+quote:  "Begin a new line below the cursor and insert text, repeat [count] times."
+given:  |a
+keys:   3ox<Esc>
+expect:
+  a
+  x
+  x
+  |x
+undo:   |a
+
+=== o then <Esc> on an empty new line
+ref:    insert.txt *o*
+quote:  "Begin a new line below the cursor and insert text"
+given:  |a
+keys:   o<Esc>
+expect:
+  a
+  |
+
+=== O opens a line above
+ref:    insert.txt *O*
+quote:  "Begin a new line above the cursor and insert text, repeat [count] times."
+given:
+  foo
+  b|ar
+keys:   Ox<Esc>
+expect:
+  foo
+  |x
+  bar
+dot:
+  foo
+  |x
+  x
+  bar
+
+=== O on the first line
+ref:    insert.txt *O*
+quote:  "Begin a new line above the cursor and insert text"
+given:  |a
+keys:   Ox<Esc>
+expect:
+  |x
+  a
+
+=== <BS> in insert mode deletes the character before the cursor
+ref:    insert.txt *i_<BS>*
+quote:  "Delete the character before the cursor"
+given:  |abc
+keys:   A<BS>x<Esc>
+expect: ab|x
+
+=== <CR> in insert mode splits the line
+ref:    insert.txt *i_<CR>*
+quote:  "Begin new line."
+given:  |ab
+keys:   a<CR><Esc>
+expect:
+  a
+  |b
+undo:   a|b

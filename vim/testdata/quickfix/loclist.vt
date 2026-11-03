@@ -1,0 +1,511 @@
+# Location lists (quickfix.txt): a quickfix list per window. As in quickfix.vt, the buffer is
+# named x.txt and the lists hold entries for it; the snapshot reads the window on x.txt unless a
+# case says otherwise.
+
+=== :lexpr makes a location list and jumps to the first entry
+ref:    quickfix.txt *:lexpr*
+quote:  "Same as |:cexpr|, except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): a
+mode:   normal
+
+=== :lnext goes to the next entry
+ref:    quickfix.txt *:lnext*
+quote:  "Same as \":cnext\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lnext<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): b
+jumps:  1:1 2:2
+
+=== :lnext at the last entry fails with E553
+ref:    quickfix.txt *:lnext*
+quote:  "Same as \":cnext\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lnext<CR>:lnext<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    E553: No more items
+
+=== :lprevious goes back an entry
+ref:    quickfix.txt *:lprevious*
+quote:  "Same as \":cNext\" and \":cprevious\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lnext<CR>:lprev<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): a
+
+=== :lprevious at the first entry fails with E553
+ref:    quickfix.txt *:lprevious*
+quote:  "Same as \":cNext\" and \":cprevious\""
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lprev<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    E553: No more items
+
+=== :ll N goes to entry N
+ref:    quickfix.txt *:ll*
+quote:  "Same as \":cc\", except the location list for the"
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:ll 2<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): b
+
+=== :Nll takes the number as a count
+ref:    quickfix.txt *:ll*
+quote:  "Same as \":cc\""
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:2ll<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): b
+
+=== :llast and :lfirst
+ref:    quickfix.txt *:lfirst*
+quote:  "Same as \":lrewind\"."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:llast<CR>:lfirst<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): a
+
+=== :llast goes to the last entry
+ref:    quickfix.txt *:llast*
+quote:  "Same as \":clast\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:llast<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): b
+
+=== :lrewind goes to the first entry
+ref:    quickfix.txt *:lrewind*
+quote:  "Same as \":crewind\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:llast<CR>:lrewind<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): a
+
+=== :lnext with no location list fails with E776
+ref:    quickfix.txt *location-list*
+quote:  "A location list is a quickfix list tied to one window."
+given:
+  o|ne
+  two
+keys:   :lnext<CR>
+expect:
+  o|ne
+  two
+msg:    E776: No location list
+
+=== the quickfix list is not a location list
+ref:    quickfix.txt *location-list-file-window*
+quote:  "The location list is independent of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:a"]<CR>:lnext<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    E776: No location list
+
+=== :cnext follows the quickfix list, not the location list
+ref:    quickfix.txt *location-list-file-window*
+quote:  "The location list is independent of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:cexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lexpr ["x.txt:5:1:c"]<CR>:cnext<CR>
+expect:
+  one
+  two
+  three
+  |four
+  five
+msg:    (2 of 2): b
+
+=== a split window gets a copy of the location list
+ref:    quickfix.txt *location-list-file-window*
+quote:  "When a window with a location list is split, the new window gets a copy of the location list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:vsplit<CR>:lnext<CR>
+# window 1, the new one
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): b
+win:    1/2
+
+=== the copy in the split moves on its own
+ref:    quickfix.txt *location-list-file-window*
+quote:  "When a window with a location list is split, the new window gets a copy of the location list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:split<CR>:lnext<CR><C-W>w:ll<CR>
+# window 2, the original: its list is still at entry 1
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): a
+win:    2/2
+
+=== a :new window also gets a copy, and :ll there jumps in its own window
+ref:    quickfix.txt *location-list-file-window*
+quote:  "When a window with a location list is split, the new window gets a copy of the location list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:new<CR>:ll<CR>
+# window 1, the new one, now on x.txt
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 2): a
+win:    1/2
+bufs:   1% 2#
+
+=== :lgetexpr makes a location list without jumping
+ref:    quickfix.txt *:lgetexpr*
+quote:  "Same as |:cgetexpr|, except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lgetexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>
+expect:
+  o|ne
+  two
+  three
+  four
+jumps:
+
+=== :laddexpr adds to the location list
+ref:    quickfix.txt *:laddexpr*
+quote:  "Same as \":caddexpr\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lgetexpr ["x.txt:2:3:a"]<CR>:laddexpr "x.txt:4:1:b"<CR>:llast<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (2 of 2): b
+
+=== :laddexpr with no location list makes one
+ref:    quickfix.txt *:caddexpr*
+quote:  "If a quickfix list is not present, then a new list is created."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:laddexpr "x.txt:4:1:b"<CR>:ll<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    (1 of 1): b
+
+=== :lbuffer reads the location list from the buffer
+ref:    quickfix.txt *:lbuffer*
+quote:  "Same as \":cbuffer\", except the location list for the current window is used instead of the quickfix list."
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+keys:   :file x.txt<CR>:lbuffer<CR>
+expect:
+  x.txt:2:3:first
+  x.|txt:4:1:second
+  three
+msg:    (1 of 3): first
+
+=== :lgetbuffer reads it without jumping
+ref:    quickfix.txt *:lgetbuffer*
+quote:  "Same as \":cgetbuffer\", except the location list for the current window is used instead of the quickfix list."
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+keys:   :file x.txt<CR>:lgetbuffer<CR>:llast<CR>
+expect:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+msg:    (3 of 3): three
+
+=== :laddbuffer adds the buffer's lines
+ref:    quickfix.txt *:laddbuffer*
+quote:  "Same as \":caddbuffer\", except the location list for the current window is used instead of the quickfix list."
+given:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+keys:   :file x.txt<CR>:1lbuffer<CR>:2laddbuffer<CR>:llast<CR>
+# "second" is at line 4, past the end: the last line
+expect:
+  x.txt:2:3:first
+  x.txt:4:1:second
+  |three
+msg:    (2 of 2): second
+
+=== :lolder and :lnewer move through the location list stack
+ref:    quickfix.txt *:lolder*
+quote:  "Same as `:colder`, except use the location list for the current window instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr "x.txt:2:3:a"<CR>:lexpr "x.txt:4:1:b"<CR>:lolder<CR>:ll<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+msg:    (1 of 1): a
+
+=== :lnewer goes forward again
+ref:    quickfix.txt *:lnewer*
+quote:  "Same as `:cnewer`, except use the location list for the current window instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr "x.txt:2:3:a"<CR>:lexpr "x.txt:4:1:b"<CR>:lolder<CR>:lnewer<CR>
+expect:
+  one
+  two
+  three
+  |four
+msg:    "error list 2 of 2; 1 errors       :lexpr \"x.txt:4:1:b\""
+
+=== :lhistory shows the location list stack
+ref:    quickfix.txt *:lhistory*
+quote:  "Show the list of location lists, otherwise like `:chistory`."
+given:
+  o|ne
+  two
+  three
+keys:   :file x.txt<CR>:lexpr "x.txt:2:3:a"<CR>:lhistory<CR>
+expect:
+  one
+  tw|o
+  three
+msg:    "> error list 1 of 1; 1 errors     :lexpr \"x.txt:2:3:a\""
+
+=== :lopen opens the location list window and enters it
+ref:    quickfix.txt *:lopen*
+quote:  "Open a window to show the location list for the current window."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lopen<CR>
+# the location list window
+expect:
+  |x.txt\|2 col 3\| a
+  x.txt\|4 col 1\| b
+win:    2/2
+
+=== :lopen with no location list fails with E776
+ref:    quickfix.txt *:lopen*
+quote:  "Works only when the location list for the current window is present."
+given:
+  o|ne
+  two
+keys:   :lopen<CR>
+expect:
+  o|ne
+  two
+win:    1/1
+msg:    E776: No location list
+
+=== <CR> in the location list window jumps in its window
+ref:    quickfix.txt *:lbottom*
+quote:  "Hitting the <Enter> key or double-clicking the mouse on a line has the same effect."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lopen<CR>j<CR>
+# the x.txt window
+expect:
+  one
+  two
+  three
+  |four
+win:    1/2
+
+=== :lnext from the location list window moves its window
+ref:    quickfix.txt *:lnext*
+quote:  "Same as \":cnext\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lopen<CR>:lnext<CR>
+# the x.txt window
+expect:
+  one
+  two
+  three
+  |four
+win:    1/2
+
+=== :lclose closes the location list window
+ref:    quickfix.txt *:lclose*
+quote:  "Close the window showing the location list for the current window."
+given:
+  o|ne
+  two
+  three
+  four
+keys:   :file x.txt<CR>:lexpr ["x.txt:2:3:a", "x.txt:4:1:b"]<CR>:lopen<CR>:lclose<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+win:    1/1
+
+=== :lvimgrep fills the location list
+ref:    quickfix.txt *:lvimgrep*
+quote:  "Same as \":vimgrep\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+  three
+  four
+  five
+keys:   :file x.txt<CR>:lvimgrep /o/ %<CR>:lnext<CR>
+expect:
+  one
+  tw|o
+  three
+  four
+  five
+msg:    (2 of 3): two
+
+=== :lvimgrep leaves the quickfix list alone
+ref:    quickfix.txt *:lvimgrep*
+quote:  "Same as \":vimgrep\", except the location list for the current window is used instead of the quickfix list."
+given:
+  o|ne
+  two
+keys:   :file x.txt<CR>:lvimgrep /o/ %<CR>:cnext<CR>
+expect:
+  |one
+  two
+msg:    E42: No Errors

@@ -1,0 +1,216 @@
+# Character classes: \s \d \w \a \l \u \x \o \h \k \i \f \p and their negations.
+
+=== \s matches spaces and tabs
+ref:    pattern.txt */\s*
+quote:  whitespace character: <Space> and <Tab>
+given:  |a b	c
+keys:   :s/\s/_/g<CR>
+expect: |a_b_c
+
+=== \S matches non-white space
+ref:    pattern.txt */\S*
+quote:  non-whitespace character; opposite of \s
+given:  |ab cd
+keys:   :s/\S\+/(&)/g<CR>
+expect: |(ab) (cd)
+
+=== \d matches digits
+ref:    pattern.txt */\d*
+quote:  digit:				[0-9]
+given:  |a12b3
+keys:   :s/\d\+/(&)/g<CR>
+expect: |a(12)b(3)
+
+=== \D matches non-digits
+ref:    pattern.txt */\D*
+quote:  non-digit:			[^0-9]
+given:  |a12b3
+keys:   :s/\D/(&)/g<CR>
+expect: |(a)12(b)3
+
+=== \w matches ASCII word characters
+ref:    pattern.txt */\w*
+quote:  word character:			[0-9A-Za-z_]
+given:  |a_1-b
+keys:   :s/\w\+/(&)/g<CR>
+expect: |(a_1)-(b)
+
+=== \w does not match a non-ASCII letter
+ref:    pattern.txt */\w*
+quote:  word character:			[0-9A-Za-z_]
+given:  |caféx
+keys:   :s/\w\+/(&)/g<CR>
+expect: |(caf)é(x)
+
+=== \W matches non-word characters
+ref:    pattern.txt */\W*
+quote:  non-word character:		[^0-9A-Za-z_]
+given:  |a-b c
+keys:   :s/\W/(&)/g<CR>
+expect: |a(-)b( )c
+
+=== \a matches ASCII letters
+ref:    pattern.txt */\a*
+quote:  alphabetic character:		[A-Za-z]
+given:  |ab1_C
+keys:   :s/\a/(&)/g<CR>
+expect: |(a)(b)1_(C)
+
+=== \A matches non-letters
+ref:    pattern.txt */\A*
+quote:  non-alphabetic character:	[^A-Za-z]
+given:  |ab1_C
+keys:   :s/\A/(&)/g<CR>
+expect: |ab(1)(_)C
+
+=== \l matches lowercase letters
+ref:    pattern.txt */\l*
+quote:  lowercase character:		[a-z]
+given:  |aBcD
+keys:   :s/\l/(&)/g<CR>
+expect: |(a)B(c)D
+
+=== \L matches non-lowercase characters
+ref:    pattern.txt */\L*
+quote:  non-lowercase character:	[^a-z]
+given:  |aB1
+keys:   :s/\L/(&)/g<CR>
+expect: |a(B)(1)
+
+=== \u matches uppercase letters
+ref:    pattern.txt */\u*
+quote:  uppercase character:		[A-Z]
+given:  |aBcD
+keys:   :s/\u/(&)/g<CR>
+expect: |a(B)c(D)
+
+=== \U matches non-uppercase characters
+ref:    pattern.txt */\U*
+quote:  non-uppercase character:	[^A-Z]
+given:  |aB1
+keys:   :s/\U/(&)/g<CR>
+expect: |(a)B(1)
+
+=== \x matches hex digits
+ref:    pattern.txt */\x*
+quote:  hex digit:			[0-9A-Fa-f]
+given:  |0xBEEFg
+keys:   :s/\x\+/(&)/g<CR>
+expect: |(0)x(BEEF)g
+
+=== \X matches non-hex digits
+ref:    pattern.txt */\X*
+quote:  non-hex digit:			[^0-9A-Fa-f]
+given:  |a9g
+keys:   :s/\X/(&)/g<CR>
+expect: |a9(g)
+
+=== \o matches octal digits
+ref:    pattern.txt */\o*
+quote:  octal digit:			[0-7]
+given:  |0789
+keys:   :s/\o\+/(&)/g<CR>
+expect: |(07)89
+
+=== \O matches non-octal digits
+ref:    pattern.txt */\O*
+quote:  non-octal digit:		[^0-7]
+given:  |0789
+keys:   :s/\O/(&)/g<CR>
+expect: |07(8)(9)
+
+=== \h matches the head of a word
+ref:    pattern.txt */\h*
+quote:  head of word character:		[A-Za-z_]
+given:  |_a1
+keys:   :s/\h/(&)/g<CR>
+expect: |(_)(a)1
+
+=== \H matches non-head-of-word characters
+ref:    pattern.txt */\H*
+quote:  non-head of word character:	[^A-Za-z_]
+given:  |_a1-
+keys:   :s/\H/(&)/g<CR>
+expect: |_a(1)(-)
+
+=== \h\w* matches an identifier
+ref:    pattern.txt */\h*
+quote:  head of word character:		[A-Za-z_]
+given:  |9ab_1 x
+keys:   :s/\<\h\w*/(&)/g<CR>
+expect: |9ab_1 (x)
+
+=== \k matches keyword characters, including non-ASCII letters
+ref:    pattern.txt */\k*
+quote:  keyword character (see 'iskeyword' option)
+given:  |café-x
+keys:   :s/\k\+/(&)/g<CR>
+expect: |(café)-(x)
+
+=== \K is \k without digits
+ref:    pattern.txt */\K*
+quote:  like "\k", but excluding digits
+given:  |a1b
+keys:   :s/\K/(&)/g<CR>
+expect: |(a)1(b)
+
+=== \i matches identifier characters
+ref:    pattern.txt */\i*
+quote:  identifier character (see 'isident' option)
+given:  |ab_1.c
+keys:   :s/\i\+/(&)/g<CR>
+expect: |(ab_1).(c)
+
+=== \I is \i without digits
+ref:    pattern.txt */\I*
+quote:  like "\i", but excluding digits
+given:  |a1b
+keys:   :s/\I/(&)/g<CR>
+expect: |(a)1(b)
+
+=== \f matches file name characters, comma included
+ref:    pattern.txt */\f*
+quote:  file name character (see 'isfname' option)
+given:  |see /tmp/a.txt, ok
+keys:   :s/\f\+/(&)/g<CR>
+expect: |(see) (/tmp/a.txt,) (ok)
+
+=== \F is \f without digits
+ref:    pattern.txt */\F*
+quote:  like "\f", but excluding digits
+given:  |a1b
+keys:   :s/\F/(&)/g<CR>
+expect: |(a)1(b)
+
+=== \p matches printable characters
+ref:    pattern.txt */\p*
+quote:  printable character (see 'isprint' option)
+given:  |a b
+keys:   :s/\p\+/(&)/<CR>
+expect: |(a b)
+
+=== \P is \p without digits
+ref:    pattern.txt */\P*
+quote:  like "\p", but excluding digits
+given:  |a1b
+keys:   :s/\P/(&)/g<CR>
+expect: |(a)1(b)
+
+=== \_d matches digits and end-of-line, and an end-of-line alone
+ref:    pattern.txt */\_*
+quote:  Where "x" is any of the characters above: The character class with end-of-line added
+given:
+  |a1
+  2b
+keys:   :%s/\_d\+/(&)/<CR>
+expect:
+  a(1
+  2)b(
+  |)
+
+=== \c does not affect character classes
+ref:    pattern.txt */\c*
+quote:  Note that 'ignorecase', "\c" and "\C" are not used for the character classes.
+given:  |aB
+keys:   :s/\c\u/(&)/g<CR>
+expect: |a(B)

@@ -1,0 +1,191 @@
+backdrop #060606
+rect 0,0 1600x38 fill #0c0c0b
+effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
+rect 101.9375,0 1x38 fill #24221d
+clip 102.9375,0 1353.2438x38 r 0
+pop
+text "INBOX" @1488.1813,13.710001 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,12.69 #b3ab99 JetBrains Mono 9.5
+rect 0,38 44x936 fill #0c0c0b
+clip 0,38 43x936 r 0
+  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+  path 7 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  rect 9.5,242 24x1 fill #332f27
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 4 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 2 segments stroke 1.4545455 #4f4a40
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 3 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  image 16x16 @13.5,847
+  path 5 segments stroke 1.4545455 #7c7566
+  path 4 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 5 segments stroke 1.4545455 #7c7566
+  path 6 segments fill #060606
+  path 6 segments stroke 1.4 #ffd23f
+  effect glow 18.9,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  effect glow 22.8,920.9 1.2999992x3.5999756 blur 2 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  path 2 segments stroke 0.8 #ffd23f
+  path 6 segments stroke 1.4545455 #7c7566
+  path 6 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+  path 2 segments stroke 1.4545455 #7c7566
+pop
+rect 43,38 1x936 fill #24221d
+rect 44,38 1556x936 fill #060606
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
+rect 0,0 44x38 fill #060606
+rect 44,0 1556x974 fill #060606
+clip 44,0 1556x974 r 0
+  rect 44,0 1556x42 fill #0c0c0b
+  text "LINEAR TICKETS" @62,25.844 #ece6d8 Space Grotesk 14
+  text "4 assigned" @184.9025,24.96 #7c7566 JetBrains Mono 11
+  text " · updated just now" @250.84,24.96 #7c7566 JetBrains Mono 11
+  rect 1426.0469,8 84.75x26 fill #191815 radius 6 stroke 1 #332f27
+  text "Refresh" @1436.0469,25.365234 #ece6d8 Inter 12
+  rect 1486.7969,13.5 14x15 radius 3 stroke 1 #ece6d866
+  text "r" @1490.7969,24.42 #ece6d8cc JetBrains Mono 9.5
+  rect 1522.7969,8 59.203125x26 fill #191815 radius 6 stroke 1 #332f27
+  text "✕" @1532.7969,25.365234 #ece6d8 Inter 12
+  rect 1546,13.5 26x15 radius 3 stroke 1 #ece6d866
+  text "esc" @1550,24.42 #ece6d8cc JetBrains Mono 9.5
+  rect 44,42 1556x1 fill #24221d
+  rect 44,43 420x931 fill #0c0c0b
+  rect 56,53 396x30 fill #060606 radius 6
+  clip 56,53 396x30 r 6
+    text "⌕ filter by key, title, project" @66,72.54712 #7c7566 Inter 12.5
+  pop
+  rect 56,53 396x30 radius 6 stroke 1 #332f27
+  clip 44,89 420x885 r 0
+    clip 46,89 418x52.73999 r 0
+      text "ENG-2231" @58,110.23 #b3ab99 JetBrains Mono 11
+      text "Search API returns stale results after a rein…" @118.75,110.999 #ece6d8 Inter 13
+      rect 409.72,98 40.28x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
+      text "TODO" @416.72,109.69 #b98aff JetBrains Mono 9.5
+      text "high · Usage · PR #4398" @58,129.74 #7c7566 JetBrains Mono 10
+    pop
+    rect 44,141.73999 420x52.73999 fill #1f1c0f
+    rect 44,141.73999 420x52.73999 fill #1f1c0f
+    rect 44,141.73999 2x52.73999 fill #ffd23f
+    clip 46,141.73999 418x52.73999 r 0
+      text "ENG-2240" @58,162.96999 #b3ab99 JetBrains Mono 11
+      text "Prime the result cache after a reindex" @118.75,163.739 #ece6d8 Inter 13
+      rect 409.72,150.73999 40.28x16.539993 fill #b98aff12 radius 10 stroke 1 #b98aff59
+      text "TODO" @416.72,162.43 #b98aff JetBrains Mono 9.5
+      text "high · Usage" @58,182.47998 #7c7566 JetBrains Mono 10
+      text "blocked" @137,182.47998 #ff9b45 JetBrains Mono 10
+    pop
+    clip 46,194.48 418x52.740005 r 0
+      text "ENG-2219" @58,215.70999 #b3ab99 JetBrains Mono 11
+      text "Round minor units half-even, per c…" @118.75,216.479 #ece6d8 Inter 13
+      rect 363.73,203.48 86.26999x16.539993 fill #4cc9f012 radius 10 stroke 1 #4cc9f059
+      text "IN PROGRESS" @370.73,215.17 #4cc9f0 JetBrains Mono 9.5
+      text "medium · PR #530" @58,235.21999 #7c7566 JetBrains Mono 10
+    pop
+    clip 46,247.22 418x52.73999 r 0
+      text "ENG-2252" @58,268.45 #b3ab99 JetBrains Mono 11
+      text "Bundle price lookup times out" @118.75,269.219 #ece6d8 Inter 13
+      rect 390.01,256.22 59.98999x16.540009 fill #b98aff12 radius 10 stroke 1 #b98aff59
+      text "BACKLOG" @397.01,267.91 #b98aff JetBrains Mono 9.5
+      text "Pricing API" @58,287.96002 #7c7566 JetBrains Mono 10
+    pop
+  pop
+  rect 464,43 1x931 fill #24221d
+  rect 465,43 1135x931 fill #060606
+  clip 465,43 1135x931 r 0
+    text "ENG-2240" @483,69.229996 #b3ab99 JetBrains Mono 11
+    rect 543.75,57 40.28003x16.54 fill #b98aff12 radius 10 stroke 1 #b98aff59
+    text "TODO" @550.75,68.69 #b98aff JetBrains Mono 9.5
+    text "Prime the result cache after a reindex" @483,102.268005 #ece6d8 Space Grotesk 17
+    rect 483,119.232 69.0625x25.999992 fill #ffd23f radius 6 stroke 1 #ffd23f
+    text "Plan" @493,136.59723 #141006 Inter 12
+    rect 524.1094,124.732 17.953125x14.999992 radius 3 stroke 1 #14100666
+    text "↵" @528.1094,135.65201 #141006cc JetBrains Mono 9.5
+    rect 560.0625,119.232 70.625x25.999992 fill #191815 radius 6 stroke 1 #332f27
+    text "Work" @570.0625,136.59723 #ece6d8 Inter 12
+    rect 606.6875,124.732 14x14.999992 radius 3 stroke 1 #ece6d866
+    text "w" @610.6875,135.65201 #ece6d8cc JetBrains Mono 9.5
+    rect 638.6875,119.232 123.078125x25.999992 radius 6 stroke 1 #332f27
+    text "Open in Linear" @648.6875,136.59723 #ece6d8 Inter 12
+    rect 737.7656,124.732 14x14.999992 radius 3 stroke 1 #ece6d866
+    text "o" @741.7656,135.65201 #ece6d8cc JetBrains Mono 9.5
+    text "TRACKER" @483,166.922 #7c7566 JetBrains Mono 9.5
+    text "Linear" @583,168.452 #ece6d8 JetBrains Mono 11
+    text "PROJECT" @483,187.442 #7c7566 JetBrains Mono 9.5
+    text "Usage" @583,188.972 #ece6d8 JetBrains Mono 11
+    text "PRIORITY" @483,207.962 #7c7566 JetBrains Mono 9.5
+    text "High" @583,209.492 #ece6d8 JetBrains Mono 11
+    text "BLOCKED BY" @483,228.482 #7c7566 JetBrains Mono 9.5
+    text "ENG-2231" @583,230.012 #ece6d8 JetBrains Mono 11
+    text "linear.app/acme/issue/ENG-2240" @483,256.532 #7c7566 JetBrains Mono 11
+    text "Evict the org's cached results when its index is rebuilt, rather than waiting for the nightly job." @483,284.42578 #b3ab99 Inter 13
+    text "Then warm the cache:" @483,308.15527 #b3ab99 Inter 13
+    text "•" @487,331.88477 #b3ab99 Inter 13
+    text "top queries" @502.3125,331.88477 #b3ab99 Inter 13
+    text "first" @577.0156,331.88477 #b3ab99 Inter 13
+    text "•" @487,355.61426 #b3ab99 Inter 13
+    text "the rest on demand" @502.3125,355.61426 #b3ab99 Inter 13
+  pop
+pop

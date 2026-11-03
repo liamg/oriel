@@ -1,0 +1,97 @@
+{"adapter":"debugpy","version":"debugpy 1.8.22 python 3.11.2","cmd":["python3","-m","debugpy.adapter"]}
+{"dir":"send","msg":{"seq":1,"type":"request","command":"initialize","arguments":{"clientID":"oriel","clientName":"Oriel","adapterID":"python","locale":"en","linesStartAt1":true,"columnsStartAt1":true,"pathFormat":"path","supportsVariableType":true,"supportsVariablePaging":false,"supportsRunInTerminalRequest":false}}}
+{"dir":"recv","msg":{"seq":3,"type":"event","event":"debugpySockets","body":{"sockets":[{"host":"127.0.0.1","port":53105,"internal":false}]}}}
+{"dir":"recv","msg":{"seq":4,"type":"response","request_seq":1,"success":true,"command":"initialize","body":{"supportsCompletionsRequest":true,"supportsConditionalBreakpoints":true,"supportsConfigurationDoneRequest":true,"supportsDebuggerProperties":true,"supportsDelayedStackTraceLoading":true,"supportsEvaluateForHovers":true,"supportsExceptionInfoRequest":true,"supportsExceptionOptions":true,"supportsFunctionBreakpoints":true,"supportsHitConditionalBreakpoints":true,"supportsLogPoints":true,"supportsModulesRequest":true,"supportsSetExpression":true,"supportsSetVariable":true,"supportsValueFormattingOptions":true,"supportsTerminateDebuggee":true,"supportsTerminateRequest":true,"supportsGotoTargetsRequest":true,"supportsClipboardContext":true,"exceptionBreakpointFilters":[{"filter":"raised","label":"Raised Exceptions","default":false,"description":"Break whenever any exception is raised."},{"filter":"uncaught","label":"Uncaught Exceptions","default":true,"description":"Break when the process is exiting due to unhandled exception."},{"filter":"userUnhandled","label":"User Uncaught Exceptions","default":false,"description":"Break when exception escapes into library code."}],"supportsStepInTargetsRequest":true}}}
+{"dir":"send","msg":{"seq":2,"type":"request","command":"launch","arguments":{"console":"internalConsole","cwd":"${root}","justMyCode":true,"name":"Debug main.py","program":"${root}/main.py"}}}
+{"dir":"recv","msg":{"seq":5,"type":"event","event":"debugpySockets","body":{"sockets":[{"host":"127.0.0.1","port":53105,"internal":false},{"host":"127.0.0.1","port":50161,"internal":true}]}}}
+{"dir":"recv","msg":{"seq":6,"type":"event","event":"debugpySockets","body":{"sockets":[{"host":"127.0.0.1","port":53105,"internal":false},{"host":"127.0.0.1","port":52161,"internal":true},{"host":"127.0.0.1","port":50161,"internal":true}]}}}
+{"dir":"recv","msg":{"seq":7,"type":"event","event":"debugpySockets","body":{"sockets":[{"host":"127.0.0.1","port":53105,"internal":false},{"host":"127.0.0.1","port":50161,"internal":true}]}}}
+{"dir":"recv","msg":{"seq":8,"type":"event","event":"initialized"}}
+{"dir":"send","msg":{"seq":3,"type":"request","command":"setBreakpoints","arguments":{"source":{"name":"main.py","path":"${root}/main.py"},"breakpoints":[{"line":17}]}}}
+{"dir":"recv","msg":{"seq":9,"type":"response","request_seq":3,"success":true,"command":"setBreakpoints","body":{"breakpoints":[{"verified":true,"id":0,"source":{"name":"main.py","path":"${root}/main.py"},"line":17}]}}}
+{"dir":"send","msg":{"seq":4,"type":"request","command":"setExceptionBreakpoints","arguments":{"filters":["uncaught"]}}}
+{"dir":"recv","msg":{"seq":10,"type":"response","request_seq":4,"success":true,"command":"setExceptionBreakpoints"}}
+{"dir":"send","msg":{"seq":5,"type":"request","command":"configurationDone"}}
+{"dir":"recv","msg":{"seq":11,"type":"response","request_seq":5,"success":true,"command":"configurationDone"}}
+{"dir":"recv","msg":{"seq":12,"type":"response","request_seq":2,"success":true,"command":"launch"}}
+{"dir":"recv","msg":{"seq":13,"type":"event","event":"process","body":{"startMethod":"launch","isLocalProcess":true,"systemProcessId":35162,"name":"${root}/main.py","pointerSize":64}}}
+{"dir":"recv","msg":{"seq":14,"type":"event","event":"thread","body":{"reason":"started","threadId":1}}}
+{"dir":"recv","msg":{"seq":15,"type":"event","event":"stopped","body":{"reason":"breakpoint","threadId":1,"preserveFocusHint":false,"allThreadsStopped":true,"hitBreakpointIds":[0]}}}
+{"dir":"send","msg":{"seq":6,"type":"request","command":"stackTrace","arguments":{"levels":64,"startFrame":0,"threadId":1}}}
+{"dir":"recv","msg":{"seq":16,"type":"response","request_seq":6,"success":true,"command":"stackTrace","body":{"stackFrames":[{"id":2,"name":"main","line":17,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":3,"name":"\u003cmodule\u003e","line":21,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}}],"totalFrames":2}}}
+{"dir":"recv","msg":{"seq":17,"type":"event","event":"module","body":{"reason":"new","module":{"id":0,"name":"__main__","path":"${root}/main.py"}}}}
+{"dir":"recv","msg":{"seq":18,"type":"event","event":"module","body":{"reason":"new","module":{"id":1,"name":"runpy","path":"/usr/lib/python3.11/runpy.py"}}}}
+{"dir":"send","msg":{"seq":7,"type":"request","command":"threads"}}
+{"dir":"recv","msg":{"seq":19,"type":"response","request_seq":7,"success":true,"command":"threads","body":{"threads":[{"id":1,"name":"MainThread"}]}}}
+{"dir":"send","msg":{"seq":8,"type":"request","command":"stepIn","arguments":{"threadId":1}}}
+{"dir":"recv","msg":{"seq":20,"type":"response","request_seq":8,"success":true,"command":"stepIn"}}
+{"dir":"recv","msg":{"seq":21,"type":"event","event":"continued","body":{"threadId":1,"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":22,"type":"event","event":"stopped","body":{"reason":"step","threadId":1,"preserveFocusHint":false,"allThreadsStopped":true}}}
+{"dir":"send","msg":{"seq":9,"type":"request","command":"stackTrace","arguments":{"levels":64,"startFrame":0,"threadId":1}}}
+{"dir":"recv","msg":{"seq":23,"type":"response","request_seq":9,"success":true,"command":"stackTrace","body":{"stackFrames":[{"id":4,"name":"half","line":8,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":2,"name":"main","line":17,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":3,"name":"\u003cmodule\u003e","line":21,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}}],"totalFrames":3}}}
+{"dir":"send","msg":{"seq":10,"type":"request","command":"next","arguments":{"threadId":1}}}
+{"dir":"recv","msg":{"seq":24,"type":"response","request_seq":10,"success":true,"command":"next"}}
+{"dir":"recv","msg":{"seq":25,"type":"event","event":"continued","body":{"threadId":1,"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":26,"type":"event","event":"stopped","body":{"reason":"step","threadId":1,"preserveFocusHint":false,"allThreadsStopped":true}}}
+{"dir":"send","msg":{"seq":11,"type":"request","command":"stackTrace","arguments":{"levels":64,"startFrame":0,"threadId":1}}}
+{"dir":"recv","msg":{"seq":27,"type":"response","request_seq":11,"success":true,"command":"stackTrace","body":{"stackFrames":[{"id":4,"name":"half","line":9,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":2,"name":"main","line":17,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":3,"name":"\u003cmodule\u003e","line":21,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}}],"totalFrames":3}}}
+{"dir":"send","msg":{"seq":12,"type":"request","command":"stepOut","arguments":{"threadId":1}}}
+{"dir":"recv","msg":{"seq":28,"type":"response","request_seq":12,"success":true,"command":"stepOut"}}
+{"dir":"recv","msg":{"seq":29,"type":"event","event":"continued","body":{"threadId":1,"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":30,"type":"event","event":"stopped","body":{"reason":"step","threadId":1,"preserveFocusHint":false,"allThreadsStopped":true}}}
+{"dir":"send","msg":{"seq":13,"type":"request","command":"stackTrace","arguments":{"levels":64,"startFrame":0,"threadId":1}}}
+{"dir":"recv","msg":{"seq":31,"type":"response","request_seq":13,"success":true,"command":"stackTrace","body":{"stackFrames":[{"id":2,"name":"main","line":17,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":3,"name":"\u003cmodule\u003e","line":21,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}}],"totalFrames":2}}}
+{"dir":"send","msg":{"seq":14,"type":"request","command":"setBreakpoints","arguments":{"source":{"name":"main.py","path":"${root}/main.py"},"breakpoints":[{"line":8,"hitCondition":"== 2"},{"line":10,"condition":"v == 3"},{"line":11,"logMessage":"out is {out}"}]}}}
+{"dir":"recv","msg":{"seq":32,"type":"response","request_seq":14,"success":true,"command":"setBreakpoints","body":{"breakpoints":[{"verified":true,"id":1,"source":{"name":"main.py","path":"${root}/main.py"},"line":8},{"verified":true,"id":2,"source":{"name":"main.py","path":"${root}/main.py"},"line":10},{"verified":true,"id":3,"source":{"name":"main.py","path":"${root}/main.py"},"line":11}]}}}
+{"dir":"send","msg":{"seq":15,"type":"request","command":"continue","arguments":{"threadId":1}}}
+{"dir":"recv","msg":{"seq":33,"type":"response","request_seq":15,"success":true,"command":"continue","body":{"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":34,"type":"event","event":"continued","body":{"threadId":1,"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":35,"type":"event","event":"output","body":{"output":"out is 10\n","category":"stdout","source":{}}}}
+{"dir":"recv","msg":{"seq":36,"type":"event","event":"stopped","body":{"reason":"breakpoint","threadId":1,"preserveFocusHint":false,"allThreadsStopped":true,"hitBreakpointIds":[1]}}}
+{"dir":"send","msg":{"seq":16,"type":"request","command":"stackTrace","arguments":{"levels":64,"startFrame":0,"threadId":1}}}
+{"dir":"recv","msg":{"seq":37,"type":"response","request_seq":16,"success":true,"command":"stackTrace","body":{"stackFrames":[{"id":5,"name":"half","line":8,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":2,"name":"main","line":17,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":3,"name":"\u003cmodule\u003e","line":21,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}}],"totalFrames":3}}}
+{"dir":"send","msg":{"seq":17,"type":"request","command":"evaluate","arguments":{"context":"watch","expression":"v","frameId":5}}}
+{"dir":"recv","msg":{"seq":38,"type":"response","request_seq":17,"success":true,"command":"evaluate","body":{"result":"3","variablesReference":0,"type":"int","presentationHint":{}}}}
+{"dir":"send","msg":{"seq":18,"type":"request","command":"continue","arguments":{"threadId":1}}}
+{"dir":"recv","msg":{"seq":39,"type":"response","request_seq":18,"success":true,"command":"continue","body":{"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":40,"type":"event","event":"continued","body":{"threadId":1,"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":41,"type":"event","event":"stopped","body":{"reason":"breakpoint","threadId":1,"preserveFocusHint":false,"allThreadsStopped":true,"hitBreakpointIds":[2]}}}
+{"dir":"send","msg":{"seq":19,"type":"request","command":"stackTrace","arguments":{"levels":64,"startFrame":0,"threadId":1}}}
+{"dir":"recv","msg":{"seq":42,"type":"response","request_seq":19,"success":true,"command":"stackTrace","body":{"stackFrames":[{"id":5,"name":"half","line":10,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":2,"name":"main","line":17,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":3,"name":"\u003cmodule\u003e","line":21,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}}],"totalFrames":3}}}
+{"dir":"send","msg":{"seq":20,"type":"request","command":"scopes","arguments":{"frameId":5}}}
+{"dir":"recv","msg":{"seq":43,"type":"response","request_seq":20,"success":true,"command":"scopes","body":{"scopes":[{"name":"Locals","variablesReference":6,"expensive":false,"presentationHint":"locals","source":{}},{"name":"Globals","variablesReference":7,"expensive":false,"source":{}}]}}}
+{"dir":"send","msg":{"seq":21,"type":"request","command":"variables","arguments":{"variablesReference":6}}}
+{"dir":"recv","msg":{"seq":44,"type":"response","request_seq":21,"success":true,"command":"variables","body":{"variables":[{"name":"p","value":"\u003c__main__.Point object at 0x7fbc01f7d010\u003e","type":"Point","evaluateName":"p","variablesReference":8},{"name":"scaled","value":"30","type":"int","evaluateName":"scaled","variablesReference":0},{"name":"v","value":"3","type":"int","evaluateName":"v","variablesReference":0}]}}}
+{"dir":"send","msg":{"seq":22,"type":"request","command":"variables","arguments":{"variablesReference":8}}}
+{"dir":"recv","msg":{"seq":45,"type":"response","request_seq":22,"success":true,"command":"variables","body":{"variables":[{"name":"special variables","value":"","type":"","variablesReference":9},{"name":"x","value":"3","type":"int","evaluateName":"p.x","variablesReference":0},{"name":"y","value":"30","type":"int","evaluateName":"p.y","variablesReference":0}]}}}
+{"dir":"send","msg":{"seq":23,"type":"request","command":"evaluate","arguments":{"context":"watch","expression":"scaled * 2","frameId":5}}}
+{"dir":"recv","msg":{"seq":46,"type":"response","request_seq":23,"success":true,"command":"evaluate","body":{"result":"60","variablesReference":0,"type":"int","presentationHint":{}}}}
+{"dir":"send","msg":{"seq":24,"type":"request","command":"evaluate","arguments":{"context":"repl","expression":"v + 1","frameId":5}}}
+{"dir":"recv","msg":{"seq":47,"type":"response","request_seq":24,"success":true,"command":"evaluate","body":{"result":"4","variablesReference":0,"type":"int","presentationHint":{}}}}
+{"dir":"send","msg":{"seq":25,"type":"request","command":"evaluate","arguments":{"context":"watch","expression":"i","frameId":2}}}
+{"dir":"recv","msg":{"seq":48,"type":"response","request_seq":25,"success":true,"command":"evaluate","body":{"result":"3","variablesReference":0,"type":"int","presentationHint":{}}}}
+{"dir":"send","msg":{"seq":26,"type":"request","command":"evaluate","arguments":{"context":"repl","expression":"nosuchname","frameId":5}}}
+{"dir":"recv","msg":{"seq":49,"type":"response","request_seq":26,"success":false,"command":"evaluate","message":"Traceback (most recent call last):\n  File \"\u003cstring\u003e\", line 1, in \u003cmodule\u003e\nNameError: name 'nosuchname' is not defined\n"}}
+{"dir":"send","msg":{"seq":27,"type":"request","command":"next","arguments":{"threadId":1}}}
+{"dir":"recv","msg":{"seq":50,"type":"response","request_seq":27,"success":true,"command":"next"}}
+{"dir":"recv","msg":{"seq":51,"type":"event","event":"continued","body":{"threadId":1,"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":52,"type":"event","event":"output","body":{"output":"out is 15\n","category":"stdout","source":{}}}}
+{"dir":"recv","msg":{"seq":53,"type":"event","event":"stopped","body":{"reason":"step","threadId":1,"preserveFocusHint":false,"allThreadsStopped":true}}}
+{"dir":"send","msg":{"seq":28,"type":"request","command":"stackTrace","arguments":{"levels":64,"startFrame":0,"threadId":1}}}
+{"dir":"recv","msg":{"seq":54,"type":"response","request_seq":28,"success":true,"command":"stackTrace","body":{"stackFrames":[{"id":5,"name":"half","line":11,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":2,"name":"main","line":17,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}},{"id":3,"name":"\u003cmodule\u003e","line":21,"column":1,"source":{"path":"${root}/main.py","sourceReference":0}}],"totalFrames":3}}}
+{"dir":"send","msg":{"seq":29,"type":"request","command":"evaluate","arguments":{"context":"watch","expression":"out","frameId":5}}}
+{"dir":"recv","msg":{"seq":55,"type":"response","request_seq":29,"success":true,"command":"evaluate","body":{"result":"15","variablesReference":0,"type":"int","presentationHint":{}}}}
+{"dir":"send","msg":{"seq":30,"type":"request","command":"setBreakpoints","arguments":{"source":{"name":"main.py","path":"${root}/main.py"},"breakpoints":[]}}}
+{"dir":"recv","msg":{"seq":56,"type":"response","request_seq":30,"success":true,"command":"setBreakpoints","body":{"breakpoints":[]}}}
+{"dir":"send","msg":{"seq":31,"type":"request","command":"continue","arguments":{"threadId":1}}}
+{"dir":"recv","msg":{"seq":57,"type":"response","request_seq":31,"success":true,"command":"continue","body":{"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":58,"type":"event","event":"output","body":{"category":"stdout","output":"total"}}}
+{"dir":"recv","msg":{"seq":59,"type":"event","event":"output","body":{"category":"stdout","output":" 50\n"}}}
+{"dir":"recv","msg":{"seq":60,"type":"event","event":"continued","body":{"threadId":1,"allThreadsContinued":true}}}
+{"dir":"recv","msg":{"seq":61,"type":"event","event":"thread","body":{"reason":"exited","threadId":1}}}
+{"dir":"recv","msg":{"seq":62,"type":"event","event":"exited","body":{"exitCode":0}}}
+{"dir":"recv","msg":{"seq":63,"type":"event","event":"terminated"}}
+{"dir":"send","msg":{"seq":32,"type":"request","command":"disconnect","arguments":{"restart":false,"terminateDebuggee":true}}}
+{"dir":"recv","msg":{"seq":64,"type":"event","event":"debugpySockets","body":{"sockets":[{"host":"127.0.0.1","port":53105,"internal":false}]}}}
+{"dir":"recv","msg":{"seq":65,"type":"response","request_seq":32,"success":true,"command":"disconnect"}}
+{"dir":"recv","msg":{"seq":66,"type":"event","event":"debugpySockets","body":{"sockets":[{"host":"127.0.0.1","port":53105,"internal":false}]}}}

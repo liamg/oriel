@@ -1,0 +1,149 @@
+# Magic levels: \v \m \M \V, and which characters need a backslash at each.
+# Substitutions wrap what matched in (…) so the match is visible in the buffer.
+
+=== \v makes ( ) + special without backslashes
+ref:    pattern.txt */\v*
+quote:  Use of "\v" means that after it, all ASCII characters except '0'-'9', 'a'-'z', 'A'-'Z' and '_' have special meaning: "very magic"
+given:  |ababx
+keys:   :s/\v(ab)+/(&)/<CR>
+expect: |(abab)x
+
+=== \v makes { a multi without a backslash
+ref:    pattern.txt */\v*
+quote:  Use of "\v" means that after it, all ASCII characters except '0'-'9', 'a'-'z', 'A'-'Z' and '_' have special meaning: "very magic"
+given:  |a12345
+keys:   :s/\v\d{2}/(&)/g<CR>
+expect: |a(12)(34)5
+
+=== \v makes | alternation
+ref:    pattern.txt */\v*
+quote:  |	   \|	    \|	     \|		nothing: separates alternatives
+given:  |foo bar baz
+keys:   :s/\vfoo|baz/(&)/g<CR>
+expect: |(foo) bar (baz)
+
+=== \v makes = a multi
+ref:    pattern.txt */\v*
+quote:  Use of "\v" means that after it, all ASCII characters except '0'-'9', 'a'-'z', 'A'-'Z' and '_' have special meaning: "very magic"
+given:  |fo foo fooo
+keys:   :s/\vfoo=/(&)/g<CR>
+expect: |(fo) (foo) (foo)o
+
+=== \v makes < and > word boundaries
+ref:    pattern.txt */\v*
+quote:  Use of "\v" means that after it, all ASCII characters except '0'-'9', 'a'-'z', 'A'-'Z' and '_' have special meaning: "very magic"
+given:  |this is
+keys:   :s/\v<is>/(&)/g<CR>
+expect: |this (is)
+
+=== \v needs a backslash for a literal dot
+ref:    pattern.txt */\v*
+quote:  \.	   \.	    .	     .		literal dot
+given:  |abc a.c
+keys:   :s/\va\.c/(&)/g<CR>
+expect: |abc (a.c)
+
+=== \v needs a backslash for a literal brace
+ref:    pattern.txt */\v*
+quote:  \{	   {	    {	     {		literal curly brace
+given:  |a{2} aa
+keys:   :s/\va\{/(&)/g<CR>
+expect: |(a{)2} aa
+
+=== \v ( ) groups capture for \1
+ref:    pattern.txt */\v*
+quote:  ()	   \(\)     \(\)     \(\)	group as an atom
+given:  |ab
+keys:   :s/\v(a)(b)/\2\1/<CR>
+expect: |ba
+
+=== in magic mode a brace is literal
+ref:    pattern.txt */\v*
+quote:  \{	   {	    {	     {		literal curly brace
+given:  |aa a{2}
+keys:   :s/a{2}/(&)/g<CR>
+expect: |aa (a{2})
+
+=== in magic mode + is literal
+ref:    pattern.txt */\v*
+quote:  Use of "\v" means that after it, all ASCII characters except '0'-'9', 'a'-'z', 'A'-'Z' and '_' have special meaning: "very magic"
+given:  |aa+ a
+keys:   :s/a+/(&)/g<CR>
+expect: |a(a+) a
+
+=== \m switches back to magic in the middle of a pattern
+ref:    pattern.txt */\m*
+quote:  Use of "\m" makes the pattern after it be interpreted as if 'magic' is set, ignoring the actual value of the 'magic' option.
+given:  |aa+b
+keys:   :s/\va+\m+/(&)/<CR>
+expect: |(aa+)b
+
+=== \M makes a dot literal
+ref:    pattern.txt */\m*
+quote:  Use of "\M" makes the pattern after it be interpreted as if 'nomagic' is used.
+given:  |abc a.c
+keys:   :s/\Ma.c/(&)/g<CR>
+expect: |abc (a.c)
+
+=== \M makes \. any character
+ref:    pattern.txt */\v*
+quote:  .	   .	    \.	     \.		any character
+given:  |abc
+keys:   :s/\Ma\.c/(&)/<CR>
+expect: |(abc)
+
+=== \M makes a star literal
+ref:    pattern.txt */\v*
+quote:  *	   *	    \*	     \*		any number of the previous atom
+given:  |aa a*
+keys:   :s/\Ma*/(&)/g<CR>
+expect: |aa (a*)
+
+=== \M still treats $ as end-of-line
+ref:    pattern.txt */\v*
+quote:  $	   $	    $	     \$		end-of-line
+given:  |ab ab
+keys:   :s/\Mab$/(&)/<CR>
+expect: |ab (ab)
+
+=== \V makes everything but backslash literal
+ref:    pattern.txt */\v*
+quote:  Use of "\V" means that after it, only a backslash and the terminating character (usually / or ?) have special meaning: "very nomagic"
+given:  |abc a.c*
+keys:   :s/\Va.c*/(&)/<CR>
+expect: |abc (a.c*)
+
+=== \V makes $ literal
+ref:    pattern.txt */\v*
+quote:  $	   $	    $	     \$		end-of-line
+given:  |a$b
+keys:   :s/\V$/(&)/<CR>
+expect: |a($)b
+
+=== \V with \$ is end-of-line
+ref:    pattern.txt */\v*
+quote:  $	   $	    $	     \$		end-of-line
+given:  |ab ab
+keys:   :s/\Vab\$/(&)/<CR>
+expect: |ab (ab)
+
+=== \V with \| still alternates
+ref:    pattern.txt */\v*
+quote:  |	   \|	    \|	     \|		nothing: separates alternatives
+given:  |a.b c*d
+keys:   :s/\Va.b\|c*d/(&)/g<CR>
+expect: |(a.b) (c*d)
+
+=== \\ is a literal backslash at every level
+ref:    pattern.txt */\v*
+quote:  \\	   \\	    \\	     \\		literal backslash
+given:  |a\b
+keys:   :s/\v\\/(&)/<CR>
+expect: |a(\)b
+
+=== \M is immune to the pattern after it being magic-looking
+ref:    pattern.txt */\v*
+quote:  If you want to you can make a pattern immune to the 'magic' option being set or not by putting "\m" or "\M" at the start of the pattern.
+given:  |a\[b\] ab
+keys:   :s/\Ma[b]/(&)/<CR>
+expect: |(a\[b\]) ab

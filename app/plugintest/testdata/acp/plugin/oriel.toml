@@ -1,0 +1,7 @@
+id          = "test/acp"
+version     = "0.1.0"
+description = "plugintest's ACP agent: a provider the bundled ACP bridge serves"
+
+[permissions]
+"agent.provider" = { why = "Bring an ACP agent" }
+exec             = { commands = ["fake-acp"], why = "Run the agent" }

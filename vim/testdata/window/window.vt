@@ -1,0 +1,795 @@
+# Windows: splitting, closing, moving between and moving windows (windows.txt).
+# Every window shows the one buffer unless a case says otherwise; `win:` is the current window's
+# number and the window count, and the buffer and cursor are the current window's.
+
+=== :split opens a second window on the same buffer and enters it
+ref:    windows.txt *:split*
+quote:  "Split current window in two.  The result is two viewports on the same file."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>
+expect:
+  one
+  two
+  th|ree
+win:    1/2
+mode:   normal
+
+=== CTRL-W s splits like :split
+ref:    windows.txt *:split*
+quote:  "Split current window in two."
+given:
+  one
+  t|wo
+keys:   <C-W>s
+expect:
+  one
+  t|wo
+win:    1/2
+
+=== CTRL-W S splits like :split
+ref:    windows.txt *:split*
+quote:  "Split current window in two."
+given:
+  one
+  t|wo
+keys:   <C-W>S
+expect:
+  one
+  t|wo
+win:    1/2
+
+=== :vsplit splits vertically and enters the new window
+ref:    windows.txt *:vsplit*
+quote:  "Like |:split|, but split vertically."
+given:
+  one
+  t|wo
+keys:   :vsplit<CR>
+expect:
+  one
+  t|wo
+win:    1/2
+
+=== CTRL-W v splits like :vsplit
+ref:    windows.txt *:vsplit*
+quote:  "Like |:split|, but split vertically."
+given:
+  one
+  t|wo
+keys:   <C-W>v
+expect:
+  one
+  t|wo
+win:    1/2
+
+=== each window keeps its own cursor: CTRL-W w finds the other one where it was
+ref:    windows.txt *CTRL-W_w*
+quote:  "Without count: move cursor to window below/right of the current one."
+given:
+  one
+  two
+  th|ree
+  four
+  five
+keys:   :split<CR>gg<C-W>w
+# window 2, the original one, still at "three"
+expect:
+  one
+  two
+  th|ree
+  four
+  five
+win:    2/2
+
+=== going back with CTRL-W w again finds the first window's cursor
+ref:    windows.txt *CTRL-W_w*
+quote:  "If there is no window below or right, go to top-left window."
+given:
+  one
+  two
+  th|ree
+  four
+  five
+keys:   :split<CR>G<C-W>w<C-W>w
+# window 1, where G moved the cursor
+expect:
+  one
+  two
+  three
+  four
+  fi|ve
+win:    1/2
+
+=== a change in one split shows in the other
+ref:    windows.txt *:split*
+quote:  "The result is two viewports on the same file."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>ggoX<Esc><C-W>w
+# window 2: the line X opened in window 1 is there, and its cursor moved down with "three"
+expect:
+  one
+  X
+  two
+  th|ree
+win:    2/2
+
+=== :sp, dd, CTRL-W w: the other window's cursor follows its line up
+ref:    windows.txt *:split*
+quote:  "The result is two viewports on the same file."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :sp<CR>ggdd<C-W>w
+# window 2: "one" is gone, the cursor is still on "three"
+expect:
+  two
+  th|ree
+  four
+win:    2/2
+
+=== deleting below the other window's cursor leaves it alone
+ref:    windows.txt *:split*
+quote:  "The result is two viewports on the same file."
+given:
+  one
+  t|wo
+  three
+  four
+keys:   :sp<CR>Gdd<C-W>w
+# window 2
+expect:
+  one
+  t|wo
+  three
+win:    2/2
+
+=== undo in the other window undoes a change made in the first
+ref:    windows.txt *:split*
+quote:  "The result is two viewports on the same file."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>ggdd<C-W>wu
+# window 2: the buffer's one undo history; undo puts the cursor on the restored line
+expect:
+  on|e
+  two
+  three
+win:    2/2
+
+=== a mark set in one window is the buffer's, seen from the other
+ref:    windows.txt *:split*
+quote:  "The result is two viewports on the same file."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>ggmak<C-W>w
+# window 2
+expect:
+  one
+  two
+  th|ree
+marks:  a=1:2
+win:    2/2
+
+=== a split copies the window's jumplist
+ref:    motion.txt *jumplist*
+quote:  "When you split a window, the jumplist will be copied to the new window."
+given:
+  one
+  two
+  th|ree
+  four
+  five
+keys:   G:split<CR>gg
+# window 1, the new one: the G jump from the original window, then its own gg
+expect:
+  on|e
+  two
+  three
+  four
+  five
+jumps:  3:2 5:2
+win:    1/2
+
+=== each window has its own jumplist
+ref:    motion.txt *jumplist*
+quote:  "There is a separate jump list for each window."
+given:
+  one
+  two
+  th|ree
+  four
+  five
+keys:   :split<CR>Ggg<C-W>w<C-O>
+# window 2 never jumped, so CTRL-O has nowhere to go
+expect:
+  one
+  two
+  th|ree
+  four
+  five
+jumps:
+win:    2/2
+
+=== CTRL-O in the new window goes back through the copied jumplist
+ref:    motion.txt *jumplist*
+quote:  "When you split a window, the jumplist will be copied to the new window."
+given:
+  one
+  two
+  th|ree
+  four
+  five
+keys:   G:split<CR><C-O>
+# window 1, back at "three", where G jumped from in the original window
+expect:
+  one
+  two
+  th|ree
+  four
+  five
+win:    1/2
+
+=== :new opens a window on a new, empty buffer
+ref:    windows.txt *:new*
+quote:  "Create a new window and start editing an empty file in it."
+given:
+  one
+  t|wo
+keys:   :new<CR>
+# window 1, the new one, on buffer 2; buffer 1 is its alternate
+expect: |
+win:    1/2
+bufs:   1# 2%
+
+=== CTRL-W n is :new
+ref:    windows.txt *:new*
+quote:  "Create a new window and start editing an empty file in it."
+given:
+  one
+  t|wo
+keys:   <C-W>n
+expect: |
+win:    1/2
+bufs:   1# 2%
+
+=== :vnew is :new split vertically
+ref:    windows.txt *:vnew*
+quote:  "Like |:new|, but split vertically."
+given:
+  one
+  t|wo
+keys:   :vnew<CR>
+expect: |
+win:    1/2
+bufs:   1# 2%
+
+=== text typed in a :new window is its own buffer's, not the first one's
+ref:    windows.txt *:new*
+quote:  "This behaves like a \":split\" first, and then an \":enew\" command."
+given:
+  one
+  t|wo
+keys:   :new<CR>ifoo<Esc><C-W>w
+# window 2, still on buffer 1
+expect:
+  one
+  t|wo
+win:    2/2
+bufs:   1% 2
+
+=== :close closes the current window and enters the other
+ref:    windows.txt *:close*
+quote:  "Without {count}: Close the current window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg:close<CR>
+# the original window, its cursor where it was
+expect:
+  one
+  two
+  th|ree
+win:    1/1
+
+=== CTRL-W c is :close
+ref:    windows.txt *CTRL-W_c*
+quote:  "Without {count}: Close the current window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>c
+expect:
+  one
+  two
+  th|ree
+win:    1/1
+
+=== :close with a count closes that window
+ref:    windows.txt *:close*
+quote:  "If {count} is given close the {count} window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg:split<CR>:3close<CR><C-W>b
+# the bottom window is now the gg one: window 3, the original, was closed
+expect:
+  on|e
+  two
+  three
+win:    2/2
+
+=== :close on the last window fails with E444
+ref:    windows.txt *E444*
+quote:  "There is only one window on the screen."
+given:
+  one
+  t|wo
+keys:   :close<CR>
+expect:
+  one
+  t|wo
+win:    1/1
+msg:    E444: Cannot close last window
+
+=== :close hides a changed buffer when 'hidden' is set
+ref:    windows.txt *:close*
+quote:  "When the 'hidden' option is set, or when the buffer was changed and the [!] is used, the buffer becomes hidden (unless there is another window editing it)."
+given:
+  one
+  t|wo
+keys:   :new<CR>ifoo<Esc>:close<CR>
+# back in the first window; buffer 2 is still listed, with its change kept
+expect:
+  one
+  t|wo
+win:    1/1
+bufs:   1% 2
+
+=== :quit in a split closes just that window
+ref:    windows.txt *CTRL-W_CTRL-Q*
+quote:  "Without {count}: Quit the current window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg:quit<CR>
+expect:
+  one
+  two
+  th|ree
+win:    1/1
+
+=== CTRL-W q quits the current window
+ref:    windows.txt *CTRL-W_CTRL-Q*
+quote:  "Without {count}: Quit the current window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>q
+expect:
+  one
+  two
+  th|ree
+win:    1/1
+
+=== :{count}quit quits that window
+ref:    windows.txt *CTRL-W_CTRL-Q*
+quote:  "If {count} is given quit the {count} window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg:split<CR>:2quit<CR><C-W>b
+# the bottom window is the original: window 2, the gg one, is gone
+expect:
+  one
+  two
+  th|ree
+win:    2/2
+
+=== :only closes every other window
+ref:    windows.txt *:only*
+quote:  "Make the current window the only one on the screen.  All other windows are closed."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>:split<CR>gg:only<CR>
+expect:
+  on|e
+  two
+  three
+win:    1/1
+
+=== CTRL-W o is :only
+ref:    windows.txt *:only*
+quote:  "All other windows are closed."
+given:
+  one
+  two
+  th|ree
+keys:   <C-W>v<C-W>vG<C-W>o
+expect:
+  one
+  two
+  th|ree
+win:    1/1
+
+=== :only with one window says so
+ref:    windows.txt *:only*
+quote:  "Make the current window the only one on the screen."
+given:
+  one
+  t|wo
+keys:   :only<CR>
+expect:
+  one
+  t|wo
+win:    1/1
+msg:    Already only one window
+
+=== CTRL-W j and k move between windows above and below
+ref:    windows.txt *CTRL-W_j*
+quote:  "Move cursor to Nth window below current one."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>j
+expect:
+  one
+  two
+  th|ree
+win:    2/2
+
+=== CTRL-W k moves to the window above
+ref:    windows.txt *CTRL-W_k*
+quote:  "Move cursor to Nth window above current one."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>j<C-W>k
+expect:
+  on|e
+  two
+  three
+win:    1/2
+
+=== CTRL-W k in the top window stays there
+ref:    windows.txt *CTRL-W_k*
+quote:  "Move cursor to Nth window above current one."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>k
+expect:
+  on|e
+  two
+  three
+win:    1/2
+
+=== 2 CTRL-W j moves two windows down
+ref:    windows.txt *CTRL-W_j*
+quote:  "Move cursor to Nth window below current one."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg:split<CR>2<C-W>j
+# window 3, the original
+expect:
+  one
+  two
+  th|ree
+win:    3/3
+
+=== CTRL-W l and h move between side-by-side windows
+ref:    windows.txt *CTRL-W_l*
+quote:  "Move cursor to Nth window right of current one."
+given:
+  one
+  two
+  th|ree
+keys:   :vsplit<CR>gg<C-W>l
+expect:
+  one
+  two
+  th|ree
+win:    2/2
+
+=== CTRL-W h moves to the window on the left
+ref:    windows.txt *CTRL-W_h*
+quote:  "Move cursor to Nth window left of current one."
+given:
+  one
+  two
+  th|ree
+keys:   :vsplit<CR>gg<C-W>l<C-W>h
+expect:
+  on|e
+  two
+  three
+win:    1/2
+
+=== CTRL-W j with no window below stays put
+ref:    windows.txt *CTRL-W_j*
+quote:  "Move cursor to Nth window below current one."
+given:
+  one
+  two
+  th|ree
+keys:   :vsplit<CR>gg<C-W>j
+expect:
+  on|e
+  two
+  three
+win:    1/2
+
+=== CTRL-W W goes to the window above, wrapping to the bottom
+ref:    windows.txt *CTRL-W_W*
+quote:  "If there is no window above or left, go to bottom-right window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>W
+expect:
+  one
+  two
+  th|ree
+win:    2/2
+
+=== a count to CTRL-W w goes to that window
+ref:    windows.txt *CTRL-W_w*
+quote:  "With count: go to Nth window (windows are numbered from top-left to bottom-right)."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>G:split<CR>gg3<C-W>w
+# window 3, the original
+expect:
+  one
+  two
+  th|ree
+  four
+win:    3/3
+
+=== a count past the last window goes to the last one
+ref:    windows.txt *CTRL-W_w*
+quote:  "When N is larger than the number of windows go to the last window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg9<C-W>w
+expect:
+  one
+  two
+  th|ree
+win:    2/2
+
+=== a count to CTRL-W W also names the window
+ref:    windows.txt *CTRL-W_W*
+quote:  "With count: go to Nth window, like with CTRL-W w."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>G:split<CR>gg2<C-W>W
+# window 2, where G was typed
+expect:
+  one
+  two
+  three
+  fo|ur
+win:    2/3
+
+=== CTRL-W b and CTRL-W t go to the last and first windows
+ref:    windows.txt *CTRL-W_t*
+quote:  "Move cursor to top-left window."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>G:split<CR>gg<C-W>b<C-W>t
+expect:
+  on|e
+  two
+  three
+  four
+win:    1/3
+
+=== CTRL-W b goes to the bottom-right window
+ref:    windows.txt *CTRL-W_b*
+quote:  "Move cursor to bottom-right window."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>G:split<CR>gg<C-W>b
+expect:
+  one
+  two
+  th|ree
+  four
+win:    3/3
+
+=== CTRL-W p goes back to the previous window
+ref:    windows.txt *CTRL-W_p*
+quote:  "Go to previous (last accessed) window."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>G:split<CR>gg<C-W>b<C-W>p
+# window 1, the last one used before CTRL-W b
+expect:
+  on|e
+  two
+  three
+  four
+win:    1/3
+
+=== :wincmd runs a CTRL-W command
+ref:    windows.txt *:wincmd*
+quote:  "Like executing CTRL-W [count] {arg}."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg:wincmd j<CR>
+expect:
+  one
+  two
+  th|ree
+win:    2/2
+
+=== :wincmd takes a count as the window number
+ref:    windows.txt *:wincmd*
+quote:  "The count can also be a window number."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>G:split<CR>gg:2wincmd w<CR>
+# window 2, where G was typed
+expect:
+  one
+  two
+  three
+  fo|ur
+win:    2/3
+
+=== CTRL-W x exchanges the window with the next one
+ref:    windows.txt *CTRL-W_x*
+quote:  "Without count: Exchange current window with next one."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>x
+# window 1 is now the original window, with its cursor on "three"
+expect:
+  one
+  two
+  th|ree
+win:    1/2
+
+=== CTRL-W x in the last window exchanges with the previous one
+ref:    windows.txt *CTRL-W_x*
+quote:  "If there is no next window, exchange with previous window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>j<C-W>x
+# window 2 now holds the window that was first, with its cursor on "one"
+expect:
+  on|e
+  two
+  three
+win:    2/2
+
+=== CTRL-W x with a count exchanges with that window
+ref:    windows.txt *CTRL-W_x*
+quote:  "With count: Exchange current window with Nth window (first window is 1)."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>j:split<CR>gg3<C-W>x
+# window 1 now holds the original window, at "three"
+expect:
+  one
+  two
+  th|ree
+  four
+win:    1/3
+
+=== CTRL-W r rotates the windows, and the cursor stays in its window
+ref:    windows.txt *CTRL-W_r*
+quote:  "The cursor remains in the same window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>gg<C-W>r
+# the window from the top is now second
+expect:
+  on|e
+  two
+  three
+win:    2/2
+
+=== CTRL-W R rotates upwards: the first window becomes the last
+ref:    windows.txt *CTRL-W_R*
+quote:  "The first window becomes the last window."
+given:
+  one
+  two
+  th|ree
+keys:   :split<CR>:split<CR>gg<C-W>R
+expect:
+  on|e
+  two
+  three
+win:    3/3
+
+=== CTRL-W ^ splits and edits the alternate buffer
+ref:    windows.txt *CTRL-W_^*
+quote:  "Split the current window in two and edit the alternate file."
+given:
+  one
+  two
+  th|ree
+keys:   :enew<CR>ifoo<Esc><C-W>^
+# a new window on buffer 1, at the line it was left on
+expect:
+  one
+  two
+  th|ree
+win:    1/2
+bufs:   1% 2#
+
+=== moving to a window on the same buffer keeps the Visual area
+ref:    windows.txt *CTRL-W_P*
+quote:  "If the window is on the same buffer, the cursor position is set to keep the same Visual area selected."
+given:
+  one
+  two
+  th|ree
+  four
+keys:   :split<CR>vj<C-W>w
+expect:
+  one
+  two
+  th[ree
+  fo|u]r
+mode:   visual
+win:    2/2
