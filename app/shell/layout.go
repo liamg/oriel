@@ -29,13 +29,14 @@ type layoutPlugin struct {
 	root  *layout.Root
 	panes panes.Panes
 	rects map[*layout.Node]render.Rect
-	saved map[string]layout.Snapshot
+	snaps map[string]layout.Snapshot
 	menu  bool
 	asked bool // the menu asked for focus
 
 	restored bool
-	kept     []byte
-	writer   stateWriter
+	kept     []byte         // the layout as last written
+	saved    []byte         // the layout kept for the directory the window is on, as its file has it
+	state    *kit.StateFile // that file
 }
 
 func (l *layoutPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "layout"} }
@@ -53,7 +54,13 @@ var movePlacements = []struct {
 }
 
 func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
-	l.h, l.root, l.saved = h, layout.New(), map[string]layout.Snapshot{}
+	l.h, l.root, l.snaps = h, layout.New(), map[string]layout.Snapshot{}
+	path := func() string { return "" }
+	if l.sh != nil {
+		path = func() string { return l.sh.dirState("layout") }
+	}
+	l.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "layout", Path: path, Load: func(b []byte) { l.saved = b }})
+	l.Add(kit.OnDispose(l.state.Close))
 	// A view put in front is what the user asked to see: the page over the layout gives way to it.
 	l.root.OnShow(func(layout.ViewRef) { closePlaces(h) })
 	l.Add(h.DeclareEvent(registry.EventInfo{Name: registry.EventName[kit.DirChanged](), Fired: true, Payload: kit.DirChanged{},
@@ -100,8 +107,7 @@ func (l *layoutPlugin) arrive() {
 // it close, as the layout under them goes.
 func (l *layoutPlugin) leave() {
 	closePlaces(l.h)
-	l.keep(l.h)
-	l.writer.flush()
+	l.keep(l.h) // to the directory's file it's leaving: the state file follows the window after
 	l.restored, l.kept = false, nil
 	if err := l.root.Load(layout.New().Save()); err != nil {
 		l.h.Log().Warn("emptying the layout", "err", err)
@@ -268,11 +274,11 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			return nil
 		}},
 		{ID: "layout.save", Title: "Save the layout by name", Run: func(_ registry.Ctx, a registry.Args) error {
-			l.saved[str(a, "name")] = l.root.Save()
+			l.snaps[str(a, "name")] = l.root.Save()
 			return nil
 		}},
 		{ID: "layout.restore", Title: "Restore a saved layout", Run: func(_ registry.Ctx, a registry.Args) error {
-			s, ok := l.saved[str(a, "name")]
+			s, ok := l.snaps[str(a, "name")]
 			if !ok {
 				return fmt.Errorf("no layout %q", str(a, "name"))
 			}
