@@ -115,7 +115,13 @@ jobs:
       - name: The runner's CPU, which the build's host tools are compiled for
         run: lscpu | grep -E 'Model name|Flags' | cut -c1-200
       - run: term/ghostty/wasm/build.sh
-      - run: git diff --exit-code -- term/ghostty/wasm/SHA256SUMS
+      - name: The wasm built is the one committed, or a known variant of it (term/ghostty/wasm/VARIANTS)
+        run: |
+          built=$(cut -d' ' -f1 term/ghostty/wasm/SHA256SUMS)
+          git checkout -- term/ghostty/wasm/SHA256SUMS
+          if grep -q "^$built " term/ghostty/wasm/SHA256SUMS; then exit 0; fi
+          if grep -q "^$built " term/ghostty/wasm/VARIANTS; then echo "a known variant: $(grep "^$built " term/ghostty/wasm/VARIANTS)"; exit 0; fi
+          echo "built $built: neither the committed wasm nor a known variant"; exit 1
       - name: The wasm built, to compare with the committed one
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

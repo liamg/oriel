@@ -1,0 +1,4 @@
+# The same build, from the same pinned sources and zig, as zig compiles it on CPUs that make one function's code
+# differently: the wasm committed is SHA256SUMS's. CI's rebuild matches that or one of these; any other is a failure.
+# Seen on GitHub's ubuntu-latest runners: one branch of one function (code section 4 bytes longer), data identical.
+93717718202128110e61bce56d606130edd5e16a4e7615d740690be2a99ace2e  oriel-vt.wasm  AMD EPYC 9V45 (Zen 5)

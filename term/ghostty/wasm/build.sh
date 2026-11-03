@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds oriel-vt.wasm.gz: libghostty-vt at the pinned Ghostty commit, with shim.c, for wasm32. Needs zig 0.16.0
 # (what that commit's build.zig.zon asks for) as $ZIG or on PATH. SHA256SUMS is of the uncompressed .wasm; CI rebuilds
-# and checks it matches.
+# and checks it matches, or matches one of VARIANTS: zig compiles one function differently on some CPUs.
 set -euo pipefail
 cd "$(dirname "$0")"
 . ../fetch.sh
