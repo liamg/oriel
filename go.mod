@@ -18,3 +18,6 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 )
+
+// wazero with its file cache reads buffered: third_party/wazero/PATCHED.md.
+replace github.com/tetratelabs/wazero => ./third_party/wazero

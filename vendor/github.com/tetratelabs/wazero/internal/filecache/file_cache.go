@@ -1,6 +1,7 @@
 package filecache
 
 import (
+	"bufio"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -36,9 +37,28 @@ func (fc *fileCache) Get(key Key) (content io.ReadCloser, ok bool, err error) {
 	} else if err != nil {
 		return nil, false, err
 	} else {
-		return f, true, nil
+		// Oriel's patch: the engine reads the entry eight bytes at a time; buffered, that's a few reads, not one
+		// syscall per field.
+		return bufferedFile{bufio.NewReaderSize(f, 64<<10), f}, true, nil
 	}
 }
+
+// bufferedFile reads its file through a buffer, each read filled as a file's is (the engine takes a short read for
+// the end), and closes the file.
+type bufferedFile struct {
+	r *bufio.Reader
+	f *os.File
+}
+
+func (b bufferedFile) Read(p []byte) (int, error) {
+	n, err := io.ReadFull(b.r, p)
+	if err == io.ErrUnexpectedEOF {
+		err = nil // the rest of the file, as a file's last read gives it
+	}
+	return n, err
+}
+
+func (b bufferedFile) Close() error { return b.f.Close() }
 
 func (fc *fileCache) Add(key Key, content io.Reader) (err error) {
 	path := fc.path(key)
