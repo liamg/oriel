@@ -8,8 +8,12 @@
 package watch
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"slices"
 	"sync"
 	"time"
@@ -236,6 +240,25 @@ func (s Sub[T]) Get() (T, time.Time, bool) {
 func (s Sub[T]) Err() error {
 	_, _, err, _ := s.s.reading()
 	return err
+}
+
+// Wait is the first reading, waiting for it if there's none yet, or why it failed; ctx gives up.
+func (s Sub[T]) Wait(ctx context.Context) (T, error) {
+	tick := time.NewTicker(10 * time.Millisecond) // Changed may be drained by another reader of it
+	defer tick.Stop()
+	for {
+		if v, _, err, ok := s.s.reading(); ok || err != nil {
+			t, _ := v.(T)
+			return t, err
+		}
+		select {
+		case <-ctx.Done():
+			var zero T
+			return zero, ctx.Err()
+		case <-s.s.changed:
+		case <-tick.C:
+		}
+	}
 }
 
 // Changed fires after each new reading.
@@ -775,6 +798,18 @@ func maxTime(a, b time.Time) time.Time {
 func FilesSource(key string, files ...Files) Source[[]string] {
 	return Source[[]string]{Key: key, Files: files, Read: func(r Reader) ([]string, error) {
 		return slices.Compact(slices.Sorted(slices.Values(r.Changed()))), nil
+	}}
+}
+
+// File is the contents of the file at path, read again when it changes: nil while there's no file. A reading the
+// same as the last isn't a change.
+func File(path string) Source[[]byte] {
+	return Source[[]byte]{Key: "file:" + path, Files: []Files{{Path: path}}, Same: bytes.Equal, Read: func(Reader) ([]byte, error) {
+		b, err := os.ReadFile(path)
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return b, err
 	}}
 }
 

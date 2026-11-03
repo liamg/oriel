@@ -1,6 +1,7 @@
 package watch
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -265,5 +266,40 @@ func TestStatsSayWhyASourceRead(t *testing.T) {
 	}
 	if why["files"] != f || why["derived"] != "files" {
 		t.Fatalf("causes %v, want files from %s and derived from files", why, f)
+	}
+}
+
+// A file's source is its contents: nil while there's no file, then each change as it's written, and nil once it's
+// gone.
+func TestFileIsWhatTheFileHolds(t *testing.T) {
+	m := manager(t, Options{})
+	p := filepath.Join(t.TempDir(), "state.json")
+	s := Subscribe(m, File(p), Need{}, "test")
+	got := func() []byte { b, _, _ := s.Get(); return b }
+	eventually(t, "the first reading", func() bool { _, _, ok := s.Get(); return ok })
+	if b := got(); b != nil {
+		t.Fatalf("with no file the reading is %q, want nil", b)
+	}
+	write(t, p, "one")
+	eventually(t, "the file as written", func() bool { return string(got()) == "one" })
+	write(t, p, "two")
+	eventually(t, "the file as changed", func() bool { return string(got()) == "two" })
+	if err := os.Remove(p); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "nothing once it's gone", func() bool { return got() == nil })
+}
+
+// Wait is the subscription's first reading, once there is one.
+func TestWaitIsTheFirstReading(t *testing.T) {
+	m := manager(t, Options{})
+	p := filepath.Join(t.TempDir(), "settings.toml")
+	write(t, p, "a = 1")
+	s := Subscribe(m, File(p), Need{}, "test")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	b, err := s.Wait(ctx)
+	if err != nil || string(b) != "a = 1" {
+		t.Fatalf("Wait = %q, %v", b, err)
 	}
 }
