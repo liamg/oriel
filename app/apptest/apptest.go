@@ -6,9 +6,6 @@ package apptest
 import (
 	"cmp"
 	"context"
-	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/app/agents"
-	"github.com/liamg/oriel/tools/perf"
 	"image/png"
 	"net/http"
 	"os"
@@ -18,6 +15,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/app/agents"
+	"github.com/liamg/oriel/app/explain"
+	"github.com/liamg/oriel/tools/perf"
 
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script"
@@ -252,9 +254,7 @@ func (s *Scene) SettleReads() {
 // ORIEL_UPDATE=1 writes them.
 func (s *Scene) Golden(name string) {
 	s.T.Helper()
-	s.SettleReads()
-	s.Frame()
-	s.Frame()
+	s.SettleDrawn()
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		s.T.Errorf("%s: text drawn past its box:\n%s", name, strings.Join(o, "\n"))
 	}
@@ -267,6 +267,21 @@ func (s *Scene) Golden(name string) {
 			s.T.Logf("%s: a %s notice from %s, %q: %s", name, n.Severity, n.Source, n.Title, n.Text)
 		}
 	}
+}
+
+// SettleDrawn waits for the work off the loop that adds to what a frame shows, the window's reads and the gutter's
+// explain marks, then draws twice: a snapshot is of the frame as it settles however loaded the machine. What the
+// test has queued itself, a move for one, it leaves to the test.
+func (s *Scene) SettleDrawn() {
+	s.T.Helper()
+	s.SettleReads()
+	if p, ok := s.Plugin("explain"); ok {
+		if e, ok := p.(*explain.Plugin); ok {
+			e.Wait()
+		}
+	}
+	s.Frame()
+	s.Frame()
 }
 
 // Shot draws two frames and writes the second to $ORIEL_SHOTS/name.png: a screenshot for the docs.
