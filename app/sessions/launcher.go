@@ -63,6 +63,7 @@ type Launcher struct {
 
 	kind                                          int
 	prompt, ticket, pr, dir, name, parent, branch string
+	another                                       string // the ticket Start another was asked for: Start starts one for it
 	template                                      string
 	provider, model, effort                       string
 	chosen                                        []core.RepoID
@@ -366,12 +367,35 @@ func (x *Launcher) launch(command string, a registry.Args) error {
 }
 
 // continues is the session the ticket field's ticket already has, when the kind starts from a prompt: Start
-// continues it rather than starting another (ticketSession).
+// continues it rather than starting another (ticketSession), unless Start another was asked for that ticket.
 func (x *Launcher) continues() (core.Session, bool) {
 	if k, ok := x.current(); !ok || startsFrom(k) != core.FromPrompt {
 		return nil, false
 	}
+	if t := strings.TrimSpace(x.ticket); t != "" && strings.EqualFold(t, x.another) {
+		return nil, false
+	}
 	return ticketSession(x.h, x.ticket)
+}
+
+// continuing is the agent column while Start continues se: the agent se runs on, which Start keeps, and Start
+// another, for a new session on the ticket on an agent picked here.
+func (x *Launcher) continuing(c *ui.Ctx, se core.Session) {
+	th := c.Theme()
+	a := se.Snapshot().Agent
+	on := "no agent"
+	if a.Provider != "" {
+		on = kit.ProviderName(x.h, a.Provider)
+		if a.Model != "" {
+			on += " · " + a.Model
+		}
+	}
+	c.Row("continuing", ui.Style{W: ui.Flex(1), Gap: 14, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
+		c.Text("on", se.Name()+" carries on with "+on, kit.MonoFont(11, th.C(theme.FgMuted)))
+		if widget.Button(c, "another", "Start another", widget.ButtonOpts{Ghost: true, Help: "agent/launcher#agent"}) {
+			x.another = strings.TrimSpace(x.ticket)
+		}
+	})
 }
 
 // saveAsJob hands what the launcher holds to the New job dialog: the prompt, the agent, where it runs.
@@ -385,7 +409,7 @@ func (x *Launcher) saveAsJob() {
 }
 
 func (x *Launcher) close() {
-	x.open, x.gen = false, x.gen+1
+	x.open, x.gen, x.another = false, x.gen+1, ""
 	if x.providers != nil {
 		x.providers.Reset()
 	}
@@ -524,6 +548,10 @@ func (x *Launcher) form(c *ui.Ctx) {
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		kit.Heading(c, "head", "Agent", "provider · model · effort")
+		if se, ok := x.continues(); ok {
+			x.continuing(c, se)
+			return
+		}
 		ps := x.providerList()
 		widget.Async(c, "probe", x.providersState(), widget.AsyncOpts{Policy: widget.Gate, Label: "Checking which agents are installed",
 			Retry: x.providers.Reload, Help: "agent/launcher#agent", Loading: func(c *ui.Ctx) {

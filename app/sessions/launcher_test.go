@@ -479,3 +479,43 @@ func TestLauncherClosesFromThePlusInASession(t *testing.T) {
 		r.WaitText("DOCKED LOG") // the docked view behind it stays
 	}
 }
+
+// A ticket that has a session already continues it, on the agent it runs on: in place of the agents, whose pick Start
+// would pass over, the launcher says which it carries on with. Start another brings them back, for a new session on
+// the ticket on the one picked.
+func TestLauncherContinuingSaysWhichAgent(t *testing.T) {
+	alpha, beta := agenttest.NewFake(), agenttest.NewFake()
+	alpha.Name, beta.Name = "alpha", "beta"
+	lw := rig.NewHost(t, alpha, beta)
+	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	if err := r.Do(func() error {
+		if err := r.Host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
+			return err
+		}
+		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "plan", "prompt": "Try it", "ticket": "try-1", "provider": "alpha"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	first := r.UntilState("the first session", func(st core.State) bool { return len(st.Sessions) == 1 }).Sessions[0]
+	if err := r.Do(func() error {
+		return r.Host.Run(context.Background(), "session.new", registry.Args{"kind": "plan", "prompt": "Try it again", "ticket": "try-1"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	r.WaitText(first.Name + " carries on with Alpha")
+	if fs := r.Win.Frames(); strings.Contains(fs[len(fs)-1].Text(), "Beta") {
+		text := fs[len(fs)-1].Text()
+		t.Errorf("the agents to pick show while Start continues %s:\n%s", first.Name, text)
+	}
+	r.ClickTop("Start another")
+	r.WaitText("Beta")
+	r.ClickTop("Beta")
+	r.ClickTop("Start Plan")
+	st := r.UntilState("a second session on try-1", func(st core.State) bool { return len(st.Sessions) == 2 })
+	for _, se := range st.Sessions {
+		if se.ID != first.ID && (se.Ticket != "try-1" || se.Agent.Provider != "beta") {
+			t.Errorf("the new session: ticket %q on %q, want try-1 on beta", se.Ticket, se.Agent.Provider)
+		}
+	}
+}
