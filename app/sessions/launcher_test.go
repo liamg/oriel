@@ -471,8 +471,7 @@ func TestLauncherClosesFromThePlusInASession(t *testing.T) {
 		if focus != "" {
 			r.TypeKeys(focus)
 		}
-		b := r.Access("New session").Bounds
-		r.Click(render.Point{X: (b.Min.X + b.Max.X) / 2, Y: (b.Min.Y + b.Max.Y) / 2})
+		r.ClickAccess("New session") // where it's settled: the session taking focus moves the strip
 		r.Latest("the launcher from +", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
 		r.TypeKeys("<Esc>")
 		r.WaitGone("NEW SESSION")
