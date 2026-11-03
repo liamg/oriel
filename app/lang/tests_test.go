@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -398,5 +399,41 @@ func TestTestOutputKeys(t *testing.T) {
 	}
 	if err := s.Headless.Press("<Space>ta"); err == nil || !strings.Contains(err.Error(), "no test running") {
 		t.Errorf("␣ta with nothing running: %v", err)
+	}
+}
+
+// The tests found in a directory stay with it: the window moving away and back finds them at once, from before the
+// scan that brings them up to date has run.
+func TestTestsFoundStayWithTheirDirectory(t *testing.T) {
+	s, dir := testsScene(t)
+	rows := func() string { return treeRows(testsOf(s).TreeAll(), true) }
+	deadline := time.Now().Add(10 * time.Second)
+	for !strings.Contains(rows(), "TestRoundMinor") && time.Now().Before(deadline) {
+		s.RunQueued()
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !strings.Contains(rows(), "TestRoundMinor") {
+		t.Fatalf("the first scan found %q", rows())
+	}
+	// A hook after the panel's sees what it has the moment the window is back, before its scan runs.
+	var back string
+	cancel := kit.OnDirChanged(s.Registry(), "what the tests panel has", func(ev kit.DirChanged) {
+		if ev.Dir == dir {
+			back = rows()
+		}
+	})
+	defer cancel.Dispose()
+	move := func(to string) {
+		t.Helper()
+		win, _ := kit.WindowOf(s.Registry())
+		if err := win.Reopen(to, ""); err != nil {
+			t.Fatal(err)
+		}
+		s.Reopen()
+	}
+	move(t.TempDir())
+	move(dir)
+	if !strings.Contains(back, "TestRoundMinor") {
+		t.Errorf("back on %s, the panel had %q", dir, back)
 	}
 }

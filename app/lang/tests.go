@@ -53,10 +53,12 @@ type Tests struct {
 	watch    bool
 	showCov  bool
 	found    map[*text.Buffer]*discovery
-	scanned  map[string][]testrun.Item // every test found in the workspace, by file
-	scanFrom time.Time                 // when the workspace scan began
-	scanGen  int                       // which scan is the window's directory's: one of a directory left is dropped
-	byKey    map[string]testrun.Item   // scanned by key, made when asked for
+	scanned  map[string][]testrun.Item            // every test found in the workspace, by file
+	kept     map[string]map[string][]testrun.Item // scanned of the directories the window has left, by directory
+	foundNow map[string]bool                      // the files found in an open buffer since the scan began
+	scanFrom time.Time                            // when the workspace scan began
+	scanGen  int                                  // which scan is the window's directory's: one of a directory left is dropped
+	byKey    map[string]testrun.Item              // scanned by key, made when asked for
 	pkgs     map[string]bool
 	work     kit.Work
 
@@ -102,14 +104,26 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(kit.OnDispose(x.state.Close))
 	// The files git sees change are read again, in whichever work tree the window is on.
 	x.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
+		ws := x.workspace().Root
 		for _, p := range paths {
-			x.rescan(filepath.Join(root, filepath.FromSlash(p)))
+			// One told late, of the tree the window has left, isn't this directory's.
+			if p := filepath.Join(root, filepath.FromSlash(p)); kit.Within(p, ws) {
+				x.rescan(p)
+			}
 		}
 	})))
-	x.Add(kit.OnDirChanged(h, "the tests of the directory", func(kit.DirChanged) {
+	// A directory's tests stay with it: the window back on one shows them at once, as its scan brings them up to date.
+	x.Add(kit.OnDirChanged(h, "the tests of the directory", func(ev kit.DirChanged) {
 		x.mu.Lock()
 		x.scanGen++
-		x.scanned, x.byKey, x.pkgs, x.last = nil, nil, nil, nil
+		if x.kept == nil {
+			x.kept = map[string]map[string][]testrun.Item{}
+		}
+		if ev.Was != "" && x.scanned != nil {
+			x.kept[ev.Was] = x.scanned
+		}
+		x.scanned, x.byKey, x.pkgs, x.last = x.kept[ev.Dir], nil, nil, nil
+		delete(x.kept, ev.Dir)
 		x.mu.Unlock()
 		h.Do(x.scan) // off the loop: the hook only notes the move
 	}))
