@@ -45,6 +45,18 @@ jobs:
       - name: Race detector on the packages where it's quick
         if: runner.os == 'Linux'
         run: go test -race -shuffle=on ./text/... ./toml/... ./semver/... ./regex/... ./update/... ./registry/... ./core/... ./lsp/... ./dap/... ./fswatch/... ./gitx/...
+      - name: Install zig 0.16.0, for the native libraries make build links
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux) asset=zig-x86_64-linux-0.16.0; sum=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00 ;;
+            macOS) asset=zig-aarch64-macos-0.16.0; sum=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489 ;;
+          esac
+          curl -sSfL -o zig.tar.xz "https://ziglang.org/download/0.16.0/$asset.tar.xz"
+          echo "$sum  zig.tar.xz" | shasum -a 256 -c -
+          mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
+          echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
+      - run: make native
       - run: make build
       - name: Install nvim for the oracle
         shell: bash
