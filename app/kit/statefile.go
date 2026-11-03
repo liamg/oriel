@@ -30,7 +30,7 @@ type StateFile struct {
 	h     plugin.Host
 	o     StateFileOpts
 	m     *watch.Manager
-	own   bool // m is its own, with no window's to share
+	done  func() // closes m, when it's its own
 	moved func()
 	w     Writer
 
@@ -51,9 +51,7 @@ const firstReadLongest = time.Second
 // NewStateFile follows the window's directory's file for h.
 func NewStateFile(h plugin.Host, o StateFileOpts) *StateFile {
 	f := &StateFile{h: h, o: o}
-	if f.m = ManagerFor(h, ""); f.m == nil {
-		f.m, f.own = watch.New(watch.Options{Name: "state", Polls: PollsOf(h)}), true
-	}
+	f.m, f.done = FileManager(h, "state", 0)
 	gen := f.follow()
 	f.mu.Lock()
 	sub := f.sub
@@ -106,9 +104,7 @@ func (f *StateFile) Close() {
 		release()
 	}
 	f.w.Wait()
-	if f.own {
-		f.m.Close()
-	}
+	f.done()
 }
 
 // leave keeps what Leave gives for the directory the window is leaving, and follows the new one's file.
