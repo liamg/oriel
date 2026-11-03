@@ -554,6 +554,7 @@ func TestQueuedMessagesEditAndDelete(t *testing.T) {
 	}
 	menu("check the zero case", "Edit")
 	r.WaitText("Editing your queued message: send replaces it")
+	r.WaitFocused("Write to the request")
 	r.TypeKeys(selectAll)
 	r.TypeText("check zero and -0")
 	r.TypeKeys("<CR>")
@@ -562,6 +563,7 @@ func TestQueuedMessagesEditAndDelete(t *testing.T) {
 	r.ClickText("Reply, or ask more")
 	r.TypeKeys("<Up>")
 	r.WaitText("Editing your queued message: send replaces it")
+	r.WaitFocused("Write to the request")
 	r.TypeKeys(selectAll)
 	r.TypeText("and the README")
 	r.TypeKeys("<CR>")
@@ -600,10 +602,7 @@ func TestQueuedEditKeepsTheToggles(t *testing.T) {
 		r.WaitText("Edit")
 		r.ClickTop("Edit")
 		r.WaitText("Editing your queued message: send replaces it")
-		r.WaitAccess("the composer focused", func(w *apptest.Window) bool {
-			n := w.Access("Write to the request")
-			return n != nil && n.Focused
-		})
+		r.WaitFocused("Write to the request")
 		r.TypeKeys(selectAll)
 		r.TypeText(to)
 		r.WaitText(to)

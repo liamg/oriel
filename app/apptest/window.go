@@ -494,6 +494,16 @@ func (w *Window) WaitAccess(what string, ok func(w *Window) bool) {
 	}
 }
 
+// WaitFocused waits for the control named label to hold keyboard focus: type into a control a click or command has
+// just moved focus to only once it has.
+func (w *Window) WaitFocused(label string) {
+	w.T.Helper()
+	w.WaitAccess(label+" focused", func(w *Window) bool {
+		n := w.Access(label)
+		return n != nil && n.Focused
+	})
+}
+
 // ScrollAt scrolls what's under the last run of text drawn, by dy.
 func (w *Window) ScrollAt(text string, dy float32) {
 	w.T.Helper()
