@@ -258,9 +258,15 @@ func (s *Scene) Golden(name string) {
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		s.T.Errorf("%s: text drawn past its box:\n%s", name, strings.Join(o, "\n"))
 	}
+	failed := s.T.Failed()
 	snapshot.Golden(s.T, "testdata/"+name+".list", []byte(snapshot.List(s.List())))
 	img := raster.Render(s.List(), s.Size(), s.Scale(), s.UI().Theme().C(theme.BgBase))
 	snapshot.GoldenPNG(s.T, "testdata/"+name+".png", img, 0.02, 0.001)
+	if !failed && s.T.Failed() { // what the status line's counts and the inbox were drawn from
+		for _, n := range s.Store().State().Notifications {
+			s.T.Logf("%s: a %s notice from %s, %q: %s", name, n.Severity, n.Source, n.Title, n.Text)
+		}
+	}
 }
 
 // Shot draws two frames and writes the second to $ORIEL_SHOTS/name.png: a screenshot for the docs.
