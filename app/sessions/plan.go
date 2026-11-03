@@ -91,6 +91,8 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 		}
 	})))
 	h.Do(x.openIfPlanning)
+	// Once the window is on a planning session's directory, after its layout comes back.
+	x.Add(kit.OnDirChanged(h, "opens the plan of a planning session the window moves onto", func(kit.DirChanged) { h.Do(x.openIfPlanning) }))
 	return nil
 }
 

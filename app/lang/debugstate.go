@@ -103,7 +103,11 @@ type debugState struct {
 }
 
 func (x *Debug) load() {
-	path := x.StateFile
+	x.statePath = ""
+	if x.StateFile != nil {
+		x.statePath = x.StateFile()
+	}
+	path := x.statePath
 	if path == "" {
 		return
 	}
@@ -122,7 +126,7 @@ func (x *Debug) load() {
 
 // save writes the breakpoints and watches, off the loop.
 func (x *Debug) save() {
-	path := x.StateFile
+	path := x.statePath
 	if path == "" {
 		return
 	}
@@ -131,11 +135,18 @@ func (x *Debug) save() {
 }
 
 // dir is the directory debugged: the window's project.
-func (x *Debug) dir() string {
-	if x.WorkDir != "" {
-		return x.WorkDir
+func (x *Debug) dir() string { return editorDir(x.h) }
+
+// follow moves the debugger onto the window's new directory: a session running stops, as it did when the window
+// left its directory, and the new directory's breakpoints and watches come in for the last one's.
+func (x *Debug) follow() {
+	if x.sess != nil && x.sess.state != debugEnded {
+		_ = x.stopSession(nil)
 	}
-	return editorDir(x.h)
+	x.save()
+	x.bps, x.watches = map[string][]debugBreakpoint{}, nil
+	x.load()
+	x.changed()
 }
 
 // configs are the launch configs in .oriel/debug.toml, as [[debug]] tables.

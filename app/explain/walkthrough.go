@@ -47,10 +47,10 @@ const walkHelp = "editor/pane#explain-change"
 // beside them, and the step dock. It's thrown away once the code a step is about changes.
 type Walkthrough struct {
 	kit.Disposer
-	WorkDir, ConfigDir string // the window's directory, and the user's config
-	h                  plugin.Host
-	busy               sync.WaitGroup
-	metrics            kit.PaneMetrics // the code's, as the editor draws it
+	ConfigDir string // the user's config
+	h         plugin.Host
+	busy      sync.WaitGroup
+	metrics   kit.PaneMetrics // the code's, as the editor draws it
 
 	w     *walkthrough // on the loop only
 	focus bool         // give the view focus next frame
@@ -81,6 +81,7 @@ func (x *Walkthrough) Manifest() plugin.Manifest { return plugin.Manifest{ID: "e
 
 func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
+	x.Add(kit.OnDirChanged(h, "a walkthrough is of its directory", func(kit.DirChanged) { x.w = nil }))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -204,8 +205,8 @@ func (x *Walkthrough) projects() []walkProject {
 			out = append(out, walkProject{name: p.Name, dir: p.Dir})
 		}
 	}
-	if len(out) == 0 && x.WorkDir != "" {
-		out = append(out, walkProject{name: filepath.Base(x.WorkDir), dir: x.WorkDir})
+	if dir := kit.WindowDir(x.h); len(out) == 0 && dir != "" {
+		out = append(out, walkProject{name: filepath.Base(dir), dir: dir})
 	}
 	return out
 }

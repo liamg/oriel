@@ -37,7 +37,7 @@ func (w window) IconImage(name string, col render.Color) image.Image {
 	return contributedIcon(w.sh.cfg.Registry, w.sh.reads.Pictures, name, col)
 }
 
-func (w window) Dir() string { return w.sh.cfg.WorkDir }
+func (w window) Dir() string { return w.sh.workDir() }
 
 func (w window) Polls() *kit.PollSet { return w.sh.polls }
 
@@ -101,4 +101,12 @@ func (r *quitDrain) Cancel()             { r.cancelQuit() }
 func (r *quitDrain) Busy() ([]core.SessionState, bool) {
 	busy, _, polled := r.shown()
 	return busy, polled
+}
+
+// workDir is the directory the window is on, from any goroutine.
+func (sh *shell) workDir() string {
+	if d := sh.dir.Load(); d != nil {
+		return *d
+	}
+	return ""
 }

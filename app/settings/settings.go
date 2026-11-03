@@ -57,10 +57,10 @@ type settingsFile struct {
 // the one line they change.
 type Plugin struct {
 	kit.Disposer
-	ConfigDir, WorkDir string // the user's config directory, and the window's
-	h                  plugin.Host
+	ConfigDir string // the user's config directory
+	h         plugin.Host
 
-	user, project *settingsFile
+	user, project *settingsFile // the user's, and the window's directory's project's (loadMu, othersMu)
 	othersMu      sync.Mutex
 	others        map[string]*settingsFile // other projects' files, by root: the repos of this machine's sessions
 	trustPath     string
@@ -95,7 +95,7 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	conf := s.ConfigDir
 	s.user = &settingsFile{path: filepath.Join(conf, "settings.toml"), layer: registry.LayerUser}
 	s.trustPath = filepath.Join(conf, "trusted.toml")
-	if root := s.WorkDir; root != "" {
+	if root := kit.WindowDir(h); root != "" {
 		s.project = projectFile(root)
 	}
 	s.Add(h.Contribute(kit.PagePlace("settings", "Settings", "settings.open", &s.open)))
@@ -116,6 +116,7 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		s.watch.Add(s.project.path)
 	}
 	s.loadAll()
+	s.Add(kit.OnDirChanged(h, "the project settings of the directory", func(kit.DirChanged) { s.follow() }))
 	s.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced:
@@ -186,12 +187,42 @@ func projectFile(root string) *settingsFile {
 	return &settingsFile{path: filepath.Join(root, ".oriel", "settings.toml"), layer: registry.LayerProject, at: registry.At{Project: root}, trust: true}
 }
 
+// follow makes the window's new directory's project file the project layer the page edits: the one it left stays
+// with the other projects', its values still applying to it.
+func (s *Plugin) follow() {
+	root := kit.WindowDir(s.h)
+	s.loadMu.Lock()
+	s.othersMu.Lock()
+	if s.others == nil {
+		s.others = map[string]*settingsFile{}
+	}
+	if s.project != nil {
+		s.others[s.project.at.Project] = s.project
+	}
+	s.project = nil
+	if root != "" {
+		if f, ok := s.others[root]; ok {
+			s.project = f
+			delete(s.others, root)
+		} else {
+			s.project = projectFile(root)
+			s.watch.Add(s.project.path)
+		}
+	}
+	s.othersMu.Unlock()
+	s.loadMu.Unlock()
+	if s.loadAll() {
+		s.h.Redraw()
+	}
+}
+
 // addOthers reads the project files of repos sessions here work in, so their project values apply to them.
 func (s *Plugin) addOthers() {
 	s.othersMu.Lock()
 	defer s.othersMu.Unlock()
-	for _, root := range projectRoots(s.WorkDir, s.h.State()) {
-		if root == s.WorkDir || s.others[root] != nil {
+	dir := kit.WindowDir(s.h)
+	for _, root := range projectRoots(dir, s.h.State()) {
+		if root == dir || s.others[root] != nil {
 			continue
 		}
 		if s.others == nil {

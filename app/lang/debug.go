@@ -142,10 +142,10 @@ type DebugEnded struct {
 // expressions and a REPL, in the Debug panel.
 type Debug struct {
 	kit.Disposer
-	WorkDir   string                           // the project the window is open on
-	StateFile string                           // where the breakpoints and watches are kept for the work dir
+	StateFile func() string                    // where the breakpoints and watches are kept for the window's directory
 	Logger    func(source string) *slog.Logger // an adapter's stderr goes to the log as source
 	h         plugin.Host
+	statePath string // the file the breakpoints and watches came from: the directory's the window is on
 
 	bps     map[string][]debugBreakpoint // by absolute path
 	watches []string
@@ -194,6 +194,7 @@ func (x *Debug) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.bps = map[string][]debugBreakpoint{}
 	x.load()
+	x.Add(kit.OnDirChanged(h, "the debugger's breakpoints and watches for the directory", func(kit.DirChanged) { x.follow() }))
 	x.Add(h.Decorations("debug", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	x.Add(h.Contribute(registry.GutterAction{Name: "debug.breakpoint", Command: "debug.breakpoint.toggle", Order: 50, When: x.debuggable,
 		Source: "builtin:debug"}))

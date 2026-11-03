@@ -28,6 +28,19 @@ saves/
 `oriel plugin init --id me/saves saves` writes a starting `oriel.toml` and `init.lua` (`--process` adds a Go command
 under `cmd/`).
 
+## How long it runs
+
+A plugin starts once and runs until Oriel quits, or until it's turned off or updated. Switching sessions doesn't start
+it again: the window moves onto the new session's directory underneath it, and its hooks, tools and views go on
+working for every session, not only the one in front. So don't note where you are once at the top of `init.lua`: read
+it when you need it. A view gets the session in front as `ctx.session` and the project it's for as `ctx.project`; a
+hook's event names its session; `oriel.session.kept("", key)` is the session in front's.
+
+When the window moves, the `DirChanged` hook fires with `{ dir, was, session }`, once it's on the new directory and
+before that directory's layout comes back (a view opened from the hook is replaced by it, so open one later). Use it
+to swap something you keep per directory. A plugin listed in a project's own settings (`[plugins]` in
+`.oriel/settings.toml`) runs only while the window is on that project.
+
 ## The manifest
 
 ```toml

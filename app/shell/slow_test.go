@@ -221,38 +221,32 @@ func TestRepoHousekeepLeavesTheLoopDrawing(t *testing.T) {
 	}, func(st core.State) bool { return seen && !busyNotice(st, notice) })
 }
 
-// slowStop is a plugin whose cleanup (plugin.Teardown) waits until held closes, noting whether the opening cover was
-// drawn as it stopped.
-type slowStop struct {
-	held     chan struct{}
-	win      *apptest.Window
-	starts   atomic.Int32
-	covered  atomic.Bool
-	cleaning atomic.Bool
+// coverWatch notes whether the opening cover was on screen by the time the window moved, and whether it was stopped.
+type coverWatch struct {
+	win     *apptest.Window
+	covered atomic.Bool
+	stopped atomic.Bool
 }
 
-func (p *slowStop) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.slowstop"} }
-func (p *slowStop) Activate(context.Context, plugin.Host) error {
-	p.starts.Add(1)
-	return nil
-}
-func (p *slowStop) Deactivate(ctx context.Context) error {
-	if fs := p.win.Win.Frames(); len(fs) > 0 && strings.Contains(fs[len(fs)-1].Text(), "Opening") {
-		p.covered.Store(true)
-	}
-	plugin.Teardown(ctx, func(context.Context) {
-		p.cleaning.Store(true)
-		<-p.held
+func (p *coverWatch) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.coverwatch"} }
+func (p *coverWatch) Activate(_ context.Context, h plugin.Host) error {
+	kit.OnDirChanged(h, "notes the cover", func(kit.DirChanged) {
+		if fs := p.win.Win.Frames(); len(fs) > 0 && strings.Contains(fs[len(fs)-1].Text(), "Opening") {
+			p.covered.Store(true)
+		}
 	})
 	return nil
 }
+func (p *coverWatch) Deactivate(context.Context) error {
+	p.stopped.Store(true)
+	return nil
+}
 
-// Switching what the window is on draws the opening cover at once, and a plugin's slow cleanup runs off the loop:
-// the plugins start again on the new directory while it's under way, and the window waits for it as it closes.
-func TestSwitchTearsDownOffTheLoop(t *testing.T) {
-	p := &slowStop{held: make(chan struct{})}
+// Switching what the window is on draws the opening cover at once, then moves onto the new directory underneath
+// the plugins, which go on running.
+func TestSwitchDrawsTheCoverAndKeepsThePlugins(t *testing.T) {
+	p := &coverWatch{}
 	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{p}})
-	t.Cleanup(func() { close(p.held) }) // before the app stops, which waits for the cleanup
 	p.win = r
 	dir := t.TempDir()
 	if err := r.Do(func() error {
@@ -261,18 +255,11 @@ func TestSwitchTearsDownOffTheLoop(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	for deadline := time.Now().Add(5 * time.Second); p.starts.Load() < 2; time.Sleep(5 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatal("the plugins never started again while the old ones' cleanup ran")
-		}
-	}
-	if !p.cleaning.Load() {
-		t.Error("the cleanup never ran")
-	}
+	r.WaitFor("the window on the new directory", func() bool { return kit.WindowDir(r.Host) == dir })
 	if !p.covered.Load() {
-		t.Error("the plugins stopped before the opening cover was drawn")
+		t.Error("the window moved before the opening cover was drawn")
 	}
-	before := len(r.Win.Frames())
-	r.Do(func() error { r.Host.Redraw(); return nil })
-	r.WaitAfter("a frame while the cleanup runs", before, func(string) bool { return true })
+	if p.stopped.Load() {
+		t.Error("switching stopped a plugin")
+	}
 }

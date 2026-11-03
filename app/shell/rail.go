@@ -70,6 +70,21 @@ type rail struct {
 	counts []railCount // the git entries' notes, by the state they were counted in
 }
 
+// loadForm reads the form the window's directory's sidebar was left in.
+func (r *rail) loadForm() {
+	r.form = ""
+	path := r.sh.cfg.DirState("sidebar")
+	if path == "" {
+		return
+	}
+	if b, err := os.ReadFile(path); err == nil {
+		var st sidebarState
+		if json.Unmarshal(b, &st) == nil {
+			r.form = st.Form
+		}
+	}
+}
+
 type railCount struct {
 	st *gitx.State
 	n  int
@@ -107,14 +122,12 @@ var projectPanels = []struct {
 
 func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 	r.h = h
-	if path := r.sh.cfg.DirState("sidebar"); path != "" {
-		if b, err := os.ReadFile(path); err == nil {
-			var st sidebarState
-			if json.Unmarshal(b, &st) == nil {
-				r.form = st.Form
-			}
-		}
-	}
+	r.loadForm()
+	r.Add(kit.OnDirChanged(h, "the sidebar's form for the directory", func(kit.DirChanged) {
+		r.writer.flush()
+		r.sel = 0
+		r.loadForm()
+	}))
 	r.Add(h.Option(registry.OptionSpec{Name: "sidebar.form", Type: registry.Enum, Values: []string{"auto", "wide", "narrow"}, Default: "auto",
 		Scopes: registry.ScopeUser, Help: "How a window's project sidebar starts: wide, narrow (an icon strip), or auto, wide with two or more projects. «/» switch a window's, which it remembers."}))
 	r.entries(h)

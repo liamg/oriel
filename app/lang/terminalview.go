@@ -67,7 +67,7 @@ func (v terminalView) Revive(state json.RawMessage) (string, error) {
 	}
 	a := registry.Args{"cmd": s.Cmd, "instance": s.ID}
 	if w, se, ok := v.x.sandboxed(a); ok {
-		c, err := w.SandboxShell(context.Background(), se, v.x.WorkDir)
+		c, err := w.SandboxShell(context.Background(), se, kit.WindowDir(v.x.h))
 		if err != nil {
 			return "", err
 		}

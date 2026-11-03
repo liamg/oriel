@@ -36,7 +36,7 @@ func (x *LSP) agentTools(h plugin.Host) {
 }
 
 func (x *LSP) agentPath(ctx registry.Ctx, file string) (string, error) {
-	return agentPath(x.h, x.WorkDir, ctx, file)
+	return agentPath(x.h, x.dir(), ctx, file)
 }
 
 // agentPath is an agent tool's file argument as an absolute path: relative to the asking session's project, or the
@@ -166,7 +166,7 @@ func (x *LSP) toolLocations(what string, find func(*lsp.Client, context.Context,
 	}
 }
 
-func (x *LSP) agentRel(path string) string { return agentRel(x.WorkDir, path) }
+func (x *LSP) agentRel(path string) string { return agentRel(x.dir(), path) }
 
 // agentRel is a path as an agent gives it: relative to the project, root, when it's inside it.
 func agentRel(root, path string) string {

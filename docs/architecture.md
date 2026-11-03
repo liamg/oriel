@@ -74,10 +74,24 @@ offers a typed service with `registry.Service{Name, Impl}` and others find it wi
 built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and `host.Access`. A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
 
-Bringing a session in another directory to the front opens the window again on it, starting every plugin afresh, so
-a plugin's fields last only until then. What a plugin remembers per session (a panel's scope, that a kind's opening
-commands have run) it keeps with `Host.Keep` and reads with `Host.Kept` (`oriel.session.keep` and `kept` in Lua): the
-window holds it across reopens and saves it in the state directory across restarts, until the session is gone.
+Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
+underneath them: the layout it leaves is saved, the pages over it close, the `DirChanged` hook fires, and the layout
+saved for the new directory comes back, then the session's opening commands. Nothing a plugin offers (its agent
+tools, hooks, subscriptions) goes away while it does, so a plugin keeps working for every session, not only the one
+in front.
+
+So a plugin asks where the window is when it needs to know, never once as it starts: `Host.Here()` is the session
+and project in front, `kit.WindowDir` the directory, and the shell's `Parts.DirState` a state file kept for it; all
+are safe off the loop. What it keeps per directory it keeps by directory (a language server per root, a directory's
+breakpoints or saved terminal screens), so coming back finds it. One that must swap something as the window moves
+does it on `DirChanged` (`kit.OnDirChanged`; `oriel.on("DirChanged", fn)` in Lua), which fires once the window is on
+the new directory and before its layout comes back; a view opened from that hook is replaced by the layout, so open
+one later. A project's own plugins (its settings' `[plugins]`) run while the window is on the project, starting and
+stopping as it comes and goes.
+
+What a plugin remembers per session across restarts (a panel's scope, that a kind's opening commands have run) it
+keeps with `Host.Keep` and reads with `Host.Kept` (`oriel.session.keep` and `kept` in Lua): the window saves it in the
+state directory until the session is gone.
 
 ## Freshness
 

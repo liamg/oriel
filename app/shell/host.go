@@ -77,7 +77,7 @@ func (h *pluginHost) UI() plugin.UIView {
 const noSession = "oriel"
 
 func (h *pluginHost) Here() registry.At {
-	at := registry.At{Session: string(h.store.Focus()), Project: h.sh.cfg.WorkDir}
+	at := registry.At{Session: string(h.store.Focus()), Project: h.sh.workDir()}
 	if at.Session == "" {
 		at.Session = noSession
 	}

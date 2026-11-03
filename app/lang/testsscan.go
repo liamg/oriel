@@ -17,6 +17,9 @@ func (x *Tests) scan() {
 		return
 	}
 	x.scanFrom = kit.WindowNow(x.h)
+	x.mu.Lock()
+	gen := x.scanGen
+	x.mu.Unlock()
 	x.work.Go(func(ctx context.Context) {
 		byFile := map[string][]testrun.Item{}
 		for _, it := range x.set.Scan(ctx, ws) {
@@ -26,6 +29,10 @@ func (x *Tests) scan() {
 			return
 		}
 		x.mu.Lock()
+		if gen != x.scanGen { // the window moved on while it ran
+			x.mu.Unlock()
+			return
+		}
 		for f, items := range x.scanned {
 			byFile[f] = items // found in an open buffer while the scan ran
 		}
@@ -35,11 +42,11 @@ func (x *Tests) scan() {
 	})
 	if st := kit.GitOf(x.h).Tree("").Status(); st != nil {
 		root := st.Repo().Dir
-		x.Add(kit.OnDispose(st.Watch(func(paths []string) {
+		x.unwatch = st.Watch(func(paths []string) {
 			for _, p := range paths {
 				x.rescan(filepath.Join(root, filepath.FromSlash(p)))
 			}
-		})))
+		})
 	}
 }
 

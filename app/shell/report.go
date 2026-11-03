@@ -40,8 +40,9 @@ type shell struct {
 	layout      *layoutPlugin
 	poke        func() // asks the loop for a frame
 	keys        *registry.Resolver
-	ui          atomic.Pointer[ui.UI] // set as the window opens; read by plugins' goroutines too
-	widgets     widgetServices        // plugins' services for the UI's widgets (Host.ProvideUI)
+	ui          atomic.Pointer[ui.UI]  // set as the window opens; read by plugins' goroutines too
+	dir         atomic.Pointer[string] // cfg.WorkDir, for plugins' goroutines: the window moves under them
+	widgets     widgetServices         // plugins' services for the UI's widgets (Host.ProvideUI)
 	modes       func() []string
 	theme       func() *theme.Resolved
 	todoMu      sync.Mutex
@@ -68,7 +69,6 @@ type shell struct {
 	frames      kit.FrameLog                 // the frames drawn: how long each took
 	claims      sync.Map                     // Host.Claim's keys held
 	kept        *keptStore                   // Host.Keep's, per session
-	teardowns   plugin.Teardowns             // stopped plugins' slow cleanup, off the loop
 }
 
 type afterOpen struct {

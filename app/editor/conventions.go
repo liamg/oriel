@@ -30,8 +30,8 @@ const conventionsEvery = 500 * time.Millisecond
 type conventions struct {
 	h       plugin.Host
 	buffers func() []string // the names of the open buffers with files
-	dir     string          // relative names are under it; sources are shown relative to it
-	reposMu sync.Mutex      // project search reads repos off the loop
+	dir     string          // relative names are under it; sources are shown relative to it (reposMu)
+	reposMu sync.Mutex      // project search reads repos, and dir, off the loop
 	repos   map[string]*attr.Repo
 	applied map[string]map[string]any // by buffer name: what the file layer holds
 	warned  map[string]bool
@@ -71,8 +71,22 @@ type value struct {
 	src string
 }
 
+// root is the directory relative names are under: the window's.
+func (c *conventions) root() string {
+	c.reposMu.Lock()
+	defer c.reposMu.Unlock()
+	return c.dir
+}
+
+// setRoot moves relative names under dir, as the window moves onto it.
+func (c *conventions) setRoot(dir string) {
+	c.reposMu.Lock()
+	defer c.reposMu.Unlock()
+	c.dir = dir
+}
+
 func (c *conventions) rel(p string) string {
-	if r, err := filepath.Rel(c.dir, p); err == nil && !strings.HasPrefix(r, "..") {
+	if r, err := filepath.Rel(c.root(), p); err == nil && !strings.HasPrefix(r, "..") {
 		return filepath.ToSlash(r)
 	}
 	return p
@@ -82,12 +96,12 @@ func (c *conventions) abs(name string) string {
 	if filepath.IsAbs(name) {
 		return name
 	}
-	return filepath.Join(c.dir, name)
+	return filepath.Join(c.root(), name)
 }
 
 // repo is the git work tree path is in, or the work dir when it's in none.
 func (c *conventions) repo(path string) (*attr.Repo, string) {
-	root := c.dir
+	root := c.root()
 	for d := filepath.Dir(path); ; d = filepath.Dir(d) {
 		if st, err := os.Stat(filepath.Join(d, ".git")); err == nil && st.IsDir() {
 			root = d

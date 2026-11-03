@@ -45,10 +45,11 @@ const (
 // Terminals are the window's terminals: a PTY each, Ghostty's VT parsing what it prints, drawn by the terminal view.
 type Terminals struct {
 	kit.Disposer
-	CacheDir, WorkDir string
-	SavedAt           string         // where the screens are kept for the work dir
-	Clipboard         edit.Clipboard // the system clipboard, for copying from the scrollback
-	h                 plugin.Host
+	CacheDir  string
+	SavedAt   func() string  // where the screens are kept for the window's directory
+	Clipboard edit.Clipboard // the system clipboard, for copying from the scrollback
+	h         plugin.Host
+	savedFrom string // the file the screens came from: the directory's the window is on
 
 	mu    sync.Mutex
 	terms map[string]*terminal
@@ -107,6 +108,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 		x.loadSaved()
 	}
 	x.mu.Unlock()
+	x.Add(kit.OnDirChanged(h, "the terminals for the directory", func(kit.DirChanged) { x.follow() }))
 	if x.CacheDir != "" {
 		ghostty.SetCacheDir(filepath.Join(x.CacheDir, "wasm"))
 	}
@@ -200,6 +202,23 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 // Deactivate keeps every terminal's screen, so they come back when the app starts again on this directory, and stops
 // their programs.
 func (x *Terminals) Deactivate(ctx context.Context) error {
+	x.keepAll()
+	x.busy.Wait()
+	x.paced.Stop()
+	return x.Disposer.Deactivate(ctx)
+}
+
+// follow moves the terminals onto the window's new directory: those of the one it left keep their screens and stop,
+// as when the app stops, and the new directory's saved screens come in, for its terminals as its layout brings them
+// back.
+func (x *Terminals) follow() {
+	x.keepAll()
+	x.saved = map[string][]byte{}
+	x.loadSaved()
+}
+
+// keepAll keeps every terminal's screen in the directory's saved screens, and stops their programs.
+func (x *Terminals) keepAll() {
 	x.mu.Lock()
 	terms := x.terms
 	x.terms = map[string]*terminal{}
@@ -211,14 +230,15 @@ func (x *Terminals) Deactivate(ctx context.Context) error {
 		t.stop()
 	}
 	x.storeSaved()
-	x.busy.Wait()
-	x.paced.Stop()
-	return x.Disposer.Deactivate(ctx)
 }
 
-func (x *Terminals) savedPath() string { return x.SavedAt }
+func (x *Terminals) savedPath() string { return x.savedFrom }
 
 func (x *Terminals) loadSaved() {
+	x.savedFrom = ""
+	if x.SavedAt != nil {
+		x.savedFrom = x.SavedAt()
+	}
 	if p := x.savedPath(); p != "" {
 		if b, err := os.ReadFile(p); err == nil {
 			json.Unmarshal(b, &x.saved)
@@ -314,7 +334,7 @@ func strList(v any) []string {
 // open starts a terminal and shows it.
 func (x *Terminals) open(ctx registry.Ctx, a registry.Args, place, side string) error {
 	if w, se, ok := x.sandboxed(a); ok {
-		dir := x.WorkDir
+		dir := kit.WindowDir(x.h)
 		return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "term.open.sandbox", Doing: "Opening a terminal in the sandbox"},
 			func(ctx context.Context) (sandbox.Command, error) {
 				c, err := w.SandboxShell(ctx, se, dir)
@@ -397,7 +417,7 @@ func (x *Terminals) start(a registry.Args, sb *sandbox.Command) (string, error) 
 	t.emu = emu
 	if src == nil {
 		cmd := exec.Command(cmdline[0], cmdline[1:]...)
-		cmd.Dir = cmp.Or(a.String("dir"), x.WorkDir)
+		cmd.Dir = cmp.Or(a.String("dir"), kit.WindowDir(x.h))
 		if env == nil {
 			env = os.Environ()
 		}

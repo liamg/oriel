@@ -29,8 +29,8 @@ var (
 // the Problems view.
 type Problems struct {
 	kit.Disposer
-	ConfigDir, WorkDir string
-	h                  plugin.Host
+	ConfigDir string
+	h         plugin.Host
 }
 
 func (p *Problems) Manifest() plugin.Manifest { return plugin.Manifest{ID: "problems"} }
@@ -135,7 +135,7 @@ func (p *Problems) view(c *ui.Ctx) {
 
 // short is a file as Problems shows it: from the config or work directory if it's under one, else with ~.
 func (p *Problems) short(file string) string {
-	for _, dir := range []string{p.ConfigDir, p.WorkDir} {
+	for _, dir := range []string{p.ConfigDir, kit.WindowDir(p.h)} {
 		if rel, err := filepath.Rel(dir, file); dir != "" && err == nil && !strings.HasPrefix(rel, "..") {
 			return rel
 		}

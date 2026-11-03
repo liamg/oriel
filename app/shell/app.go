@@ -83,7 +83,9 @@ type Builtins func(Parts) []plugin.Plugin
 // Parts are what the shell gives Builtins: its config as it is now (the directory changes as the window opens
 // again), its own plugins, and what it keeps for the features.
 type Parts struct {
-	Config    Config
+	Config Config // as it is when the plugins are made: WorkDir and Files are where the window started
+	// DirState is a state file kept for the directory the window is on now (Config.DirState), as it moves.
+	DirState  func(name string) string
 	Clipboard edit.Clipboard // the system clipboard, as the editor's registers see it
 	Pictures  *kit.Pictures  // the window's images
 	Tools     *search.Tools  // the machine's search tools
@@ -132,7 +134,6 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	p := &running{sh: sh, ctx: ctx}
 	defer func() {
 		err = errors.Join(err, p.deactivate(p.ctx))
-		sh.teardowns.Wait()
 		kit.ForgetLanguages(cfg.Registry)
 	}()
 	if err := p.activate(); err != nil {
@@ -212,7 +213,7 @@ func (sh *shell) openDirect(ctx context.Context, log *slog.Logger) {
 	}
 }
 
-// running are the plugins the window runs, started again each time it opens on another directory.
+// running are the plugins the window runs, for as long as it runs: it moves from directory to directory under them.
 type running struct {
 	sh     *shell
 	ctx    context.Context
@@ -232,18 +233,30 @@ func (p *running) deactivate(ctx context.Context) (err error) {
 	return err
 }
 
-// reopen starts every plugin again on to's directory: Open Directory, or another session in front.
-func (p *running) reopen(to reopenTo, log *slog.Logger) error {
-	sh := p.sh
-	sh.heading.Store(nil)
-	if err := p.deactivate(plugin.WithTeardowns(p.ctx, &sh.teardowns)); err != nil {
-		log.Error("reopen", "dir", to.dir, "err", err)
+// reopen moves the window onto to's directory: Open Directory, or another session in front.
+func (p *running) reopen(to reopenTo, _ *slog.Logger) error {
+	p.sh.heading.Store(nil)
+	p.sh.move(p.ctx, to)
+	if to.session == "" && to.dir != "" {
+		p.sh.recents.add(to.dir, time.Now())
+	}
+	return nil
+}
+
+// move takes the window onto to's directory underneath the plugins, which live on: the layout it leaves is saved,
+// DirChanged lets a plugin that keeps something per directory swap it, and the new directory's layout comes back.
+func (sh *shell) move(ctx context.Context, to reopenTo) {
+	was := sh.cfg.WorkDir
+	if sh.layout != nil && sh.layout.h != nil {
+		sh.layout.leave()
 	}
 	sh.cfg.WorkDir, sh.cfg.Files, sh.openedFor = to.dir, nil, to.session
-	if to.session == "" && to.dir != "" {
-		sh.recents.add(to.dir, time.Now())
+	dir := to.dir
+	sh.dir.Store(&dir)
+	sh.cfg.Registry.Fire(ctx, registry.EventName[kit.DirChanged](), to.dir, &kit.DirChanged{Dir: to.dir, Was: was, Session: string(to.session)})
+	if sh.layout != nil && sh.layout.h != nil {
+		sh.layout.arrive()
 	}
-	return p.activate()
 }
 
 // defaults fills in what Config says it makes when it's nil.
@@ -280,6 +293,7 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 	tail := cfg.Store.Subscribe(core.Filter{}, events.add)
 	notices := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })
 	sh := &shell{cfg: cfg, builtins: builtins, store: cfg.Store, events: events, poke: poke, reopen: make(chan reopenTo, 1), focus: newWindowFocus()}
+	sh.dir.Store(&cfg.WorkDir)
 	sh.reads = kit.NewReads(kit.ReadsOpts{Client: cfg.ImageNet, Wake: poke, Watch: cfg.FSWatch, Frame: func() int {
 		if u := sh.ui.Load(); u != nil {
 			return u.Frames()

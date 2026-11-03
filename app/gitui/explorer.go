@@ -219,14 +219,30 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	}
 	e.watchScratch()
 	e.Add(h.View(kit.ExplorerView, explorerView{e}))
-	if st := e.Git.status; st != nil {
-		e.Add(kit.OnDispose(st.Watch(func([]string) {
-			e.hunks.mu.Lock()
-			e.hunks.loaded = false
-			e.hunks.mu.Unlock()
-		})))
-	}
+	unwatch := e.watchStatus()
+	e.Add(kit.OnDispose(func() { unwatch() }))
+	e.Add(kit.OnDirChanged(h, "the explorer's work tree", func(kit.DirChanged) {
+		unwatch()
+		e.selected, e.work, e.rows.key = "", nil, explorerRowsKey{}
+		e.hunks.mu.Lock()
+		e.hunks.loaded = false
+		e.hunks.mu.Unlock()
+		h.Do(func() { unwatch = e.watchStatus() }) // once git holds the new directory's tree
+	}))
 	return nil
+}
+
+// watchStatus has the window's work tree's changes read its hunks again, and answers how to stop.
+func (e *Explorer) watchStatus() func() {
+	st := e.Git.status
+	if st == nil {
+		return func() {}
+	}
+	return st.Watch(func([]string) {
+		e.hunks.mu.Lock()
+		e.hunks.loaded = false
+		e.hunks.mu.Unlock()
+	})
 }
 
 func (e *Explorer) commands() []registry.Command {

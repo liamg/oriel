@@ -32,7 +32,6 @@ import (
 // whose notices are the IDE's and whose "+ and "* are the system clipboard.
 type Editor struct {
 	kit.Disposer
-	WorkDir   string         // relative names are under it; the process's directory when ""
 	Files     []string       // opened at start
 	Clipboard edit.Clipboard // the system clipboard, for "+ and "*
 	Tools     *search.Tools  // the machine's search tools, for grep
@@ -41,7 +40,8 @@ type Editor struct {
 	ed      *edit.Editor
 	e       *vim.Engine
 	conv    *conventions
-	dir     string
+	dir     string    // relative names are under it: the window's directory, or the process's on the start view
+	listed  *fileList // the files picker's
 	docs    map[*text.Buffer]*highlighter
 	busy    sync.WaitGroup // parsers being made and files read, off the loop
 	madeMu  sync.Mutex
@@ -71,10 +71,7 @@ func (x *Editor) Manifest() plugin.Manifest { return plugin.Manifest{ID: "editor
 
 func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	x.dir = x.WorkDir
-	if x.dir == "" {
-		x.dir, _ = os.Getwd()
-	}
+	x.dir = editorDir(h)
 	x.docs, x.rows, x.blockPx = map[*text.Buffer]*highlighter{}, map[vim.WindowID]int{}, map[vim.WindowID]float32{}
 	x.lineTops = map[vim.WindowID][]lineTop{}
 	x.disk.asked = map[int]time.Time{}
@@ -148,12 +145,33 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 	for _, p := range []uireg.PickerSource{x.filesSource(), syms, x.fileSymbolsSource(syms), x.buffersSource(), x.quickfixSource(), x.grepSource()} {
 		x.Add(h.Picker(p))
 	}
+	x.Add(kit.OnDirChanged(h, "the editor's directory", func(kit.DirChanged) { x.follow(editorDir(h)) }))
 	for _, f := range x.Files {
 		if _, err := x.open(context.Background(), f, ""); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// editorDir is the directory the editor's relative names are under: the window's, or the process's on the start view.
+func editorDir(h plugin.Host) string {
+	if d := kit.WindowDir(h); d != "" {
+		return d
+	}
+	d, _ := os.Getwd()
+	return d
+}
+
+// follow puts the editor's relative names under dir, as the window moves onto it. Buffers stay open; the windows
+// on them are the layout's, which the directory's own layout replaces.
+func (x *Editor) follow(dir string) {
+	x.dir = dir
+	x.fileHost.disk.Dir = dir
+	x.conv.setRoot(dir)
+	if x.listed != nil {
+		x.listed.setDir(dir)
+	}
 }
 
 // commands are the editor's commands.

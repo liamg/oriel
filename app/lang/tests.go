@@ -38,8 +38,9 @@ var (
 // the lines and in the Tests panel, failures inline at their assertion, watch mode and a coverage gutter.
 type Tests struct {
 	kit.Disposer
-	HistoryFile string // where the runs are kept for the work dir
+	HistoryFile func() string // where the runs are kept for the window's directory
 	h           plugin.Host
+	historyFrom string // the file the runs came from: the directory's the window is on
 
 	set     *testrun.Set
 	history *testrun.History
@@ -53,6 +54,8 @@ type Tests struct {
 	found    map[*text.Buffer]*discovery
 	scanned  map[string][]testrun.Item // every test found in the workspace, by file
 	scanFrom time.Time                 // when the workspace scan began
+	scanGen  int                       // which scan is the window's directory's: one of a directory left is dropped
+	unwatch  func()                    // stops following the work tree's changes
 	byKey    map[string]testrun.Item   // scanned by key, made when asked for
 	pkgs     map[string]bool
 	work     kit.Work
@@ -95,14 +98,18 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.set = testrun.Builtin()
 	x.Add(kit.OnDispose(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
-	x.history = testrun.NewHistory(20)
 	x.found = map[*text.Buffer]*discovery{}
-	if f, err := os.Open(x.historyPath()); err == nil {
-		if hs, err := testrun.LoadHistory(f); err == nil {
-			x.history = hs
-		}
-		f.Close()
-	}
+	x.loadHistory()
+	x.Add(kit.OnDispose(func() { x.stopWatching() }))
+	x.Add(kit.OnDirChanged(h, "the tests of the directory", func(kit.DirChanged) {
+		x.stopWatching()
+		x.mu.Lock()
+		x.scanGen++
+		x.scanned, x.byKey, x.pkgs, x.last = nil, nil, nil, nil
+		x.mu.Unlock()
+		x.loadHistory()
+		h.Do(x.scan) // once git holds the new directory's tree
+	}))
 	x.Add(h.Decorations("tests", uireg.DecorationFunc(x.decorations)))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -300,7 +307,32 @@ func (x *Tests) Running() bool {
 	return x.exec != nil
 }
 
-func (x *Tests) historyPath() string { return x.HistoryFile }
+func (x *Tests) historyPath() string { return x.historyFrom }
+
+// loadHistory reads the runs kept for the window's directory.
+func (x *Tests) loadHistory() {
+	x.history, x.historyFrom = testrun.NewHistory(20), ""
+	if x.HistoryFile != nil {
+		x.historyFrom = x.HistoryFile()
+	}
+	if x.historyFrom == "" {
+		return
+	}
+	if f, err := os.Open(x.historyFrom); err == nil {
+		if hs, err := testrun.LoadHistory(f); err == nil {
+			x.history = hs
+		}
+		f.Close()
+	}
+}
+
+// stopWatching stops following the work tree's changes.
+func (x *Tests) stopWatching() {
+	if x.unwatch != nil {
+		x.unwatch()
+		x.unwatch = nil
+	}
+}
 
 func (x *Tests) workspace() testrun.Workspace { return testrun.Workspace{Root: editorDir(x.h)} }
 
@@ -649,19 +681,20 @@ func (x *Tests) start(req testrun.Request) error {
 
 // saveHistory writes the history off the loop, one write at a time.
 func (x *Tests) saveHistory() {
-	if x.HistoryFile == "" {
+	path, history := x.historyFrom, x.history
+	if path == "" {
 		return
 	}
 	x.work.Go(func(context.Context) {
 		x.saving.Lock()
 		defer x.saving.Unlock()
-		os.MkdirAll(filepath.Dir(x.HistoryFile), 0o755)
-		f, err := os.Create(x.historyPath())
+		os.MkdirAll(filepath.Dir(path), 0o755)
+		f, err := os.Create(path)
 		if err != nil {
 			return
 		}
 		defer f.Close()
-		x.history.Save(f)
+		history.Save(f)
 	})
 }
 

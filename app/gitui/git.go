@@ -72,20 +72,33 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 	g.others = map[string]*gitTree{}
 	g.gitTree = gitTree{g: g, held: true}
 	g.Add(h.Contribute(registry.Service{Name: registry.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
-	g.work, g.ready, g.asked = h.Here().Project, true, g.now()
-	if dir := g.work; dir != "" {
-		if root, ok := gitx.Root(ctx, dir); ok {
-			g.gitTree.found(root)
-			g.Add(kit.OnDispose(g.status.Watch(func([]string) { h.Redraw() })))
-			g.gitTree.subscribe()
-		}
-	}
+	g.hold(ctx)
+	g.Add(kit.OnDispose(g.gitTree.unsubscribe))
+	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) {
+		g.gitTree.unsubscribe()
+		g.gitTree = gitTree{g: g, held: true}
+		g.hold(context.Background())
+	}))
 	for _, c := range g.commands() {
 		g.Add(h.Command(c))
 	}
 	g.activateCommit(h)
 	g.Add(kit.OnDispose(h.Framed(g.framed)))
 	return nil
+}
+
+// hold reads the window's directory's work tree, for good: Tree("") is it until the window moves (DirChanged), and a
+// plugin watching its Status watches it again then.
+func (g *Git) hold(ctx context.Context) {
+	h := g.h
+	g.work, g.ready, g.asked = h.Here().Project, true, g.now()
+	if dir := g.work; dir != "" {
+		if root, ok := gitx.Root(ctx, dir); ok {
+			g.gitTree.found(root)
+			g.status.Watch(func([]string) { h.Redraw() })
+			g.gitTree.subscribe()
+		}
+	}
 }
 
 func (g *Git) commands() []registry.Command {
