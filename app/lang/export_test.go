@@ -114,3 +114,11 @@ func (x *Terminals) Selected(id string) bool {
 	_, _, ok := x.get(id).selection()
 	return ok
 }
+
+// Terminal is the terminal of instance id, as any: the same one the window comes back to, or another.
+func (x *Terminals) Terminal(id string) any {
+	if t := x.get(id); t != nil {
+		return t
+	}
+	return nil
+}

@@ -53,6 +53,8 @@ type Terminals struct {
 
 	mu    sync.Mutex
 	terms map[string]*terminal
+	away  map[string]map[string]*terminal // the terminals of the directories the window has left, still running
+	dir   string                          // the directory terms are of
 	next  int
 	saved map[string][]byte // screens kept when the app stopped, by instance
 	busy  sync.WaitGroup
@@ -103,10 +105,9 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	if x.terms == nil {
 		x.terms = map[string]*terminal{}
 	}
-	x.saved = map[string][]byte{}
+	x.saved, x.dir = map[string][]byte{}, kit.WindowDir(h)
 	x.mu.Unlock()
-	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.SavedAt, Load: x.loadSaved,
-		Leave: func() []byte { x.keepAll(); return x.savedJSON() }})
+	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.SavedAt, Load: x.loadSaved, Leave: x.leave})
 	x.Add(kit.OnDispose(x.state.Close))
 	if x.CacheDir != "" {
 		ghostty.SetCacheDir(filepath.Join(x.CacheDir, "wasm"))
@@ -210,19 +211,57 @@ func (x *Terminals) Deactivate(ctx context.Context) error {
 	return x.Disposer.Deactivate(ctx)
 }
 
-// keepAll keeps every terminal's screen in the directory's saved screens, and stops their programs: as the app stops,
-// and as the window leaves their directory (whose saved screens bring them back with its layout).
+// keepAll keeps every terminal's screen in the directory's saved screens, and stops their programs, and those of the
+// directories the window has left: as the app stops.
 func (x *Terminals) keepAll() {
 	x.mu.Lock()
-	terms := x.terms
-	x.terms = map[string]*terminal{}
+	terms, away := x.terms, x.away
+	x.terms, x.away = map[string]*terminal{}, nil
 	x.mu.Unlock()
+	x.keepScreens(terms)
+	for _, t := range terms {
+		t.stop()
+	}
+	for _, ts := range away {
+		for _, t := range ts {
+			t.stop()
+		}
+	}
+}
+
+// keepScreens keeps terms' screens in the directory's saved screens, for when the app starts again on it.
+func (x *Terminals) keepScreens(terms map[string]*terminal) {
 	for id, t := range terms {
 		if snap, err := t.emu.Snapshot(); err == nil {
 			x.saved[id] = snap
 		}
-		t.stop()
 	}
+}
+
+// leave keeps the screens of the directory the window is leaving, for a restart, and its terminals running while
+// the window is away: back on it, they're the ones its layout shows. It gives what to keep in the directory's file.
+func (x *Terminals) leave() []byte {
+	x.mu.Lock()
+	terms := x.terms
+	x.mu.Unlock()
+	x.keepScreens(terms)
+	b := x.savedJSON()
+	to := kit.WindowDir(x.h)
+	x.mu.Lock()
+	if x.away == nil {
+		x.away = map[string]map[string]*terminal{}
+	}
+	if len(terms) > 0 {
+		x.away[x.dir] = terms
+	}
+	x.terms = x.away[to]
+	if x.terms == nil {
+		x.terms = map[string]*terminal{}
+	}
+	delete(x.away, to)
+	x.dir = to
+	x.mu.Unlock()
+	return b
 }
 
 // loadSaved takes the screens kept for the window's directory: none for nil.

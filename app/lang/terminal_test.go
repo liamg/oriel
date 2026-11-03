@@ -251,3 +251,39 @@ func TestTerminalRenames(t *testing.T) {
 	s.Run("term.rename", registry.Args{"instance": "1", "name": ""})
 	s.Until("the program's name back", func() bool { return !s.Has("db shell") })
 }
+
+// A terminal's program runs on while the window is on another directory: back on its directory, the same terminal
+// is there, its program never stopped and started again.
+func TestTerminalRunsOnWhileTheWindowIsAway(t *testing.T) {
+	dir := t.TempDir()
+	s := apptest.New(t, apptest.Options{WorkDir: dir, Config: func(c *apptest.Config) { c.StateDir = t.TempDir() }})
+	s.Frame()
+	s.Run("term.open", registry.Args{"cmd": []string{"sh", "-c", "echo started-once; exec cat"}})
+	s.Frame()
+	waitTerm(t, s, "started-once")
+	x := termsOf(s)
+	before := x.Terminal("1")
+	if before == nil {
+		t.Fatal("no terminal 1")
+	}
+	move := func(to string) {
+		t.Helper()
+		win, _ := kit.WindowOf(s.Registry())
+		if err := win.Reopen(to, ""); err != nil {
+			t.Fatal(err)
+		}
+		s.Reopen()
+	}
+	move(t.TempDir())
+	if x.Terminal("1") != nil {
+		t.Error("the directory left's terminal is the window's on the other")
+	}
+	move(dir)
+	if after := x.Terminal("1"); after != before {
+		t.Errorf("back on its directory, terminal 1 is %v, not the one that ran (%v)", after, before)
+	}
+	waitTerm(t, s, "started-once")
+	if n := strings.Count(s.Text(), "started-once"); n != 1 {
+		t.Errorf("the program started %d times", n)
+	}
+}

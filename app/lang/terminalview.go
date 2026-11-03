@@ -59,11 +59,15 @@ func (v terminalView) Persist(instance string) (json.RawMessage, bool) {
 	return b, true
 }
 
-// Revive starts the program again, under its screen from before.
+// Revive is the terminal running still, the window back on its directory; else it starts the program again, under
+// its screen from before.
 func (v terminalView) Revive(state json.RawMessage) (string, error) {
 	var s termState
 	if err := json.Unmarshal(state, &s); err != nil {
 		return "", err
+	}
+	if s.ID != "" && v.x.get(s.ID) != nil {
+		return s.ID, nil
 	}
 	a := registry.Args{"cmd": s.Cmd, "instance": s.ID}
 	if w, se, ok := v.x.sandboxed(a); ok {
