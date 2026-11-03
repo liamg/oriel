@@ -3,6 +3,7 @@
 package github
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -26,6 +27,8 @@ type Deps struct {
 	Keyed hostcore.Keyed
 	// Client is the GitHub client for a checkout, with the git guard's env; nil for GitHub's API with the user's token.
 	Client func() func(dir string, env []string) gh.Client
+	// HTTP is the client GitHub's API is asked through; http.DefaultClient if nil, or it gives nil.
+	HTTP func() *http.Client
 	// Wake hands a session's agent what's new, starting it if it isn't running.
 	Wake func(id core.SessionID)
 	// BranchRenamed records a project's branch's new name in its workspace's manifest.
