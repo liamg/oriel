@@ -2,6 +2,7 @@ package gio
 
 import (
 	"image"
+	"time"
 
 	"gioui.org/gpu/headless"
 	"gioui.org/op"
@@ -21,11 +22,25 @@ type Headless struct {
 // NewHeadless makes a w×h (logical pixels) offscreen surface at scale.
 func NewHeadless(w, h int, scale float32) (*Headless, error) {
 	size := image.Pt(int(float32(w)*scale+0.5), int(float32(h)*scale+0.5))
-	win, err := headless.NewWindow(size.X, size.Y)
+	win, err := newWindow(size)
 	if err != nil {
 		return nil, err
 	}
 	return &Headless{win: win, size: size, scale: scale, frame: NewFrame()}, nil
+}
+
+// newWindow makes the offscreen window, trying again when it can't: on Linux, EGL connects to the X server for each
+// one, and an X server can refuse a connection that comes straight after the last one closed (Xvfb on Ubuntu 26.04
+// refuses about half of those, and none a millisecond later).
+func newWindow(size image.Point) (*headless.Window, error) {
+	var err error
+	for wait := time.Millisecond; ; wait *= 2 {
+		var win *headless.Window
+		if win, err = headless.NewWindow(size.X, size.Y); err == nil || wait > 64*time.Millisecond {
+			return win, err
+		}
+		time.Sleep(wait)
+	}
 }
 
 // Draw draws one frame; it returns once the GPU has the frame, not when it has finished drawing it.
