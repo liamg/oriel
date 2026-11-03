@@ -332,8 +332,9 @@ func (w *Window) textAt(text string, last bool) render.Point {
 const settleIdle = 200 * time.Millisecond
 
 // Settled waits for find to give the same answer in a later frame than it first did, or for settleIdle with no new
-// frame: where a thing has stopped moving, as a person waits for a card to land before clicking it. A slow machine
-// draws an animation's frames far apart, and a click aimed where a sliding button was lands where it isn't.
+// frame, with every event sent already taken: where a thing has stopped moving, as a person waits for a card to land
+// before clicking it. A slow machine draws an animation's frames far apart, and a click aimed where a sliding button
+// was, or where it was before a scroll still waiting to be taken, lands where it isn't.
 func Settled[T comparable](w *Window, what string, find func(headless.Frame) (T, bool)) T {
 	w.T.Helper()
 	deadline := time.Now().Add(Timeout)
@@ -345,6 +346,8 @@ func Settled[T comparable](w *Window, what string, find func(headless.Frame) (T,
 		if len(fs) > 0 {
 			v, ok := find(fs[len(fs)-1])
 			switch {
+			case w.Win.Pending() > 0: // what's on screen is about to change
+				seen = false
 			case !ok:
 				seen = false
 			case seen && v == prev && (len(fs) > prevFrames || time.Since(since) >= settleIdle):

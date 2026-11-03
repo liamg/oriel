@@ -242,6 +242,9 @@ func (w *Window) Frame(fn func(render.Frame)) error {
 }
 
 func (w *Window) Events() <-chan render.Event { return w.events }
+
+// Pending is how many events sent to it the app hasn't taken yet.
+func (w *Window) Pending() int { return len(w.events) }
 func (w *Window) Scale() float32 {
 	w.mu.Lock()
 	defer w.mu.Unlock()
