@@ -92,7 +92,8 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 
 // findRoot is the root of the work tree dir is in, and the window's tree set up for it.
 func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
-	g.gitTree = gitTree{g: g, held: true, work: dir, ready: true, asked: g.now()}
+	g.gitTree.reset(dir, g.now())
+	g.ready = true
 	if dir == "" {
 		return "", false
 	}
@@ -124,7 +125,7 @@ func (g *Git) release() {
 func (g *Git) follow() {
 	g.release()
 	dir := g.h.Here().Project
-	g.gitTree = gitTree{g: g, held: true, work: dir, asked: g.now()}
+	g.gitTree.reset(dir, g.now())
 	if dir == "" {
 		g.gitTree.ready = true
 		g.notify("", nil)
@@ -465,6 +466,18 @@ func (g *Git) trees_(root string, id core.SessionID) *gitsrc.Tree {
 		return w.Tree(id, root)
 	}
 	return gitsrc.New(root, nil)
+}
+
+// reset makes t the work tree of dir, not yet found, in place: a reading for the tree it was, still on its way, only
+// writes the fields under t's locks, which are reset under them.
+func (t *gitTree) reset(dir string, asked time.Time) {
+	t.syncMu.Lock()
+	t.mu.Lock()
+	t.session, t.sub, t.remote, t.counts = "", watch.Sub[*gitx.State]{}, watch.Sub[string]{}, watch.Sub[*gitx.State]{}
+	t.setAt, t.merged, t.used, t.counted, t.failed = time.Time{}, struct{ st, c, out *gitx.State }{}, false, false, nil
+	t.mu.Unlock()
+	t.syncMu.Unlock()
+	t.status, t.src, t.work, t.ready, t.asked = nil, nil, dir, false, asked
 }
 
 // subscribe asks the tree's manager for its status and remote, if it isn't already.
