@@ -41,6 +41,8 @@ type elem struct {
 	text   string
 	ts     TextStyle
 	run    *typeset.Run
+	join   string // copied after the line before, what joins them: set on a line that wraps on from it (WrappedText)
+	soft   bool
 	paint  func(f render.Frame, r render.Rect)
 	kids   []*elem
 	parent *elem

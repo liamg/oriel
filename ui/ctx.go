@@ -137,6 +137,14 @@ func (c *Ctx) Text(key any, s string, ts TextStyle) ID {
 	return e.id
 }
 
+// WrappedText is Text for a line that wraps on from the one before: copied, the two are joined by join, not a newline.
+func (c *Ctx) WrappedText(key any, s string, ts TextStyle, join string) ID {
+	id := c.Text(key, s, ts)
+	e := c.u.byID[id]
+	e.soft, e.join = true, join
+	return id
+}
+
 // Paint adds a node drawn by fn into its rect.
 func (c *Ctx) Paint(key any, w, h Size, fn func(f render.Frame, r render.Rect)) ID {
 	e := c.u.add(c.e, key, kPaint)

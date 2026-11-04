@@ -188,9 +188,7 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 				if b.Lang != "" {
 					c.Text("lang", mdFenceKicker(c, b), kit.KickerFont(th.C(theme.FgFaint)))
 				}
-				for j, l := range b.Code {
-					c.Text(j, strings.ReplaceAll(l, "\t", "    "), kit.MonoFont(12, th.C(theme.FgMuted)))
-				}
+				widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-28, 3, kit.MonoFont(12, th.C(theme.FgMuted)))
 			})
 	case mdRule:
 		c.Box("hr", ui.Style{W: ui.Px(width), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)

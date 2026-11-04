@@ -76,8 +76,9 @@ built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and `h
 changes state through its `plugin.Host` (`State`, `Apply`).
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
-underneath them: the layout it leaves is saved, the pages over it close, the `DirChanged` hook fires, and the layout
-saved for the new directory comes back, then the session's opening commands. Nothing a plugin offers (its agent
+underneath them: the layout it leaves is saved and kept as it is, its views open, the pages over it close, the
+`DirChanged` hook fires, and the new directory's layout comes back (the one kept, back on a directory the window has
+been on, else the one saved for it), then the session's opening commands. Nothing a plugin offers (its agent
 tools, hooks, subscriptions) goes away while it does, so a plugin keeps working for every session, not only the one
 in front.
 
@@ -92,7 +93,8 @@ it takes `Window.Hold` in the hook and lets go once it has it (two seconds at mo
 layout is back. A file kept per directory (the
 layout, the sidebar, the debugger's breakpoints, saved terminal screens, the tests' runs) is a `kit.StateFile`: read
 through the freshness manager, handed to the plugin as it starts and again as the window moves (holding the
-window until then), written off the loop, and read again when something else changes it. A project's own plugins (its settings' `[plugins]`) run while the window is on the project, starting and
+window until then the first time; back on a directory, at once, as last written or read), written off the loop, and
+read again when something else changes it. A project's own plugins (its settings' `[plugins]`) run while the window is on the project, starting and
 stopping as it comes and goes.
 
 What a plugin remembers per session across restarts (a panel's scope, that a kind's opening commands have run) it

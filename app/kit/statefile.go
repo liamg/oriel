@@ -25,7 +25,8 @@ type StateFileOpts struct {
 // saved terminal screens. It's read through the app's freshness manager (watch.File) and written off the loop. Made
 // as its plugin starts, it hands Load the file before it returns, so the plugin starts with its state; as the window
 // moves it follows, holding the window's arrival on a directory (Window.Hold) until that directory's file is read
-// and handed to Load. A reading that's one of its own writes, or the one last handed over, isn't handed back.
+// and handed to Load; back on a directory, Load has what it last wrote or read for it at once. A reading that's one
+// of its own writes, or the one last handed over, isn't handed back.
 type StateFile struct {
 	h     plugin.Host
 	o     StateFileOpts
@@ -33,16 +34,18 @@ type StateFile struct {
 	done  func() // closes m, when it's its own
 	moved func()
 	w     Writer
+	subs  sync.WaitGroup // subscribing off the loop, after a move
 
 	mu      sync.Mutex
 	path    string // the file followed now
 	gen     int    // which subscription is the one followed now
 	sub     watch.Sub[[]byte]
-	release func()    // the window's hold, until the file followed now is first read
-	wrote   [][]byte  // the last few writes, not handed back as changes
-	handed  []byte    // the reading last handed to Load
-	hasRead bool      // one has been, for the file followed now
-	since   time.Time // when it began following it: its first reading is one read since
+	release func()            // the window's hold, until the file followed now is first read
+	wrote   [][]byte          // the last few writes, not handed back as changes
+	handed  []byte            // the reading last handed to Load
+	hasRead bool              // one has been, for the file followed now
+	since   time.Time         // when it subscribed: only a reading read since is handed over
+	known   map[string][]byte // each file's contents as last written or handed over
 }
 
 // firstReadLongest is how long a StateFile made as its plugin starts waits for its file.
@@ -50,9 +53,10 @@ const firstReadLongest = time.Second
 
 // NewStateFile follows the window's directory's file for h.
 func NewStateFile(h plugin.Host, o StateFileOpts) *StateFile {
-	f := &StateFile{h: h, o: o}
+	f := &StateFile{h: h, o: o, known: map[string][]byte{}}
 	f.m, f.done = FileManager(h, "state", 0)
 	gen := f.follow()
+	f.subscribe(gen)
 	f.mu.Lock()
 	sub := f.sub
 	f.mu.Unlock()
@@ -74,6 +78,9 @@ func (f *StateFile) Write(data []byte) {
 	if len(f.wrote) > 4 {
 		f.wrote = f.wrote[1:]
 	}
+	if path != "" {
+		f.known[path] = f.wrote[len(f.wrote)-1]
+	}
 	f.mu.Unlock()
 	if path != "" {
 		f.w.Write(path, data)
@@ -94,6 +101,10 @@ func (f *StateFile) Wait() { f.w.Wait() }
 func (f *StateFile) Close() {
 	f.moved()
 	f.mu.Lock()
+	f.gen++
+	f.mu.Unlock()
+	f.subs.Wait()
+	f.mu.Lock()
 	sub, release := f.sub, f.release
 	f.sub, f.release = watch.Sub[[]byte]{}, nil
 	f.mu.Unlock()
@@ -107,55 +118,71 @@ func (f *StateFile) Close() {
 	f.done()
 }
 
-// leave keeps what Leave gives for the directory the window is leaving, and follows the new one's file.
+// leave keeps what Leave gives for the directory the window is leaving, and follows the new one's file, subscribing
+// off the loop.
 func (f *StateFile) leave() {
 	if f.o.Leave != nil {
 		if data := f.o.Leave(); data != nil {
 			f.Write(data)
 		}
 	}
-	f.follow()
+	gen := f.follow()
+	f.subs.Go(func() { f.subscribe(gen) })
 }
 
-// follow subscribes to the file of the directory the window is on, holding its arrival until the first reading. It
-// answers which subscription that is.
+// follow moves onto the file of the directory the window is on. A file it has had before is handed to Load at once;
+// a new one holds the window's arrival until its first reading, which subscribe starts. It answers which
+// subscription that is.
 func (f *StateFile) follow() int {
-	// A write under way may be to the file it's about to read (the window back on a directory it just left): what
-	// it reads is what was written, not what was there before.
-	f.w.Wait()
 	path := ""
 	if f.o.Path != nil {
 		path = f.o.Path()
 	}
+	f.mu.Lock()
+	known, isKnown := f.known[path]
+	f.mu.Unlock()
 	var release func()
-	if w, ok := WindowOf(f.h); ok && path != "" {
+	if w, ok := WindowOf(f.h); ok && path != "" && !isKnown {
 		release = w.Hold()
 	}
 	f.mu.Lock()
 	old, oldRelease := f.sub, f.release
 	f.gen++
 	gen := f.gen
-	f.path, f.sub, f.release, f.wrote, f.handed, f.hasRead, f.since = path, watch.Sub[[]byte]{}, release, nil, nil, false, time.Now()
-	if path != "" {
-		f.sub = watch.SubscribeFunc(f.m, watch.File(path), watch.Need{Background: watch.Keep}, f.o.Name, func() {
-			f.h.Do(func() { f.reading(gen) })
-		})
-	}
-	sub := f.sub
+	f.path, f.sub, f.release, f.wrote, f.handed, f.hasRead = path, watch.Sub[[]byte]{}, release, nil, known, isKnown
 	f.mu.Unlock()
-	if sub.Valid() {
-		sub.Refresh() // a reading kept from before may be older than the file: the first one handed over is read now
-	}
 	if old.Valid() {
 		old.Close()
 	}
 	if oldRelease != nil {
 		oldRelease()
 	}
-	if path == "" && f.o.Load != nil {
+	switch {
+	case f.o.Load == nil:
+	case path == "":
 		f.o.Load(nil)
+	case isKnown:
+		f.o.Load(known)
 	}
 	return gen
+}
+
+// subscribe reads subscription gen's file, unless the window has moved on since. It waits for the writes under way
+// first, as one may be to that file (the window back on a directory it just left).
+func (f *StateFile) subscribe(gen int) {
+	f.w.Wait()
+	f.mu.Lock()
+	if gen != f.gen || f.path == "" {
+		f.mu.Unlock()
+		return
+	}
+	f.since = time.Now()
+	f.sub = watch.SubscribeFunc(f.m, watch.File(f.path), watch.Need{Background: watch.Keep}, f.o.Name, func() {
+		f.h.Do(func() { f.reading(gen) })
+	})
+	sub := f.sub
+	f.mu.Unlock()
+	sub.Refresh() // a reading kept from before may be older than the file: the first one handed over is read now
 }
 
 // reading hands Load the file's latest reading, on the loop, unless it's of a file left since or one of its own
@@ -166,15 +193,13 @@ func (f *StateFile) reading(gen int) {
 		f.mu.Unlock()
 		return
 	}
-	data, _, ok := f.sub.Get()
-	if !f.hasRead {
-		data, _, ok = f.sub.Since(f.since)
-	}
+	data, _, ok := f.sub.Since(f.since)
 	release := f.release
 	f.release = nil
 	same := ok && f.hasRead && (bytes.Equal(data, f.handed) || f.isMine(data))
 	if ok && !same {
 		f.handed, f.hasRead = bytes.Clone(data), true
+		f.known[f.path] = f.handed
 	}
 	f.mu.Unlock()
 	if ok && !same && f.o.Load != nil {

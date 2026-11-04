@@ -165,15 +165,15 @@ clip 224,38 1376x936 r 0
     rect 234,79 1356x885 fill #060606
     rect 234,79 1356x44 fill #0c0c0b
     text "SHIP" @256,105.844 #ece6d8 Space Grotesk 14
-    clip 303.09436,93.74 931.2494x14.519997 r 0
+    clip 303.09436,93.74 967.2494x14.519997 r 0
       text "ENG-2231 · search API rate-limit headers · 2 projects · branch rethink/search-endpoint" @303.09436,104.96 #7c7566 JetBrains Mono 11
     pop
-    rect 1248.3438,88 64.875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "Sync all" @1258.3438,105.365234 #ece6d8 Inter 12
-    rect 1327.2188,88 80.546875x26 fill #191815 radius 6 stroke 1 #332f27
-    text "Commit all" @1337.2188,105.365234 #ece6d8 Inter 12
-    rect 1421.7656,88 146.23438x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-    text "Push + raise both PRs" @1431.7656,105.365234 #141006 Inter 12
+    rect 1284.3438,88 64.875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Sync all" @1294.3438,105.365234 #ece6d8 Inter 12
+    rect 1363.2188,88 80.546875x26 fill #191815 radius 6 stroke 1 #332f27
+    text "Commit all" @1373.2188,105.365234 #ece6d8 Inter 12
+    rect 1457.7656,88 110.234375x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+    text "Push + raise PR" @1467.7656,105.365234 #141006 Inter 12
     rect 234,123 1356x1 fill #24221d
     clip 234,124 1055x840 r 0
       rect 258,149.5 11x11 fill #4cc9f0 radius 2

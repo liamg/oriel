@@ -250,9 +250,10 @@ func (s *Plugin) follow(ctx context.Context) {
 		s.others[s.project.at.Project] = s.project
 	}
 	s.project = nil
+	tracked := false // its subscription has kept it up to date: no read to wait for
 	if root != "" {
 		if f, ok := s.others[root]; ok {
-			s.project = f
+			s.project, tracked = f, true
 			delete(s.others, root)
 		} else {
 			s.project = s.projectFile(root)
@@ -261,7 +262,7 @@ func (s *Plugin) follow(ctx context.Context) {
 	project := s.project
 	s.othersMu.Unlock()
 	s.loadMu.Unlock()
-	if project != nil {
+	if project != nil && !tracked {
 		s.fresh(ctx, project)
 	}
 	if s.loadAll() {
