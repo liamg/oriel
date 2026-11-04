@@ -9,6 +9,7 @@
 # with its licence. PACKS.SHA256SUMS lists every file of every pack; the binary embeds it and installs only packs
 # that match. "build.sh packs" builds the packs alone.
 set -euo pipefail
+export LC_ALL=C # globs and sorts in byte order, whatever the machine's locale
 cd "$(dirname "$0")"
 sdk=${WASI_SDK_PATH:-/opt/wasi-sdk}
 out=${PACKS_OUT:-packs-out}

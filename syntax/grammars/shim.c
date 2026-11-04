@@ -110,7 +110,7 @@ static void window(TSNode root, uint32_t start, uint32_t end) {
   TSTreeCursor c = ts_tree_cursor_new(root);
   uint32_t lo = 0xffffffff, hi = 0;
   bool after = false;
-  if (ts_tree_cursor_goto_first_child(&c)) {
+  if (ts_tree_cursor_goto_first_child_for_byte(&c, start > 0 ? start - 1 : 0) >= 0) {
     do {
       TSNode k = ts_tree_cursor_current_node(&c);
       uint32_t ks = ts_node_start_byte(k), ke = ts_node_end_byte(k);
