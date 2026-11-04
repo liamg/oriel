@@ -55,6 +55,10 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.contributeKinds(h)
 	x.Add(h.Option(registry.OptionSpec{Name: autoNameOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Name a session started from a request, and the request, with a small model (Claude's Haiku). Off, the name is the request's first words."}))
+	x.Add(h.Option(registry.OptionSpec{Name: restartOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
+		Help: "Start an open session's agent again, on its conversation, when it exits on its own. One that exits 3 times in 2 minutes stays stopped."}))
+	x.Add(kit.OnDispose(h.Options().Watch(restartOption, x.sendRestart)))
+	x.sendRestart()
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
 	if x.Host != nil {
@@ -390,6 +394,17 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 
 // autoNameOption has a small model name the sessions started from a request.
 const autoNameOption = "sessions.auto_name"
+
+// restartOption starts an agent that exits on its own again.
+const restartOption = "sessions.restart_on_exit"
+
+func (x *Sessions) sendRestart() {
+	if x.Host == nil {
+		return
+	}
+	on, _, _ := x.h.Options().Get(restartOption, registry.At{})
+	x.Host.SetRestartOnExit(on != false)
+}
 
 // start starts a session and brings it to the front, unless {background}.
 func (x *Sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {

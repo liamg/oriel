@@ -11,6 +11,9 @@ import (
 // SetApp installs the app's callbacks; App{} takes them away.
 func (w *Host) SetApp(a App) { w.run.SetApp(a) }
 
+// SetRestartOnExit says whether an agent that exits on its own is started again, unless it keeps exiting.
+func (w *Host) SetRestartOnExit(on bool) { w.run.SetRestartOnExit(on) }
+
 // Comment adds your comment to a thread, opening one if needed, and hands it to the agent: at once if it's idle,
 // after an interrupt if urgent, else when the turn ends.
 func (w *Host) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err error) {

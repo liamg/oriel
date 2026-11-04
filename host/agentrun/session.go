@@ -50,6 +50,7 @@ type session struct {
 	trees        map[string]string       // each project's work tree at the last mark, by directory
 	markq        []func([]core.FileDiff) // marks waiting to run, each with what to do with its changes
 	marking      bool                    // a goroutine is running markq
+	exits        []time.Time             // when the agent last exited on its own, within exitWindow
 }
 
 func (h *session) running() bool {
