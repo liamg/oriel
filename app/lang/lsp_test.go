@@ -22,8 +22,8 @@ import (
 // Problems, and the server's state is in the status line.
 func TestLSPDiagnostics(t *testing.T) {
 	s, root := lspScene(t, "go", "gopls", "main.go")
-	ds := s.Registry().DiagnosticsFor(filepath.Join(root, "main.go"))
-	if len(ds) == 0 || ds[0].Line != 12 || ds[0].Owner != "gopls" || !strings.Contains(ds[0].Message, "greting") {
+	ds := s.WaitDiagnostics(filepath.Join(root, "main.go"))
+	if ds[0].Line != 12 || ds[0].Owner != "gopls" || !strings.Contains(ds[0].Message, "greting") {
 		t.Fatalf("diagnostics: %+v", ds)
 	}
 	if d := ds[0]; d.From != 25 || d.To != 32 {
@@ -135,8 +135,8 @@ func TestLSPTranscriptsReplayToTheUI(t *testing.T) {
 	} {
 		t.Run(c.server, func(t *testing.T) {
 			s, root := lspScene(t, c.fixture, c.server, c.file)
-			ds := s.Registry().DiagnosticsFor(filepath.Join(root, c.file))
-			if len(ds) == 0 || ds[0].Line != c.diagLine || ds[0].From != c.diagFrom || ds[0].Owner != c.server {
+			ds := s.WaitDiagnostics(filepath.Join(root, c.file))
+			if ds[0].Line != c.diagLine || ds[0].From != c.diagFrom || ds[0].Owner != c.server {
 				t.Errorf("diagnostics %+v, want line %d from byte %d", ds, c.diagLine, c.diagFrom)
 			}
 			cursorAt(s, c.hoverLine, c.hoverCol)
