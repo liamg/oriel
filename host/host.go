@@ -210,17 +210,15 @@ func (w *Host) sandboxDeps() sandboxhost.Deps {
 		Keyed: func(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
 			return w.run.Keyed(ctx, id, what, project, fn)
 		},
-		Config:   func() sandbox.Config { return w.boxes.Config() },
-		Factory:  func() hostcore.SandboxFactory { return w.opts.Sandbox },
-		Live:     func(id core.SessionID) hostcore.Sandbox { return w.run.Sandbox(id) },
-		Running:  func() []hostcore.Sandbox { return w.run.Sandboxes() },
-		Repos:    func() []core.Repo { return w.repos.Repos() },
-		AddRepo:  w.AddRepo,
-		Note:     func(id core.SessionID, it core.Item) { w.run.AppendItem(id, it) },
-		SetAgent: func(id core.SessionID, fn func(a *core.AgentState)) { w.run.SetAgent(id, fn) },
-		RestartWhenIdle: func(id core.SessionID, sb hostcore.Sandbox, why string, done <-chan struct{}) {
-			w.run.RestartWhenIdle(id, sb, why, done)
-		}}
+		Config:          func() sandbox.Config { return w.boxes.Config() },
+		Factory:         func() hostcore.SandboxFactory { return w.opts.Sandbox },
+		Live:            func(id core.SessionID) hostcore.Sandbox { return w.run.Sandbox(id) },
+		Running:         func() []hostcore.Sandbox { return w.run.Sandboxes() },
+		Repos:           func() []core.Repo { return w.repos.Repos() },
+		AddRepo:         w.AddRepo,
+		Note:            func(id core.SessionID, it core.Item) { w.run.AppendItem(id, it) },
+		SetAgent:        func(id core.SessionID, fn func(a *core.AgentState)) { w.run.SetAgent(id, fn) },
+		RestartWhenIdle: w.run.RestartWhenIdle}
 }
 
 // settle puts back what the last process left running when it ended without handing over.

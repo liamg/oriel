@@ -103,7 +103,9 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 	case agent.Stale:
 		h.mu.Lock()
 		working := h.working
-		h.stale = working
+		if working {
+			h.restartWhy = ev.Why
+		}
 		h.mu.Unlock()
 		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: now, Text: "Restarting the agent: " + ev.Why})
 		if !working {
@@ -267,10 +269,8 @@ func (h *session) subagentTool(id string) {
 func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 	h.mu.Lock()
 	h.working, h.interrupting = false, false
-	if h.stale {
-		h.stale = false
-		defer h.restart("it lost its tools")
-	}
+	restart := h.restartWhy
+	h.restartWhy = ""
 	started := h.turnAt
 	delivered := append(h.held, h.delivered...)
 	h.held, h.delivered = nil, nil
@@ -301,6 +301,10 @@ func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 			a.Stats.Running += int64(now.Sub(started).Seconds())
 		}
 	})
+	if restart != "" {
+		h.restart(restart)
+		return
+	}
 	h.kick()
 	if len(ev.Background) == 0 {
 		h.idle()

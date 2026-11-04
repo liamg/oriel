@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -36,7 +37,11 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	s := newSandboxRig(t)
 	ib := imageBackend{fakeBackend{s}, make(chan string, 1)}
 	s.f.Backend = func(sandbox.Config) (sandbox.Backend, error) { return ib, nil }
-	id, _, b := s.sandboxed()
+	id := s.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
+		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
+	a := s.agent()
+	b := s.keptBox(id)
+	a.WaitSent(t)
 	ws, err := s.w.Workspace(context.Background(), id)
 	if err != nil {
 		t.Fatal(err)
@@ -60,6 +65,8 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	if got := <-ib.rebuilt; got != b.Root() {
 		t.Errorf("rebuilt %q", got)
 	}
+	a.Emit(agent.TurnStart{})
+	a.Emit(agent.TurnEnd{})
 	for deadline := time.Now().Add(5 * time.Second); s.w.boxOf(id) == b || s.w.boxOf(id) == nil; time.Sleep(5 * time.Millisecond) {
 		if time.Now().After(deadline) {
 			t.Fatal("the agent didn't start again on the rebuilt image")

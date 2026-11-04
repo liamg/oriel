@@ -222,49 +222,26 @@ func (x *Runner) Running(id core.SessionID) bool {
 	return h != nil && h.running()
 }
 
-// RestartWhenIdle restarts session id's agent once its turn ends, resumed, if it still runs in sb; done, or the host
-// closing, ends the wait. Close waits for it.
-func (x *Runner) RestartWhenIdle(id core.SessionID, sb hostcore.Sandbox, why string, done <-chan struct{}) {
-	x.starts.Go(func() {
-		defer x.env.Recover("a sandbox restart", nil)
-		tick := time.NewTicker(500 * time.Millisecond)
-		defer tick.Stop()
-		for {
-			se, err := x.st.Session(id)
-			if err != nil {
-				return
-			}
-			if !se.Agent.Working {
-				break
-			}
-			select {
-			case <-done:
-				return
-			case <-x.env.Closed:
-				return
-			case <-tick.C:
-			}
-		}
-		h, _ := x.sessionFor(id, false)
-		if h == nil {
-			return
-		}
-		select {
-		case <-done:
-			return
-		default:
-		}
-		h.mu.Lock()
-		mine := h.box == sb
+// RestartWhenIdle restarts session id's agent, resumed, if it still runs in sb: now if it's idle, else once its turn
+// ends, before it's handed anything more.
+func (x *Runner) RestartWhenIdle(id core.SessionID, sb hostcore.Sandbox, why string) {
+	h, _ := x.sessionFor(id, false)
+	if h == nil {
+		return
+	}
+	h.mu.Lock()
+	if h.box != sb {
 		h.mu.Unlock()
-		if !mine {
-			return
-		}
-		h.stop(why, "")
-		if err := h.start(); err != nil {
-			x.env.Log.Warn("sandbox restart: the agent didn't start", "session", id, "why", why, "err", err)
-		}
-	})
+		return
+	}
+	working := h.working
+	if working {
+		h.restartWhy = why
+	}
+	h.mu.Unlock()
+	if !working {
+		h.restart(why)
+	}
 }
 
 // ResumeHandedOver starts again the agents the last process handed over, or had running when it crashed, once each
