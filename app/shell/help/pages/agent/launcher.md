@@ -38,6 +38,9 @@ Claude, Codex or another provider, with its model, effort and what's left of its
 in a **Direct** session edits your real files. A provider that isn't signed in, or whose login has stopped working,
 says so instead of its plan. A plugin can add an agent here, or take a built-in's place (`:help agent/plugins`).
 
+When the ticket already has a session, Start continues it on the agent it runs on, and this says which in place of
+the agents. **Start another** brings them back, for a new session on the ticket.
+
 ## Repositories
 
 The repos the session works on: each gets a worktree, all on one branch. Pick a registered repo with **+ add**, or

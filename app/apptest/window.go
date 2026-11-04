@@ -3,6 +3,8 @@ package apptest
 import (
 	"cmp"
 	"context"
+	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -33,6 +35,7 @@ var WindowTimeout = 20 * time.Second
 // Window is the app as Run runs it, on a headless window: its own loop and the real clock, for a test that drives
 // an agent or the host while the window keeps drawing. A Scene draws a frame at a time instead.
 type Window struct {
+	Logs  *app.Logs // what the app logged: the loop held up, among the rest
 	T     *testing.T
 	Win   *headless.Window
 	Store core.Store
@@ -96,12 +99,13 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	g := &grab{keys: o.Keys, setup: o.Setup}
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
-	cfg := app.Config{Store: w.Store, Registry: testRegistry(), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: OfflineNet(t), ImageNet: OfflineNet(t), SandboxBackends: Backends,
-		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
+	cfg := app.Config{Store: w.Store, Registry: testRegistry(), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t), SandboxBackends: Backends,
+		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}, Logs: app.NewLogs(app.LogOpts{Level: slog.LevelDebug})}
 	if o.Config != nil {
 		o.Config(&cfg)
 		w.Store, w.ConfigDir = cfg.Store, cfg.ConfigDir
 	}
+	w.Logs = cfg.Logs
 	activated := cfg.Activated
 	cfg.Activated = func(p plugin.Plugin) {
 		w.mu.Lock()
@@ -182,7 +186,7 @@ func (w *Window) WaitFor(what string, ok func() bool) {
 			return
 		}
 		if time.Now().After(deadline) {
-			w.T.Fatalf("waiting for %s", what)
+			w.T.Fatalf("waiting for %s%s", what, rig.Stuck())
 		}
 	}
 }
@@ -252,7 +256,7 @@ func (w *Window) WaitFrame(what string, ok func(string) bool) string {
 		if len(fs) > 0 {
 			last = fs[len(fs)-1].Text()
 		}
-		w.T.Fatalf("no frame with %s (%d frames); notices %q; last frame:\n%s", what, len(fs), rig.NoticeTexts(w.Store.State().Notifications), last)
+		w.T.Fatalf("no frame with %s (%d frames); notices %q; last frame:\n%s%s", what, len(fs), rig.NoticeTexts(w.Store.State().Notifications), last, rig.Stuck())
 	}
 	return f.Text()
 }
@@ -280,7 +284,7 @@ func (w *Window) Latest(what string, ok func(headless.Frame) bool) headless.Fram
 			if fs := w.Win.Frames(); len(fs) > 0 {
 				last = fs[len(fs)-1].Text()
 			}
-			w.T.Fatalf("the frame on screen never had %s; it is:\n%s", what, last)
+			w.T.Fatalf("the frame on screen never had %s; it is:\n%s%s", what, last, rig.Stuck())
 		}
 		time.Sleep(40 * time.Millisecond)
 	}
@@ -308,23 +312,83 @@ func (w *Window) RightClickText(text string) {
 	w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonSecondary})
 }
 
-// textAt is the middle of a run of text in the frame on screen: the first, or with last the last, the one on top.
+// textAt is the middle of a run of text in the frame on screen, once it's settled there: the first, or with last
+// the last, the one on top.
 func (w *Window) textAt(text string, last bool) render.Point {
 	w.T.Helper()
-	var at render.Point
-	w.Latest(`"`+text+`" to click`, func(f headless.Frame) bool {
+	return Settled(w, `"`+text+`" to click`, func(f headless.Frame) (render.Point, bool) {
+		var at render.Point
 		found := false
 		for _, op := range f.Ops {
 			if op.Kind == render.OpGlyphs && op.Run.Text == text {
 				at, found = render.Point{X: op.At.X + op.Run.Advance/2, Y: op.At.Y - op.Run.Ascent/2}, true
 				if !last {
-					return true
+					break
 				}
 			}
 		}
-		return found
+		return at, found
 	})
-	return at
+}
+
+// settleIdle is how long a window that draws nothing new has to show a thing in one place for it to count as settled.
+const settleIdle = 200 * time.Millisecond
+
+// Settled waits for find to give the same answer in a later frame than it first did, or for settleIdle with no new
+// frame, with every event sent already taken: where a thing has stopped moving, as a person waits for a card to land
+// before clicking it. A slow machine draws an animation's frames far apart, and a click aimed where a sliding button
+// was, or where it was before a scroll still waiting to be taken, lands where it isn't.
+func Settled[T comparable](w *Window, what string, find func(headless.Frame) (T, bool)) T {
+	w.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	var prev T
+	prevFrames, seen := -1, false
+	var since time.Time
+	for {
+		fs := w.Win.Frames()
+		if len(fs) > 0 {
+			v, ok := find(fs[len(fs)-1])
+			switch {
+			case w.Win.Pending() > 0: // what's on screen is about to change
+				seen = false
+			case !ok:
+				seen = false
+			case seen && v == prev && (len(fs) > prevFrames || time.Since(since) >= settleIdle):
+				return v
+			case !seen || v != prev:
+				prev, prevFrames, since, seen = v, len(fs), time.Now(), true
+			}
+		}
+		if time.Now().After(deadline) {
+			last := ""
+			if len(fs) > 0 {
+				last = fs[len(fs)-1].Text()
+			}
+			w.T.Fatalf("%s never settled on screen; it is:\n%s%s", what, last, rig.Stuck())
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// Hover rests the pointer on the first run of text until until is on screen, pointing at it again whenever it moves
+// first: what shows on hover goes when the thing under the pointer slides away, as a list still settling moves it.
+func (w *Window) Hover(text, until string) {
+	w.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	var at render.Point
+	for {
+		if p := w.textAt(text, false); p != at {
+			at = p
+			w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+		}
+		if fs := w.Win.Frames(); len(fs) > 0 && strings.Contains(fs[len(fs)-1].Text(), until) {
+			return
+		}
+		if time.Now().After(deadline) {
+			w.T.Fatalf("hovering %q never showed %q%s", text, until, rig.Stuck())
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 // TextPoint is the middle of the first run of text in the frame on screen.
@@ -369,8 +433,8 @@ func (w *Window) Access(label string) *render.AccessNode {
 	return found
 }
 
-// ClickAccess clicks the control named label, found in the window's accessibility tree where it's settled: in the
-// same place two frames running.
+// ClickAccess clicks the control named label, found in the window's accessibility tree where it's settled
+// (settled).
 func (w *Window) ClickAccess(label string) {
 	w.T.Helper()
 	w.ClickAccessIn("", label)
@@ -380,21 +444,14 @@ func (w *Window) ClickAccess(label string) {
 // several. An empty within is the whole tree.
 func (w *Window) ClickAccessIn(within, label string) {
 	w.T.Helper()
-	deadline := time.Now().Add(Timeout)
-	var last *render.AccessNode
-	for {
-		found := w.lastAccess(within, label)
-		settled := found != nil && last != nil && found.Bounds == last.Bounds
-		last = found
-		if settled {
-			w.Click(Centre(found.Bounds))
-			return
+	at := Settled(w, fmt.Sprintf("%q in %q to click", label, within), func(headless.Frame) (render.Rect, bool) {
+		n := w.lastAccess(within, label)
+		if n == nil {
+			return render.Rect{}, false
 		}
-		if time.Now().After(deadline) {
-			w.T.Fatalf("nothing named %q in %q to click", label, within)
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+		return n.Bounds, true
+	})
+	w.Click(Centre(at))
 }
 
 // lastAccess is the last node on screen named label inside a node named within (anywhere when within is empty), or nil.
@@ -488,10 +545,20 @@ func (w *Window) WaitAccess(what string, ok func(w *Window) bool) {
 	deadline := time.Now().Add(Timeout)
 	for !ok(w) {
 		if time.Now().After(deadline) {
-			w.T.Fatalf("never: %s", what)
+			w.T.Fatalf("never: %s%s", what, rig.Stuck())
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+}
+
+// WaitFocused waits for the control named label to hold keyboard focus: type into a control a click or command has
+// just moved focus to only once it has.
+func (w *Window) WaitFocused(label string) {
+	w.T.Helper()
+	w.WaitAccess(label+" focused", func(w *Window) bool {
+		n := w.Access(label)
+		return n != nil && n.Focused
+	})
 }
 
 // ScrollAt scrolls what's under the last run of text drawn, by dy.
@@ -541,4 +608,42 @@ func (w *Window) ProjectDir(id core.SessionID) string {
 	}
 	p, _ := se.Snapshot().Primary()
 	return p.Dir
+}
+
+// WaitGit waits for git's work, and every tree's read, to be done, as someone waits for a busy view to settle before
+// clicking in it: a status coming in builds the views on it again, and a click under way when it does is lost.
+func (w *Window) WaitGit() {
+	w.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	for {
+		var busy bool
+		w.Do(func() error { busy = kit.GitOf(w.Host).Busy(); return nil })
+		if !busy {
+			return
+		}
+		if time.Now().After(deadline) {
+			w.T.Fatal("git's work never finished")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// HeldUp are the times the window's loop was held up, as its watchdog logged them: by the machine, with Oriel's share
+// of the CPU, or by its own work, with where.
+func (w *Window) HeldUp() []string {
+	if w.Logs == nil {
+		return nil
+	}
+	var out []string
+	for _, r := range w.Logs.Ring.Records() {
+		if !strings.HasPrefix(r.Msg, "loop held up") {
+			continue
+		}
+		line := r.Time.Format("15:04:05.000") + " " + r.Msg
+		for _, a := range r.Attrs {
+			line += " " + a.Key + "=" + a.Value
+		}
+		out = append(out, line)
+	}
+	return out
 }

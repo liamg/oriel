@@ -302,8 +302,11 @@ func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a c
 	case l.Browser:
 		k.o.Note = "opens its sign-in in your browser"
 		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
-	case canLogIn(l):
+	case l.Terminal != "":
 		k.o.Note = "opens its terminal with " + l.Terminal
+		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
+	case len(l.HostCommand) > 0:
+		k.o.Note = "signs in on this machine: " + strings.Join(l.HostCommand, " ")
 		k.action(widget.CardAction{Label: "Log in", Key: "l", Primary: true}, askAct{cmd: "agent.login"})
 	case l.Shell != "":
 		k.o.Note = "run " + l.Shell + " in a terminal"
@@ -327,8 +330,9 @@ func (x *Console) questionCard(k *askCardParts, se core.SessionState, a core.Ask
 	}
 }
 
-// canLogIn is a login the app signs in again itself: in a browser it opens, or the agent's own terminal.
-func canLogIn(l core.Login) bool { return l.Browser || l.Terminal != "" }
+// canLogIn is a login the app signs in again itself: in a browser it opens, the agent's own terminal, or a terminal
+// on the host running its HostCommand.
+func canLogIn(l core.Login) bool { return l.Browser || l.Terminal != "" || len(l.HostCommand) > 0 }
 
 // loginWaiting is the session waiting on a login, and its ask: session {id}, else the one in front, else any
 // waiting on {provider}'s login.
@@ -389,6 +393,8 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 		return nil
 	case !canLogIn(l):
 		return fmt.Errorf("run %s in a terminal", cmp.Or(l.Shell, "the agent's login"))
+	case l.Terminal == "":
+		return x.h.Run(ctx, "term.host", registry.Args{"cmd": slices.Clone(l.HostCommand)})
 	}
 	return x.rawTerminal(ctx, se.ID, l.Terminal+"\r")
 }

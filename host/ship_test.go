@@ -2,6 +2,8 @@ package host
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -255,3 +257,25 @@ func TestShipDirectFollowsTheCheckout(t *testing.T) {
 		t.Error("pushed a detached HEAD")
 	}
 }
+
+// GitHub's API is asked through the host's HTTP client (Options.HTTP), as its other requests are.
+func TestGitHubIsAskedThroughTheHostsHTTP(t *testing.T) {
+	r := newRig(t)
+	t.Setenv("GH_TOKEN", "test-token")
+	var asked []string
+	r.w.opts.HTTP = &http.Client{Transport: roundTrip(func(req *http.Request) (*http.Response, error) {
+		asked = append(asked, req.URL.Host)
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"data":{"search":{"nodes":[]}}}`)),
+			Header: http.Header{"Content-Type": {"application/json"}}, Request: req}, nil
+	})}
+	if _, err := r.w.SearchPRs(context.Background(), PRsReq{Query: "is:open"}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(asked, []string{"api.github.com"}) {
+		t.Fatalf("GitHub wasn't asked through the host's client; it was asked of %q", asked)
+	}
+}
+
+type roundTrip func(*http.Request) (*http.Response, error)
+
+func (f roundTrip) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }

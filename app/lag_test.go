@@ -202,6 +202,11 @@ func checkLag(r *apptest.Window, name string, run lagRun) {
 	if run.behind > sendBehind {
 		r.T.Errorf("%s: the loop fell %v behind moves at 1 kHz", name, run.behind)
 	}
+	if r.T.Failed() { // what held the loop up meanwhile: the machine, or Oriel's own work and where
+		for _, h := range r.HeldUp() {
+			r.T.Log(h)
+		}
+	}
 }
 
 // Sweeping the Explorer's rows, each row the pointer lands on lights up within budget, as quickly at the end of a

@@ -173,3 +173,32 @@ func TestFreshHostLoginAsksTheKeychainAgain(t *testing.T) {
 		t.Errorf("FreshHostLogin = %v", l)
 	}
 }
+
+// A credentials file left behind beside the Keychain's newer sign-in (Claude Code keeps it in the Keychain on macOS)
+// isn't handed to the sandboxes: its token was rotated away long since, and the API answers it as revoked. The
+// newer of the two is the host's sign-in.
+func TestHostLoginIsTheNewerOfTheFileAndTheKeychain(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	sign := func(tok string, until time.Time) []byte {
+		b, _ := json.Marshal(map[string]any{oauthKey: map[string]any{"accessToken": tok, "expiresAt": until.UnixMilli()}})
+		return b
+	}
+	file := filepath.Join(home, ".claude", credentialsFile)
+	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, sign("left behind", time.Now().Add(-30*24*time.Hour)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	box := Box{Keychain: func(context.Context) ([]byte, error) { return sign("keychain", time.Now().Add(time.Hour)), nil }}
+	if l, _ := box.FreshHostLogin(); l.AccessToken() != "keychain" {
+		t.Errorf("with a stale file beside the Keychain, HostLogin = %q, want the Keychain's", l.AccessToken())
+	}
+	if err := os.WriteFile(file, sign("file", time.Now().Add(2*time.Hour)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ := box.FreshHostLogin(); l.AccessToken() != "file" {
+		t.Errorf("with the file the newer, HostLogin = %q, want the file's", l.AccessToken())
+	}
+}

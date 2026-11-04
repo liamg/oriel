@@ -187,8 +187,8 @@ var pickerKeys = []struct{ keys, source, desc string }{
 // fileList is the files under a directory, walked off the loop: the first walk's files show as they're found, and
 // a list older than fileFresh is walked again in the background, the old one shown until the new is done.
 type fileList struct {
-	dir    string
 	redraw func()
+	dir    string // (mu)
 
 	mu      sync.Mutex
 	at      time.Time // when the last walk finished
@@ -210,7 +210,7 @@ func (l *fileList) list() (files []string, loading bool) {
 	if !l.walking && (!l.done || time.Since(l.at) >= fileFresh) {
 		l.walking = true
 		l.busy.Add(1)
-		go l.walk(!l.done)
+		go l.walk(l.dir, !l.done)
 	}
 	return l.files, !l.done
 }
@@ -221,20 +221,34 @@ func (l *fileList) loading() bool {
 	return !l.done
 }
 
-func (l *fileList) walk(first bool) {
+// setDir lists dir's files instead, as the window moves onto it: what was found under the last is dropped.
+func (l *fileList) setDir(dir string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if dir != l.dir {
+		l.dir, l.files, l.done = dir, nil, false
+	}
+}
+
+func (l *fileList) walk(dir string, first bool) {
 	defer l.busy.Done()
 	shown := time.Now()
-	found := walkFiles(l.dir, func(found []string) {
+	found := walkFiles(dir, func(found []string) {
 		if first && time.Since(shown) > 100*time.Millisecond {
 			shown = time.Now()
 			l.mu.Lock()
-			l.files = slices.Clone(found)
+			if l.dir == dir {
+				l.files = slices.Clone(found)
+			}
 			l.mu.Unlock()
 			l.redraw()
 		}
 	})
 	l.mu.Lock()
-	l.files, l.at, l.done, l.walking = found, time.Now(), true, false
+	l.walking = false
+	if l.dir == dir { // a walk of the directory the window has left finds nothing to keep
+		l.files, l.at, l.done = found, time.Now(), true
+	}
 	l.mu.Unlock()
 	l.redraw()
 }
@@ -277,6 +291,7 @@ type filesKey struct {
 // filesSource is the files of the editor's directory; open ones and shallower paths rank higher.
 func (x *Editor) filesSource() uireg.PickerSource {
 	files := &fileList{dir: x.dir, redraw: x.h.Redraw}
+	x.listed = files
 	x.Add(kit.OnDispose(files.busy.Wait))
 	openNames := func() []string {
 		var open []string

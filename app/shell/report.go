@@ -40,15 +40,18 @@ type shell struct {
 	layout      *layoutPlugin
 	poke        func() // asks the loop for a frame
 	keys        *registry.Resolver
-	ui          atomic.Pointer[ui.UI] // set as the window opens; read by plugins' goroutines too
-	widgets     widgetServices        // plugins' services for the UI's widgets (Host.ProvideUI)
+	ui          atomic.Pointer[ui.UI]  // set as the window opens; read by plugins' goroutines too
+	dir         atomic.Pointer[string] // cfg.WorkDir, for plugins' goroutines: the window moves under them
+	widgets     widgetServices         // plugins' services for the UI's widgets (Host.ProvideUI)
 	modes       func() []string
 	theme       func() *theme.Resolved
 	todoMu      sync.Mutex
 	todo        []func() // Host.Do's, for the loop
 	shot        func(th *theme.Resolved) *image.RGBA
 	reopen      chan reopenTo            // the directory for the loop to start again on: Open Directory's, or a session's
-	heading     atomic.Pointer[reopenTo] // what reopen holds until the loop takes it, for the opening view
+	heading     atomic.Pointer[reopenTo] // where the window is going, for the opening view, until it's laid out there
+	holds       arrival                  // what laying out the directory the window is on waits for (Window.Hold)
+	moving      *moveTrace               // the move under way, timed for the log; on the loop
 	recents     *recents
 	secretsOnce sync.Once
 	secrets     plugin.Secrets               // the store plugins' requests take secrets from, each one handed out redacted from the logs
@@ -68,7 +71,6 @@ type shell struct {
 	frames      kit.FrameLog                 // the frames drawn: how long each took
 	claims      sync.Map                     // Host.Claim's keys held
 	kept        *keptStore                   // Host.Keep's, per session
-	teardowns   plugin.Teardowns             // stopped plugins' slow cleanup, off the loop
 }
 
 type afterOpen struct {

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
 )
@@ -16,6 +17,21 @@ func ManagerFor(r registry.Registry, id core.SessionID) *watch.Manager {
 		return w.For(id)
 	}
 	return nil
+}
+
+// FileManager is r's app manager or, with none to share, one of its own named name, which watches files through the
+// OS (the window's, when there is one) and polls every poll when it can't (0: the manager's default). done closes
+// the one of its own.
+func FileManager(r registry.Registry, name string, poll time.Duration) (m *watch.Manager, done func()) {
+	if m = ManagerFor(r, ""); m != nil {
+		return m, func() {}
+	}
+	start := fswatch.New
+	if w, ok := WindowOf(r); ok {
+		start = w.FSWatch
+	}
+	m = watch.New(watch.Options{Name: name, Watch: start, Timing: watch.Timing{Fallback: poll}, Polls: PollsOf(r)})
+	return m, m.Close
 }
 
 // Every is a source whose read runs fn, polled at its subscriptions' MaxAge: periodic work a manager runs while

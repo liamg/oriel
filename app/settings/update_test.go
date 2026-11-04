@@ -33,6 +33,7 @@ func updatesOf(s *apptest.Scene) *settings.Update {
 func TestUpdateCardUpdatesAndRestarts(t *testing.T) {
 	r := rig.NewReleases(t)
 	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup() // up to date as it started: the release comes out after, for the check asked for
 	r.Publish("2.0.0", "## Highlights\n\n- Faster session start\n- **Rollback** on a failed health check")
 
 	s.Run("UpdateCheck", nil)
@@ -79,6 +80,7 @@ func TestUpdateDownloadsBeforeItSays(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			r := rig.NewReleases(t)
 			s := updatesScene(t, r)
+			updatesOf(s).WaitStartup() // an automatic start's own check, done: Check below isn't turned away as one runs
 			s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, mode)
 			r.Publish("1.1.0", "")
 			updatesOf(s).Check()
@@ -108,6 +110,7 @@ func TestUpdateDownloadsBeforeItSays(t *testing.T) {
 
 	r := rig.NewReleases(t)
 	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
 	r.Publish("1.0.0", "")
 	updatesOf(s).Check()
 	if hasNotice(s.Store().State(), "update.available") || hasNotice(s.Store().State(), "update.ready") {

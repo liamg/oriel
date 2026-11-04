@@ -123,3 +123,15 @@ func TermScene(t *testing.T, args registry.Args) *Scene {
 // TestServers are the language servers a test's app may start: those the test registers (a recorded server), never
 // the machine's own built-in ones, which are slow and differ from one machine to the next.
 func TestServers(s lsp.ServerSpec) bool { return s.Source != "builtin:lsp" }
+
+// WaitDiagnostics waits for the language servers' diagnostics on path, and gives them: a server publishes them when
+// it has them, not in answer to anything the app waits on.
+func (s *Scene) WaitDiagnostics(path string) []registry.Diagnostic {
+	s.T.Helper()
+	var ds []registry.Diagnostic
+	s.Until("the diagnostics on "+filepath.Base(path), func() bool {
+		ds = s.Registry().DiagnosticsFor(path)
+		return len(ds) > 0
+	})
+	return ds
+}

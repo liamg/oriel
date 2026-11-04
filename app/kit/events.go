@@ -10,6 +10,15 @@ type (
 	BufWritePost struct{ Buf, File string }
 )
 
+// DirChanged is the DirChanged hook's event: the window has moved onto another directory, as a session in another one
+// comes to the front. Plugins live on across it; one that keeps something per directory swaps it here, before the
+// new directory's layout comes back.
+type DirChanged struct {
+	Dir     string `json:"dir"`               // the directory the window is on now; "" for the start view
+	Was     string `json:"was,omitempty"`     // the one it left
+	Session string `json:"session,omitempty"` // the session it moved for; "" for none
+}
+
 // AgentTurnEnd is the AgentTurnEnd hook's event.
 type AgentTurnEnd struct {
 	Session string `json:"session"`

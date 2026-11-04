@@ -196,7 +196,10 @@ func Needs(ctx context.Context, root, cwd string, o LaunchOptions, at agent.Sand
 		n.Mounts = append(n.Mounts, agent.Mount{Host: dir, ReadOnly: true})
 	}
 	for _, p := range n.Problems {
-		if p.Blocking {
+		switch {
+		case p.Blocking && len(p.SignIn) > 0:
+			return n, agent.AuthExpired{Provider: o.Provider, Detail: p.Message, Shell: strings.Join(p.SignIn, " "), HostCommand: p.SignIn}
+		case p.Blocking:
 			return n, fmt.Errorf("%s: %s", p.Message, p.Fix)
 		}
 	}

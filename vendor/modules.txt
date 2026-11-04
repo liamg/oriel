@@ -67,7 +67,7 @@ github.com/go-text/typesetting/shaping
 # github.com/godbus/dbus/v5 v5.2.2
 ## explicit; go 1.20
 github.com/godbus/dbus/v5
-# github.com/tetratelabs/wazero v1.12.0
+# github.com/tetratelabs/wazero v1.12.0 => ./third_party/wazero
 ## explicit; go 1.25.0
 github.com/tetratelabs/wazero
 github.com/tetratelabs/wazero/api
@@ -157,3 +157,4 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
+# github.com/tetratelabs/wazero => ./third_party/wazero

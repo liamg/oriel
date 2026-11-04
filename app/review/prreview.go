@@ -326,17 +326,26 @@ func (x *PRReview) detail(s registry.HostSite, url string) *reviewDetail {
 		if err != nil {
 			d.err = err.Error()
 		}
+		again := d.again
+		d.again = false
 		x.mu.Unlock()
 		x.h.Redraw()
+		if again {
+			x.refresh(url)
+		}
 	}()
 	return d
 }
 
-// refresh asks the host for the pull request at url again, keeping what it said last until it answers.
+// refresh asks the host for the pull request at url again, keeping what it said last until it answers. Asked while
+// a read is under way, it reads once more after it: that read may have begun before what it's asked again for.
 func (x *PRReview) refresh(url string) {
 	x.mu.Lock()
 	d := x.details[url]
 	busy := d == nil || !d.done || d.refreshing
+	if d != nil && busy {
+		d.again = true
+	}
 	if !busy {
 		d.refreshing = true
 	}
@@ -356,8 +365,13 @@ func (x *PRReview) refresh(url string) {
 		if err == nil {
 			d.d, d.err, d.read = got, "", time.Now()
 		}
+		again := d.again
+		d.again = false
 		x.mu.Unlock()
 		x.h.Redraw()
+		if again {
+			x.refresh(url)
+		}
 	}()
 }
 

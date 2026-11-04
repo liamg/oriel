@@ -308,7 +308,7 @@ var builtinOptions = []OptionSpec{
 	{Name: "keymap.timeoutlen", Type: Duration, Default: time.Second, Scopes: ScopeUser, Aliases: []string{"timeoutlen", "tm"}, Source: "builtin:registry",
 		Help: "How long to wait for a mapped key sequence to complete."},
 	{Name: "hooks.budget", Type: Duration, Default: 2 * time.Millisecond, Scopes: ScopeUser, Source: "builtin:registry",
-		Help: "How long a hook may take before it's a warning: hooks run on the hot path."},
+		Help: "How long a hook may take, on two calls running, before it's a warning: hooks run on the hot path."},
 }
 
 func (r *reg) Command(c Command) Disposable {

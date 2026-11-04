@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 	"sync"
@@ -136,7 +137,11 @@ func (x *GitHub) githubOn(r gitx.Repo, hostname, token string) gh.Client {
 	if token == "" {
 		return gh.API{T: noToken{host: host}}
 	}
-	return gh.API{T: gh.HTTP{Base: base, Token: token}}
+	var client *http.Client
+	if x.deps.HTTP != nil {
+		client = x.deps.HTTP()
+	}
+	return gh.API{T: gh.HTTP{Base: base, Token: token, Client: client}}
 }
 
 // noToken is GitHub with no token found: every call is refused, as GitHub would refuse it.

@@ -37,7 +37,9 @@ func (w window) IconImage(name string, col render.Color) image.Image {
 	return contributedIcon(w.sh.cfg.Registry, w.sh.reads.Pictures, name, col)
 }
 
-func (w window) Dir() string { return w.sh.cfg.WorkDir }
+func (w window) Dir() string { return w.sh.workDir() }
+
+func (w window) Hold() (release func()) { return w.sh.hold() }
 
 func (w window) Polls() *kit.PollSet { return w.sh.polls }
 
@@ -56,6 +58,13 @@ func (w window) Reopen(dir string, session core.SessionID) error {
 
 func (w window) AfterReopen(session core.SessionID, calls []kit.Call) {
 	w.sh.afterOpen = &afterOpen{session: session, calls: calls}
+}
+
+func (w window) Arrived() bool {
+	a := &w.sh.holds
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.done
 }
 
 func (w window) LaunchedEmpty() bool {
@@ -101,4 +110,17 @@ func (r *quitDrain) Cancel()             { r.cancelQuit() }
 func (r *quitDrain) Busy() ([]core.SessionState, bool) {
 	busy, _, polled := r.shown()
 	return busy, polled
+}
+
+// workDir is the directory the window is on, from any goroutine.
+func (sh *shell) workDir() string {
+	if d := sh.dir.Load(); d != nil {
+		return *d
+	}
+	return ""
+}
+
+// dirState is a state file kept for the directory the window is on now (Config.DirState), from any goroutine.
+func (sh *shell) dirState(name string) string {
+	return dirStateFor(sh.cfg.StateDir, sh.workDir(), name)
 }

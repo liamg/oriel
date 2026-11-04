@@ -74,6 +74,11 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		u := ev.Usage
 		h.r.deps.Record(se, stats.Event{At: now, Kind: "request", Model: se.Agent.Model, Effort: se.Agent.Effort, Window: int64(u.ContextMax),
 			Tokens: stats.Tokens{Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite5m: u.CacheWrite}})
+		if u.Output > 0 {
+			h.mu.Lock()
+			h.loginRetried = false // it worked: a sign-in lost later is worth one more try
+			h.mu.Unlock()
+		}
 		h.turnEnd(ev, now)
 	case agent.Failure:
 		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemError, Text: ev.Err, Time: now})
@@ -88,7 +93,9 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		h.relogin = h.relogin || h.working
 		h.mu.Unlock()
 		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemError, Text: "Signed out: " + ev.Detail, Time: now})
-		x.LoginLost(h.id, ev)
+		if !h.retryLogin(ev) {
+			x.LoginLost(h.id, ev)
+		}
 	case agent.AuthRestored:
 		if x.SignedOut(ev.Provider) {
 			x.env.Go("a login check", func() { x.CheckLogin(ev.Provider, true) })

@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render/headless"
 )
 
 const planMarkdown = `# Round invoice lines half-to-even
@@ -120,7 +121,12 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 		return apptest.HasAll(s, "Stripe reconciles half-even;", "NEEDS YOU")
 	})
 	w.ClickText("defer")
-	w.WaitText("Ready: every")
+	// Ready now, not as it was before the comment: WaitText finds any frame since the window opened.
+	w.WaitAccess("Start work enabled", func(w *apptest.Window) bool {
+		n := w.Access("Start work")
+		return n != nil && !n.Disabled
+	})
+	w.Latest("ready", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Ready: every") })
 
 	// Start work: the dialog, then the worktree, a fresh agent told where, and the window on the worktree.
 	w.ClickText("Start work")

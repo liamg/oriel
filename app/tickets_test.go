@@ -183,7 +183,7 @@ func TestStartWorkFromAnyTracker(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { apptest.Connect(lw.W)(cfg); change(cfg) }})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	jira := loadJira(t, s)
 	if err := s.Registry().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
@@ -223,7 +223,7 @@ func TestPRLinkedToAnyTracker(t *testing.T) {
 	}
 	s.Run("session.start", registry.Args{"kind": "work", "prompt": "Queue depth alert", "ticket": "OPS-12", "provider": "fake",
 		"repos": []string{api}})
-	st := rig.WaitState(t, s.Store(), "the OPS-12 session in front", func(st core.State) bool {
+	st := s.UntilState("the OPS-12 session in front", func(st core.State) bool {
 		se, ok := st.Session(st.Focus)
 		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != ""
 	})
@@ -250,7 +250,7 @@ func ticketScene(t *testing.T) (*apptest.Scene, *rig.Host, *lineartest.Linear, *
 		t.Fatal(err)
 	}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { apptest.Connect(lw.W)(cfg); change(cfg) }})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	jira := loadJira(t, s)
 	if err := s.Registry().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
@@ -264,7 +264,7 @@ func startTicketSession(t *testing.T, s *apptest.Scene, lw *rig.Host, prompt, ti
 	t.Helper()
 	before := s.Store().State().Focus
 	s.Run("session.start", registry.Args{"kind": "plan", "prompt": prompt, "ticket": ticket, "provider": "fake"})
-	st := rig.WaitState(t, s.Store(), prompt+" in front", func(st core.State) bool { return st.Focus != "" && st.Focus != before })
+	st := s.UntilState(prompt+" in front", func(st core.State) bool { return st.Focus != "" && st.Focus != before })
 	lw.Fake.WaitStarted(t)
 	se, _ := st.Session(st.Focus)
 	return se.Snapshot()
@@ -303,7 +303,7 @@ func continueTicket(t *testing.T, s *apptest.Scene, other core.SessionID, se cor
 		return strings.Contains(s.Text(), card) && strings.Contains(s.Text(), "Continue · "+name)
 	})
 	s.Run("session.launch", nil)
-	rig.WaitState(t, s.Store(), key+"'s session in front from the launcher", func(st core.State) bool { return st.Focus == se.ID })
+	s.UntilState(key+"'s session in front from the launcher", func(st core.State) bool { return st.Focus == se.ID })
 	s.Until("the launcher closed", func() bool { return !strings.Contains(s.Text(), "NEW SESSION") })
 	if n := len(s.Store().State().Sessions); n != sessions {
 		t.Errorf("%d sessions, %d before: a duplicate was started", n, sessions)
@@ -320,7 +320,7 @@ func TestContinueTicketSession(t *testing.T) {
 	continueTicket(t, s, other.ID, se, "OPS-12", "Page when the jobs queue backs up.")
 
 	s.Run("session.archive", registry.Args{"id": string(se.ID)})
-	rig.WaitState(t, s.Store(), "the session archived", func(st core.State) bool {
+	s.UntilState("the session archived", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return a.Snapshot().Archived
 	})
@@ -350,12 +350,12 @@ func TestLinearContinueTicketSession(t *testing.T) {
 	se := startTicketSession(t, s, lw, "Stale results", "ENG-2231")
 	other := startTicketSession(t, s, lw, "Something else", "")
 	s.Run("session.stop", registry.Args{"id": string(se.ID)})
-	rig.WaitState(t, s.Store(), "the session stopped", func(st core.State) bool {
+	s.UntilState("the session stopped", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return !a.Snapshot().Agent.Running
 	})
 	continueTicket(t, s, other.ID, se, "ENG-2231", "linked PR #4398")
-	rig.WaitState(t, s.Store(), "the session resumed", func(st core.State) bool {
+	s.UntilState("the session resumed", func(st core.State) bool {
 		a, _ := st.Session(se.ID)
 		return a.Snapshot().Agent.Running
 	})
@@ -388,7 +388,7 @@ func TestTicketDoneOnMerge(t *testing.T) {
 		repos = append(repos, p.Repo)
 	}
 	s.Run("session.start", registry.Args{"kind": "work", "prompt": "Queue depth alert", "ticket": "OPS-12", "provider": "fake", "repos": repos})
-	st := rig.WaitState(t, s.Store(), "the OPS-12 session in front", func(st core.State) bool {
+	st := s.UntilState("the OPS-12 session in front", func(st core.State) bool {
 		se, ok := st.Session(st.Focus)
 		return ok && se.Snapshot().Ticket == "OPS-12" && se.Snapshot().Branch != "" && len(se.Projects()) == 2
 	})
@@ -495,7 +495,7 @@ func TestTicketsPagePlanAndContinue(t *testing.T) {
 	s.ClickText("Search API returns stale results after a reindex")
 	s.Click(apptest.Centre(s.Within("Linear tickets page", label).Bounds), 0)
 	s.Frame()
-	rig.WaitState(t, s.Store(), "the ticket's session in front", func(st core.State) bool { return st.Focus == se.ID() && st.Focus != other.ID })
+	s.UntilState("the ticket's session in front", func(st core.State) bool { return st.Focus == se.ID() && st.Focus != other.ID })
 	if n := len(s.Store().State().Sessions); n != sessions {
 		t.Errorf("%d sessions, %d before", n, sessions)
 	}

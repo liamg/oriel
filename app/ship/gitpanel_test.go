@@ -32,9 +32,9 @@ func gitPanelScene(t *testing.T, prepare func(dir string)) (s *apptest.Scene, x 
 		prepare(blog)
 	}
 	s = apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("directory.open", registry.Args{"path": blog})
-	st := rig.WaitState(t, s.Store(), "the directory's session in front", func(st core.State) bool {
+	st := s.UntilState("the directory's session in front", func(st core.State) bool {
 		se, ok := st.Session(st.Focus)
 		return ok && se.Snapshot().Kind == core.KindDirect
 	})

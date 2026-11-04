@@ -110,9 +110,19 @@ func TestQuitWaitsForTheTurnOrCancels(t *testing.T) {
 }
 
 // Quit now doesn't wait for the turn; nor does asking to quit again.
+// working waits for the agent's turn to be under way, which is what quitting waits for.
+func working(r *apptest.Window) {
+	r.T.Helper()
+	r.UntilState("the agent working", func(st core.State) bool {
+		se, ok := st.Session("rounding")
+		return ok && se.Snapshot().Agent.Working
+	})
+}
+
 func TestQuitNow(t *testing.T) {
 	r, lw, a := quitScene(t, nil)
 	a.Emit(agent.TurnStart{})
+	working(r)
 	r.Win.RequestClose()
 	r.WaitText("Quit now")
 	r.ClickTop("Quit now")
@@ -125,6 +135,7 @@ func TestQuitNow(t *testing.T) {
 func TestASecondQuitDoesNotWait(t *testing.T) {
 	r, lw, a := quitScene(t, nil)
 	a.Emit(agent.TurnStart{})
+	working(r)
 	r.Win.RequestClose()
 	r.WaitText("QUITTING ORIEL")
 	r.Win.RequestClose()

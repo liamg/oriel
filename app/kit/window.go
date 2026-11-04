@@ -73,16 +73,24 @@ func BuiltinsOf(r registry.Registry) (Builtins, bool) {
 }
 func QuitOf(r registry.Registry) (Quit, bool) { return registry.ServiceOf[Quit](r, QuitService) }
 
-// WindowService is the window itself: the directory it's on, and opening it again on another.
+// WindowService is the window itself: the directory it's on, and moving it onto another.
 const WindowService = "window"
 
-// Window is the directory the window is on, and opening it again on another: a session's, as it comes to the front.
+// Window is the directory the window is on, and moving it onto another: a session's, as it comes to the front. The
+// plugins live on across a move; DirChanged says it happened.
 type Window interface {
 	// Dir is the directory the window is on; "" on the start view.
 	Dir() string
-	// Reopen opens the window again on dir, as session's ("" for none).
+	// Reopen moves the window onto dir, as session's ("" for none).
 	Reopen(dir string, session core.SessionID) error
-	// AfterReopen runs calls once the window has opened again on session.
+	// Hold keeps the window from laying out the directory it's moving onto, or starting on, until release: what that
+	// directory's views need is being read (a StateFile). The opening cover stays up meanwhile; a hold not let go in
+	// a couple of seconds is let go of. Release once, from any goroutine.
+	Hold() (release func())
+	// Arrived says the directory the window is on is laid out: nothing holds it any more, and the cover is down. A
+	// view opened from now on stays.
+	Arrived() bool
+	// AfterReopen runs calls once the window has moved onto session's directory.
 	AfterReopen(session core.SessionID, calls []Call)
 	// LaunchedEmpty says, the first time it's asked, whether the window started with nothing open; false after.
 	LaunchedEmpty() bool
@@ -92,6 +100,24 @@ type Window interface {
 	Frames() *FrameLog
 	// FSWatch starts one of the OS's file watchers (fswatch.New, unless the config gives another).
 	FSWatch() (*fswatch.Watcher, error)
+}
+
+// WindowDir is the directory r's window is on now ("" on the start view, or with no window). A plugin reads it when
+// it needs it rather than keeping it: the window moves underneath the plugins (DirChanged).
+func WindowDir(r registry.Registry) string {
+	if w, ok := WindowOf(r); ok {
+		return w.Dir()
+	}
+	return ""
+}
+
+// OnDirChanged runs fn on the loop each time the window moves onto another directory (DirChanged), for a plugin
+// that keeps something per directory.
+func OnDirChanged(r registry.Registry, label string, fn func(DirChanged)) registry.Disposable {
+	return registry.On(r, registry.Hook{Kind: registry.Observe, Label: label}, func(_ registry.Ctx, ev *DirChanged) (registry.Verdict, error) {
+		fn(*ev)
+		return registry.Verdict{}, nil
+	})
 }
 
 // PollsOf is r's window's periodic work; nil, noting nothing, without a window.

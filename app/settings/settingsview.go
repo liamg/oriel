@@ -104,7 +104,7 @@ func (s *Plugin) build(c *ui.Ctx) {
 				for _, sp := range rows {
 					s.row(c, th, sp, at)
 				}
-				for _, f := range s.files() {
+				for _, f := range s.allFiles() {
 					f.mu.Lock()
 					unknown := slices.Clone(f.unknown)
 					f.mu.Unlock()

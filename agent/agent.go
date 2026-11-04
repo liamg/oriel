@@ -147,6 +147,7 @@ type SandboxNeeds struct {
 type SandboxProblem struct {
 	Code, Message, Fix string
 	Blocking           bool
+	SignIn             []string // a blocking one that signing in on the host fixes: the HostCommand that does
 }
 
 // Install is what Detect found.
@@ -384,6 +385,9 @@ type (
 		Detail   string // what the provider said: "OAuth token revoked · Please run /login"
 		Terminal string // typed into the session's terminal, signs in again: "/login"; "" when that can't
 		Shell    string // run in a shell, signs in again: "claude, then /login"
+		// HostCommand runs on the host, in a terminal, and signs it in again, and so every sandbox sharing its
+		// sign-in: ["codex", "login"]. A sandboxed agent signs in only this way, never in its own terminal.
+		HostCommand []string
 	}
 	// AuthRestored is a login seen to succeed, so whoever waits on one checks again.
 	AuthRestored struct{ Provider, Account string }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -69,7 +70,8 @@ func (x *Box) Needs(ctx context.Context, at agent.SandboxPlace, modDir, pinned s
 	}
 	n.Bins = map[string]string{"claude": bin}
 	settings := Settings()
-	if err := Prepare(at.Root, at.Cwd, settings, nil); err != nil {
+	seen := x.SeenFor(bin, at.Shared || runtime.GOOS == at.OS && runtime.GOARCH == at.Arch)
+	if err := Prepare(at.Root, at.Cwd, settings, nil, seen); err != nil {
 		return n, err
 	}
 	if !ownAuth(at, settings) {
@@ -157,8 +159,8 @@ func (x *Box) Problems(at agent.SandboxPlace, pinned string) []agent.SandboxProb
 	login, ok := x.HostLogin()
 	if !ok {
 		return append(out, agent.SandboxProblem{Code: "claude-token-missing", Blocking: true,
-			Message: "Sandboxed agents have no way to sign in to Claude",
-			Fix:     "Sign in with `claude` on this machine; sandboxes share that login."})
+			Message: "Claude isn't signed in on this machine, and sandboxes share its sign-in",
+			Fix:     "Run `claude auth login` on this machine; sandboxes share that login.", SignIn: []string{"claude", "auth", "login"}})
 	}
 	SyncLogins(login)
 	if time.Until(login.Expiry()) <= 0 {

@@ -142,17 +142,16 @@ type DebugEnded struct {
 // expressions and a REPL, in the Debug panel.
 type Debug struct {
 	kit.Disposer
-	WorkDir   string                           // the project the window is open on
-	StateFile string                           // where the breakpoints and watches are kept for the work dir
+	StateFile func() string                    // where the breakpoints and watches are kept for the window's directory
 	Logger    func(source string) *slog.Logger // an adapter's stderr goes to the log as source
 	h         plugin.Host
+	state     *kit.StateFile // the breakpoints and watches of the directory the window is on
 
 	bps     map[string][]debugBreakpoint // by absolute path
 	watches []string
 	sess    *debugSession
 	console []consoleLine
 	work    kit.Work
-	writes  kit.Writer // the breakpoints and watches, saved
 	mu      sync.Mutex // guards sess.client for the goroutines that use it
 
 	panel  debugPanel
@@ -193,7 +192,9 @@ func DebugEntries() *kit.Entries {
 func (x *Debug) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.bps = map[string][]debugBreakpoint{}
-	x.load()
+	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "breakpoints and watches", Path: x.StateFile, Load: x.load})
+	x.Add(kit.OnDispose(x.state.Close))
+	x.Add(kit.OnDirChanged(h, "a debug session is of its directory", func(kit.DirChanged) { x.follow() }))
 	x.Add(h.Decorations("debug", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	x.Add(h.Contribute(registry.GutterAction{Name: "debug.breakpoint", Command: "debug.breakpoint.toggle", Order: 50, When: x.debuggable,
 		Source: "builtin:debug"}))
@@ -224,7 +225,7 @@ func (x *Debug) Deactivate(ctx context.Context) error {
 		}
 		x.work.Stop()
 	})
-	x.writes.Wait()
+	x.state.Wait()
 	return x.Disposer.Deactivate(ctx)
 }
 

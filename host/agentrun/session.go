@@ -31,6 +31,7 @@ type session struct {
 	relogin      bool // a turn stopped for a lost login: told to carry on once it's back
 	stale        bool // the agent lost what only a restart brings back: restarted once its turn ends
 	refused      bool // the agent couldn't start for a lost login: started once it's back
+	loginRetried bool // a sandboxed agent's lost sign-in was tried again with the host's, since its last turn that worked
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
 	held         []core.ThreadID // threads given to turns that left background work running: busy until it's done

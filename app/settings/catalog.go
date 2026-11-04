@@ -32,13 +32,13 @@ const PluginsOption = "plugins"
 type Catalog struct {
 	kit.Disposer
 	GitHub *catalog.GitHub // how plugins and registries are read; GitHub's API with your gh login's token if nil
-	// ConfigDir and WorkDir hold the settings files, DataDir the installed plugins, StateDir their data;
-	// CacheDir is DataDir/cache if "".
-	ConfigDir, WorkDir, DataDir, StateDir, CacheDir string
-	Bundled                                         []plugin.Bundled // shipped in the binary
-	Self                                            []string         // the command that runs oriel itself, for bundled plugins' processes; this executable if nil
-	h                                               plugin.Host
-	work                                            kit.Work // every goroutine it starts, stopped with it
+	// ConfigDir and the window's directory hold the settings files, DataDir the installed plugins, StateDir their
+	// data; CacheDir is DataDir/cache if "".
+	ConfigDir, DataDir, StateDir, CacheDir string
+	Bundled                                []plugin.Bundled // shipped in the binary
+	Self                                   []string         // the command that runs oriel itself, for bundled plugins' processes; this executable if nil
+	h                                      plugin.Host
+	work                                   kit.Work // every goroutine it starts, stopped with it
 
 	mu       sync.Mutex
 	syncing  bool
@@ -216,6 +216,11 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 	listed := func(id string) bool { return x.listed()[id] }
 	x.syncBundled(listed)
 	x.Add(kit.OnDispose(h.Options().Watch(BundledDisabledOption, func() { x.syncBundled(listed) })))
+	// A project's own plugins run while the window is on it: they start and stop as it comes and goes.
+	x.Add(kit.OnDirChanged(h, "the project's own plugins", func(kit.DirChanged) {
+		x.syncBundled(listed)
+		x.kick()
+	}))
 	x.kick()
 	return nil
 }
@@ -293,7 +298,7 @@ func (x *Catalog) listed() map[string]bool {
 	for _, l := range []struct {
 		layer registry.Layer
 		at    registry.At
-	}{{registry.LayerUser, registry.At{}}, {registry.LayerProject, registry.At{Project: x.WorkDir}}} {
+	}{{registry.LayerUser, registry.At{}}, {registry.LayerProject, registry.At{Project: kit.WindowDir(x.h)}}} {
 		v, _ := o.Lookup(PluginsOption, l.layer, l.at)
 		t, _ := v.(map[string]any)
 		es, _ := catalog.ParseEntries(t)
@@ -395,7 +400,7 @@ func (x *Catalog) files() []pluginFile {
 	userFile := filepath.Join(x.ConfigDir, "settings.toml")
 	out := []pluginFile{{entries: read(registry.LayerUser, registry.At{}, userFile),
 		m: &catalog.Manager{Store: store, Lock: filepath.Join(x.ConfigDir, catalog.LockFile), Resolver: res}}}
-	if root := x.WorkDir; root != "" {
+	if root := kit.WindowDir(x.h); root != "" {
 		file := filepath.Join(root, ".oriel", "settings.toml")
 		var es []catalog.Entry
 		for _, e := range read(registry.LayerProject, registry.At{Project: root}, file) {

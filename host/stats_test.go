@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/host/persist"
 	"github.com/liamg/oriel/host/stats"
+	"github.com/liamg/oriel/internal/isolate"
 )
 
 // loggedFake is the fake provider keeping a log of its own, as Claude does: the fixture transcript of the session
@@ -81,7 +82,7 @@ func statsHost(t *testing.T) (*Host, *loggedFake) {
 	f := &loggedFake{Fake: agenttest.NewFake(), logs: map[string]string{}}
 	providers := &agent.Providers{}
 	providers.Register(f)
-	w, err := New(Options{Home: t.TempDir(), Providers: providers, Exec: nopExec{},
+	w, err := New(Options{Home: t.TempDir(), Providers: providers, Exec: nopExec{}, HTTP: isolate.Net(t),
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name}, true }})
 	if err != nil {
 		t.Fatal(err)

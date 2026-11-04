@@ -288,10 +288,11 @@ type placeCall struct {
 }
 
 type problem struct {
-	Code     string `json:"code"`
-	Message  string `json:"message"`
-	Fix      string `json:"fix,omitempty"`
-	Blocking bool   `json:"blocking,omitempty"`
+	Code     string   `json:"code"`
+	Message  string   `json:"message"`
+	Fix      string   `json:"fix,omitempty"`
+	Blocking bool     `json:"blocking,omitempty"`
+	SignIn   []string `json:"signIn,omitempty"`
 }
 
 type needs struct {
@@ -313,7 +314,7 @@ func needsOf(n agent.SandboxNeeds) needs {
 		w.Mounts = mountsOf(n.Mounts)
 	}
 	for _, p := range n.Problems {
-		w.Problems = append(w.Problems, problem{Code: p.Code, Message: p.Message, Fix: p.Fix, Blocking: p.Blocking})
+		w.Problems = append(w.Problems, problem{Code: p.Code, Message: p.Message, Fix: p.Fix, Blocking: p.Blocking, SignIn: p.SignIn})
 	}
 	return w
 }
@@ -322,7 +323,7 @@ func (w needs) needs() agent.SandboxNeeds {
 	n := agent.SandboxNeeds{Bins: w.Bins, Tools: w.Tools, Mounts: agentMounts(w.Mounts), Env: w.Env, PassEnv: w.PassEnv, SkipEnv: w.SkipEnv,
 		URLEnv: w.URLEnv, URLs: w.URLs, Hosts: w.Hosts}
 	for _, p := range w.Problems {
-		n.Problems = append(n.Problems, agent.SandboxProblem{Code: p.Code, Message: p.Message, Fix: p.Fix, Blocking: p.Blocking})
+		n.Problems = append(n.Problems, agent.SandboxProblem{Code: p.Code, Message: p.Message, Fix: p.Fix, Blocking: p.Blocking, SignIn: p.SignIn})
 	}
 	return n
 }
@@ -399,6 +400,7 @@ type event struct {
 	Detail      string                `json:"detail,omitempty"`
 	Terminal    string                `json:"terminal,omitempty"`
 	Shell       string                `json:"shell,omitempty"`
+	HostCommand []string              `json:"hostCommand,omitempty"`
 }
 
 type usage struct {
@@ -455,7 +457,8 @@ func eventOf(ev agent.Event) (event, error) {
 		u := e.Usage
 		return event{Type: "usage", Plan: &u}, nil
 	case agent.AuthExpired:
-		return event{Type: "authExpired", Provider: e.Provider, Account: e.Account, Detail: e.Detail, Terminal: e.Terminal, Shell: e.Shell}, nil
+		return event{Type: "authExpired", Provider: e.Provider, Account: e.Account, Detail: e.Detail, Terminal: e.Terminal, Shell: e.Shell,
+			HostCommand: e.HostCommand}, nil
 	case agent.AuthRestored:
 		return event{Type: "authRestored", Provider: e.Provider, Account: e.Account}, nil
 	case agent.Exited:
@@ -494,7 +497,8 @@ func (w event) agentEvent() (agent.Event, error) {
 		}
 		return agent.UsageUpdate{Usage: u}, nil
 	case "authExpired":
-		return agent.AuthExpired{Provider: w.Provider, Account: w.Account, Detail: w.Detail, Terminal: w.Terminal, Shell: w.Shell}, nil
+		return agent.AuthExpired{Provider: w.Provider, Account: w.Account, Detail: w.Detail, Terminal: w.Terminal, Shell: w.Shell,
+			HostCommand: w.HostCommand}, nil
 	case "authRestored":
 		return agent.AuthRestored{Provider: w.Provider, Account: w.Account}, nil
 	case "exited":

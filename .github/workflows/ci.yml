@@ -17,10 +17,14 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      # Spotlight indexes the checkout, the caches and what the tests make, and on a three-core runner starves them.
+      - name: Turn Spotlight off
+        if: runner.os == 'macOS'
+        run: sudo mdutil -a -i off
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.26.x"
+          go-version: "1.26.10"
       - name: Install Gio's Linux deps, Mesa and Xvfb
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
@@ -36,15 +40,28 @@ jobs:
           echo "a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947  debugpy.whl" | shasum -a 256 -c -
           mkdir -p "$RUNNER_TEMP/py" && unzip -q debugpy.whl -d "$RUNNER_TEMP/py"
           echo "PYTHONPATH=$RUNNER_TEMP/py" >> "$GITHUB_ENV"
+      # macOS runners have three cores: two test packages at once, so their windows don't starve each other.
       - name: make test (under Xvfb on Linux, for render/gio's window test)
         shell: bash
-        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else make test; fi
+        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else GOFLAGS=-p=2 make test; fi
       - name: Snapshot and lag suites with the frame-path I/O check
         shell: bash
-        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else make test-framecheck; fi
+        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else GOFLAGS=-p=2 make test-framecheck; fi
       - name: Race detector on the packages where it's quick
         if: runner.os == 'Linux'
         run: go test -race -shuffle=on ./text/... ./toml/... ./semver/... ./regex/... ./update/... ./registry/... ./core/... ./lsp/... ./dap/... ./fswatch/... ./gitx/...
+      - name: Install zig 0.16.0, for the native libraries make build links
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux) asset=zig-x86_64-linux-0.16.0; sum=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00 ;;
+            macOS) asset=zig-aarch64-macos-0.16.0; sum=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489 ;;
+          esac
+          curl -sSfL -o zig.tar.xz "https://ziglang.org/download/0.16.0/$asset.tar.xz"
+          echo "$sum  zig.tar.xz" | shasum -a 256 -c -
+          mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
+          echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
+      - run: make native
       - run: make build
       - name: Install nvim for the oracle
         shell: bash
@@ -95,12 +112,27 @@ jobs:
           echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  zig.tar.xz" | sha256sum -c -
           mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
           echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
+      - name: The runner's CPU, which the build's host tools are compiled for
+        run: lscpu | grep -E 'Model name|Flags' | cut -c1-200
       - run: term/ghostty/wasm/build.sh
-      - run: git diff --exit-code -- term/ghostty/wasm/SHA256SUMS
+      - name: The wasm built is the one committed, or a known variant of it (term/ghostty/wasm/VARIANTS)
+        run: |
+          built=$(cut -d' ' -f1 term/ghostty/wasm/SHA256SUMS)
+          cp term/ghostty/wasm/oriel-vt.wasm.gz "$RUNNER_TEMP/oriel-vt-built.wasm.gz"
+          git checkout -- term/ghostty/wasm/SHA256SUMS term/ghostty/wasm/oriel-vt.wasm.gz # the tests after are of the committed one
+          if grep -q "^$built " term/ghostty/wasm/SHA256SUMS; then exit 0; fi
+          if grep -q "^$built " term/ghostty/wasm/VARIANTS; then echo "a known variant: $(grep "^$built " term/ghostty/wasm/VARIANTS)"; exit 0; fi
+          echo "built $built: neither the committed wasm nor a known variant"; exit 1
+      - name: The wasm built, to compare with the committed one
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oriel-vt-mismatch
+          path: ${{ runner.temp }}/oriel-vt-built.wasm.gz
       - run: term/ghostty/native/build.sh linux_amd64
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.26.x"
+          go-version: "1.26.10"
       - run: make test-vt
 
   whisper:
@@ -111,7 +143,7 @@ jobs:
       - run: voice/native/build.sh linux_amd64
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.26.x"
+          go-version: "1.26.10"
       - name: Download the tiny.en model
         run: |
           curl -sSfL -o "$RUNNER_TEMP/ggml-tiny.en.bin" https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.en.bin
@@ -125,7 +157,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.26.x"
+          go-version: "1.26.10"
       - name: Install Gio's Linux deps, which loading its cgo packages needs
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev
       - run: make vulncheck

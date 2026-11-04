@@ -8,8 +8,12 @@
 package watch
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"slices"
 	"sync"
 	"time"
@@ -238,6 +242,28 @@ func (s Sub[T]) Err() error {
 	return err
 }
 
+// Fresh reads the source again now, as Refresh does, and waits for that reading, or why it failed: a reading begun
+// after the call, never one kept from before (a file written just now). ctx gives up.
+func (s Sub[T]) Fresh(ctx context.Context) (T, error) {
+	since := time.Now()
+	s.Refresh()
+	tick := time.NewTicker(10 * time.Millisecond) // Changed may be drained by another reader of it
+	defer tick.Stop()
+	for {
+		if v, err, ok := s.s.since(since); ok {
+			t, _ := v.(T)
+			return t, err
+		}
+		select {
+		case <-ctx.Done():
+			var zero T
+			return zero, ctx.Err()
+		case <-s.s.changed:
+		case <-tick.C:
+		}
+	}
+}
+
 // Changed fires after each new reading.
 func (s Sub[T]) Changed() <-chan struct{} { return s.s.changed }
 
@@ -317,6 +343,24 @@ func (s *sub) reading() (any, time.Time, error, bool) {
 	return s.n.value, s.n.at, s.n.err, s.n.has
 }
 
+// Since is the latest reading, and whether there's one whose read began at t or after.
+func (s Sub[T]) Since(t time.Time) (T, error, bool) {
+	v, err, ok := s.s.since(t)
+	r, _ := v.(T)
+	return r, err, ok
+}
+
+// since is the latest reading, if its read began at t or after.
+func (s *sub) since(t time.Time) (any, error, bool) {
+	m := s.n.m
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !s.n.has || s.n.from.Before(t) {
+		return nil, nil, false
+	}
+	return s.n.value, s.n.err, true
+}
+
 func (s *sub) setOnChange(fn func()) {
 	s.n.m.mu.Lock()
 	s.onChange = fn
@@ -380,6 +424,7 @@ type node struct {
 
 	value any
 	at    time.Time
+	from  time.Time // when the read behind the latest reading began
 	err   error
 	has   bool
 	reads int
@@ -637,7 +682,7 @@ func (n *node) read() {
 			depErr = d.n.err
 		}
 	}
-	read := n.spec.read
+	read, began := n.spec.read, n.lastStart
 	if depErr != nil {
 		read = func(Reader) (any, error) { return nil, depErr } // a source read from one that failed fails with it
 	}
@@ -661,7 +706,7 @@ func (n *node) read() {
 		if err == nil || !n.has {
 			n.value = v
 		}
-		n.err, n.at, n.has = err, time.Now(), true
+		n.err, n.at, n.from, n.has = err, time.Now(), began, true
 		if news {
 			for s := range n.subs {
 				if s.internal {
@@ -775,6 +820,18 @@ func maxTime(a, b time.Time) time.Time {
 func FilesSource(key string, files ...Files) Source[[]string] {
 	return Source[[]string]{Key: key, Files: files, Read: func(r Reader) ([]string, error) {
 		return slices.Compact(slices.Sorted(slices.Values(r.Changed()))), nil
+	}}
+}
+
+// File is the contents of the file at path, read again when it changes: nil while there's no file. A reading the
+// same as the last isn't a change.
+func File(path string) Source[[]byte] {
+	return Source[[]byte]{Key: "file:" + path, Files: []Files{{Path: path}}, Same: bytes.Equal, Read: func(Reader) ([]byte, error) {
+		b, err := os.ReadFile(path)
+		if errors.Is(err, fs.ErrNotExist) {
+			return nil, nil
+		}
+		return b, err
 	}}
 }
 

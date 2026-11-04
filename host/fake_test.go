@@ -59,7 +59,7 @@ func (r *rig) open() {
 			providers.Register(p)
 		}
 	}
-	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: r.now, Log: r.log,
+	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: r.now, Log: r.log, HTTP: isolate.Net(r.t),
 		Packs: func(name string) (agent.Pack, bool) {
 			return agent.Pack{Name: name, Skill: name, Text: "pack " + name, Tools: r.tools}, true
 		}})

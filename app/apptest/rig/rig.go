@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -46,10 +47,38 @@ func WaitState(t *testing.T, s core.Store, what string, ok func(core.State) bool
 			return st
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s", what)
+			t.Fatalf("waiting for %s%s", what, Stuck())
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
+}
+
+// Stuck is what the process was busy with when a wait timed out: each running app's loop (app.Run), stuck in one
+// call when a window stops drawing, and every goroutine running, in a system call or waiting on a command. It's ""
+// when there's none.
+func Stuck() string {
+	buf := make([]byte, 4<<20)
+	buf = buf[:runtime.Stack(buf, true)]
+	var loops, busy []string
+	for _, g := range strings.Split(string(buf), "\n\n") {
+		head, _, _ := strings.Cut(g, "\n")
+		switch {
+		case strings.Contains(g, "github.com/liamg/oriel/app.Run("):
+			loops = append(loops, g)
+		case strings.Contains(head, "[running]") && strings.Contains(g, "rig.Stuck("):
+		case strings.Contains(head, "[running]") || strings.Contains(head, "[runnable]") || strings.Contains(head, "[syscall") ||
+			strings.Contains(g, "os/exec.(*Cmd).Wait("):
+			busy = append(busy, g)
+		}
+	}
+	var out string
+	if len(loops) > 0 {
+		out += "\nthe app's loop:\n" + strings.Join(loops, "\n\n")
+	}
+	if len(busy) > 0 {
+		out += "\nbusy:\n" + strings.Join(busy, "\n\n")
+	}
+	return out
 }
 
 // StatsNow is the stats fixture's now: Wed Oct 14, 12:17.
@@ -148,7 +177,7 @@ func NewStats(t *testing.T) *Stats {
 	providers := &agent.Providers{}
 	providers.Register(r.Claude)
 	providers.Register(r.Codex)
-	w, err := host.New(host.Options{Home: r.Home, Providers: providers, Exec: NopExec{}, Load: SteadyLoad, NoAutoName: true,
+	w, err := host.New(host.Options{Home: r.Home, Providers: providers, Exec: NopExec{}, Load: SteadyLoad, NoAutoName: true, HTTP: isolate.Net(t),
 		Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)
@@ -478,6 +507,9 @@ func NewHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *Host {
 	o.Packs = func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }
 	if o.Load == nil {
 		o.Load = SteadyLoad
+	}
+	if o.HTTP == nil {
+		o.HTTP = isolate.Net(t)
 	}
 	if o.GitHub == nil {
 		hub := ghtest.New(t) // never the user's own gh

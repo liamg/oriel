@@ -2,14 +2,13 @@ package lang
 
 import (
 	"context"
-	"path/filepath"
 	"unicode"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/testrun"
 )
 
-// scan finds every test in the workspace off the loop, then follows the files git sees change.
+// scan finds every test in the workspace off the loop; the files git sees change after are read again as they do.
 func (x *Tests) scan() {
 	ws := x.workspace()
 	if ws.Root == "" {
@@ -17,6 +16,10 @@ func (x *Tests) scan() {
 		return
 	}
 	x.scanFrom = kit.WindowNow(x.h)
+	x.mu.Lock()
+	gen := x.scanGen
+	x.foundNow = map[string]bool{}
+	x.mu.Unlock()
 	x.work.Go(func(ctx context.Context) {
 		byFile := map[string][]testrun.Item{}
 		for _, it := range x.set.Scan(ctx, ws) {
@@ -26,21 +29,23 @@ func (x *Tests) scan() {
 			return
 		}
 		x.mu.Lock()
-		for f, items := range x.scanned {
-			byFile[f] = items // found in an open buffer while the scan ran
+		if gen != x.scanGen { // the window moved on while it ran
+			x.mu.Unlock()
+			return
 		}
+		for f := range x.foundNow { // found in an open buffer while the scan ran
+			if items, ok := x.scanned[f]; ok {
+				byFile[f] = items
+			} else {
+				delete(byFile, f)
+			}
+		}
+		x.foundNow = nil
 		x.scanned, x.byKey = byFile, nil
 		x.mu.Unlock()
 		x.h.Redraw()
 	})
-	if st := kit.GitOf(x.h).Tree("").Status(); st != nil {
-		root := st.Repo().Dir
-		x.Add(kit.OnDispose(st.Watch(func(paths []string) {
-			for _, p := range paths {
-				x.rescan(filepath.Join(root, filepath.FromSlash(p)))
-			}
-		})))
-	}
+
 }
 
 // rescan reads one file's tests again from disk; a file that's gone has none.
@@ -60,6 +65,9 @@ func (x *Tests) setFound(path string, items []testrun.Item) {
 		x.scanned = map[string][]testrun.Item{}
 	}
 	x.byKey = nil
+	if x.foundNow != nil {
+		x.foundNow[path] = true
+	}
 	if len(items) == 0 {
 		delete(x.scanned, path)
 		return

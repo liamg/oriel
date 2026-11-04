@@ -36,6 +36,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `assistant`, `voice`, `update` | the assistant's conversation; dictation; signed self-update |
 | `cmd/oriel` | the binary and its subcommands |
 | `tools` | checks run by tests and CI: `layout`, `ratchet`, `depcheck`, `refcheck`, `leakcheck`, `framecheck`, `apigen`, `notices`, `perf` |
+| `third_party` | dependencies `go.mod` replaces with a patched copy, each saying why in its `PATCHED.md` (wazero: its file cache read buffered); dropped once a release has the fix |
 
 ## Layering
 
@@ -74,10 +75,29 @@ offers a typed service with `registry.Service{Name, Impl}` and others find it wi
 built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and `host.Access`. A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
 
-Bringing a session in another directory to the front opens the window again on it, starting every plugin afresh, so
-a plugin's fields last only until then. What a plugin remembers per session (a panel's scope, that a kind's opening
-commands have run) it keeps with `Host.Keep` and reads with `Host.Kept` (`oriel.session.keep` and `kept` in Lua): the
-window holds it across reopens and saves it in the state directory across restarts, until the session is gone.
+Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
+underneath them: the layout it leaves is saved, the pages over it close, the `DirChanged` hook fires, and the layout
+saved for the new directory comes back, then the session's opening commands. Nothing a plugin offers (its agent
+tools, hooks, subscriptions) goes away while it does, so a plugin keeps working for every session, not only the one
+in front.
+
+So a plugin asks where the window is when it needs to know, never once as it starts: `Host.Here()` is the session
+and project in front, `kit.WindowDir` the directory, and the shell's `Parts.DirState` a state file kept for it; all
+are safe off the loop. What it keeps per directory it keeps by directory (a language server per root, a directory's
+breakpoints or saved terminal screens), so coming back finds it. One that must swap something as the window moves
+does it on `DirChanged` (`kit.OnDirChanged`; `oriel.on("DirChanged", fn)` in Lua), which fires once the window is on
+the new directory and before its layout comes back; a view opened from that hook is replaced by the layout, so open
+one later. The layout waits behind the opening cover for what the new directory's views need: a plugin still reading
+it takes `Window.Hold` in the hook and lets go once it has it (two seconds at most), and `Window.Arrived` says the
+layout is back. A file kept per directory (the
+layout, the sidebar, the debugger's breakpoints, saved terminal screens, the tests' runs) is a `kit.StateFile`: read
+through the freshness manager, handed to the plugin as it starts and again as the window moves (holding the
+window until then), written off the loop, and read again when something else changes it. A project's own plugins (its settings' `[plugins]`) run while the window is on the project, starting and
+stopping as it comes and goes.
+
+What a plugin remembers per session across restarts (a panel's scope, that a kind's opening commands have run) it
+keeps with `Host.Keep` and reads with `Host.Kept` (`oriel.session.keep` and `kept` in Lua): the window saves it in the
+state directory until the session is gone.
 
 ## Freshness
 
@@ -90,6 +110,12 @@ go. Each session that isn't archived has a manager, and the app has one for what
 them, hands them the window's focus, and offers them as the `watches` service, with the sources Lua names
 (`oriel.subscribe`, `oriel.source`). A view subscribes while it's drawn (the git trees, the stats); a plugin that must
 hear in the background (pull requests' approvals) asks to keep. The Performance page lists every source and who holds it.
+
+A file's contents are `watch.File`, so a file is read in one place however many want it: the settings files, and the
+state files kept per directory (`kit.StateFile`). A reader that must start from what's on disk now (the settings as
+the app starts, a directory's state as the window arrives) asks `Sub.Fresh`, which waits for a reading begun after it
+asked; `Sub.Since` is the latest reading begun after a time, so a writer's own write isn't undone by an older read.
+`kit.FileManager` is the app's manager, or one of a plugin's own when there's no window to share one.
 
 ## Plugins
 
@@ -138,6 +164,9 @@ A sandbox knows no provider: each backend asks the session's provider what its a
 variables and endpoints it inherits, the hosts it reaches, the user's MCP servers for the gateway), and gives it that.
 A sandboxed Claude gets the host's sign-in without its refresh token. While one runs, the provider hands every sandbox
 the host's sign-in each minute, and near its end runs the host's own claude to renew it (`claudebox.Box.KeepLogins`).
+A sandboxed agent signs in only on the host: its login card runs the provider's `HostCommand` in a host terminal,
+never its own; a sandbox problem that a sign-in fixes (`SandboxProblem.SignIn`) raises the same card; and a sandboxed
+agent that loses its sign-in is started once again on the host's, handed over afresh, before the card asks.
 
 ## Rendering and the toolkit
 

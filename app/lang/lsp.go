@@ -38,7 +38,6 @@ const (
 // hover, code actions and inlay hints. Servers are registry contributions (registry/lang.LSPServer).
 type LSP struct {
 	kit.Disposer
-	WorkDir string                           // the project the window is open on
 	Version string                           // Oriel's, as servers are told it
 	Logger  func(source string) *slog.Logger // a server's stderr goes to the log as source
 	Servers func(lsp.ServerSpec) bool        // which servers may start, of those installed; every one if nil
@@ -174,6 +173,11 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "When language servers start: project, as soon as a project with their root files (go.mod, Cargo.toml…) opens, so the first request doesn't wait; or file, when one of their files first opens."}))
 	h.Do(x.warm) // once every plugin has contributed its servers
+	// The servers started for the directory the window left keep running, for its buffers still open; finding the
+	// new one's reads the disk, so it's off the loop.
+	x.Add(kit.OnDirChanged(h, "language servers for the directory", func(kit.DirChanged) {
+		x.work.Go(func(context.Context) { x.warm() })
+	}))
 	x.Add(h.Contribute(registry.InspectSection{Name: "LANGUAGE SERVER", Order: 30, Rows: x.inspectRows, Source: "builtin:lsp"}))
 	x.Add(h.Picker(x.callsSource()))
 	x.Add(h.View(kit.OverlayPrefix+"lsp", lspOverlay{x}))
@@ -198,20 +202,24 @@ func (x *LSP) Deactivate(ctx context.Context) error {
 	return x.Disposer.Deactivate(ctx)
 }
 
+// dir is the project the window is on now.
+func (x *LSP) dir() string { return kit.WindowDir(x.h) }
+
 // Wait waits for the work it has running off the loop: the servers' answers.
 func (x *LSP) Wait() { x.work.Wait() }
 
-// warm starts the servers for the project the app is open on, and for the projects directly in it (a session's
+// warm starts the servers for the project the window is on, and for the projects directly in it (a session's
 // worktrees), when lsp.start says to: each server whose own root files are there, its generic ones (.git) aside.
 func (x *LSP) warm() {
-	if v, _, err := x.h.Options().Get("lsp.start", registry.At{}); err != nil || v != "project" || x.WorkDir == "" {
+	dir := x.dir()
+	if v, _, err := x.h.Options().Get("lsp.start", registry.At{}); err != nil || v != "project" || dir == "" {
 		return
 	}
-	roots := []string{x.WorkDir}
-	if ents, err := os.ReadDir(x.WorkDir); err == nil {
+	roots := []string{dir}
+	if ents, err := os.ReadDir(dir); err == nil {
 		for _, e := range ents {
 			if e.IsDir() && !strings.HasPrefix(e.Name(), ".") && len(roots) < 32 {
-				roots = append(roots, filepath.Join(x.WorkDir, e.Name()))
+				roots = append(roots, filepath.Join(dir, e.Name()))
 			}
 		}
 	}

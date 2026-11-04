@@ -137,3 +137,31 @@ func TestMoreLanguagesByFile(t *testing.T) {
 		t.Errorf("a php #! line: %v", l)
 	}
 }
+
+// A compile with the cache's folder gone, deleted while Oriel runs, still compiles, and keeps it again.
+func TestCompilesWithItsCacheFolderGone(t *testing.T) {
+	dir := t.TempDir()
+	rt, err := newRuntime(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rt.Close(context.Background())
+	compile := func(name string) error {
+		l, _ := Builtin().Language(name)
+		wasm, _, err := l.load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = rt.CompileModule(context.Background(), wasm)
+		return err
+	}
+	if err := compile("go"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := compile("python"); err != nil {
+		t.Errorf("compiling with the cache's folder gone: %v", err)
+	}
+}

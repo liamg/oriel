@@ -6,14 +6,8 @@ package apptest
 import (
 	"cmp"
 	"context"
-	"fmt"
-	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/app/agents"
-	"github.com/liamg/oriel/tools/perf"
 	"image/png"
-	"net"
 	"net/http"
-	"net/netip"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,6 +15,10 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/app/agents"
+	"github.com/liamg/oriel/tools/perf"
 
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script"
@@ -57,7 +55,7 @@ const HookBudget = 10 * time.Millisecond
 func testRegistry() uireg.Registry {
 	r := uireg.New()
 	r.Option(registry.OptionSpec{Name: "hooks.budget", Type: registry.Duration, Default: HookBudget, Scopes: registry.ScopeUser,
-		Source: "builtin:apptest", Help: "How long a hook may take before it's a warning: hooks run on the hot path."})
+		Source: "builtin:apptest", Help: "How long a hook may take, on two calls running, before it's a warning: hooks run on the hot path."})
 	return r
 }
 
@@ -77,25 +75,10 @@ end)
 // Backends are the sandbox backends a scene's machine offers, whatever this one has.
 func Backends() []string { return []string{"docker", "seatbelt"} }
 
-// OfflineNet is the HTTP a scene's plugins get unless the test gives its own: loopback only, so no test reaches the
-// network; its connections close when the test ends.
-func OfflineNet(t testing.TB) *http.Client {
-	tr := &http.Transport{DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-		host, _, _ := net.SplitHostPort(addr)
-		if ip, err := netip.ParseAddr(host); host != "localhost" && (err != nil || !ip.IsLoopback()) {
-			return nil, fmt.Errorf("tests don't reach the network: %s", addr)
-		}
-		var d net.Dialer
-		return d.DialContext(ctx, network, addr)
-	}}
-	t.Cleanup(tr.CloseIdleConnections)
-	return &http.Client{Transport: tr}
-}
-
 // OfflineWhisper is dictation's engine with its models in a directory of the test's, downloaded offline.
 func OfflineWhisper(t testing.TB) *voice.Whisper {
 	w := voice.New(nil)
-	w.Dir, w.Net = t.TempDir(), OfflineNet(t)
+	w.Dir, w.Net = t.TempDir(), isolate.Net(t)
 	return w
 }
 
@@ -158,7 +141,7 @@ func New(t testing.TB, o Options) *Scene {
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
 	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
 		LanguageServers: TestServers,
-		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: OfflineNet(t), ImageNet: cmp.Or(o.ImageNet, OfflineNet(t)), SandboxBackends: Backends,
+		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t), ImageNet: cmp.Or(o.ImageNet, isolate.Net(t)), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
 	if o.Config != nil {
 		o.Config(&cfg)
@@ -235,7 +218,7 @@ func (s *Scene) Type(keys ...string) {
 func (s *Scene) Until(what string, ok func() bool) {
 	s.T.Helper()
 	if !s.Headless.Until(Timeout, ok) {
-		s.T.Fatalf("waiting for %s:\n%s", what, s.Text())
+		s.T.Fatalf("waiting for %s:\n%s%s", what, s.Text(), rig.Stuck())
 	}
 }
 
@@ -270,15 +253,19 @@ func (s *Scene) SettleReads() {
 // ORIEL_UPDATE=1 writes them.
 func (s *Scene) Golden(name string) {
 	s.T.Helper()
-	s.SettleReads()
-	s.Frame()
-	s.Frame()
+	s.SettleDrawn()
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		s.T.Errorf("%s: text drawn past its box:\n%s", name, strings.Join(o, "\n"))
 	}
+	failed := s.T.Failed()
 	snapshot.Golden(s.T, "testdata/"+name+".list", []byte(snapshot.List(s.List())))
 	img := raster.Render(s.List(), s.Size(), s.Scale(), s.UI().Theme().C(theme.BgBase))
 	snapshot.GoldenPNG(s.T, "testdata/"+name+".png", img, 0.02, 0.001)
+	if !failed && s.T.Failed() { // what the status line's counts and the inbox were drawn from
+		for _, n := range s.Store().State().Notifications {
+			s.T.Logf("%s: a %s notice from %s, %q: %s", name, n.Severity, n.Source, n.Title, n.Text)
+		}
+	}
 }
 
 // Shot draws two frames and writes the second to $ORIEL_SHOTS/name.png: a screenshot for the docs.
@@ -431,12 +418,14 @@ func (s *Scene) SignPoint(num, sign string) render.Point {
 // ClickText clicks the middle of the first run of text that reads text.
 func (s *Scene) ClickText(text string) {
 	s.T.Helper()
+	s.drawn(text)
 	s.Click(s.TextPoint(text), 0)
 }
 
 // ClickTop clicks the run of text reading text painted last, on top of any other, and draws a frame.
 func (s *Scene) ClickTop(text string) {
 	s.T.Helper()
+	s.drawn(text)
 	p, ok := s.TextAt(text)
 	if !ok {
 		s.T.Fatalf("no %q in the frame", text)
@@ -710,8 +699,8 @@ func (s *Scene) UntilState(what string, ok func(core.State) bool) core.State {
 	return st
 }
 
-// Reopen does what the window does when it's asked to open again on a directory (a session's): every plugin starts
-// again on it. It says whether it was asked.
+// Reopen does what the window does when it's asked to open on another directory (a session's): it moves onto it,
+// underneath the plugins, and lets git read its work tree, which it finds off the loop. It says whether it was asked.
 func (s *Scene) Reopen() bool {
 	s.T.Helper()
 	asked, err := s.Headless.Reopen()
@@ -719,9 +708,31 @@ func (s *Scene) Reopen() bool {
 		s.T.Fatal(err)
 	}
 	if asked {
-		s.OverviewOff = s.Registry().View(app.OverviewView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return ui.ColumnNode() }))
+		s.arrived()
+		s.SettleGit()
 	}
 	return asked
+}
+
+// arrived waits for the window to lay out the directory it moved onto, once what holds it lets go.
+func (s *Scene) arrived() {
+	s.T.Helper()
+	w, ok := kit.WindowOf(s.Registry())
+	if !ok {
+		return
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		s.RunQueued()
+		if w.Arrived() {
+			s.Frame()
+			return
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatal("the window never laid out the directory it moved onto")
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
 
 // Retheme resolves ui.theme and ui.variant, as the window does when a theme changes.

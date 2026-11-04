@@ -238,7 +238,6 @@ func projectRoots(workDir string, st core.State) []string {
 // changes.
 type SandboxSettings struct {
 	kit.Disposer
-	WorkDir string // the window's, whose project's file may add rules
 	// Backends are the sandbox backends this machine can run, the default first; sandbox.AvailableBackends if nil.
 	Backends func() []string
 	h        plugin.Host
@@ -264,7 +263,7 @@ func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 				return
 			case <-x.kick:
 			}
-			cfg := sandboxConfig(o, projectRoots(x.WorkDir, h.State()))
+			cfg := sandboxConfig(o, projectRoots(kit.WindowDir(h), h.State())) // the window's project's file may add rules
 			if w, err := kit.SessionHost(h); err == nil {
 				if err := w.SetSandboxConfig(cfg); err != nil {
 					h.Log().Warn("sandbox settings", "err", err)
@@ -274,6 +273,7 @@ func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 	}()
 	if kit.HasSessions(h) {
 		x.send()
+		x.Add(kit.OnDirChanged(h, "the sandbox's rules for the directory's project", func(kit.DirChanged) { x.send() }))
 	}
 	return nil
 }

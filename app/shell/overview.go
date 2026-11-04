@@ -53,7 +53,7 @@ const (
 // until the repo's HEAD moves.
 type overview struct {
 	kit.Disposer
-	dir   string // the work dir
+	sh    *shell
 	h     plugin.Host
 	mu    sync.Mutex
 	cards map[string]*card
@@ -129,10 +129,11 @@ func (o *overview) Activate(_ context.Context, h plugin.Host) error {
 
 // roots are the directories the overview has a card for: the one open, until sessions bring their repos.
 func (o *overview) roots() []string {
-	if o.dir == "" {
+	dir := o.sh.cfg.WorkDir
+	if dir == "" {
 		return nil
 	}
-	return []string{o.dir}
+	return []string{dir}
 }
 
 // headOf is what dir's HEAD points at now, read through rd, and whether it's a repo: a change means the cards'

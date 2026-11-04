@@ -361,8 +361,8 @@ func (h *Headless) Relaunch() error {
 	return err
 }
 
-// Reopen does what the window's loop does when it's asked to open again on a directory (a session's): every plugin
-// starts again on it. It says whether it was asked.
+// Reopen does what the window's loop does when it's asked to open on another directory (a session's): it moves onto
+// it underneath the plugins. It says whether it was asked.
 func (h *Headless) Reopen() (bool, error) {
 	var to reopenTo
 	select {
@@ -370,19 +370,7 @@ func (h *Headless) Reopen() (bool, error) {
 	default:
 		return false, nil
 	}
-	for _, e := range slices.Backward(h.plugins) {
-		if err := e.Deactivate(context.Background()); err != nil {
-			return true, err
-		}
-	}
-	h.sh.heading.Store(nil)
-	h.sh.cfg.WorkDir, h.sh.cfg.Files, h.sh.openedFor = to.dir, nil, to.session
-	h.plugins = nil
-	last, err := h.sh.activate(context.Background(), &h.plugins)
-	if err != nil {
-		return true, err
-	}
-	h.host = last
+	h.sh.move(context.Background(), to)
 	return true, nil
 }
 

@@ -25,16 +25,18 @@ import (
 type layoutPlugin struct {
 	kit.Disposer
 	sh    *shell
+	h     plugin.Host
 	root  *layout.Root
 	panes panes.Panes
 	rects map[*layout.Node]render.Rect
-	saved map[string]layout.Snapshot
+	snaps map[string]layout.Snapshot
 	menu  bool
 	asked bool // the menu asked for focus
 
 	restored bool
-	kept     []byte
-	writer   stateWriter
+	kept     []byte         // the layout as last written
+	saved    []byte         // the layout kept for the directory the window is on, as its file has it
+	state    *kit.StateFile // that file
 }
 
 func (l *layoutPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "layout"} }
@@ -52,24 +54,22 @@ var movePlacements = []struct {
 }
 
 func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
-	l.root, l.saved = layout.New(), map[string]layout.Snapshot{}
+	l.h, l.root, l.snaps = h, layout.New(), map[string]layout.Snapshot{}
+	path := func() string { return "" }
+	if l.sh != nil {
+		path = func() string { return l.sh.dirState("layout") }
+	}
+	l.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "layout", Path: path, Load: func(b []byte) { l.saved = b }})
+	l.Add(kit.OnDispose(l.state.Close))
 	// A view put in front is what the user asked to see: the page over the layout gives way to it.
 	l.root.OnShow(func(layout.ViewRef) { closePlaces(h) })
-	h.Do(func() { // once every plugin has registered its views
-		l.restore(h)
-		l.restored = true
-		// A window opened on a session with nothing laid out starts it the way its kind opens, if it never has.
-		f := h.State().Focus
-		if l.sh != nil && l.sh.openedFor != "" {
-			f = l.sh.openedFor // the session it opened for, though another may be in front by now
-		}
-		if f != "" && slices.ContainsFunc(h.Commands(), func(c registry.Command) bool { return c.ID == "session.opens" }) {
-			kit.RunCalls(h, []kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(f)}}})
-		}
-		if l.sh != nil && l.sh.afterOpen != nil && l.sh.afterOpen.session == f {
-			calls := l.sh.afterOpen.calls
-			l.sh.afterOpen = nil
-			kit.RunCalls(h, calls)
+	l.Add(h.DeclareEvent(registry.EventInfo{Name: registry.EventName[kit.DirChanged](), Fired: true, Payload: kit.DirChanged{},
+		Doc: "The window moved onto another directory, as a session in another one came to the front; plugins live on across it, and one that keeps something per directory swaps it here. The new directory's layout comes back after its hooks, in place of any view one opens. { dir, was, session }"}))
+	h.Do(func() { // once every plugin has registered its views, and what they hold it for is read
+		if l.sh != nil {
+			l.sh.arriveWhenReady()
+		} else {
+			l.arrive()
 		}
 	})
 	l.panes = l.newPanes(h)
@@ -81,6 +81,37 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	l.Add(h.View(kit.RootView, l.view(h)))
 	return nil
+}
+
+// arrive lays out the directory the window is on: the layout saved for it, then, with nothing laid out, the session
+// it's on started the way its kind opens if it never has, then what was asked to run once the window got there.
+func (l *layoutPlugin) arrive() {
+	h := l.h
+	l.restore(h)
+	l.restored = true
+	f := h.State().Focus
+	if l.sh != nil && l.sh.openedFor != "" {
+		f = l.sh.openedFor // the session it moved for, though another may be in front by now
+	}
+	if f != "" && slices.ContainsFunc(h.Commands(), func(c registry.Command) bool { return c.ID == "session.opens" }) {
+		kit.RunCalls(h, []kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(f)}}})
+	}
+	if l.sh != nil && l.sh.afterOpen != nil && l.sh.afterOpen.session == f {
+		calls := l.sh.afterOpen.calls
+		l.sh.afterOpen = nil
+		kit.RunCalls(h, calls)
+	}
+}
+
+// leave saves the layout for the directory the window is leaving and empties it, for the next one's; the pages over
+// it close, as the layout under them goes.
+func (l *layoutPlugin) leave() {
+	closePlaces(l.h)
+	l.keep(l.h) // to the directory's file it's leaving: the state file follows the window after
+	l.restored, l.kept = false, nil
+	if err := l.root.Load(layout.New().Save()); err != nil {
+		l.h.Log().Warn("emptying the layout", "err", err)
+	}
 }
 
 // newPanes is how the layout draws: what fills the empty main area, and each tab's title, mark, lead colour and tip.
@@ -243,11 +274,11 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			return nil
 		}},
 		{ID: "layout.save", Title: "Save the layout by name", Run: func(_ registry.Ctx, a registry.Args) error {
-			l.saved[str(a, "name")] = l.root.Save()
+			l.snaps[str(a, "name")] = l.root.Save()
 			return nil
 		}},
 		{ID: "layout.restore", Title: "Restore a saved layout", Run: func(_ registry.Ctx, a registry.Args) error {
-			s, ok := l.saved[str(a, "name")]
+			s, ok := l.snaps[str(a, "name")]
 			if !ok {
 				return fmt.Errorf("no layout %q", str(a, "name"))
 			}
