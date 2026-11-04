@@ -103,18 +103,18 @@ func (r Repo) Flight(ctx context.Context, base string) (*Flight, error) {
 
 // log is the commits in a range, newest first.
 func (r Repo) log(ctx context.Context, rng string) ([]Commit, error) {
-	out, err := r.git(ctx, "log", "--format=%h%x00%an%x00%ct%x00%s", rng)
+	out, err := r.git(ctx, "log", "--format=%h%x00%an%x00%ct%x00%s%x00%b%x1e", rng)
 	if err != nil {
 		return nil, err
 	}
 	var cs []Commit
-	for _, l := range strings.Split(strings.TrimRight(string(out), "\n"), "\n") {
-		f := strings.SplitN(l, "\x00", 4)
-		if len(f) != 4 {
+	for _, l := range strings.Split(string(out), "\x1e") {
+		f := strings.SplitN(strings.TrimLeft(l, "\n"), "\x00", 5)
+		if len(f) != 5 {
 			continue
 		}
 		n, _ := strconv.ParseInt(f[2], 10, 64)
-		cs = append(cs, Commit{Hash: f[0], Author: f[1], When: time.Unix(n, 0), Subject: f[3]})
+		cs = append(cs, Commit{Hash: f[0], Author: f[1], When: time.Unix(n, 0), Subject: f[3], Body: strings.TrimSpace(f[4])})
 	}
 	return cs, nil
 }

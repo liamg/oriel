@@ -207,7 +207,7 @@ func TestShipRaiseHookStopsARaise(t *testing.T) {
 	writeFiles(t, shipDir(se, "search-api"), map[string]string{"x.go": "package x\n"})
 	s.Run("ship.refresh", nil)
 	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
-	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x\n\nAdds x."})
 	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
 	asked := 0
 	s.Registry().Hook(registry.Hook{Event: "ShipRaise", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
@@ -226,8 +226,8 @@ func TestShipRaiseHookStopsARaise(t *testing.T) {
 	}
 	s.ClickOn("Push + raise PR")
 	shipSettle(s, t, "the PR", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.PR != nil })
-	if got := hub.PRs("acme/search-api"); len(got) != 1 || got[0].Title != "feat: x" || got[0].Body != "## What\n\n## Why\n" {
-		t.Errorf("raised from the first commit and the template: %+v", got)
+	if got := hub.PRs("acme/search-api"); len(got) != 1 || got[0].Title != "feat: x" || got[0].Body != "Adds x.\n\n## What\n\n## Why\n" {
+		t.Errorf("raised from the first commit's message and the template: %+v", got)
 	}
 	// Edit PR once it's raised.
 	s.Run("ship.pr.open", registry.Args{"project": "search-api", "edit": true})

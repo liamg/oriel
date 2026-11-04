@@ -37,6 +37,7 @@ type Ship struct {
 	Conflicts []string     `json:"conflicts,omitempty"`
 	Commits   int          `json:"commits,omitempty"` // on the branch since its base
 	Unpushed  []ShipCommit `json:"unpushed,omitempty"`
+	First     ShipCommit   `json:"first,omitzero"` // the branch's own first commit, pushed or not
 	Pushed    bool         `json:"pushed,omitempty"`
 	Head      string       `json:"head,omitempty"`     // the commit checked out
 	Replaced  int          `json:"replaced,omitempty"` // commits on origin's branch a rebase rewrote: the next push replaces them
@@ -63,7 +64,12 @@ type ShipFile struct {
 type ShipCommit struct {
 	Hash    string `json:"hash"`
 	Subject string `json:"subject"`
+	Body    string `json:"body,omitempty"`
 	Author  string `json:"author,omitempty"`
+}
+
+func shipCommit(c gitx.Commit) ShipCommit {
+	return ShipCommit{Hash: c.Hash, Subject: c.Subject, Body: c.Body, Author: c.Author}
 }
 
 // ShipReq reads a session's projects; Fresh fetches first.
@@ -218,7 +224,10 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 		}
 	}
 	for _, c := range f.Unpushed {
-		s.Unpushed = append(s.Unpushed, ShipCommit{Hash: c.Hash, Subject: c.Subject, Author: c.Author})
+		s.Unpushed = append(s.Unpushed, shipCommit(c))
+	}
+	if n := len(f.Commits); n > 0 {
+		s.First = shipCommit(f.Commits[n-1])
 	}
 	if f.Base != "" {
 		if files, err := repo.ChangedFiles(ctx, f.Base); err == nil {

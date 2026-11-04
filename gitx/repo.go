@@ -213,6 +213,7 @@ func (r Repo) StagedFiles(ctx context.Context) ([]string, error) {
 // Commit is one commit, as a log line shows it.
 type Commit struct {
 	Hash, Author, Subject string
+	Body                  string // the message below the subject
 	When                  time.Time
 }
 
