@@ -30,7 +30,7 @@ const (
 	moveEvery  = time.Millisecond
 	probeP90   = 50 * time.Millisecond
 	probeMax   = 150 * time.Millisecond
-	sendBehind = 30 * time.Millisecond // how far a burst of moves may fall behind its schedule
+	sendBehind = 30 * time.Millisecond // how far the loop may fall behind a burst of moves
 )
 
 // lagRepo is a repo with enough files to fill the Explorer.
@@ -114,23 +114,31 @@ func topFill(f headless.Frame, p render.Point) render.Color {
 // lagRun is what a run of moves and probes measured.
 type lagRun struct {
 	probes []time.Duration
-	behind time.Duration // the furthest a burst of moves fell behind its schedule
+	behind time.Duration // the furthest the loop fell behind a burst of moves
+	late   time.Duration // the latest the sender itself woke
 }
 
-// sendMoves sends the pointer along path, one point every moveEvery, and says how far it fell behind: the loop not
-// taking moves as fast as they come.
-func sendMoves(r *apptest.Window, path []render.Point, buttons render.Buttons) time.Duration {
+// sendMoves sends the pointer along path, one point every moveEvery, and says how far the loop fell behind: the
+// moves sent that it hadn't taken yet, at moveEvery each, and any wait for room to send one. When the sender itself
+// wakes late (the machine), its schedule starts again from then rather than sending what it missed in a burst; how
+// late is the second result.
+func sendMoves(r *apptest.Window, path []render.Point, buttons render.Buttons) (behind, late time.Duration) {
 	start := time.Now()
-	var behind time.Duration
 	for i, p := range path {
 		due := start.Add(time.Duration(i) * moveEvery)
 		if d := time.Until(due); d > 0 {
 			time.Sleep(d)
 		}
+		if l := time.Since(due); l > moveEvery {
+			late = max(late, l)
+			start = start.Add(l)
+		}
+		queued := time.Duration(r.Win.Pending()) * moveEvery
+		sent := time.Now()
 		r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p, Buttons: buttons})
-		behind = max(behind, time.Since(due))
+		behind = max(behind, queued+time.Since(sent))
 	}
-	return behind
+	return behind, late
 }
 
 // probeAt jumps the pointer to p, and times it until a frame draws something else under p.
@@ -172,7 +180,8 @@ func measureLag(r *apptest.Window, name string, noise []render.Point, targets []
 	r.T.Helper()
 	var run lagRun
 	for i := range rounds {
-		run.behind = max(run.behind, sendMoves(r, noise, 0))
+		behind, late := sendMoves(r, noise, 0)
+		run.behind, run.late = max(run.behind, behind), max(run.late, late)
 		run.probes = append(run.probes, probeAt(r, targets[i%len(targets)]))
 	}
 	checkLag(r, name, run)
@@ -191,8 +200,8 @@ func checkLag(r *apptest.Window, name string, run lagRun) {
 		return d[len(d)/2]
 	}
 	first, last := median(run.probes[:third]), median(run.probes[len(run.probes)-third:])
-	r.T.Logf("%s: %d probes, p90 %v, worst %v, first third %v, last third %v; moves fell %v behind", name, len(run.probes),
-		p90, worst, first, last, run.behind)
+	r.T.Logf("%s: %d probes, p90 %v, worst %v, first third %v, last third %v; the loop fell %v behind moves, the sender woke %v late at worst",
+		name, len(run.probes), p90, worst, first, last, run.behind, run.late)
 	if p90 > probeP90 || worst > probeMax {
 		r.T.Errorf("%s: the frame showing what's under the pointer took %v (p90), %v at worst; the budget is %v, %v", name, p90, worst, probeP90, probeMax)
 	}
