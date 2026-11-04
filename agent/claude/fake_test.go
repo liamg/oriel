@@ -37,6 +37,8 @@ var (
 	recordedRevoked []byte
 	//go:embed testdata/signed-out-start.pty
 	recordedSignedOut []byte
+	//go:embed testdata/external-imports.pty
+	recordedImports []byte
 )
 
 type fake struct {
@@ -204,12 +206,16 @@ func (f *fake) poll(turns chan<- string) {
 
 // terminal answers what's typed into it: /login signs in, as claude's does once you're through its steps; /usage
 // reads the plan's windows; /exit quits. ORIEL_FAKE_RUNS gets a line as it starts, as /usage is typed and as it quits;
-// with ORIEL_FAKE_SIGNED_OUT=1 it starts on the signed-out screen. ORIEL_FAKE_DIALOG starts it under a dialog that
+// with ORIEL_FAKE_SIGNED_OUT=1 it starts on the signed-out screen, and with ORIEL_FAKE_IMPORTS=1 on the external
+// imports dialog. ORIEL_FAKE_DIALOG starts it under a dialog that
 // swallows what's typed.
 func (f *fake) terminal() {
 	note("run")
 	if os.Getenv("ORIEL_FAKE_SIGNED_OUT") == "1" {
 		os.Stdout.Write(recordedSignedOut)
+	}
+	if os.Getenv("ORIEL_FAKE_IMPORTS") == "1" {
+		os.Stdout.Write(recordedImports)
 	}
 	dialog := os.Getenv("ORIEL_FAKE_DIALOG")
 	if dialog != "" {

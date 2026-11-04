@@ -44,8 +44,10 @@ func settingsPath(env []string) string {
 	return filepath.Join(transcript.ConfigDir(env), "settings.json")
 }
 
-// trust marks dir as a trusted project, so claude started there doesn't stop at its "do you trust this folder?"
-// dialog, which nobody is at the PTY to answer. Claude keys projects by the resolved path, so that is trusted too.
+// trust marks dir as a trusted project, so claude started there doesn't stop at its "do you trust this folder?" or
+// "allow external CLAUDE.md file imports?" dialogs, which nobody is at the PTY to answer. The imports get the
+// dialog's default, No, unless the user answered already. Claude keys projects by the resolved path, so that is
+// trusted too.
 func trust(env []string, dir string) error {
 	dirs := []string{dir}
 	if real, err := filepath.EvalSymlinks(dir); err == nil && real != dir {
@@ -64,9 +66,13 @@ func trust(env []string, dir string) error {
 			}
 			if p["hasTrustDialogAccepted"] != true {
 				p["hasTrustDialogAccepted"] = true
-				projects[d] = p
 				changed = true
 			}
+			if p["hasClaudeMdExternalIncludesApproved"] != true && p["hasClaudeMdExternalIncludesWarningShown"] != true {
+				p["hasClaudeMdExternalIncludesWarningShown"] = true
+				changed = true
+			}
+			projects[d] = p
 		}
 		m["projects"] = projects
 		return changed

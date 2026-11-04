@@ -266,6 +266,34 @@ func TestTrustKeepsExistingState(t *testing.T) {
 	}
 }
 
+// Claude Code 2.1 asks about a CLAUDE.md importing files from outside the folder unless the project has an answer:
+// "if(r.hasClaudeMdExternalIncludesApproved||r.hasClaudeMdExternalIncludesWarningShown)return!1" (its bundle).
+// Nobody is at the PTY, so the dialog's own default, No, is the answer; one the user gave is kept.
+func TestTrustAnswersTheExternalImportsDialog(t *testing.T) {
+	env := []string{"CLAUDE_CONFIG_DIR=" + t.TempDir()}
+	fresh, approved := t.TempDir(), t.TempDir()
+	body := `{"projects": {"` + approved + `": {"hasClaudeMdExternalIncludesApproved": true, "hasClaudeMdExternalIncludesWarningShown": true}}}`
+	if err := os.WriteFile(statePath(env), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{fresh, approved} {
+		if err := trust(env, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+	b, _ := os.ReadFile(statePath(env))
+	var m struct{ Projects map[string]map[string]any }
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	if p := m.Projects[fresh]; p["hasClaudeMdExternalIncludesWarningShown"] != true || p["hasClaudeMdExternalIncludesApproved"] == true {
+		t.Errorf("a new project's dialog isn't answered No: %v", p)
+	}
+	if p := m.Projects[approved]; p["hasClaudeMdExternalIncludesApproved"] != true {
+		t.Errorf("the user's Yes was lost: %v", p)
+	}
+}
+
 func TestTrustUsesTheSessionsConfigDirAndTheResolvedPath(t *testing.T) {
 	cfg := t.TempDir()
 	env := []string{"CLAUDE_CONFIG_DIR=" + cfg}

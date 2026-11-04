@@ -136,9 +136,10 @@ func SandboxSettings(host, defaults map[string]any, helperFiles map[string]strin
 	return out
 }
 
-// SandboxState is the sandbox's .claude.json: first-run screens done and cwds trusted, since nobody is at the
-// terminal to click through them. Every notice its Claude Code shows once is marked seen (seen), whether or not the
-// host's user has seen it, and the host's own "seen it" flags come along too.
+// SandboxState is the sandbox's .claude.json: first-run screens done, cwds trusted and their external CLAUDE.md
+// imports left off, since nobody is at the terminal to click through them. Every notice its Claude Code shows once
+// is marked seen (seen), whether or not the host's user has seen it, and the host's own "seen it" flags come along
+// too.
 func SandboxState(cwds []string, host map[string]any, seen Seen) map[string]any {
 	out := map[string]any{}
 	for k, v := range host {
@@ -156,8 +157,9 @@ func SandboxState(cwds []string, host map[string]any, seen Seen) map[string]any 
 	projects := map[string]any{}
 	for _, d := range cwds {
 		projects[d] = map[string]any{
-			"hasTrustDialogAccepted":        true,
-			"hasCompletedProjectOnboarding": true,
+			"hasTrustDialogAccepted":                  true,
+			"hasCompletedProjectOnboarding":           true,
+			"hasClaudeMdExternalIncludesWarningShown": true,
 		}
 	}
 	for k, v := range map[string]any{

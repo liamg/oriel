@@ -105,6 +105,8 @@ func TestEventsCrossWhole(t *testing.T) {
 		agent.UsageUpdate{Usage: core.ProviderUsage{Provider: "plug", Account: "a", Plan: "Pro", Windows: []core.UsageWindow{{Name: "5h", Used: 0.5}}}},
 		agent.AuthExpired{Provider: "plug", Account: "a", Detail: "revoked", Terminal: "/login", Shell: "plug login"},
 		agent.AuthRestored{Provider: "plug", Account: "a"},
+		agent.Dialog{Title: "Allow it?", Shown: true},
+		agent.Dialog{},
 		agent.Exited{Err: "gone"},
 	}
 	for _, ev := range evs {

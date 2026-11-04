@@ -111,7 +111,10 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		if !working {
 			h.restart(ev.Why)
 		}
+	case agent.Dialog:
+		h.terminalDialog(ev)
 	case agent.Exited:
+		h.terminalDialog(agent.Dialog{})
 		if ev.Err != "" {
 			h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Text: "The agent exited: " + ev.Err, Time: now})
 		}

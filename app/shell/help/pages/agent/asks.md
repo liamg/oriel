@@ -52,6 +52,13 @@ machine's sign-in handed over afresh, as its copy may be one the machine has ren
 sign in from here says what to run in a terminal. Once you're signed in the cards go by themselves, and the sessions
 carry on; **Check again** (`c`) looks now.
 
+## Terminal
+
+The agent's own terminal shows a dialog that no hook passes on to Oriel, such as Claude's "Allow external CLAUDE.md
+file imports?", and the agent waits until someone answers it there. The card shows what the dialog asks. **Go to
+terminal** (`t`) opens the agent's raw terminal: answer the dialog with the arrow keys and `⏎`, or `Esc`. The card
+goes once you do.
+
 ## Security key {#key}
 
 A commit, push, fetch or rebase has waited five seconds: it's most likely waiting for a touch of your security key,

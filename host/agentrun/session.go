@@ -28,10 +28,11 @@ type session struct {
 	starting     bool
 	working      bool // a turn is running, or one was just asked for
 	interrupting bool
-	relogin      bool   // a turn stopped for a lost login: told to carry on once it's back
-	restartWhy   string // why the agent is restarted once its turn ends, before it's handed more
-	refused      bool   // the agent couldn't start for a lost login: started once it's back
-	loginRetried bool   // a sandboxed agent's lost sign-in was tried again with the host's, since its last turn that worked
+	relogin      bool       // a turn stopped for a lost login: told to carry on once it's back
+	restartWhy   string     // why the agent is restarted once its turn ends, before it's handed more
+	refused      bool       // the agent couldn't start for a lost login: started once it's back
+	loginRetried bool       // a sandboxed agent's lost sign-in was tried again with the host's, since its last turn that worked
+	dialog       *dialogAsk // the card for a dialog the agent's terminal shows
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
 	handing      map[string]bool // the comments of the first turn, handed over in the agent's start: its once it can answer

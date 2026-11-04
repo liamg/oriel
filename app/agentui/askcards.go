@@ -81,6 +81,8 @@ func (x *Console) askRow(se core.SessionState, a core.Ask) (title, sub string) {
 		return prov + " needs you to log in", "login"
 	case core.AskKey:
 		return "Touch your security key", a.Summary
+	case core.AskTerminal:
+		return prov + " waits on its terminal", a.Summary
 	}
 	return cmp.Or(a.Summary, string(a.Kind)), string(a.Kind)
 }
@@ -92,7 +94,7 @@ func askTone(k core.AskKind) theme.TokenID {
 		return tAskNetwork
 	case core.AskGateway:
 		return tAskGateway
-	case core.AskQuestion, core.AskLogin:
+	case core.AskQuestion, core.AskLogin, core.AskTerminal:
 		return tAskQuestion
 	case core.AskKey:
 		return tAskKey
@@ -166,6 +168,8 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 		x.keyCard(k, se, a)
 	case core.AskQuestion:
 		x.questionCard(k, se, a, st, prov)
+	case core.AskTerminal:
+		k.terminal(a, prov, kicker)
 	}
 	if x.detail == nil || x.detail.ask != a.ID {
 		k.action(widget.CardAction{Label: "Details"}, askAct{cmd: "agent.console.details", args: registry.Args{"item": ""}})
@@ -312,6 +316,16 @@ func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a c
 		k.o.Note = "run " + l.Shell + " in a terminal"
 	}
 	k.add("Check again", "c", !canLogIn(l), registry.Args{"decision": "recheck"})
+}
+
+func (k *askCardParts) terminal(a core.Ask, prov string, kicker bool) {
+	k.o.Title = prov + " waits on its terminal"
+	k.o.Detail = a.Summary
+	k.o.Note = "a dialog only its terminal answers"
+	if !kicker {
+		k.o.Kicker = "terminal"
+	}
+	k.action(widget.CardAction{Label: "Go to terminal", Key: "t", Primary: true}, askAct{cmd: "agent.terminal"})
 }
 
 func (x *Console) keyCard(k *askCardParts, se core.SessionState, a core.Ask) {

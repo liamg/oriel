@@ -521,6 +521,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 		s.cmds = append(s.cmds, waitOut{Kind: "submit", Text: strings.TrimSpace(spec.Prompt)})
 	}
 	s.term.watch = s.watchScreen
+	s.term.typed = s.typed
 	s.tail.answered = s.answered
 	if spec.Sandbox != nil {
 		s.keep = p.box.KeepLogins(func(ctx context.Context) { _ = p.readUsage(ctx) })

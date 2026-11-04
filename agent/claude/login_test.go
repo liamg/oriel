@@ -18,6 +18,10 @@ import (
 //   - not-logged-in.jsonl, signed-out-start.pty, signed-out-send.pty: claude run in a PTY of 200×50 with an empty
 //     CLAUDE_CONFIG_DIR: the record it wrote for a prompt sent with no login, and everything its screen showed from
 //     the start, and from the start through that send.
+//
+// external-imports.pty is Claude Code 2.1.318's: claude run in a PTY of 200×50 in a project whose CLAUDE.md imports
+// a file outside it, everything its screen showed from the start, then ↓ pressed once. The import's path is
+// /elsewhere/notes.md in place of the recording's own.
 
 // An API error in the log that says to run /login raises AuthExpired with what it said, and how to sign in.
 func TestAuthExpiredFromTheLog(t *testing.T) {

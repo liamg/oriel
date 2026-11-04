@@ -17,6 +17,9 @@ func TestSandboxStateMarksEveryNoticeSeen(t *testing.T) {
 			t.Errorf("%s = %v, want true", k, state[k])
 		}
 	}
+	if p := state["projects"].(map[string]any)["/w"].(map[string]any); p["hasClaudeMdExternalIncludesWarningShown"] != true {
+		t.Errorf("the external imports dialog isn't answered: %v", p)
+	}
 	if state["lastReleaseNotesSeen"] != "2.1.317" {
 		t.Errorf("lastReleaseNotesSeen = %v", state["lastReleaseNotesSeen"])
 	}

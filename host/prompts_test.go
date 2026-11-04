@@ -103,7 +103,9 @@ func TestNoNotesInTheUsersOwnDirectory(t *testing.T) {
 }
 
 // A workspace's agent keeps its memory in its repository's Claude Code memory directory, the one `claude` in the
-// checkout uses. With more than one project, the notes say where each project's memories go and load the others'.
+// checkout uses. With more than one project, the notes say where each project's memories go and to read the
+// others' indexes, without @-importing them: Claude Code asks about an import from outside the folder on its
+// terminal, where nobody is to answer.
 func TestWorkspaceMemoryIsTheRepositorys(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	r := newRig(t)
@@ -127,17 +129,17 @@ func TestWorkspaceMemoryIsTheRepositorys(t *testing.T) {
 	b, _ = os.ReadFile(filepath.Join(se.Dir, "AGENTS.md"))
 	notes := string(b)
 	if !strings.Contains(notes, "Read each of these memory indexes before you start") {
-		t.Errorf("notes don't say to read the indexes, for an agent that doesn't import them:\n%s", notes)
+		t.Errorf("notes don't say to read the indexes:\n%s", notes)
 	}
 	for _, p := range se.Projects {
 		if want := "- A memory about " + p.Name + " goes in `" + sandbox.MemoryDir(p.Repo) + "`."; !strings.Contains(notes, want) {
 			t.Errorf("notes haven't %q:\n%s", want, notes)
 		}
 	}
-	if want := "\n@" + filepath.Join(sandbox.MemoryDir(other.Dir), "MEMORY.md") + "\n"; !strings.Contains(notes, want) {
-		t.Errorf("notes don't import the second project's index %q:\n%s", want, notes)
+	if want := "\n- `" + filepath.Join(sandbox.MemoryDir(other.Dir), "MEMORY.md") + "`\n"; !strings.Contains(notes, want) {
+		t.Errorf("notes don't name the second project's index %q:\n%s", want, notes)
 	}
-	if strings.Contains(notes, "@"+filepath.Join(sandbox.MemoryDir(r.repo.Dir), "MEMORY.md")) {
-		t.Errorf("notes import the primary's own index:\n%s", notes)
+	if strings.Contains(notes, "@/") || strings.Contains(notes, filepath.Join(sandbox.MemoryDir(r.repo.Dir), "MEMORY.md")) {
+		t.Errorf("notes import an index, or name the primary's own:\n%s", notes)
 	}
 }
