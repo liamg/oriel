@@ -90,6 +90,7 @@ func showDiff(app *apptest.Window) {
 	app.WaitText("CHANGED 2")
 	app.ClickText("round.go")
 	app.WaitFrame("the diff", func(s string) bool { return apptest.HasAll(s, "CHANGES", "func roundHalfEven", "MARK REVIEWED") })
+	app.WaitGit() // the status still coming in builds the diff again, under a click
 }
 
 // Opening a changed file opens its branch diff, not the plain file: a split diff with intraline highlights. The diff

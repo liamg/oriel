@@ -606,3 +606,21 @@ func (w *Window) ProjectDir(id core.SessionID) string {
 	p, _ := se.Snapshot().Primary()
 	return p.Dir
 }
+
+// WaitGit waits for git's work, and every tree's read, to be done, as someone waits for a busy view to settle before
+// clicking in it: a status coming in builds the views on it again, and a click under way when it does is lost.
+func (w *Window) WaitGit() {
+	w.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	for {
+		var busy bool
+		w.Do(func() error { busy = kit.GitOf(w.Host).Busy(); return nil })
+		if !busy {
+			return
+		}
+		if time.Now().After(deadline) {
+			w.T.Fatal("git's work never finished")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
