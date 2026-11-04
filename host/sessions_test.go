@@ -766,3 +766,23 @@ func TestAnArchivedHandOverIsntResumed(t *testing.T) {
 		t.Errorf("resumed %d times", n)
 	}
 }
+
+// A tab closed stays closed after a restart: an archived session's tab doesn't come back, nor put it in front.
+func TestAClosedTabStaysClosedAfterARestart(t *testing.T) {
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	st := r.w.Store()
+	if err := st.Apply(core.SessionFocused{ID: id}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Apply(core.TabClosed{ID: id}); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.w.Archive(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	r.restart()
+	if s := r.w.Store().State(); len(s.Tabs) != 0 || s.Focus != "" {
+		t.Errorf("after a restart: tabs %v, in front %q", s.Tabs, s.Focus)
+	}
+}

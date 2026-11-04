@@ -169,7 +169,7 @@ type TabClosed struct {
 	ID SessionID `json:"id"`
 }
 
-func (e TabClosed) Scope() SessionID { return "" }
+func (e TabClosed) Scope() SessionID { return e.ID }
 
 func (e TabClosed) Apply(s *State) error {
 	if !slices.Contains(s.Tabs, e.ID) {
