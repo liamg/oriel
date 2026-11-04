@@ -148,6 +148,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `editor.modelines` | false | app | |
 | `editor.threads` | `shown`: files open with their threads between the lines; `hidden`, behind gutter bubbles | app | |
 | `files.generated` | false | app | |
+| `git.gutter.base` | `branch`: the gutter marks a file's changes against where its branch left the base; `head`, the last commit; `index`, what's staged | app | |
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | |
 | `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | |

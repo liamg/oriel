@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 )
@@ -41,6 +42,34 @@ func TestGutterHunks(t *testing.T) {
 	settle(s)
 	if got, want := signsAt(s), "added@1 modified@4 added@12 added@13 deleted@22"; got != want {
 		t.Errorf("after an unsaved line at the top, signs %q, want %q", got, want)
+	}
+}
+
+// The gutter signs a branch's whole change, against where it left its base: committed, staged and unstaged alike,
+// and a renamed file against its old name (git.gutter.base); "head" signs what isn't committed, "index" what isn't
+// staged.
+// ref: oracle git (git diff -U0 -M $(git merge-base HEAD main); git diff -U0 HEAD; git diff -U0)
+func TestGutterSignsTheBranch(t *testing.T) {
+	s, _ := apptest.BranchSignsScene(t, "f.txt")
+	if got, want := signsAt(s), "modified@3 added@11 added@12 deleted@21"; got != want {
+		t.Errorf("against the base, signs %q, want %q", got, want)
+	}
+	for _, c := range []struct{ base, want string }{
+		{"head", "added@11 added@12 deleted@21"},
+		{"index", "deleted@21"},
+		{"branch", "modified@3 added@11 added@12 deleted@21"},
+	} {
+		if err := s.Registry().Options().Set("git.gutter.base", registry.LayerUser, registry.At{}, c.base); err != nil {
+			t.Fatal(err)
+		}
+		settle(s)
+		if got := signsAt(s); got != c.want {
+			t.Errorf("against %s, signs %q, want %q", c.base, got, c.want)
+		}
+	}
+	renamed, _ := apptest.BranchSignsScene(t, "new.txt")
+	if got, want := signsAt(renamed), "modified@5"; got != want {
+		t.Errorf("a file renamed on the branch signs %q, want %q", got, want)
 	}
 }
 
@@ -92,8 +121,15 @@ func TestStageHunkFromTheEditor(t *testing.T) {
 	if got := r.Git("show", ":f.txt"); got != want {
 		t.Errorf("the index after ␣hs:\n%s", got)
 	}
+	if got := signsAt(s); got != "modified@3 added@11 added@12 deleted@21" {
+		t.Errorf("against the base, signs after staging %q: a staged hunk is still the branch's", got)
+	}
+	if err := s.Registry().Options().Set("git.gutter.base", registry.LayerUser, registry.At{}, "index"); err != nil {
+		t.Fatal(err)
+	}
+	settle(s)
 	if got := signsAt(s); got != "modified@3 deleted@21" {
-		t.Errorf("signs after staging %q", got)
+		t.Errorf("against the index, signs after staging %q", got)
 	}
 	s.Run("git.hunk.unstage", nil)
 	settle(s)

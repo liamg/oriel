@@ -34,6 +34,29 @@ func SignsScene(t *testing.T) (*Scene, *gittest.Repo) {
 	return s, r
 }
 
+// BranchSignsScene is f.txt's 30 lines and old.txt's 10 on main, then a branch that commits line 3 changed and
+// renames old.txt to new.txt with its line 5 changed, stages two lines added after line 10 and leaves line 20
+// deleted unstaged; the editor opens file (f.txt or new.txt).
+func BranchSignsScene(t *testing.T, file string) (*Scene, *gittest.Repo) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"f.txt": gittest.Lines(30), "old.txt": gittest.Lines(10)})
+	r.Commit("Ada", "thirty lines")
+	r.Git("checkout", "-q", "-b", "work")
+	work := strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1)
+	r.Git("mv", "old.txt", "new.txt")
+	r.Write(map[string]string{"f.txt": work, "new.txt": strings.Replace(gittest.Lines(10), "line 5\n", "five\n", 1)})
+	r.Commit("Ada", "line three, and new.txt")
+	work = strings.Replace(work, "line 10\n", "line 10\nnew a\nnew b\n", 1)
+	r.Write(map[string]string{"f.txt": work})
+	r.Git("add", "f.txt")
+	r.Write(map[string]string{"f.txt": strings.Replace(work, "line 20\n", "", 1)})
+	s := New(t, Options{WorkDir: r.Dir})
+	s.WaitGit()
+	s.Run("editor.open", registry.Args{"path": filepath.Join(r.Dir, file)})
+	s.SettleSigns()
+	return s, r
+}
+
 // SettleSigns frames until the gutter's and blame's work off the loop is done.
 func (s *Scene) SettleSigns() {
 	for range 3 {

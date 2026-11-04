@@ -28,8 +28,8 @@ var (
 	tBlameOther = theme.Declare("git.blame.other", "fg.ghost")
 )
 
-// GitSigns is git in the editor: the gutter's hunks against the index, staging, unstaging and
-// resetting the hunk under the cursor, ]c and [c between hunks, a preview of what a hunk replaced, and the cursor
+// GitSigns is git in the editor: the gutter's hunks against the branch's base (git.gutter.base), staging,
+// unstaging and resetting the hunk under the cursor against the index, ]c and [c between hunks, a preview of what a hunk replaced, and the cursor
 // line's blame by author kind.
 type GitSigns struct {
 	kit.Disposer
@@ -38,9 +38,10 @@ type GitSigns struct {
 	Now    func() time.Time // the clock blame's ages are by
 
 	mu       sync.Mutex
-	bases    map[string]*gitBase // the index's version of each file, by repo path
+	bases    map[gitSource]*gitBase // each file as a hunk's source has it
+	gens     int                    // the last base read's gen
 	blames   map[string]*gitBlame
-	hunks    map[*text.Buffer]*bufHunks
+	hunks    map[bufAgainst]*bufHunks
 	previews map[string]int // the hunk previewed in each file, by its new start
 	busy     sync.WaitGroup
 }
@@ -50,6 +51,15 @@ type gitBase struct {
 	loaded  bool
 	gen     int
 	loading bool
+}
+
+// gitSource is where a file's hunks are from: the index when rev is "", else path at rev.
+type gitSource struct{ rev, path string }
+
+// bufAgainst is a buffer's hunks for the gutter, or against the index for staging.
+type bufAgainst struct {
+	buf   *text.Buffer
+	index bool
 }
 
 type gitBlame struct {
@@ -62,7 +72,7 @@ type gitBlame struct {
 // bufHunks are a buffer's last hunks, diffed at version against base gen; diffing is set while a diff runs.
 type bufHunks struct {
 	version uint64
-	gen     int
+	gen     int // unique to each base read
 	hunks   []gitx.Hunk
 	diffed  bool
 	diffing bool
@@ -73,9 +83,7 @@ func (g *GitSigns) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gits
 // stale has the bases and blames read again: the window's work tree changed, or is another.
 func (g *GitSigns) stale() {
 	g.mu.Lock()
-	for _, b := range g.bases {
-		b.loaded = false
-	}
+	clear(g.bases)
 	for _, b := range g.blames {
 		b.loaded = false
 	}
@@ -88,19 +96,22 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	if g.Now == nil {
 		g.Now = time.Now
 	}
-	g.bases, g.blames, g.hunks, g.previews = map[string]*gitBase{}, map[string]*gitBlame{}, map[*text.Buffer]*bufHunks{}, map[string]int{}
+	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[string]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[string]int{}
+	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"branch", "head", "index"},
+		Default: "branch", Scopes: registry.ScopeUser | registry.ScopeProject,
+		Help: "What the gutter marks a file's changes against: where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
 	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(string, []string) { g.stale() })))
 	for _, c := range []registry.Command{
-		{ID: "git.hunk.stage", Title: "Stage the hunk under the cursor", Run: g.cmd(g.stage)},
-		{ID: "git.hunk.unstage", Title: "Unstage the staged hunk at the cursor", Run: g.cmd(g.unstage)},
-		{ID: "git.hunk.reset", Title: "Put the hunk under the cursor back as the index has it", Run: g.cmd(g.reset)},
-		{ID: "git.hunk.preview", Title: "Show what the hunk under the cursor replaced (toggle)", Run: g.cmd(g.preview)},
-		{ID: "git.hunk.next", Title: "Go to the next hunk", Run: g.cmd(func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+		{ID: "git.hunk.stage", Title: "Stage the hunk under the cursor", Run: g.cmd(true, g.stage)},
+		{ID: "git.hunk.unstage", Title: "Unstage the staged hunk at the cursor", Run: g.cmd(true, g.unstage)},
+		{ID: "git.hunk.reset", Title: "Put the hunk under the cursor back as the index has it", Run: g.cmd(true, g.reset)},
+		{ID: "git.hunk.preview", Title: "Show what the hunk under the cursor replaced (toggle)", Run: g.cmd(false, g.preview)},
+		{ID: "git.hunk.next", Title: "Go to the next hunk", Run: g.cmd(false, func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 			return g.jump(x, p, hs, 1)
 		})},
-		{ID: "git.hunk.prev", Title: "Go to the previous hunk", Run: g.cmd(func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
+		{ID: "git.hunk.prev", Title: "Go to the previous hunk", Run: g.cmd(false, func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error {
 			return g.jump(x, p, hs, -1)
 		})},
 		{ID: "git.blame.toggle", Title: "Show or hide the cursor line's blame", Run: func(registry.Ctx, registry.Args) error {
@@ -160,40 +171,50 @@ func (g *GitSigns) fileOf(path string) (gitFile, bool) {
 	return gitFile{rel: rel, abs: path}, true
 }
 
-// hunksOf are the hunks from the index's version of f to buf's text as it would be written, or none while the
-// index's is read. With now, they're diffed here when out of date; otherwise the diff runs off the loop, one at a
-// time per buffer, and the last hunks show until it lands.
-func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte, now bool) []gitx.Hunk {
+// source is where the gutter's hunks of f are from, as git.gutter.base has it, or the index's for staging; not
+// ok until the tree's status is read.
+func (g *GitSigns) source(f gitFile, index bool) (gitSource, bool) {
+	base, _, _ := g.h.Options().Get("git.gutter.base", g.h.Here())
+	if index || base == "index" {
+		return gitSource{path: f.rel}, true
+	}
+	st := kit.GitOf(g.h).Tree("").State()
+	if st == nil {
+		return gitSource{}, false
+	}
+	if base == "head" {
+		return gitSource{rev: cmp.Or(st.Head, emptyRev), path: f.rel}, true
+	}
+	path := f.rel
+	if fs, ok := st.File(f.rel); ok && fs.Old != "" {
+		path = fs.Old
+	}
+	return gitSource{rev: cmp.Or(st.BaseHash, emptyRev), path: path}, true
+}
+
+// emptyRev stands for the base of a repo with no commits, which has no files.
+const emptyRev = "-"
+
+// hunksOf are the hunks to buf's text as it would be written from f as the gutter's source has it (the index's
+// with index), or none while that's read. With now, they're diffed here when out of date; otherwise the diff runs
+// off the loop, one at a time per buffer, and the last hunks show until it lands.
+func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte, now, index bool) []gitx.Hunk {
+	src, ok := g.source(f, index)
+	if !ok {
+		return nil
+	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	b, ok := g.bases[f.rel]
-	if !ok {
-		b = &gitBase{}
-		g.bases[f.rel] = b
-	}
+	b := g.baseOf(src)
 	if !b.loaded {
-		if !b.loading {
-			b.loading = true
-			g.busy.Add(1)
-			go func() {
-				defer g.busy.Done()
-				data, _ := g.repo().IndexFile(context.Background(), f.rel)
-				g.h.Do(func() {
-					g.mu.Lock()
-					b.data, b.loaded, b.loading = data, true, false
-					b.gen++
-					g.mu.Unlock()
-					g.h.DecorationsChanged("git.hunks")
-				})
-			}()
-		}
 		return nil
 	}
 	version := buf.Snapshot().Version()
-	bh := g.hunks[buf]
+	key := bufAgainst{buf: buf, index: index}
+	bh := g.hunks[key]
 	if bh == nil {
 		bh = &bufHunks{}
-		g.hunks[buf] = bh
+		g.hunks[key] = bh
 	}
 	switch {
 	case bh.diffed && bh.version == version && bh.gen == b.gen:
@@ -209,7 +230,7 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 			g.h.Do(func() {
 				g.mu.Lock()
 				bh.diffing = false
-				if g.hunks[buf] == bh && !(bh.diffed && bh.version > version) {
+				if g.hunks[key] == bh && !(bh.diffed && bh.version > version) {
 					bh.version, bh.gen, bh.hunks, bh.diffed = version, gen, hs, true
 				}
 				g.mu.Unlock()
@@ -218,6 +239,39 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 		}()
 	}
 	return bh.hunks
+}
+
+// baseOf is the file as src has it, read off the loop the first time it's asked for. g.mu is held.
+func (g *GitSigns) baseOf(src gitSource) *gitBase {
+	b, ok := g.bases[src]
+	if !ok {
+		b = &gitBase{}
+		g.bases[src] = b
+	}
+	if b.loaded || b.loading {
+		return b
+	}
+	b.loading = true
+	g.busy.Add(1)
+	go func() {
+		defer g.busy.Done()
+		var data []byte
+		switch src.rev {
+		case "":
+			data, _ = g.repo().IndexFile(context.Background(), src.path)
+		case emptyRev:
+		default:
+			data, _ = g.repo().FileAt(context.Background(), src.rev, src.path)
+		}
+		g.h.Do(func() {
+			g.mu.Lock()
+			g.gens++
+			b.data, b.loaded, b.loading, b.gen = data, true, false, g.gens
+			g.mu.Unlock()
+			g.h.DecorationsChanged("git.hunks")
+		})
+	}()
+	return b
 }
 
 // signLine is the 0-based line a hunk's sign starts on: a deletion's is the line before it.
@@ -236,8 +290,9 @@ func (g *GitSigns) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 		return nil
 	}
 	var out []uireg.Decoration
-	hs := g.hunksOf(f, ctx.Buffer, ctx.FileBytes, false)
+	hs := g.hunksOf(f, ctx.Buffer, ctx.FileBytes, false, false)
 	g.mu.Lock()
+	g.baseOf(gitSource{path: f.rel}) // the index's, ready for staging and resetting hunks
 	previewed, previewing := g.previews[f.rel]
 	g.mu.Unlock()
 	for _, h := range hs {
@@ -272,13 +327,14 @@ func (g *GitSigns) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 // goes.
 func (g *GitSigns) decorationKey(ctx uireg.DecorationCtx) any {
 	type blameAt struct {
-		on   any
-		here bool
-		mode string
-		line int
+		on, base any
+		here     bool
+		mode     string
+		line     int
 	}
 	k := blameAt{}
 	k.on, _, _ = g.h.Options().Get("git.blame.inline", g.h.Here())
+	k.base, _, _ = g.h.Options().Get("git.gutter.base", g.h.Here())
 	if x := g.Editor; x.e != nil {
 		if p := x.current(); p.Buffer() == ctx.Buffer {
 			k.here, k.mode, k.line = true, x.e.Mode(), p.Cursor().Line
@@ -357,8 +413,9 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 	return uireg.Decoration{Kind: uireg.VirtualText, Line: line, Text: s, Style: style, Priority: -1}, true
 }
 
-// cmd runs fn on the current editor window's file and hunks; outside a repo it says so.
-func (g *GitSigns) cmd(fn func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error) func(registry.Ctx, registry.Args) error {
+// cmd runs fn on the current editor window's file and its hunks, the gutter's or with index the index's; outside a
+// repo it says so.
+func (g *GitSigns) cmd(index bool, fn func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error) func(registry.Ctx, registry.Args) error {
 	return func(registry.Ctx, registry.Args) error {
 		x := g.Editor
 		if x.e == nil {
@@ -369,7 +426,7 @@ func (g *GitSigns) cmd(fn func(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk)
 		if !ok {
 			return fmt.Errorf("%s isn't in a git repository", cmp.Or(p.Name(), "[No Name]"))
 		}
-		return fn(x, p, f, g.hunksOf(f, p.Buffer(), p.FileBytes, true))
+		return fn(x, p, f, g.hunksOf(f, p.Buffer(), p.FileBytes, true, index))
 	}
 }
 
