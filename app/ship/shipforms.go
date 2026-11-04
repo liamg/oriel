@@ -125,7 +125,7 @@ func (x *Ship) prForm(id core.SessionID, s shipRead) *prForm {
 }
 
 // prDefaults are a PR's title and body before anything's typed: the open PR's, else the agent's draft, else the first
-// commit's subject and the repo's template.
+// commit's subject, and its body above the repo's template.
 func prDefaults(s shipRead) (title, body string) {
 	switch {
 	case s.PR.Open():
@@ -133,10 +133,14 @@ func prDefaults(s shipRead) (title, body string) {
 	case !s.PRDraft.Empty():
 		return s.PRDraft.Title, s.PRDraft.Body
 	}
-	if len(s.Unpushed) > 0 {
-		title = s.Unpushed[len(s.Unpushed)-1].Subject
+	first := s.First
+	if first.Body == "" {
+		return first.Subject, s.Template
 	}
-	return title, s.Template
+	if s.Template == "" {
+		return first.Subject, first.Body
+	}
+	return first.Subject, first.Body + "\n\n" + s.Template
 }
 
 // reviewersOf are who a project's PR asks: the CODEOWNERS of its change and those added, less those taken off.

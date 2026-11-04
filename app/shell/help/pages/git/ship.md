@@ -73,7 +73,7 @@ someone else pushed to the branch since, the push is refused and nothing of thei
 
 ## Raise PR {#raise}
 
-**Raise PR…** opens a main tab: the title, the body (the agent's draft, else the repo's template) with a preview,
+**Raise PR…** opens a main tab: the title, the body (the agent's draft, else the first commit's message and the repo's template) with a preview,
 reviewers (CODEOWNERS of the change first; add or take off any), and how it links to the session's other PRs. **Push +
 raise PR** pushes and raises it, **Raise as draft** raises it as a draft, **Save draft** keeps what's written. Once
 it's raised the tab shows the PR itself (below); **Edit PR** there brings the form back, **Update PR** saves it and

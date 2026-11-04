@@ -65,14 +65,14 @@ func TestFlightReadsEachStep(t *testing.T) {
 		t.Fatalf("uncommitted = %q, want %q", got, want)
 	}
 
-	if err := r.Commit(ctx, "feat: take", "limiter.go"); err != nil {
+	if err := r.Commit(ctx, "feat: take\n\nTakes one.\nThen another.", "limiter.go"); err != nil {
 		t.Fatal(err)
 	}
 	f, _ = r.Flight(ctx, "main")
 	if len(f.Uncommitted) != 1 || f.Uncommitted[0].Path != "new.go" {
 		t.Fatalf("committing one path left %+v", f.Uncommitted)
 	}
-	if len(f.Commits) != 1 || f.Commits[0].Subject != "feat: take" || len(f.Unpushed) != 1 || f.Pushed {
+	if len(f.Commits) != 1 || f.Commits[0].Subject != "feat: take" || f.Commits[0].Body != "Takes one.\nThen another." || len(f.Unpushed) != 1 || f.Pushed {
 		t.Fatalf("one commit, not pushed: %+v", f)
 	}
 

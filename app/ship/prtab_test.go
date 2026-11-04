@@ -174,3 +174,25 @@ func TestPROverviewSnapshot(t *testing.T) {
 		t.Errorf("Open didn't open the request: %+v", s.Host().Layout().Visible())
 	}
 }
+
+// With no agent draft, Raise PR starts from the branch's first commit, pushed or not: its subject is the title and
+// its body sits above the template.
+func TestPRFormStartsFromThePushedCommit(t *testing.T) {
+	s, _, hub, se, _ := shipScene(t)
+	x := shipOf(s)
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"x.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x\n\nAdds x."})
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
+	s.Run("ship.push", registry.Args{"project": "search-api"})
+	shipSettle(s, t, "the push", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Pushed && len(sh.Unpushed) == 0 })
+
+	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
+	s.Until("the Raise PR tab", func() bool { return strings.Contains(s.Text(), "RAISE PR") })
+	s.ClickOn("Push + raise PR")
+	shipSettle(s, t, "the PR", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.PR != nil })
+	if got := hub.PRs("acme/search-api"); len(got) != 1 || got[0].Title != "feat: x" || got[0].Body != "Adds x.\n\n## What\n\n## Why\n" {
+		t.Errorf("raised from the pushed commit's message and the template: %+v", got)
+	}
+}
