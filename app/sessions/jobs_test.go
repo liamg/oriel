@@ -38,7 +38,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	x := jobsOf(s)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Press("<D-J>")
 	if !x.Open() {
 		t.Fatal("⌘⇧J didn't open the Jobs page")
@@ -89,7 +89,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	s.Click(apptest.Centre(s.Within("Runs", "Delete").Bounds), 0)
 	s.Frame()
 	s.Click(apptest.Centre(s.Within("Runs", "Sure?").Bounds), 0)
-	rig.WaitState(t, s.Store(), "the run deleted", func(st core.State) bool { _, ok := st.Session(se.ID); return !ok })
+	s.UntilState("the run deleted", func(st core.State) bool { _, ok := st.Session(se.ID); return !ok })
 	if _, err := os.Stat(se.Dir); err == nil {
 		t.Error("the run's workspace is still there")
 	}
@@ -105,12 +105,14 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "**Blocked:** " + question})
 	s.Until("the blocked row", func() bool { return strings.Contains(s.Text(), "BLOCKED") })
 	s.Click(apptest.Centre(s.Within("Runs", "Open").Bounds), 0)
-	rig.WaitState(t, s.Store(), "the run in front", func(st core.State) bool { return st.Focus == se.ID })
+	s.UntilState("the run in front", func(st core.State) bool { return st.Focus == se.ID })
+	s.Until("the window on the run's directory, as it follows it", s.Reopen)
 	if x.Open() {
 		t.Error("Open left the page over the session")
 	}
 	s.Run("view.open", registry.Args{"id": kit.RequestsView, "place": "dock", "edge": "left", "title": "Requests"})
-	s.Until("the question in Requests", func() bool { return strings.Contains(s.Text(), question) })
+	// In full, as the dock beside the run's own views cuts it short.
+	s.Until("the question in Requests", func() bool { return strings.Contains(s.FullText(), question) })
 	blocked, _ := s.Store().State().Session(se.ID)
 	if th := blocked.Threads()[0]; !th.Open() || th.Busy || !th.AgentAnswered() || th.Btw {
 		t.Errorf("the blocked run's request doesn't wait on you: %+v", th)
@@ -136,7 +138,7 @@ func TestSaveAsJobFromTheLauncher(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	x := jobsOf(s)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("session.new", registry.Args{"prompt": "Draft this week's changelog from the PRs merged since Monday."})
 	l := launcherOf(s)
 	s.Until("the launcher's agents", func() bool { return l.Provider() != "" })
@@ -168,7 +170,7 @@ func TestJobsEntryPoints(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	x := jobsOf(s)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Frame()
 	if !s.Registry().Available("jobs.open", nil) || s.Node("Jobs").Disabled {
 		t.Error("the sidebar's Jobs is still dimmed")
@@ -218,7 +220,7 @@ func jobsScene(t *testing.T) (*apptest.Scene, *rig.Jobs, *sessions.Jobs) {
 	x := jobsOf(s)
 	x.SetClock(func() time.Time { return s.Now }, time.UTC)
 	s.StatsClock(func() time.Time { return s.Now }, time.UTC)
-	st := rig.WaitState(t, s.Store(), "the runs", func(st core.State) bool { return !st.Machine.Sampled.IsZero() && len(st.Sessions) == 12 })
+	st := s.UntilState("the runs", func(st core.State) bool { return !st.Machine.Sampled.IsZero() && len(st.Sessions) == 12 })
 	for _, se := range st.Sessions {
 		if host.RunOf(se).Status == host.RunRunning {
 			s.Store().Apply(core.SessionFocused{ID: se.ID})
@@ -274,7 +276,7 @@ func TestJobsPageSnapshots(t *testing.T) {
 func TestPagesReplaceEachOther(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	x := jobsOf(s)
 	pages := []struct {
 		name string
@@ -365,7 +367,7 @@ func TestASkippedRunShowsInTheList(t *testing.T) {
 	s.Now = rig.StatsNow
 	x := jobsOf(s)
 	x.SetClock(func() time.Time { return s.Now }, time.UTC)
-	rig.WaitState(t, s.Store(), "the run", func(st core.State) bool { _, ok := jobRun(st, j.Name); return ok })
+	s.UntilState("the run", func(st core.State) bool { _, ok := jobRun(st, j.Name); return ok })
 	s.Run("jobs.open", nil)
 	settleJobs(s, x)
 	s.Run("jobs.open", registry.Args{"job": j.Name})
@@ -380,7 +382,7 @@ func TestTheJobPromptTakesLines(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	x := jobsOf(s)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("jobs.new", nil)
 	s.Until("the agents", func() bool { return x.FormAgents().Phase == widget.Ready })
 	s.TypeInto("Prompt", "Sweep stale deps.")
@@ -402,7 +404,7 @@ func TestTheJobPromptTakesLines(t *testing.T) {
 func TestTheLauncherPromptTakesLines(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := s.Host().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil { // no sandbox here
 		t.Fatal(err)
 	}
@@ -418,7 +420,7 @@ func TestTheLauncherPromptTakesLines(t *testing.T) {
 	if a := lw.Fake.WaitStarted(t); a == nil {
 		t.Fatal("⌘⏎ didn't start it")
 	}
-	rig.WaitState(t, s.Store(), "the session", func(st core.State) bool {
+	s.UntilState("the session", func(st core.State) bool {
 		return len(st.Sessions) == 1 && st.Sessions[0].Prompt == "notes\nx"
 	})
 }

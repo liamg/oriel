@@ -55,7 +55,7 @@ func TestAgentDebuggerTools(t *testing.T) {
 	lw := rig.NewHost(t)
 	s, main, finish := debugSceneOn(t, "testdata/dap/agent.jsonl", apptest.Connect(lw.W))
 	x := debugOf(s)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo})
 	var a *agenttest.FakeSession
 	s.Until("the agent", func() bool {

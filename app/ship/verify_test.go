@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
@@ -196,7 +195,7 @@ func TestVerifyQuiz(t *testing.T) {
 			t.Errorf("the PR's body has no %q:\n%s", want, body)
 		}
 	}
-	got := rig.WaitState(t, s.Store(), "the verification recorded", func(st core.State) bool {
+	got := s.UntilState("the verification recorded", func(st core.State) bool {
 		se, _ := st.Session(se.ID)
 		_, ok := se.Snapshot().Verification()
 		return ok

@@ -3,7 +3,6 @@ package review_test
 import (
 	"context"
 	"fmt"
-	"github.com/liamg/oriel/app/kit"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/app/kit"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -54,7 +55,7 @@ func reviewScene(t *testing.T) (*apptest.Scene, *rig.Host, *ghtest.Server, map[s
 		apptest.Connect(lw.W)(cfg)
 		cfg.StateDir = state // the layout and what plugins keep, as a window's are
 	}})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := s.Registry().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +269,7 @@ func TestReviewsStartAndContinue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rig.WaitState(t, s.Store(), "the review session", func(st core.State) bool { _, ok := st.Session(id); return ok })
+	s.UntilState("the review session", func(st core.State) bool { _, ok := st.Session(id); return ok })
 	s.Run("reviews.open", nil)
 	s.Until("reviewing", func() bool { return strings.Contains(s.Text(), "REVIEWING") })
 	s.ClickText("Rate-limit the search endpoint per API key")
@@ -280,8 +281,7 @@ func TestReviewsStartAndContinue(t *testing.T) {
 		t.Error("a request with a session still counts as waiting")
 	}
 	s.Press("<CR>")
-	s.Frame()
-	rig.WaitState(t, s.Store(), "the review in front", func(st core.State) bool { return st.Focus == id })
+	s.UntilState("the review in front", func(st core.State) bool { return st.Focus == id }) // drawing, as the window does
 	if x.PageOpen() {
 		t.Error("the page stayed open over the session")
 	}
@@ -298,7 +298,7 @@ func TestReviewsNoticeOnANewAsk(t *testing.T) {
 	}
 	pr := hub.AddPR("acme/gateway", gh.PR{Title: "Drop the legacy v1 webhooks", Author: "rlopez", Reviewers: []string{"you"}})
 	<-x.Fresh(kit.SitesOf(s.Registry()).ReviewSources()[0])
-	rig.WaitState(t, s.Store(), "the notice", func(st core.State) bool {
+	s.UntilState("the notice", func(st core.State) bool {
 		for _, n := range st.Notifications {
 			if n.Text == "rlopez asked you to review gateway#"+strconv.Itoa(pr.Number) {
 				return true

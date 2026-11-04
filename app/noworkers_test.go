@@ -13,7 +13,6 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 )
@@ -27,7 +26,7 @@ func TestNoWorkerInAnyUI(t *testing.T) {
 		Provider: "fake", Repos: []core.RepoID{core.RepoID(lw.Repo)}}); err != nil {
 		t.Fatal(err)
 	}
-	rig.WaitState(t, s.Store(), "the session", func(st core.State) bool { _, ok := st.Session("rounding"); return ok })
+	s.UntilState("the session", func(st core.State) bool { _, ok := st.Session("rounding"); return ok })
 	check := func(where, text string) {
 		t.Helper()
 		text = strings.ReplaceAll(text, filepath.Dir(lw.Repo), "") // the test's own directory, as the launcher lists the repo

@@ -268,7 +268,7 @@ func TestLauncherSnapshot(t *testing.T) {
 		}
 	}
 	s.Now = apptest.At(14, 30, 0)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	ago := func(h int) time.Time { return s.Now.Add(-time.Duration(h) * time.Hour) }
 	for _, ev := range []core.Event{
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Plan: "max plan", Windows: []core.UsageWindow{{Name: "5h window", Used: .38}, {Name: "wk", Used: .71}}}},
