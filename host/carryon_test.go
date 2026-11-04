@@ -104,11 +104,27 @@ func TestAResumedAgentCarriesOnWithWorkOwed(t *testing.T) {
 	r.agent().NoneSent(t)
 }
 
+// delivered waits for the host to mark what the agent was sent as delivered: a reply on a thread with a comment it
+// hasn't had is refused.
+func delivered(r *rig, id core.SessionID) core.SessionState {
+	r.t.Helper()
+	return r.eventually(id, "the agent's batch delivered", func(se core.SessionState) bool {
+		for _, t := range se.Threads {
+			for _, c := range t.Comments {
+				if t.WaitsOnAgent() && c.Author == core.AuthorYou && !c.Delivered {
+					return false
+				}
+			}
+		}
+		return true
+	})
+}
+
 // answered has the agent reply on and resolve every thread that waits on it, as one that finished its batch does, so
 // it owes nothing.
 func answered(r *rig, id core.SessionID, a *agenttest.FakeSession) {
 	r.t.Helper()
-	for _, t := range r.session(id).Threads {
+	for _, t := range delivered(r, id).Threads {
 		if t.WaitsOnAgent() {
 			a.Call(r.t, "reply", map[string]any{"thread": string(t.ID), "body": "Done.", "resolve": true})
 		}

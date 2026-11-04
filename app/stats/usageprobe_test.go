@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/ui/widget"
 )
 
@@ -38,7 +39,7 @@ func failingHost(t *testing.T, err error) (*apptest.Scene, *stats.Plugin) {
 	fake.Name = "claude"
 	providers := &agent.Providers{}
 	providers.Register(usageFails{Fake: fake, err: err})
-	w, herr := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: rig.NopExec{}, Load: rig.SteadyLoad})
+	w, herr := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: rig.NopExec{}, Load: rig.SteadyLoad, HTTP: isolate.Net(t)})
 	if herr != nil {
 		t.Fatal(herr)
 	}
@@ -122,7 +123,7 @@ func TestUsageShowsAProviderWhileItsRead(t *testing.T) {
 	slow := usageSlow{Fake: fake, release: make(chan struct{})}
 	providers := &agent.Providers{}
 	providers.Register(slow)
-	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: rig.NopExec{}, Load: rig.SteadyLoad})
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: rig.NopExec{}, Load: rig.SteadyLoad, HTTP: isolate.Net(t)})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,7 +2,6 @@ package shell
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -17,15 +16,18 @@ import (
 )
 
 // DirState is a state file for the directory the app is open on, name-<hash of the directory>.json; "" without one.
-func (cfg Config) DirState(name string) string {
-	if cfg.StateDir == "" || cfg.WorkDir == "" {
+func (cfg Config) DirState(name string) string { return dirStateFor(cfg.StateDir, cfg.WorkDir, name) }
+
+// dirStateFor is the state file name for dir, under stateDir; "" without either.
+func dirStateFor(stateDir, dir, name string) string {
+	if stateDir == "" || dir == "" {
 		return ""
 	}
 	sum := 0
-	for _, r := range cfg.WorkDir {
+	for _, r := range dir {
 		sum = sum*31 + int(r)
 	}
-	return filepath.Join(cfg.StateDir, fmt.Sprintf("%s-%x.json", name, uint32(sum)))
+	return filepath.Join(stateDir, fmt.Sprintf("%s-%x.json", name, uint32(sum)))
 }
 
 // savedLayout is the layout as it comes back when the app starts again on the same directory: the
@@ -72,11 +74,11 @@ func persist(h plugin.Host, v layout.ViewRef) (st json.RawMessage, ok bool) {
 	return st, ok
 }
 
-// restore brings back the layout saved for this directory, unless something is open already.
+// restore brings back the layout saved for this directory, as its state file had it, unless something is open
+// already.
 func (l *layoutPlugin) restore(h plugin.Host) {
-	path := l.sh.cfg.DirState("layout")
-	b, err := os.ReadFile(path)
-	if path == "" || err != nil || len(l.root.All()) > 0 {
+	b, path := l.saved, l.state.Path()
+	if b == nil || len(l.root.All()) > 0 {
 		return
 	}
 	var s savedLayout
@@ -121,11 +123,7 @@ func (l *layoutPlugin) restore(h plugin.Host) {
 
 // keep saves the layout when it has changed since it was last saved.
 func (l *layoutPlugin) keep(h plugin.Host) {
-	if !l.restored {
-		return
-	}
-	path := l.sh.cfg.DirState("layout")
-	if path == "" {
+	if !l.restored || l.state.Path() == "" {
 		return
 	}
 	b := l.capture(h)
@@ -133,12 +131,7 @@ func (l *layoutPlugin) keep(h plugin.Host) {
 		return
 	}
 	l.kept = b
-	l.writer.write(path, b)
-}
-
-func (l *layoutPlugin) Deactivate(ctx context.Context) error {
-	l.writer.flush()
-	return l.Disposer.Deactivate(ctx)
+	l.state.Write(b)
 }
 
 // stateWriter writes a state file off the loop, the latest contents winning over any still waiting.

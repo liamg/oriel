@@ -79,8 +79,9 @@ func (p *Provider) sandboxProblems(at agent.SandboxPlace) []agent.SandboxProblem
 	}
 	if _, err := os.Stat(filepath.Join(home(), "auth.json")); err != nil && at.Env("OPENAI_API_KEY") == "" {
 		out = append(out, agent.SandboxProblem{Code: "codex-login-missing", Blocking: true,
-			Message: "Sandboxed agents have no way to sign in to Codex",
-			Fix:     "Run `codex login` on this machine with its credentials in a file (cli_auth_credentials_store = \"file\", the default); sandboxes share that login."})
+			Message: "Codex isn't signed in on this machine, and sandboxes share its sign-in",
+			Fix:     "Run `codex login` on this machine with its credentials in a file (cli_auth_credentials_store = \"file\", the default); sandboxes share that login.",
+			SignIn:  []string{"codex", "login"}})
 	}
 	return out
 }

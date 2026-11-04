@@ -196,3 +196,22 @@ func TestPlanClosedThreadUnfoldsWithoutReopening(t *testing.T) {
 		t.Error("the thread didn't fold back")
 	}
 }
+
+// With no doc picked, the plan shows the first doc as the docs come in: PLAN.md once it's there, though another
+// doc was read first.
+func TestPlanShowsPLANOnceItComesIn(t *testing.T) {
+	ws := t.TempDir()
+	os.WriteFile(filepath.Join(ws, "api.md"), []byte("# API\n\nthe api doc's body\n"), 0o644)
+	dir := t.TempDir()
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	s.Apply(core.SessionSynced{Session: core.SessionState{ID: "p", Name: "p", Kind: core.KindPlan, StartWork: true, Status: core.StatusQuiet,
+		Dir: ws, Projects: []core.Project{{Name: "x", Repo: dir, Dir: dir, Primary: true, ReadOnly: true}}}})
+	s.Apply(core.SessionFocused{ID: "p"})
+	s.Run("plan.open", nil)
+	s.Until("api.md shown", func() bool { return s.Has("the api doc's body") })
+	os.WriteFile(filepath.Join(ws, "PLAN.md"), []byte("# Plan\n\nthe plan's own body\n"), 0o644)
+	s.Until("PLAN.md shown, once it's there", func() bool {
+		s.SettleReads()
+		return s.Has("the plan's own body")
+	})
+}

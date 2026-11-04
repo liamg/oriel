@@ -41,8 +41,19 @@ type Interaction struct {
 	DragOver     bool              // a drag of a kind it takes is over it now
 	Access       []AccessAction    // what assistive technology asked of it since the last frame, of its Style.Actions
 
+	id  ID
 	pos render.Point
 	u   *UI
+}
+
+// PressedAt is where the last primary press on it went down, while it's held or since: a drag measures from there,
+// not from where the pointer had got to by the first frame built after the press, which on a busy machine can be well
+// along.
+func (it Interaction) PressedAt() (render.Point, bool) {
+	if it.u == nil || it.id == 0 || it.u.in.pressID != it.id || it.u.in.presses == 0 {
+		return render.Point{}, false
+	}
+	return it.u.in.pressPt, true
 }
 
 // Pointer is where the pointer is, wherever it is. A frame that reads it is built again whenever the pointer moves.
@@ -563,6 +574,7 @@ func (u *UI) Interaction(id ID) Interaction {
 		Keys:          in.keys[id],
 		Scroll:        in.wheel[id],
 		Mods:          in.mods,
+		id:            id,
 		pos:           in.pos,
 		u:             u,
 	}

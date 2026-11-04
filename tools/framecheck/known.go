@@ -17,7 +17,6 @@ var Known = []string{
 	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: os.MkdirAll",
 	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: os.WriteFile",
 	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).trustFile: os.ReadFile",
-	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).load: os.ReadFile",
 	"app/settings.(*Plugin).footer.func1 → app/settings.(*Plugin).undoLast: os.WriteFile",
 	"app/settings.(*Plugin).footer.func1 → app/settings.(*Plugin).undoLast: os.Remove",
 

@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/ship"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
@@ -147,6 +148,7 @@ func TestCodeSetupDialog(t *testing.T) {
 // "A site's token comes from the first of: one you set, the environment, the CLI, then the setup
 // dialog. A token the host refuses (401) is skipped for the session, and the next is tried."
 func TestCodeSiteTokens(t *testing.T) {
+	isolate.Test(t) // before the test's own token, which it would hide
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	t.Setenv("GITLAB_TOKEN", "from-env")
 	bin, log := t.TempDir(), filepath.Join(t.TempDir(), "glab.log")

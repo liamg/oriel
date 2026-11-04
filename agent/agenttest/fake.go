@@ -466,6 +466,21 @@ func (s *FakeSession) WaitSent(t testing.TB) agent.Input {
 	return agent.Input{}
 }
 
+// Handled waits until whoever reads the events has handled every one emitted so far. It repeats the session's Ready,
+// which changes nothing: the second is taken only once the first, and all before it, are handled.
+func (s *FakeSession) Handled(t testing.TB) {
+	t.Helper()
+	s.Emit(agent.Ready{ID: s.id})
+	s.Emit(agent.Ready{ID: s.id})
+	deadline := time.Now().Add(5 * time.Second)
+	for len(s.ev) > 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("the session's events were never handled")
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+}
+
 // NoneSent checks it's given nothing for a moment.
 func (s *FakeSession) NoneSent(t testing.TB) {
 	t.Helper()

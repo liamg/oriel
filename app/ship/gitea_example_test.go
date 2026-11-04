@@ -240,10 +240,10 @@ func TestGiteaExamplePlugin(t *testing.T) {
 		apptest.Connect(lw.W)(cfg)
 		cfg.Net, cfg.Secrets = hosttest.Net(gt.Server), secrets
 	}})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadGitea(t, s)
 	s.Run("session.start", registry.Args{"kind": "work", "prompt": "Add a health check", "provider": "fake", "repos": []string{app}})
-	st := rig.WaitState(t, s.Store(), "the session in front", func(st core.State) bool { return st.Focus != "" })
+	st := s.UntilState("the session in front", func(st core.State) bool { return st.Focus != "" })
 	sess, _ := st.Session(st.Focus)
 	se := sess.Snapshot()
 	s.Reopen()

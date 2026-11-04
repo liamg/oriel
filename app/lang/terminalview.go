@@ -59,15 +59,19 @@ func (v terminalView) Persist(instance string) (json.RawMessage, bool) {
 	return b, true
 }
 
-// Revive starts the program again, under its screen from before.
+// Revive is the terminal running still, the window back on its directory; else it starts the program again, under
+// its screen from before.
 func (v terminalView) Revive(state json.RawMessage) (string, error) {
 	var s termState
 	if err := json.Unmarshal(state, &s); err != nil {
 		return "", err
 	}
+	if s.ID != "" && v.x.get(s.ID) != nil {
+		return s.ID, nil
+	}
 	a := registry.Args{"cmd": s.Cmd, "instance": s.ID}
 	if w, se, ok := v.x.sandboxed(a); ok {
-		c, err := w.SandboxShell(context.Background(), se, v.x.WorkDir)
+		c, err := w.SandboxShell(context.Background(), se, kit.WindowDir(v.x.h))
 		if err != nil {
 			return "", err
 		}
@@ -432,8 +436,12 @@ func (x *Terminals) pointer(c *ui.Ctx, t *terminal, in ui.Interaction, r render.
 		t.emu.Scroll(term.Scroll{To: term.ScrollDelta, Delta: 1})
 		c.WakeAt(c.Now().Add(40 * time.Millisecond))
 	}
-	col := min(max(int(math.Floor(float64((at.X-r.Min.X-termGutter)/charW))), 0), t.cols-1)
-	p := term.Point{X: col, Y: sb.Offset + min(max(row, 0), t.rows-1)}
+	cell := func(at render.Point) term.Point {
+		row := int(math.Floor(float64((at.Y - r.Min.Y - 3) / termLineH)))
+		col := min(max(int(math.Floor(float64((at.X-r.Min.X-termGutter)/charW))), 0), t.cols-1)
+		return term.Point{X: col, Y: sb.Offset + min(max(row, 0), t.rows-1)}
+	}
+	p := cell(at)
 	s := t.sel
 	if s != nil && s.held {
 		if s.clicks < 2 {
@@ -442,12 +450,17 @@ func (x *Terminals) pointer(c *ui.Ctx, t *terminal, in ui.Interaction, r render.
 		s.held = in.Held
 		return
 	}
+	// A new selection starts where the press went down: the pointer may have moved on before this frame was built.
+	from := p
+	if pt, ok := in.PressedAt(); ok {
+		from = cell(pt)
+	}
 	now := c.Now()
 	clicks := 1
-	if s != nil && now.Sub(s.last) < ui.DoubleClick && p == s.lastAt {
+	if s != nil && now.Sub(s.last) < ui.DoubleClick && from == s.lastAt {
 		clicks = s.clicks + 1
 	}
-	s = &termSel{anchor: p, end: p, held: in.Held, clicks: clicks, last: now, lastAt: p}
+	s = &termSel{anchor: from, end: p, held: in.Held, clicks: clicks, last: now, lastAt: from}
 	t.sel = s
 	if clicks == 1 {
 		return

@@ -49,3 +49,6 @@ func (x *Update) Ready() (string, bool)    { return x.ready() }
 
 // SetFilter filters the Plugins page's list, as typing in its filter does.
 func (x *Catalog) SetFilter(s string) { x.page.filter = s }
+
+// WaitStartup waits for an automatic start's check to have run.
+func (x *Update) WaitStartup() { x.start.Wait() }

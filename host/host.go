@@ -65,7 +65,8 @@ type Options struct {
 	// KeyWait is how long a git operation that may need a security-key touch runs before its session asks for one;
 	// KeyWait (the constant) if 0, never if negative.
 	KeyWait time.Duration
-	// HTTP is the client the host's own requests go through (cost.dev's prices); http.DefaultClient if nil.
+	// HTTP is the client the host's own requests go through (cost.dev's prices, GitHub's API); http.DefaultClient if
+	// nil.
 	HTTP *http.Client
 	// PricesURL is where the price list is fetched from; cost.dev's (price.URL) if "".
 	PricesURL string
@@ -186,6 +187,7 @@ func (w *Host) parts() error {
 	}
 	w.code = github.New(w.env, st, github.Deps{Kinds: &w.kinds, Keyed: w.run.Keyed, Wake: w.run.Wake,
 		Client:        func() func(string, []string) gh.Client { return w.opts.GitHub },
+		HTTP:          func() *http.Client { return w.opts.HTTP },
 		BranchRenamed: worktree.BranchRenamed})
 	w.jobs = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
 		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxes.Config().Default != "host" }})

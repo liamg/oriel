@@ -103,7 +103,7 @@ linear = "npx -y linear-mcp"
 	if _, err := lw.W.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Repos: []core.RepoID{core.RepoID(other)}}); err != nil {
 		t.Fatal(err)
 	}
-	rig.WaitState(t, s.Store(), "the session on billing", func(st core.State) bool { return len(st.Sessions) == 1 })
+	s.UntilState("the session on billing", func(st core.State) bool { return len(st.Sessions) == 1 })
 	settingsOf(s).Reload()
 	s.Run("settings.trust", registry.Args{"path": filepath.Join(other, ".oriel", "settings.toml")})
 	cfg := waitSandbox(t, lw, "the user's and both projects' settings", func(c sandbox.Config) bool {

@@ -21,8 +21,10 @@ func TestMirrorReviewFromACodeHost(t *testing.T) {
 	a := r.agent()
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
+	answered(r, id, a) // owing nothing, it isn't told to carry on, so the mirrored review goes to it as its own batch
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the first turn to end", func(se core.SessionState) bool { return !se.Agent.Working })
+	a.Handled(t)
 	p, _ := r.session(id).Primary()
 	ctx := context.Background()
 	at := time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)

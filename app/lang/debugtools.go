@@ -155,7 +155,7 @@ func (x *Debug) where(f dap.Frame) string {
 	if f.Path == "" {
 		return f.Name
 	}
-	return fmt.Sprintf("%s at %s:%d", f.Name, agentRel(x.WorkDir, f.Path), f.Line+1)
+	return fmt.Sprintf("%s at %s:%d", f.Name, agentRel(x.dir(), f.Path), f.Line+1)
 }
 
 func (x *Debug) toolStack(ctx registry.Ctx, _ map[string]any) (any, error) {
@@ -181,7 +181,7 @@ func (x *Debug) toolStack(ctx registry.Ctx, _ map[string]any) (any, error) {
 		if rows := x.bpRows(); len(rows) > 0 {
 			b.WriteString("breakpoints:\n")
 			for _, r := range rows {
-				fmt.Fprintf(&b, "  %s:%d", agentRel(x.WorkDir, r.file), r.bp.Line+1)
+				fmt.Fprintf(&b, "  %s:%d", agentRel(x.dir(), r.file), r.bp.Line+1)
 				if n := r.bp.note(); n != "" {
 					b.WriteString("  " + n)
 				}
@@ -345,7 +345,7 @@ func (x *Debug) toolBreakpoint(ctx registry.Ctx, p map[string]any) (any, error) 
 	if remove {
 		what = "removed the breakpoint at"
 	}
-	return registry.Acted{Line: fmt.Sprintf("%s %s:%d", what, agentRel(x.WorkDir, path), b.Line+1)}, nil
+	return registry.Acted{Line: fmt.Sprintf("%s %s:%d", what, agentRel(x.dir(), path), b.Line+1)}, nil
 }
 
 func (x *Debug) toolStep(ctx registry.Ctx, p map[string]any) (any, error) {

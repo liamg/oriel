@@ -199,6 +199,42 @@ func TestSplitterDrag(t *testing.T) {
 	}
 }
 
+// A splitter moves as far as it's dragged though the press and the first moves come in before a frame is built, as
+// they do on a busy machine: the drag is measured from where the press went down.
+func TestSplitterDragBeforeAFrame(t *testing.T) {
+	h := newHarness(t)
+	h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight})
+	h.frame()
+	h.frame()
+	var left, right render.Rect
+	for l, rc := range h.panes.Rects(h.u) {
+		if len(l.Tabs) > 0 && l.Tabs[0] == code {
+			left = rc
+		}
+		if len(l.Tabs) > 0 && l.Tabs[0] == term {
+			right = rc
+		}
+	}
+	x, y := left.Max.X, float32(300)
+	send := func(k render.PointerKind, dx float32, b render.Buttons) {
+		h.u.Pointer(render.PointerEvent{Kind: k, Pos: render.Point{X: x + dx, Y: y}, Buttons: b})
+	}
+	send(render.PointerMove, 0, 0)
+	h.frame()
+	send(render.PointerPress, 0, render.ButtonPrimary)
+	send(render.PointerMove, 30, render.ButtonPrimary) // no frame yet
+	h.frame()
+	send(render.PointerMove, 100, render.ButtonPrimary)
+	h.frame()
+	send(render.PointerRelease, 100, render.ButtonPrimary)
+	h.frame()
+	w := h.r.Main.Weights
+	moved := w[0]/(w[0]+w[1])*(left.Dx()+right.Dx()) - left.Dx()
+	if moved < 99 || moved > 101 {
+		t.Errorf("a 100px drag moved the split %.1fpx", moved)
+	}
+}
+
 func TestFocusDir(t *testing.T) {
 	h := newHarness(t)
 	h.r.Move(term, layout.Split, layout.Opts{Side: layout.SideRight})

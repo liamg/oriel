@@ -45,13 +45,16 @@ const (
 // Terminals are the window's terminals: a PTY each, Ghostty's VT parsing what it prints, drawn by the terminal view.
 type Terminals struct {
 	kit.Disposer
-	CacheDir, WorkDir string
-	SavedAt           string         // where the screens are kept for the work dir
-	Clipboard         edit.Clipboard // the system clipboard, for copying from the scrollback
-	h                 plugin.Host
+	CacheDir  string
+	SavedAt   func() string  // where the screens are kept for the window's directory
+	Clipboard edit.Clipboard // the system clipboard, for copying from the scrollback
+	h         plugin.Host
+	state     *kit.StateFile // the saved screens of the directory the window is on
 
 	mu    sync.Mutex
 	terms map[string]*terminal
+	away  map[string]map[string]*terminal // the terminals of the directories the window has left, still running
+	dir   string                          // the directory terms are of
 	next  int
 	saved map[string][]byte // screens kept when the app stopped, by instance
 	busy  sync.WaitGroup
@@ -102,11 +105,10 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	if x.terms == nil {
 		x.terms = map[string]*terminal{}
 	}
-	if x.saved == nil {
-		x.saved = map[string][]byte{}
-		x.loadSaved()
-	}
+	x.saved, x.dir = map[string][]byte{}, kit.WindowDir(h)
 	x.mu.Unlock()
+	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.SavedAt, Load: x.loadSaved, Leave: x.leave})
+	x.Add(kit.OnDispose(x.state.Close))
 	if x.CacheDir != "" {
 		ghostty.SetCacheDir(filepath.Join(x.CacheDir, "wasm"))
 	}
@@ -200,39 +202,87 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 // Deactivate keeps every terminal's screen, so they come back when the app starts again on this directory, and stops
 // their programs.
 func (x *Terminals) Deactivate(ctx context.Context) error {
-	x.mu.Lock()
-	terms := x.terms
-	x.terms = map[string]*terminal{}
-	x.mu.Unlock()
-	for id, t := range terms {
-		if snap, err := t.emu.Snapshot(); err == nil {
-			x.saved[id] = snap
-		}
-		t.stop()
+	x.keepAll()
+	if b := x.savedJSON(); b != nil {
+		x.state.Write(b)
 	}
-	x.storeSaved()
 	x.busy.Wait()
 	x.paced.Stop()
 	return x.Disposer.Deactivate(ctx)
 }
 
-func (x *Terminals) savedPath() string { return x.SavedAt }
-
-func (x *Terminals) loadSaved() {
-	if p := x.savedPath(); p != "" {
-		if b, err := os.ReadFile(p); err == nil {
-			json.Unmarshal(b, &x.saved)
+// keepAll keeps every terminal's screen in the directory's saved screens, and stops their programs, and those of the
+// directories the window has left: as the app stops.
+func (x *Terminals) keepAll() {
+	x.mu.Lock()
+	terms, away := x.terms, x.away
+	x.terms, x.away = map[string]*terminal{}, nil
+	x.mu.Unlock()
+	x.keepScreens(terms)
+	for _, t := range terms {
+		t.stop()
+	}
+	for _, ts := range away {
+		for _, t := range ts {
+			t.stop()
 		}
 	}
 }
 
-func (x *Terminals) storeSaved() {
-	if p := x.savedPath(); p != "" && len(x.saved) > 0 {
-		os.MkdirAll(filepath.Dir(p), 0o755)
-		if b, err := json.Marshal(x.saved); err == nil {
-			os.WriteFile(p, b, 0o600)
+// keepScreens keeps terms' screens in the directory's saved screens, for when the app starts again on it.
+func (x *Terminals) keepScreens(terms map[string]*terminal) {
+	for id, t := range terms {
+		if snap, err := t.emu.Snapshot(); err == nil {
+			x.saved[id] = snap
 		}
 	}
+}
+
+// leave keeps the screens of the directory the window is leaving, for a restart, and its terminals running while
+// the window is away: back on it, they're the ones its layout shows. It gives what to keep in the directory's file.
+func (x *Terminals) leave() []byte {
+	x.mu.Lock()
+	terms := x.terms
+	x.mu.Unlock()
+	x.keepScreens(terms)
+	b := x.savedJSON()
+	to := kit.WindowDir(x.h)
+	x.mu.Lock()
+	if x.away == nil {
+		x.away = map[string]map[string]*terminal{}
+	}
+	if len(terms) > 0 {
+		x.away[x.dir] = terms
+	}
+	x.terms = x.away[to]
+	if x.terms == nil {
+		x.terms = map[string]*terminal{}
+	}
+	delete(x.away, to)
+	x.dir = to
+	x.mu.Unlock()
+	return b
+}
+
+// loadSaved takes the screens kept for the window's directory: none for nil.
+func (x *Terminals) loadSaved(b []byte) {
+	saved := map[string][]byte{}
+	if b != nil {
+		json.Unmarshal(b, &saved)
+	}
+	x.saved = saved
+}
+
+// savedJSON is the screens kept, to write; nil for none.
+func (x *Terminals) savedJSON() []byte {
+	if len(x.saved) == 0 {
+		return nil
+	}
+	b, err := json.Marshal(x.saved)
+	if err != nil {
+		return nil
+	}
+	return b
 }
 
 func (x *Terminals) get(id string) *terminal {
@@ -314,7 +364,7 @@ func strList(v any) []string {
 // open starts a terminal and shows it.
 func (x *Terminals) open(ctx registry.Ctx, a registry.Args, place, side string) error {
 	if w, se, ok := x.sandboxed(a); ok {
-		dir := x.WorkDir
+		dir := kit.WindowDir(x.h)
 		return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "term.open.sandbox", Doing: "Opening a terminal in the sandbox"},
 			func(ctx context.Context) (sandbox.Command, error) {
 				c, err := w.SandboxShell(ctx, se, dir)
@@ -397,7 +447,7 @@ func (x *Terminals) start(a registry.Args, sb *sandbox.Command) (string, error) 
 	t.emu = emu
 	if src == nil {
 		cmd := exec.Command(cmdline[0], cmdline[1:]...)
-		cmd.Dir = cmp.Or(a.String("dir"), x.WorkDir)
+		cmd.Dir = cmp.Or(a.String("dir"), kit.WindowDir(x.h))
 		if env == nil {
 			env = os.Environ()
 		}

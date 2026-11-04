@@ -17,11 +17,12 @@ func GitOf(r registry.Registry) registry.GitTrees {
 
 type noTrees struct{}
 
-func (noTrees) Tree(string) registry.GitTree       { return noTree{} }
-func (noTrees) Holding(string) registry.GitTree    { return noTree{} }
-func (noTrees) Do(func(ctx context.Context) error) {}
-func (noTrees) Reload()                            {}
-func (noTrees) Busy() bool                         { return false }
+func (noTrees) Tree(string) registry.GitTree              { return noTree{} }
+func (noTrees) Holding(string) registry.GitTree           { return noTree{} }
+func (noTrees) WatchWindow(func(string, []string)) func() { return func() {} }
+func (noTrees) Do(func(ctx context.Context) error)        {}
+func (noTrees) Reload()                                   {}
+func (noTrees) Busy() bool                                { return false }
 
 // noTree is outside any repo.
 type noTree struct{}

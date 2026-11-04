@@ -1,6 +1,7 @@
 package lang
 
 import (
+	"os"
 	"slices"
 	"strings"
 
@@ -56,9 +57,10 @@ func (x *Debug) StepLevel() string                    { return x.level(debugStep
 
 // Reload forgets the breakpoints and watches, and reads them from where they're kept.
 func (x *Debug) Reload() {
-	x.writes.Wait()
+	x.state.Wait()
 	x.bps, x.watches = nil, nil
-	x.load()
+	b, _ := os.ReadFile(x.state.Path())
+	x.load(b)
 }
 
 // ReplaceInConsole replaces old with new in the console's lines.
@@ -111,4 +113,12 @@ func (x *Terminals) NormalLine(id string) int          { return x.normalLine(x.g
 func (x *Terminals) Selected(id string) bool {
 	_, _, ok := x.get(id).selection()
 	return ok
+}
+
+// Terminal is the terminal of instance id, as any: the same one the window comes back to, or another.
+func (x *Terminals) Terminal(id string) any {
+	if t := x.get(id); t != nil {
+		return t
+	}
+	return nil
 }

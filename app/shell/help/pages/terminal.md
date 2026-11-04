@@ -33,6 +33,8 @@ reports its directory (OSC 7), the tab shows it. If the last command failed, rig
 the agent to fix the failed command** (a request with the command, its output and its exit status) and **Ask the
 agent to explain** (an answer in a notice; nothing is changed).
 
-When Oriel quits, each terminal's screen and scrollback are kept, and come back when it opens the directory again.
+A terminal's program runs on while the window is on another session's directory, and the terminal is there as it
+was when you come back. When Oriel quits, each terminal's screen and scrollback are kept, and come back when it opens
+the directory again.
 
 {{keys "term*"}}

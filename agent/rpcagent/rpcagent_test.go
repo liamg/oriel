@@ -210,11 +210,11 @@ func TestProviderCallsCross(t *testing.T) {
 	if err != nil || u.Account != "acct" || u.Provider != "fake" {
 		t.Errorf("Usage = %+v %v", u, err)
 	}
-	expired := agent.AuthExpired{Provider: "fake", Detail: "signed out", Shell: "fake login"}
+	expired := agent.AuthExpired{Provider: "fake", Detail: "signed out", Shell: "fake login", HostCommand: []string{"fake", "login"}}
 	f.Refuse(expired)
 	_, err = c.Start(ctx, agent.StartSpec{})
 	var ae agent.AuthExpired
-	if !errors.As(err, &ae) || ae != expired {
+	if !errors.As(err, &ae) || !reflect.DeepEqual(ae, expired) {
 		t.Errorf("a start refused for the login: %v (%T)", err, err)
 	}
 	f.Refuse(nil)

@@ -254,7 +254,7 @@ func (s *session) failure(raw json.RawMessage) {
 
 // signedOut is codex's login gone: it signs in again from a shell, as it has no terminal of its own here.
 func signedOut(account, detail string) agent.AuthExpired {
-	return agent.AuthExpired{Provider: "codex", Account: account, Detail: detail, Shell: "codex login"}
+	return agent.AuthExpired{Provider: "codex", Account: account, Detail: detail, Shell: "codex login", HostCommand: []string{"codex", "login"}}
 }
 
 // turnError reads a TurnError: its message, and its codexErrorInfo's name.

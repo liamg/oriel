@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
@@ -25,7 +26,7 @@ func railShown(s *apptest.Scene) bool { return s.Find("Views") != nil }
 // Each start-screen button opens what it opens on Home, which has no slot for the rail.
 func TestHomeHasNoRail(t *testing.T) {
 	scene := func(t *testing.T) *apptest.Scene {
-		w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad})
+		w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad, HTTP: isolate.Net(t)})
 		if err != nil {
 			t.Fatal(err)
 		}

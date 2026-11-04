@@ -226,6 +226,9 @@ func TestExplainAnsweredByTheSessionsFork(t *testing.T) {
 		return apptest.HasAll(s, "EXPLAIN", "case 0", "if t.IntPart()%2 == 0", "fork says:", "fork of fake · knows this session")
 	})
 	r.TypeKeys("[")
+	r.WaitAccess("the card widened to case 0", func(w *apptest.Window) bool {
+		return w.Access("Explain func roundHalfEven › switch diff.Cmp(half) › case 0") != nil
+	})
 	r.WaitFrame("wider", func(s string) bool {
 		return apptest.HasAll(s, "case 0", "fork says:") && !strings.Contains(s, "Asking…")
 	})

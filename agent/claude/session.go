@@ -256,9 +256,12 @@ func (s *session) answered(emit func(agent.Event)) {
 	}
 }
 
+// hostSignIn signs the host's claude in again, and with it the sandboxes, which share its sign-in.
+var hostSignIn = []string{"claude", "auth", "login"}
+
 // loginLost is the event for a login claude says is gone.
 func loginLost(detail string) agent.AuthExpired {
-	return agent.AuthExpired{Provider: "claude", Detail: detail, Terminal: "/login", Shell: "claude, then /login"}
+	return agent.AuthExpired{Provider: "claude", Detail: detail, Terminal: "/login", Shell: "claude auth login", HostCommand: hostSignIn}
 }
 
 // watchScreen reads the terminal for the login going, once while it stays gone, and coming back.

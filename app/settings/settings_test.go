@@ -2,13 +2,20 @@ package settings_test
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry/settingsfile"
+	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/ui"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -321,4 +328,64 @@ func TestSettingsFollows(t *testing.T) {
 	if !strings.Contains(s.Text(), "follows ui.font_size") {
 		t.Error("the row doesn't say it follows ui.font_size")
 	}
+}
+
+// fontShown shows editor.font_size at the window's directory in the status line.
+type fontShown struct{}
+
+func (fontShown) Manifest() plugin.Manifest        { return plugin.Manifest{ID: "test/font-shown"} }
+func (fontShown) Deactivate(context.Context) error { return nil }
+func (fontShown) Activate(_ context.Context, h plugin.Host) error {
+	h.View("statusline.right.99-font", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+		v, _, _ := h.Options().Get("editor.font_size", h.Here())
+		return &ui.Text{Text: fmt.Sprintf("font %v", v)}
+	})})
+	return nil
+}
+
+// The window moving onto a directory waits behind its opening cover for the project's settings there: the first
+// frame laid out on it has them.
+func TestAMoveBringsTheProjectsSettings(t *testing.T) {
+	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{fontShown{}}})
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".oriel", "settings.toml")
+	src := []byte("[editor]\nfont_size = 21\n")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, src, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := (settingsfile.Trust{Path: filepath.Join(w.ConfigDir, "trusted.toml")}).Add(path, src); err != nil {
+		t.Fatal(err)
+	}
+	w.WaitText("font 13.5")
+	before := len(w.Win.Frames())
+	if err := w.Do(func() error {
+		win, _ := kit.WindowOf(w.Host)
+		return win.Reopen(dir, "")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	w.WaitFor("the window laid out on "+dir+" with its project's settings", func() bool {
+		fs := w.Win.Frames()
+		x := fs[len(fs)-1].Text()
+		return strings.Contains(x, "font 21") && !strings.Contains(x, "Opening")
+	})
+	fs := w.Win.Frames()[before:]
+	opened := false
+	for _, f := range fs {
+		text := f.Text()
+		if strings.Contains(text, "Opening") {
+			opened = true
+			continue
+		}
+		if opened {
+			if !strings.Contains(text, "font 21") {
+				t.Errorf("the first frame laid out on %s shows %q, not its project's font_size", dir, text)
+			}
+			return
+		}
+	}
+	t.Error("no frame showed the opening cover")
 }

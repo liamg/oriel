@@ -752,6 +752,14 @@ golang.org/x/text/LICENSE: the same as Go, above.
 golang.org/x/text/PATENTS: the same as golang.org/x/image v0.47.0, above.
 
 ================================================================================
+github.com/tetratelabs/wazero =>
+Source: https://github.com/tetratelabs/wazero
+
+github.com/tetratelabs/wazero/LICENSE: the same as github.com/tetratelabs/wazero v1.12.0, above.
+
+github.com/tetratelabs/wazero/NOTICE: the same as github.com/tetratelabs/wazero v1.12.0, above.
+
+================================================================================
 libghostty-vt
 Licence: MIT
 Source: https://github.com/ghostty-org/ghostty (term/ghostty/fetch.sh)

@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
 )
@@ -16,9 +15,8 @@ import (
 // nothing while the window is behind another app, catching up once it's back. A burst of changes is one call.
 type PathWatch struct {
 	changed func()
-	poll    time.Duration
 	m       *watch.Manager
-	own     bool // m is its own, with no window's to share
+	done    func() // closes m, when it's its own
 
 	mu    sync.Mutex
 	files []watch.Files
@@ -28,14 +26,8 @@ type PathWatch struct {
 
 // WatchPaths watches with r's app manager, polling every poll once it can't.
 func WatchPaths(r registry.Registry, poll time.Duration, changed func()) *PathWatch {
-	p := &PathWatch{changed: changed, poll: poll}
-	if p.m = ManagerFor(r, ""); p.m == nil {
-		start := fswatch.New
-		if w, ok := WindowOf(r); ok {
-			start = w.FSWatch
-		}
-		p.m, p.own = watch.New(watch.Options{Name: "paths", Watch: start, Timing: watch.Timing{Fallback: poll}, Polls: PollsOf(r)}), true
-	}
+	p := &PathWatch{changed: changed}
+	p.m, p.done = FileManager(r, "paths", poll)
 	return p
 }
 
@@ -86,7 +78,5 @@ func (p *PathWatch) Close() {
 	if sub.Valid() {
 		sub.Close()
 	}
-	if p.own {
-		p.m.Close()
-	}
+	p.done()
 }

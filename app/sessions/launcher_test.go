@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
@@ -267,7 +268,7 @@ func TestLauncherSnapshot(t *testing.T) {
 		}
 	}
 	s.Now = apptest.At(14, 30, 0)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	ago := func(h int) time.Time { return s.Now.Add(-time.Duration(h) * time.Hour) }
 	for _, ev := range []core.Event{
 		core.UsageSampled{Usage: core.ProviderUsage{Provider: "claude", Plan: "max plan", Windows: []core.UsageWindow{{Name: "5h window", Used: .38}, {Name: "wk", Used: .71}}}},
@@ -402,7 +403,7 @@ func TestLauncherWaitsForTheProbe(t *testing.T) {
 
 // A probe that finds no agents says so, with Retry; No agent is there to pick, but not picked.
 func TestLauncherProbeFails(t *testing.T) {
-	w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad})
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad, HTTP: isolate.Net(t)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -470,11 +471,50 @@ func TestLauncherClosesFromThePlusInASession(t *testing.T) {
 		if focus != "" {
 			r.TypeKeys(focus)
 		}
-		b := r.Access("New session").Bounds
-		r.Click(render.Point{X: (b.Min.X + b.Max.X) / 2, Y: (b.Min.Y + b.Max.Y) / 2})
+		r.ClickAccess("New session") // where it's settled: the session taking focus moves the strip
 		r.Latest("the launcher from +", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Start Work") })
 		r.TypeKeys("<Esc>")
 		r.WaitGone("NEW SESSION")
 		r.WaitText("DOCKED LOG") // the docked view behind it stays
+	}
+}
+
+// A ticket that has a session already continues it, on the agent it runs on: in place of the agents, whose pick Start
+// would pass over, the launcher says which it carries on with. Start another brings them back, for a new session on
+// the ticket on the one picked.
+func TestLauncherContinuingSaysWhichAgent(t *testing.T) {
+	alpha, beta := agenttest.NewFake(), agenttest.NewFake()
+	alpha.Name, beta.Name = "alpha", "beta"
+	lw := rig.NewHost(t, alpha, beta)
+	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	if err := r.Do(func() error {
+		if err := r.Host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {
+			return err
+		}
+		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "plan", "prompt": "Try it", "ticket": "try-1", "provider": "alpha"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	first := r.UntilState("the first session", func(st core.State) bool { return len(st.Sessions) == 1 }).Sessions[0]
+	if err := r.Do(func() error {
+		return r.Host.Run(context.Background(), "session.new", registry.Args{"kind": "plan", "prompt": "Try it again", "ticket": "try-1"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	r.WaitText(first.Name + " carries on with Alpha")
+	if fs := r.Win.Frames(); strings.Contains(fs[len(fs)-1].Text(), "Beta") {
+		text := fs[len(fs)-1].Text()
+		t.Errorf("the agents to pick show while Start continues %s:\n%s", first.Name, text)
+	}
+	r.ClickTop("Start another")
+	r.WaitText("Beta")
+	r.ClickTop("Beta")
+	r.ClickTop("Start Plan")
+	st := r.UntilState("a second session on try-1", func(st core.State) bool { return len(st.Sessions) == 2 })
+	for _, se := range st.Sessions {
+		if se.ID != first.ID && (se.Ticket != "try-1" || se.Agent.Provider != "beta") {
+			t.Errorf("the new session: ticket %q on %q, want try-1 on beta", se.Ticket, se.Agent.Provider)
+		}
 	}
 }

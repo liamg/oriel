@@ -239,6 +239,7 @@ func (sh *shell) openDir(ctx registry.Ctx, h plugin.Host, dir string) error {
 type reopenTo struct {
 	dir     string
 	session core.SessionID
+	asked   time.Time // when it was asked for, the cover going up
 }
 
 func (sh *shell) reopenOn(to reopenTo) error {
@@ -249,6 +250,7 @@ func (sh *shell) reopenOn(to reopenTo) error {
 	case <-sh.reopen:
 	default:
 	}
+	to.asked = time.Now()
 	sh.heading.Store(&to)
 	sh.reopen <- to
 	sh.poke()

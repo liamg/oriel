@@ -30,7 +30,7 @@ func TestAddRepoWaitsForItsCheck(t *testing.T) {
 	s.Now = s.Now.Add(time.Second)
 	s.Until("the check", func() bool { return strings.Contains(s.Text(), "✓ git repo") })
 	s.Run("repos.new.submit", nil)
-	rig.WaitState(t, s.Store(), "billing registered", func(st core.State) bool { _, ok := st.Repo("billing"); return ok })
+	s.UntilState("billing registered", func(st core.State) bool { _, ok := st.Repo("billing"); return ok })
 }
 
 // A clone shows git's progress as a bar: the phase and how far through it.

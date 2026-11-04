@@ -69,8 +69,9 @@ type Update struct {
 	card   bool
 	failed string // the last check's or install's error, for the card
 	stop   chan struct{}
-	run    *updateRun // the update the Updating page shows, if any
-	page   bool       // the Updating page is up
+	run    *updateRun     // the update the Updating page shows, if any
+	start  sync.WaitGroup // an automatic start's check, while it runs
+	page   bool           // the Updating page is up
 }
 
 // updateRun is one update as the Updating page tells it: each step as a line, the download's bytes, and how it
@@ -136,7 +137,7 @@ func (x *Update) Activate(_ context.Context, h plugin.Host) error {
 		first := updateFirstCheck
 		if x.mode() == updateAutomatic {
 			first = updateEvery
-			go x.startup()
+			x.start.Go(x.startup)
 		}
 		go x.watch(stop, first, updateEvery)
 	}

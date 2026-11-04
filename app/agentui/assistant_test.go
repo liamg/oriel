@@ -193,7 +193,10 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 		t.Fatal(err)
 	}
 	ua.Emit(agent.TurnEnd{})
-	s.Until("the answer", func() bool { return strings.Contains(s.Text(), "One thing waits on you.") })
+	// The reply comes before the turn ends: the answer, with its turn over.
+	s.Until("the answer", func() bool {
+		return strings.Contains(s.Text(), "One thing waits on you.") && !strings.Contains(s.Text(), "thinking…")
+	})
 	s.WantFrame("what needs me?", "✓ SESSIONS", "rounding", "wants to run make e2e", "1m · this machine", "⌘1",
 		"start session", "asks first", "never", "sessions", "github", "web search", "now")
 	if o := s.UI().Overflowing(); len(o) > 0 {

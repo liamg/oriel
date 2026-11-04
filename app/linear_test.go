@@ -137,7 +137,7 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Now = apptest.At(14, 30, 0)
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	loadLinear(t, s)
 	// The test host has no sandbox factory.
 	if err := s.Registry().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {

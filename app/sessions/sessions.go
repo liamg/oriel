@@ -82,7 +82,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 		case core.MachineChanged:
 			was := signedOut
 			signedOut = ev.Machine.SignedOut
-			if !slices.Equal(was, signedOut) {
+			if !slices.EqualFunc(was, signedOut, core.Login.Same) {
 				h.Do(func() { x.loginNotices(ev.Machine.SignedOut, was) })
 			}
 		case core.SessionFocused:
@@ -223,7 +223,7 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 		return
 	}
 	for _, l := range signedOut {
-		if slices.Contains(was, l) {
+		if slices.ContainsFunc(was, l.Same) {
 			continue
 		}
 		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out", Time: time.Now(),

@@ -28,6 +28,21 @@ saves/
 `oriel plugin init --id me/saves saves` writes a starting `oriel.toml` and `init.lua` (`--process` adds a Go command
 under `cmd/`).
 
+## How long it runs
+
+A plugin starts once and runs until Oriel quits, or until it's turned off or updated. Switching sessions doesn't start
+it again: the window moves onto the new session's directory underneath it, and its hooks, tools and views go on
+working for every session, not only the one in front. So don't note where you are once at the top of `init.lua`: read
+it when you need it. A view gets the session in front as `ctx.session` and the project it's for as `ctx.project`; a
+hook's event names its session; `oriel.session.kept("", key)` is the session in front's.
+
+When the window moves, the `DirChanged` hook fires with `{ dir, was, session }`, once it's on the new directory and
+before that directory's layout comes back (a view opened from the hook is replaced by it, so open one later). Use it
+to swap something you keep per directory. The new directory's layout waits, behind the opening cover, until the
+built-ins have read what they keep for it (its settings, layout and saved terminals), so it comes back whole. A
+plugin listed in a project's own settings (`[plugins]` in `.oriel/settings.toml`) runs only while the window is on
+that project.
+
 ## The manifest
 
 ```toml
@@ -320,7 +335,8 @@ func TestSaves(t *testing.T) {
 - `oriel.log(msg, level)` writes to the log; `:Log` opens it, `:Log level debug` shows debug records.
   `oriel.notify(msg, level)` tells the user.
 - `:Hooks` lists every hook with its event, who registered it and its p99 time. A hook over the 2 ms budget is
-  marked; one turned off shows its last error, with **Turn back on**.
+  marked, and a warning once it's over on two calls running; one turned off shows its last error, with **Turn back
+  on**.
 - `:Inspect` shows what's under the cursor: decorations and who added them, the keymaps that apply, and the views
   that make up the window.
 - `:Plugins` shows what each plugin contributes, the capabilities it holds and how it runs.

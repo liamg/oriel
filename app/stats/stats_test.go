@@ -237,7 +237,7 @@ func TestStartViewLinks(t *testing.T) {
 	r := rig.NewStats(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W, r.Claude, r.Codex)})
 	x := apptest.PluginOf[*stats.Plugin](s, "stats")
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	settle(s, x)
 	s.Click(apptest.Centre(startCard(s, "Stats").Bounds), 0)
 	if !s.Shown("stats") {
@@ -275,7 +275,7 @@ func TestUsageIsPerAccount(t *testing.T) {
 	}
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	s.Now = rig.StatsNow
-	st := rig.WaitState(t, s.Store(), "two accounts, each its sessions'", func(st core.State) bool {
+	st := s.UntilState("two accounts, each its sessions'", func(st core.State) bool {
 		if len(st.Usage) != 2 {
 			return false
 		}

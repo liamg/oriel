@@ -46,6 +46,7 @@ type Plan struct {
 // planState is one session's plan views: the doc in front, and each doc's presentation.
 type planState struct {
 	doc     string // the doc in front, by its name at the workspace root
+	picked  bool   // doc was chosen, not the first there by default
 	docSel  int
 	focus   bool // give the doc focus next frame
 	present map[string]kit.PresentState
@@ -91,6 +92,8 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 		}
 	})))
 	h.Do(x.openIfPlanning)
+	// Once the window is on a planning session's directory, after its layout comes back.
+	x.Add(kit.OnDirChanged(h, "opens the plan of a planning session the window moves onto", func(kit.DirChanged) { h.Do(x.openIfPlanning) }))
 	return nil
 }
 
@@ -156,7 +159,7 @@ func (x *Plan) open(ctx context.Context, doc string) error {
 	}
 	st := x.state(se.ID)
 	if doc != "" {
-		st.doc = doc
+		st.doc, st.picked = doc, true
 	}
 	shown := map[string]bool{}
 	for _, v := range x.h.Layout().Visible() {
@@ -219,7 +222,7 @@ func (x *Plan) docs(se core.SessionState, st *planState) (docs []planDoc, loadin
 // current is the doc in front: the one chosen, else the first.
 func (x *Plan) current(st *planState, docs []planDoc) (planDoc, bool) {
 	for i, d := range docs {
-		if d.name == st.doc {
+		if st.picked && d.name == st.doc {
 			st.docSel = i
 			return d, true
 		}
@@ -227,7 +230,12 @@ func (x *Plan) current(st *planState, docs []planDoc) (planDoc, bool) {
 	if len(docs) == 0 {
 		return planDoc{}, false
 	}
-	st.doc, st.docSel = docs[0].name, 0
+	// None picked, or the one picked isn't there yet: the first, PLAN.md once it's read, not whichever came in first.
+	// A pick stays, for when its doc comes in.
+	if !st.picked {
+		st.doc = docs[0].name
+	}
+	st.docSel = 0
 	return docs[0], true
 }
 
@@ -363,7 +371,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 				x.docRow(c, se, docs[i], sel)
 			})
 			if res.Changed || res.Activated >= 0 {
-				st.doc = docs[st.docSel].name
+				st.doc, st.picked = docs[st.docSel].name, true
 				st.focus = st.focus || res.Activated >= 0
 			}
 		}

@@ -86,6 +86,17 @@ type editPlan struct {
 	after         func() // after it's applied
 }
 
+// forget stops the search running and drops what was searched, as the window moves onto another directory.
+func (p *Search) forget() {
+	p.mu.Lock()
+	if p.cancel != nil {
+		p.cancel()
+	}
+	p.ran, p.matches, p.done, p.err, p.cancel = searchRun{}, nil, false, nil, nil
+	p.mu.Unlock()
+	p.query, p.replace, p.globs, p.project, p.sel, p.plan, p.shown = "", "", "", "", 0, nil, searchShown{}
+}
+
 // searchRun is what a search was run with, so a change in any of it runs it again.
 type searchRun struct {
 	pattern, globs string
@@ -97,6 +108,7 @@ func (p *Search) Manifest() plugin.Manifest { return plugin.Manifest{ID: "search
 
 func (p *Search) Activate(_ context.Context, h plugin.Host) error {
 	p.h = h
+	p.Add(kit.OnDirChanged(h, "search starts afresh in the directory", func(kit.DirChanged) { p.forget() }))
 	for _, c := range []registry.Command{
 		{ID: "search.open", Title: "Search the project for a PCRE2 {query}; \"@all \" first takes in generated files", Run: func(ctx registry.Ctx, a registry.Args) error {
 			if q, ok := a["query"].(string); ok {

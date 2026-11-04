@@ -45,8 +45,12 @@ The agent asks something with options: click one to answer. Where it takes sever
 The agent's login stopped working: an expired or revoked login, or none. Every session with that provider waits on
 this card, and a notice says what to do. For a provider that signs in from Oriel (Codex), **Log in** (`l`) opens its
 sign-in in your browser. Otherwise it opens the agent's own terminal with its login command typed (`/login` for
-Claude); finish signing in there. An agent with neither says what to run in a terminal. Once you're signed in the
-cards go by themselves, and the sessions carry on; **Check again** (`c`) looks now.
+Claude); finish signing in there. A sandboxed agent never signs in in its own terminal, as its sign-in is a copy of
+this machine's: **Log in** opens a terminal on this machine running the provider's sign-in (`claude auth login`,
+`codex login`), and the sandboxes pick it up. Before asking, a sandboxed agent is started once again with this
+machine's sign-in handed over afresh, as its copy may be one the machine has renewed since. An agent with no way to
+sign in from here says what to run in a terminal. Once you're signed in the cards go by themselves, and the sessions
+carry on; **Check again** (`c`) looks now.
 
 ## Security key {#key}
 

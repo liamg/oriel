@@ -35,8 +35,16 @@ type Git struct {
 	busy    sync.WaitGroup
 	running atomic.Int32 // the work busy waits on
 
-	mu     sync.Mutex
-	others map[string]*gitTree // by the directory asked for
+	mu        sync.Mutex
+	others    map[string]*gitTree    // by the directory asked for
+	parked    map[string]*parkedTree // the work trees the window has left, by root
+	parkOrder []string               // parked's roots, the longest left first
+	roots     map[string]string      // the root of each directory the window has been on: "" outside a repo
+	// watchers follow the window's work tree (WatchWindow); unwatch stops its status calling them.
+	watchers map[int]func(root string, paths []string)
+	nextW    int
+	unwatch  func()
+	told     kit.Serial // the watchers' calls, off the loop
 
 	ask *commitAsk // the commit dialog, while it's open
 }
@@ -69,23 +77,126 @@ func (g *Git) Manifest() plugin.Manifest { return plugin.Manifest{ID: "git"} }
 
 func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 	g.h = h
-	g.others = map[string]*gitTree{}
+	g.others, g.parked, g.roots = map[string]*gitTree{}, map[string]*parkedTree{}, map[string]string{}
 	g.gitTree = gitTree{g: g, held: true}
 	g.Add(h.Contribute(registry.Service{Name: registry.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
-	g.work, g.ready, g.asked = h.Here().Project, true, g.now()
-	if dir := g.work; dir != "" {
-		if root, ok := gitx.Root(ctx, dir); ok {
-			g.gitTree.found(root)
-			g.Add(kit.OnDispose(g.status.Watch(func([]string) { h.Redraw() })))
-			g.gitTree.subscribe()
-		}
+	g.watchers = map[int]func(string, []string){}
+	if root, ok := g.findRoot(ctx, h.Here().Project); ok {
+		g.rememberRoot(h.Here().Project, root)
+		g.hold(root)
 	}
+	g.Add(kit.OnDispose(func() { g.release() }))
+	g.Add(kit.OnDispose(g.closeParked))
+	g.Add(kit.OnDispose(g.told.Stop))
+	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) { g.follow() }))
 	for _, c := range g.commands() {
 		g.Add(h.Command(c))
 	}
 	g.activateCommit(h)
 	g.Add(kit.OnDispose(h.Framed(g.framed)))
 	return nil
+}
+
+// findRoot is the root of the work tree dir is in, and the window's tree set up for it.
+func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
+	g.gitTree.reset(dir, g.now())
+	g.ready = true
+	if dir == "" {
+		return "", false
+	}
+	return gitx.Root(ctx, dir)
+}
+
+// hold reads the work tree at root as the window's, for good: Tree("") is it until the window moves (DirChanged).
+// Its changes redraw and go to the WatchWindow watchers.
+func (g *Git) hold(root string) {
+	if !g.unpark(root) {
+		g.gitTree.found(root)
+	}
+	g.unwatch = g.status.Watch(func(paths []string) {
+		g.h.Redraw()
+		g.notify(root, paths)
+	})
+	g.gitTree.subscribe()
+}
+
+// release lets go of the window's work tree.
+func (g *Git) release() {
+	g.gitTree.unsubscribe()
+	if g.unwatch != nil {
+		g.unwatch()
+		g.unwatch = nil
+	}
+}
+
+// follow moves the window's work tree onto the directory it's moved to. git finds its root off the loop: until it
+// has, the window's tree is none, and its watchers hear of the new one once it's held.
+func (g *Git) follow() {
+	g.park()
+	g.release()
+	dir := g.h.Here().Project
+	g.gitTree.reset(dir, g.now())
+	if dir == "" {
+		g.gitTree.ready = true
+		g.notify("", nil)
+		return
+	}
+	if root, ok := g.knownRoot(dir); ok { // been here: its root, and its status if it's parked, are at hand
+		g.hold(root)
+		g.ready = true
+		g.notify(g.root(), nil)
+		g.h.Redraw()
+		return
+	}
+	g.busy.Add(1)
+	g.running.Add(1)
+	go func() {
+		defer g.busy.Done()
+		root, ok := gitx.Root(context.Background(), dir)
+		g.h.Do(func() {
+			defer g.running.Add(-1)
+			if g.work != dir { // moved on again while it looked
+				return
+			}
+			if ok {
+				g.rememberRoot(dir, root)
+				g.hold(root)
+			}
+			g.ready = true
+			g.notify(g.root(), nil)
+			g.h.Redraw()
+		})
+	}()
+}
+
+// notify hands the WatchWindow watchers a change to the window's work tree at root.
+func (g *Git) notify(root string, paths []string) {
+	g.mu.Lock()
+	fns := make([]func(string, []string), 0, len(g.watchers))
+	for _, fn := range g.watchers {
+		fns = append(fns, fn)
+	}
+	g.mu.Unlock()
+	// Off the loop and in order: a status is often set in a frame's build, and a watcher reads files.
+	g.told.Do(func() {
+		for _, fn := range fns {
+			fn(root, paths)
+		}
+	})
+}
+
+// watchWindow adds a WatchWindow watcher.
+func (g *Git) watchWindow(fn func(root string, paths []string)) func() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	id := g.nextW
+	g.nextW++
+	g.watchers[id] = fn
+	return func() {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		delete(g.watchers, id)
+	}
 }
 
 func (g *Git) commands() []registry.Command {
@@ -378,6 +489,18 @@ func (g *Git) trees_(root string, id core.SessionID) *gitsrc.Tree {
 	return gitsrc.New(root, nil)
 }
 
+// reset makes t the work tree of dir, not yet found, in place: a reading for the tree it was, still on its way, only
+// writes the fields under t's locks, which are reset under them.
+func (t *gitTree) reset(dir string, asked time.Time) {
+	t.syncMu.Lock()
+	t.mu.Lock()
+	t.session, t.sub, t.remote, t.counts = "", watch.Sub[*gitx.State]{}, watch.Sub[string]{}, watch.Sub[*gitx.State]{}
+	t.setAt, t.merged, t.used, t.counted, t.failed = time.Time{}, struct{ st, c, out *gitx.State }{}, false, false, nil
+	t.mu.Unlock()
+	t.syncMu.Unlock()
+	t.status, t.src, t.work, t.ready, t.asked = nil, nil, dir, false, asked
+}
+
 // subscribe asks the tree's manager for its status and remote, if it isn't already.
 func (t *gitTree) subscribe() {
 	if t.src == nil {
@@ -390,14 +513,18 @@ func (t *gitTree) subscribe() {
 		return
 	}
 	label := "git: " + t.src.Root
-	t.sub = watch.Subscribe(m, t.src.Status(), treeNeed, label)
-	t.remote = watch.Subscribe(m, t.src.Remote(), treeNeed, label)
-	sub, status, h := t.sub, t.status, t.g.h
-	sub.OnChange(func() {
+	// Told of each reading from the first on, one already there included, off the loop: status is handed it there.
+	status, h := t.status, t.g.h
+	var sub watch.Sub[*gitx.State]
+	made := make(chan struct{})
+	sub = watch.SubscribeFunc(m, t.src.Status(), treeNeed, label, func() {
+		<-made
 		t.sync(sub, status)
 		h.Redraw()
 	})
-	t.remote.OnChange(h.Redraw)
+	t.sub = sub
+	close(made)
+	t.remote = watch.SubscribeFunc(m, t.src.Remote(), treeNeed, label, h.Redraw)
 }
 
 func (t *gitTree) unsubscribe() {
@@ -503,6 +630,9 @@ func (s gitTrees) Holding(p string) registry.GitTree     { return s.g.holding(p)
 func (s gitTrees) Do(fn func(ctx context.Context) error) { s.g.async(fn) }
 func (s gitTrees) Reload()                               { s.g.reload() }
 func (s gitTrees) Busy() bool                            { return s.g.running.Load() > 0 || s.g.reading() }
+func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {
+	return s.g.watchWindow(fn)
+}
 
 // state is the last status read, nil outside a repo or before the first.
 func (t *gitTree) state() *gitx.State {
@@ -510,12 +640,8 @@ func (t *gitTree) state() *gitx.State {
 		return nil
 	}
 	t.use()
-	t.mu.Lock()
-	sub := t.sub
-	t.mu.Unlock()
-	if sub.Valid() {
-		t.sync(sub, t.status)
-	}
+	// Each reading reaches status off the loop, as its subscription hears of it (subscribe): handing it over, a diff
+	// of every changed file and its watchers told, is too much for a frame with thousands changed.
 	return t.status.State()
 }
 

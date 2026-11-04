@@ -268,7 +268,7 @@ func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
 	if got := git(t, apiDir, "log", "-1", "--format=%B"); !strings.Contains(got, "feat(api): routes") || !strings.Contains(got, "Unreviewed-Agent-Lines: 5") {
 		t.Errorf("the commit's message: %q", got)
 	}
-	rig.WaitState(t, s.Store(), "the override in the session", func(st core.State) bool {
+	s.UntilState("the override in the session", func(st core.State) bool {
 		sess, ok := st.Session(se.ID)
 		if !ok {
 			return false
@@ -330,7 +330,7 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 	agent.Emit(agentpkg.TurnStart{})
 	rig.Answered(t, s.Store(), agent)
 	agent.Emit(agentpkg.TurnEnd{})
-	rig.WaitState(t, s.Store(), "the agent idle", func(st core.State) bool {
+	s.UntilState("the agent idle", func(st core.State) bool {
 		sess, _ := st.Session(se.ID)
 		a := sess.Snapshot().Agent
 		return a.Stats.Turns == 1 && !a.Working
@@ -378,9 +378,9 @@ func TestGitPanelInAnOpenedDirectory(t *testing.T) {
 	lw := rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
 	blog, up := shipRepo(t, "blog", map[string]string{"post.md": "# One\n"})
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	rig.WaitState(t, s.Store(), "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("directory.open", registry.Args{"path": blog})
-	st := rig.WaitState(t, s.Store(), "the directory's session in front", func(st core.State) bool {
+	st := s.UntilState("the directory's session in front", func(st core.State) bool {
 		se, ok := st.Session(st.Focus)
 		return ok && se.Snapshot().Kind == core.KindDirect
 	})

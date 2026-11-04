@@ -84,6 +84,7 @@ type diffState struct {
 	sel     diffSel
 	reveal  bool
 	tries   int  // frames reveal has waited for its target to be built and laid out
+	making  bool // reveal's file was waiting for its diff last frame
 	centre  bool // reveal puts its target in the middle of the view: a jump, not a step
 	focus   bool
 	goLine  int  // a line of the selected file to select once it's drawn

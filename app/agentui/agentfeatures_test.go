@@ -70,3 +70,18 @@ func TestABrowserLoginFromTheCard(t *testing.T) {
 	lw.Fake.FinishLogin(nil)
 	r.WaitGone("needs you to log in")
 }
+
+// A login that signs in on the host (a sandboxed agent's, whose sign-in is the host's): the card's Log in runs the
+// provider's command in a terminal on this machine.
+func TestAHostLoginFromTheCard(t *testing.T) {
+	lw := rig.NewHost(t)
+	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{})
+	lw.Fake.SignIn(false)
+	a.Emit(agent.AuthExpired{Provider: "fake", Detail: "fake is signed out", Shell: "fake login",
+		HostCommand: []string{"sh", "-c", "echo signing-in-on-the-host; exec cat"}})
+	r.WaitFrame("the card", func(s string) bool {
+		return apptest.HasAll(s, "Fake needs you to log in", "signs in on this machine", "Log in", "Check again")
+	})
+	r.ClickText("Log in")
+	r.WaitText("signing-in-on-the-host")
+}

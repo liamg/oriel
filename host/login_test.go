@@ -48,11 +48,11 @@ func TestALostLoginFlagsEverySession(t *testing.T) {
 		Terminal: "/login", Shell: "fake, then /login"}
 	for _, id := range []core.SessionID{id1, id2} {
 		se := r.eventually(id, "the login's card", flagged)
-		if a, _ := loginCard(se); a.Login == nil || *a.Login != want {
+		if a, _ := loginCard(se); a.Login == nil || !a.Login.Same(want) {
 			t.Errorf("%s: ask = %+v, want %+v", id, a, want)
 		}
 	}
-	if ms := r.w.store.State().Machine; len(ms.SignedOut) != 1 || ms.SignedOut[0] != want {
+	if ms := r.w.store.State().Machine; len(ms.SignedOut) != 1 || !ms.SignedOut[0].Same(want) {
 		t.Errorf("the machine says %+v", ms.SignedOut)
 	}
 	if p := r.w.ProviderInfo(context.Background()); p[0].Install.LoggedIn || !strings.Contains(p[0].Install.Note, "OAuth token revoked") {

@@ -48,6 +48,7 @@ type reviewDetail struct {
 	since      time.Time
 	read       time.Time // when the source last answered
 	refreshing bool      // asked again, keeping d until the answer
+	again      bool      // asked again while a read was under way: it's read once more after
 	stale      bool      // to be asked again when next shown
 	asked      time.Time // when the page last asked, by its clock
 }

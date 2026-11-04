@@ -102,7 +102,7 @@ func TestRunStatuses(t *testing.T) {
 			t.Fatal(err)
 		}
 		a := r.agent()
-		return id, string(r.session(id).Threads[0].ID), a
+		return id, string(delivered(r, id).Threads[0].ID), a
 	}
 	ctx := context.Background()
 

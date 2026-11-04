@@ -57,7 +57,7 @@ call the other. A request whose caller stops waiting is cancelled with `$/cancel
 | `terminal/write` | `{session, data}` | `{}` |
 | `terminal/resize` | `{session, cols, rows}` | `{}` |
 | `login/start` | `{login}` | `{url}`: where the user signs in |
-| `sandbox/needs` | `{call, root, cwd, dir, home, tmp, os, arch, shared, uid, stateDir, environ, cache}` | `{bins, tools, mounts: [{host, sandbox, readOnly}], env, passEnv, skipEnv, urlEnv, urls, hosts, problems: [{code, message, fix, blocking}]}` |
+| `sandbox/needs` | `{call, root, cwd, dir, home, tmp, os, arch, shared, uid, stateDir, environ, cache}` | `{bins, tools, mounts: [{host, sandbox, readOnly}], env, passEnv, skipEnv, urlEnv, urls, hosts, problems: [{code, message, fix, blocking, signIn}]}` (`signIn`: a blocking problem that signing in on the host fixes, as the `hostCommand` that does) |
 | `sandbox/mcpServers` | `{}` | `[{name, source, config, vars}]`: the user's MCP servers for it, in Claude's `mcpServers` form |
 | `logs` | `{cwd, session}` | `[{path, format}]`, when `initialize` said `logged` |
 | `discover` | `{}` | `[{session, logs, modified}]`, when it said `discovered` |
@@ -121,7 +121,7 @@ A `session/event`'s `event` is one of these, by `type`, with only the fields tha
 | `turnEnd` | `usage: {input, output, cacheRead, cacheWrite, context, contextMax, cost, durationMs}`, `background` (what the turn left running that will wake the agent: Oriel holds the turn's work open until it's done) and `running` (what it left running that won't: processes the user may stop), each `[{id, kind, description, pid, cpu, memory}]`; `cpu` is percent of a core, `memory` resident bytes |
 | `failure` | `error`, `retryable` |
 | `usage` | `plan`: the plan's windows, as `usage` answers |
-| `authExpired` | `provider`, `account`, `detail`, `terminal` (typed into the terminal, signs in again: `/login`), `shell` (run in a shell, signs in again) |
+| `authExpired` | `provider`, `account`, `detail`, `terminal` (typed into the terminal, signs in again: `/login`), `shell` (run in a shell, signs in again), `hostCommand` (argv run on the host in a terminal, signs it and its sandboxes in again: `["codex", "login"]`) |
 | `authRestored` | `provider`, `account` |
 | `exited` | `error` |
 

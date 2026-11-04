@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -51,7 +52,7 @@ func TestJobFormWaitsForAgents(t *testing.T) {
 
 // With no agent installed the form says so and names what a run uses; Save goes.
 func TestJobFormNoAgents(t *testing.T) {
-	w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad})
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: &agent.Providers{}, Exec: rig.NopExec{}, Load: rig.SteadyLoad, HTTP: isolate.Net(t)})
 	if err != nil {
 		t.Fatal(err)
 	}

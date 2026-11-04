@@ -15,13 +15,14 @@ func root(t *testing.T) string {
 	return r
 }
 
-// Everything that ships is one module; spec/ holds reference sources kept out of the build.
+// Everything that ships is one module; spec/ holds reference sources kept out of the build, and third_party/ the
+// dependencies go.mod replaces with a patched copy (each says why in its PATCHED.md).
 func TestOneModule(t *testing.T) {
 	dirs, err := ModuleDirs(root(t))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := []string{".", "spec"}; !slices.Equal(dirs, want) {
+	if want := []string{".", "spec", "third_party/wazero"}; !slices.Equal(dirs, want) {
 		t.Errorf("go.mod files in %q, want %q", dirs, want)
 	}
 }

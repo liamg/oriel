@@ -55,16 +55,30 @@ func TestThreeErrorsInARow(t *testing.T) {
 	}
 }
 
-// A hook over its time budget is a warning: "4.1 ms on CommentSend · over the 2 ms budget".
+// A hook over its time budget twice running is a warning: "4.1 ms on CommentSend · over the 2 ms budget". Once alone
+// isn't: a busy machine stalls any hook now and then, where a slow one is slow every time.
 func TestHookBudget(t *testing.T) {
 	r := registry.New()
 	var fails []registry.Failure
 	r.OnFailure(func(f registry.Failure) { fails = append(fails, f) })
+	slow := true
 	r.Hook(registry.Hook{Event: "CommentSend", Source: "lua/my/tickets.lua:8", Fn: func(registry.Ctx, any) (registry.Verdict, error) {
-		time.Sleep(3 * time.Millisecond)
+		if slow {
+			time.Sleep(3 * time.Millisecond)
+		}
 		return registry.Verdict{}, nil
 	}})
-	r.Fire(context.Background(), "CommentSend", "", nil)
+	fire := func(s bool) {
+		slow = s
+		r.Fire(context.Background(), "CommentSend", "", nil)
+	}
+	fire(true)
+	fire(false)
+	fire(true)
+	if len(fails) != 0 {
+		t.Fatalf("a slow call between quick ones warned: %+v", fails)
+	}
+	fire(true)
 	if len(fails) != 1 || !fails[0].Warn || fails[0].Kind != registry.KindHook || fails[0].InARow != 0 {
 		t.Fatalf("failures %+v", fails)
 	}

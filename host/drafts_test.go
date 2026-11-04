@@ -27,16 +27,17 @@ func draftsRig(t *testing.T) (*rig, core.SessionID, *agenttest.FakeSession, stri
 // handBack resolves the session's request, so the agent owes nothing.
 func handBack(r *rig, id core.SessionID, a *agenttest.FakeSession) {
 	r.t.Helper()
-	a.Call(r.t, "reply", map[string]any{"thread": string(r.session(id).Threads[0].ID), "body": "Done.", "resolve": true})
+	a.Call(r.t, "reply", map[string]any{"thread": string(delivered(r, id).Threads[0].ID), "body": "Done.", "resolve": true})
 }
 
-// turn is one turn of the agent's, ending idle.
+// turn is one turn of the agent's, ending idle, with the host done looking at the worktree for it.
 func turn(r *rig, id core.SessionID, a *agenttest.FakeSession) {
 	r.t.Helper()
 	n := r.session(id).Agent.Stats.Turns
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the turn's end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == n+1 })
+	a.Handled(r.t)
 }
 
 func write(t *testing.T, dir, name, text string) {
@@ -86,6 +87,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	a.Call(t, "commit_draft", map[string]any{"message": "fix(pricing): round negatives"})
 	a.Call(t, "pr_draft", map[string]any{"title": "fix(pricing): round negatives", "body": "Rounds them."})
 	a.Emit(agent.TurnEnd{})
+	a.Handled(t)
 	a.NoneSent(t)
 	s := r.ship(id, false)
 	for _, p := range s {
@@ -111,6 +113,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	a.Call(t, "commit_draft", map[string]any{"message": "fix(pricing): round negatives"})
 	a.Call(t, "pr_draft", map[string]any{"title": "fix(pricing): round negatives", "body": "Rounds them."})
 	a.Emit(agent.TurnEnd{})
+	a.Handled(t)
 	a.NoneSent(t)
 	p, _ := r.session(id).Primary()
 	if _, err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: p.Name, Message: "fix(pricing): round negatives"}); err != nil {

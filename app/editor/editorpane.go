@@ -156,16 +156,23 @@ func (x *Editor) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Interactio
 		return
 	}
 	at := in.Pointer()
-	pos, line := x.posAt(p, r, at, m)
+	pos, _ := x.posAt(p, r, at, m)
 	if !d.held {
+		// The press goes where it went down: the pointer may have moved on before this frame was built.
+		from, ok := in.PressedAt()
+		if !ok {
+			from = at
+		}
+		fpos, line := x.posAt(p, r, from, m)
 		d.held, d.moved = true, false
-		d.gutter = at.X-r.Min.X < gutterWidth(p.Buf().Lines(), m) && x.gutterAction(p, line)
+		d.gutter = from.X-r.Min.X < gutterWidth(p.Buf().Lines(), m) && x.gutterAction(p, line)
 		if d.gutter {
 			return
 		}
-		d.clicks, d.pressed = max(in.Presses, 1), pos
-		x.press(p, st, d, pos, in.Mods)
-	} else if !d.gutter && isVim(st) && (d.moved || pos != d.pressed) && pos != x.e.Cursor() {
+		d.clicks, d.pressed = max(in.Presses, 1), fpos
+		x.press(p, st, d, fpos, in.Mods)
+	}
+	if !d.gutter && isVim(st) && (d.moved || pos != d.pressed) && pos != x.e.Cursor() {
 		if !d.moved {
 			d.moved = true
 			if _, ok := x.e.Visual(); !ok {

@@ -291,7 +291,7 @@ func dockEdge(c *ui.Ctx, st *viewState, e layout.Edge, d *layout.Dock) bool {
 	changed := false
 	if in.Held {
 		if st.edge == nil || st.edge.e != e {
-			st.edge = &dockResize{e: e, from: in.Pointer(), size0: d.Size}
+			st.edge = &dockResize{e: e, from: pressedAt(in), size0: d.Size}
 		}
 		delta := in.Pointer().X - st.edge.from.X
 		switch e {
@@ -374,7 +374,7 @@ func splitter(c *ui.Ctx, st *viewState, n *layout.Node, box ui.ID, i int, s ui.S
 	changed := false
 	if in.Held {
 		if st.resize == nil {
-			st.resize = &resize{box: box, i: i, from: in.Pointer(), w0: append([]float32(nil), n.Weights...)}
+			st.resize = &resize{box: box, i: i, from: pressedAt(in), w0: append([]float32(nil), n.Weights...)}
 		}
 		rs := st.resize
 		if rs.box == box && rs.i == i && rs.span > 0 && len(n.Weights) == len(rs.w0) {
@@ -903,4 +903,12 @@ func title(v layout.ViewRef) string {
 		t = v.Project + " · " + t
 	}
 	return t
+}
+
+// pressedAt is where the press dragging in went down, or the pointer when that isn't known.
+func pressedAt(in ui.Interaction) render.Point {
+	if p, ok := in.PressedAt(); ok {
+		return p
+	}
+	return in.Pointer()
 }
