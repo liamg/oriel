@@ -193,13 +193,14 @@ func (h *session) toolResolve(ctx context.Context, raw json.RawMessage) (string,
 // those of the first turn count as given while its start hands them over. The error hands them over, so they count as
 // given and the thread stays the agent's.
 func (h *session) refuseUnseen(tid core.ThreadID) error {
+	// Read with h.mu held: the first turn's comments are marked given while it's held, as handing is cleared.
+	h.mu.Lock()
+	handing := h.handing
 	se, err := h.r.st.Session(h.id)
+	h.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	h.mu.Lock()
-	handing := h.handing
-	h.mu.Unlock()
 	unseenIn := func(t core.Thread) []core.Comment {
 		return slices.DeleteFunc(t.Undelivered(), func(c core.Comment) bool { return handing[c.ID] })
 	}
