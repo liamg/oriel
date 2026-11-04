@@ -306,29 +306,60 @@ func (w *Window) Click(p render.Point) {
 // RightClickText right-clicks the middle of the first run of text in the frame on screen.
 func (w *Window) RightClickText(text string) {
 	w.T.Helper()
-	p := w.textAt(text, false)
-	w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
-	w.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonSecondary})
-	w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonSecondary})
+	w.clickOn(`"`+text+`" to click`, textIn(text, false), render.ButtonSecondary)
+}
+
+// clickOn clicks what find finds once it's settled on screen, aimed on the loop at the frame showing: the loop takes
+// the click before it builds another, so a frame built meanwhile, by work landing, can't move what it lands on.
+func (w *Window) clickOn(what string, find func(headless.Frame) (render.Point, bool), button render.Buttons) {
+	w.T.Helper()
+	for deadline := time.Now().Add(Timeout); ; {
+		Settled(w, what, find)
+		sent := false
+		w.Do(func() error {
+			fs := w.Win.Frames()
+			if p, ok := find(fs[len(fs)-1]); ok {
+				w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+				w.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: button})
+				w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: button})
+				sent = true
+			}
+			return nil
+		})
+		if sent {
+			return
+		}
+		if time.Now().After(deadline) {
+			w.T.Fatalf("%s: gone from screen whenever it was aimed at%s", what, rig.Stuck())
+		}
+	}
 }
 
 // textAt is the middle of a run of text in the frame on screen, once it's settled there: the first, or with last
 // the last, the one on top.
 func (w *Window) textAt(text string, last bool) render.Point {
 	w.T.Helper()
-	return Settled(w, `"`+text+`" to click`, func(f headless.Frame) (render.Point, bool) {
+	return Settled(w, `"`+text+`" to click`, textIn(text, last))
+}
+
+// textIn finds the middle of what shows of a run of text in a frame, as a person would aim at it: the first, or with
+// last the last, the one on top. Text its clips hide all of, as in a panel still opening, isn't there.
+func textIn(text string, last bool) func(headless.Frame) (render.Point, bool) {
+	return func(f headless.Frame) (render.Point, bool) {
 		var at render.Point
 		found := false
-		for _, op := range f.Ops {
-			if op.Kind == render.OpGlyphs && op.Run.Text == text {
-				at, found = render.Point{X: op.At.X + op.Run.Advance/2, Y: op.At.Y - op.Run.Ascent/2}, true
-				if !last {
-					break
-				}
+		for _, r := range f.Runs() {
+			if r.Text != text || !r.Visible() {
+				continue
+			}
+			y := min(max(r.At.Y-(r.At.Y-r.Box.Min.Y)/2, r.Shown.Min.Y), r.Shown.Max.Y) // half its ascent up
+			at, found = render.Point{X: (r.Shown.Min.X + r.Shown.Max.X) / 2, Y: y}, true
+			if !last {
+				break
 			}
 		}
 		return at, found
-	})
+	}
 }
 
 // settleIdle is how long a window that draws nothing new has to show a thing in one place for it to count as settled.
@@ -400,7 +431,7 @@ func (w *Window) TextPoint(text string) render.Point {
 // ClickText clicks the middle of the first run of text in the frame on screen.
 func (w *Window) ClickText(text string) {
 	w.T.Helper()
-	w.Click(w.textAt(text, false))
+	w.clickOn(`"`+text+`" to click`, textIn(text, false), render.ButtonPrimary)
 }
 
 // DropFiles drops files from the OS's file manager on the middle of the first run of text in the frame.
@@ -412,7 +443,7 @@ func (w *Window) DropFiles(text string, paths ...string) {
 // ClickTop clicks the middle of the last run of text drawn in the frame on screen: the one on top.
 func (w *Window) ClickTop(text string) {
 	w.T.Helper()
-	w.Click(w.textAt(text, true))
+	w.clickOn(`"`+text+`" to click`, textIn(text, true), render.ButtonPrimary)
 }
 
 // Access is the node of the accessibility tree on screen named label, or nil.
@@ -444,14 +475,13 @@ func (w *Window) ClickAccess(label string) {
 // several. An empty within is the whole tree.
 func (w *Window) ClickAccessIn(within, label string) {
 	w.T.Helper()
-	at := Settled(w, fmt.Sprintf("%q in %q to click", label, within), func(headless.Frame) (render.Rect, bool) {
+	w.clickOn(fmt.Sprintf("%q in %q to click", label, within), func(headless.Frame) (render.Point, bool) {
 		n := w.lastAccess(within, label)
 		if n == nil {
-			return render.Rect{}, false
+			return render.Point{}, false
 		}
-		return n.Bounds, true
-	})
-	w.Click(Centre(at))
+		return Centre(n.Bounds), true
+	}, render.ButtonPrimary)
 }
 
 // lastAccess is the last node on screen named label inside a node named within (anywhere when within is empty), or nil.

@@ -126,6 +126,26 @@ func TestTheAgentRepliesWithEvidence(t *testing.T) {
 	}
 }
 
+// An agent that answers its first turn before its start has returned answers comments it was given: they count as
+// delivered from when it's handed them, not from when its start returns.
+func TestAnAnswerBeforeTheStartReturnsIsTaken(t *testing.T) {
+	r := newRig(t)
+	hold := make(chan struct{})
+	var release sync.Once
+	defer release.Do(func() { close(hold) })
+	r.fake.HoldStart = hold
+	id, a := r.workSession("Fix it")
+	a.WaitSent(t)
+	tid := string(r.session(id).Threads[0].ID)
+	if out, err := a.CallErr("reply", map[string]any{"thread": tid, "body": "On it."}); err != nil {
+		t.Errorf("the answer to its first turn was refused: %v", err)
+	} else if out != "replied" {
+		t.Errorf("reply said %q", out)
+	}
+	release.Do(func() { close(hold) })
+	r.eventually(id, "the agent running", func(se core.SessionState) bool { return se.Agent.Running })
+}
+
 // A "tests pass" with no run behind it is flagged; one citing a run links it.
 func TestClaimsWithoutEvidenceAreFlagged(t *testing.T) {
 	r := newRig(t)
