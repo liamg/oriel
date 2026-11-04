@@ -36,9 +36,8 @@ type Deps struct {
 	Note func(id core.SessionID, it core.Item)
 	// SetAgent changes a running session's agent state.
 	SetAgent func(id core.SessionID, fn func(a *core.AgentState))
-	// RestartWhenIdle restarts session id's agent, resumed, once its turn ends, if it still runs in sb; done ends the
-	// wait.
-	RestartWhenIdle func(id core.SessionID, sb hostcore.Sandbox, why string, done <-chan struct{})
+	// RestartWhenIdle restarts session id's agent, resumed, once its turn ends, if it still runs in sb.
+	RestartWhenIdle func(id core.SessionID, sb hostcore.Sandbox, why string)
 }
 
 // Boxes are the host's sessions' sandboxes, and the sandbox settings the app last sent.

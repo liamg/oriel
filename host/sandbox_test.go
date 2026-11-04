@@ -850,6 +850,27 @@ func TestSandboxRestartsOnceWhenIdle(t *testing.T) {
 	}
 }
 
+// A restart asked for during a turn that ends with work owed happens at the turn's end, before the agent is told to
+// carry on in the old sandbox.
+func TestSandboxRestartsBeforeTheCarryOn(t *testing.T) {
+	s := newSandboxRig(t)
+	id := s.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
+		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
+	a := s.agent()
+	b := s.keptBox(id)
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	s.eventually(id, "working", func(se core.SessionState) bool { return se.Agent.Working })
+	a.Call(t, "reply", map[string]any{"thread": string(s.session(id).Threads[0].ID), "body": "Adding the project.", "working": true})
+	b.RestartWhenIdle("a project joined the sandbox")
+	a.Emit(agent.TurnEnd{})
+	again := s.agent()
+	if again == a || !a.Closed() {
+		t.Error("the agent wasn't restarted")
+	}
+	a.NoneSent(t)
+}
+
 // An "always" allow for the network that can't be saved still lets the connection through, and the transcript says
 // it wasn't kept.
 func TestAlwaysNotSavedReachesTheTranscript(t *testing.T) {

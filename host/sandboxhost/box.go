@@ -536,7 +536,7 @@ func (b *Box) RestartWhenIdle(why string) {
 	}
 	b.restarting = true
 	b.mu.Unlock()
-	b.d.RestartWhenIdle(b.id, b, why, b.ctx.Done())
+	b.d.RestartWhenIdle(b.id, b, why)
 }
 
 // sandboxExec runs a provider's processes in the session's sandbox.

@@ -28,10 +28,10 @@ type session struct {
 	starting     bool
 	working      bool // a turn is running, or one was just asked for
 	interrupting bool
-	relogin      bool // a turn stopped for a lost login: told to carry on once it's back
-	stale        bool // the agent lost what only a restart brings back: restarted once its turn ends
-	refused      bool // the agent couldn't start for a lost login: started once it's back
-	loginRetried bool // a sandboxed agent's lost sign-in was tried again with the host's, since its last turn that worked
+	relogin      bool   // a turn stopped for a lost login: told to carry on once it's back
+	restartWhy   string // why the agent is restarted once its turn ends, before it's handed more
+	refused      bool   // the agent couldn't start for a lost login: started once it's back
+	loginRetried bool   // a sandboxed agent's lost sign-in was tried again with the host's, since its last turn that worked
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
 	held         []core.ThreadID // threads given to turns that left background work running: busy until it's done
@@ -275,7 +275,7 @@ func (h *session) unresponsive() bool {
 func (h *session) stop(why, by string) {
 	h.mu.Lock()
 	sess, box, cancel := h.sess, h.box, h.cancel
-	h.sess, h.box, h.cancel, h.working = nil, nil, nil, false
+	h.sess, h.box, h.cancel, h.working, h.restartWhy = nil, nil, nil, false, ""
 	waiting := h.waiting
 	h.waiting = map[string]chan AnswerReq{}
 	h.mu.Unlock()
