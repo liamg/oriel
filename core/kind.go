@@ -39,6 +39,7 @@ const (
 	OwnsBranch  Capability = "owns-branch"  // Oriel made its branches: it names, renames and deletes them
 	// CommentsInDiff keeps its agent's line comments on lines of its pull request's diff, as GitHub's review takes them.
 	CommentsInDiff Capability = "comments-in-diff"
+	RestartsAgent  Capability = "restarts-agent" // its agent is started again when it exits on its own
 )
 
 // KindSpec is a kind of session as data: what it starts from and what its agent is told.

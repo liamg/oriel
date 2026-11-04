@@ -50,7 +50,7 @@ func sessionsSource(h plugin.Host) uireg.PickerSource {
 			}}
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			return h.Run(ctx, "session.focus", registry.Args{"id": it.ID})
+			return h.Run(ctx, "session.open", registry.Args{"id": it.ID})
 		},
 	}
 }

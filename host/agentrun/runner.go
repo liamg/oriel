@@ -33,7 +33,8 @@ type Runner struct {
 	loginMu sync.Mutex
 	lost    map[string]*lostLogin // logins gone, by provider and account
 
-	resumed map[core.SessionID]bool // the sessions handed over that ResumeHandedOver has resumed
+	resumed    map[core.SessionID]bool // the sessions handed over that ResumeHandedOver has resumed
+	keepExited bool                    // an agent that exits on its own stays stopped
 
 	testsOnce sync.Once
 	testSet   *testrun.Set
@@ -140,6 +141,7 @@ func (x *Runner) Resume(id core.SessionID) error {
 	if h.unresponsive() {
 		h.stop("it stopped answering", "")
 	}
+	h.forgetExits()
 	if err := h.start(); err != nil {
 		return err
 	}

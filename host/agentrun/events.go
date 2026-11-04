@@ -274,6 +274,7 @@ func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 	h.working, h.interrupting = false, false
 	restart := h.restartWhy
 	h.restartWhy = ""
+	h.exits = nil
 	started := h.turnAt
 	delivered := append(h.held, h.delivered...)
 	h.held, h.delivered = nil, nil

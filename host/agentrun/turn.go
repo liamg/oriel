@@ -197,5 +197,6 @@ func (h *session) loop(sess agent.Session) {
 			_ = box.Close()
 		}
 		h.setAgent(func(a *core.AgentState) { a.Stopped(core.StoppedByAgent, h.r.env.Now()) })
+		h.exited()
 	}
 }

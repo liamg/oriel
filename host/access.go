@@ -42,6 +42,7 @@ type Access interface {
 	StartUtility(ctx context.Context, spec UtilitySpec) (*Utility, error)
 	Attach(r AttachReq) (string, error)
 	SetPrompts(o prompts.Overrides) error
+	SetRestartOnExit(on bool)
 	HandOver()
 
 	// Sandboxes and permissions
