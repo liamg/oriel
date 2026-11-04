@@ -50,7 +50,7 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 		case se.Ticket != "":
 			return registry.Gate{State: registry.GatePass, Note: se.Ticket}
 		case unplanned(se):
-			return registry.Gate{State: registry.GateWarn, Note: "unplanned"}
+			return registry.Gate{State: registry.GateSkipped, Note: "unplanned"}
 		}
 		return registry.Gate{}
 	}}))

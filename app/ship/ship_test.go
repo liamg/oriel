@@ -130,7 +130,7 @@ func TestShipFlow(t *testing.T) {
 		t.Fatalf("the PR on GitHub: %+v", apiPRs)
 	}
 
-	// web-dashboard: Commit all takes the agent's draft; Push + raise both PRs raises it and cross-links the two.
+	// web-dashboard: Commit all takes the agent's draft; Push + raise PR raises it and cross-links the two.
 	writeFiles(t, webDir, map[string]string{"src/usage.ts": "export const usage = 2\n"})
 	agent.Call(t, "commit_draft", map[string]any{"project": "web-dashboard", "message": "feat(web): back off on 429"})
 	agent.Call(t, "pr_draft", map[string]any{"project": "web-dashboard", "title": "feat(web): show the wait", "body": "Shows Retry-After."})
@@ -140,7 +140,7 @@ func TestShipFlow(t *testing.T) {
 	s.Frame()
 	s.ClickOn("Commit all")
 	shipSettle(s, t, "web committed", func() bool { sh, _ := x.ShipOf(se.ID, "web-dashboard"); return sh.Commits == 1 && len(sh.Files) == 0 })
-	s.ClickOn("Push + raise both PRs")
+	s.ClickOn("Push + raise PR")
 	shipSettle(s, t, "both PRs", func() bool {
 		sh, _ := x.ShipOf(se.ID, "web-dashboard")
 		return sh.PR != nil && x.Doing(se.ID, "search-api") == "" && x.Doing(se.ID, "web-dashboard") == ""
@@ -416,5 +416,43 @@ func TestGitPanelInAnOpenedDirectory(t *testing.T) {
 	shipSettle(s, t, "the push", func() bool { sh, _ := x.ShipOf(id, "blog"); return sh.Pushed && len(sh.Unpushed) == 0 })
 	if out := git(t, up, "ls-remote", "origin", "two"); !strings.Contains(out, "refs/heads/two") {
 		t.Errorf("origin hasn't got two: %q", out)
+	}
+}
+
+// With its PR open, the header offers Push for new commits, not another raise.
+func TestShipHeaderPushesToAnOpenPR(t *testing.T) {
+	s, _, hub, se, _ := shipScene(t)
+	x := shipOf(s)
+	dir := shipDir(se, "search-api")
+	writeFiles(t, dir, map[string]string{"x.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
+	s.Run("ship.raise", registry.Args{"project": "search-api", "title": "feat: x", "body": "x"})
+	shipSettle(s, t, "the PR", func() bool {
+		sh, _ := x.ShipOf(se.ID, "search-api")
+		return sh.PR != nil && x.Doing(se.ID, "search-api") == ""
+	})
+	s.Run("ship.open", nil)
+	s.Frame()
+	if s.Find("Push + raise PR") != nil || s.Find("Push all") != nil {
+		t.Fatalf("the header offers a raise or a push with the PR open and nothing to push:\n%s", s.Text())
+	}
+
+	writeFiles(t, dir, map[string]string{"y.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: y"})
+	shipSettle(s, t, "the unpushed commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Unpushed) == 1 })
+	s.Run("ship.open", nil)
+	s.Frame()
+	if s.Find("Push + raise PR") != nil {
+		t.Fatal("the header offers a raise with the PR open")
+	}
+	s.ClickOn("Push all")
+	shipSettle(s, t, "pushed", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Unpushed) == 0 && sh.Pushed })
+	if n := len(hub.PRs("acme/search-api")); n != 1 {
+		t.Errorf("Push all raised another PR: %d", n)
 	}
 }

@@ -16,8 +16,7 @@ Before anything is committed, each commit gate looks at it. The review ledger's 
 lines the commit takes that you haven't read (`ledger.gate`):
 
 - **hard** (work and plan sessions): the commit is blocked. **Review** (`r`) opens the diff; **Commit anyway**
-  (`a`) commits, with a trailer saying how many lines went unread (`Unreviewed-Agent-Lines: 38`), and the
-  session's log says so.
+  (`a`) commits, and the session's log says how many lines went unread.
 - **soft** (jobs): one confirmation (`⏎`), then it commits; the session's log says so.
 - **off** (reviews and direct sessions, and outside a session): it commits.
 

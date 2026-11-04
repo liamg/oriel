@@ -6,9 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/tools/perf"
+	"github.com/liamg/oriel/ui"
 )
 
 var wrapFont = typeset.FontSpec{Family: typeset.UI, Size: 12.5}
@@ -79,5 +82,64 @@ func BenchmarkWrapLinesLongToken(b *testing.B) {
 	for b.Loop() {
 		i++
 		_ = WrapLines(ts, strconv.Itoa(i)+tok, 400, wrapFont) // a new text each time, so nothing is cached
+	}
+}
+
+func TestCodeLinesKeepSpacesAndBreakAfterOne(t *testing.T) {
+	sh := headless.Shaper{} // 10px a rune
+	f := typeset.FontSpec{Size: 10 / 0.6}
+	got := codeLines(sh, "  ab cd ef\n\n\tabcdefgh", 60, f)
+	want := []wrapLine{{"  ab ", false}, {"cd ef", true}, {"", false}, {"    ab", false}, {"cdefgh", true}}
+	if len(got) != len(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got %+v, want %+v", got, want)
+		}
+	}
+}
+
+// A long line of code wraps to the box, and copied it's the line it was: no newline where it wrapped.
+func TestWrapCodeCopiesAsWritten(t *testing.T) {
+	src := `cd ~/Library/Logs/Oriel && grep -hE "agent stopped|didn't start|sandbox restart" oriel.log` + "\n" + "  ls"
+	clip := &testClip{}
+	lines := 0
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Column("page", ui.Style{W: ui.Px(200), Selectable: true}, func(c *ui.Ctx) {
+			lines = WrapCode(c, "code", src, 200, 0, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12}})
+		})
+	})
+	h.u.SetClipboard(clip)
+	if lines < 4 {
+		t.Fatalf("%d lines: the long line didn't wrap", lines)
+	}
+	h.pointer(render.PointerPress, render.ButtonPrimary, 1, 5)
+	h.frame()
+	h.pointer(render.PointerMove, render.ButtonPrimary, 199, 399)
+	h.frame()
+	h.pointer(render.PointerRelease, 0, 199, 399)
+	h.frame()
+	if got := h.u.SelectedText(); got != src {
+		t.Errorf("copied %q, want %q", got, src)
+	}
+}
+
+// A paragraph Rich wraps copies as it was written: its words, not its lines.
+func TestRichCopiesAsWritten(t *testing.T) {
+	src := "The quick brown fox jumps over the lazy dog, then runs on past the barn and over the hill."
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Column("page", ui.Style{W: ui.Px(120), Selectable: true}, func(c *ui.Ctx) {
+			if n := Rich(c, "p", []Span{{Text: "The quick brown fox "}, {Text: "jumps", Code: true}, {Text: " over the lazy dog, then runs on past the barn and over the hill."}}, 120, ui.TextStyle{Font: wrapFont}, RichOpts{}); n < 3 {
+				t.Fatalf("%d lines: it didn't wrap", n)
+			}
+		})
+	})
+	h.pointer(render.PointerPress, render.ButtonPrimary, 1, 5)
+	h.frame()
+	h.pointer(render.PointerMove, render.ButtonPrimary, 599, 399)
+	h.frame()
+	if got := h.u.SelectedText(); got != src {
+		t.Errorf("copied %q, want %q", got, src)
 	}
 }

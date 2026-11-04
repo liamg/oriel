@@ -322,7 +322,7 @@ func (u *UI) paintSel(f render.Frame, e *elem, r render.Rect) {
 }
 
 // SelectedText is the text selected, nodes on one line joined by what lies between them (nothing, or a space) and
-// lines by newlines; "" for none.
+// lines by newlines, or a wrapped line by its join (WrappedText); "" for none.
 func (u *UI) SelectedText() string {
 	if _, _, ok := u.selRange(); !ok {
 		return ""
@@ -337,6 +337,8 @@ func (u *UI) SelectedText() string {
 		if prev != nil {
 			pr, r := prev.rect(), e.rect()
 			switch {
+			case r.Min.Y >= pr.Max.Y-1 && e.soft:
+				b.WriteString(e.join)
 			case r.Min.Y >= pr.Max.Y-1:
 				b.WriteByte('\n')
 			case r.Min.X > pr.Max.X+1:

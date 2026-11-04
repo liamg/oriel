@@ -357,7 +357,6 @@ func (x *Diff) gateCheck(c registry.CommitCheck) registry.GateResult {
 		if n.Skimmed > 0 {
 			res.Reason += fmt.Sprintf(" (%d only skimmed)", n.Skimmed)
 		}
-		res.Trailer = fmt.Sprintf("Unreviewed-Agent-Lines: %d", n.NotRead())
 		res.Review, res.ReviewArgs = "diff.open", registry.Args{"path": c.Root}
 		res.ReviewLabel = fmt.Sprintf("Review %d %s", n.NotRead(), kit.Plural(n.NotRead(), "line", "lines"))
 	}

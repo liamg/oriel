@@ -18,27 +18,109 @@ var tLink = theme.Declare("link.fg", "accent")
 // Wrap adds text as lines no wider than width, breaking at spaces (and inside a word only when the word alone
 // is wider). It returns how many lines it added.
 func Wrap(c *ui.Ctx, key any, s string, width float32, ts ui.TextStyle) int {
-	wraps := ui.Keep(c, func() *wrapCache { return &wrapCache{cur: map[wrapKey][]string{}} })
-	k := wrapKey{c.Shaper(), s, width, ts.Font.Family, ts.Font.Weight, ts.Font.Italic, ts.Font.Size, ts.Font.Tracking, fmt.Sprint(ts.Font.Features)}
-	lines, ok := wraps.get(k)
-	if !ok {
-		lines = WrapLines(c.Shaper(), s, width, ts.Font)
-		wraps.put(k, lines)
-	}
+	lines := wrapped(c, s, width, ts, false)
 	c.Column(key, ui.Style{Gap: 3}, func(c *ui.Ctx) {
 		for i, ln := range lines {
-			c.Text(i, ln, ts)
+			if ln.soft {
+				c.WrappedText(i, ln.text, ts, " ")
+			} else {
+				c.Text(i, ln.text, ts)
+			}
 		}
 	})
 	return len(lines)
+}
+
+// WrapCode adds code as lines no wider than width, every space kept: a line too long breaks after its last space
+// that fits, else anywhere, gap apart. Copied, a wrapped line joins the one before as it was. It returns how many
+// lines it added.
+func WrapCode(c *ui.Ctx, key any, s string, width, gap float32, ts ui.TextStyle) int {
+	lines := wrapped(c, s, width, ts, true)
+	c.Column(key, ui.Style{Gap: gap}, func(c *ui.Ctx) {
+		for i, ln := range lines {
+			if ln.soft {
+				c.WrappedText(i, ln.text, ts, "")
+			} else {
+				c.Text(i, ln.text, ts)
+			}
+		}
+	})
+	return len(lines)
+}
+
+// wrapLine is a line of wrapped text; soft when it wraps on from the line before.
+type wrapLine struct {
+	text string
+	soft bool
+}
+
+// wrapped is s wrapped to width, as prose or as code, kept for the UI.
+func wrapped(c *ui.Ctx, s string, width float32, ts ui.TextStyle, code bool) []wrapLine {
+	wraps := ui.Keep(c, func() *wrapCache { return &wrapCache{cur: map[wrapKey][]wrapLine{}} })
+	k := wrapKey{c.Shaper(), s, width, ts.Font.Family, ts.Font.Weight, ts.Font.Italic, ts.Font.Size, ts.Font.Tracking, fmt.Sprint(ts.Font.Features), code}
+	lines, ok := wraps.get(k)
+	if !ok {
+		if code {
+			lines = codeLines(c.Shaper(), s, width, ts.Font)
+		} else {
+			lines = proseLines(c.Shaper(), s, width, ts.Font)
+		}
+		wraps.put(k, lines)
+	}
+	return lines
 }
 
 // WrapLines breaks s into lines that fit width, keeping its own newlines. Each paragraph is shaped once and
 // its breaks found over the glyph advances; Wrap keeps the results, by text, width and font, for its UI.
 func WrapLines(sh typeset.Shaper, s string, width float32, f typeset.FontSpec) []string {
 	var out []string
+	for _, ln := range proseLines(sh, s, width, f) {
+		out = append(out, ln.text)
+	}
+	return out
+}
+
+func proseLines(sh typeset.Shaper, s string, width float32, f typeset.FontSpec) []wrapLine {
+	var out []wrapLine
 	for _, para := range strings.Split(s, "\n") {
-		out = wrapPara(out, sh, strings.Join(strings.Fields(para), " "), width, f)
+		for i, ln := range wrapPara(nil, sh, strings.Join(strings.Fields(para), " "), width, f) {
+			out = append(out, wrapLine{ln, i > 0})
+		}
+	}
+	return out
+}
+
+// codeLines breaks each line of code to fit width, tabs as four spaces.
+func codeLines(sh typeset.Shaper, s string, width float32, f typeset.FontSpec) []wrapLine {
+	var out []wrapLine
+	for _, line := range strings.Split(s, "\n") {
+		rs := []rune(strings.ReplaceAll(line, "\t", "    "))
+		if len(rs) == 0 {
+			out = append(out, wrapLine{})
+			continue
+		}
+		xs := typeset.PenXs(sh.Shape(string(rs), f), len(rs))
+		for a := 0; a < len(rs); {
+			b := a + 1
+			for b < len(rs) && xs[b+1]-xs[a] <= width {
+				b++
+			}
+			if b < len(rs) {
+				// after the last space that follows some text: never inside the indent
+				text := a
+				for text < b && rs[text] == ' ' {
+					text++
+				}
+				for k := b; k > text+1; k-- {
+					if rs[k-1] == ' ' {
+						b = k
+						break
+					}
+				}
+			}
+			out = append(out, wrapLine{string(rs[a:b]), a > 0})
+			a = b
+		}
 	}
 	return out
 }
@@ -53,17 +135,18 @@ type wrapKey struct {
 	size     float32
 	tracking float32
 	features string
+	code     bool
 }
 
 // wrapCache is a UI's wrapped texts, in two generations, so a full cache drops what wasn't used recently.
 type wrapCache struct {
 	mu       sync.Mutex
-	cur, old map[wrapKey][]string
+	cur, old map[wrapKey][]wrapLine
 }
 
 const maxWraps = 512
 
-func (w *wrapCache) get(k wrapKey) ([]string, bool) {
+func (w *wrapCache) get(k wrapKey) ([]wrapLine, bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if v, ok := w.cur[k]; ok {
@@ -76,11 +159,11 @@ func (w *wrapCache) get(k wrapKey) ([]string, bool) {
 	return v, ok
 }
 
-func (w *wrapCache) put(k wrapKey, v []string) {
+func (w *wrapCache) put(k wrapKey, v []wrapLine) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if len(w.cur) >= maxWraps {
-		w.cur, w.old = map[wrapKey][]string{}, w.cur
+		w.cur, w.old = map[wrapKey][]wrapLine{}, w.cur
 	}
 	w.cur[k] = v
 }

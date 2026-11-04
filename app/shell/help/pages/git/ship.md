@@ -1,6 +1,6 @@
 ---
 id: git/ship
-covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.merge, ship.merge-default, ship.next-pr, ship.browse, ship.copy-link, ship.merge_method, code.setup, code.hosts, code.api]
+covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.push-all, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.merge, ship.merge-default, ship.next-pr, ship.browse, ship.copy-link, ship.merge_method, code.setup, code.hosts, code.api]
 related: [shell/rail, agent/requests, files/explorer]
 ---
 
@@ -50,7 +50,8 @@ it. **Redraft** hands it back and asks the agent for a new one.
 
 "Before this ships" lists the gates: the plan approved, threads resolved, tests run, and what plugins add (the review
 ledger, the verify quiz, AI review). A gate can offer a button on its row that works towards it: **Verify…** starts
-the verify quiz (`git/verify`), **Review** an AI review. A plugin can stop a commit with a veto hook on `ShipCommit`:
+the verify quiz (`git/verify`), **Review** an AI review. A gate that doesn't apply is greyed out: the plan of work
+started with no plan or ticket. A plugin can stop a commit with a veto hook on `ShipCommit`:
 its reason shows in the commit box, and **Commit anyway…** commits past it, which the hook may record (a trailer). A
 veto on `ShipRaise` stops a raise the same way.
 
@@ -63,7 +64,8 @@ and says where.
 ## Push {#push}
 
 The commits origin hasn't got. **Push** pushes the session's branch, and only it. In an opened directory that's the
-branch it's on now.
+branch it's on now. Once every project's PR is open, the header offers **Push all** in place of a raise, for any with
+commits to push (`ship.push-all`).
 
 After a rebase, the branch has rewritten commits origin already has ("n rewritten"), and Push reads **Force push**.
 It replaces origin's branch with a lease: only while origin still has what you last fetched and rebased from. If

@@ -189,18 +189,26 @@ func (h *session) toolResolve(ctx context.Context, raw json.RawMessage) (string,
 	return "resolved", h.r.SetThread(ThreadReq{Session: h.id, Thread: t.ID, Status: core.ThreadResolved})
 }
 
-// refuseUnseen refuses an answer to a thread, or resolving it, while it holds comments the agent hasn't been given. The
-// error hands them over, so they count as given and the thread stays the agent's.
+// refuseUnseen refuses an answer to a thread, or resolving it, while it holds comments the agent hasn't been given:
+// those of the first turn count as given while its start hands them over. The error hands them over, so they count as
+// given and the thread stays the agent's.
 func (h *session) refuseUnseen(tid core.ThreadID) error {
+	// Read with h.mu held: the first turn's comments are marked given while it's held, as handing is cleared.
+	h.mu.Lock()
+	handing := h.handing
 	se, err := h.r.st.Session(h.id)
+	h.mu.Unlock()
 	if err != nil {
 		return err
 	}
-	if t, ok := se.Thread(tid); !ok || len(t.Undelivered()) == 0 {
+	unseenIn := func(t core.Thread) []core.Comment {
+		return slices.DeleteFunc(t.Undelivered(), func(c core.Comment) bool { return handing[c.ID] })
+	}
+	if t, ok := se.Thread(tid); !ok || len(unseenIn(t)) == 0 {
 		return nil
 	}
 	t, err := h.r.mutateThread(h.id, tid, func(t *core.Thread) error {
-		unseen := t.Undelivered()
+		unseen := unseenIn(*t)
 		for i, c := range t.Comments {
 			if slices.ContainsFunc(unseen, func(u core.Comment) bool { return u.ID == c.ID }) {
 				t.Comments[i].Delivered = true

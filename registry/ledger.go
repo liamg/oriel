@@ -123,7 +123,7 @@ type GateResult struct {
 	Pending     bool // still counting: ask again shortly
 	Done, Total int
 	Reason      string // why it doesn't pass: "21 agent-written lines unread"
-	Trailer     string // the trailer a commit past it carries: "Unreviewed-Agent-Lines: 21"
+	Trailer     string // the trailer a commit past it carries, if any: "Verified-By: quiz"
 	Unread      int    // what it counts as left to do, for the hooks and the log
 	Review      string // a command that works towards passing it: "diff.open"
 	ReviewArgs  Args

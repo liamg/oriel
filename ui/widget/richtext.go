@@ -116,6 +116,7 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 	l := richMeasure(c, spans, base, o)
 	pieces, gap, style, code := l.pieces, l.gap, l.style, l.code
 	var lines [][]richPiece
+	var joins []string // what a wrapped line joins the one before with, copied
 	var x float32
 	for _, p := range pieces {
 		add := p.width
@@ -123,7 +124,11 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 			add += gap
 		}
 		if len(lines) == 0 || x > 0 && x+add > width {
-			lines = append(lines, nil)
+			join := ""
+			if p.space {
+				join = " "
+			}
+			lines, joins = append(lines, nil), append(joins, join)
 			x, add, p.space = 0, p.width, false
 		}
 		lines[len(lines)-1] = append(lines[len(lines)-1], p)
@@ -136,6 +141,15 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 	c.Column(key, st, func(c *ui.Ctx) {
 		for i, ln := range lines {
 			c.Row(i, ui.Style{Cross: ui.Center}, func(c *ui.Ctx) {
+				soft := i > 0
+				text := func(c *ui.Ctx, key any, s string, st ui.TextStyle) {
+					if soft {
+						c.WrappedText(key, s, st, joins[i])
+						soft = false
+					} else {
+						c.Text(key, s, st)
+					}
+				}
 				// Neighbouring words of one span draw as one run; a space between spans is a gap.
 				var run strings.Builder
 				var cur Span
@@ -148,11 +162,11 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 					if cur.Strike {
 						w := c.Shaper().Shape(run.String(), st.Font).Advance
 						c.Box(n, ui.Style{}, func(c *ui.Ctx) {
-							c.Text("t", run.String(), st)
+							text(c, "t", run.String(), st)
 							c.Box("strike", ui.Style{W: ui.Px(w), H: ui.Px(1), Fill: st.Color, Float: &ui.Float{At: render.Point{Y: .55}}}, nil)
 						})
 					} else {
-						c.Text(n, run.String(), st)
+						text(c, n, run.String(), st)
 					}
 					n++
 					run.Reset()
@@ -172,7 +186,7 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 								fg.Color, bg = p.span.Tone, alpha(p.span.Tone, .14)
 							}
 							c.Row(n, ui.Style{Pad: ui.PadXY(4, 1), Radius: 3, Fill: bg, Cross: ui.Center}, func(c *ui.Ctx) {
-								c.Text("t", p.text, fg)
+								text(c, "t", p.text, fg)
 							})
 							n++
 							cur = Span{}

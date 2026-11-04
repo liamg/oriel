@@ -74,6 +74,41 @@ func persist(h plugin.Host, v layout.ViewRef) (st json.RawMessage, ok bool) {
 	return st, ok
 }
 
+// back brings back the layout the window left this directory with, its views as they were, unless something is open
+// already; a view whose instance has gone since closes.
+func (l *layoutPlugin) back(h plugin.Host) bool {
+	p := l.state.Path()
+	s, ok := l.live[p]
+	if !ok || len(l.root.All()) > 0 {
+		return false
+	}
+	delete(l.live, p)
+	if err := l.root.Load(s); err != nil {
+		h.Log().Warn("the layout left", "path", p, "err", err)
+		return false
+	}
+	l.kept = l.keptAt[p]
+	for _, v := range l.root.All() {
+		if v.Instance != "" && !alive(h, v) {
+			l.root.Close(v)
+		}
+	}
+	return true
+}
+
+// alive says v's view is still there, and still has v's instance if it can say.
+func alive(h plugin.Host, v layout.ViewRef) bool {
+	view, ok := h.ViewByID(v.ID)
+	if !ok {
+		return false
+	}
+	if _, can := uireg.As[uireg.Persisted](view); !can {
+		return true
+	}
+	_, ok = persist(h, v)
+	return ok
+}
+
 // restore brings back the layout saved for this directory, as its state file had it, unless something is open
 // already.
 func (l *layoutPlugin) restore(h plugin.Host) {

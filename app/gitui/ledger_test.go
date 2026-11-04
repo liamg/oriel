@@ -145,9 +145,9 @@ func gateSession(t *testing.T) (*apptest.Window, *agenttest.FakeSession, string)
 }
 
 // The hard gate (work and plan sessions) blocks commit and PR until every agent-written line is read. "Commit anyway"
-// is one keypress, and it's recorded in a commit trailer (Unreviewed-Agent-Lines: 38) and in the session log.
+// is one keypress, and it's recorded in the session log, not in the commit.
 // ref: oracle git
-func TestCommitGateBlocksAndCommitAnywayWritesTheTrailer(t *testing.T) {
+func TestCommitGateBlocksAndCommitAnywayIsLogged(t *testing.T) {
 	r, _, dir := gateSession(t)
 	added := 0
 	for _, l := range strings.Split(rig.Git(t, dir, "diff", "--cached", "-U0"), "\n") {
@@ -162,7 +162,7 @@ func TestCommitGateBlocksAndCommitAnywayWritesTheTrailer(t *testing.T) {
 	})
 	r.WaitFrame("the gate", func(s string) bool {
 		return apptest.HasAll(s, "COMMIT GATED", "Agent lines reviewed", fmt.Sprintf("0 / %d", added), fmt.Sprintf("%d agent-written lines unread", added),
-			fmt.Sprintf("Unreviewed-Agent-Lines: %d", added), "Commit anyway")
+			"Commit anyway")
 	})
 	time.Sleep(200 * time.Millisecond)
 	if got := rig.Git(t, dir, "rev-parse", "HEAD"); got != head {
@@ -176,8 +176,8 @@ func TestCommitGateBlocksAndCommitAnywayWritesTheTrailer(t *testing.T) {
 		}
 		time.Sleep(30 * time.Millisecond)
 	}
-	if got := strings.TrimSpace(rig.Git(t, dir, "log", "-1", "--format=%(trailers:key=Unreviewed-Agent-Lines,valueonly)")); got != fmt.Sprint(added) {
-		t.Errorf("the trailer reads %q, want %d", got, added)
+	if got := strings.TrimSpace(rig.Git(t, dir, "log", "-1", "--format=%(trailers)")); got != "" {
+		t.Errorf("the commit has trailers: %q", got)
 	}
 	if got := strings.TrimSpace(rig.Git(t, dir, "log", "-1", "--format=%s")); got != "fix: round half to even" {
 		t.Errorf("subject %q", got)
@@ -188,12 +188,12 @@ func TestCommitGateBlocksAndCommitAnywayWritesTheTrailer(t *testing.T) {
 	})
 	se, _ := st.Session("w")
 	o := se.Snapshot().Overrides[0]
-	if o.Gate != "ledger" || o.Mode != core.GateHard || o.Unread != added || o.Trailer == "" {
+	if o.Gate != "ledger" || o.Mode != core.GateHard || o.Unread != added || o.Trailer != "" {
 		t.Errorf("override: %+v", o)
 	}
 	r.UntilState("the session's log", func(st core.State) bool {
 		for _, n := range st.Notifications {
-			if n.Session == "w" && n.ID == "git.commit.gate" && strings.Contains(n.Text, "Unreviewed-Agent-Lines") {
+			if n.Session == "w" && n.ID == "git.commit.gate" && strings.Contains(n.Text, fmt.Sprintf("%d agent-written lines unread", added)) {
 				return true
 			}
 		}

@@ -107,7 +107,7 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 		acts = t.accessible.AccessActions()
 	}
 	for {
-		drawn, err := l.frame(ctx, &t)
+		drawn, err := l.frame(ctx, &t, dirty)
 		if err != nil {
 			return err
 		}
@@ -158,8 +158,32 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 	}
 }
 
-// take feeds ev in, or, when it's input and a frame is owed, keeps it until that frame is drawn: a key goes to what
-// has focus in the frame drawn before it, as the one typing it saw. What comes after a kept event waits behind it.
+// takeWaiting takes the input already waiting, before a new frame is built: it was made on the frame on screen, so a
+// click goes to what it was aimed at there. It reports false once the window's closed.
+func (l *loop) takeWaiting(ctx context.Context, t *turn, dirty <-chan struct{}) bool {
+	events := l.win.Events()
+	for n := len(events); n > 0 || t.held != nil; n-- {
+		ev := t.held
+		t.held = nil
+		if ev == nil {
+			select {
+			case next, ok := <-events:
+				if !ok {
+					return false
+				}
+				ev, t.held = lastMove(next, events)
+			default:
+				return true // the moves read past were the rest
+			}
+		}
+		l.take(ctx, t, ev, dirty)
+	}
+	return true
+}
+
+// take feeds ev in, or, when it's a key and a frame is owed, keeps it until that frame is drawn: a key goes to what
+// has focus in the frame drawn before it, as the one typing it saw, while the pointer goes to what's on screen.
+// What comes after a kept event waits behind it.
 func (l *loop) take(ctx context.Context, t *turn, ev render.Event, dirty <-chan struct{}) {
 	if len(t.after) > 0 || waitsForFrame(ev) && l.owed(t, dirty) {
 		t.after = append(t.after, ev)
@@ -180,20 +204,21 @@ func (l *loop) owed(t *turn, dirty <-chan struct{}) bool {
 }
 
 func waitsForFrame(ev render.Event) bool {
-	switch ev := ev.(type) {
+	switch ev.(type) {
 	case render.KeyEvent, render.DropEvent:
 		return true
-	case render.PointerEvent:
-		return ev.Kind != render.PointerMove
 	}
 	return false
 }
 
-// frame runs what the loop was handed, draws a frame when one was asked for and the pacer lets it, unless the
-// window is hidden, and runs keys typed behind ones the editor has now taken.
-func (l *loop) frame(ctx context.Context, t *turn) (drawn bool, err error) {
+// frame runs what the loop was handed and takes the input waiting, draws a frame when one was asked for and the
+// pacer lets it, unless the window is hidden, and runs keys typed behind ones the editor has now taken.
+func (l *loop) frame(ctx context.Context, t *turn, dirty <-chan struct{}) (drawn bool, err error) {
 	sh := l.sh
 	l.timed(sh.runTodo)
+	if !l.takeWaiting(ctx, t, dirty) {
+		return false, nil // closed: the loop sees it next
+	}
 	if due, _ := t.pace.Due(time.Now()); !due || l.hidden {
 		return false, nil
 	}

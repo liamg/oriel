@@ -25,6 +25,9 @@ type Fake struct {
 	Started chan *FakeSession // each session as it starts
 	Launch  bool              // a session starts a process through the spec's Exec first, as a real provider's does
 	Hold    chan struct{}     // Detect waits for it to close: a slow probe
+	// HoldStart is what Start waits for once its session has its first turn and is announced (Started): an agent
+	// that answers before its start has returned.
+	HoldStart chan struct{}
 	// HoldClose is what a session's Close waits for: an agent slow to stop. Closing hears of each Close as it starts.
 	HoldClose chan struct{}
 	Closing   chan *FakeSession
@@ -165,7 +168,11 @@ func (f *Fake) Start(ctx context.Context, s agent.StartSpec) (agent.Session, err
 	if err := f.launch(ctx, s); err != nil {
 		return nil, err
 	}
-	return f.open(s, ""), nil
+	fs := f.open(s, "")
+	if hold := f.HoldStart; hold != nil {
+		<-hold
+	}
+	return fs, nil
 }
 
 func (f *Fake) Resume(ctx context.Context, id string, s agent.StartSpec) (agent.Session, error) {
