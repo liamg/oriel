@@ -80,6 +80,7 @@ func TestUpdateDownloadsBeforeItSays(t *testing.T) {
 		t.Run(mode, func(t *testing.T) {
 			r := rig.NewReleases(t)
 			s := updatesScene(t, r)
+			updatesOf(s).WaitStartup() // an automatic start's own check, done: Check below isn't turned away as one runs
 			s.Registry().Options().Set("updates.mode", registry.LayerUser, registry.At{}, mode)
 			r.Publish("1.1.0", "")
 			updatesOf(s).Check()
@@ -109,6 +110,7 @@ func TestUpdateDownloadsBeforeItSays(t *testing.T) {
 
 	r := rig.NewReleases(t)
 	s := updatesScene(t, r)
+	updatesOf(s).WaitStartup()
 	r.Publish("1.0.0", "")
 	updatesOf(s).Check()
 	if hasNotice(s.Store().State(), "update.available") || hasNotice(s.Store().State(), "update.ready") {

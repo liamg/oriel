@@ -739,20 +739,25 @@ func TestOnlyTheRequestTheAgentIsOnIsActive(t *testing.T) {
 	id, a := r.workSession("first")
 	a.WaitSent(t)
 	first := r.session(id).Threads[0].ID
-	if th, _ := r.session(id).Thread(first); !th.Busy || !th.Active {
-		t.Errorf("a request handed over alone: busy %v, active %v", th.Busy, th.Active)
-	}
+	// The hand-over is in the state once its events are applied, a moment after the agent has it.
+	r.eventually(id, "the request handed over alone busy and active", func(se core.SessionState) bool {
+		th, _ := se.Thread(first)
+		return th.Busy && th.Active
+	})
 	a.Emit(agent.TurnStart{})
 	b, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "second"})
 	c, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "third"})
 	a.Call(t, "reply", map[string]any{"thread": string(first), "body": "Done.", "resolve": true})
 	a.Emit(agent.TurnEnd{})
 	a.WaitSent(t)
-	for _, tid := range []core.ThreadID{b, c} {
-		if th, _ := r.session(id).Thread(tid); !th.Busy || th.Active {
-			t.Errorf("%s handed over with another: busy %v, active %v", tid, th.Busy, th.Active)
+	r.eventually(id, "both handed over busy, neither active", func(se core.SessionState) bool {
+		for _, tid := range []core.ThreadID{b, c} {
+			if th, _ := se.Thread(tid); !th.Busy || th.Active {
+				return false
+			}
 		}
-	}
+		return true
+	})
 	a.Call(t, "reply", map[string]any{"thread": string(c), "body": "On it.", "working": true})
 	out := a.Call(t, "task_add", map[string]any{"subject": "second", "thread": string(b)})
 	a.Call(t, "task_update", map[string]any{"id": strings.TrimSuffix(strings.Fields(out)[1], ""), "status": "in_progress"})
