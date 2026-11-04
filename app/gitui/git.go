@@ -513,14 +513,18 @@ func (t *gitTree) subscribe() {
 		return
 	}
 	label := "git: " + t.src.Root
-	t.sub = watch.Subscribe(m, t.src.Status(), treeNeed, label)
-	t.remote = watch.Subscribe(m, t.src.Remote(), treeNeed, label)
-	sub, status, h := t.sub, t.status, t.g.h
-	sub.OnChange(func() {
+	// Told of each reading from the first on, one already there included, off the loop: status is handed it there.
+	status, h := t.status, t.g.h
+	var sub watch.Sub[*gitx.State]
+	made := make(chan struct{})
+	sub = watch.SubscribeFunc(m, t.src.Status(), treeNeed, label, func() {
+		<-made
 		t.sync(sub, status)
 		h.Redraw()
 	})
-	t.remote.OnChange(h.Redraw)
+	t.sub = sub
+	close(made)
+	t.remote = watch.SubscribeFunc(m, t.src.Remote(), treeNeed, label, h.Redraw)
 }
 
 func (t *gitTree) unsubscribe() {
@@ -636,12 +640,8 @@ func (t *gitTree) state() *gitx.State {
 		return nil
 	}
 	t.use()
-	t.mu.Lock()
-	sub := t.sub
-	t.mu.Unlock()
-	if sub.Valid() {
-		t.sync(sub, t.status)
-	}
+	// Each reading reaches status off the loop, as its subscription hears of it (subscribe): handing it over, a diff
+	// of every changed file and its watchers told, is too much for a frame with thousands changed.
 	return t.status.State()
 }
 

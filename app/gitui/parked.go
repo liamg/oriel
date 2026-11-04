@@ -82,6 +82,7 @@ func (g *Git) unpark(root string) bool {
 		h.Redraw()
 	})
 	p.remote.OnChange(h.Redraw)
+	t.sync(p.sub, p.status) // the reading kept, already its status's: nothing to hand over
 	p.sub.Resume()
 	p.remote.Resume()
 	p.sub.Refresh() // what changed while it was away
