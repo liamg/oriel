@@ -245,10 +245,10 @@ func (x *Runner) RestartWhenIdle(id core.SessionID, sb hostcore.Sandbox, why str
 }
 
 // ResumeHandedOver starts again the agents the last process handed over, or had running when it crashed, once each
-// and only once its provider is known: it's called again as providers arrive.
+// and only once its provider is known: it's called again as providers arrive. An archived session's stays stopped.
 func (x *Runner) ResumeHandedOver(resume func(id core.SessionID) error) {
 	for _, se := range x.st.Snapshot().Sessions {
-		if by := se.Agent.StoppedBy; !se.Agent.Running && (by == core.StoppedByHandOver || by == core.StoppedByCrash) {
+		if by := se.Agent.StoppedBy; !se.Archived && !se.Agent.Running && (by == core.StoppedByHandOver || by == core.StoppedByCrash) {
 			if !x.claimResume(se) {
 				continue
 			}

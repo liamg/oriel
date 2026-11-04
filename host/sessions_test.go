@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
@@ -740,5 +741,28 @@ func TestAutoNameKeepsARename(t *testing.T) {
 	})
 	if se := r.session(id); se.Name != "mine" {
 		t.Errorf("the session is named %q", se.Name)
+	}
+}
+
+// An archived session stays archived across restarts, though its agent was handed over when Oriel last quit and
+// never resumed: the next start resumes the handed-over agents of open sessions only.
+func TestAnArchivedHandOverIsntResumed(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("start")
+	r.eventually(id, "the agent's id", func(se core.SessionState) bool { return se.Agent.Running && se.Agent.Session == a.ID() })
+	r.w.HandOver()
+	r.bare = true
+	r.restart()
+	if err := r.w.Archive(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	r.bare = false
+	r.restart()
+	time.Sleep(100 * time.Millisecond)
+	if se := r.session(id); !se.Archived || se.Agent.Running {
+		t.Errorf("archived, then restarted: archived %v, running %v", se.Archived, se.Agent.Running)
+	}
+	if n := len(r.fake.Resumed()); n != 0 {
+		t.Errorf("resumed %d times", n)
 	}
 }
