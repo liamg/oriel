@@ -34,6 +34,7 @@ type session struct {
 	loginRetried bool // a sandboxed agent's lost sign-in was tried again with the host's, since its last turn that worked
 	notes        []string
 	delivered    []core.ThreadID // the threads the turn now running was given
+	handing      map[string]bool // the comments of the first turn, handed over in the agent's start: its once it can answer
 	held         []core.ThreadID // threads given to turns that left background work running: busy until it's done
 	runs         []string        // the turn's test runs
 	model        string          // the model the agent last ran as, by its tool calls: "claude-opus-5-5"
@@ -84,9 +85,12 @@ func (h *session) start() error {
 	if !resumed {
 		first = h.firstTurn()
 	}
+	h.mu.Lock()
+	h.handing = first.comments
+	h.mu.Unlock()
 	sess, box, err := h.launch(ctx, cancel, first.text)
 	h.mu.Lock()
-	h.starting = false
+	h.starting, h.handing = false, nil                          // given below, with h.mu held, when it started
 	if err == nil && (ctx.Err() != nil || h.r.env.IsClosed()) { // stopped while it started
 		h.mu.Unlock()
 		_ = sess.Close()
