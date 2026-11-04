@@ -462,3 +462,17 @@ func TestConsoleTextCopies(t *testing.T) {
 	tripleCopy(out)
 	waitClip(t, r, out)
 }
+
+// A dialog only the agent's terminal answers makes its session needs-you with a card saying what it asks; the
+// card's Go to terminal opens that terminal, and the card goes once the dialog is answered.
+func TestATerminalDialogGoesToTheTerminal(t *testing.T) {
+	r, a, _ := apptest.ConsoleWindow(t)
+	a.Emit(agent.Dialog{Title: "Allow external CLAUDE.md file imports?", Shown: true})
+	r.WaitFrame("the card", func(s string) bool {
+		return apptest.HasAll(s, "Fake waits on its terminal", "Allow external CLAUDE.md file imports?", "Go to terminal", "needs you")
+	})
+	r.ClickText("Go to terminal")
+	r.WaitText("agent · " + string(r.Host.State().Focus))
+	a.Emit(agent.Dialog{})
+	r.WaitGone("Fake waits on its terminal")
+}

@@ -13,6 +13,7 @@ const backlogSize = 256 << 10
 type terminal struct {
 	pty   agent.PTY
 	watch func([]byte) // sees all it shows, before any view
+	typed func([]byte) // sees all typed into it
 
 	mu      sync.Mutex
 	buf     []byte
@@ -64,7 +65,12 @@ func (t *terminal) feed(p []byte) {
 	}
 }
 
-func (t *terminal) Write(p []byte) (int, error) { return t.pty.Write(p) }
+func (t *terminal) Write(p []byte) (int, error) {
+	if t.typed != nil {
+		t.typed(p)
+	}
+	return t.pty.Write(p)
+}
 func (t *terminal) Resize(cols, rows int) error { return t.pty.Resize(cols, rows) }
 
 func (t *terminal) Attach() ([]byte, <-chan []byte, func()) {

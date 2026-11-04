@@ -393,6 +393,12 @@ type (
 	AuthRestored struct{ Provider, Account string }
 	// Exited is the provider process gone.
 	Exited struct{ Err string }
+	// Dialog is the agent's terminal showing a dialog no hook carries, so only someone at the terminal answers it:
+	// Title is what it asks. Shown is false once it's answered.
+	Dialog struct {
+		Title string
+		Shown bool
+	}
 	// Stale is a session that has lost what only a restart brings back (an MCP server its CLI dropped): it's
 	// restarted, its conversation resumed, once its turn ends.
 	Stale struct{ Why string }
@@ -419,6 +425,7 @@ func (Failure) isEvent()      {}
 func (UsageUpdate) isEvent()  {}
 func (Exited) isEvent()       {}
 func (Stale) isEvent()        {}
+func (Dialog) isEvent()       {}
 func (AuthExpired) isEvent()  {}
 func (AuthRestored) isEvent() {}
 

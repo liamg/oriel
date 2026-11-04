@@ -184,6 +184,7 @@ const (
 	AskGateway    AskKind = "gateway"    // layer 3: the gateway holds a call
 	AskLogin      AskKind = "login"      // the agent's login is gone
 	AskKey        AskKind = "key"        // a git operation has waited long enough that it's likely waiting on a security-key touch
+	AskTerminal   AskKind = "terminal"   // the agent's terminal shows a dialog only someone at it answers
 )
 
 // Login is a provider's sign-in that has stopped working, and how to sign in again.

@@ -461,6 +461,8 @@ func eventOf(ev agent.Event) (event, error) {
 			HostCommand: e.HostCommand}, nil
 	case agent.AuthRestored:
 		return event{Type: "authRestored", Provider: e.Provider, Account: e.Account}, nil
+	case agent.Dialog:
+		return event{Type: "dialog", Text: e.Title, Done: !e.Shown}, nil
 	case agent.Exited:
 		return event{Type: "exited", Error: e.Err}, nil
 	}
@@ -501,6 +503,8 @@ func (w event) agentEvent() (agent.Event, error) {
 			HostCommand: w.HostCommand}, nil
 	case "authRestored":
 		return agent.AuthRestored{Provider: w.Provider, Account: w.Account}, nil
+	case "dialog":
+		return agent.Dialog{Title: w.Text, Shown: !w.Done}, nil
 	case "exited":
 		return agent.Exited{Err: w.Error}, nil
 	}

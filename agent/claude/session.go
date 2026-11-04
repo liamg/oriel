@@ -56,6 +56,7 @@ type session struct {
 	shown    string    // the end of the terminal's text, for saying what was on screen
 	usageErr string    // why $.session.usage() last failed; "" when it didn't
 	out      bool      // its login has been said to be gone, and not seen back
+	dialog   bool      // its terminal has been said to show a dialog, not since answered
 	heard    time.Time // the mod's last call: it long-polls, so it calls at least each waitPoll
 	once     sync.Once
 
@@ -279,6 +280,43 @@ func (s *session) watchScreen(p []byte) {
 	}
 	if says.signedIn {
 		s.push(agent.AuthRestored{Provider: "claude"})
+	}
+	if says.dialog {
+		s.mu.Lock()
+		shown := s.dialog
+		s.dialog = true
+		s.mu.Unlock()
+		if !shown {
+			s.push(agent.Dialog{Title: says.title, Shown: true})
+		}
+	}
+}
+
+// typed sees what's typed into the terminal: Enter or Esc answers a dialog it shows.
+func (s *session) typed(p []byte) {
+	if answersDialog(p) {
+		s.dialogGone()
+	}
+}
+
+// answersDialog is input with Enter or Esc in it; an escape sequence (an arrow key) isn't Esc.
+func answersDialog(p []byte) bool {
+	for i, c := range p {
+		if c == '\r' || c == 0x1b && (i+1 == len(p) || p[i+1] != '[' && p[i+1] != 'O') {
+			return true
+		}
+	}
+	return false
+}
+
+// dialogGone says a dialog the terminal showed is answered.
+func (s *session) dialogGone() {
+	s.mu.Lock()
+	shown := s.dialog
+	s.dialog = false
+	s.mu.Unlock()
+	if shown {
+		s.push(agent.Dialog{})
 	}
 }
 
@@ -511,6 +549,7 @@ func (s *session) requeue(c waitOut) {
 func (s *session) event(in eventIn) {
 	switch in.Kind {
 	case "turn-start":
+		s.dialogGone()
 		s.tail.flush(s.push)
 		s.tail.startTurn()
 		base := s.tail.usage()
@@ -520,6 +559,7 @@ func (s *session) event(in eventIn) {
 		s.mu.Unlock()
 		s.push(agent.TurnStart{})
 	case "turn-complete":
+		s.dialogGone()
 		s.tail.flushUntil(in.Answer, s.push)
 		s.mu.Lock()
 		s.working = false

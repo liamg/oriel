@@ -165,9 +165,9 @@ func agentNotes(se core.SessionState, style string) string {
 			b.WriteString("- A memory about " + m.Name + " goes in `" + m.Dir + "`.\n")
 		}
 		b.WriteString("- Anything else goes in your own memory directory.\n\n")
-		b.WriteString("Read each of these memory indexes before you start (an agent that imports @ files has them already):\n\n")
+		b.WriteString("Read each of these memory indexes before you start:\n\n")
 		for _, m := range mem[1:] {
-			b.WriteString("@" + filepath.Join(m.Dir, "MEMORY.md") + "\n")
+			b.WriteString("- `" + filepath.Join(m.Dir, "MEMORY.md") + "`\n")
 		}
 	}
 	if style != "" {
