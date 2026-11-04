@@ -34,21 +34,38 @@ func TestHighlightQueryBudget(t *testing.T) {
 		t.Skip("timing under -race, -short or -cover means nothing")
 	}
 	l, _ := Builtin().Language("go")
-	time16 := func(src []byte, at int) time.Duration {
+	// The 16 KB are read as the editor reads them, a chunk at a time, each chunk's time its best over the rounds,
+	// the two files' chunks in turn: a short read gets a clean run more often than a long one, and a busy spell on
+	// the machine falls on both.
+	big := manyDecls()
+	type read struct {
+		p    *Parser
+		at   int
+		file int
+	}
+	var reads []read
+	for file, c := range []struct {
+		src []byte
+		at  int
+	}{{big, len(big) / 2}, {big[:20<<10], 0}} {
 		p, err := NewParser(l)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer p.Close()
-		p.Parse(src)
-		if _, err := p.Highlights(at, at+16<<10); err != nil { // compiles the query
+		p.Parse(c.src)
+		if _, err := p.Highlights(c.at, c.at+16<<10); err != nil { // compiles the query
 			t.Fatal(err)
 		}
-		return perf.Times(5, 1, nil, func(int) { p.Highlights(at, at+16<<10) })[0]
+		for at := c.at; at < c.at+16<<10; at += highlightChunk {
+			reads = append(reads, read{p, at, file})
+		}
 	}
-	big := manyDecls()
-	inBig := time16(big, len(big)/2)
-	inSmall := time16(big[:20<<10], 0)
+	var took [2]time.Duration
+	for i, d := range perf.Times(9, len(reads), nil, func(i int) { reads[i].p.Highlights(reads[i].at, reads[i].at+highlightChunk) }) {
+		took[reads[i].file] += d
+	}
+	inBig, inSmall := took[0], took[1]
 	t.Logf("16 KB: %v half way down 10,000 lines, %v at the top of 20 KB", inBig, inSmall)
 	if inBig > inSmall*3/2+time.Millisecond {
 		t.Errorf("16 KB half way down a 10,000-line file took %v, against %v in a 20 KB one", inBig, inSmall)
