@@ -29,9 +29,11 @@ line continues on the rows below; `gj`, `gk`, `g0`, `g^`, `gm` and `g$` move by 
 
 ## Git hunks {#hunks}
 
-The gutter marks lines that differ from the index: `▎` added or changed, `▁` where lines were deleted. Unsaved
-edits count. On a hunk, `␣hs` stages it, `␣hu` unstages the staged hunk there, `␣hr` puts it back as the index has
-it (one undo step), and `␣hp` shows the lines it replaced. `]c` and `[c` move between hunks. After the cursor's line,
+The gutter marks the branch's changes to the file, committed, staged or not, against where the branch left its
+base (the branch the Explorer's Changed compares with): `▎` added or changed, `▁` where lines were deleted. Unsaved
+edits count. `git.gutter.base` marks them against the last commit (`head`) or what's staged (`index`) instead. On a
+line not yet staged, `␣hs` stages its hunk, `␣hu` unstages the staged hunk there, and `␣hr` puts it back as the index
+has it (one undo step); `␣hp` shows the lines a gutter hunk replaced. `]c` and `[c` move between hunks. After the cursor's line,
 who last changed it and when: you, an agent (by its name, or a Co-Authored-By trailer), someone else, or "Not
 committed yet". `␣hb` (or `git.blame.inline`) turns that off.
 
