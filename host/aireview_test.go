@@ -186,7 +186,10 @@ func TestAIReviewReadsFindingsFromItsAnswer(t *testing.T) {
 	rv.Emit(agent.Message{Role: core.ItemAssistant, Text: "Found one.\n\n```json\n{\"findings\": [{\"severity\": \"med\", \"category\": \"tests\", " +
 		"\"title\": \"No test for BHD ties\", \"file\": \"round_test.go\", \"line\": \"31\", \"description\": \"The table covers JPY and USD only.\"}]}\n```\n"})
 	rv.Emit(agent.TurnEnd{})
-	se := r.eventually(id, "the finding", func(se core.SessionState) bool { return len(se.Findings) == 1 })
+	se := r.eventually(id, "the finding and the review's end", func(se core.SessionState) bool {
+		l, _ := se.LastAIReview()
+		return len(se.Findings) == 1 && !l.Running
+	})
 	if f := se.Findings[0]; f.Severity != "medium" || f.Line != 31 || f.Body != "The table covers JPY and USD only." {
 		t.Errorf("finding: %+v", f)
 	}
