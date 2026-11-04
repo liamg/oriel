@@ -65,6 +65,7 @@ type hookEntry struct {
 	did   string
 	times []time.Duration // the last 256
 	calls int
+	over  bool // the last call went over the budget
 }
 
 type hooks struct {
@@ -160,7 +161,7 @@ func p99(ts []time.Duration) time.Duration {
 // Fire runs the hooks on event whose pattern matches subject, in priority order. A veto or a decision stops it and
 // is returned; a rewrite changes ev as the hooks after it see it. A hook that panics is turned off, and one that
 // errors is reported (FailLimit in a row turn it off); the errors are returned with the verdict, which the others
-// still decide. A hook over its time budget is a warning.
+// still decide. A hook over its time budget on two calls running is a warning.
 func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 	r.provideEvent(event, subject)
 	r.hooks.mu.Lock()
@@ -203,13 +204,17 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 		if len(e.times) > 256 {
 			e.times = e.times[1:]
 		}
+		budget := r.hookBudget()
+		over := err == nil && took > budget
+		slow := over && e.over // twice running: a busy machine stalls any one call now and then
+		e.over = over
 		r.hooks.mu.Unlock()
 		if p, ok := err.(*Panic); ok {
 			r.faults.fault(Fault{Kind: KindHook, ID: e.id, Source: e.h.Source, Err: p})
 		} else {
 			r.Report(KindHook, e.id, err)
 		}
-		if budget := r.hookBudget(); err == nil && took > budget {
+		if slow {
 			r.warn(KindHook, e.id, fmt.Errorf("%.1fms on %s · over the %v budget", float64(took.Microseconds())/1000, event, budget))
 		}
 		if err != nil {

@@ -335,7 +335,8 @@ func TestSaves(t *testing.T) {
 - `oriel.log(msg, level)` writes to the log; `:Log` opens it, `:Log level debug` shows debug records.
   `oriel.notify(msg, level)` tells the user.
 - `:Hooks` lists every hook with its event, who registered it and its p99 time. A hook over the 2 ms budget is
-  marked; one turned off shows its last error, with **Turn back on**.
+  marked, and a warning once it's over on two calls running; one turned off shows its last error, with **Turn back
+  on**.
 - `:Inspect` shows what's under the cursor: decorations and who added them, the keymaps that apply, and the views
   that make up the window.
 - `:Plugins` shows what each plugin contributes, the capabilities it holds and how it runs.

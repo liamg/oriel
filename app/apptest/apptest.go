@@ -55,7 +55,7 @@ const HookBudget = 10 * time.Millisecond
 func testRegistry() uireg.Registry {
 	r := uireg.New()
 	r.Option(registry.OptionSpec{Name: "hooks.budget", Type: registry.Duration, Default: HookBudget, Scopes: registry.ScopeUser,
-		Source: "builtin:apptest", Help: "How long a hook may take before it's a warning: hooks run on the hot path."})
+		Source: "builtin:apptest", Help: "How long a hook may take, on two calls running, before it's a warning: hooks run on the hot path."})
 	return r
 }
 
