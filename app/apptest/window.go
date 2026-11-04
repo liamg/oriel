@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,6 +35,7 @@ var WindowTimeout = 20 * time.Second
 // Window is the app as Run runs it, on a headless window: its own loop and the real clock, for a test that drives
 // an agent or the host while the window keeps drawing. A Scene draws a frame at a time instead.
 type Window struct {
+	Logs  *app.Logs // what the app logged: the loop held up, among the rest
 	T     *testing.T
 	Win   *headless.Window
 	Store core.Store
@@ -98,11 +100,12 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
 	cfg := app.Config{Store: w.Store, Registry: testRegistry(), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t), SandboxBackends: Backends,
-		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
+		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}, Logs: app.NewLogs(app.LogOpts{Level: slog.LevelDebug})}
 	if o.Config != nil {
 		o.Config(&cfg)
 		w.Store, w.ConfigDir = cfg.Store, cfg.ConfigDir
 	}
+	w.Logs = cfg.Logs
 	activated := cfg.Activated
 	cfg.Activated = func(p plugin.Plugin) {
 		w.mu.Lock()
@@ -623,4 +626,24 @@ func (w *Window) WaitGit() {
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
+}
+
+// HeldUp are the times the window's loop was held up, as its watchdog logged them: by the machine, with Oriel's share
+// of the CPU, or by its own work, with where.
+func (w *Window) HeldUp() []string {
+	if w.Logs == nil {
+		return nil
+	}
+	var out []string
+	for _, r := range w.Logs.Ring.Records() {
+		if !strings.HasPrefix(r.Msg, "loop held up") {
+			continue
+		}
+		line := r.Time.Format("15:04:05.000") + " " + r.Msg
+		for _, a := range r.Attrs {
+			line += " " + a.Key + "=" + a.Value
+		}
+		out = append(out, line)
+	}
+	return out
 }
