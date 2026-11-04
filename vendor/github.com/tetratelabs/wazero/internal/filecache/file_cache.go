@@ -64,6 +64,11 @@ func (fc *fileCache) Add(key Key, content io.Reader) (err error) {
 	path := fc.path(key)
 	dirPath, fileName := filepath.Split(path)
 
+	// Oriel's patch: the folder made as the cache was set up may be gone since (a cache cleared while the program
+	// runs): it's made again, rather than the compile failing for want of somewhere to keep its result.
+	if err = os.MkdirAll(dirPath, 0o700); err != nil {
+		return
+	}
 	file, err := os.CreateTemp(dirPath, fileName+".*.tmp")
 	if err != nil {
 		return
