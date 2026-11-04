@@ -85,6 +85,20 @@ func (x *Ship) shipCommands() []registry.Command {
 					return c.ShipPush(ctx, host.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
+		{ID: "ship.push-all", Title: "Push every project with an open PR and commits origin hasn't got", Available: inFront,
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				se, _ := x.session(a)
+				var errs []error
+				for _, s := range x.report(se.ID).ships {
+					if !s.ReadOnly && s.PR.Open() && len(s.Unpushed) > 0 {
+						p := s.Project
+						errs = append(errs, x.step(se.ID, p, "Pushing", func(ctx context.Context, c host.Access) error {
+							return c.ShipPush(ctx, host.ShipRef{Session: se.ID, Project: p})
+						}))
+					}
+				}
+				return errors.Join(errs...)
+			}},
 		{ID: "ship.sync", Title: "Rebase a project's branch onto its base, fetched: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				return x.sync(se, p)

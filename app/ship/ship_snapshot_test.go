@@ -30,7 +30,7 @@ func TestShipPageSnapshot(t *testing.T) {
 	gatesCounted(s, t)
 	s.Golden("ship-18")
 	s.WantFrame("SHIP", "ENG-2231 · search API rate-limit headers · 2 projects · branch rethink/search-endpoint", "Sync all", "Commit all",
-		"Push + raise both PRs", "NEEDS YOU", "Uncommitted", "3 files · +41 -6", "DRAFTED BY CODEX", "Behind main", "4 commits · no conflicts predicted",
+		"Push + raise PR", "NEEDS YOU", "Uncommitted", "3 files · +41 -6", "DRAFTED BY CODEX", "Behind main", "4 commits · no conflicts predicted",
 		"Rebase", "Unpushed", "a41c9e2", "Pull request", "not raised · draft ready", "TEMPLATE FILLED", "platform-team", "jkowalski",
 		"pairs with web-dashboard", "CI RUNNING", "clean", "Up to date with main", "rebased 6m ago", "Pushed", "3 commits",
 		"#812 · feat(search): back off on 429 using Retry-After", "DRAFT", "CHECKS · 5 OF 7", "1m 42s", "running 3m", "queued",

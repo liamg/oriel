@@ -131,7 +131,7 @@ func (r Repo) Commit(ctx context.Context, message string, paths ...string) error
 	return err
 }
 
-// CommitWith is Commit with trailers ("Unreviewed-Agent-Lines: 21"), and returns the new commit's hash.
+// CommitWith is Commit with trailers ("Verified-By: quiz"), and returns the new commit's hash.
 func (r Repo) CommitWith(ctx context.Context, message string, trailers []string, paths ...string) (string, error) {
 	if strings.TrimSpace(message) == "" {
 		return "", errors.New("a commit needs a message")

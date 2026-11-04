@@ -117,9 +117,15 @@ func (x *Ship) page(c *ui.Ctx) {
 
 func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 	th := c.Theme()
-	raisable, w := 0, registry.CodeHost{}.Said()
+	raisable, pushable, w := 0, 0, registry.CodeHost{}.Said()
 	for _, s := range ships {
-		if !s.ReadOnly && s.Code != nil && (s.Commits > 0 || len(s.Files) > 0 || s.PR != nil) {
+		switch {
+		case s.ReadOnly || s.Code == nil:
+		case s.PR.Open():
+			if len(s.Unpushed) > 0 {
+				pushable++
+			}
+		case s.Commits > 0 || len(s.Files) > 0 || s.PR != nil:
 			if raisable == 0 {
 				w = s.words()
 			}
@@ -162,8 +168,14 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 			if widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: kit.EndHelp, Disabled: waiting}) {
 				x.run("session.end", registry.Args{"id": string(se.ID)})
 			}
-		} else if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: raisable == 0 || waiting}) {
-			x.run("ship.raise-all", nil)
+		} else if raisable > 0 {
+			if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: waiting}) {
+				x.run("ship.raise-all", nil)
+			}
+		} else if pushable > 0 {
+			if widget.Button(c, "push", "Push all", widget.ButtonOpts{Primary: true, Help: "git/ship#push", Disabled: waiting}) {
+				x.run("ship.push-all", nil)
+			}
 		}
 	})
 	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
@@ -507,9 +519,15 @@ func (x *Ship) gatesList(c *ui.Ctx, se core.SessionState) {
 						glyph, tone = "✗", th.C(theme.Error)
 					case registry.GatePending, registry.GateOptional:
 						glyph, tone = "○", th.C(theme.FgFaint)
+					case registry.GateSkipped:
+						glyph, tone = "–", th.C(theme.FgFaint)
+					}
+					title := th.C(theme.FgMuted)
+					if g.State == registry.GateSkipped {
+						title = th.C(theme.FgFaint)
 					}
 					c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
-					c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", g.Title, kit.UIFont(12.5, th.C(theme.FgMuted))) })
+					c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", g.Title, kit.UIFont(12.5, title)) })
 					noteTone := th.C(theme.FgFaint)
 					if g.State == registry.GateWarn {
 						noteTone = th.C(theme.Warn)

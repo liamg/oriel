@@ -256,9 +256,7 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 					continue
 				}
 				c.Column(fmt.Sprint("code", k), ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 6), Radius: 4, Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
-					for j, l := range b.Code {
-						c.Text(j, strings.ReplaceAll(l, "\t", "    "), code)
-					}
+					widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-16, 0, code)
 				})
 			case mdRule:
 				c.Box(fmt.Sprint("hr", k), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)

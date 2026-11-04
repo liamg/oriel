@@ -216,7 +216,7 @@ type GateOverride struct {
 	Gate    string    `json:"gate"`              // its name: "ledger"
 	Mode    string    `json:"mode"`              // GateHard or GateSoft
 	Unread  int       `json:"unread"`            // what it counted as left: the agent-written lines not read
-	Trailer string    `json:"trailer,omitempty"` // what the commit carries for it: "Unreviewed-Agent-Lines: 38"
+	Trailer string    `json:"trailer,omitempty"` // what the commit carries for it: "Verified-By: quiz"
 	Commit  string    `json:"commit,omitempty"`  // its hash
 	Subject string    `json:"subject,omitempty"`
 	Time    time.Time `json:"time,omitzero"`

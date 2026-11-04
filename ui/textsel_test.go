@@ -224,3 +224,25 @@ func TestSelectionScrollsItsBox(t *testing.T) {
 
 // byIDFor is the id of the root's child keyed key.
 func (u *UI) byIDFor(key string) ID { return childID(0, key) }
+
+// A line that wraps on from the one before (WrappedText) copies joined to it by its join, not a newline.
+func TestWrappedTextCopiesJoined(t *testing.T) {
+	u := newUI()
+	frame := func() {
+		u.Frame(new(render.List).Record(1), render.Point{X: 400, Y: 300}, func(c *Ctx) {
+			c.Column("page", Style{W: Px(300), Selectable: true}, func(c *Ctx) {
+				c.Text("a", "round half", body)
+				c.WrappedText("b", "even", body, " ")
+				c.WrappedText("c", "-up", body, "")
+				c.Text("d", "next", body)
+			})
+		})
+	}
+	frame()
+	press(u, frame, render.Point{X: 1, Y: 2}, 0)
+	u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 290, Y: 290}, Buttons: render.ButtonPrimary})
+	frame()
+	if got, want := u.SelectedText(), "round half even-up\nnext"; got != want {
+		t.Errorf("copied %q, want %q", got, want)
+	}
+}

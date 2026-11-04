@@ -34,9 +34,11 @@ type layoutPlugin struct {
 	asked bool // the menu asked for focus
 
 	restored bool
-	kept     []byte         // the layout as last written
-	saved    []byte         // the layout kept for the directory the window is on, as its file has it
-	state    *kit.StateFile // that file
+	kept     []byte                     // the layout as last written
+	live     map[string]layout.Snapshot // each directory left, by its state file: its layout, its views still open
+	keptAt   map[string][]byte          // and its layout as last written
+	saved    []byte                     // the layout kept for the directory the window is on, as its file has it
+	state    *kit.StateFile             // that file
 }
 
 func (l *layoutPlugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "layout"} }
@@ -55,6 +57,7 @@ var movePlacements = []struct {
 
 func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	l.h, l.root, l.snaps = h, layout.New(), map[string]layout.Snapshot{}
+	l.live, l.keptAt = map[string]layout.Snapshot{}, map[string][]byte{}
 	path := func() string { return "" }
 	if l.sh != nil {
 		path = func() string { return l.sh.dirState("layout") }
@@ -87,7 +90,9 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 // it's on started the way its kind opens if it never has, then what was asked to run once the window got there.
 func (l *layoutPlugin) arrive() {
 	h := l.h
-	l.restore(h)
+	if !l.back(h) {
+		l.restore(h)
+	}
 	l.restored = true
 	f := h.State().Focus
 	if l.sh != nil && l.sh.openedFor != "" {
@@ -103,11 +108,14 @@ func (l *layoutPlugin) arrive() {
 	}
 }
 
-// leave saves the layout for the directory the window is leaving and empties it, for the next one's; the pages over
-// it close, as the layout under them goes.
+// leave saves the layout for the directory the window is leaving, keeps it as it is for the window's return, and
+// empties it for the next one's; the pages over it close, as the layout under them goes.
 func (l *layoutPlugin) leave() {
 	closePlaces(l.h)
 	l.keep(l.h) // to the directory's file it's leaving: the state file follows the window after
+	if p := l.state.Path(); l.restored && p != "" {
+		l.live[p], l.keptAt[p] = l.root.Save(), l.kept
+	}
 	l.restored, l.kept = false, nil
 	if err := l.root.Load(layout.New().Save()); err != nil {
 		l.h.Log().Warn("emptying the layout", "err", err)
