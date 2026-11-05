@@ -32,6 +32,32 @@ func jobRun(st core.State, job string) (core.SessionState, bool) {
 	return out, found
 }
 
+// runShown says whether the Runs list shows a run in status, with each of names in it (its buttons).
+func runShown(s *apptest.Scene, status string, names ...string) bool {
+	var find func(n *render.AccessNode, prefix string) *render.AccessNode
+	find = func(n *render.AccessNode, prefix string) *render.AccessNode {
+		if strings.HasPrefix(n.Name, prefix) {
+			return n
+		}
+		for _, k := range n.Children {
+			if f := find(k, prefix); f != nil {
+				return f
+			}
+		}
+		return nil
+	}
+	runs := find(s.Access(), "Runs")
+	if runs == nil || find(runs, status+" run") == nil {
+		return false
+	}
+	for _, name := range names {
+		if find(runs, name) == nil {
+			return false
+		}
+	}
+	return true
+}
+
 // A job saved from the page … runs as a job session against a fake provider; its row shows status,
 // repos, summary … and duration; Open, Resume and Delete work; a blocked run shows in Requests.
 func TestJobsRunAsJobSessions(t *testing.T) {
@@ -69,14 +95,14 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	}
 	a := lw.Fake.WaitStarted(t)
 	a.WaitSent(t) // the prompt reaches the agent before it can answer it
-	s.Until("the running row", func() bool { return strings.Contains(s.Text(), "RUNNING") })
+	s.Until("the running row", func() bool { return runShown(s, host.RunRunning) })
 
 	ctx := context.Background()
 	if err := lw.W.AddRepo(ctx, se.ID, core.RepoID(lw.Repo)); err != nil {
 		t.Fatal(err)
 	}
 	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "Bumped 3 deps in pricing; its tests pass.", "resolve": true})
-	s.Until("the done row", func() bool { return strings.Contains(s.Text(), "DONE") })
+	s.Until("the done row", func() bool { return runShown(s, host.RunDone, "Delete") })
 	row := s.Within("Runs", "done run").Name
 	for _, want := range []string{"Bumped 3 deps in pricing; its tests pass."} {
 		if !strings.Contains(row, want) {
@@ -103,7 +129,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	a = lw.Fake.WaitStarted(t)
 	question := "pricing's tests fail before any bump: is main broken?"
 	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "**Blocked:** " + question})
-	s.Until("the blocked row", func() bool { return strings.Contains(s.Text(), "BLOCKED") })
+	s.Until("the blocked row", func() bool { return runShown(s, host.RunBlocked, "Open") })
 	s.Click(apptest.Centre(s.Within("Runs", "Open").Bounds), 0)
 	s.UntilState("the run in front", func(st core.State) bool { return st.Focus == se.ID })
 	s.Until("the window on the run's directory, as it follows it", s.Reopen)
@@ -125,7 +151,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	third, _ := jobRun(s.Store().State(), "sweep-stale-deps")
 	lw.Fake.WaitStarted(t)
 	s.Run("session.stop", registry.Args{"id": string(third.ID)})
-	s.Until("the stopped row", func() bool { return strings.Contains(s.Text(), "STOPPED") })
+	s.Until("the stopped row", func() bool { return runShown(s, host.RunStopped, "Resume") })
 	s.Click(apptest.Centre(s.Within("stopped run", "Resume").Bounds), 0)
 	s.UntilState("the stopped run resumed", func(st core.State) bool {
 		r, _ := st.Session(third.ID)
