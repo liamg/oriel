@@ -38,6 +38,10 @@ Claude, Codex or another provider, with its model, effort and what's left of its
 in a **Direct** session edits your real files. A provider that isn't signed in, or whose login has stopped working,
 says so instead of its plan. A plugin can add an agent here, or take a built-in's place (`:help agent/plugins`).
 
+Agents are found on your shell's `PATH`. Opened from the Finder, the Dock or a launcher rather than a terminal, Oriel
+asks your login shell for it as it starts (`$SHELL -i -l`, its config files read, with `ORIEL_RESOLVING_ENVIRONMENT=1`
+set so your config can skip anything slow), and keeps the desktop's directories after it.
+
 When the ticket already has a session, Start continues it on the agent it runs on, and this says which in place of
 the agents. **Start another** brings them back, for a new session on the ticket.
 
