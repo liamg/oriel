@@ -379,8 +379,8 @@ func (x *Ship) raise(ctx registry.Ctx, se core.SessionState, p string, a registr
 		return err
 	}
 	s, _ := x.ship(se.ID, p)
-	if x.setupFirst(ctx, s) {
-		return nil
+	if first, err := x.setupFirst(ctx, s); first {
+		return err
 	}
 	label := "Raising"
 	if s.PR.Open() {
