@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,8 +27,9 @@ const (
 	end   = "__ORIEL_SHELL_PATH_END__"
 )
 
-// script prints PATH between the markers. printenv, not $PATH: a list in fish, joined by colons in what it exports.
-const script = "printf '%s' '" + begin + "'; printenv PATH; printf '%s' '" + end + "'"
+// script prints PATH between the markers. printenv, not $PATH: a list in fish, joined by colons in what it exports;
+// by its path, which macOS and Linux both have it at, so it's found whatever PATH the config left.
+const script = "printf '%s' '" + begin + "'; /usr/bin/printenv PATH; printf '%s' '" + end + "'"
 
 // Timeout is how long the shell is given to start and answer.
 const Timeout = 5 * time.Second
@@ -140,9 +142,16 @@ func between(s string) (string, bool) {
 	return strings.TrimSpace(s[i+len(begin) : i+j]), true
 }
 
+// checked is path if it reads as one: directories by their absolute paths, separated by colons. The terminal the shell
+// runs on carries its errors too, so what it printed between the markers may be one.
 func checked(shell, path string) (string, error) {
 	if path == "" {
 		return "", errors.New(filepath.Base(shell) + " has no PATH")
+	}
+	for _, d := range filepath.SplitList(path) {
+		if d != "" && !filepath.IsAbs(d) || strings.ContainsAny(d, "\r\n") {
+			return "", fmt.Errorf("%s printed %q, not a PATH", filepath.Base(shell), path)
+		}
 	}
 	return path, nil
 }

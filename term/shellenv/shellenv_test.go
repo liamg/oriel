@@ -60,7 +60,10 @@ func TestPathGivesUpOnAShellThatHangs(t *testing.T) {
 	}
 	b, _ := os.ReadFile(pidfile)
 	if pid := strings.TrimSpace(string(b)); pid != "" {
-		if _, err := os.Stat("/proc/" + pid); err == nil && !strings.HasPrefix(readStat(pid), "Z") {
+		running := func() bool { s := readStat(pid); return s != "" && !strings.HasPrefix(s, "Z") }
+		for deadline := time.Now().Add(time.Second); running() && time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		}
+		if running() { // the kill is sent, not waited for
 			t.Errorf("the shell's child %s is still running", pid)
 		}
 	}
@@ -84,6 +87,19 @@ func TestPathFromAShellThatNeedsATerminal(t *testing.T) {
 	sh := fakeShell(t, `[ -t 0 ] && [ -t 1 ] || exit 1`, "/opt/tty/bin:/bin")
 	if got, err := Path(t.Context(), sh, Timeout); err != nil || got != "/opt/tty/bin:/bin" {
 		t.Fatalf("Path = %q, %v", got, err)
+	}
+}
+
+// What the shell printed between the markers is taken only if it reads as a PATH: on its terminal, an error is in
+// the same stream.
+func TestCheckedRefusesWhatIsntAPath(t *testing.T) {
+	for _, bad := range []string{"/bin/sh: printenv: command not found", "printenv: not found", "/usr/bin:\r\n/bin"} {
+		if _, err := checked("sh", bad); err == nil {
+			t.Errorf("%q was taken as a PATH", bad)
+		}
+	}
+	if got, err := checked("sh", "/opt/homebrew/bin:/usr/bin::/bin"); err != nil || got != "/opt/homebrew/bin:/usr/bin::/bin" {
+		t.Errorf("a PATH was refused: %q, %v", got, err)
 	}
 }
 
