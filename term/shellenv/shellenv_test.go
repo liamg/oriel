@@ -103,6 +103,26 @@ func TestCheckedRefusesWhatIsntAPath(t *testing.T) {
 	}
 }
 
+// A shell that goes on writing after it has printed the PATH (a logout script, job notices) is still answered for, and
+// let go of in time: the terminal is read until it closes, as macOS won't let a process exit with its output unread.
+func TestPathFromAShellThatKeepsWriting(t *testing.T) {
+	isolate.Test(t)
+	sh := filepath.Join(t.TempDir(), "chatty")
+	src := "#!/bin/sh\nfor a; do last=$a; done\nPATH=/opt/chatty/bin:/bin; export PATH\n/bin/sh -c \"$last\"\n" +
+		"i=0; while [ $i -lt 20000 ]; do echo \"logging out, line $i of many\"; i=$((i+1)); done\n"
+	if err := os.WriteFile(sh, []byte(src), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	got, err := Path(t.Context(), sh, Timeout)
+	if err != nil || got != "/opt/chatty/bin:/bin" {
+		t.Fatalf("Path = %q, %v", got, err)
+	}
+	if d := time.Since(start); d > 3*time.Second {
+		t.Errorf("took %v to let the shell go", d)
+	}
+}
+
 // The shell's directories come first, then what the process had that the shell's lacks, each once.
 func TestMerge(t *testing.T) {
 	got := Merge("/opt/tools/bin:/usr/bin:/bin", "/usr/bin:/bin:/usr/sbin:/opt/tools/bin:")
