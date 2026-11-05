@@ -74,8 +74,9 @@ func shipCommit(c gitx.Commit) ShipCommit {
 
 // ShipReq reads a session's projects; Fresh fetches first.
 type ShipReq struct {
-	Session core.SessionID `json:"session"`
-	Fresh   bool           `json:"fresh,omitempty"`
+	Session  core.SessionID `json:"session"`
+	Fresh    bool           `json:"fresh,omitempty"`
+	Projects []string       `json:"projects,omitempty"` // only these projects, in the session's order; every one when empty
 }
 
 // ShipRef is one project of a session.
@@ -157,15 +158,19 @@ func (n noToken) Do(context.Context, string, string, any, any) error {
 	return &gh.Error{Status: 401, Message: "no GitHub token found: set GITHUB_TOKEN, sign in with gh, or store a git credential for " + n.host}
 }
 
-// ShipRead is every project of a session on its way to a PR.
+// ShipRead is every project of a session on its way to a PR, or those r names.
 func (x *GitHub) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]Ship, len(se.Projects))
+	projects := se.Projects
+	if len(r.Projects) > 0 {
+		projects = slices.DeleteFunc(slices.Clone(projects), func(p core.Project) bool { return !slices.Contains(r.Projects, p.Name) })
+	}
+	out := make([]Ship, len(projects))
 	var wg sync.WaitGroup
-	for i, p := range se.Projects {
+	for i, p := range projects {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

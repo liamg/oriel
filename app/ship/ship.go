@@ -91,7 +91,9 @@ type shipReport struct {
 	failed  map[string]string // project → why its last step failed
 	started int               // reads started; a read older than the one last kept is dropped
 	kept    int
-	fixed   bool // a Fixture's: reads don't replace it
+	fixed   bool           // a Fixture's: reads don't replace it
+	seq     int            // reads started, a session's whole or a project's, in order
+	from    map[string]int // project → the seq of the read its entry is from
 }
 
 func (x *Ship) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ship"} }
@@ -298,25 +300,25 @@ func (x *Ship) refresh(id core.SessionID, fresh bool) {
 		x.mu.Unlock()
 		return
 	}
-	r, n := x.reading(id)
+	r, n, seq := x.reading(id)
 	x.mu.Unlock()
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		x.readAs(id, r, n, fresh)
+		x.readAs(id, r, n, seq, fresh)
 	}()
 }
 
 // read reads a session's projects, on this goroutine.
 func (x *Ship) read(id core.SessionID, fresh bool) {
 	x.mu.Lock()
-	r, n := x.reading(id)
+	r, n, seq := x.reading(id)
 	x.mu.Unlock()
-	x.readAs(id, r, n, fresh)
+	x.readAs(id, r, n, seq, fresh)
 }
 
-// reading marks a session's read started, and numbers it; x.mu is held.
-func (x *Ship) reading(id core.SessionID) (*shipReport, int) {
+// reading marks a session's read started, and numbers it among the whole reads and among every read; x.mu is held.
+func (x *Ship) reading(id core.SessionID) (*shipReport, int, int) {
 	r := x.reports[id]
 	if r == nil {
 		r = &shipReport{doing: map[string]string{}, failed: map[string]string{}}
@@ -325,12 +327,14 @@ func (x *Ship) reading(id core.SessionID) (*shipReport, int) {
 	if !r.fixed {
 		r.loading = true
 		r.started++
+		r.seq++
 	}
-	return r, r.started
+	return r, r.started, r.seq
 }
 
-// readAs is read n into r: what it read is kept unless a read started after it was kept first.
-func (x *Ship) readAs(id core.SessionID, r *shipReport, n int, fresh bool) {
+// readAs is read n into r: what it read is kept unless a read started after it was kept first, and a project read
+// on its own since seq keeps that read's entry.
+func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) {
 	var ships []shipRead
 	c, err := x.client(id)
 	if err == nil {
@@ -362,6 +366,7 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n int, fresh bool) {
 	if err != nil {
 		r.err = err.Error()
 	} else {
+		ships = r.keepNewer(ships, seq)
 		r.ships, r.err, r.read = ships, "", time.Now()
 	}
 	seen, merged, asks := x.newPRs(id, ships)
