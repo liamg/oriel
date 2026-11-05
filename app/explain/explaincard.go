@@ -15,7 +15,7 @@ import (
 )
 
 // decorationKey is what the decorations of ctx are made from: the buffer's units as worked out last, the base they
-// were worked out against, what each unit's status reads, and the card.
+// were worked out against, what each unit's status reads, the card, and the units held back that have come due.
 func (x *Plugin) decorationKey(ctx uireg.DecorationCtx) any {
 	type made struct {
 		units  *fileUnits
@@ -24,10 +24,11 @@ func (x *Plugin) decorationKey(ctx uireg.DecorationCtx) any {
 		card   *explainCard
 		sel    int
 		reveal bool
+		due    int
 	}
 	_, base, _ := x.baseOf(ctx.Path)
 	x.mu.Lock()
-	k := made{units: x.bufs[ctx.Buffer], base: base, status: x.statusPrint(), card: x.card}
+	k := made{units: x.bufs[ctx.Buffer], base: base, status: x.statusPrint(), card: x.card, due: x.dueCount}
 	x.mu.Unlock()
 	if k.card != nil {
 		k.sel, k.reveal = k.card.sel, k.card.reveal
