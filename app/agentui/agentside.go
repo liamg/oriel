@@ -122,9 +122,10 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 // turnEdits are the files the latest turn edited, with their lines added and removed, in the order first edited.
 func turnEdits(se core.SessionState) []core.FileDiff {
 	start := 0
-	for i, it := range se.Transcript {
-		if it.Kind == core.ItemUser {
+	for i := len(se.Transcript) - 1; i >= 0; i-- {
+		if se.Transcript[i].Kind == core.ItemUser {
 			start = i
+			break
 		}
 	}
 	var out []core.FileDiff

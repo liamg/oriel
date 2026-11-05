@@ -2,6 +2,7 @@ package eventstore
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 	"time"
 
@@ -155,5 +156,35 @@ func TestThreadBusy(t *testing.T) {
 	}
 	if err := s.Apply(core.ThreadBusy{Session: "pricing", Thread: "nope"}); err == nil {
 		t.Error("an unknown thread went busy")
+	}
+}
+
+// A transcript keeps its last MaxTranscript items: an item with an ID it has is replaced in place, a new one goes on
+// the end and the oldest drops off, and a copy of the state taken before sees its own transcript still.
+func TestTranscriptAppendedKeepsTheLast(t *testing.T) {
+	s := New()
+	if err := s.Apply(core.SessionSynced{Session: core.SessionState{ID: "a", Kind: core.KindWork}}); err != nil {
+		t.Fatal(err)
+	}
+	var items []core.Item
+	for i := range core.MaxTranscript {
+		items = append(items, core.Item{ID: fmt.Sprint("i", i), Kind: core.ItemAssistant, Text: "x"})
+	}
+	if err := s.Apply(core.TranscriptAppended{Session: "a", Items: items}); err != nil {
+		t.Fatal(err)
+	}
+	before := s.State()
+	if err := s.Apply(core.TranscriptAppended{Session: "a", Items: []core.Item{
+		{ID: "i1999", Kind: core.ItemAssistant, Text: "y"}, {ID: "new", Kind: core.ItemAssistant, Text: "z"}}}); err != nil {
+		t.Fatal(err)
+	}
+	se, _ := s.State().Session("a")
+	tr := se.Snapshot().Transcript
+	if len(tr) != core.MaxTranscript || tr[0].ID != "i1" || tr[len(tr)-2].Text != "y" || tr[len(tr)-1].ID != "new" {
+		t.Errorf("the transcript: %d items, from %s to %s (%q)", len(tr), tr[0].ID, tr[len(tr)-1].ID, tr[len(tr)-2].Text)
+	}
+	old, _ := before.Session("a")
+	if ot := old.Snapshot().Transcript; len(ot) != core.MaxTranscript || ot[0].ID != "i0" || ot[len(ot)-1].Text != "x" {
+		t.Errorf("an older copy changed: %d items, from %s, last %q", len(ot), ot[0].ID, ot[len(ot)-1].Text)
 	}
 }
