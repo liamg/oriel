@@ -89,11 +89,6 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 - `oriel.language.add(spec)` (`ui`): Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.
 
-## oriel.ledger
-
-- `oriel.ledger.frac(project?)` (`agent.read`): The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread.
-- `oriel.ledger.unread(project?)` (`agent.read`): How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none.
-
 ## oriel.lsp
 
 - `oriel.lsp.server(spec)` (`exec`): Register a language server: { name, languages = { \
@@ -139,7 +134,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 - `oriel.session.done(name, fn)` (`session.control`): Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to end it.
 - `oriel.session.keep(id, key, value)` (`session.control`): Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON.
 - `oriel.session.kept(id, key)` (`session.control`): What oriel.session.keep last kept for a session (the one in front when id is empty) under key, or nil.
-- `oriel.session.kind(name, spec)` (`session.control`): A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), gate (hard, soft or off), needs_repo, launcher, order, prompt_file, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).
+- `oriel.session.kind(name, spec)` (`session.control`): A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).
 
 ## oriel.ship
 

@@ -28,13 +28,12 @@ import (
 const shipPoll = 10 * time.Second
 
 // ShipCommit is the ShipCommit hook's event: a commit about to be made from the Ship page. A veto stops it, its
-// reason shown in the commit box; Force is "Commit anyway…", and a rewrite changes it (a trailer, say).
+// reason shown in the commit box, and a rewrite changes it (a trailer, say).
 type ShipCommit struct {
 	Session string   `json:"session"`
 	Project string   `json:"project"`
 	Message string   `json:"message"`
 	Files   []string `json:"files,omitempty"`
-	Force   bool     `json:"force,omitempty"`
 }
 
 // ShipRaise is the ShipRaise hook's event: a pull request about to be raised, or edited. A veto stops it, its reason
@@ -107,7 +106,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.commits, x.prs, x.renaming = map[string]*commitForm{}, map[string]*prForm{}, map[string]*renameForm{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipCommit", Fired: true, Payload: ShipCommit{},
-		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box) unless force, a rewrite changes it. { session, project, message, files, force }"}))
+		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box), a rewrite changes it. { session, project, message, files }"}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrSeen", Fired: true, Payload: kit.PrSeen{},
 		Doc: "A session's pull request, the first time Oriel reads it, whoever raised it; the subject is its URL. { session, project, ticket, number, url, title, state, draft, merged }"}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrMerged", Fired: true, Payload: kit.PrMerged{},
@@ -564,8 +563,8 @@ func ciOf(cs []registry.Check) string {
 	return out
 }
 
-// gates are the "before this ships" gates Oriel can tell now; the work kind, the review ledger, the verify quiz and
-// AI review register theirs with their tickets.
+// gates are the "before this ships" gates Oriel can tell now; the work kind, the verify quiz and AI review register
+// theirs with their tickets.
 func (x *Ship) gates() {
 	sess := func(id string) (core.SessionState, bool) {
 		se, ok := x.h.Session(core.SessionID(id))
@@ -653,29 +652,6 @@ func sessionProjectDir(se core.SessionState, name string) string {
 		}
 	}
 	return ""
-}
-
-// ledger is a project's review ledger, if one is kept.
-func (x *Ship) ledger(se core.SessionState, p string) (registry.Ledger, bool) {
-	dir := sessionProjectDir(se, p)
-	if dir == "" {
-		return registry.Ledger{}, false
-	}
-	return registry.LedgerOf(x.h, dir)
-}
-
-// gated says a commit gate is hard or soft for a project's commits.
-func (x *Ship) gated(se core.SessionState, p string) bool {
-	dir := sessionProjectDir(se, p)
-	if dir == "" {
-		return false
-	}
-	for _, g := range registry.CheckCommit(x.h, registry.CommitCheck{Root: dir}) {
-		if g.Mode == registry.GateHard || g.Mode == registry.GateSoft {
-			return true
-		}
-	}
-	return false
 }
 
 // paths reads a list of strings from an arg.

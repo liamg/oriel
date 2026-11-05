@@ -471,12 +471,12 @@ func TestExplorerLuaBadge(t *testing.T) {
 // The Explorer opens again after a restart on the scope and layout it was left on.
 func TestExplorerComesBackAsLeftAfterARestart(t *testing.T) {
 	state, repo := t.TempDir(), explorerRepo(t)
-	flat := func(s string) bool { return strings.Contains(s, "by review") && !strings.Contains(s, "\nbilling\n") }
+	flat := func(s string) bool { return strings.Contains(s, "tree") && !strings.Contains(s, "\nbilling\n") }
 	r := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: repo.Dir})
 	r.Run("view.toggle", registry.Args{"id": kit.ExplorerView, "place": "dock", "edge": "left"})
 	r.WaitText("CHG 6")
 	r.ClickText("CHG 6")
-	r.WaitText("by review")
+	r.WaitText("tree")
 	r.ClickText("flat")
 	r.WaitFrame("Changed, flat", flat)
 	r.ClickText("UNC 3")

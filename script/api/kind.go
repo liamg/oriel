@@ -17,7 +17,7 @@ func luaKind(a *APIs, name string, spec script.Table) (registry.Kind, error) {
 	}
 	k := registry.Kind{KindSpec: core.KindSpec{Kind: core.Kind(name), Title: cmp.Or(str(spec, "title"), name), Desc: str(spec, "desc"),
 		About: str(spec, "about"), From: core.From(str(spec, "from")), Pack: cmp.Or(str(spec, "pack"), name),
-		Worktrees: core.Worktrees(cmp.Or(str(spec, "worktrees"), string(core.WorktreesNow))), Gate: str(spec, "gate"),
+		Worktrees:  core.Worktrees(cmp.Or(str(spec, "worktrees"), string(core.WorktreesNow))),
 		PromptFile: str(spec, "prompt_file"), Order: 100}, GateNames: strs(spec["gates"])}
 	k.NeedsRepo, _ = spec["needs_repo"].(bool)
 	k.Launcher, _ = spec["launcher"].(bool)

@@ -2,7 +2,6 @@ package gitui_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -209,38 +208,6 @@ func TestDiffExplainRunsExplainUnit(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("? didn't run explain.unit")
 	}
-}
-
-// The authorship breakdown (Claude, you, gofmt): who wrote the lines the change adds in the files
-// opened, by blame, with those not committed yet counted apart.
-// ref: oracle git
-func TestDiffAuthorship(t *testing.T) {
-	r := rig.DiffRepo(t)
-	app := openDiff(t, r, nil)
-	base := strings.TrimSpace(r.Git("merge-base", "HEAD", "main"))
-	// The agent's lines are the ones its commit adds that the work tree still has; the rest of the added lines
-	// aren't committed.
-	agent, work := 0, 0
-	for _, l := range strings.Split(r.Git("blame", "--line-porcelain", "--", "internal/pricing/round.go"), "\n") {
-		if strings.HasPrefix(l, "author ") {
-			if l == "author Claude" {
-				agent++
-			}
-		}
-	}
-	for _, l := range strings.Split(r.Git("diff", "--numstat", base), "\n") {
-		if strings.HasSuffix(l, "internal/pricing/round.go") {
-			var add, del int
-			if _, err := fmt.Sscan(l, &add, &del); err == nil {
-				work = add - agent
-			}
-		}
-	}
-	agent += 3 // currency.go, all the agent's, once it's opened
-	app.ClickText("currency.go")
-	app.WaitFrame("the authorship box", func(s string) bool {
-		return apptest.HasAll(s, "AUTHORSHIP", "Agent", fmt.Sprintf("%d lines", agent), "uncommitted", fmt.Sprintf("%d lines", work))
-	})
 }
 
 // In a session, a hunk marked reviewed is a session event the host keeps (core.HunksReviewed), keyed by the

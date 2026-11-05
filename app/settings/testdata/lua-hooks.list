@@ -8,7 +8,7 @@ text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
 rect 101.9375,0 1x38 fill #24221d
 clip 102.9375,0 671.2438x38 r 0
 pop
-text "✕ deploys: init.lua:65: oriel.http.get isn't available until network approvals" @788.1813,10.2 #ff5f6d JetBrains Mono 10
+text "✕ deploys: init.lua:64: oriel.http.get isn't available until network approvals" @788.1813,10.2 #ff5f6d JetBrains Mono 10
 text "INBOX" @1288.1813,13.710001 #b3ab99 JetBrains Mono 10.5
 rect 1339.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
 text "⌥ HUD" @1346.15,12.69 #b3ab99 JetBrains Mono 9.5
@@ -107,8 +107,8 @@ clip 44,625.48 716x260 r 0
       text "\"0.6.0\"" @68,730.4 #b3ab99 JetBrains Mono 12
       text "› #oriel.ui.row{}.children" @68,750.24 #ece6d8 JetBrains Mono 12
       text "0" @68,770.08 #b3ab99 JetBrains Mono 12
-      text "› oriel.ledger.unread('pricing')" @68,789.92 #ece6d8 JetBrains Mono 12
-      text "0" @68,809.76 #b3ab99 JetBrains Mono 12
+      text "› oriel.option.tabstop" @68,789.92 #ece6d8 JetBrains Mono 12
+      text "4" @68,809.76 #b3ab99 JetBrains Mono 12
     pop
     text "›" @68,832.96 #ffd23f JetBrains Mono 12
     rect 83.203125,813.64 652.7969x30 fill #060606 radius 6
@@ -364,16 +364,12 @@ clip 760,38 640x847.48 r 0
 pop
 text "" @12,896.69995 #b3ab99 JetBrains Mono 11
 text "CTX" @36,896.52 #7c7566 JetBrains Mono 10.5
-text "LEDGER" @67.78125,896.52 #7c7566 JetBrains Mono 10.5
-rect 113.34375,890.74 44x4 fill #24221d radius 2
-rect 113.34375,890.74 44x4 fill #ff9b45 radius 2
-text "100%" @163.34375,896.52 #ece6d8 JetBrains Mono 10.5
 rect 944,12 440x96.43408 fill #121210 radius 8 stroke 1 #ff5f6d8c
 rect 958,27.154785 7x7 fill #ff5f6d radius 3.5
 text "ERROR" @973,34.074783 #ff5f6d JetBrains Mono 9.5
 text "core" @1017.65,34.074783 #7c7566 JetBrains Mono 9.5
 text "✕" @1361.4062,34.65625 #7c7566 Inter 11
-text "init.lua:65: oriel.http.get isn't available until network approvals" @958,58.418945 #ece6d8 Inter 12.5
+text "init.lua:64: oriel.http.get isn't available until network approvals" @958,58.418945 #ece6d8 Inter 12.5
 text "Open at line" @958,86.79932 #ffd23f Inter 12
 rect 958,90.69385 68.515625x1 fill #ffd23fb3
 rect 1036.5156,70.43408 84.875x26 fill #191815 radius 6 stroke 1 #332f27

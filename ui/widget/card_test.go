@@ -96,8 +96,7 @@ func TestMeter(t *testing.T) {
 	}
 }
 
-// A stacked meter draws its parts one after another, each its share of the width: the review ledger's read, then
-// skimmed.
+// A stacked meter draws its parts one after another, each its share of the width.
 func TestMeterParts(t *testing.T) {
 	var id ui.ID
 	var read, skim color.NRGBA

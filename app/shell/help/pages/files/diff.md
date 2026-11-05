@@ -17,8 +17,7 @@ At the left, every file the branch changes, with its size. The box beside each s
 reviewed: ticked when every hunk is, half when some are. Clicking it marks the whole file, or takes the marks off;
 clicking the name expands the file, folded or not, and scrolls it to the top of the view.
 
-Under the files, plugins add their own boxes. **Authorship** counts who wrote the lines the change adds: blame for
-those committed (an agent, you, someone else), and for those not yet, the open buffer's authors.
+Under the files, plugins add their own boxes.
 
 ## Files {#files}
 
@@ -39,22 +38,6 @@ choice is remembered (`diff.layout`).
 
 **Mark reviewed** at a hunk's right, or `r`, marks it reviewed. A mark belongs to the change itself, not to its
 place, so it stays when other parts of the file are edited, and it's kept with the session.
-
-## Review ledger {#ledger}
-
-Above the files, the **review ledger** counts the lines an agent wrote in this change: read, skimmed and unread.
-A line is the agent's when blame says its commit is an agent's (by name, or a Co-Authored-By trailer), when the
-open buffer says the agent typed it, or, not committed yet, when the agent's edits in the session added it. Its
-edits include what its shell commands changed (a `sed`, a script) in the session's projects. Blank lines don't
-count.
-
-A line is **read** when its hunk is marked reviewed, or when it stays on screen in the diff long enough to read:
-about a second, and longer the more agent lines show at once. Scrolled past more briefly than that, but not in a
-blur, it's **skimmed**. Both are kept with the session. A folded file shows how many of its lines are unread.
-
-The chip at the right is the commit gate (`ledger.gate`): **commit gated until 100%** when a commit is blocked
-until every agent-written line it takes is read, **commit asks first** when it only asks. **Commit** opens the
-commit dialog.
 
 ## Explain {#explain}
 

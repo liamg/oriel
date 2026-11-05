@@ -73,10 +73,6 @@ var Reference = map[string][]RefFunc{
 	"language": {
 		{Call: "oriel.language.add(spec)", Doc: "Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.", Cap: "ui"},
 	},
-	"ledger": {
-		{Call: "oriel.ledger.frac(project?)", Doc: "The share of a project's agent-written lines read, 0 to 1 (1 with none to read); project as for unread.", Cap: "agent.read"},
-		{Call: "oriel.ledger.unread(project?)", Doc: "How many agent-written lines of a project's change aren't read yet (unread, or only skimmed): project is the session's name for it or a path in it, the project in front if none.", Cap: "agent.read"},
-	},
 	"lsp": {
 		{Call: "oriel.lsp.server(spec)", Doc: "Register a language server: { name, languages = { \\", Cap: "exec"},
 	},
@@ -112,7 +108,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.session.done(name, fn)", Doc: "Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to end it.", Cap: "session.control"},
 		{Call: "oriel.session.keep(id, key, value)", Doc: "Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON.", Cap: "session.control"},
 		{Call: "oriel.session.kept(id, key)", Doc: "What oriel.session.keep last kept for a session (the one in front when id is empty) under key, or nil.", Cap: "session.control"},
-		{Call: "oriel.session.kind(name, spec)", Doc: "A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), gate (hard, soft or off), needs_repo, launcher, order, prompt_file, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).", Cap: "session.control"},
+		{Call: "oriel.session.kind(name, spec)", Doc: "A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).", Cap: "session.control"},
 	},
 	"ship": {
 		{Call: "oriel.ship.action(spec)", Doc: "Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).", Cap: "ui"},

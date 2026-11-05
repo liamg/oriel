@@ -1,7 +1,6 @@
 package gitui
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"os"
@@ -38,11 +37,10 @@ type Explorer struct {
 	h   plugin.Host
 
 	kept        map[core.SessionID]explorerKept // each session's, as read from Host.Kept
-	cols        struct{ status, lines, diag, agent bool }
+	cols        struct{ status, lines, diag bool }
 	changedOnly bool
-	hidden      bool            // All shows dot files that haven't changed
-	ledger      registry.Ledger // the review ledger, as last drawn
-	selected    string          // the selected row's id: a repo path, a directory "dir/", or a section
+	hidden      bool   // All shows dot files that haven't changed
+	selected    string // the selected row's id: a repo path, a directory "dir/", or a section
 	hunks       explorerHunks
 	work        *gitTree // the work tree of the project last drawn
 	index       *explorerIndex
@@ -63,22 +61,8 @@ type explorerRowsKey struct {
 	th                             *theme.Resolved
 	root                           string
 	changedOnly, hidden, statusCol bool
-	layout                         string     // Changed's
-	ledger                         ledgerMark // the ledger Changed's files are sorted by, by review
-	hunks                          hunksMark  // the hunks Uncommitted shows
-}
-
-// ledgerMark tells one ledger from another: a ledger made again has new Files.
-type ledgerMark struct {
-	files *registry.LedgerFile
-	n     int
-}
-
-func markLedger(l registry.Ledger) ledgerMark {
-	if len(l.Files) == 0 {
-		return ledgerMark{}
-	}
-	return ledgerMark{&l.Files[0], len(l.Files)}
+	layout                         string    // Changed's
+	hunks                          hunksMark // the hunks Uncommitted shows
 }
 
 // hunksMark is the hunks' state, as Uncommitted's rows show it.
@@ -191,7 +175,7 @@ func (e *Explorer) Manifest() plugin.Manifest { return plugin.Manifest{ID: "expl
 func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
 	e.kept = map[core.SessionID]explorerKept{}
-	e.cols.status, e.cols.lines, e.cols.diag, e.cols.agent = true, true, true, true
+	e.cols.status, e.cols.lines, e.cols.diag = true, true, true
 	for _, c := range append(e.commands(), e.fileCommands()...) {
 		e.Add(h.Command(c))
 	}
@@ -294,7 +278,7 @@ func (e *Explorer) commands() []registry.Command {
 			}
 			return nil
 		}},
-		{ID: "explorer.commit", Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted), past the commit gates",
+		{ID: "explorer.commit", Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().root(), "all": a["all"] == true})
 			}},
@@ -428,7 +412,6 @@ func (e *Explorer) build(c *ui.Ctx) {
 	var x *explorerIndex
 	if st != nil {
 		x = e.indexFor(st)
-		e.ledger, _ = registry.LedgerOf(e.h, e.git().root())
 	}
 	e.readBadges()
 	c.Column("explorer", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(kit.TExplorerBg), Help: "files/explorer", Role: ui.RoleRegion, Label: "Explorer"}, func(c *ui.Ctx) {
@@ -486,7 +469,6 @@ func (e *Explorer) options(c *ui.Ctx) {
 	widget.ToggleMenu(c, "options", []widget.ToolItem{
 		{Key: "status", Label: "Status", On: &e.cols.status, Help: help},
 		{Key: "lines", Label: "± lines", On: &e.cols.lines, Help: help},
-		{Key: "agent", Label: "Agent", On: &e.cols.agent, Help: help},
 		{Key: "diag", Label: "Diagnostics", On: &e.cols.diag, Help: help},
 		{Key: "only", Label: "Changed only", On: &e.changedOnly, Help: help, Shortcut: "⌥C"},
 		{Key: "hidden", Label: "Hidden files", On: &e.hidden, Help: help},
@@ -576,8 +558,6 @@ func (e *Explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.Tree
 			e.fileHunks(p) // read off the loop when they're due
 		}
 		key.hunks = e.hunks.mark()
-	case sc == gitx.Changed && key.layout == "by review":
-		key.ledger = markLedger(e.ledger)
 	}
 	if e.rows.key != key || e.rows.items == nil {
 		e.rows.key, e.rows.items = key, e.buildItems(c.Theme(), st, sc)
@@ -611,17 +591,6 @@ func (e *Explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 		}
 		return out
 	case gitx.Changed:
-		if e.layout() == "by review" {
-			byPath := map[string]gitx.FileState{}
-			for _, f := range files {
-				byPath[f.Path] = f
-			}
-			var out []widget.TreeItem
-			for _, p := range e.reviewOrder(st) {
-				out = append(out, e.fileItem(th, byPath[p], p, sc))
-			}
-			return out
-		}
 		if e.layout() == "flat" {
 			var out []widget.TreeItem
 			for _, f := range files {
@@ -649,22 +618,6 @@ func (e *Explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 // isHidden reports whether a repo path is a dot file or under a dot directory.
 func isHidden(p string) bool {
 	return strings.HasPrefix(p, ".") || strings.Contains(p, "/.")
-}
-
-// reviewOrder is Changed's files by review: the most agent-written lines not read first, then by path.
-func (e *Explorer) reviewOrder(st *gitx.State) []string {
-	var ps []string
-	for _, f := range st.Files(gitx.Changed) {
-		ps = append(ps, f.Path)
-	}
-	notRead := make(map[string]int, len(e.ledger.Files))
-	for _, f := range e.ledger.Files {
-		if _, ok := notRead[f.Path]; !ok {
-			notRead[f.Path] = f.All.NotRead()
-		}
-	}
-	slices.SortStableFunc(ps, func(a, b string) int { return cmp.Or(cmp.Compare(notRead[b], notRead[a]), strings.Compare(a, b)) })
-	return ps
 }
 
 // hunkSection is a file's hunks, staged ticked, each row its first line and size.
@@ -821,20 +774,6 @@ func (e *Explorer) trailing(c *ui.Ctx, x *scopeIndex, sc gitx.Scope, it widget.T
 	}
 	if e.cols.diag || sc != gitx.All {
 		e.diagCounts(c, e.git().abs(p))
-	}
-	if lf, ok := e.ledger.File(p); ok {
-		switch {
-		case sc == gitx.Changed:
-			kit.ReadBar(c, "read", lf.All)
-		case sc == gitx.All && e.cols.agent:
-			glyph := "◆"
-			if lf.All.NotRead() == 0 {
-				glyph = "◇"
-			}
-			c.Box("agent", ui.Style{Tooltip: fmt.Sprintf("%d of %d agent-written lines read", lf.All.Read, lf.All.Total())}, func(c *ui.Ctx) {
-				c.Text("t", glyph, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(tDiffAuthAgent)})
-			})
-		}
 	}
 	if (e.cols.lines || sc != gitx.All) && (f.Add > 0 || f.Del > 0 || f.Binary && f.Code != 0) {
 		widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Bar: sc != gitx.Uncommitted, Scale: 80, Binary: f.Binary})

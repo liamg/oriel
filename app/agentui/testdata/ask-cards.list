@@ -277,7 +277,7 @@ text "PRICING-ROUNDING · GATEWAY" @594,276.92453 #ff9b45 JetBrains Mono 9.5
 text "✕" @994,277.0685 #7c7566 JetBrains Mono 9.900001
 rect 594,303.33676 7x7 fill #ff9b45 radius 3.5
 text "git push origin rethink/rounding" @609,303.6139 #ece6d8 Inter 12.5
-text "3 commits · +184 -22 · 0 unreviewed lines ✓" @609,319.31903 #7c7566 JetBrains Mono 9.5
+text "3 commits · +184 -22" @609,319.31903 #7c7566 JetBrains Mono 9.5
 rect 594,331.16904 72.40625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
 text "Allow" @604,348.53427 #141006 Inter 12
 rect 642.40625,336.66904 14x15 radius 3 stroke 1 #14100666

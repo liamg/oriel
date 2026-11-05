@@ -3,7 +3,6 @@ package agentui
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,11 +15,9 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/sandbox/gateway"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -113,36 +110,6 @@ func domainOf(hostport string) (domain, port string) {
 		parts = parts[len(parts)-2:]
 	}
 	return strings.Join(parts, "."), port
-}
-
-// reviewState is the review ledger where a gateway call commits, pushes or raises a PR, shown right where you
-// approve it: "21 agent lines unread", or "0 unreviewed lines ✓".
-func reviewState(h plugin.Host, se core.SessionState, a core.Ask) string {
-	tool := strings.TrimPrefix(a.Tool, gateway.Prefix)
-	if tool != "commit" && tool != "push" && tool != "pr_create" {
-		return ""
-	}
-	var in struct {
-		Project string `json:"project"`
-	}
-	_ = json.Unmarshal([]byte(a.Input), &in)
-	p, ok := se.Primary()
-	for _, q := range se.Projects {
-		if in.Project != "" && q.Name == in.Project {
-			p, ok = q, true
-		}
-	}
-	if !ok || p.Dir == "" {
-		return ""
-	}
-	l, found := registry.LedgerOf(h, p.Dir)
-	if !found || !l.Ready {
-		return ""
-	}
-	if n := l.All.NotRead(); n > 0 {
-		return fmt.Sprintf("%d agent %s unread", n, kit.Plural(n, "line", "lines"))
-	}
-	return "0 unreviewed lines ✓"
 }
 
 // askCard is an ask as a card, with what answers it: in the console where it arose, or stacked over the window
@@ -281,9 +248,6 @@ func (x *Console) gatewayCard(k *askCardParts, se core.SessionState, a core.Ask,
 	}
 	if a.Rule != "" {
 		o.Note = "rule: " + a.Rule
-	}
-	if r := reviewState(x.h, se, a); r != "" {
-		o.Note = strings.TrimPrefix(o.Note+" · "+r, " · ")
 	}
 	k.add("Allow", "y", true, registry.Args{"decision": "allow"})
 	if a.Rule != "" {

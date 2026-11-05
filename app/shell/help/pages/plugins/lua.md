@@ -53,7 +53,7 @@ up the window.
 
 ## Later features {#later}
 
-Namespaces for features that aren't here yet (`L.ledger`, `L.linear`, `L.thread`, `L.lsp`, `L.coverage`,
+Namespaces for features that aren't here yet (`L.linear`, `L.thread`, `L.lsp`, `L.coverage`,
 `L.http`) load, and calling into one says which ticket brings it.
 
 ## Types {#types}

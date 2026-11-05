@@ -861,8 +861,7 @@ func TestResolveRefusesUnseenComments(t *testing.T) {
 	}
 }
 
-// A shell command's changes to the session's projects are recorded on its item, so the ledger counts lines written
-// with sed or a script as the agent's.
+// A shell command's changes to the session's projects are recorded on its item, as an edit's are.
 func TestShellCommandsRecordWhatTheyChanged(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Write things")

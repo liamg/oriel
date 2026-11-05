@@ -690,7 +690,7 @@ func (vm *VM) Keys(path string) []string {
 	return out
 }
 
-// Error is a Lua error: its message, "init.lua:56: oriel.ledger.frac isn't available…", and its traceback.
+// Error is a Lua error: its message, "init.lua:56: oriel.forecast.today isn't available…", and its traceback.
 type Error struct {
 	Message   string
 	Traceback string // Lua's: the oriel API function that raised it named, gopher-lua's own frames left out

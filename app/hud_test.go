@@ -63,5 +63,5 @@ L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
 	s.SettleGit()
 	s.Lint("the HUD")
 	s.Golden("hud-10")
-	s.WantFrame("PLAN USAGE", "2 accounts", "5H", "WK", "38%", "71%", "THIS MACHINE", "mbp", "15m", "SESSIONS", "open", "need you", "TODAY", "since 00:00", "TOKENS", "COST", "CACHE", "THREADS", "REVIEWED", "UNREAD", "NEXT MEETING · 14:30", "Pricing sync", "⌥ RELEASE TO HIDE · CLICK TO PIN", "⌥ HUD", "CPU")
+	s.WantFrame("PLAN USAGE", "2 accounts", "5H", "WK", "38%", "71%", "THIS MACHINE", "mbp", "15m", "SESSIONS", "open", "need you", "TODAY", "since 00:00", "TOKENS", "COST", "CACHE", "THREADS", "NEXT MEETING · 14:30", "Pricing sync", "⌥ RELEASE TO HIDE · CLICK TO PIN", "⌥ HUD", "CPU")
 }

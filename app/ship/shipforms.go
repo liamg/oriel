@@ -7,7 +7,6 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -16,8 +15,7 @@ type commitForm struct {
 	message string
 	edited  bool            // typed into, so the draft no longer fills it
 	skip    map[string]bool // files left out
-	veto    string          // why a commit gate or a ShipCommit hook stopped the last try
-	held    []registry.GateCheck
+	veto    string          // why a ShipCommit hook stopped the last try
 	save    autosave
 }
 

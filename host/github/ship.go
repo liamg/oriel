@@ -91,7 +91,7 @@ type ShipCommitReq struct {
 	Project  string         `json:"project"`
 	Message  string         `json:"message"`
 	Files    []string       `json:"files,omitempty"`
-	Trailers []string       `json:"trailers,omitempty"` // a commit gate's, when committed past it
+	Trailers []string       `json:"trailers,omitempty"` // added to the message, as git commit --trailer does
 }
 
 // DraftReq saves a project's commit message (Kind "commit": Body) or PR draft (Kind "pr") as the user wrote it, or

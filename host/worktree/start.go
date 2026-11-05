@@ -51,7 +51,7 @@ func (x *Worktrees) freshName(spec core.SessionSpec) string {
 func (x *Worktrees) New(ctx context.Context, spec core.SessionSpec, k core.KindSpec) (core.SessionState, error) {
 	name := x.freshName(spec)
 	se := core.SessionState{ID: core.SessionID(name), Name: cmp.Or(spec.Title, name), Kind: spec.Kind, Prompt: spec.Prompt, Ticket: spec.Ticket,
-		Created: x.env.Now().UTC(), StartWork: k.Worktrees == core.WorktreesStartWork || k.Worktrees == core.WorktreesInit, CommitGate: k.Gate,
+		Created: x.env.Now().UTC(), StartWork: k.Worktrees == core.WorktreesStartWork || k.Worktrees == core.WorktreesInit,
 		Agent: core.AgentState{Provider: spec.Provider, Model: spec.Model, Effort: spec.Effort, Policy: hostcore.Gate(spec),
 			Sandboxed: spec.Sandbox.Container, Network: spec.Sandbox.Network, Backend: spec.Sandbox.Backend}}
 	se.SetData(spec.Data())

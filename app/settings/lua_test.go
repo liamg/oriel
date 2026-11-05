@@ -112,8 +112,7 @@ L.on("CommentSend", function(ev) ev.body = ev.body:upper(); return ev end)
 	}
 }
 
-// :Hooks and the REPL over the sample config, and :Inspect over the editor. The sample's
-// status line shows the review ledger's LEDGER bar.
+// :Hooks and the REPL over the sample config, and :Inspect over the editor.
 func TestLuaSnapshots(t *testing.T) {
 	s := luaScene(t, sample(t))
 	s.Registry().Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
@@ -122,7 +121,7 @@ func TestLuaSnapshots(t *testing.T) {
 	x := luaOf(s)
 	x.Eval("oriel.api.version")
 	x.Eval("#oriel.ui.row{}.children")
-	x.Eval("oriel.ledger.unread('pricing')")
+	x.Eval("oriel.option.tabstop")
 	x.SetInput("oriel.agent.to")
 	s.Frame()
 	s.Golden("lua-hooks")

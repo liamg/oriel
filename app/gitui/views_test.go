@@ -13,23 +13,18 @@ import (
 	"github.com/liamg/oriel/tools/perf"
 )
 
-// changedExplorer is the Explorer open on dir's Changed scope, once every diff is made.
+// changedExplorer is the Explorer open on dir's Changed scope, once its git is read.
 func changedExplorer(t *testing.T, dir string, n int) *apptest.Scene {
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	gitOf(s).Wait()
 	s.Press("<M-1>")
-	ready := func() bool {
-		l, ok := registry.LedgerOf(s.Registry(), dir)
-		return ok && l.Ready
-	}
-	if !s.Headless.Until(30*time.Second, ready) {
-		t.Fatalf("the ledger over %d changed files was never ready", n)
+	if !s.Headless.Until(30*time.Second, gitOf(s).Settled) {
+		t.Fatalf("the git of %d changed files never settled", n)
 	}
 	return s
 }
 
-// The Explorer's frame doesn't grow with the files a branch changes: the review ledger it shows is made when a diff
-// lands or the status changes, not every frame.
+// The Explorer's frame doesn't grow with the files a branch changes.
 func TestExplorerFrameWithManyChangesBudget(t *testing.T) {
 	perf.Timed(t)
 	f := apptest.MeanFrames(changedExplorer(t, rig.ChangedRepo(t, 5), 5), changedExplorer(t, rig.ChangedRepo(t, 400), 400))

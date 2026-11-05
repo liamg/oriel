@@ -151,18 +151,6 @@ func (w *Host) SetReviewed(r core.HunksReviewed) (err error) {
 	return w.emit(r)
 }
 
-// SetSeen records lines of a file's change seen in the diff.
-func (w *Host) SetSeen(r core.LinesSeen) (err error) {
-	defer w.recover("SetSeen", &err)
-	return w.emit(r)
-}
-
-// RecordOverride records a commit made past the commit gate.
-func (w *Host) RecordOverride(r core.CommitGateOverridden) (err error) {
-	defer w.recover("RecordOverride", &err)
-	return w.emit(r)
-}
-
 // RecordVerified keeps a verify quiz's result in the session.
 func (w *Host) RecordVerified(v core.Verified) (err error) {
 	defer w.recover("RecordVerified", &err)

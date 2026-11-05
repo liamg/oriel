@@ -32,8 +32,8 @@ const DiffView = kit.DiffView
 const DiffKeyMode = "diff"
 
 // The diff's slots for plugins, each a view drawn in the order of its name, built with the diff's repo root as
-// ViewCtx.Instance: DiffHeader views above the files (the review ledger), DiffSide views in the left column under
-// the changed files (authorship), and DiffRight views in a column at the right (an AI review's findings).
+// ViewCtx.Instance: DiffHeader views above the files, DiffSide views in the left column under
+// the changed files, and DiffRight views in a column at the right (an AI review's findings).
 const (
 	DiffSide  = kit.DiffSide
 	DiffRight = kit.DiffRight
@@ -49,8 +49,7 @@ const ExplainUnit = "explain.unit"
 // Diff is the diff view, its commands and keys, and the review marks it keeps.
 type Diff struct {
 	kit.Disposer
-	h           plugin.Host
-	ledgerTimes ledgerTimes
+	h plugin.Host
 
 	by    map[string]*diffState // by instance: the repo's root
 	focus *diffState            // the diff with focus, or the last to have it
@@ -58,16 +57,12 @@ type Diff struct {
 	mu         sync.Mutex
 	files      map[diffKey]*diffFile
 	loading    map[diffKey]bool
-	started    map[diffKey]time.Time // when each file's last diff was started, so one changing fast isn't remade each time
-	waking     map[diffKey]bool      // a redraw is set for when a file's diff can be made again
-	gen        uint64                // bumped when a diff lands or a local review changes: what the ledger is made from
-	reviews    uint64                // bumped when a local review changes
-	ledgers    map[string]cachedLedger
-	parts      map[diffKey]ledgerPart   // each file's share of its ledger
-	touched    map[string]touchedFiles  // by root: the files the branch's agent commits touched
+	started    map[diffKey]time.Time    // when each file's last diff was started, so one changing fast isn't remade each time
+	waking     map[diffKey]bool         // a redraw is set for when a file's diff can be made again
+	gen        uint64                   // bumped when a diff lands or a local review changes
+	reviews    uint64                   // bumped when a local review changes
 	styled     map[diffKey]bool         // files the view has shown, whose diffs are made styled from then on
 	local      core.State               // reviews made outside a session, as session "local" with each repo's root its project; they last as long as the window
-	texts      map[string]agentTexts    // by session and root
 	stats      map[diffKey]kit.FileStat // each changed file's size and time on disk, read off the loop
 	statting   bool
 	rechecking bool // a frame is set for when the stats read last go stale
@@ -99,9 +94,6 @@ type diffState struct {
 	drawn   map[string]*diffFile       // each file's diff as last drawn
 	files   []gitx.FileState           // the files listed, as last drawn
 	marks   map[string]map[string]bool // each file's marks as last drawn
-	ledger  registry.Ledger            // as last drawn
-	seen    map[string]time.Time       // agent-written lines on screen, by file and key, since when
-	sent    map[string]core.LineState  // what's been recorded of them
 	slider  map[string]bool            // image files shown as a slider, not side by side
 	waiting map[string]time.Time       // files whose diff is being made, since when
 }
@@ -115,7 +107,7 @@ type diffSel struct {
 func (x *Diff) Manifest() plugin.Manifest { return plugin.Manifest{ID: "diff"} }
 
 func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
-	x.h, x.ledgerTimes = h, defaultLedgerTimes
+	x.h = h
 	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
 	x.started, x.waking, x.styled = map[diffKey]time.Time{}, map[diffKey]bool{}, map[diffKey]bool{}
 	x.local = core.State{Sessions: []core.SessionState{{ID: localReviews}}}
@@ -144,10 +136,6 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Keymap(k))
 	}
 	x.Add(h.View(DiffView, diffView{x}))
-	x.activateLedger()
-	x.Add(h.View(DiffSide+"50-authorship", uireg.ViewFunc(func(vc uireg.ViewCtx) ui.Node {
-		return &ui.Func{Key: "authorship", Fn: func(c *ui.Ctx) { x.authorshipView(c, vc.Instance) }}
-	})))
 	return nil
 }
 
@@ -396,19 +384,6 @@ func (x *Diff) setMarks(root, file string, ids []string, on bool) error {
 	})
 }
 
-// setSeen records lines of a file seen in the diff, read or skimmed.
-func (x *Diff) setSeen(root, file string, read, skimmed []string) error {
-	if len(read)+len(skimmed) == 0 {
-		return nil
-	}
-	local := core.LinesSeen{Session: localReviews, Project: root, File: file, Read: read, Skimmed: skimmed}
-	return x.record(root, local, func(c host.Access, sid core.SessionID, project string) error {
-		ev := local
-		ev.Session, ev.Project = sid, project
-		return c.SetSeen(ev)
-	})
-}
-
 // hunkAt is the hunk a place names, as last drawn.
 func (st *diffState) hunkAt(s diffSel) (diffHunk, bool) {
 	hs := st.hunks[s.file]
@@ -579,22 +554,20 @@ func (x *Diff) source(st *diffState, _ registry.Args) error {
 
 // diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed, or
 // styled when the view asks for one (styled) and it's plain. current is false while the diff is older than the file.
-func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, styled, blame bool) (d *diffFile, current bool) {
+func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, styled bool) (d *diffFile, current bool) {
 	root := tree.Root()
 	work := filepath.Join(root, filepath.FromSlash(f.Path))
 	in := diffInput{rev: st.BaseHash, path: f.Path, old: f.Old, code: f.Code, add: f.Add, del: f.Del, repo: root, work: work}
 	if f.Code == 'A' || f.Code == '?' {
 		in.rev = ""
 	}
-	var snap *text.Snapshot
 	var buf registry.EditorBuffer
 	open := false
 	if ed, ok := registry.EditorsOf(x.h); ok {
 		buf, open = ed.Buffer(work)
 	}
 	if open {
-		s := buf.Text.Snapshot()
-		in.buf, in.version, snap = buf.Text, s.Version(), &s
+		in.buf, in.version = buf.Text, buf.Text.Snapshot().Version()
 	}
 	k := diffKey{root, f.Path}
 	if !open {
@@ -611,28 +584,24 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 		x.styled[k] = true
 	}
 	styled = x.styled[k]
-	blame = blame || styled
 	d, busy := x.files[k], x.loading[k]
 	x.mu.Unlock()
 	current = d != nil && d.in == in
-	if (d == nil || d.in != in || styled && !d.styled || blame && !d.blamed) && !busy {
+	if (d == nil || d.in != in || styled && !d.styled) && !busy {
 		if d != nil && d.in != in && !x.mayRemake(k) {
 			return d, false
 		}
-		// A diff is made in stages, each shown as it lands: plain, then styled, then blamed.
-		var styling, blaming bool
+		// A diff is made in stages, each shown as it lands: plain, then styled.
+		var styling bool
 		switch {
 		case d == nil:
 			x.h.Log().Debug("making a diff", "path", f.Path)
 		case d.in != in:
-			styling, blaming = d.styled, d.blamed
+			styling = d.styled
 			x.h.Log().Debug("remaking a diff", "path", f.Path, "changed", changedInputs(d.in, in))
-		case styled && !d.styled:
+		default:
 			styling = true
 			x.h.Log().Debug("styling a diff", "path", f.Path)
-		default:
-			styling, blaming = d.styled, true
-			x.h.Log().Debug("blaming a diff", "path", f.Path)
 		}
 		var newText []byte
 		if open {
@@ -648,7 +617,7 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 		go func() {
 			defer x.busy.Done()
 			x.limit <- struct{}{}
-			nd := loadDiff(x.h, in, newText, snap, styling, blaming)
+			nd := loadDiff(x.h, in, newText, styling)
 			<-x.limit
 			x.mu.Lock()
 			x.files[k], x.loading[k] = nd, false
@@ -743,8 +712,7 @@ func (x *Diff) restat() {
 // pace at most, not on every write.
 const diffRemakeGap = 500 * time.Millisecond
 
-// mayRemake reports whether k's diff can be made again now, and if not, has a frame drawn when it can, with what's
-// cached on the old diff (the ledger) made again.
+// mayRemake reports whether k's diff can be made again now, and if not, has a frame drawn when it can.
 func (x *Diff) mayRemake(k diffKey) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
@@ -852,12 +820,4 @@ func (v diffView) Revive(state json.RawMessage) (string, error) {
 		st.reveal = true
 	}
 	return p.Root, nil
-}
-
-// agentName is what the authorship box calls the agent of root's session.
-func (x *Diff) agentName(root string) string {
-	if se, _, ok := x.session(root); ok && se.Agent.Provider != "" {
-		return kit.ProviderName(x.h, se.Agent.Provider)
-	}
-	return "Agent"
 }

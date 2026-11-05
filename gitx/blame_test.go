@@ -2,7 +2,6 @@ package gitx
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -41,8 +40,7 @@ func TestBlameKinds(t *testing.T) {
 	}
 }
 
-// Unreviewed agent lines are recorded in a commit trailer (Unreviewed-Agent-Lines: 38): CommitStaged commits what's
-// staged and adds the trailer as git commit --trailer does; git reads it back as a trailer.
+// CommitStaged commits what's staged and adds a trailer as git commit --trailer does; git reads it back as a trailer.
 // ref: oracle git
 func TestCommitStagedWithTrailer(t *testing.T) {
 	r := gittest.New(t)
@@ -57,14 +55,14 @@ func TestCommitStagedWithTrailer(t *testing.T) {
 	if err != nil || len(staged) != 1 || staged[0] != "a.go" {
 		t.Fatalf("staged: %v %v", staged, err)
 	}
-	hash, err := repo.CommitStaged(context.Background(), "feat: x\n\nAdds x.", "Unreviewed-Agent-Lines: 38")
+	hash, err := repo.CommitStaged(context.Background(), "feat: x\n\nAdds x.", "Reviewed-By: Ada")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := strings.TrimSpace(r.Git("rev-parse", "HEAD")); got != hash {
 		t.Errorf("returned %s, HEAD is %s", hash, got)
 	}
-	if got := strings.TrimSpace(r.Git("log", "-1", "--format=%(trailers:key=Unreviewed-Agent-Lines,valueonly)")); got != "38" {
+	if got := strings.TrimSpace(r.Git("log", "-1", "--format=%(trailers:key=Reviewed-By,valueonly)")); got != "Ada" {
 		t.Errorf("the trailer reads %q", got)
 	}
 	if got := strings.TrimSpace(r.Git("show", "--name-only", "--format=", "HEAD")); got != "a.go" {
@@ -96,28 +94,5 @@ func TestBlameRunsOneGitPerFile(t *testing.T) {
 	}
 	if len(bl) != 1 || bl[0].Kind != ByAgent {
 		t.Errorf("blame from what was read once: %+v", bl)
-	}
-}
-
-// AgentTouched names the files the branch's agent commits touched, by author or Co-Authored-By, and no others.
-// ref: oracle git
-func TestAgentTouched(t *testing.T) {
-	r := gittest.New(t)
-	r.Write(map[string]string{"base.txt": "x\n"})
-	r.Commit("Ada", "base")
-	base := strings.TrimSpace(r.Git("rev-parse", "HEAD"))
-	r.Write(map[string]string{"mine.txt": "x\n"})
-	r.Commit("Ada", "mine")
-	r.Write(map[string]string{"paired file.txt": "x\n"})
-	r.Commit("Ada", "paired\n\nCo-Authored-By: Claude <noreply@anthropic.com>")
-	r.Write(map[string]string{"own.txt": "x\n", "dir/deep.txt": "x\n"})
-	r.Commit("Codex", "the agent's own")
-	got, err := Repo{Dir: r.Dir}.AgentTouched(context.Background(), base)
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := map[string]bool{"paired file.txt": true, "own.txt": true, "dir/deep.txt": true}
-	if fmt.Sprint(got) != fmt.Sprint(want) {
-		t.Errorf("touched %v, want %v", got, want)
 	}
 }

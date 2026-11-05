@@ -16,18 +16,11 @@ import (
 
 func shipSession(t *testing.T) (*apptest.Scene, core.SessionState) { return apptest.ShipSession(t) }
 
-// gatesCounted frames until no gate on screen is still counting (the review ledger's, read off the loop).
-func gatesCounted(s *apptest.Scene, t *testing.T) {
-	t.Helper()
-	shipSettle(s, t, "the gates counted", func() bool { return !strings.Contains(s.Text(), "counting") })
-}
-
 // The Ship page: two projects side by side, each step, the gates, the merge order and the ticket.
 func TestShipPageSnapshot(t *testing.T) {
 	s, _ := shipSession(t)
 	s.Run("ship.open", nil)
 	s.SettleGit()
-	gatesCounted(s, t)
 	s.Golden("ship-18")
 	s.WantFrame("SHIP", "ENG-2231 · search API rate-limit headers · 2 projects · branch rethink/search-endpoint", "Sync all", "Commit all",
 		"Push + raise PR", "NEEDS YOU", "Uncommitted", "3 files · +41 -6", "DRAFTED BY CODEX", "Behind main", "4 commits · no conflicts predicted",
@@ -52,7 +45,6 @@ func TestRaisePRSnapshot(t *testing.T) {
 	s.Run("view.close", registry.Args{"id": kit.ShipView})
 	s.Run("project.panel", registry.Args{"name": "pull-request"})
 	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
-	gatesCounted(s, t)
 	s.Golden("ship-raise-pr")
 	s.WantFrame("DRAFTING", "2 commits", "rethink/search-endpoint → main", "BRANCH", "Committed", "3 files left", "4 behind main", "2 to push",
 		"git read 4s ago", "Raise PR", "Ship ⇉", "RAISE PR", "Save draft", "Raise as draft", "Push + raise PR", "TITLE", "BODY", "DRAFTED BY CODEX",
@@ -109,7 +101,6 @@ func TestPRPanelSnapshots(t *testing.T) {
 			s.Run("view.close", registry.Args{"id": kit.ShipView})
 			s.Run("project.open", registry.Args{"project": tc.project})
 			s.Run("project.panel", registry.Args{"name": "pull-request"})
-			gatesCounted(s, t)
 			s.Golden("ship-pr-panel-" + tc.name)
 			s.WantFrame(tc.want...)
 			s.Lint("the Pull request panel")

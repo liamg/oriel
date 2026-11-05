@@ -138,7 +138,7 @@ rewrite or decide an event. Plugins are tested through the real app with `app/pl
 ## Sessions and kinds
 
 A session is a workspace (plan docs plus a git worktree per repo, on the session's branch), a kind, an agent and
-what accrues: threads, tasks, the review ledger, test runs, the transcript. Your own checkouts are never edited,
+what accrues: threads, tasks, test runs, the transcript. Your own checkouts are never edited,
 except by a `direct` session, which opens a directory in place.
 
 A kind (work, plan, review, job, new repo, direct, or one a plugin adds) is a `registry.SessionKind` registered by the

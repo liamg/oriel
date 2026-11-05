@@ -17,31 +17,9 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// showLedger is a review ledger as 18 has it: 38 of search-api's 59 agent-written lines read, 21 of them uncommitted
-// and unread.
-func showLedger(dir string) registry.ReviewLedger {
-	return registry.ReviewLedger{Name: "showcase", Order: -1, Get: func(root string) registry.Ledger {
-		l := registry.Ledger{Root: root, Ready: true}
-		if root != dir {
-			return l
-		}
-		for _, f := range []registry.LedgerFile{
-			{Path: "internal/api/usage/handler.go", All: registry.LedgerCount{Read: 4}, Uncommitted: registry.LedgerCount{Read: 4}},
-			{Path: "internal/api/usage/handler_test.go", All: registry.LedgerCount{Unread: 18}, Uncommitted: registry.LedgerCount{Unread: 18}},
-			{Path: "internal/api/usage/routes.go", All: registry.LedgerCount{Read: 17, Unread: 3}, Uncommitted: registry.LedgerCount{Read: 17, Unread: 3}},
-			{Path: "internal/ratelimit/reservation.go", All: registry.LedgerCount{Read: 17}},
-		} {
-			l.Files = append(l.Files, f)
-			l.All, l.Uncommitted = l.All.Add(f.All), l.Uncommitted.Add(f.Uncommitted)
-		}
-		return l
-	}}
-}
-
-// shipShowcase is the Ship session with the review ledger counted and web-dashboard's CI failing.
+// shipShowcase is the Ship session with web-dashboard's CI failing.
 func shipShowcase(t *testing.T) (*apptest.Scene, core.SessionState) {
 	s, se := shipSession(t)
-	s.Registry().Contribute(showLedger(shipDir(se, "search-api")))
 	s.Registry().Contribute(registry.Explainer{Name: "show", Explain: rig.ShowExplainer, Label: func() string { return "fork of codex · knows this session" }})
 	shipOf(s).Fixture(se.ID, false, func(ships []ship.Read) []ship.Read {
 		ships[0].PRDraft.Body = "## What\n\nRate-limited usage responses (429) now carry `Retry-After`, from the limiter's reset time " +

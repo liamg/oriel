@@ -17,8 +17,8 @@ same file, and neither clobbers the other.
 [editor]
 tab_stop = 4
 
-[ledger]
-gate = "soft"
+[diff]
+layout = "unified"
 ```
 
 ## Precedence
@@ -55,8 +55,8 @@ end, { desc = "commit, then verify & raise" })
 L.on("BufWritePre", { pattern = "*.go" }, function(ev) L.lsp.format(ev.buf) end)
 
 L.on("Commit", function(ev)
-  if L.ledger.unread(ev.project) > 0 then
-    return false, "unread agent lines"   -- veto
+  if not ev.message:match("^%a+[%(!:]") then
+    return false, "not a conventional commit"   -- veto
   end
 end)
 
@@ -82,7 +82,7 @@ L.agent.explainer{ name = "local", order = 5, label = "a local model",   -- answ
   byline = "written by a local model",                                  -- under a long answer: a walkthrough
   run = function(req) return my_model(req.subject .. "\n" .. req.context, req.depth, req.format) end }
 L.agent.pack("hotfix", { prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } })
-L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "ledger" }, can = { "ships", "owns-changes", "owns-branch" } })
+L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "threads" }, can = { "ships", "owns-changes", "owns-branch" } })
 
 -- views: statusline, HUD indicators, panels, all replaceable
 L.statusline(function(w)
@@ -91,7 +91,6 @@ L.statusline(function(w)
     L.ui.text(w.session.branch, "dim"),
     L.ui.spacer(),
     L.ui.indicator{ label = "CTX", bar = w.session.ctx_frac },
-    L.ui.indicator{ label = "LEDGER", bar = L.ledger.frac(), warn = 0.8 },
   }
 end)
 
@@ -152,7 +151,6 @@ Every option Oriel registers. A test checks this table against the registry.
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | |
 | `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | |
-| `ledger.gate` | `auto`: the commit gate by the session's kind (hard for work, plan and a new repo, soft for jobs, off for the rest); `hard`, `soft` or `off`; a project's `.oriel/settings.toml` overrides it for its repo | app | |
 | `review.ai.provider` | `auto`: the session agent's; or `claude`, `codex` | app | |
 | `review.ai.model` | `default`: the session agent's, or the picked provider's default; or a model's name | app | |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | |

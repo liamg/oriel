@@ -77,7 +77,7 @@ Read open buffers and the worktree files the session can see: your code. Medium 
 
 ## editor.write {#editor-write}
 
-Edit buffers. Its edits are authored as `plugin:<id>`, visible in blame and the review ledger. Medium risk.
+Edit buffers. Its edits are authored as `plugin:<id>`, visible in blame. Medium risk.
 
 ## input.observe {#input-observe}
 

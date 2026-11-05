@@ -64,27 +64,28 @@ func TestShipFlow(t *testing.T) {
 		t.Errorf("the file left out was committed: %+v", sh.Files)
 	}
 
-	// A ship.ShipCommit hook (the review gate's) stops a commit, and "Commit anyway…" goes through it with a trailer.
+	// A ship.ShipCommit hook stops a commit, its reason shown in the commit box; the next try it rewrites, with a trailer.
+	tries := 0
 	gate := s.Registry().Hook(registry.Hook{Event: "ShipCommit", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 		c := ev.(*ship.ShipCommit)
-		if !c.Force {
-			return registry.Verdict{Veto: true, Reason: "21 lines unreviewed"}, nil
+		if tries++; tries == 1 {
+			return registry.Verdict{Veto: true, Reason: "run the linter first"}, nil
 		}
-		c.Message += "\n\nUnreviewed-Agent-Lines: 21"
+		c.Message += "\n\nLinted-By: hook"
 		return registry.Verdict{Rewrote: true}, nil
 	}})
 	s.TypeInto("Commit message", "test(api): routes")
 	s.ClickOn("Commit")
 	s.Frame()
-	s.WantFrame("21 lines unreviewed", "Commit anyway…")
-	s.ClickOn("Commit anyway…")
-	shipSettle(s, t, "the forced commit", func() bool {
+	s.WantFrame("run the linter first")
+	s.ClickOn("Commit")
+	shipSettle(s, t, "the second commit", func() bool {
 		sh, _ := x.ShipOf(se.ID, "search-api")
 		return len(sh.Files) == 0 && len(sh.Unpushed) == 2
 	})
 	gate.Dispose()
-	if got := git(t, apiDir, "log", "-1", "--format=%B"); !strings.Contains(got, "routes") || !strings.Contains(got, "Unreviewed-Agent-Lines: 21") {
-		t.Errorf("the forced commit's message: %q", got)
+	if got := git(t, apiDir, "log", "-1", "--format=%B"); !strings.Contains(got, "routes") || !strings.Contains(got, "Linted-By: hook") {
+		t.Errorf("the rewritten commit's message: %q", got)
 	}
 
 	// Behind its base: Rebase brings it up to date.
@@ -236,50 +237,6 @@ func TestShipRaiseHookStopsARaise(t *testing.T) {
 	// Edit PR once it's raised.
 	s.Run("ship.pr.open", registry.Args{"project": "search-api", "edit": true})
 	s.Until("Edit PR", func() bool { return strings.Contains(s.Text(), "EDIT PR #") })
-}
-
-// On the Ship page the commit box goes through the commit gates. A hard gate holds the commit with
-// its reason and "Review N lines"; "Commit anyway…" commits with the gate's trailer and records the override in the
-// session.
-// ref: oracle git
-func TestShipCommitGoesThroughTheCommitGates(t *testing.T) {
-	s, _, _, se, _ := shipScene(t)
-	x := shipOf(s)
-	apiDir := shipDir(se, "search-api")
-	reviewed := false
-	s.Registry().Command(registry.Command{ID: "test.review", Title: "Review", Run: func(registry.Ctx, registry.Args) error { reviewed = true; return nil }})
-	s.Registry().Contribute(registry.CommitGate{Name: "fake", Label: "Agent lines reviewed", Check: func(c registry.CommitCheck) registry.GateResult {
-		return registry.GateResult{Mode: registry.GateHard, Done: 1, Total: 6, Unread: 5, Reason: "5 agent-written lines unread",
-			Trailer: "Unreviewed-Agent-Lines: 5", Review: "test.review", ReviewLabel: "Review 5 lines"}
-	}})
-	s.Run("ship.open", nil)
-	writeFiles(t, apiDir, map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
-	s.Run("ship.refresh", nil)
-	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
-	s.TypeInto("Commit message", "feat(api): routes")
-	s.ClickOn("Commit")
-	shipSettle(s, t, "the gate", func() bool { return strings.Contains(s.Text(), "Commit anyway…") })
-	s.WantFrame("5 agent-written lines unread", "Review 5 lines")
-	if sh, _ := x.ShipOf(se.ID, "search-api"); len(sh.Files) != 1 {
-		t.Fatal("the gate didn't hold the commit")
-	}
-	s.ClickOn("Review 5 lines")
-	if !reviewed {
-		t.Error("Review 5 lines didn't run the gate's review")
-	}
-	s.ClickOn("Commit anyway…")
-	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 0 })
-	if got := git(t, apiDir, "log", "-1", "--format=%B"); !strings.Contains(got, "feat(api): routes") || !strings.Contains(got, "Unreviewed-Agent-Lines: 5") {
-		t.Errorf("the commit's message: %q", got)
-	}
-	s.UntilState("the override in the session", func(st core.State) bool {
-		sess, ok := st.Session(se.ID)
-		if !ok {
-			return false
-		}
-		o := sess.Snapshot().Overrides
-		return len(o) == 1 && o[0].Gate == "fake" && o[0].Trailer == "Unreviewed-Agent-Lines: 5" && o[0].Project == "search-api"
-	})
 }
 
 // The commit box says who drafted it and whether the code has moved on since ("drafted by fake · stale"); what
