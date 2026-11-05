@@ -1,6 +1,8 @@
 package apptest
 
 import (
+	"time"
+
 	"context"
 	"fmt"
 	"path/filepath"
@@ -69,11 +71,18 @@ func ExplainScene(t *testing.T) (*Scene, *FakeExplainer, string) {
 
 // ExplainSettle frames until the units, the base and the answers worked out off the loop are in.
 func (s *Scene) ExplainSettle() {
-	for range 4 {
+	e := PluginOf[*explain.Plugin](s, "explain")
+	for i, deadline := 0, time.Now().Add(10*time.Second); i < 4 || e.Busy(); i++ {
 		s.Frame()
 		s.WaitGit()
-		PluginOf[*explain.Plugin](s, "explain").Wait()
+		e.Wait()
 		s.RunQueued()
+		if time.Now().After(deadline) {
+			s.T.Fatal("explain never settled")
+		}
+		if i >= 4 {
+			time.Sleep(5 * time.Millisecond) // units held back while it was typed in
+		}
 	}
 	s.Frame()
 }

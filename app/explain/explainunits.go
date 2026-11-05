@@ -181,6 +181,22 @@ func (x *Plugin) baseOf(abs string) (data []byte, gen int, ok bool) {
 	return b.data, b.gen, b.loaded
 }
 
+// unitsQuiet is how long a buffer that has units already must go unchanged before they're worked out again.
+const unitsQuiet = 250 * time.Millisecond
+
+// heldUnits is a working out of a buffer's units held back while it's typed in: due once it has been still long
+// enough, for the next frame to take up.
+type heldUnits struct {
+	timer *time.Timer
+	due   time.Time
+}
+
+// seenVersion is the version of a buffer seen last, and when it was first seen.
+type seenVersion struct {
+	version uint64
+	at      time.Time
+}
+
 // bufferUnits are a buffer's units and changed units, worked out off the loop for each version; until then, the
 // last version's.
 func (x *Plugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []byte) *fileUnits {
@@ -188,8 +204,33 @@ func (x *Plugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []b
 	base, gen, haveBase := x.baseOf(path)
 	x.mu.Lock()
 	fu := x.bufs[buf]
+	if l := x.later[buf]; l != nil {
+		if l.due.IsZero() {
+			x.mu.Unlock()
+			return fu
+		}
+		delete(x.later, buf) // due: taken up here, under the lock the working out starts in, so Busy misses nothing
+	}
 	stale := fu == nil || fu.version != snap.Version()+1 || fu.gen != gen
 	if !stale || x.computing[buf] {
+		x.mu.Unlock()
+		return fu
+	}
+	// While it's typed in, a buffer isn't parsed again until it has been still for unitsQuiet: each is a full parse,
+	// and the marks it had do meanwhile.
+	if seen := x.seen[buf]; seen.version != snap.Version() {
+		x.seen[buf] = seenVersion{snap.Version(), time.Now()}
+	}
+	if wait := unitsQuiet - time.Since(x.seen[buf].at); fu != nil && wait > 0 {
+		l := &heldUnits{}
+		l.timer = time.AfterFunc(wait, func() {
+			x.mu.Lock()
+			l.due = time.Now()
+			x.dueCount++ // in the decorations' key, so the next frame asks for them, and works the units out
+			x.mu.Unlock()
+			x.h.Redraw()
+		})
+		x.later[buf] = l
 		x.mu.Unlock()
 		return fu
 	}
