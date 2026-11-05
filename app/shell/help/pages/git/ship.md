@@ -74,11 +74,12 @@ someone else pushed to the branch since, the push is refused and nothing of thei
 ## Raise PR {#raise}
 
 **Raise PR…** opens a main tab: the title, the body (the agent's draft, else the first commit's message and the repo's template) with a preview,
-reviewers (CODEOWNERS of the change first; add or take off any), and how it links to the session's other PRs. **Push +
+reviewers (CODEOWNERS of the change first; add or take off any), and the session's other PRs it ships with, in merge
+order. **Push +
 raise PR** pushes and raises it, **Raise as draft** raises it as a draft, **Save draft** keeps what's written. Once
 it's raised the tab shows the PR itself (below); **Edit PR** there brings the form back, **Update PR** saves it and
-**Cancel** leaves it as it was. **Push + raise all** raises every project's in merge order, and each PR's description
-lists the others.
+**Cancel** leaves it as it was. **Push + raise all** raises every project's in merge order. A description is sent as
+written: Oriel adds nothing to it, and takes out the list of linked PRs earlier versions added.
 
 ## The PR {#pr}
 

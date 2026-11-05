@@ -301,7 +301,7 @@ clip 224,38 1376x936 r 0
         pop
         clip 300,739.12 438.5x28.519531 r 5
           text "⟷" @310,757.745 #b98aff Inter 12
-          text "pairs with web-dashboard → will cross-link both descriptio…" @339,757.1598 #b3ab99 JetBrains Mono 10.5
+          text "pairs with web-dashboard · merge order: search-api → web-d…" @339,757.1598 #b3ab99 JetBrains Mono 10.5
         pop
         rect 300,739.12 438.5x28.519531 radius 5 stroke 1 #332f27
         rect 300,775.6395 80.75x26 fill #191815 radius 6 stroke 1 #332f27

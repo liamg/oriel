@@ -296,7 +296,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 	}
 }
 
-// prFields is the tab's form: title, body (write or preview), reviewers and cross-linked PRs.
+// prFields is the tab's form: title, body (write or preview), reviewers and the PRs it ships with.
 func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) {
 	th := c.Theme()
 	if f.veto != "" {
@@ -355,13 +355,13 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 			x.reviewerRows(c, s, f)
 		})
 		c.Column("linked", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(12, 10), Gap: 6}, func(c *ui.Ctx) {
-			kit.SectionCap(c, "CROSS-LINKED PRS")
+			kit.SectionCap(c, "SHIPS WITH")
 			if len(se.Projects) < 2 {
-				c.Text("none", "One project: nothing to link.", kit.UIFont(12, th.C(theme.FgFaint)))
+				c.Text("none", "One project: it ships alone.", kit.UIFont(12, th.C(theme.FgFaint)))
 				return
 			}
 			x.links(c, se, s)
-			c.Text("both", "both descriptions link · merged in the session's order", kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("both", "merged in the session's order", kit.MonoFont(10, th.C(theme.FgFaint)))
 		})
 	})
 }

@@ -173,8 +173,7 @@ func hosted(s shipRead, can bool) (registry.CodeHost, error) {
 	return *s.Code, nil
 }
 
-// raisePR raises a project's PR from its branch, or edits the open one, asks its reviewers, and cross-links every PR
-// of the session in their merge order.
+// raisePR raises a project's PR from its branch, or edits the open one, and asks its reviewers.
 func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r prReq) error {
 	h, err := hosted(s, s.Code != nil && s.Code.ForBranch != nil && s.Code.Create != nil)
 	if err != nil {
@@ -192,13 +191,13 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 		if h.Edit == nil {
 			return fmt.Errorf("%s can't edit a %s: %w", h.Label(), h.Said().Short, registry.ErrNotOffered)
 		}
-		open := *pr
-		err = registry.Call(func() (err error) { pr, err = h.Edit(ctx, repo, open, r.Title, r.Body); return err })
+		open, body := *pr, withoutLinkedPRs(r.Body)
+		err = registry.Call(func() (err error) { pr, err = h.Edit(ctx, repo, open, r.Title, body); return err })
 	} else {
 		if s.Base == "" {
 			return fmt.Errorf("%s has no base branch for the %s", s.Project, h.Said().Short)
 		}
-		n := registry.NewPR{Title: r.Title, Body: r.Body, Branch: s.Branch, Base: s.Base, Draft: r.Draft}
+		n := registry.NewPR{Title: r.Title, Body: withoutLinkedPRs(r.Body), Branch: s.Branch, Base: s.Base, Draft: r.Draft}
 		err = registry.Call(func() (err error) { pr, err = h.Create(ctx, repo, n); return err })
 	}
 	if err != nil {
@@ -212,71 +211,31 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 			return err
 		}
 	}
-	return x.crossLink(ctx, se)
+	return nil
 }
 
-// Cross-linked PRs carry a block naming each other, between these markers, kept up to date as each is raised.
+// The block earlier versions wrote into each of a session's PR descriptions, naming the others: taken out when a
+// description is next written.
 const (
 	linkStart = "<!-- oriel:linked-prs -->"
 	linkEnd   = "<!-- /oriel:linked-prs -->"
 )
 
-// crossLink writes the block into every open PR of a session with more than one, in the projects' order.
-func (x *Ship) crossLink(ctx context.Context, se core.SessionState) error {
-	type linked struct {
-		s  shipRead
-		pr *registry.PR
+// withoutLinkedPRs is body with the linked-PRs block taken out, and the blank lines around it.
+func withoutLinkedPRs(body string) string {
+	i := strings.Index(body, linkStart)
+	if i < 0 {
+		return body
 	}
-	var prs []linked
-	for _, s := range x.report(se.ID).ships {
-		if s.Code == nil || s.ReadOnly || s.Branch == "" || s.Code.ForBranch == nil {
-			continue
-		}
-		pr, err := forBranch(ctx, *s.Code, s.codeRepo(se.ID), s.Branch)
-		if err != nil {
-			return err
-		}
-		if pr.Open() {
-			prs = append(prs, linked{s, pr})
-		}
+	j := strings.Index(body[i:], linkEnd)
+	if j < 0 {
+		return body
 	}
-	if len(prs) < 2 {
-		return nil
+	before, after := strings.TrimRight(body[:i], "\n"), strings.TrimLeft(body[i+j+len(linkEnd):], "\n")
+	if before == "" || after == "" {
+		return before + after
 	}
-	for i, l := range prs {
-		var b strings.Builder
-		b.WriteString(linkStart + "\n**Ships with** (merge in this order):\n")
-		for j, o := range prs {
-			fmt.Fprintf(&b, "%d. %s", j+1, o.s.Code.Ref(o.s.Repo, o.pr.Number))
-			if j == i {
-				b.WriteString(" (this " + l.s.words().Short + ")")
-			}
-			b.WriteString("\n")
-		}
-		b.WriteString(linkEnd)
-		body := withLinks(l.pr.Body, b.String())
-		if body == l.pr.Body || l.s.Code.Edit == nil {
-			continue
-		}
-		h, repo, pr := *l.s.Code, l.s.codeRepo(se.ID), *l.pr
-		if err := registry.Call(func() error { _, err := h.Edit(ctx, repo, pr, pr.Title, body); return err }); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// withLinks is body with its cross-linked PRs block replaced by block, or block added at its end.
-func withLinks(body, block string) string {
-	if i := strings.Index(body, linkStart); i >= 0 {
-		if j := strings.Index(body[i:], linkEnd); j >= 0 {
-			return body[:i] + block + body[i+j+len(linkEnd):]
-		}
-	}
-	if strings.TrimSpace(body) == "" {
-		return block
-	}
-	return strings.TrimRight(body, "\n") + "\n\n" + block
+	return before + "\n\n" + after
 }
 
 // markReady takes a project's draft PR out of draft.

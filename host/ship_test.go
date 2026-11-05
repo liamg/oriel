@@ -53,7 +53,7 @@ func (r *rig) ship(id core.SessionID, fresh bool) map[string]Ship {
 }
 
 // Flows tested against fixture repos and a fake GitHub: a flight checklist per project (uncommitted → behind base →
-// unpushed → PR → checks), and multiple projects side by side, with cross-linked PRs and a merge order.
+// unpushed → PR → checks), and multiple projects side by side, with a merge order.
 func TestShipFlowAcrossProjects(t *testing.T) {
 	r := newRig(t)
 	hub := ghtest.New(t)
