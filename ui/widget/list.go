@@ -27,9 +27,13 @@ type listLast struct {
 }
 
 type ListResult struct {
-	Changed   bool // the selection moved
-	Activated int  // the row clicked or opened with Enter, or -1
+	Changed   bool  // the selection moved
+	Activated int   // the row clicked or opened with Enter, or -1
+	Moved     *Move // a row dragged onto another (Rows' Movable)
 }
+
+// Move is a row dragged onto another: From is to take To's place.
+type Move struct{ From, To int }
 
 // List is a virtual list of n rows with a selection in *sel: only the rows in view are built. Keys: j/k or
 // Down/Up move, g/G or Home/End jump, PageDown/PageUp (and Ctrl-d/u) move a page, Enter opens. A click selects

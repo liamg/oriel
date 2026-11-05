@@ -520,3 +520,51 @@ func TestSidebarReadOnlyProjectCountsNoChanges(t *testing.T) {
 		t.Errorf("Git's count on a clean project: %q", n)
 	}
 }
+
+// A click on the open project's header folds its panels away and another brings them back; another project's opens
+// it, unfolded. A header dragged onto another moves the project to its place, and ⌃n follows the sidebar's order.
+func TestSidebarProjectsFoldAndMove(t *testing.T) {
+	ps := sidebarFixture(t)
+	s := sessionScene(t, core.KindWork, ps, sidebarSize)
+	panels := func() int { return strings.Count(s.Text(), "\nExplorer\n") }
+	header := func(name string) {
+		s.Click(apptest.Centre(s.Node(name).Bounds), 0)
+		s.Frame()
+	}
+	if n := panels(); n != 1 {
+		t.Fatalf("admin-ui's panels to start: %d Explorer entries", n)
+	}
+	header("admin-ui")
+	if n := panels(); n != 0 || openProject(s) != "admin-ui" {
+		t.Fatalf("a click on the open project: %d Explorer entries, %q open", n, openProject(s))
+	}
+	header("admin-ui")
+	if n := panels(); n != 1 {
+		t.Fatalf("a second click didn't unfold it: %d Explorer entries", n)
+	}
+	header("admin-ui")
+	header("api")
+	if n := panels(); n != 1 || openProject(s) != "api" {
+		t.Fatalf("api opened from admin-ui folded: %d Explorer entries, %q open", n, openProject(s))
+	}
+
+	s.Drag(apptest.Centre(s.Node("web").Bounds), apptest.Centre(s.Node("admin-ui").Bounds))
+	se, _ := s.Store().State().Session("eng-2310")
+	var names []string
+	for _, p := range se.Snapshot().ListedProjects() {
+		names = append(names, p.Name)
+	}
+	if !slices.Equal(names, []string{"web", "admin-ui", "api"}) {
+		t.Fatalf("the projects after web was dragged onto admin-ui: %v", names)
+	}
+	if openProject(s) != "api" {
+		t.Errorf("the drag opened %q", openProject(s))
+	}
+	if i, j := strings.Index(s.Text(), "\nweb\n"), strings.Index(s.Text(), "\nadmin-ui\n"); i < 0 || j < 0 || i > j {
+		t.Errorf("the sidebar doesn't list web first:\n%s", s.Text())
+	}
+	s.Press("<C-1>")
+	if got := openProject(s); got != "web" {
+		t.Errorf("⌃1 opened %q, want web, first now", got)
+	}
+}

@@ -3,6 +3,7 @@ package widget
 import (
 	"testing"
 
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
@@ -115,5 +116,55 @@ func TestRowsPassKeysOn(t *testing.T) {
 	h.frame()
 	if open {
 		t.Error("Escape on the rows didn't close the page")
+	}
+}
+
+// Rows: a movable row dragged onto another is moved there, a click on one still opens it, and a row that isn't
+// movable neither moves nor takes a move. Another list's rows don't drop in.
+func TestRowsMovable(t *testing.T) {
+	sel := 0
+	var id, other ui.ID
+	var res, otherRes ListResult
+	var moves []Move
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		id = c.Next("rows")
+		res = Rows(c, "rows", 4, &sel, RowsOpts{Label: "Rows", Movable: func(i int) bool { return i != 3 }}, func(c *ui.Ctx, i int, selected bool) {
+			c.Box("h", ui.Style{W: ui.Flex(1), H: ui.Px(20)}, nil)
+		})
+		if res.Moved != nil {
+			moves = append(moves, *res.Moved)
+		}
+		other = c.Next("other")
+		otherSel := 0
+		otherRes = Rows(c, "other", 1, &otherSel, RowsOpts{Label: "Other", Movable: func(int) bool { return true }}, func(c *ui.Ctx, i int, selected bool) {
+			c.Box("h", ui.Style{W: ui.Flex(1), H: ui.Px(20)}, nil)
+		})
+		if otherRes.Moved != nil {
+			t.Errorf("a move into another list: %+v", *otherRes.Moved)
+		}
+	})
+	h.frame()
+	r := h.rect(id)
+	at := func(i int) render.Point { return render.Point{X: r.Min.X + 20, Y: r.Min.Y + float32(i)*20 + 10} }
+	h.drag(at(0), at(2))
+	if len(moves) != 1 || moves[0] != (Move{From: 0, To: 2}) {
+		t.Fatalf("row 0 dragged onto row 2: %+v", moves)
+	}
+	if res.Activated != -1 {
+		t.Errorf("the drag also opened row %d", res.Activated)
+	}
+	h.drag(at(0), at(3))
+	h.drag(at(3), at(1))
+	if len(moves) != 1 {
+		t.Errorf("a row that isn't movable moved, or took a move: %+v", moves)
+	}
+	o := h.rect(other)
+	h.drag(render.Point{X: o.Min.X + 20, Y: o.Min.Y + 10}, at(1))
+	if len(moves) != 1 {
+		t.Errorf("another list's row dropped in: %+v", moves)
+	}
+	h.click(at(1).X, at(1).Y)
+	if res.Activated != 1 {
+		t.Errorf("a click on a movable row opened %d", res.Activated)
 	}
 }

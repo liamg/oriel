@@ -304,9 +304,12 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	for id, e := range u.byID {
 		s := e.style
 		if s.Drag != nil || len(s.Drop) > 0 {
-			s.Interactive, s.Focusable = true, true // a drag can start, and end, from the keyboard
-			if s.KeyMode == "" {
-				s.KeyMode = DragKeyMode
+			s.Interactive = true
+			if !s.NoFocus {
+				s.Focusable = true // a drag can start, and end, from the keyboard
+				if s.KeyMode == "" {
+					s.KeyMode = DragKeyMode
+				}
 			}
 		}
 		if s.Selectable && s.Cursor == 0 {

@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -206,7 +207,7 @@ func (r *rail) entries(h plugin.Host) {
 	}
 }
 
-// commands are project.open, project.panel and sidebar.form.
+// commands are project.open, project.move, project.fold, project.panel and sidebar.form.
 func (r *rail) commands(h plugin.Host) []registry.Command {
 	return []registry.Command{
 		{ID: "project.open", Title: "Open a project of the session: {project}, or the {index}th; it reopens its last panel",
@@ -217,6 +218,35 @@ func (r *rail) commands(h plugin.Host) []registry.Command {
 					return fmt.Errorf("no project %v", cmp.Or(a.String("project"), fmt.Sprint(a["index"])))
 				}
 				return r.open(ctx, p)
+			}},
+		{ID: "project.move", Title: "Move a project of the session in front, {project}, to the {index}th place in the sidebar",
+			Available: func(a registry.Args) bool {
+				_, ok := r.target(registry.Args{"project": a.String("project")})
+				return ok
+			},
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				w := kit.ProjectsHere(h)
+				p, ok := w.Project(a.String("project"))
+				if !ok || w.Session == nil {
+					return fmt.Errorf("no project %q", a.String("project"))
+				}
+				if i := a.Int("index"); i < 1 || i > len(w.Projects) {
+					return fmt.Errorf("no place %d among %d projects", i, len(w.Projects))
+				}
+				return h.Apply(core.ProjectMoved{ID: w.Session.ID, Project: p.Name, Index: a.Int("index") - 1})
+			}},
+		{ID: "project.fold", Title: "Fold the open project's panels away in the sidebar, or unfold them: {folded}; with neither, switch",
+			Available: func(registry.Args) bool { w := kit.ProjectsHere(h); return w.Session != nil && w.Many() },
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				w := kit.ProjectsHere(h)
+				if w.Session == nil {
+					return errors.New("no session in front")
+				}
+				folded := !w.Session.ProjectUI.Folded
+				if v, ok := a["folded"].(bool); ok {
+					folded = v
+				}
+				return h.Apply(core.ProjectFolded{ID: w.Session.ID, Folded: folded})
 			}},
 		{ID: "project.panel", Title: "Show or hide a panel of the open project, or of {project}: {name}, a project entry's",
 			Available: func(a registry.Args) bool {
@@ -393,7 +423,7 @@ func (r *rail) rows(w kit.Here, wide bool) []sideRow {
 	if w.Many() {
 		for i, p := range w.Projects {
 			rows = append(rows, sideRow{kind: rowProject, project: p, index: i})
-			if p.Name == w.Open {
+			if p.Name == w.Open && !w.Folded() {
 				entries(p.Name)
 			}
 		}
@@ -455,6 +485,7 @@ func (r *rail) build(c *ui.Ctx, vc uireg.ViewCtx) {
 			res := widget.Rows(c, "rows", len(rows), &r.sel, widget.RowsOpts{Help: "shell/rail", Label: "Projects", KeyMode: SidebarKeyMode,
 				Height: ui.Flex(1), Static: static, Grow: func(i int) bool { return rows[i].kind == rowGap },
 				Disabled: func(i int) bool { return r.unavailable(rows[i]) },
+				Movable:  func(i int) bool { return rows[i].kind == rowProject },
 				RowLabel: func(i int) string { return r.label(rows[i]) },
 				Tooltip:  func(i int) string { return r.tooltip(w, rows[i], wide) }},
 				func(c *ui.Ctx, i int, selected bool) {
@@ -466,6 +497,12 @@ func (r *rail) build(c *ui.Ctx, vc uireg.ViewCtx) {
 				})
 			if res.Activated >= 0 {
 				r.activate(w, rows[res.Activated])
+			}
+			if m := res.Moved; m != nil {
+				from, to := rows[m.From], rows[m.To]
+				if err := r.h.Run(context.Background(), "project.move", registry.Args{"project": from.project.Name, "index": to.index + 1}); err != nil {
+					r.h.Log().Error("sidebar", "move", from.project.Name, "err", err)
+				}
 			}
 		})
 		c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
@@ -543,6 +580,10 @@ func (r *rail) activate(w kit.Here, row sideRow) {
 	var err error
 	switch row.kind {
 	case rowProject:
+		if row.project.Name == w.Open {
+			err = r.h.Run(ctx, "project.fold", nil)
+			break
+		}
 		err = r.open(ctx, row.project)
 	case rowEntry, rowSession:
 		if r.unavailable(row) {
@@ -670,7 +711,10 @@ func (r *rail) header(c *ui.Ctx, w kit.Here, row sideRow) {
 		c.Row("l1", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			twisty, name := "▸", th.C(tSideFolded)
 			if open {
-				twisty, name = "▾", th.C(tSideName)
+				name = th.C(tSideName)
+				if !w.Folded() {
+					twisty = "▾"
+				}
 			}
 			c.Box("tw", ui.Style{W: ui.Px(9)}, func(c *ui.Ctx) { c.Text("t", twisty, kit.Mono(11, typeset.Normal, th.C(tSideHead))) })
 			c.Box("sq", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 2, Fill: w.Colour(th, row.project.Name)}, nil)

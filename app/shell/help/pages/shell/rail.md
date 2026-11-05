@@ -18,4 +18,13 @@ line. A click on an icon there puts the page away first; a lit icon's view stays
   (the weekly window), Jobs and Settings. In the narrow sidebar their icons sit at the foot.
 - Plugins add their own icons with `oriel.rail.add`.
 
+## Projects
+
+A session with more than one project lists them under **PROJECTS**, each with its branch and state, and its panels
+(Explorer, Search, Git…) under the open one.
+
+- Click a project's header, or press `⌃1` to `⌃9`, to open it. Click the open one's header again to fold its panels
+  away, and again to bring them back (`project.fold`).
+- Drag a header onto another to move the project to its place (`project.move`). `⌃1` to `⌃9` follow the order.
+
 {{keys "view.toggle"}}

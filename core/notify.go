@@ -12,6 +12,7 @@ func init() {
 	RegisterEvent[SessionFocused]("SessionFocused")
 	RegisterEvent[TabOpened]("TabOpened")
 	RegisterEvent[TabClosed]("TabClosed")
+	RegisterEvent[TabMoved]("TabMoved")
 }
 
 // Severity is how much a notice matters.
@@ -179,6 +180,23 @@ func (e TabClosed) Apply(s *State) error {
 	if s.Focus == e.ID {
 		s.Focus = ""
 	}
+	return nil
+}
+
+// TabMoved moves a session's tab to Index (0-based) along the tabs.
+type TabMoved struct {
+	ID    SessionID `json:"id"`
+	Index int       `json:"index"`
+}
+
+func (e TabMoved) Scope() SessionID { return e.ID }
+
+func (e TabMoved) Apply(s *State) error {
+	if !slices.Contains(s.Tabs, e.ID) {
+		return fmt.Errorf("no tab for %s", e.ID)
+	}
+	rest := slices.DeleteFunc(slices.Clone(s.Tabs), func(id SessionID) bool { return id == e.ID })
+	s.Tabs = slices.Insert(rest, max(0, min(e.Index, len(rest))), e.ID)
 	return nil
 }
 
