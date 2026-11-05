@@ -378,9 +378,10 @@ func shipPRs(t *testing.T, s *apptest.Scene, hub *ghtest.Server, se core.Session
 	return out
 }
 
-// "When the session's PR merges, its ticket moves to Done", through the tracker's Lua alone, whoever merged it: the
-// Jira-like tracker's done is asked once the last of the session's open PRs is merged, not before.
-func TestTicketDoneOnMerge(t *testing.T) {
+// Merging the session's PRs doesn't move its ticket to done by itself: a ticket may need more PRs, or something done
+// by hand. Once the last of the session's open PRs is merged, whoever merged it, Oriel asks; Not yet leaves the
+// ticket where it is and isn't asked again on the next read, and Mark done moves it, through the tracker's Lua.
+func TestTicketDoneAskedOnMerge(t *testing.T) {
 	s, _, hub, first, _ := apptest.ShipScene(t)
 	jira := loadJira(t, s)
 	var repos []string
@@ -395,6 +396,11 @@ func TestTicketDoneOnMerge(t *testing.T) {
 	se, _ := st.Session(st.Focus)
 	prs := shipPRs(t, s, hub, se.Snapshot(), "search-api", "web-dashboard")
 	s.ShipSettle("both PRs in review", func() bool { return slices.Contains(jiraCalls(jira), "review OPS-12") })
+	settled := func() {
+		time.Sleep(50 * time.Millisecond)
+		s.RunQueued()
+		s.Frame()
+	}
 
 	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.Run("ship.refresh", nil)
@@ -407,28 +413,55 @@ func TestTicketDoneOnMerge(t *testing.T) {
 		}
 		return false
 	})
-	time.Sleep(50 * time.Millisecond)
-	s.RunQueued()
-	if slices.Contains(jiraCalls(jira), "done OPS-12") {
-		t.Fatalf("done while web-dashboard's PR is open: %v", jiraCalls(jira))
+	settled()
+	if strings.Contains(s.FullText(), "Mark OPS-12 done") {
+		t.Fatal("asked while web-dashboard's PR is open")
 	}
 
 	hub.Merge("acme/web-dashboard", prs["web-dashboard"].Number)
 	s.Run("ship.refresh", nil)
-	s.ShipSettle("the ticket done", func() bool { return slices.Contains(jiraCalls(jira), "done OPS-12") })
-	s.Until("the notice", func() bool { return strings.Contains(s.FullText(), "OPS-12 moved to Done in Jira") })
-
+	asked := func() (core.Notification, bool) {
+		for _, n := range s.Store().State().Notifications {
+			if n.ID == "tickets.done:OPS-12" {
+				return n, true
+			}
+		}
+		return core.Notification{}, false
+	}
+	s.ShipSettle("the question", func() bool { _, ok := asked(); return ok })
+	if n, _ := asked(); n.Title != "Mark OPS-12 done in Jira?" || n.Severity != core.SevQuestion || n.Session != se.ID() {
+		t.Errorf("the question: %+v", n)
+	}
+	if slices.Contains(jiraCalls(jira), "done OPS-12") {
+		t.Fatalf("moved to done without asking: %v", jiraCalls(jira))
+	}
+	s.Run("inbox.open", nil)
+	s.Until("its card", func() bool { return s.Has("MARK OPS-12 DONE IN JIRA?", "Mark done", "Not yet") })
+	s.ClickOn("Not yet")
+	settled()
+	if n, _ := asked(); !n.Dismissed || slices.Contains(jiraCalls(jira), "done OPS-12") {
+		t.Fatalf("Not yet: the question stays (%+v), or the ticket moved: %v", n, jiraCalls(jira))
+	}
 	s.Run("ship.refresh", nil)
 	s.ShipSettle("a second read", func() bool { return true })
-	time.Sleep(50 * time.Millisecond)
-	s.RunQueued()
+	settled()
+	if n, _ := asked(); !n.Dismissed || n.Count != 1 {
+		t.Errorf("asked again on the next read: %+v", n)
+	}
+
+	// Asked again (another merge, say), Mark done moves it, once.
+	s.Run("tickets.ask-done", registry.Args{"ticket": "OPS-12", "session": string(se.ID())})
+	s.Until("the question again", func() bool { n, _ := asked(); return !n.Dismissed && n.Count == 2 })
+	s.Until("its card", func() bool { return strings.Contains(s.FullText(), "Mark done") })
+	s.ClickOn("Mark done")
+	s.Until("the notice", func() bool { return strings.Contains(s.FullText(), "OPS-12 moved to Done in Jira") })
 	if c := jiraCalls(jira); calledTimes(c, "done OPS-12") != 1 {
-		t.Errorf("done twice: %v", c)
+		t.Errorf("done %d times: %v", calledTimes(c, "done OPS-12"), c)
 	}
 }
 
-// Linear's done on merge is the same tracker move, through its Lua and process: the ticket goes to its team's
-// completed state.
+// Linear's done on merge is the same question, and Mark done the tracker's move, through its Lua and process: the
+// ticket goes to its team's completed state.
 func TestLinearDoneOnMerge(t *testing.T) {
 	l := lineartest.New(t)
 	change, secrets := linearConfig(t, l)
@@ -439,6 +472,9 @@ func TestLinearDoneOnMerge(t *testing.T) {
 	s.ShipSettle("the PR in review", func() bool { return strings.Contains(s.FullText(), "ENG-2231 moved to In Review in Linear") })
 	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.Run("ship.refresh", nil)
+	s.Run("inbox.open", nil)
+	s.ShipSettle("the question", func() bool { return s.Has("MARK ENG-2231 DONE IN LINEAR?", "Mark done") })
+	s.ClickOn("Mark done")
 	s.ShipSettle("the ticket done", func() bool {
 		for _, m := range l.Mutations() {
 			in, _ := m.Vars["input"].(map[string]any)

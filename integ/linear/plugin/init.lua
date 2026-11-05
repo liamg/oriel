@@ -1,7 +1,7 @@
--- Linear as a ticket tracker: Oriel lists its tickets, starts work from one, moves it as
--- the work goes (into progress, into review, to done on merge) and links the PR back (oriel.ticket.tracker). Linear is
--- reached by this plugin's process (bin/oriel-linear, built from integ/linear/cmd/oriel-linear), through Oriel, which
--- holds the API key: neither the process nor this Lua ever sees it.
+-- Linear as a ticket tracker: Oriel lists its tickets, starts work from one, moves it as the work goes (into progress,
+-- into review, and to done when you say so once its PRs are merged) and links the PR back (oriel.ticket.tracker).
+-- Linear is reached by this plugin's process (bin/oriel-linear, built from integ/linear/cmd/oriel-linear), through
+-- Oriel, which holds the API key: neither the process nor this Lua ever sees it.
 local L = oriel
 
 local proc

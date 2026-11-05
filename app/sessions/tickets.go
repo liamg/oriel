@@ -117,6 +117,14 @@ func (x *Tickets) commands() []registry.Command {
 		{ID: "tickets.key", Title: "Set a ticket tracker's API key: {tracker}, else the first still without one", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.askKey(ctx, a.String("tracker"))
 		}},
+		{ID: "tickets.done", Title: "Mark a {ticket} done in its tracker", Run: func(_ registry.Ctx, a registry.Args) error {
+			return x.markDone(strings.TrimSpace(a.String("ticket")))
+		}},
+		{ID: "tickets.ask-done", Title: "Ask whether a {ticket} is done, as merging its session's last PR does; {session} is the session it's for",
+			Run: func(_ registry.Ctx, a registry.Args) error {
+				x.askDone(strings.TrimSpace(a.String("ticket")), core.SessionID(a.String("session")))
+				return nil
+			}},
 		{ID: "TicketKey", Title: "Set a ticket tracker's API key; :TicketKey linear", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.askKey(ctx, strings.TrimSpace(a.String("args")))
 		}},
@@ -464,18 +472,49 @@ func (x *Tickets) prSeen(ev kit.PrSeen) {
 
 // prMerged moves a session's ticket to done once the last of its open PRs merges, whoever merged it.
 func (x *Tickets) prMerged(ev kit.PrMerged) {
-	tr, ok := registry.TrackerFor(x.h, ev.Ticket)
-	if !ok || tr.Done == nil || ev.Open > 0 {
+	if ev.Open > 0 {
 		return
 	}
-	key := strings.TrimSpace(ev.Ticket)
+	x.askDone(strings.TrimSpace(ev.Ticket), core.SessionID(ev.Session))
+}
+
+// askDoneID is the question asking whether to mark key done.
+func askDoneID(key string) string { return "tickets.done:" + key }
+
+// askDone asks whether a ticket is done, once its session's PRs are merged: it may need more of them, or something
+// done by hand, so it's never moved without a yes.
+func (x *Tickets) askDone(key string, session core.SessionID) {
+	tr, ok := registry.TrackerFor(x.h, key)
+	if !ok || tr.Done == nil {
+		return
+	}
+	x.h.Notify(core.Notice{ID: askDoneID(key), Severity: core.SevQuestion, Source: tr.Source, Session: session,
+		Title: "Mark " + key + " done in " + tr.Label() + "?",
+		Text:  "The session's PRs are merged. If the ticket needs nothing more (more PRs, something done by hand), mark it done.",
+		Actions: []core.Action{
+			{Title: "Mark done", Command: "tickets.done", Args: map[string]any{"ticket": key}},
+			{Title: "Not yet", Command: "notice.dismiss", Args: map[string]any{"id": askDoneID(key)}},
+		}, Time: time.Now()})
+}
+
+// markDone moves a ticket to its tracker's done, as the user asked; a failure is shown, not only logged.
+func (x *Tickets) markDone(key string) error {
+	tr, ok := registry.TrackerFor(x.h, key)
+	if !ok || tr.Done == nil {
+		return fmt.Errorf("no ticket tracker can mark %s done", key)
+	}
+	x.h.Dismiss(askDoneID(key))
 	x.trackerCall(tr, "move "+key+" to done", func(ctx context.Context) error {
 		m, err := tr.Done(ctx, key)
-		if err == nil {
-			x.moved(tr, key, m)
+		if err != nil {
+			x.h.Notify(core.Notice{ID: "tickets.done-failed", Severity: core.SevError, Source: tr.Source,
+				Text: key + " couldn't be marked done in " + tr.Label() + ": " + err.Error(), Time: time.Now()})
+			return err
 		}
-		return err
+		x.moved(tr, key, m)
+		return nil
 	})
+	return nil
 }
 
 // myTicket is a ticket as the assistant reads it.
