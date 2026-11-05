@@ -19,12 +19,13 @@ func (x *Ship) Pending(id core.SessionID) (fail func(err string), restore func()
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	read := x.reports[id]
-	pending := &shipReport{loading: true, doing: map[string]string{}, failed: map[string]string{}}
+	// Fixed until it fails: the reads the session's subscriptions start don't answer for it.
+	pending := &shipReport{loading: true, fixed: true, doing: map[string]string{}, failed: map[string]string{}}
 	x.reports[id] = pending
 	fail = func(err string) {
 		x.mu.Lock()
 		defer x.mu.Unlock()
-		pending.loading, pending.err = false, err
+		pending.loading, pending.err, pending.fixed = false, err, false
 	}
 	restore = func() {
 		x.mu.Lock()

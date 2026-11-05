@@ -84,6 +84,7 @@ type shipReport struct {
 	ships   []shipRead
 	read    time.Time
 	loading bool
+	again   bool      // asked for again while loading: read once more when it's done
 	since   time.Time // when the read running started, on the window's clock; set by the first frame that sees it
 	err     string
 	doing   map[string]string // project → the step running: "Pushing"
@@ -293,6 +294,7 @@ func (x *Ship) ship(id core.SessionID, project string) (shipRead, bool) {
 func (x *Ship) refresh(id core.SessionID, fresh bool) {
 	x.mu.Lock()
 	if r := x.reports[id]; r != nil && r.loading && !fresh {
+		r.again = true // what changed may be after what the read running has read
 		x.mu.Unlock()
 		return
 	}
@@ -345,8 +347,12 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n int, fresh bool) {
 		x.mu.Unlock()
 		return
 	}
+	again := false
 	if n == r.started {
-		r.loading = false
+		r.loading, again, r.again = false, r.again, false
+	}
+	if again {
+		defer x.refresh(id, false)
 	}
 	if n < r.kept {
 		x.mu.Unlock()
