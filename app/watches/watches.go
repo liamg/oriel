@@ -56,7 +56,7 @@ func (x *Watches) Activate(ctx context.Context, h plugin.Host) error {
 	x.sync(h.State())
 	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
-		case core.SessionOpened, core.SessionArchived, core.SessionClosed:
+		case core.SessionOpened, core.SessionSynced, core.SessionArchived, core.SessionClosed:
 			x.sync(h.State())
 		}
 	})))
