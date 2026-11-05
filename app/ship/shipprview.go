@@ -248,7 +248,7 @@ func (x *Ship) links(c *ui.Ctx, se core.SessionState, s shipRead) {
 	case len(before) > 0:
 		text = "depends on " + strings.Join(before, ", ")
 	case s.PR == nil:
-		text = "pairs with " + strings.Join(after, ", ") + " → will cross-link both descriptions"
+		text = "pairs with " + strings.Join(after, ", ")
 	default:
 		text = "merges before " + strings.Join(after, ", ")
 	}

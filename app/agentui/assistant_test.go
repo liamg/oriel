@@ -330,8 +330,9 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 	if out, err := settleCall(t, s, asstCall(ua, "my_tickets", map[string]any{})); err != nil || !strings.Contains(out, "ENG-2231") {
 		t.Errorf("my_tickets: %q %v", out, err)
 	}
-	s.Until("the source", func() bool { return strings.Contains(s.Text(), "linear") })
-	s.WantFrame("mission control", "request review", "asks first", "✓ MY_TICKETS")
+	// The call, under recent actions: "linear" alone is in the sources list from the start.
+	s.Until("the call", func() bool { return s.Has("✓ MY_TICKETS") })
+	s.WantFrame("mission control", "linear", "request review", "asks first")
 
 	// With the drawer away, its card stacks over the window with the inbox's, and is answered there.
 	s.Run("assistant.close", nil)

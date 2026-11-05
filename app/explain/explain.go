@@ -54,9 +54,12 @@ type Plugin struct {
 	busy      sync.WaitGroup
 	bufs      map[*text.Buffer]*fileUnits
 	computing map[*text.Buffer]bool
-	bases     map[string]*explainBase // by repo path
-	answers   map[answerKey]*answer   // the cache: by a unit's content hash and the depth
-	kept      map[string]*answer      // explain.ask's with a {key}, shown where they were asked
+	seen      map[*text.Buffer]seenVersion // the version last seen, and since when
+	later     map[*text.Buffer]*heldUnits  // a working out held back while it's typed in (unitsQuiet)
+	dueCount  int                          // how many held back have come due
+	bases     map[string]*explainBase      // by repo path
+	answers   map[answerKey]*answer        // the cache: by a unit's content hash and the depth
+	kept      map[string]*answer           // explain.ask's with a {key}, shown where they were asked
 	marks     []*explainMark
 	panel     panelState
 
@@ -143,6 +146,7 @@ func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explai
 func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.parsers, x.bufs, x.computing = map[string]*syntax.Parser{}, map[*text.Buffer]*fileUnits{}, map[*text.Buffer]bool{}
+	x.seen, x.later = map[*text.Buffer]seenVersion{}, map[*text.Buffer]*heldUnits{}
 	x.bases, x.answers, x.kept = map[string]*explainBase{}, map[answerKey]*answer{}, map[string]*answer{}
 	x.Add(h.Contribute(registry.Service{Name: kit.ExplainService, Impl: x, Source: "builtin:explain"}))
 	if st := kit.GitOf(h).Tree("").Status(); st != nil {
@@ -230,6 +234,12 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 }
 
 func (x *Plugin) Deactivate(ctx context.Context) error {
+	x.mu.Lock()
+	for _, l := range x.later {
+		l.timer.Stop()
+	}
+	x.later = map[*text.Buffer]*heldUnits{}
+	x.mu.Unlock()
 	x.busy.Wait()
 	if x.card != nil {
 		x.card.release()
@@ -246,13 +256,19 @@ func (x *Plugin) Deactivate(ctx context.Context) error {
 // Wait waits for the units, bases and answers being worked out off the loop.
 func (x *Plugin) Wait() { x.busy.Wait() }
 
-// Busy says a buffer's units or a file's base are being worked out, or are back and not yet taken on the loop. A
-// frame asking for the gutter's marks may start either, so Wait alone can't tell they're done.
+// Busy says a buffer's units or a file's base are being worked out, or units are held back to be worked out soon. A
+// frame asking for the gutter's marks may start either, so Wait alone can't tell they're done. Units due a second ago
+// and still not taken up are a buffer no longer drawn.
 func (x *Plugin) Busy() bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if len(x.computing) > 0 {
 		return true
+	}
+	for _, l := range x.later {
+		if l.due.IsZero() || time.Since(l.due) < time.Second {
+			return true
+		}
 	}
 	for _, b := range x.bases {
 		if b.loading {

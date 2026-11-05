@@ -22,9 +22,9 @@ import (
 )
 
 // Flows against fixture repos and a fake GitHub: a flight checklist per project (uncommitted → behind base →
-// unpushed → PR → checks → merge), multiple projects side by side with cross-linked PRs and a merge order, and
+// unpushed → PR → checks → merge), multiple projects side by side with a merge order, and
 // "Before this ships" listing the gates. Raise PR opens a full-width main tab with the title, the body editor
-// (template-filled, drafted by the agent), reviewers and cross-linked PRs.
+// (template-filled, drafted by the agent), reviewers and the PRs it ships with.
 func TestShipFlow(t *testing.T) {
 	s, lw, hub, se, ups := shipScene(t)
 	x := shipOf(s)
@@ -117,7 +117,7 @@ func TestShipFlow(t *testing.T) {
 		t.Errorf("the tab: %+v", s.Host().Layout().Visible())
 	}
 	s.WantFrame("Raise PR · search-api", "TITLE", "BODY", "DRAFTED BY FAKE", "TEMPLATE FILLED", "REVIEWERS", "platform-team", "jkowalski", "CODEOWNERS",
-		"CROSS-LINKED PRS", "pairs with web-dashboard", "BEFORE THIS SHIPS")
+		"SHIPS WITH", "pairs with web-dashboard", "BEFORE THIS SHIPS")
 	if v := s.Node("Title").Value; v != "feat(search): back off on 429 using Retry-After" {
 		t.Errorf("the title field has %q", v)
 	}
@@ -130,7 +130,8 @@ func TestShipFlow(t *testing.T) {
 		t.Fatalf("the PR on GitHub: %+v", apiPRs)
 	}
 
-	// web-dashboard: Commit all takes the agent's draft; Push + raise PR raises it and cross-links the two.
+	// web-dashboard: Commit all takes the agent's draft; Push + raise PR raises it. The descriptions are left as written:
+	// the merge order is the Ship page's, not a block in each.
 	writeFiles(t, webDir, map[string]string{"src/usage.ts": "export const usage = 2\n"})
 	agent.Call(t, "commit_draft", map[string]any{"project": "web-dashboard", "message": "feat(web): back off on 429"})
 	agent.Call(t, "pr_draft", map[string]any{"project": "web-dashboard", "title": "feat(web): show the wait", "body": "Shows Retry-After."})
@@ -147,9 +148,12 @@ func TestShipFlow(t *testing.T) {
 	})
 	webPRs, apiPRs := hub.PRs("acme/web-dashboard"), hub.PRs("acme/search-api")
 	for _, b := range []string{apiPRs[0].Body, webPRs[0].Body} {
-		if !strings.Contains(b, "1. acme/search-api#") || !strings.Contains(b, "2. acme/web-dashboard#") || strings.Count(b, "(this PR)") != 1 {
-			t.Errorf("a PR body doesn't cross-link both in merge order:\n%s", b)
+		if strings.Contains(b, "oriel:linked-prs") || strings.Contains(b, "Ships with") || strings.Contains(b, "acme/web-dashboard#") {
+			t.Errorf("a PR body was given a block linking the session's PRs:\n%s", b)
 		}
+	}
+	if webPRs[0].Body != "Shows Retry-After." {
+		t.Errorf("web's PR body is %q, not the draft as written", webPRs[0].Body)
 	}
 	s.WantFrame("1 · search-api → #", "2 · web-dashboard → #", "depends on search-api #")
 
