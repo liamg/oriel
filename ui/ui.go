@@ -395,14 +395,22 @@ func (u *UI) Scroll(id ID) render.Point {
 	return render.Point{X: st.scroll[0], Y: st.scroll[1]}
 }
 
-// ScrollBy moves id's scroll offset at once, from where it's drawn; the next layout clamps it to the content.
+// ScrollBy moves id's scroll offset at once, from where it's drawn, as far as its last layout had to scroll; a box
+// not laid out yet is clamped by its first.
 func (u *UI) ScrollBy(id ID, dx, dy float32) {
 	st := u.state(id)
 	st.seen = u.frame
-	st.scrolledAt = u.now()
 	st.stopEasing()
-	st.scroll[0] += dx
-	st.scroll[1] += dy
+	was := st.scroll
+	for axis, d := range [2]float32{dx, dy} {
+		st.scroll[axis] += d
+		if st.placed {
+			st.scroll[axis] = max(0, min(st.scroll[axis], st.ext[axis]-st.view[axis]))
+		}
+	}
+	if st.scroll != was {
+		st.scrolledAt = u.now()
+	}
 }
 
 // ScrollTo sets id's scroll offset, which the next layout clamps to the content. Once the box has been laid out it
