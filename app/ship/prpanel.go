@@ -198,7 +198,7 @@ func (x *Ship) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	x.branchBox(c, s)
 	c.Box("sp2", ui.Style{H: ui.Px(4)}, nil)
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-		if s.PR != nil && widget.Button(c, "open", "Open "+w.Short, widget.ButtonOpts{Help: "git/ship#pr"}) {
+		if s.PR != nil && widget.Button(c, "open", "View "+w.Short, widget.ButtonOpts{Help: "git/ship#pr"}) {
 			x.run("ship.pr.open", registry.Args{"project": p})
 		}
 		if s.PR.Open() {
@@ -213,7 +213,7 @@ func (x *Ship) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	note := "opens the Raise " + w.Short + " tab →"
 	switch {
 	case s.PR.Open():
-		note = "Open " + w.Short + " opens as a main tab"
+		note = "View " + w.Short + " opens as a main tab"
 	case movesOn(s) && registry.Can(x.h, se.Kind, core.NextPR):
 		note = "Start next " + w.Short + " cuts a fresh branch from " + cmp.Or(s.Base, "the base")
 	}

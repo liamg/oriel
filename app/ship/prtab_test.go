@@ -98,7 +98,7 @@ func TestPRTabLandsOnTheOverview(t *testing.T) {
 		t.Error("Update PR left the form up")
 	}
 
-	// The Ship page's Edit PR opens the form; the dock's Open PR the overview.
+	// The Ship page's Edit PR opens the form; the dock's View PR the overview.
 	s.Run("ship.pr.open", registry.Args{"project": "search-api", "edit": true})
 	s.Frame()
 	s.WantFrame("Update PR", "Cancel")
@@ -107,7 +107,7 @@ func TestPRTabLandsOnTheOverview(t *testing.T) {
 	s.WantFrame("Copy link")
 	s.Run("project.panel", registry.Args{"name": "pull-request"})
 	s.Frame()
-	s.WantFrame("Open PR")
+	s.WantFrame("View PR")
 }
 
 func countRefs(s *apptest.Scene, id string) int {
