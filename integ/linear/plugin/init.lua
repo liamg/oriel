@@ -38,3 +38,34 @@ L.rail.add{ name = "linear", scope = "global", icon = "linear", title = "Linear 
   command = "tickets.open", args = { tracker = "linear" }, shown = keyed }
 L.start.add{ name = "linear", icon = "linear", title = "Linear tickets", desc = "Your assigned tickets: pick one to plan",
   order = 25, command = "tickets.open", args = { tracker = "linear" }, shown = keyed }
+
+-- Tools for every session's agent, over MCP: read a ticket, and change one, comment on it or file a new one. They
+-- act as the API key's owner, without asking first.
+L.agent.tool{ name = "linear_issue", read_only = true, reads = "linear", async = true,
+  desc = "Read a Linear ticket by its key (ENG-123): its title, state, priority, project, assignee, whole description, "
+    .. "comments and attachments, in markdown.",
+  params = { key = "string" },
+  run = function(p, done)
+    call("ticket", { key = p.key }, function(res, err) done(res and res.context, err) end)
+  end }
+
+L.agent.tool{ name = "linear_update_issue", async = true,
+  desc = "Change a Linear ticket (key: ENG-123); what's left out stays as it is. title; description (markdown, "
+    .. "replaces the whole description); state (a state of the ticket's team by name: In Progress, Done…); priority "
+    .. "(0 none, 1 urgent, 2 high, 3 medium, 4 low); assignee (a name, display name or email; me; none).",
+  params = { key = "string", title = "string?", description = "string?", state = "string?", priority = "number?",
+    assignee = "string?" },
+  run = function(p, done) call("update", p, done) end }
+
+L.agent.tool{ name = "linear_comment", async = true,
+  desc = "Comment on a Linear ticket (key: ENG-123), in markdown, as the user.",
+  params = { key = "string", body = "string" },
+  run = function(p, done) call("comment", p, done) end }
+
+L.agent.tool{ name = "linear_create_issue", async = true,
+  desc = "File a new Linear ticket. team (its key, ENG, or name; needed when there's more than one); title; "
+    .. "description (markdown); state (a state of the team by name); priority (0 none, 1 urgent, 2 high, 3 medium, "
+    .. "4 low); assignee (a name, display name or email; me). Answers with its key and URL.",
+  params = { title = "string", team = "string?", description = "string?", state = "string?", priority = "number?",
+    assignee = "string?" },
+  run = function(p, done) call("create", p, done) end }

@@ -1,0 +1,95 @@
+{
+ "data": {
+  "viewer": {
+   "id": "0f3a9c2e-7b1d-4e8f-9a6c-2d5b8e1f0001"
+  },
+  "teams": {
+   "nodes": [
+    {
+     "id": "e1a7c3d5-5b8f-4c2a-9d01-3f6b2e8a0e01",
+     "key": "ENG",
+     "name": "Engineering",
+     "states": {
+      "nodes": [
+       {
+        "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a01",
+        "name": "Backlog",
+        "type": "backlog",
+        "position": 0
+       },
+       {
+        "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a02",
+        "name": "Todo",
+        "type": "unstarted",
+        "position": 1
+       },
+       {
+        "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a03",
+        "name": "In Progress",
+        "type": "started",
+        "position": 2
+       },
+       {
+        "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a04",
+        "name": "In Review",
+        "type": "started",
+        "position": 3
+       },
+       {
+        "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a05",
+        "name": "Done",
+        "type": "completed",
+        "position": 4
+       },
+       {
+        "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a06",
+        "name": "Canceled",
+        "type": "canceled",
+        "position": 5
+       },
+       {
+        "id": "6c1b3a8e-2d6f-4f0a-9a51-0b3f6f0f1a07",
+        "name": "Duplicate",
+        "type": "canceled",
+        "position": 6
+       }
+      ]
+     }
+    },
+    {
+     "id": "e1a7c3d5-5b8f-4c2a-9d01-3f6b2e8a0e02",
+     "key": "OPS",
+     "name": "Operations",
+     "states": {
+      "nodes": [
+       {
+        "id": "7d2c4b9f-3e70-4a1b-8b62-1c4a7a0e2b01",
+        "name": "Triage",
+        "type": "triage",
+        "position": 0
+       },
+       {
+        "id": "7d2c4b9f-3e70-4a1b-8b62-1c4a7a0e2b02",
+        "name": "Todo",
+        "type": "unstarted",
+        "position": 1
+       },
+       {
+        "id": "7d2c4b9f-3e70-4a1b-8b62-1c4a7a0e2b03",
+        "name": "Doing",
+        "type": "started",
+        "position": 2
+       },
+       {
+        "id": "7d2c4b9f-3e70-4a1b-8b62-1c4a7a0e2b04",
+        "name": "Done",
+        "type": "completed",
+        "position": 3
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

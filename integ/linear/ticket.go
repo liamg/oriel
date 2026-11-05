@@ -28,6 +28,7 @@ type Ticket struct {
 
 	ID     string  `json:"-"`
 	States []State `json:"-"` // the team's workflow
+	viewer string  // the API key's owner
 }
 
 // Comment is one comment on a ticket, oldest first.
@@ -111,7 +112,8 @@ func (c Client) Ticket(ctx context.Context, key string) (Ticket, error) {
 		return Ticket{}, fmt.Errorf("linear has no ticket %s", key)
 	}
 	t := Ticket{Key: is.Identifier, Title: is.Title, URL: is.URL, Description: is.Description, State: is.State.Name,
-		StateType: is.State.Type, PriorityLabel: is.PriorityLabel, Project: is.Project.Name, ID: is.ID, States: is.Team.States.Nodes}
+		StateType: is.State.Type, PriorityLabel: is.PriorityLabel, Project: is.Project.Name, ID: is.ID, States: is.Team.States.Nodes,
+		viewer: out.Viewer.ID}
 	if is.Assignee != nil {
 		t.Assignee, t.Mine = is.Assignee.Name, is.Assignee.ID == out.Viewer.ID
 	}

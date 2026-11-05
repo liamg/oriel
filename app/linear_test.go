@@ -325,6 +325,81 @@ func TestLinearTicketsForTheAssistant(t *testing.T) {
 	}
 }
 
+// A session's agent can read a Linear ticket, change it, comment on it and file a new one, through the plugin's tools
+// (oriel.agent.tool), as the key's owner and without asking; the assistant isn't offered them.
+func TestLinearToolsForAgentSessions(t *testing.T) {
+	l := lineartest.New(t)
+	change, secrets := linearConfig(t, l)
+	s := apptest.New(t, apptest.Options{Config: change})
+	loadLinear(t, s)
+	tools := map[string]registry.AgentTool{}
+	for _, tool := range registry.AgentToolsFor(s.Registry(), "work", false) {
+		tools[tool.Name] = tool
+	}
+	names := []string{"linear_issue", "linear_update_issue", "linear_comment", "linear_create_issue"}
+	for _, name := range names {
+		if _, ok := tools[name]; !ok {
+			t.Fatalf("a work session's agent isn't offered %s", name)
+		}
+		if tools[name].Confirm != nil {
+			t.Errorf("%s asks first", name)
+		}
+	}
+	if !tools["linear_issue"].ReadOnly || tools["linear_update_issue"].ReadOnly {
+		t.Error("linear_issue should be read-only, and only it")
+	}
+	for _, tool := range registry.AgentToolsFor(s.Registry(), kit.AssistantAgent, true) {
+		if slices.Contains(names, tool.Name) {
+			t.Errorf("the assistant was offered %s", tool.Name)
+		}
+	}
+	ctx := registry.WithAgent(context.Background(), "work")
+	call := func(name string, args map[string]any) (string, error) {
+		t.Helper()
+		return s.CallTool(ctx, apptest.Timeout, tools[name], args)
+	}
+
+	if _, err := call("linear_issue", map[string]any{"key": "ENG-2231"}); err == nil || !strings.Contains(err.Error(), "no Linear API key yet") {
+		t.Errorf("before the key: %v", err)
+	}
+	if err := secrets.SetSecret("LINEAR_TOKEN", lineartest.Key); err != nil {
+		t.Fatal(err)
+	}
+	out, err := call("linear_issue", map[string]any{"key": "ENG-2231"})
+	if err != nil || !strings.Contains(out, "Linear ticket ENG-2231: Search API returns stale results after a reindex") || !strings.Contains(out, "## Comments (4)") {
+		t.Fatalf("linear_issue: %v\n%s", err, out)
+	}
+
+	out, err = call("linear_update_issue", map[string]any{"key": "ENG-2240", "state": "In Review", "assignee": "ana", "priority": 1.0})
+	if err != nil || !strings.Contains(out, "state Todo → In Review") || !strings.Contains(out, "assignee Liam Galvin → Ana Ruiz") || !strings.Contains(out, "priority High → Urgent") {
+		t.Fatalf("linear_update_issue: %v\n%s", err, out)
+	}
+	if _, err := call("linear_update_issue", map[string]any{"key": "ENG-2240", "state": "Shipped"}); err == nil || !strings.Contains(err.Error(), `has no state "Shipped"`) {
+		t.Errorf("an unknown state: %v", err)
+	}
+	out, err = call("linear_comment", map[string]any{"key": "ENG-2231", "body": "Fixed on the branch; PR to follow."})
+	if err != nil || !strings.Contains(out, "commented on ENG-2231") {
+		t.Fatalf("linear_comment: %v\n%s", err, out)
+	}
+	out, err = call("linear_create_issue", map[string]any{"team": "OPS", "title": "Alert on long reindexes", "priority": 3.0})
+	if err != nil || !strings.Contains(out, "OPS-3001") || !strings.Contains(out, "https://linear.app/acme/issue/OPS-3001") {
+		t.Fatalf("linear_create_issue: %v\n%s", err, out)
+	}
+
+	var ops []string
+	for _, m := range l.Mutations() {
+		ops = append(ops, m.Op)
+	}
+	if want := []string{"issueUpdate", "commentCreate", "issueCreate"}; !slices.Equal(ops, want) {
+		t.Errorf("sent %v, want %v", ops, want)
+	}
+	for _, a := range l.Auths() {
+		if a != "api.linear.app "+lineartest.Key {
+			t.Errorf("a request went as %q", a)
+		}
+	}
+}
+
 // bundledLinear is the app on workDir (the start view if "") with the Linear plugin bundled as oriel ships it
 // (linear.Plugin), its process built for the test as Self in place of oriel's own `plugin-process linear`.
 func bundledLinear(t *testing.T, l *lineartest.Linear, workDir string) (*apptest.Scene, *plugin.SecretFile) {
