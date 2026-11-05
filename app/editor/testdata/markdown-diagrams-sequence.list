@@ -216,6 +216,42 @@ clip 44,38 1556x936 r 0
   clip 44,69 1556x905 r 0
     clip 44,69 1556x905 r 0
       clip 44,95 1556x879 r 0
+        text "?" @62,-438.562 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        text "?" @62,-322.43402 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        text "?" @62,293.91357 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        text "?" @62,722.41064 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
         clip 901,-308.82202 480x134.12451 r 6
           clip 913,-214.69751 456x30 r 6
             rect 1353.3334,-203.69751 3.333374x6.25 radius 1.6666666 stroke 1.25 #7c7566

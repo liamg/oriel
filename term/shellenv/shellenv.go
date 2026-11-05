@@ -76,15 +76,18 @@ func run(ctx context.Context, shell string, timeout time.Duration, args ...strin
 	found := make(chan string, 1)
 	read := make(chan struct{})
 	var out bytes.Buffer
-	go func() {
+	go func() { // read to the end, after the PATH too: macOS won't let a process exit with its output unread
 		defer close(read)
 		buf := make([]byte, 4096)
+		told := false
 		for {
 			n, err := p.Read(buf)
-			out.Write(buf[:n])
-			if path, ok := between(out.String()); ok {
-				found <- path
-				return
+			if !told {
+				out.Write(buf[:n])
+				if path, ok := between(out.String()); ok {
+					found <- path
+					told = true
+				}
 			}
 			if err != nil {
 				return
@@ -93,13 +96,15 @@ func run(ctx context.Context, shell string, timeout time.Duration, args ...strin
 	}()
 	exited := make(chan error, 1)
 	go func() { exited <- cmd.Wait() }()
+	// stop kills the shell's session and lets the terminal go, never waiting long: this runs as the app starts.
 	stop := func() {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the shell leads a session of its own: it, and what it started
-		<-exited
-		p.Close()
-		select {
-		case <-read:
-		case <-time.After(time.Second): // a child that left the shell's group may hold the terminal open
+		p.Close()                                           // what it hadn't written yet goes, so it can exit
+		for _, done := range []<-chan struct{}{waited(exited), read} {
+			select {
+			case <-done:
+			case <-time.After(time.Second): // a child that left the shell's group may hold the terminal open
+			}
 		}
 	}
 	timer := time.NewTimer(timeout)
@@ -127,6 +132,17 @@ func run(ctx context.Context, shell string, timeout time.Duration, args ...strin
 	}
 	stop()
 	return "", errors.New(filepath.Base(shell) + " didn't answer in " + timeout.String())
+}
+
+// waited closes once exited has an answer, putting it back.
+func waited(exited chan error) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		err := <-exited
+		exited <- err
+		close(done)
+	}()
+	return done
 }
 
 // between is what the shell printed between the markers, once it has printed both.

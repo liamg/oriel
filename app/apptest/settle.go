@@ -2,8 +2,10 @@ package apptest
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/liamg/oriel/app/explain"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render"
 )
 
@@ -12,10 +14,23 @@ import (
 // test has queued itself, a move for one, it leaves to the test.
 func (s *Scene) SettleDrawn() {
 	s.T.Helper()
-	s.SettleReads()
+	var e *explain.Plugin
 	if p, ok := s.Plugin("explain"); ok {
-		if e, ok := p.(*explain.Plugin); ok {
+		e, _ = p.(*explain.Plugin)
+	}
+	// A frame takes on what came back, and may start more: a base read in lets a buffer's units be worked out again.
+	for deadline := time.Now().Add(10 * time.Second); ; {
+		s.SettleReads()
+		if e != nil {
 			e.Wait()
+		}
+		s.Frame()
+		rd, ok := kit.ReadsOf(s.Registry())
+		if (!ok || !rd.Busy()) && (e == nil || !e.Busy()) {
+			break
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatalf("what the frame shows never settled: reads busy %v, explain busy %v", ok && rd.Busy(), e != nil && e.Busy())
 		}
 	}
 	s.Frame()

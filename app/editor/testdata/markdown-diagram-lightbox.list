@@ -186,7 +186,7 @@ clip 44,38 1556x936 r 0
         text "MERMAID · GANTT ISN'T DRAWN" @128,1346.2319 #7c7566 JetBrains Mono 9.5
         text "gantt" @128,1364.322 #b3ab99 JetBrains Mono 12
         text "  title Rollout" @128,1383.162 #b3ab99 JetBrains Mono 12
-        text "  Ship :a1, 2026-11-01, 3d" @128,1402.002 #b3ab99 JetBrains Mono 12
+        text "  Ship :a1, 2026-11-01, 3d" @128,1402.0021 #b3ab99 JetBrains Mono 12
         rect 114,1429.602 760x78.21997 fill #0c0c0b radius 6 stroke 1 #332f27
         text "MERMAID · CAN'T READ LINE 2" @128,1453.292 #7c7566 JetBrains Mono 9.5
         text "flowchart LR" @128,1471.3821 #b3ab99 JetBrains Mono 12
@@ -231,6 +231,42 @@ text "Markdown · utf-8 · LF" @1325,984.71 #b3ab99 JetBrains Mono 10.5
 text "wrap" @1479.4688,990.78 #7c7566 JetBrains Mono 10.5
 text "1:1" @1521.8438,984.71 #b3ab99 JetBrains Mono 10.5
 text "≡ 2%" @1557.625,984.71 #b3ab99 JetBrains Mono 10.5
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        text "?" @62,145.26 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        text "?" @62,261.388 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        text "?" @62,877.7356 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
+clip 44,38 1556x936 r 0
+  clip 44,69 1556x905 r 0
+    clip 44,69 1556x905 r 0
+      clip 44,95 1556x879 r 0
+        text "?" @62,1306.2327 #4f4a40 JetBrains Mono 13
+      pop
+    pop
+  pop
+pop
 clip 44,38 1556x936 r 0
   clip 44,69 1556x905 r 0
     clip 44,69 1556x905 r 0

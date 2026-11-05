@@ -246,6 +246,22 @@ func (x *Plugin) Deactivate(ctx context.Context) error {
 // Wait waits for the units, bases and answers being worked out off the loop.
 func (x *Plugin) Wait() { x.busy.Wait() }
 
+// Busy says a buffer's units or a file's base are being worked out, or are back and not yet taken on the loop. A
+// frame asking for the gutter's marks may start either, so Wait alone can't tell they're done.
+func (x *Plugin) Busy() bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if len(x.computing) > 0 {
+		return true
+	}
+	for _, b := range x.bases {
+		if b.loading {
+			return true
+		}
+	}
+	return false
+}
+
 func (x *Plugin) notify(err error) {
 	x.h.Notify(core.Notice{ID: "explain", Severity: core.SevWarning, Source: "explain", Key: true, Text: err.Error()})
 }
