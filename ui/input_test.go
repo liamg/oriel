@@ -704,3 +704,41 @@ func TestPressedAtIsWhereThePressWentDown(t *testing.T) {
 		t.Errorf("released, pressed at %v %v, want {20 20}", p, ok)
 	}
 }
+
+// The wheel over a list with nothing to scroll leaves it where it is: the next frame is built at the top, with every
+// row and the highlight where they were, not as if scrolled for a frame until layout puts it back.
+func TestWheelOverWhatCantScroll(t *testing.T) {
+	u := newUI()
+	var list ID
+	var built []float32
+	build := func(c *Ctx) {
+		list = c.ListBehind("list", Style{W: Px(200), H: Px(300)}, 5, 22, func(lc *Ctx, top float32) { built = append(built, top) },
+			func(rc *Ctx, i int) { rc.Box("row", Style{W: Flex(1), H: Flex(1)}, nil) })
+	}
+	paintOps(u, render.Point{X: 300, Y: 400}, build)
+	paintOps(u, render.Point{X: 300, Y: 400}, build)
+	before := built[len(built)-1]
+	u.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: render.Point{X: 50, Y: 50}, Scroll: render.Point{Y: 120}})
+	if got := u.Scroll(list); got != (render.Point{}) {
+		t.Errorf("the wheel moved a list with nothing to scroll to %v", got)
+	}
+	paintOps(u, render.Point{X: 300, Y: 400}, build)
+	if got := built[len(built)-1]; got != before {
+		t.Errorf("the frame after the wheel was built with its rows from %v, not %v", got, before)
+	}
+	if st := u.state(list); !st.scrolledAt.IsZero() {
+		t.Error("the wheel brought up the scrollbar of a list with nothing to scroll")
+	}
+
+	// One that scrolls stops at its end, as it's asked.
+	u2 := newUI()
+	var tall ID
+	build2 := func(c *Ctx) {
+		tall = c.ListBehind("list", Style{W: Px(200), H: Px(100)}, 10, 22, nil, func(rc *Ctx, i int) { rc.Box("row", Style{W: Flex(1), H: Flex(1)}, nil) })
+	}
+	paintOps(u2, render.Point{X: 300, Y: 400}, build2)
+	u2.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: render.Point{X: 50, Y: 50}, Scroll: render.Point{Y: 1000}})
+	if got := u2.Scroll(tall); got != (render.Point{Y: 120}) {
+		t.Errorf("scrolled to %v, want its end at 120", got)
+	}
+}

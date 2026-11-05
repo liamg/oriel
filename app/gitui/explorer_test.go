@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/gitui"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/render/snapshot"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -368,6 +369,29 @@ func TestExplorerScrolls(t *testing.T) {
 	s.Frame()
 	if text := s.Text(); strings.Contains(text, "f000.go") || !strings.Contains(text, "f040.go") {
 		t.Errorf("the wheel didn't scroll the tree:\n%s", text)
+	}
+}
+
+// The wheel over a tree that fits moves nothing: the frame after it draws the tree, its selection and its
+// highlight as they were, with no frame of them scrolled away first.
+func TestExplorerWheelOverATreeThatFits(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"a.go": "package p\n", "b.go": "package p\n", "c.go": "package p\n"})
+	r.Commit("Ada", "x")
+	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
+	gitOf(s).Wait()
+	s.Press("<M-3>")
+	s.ClickText("b.go")
+	at := render.Point{X: 150, Y: 300}
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+	s.SettleDrawn()
+	before := snapshot.List(s.List())
+	for _, dy := range []float32{120, -40, 300} {
+		s.UI().Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: at, Scroll: render.Point{Y: dy}})
+		s.Frame()
+		if got := snapshot.List(s.List()); got != before {
+			t.Fatalf("the frame after a wheel of %v over a tree that fits changed:\n%s", dy, got)
+		}
 	}
 }
 

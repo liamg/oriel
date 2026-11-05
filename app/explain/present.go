@@ -474,16 +474,18 @@ func (fr *presentFrame) scroll(ctx *uireg.PresentCtx, cards []ui.ID) {
 // settled is the source line at the top now, and whether the reader scrolled it there.
 func (fr *presentFrame) settled(p kit.Presentation) (int, bool) {
 	st := fr.st
+	at := fr.c.Scroll(fr.body).Y
+	// The blocks were laid out at the scroll last drawn; the wheel may have moved it since.
+	since := at - st.at
 	st.shown = p.Buf.Snapshot().Lines() - 1
 	if fr.okV {
 		for i := range fr.blocks {
-			if _, bottom, ok := fr.span(i); ok && bottom > fr.view.Min.Y+1 {
+			if _, bottom, ok := fr.span(i); ok && bottom-since > fr.view.Min.Y+1 {
 				st.shown = fr.blocks[i].From
 				break
 			}
 		}
 	}
-	at := fr.c.Scroll(fr.body).Y
 	if st.settle > 0 {
 		st.settle--
 		st.at = at
