@@ -123,6 +123,7 @@ func TestShipFlow(t *testing.T) {
 		t.Errorf("the title field has %q", v)
 	}
 	s.Lint("the Raise PR tab")
+	shipIdle(s) // no read lands between the press and the release
 	s.ClickOn("Raise as draft")
 	shipSettle(s, t, "the PR", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.PR != nil })
 	apiPRs := hub.PRs("acme/search-api")
