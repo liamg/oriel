@@ -264,7 +264,7 @@ clip 484,38 1116x936 r 0
       rect 608.42096,635.73816 109.1875x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
       text "usage.Meter" @624.42096,659.46716 #ece6d8 Inter 13
       rect 777.60846,635.73816 117.46869x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
-      text "pricing.Round" @793.60846,659.46716 #ece6d8 Inter 13
+      text "pricing.Round" @793.6084,659.46716 #ece6d8 Inter 13
       rect 955.07715,635.73816 116.421875x38 fill #121210 radius 4.9999995 stroke 0.9999999 #332f27
       text "billing.Invoice" @971.07715,659.46716 #ece6d8 Inter 13
       rect 554,725.0228 14x2 fill #ff9b45
@@ -375,6 +375,27 @@ text "0" @115.19625,990.95996 #b3ab99 JetBrains Mono 11
 clip 484,38 1116x936 r 0
   clip 484,69 1116x905 r 0
     clip 484,118 1116x856 r 0
+      text "?" @502,168.26 #4f4a40 JetBrains Mono 13
+    pop
+  pop
+pop
+clip 484,38 1116x936 r 0
+  clip 484,69 1116x905 r 0
+    clip 484,118 1116x856 r 0
+      text "?" @502,284.388 #4f4a40 JetBrains Mono 13
+    pop
+  pop
+pop
+clip 484,38 1116x936 r 0
+  clip 484,69 1116x905 r 0
+    clip 484,118 1116x856 r 0
+      text "?" @502,379.0462 #4f4a40 JetBrains Mono 13
+    pop
+  pop
+pop
+clip 484,38 1116x936 r 0
+  clip 484,69 1116x905 r 0
+    clip 484,118 1116x856 r 0
       rect 782.5,503.05164 224.84375x1 fill #d27049
     pop
   pop
@@ -385,6 +406,20 @@ clip 484,38 1116x936 r 0
       rect 956.65,468.99442 167.27002x18.540009 fill #060606 radius 10 stroke 1 #4fe0a080
       rect 964.65,475.2644 6x6 fill #4fe0a0 radius 3
       text "AGENT EDITED 4S AGO" @976.65,481.68442 #4fe0a0 JetBrains Mono 9.5
+    pop
+  pop
+pop
+clip 484,38 1116x936 r 0
+  clip 484,69 1116x905 r 0
+    clip 484,118 1116x856 r 0
+      text "?" @502,578.88885 #4f4a40 JetBrains Mono 13
+    pop
+  pop
+pop
+clip 484,38 1116x936 r 0
+  clip 484,69 1116x905 r 0
+    clip 484,118 1116x856 r 0
+      text "?" @502,729.99817 #4f4a40 JetBrains Mono 13
     pop
   pop
 pop

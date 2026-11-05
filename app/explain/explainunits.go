@@ -170,13 +170,12 @@ func (x *Plugin) baseOf(abs string) (data []byte, gen int, ok bool) {
 			if rev != "" {
 				data, _ = repo.FileAt(context.Background(), rev, rel)
 			}
-			x.h.Do(func() {
-				x.mu.Lock()
-				b.data, b.loaded, b.loading = data, true, false
-				b.gen++
-				x.mu.Unlock()
-				x.h.Redraw()
-			})
+			// Kept here, under x.mu, rather than handed to the loop: once Wait returns it's in.
+			x.mu.Lock()
+			b.data, b.loaded, b.loading = data, true, false
+			b.gen++
+			x.mu.Unlock()
+			x.h.Redraw()
 		}()
 	}
 	return b.data, b.gen, b.loaded
@@ -202,13 +201,11 @@ func (x *Plugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []b
 		defer x.busy.Done()
 		nu := x.computeUnits(path, src, file, base, haveBase)
 		nu.version, nu.gen = snap.Version()+1, gen
-		x.h.Do(func() {
-			x.mu.Lock()
-			x.bufs[buf] = nu
-			delete(x.computing, buf)
-			x.mu.Unlock()
-			x.h.Redraw()
-		})
+		x.mu.Lock() // kept here, as a base is
+		x.bufs[buf] = nu
+		delete(x.computing, buf)
+		x.mu.Unlock()
+		x.h.Redraw()
 	}()
 	return fu
 }
