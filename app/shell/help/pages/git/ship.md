@@ -19,6 +19,10 @@ one to do is open. The chip by a project's name says where it stands: needs you 
 running, CI failing, ready, merged. At the right: what has to happen before it ships, the order the PRs merge in, and
 the ticket. `ship.refresh` reads every project again, fetching and asking GitHub.
 
+More columns than fit scroll sideways. A project with nothing to ship (nothing uncommitted, no commits on its
+branch, no pull request) gets no column: the line over the columns names them, and **Show** brings their columns
+back.
+
 ## The Git panel {#git}
 
 A project's **Git** panel, in the dock: its branch and how far it is from its base, **Rebase on main**, **Push** and

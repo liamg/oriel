@@ -57,10 +57,11 @@ type Ship struct {
 	Clock     func() time.Time // the time Ship reads ages by; time.Now if nil
 	ctx       context.Context
 	cancel    context.CancelFunc
-	busy      kit.Busy       // reads and steps
-	saving    sync.WaitGroup // drafts the user typed, on their way to the session host
-	subs      kit.Subs       // what it reads, from the sessions' managers (shipwatch.go)
-	budget    kit.Budget     // background PR polls' requests
+	busy      kit.Busy                // reads and steps
+	saving    sync.WaitGroup          // drafts the user typed, on their way to the session host
+	subs      kit.Subs                // what it reads, from the sessions' managers (shipwatch.go)
+	budget    kit.Budget              // background PR polls' requests
+	showQuiet map[core.SessionID]bool // the Ship page shows the projects with nothing to ship; on the loop
 
 	mu       sync.Mutex
 	reports  map[core.SessionID]*shipReport
