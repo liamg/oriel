@@ -251,9 +251,9 @@ clip 224,38 250x936 r 0
         pop
       pop
       rect 246,467.2695 206x148.74002 radius 6 stroke 1 #332f27
-      rect 246,628.0095 69.578125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Open PR" @256,645.37476 #ece6d8 Inter 12
-      text "Open PR opens as a main tab" @246,668.20953 #4f4a40 JetBrains Mono 10
+      rect 246,628.0095 67.234375x26 fill #191815 radius 6 stroke 1 #332f27
+      text "View PR" @256,645.37476 #ece6d8 Inter 12
+      text "View PR opens as a main tab" @246,668.20953 #4f4a40 JetBrains Mono 10
     pop
   pop
 pop

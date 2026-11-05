@@ -179,7 +179,7 @@ func TestShipFlow(t *testing.T) {
 	s.Run("project.panel", registry.Args{"name": "pull-request"})
 	s.Frame()
 	s.WantFrame("feat(web): show the wait", "OPEN", "CHECKS", "1 of 3 failing", "unit (shard 1/2)", "e2e · chromium", "checked", "REVIEWS",
-		"BRANCH", "Committed", "clean", "Up to date", "with main", "Pushed", "yes", "git read", "Open PR")
+		"BRANCH", "Committed", "clean", "Up to date", "with main", "Pushed", "yes", "git read", "View PR")
 	s.Lint("the Pull request panel")
 
 	// Fix CI with agent writes a request with the failing line attached.
@@ -190,13 +190,13 @@ func TestShipFlow(t *testing.T) {
 	hub.ClosePR("acme/web-dashboard", webPRs[0].Number)
 	s.Run("ship.refresh", nil)
 	shipSettle(s, t, "the closed PR", func() bool { return strings.Contains(s.Text(), "CLOSED") })
-	s.WantFrame("CLOSED", "Open PR")
+	s.WantFrame("CLOSED", "View PR")
 	for line := range strings.Lines(s.Text()) {
 		if strings.TrimSpace(line) == "OPEN" {
 			t.Error("the checklist still says the closed PR is open")
 		}
 	}
-	s.ClickOn("Open PR")
+	s.ClickOn("View PR")
 	s.Until("the closed PR's overview", func() bool { return strings.Contains(s.Text(), "Raise a new PR…") })
 }
 

@@ -97,7 +97,7 @@ The **Pull request** panel in the dock reads top to bottom:
 - **Branch**: committed, up to date with the base, pushed, and **On origin**: **new commits** when the PR's head isn't
   the commit checked out and nothing here waits to be pushed (someone else pushed). The footer says when git was read.
 
-Once a project's PR is raised, its tab (**Open PR** on the Pull request panel) is the PR as it stands: its title, its
+Once a project's PR is raised, its tab (**View PR** on the Pull request panel) is the PR as it stands: its title, its
 link (click it to open the PR in the browser) with **Copy link** to share it, the checks as they run, the description
 as it reads on the code host, and the review: each reviewer's thread and the conversation, with **Open** to take one
 up in Requests.
