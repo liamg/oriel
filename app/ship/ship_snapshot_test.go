@@ -56,7 +56,7 @@ func TestRaisePRSnapshot(t *testing.T) {
 	s.Golden("ship-raise-pr")
 	s.WantFrame("DRAFTING", "2 commits", "rethink/search-endpoint → main", "BRANCH", "Committed", "3 files left", "4 behind main", "2 to push",
 		"git read 4s ago", "Raise PR", "Ship ⇉", "RAISE PR", "Save draft", "Raise as draft", "Push + raise PR", "TITLE", "BODY", "DRAFTED BY CODEX",
-		"TEMPLATE FILLED", "REVIEWERS", "CROSS-LINKED PRS", "BEFORE THIS SHIPS")
+		"TEMPLATE FILLED", "REVIEWERS", "SHIPS WITH", "BEFORE THIS SHIPS")
 	s.Lint("the Raise PR tab")
 }
 
