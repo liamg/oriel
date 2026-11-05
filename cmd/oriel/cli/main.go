@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"runtime/pprof"
@@ -22,6 +23,7 @@ import (
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/sandbox/helper"
 	"github.com/liamg/oriel/sandbox/runner"
+	"github.com/liamg/oriel/term/shellenv"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/update"
 )
@@ -68,6 +70,7 @@ func runApp(args []string) {
 		os.Exit(1)
 	}
 	log := cfg.Logs.Logger("host")
+	loginPath(log)
 	w, err := newHost(home, log)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no sessions:", err)
@@ -88,6 +91,19 @@ func runApp(args []string) {
 		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close() }, stopProfile))
 	}()
 	gio.Main()
+}
+
+// loginPath gives the process the PATH the user's login shell builds, when it wasn't started from a terminal: opened
+// from the Finder, the Dock or a launcher, it has the desktop's, and the agents' programs (claude, codex) aren't on it.
+func loginPath(log *slog.Logger) {
+	if shellenv.FromTerminal() {
+		return
+	}
+	if p, err := shellenv.Apply(context.Background()); err != nil {
+		log.Warn("the login shell's PATH couldn't be read; keeping the desktop's", "shell", shellenv.Shell(), "err", err)
+	} else {
+		log.Info("PATH from the login shell", "shell", shellenv.Shell(), "path", p)
+	}
 }
 
 // claim takes home for this process, then confirms or rolls back a pending update: only the Oriel holding the
