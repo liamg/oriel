@@ -20,6 +20,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/watch"
 )
 
 // Sessions is the app's side of the session host (docs/architecture.md): it follows the session in front with the
@@ -49,6 +50,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 			Tools:    func(r host.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
 			CallTool: func(ctx context.Context, call host.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
 			Decide:   func(ctx context.Context, d host.Decide) host.Verdict { return x.decide(ctx, h, d) },
+			Watches:  func(id core.SessionID) *watch.Manager { return kit.ManagerFor(h, id) },
 		})
 		x.Add(kit.OnDispose(func() { w.SetApp(host.App{}) }))
 	}

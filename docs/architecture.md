@@ -112,6 +112,8 @@ go. Each session that isn't archived has a manager, and the app has one for what
 them, hands them the window's focus, and offers them as the `watches` service, with the sources Lua names
 (`oriel.subscribe`, `oriel.source`). A view subscribes while it's drawn (the git trees, the stats); a plugin that must
 hear in the background (pull requests' approvals) asks to keep. The Performance page lists every source and who holds it.
+The session host is handed a session's manager by the app (`host.App.Watches`): what a shell command changed is found
+by snapshotting only the projects whose trees changed since the last mark, and every project without a window.
 
 A file's contents are `watch.File`, so a file is read in one place however many want it: the settings files, and the
 state files kept per directory (`kit.StateFile`). A reader that must start from what's on disk now (the settings as
