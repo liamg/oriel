@@ -1,7 +1,7 @@
 id          = "liamg/linear"
 version     = "0.1.0"
 oriel       = ">=0.4"
-description = "Linear as a ticket tracker: your assigned tickets in the omnibox and for the assistant, Start work from a ticket, its state moved as the work goes, and the PR linked back"
+description = "Linear as a ticket tracker: your assigned tickets in the omnibox and for the assistant, Start work from a ticket, its state moved as the work goes, the PR linked back, and tools for agents to read, change, comment on and file tickets"
 license     = "MIT"
 binaries    = ["darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"]
 
@@ -9,6 +9,7 @@ binaries    = ["darwin/arm64", "darwin/amd64", "linux/amd64", "linux/arm64"]
 icons = "icons/"
 
 [permissions]
-net            = { hosts = ["api.linear.app"], why = "Read your tickets and move them, through Linear's API" }
+net            = { hosts = ["api.linear.app"], why = "Read and change your tickets, through Linear's API" }
 secrets        = { LINEAR_TOKEN = "api.linear.app", why = "Your Linear API key, sent only to api.linear.app" }
 "agent.prompt" = { why = "Your tickets, and the one you start work from with its comments and attachments, to the agents" }
+"agent.tools"  = { tools = ["linear_issue", "linear_update_issue", "linear_comment", "linear_create_issue"], why = "Let agents read, change, comment on and file Linear tickets as you" }

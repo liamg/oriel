@@ -32,3 +32,10 @@ description, how many comments and attachments it has, and what blocks it.
   session back.
 - **Work** (`w`) opens the launcher on a work session, for when no plan is needed.
 - **Open** (`o`) opens the ticket in its tracker, in the browser.
+
+## In a session {#agent}
+
+A tracker's plugin can give every session's agent tools for its tickets. Linear's are `linear_issue` (read a ticket
+with its comments and attachments), `linear_update_issue` (its title, description, state, priority or assignee, by
+name), `linear_comment` and `linear_create_issue`. They act as the owner of the API key, and don't ask first: ask the
+agent to move a ticket, note what it found, or file a follow-up, and it does.
