@@ -457,6 +457,17 @@ func (r *Stats) Readings(t *testing.T) {
 			{Name: "Current week (all models)", Used: .71, Resets: weekReset, Length: week},
 			{Name: "Current week (Opus)", Used: .58, Resets: weekReset, Length: week},
 		}})
+	// The host keeps readings as it takes the agents' events, after Emit returns.
+	kept := func(provider string, at time.Time) bool {
+		return slices.ContainsFunc(r.W.UsageHistory(host.UsageHistoryReq{Provider: provider, Since: at}),
+			func(u core.ProviderUsage) bool { return u.Sampled.Equal(at) })
+	}
+	for deadline := time.Now().Add(10 * time.Second); !kept("claude", StatsNow.Add(-40*time.Second)) || !kept("codex", StatsNow); {
+		if time.Now().After(deadline) {
+			t.Fatal("the host never kept the plan readings")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }
 
 // WorkAccount is the fixture's Claude login: the account and organisation of a company subscription.
