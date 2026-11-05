@@ -32,7 +32,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		h.working, h.turnAt, h.runs = true, now, nil // a turn's claims are backed by its own runs
 		h.mu.Unlock()
 		h.setAgent(func(a *core.AgentState) { a.Working, a.TurnStarted, a.Error = true, now, "" })
-		h.markThen(nil)
+		h.markThen(true, nil) // every project, in case the watcher missed something
 	case agent.Message:
 		kind := ev.Role
 		if kind == "" {
@@ -152,14 +152,14 @@ func (h *session) toolResult(ev agent.ToolResult, now time.Time) {
 	h.appendItem(it)
 	switch {
 	case core.ShellTool(it.Tool):
-		h.markThen(func(files []core.FileDiff) {
+		h.markThen(false, func(files []core.FileDiff) {
 			if len(files) > 0 {
 				it.Files = files
 				h.appendItem(it)
 			}
 		})
 	case ev.Diff != nil:
-		h.markThen(nil)
+		h.markThen(false, nil)
 	}
 	if strings.HasSuffix(call.Tool, "test_run") {
 		h.linkRun(ev)

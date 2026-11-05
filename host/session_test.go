@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/watch"
 )
 
 // workSession starts a work session with the fake agent, and returns it once the agent has its first batch.
@@ -903,11 +904,14 @@ func gitRuns(t *testing.T) func() int {
 	}
 }
 
-// Shell commands come faster than the session's projects can be marked: the marks still waiting are made once, not
-// one each, so a burst of commands over seven projects doesn't leave a queue of work-tree snapshots behind it.
-func TestShellMarksCatchUpAfterABurstBudget(t *testing.T) {
-	runs := gitRuns(t)
+// sevenProjects is a work session over seven repos, its first turn started and its first mark (of all seven) made,
+// with the git runs that mark took. The app hands the host the session's freshness manager, as Oriel's does.
+func sevenProjects(t *testing.T, runs func() int) (*rig, core.SessionID, *agenttest.FakeSession, int) {
+	t.Helper()
 	r := newRig(t)
+	m := watch.New(watch.Options{Name: "the session"})
+	t.Cleanup(m.Close)
+	r.w.SetApp(App{Watches: func(core.SessionID) *watch.Manager { return m }})
 	repos := []core.RepoID{core.RepoID(r.repo.Dir)}
 	for i := range 6 {
 		g := gittest.New(t)
@@ -918,49 +922,74 @@ func TestShellMarksCatchUpAfterABurstBudget(t *testing.T) {
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Many projects", Provider: "fake", Model: "m1", Repos: repos})
 	a := r.agent()
 	a.WaitSent(t)
-	a.Emit(agent.TurnStart{})
-	time.Sleep(time.Second) // the turn's own mark is made
-	// One command's marks, alone.
 	before := runs()
-	a.Emit(agent.ToolCall{ID: "one", Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
-	a.Emit(agent.ToolResult{ID: "one", Output: "ok"})
-	settle := func() int {
-		for n := -1; ; time.Sleep(300 * time.Millisecond) {
-			if m := runs(); m == n {
-				return m
-			} else {
-				n = m
-			}
+	a.Emit(agent.TurnStart{})
+	full := settled(runs) - before
+	if full == 0 {
+		t.Fatal("the turn's start made no mark")
+	}
+	return r, id, a, full
+}
+
+// settled is runs once it has stopped changing.
+func settled(runs func() int) int {
+	for n := -1; ; time.Sleep(400 * time.Millisecond) {
+		if m := runs(); m == n {
+			return m
+		} else {
+			n = m
 		}
 	}
-	one := settle() - before
-	if one == 0 {
-		t.Fatal("a command made no mark")
-	}
-	before = runs()
+}
+
+// Shell commands come faster than the session's projects can be marked: the marks still waiting are made once, not
+// one each, so a burst of commands over seven projects doesn't leave a queue of work-tree snapshots behind it.
+func TestShellMarksCatchUpAfterABurstBudget(t *testing.T) {
+	runs := gitRuns(t)
+	r, id, a, full := sevenProjects(t, runs)
+	dirs := r.session(id).Projects
+	before := runs()
 	for i := range 150 {
 		call := fmt.Sprintf("b%d", i)
+		os.WriteFile(filepath.Join(dirs[i%7].Dir, "burst.go"), []byte(fmt.Sprintf("package p // %d\n", i)), 0o644)
 		a.Emit(agent.ToolCall{ID: call, Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
 		a.Emit(agent.ToolResult{ID: call, Output: "ok"})
 	}
 	r.eventually(id, "the burst", func(se core.SessionState) bool {
 		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "b149" && it.Done })
 	})
-	if n := settle() - before; n > 5*one {
-		t.Errorf("150 commands ran git %d times, %d marks' worth; want the waiting marks made together, at most 5", n, n/one)
+	if n := settled(runs) - before; n > 5*full {
+		t.Errorf("150 commands ran git %d times, %d marks of every project; want the waiting marks made together, at most 5", n, n/full)
 	}
-	// What's changed after the burst is still found, and on the command that changed it.
+}
+
+// A command's mark snapshots only the projects the file watcher saw change, and still finds what the command did:
+// one that changed nothing runs no git, and one that wrote a file in one project snapshots that one and records it.
+func TestShellMarksOnlyWhatChanged(t *testing.T) {
+	runs := gitRuns(t)
+	r, id, a, full := sevenProjects(t, runs)
+	before := runs()
+	a.Emit(agent.ToolCall{ID: "quiet", Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
+	a.Emit(agent.ToolResult{ID: "quiet", Output: "ok"})
+	if n := settled(runs) - before; n != 0 {
+		t.Errorf("a command that changed nothing ran git %d times", n)
+	}
 	dir := r.session(id).Projects[3].Dir
+	before = runs()
 	if err := os.WriteFile(filepath.Join(dir, "gen.go"), []byte("package gen\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	a.Emit(agent.ToolCall{ID: "last", Tool: "Bash", Input: json.RawMessage(`{"command":"python3 gen.py"}`)})
-	a.Emit(agent.ToolResult{ID: "last", Output: "ok"})
-	se := r.eventually(id, "the last command's files", func(se core.SessionState) bool {
-		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "last" && len(it.Files) > 0 })
+	a.Emit(agent.ToolCall{ID: "gen", Tool: "Bash", Input: json.RawMessage(`{"command":"python3 gen.py"}`)})
+	a.Emit(agent.ToolResult{ID: "gen", Output: "ok"})
+	se := r.eventually(id, "the command's files", func(se core.SessionState) bool {
+		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "gen" && len(it.Files) > 0 })
 	})
-	it := se.Transcript[slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == "last" })]
+	it := se.Transcript[slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == "gen" })]
 	if len(it.Files) != 1 || it.Files[0].Path != filepath.Join(dir, "gen.go") {
 		t.Errorf("files = %+v", it.Files)
+	}
+	// One project's snapshot and its diff: well under the seven projects' snapshots.
+	if n := settled(runs) - before; n > full/3 {
+		t.Errorf("a change to one project ran git %d times; marking all seven took %d", n, full)
 	}
 }
