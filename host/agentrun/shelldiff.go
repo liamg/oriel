@@ -12,6 +12,8 @@ import (
 )
 
 // markThen queues a mark, run off the event loop in the order asked, and calls then, if any, with what it found.
+// Marks asked for while one is made are made once, after it: what it finds is the newest asker's, and the others
+// find nothing.
 func (h *session) markThen(then func([]core.FileDiff)) {
 	h.mu.Lock()
 	h.markq = append(h.markq, then)
@@ -29,11 +31,15 @@ func (h *session) markThen(then func([]core.FileDiff)) {
 				h.mu.Unlock()
 				return
 			}
-			then := h.markq[0]
-			h.markq = h.markq[1:]
+			waiting := h.markq
+			h.markq = nil
 			h.mu.Unlock()
-			if files := h.mark(); then != nil {
-				then(files)
+			files := h.mark()
+			for i := len(waiting) - 1; i >= 0; i-- {
+				if then := waiting[i]; then != nil {
+					then(files)
+					files = nil
+				}
 			}
 		}
 	})

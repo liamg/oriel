@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host/agentrun"
 )
 
@@ -879,5 +881,86 @@ func TestShellCommandsRecordWhatTheyChanged(t *testing.T) {
 	}
 	if got := it.Files[0].Lines[2]; got.Op != "+" || got.New != 3 || got.Text != "func Gen() {}" {
 		t.Errorf("line 3 = %+v", got)
+	}
+}
+
+// gitRuns puts a git on PATH that logs each run before running the real one, and counts the runs so far.
+func gitRuns(t *testing.T) func() int {
+	t.Helper()
+	real, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir, log := t.TempDir(), filepath.Join(t.TempDir(), "runs")
+	shim := "#!/bin/sh\necho >> \"" + log + "\"\nexec \"" + real + "\" \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "git"), []byte(shim), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return func() int {
+		b, _ := os.ReadFile(log)
+		return strings.Count(string(b), "\n")
+	}
+}
+
+// Shell commands come faster than the session's projects can be marked: the marks still waiting are made once, not
+// one each, so a burst of commands over seven projects doesn't leave a queue of work-tree snapshots behind it.
+func TestShellMarksCatchUpAfterABurstBudget(t *testing.T) {
+	runs := gitRuns(t)
+	r := newRig(t)
+	repos := []core.RepoID{core.RepoID(r.repo.Dir)}
+	for i := range 6 {
+		g := gittest.New(t)
+		g.Write(map[string]string{fmt.Sprintf("p%d.go", i): "package p\n"})
+		g.Commit("Ada", "first")
+		repos = append(repos, core.RepoID(g.Dir))
+	}
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Many projects", Provider: "fake", Model: "m1", Repos: repos})
+	a := r.agent()
+	a.WaitSent(t)
+	a.Emit(agent.TurnStart{})
+	time.Sleep(time.Second) // the turn's own mark is made
+	// One command's marks, alone.
+	before := runs()
+	a.Emit(agent.ToolCall{ID: "one", Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
+	a.Emit(agent.ToolResult{ID: "one", Output: "ok"})
+	settle := func() int {
+		for n := -1; ; time.Sleep(300 * time.Millisecond) {
+			if m := runs(); m == n {
+				return m
+			} else {
+				n = m
+			}
+		}
+	}
+	one := settle() - before
+	if one == 0 {
+		t.Fatal("a command made no mark")
+	}
+	before = runs()
+	for i := range 150 {
+		call := fmt.Sprintf("b%d", i)
+		a.Emit(agent.ToolCall{ID: call, Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
+		a.Emit(agent.ToolResult{ID: call, Output: "ok"})
+	}
+	r.eventually(id, "the burst", func(se core.SessionState) bool {
+		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "b149" && it.Done })
+	})
+	if n := settle() - before; n > 5*one {
+		t.Errorf("150 commands ran git %d times, %d marks' worth; want the waiting marks made together, at most 5", n, n/one)
+	}
+	// What's changed after the burst is still found, and on the command that changed it.
+	dir := r.session(id).Projects[3].Dir
+	if err := os.WriteFile(filepath.Join(dir, "gen.go"), []byte("package gen\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a.Emit(agent.ToolCall{ID: "last", Tool: "Bash", Input: json.RawMessage(`{"command":"python3 gen.py"}`)})
+	a.Emit(agent.ToolResult{ID: "last", Output: "ok"})
+	se := r.eventually(id, "the last command's files", func(se core.SessionState) bool {
+		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "last" && len(it.Files) > 0 })
+	})
+	it := se.Transcript[slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == "last" })]
+	if len(it.Files) != 1 || it.Files[0].Path != filepath.Join(dir, "gen.go") {
+		t.Errorf("files = %+v", it.Files)
 	}
 }
