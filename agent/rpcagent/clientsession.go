@@ -65,7 +65,7 @@ func (c *Client) start(ctx context.Context, resume string, spec agent.StartSpec)
 		}
 	}
 	if c.said().MCP {
-		if s.tools, err = mcptools.Serve(spec.Tools); err != nil {
+		if s.tools, err = mcptools.Serve(spec.Offered); err != nil {
 			return nil, fmt.Errorf("serving Oriel's tools: %w", err)
 		}
 		e := mcptools.Entry(s.tools.Path(), c.self(), spec.Sandbox)
@@ -230,14 +230,15 @@ func (s *session) finish(drain bool) {
 }
 
 func (s *session) tool(ctx context.Context, name string, args json.RawMessage) (string, error) {
-	i := slices.IndexFunc(s.spec.Tools, func(t agent.Tool) bool { return t.Name == name })
-	if i < 0 || s.spec.Tools[i].Call == nil {
+	tools := s.spec.Offered()
+	i := slices.IndexFunc(tools, func(t agent.Tool) bool { return t.Name == name })
+	if i < 0 || tools[i].Call == nil {
 		return "", fmt.Errorf("no such tool: %s", name)
 	}
 	if len(args) == 0 {
 		args = json.RawMessage("{}")
 	}
-	return s.spec.Tools[i].Call(ctx, args)
+	return tools[i].Call(ctx, args)
 }
 
 // proc is a process Oriel runs for a plugin's session, through the session's Exec.

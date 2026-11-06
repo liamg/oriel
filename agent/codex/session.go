@@ -124,7 +124,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 			return nil, fmt.Errorf("codex isn't installed: %w", err)
 		}
 	}
-	tools, err := serveTools(spec.Tools)
+	tools, err := serveTools(spec.Offered)
 	if err != nil {
 		return nil, fmt.Errorf("codex: serving Oriel's tools: %w", err)
 	}
