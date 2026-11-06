@@ -394,6 +394,7 @@ func (w *Window) loop() {
 			start := time.Now()
 			var waited time.Duration
 			f.Begin(gtx.Ops, scale)
+			f.Window(size)
 			f.Rect(render.Rect{Max: size}, render.Style{Fill: w.opts.Background})
 			if l := w.latest.Load(); l != nil {
 				if l != shown {
