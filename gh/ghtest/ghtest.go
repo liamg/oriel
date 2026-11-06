@@ -29,6 +29,8 @@ type Server struct {
 	logs   map[int64]string      // Actions jobs' logs
 	fail   map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
 	calls  []string              // "POST /repos/acme/api/pulls"
+	lag    bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
+	unseen map[string]bool       // owner/name#number: made while lagging
 
 	login       string                         // who the fake's client is: what it posts is by them
 	review      map[string][]*gh.ReviewComment // by owner/name#number
@@ -228,6 +230,21 @@ func (s *Server) find(r *http.Request) (string, *gh.PR) {
 	return s.findNum(repoOf(r), n)
 }
 
+// Lag has PRs raised from now on left out of listings, as GitHub's lag behind what it has just made, until
+// CatchUp.
+func (s *Server) Lag() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lag = true
+}
+
+// CatchUp lists every PR again.
+func (s *Server) CatchUp() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.lag, s.unseen = false, nil
+}
+
 func (s *Server) listPRs(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -237,7 +254,7 @@ func (s *Server) listPRs(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	out := []map[string]any{}
 	for _, p := range slices.Backward(s.prs[repo]) { // newest first, as GitHub sorts them
-		if head != "" && p.Head != head || state != "all" && p.State != cmpOr(state, "open") {
+		if head != "" && p.Head != head || state != "all" && p.State != cmpOr(state, "open") || s.unseen[repo+"#"+strconv.Itoa(p.Number)] {
 			continue
 		}
 		out = append(out, s.restPR(repo, p))
@@ -275,6 +292,12 @@ func (s *Server) createPR(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	_, found := s.findNum(repo, p.Number)
+	if s.lag {
+		if s.unseen == nil {
+			s.unseen = map[string]bool{}
+		}
+		s.unseen[repo+"#"+strconv.Itoa(p.Number)] = true
+	}
 	reply(w, 201, s.restPR(repo, found))
 }
 
