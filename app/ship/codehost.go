@@ -54,9 +54,20 @@ type prRead struct {
 
 // prCache is the code hosts' last answers, by session/project/branch.
 type prCache struct {
-	mu   sync.Mutex
-	read map[string]prRead
+	mu     sync.Mutex
+	read   map[string]prRead
+	raised map[string]raisedPR // the PR raising answered with, until the code host's lookup finds it too
 }
+
+// raisedPR is a PR as its code host answered raising it, and when.
+type raisedPR struct {
+	pr registry.PR
+	at time.Time
+}
+
+// raisedHold is how long a PR just raised stands for a lookup that doesn't find it yet: a code host's search by
+// branch can lag the PR it has just made.
+const raisedHold = 2 * time.Minute
 
 // withPRs is ships with each one's code host, PR and checks: the last prTTL's unless fresh.
 func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship, fresh bool) []shipRead {
@@ -115,6 +126,17 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	g = prRead{at: x.Clock()}
 	h, repo := *s.Code, s.codeRepo(id)
 	pr, err := forBranch(ctx, h, repo, s.Branch)
+	x.cache.mu.Lock()
+	if r, ok := x.cache.raised[key]; ok {
+		switch {
+		case pr != nil || x.Clock().Sub(r.at) >= raisedHold:
+			delete(x.cache.raised, key)
+		case err == nil:
+			raised := r.pr
+			pr = &raised // raised a moment ago: the lookup hasn't caught up
+		}
+	}
+	x.cache.mu.Unlock()
 	switch {
 	case err != nil:
 		g.err = err.Error()
@@ -206,6 +228,12 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 	if pr == nil {
 		return fmt.Errorf("%s didn't answer with the %s", h.Label(), h.Said().Short)
 	}
+	x.cache.mu.Lock()
+	if x.cache.raised == nil {
+		x.cache.raised = map[string]raisedPR{}
+	}
+	x.cache.raised[formKey(se.ID, s.Project)+"/"+s.Branch] = raisedPR{pr: *pr, at: x.Clock()}
+	x.cache.mu.Unlock()
 	if len(r.Reviewers) > 0 && h.RequestReviewers != nil {
 		if err := registry.Call(func() error { return h.RequestReviewers(ctx, repo, *pr, r.Reviewers) }); err != nil {
 			return err
