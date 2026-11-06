@@ -42,11 +42,22 @@ type Frame struct {
 	images map[*image.RGBA]*imageEntry
 	shapes map[shapeKey]*shapeEntry
 	geo    []float32 // a path's geometry, reused from path to path
-	stack  []func()
+	stack  []pushed
+	view   image.Rectangle // what's on screen of the window, in device pixels, inside the clips pushed
+	drawn  int             // glyphs and rects drawn this frame, for the tests
 
 	backdrop color.NRGBA
 	alphas   map[[2]color.NRGBA]uint8
 }
+
+// pushed is a clip or an opacity layer pushed, and what was on screen before it.
+type pushed struct {
+	pop  func()
+	view image.Rectangle
+}
+
+// unbounded is a view with no edges: a frame shows everything until it's told the window's size or a clip.
+var unbounded = image.Rect(-1<<30, -1<<30, 1<<30, 1<<30)
 
 type covKey struct {
 	face int32
@@ -114,6 +125,7 @@ func (c *Frame) Begin(ops *op.Ops, scale float32) {
 	c.ops, c.scale = ops, scale
 	c.frame++
 	c.stack = c.stack[:0]
+	c.view, c.drawn = unbounded, 0
 	c.atlas.beginFrame()
 	for k, im := range c.images {
 		if c.frame-im.used > 2 {
@@ -139,6 +151,14 @@ func (c *Frame) Begin(ops *op.Ops, scale float32) {
 	}
 }
 
+// Window bounds what the frame draws to a window of size: nothing outside it is drawn.
+func (c *Frame) Window(size render.Point) {
+	c.view = c.view.Intersect(c.irect(render.Rect{Max: size}))
+}
+
+// shows says device-pixel rect r is at least partly on screen, inside the clips.
+func (c *Frame) shows(r image.Rectangle) bool { return r.Overlaps(c.view) }
+
 // End pops anything left pushed.
 func (c *Frame) End() {
 	for len(c.stack) > 0 {
@@ -157,6 +177,14 @@ func (c *Frame) irect(r render.Rect) image.Rectangle {
 func (c *Frame) pt(p render.Point) f32.Point { return f32.Pt(p.X*c.scale, p.Y*c.scale) }
 
 func (c *Frame) Rect(r render.Rect, s render.Style) {
+	edge := 1
+	if s.Width > 0 {
+		edge += c.px(s.Width)
+	}
+	if !c.shows(c.irect(r).Inset(-edge)) {
+		return
+	}
+	c.drawn++
 	if g := s.Gradient; g != nil {
 		c.gradient(r, g)
 	} else if s.Fill.A > 0 {
@@ -281,11 +309,21 @@ func (c *Frame) Glyphs(run *typeset.Run, at render.Point, col color.NRGBA) {
 	ppem := run.Font.Size * c.scale
 	base := c.px(at.Y)
 	pen := at.X * c.scale
+	// A glyph's ink stays within an em or two of its pen and the run's line: past the view, it isn't drawn.
+	reach := int(math.Ceil(float64(2 * ppem)))
+	line := image.Rect(c.px(at.X)-reach, base-c.px(run.Ascent)-reach, c.px(at.X+run.Advance)+reach, base+c.px(run.Descent)+reach)
+	if !c.shows(line) {
+		return
+	}
 	for _, g := range run.Glyphs {
 		if g.Face == nil {
 			continue
 		}
 		ix, sub := typeset.SubStep(pen + g.X*c.scale)
+		if ix+reach < c.view.Min.X || ix-reach > c.view.Max.X {
+			continue
+		}
+		c.drawn++
 		ck := covKey{face: g.Face.ID, gid: g.ID, ppem: int32(math.Round(float64(ppem * 64))), sub: sub}
 		gk := glyphKey{ck, col}
 		e, ok := c.atlas.Lookup(gk)
@@ -344,19 +382,22 @@ func (c *Frame) PushClip(r render.Rect, radius float32) {
 	ir := c.irect(r)
 	if radius > 0 {
 		rad := min(radius, r.Dx()/2, r.Dy()/2)
-		c.stack = append(c.stack, clip.UniformRRect(ir, c.px(rad)).Push(c.ops).Pop)
-		return
+		c.stack = append(c.stack, pushed{clip.UniformRRect(ir, c.px(rad)).Push(c.ops).Pop, c.view})
+	} else {
+		c.stack = append(c.stack, pushed{clip.Rect(ir).Push(c.ops).Pop, c.view})
 	}
-	c.stack = append(c.stack, clip.Rect(ir).Push(c.ops).Pop)
+	c.view = c.view.Intersect(ir)
 }
 
 func (c *Frame) PushOpacity(a float32) {
-	c.stack = append(c.stack, paint.PushOpacity(c.ops, c.layerAlpha(a)).Pop)
+	c.stack = append(c.stack, pushed{paint.PushOpacity(c.ops, c.layerAlpha(a)).Pop, c.view})
 }
 
 func (c *Frame) Pop() {
 	if n := len(c.stack); n > 0 {
-		c.stack[n-1]()
+		p := c.stack[n-1]
+		p.pop()
+		c.view = p.view
 		c.stack = c.stack[:n-1]
 	}
 }

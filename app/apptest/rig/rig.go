@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -92,6 +93,14 @@ type LoggedFake struct {
 	logs  map[string]string
 	found []agent.Transcript
 	held  chan struct{} // what Discover waits for to close
+	finds int           // Discover's calls
+}
+
+// Discovers counts the times the logs on the machine were looked for.
+func (f *LoggedFake) Discovers() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.finds
 }
 
 // NewLoggedFake is a LoggedFake with no logs yet.
@@ -122,6 +131,13 @@ func (f *LoggedFake) HoldScans() (release func()) {
 	return sync.OnceFunc(func() { close(ch) })
 }
 
+// DiscoverStamp moves with each transcript Found.
+func (f *LoggedFake) DiscoverStamp() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return strconv.Itoa(len(f.found))
+}
+
 func (f *LoggedFake) Discover() []agent.Transcript {
 	f.mu.Lock()
 	held := f.held
@@ -131,6 +147,7 @@ func (f *LoggedFake) Discover() []agent.Transcript {
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.finds++
 	return slices.Clone(f.found)
 }
 

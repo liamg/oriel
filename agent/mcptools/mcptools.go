@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/jsonrpc"
@@ -24,20 +25,25 @@ type Server struct {
 	dir   string
 	path  string
 	ln    net.Listener
-	tools []agent.Tool
+	tools func() []agent.Tool
 	ctx   context.Context
 	stop  context.CancelFunc
 	wg    sync.WaitGroup
 
 	mu    sync.Mutex
 	conns []*jsonrpc.Conn
+	names []string // the tools' names when last listed or checked
 }
+
+// recheck is how often the tools are compared with those listed: a change sends notifications/tools/list_changed.
+const recheck = 10 * time.Second
 
 // sockDirMax is how long the socket's directory may be: a unix socket's path has to fit in about 100 bytes.
 const sockDirMax = 80
 
-// Serve listens in a fresh short directory: the temp directory's, or /tmp's when that's too long.
-func Serve(tools []agent.Tool) (*Server, error) {
+// Serve listens in a fresh short directory: the temp directory's, or /tmp's when that's too long. tools are those
+// offered now, asked again at each list and call.
+func Serve(tools func() []agent.Tool) (*Server, error) {
 	base := os.TempDir()
 	if len(base) > sockDirMax {
 		base = "/tmp"
@@ -53,9 +59,38 @@ func Serve(tools []agent.Tool) (*Server, error) {
 		return nil, err
 	}
 	ctx, stop := context.WithCancel(context.Background())
-	s := &Server{dir: dir, path: path, ln: ln, tools: tools, ctx: ctx, stop: stop}
+	s := &Server{dir: dir, path: path, ln: ln, tools: tools, ctx: ctx, stop: stop, names: agent.ToolNames(tools())}
 	s.wg.Go(s.accept)
+	s.wg.Go(s.watch)
 	return s, nil
+}
+
+// watch tells the clients when the tools change.
+func (s *Server) watch() {
+	t := time.NewTicker(recheck)
+	defer t.Stop()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-t.C:
+			s.changed(s.tools())
+		}
+	}
+}
+
+// changed notes the tools' names, and tells the clients when they differ from the last.
+func (s *Server) changed(tools []agent.Tool) {
+	names := agent.ToolNames(tools)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if slices.Equal(names, s.names) {
+		return
+	}
+	s.names = names
+	for _, c := range s.conns {
+		_ = c.Notify("notifications/tools/list_changed", nil)
+	}
 }
 
 // Path is the socket's path, for SockEnv.
@@ -77,8 +112,10 @@ func (s *Server) accept() {
 func (s *Server) handle(r *jsonrpc.Request) {
 	switch r.Method {
 	case "tools/list":
+		tools := s.tools()
+		s.changed(tools)
 		list := []map[string]any{}
-		for _, t := range s.tools {
+		for _, t := range tools {
 			schema := t.Schema
 			if len(schema) == 0 {
 				schema = json.RawMessage(`{"type":"object"}`)
@@ -99,15 +136,16 @@ func (s *Server) handle(r *jsonrpc.Request) {
 			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "invalid params"})
 			return
 		}
-		i := slices.IndexFunc(s.tools, func(t agent.Tool) bool { return t.Name == p.Name })
-		if i < 0 || s.tools[i].Call == nil {
+		tools := s.tools()
+		i := slices.IndexFunc(tools, func(t agent.Tool) bool { return t.Name == p.Name })
+		if i < 0 || tools[i].Call == nil {
 			r.Reply(textResult("no such tool: "+p.Name, true), nil)
 			return
 		}
 		if len(p.Arguments) == 0 {
 			p.Arguments = json.RawMessage("{}")
 		}
-		call := s.tools[i].Call
+		call := tools[i].Call
 		s.wg.Go(func() {
 			out, err := call(s.ctx, p.Arguments)
 			if err != nil {

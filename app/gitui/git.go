@@ -231,7 +231,7 @@ func (g *Git) commands() []registry.Command {
 			for i, p := range ps {
 				ps[i] = t.rel(p)
 			}
-			g.async(func(ctx context.Context) error { return fn(ctx, t.status.Repo(), ps) })
+			g.async(func(ctx context.Context) error { return fn(ctx, t.status.Repo(), ps) }, t)
 			return nil
 		}
 	}
@@ -353,22 +353,26 @@ func (g *Git) Deactivate(ctx context.Context) error {
 	return err
 }
 
-// async runs fn off the loop, then has the trees it may have changed read again; an error is a notice.
-func (g *Git) async(fn func(ctx context.Context) error) {
+// async runs fn off the loop, then has the trees it changed read again (every tree when none are named); an error is
+// a notice. Other trees' watches stand: an op on one tree changes no other.
+func (g *Git) async(fn func(ctx context.Context) error, trees ...*gitTree) {
 	done := g.start()
 	go func() {
 		defer done()
 		if err := fn(context.Background()); err != nil {
 			g.h.Notify(core.Notice{ID: "git.error", Severity: core.SevError, Key: true, Text: err.Error()})
 		}
-		g.refresh()
+		if len(trees) == 0 {
+			trees = append(g.trees(), &g.gitTree)
+		}
+		g.refresh(trees)
 		g.h.Redraw()
 	}()
 }
 
-// refresh reads every subscribed tree again, sooner than its watch would.
-func (g *Git) refresh() {
-	for _, t := range append(g.trees(), &g.gitTree) {
+// refresh reads trees again, sooner than their watches would.
+func (g *Git) refresh(trees []*gitTree) {
+	for _, t := range trees {
 		t.mu.Lock()
 		t.unread = false
 		sub := t.sub
@@ -627,7 +631,7 @@ type gitTrees struct{ g *Git }
 
 func (s gitTrees) Tree(dir string) registry.GitTree      { return s.g.tree(dir) }
 func (s gitTrees) Holding(p string) registry.GitTree     { return s.g.holding(p) }
-func (s gitTrees) Do(fn func(ctx context.Context) error) { s.g.async(fn) }
+func (s gitTrees) Do(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
 func (s gitTrees) Reload()                               { s.g.reload() }
 func (s gitTrees) Busy() bool                            { return s.g.running.Load() > 0 || s.g.reading() }
 func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {

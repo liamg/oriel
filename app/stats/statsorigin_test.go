@@ -109,3 +109,28 @@ func TestStatsOriginSplit(t *testing.T) {
 	settle(s, x)
 	s.WantFrame("BURNED THE WEEKLY WINDOW", "outside Oriel", "1 sess")
 }
+
+// Asking for stats again doesn't look for every log on the machine again: the list stands until a log is added, or
+// for a minute. One added shows at once.
+func TestStatsQueriesListTheMachinesLogsOnce(t *testing.T) {
+	s, r, x := statsScene(t)
+	settle(s, x)
+	week := hoststats.Query{From: rig.StatsNow.Truncate(24*time.Hour).AddDate(0, 0, -6), To: rig.StatsNow.Truncate(24*time.Hour).AddDate(0, 0, 1),
+		Offset: x.Offset(), Split: true}
+	before := r.Claude.Discovers()
+	for range 3 {
+		x.ForgetReports()
+		x.Report(week)
+		settle(s, x)
+	}
+	if n := r.Claude.Discovers() - before; n > 0 {
+		t.Errorf("3 queries looked for the machine's logs %d times", n)
+	}
+	outside(t, r)
+	x.ForgetReports()
+	x.Report(week)
+	settle(s, x)
+	if all := x.Report(week); len(all.Origins) != 2 {
+		t.Errorf("a log added didn't count at once: origins %+v", all.Origins)
+	}
+}

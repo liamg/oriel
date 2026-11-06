@@ -11,6 +11,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
@@ -106,6 +107,25 @@ func DefaultConfigDir() string {
 	return filepath.Join(home, ".config", "oriel")
 }
 
+// behindRedraw is how often the events of sessions behind the one in front ask for a frame: what shows of them (a
+// status, a count) keeps up, and their agents' streaming doesn't build the window over for every token.
+const behindRedraw = 150 * time.Millisecond
+
+// behindPaced pokes for each event of the session in front, or of none, at once, and for those of the sessions
+// behind it once per behindRedraw.
+func behindPaced(st core.Store, poke func()) func(core.Event) {
+	var due atomic.Bool
+	return func(ev core.Event) {
+		if id := ev.Scope(); id == "" || id == st.Focus() {
+			poke()
+			return
+		}
+		if due.CompareAndSwap(false, true) {
+			time.AfterFunc(behindRedraw, func() { due.Store(false); poke() })
+		}
+	}
+}
+
 // Run opens a window and runs the app, builtins first, until the window closes or ctx is done.
 func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) (err error) {
 	cfg.defaults()
@@ -165,7 +185,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 		sh.desktop = windowDesktop(w)
 	}
 
-	cancel := cfg.Store.Subscribe(core.Filter{}, func(core.Event) { poke() })
+	cancel := cfg.Store.Subscribe(core.Filter{}, behindPaced(cfg.Store, poke))
 	defer cancel()
 	cfg.Logs.OnShownWrite(poke)
 

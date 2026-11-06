@@ -68,7 +68,9 @@ func orielAXKids(h C.uintptr_t, id C.uint64_t, n *C.int) *C.uintptr_t {
 	if b == nil {
 		return nil
 	}
-	b.on.Store(true)
+	if b.on.CompareAndSwap(false, true) && b.ax.wake != nil {
+		b.ax.wake()
+	}
 	e, ok := b.ax.tree.get(uint64(id))
 	if !ok {
 		return nil

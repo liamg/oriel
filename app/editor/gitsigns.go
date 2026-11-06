@@ -70,6 +70,7 @@ type bufAgainst struct {
 type gitBlame struct {
 	loaded  bool
 	version uint64
+	head    string // the commit it was read at
 	lines   []gitx.BlameLine
 	loading bool
 }
@@ -85,12 +86,21 @@ type bufHunks struct {
 
 func (g *GitSigns) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gitsigns"} }
 
-// stale has the bases and blames read again: the window's work tree changed, or is another.
-func (g *GitSigns) stale() {
+// stale has the bases and blames that changes to paths left behind read again: the index's of each, and the blame of
+// each. No paths is another work tree: everything goes. A base at a commit never changes, and a blame is read
+// again when the head moves (blameOf).
+func (g *GitSigns) stale(paths []string) {
 	g.mu.Lock()
-	clear(g.bases)
-	for _, b := range g.blames {
-		b.loaded = false
+	if paths == nil {
+		clear(g.bases)
+	}
+	for _, p := range paths {
+		delete(g.bases, gitSource{path: p})
+	}
+	for f, b := range g.blames {
+		if paths == nil || slices.Contains(paths, f) {
+			b.loaded = false
+		}
 	}
 	g.mu.Unlock()
 	g.h.DecorationsChanged("git.hunks")
@@ -108,7 +118,7 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		Help: "What the gutter marks a file's changes against: where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
-	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(string, []string) { g.stale() })))
+	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale(paths) })))
 	for _, c := range []registry.Command{
 		{ID: "git.hunk.stage", Title: "Stage the hunk under the cursor", Run: g.cmd(true, g.stage)},
 		{ID: "git.hunk.unstage", Title: "Unstage the staged hunk at the cursor", Run: g.cmd(true, g.unstage)},
@@ -374,17 +384,21 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 		return uireg.Decoration{}, false
 	}
 	snap := ctx.Snap
+	head := ""
+	if st := kit.GitOf(g.h).Tree("").State(); st != nil {
+		head = st.Head
+	}
 	g.mu.Lock()
 	b, ok := g.blames[f.rel]
 	if !ok {
 		b = &gitBlame{}
 		g.blames[f.rel] = b
 	}
-	if b.loaded && b.version != snap.Version() && !g.typing.Ready(f.rel, snap.Version()) {
+	if b.loaded && b.head == head && b.version != snap.Version() && !g.typing.Ready(f.rel, snap.Version()) {
 		g.mu.Unlock()
 		return uireg.Decoration{}, false // a line being typed has no blame worth a git run until it's still
 	}
-	if !b.loaded || b.version != snap.Version() {
+	if !b.loaded || b.version != snap.Version() || b.head != head {
 		if !b.loading {
 			b.loading = true
 			g.busy.Add(1)
@@ -395,7 +409,7 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 				g.h.Do(func() {
 					g.mu.Lock()
 					// A file blame can't read (untracked, say) waits for an edit or a git change to try again, not the next frame.
-					b.loading, b.version, b.lines, b.loaded = false, version, lines, true
+					b.loading, b.version, b.head, b.lines, b.loaded = false, version, head, lines, true
 					if err != nil {
 						b.lines = nil
 					}

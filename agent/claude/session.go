@@ -53,6 +53,7 @@ type session struct {
 	seq      int
 	base     transcript.Usage // the tally when the running turn started
 	screen   screen
+	offered  []string  // the tools' names hello last handed the mod
 	shown    string    // the end of the terminal's text, for saying what was on screen
 	usageErr string    // why $.session.usage() last failed; "" when it didn't
 	out      bool      // its login has been said to be gone, and not seen back
@@ -425,7 +426,7 @@ func (s *session) handle(ctx context.Context, op string, body json.RawMessage) (
 		return s.hello(in), nil, nil
 	case opWait:
 		c := s.wait(ctx)
-		if c.Kind == "timeout" {
+		if c.Kind == "timeout" || c.Kind == "tools" {
 			return c, nil, nil
 		}
 		return c, func() { s.requeue(c) }, nil
@@ -497,7 +498,11 @@ func (s *session) hello(in helloIn) helloOut {
 		s.push(agent.Ready{ID: id})
 	}
 	out := helloOut{Tools: []toolSpec{}}
-	for _, t := range s.spec.Tools {
+	tools := s.spec.Offered()
+	s.mu.Lock()
+	s.offered = agent.ToolNames(tools)
+	s.mu.Unlock()
+	for _, t := range tools {
 		schema := t.Schema
 		if len(schema) == 0 {
 			schema = json.RawMessage(`{"type":"object"}`)
@@ -508,6 +513,9 @@ func (s *session) hello(in helloIn) helloOut {
 }
 
 func (s *session) wait(ctx context.Context) waitOut {
+	if s.toolsChanged() {
+		return waitOut{Kind: "tools"}
+	}
 	timer := time.NewTimer(waitPoll)
 	defer timer.Stop()
 	for {
@@ -522,11 +530,22 @@ func (s *session) wait(ctx context.Context) waitOut {
 		select {
 		case <-s.wake:
 		case <-timer.C:
+			if s.toolsChanged() {
+				return waitOut{Kind: "tools"}
+			}
 			return waitOut{Kind: "timeout"}
 		case <-ctx.Done():
 			return waitOut{Kind: "timeout"}
 		}
 	}
+}
+
+// toolsChanged says the tools offered now aren't those hello last handed the mod: it says hello again to get them.
+func (s *session) toolsChanged() bool {
+	s.mu.Lock()
+	ready, offered := s.ready, s.offered
+	s.mu.Unlock()
+	return ready && !slices.Equal(offered, agent.ToolNames(s.spec.Offered()))
 }
 
 // queued is whether a command of kind waits for the mod.
@@ -722,15 +741,16 @@ func (s *session) question(ctx context.Context, in questionIn) questionOut {
 }
 
 func (s *session) callTool(ctx context.Context, in toolIn) toolOut {
-	i := slices.IndexFunc(s.spec.Tools, func(t agent.Tool) bool { return t.Name == in.Name })
-	if i < 0 || s.spec.Tools[i].Call == nil {
+	tools := s.spec.Offered()
+	i := slices.IndexFunc(tools, func(t agent.Tool) bool { return t.Name == in.Name })
+	if i < 0 || tools[i].Call == nil {
 		return toolOut{Result: "Oriel has no tool " + in.Name + ".", IsError: true}
 	}
 	input := in.Input
 	if len(input) == 0 {
 		input = json.RawMessage(`{}`)
 	}
-	out, err := s.spec.Tools[i].Call(ctx, input)
+	out, err := tools[i].Call(ctx, input)
 	if err != nil {
 		return toolOut{Result: err.Error(), IsError: true}
 	}

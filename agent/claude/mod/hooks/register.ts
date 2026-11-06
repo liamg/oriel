@@ -65,12 +65,18 @@ async function fork($: EngineInterface, st: State, id: string, prompt: string) {
   await host($, st, 'fork-answer', answer)
 }
 
-// connect says hello to Oriel and registers the tools it offers.
+// connect says hello to Oriel and registers the tools it offers that Claude Code doesn't have.
 async function connect($: EngineInterface, st: State) {
   const out = await host($, st, 'hello', { sessionId: st.sessionId, cwd: st.cwd })
   const tools = Array.isArray(out?.tools) ? (out.tools as Args[]) : []
+  const have = await $.tool
+    .list()
+    .then(ts => new Set(ts.map(t => t.name)))
+    .catch(() => new Set<string>())
+  const registered = new Set([...st.tools].filter(([full]) => have.has(full)).map(([, name]) => name))
   for (const t of tools) {
     const name = String(t.name)
+    if (registered.has(name)) continue
     const reg = await $.tool
       .register({
         name,
@@ -129,6 +135,9 @@ async function poll($: EngineInterface, st: State) {
         break
       case 'usage':
         void reportUsage($, st)
+        break
+      case 'tools':
+        await connect($, st)
         break
     }
   }

@@ -510,6 +510,8 @@ func (b *appkitBridge) update(c accessChange) {
 
 func (b *appkitBridge) activate(bool) {}
 
+func (b *appkitBridge) wanted() bool { return b.on.Load() }
+
 func (b *appkitBridge) close() {
 	appkitBridges.Delete(b.h)
 	C.orielAXDetach(C.uintptr_t(b.h))

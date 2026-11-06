@@ -255,3 +255,31 @@ func TestGutterWaitsForTypingToStop(t *testing.T) {
 		t.Errorf("once still, signs %q, want %q", got, want)
 	}
 }
+
+// Another file's change leaves the open file's gutter base as it was read: only the index's copy of a file whose
+// status changed is read again.
+func TestAnotherFilesChangeKeepsTheBase(t *testing.T) {
+	s, r := signsScene(t)
+	g := signsOf(s)
+	before := g.BaseReads()
+	if before == 0 {
+		t.Fatal("no base read for the open file")
+	}
+	r.Write(map[string]string{"other.txt": "another file\n"})
+	s.Until("the other file's status", func() bool {
+		s.Frame()
+		st := kit.GitOf(s.Registry()).Tree("").State()
+		if st == nil {
+			return false
+		}
+		_, ok := st.File("other.txt")
+		return ok
+	})
+	settle(s)
+	if n := g.BaseReads() - before; n > 0 {
+		t.Errorf("a new file read the open file's base %d more times", n)
+	}
+	if got, want := signsAt(s), "modified@3 added@11 added@12 deleted@21"; got != want {
+		t.Errorf("signs %q, want %q", got, want)
+	}
+}

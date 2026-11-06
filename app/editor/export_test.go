@@ -71,3 +71,10 @@ func (g *GitSigns) Diffs() int {
 	defer g.mu.Unlock()
 	return g.diffs
 }
+
+// BaseReads counts the bases the gutter has read, each file's index or commit copy.
+func (g *GitSigns) BaseReads() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.gens
+}

@@ -46,7 +46,7 @@ type toolSpec struct {
 
 // waitOut is what the mod does next.
 type waitOut struct {
-	Kind   string `json:"kind"` // submit, abort, fork, usage, timeout
+	Kind   string `json:"kind"` // submit, abort, fork, usage, tools, timeout
 	Text   string `json:"text,omitempty"`
 	Urgent bool   `json:"urgent,omitempty"`
 	ID     string `json:"id,omitempty"`

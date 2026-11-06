@@ -1,13 +1,14 @@
 package fswatch
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	_ "github.com/liamg/oriel/internal/isolate" // TMPDIR as FSEvents names it
+	"github.com/liamg/oriel/internal/isolate" // TMPDIR as FSEvents names it
 )
 
 func start(t *testing.T) *Watcher {
@@ -268,4 +269,21 @@ func TestMetadataOnlyChangeIsQuiet(t *testing.T) {
 	expect(t, w, f)
 	write(t, f, "b\n")
 	expect(t, w, f)
+}
+
+// A tree added once the watcher has closed is refused, and starts no watch that would outlive it.
+func TestAddAfterCloseIsRefused(t *testing.T) {
+	isolate.Test(t)
+	w, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	w.Close()
+	if err := w.AddTree(dir, nil); !errors.Is(err, ErrClosed) {
+		t.Fatalf("AddTree after Close: %v, want ErrClosed", err)
+	}
+	if err := w.Add(dir); !errors.Is(err, ErrClosed) {
+		t.Fatalf("Add after Close: %v, want ErrClosed", err)
+	}
 }

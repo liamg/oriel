@@ -254,7 +254,7 @@ func (e *Explorer) commands() []registry.Command {
 						return err
 					}
 					return repo.StageHunk(ctx, path, work, h)
-				})
+				}, t)
 				return nil
 			}
 			f, ok := e.selectedFile()

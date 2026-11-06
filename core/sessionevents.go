@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 )
 
@@ -297,6 +298,9 @@ func (e TranscriptAppended) Apply(s *State) error {
 	}
 	// One copy, with room for what's added: older states keep theirs. An item replaced is near the end, so it's
 	// looked for from there.
+	if e.repeats(se.Transcript) {
+		return nil // the transcript as it was: Unchanged says so without comparing it
+	}
 	out := make([]Item, len(se.Transcript), len(se.Transcript)+len(e.Items))
 	copy(out, se.Transcript)
 	for _, it := range e.Items {
@@ -311,6 +315,27 @@ func (e TranscriptAppended) Apply(s *State) error {
 	}
 	se.Transcript = out
 	return nil
+}
+
+// repeats says each of e's items is in items already, as it is.
+func (e TranscriptAppended) repeats(items []Item) bool {
+	for _, it := range e.Items {
+		i := LastItem(items, it.ID)
+		if it.ID == "" || i < 0 || !reflect.DeepEqual(items[i], it) {
+			return false
+		}
+	}
+	return true
+}
+
+// Unchanged says the session's transcript is the slice it was: Apply touches nothing else, and leaves it be when its
+// items are all there already.
+func (e TranscriptAppended) Unchanged(was, next *State) bool {
+	a, b := was.session(e.Session), next.session(e.Session)
+	if a == nil || b == nil {
+		return a == b
+	}
+	return len(a.Transcript) == len(b.Transcript) && (len(a.Transcript) == 0 || &a.Transcript[0] == &b.Transcript[0])
 }
 
 // LastItem is the index of the last item of items with id, -1 if none has it: a transcript's newest first.
