@@ -83,7 +83,7 @@ func (g *Git) unpark(root string) bool {
 	})
 	p.remote.OnChange(h.Redraw)
 	t.sync(p.sub, p.status) // the reading kept, already its status's: nothing to hand over
-	p.sub.Resume() // its watches kept on while it was away: it reads again only if something changed
+	p.sub.Resume()          // its watches kept on while it was away: it reads again only if something changed
 	p.remote.Resume()
 	return true
 }
