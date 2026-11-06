@@ -26,6 +26,9 @@ func (w window) contribute() func() {
 		d = append(d, w.sh.cfg.Registry.Contribute(registry.Service{Name: name, Impl: w, Source: "builtin:window"}))
 	}
 	d = append(d, w.sh.cfg.Registry.Contribute(registry.Service{Name: kit.ReadsService, Impl: w.sh.reads, Source: "builtin:window"}))
+	// A window moving is laid out once it arrives (Window.Hold), which replaces what's open meanwhile.
+	d = append(d, w.sh.cfg.Registry.Contribute(registry.Busy{Name: "window arriving", Busy: func() bool { return !w.Arrived() },
+		Source: "builtin:window"}))
 	return func() {
 		for _, x := range d {
 			x.Dispose()
