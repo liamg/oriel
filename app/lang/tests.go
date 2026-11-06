@@ -99,6 +99,7 @@ func testsRail(note func(string) string) uireg.RailEntry {
 }
 
 func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "tests", Busy: x.work.Busy, Source: "builtin:tests"}))
 	x.h = h
 	x.set = testrun.Builtin()
 	x.Add(kit.OnDispose(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))

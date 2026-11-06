@@ -153,7 +153,7 @@ type explorerHunks struct {
 	staged   []gitx.Hunk
 	unstaged []gitx.Hunk
 	gen      int // moves when the hunks or their path do
-	busy     sync.WaitGroup
+	busy     kit.Busy
 }
 
 // show makes path the file whose hunks these are: another's are dropped, to be read again.
@@ -173,6 +173,7 @@ func (x *explorerHunks) mark() hunksMark {
 func (e *Explorer) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explorer"} }
 
 func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
+	e.Add(h.Contribute(registry.Busy{Name: "explorer", Busy: e.hunks.busy.Busy, Source: "builtin:explorer"}))
 	e.h = h
 	e.kept = map[core.SessionID]explorerKept{}
 	e.cols.status, e.cols.lines, e.cols.diag = true, true, true

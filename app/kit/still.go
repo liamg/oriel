@@ -3,14 +3,17 @@ package kit
 import (
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Still holds back costly work on something that changes version by version, a buffer as it's typed in, until it
 // has stayed at one version for a while: Ready says when, and wakes calls wake once the wait is over, so the frame
 // that asks again finds it ready. The zero Still is ready at once.
 type Still[K comparable] struct {
-	Wait time.Duration
-	Wake func()
+	Wait  time.Duration
+	Wake  func()
+	Clock clock.Clock // the system's when nil
 
 	mu   sync.Mutex
 	seen map[K]stillAt
@@ -32,18 +35,19 @@ func (s *Still[K]) Ready(k K, version uint64) bool {
 	if s.seen == nil {
 		s.seen = map[K]stillAt{}
 	}
+	c := clock.Or(s.Clock)
 	at, ok := s.seen[k]
 	if !ok || at.version != version {
-		at = stillAt{version: version, at: time.Now()}
+		at = stillAt{version: version, at: c.Now()}
 	}
-	wait := s.Wait - time.Since(at.at)
+	wait := s.Wait - c.Now().Sub(at.at)
 	if wait <= 0 {
 		s.seen[k] = at
 		return true
 	}
 	if !at.waking && s.Wake != nil {
 		at.waking = true
-		time.AfterFunc(wait, func() {
+		c.AfterFunc(wait, func() {
 			s.mu.Lock()
 			if cur, ok := s.seen[k]; ok && cur.version == version {
 				cur.waking = false

@@ -35,7 +35,7 @@ type dirList struct {
 	repos   map[string]bool
 	walking bool
 	done    bool // a walk has finished
-	busy    sync.WaitGroup
+	busy    kit.Busy
 }
 
 // list is the directories found by the last walk and which are repos, starting a walk when it's due.

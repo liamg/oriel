@@ -226,7 +226,7 @@ func TestLSPRequestsWaitForTheServer(t *testing.T) {
 			t.Errorf("%s: no word that the server is starting: %+v", keys, ns)
 		}
 		s.Frame()
-		s.WantFrame("◌", "starting")
+		s.Midway(func() { s.WantFrame("◌", "starting") })
 		lspSettle(s)
 	}
 }

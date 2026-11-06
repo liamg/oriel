@@ -44,3 +44,19 @@ func (b *Busy) Wait() {
 		b.cond.Wait()
 	}
 }
+
+// Busy says some work is running: what a plugin hands a registry.Busy.
+func (b *Busy) Busy() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.n > 0
+}
+
+// Go runs f on a goroutine of its own, counted while it runs.
+func (b *Busy) Go(f func()) {
+	b.Add(1)
+	go func() {
+		defer b.Done()
+		f()
+	}()
+}

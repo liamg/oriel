@@ -58,7 +58,7 @@ type Search struct {
 	since   time.Time // when the search running began
 	err     error
 	cancel  context.CancelFunc
-	busy    sync.WaitGroup
+	busy    kit.Busy
 
 	plan *editPlan // the edits being previewed
 
@@ -107,6 +107,7 @@ type searchRun struct {
 func (p *Search) Manifest() plugin.Manifest { return plugin.Manifest{ID: "search"} }
 
 func (p *Search) Activate(_ context.Context, h plugin.Host) error {
+	p.Add(h.Contribute(registry.Busy{Name: "search", Busy: p.busy.Busy, Source: "builtin:search"}))
 	p.h = h
 	p.Add(kit.OnDirChanged(h, "search starts afresh in the directory", func(kit.DirChanged) { p.forget() }))
 	for _, c := range []registry.Command{

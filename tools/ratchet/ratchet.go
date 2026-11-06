@@ -174,6 +174,22 @@ func Selectors(files []File, chain string) []Hit {
 	return hits
 }
 
+// PkgSelectors finds pkg.name: a package's function or var, named through the package as the file imports it.
+func PkgSelectors(files []File, pkg, name string) []Hit {
+	var hits []Hit
+	for _, f := range files {
+		ast.Inspect(f.AST, func(n ast.Node) bool {
+			if s, ok := n.(*ast.SelectorExpr); ok && s.Sel.Name == name {
+				if id, ok := s.X.(*ast.Ident); ok && id.Name == pkg {
+					hits = append(hits, Hit{pos(f, s), pkg + "." + name})
+				}
+			}
+			return true
+		})
+	}
+	return hits
+}
+
 // TypeRefs finds *name used as a type.
 func TypeRefs(files []File, name string) []Hit {
 	var hits []Hit

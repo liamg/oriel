@@ -7,7 +7,6 @@ import (
 	"math"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -49,7 +48,7 @@ type Walkthrough struct {
 	kit.Disposer
 	ConfigDir string // the user's config
 	h         plugin.Host
-	busy      sync.WaitGroup
+	busy      kit.Busy
 	metrics   kit.PaneMetrics // the code's, as the editor draws it
 
 	w     *walkthrough // on the loop only
@@ -80,6 +79,7 @@ type walkthrough struct {
 func (x *Walkthrough) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain.change"} }
 
 func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "walkthrough", Busy: x.busy.Busy, Source: "builtin:walkthrough"}))
 	x.h = h
 	x.Add(kit.OnDirChanged(h, "a walkthrough is of its directory", func(kit.DirChanged) { x.w = nil }))
 	for _, c := range x.commands() {

@@ -126,6 +126,7 @@ func (m *Manager) events(fw *fswatch.Watcher) {
 				break
 			}
 		}
+		m.handled++
 		m.mu.Unlock()
 	}
 }

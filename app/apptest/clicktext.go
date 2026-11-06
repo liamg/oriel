@@ -10,6 +10,7 @@ import (
 // frames running and what's under it isn't disabled: what a person would click.
 func (s *Scene) ClickText(text string) {
 	s.T.Helper()
+	s.Quiet()
 	s.drawn(text)
 	var last render.Point
 	for deadline, seen := time.Now().Add(Timeout), false; ; {

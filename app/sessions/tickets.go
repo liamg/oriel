@@ -57,6 +57,7 @@ type ticketRow struct {
 func (x *Tickets) Manifest() plugin.Manifest { return plugin.Manifest{ID: "tickets"} }
 
 func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "tickets", Busy: x.work.Busy, Source: "builtin:tickets"}))
 	x.h, x.lists, x.details = h, map[string]*ticketList{}, map[string]*ticketDetail{}
 	x.Add(h.Contribute(kit.PagePlace("tickets", "Tickets", "tickets.open", &x.page.open)))
 	x.Add(h.Picker(x.source()))

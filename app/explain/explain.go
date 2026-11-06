@@ -51,7 +51,7 @@ type Plugin struct {
 	parsers map[string]*syntax.Parser // by language
 
 	mu        sync.Mutex
-	busy      sync.WaitGroup
+	busy      kit.Busy
 	bufs      map[*text.Buffer]*fileUnits
 	computing map[*text.Buffer]bool
 	seen      map[*text.Buffer]seenVersion // the version last seen, and since when
@@ -144,6 +144,7 @@ func (cd *explainCard) breadcrumb() string {
 func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain"} }
 
 func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "explain", Busy: x.Busy, Source: "builtin:explain"}))
 	x.h = h
 	x.parsers, x.bufs, x.computing = map[string]*syntax.Parser{}, map[*text.Buffer]*fileUnits{}, map[*text.Buffer]bool{}
 	x.seen, x.later = map[*text.Buffer]seenVersion{}, map[*text.Buffer]*heldUnits{}
