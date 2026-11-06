@@ -13,12 +13,13 @@ import (
 
 // GitHub is the host's code host side.
 type GitHub struct {
-	env    hostcore.Env
-	st     hostcore.State
-	deps   Deps
-	ship   shipState
-	mirror mirrorState
-	tokens gh.Tokens // each GitHub server's token, once found
+	env     hostcore.Env
+	st      hostcore.State
+	deps    Deps
+	ship    shipState
+	mirror  mirrorState
+	tokens  gh.Tokens // each GitHub server's token, once found
+	remotes remotes
 }
 
 // Deps are what it needs of the rest of the host.

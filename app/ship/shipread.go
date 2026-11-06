@@ -105,12 +105,12 @@ func (x *Ship) readOne(id core.SessionID, project string, fresh bool) {
 	x.h.Redraw()
 }
 
-// readSoon reads one project of a session again, off the caller's goroutine.
-func (x *Ship) readSoon(id core.SessionID, project string) {
+// readSoon reads one project of a session again, off the caller's goroutine; its PR from the code host when fresh.
+func (x *Ship) readSoon(id core.SessionID, project string, fresh bool) {
 	x.busy.Add(1)
 	go func() {
 		defer x.busy.Done()
-		x.readOne(id, project, false)
+		x.readOne(id, project, fresh)
 	}()
 }
 

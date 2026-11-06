@@ -135,14 +135,14 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 		case core.ProjectsChanged:
 			if moved, ok := x.branchesMoved(ev.ID, ev.Projects); ok {
 				for _, p := range moved {
-					x.readSoon(ev.ID, p)
+					x.readSoon(ev.ID, p, false)
 				}
 			} else {
 				x.refresh(ev.ID, false)
 			}
 			x.follow()
 		case core.DraftSaved:
-			x.readSoon(ev.Session, ev.Project)
+			x.readSoon(ev.Session, ev.Project, false)
 		}
 	})))
 	x.follow()

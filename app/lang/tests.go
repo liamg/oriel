@@ -55,8 +55,11 @@ type Tests struct {
 	found    map[*text.Buffer]*discovery
 	scanned  map[string][]testrun.Item            // every test found in the workspace, by file
 	kept     map[string]map[string][]testrun.Item // scanned of the directories the window has left, by directory
+	watched  bool                                 // git was watching the work tree scanned: it tells of what changes
+	keptGit  map[string]bool                      // which of kept git was watching
 	foundNow map[string]bool                      // the files found in an open buffer since the scan began
 	scanFrom time.Time                            // when the workspace scan began
+	scans    int                                  // whole scans begun, for the tests
 	scanGen  int                                  // which scan is the window's directory's: one of a directory left is dropped
 	byKey    map[string]testrun.Item              // scanned by key, made when asked for
 	pkgs     map[string]bool
@@ -112,20 +115,30 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 			}
 		}
 	})))
-	// A directory's tests stay with it: the window back on one shows them at once, as its scan brings them up to date.
+	// A directory's tests stay with it: the window back on one shows them at once, and reads only what changed.
 	x.Add(kit.OnDirChanged(h, "the tests of the directory", func(ev kit.DirChanged) {
 		x.mu.Lock()
 		x.scanGen++
 		if x.kept == nil {
 			x.kept = map[string]map[string][]testrun.Item{}
 		}
-		if ev.Was != "" && x.scanned != nil {
-			x.kept[ev.Was] = x.scanned
+		if x.keptGit == nil {
+			x.keptGit = map[string]bool{}
 		}
-		x.scanned, x.byKey, x.pkgs, x.last = x.kept[ev.Dir], nil, nil, nil
+		if ev.Was != "" && x.scanned != nil {
+			x.kept[ev.Was], x.keptGit[ev.Was] = x.scanned, x.watched
+		}
+		kept, back := x.kept[ev.Dir]
+		watched := back && x.keptGit[ev.Dir]
+		x.scanned, x.byKey, x.pkgs, x.last, x.watched = kept, nil, nil, nil, watched
 		delete(x.kept, ev.Dir)
+		delete(x.keptGit, ev.Dir)
 		x.mu.Unlock()
-		h.Do(x.scan) // off the loop: the hook only notes the move
+		// Back on one git watches, its tests stand: the watch hands over the files that changed while it was away.
+		// Outside a repo nothing tells, so it's scanned again.
+		if !watched {
+			h.Do(x.scan) // off the loop: the hook only notes the move
+		}
 	}))
 	x.Add(h.Decorations("tests", uireg.DecorationFunc(x.decorations)))
 	for _, c := range x.commands() {

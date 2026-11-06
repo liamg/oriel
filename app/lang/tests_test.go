@@ -437,3 +437,36 @@ func TestTestsFoundStayWithTheirDirectory(t *testing.T) {
 		t.Errorf("back on %s, the panel had %q", dir, back)
 	}
 }
+
+// The window coming back to a work tree doesn't scan it for tests again: what it found stands, and a test file
+// added while it was away is read when git sees it.
+func TestComingBackScansNoTestsAgain(t *testing.T) {
+	dir := rig.PricingPackage(t)
+	rig.Git(t, dir, "init", "-q")
+	rig.Git(t, dir, "add", "-A")
+	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "first")
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	s.SettleGit()
+	x := testsOf(s)
+	rows := func() string { return treeRows(x.TreeAll(), true) }
+	s.Until("the first scan", func() bool { s.RunQueued(); return strings.Contains(rows(), "TestRoundMinor") })
+	win, _ := kit.WindowOf(s.Registry())
+	move := func(to string) {
+		t.Helper()
+		if err := win.Reopen(to, ""); err != nil {
+			t.Fatal(err)
+		}
+		s.Reopen()
+		s.RunQueued()
+	}
+	move(t.TempDir())
+	before := x.Scans()
+	if err := os.WriteFile(filepath.Join(dir, "away_test.go"), []byte("package pricing\n\nimport \"testing\"\n\nfunc TestAway(t *testing.T) {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	move(dir)
+	s.Until("the test added while away", func() bool { s.RunQueued(); s.Frame(); return strings.Contains(rows(), "TestAway") })
+	if n := x.Scans() - before; n > 0 {
+		t.Errorf("coming back scanned the directory %d times", n)
+	}
+}
