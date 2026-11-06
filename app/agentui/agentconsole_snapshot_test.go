@@ -102,7 +102,7 @@ func TestAskCardsSnapshot(t *testing.T) {
 		Asks: []core.Ask{
 			{ID: "q1", Kind: core.AskQuestion, Questions: []core.Question{{Question: "Is pricing.RoundMinor safe to call for JPY amounts, or does it assume 2 decimal places?",
 				Options: []string{"Safe: precision comes from the currency table", "Not yet: lands with rethink/rounding"}}}},
-			{ID: "g1", Kind: core.AskGateway, Tool: "git push", Summary: "git push origin rethink/rounding", Detail: "3 commits · +184 -22 · 0 unreviewed lines ✓",
+			{ID: "g1", Kind: core.AskGateway, Tool: "git push", Summary: "git push origin rethink/rounding", Detail: "3 commits · +184 -22",
 				Rule: "git push origin rethink/*"},
 			{ID: "n1", Kind: core.AskNetwork, Host: "proxy.golang.org:443", Detail: "requested by go mod download · CONNECT · no TLS interception"},
 			{ID: "p1", Kind: core.AskPermission, Tool: "Bash", Summary: "make e2e"},

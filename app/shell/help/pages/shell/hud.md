@@ -40,8 +40,7 @@ what it's running, when it replied. Click one to bring it to the front.
 
 ## Today {#today}
 
-Since midnight: tokens, cost, the share served from the cache, requests opened, and the agent lines
-reviewed and still unread. Plugins add lines under it in the `hud.today` slot.
+Since midnight: tokens, cost, the share served from the cache, and requests opened. Plugins add lines under it in the `hud.today` slot.
 
 ## Indicators {#indicators}
 

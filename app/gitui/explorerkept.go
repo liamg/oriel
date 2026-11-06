@@ -1,7 +1,6 @@
 package gitui
 
 import (
-	"cmp"
 	"encoding/json"
 	"slices"
 
@@ -16,7 +15,7 @@ type explorerKept struct {
 
 const explorerKeptKey = "explorer"
 
-var changedLayouts = []string{"tree", "flat", "by review"}
+var changedLayouts = []string{"tree", "flat"}
 
 func (e *Explorer) scope() gitx.Scope {
 	if i := slices.Index(explorerScopes, e.state().Scope); i >= 0 {
@@ -51,4 +50,9 @@ func (e *Explorer) keep(change func(*explorerKept)) {
 }
 
 // layout is how Changed lists its files: tree, flat or by review.
-func (e *Explorer) layout() string { return cmp.Or(e.state().Layout, changedLayouts[0]) }
+func (e *Explorer) layout() string {
+	if l := e.state().Layout; slices.Contains(changedLayouts, l) {
+		return l
+	}
+	return changedLayouts[0]
+}

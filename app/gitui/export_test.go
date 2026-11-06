@@ -1,8 +1,6 @@
 package gitui
 
 import (
-	"time"
-
 	"github.com/liamg/oriel/gitx"
 )
 
@@ -43,23 +41,18 @@ func (e *Explorer) Hunks() (path string, loaded bool, unstaged []gitx.Hunk) {
 	return x.path, x.loaded, x.unstaged
 }
 
-// SetLedgerTimes sets how long lines take to read, to skim, and each line read after the first. Call it on the loop.
-func (x *Diff) SetLedgerTimes(read, skim, line time.Duration) {
-	x.ledgerTimes.read, x.ledgerTimes.skim, x.ledgerTimes.line = read, skim, line
-}
-
 // The diff's word highlights.
 var (
 	TDiffAddWord = tDiffAddWord
 	TDiffDelWord = tDiffDelWord
 )
 
-// Made is how many of the diff's files have been made, and whether one has been styled and blamed.
+// Made is how many of the diff's files have been made, and whether one has been styled.
 func (x *Diff) Made() (n int, done bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	for _, d := range x.files {
-		done = done || d.styled && d.blamed
+		done = done || d.styled
 	}
 	return len(x.files), done
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
@@ -31,17 +30,15 @@ type diffInput struct {
 	repo, work string
 }
 
-// diffFile is one file's branch diff, made off the loop: its hunks with their word marks and who wrote their added
-// lines, and when styled, for the view, their highlights and function.
+// diffFile is one file's branch diff, made off the loop: its hunks with their word marks, and when styled, for the
+// view, their highlights and function.
 type diffFile struct {
 	in      diffInput
 	styled  bool
-	blamed  bool // who wrote each added line is known
 	binary  bool
 	images  *imageDiff // a changed image's old and new versions, decoded
 	newText []byte
 	hunks   []diffHunk
-	authors map[string]int // added lines by who wrote them
 	err     error
 }
 
@@ -52,24 +49,14 @@ type diffHunk struct {
 	fn    string       // the function it's in
 	spans [][]kit.Span // each line's text, by highlight
 	marks [][][2]int   // each line's changed words
-	adds  []addedLine  // each line's change and author, for those it adds
-}
-
-// addedLine is a line a change adds: its change's ID, its key in the ledger (core.LineKey), and who wrote it, as
-// the authorship box names them.
-type addedLine struct {
-	change, key string
-	who         string
-	committed   bool
 }
 
 // loadDiff makes a file's diff: the base revision's version against newText (the buffer's), or the file on disk
-// when newText is nil. Highlights and each hunk's function, which only the view shows, are made when styled; who
-// wrote each added line when blamed.
-func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snapshot, styled, blame bool) *diffFile {
+// when newText is nil. Highlights and each hunk's function, which only the view shows, are made when styled.
+func loadDiff(r registry.Registry, in diffInput, newText []byte, styled bool) *diffFile {
 	ctx := context.Background()
 	repo := kit.RepoAt(r, in.repo)
-	f := &diffFile{in: in, styled: styled, blamed: blame}
+	f := &diffFile{in: in, styled: styled}
 	var old []byte
 	if in.code != 'A' && in.code != '?' {
 		old, _ = repo.FileAt(ctx, in.rev, cmp.Or(in.old, in.path))
@@ -101,7 +88,6 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 		if styled {
 			dh.fn = hunkFunc(h, units, newText, newLines, oldLines)
 		}
-		dh.adds = make([]addedLine, len(h.Lines))
 		k := 0
 		for _, c := range h.Changes {
 			om, nm := c.Intraline()
@@ -112,10 +98,8 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 				dh.marks[k+i] = om[i]
 			}
 			k += len(om)
-			id := c.ID()
 			for i := range nm {
 				dh.marks[k+i] = nm[i]
-				dh.adds[k+i] = addedLine{change: id, key: core.LineKey(id, i)}
 			}
 			k += len(nm)
 		}
@@ -131,9 +115,6 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, snap *text.Snap
 			}
 		}
 		f.hunks = append(f.hunks, dh)
-	}
-	if blame {
-		f.authors = authorship(ctx, repo, in.path, newText, f.hunks, snap)
 	}
 	return f
 }
@@ -262,67 +243,4 @@ func hunkFunc(h gitx.DiffHunk, units []text.Unit, src []byte, lines, oldLines []
 		}
 	}
 	return gitx.FuncLine(oldLines, h.OldStart)
-}
-
-// authorship is who wrote the lines a diff adds, set on each hunk's added lines and counted: blame for those
-// committed (an agent, you, someone else), and for those not yet, the open buffer's authors (snap), else
-// "uncommitted".
-func authorship(ctx context.Context, repo gitx.Repo, path string, src []byte, hs []diffHunk, snap *text.Snapshot) map[string]int {
-	out := map[string]int{}
-	blame, _ := repo.Blame(ctx, path, src)
-	for _, h := range hs {
-		for k, l := range h.Lines {
-			if l.Op != '+' {
-				continue
-			}
-			who, committed := "uncommitted", false
-			if i := l.New - 1; i < len(blame) {
-				committed = blame[i].Kind != gitx.NotCommitted
-				switch blame[i].Kind {
-				case gitx.ByAgent:
-					who = "agent"
-				case gitx.ByYou:
-					who = "you"
-				case gitx.ByOther:
-					who = cmp.Or(blame[i].Author, "others")
-				}
-			}
-			if who == "uncommitted" && snap != nil && l.New-1 < snap.Lines() {
-				who = cmp.Or(lineAuthor(*snap, l.New-1), who)
-			}
-			h.adds[k].who, h.adds[k].committed = who, committed
-			out[who]++
-		}
-	}
-	return out
-}
-
-// lineAuthor is who wrote most of a buffer's line, as the authorship groups name them; "" when it's as loaded.
-func lineAuthor(s text.Snapshot, line int) string {
-	n := map[string]int{}
-	start, end := s.LineStart(line), s.LineEnd(line)
-	if end <= start {
-		return ""
-	}
-	for a := range s.Authors(text.Range{Start: start, End: end}) {
-		who := ""
-		switch a.Author.Kind {
-		case text.Agent:
-			who = "agent"
-		case text.User:
-			who = "you"
-		case text.Format, text.LSP:
-			who = "formatter"
-		}
-		if who != "" {
-			n[who] += a.Range.Len()
-		}
-	}
-	best := ""
-	for k, v := range n {
-		if best == "" || v > n[best] || v == n[best] && k < best {
-			best = k
-		}
-	}
-	return best
 }

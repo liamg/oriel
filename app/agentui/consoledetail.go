@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -64,7 +63,7 @@ func (x *Console) detailView() uireg.View {
 			var it core.Item
 			var ask core.Ask
 			if d.item != "" {
-				i := slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == d.item })
+				i := core.LastItem(se.Transcript, d.item)
 				if i < 0 {
 					x.detail = nil
 					return

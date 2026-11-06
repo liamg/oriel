@@ -122,9 +122,10 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 // turnEdits are the files the latest turn edited, with their lines added and removed, in the order first edited.
 func turnEdits(se core.SessionState) []core.FileDiff {
 	start := 0
-	for i, it := range se.Transcript {
-		if it.Kind == core.ItemUser {
+	for i := len(se.Transcript) - 1; i >= 0; i-- {
+		if se.Transcript[i].Kind == core.ItemUser {
 			start = i
+			break
 		}
 	}
 	var out []core.FileDiff
@@ -339,29 +340,12 @@ func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time)
 				default:
 					value(c, "testsv", fmt.Sprintf("%d ✓", r.Passed), th.C(kit.TToolOK))
 				}
-				if n := sessionLedger(h, se); n.Total() > 0 {
-					c.Box("g2", ui.Style{W: ui.Px(6)}, nil)
-					label(c, "reviewed", "REVIEWED")
-					value(c, "reviewedv", fmt.Sprintf("%d/%d", n.Read, n.Total()), kit.LedgerTone(th, n))
-				}
 				if se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 					value(c, "turn", "turn "+kit.Duration(now.Sub(se.Agent.TurnStarted)), th.C(tToolRunning))
 				}
 			})
 		})
-}
-
-// sessionLedger is the review ledger of a session's projects together.
-func sessionLedger(h plugin.Host, se core.SessionState) registry.LedgerCount {
-	var n registry.LedgerCount
-	for _, p := range se.Projects {
-		if p.Dir != "" && !p.ReadOnly {
-			l, _ := registry.LedgerOf(h, p.Dir)
-			n = n.Add(l.All)
-		}
-	}
-	return n
 }
 
 // statsLink is a session's cost as a link to its stats (a main tab), with a card saying so under the pointer.

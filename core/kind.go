@@ -51,7 +51,6 @@ type KindSpec struct {
 	From      From      `json:"from,omitempty"`  // FromPrompt if ""
 	Pack      string    `json:"pack"`            // the prompt pack
 	Worktrees Worktrees `json:"worktrees"`
-	Gate      string    `json:"gate,omitempty"` // the commit gate: hard, soft or off
 	NeedsRepo bool      `json:"needsRepo,omitempty"`
 	// Launcher offers the kind as a mode in the new-session launcher; the rest start from their own pages or
 	// session.start.

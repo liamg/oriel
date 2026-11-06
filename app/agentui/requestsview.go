@@ -581,17 +581,12 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 				kit.Stat(c, "agent", "agent", word, th.C(tok))
 			})
 			if len(t.Touched) > 0 {
-				ledgers := map[string]registry.Ledger{}
 				kit.Section(c, "changed", "Changed by this request", "", func(c *ui.Ctx) {
 					for i, f := range t.Touched {
 						c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 							c.Text("m", "M", kit.MonoFont(11.5, th.C(theme.Warn)))
 							c.Text("p", relTo(se, f.Path), kit.MonoFont(11.5, th.C(theme.FgMuted)))
 							c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-							if n, ok := kit.TouchedLedger(x.h, se, f, ledgers); ok {
-								kit.ReadBar(c, "read", n)
-								c.Text("rd", fmt.Sprintf("%d/%d", n.Read, n.Total()), kit.MonoFont(10, kit.LedgerTone(th, n)))
-							}
 							widget.DiffStat(c, "s", f.Added, f.Removed, widget.DiffStatOpts{})
 						})
 					}

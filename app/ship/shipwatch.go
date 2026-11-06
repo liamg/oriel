@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
@@ -15,7 +16,8 @@ import (
 
 // Ship's reads are subscriptions to its sessions' managers (registry.Watches):
 //
-//   - the session in front's git, read again when one of its work trees' refs or files change, at most every shipPoll;
+//   - the session in front's git, each project read again when its work tree's refs or files change, at most every
+//     shipPoll: the others' readings stand;
 //   - its pull requests and checks, polled every prTTL, less often while the window is behind another app;
 //   - every other open session's open pull requests, polled every prBackground behind or in front, the polls together
 //     kept to prBudget so many sessions don't run into the code host's rate limit.
@@ -44,11 +46,12 @@ func (x *Ship) follow() {
 		}
 		id, front := se.ID, se.ID == st.Focus
 		if front {
-			local := x.localSource(se)
-			keep[local.Key] = true
-			x.subs.Hold(local.Key, m, watch.Need{MaxAge: shipPoll}, func() kit.Closer {
-				return watch.Subscribe(m, local, watch.Need{MaxAge: shipPoll}, "ship: git")
-			})
+			for _, local := range x.localSources(se) {
+				keep[local.Key] = true
+				x.subs.Hold(local.Key, m, watch.Need{MaxAge: shipPoll}, func() kit.Closer {
+					return watch.Subscribe(m, local, watch.Need{MaxAge: shipPoll}, "ship: git")
+				})
+			}
 		}
 		if !front && !x.openPRs(id) {
 			continue
@@ -74,26 +77,27 @@ func (x *Ship) openPRs(id core.SessionID) bool {
 	return r != nil && slices.ContainsFunc(r.ships, func(s shipRead) bool { return s.PR.Open() })
 }
 
-// localSource is a session's git as Ship reads it: read again when a writable project's refs or files change.
-func (x *Ship) localSource(se core.SessionState) watch.Source[time.Time] {
-	var deps []watch.AnySource
-	var dirs []string
-	if w, ok := registry.WatchesOf(x.h); ok {
-		for _, p := range se.Projects {
-			if p.ReadOnly || p.Dir == "" {
-				continue
-			}
-			t := w.Tree(se.ID, p.Dir)
-			deps = append(deps, t.Refs(), t.Work())
-			dirs = append(dirs, p.Dir)
-		}
+// localSources are a session's git as Ship reads it: each writable project read again when its refs or files change.
+func (x *Ship) localSources(se core.SessionState) []watch.Source[time.Time] {
+	w, ok := registry.WatchesOf(x.h)
+	if !ok {
+		return nil
 	}
-	id := se.ID
-	return watch.Source[time.Time]{Key: "ship.git:" + string(id) + ":" + strings.Join(dirs, ":"), Deps: deps,
-		Read: func(watch.Reader) (time.Time, error) {
-			x.read(id, false)
-			return time.Now(), nil
-		}}
+	var out []watch.Source[time.Time]
+	for _, p := range se.Projects {
+		if p.ReadOnly || p.Dir == "" {
+			continue
+		}
+		t := w.Tree(se.ID, p.Dir)
+		id, name := se.ID, p.Name
+		var looked atomic.Bool
+		out = append(out, watch.Source[time.Time]{Key: "ship.git:" + string(id) + ":" + p.Dir, Deps: []watch.AnySource{t.Refs(), t.Work()},
+			Read: func(watch.Reader) (time.Time, error) {
+				x.readProject(id, name, !looked.Swap(true))
+				return time.Now(), nil
+			}})
+	}
+	return out
 }
 
 // prSource is a session's pull requests and checks, polled within the budget.

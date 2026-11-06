@@ -65,24 +65,24 @@ func TestWatchdog(t *testing.T) {
 func TestFutureAndMetatable(t *testing.T) {
 	vm := New()
 	defer vm.Close()
-	vm.Future("ledger", "the review ledger")
+	vm.Future("forecast", "the forecast")
 	store := map[string]any{}
 	vm.Metatable("option", func(_ *Args, k string) (any, error) { return store[k], nil }, func(a *Args, k string, v any) error {
 		store[k] = v
 		store["at"] = a.Where()
 		return nil
 	})
-	if err := vm.Load(Chunk{Name: "init.lua", Source: []byte("oriel.option.tabstop = 4\nlocal f = oriel.ledger.unread\n")}); err != nil {
+	if err := vm.Load(Chunk{Name: "init.lua", Source: []byte("oriel.option.tabstop = 4\nlocal f = oriel.forecast.today\n")}); err != nil {
 		t.Fatal(err)
 	}
 	if store["tabstop"] != 4.0 || store["at"] != "init.lua:1" {
 		t.Errorf("store %v", store)
 	}
-	_, err := vm.Eval(Chunk{Name: "x", Source: []byte("return oriel.ledger.unread('p')")})
-	if err == nil || !strings.Contains(err.Error(), "oriel.ledger.unread isn't available until the review ledger") {
+	_, err := vm.Eval(Chunk{Name: "x", Source: []byte("return oriel.forecast.today('p')")})
+	if err == nil || !strings.Contains(err.Error(), "oriel.forecast.today isn't available until the forecast") {
 		t.Errorf("calling a future API: %v", err)
 	}
-	if keys := vm.Keys(""); strings.Join(keys, ",") != "ledger,option" {
+	if keys := vm.Keys(""); strings.Join(keys, ",") != "forecast,option" {
 		t.Errorf("keys %v", keys)
 	}
 }

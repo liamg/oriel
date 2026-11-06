@@ -5,10 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -66,7 +64,7 @@ func (x *Ship) shipCommands() []registry.Command {
 				x.refresh(se.ID, true)
 				return nil
 			}},
-		{ID: "ship.commit", Title: "Commit a project's changes: {project}, {message} (its draft by default), {files} (all by default); {force} commits past a gate",
+		{ID: "ship.commit", Title: "Commit a project's changes: {project}, {message} (its draft by default), {files} (all by default)",
 			Available: inFront, Run: run(x.commit)},
 		{ID: "ship.commit-all", Title: "Commit every project's changes, each with its message", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -258,7 +256,7 @@ func (x *Ship) draftCommands() []registry.Command {
 func (x *Ship) commit(ctx registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 	s, _ := x.ship(se.ID, p)
 	f := x.commitForm(se.ID, p)
-	ev := &ShipCommit{Session: string(se.ID), Project: p, Message: cmp.Or(a.String("message"), f.messageFor(s)), Force: a.Bool("force")}
+	ev := &ShipCommit{Session: string(se.ID), Project: p, Message: cmp.Or(a.String("message"), f.messageFor(s))}
 	if fs := paths(a["files"]); len(fs) > 0 {
 		ev.Files = fs
 	} else if len(f.skip) > 0 {
@@ -270,37 +268,6 @@ func (x *Ship) commit(ctx registry.Ctx, se core.SessionState, p string, a regist
 	if strings.TrimSpace(ev.Message) == "" {
 		return fmt.Errorf("%s's commit needs a message", p)
 	}
-	dir := sessionProjectDir(se, p)
-	files := ev.Files
-	if len(files) == 0 {
-		for _, fl := range s.Files {
-			files = append(files, fl.Path)
-		}
-	}
-	var held []registry.GateCheck
-	var trailers []string
-	if dir != "" {
-		for _, g := range registry.CheckCommit(x.h, registry.CommitCheck{Root: dir, Files: files, Message: ev.Message}) {
-			if g.Pending {
-				return x.commitLater(se, p, a)
-			}
-			if g.Blocks() || g.Asks() {
-				held = append(held, g)
-				if g.Blocks() && g.Trailer != "" {
-					trailers = append(trailers, g.Trailer)
-				}
-			}
-		}
-	}
-	f.held = held
-	if len(held) > 0 && !ev.Force {
-		var why []string
-		for _, g := range held {
-			why = append(why, g.Reason)
-		}
-		f.veto = strings.Join(why, "; ")
-		return fmt.Errorf("%w: %s", kit.ErrStopped, f.veto)
-	}
 	if v, _ := x.h.Fire(ctx, "ShipCommit", p, ev); v.Veto {
 		f.veto = v.Reason
 		return fmt.Errorf("%w: %s", kit.ErrStopped, v.Reason)
@@ -308,35 +275,9 @@ func (x *Ship) commit(ctx registry.Ctx, se core.SessionState, p string, a regist
 	f.veto = ""
 	return x.step(se.ID, p, "Committing", func(cx context.Context, c host.Access) error {
 		x.saving.Wait()
-		hash, err := c.ShipCommit(cx, host.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files, Trailers: trailers})
-		if err != nil {
-			return err
-		}
-		if len(held) > 0 {
-			x.h.Do(func() { kit.RecordOverrides(x.h, &x.busy, se, p, true, hash, ev.Message, held) })
-		}
-		return nil
+		_, err := c.ShipCommit(cx, host.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files})
+		return err
 	}, func() { *f = commitForm{skip: map[string]bool{}} })
-}
-
-// commitLater runs ship.commit again shortly, while the commit gates are still counting, until kit.CommitWait has gone.
-func (x *Ship) commitLater(se core.SessionState, p string, a registry.Args) error {
-	started, _ := a["started"].(time.Time)
-	if started.IsZero() {
-		started = time.Now()
-	}
-	if time.Since(started) > kit.CommitWait {
-		return fmt.Errorf("%s's commit gates didn't finish counting; try again", p)
-	}
-	more := maps.Clone(a)
-	more["project"], more["started"] = p, started
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
-		time.Sleep(kit.CommitPoll)
-		x.h.Do(func() { x.run("ship.commit", more) })
-	}()
-	return nil
 }
 
 func (x *Ship) sync(se core.SessionState, p string) error {

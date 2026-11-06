@@ -151,7 +151,7 @@ func Explain(g Grant) string {
 	case CapEditorRead:
 		return "read open buffers and the worktree files the session can see"
 	case CapEditorWrite:
-		return "edit buffers, as plugin:<id> in blame and the review ledger"
+		return "edit buffers, as plugin:<id> in blame"
 	case CapInputObserve:
 		return "see every key you press, not only its own mappings"
 	case CapFSRead:

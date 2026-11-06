@@ -296,12 +296,6 @@ clip 1201,52 383x192.79999 r 0
   text "%" @1486.5938,121.96 #7c7566 JetBrains Mono 11
   text "THREADS" @1213,134.95 #7c7566 JetBrains Mono 9.5
   text "2" @1213,160.47998 #ece6d8 Space Grotesk 20
-  text "REVIEWED" @1336,134.95 #7c7566 JetBrains Mono 9.5
-  text "0" @1336,160.47998 #4fe0a0 Space Grotesk 20
-  text "ln" @1351.9062,163.01999 #7c7566 JetBrains Mono 11
-  text "UNREAD" @1459,134.95 #7c7566 JetBrains Mono 9.5
-  text "0" @1459,160.47998 #ff9b45 Space Grotesk 20
-  text "ln" @1474.9062,163.01999 #7c7566 JetBrains Mono 11
   path 120 segments stroke 1 #24221d
   text "NEXT MEETING · 14:30" @1213,178.36 #7c7566 JetBrains Mono 10.5
   text "Pricing sync" @1350.875,178.36 #ece6d8 JetBrains Mono 10.5

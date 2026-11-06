@@ -9,7 +9,7 @@ import (
 )
 
 // ShipGate is one of the "before this ships" gates on the Ship page and the Raise PR tab: the plan
-// approved, threads resolved, the review ledger, tests run, the verify quiz, an AI review. Check runs on the app's
+// approved, threads resolved, tests run, the verify quiz, an AI review. Check runs on the app's
 // loop as the page is drawn, for a session, so it answers from what it has. Gates say where a change stands; what
 // stops a commit or a raise is a veto hook on ShipCommit or ShipRaise.
 type ShipGate struct {

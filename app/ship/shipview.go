@@ -301,7 +301,6 @@ func stepTitle(c *ui.Ctx, title, note string, at ...widget.AgoPart) {
 }
 
 func (x *Ship) uncommitted(c *ui.Ctx, se core.SessionState, s shipRead, open bool) {
-	th := c.Theme()
 	if len(s.Files) == 0 {
 		shipCard(c, false, func(c *ui.Ctx) { stepTitle(c, "Uncommitted", "clean") }, nil)
 		return
@@ -311,12 +310,8 @@ func (x *Ship) uncommitted(c *ui.Ctx, se core.SessionState, s shipRead, open boo
 		add, del = add+f.Add, del+f.Del
 	}
 	f := x.commitForm(se.ID, s.Project)
-	led, ledOK := x.ledger(se, s.Project)
 	shipCard(c, open, func(c *ui.Ctx) {
 		stepTitle(c, "Uncommitted", fmt.Sprintf("%s · +%d -%d", kit.Counted(len(s.Files), "file"), add, del))
-		if n := led.Uncommitted.NotRead(); ledOK && n > 0 {
-			widget.Chip(c, "unread", fmt.Sprintf("%d %s unreviewed", n, kit.Plural(n, "line", "lines")), th.C(theme.Error), "git/ship#gates")
-		}
 	}, func(c *ui.Ctx) {
 		x.fileRows(c, se, s, f, false)
 		x.commitBox(c, se, s, f)
@@ -327,7 +322,6 @@ func (x *Ship) uncommitted(c *ui.Ctx, se core.SessionState, s shipRead, open boo
 // discard, each has a button that throws its changes away.
 func (x *Ship) fileRows(c *ui.Ctx, se core.SessionState, s shipRead, f *commitForm, discard bool) {
 	th := c.Theme()
-	led, ledOK := x.ledger(se, s.Project)
 	busy := x.doing(se.ID, s.Project) != ""
 	for _, fl := range s.Files {
 		c.Row(fl.Path, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -348,15 +342,6 @@ func (x *Ship) fileRows(c *ui.Ctx, se core.SessionState, s shipRead, f *commitFo
 			if discard && widget.IconButton(c, "discard", "↺", widget.IconButtonOpts{Label: "Discard " + fl.Path + "'s changes", Help: "git/ship#git",
 				Disabled: busy}) {
 				x.run("git.discard", registry.Args{"path": filepath.Join(sessionProjectDir(se, s.Project), fl.Path)})
-			}
-			if lf, ok := led.File(fl.Path); ledOK && ok && lf.Uncommitted.Total() > 0 {
-				c.Row("read", ui.Style{W: ui.Px(64), Main: ui.End}, func(c *ui.Ctx) {
-					if n := lf.Uncommitted; n.NotRead() == 0 {
-						c.Text("r", "reviewed ✓", kit.MonoFont(10, th.C(theme.OK)))
-					} else {
-						c.Text("r", fmt.Sprintf("%d / %d", n.Read, n.Total()), kit.MonoFont(10, th.C(theme.Warn)))
-					}
-				})
 			}
 		})
 	}
@@ -396,28 +381,12 @@ func (x *Ship) commitBox(c *ui.Ctx, se core.SessionState, s shipRead, f *commitF
 		x.keepTyped(c, &f.save, r.Changed, first, host.DraftReq{Session: se.ID, Project: s.Project, Kind: "commit", Body: f.message})
 	})
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-		for _, g := range f.held {
-			if g.Review != "" && g.ReviewLabel != "" {
-				if widget.Button(c, "review."+g.Gate.Name, g.ReviewLabel, widget.ButtonOpts{Primary: true, Help: "git/ship#gates"}) {
-					x.run(g.Review, g.ReviewArgs)
-				}
-			}
-		}
-		if f.veto == "" {
-			if widget.Button(c, "commit", "Commit", x.stepOpts(se.ID, s.Project, "Committing", widget.ButtonOpts{Primary: true, Help: "git/ship#commit"})) {
-				x.run("ship.commit", registry.Args{"project": s.Project})
-			}
-		} else if widget.Button(c, "anyway", "Commit anyway…", x.stepOpts(se.ID, s.Project, "Committing", widget.ButtonOpts{Help: "git/ship#gates"})) {
-			x.run("ship.commit", registry.Args{"project": s.Project, "force": true})
+		if widget.Button(c, "commit", "Commit", x.stepOpts(se.ID, s.Project, "Committing", widget.ButtonOpts{Primary: true, Help: "git/ship#commit"})) {
+			x.run("ship.commit", registry.Args{"project": s.Project})
 		}
 		if se.Agent.Provider != "" && widget.Button(c, "redraft", "Redraft", widget.ButtonOpts{Help: "git/ship#drafts", Disabled: !x.h.Available("ship.redraft", nil)}) {
 			x.run("ship.redraft", registry.Args{"project": s.Project, "kind": "commit"})
 		}
-		c.Row("gate", ui.Style{W: ui.Flex(1), Clip: true, Main: ui.End}, func(c *ui.Ctx) {
-			if x.gated(se, s.Project) {
-				c.Text("on", "review gate on", kit.MonoFont(10, th.C(theme.FgGhost)))
-			}
-		})
 	})
 	if f.veto != "" {
 		widget.Wrap(c, "veto", f.veto, 520, kit.MonoFont(10.5, th.C(theme.Warn)))

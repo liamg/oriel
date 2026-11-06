@@ -143,8 +143,7 @@ func TestSampleInitLua(t *testing.T) {
 	}
 }
 
-// The sample's hooks, fired: a decision answers, and the Commit hook vetoes while the review ledger has unread
-// agent-written lines.
+// The sample's hooks, fired: a decision answers, and the Commit hook vetoes a message that isn't conventional.
 func TestSampleHooksFire(t *testing.T) {
 	s := apptest.LuaScene(t, sample(t))
 	v, errs := s.Registry().Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
@@ -154,16 +153,11 @@ func TestSampleHooksFire(t *testing.T) {
 	if v, _ := s.Registry().Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "rm -rf /"}); v.Decided {
 		t.Errorf("Permission for rm: %+v", v)
 	}
-	unread := 0
-	s.Registry().Contribute(registry.ReviewLedger{Name: "test", Get: func(root string) registry.Ledger {
-		return registry.Ledger{Root: root, Ready: true, All: registry.LedgerCount{Read: 3, Unread: unread}}
-	}})
-	if v, errs := s.Registry().Fire(context.Background(), "Commit", "", map[string]any{"project": "oriel"}); v.Veto || len(errs) > 0 {
-		t.Errorf("Commit with every line read: %+v %v", v, errs)
+	if v, errs := s.Registry().Fire(context.Background(), "Commit", "", map[string]any{"project": "oriel", "message": "feat(app): x"}); v.Veto || len(errs) > 0 {
+		t.Errorf("Commit with a conventional message: %+v %v", v, errs)
 	}
-	unread = 2
-	if v, errs := s.Registry().Fire(context.Background(), "Commit", "", map[string]any{"project": "oriel"}); !v.Veto || v.Reason != "unread agent lines" || len(errs) > 0 {
-		t.Errorf("Commit with lines unread: %+v %v", v, errs)
+	if v, errs := s.Registry().Fire(context.Background(), "Commit", "", map[string]any{"project": "oriel", "message": "wip"}); !v.Veto || v.Reason != "not a conventional commit" || len(errs) > 0 {
+		t.Errorf("Commit with \"wip\": %+v %v", v, errs)
 	}
 }
 

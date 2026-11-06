@@ -56,10 +56,8 @@ type Access interface {
 
 	// Review and ship
 	SetReviewed(r core.HunksReviewed) error
-	SetSeen(r core.LinesSeen) error
 	SetReviewDraft(r core.ReviewDrafted) error
 	SetFindings(r core.FindingsRecorded) error
-	RecordOverride(r core.CommitGateOverridden) error
 	RecordVerified(v core.Verified) error
 	AIReview(ctx context.Context, r AIReviewReq) (string, error)
 	ShipRead(ctx context.Context, r ShipReq) ([]Ship, error)

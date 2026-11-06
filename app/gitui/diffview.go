@@ -1,7 +1,6 @@
 package gitui
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"maps"
@@ -22,24 +21,21 @@ import (
 )
 
 var (
-	tDiffBg        = theme.Declare("diff.bg", "bg.base")
-	tDiffFiles     = theme.Declare("diff.files.bg", "bg.surface")
-	tDiffFileSel   = theme.DeclareOn("diff.files.selected", "alpha(cyan, 10%)", "bg.surface")
-	tDiffFileEdge  = theme.Declare("diff.files.edge", "cyan")
-	tDiffFileHead  = theme.Declare("diff.file.bg", "bg.raised")
-	tDiffFileMark  = theme.Declare("diff.file.mark", "cyan")
-	tDiffHunkBg    = theme.DeclareOn("diff.hunk.bg", "alpha(accent, 4%)", "bg.base")
-	tDiffAddWord   = theme.DeclareOn("diff.add.word", "alpha(green, 25%)", "bg.base")
-	tDiffDelWord   = theme.DeclareOn("diff.del.word", "alpha(red, 28%)", "bg.base")
-	tDiffAddEdge   = theme.Declare("diff.add.edge", "green")
-	tDiffDelEdge   = theme.Declare("diff.del.edge", "red")
-	tDiffEmpty     = theme.DeclareOn("diff.empty", "alpha(fg, 2%)", "bg.base")
-	tDiffSelected  = theme.DeclareOn("diff.selected", "alpha(accent, 10%)", "bg.base")
-	tDiffExplain   = theme.Declare("diff.explain", "cyan")
-	tDiffReviewed  = theme.Declare("diff.reviewed", "ok")
-	tDiffAuthAgent = theme.Declare("diff.author.agent", "brand")
-	tDiffAuthYou   = theme.Declare("diff.author.you", "amber")
-	tDiffAuthOther = theme.Declare("diff.author.other", "fg.ghost")
+	tDiffBg       = theme.Declare("diff.bg", "bg.base")
+	tDiffFiles    = theme.Declare("diff.files.bg", "bg.surface")
+	tDiffFileSel  = theme.DeclareOn("diff.files.selected", "alpha(cyan, 10%)", "bg.surface")
+	tDiffFileEdge = theme.Declare("diff.files.edge", "cyan")
+	tDiffFileHead = theme.Declare("diff.file.bg", "bg.raised")
+	tDiffFileMark = theme.Declare("diff.file.mark", "cyan")
+	tDiffHunkBg   = theme.DeclareOn("diff.hunk.bg", "alpha(accent, 4%)", "bg.base")
+	tDiffAddWord  = theme.DeclareOn("diff.add.word", "alpha(green, 25%)", "bg.base")
+	tDiffDelWord  = theme.DeclareOn("diff.del.word", "alpha(red, 28%)", "bg.base")
+	tDiffAddEdge  = theme.Declare("diff.add.edge", "green")
+	tDiffDelEdge  = theme.Declare("diff.del.edge", "red")
+	tDiffEmpty    = theme.DeclareOn("diff.empty", "alpha(fg, 2%)", "bg.base")
+	tDiffSelected = theme.DeclareOn("diff.selected", "alpha(accent, 10%)", "bg.base")
+	tDiffExplain  = theme.Declare("diff.explain", "cyan")
+	tDiffReviewed = theme.Declare("diff.reviewed", "ok")
 )
 
 var diffCodeFont = typeset.FontSpec{Family: typeset.Mono, Size: 12.5}
@@ -83,14 +79,13 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.
 		for _, f := range files {
 			d := x.made(tree.Root(), f.Path)
 			if st.open[f.Path] || st.sel.file == f.Path {
-				d, _ = x.diffFor(tree, gs, f, true, true)
+				d, _ = x.diffFor(tree, gs, f, true)
 			}
 			if d != nil {
 				st.drawn[f.Path] = d
 			}
 			st.marks[f.Path] = x.marks(st.root, f.Path)
 		}
-		st.ledger, _ = registry.LedgerOf(x.h, st.root)
 		if st.sel.file == "" && len(files) > 0 {
 			st.sel.file = files[0].Path
 			st.open[files[0].Path] = true
@@ -334,7 +329,6 @@ func (x *Diff) body(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, gs *gitx.State, 
 	for _, id := range reveal {
 		c.ScrollIntoView(bodyID, id)
 	}
-	x.track(c, st, bodyID)
 }
 
 // revealItem is the file the list is to scroll to the top of the view, -1 for none: the selected one while it's
@@ -421,10 +415,6 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 					widget.Chip(c, "rv", "reviewed", th.C(tDiffReviewed), "files/diff#review")
 				} else if d != nil && len(d.hunks) > 0 {
 					c.Text("rv", fmt.Sprintf("%d/%d hunks reviewed", n, len(d.hunks)), kit.MonoFont(10, th.C(theme.FgGhost)))
-				}
-				if !open {
-					lf, _ := st.ledger.File(f.Path)
-					unreadChip(c, lf.All.NotRead())
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if !open {
@@ -744,49 +734,4 @@ func markAt(marks [][2]int, at int) (bool, int) {
 		}
 	}
 	return false, 1 << 30
-}
-
-// authorshipView is the diff's AUTHORSHIP box: who wrote the lines the change adds, from blame and the open
-// buffers' authors.
-func (x *Diff) authorshipView(c *ui.Ctx, root string) {
-	st := x.by[root]
-	if st == nil {
-		return
-	}
-	th := c.Theme()
-	total := map[string]int{}
-	for _, d := range st.drawn {
-		for k, n := range d.authors {
-			total[k] += n
-		}
-	}
-	if len(total) == 0 {
-		return
-	}
-	who := make([]string, 0, len(total))
-	for k := range total {
-		who = append(who, k)
-	}
-	slices.SortFunc(who, func(a, b string) int { return cmp.Or(cmp.Compare(total[b], total[a]), strings.Compare(a, b)) })
-	kit.Section(c, "authorship", "Authorship", "", func(c *ui.Ctx) {
-		for _, k := range who {
-			name, tok := k, tDiffAuthOther
-			switch k {
-			case "agent":
-				name, tok = x.agentName(root), tDiffAuthAgent
-			case "you":
-				tok = tDiffAuthYou
-			}
-			tone := th.C(tok)
-			c.Row(k, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: fmt.Sprintf("%s %d lines", name, total[k])}, func(c *ui.Ctx) {
-				c.Row("av", ui.Style{W: ui.Px(16), H: ui.Px(16), Radius: 4, Fill: theme.WithAlpha(tone, .2), Stroke: theme.WithAlpha(tone, .6), Border: 1,
-					Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("t", strings.ToUpper(name[:1]), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold}, Color: tone})
-				})
-				c.Text("n", name, kit.UIFont(12.5, th.C(theme.Fg)))
-				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("v", fmt.Sprintf("%d %s", total[k], kit.Plural(total[k], "line", "lines")), kit.MonoFont(10.5, th.C(theme.FgGhost)))
-			})
-		}
-	})
 }

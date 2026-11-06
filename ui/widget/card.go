@@ -261,7 +261,7 @@ type MeterOpts struct {
 	Width  ui.Size // fills by default
 	Height float32 // 4 by default
 	Label  string  // its accessible name
-	// Then are more parts after frac's, each in its own tone: the review ledger's skimmed after its read.
+	// Then are more parts after frac's, each in its own tone.
 	Then []MeterPart
 	// To hatches on from frac to where it's headed, with a tick there: a plan window's share at its reset.
 	To float64

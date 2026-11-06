@@ -9,7 +9,6 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -182,8 +181,8 @@ func (x *Plugin) usageNote() string {
 	return kit.Counted(len(us), "account") + " · read " + kit.AgoText(x.Now(), read)
 }
 
-// todayPanel is today's totals: tokens, cost, the cache's share, the requests opened today and
-// the review ledger; then the hud.today slot's indicators.
+// todayPanel is today's totals: tokens, cost, the cache's share and the requests opened today; then the hud.today
+// slot's indicators.
 func (x *Plugin) todayPanel(c *ui.Ctx) {
 	th := c.Theme()
 	now := x.Now().In(x.Loc)
@@ -196,21 +195,10 @@ func (x *Plugin) todayPanel(c *ui.Ctx) {
 	}
 	st := x.h.State()
 	threads := 0
-	var ledger registry.LedgerCount
-	seen := map[string]bool{}
 	for _, s := range st.Sessions {
 		for _, t := range s.Threads {
 			if !t.Created.Before(from) {
 				threads++
-			}
-		}
-		for _, p := range s.Projects {
-			if s.Archived || p.Dir == "" || seen[p.Dir] {
-				continue // an archived session's work trees aren't read
-			}
-			seen[p.Dir] = true
-			if l, ok := registry.LedgerOf(x.h, p.Dir); ok {
-				ledger = ledger.Add(l.All)
 			}
 		}
 	}
@@ -227,8 +215,6 @@ func (x *Plugin) todayPanel(c *ui.Ctx) {
 	})
 	c.Row("b", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		hudFigure(c, "threads", "THREADS", fmt.Sprint(threads), "", th.C(theme.Fg))
-		hudFigure(c, "reviewed", "REVIEWED", fmt.Sprint(ledger.Read), "ln", th.C(theme.OK))
-		hudFigure(c, "unread", "UNREAD", fmt.Sprint(ledger.NotRead()), "ln", th.C(theme.Warn))
 	})
 	inds := uireg.Indicators(x.h, uireg.SlotHUDToday)
 	if is, ok := kit.IndicatorsOf(x.h); ok && len(inds) > 0 {

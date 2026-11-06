@@ -2,6 +2,7 @@ package eventstore
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/core"
@@ -56,62 +57,25 @@ func TestHunksReviewed(t *testing.T) {
 	}
 }
 
-// Every agent-written line is unread until you've seen it in the diff (scrolled past it, or marked its hunk
-// reviewed): lines seen are session events too, a line read stays read, and a marked change reads all
-// its lines. A commit made past the gate is kept in the session.
-func TestLinesSeenAndGateOverrides(t *testing.T) {
-	var log bytes.Buffer
+// Logs written while lines seen in the diff and commits past the commit gate were recorded still replay: those
+// events change nothing now, and a hunk's mark beside them stands.
+func TestRetiredReviewEventsReplay(t *testing.T) {
+	log := strings.Join([]string{
+		`{"seq":1,"type":"SessionSynced","event":{"session":{"id":"pricing","kind":"work"}}}`,
+		`{"seq":2,"type":"LinesSeen","event":{"session":"pricing","project":"pricing","file":"round.go","read":["c1.1"],"skimmed":["c1.2"]}}`,
+		`{"seq":3,"type":"HunksReviewed","event":{"session":"pricing","project":"pricing","file":"round.go","hunks":["c2"],"reviewed":true}}`,
+		`{"seq":4,"type":"CommitGateOverridden","event":{"session":"pricing","override":{"project":"pricing","gate":"ledger","mode":"hard","unread":38,"commit":"abc"}}}`,
+	}, "\n") + "\n"
 	a := New()
-	a.Subscribe(core.Filter{}, core.NewRecorder(&log).Record)
-	for _, ev := range []core.Event{
-		core.SessionSynced{Session: core.SessionState{ID: "pricing", Kind: core.KindWork}},
-		core.LinesSeen{Session: "pricing", Project: "pricing", File: "round.go", Skimmed: []string{"c1.0", "c1.1"}},
-		core.LinesSeen{Session: "pricing", Project: "pricing", File: "round.go", Read: []string{"c1.1"}, Skimmed: []string{"c1.2"}},
-		core.LinesSeen{Session: "pricing", Project: "pricing", File: "round.go", Skimmed: []string{"c1.1"}},
-		core.HunksReviewed{Session: "pricing", Project: "pricing", File: "round.go", Hunks: []string{"c2"}, Reviewed: true},
-		core.CommitGateOverridden{Session: "pricing", Override: core.GateOverride{Project: "pricing", Gate: "ledger", Mode: core.GateHard, Unread: 38, Commit: "abc"}},
-	} {
-		if err := a.Apply(ev); err != nil {
-			t.Fatalf("%T: %v", ev, err)
-		}
+	if err := core.Replay(strings.NewReader(log), a); err != nil {
+		t.Fatal(err)
 	}
 	se, _ := a.State().Session("pricing")
 	st := se.Snapshot()
-	r := st.ReviewOf("pricing", "round.go")
-	for key, want := range map[[2]string]core.LineState{
-		{"c1", "c1.0"}: core.LineSkimmed, {"c1", "c1.1"}: core.LineRead, {"c1", "c1.2"}: core.LineSkimmed,
-		{"c1", "c1.3"}: core.LineUnread, {"c2", "c2.7"}: core.LineRead,
-	} {
-		if got := r.State(key[0], key[1]); got != want {
-			t.Errorf("%s is %s, want %s", key[1], got, want)
-		}
+	if got := st.ReviewedHunks("pricing", "round.go"); len(got) != 1 || !got["c2"] {
+		t.Errorf("round.go's marks: %v", got)
 	}
-	if len(st.Overrides) != 1 || st.Overrides[0].Unread != 38 {
-		t.Errorf("overrides: %+v", st.Overrides)
-	}
-	a.Apply(core.HunksReviewed{Session: "pricing", Project: "pricing", File: "round.go", Hunks: []string{"c2"}})
-	se, _ = a.State().Session("pricing")
-	if len(se.Snapshot().Reviews) != 1 {
-		t.Error("taking the last mark off dropped the lines seen")
-	}
-	b := New()
-	if err := core.Replay(bytes.NewReader(log.Bytes()), b); err != nil {
-		t.Fatal(err)
-	}
-	if sa, sb := snapshot(t, a), snapshot(t, b); !bytes.Equal(sa, sb) {
-		t.Errorf("replayed:\n%s\nwant:\n%s", sb, sa)
-	}
-	if err := a.Apply(core.LinesSeen{Session: "pricing", File: "round.go"}); err == nil {
-		t.Error("seeing no lines applied")
-	}
-}
-
-// The commit gate is hard for work and plan sessions, soft for jobs, off for reviews and direct sessions.
-func TestDefaultGate(t *testing.T) {
-	for k, want := range map[core.Kind]string{core.KindWork: "hard", core.KindPlan: "hard", core.KindJob: "soft",
-		core.KindReview: "off", core.KindDirect: "off"} {
-		if got := core.DefaultGate(k); got != want {
-			t.Errorf("%s: %s, want %s", k, got, want)
-		}
+	if len(st.Reviews) != 1 {
+		t.Errorf("reviews: %+v", st.Reviews)
 	}
 }

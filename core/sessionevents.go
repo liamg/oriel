@@ -295,19 +295,32 @@ func (e TranscriptAppended) Apply(s *State) error {
 	if err != nil {
 		return err
 	}
-	out := slices.Clone(se.Transcript)
+	// One copy, with room for what's added: older states keep theirs. An item replaced is near the end, so it's
+	// looked for from there.
+	out := make([]Item, len(se.Transcript), len(se.Transcript)+len(e.Items))
+	copy(out, se.Transcript)
 	for _, it := range e.Items {
-		if i := slices.IndexFunc(out, func(o Item) bool { return o.ID == it.ID }); it.ID != "" && i >= 0 {
+		if i := LastItem(out, it.ID); it.ID != "" && i >= 0 {
 			out[i] = it
 			continue
 		}
 		out = append(out, it)
 	}
 	if n := len(out) - MaxTranscript; n > 0 {
-		out = slices.Clone(out[n:])
+		out = slices.Clip(out[n:])
 	}
 	se.Transcript = out
 	return nil
+}
+
+// LastItem is the index of the last item of items with id, -1 if none has it: a transcript's newest first.
+func LastItem(items []Item, id string) int {
+	for i := len(items) - 1; i >= 0; i-- {
+		if items[i].ID == id {
+			return i
+		}
+	}
+	return -1
 }
 
 type TestRunRecorded struct {

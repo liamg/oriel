@@ -2,12 +2,13 @@ package ship_test
 
 import (
 	"fmt"
-	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -156,7 +157,6 @@ func TestPROverviewSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.Run("ship.pr.open", registry.Args{"project": "web-dashboard"})
-	gatesCounted(s, t)
 	s.Golden("ship-pr-overview")
 	s.WantFrame("PR #812 · web-dashboard", "PR #812", "DRAFT", "rethink/search-endpoint → main · 3 commits",
 		"feat(search): back off on 429 using Retry-After", "https://github.com/acme/web-dashboard/pull/812", "Copy link", "Ready for review",
