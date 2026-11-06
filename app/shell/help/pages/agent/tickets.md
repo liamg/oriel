@@ -42,6 +42,7 @@ need more PRs, or something done by hand, so it's never marked done without a ye
 ## In a session {#agent}
 
 A tracker's plugin can give every session's agent tools for its tickets. Linear's are `linear_issue` (read a ticket
-with its comments and attachments), `linear_update_issue` (its title, description, state, priority or assignee, by
-name), `linear_comment` and `linear_create_issue`. They act as the owner of the API key, and don't ask first: ask the
-agent to move a ticket, note what it found, or file a follow-up, and it does.
+with its comments and attachments), `linear_update_issue` (its title, description, state, priority, assignee or
+project, by name), `linear_comment`, `linear_create_issue` (in a team, and a project if you name one) and
+`linear_projects` (the projects to file a ticket in or move one to). They act as the owner of the API key, and don't
+ask first: ask the agent to move a ticket, note what it found, or file a follow-up in a project, and it does.

@@ -1,0 +1,24 @@
+{
+ "data": {
+  "projects": {
+   "nodes": [
+    {
+     "id": "7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d0001",
+     "name": "Usage",
+     "slugId": "8f3a1c2b9d4e",
+     "url": "https://linear.app/acme/project/usage-8f3a1c2b9d4e",
+     "status": { "name": "In Progress" },
+     "teams": { "nodes": [ { "key": "ENG", "name": "Engineering" } ] }
+    },
+    {
+     "id": "7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d0002",
+     "name": "Billing revamp",
+     "slugId": "2c7d9e1f0a3b",
+     "url": "https://linear.app/acme/project/billing-revamp-2c7d9e1f0a3b",
+     "status": { "name": "Planned" },
+     "teams": { "nodes": [ { "key": "ENG", "name": "Engineering" }, { "key": "OPS", "name": "Operations" } ] }
+    }
+   ]
+  }
+ }
+}

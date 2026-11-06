@@ -26,7 +26,9 @@ type Params struct {
 	State       string   `json:"state,omitempty"`       // update, create: a state's name
 	Assignee    string   `json:"assignee,omitempty"`    // update, create: a name, display name or email; me; none
 	Priority    *float64 `json:"priority,omitempty"`    // update, create: 0 none to 4 low
-	Team        string   `json:"team,omitempty"`        // create: a team's key or name
+	Team        string   `json:"team,omitempty"`        // create, projects: a team's key or name
+	Project     string   `json:"project,omitempty"`     // update, create: a project's name, slug or URL; none
+	Query       string   `json:"query,omitempty"`       // projects: words in their names
 	Body        string   `json:"body,omitempty"`        // comment
 }
 
@@ -37,7 +39,7 @@ type Server struct {
 
 // Handle answers one request, each in Oriel's shapes for a tracker (registry.TicketTracker): assigned
 // ({tickets}), ticket (a registry.Ticket), start, review and done (a registry.TicketMove), or link; and the agent
-// tools' update, comment and create (an Edit).
+// tools' update, comment and create (an Edit), and projects ({projects}).
 func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage) (any, error) {
 	var p Params
 	if len(raw) > 0 && string(raw) != "null" {
@@ -45,7 +47,7 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 			return nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: err.Error()}
 		}
 	}
-	if method != "assigned" && method != "create" && strings.TrimSpace(p.Key) == "" {
+	if method != "assigned" && method != "create" && method != "projects" && strings.TrimSpace(p.Key) == "" {
 		return nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: method + " needs a ticket's key"}
 	}
 	c := s.Client
@@ -74,11 +76,18 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 		err = c.LinkPR(ctx, p.Key, p.URL, p.Number, p.Title)
 		out = map[string]any{"linked": err == nil}
 	case "update":
-		out, err = c.Update(ctx, p.Key, Change{Title: p.Title, Description: p.Description, State: p.State, Assignee: p.Assignee, Priority: p.Priority})
+		out, err = c.Update(ctx, p.Key, Change{Title: p.Title, Description: p.Description, State: p.State, Assignee: p.Assignee, Priority: p.Priority,
+			Project: p.Project})
 	case "comment":
 		out, err = c.Comment(ctx, p.Key, p.Body)
 	case "create":
-		out, err = c.Create(ctx, NewTicket{Team: p.Team, Title: p.Title, Description: p.Description, State: p.State, Assignee: p.Assignee, Priority: p.Priority})
+		out, err = c.Create(ctx, NewTicket{Team: p.Team, Title: p.Title, Description: p.Description, State: p.State, Assignee: p.Assignee,
+			Priority: p.Priority, Project: p.Project})
+	case "projects":
+		var ps []Project
+		if ps, err = c.Projects(ctx, p.Team, p.Query); err == nil {
+			out = map[string]any{"projects": ps}
+		}
 	default:
 		return nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "no method " + method}
 	}

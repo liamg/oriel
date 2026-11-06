@@ -38,6 +38,7 @@ type Linear struct {
 	assigned  map[string]any
 	teams     map[string]any
 	users     map[string]any
+	projects  map[string]any
 	issues    map[string]map[string]any // by identifier
 	created   int
 	mutations []Mutation
@@ -50,7 +51,7 @@ func New(t *testing.T) *Linear {
 	isolate.Test(t)
 	l := &Linear{t: t, issues: map[string]map[string]any{}}
 	l.assigned = l.load("assigned.json")
-	l.teams, l.users = l.load("teams.json"), l.load("users.json")
+	l.teams, l.users, l.projects = l.load("teams.json"), l.load("users.json"), l.load("projects.json")
 	matches, _ := filepath.Glob(filepath.Join(dir(), "issue-*.json"))
 	for _, m := range matches {
 		key := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(m), "issue-"), ".json")
@@ -147,6 +148,8 @@ func (l *Linear) serve(w http.ResponseWriter, r *http.Request) {
 	case strings.Contains(q, "attachmentCreate"):
 		l.mutations = append(l.mutations, Mutation{Op: "attachmentCreate", Vars: in.Variables})
 		json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"attachmentCreate": map[string]any{"success": true}}})
+	case strings.Contains(q, "projects("):
+		json.NewEncoder(w).Encode(l.projects)
 	case strings.Contains(q, "teams"):
 		json.NewEncoder(w).Encode(l.teams)
 	case strings.Contains(q, "users("):
@@ -213,6 +216,15 @@ func (l *Linear) apply(n, input map[string]any) bool {
 			return false
 		}
 	}
+	if v, ok := input["projectId"]; ok {
+		if v == nil {
+			n["project"] = nil
+		} else if p := l.project(fmt.Sprint(v)); p != nil {
+			n["project"] = map[string]any{"name": p["name"]}
+		} else {
+			return false
+		}
+	}
 	if stateID, ok := input["stateId"].(string); ok {
 		found := false
 		for _, s := range path(n, "team", "states")["nodes"].([]any) {
@@ -235,6 +247,15 @@ func (l *Linear) issue(idOrKey string) map[string]any {
 	for _, is := range l.issues {
 		if n := path(is, "data", "issue"); n["id"] == idOrKey {
 			return n
+		}
+	}
+	return nil
+}
+
+func (l *Linear) project(id string) map[string]any {
+	for _, p := range path(l.projects, "data", "projects")["nodes"].([]any) {
+		if pm := p.(map[string]any); pm["id"] == id {
+			return pm
 		}
 	}
 	return nil
