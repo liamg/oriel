@@ -57,3 +57,10 @@ func (x *Editor) RefreshConventions() { x.conv.refresh() }
 
 // Searchable are names less those the conventions keep out of search.
 func (x *Editor) Searchable(names []string) []string { return x.conv.searchable(names) }
+
+// BaseReads counts the bases the gutter has read, each file's index or commit copy.
+func (g *GitSigns) BaseReads() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.gens
+}
