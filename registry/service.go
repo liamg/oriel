@@ -151,7 +151,7 @@ type GitTrees interface {
 	Tree(dir string) GitTree
 	// Holding is the work tree already read whose root holds path, else the window's.
 	Holding(path string) GitTree
-	// Do runs fn off the loop, then reads every tree again; an error is a notice.
+	// Do runs fn off the loop, then reads the window's tree again; an error is a notice.
 	Do(fn func(ctx context.Context) error)
 	Reload()    // reads every tree again
 	Busy() bool // git work, or a tree's read, is running off the loop
