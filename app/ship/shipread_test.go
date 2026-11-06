@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 )
 
@@ -38,5 +39,26 @@ func shipQuiet(s *apptest.Scene) {
 		s.RunQueued()
 		s.Frame()
 		shipIdle(s)
+	}
+}
+
+// Coming back to a session with a tab reads none of its projects whole: its watches kept it while it was behind
+// another.
+func TestSwitchingBackReadsNoGit(t *testing.T) {
+	s, _, _, se, _ := shipScene(t)
+	x := shipOf(s)
+	s.Run("ship.open", nil)
+	shipSettle(s, t, "both projects read", func() bool {
+		_, a := x.ShipOf(se.ID, "search-api")
+		_, b := x.ShipOf(se.ID, "web-dashboard")
+		return a && b
+	})
+	shipQuiet(s)
+	whole := x.WholeReads(se.ID)
+	other := core.SessionState{ID: "other", Name: "other", Kind: core.KindWork}
+	s.Apply(core.SessionSynced{Session: other}, core.SessionFocused{ID: other.ID}, core.SessionFocused{ID: se.ID})
+	shipQuiet(s) // what the switch starts is handed to the loop first
+	if n := x.WholeReads(se.ID) - whole; n > 0 {
+		t.Errorf("switching back read every project %d times", n)
 	}
 }

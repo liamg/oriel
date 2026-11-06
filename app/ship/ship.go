@@ -61,6 +61,7 @@ type Ship struct {
 	subs      kit.Subs                // what it reads, from the sessions' managers (shipwatch.go)
 	budget    kit.Budget              // background PR polls' requests
 	showQuiet map[core.SessionID]bool // the Ship page shows the projects with nothing to ship; on the loop
+	watching  map[core.SessionID]bool // the sessions whose git follow watches; x.mu
 
 	mu       sync.Mutex
 	reports  map[core.SessionID]*shipReport
@@ -126,18 +127,15 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.budget.PerHour = prBudget
 	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
-		case core.SessionFocused:
-			if ev.ID != "" {
-				x.refresh(ev.ID, false) // coming to the front: read now, whatever the subscriptions last read
+		case core.SessionFocused, core.TabOpened, core.TabClosed, core.SessionOpened, core.SessionArchived, core.SessionClosed:
+			for _, id := range x.follow() {
+				x.refresh(id, false) // its git wasn't watched: read it whole once, then its watches keep it
 			}
-			x.follow()
 		case core.ProjectsChanged:
 			x.refresh(ev.ID, false)
 			x.follow()
 		case core.DraftSaved:
 			x.refresh(ev.Session, false)
-		case core.SessionOpened, core.SessionArchived, core.SessionClosed:
-			x.follow()
 		}
 	})))
 	x.follow()

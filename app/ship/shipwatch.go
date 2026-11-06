@@ -16,8 +16,8 @@ import (
 
 // Ship's reads are subscriptions to its sessions' managers (registry.Watches):
 //
-//   - the session in front's git, each project read again when its work tree's refs or files change, at most every
-//     shipPoll: the others' readings stand;
+//   - the git of each session with a tab, each project read again when its work tree's refs or files change, at
+//     most every shipPoll: the others' readings stand, and a session coming to the front has nothing to read;
 //   - its pull requests and checks, polled every prTTL, less often while the window is behind another app;
 //   - every other open session's open pull requests, polled every prBackground behind or in front, the polls together
 //     kept to prBudget so many sessions don't run into the code host's rate limit.
@@ -32,10 +32,12 @@ const prRequests = 5
 // for what's on screen and what the user does.
 const prBudget = 1500
 
-// follow subscribes to what Ship reads now: the session in front's git and PRs, and the other sessions' open PRs.
-func (x *Ship) follow() {
+// follow subscribes to what Ship reads now: the git of the sessions with tabs, the session in front's PRs, and the
+// other sessions' open PRs. It returns the sessions whose git it has started watching, which want reading whole.
+func (x *Ship) follow() (started []core.SessionID) {
 	st := x.h.State()
 	keep := map[string]bool{}
+	watching := map[core.SessionID]bool{}
 	for _, se := range st.Sessions {
 		if se.Archived {
 			continue
@@ -45,7 +47,8 @@ func (x *Ship) follow() {
 			continue
 		}
 		id, front := se.ID, se.ID == st.Focus
-		if front {
+		if front || slices.Contains(st.Tabs, se.ID) {
+			watching[id] = true
 			for _, local := range x.localSources(se) {
 				keep[local.Key] = true
 				x.subs.Hold(local.Key, m, watch.Need{MaxAge: shipPoll}, func() kit.Closer {
@@ -67,6 +70,15 @@ func (x *Ship) follow() {
 		})
 	}
 	x.subs.Only(keep)
+	x.mu.Lock()
+	for id := range watching {
+		if !x.watching[id] {
+			started = append(started, id)
+		}
+	}
+	x.watching = watching
+	x.mu.Unlock()
+	return started
 }
 
 // openPRs says the session's last read found one of its projects with a PR open.
