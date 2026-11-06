@@ -255,6 +255,7 @@ func TestDiffCommentOpensAThreadBetweenTheLines(t *testing.T) {
 	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
 	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
 	r.WaitText("func roundHalfEven")
+	r.WaitGit()
 	r.ClickText("Truncate")
 	r.WaitAccess("the line selected", func(r *apptest.Window) bool {
 		n := r.Access("\tt := scaled.Truncate(0)")

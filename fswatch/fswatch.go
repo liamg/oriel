@@ -22,6 +22,9 @@ const Delay = 75 * time.Millisecond
 // ErrLimit is a watch the OS has no room for: too many watches or open files.
 var ErrLimit = errors.New("fswatch: out of watches")
 
+// ErrClosed is a watch added once the watcher has closed.
+var ErrClosed = errors.New("fswatch: watcher closed")
+
 // ErrUnsupported is a platform with no watcher.
 var ErrUnsupported = errors.New("fswatch: not supported on this platform")
 
@@ -42,6 +45,7 @@ type Watcher struct {
 	once sync.Once
 
 	mu      sync.Mutex
+	closed  bool
 	roots   map[string]*root
 	pending map[string]error
 	seen    map[string]os.FileInfo // each file as it was at its last event, to tell a metadata-only one
@@ -135,6 +139,9 @@ func (w *Watcher) add(path string, tree bool, skip func(string) bool) error {
 	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.closed {
+		return ErrClosed
+	}
 	if _, ok := w.roots[path]; ok {
 		return nil
 	}
@@ -142,6 +149,7 @@ func (w *Watcher) add(path string, tree bool, skip func(string) bool) error {
 	w.roots[path] = r
 	err = w.settle(r, false)
 	if err != nil {
+		w.stopStream(r)
 		delete(w.roots, path)
 	}
 	w.prune()
@@ -176,6 +184,7 @@ func (w *Watcher) Close() error {
 	var err error
 	w.once.Do(func() {
 		w.mu.Lock()
+		w.closed = true
 		for _, r := range w.roots {
 			w.stopStream(r)
 		}
@@ -533,6 +542,9 @@ func (w *Watcher) unchanged(p string) bool {
 
 // resettle moves each root's anchor to where it is now, after folders came and went.
 func (w *Watcher) resettle() {
+	if w.closed {
+		return
+	}
 	changed := false
 	for _, r := range w.roots {
 		was, wasDir := r.anchor, r.dir
