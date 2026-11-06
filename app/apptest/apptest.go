@@ -111,6 +111,7 @@ type Options struct {
 	Size     render.Point      // MockupSize if zero
 	Config   func(*app.Config) // changes the config before the app starts: the session host, say
 	ImageNet *http.Client      // what remote images are fetched with; offline if nil
+	FontDirs []string          // where its installed fonts are (ui.font); none if nil
 }
 
 // Scene is the app's built-ins over a store, drawn the way Run draws the window, on a fixed clock.
@@ -148,7 +149,7 @@ func New(t testing.TB, o Options) *Scene {
 		o.Config(&cfg)
 	}
 	s.Logs = cfg.Logs
-	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: func() time.Time { return s.Now }})
+	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: func() time.Time { return s.Now }, FontDirs: o.FontDirs})
 	if err != nil {
 		t.Fatal(err)
 	}
