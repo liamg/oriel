@@ -78,9 +78,15 @@ func WhoAmI(ctx context.Context) string {
 }
 
 // Gate is the agent's own gate for a spec: the light gate inside a sandbox by default.
-func Gate(spec core.SessionSpec) string {
+func Gate(spec core.SessionSpec) string { return GateOf(spec, core.KindSpec{}) }
+
+// GateOf is the agent's own gate for a session of kind k as spec asks: spec's, else k's, else light in a sandbox and ask out of one.
+func GateOf(spec core.SessionSpec, k core.KindSpec) string {
 	if spec.Sandbox.Gate != "" {
 		return spec.Sandbox.Gate
+	}
+	if k.AgentGate != "" {
+		return k.AgentGate
 	}
 	if spec.Sandbox.Container {
 		return "light"

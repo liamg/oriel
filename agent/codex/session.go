@@ -37,12 +37,12 @@ func (p *Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (ag
 func gate(s agent.StartSpec) (approval, sandbox string, err error) {
 	if s.Sandbox != nil {
 		switch s.Policy {
-		case agent.PolicyAsk, agent.PolicyLight, agent.PolicyBypass, "":
+		case agent.PolicyAsk, agent.PolicyLight, agent.PolicyBypass, agent.PolicyAuto, "":
 			return "never", "danger-full-access", nil
 		}
 	}
 	switch s.Policy {
-	case agent.PolicyAsk, agent.PolicyLight, "":
+	case agent.PolicyAsk, agent.PolicyLight, agent.PolicyAuto, "":
 		return "untrusted", "workspace-write", nil
 	case agent.PolicyBypass:
 		return "", "", errors.New("codex: bypass is only for a sandboxed session: outside one, nothing would gate the agent")

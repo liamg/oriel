@@ -322,7 +322,7 @@ func (p *Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (ag
 func permissionMode(s agent.StartSpec) (string, error) {
 	if s.Sandbox != nil {
 		switch s.Policy {
-		case agent.PolicyAsk, agent.PolicyLight, agent.PolicyBypass, "":
+		case agent.PolicyAsk, agent.PolicyLight, agent.PolicyBypass, agent.PolicyAuto, "":
 			return "bypassPermissions", nil
 		}
 	}
@@ -331,6 +331,8 @@ func permissionMode(s agent.StartSpec) (string, error) {
 		return "default", nil
 	case agent.PolicyLight:
 		return "acceptEdits", nil
+	case agent.PolicyAuto:
+		return "auto", nil
 	case agent.PolicyBypass:
 		if s.Sandbox == nil {
 			return "", errors.New("claude: bypass is only for a sandboxed session: outside one, nothing would gate the agent")

@@ -624,7 +624,7 @@ func (s *session) permission(ctx context.Context, params json.RawMessage) (any, 
 	}
 	edits := tc.Kind == "edit" || tc.Kind == "delete" || tc.Kind == "move"
 	switch {
-	case s.spec.Policy == agent.PolicyBypass, s.spec.Policy == agent.PolicyLight && edits:
+	case s.spec.Policy == agent.PolicyBypass, (s.spec.Policy == agent.PolicyLight || s.spec.Policy == agent.PolicyAuto) && edits:
 		return pick("allow_once", "allow_always"), nil
 	}
 	// What allow_always remembers is the agent's to say, in words: there's no rule of Oriel's to show for it.

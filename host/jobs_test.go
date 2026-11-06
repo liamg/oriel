@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 )
@@ -312,5 +315,46 @@ func TestScheduleFiresAndSkipsWhileRunning(t *testing.T) {
 	r.w.RunDue(context.Background())
 	if n := len(runs()); n != 2 {
 		t.Fatalf("Friday's run didn't start: %d runs", n)
+	}
+}
+
+// A job's agent runs in its provider's auto mode, nobody being there to answer, and can bring in the repos the job
+// names itself: it starts with none, and add_project adds one as a worktree it can work in.
+func TestAJobRunsInAutoModeAndAddsItsProjects(t *testing.T) {
+	r := newRig(t)
+	if _, err := r.w.AddRepoPath(context.Background(), r.repo.Dir); err != nil {
+		t.Fatal(err)
+	}
+	j, _ := r.w.SaveJob(Job{Title: "Sweep stale deps", Prompt: "Bump every dependency in pricing."})
+	id, err := r.w.RunJob(context.Background(), j.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := r.agent()
+	if a.Spec.Policy != agent.PolicyAuto {
+		t.Errorf("the job's agent started with policy %q, want auto", a.Spec.Policy)
+	}
+	tool := func(name string) agent.Tool {
+		t.Helper()
+		i := slices.IndexFunc(a.Spec.Tools, func(tl agent.Tool) bool { return tl.Name == name })
+		if i < 0 {
+			t.Fatalf("the job's agent wasn't offered %s", name)
+		}
+		return a.Spec.Tools[i]
+	}
+	listed, err := tool("repos").Call(context.Background(), json.RawMessage(`{}`))
+	if err != nil || !strings.Contains(listed, r.repo.Dir) {
+		t.Fatalf("repos = %q, %v; want %s", listed, err, r.repo.Dir)
+	}
+	added, err := tool("add_project").Call(context.Background(), json.RawMessage(`{"repo":`+strconv.Quote(r.repo.Dir)+`}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	se := r.session(id)
+	if len(se.Projects) != 1 || !strings.Contains(added, se.Projects[0].Dir) {
+		t.Fatalf("add_project said %q; the session's projects are %+v", added, se.Projects)
+	}
+	if _, err := os.Stat(filepath.Join(se.Projects[0].Dir, "round.go")); err != nil {
+		t.Errorf("the project's worktree isn't there: %v", err)
 	}
 }

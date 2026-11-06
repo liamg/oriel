@@ -54,6 +54,8 @@ type Deps struct {
 	KeyWait func() time.Duration
 	// Repos are the registered checkouts, which an agent never edits.
 	Repos func() []core.Repo
+	// AddRepo brings a registered repo, by name or path, into a session as a project of its own.
+	AddRepo func(ctx context.Context, id core.SessionID, ref core.RepoID) error
 	// AccountOf is the account a provider is signed in to.
 	AccountOf func(provider string) (string, string)
 	// Record keeps an agent event in its session's record, for a provider with no log of its own.

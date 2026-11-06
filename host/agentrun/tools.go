@@ -51,6 +51,14 @@ func (x *Runner) tools(h *session) []agent.Tool {
 	kind := ""
 	if se, err := x.st.Session(h.id); err == nil {
 		kind = string(se.Kind)
+		// A sandbox's gateway offers its own: the agent restarts in a sandbox that can see the new project.
+		if x.deps.AddRepo != nil && x.deps.Kinds.Spec(se).Can(core.AddProjects) && !se.Agent.Sandboxed {
+			own = append(own,
+				agent.Tool{Name: "repos", Description: "List the user's repositories that could join this session as projects: name and path.", ReadOnly: true,
+					Schema: hostcore.Schema(""), Call: h.toolRepos},
+				agent.Tool{Name: "add_project", Description: "Bring one of the user's repositories into this session as a project, a worktree on the session's branch, and answer where it is. repo is a name or path from repos.",
+					Schema: hostcore.Schema(`"repo":`+str, "repo"), Call: h.toolAddProject})
+		}
 	}
 	for _, t := range x.AppTools(hostcore.ToolsReq{Session: h.id, Agent: kind}) {
 		if !slices.ContainsFunc(own, func(o agent.Tool) bool { return o.Name == t.Name }) {
@@ -383,6 +391,50 @@ func (h *session) toolProjects(ctx context.Context, _ json.RawMessage) (string, 
 		return "", err
 	}
 	return hostcore.ProjectsTool(ctx, se)
+}
+
+// toolRepos are the registered repos not in the session yet.
+func (h *session) toolRepos(context.Context, json.RawMessage) (string, error) {
+	se, err := h.r.st.Session(h.id)
+	if err != nil {
+		return "", err
+	}
+	var sb strings.Builder
+	for _, r := range h.r.deps.Repos() {
+		if slices.ContainsFunc(se.Projects, func(p core.Project) bool { return p.Repo == r.Path || p.Dir == r.Path }) {
+			continue
+		}
+		fmt.Fprintf(&sb, "%s\t%s\n", r.ID, r.Path)
+	}
+	if sb.Len() == 0 {
+		return "No repositories to add: none registered that isn't in this session already.", nil
+	}
+	return sb.String(), nil
+}
+
+// toolAddProject brings a registered repo into the session, and says where its worktree is.
+func (h *session) toolAddProject(ctx context.Context, raw json.RawMessage) (string, error) {
+	ref := strings.TrimSpace(hostcore.ParseArgs(raw).Str("repo"))
+	if ref == "" {
+		return "", errors.New("say which repo: a name or path from repos")
+	}
+	before, err := h.r.st.Session(h.id)
+	if err != nil {
+		return "", err
+	}
+	if err := h.r.deps.AddRepo(ctx, h.id, core.RepoID(ref)); err != nil {
+		return "", err
+	}
+	se, err := h.r.st.Session(h.id)
+	if err != nil {
+		return "", err
+	}
+	for _, p := range se.Projects {
+		if !slices.ContainsFunc(before.Projects, func(o core.Project) bool { return o.Name == p.Name }) {
+			return fmt.Sprintf("Added %s at %s, on branch %s. Work in it there.", p.Name, p.Dir, p.Branch), nil
+		}
+	}
+	return "Added " + ref + ".", nil
 }
 
 // toolDraft keeps a commit message or PR draft for the Ship page, per project, with the code it was drafted

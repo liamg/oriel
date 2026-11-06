@@ -68,6 +68,8 @@ func TestPolicyToFlags(t *testing.T) {
 		{agent.StartSpec{}, "--permission-mode default"},
 		{agent.StartSpec{Policy: agent.PolicyAsk}, "--permission-mode default"},
 		{agent.StartSpec{Policy: agent.PolicyLight}, "--permission-mode acceptEdits"},
+		{agent.StartSpec{Policy: agent.PolicyAuto}, "--permission-mode auto"},
+		{agent.StartSpec{Policy: agent.PolicyAuto, Sandbox: box}, "--permission-mode bypassPermissions"},
 		{agent.StartSpec{Policy: agent.PolicyBypass, Sandbox: box}, "--permission-mode bypassPermissions --mcp-config /run/gw.json --strict-mcp-config"},
 		// In a sandbox the sandbox is the gate: Claude asks nothing in its own terminal, where nobody would see it.
 		{agent.StartSpec{Policy: agent.PolicyLight, Sandbox: box}, "--permission-mode bypassPermissions"},

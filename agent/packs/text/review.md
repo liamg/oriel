@@ -1,7 +1,7 @@
 ---
 name: review
 description: Review somebody else's pull request in an Oriel review session. Leave findings on the lines they are about, each rated by severity, and change no code.
-tools: reply, thread, resolve, comment, task_add, task_update, tasks, projects, lsp_definition, lsp_references, lsp_diagnostics
+tools: reply, thread, resolve, comment, task_add, task_update, tasks, projects, repos, add_project, lsp_definition, lsp_references, lsp_diagnostics
 ---
 
 # Review

@@ -34,7 +34,7 @@ const (
 type SandboxPolicy struct {
 	Container bool   `json:"container,omitempty"` // run the agent in a container, with the gateway for git and gh
 	Network   string `json:"network,omitempty"`   // "ask" (per new host) or "open"
-	Gate      string `json:"gate,omitempty"`      // the agent's own gate: ask, light or bypass
+	Gate      string `json:"gate,omitempty"`      // the agent's own gate: ask, light, auto or bypass
 	Backend   string `json:"backend,omitempty"`   // the sandbox backend, one of the machine's Sandboxes; "" is sandbox.backend
 }
 
