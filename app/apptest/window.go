@@ -348,24 +348,30 @@ func enabledAt(w *Window, find func(headless.Frame) (render.Point, bool)) func(h
 	}
 }
 
-// disabledAt says a node under p, or one it's in, is disabled.
-func disabledAt(n *render.AccessNode, p render.Point) bool {
-	if n == nil {
-		return false
-	}
-	in := p.X >= n.Bounds.Min.X && p.X < n.Bounds.Max.X && p.Y >= n.Bounds.Min.Y && p.Y < n.Bounds.Max.Y
-	if !in && n.Bounds != (render.Rect{}) {
-		return false
-	}
-	if n.Disabled && n.Bounds != (render.Rect{}) {
-		return true
-	}
-	for _, k := range n.Children {
-		if disabledAt(k, p) {
-			return true
+// disabledAt says what's on top at p is disabled, or is inside something disabled: the last node drawn there,
+// as a click would reach it, not a page under a dialog.
+func disabledAt(root *render.AccessNode, p render.Point) bool {
+	top, found := false, false
+	var walk func(n *render.AccessNode, dis bool)
+	walk = func(n *render.AccessNode, dis bool) {
+		if n == nil {
+			return
+		}
+		b := n.Bounds
+		in := b == (render.Rect{}) || p.X >= b.Min.X && p.X < b.Max.X && p.Y >= b.Min.Y && p.Y < b.Max.Y
+		if !in {
+			return
+		}
+		dis = dis || n.Disabled && b != (render.Rect{})
+		if b != (render.Rect{}) {
+			top, found = dis, true
+		}
+		for _, k := range n.Children {
+			walk(k, dis)
 		}
 	}
-	return false
+	walk(root, false)
+	return found && top
 }
 
 // textAt is the middle of a run of text in the frame on screen, once it's settled there: the first, or with last
