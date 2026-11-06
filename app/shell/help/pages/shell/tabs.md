@@ -12,6 +12,7 @@ green `✓` is quiet, a grey `○` is off. The HUD and mission control use the s
 in that session you haven't seen yet.
 
 - Click a tab, or press `⌘1` to `⌘9`, to bring that session to the front.
+- Drag a tab onto another to move it to its place (`session.tab.move`); `⌘1` to `⌘9` follow the order.
 - Its `✕` closes the tab only: the session carries on, and the omnibox or mission control brings it back.
 - Right-click a tab for **Rename…** (edit the name in the tab; ⏎ keeps it, Escape drops it), **Close tab** and **End session…**.
 

@@ -83,6 +83,15 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 	t.Add(h.Command(registry.Command{ID: "session.close-tab", Title: "Close the tab of {id}, or of the session in front; the session stays",
 		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 0 },
 		Run:       func(_ registry.Ctx, a registry.Args) error { return t.close(h, core.SessionID(a.String("id"))) }}))
+	t.Add(h.Command(registry.Command{ID: "session.tab.move", Title: "Move the tab of {id}, or of the session in front, to the {index}th place",
+		Available: func(a registry.Args) bool { return len(h.State().Tabs) > 1 },
+		Run: func(_ registry.Ctx, a registry.Args) error {
+			st := h.State()
+			if i := a.Int("index"); i < 1 || i > len(st.Tabs) {
+				return fmt.Errorf("no place %d among %d tabs", i, len(st.Tabs))
+			}
+			return h.Apply(core.TabMoved{ID: core.SessionID(cmp.Or(a.String("id"), string(st.Focus))), Index: a.Int("index") - 1})
+		}}))
 	for n := 1; n <= 9; n++ {
 		t.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: fmt.Sprintf("<D-%d>", n), Command: "session.focus", Args: registry.Args{"n": n},
 			Desc: fmt.Sprintf("Session %d", n)}))
@@ -163,7 +172,8 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 		fill, name = th.C(tTabOn), th.C(tTabNameOn)
 	}
 	in := widget.Clickable(c, s.ID(), ui.Style{Dir: ui.Row, H: ui.Flex(1), Fill: fill, Help: "shell/tabs", Role: ui.RoleTab, Selected: on,
-		Label: s.Name(), Subject: kit.SessionSubject + string(s.ID())}, func(c *ui.Ctx) {
+		Label: s.Name(), Subject: kit.SessionSubject + string(s.ID()),
+		Drag: &ui.DragData{Kind: tabDragKind, Data: s.ID(), Label: s.Name()}, Drop: []string{tabDragKind}, NoFocus: true}, func(c *ui.Ctx) {
 		hover := widget.PointerIn(c)
 		c.Column("in", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
 			edge := color.NRGBA{}
@@ -209,7 +219,17 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 	if in.Clicked {
 		h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID())})
 	}
+	if d := in.Dropped; d != nil {
+		if id, ok := d.Data.(core.SessionID); ok && id != s.ID() {
+			if err := h.Run(context.Background(), "session.tab.move", registry.Args{"id": string(id), "index": i + 1}); err != nil {
+				h.Log().Error("sessiontabs", "move", id, "err", err)
+			}
+		}
+	}
 }
+
+// tabDragKind is what a session's tab carries as it's dragged along the tabs.
+const tabDragKind = "oriel.session-tab"
 
 // nameField edits s's name in its tab: ⏎ renames it, Escape leaves it as it was.
 func (t *sessionTabs) nameField(c *ui.Ctx, h plugin.Host, s core.Session) {

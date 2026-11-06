@@ -46,7 +46,7 @@ func ProjectsIn(work string, se *core.SessionState) Here {
 			}
 		}
 		if on && len(st.Projects) > 0 {
-			return Here{Session: &st, Projects: st.Projects, Open: st.OpenProject()}
+			return Here{Session: &st, Projects: st.ListedProjects(), Open: st.OpenProject()}
 		}
 	}
 	if work == "" {
@@ -127,6 +127,9 @@ func Holds(se core.SessionState, dir string) bool {
 
 // Many says the window has projects to choose between: views then carry the project they're for.
 func (w Here) Many() bool { return len(w.Projects) > 1 }
+
+// Folded says the open project's panels are folded away in the sidebar.
+func (w Here) Folded() bool { return w.Session != nil && w.Session.ProjectUI.Folded }
 
 // Project is a project by name.
 func (w Here) Project(name string) (core.Project, bool) {

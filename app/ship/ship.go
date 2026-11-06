@@ -60,6 +60,7 @@ type Ship struct {
 	saving    sync.WaitGroup          // drafts the user typed, on their way to the session host
 	subs      kit.Subs                // what it reads, from the sessions' managers (shipwatch.go)
 	budget    kit.Budget              // background PR polls' requests
+	showQuiet map[core.SessionID]bool // the Ship page shows the projects with nothing to ship; on the loop
 	watching  map[core.SessionID]bool // the sessions whose git follow watches; x.mu
 
 	mu       sync.Mutex

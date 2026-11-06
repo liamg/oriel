@@ -145,6 +145,7 @@ type Style struct {
 
 	Interactive bool // takes hover and press
 	Focusable   bool // takes focus; implies Interactive
+	NoFocus     bool // a drag source or target the pointer alone moves: what it's in has the keys, so it isn't focused
 	Disabled    bool // takes neither, and hides what's under it from the pointer
 	Cursor      render.Cursor
 	NoHover     bool      // draws its own hover and press, so a clickable box doesn't get the toolkit's wash
