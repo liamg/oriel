@@ -71,3 +71,13 @@ type Sites = codeSites
 func (x *CodeSites) Sites() *Sites { return x.sites }
 
 func (c *codeSites) Config() string { return c.config }
+
+// WholeReads is how many reads of every project of a session have started.
+func (x *Ship) WholeReads(id core.SessionID) int {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if r := x.reports[id]; r != nil {
+		return r.started
+	}
+	return 0
+}
