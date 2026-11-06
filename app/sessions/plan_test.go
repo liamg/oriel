@@ -101,7 +101,11 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 	}
 	w.WaitText("1 open")
 	w.WaitText("Start work unlocks when")
-	w.ClickText("Start work")
+	w.WaitAccess("Start work disabled with a thread open", func(w *apptest.Window) bool {
+		n := w.Access("Start work")
+		return n != nil && n.Disabled
+	})
+	w.Click(apptest.Centre(w.Access("Start work").Bounds)) // clicked anyway, as it is
 	time.Sleep(200 * time.Millisecond)
 	if !planNow(t, w).Planning() {
 		t.Fatal("Start work ran with a thread open")
