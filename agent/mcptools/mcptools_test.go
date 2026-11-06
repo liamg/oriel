@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,9 +21,11 @@ import (
 // `oriel hook mcp` answers initialize itself and passes the tools to the session's socket.
 func TestServeOverStdio(t *testing.T) {
 	isolate.Test(t)
-	s, err := Serve([]agent.Tool{agenttest.Echo, {Name: "fail", ReadOnly: true, Call: func(context.Context, json.RawMessage) (string, error) {
-		return "", io.ErrUnexpectedEOF
-	}}})
+	s, err := Serve(func() []agent.Tool {
+		return []agent.Tool{agenttest.Echo, {Name: "fail", ReadOnly: true, Call: func(context.Context, json.RawMessage) (string, error) {
+			return "", io.ErrUnexpectedEOF
+		}}}
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,6 +62,56 @@ func TestServeOverStdio(t *testing.T) {
 		if c != 0 {
 			t.Errorf("exit = %d", c)
 		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Main didn't return at EOF")
+	}
+}
+
+// A tool offered after the server started is listed, and the client is told the list changed.
+func TestToolsChangeAfterTheStart(t *testing.T) {
+	isolate.Test(t)
+	var mu sync.Mutex
+	tools := []agent.Tool{agenttest.Echo}
+	s, err := Serve(func() []agent.Tool {
+		mu.Lock()
+		defer mu.Unlock()
+		return tools
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	code := make(chan int, 1)
+	go func() { code <- mcpstdio.Main(inR, outW, io.Discard, []string{SockEnv + "=" + s.Path()}); outW.Close() }()
+	out := bufio.NewReader(outR)
+	read := func() string {
+		t.Helper()
+		line, err := out.ReadString('\n')
+		if err != nil {
+			t.Fatal(err)
+		}
+		return line
+	}
+	io.WriteString(inW, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}`+"\n")
+	if got := read(); !strings.Contains(got, `"listChanged":true`) {
+		t.Errorf("initialize = %s", got)
+	}
+
+	late := agenttest.Echo
+	late.Name = "linear_issue"
+	mu.Lock()
+	tools = append(tools, late)
+	mu.Unlock()
+	io.WriteString(inW, `{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}`+"\n")
+	got := read() + read()
+	if !strings.Contains(got, `"name":"linear_issue"`) || !strings.Contains(got, `"method":"notifications/tools/list_changed"`) {
+		t.Errorf("after a tool was added = %s", got)
+	}
+	inW.Close()
+	select {
+	case <-code:
 	case <-time.After(10 * time.Second):
 		t.Fatal("Main didn't return at EOF")
 	}

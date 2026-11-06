@@ -186,7 +186,7 @@ func modelOf(opts []configOption, asked string) string {
 }
 
 func (p *Provider) start(ctx context.Context, resume string, spec agent.StartSpec) (agent.Session, error) {
-	tools, err := mcptools.Serve(spec.Tools)
+	tools, err := mcptools.Serve(spec.Offered)
 	if err != nil {
 		return nil, fmt.Errorf("%s: serving Oriel's tools: %w", p.Name, err)
 	}

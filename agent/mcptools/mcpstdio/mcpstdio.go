@@ -43,7 +43,14 @@ func Main(stdin io.Reader, stdout, stderr io.Writer, env []string) int {
 		fmt.Fprintln(stderr, "oriel hook mcp:", err)
 		return 1
 	}
-	host := jsonrpc.NewConn(nc, nc, jsonrpc.Handlers{}, jsonrpc.Options{Version: "2.0"})
+	var client *jsonrpc.Conn
+	ready := make(chan struct{})
+	host := jsonrpc.NewConn(nc, nc, jsonrpc.Handlers{Notify: func(method string, _ json.RawMessage) {
+		if method == "notifications/tools/list_changed" {
+			<-ready
+			_ = client.Notify(method, nil)
+		}
+	}}, jsonrpc.Options{Version: "2.0"})
 	defer host.Close()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -54,7 +61,7 @@ func Main(stdin io.Reader, stdout, stderr io.Writer, env []string) int {
 			r.Reply(res, err)
 		})
 	}
-	client := jsonrpc.NewConn(stdin, stdout, jsonrpc.Handlers{Request: func(r *jsonrpc.Request) {
+	client = jsonrpc.NewConn(stdin, stdout, jsonrpc.Handlers{Request: func(r *jsonrpc.Request) {
 		switch r.Method {
 		case "initialize":
 			var p struct {
@@ -67,7 +74,7 @@ func Main(stdin io.Reader, stdout, stderr io.Writer, env []string) int {
 			}
 			r.Reply(map[string]any{
 				"protocolVersion": v,
-				"capabilities":    map[string]any{"tools": map[string]any{}},
+				"capabilities":    map[string]any{"tools": map[string]any{"listChanged": true}},
 				"serverInfo":      map[string]any{"name": "oriel", "version": "0"},
 			}, nil)
 		case "ping":
@@ -78,6 +85,7 @@ func Main(stdin io.Reader, stdout, stderr io.Writer, env []string) int {
 			r.Reply(nil, &jsonrpc.Error{Code: jsonrpc.MethodNotFound, Message: "method not found: " + r.Method})
 		}
 	}}, jsonrpc.Options{Version: "2.0"})
+	close(ready)
 	select {
 	case <-client.Done():
 		wg.Wait()

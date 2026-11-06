@@ -23,7 +23,7 @@ type toolServer struct {
 	path string
 }
 
-func serveTools(tools []agent.Tool) (*toolServer, error) {
+func serveTools(tools func() []agent.Tool) (*toolServer, error) {
 	s, err := mcptools.Serve(tools)
 	if err != nil {
 		return nil, err

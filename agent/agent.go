@@ -183,13 +183,14 @@ type StartSpec struct {
 	Cwd      string
 	Model    string
 	Effort   string
-	Pack     Pack     // the session kind's prompt pack
-	Prompt   string   // the first thing to say, after the pack
-	Tools    []Tool   // offered to the agent as mcp__oriel__*
-	Policy   Policy   // the agent's own gate
-	Protect  []string // directories the agent must never edit: the user's checkouts
-	Env      []string // extra environment, KEY=value
-	Exec     Exec     // how to run a process: on the host, or in the sandbox
+	Pack     Pack          // the session kind's prompt pack
+	Prompt   string        // the first thing to say, after the pack
+	Tools    []Tool        // offered to the agent as mcp__oriel__*
+	ToolsNow func() []Tool // the tools offered now, which change as plugins load; nil: Tools
+	Policy   Policy        // the agent's own gate
+	Protect  []string      // directories the agent must never edit: the user's checkouts
+	Env      []string      // extra environment, KEY=value
+	Exec     Exec          // how to run a process: on the host, or in the sandbox
 	Sandbox  *Sandbox
 	StateDir string // where the provider may keep files for this session
 	Memory   string // the agent's memory directory, "" for the provider's own
@@ -202,6 +203,23 @@ type StartSpec struct {
 	// Unattended is an agent nobody watches: a permission or question nobody answers soon is refused with a reason,
 	// and its own terminal never opens a dialog to wait on someone at it.
 	Unattended bool
+}
+
+// Offered are the tools offered to the agent now.
+func (s StartSpec) Offered() []Tool {
+	if s.ToolsNow != nil {
+		return s.ToolsNow()
+	}
+	return s.Tools
+}
+
+// ToolNames are tools' names, in order.
+func ToolNames(tools []Tool) []string {
+	out := make([]string, len(tools))
+	for i, t := range tools {
+		out[i] = t.Name
+	}
+	return out
 }
 
 // UnattendedRefusal is what an unattended agent is told of an ask nobody answered.

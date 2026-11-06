@@ -380,9 +380,11 @@ func TestParseDiff(t *testing.T) {
 
 // The MCP server answers initialize itself and passes tools to the session's socket.
 func TestMCPServer(t *testing.T) {
-	tools, err := serveTools([]agent.Tool{agenttest.Echo, {Name: "fail", ReadOnly: true, Call: func(context.Context, json.RawMessage) (string, error) {
-		return "", io.ErrUnexpectedEOF
-	}}})
+	tools, err := serveTools(func() []agent.Tool {
+		return []agent.Tool{agenttest.Echo, {Name: "fail", ReadOnly: true, Call: func(context.Context, json.RawMessage) (string, error) {
+			return "", io.ErrUnexpectedEOF
+		}}}
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
