@@ -287,3 +287,23 @@ func TestAddAfterCloseIsRefused(t *testing.T) {
 		t.Fatalf("Add after Close: %v, want ErrClosed", err)
 	}
 }
+
+// A scripted watcher sends what its script says, at once, and nothing the disk does.
+func TestScriptedSendsOnlyItsScript(t *testing.T) {
+	w, s := NewScripted()
+	defer w.Close()
+	dir := t.TempDir()
+	if err := w.AddTree(dir, nil); err != nil {
+		t.Fatal(err)
+	}
+	write(t, filepath.Join(dir, "on-disk.txt"), "x")
+	s.Change(filepath.Join(dir, "said.txt"))
+	if ev := <-w.Events(); ev.Path != filepath.Join(dir, "said.txt") {
+		t.Errorf("got %+v, want the scripted change", ev)
+	}
+	select {
+	case ev := <-w.Events():
+		t.Errorf("an event the script didn't send: %+v", ev)
+	default:
+	}
+}

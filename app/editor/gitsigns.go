@@ -45,7 +45,7 @@ type GitSigns struct {
 	previews map[string]int // the hunk previewed in each file, by its new start
 	typing   kit.Still[any] // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
 	diffs    int            // diffs begun off the loop, for the tests
-	busy     sync.WaitGroup
+	busy     kit.Busy
 }
 
 type gitBase struct {
@@ -107,6 +107,7 @@ func (g *GitSigns) stale(paths []string) {
 }
 
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
+	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }, Source: "builtin:gitsigns"}))
 	g.h = h
 	if g.Now == nil {
 		g.Now = time.Now

@@ -44,7 +44,7 @@ const (
 type PRReview struct {
 	kit.Disposer
 	h    plugin.Host
-	busy sync.WaitGroup
+	busy kit.Busy
 
 	mu       sync.Mutex
 	details  map[string]*reviewDetail // by URL
@@ -108,6 +108,7 @@ func (it reviewItem) both() bool { return it.thread != "" && it.finding != "" }
 func (x *PRReview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "pr-review"} }
 
 func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "prreview", Busy: x.busy.Busy, Source: "builtin:prreview"}))
 	x.h, x.details, x.forms = h, map[string]*reviewDetail{}, map[core.SessionID]*reviewForm{}
 	x.fetching, x.saved = map[core.SessionID]bool{}, map[core.SessionID]int{}
 	x.drafts, x.asking, x.heard = map[core.SessionID]*core.ReviewDraft{}, map[core.SessionID]bool{}, map[core.SessionID]int{}

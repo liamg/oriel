@@ -46,6 +46,7 @@ func (s *Scene) CursorAt(line, col int) {
 // WantText fails the test for each of wants the frame lacks, saying what it's checking.
 func (s *Scene) WantText(what string, wants ...string) {
 	s.T.Helper()
+	s.Quiet()
 	text := s.Text()
 	for _, w := range wants {
 		if !strings.Contains(text, w) {

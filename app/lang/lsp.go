@@ -87,6 +87,7 @@ type lspDoc struct {
 func (x *LSP) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lsp"} }
 
 func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "lsp", Busy: x.work.Busy, Source: "builtin:lsp"}))
 	x.h = h
 	x.docs, x.statuses = map[string]*lspDoc{}, map[string]lsp.Status{}
 	x.typing = kit.Still[*lspDoc]{Wait: hintsQuiet, Wake: func() { h.DecorationsChanged("lsp") }}

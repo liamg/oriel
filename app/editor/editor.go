@@ -53,7 +53,7 @@ type Editor struct {
 		walks   int // for the tests
 	}
 	docs    map[*text.Buffer]*highlighter
-	busy    sync.WaitGroup // parsers being made and files read, off the loop
+	busy    kit.Busy // parsers being made and files read, off the loop
 	madeMu  sync.Mutex
 	made    map[*syntax.Document]bool // made, not yet handed to the loop
 	stopped bool                      // deactivated: a document made since is closed where it's made
@@ -80,6 +80,7 @@ type Editor struct {
 func (x *Editor) Manifest() plugin.Manifest { return plugin.Manifest{ID: "editor"} }
 
 func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "editor", Busy: func() bool { return x.busy.Busy() || x.listed != nil && x.listed.busy.Busy() }, Source: "builtin:editor"}))
 	x.h = h
 	x.dir = editorDir(h)
 	x.docs, x.rows, x.blockPx = map[*text.Buffer]*highlighter{}, map[vim.WindowID]int{}, map[vim.WindowID]float32{}

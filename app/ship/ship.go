@@ -101,6 +101,7 @@ type shipReport struct {
 func (x *Ship) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ship"} }
 
 func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "ship", Busy: x.busy.Busy, Source: "builtin:ship"}))
 	x.h = h
 	if x.Clock == nil {
 		x.Clock = time.Now

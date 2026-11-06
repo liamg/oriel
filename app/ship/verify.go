@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -50,7 +49,7 @@ type Verify struct {
 	h         plugin.Host
 	ctx       context.Context
 	cancel    context.CancelFunc
-	busy      sync.WaitGroup
+	busy      kit.Busy
 
 	// On the loop.
 	quizzes map[core.SessionID]*quiz
@@ -78,6 +77,7 @@ type quiz struct {
 func (x *Verify) Manifest() plugin.Manifest { return plugin.Manifest{ID: "verify"} }
 
 func (x *Verify) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "verify", Busy: x.busy.Busy, Source: "builtin:verify"}))
 	x.h = h
 	x.quizzes = map[core.SessionID]*quiz{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())

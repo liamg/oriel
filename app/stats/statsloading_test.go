@@ -19,7 +19,7 @@ func TestStatsPageLoadsWithASkeleton(t *testing.T) {
 	s.Frame()
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
-	s.WantFrame("Scanning…")
+	s.Midway(func() { s.WantFrame("Scanning…") })
 	if n := s.Node("Chart"); n.Role != "status" {
 		t.Errorf("the chart's placeholder reads as %+v", n)
 	}
@@ -58,7 +58,7 @@ func TestUsageRefreshIsBusy(t *testing.T) {
 	settle(s, x)
 	s.Click(s.TextPoint("Refresh"), 0)
 	s.Frame()
-	s.WantFrame("Refreshing…")
+	s.Midway(func() { s.WantFrame("Refreshing…") })
 	if x.Reading().Phase.String() != "pending" {
 		t.Fatalf("after Refresh: %+v", x.Reading())
 	}

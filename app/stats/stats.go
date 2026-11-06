@@ -119,6 +119,7 @@ const liveAfter = 10 * time.Second
 func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "stats"} }
 
 func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "stats", Busy: x.Busy, Source: "builtin:stats"}))
 	x.h = h
 	if x.Now == nil {
 		x.Now = time.Now

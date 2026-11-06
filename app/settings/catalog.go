@@ -165,6 +165,7 @@ func (x *Catalog) Deactivate(ctx context.Context) error {
 }
 
 func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "catalog", Busy: x.work.Busy, Source: "builtin:catalog"}))
 	x.h = h
 	x.loaded, x.waiting, x.failed = map[string]*loadedPlugin{}, map[string]catalog.Status{}, map[string]string{}
 	x.updates = map[string]bool{}
@@ -185,7 +186,7 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 	for _, o := range []string{"registry.updates", "registry.trusted_hold"} {
 		x.Add(kit.OnDispose(h.Options().Watch(o, x.kick)))
 	}
-	x.work.Go(func(ctx context.Context) {
+	x.work.Loop(func(ctx context.Context) {
 		t := kit.NewTicker(kit.PollsOf(x.h), registryEvery)
 		defer t.Stop()
 		for {

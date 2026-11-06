@@ -36,8 +36,8 @@ type Prompts struct {
 	kit.Disposer
 	ConfigDir string
 	h         plugin.Host
-	sending   sync.Mutex     // one send to the session host at a time, each of the prompts as they are then
-	busy      sync.WaitGroup // the sends
+	sending   sync.Mutex // one send to the session host at a time, each of the prompts as they are then
+	busy      kit.Busy   // the sends
 
 	open   bool
 	sel    string
@@ -55,6 +55,7 @@ func (x *Prompts) store() prompts.Store {
 }
 
 func (x *Prompts) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "prompts", Busy: x.busy.Busy, Source: "builtin:prompts"}))
 	x.h, x.drafts = h, map[string]string{}
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))

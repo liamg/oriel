@@ -66,7 +66,7 @@ type Diff struct {
 	stats      map[diffKey]kit.FileStat // each changed file's size and time on disk, read off the loop
 	statting   bool
 	rechecking bool // a frame is set for when the stats read last go stale
-	busy       sync.WaitGroup
+	busy       kit.Busy
 	limit      chan struct{} // diffs made at once
 }
 
@@ -107,6 +107,7 @@ type diffSel struct {
 func (x *Diff) Manifest() plugin.Manifest { return plugin.Manifest{ID: "diff"} }
 
 func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "diff", Busy: x.busy.Busy, Source: "builtin:diff"}))
 	x.h = h
 	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
 	x.started, x.waking, x.styled = map[diffKey]time.Time{}, map[diffKey]bool{}, map[diffKey]bool{}

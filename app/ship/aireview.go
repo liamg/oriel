@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app/kit"
@@ -41,13 +40,14 @@ type AIReview struct {
 
 	filter    string // a severity the cards are narrowed to, or ""
 	dismissed bool   // dismissed findings are shown too
-	busy      sync.WaitGroup
+	busy      kit.Busy
 	asked     map[core.SessionID]bool // a review asked for and not answered yet
 }
 
 func (x *AIReview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ai-review"} }
 
 func (x *AIReview) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "aireview", Busy: x.busy.Busy, Source: "builtin:aireview"}))
 	x.h = h
 	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
 		Scopes: registry.ScopeUser,
