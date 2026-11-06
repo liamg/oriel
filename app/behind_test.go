@@ -22,6 +22,11 @@ func TestASessionBehindStreamsAtAFewFramesASecond(t *testing.T) {
 	}
 	r.WaitText("front")
 	time.Sleep(500 * time.Millisecond) // what opening it set going settles
+	// What the window draws anyway in a while, with nothing happening: the bound is on what the events add to it.
+	span := 100*10*time.Millisecond + 2*behindRedrawForTest
+	idle := len(r.Win.Frames())
+	time.Sleep(span)
+	idle = len(r.Win.Frames()) - idle
 	before := len(r.Win.Frames())
 	start := time.Now()
 	for i := range 100 {
@@ -34,8 +39,9 @@ func TestASessionBehindStreamsAtAFewFramesASecond(t *testing.T) {
 	took := time.Since(start)
 	time.Sleep(2 * behindRedrawForTest)
 	n := len(r.Win.Frames()) - before
-	if most := int(took/behindRedrawForTest) + 4; n > most {
-		t.Errorf("100 events of a session behind drew %d frames in %v, want at most %d", n, took.Round(time.Millisecond), most)
+	if most := idle + int(took/behindRedrawForTest) + 2; n > most {
+		t.Errorf("100 events of a session behind drew %d frames in %v (%d drawn idle in as long), want at most %d", n,
+			took.Round(time.Millisecond), idle, most)
 	}
 }
 

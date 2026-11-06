@@ -83,16 +83,17 @@ func TestPollsAtTheTightestNeedAndStopsWithNoSubscribers(t *testing.T) {
 func TestReadsAWatchedSourceWhenItsFilesChange(t *testing.T) {
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "a.txt"), "1")
-	m := manager(t, Options{})
+	// The app's settle, not quick's: a burst's events can arrive further apart than 20ms on a busy machine.
+	m := manager(t, Options{Timing: Timing{Settle: 150 * time.Millisecond, Most: time.Second, Grace: quick.Grace, Fallback: quick.Fallback}})
 	src, reads := counted("w", false, Files{Path: dir, Tree: true, Skip: func(rel string) bool { return rel == "skip" }})
 	s := Subscribe(m, src, Need{}, "s")
 	eventually(t, "the first read", func() bool { return reads.Load() == 1 })
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(400 * time.Millisecond)
 	if n := reads.Load(); n != 1 {
 		t.Fatalf("read %d times with nothing changed", n)
 	}
 	write(t, filepath.Join(dir, "skip", "x"), "1")
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(400 * time.Millisecond)
 	if n := reads.Load(); n != 1 {
 		t.Fatalf("read %d times for a skipped folder", n)
 	}
@@ -100,7 +101,7 @@ func TestReadsAWatchedSourceWhenItsFilesChange(t *testing.T) {
 		write(t, filepath.Join(dir, "a.txt"), string(rune('a'+i)))
 	}
 	eventually(t, "a read for the change", func() bool { return reads.Load() == 2 })
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(400 * time.Millisecond)
 	if n := reads.Load(); n != 2 {
 		t.Errorf("read %d times for one burst, want 2 in all", n)
 	}
