@@ -40,8 +40,67 @@ type Stats struct {
 
 	once    sync.Once
 	data    *stats.Store
-	mu      sync.Mutex // the stats store, and the events records it reads
+	mu      sync.Mutex // the stats store, and the events records it reads, and what's below
 	usageMu sync.Mutex
+
+	saved time.Time             // when the stats file was last written
+	found map[string]discovered // each provider's logs, as last looked for
+	roots map[string]string     // the work tree each outside session's directory is in
+}
+
+// discovered is what a provider's Discover found, and when.
+type discovered struct {
+	at    time.Time
+	stamp string
+	ts    []agent.Transcript
+}
+
+const (
+	// rediscover is how long a provider's list of its logs stands: listing them stats every one, and there are
+	// thousands. A log the list has is read to its end on each query whatever the list's age.
+	rediscover = time.Minute
+	// resave is how often the stats file is written while queries keep reading: it holds every scan.
+	resave = 30 * time.Second
+)
+
+// Close writes what the queries read since the stats file was last written.
+func (s *Stats) Close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.data != nil {
+		s.data.Save()
+	}
+}
+
+// discover is p's logs, looked for again once rediscover old; s.mu is held.
+func (s *Stats) discover(p agent.Provider, d agent.Discovered) []agent.Transcript {
+	now, stamp := s.env.Now(), ""
+	stamped, ok := p.(agent.DiscoverStamped)
+	if ok {
+		stamp = stamped.DiscoverStamp()
+	}
+	if f, ok := s.found[p.ID()]; ok && now.Sub(f.at) < rediscover && f.stamp == stamp {
+		return f.ts
+	}
+	if s.found == nil {
+		s.found = map[string]discovered{}
+	}
+	ts := d.Discover()
+	s.found[p.ID()] = discovered{at: now, stamp: stamp, ts: ts}
+	return ts
+}
+
+// rootOf is repoRoot, remembered by directory; s.mu is held.
+func (s *Stats) rootOf(dir string) string {
+	if r, ok := s.roots[dir]; ok {
+		return r
+	}
+	if s.roots == nil {
+		s.roots = map[string]string{}
+	}
+	r := repoRoot(dir)
+	s.roots[dir] = r
+	return r
 }
 
 // NewStats keeps stats under env's home, priced with the book prices gives.
@@ -106,7 +165,10 @@ func (s *Stats) Sessions(only core.SessionID, since time.Time) []stats.Session {
 	if only == "" || len(out) == 0 {
 		out = append(out, s.outside(only, since, own)...)
 	}
-	s.Store().Save()
+	if now := s.env.Now(); now.Sub(s.saved) >= resave {
+		s.Store().Save()
+		s.saved = now
+	}
 	return out
 }
 
@@ -156,7 +218,7 @@ func (s *Stats) outside(only core.SessionID, since time.Time, own owned) []stats
 		if !ok {
 			continue
 		}
-		for _, t := range d.Discover() {
+		for _, t := range s.discover(p, d) {
 			id := outsideID(p.ID(), t.Session)
 			if len(t.Logs) == 0 || only != "" && id != string(only) || own.has(p.ID(), t) || only == "" && t.Modified.Before(since) {
 				continue
@@ -169,7 +231,7 @@ func (s *Stats) outside(only core.SessionID, since time.Time, own owned) []stats
 			main := ss.Scans[0]
 			ss.Name = main.Title
 			if main.Cwd != "" {
-				root := repoRoot(main.Cwd)
+				root := s.rootOf(main.Cwd)
 				ss.Repos = []stats.Repo{{Name: filepath.Base(root), Dir: root}}
 				ss.Name = cmp.Or(ss.Name, filepath.Base(main.Cwd))
 			}

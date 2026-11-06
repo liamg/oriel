@@ -247,6 +247,7 @@ func (w *Host) Close() error {
 		w.run.Close()
 		w.reviews.Wait()
 		w.going.Wait()
+		w.stats.Close()
 		w.closeErr = errors.Join(w.closeErr, w.logs.Close())
 	})
 	return w.closeErr

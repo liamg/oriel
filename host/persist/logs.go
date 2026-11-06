@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
@@ -24,7 +25,12 @@ type Logs struct {
 	unlogged map[core.SessionID]bool // sessions whose log failed: their events are no longer recorded
 	open     map[core.SessionID]logs.SessionLog
 	notices  logs.Dirs
+	partial  map[string]time.Time // when each item still streaming was last logged, by session and item
 }
+
+// partialEvery is how often an item still streaming in is logged: each carries all of it so far, so logging every
+// chunk writes a long reply over and over. Once whole, it's logged at once.
+const partialEvery = 2 * time.Second
 
 type sessionLog struct {
 	f   *os.File
@@ -140,10 +146,45 @@ func (l *Logs) Record(ev core.Event) {
 		}
 		r = l.recs[id]
 	}
+	if l.skipPartial(id, ev) {
+		return
+	}
 	r.rec.Record(ev)
 	if err := r.rec.Err(); err != nil {
 		l.failed(id, err)
 	}
+}
+
+// skipPartial says ev only carries items still streaming that were logged less than partialEvery ago. l.mu is held.
+func (l *Logs) skipPartial(id core.SessionID, ev core.Event) bool {
+	a, ok := ev.(core.TranscriptAppended)
+	if !ok || len(a.Items) == 0 {
+		return false
+	}
+	now, skip := l.env.Now(), true
+	for _, it := range a.Items {
+		key := string(id) + "\x00" + it.ID
+		if !it.Partial {
+			delete(l.partial, key)
+			skip = false
+			continue
+		}
+		if at, ok := l.partial[key]; !ok || now.Sub(at) >= partialEvery {
+			skip = false
+		}
+	}
+	if skip {
+		return true
+	}
+	if l.partial == nil {
+		l.partial = map[string]time.Time{}
+	}
+	for _, it := range a.Items {
+		if it.Partial {
+			l.partial[string(id)+"\x00"+it.ID] = now
+		}
+	}
+	return false
 }
 
 // Logged says whether a session's events are being recorded.

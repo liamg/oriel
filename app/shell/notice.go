@@ -282,27 +282,32 @@ type tailEvent struct {
 	Seq   uint64
 	Type  string
 	Scope core.SessionID
-	JSON  string
+	JSON  string // filled in by list: most events kept are never looked at
 	At    time.Time
+	ev    core.Event
 }
 
 func newEventTail(size int) *eventTail { return &eventTail{size: size} }
 
 func (t *eventTail) add(ev core.Event) {
-	b, _ := json.Marshal(ev)
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.seq++
-	t.evs = append(t.evs, tailEvent{Seq: t.seq, Type: core.EventName(ev), Scope: ev.Scope(), JSON: string(b), At: time.Now()})
-	if len(t.evs) > t.size {
-		t.evs = slices.Delete(t.evs, 0, len(t.evs)-t.size)
+	t.evs = append(t.evs, tailEvent{Seq: t.seq, Type: core.EventName(ev), Scope: ev.Scope(), At: time.Now(), ev: ev})
+	if len(t.evs) > 2*t.size { // let go of the oldest a batch at a time, not one by one
+		t.evs = slices.Clone(t.evs[len(t.evs)-t.size:])
 	}
 }
 
 func (t *eventTail) list() []tailEvent {
 	t.mu.Lock()
-	defer t.mu.Unlock()
-	return slices.Clone(t.evs)
+	evs := slices.Clone(t.evs[max(0, len(t.evs)-t.size):])
+	t.mu.Unlock()
+	for i := range evs {
+		b, _ := json.Marshal(evs[i].ev)
+		evs[i].JSON, evs[i].ev = string(b), nil
+	}
+	return evs
 }
 
 // desktopClipboard is the system clipboard as the editor's registers see it. Platforms without a primary
