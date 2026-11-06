@@ -196,3 +196,32 @@ func TestPRFormStartsFromThePushedCommit(t *testing.T) {
 		t.Errorf("raised from the pushed commit's message and the template: %+v", got)
 	}
 }
+
+// Raised, the PR shows at once, though the code host's search doesn't find it yet: the form doesn't come back.
+func TestARaisedPRShowsWhileTheCodeHostCatchesUp(t *testing.T) {
+	s, _, hub, se, _ := shipScene(t)
+	x := shipOf(s)
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"x.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
+	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
+	s.Until("the Raise PR tab", func() bool { return strings.Contains(s.Text(), "RAISE PR") })
+	hub.Lag()
+	s.ClickOn("Push + raise PR")
+	shipSettle(s, t, "the raise done", func() bool { return !strings.Contains(s.Text(), "Raising") && len(hub.PRs("acme/search-api")) == 1 })
+	shipQuiet(s)
+	if sh, _ := x.ShipOf(se.ID, "search-api"); sh.PR == nil {
+		t.Fatal("raised, the project has no PR while the code host's search catches up")
+	}
+	if strings.Contains(s.Text(), "Push + raise PR") {
+		t.Errorf("raised, the form came back:\n%s", s.Text())
+	}
+	hub.CatchUp()
+	s.Run("ship.refresh", nil)
+	shipQuiet(s)
+	if sh, _ := x.ShipOf(se.ID, "search-api"); sh.PR == nil || sh.PR.Number != hub.PRs("acme/search-api")[0].Number {
+		t.Errorf("once found, the PR is %+v", sh.PR)
+	}
+}

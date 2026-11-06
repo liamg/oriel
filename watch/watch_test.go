@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/leaktest"
 )
 
@@ -51,29 +52,100 @@ func write(t *testing.T, p, s string) {
 	}
 }
 
+// rig is a manager on a clock the test moves and a file watcher whose events the test sends: what's timed happens
+// exactly when the test moves the clock past it, and nothing the disk does reaches it.
+type rig struct {
+	t      *testing.T
+	m      *Manager
+	clock  *clocktest.Fake
+	script *fswatch.Script
+	sent   int
+}
+
+func newRig(t *testing.T, o Options) *rig {
+	t.Helper()
+	r := &rig{t: t, clock: clocktest.New(time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC))}
+	o.Clock = r.clock
+	if o.Watch == nil {
+		o.Watch = func() (*fswatch.Watcher, error) {
+			w, s := fswatch.NewScripted()
+			r.script = s
+			return w, nil
+		}
+	}
+	r.m = manager(t, o)
+	r.settle()
+	return r
+}
+
+// settle waits for every read under way to finish and every event sent to be taken in: not for a while, for that.
+func (r *rig) settle() {
+	r.t.Helper()
+	eventually(r.t, "the manager settled", func() bool {
+		r.m.mu.Lock()
+		defer r.m.mu.Unlock()
+		for _, n := range r.m.nodes {
+			if n.reading {
+				return false
+			}
+		}
+		return r.m.handled == r.sent
+	})
+}
+
+// advance moves the clock on by d, one thing due at a time, letting what each starts finish before the next.
+func (r *rig) advance(d time.Duration) {
+	r.t.Helper()
+	r.settle()
+	end := r.clock.Now().Add(d)
+	for {
+		next, ok := r.clock.Next()
+		if !ok || next.After(end) {
+			r.clock.Advance(end.Sub(r.clock.Now()))
+			r.settle()
+			return
+		}
+		r.clock.Advance(max(0, next.Sub(r.clock.Now())))
+		r.settle()
+	}
+}
+
+// change says paths changed, as the file watcher would once they'd settled.
+func (r *rig) change(paths ...string) {
+	r.t.Helper()
+	if r.script == nil {
+		r.t.Fatal("nothing is watching files yet")
+	}
+	r.sent += len(paths)
+	r.script.Change(paths...)
+	r.settle()
+}
+
 // A polled source is read at its subscriptions' tightest MaxAge, shared between them, and not at all once none is left.
 func TestPollsAtTheTightestNeedAndStopsWithNoSubscribers(t *testing.T) {
-	m := manager(t, Options{})
+	r := newRig(t, Options{})
 	src, reads := counted("p", true)
-	a := Subscribe(m, src, Need{MaxAge: time.Hour}, "a")
-	eventually(t, "the first read", func() bool { _, _, ok := a.Get(); return ok })
-	time.Sleep(150 * time.Millisecond)
+	a := Subscribe(r.m, src, Need{MaxAge: time.Hour}, "a")
+	r.advance(0)
+	if _, _, ok := a.Get(); !ok {
+		t.Fatal("no first read")
+	}
+	r.advance(150 * time.Millisecond)
 	if n := reads.Load(); n != 1 {
 		t.Fatalf("read %d times at an hour's need, want 1", n)
 	}
-	b := Subscribe(m, src, Need{MaxAge: 50 * time.Millisecond}, "b")
-	time.Sleep(300 * time.Millisecond)
-	if n := reads.Load(); n < 3 || n > 9 {
-		t.Fatalf("read %d times in 300ms at 50ms, want about 6", n)
+	b := Subscribe(r.m, src, Need{MaxAge: 50 * time.Millisecond}, "b")
+	r.advance(300 * time.Millisecond)
+	if n := reads.Load(); n != 8 { // at once for b's need (150ms since the first), then every 50ms to 450ms
+		t.Fatalf("read %d times in 300ms at 50ms, want 8 in all", n)
 	}
-	if va, _, _ := a.Get(); va == 0 {
-		t.Error("a doesn't share the reading")
+	if va, _, _ := a.Get(); va != 8 {
+		t.Errorf("a has reading %d, not the shared 8", va)
 	}
 	a.Close()
 	b.Close()
-	time.Sleep(50 * time.Millisecond)
 	before := reads.Load()
-	time.Sleep(300 * time.Millisecond)
+	r.advance(time.Hour)
 	if n := reads.Load() - before; n > 0 {
 		t.Errorf("read %d times with no subscribers", n)
 	}
@@ -82,35 +154,31 @@ func TestPollsAtTheTightestNeedAndStopsWithNoSubscribers(t *testing.T) {
 // A watched source is read when its files change, once for a burst, and not for what it skips or while nothing changes.
 func TestReadsAWatchedSourceWhenItsFilesChange(t *testing.T) {
 	dir := t.TempDir()
-	write(t, filepath.Join(dir, "a.txt"), "1")
-	// The app's settle, not quick's: a burst's events can arrive further apart than 20ms on a busy machine.
-	m := manager(t, Options{Timing: Timing{Settle: 150 * time.Millisecond, Most: time.Second, Grace: quick.Grace, Fallback: quick.Fallback}})
+	r := newRig(t, Options{})
 	src, reads := counted("w", false, Files{Path: dir, Tree: true, Skip: func(rel string) bool { return rel == "skip" }})
-	s := Subscribe(m, src, Need{}, "s")
-	eventually(t, "the first read", func() bool { return reads.Load() == 1 })
-	time.Sleep(400 * time.Millisecond)
+	s := Subscribe(r.m, src, Need{}, "s")
+	r.advance(0)
+	r.advance(time.Hour)
 	if n := reads.Load(); n != 1 {
-		t.Fatalf("read %d times with nothing changed", n)
+		t.Fatalf("read %d times with nothing changed, want the first read only", n)
 	}
-	write(t, filepath.Join(dir, "skip", "x"), "1")
-	time.Sleep(400 * time.Millisecond)
+	r.change(filepath.Join(dir, "skip", "x"))
+	r.advance(time.Hour)
 	if n := reads.Load(); n != 1 {
 		t.Fatalf("read %d times for a skipped folder", n)
 	}
-	// A burst: five writes through one handle, as quick as the machine goes. Each written through a file of its own,
-	// the five can take long enough on a busy machine to be two bursts.
-	f, err := os.OpenFile(filepath.Join(dir, "a.txt"), os.O_WRONLY|os.O_TRUNC, 0)
-	if err != nil {
-		t.Fatal(err)
+	for range 5 { // a burst: each closer to the last than the settle
+		r.change(filepath.Join(dir, "a.txt"))
+		r.advance(quick.Settle / 2)
 	}
-	for i := range 5 {
-		if _, err := f.WriteString(string(rune('a' + i))); err != nil {
-			t.Fatal(err)
-		}
+	if n := reads.Load(); n != 1 {
+		t.Fatalf("read %d times during a burst", n)
 	}
-	f.Close()
-	eventually(t, "a read for the change", func() bool { return reads.Load() == 2 })
-	time.Sleep(400 * time.Millisecond)
+	r.advance(quick.Settle)
+	if n := reads.Load(); n != 2 {
+		t.Fatalf("read %d times once the burst settled, want 2 in all", n)
+	}
+	r.advance(time.Hour)
 	if n := reads.Load(); n != 2 {
 		t.Errorf("read %d times for one burst, want 2 in all", n)
 	}
@@ -121,49 +189,64 @@ func TestReadsAWatchedSourceWhenItsFilesChange(t *testing.T) {
 	}
 }
 
+// A burst that goes on is read at most Most after it began, not held back for as long as it lasts.
+func TestALongBurstIsReadAtMost(t *testing.T) {
+	dir := t.TempDir()
+	r := newRig(t, Options{})
+	src, reads := counted("w", false, Files{Path: dir, Tree: true})
+	Subscribe(r.m, src, Need{}, "s")
+	r.advance(0)
+	for range 2 * int(quick.Most/(quick.Settle/2)) {
+		r.change(filepath.Join(dir, "log"))
+		r.advance(quick.Settle / 2)
+	}
+	if n := reads.Load(); n < 2 {
+		t.Errorf("a burst twice Most long was read %d times, want at least once while it went on", n)
+	}
+}
+
 // Behind another app a Pause subscription reads nothing, and once back the stale source is read once; Keep goes on.
 func TestPausesInTheBackgroundAndCatchesUpOnce(t *testing.T) {
 	dir := t.TempDir()
-	m := manager(t, Options{})
+	r := newRig(t, Options{})
 	src, reads := counted("w", false, Files{Path: dir, Tree: true})
-	Subscribe(m, src, Need{}, "s")
-	eventually(t, "the first read", func() bool { return reads.Load() == 1 })
-	m.SetFocused(false)
-	for i := range 3 {
-		write(t, filepath.Join(dir, "f"), string(rune('a'+i)))
-		time.Sleep(100 * time.Millisecond)
+	Subscribe(r.m, src, Need{}, "s")
+	r.advance(0)
+	r.m.SetFocused(false)
+	for range 3 {
+		r.change(filepath.Join(dir, "f"))
+		r.advance(100 * time.Millisecond)
 	}
 	if n := reads.Load(); n != 1 {
 		t.Fatalf("read %d times behind another app", n)
 	}
-	m.SetFocused(true)
-	eventually(t, "a catch-up read", func() bool { return reads.Load() == 2 })
-	time.Sleep(200 * time.Millisecond)
+	r.m.SetFocused(true)
+	r.advance(time.Hour)
 	if n := reads.Load(); n != 2 {
 		t.Fatalf("read %d times catching up, want one", n)
 	}
 
 	kept, keptReads := counted("k", true)
-	Subscribe(m, kept, Need{MaxAge: 50 * time.Millisecond, Background: Keep}, "k")
-	m.SetFocused(false)
+	Subscribe(r.m, kept, Need{MaxAge: 50 * time.Millisecond, Background: Keep}, "k")
+	r.advance(0)
+	r.m.SetFocused(false)
 	before := keptReads.Load()
-	time.Sleep(300 * time.Millisecond)
-	if n := keptReads.Load() - before; n < 3 {
-		t.Errorf("a Keep subscription read %d times in 300ms behind another app", n)
+	r.advance(300 * time.Millisecond)
+	if n := keptReads.Load() - before; n != 6 {
+		t.Errorf("a Keep subscription read %d times in 300ms behind another app, want every 50ms: 6", n)
 	}
 	slow, slowReads := counted("slow", true)
-	Subscribe(m, slow, Need{MaxAge: 10 * time.Millisecond, Background: Slow, Slow: time.Hour}, "slow")
-	eventually(t, "the slow source's first read", func() bool { return slowReads.Load() == 1 })
-	time.Sleep(200 * time.Millisecond)
+	Subscribe(r.m, slow, Need{MaxAge: 10 * time.Millisecond, Background: Slow, Slow: time.Hour}, "slow")
+	r.advance(200 * time.Millisecond)
 	if n := slowReads.Load(); n != 1 {
-		t.Errorf("a Slow subscription read %d times in the background, want 1", n)
+		t.Errorf("a Slow subscription read %d times in the background in 200ms, want only the first", n)
 	}
 }
 
 // A source read from another is read again only when that one's reading changes, and after it.
 func TestDerivedSourcesFollowTheirDeps(t *testing.T) {
 	dir := t.TempDir()
-	m := manager(t, Options{})
+	r := newRig(t, Options{})
 	var gen atomic.Int32
 	base := Source[int]{Key: "base", Files: []Files{{Path: dir, Tree: true}}, Same: func(a, b int) bool { return a == b },
 		Read: func(Reader) (int, error) { return int(gen.Load()), nil }}
@@ -176,17 +259,23 @@ func TestDerivedSourcesFollowTheirDeps(t *testing.T) {
 		}
 		return v * 10, nil
 	}}
-	s := Subscribe(m, top, Need{}, "s")
-	eventually(t, "the first read", func() bool { v, _, ok := s.Get(); return ok && v == 0 })
-	write(t, filepath.Join(dir, "f"), "same")
-	time.Sleep(200 * time.Millisecond)
+	s := Subscribe(r.m, top, Need{}, "s")
+	r.advance(time.Hour)
+	if v, _, ok := s.Get(); !ok || v != 0 {
+		t.Fatalf("the first reading: %v, %v", v, ok)
+	}
+	r.change(filepath.Join(dir, "f"))
+	r.advance(time.Hour)
 	if n := derived.Load(); n != 1 {
 		t.Fatalf("the derived source read %d times for a base reading that didn't change", n)
 	}
 	gen.Store(4)
-	write(t, filepath.Join(dir, "f"), "new")
-	eventually(t, "the derived reading", func() bool { v, _, _ := s.Get(); return v == 40 })
-	if st := m.Stats(); len(st) != 2 {
+	r.change(filepath.Join(dir, "f"))
+	r.advance(time.Hour)
+	if v, _, _ := s.Get(); v != 40 {
+		t.Errorf("the derived reading is %d, want 40", v)
+	}
+	if st := r.m.Stats(); len(st) != 2 {
 		t.Errorf("stats list %d sources, want both", len(st))
 	}
 }
@@ -194,24 +283,32 @@ func TestDerivedSourcesFollowTheirDeps(t *testing.T) {
 // A source nobody subscribes to keeps its watch and reading through its grace, then lets both go.
 func TestLetsGoAfterItsGrace(t *testing.T) {
 	dir := t.TempDir()
-	m := manager(t, Options{})
+	r := newRig(t, Options{})
 	src, reads := counted("w", false, Files{Path: dir, Tree: true})
-	s := Subscribe(m, src, Need{}, "s")
-	eventually(t, "the first read", func() bool { return reads.Load() == 1 })
+	s := Subscribe(r.m, src, Need{}, "s")
+	r.advance(0)
 	s.Close()
-	again := Subscribe(m, src, Need{}, "again")
+	r.advance(quick.Grace / 2)
+	again := Subscribe(r.m, src, Need{}, "again")
 	if _, _, ok := again.Get(); !ok {
 		t.Fatal("a subscription back within the grace has no reading")
 	}
-	time.Sleep(100 * time.Millisecond)
+	r.advance(time.Hour)
 	if n := reads.Load(); n != 1 {
 		t.Fatalf("read %d times coming back within the grace", n)
 	}
 	again.Close()
-	eventually(t, "letting go", func() bool { return len(m.Stats()) == 0 })
-	m.roots.mu.RLock()
-	left := len(m.roots.files)
-	m.roots.mu.RUnlock()
+	r.advance(quick.Grace - time.Millisecond)
+	if len(r.m.Stats()) == 0 {
+		t.Fatal("let go before its grace was over")
+	}
+	r.advance(time.Millisecond)
+	if n := len(r.m.Stats()); n != 0 {
+		t.Fatalf("%d sources kept past their grace", n)
+	}
+	r.m.roots.mu.RLock()
+	left := len(r.m.roots.files)
+	r.m.roots.mu.RUnlock()
 	if left != 0 {
 		t.Errorf("%d paths still watched", left)
 	}
@@ -219,29 +316,31 @@ func TestLetsGoAfterItsGrace(t *testing.T) {
 
 // A paused subscription reads nothing until it resumes.
 func TestPausedSubscriptionsReadNothing(t *testing.T) {
-	m := manager(t, Options{})
+	r := newRig(t, Options{})
 	src, reads := counted("p", true)
-	s := Subscribe(m, src, Need{MaxAge: 20 * time.Millisecond}, "s")
-	eventually(t, "the first read", func() bool { return reads.Load() >= 1 })
+	s := Subscribe(r.m, src, Need{MaxAge: 20 * time.Millisecond}, "s")
+	r.advance(0)
 	s.Pause()
-	time.Sleep(50 * time.Millisecond)
 	before := reads.Load()
-	time.Sleep(200 * time.Millisecond)
+	r.advance(time.Hour)
 	if n := reads.Load() - before; n > 0 {
 		t.Fatalf("read %d times paused", n)
 	}
 	s.Resume()
-	eventually(t, "reads again", func() bool { return reads.Load() > before })
+	r.advance(0)
+	if reads.Load() == before {
+		t.Error("resumed, it reads nothing")
+	}
 }
 
 // Files that can't be watched are polled while someone subscribes.
 func TestPollsWhatItCantWatch(t *testing.T) {
-	m := manager(t, Options{Watch: func() (*fswatch.Watcher, error) { return nil, fswatch.ErrLimit }})
+	r := newRig(t, Options{Watch: func() (*fswatch.Watcher, error) { return nil, fswatch.ErrLimit }})
 	src, reads := counted("w", false, Files{Path: t.TempDir(), Tree: true})
-	s := Subscribe(m, src, Need{}, "s")
-	time.Sleep(350 * time.Millisecond)
-	if n := reads.Load(); n < 3 {
-		t.Fatalf("read %d times in 350ms polling at 100ms", n)
+	s := Subscribe(r.m, src, Need{}, "s")
+	r.advance(350 * time.Millisecond)
+	if n := reads.Load(); n != 4 { // at once, then every Fallback: 100, 200 and 300ms
+		t.Fatalf("read %d times in 350ms polling at 100ms, want 4", n)
 	}
 	s.Close()
 }

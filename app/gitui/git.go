@@ -32,7 +32,7 @@ type Git struct {
 	gitTree // the work dir's
 	h       plugin.Host
 	links   kit.Links // the dirs asked about, resolved
-	busy    sync.WaitGroup
+	busy    kit.Busy
 	running atomic.Int32 // the work busy waits on
 
 	mu        sync.Mutex
@@ -76,6 +76,7 @@ type gitTree struct {
 func (g *Git) Manifest() plugin.Manifest { return plugin.Manifest{ID: "git"} }
 
 func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
+	g.Add(h.Contribute(registry.Busy{Name: "git", Busy: func() bool { return gitTrees{g}.Busy() || g.busy.Busy() }, Source: "builtin:git"}))
 	g.h = h
 	g.others, g.parked, g.roots = map[string]*gitTree{}, map[string]*parkedTree{}, map[string]string{}
 	g.gitTree = gitTree{g: g, held: true}

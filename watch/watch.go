@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Background is what a subscription wants while the window is behind another app.
@@ -143,6 +144,7 @@ type Options struct {
 	Timing Timing
 	Log    func(msg string, args ...any) // read failures and panics
 	Polls  Polls                         // told of each source polled, for the idle budget
+	Clock  clock.Clock                   // what it times settling, reads and grace by; the system's when nil
 }
 
 // Polls note periodic work while it runs.
@@ -163,12 +165,14 @@ type Manager struct {
 	closed  bool
 	fw      *fswatch.Watcher
 	fwErr   error
+	handled int // the file watcher's events taken in, for the tests
 	roots   fsRoots
 }
 
 // New starts a manager, with the window in front.
 func New(o Options) *Manager {
 	o.Timing = o.Timing.or()
+	o.Clock = clock.Or(o.Clock)
 	if o.Watch == nil {
 		o.Watch = fswatch.New
 	}
@@ -245,7 +249,7 @@ func (s Sub[T]) Err() error {
 // Fresh reads the source again now, as Refresh does, and waits for that reading, or why it failed: a reading begun
 // after the call, never one kept from before (a file written just now). ctx gives up.
 func (s Sub[T]) Fresh(ctx context.Context) (T, error) {
-	since := time.Now()
+	since := s.s.n.m.opts.Clock.Now()
 	s.Refresh()
 	tick := time.NewTicker(10 * time.Millisecond) // Changed may be drained by another reader of it
 	defer tick.Stop()
@@ -447,7 +451,7 @@ type node struct {
 	readCause string    // the cause of its last read; "poll" for a poll
 	reading   bool      // a read is running
 	lastStart time.Time // when the last read began
-	timer     *time.Timer
+	timer     clock.Timer
 	idle      time.Time     // when it lost its last subscription
 	polling   time.Duration // the period noted with Options.Polls
 	unnote    func()
@@ -490,7 +494,7 @@ func (n *node) update() {
 		n.idle = time.Time{}
 		n.hold()
 	case n.held && n.idle.IsZero():
-		n.idle = time.Now()
+		n.idle = n.m.opts.Clock.Now()
 	}
 	for _, d := range n.deps {
 		d.need = need
@@ -582,7 +586,7 @@ func (n *node) schedule() {
 		n.timer.Stop()
 		n.timer = nil
 	}
-	now := time.Now()
+	now := n.m.opts.Clock.Now()
 	t := n.m.opts.Timing
 	var at time.Time
 	switch {
@@ -606,7 +610,7 @@ func (n *node) schedule() {
 	default:
 		return
 	}
-	n.timer = time.AfterFunc(max(0, at.Sub(now)), n.fire)
+	n.timer = n.m.opts.Clock.AfterFunc(max(0, at.Sub(now)), n.fire)
 }
 
 // waiting says a source n reads from is being read, or is about to be: n reads after it.
@@ -634,7 +638,7 @@ func (n *node) fire() {
 	if m.closed || m.nodes[n.spec.key] != n {
 		return
 	}
-	now := time.Now()
+	now := m.opts.Clock.Now()
 	grace := m.opts.Timing.Grace
 	if !n.active && !n.idle.IsZero() && now.Sub(n.idle) >= grace {
 		if n.held {
@@ -665,7 +669,7 @@ func (n *node) read() {
 		n.readCause = "poll"
 	}
 	n.reading, n.dirty, n.urgent, n.cause = true, false, false, ""
-	n.lastStart = time.Now()
+	n.lastStart = m.opts.Clock.Now()
 	n.reads++
 	n.times = append(n.times, n.lastStart)
 	if cut := n.lastStart.Add(-time.Minute); len(n.times) > 0 && n.times[0].Before(cut) {
@@ -706,7 +710,7 @@ func (n *node) read() {
 		if err == nil || !n.has {
 			n.value = v
 		}
-		n.err, n.at, n.from, n.has = err, time.Now(), began, true
+		n.err, n.at, n.from, n.has = err, m.opts.Clock.Now(), began, true
 		if news {
 			for s := range n.subs {
 				if s.internal {
@@ -768,7 +772,7 @@ func (n *node) busy() bool {
 
 // stale marks n stale, with the paths that changed and why; m.mu is held.
 func (n *node) stale(paths []string, cause string) {
-	now := time.Now()
+	now := n.m.opts.Clock.Now()
 	if !n.dirty {
 		n.dirty, n.first = true, now
 	}

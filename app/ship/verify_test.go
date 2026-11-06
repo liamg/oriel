@@ -292,7 +292,7 @@ func TestVerifyQuizWaiting(t *testing.T) {
 	s.Frame()
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
-	s.WantFrame("Writing the questions…")
+	s.Midway(func() { s.WantFrame("Writing the questions…") })
 	verifySettle(s, t, "the first question", func(f string) bool { return strings.Contains(f, "QUESTION 1") })
 	answer(s, t, "It rounds to even")
 	s.Frame()
@@ -301,6 +301,6 @@ func TestVerifyQuizWaiting(t *testing.T) {
 	if n := s.Node("Thinking"); n.Role != "status" {
 		t.Errorf("the dots read as %+v", n)
 	}
-	s.WantFrame("4s")
+	s.Midway(func() { s.WantFrame("4s") })
 	verifySettle(s, t, "the verdict", func(f string) bool { return !strings.Contains(f, "4s") })
 }

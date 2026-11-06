@@ -32,7 +32,7 @@ type SubStat struct {
 func (m *Manager) Stats() []SourceStat {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	cut := time.Now().Add(-time.Minute)
+	cut := m.opts.Clock.Now().Add(-time.Minute)
 	var out []SourceStat
 	for _, n := range m.nodes {
 		st := SourceStat{Key: n.spec.key, Need: n.need, LastRead: n.at, Reads: n.reads, Err: n.err, Stale: n.dirty,

@@ -179,6 +179,13 @@ func (h *Headless) Frame() {
 func (h *Headless) List() *render.List { return h.list }
 
 // RunQueued runs the work plugins handed the loop (Host.Do).
+// Queued says the loop has been handed work it hasn't run.
+func (h *Headless) Queued() bool {
+	h.sh.todoMu.Lock()
+	defer h.sh.todoMu.Unlock()
+	return len(h.sh.todo) > 0
+}
+
 func (h *Headless) RunQueued() {
 	defer fsx.Enter()()
 	h.sh.runTodo()

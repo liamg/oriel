@@ -124,6 +124,7 @@ type Scene struct {
 	// OverviewOff hides the project overview, whose temporary paths would change every run; overview tests dispose
 	// it.
 	OverviewOff registry.Disposable
+	midway      bool // looks don't settle the app first (Midway)
 }
 
 // New starts a scene with a home and config of the test's, and stops it when the test ends.
@@ -309,6 +310,7 @@ func (s *Scene) FullText() string {
 // WantFrame fails the test for each of wants the frame lacks.
 func (s *Scene) WantFrame(wants ...string) {
 	s.T.Helper()
+	s.Quiet()
 	text := s.Text()
 	for _, w := range wants {
 		if !strings.Contains(text, w) {
@@ -554,6 +556,7 @@ func (s *Scene) ClickNode(label string) {
 // running, pressing and letting go on the frame it was found in.
 func (s *Scene) ClickOn(label string) {
 	s.T.Helper()
+	s.Quiet()
 	var last *render.AccessNode
 	for deadline := time.Now().Add(Timeout); ; {
 		s.Frame()

@@ -195,7 +195,7 @@ type fileList struct {
 	files   []string
 	walking bool
 	done    bool // a walk has finished
-	busy    sync.WaitGroup
+	busy    kit.Busy
 }
 
 const (

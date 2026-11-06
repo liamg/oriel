@@ -26,6 +26,9 @@ var ceilings = map[string]int{
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
 	"tests writing package-level vars":     0,
+	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
+	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
+	"time.Sleep in tests": 188,
 }
 
 // stateAllowed are the package-level vars MutableVars may pass over, by "dir.name", and why each is safe to share.
@@ -47,6 +50,17 @@ var stateAllowed = map[string]string{
 	"agent/packs.sources":   "the embedded packs, parsed at init",
 	"agent/prompts.builtin": "the embedded prompts, parsed at init",
 	"text.boundaryCache":    "a test's memo of a pure function",
+}
+
+// tests are files' tests alone.
+func tests(files []File) []File {
+	var out []File
+	for _, f := range files {
+		if strings.HasSuffix(f.Path, "_test.go") {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 func repoRoot(t *testing.T) string {
@@ -114,6 +128,7 @@ func TestRatchets(t *testing.T) {
 		"multi-line Input outside Prose":       Multiline(notUI),
 		"mutable package-level vars":           MutableVars(product, layout.Module, stateAllowed),
 		"tests writing package-level vars":     allowedOut(TestVarWrites(withTests, layout.Module), stateAllowed),
+		"time.Sleep in tests":                  PkgSelectors(tests(withTests), "time", "Sleep"),
 	}
 	for name, hits := range counts {
 		ceiling, ok := ceilings[name]

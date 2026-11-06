@@ -46,7 +46,7 @@ func TestTicketsPageLoading(t *testing.T) {
 	s.Press("r")
 	s.Until("the second ask", func() bool { return global(vm, "asked") == float64(2) })
 	s.Frame()
-	s.WantFrame("Refreshing…", "Nothing assigned to you in Slow")
+	s.Midway(func() { s.WantFrame("Refreshing…", "Nothing assigned to you in Slow") })
 	answer()
 	s.Until("the refresh", func() bool { return !strings.Contains(s.Text(), "Refreshing…") })
 }

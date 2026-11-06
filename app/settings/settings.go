@@ -96,6 +96,7 @@ var scopeNames = []string{"USER", "PROJECT", "SESSION"}
 func (s *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "settings"} }
 
 func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
+	s.Add(h.Contribute(registry.Busy{Name: "settings", Busy: s.work.Busy, Source: "builtin:settings"}))
 	s.h = h
 	conf := s.ConfigDir
 	s.files, s.filesDone = kit.FileManager(h, "settings", SettingsPoll)

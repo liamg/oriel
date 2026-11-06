@@ -190,6 +190,7 @@ func DebugEntries() *kit.Entries {
 }
 
 func (x *Debug) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "debug", Busy: x.work.Busy, Source: "builtin:debug"}))
 	x.h = h
 	x.bps = map[string][]debugBreakpoint{}
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "breakpoints and watches", Path: x.StateFile, Load: x.load})
@@ -326,8 +327,10 @@ func (x *Debug) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
 		if err != nil {
 			return
 		}
-		<-c.Done()
-		x.h.Do(func() { x.ended(s) })
+		x.work.Loop(func(context.Context) { // a session runs as long as it runs: the debugger isn't busy meanwhile
+			<-c.Done()
+			x.h.Do(func() { x.ended(s) })
+		})
 	})
 }
 

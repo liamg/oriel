@@ -31,8 +31,10 @@ func TestShipColumnsLoad(t *testing.T) {
 	fail("gh: not logged in")
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
-	s.WantFrame("gh: not logged in", "Retry")
-	s.ClickNode("Retry") // this scene has no session host: the read runs again and says so
+	s.Midway(func() {
+		s.WantFrame("gh: not logged in", "Retry")
+		s.ClickNode("Retry") // this scene has no session host: the read runs again and says so
+	})
 	shipIdle(s)
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()

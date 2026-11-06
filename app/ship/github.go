@@ -48,7 +48,7 @@ type GitHub struct {
 	now    func() time.Time
 	ctx    context.Context
 	cancel context.CancelFunc
-	busy   sync.WaitGroup
+	busy   kit.Busy
 	subs   kit.Subs   // the syncs it keeps, from the sessions' managers
 	budget kit.Budget // review sessions' syncs, behind the one in front
 
@@ -79,6 +79,7 @@ func (m githubMirror) ended() bool {
 func (x *GitHub) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github"} }
 
 func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
+	x.Add(h.Contribute(registry.Busy{Name: "github", Busy: x.busy.Busy, Source: "builtin:github"}))
 	x.h = h
 	if x.now == nil {
 		x.now = time.Now
