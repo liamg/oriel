@@ -58,6 +58,9 @@ type KindSpec struct {
 	Order    int  `json:"order,omitempty"` // the launcher's order: the built-ins are 10 to 60
 	// PromptFile is a file at the workspace root the prompt is written to as the session starts: a job's JOB.md.
 	PromptFile string `json:"promptFile,omitempty"`
+	// AgentGate is the agent's own gate its sessions start with when theirs doesn't say: ask, light, auto or
+	// bypass; ask if "". A job's is auto: nobody is there to answer.
+	AgentGate string `json:"agentGate,omitempty"`
 	// Opens are commands run once the window is on a new session of the kind, before session.start's own then.
 	Opens []KindCall   `json:"opens,omitempty"`
 	Caps  []Capability `json:"caps,omitempty"`

@@ -35,7 +35,7 @@ var (
 			{Command: "view.open", Args: map[string]any{"id": "explorer", "place": "dock", "edge": "left", "alone": true, "fixed": true}},
 			{Command: "diff.open"}}}
 	JobKind = core.KindSpec{Kind: core.KindJob, Title: "Job", Desc: "runs to done on its own", From: core.FromPrompt, Pack: "job",
-		Worktrees: core.WorktreesNow, Order: 40, PromptFile: "JOB.md", Caps: everything,
+		Worktrees: core.WorktreesNow, Order: 40, PromptFile: "JOB.md", AgentGate: "auto", Caps: everything,
 		About: "The agent runs the prompt until it's done or blocked, and makes worktrees as it needs them."}
 	NewRepoKind = core.KindSpec{Kind: core.KindNewRepo, Title: "New repo", Desc: "start from nothing", From: core.FromName, Pack: "newrepo",
 		Worktrees: core.WorktreesInit, Order: 50, Caps: attended,

@@ -141,7 +141,7 @@ func (s *session) fileApproval(r *jsonrpc.Request, p request) {
 			return
 		}
 	}
-	if s.spec.Policy == agent.PolicyLight && p.GrantRoot == "" {
+	if (s.spec.Policy == agent.PolicyLight || s.spec.Policy == agent.PolicyAuto) && p.GrantRoot == "" {
 		r.Reply(map[string]any{"decision": "accept"}, nil)
 		return
 	}

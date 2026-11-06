@@ -176,6 +176,7 @@ func (w *Host) parts() error {
 		Packs:          w.opts.Packs,
 		KeyWait:        func() time.Duration { return w.opts.KeyWait },
 		Repos:          w.repos.Repos,
+		AddRepo:        w.AddRepo,
 		AccountOf:      w.stats.AccountOf,
 		Record:         w.stats.Record,
 		UsageSampled:   w.stats.UsageSampled,

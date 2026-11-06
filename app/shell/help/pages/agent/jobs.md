@@ -7,8 +7,11 @@ related: [agent/launcher, agent/stats, agent/requests]
 # Jobs
 
 A job is a saved prompt you press Run on. It names no repo or branch: the prompt names the repos it needs, and the
-agent running it adds them. Each job is one file under `~/.oriel/jobs`, and each run is a session of
-kind job in a fresh workspace, given the prompt as `JOB.md`.
+agent running it adds them, from the repos Oriel knows, as worktrees of the run's own. Each job is one file under
+`~/.oriel/jobs`, and each run is a session of kind job in a fresh workspace, given the prompt as `JOB.md`.
+
+Nobody is there to answer a run's questions, so its agent runs in its own auto mode: Claude's asks only of what it
+judges risky. In a sandbox nothing asks; the sandbox is the gate.
 
 ## The Jobs page {#page}
 

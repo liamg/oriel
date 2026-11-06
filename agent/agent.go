@@ -238,6 +238,7 @@ const (
 	PolicyAsk    Policy = "ask"    // every tool the agent would ask about
 	PolicyLight  Policy = "light"  // edits go ahead, shell commands ask
 	PolicyBypass Policy = "bypass" // nothing asks: only inside a sandbox
+	PolicyAuto   Policy = "auto"   // the agent's own judgement asks only of what's risky (Claude's auto mode); light elsewhere
 )
 
 // HookSocketEnv names the unix socket a provider's agent calls back to it over (hooks, its MCP tools). A sandbox
