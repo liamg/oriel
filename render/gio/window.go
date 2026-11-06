@@ -76,6 +76,7 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 	}
 	w.active.Store(true)
 	w.ax = newAccess(w.accessGeom)
+	w.ax.wake = func() { w.post(render.RedrawEvent{}) }
 	w.ax.bridge = newAccessBridge(w.ax)
 	b.mu.Lock()
 	b.windows = append(b.windows, w)
@@ -125,6 +126,9 @@ var _ render.Accessible = (*Window)(nil)
 
 // UpdateAccess hands the tree's changes to the platform's screen reader bridge, which uses them only once one asks.
 func (w *Window) UpdateAccess(u render.AccessUpdate) { w.ax.bridge.update(w.ax.tree.apply(u)) }
+
+// AccessWanted says a screen reader is reading the window's tree.
+func (w *Window) AccessWanted() bool { return w.ax.bridge.wanted() }
 
 func (w *Window) AccessActions() <-chan render.AccessAction { return w.ax.actions }
 

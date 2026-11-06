@@ -12,4 +12,5 @@ func newAccessBridge(*access) accessBridge { return noBridge{} }
 func (noBridge) view(event.Event)    {}
 func (noBridge) update(accessChange) {}
 func (noBridge) activate(bool)       {}
+func (noBridge) wanted() bool        { return false }
 func (noBridge) close()              {}

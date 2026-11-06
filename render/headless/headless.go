@@ -90,6 +90,7 @@ type Window struct {
 	cursor render.Cursor
 
 	access  map[uint64]*render.AccessNode
+	noAX    bool // no screen reader is reading it (SetScreenReader)
 	actions chan render.AccessAction
 	clip    string
 	files   []string // copied in the file manager
@@ -98,6 +99,7 @@ type Window struct {
 
 var (
 	_ render.Accessible     = (*Window)(nil)
+	_ render.AccessWanted   = (*Window)(nil)
 	_ render.Clipboard      = (*Window)(nil)
 	_ render.ClipboardFiles = (*Window)(nil)
 	_ render.Placed         = (*Window)(nil)
@@ -167,6 +169,24 @@ func (w *Window) Clipboard() string {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	return w.clip
+}
+
+// SetScreenReader says whether a screen reader is reading the window, as a platform's bridge knows; one starting
+// asks for a frame. A window starts with one reading.
+func (w *Window) SetScreenReader(on bool) {
+	w.mu.Lock()
+	was := !w.noAX
+	w.noAX = !on
+	w.mu.Unlock()
+	if on && !was {
+		w.Send(render.RedrawEvent{})
+	}
+}
+
+func (w *Window) AccessWanted() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return !w.noAX
 }
 
 // UpdateAccess applies an accessibility update, as a platform bridge would.

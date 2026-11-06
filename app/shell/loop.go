@@ -81,6 +81,13 @@ func (l *loop) open(poke func()) []func() {
 	return stops
 }
 
+// accessWanted says a screen reader may be reading a: no tree is built for a window that knows none is. The last tree
+// sent is kept, so the first update once one is reading brings the bridge up to date.
+func accessWanted(a render.Accessible) bool {
+	w, ok := a.(render.AccessWanted)
+	return !ok || w.AccessWanted()
+}
+
 // turn is what the loop keeps from one turn to the next.
 type turn struct {
 	accessible render.Accessible
@@ -252,7 +259,7 @@ func (l *loop) frame(ctx context.Context, t *turn, dirty <-chan struct{}) (drawn
 		l.run(ctx, acts)
 		sh.poke()
 	}
-	if t.accessible != nil {
+	if t.accessible != nil && accessWanted(t.accessible) {
 		next := l.ui.AccessTree()
 		if up := render.AccessDiff(t.tree, next); len(up.Changed) > 0 || len(up.Removed) > 0 || t.tree == nil {
 			t.accessible.UpdateAccess(up)

@@ -19,6 +19,7 @@ type access struct {
 	actions chan render.AccessAction
 	geom    func() accessGeom
 	bridge  accessBridge
+	wake    func() // asks the app for a frame: a screen reader has started reading
 }
 
 // accessGeom is where the window is, for the coordinates a screen reader wants.
@@ -34,6 +35,7 @@ type accessBridge interface {
 	view(ev event.Event) // the native view event Gio sends once the window's made
 	update(c accessChange)
 	activate(active bool)
+	wanted() bool // a screen reader is reading the tree
 	close()
 }
 
