@@ -36,12 +36,22 @@ type Editor struct {
 	Clipboard edit.Clipboard // the system clipboard, for "+ and "*
 	Tools     *search.Tools  // the machine's search tools, for grep
 
-	h       plugin.Host
-	ed      *edit.Editor
-	e       *vim.Engine
-	conv    *conventions
-	dir     string    // relative names are under it: the window's directory, or the process's on the start view
-	listed  *fileList // the files picker's
+	h      plugin.Host
+	ed     *edit.Editor
+	e      *vim.Engine
+	conv   *conventions
+	dir    string    // relative names are under it: the window's directory, or the process's on the start view
+	listed *fileList // the files picker's
+
+	unsearched struct { // what search leaves out of the work dir (unsearchable)
+		mu      sync.Mutex
+		dir     string
+		files   []string
+		at      time.Time
+		ok      bool
+		walking bool
+		walks   int // for the tests
+	}
 	docs    map[*text.Buffer]*highlighter
 	busy    sync.WaitGroup // parsers being made and files read, off the loop
 	madeMu  sync.Mutex
@@ -523,9 +533,38 @@ func (x *Editor) files(arg string) []string {
 	return out
 }
 
-// unsearchable are the work dir's files .gitattributes marks generated or vendored, which search leaves out.
+// unsearchable are the work dir's files .gitattributes marks generated or vendored, which search leaves out. They're
+// worked out once for a directory, then again in the background once fileFresh old, not for every search typed.
 func (x *Editor) unsearchable() []string {
-	all := walkFiles(x.dir, nil)
+	u := &x.unsearched
+	dir := x.dir
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.dir != dir || !u.ok {
+		u.dir, u.files, u.at, u.ok = dir, x.unsearchableIn(dir), time.Now(), true
+		return u.files
+	}
+	if !u.walking && time.Since(u.at) >= fileFresh {
+		u.walking = true
+		x.busy.Add(1)
+		go func() {
+			defer x.busy.Done()
+			files := x.unsearchableIn(dir)
+			u.mu.Lock()
+			defer u.mu.Unlock()
+			u.walking = false
+			if u.dir == dir {
+				u.files, u.at = files, time.Now()
+			}
+		}()
+	}
+	return u.files
+}
+
+// unsearchableIn walks dir for the files search leaves out.
+func (x *Editor) unsearchableIn(dir string) []string {
+	x.unsearched.walks++ // u.mu is held, or its walking set
+	all := walkFiles(dir, nil)
 	keep := map[string]bool{}
 	for _, f := range x.conv.searchable(all) {
 		keep[f] = true

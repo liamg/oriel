@@ -43,6 +43,8 @@ type GitSigns struct {
 	blames   map[string]*gitBlame
 	hunks    map[bufAgainst]*bufHunks
 	previews map[string]int // the hunk previewed in each file, by its new start
+	typing   kit.Still[any] // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
+	diffs    int            // diffs begun off the loop, for the tests
 	busy     sync.WaitGroup
 }
 
@@ -52,6 +54,9 @@ type gitBase struct {
 	gen     int
 	loading bool
 }
+
+// signsQuiet is how long a buffer being typed in waits, still, for its hunks to be diffed and its blame read again.
+const signsQuiet = 150 * time.Millisecond
 
 // gitSource is where a file's hunks are from: the index when rev is "", else path at rev.
 type gitSource struct{ rev, path string }
@@ -96,6 +101,7 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	if g.Now == nil {
 		g.Now = time.Now
 	}
+	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[string]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[string]int{}
 	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"branch", "head", "index"},
 		Default: "branch", Scopes: registry.ScopeUser | registry.ScopeProject,
@@ -143,7 +149,12 @@ func (g *GitSigns) Deactivate(ctx context.Context) error {
 }
 
 // Wait waits for its git work off the loop.
-func (g *GitSigns) Wait() { g.busy.Wait() }
+func (g *GitSigns) Wait() {
+	for g.typing.Held() {
+		time.Sleep(5 * time.Millisecond)
+	}
+	g.busy.Wait()
+}
 
 // repo is the work dir's repo; fileOf has found it.
 func (g *GitSigns) repo() gitx.Repo { return kit.GitOf(g.h).Tree("").Status().Repo() }
@@ -220,8 +231,10 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 	case bh.diffed && bh.version == version && bh.gen == b.gen:
 	case now:
 		bh.version, bh.gen, bh.hunks, bh.diffed = version, b.gen, gitx.DiffLines(b.data, fileBytes()), true
+	case bh.diffed && bh.gen == b.gen && !g.typing.Ready(key, version): // typed in: the last hunks stand a moment
 	case !bh.diffing:
 		bh.diffing = true
+		g.diffs++
 		base, gen, contents := b.data, b.gen, fileBytes()
 		g.busy.Add(1)
 		go func() {
@@ -366,6 +379,10 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 	if !ok {
 		b = &gitBlame{}
 		g.blames[f.rel] = b
+	}
+	if b.loaded && b.version != snap.Version() && !g.typing.Ready(f.rel, snap.Version()) {
+		g.mu.Unlock()
+		return uireg.Decoration{}, false // a line being typed has no blame worth a git run until it's still
 	}
 	if !b.loaded || b.version != snap.Version() {
 		if !b.loading {

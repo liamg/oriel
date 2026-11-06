@@ -57,3 +57,17 @@ func (x *Editor) RefreshConventions() { x.conv.refresh() }
 
 // Searchable are names less those the conventions keep out of search.
 func (x *Editor) Searchable(names []string) []string { return x.conv.searchable(names) }
+
+// UnsearchableWalks counts the walks of the work dir for the files search leaves out.
+func (x *Editor) UnsearchableWalks() int {
+	x.unsearched.mu.Lock()
+	defer x.unsearched.mu.Unlock()
+	return x.unsearched.walks
+}
+
+// Diffs counts the gutter's diffs begun off the loop.
+func (g *GitSigns) Diffs() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.diffs
+}
