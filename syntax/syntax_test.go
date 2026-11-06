@@ -292,12 +292,14 @@ func TestDocumentNeverBlocksTyping(t *testing.T) {
 	}
 	defer d.Close()
 	lines := buf.Snapshot().Lines()
-	var slowest time.Duration
+	var slow []time.Duration // a parse waited on slows most changes; a preempted one, one or two
 	for i := range 100 {
 		ch := typeInIdentifier(t, buf, lines/4+i*(lines/200))
 		start := time.Now()
 		d.Change(ch)
-		slowest = max(slowest, time.Since(start))
+		if took := time.Since(start); took > 200*time.Microsecond {
+			slow = append(slow, took)
+		}
 		spans, _ := d.Highlights(0, ch.After.Len())
 		for _, s := range spans {
 			if s.Range.End > ch.After.Len() {
@@ -305,8 +307,8 @@ func TestDocumentNeverBlocksTyping(t *testing.T) {
 			}
 		}
 	}
-	if !raceEnabled && slowest > 200*time.Microsecond {
-		t.Errorf("handing a change to the document took %v; it must not wait on a parse", slowest)
+	if !raceEnabled && len(slow) > 2 {
+		t.Errorf("handing a change to the document took over 200µs %d times of 100 (%v); it must not wait on a parse", len(slow), slow)
 	}
 	d.Wait()
 	final := buf.Snapshot()

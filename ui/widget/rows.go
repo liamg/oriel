@@ -1,6 +1,8 @@
 package widget
 
 import (
+	"fmt"
+
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui"
 )
@@ -17,6 +19,8 @@ type RowsOpts struct {
 	Tooltip  func(i int) string // a row's tooltip, or ""
 	// ClickSelects makes a click only select a row, for rows whose own buttons open them; Enter still opens.
 	ClickSelects bool
+	// Movable rows are dragged onto another movable row to move them there (ListResult.Moved).
+	Movable func(i int) bool
 }
 
 // Rows is a short list of rows of their own heights, all built, with a selection in *sel: j/k or Down/Up move it
@@ -42,6 +46,7 @@ func Rows(c *ui.Ctx, key any, n int, sel *int, o RowsOpts, row func(c *ui.Ctx, i
 	}
 	id := c.Next(key)
 	in := c.Interaction(id)
+	moveKind := fmt.Sprintf("widget.rows.%x", uint64(id)) // only this list's rows drop here
 	old := *sel
 	if *sel >= n || *sel < 0 || static(*sel) {
 		*sel = step(-1, 1)
@@ -82,6 +87,12 @@ func Rows(c *ui.Ctx, key any, n int, sel *int, o RowsOpts, row func(c *ui.Ctx, i
 			}
 			item := c.Next(i)
 			ri := c.Interaction(item)
+			movable := o.Movable != nil && o.Movable(i)
+			if d := ri.Dropped; movable && d != nil && d.Kind == moveKind {
+				if from, ok := d.Data.(int); ok && from != i {
+					res.Moved = &Move{From: from, To: i}
+				}
+			}
 			if ri.Clicked {
 				*sel = i
 				if !o.ClickSelects {
@@ -97,9 +108,13 @@ func Rows(c *ui.Ctx, key any, n int, sel *int, o RowsOpts, row func(c *ui.Ctx, i
 			case ri.Hovered:
 				fill = col(c, tRowHover)
 			}
-			c.Row(i, ui.Style{W: ui.Flex(1), Fill: fill, Cross: ui.Center, Interactive: true, NoHover: true, Cursor: render.CursorPointer,
+			st := ui.Style{W: ui.Flex(1), Fill: fill, Cross: ui.Center, Interactive: true, NoHover: true, Cursor: render.CursorPointer,
 				Role: ui.RoleListItem, Selected: i == *sel, Tooltip: str(o.Tooltip, i), Label: str(o.RowLabel, i), Disabled: off(i),
-				Help: o.Help}, func(c *ui.Ctx) {
+				Help: o.Help}
+			if movable {
+				st.Drag, st.Drop, st.NoFocus = &ui.DragData{Kind: moveKind, Data: i, Label: str(o.RowLabel, i)}, []string{moveKind}, true
+			}
+			c.Row(i, st, func(c *ui.Ctx) {
 				row(c, i, on)
 			})
 		}

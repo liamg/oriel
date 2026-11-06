@@ -278,13 +278,16 @@ func setupArgs(s shipRead) registry.Args {
 	return registry.Args{"hostname": s.Unknown}
 }
 
-// setupFirst opens the setup dialog for a project whose site isn't set up, and says so.
-func (x *Ship) setupFirst(ctx registry.Ctx, s shipRead) bool {
+// setupFirst opens the setup dialog for a project whose site isn't set up, and says so: with the error when it
+// can't be opened.
+func (x *Ship) setupFirst(ctx registry.Ctx, s shipRead) (bool, error) {
 	if !s.Unkeyed && s.Unknown == "" {
-		return false
+		return false, nil
 	}
-	x.h.Run(ctx, "code.setup", setupArgs(s))
-	return true
+	if err := x.h.Run(ctx, "code.setup", setupArgs(s)); err != nil {
+		return true, fmt.Errorf("%s's code host isn't set up: %w", s.Project, err)
+	}
+	return true, nil
 }
 
 // sentence is s with its first letter capitalised: "Merge request".

@@ -313,6 +313,7 @@ func (w *Window) RightClickText(text string) {
 // the click before it builds another, so a frame built meanwhile, by work landing, can't move what it lands on.
 func (w *Window) clickOn(what string, find func(headless.Frame) (render.Point, bool), button render.Buttons) {
 	w.T.Helper()
+	find = enabledAt(w, find)
 	for deadline := time.Now().Add(Timeout); ; {
 		Settled(w, what, find)
 		sent := false
@@ -333,6 +334,44 @@ func (w *Window) clickOn(what string, find func(headless.Frame) (render.Point, b
 			w.T.Fatalf("%s: gone from screen whenever it was aimed at%s", what, rig.Stuck())
 		}
 	}
+}
+
+// enabledAt is find, but not while what's at its point is disabled: a greyed-out control isn't clicked, it's waited
+// for, as a person would.
+func enabledAt(w *Window, find func(headless.Frame) (render.Point, bool)) func(headless.Frame) (render.Point, bool) {
+	return func(f headless.Frame) (render.Point, bool) {
+		p, ok := find(f)
+		if ok && disabledAt(w.Win.Access(), p) {
+			return p, false
+		}
+		return p, ok
+	}
+}
+
+// disabledAt says what's on top at p is disabled, or is inside something disabled: the last node drawn there,
+// as a click would reach it, not a page under a dialog.
+func disabledAt(root *render.AccessNode, p render.Point) bool {
+	top, found := false, false
+	var walk func(n *render.AccessNode, dis bool)
+	walk = func(n *render.AccessNode, dis bool) {
+		if n == nil {
+			return
+		}
+		b := n.Bounds
+		in := b == (render.Rect{}) || p.X >= b.Min.X && p.X < b.Max.X && p.Y >= b.Min.Y && p.Y < b.Max.Y
+		if !in {
+			return
+		}
+		dis = dis || n.Disabled && b != (render.Rect{})
+		if b != (render.Rect{}) {
+			top, found = dis, true
+		}
+		for _, k := range n.Children {
+			walk(k, dis)
+		}
+	}
+	walk(root, false)
+	return found && top
 }
 
 // textAt is the middle of a run of text in the frame on screen, once it's settled there: the first, or with last

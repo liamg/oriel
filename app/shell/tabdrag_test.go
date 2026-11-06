@@ -197,3 +197,16 @@ func TestTabHeldOverADockShowsAsATab(t *testing.T) {
 		t.Errorf("the drop isn't shown as a tab:\n%s", text)
 	}
 }
+
+// A tab dragged along its own strip moves there: onto the next tab's far half, it goes after it.
+func TestTabDragReordersItsStrip(t *testing.T) {
+	s := tabDragScene(t)
+	if dump := s.Host().Layout().Dump(); !strings.Contains(dump, "leaf [editor#1 *editor#2]") {
+		t.Fatalf("the tabs to start: %s", dump)
+	}
+	b := s.NodeRole(render.RoleTab, "b.go").Bounds
+	dragTab("a.go", func(*apptest.Scene) render.Point { return render.Point{X: b.Max.X - 4, Y: (b.Min.Y + b.Max.Y) / 2} })(s)
+	if dump := s.Host().Layout().Dump(); !strings.Contains(dump, "leaf [editor#2 *editor#1]") {
+		t.Errorf("a.go didn't move after b.go:\n%s", dump)
+	}
+}

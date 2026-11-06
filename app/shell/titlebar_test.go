@@ -282,3 +282,31 @@ func encodePNG(img image.Image) []byte {
 	png.Encode(&b, img)
 	return b.Bytes()
 }
+
+// A session's tab dragged onto another takes its place, the others moving up; ⌘n follows the new order, and a
+// click still brings a tab to the front.
+func TestSessionTabsReorderByDragging(t *testing.T) {
+	s := apptest.New(t, apptest.Options{Size: render.Point{X: 1600, Y: 120}})
+	openTabFixture(t, s.Store(), tabFixture[:3])
+	s.Frame()
+	tab := func(name string) render.Point { return apptest.Centre(s.Within("Sessions", name).Bounds) }
+	s.Drag(tab("review #4410"), tab("pricing-rounding"))
+	if st := s.Store().State(); !slices.Equal(st.Tabs, []core.SessionID{"s3", "s1", "s2"}) {
+		t.Fatalf("the tabs after review #4410 was dragged onto the first: %v", st.Tabs)
+	}
+	if st := s.Store().State(); st.Focus != "s1" {
+		t.Errorf("the drag brought %s to the front", st.Focus)
+	}
+	s.Drag(tab("review #4410"), tab("ENG-2231 search api"))
+	if st := s.Store().State(); !slices.Equal(st.Tabs, []core.SessionID{"s1", "s2", "s3"}) {
+		t.Fatalf("the tabs after it was dragged back onto the last: %v", st.Tabs)
+	}
+	if err := s.Host().Run(context.Background(), "session.focus", registry.Args{"n": 3}); err != nil || s.Store().State().Focus != "s3" {
+		t.Errorf("⌘3 focused %s (%v), want review #4410 in its new place", s.Store().State().Focus, err)
+	}
+	s.Click(tab("pricing-rounding"), 0)
+	s.Frame()
+	if f := s.Store().State().Focus; f != "s1" {
+		t.Errorf("a click on a tab focused %s", f)
+	}
+}

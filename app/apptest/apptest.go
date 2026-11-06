@@ -218,7 +218,7 @@ func (s *Scene) Type(keys ...string) {
 func (s *Scene) Until(what string, ok func() bool) {
 	s.T.Helper()
 	if !s.Headless.Until(Timeout, ok) {
-		s.T.Fatalf("waiting for %s:\n%s%s", what, s.Text(), rig.Stuck())
+		s.T.Fatalf("waiting for %s; notices %q:\n%s%s", what, rig.NoticeTexts(s.Store().State().Notifications), s.Text(), rig.Stuck())
 	}
 }
 
@@ -413,13 +413,6 @@ func (s *Scene) SignPoint(num, sign string) render.Point {
 	s.T.Helper()
 	_, g := s.SignOnRow(num, sign)
 	return render.Point{X: g.At.X + g.Run.Advance/2, Y: g.At.Y - g.Run.Ascent/2}
-}
-
-// ClickText clicks the middle of the first run of text that reads text.
-func (s *Scene) ClickText(text string) {
-	s.T.Helper()
-	s.drawn(text)
-	s.Click(s.TextPoint(text), 0)
 }
 
 // ClickTop clicks the run of text reading text painted last, on top of any other, and draws a frame.

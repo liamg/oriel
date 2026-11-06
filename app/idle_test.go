@@ -76,7 +76,14 @@ func idleWindow(t *testing.T) *apptest.Window {
 func TestIdleBudget(t *testing.T) {
 	spawned := spawns(t)
 	r := idleWindow(t)
-	time.Sleep(2 * time.Second) // what opening the sessions started settles
+	time.Sleep(2 * time.Second)
+	// What opening the sessions started (reading each one's git) settles: a second without a process started.
+	for deadline, n := time.Now().Add(20*time.Second), -1; n != len(spawned()); time.Sleep(time.Second) {
+		if time.Now().After(deadline) {
+			t.Fatal("opening the sessions never stopped starting processes")
+		}
+		n = len(spawned())
+	}
 	w, ok := kit.WindowOf(r.Host)
 	if !ok {
 		t.Fatal("no window service")

@@ -90,8 +90,9 @@ func (x *Ship) activateMerge(h plugin.Host) {
 				if err != nil {
 					return err
 				}
-				if s, _ := x.ship(se.ID, p); x.setupFirst(ctx, s) {
-					return nil
+				s, _ := x.ship(se.ID, p)
+				if first, err := x.setupFirst(ctx, s); first {
+					return err
 				}
 				return x.openMerge(se, p)
 			}},
