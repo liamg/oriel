@@ -473,7 +473,7 @@ func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx contex
 		ctx, cancel := context.WithTimeout(x.ctx, 5*time.Minute)
 		err := fn(ctx, c)
 		cancel()
-		x.read(id, false)
+		x.readOne(id, project, true) // what the step changed is this project's: the others' readings stand
 		x.h.Do(func() {
 			if err == nil {
 				for _, d := range done {
@@ -490,7 +490,6 @@ func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx contex
 				x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Key: true, Title: project, Text: err.Error()})
 			}
 		})
-		x.refresh(id, true)
 	}()
 	return nil
 }
