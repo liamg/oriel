@@ -3,6 +3,7 @@ package ship_test
 import (
 	"testing"
 
+	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/core"
 )
 
@@ -16,6 +17,7 @@ func TestAChangeReadsOnlyItsProject(t *testing.T) {
 		_, b := x.ShipOf(se.ID, "web-dashboard")
 		return a && b
 	})
+	shipQuiet(s)
 	web, _ := x.ShipOf(se.ID, "web-dashboard")
 	writeFiles(t, shipDir(se, "search-api"), map[string]string{"internal/changed.go": "package internal\n"})
 	shipSettle(s, t, "search-api read again with the new file", func() bool {
@@ -27,9 +29,19 @@ func TestAChangeReadsOnlyItsProject(t *testing.T) {
 		}
 		return false
 	})
-	shipIdle(s)
+	shipQuiet(s)
 	if now, _ := x.ShipOf(se.ID, "web-dashboard"); !now.GitRead.Equal(web.GitRead) {
 		t.Errorf("web-dashboard was read again (%v, then %v) for a change in search-api", web.GitRead, now.GitRead)
+	}
+}
+
+// shipQuiet runs what's handed to the loop and waits for Ship's reads, until neither starts more: a read's end
+// can hand on another (a read asked for while one ran).
+func shipQuiet(s *apptest.Scene) {
+	for range 3 {
+		s.RunQueued()
+		s.Frame()
+		shipIdle(s)
 	}
 }
 
@@ -43,16 +55,12 @@ func TestSwitchingBackReadsNoGit(t *testing.T) {
 		_, b := x.ShipOf(se.ID, "web-dashboard")
 		return a && b
 	})
-	shipIdle(s)
+	shipQuiet(s)
 	api, _ := x.ShipOf(se.ID, "search-api")
 	web, _ := x.ShipOf(se.ID, "web-dashboard")
 	other := core.SessionState{ID: "other", Name: "other", Kind: core.KindWork}
 	s.Apply(core.SessionSynced{Session: other}, core.SessionFocused{ID: other.ID}, core.SessionFocused{ID: se.ID})
-	for range 3 { // what the switch starts is handed to the loop first
-		s.RunQueued()
-		s.Frame()
-		shipIdle(s)
-	}
+	shipQuiet(s) // what the switch starts is handed to the loop first
 	if a, _ := x.ShipOf(se.ID, "search-api"); !a.GitRead.Equal(api.GitRead) {
 		t.Errorf("search-api was read again (%v, then %v)", api.GitRead, a.GitRead)
 	}
