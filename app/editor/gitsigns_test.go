@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -227,6 +228,31 @@ func TestInlineBlame(t *testing.T) {
 	settle(s)
 	if text := s.Text(); strings.Contains(text, "Claude (agent)") {
 		t.Error("␣hb didn't hide the blame")
+	}
+}
+
+// Typing doesn't diff the file for the gutter at every key: its signs wait for the buffer to be still a moment, then
+// are right.
+func TestGutterWaitsForTypingToStop(t *testing.T) {
+	s, _ := signsScene(t)
+	g := signsOf(s)
+	before := g.Diffs()
+	keys(s, "ggO")
+	for _, k := range "typing" { // as quick as a person types: a diff has time to end between keys
+		keys(s, string(k))
+		s.Frame()
+		time.Sleep(60 * time.Millisecond)
+		s.RunQueued()
+		s.Frame()
+	}
+	keys(s, "<Esc>")
+	s.Frame()
+	if n := g.Diffs() - before; n > 2 {
+		t.Errorf("typing 6 letters began %d diffs", n)
+	}
+	settle(s)
+	if got, want := signsAt(s), "added@1 modified@4 added@12 added@13 deleted@22"; got != want {
+		t.Errorf("once still, signs %q, want %q", got, want)
 	}
 }
 

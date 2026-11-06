@@ -220,3 +220,38 @@ func TestLSPCardsKeepTheirText(t *testing.T) {
 		t.Errorf("the peek's text runs out of its box:\n%s", strings.Join(o, "\n"))
 	}
 }
+
+// Typing doesn't ask the server for the file's inlay hints at every key: they're asked for again once the buffer
+// has been still a moment.
+func TestLSPInlayHintsWaitForTypingToStop(t *testing.T) {
+	root := rig.LSPProject(t, "go")
+	resp := rig.Recorded(t, "go")
+	s := apptest.New(t, apptest.Options{WorkDir: root})
+	s.Registry().Contribute(rig.ServerAnswering(t, "gopls", resp))
+	s.Run("editor.open", registry.Args{"path": filepath.Join(root, "main.go")})
+	s.LSPSettle()
+	hints := func() int {
+		n := 0
+		for _, m := range resp.Asked() {
+			if m == "textDocument/inlayHint" {
+				n++
+			}
+		}
+		return n
+	}
+	before := hints()
+	if before == 0 {
+		t.Fatal("no inlay hints asked for on opening the file")
+	}
+	s.EditorKeys("ggO")
+	for _, k := range "typing" { // as quick as a person types: an answer has time to come between keys
+		s.EditorKeys(string(k))
+		s.Frame()
+		time.Sleep(60 * time.Millisecond)
+		s.RunQueued()
+		s.Frame()
+	}
+	if n := hints() - before; n > 2 {
+		t.Errorf("typing 6 letters asked for inlay hints %d times", n)
+	}
+}

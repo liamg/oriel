@@ -100,15 +100,25 @@ func (c *conventions) abs(name string) string {
 }
 
 // repo is the git work tree path is in, or the work dir when it's in none.
-func (c *conventions) repo(path string) (*attr.Repo, string) {
-	root := c.root()
-	for d := filepath.Dir(path); ; d = filepath.Dir(d) {
-		if st, err := os.Stat(filepath.Join(d, ".git")); err == nil && st.IsDir() {
-			root = d
-			break
+func (c *conventions) repo(path string) (*attr.Repo, string) { return c.repoIn(path, nil) }
+
+// repoIn is repo, with the repo root of each folder already looked up in roots, which it adds to when not nil.
+func (c *conventions) repoIn(path string, roots map[string]string) (*attr.Repo, string) {
+	dir := filepath.Dir(path)
+	root, known := roots[dir]
+	if !known {
+		root = c.root()
+		for d := dir; ; d = filepath.Dir(d) {
+			if st, err := os.Stat(filepath.Join(d, ".git")); err == nil && st.IsDir() {
+				root = d
+				break
+			}
+			if filepath.Dir(d) == d {
+				break
+			}
 		}
-		if filepath.Dir(d) == d {
-			break
+		if roots != nil {
+			roots[dir] = root
 		}
 	}
 	c.reposMu.Lock()
@@ -317,8 +327,9 @@ func (c *conventions) refresh() {
 // searchable leaves out of names (relative to the work dir) the files .gitattributes marks generated or vendored.
 func (c *conventions) searchable(names []string) []string {
 	var out []string
+	roots := map[string]string{} // a folder's files share its repo
 	for _, n := range names {
-		r, rel := c.repo(c.abs(n))
+		r, rel := c.repoIn(c.abs(n), roots)
 		attrs, _ := r.Attributes(rel)
 		if g := attrs["linguist-generated"]; g.Set || g.Text == "true" {
 			continue

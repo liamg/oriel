@@ -58,7 +58,11 @@ type LSP struct {
 	rename    *renamePrompt
 	callItems []uireg.PickerItem
 	preview   kit.FilePreview
+	typing    kit.Still[*lspDoc] // a document's inlay hints wait for it to be still (hintsQuiet) once it has some
 }
+
+// hintsQuiet is how long a document being typed in waits, still, before its inlay hints are asked for again.
+const hintsQuiet = 200 * time.Millisecond
 
 // lspDoc is a buffer open on a server.
 type lspDoc struct {
@@ -85,6 +89,7 @@ func (x *LSP) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lsp"} }
 func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.docs, x.statuses = map[string]*lspDoc{}, map[string]lsp.Status{}
+	x.typing = kit.Still[*lspDoc]{Wait: hintsQuiet, Wake: func() { h.DecorationsChanged("lsp") }}
 	for _, s := range lsp.Builtins() {
 		s.Source = "builtin:lsp"
 		x.Add(h.Contribute(reglang.LSPServer(s)))
@@ -395,7 +400,7 @@ func (x *LSP) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	}
 	out := x.peekDecoration(ctx)
 	snap := ctx.Snap
-	if d.hintsVersion != snap.Version()+1 && !d.hintsLoading {
+	if d.hintsVersion != snap.Version()+1 && !d.hintsLoading && (d.hintsVersion == 0 || x.typing.Ready(d, snap.Version())) {
 		d.hintsLoading = true
 		version := snap.Version()
 		whole := lsp.Range{End: snap.PosAt(snap.Len())}

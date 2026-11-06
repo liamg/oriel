@@ -123,3 +123,23 @@ func TestKeyLayers(t *testing.T) {
 		t.Errorf("x ran the layer's command %d times", ran)
 	}
 }
+
+// Typing a search walks the project once for the generated and vendored files it leaves out, not for every letter:
+// what's left out stands until it's due a look again.
+func TestTypingASearchWalksTheProjectOnce(t *testing.T) {
+	s, _ := searchScene(t)
+	s.Run("search.open", nil)
+	s.Frame()
+	s.Frame()
+	for _, q := range []string{"R", "Ro", "Rou", "Roun", "Round"} {
+		s.Run("search.open", registry.Args{"query": q})
+		searchOf(s).Wait()
+	}
+	text := waitSearch(s, t, "in 2 files")
+	if strings.Contains(text, "gen/api.go") {
+		t.Errorf("a generated file was searched:\n%s", text)
+	}
+	if n := editorOf(s).UnsearchableWalks(); n != 1 {
+		t.Errorf("5 searches typed walked the project %d times for what they leave out", n)
+	}
+}
