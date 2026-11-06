@@ -82,13 +82,19 @@ func (x *Ship) page(c *ui.Ctx) {
 		ships, rep := x.sessionShips(se)
 		x.pageHeader(c, se, ships)
 		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-			c.Column("cols", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 24}, Gap: 10}, func(c *ui.Ctx) {
+			cols := ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 24}, Gap: 10}
+			col := ui.Style{W: ui.Flex(1), Gap: 10}
+			if x.tooWide(c, c.Next("cols"), cols.Pad, len(x.shownShips(se, ships))) {
+				cols.ScrollX, col.W = true, ui.Px(shipColumnMin)
+			}
+			c.Column("cols", cols, func(c *ui.Ctx) {
 				if rep.err != "" && len(ships) == 0 {
 					c.Text("err", rep.err, kit.MonoFont(11, th.C(theme.Error)))
 				}
-				c.Row("row", ui.Style{W: ui.Flex(1), Gap: 22}, func(c *ui.Ctx) {
-					for _, s := range ships {
-						c.Column(s.Project, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
+				shown := x.quietStrip(c, se, ships)
+				c.Row("row", ui.Style{W: ui.Flex(1), Gap: shipColumnGap}, func(c *ui.Ctx) {
+					for _, s := range shown {
+						c.Column(s.Project, col, func(c *ui.Ctx) {
 							x.columnHeader(c, se, s)
 							widget.Async(c, "load", x.loadState(c, se.ID, s.Project), widget.AsyncOpts{Label: "Reading " + s.Project,
 								Retry: func() { x.refresh(se.ID, true) }, Help: "git/ship#page", Loading: func(c *ui.Ctx) {
