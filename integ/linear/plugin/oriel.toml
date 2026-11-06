@@ -12,4 +12,4 @@ icons = "icons/"
 net            = { hosts = ["api.linear.app"], why = "Read and change your tickets, through Linear's API" }
 secrets        = { LINEAR_TOKEN = "api.linear.app", why = "Your Linear API key, sent only to api.linear.app" }
 "agent.prompt" = { why = "Your tickets, and the one you start work from with its comments and attachments, to the agents" }
-"agent.tools"  = { tools = ["linear_issue", "linear_update_issue", "linear_comment", "linear_create_issue"], why = "Let agents read, change, comment on and file Linear tickets as you" }
+"agent.tools"  = { tools = ["linear_issue", "linear_update_issue", "linear_comment", "linear_create_issue", "linear_projects"], why = "Let agents read, change, comment on and file Linear tickets as you, and list its projects to file them in" }

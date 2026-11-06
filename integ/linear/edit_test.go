@@ -152,3 +152,56 @@ func TestCreateTicket(t *testing.T) {
 		}
 	}
 }
+
+// The agent's linear_projects, and a ticket filed in a project or moved to one by its name, slug or URL: sent as
+// the project's id, which Linear takes as the issue's project.
+//
+// ref:   linear/schema.graphql
+// quote: "The project associated with the issue. Can be a UUID or project identifier (e.g., 'P-LIN-123')."
+func TestTicketsInProjects(t *testing.T) {
+	c, l := recorded(t)
+	ctx := t.Context()
+	ps, err := c.Projects(ctx, "", "")
+	if err != nil || len(ps) != 2 || ps[0].Name != "Usage" || ps[1].Status != "Planned" || !reflect.DeepEqual(ps[1].Teams, []string{"ENG", "OPS"}) {
+		t.Fatalf("projects %+v, %v", ps, err)
+	}
+	if ps, _ := c.Projects(ctx, "ops", ""); len(ps) != 1 || ps[0].Name != "Billing revamp" {
+		t.Errorf("OPS's projects: %+v", ps)
+	}
+	if ps, _ := c.Projects(ctx, "", "billing"); len(ps) != 1 || ps[0].Name != "Billing revamp" {
+		t.Errorf("projects with billing in their names: %+v", ps)
+	}
+
+	ed, err := c.Update(ctx, "ENG-2231", Change{Project: "billing revamp"})
+	if err != nil || !strings.Contains(ed.Line, "project Usage → Billing revamp") {
+		t.Fatalf("moved: %+v %v", ed, err)
+	}
+	if in := l.Mutations()[0].Vars["input"].(map[string]any); in["projectId"] != "7d2e4f60-1a3b-4c5d-8e9f-0a1b2c3d0002" {
+		t.Errorf("moved: %+v", in)
+	}
+	if tk, _ := c.Ticket(ctx, "ENG-2231"); tk.Project != "Billing revamp" {
+		t.Errorf("read back in %q", tk.Project)
+	}
+	if ed, err := c.Update(ctx, "ENG-2231", Change{Project: "none"}); err != nil || !strings.Contains(ed.Line, "out of Billing revamp") {
+		t.Fatalf("taken out: %+v %v", ed, err)
+	}
+	if in := l.Mutations()[1].Vars["input"].(map[string]any); in["projectId"] != nil {
+		t.Errorf("taken out: %+v", in)
+	}
+
+	made, err := c.Create(ctx, NewTicket{Team: "ENG", Title: "Meter the export API", Project: "https://linear.app/acme/project/usage-8f3a1c2b9d4e"})
+	if err != nil || !strings.HasSuffix(made.Line, "in project Usage") {
+		t.Fatalf("filed: %+v %v", made, err)
+	}
+	if tk, _ := c.Ticket(ctx, made.Key); tk.Project != "Usage" {
+		t.Errorf("filed in %q", tk.Project)
+	}
+
+	sent := len(l.Mutations())
+	if _, err := c.Update(ctx, "ENG-2231", Change{Project: "Pricing"}); err == nil || !strings.Contains(err.Error(), "Usage, Billing revamp") {
+		t.Errorf("a project Linear hasn't: %v", err)
+	}
+	if len(l.Mutations()) != sent {
+		t.Error("a ticket was changed for a project Linear hasn't")
+	}
+}

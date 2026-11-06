@@ -52,9 +52,10 @@ L.agent.tool{ name = "linear_issue", read_only = true, reads = "linear", async =
 L.agent.tool{ name = "linear_update_issue", async = true,
   desc = "Change a Linear ticket (key: ENG-123); what's left out stays as it is. title; description (markdown, "
     .. "replaces the whole description); state (a state of the ticket's team by name: In Progress, Done…); priority "
-    .. "(0 none, 1 urgent, 2 high, 3 medium, 4 low); assignee (a name, display name or email; me; none).",
+    .. "(0 none, 1 urgent, 2 high, 3 medium, 4 low); assignee (a name, display name or email; me; none); project "
+    .. "(a project by name, as linear_projects lists them, slug or URL, to move it there; none takes it out of its project).",
   params = { key = "string", title = "string?", description = "string?", state = "string?", priority = "number?",
-    assignee = "string?" },
+    assignee = "string?", project = "string?" },
   run = function(p, done) call("update", p, done) end }
 
 L.agent.tool{ name = "linear_comment", async = true,
@@ -65,7 +66,16 @@ L.agent.tool{ name = "linear_comment", async = true,
 L.agent.tool{ name = "linear_create_issue", async = true,
   desc = "File a new Linear ticket. team (its key, ENG, or name; needed when there's more than one); title; "
     .. "description (markdown); state (a state of the team by name); priority (0 none, 1 urgent, 2 high, 3 medium, "
-    .. "4 low); assignee (a name, display name or email; me). Answers with its key and URL.",
+    .. "4 low); assignee (a name, display name or email; me); project (a project by name, as linear_projects lists "
+    .. "them, slug or URL). Answers with its key and URL.",
   params = { title = "string", team = "string?", description = "string?", state = "string?", priority = "number?",
-    assignee = "string?" },
+    assignee = "string?", project = "string?" },
   run = function(p, done) call("create", p, done) end }
+
+L.agent.tool{ name = "linear_projects", read_only = true, reads = "linear", async = true,
+  desc = "List Linear's projects, to file a ticket in one or move one there: each one's name, slug, status, teams "
+    .. "and URL. team (its key, ENG, or name) keeps those of one team; query keeps those with it in their names.",
+  params = { team = "string?", query = "string?" },
+  run = function(p, done)
+    call("projects", p, function(res, err) done(res and res.projects, err) end)
+  end }

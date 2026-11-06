@@ -18,12 +18,14 @@ type Edit struct {
 // for nobody).
 type Change struct {
 	Title, Description, State, Assignee string
+	Project                             string   // its name, slug or URL; "none" takes the ticket out of its project
 	Priority                            *float64 // 0 none, 1 urgent, 2 high, 3 medium, 4 low
 }
 
 // NewTicket is a ticket to create, in a team named by its key or name (the only team, if there's one).
 type NewTicket struct {
 	Team, Title, Description, State, Assignee string
+	Project                                   string // its name, slug or URL
 	Priority                                  *float64
 }
 
@@ -127,6 +129,17 @@ func (c Client) Update(ctx context.Context, key string, ch Change) (Edit, error)
 			input["assigneeId"], did = id, append(did, "assignee "+cmpOr(t.Assignee, "nobody")+" → "+name)
 		}
 	}
+	if ch.Project != "" {
+		id, name, err := c.project(ctx, ch.Project)
+		if err != nil {
+			return Edit{}, err
+		}
+		if id == "" {
+			input["projectId"], did = nil, append(did, "out of "+cmpOr(t.Project, "no project"))
+		} else {
+			input["projectId"], did = id, append(did, "project "+cmpOr(t.Project, "none")+" → "+name)
+		}
+	}
 	ok, err := c.UpdateIssue(ctx, t.ID, input)
 	if err != nil {
 		return Edit{}, err
@@ -228,6 +241,16 @@ func (c Client) Create(ctx context.Context, n NewTicket) (Edit, error) {
 			input["assigneeId"] = id
 		}
 	}
+	in := ""
+	if n.Project != "" {
+		id, name, err := c.project(ctx, n.Project)
+		if err != nil {
+			return Edit{}, err
+		}
+		if id != "" {
+			input["projectId"], in = id, " in project "+name
+		}
+	}
 	const mutation = `mutation($input: IssueCreateInput!) {
 		issueCreate(input: $input) { success issue { identifier url } } }`
 	var made struct {
@@ -246,5 +269,5 @@ func (c Client) Create(ctx context.Context, n NewTicket) (Edit, error) {
 	if !made.IssueCreate.Success || is == nil {
 		return Edit{}, fmt.Errorf("linear refused the new ticket in %s", tm.Key)
 	}
-	return Edit{Key: is.Identifier, URL: is.URL, Line: "created " + is.Identifier + " in " + tm.Name}, nil
+	return Edit{Key: is.Identifier, URL: is.URL, Line: "created " + is.Identifier + " in " + tm.Name + in}, nil
 }

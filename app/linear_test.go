@@ -336,7 +336,7 @@ func TestLinearToolsForAgentSessions(t *testing.T) {
 	for _, tool := range registry.AgentToolsFor(s.Registry(), "work", false) {
 		tools[tool.Name] = tool
 	}
-	names := []string{"linear_issue", "linear_update_issue", "linear_comment", "linear_create_issue"}
+	names := []string{"linear_issue", "linear_update_issue", "linear_comment", "linear_create_issue", "linear_projects"}
 	for _, name := range names {
 		if _, ok := tools[name]; !ok {
 			t.Fatalf("a work session's agent isn't offered %s", name)
@@ -345,8 +345,8 @@ func TestLinearToolsForAgentSessions(t *testing.T) {
 			t.Errorf("%s asks first", name)
 		}
 	}
-	if !tools["linear_issue"].ReadOnly || tools["linear_update_issue"].ReadOnly {
-		t.Error("linear_issue should be read-only, and only it")
+	if !tools["linear_issue"].ReadOnly || !tools["linear_projects"].ReadOnly || tools["linear_update_issue"].ReadOnly {
+		t.Error("linear_issue and linear_projects should be read-only, and only they")
 	}
 	for _, tool := range registry.AgentToolsFor(s.Registry(), kit.AssistantAgent, true) {
 		if slices.Contains(names, tool.Name) {
@@ -381,8 +381,12 @@ func TestLinearToolsForAgentSessions(t *testing.T) {
 	if err != nil || !strings.Contains(out, "commented on ENG-2231") {
 		t.Fatalf("linear_comment: %v\n%s", err, out)
 	}
-	out, err = call("linear_create_issue", map[string]any{"team": "OPS", "title": "Alert on long reindexes", "priority": 3.0})
-	if err != nil || !strings.Contains(out, "OPS-3001") || !strings.Contains(out, "https://linear.app/acme/issue/OPS-3001") {
+	out, err = call("linear_projects", map[string]any{"team": "OPS"})
+	if err != nil || !strings.Contains(out, "Billing revamp") || strings.Contains(out, "Usage") {
+		t.Fatalf("linear_projects: %v\n%s", err, out)
+	}
+	out, err = call("linear_create_issue", map[string]any{"team": "OPS", "title": "Alert on long reindexes", "priority": 3.0, "project": "Billing revamp"})
+	if err != nil || !strings.Contains(out, "OPS-3001") || !strings.Contains(out, "https://linear.app/acme/issue/OPS-3001") || !strings.Contains(out, "in project Billing revamp") {
 		t.Fatalf("linear_create_issue: %v\n%s", err, out)
 	}
 
