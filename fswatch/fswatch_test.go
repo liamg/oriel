@@ -36,10 +36,10 @@ func write(t *testing.T, p, s string) {
 	f.Close()
 }
 
-// expect waits for an event for p.
+// expect waits for an event for p: the OS's, which a busy machine (FSEvents especially) can be seconds delivering.
 func expect(t *testing.T, w *Watcher, p string) {
 	t.Helper()
-	deadline := time.After(3 * time.Second)
+	deadline := time.After(10 * time.Second)
 	for {
 		select {
 		case ev := <-w.Events():

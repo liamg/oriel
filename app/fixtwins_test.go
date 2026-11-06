@@ -180,7 +180,17 @@ func TestExplainTwinAnswers(t *testing.T) {
 			s := e.scene(t)
 			f := &apptest.FakeExplainer{}
 			s.Registry().Contribute(registry.Explainer{Name: "fake", Explain: f.Explain})
-			s.Frame()
+			// The twins are there once what they explain is: a diagnostic's code actions, say, come from the server.
+			s.Until("an Explain beside each fix", func() bool {
+				s.Frame()
+				twins := fixTwins(s)
+				for _, ex := range twins {
+					if ex == nil {
+						return false
+					}
+				}
+				return len(twins) > 0
+			})
 			for _, ex := range fixTwins(s) {
 				s.Click(apptest.Centre(ex.Bounds), 0)
 			}

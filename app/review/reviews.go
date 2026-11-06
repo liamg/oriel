@@ -73,6 +73,7 @@ func (x *Reviews) Manifest() plugin.Manifest { return plugin.Manifest{ID: "revie
 func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.lists, x.details, x.now = h, map[string]*reviewList{}, map[string]*reviewDetail{}, time.Now
 	x.ctx, x.cancel = context.WithCancel(context.Background())
+	x.Add(h.Contribute(registry.Busy{Name: "reviews", Busy: x.asking, Source: "builtin:reviews"}))
 	for _, o := range x.options() {
 		x.Add(h.Option(o))
 	}
@@ -276,6 +277,18 @@ func prSession(h plugin.Host, url string) (core.Session, bool) {
 }
 
 // fresh asks a source for its list when it has none or it's older than stale, and gives the ask under way, if any.
+// asking says a code host's been asked for its requests and hasn't answered.
+func (x *Reviews) asking() bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	for _, l := range x.lists {
+		if l.busy != nil {
+			return true
+		}
+	}
+	return false
+}
+
 func (x *Reviews) fresh(s registry.HostSite, stale time.Duration) <-chan struct{} {
 	if s.Requested == nil || x.needsKey(s) {
 		return nil

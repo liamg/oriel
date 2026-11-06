@@ -490,7 +490,7 @@ func TestOldReviewRequestsLeftOut(t *testing.T) {
 	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(src)}); err != nil {
 		t.Fatal(err)
 	}
-	s.Frame()
+	s.Quiet() // what loading the code host set going (its first ask, the window arriving) done, as before a person looks
 	s.Run("reviews.open", nil)
 	s.Until("GitLab's", func() bool { return strings.Contains(s.Text(), "Recent ask") })
 	titles := func() (out []string) {

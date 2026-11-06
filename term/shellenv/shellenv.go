@@ -120,7 +120,13 @@ func run(ctx context.Context, shell string, timeout time.Duration, args ...strin
 			stop()
 			return checked(shell, path)
 		case <-read:
-		case <-time.After(200 * time.Millisecond):
+		case <-time.After(time.Second): // what's left to read, on a loaded machine; only a shell that printed no PATH waits it out
+		}
+		select {
+		case path := <-found: // the reader finds the PATH, then the end: both may be ready by now
+			stop()
+			return checked(shell, path)
+		default:
 		}
 		stop()
 		if err == nil {

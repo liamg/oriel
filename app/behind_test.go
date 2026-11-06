@@ -34,7 +34,9 @@ func TestASessionBehindStreamsAtAFewFramesASecond(t *testing.T) {
 	took := time.Since(start)
 	time.Sleep(2 * behindRedrawForTest)
 	n := len(r.Win.Frames()) - before
-	if most := int(took/behindRedrawForTest) + 4; n > most {
+	// A frame asked for can draw a second as what it built settles, and the window draws a few of its own: two for
+	// each of the few a second, and some, still leaves the ~90 a frame for every event would draw far behind.
+	if most := 2*int(took/behindRedrawForTest) + 4; n > most {
 		t.Errorf("100 events of a session behind drew %d frames in %v, want at most %d", n, took.Round(time.Millisecond), most)
 	}
 }
