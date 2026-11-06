@@ -71,6 +71,10 @@ func (x *Ship) follow() (started []core.SessionID) {
 	}
 	x.subs.Only(keep)
 	x.mu.Lock()
+	x.projects = map[core.SessionID][]core.Project{}
+	for _, se := range st.Sessions {
+		x.projects[se.ID] = se.Projects
+	}
 	for id := range watching {
 		if !x.watching[id] {
 			started = append(started, id)

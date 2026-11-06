@@ -56,12 +56,13 @@ type Ship struct {
 	Clock     func() time.Time // the time Ship reads ages by; time.Now if nil
 	ctx       context.Context
 	cancel    context.CancelFunc
-	busy      kit.Busy                // reads and steps
-	saving    sync.WaitGroup          // drafts the user typed, on their way to the session host
-	subs      kit.Subs                // what it reads, from the sessions' managers (shipwatch.go)
-	budget    kit.Budget              // background PR polls' requests
-	showQuiet map[core.SessionID]bool // the Ship page shows the projects with nothing to ship; on the loop
-	watching  map[core.SessionID]bool // the sessions whose git follow watches; x.mu
+	busy      kit.Busy                          // reads and steps
+	saving    sync.WaitGroup                    // drafts the user typed, on their way to the session host
+	subs      kit.Subs                          // what it reads, from the sessions' managers (shipwatch.go)
+	budget    kit.Budget                        // background PR polls' requests
+	showQuiet map[core.SessionID]bool           // the Ship page shows the projects with nothing to ship; on the loop
+	watching  map[core.SessionID]bool           // the sessions whose git follow watches; x.mu
+	projects  map[core.SessionID][]core.Project // each session's projects as follow last saw them; x.mu
 
 	mu       sync.Mutex
 	reports  map[core.SessionID]*shipReport
@@ -132,10 +133,16 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 				x.refresh(id, false) // its git wasn't watched: read it whole once, then its watches keep it
 			}
 		case core.ProjectsChanged:
-			x.refresh(ev.ID, false)
+			if moved, ok := x.branchesMoved(ev.ID, ev.Projects); ok {
+				for _, p := range moved {
+					x.readSoon(ev.ID, p)
+				}
+			} else {
+				x.refresh(ev.ID, false)
+			}
 			x.follow()
 		case core.DraftSaved:
-			x.refresh(ev.Session, false)
+			x.readSoon(ev.Session, ev.Project)
 		}
 	})))
 	x.follow()

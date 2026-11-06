@@ -104,3 +104,33 @@ func (x *Ship) readOne(id core.SessionID, project string, fresh bool) {
 	x.fire(id, seen, merged, asks)
 	x.h.Redraw()
 }
+
+// readSoon reads one project of a session again, off the caller's goroutine.
+func (x *Ship) readSoon(id core.SessionID, project string) {
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		x.readOne(id, project, false)
+	}()
+}
+
+// branchesMoved are the projects of a session's new list whose branch or base moved from its last, ok when that's
+// all that changed: the same projects, in the same folders. Otherwise the session is read whole.
+func (x *Ship) branchesMoved(id core.SessionID, projects []core.Project) (moved []string, ok bool) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	was, known := x.projects[id]
+	if !known || len(was) != len(projects) {
+		return nil, false
+	}
+	for _, p := range projects {
+		i := slices.IndexFunc(was, func(o core.Project) bool { return o.Name == p.Name })
+		if i < 0 || was[i].Dir != p.Dir || was[i].Repo != p.Repo {
+			return nil, false
+		}
+		if o := was[i]; o.Branch != p.Branch || o.Base != p.Base {
+			moved = append(moved, p.Name)
+		}
+	}
+	return moved, true
+}
