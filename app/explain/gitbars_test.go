@@ -14,7 +14,7 @@ import (
 // lines 8 and 12 with the bar, and a run of block signs on consecutive lines is one unbroken bar.
 func TestGitBarsLineUpBesideOtherSigns(t *testing.T) {
 	s, _, _ := explainScene(t)
-	s.Frame()
+	s.SettleSigns() // the gutter's hunks are diffed off the loop
 	marks := unitMarks(s)
 	if _, ok := marks[8]; !ok {
 		t.Fatalf("no ? on line 8 to share it with the bar: %v", marks)

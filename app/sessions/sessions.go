@@ -93,11 +93,11 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 			}
 		case core.SessionFocused:
 			if ev.ID != "" {
-				h.Do(func() { kit.Follow(h, ev.ID) })
+				h.Do(func() { x.follow(ev.ID) })
 			}
 		case core.ProjectsChanged:
 			if ev.ID == x.focused() {
-				h.Do(func() { kit.Follow(h, ev.ID) }) // its worktrees moved: Start work
+				h.Do(func() { x.follow(ev.ID) }) // its worktrees moved: Start work
 			}
 		case core.AgentChanged:
 			was := working[ev.ID]
@@ -114,6 +114,14 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Command(c))
 	}
 	return nil
+}
+
+// follow moves the window onto session id, if it's still the one in front: a move asked for before another session
+// came to the front, run after that one's, would take the window away from it.
+func (x *Sessions) follow(id core.SessionID) {
+	if x.focused() == id {
+		kit.Follow(x.h, id)
+	}
 }
 
 func (x *Sessions) commands() []registry.Command {

@@ -60,10 +60,13 @@ func TestPathGivesUpOnAShellThatHangs(t *testing.T) {
 	}
 	b, _ := os.ReadFile(pidfile)
 	if pid := strings.TrimSpace(string(b)); pid != "" {
-		running := func() bool { s := readStat(pid); return s != "" && !strings.HasPrefix(s, "Z") }
-		for deadline := time.Now().Add(time.Second); running() && time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
+		// Gone, a zombie or dead (X, x: on its way out) isn't running.
+		running := func() bool { s := readStat(pid); return s != "" && !strings.ContainsAny(s[:1], "ZXx") }
+		alive := running()
+		for deadline := time.Now().Add(time.Second); alive && time.Now().Before(deadline); alive = running() { // the kill is sent, not waited for
+			time.Sleep(10 * time.Millisecond)
 		}
-		if running() { // the kill is sent, not waited for
+		if alive {
 			t.Errorf("the shell's child %s is still running", pid)
 		}
 	}

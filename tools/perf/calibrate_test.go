@@ -5,8 +5,9 @@ import (
 	"time"
 )
 
+// spin burns d of the thread's CPU, which is what Times measures: on a loaded machine, d of the clock is less.
 func spin(d time.Duration) {
-	for end := time.Now().Add(d); time.Now().Before(end); {
+	for end := threadTime() + d; threadTime() < end; {
 	}
 }
 
