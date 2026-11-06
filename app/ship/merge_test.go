@@ -237,3 +237,49 @@ func TestRaisedPRIsACardChip(t *testing.T) {
 		t.Errorf("a session that raised nothing has chips %+v", chips)
 	}
 }
+
+// Starting the next PR reads that project again, not the whole session: only its branch moved on, and the drafts it
+// drops are its own.
+func TestStartingTheNextPRReadsOnlyItsProject(t *testing.T) {
+	s, _, hub, se, pr := raisedScene(t)
+	x := shipOf(s)
+	first, _ := x.ShipOf(se.ID, "search-api")
+	hub.Merge("acme/search-api", pr.Number)
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the question", func() bool { return strings.Contains(s.Text(), "Start the next PR in search-api") })
+	shipQuiet(s)
+	whole := x.WholeReads(se.ID)
+	s.ClickText("Start next PR")
+	shipSettle(s, t, "the next PR", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Branch != first.Branch && sh.PR == nil })
+	shipQuiet(s)
+	if n := x.WholeReads(se.ID) - whole; n > 0 {
+		t.Errorf("starting search-api's next PR read every project %d times", n)
+	}
+}
+
+// Switching back to a session synced a moment ago doesn't ask the code host for every PR's comments again: its
+// sync stands until it's due.
+func TestSwitchingBackDoesntSyncAgainAtOnce(t *testing.T) {
+	s, _, hub, se, _ := raisedScene(t)
+	comments := func() int {
+		n := 0
+		for _, c := range hub.Calls() {
+			if strings.Contains(c, "/comments") {
+				n++
+			}
+		}
+		return n
+	}
+	s.Apply(core.SessionFocused{ID: se.ID})
+	shipQuiet(s)
+	before := comments()
+	other := core.SessionState{ID: "other", Name: "other", Kind: core.KindWork}
+	s.Apply(core.SessionSynced{Session: other})
+	for range 3 {
+		s.Apply(core.SessionFocused{ID: other.ID}, core.SessionFocused{ID: se.ID})
+		shipQuiet(s)
+	}
+	if n := comments() - before; n > 0 {
+		t.Errorf("switching back 3 times asked for the PR's comments %d times", n)
+	}
+}

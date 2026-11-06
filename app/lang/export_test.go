@@ -122,3 +122,10 @@ func (x *Terminals) Terminal(id string) any {
 	}
 	return nil
 }
+
+// Scans counts the whole scans of the window's directory for its tests.
+func (x *Tests) Scans() int {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return x.scans
+}

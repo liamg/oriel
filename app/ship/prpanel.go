@@ -49,7 +49,7 @@ func (x *Ship) panelHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 		c.Row("s", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("s", sub, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
 		if widget.IconButton(c, "refresh", "↻", widget.IconButtonOpts{Label: "Read again: fetch origin, ask " + cmp.Or(labelOf(s), "the code host"),
 			Help: "git/ship#pr", Disabled: x.report(se.ID).loading}) {
-			x.refresh(se.ID, true)
+			x.readSoon(se.ID, s.Project, true) // this project's PR: the others' stand
 		}
 	})
 	c.Row("branch", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {

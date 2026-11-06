@@ -101,7 +101,7 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.SessionFocused:
-			if ev.ID != "" {
+			if ev.ID != "" && x.syncedAgo(ev.ID) >= githubPoll { // one synced lately stands: each sync asks for every PR's comments
 				x.sync(ev.ID, false)
 			}
 			x.follow()
@@ -352,6 +352,17 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 			x.follow() // its PRs are all closed: stop syncing it
 		}
 	}()
+}
+
+// syncedAgo is how long ago session id last synced; forever if it hasn't.
+func (x *GitHub) syncedAgo(id core.SessionID) time.Duration {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	at, ok := x.lastSync[id]
+	if !ok {
+		return time.Duration(1<<63 - 1)
+	}
+	return x.now().Sub(at)
 }
 
 func (x *GitHub) mirror(id core.SessionID) (githubMirror, bool) {

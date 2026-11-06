@@ -195,7 +195,7 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 	if !x.deps.Kinds.Spec(se).Can(core.OwnsBranch) {
 		s.Branch = hostcore.DirectBranch(ctx, p, repo).Branch
 	}
-	s.Origin = repo.RemoteURL(ctx)
+	s.Origin = x.remoteURL(ctx, repo)
 	s.Remote = s.Origin != ""
 	if s.ReadOnly {
 		return s

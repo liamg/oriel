@@ -7,6 +7,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/registry"
 )
 
 // A file changed in one project reads that project's git again, and only it: no read of every project follows.
@@ -60,5 +61,25 @@ func TestSwitchingBackReadsNoGit(t *testing.T) {
 	shipQuiet(s) // what the switch starts is handed to the loop first
 	if n := x.WholeReads(se.ID) - whole; n > 0 {
 		t.Errorf("switching back read every project %d times", n)
+	}
+}
+
+// Pushing one project reads that project again, and its PR, not every project of the session: a push changes
+// nothing of the others.
+func TestAPushReadsOnlyItsProject(t *testing.T) {
+	s, _, _, se, _ := shipScene(t)
+	x := shipOf(s)
+	writeFiles(t, shipDir(se, "search-api"), map[string]string{"x.go": "package x\n"})
+	s.Run("ship.refresh", nil)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) == 1 })
+	s.Run("ship.commit", registry.Args{"project": "search-api", "message": "feat: x"})
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Commits == 1 })
+	shipQuiet(s)
+	whole := x.WholeReads(se.ID)
+	s.Run("ship.push", registry.Args{"project": "search-api"})
+	shipSettle(s, t, "the push", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.Pushed && len(sh.Unpushed) == 0 })
+	shipQuiet(s)
+	if n := x.WholeReads(se.ID) - whole; n > 0 {
+		t.Errorf("pushing search-api read every project %d times", n)
 	}
 }

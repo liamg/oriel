@@ -50,6 +50,26 @@ func (x *Ship) readProject(id core.SessionID, project string, first bool) {
 		x.mu.Unlock()
 		return
 	}
+	x.mu.Unlock()
+	x.readOne(id, project, false)
+}
+
+// readOne reads one project of a session again, on this goroutine, its PRs from the code host when fresh: a step
+// on it, or a change to its git, leaves the others' readings standing. A session or project not read yet is read
+// whole.
+func (x *Ship) readOne(id core.SessionID, project string, fresh bool) {
+	x.mu.Lock()
+	r := x.reports[id]
+	if r == nil || r.fixed || !slices.ContainsFunc(r.ships, func(s shipRead) bool { return s.Project == project }) {
+		if r != nil && r.fixed {
+			x.mu.Unlock()
+			return
+		}
+		r, n, seq := x.reading(id)
+		x.mu.Unlock()
+		x.readAs(id, r, n, seq, fresh)
+		return
+	}
 	r.seq++
 	seq := r.seq
 	x.mu.Unlock()
@@ -61,11 +81,11 @@ func (x *Ship) readProject(id core.SessionID, project string, first bool) {
 	read, err := c.ShipRead(ctx, host.ShipReq{Session: id, Projects: []string{project}})
 	var ships []shipRead
 	if err == nil && len(read) == 1 {
-		ships = x.withPRs(ctx, id, read, false)
+		ships = x.withPRs(ctx, id, read, fresh)
 	}
 	cancel()
 	if len(ships) != 1 {
-		x.refresh(id, false)
+		x.refresh(id, fresh)
 		return
 	}
 	x.mu.Lock()
@@ -83,4 +103,34 @@ func (x *Ship) readProject(id core.SessionID, project string, first bool) {
 	x.mu.Unlock()
 	x.fire(id, seen, merged, asks)
 	x.h.Redraw()
+}
+
+// readSoon reads one project of a session again, off the caller's goroutine; its PR from the code host when fresh.
+func (x *Ship) readSoon(id core.SessionID, project string, fresh bool) {
+	x.busy.Add(1)
+	go func() {
+		defer x.busy.Done()
+		x.readOne(id, project, fresh)
+	}()
+}
+
+// branchesMoved are the projects of a session's new list whose branch or base moved from its last, ok when that's
+// all that changed: the same projects, in the same folders. Otherwise the session is read whole.
+func (x *Ship) branchesMoved(id core.SessionID, projects []core.Project) (moved []string, ok bool) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	was, known := x.projects[id]
+	if !known || len(was) != len(projects) {
+		return nil, false
+	}
+	for _, p := range projects {
+		i := slices.IndexFunc(was, func(o core.Project) bool { return o.Name == p.Name })
+		if i < 0 || was[i].Dir != p.Dir || was[i].Repo != p.Repo {
+			return nil, false
+		}
+		if o := was[i]; o.Branch != p.Branch || o.Base != p.Base {
+			moved = append(moved, p.Name)
+		}
+	}
+	return moved, true
 }
