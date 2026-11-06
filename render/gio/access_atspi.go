@@ -3,6 +3,7 @@
 package gio
 
 import (
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -87,6 +88,8 @@ func (b *atspiBridge) update(c accessChange) {
 		b.app.emit(bus, b.win, ev)
 	}
 }
+
+func (b *atspiBridge) wanted() bool { return b.app.conn() != nil }
 
 func (b *atspiBridge) activate(on bool) {
 	bus := b.app.conn()
@@ -192,7 +195,13 @@ func (a *atspiApp) join(session dbus.BusObject) {
 	}
 	a.mu.Lock()
 	a.bus, a.desktop = bus, desk
+	wins := slices.Collect(maps.Values(a.wins))
 	a.mu.Unlock()
+	for _, w := range wins { // each window's tree, built from now on
+		if w.wake != nil {
+			w.wake()
+		}
+	}
 }
 
 func (a *atspiApp) leave() {

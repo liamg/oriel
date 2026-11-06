@@ -612,3 +612,29 @@ func TestMenuHoverWhileThePointerMovesBudget(t *testing.T) {
 	}
 	b.close(t)
 }
+
+// With no screen reader reading the window, no accessibility tree is built; once one starts, the tree it gets is
+// the screen's as it is now.
+func TestAccessTreeOnlyWhileAScreenReaderReads(t *testing.T) {
+	b := boot(t, panes{})
+	b.waitText(t, "ORIEL")
+	b.win.SetScreenReader(false)
+	b.win.Send(render.KeyEvent{Key: "a"})
+	b.waitText(t, "content of alpha")
+	time.Sleep(100 * time.Millisecond)
+	if tr := b.win.Access(); tr != nil && strings.Contains(tr.Dump(), `group "alpha"`) {
+		t.Errorf("the tree was built with no screen reader reading:\n%s", tr.Dump())
+	}
+	b.win.SetScreenReader(true)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for ctx.Err() == nil {
+		if tr := b.win.Access(); tr != nil && strings.Contains(tr.Dump(), `group "alpha"`) {
+			b.close(t)
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Error("a screen reader starting never got the screen's tree")
+	b.close(t)
+}

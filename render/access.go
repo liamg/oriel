@@ -183,3 +183,9 @@ type Accessible interface {
 	UpdateAccess(u AccessUpdate)
 	AccessActions() <-chan AccessAction
 }
+
+// AccessWanted is an Accessible that knows whether a screen reader is reading it: while none is, the app needn't
+// build its tree, and once one starts the window asks for a frame, whose update brings the bridge up to date.
+type AccessWanted interface {
+	AccessWanted() bool
+}
