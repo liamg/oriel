@@ -65,7 +65,14 @@ func (s *Store) Apply(ev core.Event) error {
 	if err := ev.Apply(&next); err != nil {
 		return err
 	}
-	if _, logged := ev.(core.Logged); !logged && unchanged(s.State(), next) {
+	was := s.State()
+	same := false
+	if c, ok := ev.(core.SelfCompared); ok {
+		same = c.Unchanged(&was, &next)
+	} else {
+		same = unchanged(was, next)
+	}
+	if _, logged := ev.(core.Logged); !logged && same {
 		return nil
 	}
 	next.Seq++

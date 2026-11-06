@@ -58,6 +58,13 @@ type Event interface {
 	Apply(s *State) error
 }
 
+// SelfCompared is an event that says whether applying it changed the state, far more cheaply than comparing the two
+// whole: what it touches is all that can differ. A store asks it instead of comparing.
+type SelfCompared interface {
+	Event
+	Unchanged(was, next *State) bool
+}
+
 // Logged is an event that's published and logged even when it leaves the state as it was: a plugin's own record.
 // Any other event that changes nothing is dropped.
 type Logged interface {

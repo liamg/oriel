@@ -36,6 +36,12 @@ type Discovered interface {
 	Discover() []Transcript
 }
 
+// DiscoverStamped is a Discovered that can say, far more cheaply than Discover, that it may find logs it didn't
+// before: its stamp changes when one is added. A list of logs is kept while the stamp holds, for a while.
+type DiscoverStamped interface {
+	DiscoverStamp() string
+}
+
 // Transcript is one session's logs as its provider keeps them.
 type Transcript struct {
 	Session  string    // the provider's own id for it

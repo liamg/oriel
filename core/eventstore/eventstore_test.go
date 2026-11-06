@@ -107,3 +107,31 @@ func TestEventTimesAreUTC(t *testing.T) {
 		t.Error("the caller's event was changed")
 	}
 }
+
+// An append that brings items already in the transcript, as they are, changes nothing and isn't published; one
+// that changes an item is. The store asks the event, rather than comparing the whole state.
+func TestARepeatedAppendChangesNothing(t *testing.T) {
+	s := New()
+	if err := s.Apply(core.SessionSynced{Session: core.SessionState{ID: "w"}}); err != nil {
+		t.Fatal(err)
+	}
+	var heard int
+	s.Subscribe(core.Filter{}, func(core.Event) { heard++ })
+	it := core.Item{ID: "m1", Kind: core.ItemAssistant, Text: "Rounding half", Partial: true}
+	for range 2 {
+		if err := s.Apply(core.TranscriptAppended{Session: "w", Items: []core.Item{it}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if heard != 1 {
+		t.Errorf("the same item appended twice was published %d times", heard)
+	}
+	it.Text, it.Partial = "Rounding half to even", false
+	if err := s.Apply(core.TranscriptAppended{Session: "w", Items: []core.Item{it}}); err != nil {
+		t.Fatal(err)
+	}
+	se, _ := s.Session("w")
+	if heard != 2 || se.Snapshot().Transcript[0].Text != it.Text {
+		t.Errorf("an item changed: published %d times, transcript %+v", heard, se.Snapshot().Transcript)
+	}
+}
