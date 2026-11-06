@@ -49,13 +49,19 @@ func TestSplitterDragsAllTheWay(t *testing.T) {
 		send(render.PointerMove, dx, render.ButtonPrimary)
 	}
 	send(render.PointerRelease, 100, 0)
-	var share float32
-	r.Do(func() error {
-		w := r.Host.Layout().Main.Weights
-		share = w[0] / (w[0] + w[1])
-		return nil
-	})
-	if moved := share*width - left.Dx(); moved < 80 {
-		t.Errorf("a 100px drag moved the split %.0fpx", moved)
+	moved := func() float32 {
+		var share float32
+		r.Do(func() error {
+			w := r.Host.Layout().Main.Weights
+			share = w[0] / (w[0] + w[1])
+			return nil
+		})
+		return share*width - left.Dx()
+	}
+	// The loop takes the moves sent before the release, then the release: the split has moved once it has.
+	for deadline := time.Now().Add(apptest.Timeout); moved() < 80; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("a 100px drag moved the split %.0fpx", moved())
+		}
 	}
 }
