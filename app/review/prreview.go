@@ -130,9 +130,14 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 		return registry.Verdict{}, nil
 	}))
 	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
-		if id := ev.Scope(); id != "" {
-			h.Do(func() { x.watch(id) })
+		if _, said := ev.(core.TranscriptAppended); said { // an agent's words move no thread, draft or state watch reads
+			return
 		}
+		id := ev.Scope()
+		if ref, ok := h.Session(id); id == "" || !ok || reviewPR(ref.Snapshot()) == "" {
+			return
+		}
+		h.Do(func() { x.watch(id) })
 	})))
 	// A review's own entry in place of Raise PR's checklist: its tab, and how many comments are still to triage.
 	front := func() (core.SessionState, bool) {
