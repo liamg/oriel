@@ -97,9 +97,18 @@ func TestReadsAWatchedSourceWhenItsFilesChange(t *testing.T) {
 	if n := reads.Load(); n != 1 {
 		t.Fatalf("read %d times for a skipped folder", n)
 	}
-	for i := range 5 {
-		write(t, filepath.Join(dir, "a.txt"), string(rune('a'+i)))
+	// A burst: five writes through one handle, as quick as the machine goes. Each written through a file of its own,
+	// the five can take long enough on a busy machine to be two bursts.
+	f, err := os.OpenFile(filepath.Join(dir, "a.txt"), os.O_WRONLY|os.O_TRUNC, 0)
+	if err != nil {
+		t.Fatal(err)
 	}
+	for i := range 5 {
+		if _, err := f.WriteString(string(rune('a' + i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.Close()
 	eventually(t, "a read for the change", func() bool { return reads.Load() == 2 })
 	time.Sleep(400 * time.Millisecond)
 	if n := reads.Load(); n != 2 {
