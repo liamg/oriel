@@ -124,3 +124,36 @@ func TestMeterParts(t *testing.T) {
 		t.Errorf("its accessible node: %+v", n)
 	}
 }
+
+// A card that takes focus has it the frame it appears, so its keys answer it whatever had focus; a key typed in
+// the moment it appears, on its way to what was being typed in, answers nothing.
+func TestACardThatTakesFocusAnswersItsKeysOnceUp(t *testing.T) {
+	shown := false
+	picked := -1
+	h := newHarness(t, theme.Dark, render.Point{X: 640, Y: 300}, func(c *ui.Ctx) {
+		c.Box("field", ui.Style{W: ui.Px(100), H: ui.Px(20), Focusable: true}, nil)
+		if !shown {
+			return
+		}
+		res := ActionCard(c, "card", ActionCardOpts{Title: "Codex wants to run a command", Tone: col(c, tCardFg), Help: "test/card", TakeFocus: true,
+			Actions: []CardAction{{Label: "Allow once", Key: "y", Primary: true}, {Label: "Deny", Key: "n"}}}, func(c *ui.Ctx) {})
+		if res.Action >= 0 {
+			picked = res.Action
+		}
+	})
+	h.click(10, 10)
+	shown = true
+	h.frame()
+	h.keys("y")
+	h.frame()
+	if picked != -1 {
+		t.Fatalf("a key typed as the card appeared picked %d", picked)
+	}
+	h.now = h.now.Add(CardKeyGuard)
+	h.frame()
+	h.keys("y")
+	h.frame()
+	if picked != 0 {
+		t.Errorf("y, once the card was up, picked %d; want Allow once", picked)
+	}
+}

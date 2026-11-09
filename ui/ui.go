@@ -95,7 +95,10 @@ type UI struct {
 	flags   map[ID]flags // from the latest frame, which input resolves against
 	parents map[ID]ID
 
-	overlays map[ID]bool // the floats over the flow (Z above 0) last frame drew
+	overlays  map[ID]bool // the floats over the flow (Z above 0) last frame drew
+	opened    map[ID]bool // the FocusOnOpen nodes this frame built
+	wasOpened map[ID]bool // and those the frame before
+	lastTrap  ID          // the focus trap up last frame
 
 	theme *theme.Resolved
 
@@ -257,7 +260,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.shown = false
 	u.tracked, u.regions = false, u.regions[:0]
 	build(&Ctx{u: u, e: u.root})
-	u.settleFocus()
+	u.settleFocus(prev)
 	if u.in.pending() {
 		u.wake = u.now() // what the input changed shows next frame
 	}
@@ -1110,7 +1113,11 @@ func (u *UI) Paint(f render.Frame) {
 		// While a trap is up, focus can't leave it, other than for a float layered over it: a window kept on top.
 		// Coming in from outside, it goes to the trap's default target; dropped inside it (Escape in a field), to the
 		// trap itself.
-		if t := u.trap(); t != 0 && !u.within(u.in.focus, t) && !u.overTrap(u.in.focus, t) {
+		// A trap that's just come up takes focus from a card that took it as it appeared: what opened last has it.
+		t := u.trap()
+		fresh := t != 0 && t != u.lastTrap && u.openedHolds(u.in.focus)
+		u.lastTrap = t
+		if t != 0 && !u.within(u.in.focus, t) && (!u.overTrap(u.in.focus, t) || fresh) {
 			to := cmp.Or(u.defaultIn(t), t)
 			if n := len(u.in.trail); u.in.focus == 0 && n > 0 && u.within(u.in.trail[n-1], t) {
 				to = t
