@@ -3,6 +3,7 @@ package hostcore
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"runtime/debug"
 	"sync"
@@ -47,6 +48,21 @@ func (e Env) Go(where string, fn func()) {
 // SessionDir is where a session's log and files are kept.
 func (e Env) SessionDir(id core.SessionID) string {
 	return filepath.Join(e.Home, "sessions", string(id))
+}
+
+// RetiredID is the mark a deleted session leaves: while it's there no session started later takes its id, so
+// nothing kept by id (in the app, in an agent's own logs) turns up on another session.
+func (e Env) RetiredID(id core.SessionID) string {
+	return filepath.Join(e.Home, "retired", string(id))
+}
+
+// Retire marks id as a deleted session's, never to be another's.
+func (e Env) Retire(id core.SessionID) error {
+	p := e.RetiredID(id)
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(p, nil, 0o600)
 }
 
 // WorkspacesDir is where the workspaces Oriel makes go.

@@ -780,3 +780,26 @@ func TestAClosedTabStaysClosedAfterARestart(t *testing.T) {
 		t.Errorf("after a restart: tabs %v, in front %q", s.Tabs, s.Focus)
 	}
 }
+
+// A session's id names it and nothing else, ever: what the app keeps by id (its layout, its PR, its console) must
+// never turn up on a session started later. So a session started with no prompt or ticket, after one with the same
+// name was deleted, gets an id of its own, and still does once the host has restarted.
+func TestADeletedSessionsIDIsNeverReused(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	spec := core.SessionSpec{Kind: core.KindWork, Repos: []core.RepoID{core.RepoID(r.repo.Dir)}}
+	seen := map[core.SessionID]bool{}
+	for i := range 3 {
+		id := r.start(spec)
+		if seen[id] {
+			t.Fatalf("start %d took %s, the id of a session deleted before it", i+1, id)
+		}
+		seen[id] = true
+		if err := r.w.End(ctx, EndReq{Session: id, Delete: true, DeleteBranch: true}); err != nil {
+			t.Fatal(err)
+		}
+		if i == 1 {
+			r.restart()
+		}
+	}
+}
