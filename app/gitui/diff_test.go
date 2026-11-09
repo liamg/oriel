@@ -254,7 +254,9 @@ func TestDiffCommentOpensAThreadBetweenTheLines(t *testing.T) {
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
 	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
 	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
-	r.WaitText("func roundHalfEven")
+	// Against main, not the whole file as new before main is read: a click as the diff is made again lands on the row
+	// in its place after.
+	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
 	r.WaitGit()
 	r.ClickText("Truncate")
 	r.WaitAccess("the line selected", func(r *apptest.Window) bool {
@@ -285,7 +287,9 @@ func TestAPlusOnADiffLineOpensAThread(t *testing.T) {
 	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
 	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
 	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
-	r.WaitText("func roundHalfEven")
+	// Against main, not the whole file as new before main is read: a click as the diff is made again lands on the row
+	// in its place after.
+	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
 	r.WaitGit()
 	r.Hover("Truncate", "Truncate")
 	r.WaitAccess("line 8's + with the pointer on it", func(r *apptest.Window) bool { return r.Access("Comment on line 8") != nil })

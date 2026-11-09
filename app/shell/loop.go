@@ -192,7 +192,7 @@ func (l *loop) takeWaiting(ctx context.Context, t *turn, dirty <-chan struct{}) 
 // has focus in the frame drawn before it, as the one typing it saw, while the pointer goes to what's on screen.
 // What comes after a kept event waits behind it.
 func (l *loop) take(ctx context.Context, t *turn, ev render.Event, dirty <-chan struct{}) {
-	if len(t.after) > 0 || waitsForFrame(ev) && l.owed(t, dirty) {
+	if len(t.after) > 0 || l.waitsForFrame(ev) && l.owed(t, dirty) {
 		t.after = append(t.after, ev)
 		return
 	}
@@ -210,10 +210,14 @@ func (l *loop) owed(t *turn, dirty <-chan struct{}) bool {
 	return !at.IsZero() && !l.hidden
 }
 
-func waitsForFrame(ev render.Event) bool {
-	switch ev.(type) {
+// waitsForFrame says ev goes in after the frame owed: a key or a drop, and a release that ends a drag the pointer
+// moved since the last frame, so what's dragged follows it all the way.
+func (l *loop) waitsForFrame(ev render.Event) bool {
+	switch ev := ev.(type) {
 	case render.KeyEvent, render.DropEvent:
 		return true
+	case render.PointerEvent:
+		return ev.Kind == render.PointerRelease && l.ui.Dragged()
 	}
 	return false
 }

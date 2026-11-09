@@ -57,15 +57,11 @@ func BranchSignsScene(t *testing.T, file string) (*Scene, *gittest.Repo) {
 	return s, r
 }
 
-// SettleSigns frames until the gutter's and blame's work off the loop is done.
+// SettleSigns frames until the gutter's and blame's work off the loop is done: however many steps it takes (the
+// status, then the base, then the diff), the app gone quiet (Quiet).
 func (s *Scene) SettleSigns() {
-	for range 3 {
-		s.Frame()
-		s.WaitGit()
-		PluginOf[*editor.GitSigns](s, "gitsigns").Wait()
-		s.RunQueued()
-	}
-	s.Frame()
+	s.T.Helper()
+	s.Quiet()
 }
 
 // CursorTo puts the editor's cursor on a 1-based line, and lets the gutter catch up.
