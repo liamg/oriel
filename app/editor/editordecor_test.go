@@ -9,6 +9,7 @@ import (
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/render/typeset"
@@ -210,5 +211,38 @@ func TestBlockPastTheBottomKeepsTheRowsSteady(t *testing.T) {
 	}
 	if seen[0] >= rows || seen[0] < 1 {
 		t.Errorf("with a block in view the text has %d rows of %d", seen[0], rows)
+	}
+}
+
+// Scrolled to the end of a file with threads open further up, the wheel scrolls up past them to the top: as the
+// threads come into view and take rows from the text, the view stays where the wheel put it rather than going back
+// down to the cursor.
+func TestTheWheelScrollsUpPastBlocks(t *testing.T) {
+	s := editorScene(t)
+	keys(s, "G")
+	s.Frame()
+	s.Frame()
+	p := editorOf(s).Current()
+	end := p.Top()
+	if end < 10 {
+		t.Fatalf("the file's end is at top %d: too short to scroll", end)
+	}
+	s.Registry().Decorations("test.threads", &twoBlocks{a: end - 6, b: end - 3})
+	s.Frame()
+	at := render.Point{X: float32(editorColumn.Dx()) / 2, Y: float32(editorColumn.Dy()) / 2}
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+	prev := end
+	for range end + 5 {
+		s.UI().Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: at, Scroll: render.Point{Y: -20}})
+		s.Frame()
+		s.Frame()
+		top := editorOf(s).Current().Top()
+		if top > prev {
+			t.Fatalf("a wheel up moved the view down, from %d to %d", prev, top)
+		}
+		prev = top
+	}
+	if prev != 0 {
+		t.Errorf("scrolling up stopped at %d, not the top", prev)
 	}
 }
