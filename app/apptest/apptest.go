@@ -6,6 +6,7 @@ package apptest
 import (
 	"cmp"
 	"context"
+	"github.com/liamg/oriel/internal/clock"
 	"image/png"
 	"net/http"
 	"os"
@@ -51,9 +52,10 @@ var Timeout = 15 * time.Second
 // running alongside isn't a warning in the frame. TestHookBudget holds the real one.
 const HookBudget = 10 * time.Millisecond
 
-// testRegistry is the registry a test's app starts with.
-func testRegistry() uireg.Registry {
-	r := uireg.New()
+// testRegistry is the registry a test's app starts with, timing hooks on now: a hook's time is the scene's clock's,
+// not how busy the machine running the test is.
+func testRegistry(now func() time.Time) uireg.Registry {
+	r := uireg.NewWith(registry.Config{Clock: nowClock(now)})
 	r.Option(registry.OptionSpec{Name: "hooks.budget", Type: registry.Duration, Default: HookBudget, Scopes: registry.ScopeUser,
 		Source: "builtin:apptest", Help: "How long a hook may take, on two calls running, before it's a warning: hooks run on the hot path."})
 	return r
@@ -141,7 +143,7 @@ func New(t testing.TB, o Options) *Scene {
 	os.MkdirAll(conf, 0o755)
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644)
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
-	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
+	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(func() time.Time { return s.Now }), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
 		LanguageServers: TestServers,
 		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t), ImageNet: cmp.Or(o.ImageNet, isolate.Net(t)), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
@@ -880,3 +882,10 @@ var Day = time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)
 func At(h, m, s int) time.Time {
 	return Day.Add(time.Duration(h)*time.Hour + time.Duration(m)*time.Minute + time.Duration(s)*time.Second)
 }
+
+// nowClock is a clock.Clock that reads now; its timers are the real clock's.
+type nowClock func() time.Time
+
+func (c nowClock) Now() time.Time { return c() }
+
+func (nowClock) AfterFunc(d time.Duration, f func()) clock.Timer { return clock.Real().AfterFunc(d, f) }
