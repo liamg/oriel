@@ -24,10 +24,26 @@ get() {
 	case "$got" in *" $1 "*) rm -f "$kept" ;; esac
 	got="$got$1 "
 	if [ ! -s "$kept" ]; then
-		curl -fsSL --connect-timeout 30 --max-time 300 --retry 2 --retry-all-errors --retry-delay 5 "$1" -o "$kept.part"
+		if [[ $1 =~ ^(https://[^/]+/[^/]+/[^/]+)/archive/([0-9a-f]{40})\.tar\.gz$ ]]; then
+			# A forge's archive of a commit: when the forge can't make it, git can, the same files at that commit.
+			curl -fsSL --connect-timeout 30 --max-time 120 "$1" -o "$kept.part" ||
+				from_git "${BASH_REMATCH[1]}.git" "${BASH_REMATCH[2]}" "$kept.part"
+		else
+			curl -fsSL --connect-timeout 30 --max-time 300 --retry 2 --retry-all-errors --retry-delay 5 "$1" -o "$kept.part"
+		fi
 		mv "$kept.part" "$kept"
 	fi
 	cp "$kept" "$2"
+}
+
+# from_git REPO COMMIT FILE writes COMMIT's files from REPO to FILE, as a .tar.gz.
+from_git() {
+	echo "fetch: $1 at $2 from git" >&2
+	local g="$work/git-$2"
+	git init -q "$g"
+	git -C "$g" fetch -q --depth 1 "$1" "$2"
+	git -C "$g" archive --format=tar.gz --prefix="src/" -o "$3" FETCH_HEAD
+	rm -rf "$g"
 }
 
 if [ -n "${GHOSTTY_TGZ:-}" ]; then
