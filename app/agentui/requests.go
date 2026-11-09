@@ -139,6 +139,7 @@ func (x *Requests) Activate(_ context.Context, h plugin.Host) error {
 		Command: "thread.new"}))
 	x.Add(h.Picker(x.threadsSource()))
 	x.Add(h.Decorations("threads", uireg.KeyedDecorations{Key: x.threadsKey, Make: x.decorations}))
+	x.Add(h.Decorations("threads.plus", uireg.KeyedDecorations{Key: x.threadsPlusKey, Make: x.threadsPlus}))
 	x.Add(h.Decorations("agent.edits", uireg.KeyedDecorations{Key: func(uireg.DecorationCtx) any {
 		se, ok := x.front()
 		if !ok {

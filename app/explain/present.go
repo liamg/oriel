@@ -282,7 +282,7 @@ func blockDecorations(h plugin.Host, dctx uireg.DecorationCtx, b *presentBuild) 
 	ds := h.Decorate(dctx)
 	for _, line := range slices.Sorted(maps.Keys(ds)) {
 		i := -1
-		if line < len(b.at) {
+		if line >= 0 && line < len(b.at) { // an EveryLine sign has no block to go on
 			i = b.at[line]
 		}
 		if i < 0 {
@@ -298,7 +298,9 @@ func blockDecorations(h plugin.Host, dctx uireg.DecorationCtx, b *presentBuild) 
 					bd.cards = append(bd.cards, d)
 				}
 			case uireg.Sign:
-				bd.signs = append(bd.signs, d)
+				if !d.OnHover { // a block has no line under the pointer to show it on
+					bd.signs = append(bd.signs, d)
+				}
 			case uireg.LineBg:
 				if bd.bg == nil {
 					bd.bg = &d

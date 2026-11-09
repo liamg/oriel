@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
 )
 
@@ -323,5 +324,45 @@ end)
 	s.ClickOn("Show owner")
 	if got.String("who") != "ana" {
 		t.Errorf("Show owner ran with %v", got)
+	}
+}
+
+// A Lua sign with on_hover shows only while the pointer is on its line, as the + that comments on a line does; with
+// every_line it's on each line, and runs with the line it's on.
+func TestLuaSignOnHover(t *testing.T) {
+	s := apptest.LuaScene(t, `local L = oriel
+L.decor.provider("peek", function(buf, top, bottom)
+  return { { line = 2, sign = "◆", tooltip = "Peek", command = "peek.show", on_hover = true },
+    { every_line = true, sign = "✚", tooltip = "Note line {line}", command = "peek.note", args = { why = "x" }, on_hover = true } }
+end)
+`)
+	var got registry.Args
+	s.Registry().Command(registry.Command{ID: "peek.note", Run: func(_ registry.Ctx, a registry.Args) error { got = a; return nil }})
+	file := filepath.Join(t.TempDir(), "a.txt")
+	os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644)
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Frame()
+	s.Frame()
+	if s.Has("◆") {
+		t.Fatal("the sign shows with the pointer off its line")
+	}
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint("two")})
+	s.Frame()
+	s.Frame()
+	if !s.Has("◆") {
+		t.Error("the sign doesn't show with the pointer on its line")
+	}
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint("three")})
+	s.Frame()
+	s.Frame()
+	if s.Has("◆") {
+		t.Error("the sign still shows with the pointer on the next line")
+	}
+	if s.Find("Note line 3") == nil || s.Find("Note line 2") != nil {
+		t.Fatal("the every-line sign isn't on line 3 alone, where the pointer is")
+	}
+	s.ClickOn("Note line 3")
+	if got.Int("line") != 3 || got.String("why") != "x" {
+		t.Errorf("the every-line sign ran with %v", got)
 	}
 }
