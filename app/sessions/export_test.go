@@ -3,7 +3,6 @@ package sessions
 import (
 	"time"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/widget"
@@ -52,14 +51,3 @@ func (x *Launcher) OpenWith(a registry.Args) { x.openWith(a) }
 
 // Cloning shows the Add repo dialog cloning, git saying progress.
 func (x *Repos) Cloning(progress string) { x.dialog.busy, x.dialog.progress = true, progress }
-
-type (
-	MissionState    = missionState
-	MissionCardLine = missionCardLine
-)
-
-func (x *Mission) Open() bool               { return x.open }
-func (x *Mission) Show()                    { x.show() }
-func (x *Mission) Close()                   { x.close() }
-func (x *Mission) Selected() core.SessionID { return x.selected() }
-func (x *Mission) Terms() int               { return len(x.terms) }

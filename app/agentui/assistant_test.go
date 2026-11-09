@@ -286,7 +286,7 @@ func TestAssistantAsksFirst(t *testing.T) {
 	}
 }
 
-// my_tickets (the tickets'), mission control and agentbus's request_review are their features' tools:
+// my_tickets (the tickets'), builds and agentbus's request_review are their features' tools:
 // a feature or plugin offers them for the assistant through the registry (this my_tickets shadows the app's), and they reach it, and only it, like its own. An act
 // of theirs asks first just the same.
 func TestPluginToolsReachTheAssistant(t *testing.T) {
@@ -297,7 +297,7 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 			Run: func(registry.Ctx, map[string]any) (any, error) {
 				return []map[string]string{{"key": "ENG-2231", "title": "search api", "state": "In Progress"}}, nil
 			}},
-		{Name: "mission_control", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "mission control", Desc: "What mission control shows.",
+		{Name: "builds", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "builds", Desc: "The builds running and how they went.",
 			Run: func(registry.Ctx, map[string]any) (any, error) { return "2 PRs failing CI", nil }},
 		{Name: "request_review", For: []string{kit.AssistantAgent}, Params: map[string]string{"pr": "string", "who": "string?"},
 			Desc: "Ask someone on agentbus to review a pull request.",
@@ -321,7 +321,7 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 	s.Frame()
 	widenAssistant(t, s)
 	ua := lw.Fake.WaitStarted(t)
-	for _, want := range []string{"my_tickets", "mission_control", "request_review"} {
+	for _, want := range []string{"my_tickets", "builds", "request_review"} {
 		if !slices.Contains(toolNames(ua), want) {
 			t.Errorf("no %s for the assistant", want)
 		}
@@ -332,7 +332,7 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 	}
 	// The call, under recent actions: "linear" alone is in the sources list from the start.
 	s.Until("the call", func() bool { return s.Has("✓ MY_TICKETS") })
-	s.WantFrame("mission control", "linear", "request review", "asks first")
+	s.WantFrame("builds", "linear", "request review", "asks first")
 
 	// With the drawer away, its card stacks over the window with the inbox's, and is answered there.
 	s.Run("assistant.close", nil)

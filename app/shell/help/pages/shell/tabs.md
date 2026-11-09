@@ -8,13 +8,18 @@ related: [shell/omnibox, errors]
 
 Each session has a tab across the top. Its mark is its status, by shape as well as colour: a red `!` needs you, a
 violet `?` wants permission, a cyan spinner is working, a blue `◌` is waiting on CI, a pink `…` is with a reviewer, a
-green `✓` is quiet, a grey `○` is off. The HUD and mission control use the same marks. A `✕` and a number mean errors
+green `✓` is quiet, a grey `○` is off. The HUD uses the same marks. A `✕` and a number mean errors
 in that session you haven't seen yet.
 
 - Click a tab, or press `⌘1` to `⌘9`, to bring that session to the front.
 - Drag a tab onto another to move it to its place (`session.tab.move`); `⌘1` to `⌘9` follow the order.
-- Its `✕` closes the tab only: the session carries on, and the omnibox or mission control brings it back.
+- Its `✕` closes the tab only: the session carries on, and the omnibox brings it back.
 - Right-click a tab for **Rename…** (edit the name in the tab; ⏎ keeps it, Escape drops it), **Close tab** and **End session…**.
+
+## When Oriel starts {#launch}
+
+Oriel opens as you left it: the tabs that were open, in their order, with the session that was in front in front
+again. Left on the start view, it opens there, with the tabs behind it. A session deleted since is left out.
 
 {{keys "session.*"}}
 
@@ -33,7 +38,7 @@ commits not pushed, an open pull request (it stays open on its host), an agent m
 
 `⌘↵` ends it, `Esc` cancels. Archiving offers **Undo** in its notice while the branches are still there.
 
-The same dialog opens from mission control (`e`), the Workspace page's Overview, and **Finish session** on the Ship
+The same dialog opens from the Workspace page's Overview, and **Finish session** on the Ship
 page once every pull request is merged. Closing the tab of a session that looks finished opens it too, with
 **Delete the local branches too** ticked: a review whose last review you sent approved the pull request, or a
 session whose pull requests are all merged with nothing uncommitted or unpushed in any of its projects. Cancel

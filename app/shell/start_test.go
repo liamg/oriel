@@ -14,7 +14,6 @@ import (
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/registry/uireg"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -392,22 +391,6 @@ func TestStartLinksWrap(t *testing.T) {
 		if len(rows) < 2 {
 			t.Errorf("at %v wide, eight links sit on %d line", width, len(rows))
 		}
-	}
-}
-
-// The start view shows only while nothing runs, so it has no link to mission control; ⌘-key and the omnibox reach it.
-func TestStartHasNoMissionControlLink(t *testing.T) {
-	s := apptest.New(t, apptest.Options{Size: render.Point{X: 1400, Y: 900}})
-	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Status: core.StatusWorking,
-		Agent: core.AgentState{Running: true}}})
-	s.Frame()
-	s.Frame()
-	if strings.Contains(s.Text(), "MISSION CONTROL") {
-		s.Run("mission.toggle", nil)
-		s.Frame()
-	}
-	if strings.Contains(s.Text(), "Mission control") {
-		t.Errorf("the start view links mission control:\n%s", s.Text())
 	}
 }
 

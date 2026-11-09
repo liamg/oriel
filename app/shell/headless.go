@@ -76,7 +76,7 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 	}
 	sh, cancel := newShell(cfg, builtins, func() {})
 	sh.desktop = cfg.Desktop
-	sh.launchDone = true // a window that's been up a while: mission control doesn't open as at launch
+	sh.launchDone = true // a window that's been up a while: nothing comes back as at launch
 	h := &Headless{sh: sh, size: o.Size, cancel: cancel}
 	last, err := sh.activate(context.Background(), &h.plugins)
 	if err != nil {

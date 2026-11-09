@@ -16,7 +16,7 @@ Ask it "what needs me?", "review github.com/acme/api/pull/4410", "stop the round
 "where's that test I was working on?", "switch to the web project" or "how do I split the editor?". It reads before
 it answers: your sessions and why each waits on you, what you changed and where you are, your pull requests and the
 reviews waiting on you, your jobs, repos, plan usage and machines, these help pages, and whatever a plugin adds
-(Linear tickets, mission control). It can search the web for news and the like (`assistant.web`).
+(Linear tickets, say). It can search the web for news and the like (`assistant.web`).
 
 It never waits on its own permission prompts or questions: nobody sees its agent's terminal. It may use its Oriel
 tools and, with `assistant.web` on, the web search and fetch tools; anything else it asks for (a shell command, an

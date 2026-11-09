@@ -29,7 +29,7 @@ auth token` prints yours). It's sent only to api.github.com. Oriel's own GitHub 
 
 ## Presence {#presence}
 
-**ACTIVE**, **IDLE** and **DND** at the foot of the Inbox panel, in the HUD and in mission control set what others
+**ACTIVE**, **IDLE** and **DND** at the foot of the Inbox panel, and in the HUD set what others
 see. Do not disturb holds questions and review requests back until it ends.
 
 ## Auto-approve {#auto-approve}

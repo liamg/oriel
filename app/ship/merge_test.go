@@ -228,7 +228,7 @@ func TestNextPRAfterMergingIntoMainHereWaitsForMainToBePushed(t *testing.T) {
 // Mission control: a session's card names the PR it raised, a chip linking to it, beside its kind's chips.
 func TestRaisedPRIsACardChip(t *testing.T) {
 	s, _, _, se, pr := raisedScene(t)
-	want := registry.Chip{Text: "#" + strconv.Itoa(pr.Number), Help: kit.MissionHelp + "#cards", Link: pr.URL}
+	want := registry.Chip{Text: "#" + strconv.Itoa(pr.Number), Help: kit.TabsHelp, Link: pr.URL}
 	if chips := registry.Chips(s.Registry(), se); !slices.Contains(chips, want) {
 		t.Errorf("the card's chips %+v lack %+v", chips, want)
 	}

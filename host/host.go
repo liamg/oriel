@@ -117,8 +117,13 @@ func New(opts Options) (*Host, error) {
 	if err := w.logs.Restore(w.store); err != nil {
 		return nil, err
 	}
+	strip := persist.NewStrip(opts.Home)
+	if err := strip.Restore(w.store); err != nil {
+		w.log.Warn("the tab strip as it was left", "err", err)
+	}
 	w.stats.RestoreUsage()
 	w.store.Subscribe(core.Filter{}, w.logs.Record)
+	strip.Track(w.store)
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
 	w.repos.Changed()

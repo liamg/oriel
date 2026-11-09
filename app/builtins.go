@@ -32,7 +32,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	out = append(out, cfg.Agents...)
 	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages"), CacheDir: c.CacheDir}, p.Themes, p.Layout, gits,
 		p.Rail, &gitui.Explorer{Git: gits}, p.Start, p.Overview, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
-		&stats.HUD{}, &agentui.Inbox{}, &appsessions.Mission{}, p.Omnibox, p.Picker, p.WhichKey, &settings.Consent{}, p.Help, p.Nav, p.Menus,
+		&stats.HUD{}, &agentui.Inbox{}, p.Omnibox, p.Picker, p.WhichKey, &settings.Consent{}, p.Help, p.Nav, p.Menus,
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},
 		&editor.Search{Editor: ed, Tools: p.Tools}, &lang.LSP{Version: c.Version, Logger: c.Logs.Logger, Servers: cfg.LanguageServers},

@@ -303,7 +303,7 @@ func SettingsSections(r registry.Contributions) []SettingsSection {
 // reads state as it's drawn (a ui.Func) is live without any of them.
 type Indicator struct {
 	Name  string // unique among indicators: "deploys"
-	Slot  string // SlotTitleBar, SlotTitleBrand, SlotStatusLeft, SlotStatusRight, SlotHUD, SlotMission, or a slot a panel draws: SlotHUDToday, SlotInboxFoot
+	Slot  string // SlotTitleBar, SlotTitleBrand, SlotStatusLeft, SlotStatusRight, SlotHUD, or a slot a panel draws: SlotHUDToday, SlotInboxFoot
 	Order int    // in its slot, among the slot's views: titlebar.right.40-usage is 40
 	// Title is a HUD panel's heading, Note what it says at the heading's right ("3 online"), and Span how many of the
 	// HUD's four columns it takes (1 if 0). Help is its help page and anchor.
@@ -325,7 +325,6 @@ const (
 	SlotStatusRight = "statusline.right"
 	SlotHUD         = "hud"        // the HUD's panels
 	SlotHUDToday    = "hud.today"  // under the HUD's Today panel: a plugin's lines
-	SlotMission     = "mission"    // mission control's strip along its foot: usage, workers' load
 	SlotInboxFoot   = "inbox.foot" // the Inbox panel's foot: agentbus's presence
 )
 

@@ -40,7 +40,7 @@ func (e holdExec) Start(ctx context.Context, _ *exec.Cmd) (agent.Process, error)
 
 // Start runs session.start and the launcher closes with the session in front, though its agent is still
 // starting. Meanwhile the request says it's queued for an agent that's starting, a card with a spinner says what
-// the start is doing, for how long, and that it happens once, mission control's card says STARTING, and the raw
+// the start is doing, for how long, and that it happens once, and the raw
 // terminal says there's none yet. Once the agent is up it gets the request and the card goes.
 func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 	hold := make(chan struct{})
@@ -91,9 +91,6 @@ func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "still starting") {
 		t.Errorf("the raw terminal of a starting agent: %v", err)
 	}
-
-	r.TypeKeys("<D-K>")
-	r.WaitText("STARTING · ")
 
 	close(hold)
 	a := fake.WaitStarted(t)

@@ -39,7 +39,7 @@ type InboxCard struct {
 	Interrupt bool
 	Banner    bool
 	// Top puts an interrupting card at the top of the window with the banners, where it's seen, rather than in the
-	// stack at the bottom right; unlike a banner, a surface that draws it itself (mission control) still takes it.
+	// stack at the bottom right; unlike a banner, a surface that draws it itself still takes it.
 	Top bool
 	// Dialog draws a waiting card in the middle of the window over a scrim, holding focus: a confirm of what the user
 	// just did. Escape or a click on the scrim dismisses it.
