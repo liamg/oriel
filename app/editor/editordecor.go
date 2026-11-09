@@ -85,8 +85,21 @@ func (x *Editor) signs(c *ui.Ctx, ds, every []uireg.Decoration, line int, gw flo
 			}
 			rest = append(rest, d)
 		}
+		// A sign shown on hover (the + that comments on the line) doesn't take another sign's place, as that one may be
+		// clicked too: it sits over the line's number instead, while the pointer's on the row.
+		var hover []uireg.Decoration
+		if slices.ContainsFunc(rest, func(d uireg.Decoration) bool { return !d.OnHover }) {
+			hover = slices.DeleteFunc(slices.Clone(rest), func(d uireg.Decoration) bool { return !d.OnHover })
+			rest = slices.DeleteFunc(rest, func(d uireg.Decoration) bool { return d.OnHover })
+		}
 		if d, ok := uireg.TopSign(rest); ok {
 			kit.DrawSign(c, x.h, "sign", d, m.Font.Size)
+		}
+		if d, ok := uireg.TopSign(hover); ok {
+			c.Row("hover", ui.Style{W: ui.Px(signColW), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Fill: c.Theme().C(theme.BgBase),
+				Float: &ui.Float{Offset: render.Point{X: -signColW - 4}}}, func(c *ui.Ctx) {
+				kit.DrawSign(c, x.h, "sign", d, m.Font.Size)
+			})
 		}
 	})
 }
