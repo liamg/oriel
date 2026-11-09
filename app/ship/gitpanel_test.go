@@ -228,7 +228,9 @@ func TestGitPanelPushesWhatItJustCommitted(t *testing.T) {
 	shipSettle(s, t, "the change", func() bool { return strings.Contains(s.Text(), "CHANGES · 1") })
 	s.TypeInto("Commit message", "docs: two")
 	s.ClickOn("Commit")
-	shipSettle(s, t, "the commit", func() bool { return strings.Contains(s.Text(), "TO PUSH · 1") && !strings.Contains(s.Text(), "Committing…") })
+	shipSettle(s, t, "the commit", func() bool {
+		return strings.Contains(s.Text(), "TO PUSH · 1") && !strings.Contains(s.Text(), "Committing…")
+	})
 	s.Quiet()
 	if !clickable(s, "Push") {
 		t.Errorf("Push isn't enabled after the commit:\n%s", s.Text())
@@ -245,7 +247,9 @@ func TestAWorkSessionsCommitIsPushable(t *testing.T) {
 	shipSettle(s, t, "the change", func() bool { return strings.Contains(s.Text(), "CHANGES · 1") })
 	s.TypeInto("Commit message", "feat: one")
 	s.ClickOn("Commit")
-	shipSettle(s, t, "the commit", func() bool { return strings.Contains(s.Text(), "TO PUSH · 1") && !strings.Contains(s.Text(), "Committing…") })
+	shipSettle(s, t, "the commit", func() bool {
+		return strings.Contains(s.Text(), "TO PUSH · 1") && !strings.Contains(s.Text(), "Committing…")
+	})
 	s.Quiet()
 	if !clickable(s, "Push") {
 		t.Errorf("Push isn't enabled after the commit:\n%s", s.Text())
