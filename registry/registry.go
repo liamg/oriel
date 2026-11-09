@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/internal/clock"
 	"slices"
 	"strings"
 	"sync"
@@ -279,10 +280,20 @@ type reg struct {
 	diagIdx    *diagIndex
 	cover      map[diagKey]map[int]int
 	holders    []*placeholder
+	clock      clock.Clock // what hooks' calls are timed by
 }
 
-func New() Registry {
+// Config is a registry's own setup: what it times hooks by.
+type Config struct {
+	Clock clock.Clock // the real one if nil; a test's moves only when it says
+}
+
+func New() Registry { return NewWith(Config{}) }
+
+// NewWith is New, with o.
+func NewWith(o Config) Registry {
 	r := &reg{
+		clock:     clock.Or(o.Clock),
 		commands:  stacks[string, Command]{},
 		keymaps:   stacks[keymapKey, Keymap]{},
 		prefixes:  map[keymapKey]int{},

@@ -3,7 +3,6 @@ package gitui
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -300,10 +299,18 @@ func (g *Git) trees() []*gitTree {
 }
 
 // tree is dir's work tree: the work dir's when dir is in it, else one whose root is looked for from the first ask.
-// Until its root is found it has no status.
+// Until its root is found it has no status. A dir under the window's root is the window's own tree unless a work
+// tree of its own sits between them, which is looked for the same way, off the loop: until then it's a tree whose
+// root isn't found yet, never the wrong one.
 func (g *Git) tree(dir string) *gitTree {
-	if dir == "" || g.root() != "" && g.links.Within(dir, g.root()) && !g.nested(dir) || filepath.Clean(dir) == filepath.Clean(g.work) {
+	if dir == "" || filepath.Clean(dir) == filepath.Clean(g.work) {
 		return &g.gitTree
+	}
+	under := g.root() != "" && g.links.Within(dir, g.root())
+	if under {
+		if n, known := g.nested(dir); known && !n {
+			return &g.gitTree
+		}
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -321,6 +328,17 @@ func (g *Git) tree(dir string) *gitTree {
 		g.h.Do(func() {
 			defer g.running.Add(-1)
 			g.mu.Lock()
+			own := under && (!ok || filepath.Clean(root) == filepath.Clean(g.root()))
+			if under {
+				g.setNested(dir, !own)
+			}
+			if own {
+				delete(g.others, dir) // the window's own tree: it's asked for that from now on
+				t.ready = true
+				g.mu.Unlock()
+				g.h.Redraw()
+				return
+			}
 			if ok {
 				t.found(root)
 			}
@@ -335,29 +353,20 @@ func (g *Git) tree(dir string) *gitTree {
 	return t
 }
 
-// nested says whether dir is in a work tree of its own under the window's root: a .git between the two.
-func (g *Git) nested(dir string) bool {
-	dir, root := filepath.Clean(dir), filepath.Clean(g.root())
-	key := root + "\x00" + dir
+// nested says whether dir is in a work tree of its own under the window's root, once tree has looked.
+func (g *Git) nested(dir string) (nested, known bool) {
 	g.mu.Lock()
-	n, ok := g.nests[key]
-	g.mu.Unlock()
-	if ok {
-		return n
-	}
-	for d := dir; d != root && kit.Inside(d, root); d = filepath.Dir(d) {
-		if _, err := os.Lstat(filepath.Join(d, ".git")); err == nil {
-			n = true
-			break
-		}
-	}
-	g.mu.Lock()
+	defer g.mu.Unlock()
+	n, ok := g.nests[filepath.Clean(g.root())+"\x00"+filepath.Clean(dir)]
+	return n, ok
+}
+
+// setNested keeps what tree found of dir; g.mu is held.
+func (g *Git) setNested(dir string, n bool) {
 	if g.nests == nil {
 		g.nests = map[string]bool{}
 	}
-	g.nests[key] = n
-	g.mu.Unlock()
-	return n
+	g.nests[filepath.Clean(g.root())+"\x00"+filepath.Clean(dir)] = n
 }
 
 // holding is the work tree a path is in: one already found whose root holds it, else the work dir's.

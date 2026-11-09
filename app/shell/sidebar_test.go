@@ -125,6 +125,7 @@ func TestSidebarSnapshots(t *testing.T) {
 		s.Run("editor.open", registry.Args{"path": filepath.Join(ps[1].Dir, "proto/usage.proto")})
 		s.SettleGit()
 		s.WaitHighlights()
+		s.Quiet() // the gutter's signs and the cursor line's blame, read off the loop, are in
 		s.Golden("sidebar-three")
 		text := s.Text()
 		for _, want := range []string{"PROJECTS", "admin-ui", "eng-2310", "↑2", "4 changed", "no PR", "api", "rate-limits", "#790",
