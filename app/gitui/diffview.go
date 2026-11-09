@@ -661,9 +661,10 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	if sel {
 		fill = th.C(tDiffSelected)
 	}
-	row := c.Next(k)
+	key := lineKey(l)
+	row := c.Next(key)
 	st.ids[me] = row
-	if widget.Clickable(c, k, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(diffLineH), Cross: ui.Center, Fill: fill, Role: ui.RoleListItem, Selected: sel,
+	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(diffLineH), Cross: ui.Center, Fill: fill, Role: ui.RoleListItem, Selected: sel,
 		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, func(c *ui.Ctx) {
 		x.hoverSign(c, row, ds)
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
@@ -688,7 +689,8 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 	}
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
 	sel := st.sel == me || st.sel.file == at.file && st.sel.hunk == at.hunk && st.sel.line == p[0] && p[0] >= 0
-	row := c.Next(r)
+	key := lineKey(h.Lines[k])
+	row := c.Next(key)
 	st.ids[me] = row
 	if p[0] >= 0 && p[0] != k {
 		st.ids[diffSel{file: at.file, hunk: at.hunk, line: p[0]}] = st.ids[me]
@@ -724,7 +726,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 	if k >= 0 {
 		label = strings.TrimRight(h.Lines[k].Text, "\r\n")
 	}
-	if widget.Clickable(c, r, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(diffLineH), Role: ui.RoleListItem, Selected: sel, Label: label,
+	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(diffLineH), Role: ui.RoleListItem, Selected: sel, Label: label,
 		Help: "files/diff#hunks"}, func(c *ui.Ctx) {
 		side(c, "old", p[0], true)
 		c.Box("mid", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
@@ -732,6 +734,17 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 	}).Clicked {
 		st.sel = me
 	}
+}
+
+// lineKey is a diff line's row's key: its line in the file (the new side's, or the old side's for a removal) and its
+// text. Keyed by where it sits in its hunk, a row would be another line once the diff is made again with lines come
+// in above it, and a press on it would let go on that one. Keyed by both, a press stays on the line it was on, and
+// comes to nothing if that line moved or changed meanwhile: it never lands on another.
+func lineKey(l gitx.DiffLine) string {
+	if l.New > 0 {
+		return fmt.Sprintf("n%d %s", l.New, l.Text)
+	}
+	return fmt.Sprintf("o%d %s", l.Old, l.Text)
 }
 
 // lineNo is a line's number in its gutter, blank for none.
