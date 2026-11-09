@@ -16,7 +16,8 @@ A pane shows one window on a buffer. Keys go to the input engine (vim by default
   extend, ⌥-drag for a block. Dragging past the top or bottom scrolls. ⌘A selects the whole buffer.
 - Long lines run past the edge: the window scrolls sideways to follow the cursor (`editor.side_scroll`,
   `editor.side_scroll_off`), `zl`/`zh`/`zL`/`zH`/`zs`/`ze` scroll it, and so does a sideways wheel or trackpad.
-- A file that changes on disk reloads by itself, unless you've changed it too: then Oriel asks.
+- A file that changes on disk reloads by itself, unless you've changed it too: then Oriel asks. It does while
+  another view shows it too, such as the diff of a file open behind it.
 
 ## Wrapping {#wrap}
 
