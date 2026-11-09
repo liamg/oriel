@@ -30,6 +30,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
+	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
@@ -114,6 +115,9 @@ type Options struct {
 	Config   func(*app.Config) // changes the config before the app starts: the session host, say
 	ImageNet *http.Client      // what remote images are fetched with; offline if nil
 	FontDirs []string          // where its installed fonts are (ui.font); none if nil
+	// ScriptedFiles gives the app file watchers whose events are only what the test says changed (FilesChanged,
+	// WriteFiles), not the OS's: a count of reads isn't moved by the OS's late events for the test's own setup.
+	ScriptedFiles bool
 }
 
 // Scene is the app's built-ins over a store, drawn the way Run draws the window, on a fixed clock.
@@ -127,7 +131,8 @@ type Scene struct {
 	// OverviewOff hides the project overview, whose temporary paths would change every run; overview tests dispose
 	// it.
 	OverviewOff registry.Disposable
-	midway      bool // looks don't settle the app first (Midway)
+	midway      bool             // looks don't settle the app first (Midway)
+	files       *fswatch.Scripts // the app's file watchers, with ScriptedFiles
 }
 
 // New starts a scene with a home and config of the test's, and stops it when the test ends.
@@ -147,6 +152,10 @@ func New(t testing.TB, o Options) *Scene {
 		LanguageServers: TestServers,
 		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t), ImageNet: cmp.Or(o.ImageNet, isolate.Net(t)), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
+	if o.ScriptedFiles {
+		s.files = &fswatch.Scripts{}
+		cfg.FSWatch = s.files.New
+	}
 	if o.Config != nil {
 		o.Config(&cfg)
 	}

@@ -59,6 +59,7 @@ type overview struct {
 	cards map[string]*card
 	scans map[string]*scan
 	now   func() time.Time
+	busy  kit.Busy // a card's reads and panels, off the loop
 }
 
 // card is one directory's results, for the HEAD they were computed at.
@@ -114,6 +115,7 @@ func (o *overview) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		o.Add(h.Contribute(p))
 	}
+	o.Add(h.Contribute(registry.Busy{Name: "overview", Busy: o.busy.Busy, Source: "builtin:overview"}))
 	o.Add(h.View(OverviewView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "overview", Fn: o.build}
 	})))
@@ -195,12 +197,16 @@ func (o *overview) card(dir string) *card {
 	o.cards[dir] = cd
 	delete(o.scans, dir)
 	o.computeNew(dir, cd)
+	o.busy.Add(1)
 	go func() {
+		defer o.busy.Done()
 		r := readReadme(dir)
 		o.h.Do(func() { cd.readme = r })
 	}()
 	if cd.git {
+		o.busy.Add(1)
 		go func() {
+			defer o.busy.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
 			defer cancel()
 			r := gitx.Repo{Dir: dir}
@@ -225,7 +231,9 @@ func (o *overview) computeNew(dir string, cd *card) {
 func (o *overview) compute(dir string, cd *card, p uireg.OverviewPanel) {
 	res := &panelResult{since: kit.WindowNow(o.h)}
 	cd.panels[p.Name] = res
+	o.busy.Add(1)
 	go func() {
+		defer o.busy.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
 		defer cancel()
 		var n ui.Node

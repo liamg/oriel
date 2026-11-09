@@ -356,14 +356,23 @@ func node(c *ui.Ctx, r *layout.Root, st *viewState, n *layout.Node, content Cont
 		}
 	})
 	if st.resize != nil && st.resize.box == id {
-		if rc, ok := c.Rect(id); ok {
-			st.resize.span = rc.Dx()
-			if n.Split == layout.Vertical {
-				st.resize.span = rc.Dy()
-			}
+		if sp := span(c, id, n); sp > 0 {
+			st.resize.span = sp
 		}
 	}
 	return changed
+}
+
+// span is how long the split's box was laid out last frame along its split, or 0.
+func span(c *ui.Ctx, box ui.ID, n *layout.Node) float32 {
+	rc, ok := c.Rect(box)
+	switch {
+	case !ok:
+		return 0
+	case n.Split == layout.Vertical:
+		return rc.Dy()
+	}
+	return rc.Dx()
 }
 
 // splitter is the 1px line between two kids, with a grab area either side of it, dragged to move the split.
@@ -374,7 +383,7 @@ func splitter(c *ui.Ctx, st *viewState, n *layout.Node, box ui.ID, i int, s ui.S
 	changed := false
 	if in.Held {
 		if st.resize == nil {
-			st.resize = &resize{box: box, i: i, from: pressedAt(in), w0: append([]float32(nil), n.Weights...)}
+			st.resize = &resize{box: box, i: i, from: pressedAt(in), w0: append([]float32(nil), n.Weights...), span: span(c, box, n)}
 		}
 		rs := st.resize
 		if rs.box == box && rs.i == i && rs.span > 0 && len(n.Weights) == len(rs.w0) {

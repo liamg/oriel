@@ -259,8 +259,12 @@ func (x *Plugin) Wait() { x.busy.Wait() }
 
 // Busy says a buffer's units or a file's base are being worked out, or units are held back to be worked out soon. A
 // frame asking for the gutter's marks may start either, so Wait alone can't tell they're done. Units due a second ago
-// and still not taken up are a buffer no longer drawn.
+// and still not taken up are a buffer no longer drawn. Whatever else runs off the loop (the panel's files, answers) is
+// counted too.
 func (x *Plugin) Busy() bool {
+	if x.busy.Busy() {
+		return true
+	}
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	if len(x.computing) > 0 {

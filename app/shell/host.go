@@ -55,6 +55,13 @@ func (h *pluginHost) Do(fn func()) {
 	h.sh.poke()
 }
 
+// queued says the loop has been handed work it hasn't run.
+func (sh *shell) queued() bool {
+	sh.todoMu.Lock()
+	defer sh.todoMu.Unlock()
+	return len(sh.todo) > 0
+}
+
 // runTodo runs what Host.Do queued, on the loop.
 func (sh *shell) runTodo() {
 	sh.todoMu.Lock()

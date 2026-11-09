@@ -192,6 +192,8 @@ agent that loses its sign-in is started once again on the host's, handed over af
   - Text selects and copies by default: a drag, a double click (a word) or a triple click (a node's text), then the
     platform's copy key. A selection stays in the nearest `Selectable` box, else the nearest that scrolls or floats,
     else the window. Controls, menus and popovers never select, and `NoSelect` opts a box out.
+  - A drag goes as far as the pointer: it measures from where the press went down (`Interaction.PressedAt`), and a
+    release the loop gets behind moves no frame has seen yet waits for that frame (`UI.Dragged`).
   - Loading looks the same everywhere: `plugin.Load` tracks a fetch, `widget.Async` and `widget.Busy` draw it.
   - Widgets get outside services with `ui.Provide` / `ui.Service`, never globals.
 - Themes are TOML token tables (`theme`), resolved into a flat table the widgets read.
@@ -226,10 +228,20 @@ connects it to the platform:
   `kit.Busy` or `kit.Work` counts it; a `kit.Work.Loop` that runs as long as the plugin doesn't); `apptest`'s `Quiet`
   runs frames and the loop's queue until none is busy, and `ClickOn`, `ClickText`, `WantText` and `WantFrame` settle
   so first. A test of what shows while work is under way looks inside `Midway`.
-- Code that times things takes an `internal/clock.Clock` (`watch.Options.Clock`, `kit.Still.Clock`); its tests move
-  an `internal/clock/clocktest` clock, so what's timed happens exactly when they say. `fswatch.NewScripted` is a file
-  watcher whose events are the test's: the watch manager's tests send them, and only `fswatch`'s own test the OS's.
+- Code that times things takes an `internal/clock.Clock` (`watch.Options.Clock`, `kit.Still.Clock`,
+  `app.Config.Clock`); its tests move an `internal/clock/clocktest` clock, so what's timed happens exactly when they
+  say. `fswatch.NewScripted` is a file watcher whose events are the test's: the watch manager's tests send them, and
+  only `fswatch`'s own test the OS's. A scene with `ScriptedFiles` (every `ShipScene`) gives the app such watchers:
+  `Scene.WriteFiles` writes and says what changed, returning once every manager has taken it in, so the OS's late
+  events for a test's own setup never move a count of reads.
 - Every harness calls `internal/isolate.Test` first: its own TMPDIR, and a check that no goroutine outlives the test.
   Tests change a package's knob only through `internal/testhook.Set`. Tests run shuffled.
-- Timing budgets are tests named `…Budget` using `tools/perf`; `make test` runs them alone, one package at a time.
+- No test is racy or depends on a timer. Pacing, debounces and polls are checked on a clock the test moves; what
+  a frame or an event costs is checked by counting (frames built, reads, processes started), not by timing it. A
+  Window test waits for the app to be idle with `Idle`: nothing busy, no read or watched source due, over frames.
+- Timing budgets are tests named `…Budget` using `tools/perf`; `make test` runs them alone, one package at a time,
+  timed by the thread's CPU against reference work. What only a wall clock can measure (latency under a moving
+  pointer, a while left idle) is a `…Budget` behind the `perf` build tag (`//go:build perf`, in a `_perf_test.go`
+  file): out of `go test ./...` and CI, run with `make perf` on a quiet machine. Its deterministic part (frames per
+  event, the polls running) stays in the default suite.
 - `tools/ratchet` counts what the code is moving away from; a count may only fall.

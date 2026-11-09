@@ -3,11 +3,9 @@ package explain_test
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/explain"
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/text"
@@ -26,24 +24,12 @@ func explainScene(t *testing.T) (*apptest.Scene, *fakeExplainer, string) {
 	return apptest.ExplainScene(t)
 }
 
-// waitGit waits for the window's git work off the loop.
-func waitGit(s *apptest.Scene) {
-	for kit.GitOf(s.Registry()).Busy() {
-		time.Sleep(time.Millisecond)
-	}
-}
-
 func settle(s *apptest.Scene) { s.ExplainSettle() }
 
-// cursorTo puts the editor's cursor on a 1-based line.
+// cursorTo puts the editor's cursor on a 1-based line, and lets what the line asks for come in.
 func cursorTo(s *apptest.Scene, line int) {
 	s.Editor().SetCursor(text.Pos{Line: line - 1})
-	for range 3 {
-		s.Frame()
-		waitGit(s)
-		s.RunQueued()
-	}
-	s.Frame()
+	s.Quiet()
 }
 
 func explainKeys(s *apptest.Scene, keys ...string) { s.ExplainKeys(keys...) }

@@ -123,6 +123,7 @@ type input struct {
 	pressID  ID
 	pressAt  time.Time
 	pressPt  render.Point
+	dragged  bool // a held press moved since the last frame was built
 	keys     map[ID][]render.KeyEvent
 	context  map[ID]render.Point
 	claimed  map[ID]bool
@@ -392,6 +393,10 @@ func (in *input) pending() bool {
 	return len(in.clicks) > 0 || len(in.keys) > 0 || len(in.context) > 0 || len(in.wheel) > 0 || len(in.dropped) > 0 || len(in.access) > 0
 }
 
+// Dragged says a held press has moved since the last frame was built. A release then waits for that frame, so a
+// drag ends where it was let go, not where the frame before saw it.
+func (u *UI) Dragged() bool { return u.in.dragged }
+
 // Pointer feeds a pointer event in. Hover and press resolve against the latest painted frame. It reports whether the
 // next frame can differ for it: a move with no button held that changes nothing the latest frame read (what's
 // hovered, Interaction.Pointer, the regions it tested) doesn't need one.
@@ -427,6 +432,9 @@ func (u *UI) pointer(ev render.PointerEvent) {
 		return
 	}
 	in.pos, in.inside = ev.Pos, true
+	if ev.Kind == render.PointerMove && (in.active != 0 || in.bar != nil || in.dnd != nil) {
+		in.dragged = true
+	}
 	if in.bar != nil {
 		if ev.Kind == render.PointerRelease {
 			in.bar = nil

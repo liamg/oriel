@@ -259,6 +259,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 	u.loopWake, u.looper, u.loops = time.Time{}, nil, u.loops[:0]
 	u.shown = false
 	u.tracked, u.regions = false, u.regions[:0]
+	u.in.dragged = false
 	build(&Ctx{u: u, e: u.root})
 	u.settleFocus(prev)
 	if u.in.pending() {

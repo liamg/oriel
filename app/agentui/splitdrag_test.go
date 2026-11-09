@@ -2,7 +2,6 @@ package agentui_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -39,29 +38,20 @@ func TestSplitterDragsAllTheWay(t *testing.T) {
 	})
 	left, width := at.left, at.width
 	x, y := left.Max.X, left.Min.Y+300
+	// Sent at once, as a quick drag reaches a busy loop: the release among moves no frame has been built with yet.
 	send := func(k render.PointerKind, dx float32, b render.Buttons) {
 		r.Win.Send(render.PointerEvent{Kind: k, Pos: render.Point{X: x + dx, Y: y}, Buttons: b})
-		time.Sleep(20 * time.Millisecond)
 	}
 	send(render.PointerMove, 0, 0)
 	send(render.PointerPress, 0, render.ButtonPrimary)
 	for dx := float32(10); dx <= 100; dx += 10 {
 		send(render.PointerMove, dx, render.ButtonPrimary)
 	}
-	send(render.PointerRelease, 100, 0)
-	moved := func() float32 {
-		var share float32
-		r.Do(func() error {
-			w := r.Host.Layout().Main.Weights
-			share = w[0] / (w[0] + w[1])
-			return nil
-		})
-		return share*width - left.Dx()
-	}
-	// The loop takes the moves sent before the release, then the release: the split has moved once it has.
-	for deadline := time.Now().Add(apptest.Timeout); moved() < 80; time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("a 100px drag moved the split %.0fpx", moved())
-		}
-	}
+	send(render.PointerRelease, 100, render.ButtonPrimary)
+	// The release goes in once a frame has been built with the last move: the split has moved once the loop has
+	// taken them all.
+	r.WaitFor("a 100px drag to move the split 80px or more", func() bool {
+		w := r.Host.Layout().Main.Weights
+		return w[0]/(w[0]+w[1])*width-left.Dx() >= 80
+	})
 }

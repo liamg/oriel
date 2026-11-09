@@ -1,6 +1,6 @@
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: test test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck
+.PHONY: test perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck
 
 GOARCH ?= $(shell go env GOARCH)
 VERSION ?= dev
@@ -15,6 +15,11 @@ LDFLAGS := -X github.com/liamg/oriel/cmd/oriel/cli.version=$(VERSION) $(if $(REL
 test:
 	ORIEL_BUDGETS=later go test -shuffle=on ./...
 	go test -p 1 -shuffle=on -run 'Budget$$' ./...
+
+# perf runs every timing budget with the wall-clock ones (build tag perf): latency and idle checks only a real clock
+# can measure, kept out of make test so it stays deterministic. Run it on a quiet machine; CI does not.
+perf:
+	go test -tags perf -p 1 -count=1 -run 'Budget$$' ./...
 
 # test-framecheck runs the snapshot and lag suites with fsx's frame check on: I/O through fsx in a frame panics.
 test-framecheck:

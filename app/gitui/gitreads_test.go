@@ -1,7 +1,6 @@
 package gitui_test
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -44,9 +43,7 @@ func TestStagingReadsOnlyItsTree(t *testing.T) {
 	})
 	gitQuiet(s)
 	path := filepath.Join(api, "staged.go")
-	if err := os.WriteFile(path, []byte("package api\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	s.WriteFiles(api, map[string]string{"staged.go": "package api\n"})
 	s.Until("the new file seen", func() bool {
 		s.Frame()
 		st := kit.GitOf(s.Registry()).Tree(api).State()

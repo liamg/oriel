@@ -28,7 +28,7 @@ var ceilings = map[string]int{
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
-	"time.Sleep in tests": 188,
+	"time.Sleep in tests": 179,
 }
 
 // stateAllowed are the package-level vars MutableVars may pass over, by "dir.name", and why each is safe to share.
