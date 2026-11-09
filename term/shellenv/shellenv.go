@@ -100,11 +100,10 @@ func run(ctx context.Context, shell string, timeout time.Duration, args ...strin
 	stop := func() {
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) // the shell leads a session of its own: it, and what it started
 		p.Close()                                           // what it hadn't written yet goes, so it can exit
-		for _, done := range []<-chan struct{}{waited(exited), read} {
-			select {
-			case <-done:
-			case <-time.After(time.Second): // a child that left the shell's group may hold the terminal open
-			}
+		exited <- <-exited                                  // killed, and its terminal let go: it exits
+		select {
+		case <-read:
+		case <-time.After(time.Second): // on macOS, a child that left the shell's session may hold the terminal open
 		}
 	}
 	timer := time.NewTimer(timeout)
@@ -119,36 +118,26 @@ func run(ctx context.Context, shell string, timeout time.Duration, args ...strin
 		case path := <-found:
 			stop()
 			return checked(shell, path)
-		case <-read:
-		case <-time.After(time.Second): // what's left to read, on a loaded machine; only a shell that printed no PATH waits it out
-		}
-		select {
-		case path := <-found: // the reader finds the PATH, then the end: both may be ready by now
+		case <-read: // the terminal closed: what the shell wrote has all been read
+			select {
+			case path := <-found: // the reader finds the PATH, then the end: both may be ready by now
+				stop()
+				return checked(shell, path)
+			default:
+			}
 			stop()
-			return checked(shell, path)
-		default:
+			if err == nil {
+				err = errors.New(filepath.Base(shell) + " didn't print its PATH")
+			}
+			return "", err
+		case <-timer.C: // something it started holds the terminal open
+		case <-ctx.Done():
 		}
-		stop()
-		if err == nil {
-			err = errors.New(filepath.Base(shell) + " didn't print its PATH")
-		}
-		return "", err
 	case <-timer.C:
 	case <-ctx.Done():
 	}
 	stop()
 	return "", errors.New(filepath.Base(shell) + " didn't answer in " + timeout.String())
-}
-
-// waited closes once exited has an answer, putting it back.
-func waited(exited chan error) <-chan struct{} {
-	done := make(chan struct{})
-	go func() {
-		err := <-exited
-		exited <- err
-		close(done)
-	}()
-	return done
 }
 
 // between is what the shell printed between the markers, once it has printed both.
