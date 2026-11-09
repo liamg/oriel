@@ -238,6 +238,7 @@ func (x *Ship) column(c *ui.Ctx, se core.SessionState, s shipRead) {
 	if f := x.failed(se.ID, s.Project); f != "" && x.doing(se.ID, s.Project) == "" {
 		widget.Wrap(c, "failed", f, 420, kit.MonoFont(11, th.C(theme.Error)))
 	}
+	x.offBranch(c, se, s, 420)
 	cur := currentStep(s)
 	x.stepRow(c, "s1", 1, cur, len(s.Files) == 0, func(c *ui.Ctx) { x.uncommitted(c, se, s, cur == 1) })
 	x.stepRow(c, "s2", 2, cur, s.Behind == 0, func(c *ui.Ctx) { x.behind(c, se, s) })
@@ -449,12 +450,22 @@ func cantPush(s shipRead) string {
 	switch {
 	case !s.Remote:
 		return noOrigin
+	case s.Off != nil:
+		return offWhy(s)
 	case s.Branch == "":
 		return detached
 	case s.Pushed && len(s.Unpushed) == 0:
 		return upToDate
 	}
 	return ""
+}
+
+// offWhy is why a step on the session's branch can't run while the worktree is on another, or "".
+func offWhy(s shipRead) string {
+	if s.Off == nil {
+		return ""
+	}
+	return "Not on this session's branch " + s.Off.Session + ": switch back, or make this branch the session's, first"
 }
 
 // pushLabel is Push, or Force push once a rebase has rewritten what origin has (gitx.Repo.Push leases it).
