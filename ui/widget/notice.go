@@ -57,7 +57,11 @@ type wrapLine struct {
 // wrapped is s wrapped to width, as prose or as code, kept for the UI.
 func wrapped(c *ui.Ctx, s string, width float32, ts ui.TextStyle, code bool) []wrapLine {
 	wraps := ui.Keep(c, func() *wrapCache { return &wrapCache{cur: map[wrapKey][]wrapLine{}} })
-	k := wrapKey{c.Shaper(), s, width, ts.Font.Family, ts.Font.Weight, ts.Font.Italic, ts.Font.Size, ts.Font.Tracking, fmt.Sprint(ts.Font.Features), code}
+	var gen uint64
+	if g, ok := c.Shaper().(interface{ Gen() uint64 }); ok {
+		gen = g.Gen()
+	}
+	k := wrapKey{c.Shaper(), gen, s, width, ts.Font.Family, ts.Font.Weight, ts.Font.Italic, ts.Font.Size, ts.Font.Tracking, fmt.Sprint(ts.Font.Features), code}
 	lines, ok := wraps.get(k)
 	if !ok {
 		if code {
@@ -127,6 +131,7 @@ func codeLines(sh typeset.Shaper, s string, width float32, f typeset.FontSpec) [
 
 type wrapKey struct {
 	sh       typeset.Shaper
+	gen      uint64 // the shaper's faces' (typeset.Typesetter.Gen): a font changed wraps differently
 	text     string
 	width    float32
 	family   string

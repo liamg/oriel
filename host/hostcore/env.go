@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
-	"sync"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -18,7 +17,7 @@ type Env struct {
 	Log    *slog.Logger
 	Now    func() time.Time
 	Closed <-chan struct{}
-	Work   *sync.WaitGroup // what Go starts, which the host waits for as it closes
+	Work   *Jobs // what Go starts, which the host waits for as it closes
 }
 
 // Recover turns a panic into an error, logged, so it can't take the window down. Deferred first in every entry point
@@ -42,7 +41,7 @@ func (e Env) Go(where string, fn func()) {
 		go run()
 		return
 	}
-	e.Work.Go(run)
+	e.Work.Go(where, run)
 }
 
 // SessionDir is where a session's log and files are kept.

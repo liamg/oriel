@@ -26,6 +26,10 @@ type Typesetter struct {
 	shaper  shaping.HarfbuzzShaper
 	runs    map[runKey]*Run // the current generation
 	old     map[runKey]*Run // the previous one
+
+	installed families
+	used      map[string][]*Face // by role: the installed family each draws with, when not the bundled one
+	gen       uint64
 }
 
 type runKey struct {
@@ -65,8 +69,12 @@ func (t *Typesetter) Close() { t.fb.close() }
 // Fallbacks lists the system faces loaded so far, and the runes no face covered.
 func (t *Typesetter) Fallbacks() (names []string, missing []rune) { return t.fb.list() }
 
-// Face returns the bundled face that f resolves to.
-func (t *Typesetter) Face(f FontSpec) *Face { return match(t.bundled, f) }
+// Face returns the face that f resolves to.
+func (t *Typesetter) Face(f FontSpec) *Face {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.face(f)
+}
 
 func (t *Typesetter) Shape(text string, f FontSpec) *Run {
 	t.mu.Lock()
@@ -100,7 +108,7 @@ func featureKey(fs []Feature) string {
 
 func (t *Typesetter) shape(text string, f FontSpec) *Run {
 	run := &Run{Text: text, Font: f}
-	face := match(t.bundled, f)
+	face := t.face(f)
 	if face == nil {
 		return run
 	}

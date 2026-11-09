@@ -3,11 +3,13 @@ package shell
 import (
 	"context"
 	"path/filepath"
+	"strings"
 
 	"github.com/liamg/oriel/app/kit"
-
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -102,6 +104,7 @@ func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 		o.Add(h.Option(registry.OptionSpec{Name: p.name, Type: registry.Float, Default: uiFontSize, Min: 6, Max: 32, Step: 0.5, Follows: "ui.font_size",
 			Scopes: registry.ScopeUser, Help: p.help}))
 	}
+	o.fonts(h)
 	step := func(by float64) func(registry.Ctx, registry.Args) error {
 		return func(registry.Ctx, registry.Args) error {
 			opts := h.Options()
@@ -142,4 +145,43 @@ func (o *uiOptions) focus(h plugin.Host, dir int) error {
 		u.FocusNext(dir)
 	}
 	return nil
+}
+
+// fontRoles are the options that pick an installed family for each of the window's roles.
+var fontRoles = []struct{ name, role, help string }{
+	{"ui.font", typeset.UI, "The font the UI's text is set in: a family installed on this machine; Oriel's own (Inter) when empty."},
+	{"ui.font_mono", typeset.Mono, "The fixed-width font: the editor, terminals, and the labels set in it. A family installed on this " +
+		"machine; Oriel's own (JetBrains Mono) when empty."},
+}
+
+// fonts are the font options, each drawing its role with the family it names as it changes.
+func (o *uiOptions) fonts(h plugin.Host) {
+	installed := func() []string {
+		if f, ok := registry.FontsOf(h); ok {
+			return f.Families(h.Redraw)
+		}
+		return nil
+	}
+	for _, r := range fontRoles {
+		o.Add(h.Option(registry.OptionSpec{Name: r.name, Type: registry.String, Default: "", Choices: installed, Scopes: registry.ScopeUser, Help: r.help}))
+		apply := func() {
+			f, ok := registry.FontsOf(h)
+			if !ok {
+				return
+			}
+			v, _, _ := h.Options().Get(r.name, registry.At{})
+			family, _ := v.(string)
+			f.Use(r.role, strings.TrimSpace(family), func(err error) {
+				if err != nil {
+					h.Notify(core.Notice{ID: "ui.font", Severity: core.SevError, Source: "ui", Title: r.name, Text: err.Error()})
+				} else {
+					h.Dismiss("ui.font")
+				}
+			})
+		}
+		o.Add(kit.OnDispose(h.Options().Watch(r.name, apply)))
+		if v, _, _ := h.Options().Get(r.name, registry.At{}); v != "" && v != nil {
+			apply()
+		}
+	}
 }

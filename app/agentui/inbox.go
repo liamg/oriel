@@ -396,7 +396,7 @@ func (x *Inbox) dialog(c *ui.Ctx, r *inboxRow) {
 // card draws a row's card: stacked, with its ✕; or in the panel.
 func (x *Inbox) card(c *ui.Ctx, r *inboxRow, stacked bool) {
 	k := r.card.Key()
-	p := uireg.CardPlace{Stacked: stacked}
+	p := uireg.CardPlace{Stacked: stacked, TakeFocus: stacked && r.card.Top}
 	if stacked {
 		p.Dismiss = func() { x.dismiss(k) }
 	}
@@ -420,7 +420,7 @@ func (x *Inbox) face(c *ui.Ctx, cd uireg.InboxCard, p uireg.CardPlace) {
 		tone = th.C(theme.Accent)
 	}
 	o := widget.ActionCardOpts{Kicker: cd.Kicker, Title: cd.Title, Detail: cd.Detail, Code: cd.Code, Note: cd.Note, Tone: tone,
-		Help: inboxHelp + "#cards", Dismiss: p.Dismiss != nil}
+		Help: inboxHelp + "#cards", Dismiss: p.Dismiss != nil, TakeFocus: p.TakeFocus}
 	if p.Stacked && o.Kicker == "" && cd.Session != "" {
 		if s, ok := x.h.State().Session(core.SessionID(cd.Session)); ok {
 			o.Kicker = s.Name() + " · " + strings.ReplaceAll(cd.Type, "-", " ")

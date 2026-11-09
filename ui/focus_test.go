@@ -203,3 +203,96 @@ func TestBlurGoesToTheDefault(t *testing.T) {
 		t.Errorf("after a blur focus is on %v, want the pane's default %v", f, s.second)
 	}
 }
+
+// A card marked FocusOnOpen takes focus the frame it appears, from a field that had it, without trapping it: focus
+// moved off it stays moved. Once it goes, focus is back where it was.
+func TestACardThatOpensTakesFocusAndGivesItBack(t *testing.T) {
+	u := newUI()
+	var field, other, card ID
+	shown := false
+	frame := func() {
+		paintOps(u, render.Point{X: 400, Y: 300}, func(c *Ctx) {
+			field = c.Box("field", Style{W: Px(100), H: Px(20), Focusable: true}, nil)
+			other = c.Box("other", Style{W: Px(100), H: Px(20), Focusable: true}, nil)
+			c.Column("banner", Style{W: Px(200), Z: LayerToast, Float: &Float{Point: &render.Point{X: 150}}}, func(c *Ctx) {
+				if shown {
+					card = c.Column("card", Style{W: Px(180), H: Px(40), Focusable: true, FocusOnOpen: true}, func(c *Ctx) {
+						c.Box("allow", Style{W: Px(60), H: Px(20), Focusable: true, DefaultFocus: true}, nil)
+					})
+				}
+			})
+		})
+	}
+	click := func(id ID) {
+		r := u.byID[id].rect()
+		p := render.Point{X: r.Min.X + 5, Y: r.Min.Y + 5}
+		u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+		u.Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonPrimary})
+		u.Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonPrimary})
+		frame()
+	}
+	frame()
+	click(field)
+	shown = true
+	frame()
+	frame()
+	if !u.within(u.Focused(), card) {
+		t.Fatalf("focus %v, want in the card that opened (%v)", u.Focused(), card)
+	}
+	shown = false
+	frame()
+	frame()
+	if u.Focused() != field {
+		t.Errorf("once the card went, focus %v, want back in the field (%v)", u.Focused(), field)
+	}
+
+	shown = true
+	frame()
+	click(other)
+	frame()
+	if u.Focused() != other {
+		t.Errorf("the card kept focus from a click elsewhere: %v, want %v", u.Focused(), other)
+	}
+}
+
+// A page opened after a card took focus as it appeared gets focus, though the card is on a higher layer: the card
+// doesn't hold focus from what's opened after it.
+func TestAPageOpenedAfterACardThatTookFocusGetsIt(t *testing.T) {
+	for _, trap := range []bool{false, true} {
+		pageOpenedAfterACard(t, trap)
+	}
+}
+
+func pageOpenedAfterACard(t *testing.T, trap bool) {
+	t.Helper()
+	u := newUI()
+	var card, pageField ID
+	page := false
+	frame := func(into bool) {
+		paintOps(u, render.Point{X: 400, Y: 300}, func(c *Ctx) {
+			c.Box("field", Style{W: Px(100), H: Px(20), Focusable: true}, nil)
+			if page {
+				p := c.Column("page", Style{W: Px(300), H: Px(200), Z: LayerPage, Trap: trap, Focusable: true, Float: &Float{Point: &render.Point{}}}, func(c *Ctx) {
+					pageField = c.Box("filter", Style{W: Px(100), H: Px(20), Focusable: true, DefaultFocus: true}, nil)
+				})
+				if into {
+					c.FocusInto(p)
+				}
+			}
+			c.Column("banner", Style{W: Px(200), Z: LayerToast, Float: &Float{Point: &render.Point{X: 150}}}, func(c *Ctx) {
+				card = c.Column("card", Style{W: Px(180), H: Px(40), Focusable: true, FocusOnOpen: true}, nil)
+			})
+		})
+	}
+	frame(false)
+	frame(false)
+	if u.Focused() != card {
+		t.Fatalf("focus %v, want the card (%v)", u.Focused(), card)
+	}
+	page = true
+	frame(!trap) // a trap takes focus on its own; a page that doesn't asks for it
+	frame(false)
+	if u.Focused() != pageField {
+		t.Errorf("trap %v: focus %v after the page opened, want its field %v", trap, u.Focused(), pageField)
+	}
+}

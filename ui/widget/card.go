@@ -50,6 +50,19 @@ type ActionCardOpts struct {
 	Dismiss bool
 	// Countdown draws a ring at its top right that empties as Left runs out of it, with Left as m:ss inside.
 	Countdown, Left time.Duration
+	// TakeFocus gives the card keyboard focus as it appears (ui.Style.FocusOnOpen), so its keys answer it over
+	// whatever had focus, and focus goes back there once it's gone. For CardKeyGuard after it appears its keys
+	// answer nothing: one typed then was on its way to what was being typed in.
+	TakeFocus bool
+}
+
+// CardKeyGuard is how long a card that takes focus ignores its keys once it appears.
+const CardKeyGuard = 400 * time.Millisecond
+
+// cardUp is when a card was first drawn.
+type cardUp struct {
+	at   time.Time
+	seen bool
 }
 
 type ActionCardResult struct {
@@ -64,7 +77,18 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 	res := ActionCardResult{Action: -1}
 	id := c.Next(key)
 	in := c.Interaction(id)
+	up := ui.State[cardUp](c, id)
+	if !up.seen {
+		up.at, up.seen = c.Now(), true
+	}
+	settling := o.TakeFocus && c.Now().Sub(up.at) < CardKeyGuard
+	if settling {
+		c.WakeAt(up.at.Add(CardKeyGuard))
+	}
 	passOn(c, id, in.Keys, func(k render.KeyEvent) bool {
+		if settling {
+			return true // typed as it appeared: taken, so it reaches nothing under the card either
+		}
 		if o.Dismiss && k.Mods == 0 && k.Key == "Esc" {
 			res.Dismissed = true
 			return true
@@ -128,7 +152,7 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 		}
 	}
 	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(14, 12), Gap: 9, Fill: fill, Stroke: alpha(o.Tone, .55), Border: 1, Radius: 8, Focusable: true,
-		KeyMode: "card", Help: o.Help, Role: ui.RoleGroup, Label: label}, func(c *ui.Ctx) {
+		FocusOnOpen: o.TakeFocus, KeyMode: "card", Help: o.Help, Role: ui.RoleGroup, Label: label}, func(c *ui.Ctx) {
 		if o.Kicker != "" {
 			c.Row("kicker", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("k", strings.ToUpper(o.Kicker), monoText(9.5, typeset.SemiBold, o.Tone, .14))

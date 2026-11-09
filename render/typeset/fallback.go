@@ -184,6 +184,27 @@ func loadFace(file string, r rune, tried map[string]bool) (*Face, int) {
 	return nil, 0
 }
 
+// fontFilesIn are the font files under dirs; "~/" is the home folder.
+func fontFilesIn(dirs []string) []string {
+	home, _ := os.UserHomeDir()
+	var out []string
+	for _, d := range dirs {
+		if strings.HasPrefix(d, "~/") {
+			d = filepath.Join(home, d[2:])
+		}
+		filepath.WalkDir(d, func(p string, e fs.DirEntry, err error) error {
+			if err == nil && !e.IsDir() {
+				switch strings.ToLower(filepath.Ext(p)) {
+				case ".ttf", ".otf", ".ttc", ".otc":
+					out = append(out, p)
+				}
+			}
+			return nil
+		})
+	}
+	return out
+}
+
 // cmapHas reads only the cmap table.
 func cmapHas(ld *ot.Loader, r rune) bool {
 	raw, err := ld.RawTable(ot.MustNewTag("cmap"))
@@ -235,21 +256,7 @@ var (
 
 func systemFontFiles() []string {
 	systemFontsOnce.Do(func() {
-		home, _ := os.UserHomeDir()
-		for _, d := range fontDirs[runtime.GOOS] {
-			if strings.HasPrefix(d, "~/") {
-				d = filepath.Join(home, d[2:])
-			}
-			filepath.WalkDir(d, func(p string, e fs.DirEntry, err error) error {
-				if err == nil && !e.IsDir() {
-					switch strings.ToLower(filepath.Ext(p)) {
-					case ".ttf", ".otf", ".ttc", ".otc":
-						systemFonts = append(systemFonts, p)
-					}
-				}
-				return nil
-			})
-		}
+		systemFonts = fontFilesIn(fontDirs[runtime.GOOS])
 		rank := func(p string) int {
 			n := strings.ToLower(filepath.Base(p))
 			for i, k := range []string{"symbol", "emoji", "cjk", "dejavu", "unicode"} {

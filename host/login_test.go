@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -246,5 +247,41 @@ func TestStartLoginNeedsALoginStarter(t *testing.T) {
 	}
 	if _, err := r.w.StartLogin(context.Background(), "nobody"); err == nil {
 		t.Error("no provider signed in")
+	}
+}
+
+// Quitting doesn't wait on a sign-in nobody finished: the host closes at once, the sign-in left where it was.
+func TestCloseDoesNotWaitForASignInLeftOpen(t *testing.T) {
+	r := newRig(t)
+	r.fake.Has = &agent.Features{Login: true}
+	if _, err := r.w.StartLogin(context.Background(), "fake"); err != nil {
+		t.Fatal(err)
+	}
+	closed := make(chan error, 1)
+	go func() { closed <- r.w.Close() }()
+	select {
+	case err := <-closed:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(10 * time.Second): // a hang, not a wait: Close returns at once
+		t.Fatal("Close is still waiting for the sign-in")
+	}
+}
+
+// Whatever the host still has running when it closes, closing waits for it only so long, then says what it left.
+func TestCloseWaitsOnlySoLongAndSaysForWhat(t *testing.T) {
+	r := newRig(t)
+	var logged strings.Builder
+	r.w.log = slog.New(slog.NewTextHandler(&logged, nil))
+	r.w.opts.CloseWait = time.Millisecond
+	stuck := make(chan struct{})
+	t.Cleanup(func() { close(stuck) })
+	r.w.env.Go("a stuck fetch", func() { <-stuck })
+	if err := r.w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(logged.String(), "a stuck fetch") {
+		t.Errorf("closing didn't say what it left running: %q", logged.String())
 	}
 }

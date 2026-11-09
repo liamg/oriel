@@ -185,7 +185,13 @@ func (x *Runner) StartLogin(ctx context.Context, provider string) (string, error
 		return "", err
 	}
 	x.env.Go("a sign-in", func() {
-		if err := <-l.Done; err != nil {
+		var err error
+		select {
+		case err = <-l.Done:
+		case <-x.env.Closed: // quitting doesn't wait on a sign-in nobody finished
+			return
+		}
+		if err != nil {
 			x.env.Log.Warn("agent sign-in", "provider", provider, "err", err)
 			return
 		}

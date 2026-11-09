@@ -35,7 +35,7 @@ func (x *Console) askCards() []uireg.InboxCard {
 				Icon: string(a.Kind), Tone: askTone(a.Kind).Name(), Created: a.Created,
 				Interrupt: se.ID != st.Focus || !inConsole || a.Kind == core.AskKey,
 				Draw: func(c *ui.Ctx, key string, p uireg.CardPlace) {
-					x.askCard(c, key, se, a, p.Stacked, false, p.Dismiss)
+					x.askCard(c, key, se, a, p, false)
 				}}
 			// Over the window, key touches, permissions and the gateway's (run on host…) come at the top, where they're seen.
 			card.Top = a.Kind == core.AskKey || a.Kind == core.AskPermission || a.Kind == core.AskGateway
@@ -114,10 +114,12 @@ func domainOf(hostport string) (domain, port string) {
 
 // askCard is an ask as a card, with what answers it: in the console where it arose, or stacked over the window
 // with its session's name (kicker). With dismiss, its ✕ and Escape take it off the stack.
-func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.Ask, kicker bool, selected bool, dismiss func()) {
+func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.Ask, p uireg.CardPlace, selected bool) {
 	th := c.Theme()
 	st := x.state(se.ID)
-	k := &askCardParts{o: widget.ActionCardOpts{Tone: th.C(askTone(a.Kind)), Selected: selected, Help: "agent/asks#" + string(a.Kind), Dismiss: dismiss != nil}}
+	kicker, dismiss := p.Stacked, p.Dismiss
+	k := &askCardParts{o: widget.ActionCardOpts{Tone: th.C(askTone(a.Kind)), Selected: selected, Help: "agent/asks#" + string(a.Kind), Dismiss: dismiss != nil,
+		TakeFocus: p.TakeFocus}}
 	if kicker {
 		k.o.Kicker = kit.Label(se) + " · " + string(a.Kind)
 	}

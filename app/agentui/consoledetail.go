@@ -175,7 +175,7 @@ func (x *Console) askDetail(c *ui.Ctx, se core.SessionState, a core.Ask, width f
 	if a.Detail != "" {
 		detailBlock(c, "detail", "DETAIL", a.Detail, width, th.C(theme.FgMuted))
 	}
-	x.askCard(c, "card", se, a, false, false, nil)
+	x.askCard(c, "card", se, a, uireg.CardPlace{}, false)
 }
 
 // detailBlock is a captioned block of text, wrapped, in the mono face.

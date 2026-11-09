@@ -180,6 +180,8 @@ Every option Oriel registers. A test checks this table against the registry.
 | `keymap.timeout` | true | app | `timeout`, `to` |
 | `keymap.timeoutlen` | 1s | app | `timeoutlen`, `tm` |
 | `hooks.budget` | 2ms: how long a hook may take, on two calls running, before it's a warning | app | |
+| `ui.font` | empty (Inter): the font the UI's text is set in, a family installed on the machine | app | |
+| `ui.font_mono` | empty (JetBrains Mono): the fixed-width font, for the editor, terminals and labels set in it | app | |
 | `ui.font_size` | 13: the UI's text size, which zooms the window | app | |
 | `ui.statusline.font_size` | follows `ui.font_size` until set | app | |
 | `ui.hover.font_size` | follows `ui.font_size` until set; hovers and signature help | app | |

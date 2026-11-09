@@ -65,6 +65,8 @@ type Config struct {
 	Host *host.Host
 	// Started is called once the window is open and every plugin active.
 	Started func()
+	// Closed is called once the window has closed, before the plugins stop: what's left is the app ending.
+	Closed func()
 	// Activated is called with each plugin, built-ins first, once it's active: how a harness finds them.
 	Activated func(plugin.Plugin)
 	// Net is what plugins' HTTP goes through (http.request); a client of its own if nil.
@@ -140,6 +142,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	}
 	sh, unsubscribe := newShell(cfg, builtins, poke)
 	defer unsubscribe()
+	defer contributeFonts(cfg.Registry, be.Shaper(), poke)()
 	probed := make(chan struct{}) // rg, off the loop, so the search panel finds the answer waiting
 	go func() { sh.tools.Ripgrep(); close(probed) }()
 	defer func() { <-probed }()
@@ -170,7 +173,12 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	if err != nil {
 		return err
 	}
-	defer w.Close()
+	defer func() {
+		w.Close()
+		if cfg.Closed != nil {
+			cfg.Closed()
+		}
+	}()
 	defer func() {
 		if err := place.save(w); err != nil {
 			log.Error("window place", "err", err)

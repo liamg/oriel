@@ -59,6 +59,25 @@ func TestQuitHandsTheAgentsOver(t *testing.T) {
 	}
 }
 
+// Closed is called once the window has closed, before the app has ended: where the command starts its bound on how
+// long the rest may take.
+func TestClosedIsCalledOnceTheWindowCloses(t *testing.T) {
+	var closedWin bool
+	calls := 0
+	var r *apptest.Window
+	r, _, _ = quitScene(t, nil, func(cfg *apptest.Config) {
+		cfg.Closed = func() {
+			calls++
+			closedWin = r.Win.Closed()
+		}
+	})
+	r.Win.RequestClose()
+	r.WaitExit()
+	if calls != 1 || !closedWin {
+		t.Errorf("Closed called %d times, the window closed by then: %v; want once, closed", calls, closedWin)
+	}
+}
+
 // The quit command quits as the close button does.
 func TestTheQuitCommandHandsTheAgentsOver(t *testing.T) {
 	r, lw, _ := quitScene(t, nil)

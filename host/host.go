@@ -14,6 +14,7 @@
 package host
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -21,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -70,6 +72,9 @@ type Options struct {
 	HTTP *http.Client
 	// PricesURL is where the price list is fetched from; cost.dev's (price.URL) if "".
 	PricesURL string
+	// CloseWait is how long Close waits for what the host still has running (closeWait if 0): quitting never hangs
+	// on one, and what's left is logged by name.
+	CloseWait time.Duration
 	// NoAutoName never starts the agent that names a session (SessionSpec.AutoName): for fakes that script each start.
 	NoAutoName bool
 }
@@ -96,7 +101,7 @@ type Host struct {
 	reviews *aireview.Reviews
 
 	closed   chan struct{}
-	going    sync.WaitGroup // the env's goroutines (hostcore.Env.Go)
+	going    hostcore.Jobs // the env's goroutines (hostcore.Env.Go)
 	stopOnce sync.Once
 	closeErr error
 }
@@ -251,12 +256,32 @@ func (w *Host) Close() error {
 		defer w.recover("Close", &w.closeErr)
 		close(w.closed)
 		w.run.Close()
-		w.reviews.Wait()
-		w.going.Wait()
+		w.waitGoing()
 		w.stats.Close()
 		w.closeErr = errors.Join(w.closeErr, w.logs.Close())
 	})
 	return w.closeErr
+}
+
+// closeWait is how long closing waits for the host's goroutines by default.
+const closeWait = 5 * time.Second
+
+// waitGoing waits for the reviews and the env's goroutines to end, as they do once the host closes, but only for
+// CloseWait: one that doesn't is logged by name and left, so a quit never hangs on it.
+func (w *Host) waitGoing() {
+	done := make(chan struct{})
+	go func() {
+		w.reviews.Wait()
+		w.going.Wait()
+		close(done)
+	}()
+	t := time.NewTimer(cmp.Or(w.opts.CloseWait, closeWait))
+	defer t.Stop()
+	select {
+	case <-done:
+	case <-t.C:
+		w.log.Warn("closing without waiting any longer", "still running", strings.Join(w.going.Running(), ", "))
+	}
 }
 
 // emit applies an event to the host's state.

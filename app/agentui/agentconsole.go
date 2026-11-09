@@ -638,7 +638,7 @@ func (x *Console) transcript(c *ui.Ctx, se core.SessionState, st *consoleState, 
 				c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", kit.UIFont(12.5, th.C(theme.FgGhost)))
 			}
 		case blockAsk:
-			c.Box(b.key, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, se.Asks[b.at], false, st.sel == b.key, nil) })
+			c.Box(b.key, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, se.Asks[b.at], uireg.CardPlace{}, st.sel == b.key) })
 		case blockItem:
 			x.item(c, b.key, se, se.Transcript[b.at], st, width)
 		case blockBackground:
