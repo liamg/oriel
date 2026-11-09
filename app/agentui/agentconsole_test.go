@@ -14,7 +14,6 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 )
 
@@ -444,14 +443,10 @@ func TestConsoleTextCopies(t *testing.T) {
 	}
 	tripleCopy := func(text string) {
 		t.Helper()
-		p := r.TextPoint(text)
-		for range 3 {
-			r.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonPrimary})
-			r.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonPrimary})
-		}
-		r.WaitFrame("the frame after", func(string) bool { return true })
+		r.ClickTextTimes(text, 3)
 		r.TypeKeys(copyKey)
 	}
+	r.WaitText("go test ./...") // all of it in, so nothing arriving moves the message
 	r.WaitText("Reading the limiter to see what it exposes.")
 	tripleCopy("Reading the limiter to see what it exposes.")
 	waitClip(t, r, "Reading the limiter to see what it exposes.")

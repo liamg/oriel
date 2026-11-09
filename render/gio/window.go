@@ -254,6 +254,10 @@ const (
 
 // post queues ev for the app. It drops ev only if the app is 1024 events behind.
 func (w *Window) post(ev render.Event) {
+	if pe, ok := ev.(render.PointerEvent); ok && pe.At.IsZero() {
+		pe.At = time.Now() // when the OS gave it, however late the app takes it
+		ev = pe
+	}
 	select {
 	case w.queue <- ev:
 	default:

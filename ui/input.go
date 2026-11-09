@@ -421,7 +421,7 @@ func (u *UI) pointer(ev render.PointerEvent) {
 			return
 		}
 		u.Chord()
-		u.countPress(ev.Pos)
+		u.countPress(ev)
 		u.selPress(ev)
 		in.active, in.mods = in.hot, ev.Mods
 		// A press focuses the nearest focusable node at or above what's pressed, or nothing.
@@ -450,7 +450,7 @@ func (u *UI) pointer(ev render.PointerEvent) {
 				in.clicks = map[ID]bool{}
 			}
 			in.clicks[in.active] = true
-			now := u.now()
+			now := u.at(ev)
 			if in.lastID == in.active && now.Sub(in.lastAt) < DoubleClick {
 				if in.doubles == nil {
 					in.doubles = map[ID]bool{}
@@ -534,10 +534,19 @@ func (u *UI) scrollAt(p render.Point, d render.Point) {
 	}
 }
 
-// countPress counts a primary press at p into the run of quick presses in one place on one node.
-func (u *UI) countPress(p render.Point) {
+// at is when a pointer event happened: its own time, as the window took it, so clicks a busy loop gets to late still
+// count as the double or triple click they were; now for an event with none.
+func (u *UI) at(ev render.PointerEvent) time.Time {
+	if !ev.At.IsZero() {
+		return ev.At
+	}
+	return u.now()
+}
+
+// countPress counts a primary press into the run of quick presses in one place on one node.
+func (u *UI) countPress(ev render.PointerEvent) {
 	in := &u.in
-	now := u.now()
+	now, p := u.at(ev), ev.Pos
 	d := render.Point{X: p.X - in.pressPt.X, Y: p.Y - in.pressPt.Y}
 	if in.presses > 0 && in.pressID == in.hot && now.Sub(in.pressAt) < DoubleClick && d.X*d.X+d.Y*d.Y <= clickSlop*clickSlop {
 		in.presses++

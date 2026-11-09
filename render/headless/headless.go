@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/render"
@@ -309,6 +310,10 @@ func (w *Window) Send(ev render.Event) {
 }
 
 func (w *Window) deliver(ev render.Event) {
+	if pe, ok := ev.(render.PointerEvent); ok && pe.At.IsZero() {
+		pe.At = time.Now() // when it was sent, as an OS stamps an event when it happens
+		ev = pe
+	}
 	w.sendMu.RLock()
 	defer w.sendMu.RUnlock()
 	if w.closed {
