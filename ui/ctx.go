@@ -66,6 +66,19 @@ func (c *Ctx) Interaction(id ID) Interaction { return c.u.Interaction(id) }
 // Rect is where id was laid out last frame.
 func (c *Ctx) Rect(id ID) (render.Rect, bool) { return c.u.Rect(id) }
 
+// PointerOver reports whether the pointer is on id where it was laid out last frame, and nothing on top takes it
+// there: what's under the pointer is id, inside it, or what holds it (a row of an editor whose surface takes the
+// pointer). id needn't be interactive. The frame is built again as the pointer crosses id's edge.
+func (c *Ctx) PointerOver(id ID) bool {
+	u := c.u
+	r, ok := u.Rect(id)
+	if !ok || !u.over(r) {
+		return false
+	}
+	hot := u.in.hot
+	return hot == 0 || u.within(hot, id) || u.within(id, hot)
+}
+
 // Box adds a box and builds its children with body, which may be nil.
 func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID {
 	e := c.u.add(c.e, key, kBox)

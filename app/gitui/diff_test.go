@@ -273,6 +273,32 @@ func TestDiffCommentOpensAThreadBetweenTheLines(t *testing.T) {
 	r.WaitFrame("the thread between the diff's lines", func(s string) bool { return apptest.HasAll(s, "Thread", "L8", "Negative ties?", "Truncate") })
 }
 
+// The pointer on a diff's line shows the same + in its gutter as the editor's: clicking it opens a thread on that
+// line, which reaches the agent anchored there.
+func TestAPlusOnADiffLineOpensAThread(t *testing.T) {
+	r, a, _ := apptest.AgentWindow(t)
+	dir := r.ProjectDir("w")
+	path := filepath.Join(dir, "round.go")
+	os.WriteFile(path, []byte(rig.RoundBase), 0o644)
+	rig.Git(t, dir, "add", "-A")
+	rig.Git(t, dir, "-c", "user.name=Ada", "-c", "user.email=ada@example.com", "commit", "-qm", "base")
+	rig.Git(t, dir, "update-ref", "refs/heads/main", "HEAD")
+	os.WriteFile(path, []byte(rig.RoundAgent), 0o644)
+	r.Do(func() error { return r.Host.Run(context.Background(), "diff.open", registry.Args{"path": path}) })
+	r.WaitText("func roundHalfEven")
+	r.WaitGit()
+	r.Hover("Truncate", "Truncate")
+	r.WaitAccess("line 8's + with the pointer on it", func(r *apptest.Window) bool { return r.Access("Comment on line 8") != nil })
+	r.ClickAccess("Comment on line 8")
+	r.WaitText("New thread")
+	r.TypeText("Negative ties?")
+	r.WaitText("Negative ties?")
+	r.TypeKeys("<CR>")
+	if in := a.WaitSent(t); !strings.Contains(in.Text, "round.go:8") || !strings.Contains(in.Text, "Negative ties?") {
+		t.Errorf("the agent got %q", in.Text)
+	}
+}
+
 // sessionProject is the name of session w's project.
 func sessionProject(t *testing.T, r *apptest.Window) string {
 	t.Helper()

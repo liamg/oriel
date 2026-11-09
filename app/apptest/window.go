@@ -99,7 +99,7 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	g := &grab{keys: o.Keys, setup: o.Setup}
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
-	cfg := app.Config{Store: w.Store, Registry: testRegistry(), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t), SandboxBackends: Backends,
+	cfg := app.Config{Store: w.Store, Registry: testRegistry(time.Now), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}, Logs: app.NewLogs(app.LogOpts{Level: slog.LevelDebug})}
 	if o.Config != nil {
 		o.Config(&cfg)
@@ -313,6 +313,18 @@ func (w *Window) RightClickText(text string) {
 // the click before it builds another, so a frame built meanwhile, by work landing, can't move what it lands on.
 func (w *Window) clickOn(what string, find func(headless.Frame) (render.Point, bool), button render.Buttons) {
 	w.T.Helper()
+	w.clicksOn(what, find, button, 1)
+}
+
+// ClickTextTimes clicks the middle of the first run of text n times in quick succession: 2 is a double click, 3 a
+// triple. All n are aimed at once, at where the text has settled, so nothing moving between them sends one astray.
+func (w *Window) ClickTextTimes(text string, n int) {
+	w.T.Helper()
+	w.clicksOn(`"`+text+`" to click`, textIn(text, false), render.ButtonPrimary, n)
+}
+
+func (w *Window) clicksOn(what string, find func(headless.Frame) (render.Point, bool), button render.Buttons, n int) {
+	w.T.Helper()
 	find = enabledAt(w, find)
 	for deadline := time.Now().Add(Timeout); ; {
 		Settled(w, what, find)
@@ -321,8 +333,10 @@ func (w *Window) clickOn(what string, find func(headless.Frame) (render.Point, b
 			fs := w.Win.Frames()
 			if p, ok := find(fs[len(fs)-1]); ok {
 				w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
-				w.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: button})
-				w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: button})
+				for range n {
+					w.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: button})
+					w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: button})
+				}
 				sent = true
 			}
 			return nil

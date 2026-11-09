@@ -38,13 +38,14 @@ type GitSigns struct {
 	Now    func() time.Time // the clock blame's ages are by
 
 	mu       sync.Mutex
-	bases    map[gitSource]*gitBase // each file as a hunk's source has it
-	gens     int                    // the last base read's gen
-	blames   map[string]*gitBlame
+	watched  map[*gitx.Status]func() // the projects' trees whose changes stale their bases and blames
+	bases    map[gitSource]*gitBase  // each file as a hunk's source has it
+	gens     int                     // the last base read's gen
+	blames   map[gitFile]*gitBlame
 	hunks    map[bufAgainst]*bufHunks
-	previews map[string]int // the hunk previewed in each file, by its new start
-	typing   kit.Still[any] // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
-	diffs    int            // diffs begun off the loop, for the tests
+	previews map[gitFile]int // the hunk previewed in each file, by its new start
+	typing   kit.Still[any]  // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
+	diffs    int             // diffs begun off the loop, for the tests
 	busy     kit.Busy
 }
 
@@ -58,8 +59,8 @@ type gitBase struct {
 // signsQuiet is how long a buffer being typed in waits, still, for its hunks to be diffed and its blame read again.
 const signsQuiet = 150 * time.Millisecond
 
-// gitSource is where a file's hunks are from: the index when rev is "", else path at rev.
-type gitSource struct{ rev, path string }
+// gitSource is where a file's hunks are from: the index of tree when rev is "", else path at rev.
+type gitSource struct{ tree, rev, path string }
 
 // bufAgainst is a buffer's hunks for the gutter, or against the index for staging.
 type bufAgainst struct {
@@ -86,24 +87,35 @@ type bufHunks struct {
 
 func (g *GitSigns) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gitsigns"} }
 
-// stale has the bases and blames that changes to paths left behind read again: the index's of each, and the blame of
-// each. No paths is another work tree: everything goes. A base at a commit never changes, and a blame is read
-// again when the head moves (blameOf).
-func (g *GitSigns) stale(paths []string) {
+// stale has the bases and blames that changes to paths in tree left behind read again: the index's of each, and the
+// blame of each. No paths is another work tree: everything of tree goes. A base at a commit never changes, and a
+// blame is read again when the head moves (blameOf).
+func (g *GitSigns) stale(tree string, paths []string) {
 	g.mu.Lock()
-	if paths == nil {
-		clear(g.bases)
-	}
-	for _, p := range paths {
-		delete(g.bases, gitSource{path: p})
+	for src := range g.bases {
+		if src.tree == tree && (paths == nil || src.rev == "" && slices.Contains(paths, src.path)) {
+			delete(g.bases, src)
+		}
 	}
 	for f, b := range g.blames {
-		if paths == nil || slices.Contains(paths, f) {
+		if f.tree == tree && (paths == nil || slices.Contains(paths, f.rel)) {
 			b.loaded = false
 		}
 	}
 	g.mu.Unlock()
 	g.h.DecorationsChanged("git.hunks")
+}
+
+// watch stales tree's bases and blames as its status changes, once it's read; the window's tree has WatchWindow.
+func (g *GitSigns) watch(tree string, st *gitx.Status) {
+	if tree == "" || st == nil {
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if _, ok := g.watched[st]; !ok {
+		g.watched[st] = st.Watch(func(paths []string) { g.stale(tree, paths) })
+	}
 }
 
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
@@ -113,13 +125,21 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		g.Now = time.Now
 	}
 	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }}
-	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[string]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[string]int{}
+	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
+	g.watched = map[*gitx.Status]func(){}
 	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"branch", "head", "index"},
 		Default: "branch", Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "What the gutter marks a file's changes against: where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
-	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale(paths) })))
+	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) })))
+	g.Add(kit.OnDispose(func() {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		for _, cancel := range g.watched {
+			cancel()
+		}
+	}))
 	for _, c := range []registry.Command{
 		{ID: "git.hunk.stage", Title: "Stage the hunk under the cursor", Run: g.cmd(true, g.stage)},
 		{ID: "git.hunk.unstage", Title: "Unstage the staged hunk at the cursor", Run: g.cmd(true, g.unstage)},
@@ -167,30 +187,43 @@ func (g *GitSigns) Wait() {
 	g.busy.Wait()
 }
 
-// repo is the work dir's repo; fileOf has found it.
-func (g *GitSigns) repo() gitx.Repo { return kit.GitOf(g.h).Tree("").Status().Repo() }
+// gitFile is a buffer's file as git names it, in the work tree of tree: its project's directory, "" for the window's.
+type gitFile struct{ tree, rel, abs string }
 
-// gitFile is a buffer's file as git names it.
-type gitFile struct{ rel, abs string }
+// treeOf is f's work tree.
+func (g *GitSigns) treeOf(f gitFile) registry.GitTree { return kit.GitOf(g.h).Tree(f.tree) }
 
-// fileOf is where path is in the repo, if it's in one and not ignored.
-func (g *GitSigns) fileOf(path string) (gitFile, bool) {
-	tree := kit.GitOf(g.h).Tree("")
-	root := tree.Root()
-	if root == "" || path == "" {
-		return gitFile{}, false
-	}
+// repo is f's repo; fileOf has found it.
+func (g *GitSigns) repo(f gitFile) gitx.Repo { return g.treeOf(f).Status().Repo() }
+
+// located is path made absolute, in its project's work tree.
+func (g *GitSigns) located(path string) gitFile {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(g.Editor.dir, path)
 	}
-	rel := tree.Rel(path)
-	if strings.HasPrefix(rel, "../") || filepath.IsAbs(rel) {
+	f := gitFile{abs: path}
+	if p, ok := kit.ProjectsHere(g.h).Of(path); ok {
+		f.tree = p.Dir
+	}
+	return f
+}
+
+// fileOf is where path is in its project's repo, else the window's, if it's in one and not ignored.
+func (g *GitSigns) fileOf(path string) (gitFile, bool) {
+	if path == "" {
 		return gitFile{}, false
 	}
-	if tree.State().Ignored(rel) {
+	f := g.located(path)
+	tree := g.treeOf(f)
+	if tree.Root() == "" {
 		return gitFile{}, false
 	}
-	return gitFile{rel: rel, abs: path}, true
+	g.watch(f.tree, tree.Status())
+	f.rel = tree.Rel(path)
+	if strings.HasPrefix(f.rel, "../") || filepath.IsAbs(f.rel) || tree.State().Ignored(f.rel) {
+		return gitFile{}, false
+	}
+	return f, true
 }
 
 // source is where the gutter's hunks of f are from, as git.gutter.base has it, or the index's for staging; not
@@ -198,20 +231,20 @@ func (g *GitSigns) fileOf(path string) (gitFile, bool) {
 func (g *GitSigns) source(f gitFile, index bool) (gitSource, bool) {
 	base, _, _ := g.h.Options().Get("git.gutter.base", g.h.Here())
 	if index || base == "index" {
-		return gitSource{path: f.rel}, true
+		return gitSource{tree: f.tree, path: f.rel}, true
 	}
-	st := kit.GitOf(g.h).Tree("").State()
+	st := g.treeOf(f).State()
 	if st == nil {
 		return gitSource{}, false
 	}
 	if base == "head" {
-		return gitSource{rev: cmp.Or(st.Head, emptyRev), path: f.rel}, true
+		return gitSource{tree: f.tree, rev: cmp.Or(st.Head, emptyRev), path: f.rel}, true
 	}
 	path := f.rel
 	if fs, ok := st.File(f.rel); ok && fs.Old != "" {
 		path = fs.Old
 	}
-	return gitSource{rev: cmp.Or(st.BaseHash, emptyRev), path: path}, true
+	return gitSource{tree: f.tree, rev: cmp.Or(st.BaseHash, emptyRev), path: path}, true
 }
 
 // emptyRev stands for the base of a repo with no commits, which has no files.
@@ -227,7 +260,7 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	b := g.baseOf(src)
+	b := g.baseOf(f, src)
 	if !b.loaded {
 		return nil
 	}
@@ -265,8 +298,8 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 	return bh.hunks
 }
 
-// baseOf is the file as src has it, read off the loop the first time it's asked for. g.mu is held.
-func (g *GitSigns) baseOf(src gitSource) *gitBase {
+// baseOf is f as src has it, read off the loop the first time it's asked for. g.mu is held.
+func (g *GitSigns) baseOf(f gitFile, src gitSource) *gitBase {
 	b, ok := g.bases[src]
 	if !ok {
 		b = &gitBase{}
@@ -276,16 +309,17 @@ func (g *GitSigns) baseOf(src gitSource) *gitBase {
 		return b
 	}
 	b.loading = true
+	repo := g.repo(f)
 	g.busy.Add(1)
 	go func() {
 		defer g.busy.Done()
 		var data []byte
 		switch src.rev {
 		case "":
-			data, _ = g.repo().IndexFile(context.Background(), src.path)
+			data, _ = repo.IndexFile(context.Background(), src.path)
 		case emptyRev:
 		default:
-			data, _ = g.repo().FileAt(context.Background(), src.rev, src.path)
+			data, _ = repo.FileAt(context.Background(), src.rev, src.path)
 		}
 		g.h.Do(func() {
 			g.mu.Lock()
@@ -316,8 +350,8 @@ func (g *GitSigns) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	var out []uireg.Decoration
 	hs := g.hunksOf(f, ctx.Buffer, ctx.FileBytes, false, false)
 	g.mu.Lock()
-	g.baseOf(gitSource{path: f.rel}) // the index's, ready for staging and resetting hunks
-	previewed, previewing := g.previews[f.rel]
+	g.baseOf(f, gitSource{tree: f.tree, path: f.rel}) // the index's, ready for staging and resetting hunks
+	previewed, previewing := g.previews[f]
 	g.mu.Unlock()
 	for _, h := range hs {
 		style := "git." + h.Kind().String()
@@ -347,11 +381,12 @@ func (g *GitSigns) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	return out
 }
 
-// decorationKey is what the decorations of ctx are made from besides the file's hunks: where the cursor's line blame
-// goes.
+// decorationKey is what the decorations of ctx are made from besides the file's hunks: whether its work tree is read,
+// and where the cursor's line blame goes.
 func (g *GitSigns) decorationKey(ctx uireg.DecorationCtx) any {
 	type blameAt struct {
 		on, base any
+		loaded   bool // the file's work tree is read
 		here     bool
 		mode     string
 		line     int
@@ -359,6 +394,9 @@ func (g *GitSigns) decorationKey(ctx uireg.DecorationCtx) any {
 	k := blameAt{}
 	k.on, _, _ = g.h.Options().Get("git.blame.inline", g.h.Here())
 	k.base, _, _ = g.h.Options().Get("git.gutter.base", g.h.Here())
+	if ctx.Path != "" {
+		k.loaded = g.treeOf(g.located(ctx.Path)).Load().Done
+	}
 	if x := g.Editor; x.e != nil {
 		if p := x.current(); p.Buffer() == ctx.Buffer {
 			k.here, k.mode, k.line = true, x.e.Mode(), p.Cursor().Line
@@ -386,16 +424,16 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 	}
 	snap := ctx.Snap
 	head := ""
-	if st := kit.GitOf(g.h).Tree("").State(); st != nil {
+	if st := g.treeOf(f).State(); st != nil {
 		head = st.Head
 	}
 	g.mu.Lock()
-	b, ok := g.blames[f.rel]
+	b, ok := g.blames[f]
 	if !ok {
 		b = &gitBlame{}
-		g.blames[f.rel] = b
+		g.blames[f] = b
 	}
-	if b.loaded && b.head == head && b.version != snap.Version() && !g.typing.Ready(f.rel, snap.Version()) {
+	if b.loaded && b.head == head && b.version != snap.Version() && !g.typing.Ready(f, snap.Version()) {
 		g.mu.Unlock()
 		return uireg.Decoration{}, false // a line being typed has no blame worth a git run until it's still
 	}
@@ -403,10 +441,10 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 		if !b.loading {
 			b.loading = true
 			g.busy.Add(1)
-			version, contents := snap.Version(), ctx.FileBytes()
+			version, contents, repo := snap.Version(), ctx.FileBytes(), g.repo(f)
 			go func() {
 				defer g.busy.Done()
-				lines, err := g.repo().Blame(context.Background(), f.rel, contents)
+				lines, err := repo.Blame(context.Background(), f.rel, contents)
 				g.h.Do(func() {
 					g.mu.Lock()
 					// A file blame can't read (untracked, say) waits for an edit or a git change to try again, not the next frame.
@@ -477,7 +515,8 @@ func (g *GitSigns) stage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error
 		return fmt.Errorf("no hunk on this line")
 	}
 	contents := p.FileBytes()
-	kit.GitOf(g.h).Do(func(ctx context.Context) error { return g.repo().StageHunk(ctx, f.rel, contents, h) })
+	repo := g.repo(f)
+	kit.GitOf(g.h).Do(func(ctx context.Context) error { return repo.StageHunk(ctx, f.rel, contents, h) })
 	return nil
 }
 
@@ -493,8 +532,8 @@ func (g *GitSigns) unstage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) err
 			at += h.OldLines - h.NewLines
 		}
 	}
+	repo := g.repo(f)
 	kit.GitOf(g.h).Do(func(ctx context.Context) error {
-		repo := g.repo()
 		staged, err := repo.StagedHunks(ctx, f.rel)
 		if err != nil {
 			return err
@@ -527,14 +566,14 @@ func (g *GitSigns) preview(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) err
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	defer g.h.DecorationsChanged("git.hunks")
-	if cur, on := g.previews[f.rel]; on && (!ok || cur == h.NewStart) {
-		delete(g.previews, f.rel)
+	if cur, on := g.previews[f]; on && (!ok || cur == h.NewStart) {
+		delete(g.previews, f)
 		return nil
 	}
 	if !ok {
 		return fmt.Errorf("no hunk on this line")
 	}
-	g.previews[f.rel] = h.NewStart
+	g.previews[f] = h.NewStart
 	return nil
 }
 

@@ -14,6 +14,7 @@ type ButtonOpts struct {
 	Primary  bool
 	Ghost    bool // no fill until hovered
 	Disabled bool
+	Why      string // while Disabled, why it can't be pressed: its tooltip
 	Help     string
 	Key      string // a key cap after the label: the key that does the same, "y"
 	// Busy shows a spinner in place of the key cap and disables the button, keeping its width, while its work runs.
@@ -65,7 +66,7 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 		weight = typeset.SemiBold
 	}
 	c.Row(key, ui.Style{W: w, H: ui.Px(26), Pad: ui.PadXY(10, 0), Gap: 6, Cross: ui.Center, Fill: bg, EaseFill: true, Stroke: border, Border: 1, Radius: 6,
-		Focusable: true, Disabled: o.Disabled, NoHover: true, Sink: true, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton}, func(c *ui.Ctx) {
+		Focusable: true, Disabled: o.Disabled, NoHover: true, Sink: true, Cursor: render.CursorPointer, Help: o.Help, KeyMode: "button", Role: ui.RoleButton, Tooltip: why(o)}, func(c *ui.Ctx) {
 		if o.Busy {
 			c.Box("busy", ui.Style{Enter: fadeIn, Exit: fadeIn}, func(c *ui.Ctx) { Spinner(c, "busy", SpinnerOpts{Size: 11, Tone: fg, Name: label}) })
 		}
@@ -75,6 +76,14 @@ func Button(c *ui.Ctx, key any, label string, o ButtonOpts) bool {
 		}
 	})
 	return !o.Disabled && (in.Clicked || pressedKey(in.Keys))
+}
+
+// why is a button's tooltip: why it can't be pressed, while it can't for a reason other than its own work running.
+func why(o ButtonOpts) string {
+	if o.Disabled && !o.Busy {
+		return o.Why
+	}
+	return ""
 }
 
 // fadeIn is a part of a control that fades as it comes and goes: a busy button's spinner, its key cap.

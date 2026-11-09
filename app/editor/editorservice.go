@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/edit"
@@ -46,6 +47,7 @@ func (s editors) Buffer(path string) (registry.EditorBuffer, bool) {
 	if !ok {
 		return registry.EditorBuffer{}, false
 	}
+	s.x.lookAtDisk(time.Now())
 	return fileBuffer(f), true
 }
 
@@ -59,6 +61,7 @@ func (s editors) Buffers() []registry.EditorBuffer {
 	if s.x.e == nil {
 		return nil
 	}
+	s.x.lookAtDisk(time.Now())
 	var out []registry.EditorBuffer
 	for _, f := range s.x.e.Files() {
 		if f.File != nil {

@@ -25,8 +25,9 @@ commits not pushed, an open pull request (it stays open on its host), an agent m
 
 - **Archive**: the worktrees go; threads, transcript and test runs stay, searchable, and opening it again makes its
   worktrees again on their branches. It's the choice to start on once anything was pushed or raised.
-- **Delete**: the worktrees, workspace and log go, with everything in them. The repos themselves stay. A direct
-  session's directory isn't Oriel's, so it can only be archived.
+- **Delete**: the worktrees, workspace and log go, with everything in them. The repos themselves stay. Its id isn't
+  given to another session: one started later with the same name is `name-2`. A direct session's directory isn't
+  Oriel's, so it can only be archived.
 - With uncommitted work, Archive becomes **Discard and archive**.
 - **Delete the local branches too** deletes each project's local branch; remote branches, a pull request's included, stay.
 

@@ -33,19 +33,28 @@ type diskChange struct {
 // diskInterval is how often the files of open buffers are looked at.
 const diskInterval = time.Second
 
-// checkDisk looks at the open buffers' files off the loop, then reloads a buffer whose file changed on disk, or asks
-// when the buffer has changes of its own.
+// checkDisk looks at the open buffers' files while a pane shows one, and wakes the frame for the next look.
 func (x *Editor) checkDisk(c *ui.Ctx) {
-	now := c.Now()
+	c.WakeAt(x.lookAtDisk(c.Now()))
+}
+
+// lookAtDisk looks at the open buffers' files off the loop, at most every diskInterval, then reloads a buffer whose
+// file changed on disk, or asks when the buffer has changes of its own. It runs while a pane shows a buffer and
+// whenever another view reads one through the Editors service (a diff of a file open behind it), so no view
+// shows a buffer's text from before its file changed. It answers when the next look is due. On the loop.
+func (x *Editor) lookAtDisk(now time.Time) time.Time {
 	if now.Before(x.disk.next) {
-		c.WakeAt(x.disk.next)
-		return
+		return x.disk.next
 	}
 	x.disk.next = now.Add(diskInterval)
-	c.WakeAt(x.disk.next)
-	if x.disk.checking {
-		return
+	if !x.disk.checking {
+		x.startDiskLook()
 	}
+	return x.disk.next
+}
+
+// startDiskLook starts a look at the open buffers' files off the loop.
+func (x *Editor) startDiskLook() {
 	var looks []diskChange
 	for _, f := range x.e.Files() {
 		looks = append(looks, diskChange{num: f.Num, name: f.Name, file: f.File, modified: f.Modified})

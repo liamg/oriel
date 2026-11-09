@@ -48,14 +48,33 @@ const (
 
 // signs draws a line's gutter signs, between its number and its text. A block sign (the git bar) has a fixed place
 // at the column's right edge, so a run of them lines up whatever else a line has; of the rest, the one with the
-// highest priority sits centred left of it, the others in its menu (uireg.TopSign).
-func (x *Editor) signs(c *ui.Ctx, ds []uireg.Decoration, gw float32, m kit.PaneMetrics) {
+// highest priority sits centred left of it, the others in its menu (uireg.TopSign). every are the signs on every line
+// (uireg.EveryLine), put on this one; an OnHover sign shows only while the pointer is on the line's row.
+func (x *Editor) signs(c *ui.Ctx, ds, every []uireg.Decoration, line int, gw float32, m kit.PaneMetrics, row ui.ID) {
 	c.Row("signs", ui.Style{W: ui.Px(signColW), H: ui.Flex(1), Pad: ui.Insets{R: signBarW}, Cross: ui.Center, Main: ui.Center,
 		Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
 		var room [2]uireg.Decoration
 		rest := room[:0]
-		for i, d := range ds {
+		over := -1 // whether the pointer is on the row: asked once, of a line with an OnHover sign
+		shows := func(d uireg.Decoration) bool {
 			if d.Kind != uireg.Sign {
+				return false
+			}
+			if d.OnHover && over < 0 {
+				over = 0
+				if c.PointerOver(row) {
+					over = 1
+				}
+			}
+			return !d.OnHover || over == 1
+		}
+		for _, d := range every {
+			if shows(d) {
+				rest = append(rest, d.OnLine(line))
+			}
+		}
+		for i, d := range ds {
+			if !shows(d) {
 				continue
 			}
 			if w, h, ok := blockPart(d.Text); ok && d.Icon == "" && d.Command == "" && d.Hover == nil && len(d.Menu) == 0 {

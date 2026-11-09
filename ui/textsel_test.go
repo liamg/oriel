@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -244,5 +245,39 @@ func TestWrappedTextCopiesJoined(t *testing.T) {
 	frame()
 	if got, want := u.SelectedText(), "round half even-up\nnext"; got != want {
 		t.Errorf("copied %q, want %q", got, want)
+	}
+}
+
+// Clicks count by when they happened, not by when a busy loop got to them: a triple click whose presses are taken
+// a second apart, on a machine slow to draw, still selects the line; and presses that really were far apart don't.
+func TestATripleClickTakenLateStillSelectsTheLine(t *testing.T) {
+	u, _, frame, _ := selScene(t)
+	clk := &clock{t: time.Unix(1000, 0)}
+	u.SetClock(clk.now)
+	at, when := render.Point{X: 50, Y: 7}, time.Unix(1000, 0)
+	for i := range 3 {
+		ev := render.PointerEvent{Pos: at, Buttons: render.ButtonPrimary, At: when.Add(time.Duration(i) * 50 * time.Millisecond)}
+		ev.Kind = render.PointerPress
+		u.Pointer(ev)
+		frame()
+		clk.advance(time.Second) // the loop was busy between this press and its release
+		ev.Kind = render.PointerRelease
+		u.Pointer(ev)
+		frame()
+	}
+	if got := u.SelectedText(); got != "round half even" {
+		t.Errorf("a triple click taken late selected %q, want the line", got)
+	}
+	for i := range 3 {
+		ev := render.PointerEvent{Pos: at, Buttons: render.ButtonPrimary, At: when.Add(10*time.Second + time.Duration(i)*time.Second)}
+		ev.Kind = render.PointerPress
+		u.Pointer(ev)
+		frame()
+		ev.Kind = render.PointerRelease
+		u.Pointer(ev)
+		frame()
+	}
+	if got := u.SelectedText(); got != "" {
+		t.Errorf("three clicks a second apart selected %q, want nothing", got)
 	}
 }
