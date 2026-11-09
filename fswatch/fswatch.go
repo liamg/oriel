@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Delay is how long changes are gathered before they're sent.
@@ -47,8 +49,9 @@ func (e Event) Done() {
 // Watcher watches paths and sends what changed on Events.
 type Watcher struct {
 	b     backend
+	clock clock.Clock
 	out   chan Event
-	kick  chan struct{}
+	due   chan struct{} // a burst's Delay is up
 	done  chan struct{}
 	wg    sync.WaitGroup
 	once  sync.Once
@@ -58,6 +61,7 @@ type Watcher struct {
 	closed  bool
 	roots   map[string]*root
 	pending map[string]error
+	timing  bool                   // a burst's Delay is running
 	seen    map[string]os.FileInfo // each file as it was at its last event, to tell a metadata-only one
 }
 
@@ -109,11 +113,11 @@ func New() (*Watcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newWatcher(b), nil
+	return newWatcher(b, clock.Real()), nil
 }
 
-func newWatcher(b backend) *Watcher {
-	w := &Watcher{b: b, out: make(chan Event, 64), kick: make(chan struct{}, 1), done: make(chan struct{}),
+func newWatcher(b backend, c clock.Clock) *Watcher {
+	w := &Watcher{b: b, clock: c, out: make(chan Event, 64), due: make(chan struct{}, 1), done: make(chan struct{}),
 		roots: map[string]*root{}, pending: map[string]error{}, seen: map[string]os.FileInfo{}}
 	w.wg.Add(2)
 	go func() {
@@ -587,30 +591,28 @@ func (w *Watcher) queue(p string, err error) {
 	if old, ok := w.pending[p]; !ok || old == nil {
 		w.pending[p] = err
 	}
-	select {
-	case w.kick <- struct{}{}:
-	default:
+	if !w.timing {
+		w.timing = true
+		w.clock.AfterFunc(Delay, func() {
+			select {
+			case w.due <- struct{}{}:
+			default:
+			}
+		})
 	}
 }
 
-// deliver sends what's queued, Delay after the first change of a burst.
+// deliver sends what's queued, Delay after the first change of a burst (queue starts it).
 func (w *Watcher) deliver() {
 	for {
 		select {
 		case <-w.done:
 			return
-		case <-w.kick:
-		}
-		t := time.NewTimer(Delay)
-		select {
-		case <-w.done:
-			t.Stop()
-			return
-		case <-t.C:
+		case <-w.due:
 		}
 		w.mu.Lock()
 		got := w.pending
-		w.pending = map[string]error{}
+		w.pending, w.timing = map[string]error{}, false
 		w.mu.Unlock()
 		for _, p := range slices.Sorted(maps.Keys(got)) {
 			select {

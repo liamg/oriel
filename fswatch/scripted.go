@@ -1,6 +1,10 @@
 package fswatch
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/liamg/oriel/internal/clock"
+)
 
 // Script is a Watcher's events, as a test says they happen: nothing the OS sees reaches it.
 type Script struct{ w *Watcher }
@@ -8,7 +12,7 @@ type Script struct{ w *Watcher }
 // NewScripted is a Watcher whose events are only what its Script sends: watching a path asks the OS for nothing,
 // and changes on disk go unseen.
 func NewScripted() (*Watcher, *Script) {
-	w := newWatcher(&scripted{done: make(chan struct{})})
+	w := newWatcher(&scripted{done: make(chan struct{})}, clock.Real())
 	return w, &Script{w: w}
 }
 
