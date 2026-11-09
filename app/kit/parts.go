@@ -47,23 +47,11 @@ func HUDDot(c *ui.Ctx, key any, tone render.Color) {
 	c.Box(key, ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: tone}, nil)
 }
 
-const MissionHelp = "shell/mission"
+// TabsHelp is the help on the session tabs, and what each says of its session.
+const TabsHelp = "shell/tabs"
 
 // StartingHelp is the help on an agent starting.
 const StartingHelp = "agent/console#starting"
-
-// MissionCell is one part of mission control's strip: a small heading over a readout. Indicators in the mission
-// slot draw theirs with it.
-func MissionCell(c *ui.Ctx, key any, title string, body func(c *ui.Ctx)) {
-	th := c.Theme()
-	c.Row(key, ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
-		c.Column("cell", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(18, 12), Gap: 8, Role: ui.RoleGroup, Label: title}, func(c *ui.Ctx) {
-			c.Text("t", strings.ToUpper(title), KickerFont(th.C(theme.FgFaint)))
-			body(c)
-		})
-		c.Box("rule", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
-	})
-}
 
 // OpenURL opens url in the OS's default app for it (system.open).
 func OpenURL(h plugin.Host, url string) error {

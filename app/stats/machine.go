@@ -20,7 +20,7 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// Machine is this machine's load in the HUD, mission control's strip and the status line, from the session
+// Machine is this machine's load in the HUD, and the status line, from the session
 // host's MachineChanged readings.
 type Machine struct {
 	kit.Disposer
@@ -60,8 +60,6 @@ func (x *Machine) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.Indicator{Name: "machine", Slot: uireg.SlotHUD, Order: 20, Title: "This machine", Help: kit.HUDHelp + "#machine",
 		Note:  func() string { return fmt.Sprintf("%dm", int(loadSpan.Minutes())) },
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "machine", Fn: x.panel}, nil }}))
-	x.Add(h.Contribute(uireg.Indicator{Name: "machine.mission", Slot: uireg.SlotMission, Order: 20, Help: kit.MissionHelp + "#strip",
-		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "machine", Fn: x.strip}, nil }}))
 	x.Add(h.Contribute(uireg.Indicator{Name: "machine.status", Slot: uireg.SlotStatusRight, Order: 70, Global: true, Help: kit.HUDHelp + "#indicators",
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "machine", Fn: x.status}, nil }}))
 	return nil
@@ -144,27 +142,6 @@ func (x *Machine) panel(c *ui.Ctx) {
 				widget.Chart(c, "spark", []widget.ChartSeries{{Name: "CPU", Values: load, Tone: loadTone(th, m.CPU)}},
 					widget.ChartOpts{Kind: widget.ChartSpark, Height: 28, Max: 1, Label: "CPU, the last 15 minutes"})
 			}
-		})
-	})
-}
-
-// strip is mission control's: the machine's CPU over the last 15 minutes.
-func (x *Machine) strip(c *ui.Ctx) {
-	x.shown.Keep()
-	th := c.Theme()
-	m := x.h.State().Machine
-	if m.Sampled.IsZero() {
-		return
-	}
-	c.Row("machine", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
-		kit.MissionCell(c, "cpu", fmt.Sprintf("CPU %dm", int(loadSpan.Minutes())), func(c *ui.Ctx) {
-			load := x.loadOf()
-			if len(load) < 2 {
-				c.Text("none", fmt.Sprintf("%d%%", kit.Pct(m.CPU)), kit.Mono(10.5, typeset.SemiBold, th.C(theme.Fg)))
-				return
-			}
-			widget.Chart(c, "spark", []widget.ChartSeries{{Name: "CPU", Values: load, Tone: loadTone(th, m.CPU)}},
-				widget.ChartOpts{Kind: widget.ChartSpark, Width: ui.Px(120), Height: 20, Max: 1, Label: "CPU, the last 15 minutes"})
 		})
 	})
 }

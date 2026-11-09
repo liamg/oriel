@@ -39,7 +39,7 @@ func (x *PRReview) contributeKind() {
 		PrepareFunc: x.prepare,
 		ChipsFunc: func(se core.SessionState) []registry.Chip {
 			if pr := reviewPR(se); pr != "" {
-				return []registry.Chip{{Text: kit.PRLabel(pr), Help: kit.MissionHelp + "#cards", Link: pr}}
+				return []registry.Chip{{Text: kit.PRLabel(pr), Help: kit.TabsHelp, Link: pr}}
 			}
 			return nil
 		}}}))

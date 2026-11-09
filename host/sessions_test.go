@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -801,5 +802,31 @@ func TestADeletedSessionsIDIsNeverReused(t *testing.T) {
 		if i == 1 {
 			r.restart()
 		}
+	}
+}
+
+// The tab strip comes back as it was left: every tab, in its order, and the one in front, whatever order the
+// sessions' own logs replay in, and whichever was in front before.
+func TestTabsComeBackAsTheyWereLeft(t *testing.T) {
+	r := newRig(t)
+	var ids []core.SessionID
+	for _, n := range []string{"zeta", "alpha", "mid", "closed"} {
+		ids = append(ids, r.start(core.SessionSpec{Kind: core.KindWork, Name: n, Repos: []core.RepoID{core.RepoID(r.repo.Dir)}}))
+	}
+	st := r.w.Store()
+	for _, ev := range []core.Event{core.TabOpened{ID: ids[3]}, core.TabOpened{ID: ids[2]}, core.TabOpened{ID: ids[0]},
+		core.TabOpened{ID: ids[1]}, core.SessionFocused{ID: ids[0]}, core.TabMoved{ID: ids[2], Index: 3},
+		core.TabClosed{ID: ids[3]}, core.SessionFocused{ID: ids[2]}} {
+		if err := st.Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, front := st.State().Tabs, st.State().Focus
+	if !slices.Equal(want, []core.SessionID{ids[0], ids[1], ids[2]}) || front != ids[2] {
+		t.Fatalf("before the restart: tabs %v, front %s", want, front)
+	}
+	r.restart()
+	if got := r.w.Store().State(); !slices.Equal(got.Tabs, want) || got.Focus != front {
+		t.Errorf("after the restart: tabs %v, %s in front; want %v, %s", got.Tabs, got.Focus, want, front)
 	}
 }

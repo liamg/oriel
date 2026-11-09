@@ -144,7 +144,7 @@ L.hud.indicator("saves", { slot = "statusline.right" }, function()
 end)
 ```
 
-The slot is one of `titlebar.right`, `statusline.left`, `statusline.right`, `hud`, `hud.today` or `mission`. The
+The slot is one of `titlebar.right`, `statusline.left`, `statusline.right`, `hud` or `hud.today`. The
 build function returns `oriel.ui` nodes, and runs again every `opts.every`, on each event in `opts.on`, and on
 `oriel.hud.refresh(name)`, which the hook and the option above call.
 

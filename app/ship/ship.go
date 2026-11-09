@@ -740,7 +740,7 @@ func (x *Ship) prChips(se core.SessionState) []registry.Chip {
 	var out []registry.Chip
 	for _, p := range s.For(se) {
 		if p.PR != nil {
-			out = append(out, registry.Chip{Text: fmt.Sprintf("#%d", p.PR.Number), Help: kit.MissionHelp + "#cards", Link: p.PR.URL})
+			out = append(out, registry.Chip{Text: fmt.Sprintf("#%d", p.PR.Number), Help: kit.TabsHelp, Link: p.PR.URL})
 		}
 	}
 	return out

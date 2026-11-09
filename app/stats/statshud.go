@@ -126,31 +126,6 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 	}
 }
 
-// usageStrip is mission control's: each account's windows, the account in front first.
-func (x *Plugin) usageStrip(c *ui.Ctx) {
-	th := c.Theme()
-	us, _ := x.hudUsage()
-	c.Row("usage", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
-		for i, u := range us {
-			title := kit.JoinParts("Usage", kit.ProviderName(x.h, u.Provider)+strings.TrimSuffix(" "+u.Tier, " "))
-			kit.MissionCell(c, i, title, func(c *ui.Ctx) {
-				c.Row("w", ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
-					for j, w := range u.Windows {
-						if qualifier(w) != "" {
-							continue
-						}
-						c.Row(j, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-							c.Text("k", usageShort(w), kit.MonoFont(10, th.C(theme.FgMuted)))
-							widget.Meter(c, "m", w.Used, widget.MeterOpts{Tone: windowTone(th, w), Width: ui.Px(56), Height: 5, Label: w.Name})
-							c.Text("v", fmt.Sprintf("%d%%", kit.Pct(w.Used)), kit.Mono(10.5, typeset.SemiBold, th.C(theme.Fg)))
-						})
-					}
-				})
-			})
-		}
-	})
-}
-
 // headed is where a window's burn takes it, shortly: "→59% at reset", "→97% Thu", "idle", "full Thu 14:38".
 func (x *Plugin) headed(r windowRead, now time.Time) string {
 	switch {
@@ -230,7 +205,7 @@ func (x *Plugin) todayPanel(c *ui.Ctx) {
 // usedWithin is how recently a provider must have run a session for the HUD to show its plan.
 const usedWithin = 14 * 24 * time.Hour
 
-// hudUsage are the plans the HUD and mission control show, the account in front first: those of the providers
+// hudUsage are the plans the HUD shows, the account in front first: those of the providers
 // sessions have run on lately, when any have; every plan read, when none have. failed are the providers in use whose
 // plan couldn't be read, so one that didn't read isn't simply missing.
 func (x *Plugin) hudUsage() (us []core.ProviderUsage, failed []core.UsageFailure) {

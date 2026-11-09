@@ -56,7 +56,6 @@ var focusFields = []focusField{
 	{"new repo", runOpen("repos.new", nil), "Directory", false},
 	{"theme editor", runOpen("theme.edit", nil), "Filter tokens", false},
 	{"theme expression", runOpen("theme.edit", nil), "Expression", false},
-	{"mission control", runOpen("mission.open", nil), "Filter sessions", false},
 	{"new session prompt", runOpen("session.new", nil), "Prompt", false},
 	{"new session ticket", runOpen("session.new", nil), "Ticket", false},
 	{"omnibox", runOpen("omnibox.open", nil), "Search", false},

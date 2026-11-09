@@ -55,6 +55,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(kit.OnDispose(func() { w.SetApp(host.App{}) }))
 	}
 	x.contributeKinds(h)
+	landAtLaunch(h)
 	x.Add(h.Option(registry.OptionSpec{Name: autoNameOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Name a session started from a request, and the request, with a small model (Claude's Haiku). Off, the name is the request's first words."}))
 	x.Add(h.Option(registry.OptionSpec{Name: restartOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,

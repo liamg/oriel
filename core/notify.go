@@ -13,6 +13,7 @@ func init() {
 	RegisterEvent[TabOpened]("TabOpened")
 	RegisterEvent[TabClosed]("TabClosed")
 	RegisterEvent[TabMoved]("TabMoved")
+	RegisterEvent[TabsRestored]("TabsRestored")
 }
 
 // Severity is how much a notice matters.
@@ -215,4 +216,35 @@ func (s State) Counts(session SessionID) (errors, warnings int) {
 		}
 	}
 	return errors, warnings
+}
+
+// TabsRestored puts the tab strip back as it was left: the tabs in their order, and the one in front. A session gone
+// since is left out; a tab the sessions' own logs brought back and the strip didn't have stays, after the rest.
+type TabsRestored struct {
+	Tabs  []SessionID `json:"tabs"`
+	Focus SessionID   `json:"focus,omitempty"`
+}
+
+func (e TabsRestored) Scope() SessionID { return "" }
+
+func (e TabsRestored) Apply(s *State) error {
+	var tabs []SessionID
+	for _, id := range e.Tabs {
+		if s.session(id) != nil && !slices.Contains(tabs, id) {
+			tabs = append(tabs, id)
+		}
+	}
+	for _, id := range s.Tabs {
+		if !slices.Contains(tabs, id) {
+			tabs = append(tabs, id)
+		}
+	}
+	s.Tabs = tabs
+	if e.Focus == "" || s.session(e.Focus) != nil {
+		s.Focus = e.Focus
+		if e.Focus != "" {
+			s.openTab(e.Focus)
+		}
+	}
+	return nil
 }

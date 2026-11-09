@@ -328,8 +328,7 @@ func (x *Plugin) views() map[string]uireg.View {
 	}
 }
 
-// contributions are the service, the pages' places, rail and start entries, and the HUD's and mission control's
-// indicators.
+// contributions are the service, the pages' places, rail and start entries, and the HUD's indicators.
 func (x *Plugin) contributions() []registry.Contribution {
 	panel := func(key string, f func(c *ui.Ctx)) func(registry.Ctx) (ui.Node, error) {
 		return func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: key, Fn: f}, nil }
@@ -350,8 +349,6 @@ func (x *Plugin) contributions() []registry.Contribution {
 			Note: x.usageNote, Build: panel("usage", x.usagePanel)},
 		uireg.Indicator{Name: "today", Slot: uireg.SlotHUD, Order: 40, Title: "Today", Help: kit.HUDHelp + "#today",
 			Note: func() string { return "since 00:00" }, Build: panel("today", x.todayPanel)},
-		uireg.Indicator{Name: "usage.mission", Slot: uireg.SlotMission, Order: 10, Help: kit.MissionHelp + "#strip",
-			Build: panel("usage", x.usageStrip)},
 	}
 }
 
