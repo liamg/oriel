@@ -29,7 +29,8 @@ var treeNeed = watch.Need{}
 // status and the commands say so.
 type Git struct {
 	kit.Disposer
-	gitTree // the work dir's
+	gitTree                   // the work dir's
+	scope   func() gitx.Scope // the Explorer's, while it's active: GitTrees.Scope
 	h       plugin.Host
 	links   kit.Links // the dirs asked about, resolved
 	busy    kit.Busy
@@ -666,7 +667,13 @@ func (t *gitTree) Remote() string {
 // gitTrees is git's GitTrees service.
 type gitTrees struct{ g *Git }
 
-func (s gitTrees) Tree(dir string) registry.GitTree      { return s.g.tree(dir) }
+func (s gitTrees) Tree(dir string) registry.GitTree { return s.g.tree(dir) }
+func (s gitTrees) Scope() gitx.Scope {
+	if s.g.scope == nil {
+		return gitx.All
+	}
+	return s.g.scope()
+}
 func (s gitTrees) Holding(p string) registry.GitTree     { return s.g.holding(p) }
 func (s gitTrees) Do(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
 func (s gitTrees) Reload()                               { s.g.reload() }

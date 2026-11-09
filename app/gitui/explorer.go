@@ -175,6 +175,10 @@ func (e *Explorer) Manifest() plugin.Manifest { return plugin.Manifest{ID: "expl
 func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	e.Add(h.Contribute(registry.Busy{Name: "explorer", Busy: e.hunks.busy.Busy, Source: "builtin:explorer"}))
 	e.h = h
+	if e.Git != nil {
+		e.Git.scope = e.scope
+		e.Add(kit.OnDispose(func() { e.Git.scope = nil }))
+	}
 	e.kept = map[core.SessionID]explorerKept{}
 	e.cols.status, e.cols.lines, e.cols.diag = true, true, true
 	for _, c := range append(e.commands(), e.fileCommands()...) {
@@ -383,9 +387,13 @@ func (e *Explorer) selectedFile() (gitx.FileState, bool) {
 	return f, ok
 }
 
-// openDiff opens a file's branch diff, from a view that registers diff.open; until one does, the file.
+// openDiff opens a file's diff, from a view that registers diff.open; until one does, the file. Uncommitted's is
+// against HEAD, what isn't committed; Changed's the branch's against its base.
 func (e *Explorer) openDiff(ctx registry.Ctx, p string) error {
 	a := registry.Args{"path": e.git().abs(p)}
+	if e.scope() == gitx.Uncommitted {
+		a["against"] = "head"
+	}
 	if e.h.Available("diff.open", a) {
 		return e.h.Run(ctx, "diff.open", a)
 	}

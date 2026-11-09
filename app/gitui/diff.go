@@ -70,11 +70,35 @@ type Diff struct {
 	limit      chan struct{} // diffs made at once
 }
 
-type diffKey struct{ repo, path string }
+type diffKey struct {
+	repo, path string
+	head       bool // against HEAD: what isn't committed, not the branch's whole change
+}
+
+// uncommittedSuffix marks a diff view's instance as the repo's uncommitted change, against HEAD; without it, an
+// instance is the repo's root and the diff is the branch's against its base.
+const uncommittedSuffix = "#uncommitted"
+
+// diffInstance is the view instance of root's diff, against HEAD or its base.
+func diffInstance(root string, head bool) string {
+	if head {
+		return root + uncommittedSuffix
+	}
+	return root
+}
+
+// instanceRoot is the repo a diff view's instance is of, and whether it's against HEAD.
+func instanceRoot(instance string) (root string, head bool) {
+	if r, ok := strings.CutSuffix(instance, uncommittedSuffix); ok {
+		return r, true
+	}
+	return instance, false
+}
 
 // diffState is one diff view's place: the files open, the selection, and what to do next frame.
 type diffState struct {
 	root    string
+	head    bool // against HEAD (Uncommitted's), not the base (Changed's)
 	open    map[string]bool
 	sel     diffSel
 	reveal  bool
@@ -155,9 +179,9 @@ func (x *Diff) commands() []registry.Command {
 		return on(func(st *diffState, _ registry.Args) error { fn(st, d); return nil })
 	}
 	return []registry.Command{
-		{ID: "diff.open", Title: "Open the branch diff of {path}: a file's, or a repo's whole change (the work dir's if none), against the merge-base with its base branch; at the file's {line}, of its {side} old or new (the default)",
+		{ID: "diff.open", Title: "Open the diff of {path}: a file's, or a repo's whole change (the work dir's if none), against the merge-base with its base branch, or {against} \"head\" for what isn't committed; at the file's {line}, of its {side} old or new (the default)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.open(ctx, a.String("path"), a.Int("line"), a.String("side") == "old")
+				return x.open(ctx, a.String("path"), a.Int("line"), a.String("side") == "old", a.String("against") == "head")
 			}},
 		{ID: "diff.layout", Title: "Show the diff split or unified: {layout}, or the other one", Run: func(_ registry.Ctx, a registry.Args) error {
 			l := a.String("layout")
@@ -215,11 +239,12 @@ func (x *Diff) layout() string {
 	return "split"
 }
 
-func (x *Diff) state(root string) *diffState {
-	st := x.by[root]
+func (x *Diff) state(instance string) *diffState {
+	st := x.by[instance]
 	if st == nil {
-		st = &diffState{root: root, open: map[string]bool{}, sel: diffSel{hunk: -1, line: -1}, bufs: map[string]diffBuf{}}
-		x.by[root] = st
+		root, head := instanceRoot(instance)
+		st = &diffState{root: root, head: head, open: map[string]bool{}, sel: diffSel{hunk: -1, line: -1}, bufs: map[string]diffBuf{}}
+		x.by[instance] = st
 	}
 	return st
 }
@@ -296,9 +321,9 @@ func relIn(root, path string) string {
 
 // open shows the diff of path's repo, with path's file open in it and selected, at its line when line isn't 0: the
 // old side's when old.
-func (x *Diff) open(ctx registry.Ctx, path string, line int, old bool) error {
+func (x *Diff) open(ctx registry.Ctx, path string, line int, old, head bool) error {
 	return atTarget(ctx, x.h, path, func(root, rel string) error {
-		st := x.state(root)
+		st := x.state(diffInstance(root, head))
 		if rel != "" {
 			st.open[rel] = true
 			st.sel = diffSel{file: rel, hunk: -1, line: -1}
@@ -306,7 +331,7 @@ func (x *Diff) open(ctx registry.Ctx, path string, line int, old bool) error {
 		}
 		st.focus = true
 		kit.GitOf(x.h).Tree(root)
-		return x.h.Run(ctx, "view.open", registry.Args{"id": DiffView, "instance": root, "place": "tab"})
+		return x.h.Run(ctx, "view.open", registry.Args{"id": DiffView, "instance": diffInstance(root, head), "place": "tab"})
 	})
 }
 
@@ -555,10 +580,14 @@ func (x *Diff) source(st *diffState, _ registry.Args) error {
 
 // diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed, or
 // styled when the view asks for one (styled) and it's plain. current is false while the diff is older than the file.
-func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, styled bool) (d *diffFile, current bool) {
+func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, styled, head bool) (d *diffFile, current bool) {
 	root := tree.Root()
 	work := filepath.Join(root, filepath.FromSlash(f.Path))
-	in := diffInput{rev: st.BaseHash, path: f.Path, old: f.Old, code: f.Code, add: f.Add, del: f.Del, repo: root, work: work}
+	rev := st.BaseHash
+	if head {
+		rev = st.Head // the commit's hash, so a commit makes the diff again
+	}
+	in := diffInput{rev: rev, path: f.Path, old: f.Old, code: f.Code, add: f.Add, del: f.Del, repo: root, work: work}
 	if f.Code == 'A' || f.Code == '?' {
 		in.rev = ""
 	}
@@ -570,7 +599,7 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 	if open {
 		in.buf, in.version = buf.Text, buf.Text.Snapshot().Version()
 	}
-	k := diffKey{root, f.Path}
+	k := diffKey{root, f.Path, head}
 	if !open {
 		var read bool
 		if in.size, in.mtime, read = x.stat(k); !read {
@@ -631,10 +660,10 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 }
 
 // made is the diff made last of a file, nil before one is; it starts none.
-func (x *Diff) made(root, path string) *diffFile {
+func (x *Diff) made(root, path string, head bool) *diffFile {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	return x.files[diffKey{root, path}]
+	return x.files[diffKey{root, path, head}]
 }
 
 // stat is a file's size and time on disk as last read, read again off the loop when it's older than kit.StatFresh;
@@ -782,8 +811,14 @@ type diffBuf struct {
 
 type diffView struct{ x *Diff }
 
-func (v diffView) Title(instance string) string { return "Diff · " + filepath.Base(instance) }
-func (v diffView) EdgeToEdge()                  {}
+func (v diffView) Title(instance string) string {
+	root, head := instanceRoot(instance)
+	if head {
+		return "Uncommitted · " + filepath.Base(root)
+	}
+	return "Diff · " + filepath.Base(root)
+}
+func (v diffView) EdgeToEdge() {}
 func (v diffView) ModeLabel(string) (string, string) {
 	return "REVIEW", ""
 }
@@ -795,10 +830,12 @@ func (v diffView) Build(vc uireg.ViewCtx) ui.Node {
 type diffPersisted struct {
 	Root string `json:"root"`
 	File string `json:"file,omitempty"`
+	Head bool   `json:"head,omitempty"` // against HEAD: the uncommitted change
 }
 
 func (v diffView) Persist(instance string) (json.RawMessage, bool) {
-	p := diffPersisted{Root: instance}
+	root, head := instanceRoot(instance)
+	p := diffPersisted{Root: root, Head: head}
 	if st := v.x.by[instance]; st != nil {
 		p.File = st.sel.file
 	}
@@ -814,11 +851,12 @@ func (v diffView) Revive(state json.RawMessage) (string, error) {
 	if !gitx.IsRepo(p.Root) {
 		return "", fmt.Errorf("%s isn't a git repository", p.Root)
 	}
-	st := v.x.state(p.Root)
+	instance := diffInstance(p.Root, p.Head)
+	st := v.x.state(instance)
 	if p.File != "" {
 		st.open[p.File] = true
 		st.sel = diffSel{file: p.File, hunk: -1, line: -1}
 		st.reveal = true
 	}
-	return p.Root, nil
+	return instance, nil
 }
