@@ -22,6 +22,12 @@ jobs:
         if: runner.os == 'macOS'
         run: sudo mdutil -a -i off
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore the downloads (.github/fetch.sh)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/oriel-ci
+          key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('.github/workflows/*.yml') }}
+          restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26.10"
@@ -36,8 +42,7 @@ jobs:
         run: |
           go install github.com/go-delve/delve/cmd/dlv@v1.27.2
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o debugpy.whl https://files.pythonhosted.org/packages/56/3d/c7dc9f35bc9e22cdb53679f844bee40fd5cff871862f60595869a433400d/debugpy-1.8.22-py2.py3-none-any.whl
-          echo "a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947  debugpy.whl" | shasum -a 256 -c -
+          .github/fetch.sh debugpy.whl https://files.pythonhosted.org/packages/56/3d/c7dc9f35bc9e22cdb53679f844bee40fd5cff871862f60595869a433400d/debugpy-1.8.22-py2.py3-none-any.whl a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947
           mkdir -p "$RUNNER_TEMP/py" && unzip -q debugpy.whl -d "$RUNNER_TEMP/py"
           echo "PYTHONPATH=$RUNNER_TEMP/py" >> "$GITHUB_ENV"
       # macOS runners have three cores: two test packages at once, so their windows don't starve each other.
@@ -57,8 +62,7 @@ jobs:
             Linux) asset=zig-x86_64-linux-0.16.0; sum=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00 ;;
             macOS) asset=zig-aarch64-macos-0.16.0; sum=b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489 ;;
           esac
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o zig.tar.xz "https://ziglang.org/download/0.16.0/$asset.tar.xz"
-          echo "$sum  zig.tar.xz" | shasum -a 256 -c -
+          .github/fetch.sh zig.tar.xz "https://ziglang.org/download/0.16.0/$asset.tar.xz" $sum
           mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
           echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
       - run: make native
@@ -70,8 +74,7 @@ jobs:
             Linux) asset=nvim-linux-x86_64; sum=38a7c6317f94503841096c00e8fde05ef04b9472fc9d7d62b6e033cecd6f7991 ;;
             macOS) asset=nvim-macos-arm64; sum=9c84686ce84bbab725ff3d88ca3ac1d6da5a72128b68d9dd8094e34d4049a126 ;;
           esac
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o nvim.tar.gz "https://github.com/neovim/neovim/releases/download/v0.11.7/$asset.tar.gz"
-          echo "$sum  nvim.tar.gz" | shasum -a 256 -c -
+          .github/fetch.sh nvim.tar.gz "https://github.com/neovim/neovim/releases/download/v0.11.7/$asset.tar.gz" $sum
           tar -xzf nvim.tar.gz -C "$RUNNER_TEMP"
           echo "ORIEL_NVIM=$RUNNER_TEMP/$asset/bin/nvim" >> "$GITHUB_ENV"
       - run: make oracle
@@ -82,10 +85,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore the downloads (.github/fetch.sh)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/oriel-ci
+          key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('.github/workflows/*.yml') }}
+          restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
       - name: Install wasi-sdk 34
         run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o wasi-sdk.tar.gz https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
-          echo "b761e3a0721dbae9c09a0059e5fdb2bf917d1b4a8a7b430fb3b5aafb0984b2c4  wasi-sdk.tar.gz" | sha256sum -c -
+          .github/fetch.sh wasi-sdk.tar.gz https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz b761e3a0721dbae9c09a0059e5fdb2bf917d1b4a8a7b430fb3b5aafb0984b2c4
           tar -xzf wasi-sdk.tar.gz -C "$RUNNER_TEMP"
           echo "WASI_SDK_PATH=$RUNNER_TEMP/wasi-sdk-34.0-x86_64-linux" >> "$GITHUB_ENV"
       - run: syntax/grammars/build.sh
@@ -106,10 +114,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore the downloads (.github/fetch.sh)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/oriel-ci
+          key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('.github/workflows/*.yml') }}
+          restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
       - name: Install zig 0.16.0
         run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz
-          echo "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00  zig.tar.xz" | sha256sum -c -
+          .github/fetch.sh zig.tar.xz https://ziglang.org/download/0.16.0/zig-x86_64-linux-0.16.0.tar.xz 70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00
           mkdir "$RUNNER_TEMP/zig" && tar -xJf zig.tar.xz -C "$RUNNER_TEMP/zig" --strip-components=1
           echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
       - name: The runner's CPU, which the build's host tools are compiled for
@@ -140,14 +153,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore the downloads (.github/fetch.sh)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/oriel-ci
+          key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('.github/workflows/*.yml') }}
+          restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
       - run: voice/native/build.sh linux_amd64
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: "1.26.10"
       - name: Download the tiny.en model
         run: |
-          curl -sSfL --retry 5 --retry-all-errors --retry-delay 5 -o "$RUNNER_TEMP/ggml-tiny.en.bin" https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.en.bin
-          echo "921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f  $RUNNER_TEMP/ggml-tiny.en.bin" | sha256sum -c -
+          .github/fetch.sh "$RUNNER_TEMP/ggml-tiny.en.bin" https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.en.bin 921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f
           echo "ORIEL_WHISPER_MODEL=$RUNNER_TEMP/ggml-tiny.en.bin" >> "$GITHUB_ENV"
       - run: make test-voice
 
