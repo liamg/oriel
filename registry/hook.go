@@ -181,13 +181,13 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 	var errs []error
 	for _, e := range run {
 		var v Verdict
-		start := time.Now()
+		start := r.clock.Now()
 		err := Call(func() error {
 			var err error
 			v, err = e.h.Fn(ctx, ev)
 			return err
 		})
-		took := time.Since(start)
+		took := r.clock.Now().Sub(start)
 		r.hooks.mu.Lock()
 		switch {
 		case v.Veto:
