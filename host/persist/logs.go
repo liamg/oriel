@@ -70,6 +70,7 @@ func (l *Logs) Restore(store core.Store) error {
 		if se, ok := store.State().Session(id); ok && se.Snapshot().Source == "crit" {
 			_ = store.Apply(core.SessionClosed{ID: id})
 			_ = os.RemoveAll(l.env.SessionDir(id))
+			_ = l.env.Retire(id)
 			continue
 		}
 		if err != nil {
@@ -203,7 +204,7 @@ func (l *Logs) failed(id core.SessionID, err error) {
 	l.env.Go("session log", func() { _ = l.st.Emit(core.Notified{Notice: n}) })
 }
 
-// Forget closes a deleted session's logs and removes its directory.
+// Forget closes a deleted session's logs, removes its directory, and retires its id.
 func (l *Logs) Forget(id core.SessionID) error {
 	l.mu.Lock()
 	if r := l.recs[id]; r != nil {
@@ -216,7 +217,10 @@ func (l *Logs) Forget(id core.SessionID) error {
 		delete(l.open, id)
 	}
 	l.mu.Unlock()
-	return os.RemoveAll(l.env.SessionDir(id))
+	if err := os.RemoveAll(l.env.SessionDir(id)); err != nil {
+		return err
+	}
+	return l.env.Retire(id)
 }
 
 // Close closes every log.

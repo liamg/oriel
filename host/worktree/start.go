@@ -39,6 +39,9 @@ func (x *Worktrees) freshName(spec core.SessionSpec) string {
 		if _, err := os.Stat(x.env.SessionDir(core.SessionID(out))); err == nil {
 			taken = true
 		}
+		if _, err := os.Stat(x.env.RetiredID(core.SessionID(out))); err == nil {
+			taken = true
+		}
 		if !taken {
 			break
 		}
