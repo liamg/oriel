@@ -436,7 +436,7 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 			c.Row("gutter", ui.Style{W: ui.Px(gw), H: ui.Px(m.LineH), Pad: ui.Insets{R: 16}, Main: ui.End, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("n", num, ns)
 			})
-			x.signs(c, ds, gw, m)
+			x.signs(c, ds, decor[uireg.EveryLine], line, gw, m, rowID)
 			if edge.A > 0 {
 				c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Px(m.LineH * float32(len(segs))), Fill: edge, Float: &ui.Float{Offset: render.Point{X: gw - 2}}}, nil)
 			}

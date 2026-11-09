@@ -552,7 +552,7 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 		}
 		if layout == "unified" {
 			for k, l := range h.Lines {
-				x.unifiedRow(c, st, at, k, h)
+				x.unifiedRow(c, st, at, k, h, lineDecor{decor, l.New})
 				if l.New > 0 {
 					blocks(k, l.New)
 				}
@@ -560,7 +560,11 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 			return
 		}
 		for r, p := range splitPairs(h.Lines) {
-			x.splitRow(c, st, at, r, p, h)
+			ld := lineDecor{decor: decor}
+			if p[1] >= 0 {
+				ld.n = h.Lines[p[1]].New
+			}
+			x.splitRow(c, st, at, r, p, h, ld)
 			if p[1] >= 0 {
 				blocks(r, h.Lines[p[1]].New)
 			}
@@ -611,7 +615,44 @@ func lineTones(th *theme.Resolved, op byte) (fill, edge, word render.Color) {
 	return render.Color{}, render.Color{}, render.Color{}
 }
 
-func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHunk) {
+// lineDecor is a diff row's new-side line, n from 1 (0 for a row that has none: a removal), in its file's decorations.
+type lineDecor struct {
+	decor map[int][]uireg.Decoration
+	n     int
+}
+
+// hoverSign draws, at the left of a line's gutter, the top of its OnHover signs (a + that comments on it), its own
+// and those on every line (uireg.EveryLine), while the pointer is on row, as the editor's gutter does.
+func (x *Diff) hoverSign(c *ui.Ctx, row ui.ID, ld lineDecor) {
+	if ld.n <= 0 {
+		return
+	}
+	line := ld.n - 1
+	var signs []uireg.Decoration
+	for _, d := range ld.decor[uireg.EveryLine] {
+		if d.Kind == uireg.Sign && d.OnHover {
+			signs = append(signs, d)
+		}
+	}
+	for _, d := range ld.decor[line] {
+		if d.Kind == uireg.Sign && d.OnHover {
+			signs = append(signs, d)
+		}
+	}
+	if len(signs) == 0 || !c.PointerOver(row) {
+		return
+	}
+	for i, d := range signs {
+		if d.Line == uireg.EveryLine {
+			signs[i] = d.OnLine(line)
+		}
+	}
+	d, _ := uireg.TopSign(signs)
+	c.Row("hover", ui.Style{W: ui.Px(14), H: ui.Px(diffLineH), Main: ui.Center, Cross: ui.Center, Float: &ui.Float{Offset: render.Point{X: 4}}},
+		func(c *ui.Ctx) { kit.DrawSign(c, x.h, "sign", d, 12) })
+}
+
+func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHunk, ds lineDecor) {
 	th := c.Theme()
 	l := h.Lines[k]
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
@@ -620,9 +661,11 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	if sel {
 		fill = th.C(tDiffSelected)
 	}
-	st.ids[me] = c.Next(k)
+	row := c.Next(k)
+	st.ids[me] = row
 	if widget.Clickable(c, k, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(diffLineH), Cross: ui.Center, Fill: fill, Role: ui.RoleListItem, Selected: sel,
 		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, func(c *ui.Ctx) {
+		x.hoverSign(c, row, ds)
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		lineNo(c, "o", l.Old)
 		lineNo(c, "n", l.New)
@@ -637,7 +680,7 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	}
 }
 
-func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk) {
+func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk, ds lineDecor) {
 	th := c.Theme()
 	k := p[1]
 	if k < 0 {
@@ -645,7 +688,8 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 	}
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
 	sel := st.sel == me || st.sel.file == at.file && st.sel.hunk == at.hunk && st.sel.line == p[0] && p[0] >= 0
-	st.ids[me] = c.Next(r)
+	row := c.Next(r)
+	st.ids[me] = row
 	if p[0] >= 0 && p[0] != k {
 		st.ids[diffSel{file: at.file, hunk: at.hunk, line: p[0]}] = st.ids[me]
 	}
@@ -664,6 +708,9 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 			fill = th.C(tDiffSelected)
 		}
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: ui.Center, Fill: fill, Clip: true}, func(c *ui.Ctx) {
+			if !old {
+				x.hoverSign(c, row, ds)
+			}
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 			n := l.New
 			if old {

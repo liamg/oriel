@@ -3,6 +3,8 @@ package uireg
 import (
 	"cmp"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -51,10 +53,31 @@ type Decoration struct {
 	Icon string
 	// Hover, for a Sign, is a card shown while the pointer is on the sign or the card; it never takes focus.
 	Hover ui.Node
+	// OnHover draws a Sign only while the pointer is on its line: a line's + to comment on it. On a line with
+	// another sign it's an item in that one's menu instead.
+	OnHover bool
 	// Bg, for VirtualText, is a theme token it's drawn on, as a chip: a debugger's inline values.
 	Bg string
 	// Was, for a LineBg on a changed line, is what the line read before, for a presenter that shows the change.
 	Was string
+}
+
+// EveryLine is the Line of a Sign drawn on each line, however many the file has: one decoration, which Decorate gives
+// under this line, and a gutter that draws it puts on each of its lines with OnLine. A presenter of blocks leaves it out.
+const EveryLine = -1
+
+// OnLine is an EveryLine sign as it's drawn on line (0-based): its Args with that "line" (1-based), and "{line}" in its
+// Tooltip as the number.
+func (d Decoration) OnLine(line int) Decoration {
+	d.Line = line
+	args := make(registry.Args, len(d.Args)+1)
+	for k, v := range d.Args {
+		args[k] = v
+	}
+	args["line"] = line + 1
+	d.Args = args
+	d.Tooltip = strings.ReplaceAll(d.Tooltip, "{line}", strconv.Itoa(line+1))
+	return d
 }
 
 // SignItem is an entry in a Sign's right-click menu: Label runs Command with Args.
@@ -69,7 +92,7 @@ type SignItem struct {
 func TopSign(signs []Decoration) (Decoration, bool) {
 	top := -1
 	for i, d := range signs {
-		if top < 0 || d.Priority >= signs[top].Priority {
+		if top < 0 || signs[top].OnHover && !d.OnHover || d.OnHover == signs[top].OnHover && d.Priority >= signs[top].Priority {
 			top = i
 		}
 	}
@@ -303,7 +326,7 @@ func byLine(ctx DecorationCtx, from []*decorAsked) map[int][]Decoration {
 				}
 				d.Line = ctx.Snap.PosAt(min(o, ctx.Snap.Len())).Line
 			}
-			if d.Line >= ctx.Top && d.Line < ctx.Bottom {
+			if d.Line >= ctx.Top && d.Line < ctx.Bottom || d.Line == EveryLine && d.Anchor == 0 {
 				out[d.Line] = append(out[d.Line], d)
 			}
 		}
