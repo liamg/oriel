@@ -12,10 +12,46 @@ trap 'rm -rf "$work"' EXIT
 sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 export ZIG_GLOBAL_CACHE_DIR=${ZIG_GLOBAL_CACHE_DIR:-$work/cache}
 
+# get URL FILE downloads URL to FILE through the downloads cache (.github/fetch.sh's), kept by the URL. Whoever uses
+# what's kept checks it (the sum below, zig against build.zig.zon); a URL asked for again this run was refused, so
+# it's downloaded afresh.
+downloads=${DOWNLOADS:-$HOME/.cache/oriel-ci}
+mkdir -p "$downloads"
+got=" "
+get() {
+	local kept
+	kept="$downloads/url-$(printf '%s' "$1" | sha256 | cut -c1-64)"
+	case "$got" in *" $1 "*) rm -f "$kept" ;; esac
+	got="$got$1 "
+	if [ ! -s "$kept" ]; then
+		if [[ $1 =~ ^(https://[^/]+/[^/]+/[^/]+)/archive/([0-9a-f]{40})\.tar\.gz$ ]]; then
+			# A forge's archive of a commit: when the forge can't make it, git can, the same files at that commit.
+			curl -fsSL --connect-timeout 30 --max-time 120 "$1" -o "$kept.part" ||
+				from_git "${BASH_REMATCH[1]}.git" "${BASH_REMATCH[2]}" "$kept.part"
+		else
+			curl -fsSL --connect-timeout 30 --max-time 300 --retry 2 --retry-all-errors --retry-delay 5 "$1" -o "$kept.part"
+		fi
+		mv "$kept.part" "$kept"
+	fi
+	cp "$kept" "$2"
+}
+
+# from_git REPO COMMIT FILE writes COMMIT's files from REPO to FILE, as a .tar.gz.
+from_git() {
+	echo "fetch: $1 at $2 from git" >&2
+	local g="$work/git-$2"
+	git init -q "$g"
+	git -C "$g" fetch -q --depth 1 "$1" "$2"
+	git -C "$g" archive --format=tar.gz --prefix="src/" -o "$3" FETCH_HEAD
+	rm -rf "$g"
+}
+
 if [ -n "${GHOSTTY_TGZ:-}" ]; then
 	cp "$GHOSTTY_TGZ" "$work/ghostty.tgz" # a copy already downloaded; still checked below
 else
-	curl -fsSL "https://codeload.github.com/ghostty-org/ghostty/tar.gz/$ghostty" -o "$work/ghostty.tgz"
+	get "https://codeload.github.com/ghostty-org/ghostty/tar.gz/$ghostty" "$work/ghostty.tgz"
+	echo "$ghostty_sum  $work/ghostty.tgz" | sha256 -c - >/dev/null ||
+		get "https://codeload.github.com/ghostty-org/ghostty/tar.gz/$ghostty" "$work/ghostty.tgz"
 fi
 echo "$ghostty_sum  $work/ghostty.tgz" | sha256 -c - >/dev/null
 mkdir "$work/src" && tar -xzf "$work/ghostty.tgz" -C "$work/src" --strip-components=1
@@ -29,7 +65,7 @@ for url in \
 	https://deps.files.ghostty.org/ghostty-themes-release-20260921-150923-0b55a9e.tgz \
 	https://deps.files.ghostty.org/zlib-1220fed0c74e1019b3ee29edae2051788b080cd96e90d56836eea857b0b966742efb.tar.gz; do
 	f="$work/dep-$(basename "$url")"
-	curl -fsSL "$url" -o "$f"
+	get "$url" "$f"
 	(cd "$work/src" && "$zig" fetch "$f" >/dev/null)
 done
 
@@ -48,7 +84,7 @@ zig_build() {
 			return 1
 		fi
 		f="$work/dep-$(basename "$url")"
-		curl -fsSL "$url" -o "$f"
+		get "$url" "$f"
 		(cd "$work/src" && "$zig" fetch "$f" >/dev/null)
 	done
 	printf '%s\n' "$out" >&2
