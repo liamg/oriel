@@ -169,99 +169,115 @@ clip 44,0 1556x974 r 0
     rect 1460.5469,122 64x30 radius 6 stroke 1 #332f27
     rect 1540.5469,124 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,141.36523 #4f4a40 Inter 12
-    text "ui.font_size" @332,191.75 #ece6d8 JetBrains Mono 12.5
-    text "The UI's text size. It zooms the whole window, so panels grow with their text; ⌘= and ⌘-" @332,211.60938 #7c7566 Inter 12.5
-    text "step it, ⌘0 resets it." @332,229.73389 #7c7566 Inter 12.5
+    text "ui.font" @332,191.75 #ece6d8 JetBrains Mono 12.5
+    text "The font the UI's text is set in: a family installed on this machine; Oriel's own (Inter) when" @332,211.60938 #7c7566 Inter 12.5
+    text "empty." @332,229.73389 #7c7566 Inter 12.5
     text "default" @1202.3906,209.65453 #7c7566 JetBrains Mono 10.5
-    rect 1264.5469,203.87451 186x4 fill #060606 radius 2 stroke 1 #332f27
-    path 6 segments fill #ece6d8 stroke 1.5 #332f27
-    rect 1460.5469,190.87451 64x30 fill #060606 radius 6
-    clip 1460.5469,190.87451 64x30 r 6
-      text "13" @1470.5469,210.42163 #ece6d8 Inter 12.5
-    pop
-    rect 1460.5469,190.87451 64x30 radius 6 stroke 1 #332f27
+    rect 1494.1406,192.87451 30.40625x26 fill #191815 radius 6 stroke 1 #332f27
+    text " ▾" @1504.1406,210.23975 #ece6d8 Inter 12
     rect 1540.5469,192.87451 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
     text "↺" @1550.5469,210.23975 #4f4a40 Inter 12
-    text "ui.hover.font_size" @332,269.68677 #ece6d8 JetBrains Mono 12.5
-    text "The text size of hovers and signature help; it follows ui.font_size until it's set." @332,289.54614 #7c7566 Inter 12.5
-    text "follows ui.font_size" @1116.6719,278.52902 #7c7566 JetBrains Mono 10.5
-    rect 1264.5469,272.74902 186x4 fill #060606 radius 2 stroke 1 #332f27
+    text "ui.font_mono" @332,269.49902 #ece6d8 JetBrains Mono 12.5
+    text "The fixed-width font: the editor, terminals, and the labels set in it. A family installed on this" @332,289.3584 #7c7566 Inter 12.5
+    text "machine; Oriel's own (JetBrains Mono) when empty." @332,307.4829 #7c7566 Inter 12.5
+    text "default" @1202.3906,287.40353 #7c7566 JetBrains Mono 10.5
+    rect 1494.1406,270.62354 30.40625x26 fill #191815 radius 6 stroke 1 #332f27
+    text " ▾" @1504.1406,287.98877 #ece6d8 Inter 12
+    rect 1540.5469,270.62354 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,287.98877 #4f4a40 Inter 12
+    text "ui.font_size" @332,347.24805 #ece6d8 JetBrains Mono 12.5
+    text "The UI's text size. It zooms the whole window, so panels grow with their text; ⌘= and ⌘-" @332,367.10742 #7c7566 Inter 12.5
+    text "step it, ⌘0 resets it." @332,385.23193 #7c7566 Inter 12.5
+    text "default" @1202.3906,365.15256 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,359.37256 186x4 fill #060606 radius 2 stroke 1 #332f27
     path 6 segments fill #ece6d8 stroke 1.5 #332f27
-    rect 1460.5469,259.74902 64x30 fill #060606 radius 6
-    clip 1460.5469,259.74902 64x30 r 6
-      text "13" @1470.5469,279.29614 #ece6d8 Inter 12.5
+    rect 1460.5469,346.37256 64x30 fill #060606 radius 6
+    clip 1460.5469,346.37256 64x30 r 6
+      text "13" @1470.5469,365.91968 #ece6d8 Inter 12.5
     pop
-    rect 1460.5469,259.74902 64x30 radius 6 stroke 1 #332f27
-    rect 1540.5469,261.74902 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,279.11426 #4f4a40 Inter 12
-    rect 313,325.49127 3x36 fill #ffd23f radius 2
-    text "ui.reduced_motion" @332,329.49902 #ece6d8 JetBrains Mono 12.5
-    text "Jump straight to the end of every animation." @332,349.3584 #7c7566 Inter 12.5
-    text "init.lua wins over settings.toml" @332,367.08353 #b98aff JetBrains Mono 10.5
-    text "Open init.lua:12" @551,367.08353 #ffd23f JetBrains Mono 10.5
-    text "set in init.lua:12" @1129.8594,347.27127 #b98aff JetBrains Mono 10.5
+    rect 1460.5469,346.37256 64x30 radius 6 stroke 1 #332f27
+    rect 1540.5469,348.37256 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,365.7378 #4f4a40 Inter 12
+    text "ui.hover.font_size" @332,425.1848 #ece6d8 JetBrains Mono 12.5
+    text "The text size of hovers and signature help; it follows ui.font_size until it's set." @332,445.0442 #7c7566 Inter 12.5
+    text "follows ui.font_size" @1116.6719,434.02707 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,428.24707 186x4 fill #060606 radius 2 stroke 1 #332f27
+    path 6 segments fill #ece6d8 stroke 1.5 #332f27
+    rect 1460.5469,415.24707 64x30 fill #060606 radius 6
+    clip 1460.5469,415.24707 64x30 r 6
+      text "13" @1470.5469,434.7942 #ece6d8 Inter 12.5
+    pop
+    rect 1460.5469,415.24707 64x30 radius 6 stroke 1 #332f27
+    rect 1540.5469,417.24707 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,434.6123 #4f4a40 Inter 12
+    rect 313,480.98932 3x36 fill #ffd23f radius 2
+    text "ui.reduced_motion" @332,484.99707 #ece6d8 JetBrains Mono 12.5
+    text "Jump straight to the end of every animation." @332,504.85645 #7c7566 Inter 12.5
+    text "init.lua wins over settings.toml" @332,522.5816 #b98aff JetBrains Mono 10.5
+    text "Open init.lua:12" @551,522.5816 #ffd23f JetBrains Mono 10.5
+    text "set in init.lua:12" @1129.8594,502.76932 #b98aff JetBrains Mono 10.5
     opacity 0.45
-      rect 1492.5469,334.49127 32x18 fill #ffd23f radius 9
-      rect 1508.5469,336.49127 14x14 fill #ece6d8 radius 7
+      rect 1492.5469,489.98932 32x18 fill #ffd23f radius 9
+      rect 1508.5469,491.98932 14x14 fill #ece6d8 radius 7
     pop
-    rect 1540.5469,330.49127 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,347.8565 #4f4a40 Inter 12
-    text "ui.scrollbars" @332,406.98352 #ece6d8 JetBrains Mono 12.5
-    text "When scrollbars show: auto, while the pointer is over what scrolls and for a moment after it" @332,426.8429 #7c7566 Inter 12.5
-    text "scrolls; or always, whenever there's more than fits." @332,444.9674 #7c7566 Inter 12.5
-    text "default" @1202.3906,424.88803 #7c7566 JetBrains Mono 10.5
-    clip 1415.0469,409.10803 109.5x24 r 5
-      rect 1415.0469,409.10803 47.80005x24 fill #1f1c0f
-      text "AUTO" @1425.0469,424.52805 #ffd23f JetBrains Mono 9.5
-      text "ALWAYS" @1472.8469,424.52805 #7c7566 JetBrains Mono 9.5
+    rect 1540.5469,485.98932 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,503.35455 #4f4a40 Inter 12
+    text "ui.scrollbars" @332,562.48157 #ece6d8 JetBrains Mono 12.5
+    text "When scrollbars show: auto, while the pointer is over what scrolls and for a moment after it" @332,582.34094 #7c7566 Inter 12.5
+    text "scrolls; or always, whenever there's more than fits." @332,600.46545 #7c7566 Inter 12.5
+    text "default" @1202.3906,580.3861 #7c7566 JetBrains Mono 10.5
+    clip 1415.0469,564.6061 109.5x24 r 5
+      rect 1415.0469,564.6061 47.80005x24 fill #1f1c0f
+      text "AUTO" @1425.0469,580.02606 #ffd23f JetBrains Mono 9.5
+      text "ALWAYS" @1472.8469,580.02606 #7c7566 JetBrains Mono 9.5
     pop
-    rect 1415.0469,409.10803 109.5x24 radius 5 stroke 1 #332f27
-    rect 1540.5469,408.10803 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,425.47327 #4f4a40 Inter 12
-    text "ui.statusline.font_size" @332,484.9203 #ece6d8 JetBrains Mono 12.5
-    text "The status line's text size; it follows ui.font_size until it's set." @332,504.77966 #7c7566 Inter 12.5
-    text "follows ui.font_size" @1116.6719,493.76254 #7c7566 JetBrains Mono 10.5
-    rect 1264.5469,487.98254 186x4 fill #060606 radius 2 stroke 1 #332f27
+    rect 1415.0469,564.6061 109.5x24 radius 5 stroke 1 #332f27
+    rect 1540.5469,563.6061 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,580.9713 #4f4a40 Inter 12
+    text "ui.statusline.font_size" @332,640.41833 #ece6d8 JetBrains Mono 12.5
+    text "The status line's text size; it follows ui.font_size until it's set." @332,660.2777 #7c7566 Inter 12.5
+    text "follows ui.font_size" @1116.6719,649.2606 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,643.4806 186x4 fill #060606 radius 2 stroke 1 #332f27
     path 6 segments fill #ece6d8 stroke 1.5 #332f27
-    rect 1460.5469,474.98254 64x30 fill #060606 radius 6
-    clip 1460.5469,474.98254 64x30 r 6
-      text "13" @1470.5469,494.52966 #ece6d8 Inter 12.5
+    rect 1460.5469,630.4806 64x30 fill #060606 radius 6
+    clip 1460.5469,630.4806 64x30 r 6
+      text "13" @1470.5469,650.0277 #ece6d8 Inter 12.5
     pop
-    rect 1460.5469,474.98254 64x30 radius 6 stroke 1 #332f27
-    rect 1540.5469,476.98254 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,494.34778 #4f4a40 Inter 12
-    rect 313,531.98254 3x36 fill #ffd23f radius 2
-    text "ui.theme" @332,544.9203 #ece6d8 JetBrains Mono 12.5
-    text "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them." @332,564.77966 #7c7566 Inter 12.5
-    text "user" @1222.1719,553.7626 #7c7566 JetBrains Mono 10.5
-    rect 1469.1406,536.98254 55.40625x26 fill #191815 radius 6 stroke 1 #332f27
-    text "oriel ▾" @1479.1406,554.3478 #ece6d8 Inter 12
-    rect 1540.5469,536.98254 31.453125x26 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,554.3478 #ece6d8 Inter 12
-    text "ui.tooltip.font_size" @332,604.9203 #ece6d8 JetBrains Mono 12.5
-    text "Tooltips' text size; it follows ui.font_size until it's set." @332,624.77966 #7c7566 Inter 12.5
-    text "follows ui.font_size" @1116.6719,613.7626 #7c7566 JetBrains Mono 10.5
-    rect 1264.5469,607.98254 186x4 fill #060606 radius 2 stroke 1 #332f27
+    rect 1460.5469,630.4806 64x30 radius 6 stroke 1 #332f27
+    rect 1540.5469,632.4806 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,649.8458 #4f4a40 Inter 12
+    rect 313,687.4806 3x36 fill #ffd23f radius 2
+    text "ui.theme" @332,700.41833 #ece6d8 JetBrains Mono 12.5
+    text "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them." @332,720.2777 #7c7566 Inter 12.5
+    text "user" @1222.1719,709.2606 #7c7566 JetBrains Mono 10.5
+    rect 1469.1406,692.4806 55.40625x26 fill #191815 radius 6 stroke 1 #332f27
+    text "oriel ▾" @1479.1406,709.8458 #ece6d8 Inter 12
+    rect 1540.5469,692.4806 31.453125x26 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,709.8458 #ece6d8 Inter 12
+    text "ui.tooltip.font_size" @332,760.41833 #ece6d8 JetBrains Mono 12.5
+    text "Tooltips' text size; it follows ui.font_size until it's set." @332,780.2777 #7c7566 Inter 12.5
+    text "follows ui.font_size" @1116.6719,769.2606 #7c7566 JetBrains Mono 10.5
+    rect 1264.5469,763.4806 186x4 fill #060606 radius 2 stroke 1 #332f27
     path 6 segments fill #ece6d8 stroke 1.5 #332f27
-    rect 1460.5469,594.98254 64x30 fill #060606 radius 6
-    clip 1460.5469,594.98254 64x30 r 6
-      text "13" @1470.5469,614.52966 #ece6d8 Inter 12.5
+    rect 1460.5469,750.4806 64x30 fill #060606 radius 6
+    clip 1460.5469,750.4806 64x30 r 6
+      text "13" @1470.5469,770.0277 #ece6d8 Inter 12.5
     pop
-    rect 1460.5469,594.98254 64x30 radius 6 stroke 1 #332f27
-    rect 1540.5469,596.98254 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,614.3478 #4f4a40 Inter 12
-    text "ui.variant" @332,664.9203 #ece6d8 JetBrains Mono 12.5
-    text "The theme's dark or light variant; system follows the OS." @332,684.77966 #7c7566 Inter 12.5
-    text "default" @1202.3906,673.7626 #7c7566 JetBrains Mono 10.5
-    clip 1360.2969,657.98254 164.25x24 r 5
-      rect 1360.2969,657.98254 61.69995x24 fill #1f1c0f
-      text "SYSTEM" @1370.2969,673.4025 #ffd23f JetBrains Mono 9.5
-      text "DARK" @1431.9968,673.4025 #7c7566 JetBrains Mono 9.5
-      text "LIGHT" @1479.7969,673.4025 #7c7566 JetBrains Mono 9.5
+    rect 1460.5469,750.4806 64x30 radius 6 stroke 1 #332f27
+    rect 1540.5469,752.4806 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,769.8458 #4f4a40 Inter 12
+    text "ui.variant" @332,820.41833 #ece6d8 JetBrains Mono 12.5
+    text "The theme's dark or light variant; system follows the OS." @332,840.2777 #7c7566 Inter 12.5
+    text "default" @1202.3906,829.2606 #7c7566 JetBrains Mono 10.5
+    clip 1360.2969,813.4806 164.25x24 r 5
+      rect 1360.2969,813.4806 61.69995x24 fill #1f1c0f
+      text "SYSTEM" @1370.2969,828.9006 #ffd23f JetBrains Mono 9.5
+      text "DARK" @1431.9968,828.9006 #7c7566 JetBrains Mono 9.5
+      text "LIGHT" @1479.7969,828.9006 #7c7566 JetBrains Mono 9.5
     pop
-    rect 1360.2969,657.98254 164.25x24 radius 5 stroke 1 #332f27
-    rect 1540.5469,656.98254 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
-    text "↺" @1550.5469,674.3478 #4f4a40 Inter 12
+    rect 1360.2969,813.4806 164.25x24 radius 5 stroke 1 #332f27
+    rect 1540.5469,812.4806 31.453125x26 fill #191815 radius 6 stroke 1 #332f27
+    text "↺" @1550.5469,829.8458 #4f4a40 Inter 12
   pop
   rect 44,944 1556x30 fill #0c0c0b stroke 1 #24221d
   text "writing to ~/.config/oriel/settings.toml" @60,962.78 #7c7566 JetBrains Mono 10.5

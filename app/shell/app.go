@@ -140,6 +140,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	}
 	sh, unsubscribe := newShell(cfg, builtins, poke)
 	defer unsubscribe()
+	defer contributeFonts(cfg.Registry, be.Shaper(), poke)()
 	probed := make(chan struct{}) // rg, off the loop, so the search panel finds the answer waiting
 	go func() { sh.tools.Ripgrep(); close(probed) }()
 	defer func() { <-probed }()

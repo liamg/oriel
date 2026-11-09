@@ -40,6 +40,8 @@ type Headless struct {
 type HeadlessOpts struct {
 	Size  render.Point     // 1280×800 if zero
 	Clock func() time.Time // the window's clock (oriel.now, countdowns); time.Now if nil
+	// FontDirs are where its installed fonts are (ui.font): none if nil, so a scene draws the same everywhere.
+	FontDirs []string
 }
 
 // memDesktop is a clipboard in memory, and a browser that opens nothing but notes what it was asked to.
@@ -74,21 +76,26 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 	if o.Clock == nil {
 		o.Clock = time.Now
 	}
+	ts, err := typeset.NewBundled()
+	if err != nil {
+		return nil, err
+	}
+	dirs := o.FontDirs
+	if dirs == nil {
+		dirs = []string{} // none: not the machine's
+	}
+	ts.SetFontDirs(dirs)
 	sh, cancel := newShell(cfg, builtins, func() {})
 	sh.desktop = cfg.Desktop
 	sh.launchDone = true // a window that's been up a while: mission control doesn't open as at launch
-	h := &Headless{sh: sh, size: o.Size, cancel: cancel}
+	unfont := contributeFonts(cfg.Registry, ts, func() {})
+	h := &Headless{sh: sh, size: o.Size, cancel: func() { cancel(); unfont() }}
 	last, err := sh.activate(context.Background(), &h.plugins)
 	if err != nil {
 		h.Close()
 		return nil, err
 	}
 	h.host = last
-	ts, err := typeset.NewBundled()
-	if err != nil {
-		h.Close()
-		return nil, err
-	}
 	h.ts = ts
 	h.ui = ui.New(ts, textStyle)
 	h.ui.SetClipboard(cfg.Desktop)
