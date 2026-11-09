@@ -3,12 +3,16 @@ package sessions_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/ui/layout"
 )
 
 // mockupPlan is the scene's PLAN.md, its lines where the threads are: L14, L22 and L31.
@@ -214,4 +218,31 @@ func TestPlanShowsPLANOnceItComesIn(t *testing.T) {
 		s.SettleReads()
 		return s.Has("the plan's own body")
 	})
+}
+
+// A plan doc clicked in the docs list comes to the front, though another tab was in front of the plan: the click
+// is to read that doc, not to note it for later.
+func TestAPlanDocClickedComesToTheFront(t *testing.T) {
+	s := planScene(t)
+	s.Run("plan.open", nil)
+	s.SettleReads()
+	se, _ := s.Store().State().Session("pricing-rounding")
+	other := filepath.Join(se.Snapshot().Projects[0].Dir, "notes.go")
+	os.WriteFile(other, []byte("package pricing\n"), 0o644)
+	s.Run("editor.open", registry.Args{"path": other})
+	s.Until("the file's tab", func() bool { s.RunQueued(); return s.Find("notes.go") != nil })
+	s.ClickOn("notes.go") // its tab: the file in front, the plan behind it
+	s.Quiet()
+	shown := func(id string) bool {
+		return slices.ContainsFunc(s.Host().Layout().Shown(), func(v layout.ViewRef) bool { return v.ID == id })
+	}
+	if shown(sessions.PlanView) {
+		t.Fatalf("the plan is still in front of the editor's tab: shown %+v visible %+v\n%s", s.Host().Layout().Shown(), s.Host().Layout().Visible(), s.Text())
+	}
+	s.ClickOn("api.md")
+	s.Quiet()
+	if !shown(sessions.PlanView) {
+		t.Errorf("a click on api.md left the plan behind; in front: %v", s.Host().Layout().Shown())
+	}
+	s.WantFrame("pricing.Round(amount, mode)")
 }
