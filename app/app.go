@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry/uireg"
@@ -78,6 +79,8 @@ type Config struct {
 	Self []string
 	// Quit asks the app to quit as its close button does, without asking about scheduled jobs: a signal, say.
 	Quit <-chan struct{}
+	// Clock is what the window paces its redraws by: the sessions behind the one in front; the system's if nil.
+	Clock clock.Clock
 }
 
 // The types Config's fields name, and the shell's that the app's callers use.
@@ -113,7 +116,7 @@ func (cfg Config) shell() shell.Config {
 	return shell.Config{Store: cfg.Store, Registry: cfg.Registry, Plugins: cfg.Plugins, Logs: cfg.Logs, ConfigDir: cfg.ConfigDir,
 		CrashDir: cfg.CrashDir, Version: cfg.Version, Desktop: cfg.Desktop, Debug: cfg.Debug, Trace: cfg.Trace, Files: cfg.Files,
 		WorkDir: cfg.WorkDir, StateDir: cfg.StateDir, CacheDir: cfg.CacheDir, Host: cfg.Host, Started: cfg.Started, Closed: cfg.Closed, Activated: cfg.Activated,
-		Net: cfg.Net, ImageNet: cfg.ImageNet, FSWatch: cfg.FSWatch, Secrets: cfg.Secrets, Quit: cfg.Quit}
+		Net: cfg.Net, ImageNet: cfg.ImageNet, FSWatch: cfg.FSWatch, Secrets: cfg.Secrets, Quit: cfg.Quit, Clock: cfg.Clock}
 }
 
 func NewLogs(o LogOpts) *Logs { return shell.NewLogs(o) }

@@ -372,6 +372,55 @@ func TestExplorerScrolls(t *testing.T) {
 	}
 }
 
+// rowFill is the fill of the last rect drawn under p: what lights a row up.
+func rowFill(l *render.List, p render.Point) render.Color {
+	var got render.Color
+	for _, op := range l.Ops {
+		r := op.Rect
+		if op.Kind == render.OpRect && op.Style.Fill.A > 0 && p.X >= r.Min.X && p.X < r.Max.X && p.Y >= r.Min.Y && p.Y < r.Max.Y {
+			got = op.Style.Fill
+		}
+	}
+	return got
+}
+
+// Sweeping the Explorer's rows, each row the pointer lands on lights up in the frame drawn after the move, and the
+// row it left goes back as it was: hovering costs a frame, however long the sweep.
+func TestExplorerHoverLightsTheRowInTheNextFrame(t *testing.T) {
+	r := gittest.New(t)
+	files := map[string]string{}
+	for i := range 30 {
+		files[fmt.Sprintf("f%02d.go", i)] = "package p\n"
+	}
+	r.Write(files)
+	r.Commit("Ada", "x")
+	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
+	gitOf(s).Wait()
+	s.Press("<M-3>")
+	s.Quiet()
+	rows := []string{"f20.go", "f14.go", "f25.go", "f17.go", "f22.go"}
+	unlit := map[string]render.Color{}
+	for _, f := range rows {
+		unlit[f] = rowFill(s.List(), s.TextPoint(f))
+	}
+	prev := ""
+	for i := range 60 {
+		f := rows[i%len(rows)]
+		at := s.TextPoint(f)
+		s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: at})
+		s.Frame()
+		if got := rowFill(s.List(), at); got == unlit[f] {
+			t.Fatalf("move %d: %s didn't light up in the frame after the pointer landed on it", i, f)
+		}
+		if prev != "" {
+			if got := rowFill(s.List(), s.TextPoint(prev)); got != unlit[prev] {
+				t.Fatalf("move %d: %s stayed lit after the pointer left it", i, prev)
+			}
+		}
+		prev = f
+	}
+}
+
 // The wheel over a tree that fits moves nothing: the frame after it draws the tree, its selection and its
 // highlight as they were, with no frame of them scrolled away first.
 func TestExplorerWheelOverATreeThatFits(t *testing.T) {

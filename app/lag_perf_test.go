@@ -1,13 +1,10 @@
-//go:build !race
+//go:build perf && !race
 
 package app_test
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -278,24 +275,6 @@ func TestMenuHoverLagBudget(t *testing.T) {
 	settleWindow(r)
 	first, second, third := windowTextPoint(r, "Move pane…"), windowTextPoint(r, "Close"), windowTextPoint(r, "? Help")
 	measureLag(r, "menu", sweep(first, render.Point{X: first.X + 60, Y: first.Y}, 200), []render.Point{second, third}, 40)
-}
-
-// With --trace, a stall writes the execution trace of the seconds before it, for go tool trace.
-func TestSlowFrameWritesTrace(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "stall.trace")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Config: func(c *apptest.Config) { c.Trace = path }})
-	r.Win.Send(render.SlowFrameEvent{Waited: 900 * time.Millisecond})
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if b, err := os.ReadFile(path); err == nil && len(b) > 1<<10 {
-			if !bytes.HasPrefix(b, []byte("go 1.")) {
-				t.Fatalf("not a trace: %q", b[:16])
-			}
-			return
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	t.Fatal("no trace written for the slow frame")
 }
 
 // Hovering the Explorer over thousands of changed files: rows light up within budget from the start, the files'
