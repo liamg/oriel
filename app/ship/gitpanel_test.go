@@ -204,3 +204,18 @@ func TestGitPanelForcePushesARebasedBranch(t *testing.T) {
 	})
 	shipSettle(s, t, "Push again", func() bool { sh, _ := x.ShipOf(id, "blog"); return sh.Replaced == 0 && !clickable(s, "Force push") })
 }
+
+// A commit made after the branch was pushed, by the agent or a terminal, is pushable at once: the panel reads it, and
+// Push comes back.
+func TestGitPanelPushesACommitMadeAfterAPush(t *testing.T) {
+	s, x, id, blog, _ := gitPanelScene(t, func(dir string) {
+		git(t, dir, "checkout", "-q", "-b", "feature")
+		writeFiles(t, dir, map[string]string{"post.md": "# Two\n"})
+		git(t, dir, "commit", "-qam", "two")
+		git(t, dir, "push", "-q", "-u", "origin", "feature")
+	})
+	shipSettle(s, t, "the branch pushed", func() bool { sh, _ := x.ShipOf(id, "blog"); return sh.Branch == "feature" && sh.Pushed })
+	writeFiles(t, blog, map[string]string{"post.md": "# Three\n"})
+	git(t, blog, "commit", "-qam", "three")
+	shipSettle(s, t, "Push for the new commit", func() bool { return clickable(s, "Push") })
+}

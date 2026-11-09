@@ -283,7 +283,7 @@ func (x *Ship) stepOpts(id core.SessionID, project, step string, o widget.Button
 	case step:
 		o.Busy, o.BusyLabel = true, step
 	default:
-		o.Disabled = true
+		o.Disabled, o.Why = true, "Wait for "+strings.ToLower(d)+" to finish: one step at a time"
 	}
 	return o
 }

@@ -478,15 +478,15 @@ func (u *UI) setTip(id ID) {
 }
 
 // topTip is the topmost node at p with a tooltip, down to the topmost interactive one: text with a tooltip in a
-// clickable row shows it, and the row still takes the click.
+// clickable row shows it, and the row still takes the click. A disabled control's own tooltip shows (why it is).
 func (u *UI) topTip(p render.Point) ID {
 	for _, id := range u.Hit(p) {
 		f := u.flags[id]
 		switch {
-		case f.disabled:
-			return 0
 		case f.tooltip != "":
 			return id
+		case f.disabled:
+			return 0
 		case f.interactive:
 			return 0
 		}
