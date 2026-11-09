@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -324,7 +325,11 @@ func TestConsoleScrollsBack(t *testing.T) {
 	r.ScrollAt("Message number 39.", -20000)
 	r.Latest("the start scrolled into view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
 	a.Emit(agent.Message{ID: "m40", Role: core.ItemAssistant, Text: "Message number 40."})
-	time.Sleep(200 * time.Millisecond)
+	r.WaitFor("the message in the transcript", func() bool {
+		se, _ := r.Store.Session("w")
+		return slices.ContainsFunc(se.Snapshot().Transcript, func(it core.Item) bool { return it.ID == "m40" })
+	})
+	r.Do(func() error { return nil }) // the loop has taken it, and draws it next
 	r.Latest("the start still in view", func(f headless.Frame) bool { return strings.Contains(f.Text(), "Message number 00.") })
 }
 
