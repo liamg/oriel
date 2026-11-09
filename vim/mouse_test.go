@@ -1,7 +1,9 @@
 package vim_test
 
 import (
+	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/vim"
@@ -44,5 +46,39 @@ func TestMouseSelects(t *testing.T) {
 	s.e.Select(vim.Pos{Line: 0, Col: 3}, vim.Pos{Line: 0, Col: 3}, 'V')
 	if s.e.Mode() != "visual-line" {
 		t.Errorf("a triple click left the engine in %s", s.e.Mode())
+	}
+}
+
+// scroll.txt: "If the cursor position is moved off of the window, the cursor is moved onto the window". The wheel moves
+// the window, and the window stays where it was put when it then has fewer rows for text (blocks drawn between its
+// lines took some): the cursor is moved onto it, rather than the window moved back to the cursor. A command that moves
+// the cursor brings the window to it again.
+func TestAScrolledWindowStaysWhenItsRowsShrink(t *testing.T) {
+	dir := t.TempDir()
+	var lines strings.Builder
+	for i := range 100 {
+		fmt.Fprintf(&lines, "line %d\n", i+1)
+	}
+	writeFile(t, filepath.Join(dir, "a.txt"), lines.String())
+	s := newSession(t, dir)
+	s.keys(":e a.txt<CR>")
+	id := s.e.WindowID()
+	s.e.SetRows(id, 20)
+	s.keys("G")
+	s.e.ScrollTo(id, 60)
+	if s.e.Top() != 60 || s.e.Cursor().Line > 79 {
+		t.Fatalf("the wheel left top %d, cursor %d", s.e.Top(), s.e.Cursor().Line)
+	}
+	s.e.SetRows(id, 15)
+	if s.e.Top() != 60 {
+		t.Errorf("fewer rows moved the scrolled window to %d, want it left at 60", s.e.Top())
+	}
+	if c := s.e.Cursor().Line; c < 60 || c >= 75 {
+		t.Errorf("the cursor is on %d, off the window's 60 to 74", c)
+	}
+	s.keys("G")
+	s.e.SetRows(id, 12)
+	if bot := s.e.Top() + 12; s.e.Cursor().Line >= bot {
+		t.Errorf("after G, fewer rows left the cursor on %d below the window (top %d)", s.e.Cursor().Line, s.e.Top())
 	}
 }

@@ -646,6 +646,7 @@ func ConsoleWindow(t *testing.T) (*Window, *agenttest.FakeSession, *rig.Host) {
 	w, a, h := AgentWindow(t)
 	w.TypeKeys("<D-A>")
 	w.WaitText("SESSION STATS")
+	w.WaitGit()
 	return w, a, h
 }
 

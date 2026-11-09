@@ -154,16 +154,27 @@ func (e *Engine) SetRows(id WindowID, rows int) {
 		if cur := e.foldStart(e.cur.Line); guessed && (cur < e.top || cur >= e.botline(v)) {
 			e.top = 0
 		}
+		if w.scrolled != nil && *w.scrolled == e.cur {
+			// Scrolled by the wheel and the cursor not moved since: the window stays, the cursor comes onto it.
+			e.keepCursorIn(v)
+			e.sync()
+			at := e.cur
+			w.scrolled = &at
+			return
+		}
 		e.updateTop(v)
 	}
 }
 
-// ScrollTo shows line first in window id, as the scroll wheel does; the cursor stays on the window.
+// ScrollTo shows line first in window id, as the scroll wheel does; the cursor stays on the window, and the window
+// stays where it's put until the cursor moves (SetRows).
 func (e *Engine) ScrollTo(id WindowID, line int) {
 	if w := e.windowByID(id); w != nil {
 		prev := e.window
 		e.window, e.buffer = w, w.buf
 		e.SetTop(line)
+		at := e.cur
+		w.scrolled = &at
 		e.window, e.buffer = prev, prev.buf
 	}
 }

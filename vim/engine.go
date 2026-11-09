@@ -150,6 +150,7 @@ type window struct {
 	width      int      // screen columns for text; 0 for the window's share of the default screen
 	height     int      // rows shown; 0 for the window's share of the default screen
 	scroll     int      // 'scroll', set by a count to CTRL-D or CTRL-U; 0 for half the window
+	scrolled   *Pos     // the cursor as the wheel left it: while it's still there, the window leads
 }
 
 func (e *Engine) newBuffer(t *text.Buffer) *buffer {
