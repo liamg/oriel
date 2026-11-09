@@ -132,25 +132,24 @@ clip 44,0 1556x974 r 0
     text "keymap" @62,316.269 #b3ab99 Inter 13
     text "lsp" @62,346.269 #b3ab99 Inter 13
     text "markdown" @62,376.269 #b3ab99 Inter 13
-    text "mission" @62,406.269 #b3ab99 Inter 13
-    text "plugins" @62,436.269 #b3ab99 Inter 13
-    text "prompts" @62,466.269 #b3ab99 Inter 13
-    text "repos" @62,496.269 #b3ab99 Inter 13
-    text "review" @62,526.26904 #b3ab99 Inter 13
-    text "sandbox" @62,556.26904 #b3ab99 Inter 13
-    text "secrets" @62,586.26904 #b3ab99 Inter 13
-    text "sessions" @62,616.26904 #b3ab99 Inter 13
-    text "sidebar" @62,646.26904 #b3ab99 Inter 13
-    text "stats" @62,676.26904 #b3ab99 Inter 13
-    text "terminal" @62,706.26904 #b3ab99 Inter 13
-    rect 52,717.54004 224x28 fill #1f1c0f radius 5
-    text "ui" @62,736.26904 #ece6d8 Inter 13
-    text "● 2" @248,735.1401 #ffd23f JetBrains Mono 10
-    text "updates" @62,766.26904 #b3ab99 Inter 13
-    text "usage" @62,796.26904 #b3ab99 Inter 13
-    text "voice" @62,826.26904 #b3ab99 Inter 13
-    text "whichkey" @62,856.26904 #b3ab99 Inter 13
-    text "● 1" @248,855.1401 #ffd23f JetBrains Mono 10
+    text "plugins" @62,406.269 #b3ab99 Inter 13
+    text "prompts" @62,436.269 #b3ab99 Inter 13
+    text "repos" @62,466.269 #b3ab99 Inter 13
+    text "review" @62,496.269 #b3ab99 Inter 13
+    text "sandbox" @62,526.26904 #b3ab99 Inter 13
+    text "secrets" @62,556.26904 #b3ab99 Inter 13
+    text "sessions" @62,586.26904 #b3ab99 Inter 13
+    text "sidebar" @62,616.26904 #b3ab99 Inter 13
+    text "stats" @62,646.26904 #b3ab99 Inter 13
+    text "terminal" @62,676.26904 #b3ab99 Inter 13
+    rect 52,687.54004 224x28 fill #1f1c0f radius 5
+    text "ui" @62,706.26904 #ece6d8 Inter 13
+    text "● 2" @248,705.1401 #ffd23f JetBrains Mono 10
+    text "updates" @62,736.26904 #b3ab99 Inter 13
+    text "usage" @62,766.26904 #b3ab99 Inter 13
+    text "voice" @62,796.26904 #b3ab99 Inter 13
+    text "whichkey" @62,826.26904 #b3ab99 Inter 13
+    text "● 1" @248,825.1401 #ffd23f JetBrains Mono 10
   pop
   rect 284,53 1x891 fill #24221d
   clip 285,53 1315x891 r 0
