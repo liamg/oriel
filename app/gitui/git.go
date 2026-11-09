@@ -3,6 +3,7 @@ package gitui
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -40,6 +41,7 @@ type Git struct {
 	parked    map[string]*parkedTree // the work trees the window has left, by root
 	parkOrder []string               // parked's roots, the longest left first
 	roots     map[string]string      // the root of each directory the window has been on: "" outside a repo
+	nests     map[string]bool        // by root and directory: whether each directory asked about is in a repo of its own under the window's
 	// watchers follow the window's work tree (WatchWindow); unwatch stops its status calling them.
 	watchers map[int]func(root string, paths []string)
 	nextW    int
@@ -300,7 +302,7 @@ func (g *Git) trees() []*gitTree {
 // tree is dir's work tree: the work dir's when dir is in it, else one whose root is looked for from the first ask.
 // Until its root is found it has no status.
 func (g *Git) tree(dir string) *gitTree {
-	if dir == "" || g.root() != "" && g.links.Within(dir, g.root()) || filepath.Clean(dir) == filepath.Clean(g.work) {
+	if dir == "" || g.root() != "" && g.links.Within(dir, g.root()) && !g.nested(dir) || filepath.Clean(dir) == filepath.Clean(g.work) {
 		return &g.gitTree
 	}
 	g.mu.Lock()
@@ -331,6 +333,31 @@ func (g *Git) tree(dir string) *gitTree {
 		g.h.Redraw()
 	}()
 	return t
+}
+
+// nested says whether dir is in a work tree of its own under the window's root: a .git between the two.
+func (g *Git) nested(dir string) bool {
+	dir, root := filepath.Clean(dir), filepath.Clean(g.root())
+	key := root + "\x00" + dir
+	g.mu.Lock()
+	n, ok := g.nests[key]
+	g.mu.Unlock()
+	if ok {
+		return n
+	}
+	for d := dir; d != root && kit.Inside(d, root); d = filepath.Dir(d) {
+		if _, err := os.Lstat(filepath.Join(d, ".git")); err == nil {
+			n = true
+			break
+		}
+	}
+	g.mu.Lock()
+	if g.nests == nil {
+		g.nests = map[string]bool{}
+	}
+	g.nests[key] = n
+	g.mu.Unlock()
+	return n
 }
 
 // holding is the work tree a path is in: one already found whose root holds it, else the work dir's.
