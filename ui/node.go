@@ -162,6 +162,10 @@ type Style struct {
 	// DefaultFocus marks where focus goes when what it's in opens or is activated (Ctx.FocusInto), or when an
 	// overlay over it closes and what had focus before is gone.
 	DefaultFocus bool
+	// FocusOnOpen takes keyboard focus to it (its DefaultFocus target, else itself) the frame it first appears, unless
+	// focus is on a higher layer; when it goes, focus goes back to what had it. It doesn't trap focus: a card that
+	// wants an answer now, over whatever was being typed in.
+	FocusOnOpen bool
 
 	// Accessibility (a11y.go): a node with a Role is in the accessibility tree; one without is transparent.
 	Role     Role

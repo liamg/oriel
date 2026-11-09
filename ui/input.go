@@ -161,12 +161,15 @@ const trailMax = 32
 // settleFocus moves focus where this frame asked, unless what has it is in a higher layer and still there. When what
 // had focus is gone and nothing asked, focus goes back to what held it before an overlay that closed, or else to the
 // default target of the nearest container still there.
-func (u *UI) settleFocus() {
+func (u *UI) settleFocus(prev map[ID]*elem) {
 	in := &u.in
 	u.noteFocus()
 	lost := in.focus != 0 && !u.alive(in.focus)
 	a := in.ask
 	in.ask = focusAsk{}
+	if o := u.justOpened(prev); o != nil && !a.set {
+		a = focusAsk{id: o.id, z: o.layer(), set: true, into: true}
+	}
 	r := in.request
 	_, built := u.byID[r.id]
 	if r.set && (r.touched != in.touched || !built && r.into) {
@@ -264,11 +267,43 @@ func (u *UI) applyFocus(a focusAsk, lost bool) bool {
 	if e, ok := u.byID[target]; ok && target != 0 {
 		z = max(z, e.layer())
 	}
-	if e, ok := u.byID[in.focus]; ok && !lost && in.focus != 0 && e.layer() > z {
+	if e, ok := u.byID[in.focus]; ok && !lost && in.focus != 0 && e.layer() > z && !u.openedHolds(in.focus) {
 		return false
 	}
 	in.focus, in.visible = target, false
 	return true
+}
+
+// justOpened is the FocusOnOpen node built this frame and not the last, on the highest layer; the opened set is kept
+// for restoreFocus.
+func (u *UI) justOpened(prev map[ID]*elem) *elem {
+	var best *elem
+	var opened map[ID]bool // nil, as nearly every frame has none
+	for id, e := range u.byID {
+		if !e.style.FocusOnOpen || e.style.Disabled {
+			continue
+		}
+		if opened == nil {
+			opened = map[ID]bool{}
+		}
+		opened[id] = true
+		if _, was := prev[id]; !was && (best == nil || e.layer() > best.layer()) {
+			best = e
+		}
+	}
+	u.wasOpened, u.opened = u.opened, opened
+	return best
+}
+
+// openedHolds says focus at id is in a FocusOnOpen node: it took focus as it appeared, without trapping it, so what
+// opens or asks for focus after takes it, on any layer.
+func (u *UI) openedHolds(id ID) bool {
+	for ; id != 0; id = u.parents[id] {
+		if u.opened[id] {
+			return true
+		}
+	}
+	return false
 }
 
 // restoreFocus finds focus a home after what had it went: what held it before, when it was on an overlay that's
@@ -278,7 +313,7 @@ func (u *UI) restoreFocus() {
 	gone := in.focus
 	in.focus, in.visible = 0, false
 	for id := gone; id != 0; id = u.parents[id] {
-		if u.overlays[id] {
+		if u.overlays[id] || u.wasOpened[id] {
 			if _, open := u.byID[id]; !open {
 				for i := len(in.trail) - 1; i >= 0; i-- {
 					if u.alive(in.trail[i]) {

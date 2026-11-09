@@ -70,6 +70,9 @@ type InboxAction struct {
 // CardPlace is where a card is drawn: stacked over the window (it says whose it is), or in the Inbox panel.
 type CardPlace struct {
 	Stacked bool
+	// TakeFocus is a card over the window that wants its answer now (Top): drawn as an action card it takes
+	// keyboard focus as it appears (widget.ActionCardOpts.TakeFocus), so its keys answer it over whatever had focus.
+	TakeFocus bool
 	// Dismiss takes the card off the stack: its ✕ and Escape. Nil where it can't be dismissed.
 	Dismiss func()
 }
