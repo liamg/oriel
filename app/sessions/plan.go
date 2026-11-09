@@ -373,6 +373,8 @@ func (x *Plan) docsView(c *ui.Ctx) {
 			if res.Changed || res.Activated >= 0 {
 				st.doc, st.picked = docs[st.docSel].name, true
 				st.focus = st.focus || res.Activated >= 0
+				// The doc picked is to be read now: the plan comes to the front, from behind whatever tab was there.
+				x.run("plan.open", registry.Args{"doc": docs[st.docSel].name})
 			}
 		}
 		c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
