@@ -82,3 +82,40 @@ func TestTopSignKeepsTheOthersInItsMenu(t *testing.T) {
 		t.Error("a top sign of none")
 	}
 }
+
+// A line's + (an OnHover sign) never takes the place of another sign, whatever its priority: it's in that one's menu.
+func TestAHoverSignGoesInAnotherSignsMenu(t *testing.T) {
+	plus := uireg.Decoration{Kind: uireg.Sign, Text: "+", Priority: 50, Command: "thread.new", Tooltip: "Comment on line 3", OnHover: true}
+	bp := uireg.Decoration{Kind: uireg.Sign, Text: "●", Priority: 10, Command: "debug.toggle"}
+	d, ok := uireg.TopSign([]uireg.Decoration{bp, plus})
+	if !ok || d.Text != "●" {
+		t.Fatalf("top sign %q, want the breakpoint's", d.Text)
+	}
+	if len(d.Menu) != 1 || d.Menu[0].Command != "thread.new" {
+		t.Errorf("menu %v, want the + in it", d.Menu)
+	}
+	if d, _ := uireg.TopSign([]uireg.Decoration{plus}); d.Text != "+" {
+		t.Errorf("alone, the top sign is %q", d.Text)
+	}
+}
+
+// One EveryLine sign stands for one on each line, however long the file: Decorate keeps it under EveryLine, and on a
+// line it runs with that line, the provider's own args left as they were.
+func TestAnEveryLineSignIsOnEachLine(t *testing.T) {
+	r := uireg.New()
+	buf := text.New([]byte("a\nb\nc\n"), text.Author{})
+	plus := uireg.Decoration{Kind: uireg.Sign, Line: uireg.EveryLine, Text: "+", Command: "thread.new", Args: map[string]any{"file": "/f"},
+		Tooltip: "Comment on line {line}"}
+	r.Decorations("p", uireg.DecorationFunc(func(uireg.DecorationCtx) []uireg.Decoration { return []uireg.Decoration{plus} }))
+	ds := r.Decorate(uireg.DecorationCtx{Window: "1", Path: "/f", Buffer: buf, Snap: buf.Snapshot(), Top: 1, Bottom: 3})
+	if len(ds) != 1 || len(ds[uireg.EveryLine]) != 1 {
+		t.Fatalf("decorations %v, want the one sign under EveryLine", ds)
+	}
+	on := ds[uireg.EveryLine][0].OnLine(2)
+	if on.Line != 2 || on.Args.Int("line") != 3 || on.Args.String("file") != "/f" || on.Tooltip != "Comment on line 3" {
+		t.Errorf("on line 2 (0-based): %+v", on)
+	}
+	if _, ok := plus.Args["line"]; ok {
+		t.Error("putting it on a line changed the provider's args")
+	}
+}

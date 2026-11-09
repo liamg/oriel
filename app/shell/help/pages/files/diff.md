@@ -46,7 +46,8 @@ The `?` at a hunk's left, or `?` on a selected line, asks for the code there to 
 ## Keys {#keys}
 
 `]h` and `[h` go between hunks, `j` and `k` between lines, `r` marks the hunk reviewed, `gc` opens a thread on the
-line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file.
+line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file. The pointer on
+a line shows a **+** at the left of its gutter that opens a thread on it too (see [Between the lines](agent/requests#inline)).
 
 {{keys "diff.*"}}
 

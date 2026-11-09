@@ -171,15 +171,15 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 			label = fmt.Sprintf("Push + raise all %d %ss", raisable, w.Short)
 		}
 		if kit.AllMerged(se, projectShips(ships)) {
-			if widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: kit.EndHelp, Disabled: waiting}) {
+			if widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: kit.EndHelp, Disabled: waiting, Why: stillReading}) {
 				x.run("session.end", registry.Args{"id": string(se.ID)})
 			}
 		} else if raisable > 0 {
-			if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: waiting}) {
+			if widget.Button(c, "raise", label, widget.ButtonOpts{Primary: true, Help: "git/ship#raise", Disabled: waiting, Why: stillReading}) {
 				x.run("ship.raise-all", nil)
 			}
 		} else if pushable > 0 {
-			if widget.Button(c, "push", "Push all", widget.ButtonOpts{Primary: true, Help: "git/ship#push", Disabled: waiting}) {
+			if widget.Button(c, "push", "Push all", widget.ButtonOpts{Primary: true, Help: "git/ship#push", Disabled: waiting, Why: stillReading}) {
 				x.run("ship.push-all", nil)
 			}
 		}
@@ -434,6 +434,27 @@ func (x *Ship) behind(c *ui.Ctx, se core.SessionState, s shipRead) {
 			}
 		}
 	}())
+}
+
+// Why a branch's steps can't run.
+const (
+	noOrigin     = "This repo has no origin to push to: add a remote first"
+	detached     = "Not on a branch: check one out, or make one, to push"
+	upToDate     = "Nothing to push: origin has every commit on this branch"
+	stillReading = "Still reading the projects' git and pull requests"
+)
+
+// cantPush is why a project's branch can't be pushed, if it can't.
+func cantPush(s shipRead) string {
+	switch {
+	case !s.Remote:
+		return noOrigin
+	case s.Branch == "":
+		return detached
+	case s.Pushed && len(s.Unpushed) == 0:
+		return upToDate
+	}
+	return ""
 }
 
 // pushLabel is Push, or Force push once a rebase has rewritten what origin has (gitx.Repo.Push leases it).

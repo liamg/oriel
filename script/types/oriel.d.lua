@@ -186,7 +186,7 @@ oriel.decor = {}
 ---@param name string
 function oriel.decor.changed(name) end
 
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, and menu = { { label, command, args } } is what a right-click on it offers). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).
 ---@param name string
 ---@param fn function
 function oriel.decor.provider(name, fn) end
