@@ -219,3 +219,35 @@ func TestGitPanelPushesACommitMadeAfterAPush(t *testing.T) {
 	git(t, blog, "commit", "-qam", "three")
 	shipSettle(s, t, "Push for the new commit", func() bool { return clickable(s, "Push") })
 }
+
+// A commit made from the panel is pushable as soon as the panel shows it: Push is there, enabled.
+func TestGitPanelPushesWhatItJustCommitted(t *testing.T) {
+	s, _, _, _, _ := gitPanelScene(t, func(dir string) {
+		writeFiles(t, dir, map[string]string{"post.md": "# Two\n"})
+	})
+	shipSettle(s, t, "the change", func() bool { return strings.Contains(s.Text(), "CHANGES · 1") })
+	s.TypeInto("Commit message", "docs: two")
+	s.ClickOn("Commit")
+	shipSettle(s, t, "the commit", func() bool { return strings.Contains(s.Text(), "TO PUSH · 1") && !strings.Contains(s.Text(), "Committing…") })
+	s.Quiet()
+	if !clickable(s, "Push") {
+		t.Errorf("Push isn't enabled after the commit:\n%s", s.Text())
+	}
+}
+
+// The same in a work session: its branch in a worktree, never pushed, committed from the project's Git panel, is
+// pushable as soon as the panel shows the commit.
+func TestAWorkSessionsCommitIsPushable(t *testing.T) {
+	s, _, _, se, _ := shipScene(t)
+	dir := shipDir(se, "search-api")
+	writeFiles(t, dir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() { _ = 1 }\n"})
+	s.Run("project.panel", registry.Args{"name": "git", "project": "search-api"})
+	shipSettle(s, t, "the change", func() bool { return strings.Contains(s.Text(), "CHANGES · 1") })
+	s.TypeInto("Commit message", "feat: one")
+	s.ClickOn("Commit")
+	shipSettle(s, t, "the commit", func() bool { return strings.Contains(s.Text(), "TO PUSH · 1") && !strings.Contains(s.Text(), "Committing…") })
+	s.Quiet()
+	if !clickable(s, "Push") {
+		t.Errorf("Push isn't enabled after the commit:\n%s", s.Text())
+	}
+}
