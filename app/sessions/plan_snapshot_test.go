@@ -41,7 +41,7 @@ func planScene(t *testing.T) *apptest.Scene {
 	pricing, billing := filepath.Join(t.TempDir(), "pricing"), filepath.Join(t.TempDir(), "billing-ui")
 	os.MkdirAll(pricing, 0o755)
 	os.MkdirAll(billing, 0o755)
-	s := apptest.New(t, apptest.Options{WorkDir: pricing})
+	s := apptest.New(t, apptest.Options{WorkDir: pricing, ScriptedFiles: true})
 	s.Now = time.Date(2026, 10, 13, 14, 30, 0, 0, time.UTC)
 	ago := func(d time.Duration) time.Time { return s.Now.Add(-d) }
 	liam := "Liam Galvin"
@@ -245,4 +245,62 @@ func TestAPlanDocClickedComesToTheFront(t *testing.T) {
 		t.Errorf("a click on api.md left the plan behind; in front: %v", s.Host().Layout().Shown())
 	}
 	s.WantFrame("pricing.Round(amount, mode)")
+}
+
+// A line with a resolved thread on it takes a new one: clicking it opens the composer, beside the folded old one.
+func TestAResolvedThreadsLineTakesANewThread(t *testing.T) {
+	s := planScene(t)
+	s.Run("plan.open", nil)
+	s.SettleReads()
+	s.Quiet()
+	s.WantFrame("RESOLVED")
+	s.ClickText("Currency precision comes from")
+	s.Quiet()
+	s.WantFrame("New thread", "· L22")
+}
+
+// A doc that got shorter than its threads' lines still takes a new thread on any line it has: the threads past its
+// end don't stop the composer from opening.
+func TestAShortenedDocStillTakesNewThreads(t *testing.T) {
+	s := planScene(t)
+	se, _ := s.Store().State().Session("pricing-rounding")
+	os.WriteFile(filepath.Join(se.Snapshot().Dir, "PLAN.md"), []byte("# Round invoice lines\n\nKeep it short.\n"), 0o644)
+	s.Run("plan.open", nil)
+	s.SettleReads()
+	s.Quiet()
+	s.WantFrame("Keep it short.")
+	s.ClickText("Keep it short.")
+	s.Quiet()
+	s.WantFrame("New thread")
+	for _, n := range s.Store().State().Notifications {
+		t.Logf("notice: %s %s", n.Title, n.Text)
+	}
+}
+
+// A thread being opened on a line stays open when the doc changes under it (the agent edits it, so it's read
+// again), and a click on the same line after still opens one: the composer is never lost to a doc read again.
+func TestAComposerOutlivesTheDocBeingReadAgain(t *testing.T) {
+	s := planScene(t)
+	se, _ := s.Store().State().Session("pricing-rounding")
+	plan := filepath.Join(se.Snapshot().Dir, "PLAN.md")
+	s.Run("plan.open", nil)
+	s.SettleReads()
+	s.Quiet()
+	s.ClickText("Round each line in minor units, ties to even.")
+	s.Quiet()
+	s.WantFrame("New thread", "· L14")
+
+	s.WriteFiles(filepath.Dir(plan), map[string]string{"PLAN.md": strings.Replace(mockupPlan, "## Goal", "## Goal\n\nOne more line.", 1)})
+	s.SettleReads()
+	s.Quiet()
+	s.WantFrame("One more line.", "New thread", "· L16")
+
+	s.Type("Esc")
+	s.Quiet()
+	s.WriteFiles(filepath.Dir(plan), map[string]string{"PLAN.md": mockupPlan})
+	s.SettleReads()
+	s.Quiet()
+	s.ClickText("Round each line in minor units, ties to even.")
+	s.Quiet()
+	s.WantFrame("New thread", "· L14")
 }

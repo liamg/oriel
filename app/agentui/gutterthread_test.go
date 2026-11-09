@@ -9,6 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render/headless"
 )
 
 // The pointer on a line of a file shows a + in its gutter; clicking it opens a thread on that line, between the lines,
@@ -41,4 +42,14 @@ func TestAPlusInTheGutterOpensAThreadOnTheLine(t *testing.T) {
 	if th.Anchor == nil || th.Anchor.Line != 4 {
 		t.Errorf("the thread is on %+v, want line 4", th.Anchor)
 	}
+
+	// Line 4 has its thread's marker in the gutter now, which opens the thread. The pointer on the line still shows
+	// the + (over the line's number), and the marker stays: either can be clicked, and the + opens another thread.
+	r.Hover("package", "package")
+	r.Hover("scaled", "scaled")
+	r.WaitAccess("line 4's + beside its thread's marker", func(r *apptest.Window) bool {
+		return r.Access("Comment on line 4") != nil && r.Access(th.Heading()) != nil
+	})
+	r.ClickAccess("Comment on line 4")
+	r.Latest("a second thread being opened on line 4", func(f headless.Frame) bool { return strings.Contains(f.Text(), "New thread") })
 }

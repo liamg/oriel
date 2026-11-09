@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/internal/isolate"
 )
 
@@ -95,7 +96,7 @@ func TestTreeStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := &treeFake{backend: b}
-	w := newWatcher(f)
+	w := newWatcher(f, clock.Real())
 	t.Cleanup(func() { w.Close() })
 	skip := func(rel string) bool { return rel == ".git/objects" || filepath.Base(rel) == "node_modules" }
 	if err := w.AddTree(root, skip); err != nil {
@@ -187,7 +188,7 @@ func TestTreeStreamRootRemoved(t *testing.T) {
 	write(t, filepath.Join(root, "a.txt"), "x")
 	b := newRawScript()
 	f := &treeFake{backend: b}
-	w := newWatcher(f)
+	w := newWatcher(f, clock.Real())
 	t.Cleanup(func() { w.Close() })
 	if err := w.AddTree(root, nil); err != nil {
 		t.Fatal(err)
@@ -226,7 +227,7 @@ func TestTreeRootMadeAsTheWatcherClosesStartsNoStream(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "lua")
 	b := newRawScript()
 	f := &treeFake{backend: b}
-	w := newWatcher(f)
+	w := newWatcher(f, clock.Real())
 	if err := w.AddTree(root, nil); err != nil {
 		t.Fatal(err)
 	}

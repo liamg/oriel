@@ -281,6 +281,7 @@ func (c *Cache[K, V]) changes(w *fswatch.Watcher) {
 				c.unwatched = true
 			}
 			c.changed(ev.Path)
+			ev.Done() // taken in: a test's scripted change waits for it
 		})
 		c.h.Redraw()
 	}

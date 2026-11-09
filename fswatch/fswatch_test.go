@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/isolate" // TMPDIR as FSEvents names it
 )
 
@@ -92,20 +93,45 @@ func TestFileSiblingsAreQuiet(t *testing.T) {
 	}
 }
 
+// clocked is a watcher that sees only the changes handed to it, gathering them on c.
+func clocked(t *testing.T, c *clocktest.Fake) *Watcher {
+	t.Helper()
+	w := newWatcher(&scripted{done: make(chan struct{})}, c)
+	t.Cleanup(func() { w.Close() })
+	return w
+}
+
+// A burst of changes, however long it takes to arrive, is one event per path once Delay has passed since its first.
 func TestBurstIsCoalesced(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "log.jsonl")
 	write(t, f, "")
-	w := start(t)
+	c := clocktest.New(time.Unix(0, 0))
+	w := clocked(t, c)
 	if err := w.Add(f); err != nil {
 		t.Fatal(err)
 	}
-	for range 200 {
+	for i := range 200 {
 		write(t, f, "line\n")
+		w.handle([]raw{{path: f, op: opChanged}})
+		if i == 100 {
+			c.Advance(Delay - time.Millisecond)
+		}
 	}
-	got := quiet(w, 500*time.Millisecond)
-	if len(got) == 0 || len(got) > 3 {
-		t.Fatalf("200 writes gave %d events, want 1 to 3", len(got))
+	if len(w.Events()) != 0 {
+		t.Fatal("an event before Delay had passed")
+	}
+	c.Advance(time.Millisecond)
+	if ev := <-w.Events(); ev.Path != f {
+		t.Fatalf("got %s, want %s", ev.Path, f)
+	}
+	if c.Waiting() != 0 {
+		t.Fatal("200 changes in one Delay started a second burst")
+	}
+	w.handle([]raw{{path: f, op: opChanged}})
+	c.Advance(Delay)
+	if ev := <-w.Events(); ev.Path != f {
+		t.Fatalf("a change after the burst: got %s, want %s", ev.Path, f)
 	}
 }
 

@@ -250,3 +250,43 @@ func TestStartWorkModelsOptional(t *testing.T) {
 	w.TypeKeys("<D-CR>")
 	w.WaitGone("START WORK")
 }
+
+// A line whose thread the agent resolved takes a new thread: clicking it again opens the composer.
+func TestAResolvedLineTakesANewThreadInTheWindow(t *testing.T) {
+	w, a, _ := planSession(t)
+	w.WaitFrame("the plan view, waiting for its docs", func(s string) bool { return apptest.HasAll(s, "PLAN DOCS", "READINESS") })
+	se := planNow(t, w)
+	doc := filepath.Join(se.Dir, "PLAN.md")
+	a.Emit(agent.TurnStart{})
+	if err := os.WriteFile(doc, []byte(planMarkdown), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a.Emit(agent.ToolCall{ID: "w1", Tool: "Write", Input: rig.ToolInput(map[string]string{"file_path": doc})})
+	a.Emit(agent.ToolResult{ID: "w1", Diff: &core.FileDiff{Path: doc, Added: 11}})
+	a.Call(t, "reply", map[string]any{"thread": string(se.PlanThread()), "body": "Ready to annotate.", "resolve": true})
+	a.Emit(agent.TurnEnd{})
+	w.WaitText("Round each line in minor units, ties to even.")
+
+	w.ClickText("Round each line in minor units, ties to even.")
+	w.WaitText("New thread")
+	w.TypeText("Is half-even what finance wants?")
+	w.WaitText("Is half-even what finance wants?")
+	w.TypeKeys("<CR>")
+	a.WaitSent(t)
+	w.WaitGone("New thread")
+	var tid core.ThreadID
+	for _, th := range planNow(t, w).Threads {
+		if th.Anchor != nil {
+			tid = th.ID
+		}
+	}
+	a.Emit(agent.TurnStart{})
+	a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Yes: Stripe reconciles half-even.", "resolve": true})
+	a.Emit(agent.TurnEnd{})
+	w.Latest("the thread resolved", func(f headless.Frame) bool {
+		return strings.Contains(f.Text(), "RESOLVED") && !strings.Contains(f.Text(), "New thread")
+	})
+
+	w.ClickText("Round each line in minor units, ties to even.")
+	w.Latest("a new thread on the line", func(f headless.Frame) bool { return strings.Contains(f.Text(), "New thread") })
+}

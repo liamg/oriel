@@ -32,8 +32,26 @@ type inlineNew struct {
 	anchor      text.AnchorID
 	draft       string
 	focus       bool
-	toAuthor    bool // a comment for the pull request's author, not a question for the agent
-	review      bool // the session is a review: it can be either
+	toAuthor    bool   // a comment for the pull request's author, not a question for the agent
+	review      bool   // the session is a review: it can be either
+	window      string // the window it was opened in, when it was asked from one: it follows that window's buffer
+}
+
+// follow moves the composer to the buffer its window shows its file in now: the file was read again (the agent edited
+// it) into a new one. Its line is the one that still reads as it did, nearest where it was; its range moves with it.
+func (n *inlineNew) follow(ctx uireg.DecorationCtx) {
+	was := n.line
+	if off, ok := n.buf.Resolve(n.anchor); ok {
+		snap := n.buf.Snapshot()
+		was = snap.PosAt(min(off, snap.Len())).Line
+	}
+	line := anchoredLine(strings.Split(ctx.Snap.String(), "\n"), &core.Anchor{Line: was + 1, Text: n.text})
+	if n.end >= 0 {
+		n.end += line - was
+	}
+	n.release()
+	n.line, n.buf = line, ctx.Buffer
+	n.anchor = n.buf.Anchor(ctx.Snap.LineStart(line), text.Left)
 }
 
 func (n *inlineNew) release() {
@@ -78,7 +96,7 @@ func anchoredLine(lines []string, a *core.Anchor) int {
 func (x *Requests) newInline(a registry.Args) error {
 	st := x.state("")
 	n := &inlineNew{path: a.String("file"), line: a.Int("line") - 1, end: a.Int("end_line") - 1, col: a.Int("col"), endCol: a.Int("end_col"),
-		focus: true}
+		focus: true, window: a.String("window")}
 	if se, ok := x.front(); ok && kit.ReviewedPR(x.h, se) != "" {
 		n.review, n.toAuthor = true, a.String("to") != "agent"
 	}
@@ -213,6 +231,9 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 		x.bubbles[ctx.Window] = bubbles
 	}
 	if n := st.inline; n != nil && filepath.Clean(n.path) == filepath.Clean(ctx.Path) {
+		if n.buf != nil && ctx.Buffer != nil && n.buf != ctx.Buffer && n.window != "" && n.window == ctx.Window {
+			n.follow(ctx)
+		}
 		if n.buf == nil && ctx.Buffer != nil && n.line < ctx.Snap.Lines() {
 			n.buf, n.text = ctx.Buffer, string(ctx.Snap.Line(n.line))
 			n.anchor = n.buf.Anchor(ctx.Snap.LineStart(n.line), text.Left)

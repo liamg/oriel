@@ -10,13 +10,27 @@ import (
 )
 
 // FilesChanged tells the app's file watchers the paths changed, as the OS would once they'd settled, and returns
-// once every watcher has taken them in. The scene needs ScriptedFiles.
+// once every watcher has taken them in. The scene's loop runs meanwhile: a watcher that hands its events to the loop
+// takes them in there. The scene needs ScriptedFiles.
 func (s *Scene) FilesChanged(paths ...string) {
 	s.T.Helper()
 	if s.files == nil {
 		s.T.Fatal("FilesChanged needs a scene with ScriptedFiles")
 	}
-	s.files.Change(paths...)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		s.files.Change(paths...)
+	}()
+	s.Until("the file watchers taking the change in", func() bool {
+		s.RunQueued()
+		select {
+		case <-done:
+			return true
+		default:
+			return false
+		}
+	})
 }
 
 // WriteFiles writes files under dir, by slash path, and tells the app's file watchers (FilesChanged).

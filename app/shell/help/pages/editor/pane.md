@@ -169,8 +169,8 @@ to the column; click it to zoom it, with the document's images. **Edit** (or `�
 
 ## Threads in a file {#threads}
 
-The pointer on a line shows a **+** in its gutter (where the line has no other sign; else it's in that sign's
-right-click menu): a click opens a thread on the line, as `ga` does on the cursor's ([Between the
+The pointer on a line shows a **+** in its gutter (over the line's number where the line has another sign, which
+stays there to be clicked too): a click opens a thread on the line, even one that has threads already, as `ga` does on the cursor's ([Between the
 lines](agent/requests#inline)). A file's threads open between its lines. `␣R` (`threads.toggle`), or the 💬 button with their count, hides them
 behind speech bubbles in the gutter, coloured by the thread's state; `editor.threads = "hidden"` opens files that way.
 Hovering a bubble shows its threads without taking the keys; a click, or `⏎` on its line, shows them again at that
