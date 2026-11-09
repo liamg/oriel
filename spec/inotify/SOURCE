@@ -1,0 +1,4 @@
+source: https://git.kernel.org/pub/scm/docs/man-pages/man-pages.git
+ref: man-pages-6.19
+path: man/man7/inotify.7 (roff, as installed)
+license: Linux-man-pages-copyleft, as its header states

@@ -145,14 +145,43 @@ func TestTreeStream(t *testing.T) {
 	}
 }
 
+// rawScript is a backend whose OS events are only the ones a test hands it, taken at once on the test's goroutine:
+// what the Watcher does with an event, not when the OS sends it.
+type rawScript struct {
+	scripted
+	mu     sync.Mutex
+	handle func([]raw)
+	ready  chan struct{}
+}
+
+func newRawScript() *rawScript {
+	return &rawScript{scripted: scripted{done: make(chan struct{})}, ready: make(chan struct{})}
+}
+
+func (b *rawScript) run(handle func([]raw)) {
+	b.mu.Lock()
+	b.handle = handle
+	b.mu.Unlock()
+	close(b.ready)
+	<-b.done
+}
+
+// os hands the Watcher evs as the OS would, once it's listening.
+func (b *rawScript) os(evs ...raw) {
+	<-b.ready
+	b.mu.Lock()
+	h := b.handle
+	b.mu.Unlock()
+	h(evs)
+}
+
+// A tree whose root goes stops its stream, says the root changed, and starts a stream again once the root is back,
+// with what it holds.
 func TestTreeStreamRootRemoved(t *testing.T) {
 	parent := t.TempDir()
 	root := filepath.Join(parent, "repo")
 	write(t, filepath.Join(root, "a.txt"), "x")
-	b, err := newBackend()
-	if err != nil {
-		t.Fatal(err)
-	}
+	b := newRawScript()
 	f := &treeFake{backend: b}
 	w := newWatcher(f)
 	t.Cleanup(func() { w.Close() })
@@ -162,25 +191,26 @@ func TestTreeStreamRootRemoved(t *testing.T) {
 	if err := os.RemoveAll(root); err != nil {
 		t.Fatal(err)
 	}
-	expect(t, w, root)
-	quiet(w, 200*time.Millisecond)
+	b.os(raw{path: root, dir: true, op: opRemoved}) // the root's own watch: IN_DELETE_SELF, or kqueue's NOTE_DELETE
 	f.mu.Lock()
 	stops := f.stops
 	f.mu.Unlock()
 	if stops != 1 {
 		t.Fatalf("stream stopped %d times after its root went, want 1", stops)
 	}
+	expect(t, w, root)
 
 	tmp := filepath.Join(parent, "tmp")
 	write(t, filepath.Join(tmp, "b.txt"), "x")
 	if err := os.Rename(tmp, root); err != nil {
 		t.Fatal(err)
 	}
-	expect(t, w, filepath.Join(root, "b.txt"))
+	b.os(raw{path: root, dir: true, op: opCreated}) // the parent's watch, which the Watcher fell back to
 	f.mu.Lock()
-	again := f.root
+	again, stops := f.root, f.stops
 	f.mu.Unlock()
-	if again != root {
-		t.Fatalf("no new stream once the root came back: %q", again)
+	if again != root || stops != 1 {
+		t.Fatalf("once the root came back: stream on %q, stopped %d times; want a new one on %q, stopped once", again, stops, root)
 	}
+	expect(t, w, filepath.Join(root, "b.txt"))
 }
