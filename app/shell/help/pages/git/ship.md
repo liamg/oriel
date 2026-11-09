@@ -71,6 +71,10 @@ The commits origin hasn't got. **Push** pushes the session's branch, and only it
 branch it's on now. Once every project's PR is open, the header offers **Push all** in place of a raise, for any with
 commits to push (`ship.push-all`).
 
+A step that can't run says why when the pointer rests on it: Push with no origin to push to, when not on a branch,
+or with nothing origin hasn't got; any step while another of the project's runs. Every disabled button with a
+reason shows it the same way (`widget.ButtonOpts.Why`).
+
 After a rebase, the branch has rewritten commits origin already has ("n rewritten"), and Push reads **Force push**.
 It replaces origin's branch with a lease: only while origin still has what you last fetched and rebased from. If
 someone else pushed to the branch since, the push is refused and nothing of theirs is lost: rebase again, then push.
