@@ -28,7 +28,7 @@ import (
 // this PR" or "where's that test I was working on?", minimised to its face on the rail with a count of what's unread.
 // Its agent is a utility agent (Claude in its PTY with the mod, never claude -p),
 // offered only the agent tools for "assistant": the built-ins here, and any another feature or a plugin adds (the
-// tickets' my_tickets, mission control's). An act waits for your yes on a confirmation card (registry.AgentOwner), and what its tools did
+// tickets' my_tickets). An act waits for your yes on a confirmation card (registry.AgentOwner), and what its tools did
 // can be undone for a few seconds.
 const (
 	AssistantView     = kit.OverlayPrefix + "assistant"
@@ -427,8 +427,6 @@ func assistantProgress(tool string) string {
 		return "checking your jobs…"
 	case "usage":
 		return "checking your usage…"
-	case "mission_control":
-		return "checking mission control…"
 	case "changed_files":
 		return "looking at what you changed…"
 	case "focus_file":

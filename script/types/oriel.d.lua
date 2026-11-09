@@ -241,7 +241,7 @@ function oriel.http.request(spec, fn) end
 ---@class oriel.hud
 oriel.hud = {}
 
---- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), hud.today, or mission (mission control's strip). opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+--- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 ---@param name string
 ---@param opts table
 ---@param build any
@@ -378,7 +378,7 @@ function oriel.secret.has(name) end
 ---@class oriel.session
 oriel.session = {}
 
---- Chips for every session's mission-control card, after its kind's: fn(session) returns a list of texts or { text, help, link }.
+--- Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }.
 ---@param name string
 ---@param fn function
 function oriel.session.chips(name, fn) end

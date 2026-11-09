@@ -1,50 +1,37 @@
 package ghostty
 
 import (
-	"slices"
-	"sync"
+	goruntime "runtime"
+	"sync/atomic"
 	"testing"
-	"time"
 )
 
-// A reader (the frame drawing the grid) waits on a 64KB feed for a slice of it, not the whole.
-func TestBigWritesDontHoldReadersBack(t *testing.T) {
-	if raceEnabled || testing.Short() {
-		t.Skip("timing")
-	}
+// A reader (the frame drawing the grid) waiting on a big write gets the terminal between two of its slices, not
+// once the whole write is in: checked by the order the two finish in, recorded under the terminal's lock.
+func TestAWaitingReaderGetsInBeforeABigWriteEnds(t *testing.T) {
 	e := mustNew(t, 120, 40, Options{})
-	feed := mixedStream(64 << 10)
-	start := time.Now()
-	e.Write(feed)
-	whole := time.Since(start)
-
-	stop := make(chan struct{})
-	var wg sync.WaitGroup
-	wg.Add(1)
+	feed := mixedStream(16 * slice)
+	var seq, read, wrote atomic.Int64
+	readDone, writeDone := make(chan struct{}), make(chan struct{})
+	e.mu.Lock() // the writer and the reader both queue behind this
 	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case <-stop:
-				return
-			default:
-				e.Write(feed)
-			}
-		}
+		defer close(writeDone)
+		e.Write(feed)
+		wrote.Store(seq.Add(1))
 	}()
-	var waits []time.Duration
-	for end := time.Now().Add(300 * time.Millisecond); time.Now().Before(end); {
-		t0 := time.Now()
-		e.Size()
-		waits = append(waits, time.Since(t0))
-		time.Sleep(200 * time.Microsecond)
+	go func() {
+		defer close(readDone)
+		e.lock()
+		read.Store(seq.Add(1)) // under the lock: the writer can't move meanwhile
+		e.mu.Unlock()
+	}()
+	for e.waiting.Load() == 0 {
+		goruntime.Gosched() // until the reader is queued
 	}
-	close(stop)
-	wg.Wait()
-	slices.Sort(waits)
-	p50, p99 := waits[len(waits)/2], waits[len(waits)*99/100]
-	t.Logf("a 64KB feed takes %v; a reader waited %v typically, %v at the 99th percentile", whole, p50, p99)
-	if p50 > whole/10 {
-		t.Fatalf("a reader typically waited %v behind a %v feed", p50, whole)
+	e.mu.Unlock()
+	<-readDone
+	<-writeDone
+	if read.Load() > wrote.Load() {
+		t.Errorf("the reader got in only once the whole %d-slice write was done", len(feed)/slice)
 	}
 }

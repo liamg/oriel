@@ -33,16 +33,26 @@ type Event struct {
 	Path string
 	// Err is set when the watch under Path stopped working (the OS ran out of watches); poll it from now on.
 	Err error
+
+	done chan struct{} // a Script's, waiting for Done
+}
+
+// Done says the event has been acted on. A Script's Change waits for it; the OS's events don't.
+func (e Event) Done() {
+	if e.done != nil {
+		close(e.done)
+	}
 }
 
 // Watcher watches paths and sends what changed on Events.
 type Watcher struct {
-	b    backend
-	out  chan Event
-	kick chan struct{}
-	done chan struct{}
-	wg   sync.WaitGroup
-	once sync.Once
+	b     backend
+	out   chan Event
+	kick  chan struct{}
+	done  chan struct{}
+	wg    sync.WaitGroup
+	once  sync.Once
+	sends sync.Mutex // a Script's send, so out isn't closed under it
 
 	mu      sync.Mutex
 	closed  bool
@@ -192,7 +202,9 @@ func (w *Watcher) Close() error {
 		close(w.done)
 		err = w.b.close()
 		w.wg.Wait()
+		w.sends.Lock()
 		close(w.out)
+		w.sends.Unlock()
 	})
 	return err
 }

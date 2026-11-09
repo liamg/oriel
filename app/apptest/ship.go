@@ -14,7 +14,8 @@ import (
 )
 
 // ShipScene is the Ship page's session: search-api and web-dashboard on GitHub (a fake), a work session on both with the fake
-// agent, and the window on it; more changes the app's config besides. It answers the host, the fake GitHub, the
+// agent, and the window on it; more changes the app's config besides. Its file watchers see only what the test says
+// changed (ScriptedFiles): Scene.WriteFiles writes and says so. It answers the host, the fake GitHub, the
 // session and each project's upstream clone.
 func ShipScene(t *testing.T, more ...func(*Config)) (s *Scene, lw *rig.Host, hub *ghtest.Server, se core.SessionState, ups map[string]string) {
 	t.Helper()
@@ -37,7 +38,7 @@ func ShipSceneWith(t *testing.T, setup func(*Scene), more ...func(*Config)) (s *
 		".github/pull_request_template.md": "## What\n\n## Why\n",
 	})
 	web, webUp := rig.ShipRepo(t, "web-dashboard", map[string]string{"src/usage.ts": "export const usage = 1\n"})
-	s = New(t, Options{Config: func(cfg *Config) {
+	s = New(t, Options{ScriptedFiles: true, Config: func(cfg *Config) {
 		Connect(lw.W)(cfg)
 		for _, m := range more {
 			m(cfg)

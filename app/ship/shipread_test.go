@@ -22,7 +22,7 @@ func TestAChangeReadsOnlyItsProject(t *testing.T) {
 	})
 	shipQuiet(s)
 	whole := x.WholeReads(se.ID)
-	writeFiles(t, shipDir(se, "search-api"), map[string]string{"internal/changed.go": "package internal\n"})
+	s.WriteFiles(shipDir(se, "search-api"), map[string]string{"internal/changed.go": "package internal\n"})
 	shipSettle(s, t, "search-api read again with the new file", func() bool {
 		api, _ := x.ShipOf(se.ID, "search-api")
 		return slices.ContainsFunc(api.Files, func(f host.ShipFile) bool { return f.Path == "internal/changed.go" })

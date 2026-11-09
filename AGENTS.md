@@ -67,6 +67,10 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
 - **Test-first, with sources.** Behaviour tests cite a vendored spec with a verbatim quote, and vim expectations are
   checked against headless nvim (`make oracle`). Never write an expected value from memory, and never weaken
   a failing test to get to green.
+- **No test is racy or timer dependent.** A test waits for the work (`Quiet`, `Idle`, `registry.Busy`) or moves a
+  clock of its own (`internal/clock/clocktest`); what's timed takes an `internal/clock.Clock`. What only a wall clock
+  can measure (latency, a while left idle) goes behind the `perf` build tag and runs with `make perf`, never in
+  `go test ./...` (`docs/architecture.md`, "Testing").
 - **Test the way it's used.** Drive a control through the toolkit (click it, press keys on it, with timeouts on and
   over other overlays), not by setting the state it would set; a test that turns off a timeout or opens one view
   alone misses the bugs people hit.

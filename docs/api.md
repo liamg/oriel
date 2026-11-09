@@ -72,7 +72,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.hud
 
-- `oriel.hud.indicator(name, opts, build)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), hud.today, or mission (mission control's strip). opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+- `oriel.hud.indicator(name, opts, build)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 - `oriel.hud.refresh(name)` (`ui`): Builds the indicator name again now.
 - `oriel.hud.set(name, nodes)` (`ui`): Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes.
 
@@ -130,7 +130,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.session
 
-- `oriel.session.chips(name, fn)` (`session.control`): Chips for every session's mission-control card, after its kind's: fn(session) returns a list of texts or { text, help, link }.
+- `oriel.session.chips(name, fn)` (`session.control`): Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }.
 - `oriel.session.done(name, fn)` (`session.control`): Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to end it.
 - `oriel.session.keep(id, key, value)` (`session.control`): Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON.
 - `oriel.session.kept(id, key)` (`session.control`): What oriel.session.keep last kept for a session (the one in front when id is empty) under key, or nil.

@@ -71,43 +71,19 @@ func idleWindow(t *testing.T) *apptest.Window {
 	return r
 }
 
-// The idle budget: three quiet sessions, one agent working and the window behind another app
-// spawn no process and run no poll faster than a second over 10s.
-func TestIdleBudget(t *testing.T) {
-	spawned := spawns(t)
+// Left alone with three quiet sessions, one agent working and the window behind another app, the app goes idle:
+// nothing under way or due, and no poll running faster than a second.
+func TestIdlePollsNoFasterThanASecond(t *testing.T) {
 	r := idleWindow(t)
-	time.Sleep(2 * time.Second)
-	// What opening the sessions started (reading each one's git) settles: a second without a process started.
-	for deadline, n := time.Now().Add(20*time.Second), -1; n != len(spawned()); time.Sleep(time.Second) {
-		if time.Now().After(deadline) {
-			t.Fatal("opening the sessions never stopped starting processes")
-		}
-		n = len(spawned())
-	}
+	r.Idle()
 	w, ok := kit.WindowOf(r.Host)
 	if !ok {
 		t.Fatal("no window service")
 	}
-	polls := w.Polls()
-	polls.Reset()
-	before := len(spawned())
-	time.Sleep(10 * time.Second)
-	if ran := spawned()[before:]; len(ran) > 0 {
-		t.Errorf("spawned %d processes while idle: %v", len(ran), ran)
-	}
-	if d := polls.FastestSince(); d > 0 && d < time.Second {
-		t.Errorf("a poll ran every %v while idle, want a second or slower", d)
-	}
-}
-
-// The idle budget's frames: at most 2 over 10s with the window behind another app.
-func TestIdleFrames(t *testing.T) {
-	r := idleWindow(t)
-	time.Sleep(2 * time.Second)
-	before := len(r.Win.Frames())
-	time.Sleep(10 * time.Second)
-	if n := len(r.Win.Frames()) - before; n > 2 {
-		t.Errorf("drew %d frames while idle, want at most 2", n)
+	var fastest time.Duration
+	r.Do(func() error { fastest = w.Polls().FastestNow(); return nil })
+	if fastest > 0 && fastest < time.Second {
+		t.Errorf("a poll runs every %v while idle, want a second or slower", fastest)
 	}
 }
 

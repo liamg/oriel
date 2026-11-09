@@ -1,8 +1,6 @@
 package apptest
 
 import (
-	"time"
-
 	"context"
 	"fmt"
 	"path/filepath"
@@ -69,22 +67,10 @@ func ExplainScene(t *testing.T) (*Scene, *FakeExplainer, string) {
 	return s, f, path
 }
 
-// ExplainSettle frames until the units, the base and the answers worked out off the loop are in.
+// ExplainSettle frames until the units, the base and the answers worked out off the loop are in (Quiet).
 func (s *Scene) ExplainSettle() {
-	e := PluginOf[*explain.Plugin](s, "explain")
-	for i, deadline := 0, time.Now().Add(10*time.Second); i < 4 || e.Busy(); i++ {
-		s.Frame()
-		s.WaitGit()
-		e.Wait()
-		s.RunQueued()
-		if time.Now().After(deadline) {
-			s.T.Fatal("explain never settled")
-		}
-		if i >= 4 {
-			time.Sleep(5 * time.Millisecond) // units held back while it was typed in
-		}
-	}
-	s.Frame()
+	s.T.Helper()
+	s.Quiet()
 }
 
 // ExplainKeys presses keys as the window does, through the keymaps and key layers, settling after each.

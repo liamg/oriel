@@ -87,7 +87,7 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 	ts.SetFontDirs(dirs)
 	sh, cancel := newShell(cfg, builtins, func() {})
 	sh.desktop = cfg.Desktop
-	sh.launchDone = true // a window that's been up a while: mission control doesn't open as at launch
+	sh.launchDone = true // a window that's been up a while: nothing comes back as at launch
 	unfont := contributeFonts(cfg.Registry, ts, func() {})
 	h := &Headless{sh: sh, size: o.Size, cancel: func() { cancel(); unfont() }}
 	last, err := sh.activate(context.Background(), &h.plugins)
@@ -187,11 +187,7 @@ func (h *Headless) List() *render.List { return h.list }
 
 // RunQueued runs the work plugins handed the loop (Host.Do).
 // Queued says the loop has been handed work it hasn't run.
-func (h *Headless) Queued() bool {
-	h.sh.todoMu.Lock()
-	defer h.sh.todoMu.Unlock()
-	return len(h.sh.todo) > 0
-}
+func (h *Headless) Queued() bool { return h.sh.queued() }
 
 func (h *Headless) RunQueued() {
 	defer fsx.Enter()()

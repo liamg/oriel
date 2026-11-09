@@ -62,7 +62,7 @@ type Inbox struct {
 	rows      map[string]*inboxRow // by card key
 	order     []string             // card keys, as first seen
 	dismissed map[string]bool      // taken off the stack; they wait on in the panel
-	inline    map[string]bool      // shown by a surface of their own (mission control), so not stacked
+	inline    map[string]bool      // shown by a surface of their own, so not stacked
 	filter    int
 	sel       string // the panel's selected row, its card open under it
 	list      kit.Scroll
@@ -233,7 +233,7 @@ func (x *Inbox) isInline(k string) bool {
 	return x.inline[k]
 }
 
-// showInline keeps the cards keyed in keys off the stack while a surface draws them itself, as mission control does;
+// showInline keeps the cards keyed in keys off the stack while a surface draws them itself;
 // nil gives them back. A banner card stays at the top whatever shows it.
 func (x *Inbox) showInline(keys map[string]bool) {
 	x.mu.Lock()

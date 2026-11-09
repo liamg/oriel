@@ -109,6 +109,8 @@ func (x *Ship) localSources(se core.SessionState) []watch.Source[time.Time] {
 		var looked atomic.Bool
 		out = append(out, watch.Source[time.Time]{Key: "ship.git:" + string(id) + ":" + p.Dir, Deps: []watch.AnySource{t.Refs(), t.Work()},
 			Read: func(watch.Reader) (time.Time, error) {
+				x.busy.Add(1) // a read the watch runs is work under way like any other (Busy)
+				defer x.busy.Done()
 				x.readProject(id, name, !looked.Swap(true))
 				return time.Now(), nil
 			}})
@@ -125,6 +127,8 @@ func (x *Ship) prSource(id core.SessionID) watch.Source[time.Time] {
 		}
 		return x.budget.Interval(maxAge)
 	}, Read: func(r watch.Reader) (time.Time, error) {
+		x.busy.Add(1)
+		defer x.busy.Done()
 		x.readPRs(r.Context(), id)
 		return time.Now(), nil
 	}}

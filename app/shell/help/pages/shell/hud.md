@@ -1,7 +1,7 @@
 ---
 id: shell/hud
 covers: [app.overlay.hud, hud.*]
-related: [agent/usage, shell/mission, errors, plugins/lua]
+related: [agent/usage, shell/tabs, errors, plugins/lua]
 ---
 
 # The HUD

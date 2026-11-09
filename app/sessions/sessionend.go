@@ -23,7 +23,7 @@ import (
 )
 
 // Ending a session (help shell/tabs#end): session.end archives or deletes one, and with no {how} opens the
-// End session dialog, which says per project what would be lost first. The tab's menu, mission control, the
+// End session dialog, which says per project what would be lost first. The tab's menu, the
 // Workspace page and Ship reach it through the command; closing the tab of a session that's done
 // (registry.SessionDone) opens it too.
 

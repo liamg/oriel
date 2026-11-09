@@ -221,7 +221,6 @@ Every option Oriel registers. A test checks this table against the registry.
 | `hud.hold_delay` | 250: milliseconds the hold key is held alone before the HUD comes down, so a chord doesn't flash it | app | |
 | `sessions.auto_name` | true: a small model (Claude's Haiku) names a session started from a request, and the request; off, the name is the request's first words | app | |
 | `sessions.restart_on_exit` | true: the agent of an open session whose kind can `restarts-agent` (all built-ins but jobs) starts again on its conversation when it exits on its own; one that exits 3 times in 2 minutes stays stopped, with a notice to resume it | app | |
-| `mission.at_launch` | true: started with nothing open and sessions there, open mission control over the session that was in front | app | |
 | `updates.mode` | `automatic`: updates as Oriel starts, and installs a release that comes out while it runs for the next restart; `ask` downloads it and offers it in a notice; `manual` only checks on `:UpdateCheck` | app | |
 | `updates.channel` | `stable`; or `nightly`, pre-releases too | app | |
 | `voice.dictation` | true: every long text field (`widget.Prose`) has a mic, and ⌘⇧Space (Ctrl⇧Space elsewhere) in one dictates; false takes the mics away | app | |

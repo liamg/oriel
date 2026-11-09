@@ -25,16 +25,10 @@ func LSPScene(t *testing.T, fixture, server, file string) (*Scene, string) {
 	return s, root
 }
 
-// LSPSettle frames until the language server's answers are in.
+// LSPSettle frames until the language server's answers are in (Quiet).
 func (s *Scene) LSPSettle() {
-	x := PluginOf[*lang.LSP](s, "lsp")
-	for range 4 {
-		s.Frame()
-		x.Wait()
-		s.RunQueued()
-	}
-	s.Frame()
-	s.Frame()
+	s.T.Helper()
+	s.Quiet()
 }
 
 // CursorAt puts the editor's cursor at line and col, 0-based, and lets the servers answer.

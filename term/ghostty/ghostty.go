@@ -42,6 +42,7 @@ const chunk = 1 << 20
 type Terminal struct {
 	mu      sync.Mutex
 	waiting atomic.Int32 // goroutines waiting for mu, but for Write
+	entered atomic.Int64 // how many of them have taken it
 	opts    Options
 	m       machine
 
@@ -100,9 +101,10 @@ func (t *Terminal) Write(p []byte) {
 	}
 }
 
-// yield lets the goroutines waiting for mu take it first, for at most a millisecond.
+// yield lets a goroutine waiting for mu take it first: it returns once one has, or none waits any more. One at a
+// time, so readers coming one after another can't keep a write from going on.
 func (t *Terminal) yield() {
-	for until := time.Now().Add(time.Millisecond); t.waiting.Load() > 0 && time.Now().Before(until); {
+	for was := t.entered.Load(); t.waiting.Load() > 0 && t.entered.Load() == was; {
 		goruntime.Gosched()
 	}
 }
@@ -112,6 +114,7 @@ func (t *Terminal) lock() {
 	t.waiting.Add(1)
 	t.mu.Lock()
 	t.waiting.Add(-1)
+	t.entered.Add(1)
 }
 
 func (t *Terminal) feed(p []byte) bool {

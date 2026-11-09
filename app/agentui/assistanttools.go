@@ -26,8 +26,8 @@ import (
 
 // The assistant's own tools, offered only to it. Reading tools read; the ones that
 // show something just do it; those that start, stop or run an agent are acts, which wait for the user's yes on a
-// card. Whatever can be undone says how. my_tickets, mission_control and request_review are the tools of the
-// features that own that data (tickets, mission control, agentbus): they offer them for "assistant" the same way.
+// card. Whatever can be undone says how. my_tickets and request_review are the tools of the
+// features that own that data (tickets, agentbus): they offer them for "assistant" the same way.
 
 var replySchema = json.RawMessage(`{"type":"object","properties":{` +
 	`"text":{"type":"string","description":"your answer, in markdown"},` +

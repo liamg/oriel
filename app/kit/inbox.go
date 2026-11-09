@@ -17,7 +17,7 @@ type WaitingCard struct {
 	At   time.Time
 }
 
-// Inbox is the cards waiting on you, for a surface that shows them itself (mission control, the session tabs).
+// Inbox is the cards waiting on you, for a surface that shows them itself (the session tabs).
 type Inbox interface {
 	// Waiting are the cards waiting on you, in the order they came.
 	Waiting() []WaitingCard

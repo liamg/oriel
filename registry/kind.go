@@ -27,7 +27,7 @@ type SessionKind interface {
 	Prepare(ctx Ctx, spec *core.SessionSpec) error
 	// Gates are the ship gates its sessions get, by name; nil is every one.
 	Gates() []string
-	// Chips are the session's chips on its mission-control card, beside its agent's: a review's PR.
+	// Chips are what the session's kind says of it, beside its agent's: a review's PR.
 	Chips(se core.SessionState) []Chip
 }
 
@@ -121,7 +121,7 @@ func Label(r Contributions, se core.SessionState) string {
 	return out
 }
 
-// CardChips are chips a plugin adds to sessions' mission-control cards, after their kind's: the PR a session raised.
+// CardChips are chips a plugin adds to what's said of every session, after its kind's: the PR a session raised.
 type CardChips struct {
 	Name   string
 	Chips  func(se core.SessionState) []Chip

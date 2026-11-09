@@ -18,22 +18,34 @@ const maxLoad = 4
 func Times(rounds, n int, setup func(), step func(i int)) []time.Duration {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
+	buf := make([]byte, 16<<10)
+	return meter{now: threadTime, reference: func() { reference(buf) }, gc: runtime.GC}.times(rounds, n, setup, step)
+}
+
+// meter is what Times reads a step's time by: the thread's clock, the reference work, and what clears the heap
+// before a round.
+type meter struct {
+	now       func() time.Duration
+	reference func()
+	gc        func()
+}
+
+func (m meter) times(rounds, n int, setup func(), step func(i int)) []time.Duration {
 	raw := make([][]time.Duration, rounds)
 	ref := make([][]time.Duration, rounds)
 	refBest := time.Duration(1<<63 - 1)
-	buf := make([]byte, 16<<10)
 	for r := range rounds {
 		if setup != nil {
 			setup()
 		}
-		runtime.GC()
+		m.gc()
 		raw[r], ref[r] = make([]time.Duration, n), make([]time.Duration, n)
 		for i := range n {
-			t0 := threadTime()
-			reference(buf)
-			t1 := threadTime()
+			t0 := m.now()
+			m.reference()
+			t1 := m.now()
 			step(i)
-			raw[r][i], ref[r][i] = threadTime()-t1, t1-t0
+			raw[r][i], ref[r][i] = m.now()-t1, t1-t0
 			refBest = min(refBest, ref[r][i])
 		}
 	}

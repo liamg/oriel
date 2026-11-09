@@ -176,6 +176,33 @@ func (w *Window) Run(id string, a registry.Args) {
 	}
 }
 
+// RunFinished runs a command on the loop and waits until it has finished, its slow part off the loop too (Scene.Run),
+// failing the test if it fails.
+func (w *Window) RunFinished(id string, a registry.Args) {
+	w.T.Helper()
+	done := make(chan error, 1)
+	send := func(err error) {
+		select {
+		case done <- err:
+		default:
+		}
+	}
+	w.Do(func() error {
+		if err := w.Host.Run(registry.OnDone(context.Background(), send), id, a); err != nil {
+			send(err)
+		}
+		return nil
+	})
+	select {
+	case err := <-done:
+		if err != nil {
+			w.T.Fatal(err)
+		}
+	case <-time.After(Timeout):
+		w.T.Fatalf("%s never finished%s", id, rig.Stuck())
+	}
+}
+
 // WaitFor polls ok, on the loop, for up to Timeout.
 func (w *Window) WaitFor(what string, ok func() bool) {
 	w.T.Helper()

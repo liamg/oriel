@@ -7,7 +7,7 @@ related: [shell/tabs, shell/help]
 # Back and forward
 
 Oriel remembers where you've been, like a browser: each session you brought to the front, and each full page you
-opened over it (mission control, Stats, Jobs, Settings…). Back puts the one before up again, session and page
+opened over it (Stats, Jobs, Settings…). Back puts the one before up again, session and page
 together; forward undoes it. Going somewhere new after going back drops what was forward. A session archived since
 is passed over.
 

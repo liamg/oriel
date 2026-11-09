@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/isolate"
 )
 
 func TestTreePath(t *testing.T) {
@@ -56,6 +58,7 @@ type treeFake struct {
 	root    string
 	exclude []string
 	send    func([]fsevent)
+	starts  int
 	stops   int
 }
 
@@ -63,6 +66,7 @@ func (f *treeFake) watchTree(root string, exclude []string, send func([]fsevent)
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.root, f.exclude, f.send = root, exclude, send
+	f.starts++
 	return func() {
 		f.mu.Lock()
 		defer f.mu.Unlock()
@@ -213,4 +217,26 @@ func TestTreeStreamRootRemoved(t *testing.T) {
 		t.Fatalf("once the root came back: stream on %q, stopped %d times; want a new one on %q, stopped once", again, stops, root)
 	}
 	expect(t, w, filepath.Join(root, "b.txt"))
+}
+
+// A tree's root made as the watcher closes (a config's lua/ written just before the app quits) starts no stream: the
+// OS's event for it can be taken in once Close has stopped the streams it knew.
+func TestTreeRootMadeAsTheWatcherClosesStartsNoStream(t *testing.T) {
+	isolate.Test(t)
+	root := filepath.Join(t.TempDir(), "lua")
+	b := newRawScript()
+	f := &treeFake{backend: b}
+	w := newWatcher(f)
+	if err := w.AddTree(root, nil); err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+	write(t, filepath.Join(root, "my", "tickets.lua"), "return {}\n")
+	b.os(raw{path: root, dir: true, op: opCreated}) // the parent's watch, which the tree waits on until its root is made
+	f.mu.Lock()
+	starts, stops := f.starts, f.stops
+	f.mu.Unlock()
+	if starts != stops {
+		t.Fatalf("%d streams started, %d stopped: one outlives the watcher", starts, stops)
+	}
 }

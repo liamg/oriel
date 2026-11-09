@@ -374,7 +374,7 @@ func (s Session) Kind(name string, spec script.Table, where string) error {
 	return nil
 }
 
-//oriel:api doc="Chips for every session's mission-control card, after its kind's: fn(session) returns a list of texts or { text, help, link }."
+//oriel:api doc="Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }."
 func (s Session) Chips(name string, fn *script.Fn, where string) error {
 	s.a.own(s.a.Host.Contribute(registry.CardChips{Name: name, Source: where, Chips: func(se core.SessionState) []registry.Chip {
 		out, err := s.a.VM.Call(fn, sessionTable(se))
@@ -423,7 +423,7 @@ func (s Session) id(id string) core.SessionID {
 //oriel:api name=hud cap=ui
 type HUD struct{ a *APIs }
 
-//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), hud.today, or mission (mission control's strip). opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh."
+//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh."
 func (h HUD) Indicator(name string, opts script.Table, build any, where string) error {
 	every, _ := time.ParseDuration(str(opts, "every"))
 	fn, _ := build.(*script.Fn)

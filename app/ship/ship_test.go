@@ -320,7 +320,7 @@ func TestShipShowsADraftSavedAfterTheCode(t *testing.T) {
 	x := shipOf(s)
 	agent := lw.Fake.WaitStarted(t)
 	s.Run("ship.open", nil)
-	writeFiles(t, shipDir(se, "search-api"), map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
+	s.WriteFiles(shipDir(se, "search-api"), map[string]string{"internal/api/usage/routes.go": "package usage\n\nvar Routes = 2\n"})
 	shipSettle(s, t, "the change", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return len(sh.Files) > 0 })
 	shipIdle(s)
 

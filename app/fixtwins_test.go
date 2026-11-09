@@ -191,8 +191,9 @@ func TestExplainTwinAnswers(t *testing.T) {
 				}
 				return len(twins) > 0
 			})
+			// Clicked where each has settled, once the rest of what the menu shows has come in and can't move it.
 			for _, ex := range fixTwins(s) {
-				s.Click(apptest.Centre(ex.Bounds), 0)
+				s.ClickOn(ex.Name)
 			}
 			s.ExplainSettle()
 			s.WantText("the answer", c.want, "Answer 1 (brief)")

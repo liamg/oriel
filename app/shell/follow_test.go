@@ -39,35 +39,37 @@ func TestFollowingASessionKeepsThePluginsRunning(t *testing.T) {
 	p := &counted{}
 	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W), Plugins: []plugin.Plugin{p}})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	start := func(name string) core.SessionID {
-		t.Helper()
-		if err := w.Do(func() error {
-			return w.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": name, "provider": "fake", "repos": lw.Repo})
-		}); err != nil {
-			t.Fatal(err)
-		}
-		lw.Fake.WaitStarted(t)
-		st := w.UntilState("session "+name, func(st core.State) bool {
-			se, ok := st.Session(core.SessionID(name))
-			return ok && kit.SessionDir(se.Snapshot()) != ""
-		})
-		se, _ := st.Session(core.SessionID(name))
-		return se.ID()
-	}
 	dirOf := func(id core.SessionID) string {
 		se, _ := w.Store.Session(id)
 		return kit.SessionDir(se.Snapshot())
+	}
+	on := func(id core.SessionID) {
+		t.Helper()
+		want := dirOf(id)
+		w.WaitFor("the window on "+string(id)+"'s directory", func() bool {
+			win, ok := kit.WindowOf(w.Host)
+			return ok && win.Dir() == want
+		})
+	}
+	// A session started is brought to the front once it has: the window on it, before another is.
+	start := func(name string) core.SessionID {
+		t.Helper()
+		w.RunFinished("session.start", registry.Args{"kind": "work", "name": name, "provider": "fake", "repos": lw.Repo})
+		lw.Fake.WaitStarted(t)
+		st := w.UntilState("session "+name+" in front", func(st core.State) bool {
+			se, ok := st.Session(core.SessionID(name))
+			return ok && kit.SessionDir(se.Snapshot()) != "" && st.Focus == se.ID()
+		})
+		se, _ := st.Session(core.SessionID(name))
+		on(se.ID())
+		return se.ID()
 	}
 	follows := func(id core.SessionID) {
 		t.Helper()
 		if err := w.Store.Apply(core.SessionFocused{ID: id}); err != nil {
 			t.Fatal(err)
 		}
-		want := dirOf(id)
-		w.WaitFor("the window on "+string(id)+"'s directory", func() bool {
-			win, ok := kit.WindowOf(w.Host)
-			return ok && win.Dir() == want
-		})
+		on(id)
 	}
 	a, b := start("a"), start("b")
 	if dirOf(a) == dirOf(b) {

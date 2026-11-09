@@ -23,6 +23,7 @@ import (
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/host/search"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -79,6 +80,8 @@ type Config struct {
 	Secrets plugin.Secrets
 	// Quit asks the window to quit as its close button does, without asking about scheduled jobs.
 	Quit <-chan struct{}
+	// Clock is what the window paces its redraws by: the sessions behind the one in front; the system's if nil.
+	Clock clock.Clock
 }
 
 // Builtins are the window's built-in plugins in the order they start, made each time it starts its plugins.
@@ -115,7 +118,8 @@ const behindRedraw = 150 * time.Millisecond
 
 // behindPaced pokes for each event of the session in front, or of none, at once, and for those of the sessions
 // behind it once per behindRedraw.
-func behindPaced(st core.Store, poke func()) func(core.Event) {
+func behindPaced(st core.Store, c clock.Clock, poke func()) func(core.Event) {
+	c = clock.Or(c)
 	var due atomic.Bool
 	return func(ev core.Event) {
 		if id := ev.Scope(); id == "" || id == st.Focus() {
@@ -123,7 +127,7 @@ func behindPaced(st core.Store, poke func()) func(core.Event) {
 			return
 		}
 		if due.CompareAndSwap(false, true) {
-			time.AfterFunc(behindRedraw, func() { due.Store(false); poke() })
+			c.AfterFunc(behindRedraw, func() { due.Store(false); poke() })
 		}
 	}
 }
@@ -193,7 +197,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 		sh.desktop = windowDesktop(w)
 	}
 
-	cancel := cfg.Store.Subscribe(core.Filter{}, behindPaced(cfg.Store, poke))
+	cancel := cfg.Store.Subscribe(core.Filter{}, behindPaced(cfg.Store, cfg.Clock, poke))
 	defer cancel()
 	cfg.Logs.OnShownWrite(poke)
 
