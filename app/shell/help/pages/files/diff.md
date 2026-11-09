@@ -8,7 +8,8 @@ related: [files/explorer, files/commit, agent/requests]
 
 The review surface: a repo's branch against its base (the merge-base with origin's default branch, or main), your
 uncommitted work included. The Explorer's Changed scope, the agent console's **view in diff** and plan mode's
-**Preview diff** open it (`diff.open`). Opened at a line (a review's **Jump to code**, a finding's place), it
+**Preview diff** open it (`diff.open`). From Uncommitted (`explorer.diff`, or `diff.open` with `against` `head`), a
+file's diff is against the last commit instead: what isn't committed, in a tab of its own (**Uncommitted · repo**). Opened at a line (a review's **Jump to code**, a finding's place), it
 selects that line, removed or added, in the middle of the view.
 
 ## Changes {#changes}
