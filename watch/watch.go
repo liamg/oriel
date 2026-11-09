@@ -165,7 +165,6 @@ type Manager struct {
 	closed  bool
 	fw      *fswatch.Watcher
 	fwErr   error
-	handled int // the file watcher's events taken in, for the tests
 	roots   fsRoots
 }
 

@@ -297,10 +297,22 @@ func TestScriptedSendsOnlyItsScript(t *testing.T) {
 		t.Fatal(err)
 	}
 	write(t, filepath.Join(dir, "on-disk.txt"), "x")
-	s.Change(filepath.Join(dir, "said.txt"))
-	if ev := <-w.Events(); ev.Path != filepath.Join(dir, "said.txt") {
+	sent := make(chan struct{})
+	go func() {
+		defer close(sent)
+		s.Change(filepath.Join(dir, "said.txt"))
+	}()
+	ev := <-w.Events()
+	if ev.Path != filepath.Join(dir, "said.txt") {
 		t.Errorf("got %+v, want the scripted change", ev)
 	}
+	select {
+	case <-sent:
+		t.Fatal("Change returned before the event was Done")
+	default:
+	}
+	ev.Done()
+	<-sent
 	select {
 	case ev := <-w.Events():
 		t.Errorf("an event the script didn't send: %+v", ev)

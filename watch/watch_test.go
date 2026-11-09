@@ -59,7 +59,6 @@ type rig struct {
 	m      *Manager
 	clock  *clocktest.Fake
 	script *fswatch.Script
-	sent   int
 }
 
 func newRig(t *testing.T, o Options) *rig {
@@ -78,7 +77,7 @@ func newRig(t *testing.T, o Options) *rig {
 	return r
 }
 
-// settle waits for every read under way to finish and every event sent to be taken in: not for a while, for that.
+// settle waits for every read under way to finish: not for a while, for that.
 func (r *rig) settle() {
 	r.t.Helper()
 	eventually(r.t, "the manager settled", func() bool {
@@ -89,7 +88,7 @@ func (r *rig) settle() {
 				return false
 			}
 		}
-		return r.m.handled == r.sent
+		return true
 	})
 }
 
@@ -110,13 +109,12 @@ func (r *rig) advance(d time.Duration) {
 	}
 }
 
-// change says paths changed, as the file watcher would once they'd settled.
+// change says paths changed, as the file watcher would once they'd settled, once the manager has taken them in.
 func (r *rig) change(paths ...string) {
 	r.t.Helper()
 	if r.script == nil {
 		r.t.Fatal("nothing is watching files yet")
 	}
-	r.sent += len(paths)
 	r.script.Change(paths...)
 	r.settle()
 }

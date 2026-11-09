@@ -229,6 +229,9 @@ connects it to the platform:
 - Code that times things takes an `internal/clock.Clock` (`watch.Options.Clock`, `kit.Still.Clock`); its tests move
   an `internal/clock/clocktest` clock, so what's timed happens exactly when they say. `fswatch.NewScripted` is a file
   watcher whose events are the test's: the watch manager's tests send them, and only `fswatch`'s own test the OS's.
+  A scene with `ScriptedFiles` (every `ShipScene`) gives the app such watchers: `Scene.WriteFiles` writes and says
+  what changed, returning once every manager has taken it in, so the OS's late events for a test's own setup never
+  move a count of reads.
 - Every harness calls `internal/isolate.Test` first: its own TMPDIR, and a check that no goroutine outlives the test.
   Tests change a package's knob only through `internal/testhook.Set`. Tests run shuffled.
 - Timing budgets are tests named `…Budget` using `tools/perf`; `make test` runs them alone, one package at a time.
