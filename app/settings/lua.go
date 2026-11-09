@@ -485,7 +485,7 @@ func (x *Lua) hooksView(c *ui.Ctx) {
 						tok = tHookSlow
 						slow = append(slow, fmt.Sprintf("%s on %s (%s)", h.Source, h.Event, h.P99))
 					}
-					c.Text("p", kit.Duration(h.P99), mono(11, tok))
+					c.Text("p", kit.Duration(max(h.P99, time.Nanosecond)), mono(11, tok)) // a call that ran took some time: <1ms, never 0s
 				}
 			})
 		}

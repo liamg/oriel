@@ -28,6 +28,7 @@ func TestShipColumnsLoad(t *testing.T) {
 		}
 	}
 
+	s.Quiet() // the reads opening the page started end while the report is held, so none lands over the failure
 	fail("gh: not logged in")
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()

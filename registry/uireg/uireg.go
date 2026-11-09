@@ -65,8 +65,11 @@ type viewList struct {
 }
 
 // New is a registry with nothing drawn yet.
-func New() Registry {
-	return &reg{Registry: registry.New(), decor: &decorState{gen: map[string]int{}}, views: &viewList{gen: -1}}
+func New() Registry { return NewWith(registry.Config{}) }
+
+// NewWith is New, with the registry's setup.
+func NewWith(o registry.Config) Registry {
+	return &reg{Registry: registry.NewWith(o), decor: &decorState{gen: map[string]int{}}, views: &viewList{gen: -1}}
 }
 
 // WithSource is registry.WithSource for r's views and pickers too: each registered through it without a source of
