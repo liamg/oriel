@@ -1,6 +1,6 @@
 ---
 id: git/ship
-covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.push-all, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.merge, ship.merge-default, ship.next-pr, ship.browse, ship.copy-link, ship.merge_method, code.setup, code.hosts, code.api]
+covers: [ship, git, pull-request, pr, ship.open, ship.commit, ship.push, ship.push-all, ship.sync, ship.raise, ship.raise-all, ship.pr.open, ship.rename, ship.switch-back, ship.adopt-branch, ship.merge, ship.merge-default, ship.next-pr, ship.browse, ship.copy-link, ship.merge_method, code.setup, code.hosts, code.api]
 related: [shell/rail, agent/requests, files/explorer]
 ---
 
@@ -26,7 +26,8 @@ back.
 ## The Git panel {#git}
 
 A project's **Git** panel, in the dock: its branch and how far it is from its base, **Rebase on main**, **Push** and
-**Rename…**, then what's uncommitted with the commit box, and the commits left to push. **↺** on a file throws its
+**Rename…**, then what's uncommitted with the commit box, and the commits left to push. On a branch other than the
+session's it says so first (see [Branch](git/ship#branch)). **↺** on a file throws its
 changes away, after asking. An opened directory is a session too (a direct one, with no agent), so the panel, Pull
 request and Ship work there as they do in any session.
 
@@ -34,6 +35,29 @@ request and Ship work there as they do in any session.
 
 **Rename…** renames the branch (`ship.rename`). It stops tracking the old name on origin, so the next push makes the
 new one there. A branch whose PR is open isn't renamed: the PR would stay on the old one.
+
+Each project of a session has a branch of the session's own, and Oriel pushes, pulls and raises PRs from that branch
+only: never `main`, never another session's. The agent changes it with its own tools rather than with git:
+`rename_branch` renames it (as **Rename…** does) and `new_branch` starts a fresh one off the repo's default branch,
+freshly fetched, switching the worktree to it. `new_branch` refuses while there's uncommitted work, unless asked to
+carry it over; the branch it leaves is kept on this machine, commits and all, and is no longer pushed. The agent's
+notes in the workspace (`CLAUDE.md`, `AGENTS.md`) say which branch each project is on and to use these tools.
+
+When a project's worktree is on a branch other than the session's anyway (the agent ran `git checkout -b`, say),
+Oriel won't push it, and the Git panel and the project's column on the Ship page say **Not on this session's
+branch**, with two ways out:
+
+- **Switch back to** the session's branch (`ship.switch-back`), carrying uncommitted work over where git can.
+- **Make** the branch it's on **this session's branch** (`ship.adopt-branch`): from then on Oriel pushes it, and
+  raises its PR from it. It's offered only when that's safe; otherwise it's off, saying why. The branch must not be
+  detached, the repo's default branch or the branch the project merges into, or another session's (any session's
+  project of the same repo, archived ones included). It must hold every commit of the session's branch, so nothing of
+  the session's is left behind: a branch cut with git straight from `main` after the session has commits doesn't,
+  while one cut before it has any does, since then there's nothing to leave (a session's branch that's gone, renamed
+  with git, counts as held). And origin mustn't have a branch of that name already: it may be someone else's, and a
+  push would replace it.
+
+Nothing is adopted by itself: only the button, or the command, does it.
 
 ## Commit {#commit}
 
@@ -71,7 +95,8 @@ The commits origin hasn't got. **Push** pushes the session's branch, and only it
 branch it's on now. Once every project's PR is open, the header offers **Push all** in place of a raise, for any with
 commits to push (`ship.push-all`).
 
-A step that can't run says why when the pointer rests on it: Push with no origin to push to, when not on a branch,
+A step that can't run says why when the pointer rests on it: Push with no origin to push to, when not on a branch
+or not on the session's,
 or with nothing origin hasn't got; any step while another of the project's runs. Every disabled button with a
 reason shows it the same way (`widget.ButtonOpts.Why`).
 

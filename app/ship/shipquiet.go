@@ -43,9 +43,9 @@ func (x *Ship) shownShips(se core.SessionState, ships []shipRead) []shipRead {
 }
 
 // quiet says a project read has nothing to ship: nothing uncommitted, no commits on its branch, no pull request,
-// no draft and nothing gone wrong.
+// no draft, nothing gone wrong, and on the session's branch.
 func quiet(s shipRead) bool {
-	return !s.GitRead.IsZero() && s.GitError == "" && s.HostError == "" && len(s.Files) == 0 && s.Commits == 0 &&
+	return !s.GitRead.IsZero() && s.GitError == "" && s.HostError == "" && s.Off == nil && len(s.Files) == 0 && s.Commits == 0 &&
 		len(s.Unpushed) == 0 && s.PR == nil && s.CommitDraft.Empty() && s.PRDraft.Empty()
 }
 

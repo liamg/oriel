@@ -181,16 +181,22 @@ func (w *Host) parts() error {
 	w.work = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.repos.Resolve, AddRepo: w.repos.Add,
 		Repos: w.repos.Repos, ReposDir: w.repos.Dir})
 	w.run = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
-		Exec:           func() agent.Exec { return w.opts.Exec },
-		Sandbox:        func() hostcore.SandboxFactory { return w.opts.Sandbox },
-		Packs:          w.opts.Packs,
-		KeyWait:        func() time.Duration { return w.opts.KeyWait },
-		Repos:          w.repos.Repos,
-		AddRepo:        w.AddRepo,
-		AccountOf:      w.stats.AccountOf,
-		Record:         w.stats.Record,
-		UsageSampled:   w.stats.UsageSampled,
-		PROpen:         func(id core.SessionID, project, branch string) bool { return w.code.PROpen(id, project, branch) },
+		Exec:         func() agent.Exec { return w.opts.Exec },
+		Sandbox:      func() hostcore.SandboxFactory { return w.opts.Sandbox },
+		Packs:        w.opts.Packs,
+		KeyWait:      func() time.Duration { return w.opts.KeyWait },
+		Repos:        w.repos.Repos,
+		AddRepo:      w.AddRepo,
+		AccountOf:    w.stats.AccountOf,
+		Record:       w.stats.Record,
+		UsageSampled: w.stats.UsageSampled,
+		PROpen:       func(id core.SessionID, project, branch string) bool { return w.code.PROpen(id, project, branch) },
+		RenameBranch: func(ctx context.Context, id core.SessionID, project, name string) error {
+			return w.ShipRename(ctx, RenameReq{Session: id, Project: project, Name: name})
+		},
+		NewBranch: func(ctx context.Context, id core.SessionID, project, name string, carry bool) (string, error) {
+			return w.NewBranch(ctx, NewBranchReq{Session: id, Project: project, Name: name, Carry: carry})
+		},
 		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) },
 		Prices:         w.prices})
 	if w.boxes, err = sandboxhost.New(w.sandboxDeps()); err != nil {

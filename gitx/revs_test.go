@@ -63,6 +63,18 @@ func TestRevsCountAndMove(t *testing.T) {
 	if g.ObjectsKiB(ctx) <= 0 {
 		t.Error("the object store has a size")
 	}
+	if !g.Ancestor(ctx, "main", "feat") || g.Ancestor(ctx, "feat", "main") {
+		t.Error("main is an ancestor of feat, and not the other way")
+	}
+	if err := g.Switch(ctx, "feat"); err != nil {
+		t.Fatal(err)
+	}
+	if b := g.CurrentBranch(ctx); b != "feat" {
+		t.Errorf("after Switch, CurrentBranch = %q", b)
+	}
+	if err := g.Switch(ctx, "nope"); err == nil {
+		t.Error("switched to a branch that isn't there")
+	}
 }
 
 // ref: oracle git — git-init(1), git-clone(1), git-fetch(1).

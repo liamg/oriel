@@ -142,6 +142,18 @@ func (x *Ship) branchCommands() []registry.Command {
 					return c.ShipRename(ctx, host.RenameReq{Session: se.ID, Project: p, Name: name})
 				})
 			})},
+		{ID: "ship.switch-back", Title: "Put a project's worktree back on the session's branch for it: {project}", Available: inFront,
+			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
+				return x.step(se.ID, p, "Switching back", func(ctx context.Context, c host.Access) error {
+					return c.ShipSwitchBack(ctx, host.ShipRef{Session: se.ID, Project: p})
+				})
+			})},
+		{ID: "ship.adopt-branch", Title: "Make the branch a project's worktree is on the session's branch for it, where that's safe: {project}",
+			Available: inFront, Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
+				return x.step(se.ID, p, "Adopting", func(ctx context.Context, c host.Access) error {
+					return c.ShipAdopt(ctx, host.ShipRef{Session: se.ID, Project: p})
+				})
+			})},
 		{ID: "ship.merge-default", Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
 			Available: inFront, Run: run(x.mergeDefault)},
 		{ID: "ship.next-pr", Title: "Move a project on from its merged or closed PR to a fresh branch from its updated base: {project}",

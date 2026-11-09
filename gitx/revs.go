@@ -2,6 +2,7 @@ package gitx
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -61,6 +62,18 @@ func (r Repo) CheckoutNew(ctx context.Context, branch, start string) error {
 	_, err := r.git(ctx, "checkout", "--quiet", "-b", branch, start)
 	return err
 }
+
+// Switch checks out an existing branch, carrying uncommitted changes over where git can.
+func (r Repo) Switch(ctx context.Context, branch string) error {
+	if !r.HasBranch(ctx, branch) {
+		return fmt.Errorf("there's no branch %q", branch)
+	}
+	_, err := r.git(ctx, "checkout", "--quiet", branch, "--")
+	return err
+}
+
+// Ancestor says a is reachable from b: b holds every commit of a.
+func (r Repo) Ancestor(ctx context.Context, a, b string) bool { return r.ancestor(ctx, a, b) }
 
 // Detach checks out rev with no branch.
 func (r Repo) Detach(ctx context.Context, rev string) error {
