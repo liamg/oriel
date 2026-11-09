@@ -27,6 +27,11 @@ now.
 Then Oriel stops its agents, all at once. Each takes its sandbox down, which can take a few seconds, so while they
 stop the window says **Shutting down**, listing each agent as stopping or stopped. Nothing else takes keys meanwhile.
 
+Once the window has closed, the process ends within 15 seconds whatever is left: background work the session host
+still has running (a fetch, a sign-in nobody finished) gets 5 of them, and is logged by name if it hasn't ended.
+Something still stuck after that is logged with every goroutine's stack, and Oriel exits anyway, saying so in the
+terminal it was started from.
+
 Sent `SIGTERM` or `SIGINT` (logging out, `kill`, `^C` in the terminal it was started from), Oriel quits the same
 way, without waiting on scheduled jobs. A second signal quits now; a third exits without handing the agents over.
 

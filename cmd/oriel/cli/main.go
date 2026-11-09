@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/cmd/oriel/dev"
 	"github.com/liamg/oriel/integ"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/render/gio"
@@ -86,6 +87,11 @@ func runApp(args []string) {
 		fmt.Fprintln(os.Stderr, "oriel:", err)
 		os.Exit(1)
 	}
+	watch := &exitWatch{clock: clock.Real(), after: exitAfter, log: log, stderr: os.Stderr, exit: func(code int) {
+		_ = cfg.Logs.Close()
+		os.Exit(code)
+	}}
+	cfg.Closed = watch.start
 	go func() {
 		err := app.Run(context.Background(), be, cfg)
 		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close() }, stopProfile))
