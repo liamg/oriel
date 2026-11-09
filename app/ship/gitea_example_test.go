@@ -329,7 +329,10 @@ func TestGiteaExamplePlugin(t *testing.T) {
 		t.Errorf("merged with %q, want the repo's default, squash", how)
 	}
 
+	// A list fetched in the last two minutes, or one being fetched, predates the ask: wait it out, then ask again.
+	s.Quiet()
+	s.Run("reviews.refresh", nil)
 	s.Run("reviews.open", nil)
-	s.Until("the request", func() bool { return strings.Contains(s.Text(), "Cache the token lookup") })
+	s.Until("the request",func() bool { return strings.Contains(s.Text(), "Cache the token lookup") })
 	s.WantFrame("acme/api#12")
 }
