@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -280,6 +281,33 @@ func TestAnotherFilesChangeKeepsTheBase(t *testing.T) {
 		t.Errorf("a new file read the open file's base %d more times", n)
 	}
 	if got, want := signsAt(s), "modified@3 added@11 added@12 deleted@21"; got != want {
+		t.Errorf("signs %q, want %q", got, want)
+	}
+}
+
+// A project's file in a workspace signs against the project's repo, though the workspace's own repo ignores it.
+// ref: oracle git (git -C repos/p diff -U0 HEAD)
+func TestGutterSignsAProjectInAWorkspace(t *testing.T) {
+	ws := gittest.New(t)
+	ws.Write(map[string]string{".git/info/exclude": "repos/\n", "README.md": "workspace\n"})
+	ws.Commit("Ada", "workspace")
+	p := &gittest.Repo{T: t, Dir: filepath.Join(ws.Dir, "repos", "p"), When: ws.When}
+	if err := os.MkdirAll(p.Dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	p.Git("init", "-q", "-b", "main")
+	p.Write(map[string]string{"f.txt": gittest.Lines(30)})
+	p.Commit("Ada", "thirty lines")
+	p.Write(map[string]string{"f.txt": strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1)})
+
+	s := apptest.New(t, apptest.Options{WorkDir: ws.Dir})
+	se := core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Dir: ws.Dir,
+		Projects: []core.Project{{Name: "p", Dir: p.Dir, Primary: true}}}
+	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
+	s.WaitGit()
+	s.Run("editor.open", registry.Args{"path": filepath.Join(p.Dir, "f.txt")})
+	s.Until("the project's signs", func() bool { settle(s); return signsAt(s) != "" })
+	if got, want := signsAt(s), "modified@3"; got != want {
 		t.Errorf("signs %q, want %q", got, want)
 	}
 }

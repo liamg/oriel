@@ -314,6 +314,7 @@ clip 524,38 236x356 r 0
         text "." @701.28125,116.36 #89ddff JetBrains Mono 13.5
         text "v1" @709.6875,116.36 #d6dde6 JetBrains Mono 13.5
         text ";" @726.5,116.36 #89ddff JetBrains Mono 13.5
+        text "" @756.90625,115.82 #4f4a40 JetBrains Mono 12
         text "2" @563.59375,137.36 #4f4a40 JetBrains Mono 13.5
         text "3" @563.59375,158.36 #4f4a40 JetBrains Mono 13.5
         text "message" @592,158.36 #c792ff JetBrains Mono 13.5
