@@ -231,6 +231,8 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	t.Setenv("GIT_COMMITTER_NAME", "You")
 	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
 	gt := newFakeGitea(t)
+	// Asked from the start: the Reviews page lists what the poll last read, whenever the plugin's loading set it off.
+	gt.asks = []giteaAsk{{repo: "acme/api", number: 12, title: "Cache the token lookup", author: "priya"}}
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	secrets.SetSecret("GITEA_TOKEN", giteaToken)
 	hub := ghtest.New(t)
@@ -323,7 +325,6 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	shipSettle(s, t, "merged, and the next PR started", func() bool { p := pastPRs(s, se.ID); return len(p) == 1 && p[0].State == "merged" })
 	gt.mu.Lock()
 	how := gt.merged["acme/app#100"]
-	gt.asks = append(gt.asks, giteaAsk{repo: "acme/api", number: 12, title: "Cache the token lookup", author: "priya"})
 	gt.mu.Unlock()
 	if how != "squash" {
 		t.Errorf("merged with %q, want the repo's default, squash", how)

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
@@ -57,8 +58,8 @@ type Console struct {
 	h plugin.Host
 
 	by        map[core.SessionID]*consoleState
-	providers *plugin.Load[[]host.ProviderInfo] // the agents and their models, asked for once a composer shows
-	detail    *detailOpen                       // the details dialog, while it's open
+	providers atomic.Pointer[plugin.Load[[]host.ProviderInfo]] // the agents and their models, asked for once a composer shows
+	detail    *detailOpen                                      // the details dialog, while it's open
 }
 
 // consoleState is one session's console: what's selected, folded, typed.
@@ -112,6 +113,10 @@ func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 			}}))
 	}
 	x.Add(h.View(AgentConsoleView, consoleView{x}))
+	x.Add(h.Contribute(registry.Busy{Name: "agent providers", Source: "builtin:agentconsole", Busy: func() bool {
+		l := x.providers.Load()
+		return l != nil && l.Busy()
+	}}))
 	x.Add(h.Contribute(uireg.InboxSource{Name: "asks", Cards: x.askCards, Source: "builtin:agentconsole"}))
 	return nil
 }
@@ -331,17 +336,19 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 // provider is what the session host says of the agent provider id: its models and their efforts. The first ask
 // starts the probe, and it's not ok until that answers.
 func (x *Console) provider(session core.SessionID, id string) (host.ProviderInfo, bool) {
-	if x.providers == nil {
+	l := x.providers.Load()
+	if l == nil {
 		w, err := x.client(session)
 		if err != nil {
 			return host.ProviderInfo{}, false
 		}
-		x.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
+		l = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
 			return w.ProviderInfo(ctx), nil
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
-		x.providers.Start()
+		l.Start()
+		x.providers.Store(l)
 	}
-	ps, _ := x.providers.Value()
+	ps, _ := l.Value()
 	for _, p := range ps {
 		if p.ID == id {
 			return p, true

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/liamg/oriel/ui"
@@ -37,6 +38,7 @@ type Load[T any] struct {
 	val    T
 	has    bool
 	state  ui.LoadState
+	busy   atomic.Bool // a fetch is running or its result hasn't landed; read from any goroutine
 }
 
 func NewLoad[T any](h Loop, fetch Fetcher[T], o LoadOpts) *Load[T] {
@@ -64,6 +66,7 @@ func (l *Load[T]) Reload() {
 	}
 	l.cancel = cancel
 	l.state = ui.LoadState{Phase: ui.Pending, Since: l.now(), Err: l.state.Err, Stale: l.has, Progress: -1}
+	l.busy.Store(true)
 
 	report := func(note string, frac float64) {
 		l.h.Do(func() {
@@ -129,6 +132,7 @@ func (l *Load[T]) land(gen int, v T, err error) {
 		return
 	}
 	l.cancel = nil
+	l.busy.Store(false)
 	l.state.Note, l.state.Progress, l.state.Stale = "", -1, false
 	switch {
 	case err == nil:
@@ -148,6 +152,7 @@ func (l *Load[T]) Reset() {
 		l.cancel = nil
 	}
 	l.gen++
+	l.busy.Store(false)
 	var zero T
 	l.val, l.has = zero, false
 	l.state = ui.LoadState{}
@@ -160,6 +165,7 @@ func (l *Load[T]) Set(v T) {
 		l.cancel = nil
 	}
 	l.gen++
+	l.busy.Store(false)
 	l.val, l.has = v, true
 	l.state = ui.LoadState{Phase: ui.Ready, Progress: -1}
 }
@@ -168,6 +174,10 @@ func (l *Load[T]) Set(v T) {
 func (l *Load[T]) Value() (T, bool) { return l.val, l.has }
 
 func (l *Load[T]) State() ui.LoadState { return l.state }
+
+// Busy says a fetch is under way, until its result has landed on the loop. Unlike the rest, it's safe from any
+// goroutine, for a registry.Busy.
+func (l *Load[T]) Busy() bool { return l.busy.Load() }
 
 func (l *Load[T]) now() time.Time { return loopNow(l.h, l.opts.Now) }
 

@@ -24,9 +24,11 @@ func launcherOf(s *apptest.Scene) *sessions.Launcher {
 }
 func reposOf(s *apptest.Scene) *sessions.Repos { return apptest.PluginOf[*sessions.Repos](s, "repos") }
 
-// settleJobs frames until the Jobs page and the stats it shows have been read.
+// settleJobs frames until the Jobs page, what else the app is working on (a console's models) and the stats it
+// shows have been read.
 func settleJobs(s *apptest.Scene, x *sessions.Jobs) {
 	s.T.Helper()
 	s.Until("the jobs", func() bool { return !x.Busy() })
+	s.Quiet()
 	s.SettleStats()
 }
