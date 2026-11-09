@@ -49,6 +49,8 @@ type Config struct {
 	Updates *Updates
 	// Started is called once the window is open and every plugin active: what the updater's health check waits for.
 	Started func()
+	// Closed is called once the window has closed, before the plugins stop: what's left is the app ending.
+	Closed func()
 	// Activated is called with each plugin, built-ins first, once it's active: how a harness finds them.
 	Activated func(plugin.Plugin)
 	Voice     VoiceConfig // dictation's microphone, transcriber and speaker; the real ones, from the voice.* options, if nil
@@ -110,7 +112,7 @@ func NewHeadless(cfg Config, o HeadlessOpts) (*Headless, error) {
 func (cfg Config) shell() shell.Config {
 	return shell.Config{Store: cfg.Store, Registry: cfg.Registry, Plugins: cfg.Plugins, Logs: cfg.Logs, ConfigDir: cfg.ConfigDir,
 		CrashDir: cfg.CrashDir, Version: cfg.Version, Desktop: cfg.Desktop, Debug: cfg.Debug, Trace: cfg.Trace, Files: cfg.Files,
-		WorkDir: cfg.WorkDir, StateDir: cfg.StateDir, CacheDir: cfg.CacheDir, Host: cfg.Host, Started: cfg.Started, Activated: cfg.Activated,
+		WorkDir: cfg.WorkDir, StateDir: cfg.StateDir, CacheDir: cfg.CacheDir, Host: cfg.Host, Started: cfg.Started, Closed: cfg.Closed, Activated: cfg.Activated,
 		Net: cfg.Net, ImageNet: cfg.ImageNet, FSWatch: cfg.FSWatch, Secrets: cfg.Secrets, Quit: cfg.Quit}
 }
 
