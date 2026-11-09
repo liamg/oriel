@@ -12,7 +12,8 @@ The work tree, in three scopes. `⌥1` `⌥2` `⌥3` switch between them, and ea
 
 - **Changed**: every file the branch changes against its base (the merge-base with origin's default branch, or
   main), uncommitted work and new untracked files included. `⏎` opens a file's diff.
-- **Uncommitted**: the work tree against HEAD, in Staged, Unstaged and Untracked.
+- **Uncommitted**: the work tree against HEAD, in Staged, Unstaged and Untracked. A file's diff from here
+  (`explorer.diff`) is against HEAD too, and the editor's gutter marks what isn't committed while it shows.
 - **All**: every file, marked as Changed marks it. Ignored directories are dimmed and not opened.
 
 ## Changed {#changed}

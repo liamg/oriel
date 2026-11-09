@@ -127,9 +127,9 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
 	g.watched = map[*gitx.Status]func(){}
-	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"branch", "head", "index"},
-		Default: "branch", Scopes: registry.ScopeUser | registry.ScopeProject,
-		Help: "What the gutter marks a file's changes against: where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
+	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"scope", "branch", "head", "index"},
+		Default: "scope", Scopes: registry.ScopeUser | registry.ScopeProject,
+		Help: "What the gutter marks a file's changes against: as the Explorer's scope has it (scope: Uncommitted's against the last commit, Changed's against the branch's base), where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
 	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) })))
@@ -229,7 +229,7 @@ func (g *GitSigns) fileOf(path string) (gitFile, bool) {
 // source is where the gutter's hunks of f are from, as git.gutter.base has it, or the index's for staging; not
 // ok until the tree's status is read.
 func (g *GitSigns) source(f gitFile, index bool) (gitSource, bool) {
-	base, _, _ := g.h.Options().Get("git.gutter.base", g.h.Here())
+	base := g.base()
 	if index || base == "index" {
 		return gitSource{tree: f.tree, path: f.rel}, true
 	}
@@ -245,6 +245,20 @@ func (g *GitSigns) source(f gitFile, index bool) (gitSource, bool) {
 		path = fs.Old
 	}
 	return gitSource{tree: f.tree, rev: cmp.Or(st.BaseHash, emptyRev), path: path}, true
+}
+
+// base is what the gutter marks changes against, git.gutter.base resolved: scope follows the Explorer's, the last
+// commit while it shows Uncommitted, else the branch's base.
+func (g *GitSigns) base() string {
+	v, _, _ := g.h.Options().Get("git.gutter.base", g.h.Here())
+	base, _ := v.(string)
+	if base == "scope" || base == "" {
+		if kit.GitOf(g.h).Scope() == gitx.Uncommitted {
+			return "head"
+		}
+		return "branch"
+	}
+	return base
 }
 
 // emptyRev stands for the base of a repo with no commits, which has no files.
@@ -393,7 +407,7 @@ func (g *GitSigns) decorationKey(ctx uireg.DecorationCtx) any {
 	}
 	k := blameAt{}
 	k.on, _, _ = g.h.Options().Get("git.blame.inline", g.h.Here())
-	k.base, _, _ = g.h.Options().Get("git.gutter.base", g.h.Here())
+	k.base = g.base()
 	if ctx.Path != "" {
 		k.loaded = g.treeOf(g.located(ctx.Path)).Load().Done
 	}

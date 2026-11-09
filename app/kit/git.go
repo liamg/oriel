@@ -22,6 +22,7 @@ func (noTrees) Holding(string) registry.GitTree           { return noTree{} }
 func (noTrees) WatchWindow(func(string, []string)) func() { return func() {} }
 func (noTrees) Do(func(ctx context.Context) error)        {}
 func (noTrees) Reload()                                   {}
+func (noTrees) Scope() gitx.Scope                         { return gitx.All }
 func (noTrees) Busy() bool                                { return false }
 
 // noTree is outside any repo.

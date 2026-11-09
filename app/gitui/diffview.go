@@ -70,16 +70,20 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.GitTree, gs *gitx.State, root ui.ID) {
 	th := c.Theme()
 	c.Row("loaded", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-		files := gs.Files(gitx.Changed)
+		scope := gitx.Changed
+		if st.head {
+			scope = gitx.Uncommitted
+		}
+		files := gs.Files(scope)
 		if st.sel.file != "" && !slices.ContainsFunc(files, func(f gitx.FileState) bool { return f.Path == st.sel.file }) {
 			files = append(slices.Clone(files), gitx.FileState{Path: st.sel.file}) // asked for, and unchanged
 		}
 		st.files = files
 		st.drawn, st.marks = map[string]*diffFile{}, map[string]map[string]bool{}
 		for _, f := range files {
-			d := x.made(tree.Root(), f.Path)
+			d := x.made(tree.Root(), f.Path, st.head)
 			if st.open[f.Path] || st.sel.file == f.Path {
-				d, _ = x.diffFor(tree, gs, f, true)
+				d, _ = x.diffFor(tree, gs, f, true, st.head)
 			}
 			if d != nil {
 				st.drawn[f.Path] = d

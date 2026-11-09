@@ -311,3 +311,20 @@ func TestGutterSignsAProjectInAWorkspace(t *testing.T) {
 		t.Errorf("signs %q, want %q", got, want)
 	}
 }
+
+// The gutter follows the Explorer's scope by default (git.gutter.base "scope"): with Uncommitted showing it signs
+// only what isn't committed, against the last commit; with Changed, the branch's whole change against its base.
+// ref: oracle git (git diff -U0 HEAD; git diff -U0 $(git merge-base HEAD main))
+func TestGutterFollowsTheExplorersScope(t *testing.T) {
+	s, _ := apptest.BranchSignsScene(t, "f.txt")
+	for _, c := range []struct{ keys, scope, want string }{
+		{"<M-2>", "Uncommitted", "added@11 added@12 deleted@21"},
+		{"<M-1>", "Changed", "modified@3 added@11 added@12 deleted@21"},
+	} {
+		s.Press(c.keys)
+		settle(s)
+		if got := signsAt(s); got != c.want {
+			t.Errorf("with %s showing, signs %q, want %q", c.scope, got, c.want)
+		}
+	}
+}
