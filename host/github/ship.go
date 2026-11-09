@@ -49,6 +49,8 @@ type Ship struct {
 	TemplateFile string         `json:"templateFile,omitempty"`
 	Owners       []string       `json:"owners,omitempty"` // CODEOWNERS of what the branch changes
 	GitError     string         `json:"gitError,omitempty"`
+	// Off is set while the worktree is on a branch other than the session's for it, which Oriel won't push.
+	Off *hostcore.OffBranch `json:"off,omitempty"`
 }
 
 // ShipFile is an uncommitted file.
@@ -212,6 +214,9 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 	}
 	if f.Branch != "" && f.Branch != "HEAD" {
 		s.Branch = f.Branch
+	}
+	if x.deps.Kinds.Spec(se).Can(core.OwnsBranch) {
+		s.Off = hostcore.OffBranchOf(ctx, x.st, se, p, repo)
 	}
 	if s.Base == "" {
 		s.Base = strings.TrimPrefix(f.Base, "origin/")
@@ -378,20 +383,10 @@ func (x *GitHub) ShipRename(ctx context.Context, r RenameReq) (err error) {
 	if !x.deps.Kinds.Spec(se).Can(core.OwnsBranch) {
 		return nil
 	}
-	projects := slices.Clone(se.Projects)
-	for i := range projects {
-		if projects[i].Name == p.Name {
-			projects[i].Branch = name
-		}
-	}
 	if err := x.deps.BranchRenamed(se.Dir, p.Name, name); err != nil {
 		return err
 	}
-	branch := se.Branch
-	if branch == old && !slices.ContainsFunc(projects, func(q core.Project) bool { return q.Branch == old }) {
-		branch = name
-	}
-	return x.st.Emit(core.ProjectsChanged{ID: se.ID, Branch: branch, Projects: projects, Past: se.Past, Started: se.Started})
+	return hostcore.SetProjectBranch(x.st, se.ID, p.Name, name, "")
 }
 
 // ShipDraft saves a draft the user wrote, or drops it.

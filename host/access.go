@@ -66,6 +66,9 @@ type Access interface {
 	ShipPush(ctx context.Context, r ShipRef) error
 	ShipSync(ctx context.Context, r ShipRef) error
 	ShipRename(ctx context.Context, r RenameReq) error
+	ShipSwitchBack(ctx context.Context, r ShipRef) error
+	ShipAdopt(ctx context.Context, r ShipRef) error
+	NewBranch(ctx context.Context, r NewBranchReq) (string, error)
 	ShipMergeDefault(ctx context.Context, r ShipRef) (gitx.Merge, error)
 	NextPR(ctx context.Context, r NextPRReq) error
 	UpdatePR(ctx context.Context, id core.SessionID) (map[string]PRMove, error)

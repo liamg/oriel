@@ -61,6 +61,7 @@ type (
 	ManifestEntry = worktree.ManifestEntry
 	ManifestPR    = worktree.ManifestPR
 	NextPRReq     = worktree.NextPRReq
+	NewBranchReq  = worktree.NewBranchReq
 	PRMove        = worktree.PRMove
 )
 
@@ -82,6 +83,7 @@ type (
 	ShipCommitReq   = github.ShipCommitReq
 	DraftReq        = github.DraftReq
 	RenameReq       = github.RenameReq
+	OffBranch       = hostcore.OffBranch
 	PRsReq          = github.PRsReq
 	ReviewQueueReq  = github.ReviewQueueReq
 	PRReview        = github.PRReview

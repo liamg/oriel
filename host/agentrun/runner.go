@@ -62,6 +62,11 @@ type Deps struct {
 	Record func(se core.SessionState, ev stats.Event)
 	// UsageSampled reports a plan reading, and keeps it.
 	UsageSampled func(u core.ProviderUsage)
+	// RenameBranch renames the session's branch for a project.
+	RenameBranch func(ctx context.Context, id core.SessionID, project, name string) error
+	// NewBranch moves a project onto a fresh branch off its default branch, which the session takes, and answers its
+	// name: name when it isn't "". Uncommitted work is refused unless carry.
+	NewBranch func(ctx context.Context, id core.SessionID, project, name string, carry bool) (string, error)
 	// PROpen says the last reading of a project's branch found its pull request open.
 	PROpen func(id core.SessionID, project, branch string) bool
 	// MachineChanged reports the machine's state again: its lost logins have changed.

@@ -20,7 +20,7 @@ import (
 // Tools is every tool Oriel offers an agent, by name: the agent sees each as mcp__oriel__<name>.
 var Tools = []string{
 	"reply", "thread", "resolve", "comment",
-	"task_add", "task_update", "tasks", "projects", "repos", "add_project",
+	"task_add", "task_update", "tasks", "projects", "repos", "add_project", "new_branch", "rename_branch",
 	"commit_draft", "pr_draft", "test_run", "finding",
 	"lsp_definition", "lsp_references", "lsp_diagnostics",
 }

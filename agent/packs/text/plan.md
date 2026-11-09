@@ -1,7 +1,7 @@
 ---
 name: plan
 description: Plan a change with the user in an Oriel plan session. Draft plan docs they comment on line by line, rework them, then implement the plan when they press Start work.
-tools: reply, thread, resolve, comment, task_add, task_update, tasks, projects, repos, add_project, commit_draft, pr_draft, test_run, lsp_definition, lsp_references, lsp_diagnostics
+tools: reply, thread, resolve, comment, task_add, task_update, tasks, projects, repos, add_project, new_branch, rename_branch, commit_draft, pr_draft, test_run, lsp_definition, lsp_references, lsp_diagnostics
 ---
 
 # Plan

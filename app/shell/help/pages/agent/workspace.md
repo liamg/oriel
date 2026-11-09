@@ -54,3 +54,14 @@ What the sandboxed agent may do and the connections it made: see [Permissions](a
 `agent.permissions.dock` docks the same view at the bottom instead.
 
 A session whose agent runs on your machine has its directories only: no sandbox, image or permissions.
+
+## The agent's tools {#tools}
+
+Beside its provider's own, a session's agent has Oriel's tools, as `mcp__oriel__…`: `reply`, `thread`, `resolve` and
+`comment` for threads, `task_add`, `task_update` and `tasks` for the Tasks rail, `projects` to list the session's
+projects, `repos` and `add_project` to bring another repo in, `commit_draft` and `pr_draft` for the Ship page's
+drafts, and `test_run` to run tests as evidence. Plugins add more (language servers' lookups, a tracker's tickets).
+
+In a session with branches of its own, `rename_branch` renames a project's branch and `new_branch` starts a fresh one
+off the default branch, so the agent never creates or switches branches with git: Oriel pushes only the session's
+branch (see [Branch](git/ship#branch)).

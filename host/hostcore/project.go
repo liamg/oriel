@@ -196,8 +196,8 @@ func OwnBranch(p core.Project) (string, error) {
 		return "", err
 	}
 	if got := strings.TrimSpace(out); got != p.Branch {
-		return "", fmt.Errorf("%s is on %q, not this session's branch %q: Oriel only pushes and raises PRs from %q. Switch back first",
-			p.Name, got, p.Branch, p.Branch)
+		return "", fmt.Errorf("%s is on %q, not this session's branch %q: Oriel only pushes and raises PRs from %q. "+
+			"Switch back with git checkout %s, or use new_branch / rename_branch", p.Name, got, p.Branch, p.Branch, p.Branch)
 	}
 	return p.Branch, nil
 }

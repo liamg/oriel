@@ -7,7 +7,7 @@ Don't commit, push or raise a PR unless a `where="pr"` action or the user asks: 
 `where="pr"` is a button on the Pull request page; the body says which:
 
 - *Draft*: write a title (a conventional commit line) and a terse description filling the repository's template (`.github/pull_request_template.md` or `.github/PULL_REQUEST_TEMPLATE/`). Save with `mcp__oriel__pr_draft`, reply, resolve. Don't raise it.
-- *Raise PR*: the body holds the approved title and description. If the repository has a template the description doesn't follow, fit the user's content into it (fill its sections, tick only the boxes that apply, drop nothing they wrote); otherwise use it verbatim. On the default branch, branch first. Commit, push, open the PR, reply with its URL, resolve.
+- *Raise PR*: the body holds the approved title and description. If the repository has a template the description doesn't follow, fit the user's content into it (fill its sections, tick only the boxes that apply, drop nothing they wrote); otherwise use it verbatim. On the default branch, start a branch with `mcp__oriel__new_branch` first. Commit, push, open the PR, reply with its URL, resolve.
 - *Fix CI*: read the failing check's logs, fix the cause, commit and push to the same branch, reply with what changed, resolve.
 - *Merge conflicts*: merge `origin/<base>`, resolve each conflict faithfully to both sides' intent, commit, push, and reply with how each one was resolved.
 

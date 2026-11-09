@@ -59,6 +59,9 @@ func (x *Runner) tools(h *session) []agent.Tool {
 				agent.Tool{Name: "add_project", Description: "Bring one of the user's repositories into this session as a project, a worktree on the session's branch, and answer where it is. repo is a name or path from repos.",
 					Schema: hostcore.Schema(`"repo":`+str, "repo"), Call: h.toolAddProject})
 		}
+		if k := x.deps.Kinds.Spec(se); x.deps.NewBranch != nil && k.Can(core.OwnsBranch) && k.Can(core.Ships) {
+			own = append(own, branchTools(h)...)
+		}
 	}
 	for _, t := range x.AppTools(hostcore.ToolsReq{Session: h.id, Agent: kind}) {
 		if !slices.ContainsFunc(own, func(o agent.Tool) bool { return o.Name == t.Name }) {
