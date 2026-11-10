@@ -1,6 +1,6 @@
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: test perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck
+.PHONY: test test-chaos perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck
 
 GOARCH ?= $(shell go env GOARCH)
 VERSION ?= dev
@@ -13,6 +13,11 @@ LDFLAGS := -X github.com/liamg/oriel/cmd/oriel/cli.version=$(VERSION) $(if $(REL
 # Nothing in it measures the machine: those are make perf's.
 test:
 	go test -shuffle=on ./...
+
+# test-chaos runs the suite with the work started off the loop (plugin.Go, plugin.Load, kit.Busy) slowed by a random
+# while: a test that passes only because that work was quick fails here, not on a loaded CI runner.
+test-chaos:
+	ORIEL_TEST_CHAOS=60 go test -shuffle=on -count=1 ./...
 
 # perf runs the tests that measure the machine rather than the code: time, throughput and allocation budgets. Each
 # lives in a _perf_test.go file built only with the perf tag and is named …Budget. Run it on a quiet machine; CI
