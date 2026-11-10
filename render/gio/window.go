@@ -61,7 +61,7 @@ func (b *Backend) invalidate() {
 }
 
 func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
-	w := &Window{win: new(app.Window), events: make(chan render.Event), queue: make(chan render.Event, 1024), opts: o, pl: newPlacer()}
+	w := newGioWindow(o)
 	w.scale.Store(float32(1))
 	w.dpi.Store(float32(1))
 	w.zoom.Store(float32(1))
@@ -96,6 +96,11 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 	return w, nil
 }
 
+func newGioWindow(o render.WindowOpts) *Window {
+	return &Window{win: new(app.Window), events: make(chan render.Event), queue: make(chan render.Event, 1024), gone: make(chan struct{}),
+		opts: o, pl: newPlacer()}
+}
+
 // Window is a Gio window. The app records frames on its own goroutine; the window's event loop
 // replays the latest one whenever Gio asks for a frame.
 type Window struct {
@@ -104,6 +109,8 @@ type Window struct {
 	win    *app.Window
 	events chan render.Event // to the app, in order
 	queue  chan render.Event // from the event loop, which never blocks on the app
+	gone   chan struct{}     // closed when the platform says the window has closed: the app's events end
+	ended  sync.Once
 	latest atomic.Pointer[render.List]
 	spare  *render.List // a frame recorded the same as latest, never handed over: the next records into it
 	handed atomic.Int64 // when latest was handed over, in unix nanoseconds
@@ -265,12 +272,29 @@ func (w *Window) post(ev render.Event) {
 	}
 }
 
+// forward hands the queue to the app until the event loop ends or the platform closes the window. AppKit tells Gio
+// a window is gone only when its view is freed, which what else holds the view can put off for good.
 func (w *Window) forward() {
 	defer close(w.events)
-	for ev := range w.queue {
-		w.events <- ev
+	for {
+		select {
+		case ev, ok := <-w.queue:
+			if !ok {
+				return
+			}
+			select {
+			case w.events <- ev:
+			case <-w.gone:
+				return
+			}
+		case <-w.gone:
+			return
+		}
 	}
 }
+
+// end is the platform saying the window has closed.
+func (w *Window) end() { w.ended.Do(func() { close(w.gone) }) }
 
 func (w *Window) loop() {
 	go w.forward()
@@ -311,6 +335,8 @@ func (w *Window) loop() {
 	}
 	occl := &occlusionWatcher{on: w.vis.occlude}
 	defer occl.close()
+	shut := &closeWatcher{on: w.end}
+	defer shut.close()
 	hover := &hoverWatcher{}
 	defer hover.close()
 	drops := &dropWatcher{on: func(paths []string, x, y float64) {
@@ -424,6 +450,7 @@ func (w *Window) loop() {
 			}
 			w.vis.config(e)
 			occl.view(e)
+			shut.view(e)
 			side.view(e)
 			hover.view(e)
 			drops.view(e)
