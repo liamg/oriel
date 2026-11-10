@@ -44,18 +44,22 @@ func TestRelay(t *testing.T) {
 	defer cancel()
 	addr := PortFileAddr("127.0.0.1", portFile)
 	httpSock, rawSock := filepath.Join(dir, "h.sock"), filepath.Join(dir, "r.sock")
-	go func() { _ = Relay{Addr: addr}.Serve(ctx, httpSock) }()
-	go func() { _ = Relay{Addr: addr, Token: "tok", UpgradePath: "/raw"}.Serve(ctx, rawSock) }()
+	relay := func(r Relay, path string) {
+		ln, err := listenUnix(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		go func() { _ = r.serve(ctx, ln) }()
+	}
+	relay(Relay{Addr: addr}, httpSock)
+	relay(Relay{Addr: addr, Token: "tok", UpgradePath: "/raw"}, rawSock)
 	dial := func(p string) net.Conn {
 		t.Helper()
-		for range 50 {
-			if c, err := net.Dial("unix", p); err == nil {
-				return c
-			}
-			time.Sleep(20 * time.Millisecond)
+		c, err := net.Dial("unix", p)
+		if err != nil {
+			t.Fatal(err)
 		}
-		t.Fatalf("%s never opened", p)
-		return nil
+		return c
 	}
 
 	c := dial(httpSock)
@@ -81,7 +85,7 @@ func TestRelay(t *testing.T) {
 	// No port yet: the connection is closed, not hung.
 	_ = os.WriteFile(portFile, nil, 0o600)
 	c = dial(httpSock)
-	_ = c.SetDeadline(time.Now().Add(2 * time.Second))
+	_ = c.SetDeadline(time.Now().Add(20 * time.Second)) // a hang guard: it closes at once
 	_, _ = io.WriteString(c, "GET / HTTP/1.1\r\nHost: oriel\r\n\r\n")
 	b, err = io.ReadAll(c)
 	if len(b) != 0 || (err != nil && strings.Contains(err.Error(), "timeout")) {

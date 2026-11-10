@@ -24,11 +24,21 @@ type Relay struct {
 
 // Serve listens on path until ctx ends.
 func (r Relay) Serve(ctx context.Context, path string) error {
-	_ = os.Remove(path)
-	ln, err := net.Listen("unix", path)
+	ln, err := listenUnix(path)
 	if err != nil {
 		return err
 	}
+	return r.serve(ctx, ln)
+}
+
+// listenUnix opens the unix socket at path, replacing one left behind.
+func listenUnix(path string) (net.Listener, error) {
+	_ = os.Remove(path)
+	return net.Listen("unix", path)
+}
+
+// serve relays what connects to ln until ctx ends.
+func (r Relay) serve(ctx context.Context, ln net.Listener) error {
 	context.AfterFunc(ctx, func() { _ = ln.Close() })
 	for {
 		c, err := ln.Accept()
