@@ -37,37 +37,54 @@ func Toggle(c *ui.Ctx, key any, on bool, o ToggleOpts) bool {
 }
 
 type SelectOpts struct {
-	Label    string // its accessible name, and the menu's
-	Disabled bool
-	Help     string
-	Width    float32 // the menu's; 220 if 0
+	Label     string // its accessible name, and the menu's
+	Disabled  bool
+	Help      string
+	Width     float32 // the menu's; 220 if 0
+	MaxHeight float32 // the menu's, past which it scrolls; 320 if 0
 }
 
-type selectState struct{ open bool }
+type selectState struct {
+	open, shown bool
+	filter      string
+}
 
-// Select is a button showing value that opens a menu of options. It returns the option chosen and true on the
-// frame one is; the caller keeps the value.
+// Select is a button showing value that opens a menu of options. A long menu has a filter field over it, focused as
+// it opens, where Enter picks the one item left. It returns the option chosen and true on the frame one is; the
+// caller keeps the value.
 func Select(c *ui.Ctx, key any, value string, options []string, o SelectOpts) (string, bool) {
 	id := c.Next(key)
 	st := ui.State[selectState](c, id)
-	w := o.Width
+	w, maxH := o.Width, o.MaxHeight
 	if w == 0 {
 		w = 220
 	}
+	if maxH == 0 {
+		maxH = 320
+	}
 	var chosen string
 	var ok bool
+	pick := func(v string) { chosen, ok, st.open = v, true, false }
 	c.Box(key, ui.Style{}, func(c *ui.Ctx) {
 		b := c.Next("drop")
 		if Button(c, "drop", value+" ▾", ButtonOpts{Disabled: o.Disabled, Help: o.Help}) {
-			st.open = true
+			st.open, st.shown, st.filter = true, false, ""
 		}
-		Popover(c, "menu", b, &st.open, PopoverOpts{Label: o.Label, Width: w, Help: o.Help}, func(c *ui.Ctx) {
-			items := make([]MenuItem, len(options))
-			for i, v := range options {
+		Popover(c, "menu", b, &st.open, PopoverOpts{Label: o.Label, Width: w + 24, Help: o.Help}, func(c *ui.Ctx) {
+			shown, res := menuFilter(c, options, &st.filter, !st.shown, o.Label, o.Help)
+			st.shown = true
+			switch {
+			case res.Cancelled:
+				st.open = false
+			case res.Submitted && len(shown) == 1:
+				pick(shown[0])
+			}
+			items := make([]MenuItem, len(shown))
+			for i, v := range shown {
 				items[i] = MenuItem{Label: v, Help: o.Help}
 			}
-			if i, closed := Menu(c, "m", items, MenuOpts{Width: w, Help: o.Help}); i >= 0 {
-				chosen, ok, st.open = options[i], true, false
+			if i, closed := Menu(c, "m", items, MenuOpts{Width: w, MaxHeight: maxH, Help: o.Help}); i >= 0 {
+				pick(shown[i])
 			} else if closed {
 				st.open = false
 			}
