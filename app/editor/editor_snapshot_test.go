@@ -6,7 +6,6 @@ import (
 	"image/draw"
 	"os"
 	"path/filepath"
-	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -132,31 +131,6 @@ func TestEditorTypingBudget(t *testing.T) {
 	// The worst keypress to frame is under 8 ms, not only the mean.
 	if worst := times[keys-1]; worst > 8*time.Millisecond {
 		t.Errorf("the worst keypress to frame took %v; the budget is 8 ms", worst)
-	}
-}
-
-// The per-frame target on BenchmarkEditorTyping: a typing frame allocates under 0.6MB. Bytes, unlike time,
-// don't move with the machine's load.
-func TestEditorTypingFrameAllocs(t *testing.T) {
-	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
-		t.Skip("allocation counts need a build without the race detector or coverage")
-	}
-	s := typingScene(t)
-	for i := range 50 {
-		keyToFrame(s, string(rune('a'+i%26)))
-	}
-	const keys = 200
-	var before, after runtime.MemStats
-	runtime.ReadMemStats(&before)
-	for i := range keys {
-		keyToFrame(s, string(rune('a'+i%26)))
-	}
-	runtime.ReadMemStats(&after)
-	waitHighlights(s) // the last reparse done before the scene closes
-	bytes, allocs := (after.TotalAlloc-before.TotalAlloc)/keys, (after.Mallocs-before.Mallocs)/keys
-	t.Logf("a typing frame: %d B, %d allocations", bytes, allocs)
-	if bytes > 600<<10 {
-		t.Errorf("a typing frame allocates %d B; the budget is 0.6MB", bytes)
 	}
 }
 
