@@ -21,7 +21,7 @@ func testReads(t *testing.T) (*Reads, registry.Registry) {
 	return rd, r
 }
 
-// until asks again until ok, failing the test after a few seconds.
+// until asks again until ok, failing the test after a few seconds: a hang guard, not a wait for a while.
 func until(t *testing.T, what string, ok func() bool) {
 	t.Helper()
 	for deadline := time.Now().Add(5 * time.Second); !ok(); time.Sleep(time.Millisecond) {

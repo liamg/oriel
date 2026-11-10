@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/apptest"
@@ -115,12 +114,10 @@ func TestExplainChangeIsThrowaway(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(billing, "Total.tsx"), []byte("export const Total = ({ lines }) => 0;\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	for deadline := time.Now().Add(5 * time.Second); walker(s).Held() || s.Showing(explain.ExplainChangeView); {
-		if time.Now().After(deadline) {
-			t.Fatal("a change on disk to step 3's file kept the walkthrough")
-		}
+	s.Until("a change on disk to step 3's file to end the walkthrough", func() bool {
 		walkSettle(s)
-	}
+		return !walker(s).Held() && !s.Showing(explain.ExplainChangeView)
+	})
 
 }
 
