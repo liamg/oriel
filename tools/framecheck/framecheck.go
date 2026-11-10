@@ -5,7 +5,8 @@
 //
 // The call graph is read from the syntax: calls to functions in the same package or another of the module's, and a
 // method's calls to its receiver's methods. A func literal whose first parameter is a
-// context.Context is work run off the loop (plugin.RunSlow's, a cache's fetch), as is a go statement's.
+// context.Context is work run off the loop (plugin.RunSlow's, a cache's fetch), as is a go statement's and one handed to a
+// Go (plugin.Go, kit.Busy.Go).
 package framecheck
 
 import (
@@ -142,6 +143,18 @@ func buildsFrame(t *ast.FuncType, dir string) bool {
 	return false
 }
 
+// spawns says a call runs the func literals it's given on a goroutine of their own, as a go statement does: a Go
+// (plugin.Go, kit.Busy's, a sync.WaitGroup's).
+func spawns(c *ast.CallExpr) bool {
+	switch e := c.Fun.(type) {
+	case *ast.SelectorExpr:
+		return e.Sel.Name == "Go"
+	case *ast.Ident:
+		return e.Name == "Go"
+	}
+	return false
+}
+
 // offLoop says a func literal is work run off the loop: its first parameter is a context.Context.
 func offLoop(t *ast.FuncType) bool {
 	if len(t.Params.List) == 0 {
@@ -186,6 +199,19 @@ func (g *graph) scan(f *fn) {
 				}
 			case *ast.CallExpr:
 				g.call(f, imports, n)
+				if spawns(n) {
+					for _, a := range n.Args {
+						if _, lit := a.(*ast.FuncLit); !lit {
+							ast.Inspect(a, func(m ast.Node) bool {
+								if c, ok := m.(*ast.CallExpr); ok {
+									g.call(f, imports, c)
+								}
+								return true
+							})
+						}
+					}
+					return false
+				}
 			}
 			return true
 		})
