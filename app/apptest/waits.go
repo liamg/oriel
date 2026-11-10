@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/editor"
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
@@ -73,9 +72,6 @@ func (w *Window) look() (busy []string, built <-chan struct{}) {
 	done := make(chan struct{})
 	w.Do(func() error {
 		busy = append(registry.BusyNow(w.Host), dueSources(w.Host, w.Store.State())...)
-		if rd, ok := kit.ReadsOf(w.Host); ok && rd.Busy() {
-			busy = append(busy, "the window's reads")
-		}
 		var once sync.Once
 		var cancel func()
 		cancel = w.Host.Framed(func() { once.Do(func() { cancel(); close(done) }) })

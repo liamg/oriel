@@ -8,8 +8,9 @@ import (
 )
 
 // Quiet runs frames and what the loop is handed until the app has settled: no contributor's work under way
-// (registry.Busy) and nothing handed to the loop, two frames running. It's what a person waits for before they
-// click or read: not a while, the work done. It fails the test, naming what's still busy, if that never comes.
+// (registry.Busy), nothing handed to the loop and no redraw asked for, two frames running. It's what a person
+// waits for before they click or read: not a while, the work done. It fails the test, naming what's still busy,
+// if that never comes.
 func (s *Scene) Quiet() {
 	s.T.Helper()
 	if s.midway {
@@ -21,7 +22,7 @@ func (s *Scene) Quiet() {
 		s.RunQueued()
 		s.Frame()
 		busy := registry.BusyNow(s.Registry())
-		if len(busy) == 0 && !s.Queued() {
+		if len(busy) == 0 && !s.Queued() && !s.Poked() {
 			if calm++; calm == 2 {
 				return
 			}
@@ -29,6 +30,9 @@ func (s *Scene) Quiet() {
 		}
 		calm = 0
 		if time.Now().After(deadline) {
+			if s.Poked() {
+				busy = append(busy, "a redraw asked for each frame")
+			}
 			s.T.Fatalf("the app never settled: still busy: %s", strings.Join(busy, ", "))
 		}
 		time.Sleep(time.Millisecond)

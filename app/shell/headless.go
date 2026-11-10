@@ -7,6 +7,7 @@ import (
 	"image"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
@@ -34,6 +35,7 @@ type Headless struct {
 	scale   float32 // the zoom it's drawn at; 1 when 0
 	list    *render.List
 	cancel  func()
+	poked   *atomic.Bool // a redraw asked for since the last frame started
 }
 
 // HeadlessOpts is how a Headless app is drawn.
@@ -85,11 +87,12 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 		dirs = []string{} // none: not the machine's
 	}
 	ts.SetFontDirs(dirs)
-	sh, cancel := newShell(cfg, builtins, func() {})
+	poked := new(atomic.Bool)
+	sh, cancel := newShell(cfg, builtins, func() { poked.Store(true) })
 	sh.desktop = cfg.Desktop
 	sh.launchDone = true // a window that's been up a while: nothing comes back as at launch
 	unfont := contributeFonts(cfg.Registry, ts, func() {})
-	h := &Headless{sh: sh, size: o.Size, cancel: func() { cancel(); unfont() }}
+	h := &Headless{sh: sh, size: o.Size, poked: poked, cancel: func() { cancel(); unfont() }}
 	last, err := sh.activate(context.Background(), &h.plugins)
 	if err != nil {
 		h.Close()
@@ -173,6 +176,7 @@ func (h *Headless) zoomed() float32 {
 // Frame draws one frame, as the window would.
 func (h *Headless) Frame() {
 	defer fsx.Enter()()
+	h.poked.Store(false)
 	h.sh.seeNav(h.sh.cfg.Registry, h.ui.Now())
 	h.list = new(render.List)
 	start := time.Now()
@@ -181,6 +185,10 @@ func (h *Headless) Frame() {
 	})
 	h.sh.frames.Add(time.Now(), time.Since(start), 0, h.ui.WokenBy())
 }
+
+// Poked says a redraw has been asked for (Host.Redraw) since the last frame started: work that landed without
+// handing the loop anything, which the next frame shows.
+func (h *Headless) Poked() bool { return h.poked.Load() }
 
 // List is the last frame's display list.
 func (h *Headless) List() *render.List { return h.list }
