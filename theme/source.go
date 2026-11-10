@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Source is where a theme comes from: a built-in, a file, a plugin, a Lua-generated theme.
@@ -59,6 +61,7 @@ func (builtin) Watch(func()) func() { return func() {} }
 type File struct {
 	Path      string
 	PollEvery time.Duration
+	Clock     clock.Clock // nil is the system's
 }
 
 func (f File) Name() string {
@@ -97,24 +100,31 @@ func (f File) Watch(fn func()) (cancel func()) {
 		return sha256.Sum256(b)
 	}
 	last := read()
-	done := make(chan struct{})
-	go func() {
-		t := time.NewTicker(every)
-		defer t.Stop()
-		for {
-			select {
-			case <-done:
-				return
-			case <-t.C:
-				if h := read(); h != last {
-					last = h
-					fn()
-				}
-			}
+	clk := clock.Or(f.Clock)
+	var mu sync.Mutex
+	var timer clock.Timer
+	stopped := false
+	var poll func()
+	poll = func() {
+		if h := read(); h != last {
+			last = h
+			fn()
 		}
-	}()
-	var once sync.Once
-	return func() { once.Do(func() { close(done) }) }
+		mu.Lock()
+		defer mu.Unlock()
+		if !stopped {
+			timer = clk.AfterFunc(every, poll)
+		}
+	}
+	mu.Lock()
+	timer = clk.AfterFunc(every, poll)
+	mu.Unlock()
+	return func() {
+		mu.Lock()
+		defer mu.Unlock()
+		stopped = true
+		timer.Stop()
+	}
 }
 
 // Stack loads the theme called name and everything it extends, base first.
