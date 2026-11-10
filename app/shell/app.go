@@ -177,18 +177,23 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	if err != nil {
 		return err
 	}
+	closed := func() {}
+	if cfg.Closed != nil {
+		closed = sync.OnceFunc(cfg.Closed)
+	}
 	defer func() {
 		w.Close()
-		if cfg.Closed != nil {
-			cfg.Closed()
-		}
+		closed()
 	}()
 	defer func() {
 		if err := place.save(w); err != nil {
 			log.Error("window place", "err", err)
 		}
 	}()
-	sh.closeWin = w.Close
+	sh.closeWin = func() {
+		w.Close()
+		closed()
+	}
 	if _, ok := w.(render.CloseHolder); ok && cfg.Host != nil {
 		sh.holdsClose = true
 	}
