@@ -248,7 +248,7 @@ func (s *Scene) SettleReads() {
 	if !ok {
 		return
 	}
-	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(time.Millisecond) {
+	for deadline := time.Now().Add(Timeout); ; time.Sleep(time.Millisecond) {
 		s.Frame()
 		if !rd.Busy() {
 			return
@@ -692,7 +692,7 @@ func (s *Scene) arrived() {
 	if !ok {
 		return
 	}
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for {
 		s.RunQueued()
 		if w.Arrived() {
@@ -746,7 +746,7 @@ func (s *Scene) PluginVM(p plugin.Caller) *script.VM {
 // as the GitTrees service says.
 func (s *Scene) SettleGit() {
 	s.T.Helper()
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for {
 		s.Frame()
 		s.RunQueued()
@@ -776,10 +776,10 @@ func (s *Scene) gitRead() bool {
 	return true
 }
 
-// WaitFor frames until the frame's text, its lines run together, has want, for up to 5s, and answers that text.
+// WaitFor frames until the frame's text, its lines run together, has want, for up to Timeout, and answers that text.
 func (s *Scene) WaitFor(want string) string {
 	s.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for {
 		s.Frame()
 		text := strings.ReplaceAll(s.Text(), "\n", "")

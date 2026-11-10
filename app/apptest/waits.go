@@ -57,7 +57,7 @@ func (w *Window) Taken() {
 // WaitSearch frames until project search has finished and the frame has want, and answers the frame's text.
 func (s *Scene) WaitSearch(want string) string {
 	s.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for {
 		PluginOf[*editor.Search](s, "search").Wait()
 		s.Frame()

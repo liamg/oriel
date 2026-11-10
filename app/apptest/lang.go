@@ -80,7 +80,7 @@ func (s *Scene) RunDone() {
 // WaitTerm frames until the frame has want, as a terminal's shell answers off the loop, and answers the frame's text.
 func (s *Scene) WaitTerm(want string) string {
 	s.T.Helper()
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for {
 		s.RunQueued()
 		s.Frame()

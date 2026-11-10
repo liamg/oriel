@@ -625,7 +625,7 @@ func AgentWindowWith(t *testing.T, h *rig.Host, o WindowOptions) (*Window, *agen
 	st := w.UntilState("the session in front", func(st core.State) bool { return st.Focus == "w" })
 	se, _ := st.Session("w")
 	p, _ := se.Snapshot().Primary()
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for {
 		var dir string
 		w.Do(func() error { dir = w.Host.Here().Project; return nil })
