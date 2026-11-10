@@ -141,9 +141,7 @@ func (x *Ship) readMerge(a *mergeAsk) {
 	if u := x.h.UI(); u != nil {
 		a.since = u.Now()
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, time.Minute)
 		defer cancel()
 		pr, methods, blockers, err := x.mergeRead(ctx, se, s, h)
@@ -167,7 +165,7 @@ func (x *Ship) readMerge(a *mergeAsk) {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 // mergeRead is the PR now, the methods its repo allows, and every blocker: the host's, then the session's.

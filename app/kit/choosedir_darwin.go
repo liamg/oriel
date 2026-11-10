@@ -1,13 +1,17 @@
 package kit
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 )
 
-// ChooseDir asks macOS for a folder with its own chooser.
-func ChooseDir() (string, error) {
-	out, err := exec.Command("osascript", "-e", `POSIX path of (choose folder with prompt "Open Directory")`).Output()
+// ChooseDir asks macOS for a folder with its own chooser; it closes when ctx ends.
+func ChooseDir(ctx context.Context) (string, error) {
+	out, err := exec.CommandContext(ctx, "osascript", "-e", `POSIX path of (choose folder with prompt "Open Directory")`).Output()
+	if ctx.Err() != nil {
+		return "", nil
+	}
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok && strings.Contains(string(e.Stderr), "-128") {
 			return "", nil // cancelled

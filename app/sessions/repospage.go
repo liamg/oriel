@@ -77,7 +77,7 @@ func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 		return
 	}
 	d.planBusy, d.planErr, d.planSince = true, "", x.h.UI().Now()
-	go func() {
+	plugin.Go(x.h, "repos: housekeeping "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		p, err := w.Housekeeping(ctx, host.HousekeepReq{Repo: id, Fetch: fetch})
@@ -93,7 +93,7 @@ func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 // act runs a host call for a repo off the loop, then reads its facts again.
@@ -104,7 +104,7 @@ func (x *Repos) act(id core.RepoID, what string, fn func(ctx context.Context, w 
 		return
 	}
 	d.busy, d.note, x.err = what, "", ""
-	go func() {
+	plugin.Go(x.h, "repos: "+what+" "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		note, err := fn(ctx, w)
@@ -116,7 +116,7 @@ func (x *Repos) act(id core.RepoID, what string, fn func(ctx context.Context, w 
 			x.readFacts(id)
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 // shown are the repos the filter lets through: found ones last, else by name.
@@ -675,7 +675,7 @@ func (x *Repos) loadTag(id core.RepoID, t *tagForm) {
 	}
 	t.loading, t.since = true, x.h.UI().Now()
 	branch := t.branch
-	go func() {
+	plugin.Go(x.h, "repos: tag preview "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		p, err := w.TagPreview(ctx, id, branch)
@@ -696,7 +696,7 @@ func (x *Repos) loadTag(id core.RepoID, t *tagForm) {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 func (x *Repos) tagCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
@@ -850,7 +850,7 @@ func (x *Repos) createTag(id core.RepoID, t *tagForm) {
 	a := registry.Args{"repo": string(id), "branch": t.branch, "name": strings.TrimSpace(t.name), "message": t.message,
 		"pull": t.pull && t.preview.Remote, "sign": t.sign && t.preview.Signing, "push": t.push && t.preview.Remote}
 	w, _ := kit.SessionHost(x.h)
-	go func() {
+	plugin.Go(x.h, "repos: tag "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		res, err := w.Tag(ctx, host.TagReq{Repo: id, Branch: a.String("branch"), Name: a.String("name"), Message: a.String("message"),
@@ -865,7 +865,7 @@ func (x *Repos) createTag(id core.RepoID, t *tagForm) {
 			x.readFacts(id)
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 // tagDone is a tag just made, and how its push went.

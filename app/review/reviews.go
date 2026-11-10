@@ -308,7 +308,7 @@ func (x *Reviews) fresh(s registry.HostSite, stale time.Duration) <-chan struct{
 	}
 	done := make(chan struct{})
 	l.busy, l.since = done, kit.WindowNow(x.h)
-	go func() {
+	plugin.Go(x.h, "reviews: requests from "+s.Key(), func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		defer cancel()
 		rs, err := registry.RequestedReviews(ctx, s)
@@ -330,7 +330,7 @@ func (x *Reviews) fresh(s registry.HostSite, stale time.Duration) <-chan struct{
 			x.notifyNew(s, before, rs)
 		}
 		x.h.Redraw()
-	}()
+	})
 	return done
 }
 

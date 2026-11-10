@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -157,7 +158,7 @@ func (x *Repos) probe(c *ui.Ctx, f *addRepo) {
 		return
 	}
 	f.probing, f.probeAt = true, now
-	go func() {
+	plugin.Go(x.h, "repos: the add dialog's check", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		var (
@@ -178,7 +179,7 @@ func (x *Repos) probe(c *ui.Ctx, f *addRepo) {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 func (x *Repos) dialogBody(c *ui.Ctx, f *addRepo) {
@@ -257,15 +258,15 @@ func (x *Repos) dirMode(c *ui.Ctx, f *addRepo, focus bool) {
 		c.Row("row", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			x.dialogField(c, "path", &f.path, "Directory", "~/src/my-project", focus, widget.InputOpts{})
 			if kit.ReadsIn(c).HasChooseDir() && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
-				go func() {
-					dir, err := kit.ChooseDir()
+				x.work.Loop(func(ctx context.Context) {
+					dir, err := kit.ChooseDir(ctx)
 					x.h.Do(func() {
 						if err == nil && dir != "" {
 							f.path = kit.TildePath(strings.TrimRight(dir, "/"))
 						}
 					})
 					x.h.Redraw()
-				}()
+				})
 			}
 		})
 		x.completions(c, f)
@@ -328,15 +329,15 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 		labelled(c, "parent", "Parent folder", func(c *ui.Ctx) {
 			x.dialogField(c, "parent", &f.parent, "Parent folder", "~/src", false, widget.InputOpts{})
 			if kit.ReadsIn(c).HasChooseDir() && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
-				go func() {
-					dir, err := kit.ChooseDir()
+				x.work.Loop(func(ctx context.Context) {
+					dir, err := kit.ChooseDir(ctx)
 					x.h.Do(func() {
 						if err == nil && dir != "" {
 							f.parent = kit.TildePath(strings.TrimRight(dir, "/"))
 						}
 					})
 					x.h.Redraw()
-				}()
+				})
 			}
 		})
 		if w, _ := kit.SessionHost(x.h); w != nil && expandTilde(f.parent) == w.CloneParent() && len(x.repos()) > 0 {
@@ -437,7 +438,7 @@ func (x *Repos) submitDialog() {
 			x.h.Do(func() { f.progress = line })
 			x.h.Redraw()
 		}}
-	go func() {
+	plugin.Go(x.h, "repos: add "+cmp.Or(req.URL, path), func() {
 		defer cancel()
 		var (
 			r   core.Repo
@@ -469,7 +470,7 @@ func (x *Repos) submitDialog() {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 // remoteHost is a remote URL as the dialog shows it: github.com/liamg/oriel.

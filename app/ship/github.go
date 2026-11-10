@@ -265,15 +265,13 @@ func (x *GitHub) resolveHost(id core.SessionID, t core.Thread) {
 	if err != nil {
 		return
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, time.Minute)
 		defer cancel()
 		if err := c.ResolveGitHub(ctx, host.ResolveReq{Session: id, Thread: t.ID, Resolved: want}); err != nil {
 			fail(err)
 		}
-	}()
+	})
 }
 
 // wait is until every sync and forward started has finished.
@@ -314,9 +312,7 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 	x.synced[id] = done
 	x.mu.Unlock()
 	trust := x.trust()
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		var m host.Mirror
 		c, err := x.client(id)
 		if err == nil {
@@ -352,7 +348,7 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		} else if x.ctx.Err() == nil && g.ended() {
 			x.follow() // its PRs are all closed: stop syncing it
 		}
-	}()
+	})
 }
 
 // syncedAgo is how long ago session id last synced; forever if it hasn't.
@@ -422,9 +418,7 @@ func (x *GitHub) forward(a registry.Args) error {
 	x.forwarding[cm.ID] = true
 	x.mu.Unlock()
 	delete(x.editing, cm.ID)
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		_, err := c.ForwardGitHub(ctx, host.ForwardReq{Session: se.ID, Thread: t.ID, Comment: cm.ID})
 		cancel()
@@ -435,7 +429,7 @@ func (x *GitHub) forward(a registry.Args) error {
 			x.h.Notify(core.Notice{ID: "github.forward", Severity: core.SevError, Source: "github", Title: "Forward to GitHub", Text: err.Error()})
 		}
 		x.h.Redraw()
-	}()
+	})
 	return nil
 }
 

@@ -143,7 +143,7 @@ func (x *Plan) runStartWork() error {
 	a := d.args()
 	d.busy, d.err = true, ""
 	gen, life := x.startGen, x.life
-	go func() {
+	plugin.Go(x.h, "plan: start work", func() {
 		err := plugin.Await(life, func(ctx registry.Ctx) error { return x.h.Run(ctx, "session.start-work", a) })
 		x.h.Do(func() {
 			if gen != x.startGen || x.dialog == nil {
@@ -157,7 +157,7 @@ func (x *Plan) runStartWork() error {
 			x.closeStartWork()
 		})
 		x.h.Redraw()
-	}()
+	})
 	return nil
 }
 

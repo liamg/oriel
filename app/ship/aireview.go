@@ -208,16 +208,14 @@ func (x *AIReview) run(a registry.Args) error {
 		x.asked = map[core.SessionID]bool{}
 	}
 	x.asked[se.ID] = true
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		_, err := c.AIReview(context.Background(), req)
 		x.h.Do(func() { delete(x.asked, se.ID) })
 		x.h.Redraw()
 		if err != nil {
 			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Key: true, Text: "AI review: " + err.Error()})
 		}
-	}()
+	})
 	return nil
 }
 
@@ -226,13 +224,11 @@ func (x *AIReview) setFinding(se core.SessionState, f core.Finding) error {
 	if err != nil {
 		return err
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		if err := c.SetFindings(core.FindingsRecorded{Session: se.ID, Findings: []core.Finding{f}}); err != nil {
 			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Key: true, Text: err.Error()})
 		}
-	}()
+	})
 	return nil
 }
 

@@ -137,7 +137,7 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
 			if it.ID == "browse" {
 				go func() {
-					dir, err := kit.ChooseDir()
+					dir, err := kit.ChooseDir(context.Background())
 					h.Do(func() {
 						if err == nil && dir != "" {
 							err = sh.openDir(context.Background(), h, dir)

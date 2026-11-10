@@ -274,9 +274,7 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) <-c
 		close(done)
 		return done
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		defer close(done)
 		x.mu.Lock()
 		defer x.mu.Unlock()
@@ -287,7 +285,7 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) <-c
 		if err := w.SetReviewDraft(core.ReviewDrafted{Session: id, Draft: d}); err != nil {
 			x.h.Notify(core.Notice{ID: "review.pr.draft", Severity: core.SevError, Text: err.Error()})
 		}
-	}()
+	})
 	return done
 }
 
@@ -321,9 +319,7 @@ func (x *PRReview) detail(s registry.HostSite, url string) *reviewDetail {
 		d.done = true
 		return d
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		got, err := registry.LookupReview(ctx, s, url)
@@ -339,7 +335,7 @@ func (x *PRReview) detail(s registry.HostSite, url string) *reviewDetail {
 		if again {
 			x.refresh(url)
 		}
-	}()
+	})
 	return d
 }
 
@@ -360,9 +356,7 @@ func (x *PRReview) refresh(url string) {
 	if busy || !ok || src.Lookup == nil {
 		return
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		got, err := registry.LookupReview(ctx, src, url)
@@ -378,7 +372,7 @@ func (x *PRReview) refresh(url string) {
 		if again {
 			x.refresh(url)
 		}
-	}()
+	})
 }
 
 // ended says the pull request at url is closed or merged, as its host last said.

@@ -3,6 +3,7 @@
 package kit
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 )
@@ -13,13 +14,13 @@ var dirChoosers = [][]string{
 	{"kdialog", "--getexistingdirectory"},
 }
 
-// ChooseDir asks the desktop for a folder with the first chooser it has; "" if cancelled.
-func ChooseDir() (string, error) {
+// ChooseDir asks the desktop for a folder with the first chooser it has; "" if cancelled or ctx ends.
+func ChooseDir(ctx context.Context) (string, error) {
 	for _, c := range dirChoosers {
 		if _, err := exec.LookPath(c[0]); err != nil {
 			continue
 		}
-		out, err := exec.Command(c[0], c[1:]...).Output()
+		out, err := exec.CommandContext(ctx, c[0], c[1:]...).Output()
 		if _, ok := err.(*exec.ExitError); ok {
 			return "", nil // cancelled
 		}

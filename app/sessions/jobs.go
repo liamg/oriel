@@ -400,7 +400,7 @@ func (x *Jobs) deleteJob(ctx context.Context, a registry.Args) error {
 
 // do runs a command off the loop, as a click asks, and shows what went wrong on the page.
 func (x *Jobs) do(id string, a registry.Args) {
-	go func() {
+	plugin.Go(x.h, "jobs: "+id, func() {
 		err := x.h.Run(context.Background(), id, a)
 		x.h.Do(func() {
 			x.err = ""
@@ -409,7 +409,7 @@ func (x *Jobs) do(id string, a registry.Args) {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 // figure is the sidebar's note: how many runs are going.
