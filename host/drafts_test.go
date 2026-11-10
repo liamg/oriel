@@ -56,7 +56,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	ctx := context.Background()
 
 	turn(r, id, a)
-	a.NoneSent(t) // clean, and no commits of its own
+	r.noneSent(a) // clean, and no commits of its own
 
 	write(t, dir, "round.go", "package pricing\n\nfunc Round(x float64) float64 { return x }\n")
 	turn(r, id, a)
@@ -72,9 +72,9 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 
 	// It doesn't draft; the same code isn't asked about again.
 	turn(r, id, a)
-	a.NoneSent(t)
+	r.noneSent(a)
 	turn(r, id, a)
-	a.NoneSent(t)
+	r.noneSent(a)
 
 	// The code moves on: asked again. It drafts, and isn't asked again.
 	write(t, dir, "round.go", "package pricing\n\nfunc Round(x float64) float64 { return -x }\n")
@@ -88,7 +88,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	a.Call(t, "pr_draft", map[string]any{"title": "fix(pricing): round negatives", "body": "Rounds them."})
 	a.Emit(agent.TurnEnd{})
 	a.Handled(t)
-	a.NoneSent(t)
+	r.noneSent(a)
 	s := r.ship(id, false)
 	for _, p := range s {
 		if p.CommitDraft.Stale || p.PRDraft.Stale || p.CommitDraft.By != "fake" {
@@ -114,7 +114,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	a.Call(t, "pr_draft", map[string]any{"title": "fix(pricing): round negatives", "body": "Rounds them."})
 	a.Emit(agent.TurnEnd{})
 	a.Handled(t)
-	a.NoneSent(t)
+	r.noneSent(a)
 	p, _ := r.session(id).Primary()
 	if _, err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: p.Name, Message: "fix(pricing): round negatives"}); err != nil {
 		t.Fatal(err)
@@ -123,7 +123,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 		t.Errorf("the PR draft after the commit: %+v", d)
 	}
 	turn(r, id, a)
-	a.NoneSent(t)
+	r.noneSent(a)
 }
 
 // "Never overwrite what the user typed": a draft the user wrote is theirs. The agent isn't asked for it, its tool
@@ -168,5 +168,5 @@ func TestNoDraftNudgeWithoutTheTool(t *testing.T) {
 	p, _ := r.session(id).Primary()
 	write(t, p.Dir, "round.go", "package pricing\n")
 	turn(r, id, a)
-	a.NoneSent(t)
+	r.noneSent(a)
 }

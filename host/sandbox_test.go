@@ -112,14 +112,8 @@ func (s *sandboxRig) sandboxed() (core.SessionID, *agent.StartSpec, *sandboxhost
 // before then.
 func (r *rig) keptBox(id core.SessionID) *sandboxhost.Box {
 	r.t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(time.Millisecond) {
-		if b := r.w.boxOf(id); b != nil {
-			return b
-		}
-		if time.Now().After(deadline) {
-			r.t.Fatal("the session never kept its sandbox")
-		}
-	}
+	until(r.t, "the session to keep its sandbox", func() bool { return r.w.boxOf(id) != nil })
+	return r.w.boxOf(id)
 }
 
 // waitAsk waits for the session's one ask of kind.
@@ -193,7 +187,7 @@ func TestSandboxBackendPerSession(t *testing.T) {
 		if got != "seatbelt" {
 			t.Errorf("the session runs in %q", got)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Fatal("no sandbox opened")
 	}
 	if se, _ := s.w.session(id); se.Agent.Backend != "seatbelt" {
@@ -353,7 +347,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	select {
 	case r := <-res:
 		t.Fatalf("not held: %+v", r)
-	case <-time.After(100 * time.Millisecond):
+	default:
 	}
 	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"})
 	if r := <-res; r.code != http.StatusForbidden || !strings.Contains(r.body, "not allowed") {
@@ -485,7 +479,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 	select {
 	case r := <-res:
 		t.Fatalf("not held: %q", r.Text())
-	case <-time.After(100 * time.Millisecond):
+	default:
 	}
 	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "open a PR instead"})
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "the user denied oriel__push") || !strings.Contains(r.Text(), "open a PR instead") {
@@ -673,7 +667,7 @@ func TestStartDoesNotWaitForTheSandbox(t *testing.T) {
 	var id core.SessionID
 	select {
 	case id = <-started:
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		close(s.hold)
 		t.Fatal("Start waited for the sandbox")
 	}
@@ -688,13 +682,8 @@ func TestStartDoesNotWaitForTheSandbox(t *testing.T) {
 	}
 	close(s.hold)
 	a := s.agent()
-	select {
-	case in := <-a.Sent:
-		if !strings.Contains(in.Text, "Work") {
-			t.Errorf("first input: %q", in.Text)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("the agent never got the prompt")
+	if in := a.WaitSent(t); !strings.Contains(in.Text, "Work") {
+		t.Errorf("first input: %q", in.Text)
 	}
 	se = s.eventually(id, "the agent up", func(se core.SessionState) bool { return se.Agent.Running && se.Agent.Starting == nil })
 	_ = se
@@ -830,11 +819,7 @@ func TestSandboxRestartsOnceWhenIdle(t *testing.T) {
 	b.RestartWhenIdle("again")
 	a.Emit(agent.TurnEnd{})
 	a = s.agent()
-	select {
-	case <-s.fake.Started:
-		t.Error("the agent restarted twice")
-	case <-time.After(1500 * time.Millisecond):
-	}
+	s.noStart("twice")
 
 	b = s.keptBox(id)
 	a.Emit(agent.TurnStart{})
@@ -843,11 +828,7 @@ func TestSandboxRestartsOnceWhenIdle(t *testing.T) {
 	if err := s.w.Stop(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case <-s.fake.Started:
-		t.Error("a stopped agent restarted")
-	case <-time.After(1500 * time.Millisecond):
-	}
+	s.noStart("once stopped")
 }
 
 // A restart asked for during a turn that ends with work owed happens at the turn's end, before the agent is told to
@@ -868,7 +849,7 @@ func TestSandboxRestartsBeforeTheCarryOn(t *testing.T) {
 	if again == a || !a.Closed() {
 		t.Error("the agent wasn't restarted")
 	}
-	a.NoneSent(t)
+	s.noneSent(a)
 }
 
 // An "always" allow for the network that can't be saved still lets the connection through, and the transcript says

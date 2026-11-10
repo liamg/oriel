@@ -165,7 +165,7 @@ func (h *session) firstTurn() handout {
 
 // startAside starts the agent off the caller: a failure is in the agent's state, and logged. Close waits for it.
 func (h *session) startAside() {
-	h.r.starts.Go(func() {
+	h.r.starts.Go("starting an agent", func() {
 		defer h.r.env.Recover("starting an agent", nil)
 		if err := h.start(); err != nil {
 			h.r.env.Log.Warn("the agent didn't start", "session", h.id, "err", err)
@@ -263,7 +263,7 @@ func (h *session) ranModel() string {
 
 // restart stops the agent and starts it again on its conversation, off the caller.
 func (h *session) restart(why string) {
-	h.r.starts.Go(func() {
+	h.r.starts.Go("restarting an agent", func() {
 		defer h.r.env.Recover("restarting an agent", nil)
 		h.stop(why, "")
 		if err := h.start(); err != nil {

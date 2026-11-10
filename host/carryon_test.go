@@ -41,14 +41,14 @@ func TestATurnEndingWithWorkOwedIsToldToCarryOn(t *testing.T) {
 		t.Errorf("asked for drafts with the work owed:\n%s", got.Text)
 	}
 	turn(r, id, a)
-	a.NoneSent(t) // nothing moved since
+	r.noneSent(a) // nothing moved since
 
 	replied(r, id, a, map[string]any{"body": "Still on it.", "working": true})
 	a.WaitSent(t)
 	replied(r, id, a, map[string]any{"body": "Nearly there.", "working": true})
 	a.WaitSent(t)
 	replied(r, id, a, map[string]any{"body": "One more step.", "working": true})
-	a.NoneSent(t) // three without the user is enough
+	r.noneSent(a) // three without the user is enough
 
 	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Thread: tid, Body: "keep going"}); err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func TestATurnEndingWithWorkOwedIsToldToCarryOn(t *testing.T) {
 	a.Emit(agent.Subagent{ID: "s1", Description: "Find the callers"})
 	a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "A subagent is finding the callers.", "working": true})
 	turn(r, id, a)
-	a.NoneSent(t)
+	r.noneSent(a)
 	a.Emit(agent.Subagent{ID: "s1", Done: true})
 
 	// Handed back to the user with a question: nothing owed, so the drafts are asked for.
@@ -101,7 +101,7 @@ func TestAResumedAgentCarriesOnWithWorkOwed(t *testing.T) {
 	if err := r.w.Resume(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
-	r.agent().NoneSent(t)
+	r.noneSent(r.agent())
 }
 
 // delivered waits for the host to mark what the agent was sent as delivered: a reply on a thread with a comment it

@@ -4,7 +4,6 @@ import (
 	"context"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
@@ -67,11 +66,7 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	}
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.TurnEnd{})
-	for deadline := time.Now().Add(5 * time.Second); s.w.boxOf(id) == b || s.w.boxOf(id) == nil; time.Sleep(5 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatal("the agent didn't start again on the rebuilt image")
-		}
-	}
+	until(t, "the agent started again on the rebuilt image", func() bool { nb := s.w.boxOf(id); return nb != b && nb != nil })
 }
 
 // A session whose agent runs on the host has its directories, and no sandbox.

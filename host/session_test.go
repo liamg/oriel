@@ -75,7 +75,7 @@ func TestCommentsWaitForTheTurnUnlessUrgent(t *testing.T) {
 	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "later please"}); err != nil {
 		t.Fatal(err)
 	}
-	a.NoneSent(t)
+	r.noneSent(a)
 	a.Emit(agent.TurnEnd{})
 	if got := a.WaitSent(t); !strings.Contains(got.Text, "later please") {
 		t.Errorf("after the turn: %q", got.Text)
@@ -357,7 +357,7 @@ func TestBtwIsAnsweredByAFork(t *testing.T) {
 	if c := th.Comments[1]; c.Author != core.AuthorAgent || !c.Btw || !strings.HasPrefix(c.Body, "fork says:") {
 		t.Errorf("answer = %+v", c)
 	}
-	a.NoneSent(t)
+	r.noneSent(a)
 }
 
 // Pin as note is a thread opened resolved; it stays with the user and never reaches the agent.
@@ -373,7 +373,7 @@ func TestAThreadOpenedResolvedIsANote(t *testing.T) {
 	if th, _ := r.session(id).Thread(tid); th.Status != core.ThreadResolved || th.Busy {
 		t.Errorf("the note = %+v", th)
 	}
-	a.NoneSent(t)
+	r.noneSent(a)
 }
 
 func TestConsoleMessagesQueueUntilTheTurnEnds(t *testing.T) {
@@ -388,7 +388,7 @@ func TestConsoleMessagesQueueUntilTheTurnEnds(t *testing.T) {
 	if q := r.session(id).Agent.Queue; len(q) != 1 {
 		t.Fatalf("queue = %v", q)
 	}
-	a.NoneSent(t)
+	r.noneSent(a)
 	a.Emit(agent.TurnEnd{})
 	if got := a.WaitSent(t); got.Text != "also check routes.go" {
 		t.Errorf("sent %q", got.Text)
@@ -540,7 +540,7 @@ func TestRunningProcessesDontHoldTheTurn(t *testing.T) {
 		if want := (core.ThreadBusy{Session: id, Thread: tid}); ev != want {
 			t.Errorf("the thread changed with %#v, want %#v", ev, want)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Fatal("the thread stayed busy while the dev server ran")
 	}
 	if in := a.WaitSent(t); in.Text == "" {
@@ -646,12 +646,12 @@ func TestResumeRestartsAnAgentThatStoppedAnswering(t *testing.T) {
 	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "and the zero case"}); err != nil {
 		t.Fatal(err)
 	}
-	a.NoneSent(t)
+	r.noneSent(a)
 
 	if err := r.w.Resume(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
-	a.NoneSent(t) // still answering: it carries on with its turn
+	r.noneSent(a) // still answering: it carries on with its turn
 
 	a.Quiet()
 	if err := r.w.Resume(context.Background(), id); err != nil {
@@ -679,7 +679,8 @@ func TestAStaleAgentRestartsAfterItsTurn(t *testing.T) {
 	a.Emit(agent.TurnStart{})
 	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
 	a.Emit(agent.Stale{Why: "its CLI dropped oriel-gw"})
-	time.Sleep(100 * time.Millisecond)
+	a.Handled(t)
+	r.settle()
 	if a.Closed() {
 		t.Fatal("restarted mid-turn")
 	}
@@ -923,22 +924,19 @@ func sevenProjects(t *testing.T, runs func() int) (*rig, core.SessionID, *agentt
 	a.WaitSent(t)
 	before := runs()
 	a.Emit(agent.TurnStart{})
-	full := settled(runs) - before
+	full := settled(r, a, runs) - before
 	if full == 0 {
 		t.Fatal("the turn's start made no mark")
 	}
 	return r, id, a, full
 }
 
-// settled is runs once it has stopped changing.
-func settled(runs func() int) int {
-	for n := -1; ; time.Sleep(400 * time.Millisecond) {
-		if m := runs(); m == n {
-			return m
-		} else {
-			n = m
-		}
-	}
+// settled is runs once a's events are handled and the marks they asked for are made.
+func settled(r *rig, a *agenttest.FakeSession, runs func() int) int {
+	r.t.Helper()
+	a.Handled(r.t)
+	r.settle()
+	return runs()
 }
 
 // Shell commands come faster than the session's projects can be marked: the marks still waiting are made once, not
@@ -957,7 +955,7 @@ func TestShellMarksCatchUpAfterABurstBudget(t *testing.T) {
 	r.eventually(id, "the burst", func(se core.SessionState) bool {
 		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "b149" && it.Done })
 	})
-	if n := settled(runs) - before; n > 5*full {
+	if n := settled(r, a, runs) - before; n > 5*full {
 		t.Errorf("150 commands ran git %d times, %d marks of every project; want the waiting marks made together, at most 5", n, n/full)
 	}
 }
@@ -970,7 +968,7 @@ func TestShellMarksOnlyWhatChanged(t *testing.T) {
 	before := runs()
 	a.Emit(agent.ToolCall{ID: "quiet", Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
 	a.Emit(agent.ToolResult{ID: "quiet", Output: "ok"})
-	if n := settled(runs) - before; n != 0 {
+	if n := settled(r, a, runs) - before; n != 0 {
 		t.Errorf("a command that changed nothing ran git %d times", n)
 	}
 	dir := r.session(id).Projects[3].Dir
@@ -988,7 +986,7 @@ func TestShellMarksOnlyWhatChanged(t *testing.T) {
 		t.Errorf("files = %+v", it.Files)
 	}
 	// One project's snapshot and its diff: well under the seven projects' snapshots.
-	if n := settled(runs) - before; n > full/3 {
+	if n := settled(r, a, runs) - before; n > full/3 {
 		t.Errorf("a change to one project ran git %d times; marking all seven took %d", n, full)
 	}
 }

@@ -2,7 +2,10 @@ package host
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -115,19 +118,72 @@ func (r *rig) agent() *agenttest.FakeSession {
 	return r.fake.WaitStarted(r.t)
 }
 
+// waitTimeout is how long a wait on the host's work goes before it's taken as hung.
+const waitTimeout = 30 * time.Second
+
+// until waits for cond, failing with what (and more, if given) once the host looks hung.
+func until(t testing.TB, what string, cond func() bool, more ...func() string) {
+	t.Helper()
+	deadline := time.Now().Add(waitTimeout)
+	for !cond() {
+		if time.Now().After(deadline) {
+			detail := ""
+			for _, m := range more {
+				detail += "; " + m()
+			}
+			t.Fatalf("waiting for %s%s", what, detail)
+		}
+		time.Sleep(time.Millisecond) // a poll: the condition is the host's work, not a while
+	}
+}
+
 // eventually waits for cond on the session's state.
 func (r *rig) eventually(id core.SessionID, what string, cond func(core.SessionState) bool) core.SessionState {
 	r.t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		se := r.session(id)
-		if cond(se) {
-			return se
+	var se core.SessionState
+	until(r.t, what, func() bool { se = r.session(id); return cond(se) }, func() string { return fmt.Sprintf("session is %+v", se) })
+	return se
+}
+
+// settle waits for the host's work off its callers to end: agents starting, resumes, marks, notices.
+func (r *rig) settle() {
+	r.t.Helper()
+	// The jobs that run as long as what they serve.
+	lasting := []string{"an agent's events", "a utility agent", "a permission", "a question", "Terminal", "a terminal dialog",
+		"a sign-in", "usage", "a stuck fetch"}
+	busy := func() []string {
+		out := r.w.run.Starting()
+		for _, j := range r.w.going.Running() {
+			name, _, _ := strings.Cut(j, " ×")
+			if !slices.Contains(lasting, name) {
+				out = append(out, j)
+			}
 		}
-		if time.Now().After(deadline) {
-			r.t.Fatalf("waiting for %s; session is %+v", what, se)
-		}
-		time.Sleep(5 * time.Millisecond)
+		return out
+	}
+	until(r.t, "the host's work to end", func() bool { return len(busy()) == 0 }, func() string { return fmt.Sprintf("still running %q", busy()) })
+}
+
+// noneSent checks a was given nothing: once its events are handled and the host's work has ended, nothing is on its way.
+func (r *rig) noneSent(a *agenttest.FakeSession) {
+	r.t.Helper()
+	a.Handled(r.t)
+	r.settle()
+	select {
+	case in := <-a.Sent:
+		r.t.Fatalf("the agent was sent %q, want nothing yet", in.Text)
+	default:
+	}
+}
+
+// noStart fails if an agent started: once the host's work has ended, none is on its way.
+func (r *rig) noStart(what string) {
+	r.t.Helper()
+	r.settle()
+	select {
+	case <-r.fake.Started:
+		r.t.Fatalf("an agent started: %s", what)
+	default:
 	}
 }
 
