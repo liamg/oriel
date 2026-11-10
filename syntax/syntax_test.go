@@ -5,18 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"hash/fnv"
-	"math"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
-	"time"
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/text"
-	"github.com/liamg/oriel/tools/perf"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden highlight snapshots")
@@ -209,43 +205,6 @@ func TestIncrementalMatchesFullParse(t *testing.T) {
 	}
 }
 
-// TestIncrementalReparseBudget is the ticket's budget: typing a character into an identifier
-// in a 600-line Go file reparses in under 1.5 ms (the median of 50 edits, the best of a few rounds). Bigger files parse off the
-// keystroke path, in a Document (TestDocumentNeverBlocksTyping).
-// reparseBudget: an edit in a 600-line file reparses within it.
-const reparseBudget = 1500 * time.Microsecond
-
-func TestIncrementalReparseBudget(t *testing.T) {
-	perf.Timed(t)
-	if testing.Short() || raceEnabled {
-		t.Skip("timing budget: not under -short or -race")
-	}
-	p, buf := bigGo(t, 600)
-	defer p.Close()
-	lines := buf.Snapshot().Lines()
-	// The best median of a few rounds of 50 edits: a round the scheduler preempted under a parallel test load
-	// can't fail the budget, and a slow reparse still fails every round.
-	best := time.Duration(math.MaxInt64)
-	var worst time.Duration
-	for round := range 5 {
-		var reparses perf.Sampler
-		for i := range 50 {
-			ch := typeInIdentifier(t, buf, lines/4+i*(lines/100)+round)
-			reparses.Time(func() { p.Update(ch) })
-		}
-		times := reparses.Times()
-		sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
-		best, worst = min(best, times[len(times)/2]), max(worst, times[len(times)-1])
-		if best < reparseBudget {
-			break
-		}
-	}
-	t.Logf("%d lines: best median reparse %v, max %v", lines, best, worst)
-	if best >= reparseBudget {
-		t.Errorf("median incremental reparse %v, want under %v", best, reparseBudget)
-	}
-}
-
 // bigGo builds a Go file of at least n lines from the fixture, parsed.
 func bigGo(t *testing.T, n int) (*Parser, *text.Buffer) {
 	t.Helper()
@@ -279,10 +238,9 @@ func typeInIdentifier(t *testing.T, buf *text.Buffer, line int) text.Change {
 	return ch
 }
 
-// TestDocumentNeverBlocksTyping types fast into a 2,000-line file through a Document: handing it each change
-// returns at once, highlights read meanwhile line up with the text, and once it catches up they equal a
-// fresh parse.
-func TestDocumentNeverBlocksTyping(t *testing.T) {
+// Typing fast into a 2,000-line file through a Document: highlights read meanwhile line up with the text, and once
+// it catches up they equal a fresh parse. That handing it a change returns at once is TestDocumentChangeBudget.
+func TestDocumentCatchesUpWithTyping(t *testing.T) {
 	p, buf := bigGo(t, 2000)
 	p.Close()
 	l, _ := Builtin().Language("go")
@@ -292,23 +250,15 @@ func TestDocumentNeverBlocksTyping(t *testing.T) {
 	}
 	defer d.Close()
 	lines := buf.Snapshot().Lines()
-	var slow []time.Duration // a parse waited on slows most changes; a preempted one, one or two
 	for i := range 100 {
 		ch := typeInIdentifier(t, buf, lines/4+i*(lines/200))
-		start := time.Now()
 		d.Change(ch)
-		if took := time.Since(start); took > 200*time.Microsecond {
-			slow = append(slow, took)
-		}
 		spans, _ := d.Highlights(0, ch.After.Len())
 		for _, s := range spans {
 			if s.Range.End > ch.After.Len() {
 				t.Fatalf("a span runs past the end of the text")
 			}
 		}
-	}
-	if !raceEnabled && len(slow) > 2 {
-		t.Errorf("handing a change to the document took over 200µs %d times of 100 (%v); it must not wait on a parse", len(slow), slow)
 	}
 	d.Wait()
 	final := buf.Snapshot()

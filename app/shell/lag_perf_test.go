@@ -1,4 +1,4 @@
-//go:build !race
+//go:build perf && !race
 
 package shell_test
 
@@ -35,7 +35,6 @@ func omniboxDownFrame(t *testing.T, dir string, n int) time.Duration {
 
 // ↓ in the omnibox doesn't grow with the files it searches: the ranking is kept while the selection moves.
 func TestOmniboxDownWithManyFilesBudget(t *testing.T) {
-	perf.Timed(t)
 	few, many := omniboxDownFrame(t, rig.ChangedRepo(t, 5), 5), omniboxDownFrame(t, rig.ChangedRepo(t, 4000), 4000)
 	t.Logf("↓ in the omnibox over 5 files: %v; over 4000: %v", few, many)
 	if many > 2*few+2*time.Millisecond {
@@ -66,7 +65,6 @@ func omniboxTypingFrame(t *testing.T, dir string, n int) (frame, shown time.Dura
 // Typing into the omnibox doesn't wait on ranking its files: they're matched off the loop, and the files matching
 // the query show soon after.
 func TestOmniboxTypingWithManyFilesBudget(t *testing.T) {
-	perf.Timed(t)
 	few, _ := omniboxTypingFrame(t, rig.ChangedRepo(t, 100), 100)
 	many, shown := omniboxTypingFrame(t, rig.ChangedRepo(t, 20000), 20000)
 	t.Logf("a key typed into the omnibox over 100 files: %v; over 20000: %v, the matches shown after %v", few, many, shown)

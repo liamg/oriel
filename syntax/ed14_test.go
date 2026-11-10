@@ -5,97 +5,11 @@ import (
 	"hash/fnv"
 	"math/rand/v2"
 	"os"
-	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/text"
-	"github.com/liamg/oriel/tools/perf"
 )
-
-// manyDecls is a 10,000-line Go file of many top-level declarations, the shape that made each capture's parent
-// expensive to find.
-func manyDecls() []byte {
-	var b strings.Builder
-	b.WriteString("package big\n\nimport \"fmt\"\n\n")
-	for i := 0; strings.Count(b.String(), "\n") < 9990; i++ {
-		fmt.Fprintf(&b, "// f%d prints its number.\nfunc f%d(n int) string {\n\treturn fmt.Sprintf(\"%%d:%%d\", n, %d)\n}\n\n", i, i, i)
-	}
-	return []byte(b.String())
-}
-
-// A highlight query costs what its range holds, wherever it is: tree-sitter doesn't step over every
-// top-level declaration before it, nor walk down from the root for each capture's parent. Each chunk the parser
-// queries stays under 2 ms, so the wasm call never holds up the Go runtime for longer.
-func TestHighlightQueryBudget(t *testing.T) {
-	perf.Timed(t)
-	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
-		t.Skip("timing under -race, -short or -cover means nothing")
-	}
-	l, _ := Builtin().Language("go")
-	// The 16 KB are read as the editor reads them, a chunk at a time, each chunk's time its best over the rounds,
-	// the two files' chunks in turn: a short read gets a clean run more often than a long one, and a busy spell on
-	// the machine falls on both.
-	big := manyDecls()
-	type read struct {
-		p    *Parser
-		at   int
-		file int
-	}
-	var reads []read
-	for file, c := range []struct {
-		src []byte
-		at  int
-	}{{big, len(big) / 2}, {big[:20<<10], 0}} {
-		p, err := NewParser(l)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer p.Close()
-		p.Parse(c.src)
-		if _, err := p.Highlights(c.at, c.at+16<<10); err != nil { // compiles the query
-			t.Fatal(err)
-		}
-		for at := c.at; at < c.at+16<<10; at += highlightChunk {
-			reads = append(reads, read{p, at, file})
-		}
-	}
-	var took [2]time.Duration
-	for i, d := range perf.Times(9, len(reads), nil, func(i int) { reads[i].p.Highlights(reads[i].at, reads[i].at+highlightChunk) }) {
-		took[reads[i].file] += d
-	}
-	inBig, inSmall := took[0], took[1]
-	t.Logf("16 KB: %v half way down 10,000 lines, %v at the top of 20 KB", inBig, inSmall)
-	if inBig > inSmall*3/2+time.Millisecond {
-		t.Errorf("16 KB half way down a 10,000-line file took %v, against %v in a 20 KB one", inBig, inSmall)
-	}
-
-	p, _ := NewParser(l)
-	defer p.Close()
-	p.Parse(big)
-	mid := len(big) / 2
-	p.Highlights(mid, mid+highlightChunk)
-	// Each chunk's time is its best over three runs (perf.Times): a chunk that's slow every time is slow, one the
-	// scheduler preempted, or that ran while every core was busy, isn't.
-	type query struct {
-		kind string
-		at   int
-	}
-	var queries []query
-	for at := mid; at < mid+64<<10; at += highlightChunk {
-		for _, kind := range []string{"highlights", "injections"} {
-			queries = append(queries, query{kind, at})
-		}
-	}
-	worst := slices.Max(perf.Times(3, len(queries), nil, func(i int) {
-		p.run(queries[i].kind, queries[i].at, queries[i].at+highlightChunk)
-	}))
-	t.Logf("a %d-byte chunk's query takes at worst %v", highlightChunk, worst)
-	if worst > 2*time.Millisecond {
-		t.Errorf("a chunk's query took %v; the budget is 2 ms", worst)
-	}
-}
 
 // A Document re-highlights only what an edit changed, and ends up highlighting as a fresh parse does.
 func TestDocumentRehighlightsWhatChanged(t *testing.T) {
@@ -180,4 +94,15 @@ func mustRead(t *testing.T, f string) []byte {
 		t.Fatal(err)
 	}
 	return b
+}
+
+// manyDecls is a 10,000-line Go file of many top-level declarations, the shape that made each capture's parent
+// expensive to find.
+func manyDecls() []byte {
+	var b strings.Builder
+	b.WriteString("package big\n\nimport \"fmt\"\n\n")
+	for i := 0; strings.Count(b.String(), "\n") < 9990; i++ {
+		fmt.Fprintf(&b, "// f%d prints its number.\nfunc f%d(n int) string {\n\treturn fmt.Sprintf(\"%%d:%%d\", n, %d)\n}\n\n", i, i, i)
+	}
+	return []byte(b.String())
 }

@@ -62,27 +62,28 @@ func projectDir(t *testing.T, r *apptest.Window) string {
 	return p.Dir
 }
 
-// newRequest writes a request in the composer and sends it with ⏎, returning when the agent has it and how long that
-// took from the key.
-func newRequest(t *testing.T, r *apptest.Window, a *agenttest.FakeSession, body string) (agent.Input, time.Duration) {
+// writeRequest writes a request in the composer, not yet sent.
+func writeRequest(t *testing.T, r *apptest.Window, body string) {
 	t.Helper()
 	r.ClickText("New request")
 	r.WaitText("Write a request")
 	r.TypeText(body)
 	r.WaitText(body)
-	start := time.Now()
-	r.TypeKeys("<CR>")
-	in := a.WaitSent(t)
-	return in, time.Since(start)
 }
 
-// A comment reaches the agent within 1 s; the fake agent is idle, so the host hands it over at once.
-func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
+// newRequest writes a request in the composer and sends it with ⏎, returning when the agent has it.
+func newRequest(t *testing.T, r *apptest.Window, a *agenttest.FakeSession, body string) agent.Input {
+	t.Helper()
+	writeRequest(t, r, body)
+	r.TypeKeys("<CR>")
+	return a.WaitSent(t)
+}
+
+// A comment reaches the agent; the fake agent is idle, so the host hands it over at once (how soon is
+// TestACommentReachesTheAgentBudget).
+func TestACommentReachesTheAgent(t *testing.T) {
 	r, a, _ := requestsSession(t)
-	in, took := newRequest(t, r, a, "Negative values round the wrong way")
-	if took > time.Second {
-		t.Errorf("the comment took %v to reach the agent", took)
-	}
+	in := newRequest(t, r, a, "Negative values round the wrong way")
 	if !strings.Contains(in.Text, "Negative values round the wrong way") {
 		t.Errorf("the agent got %q", in.Text)
 	}

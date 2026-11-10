@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/tools/perf"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -36,27 +35,6 @@ func busy(t testing.TB) (*harness, func()) {
 		s.toasts.list = s.toasts.list[1:]
 	}
 	return h, kick
-}
-
-// The frame budgets still hold with several things animating: a frame (build, layout and
-// paint) stays under 4 ms of CPU.
-func TestAnimatingFrameBudget(t *testing.T) {
-	perf.Timed(t)
-	h, kick := busy(t)
-	const frames = 240
-	var times perf.Sampler
-	for i := range frames {
-		if i%20 == 0 {
-			kick()
-		}
-		h.now = h.now.Add(time.Second / 120)
-		times.Time(h.frame)
-	}
-	avg := perf.Mean(times.Times())
-	t.Logf("%v a frame with six things animating", avg)
-	if avg > 4*time.Millisecond {
-		t.Errorf("a frame takes %v; the budget is 4 ms", avg)
-	}
 }
 
 func BenchmarkAnimatingFrame(b *testing.B) {

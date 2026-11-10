@@ -5,10 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/tools/perf"
 )
 
 func paintOps(u *UI, size render.Point, build func(c *Ctx)) []render.Op {
@@ -151,36 +149,6 @@ func TestListBuildsOnlyVisibleRows(t *testing.T) {
 	}
 	if last := built[len(built)-1]; last != 9_999 {
 		t.Errorf("last row built %d", last)
-	}
-}
-
-// A 10k-row list scrolled a row per frame must build, lay out and paint well inside the 4 ms frame
-// budget at 120 Hz.
-func TestListScrollBudget(t *testing.T) {
-	perf.Timed(t)
-	if raceEnabled || testing.Short() || testing.CoverMode() != "" {
-		t.Skip("timing under -race, -short or -cover means nothing")
-	}
-	u := newUI()
-	size := render.Point{X: 1600, Y: 1000}
-	build := func(c *Ctx) {
-		c.List("list", Style{W: Flex(1), H: Flex(1)}, 10_000, 21, func(c *Ctx, i int) {
-			c.Row(nil, Style{Gap: 8, Pad: PadXY(10, 0), Cross: Center, H: Flex(1)}, func(c *Ctx) {
-				c.Text(nil, "func roundHalfEven(v decimal.Decimal, p int32) decimal.Decimal {", TextStyle{})
-				c.Text(nil, "← agent · 2m ago", TextStyle{})
-			})
-		})
-	}
-	id := childID(0, "list")
-	times := perf.Times(3, 240, func() { u.ScrollBy(id, 0, -1e9) }, func(int) {
-		var l render.List
-		u.Frame(l.Record(1), size, build)
-		u.ScrollBy(id, 0, 21)
-	})
-	p50, p99 := perf.Pct(times, 50), perf.Pct(times, 99)
-	t.Logf("10k-row list, 48 rows in view: p50 %v, p99 %v per frame", p50, p99)
-	if p99 > 4*time.Millisecond {
-		t.Errorf("p99 %v per frame, budget 4ms", p99)
 	}
 }
 

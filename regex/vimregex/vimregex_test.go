@@ -730,7 +730,8 @@ func TestMatchAPI(t *testing.T) {
 	}
 }
 
-func TestBudget(t *testing.T) {
+// Matching past the step or depth budget is ErrTooComplex.
+func TestTooComplex(t *testing.T) {
 	re, err := Compile(`\(a*\)*b`, Options{Magic: true})
 	if err != nil {
 		t.Fatal(err)

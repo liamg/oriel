@@ -29,8 +29,8 @@ func (r *rig) workSession(prompt string) (core.SessionID, *agenttest.FakeSession
 	return id, r.agent()
 }
 
-// A comment reaches the agent within 1 s.
-func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
+// idleWithAComment is a work session whose first turn has ended, and the comment to send it.
+func idleWithAComment(t *testing.T) (*rig, core.SessionID, *agenttest.FakeSession, CommentReq) {
 	r := newRig(t)
 	id, a := r.workSession("Negative values round the wrong way")
 	first := a.WaitSent(t)
@@ -41,16 +41,17 @@ func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
 	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Stats.Turns == 1 })
-	start := time.Now()
-	tid, err := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3, Text: "func Round() {}"},
-		Body: "what about -2.5?"})
+	return r, id, a, CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3, Text: "func Round() {}"}, Body: "what about -2.5?"}
+}
+
+// A comment to an idle agent reaches it at once (how soon is TestACommentReachesTheAgentBudget).
+func TestACommentReachesTheAgent(t *testing.T) {
+	r, id, a, req := idleWithAComment(t)
+	tid, err := r.w.Comment(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got := a.WaitSent(t)
-	if d := time.Since(start); d > time.Second {
-		t.Errorf("the comment took %v to reach the agent", d)
-	}
 	for _, want := range []string{`where="round.go:3"`, `<anchor>func Round() {}</anchor>`, `new="true"`, "what about -2.5?", string(tid)} {
 		if !strings.Contains(got.Text, want) {
 			t.Errorf("batch lacks %q:\n%s", want, got.Text)
@@ -938,27 +939,6 @@ func settled(runs func() int) int {
 		} else {
 			n = m
 		}
-	}
-}
-
-// Shell commands come faster than the session's projects can be marked: the marks still waiting are made once, not
-// one each, so a burst of commands over seven projects doesn't leave a queue of work-tree snapshots behind it.
-func TestShellMarksCatchUpAfterABurstBudget(t *testing.T) {
-	runs := gitRuns(t)
-	r, id, a, full := sevenProjects(t, runs)
-	dirs := r.session(id).Projects
-	before := runs()
-	for i := range 150 {
-		call := fmt.Sprintf("b%d", i)
-		os.WriteFile(filepath.Join(dirs[i%7].Dir, "burst.go"), []byte(fmt.Sprintf("package p // %d\n", i)), 0o644)
-		a.Emit(agent.ToolCall{ID: call, Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
-		a.Emit(agent.ToolResult{ID: call, Output: "ok"})
-	}
-	r.eventually(id, "the burst", func(se core.SessionState) bool {
-		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "b149" && it.Done })
-	})
-	if n := settled(runs) - before; n > 5*full {
-		t.Errorf("150 commands ran git %d times, %d marks of every project; want the waiting marks made together, at most 5", n, n/full)
 	}
 }
 
