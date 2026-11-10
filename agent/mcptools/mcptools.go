@@ -38,14 +38,17 @@ type Server struct {
 // recheck is how often the tools are compared with those listed: a change sends notifications/tools/list_changed.
 const recheck = 10 * time.Second
 
-// sockDirMax is how long the socket's directory may be: a unix socket's path has to fit in about 100 bytes.
-const sockDirMax = 80
+// sockPathMax is how long a unix socket's path may be: sun_path is 104 bytes on macOS, with its NUL.
+const sockPathMax = 103
+
+// sockTail is the longest the path gets past the base directory: MkdirTemp's random suffix is up to 10 digits.
+const sockTail = "/oriel-mcp-0123456789/tools.sock"
 
 // Serve listens in a fresh short directory: the temp directory's, or /tmp's when that's too long. tools are those
 // offered now, asked again at each list and call.
 func Serve(tools func() []agent.Tool) (*Server, error) {
 	base := os.TempDir()
-	if len(base) > sockDirMax {
+	if len(base)+len(sockTail) > sockPathMax {
 		base = "/tmp"
 	}
 	dir, err := os.MkdirTemp(base, "oriel-mcp-")
