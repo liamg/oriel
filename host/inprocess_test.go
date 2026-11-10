@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 // The app's store is the host's: what the host does is in it at once, with this machine's state.
@@ -108,7 +109,8 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 
 	r.w.opts.Now = func() time.Time { panic("no load") }
 	ctx, cancel := context.WithCancel(context.Background())
-	load := sysload.NewSampler(time.Millisecond, func() sysload.Reading { return sysload.Reading{CPU: 34, Cores: 4} })
+	load := sysload.NewSampler(time.Second, func() sysload.Reading { return sysload.Reading{CPU: 34, Cores: 4} })
+	load.Clock = clocktest.New(r.now())
 	go load.Run(ctx)
 	defer load.Want()()
 	sampled := make(chan struct{})
@@ -116,11 +118,7 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 		defer close(sampled)
 		r.w.SampleLoad(ctx, load)
 	}()
-	for deadline := time.Now().Add(5 * time.Second); !strings.Contains(logged(), "no load"); time.Sleep(time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatal("SampleLoad's panic wasn't logged")
-		}
-	}
+	until(t, "SampleLoad's panic logged", func() bool { return strings.Contains(logged(), "no load") })
 	cancel()
 	<-sampled
 	r.w.opts.Now = now
@@ -171,7 +169,7 @@ func TestHandOverStopsTheAgentsTogether(t *testing.T) {
 	for range ids {
 		select {
 		case <-r.fake.Closing:
-		case <-time.After(5 * time.Second):
+		case <-time.After(waitTimeout):
 			t.Fatal("the agents stop one after another")
 		}
 	}
@@ -190,11 +188,14 @@ func TestSampleLoadEmitsOnlyChanges(t *testing.T) {
 	r := newRig(t)
 	var mu sync.Mutex
 	cpu := 34.0
-	load := sysload.NewSampler(time.Millisecond, func() sysload.Reading {
+	const every = time.Second
+	load := sysload.NewSampler(every, func() sysload.Reading {
 		mu.Lock()
 		defer mu.Unlock()
 		return sysload.Reading{CPU: cpu, Cores: 4, MemUsed: 1 << 30, MemTotal: 4 << 30}
 	})
+	c := clocktest.New(r.now())
+	load.Clock = c
 	var got []float64
 	var gotMu sync.Mutex
 	cancelSub := r.w.Store().Subscribe(core.Filter{}, func(ev core.Event) {
@@ -215,23 +216,18 @@ func TestSampleLoadEmitsOnlyChanges(t *testing.T) {
 	go load.Run(ctx)
 	defer load.Want()()
 	go r.w.SampleLoad(ctx, load)
-	for deadline := time.Now().Add(5 * time.Second); len(seen()) == 0; time.Sleep(time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatal("no MachineChanged")
-		}
+	until(t, "a MachineChanged", func() bool { return len(seen()) > 0 })
+	for range 100 {
+		c.Advance(every) // a reading each, all the same: none sent
 	}
-	time.Sleep(100 * time.Millisecond) // about a hundred readings, all the same
 	if g := seen(); len(g) != 1 || g[0] != .34 {
 		t.Fatalf("a steady machine sent %v, want [0.34]", g)
 	}
 	mu.Lock()
 	cpu = 60
 	mu.Unlock()
-	for deadline := time.Now().Add(5 * time.Second); len(seen()) < 2; time.Sleep(time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatal("the moved reading wasn't sent")
-		}
-	}
+	c.Advance(every)
+	until(t, "the moved reading sent", func() bool { return len(seen()) >= 2 })
 	if g := seen(); g[1] != .6 {
 		t.Fatalf("sent %v, want 0.6 second", g)
 	}

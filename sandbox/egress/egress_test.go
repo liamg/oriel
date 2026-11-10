@@ -419,7 +419,7 @@ func TestListenAndServe(t *testing.T) {
 	go func() { done <- (&Proxy{Decider: always(Deny)}).ListenAndServe(ctx, addr) }()
 
 	var resp *http.Response
-	for range 50 {
+	for range 1000 { // until it listens: nothing says when it has
 		if resp, err = http.Get("http://" + addr + "/"); err == nil {
 			break
 		}

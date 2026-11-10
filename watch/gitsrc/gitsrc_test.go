@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/leaktest"
 	"github.com/liamg/oriel/watch"
 )
@@ -20,55 +22,86 @@ type rig struct {
 	runs func(...string) int
 	m    *watch.Manager
 	tree *Tree
+
+	clock  *clocktest.Fake // set by scripted
+	script *fswatch.Script // set by scripted
 }
 
-func newRig(t *testing.T) *rig {
+func newRig(t *testing.T) *rig { return makeRig(t, watch.Options{}, &rig{}) }
+
+// scripted is a rig on a clock the test moves, whose file changes are only the ones the test says happened: what
+// runs git is exactly what the test does, and nothing git itself writes under .git.
+func scripted(t *testing.T) *rig {
+	t.Helper()
+	r := &rig{clock: clocktest.New(time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC))}
+	return makeRig(t, watch.Options{Clock: r.clock, Watch: func() (*fswatch.Watcher, error) {
+		w, s := fswatch.NewScripted()
+		r.script = s
+		return w, nil
+	}}, r)
+}
+
+func makeRig(t *testing.T, o watch.Options, r *rig) *rig {
 	t.Helper()
 	runs := gittest.CountGit(t)
 	leaktest.Check(t)
 	repo := gittest.New(t)
 	repo.Write(map[string]string{"main.go": "package main\n", ".gitignore": "build/\n"})
 	repo.Commit("Ada", "first")
-	m := watch.New(watch.Options{Name: "test", Timing: quick})
+	o.Name, o.Timing = "test", quick
+	m := watch.New(o)
 	t.Cleanup(m.Close)
-	return &rig{repo: repo, runs: runs, m: m, tree: New(repo.Dir, nil)}
+	r.repo, r.runs, r.m, r.tree = repo, runs, m, New(repo.Dir, nil)
+	return r
 }
 
-func eventually(t *testing.T, what string, ok func() bool) {
+// advance moves a scripted rig's clock on by d, one thing due at a time, letting the reads each starts finish
+// before the next.
+func (r *rig) advance(d time.Duration) {
+	r.m.Idle()
+	end := r.clock.Now().Add(d)
+	for {
+		next, ok := r.clock.Next()
+		if !ok || next.After(end) {
+			r.clock.Advance(end.Sub(r.clock.Now()))
+			r.m.Idle()
+			return
+		}
+		r.clock.Advance(max(0, next.Sub(r.clock.Now())))
+		r.m.Idle()
+	}
+}
+
+// change says the paths under the repo changed, as a scripted rig's file watcher would.
+func (r *rig) change(t *testing.T, rel ...string) {
 	t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); !ok(); time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
+	if r.script == nil {
+		t.Fatal("nothing is watching files yet")
+	}
+	for i, p := range rel {
+		rel[i] = filepath.Join(r.repo.Dir, p)
+	}
+	r.script.Change(rel...)
+	r.m.Idle()
+}
+
+// until waits for a reading of s's that ok accepts, as each new one arrives.
+func until[T any](t *testing.T, s watch.Sub[T], what string, ok func(v T) bool) {
+	t.Helper()
+	deadline := time.After(10 * time.Second)
+	for {
+		if v, _, has := s.Get(); has && ok(v) {
+			return
+		}
+		select {
+		case <-s.Changed():
+		case <-deadline:
 			t.Fatalf("never: %s", what)
 		}
 	}
 }
 
-// settle waits out the reads FSEvents brings on as a watch begins: it may report the setup's changes, made just
-// before.
-func (r *rig) settle(t *testing.T) {
-	t.Helper()
-	last := r.runs()
-	for deadline := time.Now().Add(5 * time.Second); ; {
-		time.Sleep(300 * time.Millisecond)
-		n := r.runs()
-		if n == last {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("git still running %d times in 300ms", n-last)
-		}
-		last = n
-	}
-}
-
-func (r *rig) quiet(t *testing.T, what string, d time.Duration) {
-	t.Helper()
-	before := r.runs()
-	time.Sleep(d)
-	if n := r.runs() - before; n > 0 {
-		t.Fatalf("ran git %d times %s", n, what)
-	}
-}
+func anyReading[T any](T) bool { return true }
 
 // The status put together from the sources is the one read all at once, but for line counts.
 func TestStatusMatchesAWholeRead(t *testing.T) {
@@ -78,7 +111,7 @@ func TestStatusMatchesAWholeRead(t *testing.T) {
 	r.repo.Git("add", "main.go")
 	r.repo.Write(map[string]string{"main.go": "package main\n// y\n"})
 	s := watch.Subscribe(r.m, r.tree.Status(), watch.Need{}, "test")
-	eventually(t, "a status", func() bool { _, _, ok := s.Get(); return ok })
+	until(t, s, "a status", anyReading)
 	got, _, _ := s.Get()
 	want, err := gitx.Repo{Dir: r.repo.Dir}.Status(context.Background())
 	if err != nil {
@@ -104,18 +137,29 @@ func TestStatusMatchesAWholeRead(t *testing.T) {
 // Nothing changing runs no git; a file changing runs git status and the diff against the base, and nothing else;
 // an ignored folder, or git's housekeeping under .git, runs none.
 func TestAFileChangeRunsTwoGits(t *testing.T) {
-	r := newRig(t)
+	r := scripted(t)
 	other := filepath.Join(t.TempDir(), "other")
 	r.repo.Git("worktree", "add", "-q", "-b", "other", other)
 	s := watch.Subscribe(r.m, r.tree.Status(), watch.Need{}, "test")
-	eventually(t, "a status", func() bool { _, _, ok := s.Get(); return ok })
-	r.settle(t)
-	r.quiet(t, "with nothing changed", time.Second)
+	r.advance(time.Hour)
+	if _, _, ok := s.Get(); !ok {
+		t.Fatal("no status")
+	}
+	before := r.runs()
+	r.advance(time.Hour)
+	if n := r.runs() - before; n > 0 {
+		t.Fatalf("ran git %d times with nothing changed", n)
+	}
 
 	before, refs := r.runs(), r.runs("rev-parse")
 	os.WriteFile(filepath.Join(r.repo.Dir, "new.go"), []byte("package main\n"), 0o644)
-	eventually(t, "new.go", func() bool { st, _, _ := s.Get(); _, ok := st.File("new.go"); return ok })
-	time.Sleep(200 * time.Millisecond)
+	r.change(t, "new.go")
+	r.advance(time.Hour)
+	if st, _, _ := s.Get(); st == nil {
+		t.Fatal("no status")
+	} else if _, ok := st.File("new.go"); !ok {
+		t.Fatal("new.go isn't in the status")
+	}
 	if n := r.runs() - before; n != 2 {
 		t.Errorf("a file change ran %d gits, want 2 (status, diff)", n)
 	}
@@ -124,18 +168,21 @@ func TestAFileChangeRunsTwoGits(t *testing.T) {
 	}
 
 	os.MkdirAll(filepath.Join(r.repo.Dir, "build"), 0o755)
-	time.Sleep(300 * time.Millisecond) // the new ignored folder is read once
+	r.change(t, "build") // the new ignored folder is read once
+	r.advance(time.Hour)
 	git := filepath.Join(r.repo.Dir, ".git")
-	r.runs()
 	before = r.runs()
 	for i := range 3 {
 		os.WriteFile(filepath.Join(r.repo.Dir, "build", "out"), []byte{byte(i)}, 0o644)
 		os.WriteFile(filepath.Join(git, "worktrees", "other", "index"), []byte{byte(i)}, 0o644)
 		os.WriteFile(filepath.Join(git, "FETCH_HEAD"), []byte{byte(i)}, 0o644)
 		os.WriteFile(filepath.Join(other, "main.go"), []byte{byte(i)}, 0o644)
-		time.Sleep(100 * time.Millisecond)
+		r.change(t, filepath.Join("build", "out"), filepath.Join(".git", "worktrees", "other", "index"),
+			filepath.Join(".git", "FETCH_HEAD"))
+		r.script.Change(filepath.Join(other, "main.go"))
+		r.advance(100 * time.Millisecond)
 	}
-	time.Sleep(300 * time.Millisecond)
+	r.advance(time.Hour)
 	if n := r.runs() - before; n > 0 {
 		t.Errorf("ran %d gits for an ignored folder, git's housekeeping and another work tree", n)
 	}
@@ -145,18 +192,16 @@ func TestAFileChangeRunsTwoGits(t *testing.T) {
 func TestRefsFollowCommitsAndBranches(t *testing.T) {
 	r := newRig(t)
 	s := watch.Subscribe(r.m, r.tree.Status(), watch.Need{}, "test")
-	eventually(t, "a status", func() bool { _, _, ok := s.Get(); return ok })
+	until(t, s, "a status", anyReading)
 	r.repo.Git("checkout", "-q", "-b", "feature")
-	eventually(t, "the branch", func() bool { st, _, _ := s.Get(); return st.Branch == "feature" })
+	until(t, s, "the branch", func(st *gitx.State) bool { return st.Branch == "feature" })
 	r.repo.Write(map[string]string{"added.go": "package main\n"})
 	r.repo.Commit("Ada", "second")
-	eventually(t, "the commit", func() bool {
-		st, _, _ := s.Get()
+	until(t, s, "the commit", func(st *gitx.State) bool {
 		f, ok := st.File("added.go")
 		return ok && f.Area == gitx.Committed
 	})
-	eventually(t, "added.go tracked", func() bool {
-		st, _, _ := s.Get()
+	until(t, s, "added.go tracked", func(st *gitx.State) bool {
 		for _, f := range st.Files(gitx.All) {
 			if f.Path == "added.go" {
 				return true
@@ -170,15 +215,14 @@ func TestRefsFollowCommitsAndBranches(t *testing.T) {
 func TestCountsOnlyWhileSubscribed(t *testing.T) {
 	r := newRig(t)
 	s := watch.Subscribe(r.m, r.tree.Status(), watch.Need{}, "test")
-	eventually(t, "a status", func() bool { _, _, ok := s.Get(); return ok })
+	until(t, s, "a status", anyReading)
 	os.WriteFile(filepath.Join(r.repo.Dir, "main.go"), []byte("package main\n// more\n"), 0o644)
-	eventually(t, "the change", func() bool { st, _, _ := s.Get(); _, ok := st.File("main.go"); return ok })
+	until(t, s, "the change", func(st *gitx.State) bool { _, ok := st.File("main.go"); return ok })
 	if n := r.runs("--numstat"); n > 0 {
 		t.Fatalf("ran %d numstats with no one counting", n)
 	}
 	c := watch.Subscribe(r.m, r.tree.Counted(), watch.Need{}, "test")
-	eventually(t, "the counts", func() bool {
-		st, _, _ := c.Get()
+	until(t, c, "the counts", func(st *gitx.State) bool {
 		f, ok := st.File("main.go")
 		return ok && f.Add == 1
 	})

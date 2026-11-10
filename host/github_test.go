@@ -200,7 +200,7 @@ func TestAgentAskingToPostAReviewIsRefused(t *testing.T) {
 		if d.Allow || !strings.Contains(d.Note, "never post") {
 			t.Errorf("decision %+v", d)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Fatal("no answer")
 	}
 	if d := <-a.Ask(agent.Permission{ID: "p2", Tool: "mcp__github__add_issue_comment", Input: json.RawMessage(`{}`)}); d.Allow {
@@ -340,7 +340,7 @@ func TestASlowSyncDoesNotBlockAnother(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Error("a sync waited on another's GitHub")
 		close(slow.hold)
 		<-synced

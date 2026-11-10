@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
@@ -753,7 +752,7 @@ func TestAnArchivedHandOverIsntResumed(t *testing.T) {
 	}
 	r.bare = false
 	r.restart()
-	time.Sleep(100 * time.Millisecond)
+	r.settle()
 	if se := r.session(id); !se.Archived || se.Agent.Running {
 		t.Errorf("archived, then restarted: archived %v, running %v", se.Archived, se.Agent.Running)
 	}

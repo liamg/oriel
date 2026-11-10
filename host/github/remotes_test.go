@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -34,8 +35,16 @@ func TestRemoteURLReadOnceUntilTheConfigChanges(t *testing.T) {
 		t.Errorf("read again, with git gone: %q", got)
 	}
 	t.Setenv("PATH", path)
-	time.Sleep(10 * time.Millisecond) // the config's time moves on
+	config := filepath.Join(r.Dir, ".git", "config")
+	fi, err := os.Stat(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 	set("https://github.com/acme/search.git")
+	later := fi.ModTime().Add(time.Minute) // a coarse clock may have left the config's time where it was
+	if err := os.Chtimes(config, later, later); err != nil {
+		t.Fatal(err)
+	}
 	if got := x.remoteURL(ctx, gitx.Repo{Dir: r.Dir}); got != "https://github.com/acme/search.git" {
 		t.Errorf("after the remote moved: %q", got)
 	}

@@ -15,6 +15,7 @@ import (
 type fakeAgent struct {
 	sig    chan Signal
 	sent   chan string
+	poke   func() // told when it closes
 	mu     sync.Mutex
 	closed bool
 	stops  int
@@ -37,6 +38,9 @@ func (f *fakeAgent) Close() error {
 	if !f.closed {
 		f.closed = true
 		close(f.sig)
+		if f.poke != nil {
+			f.poke()
+		}
 	}
 	return nil
 }
@@ -46,26 +50,32 @@ func (f *fakeAgent) isClosed() bool {
 	return f.closed
 }
 
-// rig is a conversation whose agents are fakes, started as the test asks, on a fixed clock.
+// rig is a conversation whose agents are fakes, started as the test asks, on a clock the test moves.
 type rig struct {
-	t      *testing.T
-	c      *Conversation
-	starts chan string
-	agents chan *fakeAgent
-	fail   error
+	t       *testing.T
+	c       *Conversation
+	clock   *clocktest.Fake
+	starts  chan string
+	agents  chan *fakeAgent
+	fail    error
+	changed chan struct{} // the log changed, or an agent closed
 }
 
 func newRig(t *testing.T) *rig {
-	r := &rig{t: t, starts: make(chan string, 4), agents: make(chan *fakeAgent, 4)}
+	r := &rig{t: t, starts: make(chan string, 4), agents: make(chan *fakeAgent, 4), changed: make(chan struct{}, 1),
+		clock: clocktest.New(time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC))}
 	r.c = New(func(_ context.Context, first string) (Agent, error) {
 		if r.fail != nil {
 			return nil, r.fail
 		}
 		r.starts <- first
 		a := newFake()
+		a.poke = r.poke
 		r.agents <- a
 		return a, nil
 	})
+	r.c.Changed = r.poke
+	r.c.Clock = r.clock
 	r.c.Now = func() time.Time { return time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC) }
 	t.Cleanup(r.c.Close)
 	return r
@@ -82,18 +92,27 @@ func (r *rig) started() (string, *fakeAgent) {
 	return "", nil
 }
 
+func (r *rig) poke() {
+	select {
+	case r.changed <- struct{}{}:
+	default:
+	}
+}
+
+// until waits for ok to hold, looking again each time the log changes or an agent closes.
 func (r *rig) until(what string, ok func([]Entry, bool) bool) []Entry {
 	r.t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	hung := time.After(10 * time.Second)
 	for {
 		log, busy := r.c.Log()
 		if ok(log, busy) {
 			return log
 		}
-		if time.Now().After(deadline) {
+		select {
+		case <-r.changed:
+		case <-hung:
 			r.t.Fatalf("waiting for %s: %+v", what, log)
 		}
-		time.Sleep(2 * time.Millisecond)
 	}
 }
 
@@ -122,14 +141,14 @@ func TestAConversation(t *testing.T) {
 		t.Errorf("first turn %q", first)
 	}
 	r.c.Say("and my PRs?", true)
-	select {
-	case s := <-a.sent:
-		t.Fatalf("a second turn went in while the first ran: %q", s)
-	case <-time.After(30 * time.Millisecond):
-	}
 	a.sig <- Signal{Kind: TurnStarted}
 	a.sig <- Signal{Kind: UsedTool, Tool: "sessions"}
 	r.until("the tool", func(l []Entry, _ bool) bool { return strings.Contains(kinds(l), "tool progress") })
+	select {
+	case s := <-a.sent:
+		t.Fatalf("a second turn went in while the first ran: %q", s)
+	default:
+	}
 	r.c.Reply("Four things, oldest first.", false, []Item{{Title: "review #4410", Session: "rv-4410"}})
 	r.c.Reply("again", false, nil)
 	a.sig <- Signal{Kind: Said, Text: "ignored: the reply tool answered"}
@@ -157,7 +176,7 @@ func TestAConversation(t *testing.T) {
 // Confirmation cards: an act waits for the user's yes, no, or the wait running out; the answer is on its entry.
 func TestConfirmations(t *testing.T) {
 	r := newRig(t)
-	r.c.ConfirmWait = 200 * time.Millisecond
+	r.c.ConfirmWait = time.Minute
 	done := make(chan Answer, 1)
 	go func() {
 		done <- r.c.Confirm(context.Background(), "review_pr", "start a review of acme/api#4410", "card")
@@ -182,6 +201,14 @@ func TestConfirmations(t *testing.T) {
 		t.Error("answered twice")
 	}
 	go func() { done <- r.c.Confirm(context.Background(), "stop_session", "stop rounding", nil) }()
+	r.until("the second card", func(l []Entry, _ bool) bool { return len(l) == 2 })
+	r.clock.Advance(time.Minute - time.Nanosecond)
+	select {
+	case a := <-done:
+		t.Fatalf("answered %q before the wait ran out", a)
+	default:
+	}
+	r.clock.Advance(time.Nanosecond)
 	if a := <-done; a != NoAnswer {
 		t.Errorf("unanswered: %q", a)
 	}
@@ -278,56 +305,42 @@ func TestInterrupt(t *testing.T) {
 	}
 }
 
-// fakeClock puts the conversation's stamps and its reaper on a clock the test moves.
-func (r *rig) fakeClock() *clocktest.Fake {
-	clk := clocktest.New(time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC))
-	r.c.Now, r.c.Clock = clk.Now, clk
-	return clk
-}
-
-// reaped says whether the conversation has ended: its log's divider is written as it ends.
-func (r *rig) reaped() bool {
-	log, _ := r.c.Log()
-	return strings.Contains(kinds(log), "divider")
-}
-
 // An idle conversation ends at its deadline, from a timer set to it rather than a once-a-second check.
 func TestIdleConversationEndsOnTime(t *testing.T) {
 	r := newRig(t)
-	clk := r.fakeClock()
+	r.c.Now = r.clock.Now
 	r.c.Idle = 100 * time.Millisecond
 	r.c.Say("hi", false)
 	_, a := r.started()
 	a.sig <- Signal{Kind: TurnEnded}
 	r.until("idle", func(_ []Entry, busy bool) bool { return !busy })
-	clk.Advance(99 * time.Millisecond)
-	if r.reaped() {
-		t.Fatal("reaped before its deadline")
+	r.wantEndedAfter(100*time.Millisecond, a)
+}
+
+// wantEndedAfter checks the conversation ends exactly d from now, closing a.
+func (r *rig) wantEndedAfter(d time.Duration, a *fakeAgent) {
+	r.t.Helper()
+	ended := func() bool { l, _ := r.c.Log(); return len(l) > 0 && l[len(l)-1].Kind == KindDivider }
+	r.clock.Advance(d - time.Nanosecond)
+	if ended() {
+		r.t.Fatalf("ended before %v", d)
 	}
-	clk.Advance(time.Millisecond)
-	if !r.reaped() {
-		t.Fatal("not reaped at its deadline")
+	r.clock.Advance(time.Nanosecond)
+	if !ended() {
+		r.t.Fatalf("not ended at %v", d)
 	}
-	r.until("the agent closed", func([]Entry, bool) bool { return a.isClosed() })
+	r.until("reaped", func([]Entry, bool) bool { return a.isClosed() })
 }
 
 // Shortening Idle while a conversation waits re-arms its reaper to the new deadline, rather than the old one.
 func TestShorterIdleRearmsTheReaper(t *testing.T) {
 	r := newRig(t)
-	clk := r.fakeClock()
+	r.c.Now = r.clock.Now
 	r.c.SetIdle(time.Hour)
 	r.c.Say("hi", false)
 	_, a := r.started()
 	a.sig <- Signal{Kind: TurnEnded}
 	r.until("idle", func(_ []Entry, busy bool) bool { return !busy })
-	clk.Advance(time.Second)
 	r.c.SetIdle(100 * time.Millisecond)
-	if r.reaped() {
-		t.Fatal("reaped as Idle was shortened")
-	}
-	clk.Advance(minReap)
-	if !r.reaped() {
-		t.Fatal("not reaped once the new deadline passed")
-	}
-	r.until("the agent closed", func([]Entry, bool) bool { return a.isClosed() })
+	r.wantEndedAfter(100*time.Millisecond, a)
 }

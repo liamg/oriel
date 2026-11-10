@@ -62,6 +62,22 @@ type usageBook struct {
 	mu      sync.Mutex
 	last    core.ProviderUsage // the newest reading, a session's or a probe's
 	probing *probeRun          // the probe running, nil when none is
+	begun   chan struct{}      // closed when the next probe starts, if anyone is waiting for one
+}
+
+// started is closed once a probe is running.
+func (b *usageBook) started() <-chan struct{} {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.probing != nil {
+		ch := make(chan struct{})
+		close(ch)
+		return ch
+	}
+	if b.begun == nil {
+		b.begun = make(chan struct{})
+	}
+	return b.begun
 }
 
 // probeRun is a probe that callers arriving while it runs wait on: done closes once err is set.
@@ -97,6 +113,10 @@ func (p *Provider) readUsage(ctx context.Context) error {
 	}
 	run := &probeRun{done: make(chan struct{})}
 	p.usage.probing = run
+	if p.usage.begun != nil {
+		close(p.usage.begun)
+		p.usage.begun = nil
+	}
 	p.usage.mu.Unlock()
 	_, err := p.probe(ctx)
 	if errors.As(err, new(agent.AuthExpired)) {

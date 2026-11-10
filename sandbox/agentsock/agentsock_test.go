@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/sandbox/egress"
 	"github.com/liamg/oriel/sandbox/gateway"
@@ -25,15 +24,20 @@ func serve(t *testing.T, h *Handler) string {
 	path := filepath.Join(dir, "oriel.sock")
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	go func() { _ = Serve(ctx, h, path, filepath.Join(dir, "port")) }()
-	for range 200 {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-		time.Sleep(5 * time.Millisecond)
+	ln, err := listen(path)
+	if err != nil {
+		t.Fatal(err)
 	}
-	t.Fatal("socket never opened")
-	return ""
+	served := make(chan struct{})
+	go func() {
+		defer close(served)
+		_ = serveOn(ctx, h, ln, path, filepath.Join(dir, "port"))
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-served
+	})
+	return path
 }
 
 func handler(t *testing.T) *Handler {

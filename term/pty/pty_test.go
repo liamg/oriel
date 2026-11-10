@@ -105,18 +105,19 @@ func TestControllingTerminal(t *testing.T) {
 
 // Close hangs the terminal up: a Read in progress returns (on macOS once SIGHUP has ended the program).
 func TestCloseEndsRead(t *testing.T) {
-	cmd := exec.Command("sleep", "30")
+	cmd := exec.Command("sh", "-c", "printf ready; exec sleep 30")
 	p, err := Start(cmd, 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cmd.Process.Kill()
+	var out bytes.Buffer
+	readUntil(t, p, &out, "ready") // the program has written all it will: the next Read waits
 	done := make(chan struct{})
 	go func() {
 		p.Read(make([]byte, 16))
 		close(done)
 	}()
-	time.Sleep(50 * time.Millisecond)
 	p.Close()
 	select {
 	case <-done:

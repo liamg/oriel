@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -97,19 +98,12 @@ func writeLogin(t *testing.T, path, token string, expiry time.Time) {
 	}
 }
 
-// waitForToken waits until root's sandbox holds token.
-func waitForToken(t *testing.T, root, token string) {
+// wantToken checks root's sandbox holds token.
+func wantToken(t *testing.T, root, token string) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		b, _ := os.ReadFile(filepath.Join(Dir(root), credentialsFile))
-		if l, ok := parseLogin(b); ok && l.AccessToken() == token {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the sandbox never got %q: %s", token, b)
-		}
-		time.Sleep(5 * time.Millisecond)
+	b, _ := os.ReadFile(filepath.Join(Dir(root), credentialsFile))
+	if l, ok := parseLogin(b); !ok || l.AccessToken() != token {
+		t.Fatalf("the sandbox has %s, want %q", b, token)
 	}
 }
 
@@ -128,26 +122,34 @@ func keepHome(t *testing.T) (host, root string) {
 // While a sandbox's session runs, the host's login reaches it each tick: a login the host renews later too.
 func TestKeepLoginsHandsSandboxesTheHostsLogin(t *testing.T) {
 	host, root := keepHome(t)
-	writeLogin(t, host, "first", time.Now().Add(time.Hour))
-	box := Box{KeepEvery: 10 * time.Millisecond}
+	clk := clocktest.New(time.Now())
+	writeLogin(t, host, "first", clk.Now().Add(time.Hour))
+	box := Box{KeepEvery: time.Minute, Clock: clk}
 	release := box.KeepLogins(func(context.Context) { t.Error("a login an hour from its end was renewed") })
 	defer release()
-	waitForToken(t, root, "first")
-	writeLogin(t, host, "second", time.Now().Add(8*time.Hour))
-	waitForToken(t, root, "second")
+	clk.Advance(0)
+	wantToken(t, root, "first")
+	writeLogin(t, host, "second", clk.Now().Add(8*time.Hour))
+	clk.Advance(time.Minute - time.Nanosecond)
+	wantToken(t, root, "first")
+	clk.Advance(time.Nanosecond)
+	wantToken(t, root, "second")
 }
 
 // A host login near its end is renewed on the host (sandboxes can't), once, and the new one handed on.
 func TestKeepLoginsRenewsALoginNearItsEnd(t *testing.T) {
 	host, root := keepHome(t)
-	writeLogin(t, host, "old", time.Now().Add(time.Minute))
+	clk := clocktest.New(time.Now())
+	writeLogin(t, host, "old", clk.Now().Add(time.Minute))
 	var renewals atomic.Int32
-	box := Box{KeepEvery: 10 * time.Millisecond}
+	box := Box{KeepEvery: time.Minute, Clock: clk}
 	release := box.KeepLogins(func(context.Context) {
 		renewals.Add(1)
-		writeLogin(t, host, "renewed", time.Now().Add(8*time.Hour))
+		writeLogin(t, host, "renewed", clk.Now().Add(8*time.Hour))
 	})
-	waitForToken(t, root, "renewed")
+	clk.Advance(0)
+	wantToken(t, root, "renewed")
+	clk.Advance(3 * time.Minute)
 	release()
 	if n := renewals.Load(); n != 1 {
 		t.Errorf("renewed %d times", n)

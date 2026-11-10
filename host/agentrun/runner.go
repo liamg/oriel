@@ -28,7 +28,7 @@ type Runner struct {
 	app         App
 	prompts     prompts.Overrides // the user's versions of the prompts the app last sent
 	promptsSent bool
-	starts      sync.WaitGroup // agents starting off their callers (startAside), and restarts
+	starts      hostcore.Jobs // agents starting off their callers (startAside), and restarts
 
 	loginMu sync.Mutex
 	lost    map[string]*lostLogin // logins gone, by provider and account
@@ -140,6 +140,9 @@ func (x *Runner) Close() {
 	}
 	x.starts.Wait()
 }
+
+// Starting are the agents starting off their callers, and restarting, not up yet: "starting an agent ×2".
+func (x *Runner) Starting() []string { return x.starts.Running() }
 
 // Resume starts session id's agent if it isn't running, by its own id when it had one so the conversation carries
 // on, and hands it what's waiting. One running that has stopped answering is started again.

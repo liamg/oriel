@@ -103,7 +103,17 @@ func TestWriteWaitsForTheIndexLock(t *testing.T) {
 	if err := os.WriteFile(lock, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	time.AfterFunc(150*time.Millisecond, func() { os.Remove(lock) })
+	real, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("no git")
+	}
+	// The other git lets go just after ours has found the index locked.
+	bin := t.TempDir()
+	script := "#!/bin/sh\n'" + real + "' \"$@\" && exit 0\nrm -f '" + lock + "'\nexit 1\n"
+	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	if err := (Repo{Dir: r.Dir}).Stage(context.Background(), "a.txt"); err != nil {
 		t.Fatalf("staging past a lock let go: %v", err)
 	}

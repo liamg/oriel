@@ -1,14 +1,11 @@
 package typeset
 
 import (
-	"runtime"
 	"testing"
-	"time"
 )
 
 // Close stops the worker, and a rune asked for after it starts none.
 func TestCloseStopsTheFallbackWorker(t *testing.T) {
-	before := runtime.NumGoroutine()
 	ts, err := NewBundled()
 	if err != nil {
 		t.Fatal(err)
@@ -16,9 +13,10 @@ func TestCloseStopsTheFallbackWorker(t *testing.T) {
 	ts.fb.request('★')
 	ts.Close()
 	ts.fb.request('☂')
-	for deadline := time.Now().Add(5 * time.Second); runtime.NumGoroutine() > before; time.Sleep(time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("%d goroutines, %d before", runtime.NumGoroutine(), before)
-		}
+	<-ts.fb.done
+	ts.fb.mu.Lock()
+	defer ts.fb.mu.Unlock()
+	if ts.fb.requested['☂'] {
+		t.Error("a rune asked for after Close went to the worker")
 	}
 }

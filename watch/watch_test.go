@@ -33,10 +33,17 @@ func counted(key string, poll bool, files ...Files) (Source[int], *atomic.Int32)
 	return Source[int]{Key: key, Poll: poll, Files: files, Read: func(Reader) (int, error) { return int(n.Add(1)), nil }}, &n
 }
 
-func eventually(t *testing.T, what string, ok func() bool) {
+// until waits for a reading of s's that ok accepts, as each new one arrives.
+func until[T any](t *testing.T, s Sub[T], what string, ok func(v T) bool) {
 	t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); !ok(); time.Sleep(5 * time.Millisecond) {
-		if time.Now().After(deadline) {
+	deadline := time.After(10 * time.Second)
+	for {
+		if v, _, has := s.Get(); has && ok(v) {
+			return
+		}
+		select {
+		case <-s.Changed():
+		case <-deadline:
 			t.Fatalf("never: %s", what)
 		}
 	}
@@ -78,19 +85,7 @@ func newRig(t *testing.T, o Options) *rig {
 }
 
 // settle waits for every read under way to finish: not for a while, for that.
-func (r *rig) settle() {
-	r.t.Helper()
-	eventually(r.t, "the manager settled", func() bool {
-		r.m.mu.Lock()
-		defer r.m.mu.Unlock()
-		for _, n := range r.m.nodes {
-			if n.reading {
-				return false
-			}
-		}
-		return true
-	})
-}
+func (r *rig) settle() { r.m.Idle() }
 
 // advance moves the clock on by d, one thing due at a time, letting what each starts finish before the next.
 func (r *rig) advance(d time.Duration) {
@@ -348,9 +343,9 @@ func TestFilesSourceSaysWhatChanged(t *testing.T) {
 	dir := t.TempDir()
 	m := manager(t, Options{})
 	s := Subscribe(m, FilesSource("files", Files{Path: dir, Tree: true}), Need{}, "s")
-	eventually(t, "the first read", func() bool { _, _, ok := s.Get(); return ok })
+	until(t, s, "the first read", func([]string) bool { return true })
 	write(t, filepath.Join(dir, "x"), "1")
-	eventually(t, "x", func() bool { v, _, _ := s.Get(); return len(v) == 1 && v[0] == filepath.Join(dir, "x") })
+	until(t, s, "x", func(v []string) bool { return len(v) == 1 && v[0] == filepath.Join(dir, "x") })
 }
 
 // Stats say what made each source read last: the path that changed, or the source it reads from.
@@ -363,10 +358,12 @@ func TestStatsSayWhyASourceRead(t *testing.T) {
 	derived := Derive("derived", src, func(n int) (int, error) { return n, nil })
 	s := Subscribe(m, derived, Need{}, "test")
 	defer s.Close()
-	eventually(t, "the first read", func() bool { _, _, ok := s.Get(); return ok })
+	until(t, s, "the first read", func(int) bool { return true })
 	write(t, f, "b")
-	eventually(t, "the change", func() bool { return reads.Load() == 2 })
-	eventually(t, "the derived read", func() bool { v, _, _ := s.Get(); return v == 2 })
+	until(t, s, "the derived read of the change", func(v int) bool { return v == 2 })
+	if n := reads.Load(); n != 2 {
+		t.Fatalf("read %d times, want 2", n)
+	}
 	why := map[string]string{}
 	for _, st := range m.Stats() {
 		why[st.Key] = st.Cause
@@ -382,19 +379,18 @@ func TestFileIsWhatTheFileHolds(t *testing.T) {
 	m := manager(t, Options{})
 	p := filepath.Join(t.TempDir(), "state.json")
 	s := Subscribe(m, File(p), Need{}, "test")
-	got := func() []byte { b, _, _ := s.Get(); return b }
-	eventually(t, "the first reading", func() bool { _, _, ok := s.Get(); return ok })
-	if b := got(); b != nil {
+	until(t, s, "the first reading", func([]byte) bool { return true })
+	if b, _, _ := s.Get(); b != nil {
 		t.Fatalf("with no file the reading is %q, want nil", b)
 	}
 	write(t, p, "one")
-	eventually(t, "the file as written", func() bool { return string(got()) == "one" })
+	until(t, s, "the file as written", func(b []byte) bool { return string(b) == "one" })
 	write(t, p, "two")
-	eventually(t, "the file as changed", func() bool { return string(got()) == "two" })
+	until(t, s, "the file as changed", func(b []byte) bool { return string(b) == "two" })
 	if err := os.Remove(p); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, "nothing once it's gone", func() bool { return got() == nil })
+	until(t, s, "nothing once it's gone", func(b []byte) bool { return b == nil })
 }
 
 // Fresh is a reading begun after it's asked for, never the one a source kept from before: a file written since is

@@ -108,8 +108,7 @@ func TestStopTakesALastPass(t *testing.T) {
 	var heard sync.WaitGroup
 	heard.Add(1)
 	d, wait := dictate(t, mic, &voicetest.Transcriber{}, voice.ListenOpts{OnState: func(string) { heard.Done() }})
-	heard.Wait()
-	time.Sleep(50 * time.Millisecond)
+	heard.Wait() // speech has begun: what's heard so far is the last pass
 	d.Stop()
 	ps, e := wait()
 	if e.reason != "stopped" || len(finals(ps)) != 1 {

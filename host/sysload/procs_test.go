@@ -1,7 +1,10 @@
 package sysload
 
 import (
+	"bufio"
 	"encoding/binary"
+	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -52,11 +55,15 @@ func TestLoads(t *testing.T) {
 // sleeperEnv makes this test binary a child that sleeps: macOS hides the environment of its own binaries (sleep).
 const sleeperEnv = "SYSLOAD_TEST_SLEEPER"
 
+// sleeperReady is what the sleeper writes once it runs, so its own command line shows.
+const sleeperReady = "sleeper ready"
+
 func TestSleeper(t *testing.T) {
 	if os.Getenv(sleeperEnv) == "" {
 		t.Skip("only a child of TestFamily")
 	}
-	time.Sleep(30 * time.Second)
+	fmt.Println(sleeperReady)
+	io.Copy(io.Discard, os.Stdin) // until its parent is done with it
 }
 
 // A child started with a session's variable is in this process's family, with its command line and session.
@@ -67,11 +74,26 @@ func TestFamily(t *testing.T) {
 	}
 	cmd := exec.Command(self, "-test.run=^TestSleeper$")
 	cmd.Env = append(os.Environ(), SessionEnv+"=s-123", sleeperEnv+"=1")
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { cmd.Process.Kill(); cmd.Wait() })
-	time.Sleep(50 * time.Millisecond) // the exec lands, so the child shows its own command
+	t.Cleanup(func() { stdin.Close(); cmd.Process.Kill(); cmd.Wait() })
+	for sc := bufio.NewScanner(stdout); ; {
+		if !sc.Scan() {
+			t.Fatal("the sleeper ended before it ran")
+		}
+		if sc.Text() == sleeperReady {
+			break
+		}
+	}
 	fam, err := Family(os.Getpid())
 	if err != nil {
 		t.Fatal(err)

@@ -99,7 +99,7 @@ func TestSweepRunsOnATimer(t *testing.T) {
 			if !attached {
 				t.Error("the sweep didn't see the running session's sandbox as attached")
 			}
-		case <-time.After(5 * time.Second):
+		case <-time.After(waitTimeout):
 			t.Fatal("the sweep never ran")
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -121,7 +122,8 @@ func fakeClaude(args []string) int {
 	fmt.Printf("fake claude %s in %s\r\n", f.id, cwd)
 	if os.Getenv("ORIEL_FAKE_NO_HELLO") == "1" {
 		note("run")
-		time.Sleep(time.Hour)
+		_, _ = io.Copy(io.Discard, os.Stdin) // until the terminal closes
+		return 0
 	}
 
 	var hello struct{ Tools []toolSpec }

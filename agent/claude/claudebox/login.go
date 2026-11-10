@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -68,15 +69,16 @@ type Box struct {
 	Keychain func(ctx context.Context) ([]byte, error)
 	// KeepEvery is how often KeepLogins hands the sandboxes the host's sign-in; 0 is a minute.
 	KeepEvery time.Duration
+	// Clock times KeepLogins and tells how near its end a sign-in is; nil is the system's.
+	Clock clock.Clock
 
 	keychainMu    sync.Mutex
 	keychainLogin Login
 	downloads     sync.Mutex
 
-	keepMu   sync.Mutex
-	keepers  int
-	stopKeep context.CancelFunc
-	keepDone chan struct{}
+	keepMu  sync.Mutex
+	keepers int
+	keeping *keeper
 
 	seen      seenCache // what each Claude Code binary has sandboxes told they've seen
 	refreshed time.Time
@@ -161,12 +163,8 @@ func (x *Box) KeepLogins(refresh func(context.Context)) (release func()) {
 	x.keepers++
 	if x.keepers == 1 {
 		ctx, cancel := context.WithCancel(context.Background())
-		done := make(chan struct{})
-		x.stopKeep, x.keepDone = cancel, done
-		go func() {
-			defer close(done)
-			x.keep(ctx, refresh)
-		}()
+		x.keeping = &keeper{ctx: ctx, cancel: cancel}
+		x.keepAfter(x.keeping, 0, refresh)
 	}
 	x.keepMu.Unlock()
 	var once sync.Once
@@ -174,32 +172,45 @@ func (x *Box) KeepLogins(refresh func(context.Context)) (release func()) {
 		once.Do(func() {
 			x.keepMu.Lock()
 			x.keepers--
-			var stop context.CancelFunc
-			var done chan struct{}
-			if x.keepers == 0 {
-				stop, done = x.stopKeep, x.keepDone
-				x.stopKeep, x.keepDone = nil, nil
+			last, k := x.keepers == 0, x.keeping
+			if last {
+				x.keeping = nil
+				k.cancel()
+				if k.timer.Stop() {
+					k.runs.Done()
+				}
 			}
 			x.keepMu.Unlock()
-			if stop != nil {
-				stop()
-				<-done
+			if last {
+				k.runs.Wait()
 			}
 		})
 	}
 }
 
-func (x *Box) keep(ctx context.Context, refresh func(context.Context)) {
-	t := time.NewTicker(cmp.Or(x.KeepEvery, time.Minute))
-	defer t.Stop()
-	for {
-		x.keepOnce(ctx, refresh)
-		select {
-		case <-ctx.Done():
+// keeper is one stretch of KeepLogins, from the first hold to the last release.
+type keeper struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	timer  clock.Timer
+	runs   sync.WaitGroup // the round waiting or running
+}
+
+// keepAfter runs a round of keeping after d, and schedules the next when it's done. keepMu is held.
+func (x *Box) keepAfter(k *keeper, d time.Duration, refresh func(context.Context)) {
+	k.runs.Add(1)
+	k.timer = clock.Or(x.Clock).AfterFunc(d, func() {
+		defer k.runs.Done()
+		if k.ctx.Err() != nil {
 			return
-		case <-t.C:
 		}
-	}
+		x.keepOnce(k.ctx, refresh)
+		x.keepMu.Lock()
+		defer x.keepMu.Unlock()
+		if k.ctx.Err() == nil {
+			x.keepAfter(k, cmp.Or(x.KeepEvery, time.Minute), refresh)
+		}
+	})
 }
 
 // keepOnce hands every sandbox the host's sign-in, renewed first when it's near its end.
@@ -212,9 +223,10 @@ func (x *Box) keepOnce(ctx context.Context, refresh func(context.Context)) {
 		return
 	}
 	x.keepMu.Lock()
-	renew := time.Until(l.Expiry()) < refreshBefore && time.Since(x.refreshed) >= refreshGap
+	now := clock.Or(x.Clock).Now()
+	renew := l.Expiry().Sub(now) < refreshBefore && now.Sub(x.refreshed) >= refreshGap
 	if renew {
-		x.refreshed = time.Now()
+		x.refreshed = now
 	}
 	x.keepMu.Unlock()
 	if renew {

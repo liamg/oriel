@@ -32,7 +32,7 @@ func TestShellMarksCatchUpAfterABurstBudget(t *testing.T) {
 	r.eventually(id, "the burst", func(se core.SessionState) bool {
 		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "b149" && it.Done })
 	})
-	if n := settled(runs) - before; n > 5*full {
+	if n := settled(r, a, runs) - before; n > 5*full {
 		t.Errorf("150 commands ran git %d times, %d marks of every project; want the waiting marks made together, at most 5", n, n/full)
 	}
 }

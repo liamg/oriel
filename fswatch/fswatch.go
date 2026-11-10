@@ -463,7 +463,7 @@ func (w *Watcher) startStream(r *root) bool {
 	if err != nil {
 		real = r.path
 	}
-	s := &stream{real: real, since: time.Now()}
+	s := &stream{real: real, since: w.clock.Now()}
 	stop, err := tb.watchTree(real, excludes(r.path, real, r.skip, maxExclude), func(evs []fsevent) {
 		w.handleStream(r, s, evs)
 	})

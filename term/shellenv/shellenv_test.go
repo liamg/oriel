@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -64,29 +65,9 @@ func TestPathGivesUpOnAShellThatHangs(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	b, _ := os.ReadFile(pidfile)
-	if pid := strings.TrimSpace(string(b)); pid != "" {
-		// Gone, a zombie or dead (X, x: on its way out) isn't running.
-		running := func() bool { s := readStat(pid); return s != "" && !strings.ContainsAny(s[:1], "ZXx") }
-		alive := running()
-		for deadline := time.Now().Add(time.Second); alive && time.Now().Before(deadline); alive = running() { // the kill is sent, not waited for
-			time.Sleep(10 * time.Millisecond)
-		}
-		if alive {
-			t.Errorf("the shell's child %s is still running", pid)
-		}
+	if pid, err := strconv.Atoi(strings.TrimSpace(string(b))); err == nil && !exited(pid, 10*time.Second) { // the kill is sent, not waited for
+		t.Errorf("the shell's child %d is still running", pid)
 	}
-}
-
-// readStat is a process's state letter on Linux; "" elsewhere, or once it's gone.
-func readStat(pid string) string {
-	b, err := os.ReadFile("/proc/" + pid + "/stat")
-	if err != nil {
-		return ""
-	}
-	if i := strings.LastIndex(string(b), ") "); i >= 0 {
-		return string(b[i+2:])
-	}
-	return ""
 }
 
 // A shell that can't start a program without a terminal (shiv) is given one.

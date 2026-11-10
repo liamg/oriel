@@ -285,13 +285,13 @@ func TestCloseWaitsForAIReview(t *testing.T) {
 	}()
 	select {
 	case <-codex.Closing:
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Fatal("the reviewer wasn't closed")
 	}
 	select {
 	case <-closed:
 		t.Error("Close returned while the review was still ending")
-	case <-time.After(100 * time.Millisecond):
+	default:
 	}
 	release()
 	<-closed

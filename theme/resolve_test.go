@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 func spec(t *testing.T, src string) *Spec {
@@ -203,15 +205,25 @@ func TestExtendsAndStack(t *testing.T) {
 func TestFileWatch(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "live.toml")
 	os.WriteFile(p, []byte("name = \"live\"\n"), 0o644)
-	changed := make(chan struct{}, 1)
-	cancel := File{Path: p, PollEvery: 5 * time.Millisecond}.Watch(func() { changed <- struct{}{} })
+	clk := clocktest.New(time.Unix(0, 0))
+	changed := 0
+	cancel := File{Path: p, PollEvery: time.Second, Clock: clk}.Watch(func() { changed++ })
 	defer cancel()
 	// Straight away, and the same size: a save right after Watch returns still counts.
 	os.WriteFile(p, []byte("name = \"evil\"\n"), 0o644)
-	select {
-	case <-changed:
-	case <-time.After(2 * time.Second):
-		t.Fatal("no change seen")
+	clk.Advance(time.Second)
+	if changed != 1 {
+		t.Fatalf("%d changes seen after a save and a poll; want 1", changed)
+	}
+	clk.Advance(time.Second)
+	if changed != 1 {
+		t.Errorf("%d changes seen after a poll with no save; want 1", changed)
+	}
+	cancel()
+	os.WriteFile(p, []byte("name = \"gone\"\n"), 0o644)
+	clk.Advance(time.Second)
+	if changed != 1 || clk.Waiting() != 0 {
+		t.Errorf("after cancel: %d changes, %d polls waiting", changed, clk.Waiting())
 	}
 }
 

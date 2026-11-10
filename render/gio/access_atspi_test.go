@@ -25,6 +25,7 @@ type a11yDesktop struct {
 	mu       sync.Mutex
 	enabled  bool
 	embedded []atspiRef
+	asked    chan struct{} // the switch was read
 }
 
 func startDesktop(t *testing.T, addr string) *a11yDesktop {
@@ -33,7 +34,7 @@ func startDesktop(t *testing.T, addr string) *a11yDesktop {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { conn.Close() })
-	d := &a11yDesktop{conn: conn}
+	d := &a11yDesktop{conn: conn, asked: make(chan struct{}, 8)}
 	for _, name := range []string{"org.a11y.Bus", "org.a11y.atspi.Registry"} {
 		if _, err := conn.RequestName(name, dbus.NameFlagDoNotQueue); err != nil {
 			t.Fatal(err)
@@ -52,6 +53,10 @@ func startDesktop(t *testing.T, addr string) *a11yDesktop {
 			d.mu.Lock()
 			defer d.mu.Unlock()
 			if iface == "org.a11y.Status" && name == "IsEnabled" {
+				select {
+				case d.asked <- struct{}{}:
+				default:
+				}
 				return dbus.MakeVariant(d.enabled), nil
 			}
 			return dbus.Variant{}, dbus.NewError("org.freedesktop.DBus.Error.UnknownProperty", nil)
@@ -78,7 +83,7 @@ func (d *a11yDesktop) enable(on bool) error {
 
 func eventually(t *testing.T, what string, ok func() bool) {
 	t.Helper()
-	for end := time.Now().Add(5 * time.Second); time.Now().Before(end); time.Sleep(5 * time.Millisecond) {
+	for end := time.Now().Add(30 * time.Second); time.Now().Before(end); time.Sleep(5 * time.Millisecond) {
 		if ok() {
 			return
 		}
@@ -92,6 +97,13 @@ func testATSPI(t *testing.T, addr string) {
 	ax := newAccess(func() accessGeom {
 		return accessGeom{Origin: render.Point{X: 100, Y: 50}, Scale: 2, Dpi: 2, Active: true}
 	})
+	joined := make(chan struct{}, 1)
+	ax.wake = func() {
+		select {
+		case joined <- struct{}{}:
+		default:
+		}
+	}
 	first := fixtureTree()
 	ax.tree.apply(render.AccessDiff(nil, first))
 	b := app.add(ax)
@@ -103,8 +115,9 @@ func testATSPI(t *testing.T, addr string) {
 		app.leave()
 	})
 
-	// Off until the session turns accessibility on: no connection, nothing exported.
-	time.Sleep(100 * time.Millisecond)
+	// Off until the session turns accessibility on: no connection, nothing exported. The app reads the switch once
+	// it's listening for it to change.
+	<-desk.asked
 	if app.conn() != nil {
 		t.Fatal("joined the accessibility bus while it's off")
 	}
@@ -113,12 +126,11 @@ func testATSPI(t *testing.T, addr string) {
 	if err := desk.enable(true); err != nil {
 		t.Fatal(err)
 	}
-	eventually(t, "the app to embed itself", func() bool {
-		desk.mu.Lock()
-		defer desk.mu.Unlock()
-		return len(desk.embedded) == 1 && app.conn() != nil
-	})
+	<-joined
 	desk.mu.Lock()
+	if len(desk.embedded) != 1 || app.conn() == nil {
+		t.Fatalf("joined with %d embedded", len(desk.embedded))
+	}
 	appRef := desk.embedded[0]
 	desk.mu.Unlock()
 	if appRef.Path != atspiRoot {

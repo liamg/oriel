@@ -33,16 +33,18 @@ func TestPortalSettingChangedReadsAppearance(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	emit("org.gnome.desktop.interface", "font-name")
 	emit("org.freedesktop.appearance", "color-scheme")
 	select {
 	case <-changed:
-	case <-time.After(5 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Fatal("the change wasn't noticed")
 	}
-	select {
-	case <-changed:
-		t.Error("another setting's change was taken for the appearance's")
-	case <-time.After(50 * time.Millisecond):
+	signal := func(ns, key string) *dbus.Signal {
+		return &dbus.Signal{Name: portalSettings + ".SettingChanged", Body: []any{ns, key, dbus.MakeVariant(uint32(1))}}
+	}
+	for _, s := range []*dbus.Signal{signal("org.gnome.desktop.interface", "font-name"), signal("org.freedesktop.appearance", "contrast")} {
+		if colorSchemeChanged(s) {
+			t.Errorf("%v's change was taken for the color scheme's", s.Body[:2])
+		}
 	}
 }

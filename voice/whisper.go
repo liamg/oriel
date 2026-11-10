@@ -22,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // MaxAudio caps one phrase: 30s of 16 kHz mono 16-bit PCM, plus its header.
@@ -65,6 +67,8 @@ type Whisper struct {
 	Metered func() bool
 	// Net is what models are downloaded with; a client with connect and header timeouts if nil.
 	Net *http.Client
+	// Clock times how long the model has gone unused; the system's when nil.
+	Clock clock.Clock
 
 	load func(path string) (engine, error) // loadEngine, swapped in tests
 
@@ -160,7 +164,7 @@ func (w *Whisper) Transcribe(ctx context.Context, wav []byte, prompt string) (st
 		})
 	}
 	w.mu.Lock()
-	w.lastUse = time.Now()
+	w.lastUse = clock.Or(w.Clock).Now()
 	w.mu.Unlock()
 	return text, err
 }
@@ -172,7 +176,7 @@ func (w *Whisper) ensure(setting string) (string, engine, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.stop != nil && w.model == path {
-		w.lastUse = time.Now()
+		w.lastUse = clock.Or(w.Clock).Now()
 		return w.url, w.eng, nil
 	}
 	bin := ""
@@ -203,8 +207,8 @@ func (w *Whisper) ensure(setting string) (string, engine, error) {
 		w.url, w.stop = url, stop
 	}
 	w.gen++
-	w.model, w.lastUse = path, time.Now()
-	go w.reap(w.gen)
+	w.model, w.lastUse = path, clock.Or(w.Clock).Now()
+	w.reapAfter(w.gen)
 	return w.url, w.eng, nil
 }
 
@@ -216,29 +220,26 @@ func (w *Whisper) unload() {
 	w.url, w.eng, w.stop, w.model = "", nil, nil, ""
 }
 
-// reap drops the model once it has gone unused for Idle.
-func (w *Whisper) reap(gen int) {
-	tick := w.Idle / 10
-	if tick < 10*time.Millisecond {
-		tick = 10 * time.Millisecond
-	}
-	for {
-		time.Sleep(tick)
+// reapAfter looks again in a tenth of Idle, and drops load gen's model once it has gone unused for Idle.
+func (w *Whisper) reapAfter(gen int) {
+	c := clock.Or(w.Clock)
+	c.AfterFunc(max(w.Idle/10, 10*time.Millisecond), func() {
 		if !w.reqMu.TryLock() {
-			continue // transcribing
-		}
-		w.mu.Lock()
-		done := w.gen != gen || w.stop == nil
-		if !done && time.Since(w.lastUse) >= w.Idle {
-			w.unload()
-			done = true
-		}
-		w.mu.Unlock()
-		w.reqMu.Unlock()
-		if done {
+			w.reapAfter(gen) // transcribing
 			return
 		}
-	}
+		defer w.reqMu.Unlock()
+		w.mu.Lock()
+		defer w.mu.Unlock()
+		if w.gen != gen || w.stop == nil {
+			return
+		}
+		if c.Now().Sub(w.lastUse) >= w.Idle {
+			w.unload()
+			return
+		}
+		w.reapAfter(gen)
+	})
 }
 
 // Running reports whether a model is loaded.

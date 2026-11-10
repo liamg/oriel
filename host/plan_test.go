@@ -203,7 +203,7 @@ func TestStartWorkPromptIsTheFreshAgentsFirstTurn(t *testing.T) {
 		t.Fatalf("the fresh agent's first turn = %q, want the Start work prompt on the plan's thread", fresh.Spec.Prompt)
 	}
 	fresh.WaitSent(t)
-	fresh.NoneSent(t)
+	r.noneSent(fresh)
 	r.eventually(id, "the plan's thread given to the agent", func(se core.SessionState) bool {
 		th, ok := se.Thread(se.PlanThread())
 		return ok && th.Busy && len(th.Undelivered()) == 0

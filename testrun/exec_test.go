@@ -115,13 +115,13 @@ func TestExecEndsWhenAChildHoldsStdout(t *testing.T) {
 		t.Skip("a shell line")
 	}
 	testhook.Set(t, &waitDelay, 200*time.Millisecond)
-	x, err := Start(context.Background(), Request{Adapter: &shell{line: "echo hi; sleep 5 &"}}, nil)
+	x, err := Start(context.Background(), Request{Adapter: &shell{line: "echo hi; sleep 30 &"}}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	select {
 	case <-x.Done():
-	case <-time.After(3 * time.Second):
+	case <-time.After(20 * time.Second):
 		t.Fatal("the run waited on a child holding its stdout")
 	}
 	if run, _ := x.Wait(); run.Raw != "hi\n" || run.Status == StatusError {

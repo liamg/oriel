@@ -540,18 +540,7 @@ func TestTerminal(t *testing.T) {
 	if term == nil {
 		t.Fatal("no terminal")
 	}
-	deadline := time.Now().Add(20 * time.Second)
-	for {
-		backlog, _, detach := term.Attach()
-		detach()
-		if bytes.Contains(backlog, []byte("fake claude "+s.S.ID())) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("backlog = %q", backlog)
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
+	waitShown(t, term, "fake claude "+s.S.ID(), h.Timeout)
 	if err := term.Resize(100, 30); err != nil {
 		t.Error(err)
 	}
@@ -563,6 +552,25 @@ func TestTerminal(t *testing.T) {
 	}
 	detach()
 	s.Wait("the process to exit", func(ev agent.Event) bool { _, ok := ev.(agent.Exited); return ok })
+}
+
+// waitShown reads what term shows, from its backlog on, until it has shown want.
+func waitShown(t *testing.T, term agent.Terminal, want string, hang time.Duration) {
+	t.Helper()
+	shown, more, stop := term.Attach()
+	defer stop()
+	hung := time.After(hang)
+	for !bytes.Contains(shown, []byte(want)) {
+		select {
+		case chunk, ok := <-more:
+			if !ok {
+				t.Fatalf("the terminal closed after %q", shown)
+			}
+			shown = append(shown, chunk...)
+		case <-hung:
+			t.Fatalf("the terminal showed %q", shown)
+		}
+	}
 }
 
 func TestStartRefusesBypassOutsideASandbox(t *testing.T) {

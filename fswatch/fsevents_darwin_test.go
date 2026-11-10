@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 func TestFSEventsFlags(t *testing.T) {
@@ -36,7 +35,6 @@ func TestTreeIsOneStream(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(root, "new"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	quiet(w, 200*time.Millisecond)
 	q := filepath.Join(root, "new", "g.txt")
 	write(t, q, "x")
 	expect(t, w, q)

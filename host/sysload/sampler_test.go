@@ -12,21 +12,26 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 func TestSamplerReadsOnlyWhileWanted(t *testing.T) {
+	const every = 5 * time.Second
 	var reads atomic.Int64
-	s := NewSampler(5*time.Millisecond, func() Reading {
+	c := clocktest.New(time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC))
+	s := NewSampler(every, func() Reading {
 		reads.Add(1)
 		return Reading{CPU: 10, Cores: 4}
 	})
+	s.Clock = c
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go s.Run(ctx)
 
-	time.Sleep(100 * time.Millisecond)
-	if n := reads.Load(); n != 0 {
-		t.Fatalf("%d reads with no one wanting them", n)
+	c.Advance(time.Hour)
+	if n := reads.Load(); n != 0 || c.Waiting() != 0 {
+		t.Fatalf("%d reads, %d waiting, with no one wanting them", n, c.Waiting())
 	}
 
 	release := s.Want()
@@ -35,26 +40,28 @@ func TestSamplerReadsOnlyWhileWanted(t *testing.T) {
 		if r.CPU != 10 {
 			t.Fatalf("got %+v", r)
 		}
-	case <-time.After(time.Second):
+	case <-time.After(time.Minute):
 		t.Fatal("no reading after Want")
 	}
 	if s.Last().Cores != 4 {
 		t.Fatalf("Last is %+v", s.Last())
 	}
+	c.Advance(every)
+	if n := reads.Load(); n != 2 {
+		t.Fatalf("%d reads an interval after Want, want 2", n)
+	}
 	inner := s.Want()
 	inner()
-	time.Sleep(50 * time.Millisecond)
-	if !s.Wanted() || reads.Load() < 2 {
+	c.Advance(every)
+	if !s.Wanted() || reads.Load() != 3 {
 		t.Fatalf("an inner release stopped it: wanted %v, %d reads", s.Wanted(), reads.Load())
 	}
 
 	release()
 	release()
-	time.Sleep(20 * time.Millisecond)
-	stopped := reads.Load()
-	time.Sleep(100 * time.Millisecond)
-	if n := reads.Load() - stopped; n != 0 || s.Wanted() {
-		t.Fatalf("%d reads after release", n)
+	c.Advance(time.Hour)
+	if n := reads.Load(); n != 3 || s.Wanted() || c.Waiting() != 0 {
+		t.Fatalf("%d reads after release, want 3; %d waiting", n, c.Waiting())
 	}
 }
 
