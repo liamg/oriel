@@ -1,13 +1,17 @@
 package shellenv
 
 import (
+	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/internal/isolate"
+	"github.com/liamg/oriel/term/pty"
 )
 
 // fakeShell writes a shell that runs body, then the command it's given (its last argument) with PATH set to path.
@@ -123,6 +127,40 @@ func TestPathFromAShellThatKeepsWriting(t *testing.T) {
 	}
 	if d := time.Since(start); d > 3*time.Second {
 		t.Errorf("took %v to let the shell go", d)
+	}
+}
+
+// The Finder, the Dock and launchd give an app /dev/null for stdin: a character device, but not a terminal.
+func TestNullStdinIsNotATerminal(t *testing.T) {
+	isolate.Test(t)
+	f, err := os.Open(os.DevNull)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if isTerminal(f) {
+		t.Error("/dev/null was taken for a terminal")
+	}
+}
+
+// A process run on a terminal is seen as one.
+func TestPtyStdinIsATerminal(t *testing.T) {
+	isolate.Test(t)
+	if os.Getenv("ORIEL_SHELLENV_REPORT_TERMINAL") == "1" {
+		fmt.Printf("terminal=%v\n", FromTerminal())
+		return
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestPtyStdinIsATerminal$")
+	cmd.Env = append(os.Environ(), "ORIEL_SHELLENV_REPORT_TERMINAL=1")
+	p, err := pty.Start(cmd, 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	out, _ := io.ReadAll(p)
+	_ = cmd.Wait()
+	if !strings.Contains(string(out), "terminal=true") {
+		t.Errorf("a pty wasn't taken for a terminal: %q", out)
 	}
 }
 
