@@ -19,6 +19,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/unit"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/osclip"
 	"github.com/liamg/oriel/render/typeset"
@@ -321,7 +322,7 @@ func (w *Window) loop() {
 	f := NewFrame()
 	tag := new(int)
 	var held pointer.Buttons
-	var clock inputClock
+	var stamps inputClock
 	var shown *render.List
 	var slowSent time.Time
 	var down render.Mods // the modifier keys held
@@ -386,7 +387,7 @@ func (w *Window) loop() {
 				}
 				for _, k := range translate(ev, scale, &held, &down) {
 					if pe, ok := k.(render.PointerEvent); ok {
-						pe.At = clock.at(ev.(pointer.Event).Time)
+						pe.At = stamps.at(ev.(pointer.Event).Time)
 						k = pe
 					}
 					w.post(k)
@@ -460,6 +461,7 @@ func pointerFilter(tag event.Tag) pointer.Filter {
 // inputClock turns the OS's input timestamps, from an epoch of its own, into wall time. The epoch is the earliest any
 // event puts it at: the event that arrived soonest after it happened reads as arriving at once.
 type inputClock struct {
+	clock clock.Clock // nil is the system's
 	epoch time.Time
 }
 
@@ -467,7 +469,7 @@ func (c *inputClock) at(t time.Duration) time.Time {
 	if t == 0 {
 		return time.Time{}
 	}
-	if e := time.Now().Add(-t); c.epoch.IsZero() || e.Before(c.epoch) {
+	if e := clock.Or(c.clock).Now().Add(-t); c.epoch.IsZero() || e.Before(c.epoch) {
 		c.epoch = e
 	}
 	return c.epoch.Add(t)

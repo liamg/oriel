@@ -24,6 +24,12 @@ func appearanceSignals(changed func()) (stop func()) {
 	return func() { end(); conn.Close() }
 }
 
+// colorSchemeChanged says whether s is the portal saying the color scheme changed.
+func colorSchemeChanged(s *dbus.Signal) bool {
+	return s.Name == portalSettings+".SettingChanged" && len(s.Body) >= 2 && s.Body[0] == "org.freedesktop.appearance" &&
+		s.Body[1] == "color-scheme"
+}
+
 // watchPortal calls changed on each SettingChanged of org.freedesktop.appearance's color-scheme on conn.
 func watchPortal(conn *dbus.Conn, changed func()) (stop func(), err error) {
 	match := []dbus.MatchOption{dbus.WithMatchObjectPath(portalPath), dbus.WithMatchInterface(portalSettings),
@@ -43,8 +49,7 @@ func watchPortal(conn *dbus.Conn, changed func()) (stop func(), err error) {
 				if !ok {
 					return
 				}
-				if s.Name == portalSettings+".SettingChanged" && len(s.Body) >= 2 && s.Body[0] == "org.freedesktop.appearance" &&
-					s.Body[1] == "color-scheme" {
+				if colorSchemeChanged(s) {
 					changed()
 				}
 			}
