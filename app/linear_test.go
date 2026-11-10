@@ -150,14 +150,9 @@ func TestLinearStartWorkFromATicket(t *testing.T) {
 	})
 	s.Type("CR")
 	s.Until("the card", func() bool { return strings.Contains(s.Text(), "linked PR #4398") })
-	text := s.Text()
-	for _, want := range []string{"NEW SESSION", "from ticket", "ENG-2231", "TODO", "Search API returns stale results after a reindex",
+	s.WantFrame("NEW SESSION", "from ticket", "ENG-2231", "TODO", "Search API returns stale results after a reindex",
 		"Customers who rebuild their index", "2 attachments", "4 comments", "the ticket, comments and attachments go to the agent as context",
-		"Start Plan"} {
-		if !strings.Contains(text, want) {
-			t.Errorf("the launcher lacks %q:\n%s", want, text)
-		}
-	}
+		"Start Plan")
 	s.ClickText("pricing")
 	typeKeysIn(s, t, "Confirm the cache is keyed by org first.", appsessions.PromptPlaceholder)
 	s.Lint("the launcher with a ticket")

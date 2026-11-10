@@ -194,11 +194,7 @@ func TestStartWorkFromAnyTracker(t *testing.T) {
 	s.Until("the ticket", func() bool { return strings.Contains(s.Text(), "Alert on queue depth") })
 	s.Type("CR")
 	s.Until("the card", func() bool { return strings.Contains(s.Text(), "Page when the jobs queue backs up.") })
-	for _, want := range []string{"from ticket", "OPS-12", "TO DO", "1 comment", "the ticket, comments and attachments go to the agent as context"} {
-		if !strings.Contains(s.Text(), want) {
-			t.Errorf("the launcher lacks %q:\n%s", want, s.Text())
-		}
-	}
+	s.WantFrame("from ticket", "OPS-12", "TO DO", "1 comment", "the ticket, comments and attachments go to the agent as context")
 	s.Run("session.launch", nil)
 	sent := lw.Fake.WaitStarted(t).WaitSent(t)
 	if !strings.Contains(sent.Text, "Jira issue OPS-12: Alert on queue depth") || !strings.Contains(sent.Text, "> Use the p95, not the max.") {
@@ -507,11 +503,7 @@ func TestTicketsPagePlanAndContinue(t *testing.T) {
 	s.Click(apptest.Centre(s.Within("Linear tickets page", "Plan").Bounds), 0)
 	s.Frame()
 	s.Until("the card", func() bool { return strings.Contains(s.Text(), "linked PR #4398") })
-	for _, want := range []string{"NEW SESSION", "from ticket", "ENG-2231", "Start Plan"} {
-		if !strings.Contains(s.Text(), want) {
-			t.Errorf("the launcher lacks %q:\n%s", want, s.Text())
-		}
-	}
+	s.WantFrame("NEW SESSION", "from ticket", "ENG-2231", "Start Plan")
 	s.Run("session.launch", nil)
 	sent := lw.Fake.WaitStarted(t).WaitSent(t)
 	if !strings.Contains(sent.Text, "Linear ticket ENG-2231: Search API returns stale results after a reindex") {
