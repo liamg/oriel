@@ -232,25 +232,6 @@ func (s *Scene) Until(what string, ok func() bool) {
 	}
 }
 
-// UntilEach is Until for a test of every frame on the way: it runs the work handed to the loop and draws a frame,
-// calls check with the frame's number (0 is the first drawn), and stops once ok; it fails the test after Timeout.
-func (s *Scene) UntilEach(what string, check func(frame int), ok func() bool) {
-	s.T.Helper()
-	deadline := time.Now().Add(Timeout)
-	for n := 0; ; n++ {
-		s.RunQueued()
-		s.Frame()
-		check(n)
-		if ok() {
-			return
-		}
-		if time.Now().After(deadline) {
-			s.T.Fatalf("waiting for %s:\n%s%s", what, s.Text(), rig.Stuck())
-		}
-		time.Sleep(time.Millisecond)
-	}
-}
-
 // Hold presses mods (0 lets go) and draws, d later on the clock.
 func (s *Scene) Hold(m render.Mods, d time.Duration) {
 	s.UI().Mods(m)
@@ -702,30 +683,6 @@ func (s *Scene) Reopen() bool {
 		s.SettleGit()
 	}
 	return asked
-}
-
-// Follow waits for the window to be asked to open on another directory, as focusing a session there asks it, and
-// moves it there (Reopen): the ask is handed to the loop, so a Reopen straight after the focus can come too soon.
-func (s *Scene) Follow() {
-	s.T.Helper()
-	if s.Moves() {
-		return
-	}
-	s.Until("the window asked to open on another directory", s.ReopenAsked)
-	s.Reopen()
-}
-
-// Moves runs what the loop was handed, moving the window wherever that asks it to open (Reopen) before any frame, as
-// the loop takes a move before it draws again; then it settles (Quiet). It says whether the window moved.
-func (s *Scene) Moves() bool {
-	s.T.Helper()
-	moved := false
-	for s.Queued() || s.ReopenAsked() {
-		s.RunQueued()
-		moved = s.Reopen() || moved
-	}
-	s.Quiet()
-	return moved
 }
 
 // arrived waits for the window to lay out the directory it moved onto, once what holds it lets go.

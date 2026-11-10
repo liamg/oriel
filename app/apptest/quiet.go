@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 )
@@ -61,6 +62,25 @@ func (s *Scene) Idle() {
 		calm = 0
 		if time.Now().After(deadline) {
 			s.T.Fatalf("the app never went idle: still at work: %s", strings.Join(busy, ", "))
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// UntilEach is Until for a test of every frame on the way: it runs the work handed to the loop and draws a frame,
+// calls check with the frame's number (0 is the first drawn), and stops once ok; it fails the test after Timeout.
+func (s *Scene) UntilEach(what string, check func(frame int), ok func() bool) {
+	s.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	for n := 0; ; n++ {
+		s.RunQueued()
+		s.Frame()
+		check(n)
+		if ok() {
+			return
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatalf("waiting for %s:\n%s%s", what, s.Text(), rig.Stuck())
 		}
 		time.Sleep(time.Millisecond)
 	}
