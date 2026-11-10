@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/gitx/gittest"
 )
@@ -186,9 +185,9 @@ func TestStatusWatch(t *testing.T) {
 	if err := s.Refresh(ctx); err != nil {
 		t.Fatal(err)
 	}
-	select {
+	select { // watchers are told before Refresh returns
 	case <-got:
-	case <-time.After(time.Second):
+	default:
 		t.Fatal("the first refresh told no one")
 	}
 	first := s.State()
@@ -212,7 +211,7 @@ func TestStatusWatch(t *testing.T) {
 		if strings.Join(p, " ") != "internal/pricing/rates.go" {
 			t.Errorf("changed paths %v", p)
 		}
-	case <-time.After(time.Second):
+	default:
 		t.Fatal("a change told no one")
 	}
 	if fs := s.Files(Uncommitted); len(fs) != 5 {

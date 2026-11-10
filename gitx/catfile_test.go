@@ -51,38 +51,48 @@ func TestObjectStopsWithCtx(t *testing.T) {
 		t.Skip("a shell script as git")
 	}
 	bin := t.TempDir()
-	if err := os.WriteFile(filepath.Join(bin, "git"), []byte("#!/bin/sh\nexec sleep 30\n"), 0o755); err != nil {
+	started := filepath.Join(bin, "started")
+	if err := syscall.Mkfifo(started, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// It says it has started (a write to the fifo waits for the test to read it), then never answers.
+	if err := os.WriteFile(filepath.Join(bin, "git"), []byte("#!/bin/sh\necho > '"+started+"'\nexec sleep 30\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	repo := Repo{Dir: t.TempDir(), Cache: testCache(t)}
-	ask := func(d time.Duration) chan error {
+	ask := func(ctx context.Context) chan error {
 		ch := make(chan error, 1)
 		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), d)
-			defer cancel()
 			_, _, err := repo.object(ctx, "0123456789:a.txt")
 			ch <- err
 		}()
 		return ch
 	}
-	first := ask(2 * time.Second)
-	time.Sleep(50 * time.Millisecond)
-	second := ask(100 * time.Millisecond)
+	firstCtx, stopFirst := context.WithCancel(context.Background())
+	defer stopFirst()
+	first := ask(firstCtx)
+	if _, err := os.ReadFile(started); err != nil { // the first read's git is running, and holds the batch
+		t.Fatal(err)
+	}
+	secondCtx, stopSecond := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer stopSecond()
+	second := ask(secondCtx)
 	select {
 	case err := <-second:
 		if err == nil {
 			t.Error("a read behind a hung git had no error")
 		}
-	case <-time.After(time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("a read waiting behind a hung git outlived its ctx")
 	}
+	stopFirst()
 	select {
 	case err := <-first:
 		if err == nil {
 			t.Error("a read from a hung git had no error")
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("a read from a hung git outlived its ctx")
 	}
 }
