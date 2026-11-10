@@ -435,3 +435,29 @@ func TestReviewComesBackAsLeft(t *testing.T) {
 	s.Press("<M-1>")
 	s.Until("Changed, flat", func() bool { return s.Has("⏎ opens the diff, not the file") && !s.Has("rate") })
 }
+
+// ⌘G (or Suggest a change) in a comment for the author adds a suggestion block holding the commented line, to edit into
+// the change; it's sent in the comment as GitHub reads it.
+func TestCommentForTheAuthorSuggestsAChange(t *testing.T) {
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	sess, _ := s.Store().State().Session(id)
+	file := filepath.Join(sess.Snapshot().Projects[0].Dir, "bucket.go")
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("the composer, for the author, offering a suggestion", func() bool { return s.Has("Comment for the author", "Suggest a change") })
+	s.Press("<D-g>")
+	s.Until("the suggestion in the field", func() bool { return s.Has("```suggestion", "func Take() int { return 1 }") })
+	s.Press("<CR>")
+	want := "```suggestion\nfunc Take() int { return 1 }\n```"
+	s.UntilState("the comment, with its suggestion", func(st core.State) bool {
+		sess, _ := st.Session(id)
+		for _, th := range sess.Snapshot().Threads {
+			for _, c := range th.Comments {
+				if strings.Contains(c.Body, want) {
+					return true
+				}
+			}
+		}
+		return false
+	})
+}

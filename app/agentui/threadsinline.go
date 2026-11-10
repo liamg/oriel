@@ -514,6 +514,9 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 				}
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			if n.toAuthor && widget.Button(c, "suggest", "Suggest a change", widget.ButtonOpts{Ghost: true, Key: "⌘G", Help: "agent/reviews#suggest"}) {
+				kit.NotifyError(x.h, "requests", x.h.Run(context.Background(), "thread.suggest", nil), true)
+			}
 			c.Text("keys", "⏎ sends · ⇧⏎ new line · esc drops it", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
 		c.Box("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 10}}, func(c *ui.Ctx) {
@@ -527,7 +530,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 				files = pastedFiles(x.h, se.ID)
 			}
 			r := widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
-				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files})
+				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files, KeyMode: ThreadComposerKeyMode})
 			switch {
 			case r.Submitted && strings.TrimSpace(n.draft) != "":
 				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
@@ -555,4 +558,41 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			}
 		})
 	})
+}
+
+// suggest adds a suggestion block holding the commented lines, as they read now, to the comment being written, and
+// puts the cursor back in its field.
+func (x *Requests) suggest() error {
+	n := x.state("").inline
+	if n == nil || !n.toAuthor {
+		return errors.New("no comment for the author is being written")
+	}
+	if n.buf == nil {
+		return errors.New("the commented lines aren't read yet")
+	}
+	snap := n.buf.Snapshot()
+	first := n.line
+	if off, ok := n.buf.Resolve(n.anchor); ok {
+		first = snap.PosAt(min(off, snap.Len())).Line
+	}
+	var lines []string
+	for i := first; i <= first+max(n.end-n.line, 0) && i < snap.Lines(); i++ {
+		lines = append(lines, strings.TrimRight(string(snap.Line(i)), "\r\n"))
+	}
+	if n.draft != "" && !strings.HasSuffix(n.draft, "\n") {
+		n.draft += "\n"
+	}
+	n.draft += suggestion(strings.Join(lines, "\n"))
+	n.focus = true
+	return nil
+}
+
+// suggestion is a GitHub suggestion block of lines; its fence is longer than any run of backticks in them, so they
+// can't close it early.
+func suggestion(lines string) string {
+	fence := "```"
+	for strings.Contains(lines, fence) {
+		fence += "`"
+	}
+	return fence + "suggestion\n" + lines + "\n" + fence
 }
