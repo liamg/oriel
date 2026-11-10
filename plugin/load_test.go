@@ -14,15 +14,18 @@ import (
 type loop struct {
 	mu   sync.Mutex
 	todo []func()
-	poke chan struct{}
+	dos  int           // how many were ever queued
+	poke chan struct{} // something was queued
 }
 
-func newLoop() *loop { return &loop{poke: make(chan struct{}, 64)} }
+func newLoop() *loop { return &loop{poke: make(chan struct{}, 1)} }
 
 func (l *loop) Do(fn func()) {
 	l.mu.Lock()
 	l.todo = append(l.todo, fn)
+	l.dos++
 	l.mu.Unlock()
+	l.Redraw()
 }
 
 func (l *loop) Redraw() {
@@ -42,19 +45,31 @@ func (l *loop) drain() {
 	}
 }
 
-// until runs the loop until ok, failing after a second.
+// until runs what's queued as it's queued, until ok.
 func (l *loop) until(t *testing.T, ok func() bool) {
 	t.Helper()
-	deadline := time.After(time.Second)
+	l.wait(t, func() bool { l.drain(); return ok() })
+}
+
+// wait looks at ok each time something is queued, until it holds.
+func (l *loop) wait(t *testing.T, ok func() bool) {
+	t.Helper()
+	deadline := time.After(10 * time.Second)
 	for !ok() {
 		select {
 		case <-l.poke:
-			l.drain()
-		case <-time.After(5 * time.Millisecond):
-			l.drain()
 		case <-deadline:
 			t.Fatal("timed out")
 		}
+	}
+}
+
+// queuedAll says n have been queued in all.
+func (l *loop) queuedAll(n int) func() bool {
+	return func() bool {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		return l.dos >= n
 	}
 }
 
@@ -129,7 +144,7 @@ func TestLoadDropsStaleResults(t *testing.T) {
 	second <- 2
 	lp.until(t, func() bool { return l.State().Phase == ui.Ready })
 	first <- 1
-	time.Sleep(20 * time.Millisecond)
+	lp.wait(t, lp.queuedAll(2)) // each fetch hands its result to the loop, the older one too
 	lp.drain()
 	if v, _ := l.Value(); v != 2 {
 		t.Errorf("value %d: the older fetch's result landed", v)

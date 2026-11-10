@@ -22,10 +22,11 @@ type gate struct {
 	answers  map[string]chan string
 	calls    map[string]int
 	canceled map[string]int
+	counted  func() // a call or a cancel was counted
 }
 
 func newGate() *gate {
-	return &gate{answers: map[string]chan string{}, calls: map[string]int{}, canceled: map[string]int{}}
+	return &gate{answers: map[string]chan string{}, calls: map[string]int{}, canceled: map[string]int{}, counted: func() {}}
 }
 
 func (g *gate) ch(k string) chan string {
@@ -41,6 +42,7 @@ func (g *gate) fetch(ctx context.Context, k string) (string, error) {
 	g.mu.Lock()
 	g.calls[k]++
 	g.mu.Unlock()
+	g.counted()
 	select {
 	case v := <-g.ch(k):
 		if v == "" {
@@ -51,6 +53,7 @@ func (g *gate) fetch(ctx context.Context, k string) (string, error) {
 		g.mu.Lock()
 		g.canceled[k]++
 		g.mu.Unlock()
+		g.counted()
 		return "", ctx.Err()
 	}
 }
@@ -69,6 +72,7 @@ func (f *frames) next()    { f.n.Add(1) }
 func (f *frames) get() int { return int(f.n.Load()) }
 func cacheFor(g *gate, o CacheOpts[string, string]) (*Cache[string, string], *loop, *frames) {
 	lp, fr := newLoop(), &frames{}
+	g.counted = lp.Redraw // the loop looks again when a fetch begins or ends
 	if o.Frame == nil {
 		o.Frame = fr.get
 	}
@@ -214,35 +218,31 @@ func TestCacheWatchesPaths(t *testing.T) {
 	if err := os.WriteFile(p, []byte("one"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if w, err := fswatch.New(); err != nil {
-		t.Skip("no watcher here:", err)
-	} else {
-		w.Close()
-	}
 	lp, fr := newLoop(), &frames{}
-	var calls atomic.Int32
+	var script *fswatch.Script
 	c := NewCache(lp, func(ctx context.Context, k string) (string, error) {
-		calls.Add(1)
 		b, err := os.ReadFile(k)
 		return string(b), err
-	}, CacheOpts[string, string]{Path: func(k string) string { return k }, Frame: fr.get})
+	}, CacheOpts[string, string]{Path: func(k string) string { return k }, Frame: fr.get, Watch: func() (*fswatch.Watcher, error) {
+		w, s := fswatch.NewScripted()
+		script = s
+		return w, nil
+	}})
 	defer c.Close()
 	lp.until(t, func() bool { v, _ := c.Get(p); return v == "one" })
-	time.Sleep(50 * time.Millisecond) // the watch is set before the read, but let it settle
+	if v, _ := c.Get(p); v != "one" {
+		t.Fatalf("an unchanged file was read again: %q", v)
+	}
 	if err := os.WriteFile(p, []byte("two"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(3 * time.Second)
-	for {
-		lp.drain()
-		if v, _ := c.Get(p); v == "two" {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the change wasn't seen; fetched %d times", calls.Load())
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	changed := make(chan struct{})
+	go func() {
+		defer close(changed)
+		script.Change(p) // returns once the loop has taken it in
+	}()
+	lp.until(t, func() bool { v, _ := c.Get(p); return v == "two" })
+	<-changed
 }
 
 func TestCacheGetNeverBlocks(t *testing.T) {
@@ -257,7 +257,7 @@ func TestCacheGetNeverBlocks(t *testing.T) {
 	}()
 	select {
 	case <-done:
-	case <-time.After(time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("Get waited on a fetch")
 	}
 }
