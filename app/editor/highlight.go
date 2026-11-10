@@ -50,9 +50,7 @@ func (x *Editor) highlights(p vim.Pane) *highlighter {
 		}
 	})
 	name := p.Name()
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		doc, err := syntax.NewDocument(lang, snap)
 		if err == nil {
 			x.madeMu.Lock()
@@ -86,6 +84,6 @@ func (x *Editor) highlights(p vim.Pane) *highlighter {
 			h.pending, h.doc = nil, doc
 			x.h.Redraw()
 		})
-	}()
+	})
 	return h
 }

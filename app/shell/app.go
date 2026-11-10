@@ -435,6 +435,7 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 	}})
 	sh.polls, sh.tools = &kit.PollSet{}, search.NewTools()
 	sh.kept = newKeptStore(cfg.StateDir, log)
+	sh.kept.writer.track = sh.inflight.begin
 	gone := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.SessionClosed); ok {
 			sh.kept.forget(ev.ID)

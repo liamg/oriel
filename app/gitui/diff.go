@@ -387,13 +387,11 @@ func (x *Diff) record(root string, ev core.Event, send func(c host.Access, sid c
 	if err != nil {
 		return err
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		if err := send(c, se.ID, project); err != nil {
 			x.h.Notify(core.Notice{ID: "diff.review", Severity: core.SevError, Key: true, Text: err.Error()})
 		}
-	}()
+	})
 	return nil
 }
 
@@ -643,9 +641,7 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 			x.started[k] = time.Now() // a stage on the same text doesn't hold back its remaking
 		}
 		x.mu.Unlock()
-		x.busy.Add(1)
-		go func() {
-			defer x.busy.Done()
+		x.busy.Go(func() {
 			x.limit <- struct{}{}
 			nd := loadDiff(x.h, in, newText, styling)
 			<-x.limit
@@ -654,7 +650,7 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 			x.gen++
 			x.mu.Unlock()
 			x.h.Redraw()
-		}()
+		})
 	}
 	return d, current
 }
@@ -688,8 +684,7 @@ func (x *Diff) stat(k diffKey) (size, mtime int64, read bool) {
 	}
 	x.mu.Unlock()
 	if start {
-		x.busy.Add(1)
-		go x.restat()
+		x.busy.Go(x.restat)
 	}
 	if recheck {
 		time.AfterFunc(time.Until(st.Read.Add(kit.StatFresh))+time.Millisecond, func() {
@@ -704,7 +699,6 @@ func (x *Diff) stat(k diffKey) (size, mtime int64, read bool) {
 
 // restat reads again every file whose read is older than kit.StatFresh.
 func (x *Diff) restat() {
-	defer x.busy.Done()
 	x.mu.Lock()
 	var due []diffKey
 	for k, st := range x.stats {
