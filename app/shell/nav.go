@@ -139,8 +139,12 @@ func (x *navPlugin) move(ctx context.Context, dir int) error {
 	return nil
 }
 
-// reachable says whether the window can go back to s: its session is still open, and its place still there.
+// reachable says whether the window can go back to s: its session is still open, and its place still there; one with
+// no session, while tabs are open, isn't.
 func (x *navPlugin) reachable(s navStop) bool {
+	if s.session == "" && len(x.h.State().Tabs) > 0 {
+		return false // the start view: there's none with tabs open
+	}
 	if s.session != "" {
 		se, ok := x.h.Session(s.session)
 		if !ok || se.Snapshot().Archived {

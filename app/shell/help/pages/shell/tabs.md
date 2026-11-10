@@ -19,7 +19,8 @@ in that session you haven't seen yet.
 ## When Oriel starts {#launch}
 
 Oriel opens as you left it: the tabs that were open, in their order, with the session that was in front in front
-again. Left on the start view, it opens there, with the tabs behind it. A session deleted since is left out.
+again, or the first tab when that one's gone. A session deleted since is left out. The start view is for when no tabs
+are open: with tabs open, one is always in front.
 
 {{keys "session.*"}}
 
