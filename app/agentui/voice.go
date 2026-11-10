@@ -45,7 +45,7 @@ type Voice struct {
 	h      plugin.Host
 
 	whisper  *voice.Whisper
-	ctx      context.Context
+	work     kit.Work            // a download's watch
 	provided registry.Disposable // the Dictator, while voice.dictation is on
 
 	// On the loop.
@@ -79,9 +79,7 @@ func (x *Voice) on(name string) bool    { b, _ := x.opt(name).(bool); return b }
 
 func (x *Voice) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	var cancel context.CancelFunc
-	x.ctx, cancel = context.WithCancel(context.Background())
-	x.Add(kit.OnDispose(cancel))
+	x.Add(&x.work)
 	x.whisper = x.Config.Whisper
 	if x.whisper == nil {
 		home, _ := os.UserHomeDir()
@@ -160,7 +158,10 @@ func (x *Voice) settle() {
 		x.provided = nil
 	}
 	if on && x.Config.Transcriber == nil {
-		go x.whisper.Prefetch()
+		plugin.Go(x.h, "the Whisper model's prefetch", func() {
+			x.whisper.Prefetch()
+			x.h.Do(x.refresh)
+		})
 	}
 	x.refresh()
 }
@@ -243,7 +244,7 @@ func (x *Voice) Start(target ui.ID) error {
 			return errors.New(r.String())
 		}
 	}
-	s, err := x.mic().Open(x.ctx)
+	s, err := x.mic().Open(x.work.Ctx())
 	if err != nil {
 		x.tell(x.problem(err))
 		return err
@@ -338,7 +339,7 @@ func (x *Voice) download(model string) error {
 		return err
 	}
 	x.h.Notify(core.Notice{ID: "voice.download", Severity: core.SevInfo, Title: "Voice", Text: "Downloading the Whisper model " + model + "…"})
-	go func() {
+	x.work.Loop(func(ctx context.Context) {
 		for {
 			st, _ := x.whisper.DownloadState(model)
 			if st.Done {
@@ -351,12 +352,12 @@ func (x *Voice) download(model string) error {
 				return
 			}
 			select {
-			case <-x.ctx.Done():
+			case <-ctx.Done():
 				return
 			case <-time.After(time.Second):
 			}
 		}
-	}()
+	})
 	return nil
 }
 
@@ -382,10 +383,10 @@ func (x *Voice) speak(text string) error {
 	if !ok {
 		return errors.New("speech is off: voice.speech")
 	}
-	go func() {
+	plugin.Go(x.h, "speech", func() {
 		if err := s.Speak(context.Background(), text); err != nil {
 			x.h.Notify(x.problem(err))
 		}
-	}()
+	})
 	return nil
 }

@@ -83,6 +83,10 @@ func (g *grab) Activate(_ context.Context, h plugin.Host) error {
 }
 func (g *grab) Deactivate(context.Context) error { return nil }
 
+// windowNow is what a Window's hooks are timed by: it doesn't move, so how busy the machine is never makes a hook
+// over its budget a warning (a Scene's hooks are timed by its own clock).
+func windowNow() time.Time { return time.Time{} }
+
 // NewWindow runs the app on a headless window until the test ends.
 func NewWindow(t *testing.T, o WindowOptions) *Window {
 	t.Helper()
@@ -99,7 +103,7 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	g := &grab{keys: o.Keys, setup: o.Setup}
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
-	cfg := app.Config{Store: w.Store, Registry: testRegistry(time.Now), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t), SandboxBackends: Backends,
+	cfg := app.Config{Store: w.Store, Registry: testRegistry(windowNow), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t), SandboxBackends: Backends,
 		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}, Logs: app.NewLogs(app.LogOpts{Level: slog.LevelDebug})}
 	if o.Config != nil {
 		o.Config(&cfg)
@@ -625,7 +629,7 @@ func AgentWindowWith(t *testing.T, h *rig.Host, o WindowOptions) (*Window, *agen
 	st := w.UntilState("the session in front", func(st core.State) bool { return st.Focus == "w" })
 	se, _ := st.Session("w")
 	p, _ := se.Snapshot().Primary()
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(Timeout)
 	for {
 		var dir string
 		w.Do(func() error { dir = w.Host.Here().Project; return nil })

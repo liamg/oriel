@@ -2,8 +2,10 @@ package fswatch
 
 import (
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -53,18 +55,32 @@ func expect(t *testing.T, w *Watcher, p string) {
 	}
 }
 
-// quiet collects what arrives over d.
-func quiet(w *Watcher, d time.Duration) []string {
+// before writes marker, which w must watch, and gives what arrived ahead of its event. The OS reports changes in
+// the order they're made and a batch is sent in path order, so a marker named to sort last ("zz…") follows whatever
+// was changed before it.
+func before(t *testing.T, w *Watcher, marker string) []string {
+	t.Helper()
+	write(t, marker, "x")
 	var got []string
-	deadline := time.After(d)
+	deadline := time.After(10 * time.Second)
 	for {
 		select {
 		case ev := <-w.Events():
+			if ev.Path == marker {
+				return got
+			}
 			got = append(got, ev.Path)
 		case <-deadline:
-			return got
+			t.Fatalf("no event for %s", marker)
 		}
 	}
+}
+
+// queued is what w holds to send.
+func queued(w *Watcher) []string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return slices.Sorted(maps.Keys(w.pending))
 }
 
 func TestFileWrite(t *testing.T) {
@@ -87,8 +103,12 @@ func TestFileSiblingsAreQuiet(t *testing.T) {
 	if err := w.Add(f); err != nil {
 		t.Fatal(err)
 	}
+	marker := filepath.Join(dir, "zz.jsonl")
+	if err := w.Add(marker); err != nil {
+		t.Fatal(err)
+	}
 	write(t, filepath.Join(dir, "other.jsonl"), "x\n")
-	if got := quiet(w, 300*time.Millisecond); len(got) != 0 {
+	if got := before(t, w, marker); len(got) != 0 {
 		t.Fatalf("events for a sibling: %v", got)
 	}
 }
@@ -198,7 +218,7 @@ func TestTree(t *testing.T) {
 	write(t, filepath.Join(root, ".git", "objects", "ab", "cd"), "more")
 	write(t, filepath.Join(root, ".git", "objects", "ef", "01"), "new")
 	// FSEvents may still report the writes made just before the watch; only the skipped folders must stay quiet.
-	for _, p := range quiet(w, 300*time.Millisecond) {
+	for _, p := range before(t, w, filepath.Join(root, "zz.txt")) {
 		if strings.Contains(p, "/node_modules/") || strings.Contains(p, "/.git/objects/") {
 			t.Fatalf("an event from a skipped folder: %s", p)
 		}
@@ -213,7 +233,6 @@ func TestTree(t *testing.T) {
 	if err := os.MkdirAll(deep, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	quiet(w, 200*time.Millisecond)
 	write(t, filepath.Join(deep, "new.txt"), "x")
 	expect(t, w, filepath.Join(deep, "new.txt"))
 }
@@ -232,8 +251,12 @@ func TestRemove(t *testing.T) {
 	if n := len(w.b.watched()); n != 0 {
 		t.Fatalf("%d watches left after Remove", n)
 	}
+	marker := filepath.Join(dir, "zz.jsonl")
+	if err := w.Add(marker); err != nil {
+		t.Fatal(err)
+	}
 	write(t, f, "b\n")
-	if got := quiet(w, 300*time.Millisecond); len(got) != 0 {
+	if got := before(t, w, marker); len(got) != 0 {
 		t.Fatalf("events after Remove: %v", got)
 	}
 }
@@ -246,7 +269,11 @@ func TestIdleSendsNothing(t *testing.T) {
 	if err := w.Add(f); err != nil {
 		t.Fatal(err)
 	}
-	if got := quiet(w, 500*time.Millisecond); len(got) != 0 {
+	marker := filepath.Join(dir, "zz.jsonl")
+	if err := w.Add(marker); err != nil {
+		t.Fatal(err)
+	}
+	if got := before(t, w, marker); len(got) != 0 {
 		t.Fatalf("events with nothing written: %v", got)
 	}
 }
@@ -264,7 +291,7 @@ func TestCloseClosesEvents(t *testing.T) {
 		if ok {
 			t.Fatal("an event after Close")
 		}
-	case <-time.After(time.Second):
+	default:
 		t.Fatal("Events still open after Close")
 	}
 	if err := w.Close(); err != nil {
@@ -278,22 +305,26 @@ func TestMetadataOnlyChangeIsQuiet(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "index")
 	write(t, f, "a\n")
-	w := start(t)
+	c := clocktest.New(time.Unix(0, 0))
+	w := clocked(t, c)
 	if err := w.Add(f); err != nil {
 		t.Fatal(err)
 	}
 	for range 3 {
 		w.handle([]raw{{path: f, op: opAttrib}})
 	}
-	if got := quiet(w, 300*time.Millisecond); len(got) != 0 {
+	if got := queued(w); len(got) != 0 {
 		t.Fatalf("events for metadata that didn't change: %v", got)
 	}
 	if err := os.Chmod(f, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	w.handle([]raw{{path: f, op: opAttrib}})
+	c.Advance(Delay)
 	expect(t, w, f)
 	write(t, f, "b\n")
+	w.handle([]raw{{path: f, op: opChanged}})
+	c.Advance(Delay)
 	expect(t, w, f)
 }
 

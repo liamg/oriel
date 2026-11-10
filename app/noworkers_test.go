@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/agentui"
 	"github.com/liamg/oriel/app/shell/help"
@@ -82,13 +81,7 @@ func TestNoWorkerInAnyUI(t *testing.T) {
 	s.Frame()
 	check("the start view", s.Text())
 	s.Run("session.new", nil)
-	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(10 * time.Millisecond) {
-		s.Frame()
-		s.RunQueued()
-		if strings.Contains(s.Text(), "Pre-flight") && !strings.Contains(s.Text(), "reading") || time.Now().After(deadline) {
-			break
-		}
-	}
+	s.Quiet() // what the launcher reads is in
 	check("the launcher", s.FullText())
 	s.Type("<Esc>")
 	s.Frame()

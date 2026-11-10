@@ -1,13 +1,13 @@
 package lang_test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/lang"
@@ -49,13 +49,8 @@ func TestTerminalShowsASource(t *testing.T) {
 	go pw.Write([]byte("hello from elsewhere\r\n"))
 	s.Until("the source's text", func() bool { return s.Has("hello from elsewhere") })
 	s.Press("x")
-	select {
-	case b := <-src.typed:
-		if string(b) != "x" {
-			t.Errorf("typed %q", b)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("what was typed never reached the source")
+	if b := apptest.Recv(t, "what was typed to reach the source", src.typed); string(b) != "x" {
+		t.Errorf("typed %q", b)
 	}
 }
 
@@ -72,18 +67,10 @@ func TestTerminalOpenedAgainStopsTheOneBefore(t *testing.T) {
 	}
 	first := open()
 	open()
-	select {
-	case <-first.closed:
-	case <-time.After(5 * time.Second):
-		t.Fatal("the terminal opened before was never stopped")
-	}
+	apptest.Recv(t, "the terminal opened before to stop", first.closed)
 	done := make(chan struct{})
 	go func() { s.Reopen(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(10 * time.Second):
-		t.Fatal("the window never opened again")
-	}
+	apptest.Recv(t, "the window to open again", done)
 }
 
 // The wheel over a terminal goes to its program once the program asks for mouse events, as a real terminal sends it
@@ -110,16 +97,14 @@ func TestTerminalWheelGoesToAProgramThatAsks(t *testing.T) {
 		s.Frame()
 		s.UI().Mods(0)
 	}
+	// typed is what the program was sent before a z typed after it: the z marks the end, not a while.
 	typed := func() string {
+		s.Press("z")
 		var out []byte
-		for {
-			select {
-			case b := <-src.typed:
-				out = append(out, b...)
-			case <-time.After(200 * time.Millisecond):
-				return string(out)
-			}
+		for !bytes.HasSuffix(out, []byte("z")) {
+			out = append(out, apptest.Recv(t, "what was typed", src.typed)...)
 		}
+		return string(out[:len(out)-1])
 	}
 
 	wheel(-2000, 0)

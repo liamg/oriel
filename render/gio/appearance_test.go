@@ -13,37 +13,40 @@ import (
 // The OS's preference is read at once when asked (the window came back to the front), not only on the slow poll.
 func TestAppearanceIsReadAgainWhenAsked(t *testing.T) {
 	var mu sync.Mutex
-	dark, reads := false, 0
+	dark := false
+	reads := make(chan struct{}, 4)
 	read := func() (bool, bool) {
 		mu.Lock()
 		defer mu.Unlock()
-		reads++
+		reads <- struct{}{}
 		return dark, true
+	}
+	set := func(d bool) {
+		mu.Lock()
+		defer mu.Unlock()
+		dark = d
 	}
 	got := make(chan bool, 4)
 	stop, check := watchAppearance(read, time.Hour, func(d bool) { got <- d })
 	defer stop()
+	<-reads
 	if d := <-got; d {
 		t.Fatal("first reading is dark, want light")
 	}
-	mu.Lock()
-	dark = true
-	mu.Unlock()
+	set(true)
 	check()
-	select {
-	case d := <-got:
-		if !d {
-			t.Fatal("read light after the change, want dark")
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("asking again didn't read the preference")
+	<-reads
+	if d := <-got; !d {
+		t.Fatal("read light after the change, want dark")
 	}
 	check()
-	time.Sleep(20 * time.Millisecond)
-	select {
-	case d := <-got:
-		t.Fatalf("sent %v again with no change", d)
-	default:
+	<-reads
+	// What's sent next is from a later reading, so anything sent for the unchanged one comes first.
+	set(false)
+	check()
+	<-reads
+	if d := <-got; d {
+		t.Fatal("sent dark again with no change")
 	}
 }
 

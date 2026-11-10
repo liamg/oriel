@@ -45,21 +45,10 @@ func shipIdle(s *apptest.Scene) { s.ShipIdle() }
 
 func shipDir(se core.SessionState, name string) string { return apptest.ProjectDir(se, name) }
 
-// framesUntil frames, calling check with each frame's number, until ok, failing after 15s.
+// framesUntil frames, calling check with each frame's number, until ok (Until).
 func framesUntil(s *apptest.Scene, t *testing.T, what string, check func(frame int), ok func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(15 * time.Second)
-	for n := 0; ; n++ {
-		s.RunQueued()
-		s.Frame()
-		check(n)
-		if ok() {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s:\n%s", what, s.Text())
-		}
-	}
+	s.UntilEach(what, check, ok)
 }
 
 // editorFile is the file an editor view's instance shows.

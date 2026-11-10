@@ -197,16 +197,12 @@ func (o *overview) card(dir string) *card {
 	o.cards[dir] = cd
 	delete(o.scans, dir)
 	o.computeNew(dir, cd)
-	o.busy.Add(1)
-	go func() {
-		defer o.busy.Done()
+	o.busy.Go(func() {
 		r := readReadme(dir)
 		o.h.Do(func() { cd.readme = r })
-	}()
+	})
 	if cd.git {
-		o.busy.Add(1)
-		go func() {
-			defer o.busy.Done()
+		o.busy.Go(func() {
 			ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
 			defer cancel()
 			r := gitx.Repo{Dir: dir}
@@ -214,7 +210,7 @@ func (o *overview) card(dir string) *card {
 			hd.branch, _ = r.Branch(ctx)
 			hd.track, _ = r.AheadBehind(ctx)
 			o.h.Do(func() { cd.header = hd })
-		}()
+		})
 	}
 	return cd
 }
@@ -231,15 +227,13 @@ func (o *overview) computeNew(dir string, cd *card) {
 func (o *overview) compute(dir string, cd *card, p uireg.OverviewPanel) {
 	res := &panelResult{since: kit.WindowNow(o.h)}
 	cd.panels[p.Name] = res
-	o.busy.Add(1)
-	go func() {
-		defer o.busy.Done()
+	o.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), panelBudget)
 		defer cancel()
 		var n ui.Node
 		err := registry.Call(func() (err error) { n, err = p.Compute(ctx, dir); return err })
 		o.h.Do(func() { res.node, res.err, res.done = n, err, true })
-	}()
+	})
 }
 
 func (o *overview) build(c *ui.Ctx) {
@@ -451,9 +445,7 @@ func scanDir(ctx context.Context, dir string, langOf func(string) string) ([]sca
 	var mu sync.Mutex
 	approx := false
 	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := range next {
 				f := &files[i]
 				st, err := os.Lstat(filepath.Join(dir, names[i]))
@@ -470,7 +462,7 @@ func scanDir(ctx context.Context, dir string, langOf func(string) string) ([]sca
 				}
 				f.lines = countLines(filepath.Join(dir, f.path))
 			}
-		}()
+		})
 	}
 	for i := range names {
 		next <- i

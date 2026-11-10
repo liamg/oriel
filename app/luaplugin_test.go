@@ -302,7 +302,7 @@ end)`)
 	s.Until("the load to start", func() bool { return global(lua(s).VM(), "runs") == float64(1) })
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
-	s.WantFrame("Reading the wiki…")
+	s.Midway(func() { s.WantFrame("Reading the wiki…") })
 	if n := s.Node("Reading the wiki…"); n == nil || n.Role != "status" {
 		t.Errorf("the busy line reads as %+v", n)
 	}

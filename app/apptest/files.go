@@ -23,7 +23,6 @@ func (s *Scene) FilesChanged(paths ...string) {
 		s.files.Change(paths...)
 	}()
 	s.Until("the file watchers taking the change in", func() bool {
-		s.RunQueued()
 		select {
 		case <-done:
 			return true

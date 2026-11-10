@@ -165,7 +165,7 @@ func (x *Jobs) submit(run bool) {
 		a["name"] = j.Name
 	}
 	f.busy, f.err = true, ""
-	go func() {
+	plugin.Go(x.h, "jobs: save", func() {
 		saved, err := x.save(context.Background(), a)
 		x.h.Do(func() {
 			if x.form != f {
@@ -180,7 +180,7 @@ func (x *Jobs) submit(run bool) {
 			x.open, x.selKey = true, jobKey(saved)
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 func (x *Jobs) dialog(c *ui.Ctx) {

@@ -42,6 +42,7 @@ type Perf struct {
 	h     plugin.Host
 	open  bool
 	shown *kit.WhileShown
+	work  kit.Work // sampling, while the page is up
 
 	mu   sync.Mutex
 	snap perfSnap
@@ -88,6 +89,7 @@ func (x *Perf) Activate(_ context.Context, h plugin.Host) error {
 	x.shown = &kit.WhileShown{Want: x.want, Focus: h}
 	x.Add(kit.OnDispose(h.Framed(x.shown.Framed)))
 	x.Add(kit.OnDispose(x.shown.Drop))
+	x.Add(&x.work)
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -115,10 +117,15 @@ func (x *Perf) want() func() {
 		dir, _ = os.UserHomeDir()
 	}
 	poll := kit.PollsOf(x.h).Start(x.every())
-	go func() {
+	first := plugin.Begin(x.h, "the Performance page's first sample")
+	if !x.work.Loop(func(context.Context) {
 		defer close(done)
-		x.run(ctx, frames, dir)
-	}()
+		defer first()
+		x.run(ctx, frames, dir, first)
+	}) {
+		first()
+		close(done)
+	}
 	return func() {
 		cancel()
 		<-done
@@ -127,7 +134,8 @@ func (x *Perf) want() func() {
 	}
 }
 
-func (x *Perf) run(ctx context.Context, frames *kit.FrameLog, dir string) {
+// run samples every while until ctx ends, calling sampled after each sample is in.
+func (x *Perf) run(ctx context.Context, frames *kit.FrameLog, dir string, sampled func()) {
 	tick := time.NewTicker(x.every())
 	defer tick.Stop()
 	var prev []sysload.Proc
@@ -162,6 +170,7 @@ func (x *Perf) run(ctx context.Context, frames *kit.FrameLog, dir string) {
 		x.snap = s
 		x.mu.Unlock()
 		x.h.Redraw()
+		sampled()
 		select {
 		case <-ctx.Done():
 			return

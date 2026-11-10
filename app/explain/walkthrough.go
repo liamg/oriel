@@ -161,9 +161,6 @@ func (x *Walkthrough) Deactivate(ctx context.Context) error {
 	return x.Disposer.Deactivate(ctx)
 }
 
-// Wait waits for a walkthrough being asked for off the loop.
-func (x *Walkthrough) Wait() { x.busy.Wait() }
-
 // Held says whether there's a walkthrough, shown or not: asked for, failed, or its steps.
 func (x *Walkthrough) Held() bool { return x.w != nil }
 
@@ -229,9 +226,7 @@ func (x *Walkthrough) start() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	w := &walkthrough{loading: true, since: kit.WindowNow(x.h), cancel: cancel, srcs: kit.FileSrcs{}, checked: map[string]int{}, cardH: map[int]float32{}}
 	x.w = w
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		defer cancel()
 		ch, err := gatherChange(ctx, ps, open)
 		var steps []walkStep
@@ -262,7 +257,7 @@ func (x *Walkthrough) start() error {
 			x.goTo(0)
 			x.h.Redraw()
 		})
-	}()
+	})
 	return nil
 }
 

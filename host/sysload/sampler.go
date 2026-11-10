@@ -5,6 +5,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Step is how far, in percentage points of CPU or memory, a reading must move to be news.
@@ -13,13 +15,19 @@ const Step = 1.0
 // Sampler reads the machine every interval while anyone wants it, and says when the reading moved by Step or more.
 // With no one wanting it, it reads nothing and sleeps.
 type Sampler struct {
+	// Clock times the readings; the system's if nil. Set before Run.
+	Clock clock.Clock
+
 	every   time.Duration
 	read    func() Reading
 	changes chan Reading
 	wake    chan struct{}
+	sendMu  sync.Mutex // one reading sent at a time
 
 	mu     sync.Mutex
 	wanted int
+	timer  clock.Timer // the next reading, while wanted
+	gen    int         // bumped as the readings stop: a timer of an older one does nothing
 	last   Reading
 	got    bool // last is set
 	sent   Reading
@@ -34,7 +42,8 @@ func NewSampler(every time.Duration, read func() Reading) *Sampler {
 	return &Sampler{every: every, read: read, changes: make(chan Reading, 1), wake: make(chan struct{}, 1)}
 }
 
-// Want asks for readings until release is called; it reads at once when it starts. Calls nest.
+// Want asks for readings until release is called; it reads at once when it starts. Calls nest. The last release
+// stops the readings before it returns.
 func (s *Sampler) Want() (release func()) {
 	s.mu.Lock()
 	s.wanted++
@@ -44,9 +53,10 @@ func (s *Sampler) Want() (release func()) {
 	return func() {
 		once.Do(func() {
 			s.mu.Lock()
-			s.wanted--
+			if s.wanted--; s.wanted == 0 {
+				s.stopLocked()
+			}
 			s.mu.Unlock()
-			s.poke()
 		})
 	}
 }
@@ -85,34 +95,59 @@ func (s *Sampler) poke() {
 	}
 }
 
-// Run samples until ctx ends.
+// Run samples until ctx ends: at once when wanted, then every interval while it still is.
 func (s *Sampler) Run(ctx context.Context) {
-	var tick *time.Ticker
-	var tc <-chan time.Time
 	defer func() {
-		if tick != nil {
-			tick.Stop()
-		}
+		s.mu.Lock()
+		s.stopLocked()
+		s.mu.Unlock()
 	}()
 	for {
-		on := s.Wanted()
-		switch {
-		case on && tick == nil:
-			tick = time.NewTicker(s.every)
-			tc = tick.C
+		s.mu.Lock()
+		start := s.wanted > 0 && s.timer == nil
+		if start {
+			s.scheduleLocked()
+		}
+		s.mu.Unlock()
+		if start {
 			s.sample()
-		case !on && tick != nil:
-			tick.Stop()
-			tick, tc = nil, nil
 		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-s.wake:
-		case <-tc:
-			s.sample()
 		}
 	}
+}
+
+// scheduleLocked sets the next reading. Callers hold s.mu.
+func (s *Sampler) scheduleLocked() {
+	gen := s.gen
+	s.timer = clock.Or(s.Clock).AfterFunc(s.every, func() { s.tick(gen) })
+}
+
+// stopLocked stops the readings. Callers hold s.mu.
+func (s *Sampler) stopLocked() {
+	if s.timer != nil {
+		s.timer.Stop()
+		s.timer = nil
+	}
+	s.gen++
+}
+
+func (s *Sampler) tick(gen int) {
+	s.mu.Lock()
+	on := gen == s.gen
+	s.mu.Unlock()
+	if !on {
+		return
+	}
+	s.sample()
+	s.mu.Lock()
+	if gen == s.gen {
+		s.scheduleLocked()
+	}
+	s.mu.Unlock()
 }
 
 func (s *Sampler) sample() {
@@ -127,6 +162,8 @@ func (s *Sampler) sample() {
 	if !news {
 		return
 	}
+	s.sendMu.Lock()
+	defer s.sendMu.Unlock()
 	select {
 	case <-s.changes:
 	default:

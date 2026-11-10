@@ -1,4 +1,4 @@
-//go:build !race
+//go:build perf && !race
 
 package app_test
 
@@ -13,7 +13,6 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
-	"github.com/liamg/oriel/tools/perf"
 )
 
 // longMD is a markdown doc of n sections, each a heading, a paragraph and a list.
@@ -43,7 +42,6 @@ func markdownPreviewScene(t *testing.T, n int) *apptest.Scene {
 
 // The markdown preview's frame doesn't grow with the doc: what's built from its text is kept until it changes.
 func TestMarkdownPreviewWithLongDocBudget(t *testing.T) {
-	perf.Timed(t)
 	f := apptest.MeanFrames(markdownPreviewScene(t, 10), markdownPreviewScene(t, 2000))
 	few, many := f[0], f[1]
 	t.Logf("the preview's frame over 10 sections: %v; over 2000: %v", few, many)
@@ -87,7 +85,6 @@ func planScene(t *testing.T, n int) *apptest.Scene {
 // The plan view's frame doesn't grow with its doc or the agent's edits of it: the doc is read and built again only
 // when it changes, and its revisions counted when the transcript does.
 func TestPlanViewWithLongDocBudget(t *testing.T) {
-	perf.Timed(t)
 	f := apptest.MeanFrames(planScene(t, 10), planScene(t, 2000))
 	few, many := f[0], f[1]
 	t.Logf("the plan's frame over 10 sections: %v; over 2000: %v", few, many)
@@ -130,7 +127,6 @@ func agentEditScene(t *testing.T, n int) *apptest.Scene {
 // An editor on a file the agent just wrote: its frame doesn't grow with the file, the edit's lines found once for
 // each version of the text.
 func TestAgentEditsWithLongFileBudget(t *testing.T) {
-	perf.Timed(t)
 	f := apptest.MeanFrames(agentEditScene(t, 100), agentEditScene(t, 50000))
 	few, many := f[0], f[1]
 	t.Logf("an editor on 100 lines the agent wrote: %v; on 50000: %v", few, many)

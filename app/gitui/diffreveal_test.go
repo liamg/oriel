@@ -20,7 +20,7 @@ func TestDiffRevealOfAGoneFileSettles(t *testing.T) {
 			repo := rig.DiffRepo(t)
 			r := repo.Dir
 			s := apptest.New(t, apptest.Options{WorkDir: r})
-			gitOf(s).Wait()
+			s.Quiet()
 			file := filepath.Join(r, "internal/pricing/round.go")
 			switch how {
 			case "never there":
@@ -31,14 +31,14 @@ func TestDiffRevealOfAGoneFileSettles(t *testing.T) {
 				repo.Git("checkout", "--", "internal/pricing/round.go")
 			}
 			gitOf(s).Reload()
-			gitOf(s).Wait()
+			s.Quiet()
 			s.Run("diff.open", registry.Args{"path": file, "line": 40})
 			if how == "nothing" {
 				diffOf(s).Reveal(r, "")
 			}
 			for range 30 {
 				s.Frame()
-				diffOf(s).Wait()
+				s.Quiet()
 				s.Now = s.Now.Add(10 * time.Millisecond)
 			}
 			if !strings.Contains(s.Text(), "currency.go") {

@@ -9,16 +9,6 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// noStart fails if an agent starts within a moment.
-func (r *rig) noStart(what string) {
-	r.t.Helper()
-	select {
-	case <-r.fake.Started:
-		r.t.Fatalf("an agent started: %s", what)
-	case <-time.After(300 * time.Millisecond):
-	}
-}
-
 // exitsAlone ends a's process as if it ended by itself.
 func exitsAlone(a *agenttest.FakeSession) { _ = a.Close() }
 

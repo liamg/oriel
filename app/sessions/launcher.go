@@ -348,7 +348,7 @@ func (x *Launcher) start() error {
 func (x *Launcher) launch(command string, a registry.Args) error {
 	x.busy, x.err = true, ""
 	gen, h, life := x.gen, x.h, x.life
-	go func() {
+	plugin.Go(h, "launcher: "+command, func() {
 		err := plugin.Await(life, func(ctx registry.Ctx) error { return h.Run(ctx, command, a) })
 		h.Do(func() {
 			if gen != x.gen {
@@ -362,7 +362,7 @@ func (x *Launcher) launch(command string, a registry.Args) error {
 			x.open = false
 		})
 		h.Redraw()
-	}()
+	})
 	return nil
 }
 
@@ -611,7 +611,7 @@ func (x *Launcher) lookTicket(c *ui.Ctx) {
 	}
 	x.card.busy, x.card.source, x.card.since = true, src.Label(), c.Now()
 	gen, h := x.gen, x.h
-	go func() {
+	plugin.Go(h, "launcher: ticket "+key, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 		t, err := registry.LookupTicket(ctx, src, key)
@@ -627,7 +627,7 @@ func (x *Launcher) lookTicket(c *ui.Ctx) {
 			x.card.t = &t
 		})
 		h.Redraw()
-	}()
+	})
 }
 
 // ticketCard is the ticket under the prompt: its key and state, title, summary and what's on it; ✕ takes it off.

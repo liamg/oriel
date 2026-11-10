@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
@@ -58,8 +57,8 @@ type Console struct {
 	h plugin.Host
 
 	by        map[core.SessionID]*consoleState
-	providers atomic.Pointer[plugin.Load[[]host.ProviderInfo]] // the agents and their models, asked for once a composer shows
-	detail    *detailOpen                                      // the details dialog, while it's open
+	providers *plugin.Load[[]host.ProviderInfo] // the agents and their models, asked for once a composer shows
+	detail    *detailOpen                       // the details dialog, while it's open
 }
 
 // consoleState is one session's console: what's selected, folded, typed.
@@ -113,10 +112,6 @@ func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 			}}))
 	}
 	x.Add(h.View(AgentConsoleView, consoleView{x}))
-	x.Add(h.Contribute(registry.Busy{Name: "agent providers", Source: "builtin:agentconsole", Busy: func() bool {
-		l := x.providers.Load()
-		return l != nil && l.Busy()
-	}}))
 	x.Add(h.Contribute(uireg.InboxSource{Name: "asks", Cards: x.askCards, Source: "builtin:agentconsole"}))
 	return nil
 }
@@ -336,7 +331,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 // provider is what the session host says of the agent provider id: its models and their efforts. The first ask
 // starts the probe, and it's not ok until that answers.
 func (x *Console) provider(session core.SessionID, id string) (host.ProviderInfo, bool) {
-	l := x.providers.Load()
+	l := x.providers
 	if l == nil {
 		w, err := x.client(session)
 		if err != nil {
@@ -346,7 +341,7 @@ func (x *Console) provider(session core.SessionID, id string) (host.ProviderInfo
 			return w.ProviderInfo(ctx), nil
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
 		l.Start()
-		x.providers.Store(l)
+		x.providers = l
 	}
 	ps, _ := l.Value()
 	for _, p := range ps {
@@ -446,7 +441,7 @@ func (x *Console) fork(id core.SessionID, prompt string) error {
 	st := x.state(id)
 	st.forks = append(st.forks, forkAnswer{q: prompt, since: kit.WindowNow(x.h)})
 	n := len(st.forks) - 1
-	go func() {
+	plugin.Go(x.h, "a side question", func() {
 		out, err := c.Fork(id, prompt)
 		x.h.Do(func() {
 			if n < len(st.forks) {
@@ -454,7 +449,7 @@ func (x *Console) fork(id core.SessionID, prompt string) error {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 	return nil
 }
 

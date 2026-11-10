@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 // fakeAgent echoes whatever it is sent, standing in for ssh-agent.
@@ -33,7 +35,7 @@ func sshRoundTrip(t *testing.T, s *SSHAgent) bool {
 	t.Helper()
 	a, b := net.Pipe()
 	go s.Forward(b)
-	_ = a.SetDeadline(time.Now().Add(2 * time.Second))
+	_ = a.SetDeadline(time.Now().Add(20 * time.Second)) // a hang guard: a refusal closes at once
 	if _, err := a.Write([]byte("ping")); err != nil {
 		return false
 	}
@@ -67,15 +69,23 @@ func TestSSHAgentOnlyWhileGranted(t *testing.T) {
 
 func TestSSHGrantIsCapped(t *testing.T) {
 	t.Setenv("SSH_AUTH_SOCK", fakeAgent(t))
-	s := &SSHAgent{}
+	clk := clocktest.New(time.Now())
+	s := &SSHAgent{Clock: clk}
 	until, err := s.Grant(time.Hour)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d := time.Until(until); d > SSHMax || d < SSHMax-time.Second {
+	if d := until.Sub(clk.Now()); d != SSHMax {
 		t.Errorf("grant lasts %s, want %s", d, SSHMax)
 	}
-	s.Revoke()
+	clk.Advance(SSHMax - time.Nanosecond)
+	if !s.Live() {
+		t.Error("the grant ended early")
+	}
+	clk.Advance(time.Nanosecond)
+	if s.Live() || !s.Until().IsZero() {
+		t.Error("the grant outlived its cap")
+	}
 }
 
 func TestSSHGrantNeedsAHostAgent(t *testing.T) {

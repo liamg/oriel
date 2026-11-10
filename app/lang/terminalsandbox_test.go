@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -63,15 +63,11 @@ func TestSandboxTerminalOpensOffTheLoop(t *testing.T) {
 	s, _, _ := apptest.SandboxedScene(t, heldShell{imageBackend{log: filepath.Join(t.TempDir(), "build.log")}, held})
 	ran := make(chan error, 1)
 	go func() { ran <- s.Registry().Run(context.Background(), "term.open", nil) }()
-	select {
-	case err := <-ran:
-		if err != nil {
-			t.Fatal(err)
-		}
-	case <-time.After(5 * time.Second):
-		close(held)
-		t.Fatal("term.open held the loop while the sandbox's shell started")
+	release := sync.OnceFunc(func() { close(held) })
+	t.Cleanup(release)
+	if err := apptest.Recv(t, "term.open to answer while the sandbox's shell starts", ran); err != nil {
+		t.Fatal(err)
 	}
-	close(held)
+	release()
 	s.Until("the sandbox's shell", func() bool { return s.Has("shell-in-the-sandbox", "sandbox") })
 }

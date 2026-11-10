@@ -3,6 +3,7 @@ package voice
 import (
 	"context"
 	"errors"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/testhook"
 	"net/http"
 	"net/http/httptest"
@@ -72,16 +73,46 @@ func TestTheBuiltInEngineTranscribesWithNoServer(t *testing.T) {
 func TestTheModelIsDroppedWhenIdle(t *testing.T) {
 	eng := &fakeEngine{}
 	w := withModel(t, func(string) (engine, error) { return eng, nil })
-	w.Idle = 30 * time.Millisecond
+	c := clocktest.New(time.Unix(0, 0))
+	w.Idle, w.Clock = 300*time.Millisecond, c
 	if _, err := w.Transcribe(context.Background(), EncodeWAV(nil), ""); err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(2 * time.Second)
-	for !eng.closed.Load() {
-		if time.Now().After(deadline) {
-			t.Fatal("the idle model was never dropped")
+	c.Advance(200 * time.Millisecond)
+	if _, err := w.Transcribe(context.Background(), EncodeWAV(nil), ""); err != nil {
+		t.Fatal(err)
+	}
+	c.Advance(299 * time.Millisecond)
+	if eng.closed.Load() {
+		t.Fatal("the model was dropped before it had gone unused for Idle")
+	}
+	c.Advance(w.Idle / 10) // it looks a tenth of Idle apart
+	if !eng.closed.Load() || w.Running() {
+		t.Fatal("the idle model was never dropped")
+	}
+	if c.Waiting() != 0 {
+		t.Error("still looking once the model was dropped")
+	}
+}
+
+// waitFor waits for ok, looking again as each download starts, moves or ends.
+func waitFor(t *testing.T, w *Whisper, what string, ok func() bool) {
+	t.Helper()
+	moved := make(chan struct{}, 1)
+	remove := w.OnChange(func() {
+		select {
+		case moved <- struct{}{}:
+		default:
 		}
-		time.Sleep(5 * time.Millisecond)
+	})
+	defer remove()
+	deadline := time.After(10 * time.Second)
+	for !ok() {
+		select {
+		case <-moved:
+		case <-deadline:
+			t.Fatalf("never: %s", what)
+		}
 	}
 }
 
@@ -140,13 +171,7 @@ func TestReadiness(t *testing.T) {
 	if r := w.Prepare(); r.State != Downloading && r.State != Ready {
 		t.Errorf("Prepare didn't start the download: %+v", r)
 	}
-	deadline := time.Now().Add(2 * time.Second)
-	for w.Readiness().State != Ready {
-		if time.Now().After(deadline) {
-			t.Fatalf("never ready: %+v", w.Readiness())
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
+	waitFor(t, w, "ready", func() bool { return w.Readiness().State == Ready })
 	if len(changes) == 0 {
 		t.Error("OnChange heard nothing of the download")
 	}
@@ -177,13 +202,7 @@ func TestPrefetchIsBackgroundAndSkipsMeteredNetworks(t *testing.T) {
 	}
 	// Dictating asks for it: the same download goes full speed.
 	w.Prepare()
-	deadline := time.Now().Add(2 * time.Second)
-	for w.Readiness().State != Ready {
-		if time.Now().After(deadline) {
-			t.Fatalf("not sped up: %+v", w.Readiness())
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
+	waitFor(t, w, "sped up and ready", func() bool { return w.Readiness().State == Ready })
 	if w.Prefetch() {
 		t.Error("prefetched a model already on disk")
 	}

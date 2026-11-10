@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/sandbox/egress"
 )
 
@@ -24,6 +25,8 @@ type SSHAgent struct {
 	Socket string
 	// Changed is told when a grant opens or closes.
 	Changed func()
+	// Clock times grants; nil is the system's.
+	Clock clock.Clock
 
 	mu    sync.Mutex
 	until time.Time
@@ -31,7 +34,7 @@ type SSHAgent struct {
 	// with no grant open.
 	refused time.Time
 	conns   map[net.Conn]bool
-	timer   *time.Timer
+	timer   clock.Timer
 }
 
 func (s *SSHAgent) socket() string {
@@ -57,11 +60,12 @@ func (s *SSHAgent) Grant(d time.Duration) (time.Time, error) {
 		d = SSHMax
 	}
 	s.mu.Lock()
-	s.until = time.Now().Add(d)
+	clk := clock.Or(s.Clock)
+	s.until = clk.Now().Add(d)
 	if s.timer != nil {
 		s.timer.Stop()
 	}
-	s.timer = time.AfterFunc(d, s.Revoke)
+	s.timer = clk.AfterFunc(d, s.Revoke)
 	until := s.until
 	s.mu.Unlock()
 	s.changed()
@@ -89,14 +93,14 @@ func (s *SSHAgent) changed() {
 func (s *SSHAgent) Live() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return time.Now().Before(s.until)
+	return clock.Or(s.Clock).Now().Before(s.until)
 }
 
 // Until is when the current grant ends, zero when there is none.
 func (s *SSHAgent) Until() time.Time {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if time.Now().After(s.until) {
+	if clock.Or(s.Clock).Now().After(s.until) {
 		return time.Time{}
 	}
 	return s.until
@@ -149,7 +153,7 @@ func (s *SSHAgent) ServeUpgrade(w http.ResponseWriter, r *http.Request) {
 func (s *SSHAgent) Forward(c net.Conn) {
 	if !s.Live() {
 		s.mu.Lock()
-		s.refused = time.Now()
+		s.refused = clock.Or(s.Clock).Now()
 		s.mu.Unlock()
 		_ = c.Close()
 		return

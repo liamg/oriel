@@ -355,13 +355,17 @@ func TestProcessRequestsAreBounded(t *testing.T) {
 	self, _ := os.Executable()
 	var mu sync.Mutex
 	active, most := 0, 0
-	release := make(chan struct{})
+	release, full := make(chan struct{}), make(chan struct{})
+	var fullOnce sync.Once
 	ps := testProcesses(&syncBuf{})
 	pr, err := ps.Spawn(Caller{ID: "init.lua"}, self, SpawnOpts{Env: []string{fakeEnv + "=1"},
 		Request: func(string, json.RawMessage) (any, bool, error) {
 			mu.Lock()
 			active++
 			most = max(most, active)
+			if active == maxRequests {
+				fullOnce.Do(func() { close(full) })
+			}
 			mu.Unlock()
 			<-release
 			mu.Lock()
@@ -378,17 +382,13 @@ func TestProcessRequestsAreBounded(t *testing.T) {
 		_, err := call(t, pr, "flood", map[string]any{"n": maxRequests + 50, "method": "wait"})
 		done <- err
 	}()
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		mu.Lock()
-		a := active
-		mu.Unlock()
-		if a >= maxRequests || time.Now().After(deadline) {
-			break
-		}
-		time.Sleep(5 * time.Millisecond)
+	select {
+	case <-full:
+	case err := <-done:
+		t.Fatalf("the flood ended before %d requests ran at once: %v", maxRequests, err)
+	case <-time.After(10 * time.Second):
+		t.Fatalf("%d requests never ran at once", maxRequests)
 	}
-	time.Sleep(100 * time.Millisecond)
 	close(release)
 	if err := <-done; err != nil {
 		t.Fatal(err)

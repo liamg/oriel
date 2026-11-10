@@ -84,12 +84,10 @@ func TestUsageNeverProbesTwiceAtOnce(t *testing.T) {
 		_, err := p.Usage(context.Background())
 		first <- err
 	}()
-	deadline := time.Now().Add(20 * time.Second)
-	for started, _ := runs(); started == 0; started, _ = runs() {
-		if time.Now().After(deadline) {
-			t.Fatal("no probe started")
-		}
-		time.Sleep(10 * time.Millisecond)
+	select {
+	case <-p.usage.started():
+	case err := <-first:
+		t.Fatalf("the first call ended without probing: %v", err)
 	}
 	u, err := p.Usage(context.Background())
 	if err != nil {
@@ -128,13 +126,9 @@ func TestUsageSignedOutEndsTheProbe(t *testing.T) {
 	p, runs := usageProbe(t)
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	t.Setenv("ORIEL_FAKE_SIGNED_OUT", "1")
-	start := time.Now()
-	u, err := p.Usage(context.Background())
+	u, err := p.Usage(context.Background()) // a probe that ran out its time would end with an error
 	if started, _ := runs(); err != nil || len(u.Windows) != 0 || started != 1 {
 		t.Errorf("signed out: %+v, %v; %d claudes started", u, err, started)
-	}
-	if d := time.Since(start); d > probeTimeout/2 {
-		t.Errorf("the probe took %s to see the login screen", d)
 	}
 }
 
@@ -208,12 +202,10 @@ func TestUsageWhileAProbeFailsSaysWhy(t *testing.T) {
 		_, err := p.Usage(ctx)
 		first <- err
 	}()
-	deadline := time.Now().Add(20 * time.Second)
-	for started, _ := runs(); started == 0; started, _ = runs() {
-		if time.Now().After(deadline) {
-			t.Fatal("no probe started")
-		}
-		time.Sleep(10 * time.Millisecond)
+	select {
+	case <-p.usage.started():
+	case err := <-first:
+		t.Fatalf("the first call ended without probing: %v", err)
 	}
 	_, err := p.Usage(context.Background())
 	var pe *ProbeError

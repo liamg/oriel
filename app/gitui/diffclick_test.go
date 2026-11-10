@@ -29,7 +29,7 @@ func TestADiffClickStaysOnItsLineThroughARedraw(t *testing.T) {
 
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Run("diff.open", registry.Args{"path": path})
-	s.Until("the diff", func() bool { s.RunQueued(); return s.Find("line 15, changed") != nil })
+	s.Until("the diff", func() bool { return s.Find("line 15, changed") != nil })
 	s.Quiet()
 	pressed := s.Find("line 15, changed")
 	at := apptest.Centre(pressed.Bounds)
@@ -40,7 +40,7 @@ func TestADiffClickStaysOnItsLineThroughARedraw(t *testing.T) {
 	// Three lines come in just above it: what sat three lines up now sits where it was pressed.
 	os.WriteFile(path, []byte(strings.Replace(changed, "line 14\n", "line 14\nnew a\nnew b\nnew c\n", 1)), 0o644)
 	s.Run("git.refresh", nil)
-	s.Until("the diff made again", func() bool { s.RunQueued(); return s.Find("new a") != nil })
+	s.Until("the diff made again", func() bool { return s.Find("new a") != nil })
 	s.Quiet()
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: at, Buttons: render.ButtonPrimary})
 	s.Frame()

@@ -67,8 +67,7 @@ func verifySettle(s *apptest.Scene, t *testing.T, what string, ok func(frame str
 	s.Until(what, func() bool {
 		verifyOf(s).Wait()
 		shipOf(s).Wait()
-		s.RunQueued()
-		s.Frame()
+		s.Quiet()
 		return ok(s.Text())
 	})
 }

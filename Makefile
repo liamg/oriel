@@ -1,6 +1,6 @@
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: test perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck
+.PHONY: test test-chaos perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck
 
 GOARCH ?= $(shell go env GOARCH)
 VERSION ?= dev
@@ -9,21 +9,25 @@ HELPER := sandbox/helper/bin/oriel-sandbox-linux-$(GOARCH)
 # published sandbox base image it pulls (sha256:…). release.yml sets both.
 LDFLAGS := -X github.com/liamg/oriel/cmd/oriel/cli.version=$(VERSION) $(if $(RELEASE_KEYS),-X github.com/liamg/oriel/update.releaseKeys=$(RELEASE_KEYS)) \
 	$(if $(SANDBOX_DIGEST),-X github.com/liamg/oriel/sandbox/container.baseDigest=$(SANDBOX_DIGEST))
-# test runs the timing budgets (tests named …Budget, perf.Timed) after the rest, one package at a time, so other
-# packages' tests running alongside can't fail them. Tests run in a random order (its seed is printed), so one that
-# leans on another's leftovers fails.
+# test runs the suite in a random order (its seed is printed), so a test that leans on another's leftovers fails.
+# Nothing in it measures the machine: those are make perf's.
 test:
-	ORIEL_BUDGETS=later go test -shuffle=on ./...
-	go test -p 1 -shuffle=on -run 'Budget$$' ./...
+	go test -shuffle=on ./...
 
-# perf runs every timing budget with the wall-clock ones (build tag perf): latency and idle checks only a real clock
-# can measure, kept out of make test so it stays deterministic. Run it on a quiet machine; CI does not.
+# test-chaos runs the suite with the work started off the loop (plugin.Go, plugin.Load, kit.Busy) slowed by a random
+# while: a test that passes only because that work was quick fails here, not on a loaded CI runner.
+test-chaos:
+	ORIEL_TEST_CHAOS=60 go test -shuffle=on -count=1 ./...
+
+# perf runs the tests that measure the machine rather than the code: time, throughput and allocation budgets. Each
+# lives in a _perf_test.go file built only with the perf tag and is named …Budget. Run it on a quiet machine; CI
+# does not.
 perf:
 	go test -tags perf -p 1 -count=1 -run 'Budget$$' ./...
 
-# test-framecheck runs the snapshot and lag suites with fsx's frame check on: I/O through fsx in a frame panics.
+# test-framecheck runs the snapshot suites with fsx's frame check on: I/O through fsx in a frame panics.
 test-framecheck:
-	go test -p 1 -tags oriel_framecheck -run 'Snapshot|Golden|Lag|Budget' ./app/... ./internal/fsx/...
+	go test -p 1 -tags oriel_framecheck -run 'Snapshot|Golden' ./app/... ./internal/fsx/...
 
 # test-vt runs the terminal emulator's suite on both backends; it needs native first.
 test-vt:

@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync/atomic"
@@ -62,7 +63,7 @@ func TestALostLoginFlagsEverySession(t *testing.T) {
 	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id2, Body: "and this"}); err != nil {
 		t.Fatal(err)
 	}
-	a2.NoneSent(t)
+	r.noneSent(a2)
 
 	if _, err := a1.Term().Write([]byte("/login\r")); err != nil {
 		t.Fatal(err)
@@ -109,11 +110,8 @@ func TestCheckingAgainKeepsTheCardUntilSignedIn(t *testing.T) {
 // signedIn waits for the host to say every login is back: the card goes as it's answered, a moment before.
 func (r *rig) signedIn() {
 	r.t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); len(r.w.store.State().Machine.SignedOut) > 0; time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			r.t.Fatalf("signed in, the machine still says %+v", r.w.store.State().Machine.SignedOut)
-		}
-	}
+	until(r.t, "every login back", func() bool { return len(r.w.store.State().Machine.SignedOut) == 0 },
+		func() string { return fmt.Sprintf("the machine still says %+v", r.w.store.State().Machine.SignedOut) })
 }
 
 // An agent that can't start for want of a login (Codex's) flags its session, and starts once signed in.
@@ -202,14 +200,12 @@ func TestALoginCheckOutlivesAFailedMark(t *testing.T) {
 	p := &detectPanics{Fake: &agenttest.Fake{Name: "flaky"}}
 	r := newRig(t, p)
 	r.w.run.LoginLost("", agent.AuthExpired{Provider: "flaky", Account: "u1", Detail: "gone"})
-	for p.calls.Load() == 0 {
-		time.Sleep(time.Millisecond)
-	}
+	until(t, "the login's read", func() bool { return p.calls.Load() > 0 })
 	done := make(chan bool)
 	go func() { done <- r.w.run.CheckLogin("flaky", false) }()
 	select {
 	case <-done:
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Fatal("checkLogin is still waiting")
 	}
 }
@@ -264,7 +260,7 @@ func TestCloseDoesNotWaitForASignInLeftOpen(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-	case <-time.After(10 * time.Second): // a hang, not a wait: Close returns at once
+	case <-time.After(waitTimeout): // a hang, not a wait: Close returns at once
 		t.Fatal("Close is still waiting for the sign-in")
 	}
 }

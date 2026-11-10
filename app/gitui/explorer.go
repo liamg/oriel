@@ -301,8 +301,6 @@ func (e *Explorer) Deactivate(ctx context.Context) error {
 	return e.Disposer.Deactivate(ctx)
 }
 
-func (e *Explorer) wait() { e.hunks.busy.Wait() }
-
 // fileHunks are path's staged and unstaged hunks, read off the loop; nil until they're read.
 func (e *Explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool) {
 	x := &e.hunks
@@ -311,10 +309,8 @@ func (e *Explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 	x.show(path)
 	if !x.loaded && !x.loading {
 		x.loading, x.since = true, kit.WindowNow(e.h)
-		x.busy.Add(1)
 		t := e.git()
-		go func() {
-			defer x.busy.Done()
+		x.busy.Go(func() {
 			ctx, repo := context.Background(), t.status.Repo()
 			st, _ := repo.StagedHunks(ctx, path)
 			work, _ := os.ReadFile(t.abs(path))
@@ -327,7 +323,7 @@ func (e *Explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 			x.loading = false
 			x.mu.Unlock()
 			e.h.Redraw()
-		}()
+		})
 	}
 	return x.staged, x.unstaged, x.loaded
 }

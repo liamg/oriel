@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -81,15 +80,6 @@ func TestFollowingASessionKeepsThePluginsRunning(t *testing.T) {
 	if n, d := p.activated.Load(), p.deactivated.Load(); n != 1 || d != 0 {
 		t.Errorf("following sessions activated the plugin %d times and deactivated it %d times, want once and never", n, d)
 	}
-	// Moving is quick: no DirChanged hook goes over its budget, which would be a warning.
-	w.Do(func() error {
-		for _, hk := range w.Host.Hooks() {
-			if hk.Event == "DirChanged" {
-				t.Logf("%-28s %-58s p99 %v", hk.Source, hk.Label, hk.P99)
-			}
-		}
-		return nil
-	})
 	for _, n := range w.Store.State().Notifications {
 		if n.Severity == core.SevWarning || n.Severity == core.SevError {
 			t.Errorf("following sessions raised a %s from %s: %s: %s", n.Severity, n.Source, n.Title, n.Text)
@@ -126,10 +116,10 @@ func TestAMoveWaitsForWhatHoldsIt(t *testing.T) {
 	}
 	release := <-p.release
 	r.WaitText("Opening")
-	time.Sleep(300 * time.Millisecond)
+	before := len(r.Win.Frames())
 	r.Do(func() error { r.Host.Redraw(); return nil })
-	if fs := r.Win.Frames(); !strings.Contains(fs[len(fs)-1].Text(), "Opening") {
-		t.Fatal("the window laid the directory out while a plugin held it")
+	if f := r.WaitAfter("a frame while it's held", before, func(string) bool { return true }); !strings.Contains(f, "Opening") {
+		t.Fatalf("the window laid the directory out while a plugin held it:\n%s", f)
 	}
 	release()
 	r.WaitGone("Opening")

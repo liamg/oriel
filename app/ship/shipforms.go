@@ -64,16 +64,14 @@ func (x *Ship) keepTyped(c *ui.Ctx, a *autosave, changed, first bool, req host.D
 		return
 	}
 	x.saving.Add(1)
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		defer x.saving.Done()
 		ctx, cancel := context.WithTimeout(x.ctx, 30*time.Second)
 		defer cancel()
 		if err := cl.ShipDraft(ctx, req); err != nil {
 			x.h.Log().Debug("ship", "draft", req.Project, "err", err)
 		}
-	}()
+	})
 }
 
 func formKey(id core.SessionID, project string) string { return string(id) + "/" + project }

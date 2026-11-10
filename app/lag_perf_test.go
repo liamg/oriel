@@ -17,7 +17,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
-	"github.com/liamg/oriel/tools/perf"
 )
 
 // The lag budgets drive the real loop as a fast mouse does: moves at 1 kHz, and every so often a jump onto something
@@ -218,7 +217,6 @@ func checkLag(r *apptest.Window, name string, run lagRun) {
 // Sweeping the Explorer's rows, each row the pointer lands on lights up within budget, as quickly at the end of a
 // long run as at its start.
 func TestExplorerHoverLagBudget(t *testing.T) {
-	perf.Timed(t)
 	r := lagApp(t)
 	top, mid := windowTextPoint(r, "f00.go"), windowTextPoint(r, "f10.go")
 	noise := sweep(top, mid, 200)
@@ -232,7 +230,6 @@ func TestExplorerHoverLagBudget(t *testing.T) {
 // The same after drags over the Explorer: a drag that ends mustn't leave moves building frames they didn't before,
 // or slow the ones that do.
 func TestHoverLagAfterDragBudget(t *testing.T) {
-	perf.Timed(t)
 	r := lagApp(t)
 	row := windowTextPoint(r, "f00.go")
 	along := func() int {
@@ -265,7 +262,6 @@ func TestHoverLagAfterDragBudget(t *testing.T) {
 
 // A context menu over the Explorer: its items light up within budget while the pointer keeps moving.
 func TestMenuHoverLagBudget(t *testing.T) {
-	perf.Timed(t)
 	r := lagApp(t)
 	at := windowTextPoint(r, "f05.go")
 	r.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: at})
@@ -280,7 +276,6 @@ func TestMenuHoverLagBudget(t *testing.T) {
 // Hovering the Explorer over thousands of changed files: rows light up within budget from the start, the files'
 // diffs not made until they're opened.
 func TestExplorerHoverLagOverManyChangesBudget(t *testing.T) {
-	perf.Timed(t)
 	dir := rig.ChangedRepo(t, 4000)
 	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: dir})
 	r.Do(func() error {

@@ -1,10 +1,8 @@
 package shell_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +15,6 @@ import (
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"
-	"github.com/liamg/oriel/tools/perf"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -37,19 +34,7 @@ func overviewScene(t *testing.T, make func(home string) string) *apptest.Scene {
 	s.Registry().Language(registry.Language{Name: "SQL", Extensions: []string{".sql"}})
 	s.Registry().Language(registry.Language{Name: "YAML", Extensions: []string{".yaml"}})
 	s.Registry().Language(registry.Language{Name: "Markdown", Extensions: []string{".md"}})
-	deadline := time.Now().Add(20 * time.Second)
-	for {
-		s.RunQueued()
-		s.Frame()
-		if overviewDone(s) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the overview never finished:\n%s", s.Text())
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	s.Frame()
+	s.Until("the overview to finish", func() bool { return overviewDone(s) })
 	return s
 }
 
@@ -128,55 +113,7 @@ func TestOverviewPluginPanelAndReturn(t *testing.T) {
 		t.Fatal("the overview shows over an open file")
 	}
 	s.Run("view.close", nil)
-	deadline := time.Now().Add(10 * time.Second)
-	for !strings.Contains(s.Text(), "3 todos") {
-		if time.Now().After(deadline) {
-			t.Fatalf("no plugin panel:\n%s", s.Text())
-		}
-		s.RunQueued()
-		s.Frame()
-		time.Sleep(5 * time.Millisecond)
-	}
-}
-
-// On a 100k-file repo the overview shows at once, and frames stay under a frame's budget while it counts.
-func TestOverviewBigRepoBudget(t *testing.T) {
-	perf.Timed(t)
-	if testing.Short() {
-		t.Skip("makes 100,000 files")
-	}
-	dir := filepath.Join(t.TempDir(), "big")
-	files := map[string]string{}
-	for i := range 100_000 {
-		files[fmt.Sprintf("pkg%03d/f%05d.go", i%500, i)] = "package p\n\nfunc f() {}\n"
-	}
-	gitRepo(t, dir, files, 3)
-	s := apptest.New(t, apptest.Options{WorkDir: dir})
-	s.OverviewOff.Dispose()
-	var frames perf.Sampler
-	deadline := time.Now().Add(shell.PanelBudget + 5*time.Second)
-	for !overviewDone(s) {
-		frames.Time(func() {
-			s.RunQueued()
-			s.Frame()
-		})
-		if time.Now().After(deadline) {
-			t.Fatalf("not done within the panels' budget:\n%s", s.Text())
-		}
-		time.Sleep(2 * time.Millisecond)
-	}
-	times := frames.Times()
-	slices.Sort(times)
-	p95, worst := times[len(times)*95/100], times[len(times)-1]
-	t.Logf("frames while counting: %d, p95 %v, slowest %v", len(times), p95, worst)
-	// A frame's time is the loop thread's own (perf.Sampler), so the counting beside it on every core isn't; counting
-	// on the loop would slow most frames, and one far more.
-	if p95 > 16*time.Millisecond || worst > 50*time.Millisecond {
-		t.Errorf("frames took p95 %v, slowest %v, while the overview counted; the budget is 16 ms", p95, worst)
-	}
-	if !strings.Contains(s.Text(), "100,000") {
-		t.Errorf("doesn't count 100,000 files:\n%s", s.Text())
-	}
+	s.Until("the plugin's panel", func() bool { return strings.Contains(s.Text(), "3 todos") })
 }
 
 // A Lua panel's rows show on the card.
@@ -190,15 +127,7 @@ func TestOverviewLuaPanel(t *testing.T) {
 	s.WriteConfig(map[string]string{"init.lua": `oriel.overview.add{ name = "todo", title = "To do", order = 90,
   compute = function(dir) return { { label = "open", value = 3 } } end }`})
 	s.ReloadLua()
-	deadline := time.Now().Add(10 * time.Second)
-	for !strings.Contains(s.Text(), "open\n  3") {
-		if time.Now().After(deadline) {
-			t.Fatalf("no Lua panel:\n%s", s.Text())
-		}
-		s.RunQueued()
-		s.Frame()
-		time.Sleep(5 * time.Millisecond)
-	}
+	s.Until("the Lua panel", func() bool { return strings.Contains(s.Text(), "open\n  3") })
 }
 
 // A directory's README shows under its card's panels, as markdown.

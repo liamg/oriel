@@ -3,7 +3,6 @@ package shell_test
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/shell"
@@ -39,14 +38,12 @@ func TestPickerSources(t *testing.T) {
 			tt.source, _, _ = strings.Cut(tt.source, " ")
 			s := pickerScene(t, tt.source, tt.query)
 			src := mustSource(t, s, tt.source)
-			g, ok := shell.RankSource(s.Headless, src, tt.query, shell.PickerMax)
-			for deadline := time.Now().Add(5 * time.Second); !ok && time.Now().Before(deadline); { // a live source answers off the UI's goroutine
-				time.Sleep(5 * time.Millisecond)
+			g, _ := shell.RankSource(s.Headless, src, tt.query, shell.PickerMax)
+			apptest.Poll(t, "results", func() bool { // a live source answers off the UI's goroutine
+				var ok bool
 				g, ok = shell.RankSource(s.Headless, src, tt.query, shell.PickerMax)
-			}
-			if !ok {
-				t.Fatalf("no results")
-			}
+				return ok
+			})
 			text := s.WaitFor(tt.preview)
 			first := g.Items()[0]
 			if !strings.Contains(first.Label+" "+first.Detail, tt.first) {

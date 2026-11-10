@@ -4,7 +4,6 @@ import (
 	"slices"
 	"sync"
 	"testing"
-	"time"
 )
 
 // What a Serial is handed runs in order, one at a time, and handing it over doesn't wait for it.
@@ -14,8 +13,7 @@ func TestSerialRunsInOrderWithoutWaiting(t *testing.T) {
 	var mu sync.Mutex
 	var got []int
 	gate := make(chan struct{})
-	start := time.Now()
-	for i := range 5 {
+	for i := range 5 { // the first holds the rest until the gate opens: a Do that waited would never return
 		s.Do(func() {
 			if i == 0 {
 				<-gate
@@ -24,9 +22,6 @@ func TestSerialRunsInOrderWithoutWaiting(t *testing.T) {
 			got = append(got, i)
 			mu.Unlock()
 		})
-	}
-	if d := time.Since(start); d > 100*time.Millisecond {
-		t.Errorf("handing work over waited %v", d)
 	}
 	close(gate)
 	s.Wait()

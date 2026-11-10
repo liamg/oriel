@@ -41,12 +41,8 @@ func whichKeyAppWith(t *testing.T, opts func(h plugin.Host)) *apptest.Window {
 // It appears after 300 ms for any prefix, lists desc, and ⌫ backs up.
 func TestWhichKeyLeader(t *testing.T) {
 	r := whichKeyApp(t)
-	sent := time.Now()
 	r.TypeKeys("<Space>")
 	r.WaitText("shown after 300ms")
-	if d := time.Since(sent); d < shell.WhichKeyDelay {
-		t.Errorf("which-key showed after %v", d)
-	}
 	text := r.WaitText("+agent")
 	for _, want := range []string{"Find files", "Grep", "Keymaps"} {
 		if !strings.Contains(text, want) {
@@ -89,6 +85,29 @@ func TestWhichKeyEnginePrefix(t *testing.T) {
 	}
 	r.TypeKeys("g")
 	r.WaitFrame("which-key gone", func(s string) bool { return !strings.Contains(s, "First line") })
+}
+
+// A prefix shows which-key once WhichKeyDelay has passed, not before.
+func TestWhichKeyWaitsItsDelay(t *testing.T) {
+	s := apptest.EditorScene(t)
+	for _, k := range agentKeys {
+		s.Registry().Keymap(k)
+	}
+	keys := registry.NewResolver(s.Registry())
+	shell.SetKeys(s.Headless, keys)
+	start := s.Now
+	keys.Feed([]string{"n", "global"}, " ", start)
+	s.Now = start.Add(shell.WhichKeyDelay - time.Millisecond)
+	s.Quiet()
+	s.Frame()
+	if strings.Contains(s.Text(), "+agent") {
+		t.Fatalf("which-key showed before its delay:\n%s", s.Text())
+	}
+	s.Now = start.Add(shell.WhichKeyDelay)
+	s.Frame()
+	if !strings.Contains(s.Text(), "+agent") {
+		t.Errorf("which-key not shown after its delay:\n%s", s.Text())
+	}
 }
 
 // 27-whichkey: ␣a's +agent group, against a golden.

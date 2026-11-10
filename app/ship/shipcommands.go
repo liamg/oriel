@@ -372,9 +372,7 @@ func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 	if _, err := x.client(se.ID); err != nil {
 		return err
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		for _, req := range reqs {
 			done := make(chan struct{})
 			s, _ := x.ship(se.ID, req.Project)
@@ -391,6 +389,6 @@ func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 			}
 			<-done
 		}
-	}()
+	})
 	return nil
 }

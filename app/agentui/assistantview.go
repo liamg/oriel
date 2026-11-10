@@ -76,7 +76,7 @@ func (x *Assistant) window(c *ui.Ctx) {
 	}
 	if !x.win.Dragging() && x.win.Rect != x.placed {
 		x.placed = x.win.Rect
-		go x.savePlace(x.placed)
+		x.savePlace(x.placed)
 	}
 }
 
@@ -98,10 +98,11 @@ func (x *Assistant) loadPlace() render.Rect {
 	return r
 }
 
+// savePlace saves r as the window's place, off the loop.
 func (x *Assistant) savePlace(r render.Rect) {
 	if f := x.placeFile(); f != "" {
 		b, _ := json.Marshal(r)
-		_ = os.WriteFile(f, b, 0o600)
+		x.places.Write(f, b)
 	}
 }
 

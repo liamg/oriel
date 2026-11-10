@@ -308,11 +308,9 @@ func (x *Ship) refresh(id core.SessionID, fresh bool) {
 	}
 	r, n, seq := x.reading(id)
 	x.mu.Unlock()
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		x.readAs(id, r, n, seq, fresh)
-	}()
+	})
 }
 
 // read reads a session's projects, on this goroutine.
@@ -475,9 +473,7 @@ func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx contex
 	r.doing[project] = doing
 	delete(r.failed, project)
 	x.mu.Unlock()
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 5*time.Minute)
 		err := fn(ctx, c)
 		cancel()
@@ -498,7 +494,7 @@ func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx contex
 				x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Key: true, Title: project, Text: err.Error()})
 			}
 		})
-	}()
+	})
 	return nil
 }
 

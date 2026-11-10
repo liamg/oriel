@@ -294,9 +294,7 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 		bh.diffing = true
 		g.diffs++
 		base, gen, contents := b.data, b.gen, fileBytes()
-		g.busy.Add(1)
-		go func() {
-			defer g.busy.Done()
+		g.busy.Go(func() {
 			hs := gitx.DiffLines(base, contents)
 			g.h.Do(func() {
 				g.mu.Lock()
@@ -307,7 +305,7 @@ func (g *GitSigns) hunksOf(f gitFile, buf *text.Buffer, fileBytes func() []byte,
 				g.mu.Unlock()
 				g.h.DecorationsChanged("git.hunks")
 			})
-		}()
+		})
 	}
 	return bh.hunks
 }
@@ -324,9 +322,7 @@ func (g *GitSigns) baseOf(f gitFile, src gitSource) *gitBase {
 	}
 	b.loading = true
 	repo := g.repo(f)
-	g.busy.Add(1)
-	go func() {
-		defer g.busy.Done()
+	g.busy.Go(func() {
 		var data []byte
 		switch src.rev {
 		case "":
@@ -342,7 +338,7 @@ func (g *GitSigns) baseOf(f gitFile, src gitSource) *gitBase {
 			g.mu.Unlock()
 			g.h.DecorationsChanged("git.hunks")
 		})
-	}()
+	})
 	return b
 }
 
@@ -454,10 +450,8 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 	if !b.loaded || b.version != snap.Version() || b.head != head {
 		if !b.loading {
 			b.loading = true
-			g.busy.Add(1)
 			version, contents, repo := snap.Version(), ctx.FileBytes(), g.repo(f)
-			go func() {
-				defer g.busy.Done()
+			g.busy.Go(func() {
 				lines, err := repo.Blame(context.Background(), f.rel, contents)
 				g.h.Do(func() {
 					g.mu.Lock()
@@ -469,7 +463,7 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 					g.mu.Unlock()
 					g.h.DecorationsChanged("git.hunks")
 				})
-			}()
+			})
 		}
 		g.mu.Unlock()
 		return uireg.Decoration{}, false

@@ -157,14 +157,24 @@ func writeJSON(w http.ResponseWriter, v any) {
 // set, it also listens on a loopback port, written to portFile, for the
 // egress proxy to relay to where the socket cannot be mounted.
 func Serve(ctx context.Context, h http.Handler, path, portFile string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
-	_ = os.Remove(path)
-	ln, err := net.Listen("unix", path)
+	ln, err := listen(path)
 	if err != nil {
 		return err
 	}
+	return serveOn(ctx, h, ln, path, portFile)
+}
+
+// listen opens the unix socket at path, replacing one left behind.
+func listen(path string) (net.Listener, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return nil, err
+	}
+	_ = os.Remove(path)
+	return net.Listen("unix", path)
+}
+
+// serveOn is Serve on the socket ln, listening at path.
+func serveOn(ctx context.Context, h http.Handler, ln net.Listener, path, portFile string) error {
 	srv := &http.Server{Handler: h, ReadHeaderTimeout: 30 * time.Second}
 	stop := context.AfterFunc(ctx, func() {
 		_ = srv.Close()

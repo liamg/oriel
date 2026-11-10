@@ -248,7 +248,7 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	st := s.UntilState("the session in front", func(st core.State) bool { return st.Focus != "" })
 	sess, _ := st.Session(st.Focus)
 	se := sess.Snapshot()
-	s.Reopen()
+	s.Follow()
 	x := shipOf(s)
 
 	writeFiles(t, shipDir(se, "app"), map[string]string{"health.go": "package main\n\nfunc health() {}\n"})

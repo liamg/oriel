@@ -12,10 +12,9 @@ const (
 	StallFrame = 50 * time.Millisecond // no frame, even a first one, takes longer
 )
 
-// FrameTimed marks a test as a frame-time budget, skipping it where timing means nothing.
+// FrameTimed skips a frame-time budget where timing means nothing.
 func FrameTimed(t *testing.T) {
 	t.Helper()
-	perf.Timed(t)
 	if testing.Short() || testing.CoverMode() != "" {
 		t.Skip("timing under -short or -cover means nothing")
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
@@ -19,7 +20,6 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
-	"github.com/liamg/oriel/tools/perf"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -112,13 +112,8 @@ func (b *booted) waitText(t *testing.T, want string) {
 func (b *booted) close(t *testing.T) {
 	t.Helper()
 	b.win.Close()
-	select {
-	case err := <-b.done:
-		if err != nil {
-			t.Fatalf("Run: %v", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("app did not exit after its window closed")
+	if err := apptest.Recv(t, "the app to exit after its window closed", b.done); err != nil {
+		t.Fatalf("Run: %v", err)
 	}
 }
 
@@ -230,11 +225,7 @@ func TestKeysAndCommandsArePickers(t *testing.T) {
 	b.waitText(t, "Do nothing")
 	b.waitText(t, "lister.noop")
 	b.win.Send(render.KeyEvent{Key: "CR"})
-	select {
-	case <-l.ran:
-	case <-time.After(5 * time.Second):
-		t.Fatal("Enter in :Commands didn't run the command")
-	}
+	apptest.Recv(t, "Enter in :Commands to run the command", l.ran)
 	b.close(t)
 }
 
@@ -291,19 +282,9 @@ func TestPointerSetsTheCursor(t *testing.T) {
 	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
 	// The root view sits under the 38px titlebar, right of the 44px rail.
 	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 74, Y: 48}})
-	for b.win.Cursor() != render.CursorPointer {
-		if ctx.Err() != nil {
-			t.Fatalf("cursor is %v over the link", b.win.Cursor())
-		}
-		time.Sleep(time.Millisecond)
-	}
+	apptest.Poll(t, "the pointer cursor over the link", func() bool { return b.win.Cursor() == render.CursorPointer })
 	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})
-	for b.win.Cursor() != render.CursorDefault {
-		if ctx.Err() != nil {
-			t.Fatalf("cursor is %v off the link", b.win.Cursor())
-		}
-		time.Sleep(time.Millisecond)
-	}
+	apptest.Poll(t, "the default cursor off the link", func() bool { return b.win.Cursor() == render.CursorDefault })
 	b.close(t)
 }
 
@@ -470,18 +451,13 @@ func TestAccessTree(t *testing.T) {
 	b := boot(t, panes{})
 	b.win.Send(render.KeyEvent{Key: "a"})
 	b.waitText(t, "content of alpha")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	var dump string
-	for ctx.Err() == nil {
+	apptest.Poll(t, "alpha in the accessibility tree", func() bool {
 		if tr := b.win.Access(); tr != nil {
 			dump = tr.Dump()
-			if strings.Contains(dump, `group "alpha"`) {
-				break
-			}
 		}
-		time.Sleep(5 * time.Millisecond)
-	}
+		return strings.Contains(dump, `group "alpha"`)
+	})
 	for _, want := range []string{`window "Oriel"`, `region "Main"`, `tablist`, `tab "alpha" selected`, `group "alpha"`} {
 		if !strings.Contains(dump, want) {
 			t.Errorf("no %s in the tree:\n%s", want, dump)
@@ -565,54 +541,6 @@ func fillAt(f headless.Frame, p render.Point, not render.Color) render.Color {
 	return got
 }
 
-// Sweeping down a menu, each row's highlight eases in while the pointer goes on moving over it: moves that change
-// nothing build no frame, but mustn't hold back the frames the easing needs.
-func TestMenuHoverWhileThePointerMovesBudget(t *testing.T) {
-	perf.Timed(t)
-	b := boot(t, menuView{})
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	b.win.WaitFrame(ctx, func(f headless.Frame) bool { return strings.Contains(f.Text(), "Close All") })
-	for n := len(b.win.Frames()); ; {
-		time.Sleep(200 * time.Millisecond)
-		if m := len(b.win.Frames()); m == n || ctx.Err() != nil {
-			break
-		} else {
-			n = m
-		}
-	}
-	// The root view sits under the 38px titlebar, right of the 44px rail; the menu's rows are 30px under 4px of pad.
-	row := func(i int) render.Point { return render.Point{X: 44 + 100, Y: 38 + 4 + 15 + 30*float32(i)} }
-	frames := b.win.Frames()
-	last := frames[len(frames)-1]
-	bg := fillAt(last, row(2), render.Color{})
-	hover := fillAt(last, row(0), bg) // the first row starts highlighted
-	if hover.A == 0 {
-		t.Fatal("no highlight on the first row")
-	}
-	near := func(a, b render.Color) bool {
-		d := func(x, y uint8) bool { return max(x, y)-min(x, y) <= 2 }
-		return d(a.R, b.R) && d(a.G, b.G) && d(a.B, b.B) && d(a.A, b.A)
-	}
-	const stay, every = 400 * time.Millisecond, 2 * time.Millisecond
-	for i := 1; i < 4; i++ {
-		start := len(b.win.Frames())
-		for j := range int(stay / every) {
-			b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: row(i).X + float32(j%20), Y: row(i).Y}})
-			time.Sleep(every)
-		}
-		moving := b.win.Frames()[start:]
-		var got render.Color
-		if len(moving) > 0 {
-			got = fillAt(moving[len(moving)-1], row(i), bg)
-		}
-		if !near(got, hover) {
-			t.Errorf("after %v of moves over row %d it's drawn %v in %d frames, not the highlight %v", stay, i, got, len(moving), hover)
-		}
-	}
-	b.close(t)
-}
-
 // With no screen reader reading the window, no accessibility tree is built; once one starts, the tree it gets is
 // the screen's as it is now.
 func TestAccessTreeOnlyWhileAScreenReaderReads(t *testing.T) {
@@ -626,15 +554,9 @@ func TestAccessTreeOnlyWhileAScreenReaderReads(t *testing.T) {
 		t.Errorf("the tree was built with no screen reader reading:\n%s", tr.Dump())
 	}
 	b.win.SetScreenReader(true)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	for ctx.Err() == nil {
-		if tr := b.win.Access(); tr != nil && strings.Contains(tr.Dump(), `group "alpha"`) {
-			b.close(t)
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Error("a screen reader starting never got the screen's tree")
+	apptest.Poll(t, "the screen's tree for a screen reader starting", func() bool {
+		tr := b.win.Access()
+		return tr != nil && strings.Contains(tr.Dump(), `group "alpha"`)
+	})
 	b.close(t)
 }

@@ -31,9 +31,9 @@ func TestAPermissionOverTheWindowTakesItsKeys(t *testing.T) {
 	s.Quiet()
 
 	allow := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "make e2e"})})
-	s.Until("the permission card", func() bool { s.RunQueued(); return strings.Contains(s.Text(), "Allow once") })
+	s.Until("the permission card", func() bool { return strings.Contains(s.Text(), "Allow once") })
 	s.Type("y") // on its way to the editor as the card came
-	s.Frame()
+	s.Quiet()
 	select {
 	case d := <-allow:
 		t.Fatalf("a key typed as the card appeared answered it: %+v", d)
@@ -44,7 +44,6 @@ func TestAPermissionOverTheWindowTakesItsKeys(t *testing.T) {
 	s.Type("y")
 	var d agent.Decision
 	s.Until("the agent's answer", func() bool {
-		s.RunQueued()
 		select {
 		case d = <-allow:
 			return true
@@ -55,7 +54,7 @@ func TestAPermissionOverTheWindowTakesItsKeys(t *testing.T) {
 	if !d.Allow || d.Always {
 		t.Errorf("y answered %+v, want Allow once", d)
 	}
-	s.Until("the card gone", func() bool { s.RunQueued(); return !strings.Contains(s.Text(), "Allow once") })
+	s.Until("the card gone", func() bool { return !strings.Contains(s.Text(), "Allow once") })
 	s.Type("i")
 	s.Frame()
 	if !strings.Contains(s.Text(), "INSERT") {

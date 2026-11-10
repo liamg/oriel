@@ -54,6 +54,7 @@ type fallbacks struct {
 	mu        sync.Mutex
 	requested map[rune]bool
 	work      chan rune
+	done      chan struct{} // closed when the worker has stopped
 	closed    bool
 	landed    []*Face
 	names     []string
@@ -74,6 +75,7 @@ func (f *fallbacks) request(r rune) {
 	f.requested[r] = true
 	if f.work == nil {
 		f.work = make(chan rune, maxQueue)
+		f.done = make(chan struct{})
 		go f.worker()
 	}
 	select {
@@ -108,6 +110,7 @@ func (f *fallbacks) list() ([]string, []rune) {
 }
 
 func (f *fallbacks) worker() {
+	defer close(f.done)
 	var faces []*Face
 	tried := map[string]bool{}
 	for r := range f.work {

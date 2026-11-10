@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -140,7 +141,7 @@ func (x *Reviews) detail(s registry.HostSite, url string) *reviewDetail {
 	default:
 		return d
 	}
-	go func() {
+	plugin.Go(x.h, "reviews: "+url, func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		defer cancel()
 		got, err := registry.LookupReview(ctx, s, url)
@@ -157,7 +158,7 @@ func (x *Reviews) detail(s registry.HostSite, url string) *reviewDetail {
 		d.refreshing = false
 		x.mu.Unlock()
 		x.h.Redraw()
-	}()
+	})
 	return d
 }
 

@@ -37,16 +37,18 @@ func agentToolErr(t *testing.T, s *apptest.Scene, name string, p map[string]any)
 			out, err := tool.Run(registry.WithSession(context.Background(), "s1"), p)
 			done <- result{out, err}
 		}()
-		for {
+		var r result
+		s.Until("the tool's answer", func() bool {
+			lspOf(s).Wait()
 			select {
-			case r := <-done:
-				out, _ := r.out.(string)
-				return out, r.err
+			case r = <-done:
+				return true
 			default:
-				s.RunQueued()
-				lspOf(s).Wait()
+				return false
 			}
-		}
+		})
+		out, _ := r.out.(string)
+		return out, r.err
 	}
 	t.Fatalf("no agent tool %s", name)
 	return "", nil

@@ -67,8 +67,8 @@ type Update struct {
 	busy   string    // what it's doing now: "Checking for updates", "Downloading 2.0.0", "Updating to 2.0.0"
 	since  time.Time // when it started
 	card   bool
-	failed string // the last check's or install's error, for the card
-	stop   chan struct{}
+	failed string         // the last check's or install's error, for the card
+	work   kit.Work       // the timer's checks
 	run    *updateRun     // the update the Updating page shows, if any
 	start  sync.WaitGroup // an automatic start's check, while it runs
 	page   bool           // the Updating page is up
@@ -131,15 +131,13 @@ func (x *Update) Activate(_ context.Context, h plugin.Host) error {
 	x.updated()
 	if u := x.updater(); u != nil {
 		u.Progress = x.progress
-		x.stop = make(chan struct{})
-		stop := x.stop
-		x.Add(kit.OnDispose(func() { close(stop) }))
+		x.Add(&x.work)
 		first := updateFirstCheck
 		if x.mode() == updateAutomatic {
 			first = updateEvery
 			x.start.Go(x.startup)
 		}
-		go x.watch(stop, first, updateEvery)
+		x.work.Loop(func(ctx context.Context) { x.watch(ctx, first, updateEvery) })
 	}
 	return nil
 }
@@ -257,12 +255,12 @@ func (x *Update) startup() {
 }
 
 // watch checks now and then, unless updates are manual.
-func (x *Update) watch(stop chan struct{}, first, every time.Duration) {
+func (x *Update) watch(ctx context.Context, first, every time.Duration) {
 	t := time.NewTimer(first)
 	defer t.Stop()
 	for {
 		select {
-		case <-stop:
+		case <-ctx.Done():
 			return
 		case <-t.C:
 			if x.mode() != updateManual {
@@ -281,7 +279,7 @@ func (x *Update) checkNow(asked bool) {
 		x.setCard(true)
 	}
 	if began {
-		go x.checked(asked)
+		plugin.Go(x.h, "an update check", func() { x.checked(asked) })
 	}
 }
 
@@ -455,7 +453,7 @@ func (x *Update) update(restart, page bool) error {
 	}
 	x.mu.Unlock()
 	x.h.Dismiss("update.available")
-	go func() {
+	plugin.Go(x.h, "an update's install", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 		defer cancel()
 		err := u.Install(ctx)
@@ -491,7 +489,7 @@ func (x *Update) update(restart, page bool) error {
 				Text:    fmt.Sprintf("Oriel %s is installed: it runs from the next restart.", m.Version),
 				Actions: []core.Action{{Title: "Restart", Command: "update.restart"}}})
 		}
-	}()
+	})
 	return nil
 }
 

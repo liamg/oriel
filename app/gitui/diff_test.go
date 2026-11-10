@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -200,13 +199,8 @@ func TestDiffExplainRunsExplainUnit(t *testing.T) {
 	app.TypeKeys("]h")
 	app.TypeKeys("jjjjjj")
 	app.TypeKeys("?")
-	select {
-	case a := <-got:
-		if a.String("file") != filepath.Join(r.Dir, "internal/pricing/round.go") || a.Int("line") != 8 {
-			t.Errorf("explain.unit got %v, want round.go's line 8", a)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("? didn't run explain.unit")
+	if a := apptest.Recv(t, "? to run explain.unit", got); a.String("file") != filepath.Join(r.Dir, "internal/pricing/round.go") || a.Int("line") != 8 {
+		t.Errorf("explain.unit got %v, want round.go's line 8", a)
 	}
 }
 
@@ -322,17 +316,10 @@ func TestDiffOpenIsAvailableWithHelp(t *testing.T) {
 	if !s.Registry().Available("diff.open", registry.Args{"path": r.Dir}) {
 		t.Error("diff.open isn't available")
 	}
-	apptest.PluginOf[*gitui.Git](s, "git").Wait()
+	s.Quiet()
 	s.Run("diff.open", registry.Args{"path": r.Dir})
-	for range 3 {
-		s.Frame()
-		apptest.PluginOf[*gitui.Diff](s, "diff").Wait()
-		s.RunQueued()
-	}
-	s.Frame()
-	if !strings.Contains(s.Text(), "MARK REVIEWED") {
-		t.Fatalf("the diff isn't drawn:\n%s", s.Text())
-	}
+	s.Until("the diff drawn", func() bool { return strings.Contains(s.Text(), "MARK REVIEWED") })
+	s.Quiet()
 	s.Lint("the diff")
 }
 

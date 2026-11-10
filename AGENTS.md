@@ -70,7 +70,10 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
 - **No test is racy or timer dependent.** A test waits for the work (`Quiet`, `Idle`, `registry.Busy`) or moves a
   clock of its own (`internal/clock/clocktest`); what's timed takes an `internal/clock.Clock`. What only a wall clock
   can measure (latency, a while left idle) goes behind the `perf` build tag and runs with `make perf`, never in
-  `go test ./...` (`docs/architecture.md`, "Testing").
+  `go test ./...` (`docs/architecture.md`, "Testing"). Work off the loop starts through `plugin.Go`, a
+  `plugin.Load`, a contributed `kit.Busy` or `kit.Work` (its `Loop` for what lives as long as the plugin), never a
+  bare `go`, so a wait sees it; a snapshot or assertion comes after `Quiet` (`WantFrame`, `Golden`), or inside
+  `Midway` when it's of the work under way. `make test-chaos` slows that work at random: run it on what you change.
 - **Test the way it's used.** Drive a control through the toolkit (click it, press keys on it, with timeouts on and
   over other overlays), not by setting the state it would set; a test that turns off a timeout or opens one view
   alone misses the bugs people hit.

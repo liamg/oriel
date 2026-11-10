@@ -217,9 +217,7 @@ func (x *Verify) ask(q *quiz, prompt string, got func(out string) error) {
 	q.gen++
 	gen := q.gen
 	q.asking, q.err, q.since = true, "", kit.WindowNow(x.h)
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, verifyTimeout)
 		out, _, err := registry.Fork(ctx, x.h, registry.ForkRequest{Session: string(q.session), Prompt: prompt})
 		cancel()
@@ -237,7 +235,7 @@ func (x *Verify) ask(q *quiz, prompt string, got func(out string) error) {
 			q.scroll.Follow = true
 		})
 		x.h.Redraw()
-	}()
+	})
 }
 
 // send gives the answer to the question being asked, to be graded.
@@ -282,13 +280,11 @@ func (x *Verify) record(q *quiz, result string) {
 		log.Error("verification not recorded", "err", err)
 		return
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		if err := c.RecordVerified(core.Verified{Session: q.session, Verification: v}); err != nil {
 			log.Error("verification not recorded", "err", err)
 		}
-	}()
+	})
 }
 
 // again starts a new quiz in place of a finished one.

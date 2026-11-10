@@ -22,6 +22,7 @@ type PathWatch struct {
 	files []watch.Files
 	sub   watch.Sub[[]string]
 	gen   int
+	kicks Busy // Kick's calls with nothing watched
 }
 
 // WatchPaths watches with r's app manager, polling every poll once it can't.
@@ -66,7 +67,7 @@ func (p *PathWatch) Kick() {
 	if sub.Valid() {
 		sub.Refresh()
 	} else {
-		go p.changed()
+		p.kicks.Go(p.changed)
 	}
 }
 
@@ -78,5 +79,6 @@ func (p *PathWatch) Close() {
 	if sub.Valid() {
 		sub.Close()
 	}
+	p.kicks.Wait()
 	p.done()
 }

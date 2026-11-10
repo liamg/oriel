@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/isolate"
 )
 
@@ -96,7 +97,8 @@ func TestTreeStream(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := &treeFake{backend: b}
-	w := newWatcher(f, clock.Real())
+	c := clocktest.New(time.Unix(0, 0))
+	w := newWatcher(f, c)
 	t.Cleanup(func() { w.Close() })
 	skip := func(rel string) bool { return rel == ".git/objects" || filepath.Base(rel) == "node_modules" }
 	if err := w.AddTree(root, skip); err != nil {
@@ -118,21 +120,23 @@ func TestTreeStream(t *testing.T) {
 		fsevent{filepath.Join(real, ".git", "objects", "ef", "01"), evItemCreated | evItemIsFile},
 		fsevent{"/elsewhere/a.go", evItemModified | evItemIsFile},
 	)
-	if got := quiet(w, 300*time.Millisecond); len(got) != 0 {
+	if got := queued(w); len(got) != 0 {
 		t.Fatalf("events from skipped or outside paths: %v", got)
 	}
 
 	write(t, filepath.Join(real, "src", "main.go"), "// more\n")
 	f.emit(fsevent{filepath.Join(real, "src", "main.go"), evItemModified | evItemIsFile})
+	c.Advance(Delay)
 	expect(t, w, filepath.Join(root, "src", "main.go"))
 
 	f.emit(fsevent{"", evKernelDropped})
+	c.Advance(Delay)
 	expect(t, w, root)
 
 	// A folder moved in arrives whole: what's in it is announced too.
 	write(t, filepath.Join(real, "moved", "deep", "new.txt"), "x")
-	quiet(w, 200*time.Millisecond)
 	f.emit(fsevent{filepath.Join(real, "moved"), evItemRenamed | evItemIsDir})
+	c.Advance(Delay)
 	expect(t, w, filepath.Join(root, "moved", "deep", "new.txt"))
 	if got := b.watched(); !slices.Equal(got, []string{root}) {
 		t.Fatalf("OS watches %v after a folder arrived, want only the root", got)
@@ -145,8 +149,8 @@ func TestTreeStream(t *testing.T) {
 		t.Fatalf("stream stopped %d times on Remove, want 1", f.stops)
 	}
 	f.emit(fsevent{filepath.Join(real, "src", "main.go"), evItemModified | evItemIsFile})
-	if got := quiet(w, 300*time.Millisecond); len(got) != 0 {
-		t.Fatalf("events after Remove: %v", got)
+	if slices.Contains(queued(w), filepath.Join(root, "src", "main.go")) {
+		t.Fatal("an event after Remove")
 	}
 }
 
@@ -188,7 +192,8 @@ func TestTreeStreamRootRemoved(t *testing.T) {
 	write(t, filepath.Join(root, "a.txt"), "x")
 	b := newRawScript()
 	f := &treeFake{backend: b}
-	w := newWatcher(f, clock.Real())
+	c := clocktest.New(time.Unix(0, 0))
+	w := newWatcher(f, c)
 	t.Cleanup(func() { w.Close() })
 	if err := w.AddTree(root, nil); err != nil {
 		t.Fatal(err)
@@ -203,6 +208,7 @@ func TestTreeStreamRootRemoved(t *testing.T) {
 	if stops != 1 {
 		t.Fatalf("stream stopped %d times after its root went, want 1", stops)
 	}
+	c.Advance(Delay)
 	expect(t, w, root)
 
 	tmp := filepath.Join(parent, "tmp")
@@ -217,6 +223,7 @@ func TestTreeStreamRootRemoved(t *testing.T) {
 	if again != root || stops != 1 {
 		t.Fatalf("once the root came back: stream on %q, stopped %d times; want a new one on %q, stopped once", again, stops, root)
 	}
+	c.Advance(Delay)
 	expect(t, w, filepath.Join(root, "b.txt"))
 }
 

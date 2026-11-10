@@ -25,37 +25,46 @@ func gitScene(t *testing.T, change ...func(*apptest.Config)) (*apptest.Scene, *g
 			f(cfg)
 		}
 	}})
-	gitOf(s).Wait()
+	s.Quiet()
 	return s, repo
 }
 
 func waitGit(t *testing.T, s *apptest.Scene, what string, ok func() bool) {
 	t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); !ok(); time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("git status never saw %s", what)
-		}
-	}
+	s.Until("git status to see "+what, ok)
+}
+
+// scriptedGitScene is gitScene with file watchers that see only what the test says changed (ScriptedFiles).
+func scriptedGitScene(t *testing.T) (*apptest.Scene, *gittest.Repo) {
+	t.Helper()
+	repo := gittest.New(t)
+	repo.Write(map[string]string{"main.go": "package main\n", ".gitignore": "build/\n", "node_modules/x/index.js": "x\n", "build/out": "x\n"})
+	repo.Commit("Ada", "first")
+	s := apptest.New(t, apptest.Options{WorkDir: repo.Dir, ScriptedFiles: true})
+	s.Idle()
+	return s, repo
 }
 
 // The work tree's status is read again when the tree or .git changes, and not while nothing does.
 func TestGitStatusFollowsTheTree(t *testing.T) {
 	runs := gittest.CountGit(t)
-	s, repo := gitScene(t)
+	s, repo := scriptedGitScene(t)
 	read := runs("status")
-	time.Sleep(2500 * time.Millisecond)
+	s.Now = s.Now.Add(time.Minute)
+	s.Idle()
 	if n := runs("status") - read; n > 0 {
 		t.Fatalf("git status ran %d times with nothing changed", n)
 	}
-	os.WriteFile(filepath.Join(repo.Dir, "node_modules", "x", "more.js"), []byte("y\n"), 0o644)
-	os.WriteFile(filepath.Join(repo.Dir, "build", "more"), []byte("y\n"), 0o644)
-	time.Sleep(time.Second)
+	s.WriteFiles(repo.Dir, map[string]string{"node_modules/x/more.js": "y\n", "build/more": "y\n"})
+	s.Idle()
 	if n := runs("status") - read; n > 0 {
 		t.Fatalf("git status ran %d times for node_modules and an ignored folder", n)
 	}
-	os.WriteFile(filepath.Join(repo.Dir, "new.go"), []byte("package main\n"), 0o644)
+	s.WriteFiles(repo.Dir, map[string]string{"new.go": "package main\n"})
 	waitGit(t, s, "new.go", func() bool { _, ok := gitOf(s).State().File("new.go"); return ok })
 	repo.Git("checkout", "-q", "-b", "other")
+	git := filepath.Join(repo.Dir, ".git")
+	s.FilesChanged(filepath.Join(git, "HEAD"), filepath.Join(git, "refs", "heads", "other"), filepath.Join(git, "logs", "HEAD"))
 	waitGit(t, s, "the branch change", func() bool { return gitOf(s).State().Branch == "other" })
 }
 
@@ -70,21 +79,22 @@ func TestGitStatusIgnoresGitsHousekeeping(t *testing.T) {
 	repo.Git("worktree", "add", "-q", "-b", "other", other)
 	git := filepath.Join(repo.Dir, ".git")
 	os.MkdirAll(filepath.Join(git, "fsmonitor--daemon", "cookies"), 0o755)
-	s := apptest.New(t, apptest.Options{WorkDir: repo.Dir})
-	gitOf(s).Wait()
-	time.Sleep(2500 * time.Millisecond)
+	s := apptest.New(t, apptest.Options{WorkDir: repo.Dir, ScriptedFiles: true})
+	s.Idle()
 	read := runs("status")
 	for i := range 3 {
-		os.WriteFile(filepath.Join(other, "main.go"), []byte(fmt.Sprintf("package main // %d\n", i)), 0o644)
-		os.WriteFile(filepath.Join(git, "worktrees", "other", "index"), []byte("x"), 0o644)
 		cookie := filepath.Join(git, "fsmonitor--daemon", "cookies", fmt.Sprint(i))
+		paths := []string{filepath.Join(other, "main.go"), filepath.Join(git, "worktrees", "other", "index"), cookie,
+			filepath.Join(git, "FETCH_HEAD"), filepath.Join(git, "logs", "HEAD")}
+		os.WriteFile(paths[0], []byte(fmt.Sprintf("package main // %d\n", i)), 0o644)
+		os.WriteFile(paths[1], []byte("x"), 0o644)
 		os.WriteFile(cookie, nil, 0o644)
 		os.Remove(cookie)
-		os.WriteFile(filepath.Join(git, "FETCH_HEAD"), []byte(fmt.Sprint(i)), 0o644)
-		os.WriteFile(filepath.Join(git, "logs", "HEAD"), []byte(fmt.Sprint(i)), 0o644)
-		time.Sleep(300 * time.Millisecond)
+		os.WriteFile(paths[3], []byte(fmt.Sprint(i)), 0o644)
+		os.WriteFile(paths[4], []byte(fmt.Sprint(i)), 0o644)
+		s.FilesChanged(paths...)
+		s.Idle()
 	}
-	time.Sleep(time.Second)
 	if n := runs("status") - read; n > 0 {
 		t.Fatalf("git status ran %d times for git's housekeeping", n)
 	}

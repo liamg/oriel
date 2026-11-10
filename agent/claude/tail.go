@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/agent/claude/transcript"
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/internal/clock"
 )
 
 const (
@@ -37,6 +38,7 @@ type tailer struct {
 	moved    chan struct{} // the session's id or folder changed: watch its new log
 	reads    int           // flushes, for the idle tests
 	watcher  func() (*fswatch.Watcher, error)
+	clock    clock.Clock // times the polls; nil is the system's
 }
 
 func newTailer(config, cwd, id string, resume bool, prices price.Books) *tailer {
@@ -130,56 +132,119 @@ func (t *tailer) watch(done <-chan struct{}, emit func(agent.Event)) bool {
 		return false
 	}
 	t.flush(emit)
-	tick := time.NewTicker(tailSafety)
-	defer tick.Stop()
+	tick, left := make(chan struct{}), make(chan struct{})
+	timer := t.every(tailSafety, done, func() {
+		select {
+		case tick <- struct{}{}:
+		case <-done:
+		case <-left:
+		}
+	})
+	defer func() {
+		close(left)
+		timer.stop()
+	}()
 	for {
+		var burst []fswatch.Event
 		select {
 		case <-done:
 			return true
 		case ev, ok := <-w.Events():
-			if !ok || !drain(w, ev) {
+			if !ok {
+				return false
+			}
+			var whole bool
+			burst, whole = drain(w, ev)
+			if !whole {
 				return false
 			}
 		case <-t.moved:
-		case <-tick.C:
+		case <-tick:
 		}
 		t.flush(emit)
-		if !retarget() {
+		ok := retarget()
+		for _, ev := range burst {
+			ev.Done()
+		}
+		if !ok {
 			return false
 		}
 	}
 }
 
 // drain takes the rest of a burst's events, and is false when the watch broke.
-func drain(w *fswatch.Watcher, ev fswatch.Event) bool {
+func drain(w *fswatch.Watcher, ev fswatch.Event) ([]fswatch.Event, bool) {
+	burst := []fswatch.Event{ev}
 	for {
 		if ev.Err != nil {
-			return false
+			return burst, false
 		}
 		select {
 		case next, ok := <-w.Events():
 			if !ok {
-				return false
+				return burst, false
 			}
 			ev = next
+			burst = append(burst, ev)
 		default:
-			return true
+			return burst, true
 		}
 	}
 }
 
 // poll reads the logs every tailPoll until done closes.
 func (t *tailer) poll(done <-chan struct{}, emit func(agent.Event)) {
-	tick := time.NewTicker(tailPoll)
-	defer tick.Stop()
-	for {
-		select {
-		case <-done:
-			return
-		case <-tick.C:
-			t.flush(emit)
-		}
+	timer := t.every(tailPoll, done, func() { t.flush(emit) })
+	<-done
+	timer.stop()
+}
+
+// repeat is f run every while until it's stopped.
+type repeat struct {
+	mu      sync.Mutex
+	timer   clock.Timer
+	stopped bool
+	running sync.WaitGroup
+}
+
+// every runs f each d on t's clock until done closes or it's stopped.
+func (t *tailer) every(d time.Duration, done <-chan struct{}, f func()) *repeat {
+	r := &repeat{}
+	c := clock.Or(t.clock)
+	var next func()
+	next = func() {
+		r.timer = c.AfterFunc(d, func() {
+			defer r.running.Done()
+			select {
+			case <-done:
+				return
+			default:
+			}
+			f()
+			r.mu.Lock()
+			defer r.mu.Unlock()
+			if !r.stopped {
+				r.running.Add(1)
+				next()
+			}
+		})
 	}
+	r.mu.Lock()
+	r.running.Add(1)
+	next()
+	r.mu.Unlock()
+	return r
+}
+
+// stop ends the repeat, waiting for a run under way.
+func (r *repeat) stop() {
+	r.mu.Lock()
+	r.stopped = true
+	if r.timer.Stop() {
+		r.running.Done()
+	}
+	r.mu.Unlock()
+	r.running.Wait()
 }
 
 // logs are what to watch: the session's log and its subagents' folder.

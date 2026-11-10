@@ -109,18 +109,10 @@ func debugFixture(t *testing.T, src, adapter, transcript, open string, change fu
 // debugUntil frames until ok, failing after a while.
 func debugUntil(t *testing.T, s *apptest.Scene, what string, ok func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(60 * time.Second)
-	for !ok() {
-		if time.Now().After(deadline) {
-			t.Fatalf("waited for %s; the console has %v\n%s", what, debugOf(s).Console(), s.Text())
-		}
-		s.RunQueued()
-		s.Frame()
-		time.Sleep(5 * time.Millisecond)
+	if !s.Headless.Until(60*time.Second, ok) { // a debugger starts slowly
+		t.Fatalf("waited for %s; the console has %v\n%s", what, debugOf(s).Console(), s.Text())
 	}
-	s.RunQueued()
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 }
 
 // pausedAt waits until the debugger is paused with its frames and variables in, at a frame named name on a 0-based

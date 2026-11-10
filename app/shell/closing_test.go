@@ -99,12 +99,7 @@ func TestEveryViewClosesWithCtrlWC(t *testing.T) {
 				t.Skip("opens nothing in the layout")
 			}
 			r.TypeKeys("<C-w>c")
-			deadline := time.Now().Add(5 * time.Second)
-			for len(r.Shown()) > 0 {
-				if time.Now().After(deadline) {
-					t.Fatalf("%s is still open after ⌃W c: %v", id, r.Shown())
-				}
-			}
+			r.WaitFor(id+" closed by ⌃W c", func() bool { return len(r.Host.Layout().Shown()) == 0 })
 		})
 	}
 }

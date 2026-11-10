@@ -197,7 +197,7 @@ func (x *Workspace) rebuild(id core.SessionID) error {
 		return nil
 	}
 	st.rebuilding = true
-	go func() {
+	plugin.Go(x.h, "workspace: rebuild "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 		defer cancel()
 		err := w.RebuildSandbox(ctx, id)
@@ -209,7 +209,7 @@ func (x *Workspace) rebuild(id core.SessionID) error {
 				x.h.Notify(core.Notice{ID: "workspace.rebuild", Severity: core.SevError, Source: "workspace", Text: err.Error(), Time: time.Now()})
 			}
 		})
-	}()
+	})
 	return nil
 }
 

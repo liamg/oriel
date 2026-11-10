@@ -2,7 +2,6 @@ package host
 
 import (
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
@@ -17,7 +16,7 @@ func TestAHandOverWaitsForItsProvider(t *testing.T) {
 	r.w.HandOver()
 	r.bare = true
 	r.restart()
-	time.Sleep(100 * time.Millisecond)
+	r.settle()
 	if n := len(r.fake.Resumed()); n != 0 {
 		t.Fatalf("resumed %d times before its provider was known", n)
 	}
@@ -26,7 +25,7 @@ func TestAHandOverWaitsForItsProvider(t *testing.T) {
 	r.agent()
 	r.eventually(id, "resumed", func(se core.SessionState) bool { return se.Agent.Running })
 	r.w.SetProviders(app)
-	time.Sleep(100 * time.Millisecond)
+	r.settle()
 	if n := len(r.fake.Resumed()); n != 1 {
 		t.Errorf("resumed %d times, want once", n)
 	}

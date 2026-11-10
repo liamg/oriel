@@ -48,10 +48,11 @@ func (s *State) Mutate(id core.SessionID, fn func(se core.SessionState) error) e
 
 func (s *State) Emit(ev core.Event) error { return s.Store.Apply(ev) }
 
-// Env is an Env on a temporary home, with the real clock and a log that's thrown away; it closes with the test.
+// Env is an Env on a temporary home, with the real clock, a log that's thrown away and its goroutines counted in Work;
+// it closes with the test.
 func Env(t testing.TB) hostcore.Env {
 	isolate.Test(t)
 	closed := make(chan struct{})
 	t.Cleanup(func() { close(closed) })
-	return hostcore.Env{Home: t.TempDir(), Log: slog.New(slog.DiscardHandler), Now: time.Now, Closed: closed}
+	return hostcore.Env{Home: t.TempDir(), Log: slog.New(slog.DiscardHandler), Now: time.Now, Closed: closed, Work: &hostcore.Jobs{}}
 }

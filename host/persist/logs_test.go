@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
@@ -41,11 +40,7 @@ func TestALogThatFailsSaysSo(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for len(failed()) == 0 && time.Now().Before(deadline) {
-		time.Sleep(5 * time.Millisecond)
-	}
-	time.Sleep(50 * time.Millisecond)
+	env.Work.Wait() // the notices, emitted off the recorder
 	if ns := failed(); len(ns) != 1 || ns[0].Count != 1 || ns[0].Severity != core.SevError {
 		t.Errorf("notices of the failed log: %+v", ns)
 	}

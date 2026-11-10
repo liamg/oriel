@@ -98,9 +98,7 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 		if s.ReadOnly || s.Branch == "" || hs.ForBranch == nil {
 			continue
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			g := x.prFor(ctx, id, out[i], fresh)
 			out[i].PR, out[i].Checks, out[i].FailLine, out[i].HostError, out[i].PRRead = g.pr, g.checks, g.failLine, g.err, g.at
 			if g.err != "" && kit.SitesOf(x.h).Refuse(hs, errors.New(g.err)) {
@@ -109,7 +107,7 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 				delete(x.cache.read, formKey(id, s.Project)+"/"+s.Branch)
 				x.cache.mu.Unlock()
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	return out

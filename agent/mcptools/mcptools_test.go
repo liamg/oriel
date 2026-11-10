@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -114,6 +116,27 @@ func TestToolsChangeAfterTheStart(t *testing.T) {
 	case <-code:
 	case <-time.After(10 * time.Second):
 		t.Fatal("Main didn't return at EOF")
+	}
+}
+
+// However long the temp directory, the socket's path fits sun_path whatever MkdirTemp's random suffix.
+func TestSocketPathFitsUnderALongTempDir(t *testing.T) {
+	isolate.Test(t)
+	for _, n := range []int{60, 70, 75, 80, 120} {
+		base := os.TempDir()
+		long := filepath.Join(base, strings.Repeat("d", max(1, n-len(base)-1)))
+		if err := os.MkdirAll(long, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv("TMPDIR", long)
+		s, err := Serve(func() []agent.Tool { return nil })
+		if err != nil {
+			t.Fatalf("TMPDIR of %d bytes: %v", len(long), err)
+		}
+		if got := len(filepath.Dir(filepath.Dir(s.Path()))) + len(sockTail); got > sockPathMax {
+			t.Errorf("TMPDIR of %d bytes: the path can reach %d bytes", len(long), got)
+		}
+		s.Close()
 	}
 }
 

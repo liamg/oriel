@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -23,6 +24,7 @@ type Fetcher[T any] func(ctx context.Context, report func(note string, frac floa
 type LoadOpts struct {
 	Timeout time.Duration    // a fetch running longer fails; none when 0
 	Now     func() time.Time // the clock loads are timed by; the window's (Host.UI) or time.Now when nil
+	Name    string           // what it loads, named to a test waiting for it ("load" when empty)
 }
 
 // Load runs a fetch off the loop and tracks it for the widgets that draw it (ui.Async, ui.Busy). Its
@@ -39,6 +41,7 @@ type Load[T any] struct {
 	has    bool
 	state  ui.LoadState
 	busy   atomic.Bool // a fetch is running or its result hasn't landed; read from any goroutine
+	end    func()      // stops the fetch counting as work under way (Begin)
 }
 
 func NewLoad[T any](h Loop, fetch Fetcher[T], o LoadOpts) *Load[T] {
@@ -67,6 +70,8 @@ func (l *Load[T]) Reload() {
 	l.cancel = cancel
 	l.state = ui.LoadState{Phase: ui.Pending, Since: l.now(), Err: l.state.Err, Stale: l.has, Progress: -1}
 	l.busy.Store(true)
+	l.ended()
+	l.end = Begin(l.h, cmp.Or(l.opts.Name, "load"))
 
 	report := func(note string, frac float64) {
 		l.h.Do(func() {
@@ -77,6 +82,7 @@ func (l *Load[T]) Reload() {
 		l.h.Redraw()
 	}
 	go func() {
+		Chaos()
 		v, err := l.run(ctx, report)
 		cancel()
 		l.h.Do(func() { l.land(gen, v, err) })
@@ -133,6 +139,7 @@ func (l *Load[T]) land(gen int, v T, err error) {
 	}
 	l.cancel = nil
 	l.busy.Store(false)
+	l.ended()
 	l.state.Note, l.state.Progress, l.state.Stale = "", -1, false
 	switch {
 	case err == nil:
@@ -153,6 +160,7 @@ func (l *Load[T]) Reset() {
 	}
 	l.gen++
 	l.busy.Store(false)
+	l.ended()
 	var zero T
 	l.val, l.has = zero, false
 	l.state = ui.LoadState{}
@@ -166,6 +174,7 @@ func (l *Load[T]) Set(v T) {
 	}
 	l.gen++
 	l.busy.Store(false)
+	l.ended()
 	l.val, l.has = v, true
 	l.state = ui.LoadState{Phase: ui.Ready, Progress: -1}
 }
@@ -174,6 +183,14 @@ func (l *Load[T]) Set(v T) {
 func (l *Load[T]) Value() (T, bool) { return l.val, l.has }
 
 func (l *Load[T]) State() ui.LoadState { return l.state }
+
+// ended stops the fetch under way, if any, counting as work.
+func (l *Load[T]) ended() {
+	if l.end != nil {
+		l.end()
+		l.end = nil
+	}
+}
 
 // Busy says a fetch is under way, until its result has landed on the loop. Unlike the rest, it's safe from any
 // goroutine, for a registry.Busy.

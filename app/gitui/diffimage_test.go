@@ -28,10 +28,10 @@ func imageRepo(t *testing.T) *gittest.Repo {
 func imageDiffScene(t *testing.T, file string) (*apptest.Scene, *gittest.Repo) {
 	r := imageRepo(t)
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir, Size: render.Point{X: 1400, Y: 900}})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, file)})
 	if !s.Headless.Until(5*time.Second, func() bool {
-		diffOf(s).Wait()
+		s.Quiet()
 		return s.Has("· ") && (s.Has("OLD") || s.Has("ADDED") || s.Has("DELETED"))
 	}) {
 		t.Fatalf("%s's images never showed:\n%s", file, s.Text())

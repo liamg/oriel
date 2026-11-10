@@ -160,6 +160,7 @@ type Manager struct {
 	wg     sync.WaitGroup
 
 	mu      sync.Mutex
+	readEnd sync.Cond // a read finished; its L is mu
 	nodes   map[string]*node
 	focused bool
 	closed  bool
@@ -176,8 +177,10 @@ func New(o Options) *Manager {
 		o.Watch = fswatch.New
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Manager{opts: o, ctx: ctx, cancel: cancel, nodes: map[string]*node{}, focused: true,
+	m := &Manager{opts: o, ctx: ctx, cancel: cancel, nodes: map[string]*node{}, focused: true,
 		roots: fsRoots{files: map[string][]Files{}}}
+	m.readEnd.L = &m.mu
+	return m
 }
 
 func (m *Manager) Name() string { return m.opts.Name }
@@ -194,6 +197,26 @@ func (m *Manager) SetFocused(on bool) {
 	for _, n := range m.nodes {
 		n.update()
 	}
+}
+
+// Idle waits until no read is under way. What a finished read sets off on the manager's clock (a settle, a source
+// reading from it) is not under way until that clock reaches it.
+func (m *Manager) Idle() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for m.reading() {
+		m.readEnd.Wait()
+	}
+}
+
+// reading says a read is under way; m.mu is held.
+func (m *Manager) reading() bool {
+	for _, n := range m.nodes {
+		if n.reading {
+			return true
+		}
+	}
+	return false
 }
 
 // Close stops every watch, poll and read, and ends every subscription's readings.
@@ -696,6 +719,7 @@ func (n *node) read() {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		n.reading = false
+		m.readEnd.Broadcast()
 		if m.closed || m.nodes[n.spec.key] != n {
 			return
 		}

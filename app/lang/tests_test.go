@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -179,11 +178,7 @@ func TestTestsPanelFindsTests(t *testing.T) {
 	os.WriteFile(other, []byte("package other\n\nimport \"testing\"\n\nfunc TestOther(t *testing.T) { t.Fatal(\"no\") }\n"), 0o644)
 	testsOf(s).Rescan(other)
 	rows := func() string { return treeRows(testsOf(s).TreeAll(), true) }
-	deadline := time.Now().Add(10 * time.Second)
-	for !strings.Contains(rows(), "TestRoundMinor") && time.Now().Before(deadline) {
-		s.RunQueued()
-		time.Sleep(10 * time.Millisecond)
-	}
+	s.Until("the scan", func() bool { return strings.Contains(rows(), "TestRoundMinor") })
 	if got := rows(); got != "example.com/pricing TestFlaky○ TestRoundHalfEven○ -3.5○ 2.5○ TestRoundMinor○ example.com/pricing/other TestOther○" {
 		t.Fatalf("rows before a run: %q", got)
 	}
@@ -217,11 +212,7 @@ func TestWatchRunsAffected(t *testing.T) {
 		t.Fatal("watch didn't turn on")
 	}
 	s.EditorKeys(":w<CR>")
-	deadline := time.Now().Add(30 * time.Second)
-	for !testsOf(s).Running() && testsOf(s).History().Runs() == nil && time.Now().Before(deadline) {
-		s.RunQueued()
-		time.Sleep(10 * time.Millisecond)
-	}
+	s.Until("the watch run", func() bool { return testsOf(s).Running() || testsOf(s).History().Runs() != nil })
 	runDone(t, s)
 	r, ok := testsOf(s).History().Last(testrun.ByWatch)
 	if !ok {
@@ -407,14 +398,7 @@ func TestTestOutputKeys(t *testing.T) {
 func TestTestsFoundStayWithTheirDirectory(t *testing.T) {
 	s, dir := testsScene(t)
 	rows := func() string { return treeRows(testsOf(s).TreeAll(), true) }
-	deadline := time.Now().Add(10 * time.Second)
-	for !strings.Contains(rows(), "TestRoundMinor") && time.Now().Before(deadline) {
-		s.RunQueued()
-		time.Sleep(10 * time.Millisecond)
-	}
-	if !strings.Contains(rows(), "TestRoundMinor") {
-		t.Fatalf("the first scan found %q", rows())
-	}
+	s.Until("the first scan", func() bool { return strings.Contains(rows(), "TestRoundMinor") })
 	// A hook after the panel's sees what it has the moment the window is back, before its scan runs.
 	var back string
 	cancel := kit.OnDirChanged(s.Registry(), "what the tests panel has", func(ev kit.DirChanged) {
@@ -449,7 +433,7 @@ func TestComingBackScansNoTestsAgain(t *testing.T) {
 	s.SettleGit()
 	x := testsOf(s)
 	rows := func() string { return treeRows(x.TreeAll(), true) }
-	s.Until("the first scan", func() bool { s.RunQueued(); return strings.Contains(rows(), "TestRoundMinor") })
+	s.Until("the first scan", func() bool { return strings.Contains(rows(), "TestRoundMinor") })
 	win, _ := kit.WindowOf(s.Registry())
 	move := func(to string) {
 		t.Helper()
@@ -457,7 +441,7 @@ func TestComingBackScansNoTestsAgain(t *testing.T) {
 			t.Fatal(err)
 		}
 		s.Reopen()
-		s.RunQueued()
+		s.Quiet()
 	}
 	move(t.TempDir())
 	before := x.Scans()
@@ -465,7 +449,7 @@ func TestComingBackScansNoTestsAgain(t *testing.T) {
 		t.Fatal(err)
 	}
 	move(dir)
-	s.Until("the test added while away", func() bool { s.RunQueued(); s.Frame(); return strings.Contains(rows(), "TestAway") })
+	s.Until("the test added while away", func() bool { return strings.Contains(rows(), "TestAway") })
 	if n := x.Scans() - before; n > 0 {
 		t.Errorf("coming back scanned the directory %d times", n)
 	}

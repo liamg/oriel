@@ -20,7 +20,7 @@ func nextUtility(t *testing.T, u *Utility) UtilityEvent {
 			t.Fatal("the utility agent's stream ended")
 		}
 		return ev
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Fatal("no event from the utility agent")
 	}
 	return UtilityEvent{}
@@ -105,13 +105,7 @@ func TestUtilityAgent(t *testing.T) {
 		t.Errorf("sent %q", in.Text)
 	}
 	u.Close()
-	deadline := time.Now().Add(5 * time.Second)
-	for !fs.Closed() {
-		if time.Now().After(deadline) {
-			t.Fatal("the agent outlived its stream")
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
+	until(t, "the agent to end with its stream", fs.Closed)
 	if err := u.Send(context.Background(), "still there?"); err == nil {
 		t.Error("a stopped utility agent took a turn")
 	}
@@ -144,7 +138,7 @@ func TestUtilityAgentThatPanicsFailsToStart(t *testing.T) {
 		if err == nil {
 			t.Error("a utility agent whose start panicked started")
 		}
-	case <-time.After(5 * time.Second):
+	case <-time.After(waitTimeout):
 		t.Fatal("StartUtility is still waiting")
 	}
 }

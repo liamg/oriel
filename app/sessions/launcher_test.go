@@ -200,11 +200,7 @@ func TestStartViewListsSessions(t *testing.T) {
 	se, _ := st.Session("pricing-rounding")
 	p, _ := se.Snapshot().Primary()
 	r.WaitGone("SESSIONS")
-	var dir string
-	r.Do(func() error { dir = r.Host.Here().Project; return nil })
-	if dir != p.Dir {
-		t.Errorf("the window is on %q, want the session's worktree %q", dir, p.Dir)
-	}
+	r.WaitProject(p.Dir)
 }
 
 // Files outside the session's worktrees (the stdlib, dependencies, another repo) open read-only.
@@ -224,16 +220,7 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	p, _ := se.Snapshot().Primary()
 	inside := filepath.Join(p.Dir, "round.go")
 	os.WriteFile(inside, []byte("package pricing\n"), 0o644)
-	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(20 * time.Millisecond) {
-		var dir string
-		r.Do(func() error { dir = r.Host.Here().Project; return nil })
-		if dir == p.Dir {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the window is on %q, not the worktree", dir)
-		}
-	}
+	r.WaitProject(p.Dir)
 
 	open := func(path string) {
 		t.Helper()
@@ -245,9 +232,9 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	r.WaitText("read-only · outside the session")
 	open(inside)
 	r.WaitFrame("round.go", func(s string) bool { return strings.Contains(s, "package\n \npricing") })
-	time.Sleep(200 * time.Millisecond)
-	if fs := r.Win.Frames(); strings.Contains(fs[len(fs)-1].Text(), "read-only ·") {
-		t.Errorf("a file in the session's worktree opened read-only:\n%s", fs[len(fs)-1].Text())
+	r.Idle()
+	if f := r.Latest("round.go settled", func(headless.Frame) bool { return true }); strings.Contains(f.Text(), "read-only ·") {
+		t.Errorf("a file in the session's worktree opened read-only:\n%s", f.Text())
 	}
 }
 
@@ -289,13 +276,7 @@ func TestLauncherSnapshot(t *testing.T) {
 	reading := func() bool {
 		return s.Find("Checking which agents are installed") != nil || strings.Contains(s.Text(), "Checking agents")
 	}
-	for deadline := time.Now().Add(10 * time.Second); reading(); time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("the launcher never read the providers:\n%s", s.Text())
-		}
-		s.Frame()
-		s.RunQueued()
-	}
+	s.Until("the launcher to read the providers", func() bool { return !reading() })
 	s.SettleStats()
 	s.Frame()
 	s.Lint("the launcher")
@@ -375,19 +356,21 @@ func TestLauncherWaitsForTheProbe(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	s.Now = apptest.At(14, 30, 0)
 	s.Run("session.new", registry.Args{"prompt": "Fix stale search results"})
-	s.Frame()
-	s.WantFrame("NEW SESSION", "Plan") // the kinds are there at once
-	s.Now = s.Now.Add(4 * time.Second)
-	s.Frame()
-	s.WantFrame("Checking which agents are installed…", "· 4s", "Checking agents…")
-	if n := s.Node("No agent"); n.Selected {
-		t.Error("No agent is picked while the probe runs")
-	}
-	if err := s.Registry().Run(context.Background(), "session.launch", nil); err == nil || err.Error() != "To start: a moment: checking which agents are installed." {
-		t.Errorf("⌘↵: %v", err)
-	}
-	s.Frame()
-	s.WantFrame("To start: a moment: checking which agents are installed.")
+	s.Midway(func() {
+		s.Frame()
+		s.WantFrame("NEW SESSION", "Plan") // the kinds are there at once
+		s.Now = s.Now.Add(4 * time.Second)
+		s.Frame()
+		s.WantFrame("Checking which agents are installed…", "· 4s", "Checking agents…")
+		if n := s.Node("No agent"); n.Selected {
+			t.Error("No agent is picked while the probe runs")
+		}
+		if err := s.Registry().Run(context.Background(), "session.launch", nil); err == nil || err.Error() != "To start: a moment: checking which agents are installed." {
+			t.Errorf("⌘↵: %v", err)
+		}
+		s.Frame()
+		s.WantFrame("To start: a moment: checking which agents are installed.")
+	})
 
 	close(fake.Hold)
 	s.Until("the probe", func() bool { return strings.Contains(s.Text(), "Fake") })

@@ -26,8 +26,8 @@ const (
 // dirList is the directories under home, git repos marked, walked off the loop: a list older than dirFresh is walked
 // again in the background, the old one shown until the new is done.
 type dirList struct {
-	root   string
-	redraw func()
+	root string
+	h    plugin.Host
 
 	mu      sync.Mutex
 	at      time.Time // when the last walk finished
@@ -36,6 +36,7 @@ type dirList struct {
 	walking bool
 	done    bool // a walk has finished
 	busy    kit.Busy
+	work    kit.Work // the OS chooser, open while a person picks
 }
 
 // list is the directories found by the last walk and which are repos, starting a walk when it's due.
@@ -45,7 +46,7 @@ func (l *dirList) list() ([]string, map[string]bool) {
 	if !l.walking && (!l.done || time.Since(l.at) >= dirFresh) {
 		l.walking = true
 		l.busy.Add(1)
-		go l.walk()
+		plugin.Go(l.h, "walking directories", l.walk)
 	}
 	return l.dirs, l.repos
 }
@@ -62,7 +63,7 @@ func (l *dirList) walk() {
 	l.mu.Lock()
 	l.dirs, l.repos, l.at, l.done, l.walking = dirs, repos, time.Now(), true, false
 	l.mu.Unlock()
-	l.redraw()
+	l.h.Redraw()
 }
 
 // walkDirs is the directories under root, dirScanDepth deep and at most maxDirs, not into a git repo, and which of
@@ -98,7 +99,7 @@ func walkDirs(root string) ([]string, map[string]bool) {
 // under home; a typed path lists what's in it; and Browse… asks the OS.
 func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.Disposable) {
 	home, _ := os.UserHomeDir()
-	all := &dirList{root: home, redraw: h.Redraw}
+	all := &dirList{root: home, h: h}
 	return uireg.PickerSource{ID: "directories", Title: "Directories", Order: 15, PickerOnly: true, Loading: all.loading,
 		Items: func(_ registry.Ctx, query string) []uireg.PickerItem {
 			var out []uireg.PickerItem
@@ -136,8 +137,8 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 		},
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
 			if it.ID == "browse" {
-				go func() {
-					dir, err := kit.ChooseDir()
+				all.work.Loop(func(cctx context.Context) { // waits on a person
+					dir, err := kit.ChooseDir(cctx)
 					h.Do(func() {
 						if err == nil && dir != "" {
 							err = sh.openDir(context.Background(), h, dir)
@@ -146,10 +147,10 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 							h.Log().Error("browse", "err", err)
 						}
 					})
-				}()
+				})
 				return nil
 			}
 			return sh.openDir(ctx, h, it.Data.(string))
 		},
-	}, kit.OnDispose(all.busy.Wait)
+	}, kit.OnDispose(func() { all.work.Stop(); all.busy.Wait() })
 }

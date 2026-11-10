@@ -130,7 +130,7 @@ func TestExplorerHiddenFiles(t *testing.T) {
 	r := explorerRepo(t)
 	r.Write(map[string]string{".env.example": "KEY=\n"})
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Run("explorer.scope", registry.Args{"scope": "all"})
 	s.Frame()
 	s.Frame()
@@ -186,14 +186,14 @@ func TestExplorerStagesFiles(t *testing.T) {
 	}
 	selectRow(t, s, "internal/pricing/round.go")
 	s.Press("s")
-	gitOf(s).Wait()
+	s.Quiet()
 	if a := area("internal/pricing/round.go"); len(a) != 1 || a[0] != gitx.Staged {
 		t.Fatalf("after s, round.go is %v", a)
 	}
 	s.Frame()
 	selectRow(t, s, "internal/pricing/round.go")
 	s.Press("s")
-	gitOf(s).Wait()
+	s.Quiet()
 	if a := area("internal/pricing/round.go"); len(a) != 1 || a[0] != gitx.Unstaged {
 		t.Fatalf("s on a staged file didn't unstage it: %v", a)
 	}
@@ -213,7 +213,7 @@ func TestExplorerStagesFiles(t *testing.T) {
 		t.Fatal("x deleted the file before the answer")
 	}
 	s.Run(ask.Actions[0].Command, registry.Args(ask.Actions[0].Args))
-	gitOf(s).Wait()
+	s.Quiet()
 	if _, err := os.Stat(filepath.Join(r.Dir, "scratch.sql")); !os.IsNotExist(err) {
 		t.Errorf("Discard left scratch.sql: %v", err)
 	}
@@ -267,7 +267,7 @@ func TestExplorerStagesHunks(t *testing.T) {
 	work := strings.Replace(strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1), "line 25\n", "twenty-five\n", 1)
 	r.Write(map[string]string{"f.txt": work})
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
 	s.Frame()
 	s.Frame()
@@ -275,7 +275,7 @@ func TestExplorerStagesHunks(t *testing.T) {
 	s.Click(s.TextPoint("UNSTAGED"), 0)
 	selectRow(t, s, "f.txt")
 	s.Frame()
-	explorerOf(s).Wait()
+	s.Quiet()
 	s.Frame()
 	s.Frame()
 	if !strings.Contains(s.Text(), "HUNKS IN F.TXT") {
@@ -288,7 +288,7 @@ func TestExplorerStagesHunks(t *testing.T) {
 		s.Press("j")
 	}
 	s.Press("s")
-	gitOf(s).Wait()
+	s.Quiet()
 	want := strings.Replace(gittest.Lines(30), "line 3\n", "three\n", 1)
 	if got := r.Git("show", ":f.txt"); got != want {
 		t.Errorf("after s on the first hunk the index is:\n%s", got)
@@ -305,7 +305,7 @@ func TestExplorerHunksFollowTheSelection(t *testing.T) {
 		"b.txt": strings.Replace(gittest.Lines(30), "line 25\n", "twenty-five\n", 1),
 	})
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
 	s.Frame()
 	s.Frame()
@@ -315,7 +315,7 @@ func TestExplorerHunksFollowTheSelection(t *testing.T) {
 		selectRow(t, s, name)
 		for range 3 {
 			s.Frame()
-			explorerOf(s).Wait()
+			s.Quiet()
 		}
 		path, loaded, unstaged := explorerOf(s).Hunks()
 		if path != name || !loaded {
@@ -358,7 +358,7 @@ func TestExplorerScrolls(t *testing.T) {
 	r.Write(files)
 	r.Commit("Ada", "x")
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Press("<M-3>")
 	s.Frame()
 	at := render.Point{X: 150, Y: 500}
@@ -395,7 +395,7 @@ func TestExplorerHoverLightsTheRowInTheNextFrame(t *testing.T) {
 	r.Write(files)
 	r.Commit("Ada", "x")
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Press("<M-3>")
 	s.Quiet()
 	rows := []string{"f20.go", "f14.go", "f25.go", "f17.go", "f22.go"}
@@ -428,7 +428,7 @@ func TestExplorerWheelOverATreeThatFits(t *testing.T) {
 	r.Write(map[string]string{"a.go": "package p\n", "b.go": "package p\n", "c.go": "package p\n"})
 	r.Commit("Ada", "x")
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Press("<M-3>")
 	s.ClickText("b.go")
 	at := render.Point{X: 150, Y: 300}

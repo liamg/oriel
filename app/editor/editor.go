@@ -547,9 +547,7 @@ func (x *Editor) unsearchable() []string {
 	}
 	if !u.walking && time.Since(u.at) >= fileFresh {
 		u.walking = true
-		x.busy.Add(1)
-		go func() {
-			defer x.busy.Done()
+		x.busy.Go(func() {
 			files := x.unsearchableIn(dir)
 			u.mu.Lock()
 			defer u.mu.Unlock()
@@ -557,7 +555,7 @@ func (x *Editor) unsearchable() []string {
 			if u.dir == dir {
 				u.files, u.at = files, time.Now()
 			}
-		}()
+		})
 	}
 	return u.files
 }

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
@@ -106,8 +105,8 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 		return n != nil && n.Disabled
 	})
 	w.Click(apptest.Centre(w.Access("Start work").Bounds)) // clicked anyway, as it is
-	time.Sleep(200 * time.Millisecond)
-	if !planNow(t, w).Planning() {
+	w.Drain()
+	if fs := w.Win.Frames(); strings.Contains(fs[len(fs)-1].Text(), "START WORK") || !planNow(t, w).Planning() {
 		t.Fatal("Start work ran with a thread open")
 	}
 
@@ -150,18 +149,7 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 	if !strings.Contains(in.Text, "Start work") || !strings.Contains(in.Text, p.Dir) {
 		t.Errorf("the agent was told %q", in.Text)
 	}
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		var dir string
-		w.Do(func() error { dir = w.Host.Here().Project; return nil })
-		if filepath.Clean(dir) == filepath.Clean(p.Dir) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the window stayed on %s, not the worktree %s", dir, p.Dir)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	w.WaitProject(p.Dir)
 }
 
 // Plan → Start work: Start work opens a dialog over the plan, which Escape, its esc and Cancel close.

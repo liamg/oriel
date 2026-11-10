@@ -371,7 +371,7 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 		}
 		return "", false
 	}
-	go func() {
+	plugin.Go(h, "sessions: add "+repo, func() {
 		arrived := make(chan struct{}, 1)
 		stop := h.Subscribe(core.Filter{Session: id}, func(core.Event) {
 			select {
@@ -401,7 +401,7 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 			}
 		})
 		h.Redraw()
-	}()
+	})
 }
 
 // autoNameOption has a small model name the sessions started from a request.

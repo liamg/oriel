@@ -297,33 +297,34 @@ func TestTerminalCrosses(t *testing.T) {
 	if term == nil {
 		t.Fatal("no terminal")
 	}
+	// shows reads term, from its backlog on, until it has shown want.
+	shows := func(want string) {
+		t.Helper()
+		b, live, detach := term.Attach()
+		defer detach()
+		got := string(b)
+		hung := time.After(10 * time.Second)
+		for !strings.Contains(got, want) {
+			select {
+			case b := <-live:
+				got += string(b)
+			case <-hung:
+				t.Fatalf("the terminal showed %q", got)
+			}
+		}
+	}
 	if _, err := term.Write([]byte("before\r")); err != nil {
 		t.Fatal(err)
 	}
 	if err := term.Resize(100, 30); err != nil {
 		t.Fatal(err)
 	}
-	shown := ""
-	deadline := time.Now().Add(10 * time.Second)
-	for !strings.Contains(shown, "before") && time.Now().Before(deadline) {
-		b, _, detach := term.Attach()
+	shows("before")
+	if b, _, detach := term.Attach(); !strings.Contains(string(b), "before") {
+		t.Errorf("once shown, the backlog is %q", b)
+	} else {
 		detach()
-		shown = string(b)
-		time.Sleep(10 * time.Millisecond)
 	}
-	if !strings.Contains(shown, "before") {
-		t.Fatalf("the backlog is %q", shown)
-	}
-	_, live, detach := term.Attach()
-	defer detach()
 	term.Write([]byte("after\r"))
-	got := ""
-	for !strings.Contains(got, "after") {
-		select {
-		case b := <-live:
-			got += string(b)
-		case <-time.After(10 * time.Second):
-			t.Fatalf("live: %q", got)
-		}
-	}
+	shows("after")
 }

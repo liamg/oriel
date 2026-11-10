@@ -1,6 +1,10 @@
 package kit
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/liamg/oriel/plugin"
+)
 
 // Counter counts work started and finished: a Busy or a sync.WaitGroup.
 type Counter interface {
@@ -57,6 +61,7 @@ func (b *Busy) Go(f func()) {
 	b.Add(1)
 	go func() {
 		defer b.Done()
+		plugin.Chaos()
 		f()
 	}()
 }

@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -67,7 +66,7 @@ func waitHighlights(s *apptest.Scene) {
 	s.Frame() // asks for each buffer's parser
 	x := editorOf(s)
 	x.Wait()
-	s.RunQueued()
+	s.Quiet()
 	x.WaitDocs()
 	s.Frame()
 }
@@ -101,28 +100,13 @@ func option(s *apptest.Scene, t *testing.T, name string, at registry.At) (any, s
 // framesUntil draws frames, running the work handed to the loop, until ok; check sees each frame.
 func framesUntil(s *apptest.Scene, t *testing.T, what string, check func(frame int), ok func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(15 * time.Second)
-	for n := 0; ; n++ {
-		s.RunQueued()
-		s.Frame()
-		check(n)
-		if ok() {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s:\n%s", what, s.Text())
-		}
-	}
+	s.UntilEach(what, check, ok)
 }
 
 func signsScene(t *testing.T) (*apptest.Scene, *gittest.Repo) { return apptest.SignsScene(t) }
 
 // waitGit waits for the window's git work off the loop.
-func waitGit(s *apptest.Scene) {
-	for kit.GitOf(s.Registry()).Busy() {
-		time.Sleep(time.Millisecond)
-	}
-}
+func waitGit(s *apptest.Scene) { s.WaitGit() }
 
 func settle(s *apptest.Scene) { s.SettleSigns() }
 
@@ -178,31 +162,12 @@ func runEditorWith(t *testing.T, files map[string]string, open []string, plugins
 
 func (r *running) waitFile(name, want string) {
 	r.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	var got []byte
-	for time.Now().Before(deadline) {
-		got, _ = os.ReadFile(filepath.Join(r.dir, name))
-		if string(got) == want {
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	r.T.Fatalf("%s = %q, want %q", name, got, want)
+	r.WaitFile(name, want)
 }
 
 func (r *running) waitNotice(id string) core.Notification {
 	r.T.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		for _, n := range r.Store.State().Notifications {
-			if n.ID == id {
-				return n
-			}
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	r.T.Fatalf("no notice %s: %+v", id, r.Store.State().Notifications)
-	return core.Notification{}
+	return r.WaitNotice(id)
 }
 
 // shown is the layout's main panes, read on the app's loop.
@@ -214,12 +179,6 @@ func (r *running) shown() []layout.ViewRef {
 		return nil
 	}})
 	r.Host.Keymap(registry.Keymap{Mode: "global", Keys: "<F12>", Command: "test.shown"})
-	r.Win.Send(render.KeyEvent{Key: "F12"})
-	select {
-	case s := <-got:
-		return s
-	case <-time.After(5 * time.Second):
-		r.T.Fatal("the layout never answered")
-	}
-	return nil
+	r.Win.Send(render.KeyEvent{Key: "F12"}) // behind the keys typed before it
+	return apptest.Recv(r.T, "the layout", got)
 }

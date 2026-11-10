@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/netip"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -22,12 +23,17 @@ import (
 type cards struct {
 	mu      sync.Mutex
 	waiting []chan Answer
+	opened  chan struct{} // closed when a card opens, then replaced
 }
 
 func (c *cards) ApproveEgress(ctx context.Context, _ string, _ int) (Answer, error) {
 	ch := make(chan Answer, 1)
 	c.mu.Lock()
 	c.waiting = append(c.waiting, ch)
+	if c.opened != nil {
+		close(c.opened)
+	}
+	c.opened = make(chan struct{})
 	c.mu.Unlock()
 	select {
 	case a := <-ch:
@@ -43,22 +49,37 @@ func (c *cards) open() int {
 	return len(c.waiting)
 }
 
+// await waits for n cards to be open.
+func (c *cards) await(t *testing.T, n int) {
+	t.Helper()
+	hung := time.After(10 * time.Second)
+	for {
+		c.mu.Lock()
+		if c.opened == nil {
+			c.opened = make(chan struct{})
+		}
+		open, opened := len(c.waiting), c.opened
+		c.mu.Unlock()
+		if open >= n {
+			return
+		}
+		select {
+		case <-opened:
+		case <-hung:
+			t.Fatalf("%d cards open, want %d", open, n)
+		}
+	}
+}
+
 // answer answers the oldest open card, waiting for one to open.
 func (c *cards) answer(t *testing.T, a Answer) {
 	t.Helper()
-	for range 400 {
-		c.mu.Lock()
-		if len(c.waiting) > 0 {
-			ch := c.waiting[0]
-			c.waiting = c.waiting[1:]
-			c.mu.Unlock()
-			ch <- a
-			return
-		}
-		c.mu.Unlock()
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("no card opened")
+	c.await(t, 1)
+	c.mu.Lock()
+	ch := c.waiting[0]
+	c.waiting = c.waiting[1:]
+	c.mu.Unlock()
+	ch <- a
 }
 
 func newSession(t *testing.T) (*Session, *cards) {
@@ -123,15 +144,7 @@ func TestAllHostsForTheSession(t *testing.T) {
 		return out
 	}
 	first, second := decide("a.example.com"), decide("b.example.com")
-	for range 200 {
-		if c.open() == 2 {
-			break
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	if c.open() != 2 {
-		t.Fatalf("never saw 2 cards, saw %d", c.open())
-	}
+	c.await(t, 2)
 	c.answer(t, Answer{Key: AnyHost})
 	if !<-first || !<-second {
 		t.Error("both waiting connections allowed")
@@ -148,7 +161,7 @@ func TestSharedCard(t *testing.T) {
 		go func() { out <- allow(s, "one.example.com", 443) }()
 	}
 	for s.callers("one.example.com:443") < 2 {
-		time.Sleep(time.Millisecond)
+		runtime.Gosched() // the second joins the card the first opened
 	}
 	c.answer(t, Answer{Key: Once})
 	if !<-out || !<-out {

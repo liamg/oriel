@@ -113,16 +113,14 @@ func (g *Git) commit(root string, a registry.Args, started time.Time) error {
 		if time.Since(started) > commitWait {
 			return fmt.Errorf("%s's status didn't settle; try again", filepath.Base(root))
 		}
-		g.busy.Add(1)
-		go func() {
-			defer g.busy.Done()
+		g.busy.Go(func() {
 			time.Sleep(commitPoll)
 			g.h.Do(func() {
 				if err := g.commit(root, a, started); err != nil {
 					g.h.Notify(core.Notice{ID: "git.commit", Severity: core.SevError, Text: err.Error()})
 				}
 			})
-		}()
+		})
 		return nil
 	}
 	if st == nil || t.busy() {

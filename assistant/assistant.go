@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Agent is the conversation's agent: it takes turns and says what it does.
@@ -120,6 +122,8 @@ type Conversation struct {
 	Progress func(tool string) string
 	// Now is the clock: it stamps turns, so the agent can resolve "ten minutes ago".
 	Now func() time.Time
+	// Clock times the idle end and a confirmation's wait; nil is the system's.
+	Clock clock.Clock
 	// Changed is told whenever the log changes, from any goroutine.
 	Changed func()
 
@@ -137,7 +141,7 @@ type Conversation struct {
 	asks    map[string]chan bool
 	undo    map[string]func(context.Context) error
 	stop    chan struct{}
-	reaper  *time.Timer // set to the idle deadline once a turn ends
+	reaper  clock.Timer // set to the idle deadline once a turn ends
 }
 
 type turn struct {
@@ -238,20 +242,21 @@ func newID() string {
 func (c *Conversation) Confirm(ctx context.Context, tool, line string, card any) Answer {
 	id := newID()
 	ch := make(chan bool, 1)
+	expired := make(chan struct{})
 	c.mu.Lock()
 	c.asks[id] = ch
 	e := c.emitLocked(Entry{Kind: KindConfirm, ID: id, Tool: tool, Text: line, Card: card, Voice: c.cur.voice, Until: c.Now().Add(c.ConfirmWait)})
+	t := clock.Or(c.Clock).AfterFunc(c.ConfirmWait, func() { close(expired) })
 	c.mu.Unlock()
-
-	t := time.NewTimer(c.ConfirmWait)
 	defer t.Stop()
+
 	ans := Dropped
 	select {
 	case yes, ok := <-ch:
 		if ok {
 			ans = map[bool]Answer{true: Yes, false: No}[yes]
 		}
-	case <-t.C:
+	case <-expired:
 		ans = NoAnswer
 	case <-ctx.Done():
 	}
@@ -568,11 +573,10 @@ func (c *Conversation) reapAfterLocked(d time.Duration) {
 	default:
 	}
 	d = max(d, minReap)
-	if c.reaper == nil {
-		c.reaper = time.AfterFunc(d, c.ReapIdle)
-		return
+	if c.reaper != nil {
+		c.reaper.Stop()
 	}
-	c.reaper.Reset(d)
+	c.reaper = clock.Or(c.Clock).AfterFunc(d, c.ReapIdle)
 }
 
 // minReap keeps a clock that doesn't move (a test's) from checking without pause.

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -121,7 +122,8 @@ func fakeClaude(args []string) int {
 	fmt.Printf("fake claude %s in %s\r\n", f.id, cwd)
 	if os.Getenv("ORIEL_FAKE_NO_HELLO") == "1" {
 		note("run")
-		time.Sleep(time.Hour)
+		_, _ = io.Copy(io.Discard, os.Stdin) // until the terminal closes
+		return 0
 	}
 
 	var hello struct{ Tools []toolSpec }
@@ -308,7 +310,6 @@ func (f *fake) result(id, text string, isError bool) {
 }
 
 func (f *fake) turn(text string) {
-	start := time.Now()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	f.mu.Lock()
@@ -402,7 +403,7 @@ func (f *fake) turn(text string) {
 	f.mu.Unlock()
 	_ = f.hook("event", map[string]any{
 		"kind": "turn-complete", "turnId": turnID, "reason": reason, "answer": answer,
-		"durationMs": time.Since(start).Milliseconds(),
+		"durationMs": 1200, // a fixed turn time, so nothing shown from it moves with the machine
 		"usage":      map[string]any{"input_tokens": 10, "output_tokens": 5, "cache_read_input_tokens": 100, "cache_creation_input_tokens": 20, "model": "claude-opus-5"},
 		"context":    map[string]any{"tokens": 130, "window": 200000},
 		"rateLimits": fakeRateLimits,

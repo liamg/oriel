@@ -144,7 +144,7 @@ func (x *Editor) grepSource() uireg.PickerSource {
 		sq := search.Query{Pattern: pat, Dir: x.dir, Max: maxGrep}
 		ctx, cancel := context.WithCancel(context.Background())
 		g.cancel, g.running = cancel, true
-		go func() {
+		x.busy.Go(func() {
 			if !all {
 				sq.Exclude = x.unsearchable()
 			}
@@ -155,7 +155,7 @@ func (x *Editor) grepSource() uireg.PickerSource {
 			}
 			g.mu.Unlock()
 			x.h.Redraw()
-		}()
+		})
 	}
 	return uireg.PickerSource{ID: "grep", Title: "Grep", Order: 31, Live: true, PickerOnly: true,
 		Items: func(_ registry.Ctx, q string) []uireg.PickerItem {
@@ -209,8 +209,8 @@ func (l *fileList) list() (files []string, loading bool) {
 	defer l.mu.Unlock()
 	if !l.walking && (!l.done || time.Since(l.at) >= fileFresh) {
 		l.walking = true
-		l.busy.Add(1)
-		go l.walk(l.dir, !l.done)
+		dir, first := l.dir, !l.done
+		l.busy.Go(func() { l.walk(dir, first) })
 	}
 	return l.files, !l.done
 }
@@ -231,7 +231,6 @@ func (l *fileList) setDir(dir string) {
 }
 
 func (l *fileList) walk(dir string, first bool) {
-	defer l.busy.Done()
 	shown := time.Now()
 	found := walkFiles(dir, func(found []string) {
 		if first && time.Since(shown) > 100*time.Millisecond {

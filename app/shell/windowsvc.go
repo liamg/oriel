@@ -26,11 +26,15 @@ func (w window) contribute() func() {
 		d = append(d, w.sh.cfg.Registry.Contribute(registry.Service{Name: name, Impl: w, Source: "builtin:window"}))
 	}
 	d = append(d, w.sh.cfg.Registry.Contribute(registry.Service{Name: kit.ReadsService, Impl: w.sh.reads, Source: "builtin:window"}))
+	// A read from disk the last frame asked for, or one landed it hasn't shown.
+	d = append(d, w.sh.cfg.Registry.Contribute(registry.Busy{Name: "the window's reads", Busy: w.sh.reads.Busy, Source: "builtin:window"}))
 	// A window moving is laid out once it arrives (Window.Hold), which replaces what's open meanwhile.
 	d = append(d, w.sh.cfg.Registry.Contribute(registry.Busy{Name: "window arriving", Busy: func() bool { return !w.Arrived() },
 		Source: "builtin:window"}))
 	// What's been handed the loop (Host.Do) and not run yet: looked at from the loop, what the work running hands it.
 	d = append(d, w.sh.cfg.Registry.Contribute(registry.Busy{Name: "the loop's queue", Busy: w.sh.queued, Source: "builtin:window"}))
+	d = append(d, w.sh.cfg.Registry.Contribute(registry.Busy{Name: "work off the loop", Busy: w.sh.inflight.busy, What: w.sh.inflight.what,
+		Source: "builtin:window"}))
 	return func() {
 		for _, x := range d {
 			x.Dispose()
