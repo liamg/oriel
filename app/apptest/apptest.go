@@ -46,7 +46,7 @@ var MockupSize = render.Point{X: 1600, Y: 1000}
 var Timeout = 15 * time.Second
 
 // HookBudget is the hooks.budget a test's app starts with: looser than the real one, so a hook slowed by the tests
-// running alongside isn't a warning in the frame. TestHookBudget holds the real one.
+// running alongside isn't a warning in the frame. TestSlowHookWarns holds the real one.
 const HookBudget = 10 * time.Millisecond
 
 // testRegistry is the registry a test's app starts with, timing hooks on now: a hook's time is the scene's clock's,
