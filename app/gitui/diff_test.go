@@ -322,14 +322,9 @@ func TestDiffOpenIsAvailableWithHelp(t *testing.T) {
 	if !s.Registry().Available("diff.open", registry.Args{"path": r.Dir}) {
 		t.Error("diff.open isn't available")
 	}
-	apptest.PluginOf[*gitui.Git](s, "git").Wait()
+	s.Quiet()
 	s.Run("diff.open", registry.Args{"path": r.Dir})
-	for range 3 {
-		s.Frame()
-		apptest.PluginOf[*gitui.Diff](s, "diff").Wait()
-		s.RunQueued()
-	}
-	s.Frame()
+	s.Quiet()
 	if !strings.Contains(s.Text(), "MARK REVIEWED") {
 		t.Fatalf("the diff isn't drawn:\n%s", s.Text())
 	}

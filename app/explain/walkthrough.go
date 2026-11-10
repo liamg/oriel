@@ -161,9 +161,6 @@ func (x *Walkthrough) Deactivate(ctx context.Context) error {
 	return x.Disposer.Deactivate(ctx)
 }
 
-// Wait waits for a walkthrough being asked for off the loop.
-func (x *Walkthrough) Wait() { x.busy.Wait() }
-
 // Held says whether there's a walkthrough, shown or not: asked for, failed, or its steps.
 func (x *Walkthrough) Held() bool { return x.w != nil }
 

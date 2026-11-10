@@ -419,13 +419,6 @@ func (g *Git) refresh(trees []*gitTree) {
 	}
 }
 
-// wait is until the work queued with async is done, and the trees subscribed to are read.
-func (g *Git) wait() {
-	g.busy.Wait()
-	for deadline := time.Now().Add(10 * time.Second); g.reading() && time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
-	}
-}
-
 // reading says a subscribed tree, or its line counts, is being read or is about to be.
 func (g *Git) reading() bool {
 	for _, t := range append(g.trees(), &g.gitTree) {

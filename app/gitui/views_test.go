@@ -16,7 +16,7 @@ import (
 // changedExplorer is the Explorer open on dir's Changed scope, once its git is read.
 func changedExplorer(t *testing.T, dir string, n int) *apptest.Scene {
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Press("<M-1>")
 	if !s.Headless.Until(30*time.Second, gitOf(s).Settled) {
 		t.Fatalf("the git of %d changed files never settled", n)
@@ -39,7 +39,7 @@ func TestExplorerFrameWithManyChangesBudget(t *testing.T) {
 // more than the open file were diffed.
 func diffViewScene(t *testing.T, dir string, n int) (s *apptest.Scene, check func()) {
 	s = apptest.New(t, apptest.Options{WorkDir: dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Run("diff.open", registry.Args{"path": dir})
 	made := func() (n int, done bool) {
 		return diffOf(s).Made()
@@ -72,10 +72,10 @@ func TestDiffViewWithManyChangesBudget(t *testing.T) {
 // uncommittedScene is the Explorer open on dir's Uncommitted scope.
 func uncommittedScene(t *testing.T, dir string) *apptest.Scene {
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Press("<M-2>")
 	s.Headless.Until(5*time.Second, func() bool { return gitOf(s).State() != nil })
-	gitOf(s).Wait()
+	s.Quiet()
 	return s
 }
 
@@ -95,7 +95,7 @@ func TestExplorerUncommittedFrameWithManyChangesBudget(t *testing.T) {
 func TestDiffWhileTheStatusLoads(t *testing.T) {
 	r := rig.DiffRepo(t)
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	gitOf(s).Unread(r.Dir)
 	s.Run("diff.open", registry.Args{"path": r.Dir})
 	s.Frame()
@@ -105,7 +105,7 @@ func TestDiffWhileTheStatusLoads(t *testing.T) {
 
 	gitOf(s).Unread(filepath.Join(r.Dir, "gone"))
 	gitOf(s).Reload()
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
 	s.WantFrame("Retry")

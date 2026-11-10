@@ -131,7 +131,8 @@ type diffSel struct {
 func (x *Diff) Manifest() plugin.Manifest { return plugin.Manifest{ID: "diff"} }
 
 func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "diff", Busy: x.busy.Busy, Source: "builtin:diff"}))
+	// A diff waiting out diffRemakeGap is work that ends too: its remaking starts at the frame after.
+	x.Add(h.Contribute(registry.Busy{Name: "diff", Busy: func() bool { return x.busy.Busy() || x.remaking() }, Source: "builtin:diff"}))
 	x.h = h
 	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
 	x.started, x.waking, x.styled = map[diffKey]time.Time{}, map[diffKey]bool{}, map[diffKey]bool{}
@@ -220,9 +221,6 @@ func (x *Diff) Deactivate(ctx context.Context) error {
 	x.busy.Wait()
 	return x.Disposer.Deactivate(ctx)
 }
-
-// wait is until the diffs being made are done.
-func (x *Diff) wait() { x.busy.Wait() }
 
 // hunkArg is the hunk {path} {hunk} names, or the selected one.
 func hunkArg(st *diffState, a registry.Args) diffSel {
@@ -853,4 +851,11 @@ func (v diffView) Revive(state json.RawMessage) (string, error) {
 		st.reveal = true
 	}
 	return instance, nil
+}
+
+// remaking says a file's diff waits out diffRemakeGap to be made again.
+func (x *Diff) remaking() bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return len(x.waking) > 0
 }

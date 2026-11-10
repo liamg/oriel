@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/explain"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
@@ -119,14 +118,10 @@ func WalkScene(t *testing.T) (s *Scene, f *FakeExplainer, pricing, billing strin
 	return s, f, p.Dir, b.Dir
 }
 
-// WalkSettle frames until the walkthrough asked for off the loop is in.
+// WalkSettle frames until the walkthrough asked for off the loop is in (Quiet).
 func (s *Scene) WalkSettle() {
-	for range 4 {
-		s.Frame()
-		PluginOf[*explain.Walkthrough](s, "explain.change").Wait()
-		s.RunQueued()
-	}
-	s.Frames(2)
+	s.T.Helper()
+	s.Quiet()
 }
 
 // WalkKeys presses keys as the window does, a frame after each.

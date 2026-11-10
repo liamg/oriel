@@ -14,11 +14,11 @@ import (
 func TestShowcaseDiff(t *testing.T) {
 	r := rig.DiffRepo(t)
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, "internal/pricing/round.go")})
 	for range 3 {
 		s.Frame()
-		diffOf(s).Wait()
+		s.Quiet()
 		s.RunQueued()
 	}
 	s.Shot("06-diff-split")

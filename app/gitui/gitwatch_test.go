@@ -25,7 +25,7 @@ func gitScene(t *testing.T, change ...func(*apptest.Config)) (*apptest.Scene, *g
 			f(cfg)
 		}
 	}})
-	gitOf(s).Wait()
+	s.Quiet()
 	return s, repo
 }
 
@@ -71,7 +71,7 @@ func TestGitStatusIgnoresGitsHousekeeping(t *testing.T) {
 	git := filepath.Join(repo.Dir, ".git")
 	os.MkdirAll(filepath.Join(git, "fsmonitor--daemon", "cookies"), 0o755)
 	s := apptest.New(t, apptest.Options{WorkDir: repo.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	time.Sleep(2500 * time.Millisecond)
 	read := runs("status")
 	for i := range 3 {
