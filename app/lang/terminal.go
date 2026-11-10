@@ -57,8 +57,8 @@ type Terminals struct {
 	dir   string                          // the directory terms are of
 	next  int
 	saved map[string][]byte // screens kept when the app stopped, by instance
-	busy  sync.WaitGroup
-	paced kit.PacedRedraw // output's frames
+	work  kit.Work          // the readers: each runs as long as its program
+	paced kit.PacedRedraw   // output's frames
 }
 
 // TermSource is what a terminal shows and types into: a program in a PTY, or a stream from elsewhere, such as an
@@ -206,7 +206,7 @@ func (x *Terminals) Deactivate(ctx context.Context) error {
 	if b := x.savedJSON(); b != nil {
 		x.state.Write(b)
 	}
-	x.busy.Wait()
+	x.work.Stop()
 	x.paced.Stop()
 	return x.Disposer.Deactivate(ctx)
 }
@@ -470,8 +470,7 @@ func (x *Terminals) start(a registry.Args, sb *sandbox.Command) (string, error) 
 	if before != nil {
 		before.stop()
 	}
-	x.busy.Add(1)
-	go x.read(t)
+	x.work.Loop(func(context.Context) { x.read(t) })
 	return id, nil
 }
 
@@ -486,7 +485,6 @@ func (t *terminal) stop() {
 
 // read feeds the program's output to the VT until it exits.
 func (x *Terminals) read(t *terminal) {
-	defer x.busy.Done()
 	buf := make([]byte, 64<<10)
 	for {
 		n, err := t.src.Read(buf)

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/liamg/oriel/agent"
@@ -241,36 +242,21 @@ type SandboxSettings struct {
 	// Backends are the sandbox backends this machine can run, the default first; sandbox.AvailableBackends if nil.
 	Backends func() []string
 	h        plugin.Host
-	kick     chan struct{}
-	cancel   func()
+	sends    kit.Serial  // the settings, going to the host
+	queued   atomic.Bool // a send is queued and hasn't started
 }
 
 func (x *SandboxSettings) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sandbox.settings"} }
 
 func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
-	x.h, x.kick = h, make(chan struct{}, 1)
+	x.h = h
 	o := h.Options()
 	for _, sp := range sandboxOptions(o, h, x.Backends) {
 		x.Add(h.Option(sp))
 		x.Add(kit.OnDispose(o.Watch(sp.Name, x.send)))
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	x.cancel = cancel
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-x.kick:
-			}
-			cfg := sandboxConfig(o, projectRoots(kit.WindowDir(h), h.State())) // the window's project's file may add rules
-			if w, err := kit.SessionHost(h); err == nil {
-				if err := w.SetSandboxConfig(cfg); err != nil {
-					h.Log().Warn("sandbox settings", "err", err)
-				}
-			}
-		}
-	}()
+	x.Add(kit.OnDispose(x.sends.Stop))
+	x.Add(h.Contribute(registry.Busy{Name: "sandbox.settings", Busy: x.sends.Busy, Source: "builtin:sandbox.settings"}))
 	if kit.HasSessions(h) {
 		x.send()
 		x.Add(kit.OnDirChanged(h, "the sandbox's rules for the directory's project", func(kit.DirChanged) { x.send() }))
@@ -278,15 +264,19 @@ func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-func (x *SandboxSettings) Deactivate(ctx context.Context) error {
-	x.cancel()
-	return x.Disposer.Deactivate(ctx)
-}
-
-// send asks for the settings to go to the host; asks that come while they're going are one.
+// send asks for the settings to go to the host; asks that come before they go are one.
 func (x *SandboxSettings) send() {
-	select {
-	case x.kick <- struct{}{}:
-	default:
+	if !x.queued.CompareAndSwap(false, true) {
+		return
 	}
+	x.sends.Do(func() {
+		x.queued.Store(false)
+		h := x.h
+		cfg := sandboxConfig(h.Options(), projectRoots(kit.WindowDir(h), h.State())) // the window's project's file may add rules
+		if w, err := kit.SessionHost(h); err == nil {
+			if err := w.SetSandboxConfig(cfg); err != nil {
+				h.Log().Warn("sandbox settings", "err", err)
+			}
+		}
+	})
 }

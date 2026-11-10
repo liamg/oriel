@@ -3,13 +3,14 @@ package kit
 import "sync"
 
 // Serial runs what it's handed off the loop, one at a time in the order handed: calls that mustn't reorder (a
-// watcher's) and mustn't hold up whoever hands them over (a frame's build). Stop drops what's waiting.
+// watcher's) and mustn't hold up whoever hands them over (a frame's build). Stop drops what's waiting. Its Busy is
+// what a plugin hands a registry.Busy, so a test settling waits for what's queued.
 type Serial struct {
 	mu      sync.Mutex
 	queue   []func()
 	running bool
 	stopped bool
-	wg      sync.WaitGroup
+	wg      Busy
 }
 
 // Do queues fn; nothing once stopped.
@@ -22,13 +23,11 @@ func (s *Serial) Do(fn func()) {
 	s.queue = append(s.queue, fn)
 	if !s.running {
 		s.running = true
-		s.wg.Add(1)
-		go s.run()
+		s.wg.Go(s.run)
 	}
 }
 
 func (s *Serial) run() {
-	defer s.wg.Done()
 	for {
 		s.mu.Lock()
 		if len(s.queue) == 0 || s.stopped {
@@ -45,6 +44,9 @@ func (s *Serial) run() {
 
 // Wait waits until nothing's queued or running.
 func (s *Serial) Wait() { s.wg.Wait() }
+
+// Busy says something's queued or running.
+func (s *Serial) Busy() bool { return s.wg.Busy() }
 
 // Stop drops what's queued, and waits for the one running.
 func (s *Serial) Stop() {

@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -359,7 +360,7 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 		if err != nil {
 			return err
 		}
-		go func() {
+		plugin.Go(x.h, "an agent's sign-in", func() {
 			url, err := c.StartLogin(context.Background(), l.Provider)
 			x.h.Do(func() {
 				if err == nil {
@@ -369,7 +370,7 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 					x.h.Notify(core.Notice{ID: "agent.login", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
 				}
 			})
-		}()
+		})
 		return nil
 	case !canLogIn(l):
 		return fmt.Errorf("run %s in a terminal", cmp.Or(l.Shell, "the agent's login"))

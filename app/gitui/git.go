@@ -78,7 +78,7 @@ type gitTree struct {
 func (g *Git) Manifest() plugin.Manifest { return plugin.Manifest{ID: "git"} }
 
 func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
-	g.Add(h.Contribute(registry.Busy{Name: "git", Busy: func() bool { return gitTrees{g}.Busy() || g.busy.Busy() }, Source: "builtin:git"}))
+	g.Add(h.Contribute(registry.Busy{Name: "git", Busy: func() bool { return gitTrees{g}.Busy() || g.busy.Busy() || g.told.Busy() }, Source: "builtin:git"}))
 	g.h = h
 	g.others, g.parked, g.roots = map[string]*gitTree{}, map[string]*parkedTree{}, map[string]string{}
 	g.gitTree = gitTree{g: g, held: true}

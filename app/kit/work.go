@@ -43,16 +43,17 @@ func (w *Work) Go(fn func(ctx context.Context)) {
 }
 
 // Loop runs fn on a goroutine of its own for as long as it likes, unless Stop has been called: a ticker, a wait on
-// something that ends when it ends. Unlike Go's, it doesn't count as work under way (Busy).
-func (w *Work) Loop(fn func(ctx context.Context)) {
+// something that ends when it ends. Unlike Go's, it doesn't count as work under way (Busy). It says whether fn runs.
+func (w *Work) Loop(fn func(ctx context.Context)) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.stopped {
-		return
+		return false
 	}
 	w.init()
 	ctx := w.ctx
 	w.loops.Go(func() { fn(ctx) })
+	return true
 }
 
 // Stop ends every goroutine's ctx and waits for them to return.

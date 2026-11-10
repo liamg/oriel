@@ -59,6 +59,9 @@ type Assistant struct {
 	win        widget.WindowState
 	placed     render.Rect // where the window was last saved
 
+	work   kit.Work   // the agents' pumps
+	places kit.Writer // the window's place, saved
+
 	mu  sync.Mutex
 	ran string // what the conversation runs on: "claude · haiku"
 }
@@ -93,6 +96,9 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 	x.setIdle()
 	x.Add(kit.OnDispose(h.Options().Watch("assistant.idle", func() { h.Do(x.setIdle) })))
 	x.Add(kit.OnDispose(x.conv.Close))
+	x.Add(&x.work)
+	x.Add(kit.OnDispose(x.places.Wait))
+	x.Add(h.Contribute(registry.Busy{Name: "assistant", Busy: x.places.Busy, Source: "builtin:assistant"}))
 	x.Add(h.Contribute(registry.AgentOwner{Agent: kit.AssistantAgent, Confirm: x.confirm, Acted: x.acted, Source: "builtin:assistant"}))
 	x.Add(h.Contribute(uireg.InboxSource{Name: kit.AssistantAgent, Cards: x.inboxCards, Source: "builtin:assistant"}))
 	for _, t := range x.tools() {
@@ -253,7 +259,9 @@ func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Age
 	x.ran = strings.Trim(ready.Provider+" · "+ready.Model, " ·")
 	x.mu.Unlock()
 	a := &utilityAgent{u: u, sig: make(chan assistant.Signal, 64)}
-	go a.pump()
+	if !x.work.Loop(a.pump) {
+		close(a.sig)
+	}
 	return a, nil
 }
 
@@ -278,9 +286,19 @@ func (a *utilityAgent) Interrupt(ctx context.Context) error         { return a.u
 func (a *utilityAgent) Signals() <-chan assistant.Signal            { return a.sig }
 func (a *utilityAgent) Close() error                                { return a.u.Close() }
 
-func (a *utilityAgent) pump() {
+func (a *utilityAgent) pump(ctx context.Context) {
 	defer close(a.sig)
-	for ev := range a.u.Events() {
+	for {
+		var ev host.UtilityEvent
+		select {
+		case <-ctx.Done():
+			return
+		case e, ok := <-a.u.Events():
+			if !ok {
+				return
+			}
+			ev = e
+		}
 		var s assistant.Signal
 		switch ev.Type {
 		case "turn-start":
@@ -298,7 +316,11 @@ func (a *utilityAgent) pump() {
 		default:
 			continue
 		}
-		a.sig <- s
+		select {
+		case a.sig <- s:
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
@@ -366,11 +388,11 @@ func (x *Assistant) pick(n int) error {
 		return kit.OpenURL(x.h, it.URL)
 	case it.File != "":
 		args := map[string]any{"path": it.File, "line": float64(it.Line), "project": it.Project}
-		go func() {
+		plugin.Go(x.h, "the assistant's row's file", func() {
 			if _, err := x.toolFocusFile(context.Background(), args); err != nil {
 				x.h.Do(func() { x.report(err) })
 			}
-		}()
+		})
 		return nil
 	}
 	x.conv.Say("Tell me more about "+it.Title, false)
@@ -394,11 +416,11 @@ func (x *Assistant) undo(id string) error {
 	if err != nil {
 		return errors.New("nothing to undo")
 	}
-	go func() {
+	plugin.Go(x.h, "the assistant's undo", func() {
 		if err := x.conv.Undo(context.Background(), e.ID); err != nil {
 			x.h.Notify(core.Notice{ID: "assistant.undo", Severity: core.SevError, Key: true, Text: "Couldn't undo it: " + err.Error()})
 		}
-	}()
+	})
 	return nil
 }
 

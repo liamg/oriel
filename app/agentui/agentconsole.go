@@ -441,7 +441,7 @@ func (x *Console) fork(id core.SessionID, prompt string) error {
 	st := x.state(id)
 	st.forks = append(st.forks, forkAnswer{q: prompt, since: kit.WindowNow(x.h)})
 	n := len(st.forks) - 1
-	go func() {
+	plugin.Go(x.h, "a side question", func() {
 		out, err := c.Fork(id, prompt)
 		x.h.Do(func() {
 			if n < len(st.forks) {
@@ -449,7 +449,7 @@ func (x *Console) fork(id core.SessionID, prompt string) error {
 			}
 		})
 		x.h.Redraw()
-	}()
+	})
 	return nil
 }
 

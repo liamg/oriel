@@ -7,13 +7,15 @@ import (
 )
 
 // Writer writes files off the loop, one at a time: each path's latest content, the folders it's in made first. A
-// write asked for while an older one of the same path waits replaces it. The zero Writer is ready.
+// write asked for while an older one of the same path waits replaces it. Its Busy is what a plugin hands a
+// registry.Busy. The zero Writer is ready.
 type Writer struct {
 	mu      sync.Mutex
 	pending map[string]write
 	order   []string
 	busy    bool
 	idle    sync.Cond
+	running Busy
 	// Failed is told of a write that failed, off the loop; nil drops it.
 	Failed func(path string, err error)
 }
@@ -41,7 +43,7 @@ func (w *Writer) put(path string, wr write) {
 	w.pending[path] = wr
 	if !w.busy {
 		w.busy = true
-		go w.drain()
+		w.running.Go(w.drain)
 	}
 }
 
@@ -88,3 +90,6 @@ func (w *Writer) Wait() {
 		w.cond().Wait()
 	}
 }
+
+// Busy says a write asked for isn't done.
+func (w *Writer) Busy() bool { return w.running.Busy() }

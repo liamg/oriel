@@ -80,6 +80,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.Add(kit.OnDispose(h.Framed(n.panel.shown.Framed)))
 	n.Add(kit.OnDispose(n.panel.shown.Drop))
 	n.Add(kit.OnDispose(n.writes.Wait))
+	n.Add(h.Contribute(registry.Busy{Name: "notices", Busy: n.writes.Busy, Source: "builtin:notices"}))
 	cfg := n.sh.cfg
 	n.Add(h.OnFault(func(f registry.Fault) {
 		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir)})
