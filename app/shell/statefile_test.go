@@ -3,12 +3,12 @@ package shell_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -58,13 +58,10 @@ func (p *keeper) Activate(_ context.Context, h plugin.Host) error {
 // waitFile waits for the file at path to hold want.
 func waitFile(t *testing.T, path, want string) {
 	t.Helper()
-	var got []byte
-	for deadline := time.Now().Add(apptest.Timeout); time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
-		if got, _ = os.ReadFile(path); string(got) == want {
-			return
-		}
-	}
-	t.Fatalf("%s holds %q, want %q", path, got, want)
+	apptest.Poll(t, fmt.Sprintf("%s to hold %q", path, want), func() bool {
+		got, _ := os.ReadFile(path)
+		return string(got) == want
+	})
 }
 
 func (p *keeper) loaded() []string {

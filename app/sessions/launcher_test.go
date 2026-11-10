@@ -200,11 +200,7 @@ func TestStartViewListsSessions(t *testing.T) {
 	se, _ := st.Session("pricing-rounding")
 	p, _ := se.Snapshot().Primary()
 	r.WaitGone("SESSIONS")
-	var dir string
-	r.Do(func() error { dir = r.Host.Here().Project; return nil })
-	if dir != p.Dir {
-		t.Errorf("the window is on %q, want the session's worktree %q", dir, p.Dir)
-	}
+	r.WaitProject(p.Dir)
 }
 
 // Files outside the session's worktrees (the stdlib, dependencies, another repo) open read-only.
@@ -224,7 +220,7 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	p, _ := se.Snapshot().Primary()
 	inside := filepath.Join(p.Dir, "round.go")
 	os.WriteFile(inside, []byte("package pricing\n"), 0o644)
-	r.WaitFor("the window on the worktree", func() bool { return r.Host.Here().Project == p.Dir })
+	r.WaitProject(p.Dir)
 
 	open := func(path string) {
 		t.Helper()
@@ -237,8 +233,8 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	open(inside)
 	r.WaitFrame("round.go", func(s string) bool { return strings.Contains(s, "package\n \npricing") })
 	r.Idle()
-	if fs := r.Win.Frames(); strings.Contains(fs[len(fs)-1].Text(), "read-only ·") {
-		t.Errorf("a file in the session's worktree opened read-only:\n%s", fs[len(fs)-1].Text())
+	if f := r.Latest("round.go settled", func(headless.Frame) bool { return true }); strings.Contains(f.Text(), "read-only ·") {
+		t.Errorf("a file in the session's worktree opened read-only:\n%s", f.Text())
 	}
 }
 
@@ -280,7 +276,7 @@ func TestLauncherSnapshot(t *testing.T) {
 	reading := func() bool {
 		return s.Find("Checking which agents are installed") != nil || strings.Contains(s.Text(), "Checking agents")
 	}
-	s.Until("the launcher's providers read", func() bool { return !reading() })
+	s.Until("the launcher to read the providers", func() bool { return !reading() })
 	s.SettleStats()
 	s.Frame()
 	s.Lint("the launcher")

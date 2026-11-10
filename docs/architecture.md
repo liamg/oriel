@@ -238,7 +238,11 @@ connects it to the platform:
   Tests change a package's knob only through `internal/testhook.Set`. Tests run shuffled.
 - No test is racy or depends on a timer. Pacing, debounces and polls are checked on a clock the test moves; what
   a frame or an event costs is checked by counting (frames built, reads, processes started), not by timing it. A
-  Window test waits for the app to be idle with `Idle`: nothing busy, no read or watched source due, over frames.
+  Window test waits for the app to be idle with `Idle` (a Scene too, before it counts reads): nothing busy, no read
+  or watched source due, over frames. That something didn't happen is asserted after a barrier, not a while: a
+  Window's `Drain` (what was sent taken, then idle), a marker sent after it, or a scripted file watcher's events
+  taken in. What no frame shows is waited for with `apptest.Recv` (a channel) or `apptest.Poll`, which share the
+  harness's one `Timeout`; a move to a session's directory with `Scene.Follow`.
 - A test that measures the machine rather than the code (a time, throughput or allocation budget, a latency, a while
   left idle) is named `…Budget` and lives in a `_perf_test.go` file behind the `perf` build tag (`//go:build
   perf`): out of `go test ./...`, `make test` and CI, run by `make perf` (`-tags perf -run 'Budget$'`) on a quiet

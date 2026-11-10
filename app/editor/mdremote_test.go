@@ -6,7 +6,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/editor"
@@ -44,7 +43,7 @@ func TestMarkdownRemoteImagesOff(t *testing.T) {
 	if pc.Loading || !strings.Contains(why, "markdown.remote_images") {
 		t.Errorf("loading %v, why %q", pc.Loading, why)
 	}
-	time.Sleep(10 * time.Millisecond)
+	s.Idle()
 	if fetched.Load() {
 		t.Error("a remote image was fetched with markdown.remote_images off")
 	}

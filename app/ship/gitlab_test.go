@@ -101,7 +101,7 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	st := s.UntilState("the session in front", func(st core.State) bool { return st.Focus != "" })
 	sess, _ := st.Session(st.Focus)
 	se := sess.Snapshot()
-	s.Reopen()
+	s.Follow()
 	x := shipOf(s)
 	p := se.Projects[0].Name
 	ag := lw.Fake.WaitStarted(t)

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/apptest"
@@ -38,11 +37,7 @@ func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 	w.WaitFrame("the worktree's files in the picker", func(s string) bool {
 		return !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening rounding")
 	})
-	var dir string
-	w.Do(func() error { dir = w.Host.Here().Project; return nil })
-	if dir != p.Dir {
-		t.Errorf("the window is on %q, want the session's worktree %q", dir, p.Dir)
-	}
+	w.WaitProject(p.Dir)
 }
 
 // With a session host, Open Directory is a direct session with no agent, the same one each
@@ -68,7 +63,7 @@ func TestOpenDirectoryIsADirectSession(t *testing.T) {
 	if first.Dir != lw.Repo || first.Agent.Provider != "" || len(first.Projects) != 1 || first.Projects[0].Branch != "main" {
 		t.Fatalf("direct session = %+v, want the repo itself on main, with no agent", first)
 	}
-	w.WaitFor("the window on the repo", func() bool { return w.Host.Here().Project == lw.Repo })
+	w.WaitProject(lw.Repo)
 	if again := open(); again.ID != first.ID {
 		t.Errorf("opening it again started %s, want %s again", again.ID, first.ID)
 	}
@@ -108,13 +103,8 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 	})
 	a := lw.Fake.WaitStarted(t)
 	in, _ := json.Marshal(map[string]string{"command": "go test ./..."})
-	select {
-	case d := <-a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: in}):
-		if !d.Allow {
-			t.Errorf("the hook's allow came back as %+v", d)
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("the hook never answered")
+	if d := apptest.Recv(t, "the hook's answer", a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: in})); !d.Allow {
+		t.Errorf("the hook's allow came back as %+v", d)
 	}
 	rm, _ := json.Marshal(map[string]string{"command": "rm -rf build"})
 	a.Ask(agent.Permission{ID: "p2", Tool: "Bash", Input: rm})
@@ -175,12 +165,7 @@ func TestAgentTurnEndFires(t *testing.T) {
 		return ok && se.Snapshot().Agent.Working
 	})
 	a.Emit(agent.TurnEnd{})
-	select {
-	case got := <-ended:
-		if got != "w" {
-			t.Errorf("AgentTurnEnd for %q", got)
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("AgentTurnEnd never fired")
+	if got := apptest.Recv(t, "AgentTurnEnd", ended); got != "w" {
+		t.Errorf("AgentTurnEnd for %q", got)
 	}
 }

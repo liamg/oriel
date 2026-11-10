@@ -2,10 +2,10 @@ package shell_test
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -20,13 +20,7 @@ func TestUIFontSizeZoomsTheWindow(t *testing.T) {
 	waitZoom := func(what string, z float32) {
 		t.Helper()
 		want := render.Point{X: before.X / z, Y: before.Y / z}
-		deadline := time.Now().Add(5 * time.Second)
-		for r.Win.Scale() != z || r.Win.Size() != want {
-			if time.Now().After(deadline) {
-				t.Fatalf("%s: scale %v, size %v; want %v, %v", what, r.Win.Scale(), r.Win.Size(), z, want)
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
+		apptest.Poll(t, fmt.Sprintf("%s: scale %v, size %v", what, z, want), func() bool { return r.Win.Scale() == z && r.Win.Size() == want })
 	}
 	r.Do(func() error {
 		return r.Host.Options().Set("ui.font_size", registry.LayerUser, registry.At{}, 19.5)

@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/editor/emacs"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -43,13 +43,7 @@ func TestEditorClipboard(t *testing.T) {
 	r := runEditor(t, map[string]string{"a.txt": "one\ntwo\n"}, []string{"a.txt"})
 	r.WaitText("two")
 	r.TypeKeys("yy")
-	deadline := time.Now().Add(5 * time.Second)
-	for r.Win.Clipboard() != "one\n" && time.Now().Before(deadline) {
-		time.Sleep(5 * time.Millisecond)
-	}
-	if r.Win.Clipboard() != "one\n" {
-		t.Fatalf("clipboard = %q", r.Win.Clipboard())
-	}
+	apptest.Poll(t, "the line on the clipboard", func() bool { return r.Win.Clipboard() == "one\n" })
 	r.Win.SetClipboard("pasted")
 	r.TypeKeys("jp:w<CR>")
 	r.waitFile("a.txt", "one\ntpastedwo\n")

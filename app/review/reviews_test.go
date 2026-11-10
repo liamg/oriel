@@ -379,7 +379,7 @@ func TestReviewsNoticeStartsAReviewBehind(t *testing.T) {
 	if err := s.Host().Run(context.Background(), "session.focus", registry.Args{"id": string(se.ID())}); err != nil {
 		t.Fatal(err)
 	}
-	s.Until("the window on the review", func() bool { s.RunQueued(); return s.Reopen() })
+	s.Follow()
 	onChanges := func() bool {
 		return s.Showing(kit.ExplorerView) && s.Showing(kit.DiffView)
 	}
@@ -390,7 +390,7 @@ func TestReviewsNoticeStartsAReviewBehind(t *testing.T) {
 	if err := w.Reopen(t.TempDir(), se.ID()); err != nil {
 		t.Fatal(err)
 	}
-	s.Until("the window opened again", func() bool { s.RunQueued(); return s.Reopen() })
+	s.Follow()
 	s.Until("the Explorer and diff after it", onChanges)
 }
 

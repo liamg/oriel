@@ -18,7 +18,7 @@ func TestShowcaseP6Diff(t *testing.T) {
 	s.Registry().Contribute(registry.Explainer{Name: "show", Explain: rig.ShowExplainer, Label: func() string { return "fork of claude · knows this session" }})
 	s.WaitGit()
 	s.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, "internal/pricing/round.go")})
-	s.Until("the diff", func() bool { s.RunQueued(); return strings.Contains(s.Text(), "MARK REVIEWED") })
+	s.Until("the diff", func() bool { return strings.Contains(s.Text(), "MARK REVIEWED") })
 	s.Run("diff.hunk.next", nil)
 	s.Run("diff.review", nil)
 	s.Shot("p6-05a-diff-split")

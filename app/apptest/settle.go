@@ -19,7 +19,7 @@ func (s *Scene) SettleDrawn() {
 		e, _ = p.(*explain.Plugin)
 	}
 	// A frame takes on what came back, and may start more: a base read in lets a buffer's units be worked out again.
-	for deadline := time.Now().Add(10 * time.Second); ; {
+	for deadline := time.Now().Add(Timeout); ; {
 		s.SettleReads()
 		if e != nil {
 			e.Wait()

@@ -105,8 +105,7 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 		return n != nil && n.Disabled
 	})
 	w.Click(apptest.Centre(w.Access("Start work").Bounds)) // clicked anyway, as it is
-	// The click handled, and whatever it set going done.
-	w.Idle()
+	w.Drain()
 	if fs := w.Win.Frames(); strings.Contains(fs[len(fs)-1].Text(), "START WORK") || !planNow(t, w).Planning() {
 		t.Fatal("Start work ran with a thread open")
 	}
@@ -150,7 +149,7 @@ func TestPlanFlowWorksEndToEnd(t *testing.T) {
 	if !strings.Contains(in.Text, "Start work") || !strings.Contains(in.Text, p.Dir) {
 		t.Errorf("the agent was told %q", in.Text)
 	}
-	w.WaitFor("the window on the worktree "+p.Dir, func() bool { return filepath.Clean(w.Host.Here().Project) == filepath.Clean(p.Dir) })
+	w.WaitProject(p.Dir)
 }
 
 // Plan → Start work: Start work opens a dialog over the plan, which Escape, its esc and Cancel close.

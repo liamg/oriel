@@ -34,19 +34,7 @@ func overviewScene(t *testing.T, make func(home string) string) *apptest.Scene {
 	s.Registry().Language(registry.Language{Name: "SQL", Extensions: []string{".sql"}})
 	s.Registry().Language(registry.Language{Name: "YAML", Extensions: []string{".yaml"}})
 	s.Registry().Language(registry.Language{Name: "Markdown", Extensions: []string{".md"}})
-	deadline := time.Now().Add(20 * time.Second)
-	for {
-		s.RunQueued()
-		s.Frame()
-		if overviewDone(s) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the overview never finished:\n%s", s.Text())
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	s.Frame()
+	s.Until("the overview to finish", func() bool { return overviewDone(s) })
 	return s
 }
 
@@ -125,15 +113,7 @@ func TestOverviewPluginPanelAndReturn(t *testing.T) {
 		t.Fatal("the overview shows over an open file")
 	}
 	s.Run("view.close", nil)
-	deadline := time.Now().Add(10 * time.Second)
-	for !strings.Contains(s.Text(), "3 todos") {
-		if time.Now().After(deadline) {
-			t.Fatalf("no plugin panel:\n%s", s.Text())
-		}
-		s.RunQueued()
-		s.Frame()
-		time.Sleep(5 * time.Millisecond)
-	}
+	s.Until("the plugin's panel", func() bool { return strings.Contains(s.Text(), "3 todos") })
 }
 
 // A Lua panel's rows show on the card.
@@ -147,15 +127,7 @@ func TestOverviewLuaPanel(t *testing.T) {
 	s.WriteConfig(map[string]string{"init.lua": `oriel.overview.add{ name = "todo", title = "To do", order = 90,
   compute = function(dir) return { { label = "open", value = 3 } } end }`})
 	s.ReloadLua()
-	deadline := time.Now().Add(10 * time.Second)
-	for !strings.Contains(s.Text(), "open\n  3") {
-		if time.Now().After(deadline) {
-			t.Fatalf("no Lua panel:\n%s", s.Text())
-		}
-		s.RunQueued()
-		s.Frame()
-		time.Sleep(5 * time.Millisecond)
-	}
+	s.Until("the Lua panel", func() bool { return strings.Contains(s.Text(), "open\n  3") })
 }
 
 // A directory's README shows under its card's panels, as markdown.

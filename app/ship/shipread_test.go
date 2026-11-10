@@ -33,8 +33,14 @@ func TestAChangeReadsOnlyItsProject(t *testing.T) {
 	}
 }
 
-// shipQuiet waits until the app has settled: a read's end can hand on another (a read asked for while one ran).
-func shipQuiet(s *apptest.Scene) { s.Quiet() }
+// shipQuiet runs what's handed to the loop and waits for Ship's reads, until neither starts more: a read's end
+// can hand on another (a read asked for while one ran).
+func shipQuiet(s *apptest.Scene) {
+	for range 3 {
+		s.Idle()
+		shipIdle(s)
+	}
+}
 
 // Coming back to a session with a tab reads none of its projects whole: its watches kept it while it was behind
 // another.

@@ -172,7 +172,7 @@ func TestQuitWarnsOfScheduledJobs(t *testing.T) {
 	r.WaitFrame("the warning", func(s string) bool {
 		return apptest.HasAll(s, "QUITTING ORIEL", "Sweep stale deps", "Quit", "Cancel")
 	})
-	time.Sleep(300 * time.Millisecond)
+	r.Drain()
 	if r.Win.Closed() {
 		t.Fatal("quit without the warning answered")
 	}
@@ -207,7 +207,7 @@ func TestQuitShowsTheShutdown(t *testing.T) {
 		return apptest.HasAll(s, "SHUTTING DOWN", "Stopping 1 agent", "rounding")
 	})
 	r.TypeKeys("<D-k>")
-	time.Sleep(150 * time.Millisecond)
+	r.Taken()
 	f := r.Latest("the shutdown", func(f headless.Frame) bool { return strings.Contains(f.Text(), "SHUTTING DOWN") })
 	if strings.Contains(f.Text(), "Search sessions, commands") {
 		t.Error("the omnibox opened over the shutdown")

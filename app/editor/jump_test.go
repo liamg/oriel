@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/editor"
@@ -33,23 +32,12 @@ func TestEditorOpenLandsOnTheLine(t *testing.T) {
 	jump := func(line int, place string) {
 		t.Helper()
 		open("long.go", line, place)
-		var cur, top, rows int
-		deadline := time.Now().Add(apptest.Timeout)
-		for {
-			app.Do(func() error {
-				p := x.Current()
-				cur, top, rows = p.Cursor().Line, p.Top(), x.Rows(p.ID())
-				return nil
-			})
+		app.WaitFor(fmt.Sprintf("the cursor on line %d (%s), near the middle", line, place), func() bool {
+			p := x.Current()
+			cur, top, rows := p.Cursor().Line, p.Top(), x.Rows(p.ID())
 			at := cur - top
-			if rows > 0 && cur == line-1 && at >= rows/4 && at <= rows*3/4 {
-				return
-			}
-			if time.Now().After(deadline) {
-				t.Fatalf("opened at line %d (%s), the cursor is on line %d, row %d of %d: want it on that line, near the middle", line, place, cur+1, at, rows)
-			}
-			time.Sleep(20 * time.Millisecond)
-		}
+			return rows > 0 && cur == line-1 && at >= rows/4 && at <= rows*3/4
+		})
 	}
 	open("other.go", 1, "")
 	app.WaitText("package p")

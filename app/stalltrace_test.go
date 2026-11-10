@@ -16,15 +16,13 @@ func TestSlowFrameWritesTrace(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "stall.trace")
 	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Config: func(c *apptest.Config) { c.Trace = path }})
 	r.Win.Send(render.SlowFrameEvent{Waited: 900 * time.Millisecond})
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if b, err := os.ReadFile(path); err == nil && len(b) > 1<<10 {
-			if !bytes.HasPrefix(b, []byte("go 1.")) {
-				t.Fatalf("not a trace: %q", b[:16])
-			}
-			return
-		}
-		time.Sleep(20 * time.Millisecond)
+	var b []byte
+	apptest.Poll(t, "a trace written for the slow frame", func() bool {
+		var err error
+		b, err = os.ReadFile(path)
+		return err == nil && len(b) > 1<<10
+	})
+	if !bytes.HasPrefix(b, []byte("go 1.")) {
+		t.Fatalf("not a trace: %q", b[:16])
 	}
-	t.Fatal("no trace written for the slow frame")
 }

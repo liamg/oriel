@@ -39,13 +39,8 @@ func TestStartViewEntries(t *testing.T) {
 	}})
 	r.WaitText("Say hello")
 	r.TypeKeys("<CR>") // the first entry is selected
-	select {
-	case got := <-ran:
-		if got != "hello" {
-			t.Fatalf("ran %q", got)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("Enter didn't run the selected entry")
+	if got := apptest.Recv(t, "Enter to run the selected entry", ran); got != "hello" {
+		t.Fatalf("ran %q", got)
 	}
 	r.TypeKeys("j<CR>")    // New Session: no session host, so it does nothing
 	r.TypeKeys("jjjj<CR>") // past Resume, Reviews and Open Directory
@@ -355,11 +350,7 @@ func TestStartViewKeepsToItsOwnKeys(t *testing.T) {
 
 	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Setup: setup})
 	r2.TypeKeys("<D-y>")
-	select {
-	case <-ran:
-	case <-time.After(5 * time.Second):
-		t.Fatal("a global key didn't run with a directory open")
-	}
+	apptest.Recv(t, "a global key to run with a directory open", ran)
 }
 
 // However many links plugins add under the actions, every one shows whole: the strip wraps onto more
@@ -447,15 +438,12 @@ func TestWindowOpensOnTheThemesBackground(t *testing.T) {
 // swap waits for it.
 func TestStartedRunsOnceTheWindowIsUp(t *testing.T) {
 	started := make(chan struct{}, 2)
-	apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Started = func() { started <- struct{}{} } }})
-	select {
-	case <-started:
-	case <-time.After(10 * time.Second):
-		t.Fatal("Started wasn't called")
-	}
+	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Started = func() { started <- struct{}{} } }})
+	apptest.Recv(t, "Started", started)
+	r.Idle()
 	select {
 	case <-started:
 		t.Fatal("Started was called twice")
-	case <-time.After(100 * time.Millisecond):
+	default:
 	}
 }

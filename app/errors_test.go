@@ -58,15 +58,9 @@ func bootWith(t *testing.T, cfg app.Config) *booted {
 
 func (b *booted) waitState(t *testing.T, what string, ok func(core.State) bool) core.State {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if st := b.store.State(); ok(st) {
-			return st
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatalf("state never had %s: %+v", what, b.store.State())
-	return core.State{}
+	var st core.State
+	apptest.Poll(t, "the state to have "+what, func() bool { st = b.store.State(); return ok(st) })
+	return st
 }
 
 func findNotice(st core.State, prefix string) (core.Notification, bool) {
@@ -230,12 +224,7 @@ func TestCrashReportOfferedOnNextLaunch(t *testing.T) {
 		return &ui.Paint{W: ui.Px(10), H: ui.Px(10), Fn: func(render.Frame, render.Rect) { panic("index out of range [12] with length 12") }}
 	}))
 	b.win.Send(render.KeyEvent{Key: "x"})
-	var err error
-	select {
-	case err = <-b.done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("app didn't stop after its own panic")
-	}
+	err := apptest.Recv(t, "the app to stop after its own panic", b.done)
 	if err == nil || !strings.Contains(err.Error(), "oriel crashed") {
 		t.Fatalf("Run = %v", err)
 	}
@@ -324,13 +313,6 @@ func TestLogLevelCommand(t *testing.T) {
 
 func (b *booted) waitClipboard(t *testing.T) string {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		if c := b.win.Clipboard(); c != "" {
-			return c
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Fatal("nothing went on the clipboard")
-	return ""
+	apptest.Poll(t, "something on the clipboard", func() bool { return b.win.Clipboard() != "" })
+	return b.win.Clipboard()
 }

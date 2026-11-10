@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
@@ -265,8 +264,8 @@ func aiReviewScene(t *testing.T) *apptest.Scene {
 	}
 	s.SettleGit()
 	s.Run("diff.open", registry.Args{"path": filepath.Join(r.Dir, "internal/pricing/round.go")})
-	s.Until("the diff and its review", func() bool { s.RunQueued(); return s.Has("CODEX · GPT-5", "Add project") })
-	s.Frame()
+	s.Until("the diff and its review", func() bool { return s.Has("CODEX · GPT-5", "Add project") })
+	s.Quiet()
 	return s
 }
 
@@ -305,9 +304,10 @@ func TestAIReviewButtonBusyFromTheClick(t *testing.T) {
 		r.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: at, Buttons: render.ButtonPrimary})
 	}
 	waitReviewer(t, codex)
+	r.Taken()
 	select {
 	case <-codex.Started:
 		t.Fatal("a second click started a second review")
-	case <-time.After(300 * time.Millisecond):
+	default:
 	}
 }

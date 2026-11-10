@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/apptest"
@@ -31,13 +30,7 @@ func TestStopAProcessTheTurnLeftRunning(t *testing.T) {
 		return apptest.HasAll(s, "RUNNING", "2 processes", "npm run dev", "pid 4242 · 1.5% cpu · 2.0 MB", "go run ./watch", "Stop")
 	})
 	r.ClickText("Stop")
-	deadline := time.Now().Add(5 * time.Second)
-	for !slices.Equal(a.Stopped(), []string{"1001"}) {
-		if time.Now().After(deadline) {
-			t.Fatalf("the provider was asked to stop %v, want [1001]", a.Stopped())
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	apptest.Poll(t, "the provider asked to stop 1001", func() bool { return slices.Equal(a.Stopped(), []string{"1001"}) })
 	r.WaitGone("npm run dev")
 	r.WaitText("go run ./watch")
 }

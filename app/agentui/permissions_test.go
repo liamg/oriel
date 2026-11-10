@@ -104,13 +104,8 @@ func TestPermissionsViewShowsRulesAndConnections(t *testing.T) {
 		return apptest.HasAll(s, "registry.npmjs.org:443", "ALLOWED", "1 connection", "↑2.0 KB ↓4.0 KB")
 	})
 	r.ClickText("Block")
-	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(20 * time.Millisecond) {
+	apptest.Poll(t, "the row's Block to make a rule", func() bool {
 		p, _ := lw.W.Permissions(context.Background(), se.ID)
-		if slices.ContainsFunc(p.Hosts, func(r egress.Rule) bool { return r.Host == "registry.npmjs.org" && r.Port == 443 && !r.Allow }) {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the row's Block never made a rule: %+v", p.Hosts)
-		}
-	}
+		return slices.ContainsFunc(p.Hosts, func(r egress.Rule) bool { return r.Host == "registry.npmjs.org" && r.Port == 443 && !r.Allow })
+	})
 }

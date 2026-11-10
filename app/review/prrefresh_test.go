@@ -4,7 +4,6 @@ import (
 	"context"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/review"
@@ -31,13 +30,8 @@ func TestARefreshAskedMidReadReadsAgain(t *testing.T) {
 	x.PRDetail(url)   // the first read begins
 	x.RefreshPR(url)  // asked again while it runs
 	answers <- "open" // the first read's answer, from before the merge
-	select {
-	case answers <- "merged": // the read asked for after
-	case <-time.After(5 * time.Second):
-		t.Fatal("the refresh asked mid-read never read again")
-	}
-	s.Quiet()
-	if st, _ := x.PRDetail(url); st != "merged" {
-		t.Fatalf("the pull request reads %q, want what the second read said", st)
-	}
+	sent := make(chan struct{})
+	go func() { answers <- "merged"; close(sent) }() // the read asked for after
+	apptest.Recv(t, "the refresh asked mid-read to read again", sent)
+	apptest.Poll(t, "the pull request to read what the second read said", func() bool { st, _ := x.PRDetail(url); return st == "merged" })
 }

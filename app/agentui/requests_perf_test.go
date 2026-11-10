@@ -1,4 +1,4 @@
-//go:build perf
+//go:build perf && !race
 
 package agentui_test
 

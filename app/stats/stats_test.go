@@ -35,20 +35,9 @@ func statsOf(s *apptest.Scene) *stats.Plugin {
 func settle(s *apptest.Scene, x *stats.Plugin) {
 	s.T.Helper()
 	s.SettleGit()
-	deadline := time.Now().Add(20 * time.Second)
-	for time.Now().Before(deadline) {
-		s.Frame()
-		s.RunQueued()
-		if !x.Busy() {
-			s.Frame()
-			s.RunQueued()
-			if !x.Busy() {
-				return
-			}
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	s.T.Fatal("the stats never came in")
+	s.Until("the stats to come in", func() bool { return !x.Busy() })
+	s.Quiet()
+	s.Until("the stats to come in", func() bool { return !x.Busy() })
 }
 
 // startCard is the start view's card or row named label, not the rail's entry of the same name.

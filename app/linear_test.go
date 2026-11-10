@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -234,8 +233,7 @@ func TestLinearPRLinkedBack(t *testing.T) {
 	sent := len(l.Mutations())
 	s.Run("ship.refresh", nil)
 	s.ShipSettle("a second read", func() bool { return true })
-	time.Sleep(100 * time.Millisecond)
-	s.RunQueued()
+	s.Idle()
 	if n := len(l.Mutations()); n != sent {
 		t.Errorf("%d changes after a second read, %d before", n, sent)
 	}

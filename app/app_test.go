@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
@@ -111,13 +112,8 @@ func (b *booted) waitText(t *testing.T, want string) {
 func (b *booted) close(t *testing.T) {
 	t.Helper()
 	b.win.Close()
-	select {
-	case err := <-b.done:
-		if err != nil {
-			t.Fatalf("Run: %v", err)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("app did not exit after its window closed")
+	if err := apptest.Recv(t, "the app to exit after its window closed", b.done); err != nil {
+		t.Fatalf("Run: %v", err)
 	}
 }
 
@@ -229,11 +225,7 @@ func TestKeysAndCommandsArePickers(t *testing.T) {
 	b.waitText(t, "Do nothing")
 	b.waitText(t, "lister.noop")
 	b.win.Send(render.KeyEvent{Key: "CR"})
-	select {
-	case <-l.ran:
-	case <-time.After(5 * time.Second):
-		t.Fatal("Enter in :Commands didn't run the command")
-	}
+	apptest.Recv(t, "Enter in :Commands to run the command", l.ran)
 	b.close(t)
 }
 
@@ -290,19 +282,9 @@ func TestPointerSetsTheCursor(t *testing.T) {
 	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
 	// The root view sits under the 38px titlebar, right of the 44px rail.
 	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 74, Y: 48}})
-	for b.win.Cursor() != render.CursorPointer {
-		if ctx.Err() != nil {
-			t.Fatalf("cursor is %v over the link", b.win.Cursor())
-		}
-		time.Sleep(time.Millisecond)
-	}
+	apptest.Poll(t, "the pointer cursor over the link", func() bool { return b.win.Cursor() == render.CursorPointer })
 	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})
-	for b.win.Cursor() != render.CursorDefault {
-		if ctx.Err() != nil {
-			t.Fatalf("cursor is %v off the link", b.win.Cursor())
-		}
-		time.Sleep(time.Millisecond)
-	}
+	apptest.Poll(t, "the default cursor off the link", func() bool { return b.win.Cursor() == render.CursorDefault })
 	b.close(t)
 }
 
@@ -469,18 +451,13 @@ func TestAccessTree(t *testing.T) {
 	b := boot(t, panes{})
 	b.win.Send(render.KeyEvent{Key: "a"})
 	b.waitText(t, "content of alpha")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	var dump string
-	for ctx.Err() == nil {
+	apptest.Poll(t, "alpha in the accessibility tree", func() bool {
 		if tr := b.win.Access(); tr != nil {
 			dump = tr.Dump()
-			if strings.Contains(dump, `group "alpha"`) {
-				break
-			}
 		}
-		time.Sleep(5 * time.Millisecond)
-	}
+		return strings.Contains(dump, `group "alpha"`)
+	})
 	for _, want := range []string{`window "Oriel"`, `region "Main"`, `tablist`, `tab "alpha" selected`, `group "alpha"`} {
 		if !strings.Contains(dump, want) {
 			t.Errorf("no %s in the tree:\n%s", want, dump)
@@ -577,15 +554,9 @@ func TestAccessTreeOnlyWhileAScreenReaderReads(t *testing.T) {
 		t.Errorf("the tree was built with no screen reader reading:\n%s", tr.Dump())
 	}
 	b.win.SetScreenReader(true)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	for ctx.Err() == nil {
-		if tr := b.win.Access(); tr != nil && strings.Contains(tr.Dump(), `group "alpha"`) {
-			b.close(t)
-			return
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-	t.Error("a screen reader starting never got the screen's tree")
+	apptest.Poll(t, "the screen's tree for a screen reader starting", func() bool {
+		tr := b.win.Access()
+		return tr != nil && strings.Contains(tr.Dump(), `group "alpha"`)
+	})
 	b.close(t)
 }

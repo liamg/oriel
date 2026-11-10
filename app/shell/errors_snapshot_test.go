@@ -212,15 +212,9 @@ func TestCrashOfferedOnceALaunch(t *testing.T) {
 	s.ClickText("Close")
 	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "billing", Name: "billing", Kind: core.KindWork, Status: core.StatusQuiet, Dir: b}})
 	s.Store().Apply(core.SessionFocused{ID: "billing"})
-	reopened := false
-	for range 3 {
-		s.RunQueued()
-		reopened = s.Reopen() || reopened
-	}
-	if !reopened {
+	if !s.Moves() {
 		t.Fatal("the window didn't reopen on the session")
 	}
-	s.Frame()
 	if strings.Contains(s.Text(), "Oriel quit unexpectedly last time") {
 		t.Errorf("crash report offered again after a reopen:\n%s", s.Text())
 	}

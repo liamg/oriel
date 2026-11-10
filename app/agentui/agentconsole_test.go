@@ -162,13 +162,7 @@ func TestConsoleInterrupts(t *testing.T) {
 	a.Emit(agent.TurnStart{})
 	r.WaitText("WORKING")
 	r.ClickText("Interrupt")
-	deadline := time.Now().Add(5 * time.Second)
-	for a.Interrupts() == 0 {
-		if time.Now().After(deadline) {
-			t.Fatal("the agent was never interrupted")
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
+	apptest.Poll(t, "the agent interrupted", func() bool { return a.Interrupts() > 0 })
 	r.WaitText("IDLE")
 }
 
@@ -208,13 +202,7 @@ func TestComposerQueuesWhileWorking(t *testing.T) {
 
 func waitDecision(t *testing.T, ch chan agent.Decision) agent.Decision {
 	t.Helper()
-	select {
-	case d := <-ch:
-		return d
-	case <-time.After(10 * time.Second):
-		t.Fatal("the agent never got an answer")
-	}
-	return agent.Decision{}
+	return apptest.Recv(t, "the agent's answer", ch)
 }
 
 // A lost login turns its sessions needs-you with the card, the notice and the title bar's indicator
@@ -248,13 +236,7 @@ func TestALostLoginLogsInFromTheAgentsTerminal(t *testing.T) {
 	r.WaitGone("Signed out: OAuth token revoked")
 
 	r.ClickText("Log in")
-	deadline := time.Now().Add(5 * time.Second)
-	for !strings.Contains(a.Term().Shown(), "/login\r") {
-		if time.Now().After(deadline) {
-			t.Fatalf("the agent's terminal shows %q", a.Term().Shown())
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	apptest.Poll(t, "/login typed in the agent's terminal", func() bool { return strings.Contains(a.Term().Shown(), "/login\r") })
 	r.WaitGone("needs you to log in")
 	r.WaitGone("signed out")
 	if got := a.WaitSent(t); !strings.Contains(got.Text, "signed in again") {

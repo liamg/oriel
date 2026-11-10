@@ -128,17 +128,9 @@ linear = "npx -y linear-mcp"
 
 func waitSandbox(t *testing.T, lw *rig.Host, what string, ok func(sandbox.Config) bool) sandbox.Config {
 	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for {
-		c := lw.W.SandboxConfig()
-		if ok(c) {
-			return c
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("waiting for %s; the host has %+v", what, c)
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	var c sandbox.Config
+	apptest.Poll(t, what, func() bool { c = lw.W.SandboxConfig(); return ok(c) })
+	return c
 }
 
 // The page's sandbox section edits each list option in a list editor (a row per
