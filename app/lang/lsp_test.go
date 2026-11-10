@@ -94,8 +94,6 @@ func TestLSPCodeActions(t *testing.T) {
 	wantText(t, s, "the code actions menu", "QUICK FIX", "Create function greting")
 	s.Press("<CR>")
 	lspSettle(s)
-	time.Sleep(10 * time.Millisecond)
-	lspSettle(s)
 	text := strings.Join(fileLines(s, filepath.Join(root, "main.go")), "\n")
 	if !strings.Contains(text, "func greting(") {
 		t.Errorf("after taking the fix, main.go is:\n%s", text)

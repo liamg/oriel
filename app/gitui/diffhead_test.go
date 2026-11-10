@@ -25,7 +25,7 @@ func TestUncommittedsDiffIsAgainstTheLastCommit(t *testing.T) {
 
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Run("diff.open", registry.Args{"path": path, "against": "head"})
-	s.Until("the uncommitted diff", func() bool { s.RunQueued(); return s.Find("nine, not yet") != nil })
+	s.Until("the uncommitted diff", func() bool { return s.Find("nine, not yet") != nil })
 	s.Quiet()
 	s.WantFrame("Uncommitted · ")
 	if s.Find("two, committed") != nil {
@@ -34,7 +34,6 @@ func TestUncommittedsDiffIsAgainstTheLastCommit(t *testing.T) {
 
 	s.Run("diff.open", registry.Args{"path": path})
 	s.Until("the branch diff, committed and uncommitted lines both", func() bool {
-		s.RunQueued()
 		return s.Find("two, committed") != nil && s.Find("nine, not yet") != nil
 	})
 }

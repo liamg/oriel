@@ -238,7 +238,7 @@ func TestAPlanDocClickedComesToTheFront(t *testing.T) {
 	other := filepath.Join(se.Snapshot().Projects[0].Dir, "notes.go")
 	os.WriteFile(other, []byte("package pricing\n"), 0o644)
 	s.Run("editor.open", registry.Args{"path": other})
-	s.Until("the file's tab", func() bool { s.RunQueued(); return s.Find("notes.go") != nil })
+	s.Until("the file's tab", func() bool { return s.Find("notes.go") != nil })
 	s.ClickOn("notes.go") // its tab: the file in front, the plan behind it
 	s.Quiet()
 	shown := func(id string) bool {

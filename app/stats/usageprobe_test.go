@@ -62,14 +62,7 @@ func TestUsageSaysWhyTheProbeFailed(t *testing.T) {
 			s, x := failingHost(t, probeErr)
 			s.Run("usage.open", nil)
 			s.Run("usage.refresh", nil)
-			deadline := time.Now().Add(10 * time.Second)
-			for x.Reading().Phase == widget.Pending && time.Now().Before(deadline) {
-				s.Frame()
-				s.RunQueued()
-				time.Sleep(10 * time.Millisecond)
-			}
-			s.Frame()
-			s.Frame()
+			s.Until("the read to end", func() bool { return x.Reading().Phase != widget.Pending })
 			s.WantFrame(tc.want)
 			if text := s.Text(); strings.Contains(text, "deadline") || strings.Contains(text, "timed out") {
 				t.Errorf("the page shows the probe's raw error:\n%s", text)
@@ -78,8 +71,6 @@ func TestUsageSaysWhyTheProbeFailed(t *testing.T) {
 			s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: s.TextPoint(tc.want)})
 			s.Frame()
 			s.Now = s.Now.Add(time.Second)
-			time.Sleep(600 * time.Millisecond)
-			s.Frame()
 			s.WantFrame(probeErr.Error())
 		})
 	}
@@ -90,11 +81,7 @@ func TestUsageShowsTheStartupReadsFailure(t *testing.T) {
 	s, _ := failingHost(t, &claude.ProbeError{Hello: true, Err: context.DeadlineExceeded})
 	s.Run("usage.open", nil)
 	const want = "Claude started but reported no usage"
-	deadline := time.Now().Add(10 * time.Second)
-	for s.Frame(); !strings.Contains(s.Text(), want) && time.Now().Before(deadline); s.Frame() {
-		s.RunQueued()
-		time.Sleep(10 * time.Millisecond)
-	}
+	s.Until(want, func() bool { return strings.Contains(s.Text(), want) })
 	s.WantFrame(want)
 }
 
@@ -132,11 +119,7 @@ func TestUsageShowsAProviderWhileItsRead(t *testing.T) {
 	s.Run("usage.open", nil)
 	wait := func(want string) {
 		t.Helper()
-		deadline := time.Now().Add(10 * time.Second)
-		for s.Frame(); !strings.Contains(s.Text(), want) && time.Now().Before(deadline); s.Frame() {
-			s.RunQueued()
-			time.Sleep(10 * time.Millisecond)
-		}
+		s.Until(want, func() bool { return strings.Contains(s.Text(), want) })
 		s.WantFrame(want)
 	}
 	wait("Reading Claude's plan windows…")

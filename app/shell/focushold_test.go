@@ -132,12 +132,11 @@ func keepsFocus(s *apptest.Scene, t *testing.T, what string, id ui.ID) {
 	statuses := []core.Status{core.StatusWorking, core.StatusQuiet}
 	for i := range 30 {
 		s.Now = s.Now.Add(100 * time.Millisecond)
-		s.RunQueued()
 		if i%5 == 0 {
 			s.Store().Apply(core.SessionStatusChanged{ID: "pricing-rounding", Status: statuses[i/5%2]})
 			s.Store().Apply(core.SessionFocused{ID: "config"})
 		}
-		s.Frame()
+		s.Quiet()
 		if f := s.UI().Focused(); f != id {
 			t.Fatalf("%s: %v after %v, focus jumped from the field to %v", what, i, time.Duration(i+1)*100*time.Millisecond, f)
 		}

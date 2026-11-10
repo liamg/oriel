@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
@@ -23,15 +22,8 @@ func readsOf(s *apptest.Scene, id core.SessionID, dir string) int {
 	return n
 }
 
-// gitQuiet frames until git's work is done and no tree is reading, a few times over: a read's end can start another.
-func gitQuiet(s *apptest.Scene) {
-	for range 3 {
-		s.RunQueued()
-		s.Frame()
-		s.WaitGit()
-		time.Sleep(50 * time.Millisecond)
-	}
-}
+// gitQuiet frames until git's work is done and no tree is reading or due a read: a read's end can start another.
+func gitQuiet(s *apptest.Scene) { s.Idle() }
 
 // Staging a file in one project reads that project's git again, not the session's others: their trees didn't change.
 func TestStagingReadsOnlyItsTree(t *testing.T) {

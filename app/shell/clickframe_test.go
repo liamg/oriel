@@ -2,7 +2,6 @@ package shell_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/plugin"
@@ -37,12 +36,7 @@ func TestAClickGoesToTheFrameItWasMadeOn(t *testing.T) {
 		r.Click(at)
 		return nil
 	})
-	select {
-	case got := <-ran:
-		if got != "first" {
-			t.Errorf("the click ran %q, which moved under it after it was made; it was aimed at first", got)
-		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("the click ran nothing")
+	if got := apptest.Recv(t, "the click to run something", ran); got != "first" {
+		t.Errorf("the click ran %q, which moved under it after it was made; it was aimed at first", got)
 	}
 }

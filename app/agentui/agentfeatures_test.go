@@ -5,7 +5,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
@@ -55,13 +54,7 @@ func TestABrowserLoginFromTheCard(t *testing.T) {
 		return apptest.HasAll(s, "Fake needs you to log in", "opens its sign-in in your browser", "Log in", "Check again")
 	})
 	r.ClickText("Log in")
-	deadline := time.Now().Add(5 * time.Second)
-	for !lw.Fake.LoginStarted() {
-		if time.Now().After(deadline) {
-			t.Fatal("the sign-in never started")
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	apptest.Poll(t, "the sign-in to start", lw.Fake.LoginStarted)
 	r.UntilState("the browser opened", func(core.State) bool {
 		var opened bool
 		r.Do(func() error { opened = slices.Contains(desk.Opened, agenttest.LoginURL); return nil })

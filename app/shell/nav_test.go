@@ -27,8 +27,7 @@ func navScene(t *testing.T, dir string) *apptest.Scene {
 
 func at(s *apptest.Scene, t *testing.T, what string, session core.SessionID, place string) {
 	t.Helper()
-	s.RunQueued()
-	s.Frame()
+	s.Quiet()
 	got, _ := uireg.ShownPlace(s.Registry())
 	if f := s.Store().Focus(); f != session || got != place {
 		t.Errorf("%s: on %q with %q showing, want %q with %q", what, f, got, session, place)
@@ -105,12 +104,7 @@ func TestSideButtonsBackToAnotherDirectory(t *testing.T) {
 	for id, dir := range map[core.SessionID]string{"pricing": a, "billing": b} {
 		s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: id, Name: string(id), Kind: core.KindWork, Status: core.StatusQuiet, Dir: dir}})
 	}
-	settle := func() {
-		for range 3 {
-			s.RunQueued()
-			s.Reopen()
-		}
-	}
+	settle := func() { s.Moves() }
 	s.Store().Apply(core.SessionFocused{ID: "pricing"})
 	settle()
 	s.Run("stats.open", nil)

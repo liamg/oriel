@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app"
 
@@ -185,17 +184,9 @@ func TestLuaProcessPlugin(t *testing.T) {
 		t.Fatalf("loading: %s", msg)
 	}
 	runCommand(s, t, "Echo")
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
-		s.RunQueued()
-		for _, n := range s.Store().State().Notifications {
-			if strings.Contains(n.Title+n.Text, "Hello, Oriel") {
-				return
-			}
-		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	t.Errorf("no answer from the process; notices: %v", noticeTexts(s.Store().State().Notifications))
+	s.UntilState("the process's answer", func(st core.State) bool {
+		return slices.ContainsFunc(st.Notifications, func(n core.Notification) bool { return strings.Contains(n.Title+n.Text, "Hello, Oriel") })
+	})
 }
 
 func noticeTexts(ns []core.Notification) []string {

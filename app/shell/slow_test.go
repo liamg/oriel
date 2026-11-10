@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -21,8 +20,8 @@ import (
 )
 
 // blockGit puts a git first on PATH that, for a command line holding what, waits until release before running the
-// real git; started is closed once one has come.
-func blockGit(t *testing.T, what string) (started <-chan struct{}, release func()) {
+// real git; started waits for one to come.
+func blockGit(t *testing.T, what string) (started func(), release func()) {
 	t.Helper()
 	real, err := exec.LookPath("git")
 	if err != nil {
@@ -37,32 +36,23 @@ func blockGit(t *testing.T, what string) (started <-chan struct{}, release func(
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	release = func() { os.WriteFile(gate, nil, 0o644) }
 	t.Cleanup(release)
-	ch := make(chan struct{})
-	go func() {
-		for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); time.Sleep(10 * time.Millisecond) {
-			if _, err := os.Stat(mark); err == nil {
-				close(ch)
-				return
-			}
-		}
-	}()
-	return ch, release
+	started = func() {
+		t.Helper()
+		apptest.Poll(t, "git "+what, func() bool { _, err := os.Stat(mark); return err == nil })
+	}
+	return started, release
 }
 
 // slowCommand runs a command on the loop while its git call is held, checks the loop keeps drawing, and while, if
 // any, until it's let go, and waits for done to say the command's result has landed.
-func slowCommand(t *testing.T, r *apptest.Window, started <-chan struct{}, release func(), id string, args registry.Args, while func(),
+func slowCommand(t *testing.T, r *apptest.Window, started func(), release func(), id string, args registry.Args, while func(),
 	done func(core.State) bool) {
 	t.Helper()
 	t.Cleanup(release) // before the app stops, which waits for a loop held in git
 	if err := r.Do(func() error { return r.Host.Run(context.Background(), id, args) }); err != nil {
 		t.Fatal(err)
 	}
-	select {
-	case <-started:
-	case <-time.After(15 * time.Second):
-		t.Fatalf("%s never reached git", id)
-	}
+	started()
 	for range 3 {
 		before := len(r.Win.Frames())
 		r.Do(func() error { r.Host.Redraw(); return nil })

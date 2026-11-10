@@ -3,8 +3,8 @@ package shell_test
 import (
 	"path/filepath"
 	"testing"
-	"time"
 
+	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/shell"
 )
 
@@ -23,10 +23,6 @@ func TestStallTraceNeverWaitsOnAWrite(t *testing.T) {
 		s.Stalled()
 		close(done)
 	}()
-	select {
-	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("stalled waited on the write")
-	}
+	apptest.Recv(t, "stalled not to wait on the write", done)
 	s.ReleaseWrite()
 }

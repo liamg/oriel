@@ -34,9 +34,8 @@ func TestDiffRemadeAtAPaceWhileWritten(t *testing.T) {
 	for i := 0; time.Since(start) < 2*time.Second; i++ {
 		last = fmt.Sprintf("// write %d", i)
 		os.WriteFile(file, []byte("package pricing\n\nfunc Round() {}\n"+last+"\n"), 0o644)
-		s.Frame()
-		s.RunQueued()
-		time.Sleep(20 * time.Millisecond)
+		s.Quiet()
+		time.Sleep(20 * time.Millisecond) // the pace of the writes
 	}
 	remakes := 0
 	for _, rec := range s.Logs.Ring.Records() {

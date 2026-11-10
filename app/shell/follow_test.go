@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -126,10 +125,10 @@ func TestAMoveWaitsForWhatHoldsIt(t *testing.T) {
 	}
 	release := <-p.release
 	r.WaitText("Opening")
-	time.Sleep(300 * time.Millisecond)
+	before := len(r.Win.Frames())
 	r.Do(func() error { r.Host.Redraw(); return nil })
-	if fs := r.Win.Frames(); !strings.Contains(fs[len(fs)-1].Text(), "Opening") {
-		t.Fatal("the window laid the directory out while a plugin held it")
+	if f := r.WaitAfter("a frame while it's held", before, func(string) bool { return true }); !strings.Contains(f, "Opening") {
+		t.Fatalf("the window laid the directory out while a plugin held it:\n%s", f)
 	}
 	release()
 	r.WaitGone("Opening")

@@ -9,7 +9,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
@@ -62,27 +61,21 @@ func projectDir(t *testing.T, r *apptest.Window) string {
 	return p.Dir
 }
 
-// newRequest writes a request in the composer and sends it with ⏎, returning when the agent has it and how long that
-// took from the key.
-func newRequest(t *testing.T, r *apptest.Window, a *agenttest.FakeSession, body string) (agent.Input, time.Duration) {
+// newRequest writes a request in the composer and sends it with ⏎, returning when the agent has it.
+func newRequest(t *testing.T, r *apptest.Window, a *agenttest.FakeSession, body string) agent.Input {
 	t.Helper()
 	r.ClickText("New request")
 	r.WaitText("Write a request")
 	r.TypeText(body)
 	r.WaitText(body)
-	start := time.Now()
 	r.TypeKeys("<CR>")
-	in := a.WaitSent(t)
-	return in, time.Since(start)
+	return a.WaitSent(t)
 }
 
-// A comment reaches the agent within 1 s; the fake agent is idle, so the host hands it over at once.
-func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
+// A comment reaches the agent (within a second: requests_perf_test.go).
+func TestACommentReachesTheAgent(t *testing.T) {
 	r, a, _ := requestsSession(t)
-	in, took := newRequest(t, r, a, "Negative values round the wrong way")
-	if took > time.Second {
-		t.Errorf("the comment took %v to reach the agent", took)
-	}
+	in := newRequest(t, r, a, "Negative values round the wrong way")
 	if !strings.Contains(in.Text, "Negative values round the wrong way") {
 		t.Errorf("the agent got %q", in.Text)
 	}
@@ -358,7 +351,7 @@ func TestRequestScrollsBack(t *testing.T) {
 	r.ScrollAt("Reply number 29.", -20000)
 	r.Latest("the first reply scrolled into view", func(f headless.Frame) bool { return inView(f, "Reply number 00.") })
 	a.Call(t, "reply", map[string]any{"thread": string(th.ID), "body": "Reply number 30."})
-	time.Sleep(200 * time.Millisecond)
+	r.WaitText("Reply number 30.")
 	r.Latest("the first reply still in view", func(f headless.Frame) bool { return inView(f, "Reply number 00.") })
 }
 
@@ -488,11 +481,7 @@ func TestCommentMenu(t *testing.T) {
 // waitClip waits for the clipboard to hold want.
 func waitClip(t *testing.T, r *apptest.Window, want string) {
 	t.Helper()
-	for deadline := time.Now().Add(5 * time.Second); r.Win.Clipboard() != want; time.Sleep(10 * time.Millisecond) {
-		if time.Now().After(deadline) {
-			t.Fatalf("the clipboard holds %q, want %q", r.Win.Clipboard(), want)
-		}
-	}
+	apptest.Poll(t, fmt.Sprintf("the clipboard to hold %q", want), func() bool { return r.Win.Clipboard() == want })
 }
 
 // A closed request's comments say what became of them: an old progress note isn't "working on it", and a comment the

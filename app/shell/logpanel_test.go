@@ -25,7 +25,7 @@ func TestLogRecordsDrawOnlyWhileThePanelShows(t *testing.T) {
 	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
 	r.WaitText("ORIEL")
 	log := r.Host.Log()
-	time.Sleep(time.Second) // what opening started settles
+	r.Idle()
 	before := len(r.Win.Frames())
 	for i := range 5 {
 		log.Info("written while the panel is closed", "i", i)
@@ -74,8 +74,7 @@ func TestLogRowCopiesFromItsMenu(t *testing.T) {
 		t.Fatal("no Copy in the menu")
 	}
 	s.Click(apptest.Centre(item.Bounds), 0)
-	s.Frame()
-	s.RunQueued()
+	s.Quiet()
 	if got, _ := s.Desktop.ReadClipboard(); !strings.Contains(got, "WARN") || !strings.Contains(got, "err="+longErr) {
 		t.Errorf("copied %q", got)
 	}

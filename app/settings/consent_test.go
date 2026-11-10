@@ -125,7 +125,7 @@ func TestConsentCancels(t *testing.T) {
 			t.Error("Escape on the dialog closed the settings page under it too")
 		}
 	}
-	s.RunQueued()
+	s.Quiet()
 	if len(*installed) != 0 {
 		t.Errorf("a cancelled install ran the installer: %v", *installed)
 	}
@@ -177,7 +177,7 @@ exec = ["jira-cli"]
 		}
 	}
 	s.ClickText("Stay on v0.4.1")
-	s.RunQueued()
+	s.Quiet()
 	if len(*installed) != 0 {
 		t.Fatal("staying on the old version ran the update")
 	}

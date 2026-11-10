@@ -2,7 +2,6 @@ package shell_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/plugin"
@@ -24,19 +23,11 @@ func TestFocusHooks(t *testing.T) {
 	for _, f := range []bool{false, false, true} {
 		r.Win.Send(render.FocusEvent{Focused: f})
 	}
-	for _, want := range []string{"FocusLost", "FocusGained"} {
-		select {
-		case ev := <-got:
-			if ev != want {
-				t.Fatalf("fired %s, want %s", ev, want)
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatalf("%s never fired", want)
+	// The last focus lost is a marker: nothing fired again before it.
+	r.Win.Send(render.FocusEvent{Focused: false})
+	for _, want := range []string{"FocusLost", "FocusGained", "FocusLost"} {
+		if ev := apptest.Recv(t, want, got); ev != want {
+			t.Fatalf("fired %s, want %s", ev, want)
 		}
-	}
-	select {
-	case ev := <-got:
-		t.Fatalf("fired %s again", ev)
-	case <-time.After(50 * time.Millisecond):
 	}
 }
