@@ -30,16 +30,9 @@ func waitDownload(t *testing.T, w *Whisper) DownloadStatus {
 	if _, err := w.Download("base.en"); err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		if st, _ := w.DownloadState("base.en"); st.Done {
-			return st
-		}
-		if time.Now().After(deadline) {
-			t.Fatal("download never finished")
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
+	waitFor(t, w, "the download finished", func() bool { st, _ := w.DownloadState("base.en"); return st.Done })
+	st, _ := w.DownloadState("base.en")
+	return st
 }
 
 func sum(b []byte) string {
