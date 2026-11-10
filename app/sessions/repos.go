@@ -37,6 +37,7 @@ type Repos struct {
 
 	dialog   *addRepo // the Add repo dialog, while it's open
 	scanning bool     // Scan for repos is running
+	work     kit.Work // the folder choosers open, closed with it
 }
 
 func (x *Repos) Manifest() plugin.Manifest { return plugin.Manifest{ID: "repos"} }
@@ -61,6 +62,7 @@ func repoOptions() []registry.OptionSpec {
 
 func (x *Repos) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.details = h, map[core.RepoID]*repoDetail{}
+	x.Add(&x.work)
 	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.NewRepoKind}, Source: "builtin:repos"}))
 	for _, sp := range repoOptions() {
 		x.Add(h.Option(sp))
@@ -209,7 +211,7 @@ func (x *Repos) discover(all bool) {
 		}
 		x.scanning = true
 	}
-	go func() {
+	plugin.Go(x.h, "repos: discover", func() {
 		if _, err := w.ScanRepos(context.Background(), all); err != nil {
 			x.h.Log().Warn("repo discovery", "err", err)
 		}
@@ -217,7 +219,7 @@ func (x *Repos) discover(all bool) {
 			x.h.Do(func() { x.scanning = false })
 			x.h.Redraw()
 		}
-	}()
+	})
 }
 
 // repoArg is {repo}, or the one the Repos page has selected.

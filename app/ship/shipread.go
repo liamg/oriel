@@ -107,11 +107,9 @@ func (x *Ship) readOne(id core.SessionID, project string, fresh bool) {
 
 // readSoon reads one project of a session again, off the caller's goroutine; its PR from the code host when fresh.
 func (x *Ship) readSoon(id core.SessionID, project string, fresh bool) {
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		x.readOne(id, project, fresh)
-	}()
+	})
 }
 
 // branchesMoved are the projects of a session's new list whose branch or base moved from its last, ok when that's

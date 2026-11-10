@@ -92,8 +92,8 @@ func (x *Tickets) detail(tr registry.TicketTracker, key string) *ticketDetail {
 	}
 	d := &ticketDetail{since: kit.WindowNow(x.h)}
 	x.details[key] = d
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	x.work.Go(func(ctx context.Context) {
+		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 		t, err := registry.LookupTicket(ctx, tr, key)
 		x.mu.Lock()
@@ -103,7 +103,7 @@ func (x *Tickets) detail(tr registry.TicketTracker, key string) *ticketDetail {
 		}
 		x.mu.Unlock()
 		x.h.Redraw()
-	}()
+	})
 	return d
 }
 

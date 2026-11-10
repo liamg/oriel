@@ -67,9 +67,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 	if err != nil {
 		return
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		moved, err := w.UpdatePR(ctx, id)
 		cancel()
@@ -93,7 +91,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 					Actions: []core.Action{openReview(id)}})
 			}
 		})
-	}()
+	})
 }
 
 // recheck asks the agent to review the commits a fetch brought: the review pack's later round, with where each of

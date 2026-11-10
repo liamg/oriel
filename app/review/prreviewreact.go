@@ -24,13 +24,11 @@ func (x *PRReview) reactOnStart(id core.SessionID) {
 	if url == "" || !ok || src.React == nil {
 		return
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 		if err := registry.ReactToPR(ctx, src, url, e); err != nil {
 			x.h.Log().Warn("review: couldn't react to "+url, "err", err)
 		}
-	}()
+	})
 }

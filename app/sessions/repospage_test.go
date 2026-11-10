@@ -108,6 +108,7 @@ func TestReposPageCleansAndTags(t *testing.T) {
 	r.WaitText("Create tag v0.1.0")
 	r.WaitText("WILL TAG") // the form's preview, read off the loop: its coming in moves the button down
 	r.ScrollAt("HOUSEKEEPING", 2000)
+	r.Idle() // the scroll drawn, so the click is aimed at where the button is now
 	r.ClickTop("Create tag v0.1.0")
 	r.WaitText("✓ tagged v0.1.0")
 	if out := rig.Git(t, lw.Repo, "cat-file", "-t", "v0.1.0"); strings.TrimSpace(out) != "tag" {

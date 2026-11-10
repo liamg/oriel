@@ -68,16 +68,7 @@ func TestOpenDirectoryIsADirectSession(t *testing.T) {
 	if first.Dir != lw.Repo || first.Agent.Provider != "" || len(first.Projects) != 1 || first.Projects[0].Branch != "main" {
 		t.Fatalf("direct session = %+v, want the repo itself on main, with no agent", first)
 	}
-	for deadline := time.Now().Add(10 * time.Second); ; time.Sleep(5 * time.Millisecond) {
-		var dir string
-		w.Do(func() error { dir = w.Host.Here().Project; return nil })
-		if dir == lw.Repo {
-			break
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("the window is on %q, want %q", dir, lw.Repo)
-		}
-	}
+	w.WaitFor("the window on the repo", func() bool { return w.Host.Here().Project == lw.Repo })
 	if again := open(); again.ID != first.ID {
 		t.Errorf("opening it again started %s, want %s again", again.ID, first.ID)
 	}
@@ -179,6 +170,10 @@ func TestAgentTurnEndFires(t *testing.T) {
 	})
 	a := lw.Fake.WaitStarted(t)
 	a.Emit(agent.TurnStart{})
+	w.UntilState("the turn under way", func(st core.State) bool { // the window sees it start, as it would a turn of any length
+		se, ok := st.Session("w")
+		return ok && se.Snapshot().Agent.Working
+	})
 	a.Emit(agent.TurnEnd{})
 	select {
 	case got := <-ended:
