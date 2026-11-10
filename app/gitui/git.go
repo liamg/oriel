@@ -151,10 +151,8 @@ func (g *Git) follow() {
 		g.h.Redraw()
 		return
 	}
-	g.busy.Add(1)
 	g.running.Add(1)
-	go func() {
-		defer g.busy.Done()
+	g.busy.Go(func() {
 		root, ok := gitx.Root(context.Background(), dir)
 		g.h.Do(func() {
 			defer g.running.Add(-1)
@@ -169,7 +167,7 @@ func (g *Git) follow() {
 			g.notify(g.root(), nil)
 			g.h.Redraw()
 		})
-	}()
+	})
 }
 
 // notify hands the WatchWindow watchers a change to the window's work tree at root.
@@ -320,10 +318,8 @@ func (g *Git) tree(dir string) *gitTree {
 	}
 	t := &gitTree{g: g, work: dir, asked: g.now()}
 	g.others[dir] = t
-	g.busy.Add(1)
 	g.running.Add(1)
-	go func() {
-		defer g.busy.Done()
+	g.busy.Go(func() {
 		root, ok := gitx.Root(context.Background(), dir)
 		// The loop reads the tree's fields unlocked, so they're set there; Busy holds until they are.
 		g.h.Do(func() {
@@ -350,7 +346,7 @@ func (g *Git) tree(dir string) *gitTree {
 			}
 		})
 		g.h.Redraw()
-	}()
+	})
 	return t
 }
 
@@ -394,9 +390,9 @@ func (g *Git) Deactivate(ctx context.Context) error {
 // async runs fn off the loop, then has the trees it changed read again (every tree when none are named); an error is
 // a notice. Other trees' watches stand: an op on one tree changes no other.
 func (g *Git) async(fn func(ctx context.Context) error, trees ...*gitTree) {
-	done := g.start()
-	go func() {
-		defer done()
+	g.running.Add(1)
+	g.busy.Go(func() {
+		defer g.running.Add(-1)
 		if err := fn(context.Background()); err != nil {
 			g.h.Notify(core.Notice{ID: "git.error", Severity: core.SevError, Key: true, Text: err.Error()})
 		}
@@ -405,7 +401,7 @@ func (g *Git) async(fn func(ctx context.Context) error, trees ...*gitTree) {
 		}
 		g.refresh(trees)
 		g.h.Redraw()
-	}()
+	})
 }
 
 // refresh reads trees again, sooner than their watches would.
@@ -420,23 +416,6 @@ func (g *Git) refresh(trees []*gitTree) {
 		} else if t.src != nil && t.held {
 			t.subscribe()
 		}
-	}
-}
-
-// start counts work off the loop in, for wait and Busy; it answers how to count it out.
-func (g *Git) start() func() {
-	g.busy.Add(1)
-	g.running.Add(1)
-	return func() {
-		g.running.Add(-1)
-		g.busy.Done()
-	}
-}
-
-// wait is until the work queued with async is done, and the trees subscribed to are read.
-func (g *Git) wait() {
-	g.busy.Wait()
-	for deadline := time.Now().Add(10 * time.Second); g.reading() && time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
 	}
 }
 

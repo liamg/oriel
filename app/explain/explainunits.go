@@ -163,9 +163,7 @@ func (x *Plugin) baseOf(abs string) (data []byte, gen int, ok bool) {
 		b.loading = true
 		rev := st.BaseHash
 		repo := g.Status().Repo()
-		x.busy.Add(1)
-		go func() {
-			defer x.busy.Done()
+		x.busy.Go(func() {
 			var data []byte
 			if rev != "" {
 				data, _ = repo.FileAt(context.Background(), rev, rel)
@@ -176,7 +174,7 @@ func (x *Plugin) baseOf(abs string) (data []byte, gen int, ok bool) {
 			b.gen++
 			x.mu.Unlock()
 			x.h.Redraw()
-		}()
+		})
 	}
 	return b.data, b.gen, b.loaded
 }
@@ -237,9 +235,7 @@ func (x *Plugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []b
 	x.computing[buf] = true
 	x.mu.Unlock()
 	src, file := snap.Bytes(), fileBytes()
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		nu := x.computeUnits(path, src, file, base, haveBase)
 		nu.version, nu.gen = snap.Version()+1, gen
 		x.mu.Lock() // kept here, as a base is
@@ -247,7 +243,7 @@ func (x *Plugin) bufferUnits(path string, buf *text.Buffer, fileBytes func() []b
 		delete(x.computing, buf)
 		x.mu.Unlock()
 		x.h.Redraw()
-	}()
+	})
 	return fu
 }
 
@@ -326,9 +322,7 @@ func (x *Plugin) restatPanel() {
 	}
 	p.statting = true
 	stats := p.stats
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		changed := false
 		for path, was := range stats {
 			if now := kit.StatNow(path); now.Size != was.Size || now.MTime != was.MTime {
@@ -347,7 +341,7 @@ func (x *Plugin) restatPanel() {
 				x.h.Redraw()
 			}
 		})
-	}()
+	})
 }
 
 // changedFiles are the branch's changed files' units, worked out off the loop when the status, an open buffer or a
@@ -384,9 +378,7 @@ func (x *Plugin) changedFiles() ([]changedFile, bool) {
 			srcs[p], writes[p] = b.Text.Snapshot().Bytes(), b.Bytes()
 		}
 	}
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		var files []changedFile
 		stats := map[string]kit.FileStat{}
 		for _, p := range paths {
@@ -418,7 +410,7 @@ func (x *Plugin) changedFiles() ([]changedFile, bool) {
 			x.mu.Unlock()
 			x.h.Redraw()
 		})
-	}()
+	})
 	return x.panel.files, true
 }
 

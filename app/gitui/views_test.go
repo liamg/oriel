@@ -16,7 +16,7 @@ import (
 // more than the open file were diffed.
 func diffViewScene(t *testing.T, dir string, n int) (s *apptest.Scene, check func()) {
 	s = apptest.New(t, apptest.Options{WorkDir: dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Run("diff.open", registry.Args{"path": dir})
 	made := func() (n int, done bool) {
 		return diffOf(s).Made()
@@ -44,7 +44,7 @@ func TestDiffViewDiffsOnlyTheOpenFile(t *testing.T) {
 func TestDiffWhileTheStatusLoads(t *testing.T) {
 	r := rig.DiffRepo(t)
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	gitOf(s).Unread(r.Dir)
 	s.Run("diff.open", registry.Args{"path": r.Dir})
 	s.Frame()
@@ -54,7 +54,7 @@ func TestDiffWhileTheStatusLoads(t *testing.T) {
 
 	gitOf(s).Unread(filepath.Join(r.Dir, "gone"))
 	gitOf(s).Reload()
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
 	s.WantFrame("Retry")

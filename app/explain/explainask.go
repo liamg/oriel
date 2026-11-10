@@ -36,9 +36,7 @@ func (x *Plugin) keep(key string, req registry.ExplainRequest) {
 	x.mu.Lock()
 	x.kept[key] = a
 	x.mu.Unlock()
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		md, by, err := registry.Explain(ctx, x.h, req)
@@ -54,7 +52,7 @@ func (x *Plugin) keep(key string, req registry.ExplainRequest) {
 				x.notify(err)
 			}
 		})
-	}()
+	})
 }
 
 // keptAnswer is the answer asked for under key, if one was.
@@ -135,9 +133,7 @@ func (x *Plugin) request(cd *explainCard, i int) {
 	x.answers[key] = a
 	x.mu.Unlock()
 	path, buf, kind, start := cd.path, cd.buf, cr.kind, r.Start
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		if depth == registry.ExplainWhy {
@@ -166,7 +162,7 @@ func (x *Plugin) request(cd *explainCard, i int) {
 			x.mu.Unlock()
 			x.h.Redraw()
 		})
-	}()
+	})
 }
 
 func crumbLabels(cs []explainCrumb) []string {
@@ -293,9 +289,7 @@ func (x *Plugin) ask(a registry.Args) error {
 	}
 	x.h.Notify(core.Notice{ID: explainAsking, Severity: core.SevInfo, Source: "explain", Title: "Explain: " + req.Subject,
 		Text: "Asking the explainer; its answer comes here."})
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 		md, _, err := registry.Explain(ctx, x.h, req)
@@ -307,7 +301,7 @@ func (x *Plugin) ask(a registry.Args) error {
 			}
 			x.h.Notify(core.Notice{ID: "explain.answer", Severity: core.SevInfo, Source: "explain", Title: "Explain: " + req.Subject, Text: md})
 		})
-	}()
+	})
 	return nil
 }
 

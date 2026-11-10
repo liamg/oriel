@@ -128,7 +128,7 @@ func (r *rankings) rank(s uireg.PickerSource, q string, limit int, moving bool) 
 		ctx, cancel := context.WithCancel(context.Background())
 		k.running, k.want = cancel, want
 		items, version := k.items, k.version
-		go func() {
+		plugin.Go(r.h, "ranking "+s.ID, func() {
 			g, ok := rankItems(ctx, s, items, q, limit)
 			r.mu.Lock()
 			if ok && ctx.Err() == nil {
@@ -137,7 +137,7 @@ func (r *rankings) rank(s uireg.PickerSource, q string, limit int, moving bool) 
 			r.mu.Unlock()
 			cancel()
 			r.h.Redraw()
-		}()
+		})
 	}
 	return k.g, len(k.g.hits) > 0
 }

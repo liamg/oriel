@@ -176,6 +176,7 @@ type stateWriter struct {
 	pending []byte
 	busy    bool
 	done    sync.WaitGroup
+	track   func(what string) (end func()) // counts a write under way; nil counts nothing
 }
 
 func (w *stateWriter) write(path string, b []byte) {
@@ -185,12 +186,17 @@ func (w *stateWriter) write(path string, b []byte) {
 	if !w.busy {
 		w.busy = true
 		w.done.Add(1)
-		go w.run()
+		end := func() {}
+		if w.track != nil {
+			end = w.track("writing " + filepath.Base(path))
+		}
+		go w.run(end)
 	}
 }
 
-func (w *stateWriter) run() {
+func (w *stateWriter) run(end func()) {
 	defer w.done.Done()
+	defer end()
 	for {
 		w.mu.Lock()
 		path, b := w.path, w.pending

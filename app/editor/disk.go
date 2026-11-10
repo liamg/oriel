@@ -68,9 +68,7 @@ func (x *Editor) startDiskLook() {
 	}
 	x.disk.checking = true
 	disk := x.fileHost.disk
-	x.busy.Add(1)
-	go func() {
-		defer x.busy.Done()
+	x.busy.Go(func() {
 		var found []diskChange
 		for i, l := range looks {
 			if changed, err := files[i].ChangedOnDisk(); err != nil || !changed {
@@ -93,7 +91,7 @@ func (x *Editor) startDiskLook() {
 				x.changedOnDisk(found)
 			}
 		})
-	}()
+	})
 }
 
 // changedOnDisk reloads or asks about the buffers a look off the loop found changed, unless they've been saved or

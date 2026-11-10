@@ -13,7 +13,7 @@ import (
 // changedExplorer is the Explorer open on dir's Changed scope, once its git is read.
 func changedExplorer(t *testing.T, dir string, n int) *apptest.Scene {
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Press("<M-1>")
 	if !s.Headless.Until(30*time.Second, gitOf(s).Settled) {
 		t.Fatalf("the git of %d changed files never settled", n)
@@ -48,10 +48,10 @@ func TestDiffViewWithManyChangesBudget(t *testing.T) {
 // uncommittedScene is the Explorer open on dir's Uncommitted scope.
 func uncommittedScene(t *testing.T, dir string) *apptest.Scene {
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
-	gitOf(s).Wait()
+	s.Quiet()
 	s.Press("<M-2>")
 	s.Headless.Until(5*time.Second, func() bool { return gitOf(s).State() != nil })
-	gitOf(s).Wait()
+	s.Quiet()
 	return s
 }
 

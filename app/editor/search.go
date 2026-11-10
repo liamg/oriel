@@ -239,10 +239,8 @@ func (p *Search) run() {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	p.cancel = cancel
-	p.busy.Add(1)
 	p.mu.Unlock()
-	go func() {
-		defer p.busy.Done()
+	p.busy.Go(func() {
 		var err error
 		for _, root := range roots {
 			// Matches keep absolute paths, so those of every root sit together.
@@ -264,7 +262,7 @@ func (p *Search) run() {
 		}
 		p.mu.Unlock()
 		p.h.Redraw()
-	}()
+	})
 }
 
 // results are the matches so far, by file then line.
