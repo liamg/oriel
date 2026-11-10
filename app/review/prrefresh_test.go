@@ -36,15 +36,8 @@ func TestARefreshAskedMidReadReadsAgain(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("the refresh asked mid-read never read again")
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for {
-		if st, _ := x.PRDetail(url); st == "merged" {
-			return
-		}
-		if time.Now().After(deadline) {
-			st, _ := x.PRDetail(url)
-			t.Fatalf("the pull request reads %q, want what the second read said", st)
-		}
-		time.Sleep(5 * time.Millisecond)
+	s.Quiet()
+	if st, _ := x.PRDetail(url); st != "merged" {
+		t.Fatalf("the pull request reads %q, want what the second read said", st)
 	}
 }
