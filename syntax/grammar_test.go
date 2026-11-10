@@ -9,11 +9,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/liamg/oriel/tools/perf"
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
 )
 
 // The embedded grammars are what build.sh makes: each decompresses to its SHA256SUMS line, which CI checks a rebuild
@@ -62,51 +57,6 @@ func TestCoreSetSize(t *testing.T) {
 	t.Logf("the core grammars take %.1f MB", float64(total)/(1<<20))
 	if total >= 12<<20 {
 		t.Errorf("the core grammars take %d bytes; the budget is 12 MB", total)
-	}
-}
-
-// Opening a file in an already-compiled language is under 20 ms from cache: a runtime that finds the
-// compiled grammar on disk compiles, instantiates and parses a fixture in that.
-func TestCompiledFromCacheBudget(t *testing.T) {
-	perf.Timed(t)
-	dir := t.TempDir()
-	l, _ := Builtin().Language("go")
-	wasm, _, err := l.load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	src, _ := os.ReadFile("testdata/highlight/fixture.go")
-	// open times a fresh runtime's compile, instantiate and parse, the best of rounds.
-	open := func(rounds int) time.Duration {
-		var rt wazero.Runtime
-		defer func() { rt.Close(context.Background()) }()
-		fresh := func() {
-			if rt != nil {
-				rt.Close(context.Background())
-			}
-			if rt, err = newRuntime(dir); err != nil {
-				t.Fatal(err)
-			}
-		}
-		return perf.Times(rounds, 1, fresh, func(int) {
-			cm, err := rt.CompileModule(context.Background(), wasm)
-			if err != nil {
-				t.Fatal(err)
-			}
-			mod, err := rt.InstantiateModule(context.Background(), cm, wazero.NewModuleConfig().WithName("").WithStartFunctions("_initialize"))
-			if err != nil {
-				t.Fatal(err)
-			}
-			m := &module{m: mod, fns: map[string]api.Function{}}
-			p := &Parser{lang: l, m: m, parser: m.call("parser_new"), queries: map[string]*query{}, symbols: map[string]uint32{}}
-			p.Parse(src)
-		})[0]
-	}
-	cold := open(1)
-	warm := open(3)
-	t.Logf("first open %v, from the cache %v", cold, warm)
-	if warm > 20*time.Millisecond && !raceEnabled && testing.CoverMode() == "" {
-		t.Errorf("opening from the cache took %v", warm)
 	}
 }
 

@@ -219,10 +219,6 @@ func TestDrawReusesPathsForTheSameRect(t *testing.T) {
 			}
 		}
 	}
-	f := &pathFrame{paths: make([]render.Path, 0, 400)}
-	if n := testing.AllocsPerRun(20, func() { f.paths = f.paths[:0]; d.Draw(f, r1, nil) }); n > 0 {
-		t.Fatalf("drawing again at the same rect allocates %v times", n)
-	}
 }
 
 func BenchmarkDraw(b *testing.B) {

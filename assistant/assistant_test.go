@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 // fakeAgent is an agent the test speaks for.
@@ -276,35 +278,56 @@ func TestInterrupt(t *testing.T) {
 	}
 }
 
+// fakeClock puts the conversation's stamps and its reaper on a clock the test moves.
+func (r *rig) fakeClock() *clocktest.Fake {
+	clk := clocktest.New(time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC))
+	r.c.Now, r.c.Clock = clk.Now, clk
+	return clk
+}
+
+// reaped says whether the conversation has ended: its log's divider is written as it ends.
+func (r *rig) reaped() bool {
+	log, _ := r.c.Log()
+	return strings.Contains(kinds(log), "divider")
+}
+
 // An idle conversation ends at its deadline, from a timer set to it rather than a once-a-second check.
 func TestIdleConversationEndsOnTime(t *testing.T) {
 	r := newRig(t)
-	r.c.Now = time.Now
+	clk := r.fakeClock()
 	r.c.Idle = 100 * time.Millisecond
 	r.c.Say("hi", false)
 	_, a := r.started()
 	a.sig <- Signal{Kind: TurnEnded}
 	r.until("idle", func(_ []Entry, busy bool) bool { return !busy })
-	ended := time.Now()
-	r.until("reaped", func([]Entry, bool) bool { return a.isClosed() })
-	if took := time.Since(ended); took > 600*time.Millisecond {
-		t.Errorf("reaped %v after the turn, want about 100ms", took)
+	clk.Advance(99 * time.Millisecond)
+	if r.reaped() {
+		t.Fatal("reaped before its deadline")
 	}
+	clk.Advance(time.Millisecond)
+	if !r.reaped() {
+		t.Fatal("not reaped at its deadline")
+	}
+	r.until("the agent closed", func([]Entry, bool) bool { return a.isClosed() })
 }
 
 // Shortening Idle while a conversation waits re-arms its reaper to the new deadline, rather than the old one.
 func TestShorterIdleRearmsTheReaper(t *testing.T) {
 	r := newRig(t)
-	r.c.Now = time.Now
+	clk := r.fakeClock()
 	r.c.SetIdle(time.Hour)
 	r.c.Say("hi", false)
 	_, a := r.started()
 	a.sig <- Signal{Kind: TurnEnded}
 	r.until("idle", func(_ []Entry, busy bool) bool { return !busy })
+	clk.Advance(time.Second)
 	r.c.SetIdle(100 * time.Millisecond)
-	shortened := time.Now()
-	r.until("reaped", func([]Entry, bool) bool { return a.isClosed() })
-	if took := time.Since(shortened); took > 600*time.Millisecond {
-		t.Errorf("reaped %v after Idle was shortened, want about 100ms", took)
+	if r.reaped() {
+		t.Fatal("reaped as Idle was shortened")
 	}
+	clk.Advance(minReap)
+	if !r.reaped() {
+		t.Fatal("not reaped once the new deadline passed")
+	}
+	r.until("the agent closed", func([]Entry, bool) bool { return a.isClosed() })
 }

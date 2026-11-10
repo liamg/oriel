@@ -461,13 +461,18 @@ func pointerFilter(tag event.Tag) pointer.Filter {
 // event puts it at: the event that arrived soonest after it happened reads as arriving at once.
 type inputClock struct {
 	epoch time.Time
+	now   func() time.Time // the wall clock if nil
 }
 
 func (c *inputClock) at(t time.Duration) time.Time {
 	if t == 0 {
 		return time.Time{}
 	}
-	if e := time.Now().Add(-t); c.epoch.IsZero() || e.Before(c.epoch) {
+	now := time.Now
+	if c.now != nil {
+		now = c.now
+	}
+	if e := now().Add(-t); c.epoch.IsZero() || e.Before(c.epoch) {
 		c.epoch = e
 	}
 	return c.epoch.Add(t)

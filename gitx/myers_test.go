@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand/v2"
-	"runtime"
 	"testing"
 )
 
@@ -65,9 +64,11 @@ func TestMyersMatchesFullTrace(t *testing.T) {
 	}
 }
 
-// A new file of 20,000 lines diffs without allocating a trace for it, and a rewrite past myersMaxD edits is a
-// replacement rather than gigabytes of trace.
-func TestMyersMemory(t *testing.T) {
+// myersLong is the long inputs Myers must diff in bounded memory: a new file, and a rewrite.
+func myersLong() []struct {
+	name string
+	a, b []string
+} {
 	lines := func(n int, f string) []string {
 		out := make([]string, n)
 		for i := range out {
@@ -75,22 +76,21 @@ func TestMyersMemory(t *testing.T) {
 		}
 		return out
 	}
-	for _, tt := range []struct {
+	return []struct {
 		name string
 		a, b []string
 	}{
 		{"a new file", nil, lines(20000, "new %d")},
 		{"a rewrite", lines(20000, "old %d"), lines(20000, "new %d")},
-	} {
-		var before, after runtime.MemStats
-		runtime.ReadMemStats(&before)
-		ops := myers(tt.a, tt.b)
-		runtime.ReadMemStats(&after)
-		if len(ops) != len(tt.a)+len(tt.b) {
+	}
+}
+
+// Long inputs with nothing in common diff to every line out and every line in (TestMyersMemoryBudget holds what
+// that allocates).
+func TestMyersLong(t *testing.T) {
+	for _, tt := range myersLong() {
+		if ops := myers(tt.a, tt.b); len(ops) != len(tt.a)+len(tt.b) {
 			t.Errorf("%s: %d ops for %d lines out and %d in", tt.name, len(ops), len(tt.a), len(tt.b))
-		}
-		if mb := (after.TotalAlloc - before.TotalAlloc) >> 20; mb > 64 {
-			t.Errorf("%s allocated %d MB", tt.name, mb)
 		}
 	}
 }

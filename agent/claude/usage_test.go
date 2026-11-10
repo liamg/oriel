@@ -128,13 +128,9 @@ func TestUsageSignedOutEndsTheProbe(t *testing.T) {
 	p, runs := usageProbe(t)
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	t.Setenv("ORIEL_FAKE_SIGNED_OUT", "1")
-	start := time.Now()
-	u, err := p.Usage(context.Background())
+	u, err := p.Usage(context.Background()) // a probe that missed the login screen ends at its timeout, with an error
 	if started, _ := runs(); err != nil || len(u.Windows) != 0 || started != 1 {
 		t.Errorf("signed out: %+v, %v; %d claudes started", u, err, started)
-	}
-	if d := time.Since(start); d > probeTimeout/2 {
-		t.Errorf("the probe took %s to see the login screen", d)
 	}
 }
 

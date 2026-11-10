@@ -239,9 +239,9 @@ connects it to the platform:
 - No test is racy or depends on a timer. Pacing, debounces and polls are checked on a clock the test moves; what
   a frame or an event costs is checked by counting (frames built, reads, processes started), not by timing it. A
   Window test waits for the app to be idle with `Idle`: nothing busy, no read or watched source due, over frames.
-- Timing budgets are tests named `…Budget` using `tools/perf`; `make test` runs them alone, one package at a time,
-  timed by the thread's CPU against reference work. What only a wall clock can measure (latency under a moving
-  pointer, a while left idle) is a `…Budget` behind the `perf` build tag (`//go:build perf`, in a `_perf_test.go`
-  file): out of `go test ./...` and CI, run with `make perf` on a quiet machine. Its deterministic part (frames per
-  event, the polls running) stays in the default suite.
+- A test that measures the machine rather than the code (a time, throughput or allocation budget, a latency, a while
+  left idle) is named `…Budget` and lives in a `_perf_test.go` file behind the `perf` build tag (`//go:build
+  perf`): out of `go test ./...`, `make test` and CI, run by `make perf` (`-tags perf -run 'Budget$'`) on a quiet
+  machine. `tools/perf` times a step by the thread's CPU against reference work. Its deterministic part (what's
+  built, read or diffed, frames per event, the polls running) is a test of its own in the default suite.
 - `tools/ratchet` counts what the code is moving away from; a count may only fall.

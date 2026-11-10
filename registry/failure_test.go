@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -57,14 +58,15 @@ func TestThreeErrorsInARow(t *testing.T) {
 
 // A hook over its time budget twice running is a warning: "4.1 ms on CommentSend · over the 2 ms budget". Once alone
 // isn't: a busy machine stalls any hook now and then, where a slow one is slow every time.
-func TestHookBudget(t *testing.T) {
-	r := registry.New()
+func TestSlowHookWarns(t *testing.T) {
+	clk := clocktest.New(time.Unix(0, 0))
+	r := registry.NewWith(registry.Config{Clock: clk})
 	var fails []registry.Failure
 	r.OnFailure(func(f registry.Failure) { fails = append(fails, f) })
 	slow := true
 	r.Hook(registry.Hook{Event: "CommentSend", Source: "lua/my/tickets.lua:8", Fn: func(registry.Ctx, any) (registry.Verdict, error) {
 		if slow {
-			time.Sleep(3 * time.Millisecond)
+			clk.Advance(3 * time.Millisecond)
 		}
 		return registry.Verdict{}, nil
 	}})

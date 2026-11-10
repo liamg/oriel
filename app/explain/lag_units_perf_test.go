@@ -1,4 +1,4 @@
-//go:build !race
+//go:build perf && !race
 
 package explain_test
 
@@ -10,7 +10,6 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/tools/perf"
 )
 
 // unitsPanelScene is the Changed units panel open over dir's n changed files, once it's read them.
@@ -27,7 +26,6 @@ func unitsPanelScene(t *testing.T, dir string, n int) *apptest.Scene {
 // The Changed units panel's frame doesn't grow with the files the branch changes: what it shows is worked out when
 // they change, not every frame.
 func TestChangedUnitsFrameWithManyChangesBudget(t *testing.T) {
-	perf.Timed(t)
 	f := apptest.MeanFrames(unitsPanelScene(t, rig.ChangedRepo(t, 5), 5), unitsPanelScene(t, rig.ChangedRepo(t, 4000), 4000))
 	few, many := f[0], f[1]
 	t.Logf("the Changed units panel's frame over 5 changed files: %v; over 4000: %v", few, many)

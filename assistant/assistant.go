@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Agent is the conversation's agent: it takes turns and says what it does.
@@ -120,6 +122,8 @@ type Conversation struct {
 	Progress func(tool string) string
 	// Now is the clock: it stamps turns, so the agent can resolve "ten minutes ago".
 	Now func() time.Time
+	// Clock runs the idle reaper: the system's if nil.
+	Clock clock.Clock
 	// Changed is told whenever the log changes, from any goroutine.
 	Changed func()
 
@@ -137,7 +141,7 @@ type Conversation struct {
 	asks    map[string]chan bool
 	undo    map[string]func(context.Context) error
 	stop    chan struct{}
-	reaper  *time.Timer // set to the idle deadline once a turn ends
+	reaper  clock.Timer // set to the idle deadline once a turn ends
 }
 
 type turn struct {
@@ -567,12 +571,10 @@ func (c *Conversation) reapAfterLocked(d time.Duration) {
 		return
 	default:
 	}
-	d = max(d, minReap)
-	if c.reaper == nil {
-		c.reaper = time.AfterFunc(d, c.ReapIdle)
-		return
+	if c.reaper != nil {
+		c.reaper.Stop()
 	}
-	c.reaper.Reset(d)
+	c.reaper = clock.Or(c.Clock).AfterFunc(max(d, minReap), c.ReapIdle)
 }
 
 // minReap keeps a clock that doesn't move (a test's) from checking without pause.

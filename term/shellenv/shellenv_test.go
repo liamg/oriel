@@ -48,19 +48,20 @@ func TestPathWithoutInteractive(t *testing.T) {
 	}
 }
 
-// A shell whose config waits for input, or starts something that never ends, is given up on in time, with what it
-// started.
+// hangingShell is a shell whose config starts something that never ends, and the file it writes that child's pid to.
+func hangingShell(t *testing.T) (sh, pidfile string) {
+	pidfile = filepath.Join(t.TempDir(), "child")
+	return fakeShell(t, `sleep 1000 & echo $! > `+pidfile+`; wait`, "/bin"), pidfile
+}
+
+// A shell whose config waits for input, or starts something that never ends, is given up on, with what it started:
+// one that waited for its child would never return. How soon is TestPathGivesUpOnAShellThatHangsBudget.
 func TestPathGivesUpOnAShellThatHangs(t *testing.T) {
 	isolate.Test(t)
-	pidfile := filepath.Join(t.TempDir(), "child")
-	sh := fakeShell(t, `sleep 60 & echo $! > `+pidfile+`; wait`, "/bin")
-	start := time.Now()
+	sh, pidfile := hangingShell(t)
 	_, err := Path(t.Context(), sh, 300*time.Millisecond)
 	if err == nil || !strings.Contains(err.Error(), "didn't answer") {
 		t.Fatalf("err = %v", err)
-	}
-	if d := time.Since(start); d > 4*time.Second {
-		t.Errorf("gave up after %v", d)
 	}
 	b, _ := os.ReadFile(pidfile)
 	if pid := strings.TrimSpace(string(b)); pid != "" {
@@ -110,23 +111,24 @@ func TestCheckedRefusesWhatIsntAPath(t *testing.T) {
 	}
 }
 
-// A shell that goes on writing after it has printed the PATH (a logout script, job notices) is still answered for, and
-// let go of in time: the terminal is read until it closes, as macOS won't let a process exit with its output unread.
-func TestPathFromAShellThatKeepsWriting(t *testing.T) {
-	isolate.Test(t)
+// chattyShell is a shell that goes on writing after it has printed the PATH.
+func chattyShell(t *testing.T) string {
 	sh := filepath.Join(t.TempDir(), "chatty")
 	src := "#!/bin/sh\nfor a; do last=$a; done\nPATH=/opt/chatty/bin:/bin; export PATH\n/bin/sh -c \"$last\"\n" +
 		"i=0; while [ $i -lt 20000 ]; do echo \"logging out, line $i of many\"; i=$((i+1)); done\n"
 	if err := os.WriteFile(sh, []byte(src), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	start := time.Now()
-	got, err := Path(t.Context(), sh, Timeout)
-	if err != nil || got != "/opt/chatty/bin:/bin" {
+	return sh
+}
+
+// A shell that goes on writing after it has printed the PATH (a logout script, job notices) is still answered for, and
+// let go of: the terminal is read until it closes, as macOS won't let a process exit with its output unread. How soon
+// is TestPathFromAShellThatKeepsWritingBudget.
+func TestPathFromAShellThatKeepsWriting(t *testing.T) {
+	isolate.Test(t)
+	if got, err := Path(t.Context(), chattyShell(t), Timeout); err != nil || got != "/opt/chatty/bin:/bin" {
 		t.Fatalf("Path = %q, %v", got, err)
-	}
-	if d := time.Since(start); d > 3*time.Second {
-		t.Errorf("took %v to let the shell go", d)
 	}
 }
 
