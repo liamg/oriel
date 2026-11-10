@@ -61,7 +61,8 @@ func (b *Backend) invalidate() {
 }
 
 func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
-	w := newGioWindow(o)
+	w := newStreams()
+	w.win, w.opts, w.pl = new(app.Window), o, newPlacer()
 	w.scale.Store(float32(1))
 	w.dpi.Store(float32(1))
 	w.zoom.Store(float32(1))
@@ -96,9 +97,9 @@ func (b *Backend) NewWindow(o render.WindowOpts) (render.Window, error) {
 	return w, nil
 }
 
-func newGioWindow(o render.WindowOpts) *Window {
-	return &Window{win: new(app.Window), events: make(chan render.Event), queue: make(chan render.Event, 1024), gone: make(chan struct{}),
-		opts: o, pl: newPlacer()}
+// newStreams is a window with its event channels and nothing else.
+func newStreams() *Window {
+	return &Window{events: make(chan render.Event), queue: make(chan render.Event, 1024), gone: make(chan struct{})}
 }
 
 // Window is a Gio window. The app records frames on its own goroutine; the window's event loop
