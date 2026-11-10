@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -32,7 +34,7 @@ const mockupPlan = "# Round invoice lines half-to-even\n\n## Goal\n\n" +
 // planScene is a session, pricing-rounding, planning: three docs, Claude drafting rev 4 of PLAN.md and just
 // edited its precision line, a thread on L14 that needs you, one on L22 resolved, one on L31 Claude is working on,
 // and one on api.md.
-func planScene(t *testing.T) *apptest.Scene {
+func planScene(t *testing.T, config ...func(*apptest.Config)) *apptest.Scene {
 	t.Helper()
 	ws := t.TempDir()
 	os.WriteFile(filepath.Join(ws, "PLAN.md"), []byte(mockupPlan), 0o644)
@@ -41,7 +43,11 @@ func planScene(t *testing.T) *apptest.Scene {
 	pricing, billing := filepath.Join(t.TempDir(), "pricing"), filepath.Join(t.TempDir(), "billing-ui")
 	os.MkdirAll(pricing, 0o755)
 	os.MkdirAll(billing, 0o755)
-	s := apptest.New(t, apptest.Options{WorkDir: pricing, ScriptedFiles: true})
+	s := apptest.New(t, apptest.Options{WorkDir: pricing, ScriptedFiles: true, Config: func(cfg *apptest.Config) {
+		for _, c := range config {
+			c(cfg)
+		}
+	}})
 	s.Now = time.Date(2026, 10, 13, 14, 30, 0, 0, time.UTC)
 	ago := func(d time.Duration) time.Time { return s.Now.Add(-d) }
 	liam := "Liam Galvin"
@@ -147,7 +153,9 @@ func TestPlanThreadsSitBesideTheirLines(t *testing.T) {
 // Plan → Start work: the dialog over the plan, with the plan's threads to clear, a fresh agent on the
 // plan's model, a branch per project, and the session's sandbox and network.
 func TestStartWorkDialogSnapshot(t *testing.T) {
-	s := planScene(t)
+	claude := agenttest.NewFake()
+	claude.Name = "claude"
+	s := planScene(t, apptest.Connect(rig.NewHost(t, claude).W))
 	se, _ := s.Store().Session("pricing-rounding")
 	for _, th := range se.Snapshot().Threads {
 		if th.Status == core.ThreadOpen && th.Anchor != nil {

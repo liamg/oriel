@@ -375,19 +375,21 @@ func TestLauncherWaitsForTheProbe(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	s.Now = apptest.At(14, 30, 0)
 	s.Run("session.new", registry.Args{"prompt": "Fix stale search results"})
-	s.Frame()
-	s.WantFrame("NEW SESSION", "Plan") // the kinds are there at once
-	s.Now = s.Now.Add(4 * time.Second)
-	s.Frame()
-	s.WantFrame("Checking which agents are installed…", "· 4s", "Checking agents…")
-	if n := s.Node("No agent"); n.Selected {
-		t.Error("No agent is picked while the probe runs")
-	}
-	if err := s.Registry().Run(context.Background(), "session.launch", nil); err == nil || err.Error() != "To start: a moment: checking which agents are installed." {
-		t.Errorf("⌘↵: %v", err)
-	}
-	s.Frame()
-	s.WantFrame("To start: a moment: checking which agents are installed.")
+	s.Midway(func() {
+		s.Frame()
+		s.WantFrame("NEW SESSION", "Plan") // the kinds are there at once
+		s.Now = s.Now.Add(4 * time.Second)
+		s.Frame()
+		s.WantFrame("Checking which agents are installed…", "· 4s", "Checking agents…")
+		if n := s.Node("No agent"); n.Selected {
+			t.Error("No agent is picked while the probe runs")
+		}
+		if err := s.Registry().Run(context.Background(), "session.launch", nil); err == nil || err.Error() != "To start: a moment: checking which agents are installed." {
+			t.Errorf("⌘↵: %v", err)
+		}
+		s.Frame()
+		s.WantFrame("To start: a moment: checking which agents are installed.")
+	})
 
 	close(fake.Hold)
 	s.Until("the probe", func() bool { return strings.Contains(s.Text(), "Fake") })
