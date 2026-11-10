@@ -162,10 +162,7 @@ func (f *fake) handle(r *jsonrpc.Request) {
 	case "account/login/start":
 		id := f.id("login")
 		r.Reply(map[string]any{"type": "chatgpt", "loginId": id, "authUrl": "https://auth.example/" + id}, nil)
-		go func() {
-			time.Sleep(50 * time.Millisecond)
-			f.rpc.Notify("account/login/completed", map[string]any{"loginId": id, "success": true, "error": nil})
-		}()
+		f.rpc.Notify("account/login/completed", map[string]any{"loginId": id, "success": true, "error": nil})
 	case "thread/start", "thread/resume":
 		t := &fakeThread{id: p.ThreadID}
 		if r.Method == "thread/start" {
@@ -412,13 +409,14 @@ func (f *fake) run(t *fakeThread, turn, text string) {
 		cmd["status"] = "declined"
 		item("item/completed", cmd)
 		t.mu.Lock()
-		steer := t.steer
+		steer, stop := t.steer, t.interrupt
 		t.mu.Unlock()
+		// A denial's note follows it as a steer; every denial the tests make has one.
 		select {
 		case why := <-steer:
 			say("denied: " + why)
-		case <-time.After(5 * time.Second):
-			say("denied: no reason given")
+		case <-stop:
+			status = "interrupted"
 		}
 	case strings.HasSuffix(text, "ask me"):
 		var r struct {

@@ -3,9 +3,7 @@ package claude
 import (
 	"context"
 	"io"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
@@ -52,17 +50,7 @@ func TestTerminalOverRPC(t *testing.T) {
 	if term == nil {
 		t.Fatal("no terminal over the protocol")
 	}
-	var shown string
-	for deadline := time.Now().Add(h.Timeout); time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
-		b, _, detach := term.Attach()
-		detach()
-		if shown = string(b); strings.Contains(shown, "fake claude "+s.S.ID()) {
-			break
-		}
-	}
-	if !strings.Contains(shown, "fake claude "+s.S.ID()) {
-		t.Fatalf("the terminal showed %q", shown)
-	}
+	waitShown(t, term, "fake claude "+s.S.ID(), h.Timeout)
 	if err := term.Resize(120, 40); err != nil {
 		t.Error(err)
 	}
