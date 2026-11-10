@@ -31,6 +31,8 @@ func (w window) contribute() func() {
 		Source: "builtin:window"}))
 	// What's been handed the loop (Host.Do) and not run yet: looked at from the loop, what the work running hands it.
 	d = append(d, w.sh.cfg.Registry.Contribute(registry.Busy{Name: "the loop's queue", Busy: w.sh.queued, Source: "builtin:window"}))
+	d = append(d, w.sh.cfg.Registry.Contribute(registry.Busy{Name: "work off the loop", Busy: w.sh.inflight.busy, What: w.sh.inflight.what,
+		Source: "builtin:window"}))
 	return func() {
 		for _, x := range d {
 			x.Dispose()

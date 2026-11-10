@@ -46,6 +46,7 @@ type shell struct {
 	modes       func() []string
 	theme       func() *theme.Resolved
 	todoMu      sync.Mutex
+	inflight    inflight // plugins' work off the loop (plugin.Begin)
 	todo        []func() // Host.Do's, for the loop
 	shot        func(th *theme.Resolved) *image.RGBA
 	reopen      chan reopenTo            // the directory for the loop to start again on: Open Directory's, or a session's

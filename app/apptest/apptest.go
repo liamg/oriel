@@ -266,6 +266,7 @@ func (s *Scene) SettleReads() {
 // ORIEL_UPDATE=1 writes them.
 func (s *Scene) Golden(name string) {
 	s.T.Helper()
+	s.Quiet()
 	s.SettleDrawn()
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		s.T.Errorf("%s: text drawn past its box:\n%s", name, strings.Join(o, "\n"))
@@ -284,6 +285,7 @@ func (s *Scene) Golden(name string) {
 // Shot draws two frames and writes the second to $ORIEL_SHOTS/name.png: a screenshot for the docs.
 func (s *Scene) Shot(name string) {
 	s.T.Helper()
+	s.Quiet()
 	s.SettleReads()
 	s.Frame()
 	s.Frame()
