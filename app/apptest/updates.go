@@ -2,7 +2,6 @@ package apptest
 
 import (
 	"context"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/settings"
@@ -20,7 +19,7 @@ func (s *Scene) CheckUpdates() { PluginOf[*settings.Update](s, "update").Check()
 // WaitAfter waits for a frame drawn after the first after frames that satisfies ok, and answers its text.
 func (w *Window) WaitAfter(what string, after int, ok func(string) bool) string {
 	w.T.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), Timeout)
 	defer cancel()
 	n := 0
 	f, err := w.Win.WaitFrame(ctx, func(f headless.Frame) bool { n++; return n > after && ok(f.Text()) })

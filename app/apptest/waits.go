@@ -1,6 +1,7 @@
 package apptest
 
 import (
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +25,28 @@ func (w *Window) WaitExit() {
 	case <-time.After(10 * time.Second):
 		w.T.Fatal("Oriel didn't quit")
 	}
+}
+
+// WaitProject waits for the window to be on the project dir (Host.Here).
+func (w *Window) WaitProject(dir string) {
+	w.T.Helper()
+	w.WaitFor("the window on "+dir, func() bool { return filepath.Clean(w.Host.Here().Project) == filepath.Clean(dir) })
+}
+
+// Drain waits for every event sent to the window to be taken, then for the app to go idle after them (Idle): what
+// a test waits for before it asserts that a click or a key did nothing, rather than a while.
+func (w *Window) Drain() {
+	w.T.Helper()
+	w.Taken()
+	w.Idle()
+}
+
+// Taken waits for every event sent to the window to be taken and handled: the loop reads them in turn with what it
+// was handed (Do), so a Do after the last is taken runs once it's handled. It doesn't wait for work they started.
+func (w *Window) Taken() {
+	w.T.Helper()
+	Poll(w.T, "the window to take what was sent", func() bool { return w.Win.Pending() == 0 })
+	w.Do(func() error { return nil })
 }
 
 // WaitSearch frames until project search has finished and the frame has want, and answers the frame's text.
@@ -101,7 +124,9 @@ func dueSources(r registry.Registry, st core.State) []string {
 		}
 		for _, s := range m.Stats() {
 			active := s.State == "watching" || s.State == "polling"
-			if s.State == "reading" || active && (s.Stale || s.LastRead.IsZero()) {
+			// A stale source read within its MaxAge waits for it to pass: not due now.
+			due := s.LastRead.IsZero() || s.Stale && time.Since(s.LastRead) >= s.Need.MaxAge
+			if s.State == "reading" || active && due {
 				out = append(out, m.Name()+": "+s.Key)
 			}
 		}

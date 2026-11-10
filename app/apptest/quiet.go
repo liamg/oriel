@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -30,6 +31,36 @@ func (s *Scene) Quiet() {
 		calm = 0
 		if time.Now().After(deadline) {
 			s.T.Fatalf("the app never settled: still busy: %s", strings.Join(busy, ", "))
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// Idle is Quiet, and more: no watched source (registry.Watches) reading or due a read, no read a frame asked for
+// (kit.Reads) under way and no git tree reading, two frames running, as Window.Idle. It's what a test that counts
+// reads waits for before it counts, since a read's end can start another.
+func (s *Scene) Idle() {
+	s.T.Helper()
+	if s.midway {
+		return
+	}
+	deadline := time.Now().Add(Timeout)
+	for calm := 0; calm < 2; {
+		s.Quiet()
+		busy := dueSources(s.Registry(), s.Store().State())
+		if rd, ok := kit.ReadsOf(s.Registry()); ok && rd.Busy() {
+			busy = append(busy, "the window's reads")
+		}
+		if kit.GitOf(s.Registry()).Busy() {
+			busy = append(busy, "git")
+		}
+		if len(busy) == 0 {
+			calm++
+			continue
+		}
+		calm = 0
+		if time.Now().After(deadline) {
+			s.T.Fatalf("the app never went idle: still at work: %s", strings.Join(busy, ", "))
 		}
 		time.Sleep(time.Millisecond)
 	}
