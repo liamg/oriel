@@ -37,8 +37,7 @@ func TestAChangeReadsOnlyItsProject(t *testing.T) {
 // can hand on another (a read asked for while one ran).
 func shipQuiet(s *apptest.Scene) {
 	for range 3 {
-		s.RunQueued()
-		s.Frame()
+		s.Idle()
 		shipIdle(s)
 	}
 }

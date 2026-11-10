@@ -7,8 +7,9 @@ import (
 	"time"
 )
 
-// A comment reaches the agent within 1 s of its ⏎; the fake agent is idle, so the host hands it over at once.
-func TestACommentReachesTheAgentWithinASecond(t *testing.T) {
+// The comment budget: a comment reaches the agent within 1 s of its ⏎; the fake agent is idle, so the host hands it
+// over at once.
+func TestACommentReachesTheAgentBudget(t *testing.T) {
 	r, a, _ := requestsSession(t)
 	const body = "Negative values round the wrong way"
 	r.ClickText("New request")

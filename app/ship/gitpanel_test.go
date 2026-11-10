@@ -39,7 +39,7 @@ func gitPanelScene(t *testing.T, prepare func(dir string)) (s *apptest.Scene, x 
 		return ok && se.Snapshot().Kind == core.KindDirect
 	})
 	id = st.Focus
-	s.Until("the window on the directory", func() bool { s.RunQueued(); return s.Reopen() })
+	s.Follow()
 	x = shipOf(s)
 	s.Run("project.panel", registry.Args{"name": "git"})
 	shipSettle(s, t, "the Git panel", func() bool { return strings.Contains(s.Text(), "→ main") })

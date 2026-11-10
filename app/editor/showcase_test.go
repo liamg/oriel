@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/editor"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"

@@ -81,11 +81,9 @@ func TestRemotePictureRetries(t *testing.T) {
 	pics := testPictures(t, client)
 	pics.Now = func() time.Time { return now }
 	settled := func() *Picture {
+		t.Helper()
 		pc := pics.Remote(src)
-		for i := 0; pc.Loading && i < 2000; i++ {
-			time.Sleep(time.Millisecond)
-			pc = pics.Remote(src)
-		}
+		until(t, src+" read", func() bool { pc = pics.Remote(src); return !pc.Loading })
 		return pc
 	}
 	if pc := settled(); pc.Err == nil {
@@ -107,11 +105,7 @@ func TestRemotePictureFails(t *testing.T) {
 	release, client := remotePictures(t, nil)
 	release()
 	pics := testPictures(t, client)
-	pc := pics.Remote("https://example.com/gone.png")
-	for i := 0; pc.Loading && i < 500; i++ {
-		time.Sleep(time.Millisecond)
-		pc = pics.Remote("https://example.com/gone.png")
-	}
+	until(t, "the fetch to fail", func() bool { return !pics.Remote("https://example.com/gone.png").Loading })
 	if pc := pics.Remote("https://example.com/gone.png"); pc.Loading || pc.Err == nil || !strings.Contains(pc.Err.Error(), "404") {
 		t.Errorf("a failed fetch: loading %v, err %v", pc.Loading, pc.Err)
 	}
@@ -177,10 +171,7 @@ func TestPictureFileDecodesOffTheLoop(t *testing.T) {
 		t.Fatalf("the first ask decoded on the loop: %+v", pc)
 	}
 	pc := pics.File(path)
-	for i := 0; pc.Loading && i < 2000; i++ {
-		time.Sleep(time.Millisecond)
-		pc = pics.File(path)
-	}
+	until(t, "the picture decoded", func() bool { pc = pics.File(path); return !pc.Loading })
 	if pc.Img == nil || pc.Img.Bounds().Dx() != 3 {
 		t.Errorf("the picture: %+v", pc)
 	}

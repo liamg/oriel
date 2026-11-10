@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -104,11 +105,7 @@ func TestMachineLoadIsReadWhileShown(t *testing.T) {
 	}})
 	wanted := func(what string, want bool) {
 		t.Helper()
-		for deadline := time.Now().Add(5 * time.Second); load.Wanted() != want; time.Sleep(5 * time.Millisecond) {
-			if time.Now().After(deadline) {
-				t.Fatalf("%s: wanted %v, want %v", what, !want, want)
-			}
-		}
+		apptest.Poll(t, fmt.Sprintf("%s: wanted %v", what, want), func() bool { return load.Wanted() == want })
 	}
 	r.WaitText("CPU")
 	wanted("the status line shows the CPU", true)
@@ -131,7 +128,9 @@ func TestNoFramesWhileHidden(t *testing.T) {
 	}
 	before := len(r.Win.Frames())
 	r.Host.Notify(core.Notice{ID: "hidden.test", Severity: core.SevInfo, Text: "changed while hidden"})
-	time.Sleep(500 * time.Millisecond)
+	for range 2 { // the loop goes round after the notice, where a shown window would build its frame
+		r.Do(func() error { return nil })
+	}
 	if n := len(r.Win.Frames()) - before; n > 0 {
 		t.Errorf("drew %d frames while hidden", n)
 	}

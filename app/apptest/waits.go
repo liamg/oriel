@@ -41,11 +41,16 @@ func (w *Window) Drain() {
 	w.Idle()
 }
 
-// Taken waits for every event sent to the window to be taken and handled: the loop reads them in turn with what it
-// was handed (Do), so a Do after the last is taken runs once it's handled. It doesn't wait for work they started.
+// Taken waits for the events sent to the window to be taken and handled: none left to read, then two frames built,
+// as a key read while a frame is owed goes in once it's drawn. It's for a click or a key or two; a key typed behind
+// several kept ones can wait longer, so a test of what keys did waits for that. It doesn't wait for work they started.
 func (w *Window) Taken() {
 	w.T.Helper()
 	Poll(w.T, "the window to take what was sent", func() bool { return w.Win.Pending() == 0 })
+	for range 2 {
+		_, built := w.look()
+		Recv(w.T, "a frame after what was sent", built)
+	}
 	w.Do(func() error { return nil })
 }
 

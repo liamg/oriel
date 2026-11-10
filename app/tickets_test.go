@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -392,11 +391,7 @@ func TestTicketDoneAskedOnMerge(t *testing.T) {
 	se, _ := st.Session(st.Focus)
 	prs := shipPRs(t, s, hub, se.Snapshot(), "search-api", "web-dashboard")
 	s.ShipSettle("both PRs in review", func() bool { return slices.Contains(jiraCalls(jira), "review OPS-12") })
-	settled := func() {
-		time.Sleep(50 * time.Millisecond)
-		s.RunQueued()
-		s.Frame()
-	}
+	settled := s.Idle
 
 	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.Run("ship.refresh", nil)

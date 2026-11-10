@@ -14,19 +14,24 @@ func TestSerialRunsInOrderWithoutWaiting(t *testing.T) {
 	var mu sync.Mutex
 	var got []int
 	gate := make(chan struct{})
-	start := time.Now()
-	for i := range 5 {
-		s.Do(func() {
-			if i == 0 {
-				<-gate
-			}
-			mu.Lock()
-			got = append(got, i)
-			mu.Unlock()
-		})
-	}
-	if d := time.Since(start); d > 100*time.Millisecond {
-		t.Errorf("handing work over waited %v", d)
+	handed := make(chan struct{})
+	go func() {
+		defer close(handed)
+		for i := range 5 {
+			s.Do(func() {
+				if i == 0 {
+					<-gate
+				}
+				mu.Lock()
+				got = append(got, i)
+				mu.Unlock()
+			})
+		}
+	}()
+	select {
+	case <-handed: // the first is held at the gate: handing over waited on nothing
+	case <-time.After(10 * time.Second):
+		t.Fatal("handing work over waited for the work")
 	}
 	close(gate)
 	s.Wait()

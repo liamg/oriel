@@ -19,7 +19,7 @@ func TestPacedRedrawKeepsTheTrailingFrame(t *testing.T) {
 	if n.Load() != 1 {
 		t.Fatalf("asks inside the interval redrew at once")
 	}
-	time.Sleep(150 * time.Millisecond)
+	until(t, "the trailing frame", func() bool { return n.Load() >= 2 })
 	if got := n.Load(); got != 2 {
 		t.Fatalf("redrew %d times, want the trailing one: 2", got)
 	}

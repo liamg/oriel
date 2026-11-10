@@ -232,6 +232,25 @@ func (s *Scene) Until(what string, ok func() bool) {
 	}
 }
 
+// UntilEach is Until for a test of every frame on the way: it runs the work handed to the loop and draws a frame,
+// calls check with the frame's number (0 is the first drawn), and stops once ok; it fails the test after Timeout.
+func (s *Scene) UntilEach(what string, check func(frame int), ok func() bool) {
+	s.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	for n := 0; ; n++ {
+		s.RunQueued()
+		s.Frame()
+		check(n)
+		if ok() {
+			return
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatalf("waiting for %s:\n%s%s", what, s.Text(), rig.Stuck())
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
 // Hold presses mods (0 lets go) and draws, d later on the clock.
 func (s *Scene) Hold(m render.Mods, d time.Duration) {
 	s.UI().Mods(m)

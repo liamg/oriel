@@ -72,7 +72,7 @@ func newRequest(t *testing.T, r *apptest.Window, a *agenttest.FakeSession, body 
 	return a.WaitSent(t)
 }
 
-// A comment reaches the agent (within a second: requests_perf_test.go).
+// A comment reaches the agent (within a second: TestACommentReachesTheAgentBudget).
 func TestACommentReachesTheAgent(t *testing.T) {
 	r, a, _ := requestsSession(t)
 	in := newRequest(t, r, a, "Negative values round the wrong way")

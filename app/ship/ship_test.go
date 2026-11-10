@@ -347,7 +347,7 @@ func TestGitPanelInAnOpenedDirectory(t *testing.T) {
 		return ok && se.Snapshot().Kind == core.KindDirect
 	})
 	id := st.Focus
-	s.Until("the window on the directory", func() bool { s.RunQueued(); return s.Reopen() })
+	s.Follow()
 	x := shipOf(s)
 
 	s.Run("project.panel", registry.Args{"name": "git"})
