@@ -29,7 +29,7 @@ func Parse(root string, dirs ...string) ([]File, error) {
 				return err
 			}
 			if e.IsDir() {
-				if n := e.Name(); n == "vendor" || n == "testdata" {
+				if n := e.Name(); n == "vendor" || n == "testdata" || (strings.HasPrefix(n, ".") && p != filepath.Join(root, d)) {
 					return filepath.SkipDir
 				}
 				return nil

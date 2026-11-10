@@ -22,13 +22,22 @@ var ceilings = map[string]int{
 	"functions over 120 lines in host/":    0,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
-	"RequestFocus calls outside ui/":       38,
+	"RequestFocus calls outside ui/":       37,
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
 	"time.Sleep in tests": 177,
+	// Work started with a bare go statement is counted by nothing, so a test can't wait for it: plugin.Go, a
+	// plugin.Load, kit.Busy or kit.Work (whose Loop is for what runs as long as the plugin) count it.
+	"go statements in app/": 96,
+	// What only a wall clock can measure runs behind the perf build tag (make perf), never in go test ./...
+	"wall-clock measures in tests": 26,
+	// A timer in a test either guards a hang or guesses how long work takes; a test waits for the work instead.
+	"timers in tests": 115,
+	// A test frames and runs the loop's queue through apptest's waits (Until, Quiet), not a loop of its own.
+	"RunQueued in tests outside apptest": 60,
 }
 
 // stateAllowed are the package-level vars MutableVars may pass over, by "dir.name", and why each is safe to share.
@@ -129,6 +138,10 @@ func TestRatchets(t *testing.T) {
 		"mutable package-level vars":           MutableVars(product, layout.Module, stateAllowed),
 		"tests writing package-level vars":     allowedOut(TestVarWrites(withTests, layout.Module), stateAllowed),
 		"time.Sleep in tests":                  PkgSelectors(tests(withTests), "time", "Sleep"),
+		"go statements in app/":                GoStmts(without(app, "app/apptest/")),
+		"wall-clock measures in tests":         wallClock(Untagged(tests(withTests), "perf")),
+		"timers in tests":                      AnyPkgSelectors(Untagged(tests(withTests), "perf"), "time", "After", "Tick", "NewTimer", "NewTicker", "AfterFunc"),
+		"RunQueued in tests outside apptest":   Calls(without(Untagged(tests(withTests), "perf"), "app/apptest/"), "RunQueued"),
 	}
 	for name, hits := range counts {
 		ceiling, ok := ceilings[name]
@@ -157,6 +170,11 @@ func TestNoKindFields(t *testing.T) {
 			t.Errorf("core.SessionState has %s: it belongs in its kind's data", name)
 		}
 	}
+}
+
+// wallClock finds what measures the machine rather than the code: elapsed time and the process's allocations.
+func wallClock(files []File) []Hit {
+	return append(PkgSelectors(files, "time", "Since"), append(PkgSelectors(files, "runtime", "ReadMemStats"), PkgSelectors(files, "testing", "AllocsPerRun")...)...)
 }
 
 // allowedOut drops the hits on vars allowed.
