@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -154,13 +155,21 @@ func TestReadsEitherFormAndStringIDs(t *testing.T) {
 
 type writerFunc func([]byte) (int, error)
 
+// yield lets every other goroutine run a while, so what races the caller gets ahead of it.
+func yield() {
+	for range 100 {
+		runtime.Gosched()
+	}
+}
+
 func (f writerFunc) Write(b []byte) (int, error) { return f(b) }
 
 func TestCloseFailsPendingCalls(t *testing.T) {
-	c, _ := pair(t, Handlers{}, Handlers{Request: func(r *Request) {}}, Options{})
+	arrived := make(chan struct{})
+	c, _ := pair(t, Handlers{}, Handlers{Request: func(r *Request) { close(arrived) }}, Options{})
 	errc := make(chan error, 1)
 	go func() { errc <- c.Call(context.Background(), "never", nil, nil) }()
-	time.Sleep(20 * time.Millisecond)
+	<-arrived
 	c.Close()
 	select {
 	case err := <-errc:
@@ -312,7 +321,7 @@ func TestSendReturnsOnceWritten(t *testing.T) {
 	var out strings.Builder
 	idle, _ := io.Pipe()
 	c := NewConn(idle, writerFunc(func(b []byte) (int, error) {
-		time.Sleep(10 * time.Millisecond)
+		yield() // a slow write: an unwaited one would land after Notify returned
 		mu.Lock()
 		defer mu.Unlock()
 		return out.Write(b)
@@ -334,7 +343,7 @@ func TestInOrderResultsFollowTheirNotifications(t *testing.T) {
 	var mu sync.Mutex
 	var seen []string
 	client := Handlers{Notify: func(method string, _ json.RawMessage) {
-		time.Sleep(time.Millisecond)
+		yield()
 		mu.Lock()
 		seen = append(seen, method)
 		mu.Unlock()

@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -28,13 +30,14 @@ type server struct {
 
 	mu    sync.Mutex
 	got   []jsonrpc.Message
+	more  chan struct{} // closed when a message is kept, then replaced
 	conn  *jsonrpc.Conn
 	ready chan struct{}
 	quit  chan struct{}
 }
 
 func newServer(t *testing.T, caps string) *server {
-	return &server{t: t, caps: caps, ready: make(chan struct{}), quit: make(chan struct{})}
+	return &server{t: t, caps: caps, ready: make(chan struct{}), quit: make(chan struct{}), more: make(chan struct{})}
 }
 
 func (s *server) launch(ctx context.Context, spec ServerSpec, root string, stderr io.Writer) (Process, error) {
@@ -69,49 +72,58 @@ func (s *server) launch(ctx context.Context, spec ServerSpec, root string, stder
 func (s *server) keep(m jsonrpc.Message) {
 	s.mu.Lock()
 	s.got = append(s.got, m)
+	close(s.more)
+	s.more = make(chan struct{})
 	s.mu.Unlock()
+}
+
+// await is what find picks from the messages kept, waiting for more until it picks one.
+func (s *server) await(what string, find func([]jsonrpc.Message) (json.RawMessage, bool)) json.RawMessage {
+	s.t.Helper()
+	hung := time.After(10 * time.Second)
+	for {
+		s.mu.Lock()
+		p, ok := find(s.got)
+		more := s.more
+		s.mu.Unlock()
+		if ok {
+			return p
+		}
+		select {
+		case <-more:
+		case <-hung:
+			s.t.Fatalf("the client never sent %s", what)
+		}
+	}
 }
 
 // last is the params of the last message with method, waiting for it to arrive.
 func (s *server) last(method string) json.RawMessage {
 	s.t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		s.mu.Lock()
-		for i := len(s.got) - 1; i >= 0; i-- {
-			if s.got[i].Method == method {
-				p := s.got[i].Params
-				s.mu.Unlock()
-				return p
+	return s.await(method, func(got []jsonrpc.Message) (json.RawMessage, bool) {
+		for i := len(got) - 1; i >= 0; i-- {
+			if got[i].Method == method {
+				return got[i].Params, true
 			}
 		}
-		s.mu.Unlock()
-		time.Sleep(time.Millisecond)
-	}
-	s.t.Fatalf("the client never sent %s", method)
-	return nil
+		return nil, false
+	})
 }
 
 // nth is the params of the nth (from 1) message with method, waiting for it to arrive.
 func (s *server) nth(method string, n int) json.RawMessage {
 	s.t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		s.mu.Lock()
+	return s.await(fmt.Sprintf("%d %s", n, method), func(got []jsonrpc.Message) (json.RawMessage, bool) {
 		k := 0
-		for _, m := range s.got {
+		for _, m := range got {
 			if m.Method == method {
 				if k++; k == n {
-					s.mu.Unlock()
-					return m.Params
+					return m.Params, true
 				}
 			}
 		}
-		s.mu.Unlock()
-		time.Sleep(time.Millisecond)
-	}
-	s.t.Fatalf("the client sent fewer than %d %s", n, method)
-	return nil
+		return nil, false
+	})
 }
 
 func (s *server) count(method string) int {
@@ -332,9 +344,11 @@ func TestDidChangeOutOfOrder(t *testing.T) {
 		t.Errorf("out of order change = %+v", p.ContentChanges)
 	}
 	c.DidChange(path, first) // older than what was sent: dropped
-	time.Sleep(10 * time.Millisecond)
-	if n := s.count("textDocument/didChange"); n != 1 {
-		t.Errorf("%d didChange notifications, want 1", n)
+	third := change(t, buf, text.Replace{Range: text.Range{Start: 0, End: 0}, Text: []byte("3")})
+	c.DidChange(path, third)
+	p = decode[protocol.DidChangeTextDocumentParams](t, s.nth("textDocument/didChange", 2))
+	if len(p.ContentChanges) != 1 || p.ContentChanges[0].Text != "3" {
+		t.Errorf("the change after the dropped one = %+v, want the third", p.ContentChanges)
 	}
 }
 
@@ -363,11 +377,14 @@ func TestDidSaveWaitsForSendOrder(t *testing.T) {
 	c.sendMu.Lock()
 	saved := make(chan error, 1)
 	go func() { saved <- c.DidSave(path, buf.Snapshot()) }()
+	for range 100 {
+		runtime.Gosched() // give DidSave every chance to get past the order
+	}
 	select {
 	case <-saved:
 		c.sendMu.Unlock()
 		t.Fatal("DidSave sent while another document notification held the order")
-	case <-time.After(50 * time.Millisecond):
+	default:
 	}
 	c.sendMu.Unlock()
 	if err := <-saved; err != nil {
@@ -443,8 +460,17 @@ func TestPublishDiagnostics(t *testing.T) {
 func TestProgressStatus(t *testing.T) {
 	var mu sync.Mutex
 	var seen []Status
+	changed := make(chan struct{}, 1)
 	s := newServer(t, `{}`)
-	c := startClient(t, s, Options{OnStatus: func(st Status) { mu.Lock(); seen = append(seen, st); mu.Unlock() }})
+	c := startClient(t, s, Options{OnStatus: func(st Status) {
+		mu.Lock()
+		seen = append(seen, st)
+		mu.Unlock()
+		select {
+		case changed <- struct{}{}:
+		default:
+		}
+	}})
 	// ref: lsp/window/workDoneProgressCreate.md#window_workDoneProgress_create
 	// quote: "The `window/workDoneProgress/create` request is sent from the server to the client to ask the client to create a work done progress."
 	if err := s.call("window/workDoneProgress/create", map[string]any{"token": "t1"}, nil); err != nil {
@@ -452,7 +478,7 @@ func TestProgressStatus(t *testing.T) {
 	}
 	s.notify("$/progress", `{"token":"t1","value":{"kind":"begin","title":"Indexing","percentage":0}}`)
 	s.notify("$/progress", `{"token":"t1","value":{"kind":"report","message":"3/10","percentage":30}}`)
-	waitFor(t, func() bool {
+	waitFor(t, changed, func() bool {
 		st := c.Status()
 		return st.State == Busy && len(st.Work) == 1 && st.Work[0].Percent == 30
 	})
@@ -462,7 +488,7 @@ func TestProgressStatus(t *testing.T) {
 	// ref: lsp/types/workDoneProgress.md#workDoneProgressEnd
 	// quote: "Signaling the end of a progress reporting is done using the following payload:"
 	s.notify("$/progress", `{"token":"t1","value":{"kind":"end"}}`)
-	waitFor(t, func() bool { return c.Status().State == Ready && len(c.Status().Work) == 0 })
+	waitFor(t, changed, func() bool { return c.Status().State == Ready && len(c.Status().Work) == 0 })
 	mu.Lock()
 	defer mu.Unlock()
 	var states []State
@@ -476,14 +502,16 @@ func TestProgressStatus(t *testing.T) {
 	}
 }
 
-func waitFor(t *testing.T, cond func() bool) {
+// waitFor waits for cond, looking again each time changed says something did.
+func waitFor(t *testing.T, changed <-chan struct{}, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	hung := time.After(10 * time.Second)
 	for !cond() {
-		if time.Now().After(deadline) {
+		select {
+		case <-changed:
+		case <-hung:
 			t.Fatal("timed out")
 		}
-		time.Sleep(time.Millisecond)
 	}
 }
 

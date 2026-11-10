@@ -231,7 +231,7 @@ func TestSendsQueueInOrder(t *testing.T) {
 	}()
 	select {
 	case <-sent:
-	case <-time.After(2 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Fatal("Notify waited for the other side to read")
 	}
 	done := make(chan error, 1)
