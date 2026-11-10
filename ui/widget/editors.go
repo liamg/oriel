@@ -74,21 +74,12 @@ func MultiSelect(c *ui.Ctx, key any, selected []string, options func() []string,
 					all = append(all, s)
 				}
 			}
-			shown := all
-			if len(all) >= filterFrom {
-				f := c.Next("filter")
-				if !st.shown {
-					c.Focus(f)
-				}
-				res := Input(c, "filter", &st.filter, InputOpts{Label: "Filter " + o.Label, Placeholder: "filter", Help: o.Help})
-				q := strings.ToLower(strings.TrimSpace(st.filter))
-				shown = slices.DeleteFunc(slices.Clone(all), func(v string) bool { return !strings.Contains(strings.ToLower(v), q) })
-				switch {
-				case res.Cancelled:
-					st.open = false
-				case res.Submitted && len(shown) == 1:
-					toggle(shown[0])
-				}
+			shown, res := menuFilter(c, all, &st.filter, !st.shown, o.Label, o.Help)
+			switch {
+			case res.Cancelled:
+				st.open = false
+			case res.Submitted && len(shown) == 1:
+				toggle(shown[0])
 			}
 			st.shown = true
 			items := make([]MenuItem, len(shown))
@@ -105,6 +96,21 @@ func MultiSelect(c *ui.Ctx, key any, selected []string, options func() []string,
 		})
 	})
 	return out, changed
+}
+
+// menuFilter is a filter field over a long menu, focused when focus is set (as the menu opens), and the options
+// whose names contain its text. A short menu gets no field and keeps all its options.
+func menuFilter(c *ui.Ctx, all []string, filter *string, focus bool, label, help string) ([]string, InputResult) {
+	if len(all) < filterFrom {
+		return all, InputResult{}
+	}
+	f := c.Next("filter")
+	if focus {
+		c.Focus(f)
+	}
+	res := Input(c, "filter", filter, InputOpts{Label: "Filter " + label, Placeholder: "filter", Help: help})
+	q := strings.ToLower(strings.TrimSpace(*filter))
+	return slices.DeleteFunc(slices.Clone(all), func(v string) bool { return !strings.Contains(strings.ToLower(v), q) }), res
 }
 
 // summary is a selection in a few words: its items, or the first two and how many more.

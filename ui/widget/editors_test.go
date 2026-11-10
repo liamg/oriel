@@ -236,3 +236,62 @@ func TestMultiSelectFilters(t *testing.T) {
 		t.Error("Escape in the filter didn't close the menu")
 	}
 }
+
+// A long select stays inside the window, scrolling past its height, and filters as you type; Enter picks the one
+// item left.
+func TestSelectLongListFitsAndFilters(t *testing.T) {
+	var opts []string
+	for i := range 60 {
+		opts = append(opts, fmt.Sprintf("Font %02d", i))
+	}
+	value := "Font 00"
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		if v, ok := Select(c, "font", value, opts, SelectOpts{Label: "Font", Help: "test/select"}); ok {
+			value = v
+		}
+	})
+	h.clickNode("Font 00 ▾")
+	h.frame()
+	d := h.find("Font")
+	if d == nil {
+		t.Fatalf("no menu: %q", h.texts())
+	}
+	if d.Bounds.Max.Y > small.Y {
+		t.Errorf("the menu runs past the window: %v, window height %v", d.Bounds, small.Y)
+	}
+	h.typeText("4")
+	h.frame()
+	if h.find("Font 01") != nil || h.find("Font 14") == nil {
+		t.Errorf("filtering by 4: %q", h.texts())
+	}
+	h.typeText("7")
+	h.keys("CR")
+	if value != "Font 47" {
+		t.Errorf("Enter on the one left: %q", value)
+	}
+	h.frame()
+	if h.find("Font 14") != nil {
+		t.Error("the menu stayed open after a choice")
+	}
+}
+
+// A select at the window's right edge opens its menu leftwards, inside the window.
+func TestSelectAtTheRightEdge(t *testing.T) {
+	value := "dark"
+	h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+		c.Row("page", ui.Style{W: ui.Flex(1), Main: ui.End}, func(c *ui.Ctx) {
+			if v, ok := Select(c, "variant", value, []string{"dark", "light", "system"}, SelectOpts{Label: "Variant", Help: "test/select"}); ok {
+				value = v
+			}
+		})
+	})
+	h.clickNode("dark ▾")
+	h.frame()
+	d := h.find("Variant")
+	if d == nil {
+		t.Fatalf("no menu: %q", h.texts())
+	}
+	if d.Bounds.Min.X < 0 || d.Bounds.Max.X > small.X {
+		t.Errorf("the menu runs past the window: %v, window width %v", d.Bounds, small.X)
+	}
+}

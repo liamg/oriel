@@ -260,7 +260,8 @@ type PopoverOpts struct {
 	Help  string
 }
 
-// Popover shows body in a card under anchor while *open. Escape or a click outside closes it.
+// Popover shows body in a card under anchor while *open, flipped above or leftwards where it would leave the
+// window. Escape or a click outside closes it.
 func Popover(c *ui.Ctx, key any, anchor ui.ID, open *bool, o PopoverOpts, body func(c *ui.Ctx)) {
 	id := c.Next(key)
 	st := ui.State[modalState](c, id)
@@ -282,6 +283,6 @@ func Popover(c *ui.Ctx, key any, anchor ui.ID, open *bool, o PopoverOpts, body f
 	}
 	c.Column(key, ui.Style{W: w, Pad: ui.Pad(12), Gap: 8, Fill: col(c, tMenuBg), Stroke: col(c, tMenuBorder), Border: 1, Radius: 8, Z: ui.LayerPopup,
 		Enter: dropIn, Exit: fade,
-		Float: &ui.Float{To: anchor, At: render.Point{Y: 1}, Offset: render.Point{Y: 4}, Flip: true}, Focusable: true, KeyMode: "popover", Help: o.Help,
+		Float: &ui.Float{To: anchor, At: render.Point{Y: 1}, Offset: render.Point{Y: 4}, Flip: true, FlipX: true}, Focusable: true, KeyMode: "popover", Help: o.Help,
 		Role: ui.RoleDialog, Label: o.Label}, body)
 }
