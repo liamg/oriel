@@ -120,5 +120,5 @@ func (t *Tree) Counted() watch.Source[*gitx.State] {
 func (t *Tree) Remote() watch.Source[string] {
 	return watch.Source[string]{Key: t.key("remote"), Files: []watch.Files{{Path: filepath.Join(t.common, "config")}},
 		Same: func(a, b string) bool { return a == b },
-		Read: func(r watch.Reader) (string, error) { return t.repo.RemoteURL(r.Context()), nil }}
+		Read: func(r watch.Reader) (string, error) { return t.repo.Origin(r.Context()) }}
 }
