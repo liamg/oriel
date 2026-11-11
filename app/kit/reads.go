@@ -2,11 +2,13 @@ package kit
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -162,6 +164,37 @@ func (r *Reads) note(st ui.LoadState) {
 // Busy says whether a read from disk the latest frame asked for is still under way, or one has landed it hasn't
 // shown. A remote picture's fetch doesn't count.
 func (r *Reads) Busy() bool { return r.asked == r.frame() || r.q.queued() }
+
+// Pending names the reads under way, for a test that never settles.
+func (r *Reads) Pending() []string {
+	var out []string
+	for _, p := range r.Files.Fetching() {
+		out = append(out, "file "+p)
+	}
+	for _, p := range r.Dirs.Fetching() {
+		out = append(out, "folder "+p)
+	}
+	for _, p := range r.Stats.Fetching() {
+		out = append(out, "stat "+p)
+	}
+	for _, p := range r.Reals.Fetching() {
+		out = append(out, "real path of "+p)
+	}
+	for _, n := range r.Programs.Fetching() {
+		out = append(out, "program "+n)
+	}
+	for _, k := range r.Highlights.Fetching() {
+		out = append(out, fmt.Sprintf("highlighting %s:%d", k.path, k.line))
+	}
+	slices.Sort(out)
+	if r.q.queued() {
+		out = append(out, "a read landed and not shown")
+	}
+	if len(out) == 0 && r.asked == r.frame() {
+		out = append(out, "a read the latest frame found pending, landed since")
+	}
+	return out
+}
 
 // Close cancels the reads under way and stops watching.
 func (r *Reads) Close() {
