@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/liamg/oriel/agent/price"
@@ -99,7 +100,12 @@ type Login struct {
 // sandbox gives it wherever the backend puts it (a container, the OS's sandbox).
 type Sandboxed interface {
 	SandboxNeeds(ctx context.Context, at SandboxPlace) (SandboxNeeds, error)
-	// MCPServers are the MCP servers the user installed for it, which a sandbox's gateway carries in their place.
+	MCPInstalled
+}
+
+// MCPInstalled is a provider that says which MCP servers the user installed for it, which its agent reaches on this
+// machine and a sandbox's gateway carries in their place.
+type MCPInstalled interface {
 	MCPServers() []MCPServer
 }
 
@@ -265,11 +271,14 @@ type Pack struct {
 
 // Tool is a tool Oriel offers the agent. Call runs on the session host.
 type Tool struct {
-	Name        string                                                          `json:"name"`
-	Description string                                                          `json:"description"`
-	Schema      json.RawMessage                                                 `json:"inputSchema"`
-	ReadOnly    bool                                                            `json:"readOnly,omitempty"`
-	Call        func(ctx context.Context, args json.RawMessage) (string, error) `json:"-"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Schema      json.RawMessage `json:"inputSchema"`
+	ReadOnly    bool            `json:"readOnly,omitempty"`
+	// CoveredBy are MCP servers that already do what it does, each by its name or part of where it runs (an
+	// address: mcp.linear.app). An agent that reaches one isn't offered the tool.
+	CoveredBy []string                                                        `json:"coveredBy,omitempty"`
+	Call      func(ctx context.Context, args json.RawMessage) (string, error) `json:"-"`
 }
 
 // Exec starts processes for a provider: on the host by default, in a sandbox when there is one.
@@ -471,3 +480,19 @@ type UsageProbeFailed interface {
 
 // ErrNoFork is returned by Fork when there is nothing to fork from yet.
 var ErrNoFork = errors.New("the agent has said nothing yet: there is no context to answer from")
+
+// Covered says one of servers is one of covers: named so, or running at or from it (its config holds the cover: its
+// URL, or a command line with the address in it).
+func Covered(servers []MCPServer, covers []string) bool {
+	for _, c := range covers {
+		if c == "" {
+			continue
+		}
+		for _, m := range servers {
+			if m.Name == c || strings.Contains(string(m.Config), c) {
+				return true
+			}
+		}
+	}
+	return false
+}

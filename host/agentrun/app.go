@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
@@ -41,7 +42,7 @@ func (x *Runner) AppTools(r hostcore.ToolsReq) (list []agent.Tool) {
 	if a.Tools == nil {
 		return nil
 	}
-	list = a.Tools(r)
+	list = x.uncovered(r, a.Tools(r))
 	for i, t := range list {
 		list[i].Call = x.appTool(ToolCall{Session: r.Session, Agent: r.Agent, Tool: t.Name})
 	}
@@ -78,4 +79,17 @@ func (x *Runner) appWatches(id core.SessionID) (m *watch.Manager) {
 		return f(id)
 	}
 	return nil
+}
+
+// uncovered are tools less those an MCP server the session's agent reaches already covers (agent.Tool's CoveredBy).
+func (x *Runner) uncovered(r hostcore.ToolsReq, tools []agent.Tool) []agent.Tool {
+	if r.Session == "" || x.deps.MCPServers == nil || !slices.ContainsFunc(tools, func(t agent.Tool) bool { return len(t.CoveredBy) > 0 }) {
+		return tools
+	}
+	se, err := x.st.Session(r.Session)
+	if err != nil {
+		return tools
+	}
+	servers := x.deps.MCPServers(se)
+	return slices.DeleteFunc(tools, func(t agent.Tool) bool { return agent.Covered(servers, t.CoveredBy) })
 }

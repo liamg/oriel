@@ -85,8 +85,11 @@ type AgentTool struct {
 	Run     func(ctx Ctx, params map[string]any) (any, error)
 	// Adds makes it a part of another tool's answer rather than a tool of its own: when the tool named Adds is
 	// called, the answer is each one's result under its Reads (or Name): agentbus's review requests beside GitHub's.
-	Adds   string
-	Source string
+	Adds string
+	// CoveredBy are MCP servers that already do what it does, by name or part of where they run (mcp.linear.app): an
+	// agent that reaches one of its own, or through its sandbox's gateway, isn't offered it.
+	CoveredBy []string
+	Source    string
 }
 
 // PromptPack is a named prompt and the tools that go with it.

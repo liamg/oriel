@@ -46,3 +46,5 @@ with its comments and attachments), `linear_update_issue` (its title, descriptio
 project, by name), `linear_comment`, `linear_create_issue` (in a team, and a project if you name one) and
 `linear_projects` (the projects to file a ticket in or move one to). They act as the owner of the API key, and don't
 ask first: ask the agent to move a ticket, note what it found, or file a follow-up in a project, and it does.
+An agent that already has Linear's own MCP server (`mcp.linear.app`, installed for it, or carried into its sandbox by
+the gateway) isn't given them: it has the same tools there, under your Linear sign-in.

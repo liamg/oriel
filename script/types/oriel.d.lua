@@ -152,7 +152,7 @@ function oriel.agent.pack(name, spec) end
 ---@param spec table
 function oriel.agent.provider(spec) end
 
---- Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own.
+--- Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds, covered_by = { 'mcp.linear.app' } }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own. covered_by names MCP servers that already do what it does, by name or part of where they run: an agent that reaches one (its own, or through its sandbox) isn't offered the tool.
 ---@param spec table
 function oriel.agent.tool(spec) end
 
