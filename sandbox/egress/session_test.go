@@ -172,6 +172,20 @@ func TestSharedCard(t *testing.T) {
 	}
 }
 
+// A connection that comes once a card is answered asks again: it never takes the answer given to the ones before it.
+// Each card is answered before the next connection starts, so a card shared by them would show as one card, not three.
+func TestAConnectionAfterTheAnswerAsksAgain(t *testing.T) {
+	s, c := newSession(t)
+	for i, key := range []string{"deny", Once, "deny"} {
+		out := make(chan bool, 1)
+		go func() { out <- allow(s, "again.example.com", 443) }()
+		c.answer(t, Answer{Key: key}) // waits for this connection's own card
+		if got := <-out; got != (key == Once) {
+			t.Fatalf("connection %d, answered %s: allowed %v", i+1, key, got)
+		}
+	}
+}
+
 func TestNobodyAnswers(t *testing.T) {
 	s, _ := newSession(t)
 	s.Wait = 50 * time.Millisecond

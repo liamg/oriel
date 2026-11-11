@@ -290,12 +290,7 @@ func (s *Session) ask(key, host string, port int, a *ask) {
 	s.mu.Lock()
 	a.cancel = cancel
 	s.mu.Unlock()
-	defer func() {
-		s.mu.Lock()
-		delete(s.asks, key)
-		s.mu.Unlock()
-		s.settle(a, false, false)
-	}()
+	defer s.settle(key, a, false, false)
 	if s.Approver == nil {
 		s.note(key, "nobody answered the card")
 		return
@@ -343,11 +338,17 @@ func (s *Session) ask(key, host string, port int, a *ask) {
 		why += ", with private network access"
 	}
 	s.note(key, why)
-	s.settle(a, ok, private)
+	s.settle(key, a, ok, private)
 }
 
-// settle answers a waiting ask, once.
-func (s *Session) settle(a *ask, ok, private bool) {
+// settle answers a waiting ask, once. It's withdrawn first, so a connection that comes once it's answered asks
+// again rather than taking this answer.
+func (s *Session) settle(key string, a *ask, ok, private bool) {
+	s.mu.Lock()
+	if s.asks[key] == a {
+		delete(s.asks, key)
+	}
+	s.mu.Unlock()
 	a.once.Do(func() {
 		a.ok, a.private = ok, private
 		close(a.done)
@@ -368,6 +369,7 @@ func (s *Session) allowWaiting(except *ask) {
 }
 
 func (s *Session) settleLocked(key string, a *ask) {
+	delete(s.asks, key)
 	a.once.Do(func() {
 		a.ok = true
 		close(a.done)
