@@ -54,5 +54,6 @@ files too, each trusted the same way.
 
 The `sandbox` section is how sandboxed agents run: their image, memory and processes, the host variables they
 get, network rules (`allow *.golang.org:443`), gateway rules (`deny oriel__push`), and extra MCP servers for the
-gateway, each a URL or a command line (`npx -y @foo/mcp`). New sessions run sandboxed unless `sandbox.default` says
+gateway, each a URL or a command line (`npx -y @foo/mcp`). Every sandbox's gateway carries these and the servers you
+installed for any of your agents; one in `sandbox.servers` wins over an installed one of the same name. New sessions run sandboxed unless `sandbox.default` says
 `host`. A project's file can add its own rules and image. Changes apply to the sandboxes opened next.

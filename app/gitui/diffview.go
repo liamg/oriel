@@ -49,6 +49,7 @@ const (
 func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 	th := c.Theme()
 	st := x.state(vc.Instance)
+	x.wrap = x.wraps()
 	root := c.Next("diff")
 	c.Row("diff", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tDiffBg), Role: ui.RoleRegion, Label: "Diff", Help: "files/diff"}, func(c *ui.Ctx) {
 		trees := kit.GitOf(x.h)
@@ -668,18 +669,19 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	key := lineKey(l)
 	row := c.Next(key)
 	st.ids[me] = row
-	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(diffLineH), Cross: ui.Center, Fill: fill, Role: ui.RoleListItem, Selected: sel,
+	h0, cross := x.rowFit()
+	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Cross: cross, Fill: fill, Role: ui.RoleListItem, Selected: sel,
 		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, func(c *ui.Ctx) {
 		x.hoverSign(c, row, ds)
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		lineNo(c, "o", l.Old)
 		lineNo(c, "n", l.New)
-		c.Box("sign", ui.Style{W: ui.Px(16)}, func(c *ui.Ctx) {
+		c.Box("sign", ui.Style{W: ui.Px(16), H: ui.Px(diffLineH), Cross: ui.Center}, func(c *ui.Ctx) {
 			if l.Op != ' ' {
 				c.Text("t", string(l.Op), ui.TextStyle{Font: diffCodeFont, Color: edge})
 			}
 		})
-		diffCode(c, h.spans[k], h.marks[k], word)
+		diffCode(c, h.spans[k], h.marks[k], word, x.wrap)
 	}).Clicked {
 		st.sel = me
 	}
@@ -713,7 +715,8 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		if sel {
 			fill = th.C(tDiffSelected)
 		}
-		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: ui.Center, Fill: fill, Clip: true}, func(c *ui.Ctx) {
+		_, cross := x.rowFit()
+		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: cross, Fill: fill, Clip: true}, func(c *ui.Ctx) {
 			if !old {
 				x.hoverSign(c, row, ds)
 			}
@@ -723,14 +726,15 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 				n = l.Old
 			}
 			lineNo(c, "n", n)
-			diffCode(c, h.spans[i], h.marks[i], word)
+			diffCode(c, h.spans[i], h.marks[i], word, x.wrap)
 		})
 	}
 	label := ""
 	if k >= 0 {
 		label = strings.TrimRight(h.Lines[k].Text, "\r\n")
 	}
-	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(diffLineH), Role: ui.RoleListItem, Selected: sel, Label: label,
+	h0, _ := x.rowFit()
+	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Role: ui.RoleListItem, Selected: sel, Label: label,
 		Help: "files/diff#hunks"}, func(c *ui.Ctx) {
 		side(c, "old", p[0], true)
 		c.Box("mid", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
@@ -753,38 +757,96 @@ func lineKey(l gitx.DiffLine) string {
 
 // lineNo is a line's number in its gutter, blank for none.
 func lineNo(c *ui.Ctx, key string, n int) {
-	c.Row(key, ui.Style{W: ui.Px(44), Pad: ui.Insets{R: 10}, Main: ui.End}, func(c *ui.Ctx) {
+	c.Row(key, ui.Style{W: ui.Px(44), H: ui.Px(diffLineH), Pad: ui.Insets{R: 10}, Main: ui.End, Cross: ui.Center}, func(c *ui.Ctx) {
 		if n > 0 {
 			c.Text("t", fmt.Sprint(n), ui.TextStyle{Font: diffCodeFont, Color: c.Theme().C(theme.FgGhost)})
 		}
 	})
 }
 
-// diffCode is a line's text in its highlight colours, its changed words on a tint of word.
-func diffCode(c *ui.Ctx, spans []kit.Span, marks [][2]int, word render.Color) {
+// rowFit is a line's row's height and how its parts sit: one line high, centred; with 'wrap', as high as its rows,
+// the gutters on the first.
+func (x *Diff) rowFit() (ui.Size, ui.Align) {
+	if x.wrap {
+		return ui.Size{}, ui.Start
+	}
+	return ui.Px(diffLineH), ui.Center
+}
+
+// codePiece is a stretch of a line's text in one colour, marked or not.
+type codePiece struct {
+	text   []rune
+	ts     ui.TextStyle
+	marked bool
+}
+
+// diffCode is a line's text in its highlight colours, its changed words on a tint of word. With wrap it takes as many
+// rows as it needs at its box's width last frame, broken at the column as the editor's 'wrap' does.
+func diffCode(c *ui.Ctx, spans []kit.Span, marks [][2]int, word render.Color, wrap bool) {
 	th := c.Theme()
-	c.Row("code", ui.Style{W: ui.Flex(1), Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-		off, k := 0, 0
-		for _, s := range spans {
-			col := th.C(theme.Fg)
-			if s.Capture != "" {
-				col = th.Syntax("@" + s.Capture).FG
+	var pieces []codePiece
+	off := 0
+	for _, s := range spans {
+		col := th.C(theme.Fg)
+		if s.Capture != "" {
+			col = th.Syntax("@" + s.Capture).FG
+		}
+		ts := ui.TextStyle{Font: diffCodeFont, Color: col}
+		for pos := 0; pos < len(s.Text); {
+			in, end := markAt(marks, off+pos)
+			e := min(max(end-off, pos+1), len(s.Text))
+			pieces = append(pieces, codePiece{[]rune(kit.ExpandTabs(s.Text[pos:e])), ts, in})
+			pos = e
+		}
+		off += len(s.Text)
+	}
+	draw := func(c *ui.Ctx, pieces []codePiece) {
+		for k, p := range pieces {
+			if p.marked {
+				c.Box(k, ui.Style{Fill: word, Radius: 2}, func(c *ui.Ctx) { c.Text("t", string(p.text), p.ts) })
+			} else {
+				c.Text(k, string(p.text), p.ts)
 			}
-			ts := ui.TextStyle{Font: diffCodeFont, Color: col}
-			for pos := 0; pos < len(s.Text); k++ {
-				in, end := markAt(marks, off+pos)
-				e := min(max(end-off, pos+1), len(s.Text))
-				seg := kit.ExpandTabs(s.Text[pos:e])
-				if in {
-					c.Box(k, ui.Style{Fill: word, Radius: 2}, func(c *ui.Ctx) { c.Text("t", seg, ts) })
-				} else {
-					c.Text(k, seg, ts)
-				}
-				pos = e
-			}
-			off += len(s.Text)
+		}
+	}
+	if !wrap {
+		c.Row("code", ui.Style{W: ui.Flex(1), Cross: ui.Center, Clip: true}, func(c *ui.Ctx) { draw(c, pieces) })
+		return
+	}
+	cols := 0
+	if r, ok := c.Rect(c.Next("code")); ok {
+		if adv := c.Shaper().Shape("0", diffCodeFont).Advance; adv > 0 {
+			cols = int(r.Dx() / adv)
+		}
+	}
+	rows := breakCols(pieces, cols)
+	c.Column("code", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+		for i, row := range rows {
+			c.Row(i, ui.Style{H: ui.Px(diffLineH), Cross: ui.Center}, func(c *ui.Ctx) { draw(c, row) })
 		}
 	})
+}
+
+// breakCols cuts pieces into rows of cols columns each, one row if cols is 0.
+func breakCols(pieces []codePiece, cols int) [][]codePiece {
+	if cols <= 0 {
+		return [][]codePiece{pieces}
+	}
+	var rows [][]codePiece
+	var row []codePiece
+	used := 0
+	for _, p := range pieces {
+		for len(p.text) > 0 {
+			if used == cols {
+				rows, row, used = append(rows, row), nil, 0
+			}
+			n := min(len(p.text), cols-used)
+			row = append(row, codePiece{p.text[:n], p.ts, p.marked})
+			used += n
+			p.text = p.text[n:]
+		}
+	}
+	return append(rows, row)
 }
 
 // markAt says whether byte at is in a mark, and where that stretch (marked or not) ends.

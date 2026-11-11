@@ -35,6 +35,10 @@ terminal it was started from.
 Sent `SIGTERM` or `SIGINT` (logging out, `kill`, `^C` in the terminal it was started from), Oriel quits the same
 way, without waiting on scheduled jobs. A second signal quits now; a third exits without handing the agents over.
 
+Started from a terminal, Oriel keeps it out of reach of what it runs: nothing it starts (a passphrase prompt, a
+credential helper) can open the terminal, so none can leave it unable to take `^C`. When Oriel ends, the terminal
+has the settings it had when Oriel started.
+
 ## After a crash {#crash}
 
 If Oriel stops without quitting (it crashed, or the machine went down), its agents stop with it. When it opens

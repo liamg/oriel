@@ -5,6 +5,8 @@ import (
 	"maps"
 	"slices"
 	"sync"
+
+	"github.com/liamg/oriel/internal/chaos"
 )
 
 // Jobs are the host's own goroutines (Env.Go), by what each is doing, so closing can wait for them and say which it's
@@ -33,6 +35,7 @@ func (j *Jobs) Go(where string, fn func()) {
 			j.mu.Unlock()
 			j.wg.Done()
 		}()
+		chaos.Sleep()
 		fn()
 	}()
 }

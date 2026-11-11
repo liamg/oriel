@@ -16,7 +16,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `syntax` | tree-sitter grammars under wazero: highlights, folds, code units, outline |
 | `jsonrpc`, `lsp`, `dap` | JSON-RPC framing and processes; the LSP and DAP clients |
 | `testrun` | test discovery and runner adapters (go, pytest, vitest/jest, cargo), results, coverage |
-| `term` | the terminal model behind `term.Emulator`; `term/ghostty` (libghostty-vt, wasm or native), `term/pty` |
+| `term` | the terminal model behind `term.Emulator`; `term/ghostty` (libghostty-vt, wasm or native), `term/pty`, `term/tty` (a terminal's modes) |
 | `core` | sessions, workspaces, threads, tasks and the typed events that change them: pure state and logic |
 | `agent` | the `Provider` interface, its optional ones (`Featured`, `Sandboxed`, `LoginStarter`, `Logged`, `Discovered`) and transcript types; `agent/claude` (and `agent/claude/claudebox`, what it needs in a sandbox), `agent/codex`; `agent/rpcagent` (the Oriel agent protocol: any provider over JSON-RPC, for plugins), `agent/acp` (any Agent Client Protocol agent), `agent/mcptools` (a session's tools as the MCP server oriel); `agent/price` (a `Book` of models' list prices, read from cost.dev's model list, with the snapshot vendored in `spec/cost-dev` as its default: every cost estimate prices tokens with one, a provider with `StartSpec.Prices`); `agent/agenttest` (the conformance suite, a fake provider and one that plays the suite) |
 | `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State |
@@ -166,6 +166,12 @@ token). Codex runs as `codex app-server` over stdio.
 A sandbox knows no provider: each backend asks the session's provider what its agent needs where the backend puts it
 (`agent.Sandboxed`: its binary for that platform, its config and sign-in in a directory of its own, the host
 variables and endpoints it inherits, the hosts it reaches, the user's MCP servers for the gateway), and gives it that.
+Every sandbox's gateway carries the same servers whatever its agent (`gateway.Found`, which the settings page lists
+too): `sandbox.servers`, then those installed for each registered provider, the first of a name winning and
+`sandbox.hidden_servers` left out; a repository's `.mcp.json` is never read. Each sandbox has its own connections,
+never shared, and a server starts on its first call: tools are listed from each server's list kept under
+`sandbox.ToolsCache()` (tools only, keyed by a hash of the server's config), and a server with none kept yet is
+started to list it. A call refreshes the kept list from the live server.
 A sandboxed Claude gets the host's sign-in without its refresh token. While one runs, the provider hands every sandbox
 the host's sign-in each minute, and near its end runs the host's own claude to renew it (`claudebox.Box.KeepLogins`).
 A sandboxed agent signs in only on the host: its login card runs the provider's `HostCommand` in a host terminal,

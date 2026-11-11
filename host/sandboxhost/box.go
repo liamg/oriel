@@ -181,11 +181,11 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 		},
 		Failed: b.netFailed,
 	}
-	var installed []agent.MCPServer
-	if b.agent != nil {
-		installed = b.agent.MCPServers()
+	var providers []agent.Provider
+	if d.Providers != nil {
+		providers = d.Providers()
 	}
-	up := &gateway.Upstreams{Servers: gateway.Discover(installed, cfg.Servers, cfg.Hidden)}
+	up := &gateway.Upstreams{Servers: gateway.Found(providers, cfg.Servers, cfg.Hidden), Cache: sandbox.ToolsCache()}
 	b.gateway = &gateway.Gateway{
 		Builtins: gateway.Builtins(gatewayHost{b}),
 		Up:       up,
@@ -216,7 +216,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 	if backend.ServesPort() {
 		portFile = sandbox.PortPath(root)
 	}
-	h := &agentsock.Handler{Token: rec.AgentToken, Gateway: b.gateway, Egress: b.egress, SSH: b.ssh, Hook: b.hookSocket}
+	h := &agentsock.Handler{Token: rec.AgentToken, Gateway: b.gateway, Egress: b.egress, SSH: b.ssh, Hook: b.hookSocket, ToolsVersion: up.Version}
 	if err := b.serve(func(ctx context.Context) error { return agentsock.Serve(ctx, h, sandbox.SocketPath(root), portFile) }); err != nil {
 		b.cancel()
 		return nil, err

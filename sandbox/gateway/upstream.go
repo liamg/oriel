@@ -43,8 +43,20 @@ type rawServer struct {
 	Headers map[string]string `json:"headers"`
 }
 
-// Discover lists the MCP servers the user installed, as the providers found them (agent.Sandboxed's MCPServers),
-// then oriel's own list. The first of a name wins.
+// Found are the MCP servers the gateway finds on this machine, the same for every sandbox whatever its agent: Oriel's
+// own list (extra), then those the user installed for each of providers (agent.Sandboxed's MCPServers), less hidden.
+func Found(providers []agent.Provider, extra map[string]json.RawMessage, hidden []string) []Server {
+	var installed []agent.MCPServer
+	for _, p := range providers {
+		if s, ok := p.(agent.Sandboxed); ok {
+			installed = append(installed, s.MCPServers()...)
+		}
+	}
+	return Discover(installed, extra, hidden)
+}
+
+// Discover lists Oriel's own servers (extra), then the ones the user installed, as the providers found them. The first
+// of a name wins, so Oriel's own config wins over an installed server of its name.
 func Discover(installed []agent.MCPServer, extra map[string]json.RawMessage, hidden []string) []Server {
 	var out []Server
 	seen := map[string]bool{}
@@ -60,21 +72,16 @@ func Discover(installed []agent.MCPServer, extra map[string]json.RawMessage, hid
 		seen[name] = true
 		out = append(out, s)
 	}
+	for _, name := range sortedKeys(extra) {
+		var raw rawServer
+		if json.Unmarshal(extra[name], &raw) == nil {
+			add(name, "oriel", raw, nil)
+		}
+	}
 	for _, m := range installed {
 		var raw rawServer
 		if json.Unmarshal(m.Config, &raw) == nil {
 			add(m.Name, m.Source, raw, m.Vars)
-		}
-	}
-	names := make([]string, 0, len(extra))
-	for k := range extra {
-		names = append(names, k)
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		var raw rawServer
-		if json.Unmarshal(extra[name], &raw) == nil {
-			add(name, "oriel", raw, nil)
 		}
 	}
 	return out
@@ -153,22 +160,28 @@ func ToolName(server, tool string) string {
 	return name[:55] + "_" + hex.EncodeToString(sum[:])[:8]
 }
 
-// Upstreams holds the connections to the user's servers.
+// Upstreams holds one sandbox's connections to the user's servers. A server starts on the first call to it, or to
+// list its tools when Cache keeps no list of them.
 type Upstreams struct {
 	Servers []Server
+	// Cache is the directory each server's tool list is kept in, between sandboxes; "" keeps none.
+	Cache string
 	// Auth supplies OAuth for an http server; nil means none.
 	Auth func(s Server) mcp.TokenSource
 	// OnChange is told when a server's tool list changes.
 	OnChange func()
 
-	mu    sync.Mutex
-	conns map[string]*conn
+	mu      sync.Mutex
+	conns   map[string]*conn
+	version int
 }
 
 type conn struct {
 	mu     sync.Mutex
 	client *mcp.Client
 	tools  []mcp.Tool
+	listed bool // tools is the server's list: from the cache, or from the connection when live
+	live   bool
 	err    error
 	at     time.Time
 }
@@ -186,7 +199,7 @@ type ServerError struct {
 	Error  string `json:"error"`
 }
 
-// Tools lists every reachable server's tools, connecting as needed.
+// Tools lists every reachable server's tools: as kept in the cache, or by connecting where none is.
 func (u *Upstreams) Tools(ctx context.Context) ([]Tool, []ServerError) {
 	var out []Tool
 	var errs []ServerError
@@ -207,20 +220,49 @@ func (u *Upstreams) Tools(ctx context.Context) ([]Tool, []ServerError) {
 	return out, errs
 }
 
-// Call runs an upstream tool.
+// Call runs an upstream tool. A server not yet connected is started, and its tool list refreshed from it.
 func (u *Upstreams) Call(ctx context.Context, t Tool, args json.RawMessage) (mcp.CallResult, error) {
-	for _, s := range u.Servers {
-		if s.Name != t.Server {
-			continue
-		}
-		c := u.conn(s.Name)
-		client, err := c.dial(ctx, u, s)
-		if err != nil {
+	i := slices.IndexFunc(u.Servers, func(s Server) bool { return s.Name == t.Server })
+	if i < 0 {
+		return mcp.CallResult{}, fmt.Errorf("no server %q", t.Server)
+	}
+	s := u.Servers[i]
+	c := u.conn(s.Name)
+	c.mu.Lock()
+	fresh := c.live && c.listed
+	c.mu.Unlock()
+	if !fresh {
+		if _, err := c.refresh(ctx, u, s); err != nil {
 			return mcp.CallResult{}, err
 		}
-		return client.CallTool(ctx, t.Upstream, args)
 	}
-	return mcp.CallResult{}, fmt.Errorf("no server %q", t.Server)
+	c.mu.Lock()
+	has := slices.ContainsFunc(c.tools, func(x mcp.Tool) bool { return x.Name == t.Upstream })
+	c.mu.Unlock()
+	if !has {
+		return mcp.TextResult("oriel: "+s.Name+" has no tool called "+t.Upstream+" any more.", true), nil
+	}
+	client, err := c.dial(ctx, u, s)
+	if err != nil {
+		return mcp.CallResult{}, err
+	}
+	return client.CallTool(ctx, t.Upstream, args)
+}
+
+// Version moves each time a server's tool list changes.
+func (u *Upstreams) Version() int {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.version
+}
+
+func (u *Upstreams) changed() {
+	u.mu.Lock()
+	u.version++
+	u.mu.Unlock()
+	if u.OnChange != nil {
+		u.OnChange()
+	}
 }
 
 // Close disconnects every server.
@@ -256,24 +298,46 @@ const retryAfter = time.Minute
 
 func (c *conn) list(ctx context.Context, u *Upstreams, s Server) ([]mcp.Tool, error) {
 	c.mu.Lock()
-	if c.tools != nil {
+	if c.listed {
 		defer c.mu.Unlock()
 		return c.tools, nil
+	}
+	if c.client == nil {
+		if tools, ok := u.cached(s); ok {
+			defer c.mu.Unlock()
+			c.tools, c.listed = tools, true
+			return tools, nil
+		}
 	}
 	if c.err != nil && time.Since(c.at) < retryAfter {
 		defer c.mu.Unlock()
 		return nil, c.err
 	}
 	c.mu.Unlock()
+	return c.refresh(ctx, u, s)
+}
+
+// refresh lists s's tools on its connection, dialling it if need be, and keeps the list.
+func (c *conn) refresh(ctx context.Context, u *Upstreams, s Server) ([]mcp.Tool, error) {
 	client, err := c.dial(ctx, u, s)
 	if err != nil {
 		return nil, err
 	}
 	tools, err := client.ListTools(ctx)
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.tools, c.err, c.at = tools, err, time.Now()
-	return tools, err
+	if err != nil {
+		c.err, c.at = err, time.Now()
+		c.mu.Unlock()
+		return nil, err
+	}
+	changed := c.listed && !sameTools(c.tools, tools)
+	c.tools, c.listed, c.live, c.err = tools, true, true, nil
+	c.mu.Unlock()
+	u.keep(s, tools)
+	if changed {
+		u.changed()
+	}
+	return tools, nil
 }
 
 func (c *conn) dial(ctx context.Context, u *Upstreams, s Server) (*mcp.Client, error) {
@@ -314,11 +378,9 @@ func (c *conn) dial(ctx context.Context, u *Upstreams, s Server) (*mcp.Client, e
 	}
 	client.OnToolsChanged(func() {
 		c.mu.Lock()
-		c.tools = nil
+		c.listed = false
 		c.mu.Unlock()
-		if u.OnChange != nil {
-			u.OnChange()
-		}
+		u.changed()
 	})
 	c.client, c.err = client, nil
 	return client, nil

@@ -28,7 +28,8 @@ Each file has a header with its path and size, and how many of its hunks are rev
 
 Each hunk starts with git's `@@` line and the function, method or type it's in. Removed lines are red and added
 ones green, the words that changed in a changed line marked brighter. A click selects a line; threads open between
-the lines they're about, as in the editor.
+the lines they're about, as in the editor. Long lines wrap when the editor's do (`wrap`, or the status line's
+**wrap**); otherwise they're cut at the edge.
 
 ## Split or unified {#layout}
 

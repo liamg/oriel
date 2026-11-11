@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
@@ -22,6 +23,8 @@ type Deps struct {
 	Keyed hostcore.Keyed
 	// Config is the sandbox settings the app last sent.
 	Config func() sandbox.Config
+	// Providers are the agent providers the host knows, whose installed MCP servers every sandbox's gateway carries.
+	Providers func() []agent.Provider
 	// Factory is the host's sandbox factory; nil when this machine can't run one.
 	Factory func() hostcore.SandboxFactory
 	// Live is session id's sandbox while its agent runs in one, else nil.
