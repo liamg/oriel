@@ -53,6 +53,7 @@ type Diff struct {
 
 	by    map[string]*diffState // by instance: the repo's root
 	focus *diffState            // the diff with focus, or the last to have it
+	wrap  bool                  // long lines wrap ('wrap'), as of this frame
 
 	mu         sync.Mutex
 	files      map[diffKey]*diffFile
@@ -235,6 +236,12 @@ func (x *Diff) layout() string {
 		return "unified"
 	}
 	return "split"
+}
+
+// wraps says long lines wrap: the editor's 'wrap', where the window is.
+func (x *Diff) wraps() bool {
+	v, _, _ := x.h.Options().Get("editor.wrap", x.h.Here())
+	return v == true
 }
 
 func (x *Diff) state(instance string) *diffState {
