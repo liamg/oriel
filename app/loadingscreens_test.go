@@ -39,7 +39,8 @@ func TestUpdateCardIsBusyBeforeItOpens(t *testing.T) {
 	if strings.Contains(s.Text(), "is the newest") {
 		t.Fatal("the card said 1.0.0 is the newest before the check answered")
 	}
-	s.WantFrame("Checking for updates…", "Checking…")
+	// The check is held open, so the app can't settle: look while it runs.
+	s.Midway(func() { s.WantFrame("Checking for updates…", "Checking…") })
 	s.Run("UpdateCheck", nil) // joins the check running
 	close(held.release)
 	s.Until("the release", func() bool { return strings.Contains(s.Text(), "Oriel 2.0.0") })
