@@ -65,6 +65,7 @@ type State struct {
 	Ahead    int
 	Behind   int
 	files    [3][]FileState
+	whole    []FileState // Uncommitted, a path once
 	byPath   map[string]FileState // what File answers
 	ignored  map[string]bool      // All's ignored paths, directories with their "/"
 }
@@ -81,6 +82,14 @@ func (s *State) Files(sc Scope) []FileState {
 		return nil
 	}
 	return s.files[sc]
+}
+
+// Whole are Uncommitted's files with each path once: its change against HEAD, staged and unstaged together.
+func (s *State) Whole() []FileState {
+	if s == nil {
+		return nil
+	}
+	return s.whole
 }
 
 // Count is how many files a scope lists, for its segment: All counts every file.
