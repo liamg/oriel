@@ -16,6 +16,14 @@ import (
 // A fake upstream: the test binary re-executed as a stdio MCP server.
 func TestMain(m *testing.M) {
 	if v := os.Getenv("GATEWAY_FAKE_MCP"); v != "" {
+		if starts := os.Getenv("GATEWAY_FAKE_STARTS"); starts != "" {
+			f, err := os.OpenFile(starts, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+			if err != nil {
+				os.Exit(1)
+			}
+			_, _ = f.WriteString("started\n")
+			_ = f.Close()
+		}
 		srv := &mcp.Server{Name: "fake", Handler: fakeHandler{github: v == "github"}}
 		_ = srv.Serve(context.Background(), os.Stdin, os.Stdout)
 		os.Exit(0)
@@ -291,7 +299,7 @@ func TestDecideSpecificity(t *testing.T) {
 	}
 }
 
-// The servers the providers found come first, then oriel's own list; a ${VAR:-default} expands, and SSE servers,
+// Oriel's own list comes first, then the servers the providers found; a ${VAR:-default} expands, and SSE servers,
 // hidden ones and a second of a name aren't carried.
 func TestDiscover(t *testing.T) {
 	installed := []agent.MCPServer{
@@ -307,15 +315,15 @@ func TestDiscover(t *testing.T) {
 	for _, s := range got {
 		names = append(names, s.Name+"/"+s.Source)
 	}
-	want := "aws/user linear/plugin:linear extra/oriel"
+	want := "extra/oriel aws/user linear/plugin:linear"
 	if strings.Join(names, " ") != want {
 		t.Fatalf("got %v want %s", names, want)
 	}
-	if got[0].Env["R"] != "eu" || got[0].Command != "aws-mcp" {
-		t.Errorf("aws = %+v", got[0])
+	if got[1].Env["R"] != "eu" || got[1].Command != "aws-mcp" {
+		t.Errorf("aws = %+v", got[1])
 	}
-	if got[1].URL != "https://mcp.linear.app/mcp" {
-		t.Errorf("plugin url = %q", got[1].URL)
+	if got[2].URL != "https://mcp.linear.app/mcp" {
+		t.Errorf("plugin url = %q", got[2].URL)
 	}
 }
 

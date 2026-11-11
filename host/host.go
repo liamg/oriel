@@ -228,6 +228,7 @@ func (w *Host) sandboxDeps() sandboxhost.Deps {
 			return w.run.Keyed(ctx, id, what, project, fn)
 		},
 		Config:          func() sandbox.Config { return w.boxes.Config() },
+		Providers:       w.opts.Providers.List,
 		Factory:         func() hostcore.SandboxFactory { return w.opts.Sandbox },
 		Live:            func(id core.SessionID) hostcore.Sandbox { return w.run.Sandbox(id) },
 		Running:         func() []hostcore.Sandbox { return w.run.Sandboxes() },

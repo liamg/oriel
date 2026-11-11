@@ -66,3 +66,31 @@ func TestTheSandboxGivesTheProviderWhatItNeeds(t *testing.T) {
 		t.Errorf("the gateway's servers = %v", names)
 	}
 }
+
+// Every sandbox's gateway carries the servers installed for every provider, not just its own agent's, and a
+// sandbox.servers entry wins over an installed server of its name.
+func TestTheGatewayCarriesEveryProvidersServers(t *testing.T) {
+	other := &boxed{Fake: agenttest.NewFake(), at: make(chan agent.SandboxPlace, 4),
+		servers: []agent.MCPServer{{Name: "browser", Source: "user", Config: json.RawMessage(`{"command":"browser-mcp"}`)},
+			{Name: "docs", Source: "user", Config: json.RawMessage(`{"command":"installed-docs"}`)}}}
+	other.Name = "other"
+	s := newSandboxRig(t, other)
+	raw, err := sandbox.ParseServer("https://docs.example.com/mcp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.w.SetSandboxConfig(sandbox.Config{Servers: map[string]json.RawMessage{"docs": raw}}); err != nil {
+		t.Fatal(err)
+	}
+	_, _, b := s.sandboxed()
+	got := map[string]string{}
+	for _, u := range b.Gateway().Up.Servers {
+		got[u.Name] = u.Source + " " + u.Command + u.URL
+	}
+	if got["browser"] != "user browser-mcp" {
+		t.Errorf("a session on the fake provider lacks the other provider's server: %v", got)
+	}
+	if got["docs"] != "oriel https://docs.example.com/mcp" {
+		t.Errorf("sandbox.servers' docs should win the clash: %v", got)
+	}
+}

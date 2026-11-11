@@ -136,19 +136,17 @@ func envNames() []string {
 	return out
 }
 
-// upstreamNames are the MCP servers the gateway finds on this machine: those the user installed for each agent
-// provider, and sandbox.servers'.
+// upstreamNames are the MCP servers every sandbox's gateway finds on this machine (gateway.Found): sandbox.servers',
+// and those the user installed for each agent provider.
 func upstreamNames(o registry.Options, r registry.Contributions) []string {
 	m, _, _ := o.Get("sandbox.servers", registry.At{})
 	servers, _ := mcpServers(m)
-	var installed []agent.MCPServer
+	var providers []agent.Provider
 	for _, p := range registry.AgentProviders(r) {
-		if s, ok := p.Provider.(agent.Sandboxed); ok {
-			installed = append(installed, s.MCPServers()...)
-		}
+		providers = append(providers, p.Provider)
 	}
 	var out []string
-	for _, s := range gateway.Discover(installed, servers, nil) {
+	for _, s := range gateway.Found(providers, servers, nil) {
 		out = append(out, s.Name)
 	}
 	return out

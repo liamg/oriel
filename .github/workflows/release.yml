@@ -85,7 +85,7 @@ jobs:
           restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.26.10"
+          go-version: "1.26.11"
       - name: Install Gio's Linux deps, and cmake for whisper.cpp
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends cmake pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev
       - name: Install zig 0.16.0
@@ -117,7 +117,7 @@ jobs:
           restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.26.10"
+          go-version: "1.26.11"
       - name: Install zig 0.16.0
         run: |
           .github/fetch.sh zig.tar.xz https://ziglang.org/download/0.16.0/zig-aarch64-macos-0.16.0.tar.xz b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489
@@ -178,7 +178,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: "1.26.10"
+          go-version: "1.26.11"
       - run: |
           gh release download "$TAG" --pattern 'oriel-*' --dir dist
           gh release view "$TAG" --json body --jq .body > notes.md
