@@ -97,6 +97,17 @@ func (c *Cache[K, V]) Get(k K) (V, ui.LoadState) {
 	return e.val, e.state
 }
 
+// Fetching are the keys being fetched now.
+func (c *Cache[K, V]) Fetching() []K {
+	var out []K
+	for k, e := range c.m {
+		if e.stop != nil {
+			out = append(out, k)
+		}
+	}
+	return out
+}
+
 // Invalidate makes k's value stale: the next Get fetches it again, showing it meanwhile.
 func (c *Cache[K, V]) Invalidate(k K) {
 	if e := c.m[k]; e != nil {
@@ -182,6 +193,7 @@ func (c *Cache[K, V]) start(e *cacheEntry[K, V]) {
 	}
 	k, path := e.key, e.path
 	go func() {
+		Chaos()
 		if path != "" {
 			c.watchPath(path)
 		}

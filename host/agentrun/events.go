@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
+	"github.com/liamg/oriel/internal/chaos"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -305,6 +306,7 @@ func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 			a.Stats.Running += int64(now.Sub(started).Seconds())
 		}
 	})
+	chaos.Sleep() // what follows the end lands a while after it shows
 	if restart != "" {
 		h.restart(restart)
 		return

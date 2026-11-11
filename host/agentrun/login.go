@@ -130,7 +130,8 @@ func (h *session) askLogins(provider string) {
 	}
 }
 
-// askLogin puts the login's card on the session, unless it has it; Check again (any answer) checks the login.
+// askLogin puts the login's card on the session, unless it has it, once the login refused is read; Check again (any
+// answer) checks the login.
 func (h *session) askLogin(key string) {
 	x := h.r
 	ctx, cancel := context.WithCancel(h.ctx)
@@ -143,7 +144,7 @@ func (h *session) askLogin(key string) {
 		return
 	}
 	l.asks[h.id] = mine
-	login := l.login
+	login, marked := l.login, l.marked
 	x.loginMu.Unlock()
 	if h.snapshot().Agent.Sandboxed {
 		login.Terminal = "" // its terminal is the sandbox's, whose sign-in is the host's: signing in there forks it
@@ -158,6 +159,12 @@ func (h *session) askLogin(key string) {
 			x.loginMu.Unlock()
 			cancel()
 		}()
+		// The card goes up once the refused login is read, so a Check again can't be taken before it.
+		select {
+		case <-marked:
+		case <-ctx.Done():
+			return
+		}
 		for {
 			if _, ok := h.askUser(ctx, core.Ask{Kind: core.AskLogin, Summary: login.Detail, Login: &login}); !ok {
 				return
