@@ -30,6 +30,9 @@ type Bind struct {
 // sandbox: both are content-addressed and checked by go.sum.
 func GoCache() string { return filepath.Join(Base(), "cache", "go") }
 
+// ToolsCache is where the gateway keeps each MCP server's tool list, shared by every sandbox.
+func ToolsCache() string { return filepath.Join(Base(), "cache", "mcp-tools") }
+
 // HomeDir is root's sandbox home: the agent's $HOME.
 func HomeDir(root string) string { return filepath.Join(Dir(root), "home") }
 

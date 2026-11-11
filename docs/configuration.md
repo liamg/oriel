@@ -210,7 +210,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `sandbox.approval_timeout` | 10m: how long a held gateway call waits for you | app | |
 | `sandbox.auto_allow_read_only` | false | app | |
 | `sandbox.hidden_servers` | empty; the page offers the servers the gateway finds | app | |
-| `sandbox.servers` | empty: extra MCP servers for the gateway, name → an https URL or a command line | app | |
+| `sandbox.servers` | empty: extra MCP servers for the gateway, name → an https URL or a command line; every sandbox carries them with the servers installed for any agent, and one here wins over an installed one of its name | app | |
 | `sandbox.egress_proxy` | true: off allows every connection (still made from the host, so its VPN and tailnet reach the sandbox) | app | |
 | `sandbox.memory` | `8g`; `none` for no cap | app | |
 | `sandbox.pids_limit` | 4096; -1 for no cap | app | |

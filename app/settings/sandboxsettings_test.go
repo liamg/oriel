@@ -11,13 +11,49 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/gateway"
 )
+
+// installs is a provider with MCP servers installed for it.
+type installs struct {
+	*agenttest.Fake
+	servers []agent.MCPServer
+}
+
+func (installs) SandboxNeeds(context.Context, agent.SandboxPlace) (agent.SandboxNeeds, error) {
+	return agent.SandboxNeeds{}, nil
+}
+
+func (i installs) MCPServers() []agent.MCPServer { return i.servers }
+
+// The servers sandbox.hidden_servers offers are the ones a sandbox's gateway finds: every provider's installed
+// servers and sandbox.servers, by the gateway's own function.
+func TestHiddenServersOfferWhatTheGatewayFinds(t *testing.T) {
+	claude, codex := agenttest.NewFake(), agenttest.NewFake()
+	claude.Name, codex.Name = "claude", "codex"
+	providers := []agent.Provider{
+		installs{Fake: claude, servers: []agent.MCPServer{{Name: "browser", Source: "user", Config: json.RawMessage(`{"command":"browser-mcp"}`)}}},
+		installs{Fake: codex, servers: []agent.MCPServer{{Name: "notes", Source: "codex", Config: json.RawMessage(`{"command":"notes-mcp"}`)}}},
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Config: apptest.Builtin(providers...)})
+	rig.WriteFile(t, filepath.Join(s.ConfigDir, "settings.toml"), "[sandbox]\nservers = { docs = \"https://docs.example.com/mcp\" }\n")
+	settingsOf(s).Reload()
+	sp, _ := s.Registry().Options().Spec("sandbox.hidden_servers")
+	var want []string
+	for _, sv := range gateway.Found(providers, map[string]json.RawMessage{"docs": json.RawMessage(`{"type":"http","url":"https://docs.example.com/mcp"}`)}, nil) {
+		want = append(want, sv.Name)
+	}
+	if got := sp.Choices(); !slices.Equal(got, want) || len(got) != 3 {
+		t.Errorf("hidden_servers offers %v, the gateway finds %v", got, want)
+	}
+}
 
 // The sandbox's settings are options of the right types, with the project layer only
 // where a repo may set its own (its network and gateway rules, its image).

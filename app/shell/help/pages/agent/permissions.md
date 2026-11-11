@@ -21,6 +21,12 @@ An agent running on the host, outside a sandbox, has your access: none of this a
 ## Tools {#tools}
 
 Everything privileged is a tool on the sandbox's gateway: Oriel's own host actions, then each of your MCP servers.
+Every sandbox carries the same servers, whichever agent runs in it: those in `sandbox.servers`, and those you
+installed for any of your agents (Claude Code's user servers and plugins, Codex's config), minus
+`sandbox.hidden_servers`. Where two share a name, `sandbox.servers` wins. A repository's `.mcp.json` is never read.
+A server starts on the session's first call to it, not when the agent starts: its tools are listed from what Oriel
+kept the last time it ran (only a server never listed, or whose settings changed, is started to list them), and each
+sandbox starts its own. If a call finds a tool gone, the agent is told so and the list is brought up to date.
 Each row says what a call meets (allowed, asks you, denied) and where that comes from: this session, project
 settings, your settings, always on this machine, read-only (allowed by default), or the built-in default. The menu
 sets this session's own rule for the tool, or drops it.
