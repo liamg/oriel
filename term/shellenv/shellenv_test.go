@@ -1,10 +1,7 @@
 package shellenv
 
 import (
-	"fmt"
-	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -12,7 +9,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/internal/isolate"
-	"github.com/liamg/oriel/term/pty"
 )
 
 // fakeShell writes a shell that runs body, then the command it's given (its last argument) with PATH set to path.
@@ -110,27 +106,6 @@ func TestPathFromAShellThatKeepsWriting(t *testing.T) {
 	isolate.Test(t)
 	if got, err := Path(t.Context(), chattyShell(t), Timeout); err != nil || got != "/opt/chatty/bin:/bin" {
 		t.Fatalf("Path = %q, %v", got, err)
-	}
-}
-
-// A process run on a terminal is seen as one.
-func TestPtyStdinIsATerminal(t *testing.T) {
-	isolate.Test(t)
-	if os.Getenv("ORIEL_SHELLENV_REPORT_TERMINAL") == "1" {
-		fmt.Printf("terminal=%v\n", FromTerminal())
-		return
-	}
-	cmd := exec.Command(os.Args[0], "-test.run=^TestPtyStdinIsATerminal$")
-	cmd.Env = append(os.Environ(), "ORIEL_SHELLENV_REPORT_TERMINAL=1")
-	p, err := pty.Start(cmd, 80, 24)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer p.Close()
-	out, _ := io.ReadAll(p)
-	_ = cmd.Wait()
-	if !strings.Contains(string(out), "terminal=true") {
-		t.Errorf("a pty wasn't taken for a terminal: %q", out)
 	}
 }
 

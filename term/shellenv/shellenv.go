@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/term/pty"
-	"github.com/liamg/oriel/term/tty"
 )
 
 // Resolving is set in the shell's environment while it's read, so its config can skip what's slow or interactive.
@@ -188,6 +187,3 @@ func Apply(ctx context.Context) (string, error) {
 	merged := Merge(p, os.Getenv("PATH"))
 	return merged, os.Setenv("PATH", merged)
 }
-
-// FromTerminal says the process was started from a terminal, so it has the shell's environment already.
-func FromTerminal() bool { return tty.IsTerminal(os.Stdin) }

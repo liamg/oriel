@@ -54,8 +54,10 @@ func Main() {
 	os.Exit(run(args, os.Stdout, os.Stderr))
 }
 
-// runApp opens the app's window. Gio's event loop needs the main goroutine, so the app runs on another.
+// runApp opens the app's window. Gio's event loop needs the main goroutine, so the app runs on another. Started from
+// a terminal, the app runs detached from it (detach).
 func runApp(args []string) {
+	fromTerminal := detach()
 	cfg, err := app.ConfigFromFlags(args, version, os.Stderr)
 	if err != nil {
 		os.Exit(2)
@@ -71,7 +73,7 @@ func runApp(args []string) {
 		os.Exit(1)
 	}
 	log := cfg.Logs.Logger("host")
-	loginPath(log)
+	loginPath(log, fromTerminal)
 	w, err := newHost(home, log)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no sessions:", err)
@@ -101,8 +103,8 @@ func runApp(args []string) {
 
 // loginPath gives the process the PATH the user's login shell builds, when it wasn't started from a terminal: opened
 // from the Finder, the Dock or a launcher, it has the desktop's, and the agents' programs (claude, codex) aren't on it.
-func loginPath(log *slog.Logger) {
-	if shellenv.FromTerminal() {
+func loginPath(log *slog.Logger, fromTerminal bool) {
+	if fromTerminal {
 		return
 	}
 	if p, err := shellenv.Apply(context.Background()); err != nil {
