@@ -14,8 +14,9 @@ LDFLAGS := -X github.com/liamg/oriel/cmd/oriel/cli.version=$(VERSION) $(if $(REL
 test:
 	go test -shuffle=on ./...
 
-# test-chaos runs the suite with the work started off the loop (plugin.Go, plugin.Load, kit.Busy) slowed by a random
-# while: a test that passes only because that work was quick fails here, not on a loaded CI runner.
+# test-chaos runs the suite with the work started off the loop (plugin.Go, plugin.Load, kit.Busy, a plugin.Cache's
+# fetches, the host's jobs) slowed by a random while: a test that passes only because that work was quick fails here,
+# not on a loaded CI runner.
 test-chaos:
 	ORIEL_TEST_CHAOS=60 go test -shuffle=on -count=1 ./...
 

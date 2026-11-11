@@ -193,6 +193,7 @@ func (c *Cache[K, V]) start(e *cacheEntry[K, V]) {
 	}
 	k, path := e.key, e.path
 	go func() {
+		Chaos()
 		if path != "" {
 			c.watchPath(path)
 		}
