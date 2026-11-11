@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 )
@@ -157,6 +158,9 @@ func (a API) Checks(ctx context.Context, repo Repo, ref string) ([]Check, error)
 			App         struct {
 				Slug string `json:"slug"`
 			} `json:"app"`
+			CheckSuite struct {
+				ID int64 `json:"id"`
+			} `json:"check_suite"`
 		} `json:"check_runs"`
 	}
 	ref = url.PathEscape(ref)
@@ -165,7 +169,8 @@ func (a API) Checks(ctx context.Context, repo Repo, ref string) ([]Check, error)
 	}
 	var out []Check
 	for _, r := range runs.CheckRuns {
-		c := Check{ID: r.ID, Name: r.Name, Status: r.Status, Conclusion: r.Conclusion, URL: r.HTMLURL, Actions: r.App.Slug == "github-actions"}
+		c := Check{ID: r.ID, Name: r.Name, Status: r.Status, Conclusion: r.Conclusion, URL: r.HTMLURL, Actions: r.App.Slug == "github-actions",
+			Suite: r.CheckSuite.ID}
 		if r.StartedAt != nil {
 			c.Started = *r.StartedAt
 		}
@@ -174,6 +179,7 @@ func (a API) Checks(ctx context.Context, repo Repo, ref string) ([]Check, error)
 		}
 		out = append(out, c)
 	}
+	out = a.latestRuns(ctx, repo, ref, out, func(i int) string { return runs.CheckRuns[i].App.Slug })
 	var status struct {
 		Statuses []struct {
 			Context   string    `json:"context"`
@@ -204,6 +210,77 @@ func (a API) Checks(ctx context.Context, repo Repo, ref string) ([]Check, error)
 		out = append(out, c)
 	}
 	return out, nil
+}
+
+// latestRuns keeps each check's newest run, as GitHub's own page does: a workflow run again on the same commit (a PR's
+// description edited, say) adds runs beside the old ones. Actions jobs are the same check when their workflow and name
+// are; a workflow's runs are looked up only when names repeat, and a job whose workflow isn't known is kept.
+func (a API) latestRuns(ctx context.Context, repo Repo, ref string, cs []Check, app func(int) string) []Check {
+	names := map[string]int{}
+	again := false
+	for i, c := range cs {
+		k := app(i) + "/" + c.Name
+		names[k]++
+		again = again || names[k] > 1
+	}
+	if !again {
+		return cs
+	}
+	var flows map[int64]int64 // check suite → workflow
+	if slices.ContainsFunc(cs, func(c Check) bool { return c.Actions && names["github-actions/"+c.Name] > 1 }) {
+		flows = a.workflows(ctx, repo, ref)
+	}
+	at := map[string]int{}
+	var out []Check
+	for i, c := range cs {
+		key := app(i) + "/" + c.Name
+		if c.Actions {
+			w, ok := flows[c.Suite]
+			if !ok {
+				out = append(out, c)
+				continue
+			}
+			key = fmt.Sprintf("%s/%d/%s", app(i), w, c.Name)
+		}
+		if j, ok := at[key]; ok {
+			if c.ID > out[j].ID {
+				out[j] = c
+			}
+			continue
+		}
+		at[key] = len(out)
+		out = append(out, c)
+	}
+	return out
+}
+
+// workflows maps the Actions workflow runs on ref, a commit or a branch, from their check suites to their workflows;
+// nil when they can't be read.
+func (a API) workflows(ctx context.Context, repo Repo, ref string) map[int64]int64 {
+	var runs struct {
+		WorkflowRuns []struct {
+			WorkflowID   int64 `json:"workflow_id"`
+			CheckSuiteID int64 `json:"check_suite_id"`
+		} `json:"workflow_runs"`
+	}
+	q := url.Values{"per_page": {"100"}}
+	if isSHA(ref) {
+		q.Set("head_sha", ref)
+	} else {
+		q.Set("branch", ref)
+	}
+	if err := a.T.Do(ctx, "GET", repoPath(repo, "actions/runs?"+q.Encode()), nil, &runs); err != nil {
+		return nil
+	}
+	out := map[int64]int64{}
+	for _, r := range runs.WorkflowRuns {
+		out[r.CheckSuiteID] = r.WorkflowID
+	}
+	return out
+}
+
+func isSHA(ref string) bool {
+	return len(ref) == 40 && strings.Trim(ref, "0123456789abcdef") == ""
 }
 
 func (a API) Log(ctx context.Context, repo Repo, c Check) (string, error) {
