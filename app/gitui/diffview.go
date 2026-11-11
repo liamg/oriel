@@ -71,11 +71,10 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.GitTree, gs *gitx.State, root ui.ID) {
 	th := c.Theme()
 	c.Row("loaded", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-		scope := gitx.Changed
+		files := gs.Files(gitx.Changed)
 		if st.head {
-			scope = gitx.Uncommitted
+			files = gs.Whole() // a file staged and edited again is one change against HEAD
 		}
-		files := gs.Files(scope)
 		if st.sel.file != "" && !slices.ContainsFunc(files, func(f gitx.FileState) bool { return f.Path == st.sel.file }) {
 			files = append(slices.Clone(files), gitx.FileState{Path: st.sel.file}) // asked for, and unchanged
 		}

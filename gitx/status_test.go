@@ -385,3 +385,37 @@ func TestChangedAgainstTheBaseSet(t *testing.T) {
 		t.Errorf("with the base unset %q", got)
 	}
 }
+
+// Whole lists each uncommitted path once, as git diff HEAD has it: a file staged then edited again is one change,
+// counted against HEAD, and one added then edited is still added.
+// ref: oracle git (git diff HEAD -M --numstat; git status)
+func TestWholeIsEachPathOnceAgainstHead(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"a.txt": gittest.Lines(10), "b.txt": gittest.Lines(5)})
+	r.Commit("Ada", "base")
+	r.Write(map[string]string{"a.txt": strings.Replace(gittest.Lines(10), "line 2\n", "two\n", 1), "new.txt": "one\n"})
+	r.Git("add", "a.txt", "new.txt")
+	r.Write(map[string]string{
+		"a.txt":   strings.Replace(strings.Replace(gittest.Lines(10), "line 2\n", "two\n", 1), "line 9\n", "nine\n", 1),
+		"new.txt": "one\ntwo\n",
+		"b.txt":   gittest.Lines(5) + "line 6\n",
+		"u.txt":   "x\n",
+	})
+	st, err := Repo{Dir: r.Dir}.Status(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len(st.Files(Uncommitted)); n != 6 {
+		t.Fatalf("Uncommitted lists %d, want a and new twice (staged, unstaged), b and u once:\n%s", n, rows(st.Files(Uncommitted)))
+	}
+	numstat := map[string]string{}
+	for _, l := range strings.Split(strings.TrimSpace(r.Git("diff", "HEAD", "-M", "--numstat")), "\n") {
+		f := strings.Fields(l)
+		numstat[f[2]] = "+" + f[0] + " -" + f[1]
+	}
+	want := fmt.Sprintf("M a.txt %s uncommitted\nM b.txt %s uncommitted\nA new.txt %s uncommitted\n? u.txt +1 -0 untracked",
+		numstat["a.txt"], numstat["b.txt"], numstat["new.txt"])
+	if got := rows(st.Whole()); got != want {
+		t.Errorf("Whole:\n%s\nwant:\n%s", got, want)
+	}
+}

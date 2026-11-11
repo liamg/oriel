@@ -3,6 +3,7 @@ package gitui_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
@@ -36,4 +37,28 @@ func TestUncommittedsDiffIsAgainstTheLastCommit(t *testing.T) {
 	s.Until("the branch diff, committed and uncommitted lines both", func() bool {
 		return s.Find("two, committed") != nil && s.Find("nine, not yet") != nil
 	})
+}
+
+// A file staged and then edited again is one file in Uncommitted's diff, counted as git diff HEAD counts it, not one
+// row for what's staged and another for what isn't.
+// ref: oracle git (git diff HEAD --numstat)
+func TestUncommittedsDiffListsAStagedAndEditedFileOnce(t *testing.T) {
+	r := gittest.New(t)
+	r.Write(map[string]string{"f.txt": "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n"})
+	r.Commit("Ada", "base")
+	r.Write(map[string]string{"f.txt": "one\ntwo, staged\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n"})
+	r.Git("add", "f.txt")
+	r.Write(map[string]string{"f.txt": "one\ntwo, staged\nthree\nfour\nfive\nsix\nseven\neight\nnine, not staged\nten\n"})
+	f := strings.Fields(r.Git("diff", "HEAD", "--numstat"))
+	path := filepath.Join(r.Dir, "f.txt")
+
+	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
+	s.Run("diff.open", registry.Args{"path": path, "against": "head"})
+	s.Until("the uncommitted diff, staged and unstaged lines both", func() bool {
+		return s.Find("two, staged") != nil && s.Find("nine, not staged") != nil
+	})
+	s.Quiet()
+	if want := "1 file · +" + f[0] + " −" + f[1]; !strings.Contains(s.Text(), want) {
+		t.Errorf("the list's heading isn't %q:\n%s", want, s.Text())
+	}
 }

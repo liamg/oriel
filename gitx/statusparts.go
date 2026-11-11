@@ -150,16 +150,17 @@ func (r Repo) ReadWork(ctx context.Context, rf Refs) (Work, error) {
 
 // Lines are how many lines each changed file adds and deletes, in each scope.
 type Lines struct {
-	staged, unstaged, base numstats
-	untracked              map[string]lineCount
+	staged, unstaged, base, head numstats
+	untracked                    map[string]lineCount
 }
 
-// ReadLines counts the lines of what w says changed: three numstats, and the untracked files read.
+// ReadLines counts the lines of what w says changed: four numstats, and the untracked files read.
 func (r Repo) ReadLines(ctx context.Context, rf Refs, w Work) (Lines, error) {
 	l := Lines{untracked: map[string]lineCount{}}
 	var wg sync.WaitGroup
 	wg.Go(func() { l.staged, _ = r.numstat(ctx, "diff", "--cached", "-M", "--numstat", "-z") })
 	wg.Go(func() { l.unstaged, _ = r.numstat(ctx, "diff", "--numstat", "-z") })
+	wg.Go(func() { l.head, _ = r.numstat(ctx, "diff", "-M", "--numstat", "-z", cmp.Or(rf.Head, emptyTree)) })
 	if rf.Head != "" {
 		wg.Go(func() { l.base, _ = r.numstat(ctx, "diff", "-M", "--numstat", "-z", rf.Rev) })
 	}
@@ -177,24 +178,29 @@ func (r Repo) ReadLines(ctx context.Context, rf Refs, w Work) (Lines, error) {
 func Compose(rf Refs, tracked []string, w Work, lines *Lines) *State {
 	st := &State{Branch: rf.Branch, Head: rf.Head, Upstream: rf.Upstream, Ahead: rf.Ahead, Behind: rf.Behind, Base: rf.Base,
 		BaseHash: rf.BaseHash}
-	var staged, unstaged, base numstats
+	var staged, unstaged, base, head numstats
 	untracked := map[string]lineCount{}
 	if lines != nil {
-		staged, unstaged, base, untracked = lines.staged, lines.unstaged, lines.base, lines.untracked
+		staged, unstaged, base, head, untracked = lines.staged, lines.unstaged, lines.base, lines.head, lines.untracked
 	}
 
 	// Uncommitted, from git status.
-	var unc []FileState
+	var unc, whole []FileState
 	working := map[string]bool{}
 	for _, e := range w.entries {
 		switch {
 		case e.untracked:
 			c := untracked[e.path]
 			unc = append(unc, FileState{Path: e.path, Code: '?', Add: c.add, Binary: c.binary, Area: Untracked})
+			whole = append(whole, unc[len(unc)-1])
 		case e.unmerged:
 			unc = append(unc, FileState{Path: e.path, Code: 'U', Area: Unstaged})
+			whole = append(whole, FileState{Path: e.path, Code: 'U', Area: Working})
 			working[e.path] = true
 		default:
+			f := FileState{Path: e.path, Old: e.old, Code: againstHead(e.x, e.y), Area: Working}
+			head.fill(&f)
+			whole = append(whole, f)
 			if e.x != '.' {
 				f := FileState{Path: e.path, Old: e.old, Code: e.x, Area: Staged}
 				staged.fill(&f)
@@ -214,6 +220,8 @@ func Compose(rf Refs, tracked []string, w Work, lines *Lines) *State {
 	}
 	slices.SortStableFunc(unc, func(a, b FileState) int { return cmp.Or(cmp.Compare(a.Area, b.Area), strings.Compare(a.Path, b.Path)) })
 	st.files[Uncommitted] = unc
+	slices.SortFunc(whole, func(a, b FileState) int { return strings.Compare(a.Path, b.Path) })
+	st.whole = whole
 
 	// Changed: the work tree against the merge-base.
 	var changed []FileState
@@ -318,6 +326,30 @@ func (s *State) WithCounts(c *State) *State {
 		}
 		out.files[sc] = fs
 	}
+	whole := map[key]FileState{}
+	for _, f := range c.whole {
+		whole[key{f.Path, f.Area, f.Code}] = f
+	}
+	out.whole = slices.Clone(s.whole)
+	for i, f := range out.whole {
+		if n, ok := whole[key{f.Path, f.Area, f.Code}]; ok {
+			out.whole[i].Add, out.whole[i].Del, out.whole[i].Binary = n.Add, n.Del, n.Binary
+		}
+	}
 	out.index()
 	return &out
+}
+
+// againstHead is the status letter of a change against HEAD, from its staged (x) and unstaged (y) letters: a file
+// added and then edited is still added, and one deleted from the work tree is deleted.
+func againstHead(x, y byte) byte {
+	switch {
+	case y == 'D' || x == 'D':
+		return 'D'
+	case x == 'A' || x == 'R' || x == 'C':
+		return x
+	case x == '.':
+		return y
+	}
+	return 'M'
 }
