@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -69,7 +70,7 @@ func mdBlocks(src string) []mdBlock {
 	for i := 0; i < len(lines); i++ {
 		l := strings.TrimRight(lines[i], "\r")
 		t := strings.TrimSpace(l)
-		if t != "" && para >= 0 && !strings.HasPrefix(t, "```") && t != "---" && t != "***" && !strings.HasPrefix(t, "#") && !listItem.MatchString(l) && !startsHTMLBlock(l) && mdTableAt(lines, i) == nil {
+		if t != "" && para >= 0 && !mdImageLine(t) && !strings.HasPrefix(t, "```") && t != "---" && t != "***" && !strings.HasPrefix(t, "#") && !listItem.MatchString(l) && !startsHTMLBlock(l) && mdTableAt(lines, i) == nil {
 			out[para].Text += " " + t
 			out[para].End = i + 1
 			continue
@@ -123,7 +124,9 @@ func mdBlocks(src string) []mdBlock {
 			out = append(out, b)
 		default:
 			out = append(out, mdBlock{Kind: mdPara, Text: t, Line: i + 1, End: i + 1})
-			para = len(out) - 1
+			if !mdImageLine(t) { // a line of images stands alone, where it's written
+				para = len(out) - 1
+			}
 		}
 	}
 	return out
@@ -201,10 +204,21 @@ func mdRow(t string) []string {
 }
 
 // mdImagesOut takes each block's images out of its text, makes its inline HTML markdown, and drops what's left empty.
+// A paragraph's images stay where they're written: it's split into its text and its images, in order.
 func mdImagesOut(bs []mdBlock) []mdBlock {
-	out := bs[:0]
+	var out []mdBlock
 	for _, b := range bs {
-		if b.Kind == mdPara || b.Kind == mdHeading || b.Kind == mdItem {
+		if b.Kind == mdPara {
+			for _, part := range mdSplitImages(b.Text) {
+				p := b
+				p.Text, p.Images = mdInlineHTML(part.text), append(slices.Clone(b.Images), part.images...)
+				if p.Text != "" || len(p.Images) > 0 {
+					out = append(out, p)
+				}
+			}
+			continue
+		}
+		if b.Kind == mdHeading || b.Kind == mdItem {
 			text, imgs := mdTakeImages(b.Text)
 			b.Text, b.Images = mdInlineHTML(text), append(b.Images, imgs...)
 			if b.Text == "" && len(b.Images) == 0 && b.Kind != mdItem {

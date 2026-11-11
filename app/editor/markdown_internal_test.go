@@ -219,7 +219,8 @@ func TestMarkdownImagesAndHTML(t *testing.T) {
 	want := []got{
 		{Kind: mdPara, Align: "center", Images: []mdImage{{Src: "logo.png", Alt: "Logo", W: 120}}},
 		{Kind: mdHeading, Level: 1, Text: "Oriel", Align: "center"},
-		{Kind: mdPara, Text: "Badges:", Images: []mdImage{{Src: "https://example.com/ci.svg", Alt: "CI"}, {Src: "shot.png", Alt: "Shot"}}},
+		{Kind: mdPara, Text: "Badges:"}, // the images after it, where they're written
+		{Kind: mdPara, Images: []mdImage{{Src: "https://example.com/ci.svg", Alt: "CI"}, {Src: "shot.png", Alt: "Shot"}}},
 		{Kind: mdPara, Text: "Press `Ctrl`+**S** to save. Done & dusted, `<div>` kept."},
 		{Kind: mdPara, Text: "**▸ More**"},
 		{Kind: mdPara, Text: "Hidden body."},
@@ -343,5 +344,40 @@ func TestMarkdownParsedOnce(t *testing.T) {
 	}
 	if len(got[0]) == 0 || &got[0][0] != &got[1][0] {
 		t.Error("the same source was parsed again on the next frame")
+	}
+}
+
+// An image is drawn where it's written in its paragraph, not above the paragraph's text. Images are inlines, and
+// spec/gfm/spec.md, "Inlines": "Inlines are parsed sequentially from the beginning of the character stream to the end
+// (left to right, in left-to-right languages)." A line that's only images is a block of its own, on its line.
+func TestMarkdownImagesStayWhereTheyreWritten(t *testing.T) {
+	type got struct {
+		Text      string
+		Images    []string
+		Line, End int
+	}
+	for _, c := range []struct {
+		name, src string
+		want      []got
+	}{
+		{"a line of its own", "Before the shot:\n![shot](a.png)\nand after it.", []got{
+			{Text: "Before the shot:", Line: 1, End: 1}, {Images: []string{"a.png"}, Line: 2, End: 2}, {Text: "and after it.", Line: 3, End: 3}}},
+		{"inside a line", "see ![a](a.png) then ![b](b.png) <img src=\"c.png\"> done", []got{
+			{Text: "see", Line: 1, End: 1}, {Images: []string{"a.png"}, Line: 1, End: 1}, {Text: "then", Line: 1, End: 1},
+			{Images: []string{"b.png", "c.png"}, Line: 1, End: 1}, {Text: "done", Line: 1, End: 1}}},
+		{"at the end", "Look at this\n![x](x.png)", []got{{Text: "Look at this", Line: 1, End: 1}, {Images: []string{"x.png"}, Line: 2, End: 2}}},
+		{"only text", "no images\nhere", []got{{Text: "no images here", Line: 1, End: 2}}},
+	} {
+		var bs []got
+		for _, b := range mdParse(c.src) {
+			g := got{Text: b.Text, Line: b.Line, End: b.End}
+			for _, im := range b.Images {
+				g.Images = append(g.Images, im.Src)
+			}
+			bs = append(bs, g)
+		}
+		if !reflect.DeepEqual(bs, c.want) {
+			t.Errorf("%s:\n%+v\nwant\n%+v", c.name, bs, c.want)
+		}
 	}
 }
