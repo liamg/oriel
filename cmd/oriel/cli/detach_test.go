@@ -208,7 +208,7 @@ func superviseRestore(out string) {
 	cmd.ExtraFiles = []*os.File{os.Stdin}
 	code := supervise(os.Stdin, cmd)
 	after, _ := tty.Get(os.Stdin)
-	report(out+".supervisor", map[string]any{"code": code, "restored": after != nil && *after == *before})
+	report(out+".supervisor", map[string]any{"code": code, "restored": after != nil && tty.Same(after, before)})
 	os.Exit(0)
 }
 

@@ -68,5 +68,5 @@ func report() string {
 	}
 	got, _ = Get(in)
 	return fmt.Sprintf("terminal=%v foreground=%v raw=%v restored=%v", IsTerminal(in), Foreground(in), isRaw,
-		got.Lflag == before.Lflag)
+		Same(got, before))
 }
