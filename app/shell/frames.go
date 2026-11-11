@@ -107,8 +107,12 @@ func frameWindow(st core.State, dir string) uireg.Window {
 }
 
 // buildWindow is the window: win's frame, its top regions over its left ones beside the main area, its bottom ones
-// under them, each a widget.Area, and its over regions and every app.overlay.* view floating over it all.
+// under them, each a widget.Area, and its over regions and every app.overlay.* view floating over it all. The reads
+// that landed since the last frame are taken in first, whether or not this one asks for them.
 func buildWindow(c *ui.Ctx, reg uireg.Registry, size render.Point, win uireg.Window) {
+	if rd, ok := kit.ReadsOf(reg); ok {
+		rd.Land()
+	}
 	f, _ := uireg.FrameFor(reg, win)
 	vc := uireg.ViewCtx{Width: size.X, Height: size.Y, Session: win.Session}
 	if f.Global {

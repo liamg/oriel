@@ -1,11 +1,9 @@
 package plugin
 
 import (
-	"math/rand/v2"
-	"os"
-	"strconv"
 	"sync"
-	"time"
+
+	"github.com/liamg/oriel/internal/chaos"
 )
 
 // Tracker is a host that counts the work its plugins run off the loop, so what waits for the app to settle (a
@@ -40,17 +38,7 @@ func Go(h any, what string, fn func()) {
 
 // ChaosEnv names the variable that slows the work started off the loop (Go, Load) by a random while up to its
 // value in milliseconds: a test that passes only because that work was quick fails under it (make test-chaos).
-const ChaosEnv = "ORIEL_TEST_CHAOS"
+const ChaosEnv = chaos.Env
 
 // Chaos sleeps up to ORIEL_TEST_CHAOS milliseconds when it's set, and returns at once when it isn't.
-func Chaos() {
-	v := os.Getenv(ChaosEnv)
-	if v == "" {
-		return
-	}
-	ms, err := strconv.Atoi(v)
-	if err != nil || ms <= 0 {
-		ms = 50
-	}
-	time.Sleep(time.Duration(rand.Int64N(int64(ms)+1)) * time.Millisecond)
-}
+func Chaos() { chaos.Sleep() }

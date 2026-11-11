@@ -101,6 +101,27 @@ func TestCacheMissFetchesOffTheLoopAndShares(t *testing.T) {
 	}
 }
 
+// Fetching names the keys whose fetch is under way: what a wait that never ends was waiting for.
+func TestCacheSaysWhatItsFetching(t *testing.T) {
+	g := newGate()
+	c, lp, _ := cacheFor(g, CacheOpts[string, string]{})
+	c.Get("a")
+	c.Get("b")
+	if got := c.Fetching(); len(got) != 2 {
+		t.Fatalf("fetching %q, want a and b", got)
+	}
+	g.answer("a", "A")
+	lp.until(t, func() bool { _, s := c.Get("a"); return s.Phase == ui.Ready })
+	if got := c.Fetching(); len(got) != 1 || got[0] != "b" {
+		t.Fatalf("fetching %q, want b", got)
+	}
+	g.answer("b", "B")
+	lp.until(t, func() bool { _, s := c.Get("b"); return s.Phase == ui.Ready })
+	if got := c.Fetching(); len(got) != 0 {
+		t.Fatalf("fetching %q after both landed", got)
+	}
+}
+
 func TestCacheServesStaleWhileItRevalidates(t *testing.T) {
 	g := newGate()
 	c, lp, _ := cacheFor(g, CacheOpts[string, string]{})
