@@ -22,7 +22,8 @@ type remoteURL struct {
 	config time.Time // the config file's time when it was read
 }
 
-// remoteURL is repo's origin URL, read with git only when its config changed since it was last read.
+// remoteURL is repo's origin URL, read with git only when its config changed since it was last read. A read that
+// fails isn't kept: the next asks git again.
 func (x *GitHub) remoteURL(ctx context.Context, repo gitx.Repo) string {
 	_, common := gitx.Dirs(repo.Dir)
 	var at time.Time
@@ -36,7 +37,10 @@ func (x *GitHub) remoteURL(ctx context.Context, repo gitx.Repo) string {
 	if ok && !at.IsZero() && got.config.Equal(at) {
 		return got.url
 	}
-	url := repo.RemoteURL(ctx)
+	url, err := repo.Origin(ctx)
+	if err != nil {
+		return got.url // as last read: a git that failed says nothing of the remote
+	}
 	r.mu.Lock()
 	if r.urls == nil {
 		r.urls = map[string]remoteURL{}

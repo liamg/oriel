@@ -49,3 +49,35 @@ func TestRemoteURLReadOnceUntilTheConfigChanges(t *testing.T) {
 		t.Errorf("after the remote moved: %q", got)
 	}
 }
+
+// A read of the origin that fails (git couldn't run) isn't kept as "no origin": the next read asks git again.
+func TestAFailedRemoteReadIsntKept(t *testing.T) {
+	r := gittest.New(t)
+	if out, err := exec.Command("git", "-C", r.Dir, "remote", "add", "origin", "https://github.com/acme/search-api.git").CombinedOutput(); err != nil {
+		t.Fatalf("%v: %s", err, out)
+	}
+	var x GitHub
+	ctx := context.Background()
+	path := os.Getenv("PATH")
+	t.Setenv("PATH", t.TempDir())
+	if got := x.remoteURL(ctx, gitx.Repo{Dir: r.Dir}); got != "" {
+		t.Fatalf("with git gone: %q", got)
+	}
+	t.Setenv("PATH", path)
+	if got := x.remoteURL(ctx, gitx.Repo{Dir: r.Dir}); got != "https://github.com/acme/search-api.git" {
+		t.Errorf("with git back, the config unchanged: %q", got)
+	}
+}
+
+// A checkout with no origin reads as none, and is kept so.
+func TestNoOriginIsKept(t *testing.T) {
+	r := gittest.New(t)
+	var x GitHub
+	if got := x.remoteURL(context.Background(), gitx.Repo{Dir: r.Dir}); got != "" {
+		t.Fatalf("origin %q", got)
+	}
+	t.Setenv("PATH", t.TempDir())
+	if got := x.remoteURL(context.Background(), gitx.Repo{Dir: r.Dir}); got != "" {
+		t.Errorf("read again: %q", got)
+	}
+}

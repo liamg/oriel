@@ -2,8 +2,10 @@ package gitx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -133,13 +135,24 @@ func Clone(ctx context.Context, url, dir string) error {
 	return CloneProgress(ctx, url, dir, nil)
 }
 
-// RemoteURL is the URL of origin as it's configured (before any url.insteadOf), or "".
+// RemoteURL is the URL of origin as it's configured (before any url.insteadOf), or "": none, or git couldn't say.
 func (r Repo) RemoteURL(ctx context.Context) string {
+	url, _ := r.Origin(ctx)
+	return url
+}
+
+// Origin is the URL of origin as it's configured (before any url.insteadOf): "" with no error when there's none
+// configured, and an error when git couldn't be asked (it failed, or ctx ended).
+func (r Repo) Origin(ctx context.Context) (string, error) {
 	out, err := r.git(ctx, "config", "--get", "remote.origin.url")
-	if err != nil {
-		return ""
+	var exit *exec.ExitError
+	switch {
+	case err == nil:
+		return strings.TrimSpace(string(out)), nil
+	case errors.As(err, &exit) && exit.ExitCode() == 1: // git config's "not set"
+		return "", nil
 	}
-	return strings.TrimSpace(string(out))
+	return "", err
 }
 
 // BranchWorktree is the work tree that has branch checked out, or "".
