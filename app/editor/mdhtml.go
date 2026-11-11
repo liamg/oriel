@@ -3,6 +3,7 @@ package editor
 import (
 	"html"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -281,6 +282,52 @@ func mdTakeImages(s string) (string, []mdImage) {
 	}
 	s = htmlImgRe.ReplaceAllString(mdImageRe.ReplaceAllString(s, ""), "")
 	return strings.TrimSpace(s), out
+}
+
+// mdImageLine says a line is only images, markdown's or HTML's.
+func mdImageLine(t string) bool {
+	text, imgs := mdTakeImages(t)
+	return text == "" && len(imgs) > 0
+}
+
+// mdPart is a run of a paragraph's text, or of its images.
+type mdPart struct {
+	text   string
+	images []mdImage
+}
+
+// mdSplitImages cuts a paragraph's inline markdown at its images, in order: its text and its runs of images (with
+// only space between them). One without images is a single part.
+func mdSplitImages(s string) []mdPart {
+	if !strings.Contains(s, "![") && !strings.Contains(strings.ToLower(s), "<img") {
+		return []mdPart{{text: s}}
+	}
+	s = mdLinkedImg.ReplaceAllString(s, "$1")
+	var at [][]int
+	at = append(at, mdImageRe.FindAllStringIndex(s, -1)...)
+	at = append(at, htmlImgRe.FindAllStringIndex(s, -1)...)
+	slices.SortFunc(at, func(a, b []int) int { return a[0] - b[0] })
+	var out []mdPart
+	from := 0
+	for _, m := range at {
+		if m[0] < from {
+			continue // inside one taken already
+		}
+		if t := strings.TrimSpace(s[from:m[0]]); t != "" {
+			out = append(out, mdPart{text: t})
+		}
+		_, imgs := mdTakeImages(s[m[0]:m[1]])
+		if n := len(out); n > 0 && out[n-1].text == "" {
+			out[n-1].images = append(out[n-1].images, imgs...)
+		} else {
+			out = append(out, mdPart{images: imgs})
+		}
+		from = m[1]
+	}
+	if t := strings.TrimSpace(s[from:]); t != "" {
+		out = append(out, mdPart{text: t})
+	}
+	return out
 }
 
 // mdInlineHTML is inline markdown with its HTML made markdown: <b> and <strong> bold, <code> and <kbd> code, <br> a
