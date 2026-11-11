@@ -65,7 +65,7 @@ type State struct {
 	Ahead    int
 	Behind   int
 	files    [3][]FileState
-	whole    []FileState // Uncommitted, a path once
+	whole    []FileState          // Uncommitted, a path once
 	byPath   map[string]FileState // what File answers
 	ignored  map[string]bool      // All's ignored paths, directories with their "/"
 }
