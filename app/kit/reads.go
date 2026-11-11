@@ -155,6 +155,10 @@ func (r *Reads) highlight(k highlightKey) *SourceFile {
 	return f
 }
 
+// Land takes in the reads that have landed since it last ran. The window calls it as each frame starts, so a read
+// lands though the view that asked for it has gone.
+func (r *Reads) Land() { r.q.run() }
+
 func (r *Reads) note(st ui.LoadState) {
 	if st.Phase == ui.Pending {
 		r.asked = r.frame()
@@ -207,7 +211,7 @@ func (r *Reads) Close() {
 	r.Pictures.Close()
 }
 
-// landing is the loop the reads' results land on: queued as they come, and run at the next ask.
+// landing is the loop the reads' results land on: queued as they come, and run at the next ask or frame.
 type landing struct {
 	mu   sync.Mutex
 	fns  []func()
