@@ -70,6 +70,7 @@ type Check struct {
 	Started    time.Time `json:"started,omitzero"`
 	Completed  time.Time `json:"completed,omitzero"`
 	Actions    bool      `json:"actions,omitempty"` // run by GitHub Actions, so its log can be read
+	Suite      int64     `json:"suite,omitempty"`   // a check run's check suite: an Actions workflow run's
 }
 
 // Check states, as the Ship page shows them.

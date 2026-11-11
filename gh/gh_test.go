@@ -156,6 +156,39 @@ func TestPullRequestFlow(t *testing.T) {
 	}
 }
 
+// A workflow run again on the same commit (the PR's description edited) adds runs beside the old ones: each check is
+// its newest run, as GitHub's own page shows it. Jobs of another workflow with the same name are checks of their own.
+func TestAWorkflowRunAgainReplacesItsChecks(t *testing.T) {
+	for _, transport := range []string{"http", "cli"} {
+		t.Run(transport, func(t *testing.T) {
+			s := ghtest.New(t)
+			c := client(t, transport, s)
+			s.SetWorkflow(10, 7)
+			s.SetWorkflow(11, 7)
+			s.SetWorkflow(12, 8)
+			for _, ref := range []string{"rate-limits", "0123456789abcdef0123456789abcdef01234567"} {
+				s.SetChecks("acme/api", ref,
+					gh.Check{ID: 4, Name: "lint", Status: "completed", Conclusion: "success", Actions: true, Suite: 10},
+					gh.Check{ID: 5, Name: "description", Status: "completed", Conclusion: "failure", Actions: true, Suite: 10},
+					gh.Check{ID: 6, Name: "lint", Status: "completed", Conclusion: "failure", Actions: true, Suite: 12},
+					gh.Check{ID: 9, Name: "description", Status: "completed", Conclusion: "success", Actions: true, Suite: 11},
+				)
+				cs, err := c.Checks(context.Background(), acme, ref)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var states []string
+				for _, ch := range cs {
+					states = append(states, ch.Name+":"+ch.State())
+				}
+				if want := []string{"lint:pass", "description:pass", "lint:fail"}; !slices.Equal(states, want) {
+					t.Errorf("checks on %s: %q, want %q", ref, states, want)
+				}
+			}
+		})
+	}
+}
+
 func TestParseRepo(t *testing.T) {
 	for in, want := range map[string]string{
 		"https://github.com/acme/api.git":       "acme/api",

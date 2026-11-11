@@ -27,6 +27,7 @@ type Server struct {
 	prs    map[string][]*gh.PR   // by owner/name
 	checks map[string][]gh.Check // by owner/name@ref
 	logs   map[int64]string      // Actions jobs' logs
+	flows  map[int64]int64       // check suite → Actions workflow
 	fail   map[string]*gh.Error  // "METHOD path-prefix" → the error it answers
 	calls  []string              // "POST /repos/acme/api/pulls"
 	lag    bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
@@ -55,7 +56,7 @@ type Server struct {
 // New starts a fake GitHub that closes with the test.
 func New(t testing.TB) *Server {
 	isolate.Test(t)
-	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{},
+	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{}, flows: map[int64]int64{},
 		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
 		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{}, diffLines: map[string][]string{},
 		teams: map[string][]string{}, commits: map[string][]string{}, prReactions: map[string]gh.Reactions{}, reacted: map[string]bool{}, asked: map[string]map[string]time.Time{},
@@ -66,6 +67,7 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("PATCH /repos/{owner}/{name}/pulls/{num}", s.editPR)
 	mux.HandleFunc("POST /repos/{owner}/{name}/pulls/{num}/requested_reviewers", s.reviewers)
 	mux.HandleFunc("GET /repos/{owner}/{name}/commits/{ref}/check-runs", s.checkRuns)
+	mux.HandleFunc("GET /repos/{owner}/{name}/actions/runs", s.workflowRuns)
 	mux.HandleFunc("GET /repos/{owner}/{name}/commits/{ref}/status", s.status)
 	mux.HandleFunc("GET /repos/{owner}/{name}/actions/jobs/{id}/logs", s.log)
 	mux.HandleFunc("POST /graphql", s.graphql)
@@ -159,6 +161,13 @@ func (s *Server) SetChecks(repo, ref string, cs ...gh.Check) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.checks[repo+"@"+ref] = cs
+}
+
+// SetWorkflow says check suite suite is a run of Actions workflow workflow.
+func (s *Server) SetWorkflow(suite, workflow int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.flows[suite] = workflow
 }
 
 // SetLog sets an Actions job's log.
@@ -363,7 +372,8 @@ func (s *Server) checkRuns(w http.ResponseWriter, r *http.Request) {
 		if c.ID == 0 && !c.Actions {
 			continue // a commit status
 		}
-		run := map[string]any{"id": c.ID, "name": c.Name, "status": c.Status, "html_url": c.URL, "app": map[string]string{"slug": "other"}}
+		run := map[string]any{"id": c.ID, "name": c.Name, "status": c.Status, "html_url": c.URL, "app": map[string]string{"slug": "other"},
+			"check_suite": map[string]int64{"id": c.Suite}}
 		if c.Conclusion != "" {
 			run["conclusion"] = c.Conclusion
 		}
@@ -379,6 +389,22 @@ func (s *Server) checkRuns(w http.ResponseWriter, r *http.Request) {
 		runs = append(runs, run)
 	}
 	reply(w, 200, map[string]any{"total_count": len(runs), "check_runs": runs})
+}
+
+// workflowRuns are the Actions workflow runs on a branch or commit: those of the suites its checks are in.
+func (s *Server) workflowRuns(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ref := r.URL.Query().Get("branch") + r.URL.Query().Get("head_sha")
+	runs := []map[string]int64{}
+	seen := map[int64]bool{}
+	for _, c := range s.checks[repoOf(r)+"@"+ref] {
+		if wf, ok := s.flows[c.Suite]; ok && c.Actions && !seen[c.Suite] {
+			seen[c.Suite] = true
+			runs = append(runs, map[string]int64{"id": c.Suite, "workflow_id": wf, "check_suite_id": c.Suite})
+		}
+	}
+	reply(w, 200, map[string]any{"total_count": len(runs), "workflow_runs": runs})
 }
 
 func (s *Server) status(w http.ResponseWriter, r *http.Request) {
