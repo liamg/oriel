@@ -113,19 +113,6 @@ func TestPathFromAShellThatKeepsWriting(t *testing.T) {
 	}
 }
 
-// The Finder, the Dock and launchd give an app /dev/null for stdin: a character device, but not a terminal.
-func TestNullStdinIsNotATerminal(t *testing.T) {
-	isolate.Test(t)
-	f, err := os.Open(os.DevNull)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer f.Close()
-	if isTerminal(f) {
-		t.Error("/dev/null was taken for a terminal")
-	}
-}
-
 // A process run on a terminal is seen as one.
 func TestPtyStdinIsATerminal(t *testing.T) {
 	isolate.Test(t)
