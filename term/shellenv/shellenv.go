@@ -16,8 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/liamg/oriel/term/pty"
 )
 
@@ -188,13 +186,4 @@ func Apply(ctx context.Context) (string, error) {
 	}
 	merged := Merge(p, os.Getenv("PATH"))
 	return merged, os.Setenv("PATH", merged)
-}
-
-// FromTerminal says the process was started from a terminal, so it has the shell's environment already.
-func FromTerminal() bool { return isTerminal(os.Stdin) }
-
-// isTerminal asks the device for its terminal settings: /dev/null is a character device too, but has none.
-func isTerminal(f *os.File) bool {
-	_, err := unix.IoctlGetTermios(int(f.Fd()), getTermios)
-	return err == nil
 }
