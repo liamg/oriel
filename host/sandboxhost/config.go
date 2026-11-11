@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sandbox/gateway"
 )
 
 // configPath is where the host keeps the sandbox settings the app last sent, for sessions that start while no app is
@@ -58,4 +60,22 @@ func (x *Boxes) Config() sandbox.Config {
 	x.cfgMu.Lock()
 	defer x.cfgMu.Unlock()
 	return x.cfg
+}
+
+// MCPServers are the MCP servers a sandbox's gateway carries, as an agent reaches them: each one's name and config.
+func (x *Boxes) MCPServers() []agent.MCPServer {
+	var providers []agent.Provider
+	if x.deps.Providers != nil {
+		providers = x.deps.Providers()
+	}
+	cfg := x.Config()
+	var out []agent.MCPServer
+	for _, s := range gateway.Found(providers, cfg.Servers, cfg.Hidden) {
+		raw, err := json.Marshal(s)
+		if err != nil {
+			continue
+		}
+		out = append(out, agent.MCPServer{Name: s.Name, Source: s.Source, Config: raw})
+	}
+	return out
 }

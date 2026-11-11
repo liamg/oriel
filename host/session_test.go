@@ -460,6 +460,41 @@ func TestAppToolsReachTheAgent(t *testing.T) {
 	}
 }
 
+// An app tool an MCP server of the agent's own already covers (CoveredBy) isn't offered to it; one it doesn't reach is.
+func TestAToolTheAgentsOwnMCPServerCoversIsntOffered(t *testing.T) {
+	for _, c := range []struct {
+		name      string
+		installed []agent.MCPServer
+		offered   bool
+	}{
+		{"none installed", nil, true},
+		{"by its address", []agent.MCPServer{{Name: "tickets", Config: json.RawMessage(`{"type":"http","url":"https://mcp.linear.app/mcp"}`)}}, false},
+		{"through mcp-remote", []agent.MCPServer{{Name: "lin", Config: json.RawMessage(`{"command":"npx","args":["-y","mcp-remote","https://mcp.linear.app/sse"]}`)}}, false},
+		{"another server", []agent.MCPServer{{Name: "github", Config: json.RawMessage(`{"type":"http","url":"https://api.githubcopilot.com/mcp/"}`)}}, true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			r := newRig(t)
+			r.fake.MCP = c.installed
+			r.w.SetApp(App{Tools: func(ToolsReq) []agent.Tool {
+				return []agent.Tool{
+					{Name: "linear_issue", Schema: json.RawMessage(`{"type":"object"}`), CoveredBy: []string{"mcp.linear.app"}},
+					{Name: "lsp_definition", Schema: json.RawMessage(`{"type":"object"}`)},
+				}
+			}})
+			_, a := r.workSession("Work")
+			has := func(name string) bool {
+				return slices.ContainsFunc(a.Spec.Tools, func(tl agent.Tool) bool { return tl.Name == name })
+			}
+			if has("linear_issue") != c.offered {
+				t.Errorf("linear_issue offered %v, want %v", has("linear_issue"), c.offered)
+			}
+			if !has("lsp_definition") {
+				t.Error("a tool nothing covers wasn't offered")
+			}
+		})
+	}
+}
+
 // A turn that ends with background work in flight (a Claude Code Stop hook's background_tasks) isn't the end of the
 // work: its threads stay busy and the session working until a turn ends with none, the one the work wakes.
 func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {

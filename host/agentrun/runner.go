@@ -44,6 +44,9 @@ type Runner struct {
 type Deps struct {
 	Providers *agent.Providers
 	Kinds     hostcore.Kinds
+	// MCPServers are the MCP servers a session's agent reaches of its own: its provider's, or in a sandbox those
+	// its gateway carries. Nil for none.
+	MCPServers func(se core.SessionState) []agent.MCPServer
 	// Exec is how agents' processes start.
 	Exec func() agent.Exec
 	// Sandbox makes a sandboxed session's sandbox; nil when this machine can't run one.

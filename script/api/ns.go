@@ -141,7 +141,7 @@ func (d Decor) Changed(name string) {
 //oriel:api name=agent cap=agent.tools doc="What agents are offered and asked, and the agents themselves: a plugin brings an agent with oriel.agent.provider, served by a process of its own over the Oriel agent protocol ([agent-protocol.md](agent-protocol.md)) or by a bridge such as the bundled ACP one."
 type Agent struct{ a *APIs }
 
-//oriel:api doc="Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own."
+//oriel:api doc="Offer a tool to agents over MCP: { name, desc, params = { name = 'string' }, run = fn(p), read_only, reads, for = { 'assistant' }, confirm = fn(p), async, adds, covered_by = { 'mcp.linear.app' } }. for names the agents it's for (session kinds, or the assistant); none is every session's. confirm makes it an act that waits for the user's yes: it returns { title, lead, rows = { { key, value, url } }, note, line }, and run's table { result, line, detail } says what was done. async gives run a second argument, done(result, err), to answer later: after a process or HTTP call. adds names another tool whose answer this one's result joins, under its reads, instead of being a tool of its own. covered_by names MCP servers that already do what it does, by name or part of where they run: an agent that reaches one (its own, or through its sandbox) isn't offered the tool."
 func (g Agent) Tool(spec script.Table, where string) error {
 	run, _ := spec["run"].(*script.Fn)
 	if str(spec, "name") == "" || run == nil {
@@ -161,6 +161,7 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	confirm, _ := spec["confirm"].(*script.Fn)
 	t := registry.AgentTool{Name: str(spec, "name"), Desc: str(spec, "desc"), Params: params, Source: where,
 		ReadOnly: readOnly, Reads: str(spec, "reads"), For: strs(spec["for"]), Adds: str(spec, "adds"),
+		CoveredBy: strs(spec["covered_by"]),
 		Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
 			var out any
 			var err error

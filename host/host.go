@@ -181,6 +181,7 @@ func (w *Host) parts() error {
 	w.work = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.repos.Resolve, AddRepo: w.repos.Add,
 		Repos: w.repos.Repos, ReposDir: w.repos.Dir})
 	w.run = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
+		MCPServers:   w.mcpServers,
 		Exec:         func() agent.Exec { return w.opts.Exec },
 		Sandbox:      func() hostcore.SandboxFactory { return w.opts.Sandbox },
 		Packs:        w.opts.Packs,
@@ -328,4 +329,21 @@ func (s state) Mutate(id core.SessionID, fn func(se core.SessionState) error) er
 		return err
 	}
 	return fn(se)
+}
+
+// mcpServers are the MCP servers a session's agent reaches of its own: in a sandbox, those its gateway carries; on
+// this machine, the ones installed for its provider.
+func (w *Host) mcpServers(se core.SessionState) []agent.MCPServer {
+	if se.Agent.Sandboxed && w.boxes != nil {
+		return w.boxes.MCPServers()
+	}
+	if w.opts.Providers == nil {
+		return nil
+	}
+	if p, ok := w.opts.Providers.Get(se.Agent.Provider); ok {
+		if s, ok := p.(agent.MCPInstalled); ok {
+			return s.MCPServers()
+		}
+	}
+	return nil
 }

@@ -34,7 +34,8 @@ type Fake struct {
 	// Has is what it says its sessions can do (agent.Features); a terminal and a tool-less fork if nil. With Login,
 	// StartLogin's sign-ins wait for FinishLogin.
 	Has *agent.Features
-	Web []string // its own tools that reach the web (agent.WebTooled); WebSearch if nil
+	Web []string          // its own tools that reach the web (agent.WebTooled); WebSearch if nil
+	MCP []agent.MCPServer // the MCP servers installed for it (agent.MCPInstalled)
 
 	mu        sync.Mutex
 	seq       int // sessions it has named
@@ -44,6 +45,9 @@ type Fake struct {
 	refuse    error
 	login     chan error // the sign-in under way, when there is one
 }
+
+// MCPServers are the servers installed for it.
+func (f *Fake) MCPServers() []agent.MCPServer { return f.MCP }
 
 func NewFake() *Fake { return &Fake{Started: make(chan *FakeSession, 16)} }
 

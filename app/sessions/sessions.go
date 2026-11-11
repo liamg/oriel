@@ -567,7 +567,8 @@ func (x *Sessions) agentTools(h plugin.Host, r host.ToolsReq) []agent.Tool {
 	var out []agent.Tool
 	name, utility := x.agentName(r.Session, r.Agent)
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
-		out = append(out, agent.Tool{Name: t.Name, Description: t.Desc, Schema: t.Schema(), ReadOnly: t.ReadOnly && t.Confirm == nil})
+		out = append(out, agent.Tool{Name: t.Name, Description: t.Desc, Schema: t.Schema(), ReadOnly: t.ReadOnly && t.Confirm == nil,
+			CoveredBy: t.CoveredBy})
 	}
 	return out
 }
