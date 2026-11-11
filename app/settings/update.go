@@ -135,7 +135,11 @@ func (x *Update) Activate(_ context.Context, h plugin.Host) error {
 		first := updateFirstCheck
 		if x.mode() == updateAutomatic {
 			first = updateEvery
-			x.start.Go(x.startup)
+			x.start.Add(1)
+			plugin.Go(x.h, "the update check at start", func() {
+				defer x.start.Done()
+				x.startup()
+			})
 		}
 		x.work.Loop(func(ctx context.Context) { x.watch(ctx, first, updateEvery) })
 	}

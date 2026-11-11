@@ -467,13 +467,16 @@ func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
 	id, a := r.workSession("start")
 	a.WaitSent(t)
 	a.Emit(agent.TurnStart{})
+	answered(r, id, a) // nothing owed: the next the agent is sent is the comment, not a carry-on
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the first turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 1 })
 	tid, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "run the suite"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.WaitSent(t)
+	if in := a.WaitSent(t); !strings.Contains(in.Text, "run the suite") {
+		t.Fatalf("the agent was sent %q, want the comment", in.Text)
+	}
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.TurnEnd{Background: []core.BackgroundTask{{Kind: "shell", Description: "go test ./..."}}})
 	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 2 })
