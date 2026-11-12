@@ -74,6 +74,9 @@ func TestPolicyToFlags(t *testing.T) {
 		// In a sandbox the sandbox is the gate: Claude asks nothing in its own terminal, where nobody would see it.
 		{agent.StartSpec{Policy: agent.PolicyLight, Sandbox: box}, "--permission-mode bypassPermissions"},
 		{agent.StartSpec{Policy: agent.PolicyAsk, Sandbox: box}, "--permission-mode bypassPermissions"},
+		// Claude Code's PermissionMode: "'dontAsk' - Don't prompt for permissions, deny if not pre-approved."
+		{agent.StartSpec{Policy: agent.PolicyRefuse}, "--permission-mode dontAsk"},
+		{agent.StartSpec{Policy: agent.PolicyRefuse, Sandbox: box}, "--permission-mode dontAsk"},
 	}
 	for _, c := range cases {
 		a, err := args(c.spec, "/m", "id", "")
@@ -172,6 +175,50 @@ func TestArgs(t *testing.T) {
 	a, _ = args(agent.StartSpec{NoMCP: true}, "/m", "s1", "")
 	if j := strings.Join(a, " "); !strings.Contains(j, `--mcp-config {"mcpServers":{}} --strict-mcp-config`) {
 		t.Errorf("no MCP = %q", a)
+	}
+}
+
+// Under PolicyRefuse, dontAsk refuses all that isn't allowed ahead: Oriel's tools and the spec's Allow are, in the
+// settings on the command line, beside the memory directory.
+func TestRefuseAllowsOrielsToolsAndAllow(t *testing.T) {
+	a, err := args(agent.StartSpec{Policy: agent.PolicyRefuse, Allow: []string{"WebSearch", "WebFetch"}, Memory: "/mem"}, "/m", "s1", "")
+	i := slices.Index(a, "--settings")
+	if err != nil || i < 0 {
+		t.Fatalf("args = %q, %v", a, err)
+	}
+	var set struct {
+		Memory      string `json:"autoMemoryDirectory"`
+		Permissions struct{ Allow []string }
+	}
+	if err := json.Unmarshal([]byte(a[i+1]), &set); err != nil {
+		t.Fatal(err)
+	}
+	if set.Memory != "/mem" || !slices.Equal(set.Permissions.Allow, []string{"mcp__oriel", "WebSearch", "WebFetch"}) {
+		t.Errorf("settings = %s", a[i+1])
+	}
+	a, _ = args(agent.StartSpec{Policy: agent.PolicyAsk, Allow: []string{"WebSearch"}}, "/m", "s1", "")
+	if slices.Contains(a, "--settings") {
+		t.Errorf("a gate that asks had what it allows put ahead: %q", a)
+	}
+}
+
+// An agent nobody watches starts with what Claude Code's terminal offers someone at it turned off; one somebody
+// watches keeps it, and a caller's own environment comes last.
+func TestUnattendedEnv(t *testing.T) {
+	env := processEnv(agent.StartSpec{Unattended: true, Env: []string{"DISABLE_AUTOUPDATER=0"}}, "/s", "/oriel")
+	for _, want := range []string{"ORIEL_UNATTENDED=1", "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1", "CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false",
+		"CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0", "DISABLE_COST_WARNINGS=1", "DISABLE_INSTALLATION_CHECKS=1", "DISABLE_AUTOUPDATER=1"} {
+		if !slices.Contains(env, want) {
+			t.Errorf("unattended env lacks %s: %q", want, env)
+		}
+	}
+	if env[len(env)-1] != "DISABLE_AUTOUPDATER=0" {
+		t.Errorf("the caller's env isn't last: %q", env)
+	}
+	for _, kv := range processEnv(agent.StartSpec{}, "/s", "/oriel") {
+		if strings.HasPrefix(kv, "ORIEL_UNATTENDED") || strings.HasPrefix(kv, "DISABLE_") || strings.HasPrefix(kv, "CLAUDE_CODE_DISABLE_") {
+			t.Errorf("an attended agent got %s", kv)
+		}
 	}
 }
 

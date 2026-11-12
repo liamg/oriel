@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/guard"
 	"github.com/liamg/oriel/agent/mcptools"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/jsonrpc"
@@ -626,6 +627,10 @@ func (s *session) permission(ctx context.Context, params json.RawMessage) (any, 
 	switch {
 	case s.spec.Policy == agent.PolicyBypass, (s.spec.Policy == agent.PolicyLight || s.spec.Policy == agent.PolicyAuto) && edits:
 		return pick("allow_once", "allow_always"), nil
+	case s.spec.Policy == agent.PolicyRefuse && guard.Allowed(s.spec, tc.tool()):
+		return pick("allow_once", "allow_always"), nil
+	case s.spec.Policy == agent.PolicyRefuse:
+		return pick("reject_once", "reject_always"), nil
 	}
 	// What allow_always remembers is the agent's to say, in words: there's no rule of Oriel's to show for it.
 	id := s.next("perm")
@@ -671,6 +676,9 @@ func (s *session) elicit(ctx context.Context, params json.RawMessage) (any, erro
 	}
 	if err := json.Unmarshal(params, &p); err != nil || p.Mode != "form" {
 		return nil, &jsonrpc.Error{Code: jsonrpc.InvalidParams, Message: "only form elicitations are offered"}
+	}
+	if s.spec.Policy == agent.PolicyRefuse {
+		return map[string]any{"action": "decline"}, nil
 	}
 	names := slices.Sorted(func(yield func(string) bool) {
 		for k := range p.Schema.Properties {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/agent"
@@ -73,6 +74,11 @@ func Check(spec agent.StartSpec, tool string, input json.RawMessage) Decision {
 		}
 	}
 	return Decision{}
+}
+
+// Allowed says a tool goes ahead under agent.PolicyRefuse, which refuses the rest: Oriel's own, and spec's Allow.
+func Allowed(spec agent.StartSpec, tool string) bool {
+	return strings.HasPrefix(tool, "mcp__oriel__") || slices.Contains(spec.Allow, tool)
 }
 
 // Protected refuses a write to file when it's in one of spec's protected checkouts and not in the session's own

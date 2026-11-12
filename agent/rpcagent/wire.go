@@ -151,6 +151,7 @@ type startSpec struct {
 	Prompt   string       `json:"prompt,omitempty"`
 	Tools    []tool       `json:"tools"`
 	Policy   agent.Policy `json:"policy,omitempty"`
+	Allow    []string     `json:"allow,omitempty"`
 	Mode     string       `json:"mode,omitempty"`
 	Protect  []string     `json:"protect,omitempty"`
 	Env      []string     `json:"env,omitempty"`

@@ -18,10 +18,12 @@ it answers: your sessions and why each waits on you, what you changed and where 
 reviews waiting on you, your jobs, repos, plan usage and machines, these help pages, and whatever a plugin adds
 (Linear tickets, say). It can search the web for news and the like (`assistant.web`).
 
-It never waits on its own permission prompts or questions: nobody sees its agent's terminal. It may use its Oriel
-tools and, with `assistant.web` on, the web search and fetch tools; anything else it asks for (a shell command, an
-edit) is refused at once with a reason, and so is a question it would put to you, so it carries on and says in its
-answer what you should do. The only thing it waits for is your yes on a confirmation card.
+It never waits on its own permission prompts or questions: nobody sees its agent's terminal. Its agent starts in a
+mode that never asks (Claude Code's "don't ask"; Codex never asking, in a read-only sandbox; other agents' asks
+refused as they come). It may use its Oriel tools and, with `assistant.web` on, the web search and fetch tools;
+anything else it tries (a shell command, an edit) is refused at once with a reason, and so is a question it would put
+to you, so it carries on and says in its answer what you should do. A dialog its agent's terminal opens is cancelled.
+The only thing it waits for is your yes on a confirmation card, and only for two minutes.
 
 ## Steering the window {#steering}
 

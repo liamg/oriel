@@ -34,7 +34,12 @@ func (p *Provider) Resume(ctx context.Context, id string, s agent.StartSpec) (ag
 
 // gate is the approval policy and sandbox mode for a policy. In a sandbox there's no approval: the sandbox and its
 // gateway are the gate. Outside one every command asks; under PolicyLight the session accepts the edits itself.
+// PolicyRefuse never asks and only reads, wherever it runs: approval "never" ("failures are immediately returned to
+// the model", codex's AskForApproval) in a read-only sandbox.
 func gate(s agent.StartSpec) (approval, sandbox string, err error) {
+	if s.Policy == agent.PolicyRefuse {
+		return "never", "read-only", nil
+	}
 	if s.Sandbox != nil {
 		switch s.Policy {
 		case agent.PolicyAsk, agent.PolicyLight, agent.PolicyBypass, agent.PolicyAuto, "":

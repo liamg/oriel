@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,8 +59,12 @@ func TestUtilityAgent(t *testing.T) {
 	}
 	s := fs.Spec
 	if s.Model != "small" || s.Pack.Skill != "assistant" || s.Pack.Text != "Be brief." || s.Prompt != "what needs me?" ||
-		s.Policy != agent.PolicyAsk || !s.Unattended || s.Cwd != filepath.Join(r.home, "utility", "assistant") {
+		s.Policy != agent.PolicyRefuse || !s.Unattended || s.Cwd != filepath.Join(r.home, "utility", "assistant") {
 		t.Errorf("started with %+v", s)
+	}
+	// Its gate never asks: what it may use is allowed ahead, the provider's web tools with Web.
+	if !slices.Equal(s.Allow, []string{"WebSearch"}) {
+		t.Errorf("allowed ahead: %q", s.Allow)
 	}
 	if in := fs.WaitSent(t); in.Text != "what needs me?" {
 		t.Errorf("its first turn was %q", in.Text)
@@ -109,6 +115,21 @@ func TestUtilityAgent(t *testing.T) {
 	if err := u.Send(context.Background(), "still there?"); err == nil {
 		t.Error("a stopped utility agent took a turn")
 	}
+}
+
+// A dialog a utility agent's terminal shows, which only a key there answers, is cancelled with its Esc: nobody is at
+// that terminal, so it would hold the turn for good.
+func TestUtilityAgentCancelsATerminalDialog(t *testing.T) {
+	r := newRig(t)
+	u, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Pack: "p", Prompt: "hi"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer u.Close()
+	fs := r.fake.WaitStarted(t)
+	fs.Emit(agent.TurnStart{})
+	fs.Emit(agent.Dialog{Title: "New MCP server found in .mcp.json", Shown: true})
+	until(t, "Esc typed at the dialog", func() bool { return strings.Contains(fs.Term().Shown(), "\x1b") })
 }
 
 // A session's agent isn't offered the tools of a utility agent: the host asks the app for the session's kind's.

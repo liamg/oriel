@@ -326,7 +326,10 @@ func permissionMode(s agent.StartSpec) (string, error) {
 			return "bypassPermissions", nil
 		}
 	}
+	// dontAsk: "Don't prompt for permissions, deny if not pre-approved" (Claude Code's own words for it).
 	switch s.Policy {
+	case agent.PolicyRefuse:
+		return "dontAsk", nil
 	case agent.PolicyAsk, "":
 		return "default", nil
 	case agent.PolicyLight:
@@ -376,9 +379,8 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 	case s.NoMCP:
 		a = append(a, "--mcp-config", `{"mcpServers":{}}`, "--strict-mcp-config")
 	}
-	// A sandbox's settings.json has it already.
-	if s.Memory != "" && s.Sandbox == nil {
-		b, err := json.Marshal(map[string]string{"autoMemoryDirectory": s.Memory})
+	if set := settings(s); len(set) > 0 {
+		b, err := json.Marshal(set)
 		if err != nil {
 			return nil, err
 		}
@@ -402,6 +404,20 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 		a = append(a, first)
 	}
 	return a, nil
+}
+
+// settings are the session's own settings on claude's command line: its memory directory (a sandbox's settings.json
+// has it already), and under PolicyRefuse what's allowed ahead, since dontAsk refuses everything else: Oriel's tools
+// and the spec's Allow.
+func settings(s agent.StartSpec) map[string]any {
+	set := map[string]any{}
+	if s.Memory != "" && s.Sandbox == nil {
+		set["autoMemoryDirectory"] = s.Memory
+	}
+	if s.Policy == agent.PolicyRefuse {
+		set["permissions"] = map[string]any{"allow": append([]string{"mcp__oriel"}, s.Allow...)}
+	}
+	return set
 }
 
 // maxArgPrompt is the longest first prompt claude's command line carries, under Linux's 128 KiB an argument.
@@ -483,19 +499,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	}
 	cmd := exec.Command(bin, argv...)
 	cmd.Dir = spec.Cwd
-	cmd.Env = append(os.Environ(),
-		"ORIEL_SPAWNED=1",
-		"CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1",
-		agent.HookSocketEnv+"="+sockPath(dir),
-		"ORIEL_BIN="+orielBin,
-	)
-	if spec.Sandbox != nil || spec.NoMCP {
-		cmd.Env = append(cmd.Env, "ENABLE_CLAUDEAI_MCP_SERVERS=false")
-	}
-	if spec.Unattended {
-		cmd.Env = append(cmd.Env, "ORIEL_UNATTENDED=1")
-	}
-	cmd.Env = append(cmd.Env, spec.Env...)
+	cmd.Env = append(os.Environ(), processEnv(spec, sockPath(dir), orielBin)...)
 
 	sctx, cancel := context.WithCancel(ctx)
 	pty, err := exe.StartPTY(sctx, cmd, cols, rows)
@@ -548,6 +552,34 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	go s.tail.follow(s.done, s.push)
 	go s.run()
 	return s, nil
+}
+
+// processEnv is what claude's environment adds to Oriel's own: the mod's way back, and for an agent nobody watches,
+// unattendedEnv. spec.Env comes last, so a caller's own value stands.
+func processEnv(spec agent.StartSpec, sock, orielBin string) []string {
+	env := []string{"ORIEL_SPAWNED=1", "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1", agent.HookSocketEnv + "=" + sock, "ORIEL_BIN=" + orielBin}
+	if spec.Sandbox != nil || spec.NoMCP {
+		env = append(env, "ENABLE_CLAUDEAI_MCP_SERVERS=false")
+	}
+	if spec.Unattended {
+		env = append(env, "ORIEL_UNATTENDED=1")
+		env = append(env, unattendedEnv...)
+	}
+	return append(env, spec.Env...)
+}
+
+// unattendedEnv turns off what Claude Code's terminal offers someone at it, each as Claude Code 2.1.322 reads it:
+// the feedback survey that waits on a key (i.CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY), prompt suggestions
+// (CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION===!1), the summary shown on coming back (cs(CLAUDE_CODE_ENABLE_AWAY_SUMMARY)),
+// cost warnings (i.DISABLE_COST_WARNINGS), the installation notices (Pe(DISABLE_INSTALLATION_CHECKS)) and updating
+// itself mid-run (Pe(DISABLE_AUTOUPDATER)).
+var unattendedEnv = []string{
+	"CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1",
+	"CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false",
+	"CLAUDE_CODE_ENABLE_AWAY_SUMMARY=0",
+	"DISABLE_COST_WARNINGS=1",
+	"DISABLE_INSTALLATION_CHECKS=1",
+	"DISABLE_AUTOUPDATER=1",
 }
 
 var _ agent.WebTooled = (*Provider)(nil)
