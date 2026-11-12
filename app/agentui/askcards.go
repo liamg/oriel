@@ -26,6 +26,8 @@ import (
 
 // askCards are the asks waiting on you, from every session, as the inbox's cards: stacked over the
 // window, except the session in front's while its console shows them; a security-key touch on its own at the top.
+// A permission is a prompt: it comes up in the middle of the window while its session is in front, and calls from
+// its tab while it's behind.
 func (x *Console) askCards() []uireg.InboxCard {
 	st := x.h.State()
 	inConsole := x.shown()
@@ -38,8 +40,9 @@ func (x *Console) askCards() []uireg.InboxCard {
 				Draw: func(c *ui.Ctx, key string, p uireg.CardPlace) {
 					x.askCard(c, key, se, a, p, false)
 				}}
-			// Over the window, key touches, permissions and the gateway's (run on host…) come at the top, where they're seen.
-			card.Top = a.Kind == core.AskKey || a.Kind == core.AskPermission || a.Kind == core.AskGateway
+			// Over the window, key touches and the gateway's (run on host…) come at the top, where they're seen.
+			card.Top = a.Kind == core.AskKey || a.Kind == core.AskGateway
+			card.Prompt = a.Kind == core.AskPermission
 			title, sub := x.askRow(se, a)
 			card.Title, card.Sub = title, kit.JoinParts(sub, kit.Label(se))
 			out = append(out, card)
@@ -142,14 +145,14 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 		k.terminal(a, prov, kicker)
 	}
 	if x.detail == nil || x.detail.ask != a.ID {
-		k.action(widget.CardAction{Label: "Details"}, askAct{cmd: "agent.console.details", args: registry.Args{"item": ""}})
+		k.action(widget.CardAction{Label: "Details"}, askAct{cmd: "agent.console.details", args: registry.Args{"item": ""}, away: true})
 	}
 	// A card away from its session's console can take you there, for the context to decide on.
 	if kicker && (a.Kind == core.AskPermission || a.Kind == core.AskNetwork || a.Kind == core.AskGateway || a.Kind == core.AskQuestion) {
-		k.action(widget.CardAction{Label: "Console", Key: "g"}, askAct{cmd: "agent.console.show"})
+		k.action(widget.CardAction{Label: "Console", Key: "g"}, askAct{cmd: "agent.console.show", away: true})
 	}
 	body := k.body
-	if st.noting == a.ID {
+	if st.noting == a.ID && st.notingOn == p.Stacked {
 		inner := body
 		body = func(c *ui.Ctx) {
 			if inner != nil {
@@ -166,8 +169,12 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 		return
 	}
 	if k.acts[res.Action].note {
-		x.startNote(se.ID, a.ID)
+		x.startNote(se.ID, a.ID, p.Stacked)
 		return
+	}
+	// A permission over the window steps aside for the console it takes you to, where it waits to be answered.
+	if k.acts[res.Action].away && a.Kind == core.AskPermission && dismiss != nil {
+		dismiss()
 	}
 	args := registry.Args{"id": string(se.ID), "ask": a.ID}
 	for n, v := range k.acts[res.Action].args {
@@ -181,6 +188,7 @@ type askAct struct {
 	cmd  string // ask.answer if ""
 	args registry.Args
 	note bool
+	away bool // it takes you to the console
 }
 
 // askCardParts is an ask card being made: its options, its actions' acts in order, and its body.

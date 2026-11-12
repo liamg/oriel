@@ -351,9 +351,9 @@ func TestNoticesThatAskAreInboxCards(t *testing.T) {
 	s.Node("mkhan asked you to review api#812 (answered)")
 }
 
-// Sessions' tabs with their badges, a security-key touch at the top, the stack of a network and a
-// gateway approval and agentbus's review request and question (its countdown ring), and the Inbox panel at the
-// right with what waits and what's been answered.
+// Sessions' tabs with their badges (a session behind with a permission calling for you), a security-key touch at the
+// top, the stack of a network and a gateway approval and agentbus's review request and question (its countdown ring),
+// and the Inbox panel at the right with what waits and what's been answered.
 func TestInboxSnapshot(t *testing.T) {
 	s, b := busScene(t)
 	ago := func(d time.Duration) time.Time { return s.Now.Add(-d) }

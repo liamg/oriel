@@ -23,6 +23,7 @@ import (
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/voice/voicetest"
 )
 
@@ -211,6 +212,13 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 	if !assistantOf(s).Open() {
 		t.Error("the window went when its row opened a session")
 	}
+	// Its permission comes up as the session comes to the front; Escape puts it off.
+	s.Frame()
+	s.NodeRole(render.RoleDialog, "Permission: Bash(make e2e)")
+	s.Now = s.Now.Add(widget.CardKeyGuard)
+	s.Frame()
+	s.Type("Esc")
+	s.Frame()
 
 	// Minimised to Ori on the rail, what it says next is counted there until the window shows it.
 	s.ClickNode("Minimise")

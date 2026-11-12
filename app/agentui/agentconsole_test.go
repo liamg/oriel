@@ -8,7 +8,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -85,15 +84,15 @@ func TestSubagentsInTheSideColumn(t *testing.T) {
 	r.WaitGone("PROMPT")
 }
 
-// A permission's card answers the agent: Allow once on a click, Always on a, and ⇧n's note goes back with the
-// denial; each card goes once it's answered.
+// A permission's prompt answers the agent: Allow once, Always in this workspace, and Deny with note…'s note goes back
+// with the denial; each goes once it's answered.
 func TestPermissionCardsAnswerTheAgent(t *testing.T) {
 	r, a, _ := apptest.ConsoleWindow(t)
 	allow := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "go test ./internal/api/... -run TestUsage"})})
 	r.WaitFrame("the permission card", func(s string) bool {
 		return apptest.HasAll(s, "Fake wants to run a command", "$ go test ./internal/api/... -run TestUsage", "rule: Bash(go test:*)", "WANTS PERMISSION")
 	})
-	r.ClickText("Allow once")
+	r.ClickTop("Allow once")
 	if d := waitDecision(t, allow); !d.Allow || d.Always {
 		t.Errorf("Allow once answered %+v", d)
 	}
@@ -101,15 +100,15 @@ func TestPermissionCardsAnswerTheAgent(t *testing.T) {
 
 	always := a.Ask(agent.Permission{ID: "p2", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "go vet ./..."})})
 	r.WaitText("$ go vet ./...")
-	r.TypeKeys("a")
+	r.ClickTop("Always in this workspace")
 	if d := waitDecision(t, always); !d.Allow || !d.Always {
-		t.Errorf("a answered %+v", d)
+		t.Errorf("Always answered %+v", d)
 	}
 	r.WaitText("BASH(GO VET:*)") // the rule it made, in force
 
 	deny := a.Ask(agent.Permission{ID: "p3", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "rm -rf build"})})
 	r.WaitText("$ rm -rf build")
-	r.TypeKeys("N")
+	r.ClickTop("Deny with note…")
 	r.WaitText("Deny with this note")
 	r.TypeText("use make clean")
 	r.TypeKeys("<CR>")
@@ -337,7 +336,7 @@ func TestDetailsShowCallsAndAsksInFull(t *testing.T) {
 
 	allow := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": long})})
 	r.WaitText("Fake wants to run a command")
-	r.ClickText("Details")
+	r.ClickTop("Details")
 	r.WaitText("ASK · PERMISSION")
 	r.WaitText("INPUT")
 	r.ClickTop("Allow once")
@@ -386,30 +385,6 @@ func TestQueuedConsoleMessageEdits(t *testing.T) {
 	if in := a.WaitSent(t); in.Text != "also check routes.go and the tests" {
 		t.Errorf("sent %q", in.Text)
 	}
-}
-
-// A permission that comes while you type in a text field waits for you to stop before it goes over the window, at
-// the top: it doesn't cover what you're writing or catch a key meant for it.
-func TestAskWaitsForTypingToStop(t *testing.T) {
-	r, a, _ := apptest.ConsoleWindow(t)
-	r.TypeKeys("<D-A>")
-	r.WaitGone("SESSION STATS")
-	r.TypeKeys("<D-R>")
-	r.ClickText("New request")
-	r.WaitText("Write a request")
-	r.ClickText("Write a request")
-	r.TypeText("round")
-	r.WaitText("round")
-	a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "curl example.com"})})
-	for _, ch := range " half even" {
-		r.TypeText(string(ch))
-		time.Sleep(80 * time.Millisecond)
-		if fs := r.Win.Frames(); len(fs) > 0 && strings.Contains(fs[len(fs)-1].Text(), "$ curl example.com") {
-			t.Fatal("the card went over the window while typing")
-		}
-	}
-	r.WaitFrame("the card, once typing stopped", func(s string) bool { return apptest.HasAll(s, "W · PERMISSION", "$ curl example.com") })
-	r.WaitText("round half even") // nothing typed went anywhere else
 }
 
 // Text in the console selects and copies with no opting in: a triple click on the agent's message, then the copy key,
