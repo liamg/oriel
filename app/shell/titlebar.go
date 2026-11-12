@@ -33,6 +33,8 @@ var (
 	tTabNameOn = theme.Declare("session.tab.active.fg", "fg")
 	tTabMini   = theme.Declare("session.tab.mini", "fg.faint")
 	tTabKey    = theme.Declare("session.tab.key", "fg.ghost")
+	// tTabCalling is how strong a tab behind calling for you is washed at its pulses' peak; its colour is the prompt's.
+	tTabCalling = theme.Declare("session.tab.calling.bg", "alpha(status.permission, 34%)")
 )
 
 // statusWord is what a tab says beside its name: the status, unless it's working (then its kind) or quiet.
@@ -206,6 +208,9 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 		case hover:
 			widget.Joined(c, "surface", th.C(tTabHover), tabRadius)
 		}
+		if !on {
+			callFrom(c, h, s)
+		}
 		c.Row("top", ui.Style{H: ui.Px(16), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 			kit.StatusMark(c, "mark", s.Status(), 9)
 			if t.renaming == s.ID() {
@@ -254,6 +259,29 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 			}
 		}
 	}
+}
+
+// callFrom washes the tab of s, behind, in the tone of a prompt waiting in it: a few pulses as each comes, then
+// steady until it's seen.
+func callFrom(c *ui.Ctx, h plugin.Host, s core.Session) {
+	inbox, ok := kit.InboxOf(h)
+	if !ok {
+		return
+	}
+	key, tone, ok := inbox.Calling(string(s.ID()))
+	if !ok {
+		return
+	}
+	th := c.Theme()
+	col, ok := th.Color(tone)
+	if !ok {
+		col = th.C(theme.StatusPermission)
+	}
+	wash := th.C(tTabCalling)
+	strength := widget.Pulse(c, "call", key, widget.PulseOpts{})
+	col.A = uint8(float32(wash.A) * strength)
+	widget.Joined(c, "calling", col, tabRadius)
+	c.Box("calls", ui.Style{Float: &ui.Float{Fill: true}, W: ui.Flex(1), H: ui.Flex(1), Z: ui.LayerUnder, Role: ui.RoleText, Label: "Calls for you"}, nil)
 }
 
 // weight is a tab name's: the one in front's is heavier.

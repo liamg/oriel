@@ -75,6 +75,7 @@ type consoleState struct {
 	forkQ    string
 	forks    []forkAnswer
 	noting   string // the ask a note is being written for
+	notingOn bool   // on its card over the window, not in the console
 	note     string
 	focusNow string // an input to focus next frame: "note", "fork"
 	chosen   map[string]map[int][]string
@@ -223,7 +224,7 @@ func (x *Console) commands() []registry.Command {
 				if !ok {
 					return errors.New("nothing is waiting on you there")
 				}
-				x.startNote(id, ask.ID)
+				x.startNote(id, ask.ID, false)
 				return nil
 			}},
 	}
@@ -426,9 +427,10 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 	return c.Answer(r)
 }
 
-func (x *Console) startNote(id core.SessionID, ask string) {
+// startNote starts a note for a denial of ask, on its card over the window (stacked) or in the console.
+func (x *Console) startNote(id core.SessionID, ask string, stacked bool) {
 	if st := x.state(id); st != nil {
-		st.noting, st.note, st.focusNow = ask, "", "note"
+		st.noting, st.notingOn, st.note, st.focusNow = ask, stacked, "", "note"
 	}
 }
 

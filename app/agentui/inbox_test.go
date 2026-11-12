@@ -170,8 +170,9 @@ func TestInboxEscapeDismissesAndFilters(t *testing.T) {
 	}
 }
 
-// Each ask's card acts where it's drawn (the network, gateway, question and security-key cards answer the ask
-// through ask.answer) and its ✕ dismisses it while the tab still counts it.
+// Each ask's card acts where it's drawn and answers the ask through ask.answer: the security key's at the top of
+// the window, the sandbox's (network, then gateway) as prompts in the middle one at a time, the question in the
+// stack; a card's ✕ dismisses it while the tab still counts it.
 func TestAskCardsActAndDismiss(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	s.Now = apptest.At(14, 30, 0)
@@ -195,34 +196,33 @@ func TestAskCardsActAndDismiss(t *testing.T) {
 			ans = m["Which colour?"]
 		}
 		got = append(got, a.String("ask")+"="+ans+a.String("scope"))
-		return nil
+		return s.Store().Apply(core.AskClosed{Session: se.ID, ID: a.String("ask"), Decision: a.String("decision")})
 	}})
 	s.Frame()
-	// The key touch and the gateway's ask wait at the top; the stack holds back to a count until they're dealt with.
-	for _, w := range []string{"Touch your security key", "git push · e2e · flaky-e2e", "git push origin rethink/rounding", "+2 more waiting"} {
+	s.Frame()
+	s.Node("4 waiting on you")
+	// The key's touch at the top; the first of the sandbox's asks in the middle, the gateway's after it.
+	for _, w := range []string{"Touch your security key", "git push · e2e · flaky-e2e", "Network: proxy.golang.org:443"} {
 		if !strings.Contains(s.FullText(), w) {
 			t.Errorf("the frame lacks %q:\n%s", w, s.FullText())
 		}
 	}
-	if strings.Contains(s.FullText(), "Network: proxy.golang.org:443") {
-		t.Errorf("the stack shows under the cards at the top:\n%s", s.FullText())
+	if strings.Contains(s.FullText(), "git push origin rethink/rounding") {
+		t.Errorf("the gateway's prompt is up beside the network's:\n%s", s.FullText())
 	}
-	s.Node("4 waiting on you")
-	s.ClickTop("Cancel")
-	s.ClickTop("Allow")
-	s.ClickNode("Dismiss") // the key's
-	if strings.Contains(s.Text(), "Touch your security key") {
-		t.Error("the dismissed key card is still shown")
-	}
-	s.ClickNode("Dismiss") // the gateway's
-	s.Until("the stack, once the top is clear", func() bool { return strings.Contains(s.FullText(), "Network: proxy.golang.org:443") })
+	s.Now = s.Now.Add(time.Second) // past the moment a prompt ignores input as it comes up
 	s.ClickTop("Once")
+	s.Until("the gateway's prompt, next", func() bool { return strings.Contains(s.FullText(), "git push origin rethink/rounding") })
+	s.Now = s.Now.Add(time.Second)
+	s.ClickTop("Allow")
+	s.Until("the prompts done", func() bool { return !strings.Contains(s.FullText(), "git push origin rethink/rounding") })
+	s.ClickTop("Cancel") // the key's, at the top
+	s.Until("the question", func() bool { return strings.Contains(s.FullText(), "green") })
 	s.ClickTop("green")
-	want := []string{"k1=deny", "g1=allow", "n1=allow", "q1=green"}
+	want := []string{"n1=allow", "g1=allow", "k1=deny", "q1=green"}
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Errorf("the cards answered %v, want %v", got, want)
 	}
-	s.Node("4 waiting on you")
 }
 
 // A commit whose signing waits shows "Touch your security key" over the window,
@@ -289,6 +289,30 @@ func TestLuaInboxCards(t *testing.T) {
 	s.Node("Deploy api to prod? (answered)")
 }
 
+// A Lua plugin's card with prompt comes up in the middle of the window, as an agent's permission does, and its action
+// answers it.
+func TestLuaPromptCards(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	var deployed []string
+	s.Registry().Command(registry.Command{ID: "deploy.approve", Run: func(_ registry.Ctx, a registry.Args) error {
+		deployed = append(deployed, a.String("env"))
+		return nil
+	}})
+	s.Lua(`L.inbox.add({ id = "d1", type = "deploy", title = "Deploy api to prod?", prompt = true,
+		actions = { { label = "Approve", key = "y", primary = true, command = "deploy.approve", args = { env = "prod" } } } })`)
+	s.Frame()
+	s.Frame()
+	s.NodeRole(render.RoleDialog, "Deploy api to prod?")
+	s.ClickTop("Approve")
+	s.Frame()
+	if len(deployed) != 1 || deployed[0] != "prod" {
+		t.Fatalf("Approve ran deploy.approve with %v", deployed)
+	}
+	if s.FindRole(render.RoleDialog, "Deploy api to prod?") != nil {
+		t.Error("the answered prompt is still up")
+	}
+}
+
 // A notice that asks something (a question) is an inbox card, whoever sent it: stacked while it
 // waits, answered by its actions, then history. One that only tells stays a toast.
 func TestNoticesThatAskAreInboxCards(t *testing.T) {
@@ -327,9 +351,9 @@ func TestNoticesThatAskAreInboxCards(t *testing.T) {
 	s.Node("mkhan asked you to review api#812 (answered)")
 }
 
-// Sessions' tabs with their badges, a security-key touch at the top, the stack of a network and a
-// gateway approval and agentbus's review request and question (its countdown ring), and the Inbox panel at the
-// right with what waits and what's been answered.
+// Sessions' tabs with their badges (a session behind with a permission calling for you), a security-key touch at the
+// top, the stack of a network and a gateway approval and agentbus's review request and question (its countdown ring),
+// and the Inbox panel at the right with what waits and what's been answered.
 func TestInboxSnapshot(t *testing.T) {
 	s, b := busScene(t)
 	ago := func(d time.Duration) time.Time { return s.Now.Add(-d) }

@@ -635,8 +635,7 @@ func (s *Scene) TypeInto(label, text string) {
 // TypeText types text on what has focus, a character at a time.
 func (s *Scene) TypeText(text string) {
 	for _, r := range text {
-		s.UI().Key(render.KeyEvent{Key: string(r)})
-		s.Frame()
+		s.Key(string(r))
 	}
 }
 

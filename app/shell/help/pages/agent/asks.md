@@ -6,14 +6,18 @@ related: [agent/console, plugins/hooks]
 # Waiting on you
 
 When an agent wants something only you can give, it waits for a card's answer. Cards show in the agent console where
-they arose, and over the window for any session (with its name), whatever view is in front: permissions and the
-gateway's (run on host…) at the top, the rest stacked at the bottom right; the inbox keeps them all. A card that
+they arose, and over the window for any session (with its name), whatever view is in front: a security key's touch
+at the top, the rest stacked at the bottom right; the inbox keeps them all. What holds the agent until you allow or
+deny it (a permission, a gateway's call such as a push or leaving the sandbox, a connection the sandbox holds) is a
+prompt in the middle of the window instead, for the session in front only, once you've stopped typing for a few
+seconds; a session behind calls for you from its tab ([Prompts](shell/inbox#prompts)). A card that
 comes while you're typing in a text field waits until you've stopped for a moment, so it doesn't cover what you're
 writing or catch a key meant for it. A card at the top takes the keys as it shows, so its keys (`y`, `n`…) answer
 it whatever had focus; for a moment as it appears they do nothing, and once it's answered the keys go back where they
 were. A view opened after it takes them from it. A session's tab counts the cards waiting on it. A `Permission` hook can answer
 before a card shows. A stacked card's **Console** (`g`, `agent.console.show`) brings its session to the front with
-the agent console open, so you can read what led to the ask before you answer it.
+the agent console open, so you can read what led to the ask before you answer it; a prompt steps aside
+for it, and waits there to be answered.
 
 ## Permission
 
