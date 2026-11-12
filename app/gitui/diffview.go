@@ -323,6 +323,7 @@ func (x *Diff) body(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, gs *gitx.State, 
 			c.Text("t", "No changes against "+base+".", kit.UIFont(13, th.C(theme.FgFaint)))
 		})
 	}
+	st.panLines(c)
 	at := st.revealItem(c, bodyID)
 	c.Items("files", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Focusable: true, DefaultFocus: true, KeyMode: DiffKeyMode, Role: ui.RoleList, Label: "Changes",
 		Help: "files/diff#hunks"}, len(st.files), ui.ItemsOpts{Estimate: 35, Key: func(i int) any { return st.files[i].Path }, Reveal: at},
@@ -429,6 +430,10 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 				st.sel = diffSel{file: f.Path, hunk: -1, line: -1}
 			}
 			if open && (d == nil || d.images == nil) {
+				if widget.ToggleChip(c, "wrap", "wrap", x.wrap, widget.ToggleChipOpts{Label: "Wrap long lines", Help: "files/diff#wrap",
+					Tooltip: "Wrap long lines, or scroll across them (editor.wrap)"}) != x.wrap {
+					x.h.Run(context.Background(), "diff.wrap", registry.Args{"wrap": !x.wrap})
+				}
 				active := 0
 				if layout == "unified" {
 					active = 1
@@ -680,7 +685,7 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 				c.Text("t", string(l.Op), ui.TextStyle{Font: diffCodeFont, Color: edge})
 			}
 		})
-		diffCode(c, h.spans[k], h.marks[k], word, x.wrap)
+		diffCode(c, h.spans[k], h.marks[k], word, x.codeFit(st, at.file))
 	}).Clicked {
 		st.sel = me
 	}
@@ -725,7 +730,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 				n = l.Old
 			}
 			lineNo(c, "n", n)
-			diffCode(c, h.spans[i], h.marks[i], word, x.wrap)
+			diffCode(c, h.spans[i], h.marks[i], word, x.codeFit(st, at.file))
 		})
 	}
 	label := ""
@@ -761,102 +766,4 @@ func lineNo(c *ui.Ctx, key string, n int) {
 			c.Text("t", fmt.Sprint(n), ui.TextStyle{Font: diffCodeFont, Color: c.Theme().C(theme.FgGhost)})
 		}
 	})
-}
-
-// rowFit is a line's row's height and how its parts sit: one line high, centred; with 'wrap', as high as its rows,
-// the gutters on the first.
-func (x *Diff) rowFit() (ui.Size, ui.Align) {
-	if x.wrap {
-		return ui.Size{}, ui.Start
-	}
-	return ui.Px(diffLineH), ui.Center
-}
-
-// codePiece is a stretch of a line's text in one colour, marked or not.
-type codePiece struct {
-	text   []rune
-	ts     ui.TextStyle
-	marked bool
-}
-
-// diffCode is a line's text in its highlight colours, its changed words on a tint of word. With wrap it takes as many
-// rows as it needs at its box's width last frame, broken at the column as the editor's 'wrap' does.
-func diffCode(c *ui.Ctx, spans []kit.Span, marks [][2]int, word render.Color, wrap bool) {
-	th := c.Theme()
-	var pieces []codePiece
-	off := 0
-	for _, s := range spans {
-		col := th.C(theme.Fg)
-		if s.Capture != "" {
-			col = th.Syntax("@" + s.Capture).FG
-		}
-		ts := ui.TextStyle{Font: diffCodeFont, Color: col}
-		for pos := 0; pos < len(s.Text); {
-			in, end := markAt(marks, off+pos)
-			e := min(max(end-off, pos+1), len(s.Text))
-			pieces = append(pieces, codePiece{[]rune(kit.ExpandTabs(s.Text[pos:e])), ts, in})
-			pos = e
-		}
-		off += len(s.Text)
-	}
-	draw := func(c *ui.Ctx, pieces []codePiece) {
-		for k, p := range pieces {
-			if p.marked {
-				c.Box(k, ui.Style{Fill: word, Radius: 2}, func(c *ui.Ctx) { c.Text("t", string(p.text), p.ts) })
-			} else {
-				c.Text(k, string(p.text), p.ts)
-			}
-		}
-	}
-	if !wrap {
-		c.Row("code", ui.Style{W: ui.Flex(1), Cross: ui.Center, Clip: true}, func(c *ui.Ctx) { draw(c, pieces) })
-		return
-	}
-	cols := 0
-	if r, ok := c.Rect(c.Next("code")); ok {
-		if adv := c.Shaper().Shape("0", diffCodeFont).Advance; adv > 0 {
-			cols = int(r.Dx() / adv)
-		}
-	}
-	rows := breakCols(pieces, cols)
-	c.Column("code", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		for i, row := range rows {
-			c.Row(i, ui.Style{H: ui.Px(diffLineH), Cross: ui.Center}, func(c *ui.Ctx) { draw(c, row) })
-		}
-	})
-}
-
-// breakCols cuts pieces into rows of cols columns each, one row if cols is 0.
-func breakCols(pieces []codePiece, cols int) [][]codePiece {
-	if cols <= 0 {
-		return [][]codePiece{pieces}
-	}
-	var rows [][]codePiece
-	var row []codePiece
-	used := 0
-	for _, p := range pieces {
-		for len(p.text) > 0 {
-			if used == cols {
-				rows, row, used = append(rows, row), nil, 0
-			}
-			n := min(len(p.text), cols-used)
-			row = append(row, codePiece{p.text[:n], p.ts, p.marked})
-			used += n
-			p.text = p.text[n:]
-		}
-	}
-	return append(rows, row)
-}
-
-// markAt says whether byte at is in a mark, and where that stretch (marked or not) ends.
-func markAt(marks [][2]int, at int) (bool, int) {
-	for _, m := range marks {
-		if at < m[0] {
-			return false, m[0]
-		}
-		if at < m[1] {
-			return true, m[1]
-		}
-	}
-	return false, 1 << 30
 }

@@ -29,8 +29,14 @@ Each file has a header with its path and size, and how many of its hunks are rev
 
 Each hunk starts with git's `@@` line and the function, method or type it's in. Removed lines are red and added
 ones green, the words that changed in a changed line marked brighter. A click selects a line; threads open between
-the lines they're about, as in the editor. Long lines wrap when the editor's do (`wrap`, or the status line's
-**wrap**); otherwise they're cut at the edge.
+the lines they're about, as in the editor.
+
+## Long lines {#wrap}
+
+**wrap** in a file's header (or `diff.wrap`) wraps long lines onto the rows below, or stops; it's the editor's
+`editor.wrap`, so the editor's `:set wrap` and its status line's **wrap** switch it too. Not wrapped, a file's
+lines scroll across together, the line numbers staying put: with a sideways wheel or trackpad, ⇧ and the wheel, or
+`zl`/`zh` (a column) and `zL`/`zH` (half the view).
 
 ## Split or unified {#layout}
 
@@ -49,8 +55,9 @@ The `?` at a hunk's left, or `?` on a selected line, asks for the code there to 
 ## Keys {#keys}
 
 `]h` and `[h` go between hunks, `j` and `k` between lines, `r` marks the hunk reviewed, `gc` opens a thread on the
-line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file. The pointer on
-a line shows a **+** at the left of its gutter that opens a thread on it too (see [Between the lines](agent/requests#inline)).
+line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file, and `zl`,
+`zh`, `zL` and `zH` scroll across. The pointer on a line shows a **+** at the left of its gutter that opens a thread
+on it too (see [Between the lines](agent/requests#inline)).
 
 {{keys "diff.*"}}
 

@@ -121,6 +121,8 @@ type diffState struct {
 	marks   map[string]map[string]bool // each file's marks as last drawn
 	slider  map[string]bool            // image files shown as a slider, not side by side
 	waiting map[string]time.Time       // files whose diff is being made, since when
+	pan     []diffPan                  // sideways scrolls asked for, for the next frame
+	codeW   float32                    // the width a line's code had last frame
 }
 
 // diffSel is a place in the diff: a file, a hunk of it, a line of the hunk (-1 for the hunk as a whole).
@@ -157,6 +159,10 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 		{Keys: "?", Command: "diff.explain", Desc: "Explain"},
 		{Keys: "o", Command: "diff.source", Desc: "Open in the editor"},
 		{Keys: "<CR>", Command: "diff.expand", Desc: "Show or fold the file"},
+		{Keys: "zl", Command: "diff.scroll", Args: registry.Args{"columns": 1}, Desc: "Scroll right"},
+		{Keys: "zh", Command: "diff.scroll", Args: registry.Args{"columns": -1}, Desc: "Scroll left"},
+		{Keys: "zL", Command: "diff.scroll", Args: registry.Args{"halves": 1}, Desc: "Scroll right half a screen"},
+		{Keys: "zH", Command: "diff.scroll", Args: registry.Args{"halves": -1}, Desc: "Scroll left half a screen"},
 		{Keys: "q", Command: "view.close", Desc: "Close"},
 	} {
 		k.Mode = DiffKeyMode
@@ -209,6 +215,18 @@ func (x *Diff) commands() []registry.Command {
 		{ID: "diff.comment", Title: "Open a thread on the selected line of the diff, or its hunk's lines: {to} the agent or the author, as thread.new", Available: has, Run: on(x.comment)},
 		{ID: "diff.explain", Title: "Explain the code unit of the selected line (" + ExplainUnit + ")", Available: has, Run: on(x.explain)},
 		{ID: "diff.source", Title: "Open the selected line in the editor", Available: has, Run: on(x.source)},
+		{ID: "diff.wrap", Title: "Wrap the diff's long lines, or stop wrapping them: {wrap}, or the other way (the editor's 'wrap')", Run: func(_ registry.Ctx, a registry.Args) error {
+			on, ok := a["wrap"].(bool)
+			if !ok {
+				on = !x.wraps()
+			}
+			return x.setWrap(on)
+		}},
+		{ID: "diff.scroll", Title: "Scroll the selected file's lines across, with 'wrap' off: by {columns}, or {halves} of the view; less than 0 goes left", Available: has,
+			Run: on(func(st *diffState, a registry.Args) error {
+				st.pan = append(st.pan, diffPan{file: st.sel.file, columns: a.Int("columns"), halves: a.Int("halves")})
+				return nil
+			})},
 		{ID: "diff.expand", Title: "Show or fold a file of the diff: {path}, the selected one if none", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error {
 				p := cmp.Or(a.String("path"), st.sel.file)
@@ -236,12 +254,6 @@ func (x *Diff) layout() string {
 		return "unified"
 	}
 	return "split"
-}
-
-// wraps says long lines wrap: the editor's 'wrap', where the window is.
-func (x *Diff) wraps() bool {
-	v, _, _ := x.h.Options().Get("editor.wrap", x.h.Here())
-	return v == true
 }
 
 func (x *Diff) state(instance string) *diffState {
