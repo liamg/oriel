@@ -405,6 +405,10 @@ func (c *Ctx) Now() time.Time { return c.u.now() }
 // LastTyped is when a key was last typed into a text field, on the UI's clock; zero before any.
 func (c *Ctx) LastTyped() time.Time { return c.u.in.lastText }
 
+// LastKey is when a key last went down in the window (UI.KeyDown), whatever took it, on the UI's clock; zero before
+// any. What would take a key meant for something else waits until a while after it.
+func (c *Ctx) LastKey() time.Time { return c.u.in.lastKey }
+
 // Held is the modifier keys held now.
 func (c *Ctx) Held() render.Mods { return c.u.in.held }
 

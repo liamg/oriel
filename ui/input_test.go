@@ -455,6 +455,34 @@ func TestHeldAlone(t *testing.T) {
 	})
 }
 
+// LastKey is when a key last went down in the window, on the UI's clock, whether or not anything took it, and
+// whatever has focus; a press of the pointer isn't a key.
+func TestLastKey(t *testing.T) {
+	h := newHarness()
+	last := func() (at time.Time) {
+		paintOps(h.u, render.Point{X: 300, Y: 100}, func(c *Ctx) { at = c.LastKey() })
+		return
+	}
+	if at := last(); !at.IsZero() {
+		t.Fatalf("a last key before any: %v", at)
+	}
+	h.u.KeyDown()
+	t0 := h.clk.t
+	h.clk.advance(2 * time.Second)
+	if at := last(); !at.Equal(t0) {
+		t.Errorf("the last key at %v, want %v", at, t0)
+	}
+	h.pointer(render.PointerPress, 20, 20)
+	h.pointer(render.PointerRelease, 20, 20)
+	if at := last(); !at.Equal(t0) {
+		t.Errorf("a press moved the last key to %v", at)
+	}
+	h.u.KeyDown()
+	if at := last(); !at.Equal(h.clk.t) {
+		t.Errorf("the last key at %v, want %v", at, h.clk.t)
+	}
+}
+
 // A focused node with Text takes typed text; one without, or disabled, or that takes no keys, doesn't.
 func TestTakesText(t *testing.T) {
 	u := newUI()

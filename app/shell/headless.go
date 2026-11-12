@@ -260,6 +260,7 @@ func (h *Headless) Click(p render.Point, mods render.Mods) {
 // Key presses key (vim notation's name: "a", "CR", "Esc") on what has focus, then draws a frame. It says whether
 // anything took it.
 func (h *Headless) Key(key string) bool {
+	h.ui.KeyDown()
 	ok := h.ui.Key(render.KeyEvent{Key: key})
 	h.Frame()
 	return ok
@@ -316,6 +317,7 @@ func (h *Headless) Plugin(id string) (plugin.Plugin, bool) {
 // Press presses key (vim notation: "<D-J>", "j") as the window does a key on its own: the keymaps of the modes in
 // force run their command, waiting for it, else it's typed at what has focus. Then it draws a frame.
 func (h *Headless) Press(key string) error {
+	h.ui.KeyDown()
 	reg := h.sh.cfg.Registry
 	var err error
 	if k, _ := reg.Lookup(h.sh.keyModesFor(key), keymap.Parse(key)); k != nil {
