@@ -103,6 +103,7 @@ func (x *PRReview) submit(ctx registry.Ctx, a registry.Args) error {
 		func(ctx registry.Ctx, _ struct{}) error {
 			f.body, f.seen, f.auto = "", "", ""
 			x.forget(reviewPR(se))
+			x.unreactOnSent(se.ID)
 			saved := x.setDraft(se.ID, func(d *core.ReviewDraft) {
 				for i, it := range sent {
 					p := d.Picks[it.id]

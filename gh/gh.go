@@ -161,6 +161,8 @@ type Client interface {
 	PRReactions(ctx context.Context, repo Repo, number int) (Reactions, error)
 	// ReactPR reacts to a pull request (ReactionNames).
 	ReactPR(ctx context.Context, repo Repo, number int, content string) error
+	// UnreactPR takes back the signed-in user's reaction to a pull request (ReactionNames), if they have it.
+	UnreactPR(ctx context.Context, repo Repo, number int, content string) error
 	// SubmitReview submits the user's review of someone else's pull request.
 	SubmitReview(ctx context.Context, repo Repo, number int, in ReviewInput) error
 	// MergeState is what merging a PR now would meet; MergePR merges it, DeleteBranch deletes a branch.

@@ -348,6 +348,20 @@ func TestReviewSessionReactsToItsPR(t *testing.T) {
 	s.Until("👀 on the PR", func() bool { return hub.PRReactions("acme/api", pr.Number)["eyes"] == 1 })
 }
 
+// Once the review is sent, the 👀 is taken back: the review says it was read. Somebody else's 👀 stays.
+func TestSendingTheReviewTakesTheReactionBack(t *testing.T) {
+	s, _, hub, pr, id, _ := prReviewScene(t, false)
+	s.Until("👀 on the PR", func() bool { return hub.PRReactions("acme/api", pr.Number)["eyes"] == 1 })
+	hub.SetPRReactions("acme/api", pr.Number, gh.Reactions{"eyes": 2}) // and now somebody else's too
+	s.Run("ship.pr.open", nil)
+	s.Until("the review tab", func() bool { return s.Has("YOUR REVIEW") })
+	s.Run("review.pr.preview", registry.Args{"id": string(id), "verdict": "approve"})
+	s.Until("the approval's preview", func() bool { return s.Has("Post: Approved") })
+	s.ClickText("Post: Approved")
+	s.Until("the approval on GitHub", func() bool { return len(hub.Reviews("acme/api", pr.Number)) == 1 })
+	s.Until("the user's 👀 taken back", func() bool { return hub.PRReactions("acme/api", pr.Number)["eyes"] == 1 })
+}
+
 // A review the assistant started behind the one in front opens on its Requests panel and request the first time
 // it's brought to the front.
 func TestReviewStartedBehindOpensWhenShown(t *testing.T) {

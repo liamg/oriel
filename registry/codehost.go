@@ -40,6 +40,8 @@ type CodeHost struct {
 	Submit func(ctx context.Context, s Site, url string, r ReviewSubmit) error
 	// React reacts to someone else's PR as the user, with an emoji ("👀"); a host that hasn't it refuses.
 	React func(ctx context.Context, s Site, url, emoji string) error
+	// Unreact takes back the user's emoji reaction to someone else's PR; not having it is no error.
+	Unreact func(ctx context.Context, s Site, url, emoji string) error
 
 	ForBranch        func(ctx context.Context, r CodeRepo, branch string) (*PR, error) // the branch's newest PR, open first; nil for none
 	Create           func(ctx context.Context, r CodeRepo, pr NewPR) (*PR, error)
