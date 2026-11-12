@@ -25,8 +25,9 @@ type Span struct {
 }
 
 type RichOpts struct {
-	Code  ui.TextStyle // code spans' text: the base's size in mono by default
-	Align ui.Align     // each line's alignment in width: Start, Center or End
+	Code   ui.TextStyle // code spans' text: the base's size in mono by default
+	Align  ui.Align     // each line's alignment in width: Start, Center or End
+	Breaks bool         // a newline in the text starts a new line; otherwise it's a space
 }
 
 type richPiece struct {
@@ -34,6 +35,7 @@ type richPiece struct {
 	span  Span
 	width float32
 	space bool // a space comes before it
+	brk   bool // a line break, with no text
 }
 
 // richLayout is a paragraph's words, measured: each code span whole; the width of a space; how each span is drawn.
@@ -93,20 +95,30 @@ func richMeasure(c *ui.Ctx, spans []Span, base ui.TextStyle, o RichOpts) richLay
 	space := false
 	for _, s := range spans {
 		if s.Code {
+			s.Text = strings.ReplaceAll(s.Text, "\n", " ")
 			pieces = append(pieces, richPiece{text: s.Text, span: s, width: measure(s, s.Text), space: space})
 			space = false
 			continue
 		}
-		t := s.Text
-		lead := strings.HasPrefix(t, " ") || strings.HasPrefix(t, "\n")
-		for i, w := range strings.Fields(t) {
-			pieces = append(pieces, richPiece{text: w, span: s, width: measure(s, w), space: space || i > 0 || lead})
-			space = false
+		lines := []string{s.Text}
+		if o.Breaks {
+			lines = strings.Split(s.Text, "\n")
 		}
-		if strings.TrimSpace(t) == "" && t != "" {
-			space = true
-		} else if strings.HasSuffix(t, " ") || strings.HasSuffix(t, "\n") {
-			space = true
+		for k, t := range lines {
+			if k > 0 {
+				pieces = append(pieces, richPiece{brk: true})
+				space = false
+			}
+			lead := strings.HasPrefix(t, " ") || strings.HasPrefix(t, "\n")
+			for i, w := range strings.Fields(t) {
+				pieces = append(pieces, richPiece{text: w, span: s, width: measure(s, w), space: space || i > 0 || lead})
+				space = false
+			}
+			if strings.TrimSpace(t) == "" && t != "" {
+				space = true
+			} else if strings.HasSuffix(t, " ") || strings.HasSuffix(t, "\n") {
+				space = true
+			}
 		}
 	}
 	return richLayout{pieces: pieces, gap: c.Shaper().Shape(" ", base.Font).Advance, style: style, code: code, measure: measure}
@@ -114,12 +126,17 @@ func richMeasure(c *ui.Ctx, spans []Span, base ui.TextStyle, o RichOpts) richLay
 
 // widths are the paragraph's width on one line and its widest piece: the narrowest it wraps to.
 func (l richLayout) widths() (line, widest float32) {
+	var x float32
 	for i, p := range l.pieces {
-		line += p.width
-		if p.space && i > 0 {
-			line += l.gap
+		if p.brk {
+			x = 0
+			continue
 		}
-		widest = max(widest, p.width)
+		x += p.width
+		if p.space && i > 0 {
+			x += l.gap
+		}
+		line, widest = max(line, x), max(widest, p.width)
 	}
 	return line, widest
 }
@@ -154,6 +171,11 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 	}
 	for _, p := range l.pieces {
 		switch {
+		case p.brk:
+			if len(lines) == 0 {
+				newLine("")
+			}
+			newLine("\n")
 		case p.width > width:
 			for i, q := range l.split(c, p, width) {
 				if i > 0 {

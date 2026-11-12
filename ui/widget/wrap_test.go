@@ -175,3 +175,31 @@ func TestRichBreaksWhatsTooWide(t *testing.T) {
 		t.Errorf("copied %q, want %q", got, src)
 	}
 }
+
+// With Breaks, a newline in the text starts a new line, and copies as one; without, it's a space between words.
+func TestRichBreaks(t *testing.T) {
+	spans := []Span{{Text: "Floor goes the "}, {Text: "wrong", Bold: true}, {Text: " way.\nAnd for zero?"}}
+	for _, breaks := range []bool{false, true} {
+		var lines int
+		h := newHarness(t, theme.Dark, small, func(c *ui.Ctx) {
+			c.Column("page", ui.Style{W: ui.Px(600), Selectable: true}, func(c *ui.Ctx) {
+				lines = Rich(c, "p", spans, 600, ui.TextStyle{Font: wrapFont}, RichOpts{Breaks: breaks})
+			})
+		})
+		h.frame()
+		want, copied := 1, "Floor goes the wrong way. And for zero?"
+		if breaks {
+			want, copied = 2, "Floor goes the wrong way.\nAnd for zero?"
+		}
+		if lines != want {
+			t.Errorf("breaks %v: %d lines, want %d: %q", breaks, lines, want, h.texts())
+		}
+		h.pointer(render.PointerPress, render.ButtonPrimary, 1, 5)
+		h.frame()
+		h.pointer(render.PointerMove, render.ButtonPrimary, 599, 399)
+		h.frame()
+		if got := h.u.SelectedText(); got != copied {
+			t.Errorf("breaks %v: copied %q, want %q", breaks, got, copied)
+		}
+	}
+}
