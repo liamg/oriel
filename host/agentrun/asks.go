@@ -59,7 +59,7 @@ func (h *session) answer(r AnswerReq) error {
 // permission is layer 1 asking: the session's rules and the app's policy hooks answer first (layer 2), and the
 // user only when neither does.
 func (h *session) permission(sess agent.Session, p agent.Permission) {
-	ask := core.Ask{ID: p.ID, Kind: core.AskPermission, Tool: p.Tool, Summary: p.Summary, Input: string(p.Input), Rule: p.Rule}
+	ask := core.Ask{ID: p.ID, Kind: core.AskPermission, Tool: p.Tool, Summary: p.Summary, Input: string(p.Input), Rule: p.Rule, Diff: p.Diff}
 	if ask.Rule == "" {
 		ask.Rule = RuleFor(p.Tool, p.Input)
 	}

@@ -448,7 +448,7 @@ func eventOf(ev agent.Event) (event, error) {
 	case agent.ToolResult:
 		return event{Type: "toolResult", ID: e.ID, Output: e.Output, IsError: e.IsError, Diff: e.Diff}, nil
 	case agent.Permission:
-		return event{Type: "permission", ID: e.ID, Tool: e.Tool, Summary: e.Summary, Input: e.Input, Rule: e.Rule}, nil
+		return event{Type: "permission", ID: e.ID, Tool: e.Tool, Summary: e.Summary, Input: e.Input, Rule: e.Rule, Diff: e.Diff}, nil
 	case agent.Question:
 		return event{Type: "question", ID: e.ID, Questions: e.Questions, Thread: e.Thread}, nil
 	case agent.Subagent:
@@ -489,7 +489,7 @@ func (w event) agentEvent() (agent.Event, error) {
 	case "toolResult":
 		return agent.ToolResult{ID: w.ID, Output: w.Output, IsError: w.IsError, Diff: w.Diff}, nil
 	case "permission":
-		return agent.Permission{ID: w.ID, Tool: w.Tool, Summary: w.Summary, Input: w.Input, Rule: w.Rule}, nil
+		return agent.Permission{ID: w.ID, Tool: w.Tool, Summary: w.Summary, Input: w.Input, Rule: w.Rule, Diff: w.Diff}, nil
 	case "question":
 		return agent.Question{ID: w.ID, Questions: w.Questions, Thread: w.Thread}, nil
 	case "subagent":

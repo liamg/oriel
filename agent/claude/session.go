@@ -706,7 +706,7 @@ const unattendedWait = 30 * time.Second
 
 func (s *session) permission(ctx context.Context, in permissionIn) permissionOut {
 	d, ok := s.ask(ctx, in.ID, agent.Permission{
-		ID: in.ID, Tool: in.Tool, Summary: summary(in.Tool, in.Input), Input: in.Input, Rule: rule(in.Suggestions),
+		ID: in.ID, Tool: in.Tool, Summary: summary(in.Tool, in.Input), Input: in.Input, Rule: rule(in.Suggestions), Diff: transcript.Diff(in.Tool, in.Input, nil),
 	})
 	switch {
 	case !ok:
