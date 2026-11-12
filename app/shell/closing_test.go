@@ -103,3 +103,18 @@ func TestEveryViewClosesWithCtrlWC(t *testing.T) {
 		})
 	}
 }
+
+// ⌘W closes the tab in front, a file's in the editor whatever its mode, and leaves the others and the session.
+func TestCmdWClosesTheTabInFront(t *testing.T) {
+	for _, mode := range []string{"normal", "insert"} {
+		t.Run(mode, func(t *testing.T) {
+			r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"a.txt": "alpha\n", "b.txt": "bravo\n"}, Files: []string{"a.txt", "b.txt"}})
+			r.WaitText("bravo")
+			if mode == "insert" {
+				r.TypeKeys("i")
+			}
+			r.TypeKeys("<D-w>")
+			r.WaitFrame("b.txt closed, a.txt in front", func(s string) bool { return strings.Contains(s, "alpha") && !strings.Contains(s, "b.txt") })
+		})
+	}
+}

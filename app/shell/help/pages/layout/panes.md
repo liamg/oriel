@@ -12,7 +12,8 @@ and a drop-down.
 ## Tabs {#tabs}
 
 A pane can hold several views as tabs. Click one to show it; drag it along its tab strip to reorder the tabs, or
-elsewhere to move it.
+elsewhere to move it. `⌘W` closes the tab in front, from the editor in any mode too (`⌃W c` and `q` do the same); a
+session's tab along the top isn't one of these, and stays.
 
 ## Splits {#splits}
 
