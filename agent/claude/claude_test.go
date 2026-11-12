@@ -222,6 +222,18 @@ func TestUnattendedEnv(t *testing.T) {
 	}
 }
 
+// Oriel started from inside a Claude Code session isn't that session's child, nor are the claudes it starts: one that
+// inherited the session's markers keeps no transcript ("Transcript saving is off — inherited
+// CLAUDE_CODE_CHILD_SESSION marker", Claude Code 2.1.322's own notice), and the transcript is where Oriel reads what
+// its agent said and did. A sign-in in the environment stays.
+func TestInheritedEnvLeavesAParentSessionOut(t *testing.T) {
+	got := inherited([]string{"PATH=/bin", "CLAUDECODE=1", "CLAUDE_CODE_CHILD_SESSION=1", "CLAUDE_CODE_SESSION_ID=s",
+		"CLAUDE_CODE_ENTRYPOINT=cli", "CLAUDE_CODE_MESSAGING_SOCKET=/m", "CLAUDE_CODE_OAUTH_TOKEN=t", "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1"})
+	if want := []string{"PATH=/bin", "CLAUDE_CODE_OAUTH_TOKEN=t", "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1"}; !slices.Equal(got, want) {
+		t.Errorf("inherited = %q, want %q", got, want)
+	}
+}
+
 // Outside a sandbox, the memory directory goes on the command line; a sandbox's settings.json has it.
 func TestArgsSetTheMemoryDirectory(t *testing.T) {
 	a, _ := args(agent.StartSpec{Memory: "/mem"}, "/m", "s1", "s1")

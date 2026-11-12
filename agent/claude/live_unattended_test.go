@@ -21,15 +21,6 @@ func TestLiveRefuseNeverPrompts(t *testing.T) {
 	if os.Getenv("ORIEL_LIVE") != "1" {
 		t.Skip("ORIEL_LIVE=1 runs the real claude")
 	}
-	// Run from inside a Claude Code session, claude would take itself for that session's child and keep no
-	// transcript, which is where Oriel reads what it said and did.
-	for _, kv := range os.Environ() {
-		if k, _, _ := strings.Cut(kv, "="); k == "CLAUDECODE" || strings.HasPrefix(k, "CLAUDE_CODE_SESSION") ||
-			k == "CLAUDE_CODE_CHILD_SESSION" || k == "CLAUDE_CODE_ENTRYPOINT" {
-			t.Setenv(k, "")
-			os.Unsetenv(k)
-		}
-	}
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -99,6 +90,9 @@ func TestLiveRefuseNeverPrompts(t *testing.T) {
 				t.Errorf("the allowed WebSearch was refused: %q", ev.Output)
 			}
 		}
+	}
+	if len(ran) == 0 {
+		t.Error("no tool calls came from its transcript")
 	}
 	select {
 	case in := <-echoed:

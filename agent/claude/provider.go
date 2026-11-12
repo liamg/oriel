@@ -12,8 +12,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -499,7 +501,7 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	}
 	cmd := exec.Command(bin, argv...)
 	cmd.Dir = spec.Cwd
-	cmd.Env = append(os.Environ(), processEnv(spec, sockPath(dir), orielBin)...)
+	cmd.Env = append(inherited(os.Environ()), processEnv(spec, sockPath(dir), orielBin)...)
 
 	sctx, cancel := context.WithCancel(ctx)
 	pty, err := exe.StartPTY(sctx, cmd, cols, rows)
@@ -552,6 +554,15 @@ func (p *Provider) start(ctx context.Context, spec agent.StartSpec, resume strin
 	go s.tail.follow(s.done, s.push)
 	go s.run()
 	return s, nil
+}
+
+// inherited is Oriel's environment as claude gets it: without a parent Claude Code session's markers
+// (claudebox.ParentSession), which would have claude take itself for that session's child and keep no transcript.
+func inherited(environ []string) []string {
+	return slices.DeleteFunc(slices.Clone(environ), func(kv string) bool {
+		k, _, _ := strings.Cut(kv, "=")
+		return slices.ContainsFunc(claudebox.ParentSession, func(p string) bool { ok, _ := path.Match(p, k); return ok })
+	})
 }
 
 // processEnv is what claude's environment adds to Oriel's own: the mod's way back, and for an agent nobody watches,
