@@ -162,10 +162,16 @@ clip 224,50 1376x924 r 0
     text "PR #812" @252,117.844 #ece6d8 Space Grotesk 14
     rect 320.58313,108.5 9x9 fill #b98aff radius 2
     text "web-dashboard" @339.58313,117.32 #ece6d8 JetBrains Mono 12
-    rect 443.22375,104.73 46.850006x16.54 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-    text "DRAFT" @450.22375,116.420006 #b3ab99 JetBrains Mono 9.5
-    clip 500.07376,105.74 795.7388x14.519997 r 0
-      text "rethink/search-endpoint → main · 3 commits" @500.07376,116.96 #7c7566 JetBrains Mono 11
+    rect 443.22375,98 79.09375x30 fill #b3ab9924 radius 7 stroke 1 #b3ab998c
+    path 6 segments stroke 1.6363636 #b3ab99
+    path 6 segments stroke 1.6363636 #b3ab99
+    path 6 segments stroke 1.6363636 #b3ab99
+    path 2 segments stroke 1.6363636 #b3ab99
+    path 3 segments stroke 1.6363636 #b3ab99
+    path 3 segments stroke 1.6363636 #b3ab99
+    text "Draft" @478.22375,117.91089 #b3ab99 Inter 13.5
+    clip 532.3175,105.74 763.495x14.519997 r 0
+      text "rethink/search-endpoint → main · 3 commits" @532.3175,116.96 #7c7566 JetBrains Mono 11
     pop
     rect 1305.8125,100 117.421875x26 fill #191815 radius 6 stroke 1 #332f27
     text "Ready for review" @1315.8125,117.365234 #ece6d8 Inter 12

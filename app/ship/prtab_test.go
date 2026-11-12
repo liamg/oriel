@@ -45,7 +45,7 @@ func TestPRTabLandsOnTheOverview(t *testing.T) {
 	}
 	pr := prs[0]
 	num := fmt.Sprintf("PR #%d", pr.Number)
-	s.WantFrame(num, num+" · search-api", "OPEN", "feat: x", pr.URL, "Copy link", "Edit PR", "CHECKS · NONE YET", "DESCRIPTION",
+	s.WantFrame(num, num+" · search-api", "Open", "feat: x", pr.URL, "Copy link", "Edit PR", "CHECKS · NONE YET", "DESCRIPTION",
 		"REVIEW", "BEFORE THIS SHIPS")
 	if f := s.Text(); strings.Contains(f, "Update PR") || strings.Contains(f, "RAISE PR") {
 		t.Errorf("the tab is still the form:\n%s", f)
@@ -158,7 +158,7 @@ func TestPROverviewSnapshot(t *testing.T) {
 	}
 	s.Run("ship.pr.open", registry.Args{"project": "web-dashboard"})
 	s.Golden("ship-pr-overview")
-	s.WantFrame("PR #812 · web-dashboard", "PR #812", "DRAFT", "rethink/search-endpoint → main · 3 commits",
+	s.WantFrame("PR #812 · web-dashboard", "PR #812", "Draft", "rethink/search-endpoint → main · 3 commits",
 		"feat(search): back off on 429 using Retry-After", "https://github.com/acme/web-dashboard/pull/812", "Copy link", "Ready for review",
 		"Edit PR", "CHECKS · 5 OF 7", "running 3m", "queued", "DESCRIPTION", "What", "Retry-After", "REVIEW · 2 THREADS",
 		"src/search/backoff.ts:42", "@MCHEN", "CHANGES REQUESTED", "Cap the wait", "conversation", "jkowalski", "Looks good once the cap's in.",
@@ -224,4 +224,22 @@ func TestARaisedPRShowsWhileTheCodeHostCatchesUp(t *testing.T) {
 	if sh, _ := x.ShipOf(se.ID, "search-api"); sh.PR == nil || sh.PR.Number != hub.PRs("acme/search-api")[0].Number {
 		t.Errorf("once found, the PR is %+v", sh.PR)
 	}
+}
+
+// A merged PR's overview leads with its purple Merged badge.
+func TestPROverviewMergedSnapshot(t *testing.T) {
+	s, se := shipSession(t)
+	s.Run("ship.open", nil)
+	s.SettleGit()
+	s.Run("view.close", registry.Args{"id": kit.ShipView})
+	x := shipOf(s)
+	x.Fixture(se.ID, false, func(ships []ship.Read) []ship.Read {
+		web := &ships[1]
+		web.PR.URL = "https://github.com/acme/web-dashboard/pull/812"
+		web.PR.State, web.PR.Merged, web.PR.Draft = "closed", true, false
+		return ships
+	})
+	s.Run("ship.pr.open", registry.Args{"project": "web-dashboard"})
+	s.Until("the merged badge", func() bool { return s.Find("Pull request: Merged") != nil })
+	s.Golden("ship-pr-merged")
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -87,6 +88,7 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.mirrors, x.syncing, x.forwarding, x.editing = map[core.SessionID]githubMirror{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
 	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
+	x.Add(h.Contribute(registry.Service{Name: kit.PRReviewsService, Impl: githubReviews{x}, Source: "builtin:github"}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrPushed", Fired: true, Payload: kit.PrPushed{},
 		Doc: "A session's pull request's head, each time GitHub is read for it; the subject is the session. { session, project, head }"}))
 	x.Add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
@@ -605,6 +607,22 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 		c.Text("never", kit.ProviderName(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
 			kit.UIFont(11, th.C(theme.FgFaint)))
 	})
+}
+
+// githubReviews is the PRReviewsService from what the last read of each session's PRs found.
+type githubReviews struct{ x *GitHub }
+
+func (g githubReviews) Reviews(id core.SessionID, url string) []string {
+	m, ok := g.x.mirror(id)
+	if !ok {
+		return nil
+	}
+	for _, pr := range m.PRs {
+		if pr.URL == url {
+			return slices.Collect(maps.Values(pr.Reviews))
+		}
+	}
+	return nil
 }
 
 // statusSegment is "GH 1 changes requested": where the reviewers of the session in front's PRs stand.

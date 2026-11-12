@@ -66,7 +66,9 @@ it's being read, and takes it back once you send your review (`review.start_reac
 The session opens on the **Explorer**, set to Changed, which compares with the branch the PR merges into, so it lists
 only the PR's files; the PR's **diff** is in front, to read from the top, and its **Review** tab behind it. The agent's
 review request is in **Requests** like any other. The sidebar's **Review** entry (the pull request icon, in place of
-Raise PR's checklist) opens the tab again, is lit while it's showing, and counts the comments still to triage. The tab's top line says where the agent and the AI review are;
+Raise PR's checklist) opens the tab again, is lit while it's showing, and counts the comments still to triage. The
+tab's header has a badge of where the PR stands: **Merged** (purple) or **Closed** (red) over anything a reviewer said,
+then **Changes requested** (amber), **Approved** (green), **Draft** or **Open**. The tab's top line says where the agent and the AI review are;
 when the agent resolves its request, a **Review done** notice says how many comments it has for you to triage.
 
 ### Triage {#triage}

@@ -74,6 +74,30 @@ var icons = map[string]func(p *iconPen){
 		p.poly(false, 12, 10.7, 12, 5.5, 8, 5.5)
 		p.poly(false, 9.8, 3.7, 8, 5.5, 9.8, 7.3)
 	},
+	"merged": func(p *iconPen) {
+		p.circle(4, 3.5, 1.8)
+		p.circle(4, 12.5, 1.8)
+		p.circle(12, 8.5, 1.8)
+		p.line(4, 5.3, 4, 10.7)
+		p.curve(4, 5.3, 4, 8.5, 7, 8.5, 10.2, 8.5)
+	},
+	"prclosed": func(p *iconPen) {
+		p.circle(4, 3.5, 1.8)
+		p.circle(4, 12.5, 1.8)
+		p.circle(12, 12.5, 1.8)
+		p.line(4, 5.3, 4, 10.7)
+		p.line(10, 3, 14, 7)
+		p.line(14, 3, 10, 7)
+	},
+	"approved": func(p *iconPen) {
+		p.circle(8, 8, 6)
+		p.poly(false, 5, 8.2, 7.2, 10.4, 11, 6)
+	},
+	"changes": func(p *iconPen) {
+		p.circle(8, 8, 6)
+		p.line(8, 4.8, 8, 8.8)
+		p.circle(8, 11.2, .5)
+	},
 	"ship": func(p *iconPen) {
 		p.poly(true, 1.5, 10.5, 14.5, 10.5, 12.5, 14, 3.5, 14)
 		p.line(8, 1.5, 8, 10.5)
