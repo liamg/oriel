@@ -360,7 +360,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 		}
 		x.reviewed[pr.URL] = reviewStates(ts)
 		x.mu.Unlock()
-		req := host.MirrorReviewReq{Session: id, Project: s.Project, Host: h.Name, Repo: s.Repo, PR: pr.Number, URL: pr.URL}
+		req := host.MirrorReviewReq{Session: id, Project: s.Project, Host: h.Name, Repo: s.Repo, PR: pr.Number, URL: pr.URL, Author: pr.Author}
 		for _, t := range ts {
 			rt := host.ReviewThread{Key: t.ID, Path: t.Path, Line: t.Line, Old: t.Old, Outdated: t.Outdated, Resolved: t.Resolved,
 				Reviewer: t.Reviewer, State: t.State, URL: t.URL}

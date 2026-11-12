@@ -227,9 +227,10 @@ func TestSearchPRs(t *testing.T) {
 	}
 }
 
-// A review session's PR is mirrored too: the comment the user posted joins the thread it was posted from, their own
-// words aren't handed to the agent, the author's reply is, and resolving the thread in Oriel resolves it on GitHub.
-func TestReviewSessionMirrorsItsPR(t *testing.T) {
+// reviewSessionScene is a review session of bob's pull request on acme/pricing, its agent provider's (none for ""),
+// GitHub faked, and the PR's head.
+func reviewSessionScene(t *testing.T, provider string) (*rig, *ghtest.Server, gh.PR, string, core.SessionID) {
+	t.Helper()
 	r := newRig(t)
 	hub := ghtest.New(t)
 	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
@@ -244,7 +245,15 @@ func TestReviewSessionMirrorsItsPR(t *testing.T) {
 	head := strings.TrimSpace(up.Git("rev-parse", "HEAD"))
 	up.Git("push", "-q", "origin", fmt.Sprintf("HEAD:refs/pull/%d/head", pr.Number))
 	hub.SetPRSize("acme/pricing", pr.Number, ghtest.PRSize{Author: "bob", HeadSHA: head})
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr.URL, Repos: []core.RepoID{core.RepoID(co.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr.URL, Provider: provider, Repos: []core.RepoID{core.RepoID(co.Dir)}})
+	return r, hub, pr, head, id
+}
+
+// A review session's PR is mirrored too: the comment the user posted joins the thread it was posted from, their own
+// words aren't handed to the agent, the author's reply is, and resolving the thread in Oriel resolves it on GitHub.
+func TestReviewSessionMirrorsItsPR(t *testing.T) {
+	r, hub, pr, head, id := reviewSessionScene(t, "")
+	ctx := context.Background()
 
 	mine, err := r.w.Comment(ctx, CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "Name the mode.", Outgoing: true})
 	if err != nil {
@@ -356,21 +365,8 @@ func TestASlowSyncDoesNotBlockAnother(t *testing.T) {
 // A comment GitHub took only on its file, headed with its line, still joins the thread it was posted from: no second
 // thread of the same words.
 func TestReviewSessionLinksAFileComment(t *testing.T) {
-	r := newRig(t)
-	hub := ghtest.New(t)
-	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	r, hub, pr, _, id := reviewSessionScene(t, "")
 	ctx := context.Background()
-	co, up := githubRepo(t, "pricing", map[string]string{"round.go": "package pricing\n"})
-	if _, err := r.w.addRepo(ctx, co.Dir, core.RepoAdded); err != nil {
-		t.Fatal(err)
-	}
-	pr := hub.AddPR("acme/pricing", gh.PR{Title: "feat: round", Author: "bob", Head: "bob/round", Base: "main"})
-	up.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
-	up.Commit("Bob", "round")
-	head := strings.TrimSpace(up.Git("rev-parse", "HEAD"))
-	up.Git("push", "-q", "origin", fmt.Sprintf("HEAD:refs/pull/%d/head", pr.Number))
-	hub.SetPRSize("acme/pricing", pr.Number, ghtest.PRSize{Author: "bob", HeadSHA: head})
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr.URL, Repos: []core.RepoID{core.RepoID(co.Dir)}})
 
 	mine, err := r.w.Comment(ctx, CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 1}, Body: "Say what it rounds.", Outgoing: true})
 	if err != nil {
@@ -389,5 +385,82 @@ func TestReviewSessionLinksAFileComment(t *testing.T) {
 	}
 	if n := len(githubThreads(r.session(id))); n != 1 {
 		t.Errorf("%d GitHub threads, want the posted one alone", n)
+	}
+}
+
+// In a review, others' comments are the agent's to read, not to answer: another reviewer's comment nobody but the user
+// has replied to, and the conversation but for the author's words, come in as already given to it. The author's, and
+// a reply to another reviewer, are handed to it. (No agent runs, so nothing else marks them given.)
+func TestAReviewLeavesOthersCommentsToRead(t *testing.T) {
+	r, hub, pr, _, id := reviewSessionScene(t, "")
+	ctx := context.Background()
+	add := func(user, body string, line int, reply int64) gh.ReviewComment {
+		return hub.AddReviewComment("acme/pricing", pr.Number, gh.ReviewComment{User: user, Association: "MEMBER", Path: "round.go", Line: line, Body: body, InReplyTo: reply})
+	}
+	add("carol", "Round half to even?", 3, 0)
+	add("bob", "I'll split this later.", 1, 0)
+	replied := add("carol", "Is this exported on purpose?", 2, 0)
+	add("dave", "It is: billing calls it.", 2, replied.ID)
+	mine := add("carol", "Does it need a test?", 3, 0)
+	add("you", "Yes, I'll ask for one.", 3, mine.ID)
+	hub.AddIssueComment("acme/pricing", pr.Number, gh.IssueComment{User: "carol", Association: "MEMBER", Body: "Looks fine to me."})
+	hub.AddIssueComment("acme/pricing", pr.Number, gh.IssueComment{User: "bob", Association: "OWNER", Body: "Ready for another look."})
+	if _, err := r.w.SyncGitHub(ctx, MirrorReq{Session: id, Fresh: true}); err != nil {
+		t.Fatal(err)
+	}
+	given := map[string]bool{}
+	for _, th := range githubThreads(r.session(id)) {
+		for _, c := range th.Comments {
+			given[c.Body] = c.Delivered
+		}
+	}
+	for body, want := range map[string]bool{
+		"Round half to even?": true, "Does it need a test?": true, "Yes, I'll ask for one.": true, "Looks fine to me.": true,
+		"I'll split this later.": false, "Is this exported on purpose?": false, "It is: billing calls it.": false, "Ready for another look.": false,
+	} {
+		if got, ok := given[body]; !ok || got != want {
+			t.Errorf("%q: mirrored %v, given to the agent unasked %v, want %v", body, ok, got, want)
+		}
+	}
+}
+
+// The threads tool lists the threads the agent wasn't handed too, so it can read another reviewer's comment.
+func TestTheThreadsToolListsOthersComments(t *testing.T) {
+	r, hub, pr, _, id := reviewSessionScene(t, "fake")
+	a := r.agent()
+	hub.AddReviewComment("acme/pricing", pr.Number, gh.ReviewComment{User: "carol", Association: "MEMBER", Path: "round.go", Line: 3, Body: "Round half to even?\nOr away from zero?"})
+	if _, err := r.w.SyncGitHub(context.Background(), MirrorReq{Session: id, Fresh: true}); err != nil {
+		t.Fatal(err)
+	}
+	list := a.Call(t, "threads", nil)
+	if !strings.Contains(list, `by="carol"`) || !strings.Contains(list, `origin="github"`) || !strings.Contains(list, ">Round half to even?</thread>") {
+		t.Errorf("the threads tool doesn't list another reviewer's comment by its first line:\n%s", list)
+	}
+}
+
+// A review on another code host follows the same rule, by the PR's author the host's plugin names.
+func TestAReviewOnACodeHostLeavesOthersCommentsToRead(t *testing.T) {
+	r, _, _, _, id := reviewSessionScene(t, "")
+	p, _ := r.session(id).Primary()
+	at := time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)
+	req := MirrorReviewReq{Session: id, Project: p.Name, Host: "gitlab", Repo: "acme/pricing", PR: 7, Author: "bob", Threads: []ReviewThread{
+		{Key: "d1", Path: "round.go", Line: 3, Comments: []ReviewComment{{Key: "n1", User: "carol", Body: "Round half to even?", At: at, Trusted: true}}},
+		{Key: "d2", Path: "round.go", Line: 1, Comments: []ReviewComment{{Key: "n2", User: "bob", Body: "I'll split this later.", At: at, Trusted: true}}},
+	}}
+	if err := r.w.MirrorReview(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, th := range r.session(id).Threads {
+		if th.Hosted == nil || th.Hosted.Host != "gitlab" || len(th.Comments) != 1 {
+			continue
+		}
+		n++
+		if c := th.Comments[0]; c.Delivered != (c.Name == "carol") {
+			t.Errorf("%s's comment: given to the agent unasked %v", c.Name, c.Delivered)
+		}
+	}
+	if n != 2 {
+		t.Errorf("%d threads mirrored, want 2", n)
 	}
 }
