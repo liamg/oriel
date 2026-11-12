@@ -1,4 +1,4 @@
-import type { EngineInterface, On } from 'claude-code'
+import type { Args as EventArgs, EngineInterface, EventResult, On } from 'claude-code'
 
 type Args = Record<string, unknown>
 
@@ -22,10 +22,23 @@ type State = {
   unattended: boolean
   // mode is the permission mode Oriel was last told of: a restart resumes the conversation in it.
   mode: string
+  // pending: a call went to a person, and Oriel's PermissionRequest hook hasn't been reached for it yet.
+  pending: boolean
+  // skipped: a managed plugin continues past Oriel's PermissionRequest hook (store SKIPPED), so only the engine's
+  // dialog in the terminal answers; Oriel is told of each such dialog from tool.check.
+  skipped: boolean
+  // dialog: Oriel was told the engine's own dialog asks about a call, and hasn't been told it's gone.
+  dialog: boolean
 }
 
 // NOBODY is what an unattended agent is told of an ask Oriel didn't answer: agent.UnattendedRefusal.
 const NOBODY = 'Nobody is here to answer this: carry on without it, or say in your reply what the user should do.'
+
+// ORIEL marks an ask of Oriel's own from check: a person's in any mode. The engine pins its own name over it.
+const ORIEL = 'oriel'
+
+// SKIPPED is the store's key for State.skipped: it holds across sessions, as the managed plugin does.
+const SKIPPED = 'permissionRequestSkipped'
 
 // CHECK_FAILED is why an MCP call is refused when Oriel didn't answer its check: claude.CheckFailed.
 const CHECK_FAILED = "Oriel couldn't be asked about this call, so it was refused."
@@ -56,6 +69,46 @@ async function noteMode($: EngineInterface, st: State, mode: string | undefined)
   if (!st.active || !mode || mode === st.mode) return
   st.mode = mode
   await event($, st, { kind: 'mode', mode })
+}
+
+// check is Oriel's verdict on a call: it allows, denies, asks, or leaves the call to the mode and its dialog.
+async function check($: EngineInterface, st: State, e: EventArgs<'tool.check'>, next: (e: EventArgs<'tool.check'>) => Promise<EventResult<'tool.check'>>) {
+  const out = await host($, st, 'check', { tool: e.tool, input: e.input, agentId: e.agentId })
+  // No answer from Oriel: its own tools still run, and an MCP call is refused rather than left to a mode that
+  // might let it through unasked (the gateway's holds its own calls).
+  if (!out) {
+    if (st.tools.has(e.tool) || e.tool.startsWith('mcp__oriel__')) return { decision: 'allow' }
+    if (e.tool.startsWith('mcp__') && !e.tool.startsWith('mcp__oriel-gw__')) return { decision: 'deny', reason: CHECK_FAILED }
+    return next(e)
+  }
+  const reason = out?.reason ? String(out.reason) : undefined
+  if (out?.decision === 'allow' || out?.decision === 'deny') return { decision: out.decision, reason }
+  if (out?.decision === 'ask') {
+    const core = await next(e)
+    if (core.decision === 'deny' || (core.decision === 'allow' && core.rule)) return core
+    return { decision: 'ask', reason, plugin: ORIEL }
+  }
+  return next(e)
+}
+
+// dialogGone tells Oriel the engine's dialog it was told of is answered: the call ran, or another came.
+async function dialogGone($: EngineInterface, st: State) {
+  if (!st.dialog) return
+  st.dialog = false
+  await event($, st, { kind: 'dialog-gone' })
+}
+
+// settle is the last call a person was asked about moving on (it ran, or another call or the turn's end came) with
+// no PermissionRequest reaching Oriel: a plugin above continued past its hook, and the engine's dialog answered.
+async function settle($: EngineInterface, st: State) {
+  if (st.pending) {
+    st.pending = false
+    if (!st.skipped) {
+      st.skipped = true
+      await $.store.set(SKIPPED, true).catch(() => undefined)
+    }
+  }
+  await dialogGone($, st)
 }
 
 async function abortTurn($: EngineInterface, st: State) {
@@ -204,6 +257,9 @@ export function register(on: On): void {
     servers: new Set(),
     unattended: false,
     mode: '',
+    pending: false,
+    skipped: false,
+    dialog: false,
   }
 
   on('session.start', async ($, e, next) => {
@@ -215,6 +271,7 @@ export function register(on: On): void {
     st.bin = (await $.env.get('ORIEL_BIN')) || 'oriel'
     st.sock = (await $.env.get('ORIEL_HOOK_SOCK')) || ''
     st.unattended = (await $.env.get('ORIEL_UNATTENDED')) === '1'
+    st.skipped = (await $.store.get(SKIPPED).catch(() => undefined)) === true
     await connect($, st)
     void poll($, st)
     return r
@@ -267,6 +324,8 @@ export function register(on: On): void {
       return r
     }
     st.working = false
+    if (e.isAborted) st.pending = false // an interrupt can end a dialog too
+    await settle($, st)
     void reportTurnEnd($, st, e as unknown as Args)
     return r
   })
@@ -295,22 +354,21 @@ export function register(on: On): void {
   // (core's verdict) still stands over it.
   on('tool.check', async ($, e, next) => {
     if (!st.active) return next(e)
-    const out = await host($, st, 'check', { tool: e.tool, input: e.input, agentId: e.agentId })
-    // No answer from Oriel: its own tools still run, and an MCP call is refused rather than left to a mode that
-    // might let it through unasked (the gateway's holds its own calls).
-    if (!out) {
-      if (st.tools.has(e.tool) || e.tool.startsWith('mcp__oriel__')) return { decision: 'allow' }
-      if (e.tool.startsWith('mcp__') && !e.tool.startsWith('mcp__oriel-gw__')) return { decision: 'deny', reason: CHECK_FAILED }
-      return next(e)
+    await settle($, st)
+    const v = await check($, st, e, next)
+    // A person answers it: Oriel's PermissionRequest hook below, or, where a managed plugin continues past that
+    // hook, only the engine's dialog in the terminal, which Oriel is told of here. Auto mode's classifier answers
+    // the mode's own asks; an organization's ceiling caps an allow at an ask.
+    const asks = v.decision === 'ask' && (v.plugin !== undefined || st.mode !== 'auto')
+    const real = e.tool_use_id !== undefined && e.approver !== 'host' // a call, not a query, and no host's callback answers it
+    if (real && e.tool !== 'AskUserQuestion' && (asks || (v.decision === 'allow' && e.ceiling === 'ask'))) {
+      st.pending = true
+      if (st.skipped) {
+        st.dialog = true
+        await event($, st, { kind: 'dialog', tool: e.tool, input: e.input })
+      }
     }
-    const reason = out?.reason ? String(out.reason) : undefined
-    if (out?.decision === 'allow' || out?.decision === 'deny') return { decision: out.decision, reason }
-    if (out?.decision === 'ask') {
-      const core = await next(e)
-      if (core.decision === 'deny' || (core.decision === 'allow' && core.rule)) return core
-      return { decision: 'ask', reason }
-    }
-    return next(e)
+    return v
   }).catch(passOn)
 
   // Fires only when the engine is about to open its dialog. Oriel answers it instead; with no answer from Oriel
@@ -319,7 +377,17 @@ export function register(on: On): void {
   on('classic.PermissionRequest', async ($, e, next) => {
     await noteMode($, st, e.permission_mode)
     const r = await next(e)
-    if (!st.active || r.decision || e.tool_name === 'AskUserQuestion') return r
+    if (!st.active || e.tool_name === 'AskUserQuestion') return r
+    st.pending = false
+    if (st.skipped) {
+      st.skipped = false // reached after all: whatever skipped it no longer does
+      await $.store.set(SKIPPED, false).catch(() => undefined)
+    }
+    if (r.decision) {
+      await dialogGone($, st)
+      return r
+    }
+    st.dialog = false // the permission Oriel is asked takes the dialog's place
     const id = `${Date.now()}-${++permSeq}`
     const out = await host(
       $,
@@ -339,6 +407,7 @@ export function register(on: On): void {
     return r
   }).catch(passOn)
 
+
   on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
     if (!st.active) return next(e)
     const questions = (e as unknown as Args).questions
@@ -351,6 +420,7 @@ export function register(on: On): void {
 
   // Oriel's own tools run on the host.
   on('tool.call', async ($, e, next) => {
+    await settle($, st)
     const name = st.tools.get(e.tool)
     if (!st.active || name === undefined) return next(e)
     const { tool: _tool, tool_use_id, agentId: _agent, requestMeta: _meta, ...input } = e as unknown as Args

@@ -109,7 +109,10 @@ carry on; **Check again** (`c`) looks now.
 ## Terminal
 
 The agent's own terminal shows a dialog that no hook passes on to Oriel, such as Claude's "Allow external CLAUDE.md
-file imports?", and the agent waits until someone answers it there. The card shows what the dialog asks. **Go to
+file imports?", and the agent waits until someone answers it there. Claude's permission dialog is one too where a
+plugin your organization manages keeps permission prompts from other plugins, Oriel's included (Claude's terminal
+says Oriel's PermissionRequest hook "was skipped"): Oriel learns this the first time a call waits on it, and from
+then on each such call shows here, titled with the call, until it runs. The card shows what the dialog asks. **Go to
 terminal** (`t`) opens the agent's raw terminal: answer the dialog with the arrow keys and `⏎`, or `Esc`. The card
 goes once you do.
 

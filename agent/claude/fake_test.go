@@ -52,10 +52,11 @@ type fake struct {
 	usage   bool     // /usage has been typed: the plan's windows are known
 	cancel  context.CancelFunc
 	seq     int
+	typed   chan string // lines typed into its terminal, for a dialog on it to read
 }
 
 func fakeClaude(args []string) int {
-	f := &fake{}
+	f := &fake{typed: make(chan string, 8)}
 	var plugin, resume, first string
 	for i := 0; i < len(args); i++ {
 		switch a := args[i]; a {
@@ -225,6 +226,10 @@ func (f *fake) terminal() {
 	}
 	sc := bufio.NewScanner(os.Stdin)
 	for sc.Scan() {
+		select {
+		case f.typed <- sc.Text():
+		default:
+		}
 		if strings.Trim(sc.Text(), " \x1b") == "/usage" {
 			note("usage")
 		}
@@ -362,6 +367,11 @@ func (f *fake) turn(text string) {
 		}
 	case "call a connector":
 		answer = f.connector(turnID)
+	case "call a connector, its dialog told first":
+		_ = f.hook("event", map[string]any{"kind": "dialog", "tool": fakeConnector, "input": json.RawMessage(`{"items":["topic.index"]}`)}, nil)
+		answer = f.connector(turnID)
+	case "call a connector past the org's plugin":
+		answer = f.skippedConnector()
 	case "ask me":
 		qs := map[string]any{"questions": []any{map[string]any{"question": "Which colour?", "header": "Colour", "multiSelect": false,
 			"options": []any{map[string]any{"label": "red", "description": "warm"}, map[string]any{"label": "blue", "description": "cool"}}}}}
@@ -460,6 +470,26 @@ func (f *fake) connector(turnID string) string {
 		f.result("toolu_conn", message, true)
 		return f.say("denied: " + message)
 	}
+	f.result("toolu_conn", "the index", false)
+	return f.say("ran: the index")
+}
+
+// skippedConnector calls a connector's tool where a managed plugin continues past the mod's PermissionRequest hook,
+// as the mod meets it once it's learnt that: its check asks, the mod tells Oriel the engine's dialog is up, and the
+// call runs once 1 is typed into the terminal, which the mod's tool.call hook tells Oriel.
+func (f *fake) skippedConnector() string {
+	input := json.RawMessage(`{"items":["topic.index"]}`)
+	f.use("toolu_conn", fakeConnector, input)
+	if c := f.check(fakeConnector, input); c.Decision != "ask" {
+		return f.say("not asked: " + c.Decision)
+	}
+	_ = f.hook("event", map[string]any{"kind": "dialog", "tool": fakeConnector, "input": input}, nil)
+	for l := range f.typed { // 1: the dialog's first choice, Yes
+		if l == "1" {
+			break
+		}
+	}
+	_ = f.hook("event", map[string]any{"kind": "dialog-gone"}, nil)
 	f.result("toolu_conn", "the index", false)
 	return f.say("ran: the index")
 }

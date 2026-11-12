@@ -77,6 +77,9 @@ type eventIn struct {
 	Servers []string `json:"servers,omitempty"`
 	// mode: the permission mode the session is in now, from a classic hook's permission_mode
 	Mode string `json:"mode,omitempty"`
+	// dialog: the call the engine's own dialog asks about
+	Tool  string          `json:"tool,omitempty"`
+	Input json.RawMessage `json:"input,omitempty"`
 }
 
 // backgroundTask is one of the Stop hook's background_tasks: a shell, subagent, monitor or workflow still running.

@@ -156,3 +156,49 @@ func TestAnMCPCallIsRefusedWhenOrielCantBeAsked(t *testing.T) {
 		})
 	}
 }
+
+// Where a managed plugin continues past the mod's PermissionRequest hook, only Claude's own dialog answers a call:
+// the mod says so, and the session raises Dialog with the call as its title, no Permission, until the call runs.
+func TestACallOnlyClaudesDialogAnswersRaisesDialog(t *testing.T) {
+	s := agenttest.Start(t, connectorHarness(t, func(s *agent.StartSpec) { s.Policy = agent.PolicyAsk }))
+	s.Send("call a connector past the org's plugin")
+	d := s.Wait("the dialog", func(ev agent.Event) bool { d, ok := ev.(agent.Dialog); return ok && d.Shown }).(agent.Dialog)
+	if !strings.HasPrefix(d.Title, "Allow "+fakeConnector) || !strings.HasSuffix(d.Title, "?") {
+		t.Errorf("the dialog's title is %q", d.Title)
+	}
+	if _, err := s.S.Terminal().Write([]byte("1\n")); err != nil {
+		t.Fatal(err)
+	}
+	s.Wait("the dialog gone", func(ev agent.Event) bool { d, ok := ev.(agent.Dialog); return ok && !d.Shown })
+	if got := s.Reply(); !strings.Contains(got, "ran: the index") {
+		t.Errorf("the reply is %q", got)
+	}
+	for _, ev := range s.Events {
+		if p, ok := ev.(agent.Permission); ok {
+			t.Errorf("Oriel raised a permission Claude's dialog answers: %+v", p)
+		}
+	}
+}
+
+// A permission the mod hands Oriel takes the place of a dialog it said was up (it had learnt its hook was skipped,
+// and is reached after all): the dialog goes as the permission comes.
+func TestAPermissionTakesTheDialogsPlace(t *testing.T) {
+	s := agenttest.Start(t, connectorHarness(t, func(s *agent.StartSpec) { s.Policy = agent.PolicyAsk }))
+	s.Send("call a connector, its dialog told first")
+	p := s.Wait("the permission", func(ev agent.Event) bool { _, ok := ev.(agent.Permission); return ok }).(agent.Permission)
+	var shown, gone bool
+	for _, ev := range s.Events {
+		if d, ok := ev.(agent.Dialog); ok {
+			shown, gone = shown || d.Shown, shown && !d.Shown
+		}
+	}
+	if !shown || !gone {
+		t.Errorf("before the permission, the dialog was shown %v and gone %v", shown, gone)
+	}
+	if err := s.S.Answer(context.Background(), p.ID, agent.Decision{Allow: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Reply(); !strings.Contains(got, "ran: the index") {
+		t.Errorf("the reply is %q", got)
+	}
+}

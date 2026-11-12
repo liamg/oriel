@@ -283,14 +283,27 @@ func (s *session) watchScreen(p []byte) {
 		s.push(agent.AuthRestored{Provider: "claude"})
 	}
 	if says.dialog {
-		s.mu.Lock()
-		shown := s.dialog
-		s.dialog = true
-		s.mu.Unlock()
-		if !shown {
-			s.push(agent.Dialog{Title: says.title, Shown: true})
-		}
+		s.dialogShown(says.title)
 	}
+}
+
+// dialogShown says the terminal shows a dialog asking title, once while it stays.
+func (s *session) dialogShown(title string) {
+	s.mu.Lock()
+	shown := s.dialog
+	s.dialog = true
+	s.mu.Unlock()
+	if !shown {
+		s.push(agent.Dialog{Title: title, Shown: true})
+	}
+}
+
+// callTitle is what the engine's dialog asks of a call: its tool, and what it's on.
+func callTitle(tool string, input json.RawMessage) string {
+	if sum := summary(tool, input); sum != "" {
+		return "Allow " + tool + ": " + sum + "?"
+	}
+	return "Allow " + tool + "?"
 }
 
 // typed sees what's typed into the terminal: Enter or Esc answers a dialog it shows.
@@ -449,6 +462,7 @@ func (s *session) handle(ctx context.Context, op string, body json.RawMessage) (
 		if err != nil {
 			return nil, nil, err
 		}
+		s.dialogGone() // Oriel asks it, in the dialog's place
 		return s.permission(ctx, in), nil, nil
 	case opQuestion:
 		in, err := decode[questionIn](body)
@@ -606,6 +620,10 @@ func (s *session) event(in eventIn) {
 		if in.Mode != "" {
 			s.push(agent.ModeChanged{Mode: in.Mode})
 		}
+	case "dialog":
+		s.dialogShown(callTitle(in.Tool, in.Input))
+	case "dialog-gone":
+		s.dialogGone()
 	case "tools-lost":
 		s.push(agent.Stale{Why: "its CLI dropped " + strings.Join(in.Servers, ", ")})
 	case "api-error":
