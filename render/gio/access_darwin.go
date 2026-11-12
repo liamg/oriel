@@ -355,18 +355,19 @@ static Class orielViewSubclass(Class base) {
 }
 
 // orielProbeAcceptsFirstMouse says Oriel's subclass of NSView takes a click that brings its window forward: its
-// acceptsFirstMouse: answers YES. It needs no window or main thread.
-static BOOL orielProbeAcceptsFirstMouse(void) {
+// acceptsFirstMouse: answers YES. It needs no window or main thread. An int, not a BOOL: BOOL is bool on arm64 and
+// a signed char on x86_64, and Go sees the two as different types.
+static int orielProbeAcceptsFirstMouse(void) {
 	Class sub = orielViewSubclass([NSView class]);
 	if (sub == nil) {
-		return NO;
+		return 0;
 	}
 	Method m = class_getInstanceMethod(sub, @selector(acceptsFirstMouse:));
 	if (m == NULL) {
-		return NO;
+		return 0;
 	}
 	BOOL (*f)(id, SEL, id) = (BOOL (*)(id, SEL, id))method_getImplementation(m);
-	return f(nil, @selector(acceptsFirstMouse:), nil);
+	return f(nil, @selector(acceptsFirstMouse:), nil) ? 1 : 0;
 }
 
 // orielAXAttach answers the view's accessibility questions from bridge h: its children, hit tests and focus. Gio's
