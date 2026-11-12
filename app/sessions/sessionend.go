@@ -24,8 +24,8 @@ import (
 
 // Ending a session (help shell/tabs#end): session.end archives or deletes one, and with no {how} opens the
 // End session dialog, which says per project what would be lost first. The tab's menu, the
-// Workspace page and Ship reach it through the command; closing the tab of a session that's done
-// (registry.SessionDone) opens it too.
+// Workspace page and Ship reach it through the command. session.close, a session tab's ✕, archives it, asking first
+// when something would be lost or when it's done (registry.SessionDone), when deleting it is offered too.
 
 // SessionEndKeyMode is the End session dialog's keys: ⌘↵ ends it, Esc cancels.
 const SessionEndKeyMode = "session.end"
@@ -40,9 +40,8 @@ var endHows = []string{"Archive", "Delete"}
 
 type End struct {
 	kit.Disposer
-	h      plugin.Host
-	ask    *endAsk
-	ending map[core.SessionID]bool // sessions whose tab end closes, so closing it asks nothing
+	h   plugin.Host
+	ask *endAsk
 }
 
 // endAsk is the dialog while it's open.
@@ -52,13 +51,14 @@ type endAsk struct {
 	picked       bool
 	deleteBranch bool
 	focus        bool
+	closing      bool   // its tab was closed: with nothing to lose and not done, it's archived without asking
 	done         string // why it looks finished, when closing its tab opened the dialog
 }
 
 func (x *End) Manifest() plugin.Manifest { return plugin.Manifest{ID: "sessionend"} }
 
 func (x *End) Activate(_ context.Context, h plugin.Host) error {
-	x.h, x.ending = h, map[core.SessionID]bool{}
+	x.h = h
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -77,7 +77,7 @@ func (x *End) Activate(_ context.Context, h plugin.Host) error {
 	for _, it := range []registry.MenuItem{
 		{Name: "session.close-tab", Label: "Close tab", Group: "session", Order: 10, When: registry.MenuWhen{Subject: kit.SessionSubject, Help: "shell/tabs"},
 			Source: "builtin:sessionend", Run: onSession(func(ctx registry.Ctx, id string) error {
-				return h.Run(ctx, "session.close-tab", registry.Args{"id": id})
+				return h.Run(ctx, "session.close", registry.Args{"id": id})
 			})},
 		{Name: "session.end", Label: "End session…", Group: "session", Order: 90, When: registry.MenuWhen{Subject: kit.SessionSubject},
 			Source: "builtin:sessionend", Run: onSession(func(ctx registry.Ctx, id string) error {
@@ -94,11 +94,6 @@ func (x *End) Activate(_ context.Context, h plugin.Host) error {
 			x.archiveIfMerged(ctx, core.SessionID(ev.Session))
 			return registry.Verdict{}, nil
 		}))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
-		if e, ok := ev.(core.TabClosed); ok {
-			h.Do(func() { x.offer(e.ID) })
-		}
-	})))
 	x.Add(h.View(kit.OverlayPrefix+"session-end", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "session-end", Fn: x.view}
 	})))
@@ -124,6 +119,10 @@ func (x *End) commands() []registry.Command {
 				}
 				return fmt.Errorf("a session ends by archive or delete, not %q", a.String("how"))
 			}},
+		{ID: "session.close", Title: "Close {id}, or the session in front: stop its agent and archive it, asking first when something would be lost, or archive or delete it when it's done",
+			Available: has, Run: func(_ registry.Ctx, a registry.Args) error {
+				return x.close(core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus))))
+			}},
 		{ID: "session.end.confirm", Title: "End the session as the End session dialog says", Available: open,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.confirm(ctx) }},
 		{ID: "session.end.cancel", Title: "Close the End session dialog, ending nothing", Available: open,
@@ -143,25 +142,18 @@ func (x *End) open(id core.SessionID) error {
 	return nil
 }
 
-// offer opens the dialog on id once its tab closed, if it looks done, its local branches ticked to go.
-func (x *End) offer(id core.SessionID) {
-	if x.ending[id] {
-		delete(x.ending, id)
-		return
+// close opens the dialog on id to archive it once its projects are read afresh; one that looks done offers delete
+// too, its local branches ticked to go, and one with nothing to lose is archived without asking (view).
+func (x *End) close(id core.SessionID) error {
+	if err := x.open(id); err != nil {
+		return err
 	}
-	s, ok := x.h.State().Session(id)
-	if !ok || x.ask != nil || slices.Contains(x.h.State().Tabs, id) {
-		return
+	s, _ := x.h.State().Session(id)
+	x.ask.closing = true
+	if why := registry.Done(x.h, s.Snapshot()); why != "" {
+		x.ask.done, x.ask.deleteBranch = why, true
 	}
-	se := s.Snapshot()
-	if se.Archived {
-		return
-	}
-	why := registry.Done(x.h, se)
-	if why == "" || x.open(id) != nil {
-		return
-	}
-	x.ask.done, x.ask.deleteBranch = why, true
+	return nil
 }
 
 // preview is the session's projects as Ship last read them, and how far that read is.
@@ -209,14 +201,15 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 	}
 }
 
-// settle picks the choice the dialog starts on, until one is picked: Archive once anything left the machine, Delete
-// otherwise; a session whose kind can't be deleted (a direct one's directory isn't Oriel's) archives.
+// settle picks the choice the dialog starts on, until one is picked: Archive once anything left the machine or when
+// closing a tab of a session that isn't done, Delete otherwise; a session whose kind can't be deleted (a direct one's
+// directory isn't Oriel's) archives.
 func (a *endAsk) settle(canDelete bool, ships []registry.ProjectShip, st widget.LoadState) {
 	switch {
 	case !canDelete:
 		a.how = 0
 	case a.picked || st.Loading():
-	case leftMachine(ships):
+	case leftMachine(ships), a.closing && a.done == "":
 		a.how = 0
 	default:
 		a.how = 1
@@ -253,13 +246,9 @@ func (x *End) end(ctx registry.Ctx, r host.EndReq) error {
 	if s, ok := x.h.State().Session(r.Session); ok {
 		name = kit.Label(s.Snapshot())
 	}
-	for _, t := range x.h.State().Tabs {
-		if t == r.Session {
-			x.ending[r.Session] = true
-			if err := x.h.Run(ctx, "session.close-tab", registry.Args{"id": string(r.Session)}); err != nil {
-				delete(x.ending, r.Session)
-				return err
-			}
+	if slices.Contains(x.h.State().Tabs, r.Session) {
+		if err := x.h.Run(ctx, "session.close-tab", registry.Args{"id": string(r.Session)}); err != nil {
+			return err
 		}
 	}
 	doing := "Archiving " + name
@@ -293,6 +282,15 @@ func (x *End) view(c *ui.Ctx) {
 	}
 	se := s.Snapshot()
 	ships, st := x.preview(c, se)
+	if a.closing && a.done == "" && st.Phase == widget.Ready && !slices.ContainsFunc(lossesOf(se, ships, a.deleteBranch), loss.matters) {
+		x.ask = nil
+		x.h.Do(func() {
+			if err := x.end(context.Background(), host.EndReq{Session: a.id}); err != nil {
+				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, Session: a.id, Text: err.Error(), Time: time.Now()})
+			}
+		})
+		return
+	}
 	a.settle(registry.Can(x.h, se.Kind, core.Delete), ships, st)
 	th := c.Theme()
 	size := c.Size()
@@ -384,43 +382,42 @@ func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.
 	}
 }
 
-// losses are, per project, what ending it this way would lose or leave behind; then the agent and its sandbox.
-func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.ProjectShip, width float32) {
-	th := c.Theme()
-	line := func(key, glyph string, tone render.Color, text string) {
-		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleText, Label: text}, func(c *ui.Ctx) {
-			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
-			widget.Wrap(c, "t", text, width-24, kit.UIFont(12.5, th.C(theme.FgMuted)))
-		})
-	}
-	warn, info := th.C(theme.Warn), th.C(theme.FgFaint)
-	n := 0
+// loss is a line of what ending a session would lose or leave behind.
+type loss struct {
+	key, text string
+	alarm     bool // marked !, not ·
+	warn      bool // in the warning colour
+	info      bool // worth knowing, but nothing to stop for
+}
+
+func (l loss) matters() bool { return !l.info }
+
+// lossesOf are, per project, what archiving or deleting se would lose or leave behind; then its agent and sandbox.
+func lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch bool) []loss {
+	var out []loss
 	for _, s := range ships {
 		if s.ReadOnly {
 			continue
 		}
 		if k := len(s.Files); k > 0 {
-			line(s.Project+"/files", "!", warn, fmt.Sprintf("%s: %s uncommitted, lost: %s", s.Project, kit.Counted(k, "file"), previewed(s.Files)))
-			n++
+			out = append(out, loss{key: s.Project + "/files", alarm: true, warn: true,
+				text: fmt.Sprintf("%s: %s uncommitted, lost: %s", s.Project, kit.Counted(k, "file"), previewed(s.Files))})
 		}
 		if k := s.Unpushed; k > 0 {
 			fate := "they stay on its branch"
-			tone := info
-			if a.deleteBranch {
-				fate, tone = "lost with its branch", warn
+			if deleteBranch {
+				fate = "lost with its branch"
 			}
-			line(s.Project+"/unpushed", "!", tone, fmt.Sprintf("%s: %s not pushed: %s", s.Project, kit.Counted(k, "commit"), fate))
-			n++
+			out = append(out, loss{key: s.Project + "/unpushed", alarm: true, warn: deleteBranch,
+				text: fmt.Sprintf("%s: %s not pushed: %s", s.Project, kit.Counted(k, "commit"), fate)})
 		}
 		if s.PR.Open() {
 			w := kit.WordsOf(s.Code)
-			line(s.Project+"/pr", "·", info, fmt.Sprintf("%s: %s%d stays open on %s", s.Project, w.Sigil, s.PR.Number, s.Code.Label()))
-			n++
+			out = append(out, loss{key: s.Project + "/pr", text: fmt.Sprintf("%s: %s%d stays open on %s", s.Project, w.Sigil, s.PR.Number, s.Code.Label())})
 		}
 	}
 	if se.Agent.Working {
-		line("agent", "!", warn, "The agent is mid-turn: it's stopped where it is.")
-		n++
+		out = append(out, loss{key: "agent", alarm: true, warn: true, text: "The agent is mid-turn: it's stopped where it is."})
 	}
 	var helpers []string
 	for _, sa := range se.Subagents {
@@ -437,15 +434,37 @@ func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registr
 		{"processes", "process", "processes", tasks(se.Agent.Processes)},
 	} {
 		if k := len(w.names); k > 0 {
-			line(w.key, "!", warn, fmt.Sprintf("%d %s still running, stopped with the agent: %s", k, kit.Plural(k, w.one, w.many), previewed(w.names)))
-			n++
+			out = append(out, loss{key: w.key, alarm: true, warn: true,
+				text: fmt.Sprintf("%d %s still running, stopped with the agent: %s", k, kit.Plural(k, w.one, w.many), previewed(w.names))})
 		}
 	}
 	if se.Agent.Sandboxed && se.Agent.Running {
-		line("sandbox", "·", info, "Its sandbox stops.")
-		n++
+		out = append(out, loss{key: "sandbox", info: true, text: "Its sandbox stops."})
 	}
-	if n == 0 {
+	return out
+}
+
+// losses draws lossesOf, or that nothing is lost.
+func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.ProjectShip, width float32) {
+	th := c.Theme()
+	line := func(key, glyph string, tone render.Color, text string) {
+		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleText, Label: text}, func(c *ui.Ctx) {
+			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
+			widget.Wrap(c, "t", text, width-24, kit.UIFont(12.5, th.C(theme.FgMuted)))
+		})
+	}
+	ls := lossesOf(se, ships, a.deleteBranch)
+	for _, l := range ls {
+		glyph, tone := "·", th.C(theme.FgFaint)
+		if l.alarm {
+			glyph = "!"
+		}
+		if l.warn {
+			tone = th.C(theme.Warn)
+		}
+		line(l.key, glyph, tone, l.text)
+	}
+	if len(ls) == 0 {
 		line("none", "✓", th.C(theme.OK), "Nothing unsaved is lost.")
 	}
 }

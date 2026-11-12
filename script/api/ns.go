@@ -388,7 +388,7 @@ func (s Session) Chips(name string, fn *script.Fn, where string) error {
 	return nil
 }
 
-//oriel:api doc="Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to end it."
+//oriel:api doc="Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it."
 func (s Session) Done(name string, fn *script.Fn, where string) error {
 	s.a.own(s.a.Host.Contribute(registry.SessionDone{Name: name, Source: where, Done: func(se core.SessionState) string {
 		out, err := s.a.VM.Call(fn, sessionTable(se))

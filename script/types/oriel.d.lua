@@ -383,7 +383,7 @@ oriel.session = {}
 ---@param fn function
 function oriel.session.chips(name, fn) end
 
---- Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to end it.
+--- Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it.
 ---@param name string
 ---@param fn function
 function oriel.session.done(name, fn) end

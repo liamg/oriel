@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -207,7 +208,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 				}
 				if hover {
 					if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close " + s.Name(), Help: "shell/tabs", Size: 16}) {
-						h.Run(context.Background(), "session.close-tab", registry.Args{"id": string(s.ID())})
+						closeSession(h, s.ID())
 					}
 				} else if i < 9 {
 					c.Text("key", fmt.Sprintf("⌘%d", i+1), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium},
@@ -253,6 +254,19 @@ func openTabs(st core.State) []core.Session {
 		}
 	}
 	return out
+}
+
+// closeSession is a session tab's ✕: session.close, which ends the session, or with nothing contributing it, closing
+// its tab.
+func closeSession(h plugin.Host, id core.SessionID) {
+	args := registry.Args{"id": string(id)}
+	cmd := "session.close"
+	if !h.Available(cmd, args) {
+		cmd = "session.close-tab"
+	}
+	if err := h.Run(context.Background(), cmd, args); err != nil {
+		h.Notify(core.Notice{ID: cmd, Severity: core.SevError, Source: "shell", Key: true, Text: err.Error(), Time: time.Now()})
+	}
 }
 
 // close closes id's tab, or the front one's. The one in front hands the front to its neighbour, or to the start view.

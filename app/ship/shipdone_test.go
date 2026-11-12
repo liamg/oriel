@@ -6,12 +6,12 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
 
 // Closing the tab of a session whose PRs are all merged, with nothing uncommitted or unpushed, offers to end it,
-// its local branches ticked to go; ⌘↵ archives it and deletes them. While its PR is open, the tab just closes.
+// its local branches ticked to go; ⌘↵ archives it and deletes them. While its PR is open, closing it warns that the PR
+// stays open.
 func TestClosingAShippedSessionOffersToEndIt(t *testing.T) {
 	s, _, hub, se, pr := raisedScene(t)
 	x := shipOf(s)
@@ -20,15 +20,15 @@ func TestClosingAShippedSessionOffersToEndIt(t *testing.T) {
 		s.Until("its tab", func() bool { return s.FindRole(render.RoleTab, se.Name) != nil })
 		s.RightClick(apptest.Centre(s.NodeRole(render.RoleTab, se.Name).Bounds))
 		s.ClickText("Close tab")
-		s.UntilState("the tab closed", func(st core.State) bool { return len(st.Tabs) == 0 })
 	}
 
 	closeTab()
-	s.Frames(3)
-	if s.Has("END SESSION") {
-		t.Fatal("closing a session with an open PR offered to end it")
+	s.Until("the End session dialog", func() bool { return s.Has("END SESSION", "stays open on GitHub") })
+	if s.Has("Every pull request is merged") {
+		t.Fatal("a session with an open PR is called done")
 	}
-	s.Run("session.focus", registry.Args{"id": string(se.ID)})
+	s.ClickText("Cancel")
+	s.Until("the dialog closed", func() bool { return !s.Has("END SESSION") })
 
 	hub.Merge("acme/search-api", pr.Number)
 	s.Run("ship.refresh", nil)
