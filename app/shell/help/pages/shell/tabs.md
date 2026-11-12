@@ -7,8 +7,9 @@ related: [shell/omnibox, errors]
 # Session tabs
 
 Each session has a tab across the top, its name over a line of its state and its key. The session in front is the
-window under the tabs: its tab is cut from the same surface and runs into it, while the others sit on the darker band
-above, so the session tabs never look like the file tabs inside it. More tabs than fit scroll sideways.
+window under the tabs: its tab is cut from the same surface and runs into it, while the others sit on the band
+above (a step lighter than a dark window, darker than a light one), so the session tabs never look like the file
+tabs inside it. More tabs than fit scroll sideways.
 
 A tab's mark is its status, by shape as well as colour: a red `!` needs you, a
 violet `?` wants permission, a cyan spinner is working, a blue `◌` is waiting on CI, a pink `…` is with a reviewer, a

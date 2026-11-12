@@ -23,7 +23,9 @@ import (
 var (
 	// The band the tabs sit on is a step deeper than the surface under it, so the tab in front, filled with that
 	// surface, reads as the top of the window below it.
-	tTitleBg   = theme.Declare("titlebar.bg", "darken(bg.surface, 6%)")
+	// A step from the window toward the text: lighter than a dark window, darker than a light one, so the band always
+	// stands apart and the tab in front reads as cut from the window under it.
+	tTitleBg   = theme.Declare("titlebar.bg", "mix(bg.surface, fg, 8%)")
 	tTitleLine = theme.Declare("titlebar.line", "line.strong")
 	tTabOn     = theme.Declare("session.tab.active.bg", "bg.surface")
 	tTabHover  = theme.Declare("session.tab.hover.bg", "alpha(bg.surface, 55%)")

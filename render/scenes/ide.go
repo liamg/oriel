@@ -70,8 +70,8 @@ const (
 )
 
 func (c *Canvas) titlebar() {
-	// The band is a step deeper than the surface under it, as the title bar's token makes it.
-	band := theme.Lighten(c.p.bg1, -.06)
+	// The band is a step from the surface under it toward the text, as the title bar's token makes it.
+	band := theme.Mix(c.p.bg1, c.p.fg, .08)
 	c.Fill(Rect{0, 0, IDEWidth, titleH}, band)
 	cy := float32(titleH) / 2
 

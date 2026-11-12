@@ -403,3 +403,27 @@ func TestASessionTabIsItsNameOverItsState(t *testing.T) {
 		}
 	}
 }
+
+// The title bar's band stands apart from the window under it in every built-in theme, dark and light, so the tabs
+// behind read as tabs on a band and the one in front as cut from the window: a step a person sees, by contrast ratio
+// (lightness alone misleads near black, where a large step in L is a small one on screen).
+func TestTheTitleBarStandsApartFromTheWindow(t *testing.T) {
+	const min = 1.1
+	for _, src := range theme.Builtins() {
+		st, err := theme.Stack(theme.Builtins(), src.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, v := range []theme.Variant{theme.Dark, theme.Light} {
+			r, err := theme.Resolve(st, v)
+			if err != nil {
+				continue // a theme without that variant
+			}
+			band, _ := r.Color("titlebar.bg")
+			surface, _ := r.Color("bg.surface")
+			if got := theme.ContrastRatio(band, surface); got < min {
+				t.Errorf("%s %s: the band %s on the window %s is %.3f:1, under %.2f:1", src.Name(), v, theme.Hex(band), theme.Hex(surface), got, min)
+			}
+		}
+	}
+}

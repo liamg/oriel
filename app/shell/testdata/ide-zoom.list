@@ -1,5 +1,5 @@
 backdrop #060606
-rect 0,0 1066.6666x50 fill #030302
+rect 0,0 1066.6666x50 fill #1a1a18
 effect glow-disc 16.86,20.16 11x11 blur 4 #ff8a1f38
 effect glow 28.96,20.16 2.8600006x11 blur 4 #ff8a1f4d
 path 6 segments stroke 1.76 #ffd23f

@@ -1,6 +1,6 @@
 backdrop #060606
 rect 0,0 1600x1000 fill #060606
-rect 0,0 1600x50 fill #030302
+rect 0,0 1600x50 fill #1a1a18
 effect glow-disc 16.86,20.16 11x11 blur 4 #ffaa2838
 effect glow 28.96,20.16 2.8600006x11 blur 4 #ffaa284d
 path 6 segments stroke 1.76 #ffd23f
@@ -10,8 +10,8 @@ rect 107.9375,8 148.35938x18 fill #0c0c0b radius 9
 rect 107.9375,17 148.35938x33 fill #0c0c0b
 rect 98.9375,41 9x9 fill #0c0c0b
 rect 256.29688,41 9x9 fill #0c0c0b
-path 6 segments fill #030302
-path 6 segments fill #030302
+path 6 segments fill #1a1a18
+path 6 segments fill #1a1a18
 path 6 segments fill #4cc9f0
 text "pricing-rounding" @134.9375,25.54712 #ece6d8 Inter 12.5
 text "plan" @135.9375,42.6 #7c7566 JetBrains Mono 10
