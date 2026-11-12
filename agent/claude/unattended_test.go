@@ -2,6 +2,7 @@ package claude
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -50,5 +51,48 @@ func TestModRefusesUnattendedDialogs(t *testing.T) {
 		if !strings.Contains(string(ts), want) {
 			t.Errorf("register.ts lacks %s", want)
 		}
+	}
+}
+
+// The PermissionRequest settings hook answers as the mod's hook did: Allow always hands back the call's suggestions
+// as the rules to keep, a deny its words; with no answer the dialog opens, unless nobody is there to answer it.
+func TestThePermissionHookAnswers(t *testing.T) {
+	newSession := func(unattended bool) *session {
+		return &session{spec: agent.StartSpec{Unattended: unattended}, events: eventq.New(), asks: map[string]chan agent.Decision{}}
+	}
+	sugg := json.RawMessage(`[{"type":"addRules","rules":[{"toolName":"Bash"}],"behavior":"allow","destination":"localSettings"}]`)
+	in := classicIn{Event: "PermissionRequest", Tool: "Bash", Input: json.RawMessage(`{"command":"ls"}`), Suggestions: sugg}
+	answered := func(s *session, d agent.Decision) any {
+		out := make(chan any, 1)
+		go func() { out <- s.classic(context.Background(), in) }()
+		for ev := range s.events.Out() {
+			if p, ok := ev.(agent.Permission); ok {
+				if err := s.Answer(context.Background(), p.ID, d); err != nil {
+					t.Fatal(err)
+				}
+				break
+			}
+		}
+		return <-out
+	}
+	r, ok := answered(newSession(false), agent.Decision{Allow: true, Always: true}).(permissionHookOut)
+	if !ok || r.Specific.Event != "PermissionRequest" || r.Specific.Decision.Behavior != "allow" || string(r.Specific.Decision.UpdatedPermissions) != string(sugg) {
+		t.Errorf("allowed always: %+v", r)
+	}
+	r, ok = answered(newSession(false), agent.Decision{Note: "not now"}).(permissionHookOut)
+	if !ok || r.Specific.Decision.Behavior != "deny" || r.Specific.Decision.Message != "Denied by the user: not now" {
+		t.Errorf("denied: %+v", r)
+	}
+
+	gone, cancel := context.WithCancel(context.Background())
+	cancel()
+	if out := newSession(false).classic(gone, in); out != (struct{}{}) {
+		t.Errorf("unanswered: %+v, want nothing (the dialog)", out)
+	}
+	if r, ok := newSession(true).classic(gone, in).(permissionHookOut); !ok || r.Specific.Decision.Behavior != "deny" || r.Specific.Decision.Message != agent.UnattendedRefusal {
+		t.Errorf("unanswered, unattended: %+v", r)
+	}
+	if out := newSession(false).classic(gone, classicIn{Event: "PermissionRequest", Tool: "AskUserQuestion"}); out != (struct{}{}) {
+		t.Errorf("the agent's question: %+v, want it left to the mod", out)
 	}
 }

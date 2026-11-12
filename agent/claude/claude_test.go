@@ -176,7 +176,8 @@ func TestAModeSwitchIsReportedAndResumed(t *testing.T) {
 func TestArgs(t *testing.T) {
 	spec := agent.StartSpec{Model: "opus", Effort: "high", Pack: agent.Pack{Skill: "plan"}, Prompt: "add a cache"}
 	a, _ := args(spec, "/m", "s1", "")
-	want := []string{"--plugin-dir", "/m", "--permission-mode", "default", "--model", "opus", "--effort", "high", "--session-id", "s1", "/oriel:plan add a cache"}
+	hooks, _ := json.Marshal(map[string]any{"hooks": classicHooks()})
+	want := []string{"--plugin-dir", "/m", "--permission-mode", "default", "--model", "opus", "--effort", "high", "--settings", string(hooks), "--session-id", "s1", "/oriel:plan add a cache"}
 	if !slices.Equal(a, want) {
 		t.Errorf("fresh = %q\nwant %q", a, want)
 	}
@@ -199,7 +200,7 @@ func TestArgs(t *testing.T) {
 	// AGENTS.md: "Claude is driven through its interactive CLI in a PTY with hooks, never claude -p". A utility
 	// agent (the assistant) is no exception: its turn goes in as the skill's prompt.
 	a, _ = args(agent.StartSpec{Model: "haiku", Pack: agent.Pack{Skill: "assistant"}, Prompt: "what needs me?"}, "/m", "s1", "")
-	want = []string{"--plugin-dir", "/m", "--permission-mode", "default", "--model", "haiku", "--session-id", "s1", "/oriel:assistant what needs me?"}
+	want = []string{"--plugin-dir", "/m", "--permission-mode", "default", "--model", "haiku", "--settings", string(hooks), "--session-id", "s1", "/oriel:assistant what needs me?"}
 	if !slices.Equal(a, want) || slices.Contains(a, "-p") || slices.Contains(a, "--print") {
 		t.Errorf("the assistant = %q\nwant %q", a, want)
 	}
@@ -228,7 +229,7 @@ func TestRefuseAllowsOrielsToolsAndAllow(t *testing.T) {
 		t.Errorf("settings = %s", a[i+1])
 	}
 	a, _ = args(agent.StartSpec{Policy: agent.PolicyAsk, Allow: []string{"WebSearch"}}, "/m", "s1", "")
-	if slices.Contains(a, "--settings") {
+	if _, ok := settingsArg(t, a)["permissions"]; ok {
 		t.Errorf("a gate that asks had what it allows put ahead: %q", a)
 	}
 }
@@ -268,13 +269,27 @@ func TestInheritedEnvLeavesAParentSessionOut(t *testing.T) {
 // Outside a sandbox, the memory directory goes on the command line; a sandbox's settings.json has it.
 func TestArgsSetTheMemoryDirectory(t *testing.T) {
 	a, _ := args(agent.StartSpec{Memory: "/mem"}, "/m", "s1", "s1")
-	if i := slices.Index(a, "--settings"); i < 0 || a[i+1] != `{"autoMemoryDirectory":"/mem"}` {
+	if m := settingsArg(t, a)["autoMemoryDirectory"]; m != "/mem" {
 		t.Errorf("args = %q", a)
 	}
 	a, _ = args(agent.StartSpec{Memory: "/mem", Sandbox: &agent.Sandbox{}}, "/m", "s1", "")
-	if slices.Contains(a, "--settings") {
+	if _, ok := settingsArg(t, a)["autoMemoryDirectory"]; ok {
 		t.Errorf("sandboxed args = %q", a)
 	}
+}
+
+// settingsArg is the settings on claude's command line.
+func settingsArg(t *testing.T, a []string) map[string]any {
+	t.Helper()
+	i := slices.Index(a, "--settings")
+	if i < 0 {
+		t.Fatalf("no --settings in %q", a)
+	}
+	var v map[string]any
+	if err := json.Unmarshal([]byte(a[i+1]), &v); err != nil {
+		t.Fatal(err)
+	}
+	return v
 }
 
 func TestWriteMod(t *testing.T) {
@@ -646,6 +661,57 @@ func TestTurnEndCarriesBackgroundWork(t *testing.T) {
 	end := s.Wait("the turn's end", func(ev agent.Event) bool { _, ok := ev.(agent.TurnEnd); return ok }).(agent.TurnEnd)
 	if len(end.Background) != 1 || end.Background[0] != (core.BackgroundTask{Kind: "shell", Description: "Run the suite"}) {
 		t.Errorf("background = %+v", end.Background)
+	}
+}
+
+// A turn the API ended once Claude Code's retries ran out is reported from its StopFailure settings hook.
+func TestAnAPIFailureIsReported(t *testing.T) {
+	h := fakeHarness(t)
+	s := agenttest.Start(t, h)
+	s.Wait("ready", func(ev agent.Event) bool { _, ok := ev.(agent.Ready); return ok })
+	s.Send("fail at the api")
+	f := s.Wait("the failure", func(ev agent.Event) bool { _, ok := ev.(agent.Failure); return ok }).(agent.Failure)
+	if f.Err != "overloaded: Overloaded" || !f.Retryable {
+		t.Errorf("failure = %+v", f)
+	}
+}
+
+// Oriel's classic hooks are settings hooks passed with --settings, on the host and in a sandbox alike: Claude Code
+// runs them beneath every plugin, so a plugin that skips the plugins people install (its built-in sec-default, on a
+// Team plan) still reaches them. Nothing is written to the user's settings.
+func TestClassicHooksArePassedAsSettings(t *testing.T) {
+	for _, spec := range []agent.StartSpec{{Policy: agent.PolicyAsk}, {Policy: agent.PolicyAsk, Sandbox: &agent.Sandbox{Name: "box"}}, {Policy: agent.PolicyAsk, Memory: "/mem"}} {
+		a, err := args(spec, "/m", "s1", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var settings []string
+		for i := 0; i+1 < len(a); i++ {
+			if a[i] == "--settings" {
+				settings = append(settings, a[i+1])
+			}
+		}
+		if len(settings) != 1 {
+			t.Fatalf("%+v: --settings %q, want one", spec, settings)
+		}
+		var v struct {
+			Memory string `json:"autoMemoryDirectory"`
+			Hooks  map[string][]struct {
+				Hooks []struct{ Type, Command string } `json:"hooks"`
+			} `json:"hooks"`
+		}
+		if err := json.Unmarshal([]byte(settings[0]), &v); err != nil {
+			t.Fatal(err)
+		}
+		for _, ev := range []string{"PermissionRequest", "Stop", "StopFailure", "UserPromptSubmit"} {
+			g := v.Hooks[ev]
+			if len(g) != 1 || len(g[0].Hooks) != 1 || g[0].Hooks[0].Type != "command" || g[0].Hooks[0].Command != `"$ORIEL_BIN" hook classic` {
+				t.Errorf("%+v: %s hooks = %+v", spec, ev, g)
+			}
+		}
+		if want := map[bool]string{true: "/mem"}[spec.Memory != "" && spec.Sandbox == nil]; v.Memory != want {
+			t.Errorf("%+v: memory = %q, want %q", spec, v.Memory, want)
+		}
 	}
 }
 

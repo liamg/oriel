@@ -413,11 +413,11 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 	return a, nil
 }
 
-// settings are the session's own settings on claude's command line: its memory directory (a sandbox's settings.json
-// has it already), and under PolicyRefuse what's allowed ahead, since dontAsk refuses everything else: Oriel's tools
-// and the spec's Allow.
+// settings are the session's own settings on claude's command line, where nothing is written to the user's own:
+// Oriel's classic hooks, its memory directory (a sandbox's settings.json has it already), and under PolicyRefuse
+// what's allowed ahead, since dontAsk refuses everything else: Oriel's tools and the spec's Allow.
 func settings(s agent.StartSpec) map[string]any {
-	set := map[string]any{}
+	set := map[string]any{"hooks": classicHooks()}
 	if s.Memory != "" && s.Sandbox == nil {
 		set["autoMemoryDirectory"] = s.Memory
 	}
@@ -429,6 +429,22 @@ func settings(s agent.StartSpec) map[string]any {
 		set["enableAllProjectMcpServers"] = true
 	}
 	return set
+}
+
+// classicHooks are Oriel's settings hooks. Claude Code runs settings hooks beneath every plugin: a plugin seated
+// above Oriel's mod that skips the plugins people install (its built-in sec-default, seated on Team and Enterprise
+// plans) skips the mod's classic hooks, but not these. Each hands its input to the session (op classic); a
+// permission waits as long as the mod's asks do.
+func classicHooks() map[string]any {
+	hook := func(timeout int) []any {
+		return []any{map[string]any{"hooks": []any{map[string]any{"type": "command", "command": `"$ORIEL_BIN" hook classic`, "timeout": timeout}}}}
+	}
+	return map[string]any{
+		"PermissionRequest": hook(600),
+		"Stop":              hook(30),
+		"StopFailure":       hook(30),
+		"UserPromptSubmit":  hook(30),
+	}
 }
 
 // maxArgPrompt is the longest first prompt claude's command line carries, under Linux's 128 KiB an argument.

@@ -52,6 +52,7 @@ type fake struct {
 	usage   bool     // /usage has been typed: the plan's windows are known
 	cancel  context.CancelFunc
 	seq     int
+	hooks   map[string][]string // the settings hooks' commands by event, from --settings
 }
 
 func fakeClaude(args []string) int {
@@ -71,7 +72,13 @@ func fakeClaude(args []string) int {
 		case "--permission-mode":
 			i++
 			f.mode = args[i]
-		case "--model", "--effort", "--mcp-config", "--settings":
+		case "--settings":
+			i++
+			if err := f.readSettings(args[i]); err != nil {
+				fmt.Fprintln(os.Stderr, "fake claude: --settings:", err)
+				return 2
+			}
+		case "--model", "--effort", "--mcp-config":
 			i++
 		case "--strict-mcp-config", "--":
 		default:
@@ -141,6 +148,85 @@ func fakeClaude(args []string) int {
 		f.turn(text)
 	}
 	return 0
+}
+
+// readSettings keeps the hooks of --settings' JSON.
+func (f *fake) readSettings(arg string) error {
+	var v struct {
+		Hooks map[string][]struct {
+			Hooks []struct {
+				Type    string `json:"type"`
+				Command string `json:"command"`
+			} `json:"hooks"`
+		} `json:"hooks"`
+	}
+	if err := json.Unmarshal([]byte(arg), &v); err != nil {
+		return err
+	}
+	f.hooks = map[string][]string{}
+	for ev, groups := range v.Hooks {
+		for _, g := range groups {
+			for _, h := range g.Hooks {
+				if h.Type == "command" {
+					f.hooks[ev] = append(f.hooks[ev], h.Command)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// classic runs the settings hooks for event as Claude Code does: each command in a shell with the event's input on
+// stdin, the session's base fields added. out is the last hook's answer.
+func (f *fake) classic(event string, in map[string]any, out any) error {
+	cwd, _ := os.Getwd()
+	body := map[string]any{"hook_event_name": event, "session_id": f.id, "transcript_path": f.log, "cwd": cwd, "permission_mode": f.mode}
+	for k, v := range in {
+		body[k] = v
+	}
+	b, _ := json.Marshal(body)
+	for _, c := range f.hooks[event] {
+		cmd := exec.Command("sh", "-c", c)
+		cmd.Stdin = bytes.NewReader(b)
+		var stderr bytes.Buffer
+		cmd.Stderr = &stderr
+		o, err := cmd.Output()
+		if err != nil {
+			return fmt.Errorf("%s hook: %w: %s", event, err, stderr.String())
+		}
+		if out != nil && len(bytes.TrimSpace(o)) > 0 {
+			if err := json.Unmarshal(o, out); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// permissionHook is a PermissionRequest hook's answer.
+type permissionHook struct {
+	HookSpecificOutput struct {
+		HookEventName string `json:"hookEventName"`
+		Decision      struct {
+			Behavior           string          `json:"behavior"`
+			Message            string          `json:"message"`
+			UpdatedPermissions json.RawMessage `json:"updatedPermissions"`
+		} `json:"decision"`
+	} `json:"hookSpecificOutput"`
+}
+
+// permission fires PermissionRequest for a call, as Claude Code does before it opens its dialog: the settings hooks'
+// decision, or none (the dialog).
+func (f *fake) permission(tool string, input, suggestions json.RawMessage) (decision, message string) {
+	var p permissionHook
+	in := map[string]any{"tool_name": tool, "tool_input": input}
+	if suggestions != nil {
+		in["permission_suggestions"] = suggestions
+	}
+	if err := f.classic("PermissionRequest", in, &p); err != nil {
+		return "", ""
+	}
+	return p.HookSpecificOutput.Decision.Behavior, p.HookSpecificOutput.Decision.Message
 }
 
 // hook runs `$ORIEL_BIN hook op`, as the mod does.
@@ -348,10 +434,8 @@ func (f *fake) turn(text string) {
 		_ = f.hook("check", checkIn{Tool: "Bash", Input: input}, &c)
 		decision, message := c.Decision, c.Reason
 		if decision == "" && f.mode == "default" {
-			var p permissionOut
-			_ = f.hook("permission", permissionIn{ID: "perm-" + turnID, Tool: "Bash", Input: input,
-				Suggestions: json.RawMessage(`[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"go test:*"}],"behavior":"allow","destination":"localSettings"}]`)}, &p)
-			decision, message = p.Decision, p.Message
+			decision, message = f.permission("Bash", input,
+				json.RawMessage(`[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"go test:*"}],"behavior":"allow","destination":"localSettings"}]`))
 		}
 		if decision == "deny" {
 			f.result("toolu_bash", message, true)
@@ -361,7 +445,7 @@ func (f *fake) turn(text string) {
 			answer = f.say("ran: ok")
 		}
 	case "call a connector":
-		answer = f.connector(turnID)
+		answer = f.connector()
 	case "ask me":
 		qs := map[string]any{"questions": []any{map[string]any{"question": "Which colour?", "header": "Colour", "multiSelect": false,
 			"options": []any{map[string]any{"label": "red", "description": "warm"}, map[string]any{"label": "blue", "description": "cool"}}}}}
@@ -383,15 +467,17 @@ func (f *fake) turn(text string) {
 	case "show the login prompt":
 		os.Stdout.Write(recordedSignedOut)
 		answer = f.say("shown")
+	case "fail at the api": // the API ended the turn once Claude Code's retries ran out
+		_ = f.classic("StopFailure", map[string]any{"error": "overloaded", "error_details": "Overloaded"}, nil)
+		reason = "error"
 	case "work slowly":
 		<-ctx.Done()
 		reason = "aborted"
 	case "test in the background":
 		answer = f.say("the suite is running")
 		background = []any{map[string]any{"id": "b1", "type": "shell", "status": "running", "description": "Run the suite", "command": "go test ./..."}}
-	case "switch to auto": // Shift+Tab: the mod's Stop hook sees the mode change and says so
+	case "switch to auto": // Shift+Tab: the Stop hook's permission_mode says so
 		f.mode = "auto"
-		_ = f.hook("event", map[string]any{"kind": "mode", "mode": f.mode}, nil)
 		answer = f.say("switched")
 	case "what mode":
 		answer = f.say("mode " + f.mode)
@@ -408,13 +494,18 @@ func (f *fake) turn(text string) {
 	f.replied = f.replied || answer != ""
 	f.cancel = nil
 	f.mu.Unlock()
+	if reason == "answer" {
+		if background == nil {
+			background = []any{}
+		}
+		_ = f.classic("Stop", map[string]any{"stop_hook_active": false, "last_assistant_message": answer, "background_tasks": background}, nil)
+	}
 	_ = f.hook("event", map[string]any{
 		"kind": "turn-complete", "turnId": turnID, "reason": reason, "answer": answer,
 		"durationMs": 1200, // a fixed turn time, so nothing shown from it moves with the machine
 		"usage":      map[string]any{"input_tokens": 10, "output_tokens": 5, "cache_read_input_tokens": 100, "cache_creation_input_tokens": 20, "model": "claude-opus-5"},
 		"context":    map[string]any{"tokens": 130, "window": 200000},
 		"rateLimits": fakeRateLimits,
-		"background": background,
 	}, nil)
 }
 
@@ -440,17 +531,15 @@ const fakeConnector = "mcp__claude_ai_Claude_Docs__guide"
 // connector calls a claude.ai connector's tool as Claude Code 2.1.322 decides it: the mod's check first; its ask
 // fires PermissionRequest, which the mod hands to Oriel, in every mode (bypassPermissions and dontAsk included, as
 // the real claude did); with no word from the check, the mode decides.
-func (f *fake) connector(turnID string) string {
+func (f *fake) connector() string {
 	input := json.RawMessage(`{"items":["topic.index"]}`)
 	f.use("toolu_conn", fakeConnector, input)
 	c := f.check(fakeConnector, input)
 	decision, message := c.Decision, c.Reason
 	switch {
 	case decision == "ask", decision == "" && f.mode == "default":
-		var p permissionOut
-		_ = f.hook("permission", permissionIn{ID: "perm-" + turnID, Tool: fakeConnector, Input: input,
-			Suggestions: json.RawMessage(`[{"type":"addRules","rules":[{"toolName":"` + fakeConnector + `"}],"behavior":"allow","destination":"localSettings"}]`)}, &p)
-		decision, message = p.Decision, p.Message
+		decision, message = f.permission(fakeConnector, input,
+			json.RawMessage(`[{"type":"addRules","rules":[{"toolName":"`+fakeConnector+`"}],"behavior":"allow","destination":"localSettings"}]`))
 	case decision == "" && f.mode == "dontAsk":
 		decision, message = "deny", "Permission to use "+fakeConnector+" has been denied because Claude Code is running in don't ask mode."
 	case decision == "":

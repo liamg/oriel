@@ -9,8 +9,9 @@ import (
 	"github.com/liamg/oriel/sandbox/hookcall"
 )
 
-// The mod hands every decision to the session host by running `oriel hook <op>` with JSON on stdin. HookMain is
-// that command: it carries one request over the unix socket in ORIEL_HOOK_SOCK and prints the answer.
+// The mod hands every decision to the session host by running `oriel hook <op>` with JSON on stdin, and so do
+// Oriel's settings hooks (op classic). HookMain is that command: it carries one request over the unix socket in
+// ORIEL_HOOK_SOCK and prints the answer.
 
 // Hook ops.
 const (
@@ -22,6 +23,7 @@ const (
 	opQuestion   = "question"    // questionIn → questionOut, once answered
 	opTool       = "tool"        // toolIn → toolOut
 	opForkAnswer = "fork-answer" // forkAnswerIn → {}
+	opClassic    = "classic"     // classicIn → what the settings hook prints
 )
 
 type (
@@ -56,15 +58,14 @@ type waitOut struct {
 type eventIn struct {
 	Kind string `json:"kind"`
 	// turn-complete
-	TurnID     string           `json:"turnId,omitempty"`
-	Reason     string           `json:"reason,omitempty"`
-	Answer     string           `json:"answer,omitempty"`
-	DurationMs int64            `json:"durationMs,omitempty"`
-	Usage      *turnUsage       `json:"usage,omitempty"`
-	Context    *ctxUsage        `json:"context,omitempty"`
-	Cost       *float64         `json:"cost,omitempty"`
-	RateLimits []rateLimit      `json:"rateLimits,omitempty"`
-	Background []backgroundTask `json:"background,omitempty"` // what the turn left running: the Stop hook's background_tasks
+	TurnID     string      `json:"turnId,omitempty"`
+	Reason     string      `json:"reason,omitempty"`
+	Answer     string      `json:"answer,omitempty"`
+	DurationMs int64       `json:"durationMs,omitempty"`
+	Usage      *turnUsage  `json:"usage,omitempty"`
+	Context    *ctxUsage   `json:"context,omitempty"`
+	Cost       *float64    `json:"cost,omitempty"`
+	RateLimits []rateLimit `json:"rateLimits,omitempty"`
 	// subagent-start, -run, -end
 	ID          string `json:"id,omitempty"`
 	Description string `json:"description,omitempty"`
@@ -75,8 +76,6 @@ type eventIn struct {
 	Error string `json:"error,omitempty"`
 	// tools-lost: Oriel's MCP servers the CLI has dropped
 	Servers []string `json:"servers,omitempty"`
-	// mode: the permission mode the session is in now, from a classic hook's permission_mode
-	Mode string `json:"mode,omitempty"`
 }
 
 // backgroundTask is one of the Stop hook's background_tasks: a shell, subagent, monitor or workflow still running.
@@ -129,6 +128,33 @@ type permissionOut struct {
 	Decision string `json:"decision,omitempty"` // allow, deny, or "" for the terminal's dialog
 	Message  string `json:"message,omitempty"`
 	Always   bool   `json:"always,omitempty"`
+}
+
+// classicIn is what Claude Code hands a settings hook on stdin, as far as Oriel reads it.
+type classicIn struct {
+	Event       string           `json:"hook_event_name"`
+	Mode        string           `json:"permission_mode,omitempty"`
+	Tool        string           `json:"tool_name,omitempty"`  // PermissionRequest
+	Input       json.RawMessage  `json:"tool_input,omitempty"` // PermissionRequest
+	Suggestions json.RawMessage  `json:"permission_suggestions,omitempty"`
+	Background  []backgroundTask `json:"background_tasks,omitempty"` // Stop: what the turn left running
+	Error       string           `json:"error,omitempty"`            // StopFailure
+	Details     string           `json:"error_details,omitempty"`    // StopFailure
+	Last        string           `json:"last_assistant_message,omitempty"`
+}
+
+// permissionHookOut is a PermissionRequest hook's answer.
+type permissionHookOut struct {
+	Specific struct {
+		Event    string             `json:"hookEventName"`
+		Decision permissionDecision `json:"decision"`
+	} `json:"hookSpecificOutput"`
+}
+
+type permissionDecision struct {
+	Behavior           string          `json:"behavior"` // allow or deny
+	Message            string          `json:"message,omitempty"`
+	UpdatedPermissions json.RawMessage `json:"updatedPermissions,omitempty"`
 }
 
 type questionIn struct {

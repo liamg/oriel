@@ -161,11 +161,14 @@ a sandbox, signing in from Oriel, its notes file), and the app offers only that.
 package names it.
 
 Claude runs as its interactive CLI in a PTY, with Oriel's mod for hooks, never `claude -p` (that path is billed per
-token). Codex runs as `codex app-server` over stdio.
+token). Claude Code's classic events Oriel reads (PermissionRequest, Stop, StopFailure, UserPromptSubmit) are
+settings hooks passed with `--settings`, not the mod's: Claude Code runs settings hooks beneath every plugin, and its
+built-in sec-default plugin, seated above the plugins a person installs on Team and Enterprise plans, sends classic
+events past them. Nothing is written to the user's settings. Codex runs as `codex app-server` over stdio.
 
 The guard rails every agent is held to are `agent/guard`'s `Check`, ahead of the agent's own gate. It allows
 Oriel's own tools (and in a sandbox the gateway's, which gates its own calls) and puts every other MCP call to Oriel:
-Claude's mod answers its tool check "ask", which raises the PermissionRequest the mod hands to the session host's
+Claude's mod answers its tool check "ask", which raises the PermissionRequest Oriel's settings hook hands to the session host's
 permission layers in any of Claude's modes, bypassPermissions included. An agent nobody can ask (`PolicyRefuse`) is
 answered in the check instead (its `Allow` goes ahead, the rest is refused), as Claude's dontAsk refuses a plugin's
 ask outright. A check the mod gets no answer to fails closed for MCP: Oriel's own tools still run, the gateway's are
