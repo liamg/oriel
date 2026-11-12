@@ -82,3 +82,31 @@ func TestAFreshConversationDropsTheMode(t *testing.T) {
 		t.Errorf("a fresh conversation started in mode %q, want the policy's", fresh.Spec.Mode)
 	}
 }
+
+// Leaving the sandbox hands the agent to the host's gate (bypass becomes ask): a mode it was switched to inside the
+// sandbox doesn't follow it out, so the restart on the host starts on the new gate.
+func TestLeavingTheSandboxDropsTheMode(t *testing.T) {
+	s := newSandboxRig(t)
+	id := s.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Work", Provider: "fake", Repos: []core.RepoID{core.RepoID(s.repo.Dir)},
+		Sandbox: core.SandboxPolicy{Container: true, Network: "ask"}})
+	a := s.agent()
+	b := s.keptBox(id)
+	a.Emit(agent.TurnStart{})
+	s.eventually(id, "working", func(se core.SessionState) bool { return se.Agent.Working })
+	a.Emit(agent.ModeChanged{Mode: "acceptEdits"})
+	s.eventually(id, "the mode kept", func(se core.SessionState) bool { return se.Agent.Mode == "acceptEdits" })
+	res := make(chan mcp.CallResult, 1)
+	go func() { res <- gatewayCall(t, b.Root(), "oriel__request_host", map[string]any{"why": "needs docker"}) }()
+	ask := s.waitAsk(id, core.AskGateway)
+	if err := s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"}); err != nil {
+		t.Fatal(err)
+	}
+	if r := <-res; r.IsError {
+		t.Fatalf("request_host: %q", r.Text())
+	}
+	a.Emit(agent.TurnEnd{})
+	again := s.agent()
+	if again.Spec.Sandbox != nil || again.Spec.Mode != "" {
+		t.Errorf("restarted on the host (sandboxed %v) in mode %q, want the host's gate", again.Spec.Sandbox != nil, again.Spec.Mode)
+	}
+}

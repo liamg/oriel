@@ -85,6 +85,7 @@ func (x *Runner) WorkAgent(id core.SessionID, r StartWorkReq, why string) error 
 			a.Policy = hostcore.Gate(core.SessionSpec{Sandbox: core.SandboxPolicy{Container: *r.Sandbox}})
 		}
 		a.Sandboxed = *r.Sandbox
+		a.Mode = "" // a mode switched to on one side of the sandbox doesn't cross it: the new gate decides
 	}
 	if r.Network != "" {
 		a.Network = r.Network
