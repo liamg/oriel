@@ -316,6 +316,7 @@ func layoutKeys() []registry.Keymap {
 		{Keys: "<C-w>l", Command: "layout.focus", Args: registry.Args{"dir": "l"}},
 		{Keys: "<C-j>", Command: "layout.dock", Args: registry.Args{"edge": "bottom"}},
 		{Keys: "<C-`>", Command: "layout.move", Args: registry.Args{"place": "dropdown"}},
+		{Keys: "<D-w>", Command: "view.close", Desc: "Close the tab in front"},
 	} {
 		k.Mode = "global"
 		out = append(out, k)
