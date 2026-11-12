@@ -52,7 +52,9 @@ between the editor's or the diff's lines and in Requests, as well as in the agen
 with `mcp__oriel__ask`; a question tool of its own that names none (Claude's) asks in the thread it's on (the one it's
 working on, else one it was handed), else in the session's request, else in a general thread opened for it, which
 keeps your answer and is resolved once you give it. The inbox and the session's tab count it, and choosing it in the
-Inbox panel opens its thread.
+Inbox panel opens its thread. It stays in its thread until it's answered, wherever you answer it, or the agent
+withdraws it: resolving the thread meanwhile leaves it there. From its field, `⇧⇥` moves back onto its options and
+`Space` picks one.
 
 ## Login
 

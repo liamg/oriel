@@ -485,7 +485,8 @@ func (x *Console) questions(c *ui.Ctx, se core.SessionState, a core.Ask, st *con
 	}
 	if len(a.Questions) == 1 {
 		t := st.typed[a.ID]
-		r := widget.Input(c, "typed", &t, widget.InputOpts{Label: "Your own answer", Placeholder: "or type an answer: ⏎ sends it", Help: help})
+		r := widget.Input(c, "typed", &t, widget.InputOpts{Label: "Your own answer", Placeholder: "or type an answer: ⏎ sends it", Help: help,
+			TabMoves: true})
 		st.typed[a.ID] = t
 		if r.Submitted && strings.TrimSpace(t) != "" {
 			x.run(context.Background(), "ask.answer", registry.Args{"id": string(se.ID), "ask": a.ID, "answers": x.answers(st, a)})

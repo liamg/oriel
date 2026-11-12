@@ -28,6 +28,16 @@ func (x *Console) questionFoot(c *ui.Ctx, session, thread string, _ uireg.Thread
 	}
 }
 
+// asksIn says a question waits in thread tid: its card shows, resolved or not, until it's answered.
+func asksIn(se core.SessionState, tid core.ThreadID) bool {
+	for _, a := range se.Asks {
+		if a.Kind == core.AskQuestion && a.Thread != "" && a.Thread == tid {
+			return true
+		}
+	}
+	return false
+}
+
 // openThread shows thread tid of session id in Requests, bringing the session to the front first.
 func (x *Console) openThread(id core.SessionID, tid core.ThreadID) {
 	open := registry.Args{"thread": string(tid)}
