@@ -1,0 +1,53 @@
+   1 | // Module shapes draws shapes.
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ comment
+   2 | module github.com/example/shapes
+     | ^^^^^^ keyword
+     |        ^^^^^^^^^^^^^^^^^^^^^^^^^ string.special.url
+   3 | 
+   4 | go 1.24
+     | ^^ keyword
+     |    ^^^^ string.special
+   5 | 
+   6 | toolchain go1.24.2
+     | ^^^^^^^^^ keyword
+     |           ^^^^^^^^ string.special
+   7 | 
+   8 | require (
+     | ^^^^^^^ keyword
+     |         ^ punctuation.bracket
+   9 | 	github.com/liamg/memoryfs v1.6.0
+     |  ^^^^^^^^^^^^^^^^^^^^^^^^^ string.special.url
+     |                            ^^^^^^ string.special
+  10 | 	golang.org/x/sync v0.12.0 // indirect
+     |  ^^^^^^^^^^^^^^^^^ string.special.url
+     |                    ^^^^^^^ string.special
+     |                            ^^^^^^^^^^^ comment
+  11 | )
+     | ^ punctuation.bracket
+  12 | 
+  13 | require github.com/example/colour v0.0.0-20240101120000-abcdef123456
+     | ^^^^^^^ keyword
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^ string.special.url
+     |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string.special
+  14 | 
+  15 | exclude github.com/example/old v1.2.3
+     | ^^^^^^^ keyword
+     |         ^^^^^^^^^^^^^^^^^^^^^^ string.special.url
+     |                                ^^^^^^ string.special
+  16 | 
+  17 | tool golang.org/x/tools/cmd/stringer
+     | ^^^^^ keyword.directive
+     |      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ string.special.url
+  18 | 
+  19 | replace github.com/example/colour => ../colour
+     | ^^^^^^^ keyword
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^ string.special.url
+     |                                   ^^ operator
+  20 | 
+  21 | retract [v1.0.0, v1.0.5]
+     | ^^^^^^^ keyword
+     |         ^ punctuation.bracket
+     |          ^^^^^^ string.special
+     |                ^ punctuation.delimiter
+     |                  ^^^^^^ string.special
+     |                        ^ punctuation.bracket

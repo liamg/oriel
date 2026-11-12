@@ -96,6 +96,11 @@ it started and finished, the requests it worked on, its prompt, and what it said
 What lets the agent through without asking: its own gate (edits automatic, shell asks), the sandbox's network and
 gateway, and every rule "Always in this workspace" made.
 
+The gate is the mode the agent starts in. A mode it's switched to in the session (Claude's `⇧Tab`, or leaving plan
+mode for auto) is kept from the end of the turn it was switched in: when the agent starts again on its conversation (a
+project joins its sandbox, **Restart sandbox**, it exits, Oriel quits and opens again) it comes back in that mode,
+except bypass outside a sandbox. A fresh conversation starts on the gate.
+
 {{keys "agent.*"}}
 
 ## Details {#details}

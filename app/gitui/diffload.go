@@ -38,6 +38,8 @@ type diffFile struct {
 	binary  bool
 	images  *imageDiff // a changed image's old and new versions, decoded
 	newText []byte
+	lines   []string // newText's lines
+	hidden  *hiddenSpans
 	hunks   []diffHunk
 	err     error
 }
@@ -56,7 +58,7 @@ type diffHunk struct {
 func loadDiff(r registry.Registry, in diffInput, newText []byte, styled bool) *diffFile {
 	ctx := context.Background()
 	repo := kit.RepoAt(r, in.repo)
-	f := &diffFile{in: in, styled: styled}
+	f := &diffFile{in: in, styled: styled, hidden: &hiddenSpans{}}
 	var old []byte
 	if in.code != 'A' && in.code != '?' {
 		old, _ = repo.FileAt(ctx, in.rev, cmp.Or(in.old, in.path))
@@ -77,6 +79,7 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, styled bool) *d
 	}
 	hs := gitx.Unified(old, newText, diffContext)
 	oldLines, newLines := gitx.SplitLines(old), gitx.SplitLines(newText)
+	f.lines = newLines
 	var oldHL, newHL [][]kit.Span
 	var units []text.Unit
 	if styled {
@@ -146,6 +149,22 @@ func decodeImageDiff(path string, old, new []byte, code byte) *imageDiff {
 // highlightLines is each line of src that a hunk shows on its side, cut into runs by highlight; nil without a
 // grammar.
 func highlightLines(r registry.Registry, path string, src []byte, lines []string, hs []gitx.DiffHunk, old bool) [][]kit.Span {
+	var ranges [][2]int
+	for _, h := range hs {
+		start, n := h.NewStart, h.NewLines
+		if old {
+			start, n = h.OldStart, h.OldLines
+		}
+		if n > 0 {
+			ranges = append(ranges, [2]int{start - 1, start - 1 + n})
+		}
+	}
+	return highlightRanges(r, path, src, lines, ranges)
+}
+
+// highlightRanges is each line of src in ranges (from 0, the end excluded) cut into runs by highlight; nil without
+// a grammar.
+func highlightRanges(r registry.Registry, path string, src []byte, lines []string, ranges [][2]int) [][]kit.Span {
 	lang, ok := kit.LanguageFor(r, path, src)
 	if !ok || len(src) == 0 {
 		return nil
@@ -161,13 +180,9 @@ func highlightLines(r registry.Registry, path string, src []byte, lines []string
 		starts[i+1] = starts[i] + len(l)
 	}
 	out := make([][]kit.Span, len(lines))
-	for _, h := range hs {
-		start, n := h.NewStart, h.NewLines
-		if old {
-			start, n = h.OldStart, h.OldLines
-		}
-		from, to := max(start-1, 0), min(start-1+n, len(lines))
-		if n == 0 || from >= to {
+	for _, rg := range ranges {
+		from, to := max(rg[0], 0), min(rg[1], len(lines))
+		if from >= to {
 			continue
 		}
 		var hl []syntax.Span

@@ -89,6 +89,56 @@ func TestPolicyToFlags(t *testing.T) {
 	}
 }
 
+// A resumed conversation starts again in the mode it was last in, one of Claude's own (PermissionMode in its mod
+// API's types: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'dontAsk' | 'auto'); bypass only in a
+// sandbox. A fresh one starts on the policy's.
+func TestModeOnResume(t *testing.T) {
+	box := &agent.Sandbox{Name: "box"}
+	cases := []struct {
+		spec   agent.StartSpec
+		resume string
+		want   string
+	}{
+		{agent.StartSpec{Policy: agent.PolicyAsk, Mode: "auto"}, "s1", "--permission-mode auto"},
+		{agent.StartSpec{Policy: agent.PolicyAuto, Mode: "acceptEdits"}, "s1", "--permission-mode acceptEdits"},
+		{agent.StartSpec{Policy: agent.PolicyAuto, Mode: "auto", Sandbox: box}, "s1", "--permission-mode auto"},
+		{agent.StartSpec{Policy: agent.PolicyAuto, Mode: "bypassPermissions", Sandbox: box}, "s1", "--permission-mode bypassPermissions"},
+		{agent.StartSpec{Policy: agent.PolicyAuto, Mode: "bypassPermissions"}, "s1", "--permission-mode auto"},
+		{agent.StartSpec{Policy: agent.PolicyLight, Mode: "yolo"}, "s1", "--permission-mode acceptEdits"},
+		{agent.StartSpec{Policy: agent.PolicyAsk, Mode: "auto"}, "", "--permission-mode default"},
+	}
+	for _, c := range cases {
+		a, err := args(c.spec, "/m", "s1", c.resume)
+		if err != nil || !strings.Contains(strings.Join(a, " "), c.want) {
+			t.Errorf("%+v resuming %q: %q, %v; want %q", c.spec, c.resume, a, err, c.want)
+		}
+	}
+}
+
+// Claude switched into another mode (Shift+Tab) says so, and resumed in it, it's in it again.
+func TestAModeSwitchIsReportedAndResumed(t *testing.T) {
+	h := fakeHarness(t)
+	dir := t.TempDir()
+	s := agenttest.StartIn(t, h, dir, "")
+	s.Send("switch to auto")
+	m := s.Wait("the mode it switched to", func(ev agent.Event) bool { _, ok := ev.(agent.ModeChanged); return ok }).(agent.ModeChanged)
+	if m.Mode != "auto" {
+		t.Errorf("mode = %q, want auto", m.Mode)
+	}
+	s.Reply()
+	id := s.S.ID()
+	if err := s.S.Close(); err != nil {
+		t.Fatal(err)
+	}
+	spec := h.Spec
+	h.Spec = func(t *testing.T, dir string) agent.StartSpec { sp := spec(t, dir); sp.Mode = m.Mode; return sp }
+	r := agenttest.StartIn(t, h, dir, id)
+	r.Send("what mode")
+	if got := r.Reply(); !strings.Contains(got, "mode auto") {
+		t.Errorf("resumed, the reply is %q; want it in auto", got)
+	}
+}
+
 func TestArgs(t *testing.T) {
 	spec := agent.StartSpec{Model: "opus", Effort: "high", Pack: agent.Pack{Skill: "plan"}, Prompt: "add a cache"}
 	a, _ := args(spec, "/m", "s1", "")

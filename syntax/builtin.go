@@ -27,6 +27,8 @@ var core = []struct {
 	{name: "jsx", queriesOnly: true},
 	{name: "html_tags", queriesOnly: true},
 	{name: "go", exts: []string{".go"}},
+	{name: "gomod", filenames: []string{"go.mod"}},
+	{name: "gosum", filenames: []string{"go.sum"}},
 	{name: "typescript", exts: []string{".ts", ".mts", ".cts"}},
 	{name: "tsx", exts: []string{".tsx"}},
 	{name: "javascript", exts: []string{".js", ".mjs", ".cjs", ".jsx"}, bangs: []string{"node"}},

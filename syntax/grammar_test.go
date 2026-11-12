@@ -77,6 +77,7 @@ func TestMoreLanguagesByFile(t *testing.T) {
 		"setup.ini":  "ini",
 		"lib/app.ex": "elixir", "mix.exs": "elixir", "Main.scala": "scala", "build.sbt": "scala",
 		".gitignore": "gitignore", ".dockerignore": "gitignore", "App.vue": "vue", "Page.svelte": "svelte",
+		"go.mod": "gomod", "go.sum": "gosum",
 	} {
 		l, ok := Builtin().ForFile(file, nil)
 		if !ok || l.Name != want {

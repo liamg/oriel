@@ -53,7 +53,8 @@ type AgentState struct {
 	Working     bool             `json:"working,omitempty"`  // a turn is running
 	TurnStarted time.Time        `json:"turnStarted,omitzero"`
 	Error       string           `json:"error,omitempty"`  // the last failure, until a turn succeeds
-	Policy      string           `json:"policy,omitempty"` // the agent's own gate: ask, light or bypass
+	Policy      string           `json:"policy,omitempty"` // the agent's own gate: ask, light, auto or bypass
+	Mode        string           `json:"mode,omitempty"`   // the agent's own permission mode as it last said, in its provider's terms: what its conversation resumes in
 	Sandboxed   bool             `json:"sandboxed,omitempty"`
 	Network     string           `json:"network,omitempty"`    // in a sandbox: ask or open
 	Backend     string           `json:"backend,omitempty"`    // in a sandbox: what confines it; "" is sandbox.backend
