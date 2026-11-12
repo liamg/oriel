@@ -559,6 +559,33 @@ func TestLuaReviewSource(t *testing.T) {
 	}
 }
 
+// While one code host hasn't answered yet, the requests of those that have are listed, the list agreeing with the
+// header's count and the selected one's detail; the one still out is asked with the bar along the top.
+func TestReviewsListWhatsInWhileAHostAnswers(t *testing.T) {
+	s, _, _, _ := reviewScene(t)
+	m, err := plugin.ParseManifest([]byte("id = \"acme/gitlab\"\nversion = \"0.1.0\"\ndescription = \"A GitLab-like source\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := plugin.NewGrants()
+	g.Grant(m.ID, m.Permissions)
+	vm := s.PluginVM(plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
+	const slow = `
+oriel.code.host{ name = "forge", title = "Forge", order = 30, takes = [[/forge/pr/\d+]],
+  sites = { { host = "forge.example", api = "https://forge.example/api" } }, path = [[^/?(.+?)/?$]],
+  requested = function(site, done) end }  -- never answers
+`
+	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(gitlabLua + slow)}); err != nil {
+		t.Fatal(err)
+	}
+	s.Frame()
+	s.Run("reviews.open", nil)
+	s.Until("GitLab's request in", func() bool { return strings.Contains(s.Text(), "Drop the legacy v1 webhooks") })
+	if s.FindRole(render.RoleListItem, "acme/gateway#57 Drop the legacy v1 webhooks") == nil {
+		t.Errorf("GitLab's request isn't in the list while Forge is still asked:\n%s", s.Text())
+	}
+}
+
 // hasValue says a node at or under n holds v, as a filled-in field does.
 func hasValue(n *render.AccessNode, v string) bool {
 	return n != nil && (n.Value == v || slices.ContainsFunc(n.Children, func(k *render.AccessNode) bool { return hasValue(k, v) }))
