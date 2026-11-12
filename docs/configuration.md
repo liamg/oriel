@@ -231,7 +231,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `voice.speech` | `system` (say, spd-say or espeak), `piper` or `off`: how replies are spoken | app | |
 | `voice.piper_voice` | a Piper voice's name in `~/.oriel/piper`; empty uses the first there | app | |
 | `assistant.provider` | `auto`: the first agent installed and signed in; or `claude`, `codex` | app | |
-| `assistant.model` | `small`: the provider's small model (Claude's Haiku); `default`, its default; or a model's name | app | |
+| `assistant.model` | `default`: the provider's default model; `small`, its small one (Claude's Haiku); or a model's name | app | |
 | `assistant.web` | true: the assistant may search the web (the provider's WebSearch and WebFetch) | app | |
 | `assistant.idle` | 15: minutes of quiet before a conversation ends and the next starts afresh | app | |
 | `debug.agent.read` | allow: agents may read the paused stack, frames and variables (allow, ask or off) | app | |
