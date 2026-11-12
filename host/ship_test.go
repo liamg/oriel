@@ -296,3 +296,19 @@ func TestShipReadsARepoWithNoCommitsYet(t *testing.T) {
 		}
 	}
 }
+
+// A repo whose remote isn't named origin reads as having none to push to, with the remotes it has, so the reason
+// can say so rather than that it has no remote at all.
+func TestShipSaysWhichRemotesARepoHasWithoutOrigin(t *testing.T) {
+	r := newRig(t)
+	g := gittest.New(t)
+	g.Write(map[string]string{"main.go": "package main\n"})
+	g.Commit("Ada", "first")
+	g.Git("remote", "add", "upstream", "https://github.com/acme/search-api.git")
+	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: g.Dir})
+	for name, s := range r.ship(id, false) {
+		if s.Remote || !slices.Equal(s.Remotes, []string{"upstream"}) {
+			t.Errorf("%s: remote %v with remotes %v, want none to push to and [upstream]", name, s.Remote, s.Remotes)
+		}
+	}
+}

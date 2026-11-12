@@ -30,6 +30,7 @@ type Ship struct {
 	Default   string       `json:"default,omitempty"`   // the repo's default branch, when it has it locally: main
 	Remote    bool         `json:"remote,omitempty"`    // it has an origin to push to
 	Origin    string       `json:"origin,omitempty"`    // origin's URL
+	Remotes   []string     `json:"remotes,omitempty"`   // the repo's remotes, when none is origin
 	ReadOnly  bool         `json:"readOnly,omitempty"`  // a pinned or read-only worktree, with nothing to ship
 	Files     []ShipFile   `json:"files,omitempty"`     // uncommitted
 	Behind    int          `json:"behind,omitempty"`    // commits on the base it lacks
@@ -197,8 +198,11 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 	if !x.deps.Kinds.Spec(se).Can(core.OwnsBranch) {
 		s.Branch = hostcore.DirectBranch(ctx, p, repo).Branch
 	}
-	s.Origin = x.remoteURL(ctx, repo)
+	s.Origin = x.remoteURL(ctx, repo, fresh)
 	s.Remote = s.Origin != ""
+	if !s.Remote {
+		s.Remotes, _ = repo.Remotes(ctx)
+	}
 	if s.ReadOnly {
 		return s
 	}

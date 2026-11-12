@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -117,16 +118,17 @@ func (r Repo) fetch(ctx context.Context, refspec string) bool {
 
 // HasRemote reports whether the repo has a remote of this name.
 func (r Repo) HasRemote(ctx context.Context, name string) bool {
+	names, err := r.Remotes(ctx)
+	return err == nil && slices.Contains(names, name)
+}
+
+// Remotes are the repo's remotes' names.
+func (r Repo) Remotes(ctx context.Context) ([]string, error) {
 	out, err := r.git(ctx, "remote")
 	if err != nil {
-		return false
+		return nil, err
 	}
-	for _, l := range strings.Fields(string(out)) {
-		if l == name {
-			return true
-		}
-	}
-	return false
+	return strings.Fields(string(out)), nil
 }
 
 // Clone clones url into dir, making its parents. Git doesn't prompt for a password here: a clone that needs one

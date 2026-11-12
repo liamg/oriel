@@ -98,7 +98,9 @@ commits to push (`ship.push-all`).
 A step that can't run says why when the pointer rests on it: Push with no origin to push to, when not on a branch
 or not on the session's,
 or with nothing origin hasn't got; any step while another of the project's runs. Every disabled button with a
-reason shows it the same way (`widget.ButtonOpts.Why`).
+reason shows it the same way (`widget.ButtonOpts.Why`). Oriel pushes to the remote named `origin`: a repo whose remote
+has another name is told so, with the names it has. The repo's remote is read again whenever its git config changes,
+on **Read again** (↻), and on every read while it seemed to have none.
 
 After a rebase, the branch has rewritten commits origin already has ("n rewritten"), and Push reads **Force push**.
 It replaces origin's branch with a lease: only while origin still has what you last fetched and rebased from. If
