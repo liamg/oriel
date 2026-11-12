@@ -342,11 +342,26 @@ func permissionMode(s agent.StartSpec) (string, error) {
 	return "", fmt.Errorf("claude: unknown policy %q", s.Policy)
 }
 
+// resumesIn says a resumed conversation starts again in the mode it was last in: one of Claude's modes
+// (PermissionMode in its mod API's types), and bypassPermissions only where a sandbox gates the agent.
+func resumesIn(s agent.StartSpec, resume string) bool {
+	switch s.Mode {
+	case "default", "acceptEdits", "plan", "auto", "dontAsk":
+		return resume != ""
+	case "bypassPermissions":
+		return resume != "" && s.Sandbox != nil
+	}
+	return false
+}
+
 // args is claude's command line. A fresh session starts on its pack's skill; a resumed one has it already.
 func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 	mode, err := permissionMode(s)
 	if err != nil {
 		return nil, err
+	}
+	if resumesIn(s, resume) {
+		mode = s.Mode
 	}
 	a := []string{"--plugin-dir", modDir, "--permission-mode", mode}
 	if s.Model != "" {

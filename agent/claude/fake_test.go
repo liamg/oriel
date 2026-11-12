@@ -388,6 +388,12 @@ func (f *fake) turn(text string) {
 	case "test in the background":
 		answer = f.say("the suite is running")
 		background = []any{map[string]any{"id": "b1", "type": "shell", "status": "running", "description": "Run the suite", "command": "go test ./..."}}
+	case "switch to auto": // Shift+Tab: the mod's Stop hook sees the mode change and says so
+		f.mode = "auto"
+		_ = f.hook("event", map[string]any{"kind": "mode", "mode": f.mode}, nil)
+		answer = f.say("switched")
+	case "what mode":
+		answer = f.say("mode " + f.mode)
 	case "what did I say":
 		if len(before) == 0 {
 			answer = f.say("nothing yet")

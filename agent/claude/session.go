@@ -602,6 +602,10 @@ func (s *session) event(in eventIn) {
 	case "subagent-end":
 		s.tail.flush(s.push)
 		s.push(agent.Subagent{ID: in.ID, Done: true, Result: in.Text})
+	case "mode":
+		if in.Mode != "" {
+			s.push(agent.ModeChanged{Mode: in.Mode})
+		}
 	case "tools-lost":
 		s.push(agent.Stale{Why: "its CLI dropped " + strings.Join(in.Servers, ", ")})
 	case "api-error":

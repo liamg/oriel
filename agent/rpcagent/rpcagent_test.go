@@ -80,12 +80,15 @@ func TestEventsCrossWhole(t *testing.T) {
 	f.Name = "plug"
 	c := behind(t, "plug", f)
 	ctx := context.Background()
-	s, err := c.Start(ctx, agent.StartSpec{})
+	s, err := c.Start(ctx, agent.StartSpec{Policy: agent.PolicyAsk, Mode: "auto"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer s.Close()
 	fs := f.WaitStarted(t)
+	if fs.Spec.Policy != agent.PolicyAsk || fs.Spec.Mode != "auto" {
+		t.Errorf("the provider started on policy %q, mode %q; want ask, auto", fs.Spec.Policy, fs.Spec.Mode)
+	}
 	first := s.ID()
 	diff := &core.FileDiff{Path: "a.go", Added: 1, Removed: 1, Lines: []core.DiffLine{{Op: "-", Old: 3, Text: "x"}, {Op: "+", New: 3, Text: "y"}}}
 	evs := []agent.Event{
@@ -107,6 +110,7 @@ func TestEventsCrossWhole(t *testing.T) {
 		agent.AuthRestored{Provider: "plug", Account: "a"},
 		agent.Dialog{Title: "Allow it?", Shown: true},
 		agent.Dialog{},
+		agent.ModeChanged{Mode: "auto"},
 		agent.Exited{Err: "gone"},
 	}
 	for _, ev := range evs {

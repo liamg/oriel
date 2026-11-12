@@ -200,6 +200,7 @@ type StartSpec struct {
 	Tools    []Tool        // offered to the agent as mcp__oriel__*
 	ToolsNow func() []Tool // the tools offered now, which change as plugins load; nil: Tools
 	Policy   Policy        // the agent's own gate
+	Mode     string        // the permission mode a resumed conversation was last in (ModeChanged): over Policy where it can start in it
 	Protect  []string      // directories the agent must never edit: the user's checkouts
 	Env      []string      // extra environment, KEY=value
 	Exec     Exec          // how to run a process: on the host, or in the sandbox
@@ -436,6 +437,9 @@ type (
 	// Stale is a session that has lost what only a restart brings back (an MCP server its CLI dropped): it's
 	// restarted, its conversation resumed, once its turn ends.
 	Stale struct{ Why string }
+	// ModeChanged is the agent's own permission mode, in its provider's terms, now something else: the user or the
+	// agent switched it (Claude's Shift+Tab, its plan mode's exit). A restart resumes the conversation in it.
+	ModeChanged struct{ Mode string }
 )
 
 // Usage is what a turn used.
@@ -459,6 +463,7 @@ func (Failure) isEvent()      {}
 func (UsageUpdate) isEvent()  {}
 func (Exited) isEvent()       {}
 func (Stale) isEvent()        {}
+func (ModeChanged) isEvent()  {}
 func (Dialog) isEvent()       {}
 func (AuthExpired) isEvent()  {}
 func (AuthRestored) isEvent() {}
