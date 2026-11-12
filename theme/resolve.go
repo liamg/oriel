@@ -296,3 +296,17 @@ func (r *Resolved) Link(name string) (Link, bool) {
 
 // IsProbe reports whether r came from Probe.
 func (r *Resolved) IsProbe() bool { return r.probes != nil }
+
+// With is r with the tokens in over set to their colours, for a part of the window drawn in a variation of the theme
+// (ui.Style.Theme); r is unchanged. A token derived from one of them keeps its colour from r.
+func (r *Resolved) With(over map[TokenID]Color) *Resolved {
+	w := *r
+	w.colors, w.byName = slices.Clone(r.colors), maps.Clone(r.byName)
+	for id, c := range over {
+		if int(id) < len(w.colors) {
+			w.colors[id] = c
+			w.byName[id.Name()] = c
+		}
+	}
+	return &w
+}

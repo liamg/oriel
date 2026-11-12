@@ -3,6 +3,7 @@ package ui
 import (
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 // Node is a view tree: what Ctx builds each frame, and what a plugin's view returns in any tier.
@@ -111,6 +112,9 @@ type Style struct {
 	// Scale draws the box and everything in it this many times bigger (its sizes, padding, gaps, radii and text), as a
 	// part with its own text size does; 0 is 1. It multiplies a scaled parent's.
 	Scale float32
+	// Theme is the theme the box's subtree is built in (Ctx.Theme), a variation of the window's (theme.Resolved.With);
+	// nil is its parent's.
+	Theme *theme.Resolved
 
 	Clip bool
 	// Selectable makes it the box a selection stays in, with the text cursor over it. All text selects with the pointer

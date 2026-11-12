@@ -46,7 +46,8 @@ type elem struct {
 	paint  func(f render.Frame, r render.Rect)
 	kids   []*elem
 	parent *elem
-	scale  float32 // what it and its subtree are drawn at (Style.Scale, times its parent's); 0 is 1
+	scale  float32         // what it and its subtree are drawn at (Style.Scale, times its parent's); 0 is 1
+	theme  *theme.Resolved // what it and its subtree are built in (Style.Theme, or its parent's); nil is the UI's
 
 	controls bool // it or something in it can be clicked or focused, or keeps its width (Style.Keep)
 	inlaid   bool // a float built under LayerPane: part of its view, so clipped as the view is
@@ -605,7 +606,7 @@ func (e *elem) nextKey(key any) (any, dupKey) {
 func (u *UI) add(e *elem, key any, k kind) *elem {
 	key, d := e.nextKey(key)
 	c := u.newElem()
-	c.id, c.key, c.base, c.kind, c.parent, c.scale = childID(e.id, key), key, d, k, e, e.scale
+	c.id, c.key, c.base, c.kind, c.parent, c.scale, c.theme = childID(e.id, key), key, d, k, e, e.scale, e.theme
 	e.kids = append(e.kids, c)
 	switch {
 	case e.keys != nil:
