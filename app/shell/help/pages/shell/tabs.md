@@ -27,7 +27,8 @@ are open: with tabs open, one is always in front.
 ## Ending a session {#end}
 
 **End session…** asks how, in one dialog, and says first what would be lost, project by project: uncommitted files,
-commits not pushed, an open pull request (it stays open on its host), an agent mid-turn, a running sandbox.
+commits not pushed, an open pull request (it stays open on its host), an agent mid-turn, the subagents, background
+tasks and processes it's still running (they stop with it), a running sandbox.
 
 - **Archive**: the worktrees go; threads, transcript and test runs stay, searchable, and opening it again makes its
   worktrees again on their branches. It's the choice to start on once anything was pushed or raised.

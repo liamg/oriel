@@ -400,13 +400,7 @@ func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registr
 			continue
 		}
 		if k := len(s.Files); k > 0 {
-			var names []string
-			names = append(names, s.Files[:min(k, endPreviewedFiles)]...)
-			more := ""
-			if k > endPreviewedFiles {
-				more = fmt.Sprintf(" and %d more", k-endPreviewedFiles)
-			}
-			line(s.Project+"/files", "!", warn, fmt.Sprintf("%s: %s uncommitted, lost: %s%s", s.Project, kit.Counted(k, "file"), strings.Join(names, ", "), more))
+			line(s.Project+"/files", "!", warn, fmt.Sprintf("%s: %s uncommitted, lost: %s", s.Project, kit.Counted(k, "file"), previewed(s.Files)))
 			n++
 		}
 		if k := s.Unpushed; k > 0 {
@@ -428,6 +422,25 @@ func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registr
 		line("agent", "!", warn, "The agent is mid-turn: it's stopped where it is.")
 		n++
 	}
+	var helpers []string
+	for _, sa := range se.Subagents {
+		if sa.Running {
+			helpers = append(helpers, cmp.Or(sa.Description, sa.Type, sa.ID))
+		}
+	}
+	for _, w := range []struct {
+		key, one, many string
+		names          []string
+	}{
+		{"subagents", "subagent", "subagents", helpers},
+		{"background", "background task", "background tasks", tasks(se.Agent.Background)},
+		{"processes", "process", "processes", tasks(se.Agent.Processes)},
+	} {
+		if k := len(w.names); k > 0 {
+			line(w.key, "!", warn, fmt.Sprintf("%d %s still running, stopped with the agent: %s", k, kit.Plural(k, w.one, w.many), previewed(w.names)))
+			n++
+		}
+	}
 	if se.Agent.Sandboxed && se.Agent.Running {
 		line("sandbox", "·", info, "Its sandbox stops.")
 		n++
@@ -435,4 +448,22 @@ func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registr
 	if n == 0 {
 		line("none", "✓", th.C(theme.OK), "Nothing unsaved is lost.")
 	}
+}
+
+// tasks are what each of ts is doing.
+func tasks(ts []core.BackgroundTask) []string {
+	var out []string
+	for _, t := range ts {
+		out = append(out, cmp.Or(t.Description, t.Kind, t.ID))
+	}
+	return out
+}
+
+// previewed is the first few of names, and how many more.
+func previewed(names []string) string {
+	s := strings.Join(names[:min(len(names), endPreviewedFiles)], ", ")
+	if k := len(names) - endPreviewedFiles; k > 0 {
+		s += fmt.Sprintf(" and %d more", k)
+	}
+	return s
 }

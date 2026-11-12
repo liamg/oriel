@@ -86,3 +86,35 @@ func TestClosingADoneSessionsTabOffersToEndIt(t *testing.T) {
 		t.Error("cancelling ended the session")
 	}
 }
+
+// What the agent is still running is listed too: its turn, the subagents it started, the background tasks that will
+// wake it and the processes it left running all stop with it.
+func TestEndSessionListsWhatTheAgentIsStillRunning(t *testing.T) {
+	s, se := endScene(t)
+	s.Quiet()
+	a := se.Agent
+	a.Working = true
+	a.Background = []core.BackgroundTask{{Kind: "shell", Description: "go test ./... -count=5"}}
+	a.Processes = []core.BackgroundTask{{Kind: "terminal", Description: "npm run dev"}, {Kind: "terminal", Description: "make watch"}}
+	for _, ev := range []core.Event{
+		core.AgentChanged{ID: se.ID, Agent: a},
+		core.SubagentChanged{Session: se.ID, Subagent: core.Subagent{ID: "a1", Description: "sweep the flaky tests", Running: true}},
+		core.SubagentChanged{Session: se.ID, Subagent: core.Subagent{ID: "a2", Description: "read the old parser", Running: false}},
+	} {
+		if err := s.Store().Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.Run("session.end", registry.Args{"id": "rounding"})
+	s.WaitFor("The agent is mid-turn")
+	// Each wraps in the dialog, so its count and what it's running are looked for apart.
+	s.WantFrame("1 subagent still running, stopped with the agent: sweep the flaky tests",
+		"1 background task still running, stopped with the agent", "go test ./...",
+		"2 processes still running, stopped with the agent", "npm run dev, make")
+	if strings.Contains(s.Text(), "read the old parser") {
+		t.Error("a subagent that's finished is listed")
+	}
+	if strings.Contains(s.Text(), "Nothing unsaved is lost.") {
+		t.Error("the dialog says nothing is lost")
+	}
+}
