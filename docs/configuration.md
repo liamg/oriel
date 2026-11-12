@@ -193,6 +193,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `ui.theme` | `oriel` | app | |
 | `ui.variant` | `system`: follows the OS; or `dark`, `light` | app | |
 | `whichkey.enabled` | true | app | |
+| `inbox.prompt_pause` | 3s: how long no key must go down before a prompt (an agent's permission) comes up in the middle of the window; `0` shows it at once | app | |
 | `sandbox.default` | `sandbox`: a new session's agent runs in a container; or `host`, on this machine | app | |
 | `repos.dir` | `~/src`: where clones and new repos go when nothing else says | app | |
 | `repos.discover` | `true`: register the repos beside the ones you have, on start and when one is added | app | |

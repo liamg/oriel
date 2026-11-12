@@ -83,18 +83,20 @@ func consoleScene(t *testing.T) *apptest.Scene {
 }
 
 // The console with its blocks, a permission and a network card where they arose, the
-// subagents, the composer's queue and the stats.
+// subagents, the composer's queue and the stats; the permission's prompt put off, it waits there.
 func TestAgentConsoleSnapshot(t *testing.T) {
 	s := consoleScene(t)
 	s.Run("view.open", registry.Args{"id": kit.AgentConsoleView, "place": "tab", "title": "Agent"})
+	s.Frame()
+	s.Run("inbox.dismiss", nil)
 	s.Frame()
 	s.Lint("the agent console")
 	s.Golden("agent-console")
 }
 
-// With the console hidden, every session's asks stack at the bottom right over the window, each with its
-// session's name: a permission, a network connection, a question and a gateway call, then a count of the rest; the
-// tabs count them.
+// With the console hidden, the session in front's permission is a prompt in the middle of the window over a dimmed
+// rest; every session's other asks are over the window, each with its session's name: a gateway call at the top,
+// and while it waits, the stack at the bottom right holds back to a count of the rest; the tabs count them.
 func TestAskCardsSnapshot(t *testing.T) {
 	s := consoleScene(t)
 	other := core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusNeedsYou,
@@ -135,6 +137,8 @@ func TestLoginCardsSnapshot(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	s.Frame()
+	s.Run("inbox.dismiss", nil) // the session in front's permission, put off
 	s.Frame()
 	s.Lint("the login cards")
 	s.Golden("login-cards")

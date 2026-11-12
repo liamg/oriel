@@ -28,7 +28,7 @@ var ceilings = map[string]int{
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
-	"time.Sleep in tests": 35,
+	"time.Sleep in tests": 34,
 	// Work started with a bare go statement is counted by nothing, so a test can't wait for it: plugin.Go, a
 	// plugin.Load, kit.Busy or kit.Work (whose Loop is for what runs as long as the plugin) count it.
 	"go statements in app/": 6,

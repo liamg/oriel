@@ -138,6 +138,7 @@ type input struct {
 	request  focusAsk                 // Ctx.RequestFocus's, until its target is built or the user moves on
 	touched  int                      // presses and keys so far: a request asked before the latest is stale
 	lastText time.Time                // when a key was last typed into a text field
+	lastKey  time.Time                // when a key last went down in the window, whatever took it
 	trail    []ID                     // what held focus before, latest last: focus goes back there when an overlay closes
 	settled  ID                       // focus as the last frame left it
 	blurred  ID                       // what Ctx.Blur took focus from, this frame
@@ -677,6 +678,13 @@ func (u *UI) Mods(m render.Mods) {
 	if m == 0 {
 		in.chorded = false
 	}
+}
+
+// KeyDown says a key went down in the window, whatever it goes on to do (a keymap's command, or typed at what has
+// focus): it's the last key now (Ctx.LastKey), and part of a chord with the modifiers held.
+func (u *UI) KeyDown() {
+	u.in.lastKey = u.now()
+	u.Chord()
 }
 
 // Chord says a key went down: the modifiers held are part of a chord now, not held alone. A press does too.

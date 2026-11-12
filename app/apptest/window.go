@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app"
+	"github.com/liamg/oriel/app/agentui"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -127,6 +128,13 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	}
 	w.Host = g.h
 	t.Cleanup(w.Stop)
+	// A Window runs on the real clock, so a prompt waiting for typing to pause would wait for a while: it comes up at
+	// once. The pause is a Scene's to test, on its own clock.
+	if err := w.Do(func() error {
+		return w.Host.Options().Set(agentui.PromptPauseOption, registry.LayerUser, registry.At{}, time.Duration(0))
+	}); err != nil {
+		t.Fatal(err)
+	}
 	return w
 }
 

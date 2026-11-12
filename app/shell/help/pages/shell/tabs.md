@@ -15,6 +15,10 @@ violet `?` wants permission, a cyan spinner is working, a blue `◌` is waiting 
 green `✓` is quiet, a grey `○` is off. The HUD uses the same marks. A `✕` and a number mean errors
 in that session you haven't seen yet.
 
+A tab behind with a permission waiting calls for you: it pulses in the permission's colour a few times as each one
+comes, then stays lit until you go to it, when the permission comes up at once
+([Prompts](shell/inbox#prompts)). With reduced motion (`ui.reduced_motion`) it's lit without pulsing.
+
 - Click a tab, or press `⌘1` to `⌘9`, to bring that session to the front.
 - Drag a tab onto another to move it to its place (`session.tab.move`); `⌘1` to `⌘9` follow the order.
 - Its `✕` ends the session: its agent stops and it's archived, asking first when something would be lost

@@ -44,6 +44,12 @@ type InboxCard struct {
 	// Dialog draws a waiting card in the middle of the window over a scrim, holding focus: a confirm of what the user
 	// just did. Escape or a click on the scrim dismisses it.
 	Dialog bool
+	// Prompt asks for an answer from whoever is at its session (an agent's permission): while its Session is in front
+	// (or it has none) it's drawn in the middle of the window over a scrim, holding focus, one at a time in the order
+	// they came, once no key has gone down for the inbox.prompt_pause; at once if none has since its session came to the
+	// front or a prompt was last up. Behind another session it waits, and its session's tab calls for you. Escape, its
+	// ✕ or a click on the scrim puts it off to the Inbox panel until its session next comes to the front.
+	Prompt bool
 	Done   bool // history: nothing waits on it; it never stacks or counts
 
 	// The card's face: Kicker, Title, Detail, Code, Body, Actions and Note in a widget.ActionCard. Draw, when set,
