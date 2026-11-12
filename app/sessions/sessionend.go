@@ -143,7 +143,8 @@ func (x *End) open(id core.SessionID) error {
 }
 
 // close opens the dialog on id to archive it once its projects are read afresh; one that looks done offers delete
-// too, its local branches ticked to go, and one with nothing to lose is archived without asking (view).
+// too, its local branches ticked to go, and one with nothing to lose is archived without asking (view). One whose
+// kind ends by deleting always asks, starting on Delete.
 func (x *End) close(id core.SessionID) error {
 	if err := x.open(id); err != nil {
 		return err
@@ -201,14 +202,17 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 	}
 }
 
-// settle picks the choice the dialog starts on, until one is picked: Archive once anything left the machine or when
-// closing a tab of a session that isn't done, Delete otherwise; a session whose kind can't be deleted (a direct one's
-// directory isn't Oriel's) archives.
-func (a *endAsk) settle(canDelete bool, ships []registry.ProjectShip, st widget.LoadState) {
+// settle picks the choice the dialog starts on, until one is picked: Delete for a kind that ends that way
+// (core.DeletesOnEnd); Archive once anything left the machine or when closing a tab of a session that isn't done;
+// Delete otherwise. A session whose kind can't be deleted (a direct one's directory isn't Oriel's) archives.
+func (a *endAsk) settle(canDelete, deletes bool, ships []registry.ProjectShip, st widget.LoadState) {
 	switch {
 	case !canDelete:
 		a.how = 0
-	case a.picked || st.Loading():
+	case a.picked:
+	case deletes:
+		a.how = 1
+	case st.Loading():
 	case leftMachine(ships), a.closing && a.done == "":
 		a.how = 0
 	default:
@@ -282,7 +286,8 @@ func (x *End) view(c *ui.Ctx) {
 	}
 	se := s.Snapshot()
 	ships, st := x.preview(c, se)
-	if a.closing && a.done == "" && st.Phase == widget.Ready && !slices.ContainsFunc(lossesOf(se, ships, a.deleteBranch), loss.matters) {
+	deletes := registry.Can(x.h, se.Kind, core.DeletesOnEnd)
+	if a.closing && a.done == "" && !deletes && st.Phase == widget.Ready && !slices.ContainsFunc(lossesOf(se, ships, a.deleteBranch), loss.matters) {
 		x.ask = nil
 		x.h.Do(func() {
 			if err := x.end(context.Background(), host.EndReq{Session: a.id}); err != nil {
@@ -291,7 +296,7 @@ func (x *End) view(c *ui.Ctx) {
 		})
 		return
 	}
-	a.settle(registry.Can(x.h, se.Kind, core.Delete), ships, st)
+	a.settle(registry.Can(x.h, se.Kind, core.Delete), deletes, ships, st)
 	th := c.Theme()
 	size := c.Size()
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}

@@ -49,6 +49,19 @@ func TestClosingAnApprovedReviewOffersToEndIt(t *testing.T) {
 	})
 }
 
+// A review is done with once it's closed: closing its tab, approved or not, asks first, starting on Delete, and ⌘↵
+// deletes it.
+func TestClosingAReviewsTabStartsOnDelete(t *testing.T) {
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	sess, _ := s.Store().State().Session(id)
+	s.Until("its tab", func() bool { return s.FindRole(render.RoleTab, sess.Name()) != nil })
+	s.RightClick(apptest.Centre(s.NodeRole(render.RoleTab, sess.Name()).Bounds))
+	s.ClickText("Close tab")
+	s.Until("the End session dialog", func() bool { return s.Has("END SESSION", "Its worktrees, workspace and log go") })
+	s.Press("<D-CR>")
+	s.UntilState("the review deleted", func(st core.State) bool { _, ok := st.Session(id); return !ok })
+}
+
 // Once you've approved, the session's work is done: the review's own comments, mirrored back from GitHub, aren't the
 // agent's to answer, so its tab shows ✓, not a spinner.
 func TestApprovedReviewIsQuiet(t *testing.T) {

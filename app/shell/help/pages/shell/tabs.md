@@ -46,10 +46,17 @@ page once every pull request is merged.
 
 Closing a session's tab (its `✕`, **Close tab**, `session.close`) archives it. When nothing would be lost it does so
 without asking, and its notice offers **Undo**. When something would be (any of the list above but a sandbox), the
-dialog opens first, on Archive. A session that looks finished opens the dialog too, offering Delete as well, with
-**Delete the local branches too** ticked: a review whose last review you sent approved the pull request, or a
-session whose pull requests are all merged with nothing uncommitted or unpushed in any of its projects. Cancel
-leaves the session as it was, its tab open. A plugin says when a session is finished with `oriel.session.done`.
-`session.end` with `how` (`archive` or `delete`) ends one without asking; `session.close-tab` closes only the tab.
+dialog opens first, on Archive. A session that looks finished opens the dialog too, with **Delete the local branches
+too** ticked: a review whose last review you sent approved the pull request, or a session whose pull requests are all
+merged with nothing uncommitted or unpushed in any of its projects. A pull request review always opens the dialog,
+starting on Delete: there's nothing of it to keep once it's closed (a kind of session says so with `deletes-on-end`
+in its `can`). Cancel leaves the session as it was, its tab open. A plugin says when a session is finished with
+`oriel.session.done`. `session.end` with `how` (`archive` or `delete`) ends one without asking; `session.close-tab`
+closes only the tab.
+
+Ending a session stops everything it was running: its agent, every process the agent started and left running
+(found by the session's mark in their environment, so a detached server or one whose shell has exited goes too),
+and its sandbox's containers, network and volume. Opening an archived session again makes its worktrees and its
+sandbox again, in the same place, with the sandbox's home as it was; only its caches start empty.
 
 {{options "session"}}

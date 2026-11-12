@@ -128,7 +128,8 @@ stands, closing those the new commits fixed. **Fetch latest** (`review.pr.fetch`
 
 When the author replies on a comment you posted, a notice says so, with the first line of the reply. Once the PR is
 merged or closed, the tab says so, nothing more can be posted, and syncing stops; **Archive this review** (there, or
-under **Sent** once you've posted) puts the session away.
+under **Sent** once you've posted) puts the session away. Closing its tab asks first, starting on Delete
+([Ending a session](shell/tabs#end)).
 
 A review the assistant started in the background opens the same way, on the Explorer and the PR's diff, the first
 time you bring it to the front. If the agent answers its request without resolving it, the review counts as done once it stops.

@@ -40,6 +40,8 @@ const (
 	// CommentsInDiff keeps its agent's line comments on lines of its pull request's diff, as GitHub's review takes them.
 	CommentsInDiff Capability = "comments-in-diff"
 	RestartsAgent  Capability = "restarts-agent" // its agent is started again when it exits on its own
+	// DeletesOnEnd ends by deleting: nothing of it is worth keeping once it's done with, so ending it starts on Delete.
+	DeletesOnEnd Capability = "deletes-on-end"
 )
 
 // KindSpec is a kind of session as data: what it starts from and what its agent is told.
