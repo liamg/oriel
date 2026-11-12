@@ -1,6 +1,7 @@
 package agentui_test
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"os"
@@ -540,5 +541,25 @@ func widenAssistant(t *testing.T, s *apptest.Scene) {
 	s.Drag(render.Point{X: r.Max.X - 3, Y: r.Max.Y - 3}, render.Point{X: r.Max.X + 520, Y: r.Max.Y + 400})
 	if w := assistantOf(s).WindowRect().Dx(); w < 900 {
 		t.Fatalf("dragged by its corner, the window is %v wide", w)
+	}
+}
+
+// The assistant runs on its provider's default model unless assistant.model says otherwise; small picks the
+// provider's small one.
+func TestAssistantRunsOnTheDefaultModel(t *testing.T) {
+	for _, tt := range []struct{ setting, want string }{{"", "big"}, {"small", "tiny"}} {
+		t.Run(cmp.Or(tt.setting, "unset"), func(t *testing.T) {
+			s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+			lw.Fake.Offers = []agent.Model{{ID: "big", Name: "Big", Default: true}, {ID: "tiny", Name: "Tiny", Small: true}}
+			if tt.setting != "" {
+				if err := s.Registry().Options().Set("assistant.model", registry.LayerUser, registry.At{}, tt.setting); err != nil {
+					t.Fatal(err)
+				}
+			}
+			s.Run("assistant.open", registry.Args{"text": "hello"})
+			if ua := lw.Fake.WaitStarted(t); ua.Spec.Model != tt.want {
+				t.Errorf("the assistant started on %q, want %q", ua.Spec.Model, tt.want)
+			}
+		})
 	}
 }

@@ -80,8 +80,8 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 	for _, o := range []registry.OptionSpec{
 		{Name: "assistant.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
 			Help: "The agent the assistant runs on: claude or codex; auto picks the first installed and signed in."},
-		{Name: "assistant.model", Type: registry.String, Default: "small", Choices: func() []string { return []string{"small", "default"} },
-			Help: "The assistant's model: small, the provider's small model (Claude's Haiku); default, its default; or a model's name."},
+		{Name: "assistant.model", Type: registry.String, Default: "default", Choices: func() []string { return []string{"default", "small"} },
+			Help: "The assistant's model: default, the provider's default model; small, its small one (Claude's Haiku); or a model's name."},
 		{Name: "assistant.web", Type: registry.Bool, Default: true,
 			Help: "Let the assistant search the web, for news and anything happening in the world."},
 		{Name: "assistant.idle", Type: registry.Int, Default: 15, Min: 1, Max: 24 * 60, Step: 5,
@@ -272,7 +272,7 @@ func (x *Assistant) runsOn() string {
 	if _, model, ok := strings.Cut(x.ran, " · "); ok && model != "" {
 		return model
 	}
-	return cmp.Or(x.str("assistant.model"), cmp.Or(x.ran, "small model"))
+	return cmp.Or(x.str("assistant.model"), cmp.Or(x.ran, "default model"))
 }
 
 // utilityAgent is a utility agent as the conversation drives it.

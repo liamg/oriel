@@ -35,8 +35,8 @@ opens the page when you want to read it.
 ## What it runs on {#model}
 
 The assistant is an agent of its own, with no session: a hidden one, started the way any
-session's is (Claude Code in its terminal with Oriel's mod; never `claude -p`), on a small model (Claude's Haiku)
-unless `assistant.provider` and `assistant.model` say otherwise. The chip in its title bar says which. It can't
+session's is (Claude Code in its terminal with Oriel's mod; never `claude -p`), on the provider's default model
+unless `assistant.provider` and `assistant.model` say otherwise (`small` runs it on Claude's Haiku, quicker and cheaper). The chip in its title bar says which. It can't
 edit code, run commands or post anywhere: every tool it has is one of Oriel's. What it's told is the **Assistant**
 prompt on the Prompts page.
 
