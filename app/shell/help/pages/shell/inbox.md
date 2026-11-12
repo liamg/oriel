@@ -11,7 +11,8 @@ gateway call the sandbox holds, a security-key touch, a review request or a ques
 
 ## Cards {#cards}
 
-Cards waiting on you stack at the bottom right of the window, whatever is in front; past four, a count says how many
+Cards waiting on you stack at the bottom right of the window, whatever is in front, except an agent's question,
+which waits in its thread; past four, a count says how many
 more wait. A security-key touch shows on its own at the top. Each card answers with its buttons, or with their keys
 while it has focus. A card with a time limit shows a ring counting down to it. Its ✕, or `Esc` while it has focus,
 dismisses it: it leaves the stack and waits on in the Inbox panel, still counted on its session's tab.
@@ -19,7 +20,9 @@ dismisses it: it leaves the stack and waits on in the Inbox panel, still counted
 ## The Inbox panel {#list}
 
 The Inbox panel lists every card, those waiting first, then those answered, newest first. Click a card waiting on
-you, or select it with `j` and `k`, and it opens under its row to be answered there. `Esc` or `q` closes the panel.
+you, or select it with `j` and `k`, and it opens under its row to be answered there. A card answered somewhere of its
+own, such as an agent's question in its thread, takes you there instead: a click on it, or `⏎` on it, opens the
+thread in Requests with the question in it. `Esc` or `q` closes the panel.
 
 {{keys "inbox.*"}}
 
@@ -69,4 +72,5 @@ its session comes to the front. A card is a prompt when it sets `Prompt`.
 
 Cards come from inbox sources (`uireg.InboxSource`): the asks of every session are one; a plugin adds its own with
 `oriel.inbox.add`, and takes them away with `oriel.inbox.remove`. A card's `body` holds what its buttons can't: a
-field to type an answer in.
+field to type an answer in. One answered on a page of its own sets `open` (`uireg.InboxCard.Open`), which choosing its
+row runs, and needn't stack.

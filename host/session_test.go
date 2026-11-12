@@ -341,6 +341,99 @@ func TestQuestionsWaitForTheUser(t *testing.T) {
 	}
 }
 
+// A question is asked in a thread: the one the agent names; with none named (Claude's own question tool), the one it's
+// working on, else the session's request, else a new general thread of its own.
+func TestAQuestionIsAskedInAThread(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Negative values round the wrong way")
+	a.WaitSent(t)
+	req := r.session(id).Threads[0].ID
+	other, err := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "and zero?"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Unnamed, it's asked in the thread the agent was handed and is on: the request, not the comment waiting behind it.
+	ch := a.Expect("q1")
+	a.Emit(agent.Question{ID: "q1", Questions: []core.Question{{Question: "Half to even?", Options: []string{"yes", "no"}}}})
+	se := r.eventually(id, "the first question", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	if se.Asks[0].Thread != req {
+		t.Errorf("an unnamed question was asked in %q, want the active thread %q", se.Asks[0].Thread, req)
+	}
+	r.w.Answer(AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}})
+	<-ch
+
+	// Named, through Oriel's own tool, it's asked there, and the tool answers with the user's choice.
+	got := make(chan string, 1)
+	go func() {
+		out, err := a.CallErr("ask", map[string]any{"thread": string(other), "questions": []map[string]any{{"question": "Which zero?", "options": []string{"+0", "-0"}}}})
+		if err != nil {
+			out = "error: " + err.Error()
+		}
+		got <- out
+	}()
+	se = r.eventually(id, "the named question", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	if se.Asks[0].Thread != other || se.Asks[0].Kind != core.AskQuestion || se.Asks[0].Questions[0].Question != "Which zero?" {
+		t.Errorf("the ask tool asked %+v, want a question in %q", se.Asks[0], other)
+	}
+	r.w.Answer(AnswerReq{Session: id, Ask: se.Asks[0].ID, Answers: map[string]string{"Which zero?": "-0"}})
+	if out := <-got; !strings.Contains(out, "Which zero?") || !strings.Contains(out, "-0") {
+		t.Errorf("the ask tool answered %q", out)
+	}
+	if _, err := a.CallErr("ask", map[string]any{"questions": []map[string]any{{"question": "Where?"}}}); err == nil {
+		t.Error("the ask tool asked with no thread")
+	}
+	if _, err := a.CallErr("ask", map[string]any{"thread": "nope", "questions": []map[string]any{{"question": "Where?"}}}); err == nil {
+		t.Error("the ask tool asked in a thread that isn't there")
+	}
+}
+
+// A question with no thread named, from an agent on no thread, is asked in the session's request.
+func TestAQuestionOffAThreadIsAskedInTheRequest(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Negative values round the wrong way")
+	a.WaitSent(t)
+	req := r.session(id).Threads[0].ID
+	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "and zero?"}); err != nil {
+		t.Fatal(err)
+	}
+	a.Call(t, "reply", map[string]any{"thread": string(req), "body": "Which way should they round?"})
+	r.eventually(id, "the request handed back", func(se core.SessionState) bool { th, _ := se.Thread(req); return !th.Busy })
+	ch := a.Expect("q1")
+	a.Emit(agent.Question{ID: "q1", Questions: []core.Question{{Question: "Half to even?"}}})
+	se := r.eventually(id, "the question", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	if se.Asks[0].Thread != req {
+		t.Errorf("the question was asked in %q, want the request %q", se.Asks[0].Thread, req)
+	}
+	r.w.Answer(AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}})
+	<-ch
+}
+
+// A question from an agent with no thread to ask in opens a general thread for it.
+func TestAQuestionWithNoThreadOpensOne(t *testing.T) {
+	r := newRig(t)
+	id := r.start(core.SessionSpec{Kind: core.KindWork, Provider: "fake", Model: "m1", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
+	a := r.agent()
+	ch := a.Expect("q1")
+	a.Emit(agent.Question{ID: "q1", Questions: []core.Question{{Question: "What should it do?"}}})
+	se := r.eventually(id, "the question", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	th, ok := se.Thread(se.Asks[0].Thread)
+	if !ok || th.Anchor != nil || !th.Open() {
+		t.Fatalf("the question is in thread %q (%+v), want an open general one", se.Asks[0].Thread, th)
+	}
+	r.w.Answer(AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"What should it do?": "round"}})
+	<-ch
+	// The thread was the question's own: it keeps the answer, and is resolved.
+	se = r.eventually(id, "the question's thread resolved", func(se core.SessionState) bool {
+		t, _ := se.Thread(th.ID)
+		return t.Status == core.ThreadResolved
+	})
+	t2, _ := se.Thread(th.ID)
+	if last, _ := t2.Last(); last.Author != core.AuthorYou || last.Body != "What should it do? → round" || !last.Delivered {
+		t.Errorf("the thread ends %+v, want your answer, given to the agent", last)
+	}
+}
+
 // A btw is answered by a fork, and never joins the conversation.
 func TestBtwIsAnsweredByAFork(t *testing.T) {
 	r := newRig(t)
@@ -438,7 +531,7 @@ func TestStartSpecCarriesThePackToolsAndGuards(t *testing.T) {
 	for _, tool := range s.Tools {
 		names = append(names, tool.Name)
 	}
-	for _, want := range []string{"reply", "thread", "resolve", "comment", "task_add", "task_update", "tasks", "projects", "commit_draft", "pr_draft", "test_run"} {
+	for _, want := range []string{"reply", "thread", "resolve", "comment", "ask", "task_add", "task_update", "tasks", "projects", "commit_draft", "pr_draft", "test_run"} {
 		if !strings.Contains(" "+strings.Join(names, " ")+" ", " "+want+" ") {
 			t.Errorf("no %s tool in %v", want, names)
 		}

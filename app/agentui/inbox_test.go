@@ -313,6 +313,35 @@ func TestLuaPromptCards(t *testing.T) {
 	}
 }
 
+// A card with somewhere it's answered (open) takes you there when its row is chosen in the Inbox panel, by a click or
+// ⏎, rather than opening under the row; it waits on until it's answered.
+func TestAnInboxCardOpensWhereItsAnswered(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	var opened []string
+	s.Registry().Command(registry.Command{ID: "deploy.show", Run: func(_ registry.Ctx, a registry.Args) error {
+		opened = append(opened, a.String("env"))
+		return nil
+	}})
+	s.Lua(`L.inbox.add({ id = "d1", type = "deploy", title = "Deploy api to prod?", detail = "approve it on its page",
+		open = { command = "deploy.show", args = { env = "prod" } } })`)
+	s.Run("inbox.open", nil)
+	s.Frame()
+	s.ClickText("Deploy api to prod?")
+	s.Frame()
+	if len(opened) != 1 || opened[0] != "prod" {
+		t.Fatalf("choosing the row ran deploy.show with %v", opened)
+	}
+	if strings.Contains(s.Text(), "approve it on its page") {
+		t.Error("the card opened under its row as well")
+	}
+	s.Press("<CR>")
+	s.Frame()
+	if len(opened) != 2 {
+		t.Errorf("⏎ on the chosen row ran deploy.show %d times in all, want 2", len(opened))
+	}
+	s.Node("Deploy api to prod?")
+}
+
 // A notice that asks something (a question) is an inbox card, whoever sent it: stacked while it
 // waits, answered by its actions, then history. One that only tells stays a toast.
 func TestNoticesThatAskAreInboxCards(t *testing.T) {

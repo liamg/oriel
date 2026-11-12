@@ -137,6 +137,7 @@ func (x *Inbox) keymaps() []registry.Keymap {
 		{Mode: InboxKeyMode, Keys: "<Down>", Command: "inbox.next", Desc: "Next card"},
 		{Mode: InboxKeyMode, Keys: "k", Command: "inbox.prev", Desc: "Card before"},
 		{Mode: InboxKeyMode, Keys: "<Up>", Command: "inbox.prev", Desc: "Card before"},
+		{Mode: InboxKeyMode, Keys: "<CR>", Command: "inbox.choose", Desc: "Go where it's answered, or open it"},
 		{Mode: InboxKeyMode, Keys: "<Esc>", Command: "view.close", Args: registry.Args{"docked": true}, Desc: "Close the inbox"},
 		{Mode: InboxKeyMode, Keys: "q", Command: "view.close", Desc: "Close"},
 		{Mode: InboxKeyMode, Keys: "<C-w>c", Command: "view.close", Desc: "Close"},
@@ -172,6 +173,8 @@ func (x *Inbox) commands() []registry.Command {
 			}},
 		{ID: "inbox.next", Title: "Inbox: the next card", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
 		{ID: "inbox.prev", Title: "Inbox: the card before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
+		{ID: "inbox.choose", Title: "Inbox: go where the selected card is answered (a question's thread), or open it",
+			Run: func(registry.Ctx, registry.Args) error { return x.chooseSelected() }},
 	}
 }
 
@@ -619,6 +622,37 @@ func (x *Inbox) move(d int) {
 	x.list.Reveal = x.sel
 }
 
+// choose is a row picked in the panel: a waiting card with somewhere to answer it takes you there; another opens
+// under its row, or with toggle closes again.
+func (x *Inbox) choose(r *inboxRow, toggle bool) {
+	k := r.card.Key()
+	x.mu.Lock()
+	switch {
+	case toggle && x.sel == k && (r.card.Open == nil || !r.waiting()):
+		x.sel = ""
+	default:
+		x.sel = k
+	}
+	x.mu.Unlock()
+	if open := r.card.Open; open != nil && r.waiting() {
+		registry.Call(func() error { open(); return nil })
+	}
+}
+
+// chooseSelected chooses the panel's selected row, as ⏎ on it does.
+func (x *Inbox) chooseSelected() error {
+	x.mu.Lock()
+	sel := x.sel
+	x.mu.Unlock()
+	for _, r := range x.visible() {
+		if r.card.Key() == sel {
+			x.choose(r, false)
+			return nil
+		}
+	}
+	return fmt.Errorf("no card is selected")
+}
+
 // panel is the Inbox panel: the filters, then a row for every card, the selected one's card open
 // under it.
 func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
@@ -671,15 +705,9 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 				block(k)
 				c.Column(k, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 					if x.row(c, r, k == sel, now) {
-						x.mu.Lock()
-						if x.sel == k {
-							x.sel = ""
-						} else {
-							x.sel = k
-						}
-						x.mu.Unlock()
+						x.choose(r, true)
 					}
-					if k == sel && r.waiting() {
+					if k == sel && r.waiting() && r.card.Open == nil {
 						c.Box("open", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 10}}, func(c *ui.Ctx) { x.card(c, r, false) })
 					}
 				})

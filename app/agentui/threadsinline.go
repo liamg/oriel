@@ -188,7 +188,7 @@ func (x *Requests) decorations(ctx uireg.DecorationCtx) []uireg.Decoration {
 	byLine := map[int][]core.Thread{}
 	var lines []int
 	for _, t := range se.Threads {
-		if t.Anchor == nil || t.Btw || !t.Open() && (!present || hidden) || filepath.Clean(kit.AnchorPath(se, t.Anchor)) != filepath.Clean(ctx.Path) {
+		if t.Anchor == nil || t.Btw || !t.Open() && !asksIn(se, t.ID) && (!present || hidden) || filepath.Clean(kit.AnchorPath(se, t.Anchor)) != filepath.Clean(ctx.Path) {
 			continue
 		}
 		line := x.lineOf(ctx, t)
@@ -286,7 +286,7 @@ func (x *Requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 	if !ok {
 		return
 	}
-	if t.Open() {
+	if t.Open() || asksIn(se, id) {
 		delete(x.unfolded, id)
 	} else if !x.unfolded[id] {
 		if foldedThread(c, x.h, se, t, x.lineNow[id]) {

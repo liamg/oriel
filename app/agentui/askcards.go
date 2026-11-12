@@ -25,7 +25,8 @@ import (
 )
 
 // askCards are the asks waiting on you, from every session, as the inbox's cards: stacked over the
-// window, except the session in front's while its console shows them; a security-key touch on its own at the top.
+// window, except the session in front's while its console shows them and a question, drawn in its thread; a
+// security-key touch on its own at the top.
 // A permission is a prompt: it comes up in the middle of the window while its session is in front, and calls from
 // its tab while it's behind.
 func (x *Console) askCards() []uireg.InboxCard {
@@ -36,7 +37,7 @@ func (x *Console) askCards() []uireg.InboxCard {
 		for _, a := range se.Asks {
 			card := uireg.InboxCard{ID: string(se.ID) + "/" + a.ID, Type: string(a.Kind), Group: askGroup(a.Kind), Mine: true, Session: string(se.ID),
 				Icon: string(a.Kind), Tone: askTone(a.Kind).Name(), Created: a.Created,
-				Interrupt: se.ID != st.Focus || !inConsole || a.Kind == core.AskKey,
+				Interrupt: (se.ID != st.Focus || !inConsole || a.Kind == core.AskKey) && a.Thread == "",
 				Draw: func(c *ui.Ctx, key string, p uireg.CardPlace) {
 					x.askCard(c, key, se, a, p, false)
 				}}
@@ -44,6 +45,9 @@ func (x *Console) askCards() []uireg.InboxCard {
 			// proxy holds) comes up as a prompt; a key touch comes at the top of the window, where it's seen.
 			card.Prompt = asksYou(a.Kind)
 			card.Top = a.Kind == core.AskKey
+			if a.Thread != "" { // asked in a thread, it's drawn there, and the inbox takes you to it
+				card.Open = func() { x.openThread(se.ID, a.Thread) }
+			}
 			title, sub := x.askRow(se, a)
 			card.Title, card.Sub = title, kit.JoinParts(sub, kit.Label(se))
 			out = append(out, card)
@@ -481,7 +485,8 @@ func (x *Console) questions(c *ui.Ctx, se core.SessionState, a core.Ask, st *con
 	}
 	if len(a.Questions) == 1 {
 		t := st.typed[a.ID]
-		r := widget.Input(c, "typed", &t, widget.InputOpts{Label: "Your own answer", Placeholder: "or type an answer: ⏎ sends it", Help: help})
+		r := widget.Input(c, "typed", &t, widget.InputOpts{Label: "Your own answer", Placeholder: "or type an answer: ⏎ sends it", Help: help,
+			TabMoves: true})
 		st.typed[a.ID] = t
 		if r.Submitted && strings.TrimSpace(t) != "" {
 			x.run(context.Background(), "ask.answer", registry.Args{"id": string(se.ID), "ask": a.ID, "answers": x.answers(st, a)})

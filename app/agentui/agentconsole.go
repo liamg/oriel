@@ -114,6 +114,7 @@ func (x *Console) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.View(AgentConsoleView, consoleView{x}))
 	x.Add(h.Contribute(uireg.InboxSource{Name: "asks", Cards: x.askCards, Source: "builtin:agentconsole"}))
+	x.Add(h.Contribute(uireg.ThreadFoot{Name: "question", Draw: x.questionFoot, Source: "builtin:agentconsole"}))
 	return nil
 }
 

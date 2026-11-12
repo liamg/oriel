@@ -24,7 +24,11 @@ func TestATerminalDialogAsksForYou(t *testing.T) {
 	a.WaitSent(t)
 	a.Emit(agent.Dialog{Title: "Allow external CLAUDE.md file imports?", Shown: true})
 	a.Emit(agent.Dialog{Title: "Allow external CLAUDE.md file imports?", Shown: true})
-	se := r.eventually(id, "the terminal ask", func(se core.SessionState) bool { _, ok := terminalAsk(se); return ok })
+	// The status follows the ask in an event of its own.
+	se := r.eventually(id, "the terminal ask", func(se core.SessionState) bool {
+		_, ok := terminalAsk(se)
+		return ok && se.Status == core.StatusNeedsYou
+	})
 	if ask, _ := terminalAsk(se); ask.Summary != "Allow external CLAUDE.md file imports?" || se.Status != core.StatusNeedsYou || len(se.Asks) != 1 {
 		t.Errorf("asked %+v with the session %s", se.Asks, se.Status)
 	}

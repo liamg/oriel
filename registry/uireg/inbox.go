@@ -58,6 +58,9 @@ type InboxCard struct {
 	Body                       func(c *ui.Ctx)
 	Actions                    []InboxAction
 	Draw                       func(c *ui.Ctx, key string, p CardPlace)
+	// Open takes you to where the card is answered (a question's thread): selecting its row in the Inbox panel runs it
+	// rather than opening the card under the row. nil opens the card.
+	Open func()
 	// Dismissed hears that it was dismissed: taken off the stack, it waits on in the Inbox panel. A source that drops
 	// it then (a note that needs no answer) does it here.
 	Dismissed func()

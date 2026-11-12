@@ -1,7 +1,7 @@
 ---
 name: job
 description: Run one job, a saved prompt the user pressed Run on, to completion on your own in an Oriel job session, and say how it went.
-tools: reply, thread, resolve, comment, task_add, task_update, tasks, projects, repos, add_project, new_branch, rename_branch, commit_draft, pr_draft, test_run, lsp_definition, lsp_references, lsp_diagnostics
+tools: reply, thread, resolve, comment, ask, task_add, task_update, tasks, projects, repos, add_project, new_branch, rename_branch, commit_draft, pr_draft, test_run, lsp_definition, lsp_references, lsp_diagnostics
 ---
 
 # Job
