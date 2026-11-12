@@ -371,10 +371,6 @@ func (x *Editor) symbolsSource() uireg.PickerSource {
 		s.units, _ = p.Outline()
 		return s.units
 	}
-	type sym struct {
-		file string
-		line int
-	}
 	return uireg.PickerSource{ID: "symbols", Title: "Symbols", Prefix: "#", Order: 40,
 		Key: func() any {
 			var k strings.Builder
@@ -404,18 +400,16 @@ func (x *Editor) symbolsSource() uireg.PickerSource {
 					}
 					out = append(out, uireg.PickerItem{ID: fmt.Sprintf("%s:%d", p.Name(), line+1), Label: u.Name,
 						Detail: fmt.Sprintf("%s:%d", p.Name(), line+1), Icon: icon, IconStyle: style, Note: u.Kind,
-						Path: p.Name(), Line: line + 1, Data: sym{p.Name(), line}})
+						Path: p.Name(), Line: line + 1})
 				}
 			}
 			return dedupe(out)
 		},
-		Preview: func(it uireg.PickerItem) ui.Node {
-			s := it.Data.(sym)
-			return x.filePreview(s.file, s.line)
-		},
+		// Preview and Run read the item's place, not a Data of the editor's own: a plugin that asks a language server
+		// for the symbols in their place (the LSP's) keeps these.
+		Preview: func(it uireg.PickerItem) ui.Node { return x.filePreview(it.Path, it.Line-1) },
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			s := it.Data.(sym)
-			return x.h.Run(ctx, "editor.open", registry.Args{"path": s.file, "line": s.line + 1})
+			return x.h.Run(ctx, "editor.open", registry.Args{"path": it.Path, "line": it.Line})
 		},
 	}
 }

@@ -183,3 +183,23 @@ func runsIn(s *apptest.Scene, r render.Rect, sep string) string {
 	}
 	return strings.Join(out, sep)
 }
+
+// ⌘K, a symbol's name and Enter open its line, from the omnibox's symbols as from everything's.
+func TestOmniboxOpensASymbol(t *testing.T) {
+	for _, q := range []string{"#setDetails", "setDetails"} {
+		t.Run(q, func(t *testing.T) {
+			r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"deep/tiers.go": "package deep\n\nfunc setDetails() {}\n"},
+				Files: []string{"deep/tiers.go"}})
+			r.WaitText("func setDetails")
+			r.TypeKeys("<D-k>")
+			r.WaitText("SESSIONS")
+			r.TypeKeys(q)
+			r.WaitText("deep/tiers.go:3")
+			r.TypeKeys("<CR>")
+			r.WaitFrame("the omnibox closed", func(s string) bool { return !strings.Contains(s, "deep/tiers.go:3") })
+			if n := rig.NoticeTexts(r.Store.State().Notifications); len(n) > 0 {
+				t.Errorf("notices: %q", n)
+			}
+		})
+	}
+}
