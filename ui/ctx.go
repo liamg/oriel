@@ -51,7 +51,13 @@ func (c *Ctx) ID() ID { return c.e.id }
 func (c *Ctx) Shaper() typeset.Shaper { return c.u.sh }
 
 // Theme is the resolved theme widgets read their colours from, by token id.
-func (c *Ctx) Theme() *theme.Resolved { return c.u.theme }
+// It's the UI's, or the nearest Style.Theme of what holds it.
+func (c *Ctx) Theme() *theme.Resolved {
+	if c.e.theme != nil {
+		return c.e.theme
+	}
+	return c.u.theme
+}
 
 // Next is the id the next child added with key will have, so a widget can ask for its interaction
 // before it builds itself.
@@ -83,6 +89,9 @@ func (c *Ctx) PointerOver(id ID) bool {
 func (c *Ctx) Box(key any, st Style, body func(c *Ctx)) ID {
 	e := c.u.add(c.e, key, kBox)
 	e.style = scaled(st, &e.scale, c.Scale())
+	if st.Theme != nil {
+		e.theme = st.Theme
+	}
 	stackFloat(e)
 	if body != nil {
 		body(&Ctx{u: c.u, e: e})
@@ -104,6 +113,9 @@ func stackFloat(e *elem) {
 func (c *Ctx) Guard(key any, st Style, body func(c *Ctx), fallback func(c *Ctx, v any, stack []byte)) ID {
 	e := c.u.add(c.e, key, kBox)
 	e.style = scaled(st, &e.scale, c.Scale())
+	if st.Theme != nil {
+		e.theme = st.Theme
+	}
 	if v, stack := try(func() { body(&Ctx{u: c.u, e: e}) }); stack != nil {
 		e.kids, e.keys = nil, nil
 		fallback(&Ctx{u: c.u, e: e}, v, stack)

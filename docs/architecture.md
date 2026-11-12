@@ -214,7 +214,9 @@ agent that loses its sign-in is started once again on the host's, handed over af
     release the loop gets behind moves no frame has seen yet waits for that frame (`UI.Dragged`).
   - Loading looks the same everywhere: `plugin.Load` tracks a fetch, `widget.Async` and `widget.Busy` draw it.
   - Widgets get outside services with `ui.Provide` / `ui.Service`, never globals.
-- Themes are TOML token tables (`theme`), resolved into a flat table the widgets read.
+- Themes are TOML token tables (`theme`), resolved into a flat table the widgets read. A part of the window can be
+  built in a variation of it: `theme.Resolved.With` changes some tokens, and a box's `Style.Theme` holds it for its
+  subtree (`Ctx.Theme`).
 
 ## Accessibility
 

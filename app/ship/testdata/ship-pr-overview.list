@@ -162,7 +162,7 @@ clip 224,50 1376x924 r 0
     text "PR #812" @252,117.844 #ece6d8 Space Grotesk 14
     rect 320.58313,108.5 9x9 fill #b98aff radius 2
     text "web-dashboard" @339.58313,117.32 #ece6d8 JetBrains Mono 12
-    rect 443.22375,98 79.09375x30 fill #b3ab9924 radius 7 stroke 1 #b3ab998c
+    rect 443.22375,98 79.09375x30 radius 7 stroke 1 #b3ab99bf
     path 6 segments stroke 1.6363636 #b3ab99
     path 6 segments stroke 1.6363636 #b3ab99
     path 6 segments stroke 1.6363636 #b3ab99

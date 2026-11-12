@@ -68,7 +68,8 @@ only the PR's files; the PR's **diff** is in front, to read from the top, and it
 review request is in **Requests** like any other. The sidebar's **Review** entry (the pull request icon, in place of
 Raise PR's checklist) opens the tab again, is lit while it's showing, and counts the comments still to triage. The
 tab's header has a badge of where the PR stands: **Merged** (purple) or **Closed** (red) over anything a reviewer said,
-then **Changes requested** (amber), **Approved** (green), **Draft** or **Open**. The tab's top line says where the agent and the AI review are;
+then **Changes requested** (amber), **Approved** (green), **Draft** or **Open**; from Approved on, the tab's boxes
+are bordered in that colour too. The tab's top line says where the agent and the AI review are;
 when the agent resolves its request, a **Review done** notice says how many comments it has for you to triage.
 
 ### Triage {#triage}

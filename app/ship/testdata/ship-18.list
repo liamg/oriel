@@ -350,7 +350,7 @@ clip 224,50 1376x924 r 0
         clip 814.5,346.43774 351.40625x15.124512 r 0
           text "#812 · feat(search): back off on 429 using Retry-After" @814.5,358.54712 #ece6d8 Inter 12.5
         pop
-        rect 1173.9062,339 79.09375x30 fill #b3ab9924 radius 7 stroke 1 #b3ab998c
+        rect 1173.9062,339 79.09375x30 radius 7 stroke 1 #b3ab99bf
         path 6 segments stroke 1.6363636 #b3ab99
         path 6 segments stroke 1.6363636 #b3ab99
         path 6 segments stroke 1.6363636 #b3ab99
