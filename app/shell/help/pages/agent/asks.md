@@ -28,6 +28,17 @@ restart too: `Bash(go test:*)` for commands starting `go test`, `Edit` for edits
 agent reads that as the tool's result. Whatever the agent, it never posts to a code review, and an edit of your own
 checkout is refused before you're asked.
 
+### MCP calls {#mcp}
+
+Claude's every call to an MCP tool comes to Oriel, whatever mode it's in, sandboxed and in bypass too: a claude.ai
+connector's (`mcp__claude_ai_…`) or one of your own servers'. Your rules and `Permission` hooks answer first, then
+this card; **Always** makes a rule for that one tool. Oriel's own tools never ask, nor do the sandbox gateway's,
+which holds its own calls ([Gateway](#gateway)). If Oriel can't be asked about a call, it's refused, never left to
+Claude's mode. A tool your Claude settings deny is never offered, and on the host
+one they allow goes through. An agent nobody watches, such as the [assistant](agent/assistant), asks nothing: what it
+was allowed goes through and the rest is refused at once. Codex and other agents ask about an MCP call only when
+their own gate does.
+
 ## Deny with a note
 
 `⇧n` asks for a note before denying: why not, and what to do instead. The agent gets it with the denial.
@@ -38,7 +49,7 @@ The sandbox holds a connection to a host until you answer. **Allow host** allows
 \*.domain** every host under its domain, **Once** this connection only; **Deny** refuses it, and the agent sees a
 refused connection.
 
-## Gateway
+## Gateway {#gateway}
 
 The sandbox's gateway holds a call that leaves it, such as a push or opening a PR, until you allow or deny it.
 

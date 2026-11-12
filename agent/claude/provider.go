@@ -377,7 +377,12 @@ func args(s agent.StartSpec, modDir, id, resume string) ([]string, error) {
 	}
 	switch {
 	case s.Sandbox != nil && s.Sandbox.GatewayMCP != "":
-		a = append(a, "--mcp-config", s.Sandbox.GatewayMCP, "--strict-mcp-config")
+		// Not strict: the user's claude.ai connectors load beside the gateway's servers, and a repository's own run
+		// inside the sandbox. Every call to any of them asks Oriel (guard.Check), and the sandbox holds what they reach.
+		a = append(a, "--mcp-config", s.Sandbox.GatewayMCP)
+		if s.NoMCP {
+			a = append(a, "--strict-mcp-config") // the gateway's alone: Oriel's own tools, and nothing of the user's
+		}
 	case s.NoMCP:
 		a = append(a, "--mcp-config", `{"mcpServers":{}}`, "--strict-mcp-config")
 	}
@@ -418,6 +423,10 @@ func settings(s agent.StartSpec) map[string]any {
 	}
 	if s.Policy == agent.PolicyRefuse {
 		set["permissions"] = map[string]any{"allow": append([]string{"mcp__oriel"}, s.Allow...)}
+	}
+	if s.Sandbox != nil && s.Sandbox.GatewayMCP != "" && !s.NoMCP {
+		// A repository's servers would wait on Claude's approval dialog, which nobody at the sandbox's terminal sees.
+		set["enableAllProjectMcpServers"] = true
 	}
 	return set
 }
@@ -565,11 +574,12 @@ func inherited(environ []string) []string {
 	})
 }
 
-// processEnv is what claude's environment adds to Oriel's own: the mod's way back, and for an agent nobody watches,
-// unattendedEnv. spec.Env comes last, so a caller's own value stands.
+// processEnv is what claude's environment adds to Oriel's own: the mod's way back, claude.ai's connectors off for a
+// session without MCP servers, and for an agent nobody watches, unattendedEnv. spec.Env comes last, so a caller's own
+// value stands. A sandbox keeps the connectors: every MCP call asks Oriel (guard.Check), bypassPermissions or not.
 func processEnv(spec agent.StartSpec, sock, orielBin string) []string {
 	env := []string{"ORIEL_SPAWNED=1", "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1", agent.HookSocketEnv + "=" + sock, "ORIEL_BIN=" + orielBin}
-	if spec.Sandbox != nil || spec.NoMCP {
+	if spec.NoMCP {
 		env = append(env, "ENABLE_CLAUDEAI_MCP_SERVERS=false")
 	}
 	if spec.Unattended {
