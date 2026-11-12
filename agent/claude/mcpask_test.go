@@ -2,6 +2,8 @@ package claude
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -105,5 +107,52 @@ func TestASandboxKeepsClaudeAIConnectors(t *testing.T) {
 	}
 	if env := processEnv(agent.StartSpec{NoMCP: true}, "/s", "/oriel"); !slices.Contains(env, off) {
 		t.Errorf("a session without MCP servers kept the connectors: %q", env)
+	}
+}
+
+// unreachable is an oriel whose check never answers, as when the mod can't reach the host: every other op is the
+// real one (the test binary).
+func unreachable(t *testing.T) string {
+	t.Helper()
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(t.TempDir(), "oriel")
+	script := "#!/bin/sh\nif [ \"$1\" = hook ] && [ \"$2\" = check ]; then echo 'no Oriel here' >&2; exit 1; fi\nexec '" + exe + "' \"$@\"\n"
+	if err := os.WriteFile(bin, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return bin
+}
+
+// An MCP call Oriel couldn't be asked about is refused, never left to Claude's mode: in bypassPermissions it would
+// run unasked. Oriel's own tools still run. The fake plays the mod's side; the mod says it in the same words.
+func TestAnMCPCallIsRefusedWhenOrielCantBeAsked(t *testing.T) {
+	if ts, err := mod.ReadFile("mod/hooks/register.ts"); err != nil || !strings.Contains(string(ts), `"`+CheckFailed+`"`) {
+		t.Errorf("register.ts lacks %q (%v)", CheckFailed, err)
+	}
+	for name, change := range map[string]func(*agent.StartSpec){
+		"asking":    func(s *agent.StartSpec) { s.Policy = agent.PolicyAsk },
+		"sandboxed": func(s *agent.StartSpec) { s.Sandbox = &agent.Sandbox{Name: "box"}; s.Policy = agent.PolicyBypass },
+	} {
+		t.Run(name, func(t *testing.T) {
+			h := connectorHarness(t, change)
+			h.Provider.(*Provider).OrielBin = unreachable(t)
+			s := agenttest.Start(t, h)
+			s.Send("call a connector")
+			if got := s.Reply(); !strings.Contains(got, "denied: "+CheckFailed) {
+				t.Errorf("the reply is %q", got)
+			}
+			s.Send("call echo")
+			if got := s.Reply(); !strings.Contains(got, "echo: hi") {
+				t.Errorf("Oriel's own tool: %q", got)
+			}
+			for _, ev := range s.Events {
+				if p, ok := ev.(agent.Permission); ok {
+					t.Errorf("asked: %+v", p)
+				}
+			}
+		})
 	}
 }

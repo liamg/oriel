@@ -168,7 +168,8 @@ Oriel's own tools (and in a sandbox the gateway's, which gates its own calls) an
 Claude's mod answers its tool check "ask", which raises the PermissionRequest the mod hands to the session host's
 permission layers in any of Claude's modes, bypassPermissions included. An agent nobody can ask (`PolicyRefuse`) is
 answered in the check instead (its `Allow` goes ahead, the rest is refused), as Claude's dontAsk refuses a plugin's
-ask outright.
+ask outright. A check the mod gets no answer to fails closed for MCP: Oriel's own tools still run, the gateway's are
+the mode's, and any other MCP call is refused; other tools are left to the mode.
 
 A sandbox knows no provider: each backend asks the session's provider what its agent needs where the backend puts it
 (`agent.Sandboxed`: its binary for that platform, its config and sign-in in a directory of its own, the host

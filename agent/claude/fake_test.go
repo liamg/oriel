@@ -330,8 +330,7 @@ func (f *fake) turn(text string) {
 		answer = f.say("hello")
 	case "call echo":
 		f.use("toolu_echo", "mcp__oriel__echo", map[string]any{"text": "hi"})
-		var c checkOut
-		_ = f.hook("check", checkIn{Tool: "mcp__oriel__echo", Input: json.RawMessage(`{"text":"hi"}`)}, &c)
+		c := f.check("mcp__oriel__echo", json.RawMessage(`{"text":"hi"}`))
 		if c.Decision != "allow" {
 			answer = f.say("the echo call was not allowed: " + c.Reason)
 			break
@@ -419,6 +418,22 @@ func (f *fake) turn(text string) {
 	}, nil)
 }
 
+// check asks Oriel about a tool call as the mod's tool.check does. With no answer, Oriel's own tools go ahead (the
+// mod registered them), an MCP call other than the gateway's is refused, and the rest is the mode's.
+func (f *fake) check(tool string, input json.RawMessage) checkOut {
+	var c checkOut
+	if err := f.hook("check", checkIn{Tool: tool, Input: input}, &c); err == nil {
+		return c
+	}
+	switch {
+	case strings.HasPrefix(tool, "mcp__oriel__"):
+		return checkOut{Decision: "allow"}
+	case strings.HasPrefix(tool, "mcp__oriel-gw__"), !strings.HasPrefix(tool, "mcp__"):
+		return checkOut{}
+	}
+	return checkOut{Decision: "deny", Reason: CheckFailed}
+}
+
 // fakeConnector is the claude.ai connector tool the fake calls.
 const fakeConnector = "mcp__claude_ai_Claude_Docs__guide"
 
@@ -428,8 +443,7 @@ const fakeConnector = "mcp__claude_ai_Claude_Docs__guide"
 func (f *fake) connector(turnID string) string {
 	input := json.RawMessage(`{"items":["topic.index"]}`)
 	f.use("toolu_conn", fakeConnector, input)
-	var c checkOut
-	_ = f.hook("check", checkIn{Tool: fakeConnector, Input: input}, &c)
+	c := f.check(fakeConnector, input)
 	decision, message := c.Decision, c.Reason
 	switch {
 	case decision == "ask", decision == "" && f.mode == "default":

@@ -27,6 +27,9 @@ type State = {
 // NOBODY is what an unattended agent is told of an ask Oriel didn't answer: agent.UnattendedRefusal.
 const NOBODY = 'Nobody is here to answer this: carry on without it, or say in your reply what the user should do.'
 
+// CHECK_FAILED is why an MCP call is refused when Oriel didn't answer its check: claude.CheckFailed.
+const CHECK_FAILED = "Oriel couldn't be asked about this call, so it was refused."
+
 // clip bounds what an event carries: Oriel shows it, it doesn't need it whole.
 const clip = (s: string, max = 20_000) => (s && s.length > max ? s.slice(0, max) + '\n…' : s ?? '')
 
@@ -293,6 +296,13 @@ export function register(on: On): void {
   on('tool.check', async ($, e, next) => {
     if (!st.active) return next(e)
     const out = await host($, st, 'check', { tool: e.tool, input: e.input, agentId: e.agentId })
+    // No answer from Oriel: its own tools still run, and an MCP call is refused rather than left to a mode that
+    // might let it through unasked (the gateway's holds its own calls).
+    if (!out) {
+      if (st.tools.has(e.tool) || e.tool.startsWith('mcp__oriel__')) return { decision: 'allow' }
+      if (e.tool.startsWith('mcp__') && !e.tool.startsWith('mcp__oriel-gw__')) return { decision: 'deny', reason: CHECK_FAILED }
+      return next(e)
+    }
     const reason = out?.reason ? String(out.reason) : undefined
     if (out?.decision === 'allow' || out?.decision === 'deny') return { decision: out.decision, reason }
     if (out?.decision === 'ask') {

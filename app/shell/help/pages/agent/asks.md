@@ -33,7 +33,8 @@ checkout is refused before you're asked.
 Claude's every call to an MCP tool comes to Oriel, whatever mode it's in, sandboxed and in bypass too: a claude.ai
 connector's (`mcp__claude_ai_…`) or one of your own servers'. Your rules and `Permission` hooks answer first, then
 this card; **Always** makes a rule for that one tool. Oriel's own tools never ask, nor do the sandbox gateway's,
-which holds its own calls ([Gateway](#gateway)). A tool your Claude settings deny is never offered, and on the host
+which holds its own calls ([Gateway](#gateway)). If Oriel can't be asked about a call, it's refused, never left to
+Claude's mode. A tool your Claude settings deny is never offered, and on the host
 one they allow goes through. An agent nobody watches, such as the [assistant](agent/assistant), asks nothing: what it
 was allowed goes through and the rest is refused at once. Codex and other agents ask about an MCP call only when
 their own gate does.
