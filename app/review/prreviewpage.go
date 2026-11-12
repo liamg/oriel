@@ -37,45 +37,59 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 	if wake := x.saveSummary(se, f, c.Now()); !wake.IsZero() {
 		c.WakeAt(wake)
 	}
-	x.pageHead(c, se, src, full)
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-	x.pageBanner(c, se, f, full, p, done)
-	c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-		width := float32(640)
-		if r, ok := c.Rect(c.Next("main")); ok {
-			width = max(r.Dx()-36, 240)
-		}
-		c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
-			if done && full.Request.Author != "" {
-				c.Text("who", fmt.Sprintf("%s wants to merge %s → %s · %s  +%d −%d", full.Request.Author, cmp.Or(full.Head, "?"), cmp.Or(full.Base, "?"),
-					kit.Counted(len(full.Files), "file"), full.Request.Adds, full.Request.Dels), kit.MonoFont(11, th.C(theme.FgMuted)))
+	kit.PRFrame(c, "frame", reviewedStatus(full), func(c *ui.Ctx) {
+		x.pageHead(c, se, src, full)
+		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		x.pageBanner(c, se, f, full, p, done)
+		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+			width := float32(640)
+			if r, ok := c.Rect(c.Next("main")); ok {
+				width = max(r.Dx()-36, 240)
 			}
-			x.progress(c, se)
-			x.review(c, se, src, f, width, done && (full.State == "merged" || full.State == "closed"))
-			x.sent(c, se, width)
-			switch {
-			case !done:
-				widget.Busy(c, "asking", widget.LoadState{Phase: widget.Pending, Since: d.since}, widget.BusyOpts{Label: "Asking " + src.Label() + " for the pull request",
-					Size: 11, Help: prReviewHelp})
-			case failed != "":
-				widget.Wrap(c, "err", failed, width, kit.MonoFont(11, th.C(theme.Error)))
-			default:
-				x.overview(c, full, width)
-			}
-		})
-		c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
-		c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 10, ScrollY: true}, func(c *ui.Ctx) {
-			var fields [][2]string
-			if p.Commit != "" {
-				fields = append(fields, [2]string{"checkout", kit.ShortSHA(p.Commit)})
-			}
-			prStatusBoxes(c, prStatus{full: full, done: done, read: read, host: src.Label(), fields: fields})
+			c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
+				if done && full.Request.Author != "" {
+					c.Text("who", fmt.Sprintf("%s wants to merge %s → %s · %s  +%d −%d", full.Request.Author, cmp.Or(full.Head, "?"), cmp.Or(full.Base, "?"),
+						kit.Counted(len(full.Files), "file"), full.Request.Adds, full.Request.Dels), kit.MonoFont(11, th.C(theme.FgMuted)))
+				}
+				x.progress(c, se)
+				x.review(c, se, src, f, width, done && (full.State == "merged" || full.State == "closed"))
+				x.sent(c, se, width)
+				switch {
+				case !done:
+					widget.Busy(c, "asking", widget.LoadState{Phase: widget.Pending, Since: d.since}, widget.BusyOpts{Label: "Asking " + src.Label() + " for the pull request",
+						Size: 11, Help: prReviewHelp})
+				case failed != "":
+					widget.Wrap(c, "err", failed, width, kit.MonoFont(11, th.C(theme.Error)))
+				default:
+					x.overview(c, full, width)
+				}
+			})
+			c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 10, ScrollY: true}, func(c *ui.Ctx) {
+				var fields [][2]string
+				if p.Commit != "" {
+					fields = append(fields, [2]string{"checkout", kit.ShortSHA(p.Commit)})
+				}
+				prStatusBoxes(c, prStatus{full: full, done: done, read: read, host: src.Label(), fields: fields})
+			})
 		})
 	})
 	reviewKeys(c)
 	if f.preview != "" {
 		x.previewDialog(c, se, src, f)
 	}
+}
+
+// reviewedStatus is where the reviewed PR stands, from its state and its reviewers'; none while its host hasn't said.
+func reviewedStatus(full registry.ReviewDetail) kit.PRStatus {
+	if full.State == "" {
+		return kit.PRStatus{}
+	}
+	var reviews []string
+	for _, r := range full.Reviewers {
+		reviews = append(reviews, r.State)
+	}
+	return kit.PRStatusOf(full.State, false, full.Request.Draft, reviews)
 }
 
 // pageHead is the tab's top bar: the PR's ref and title, and its open and fetch buttons.
@@ -85,11 +99,7 @@ func (x *PRReview) pageHead(c *ui.Ctx, se core.SessionState, src registry.HostSi
 		c.Text("h", "REVIEW", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Text("ref", kit.Label(se), kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		if full.State != "" { // until its host says, it's no state at all
-			var reviews []string
-			for _, r := range full.Reviewers {
-				reviews = append(reviews, r.State)
-			}
-			kit.PRBadge(c, x.h, "state", kit.PRStatusOf(full.State, false, full.Request.Draft, reviews), prReviewHelp)
+			kit.PRBadge(c, x.h, "state", reviewedStatus(full), prReviewHelp)
 		}
 		c.Row("title", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("t", full.Request.Title, kit.UIFont(13, th.C(theme.FgMuted)))

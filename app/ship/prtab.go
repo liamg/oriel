@@ -69,11 +69,20 @@ func (x *Ship) editPR(id core.SessionID, project string, edit bool) {
 	f.editing, f.edited, f.save, f.veto, f.tab = edit, false, autosave{}, "", 0
 }
 
-// prTabBody is the tab once the project's been read.
+// prTabBody is the tab once the project's been read; a raised PR's overview is framed in where it stands.
 func (x *Ship) prTabBody(c *ui.Ctx, se core.SessionState, p string) {
-	th := c.Theme()
 	s, _ := x.ship(se.ID, p)
 	f := x.prForm(se.ID, s)
+	var status kit.PRStatus
+	if s.PR != nil && !f.editing {
+		status = x.prStatus(se, s)
+	}
+	kit.PRFrame(c, "frame", status, func(c *ui.Ctx) { x.prTabContent(c, se, s, f) })
+}
+
+// prTabContent is the tab's header and body: a raised PR's overview, or the form.
+func (x *Ship) prTabContent(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) {
+	th := c.Theme()
 	overview := s.PR != nil && !f.editing
 	if overview {
 		x.overviewHeader(c, se, s)

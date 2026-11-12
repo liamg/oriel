@@ -74,3 +74,28 @@ func PRReviewsOf(r registry.Registry, id core.SessionID, url string) []string {
 	}
 	return nil
 }
+
+// Framed says the status is one worth framing the whole PR view in: something happened to it (merged, closed) or a
+// reviewer has decided (approved, changes requested). An open PR, or a draft, isn't framed.
+func (s PRStatus) Framed() bool {
+	switch s.Word {
+	case "Merged", "Closed", "Approved", "Changes requested":
+		return true
+	}
+	return false
+}
+
+// PRFrame lays fn out filling its parent, framed in the status's tone, with a band of it across the top, when the
+// status is Framed: the whole view says where the PR stands, not only its badge.
+func PRFrame(c *ui.Ctx, key any, s PRStatus, fn func(c *ui.Ctx)) {
+	if !s.Framed() {
+		c.Column(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, fn)
+		return
+	}
+	tone := c.Theme().C(s.Tone)
+	c.Column(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Stroke: tone, Border: 2, Clip: true, Role: ui.RoleGroup, Label: "Pull request " + strings.ToLower(s.Word)},
+		func(c *ui.Ctx) {
+			c.Box("band", ui.Style{W: ui.Flex(1), H: ui.Px(4), Fill: tone}, nil)
+			fn(c)
+		})
+}

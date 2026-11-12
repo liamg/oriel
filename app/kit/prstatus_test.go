@@ -28,3 +28,12 @@ func TestPRStatusOf(t *testing.T) {
 		}
 	}
 }
+
+// Only what happened to a PR, or a reviewer's decision, frames its view: not an open PR, nor a draft.
+func TestPRStatusFramed(t *testing.T) {
+	for word, want := range map[string]bool{"Merged": true, "Closed": true, "Approved": true, "Changes requested": true, "Open": false, "Draft": false, "": false} {
+		if got := (PRStatus{Word: word}).Framed(); got != want {
+			t.Errorf("%q framed %v, want %v", word, got, want)
+		}
+	}
+}

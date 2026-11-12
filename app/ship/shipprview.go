@@ -126,6 +126,12 @@ func (x *Ship) nextButton(c *ui.Ctx, se core.SessionState, s shipRead, primary b
 // prBadge is where a raised PR stands, at a glance: merged or closed over what its reviewers said, then changes
 // requested, approved, draft or open.
 func (x *Ship) prBadge(c *ui.Ctx, se core.SessionState, s shipRead) {
+	kit.PRBadge(c, x.h, "state", x.prStatus(se, s), "git/ship#pr")
+}
+
+// prStatus is where a raised PR stands, from its state and its reviewers' latest verdicts: this code host's, as its
+// threads were mirrored, and those a plugin keeps (GitHub's).
+func (x *Ship) prStatus(se core.SessionState, s shipRead) kit.PRStatus {
 	x.mu.Lock()
 	var reviews []string
 	for _, v := range x.reviewed[s.PR.URL] {
@@ -133,7 +139,7 @@ func (x *Ship) prBadge(c *ui.Ctx, se core.SessionState, s shipRead) {
 	}
 	x.mu.Unlock()
 	reviews = append(reviews, kit.PRReviewsOf(x.h, se.ID, s.PR.URL)...)
-	kit.PRBadge(c, x.h, "state", kit.PRStatusOf(s.PR.State, s.PR.Merged, s.PR.Draft, reviews), "git/ship#pr")
+	return kit.PRStatusOf(s.PR.State, s.PR.Merged, s.PR.Draft, reviews)
 }
 
 // prStateWord is where a PR stands, in a word: open, draft, merged or closed.
