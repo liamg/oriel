@@ -24,7 +24,7 @@ type State = {
   mode: string
   // pending: a call went to a person, and Oriel's PermissionRequest hook hasn't been reached for it yet.
   pending: boolean
-  // skipped: a managed plugin continues past Oriel's PermissionRequest hook (store SKIPPED), so only the engine's
+  // skipped: Claude Code's built-in sec-default plugin continues past Oriel's PermissionRequest hook (store SKIPPED), so only the engine's
   // dialog in the terminal answers; Oriel is told of each such dialog from tool.check.
   skipped: boolean
   // dialog: Oriel was told the engine's own dialog asks about a call, and hasn't been told it's gone.
@@ -37,7 +37,7 @@ const NOBODY = 'Nobody is here to answer this: carry on without it, or say in yo
 // ORIEL marks an ask of Oriel's own from check: a person's in any mode. The engine pins its own name over it.
 const ORIEL = 'oriel'
 
-// SKIPPED is the store's key for State.skipped: it holds across sessions, as the managed plugin does.
+// SKIPPED is the store's key for State.skipped: it holds across sessions, and a reached PermissionRequest hook clears it.
 const SKIPPED = 'permissionRequestSkipped'
 
 // CHECK_FAILED is why an MCP call is refused when Oriel didn't answer its check: claude.CheckFailed.
@@ -356,7 +356,7 @@ export function register(on: On): void {
     if (!st.active) return next(e)
     await settle($, st)
     const v = await check($, st, e, next)
-    // A person answers it: Oriel's PermissionRequest hook below, or, where a managed plugin continues past that
+    // A person answers it: Oriel's PermissionRequest hook below, or, where the sec-default plugin continues past that
     // hook, only the engine's dialog in the terminal, which Oriel is told of here. Auto mode's classifier answers
     // the mode's own asks; an organization's ceiling caps an allow at an ask.
     const asks = v.decision === 'ask' && (v.plugin !== undefined || st.mode !== 'auto')

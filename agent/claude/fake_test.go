@@ -474,7 +474,7 @@ func (f *fake) connector(turnID string) string {
 	return f.say("ran: the index")
 }
 
-// skippedConnector calls a connector's tool where a managed plugin continues past the mod's PermissionRequest hook,
+// skippedConnector calls a connector's tool where Claude Code's sec-default plugin continues past the mod's PermissionRequest hook,
 // as the mod meets it once it's learnt that: its check asks, the mod tells Oriel the engine's dialog is up, and the
 // call runs once 1 is typed into the terminal, which the mod's tool.call hook tells Oriel.
 func (f *fake) skippedConnector() string {
