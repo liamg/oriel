@@ -33,7 +33,7 @@ func signsOf(s *apptest.Scene) *editor.GitSigns {
 func searchOf(s *apptest.Scene) *editor.Search { return apptest.PluginOf[*editor.Search](s, "search") }
 
 // The editor column of 01-ide: from the left edge of the editor to the minimap, from the tabs to the agent dock.
-var editorColumn = image.Rect(294, 38, 1150, 773)
+var editorColumn = image.Rect(294, kit.TitleH, 1150, kit.TitleH+735)
 
 // editorScene is the editor on round.go, in a window the size of the mockup's editor column, with the cursor where
 // the mockup has it: line 46, on the ':' of "case 0:".
