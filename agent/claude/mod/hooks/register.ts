@@ -14,14 +14,10 @@ type State = {
   // Oriel's tools, by full name (mcp__oriel__echo) to the name Oriel knows them by.
   tools: Map<string, string>
   subagents: Set<string>
-  // background is the work the turn ending left running, from its Stop hook: it wakes the session again.
-  background: unknown[]
   // servers are Oriel's MCP servers the session has had (oriel-gw, from mcp__oriel-gw__…).
   servers: Set<string>
   // unattended: nobody is at this terminal, so a dialog would wait forever; what Oriel leaves unanswered is refused.
   unattended: boolean
-  // mode is the permission mode Oriel was last told of: a restart resumes the conversation in it.
-  mode: string
 }
 
 // NOBODY is what an unattended agent is told of an ask Oriel didn't answer: agent.UnattendedRefusal.
@@ -50,13 +46,6 @@ async function host($: EngineInterface, st: State, op: string, body: unknown, ti
 
 const event = ($: EngineInterface, st: State, body: Args) => host($, st, 'event', body)
 
-// noteMode tells Oriel the session's permission mode when it's changed (Shift+Tab, plan mode's exit), as a classic
-// hook's permission_mode reads it; nothing says so as it changes.
-async function noteMode($: EngineInterface, st: State, mode: string | undefined) {
-  if (!st.active || !mode || mode === st.mode) return
-  st.mode = mode
-  await event($, st, { kind: 'mode', mode })
-}
 
 async function abortTurn($: EngineInterface, st: State) {
   if (st.working && st.turnId) await $.turn.abort({ turnId: st.turnId }).catch(() => undefined)
@@ -181,9 +170,7 @@ async function reportTurnEnd($: EngineInterface, st: State, e: Args) {
     context: u?.context ? { tokens: u.context.tokens, window: u.context.window } : undefined,
     cost: u?.cost?.usd,
     rateLimits: u?.rateLimits ?? [],
-    background: st.background,
   })
-  st.background = []
 }
 
 // passOn leaves a call whose hook failed to the hooks beneath and the engine, as if this mod weren't here.
@@ -200,10 +187,8 @@ export function register(on: On): void {
     turnId: '',
     tools: new Map(),
     subagents: new Set(),
-    background: [],
     servers: new Set(),
     unattended: false,
-    mode: '',
   }
 
   on('session.start', async ($, e, next) => {
@@ -271,28 +256,10 @@ export function register(on: On): void {
     return r
   })
 
-  // Runs as the main loop stops, before its turn.complete: the mode is told first, so a restart at the turn's end
-  // resumes in it.
-  on('classic.Stop', async ($, e, next) => {
-    if (st.active) st.background = e.background_tasks ?? []
-    await noteMode($, st, e.permission_mode)
-    return next(e)
-  }).catch(passOn)
-
-  on('classic.UserPromptSubmit', async ($, e, next) => {
-    await noteMode($, st, e.permission_mode)
-    return next(e)
-  }).catch(passOn)
-
-  // A turn the API ended once Claude Code's own retries ran out.
-  on('classic.StopFailure', async ($, e, next) => {
-    if (st.active) void event($, st, { kind: 'api-error', error: e.error, text: e.error_details ?? e.last_assistant_message ?? '' })
-    return next(e)
-  }).catch(passOn)
-
   // The guard rails are Oriel's: it allows, denies, asks, or leaves the call to the mode and its dialog. Its ask
-  // fires PermissionRequest in every mode, which Oriel answers below; a deny or a rule of the user's own settings
-  // (core's verdict) still stands over it.
+  // fires PermissionRequest in every mode, which Oriel's PermissionRequest settings hook answers (args in
+  // provider.go: settings hooks run beneath every plugin, so one that skips this mod's classic hooks doesn't skip
+  // them); a deny or a rule of the user's own settings (core's verdict) still stands over it.
   on('tool.check', async ($, e, next) => {
     if (!st.active) return next(e)
     const out = await host($, st, 'check', { tool: e.tool, input: e.input, agentId: e.agentId })
@@ -311,32 +278,6 @@ export function register(on: On): void {
       return { decision: 'ask', reason }
     }
     return next(e)
-  }).catch(passOn)
-
-  // Fires only when the engine is about to open its dialog. Oriel answers it instead; with no answer from Oriel
-  // the dialog opens as usual.
-  let permSeq = 0
-  on('classic.PermissionRequest', async ($, e, next) => {
-    await noteMode($, st, e.permission_mode)
-    const r = await next(e)
-    if (!st.active || r.decision || e.tool_name === 'AskUserQuestion') return r
-    const id = `${Date.now()}-${++permSeq}`
-    const out = await host(
-      $,
-      st,
-      'permission',
-      { id, tool: e.tool_name, input: e.tool_input, suggestions: e.permission_suggestions },
-      600_000,
-    )
-    if (out?.decision === 'allow') {
-      return {
-        ...r,
-        decision: { behavior: 'allow', updatedPermissions: out.always ? e.permission_suggestions : undefined },
-      }
-    }
-    if (out?.decision === 'deny') return { ...r, decision: { behavior: 'deny', message: String(out.message ?? '') } }
-    if (st.unattended) return { ...r, decision: { behavior: 'deny', message: NOBODY } }
-    return r
   }).catch(passOn)
 
   on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {

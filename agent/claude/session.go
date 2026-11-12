@@ -52,6 +52,9 @@ type session struct {
 	forks    map[string]chan forkAnswerIn
 	seq      int
 	base     transcript.Usage // the tally when the running turn started
+	mode     string           // the permission mode the settings hooks last saw
+	left     []backgroundTask // what the main loop's Stop hook said its turn left running
+	permSeq  int
 	screen   screen
 	offered  []string  // the tools' names hello last handed the mod
 	shown    string    // the end of the terminal's text, for saying what was on screen
@@ -462,6 +465,12 @@ func (s *session) handle(ctx context.Context, op string, body json.RawMessage) (
 			return nil, nil, err
 		}
 		return s.callTool(ctx, in), nil, nil
+	case opClassic:
+		in, err := decode[classicIn](body)
+		if err != nil {
+			return nil, nil, err
+		}
+		return s.classic(ctx, in), nil, nil
 	case opForkAnswer:
 		in, err := decode[forkAnswerIn](body)
 		if err != nil {
@@ -575,6 +584,7 @@ func (s *session) event(in eventIn) {
 		s.mu.Lock()
 		s.working = true
 		s.base = base
+		s.left = nil
 		s.mu.Unlock()
 		s.push(agent.TurnStart{})
 	case "turn-complete":
@@ -582,10 +592,11 @@ func (s *session) event(in eventIn) {
 		s.tail.flushUntil(in.Answer, s.push)
 		s.mu.Lock()
 		s.working = false
-		base := s.base
+		base, left := s.base, s.left
+		s.left = nil
 		s.mu.Unlock()
 		var bg []core.BackgroundTask
-		for _, t := range in.Background {
+		for _, t := range left {
 			bg = append(bg, core.BackgroundTask{Kind: t.Type, Description: cmp.Or(t.Description, t.Command, t.Type)})
 		}
 		s.push(agent.TurnEnd{Usage: turnUsageOf(in, base, s.tail.usage(), s.prices.Book()), Background: bg})
@@ -602,10 +613,6 @@ func (s *session) event(in eventIn) {
 	case "subagent-end":
 		s.tail.flush(s.push)
 		s.push(agent.Subagent{ID: in.ID, Done: true, Result: in.Text})
-	case "mode":
-		if in.Mode != "" {
-			s.push(agent.ModeChanged{Mode: in.Mode})
-		}
 	case "tools-lost":
 		s.push(agent.Stale{Why: "its CLI dropped " + strings.Join(in.Servers, ", ")})
 	case "api-error":
@@ -718,6 +725,66 @@ func (s *session) permission(ctx context.Context, in permissionIn) permissionOut
 	default:
 		return permissionOut{Decision: "deny", Message: denial(d.Note)}
 	}
+}
+
+// classic answers Oriel's settings hooks. Claude Code runs them beneath every plugin, so they're reached where a
+// plugin seated above Oriel's mod (its built-in sec-default, on a Team plan) skips the mod's classic hooks.
+func (s *session) classic(ctx context.Context, in classicIn) any {
+	s.noteMode(in.Mode)
+	switch in.Event {
+	case "Stop": // runs as the main loop stops, before the mod's turn.complete
+		s.mu.Lock()
+		s.left = in.Background
+		s.mu.Unlock()
+	case "StopFailure": // the API ended the turn once Claude Code's own retries ran out
+		s.event(eventIn{Kind: "api-error", Error: in.Error, Text: cmp.Or(in.Details, in.Last)})
+	case "PermissionRequest": // fires only as Claude Code is about to open its dialog
+		return s.permissionHook(ctx, in)
+	}
+	return struct{}{}
+}
+
+// noteMode reports the session's permission mode when it's changed (Shift+Tab, plan mode's exit).
+func (s *session) noteMode(mode string) {
+	s.mu.Lock()
+	changed := mode != "" && mode != s.mode
+	if changed {
+		s.mode = mode
+	}
+	s.mu.Unlock()
+	if changed {
+		s.push(agent.ModeChanged{Mode: mode})
+	}
+}
+
+// permissionHook asks you about a call Claude Code would ask about in its dialog; with no answer, the dialog opens
+// as usual. The agent's questions are the mod's to put.
+func (s *session) permissionHook(ctx context.Context, in classicIn) any {
+	if in.Tool == "AskUserQuestion" {
+		return struct{}{}
+	}
+	s.mu.Lock()
+	s.permSeq++
+	id := fmt.Sprintf("%d-%d", time.Now().UnixMilli(), s.permSeq)
+	s.mu.Unlock()
+	out := s.permission(ctx, permissionIn{ID: id, Tool: in.Tool, Input: in.Input, Suggestions: in.Suggestions})
+	if out.Decision == "" && s.spec.Unattended {
+		out = permissionOut{Decision: "deny", Message: agent.UnattendedRefusal}
+	}
+	var r permissionHookOut
+	r.Specific.Event = "PermissionRequest"
+	switch out.Decision {
+	case "allow":
+		r.Specific.Decision = permissionDecision{Behavior: "allow"}
+		if out.Always {
+			r.Specific.Decision.UpdatedPermissions = in.Suggestions
+		}
+	case "deny":
+		r.Specific.Decision = permissionDecision{Behavior: "deny", Message: out.Message}
+	default:
+		return struct{}{}
+	}
+	return r
 }
 
 // denial is what the agent reads as the tool's result when you deny it.
