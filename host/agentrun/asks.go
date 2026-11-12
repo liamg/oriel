@@ -105,19 +105,35 @@ func (h *session) ask(ctx context.Context, id string, named core.ThreadID, qs []
 	if err != nil {
 		return AnswerReq{}, false
 	}
+	asked := h.r.env.Now().UTC()
 	a, ok := h.askUser(ctx, core.Ask{ID: id, Kind: core.AskQuestion, Summary: questionSummary(qs), Questions: qs, Thread: tid})
-	if ok && opened {
-		_, _ = h.r.mutateThread(h.id, tid, func(t *core.Thread) error {
-			if body := answerText(qs, a); body != "" {
-				t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorYou, Name: hostcore.WhoAmI(ctx), Body: body,
-					Time: h.r.env.Now().UTC(), Delivered: true})
-			}
+	if !ok {
+		return a, ok
+	}
+	_, _ = h.r.mutateThread(h.id, tid, func(t *core.Thread) error {
+		if !opened {
+			t.Comments = append(t.Comments, h.questionComment(qs, asked))
+		}
+		if body := answerText(qs, a); body != "" {
+			t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorYou, Name: hostcore.WhoAmI(ctx), Body: body,
+				Time: h.r.env.Now().UTC(), Delivered: true, Asked: true})
+		}
+		if opened {
 			t.Status, t.Busy, t.Active = core.ThreadResolved, false, false
-			return nil
-		})
+		}
+		return nil
+	})
+	if opened {
 		hostcore.Restatus(h.r.st, h.id)
 	}
 	return a, ok
+}
+
+// questionComment is the agent's questions as a comment in their thread, asked at when.
+func (h *session) questionComment(qs []core.Question, when time.Time) core.Comment {
+	se, _ := h.r.st.Session(h.id)
+	return core.Comment{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: questionsText(qs), Time: when,
+		Model: modelLabel(se.Agent, h.ranModel()), Asked: true}
 }
 
 // questionThread is the thread a question is asked in: the one named if it's there; else the one the agent is on (an
@@ -153,8 +169,7 @@ func (h *session) questionThread(named core.ThreadID, qs []core.Question) (core.
 	}
 	now := h.r.env.Now().UTC()
 	t := core.Thread{ID: core.ThreadID(hostcore.NewID(8)), Title: questionSummary(qs), Status: core.ThreadOpen, Created: now, Updated: now,
-		Comments: []core.Comment{{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: questionsText(qs), Time: now,
-			Model: modelLabel(se.Agent, h.ranModel())}}}
+		Comments: []core.Comment{h.questionComment(qs, now)}}
 	if err := h.r.st.Emit(core.ThreadUpdated{Session: h.id, Thread: t}); err != nil {
 		return "", false, err
 	}

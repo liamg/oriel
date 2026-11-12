@@ -55,6 +55,7 @@ type Comment struct {
 	Time      time.Time  `json:"time,omitzero"`
 	Progress  bool       `json:"progress,omitempty"`  // an agent's "working on it" note, not an answer
 	Btw       bool       `json:"btw,omitempty"`       // a side question, or its answer from a fork
+	Asked     bool       `json:"asked,omitempty"`     // a question the agent asked with its ask tool, or your answer to it
 	Delivered bool       `json:"delivered,omitempty"` // a comment of yours the agent has been given
 	Images    []string   `json:"images,omitempty"`
 	Model     string     `json:"model,omitempty"` // the agent's model and effort when it wrote this

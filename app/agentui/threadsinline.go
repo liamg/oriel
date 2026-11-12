@@ -437,6 +437,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 							if cm.Redacted {
 								widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 							}
+							askedChip(c, cm)
 						})
 						kit.MarkdownTextIn(c, h, "body", cm.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 						if sourced && src.Comment != nil {

@@ -101,7 +101,12 @@ func TestAQuestionIsAnsweredInItsThread(t *testing.T) {
 	if out := apptest.Recv(t, "the ask tool's answer", got); !strings.Contains(out, "Which rounding? → away from zero") {
 		t.Errorf("the agent was answered %q", out)
 	}
-	r.WaitGone("banker's")
+	cardGone(r, "Conversation", "banker's")
+}
+
+// cardGone waits for the question card offering option to leave within: the question, answered, reads on as comments.
+func cardGone(r *apptest.Window, within, option string) {
+	r.WaitAccess("no card offering "+option+" in "+within, func(r *apptest.Window) bool { return !inThread(r, within, option) })
 }
 
 // askIn calls the agent's ask tool for one question in thread tid under ctx, as the agent would, and returns where
@@ -186,14 +191,13 @@ func TestSeveralQuestionsWaitInAThread(t *testing.T) {
 	if out := apptest.Recv(t, "the first answer", first); !strings.Contains(out, "banker's") {
 		t.Errorf("the first question was answered %q", out)
 	}
-	r.WaitFrame("only the second question in the thread", func(s string) bool {
-		return !strings.Contains(s, "Which rounding?") && apptest.HasAll(s, "Which currency first?", "JPY")
-	})
+	cardGone(r, "Conversation", "banker's")
+	r.WaitAccess("the second question still in the thread", func(r *apptest.Window) bool { return inThread(r, "Conversation", "JPY") })
 	pickInThread(t, r, "Conversation", "EUR")
 	if out := apptest.Recv(t, "the second answer", second); !strings.Contains(out, "Which currency first? → EUR") {
 		t.Errorf("the second question was answered %q", out)
 	}
-	r.WaitGone("Which currency first?")
+	cardGone(r, "Conversation", "JPY")
 }
 
 // A question the agent withdraws (its call cancelled, as an interrupt does) leaves its thread and the inbox.
@@ -241,7 +245,7 @@ func TestAQuestionWithNoThreadLandsInTheActiveThread(t *testing.T) {
 	if d := waitDecision(t, ch); d.Answers["Use math.Round?"] != "Keep Floor" {
 		t.Errorf("answered %+v", d)
 	}
-	r.WaitGone("Use math.Round?")
+	cardGone(r, "Thread Floor goes the wrong way.", "Keep Floor")
 }
 
 // A question's options are reached from its field by keyboard: ⇧⇥ moves back onto the last option, and Space picks it.
@@ -262,7 +266,7 @@ func TestAQuestionsOptionsAnswerByKeyboard(t *testing.T) {
 	if out := apptest.Recv(t, "the ask tool's answer", got); !strings.Contains(out, "Which rounding? → away from zero") {
 		t.Errorf("the agent was answered %q", out)
 	}
-	r.WaitGone("banker's")
+	cardGone(r, "Conversation", "banker's")
 }
 
 // A question in a session behind the one in front isn't stacked over the window: its tab counts it, the inbox lists
@@ -334,4 +338,40 @@ func TestAQuestionShowsInItsThreadInTheDiff(t *testing.T) {
 		t.Errorf("the agent was answered %q", out)
 	}
 	r.WaitGone("Toward zero or away?")
+}
+
+// An answered question stays in its thread: the agent's question, then your answer, each marked as such, so the
+// conversation reads back whole once the question's card has gone.
+func TestAnAnsweredQuestionStaysInItsThread(t *testing.T) {
+	r, a, _ := apptest.AgentWindow(t)
+	r.Run("request.comment", registry.Args{"body": "Round half to even?"})
+	a.WaitSent(t)
+	th := threadWith(t, r, "Round half to even?")
+	got := askIn(context.Background(), a, th.ID, "Which rounding?", "banker's", "away from zero")
+	asked(r, 1)
+	r.Run("request.open", registry.Args{"thread": string(th.ID)})
+	pickInThread(t, r, "Conversation", "away from zero")
+	apptest.Recv(t, "the ask tool's answer", got)
+	asked(r, 0)
+
+	st := r.UntilState("the question and its answer in the thread", func(st core.State) bool {
+		se, _ := st.Session("w")
+		t, _ := se.Snapshot().Thread(th.ID)
+		return len(t.Comments) == 3
+	})
+	se, _ := st.Session("w")
+	got2, _ := se.Snapshot().Thread(th.ID)
+	q, ans := got2.Comments[1], got2.Comments[2]
+	if q.Author != core.AuthorAgent || !q.Asked || !strings.Contains(q.Body, "Which rounding?") {
+		t.Errorf("the thread's second comment is %+v, want the agent's question", q)
+	}
+	if ans.Author != core.AuthorYou || !ans.Asked || !ans.Delivered || !strings.Contains(ans.Body, "away from zero") {
+		t.Errorf("the thread's third comment is %+v, want your answer, already the agent's", ans)
+	}
+	if got2.Status != core.ThreadOpen {
+		t.Errorf("the thread is %q, want it still open", got2.Status)
+	}
+	r.WaitFrame("the question and its answer drawn in the thread", func(s string) bool {
+		return apptest.HasAll(s, "Round half to even?", "Which rounding?", "away from zero", "QUESTION", "ANSWERED")
+	})
 }
