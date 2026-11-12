@@ -294,7 +294,7 @@ func TestTheSandboxsAsksArePromptsToo(t *testing.T) {
 	s.Frame()
 	for _, step := range []struct{ name, key, answer string }{
 		{"git push origin round", "y", "g1=allow"},
-		{"Network: registry.npmjs.org", "y", "n1=always"}, // y on a network ask allows the host
+		{"Network: registry.npmjs.org", "a", "n1=always"}, // a on a network ask allows the host for the session
 	} {
 		p := promptNamed(s, step.name)
 		if p == nil {

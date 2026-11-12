@@ -359,28 +359,48 @@ text "Open the inbox" @1084.75,955.36523 #ece6d8 Inter 12
 rect 1178,943.5 26x15 radius 3 stroke 1 #ece6d866
 text "⇧⌘I" @1182,954.42 #ece6d8cc JetBrains Mono 9.5
 rect 0,0 1600x1000 fill #030508b8
-rect 580,424.16772 440x151.66455 fill #0c0c0b radius 8 stroke 1 #ff9b458c
-text "PRICING-ROUNDING · GATEWAY" @594,448.58774 #ff9b45 JetBrains Mono 9.5
-text "✕" @994,448.73172 #7c7566 JetBrains Mono 9.900001
-rect 594,474.99997 7x7 fill #ff9b45 radius 3.5
-text "git push origin rethink/rounding" @609,475.2771 #ece6d8 Inter 12.5
-text "3 commits · +184 -22" @609,490.98224 #7c7566 JetBrains Mono 9.5
-rect 594,502.83224 72.40625x26.00003 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Allow" @604,520.1975 #141006 Inter 12
-rect 642.40625,508.33224 14x15.0000305 radius 3 stroke 1 #14100666
-text "y" @646.40625,519.25226 #141006cc JetBrains Mono 9.5
-rect 674.40625,502.83224 81.6875x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Always" @684.40625,520.1975 #ece6d8 Inter 12
-rect 732.09375,508.33224 14x15.0000305 radius 3 stroke 1 #ece6d866
-text "a" @736.09375,519.25226 #ece6d8cc JetBrains Mono 9.5
-rect 764.09375,502.83224 69.828125x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Deny" @774.09375,520.1975 #ece6d8 Inter 12
-rect 809.9219,508.33224 14x15.0000305 radius 3 stroke 1 #ece6d866
-text "n" @813.9219,519.25226 #ece6d8cc JetBrains Mono 9.5
-rect 841.9219,502.83224 59.125x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Details" @851.9219,520.1975 #ece6d8 Inter 12
-rect 594,537.8322 87.0625x26 fill #191815 radius 6 stroke 1 #332f27
-text "Console" @604,555.19745 #ece6d8 Inter 12
-rect 657.0625,543.3322 14x15 radius 3 stroke 1 #ece6d866
-text "g" @661.0625,554.2522 #ece6d8cc JetBrains Mono 9.5
-text "rule: oriel__push" @904,554.2522 #7c7566 JetBrains Mono 9.5
+rect 420,324.95532 760x350.08936 fill #0c0c0b radius 12
+clip 420,324.95532 760x350.08936 r 12
+  text "PRICING-ROUNDING · GATEWAY" @442,357.73532 #ff9b45 JetBrains Mono 10.5
+  rect 991.075,340.95532 87.06244x26 radius 6 stroke 1 #332f27
+  text "Console" @1001.075,358.32056 #ece6d8 Inter 12
+  rect 1054.1375,346.45532 14x15 radius 3 stroke 1 #ece6d866
+  text "g" @1058.1375,357.37534 #ece6d8cc JetBrains Mono 9.5
+  text "1 OF 1" @1088.1375,357.73532 #7c7566 JetBrains Mono 10.5
+  text "✕" @1151.1016,358.31134 #7c7566 JetBrains Mono 12.1
+  text "Claude wants to push through the gateway" @442,393.42407 #ece6d8 Inter 17
+  text "pricing-rounding · the sandbox's gateway · 3 commits · +184 -22" @442,414.74466 #7c7566 JetBrains Mono 11
+  rect 442,432.04468 716x39 fill #060606 radius 8
+  clip 442,432.04468 716x39 r 8
+    clip 456,442.04468 688x19 r 0
+      text "git push origin rethink/rounding" @456,456.04468 #ece6d8 JetBrains Mono 12.5
+    pop
+  pop
+  rect 442,432.04468 716x39 radius 8 stroke 1 #24221d
+  clip 442,483.04468 716x174 r 8
+    rect 442,483.04468 716x34 fill #191815
+    rect 454,491.54468 26x17 radius 3 stroke 1 #b3ab9973
+    text "y" @463.70312,503.82468 #b3ab99 JetBrains Mono 10.5
+    text "Allow once" @492,504.77368 #ece6d8 Inter 13
+    rect 442,517.0447 716x1 fill #24221d
+    rect 454,526.5447 26x17 radius 3 stroke 1 #b3ab9973
+    text "a" @463.70312,538.8247 #b3ab99 JetBrains Mono 10.5
+    text "Allow for this session" @492,539.7737 #ece6d8 Inter 13
+    text "oriel__push" @1073.4688,539.00464 #7c7566 JetBrains Mono 11
+    rect 442,552.0447 716x1 fill #24221d
+    rect 454,561.5447 26x17 radius 3 stroke 1 #b3ab9973
+    text "⇧A" @460.40625,573.8247 #b3ab99 JetBrains Mono 10.5
+    text "Allow for all sessions" @492,574.7737 #ece6d8 Inter 13
+    text "oriel__push · every session" @967.96875,574.00464 #7c7566 JetBrains Mono 11
+    rect 442,587.0447 716x1 fill #24221d
+    rect 454,596.5447 26x17 radius 3 stroke 1 #ff5f6d5c
+    text "n" @463.70312,608.8247 #ff5f6dcc JetBrains Mono 10.5
+    text "Deny" @492,609.7737 #ff5f6d Inter 13
+    rect 442,622.0447 716x1 fill #24221d
+    rect 454,631.5447 26x17 radius 3 stroke 1 #ff5f6d5c
+    text "⇧N" @460.40625,643.8247 #ff5f6dcc JetBrains Mono 10.5
+    text "Deny with a note…" @492,644.7737 #ff5f6d Inter 13
+  pop
+  rect 442,483.04468 716x174 radius 8 stroke 1 #24221d
+pop
+rect 420,324.95532 760x350.08936 radius 12 stroke 1 #ff9b45

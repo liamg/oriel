@@ -130,6 +130,10 @@ func domainOf(hostport string) (domain, port string) {
 // askCard is an ask as a card, with what answers it: in the console where it arose, or stacked over the window
 // with its session's name (kicker). With dismiss, its ✕ and Escape take it off the stack.
 func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.Ask, p uireg.CardPlace, selected bool) {
+	if p.Prompt && asksYou(a.Kind) {
+		x.promptCard(c, key, se, a, p)
+		return
+	}
 	th := c.Theme()
 	st := x.state(se.ID)
 	kicker, dismiss := p.Stacked, p.Dismiss
@@ -140,12 +144,8 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 	}
 	prov := kit.ProviderName(x.h, se.Agent.Provider)
 	switch a.Kind {
-	case core.AskPermission:
-		k.permission(se, a, prov)
-	case core.AskNetwork:
-		k.network(a)
-	case core.AskGateway:
-		x.gatewayCard(k, se, a, kicker)
+	case core.AskPermission, core.AskNetwork, core.AskGateway:
+		x.decisionCard(th, k, se, a, st, kicker)
 	case core.AskLogin:
 		k.login(x.h, se, a, kicker)
 	case core.AskKey:
@@ -219,65 +219,50 @@ func (k *askCardParts) add(label, key string, primary bool, args registry.Args) 
 	k.action(widget.CardAction{Label: label, Key: key, Primary: primary}, askAct{args: args})
 }
 
-func (k *askCardParts) permission(se core.SessionState, a core.Ask, prov string) {
+// decisionCard is an ask that holds the agent as a card in the console or the Inbox panel: its command, the rule an
+// always makes, its answers as buttons, and a network ask's scope.
+func (x *Console) decisionCard(th *theme.Resolved, k *askCardParts, se core.SessionState, a core.Ask, st *consoleState, kicker bool) {
+	d := x.decide(th, se, a)
 	o := &k.o
-	o.Title = prov + " wants to use " + a.Tool
-	if core.ShellTool(a.Tool) {
-		o.Title = prov + " wants to run a command"
-	}
-	o.Code = "$ " + cmp.Or(a.Summary, kit.MainInput(a.Input))
-	if !core.ShellTool(a.Tool) {
-		o.Code = cmp.Or(a.Summary, kit.MainInput(a.Input))
-	}
-	if se.Agent.Sandboxed {
-		o.Meta = "sandbox · network " + cmp.Or(se.Agent.Network, "ask")
-	} else {
-		o.Meta = "on this machine"
-	}
-	if a.Rule != "" {
-		o.Note = "rule: " + a.Rule
-	}
-	k.add("Allow once", "y", true, registry.Args{"decision": "allow"})
-	k.add("Always in this workspace", "a", false, registry.Args{"decision": "always"})
-	k.add("Deny", "n", false, registry.Args{"decision": "deny"})
-	k.action(widget.CardAction{Label: "Deny with note…", Key: "N"}, askAct{note: true})
-}
-
-func (k *askCardParts) network(a core.Ask) {
-	k.o.Title = "Network: " + a.Host
-	k.o.Detail = a.Detail
-	k.o.Inline = true
-	domain, port := domainOf(a.Host)
-	h, _, _ := net.SplitHostPort(a.Host)
-	k.add("Allow host", "y", false, registry.Args{"decision": "always", "scope": a.Host})
-	if h != "" && h != domain {
-		scope := "*." + domain
-		if port != "" {
-			scope += ":" + port
+	o.Title, o.Code = d.title, d.code
+	switch a.Kind {
+	case core.AskPermission:
+		if d.code == "" {
+			o.Code = cmp.Or(a.Summary, kit.MainInput(a.Input))
 		}
-		k.add("Allow *."+domain, "a", false, registry.Args{"decision": "always", "scope": scope})
+		o.Meta = "on this machine"
+		if se.Agent.Sandboxed {
+			o.Meta = "sandbox · network " + cmp.Or(se.Agent.Network, "ask")
+		}
+	case core.AskGateway:
+		o.Detail = a.Detail
+		if !kicker {
+			o.Kicker = "gateway"
+		}
+	case core.AskNetwork:
+		o.Detail = d.where
 	}
-	k.add("Once", "o", false, registry.Args{"decision": "allow"})
-	k.add("Deny", "n", false, registry.Args{"decision": "deny"})
-}
-
-func (x *Console) gatewayCard(k *askCardParts, se core.SessionState, a core.Ask, kicker bool) {
-	o := &k.o
-	o.Title = cmp.Or(a.Summary, a.Tool)
-	o.Detail = a.Detail
-	if !kicker {
-		o.Kicker = "gateway"
-	}
-	if a.Rule != "" {
+	if a.Rule != "" && a.Kind != core.AskNetwork {
 		o.Note = "rule: " + a.Rule
 	}
-	k.add("Allow", "y", true, registry.Args{"decision": "allow"})
-	if a.Rule != "" {
-		k.add("Always", "a", false, registry.Args{"decision": "always"})
+	scope := st.scope[a.ID]
+	if len(d.scopes) > 1 {
+		k.body = func(c *ui.Ctx) {
+			widget.Segmented(c, "scope", d.scopes, &scope, widget.SegmentedOpts{Label: "Allow", Help: "agent/asks#network"})
+			st.scope[a.ID] = scope
+		}
 	}
-	k.add("Deny", "n", false, registry.Args{"decision": "deny"})
+	for i, opt := range d.options {
+		act := opt.act
+		if opt.scoped && len(d.scopeArgs) > 0 {
+			act.args = registry.Args{"scope": d.scopeArgs[min(scope, len(d.scopeArgs)-1)]}
+			for n, v := range opt.act.args {
+				act.args[n] = v
+			}
+		}
+		k.action(widget.CardAction{Label: opt.Label, Key: opt.Key, Primary: i == 0}, act)
+	}
 }
-
 func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a core.Ask, kicker bool) {
 	l := core.Login{Provider: se.Agent.Provider}
 	if a.Login != nil {
