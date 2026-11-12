@@ -17,7 +17,7 @@ func SelectRow(c *ui.Ctx, key any, st ui.Style, selected bool, body func(c *ui.C
 	}
 	return Clickable(c, key, st, func(c *ui.Ctx) {
 		if hovered && !selected {
-			c.Box("hover", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: col(c, tRowHover), Float: &ui.Float{Fill: true}}, nil)
+			c.Box("hover", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: col(c, tRowHover), Float: &ui.Float{Fill: true}, Z: ui.LayerUnder}, nil)
 		}
 		body(c)
 		if selected {

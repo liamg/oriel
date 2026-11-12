@@ -10,7 +10,7 @@ import (
 
 // SelectRow is a list's row a click selects, as List's are: a list item that tints under the pointer instead of a
 // button's wash, filled and edged in the selection's colours while selected, its own fill otherwise; a double click
-// is reported, to open it.
+// is reported, to open it. The hover's tint is under the row's content, never over it.
 func TestSelectRow(t *testing.T) {
 	for _, v := range []theme.Variant{theme.Dark, theme.Light} {
 		sel := false
@@ -48,6 +48,18 @@ func TestSelectRow(t *testing.T) {
 		h.frame()
 		if f := fills(); !f[th.C(tRowHover)] || !f[own] {
 			t.Errorf("%v: under the pointer, its fills are %v, want the row hover's over its own", v, f)
+		}
+		hover, text := -1, -1
+		for i, op := range h.list.Ops {
+			switch {
+			case op.Kind == render.OpRect && op.Style.Fill == th.C(tRowHover) && hover < 0:
+				hover = i
+			case op.Kind == render.OpGlyphs && op.Rect.Min.Y >= r.Min.Y-.5 && op.Rect.Max.Y <= r.Max.Y+.5:
+				text = i
+			}
+		}
+		if hover < 0 || text < 0 || hover > text {
+			t.Errorf("%v: under the pointer, the hover's fill (op %d) isn't under the row's text (op %d): it hides it", v, hover, text)
 		}
 		if h.u.Options().Hover.A > 0 && h.list.Ops != nil {
 			for _, op := range h.list.Ops {
