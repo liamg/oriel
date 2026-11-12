@@ -5,15 +5,19 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"image/png"
+	"math"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/core"
@@ -205,7 +209,7 @@ func TestSessionKeysSwitchInOneFrame(t *testing.T) {
 
 // 01-ide's titlebar, from the logo to the end of its sixth tab, against the mockup. Each tab lands within a few
 // pixels of the mockup's; the rest is text measured by our shaper rather than Chrome's, which the pixel count
-// magnifies. The bound is just over today's 0.0425 and 12.4%.
+// magnifies. The bound is just over today's 0.0344 and 8.95%.
 func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Size: render.Point{X: 1600, Y: 120}})
 	openTabFixture(t, s.Store(), tabFixture[:6])
@@ -222,7 +226,7 @@ func TestSessionTabsAgainstTheMockup(t *testing.T) {
 	draw.Draw(got, r, img, image.Point{}, draw.Src)
 	d, side := snapshot.Compare(want, got, 0.1)
 	t.Logf("titlebar against 01-ide: %s", d)
-	if d.Mean > 0.044 || d.Off > 0.127 {
+	if d.Mean > 0.036 || d.Off > 0.092 {
 		os.WriteFile("testdata/session-tabs-mockup.failed.png", encodePNG(side), 0o644)
 		t.Errorf("the titlebar is %s off the mockup (testdata/session-tabs-mockup.failed.png)", d)
 	}
@@ -308,5 +312,94 @@ func TestSessionTabsReorderByDragging(t *testing.T) {
 	s.Frame()
 	if f := s.Store().State().Focus; f != "s1" {
 		t.Errorf("a click on a tab focused %s", f)
+	}
+}
+
+// workspaceWithTabs is the window on a project with round.go open in the editor and the first n fixture sessions'
+// tabs, the first in front.
+func workspaceWithTabs(t *testing.T, n int) *apptest.Scene {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "internal", "pricing", "round.go")
+	os.MkdirAll(filepath.Dir(p), 0o755)
+	os.WriteFile(p, []byte(rig.RoundGo()), 0o644)
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	openTabFixture(t, s.Store(), tabFixture[:n])
+	s.Run("editor.open", registry.Args{"path": "internal/pricing/round.go"})
+	s.Quiet()
+	s.Frame()
+	s.Frame()
+	return s
+}
+
+// The session in front is the window under the tabs: its tab is the surface under the title bar, running into it
+// with no edge between and flaring out at its foot, on a band a step deeper. The tabs behind have no fill of their own
+// until the pointer is on one, so only the one in front stands out, and never as the file tabs below do.
+func TestTheTabInFrontJoinsTheWindowUnderIt(t *testing.T) {
+	s := workspaceWithTabs(t, 3)
+	img := raster.Render(s.List(), s.Size(), 1, s.UI().Theme().C(theme.BgBase))
+	at := func(x, y float32) render.Color {
+		c := img.At(int(x), int(y)).(color.RGBA)
+		return render.Color{R: c.R, G: c.G, B: c.B, A: c.A}
+	}
+	front := s.Within("Sessions", "pricing-rounding").Bounds
+	behind := s.Within("Sessions", "review #4410").Bounds
+	x := front.Max.X - 4 // clear of the file tab in front under it, which has an edge of its own
+	under := at(x, kit.TitleH+3)
+	band := at(x, 2)
+	if under == band {
+		t.Fatalf("the band is the colour of the window under it, %s", theme.Hex(band))
+	}
+	for y := front.Min.Y + 2; y < kit.TitleH+4; y++ {
+		if c := at(x, y); c != under {
+			t.Fatalf("the front tab at y=%v is %s, not the window's %s: there's an edge between them", y, theme.Hex(c), theme.Hex(under))
+		}
+	}
+	if c := at(front.Max.X+2, kit.TitleH-1); c != under {
+		t.Errorf("the front tab's foot doesn't flare out into the window: %s beside it", theme.Hex(c))
+	}
+	if c := at(front.Min.X+1, front.Min.Y+1); c == under {
+		t.Errorf("the front tab's top corner isn't rounded")
+	}
+	if c := at(behind.Min.X+4, behind.Max.Y-2); c != band {
+		t.Errorf("a tab behind is %s, not the band's %s", theme.Hex(c), theme.Hex(band))
+	}
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: apptest.Centre(behind)})
+	s.Frame()
+	s.Frame()
+	img = raster.Render(s.List(), s.Size(), 1, s.UI().Theme().C(theme.BgBase))
+	if c := at(behind.Min.X+4, behind.Max.Y-2); c == band {
+		t.Errorf("the tab under the pointer doesn't lighten")
+	}
+}
+
+// A tab is two lines: its name, and under it what it's doing, the asks waiting in it and its key.
+func TestASessionTabIsItsNameOverItsState(t *testing.T) {
+	s := apptest.New(t, apptest.Options{Size: render.Point{X: 1600, Y: 120}})
+	openTabFixture(t, s.Store(), tabFixture[:3])
+	s.Frame()
+	s.Frame()
+	for _, tt := range []struct{ name, state string }{{"pricing-rounding", "plan"}, {"ENG-2231 search api", "needs you"}, {"review #4410", "permission"}} {
+		tab := s.Within("Sessions", tt.name).Bounds
+		var name, state, key render.Op
+		for _, op := range s.List().Ops {
+			if op.Kind != render.OpGlyphs || op.At.X < tab.Min.X || op.At.X > tab.Max.X {
+				continue
+			}
+			switch op.Run.Text {
+			case tt.name:
+				name = op
+			case tt.state:
+				state = op
+			case "⌘1", "⌘2", "⌘3":
+				key = op
+			}
+		}
+		if name.Run == nil || state.Run == nil || key.Run == nil {
+			t.Fatalf("%s's tab lacks its name, %q or its key", tt.name, tt.state)
+		}
+		if state.At.Y <= name.At.Y+8 || math.Abs(float64(key.At.Y-state.At.Y)) > 1 {
+			t.Errorf("%s: the name at y=%v, %q at %v and the key at %v; want the state and key on a line under the name",
+				tt.name, name.At.Y, tt.state, state.At.Y, key.At.Y)
+		}
 	}
 }

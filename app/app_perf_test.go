@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/headless"
 )
@@ -27,8 +28,10 @@ func TestMenuHoverWhileThePointerMovesBudget(t *testing.T) {
 			n = m
 		}
 	}
-	// The root view sits under the 38px titlebar, right of the 44px rail; the menu's rows are 30px under 4px of pad.
-	row := func(i int) render.Point { return render.Point{X: 44 + 100, Y: 38 + 4 + 15 + 30*float32(i)} }
+	// The root view sits under the titlebar, right of the rail; the menu's rows are 30px under 4px of pad.
+	row := func(i int) render.Point {
+		return render.Point{X: kit.RailW + 100, Y: kit.TitleH + 4 + 15 + 30*float32(i)}
+	}
 	frames := b.win.Frames()
 	last := frames[len(frames)-1]
 	bg := fillAt(last, row(2), render.Color{})

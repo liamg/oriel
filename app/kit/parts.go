@@ -147,7 +147,7 @@ var TScrimOmni = theme.Declare("omnibox.scrim", "alpha(#030508, 60%)")
 
 // The window's bars: the title bar's height, the status line's, and the sidebar's narrow strip's width.
 const (
-	TitleH  = 38
+	TitleH  = 50
 	StatusH = 26
 	RailW   = 44
 )

@@ -280,8 +280,8 @@ func TestPointerSetsTheCursor(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
-	// The root view sits under the 38px titlebar, right of the 44px rail.
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 74, Y: 48}})
+	// The root view sits under the titlebar, right of the rail.
+	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: kit.RailW + 30, Y: kit.TitleH + 10}})
 	apptest.Poll(t, "the pointer cursor over the link", func() bool { return b.win.Cursor() == render.CursorPointer })
 	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})
 	apptest.Poll(t, "the default cursor off the link", func() bool { return b.win.Cursor() == render.CursorDefault })
