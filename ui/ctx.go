@@ -439,6 +439,16 @@ func (c *Ctx) Scroll(id ID) render.Point { return c.u.Scroll(id) }
 // ScrollTo sets id's scroll offset; layout clamps it.
 func (c *Ctx) ScrollTo(id ID, p render.Point) { c.u.ScrollTo(id, p) }
 
+// ScrollBy moves id's scroll offset at once by d, as far as its last layout could scroll.
+func (c *Ctx) ScrollBy(id ID, d render.Point) { c.u.ScrollBy(id, d.X, d.Y) }
+
+// ScrollExtent is how big a scrolling box's content was at its last layout, and how much of it showed: what's
+// past its edges, for a hint that there's more.
+func (c *Ctx) ScrollExtent(id ID) (content, view render.Point) {
+	st := c.u.state(c.u.scroller(id))
+	return render.Point{X: st.ext[0], Y: st.ext[1]}, render.Point{X: st.view[0], Y: st.view[1]}
+}
+
 // keptView is the target KeepInView last brought into view.
 type keptView struct {
 	target ID
