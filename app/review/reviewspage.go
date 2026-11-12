@@ -367,15 +367,18 @@ func (x *Reviews) pageRowsView(c *ui.Ctx, rows []reviewRow) {
 	}
 }
 
-// pageState is the page's sources' lists read together: loading while any hasn't answered yet, refreshing while
-// any is asked again. A source that failed is a row of its own, with Retry.
+// pageState is the page's sources' lists read together: loading while none has answered yet, refreshing while any
+// is asked again or yet to answer once another has, so the rows that are in show (as the header's count and the
+// detail of the one selected do). A source that failed is a row of its own, with Retry.
 func (x *Reviews) pageState() widget.LoadState {
 	out := widget.LoadState{Phase: widget.Ready}
+	answered := false
 	for _, s := range x.pageSources() {
 		if x.needsKey(s) || s.Requested == nil {
 			continue
 		}
 		st := x.listState(s.Key())
+		answered = answered || st.Phase == widget.Ready || st.Phase == widget.Failed || st.Stale
 		switch {
 		case st.Phase == widget.Idle || st.Loading():
 			if out.Phase != widget.Pending || out.Stale || st.Since.Before(out.Since) {
@@ -384,6 +387,9 @@ func (x *Reviews) pageState() widget.LoadState {
 		case st.Phase == widget.Pending && out.Phase == widget.Ready:
 			out = widget.LoadState{Phase: widget.Pending, Since: st.Since, Stale: true}
 		}
+	}
+	if out.Phase == widget.Pending && answered {
+		out.Stale = true
 	}
 	return out
 }
