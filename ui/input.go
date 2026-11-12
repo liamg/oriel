@@ -566,14 +566,18 @@ func (u *UI) scrollAt(p render.Point, d render.Point) {
 			d = render.Point{X: d.Y}
 		}
 		if (f.scrollX && d.X != 0) || (f.scrollY && d.Y != 0) {
-			if !f.scrollX {
-				d.X = 0
+			var take render.Point
+			if f.scrollX {
+				take.X, d.X = d.X, 0
 			}
-			if !f.scrollY {
-				d.Y = 0
+			if f.scrollY {
+				take.Y, d.Y = d.Y, 0
 			}
-			u.ScrollBy(id, d.X, d.Y)
-			return
+			u.ScrollBy(id, take.X, take.Y)
+			if d == (render.Point{}) {
+				return
+			}
+			// a box that scrolls one way leaves the other way's part to what it's in
 		}
 	}
 }

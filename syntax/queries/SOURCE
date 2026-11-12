@@ -1,6 +1,6 @@
 source: https://github.com/nvim-treesitter/nvim-treesitter
 commit: f603a2f4da48728f80257fb5fbb90145fd1dc173 (2026-09-19)
-path: runtime/queries/{go,typescript,tsx,ecma,jsx,javascript,python,rust,lua,markdown,markdown_inline,c,cpp,java,ruby,
+path: runtime/queries/{go,gomod,gosum,typescript,tsx,ecma,jsx,javascript,python,rust,lua,markdown,markdown_inline,c,cpp,java,ruby,
   bash,json,yaml,toml,html,html_tags,css,sql,dockerfile,make,diff,gitcommit,vimdoc,
   hcl,terraform,kotlin,c_sharp,php,php_only,zig,nix,proto,graphql,xml,ini,
   elixir,scala,gitignore,vue,svelte}/{highlights,folds,injections}.scm

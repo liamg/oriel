@@ -218,6 +218,13 @@ func TestWheelScrollsWhatsUnderThePointer(t *testing.T) {
 	if got := u.Scroll(inner); got != (render.Point{X: 25}) {
 		t.Errorf("inner scrolled to %v", got)
 	}
+
+	// A trackpad's diagonal move over it scrolls each its own way: across the inner, down the outer.
+	u.Pointer(render.PointerEvent{Kind: render.PointerScroll, Pos: render.Point{X: 50, Y: 5}, Scroll: render.Point{X: 10, Y: 20}})
+	paintOps(u, render.Point{X: 300, Y: 300}, build)
+	if got, got2 := u.Scroll(inner), u.Scroll(outer); got != (render.Point{X: 35}) || got2 != (render.Point{Y: 50}) {
+		t.Errorf("a diagonal move left inner at %v and outer at %v, want {35 0} and {0 50}", got, got2)
+	}
 }
 
 func TestSprings(t *testing.T) {

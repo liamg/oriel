@@ -22,6 +22,9 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 	switch ev := ev.(type) {
 	case agent.Ready:
 		h.setAgent(func(a *core.AgentState) {
+			if a.Session != ev.ID {
+				a.Mode = "" // the mode was another conversation's
+			}
 			a.Session = ev.ID
 			if a.Model == "" {
 				a.Model = ev.Model
@@ -112,6 +115,8 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		if !working {
 			h.restart(ev.Why)
 		}
+	case agent.ModeChanged:
+		h.setAgent(func(a *core.AgentState) { a.Mode = ev.Mode })
 	case agent.Dialog:
 		h.terminalDialog(ev)
 	case agent.Exited:

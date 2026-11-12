@@ -20,6 +20,8 @@ type State = {
   servers: Set<string>
   // unattended: nobody is at this terminal, so a dialog would wait forever; what Oriel leaves unanswered is refused.
   unattended: boolean
+  // mode is the permission mode Oriel was last told of: a restart resumes the conversation in it.
+  mode: string
 }
 
 // NOBODY is what an unattended agent is told of an ask Oriel didn't answer: agent.UnattendedRefusal.
@@ -44,6 +46,14 @@ async function host($: EngineInterface, st: State, op: string, body: unknown, ti
 }
 
 const event = ($: EngineInterface, st: State, body: Args) => host($, st, 'event', body)
+
+// noteMode tells Oriel the session's permission mode when it's changed (Shift+Tab, plan mode's exit), as a classic
+// hook's permission_mode reads it; nothing says so as it changes.
+async function noteMode($: EngineInterface, st: State, mode: string | undefined) {
+  if (!st.active || !mode || mode === st.mode) return
+  st.mode = mode
+  await event($, st, { kind: 'mode', mode })
+}
 
 async function abortTurn($: EngineInterface, st: State) {
   if (st.working && st.turnId) await $.turn.abort({ turnId: st.turnId }).catch(() => undefined)
@@ -190,6 +200,7 @@ export function register(on: On): void {
     background: [],
     servers: new Set(),
     unattended: false,
+    mode: '',
   }
 
   on('session.start', async ($, e, next) => {
@@ -257,9 +268,16 @@ export function register(on: On): void {
     return r
   })
 
-  // Runs as the main loop stops, before its turn.complete.
+  // Runs as the main loop stops, before its turn.complete: the mode is told first, so a restart at the turn's end
+  // resumes in it.
   on('classic.Stop', async ($, e, next) => {
     if (st.active) st.background = e.background_tasks ?? []
+    await noteMode($, st, e.permission_mode)
+    return next(e)
+  }).catch(passOn)
+
+  on('classic.UserPromptSubmit', async ($, e, next) => {
+    await noteMode($, st, e.permission_mode)
     return next(e)
   }).catch(passOn)
 
@@ -283,6 +301,7 @@ export function register(on: On): void {
   // the dialog opens as usual.
   let permSeq = 0
   on('classic.PermissionRequest', async ($, e, next) => {
+    await noteMode($, st, e.permission_mode)
     const r = await next(e)
     if (!st.active || r.decision || e.tool_name === 'AskUserQuestion') return r
     const id = `${Date.now()}-${++permSeq}`

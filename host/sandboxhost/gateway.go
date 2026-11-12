@@ -264,6 +264,7 @@ func (g gatewayHost) RequestHost(ctx context.Context, why string) (bool, string)
 		if a.Policy == "bypass" {
 			a.Policy = "ask"
 		}
+		a.Mode = "" // a mode switched to inside the sandbox doesn't follow it out: the host's gate decides
 	})
 	g.b.RestartWhenIdle("the user let the session leave the sandbox")
 	return true, "The user allowed it. End your turn now: you restart on the host, with this conversation, once it ends."
