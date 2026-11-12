@@ -2,11 +2,14 @@ package host
 
 import (
 	"context"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -62,6 +65,48 @@ func TestArchiveCleansTheSandbox(t *testing.T) {
 	if !there(filepath.Join(sandbox.HomeDir(b.Root()), ".gitconfig")) || !sandbox.Managed(b.Root()) {
 		t.Error("archiving took what a reopen needs")
 	}
+}
+
+// launch runs the agent's command in its sandbox, as a provider does, and waits for the backend's launch.
+func (s *sandboxRig) launch(spec *agent.StartSpec) {
+	s.t.Helper()
+	p, err := spec.Exec.Start(context.Background(), exec.Command("claude"))
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	_, _ = io.ReadAll(p.Stdout())
+	_ = p.Wait()
+	<-s.launched
+	<-s.opts
+}
+
+// Archiving a session takes its sandbox down (the backend's containers, network and volume), and reopening it
+// launches the sandbox again, in the same place.
+func TestArchiveStopsTheSandboxAndReopeningLaunchesItAgain(t *testing.T) {
+	s := newSandboxRig(t)
+	s.stopped = make(chan string, 4)
+	id, spec, b := s.sandboxed()
+	s.launch(spec)
+	if err := s.w.End(context.Background(), EndReq{Session: id, Discard: true}); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case root := <-s.stopped:
+		if root != b.Root() {
+			t.Errorf("stopped %s, not the session's sandbox %s", root, b.Root())
+		}
+	default:
+		t.Fatal("archiving didn't stop the sandbox")
+	}
+	if err := s.w.Resume(context.Background(), id); err != nil {
+		t.Fatal(err)
+	}
+	a := s.agent()
+	again := s.keptBox(id)
+	if again == b || again.Root() != b.Root() {
+		t.Errorf("reopened in a new sandbox %v at %s, want one at %s", again != b, again.Root(), b.Root())
+	}
+	s.launch(&a.Spec)
 }
 
 // Deleting a session removes the sandbox's directory with the workspace.

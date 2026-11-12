@@ -88,6 +88,6 @@ func details(ps []Proc) {
 		if len(args) > 0 {
 			ps[i].Command = strings.Join(args, " ")
 		}
-		ps[i].Session = sessionIn(env)
+		ps[i].Session, ps[i].Key = sessionIn(env)
 	}
 }

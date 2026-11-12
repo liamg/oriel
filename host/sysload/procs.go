@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"cmp"
 	"encoding/binary"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// SessionEnv is the variable a session's agent runs with, naming the session.
-const SessionEnv = "ORIEL_SESSION"
+// SessionEnv is the variable a session's agent runs with, naming the session; SessionKeyEnv tells it from another
+// Oriel's session of the same name.
+const (
+	SessionEnv    = "ORIEL_SESSION"
+	SessionKeyEnv = "ORIEL_SESSION_KEY"
+)
 
 // Proc is a process as the OS counts it.
 type Proc struct {
@@ -20,6 +25,7 @@ type Proc struct {
 	CPU       time.Duration // user and system time over its life
 	RSS       uint64        // bytes resident
 	Session   string        // its SessionEnv: the session it runs for, read by Family
+	Key       string        // its SessionKeyEnv, read by Family
 }
 
 // Family is pid and every process under it, pid first, each with its command line and session.
@@ -31,6 +37,38 @@ func Family(pid int) ([]Proc, error) {
 	fam := descendants(all, pid)
 	details(fam)
 	return fam, nil
+}
+
+// Keyed is every process whose environment carries SessionKeyEnv=key, and what each started, but this one and
+// the processes it runs under.
+func Keyed(key string) ([]Proc, error) {
+	all, err := procs()
+	if err != nil {
+		return nil, err
+	}
+	details(all)
+	mine := map[int]bool{}
+	by := map[int]Proc{}
+	for _, p := range all {
+		by[p.PID] = p
+	}
+	for pid := os.Getpid(); pid > 1 && !mine[pid]; pid = by[pid].PPID {
+		mine[pid] = true
+	}
+	var out []Proc
+	seen := map[int]bool{}
+	for _, p := range all {
+		if p.Key != key || seen[p.PID] {
+			continue
+		}
+		for _, d := range descendants(all, p.PID) {
+			if !seen[d.PID] && !mine[d.PID] {
+				seen[d.PID] = true
+				out = append(out, d)
+			}
+		}
+	}
+	return out, nil
 }
 
 // descendants is root and the processes under it in all, root first.
@@ -116,14 +154,17 @@ func parseCPUTime(s string) (time.Duration, bool) {
 	return total + time.Duration(days)*24*time.Hour, true
 }
 
-// sessionIn is SessionEnv's value among words: an environment, or a command line with it after.
-func sessionIn(words []string) string {
+// sessionIn is SessionEnv's and SessionKeyEnv's values among words: an environment, or a command line with it after.
+func sessionIn(words []string) (session, key string) {
 	for _, w := range words {
-		if v, ok := strings.CutPrefix(w, SessionEnv+"="); ok {
-			return v
+		if v, ok := strings.CutPrefix(w, SessionEnv+"="); ok && session == "" {
+			session = v
+		}
+		if v, ok := strings.CutPrefix(w, SessionKeyEnv+"="); ok && key == "" {
+			key = v
 		}
 	}
-	return ""
+	return session, key
 }
 
 // parseProcArgs reads macOS's KERN_PROCARGS2: argc, the executable's path, padding, the arguments, then the

@@ -11,8 +11,8 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
-// Closing the tab of a review you've approved offers to end it, its local branch ticked to go; ⌘↵ ends it.
-func TestClosingAnApprovedReviewOffersToEndIt(t *testing.T) {
+// Closing the tab of a review you've approved and sent deletes it, its local branch with it, without asking.
+func TestClosingAnApprovedReviewDeletesIt(t *testing.T) {
 	s, lw, hub, pr, id, _ := prReviewScene(t, false)
 	a := lw.Fake.WaitStarted(t)
 	for a.Spec.Pack.Name != "review" {
@@ -38,15 +38,53 @@ func TestClosingAnApprovedReviewOffersToEndIt(t *testing.T) {
 	s.Until("its tab", func() bool { return s.FindRole(render.RoleTab, sess.Name()) != nil })
 	s.RightClick(apptest.Centre(s.NodeRole(render.RoleTab, sess.Name()).Bounds))
 	s.ClickText("Close tab")
-	s.Until("the End session dialog", func() bool { return s.Has("END SESSION", "You approved") })
-	if b := s.Node("Delete the local branches too (remote branches stay)"); b.Checked == nil || !*b.Checked {
-		t.Error("deleting the local branch isn't ticked")
+	s.UntilState("the review deleted", func(st core.State) bool { _, ok := st.Session(id); return !ok })
+	if s.Has("END SESSION") {
+		t.Error("closing a sent review asked first")
 	}
+}
+
+// closeReview closes the review's tab from its menu.
+func closeReview(s *apptest.Scene, id core.SessionID) {
+	s.T.Helper()
+	sess, _ := s.Store().State().Session(id)
+	s.Until("its tab", func() bool { return s.FindRole(render.RoleTab, sess.Name()) != nil })
+	s.RightClick(apptest.Centre(s.NodeRole(render.RoleTab, sess.Name()).Bounds))
+	s.ClickText("Close tab")
+}
+
+// A review with nothing unsent is done with once it's closed: closing its tab deletes it without asking.
+func TestClosingAReviewDeletesIt(t *testing.T) {
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	s.Quiet()
+	closeReview(s, id)
+	s.UntilState("the review deleted", func(st core.State) bool { _, ok := st.Session(id); return !ok })
+	if s.Has("END SESSION") {
+		t.Error("closing a review with nothing unsent asked first")
+	}
+}
+
+// A review with comments kept but not sent asks first, starting on Delete; Cancel keeps it, and ⌘↵ deletes it.
+func TestClosingAReviewWithAnUnsentReviewAsks(t *testing.T) {
+	s, lw, _, _, id, _ := prReviewScene(t, false)
+	a := lw.Fake.WaitStarted(t)
+	for a.Spec.Pack.Name != "review" {
+		a = lw.Fake.WaitStarted(t)
+	}
+	a.Call(t, "comment", map[string]any{"file": "bucket.go", "line": 3, "severity": "high", "body": "Takes one whatever the cost."})
+	s.Quiet()
+	closeReview(s, id)
+	s.Until("the End session dialog", func() bool { return s.Has("END SESSION", "Your review isn't sent: 1 comment, lost.") })
+	s.WantFrame("Its worktrees, workspace and log go")
+	s.ClickText("Cancel")
+	s.Until("the dialog closed", func() bool { return !s.Has("END SESSION") })
+	if _, ok := s.Store().State().Session(id); !ok {
+		t.Fatal("cancelling deleted it")
+	}
+	closeReview(s, id)
+	s.Until("the End session dialog", func() bool { return s.Has("END SESSION") })
 	s.Press("<D-CR>")
-	s.UntilState("the review ended", func(st core.State) bool {
-		sess, ok := st.Session(id)
-		return !ok || sess.Snapshot().Archived
-	})
+	s.UntilState("the review deleted", func(st core.State) bool { _, ok := st.Session(id); return !ok })
 }
 
 // Once you've approved, the session's work is done: the review's own comments, mirrored back from GitHub, aren't the

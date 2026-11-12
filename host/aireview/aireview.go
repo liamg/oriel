@@ -120,7 +120,7 @@ func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
 	run := &aiReviewRun{x: x, session: se.ID, review: rv}
 	spec := agent.StartSpec{Cwd: hostcore.AgentDir(se), Model: model, Pack: pack, Prompt: reviewPrompt(se, rv, change), Tools: run.tools(),
 		Policy: agent.PolicyAsk, Protect: x.deps.Protected(se), Exec: x.deps.Exec(),
-		StateDir: filepath.Join(x.env.SessionDir(se.ID), "ai-review", rv.ID), Env: []string{"ORIEL_SESSION=" + string(se.ID)}}
+		StateDir: filepath.Join(x.env.SessionDir(se.ID), "ai-review", rv.ID), Env: x.env.AgentEnv(se.ID)}
 	x.runs.Go(func() {
 		var err error
 		defer func() {

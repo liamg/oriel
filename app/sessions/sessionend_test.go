@@ -60,29 +60,102 @@ func TestEndSessionDiscardsAndArchives(t *testing.T) {
 	s.WantFrame("Undo")
 }
 
-// Closing the tab of a session that isn't done just closes it; one a SessionDone contribution calls done asks first,
-// and Cancel leaves it, its tab closed.
-func TestClosingADoneSessionsTabOffersToEndIt(t *testing.T) {
-	s, se := endScene(t)
-	closeTab := func() {
-		t.Helper()
-		s.RightClick(apptest.Centre(s.NodeRole(render.RoleTab, se.Name).Bounds))
-		s.ClickText("Close tab")
-		s.UntilState("the tab closed", func(st core.State) bool { return len(st.Tabs) == 0 })
-	}
-	closeTab()
-	s.Frames(3)
-	if s.Has("END SESSION") {
-		t.Fatal("closing an unfinished session's tab offered to end it")
-	}
-	s.Registry().Contribute(registry.SessionDone{Name: "test", Done: func(core.SessionState) string { return "It's done." }})
-	s.Run("session.focus", registry.Args{"id": string(se.ID)})
+// closeByTab hovers the session's tab and clicks its ✕.
+func closeByTab(s *apptest.Scene, se core.SessionState) {
+	s.T.Helper()
 	s.Until("its tab", func() bool { return s.FindRole(render.RoleTab, se.Name) != nil })
-	closeTab()
-	s.Until("the End session dialog", func() bool { return s.Has("END SESSION", "It's done.") })
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: apptest.Centre(s.NodeRole(render.RoleTab, se.Name).Bounds)})
+	s.ClickOn("Close " + se.Name)
+}
+
+// archived is whether the session is archived.
+func archived(st core.State, id core.SessionID) bool {
+	se, ok := st.Session(id)
+	return ok && se.Snapshot().Archived
+}
+
+// A session tab's ✕ ends the session: with nothing to lose and the work not done, it's archived without asking, its
+// agent stopped, and its notice offers Undo.
+func TestClosingASessionsTabArchivesIt(t *testing.T) {
+	s, se := endScene(t)
+	closeByTab(s, se)
+	s.UntilState("the session archived", func(st core.State) bool { return archived(st, se.ID) })
+	if st := s.Store().State(); len(st.Tabs) != 0 {
+		t.Errorf("tabs open: %v", st.Tabs)
+	}
+	if sess, _ := s.Store().State().Session(se.ID); sess.Snapshot().Agent.Running {
+		t.Error("its agent is still running")
+	}
+	s.WaitFor("Archived rounding.")
+	s.WantFrame("Undo")
+	if s.Has("END SESSION") {
+		t.Error("closing it asked first, with nothing to lose")
+	}
+}
+
+// With something to lose, closing the tab asks first and says what; Cancel leaves the session, its tab open.
+func TestClosingASessionsTabWarnsFirst(t *testing.T) {
+	s, se := endScene(t)
+	if err := os.WriteFile(filepath.Join(se.Projects[0].Dir, "notes.txt"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	closeByTab(s, se)
+	s.WaitFor("1 file uncommitted, lost: notes.txt")
+	s.WantFrame("END SESSION", "Discard and archive")
 	s.ClickText("Cancel")
 	s.Until("the dialog closed", func() bool { return !s.Has("END SESSION") })
-	if sess, ok := s.Store().State().Session(se.ID); !ok || sess.Snapshot().Archived {
+	st := s.Store().State()
+	if archived(st, se.ID) || len(st.Tabs) != 1 {
+		t.Errorf("cancelling closed it: archived %v, tabs %v", archived(st, se.ID), st.Tabs)
+	}
+}
+
+// Closing the tab of a session a SessionDone contribution calls done asks whether to archive or delete it, its local
+// branches ticked to go; Cancel leaves it.
+func TestClosingADoneSessionsTabOffersArchiveOrDelete(t *testing.T) {
+	s, se := endScene(t)
+	s.Registry().Contribute(registry.SessionDone{Name: "test", Done: func(core.SessionState) string { return "It's done." }})
+	closeByTab(s, se)
+	s.Until("the End session dialog", func() bool { return s.Has("END SESSION", "It's done.", "Nothing unsaved is lost.") })
+	s.WantFrame("Archive", "Delete")
+	if b := s.Node("Delete the local branches too (remote branches stay)"); b.Checked == nil || !*b.Checked {
+		t.Error("deleting the local branches isn't ticked")
+	}
+	s.ClickText("Cancel")
+	s.Until("the dialog closed", func() bool { return !s.Has("END SESSION") })
+	if archived(s.Store().State(), se.ID) || len(s.Store().State().Tabs) != 1 {
 		t.Error("cancelling ended the session")
+	}
+}
+
+// What the agent is still running is listed too: its turn, the subagents it started, the background tasks that will
+// wake it and the processes it left running all stop with it.
+func TestEndSessionListsWhatTheAgentIsStillRunning(t *testing.T) {
+	s, se := endScene(t)
+	s.Quiet()
+	a := se.Agent
+	a.Working = true
+	a.Background = []core.BackgroundTask{{Kind: "shell", Description: "go test ./... -count=5"}}
+	a.Processes = []core.BackgroundTask{{Kind: "terminal", Description: "npm run dev"}, {Kind: "terminal", Description: "make watch"}}
+	for _, ev := range []core.Event{
+		core.AgentChanged{ID: se.ID, Agent: a},
+		core.SubagentChanged{Session: se.ID, Subagent: core.Subagent{ID: "a1", Description: "sweep the flaky tests", Running: true}},
+		core.SubagentChanged{Session: se.ID, Subagent: core.Subagent{ID: "a2", Description: "read the old parser", Running: false}},
+	} {
+		if err := s.Store().Apply(ev); err != nil {
+			t.Fatal(err)
+		}
+	}
+	s.Run("session.end", registry.Args{"id": "rounding"})
+	s.WaitFor("The agent is mid-turn")
+	// Each wraps in the dialog, so its count and what it's running are looked for apart.
+	s.WantFrame("1 subagent still running, stopped with the agent: sweep the flaky tests",
+		"1 background task still running, stopped with the agent", "go test ./...",
+		"2 processes still running, stopped with the agent", "npm run dev, make")
+	if strings.Contains(s.Text(), "read the old parser") {
+		t.Error("a subagent that's finished is listed")
+	}
+	if strings.Contains(s.Text(), "Nothing unsaved is lost.") {
+		t.Error("the dialog says nothing is lost")
 	}
 }

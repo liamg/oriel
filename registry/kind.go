@@ -168,6 +168,31 @@ func Done(r Contributions, se core.SessionState) string {
 	return ""
 }
 
+// SessionUnsaved says what ending a session would lose that only its contributor knows of: Unsaved answers what
+// ("Your review isn't sent: 3 comments."), or "" for nothing.
+type SessionUnsaved struct {
+	Name    string
+	Unsaved func(se core.SessionState) string
+	Source  string
+}
+
+func (SessionUnsaved) ContributionKind() string   { return "session.unsaved" }
+func (u SessionUnsaved) ContributionName() string { return u.Name }
+
+// Unsaved is what ending se would lose, each SessionUnsaved contribution's answer that isn't "".
+func Unsaved(r Contributions, se core.SessionState) []string {
+	var out []string
+	for _, c := range r.Contributions("session.unsaved") {
+		u := c.(SessionUnsaved)
+		what := ""
+		Call(func() error { what = u.Unsaved(se); return nil })
+		if what != "" {
+			out = append(out, what)
+		}
+	}
+	return out
+}
+
 // FrontSession is the session in front, if the Sessions service knows one.
 func FrontSession(r Contributions) (core.SessionState, bool) {
 	s, ok := SessionsOf(r)
