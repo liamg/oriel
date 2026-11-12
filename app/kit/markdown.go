@@ -14,7 +14,8 @@ import (
 // ThreadMarkdown is how a thread's comments draw their markdown: images found from its project's folder (the primary
 // project's, or the first, when it isn't anchored), all of them one lightbox group.
 func ThreadMarkdown(se core.SessionState, t core.Thread) MarkdownOpts {
-	o := MarkdownOpts{Group: "thread:" + string(t.ID), Help: "agent/requests#request"}
+	o := CommentMarkdown()
+	o.Group, o.Help = "thread:"+string(t.ID), "agent/requests#request"
 	for i, p := range se.Projects {
 		if t.Anchor != nil && p.Name == t.Anchor.Project || t.Anchor == nil && p.Primary || o.Dir == "" && i == 0 {
 			o.Dir = p.Dir
@@ -68,15 +69,20 @@ func MDSpans(s string) []widget.Span {
 	return out
 }
 
-// MarkdownOpts are where a document's relative images are, and the lightbox group its images make (one of its own if
-// "").
+// MarkdownOpts are where a document's relative images are, the lightbox group its images make (one of its own if
+// ""), and whether a newline in a paragraph is a line break (a comment's) or a space (a document's: CommonMark's soft
+// break).
 type MarkdownOpts struct {
-	Dir   string
-	Group string
-	Help  string
+	Dir    string
+	Group  string
+	Help   string
+	Breaks bool
 }
 
-// MarkdownTextIn is MarkdownText with its images found from o.Dir.
+// CommentMarkdown is how a comment draws its markdown, as GitHub draws a comment's: each newline a line break.
+func CommentMarkdown() MarkdownOpts { return MarkdownOpts{Breaks: true} }
+
+// MarkdownTextIn is MarkdownText as o says: its images found from o.Dir, its newlines line breaks with o.Breaks.
 func MarkdownTextIn(c *ui.Ctx, r registry.Registry, key any, src string, width float32, body ui.TextStyle, o MarkdownOpts) {
 	if md, ok := registry.ServiceOf[Markdown](r, MarkdownService); ok {
 		md.TextIn(c, key, src, width, body, o)

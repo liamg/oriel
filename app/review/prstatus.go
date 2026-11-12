@@ -141,7 +141,7 @@ func prActivity(c *ui.Ctx, r registry.Registry, events []registry.PREvent, width
 				if body := activityBody(e); body != "" || len(e.Reactions) > 0 {
 					c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Gap: 6}, func(c *ui.Ctx) {
 						if body != "" {
-							kit.MarkdownText(c, r, "md", body, width-46, kit.UIFont(12.5, th.C(theme.FgMuted)))
+							kit.MarkdownTextIn(c, r, "md", body, width-46, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.CommentMarkdown())
 						}
 						reactions(c, "reactions", e.Reactions)
 					})

@@ -34,8 +34,8 @@ const (
 // mdBlock is one block of markdown and the source lines it came from, so a thread can be anchored to it.
 type mdBlock struct {
 	Kind      mdKind
-	Text      string   // a paragraph's, heading's or item's inline markdown
-	Level     int      // a heading's level; an item's depth
+	Text      string   // a paragraph's, heading's or item's inline markdown, its source's newlines kept
+	Level     int      // a heading's level; an item's depth; a fence's in a list item, its item's depth + 1
 	Mark      string   // an item's bullet, or its number
 	Lang      string   // a fence's info string
 	Code      []string // a fence's lines
@@ -71,18 +71,15 @@ func mdBlocks(src string) []mdBlock {
 		l := strings.TrimRight(lines[i], "\r")
 		t := strings.TrimSpace(l)
 		if t != "" && para >= 0 && !mdImageLine(t) && !strings.HasPrefix(t, "```") && t != "---" && t != "***" && !strings.HasPrefix(t, "#") && !listItem.MatchString(l) && !startsHTMLBlock(l) && mdTableAt(lines, i) == nil {
-			out[para].Text += " " + t
+			out[para].Text += "\n" + t
 			out[para].End = i + 1
 			continue
 		}
 		para = -1
 		switch {
 		case strings.HasPrefix(t, "```"):
-			b := mdBlock{Kind: mdCode, Lang: strings.TrimSpace(strings.TrimPrefix(t, "```")), Line: i + 1}
-			for i++; i < len(lines) && !strings.HasPrefix(strings.TrimSpace(lines[i]), "```"); i++ {
-				b.Code = append(b.Code, strings.TrimRight(lines[i], "\r"))
-			}
-			b.End = min(i+1, len(lines))
+			var b mdBlock
+			b, i = mdFence(lines, i, out)
 			out = append(out, b)
 		case t == "---" || t == "***":
 			out = append(out, mdBlock{Kind: mdRule, Line: i + 1, End: i + 1})
@@ -107,9 +104,10 @@ func mdBlocks(src string) []mdBlock {
 			if box, rest, ok := taskBox(b.Text); ok {
 				b.Mark, b.Text = box, rest
 			}
-			for i+1 < len(lines) && strings.HasPrefix(lines[i+1], "  ") && !listItem.MatchString(lines[i+1]) && strings.TrimSpace(lines[i+1]) != "" {
+			for i+1 < len(lines) && strings.HasPrefix(lines[i+1], "  ") && !listItem.MatchString(lines[i+1]) && strings.TrimSpace(lines[i+1]) != "" &&
+				!strings.HasPrefix(strings.TrimSpace(lines[i+1]), "```") {
 				i++
-				b.Text += " " + strings.TrimSpace(lines[i])
+				b.Text += "\n" + strings.TrimSpace(lines[i])
 				b.End = i + 1
 			}
 			out = append(out, b)
@@ -130,6 +128,27 @@ func mdBlocks(src string) []mdBlock {
 		}
 	}
 	return out
+}
+
+// mdFence is the fenced code starting at line i, and the line it ends on. Its lines lose as much of the fence's
+// indent as they have; a fence indented under a list item (after its blocks) is that item's.
+func mdFence(lines []string, i int, before []mdBlock) (mdBlock, int) {
+	l := strings.TrimRight(lines[i], "\r")
+	t := strings.TrimSpace(l)
+	indent := len(l) - len(strings.TrimLeft(l, " "))
+	b := mdBlock{Kind: mdCode, Lang: strings.TrimSpace(strings.TrimPrefix(t, "```")), Line: i + 1}
+	if n := len(before); indent >= 2 && n > 0 && (before[n-1].Kind == mdItem || before[n-1].Kind == mdCode && before[n-1].Level > 0) {
+		b.Level = before[n-1].Level
+		if before[n-1].Kind == mdItem {
+			b.Level++
+		}
+	}
+	for i++; i < len(lines) && !strings.HasPrefix(strings.TrimSpace(lines[i]), "```"); i++ {
+		ln := strings.TrimRight(lines[i], "\r")
+		b.Code = append(b.Code, ln[min(indent, len(ln)-len(strings.TrimLeft(ln, " "))):])
+	}
+	b.End = min(i+1, len(lines))
+	return b, i
 }
 
 var tableDelim = regexp.MustCompile(`^:?-+:?$`)
@@ -256,6 +275,7 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 	if o.Group == "" {
 		o.Group = fmt.Sprint("md:", c.Next(key))
 	}
+	prose := widget.RichOpts{Breaks: o.Breaks}
 	c.Column(key, ui.Style{W: ui.Px(width), Gap: 8, Selectable: true}, func(c *ui.Ctx) {
 		for k, b := range mdParsed(c, src) {
 			if len(b.Images) > 0 {
@@ -269,8 +289,11 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 				if mdDiagramBox(c, fmt.Sprint("code", k), b, width, o, false) {
 					continue
 				}
-				c.Column(fmt.Sprint("code", k), ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 6), Radius: 4, Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
-					widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-16, 0, code)
+				indent := mdCodeIndent(b, 14)
+				c.Row(fmt.Sprint("code", k), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: indent}}, func(c *ui.Ctx) {
+					c.Column("box", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 6), Radius: 4, Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
+						widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-indent-16, 0, code)
+					})
 				})
 			case mdRule:
 				c.Box(fmt.Sprint("hr", k), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
@@ -282,13 +305,21 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 				indent := float32(b.Level) * 14
 				c.Row(fmt.Sprint("li", k), ui.Style{Gap: 8, Pad: ui.Insets{L: 4 + indent}}, func(c *ui.Ctx) {
 					c.Text("mark", b.Mark, body)
-					widget.Rich(c, "t", kit.MDSpans(b.Text), width-22-indent, body, widget.RichOpts{})
+					widget.Rich(c, "t", kit.MDSpans(b.Text), width-22-indent, body, prose)
 				})
 			default:
-				mdAligned(c, fmt.Sprint("p", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, kit.MDSpans(b.Text), width, body, widget.RichOpts{}) })
+				mdAligned(c, fmt.Sprint("p", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, kit.MDSpans(b.Text), width, body, prose) })
 			}
 		}
 	})
+}
+
+// mdCodeIndent is how far a fence sits in, under its list item's text when it's in one: step a level of list.
+func mdCodeIndent(b mdBlock, step float32) float32 {
+	if b.Level == 0 {
+		return 0
+	}
+	return 22 + float32(b.Level-1)*step
 }
 
 // markdownTable draws a table block: its cells' inline markdown in body, its header row semibold, each column aligned
