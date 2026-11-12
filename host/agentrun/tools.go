@@ -30,6 +30,8 @@ func (x *Runner) tools(h *session) []agent.Tool {
 			Schema: hostcore.Schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl+`,"resolve":`+bl, "thread", "body"), Call: h.toolReply},
 		{Name: "thread", Description: "Read one Oriel thread in full: every comment, with nothing clipped.", ReadOnly: true,
 			Schema: hostcore.Schema(`"thread":`+str, "thread"), Call: h.toolThread},
+		{Name: "threads", Description: "List the session's Oriel threads, open and closed, each with where it is, where it came from, who started it and its first line: the thread tool reads one in full. Those mirrored from a code host include other people's comments that weren't handed to you.", ReadOnly: true,
+			Schema: hostcore.Schema(""), Call: h.toolThreads},
 		{Name: "resolve", Description: "Resolve an Oriel thread.", Schema: hostcore.Schema(`"thread":`+str+`,"summary":`+str, "thread"), Call: h.toolResolve},
 		{Name: "comment", Description: `Start a thread of your own: on a line of a file (file, line, optional end_line and side "old"/"new", project in a session with more than one), or a general one with no file. severity rates a review finding: nit, low, medium, high or critical.`,
 			Schema: hostcore.Schema(`"body":`+str+`,"file":`+str+`,"line":`+num+`,"end_line":`+num+`,"side":`+str+`,"project":`+str+`,"severity":{"type":"string","enum":["nit","low","medium","high","critical"]}`, "body"),
@@ -178,6 +180,14 @@ func (h *session) toolThread(_ context.Context, raw json.RawMessage) (string, er
 		return "", err
 	}
 	return renderThreadFull(se, t), nil
+}
+
+func (h *session) toolThreads(context.Context, json.RawMessage) (string, error) {
+	se, err := h.r.st.Session(h.id)
+	if err != nil {
+		return "", err
+	}
+	return renderThreadList(se), nil
 }
 
 func (h *session) toolResolve(ctx context.Context, raw json.RawMessage) (string, error) {

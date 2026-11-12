@@ -26,6 +26,7 @@ type mirrorMsg struct {
 	at      time.Time
 	trusted bool // the agent may read its text
 	own     bool // the user's own: not given to the agent as theirs to answer
+	aside   bool // another's, for the agent to read but not to answer: in a review, see asides
 }
 
 // mirrored is a thread as its code host has it.
@@ -128,6 +129,24 @@ func (x *GitHub) mirrorInto(se core.SessionState, host, repo string, pr int, thr
 	return kick
 }
 
+// asides marks what of a reviewed PR's thread its review's agent reads but needn't answer: in a review thread, a
+// first comment nobody but the user has answered, unless the PR's author wrote it; in the PR's conversation (convo),
+// everything but the author's. The user's own are never the agent's to answer either (own). Outside a review
+// (author ""), the agent answers them all.
+func asides(msgs []mirrorMsg, author string, convo bool) {
+	if author == "" || len(msgs) == 0 {
+		return
+	}
+	if convo {
+		for i := range msgs {
+			msgs[i].aside = msgs[i].user != author
+		}
+		return
+	}
+	answered := slices.ContainsFunc(msgs[1:], func(m mirrorMsg) bool { return !m.own })
+	msgs[0].aside = !answered && msgs[0].user != author
+}
+
 // mergeMsgs brings a thread's comments in line with its host's: new ones added, edited ones changed (and given to the
 // agent again), deleted ones taken out. A comment of Oriel's (a forwarded draft) is matched by its id there, so it
 // isn't added again.
@@ -139,13 +158,13 @@ func mergeMsgs(t *core.Thread, msgs []mirrorMsg) {
 		i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return is(c, m) })
 		if i < 0 {
 			t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorHost, Name: m.user, Body: m.body, Time: m.at.UTC(),
-				GitHubID: m.num, HostID: m.key, Redacted: !m.trusted, Delivered: m.own, Mine: m.own})
+				GitHubID: m.num, HostID: m.key, Redacted: !m.trusted, Delivered: m.own || m.aside, Mine: m.own})
 			continue
 		}
 		c := &t.Comments[i]
 		c.Mine = c.Mine || m.own
 		if c.Author == core.AuthorHost && c.Body != m.body {
-			c.Body, c.Edited, c.Delivered = m.body, true, false
+			c.Body, c.Edited, c.Delivered = m.body, true, m.own || m.aside
 			c.Redacted = !m.trusted
 		}
 	}
@@ -164,6 +183,7 @@ type MirrorReviewReq struct {
 	Repo    string         `json:"repo"`
 	PR      int            `json:"pr"`
 	URL     string         `json:"url,omitempty"`
+	Author  string         `json:"author,omitempty"` // the PR's: in a review, what others wrote isn't the agent's to answer
 	Threads []ReviewThread `json:"threads"`
 }
 
@@ -215,6 +235,9 @@ func (x *GitHub) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error
 		}
 		for _, c := range rt.Comments {
 			m.msgs = append(m.msgs, mirrorMsg{key: c.Key, user: c.User, body: c.Body, at: c.At, trusted: c.Trusted})
+		}
+		if reviewedPR(se) != "" {
+			asides(m.msgs, r.Author, rt.Key == "")
 		}
 		threads = append(threads, m)
 	}

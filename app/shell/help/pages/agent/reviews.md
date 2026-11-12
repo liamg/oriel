@@ -121,6 +121,11 @@ replies reach the agent, which can draft an answer for you to forward; it never 
 resolves it on GitHub too, and reopening it reopens it there (a code host plugin's `resolve` does the same for its
 host).
 
+Comments other people left on the pull request come in too, for the agent to read, not to answer: it reads them
+before it comments, so it doesn't repeat a point someone made. Another reviewer's comment nobody but you has replied
+to, the conversation's comments, and your own earlier ones are never handed to it. It's handed a thread only when the
+author writes in it or someone replies to another reviewer, and then says what that changes in its review.
+
 Open review sessions are synced with their pull requests every two minutes, and the one in front every 30 seconds.
 When the author pushes, the checkout moves to the new head, and with `review.auto_rereview` on (the default) the
 agent is asked to review what changed once its last review is done (`review.pr.recheck`): where each earlier comment

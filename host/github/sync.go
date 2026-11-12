@@ -110,9 +110,9 @@ func (x *GitHub) mirrorPR(ctx context.Context, id core.SessionID, p core.Project
 	if err != nil {
 		return mp, false, err
 	}
-	me := ""
+	me, author := "", ""
 	if reviewedPR(se) != "" {
-		me = x.githubMe(ctx, c)
+		me, author = x.githubMe(ctx, c), pr.Author
 	}
 	msg := func(id int64, user, assoc, body string, at time.Time) mirrorMsg {
 		return mirrorMsg{num: id, user: user, body: body, at: at, trusted: trusted(user, assoc), own: me != "" && user == me}
@@ -138,6 +138,7 @@ func (x *GitHub) mirrorPR(ctx context.Context, id core.SessionID, p core.Project
 		for _, rc := range cs {
 			msgs = append(msgs, msg(rc.ID, rc.User, rc.Association, rc.Body, rc.Created))
 		}
+		asides(msgs, author, false)
 		line, side := first.Line, ""
 		if line == 0 {
 			line = first.OriginalLine
@@ -168,6 +169,7 @@ func (x *GitHub) mirrorPR(ctx context.Context, id core.SessionID, p core.Project
 		}
 	}
 	slices.SortStableFunc(convo, func(a, b mirrorMsg) int { return a.at.Compare(b.at) })
+	asides(convo, author, true)
 	ref := core.HostThread{Project: p.Name, Repo: mp.Repo, PR: pr.Number, URL: pr.URL}
 	if len(convo) > 0 {
 		ref.Reviewer = convo[0].user

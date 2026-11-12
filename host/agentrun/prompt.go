@@ -1,6 +1,7 @@
 package agentrun
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
 	"slices"
@@ -58,6 +59,50 @@ func renderBatch(se core.SessionState, threads []core.Thread, fresh map[string]b
 // hidden says the agent isn't told of t at all: every comment in it is an untrusted author's.
 func hidden(t core.Thread) bool {
 	return len(t.Comments) > 0 && !slices.ContainsFunc(t.Comments, func(c core.Comment) bool { return !c.Redacted })
+}
+
+// listFirstLine bounds the first line a thread list shows of each thread.
+const listFirstLine = 160
+
+// renderThreadList is every thread the agent may read but a side question or a dismissed one, a line each: the threads
+// tool's answer.
+func renderThreadList(se core.SessionState) string {
+	var b strings.Builder
+	for _, t := range se.Threads {
+		if hidden(t) || t.Btw || t.Status == core.ThreadDismissed {
+			continue
+		}
+		i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return !c.Redacted && !c.Btw })
+		if i < 0 {
+			continue
+		}
+		first := t.Comments[i]
+		by := "user"
+		switch first.Author {
+		case core.AuthorAgent:
+			by = "you"
+		case core.AuthorHost:
+			by = first.Name
+		}
+		attrs := [][2]string{{"id", string(t.ID)}, {"where", where(se, t)}, {"status", string(cmp.Or(t.Status, core.ThreadOpen))}, {"by", by},
+			{"comments", strconv.Itoa(len(t.Comments))}}
+		origin := t.Origin
+		if t.Hosted != nil && t.Hosted.Host != "" {
+			origin = t.Hosted.Host
+		}
+		if origin != "" {
+			attrs = append(attrs, [2]string{"origin", origin})
+		}
+		line, _, _ := strings.Cut(strings.TrimSpace(first.Body), "\n")
+		if r := []rune(line); len(r) > listFirstLine {
+			line = string(r[:listFirstLine]) + "…"
+		}
+		b.WriteString(openTag("thread", attrs) + escapeBody(line) + "</thread>\n")
+	}
+	if b.Len() == 0 {
+		return "No threads."
+	}
+	return strings.TrimSpace(b.String())
 }
 
 // renderThreadFull is one thread, nothing clipped: the thread tool's answer.
