@@ -69,8 +69,13 @@ type PromptCardOpts struct {
 	Scopes  []string
 	Scope   *int
 	Options []PromptOption
-	Help    string
-	Label   string // its accessible name; the title by default
+	// Actions are what isn't an answer (go to the console): their keys pick them, and one with a Label is a small
+	// button in its head, beside the count.
+	Actions []CardAction
+	// Foot is drawn under the answers: a note being written for a denial.
+	Foot  func(c *ui.Ctx)
+	Help  string
+	Label string // its accessible name; the title by default
 	// Dismiss puts a ✕ at its top right; it, or Escape, dismisses the card.
 	Dismiss bool
 	// TakeFocus gives it keyboard focus as it appears; for CardKeyGuard after, its keys answer nothing.
@@ -79,6 +84,7 @@ type PromptCardOpts struct {
 
 type PromptCardResult struct {
 	Option    int // the option picked, or -1
+	Action    int // the action clicked or typed, or -1
 	Dismissed bool
 }
 
@@ -111,7 +117,7 @@ func PromptWidth(c *ui.Ctx) float32 {
 // a list: ↑/↓ move the highlight and ↵ picks it, an option's key picks it, and a click picks a row. It never grows
 // past the window: only the detail gives way.
 func PromptCard(c *ui.Ctx, key any, o PromptCardOpts) PromptCardResult {
-	res := PromptCardResult{Option: -1}
+	res := PromptCardResult{Option: -1, Action: -1}
 	id := c.Next(key)
 	in := c.Interaction(id)
 	st := ui.State[promptState](c, id)
@@ -164,6 +170,12 @@ func PromptCard(c *ui.Ctx, key any, o PromptCardOpts) PromptCardResult {
 					return true
 				}
 			}
+			for i, a := range o.Actions {
+				if a.Key != "" && cardKey(k) == a.Key {
+					res.Action = i
+					return true
+				}
+			}
 			return false
 		}
 		return true
@@ -190,6 +202,11 @@ func PromptCard(c *ui.Ctx, key any, o PromptCardOpts) PromptCardResult {
 		c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: promptPad, R: 14}, Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("kicker", strings.ToUpper(o.Kicker), monoText(10.5, typeset.SemiBold, o.Tone, .18))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			for i, a := range o.Actions {
+				if a.Label != "" && Button(c, fmt.Sprint("action", i), a.Label, ButtonOpts{Ghost: true, Primary: a.Primary, Key: keyLabel(a.Key), Help: o.Help}) {
+					res.Action = i
+				}
+			}
 			if o.Count != "" {
 				c.Text("count", strings.ToUpper(o.Count), monoText(10.5, typeset.Medium, col(c, tPromptMuted), .1))
 			}
@@ -217,6 +234,9 @@ func PromptCard(c *ui.Ctx, key any, o PromptCardOpts) PromptCardResult {
 		}
 		if i := promptOptions(c, o, st); i >= 0 {
 			res.Option = i
+		}
+		if o.Foot != nil {
+			c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: promptPad, R: promptPad, T: 12}}, o.Foot)
 		}
 	})
 	return res
@@ -348,7 +368,7 @@ func promptOptions(c *ui.Ctx, o PromptCardOpts, st *promptState) int {
 					}
 					if Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(promptOptionH), Pad: ui.PadXY(12, 0), Gap: 12, Cross: ui.Center, Fill: fill,
 						EaseFill: true, Role: ui.RoleListItem, Label: name, Selected: on, Help: o.Help}, func(c *ui.Ctx) {
-						c.Row("key", ui.Style{W: ui.Size{Kind: ui.Fit}.Clamp(22, 40), H: ui.Px(17), Pad: ui.PadXY(5, 0), Main: ui.Center, Cross: ui.Center,
+						c.Row("key", ui.Style{W: ui.Px(26), H: ui.Px(17), Main: ui.Center, Cross: ui.Center,
 							Stroke: alpha(keyFg, .45), Border: 1, Radius: 3}, func(c *ui.Ctx) {
 							c.Text("k", promptKeyLabel(a.Key), monoText(10.5, typeset.Medium, keyFg, 0))
 						})

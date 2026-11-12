@@ -51,7 +51,9 @@ func (r *promptRig) detail() ui.ID {
 	return ui.Child(ui.Child(ui.Child(r.id, "detailbox"), "frame"), "detail")
 }
 
-func (r *promptRig) option(i int) ui.ID { return ui.Child(ui.Child(ui.Child(r.id, "options"), "list"), i) }
+func (r *promptRig) option(i int) ui.ID {
+	return ui.Child(ui.Child(ui.Child(r.id, "options"), "list"), i)
+}
 
 // The answers are a list: ↑/↓ move the highlight and ↵ picks it, an option's key picks it at once, and a click
 // picks a row. Each row is a list item named with its key and the rule it makes; ←/→ choose a scope.
@@ -212,5 +214,30 @@ func TestPromptCardIgnoresKeysAsItAppears(t *testing.T) {
 	h.keys("y")
 	if picked != 0 {
 		t.Errorf("y once it settled picked %d", picked)
+	}
+}
+
+// An action that isn't an answer is a small button in the head, its key picking it too; the foot is drawn under the
+// answers.
+func TestPromptCardActionsAndFoot(t *testing.T) {
+	action := -1
+	var id ui.ID
+	h := newHarness(t, theme.Dark, render.Point{X: 1000, Y: 600}, func(c *ui.Ctx) {
+		id = c.Next("p")
+		res := PromptCard(c, "p", PromptCardOpts{Title: "t", Tone: col(c, tCardFg), Options: []PromptOption{{Key: "y", Label: "Allow once"}},
+			Actions: []CardAction{{Label: "Console", Key: "g"}}, Foot: func(c *ui.Ctx) { c.Text("note", "a note field", uiText(c, 12, 400, col(c, tCardFg))) }})
+		if res.Action >= 0 {
+			action = res.Action
+		}
+	})
+	h.frame()
+	if !h.drew("Console") || !h.drew("a note field") {
+		t.Fatalf("no Console button or foot: %q", h.texts())
+	}
+	h.u.Focus(id)
+	h.frame()
+	h.keys("g")
+	if action != 0 {
+		t.Errorf("g picked action %d", action)
 	}
 }
