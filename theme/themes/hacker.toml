@@ -1,0 +1,40 @@
+# Hacker: a green phosphor terminal in a dark room. Saturated greens on black, the hottest near white; amber for
+# numbers, as an amber phosphor would. Status keeps its own hues so a session's state still reads at a glance.
+name = "hacker"
+extends = "oriel"
+variant = "dark"
+
+[effects]
+glow = 1
+
+[palette]
+bg0 = "#000000"
+bg1 = "#030d05"
+bg2 = "mix(bg1, bg3, 45%)"
+bg3 = "#08200e"
+bg4 = "#0e3618"
+line  = "#0a2a12"
+line2 = "#0f4a1f"
+fg      = "#5cff8a"
+fg2     = "#2fd65e"
+fg3     = "#1f9443"
+fg4     = "#166b30"
+accent  = "#00ff41"
+accent2 = "#007a22"
+ink     = "#000000"
+brand   = "#00ff41"
+green   = "#39ff6a"
+amber   = "#e8d24a"
+red     = "#ff4d4d"
+cyan    = "#3fe0e0"
+violet  = "#b57afc"
+pink    = "#ff7ac8"
+blue    = "#4f8dff"
+"syn.keyword"   = "#d4ffe0"
+"syn.string"    = "#00ff41"
+"syn.number"    = "#ffb000"
+"syn.function"  = "#8affab"
+"syn.type"      = "#00e0b0"
+"syn.comment"   = "#1d8a3c"
+"syn.punct"     = "#12b043"
+"syn.variable"  = "#5cff8a"
