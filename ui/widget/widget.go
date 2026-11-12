@@ -35,6 +35,7 @@ var (
 	tRowHover       = theme.DeclareOn("list.row.hover", "alpha(fg, 4%)", "bg.surface")
 	tRowSelected    = theme.Declare("list.row.selected", "accent.bg")
 	tRowEdge        = theme.Declare("list.row.selected.edge", "accent")
+	tRowPicked      = theme.DeclareOn("list.row.picked", "alpha(accent, 16%)", "bg.base") // a SelectRow's, over rows tinted their own way
 	tRowFg          = theme.Declare("list.row.fg", "fg.muted")
 	tRowSelectedFg  = theme.Declare("list.row.selected.fg", "fg")
 	tTabBg          = theme.Declare("tab.bg", "bg.surface")

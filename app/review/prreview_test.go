@@ -25,6 +25,11 @@ import (
 // review of it started with the fake agent: in front, its window opened on it, or in the background. push pushes
 // bucket.go's next version to the PR and answers its head.
 func prReviewScene(t *testing.T, background bool) (s *apptest.Scene, lw *rig.Host, hub *ghtest.Server, pr gh.PR, id core.SessionID, push func(string) string) {
+	return prReviewSceneOf(t, background, "package ratelimit\n\nfunc Take() int { return 1 }\n")
+}
+
+// prReviewSceneOf is prReviewScene with body bucket.go's first version.
+func prReviewSceneOf(t *testing.T, background bool, body string) (s *apptest.Scene, lw *rig.Host, hub *ghtest.Server, pr gh.PR, id core.SessionID, push func(string) string) {
 	s, lw, hub, prs := reviewScene(t)
 	pr = prs["ratelimit"]
 	git := func(args ...string) string {
@@ -51,7 +56,7 @@ func prReviewScene(t *testing.T, background bool) (s *apptest.Scene, lw *rig.Hos
 		return head
 	}
 	git("remote", "add", "origin", lw.Repo)
-	push("package ratelimit\n\nfunc Take() int { return 1 }\n")
+	push(body)
 	hub.DiffLines("acme/api", pr.Number, "bucket.go:1", "bucket.go:2", "bucket.go:3")
 
 	done := make(chan error, 1)

@@ -99,6 +99,7 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.
 		c.Column("center", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			x.slots(c, kit.DiffHeader, st.root, vc.Width)
 			x.body(c, vc, st, gs, root)
+			lineKeys(c, st)
 		})
 		if len(right) > 0 {
 			c.Column("right", ui.Style{W: ui.Px(360), H: ui.Flex(1), Fill: th.C(tDiffFiles)}, func(c *ui.Ctx) {
@@ -323,6 +324,7 @@ func (x *Diff) body(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, gs *gitx.State, 
 			c.Text("t", "No changes against "+base+".", kit.UIFont(13, th.C(theme.FgFaint)))
 		})
 	}
+	st.panLines(c)
 	at := st.revealItem(c, bodyID)
 	c.Items("files", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Focusable: true, DefaultFocus: true, KeyMode: DiffKeyMode, Role: ui.RoleList, Label: "Changes",
 		Help: "files/diff#hunks"}, len(st.files), ui.ItemsOpts{Estimate: 35, Key: func(i int) any { return st.files[i].Path }, Reveal: at},
@@ -429,6 +431,10 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 				st.sel = diffSel{file: f.Path, hunk: -1, line: -1}
 			}
 			if open && (d == nil || d.images == nil) {
+				if widget.ToggleChip(c, "wrap", "wrap", x.wrap, widget.ToggleChipOpts{Label: "Wrap long lines", Help: "files/diff#wrap",
+					Tooltip: "Wrap long lines, or scroll across them (editor.wrap)"}) != x.wrap {
+					x.h.Run(context.Background(), "diff.wrap", registry.Args{"wrap": !x.wrap})
+				}
 				active := 0
 				if layout == "unified" {
 					active = 1
@@ -482,9 +488,13 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 		decor := x.h.Decorate(uireg.DecorationCtx{Window: DiffView + ":" + st.root, Presenter: diffPresenter, Now: c.Now(), Name: f.Path,
 			Path: filepath.Join(st.root, filepath.FromSlash(f.Path)), Buffer: buf, Snap: snap, Top: 0, Bottom: snap.Lines(), FileBytes: snap.Bytes,
 			Wake: c.WakeAt})
+		gaps := hiddenGaps(d)
+		fc := st.context(f.Path, d.hunks)
 		for i, h := range d.hunks {
+			reveal = append(reveal, x.gapRows(c, st, f.Path, d, fc, gaps[i], layout, decor)...)
 			reveal = append(reveal, x.hunk(c, st, f.Path, i, h, layout, decor)...)
 		}
+		reveal = append(reveal, x.gapRows(c, st, f.Path, d, fc, gaps[len(d.hunks)], layout, decor)...)
 	})
 	return reveal
 }
@@ -532,28 +542,7 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 				}
 			}
 		})
-		blocks := func(key any, line int) {
-			for _, d := range decor[line-1] {
-				if d.Kind != uireg.Block || d.Node == nil || line <= 0 {
-					continue
-				}
-				k := fmt.Sprint(key, ".", d.Priority)
-				if f, ok := d.Node.(*ui.Func); ok && f.Key != nil {
-					k = fmt.Sprint(f.Key)
-				}
-				id := c.Next(k)
-				c.Box(k, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 62, R: 14, T: 8, B: 10}}, func(c *ui.Ctx) {
-					if f, ok := d.Node.(*ui.Func); ok {
-						f.Fn(c)
-						return
-					}
-					c.Node(d.Node)
-				})
-				if d.Reveal {
-					reveal = append(reveal, id)
-				}
-			}
-		}
+		blocks := func(key any, line int) { reveal = append(reveal, lineBlocks(c, decor, key, line)...) }
 		if layout == "unified" {
 			for k, l := range h.Lines {
 				x.unifiedRow(c, st, at, k, h, lineDecor{decor, l.New})
@@ -574,6 +563,32 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 			}
 		}
 	})
+	return reveal
+}
+
+// lineBlocks draws the Block decorations of new line (from 1) under it, and returns those that asked to be brought
+// into view.
+func lineBlocks(c *ui.Ctx, decor map[int][]uireg.Decoration, key any, line int) (reveal []ui.ID) {
+	for _, d := range decor[line-1] {
+		if d.Kind != uireg.Block || d.Node == nil || line <= 0 {
+			continue
+		}
+		k := fmt.Sprint(key, ".", d.Priority)
+		if f, ok := d.Node.(*ui.Func); ok && f.Key != nil {
+			k = fmt.Sprint(f.Key)
+		}
+		id := c.Next(k)
+		c.Box(k, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 62, R: 14, T: 8, B: 10}}, func(c *ui.Ctx) {
+			if f, ok := d.Node.(*ui.Func); ok {
+				f.Fn(c)
+				return
+			}
+			c.Node(d.Node)
+		})
+		if d.Reveal {
+			reveal = append(reveal, id)
+		}
+	}
 	return reveal
 }
 
@@ -662,15 +677,12 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
 	sel := st.sel == me
 	fill, edge, word := lineTones(th, l.Op)
-	if sel {
-		fill = th.C(tDiffSelected)
-	}
 	key := lineKey(l)
 	row := c.Next(key)
 	st.ids[me] = row
 	h0, cross := x.rowFit()
-	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Cross: cross, Fill: fill, Role: ui.RoleListItem, Selected: sel,
-		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, func(c *ui.Ctx) {
+	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Cross: cross, Fill: fill,
+		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, sel, func(c *ui.Ctx) {
 		x.hoverSign(c, row, ds)
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		lineNo(c, "o", l.Old)
@@ -680,10 +692,42 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 				c.Text("t", string(l.Op), ui.TextStyle{Font: diffCodeFont, Color: edge})
 			}
 		})
-		diffCode(c, h.spans[k], h.marks[k], word, x.wrap)
-	}).Clicked {
+		diffCode(c, h.spans[k], h.marks[k], word, x.codeFit(st, at.file))
+	})
+	x.lineClicked(st, me, in)
+}
+
+// lineClicked selects the line a click is on, and opens it in the editor on a double click.
+func (x *Diff) lineClicked(st *diffState, me diffSel, in ui.Interaction) {
+	if in.Clicked || in.DoubleClicked {
 		st.sel = me
 	}
+	if in.DoubleClicked {
+		if err := x.source(st, nil); err != nil {
+			x.h.Log().Warn("diff", "err", err)
+		}
+	}
+}
+
+// lineKeys is the foot of the diff while a line is selected: where it is, and the keys that act on it.
+func lineKeys(c *ui.Ctx, st *diffState) {
+	path, line, _, ok := st.selLine()
+	if !ok || st.sel.line < 0 {
+		return
+	}
+	th := c.Theme()
+	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	c.Row("keys", ui.Style{W: ui.Flex(1), H: ui.Px(26), Gap: 12, Pad: ui.PadXY(14, 0), Cross: ui.Center, Fill: th.C(tDiffFiles), Role: ui.RoleGroup,
+		Label: "Keys for the selected line", Help: "files/diff#keys"}, func(c *ui.Ctx) {
+		rel, err := filepath.Rel(st.root, path)
+		if err != nil {
+			rel = path
+		}
+		c.Text("at", fmt.Sprintf("%s:%d", filepath.ToSlash(rel), line), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+		for i, k := range [][2]string{{"gc", "comment"}, {"ga", "ask"}, {"o", "open"}, {"?", "explain"}} {
+			kit.KeyHint(c, i, k[0], k[1])
+		}
+	})
 }
 
 func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk, ds lineDecor) {
@@ -702,7 +746,11 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 	}
 	side := func(c *ui.Ctx, key string, i int, old bool) {
 		if i < 0 {
-			c.Box(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tDiffEmpty)}, nil)
+			fill := th.C(tDiffEmpty)
+			if sel {
+				fill = render.Color{}
+			}
+			c.Box(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill}, nil)
 			return
 		}
 		l := h.Lines[i]
@@ -712,7 +760,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		}
 		fill, edge, word := lineTones(th, op)
 		if sel {
-			fill = th.C(tDiffSelected)
+			fill = render.Color{} // the row's selection shows through
 		}
 		_, cross := x.rowFit()
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: cross, Fill: fill, Clip: true}, func(c *ui.Ctx) {
@@ -725,7 +773,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 				n = l.Old
 			}
 			lineNo(c, "n", n)
-			diffCode(c, h.spans[i], h.marks[i], word, x.wrap)
+			diffCode(c, h.spans[i], h.marks[i], word, x.codeFit(st, at.file))
 		})
 	}
 	label := ""
@@ -733,14 +781,12 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		label = strings.TrimRight(h.Lines[k].Text, "\r\n")
 	}
 	h0, _ := x.rowFit()
-	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Role: ui.RoleListItem, Selected: sel, Label: label,
-		Help: "files/diff#hunks"}, func(c *ui.Ctx) {
+	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Label: label, Help: "files/diff#hunks"}, sel, func(c *ui.Ctx) {
 		side(c, "old", p[0], true)
 		c.Box("mid", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
 		side(c, "new", p[1], false)
-	}).Clicked {
-		st.sel = me
-	}
+	})
+	x.lineClicked(st, me, in)
 }
 
 // lineKey is a diff line's row's key: its line in the file (the new side's, or the old side's for a removal) and its
@@ -761,102 +807,4 @@ func lineNo(c *ui.Ctx, key string, n int) {
 			c.Text("t", fmt.Sprint(n), ui.TextStyle{Font: diffCodeFont, Color: c.Theme().C(theme.FgGhost)})
 		}
 	})
-}
-
-// rowFit is a line's row's height and how its parts sit: one line high, centred; with 'wrap', as high as its rows,
-// the gutters on the first.
-func (x *Diff) rowFit() (ui.Size, ui.Align) {
-	if x.wrap {
-		return ui.Size{}, ui.Start
-	}
-	return ui.Px(diffLineH), ui.Center
-}
-
-// codePiece is a stretch of a line's text in one colour, marked or not.
-type codePiece struct {
-	text   []rune
-	ts     ui.TextStyle
-	marked bool
-}
-
-// diffCode is a line's text in its highlight colours, its changed words on a tint of word. With wrap it takes as many
-// rows as it needs at its box's width last frame, broken at the column as the editor's 'wrap' does.
-func diffCode(c *ui.Ctx, spans []kit.Span, marks [][2]int, word render.Color, wrap bool) {
-	th := c.Theme()
-	var pieces []codePiece
-	off := 0
-	for _, s := range spans {
-		col := th.C(theme.Fg)
-		if s.Capture != "" {
-			col = th.Syntax("@" + s.Capture).FG
-		}
-		ts := ui.TextStyle{Font: diffCodeFont, Color: col}
-		for pos := 0; pos < len(s.Text); {
-			in, end := markAt(marks, off+pos)
-			e := min(max(end-off, pos+1), len(s.Text))
-			pieces = append(pieces, codePiece{[]rune(kit.ExpandTabs(s.Text[pos:e])), ts, in})
-			pos = e
-		}
-		off += len(s.Text)
-	}
-	draw := func(c *ui.Ctx, pieces []codePiece) {
-		for k, p := range pieces {
-			if p.marked {
-				c.Box(k, ui.Style{Fill: word, Radius: 2}, func(c *ui.Ctx) { c.Text("t", string(p.text), p.ts) })
-			} else {
-				c.Text(k, string(p.text), p.ts)
-			}
-		}
-	}
-	if !wrap {
-		c.Row("code", ui.Style{W: ui.Flex(1), Cross: ui.Center, Clip: true}, func(c *ui.Ctx) { draw(c, pieces) })
-		return
-	}
-	cols := 0
-	if r, ok := c.Rect(c.Next("code")); ok {
-		if adv := c.Shaper().Shape("0", diffCodeFont).Advance; adv > 0 {
-			cols = int(r.Dx() / adv)
-		}
-	}
-	rows := breakCols(pieces, cols)
-	c.Column("code", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		for i, row := range rows {
-			c.Row(i, ui.Style{H: ui.Px(diffLineH), Cross: ui.Center}, func(c *ui.Ctx) { draw(c, row) })
-		}
-	})
-}
-
-// breakCols cuts pieces into rows of cols columns each, one row if cols is 0.
-func breakCols(pieces []codePiece, cols int) [][]codePiece {
-	if cols <= 0 {
-		return [][]codePiece{pieces}
-	}
-	var rows [][]codePiece
-	var row []codePiece
-	used := 0
-	for _, p := range pieces {
-		for len(p.text) > 0 {
-			if used == cols {
-				rows, row, used = append(rows, row), nil, 0
-			}
-			n := min(len(p.text), cols-used)
-			row = append(row, codePiece{p.text[:n], p.ts, p.marked})
-			used += n
-			p.text = p.text[n:]
-		}
-	}
-	return append(rows, row)
-}
-
-// markAt says whether byte at is in a mark, and where that stretch (marked or not) ends.
-func markAt(marks [][2]int, at int) (bool, int) {
-	for _, m := range marks {
-		if at < m[0] {
-			return false, m[0]
-		}
-		if at < m[1] {
-			return true, m[1]
-		}
-	}
-	return false, 1 << 30
 }
