@@ -65,6 +65,7 @@ type AnswerReq struct {
 	Note     string            `json:"note,omitempty"`
 	Answers  map[string]string `json:"answers,omitempty"`
 	Scope    string            `json:"scope,omitempty"` // a network rule's host pattern
+	For      string            `json:"for,omitempty"`   // an always's reach: ForAll for every session; this one's by default
 }
 
 // AskReq is something the app asks the user for a session, as its agent's own gate would: an agent tool that asks

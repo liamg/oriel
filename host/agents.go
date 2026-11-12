@@ -53,6 +53,19 @@ func (w *Host) Answer(r AnswerReq) (err error) {
 	return w.run.Answer(r)
 }
 
+// AddRule makes rule one for all sessions: asks of kind it covers go through in every session without a card, from
+// now on and after a restart.
+func (w *Host) AddRule(kind core.AskKind, rule string) (err error) {
+	defer w.recover("AddRule", &err)
+	return w.run.AddRule(kind, rule)
+}
+
+// RemoveRule drops a rule for all sessions: what it allowed asks again.
+func (w *Host) RemoveRule(rule string) (err error) {
+	defer w.recover("RemoveRule", &err)
+	return w.run.RemoveRule(rule)
+}
+
 // StartLogin signs provider in from Oriel, where it can (agent.LoginStarter): the URL to open in a browser. Its
 // lost-login cards clear once the sign-in succeeds.
 func (w *Host) StartLogin(ctx context.Context, provider string) (_ string, err error) {

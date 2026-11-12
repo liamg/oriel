@@ -431,20 +431,21 @@ func (b *Box) ApproveEgress(ctx context.Context, host string, port int) (egress.
 	if !v.Allow {
 		return egress.Answer{Key: "deny", By: v.By, Note: v.Note}, nil
 	}
-	scope := v.Scope
-	if scope != "" {
+	// An always for all sessions is the host's rule, met before any card; one for the session is its grant too.
+	if scope := v.Scope; scope != "" && !v.All && b.ruled("net("+scope+")") {
 		h, p := scope, 0
 		if i := strings.LastIndex(scope, ":"); i > 0 {
 			if n, err := strconv.Atoi(scope[i+1:]); err == nil {
 				h, p = scope[:i], n
 			}
 		}
-		_ = alwaysEgress(egress.Rule{Host: h, Port: p, Allow: true}, false)
-		_ = b.d.State.Emit(core.RuleAdded{Session: b.id, Rule: "net(" + scope + ")"})
+		if err := b.egress.SetRule(h, p, true, false); err != nil {
+			b.notSaved("Network: "+scope, err)
+		}
 		return egress.Answer{Key: egress.Once}, nil
 	}
-	if b.ruled(ask.Rule) {
-		return egress.Answer{Key: egress.Always}, nil
+	if !v.All && b.ruled(ask.Rule) {
+		return egress.Answer{Key: egress.ForSession}, nil
 	}
 	return egress.Answer{Key: egress.Once}, nil
 }

@@ -29,6 +29,8 @@ type Access interface {
 	AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) error
 	Send(r SendReq) error
 	Answer(r AnswerReq) error
+	AddRule(kind core.AskKind, rule string) error
+	RemoveRule(rule string) error
 	StartLogin(ctx context.Context, provider string) (string, error)
 	Ask(ctx context.Context, r AskReq) (Verdict, error)
 	Comment(ctx context.Context, r CommentReq) (core.ThreadID, error)

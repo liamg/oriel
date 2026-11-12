@@ -33,6 +33,7 @@ type Approve func(ctx context.Context, ask core.Ask) (Approval, error)
 type Approval struct {
 	Allow bool
 	Scope string // a wider rule the user chose ("*.golang.org"), or ""
+	All   bool   // an always for all sessions, which the host keeps; the session's own otherwise
 	By    string // "the user", "rule net(…)", the hook's source
 	Note  string
 }

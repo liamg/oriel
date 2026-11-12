@@ -143,6 +143,7 @@ const (
 	NoticeLead    = agentrun.NoticeLead
 	NoPosting     = agentrun.NoPosting
 	KeyWait       = agentrun.KeyWait
+	ForAll        = agentrun.ForAll
 	GatewayServer = sandboxhost.GatewayServer
 	ManifestFile  = worktree.ManifestFile
 	ReposDir      = worktree.ReposDir

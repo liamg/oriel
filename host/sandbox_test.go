@@ -434,7 +434,8 @@ func TestNetworkFailuresReachTheTranscript(t *testing.T) {
 	})
 }
 
-// An always with a scope allows the pattern: the next host it covers isn't asked about.
+// An always with a scope allows the pattern for the session: the next host it covers isn't asked about there, but is
+// in another session. For all sessions, it's a rule every session meets before a card.
 func TestNetworkAlwaysWithAScope(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
@@ -449,11 +450,29 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	if !b.Egress().Allow(ctx, "cdn.mirror.test", 443) {
 		t.Error("the scope didn't cover cdn.mirror.test")
 	}
-	if a := sandbox.LoadAlways().Egress; len(a) != 1 || a[0].Host != "*.mirror.test" {
-		t.Errorf("always = %+v", a)
+	if a := sandbox.LoadAlways().Egress; len(a) != 0 {
+		t.Errorf("an always for the session was kept for every sandbox: %+v", a)
 	}
 	if se := s.session(id); len(se.Asks) != 0 || len(se.Rules) != 1 || se.Rules[0] != "net(*.mirror.test)" {
 		t.Errorf("asks %v, rules %v", se.Asks, se.Rules)
+	}
+
+	other, _, ob := s.sandboxed()
+	go func() { done <- ob.Egress().Allow(ctx, "cdn.mirror.test", 443) }()
+	ask = s.waitAsk(other, core.AskNetwork)
+	s.w.Answer(AnswerReq{Session: other, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test", For: ForAll})
+	if !<-done {
+		t.Fatal("not allowed for all sessions")
+	}
+	if rules := s.w.Store().State().Rules; len(rules) != 1 || rules[0].Rule != "net(*.mirror.test)" || rules[0].Kind != core.AskNetwork {
+		t.Fatalf("rules for all sessions = %+v", rules)
+	}
+	third, _, tb := s.sandboxed()
+	if !tb.Egress().Allow(ctx, "dl.mirror.test", 443) {
+		t.Error("a rule for all sessions didn't cover dl.mirror.test in a third session")
+	}
+	if se := s.session(third); len(se.Asks) != 0 {
+		t.Errorf("the third session asked: %+v", se.Asks)
 	}
 }
 
@@ -858,12 +877,12 @@ func TestSandboxRestartsBeforeTheCarryOn(t *testing.T) {
 	s.noneSent(a)
 }
 
-// An "always" allow for the network that can't be saved still lets the connection through, and the transcript says
-// it wasn't kept.
+// An allow for all sessions that can't be saved still lets the connection through, and the transcript says it wasn't
+// kept.
 func TestAlwaysNotSavedReachesTheTranscript(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	if err := os.MkdirAll(filepath.Join(sandbox.Base(), "always.json"), 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Join(s.home, "rules.json"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	notSaved := func(what string) {
@@ -881,7 +900,7 @@ func TestAlwaysNotSavedReachesTheTranscript(t *testing.T) {
 	done := make(chan bool, 1)
 	go func() { done <- b.Egress().Allow(context.Background(), "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
+	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always", For: ForAll})
 	if !<-done {
 		t.Fatal("not allowed")
 	}
