@@ -66,7 +66,6 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 				c.Text("keys", k, kit.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
-		x.filters(c, se, st, vc.Width)
 		c.Box("search", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 8, B: 10}}, func(c *ui.Ctx) {
 			widget.Input(c, "q", &st.query, widget.InputOpts{Label: "Search requests", Placeholder: "⌕ search requests…", Help: "agent/requests#search"})
 		})
@@ -119,59 +118,6 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 			}
 			c.Text("note", note, kit.MonoFont(10, th.C(theme.FgGhost)))
 		})
-	})
-}
-
-// filters are the list's chips: All and each group, with counts; one is on.
-func (x *Requests) filters(c *ui.Ctx, se core.SessionState, st *requestsState, width float32) {
-	th := c.Theme()
-	counts := make([]int, len(filterGroups))
-	for _, t := range se.Threads {
-		counts[0]++
-		for i, g := range filterGroups {
-			if i > 0 && int(kit.GroupOf(t)) == g {
-				counts[i]++
-			}
-		}
-	}
-	labels := []string{"all", "needs you", "working", "open", "resolved"}
-	tones := []theme.TokenID{theme.Accent, theme.StatusNeedsYou, theme.StatusWorking, theme.FgMuted, theme.StatusQuiet}
-	if r, ok := c.Rect(c.Next("filters")); ok {
-		width = r.Dx()
-	}
-	font := kit.KickerFont(render.Color{}).Font
-	var rows [][]int
-	w := float32(0)
-	for i, l := range labels {
-		n := c.Shaper().Shape(strings.ToUpper(l), font).Advance + c.Shaper().Shape(fmt.Sprint(counts[i]), font).Advance + 22
-		if len(rows) == 0 || w+n > max(width-32, 160) {
-			rows = append(rows, nil)
-			w = 0
-		}
-		rows[len(rows)-1] = append(rows[len(rows)-1], i)
-		w += n + 6
-	}
-	c.Column("filters", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 0), Gap: 6}, func(c *ui.Ctx) {
-		for r, row := range rows {
-			c.Row(r, ui.Style{Gap: 6}, func(c *ui.Ctx) {
-				for _, i := range row {
-					on := st.filter == i
-					tone := th.C(tones[i])
-					fill := render.Color{}
-					if on {
-						fill = theme.WithAlpha(tone, .12)
-					}
-					if widget.Clickable(c, i, ui.Style{Dir: ui.Row, H: ui.Px(20), Pad: ui.PadXY(7, 0), Gap: 6, Cross: ui.Center, Radius: 10,
-						Stroke: theme.WithAlpha(tone, .45), Border: 1, Fill: fill, Selected: on, Focusable: true, Label: labels[i],
-						Help: "agent/requests#filters"}, func(c *ui.Ctx) {
-						c.Text("l", strings.ToUpper(labels[i]), kit.KickerFont(tone))
-						c.Text("n", fmt.Sprint(counts[i]), kit.KickerFont(tone))
-					}).Clicked {
-						st.filter = i
-					}
-				}
-			})
-		}
 	})
 }
 

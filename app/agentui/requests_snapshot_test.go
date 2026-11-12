@@ -12,7 +12,7 @@ import (
 
 func requestsScene(t *testing.T) *apptest.Scene { return apptest.RequestsScene(t) }
 
-// The Requests list grouped Working / Needs you / Open / Resolved with its filters, and the
+// The Requests list grouped Working / Needs you / Open / Resolved, with its search, and the
 // request in front: its anchored code, your prompt as markdown with a pasted image, Claude's reply,
 // the composer, and what the request changed and spawned.
 func TestRequestsSnapshot(t *testing.T) {
@@ -76,5 +76,21 @@ func TestAQuestionBetweenTheLinesSnapshot(t *testing.T) {
 	s.Golden("question-in-editor")
 	if n := strings.Count(s.FullText(), "Away from zero"); n != 1 {
 		t.Errorf("the question is drawn %d times, want once, in its thread", n)
+	}
+}
+
+// The list has no filter chips: a session has too few requests to need them; its groups and search are enough.
+func TestRequestsHaveNoFilterChips(t *testing.T) {
+	s := requestsScene(t)
+	s.Run("view.open", registry.Args{"id": kit.RequestsView, "place": "dock", "edge": "left", "size": 320})
+	s.Frame()
+	// "working" and "open" name other things here too (the agent's state); these name only the chips.
+	for _, chip := range []string{"all", "needs you", "resolved"} {
+		if n := s.Find(chip); n != nil {
+			t.Errorf("a %q filter chip is still there", chip)
+		}
+	}
+	if s.Find("Search requests") == nil {
+		t.Error("the search field went with them")
 	}
 }

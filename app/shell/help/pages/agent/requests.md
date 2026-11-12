@@ -16,10 +16,6 @@ Every request of the session in front, grouped by what it waits on: **Working** 
 agent answered), **Open** (queued behind the turn, or a btw), **Resolved**. `j` and `k` move, `⏎` writes to the selected
 one, `o` opens its anchor in the editor and `R` resolves it.
 
-## Filters
-
-All, or one group, with how many each holds.
-
 ## Search
 
 Narrows the list to requests whose title or comments hold the words.

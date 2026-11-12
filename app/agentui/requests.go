@@ -105,12 +105,11 @@ func (a attachment) label() string {
 // newKey is the draft of a request not yet sent.
 const newKey = ""
 
-// requestsState is one session's requests: what's selected, filtered and being written.
+// requestsState is one session's requests: what's selected, searched for and being written.
 type requestsState struct {
 	sel       core.ThreadID
 	writing   bool // the new request's composer is showing, not a thread
 	newAnchor *core.Anchor
-	filter    int
 	query     string
 	drafts    map[core.ThreadID]*draft
 	awaiting  string // a new request's body, sent, to select once its thread arrives
@@ -337,14 +336,11 @@ func (x *Requests) target(st *requestsState) core.ThreadID {
 	return st.sel
 }
 
-// visible are the session's requests in the list's order, filtered: by group, then the latest first.
+// visible are the session's requests in the list's order, as searched: by group, then the latest first.
 func (x *Requests) visible(se core.SessionState, st *requestsState) []core.Thread {
 	var out []core.Thread
 	q := strings.ToLower(strings.TrimSpace(st.query))
 	for _, t := range se.Threads {
-		if st.filter > 0 && int(kit.GroupOf(t)) != filterGroups[st.filter] {
-			continue
-		}
 		if q != "" && !strings.Contains(strings.ToLower(t.Heading()), q) && !slices.ContainsFunc(t.Comments, func(c core.Comment) bool {
 			return strings.Contains(strings.ToLower(c.Body), q)
 		}) {
@@ -357,9 +353,6 @@ func (x *Requests) visible(se core.SessionState, st *requestsState) []core.Threa
 	})
 	return out
 }
-
-// filterGroups are the filter chips' groups, after All.
-var filterGroups = []int{-1, int(kit.GroupNeedsYou), int(kit.GroupWorking), int(kit.GroupOpen), int(kit.GroupResolved)}
 
 // selection is the selected thread, following a new request to its thread once it arrives, and defaulting to the
 // first in the list.
