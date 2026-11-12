@@ -1,0 +1,21 @@
+// Module shapes draws shapes.
+module github.com/example/shapes
+
+go 1.24
+
+toolchain go1.24.2
+
+require (
+	github.com/liamg/memoryfs v1.6.0
+	golang.org/x/sync v0.12.0 // indirect
+)
+
+require github.com/example/colour v0.0.0-20240101120000-abcdef123456
+
+exclude github.com/example/old v1.2.3
+
+tool golang.org/x/tools/cmd/stringer
+
+replace github.com/example/colour => ../colour
+
+retract [v1.0.0, v1.0.5]
