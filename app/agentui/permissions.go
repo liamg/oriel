@@ -92,6 +92,10 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		x.Add(h.Command(c))
 	}
+	for _, c := range x.rulesCommands() {
+		x.Add(h.Command(c))
+	}
+	x.Add(h.Contribute(x.rulesSettings()))
 	x.Add(h.View(kit.PermissionsView, permsView{x}))
 	return nil
 }
@@ -254,7 +258,7 @@ func (x *Permissions) waiting(c *ui.Ctx, se core.SessionState) {
 		c.Row(a.ID, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 			c.Text("s", a.Summary, kit.UIFont(12.5, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			for _, d := range []struct{ key, label string }{{"allow", "Allow once"}, {"always", "Always"}, {"deny", "Deny"}} {
+			for _, d := range []struct{ key, label string }{{"allow", "Allow once"}, {"always", "Allow for this session"}, {"deny", "Deny"}} {
 				if widget.Button(c, d.key, d.label, widget.ButtonOpts{Primary: d.key == "allow", Ghost: d.key == "deny", Help: "agent/asks"}) {
 					x.run("ask.answer", registry.Args{"id": string(se.ID), "ask": a.ID, "decision": d.key})
 				}
