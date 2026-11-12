@@ -1,6 +1,7 @@
 package shell_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -143,4 +144,22 @@ func TestPickerSnapshot(t *testing.T) {
 	s := pickerScene(t, "files", "rndgo")
 	s.WaitSyntax()
 	s.Golden("picker-files")
+}
+
+// Picking a symbol with Enter, from the file's symbols or everyone's, opens its line, whatever was typed to find it.
+func TestPickingASymbolOpensIt(t *testing.T) {
+	for _, source := range []string{"symbols.file", "symbols"} {
+		t.Run(source, func(t *testing.T) {
+			s := pickerScene(t, source, "")
+			s.Type("PriceForTier")
+			s.WaitFor("func PriceForTier")
+			s.Press("<CR>")
+			s.Until("the picker closed", func() bool { return !picker(s).Open() })
+			at := s.Editor().At(registry.At{})
+			b, err := os.ReadFile(at.File)
+			if lines := strings.Split(string(b), "\n"); err != nil || at.Line < 1 || at.Line > len(lines) || !strings.Contains(lines[at.Line-1], "func PriceForTier") {
+				t.Errorf("the cursor is at %s:%d, not the symbol (%v)", at.File, at.Line, err)
+			}
+		})
+	}
 }

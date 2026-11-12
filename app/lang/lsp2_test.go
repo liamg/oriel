@@ -8,9 +8,11 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/registry"
 	reglang "github.com/liamg/oriel/registry/lang"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -161,6 +163,35 @@ func TestLSPSymbols(t *testing.T) {
 	}
 	if k, _ := s.Registry().Lookup([]string{"n"}, []string{"g", "O"}); k == nil || k.Args["source"] != "symbols.file" {
 		t.Errorf("gO is %+v", k)
+	}
+}
+
+// Picking one of the server's symbols opens its line: Symbols here, its name, Enter, as from the editor's own outline.
+func TestPickingAServersSymbolOpensIt(t *testing.T) {
+	s, _ := lspScene(t, "go", "gopls", "lib.go")
+	src := pickerSource(t, s, "symbols.file")
+	s.Until("the server's symbols", func() bool { // the editor's outline answers until the server does: its have a detail
+		for _, it := range src.Items(nil, "") {
+			if it.Label == "greeting" && it.Col > 0 {
+				return true
+			}
+		}
+		lspSettle(s)
+		return false
+	})
+	s.Run("picker.open", registry.Args{"source": "symbols.file"}) // ␣s, with the leader the scene hasn't
+	s.WaitFor("SYMBOLS HERE")
+	s.Type("greeting")
+	s.WaitFor("function")
+	s.Press("<CR>")
+	s.Until("the picker closed", func() bool { return !strings.Contains(s.Text(), "SYMBOLS HERE") })
+	if at := s.Editor().At(registry.At{}); at.Line != 6 {
+		t.Errorf("the cursor is on line %d, not greeting's 6; notices %q", at.Line, rig.NoticeTexts(s.Store().State().Notifications))
+	}
+	for _, n := range s.Store().State().Notifications {
+		if n.Severity == core.SevError {
+			t.Errorf("error: %s", n.Text)
+		}
 	}
 }
 
