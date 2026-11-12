@@ -172,6 +172,10 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Keymap(k))
 	}
 	x.Add(h.View(DiffView, diffView{x}))
+	for _, it := range x.lineMenu() {
+		it.When, it.Source = registry.MenuWhen{View: DiffView, Subject: diffLineSubject}, "builtin:diff"
+		x.Add(h.Contribute(it))
+	}
 	return nil
 }
 

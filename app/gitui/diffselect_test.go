@@ -26,10 +26,11 @@ func rowFilled(s *apptest.Scene, n *render.AccessNode) bool {
 	return false
 }
 
-// A click on a diff's line selects it, and shows it: the row is filled and edged in the accent, and the diff's foot
-// says where it is and the keys that act on it. gc then opens a thread on it; a double click opens it in the editor,
-// as o does.
-func TestDiffLineClickSelectsItVisibly(t *testing.T) {
+// A click on a diff's line selects it, shows it, and starts a comment on it (thread.new, whose composer offers who
+// it's for): the row is filled and edged in the accent, and the diff's foot says where it is and the keys that act on
+// it. A right-click selects the line too, and its menu opens it in the file, comments, asks, explains or copies where
+// it is.
+func TestADiffLineClickCommentsOnIt(t *testing.T) {
 	for _, layout := range []string{"split", "unified"} {
 		t.Run(layout, func(t *testing.T) {
 			r := gittest.New(t)
@@ -52,6 +53,9 @@ func TestDiffLineClickSelectsItVisibly(t *testing.T) {
 			if rowFilled(s, s.Node("line 13")) || s.Find("Keys for the selected line") != nil {
 				t.Fatal("an unselected context line is filled, or keys show with nothing selected")
 			}
+			// The threads' own composer is TestDiffCommentOpensAThreadBetweenTheLines's; here, what's asked of it.
+			var asked registry.Args
+			s.Registry().Command(registry.Command{ID: "thread.new", Run: func(_ registry.Ctx, a registry.Args) error { asked = a; return nil }})
 			s.ClickOn("line 13")
 			s.Quiet()
 			n := s.Node("line 13")
@@ -61,18 +65,27 @@ func TestDiffLineClickSelectsItVisibly(t *testing.T) {
 			if s.Find("Keys for the selected line") == nil || !strings.Contains(s.Text(), "f.txt:13") || !strings.Contains(s.Text(), "open") {
 				t.Error("the selected line doesn't say its keys")
 			}
-
-			// The threads' own composer is TestDiffCommentOpensAThreadBetweenTheLines's; here, what gc asks of it.
-			var asked registry.Args
-			s.Registry().Command(registry.Command{ID: "thread.new", Run: func(_ registry.Ctx, a registry.Args) error { asked = a; return nil }})
-			s.Press("gc")
-			if asked == nil || asked.String("file") != path || asked.Int("line") != 13 {
-				t.Errorf("gc on the selected line asked thread.new for %v, want f.txt line 13", asked)
+			if asked == nil || asked.String("file") != path || asked.Int("line") != 13 || asked.String("to") != "" {
+				t.Errorf("the click asked thread.new for %v, want a comment on f.txt line 13, for whoever the composer says", asked)
 			}
 
-			at := apptest.Centre(s.Node("line 17").Bounds)
-			s.Click(at, 0)
-			s.Click(at, 0)
+			asked = nil
+			menu := s.RightClick(apptest.Centre(s.Node("line 16").Bounds))
+			for _, want := range []string{"Open in file", "Comment…", "Ask the agent…", "Explain", "Copy reference"} {
+				if !strings.Contains(menu, want) {
+					t.Errorf("the line's menu lacks %q", want)
+				}
+			}
+			if !s.Node("line 16").Selected {
+				t.Error("the right-click didn't select line 16")
+			}
+			s.ClickTop("Ask the agent…")
+			s.Quiet()
+			if asked == nil || asked.Int("line") != 16 || asked.String("to") != "agent" {
+				t.Errorf("Ask the agent… asked thread.new for %v, want the agent, on line 16", asked)
+			}
+			s.RightClick(apptest.Centre(s.Node("line 17").Bounds))
+			s.ClickTop("Open in file")
 			s.Until("line 17 in the editor", func() bool { return s.Showing(kit.EditorView) && strings.Contains(s.Text(), "17:1") })
 		})
 	}

@@ -70,8 +70,8 @@ A side question, answered by a fork of the agent that has no tools and doesn't j
 
 ## Between the lines {#inline}
 
-The pointer on a line of a file, in the editor or a diff, shows a **+** in its gutter: a click opens a thread on that
-line, to ask the agent about it or ask for a change, whatever threads the line has already. In a plan's docs a click
+The pointer on a line of a file in the editor shows a **+** in its gutter: a click opens a thread on that line, to ask
+the agent about it or ask for a change, whatever threads the line has already. In a diff, or a plan's docs, a click
 on the line itself does the same. `ga` does the same on the cursor's line (`gc` or `ga` in a diff).
 **Ask about this…** in the editor's right-click menu (or `thread.new`) opens a thread on the selection, or on the place
 clicked, and the agent is told its line and column (`round.go:4:7`, or `round.go:3:6-4:2` for a selection): `⏎` sends

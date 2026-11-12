@@ -13,24 +13,21 @@ file's diff is against the last commit instead: what isn't committed, in a tab o
 each file once, staged and unstaged changes together. Opened at a line (a review's **Jump to code**, a finding's place), it
 selects that line, removed or added, in the middle of the view.
 
-## Changes {#changes}
-
-At the left, every file the branch changes, with its size. The box beside each says how much of it you've marked
-reviewed: ticked when every hunk is, half when some are. Clicking it marks the whole file, or takes the marks off;
-clicking the name expands the file, folded or not, and scrolls it to the top of the view.
-
-Under the files, plugins add their own boxes.
-
 ## Files {#files}
 
-Each file has a header with its path and size, and how many of its hunks are reviewed. A click shows or folds it.
+The diff is every file the branch changes; the Explorer's Changed scope lists them, and a click on one there
+expands it here and scrolls it to the top. Each file has a header with its path and size, and how many of its hunks
+are reviewed. A click on the header shows or folds it. Plugins can add a column of their own boxes at the left.
 
 ## Hunks {#hunks}
 
 Each hunk starts with git's `@@` line and the function, method or type it's in. Removed lines are red and added
 ones green, the words that changed in a changed line marked brighter. A click selects a line: it's filled and edged
-in the accent, and the foot of the diff says where it is and the keys that act on it (`gc` comment, `ga` ask the
-agent, `o` open it in the editor, `?` explain). A double click opens it in the editor. Threads open between the lines they're about, as in the editor.
+A click on a line selects it and starts a comment on it: a thread opens between the lines, its composer saying who
+it's for (in a review, the author or the agent; otherwise the agent). The selected line is filled and edged in the
+accent, and the foot of the diff says where it is and the keys that act on it (`gc` comment, `ga` ask the agent,
+`o` open it in the editor, `?` explain). A right-click selects it too, with a menu: **Open in file** (the whole
+file in the editor, at that line), **Comment…**, **Ask the agent…**, **Explain** and **Copy reference** (`path:line`).
 
 ## Unchanged lines {#context}
 
@@ -66,8 +63,8 @@ The `?` at a hunk's left, or `?` on a selected line, asks for the code there to 
 
 `]h` and `[h` go between hunks, `j` and `k` between lines, `r` marks the hunk reviewed, `gc` opens a thread on the
 line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file, `zo` and
-`zR` show hidden lines, and `zl`, `zh`, `zL` and `zH` scroll across. The pointer on a line shows a **+** at the left of its gutter that opens a thread
-on it too (see [Between the lines](agent/requests#inline)).
+`zR` show hidden lines, and `zl`, `zh`, `zL` and `zH` scroll across. A click on a line opens a thread on it too
+(see [Between the lines](agent/requests#inline)).
 
 {{keys "diff.*"}}
 

@@ -23,8 +23,6 @@ import (
 var (
 	tDiffBg       = theme.Declare("diff.bg", "bg.base")
 	tDiffFiles    = theme.Declare("diff.files.bg", "bg.surface")
-	tDiffFileSel  = theme.DeclareOn("diff.files.selected", "alpha(cyan, 10%)", "bg.surface")
-	tDiffFileEdge = theme.Declare("diff.files.edge", "cyan")
 	tDiffFileHead = theme.Declare("diff.file.bg", "bg.raised")
 	tDiffFileMark = theme.Declare("diff.file.mark", "cyan")
 	tDiffHunkBg   = theme.DeclareOn("diff.hunk.bg", "alpha(accent, 4%)", "bg.base")
@@ -95,7 +93,11 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.
 			st.open[files[0].Path] = true
 		}
 		right := x.slotIDs(DiffRight, st.root)
-		x.changes(c, st, files)
+		if len(x.slotIDs(DiffSide, st.root)) > 0 {
+			c.Column("side", ui.Style{W: ui.Px(230), H: ui.Flex(1), Fill: th.C(tDiffFiles), ScrollY: true}, func(c *ui.Ctx) {
+				x.slots(c, DiffSide, st.root, 230)
+			})
+		}
 		c.Column("center", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			x.slots(c, kit.DiffHeader, st.root, vc.Width)
 			x.body(c, vc, st, gs, root)
@@ -212,92 +214,6 @@ func fileCheck(d *diffFile, marks map[string]bool) (widget.CheckState, int) {
 		return widget.CheckOn, n
 	}
 	return widget.CheckMixed, n
-}
-
-// changes is the left column: every changed file with its reviewed box and size, what plugins add under it
-// (authorship), and the keys.
-func (x *Diff) changes(c *ui.Ctx, st *diffState, files []gitx.FileState) {
-	th := c.Theme()
-	add, del := 0, 0
-	for _, f := range files {
-		add, del = add+f.Add, del+f.Del
-	}
-	c.Column("changes", ui.Style{W: ui.Px(230), H: ui.Flex(1), Fill: th.C(tDiffFiles)}, func(c *ui.Ctx) {
-		// The heading, a row a file, and the side slots, of which only those in view are built.
-		key := func(i int) any {
-			switch {
-			case i == 0:
-				return "\x00head"
-			case i <= len(files):
-				return files[i-1].Path
-			}
-			return "\x00side"
-		}
-		c.Items("top", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Role: ui.RoleList, Label: "Changed files"}, len(files)+2,
-			ui.ItemsOpts{Estimate: 26, Key: key}, func(c *ui.Ctx, i int) {
-				switch {
-				case i == 0:
-					c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Text("k", "CHANGES", kit.KickerFont(th.C(theme.FgFaint)))
-						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-						c.Text("n", fmt.Sprintf("%d %s · +%d −%d", len(files), kit.Plural(len(files), "file", "files"), add, del), kit.MonoFont(9.5, th.C(theme.FgGhost)))
-					})
-				case i <= len(files):
-					x.changeRow(c, st, files[i-1])
-				default:
-					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-					x.slots(c, DiffSide, st.root, 230)
-				}
-			})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
-		c.Column("keys", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 5}, func(c *ui.Ctx) {
-			for i, pair := range [][2][2]string{{{"]h", "next hunk"}, {"r", "mark read"}}, {{"gc", "comment"}, {"ga", "ask"}}, {{"?", "explain"}}} {
-				c.Row(i, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-					for j, k := range pair {
-						if k[0] != "" {
-							kit.KeyHint(c, j, k[0], k[1])
-						}
-					}
-				})
-			}
-		})
-	})
-}
-
-func (x *Diff) changeRow(c *ui.Ctx, st *diffState, f gitx.FileState) {
-	th := c.Theme()
-	sel := st.sel.file == f.Path
-	fill, edge := render.Color{}, render.Color{}
-	if sel {
-		fill, edge = th.C(tDiffFileSel), th.C(tDiffFileEdge)
-	}
-	d := st.drawn[f.Path]
-	check, _ := fileCheck(d, st.marks[f.Path])
-	c.Row(f.Path, ui.Style{W: ui.Flex(1), H: ui.Px(26), Cross: ui.Center, Fill: fill}, func(c *ui.Ctx) {
-		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
-		c.Row("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 12}, Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
-			if widget.Check(c, "ck", check, widget.CheckOpts{Label: "Reviewed: " + f.Path, Disabled: d == nil || len(d.hunks) == 0, Help: "files/diff#changes"}) {
-				x.focus = st
-				if err := x.reviewFile(st, f.Path, nil); err != nil {
-					x.h.Log().Warn("diff", "err", err)
-				}
-			}
-			fg := th.C(theme.FgMuted)
-			if sel {
-				fg = th.C(theme.Fg)
-			}
-			if widget.Clickable(c, "name", ui.Style{Dir: ui.Row, W: ui.Flex(1), Gap: 6, Cross: ui.Center, Role: ui.RoleListItem, Selected: sel, Label: f.Path,
-				Tooltip: f.Path, Help: "files/diff#changes"}, func(c *ui.Ctx) {
-				c.Text("n", filepath.Base(f.Path), kit.UIFont(12, fg))
-				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Binary: f.Binary})
-			}).Clicked {
-				st.open[f.Path] = true
-				st.sel = diffSel{file: f.Path, hunk: -1, line: -1}
-				st.reveal, st.focus = true, true
-			}
-		})
-	})
 }
 
 // body is the files, each with its header and, open, its hunks.
@@ -545,7 +461,7 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 		blocks := func(key any, line int) { reveal = append(reveal, lineBlocks(c, decor, key, line)...) }
 		if layout == "unified" {
 			for k, l := range h.Lines {
-				x.unifiedRow(c, st, at, k, h, lineDecor{decor, l.New})
+				x.unifiedRow(c, st, at, k, h)
 				if l.New > 0 {
 					blocks(k, l.New)
 				}
@@ -553,11 +469,7 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 			return
 		}
 		for r, p := range splitPairs(h.Lines) {
-			ld := lineDecor{decor: decor}
-			if p[1] >= 0 {
-				ld.n = h.Lines[p[1]].New
-			}
-			x.splitRow(c, st, at, r, p, h, ld)
+			x.splitRow(c, st, at, r, p, h)
 			if p[1] >= 0 {
 				blocks(r, h.Lines[p[1]].New)
 			}
@@ -634,44 +546,7 @@ func lineTones(th *theme.Resolved, op byte) (fill, edge, word render.Color) {
 	return render.Color{}, render.Color{}, render.Color{}
 }
 
-// lineDecor is a diff row's new-side line, n from 1 (0 for a row that has none: a removal), in its file's decorations.
-type lineDecor struct {
-	decor map[int][]uireg.Decoration
-	n     int
-}
-
-// hoverSign draws, at the left of a line's gutter, the top of its OnHover signs (a + that comments on it), its own
-// and those on every line (uireg.EveryLine), while the pointer is on row, as the editor's gutter does.
-func (x *Diff) hoverSign(c *ui.Ctx, row ui.ID, ld lineDecor) {
-	if ld.n <= 0 {
-		return
-	}
-	line := ld.n - 1
-	var signs []uireg.Decoration
-	for _, d := range ld.decor[uireg.EveryLine] {
-		if d.Kind == uireg.Sign && d.OnHover {
-			signs = append(signs, d)
-		}
-	}
-	for _, d := range ld.decor[line] {
-		if d.Kind == uireg.Sign && d.OnHover {
-			signs = append(signs, d)
-		}
-	}
-	if len(signs) == 0 || !c.PointerOver(row) {
-		return
-	}
-	for i, d := range signs {
-		if d.Line == uireg.EveryLine {
-			signs[i] = d.OnLine(line)
-		}
-	}
-	d, _ := uireg.TopSign(signs)
-	c.Row("hover", ui.Style{W: ui.Px(14), H: ui.Px(diffLineH), Main: ui.Center, Cross: ui.Center, Float: &ui.Float{Offset: render.Point{X: 4}}},
-		func(c *ui.Ctx) { kit.DrawSign(c, x.h, "sign", d, 12) })
-}
-
-func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHunk, ds lineDecor) {
+func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHunk) {
 	th := c.Theme()
 	l := h.Lines[k]
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
@@ -682,8 +557,7 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	st.ids[me] = row
 	h0, cross := x.rowFit()
 	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Cross: cross, Fill: fill,
-		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, sel, func(c *ui.Ctx) {
-		x.hoverSign(c, row, ds)
+		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks", Subject: diffLineSubject}, sel, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		lineNo(c, "o", l.Old)
 		lineNo(c, "n", l.New)
@@ -697,13 +571,15 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	x.lineClicked(st, me, in)
 }
 
-// lineClicked selects the line a click is on, and opens it in the editor on a double click.
+// lineClicked selects the line a click is on and starts a comment on it (diff.comment); a right-click selects it
+// for its menu's items (lineMenu) to act on.
 func (x *Diff) lineClicked(st *diffState, me diffSel, in ui.Interaction) {
-	if in.Clicked || in.DoubleClicked {
+	if in.Context != nil {
 		st.sel = me
 	}
-	if in.DoubleClicked {
-		if err := x.source(st, nil); err != nil {
+	if in.Clicked {
+		st.sel = me
+		if err := x.comment(st, registry.Args{}); err != nil {
 			x.h.Log().Warn("diff", "err", err)
 		}
 	}
@@ -730,7 +606,7 @@ func lineKeys(c *ui.Ctx, st *diffState) {
 	})
 }
 
-func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk, ds lineDecor) {
+func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk) {
 	th := c.Theme()
 	k := p[1]
 	if k < 0 {
@@ -765,7 +641,6 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		_, cross := x.rowFit()
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: cross, Fill: fill, Clip: true}, func(c *ui.Ctx) {
 			if !old {
-				x.hoverSign(c, row, ds)
 			}
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 			n := l.New
@@ -781,7 +656,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		label = strings.TrimRight(h.Lines[k].Text, "\r\n")
 	}
 	h0, _ := x.rowFit()
-	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Label: label, Help: "files/diff#hunks"}, sel, func(c *ui.Ctx) {
+	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Label: label, Help: "files/diff#hunks", Subject: diffLineSubject}, sel, func(c *ui.Ctx) {
 		side(c, "old", p[0], true)
 		c.Box("mid", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
 		side(c, "new", p[1], false)

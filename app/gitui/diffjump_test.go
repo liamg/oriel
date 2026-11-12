@@ -75,8 +75,9 @@ func shows(w *apptest.Window, text string) bool {
 	return list != nil && row != nil && row.Bounds.Dy() > 0 && row.Bounds.Min.Y >= list.Bounds.Min.Y && row.Bounds.Max.Y <= list.Bounds.Max.Y
 }
 
-// A click on a file in CHANGES shows that file expanded, from its first hunk: collapsed or not, far down or not.
-func TestDiffChangesClickExpandsTheFile(t *testing.T) {
+// Opening a file's diff (diff.open, as a click on it in the explorer does) shows that file expanded, from its first
+// hunk: collapsed or not, far down or not.
+func TestDiffOpenExpandsTheFile(t *testing.T) {
 	r := jumpRepo(t, 12)
 	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: r.Dir})
 	if err := app.Do(func() error {
@@ -85,15 +86,23 @@ func TestDiffChangesClickExpandsTheFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	app.Latest("f00.go's line 285", func(headless.Frame) bool { return centred(app, "// f00 line 285 changed") })
+	open := func(f string) {
+		app.T.Helper()
+		if err := app.Do(func() error {
+			return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": filepath.Join(r.Dir, f)})
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for _, f := range []string{"f09", "f03", "f09", "f11", "f00"} {
-		app.ClickAccessIn("Changed files", f+".go")
+		open(f + ".go")
 		first := "// " + f + " line 15 changed"
 		app.Latest(f+".go expanded from its first hunk", func(headless.Frame) bool { return shows(app, first) })
 	}
-	// Folded by its header, a click in CHANGES opens it again.
+	// Folded by its header, opening it again unfolds it.
 	app.ClickAccessIn("Changes", "f00.go")
 	app.WaitGone("// f00 line 15 changed")
-	app.ClickAccessIn("Changed files", "f00.go")
+	open("f00.go")
 	app.Latest("f00.go expanded again", func(headless.Frame) bool { return shows(app, "// f00 line 15 changed") })
 }
 
