@@ -323,13 +323,56 @@ static id orielViewFocused(id v, SEL cmd) {
 	return h != 0 ? orielAXObject(orielAXFocusedElement(h), v) : v;
 }
 
+// orielViewAcceptsFirstMouse lets a click on the window while another has the focus reach Oriel as well as bring the
+// window forward, as a click does in most editors: AppKit's default swallows it, so with a picture-in-picture video
+// or another always-on-top window taking the focus back, every control needed two clicks.
+static BOOL orielViewAcceptsFirstMouse(id v, SEL cmd, NSEvent *e) {
+	return YES;
+}
+
 static void orielAXOverride(Class sub, Class base, SEL sel, IMP imp, const char *types) {
 	Method m = class_getInstanceMethod(base, sel);
 	class_addMethod(sub, sel, imp, m != NULL ? method_getTypeEncoding(m) : types);
 }
 
+// orielViewSubclass is base's subclass with Oriel's overrides, made the first time it's asked for.
+static Class orielViewSubclass(Class base) {
+	NSString *name = [@"OrielAX_" stringByAppendingString:NSStringFromClass(base)];
+	Class sub = NSClassFromString(name);
+	if (sub != nil) {
+		return sub;
+	}
+	sub = objc_allocateClassPair(base, name.UTF8String, 0);
+	if (sub == nil) {
+		return nil;
+	}
+	orielAXOverride(sub, base, @selector(accessibilityChildren), (IMP)orielViewChildren, "@@:");
+	orielAXOverride(sub, base, @selector(accessibilityHitTest:), (IMP)orielViewHit, "@@:{CGPoint=dd}");
+	orielAXOverride(sub, base, @selector(accessibilityFocusedUIElement), (IMP)orielViewFocused, "@@:");
+	orielAXOverride(sub, base, @selector(acceptsFirstMouse:), (IMP)orielViewAcceptsFirstMouse, "c@:@");
+	objc_registerClassPair(sub);
+	return sub;
+}
+
+// orielProbeAcceptsFirstMouse says Oriel's subclass of NSView takes a click that brings its window forward: its
+// acceptsFirstMouse: answers YES. It needs no window or main thread. An int, not a BOOL: BOOL is bool on arm64 and
+// a signed char on x86_64, and Go sees the two as different types.
+static int orielProbeAcceptsFirstMouse(void) {
+	Class sub = orielViewSubclass([NSView class]);
+	if (sub == nil) {
+		return 0;
+	}
+	Method m = class_getInstanceMethod(sub, @selector(acceptsFirstMouse:));
+	if (m == NULL) {
+		return 0;
+	}
+	BOOL (*f)(id, SEL, id) = (BOOL (*)(id, SEL, id))method_getImplementation(m);
+	return f(nil, @selector(acceptsFirstMouse:), nil) ? 1 : 0;
+}
+
 // orielAXAttach answers the view's accessibility questions from bridge h: its children, hit tests and focus. Gio's
-// view is its own class, so the view is moved to a subclass made here that overrides those three.
+// view is its own class, so the view is moved to a subclass made here that overrides those three, and takes a
+// click that brings the window forward (acceptsFirstMouse:).
 static void orielAXAttach(uintptr_t viewRef, uintptr_t h) {
 	NSView *view = (__bridge NSView *)(void *)viewRef;
 	dispatch_async(dispatch_get_main_queue(), ^{
@@ -342,19 +385,10 @@ static void orielAXAttach(uintptr_t viewRef, uintptr_t h) {
 		if (strncmp(class_getName(base), "OrielAX_", 8) == 0) {
 			return;
 		}
-		NSString *name = [@"OrielAX_" stringByAppendingString:NSStringFromClass(base)];
-		Class sub = NSClassFromString(name);
-		if (sub == nil) {
-			sub = objc_allocateClassPair(base, name.UTF8String, 0);
-			if (sub == nil) {
-				return;
-			}
-			orielAXOverride(sub, base, @selector(accessibilityChildren), (IMP)orielViewChildren, "@@:");
-			orielAXOverride(sub, base, @selector(accessibilityHitTest:), (IMP)orielViewHit, "@@:{CGPoint=dd}");
-			orielAXOverride(sub, base, @selector(accessibilityFocusedUIElement), (IMP)orielViewFocused, "@@:");
-			objc_registerClassPair(sub);
+		Class sub = orielViewSubclass(base);
+		if (sub != nil) {
+			object_setClass(view, sub);
 		}
-		object_setClass(view, sub);
 	});
 }
 
@@ -538,3 +572,6 @@ func cArray(hs []uintptr) *C.uintptr_t {
 	}
 	return p
 }
+
+// viewTakesFirstClick says Oriel's view takes a click that brings its window forward, as well as doing what it's on.
+func viewTakesFirstClick() bool { return C.orielProbeAcceptsFirstMouse() != 0 }
