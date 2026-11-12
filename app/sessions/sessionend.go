@@ -144,15 +144,20 @@ func (x *End) open(id core.SessionID) error {
 
 // close opens the dialog on id to archive it once its projects are read afresh; one that looks done offers delete
 // too, its local branches ticked to go, and one with nothing to lose is archived without asking (view). One whose
-// kind ends by deleting always asks, starting on Delete.
+// kind ends by deleting (core.DeletesOnEnd) is deleted, its local branches too, asking first, on Delete, only when
+// something would be lost.
 func (x *End) close(id core.SessionID) error {
 	if err := x.open(id); err != nil {
 		return err
 	}
 	s, _ := x.h.State().Session(id)
 	x.ask.closing = true
-	if why := registry.Done(x.h, s.Snapshot()); why != "" {
+	se := s.Snapshot()
+	if why := registry.Done(x.h, se); why != "" {
 		x.ask.done, x.ask.deleteBranch = why, true
+	}
+	if registry.Can(x.h, se.Kind, core.DeletesOnEnd) {
+		x.ask.deleteBranch = true
 	}
 	return nil
 }
@@ -286,11 +291,11 @@ func (x *End) view(c *ui.Ctx) {
 	}
 	se := s.Snapshot()
 	ships, st := x.preview(c, se)
-	deletes := registry.Can(x.h, se.Kind, core.DeletesOnEnd)
-	if a.closing && a.done == "" && !deletes && st.Phase == widget.Ready && !slices.ContainsFunc(lossesOf(se, ships, a.deleteBranch), loss.matters) {
+	deletes := registry.Can(x.h, se.Kind, core.DeletesOnEnd) && registry.Can(x.h, se.Kind, core.Delete)
+	if a.closing && (a.done == "" || deletes) && st.Phase == widget.Ready && !slices.ContainsFunc(x.lossesOf(se, ships, a.deleteBranch), loss.matters) {
 		x.ask = nil
 		x.h.Do(func() {
-			if err := x.end(context.Background(), host.EndReq{Session: a.id}); err != nil {
+			if err := x.end(context.Background(), host.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
 				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, Session: a.id, Text: err.Error(), Time: time.Now()})
 			}
 		})
@@ -397,9 +402,14 @@ type loss struct {
 
 func (l loss) matters() bool { return !l.info }
 
-// lossesOf are, per project, what archiving or deleting se would lose or leave behind; then its agent and sandbox.
-func lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch bool) []loss {
+// lossesOf are what plugins say would be lost, then, per project, what archiving or deleting se would lose or leave behind; then its agent and sandbox.
+// unsaved are what plugins say it would lose (registry.Unsaved); an open PR is listed when it's the session's own
+// (ownPRs).
+func lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch, ownPRs bool, unsaved []string) []loss {
 	var out []loss
+	for i, u := range unsaved {
+		out = append(out, loss{key: fmt.Sprintf("unsaved/%d", i), alarm: true, warn: true, text: u})
+	}
 	for _, s := range ships {
 		if s.ReadOnly {
 			continue
@@ -416,7 +426,7 @@ func lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch b
 			out = append(out, loss{key: s.Project + "/unpushed", alarm: true, warn: deleteBranch,
 				text: fmt.Sprintf("%s: %s not pushed: %s", s.Project, kit.Counted(k, "commit"), fate)})
 		}
-		if s.PR.Open() {
+		if ownPRs && s.PR.Open() {
 			w := kit.WordsOf(s.Code)
 			out = append(out, loss{key: s.Project + "/pr", text: fmt.Sprintf("%s: %s%d stays open on %s", s.Project, w.Sigil, s.PR.Number, s.Code.Label())})
 		}
@@ -449,6 +459,11 @@ func lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch b
 	return out
 }
 
+// lossesOf is lossesOf for se, asking its kind and the plugins.
+func (x *End) lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch bool) []loss {
+	return lossesOf(se, ships, deleteBranch, registry.Can(x.h, se.Kind, core.Ships), registry.Unsaved(x.h, se))
+}
+
 // losses draws lossesOf, or that nothing is lost.
 func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.ProjectShip, width float32) {
 	th := c.Theme()
@@ -458,7 +473,7 @@ func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registr
 			widget.Wrap(c, "t", text, width-24, kit.UIFont(12.5, th.C(theme.FgMuted)))
 		})
 	}
-	ls := lossesOf(se, ships, a.deleteBranch)
+	ls := x.lossesOf(se, ships, a.deleteBranch)
 	for _, l := range ls {
 		glyph, tone := "·", th.C(theme.FgFaint)
 		if l.alarm {

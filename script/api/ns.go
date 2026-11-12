@@ -402,6 +402,20 @@ func (s Session) Done(name string, fn *script.Fn, where string) error {
 	return nil
 }
 
+//oriel:api doc="Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it."
+func (s Session) Unsaved(name string, fn *script.Fn, where string) error {
+	s.a.own(s.a.Host.Contribute(registry.SessionUnsaved{Name: name, Source: where, Unsaved: func(se core.SessionState) string {
+		out, err := s.a.VM.Call(fn, sessionTable(se))
+		s.a.Host.Report(registry.KindView, "session.unsaved."+name, err)
+		if err != nil || len(out) == 0 {
+			return ""
+		}
+		what, _ := out[0].(string)
+		return what
+	}}))
+	return nil
+}
+
 //oriel:api doc="Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON."
 func (s Session) Keep(id, key string, value any) error {
 	return s.a.Host.Keep(s.id(id), key, value)

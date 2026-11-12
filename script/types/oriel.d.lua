@@ -405,6 +405,11 @@ function oriel.session.kept(id, key) end
 ---@param spec table
 function oriel.session.kind(name, spec) end
 
+--- Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it.
+---@param name string
+---@param fn function
+function oriel.session.unsaved(name, fn) end
+
 ---@class oriel.ship
 oriel.ship = {}
 

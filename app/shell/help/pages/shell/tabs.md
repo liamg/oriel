@@ -28,7 +28,7 @@ are open: with tabs open, one is always in front.
 ## Ending a session {#end}
 
 **End session…** asks how, in one dialog, and says first what would be lost, project by project: uncommitted files,
-commits not pushed, an open pull request (it stays open on its host), an agent mid-turn, the subagents, background
+commits not pushed, an open pull request of its own (it stays open on its host), an unsent review, an agent mid-turn, the subagents, background
 tasks and processes it's still running (they stop with it), a running sandbox.
 
 - **Archive**: the worktrees go; threads, transcript and test runs stay, searchable, and opening it again makes its
@@ -48,10 +48,11 @@ Closing a session's tab (its `✕`, **Close tab**, `session.close`) archives it.
 without asking, and its notice offers **Undo**. When something would be (any of the list above but a sandbox), the
 dialog opens first, on Archive. A session that looks finished opens the dialog too, with **Delete the local branches
 too** ticked: a review whose last review you sent approved the pull request, or a session whose pull requests are all
-merged with nothing uncommitted or unpushed in any of its projects. A pull request review always opens the dialog,
-starting on Delete: there's nothing of it to keep once it's closed (a kind of session says so with `deletes-on-end`
-in its `can`). Cancel leaves the session as it was, its tab open. A plugin says when a session is finished with
-`oriel.session.done`. `session.end` with `how` (`archive` or `delete`) ends one without asking; `session.close-tab`
+merged with nothing uncommitted or unpushed in any of its projects. Closing a pull request review deletes it, its
+local branch too: there's nothing of it to keep (a kind of session says so with `deletes-on-end` in its `can`). It
+asks first, starting on Delete, only when something would be lost, such as a review you haven't sent. Cancel leaves
+the session as it was, its tab open. A plugin says when a session is finished with `oriel.session.done`, and what
+ending it would lose that only the plugin knows of with `oriel.session.unsaved`. `session.end` with `how` (`archive` or `delete`) ends one without asking; `session.close-tab`
 closes only the tab.
 
 Ending a session stops everything it was running: its agent, every process the agent started and left running
