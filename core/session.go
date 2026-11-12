@@ -217,7 +217,8 @@ type Ask struct {
 	Host      string     `json:"host,omitempty"`   // network: host:port
 	Detail    string     `json:"detail,omitempty"` // where it came from: "go mod download · first request"
 	Questions []Question `json:"questions,omitempty"`
-	Login     *Login     `json:"login,omitempty"` // a login ask's
+	Thread    ThreadID   `json:"thread,omitempty"` // a question's: the thread it's asked in, and drawn in
+	Login     *Login     `json:"login,omitempty"`  // a login ask's
 	Created   time.Time  `json:"created,omitzero"`
 }
 

@@ -384,10 +384,11 @@ type (
 		Input             json.RawMessage
 		Rule              string // what "Always" would allow
 	}
-	// Question is the agent asking the user something: it waits for Answer.
+	// Question is the agent asking the user something, in a thread: it waits for Answer.
 	Question struct {
 		ID        string
 		Questions []core.Question
+		Thread    core.ThreadID // the thread it's asked in; "" lets the host choose the one the agent is on
 	}
 	// Subagent is a helper the agent started, ran or finished.
 	Subagent struct {

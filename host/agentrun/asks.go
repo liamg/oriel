@@ -90,11 +90,101 @@ func (h *session) permission(sess agent.Session, p agent.Permission) {
 }
 
 func (h *session) question(sess agent.Session, q agent.Question) {
-	a, ok := h.askUser(h.ctx, core.Ask{ID: q.ID, Kind: core.AskQuestion, Summary: questionSummary(q.Questions), Questions: q.Questions})
+	a, ok := h.ask(h.ctx, q.ID, q.Thread, q.Questions)
 	if !ok {
 		return
 	}
 	_ = sess.Answer(h.ctx, q.ID, agent.Decision{Allow: true, Answers: a.Answers, Note: a.Note})
+}
+
+// ask asks the user questions in a thread (questionThread's) and waits for the answer. A thread opened for the
+// question keeps the answer and is resolved once it's given.
+func (h *session) ask(ctx context.Context, id string, named core.ThreadID, qs []core.Question) (AnswerReq, bool) {
+	tid, opened, err := h.questionThread(named, qs)
+	if err != nil {
+		return AnswerReq{}, false
+	}
+	a, ok := h.askUser(ctx, core.Ask{ID: id, Kind: core.AskQuestion, Summary: questionSummary(qs), Questions: qs, Thread: tid})
+	if ok && opened {
+		_, _ = h.r.mutateThread(h.id, tid, func(t *core.Thread) error {
+			if body := answerText(qs, a); body != "" {
+				t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorYou, Name: hostcore.WhoAmI(ctx), Body: body,
+					Time: h.r.env.Now().UTC(), Delivered: true})
+			}
+			t.Status, t.Busy, t.Active = core.ThreadResolved, false, false
+			return nil
+		})
+		hostcore.Restatus(h.r.st, h.id)
+	}
+	return a, ok
+}
+
+// questionThread is the thread a question is asked in: the one named if it's there; else the one the agent is on (an
+// active thread, the latest touched), else one it was handed and is busy with, else the session's request (its first
+// open general thread). With none, it opens a general thread holding the question, and says so.
+func (h *session) questionThread(named core.ThreadID, qs []core.Question) (core.ThreadID, bool, error) {
+	se, err := h.r.st.Session(h.id)
+	if err != nil {
+		return "", false, err
+	}
+	if t, ok := se.Thread(named); ok && named != "" {
+		return t.ID, false, nil
+	}
+	mine := func(t core.Thread) bool { return t.Open() && !t.Btw && !t.Outgoing }
+	for _, want := range []func(core.Thread) bool{
+		func(t core.Thread) bool { return t.Active },
+		func(t core.Thread) bool { return t.Busy },
+	} {
+		var best *core.Thread
+		for i, t := range se.Threads {
+			if mine(t) && want(t) && (best == nil || t.Updated.After(best.Updated)) {
+				best = &se.Threads[i]
+			}
+		}
+		if best != nil {
+			return best.ID, false, nil
+		}
+	}
+	for _, t := range se.Threads {
+		if mine(t) && t.Anchor == nil && len(t.Comments) > 0 {
+			return t.ID, false, nil
+		}
+	}
+	now := h.r.env.Now().UTC()
+	t := core.Thread{ID: core.ThreadID(hostcore.NewID(8)), Title: questionSummary(qs), Status: core.ThreadOpen, Created: now, Updated: now,
+		Comments: []core.Comment{{ID: hostcore.NewID(6), Author: core.AuthorAgent, Name: se.Agent.Provider, Body: questionsText(qs), Time: now,
+			Model: modelLabel(se.Agent, h.ranModel())}}}
+	if err := h.r.st.Emit(core.ThreadUpdated{Session: h.id, Thread: t}); err != nil {
+		return "", false, err
+	}
+	return t.ID, true, nil
+}
+
+// questionsText is questions as a comment: each on its own line, with its options.
+func questionsText(qs []core.Question) string {
+	var lines []string
+	for _, q := range qs {
+		line := q.Question
+		if len(q.Options) > 0 {
+			line += " (" + strings.Join(q.Options, " / ") + ")"
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\n\n")
+}
+
+// answerText is the user's answers to questions, as a comment or the ask tool's result: each question and its answer.
+func answerText(qs []core.Question, a AnswerReq) string {
+	var lines []string
+	for _, q := range qs {
+		if ans, ok := a.Answers[q.Question]; ok {
+			lines = append(lines, q.Question+" → "+ans)
+		}
+	}
+	if n := strings.TrimSpace(a.Note); n != "" {
+		lines = append(lines, n)
+	}
+	return strings.Join(lines, "\n\n")
 }
 
 func questionSummary(qs []core.Question) string {

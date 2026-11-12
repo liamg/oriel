@@ -99,7 +99,7 @@ func TestEventsCrossWhole(t *testing.T) {
 		agent.ToolCall{ID: "c1", Tool: "Bash", Input: json.RawMessage(`{"command":"ls"}`), Agent: "sub1"},
 		agent.ToolResult{ID: "c1", Output: "out", IsError: true, Diff: diff},
 		agent.Permission{ID: "p1", Tool: "Bash", Summary: "ls", Input: json.RawMessage(`{"command":"ls"}`), Rule: "Bash(ls:*)"},
-		agent.Question{ID: "q1", Questions: []core.Question{{Header: "H", Question: "Q?", Options: []string{"a", "b"}, Multi: true}}},
+		agent.Question{ID: "q1", Questions: []core.Question{{Header: "H", Question: "Q?", Options: []string{"a", "b"}, Multi: true}}, Thread: "t1"},
 		agent.Subagent{ID: "sub1", Description: "d", Type: "general", Prompt: "p", Done: true, Result: "r"},
 		agent.TurnEnd{Usage: agent.Usage{Input: 1, Output: 2, CacheRead: 3, CacheWrite: 4, Context: 5, ContextMax: 6, Cost: 0.5,
 			Duration: 1500 * time.Millisecond}, Background: []core.BackgroundTask{{Kind: "shell", Description: "go test ./..."}},

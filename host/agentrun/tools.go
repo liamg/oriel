@@ -33,6 +33,8 @@ func (x *Runner) tools(h *session) []agent.Tool {
 		{Name: "threads", Description: "List the session's Oriel threads, open and closed, each with where it is, where it came from, who started it and its first line: the thread tool reads one in full. Those mirrored from a code host include other people's comments that weren't handed to you.", ReadOnly: true,
 			Schema: hostcore.Schema(""), Call: h.toolThreads},
 		{Name: "resolve", Description: "Resolve an Oriel thread.", Schema: hostcore.Schema(`"thread":`+str+`,"summary":`+str, "thread"), Call: h.toolResolve},
+		{Name: "ask", Description: "Ask the user something in an Oriel thread and wait for the answer: the thread you're working on, where the user sees the question with its options as buttons and a field for an answer of their own. Each question has its options (header: a short label; multi: several may be picked). Returns each question with the user's answer.",
+			Schema: hostcore.Schema(`"thread":`+str+`,"questions":`+questionsType, "thread", "questions"), Call: h.toolAsk},
 		{Name: "comment", Description: `Start a thread of your own: on a line of a file (file, line, optional end_line and side "old"/"new", project in a session with more than one), or a general one with no file. severity rates a review finding: nit, low, medium, high or critical.`,
 			Schema: hostcore.Schema(`"body":`+str+`,"file":`+str+`,"line":`+num+`,"end_line":`+num+`,"side":`+str+`,"project":`+str+`,"severity":{"type":"string","enum":["nit","low","medium","high","critical"]}`, "body"),
 			Call:   h.toolComment},
@@ -208,6 +210,44 @@ func (h *session) toolResolve(ctx context.Context, raw json.RawMessage) (string,
 		return "", err
 	}
 	return "resolved", h.r.SetThread(ThreadReq{Session: h.id, Thread: t.ID, Status: core.ThreadResolved})
+}
+
+// questionsType is the ask tool's questions: each a question, with its options.
+const questionsType = `{"type":"array","minItems":1,"items":{"type":"object","properties":{"question":` + str + `,"header":` + str +
+	`,"options":{"type":"array","items":` + str + `},"multi":` + bl + `},"required":["question"]}}`
+
+// toolAsk is the agent asking the user in a thread: it waits for the answer and returns it.
+func (h *session) toolAsk(ctx context.Context, raw json.RawMessage) (string, error) {
+	var in struct {
+		Thread    string          `json:"thread"`
+		Questions []core.Question `json:"questions"`
+	}
+	if err := json.Unmarshal(raw, &in); err != nil {
+		return "", err
+	}
+	in.Questions = slices.DeleteFunc(in.Questions, func(q core.Question) bool { return strings.TrimSpace(q.Question) == "" })
+	if len(in.Questions) == 0 {
+		return "", errors.New("ask has no questions")
+	}
+	if strings.TrimSpace(in.Thread) == "" {
+		return "", errors.New("say which thread you're asking in: thread")
+	}
+	se, err := h.r.st.Session(h.id)
+	if err != nil {
+		return "", err
+	}
+	t, err := hostcore.FindThread(se, in.Thread)
+	if err != nil {
+		return "", err
+	}
+	a, ok := h.ask(ctx, hostcore.NewID(6), t.ID, in.Questions)
+	if !ok {
+		return "", errors.New("the question went unanswered")
+	}
+	if len(a.Answers) == 0 {
+		return "The user chose not to answer. " + strings.TrimSpace(a.Note), nil
+	}
+	return answerText(in.Questions, a), nil
 }
 
 // refuseUnseen refuses an answer to a thread, or resolving it, while it holds comments the agent hasn't been given:

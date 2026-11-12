@@ -385,6 +385,7 @@ type event struct {
 	Summary     string                `json:"summary,omitempty"`
 	Rule        string                `json:"rule,omitempty"`
 	Questions   []core.Question       `json:"questions,omitempty"`
+	Thread      core.ThreadID         `json:"thread,omitempty"` // a question's
 	Description string                `json:"description,omitempty"`
 	Kind        string                `json:"kind,omitempty"` // a subagent's type
 	Prompt      string                `json:"prompt,omitempty"`
@@ -448,7 +449,7 @@ func eventOf(ev agent.Event) (event, error) {
 	case agent.Permission:
 		return event{Type: "permission", ID: e.ID, Tool: e.Tool, Summary: e.Summary, Input: e.Input, Rule: e.Rule}, nil
 	case agent.Question:
-		return event{Type: "question", ID: e.ID, Questions: e.Questions}, nil
+		return event{Type: "question", ID: e.ID, Questions: e.Questions, Thread: e.Thread}, nil
 	case agent.Subagent:
 		return event{Type: "subagent", ID: e.ID, Description: e.Description, Kind: e.Type, Prompt: e.Prompt, Done: e.Done, Result: e.Result}, nil
 	case agent.TurnEnd:
@@ -489,7 +490,7 @@ func (w event) agentEvent() (agent.Event, error) {
 	case "permission":
 		return agent.Permission{ID: w.ID, Tool: w.Tool, Summary: w.Summary, Input: w.Input, Rule: w.Rule}, nil
 	case "question":
-		return agent.Question{ID: w.ID, Questions: w.Questions}, nil
+		return agent.Question{ID: w.ID, Questions: w.Questions, Thread: w.Thread}, nil
 	case "subagent":
 		return agent.Subagent{ID: w.ID, Description: w.Description, Type: w.Kind, Prompt: w.Prompt, Done: w.Done, Result: w.Result}, nil
 	case "turnEnd":
