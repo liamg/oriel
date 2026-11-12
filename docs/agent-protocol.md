@@ -115,7 +115,7 @@ A `session/event`'s `event` is one of these, by `type`, with only the fields tha
 | `message` | `id`, `role` (`assistant`, `user`, `thinking`), `text` (the whole message so far), `partial` (while it streams), `agent` (a subagent's id) |
 | `toolCall` | `id`, `tool` (`Bash`, `Edit`, `mcp__oriel__…`), `input`, `agent` |
 | `toolResult` | `id`, `output`, `isError`, `diff` (`{path, added, removed, lines: [{op, old, new, text}]}`) |
-| `permission` | `id`, `tool`, `summary`, `input`, `rule` (what Always would allow): answered with `session/answer` |
+| `permission` | `id`, `tool`, `summary`, `input`, `rule` (what Always would allow), `diff` (what an edit would do, as `toolResult`'s): answered with `session/answer` |
 | `question` | `id`, `questions: [{header, question, options, multi}]`, `thread` (the Oriel thread it's asked in, where the user sees it; without one, the thread the agent is on): answered with `session/answer`'s `answers`, by question |
 | `subagent` | `id`, `description`, `kind`, `prompt`, `done`, `result` |
 | `turnEnd` | `usage: {input, output, cacheRead, cacheWrite, context, contextMax, cost, durationMs}`, `background` (what the turn left running that will wake the agent: Oriel holds the turn's work open until it's done) and `running` (what it left running that won't: processes the user may stop), each `[{id, kind, description, pid, cpu, memory}]`; `cpu` is percent of a core, `memory` resident bytes |

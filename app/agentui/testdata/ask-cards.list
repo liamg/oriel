@@ -146,37 +146,52 @@ text "Console" @1235.125,943.36523 #ece6d8 Inter 12
 rect 1288.1875,931.5 14x15 radius 3 stroke 1 #ece6d866
 text "g" @1292.1875,942.42 #ece6d8cc JetBrains Mono 9.5
 rect 0,0 1600x1000 fill #030508b8
-rect 580,401.74774 440x196.50452 fill #0c0c0b radius 8 stroke 1 #b98aff8c
-text "ENG-2231 SEARCH API · PERMISSION" @594,426.16776 #b98aff JetBrains Mono 9.5
-text "sandbox · network ask" @854,426.16776 #7c7566 JetBrains Mono 9.5
-text "✕" @994,426.31174 #7c7566 JetBrains Mono 9.900001
-rect 594,444.81 7x7 fill #b98aff radius 3.5
-text "Codex wants to run a command" @609,452.85712 #ece6d8 Inter 12.5
-rect 594,464.87225 412x29.839996 fill #060606 radius 5
-clip 594,464.87225 412x29.839996 r 5
-  text "$ go test ./internal/api/... -run TestUsage -count=1" @604,484.11224 #ece6d8 JetBrains Mono 12
+rect 420,299.4906 760x401.0188 fill #0c0c0b radius 12
+clip 420,299.4906 760x401.0188 r 12
+  text "ENG-2231 SEARCH API · PERMISSION" @442,332.2706 #b98aff JetBrains Mono 10.5
+  rect 991.075,315.4906 87.06244x26 radius 6 stroke 1 #332f27
+  text "Console" @1001.075,332.85583 #ece6d8 Inter 12
+  rect 1054.1375,320.9906 14x15 radius 3 stroke 1 #ece6d866
+  text "g" @1058.1375,331.9106 #ece6d8cc JetBrains Mono 9.5
+  text "1 OF 2" @1088.1375,332.2706 #7c7566 JetBrains Mono 10.5
+  text "✕" @1151.1016,332.84662 #7c7566 JetBrains Mono 12.1
+  text "Codex wants to run a command" @442,367.95935 #ece6d8 Inter 17
+  text "ENG-2231 search api · /src/search-api · sandbox" @442,389.27994 #7c7566 JetBrains Mono 11
+  rect 442,406.57996 2x36.929504 fill #332f27
+  text "WHY" @456,418.77997 #7c7566 JetBrains Mono 10
+  text "Reservation.ResetAt() already exists. Writing the header from it:" @456,438.37372 #b3ab99 Inter 13
+  rect 442,457.50943 716x39 fill #060606 radius 8
+  clip 442,457.50943 716x39 r 8
+    clip 456,467.50943 688x19 r 0
+      text "$ " @456,481.50943 #4cc9f0 JetBrains Mono 12.5
+      text "go test ./internal/api/... -run TestUsage -count=1" @471.59375,481.50943 #ece6d8 JetBrains Mono 12.5
+    pop
+  pop
+  rect 442,457.50943 716x39 radius 8 stroke 1 #24221d
+  clip 442,508.50943 716x173.99997 r 8
+    rect 442,508.50943 716x33.99997 fill #191815
+    rect 454,517.0094 26x17 radius 3 stroke 1 #b3ab9973
+    text "y" @463.70312,529.2894 #b3ab99 JetBrains Mono 10.5
+    text "Allow once" @492,530.2384 #ece6d8 Inter 13
+    rect 442,542.5094 716x1 fill #24221d
+    rect 454,552.0094 26x17 radius 3 stroke 1 #b3ab9973
+    text "a" @463.70312,564.2894 #b3ab99 JetBrains Mono 10.5
+    text "Allow for this session" @492,565.2384 #ece6d8 Inter 13
+    text "Bash(go test:*)" @1047.0938,564.46936 #7c7566 JetBrains Mono 11
+    rect 442,577.5094 716x1 fill #24221d
+    rect 454,587.0094 26x17 radius 3 stroke 1 #b3ab9973
+    text "⇧A" @460.40625,599.2894 #b3ab99 JetBrains Mono 10.5
+    text "Allow for all sessions" @492,600.2384 #ece6d8 Inter 13
+    text "Bash(go test:*) · every session" @941.59375,599.46936 #7c7566 JetBrains Mono 11
+    rect 442,612.5094 716x1 fill #24221d
+    rect 454,622.0094 26x17 radius 3 stroke 1 #ff5f6d5c
+    text "n" @463.70312,634.2894 #ff5f6dcc JetBrains Mono 10.5
+    text "Deny" @492,635.2384 #ff5f6d Inter 13
+    rect 442,647.5094 716x1 fill #24221d
+    rect 454,657.0094 26x17 radius 3 stroke 1 #ff5f6d5c
+    text "⇧N" @460.40625,669.2894 #ff5f6dcc JetBrains Mono 10.5
+    text "Deny with a note…" @492,670.2384 #ff5f6d Inter 13
+  pop
+  rect 442,508.50943 716x173.99997 radius 8 stroke 1 #24221d
 pop
-rect 594,464.87225 412x29.839996 radius 5 stroke 1 #332f27
-rect 594,503.71225 104.171875x26.00003 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Allow once" @604,521.0775 #141006 Inter 12
-rect 674.1719,509.21225 14x15.0000305 radius 3 stroke 1 #14100666
-text "y" @678.1719,520.13226 #141006cc JetBrains Mono 9.5
-rect 706.1719,503.71225 185.5625x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Always in this workspace" @716.1719,521.0775 #ece6d8 Inter 12
-rect 867.7344,509.21225 14x15.0000305 radius 3 stroke 1 #ece6d866
-text "a" @871.7344,520.13226 #ece6d8cc JetBrains Mono 9.5
-rect 899.7344,503.71225 69.828125x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Deny" @909.7344,521.0775 #ece6d8 Inter 12
-rect 945.5625,509.21225 14x15.0000305 radius 3 stroke 1 #ece6d866
-text "n" @949.5625,520.13226 #ece6d8cc JetBrains Mono 9.5
-rect 594,538.7123 143.03125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Deny with note…" @604,556.0775 #ece6d8 Inter 12
-rect 707.03125,544.2123 20x15 radius 3 stroke 1 #ece6d866
-text "⇧n" @711.03125,555.13226 #ece6d8cc JetBrains Mono 9.5
-rect 745.03125,538.7123 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Details" @755.03125,556.0775 #ece6d8 Inter 12
-rect 812.15625,538.7123 87.0625x26 fill #191815 radius 6 stroke 1 #332f27
-text "Console" @822.15625,556.0775 #ece6d8 Inter 12
-rect 875.21875,544.2123 14x15 radius 3 stroke 1 #ece6d866
-text "g" @879.21875,555.13226 #ece6d8cc JetBrains Mono 9.5
-text "rule: Bash(go test:*)" @594,583.4023 #7c7566 JetBrains Mono 9.5
+rect 420,299.4906 760x401.0188 radius 12 stroke 1 #b98aff

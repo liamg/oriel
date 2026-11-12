@@ -84,7 +84,7 @@ func TestSubagentsInTheSideColumn(t *testing.T) {
 	r.WaitGone("PROMPT")
 }
 
-// A permission's prompt answers the agent: Allow once, Always in this workspace, and Deny with note…'s note goes back
+// A permission's prompt answers the agent: Allow once, Allow for this session, and Deny with a note…'s note goes back
 // with the denial; each goes once it's answered.
 func TestPermissionCardsAnswerTheAgent(t *testing.T) {
 	r, a, _ := apptest.ConsoleWindow(t)
@@ -100,15 +100,15 @@ func TestPermissionCardsAnswerTheAgent(t *testing.T) {
 
 	always := a.Ask(agent.Permission{ID: "p2", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "go vet ./..."})})
 	r.WaitText("$ go vet ./...")
-	r.ClickTop("Always in this workspace")
+	r.ClickTop("Allow for this session")
 	if d := waitDecision(t, always); !d.Allow || !d.Always {
-		t.Errorf("Always answered %+v", d)
+		t.Errorf("Allow for this session answered %+v", d)
 	}
 	r.WaitText("BASH(GO VET:*)") // the rule it made, in force
 
 	deny := a.Ask(agent.Permission{ID: "p3", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "rm -rf build"})})
 	r.WaitText("$ rm -rf build")
-	r.ClickTop("Deny with note…")
+	r.ClickTop("Deny with a note…")
 	r.WaitText("Deny with this note")
 	r.TypeText("use make clean")
 	r.TypeKeys("<CR>")
@@ -125,17 +125,17 @@ func TestAskCardsInterruptAnyView(t *testing.T) {
 	r.TypeKeys("<D-A>")
 	r.WaitGone("SESSION STATS")
 	deny := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "curl example.com"})})
-	r.WaitFrame("the interrupt card", func(s string) bool { return apptest.HasAll(s, "W · PERMISSION", "$ curl example.com") })
-	r.ClickText("Deny")
+	r.WaitFrame("the prompt", func(s string) bool { return apptest.HasAll(s, "W · PERMISSION", "curl example.com") })
+	r.ClickTop("Deny")
 	if d := waitDecision(t, deny); d.Allow {
 		t.Errorf("Deny answered %+v", d)
 	}
-	r.WaitGone("$ curl example.com")
+	r.WaitGone("curl example.com")
 
-	// Console takes you to the session's console, where the card waits with the context around it.
+	// g takes you to the session's console, where the card waits with the context around it.
 	a.Ask(agent.Permission{ID: "p2", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": "curl example.org"})})
-	r.WaitFrame("the second card", func(s string) bool { return apptest.HasAll(s, "W · PERMISSION", "$ curl example.org") })
-	r.ClickText("Console")
+	r.WaitFrame("the second prompt", func(s string) bool { return apptest.HasAll(s, "W · PERMISSION", "curl example.org") })
+	r.ClickTop("Console")
 	r.WaitFrame("the console, with the card in it", func(s string) bool {
 		return apptest.HasAll(s, "SESSION STATS", "$ curl example.org") && !strings.Contains(s, "W · PERMISSION")
 	})
@@ -336,6 +336,7 @@ func TestDetailsShowCallsAndAsksInFull(t *testing.T) {
 
 	allow := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": long})})
 	r.WaitText("Fake wants to run a command")
+	r.ClickAccess("Dismiss") // the prompt waits on in the console, whose card has its Details
 	r.ClickTop("Details")
 	r.WaitText("ASK · PERMISSION")
 	r.WaitText("INPUT")

@@ -5,6 +5,7 @@ package agentrun
 
 import (
 	"context"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -35,6 +36,8 @@ type Runner struct {
 
 	resumed    map[core.SessionID]bool // the sessions handed over that ResumeHandedOver has resumed
 	keepExited bool                    // an agent that exits on its own stays stopped
+
+	rules *allRules // for all sessions
 
 	testsOnce sync.Once
 	testSet   *testrun.Set
@@ -80,8 +83,11 @@ type Deps struct {
 
 // New runs st's sessions' agents.
 func New(env hostcore.Env, st hostcore.State, deps Deps) *Runner {
-	r := &Runner{env: env, st: st, deps: deps, live: map[core.SessionID]*session{}}
+	r := &Runner{env: env, st: st, deps: deps, live: map[core.SessionID]*session{}, rules: &allRules{path: filepath.Join(env.Home, "rules.json")}}
 	r.loadPrompts()
+	if err := r.rules.load(); err != nil {
+		env.Log.Warn("rules for all sessions", "path", r.rules.path, "err", err)
+	}
 	return r
 }
 

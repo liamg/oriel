@@ -20,19 +20,33 @@ before a card shows. A stacked card's **Console** (`g`, `agent.console.show`) br
 the agent console open, so you can read what led to the ask before you answer it; a prompt steps aside
 for it, and waits there to be answered.
 
+## The prompt {#prompt}
+
+A prompt says whose it is and its place in that session's queue (`2 OF 3`, counting those answered since none
+waited), what the agent wants and where (the session, its branch, the working directory or the lines an edit
+touches), and **WHY**: what the agent said last before it asked, three lines of it until you open **more**. Below
+that is what it's about: a command in full, wrapped and never cut; an edit's diff; a tool's arguments, a line each,
+long and nested values indented under their name; a gateway's call. However long, it scrolls inside its own box, no
+taller than 40% of the window, so the answers always show: the wheel, `⇧↑`/`⇧↓` and `PgUp`/`PgDn` scroll it, and
+it says how much is below. The answers are a list: `↑`/`↓` move the highlight and `↵` picks it, each answer's key
+picks it at once, and a click picks a row. Each says at the right the rule it makes. **Console** (`g`) takes you to
+the session's console, where the ask waits with what led to it.
+
 ## Permission
 
-The agent wants to run a command or use a tool. **Allow once** (`y`) lets this call through; **Always in this
-workspace** (`a`) also makes the rule shown at the right, so the same kind of call goes through from now on, after a
-restart too: `Bash(go test:*)` for commands starting `go test`, `Edit` for edits; **Deny** (`n`) refuses it, and the
-agent reads that as the tool's result. Whatever the agent, it never posts to a code review, and an edit of your own
-checkout is refused before you're asked.
+The agent wants to run a command, edit a file or use a tool (an MCP server's, or a claude.ai connector's, which acts
+as you). **Allow once** (`y`) lets this call through. **Allow for this session** (`a`) also makes the rule shown, so
+the same kind of call goes through in this session from now on, after a restart too: `Bash(go test:*)` for commands
+starting `go test`, `Edit` for edits, a tool's name for its calls. **Allow for all sessions** (`⇧A`) makes it a
+rule for every session ([For all sessions](#all-sessions)). **Deny** (`n`) refuses it, and the agent reads that as
+the tool's result. Whatever the agent, it never posts to a code review, and an edit of your own checkout is refused
+before you're asked.
 
 ### MCP calls {#mcp}
 
 Claude's every call to an MCP tool comes to Oriel, whatever mode it's in, sandboxed and in bypass too: a claude.ai
 connector's (`mcp__claude_ai_…`) or one of your own servers'. Your rules and `Permission` hooks answer first, then
-this card; **Always** makes a rule for that one tool. Oriel's own tools never ask, nor do the sandbox gateway's,
+this prompt; **Allow for this session** or **for all sessions** makes a rule for that one tool. Oriel's own tools never ask, nor do the sandbox gateway's,
 which holds its own calls ([Gateway](#gateway)). If Oriel can't be asked about a call, it's refused, never left to
 Claude's mode. A tool your Claude settings deny is never offered, and on the host
 one they allow goes through. An agent nobody watches, such as the [assistant](agent/assistant), asks nothing: what it
@@ -41,17 +55,30 @@ their own gate does.
 
 ## Deny with a note
 
-`⇧n` asks for a note before denying: why not, and what to do instead. The agent gets it with the denial.
+`⇧N` asks for a note before denying: why not, and what to do instead. The agent gets it with the denial.
 
 ## Network
 
-The sandbox holds a connection to a host until you answer. **Allow host** allows that host from now on, **Allow
-\*.domain** every host under its domain, **Once** this connection only; **Deny** refuses it, and the agent sees a
-refused connection.
+The sandbox holds a connection to a host until you answer. Above the answers, choose what they apply to: the host
+(`proxy.golang.org`), or every host under its domain (`*.golang.org`), with a click or `←`/`→`. **Once** (`o`) lets
+this connection through; **Allow for this session** (`a`) allows what you chose for the rest of the session;
+**Allow for all sessions** (`⇧A`) for every session; **Deny** (`n`) refuses it, and the agent sees a refused
+connection.
 
 ## Gateway {#gateway}
 
-The sandbox's gateway holds a call that leaves it, such as a push or opening a PR, until you allow or deny it.
+The sandbox's gateway holds a call that leaves it, such as a push or opening a PR, until you allow or deny it. Its
+answers are a permission's, the rule being the gateway's tool.
+
+## For all sessions {#all-sessions}
+
+**Allow for all sessions** makes a rule that every session meets before a prompt, after a restart too: a
+permission's (`Bash(go test:*)`, `Edit`, a tool's name), a gateway's tool, or a host or domain
+(`net(*.golang.org:443)`). They're kept in `~/.oriel/rules.json` and listed in Settings › rules, each with what it
+answers and when it was made; **Remove** there, or `rules.remove {rule}`, makes what it let through ask again, and
+`rules.add {kind} {rule}` makes one. A session's own rules are met first. From Lua or a plugin, `ask.answer` with
+`decision = "always"` and `for = "all"` answers as `⇧A` does. Utility agents, such as Ori, never meet these rules:
+they only do what they're allowed ahead.
 
 ## Question
 

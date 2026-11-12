@@ -83,6 +83,7 @@ type consoleState struct {
 	layout   consoleBlocks   // the transcript's blocks, as last laid out
 	stopping map[string]bool // the processes being stopped, by session/id
 	sub      string          // the subagent whose detail is open
+	scope    map[string]int  // a network ask's scope chosen, by ask: its host, or its domain
 }
 
 type forkAnswer struct {
@@ -209,7 +210,7 @@ func (x *Console) commands() []registry.Command {
 		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its sign-in in the browser, or its own terminal with the login typed",
 			Available: func(a registry.Args) bool { _, _, ok := x.loginWaiting(a); return ok },
 			Run:       x.logIn},
-		{ID: "ask.answer", Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope}, {answers}",
+		{ID: "ask.answer", Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope} (a network rule's host pattern), {for} (\"all\": an always for every session, else for this one), {answers}",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := session(a)
 				ask, ok := x.ask(id, a.String("ask"))
@@ -242,7 +243,8 @@ func (x *Console) keymaps() []registry.Keymap {
 		{Keys: "i", Command: "agent.console.compose", Desc: "Write to the agent"},
 		{Keys: "<Esc>", Command: "agent.console.escape", Desc: "Interrupt, or close"},
 		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": "allow"}, Desc: "Allow once"},
-		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": "always"}, Desc: "Always in this workspace"},
+		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": "always"}, Desc: "Allow for this session"},
+		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": "always", "for": forAll}, Desc: "Allow for all sessions"},
 		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": "deny"}, Desc: "Deny"},
 		{Keys: "N", Command: "ask.deny-note", Desc: "Deny with a note"},
 	} {
@@ -282,7 +284,7 @@ func (x *Console) state(id core.SessionID) *consoleState {
 	}
 	st := x.by[id]
 	if st == nil {
-		st = &consoleState{flip: map[string]bool{}, stopping: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: kit.Scroll{Follow: true}}
+		st = &consoleState{flip: map[string]bool{}, stopping: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: kit.Scroll{Follow: true}, scope: map[string]int{}}
 		x.by[id] = st
 	}
 	return st
@@ -406,7 +408,7 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 	if err != nil {
 		return err
 	}
-	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: a.String("decision"), Note: a.String("note"), Scope: a.String("scope")}
+	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: a.String("decision"), Note: a.String("note"), Scope: a.String("scope"), For: a.String("for")}
 	switch m := a["answers"].(type) {
 	case map[string]string:
 		r.Answers = m

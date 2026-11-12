@@ -57,14 +57,16 @@ this way when it sets `Confirm`; an inbox card when it sets `Dialog`.
 
 What holds an agent until you allow or deny it is a prompt: a permission, a gateway's call (a push, leaving the
 sandbox) and a connection the sandbox holds. It comes up in the middle of the window over a dimmed background, holding the
-keys, so its keys (`y`, `a`, `n`…) answer it. It waits until no key has gone down for three seconds
+keys, so its keys (`y`, `a`, `⇧A`, `n`…) answer it, and `↑`/`↓` and `↵` pick from its list of answers ([The
+prompt](agent/asks#prompt)); it says its place in its session's queue, `2 OF 3`. It waits until no key has gone down for three seconds
 (`inbox.prompt_pause`), so it never takes a key meant for what you're typing; if you've already stopped, it comes up
 at once. Prompts come one at a time, in the order they came: once one is answered, here or anywhere else, or the agent
 withdraws it, the next comes up straight away. Only the session in front prompts. A prompt in a session behind
 waits, and that session's tab calls for you: it pulses in the prompt's colour a few times, then stays lit until you
 go to it ([Session tabs](shell/tabs)), and going to it brings the prompt up at once. Escape, its ✕ or a click
 outside puts a prompt off: it waits on in the Inbox panel and the agent console, and comes up again the next time
-its session comes to the front. A card is a prompt when it sets `Prompt`.
+its session comes to the front. A card is a prompt when it sets `Prompt`; one without a drawing of its own shows as
+this prompt, its code as the detail and its actions as the answers.
 
 {{options "inbox"}}
 

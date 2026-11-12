@@ -20,6 +20,7 @@ type State struct {
 	UsageFailures []UsageFailure  `json:"usageFailures,omitempty"` // the providers whose last read of them failed
 	UsageReading  []string        `json:"usageReading,omitempty"`  // the providers being read now
 	Repos         []Repo          `json:"repos,omitempty"`         // the registered checkouts
+	Rules         []Rule          `json:"rules,omitempty"`         // what goes through in every session without a card
 }
 
 type SessionState struct {
@@ -46,7 +47,7 @@ type SessionState struct {
 	Asks       []Ask      `json:"asks,omitempty"`
 	Transcript []Item     `json:"transcript,omitempty"`
 	Runs       []TestRun  `json:"runs,omitempty"`
-	Rules      []string   `json:"rules,omitempty"`   // "Always in this workspace": Bash(go test:*), net(*.golang.org:443)
+	Rules      []string   `json:"rules,omitempty"`   // "Allow for this session": Bash(go test:*), net(*.golang.org:443)
 	Reviews    []Review   `json:"reviews,omitempty"` // what's been marked reviewed in the diff, per file
 	AIReviews  []AIReview `json:"aiReviews,omitempty"`
 	Findings   []Finding  `json:"findings,omitempty"` // the AI reviews' findings

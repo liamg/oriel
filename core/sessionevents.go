@@ -423,7 +423,7 @@ func (e MachineChanged) Apply(s *State) error {
 	return nil
 }
 
-// RuleAdded lets something through from now on in this session: what "Always" makes of an ask.
+// RuleAdded lets something through from now on in this session: what "Allow for this session" makes of an ask.
 type RuleAdded struct {
 	Session SessionID `json:"session"`
 	Rule    string    `json:"rule"`

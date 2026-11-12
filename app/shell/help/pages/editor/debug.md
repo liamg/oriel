@@ -60,7 +60,7 @@ A session's agent can use the debugger too, through its tools `debug_stack`, `de
 guess from the source. What it may do is yours to grant, shown as chips under the debug console: **read frames**,
 **eval**, **set breakpoints** and **step/continue**. Click a chip to go from allow, to ask, to off. Allowed actions
 just run. Asked ones show a permission card on the session, where your rules and `Permission` hooks can answer
-first, and **Always** allows that tool for the rest of the session. Actions that are off are refused, and the agent
+first, and **Allow for this session** allows that tool for the rest of the session. Actions that are off are refused, and the agent
 is told why. By default reading and eval are allowed, breakpoints ask and stepping is off. The options are
 `debug.agent.read`, `debug.agent.eval`, `debug.agent.breakpoints` and `debug.agent.step`, and
 `debug.agent.access {action, level}` sets one. What the agent evaluates shows in the console as `agent ›`.

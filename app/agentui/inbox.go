@@ -72,6 +72,8 @@ type Inbox struct {
 	frontAt  time.Time      // when it came to the front, on the UI's clock
 	promptUp time.Time      // when a prompt was last up, on the UI's clock
 	prompted string         // the prompt up in the last frame, by key; "" for none
+	// batch are the prompts of the session in front since none waited, by key, answered ones too: "2 of 3".
+	batch []string
 }
 
 // inboxRow is a card as the inbox last had it, and whether its source has let it go (answered: history now).
@@ -369,6 +371,9 @@ func (x *Inbox) prompt(c *ui.Ctx) *inboxRow {
 		}
 	}
 	x.prompted = ""
+	if next == nil {
+		x.batch = nil
+	}
 	x.mu.Unlock()
 	if next == nil {
 		return nil
@@ -387,6 +392,24 @@ func (x *Inbox) prompt(c *ui.Ctx) *inboxRow {
 	return next
 }
 
+// queued is where prompt r is in its session's queue: its place, and how many there are, counting those answered
+// since none waited. One put off leaves it.
+func (x *Inbox) queued(r *inboxRow) (n, of int) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.batch = slices.DeleteFunc(x.batch, func(k string) bool {
+		row := x.rows[k]
+		return row == nil || x.dismissed[k] || row.card.Session != r.card.Session
+	})
+	for _, k := range x.order {
+		row := x.rows[k]
+		if row.waiting() && row.card.Prompt && row.card.Session == r.card.Session && !x.dismissed[k] && !slices.Contains(x.batch, k) {
+			x.batch = append(x.batch, k)
+		}
+	}
+	return slices.Index(x.batch, r.card.Key()) + 1, len(x.batch)
+}
+
 func (x *Inbox) promptPause() time.Duration {
 	v, _, _ := x.h.Options().Get(PromptPauseOption, registry.At{})
 	d, _ := v.(time.Duration)
@@ -397,8 +420,10 @@ func (x *Inbox) promptPause() time.Duration {
 // it off.
 func (x *Inbox) promptDialog(c *ui.Ctx, r *inboxRow) {
 	k := r.card.Key()
-	place := uireg.CardPlace{Stacked: true, TakeFocus: true, Dismiss: func() { x.dismiss(k) }}
-	if widget.Dialog(c, "prompt", widget.DialogOpts{Label: cmp.Or(r.card.Title, r.card.Kicker), Help: inboxHelp + "#prompts"}, func(c *ui.Ctx) {
+	n, of := x.queued(r)
+	place := uireg.CardPlace{Stacked: true, TakeFocus: true, Dismiss: func() { x.dismiss(k) }, Prompt: true, N: n, Of: of}
+	o := widget.DialogOpts{Label: cmp.Or(r.card.Title, r.card.Kicker), Help: inboxHelp + "#prompts", Width: widget.PromptWidth(c)}
+	if widget.Dialog(c, "prompt", o, func(c *ui.Ctx) {
 		c.Box(k, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.draw(c, r, place) })
 	}) {
 		x.dismiss(k)
@@ -550,7 +575,12 @@ func (x *Inbox) face(c *ui.Ctx, cd uireg.InboxCard, p uireg.CardPlace) {
 	for _, a := range cd.Actions {
 		o.Actions = append(o.Actions, widget.CardAction{Label: a.Label, Key: a.Key, Primary: a.Primary})
 	}
-	res := widget.ActionCard(c, "card", o, cd.Body)
+	var res widget.ActionCardResult
+	if p.Prompt {
+		res = promptFace(c, cd, o, p)
+	} else {
+		res = widget.ActionCard(c, "card", o, cd.Body)
+	}
 	if res.Dismissed && p.Dismiss != nil {
 		p.Dismiss()
 	}
@@ -565,6 +595,26 @@ func (x *Inbox) face(c *ui.Ctx, cd uireg.InboxCard, p uireg.CardPlace) {
 	if a.Command != "" {
 		x.h.Run(context.Background(), a.Command, a.Args)
 	}
+}
+
+// promptFace is a Prompt card with no Draw of its own as a prompt: its detail and code as the prompt's detail, its
+// actions as its answers.
+func promptFace(c *ui.Ctx, cd uireg.InboxCard, o widget.ActionCardOpts, p uireg.CardPlace) widget.ActionCardResult {
+	po := widget.PromptCardOpts{Kicker: o.Kicker, Title: o.Title, Where: o.Detail, Tone: o.Tone, Help: o.Help, Dismiss: o.Dismiss, TakeFocus: p.TakeFocus}
+	if p.Of > 0 {
+		po.Count = fmt.Sprintf("%d of %d", p.N, p.Of)
+	}
+	for _, l := range strings.Split(cd.Code, "\n") {
+		if cd.Code != "" {
+			po.Detail = append(po.Detail, widget.PromptLine{Text: l})
+		}
+	}
+	for _, a := range cd.Actions {
+		po.Options = append(po.Options, widget.PromptOption{Key: a.Key, Label: a.Label})
+	}
+	po.Where = kit.JoinParts(o.Detail, cd.Note)
+	res := widget.PromptCard(c, "card", po)
+	return widget.ActionCardResult{Action: res.Option, Dismissed: res.Dismissed}
 }
 
 // visible are the panel's rows under its filter: those waiting first, then history, each newest first.

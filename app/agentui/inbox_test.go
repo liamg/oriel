@@ -202,7 +202,7 @@ func TestAskCardsActAndDismiss(t *testing.T) {
 	s.Frame()
 	s.Node("4 waiting on you")
 	// The key's touch at the top; the first of the sandbox's asks in the middle, the gateway's after it.
-	for _, w := range []string{"Touch your security key", "git push · e2e · flaky-e2e", "Network: proxy.golang.org:443"} {
+	for _, w := range []string{"Touch your security key", "git push · e2e · flaky-e2e", "The sandbox holds a connection to proxy.golang.org"} {
 		if !strings.Contains(s.FullText(), w) {
 			t.Errorf("the frame lacks %q:\n%s", w, s.FullText())
 		}
@@ -214,7 +214,7 @@ func TestAskCardsActAndDismiss(t *testing.T) {
 	s.ClickTop("Once")
 	s.Until("the gateway's prompt, next", func() bool { return strings.Contains(s.FullText(), "git push origin rethink/rounding") })
 	s.Now = s.Now.Add(time.Second)
-	s.ClickTop("Allow")
+	s.ClickTop("Allow once")
 	s.Until("the prompts done", func() bool { return !strings.Contains(s.FullText(), "git push origin rethink/rounding") })
 	s.ClickTop("Cancel") // the key's, at the top
 	s.Until("the question", func() bool { return strings.Contains(s.FullText(), "green") })

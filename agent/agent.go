@@ -386,7 +386,8 @@ type (
 	Permission struct {
 		ID, Tool, Summary string
 		Input             json.RawMessage
-		Rule              string // what "Always" would allow
+		Rule              string         // what "Always" would allow
+		Diff              *core.FileDiff // what an edit would do to its file, where the agent can say
 	}
 	// Question is the agent asking the user something, in a thread: it waits for Answer.
 	Question struct {

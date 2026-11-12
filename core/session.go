@@ -219,6 +219,7 @@ type Ask struct {
 	Questions []Question `json:"questions,omitempty"`
 	Thread    ThreadID   `json:"thread,omitempty"` // a question's: the thread it's asked in, and drawn in
 	Login     *Login     `json:"login,omitempty"`  // a login ask's
+	Diff      *FileDiff  `json:"diff,omitempty"`   // a permission for an edit: what it would do to its file
 	Created   time.Time  `json:"created,omitzero"`
 }
 

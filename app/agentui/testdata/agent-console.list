@@ -137,145 +137,148 @@ clip 44,50 1556x924 r 0
     text "THREAD · HANDLER.GO:88" @220.5,158.98225 #ff9b45 JetBrains Mono 9.5
     text "The 429 path never sets Retry-After. Add it from the limiter's reset time and cover it in the handler test." @391.76,160.10938 #ece6d8 Inter 12.5
     clip 44,173.12451 1225x668.8159 r 0
-      rect 206.5,180.23236 900x28.519531 fill #0c0c0b radius 6
-      clip 206.5,180.23236 900x28.519531 r 6
-        text "YOU" @218.5,197.91212 #ffd23f JetBrains Mono 9.5
-        text "Requests to handle:" @248.49,198.85736 #b3ab99 Inter 12
+      rect 206.5,153.73132 900x32 fill #0c0c0b radius 6
+      clip 206.5,153.73132 900x32 r 6
+        text "✓" @219.63281,173.73279 #4fe0a0 Inter 11
+        text "Read" @238.5,174.27844 #ece6d8 Inter 12.5
+        text "internal/ratelimit/limiter.go" @278.25,173.87132 #b3ab99 JetBrains Mono 11.5
+        text "142 lines · 0.1s" @972.5,173.33131 #4f4a40 JetBrains Mono 10
+        text "⤢" @1082.5,173.29533 #7c7566 JetBrains Mono 9.900001
       pop
-      rect 206.5,180.23236 900x28.519531 radius 6 stroke 1 #24221d
-      text "Reading the limiter to see what it exposes for the reset time." @214.5,230.37689 #b3ab99 Inter 12
-      rect 206.5,243.27142 900x32 fill #0c0c0b radius 6
-      clip 206.5,243.27142 900x32 r 6
-        text "✓" @219.63281,263.2729 #4fe0a0 Inter 11
-        text "Read" @238.5,263.81854 #ece6d8 Inter 12.5
-        text "internal/ratelimit/limiter.go" @278.25,263.41144 #b3ab99 JetBrains Mono 11.5
-        text "142 lines · 0.1s" @972.5,262.87143 #4f4a40 JetBrains Mono 10
-        text "⤢" @1082.5,262.83542 #7c7566 JetBrains Mono 9.900001
+      rect 206.5,153.73132 900x32 radius 6 stroke 1 #24221d
+      rect 206.5,195.73132 900x32 fill #0c0c0b radius 6
+      clip 206.5,195.73132 900x32 r 6
+        text "✓" @219.63281,215.73279 #4fe0a0 Inter 11
+        text "Search" @238.5,216.27844 #ece6d8 Inter 12.5
+        text "\"Reserve(\" in internal/" @290.79688,215.87132 #b3ab99 JetBrains Mono 11.5
+        text "4 hits · 0.2s" @990.5,215.33131 #4f4a40 JetBrains Mono 10
+        text "⤢" @1082.5,215.29533 #7c7566 JetBrains Mono 9.900001
       pop
-      rect 206.5,243.27142 900x32 radius 6 stroke 1 #24221d
-      rect 206.5,285.27142 900x32 fill #0c0c0b radius 6
-      clip 206.5,285.27142 900x32 r 6
-        text "✓" @219.63281,305.2729 #4fe0a0 Inter 11
-        text "Search" @238.5,305.81854 #ece6d8 Inter 12.5
-        text "\"Reserve(\" in internal/" @290.79688,305.41144 #b3ab99 JetBrains Mono 11.5
-        text "4 hits · 0.2s" @990.5,304.87143 #4f4a40 JetBrains Mono 10
-        text "⤢" @1082.5,304.83542 #7c7566 JetBrains Mono 9.900001
+      rect 206.5,195.73132 900x32 radius 6 stroke 1 #24221d
+      rect 206.5,237.73132 900x28.519989 fill #0c0c0b radius 6
+      clip 206.5,237.73132 900x28.519989 r 6
+        text "▸ thinking" @218.5,255.95132 #4f4a40 JetBrains Mono 11
+        text "2 lines" @292.4375,255.59132 #4f4a40 JetBrains Mono 10
       pop
-      rect 206.5,285.27142 900x32 radius 6 stroke 1 #24221d
-      rect 206.5,327.27142 900x28.519989 fill #0c0c0b radius 6
-      clip 206.5,327.27142 900x28.519989 r 6
-        text "▸ thinking" @218.5,345.49142 #4f4a40 JetBrains Mono 11
-        text "2 lines" @292.4375,345.13144 #4f4a40 JetBrains Mono 10
+      rect 206.5,237.73132 900x28.519989 radius 6 stroke 1 #24221d
+      rect 214.5,276.25134 146.46875x16.519989 fill #161615 radius 3
+      text "Reservation.ResetAt()" @218.5,288.47134 #ece6d8 JetBrains Mono 11
+      text "already exists. Writing the header from it:" @364.34375,288.8766 #b3ab99 Inter 12
+      rect 206.5,302.77133 900x154 fill #0c0c0b radius 6
+      clip 206.5,302.77133 900x154 r 6
+        text "✓" @219.63281,322.7728 #4fe0a0 Inter 11
+        text "Edit" @238.5,323.31845 #ece6d8 Inter 12.5
+        text "internal/api/usage/handler.go" @270.48438,322.91135 #b3ab99 JetBrains Mono 11.5
+        text "+3" @952.46875,322.55133 #4fe0a0 JetBrains Mono 10.5
+        text "-1" @971.65625,322.55133 #ff5f6d JetBrains Mono 10.5
+        text "view in diff ↗" @992.84375,322.13657 #ffd23f Inter 12
+        rect 992.84375,326.0311 75.65625x1 fill #ffd23fb3
+        text "⤢" @1082.5,322.33533 #7c7566 JetBrains Mono 9.900001
+        text "87" @218.5,350.23132 #4f4a40 JetBrains Mono 11
+        text "" @262.5,350.41135 #4f4a40 JetBrains Mono 11.5
+        text "    if !res.OK() {" @284.5,350.41135 #b3ab99 JetBrains Mono 11.5
+        rect 206.5,355.77133 900x19 fill #180c0d
+        text "88" @218.5,369.23132 #ff5f6d JetBrains Mono 11
+        text "-" @262.5,369.41135 #ff5f6d JetBrains Mono 11.5
+        text "        http.Error(w, \"rate limited\", http.StatusTooManyRequests)" @284.5,369.41135 #ece6d8 JetBrains Mono 11.5
+        rect 206.5,374.77133 900x19 fill #0b1511
+        text "88" @218.5,388.23132 #4fe0a0 JetBrains Mono 11
+        text "+" @262.5,388.41135 #4fe0a0 JetBrains Mono 11.5
+        text "        secs := int(math.Ceil(time.Until(res.ResetAt()).Seconds()))" @284.5,388.41135 #ece6d8 JetBrains Mono 11.5
+        rect 206.5,393.77133 900x19 fill #0b1511
+        text "89" @218.5,407.23132 #4fe0a0 JetBrains Mono 11
+        text "+" @262.5,407.41135 #4fe0a0 JetBrains Mono 11.5
+        text "        w.Header().Set(\"Retry-After\", strconv.Itoa(max(secs, 1)))" @284.5,407.41135 #ece6d8 JetBrains Mono 11.5
+        rect 206.5,412.77133 900x19 fill #0b1511
+        text "90" @218.5,426.23132 #4fe0a0 JetBrains Mono 11
+        text "+" @262.5,426.41135 #4fe0a0 JetBrains Mono 11.5
+        text "        http.Error(w, \"rate limited\", http.StatusTooManyRequests)" @284.5,426.41135 #ece6d8 JetBrains Mono 11.5
+        text "91" @218.5,445.23132 #4f4a40 JetBrains Mono 11
+        text "" @262.5,445.41135 #4f4a40 JetBrains Mono 11.5
+        text "        return" @284.5,445.41135 #b3ab99 JetBrains Mono 11.5
       pop
-      rect 206.5,327.27142 900x28.519989 radius 6 stroke 1 #24221d
-      rect 214.5,365.79144 146.46875x16.519989 fill #161615 radius 3
-      text "Reservation.ResetAt()" @218.5,378.01144 #ece6d8 JetBrains Mono 11
-      text "already exists. Writing the header from it:" @364.34375,378.4167 #b3ab99 Inter 12
-      rect 206.5,392.31143 900x153.99997 fill #0c0c0b radius 6
-      clip 206.5,392.31143 900x153.99997 r 6
-        text "✓" @219.63281,412.3129 #4fe0a0 Inter 11
-        text "Edit" @238.5,412.85855 #ece6d8 Inter 12.5
-        text "internal/api/usage/handler.go" @270.48438,412.45145 #b3ab99 JetBrains Mono 11.5
-        text "+3" @952.46875,412.09143 #4fe0a0 JetBrains Mono 10.5
-        text "-1" @971.65625,412.09143 #ff5f6d JetBrains Mono 10.5
-        text "view in diff ↗" @992.84375,411.67667 #ffd23f Inter 12
-        rect 992.84375,415.5712 75.65625x1 fill #ffd23fb3
-        text "⤢" @1082.5,411.87543 #7c7566 JetBrains Mono 9.900001
-        text "87" @218.5,439.77142 #4f4a40 JetBrains Mono 11
-        text "" @262.5,439.95145 #4f4a40 JetBrains Mono 11.5
-        text "    if !res.OK() {" @284.5,439.95145 #b3ab99 JetBrains Mono 11.5
-        rect 206.5,445.31143 900x19 fill #180c0d
-        text "88" @218.5,458.77142 #ff5f6d JetBrains Mono 11
-        text "-" @262.5,458.95145 #ff5f6d JetBrains Mono 11.5
-        text "        http.Error(w, \"rate limited\", http.StatusTooManyRequests)" @284.5,458.95145 #ece6d8 JetBrains Mono 11.5
-        rect 206.5,464.31143 900x19 fill #0b1511
-        text "88" @218.5,477.77142 #4fe0a0 JetBrains Mono 11
-        text "+" @262.5,477.95145 #4fe0a0 JetBrains Mono 11.5
-        text "        secs := int(math.Ceil(time.Until(res.ResetAt()).Seconds()))" @284.5,477.95145 #ece6d8 JetBrains Mono 11.5
-        rect 206.5,483.31143 900x19 fill #0b1511
-        text "89" @218.5,496.77142 #4fe0a0 JetBrains Mono 11
-        text "+" @262.5,496.95145 #4fe0a0 JetBrains Mono 11.5
-        text "        w.Header().Set(\"Retry-After\", strconv.Itoa(max(secs, 1)))" @284.5,496.95145 #ece6d8 JetBrains Mono 11.5
-        rect 206.5,502.31143 900x18.99997 fill #0b1511
-        text "90" @218.5,515.7714 #4fe0a0 JetBrains Mono 11
-        text "+" @262.5,515.9514 #4fe0a0 JetBrains Mono 11.5
-        text "        http.Error(w, \"rate limited\", http.StatusTooManyRequests)" @284.5,515.9514 #ece6d8 JetBrains Mono 11.5
-        text "91" @218.5,534.77136 #4f4a40 JetBrains Mono 11
-        text "" @262.5,534.95135 #4f4a40 JetBrains Mono 11.5
-        text "        return" @284.5,534.95135 #b3ab99 JetBrains Mono 11.5
+      rect 206.5,302.77133 900x154 radius 6 stroke 1 #24221d
+      rect 206.5,466.77133 900x40 fill #0c0c0b radius 6
+      clip 206.5,466.77133 900x40 r 6
+        text "✓" @219.63281,486.7728 #4fe0a0 Inter 11
+        text "Edit" @238.5,487.31845 #ece6d8 Inter 12.5
+        text "internal/api/usage/handler_test.go" @270.48438,486.91135 #b3ab99 JetBrains Mono 11.5
+        text "+18" @965.0625,486.55133 #4fe0a0 JetBrains Mono 10.5
+        text "view in diff ↗" @992.84375,486.13657 #ffd23f Inter 12
+        rect 992.84375,490.0311 75.65625x1 fill #ffd23fb3
+        text "⤢" @1082.5,486.33533 #7c7566 JetBrains Mono 9.900001
       pop
-      rect 206.5,392.31143 900x153.99997 radius 6 stroke 1 #24221d
-      rect 206.5,556.3114 900x40 fill #0c0c0b radius 6
-      clip 206.5,556.3114 900x40 r 6
-        text "✓" @219.63281,576.31287 #4fe0a0 Inter 11
-        text "Edit" @238.5,576.8585 #ece6d8 Inter 12.5
-        text "internal/api/usage/handler_test.go" @270.48438,576.45135 #b3ab99 JetBrains Mono 11.5
-        text "+18" @965.0625,576.09143 #4fe0a0 JetBrains Mono 10.5
-        text "view in diff ↗" @992.84375,575.67664 #ffd23f Inter 12
-        rect 992.84375,579.57117 75.65625x1 fill #ffd23fb3
-        text "⤢" @1082.5,575.8754 #7c7566 JetBrains Mono 9.900001
+      rect 206.5,466.77133 900x40 radius 6 stroke 1 #24221d
+      rect 206.5,516.77136 900x32 fill #0c0c0b radius 6
+      clip 206.5,516.77136 900x32 r 6
+        text "✓" @219.63281,536.7728 #4fe0a0 Inter 11
+        text "Bash" @238.5,537.3185 #ece6d8 Inter 12.5
+        text "go vet ./internal/api/..." @277.625,536.9113 #b3ab99 JetBrains Mono 11.5
+        text "1 line · 2.3s" @975.90625,536.3714 #4f4a40 JetBrains Mono 10
+        text "▸" @1061.9062,536.7313 #7c7566 JetBrains Mono 11
+        text "⤢" @1082.5,536.3354 #7c7566 JetBrains Mono 9.900001
       pop
-      rect 206.5,556.3114 900x40 radius 6 stroke 1 #24221d
-      rect 206.5,606.3114 900x32 fill #0c0c0b radius 6
-      clip 206.5,606.3114 900x32 r 6
-        text "✓" @219.63281,626.31287 #4fe0a0 Inter 11
-        text "Bash" @238.5,626.8585 #ece6d8 Inter 12.5
-        text "go vet ./internal/api/..." @277.625,626.45135 #b3ab99 JetBrains Mono 11.5
-        text "1 line · 2.3s" @975.90625,625.91144 #4f4a40 JetBrains Mono 10
-        text "▸" @1061.9062,626.27136 #7c7566 JetBrains Mono 11
-        text "⤢" @1082.5,625.8754 #7c7566 JetBrains Mono 9.900001
+      rect 206.5,516.77136 900x32 radius 6 stroke 1 #24221d
+      rect 206.5,558.77136 900x134.50452 fill #0c0c0b radius 8 stroke 1 #b98aff8c
+      rect 220.5,574.8336 7x7 fill #b98aff radius 3.5
+      text "Codex wants to run a command" @235.5,582.88074 #ece6d8 Inter 12.5
+      text "sandbox · network ask" @966.5,581.7536 #7c7566 JetBrains Mono 9.5
+      rect 220.5,594.8959 872x29.840027 fill #060606 radius 5
+      clip 220.5,594.8959 872x29.840027 r 5
+        text "$ go test ./internal/api/... -run TestUsage -count=1" @230.5,614.13586 #ece6d8 JetBrains Mono 12
       pop
-      rect 206.5,606.3114 900x32 radius 6 stroke 1 #24221d
-      rect 206.5,648.3114 900x112.96448 fill #0c0c0b radius 8 stroke 1 #b98aff8c
-      rect 220.5,664.37366 7x7 fill #b98aff radius 3.5
-      text "Codex wants to run a command" @235.5,672.4208 #ece6d8 Inter 12.5
-      text "sandbox · network ask" @966.5,671.29364 #7c7566 JetBrains Mono 9.5
-      rect 220.5,684.4359 872x29.840027 fill #060606 radius 5
-      clip 220.5,684.4359 872x29.840027 r 5
-        text "$ go test ./internal/api/... -run TestUsage -count=1" @230.5,703.6759 #ece6d8 JetBrains Mono 12
+      rect 220.5,594.8959 872x29.840027 radius 5 stroke 1 #332f27
+      rect 220.5,633.7359 104.171875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+      text "Allow once" @230.5,651.10114 #141006 Inter 12
+      rect 300.67188,639.2359 14x15 radius 3 stroke 1 #14100666
+      text "y" @304.67188,650.1559 #141006cc JetBrains Mono 9.5
+      rect 332.67188,633.7359 162.57812x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Allow for this session" @342.67188,651.10114 #ece6d8 Inter 12
+      rect 471.25,639.2359 14x15 radius 3 stroke 1 #ece6d866
+      text "a" @475.25,650.1559 #ece6d8cc JetBrains Mono 9.5
+      rect 503.25,633.7359 167.125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Allow for all sessions" @513.25,651.10114 #ece6d8 Inter 12
+      rect 640.375,639.2359 20x15 radius 3 stroke 1 #ece6d866
+      text "⇧a" @644.375,650.1559 #ece6d8cc JetBrains Mono 9.5
+      rect 678.375,633.7359 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Deny" @688.375,651.10114 #ece6d8 Inter 12
+      rect 724.2031,639.2359 14x15 radius 3 stroke 1 #ece6d866
+      text "n" @728.2031,650.1559 #ece6d8cc JetBrains Mono 9.5
+      rect 756.2031,633.7359 153.04688x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Deny with a note…" @766.2031,651.10114 #ece6d8 Inter 12
+      rect 879.25,639.2359 20x15 radius 3 stroke 1 #ece6d866
+      text "⇧n" @883.25,650.1559 #ece6d8cc JetBrains Mono 9.5
+      rect 917.25,633.7359 59.125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Details" @927.25,651.10114 #ece6d8 Inter 12
+      text "rule: Bash(go test:*)" @220.5,678.42584 #7c7566 JetBrains Mono 9.5
+      rect 206.5,703.2759 900x122.66449 fill #0c0c0b radius 8 stroke 1 #4cc9f08c
+      rect 220.5,727.10815 7x7 fill #4cc9f0 radius 3.5
+      text "The sandbox holds a connection to proxy.golang.org" @235.5,727.38525 #ece6d8 Inter 12.5
+      text "ENG-2231 search api · CONNECT :443" @235.5,743.0904 #7c7566 JetBrains Mono 9.5
+      clip 220.5,754.94037 234.59998x24 r 5
+        rect 220.5,754.94037 131.19998x24 fill #1f1c0f
+        text "proxy.golang.org" @230.5,770.36035 #ffd23f JetBrains Mono 9.5
+        text "*.golang.org" @361.69998,770.36035 #7c7566 JetBrains Mono 9.5
       pop
-      rect 220.5,684.4359 872x29.840027 radius 5 stroke 1 #332f27
-      rect 220.5,723.27594 104.171875x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-      text "Allow once" @230.5,740.6412 #141006 Inter 12
-      rect 300.67188,728.77594 14x15 radius 3 stroke 1 #14100666
-      text "y" @304.67188,739.6959 #141006cc JetBrains Mono 9.5
-      rect 332.67188,723.27594 185.5625x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Always in this workspace" @342.67188,740.6412 #ece6d8 Inter 12
-      rect 494.23438,728.77594 14x15 radius 3 stroke 1 #ece6d866
-      text "a" @498.23438,739.6959 #ece6d8cc JetBrains Mono 9.5
-      rect 526.2344,723.27594 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Deny" @536.2344,740.6412 #ece6d8 Inter 12
-      rect 572.0625,728.77594 14x15 radius 3 stroke 1 #ece6d866
-      text "n" @576.0625,739.6959 #ece6d8cc JetBrains Mono 9.5
-      rect 604.0625,723.27594 143.03125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Deny with note…" @614.0625,740.6412 #ece6d8 Inter 12
-      rect 717.09375,728.77594 20x15 radius 3 stroke 1 #ece6d866
-      text "⇧n" @721.09375,739.6959 #ece6d8cc JetBrains Mono 9.5
-      rect 755.09375,723.27594 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Details" @765.09375,740.6412 #ece6d8 Inter 12
-      text "rule: Bash(go test:*)" @966.5,739.6959 #7c7566 JetBrains Mono 9.5
-      rect 206.5,771.27594 900x54.66449 fill #0c0c0b radius 8 stroke 1 #4cc9f08c
-      rect 220.5,795.1082 7x7 fill #4cc9f0 radius 3.5
-      text "Network: proxy.golang.org:443" @235.5,795.3853 #ece6d8 Inter 12.5
-      text "go mod download · first request from this workspace · egress …" @235.5,811.09045 #7c7566 JetBrains Mono 9.5
-      rect 615.75,785.6082 100x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Allow host" @625.75,802.97345 #ece6d8 Inter 12
-      rect 691.75,791.1082 14x15 radius 3 stroke 1 #ece6d866
-      text "y" @695.75,802.0282 #ece6d8cc JetBrains Mono 9.5
-      rect 723.75,785.6082 145.40625x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Allow *.golang.org" @733.75,802.97345 #ece6d8 Inter 12
-      rect 845.15625,791.1082 14x15 radius 3 stroke 1 #ece6d866
-      text "a" @849.15625,802.0282 #ece6d8cc JetBrains Mono 9.5
-      rect 877.15625,785.6082 70.390625x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Once" @887.15625,802.97345 #ece6d8 Inter 12
-      rect 923.5469,791.1082 14x15 radius 3 stroke 1 #ece6d866
-      text "o" @927.5469,802.0282 #ece6d8cc JetBrains Mono 9.5
-      rect 955.5469,785.6082 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Deny" @965.5469,802.97345 #ece6d8 Inter 12
-      rect 1001.375,791.1082 14x15 radius 3 stroke 1 #ece6d866
-      text "n" @1005.375,802.0282 #ece6d8cc JetBrains Mono 9.5
-      rect 1033.375,785.6082 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-      text "Details" @1043.375,802.97345 #ece6d8 Inter 12
+      rect 220.5,754.94037 234.59998x24 radius 5 stroke 1 #332f27
+      rect 220.5,787.94037 70.640625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+      text "Once" @230.5,805.3056 #141006 Inter 12
+      rect 267.14062,793.44037 14x15 radius 3 stroke 1 #14100666
+      text "o" @271.14062,804.36035 #141006cc JetBrains Mono 9.5
+      rect 299.14062,787.94037 162.57812x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Allow for this session" @309.14062,805.3056 #ece6d8 Inter 12
+      rect 437.71875,793.44037 14x15 radius 3 stroke 1 #ece6d866
+      text "a" @441.71875,804.36035 #ece6d8cc JetBrains Mono 9.5
+      rect 469.71875,787.94037 167.125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Allow for all sessions" @479.71875,805.3056 #ece6d8 Inter 12
+      rect 606.84375,793.44037 20x15 radius 3 stroke 1 #ece6d866
+      text "⇧a" @610.84375,804.36035 #ece6d8cc JetBrains Mono 9.5
+      rect 644.84375,787.94037 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Deny" @654.84375,805.3056 #ece6d8 Inter 12
+      rect 690.6719,793.44037 14x15 radius 3 stroke 1 #ece6d866
+      text "n" @694.6719,804.36035 #ece6d8cc JetBrains Mono 9.5
+      rect 722.6719,787.94037 59.125x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Details" @732.6719,805.3056 #ece6d8 Inter 12
     pop
     rect 44,841.9404 1225x1 fill #24221d
     path 6 segments fill #4cc9f0b7
@@ -404,31 +407,46 @@ clip 44,50 1556x924 r 0
   pop
 pop
 rect 0,0 1600x1000 fill #030508b8
-rect 580,424.16772 440x151.66455 fill #0c0c0b radius 8 stroke 1 #4cc9f08c
-text "ENG-2231 SEARCH API · NETWORK" @594,448.58774 #4cc9f0 JetBrains Mono 9.5
-text "✕" @994,448.73172 #7c7566 JetBrains Mono 9.900001
-rect 594,474.99997 7x7 fill #4cc9f0 radius 3.5
-text "Network: proxy.golang.org:443" @609,475.2771 #ece6d8 Inter 12.5
-text "go mod download · first request from this workspace · egress proxy" @609,490.98224 #7c7566 JetBrains Mono 9.5
-rect 594,502.83224 100x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Allow host" @604,520.1975 #ece6d8 Inter 12
-rect 670,508.33224 14x15.0000305 radius 3 stroke 1 #ece6d866
-text "y" @674,519.25226 #ece6d8cc JetBrains Mono 9.5
-rect 702,502.83224 145.40625x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Allow *.golang.org" @712,520.1975 #ece6d8 Inter 12
-rect 823.40625,508.33224 14x15.0000305 radius 3 stroke 1 #ece6d866
-text "a" @827.40625,519.25226 #ece6d8cc JetBrains Mono 9.5
-rect 855.40625,502.83224 70.390625x26.00003 fill #191815 radius 6 stroke 1 #332f27
-text "Once" @865.40625,520.1975 #ece6d8 Inter 12
-rect 901.7969,508.33224 14x15.0000305 radius 3 stroke 1 #ece6d866
-text "o" @905.7969,519.25226 #ece6d8cc JetBrains Mono 9.5
-rect 594,537.8322 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Deny" @604,555.19745 #ece6d8 Inter 12
-rect 639.8281,543.3322 14x15 radius 3 stroke 1 #ece6d866
-text "n" @643.8281,554.2522 #ece6d8cc JetBrains Mono 9.5
-rect 671.8281,537.8322 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Details" @681.8281,555.19745 #ece6d8 Inter 12
-rect 738.9531,537.8322 87.0625x26 fill #191815 radius 6 stroke 1 #332f27
-text "Console" @748.9531,555.19745 #ece6d8 Inter 12
-rect 802.0156,543.3322 14x15 radius 3 stroke 1 #ece6d866
-text "g" @806.0156,554.2522 #ece6d8cc JetBrains Mono 9.5
+rect 420,324.4906 760x351.0188 fill #0c0c0b radius 12
+clip 420,324.4906 760x351.0188 r 12
+  text "ENG-2231 SEARCH API · NETWORK" @442,357.2706 #4cc9f0 JetBrains Mono 10.5
+  rect 991.075,340.4906 87.06244x26 radius 6 stroke 1 #332f27
+  text "Console" @1001.075,357.85583 #ece6d8 Inter 12
+  rect 1054.1375,345.9906 14x15 radius 3 stroke 1 #ece6d866
+  text "g" @1058.1375,356.9106 #ece6d8cc JetBrains Mono 9.5
+  text "1 OF 1" @1088.1375,357.2706 #7c7566 JetBrains Mono 10.5
+  text "✕" @1151.1016,357.84662 #7c7566 JetBrains Mono 12.1
+  text "The sandbox holds a connection to proxy.golang.org" @442,392.95935 #ece6d8 Inter 17
+  text "ENG-2231 search api · CONNECT :443" @442,414.27994 #7c7566 JetBrains Mono 11
+  rect 442,431.57996 2x36.929504 fill #332f27
+  text "WHY" @456,443.77997 #7c7566 JetBrains Mono 10
+  text "Reservation.ResetAt() already exists. Writing the header from it:" @456,463.37372 #b3ab99 Inter 13
+  clip 442,482.50943 234.59998x24 r 5
+    rect 442,482.50943 131.19995x24 fill #1f1c0f
+    text "proxy.golang.org" @452,497.92944 #ffd23f JetBrains Mono 9.5
+    text "*.golang.org" @583.19995,497.92944 #7c7566 JetBrains Mono 9.5
+  pop
+  rect 442,482.50943 234.59998x24 radius 5 stroke 1 #332f27
+  clip 442,518.5094 716x139 r 8
+    rect 442,518.5094 716x34 fill #191815
+    rect 454,527.0094 26x17 radius 3 stroke 1 #b3ab9973
+    text "o" @463.70312,539.2894 #b3ab99 JetBrains Mono 10.5
+    text "Once" @492,540.2384 #ece6d8 Inter 13
+    rect 442,552.5094 716x1 fill #24221d
+    rect 454,562.0094 26x17 radius 3 stroke 1 #b3ab9973
+    text "a" @463.70312,574.2894 #b3ab99 JetBrains Mono 10.5
+    text "Allow for this session" @492,575.2384 #ece6d8 Inter 13
+    text "proxy.golang.org" @1040.5,574.46936 #7c7566 JetBrains Mono 11
+    rect 442,587.5094 716x1 fill #24221d
+    rect 454,597.0094 26x17 radius 3 stroke 1 #b3ab9973
+    text "⇧A" @460.40625,609.2894 #b3ab99 JetBrains Mono 10.5
+    text "Allow for all sessions" @492,610.2384 #ece6d8 Inter 13
+    text "proxy.golang.org · every session" @935,609.46936 #7c7566 JetBrains Mono 11
+    rect 442,622.5094 716x1 fill #24221d
+    rect 454,632.0094 26x17 radius 3 stroke 1 #ff5f6d5c
+    text "n" @463.70312,644.2894 #ff5f6dcc JetBrains Mono 10.5
+    text "Deny" @492,645.2384 #ff5f6d Inter 13
+  pop
+  rect 442,518.5094 716x139 radius 8 stroke 1 #24221d
+pop
+rect 420,324.4906 760x351.0188 radius 12 stroke 1 #4cc9f0

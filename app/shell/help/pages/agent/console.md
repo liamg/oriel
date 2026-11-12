@@ -94,7 +94,8 @@ it started and finished, the requests it worked on, its prompt, and what it said
 ## Rules in force {#rules}
 
 What lets the agent through without asking: its own gate (edits automatic, shell asks), the sandbox's network and
-gateway, and every rule "Always in this workspace" made.
+gateway, and every rule **Allow for this session** made; the rules for all sessions are in Settings › rules
+([For all sessions](agent/asks#all-sessions)).
 
 The gate is the mode the agent starts in. A mode it's switched to in the session (Claude's `⇧Tab`, or leaving plan
 mode for auto) is kept from the end of the turn it was switched in: when the agent starts again on its conversation (a

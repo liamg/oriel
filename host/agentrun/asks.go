@@ -1,6 +1,7 @@
 package agentrun
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -58,7 +59,7 @@ func (h *session) answer(r AnswerReq) error {
 // permission is layer 1 asking: the session's rules and the app's policy hooks answer first (layer 2), and the
 // user only when neither does.
 func (h *session) permission(sess agent.Session, p agent.Permission) {
-	ask := core.Ask{ID: p.ID, Kind: core.AskPermission, Tool: p.Tool, Summary: p.Summary, Input: string(p.Input), Rule: p.Rule}
+	ask := core.Ask{ID: p.ID, Kind: core.AskPermission, Tool: p.Tool, Summary: p.Summary, Input: string(p.Input), Rule: p.Rule, Diff: p.Diff}
 	if ask.Rule == "" {
 		ask.Rule = RuleFor(p.Tool, p.Input)
 	}
@@ -84,7 +85,7 @@ func (h *session) permission(sess agent.Session, p agent.Permission) {
 		d.Note = "Denied by the user in Oriel: " + d.Note
 	}
 	if d.Always {
-		_ = h.r.addRule(h.id, ask.Rule)
+		h.remember(ask, a)
 	}
 	_ = sess.Answer(h.ctx, p.ID, d)
 }
@@ -203,10 +204,29 @@ func (h *session) approve(ctx context.Context, ask core.Ask) (hostcore.Approval,
 	if !ok {
 		return hostcore.Approval{}, ctx.Err()
 	}
-	if a.Decision == "always" && a.Scope == "" {
-		_ = h.r.addRule(h.id, ask.Rule)
+	if a.Decision == "always" {
+		h.remember(ask, a)
 	}
-	return hostcore.Approval{Allow: a.Decision == "allow" || a.Decision == "always", Scope: a.Scope, By: "the user", Note: a.Note}, nil
+	return hostcore.Approval{Allow: a.Decision == "allow" || a.Decision == "always", Scope: a.Scope, All: a.For == ForAll, By: "the user",
+		Note: a.Note}, nil
+}
+
+// remember keeps the rule an always makes of ask: the session's, or with ForAll every session's. One for all sessions
+// that can't be saved still allows the call, and the transcript says so.
+func (h *session) remember(ask core.Ask, a AnswerReq) {
+	rule := ask.Rule
+	if ask.Kind == core.AskNetwork && a.Scope != "" {
+		rule = "net(" + a.Scope + ")"
+	}
+	if a.For != ForAll {
+		_ = h.r.addRule(h.id, rule)
+		return
+	}
+	if err := h.r.AddRule(ask.Kind, rule); err != nil {
+		h.r.env.Log.Warn("a rule for all sessions was not saved", "session", h.id, "rule", rule, "err", err)
+		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemError, Time: h.r.env.Now().UTC(),
+			Text: cmp.Or(ask.Host, ask.Summary, ask.Tool) + ": allowed, but the rule for all sessions was not saved: " + err.Error()})
+	}
 }
 
 // RuleFor is the rule "Always" makes of a tool call: the command's first two words for a shell, the tool for
@@ -269,7 +289,7 @@ func (x *Runner) addRule(id core.SessionID, rule string) error {
 	return x.st.Emit(core.RuleAdded{Session: id, Rule: rule})
 }
 
-// policy is layer 2: the session's rules, then the app's hooks. ok is false when neither answers.
+// policy is layer 2: the session's rules, the rules for all sessions, then the app's hooks. ok is false when neither answers.
 func (x *Runner) policy(id core.SessionID, ask core.Ask) (Verdict, bool) {
 	se, err := x.st.Session(id)
 	if err != nil {
@@ -279,6 +299,9 @@ func (x *Runner) policy(id core.SessionID, ask core.Ask) (Verdict, bool) {
 		if matchRule(r, ask) {
 			return Verdict{Decision: "allow", By: "rule " + r}, true
 		}
+	}
+	if r, ok := x.allRule(ask); ok {
+		return Verdict{Decision: "allow", By: "rule " + r + " for all sessions"}, true
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()

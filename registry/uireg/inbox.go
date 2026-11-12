@@ -84,6 +84,10 @@ type CardPlace struct {
 	TakeFocus bool
 	// Dismiss takes the card off the stack: its ✕ and Escape. Nil where it can't be dismissed.
 	Dismiss func()
+	// Prompt is a Prompt card up in the middle of the window, drawn as a prompt (widget.PromptCard); N of Of is its
+	// place in the queue of its session's prompts.
+	Prompt bool
+	N, Of  int
 }
 
 // The Inbox panel's filters.
