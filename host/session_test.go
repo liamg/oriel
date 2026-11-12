@@ -388,6 +388,27 @@ func TestAQuestionIsAskedInAThread(t *testing.T) {
 	}
 }
 
+// A question with no thread named, from an agent on no thread, is asked in the session's request.
+func TestAQuestionOffAThreadIsAskedInTheRequest(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Negative values round the wrong way")
+	a.WaitSent(t)
+	req := r.session(id).Threads[0].ID
+	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "and zero?"}); err != nil {
+		t.Fatal(err)
+	}
+	a.Call(t, "reply", map[string]any{"thread": string(req), "body": "Which way should they round?"})
+	r.eventually(id, "the request handed back", func(se core.SessionState) bool { th, _ := se.Thread(req); return !th.Busy })
+	ch := a.Expect("q1")
+	a.Emit(agent.Question{ID: "q1", Questions: []core.Question{{Question: "Half to even?"}}})
+	se := r.eventually(id, "the question", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	if se.Asks[0].Thread != req {
+		t.Errorf("the question was asked in %q, want the request %q", se.Asks[0].Thread, req)
+	}
+	r.w.Answer(AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"Half to even?": "yes"}})
+	<-ch
+}
+
 // A question from an agent with no thread to ask in opens a general thread for it.
 func TestAQuestionWithNoThreadOpensOne(t *testing.T) {
 	r := newRig(t)
@@ -402,6 +423,15 @@ func TestAQuestionWithNoThreadOpensOne(t *testing.T) {
 	}
 	r.w.Answer(AnswerReq{Session: id, Ask: "q1", Answers: map[string]string{"What should it do?": "round"}})
 	<-ch
+	// The thread was the question's own: it keeps the answer, and is resolved.
+	se = r.eventually(id, "the question's thread resolved", func(se core.SessionState) bool {
+		t, _ := se.Thread(th.ID)
+		return t.Status == core.ThreadResolved
+	})
+	t2, _ := se.Thread(th.ID)
+	if last, _ := t2.Last(); last.Author != core.AuthorYou || last.Body != "What should it do? → round" || !last.Delivered {
+		t.Errorf("the thread ends %+v, want your answer, given to the agent", last)
+	}
 }
 
 // A btw is answered by a fork, and never joins the conversation.
