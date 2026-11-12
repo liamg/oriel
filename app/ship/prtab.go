@@ -152,7 +152,7 @@ func (x *Ship) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 			ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Box("sq", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: kit.TokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
 		c.Text("p", s.Project, kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
-		prStateChip(c, s.PR)
+		x.prBadge(c, se, s)
 		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmp.Or(s.Base, "?"), kit.Counted(s.Commits, "commit")), kit.MonoFont(11, th.C(theme.FgFaint)))
 		})

@@ -72,7 +72,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 			c.Text("t", fmt.Sprintf("%s%d · %s", w.Sigil, s.PR.Number, s.PR.Title),
 				ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		})
-		prStateChip(c, s.PR)
+		x.prBadge(c, se, s)
 	}, func(c *ui.Ctx) {
 		x.checks(c, s)
 		c.Row("fresh", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { checksFoot(c, s) })
@@ -123,9 +123,17 @@ func (x *Ship) nextButton(c *ui.Ctx, se core.SessionState, s shipRead, primary b
 	}
 }
 
-// prStateChip is where a PR stands: open, draft, merged or closed.
-func prStateChip(c *ui.Ctx, pr *registry.PR) {
-	widget.Chip(c, "state", prStateWord(pr), kit.PRStateTone(c, prStateWord(pr)), "git/ship#pr")
+// prBadge is where a raised PR stands, at a glance: merged or closed over what its reviewers said, then changes
+// requested, approved, draft or open.
+func (x *Ship) prBadge(c *ui.Ctx, se core.SessionState, s shipRead) {
+	x.mu.Lock()
+	var reviews []string
+	for _, v := range x.reviewed[s.PR.URL] {
+		reviews = append(reviews, v)
+	}
+	x.mu.Unlock()
+	reviews = append(reviews, kit.PRReviewsOf(x.h, se.ID, s.PR.URL)...)
+	kit.PRBadge(c, x.h, "state", kit.PRStatusOf(s.PR.State, s.PR.Merged, s.PR.Draft, reviews), "git/ship#pr")
 }
 
 // prStateWord is where a PR stands, in a word: open, draft, merged or closed.

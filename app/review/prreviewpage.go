@@ -84,6 +84,13 @@ func (x *PRReview) pageHead(c *ui.Ctx, se core.SessionState, src registry.HostSi
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(kit.TShipHead)}, func(c *ui.Ctx) {
 		c.Text("h", "REVIEW", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Text("ref", kit.Label(se), kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
+		if full.State != "" { // until its host says, it's no state at all
+			var reviews []string
+			for _, r := range full.Reviewers {
+				reviews = append(reviews, r.State)
+			}
+			kit.PRBadge(c, x.h, "state", kit.PRStatusOf(full.State, false, full.Request.Draft, reviews), prReviewHelp)
+		}
 		c.Row("title", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("t", full.Request.Title, kit.UIFont(13, th.C(theme.FgMuted)))
 		})

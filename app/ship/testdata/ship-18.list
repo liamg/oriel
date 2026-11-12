@@ -347,11 +347,17 @@ clip 224,50 1376x924 r 0
       rect 782,363 1x368.77905 fill #332f27
       rect 802.5,336 462.5x393.77905 fill #060606 radius 6
       clip 802.5,336 462.5x393.77905 r 6
-        clip 814.5,346.43774 383.65002x15.124512 r 0
+        clip 814.5,346.43774 351.40625x15.124512 r 0
           text "#812 · feat(search): back off on 429 using Retry-After" @814.5,358.54712 #ece6d8 Inter 12.5
         pop
-        rect 1206.15,345.73 46.849976x16.540009 fill #b3ab9912 radius 10 stroke 1 #b3ab9959
-        text "DRAFT" @1213.15,357.42 #b3ab99 JetBrains Mono 9.5
+        rect 1173.9062,339 79.09375x30 fill #b3ab9924 radius 7 stroke 1 #b3ab998c
+        path 6 segments stroke 1.6363636 #b3ab99
+        path 6 segments stroke 1.6363636 #b3ab99
+        path 6 segments stroke 1.6363636 #b3ab99
+        path 2 segments stroke 1.6363636 #b3ab99
+        path 3 segments stroke 1.6363636 #b3ab99
+        path 3 segments stroke 1.6363636 #b3ab99
+        text "Draft" @1208.9062,358.9109 #b3ab99 Inter 13.5
         rect 802.5,372 462.5x1 fill #24221d
         text "CHECKS · 5 OF 7" @814.5,392.69 #7c7566 JetBrains Mono 9.5
         text "✓" @814.5,418.90524 #4fe0a0 Inter 12

@@ -1,0 +1,284 @@
+backdrop #060606
+rect 0,0 1600x50 fill #1a1a18
+effect glow-disc 16.86,20.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,20.16 2.8600006x11 blur 4 #ff8a1f4d
+path 6 segments stroke 1.76 #ffd23f
+path 5 segments fill #ff8a1f
+text "ORIEL" @44,29.152 #ece6d8 Space Grotesk 12
+clip 101.9375,0 1354.2438x50 r 0
+  path 9 segments fill #0c0c0b
+  text "!" @128,24.637695 #ff5f6d Inter 10
+  text "search API rate-limit headers" @141.9375,25.54712 #ece6d8 Inter 12.5
+  text "needs you" @139.9375,42.600002 #ff5f6d JetBrains Mono 10
+  text "⌘1" @200.9375,42.42 #4f4a40 JetBrains Mono 9.5
+pop
+text "INBOX" @1488.1813,28.779999 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,15.07 46.849976x18.54 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,27.759998 #b3ab99 JetBrains Mono 9.5
+rect 0,50 224x924 fill #0c0c0b
+clip 0,50 223x924 r 0
+  clip 12,57.73 181x12.539997 r 0
+    text "PROJECTS" @12,67.42 #7c7566 JetBrains Mono 9.5
+  pop
+  text "«" @203.70312,67.96 #7c7566 JetBrains Mono 11
+  rect 0,78 223x1 fill #24221d
+  rect 0,83 223x39.72 fill #1d160f
+  text "▾" @10,99.22 #7c7566 JetBrains Mono 11
+  rect 25,91.26 8x8 fill #4cc9f0 radius 2
+  text "search-api" @39,99.22 #ece6d8 JetBrains Mono 11
+  rect 196.1875,88.32 18.8125x13.879997 radius 3 stroke 1 #332f27
+  text "⌃1" @200.1875,98.5 #7c7566 JetBrains Mono 9
+  clip 10,104.520004 205x13.199997 r 0
+    text "rethink/search-endpoint" @25,114.72 #7c7566 JetBrains Mono 10
+    text "·" @167,114.72 #7c7566 JetBrains Mono 10
+    text "no PR" @177,114.72 #7c7566 JetBrains Mono 10
+  pop
+  path 7 segments stroke 1.25 #7c7566
+  text "Explorer" @54,138.58524 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Search" @54,161.58524 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Git" @54,184.58524 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Pull request" @54,207.58524 #b3ab99 Inter 12
+  text "drafting" @165,206.81999 #7c7566 JetBrains Mono 10
+  path 3 segments stroke 1.25 #7c7566
+  text "Tests" @54,230.58524 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Debug" @54,253.58524 #b3ab99 Inter 12
+  text "▸" @10,276.94 #7c7566 JetBrains Mono 11
+  rect 25,268.98 8x8 fill #b98aff radius 2
+  text "web-dashboard" @39,276.94 #b3ab99 JetBrains Mono 11
+  rect 196.1875,266.04 18.8125x13.880005 radius 3 stroke 1 #332f27
+  text "⌃2" @200.1875,276.22 #7c7566 JetBrains Mono 9
+  clip 10,282.24 205x13.200012 r 0
+    text "rethink/search-endpoint" @25,292.44 #7c7566 JetBrains Mono 10
+    text "·" @167,292.44 #7c7566 JetBrains Mono 10
+    text "#812" @177,292.44 #7c7566 JetBrains Mono 10
+    rect 205,285.84 6x6 fill #b98aff radius 3
+  pop
+  rect 10,305.44 203x1 fill #332f27
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  text "Requests" @33,327.30524 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
+  text "Ship" @33,350.30524 #b3ab99 Inter 12
+  rect 10,807.00006 203x1 fill #332f27
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 4 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  path 2 segments stroke 1.25 #4f4a40
+  text "Repos" @33,828.8653 #4f4a40 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  path 3 segments stroke 1.25 #7c7566
+  text "Reviews" @33,851.8653 #b3ab99 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Stats" @33,874.8653 #b3ab99 Inter 12
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Usage" @33,897.8653 #b3ab99 Inter 12
+  path 5 segments stroke 1.25 #7c7566
+  path 4 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 5 segments stroke 1.25 #7c7566
+  text "Jobs" @33,920.8653 #b3ab99 Inter 12
+  path 6 segments fill #060606
+  path 6 segments stroke 1.1374999 #ffd23f
+  effect glow 16.3875,937.7938 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  effect glow 19.55625,937.7938 1.0562496x2.9249878 blur 1.625 #ff8a1f73
+  path 5 segments fill #ff8a1f
+  path 2 segments stroke 0.8 #ffd23f
+  text "Ori" @33,943.8653 #b3ab99 Inter 12
+  path 6 segments stroke 1.25 #7c7566
+  path 6 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  path 2 segments stroke 1.25 #7c7566
+  text "Settings" @33,966.8653 #b3ab99 Inter 12
+pop
+rect 223,50 1x924 fill #24221d
+rect 224,50 1376x924 fill #060606
+clip 224,50 1376x924 r 0
+  rect 224,50 1376x30 fill #0c0c0b
+  clip 224,50 1376x30 r 0
+    rect 224,50 193.5x30 fill #121210
+    rect 224,50 193.5x2 fill #ffd23f
+    text "PR #812 · web-dashboard" @238,70.365234 #ece6d8 Inter 12
+    text "✕" @398.20312,69.96 #7c7566 JetBrains Mono 11
+  pop
+  rect 224,80 1376x1 fill #24221d
+  clip 224,81 1376x893 r 0
+    rect 234,91 1356x873 fill #060606
+    rect 234,91 1356x44 fill #0c0c0b
+    text "PR #812" @252,117.844 #ece6d8 Space Grotesk 14
+    rect 320.58313,108.5 9x9 fill #b98aff radius 2
+    text "web-dashboard" @339.58313,117.32 #ece6d8 JetBrains Mono 12
+    rect 443.22375,98 97.515625x30 fill #b98aff24 radius 7 stroke 1 #b98aff8c
+    path 6 segments stroke 1.6363636 #b98aff
+    path 6 segments stroke 1.6363636 #b98aff
+    path 6 segments stroke 1.6363636 #b98aff
+    path 2 segments stroke 1.6363636 #b98aff
+    path 2 segments stroke 1.6363636 #b98aff
+    text "Merged" @478.22375,117.91089 #b98aff Inter 13.5
+    clip 550.7394,105.74 916.1981x14.519997 r 0
+      text "rethink/search-endpoint → main · 3 commits" @550.7394,116.96 #7c7566 JetBrains Mono 11
+    pop
+    rect 1476.9375,100 95.0625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
+    text "Start next PR" @1486.9375,117.365234 #141006 Inter 12
+    rect 234,135 1356x1 fill #24221d
+    clip 234,136 1095x828 r 0
+      text "feat(search): back off on 429 using Retry-After" @252,167.4375 #ece6d8 Inter 18
+      clip 252,183.7793 1059x26 r 0
+        text "https://github.com/acme/web-dashboard/pull/812" @252,200.14453 #ffd23f Inter 12
+        rect 252,204.03906 287.90625x1 fill #ffd23fb3
+        rect 549.90625,183.7793 73.5625x26 radius 6 stroke 1 #332f27
+        text "Copy link" @559.90625,201.14453 #ece6d8 Inter 12
+      pop
+      clip 252,221.7793 1059x14.519531 r 0
+        text "REVIEWERS" @252,232.45906 #7c7566 JetBrains Mono 9.5
+        text "none yet" @327.97,233.4043 #7c7566 Inter 12
+      pop
+      clip 252,248.29883 1059x28.519531 r 5
+        text "⟷" @262,266.92383 #b98aff Inter 12
+        text "depends on search-api PR (not raised) · merge order: search-api → web-dashboard" @291,266.3386 #b3ab99 JetBrains Mono 10.5
+      pop
+      rect 252,248.29883 1059x28.519531 radius 5 stroke 1 #332f27
+      rect 252,288.81836 1059x246.54004 radius 6 stroke 1 #332f27
+      text "CHECKS · 5 OF 7" @266,310.50836 #7c7566 JetBrains Mono 9.5
+      text "✓" @266,336.7236 #4fe0a0 Inter 12
+      clip 288,325.0986 981.21875x14.519531 r 0
+        text "lint" @288,336.7236 #b3ab99 Inter 12
+      pop
+      text "38s" @1277.2188,336.13837 #7c7566 JetBrains Mono 10.5
+      text "✓" @266,366.7236 #4fe0a0 Inter 12
+      clip 288,355.0986 981.21875x14.519531 r 0
+        text "typecheck" @288,366.7236 #b3ab99 Inter 12
+      pop
+      text "51s" @1277.2188,366.13837 #7c7566 JetBrains Mono 10.5
+      text "✓" @266,396.7236 #4fe0a0 Inter 12
+      clip 288,385.0986 961.4375x14.519531 r 0
+        text "unit (shard 1/2)" @288,396.7236 #b3ab99 Inter 12
+      pop
+      text "1m 42s" @1257.4375,396.13837 #7c7566 JetBrains Mono 10.5
+      text "✓" @266,426.7236 #4fe0a0 Inter 12
+      clip 288,415.0986 961.4375x14.519531 r 0
+        text "unit (shard 2/2)" @288,426.7236 #b3ab99 Inter 12
+      pop
+      text "1m 39s" @1257.4375,426.13837 #7c7566 JetBrains Mono 10.5
+      text "✓" @266,456.7236 #4fe0a0 Inter 12
+      clip 288,445.0986 961.4375x14.519531 r 0
+        text "build" @288,456.7236 #b3ab99 Inter 12
+      pop
+      text "2m 05s" @1257.4375,456.13837 #7c7566 JetBrains Mono 10.5
+      text "◌" @266,486.7236 #5c8dff Inter 12
+      clip 288,475.0986 935.0625x14.519531 r 0
+        text "e2e · chromium" @288,486.7236 #b3ab99 Inter 12
+      pop
+      text "running 3m" @1231.0625,486.13837 #7c7566 JetBrains Mono 10.5
+      text "◌" @266,516.72363 #5c8dff Inter 12
+      clip 288,505.0986 961.4375x14.519562 r 0
+        text "preview deploy" @288,516.72363 #b3ab99 Inter 12
+      pop
+      text "queued" @1257.4375,516.13837 #7c7566 JetBrains Mono 10.5
+      rect 252,547.3584 1059x59.05951 radius 6 stroke 1 #332f27
+      text "DESCRIPTION" @266,569.0484 #7c7566 JetBrains Mono 9.5
+      text "No description." @266,591.5234 #7c7566 Inter 12
+      rect 252,618.4179 1059x59.05951 radius 6 stroke 1 #332f27
+      text "REVIEW · NONE YET" @266,640.1079 #7c7566 JetBrains Mono 9.5
+      text "No review comments yet." @266,662.5829 #7c7566 Inter 12
+    pop
+    rect 1329,136 1x828 fill #24221d
+    rect 1330,136 260x828 fill #0c0c0b
+    clip 1330,136 260x828 r 0
+      text "BEFORE THIS SHIPS" @1346,161.69 #7c7566 JetBrains Mono 9.5
+      text "✓" @1346,192.269 #4fe0a0 Inter 13
+      clip 1370,179.97774 194x15.124512 r 0
+        text "Plan approved" @1370,192.08711 #b3ab99 Inter 12.5
+      pop
+      text "" @1574,191.31999 #7c7566 JetBrains Mono 10.5
+      text "✓" @1346,230.26901 #4fe0a0 Inter 13
+      clip 1370,217.97775 187.40625x15.124512 r 0
+        text "All threads resolved" @1370,230.08713 #b3ab99 Inter 12.5
+      pop
+      text "9" @1567.4062,229.32002 #7c7566 JetBrains Mono 10.5
+      text "✓" @1346,268.269 #4fe0a0 Inter 13
+      clip 1370,255.97775 101.6875x15.124512 r 0
+        text "Tests ran this …" @1370,268.08713 #b3ab99 Inter 12.5
+      pop
+      text "go test 2m ago" @1481.6875,267.32 #7c7566 JetBrains Mono 10.5
+      text "○" @1346,306.269 #7c7566 Inter 13
+      clip 1370,293.97775 141.25x15.124512 r 0
+        text "Verify quiz" @1370,306.08713 #b3ab99 Inter 12.5
+      pop
+      text "optional" @1521.25,305.32 #7c7566 JetBrains Mono 10.5
+      rect 1370,316.54 65.609375x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Verify…" @1380,333.90524 #4f4a40 Inter 12
+      text "○" @1346,376.269 #7c7566 Inter 13
+      clip 1370,363.97775 141.25x15.124512 r 0
+        text "AI review" @1370,376.08713 #b3ab99 Inter 12.5
+      pop
+      text "optional" @1521.25,375.32 #7c7566 JetBrains Mono 10.5
+      rect 1370,386.54 61.75x26 fill #191815 radius 6 stroke 1 #332f27
+      text "Review" @1380,403.90524 #4f4a40 Inter 12
+      rect 1346,440.54 228x1 fill #24221d
+      text "TICKET" @1346,473.23 #7c7566 JetBrains Mono 9.5
+      text "ENG-2231" @1346,495.81003 #b98aff JetBrains Mono 11.5
+      text "Across projects, the merge order and" @1346,929.0371 #7c7566 Inter 11
+      text "\"raise all\" live in Ship." @1346,945.3467 #7c7566 Inter 11
+    pop
+  pop
+pop
+rect 0,974 1600x26 fill #0c0c0b
+text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
+text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
+text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
