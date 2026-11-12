@@ -31,8 +31,10 @@ Each row says what a call meets (allowed, asks you, denied) and where that comes
 settings, your settings, always on this machine, read-only (allowed by default), or the built-in default. The menu
 sets this session's own rule for the tool, or drops it.
 
-A sandboxed Claude reaches MCP servers only through the gateway, so it has none of your claude.ai connectors. Any
-other MCP tool it calls asks you, bypass or not ([MCP calls](agent/asks#mcp)).
+A sandboxed Claude has your claude.ai connectors (Linear, Drive, Slack…) beside the gateway's servers, and a
+repository's own servers (its `.mcp.json`) run inside the sandbox, where the sandbox holds what they reach. Every call
+to any of them asks you, bypass or not, unless a rule of yours allows it ([MCP calls](agent/asks#mcp)). The gateway,
+which runs on your machine, still never starts a repository's servers.
 
 ## Network {#network}
 

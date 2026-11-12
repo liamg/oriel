@@ -75,7 +75,7 @@ func TestPolicyToFlags(t *testing.T) {
 		{agent.StartSpec{Policy: agent.PolicyLight}, "--permission-mode acceptEdits"},
 		{agent.StartSpec{Policy: agent.PolicyAuto}, "--permission-mode auto"},
 		{agent.StartSpec{Policy: agent.PolicyAuto, Sandbox: box}, "--permission-mode bypassPermissions"},
-		{agent.StartSpec{Policy: agent.PolicyBypass, Sandbox: box}, "--permission-mode bypassPermissions --mcp-config /run/gw.json --strict-mcp-config"},
+		{agent.StartSpec{Policy: agent.PolicyBypass, Sandbox: box}, "--permission-mode bypassPermissions --mcp-config /run/gw.json"},
 		// In a sandbox the sandbox is the gate: Claude asks nothing in its own terminal, where nobody would see it.
 		{agent.StartSpec{Policy: agent.PolicyLight, Sandbox: box}, "--permission-mode bypassPermissions"},
 		{agent.StartSpec{Policy: agent.PolicyAsk, Sandbox: box}, "--permission-mode bypassPermissions"},
@@ -94,6 +94,32 @@ func TestPolicyToFlags(t *testing.T) {
 	}
 	if _, err := args(agent.StartSpec{Policy: "yolo"}, "/m", "id", ""); err == nil {
 		t.Error("an unknown policy started")
+	}
+}
+
+// A sandboxed Claude isn't held to the gateway's MCP servers alone: the user's claude.ai connectors load, and a
+// repository's own servers (.mcp.json) run inside the sandbox approved ahead, since nobody is at its terminal. Every
+// call to any of them still asks Oriel (guard.Check). On the host, and with NoMCP, nothing changes.
+func TestASandboxedClaudeLoadsConnectors(t *testing.T) {
+	box := &agent.Sandbox{Name: "box", GatewayMCP: "/run/gw.json"}
+	a, err := args(agent.StartSpec{Policy: agent.PolicyBypass, Sandbox: box}, "/m", "id", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	j := strings.Join(a, " ")
+	if strings.Contains(j, "--strict-mcp-config") || !strings.Contains(j, "--mcp-config /run/gw.json") {
+		t.Errorf("sandboxed: %s", j)
+	}
+	if !strings.Contains(j, `"enableAllProjectMcpServers":true`) {
+		t.Errorf("a sandbox's project servers would wait on a dialog nobody sees: %s", j)
+	}
+	a, _ = args(agent.StartSpec{}, "/m", "id", "")
+	if j := strings.Join(a, " "); strings.Contains(j, "enableAllProjectMcpServers") {
+		t.Errorf("on the host a repository's servers were approved: %s", j)
+	}
+	a, _ = args(agent.StartSpec{NoMCP: true, Sandbox: box}, "/m", "id", "")
+	if j := strings.Join(a, " "); !strings.Contains(j, "--strict-mcp-config") {
+		t.Errorf("NoMCP isn't strict: %s", j)
 	}
 }
 
