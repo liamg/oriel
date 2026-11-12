@@ -42,7 +42,7 @@ failing or running ones, with when they were read and at which commit. **Pull re
 cleanly, with its size, labels and the registered checkout it's reviewed in. **Reviews** shows each reviewer and
 where they stand. Its description comes next, then its **Activity**, oldest first: each commit pushed, each review
 with its verdict, and each comment in its conversation or on a line. Reactions show under the description and each
-comment, with how many reacted (+1 3, rocket 1), when the code host has them. Its files come last. The description and activity
+comment, with how many reacted (👍 3, 🚀 1), when the code host has them. Its files come last. The description and activity
 are shown to you only; the agent never gets them from here.
 
 - **Start review…** (`↵`) opens the new session launcher on Review PR with the pull request filled in: pick the
