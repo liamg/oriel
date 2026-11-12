@@ -284,6 +284,37 @@ func TestPermissionLayers(t *testing.T) {
 	}
 }
 
+// An MCP call (a claude.ai connector's here) is put to Oriel by the agent's provider whatever its mode, and asks
+// through the same layers: a card naming the tool, "always" making a rule for the tool that answers its next call
+// at once, and nothing for another tool of the same server.
+func TestAnMCPCallAsksThroughTheSessionsLayers(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Read the docs")
+	a.WaitSent(t)
+	const tool = "mcp__claude_ai_Claude_Docs__guide"
+	in := json.RawMessage(`{"items":["topic.index"]}`)
+	ans := a.Ask(agent.Permission{ID: "m1", Tool: tool, Summary: `{"items":["topic.index"]}`, Input: in})
+	se := r.eventually(id, "the card", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	if ask := se.Asks[0]; ask.Kind != core.AskPermission || ask.Tool != tool || ask.Rule != tool {
+		t.Fatalf("ask = %+v", ask)
+	}
+	if err := r.w.Answer(AnswerReq{Session: id, Ask: "m1", Decision: "always"}); err != nil {
+		t.Fatal(err)
+	}
+	if d := <-ans; !d.Allow || !d.Always {
+		t.Errorf("always = %+v", d)
+	}
+	if d := <-a.Ask(agent.Permission{ID: "m2", Tool: tool, Input: in}); !d.Allow {
+		t.Errorf("the rule didn't answer the next call: %+v", d)
+	}
+	ans = a.Ask(agent.Permission{ID: "m3", Tool: "mcp__claude_ai_Claude_Docs__delete", Input: json.RawMessage(`{}`)})
+	r.eventually(id, "a card for the other tool", func(se core.SessionState) bool { return len(se.Asks) == 1 })
+	r.w.Answer(AnswerReq{Session: id, Ask: "m3", Decision: "deny"})
+	if d := <-ans; d.Allow {
+		t.Errorf("the other tool was allowed: %+v", d)
+	}
+}
+
 // The app asks for a session's agent (a tool that asks first) through the same layers: a card, "always" making
 // a rule that answers the next at once, and a deny's note.
 func TestTheAppAsksThroughTheSessionsLayers(t *testing.T) {

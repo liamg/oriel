@@ -17,6 +17,9 @@ import (
 // Gateway is the prefix of the sandbox gateway's tools.
 const Gateway = "mcp__oriel-gw__oriel__"
 
+// gatewayServer is the prefix of every tool the sandbox gateway carries: its own, and the user's servers behind it.
+const gatewayServer = "mcp__oriel-gw__"
+
 // NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
 const NoPosting = "Oriel: agents never post to GitHub reviews. Answer the thread with mcp__oriel__reply: on a GitHub " +
 	"thread your reply is a draft, and the user forwards it."
@@ -31,15 +34,19 @@ var (
 // EditTools are the tools that write a file named in their input (file_path, or notebook_path).
 var EditTools = []string{"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
-// Decision is a guard rail's answer: Allow or Deny with Reason, or neither to leave it to the agent's gate.
+// Decision is a guard rail's answer: Allow or Deny with Reason, Ask to put the call to Oriel's permission flow
+// whatever the agent's own gate would say, or none to leave it to the agent's gate.
 type Decision struct {
-	Allow, Deny bool
-	Reason      string
+	Allow, Deny, Ask bool
+	Reason           string
 }
 
 // Check decides a tool call, in Oriel's names for tools (Bash, Edit…, mcp__server__tool), for the guard rails.
+// Oriel's own tools go ahead, and so do the sandbox gateway's, which gates its own calls. Every other MCP server's
+// call asks Oriel, which answers from the session's rules and the app's policy or puts it to the user; an agent
+// nobody can ask (PolicyRefuse) is answered here instead: its Allow goes ahead, the rest is refused.
 func Check(spec agent.StartSpec, tool string, input json.RawMessage) Decision {
-	if strings.HasPrefix(tool, "mcp__oriel__") {
+	if strings.HasPrefix(tool, "mcp__oriel__") || spec.Sandbox != nil && strings.HasPrefix(tool, gatewayServer) && !gh.ReviewTool(tool) {
 		return Decision{Allow: true}
 	}
 	var in struct {
@@ -50,6 +57,16 @@ func Check(spec agent.StartSpec, tool string, input json.RawMessage) Decision {
 	_ = json.Unmarshal(input, &in)
 	if gh.ReviewTool(tool) || tool == "Bash" && gh.PostsReview(in.Command) {
 		return Decision{Deny: true, Reason: NoPosting}
+	}
+	if strings.HasPrefix(tool, "mcp__") {
+		switch {
+		case spec.Policy != agent.PolicyRefuse:
+			return Decision{Ask: true, Reason: "Oriel decides every MCP call."}
+		case Allowed(spec, tool):
+			return Decision{Allow: true}
+		}
+		return Decision{Deny: true, Reason: "Oriel: nobody is here to approve " + tool + ". This agent may use only Oriel's " +
+			"tools and those it was allowed: carry on without it, or say in your reply what the user should do."}
 	}
 	if spec.Sandbox != nil && tool == "Bash" {
 		cmd := quoted.ReplaceAllString(in.Command, `""`)

@@ -71,7 +71,7 @@ func fakeClaude(args []string) int {
 		case "--permission-mode":
 			i++
 			f.mode = args[i]
-		case "--model", "--effort", "--mcp-config":
+		case "--model", "--effort", "--mcp-config", "--settings":
 			i++
 		case "--strict-mcp-config", "--":
 		default:
@@ -330,8 +330,7 @@ func (f *fake) turn(text string) {
 		answer = f.say("hello")
 	case "call echo":
 		f.use("toolu_echo", "mcp__oriel__echo", map[string]any{"text": "hi"})
-		var c checkOut
-		_ = f.hook("check", checkIn{Tool: "mcp__oriel__echo", Input: json.RawMessage(`{"text":"hi"}`)}, &c)
+		c := f.check("mcp__oriel__echo", json.RawMessage(`{"text":"hi"}`))
 		if c.Decision != "allow" {
 			answer = f.say("the echo call was not allowed: " + c.Reason)
 			break
@@ -361,6 +360,8 @@ func (f *fake) turn(text string) {
 			f.result("toolu_bash", "ok", false)
 			answer = f.say("ran: ok")
 		}
+	case "call a connector":
+		answer = f.connector(turnID)
 	case "ask me":
 		qs := map[string]any{"questions": []any{map[string]any{"question": "Which colour?", "header": "Colour", "multiSelect": false,
 			"options": []any{map[string]any{"label": "red", "description": "warm"}, map[string]any{"label": "blue", "description": "cool"}}}}}
@@ -415,6 +416,52 @@ func (f *fake) turn(text string) {
 		"rateLimits": fakeRateLimits,
 		"background": background,
 	}, nil)
+}
+
+// check asks Oriel about a tool call as the mod's tool.check does. With no answer, Oriel's own tools go ahead (the
+// mod registered them), an MCP call other than the gateway's is refused, and the rest is the mode's.
+func (f *fake) check(tool string, input json.RawMessage) checkOut {
+	var c checkOut
+	if err := f.hook("check", checkIn{Tool: tool, Input: input}, &c); err == nil {
+		return c
+	}
+	switch {
+	case strings.HasPrefix(tool, "mcp__oriel__"):
+		return checkOut{Decision: "allow"}
+	case strings.HasPrefix(tool, "mcp__oriel-gw__"), !strings.HasPrefix(tool, "mcp__"):
+		return checkOut{}
+	}
+	return checkOut{Decision: "deny", Reason: CheckFailed}
+}
+
+// fakeConnector is the claude.ai connector tool the fake calls.
+const fakeConnector = "mcp__claude_ai_Claude_Docs__guide"
+
+// connector calls a claude.ai connector's tool as Claude Code 2.1.322 decides it: the mod's check first; its ask
+// fires PermissionRequest, which the mod hands to Oriel, in every mode (bypassPermissions and dontAsk included, as
+// the real claude did); with no word from the check, the mode decides.
+func (f *fake) connector(turnID string) string {
+	input := json.RawMessage(`{"items":["topic.index"]}`)
+	f.use("toolu_conn", fakeConnector, input)
+	c := f.check(fakeConnector, input)
+	decision, message := c.Decision, c.Reason
+	switch {
+	case decision == "ask", decision == "" && f.mode == "default":
+		var p permissionOut
+		_ = f.hook("permission", permissionIn{ID: "perm-" + turnID, Tool: fakeConnector, Input: input,
+			Suggestions: json.RawMessage(`[{"type":"addRules","rules":[{"toolName":"` + fakeConnector + `"}],"behavior":"allow","destination":"localSettings"}]`)}, &p)
+		decision, message = p.Decision, p.Message
+	case decision == "" && f.mode == "dontAsk":
+		decision, message = "deny", "Permission to use "+fakeConnector+" has been denied because Claude Code is running in don't ask mode."
+	case decision == "":
+		decision = "allow"
+	}
+	if decision != "allow" {
+		f.result("toolu_conn", message, true)
+		return f.say("denied: " + message)
+	}
+	f.result("toolu_conn", "the index", false)
+	return f.say("ran: the index")
 }
 
 // fakeHarness starts the provider against the fake, in a HOME of its own.

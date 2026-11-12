@@ -21,7 +21,7 @@ reviews waiting on you, your jobs, repos, plan usage and machines, these help pa
 It never waits on its own permission prompts or questions: nobody sees its agent's terminal. Its agent starts in a
 mode that never asks (Claude Code's "don't ask"; Codex never asking, in a read-only sandbox; other agents' asks
 refused as they come). It may use its Oriel tools and, with `assistant.web` on, the web search and fetch tools;
-anything else it tries (a shell command, an edit) is refused at once with a reason, and so is a question it would put
+anything else it tries (a shell command, an edit, an MCP server's tool) is refused at once with a reason, and so is a question it would put
 to you, so it carries on and says in its answer what you should do. A dialog its agent's terminal opens is cancelled.
 The only thing it waits for is your yes on a confirmation card, and only for two minutes.
 

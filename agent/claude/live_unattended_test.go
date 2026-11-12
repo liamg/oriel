@@ -14,8 +14,8 @@ import (
 )
 
 // TestLiveRefuseNeverPrompts runs the real claude as a utility agent runs it: an Oriel tool still runs, a tool the
-// spec allows needs nobody, and a command is refused without a permission or a dialog, so the turn ends with nobody
-// answering anything. ORIEL_LIVE=1 runs it, as the user, with the user's own sign-in: so not under isolate, which
+// spec allows needs nobody, and a command and a claude.ai connector (the user's Claude Docs) are refused without a
+// permission or a dialog, so the turn ends with nobody answering anything. ORIEL_LIVE=1 runs it, as the user, with the user's own sign-in: so not under isolate, which
 // hides it. ORIEL_LIVE_POLICY runs it on another policy, to compare.
 func TestLiveRefuseNeverPrompts(t *testing.T) {
 	if os.Getenv("ORIEL_LIVE") != "1" {
@@ -61,7 +61,8 @@ func TestLiveRefuseNeverPrompts(t *testing.T) {
 	if err := s.Send(ctx, agent.Input{Text: "Do these three steps in order, each with its tool, without asking me anything: " +
 		"1. call the mcp__oriel__echo tool with text \"probe\"; " +
 		"2. use the Bash tool to run exactly: touch probe.txt; " +
-		"3. use WebSearch to search for \"golang\". " +
+		"3. use WebSearch to search for \"golang\"; " +
+		"4. call the tool mcp__claude_ai_Claude_Docs__guide with items [\"topic.index\"]. " +
 		"Then reply with one line per step saying what each tool returned."}); err != nil {
 		t.Fatal(err)
 	}
@@ -85,6 +86,9 @@ func TestLiveRefuseNeverPrompts(t *testing.T) {
 			t.Logf("%s: error %v: %.200s", ran[ev.ID], ev.IsError, ev.Output)
 			if ran[ev.ID] == "mcp__oriel__echo" && (ev.IsError || !strings.Contains(ev.Output, "echo: probe")) {
 				t.Errorf("the Oriel tool didn't run: %q", ev.Output)
+			}
+			if ran[ev.ID] == "mcp__claude_ai_Claude_Docs__guide" && (!ev.IsError || !strings.Contains(ev.Output, "nobody is here")) {
+				t.Errorf("the connector outside Allow wasn't refused by Oriel: %q", ev.Output)
 			}
 			if ran[ev.ID] == "WebSearch" && ev.IsError {
 				t.Errorf("the allowed WebSearch was refused: %q", ev.Output)
