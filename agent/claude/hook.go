@@ -114,7 +114,7 @@ type checkIn struct {
 }
 
 type checkOut struct {
-	Decision string `json:"decision"` // allow, deny, or "" for the mode to decide
+	Decision string `json:"decision"` // allow, deny, ask for Oriel's permission flow, or "" for the mode to decide
 	Reason   string `json:"reason,omitempty"`
 }
 
