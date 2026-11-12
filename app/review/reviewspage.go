@@ -639,7 +639,7 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 // reviewCard is a titled box of the detail.
 func reviewCard(c *ui.Ctx, key, title string, w ui.Size, body func(c *ui.Ctx)) {
 	th := c.Theme()
-	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(12, 10), Gap: 8, Stroke: th.C(theme.Line), Border: 1, Radius: 6}, func(c *ui.Ctx) {
+	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(12, 10), Gap: 8, Stroke: th.C(kit.TReviewCard), Border: 1, Radius: 6}, func(c *ui.Ctx) {
 		c.Text("h", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Tracking: .12}, Color: th.C(theme.FgFaint)})
 		body(c)
 	})

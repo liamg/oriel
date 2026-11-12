@@ -45,12 +45,11 @@ func PRStatusOf(state string, merged, draft bool, reviews []string) PRStatus {
 	return PRStatus{"Open", "pullrequest", theme.OK}
 }
 
-// PRBadge draws a PR's status where it's seen at a glance: its icon and word in its tone, on a tint of it.
+// PRBadge draws a PR's status where it's seen at a glance: its icon, word and outline in its tone.
 func PRBadge(c *ui.Ctx, r registry.Registry, key any, s PRStatus, help string) {
 	th := c.Theme()
 	tone := th.C(s.Tone)
-	c.Row(key, ui.Style{H: ui.Px(30), Pad: ui.PadXY(10, 0), Gap: 7, Cross: ui.Center, Radius: 7, Fill: theme.WithAlpha(tone, .14),
-		Stroke: theme.WithAlpha(tone, .55), Border: 1, Role: ui.RoleStatus, Label: "Pull request: " + s.Word, Help: help}, func(c *ui.Ctx) {
+	c.Row(key, ui.Style{H: ui.Px(30), Pad: ui.PadXY(10, 0), Gap: 7, Cross: ui.Center, Radius: 7, Stroke: theme.WithAlpha(tone, .75), Border: 1, Role: ui.RoleStatus, Label: "Pull request: " + s.Word, Help: help}, func(c *ui.Ctx) {
 		Icon(c, r, "i", s.Icon, 18, tone)
 		c.Text("w", s.Word, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13.5, Weight: typeset.SemiBold}, Color: tone})
 	})
@@ -85,17 +84,23 @@ func (s PRStatus) Framed() bool {
 	return false
 }
 
-// PRFrame lays fn out filling its parent, framed in the status's tone, with a band of it across the top, when the
-// status is Framed: the whole view says where the PR stands, not only its badge.
+// TReviewCard is the border of a review page's cards, which PRFrame recolours with TPRCard's.
+var TReviewCard = theme.Declare("review.card.border", "line")
+
+// PRCardStroke is the border the cards of a PR's view take when its status is Framed.
+func PRCardStroke(th *theme.Resolved, s PRStatus) theme.Color {
+	return theme.WithAlpha(th.C(s.Tone), .75)
+}
+
+// PRFrame lays fn out filling its parent; when the status is Framed, the cards inside (TPRCard, TReviewCard) are
+// bordered in its tone, so the whole view says where the PR stands, not only its badge.
 func PRFrame(c *ui.Ctx, key any, s PRStatus, fn func(c *ui.Ctx)) {
-	if !s.Framed() {
-		c.Column(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, fn)
-		return
+	st := ui.Style{W: ui.Flex(1), H: ui.Flex(1)}
+	if s.Framed() {
+		th := c.Theme()
+		edge := PRCardStroke(th, s)
+		st.Theme = th.With(map[theme.TokenID]theme.Color{TPRCard: edge, TReviewCard: edge})
+		st.Role, st.Label = ui.RoleGroup, "Pull request "+strings.ToLower(s.Word)
 	}
-	tone := c.Theme().C(s.Tone)
-	c.Column(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Stroke: tone, Border: 2, Clip: true, Role: ui.RoleGroup, Label: "Pull request " + strings.ToLower(s.Word)},
-		func(c *ui.Ctx) {
-			c.Box("band", ui.Style{W: ui.Flex(1), H: ui.Px(4), Fill: tone}, nil)
-			fn(c)
-		})
+	c.Column(key, st, fn)
 }
