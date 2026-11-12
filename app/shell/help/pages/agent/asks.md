@@ -6,11 +6,12 @@ related: [agent/console, plugins/hooks]
 # Waiting on you
 
 When an agent wants something only you can give, it waits for a card's answer. Cards show in the agent console where
-they arose, and over the window for any session (with its name), whatever view is in front: a security key's touch
-at the top, the rest stacked at the bottom right; the inbox keeps them all. What holds the agent until you allow or
-deny it (a permission, a gateway's call such as a push or leaving the sandbox, a connection the sandbox holds) is a
-prompt in the middle of the window instead, for the session in front only, once you've stopped typing for a few
-seconds; a session behind calls for you from its tab ([Prompts](shell/inbox#prompts)). A card that
+they arose, a [question](#question) in its thread, and the rest over the window for any session (with its name),
+whatever view is in front: a security key's touch at the top, the rest stacked at the bottom right; the inbox keeps
+them all. What holds the agent until you allow or deny it (a permission, a gateway's call such as a push or leaving
+the sandbox, a connection the sandbox holds) is a prompt in the middle of the window instead, for the session in
+front only, once you've stopped typing for a few seconds; a session behind calls for you from its tab
+([Prompts](shell/inbox#prompts)). A card that
 comes while you're typing in a text field waits until you've stopped for a moment, so it doesn't cover what you're
 writing or catch a key meant for it. A card at the top takes the keys as it shows, so its keys (`y`, `n`…) answer
 it whatever had focus; for a moment as it appears they do nothing, and once it's answered the keys go back where they
@@ -45,6 +46,13 @@ The sandbox's gateway holds a call that leaves it, such as a push or opening a P
 
 The agent asks something with options: click one to answer. Where it takes several, pick them and press
 **Answer**; or type your own answer and press `⏎`.
+
+A question is asked in a thread, and waits there rather than over the window: at the foot of the thread's card,
+between the editor's or the diff's lines and in Requests, as well as in the agent console. The agent says which thread
+with `mcp__oriel__ask`; a question tool of its own that names none (Claude's) asks in the thread it's on (the one it's
+working on, else one it was handed), else in the session's request, else in a general thread opened for it, which
+keeps your answer and is resolved once you give it. The inbox and the session's tab count it, and choosing it in the
+Inbox panel opens its thread.
 
 ## Login
 
