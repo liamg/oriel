@@ -145,6 +145,9 @@ type IconButtonOpts struct {
 	Icon     func(c *ui.Ctx, fg render.Color) // drawn in place of the glyph
 	On       bool                             // lit, as while what it opens is showing
 	Disabled bool
+	// Hidden keeps its room but draws nothing and takes no click, so what's beside it doesn't move when it shows:
+	// a tab's ✕ shown under the pointer.
+	Hidden bool
 }
 
 // IconButton is a small square button showing a glyph, such as ✕. It reports a click.
@@ -152,6 +155,10 @@ func IconButton(c *ui.Ctx, key any, glyph string, o IconButtonOpts) bool {
 	side := o.Size
 	if side == 0 {
 		side = 20
+	}
+	if o.Hidden {
+		c.Box(key, ui.Style{W: ui.Px(side), H: ui.Px(side)}, nil)
+		return false
 	}
 	tip := o.Tooltip
 	if tip == "" {

@@ -587,11 +587,8 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 			}
 			// The ✕ has its own room, so it never covers the title and the tab doesn't change width when it shows:
 			// always on the tab in front, under the pointer on the rest.
-			if (on || in.Inside) && st.drag == nil {
-				closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: closeSide})
-			} else {
-				c.Box("x", ui.Style{W: ui.Px(closeSide), H: ui.Px(closeSide)}, nil)
-			}
+			closed = widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Close " + title, Help: HelpTab, Size: closeSide,
+				Hidden: !(on || in.Inside) || st.drag != nil})
 		})
 	})
 	if closed {
