@@ -84,7 +84,7 @@ Notifications: `session/event` `{session, event}`, `session/closed` `{session}` 
 
 `session/start`'s `spec` is everything a session starts with: `cwd`, `model`, `effort`, `pack` (`{name, skill, text,
 tools}`: the session kind's instructions), `prompt` (the first thing to say), `tools` (`[{name, description,
-inputSchema, readOnly}]`), `policy` (`ask`, `light`, `auto` or `bypass`: how much the agent's own gate asks; `auto` is the agent's own judgement, light where it has none), `protect`
+inputSchema, readOnly}]`), `policy` (`ask`, `light`, `auto` or `bypass`: how much the agent's own gate asks; `auto` is the agent's own judgement, light where it has none), `mode` (on a resume, the agent's own permission mode the conversation was last in, as its `mode` event said: start in it where it can, else on `policy`), `protect`
 (directories it must never edit), `env`, `sandbox` (`{name, hookSocket, gatewayMCP, gateway}`), `stateDir`,
 `memory` and `noMCP`. `session` is Oriel's handle for it, which every message about it carries, from before
 `session/start` answers; `id` in the answer is the agent's own, which a later `resume` names.
@@ -123,6 +123,7 @@ A `session/event`'s `event` is one of these, by `type`, with only the fields tha
 | `usage` | `plan`: the plan's windows, as `usage` answers |
 | `authExpired` | `provider`, `account`, `detail`, `terminal` (typed into the terminal, signs in again: `/login`), `shell` (run in a shell, signs in again), `hostCommand` (argv run on the host in a terminal, signs it and its sandboxes in again: `["codex", "login"]`) |
 | `authRestored` | `provider`, `account` |
+| `mode` | `mode`: the agent's own permission mode, in its terms, now something else (switched in its terminal); a resume's `spec.mode` carries it back |
 | `exited` | `error` |
 
 ## Writing one in Go

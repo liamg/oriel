@@ -48,7 +48,7 @@ func (c *Client) start(ctx context.Context, resume string, spec agent.StartSpec)
 	if s.exec == nil {
 		s.exec = hostexec.Exec{}
 	}
-	w := startSpec{Cwd: spec.Cwd, Model: spec.Model, Effort: spec.Effort, Prompt: spec.Prompt, Policy: spec.Policy,
+	w := startSpec{Cwd: spec.Cwd, Model: spec.Model, Effort: spec.Effort, Prompt: spec.Prompt, Policy: spec.Policy, Mode: spec.Mode,
 		Protect: spec.Protect, Env: spec.Env, StateDir: spec.StateDir, Memory: spec.Memory, NoMCP: spec.NoMCP, Tools: []tool{},
 		Pack: pack{Name: spec.Pack.Name, Skill: spec.Pack.Skill, Text: spec.Pack.Text, Tools: spec.Pack.Tools}}
 	for _, t := range spec.Tools {

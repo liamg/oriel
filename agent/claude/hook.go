@@ -75,6 +75,8 @@ type eventIn struct {
 	Error string `json:"error,omitempty"`
 	// tools-lost: Oriel's MCP servers the CLI has dropped
 	Servers []string `json:"servers,omitempty"`
+	// mode: the permission mode the session is in now, from a classic hook's permission_mode
+	Mode string `json:"mode,omitempty"`
 }
 
 // backgroundTask is one of the Stop hook's background_tasks: a shell, subagent, monitor or workflow still running.

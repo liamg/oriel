@@ -151,6 +151,7 @@ type startSpec struct {
 	Prompt   string       `json:"prompt,omitempty"`
 	Tools    []tool       `json:"tools"`
 	Policy   agent.Policy `json:"policy,omitempty"`
+	Mode     string       `json:"mode,omitempty"`
 	Protect  []string     `json:"protect,omitempty"`
 	Env      []string     `json:"env,omitempty"`
 	Sandbox  *sandbox     `json:"sandbox,omitempty"`
@@ -401,6 +402,7 @@ type event struct {
 	Terminal    string                `json:"terminal,omitempty"`
 	Shell       string                `json:"shell,omitempty"`
 	HostCommand []string              `json:"hostCommand,omitempty"`
+	Mode        string                `json:"mode,omitempty"`
 }
 
 type usage struct {
@@ -465,6 +467,8 @@ func eventOf(ev agent.Event) (event, error) {
 		return event{Type: "dialog", Text: e.Title, Done: !e.Shown}, nil
 	case agent.Exited:
 		return event{Type: "exited", Error: e.Err}, nil
+	case agent.ModeChanged:
+		return event{Type: "mode", Mode: e.Mode}, nil
 	}
 	return event{}, fmt.Errorf("rpcagent: no wire form for %T", ev)
 }
@@ -507,6 +511,8 @@ func (w event) agentEvent() (agent.Event, error) {
 		return agent.Dialog{Title: w.Text, Shown: !w.Done}, nil
 	case "exited":
 		return agent.Exited{Err: w.Error}, nil
+	case "mode":
+		return agent.ModeChanged{Mode: w.Mode}, nil
 	}
 	return nil, fmt.Errorf("rpcagent: unknown event %q", w.Type)
 }
