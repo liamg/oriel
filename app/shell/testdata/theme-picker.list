@@ -645,36 +645,50 @@ clip 180,108 1240x720 r 10
   pop
   rect 211.59375,155 407.5x30 radius 6 stroke 1 #5cc8ff
   rect 207.59375,151 415.5x38 radius 10 stroke 2 #5cc8ff
-  text "12 / 12 · fuzzy" @627.09375,173.78001 #7c7566 JetBrains Mono 10.5
+  text "20 / 20 · fuzzy" @627.09375,173.78001 #7c7566 JetBrains Mono 10.5
   rect 180,193 560x1 fill #24221d
   clip 186,200 548x595 r 0
     rect 202.5,212.5 7x7 fill #7c7566 radius 3.5
-    text "catppuccin" @224,220.729 #ece6d8 Inter 13
+    text "abyss" @224,220.729 #ece6d8 Inter 13
     rect 202.5,244.5 7x7 fill #7c7566 radius 3.5
-    text "dracula" @224,252.729 #ece6d8 Inter 13
+    text "aurora" @224,252.729 #ece6d8 Inter 13
     rect 202.5,276.5 7x7 fill #7c7566 radius 3.5
-    text "everforest" @224,284.729 #ece6d8 Inter 13
-    rect 186,296 548x32 fill #112431 radius 6
-    rect 186,302 2x20 fill #5cc8ff
+    text "catppuccin" @224,284.729 #ece6d8 Inter 13
     rect 202.5,308.5 7x7 fill #7c7566 radius 3.5
-    text "glacier" @224,316.729 #ece6d8 Inter 13
+    text "dracula" @224,316.729 #ece6d8 Inter 13
     rect 202.5,340.5 7x7 fill #7c7566 radius 3.5
-    text "gruvbox" @224,348.729 #ece6d8 Inter 13
+    text "ember" @224,348.729 #ece6d8 Inter 13
     rect 202.5,372.5 7x7 fill #7c7566 radius 3.5
-    text "kanagawa" @224,380.729 #ece6d8 Inter 13
+    text "everforest" @224,380.729 #ece6d8 Inter 13
+    rect 186,392 548x32 fill #112431 radius 6
+    rect 186,398 2x20 fill #5cc8ff
     rect 202.5,404.5 7x7 fill #7c7566 radius 3.5
-    text "nord" @224,412.729 #ece6d8 Inter 13
+    text "glacier" @224,412.729 #ece6d8 Inter 13
     rect 202.5,436.5 7x7 fill #7c7566 radius 3.5
-    text "one-dark" @224,444.729 #ece6d8 Inter 13
+    text "graphite" @224,444.729 #ece6d8 Inter 13
     rect 202.5,468.5 7x7 fill #7c7566 radius 3.5
-    text "oriel" @224,476.729 #ece6d8 Inter 13
-    text "current" @682,475.6 #4f4a40 JetBrains Mono 10
+    text "gruvbox" @224,476.729 #ece6d8 Inter 13
     rect 202.5,500.5 7x7 fill #7c7566 radius 3.5
-    text "rose-pine" @224,508.729 #ece6d8 Inter 13
+    text "kanagawa" @224,508.729 #ece6d8 Inter 13
     rect 202.5,532.5 7x7 fill #7c7566 radius 3.5
-    text "solarized" @224,540.729 #ece6d8 Inter 13
+    text "neon" @224,540.729 #ece6d8 Inter 13
     rect 202.5,564.5 7x7 fill #7c7566 radius 3.5
-    text "tokyonight" @224,572.729 #ece6d8 Inter 13
+    text "nord" @224,572.729 #ece6d8 Inter 13
+    rect 202.5,596.5 7x7 fill #7c7566 radius 3.5
+    text "obsidian" @224,604.729 #ece6d8 Inter 13
+    rect 202.5,628.5 7x7 fill #7c7566 radius 3.5
+    text "one-dark" @224,636.729 #ece6d8 Inter 13
+    rect 202.5,660.5 7x7 fill #7c7566 radius 3.5
+    text "oriel" @224,668.729 #ece6d8 Inter 13
+    text "current" @682,667.60004 #4f4a40 JetBrains Mono 10
+    rect 202.5,692.5 7x7 fill #7c7566 radius 3.5
+    text "plum" @224,700.729 #ece6d8 Inter 13
+    rect 202.5,724.5 7x7 fill #7c7566 radius 3.5
+    text "rose-pine" @224,732.729 #ece6d8 Inter 13
+    rect 202.5,756.5 7x7 fill #7c7566 radius 3.5
+    text "solarized" @224,764.729 #ece6d8 Inter 13
+    rect 202.5,788.5 7x7 fill #7c7566 radius 3.5
+    text "tokyonight" @224,796.729 #ece6d8 Inter 13
   pop
   rect 740,147 1x648 fill #24221d
   clip 741,147 679x648 r 0
