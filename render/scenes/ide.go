@@ -5,13 +5,14 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 )
 
 // The 01-ide mockup is 1600×1000 CSS px; positions below are read off its HTML and base.css.
 const (
 	IDEWidth, IDEHeight = 1600, 1000
 
-	titleH  = 38
+	titleH  = 50
 	statusH = 26
 	railW   = 44
 	sideW   = 250
@@ -62,50 +63,58 @@ func (c *Canvas) logo(x, cy, size float32) {
 	c.FillFree(cursor, c.p.brand2)
 }
 
+// The session tabs stand on the bottom of the title bar: the one in front is the surface under it, joined to it.
+const (
+	tabTop    = 8
+	tabRadius = 9
+)
+
 func (c *Canvas) titlebar() {
-	c.Fill(Rect{0, 0, IDEWidth, titleH}, c.p.bg1)
-	c.Fill(Rect{0, titleH - 1, IDEWidth, 1}, c.p.line)
-	cy := float32(titleH-1) / 2
+	// The band is a step deeper than the surface under it, as the title bar's token makes it.
+	band := theme.Lighten(c.p.bg1, -.06)
+	c.Fill(Rect{0, 0, IDEWidth, titleH}, band)
+	cy := float32(titleH) / 2
 
 	brandStyle := TextStyle{Face: Display, Weight: typeset.Bold, Size: 12, Color: c.p.fg, Spacing: .2}
 	end := row(14, cy, 8, item{22, func(x, cy float32) { c.logo(x, cy, 22) }}, c.txt("ORIEL", brandStyle))
 	// Trailing letter-spacing is part of the box in CSS.
-	end += 14
-	c.Fill(Rect{end, 0, 1, titleH - 1}, c.p.line)
-	x := end + 1
+	x := end + 10 + tabRadius + 1
 
 	type stab struct {
 		dot        color.NRGBA
 		name, mini string
+		miniCol    color.NRGBA
 		key        string
 	}
 	tabs := []stab{
-		{c.p.working, "pricing-rounding", "plan", "⌘1"},
-		{c.p.red, "ENG-2231 search api", "needs you", "⌘2"},
-		{c.p.violet, "review #4410", "permission", "⌘3"},
-		{c.p.ciBlue, "flaky e2e sweep", "ci", "⌘4"},
-		{c.p.pink, "dash-filters", "in review", "⌘5"},
-		{c.p.green, "auth flow", "", "⌘6"},
+		{c.p.working, "pricing-rounding", "plan", c.p.fg3, "⌘1"},
+		{c.p.red, "ENG-2231 search api", "needs you", c.p.red, "⌘2"},
+		{c.p.violet, "review #4410", "permission", c.p.violet, "⌘3"},
+		{c.p.ciBlue, "flaky e2e sweep", "ci", c.p.fg3, "⌘4"},
+		{c.p.pink, "dash-filters", "in review", c.p.fg3, "⌘5"},
+		{c.p.green, "auth flow", "", c.p.fg3, "⌘6"},
 	}
+	nameY, stateY := float32(tabTop+5+8), float32(tabTop+5+16+4+6)
 	for i, t := range tabs {
-		col := c.p.fg2
+		col, weight := c.p.fg2, typeset.Normal
 		if i == 0 {
-			col = c.p.fg
+			col, weight = c.p.fg, typeset.SemiBold
 		}
-		items := []item{c.dot(t.dot, 8), c.txt(t.name, ui(12, typeset.Normal, col))}
+		top := []item{c.dot(t.dot, 0), c.txt(t.name, ui(12.5, weight, col))}
+		var state []item
 		if t.mini != "" {
-			items = append(items, c.txt(t.mini, mono(10, typeset.Medium, c.p.fg3)))
+			state = append(state, c.txt(t.mini, mono(10, typeset.Medium, t.miniCol)))
 		}
-		items = append(items, c.txt(t.key, mono(9.5, typeset.Medium, c.p.fg4)))
-		w := width(items, 7) + 24
+		state = append(state, c.txt(t.key, mono(9.5, typeset.Medium, c.p.fg4)))
+		w := 12 + max(width(top, 7)+2, 16+width(state, 7)) + 14
 		if i == 0 {
-			c.Fill(Rect{x, 0, w, titleH - 1}, c.p.bg2)
-			c.Glow(Rect{x, 0, w, 2}, 10, c.p.accent)
-			c.Fill(Rect{x, 0, w, 2}, c.p.accent)
+			c.joinedTab(Rect{x, tabTop, w, titleH - tabTop}, band)
+		} else if i > 1 {
+			c.Fill(Rect{x - tabRadius - 1, tabTop + 12, 1, 18}, c.p.line2)
 		}
-		row(x+12, cy, 7, items...)
-		c.Fill(Rect{x + w, 0, 1, titleH - 1}, c.p.line)
-		x += w + 1
+		row(x+12+1, nameY, 7, top...)
+		row(x+12+16, stateY, 7, state...)
+		x += w + 2*tabRadius + 1
 	}
 
 	indicator := mono(10.5, typeset.Medium, c.p.fg2)
@@ -115,12 +124,19 @@ func (c *Canvas) titlebar() {
 		c.txt("WK", indicator), gap(6), c.bar(.71, c.p.warn), gap(6), c.txt("71%", b), gap(14),
 		c.dot(c.p.green, 5), gap(6), c.txt("BUS 4", indicator), gap(14), c.kbd("⌘K"),
 	}
-	start := rowEnd(IDEWidth-14, cy, 0, right...)
-	c.Fill(Rect{start - 14 - 1, 0, 1, titleH - 1}, c.p.line)
+	rowEnd(IDEWidth-14, cy, 0, right...)
+}
 
-	// The accent hairline under the titlebar: transparent → accent at 30% → transparent at 70%, opacity .25.
-	c.Gradient(Rect{0, titleH - 1, IDEWidth * .3, 1}, true, alpha(c.p.accent, 0), alpha(c.p.accent, .25))
-	c.Gradient(Rect{IDEWidth * .3, titleH - 1, IDEWidth * .4, 1}, true, alpha(c.p.accent, .25), alpha(c.p.accent, 0))
+// joinedTab is r filled with the surface under the title bar, its top corners rounded and its foot flaring out into
+// the surface: a square of it each side, its corner cut away by a disc of the band.
+func (c *Canvas) joinedTab(r Rect, band color.NRGBA) {
+	foot := r.Y + r.H - tabRadius
+	c.RRect(Rect{r.X, r.Y, r.W, 2 * tabRadius}, tabRadius, c.p.bg1)
+	c.Fill(Rect{r.X, r.Y + tabRadius, r.W, r.H - tabRadius}, c.p.bg1)
+	c.Fill(Rect{r.X - tabRadius, foot, tabRadius, tabRadius}, c.p.bg1)
+	c.Fill(Rect{r.X + r.W, foot, tabRadius, tabRadius}, c.p.bg1)
+	c.Disc(r.X-tabRadius, foot, tabRadius, band)
+	c.Disc(r.X+r.W+tabRadius, foot, tabRadius, band)
 }
 
 func (c *Canvas) kbd(s string) item {

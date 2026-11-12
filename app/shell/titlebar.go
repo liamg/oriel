@@ -21,10 +21,12 @@ import (
 )
 
 var (
-	tTitleBg   = theme.Declare("titlebar.bg", "bg.surface")
-	tTitleLine = theme.Declare("titlebar.line", "line")
-	tTabOn     = theme.Declare("session.tab.active.bg", "bg.raised")
-	tTabEdgeOn = theme.Declare("session.tab.active.edge", "accent")
+	// The band the tabs sit on is a step deeper than the surface under it, so the tab in front, filled with that
+	// surface, reads as the top of the window below it.
+	tTitleBg   = theme.Declare("titlebar.bg", "darken(bg.surface, 6%)")
+	tTitleLine = theme.Declare("titlebar.line", "line.strong")
+	tTabOn     = theme.Declare("session.tab.active.bg", "bg.surface")
+	tTabHover  = theme.Declare("session.tab.hover.bg", "alpha(bg.surface, 55%)")
 	tTabName   = theme.Declare("session.tab.fg", "fg.muted")
 	tTabNameOn = theme.Declare("session.tab.active.fg", "fg")
 	tTabMini   = theme.Declare("session.tab.mini", "fg.faint")
@@ -126,6 +128,12 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
+// tabH is a session's tab: its name over its status line, standing on the bottom of the title bar.
+const (
+	tabH      = 42
+	tabRadius = 9
+)
+
 func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 	th := c.Theme()
 	st := h.State()
@@ -133,7 +141,6 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 		c.Row("brand", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(10, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			slot(c, h, uireg.SlotTitleBrand, vc)
 		})
-		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 		// More sessions than fit scroll sideways, the one in front brought into view when it changes.
 		open := openTabs(st)
 		o := widget.StripOpts{Help: "shell/tabs"}
@@ -143,13 +150,23 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 		if st.Focus != "" {
 			o.Active = st.Focus
 		}
-		widget.Strip(c, "tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), Role: ui.RoleTabList, Label: "Sessions"}, o, func(c *ui.Ctx) {
+		widget.Strip(c, "tabs", ui.Style{H: ui.Flex(1), W: ui.Flex(1), Cross: ui.End, Role: ui.RoleTabList, Label: "Sessions"}, o, func(c *ui.Ctx) {
+			c.Box("lead", ui.Style{W: ui.Px(tabRadius + 1)}, nil) // room for the first tab's foot
 			for i, s := range open {
+				if i > 0 {
+					// The tabs behind are split by a short rule, left out beside the one in front, which needs no edge.
+					rule := th.C(tTitleLine)
+					if s.ID() == st.Focus || open[i-1].ID() == st.Focus {
+						rule = color.NRGBA{}
+					}
+					c.Row(fmt.Sprint("sep", i), ui.Style{W: ui.Px(2*tabRadius + 1), H: ui.Px(tabH), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
+						c.Box("rule", ui.Style{W: ui.Px(1), H: ui.Px(18), Fill: rule}, nil)
+					})
+				}
 				t.tab(c, h, i, s, s.ID() == st.Focus)
-				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tTitleLine)}, nil)
 			}
 			if h.Available("session.new", nil) {
-				c.Row("new", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(8, 0), Cross: ui.Center}, func(c *ui.Ctx) {
+				c.Row("new", ui.Style{H: ui.Px(tabH), Pad: ui.Insets{L: tabRadius + 4, R: 8}, Cross: ui.Center}, func(c *ui.Ctx) {
 					tip := "New session"
 					if k := kit.BoundKey(h, "session.new", nil); k != "" {
 						tip += " " + k
@@ -160,61 +177,69 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 				})
 			}
 		})
-		c.Row("right", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Row("right", ui.Style{Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 			slot(c, h, uireg.SlotTitleBar, vc)
 		})
 	})
 }
 
+// tab is s's tab: its name over a line of its state, the asks waiting in it and its key. The one in front is the
+// surface under the title bar, joined to it; the others sit on the band.
 func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bool) {
 	th := c.Theme()
-	fill, name := color.NRGBA{}, th.C(tTabName)
+	name := th.C(tTabName)
 	if on {
-		fill, name = th.C(tTabOn), th.C(tTabNameOn)
+		name = th.C(tTabNameOn)
 	}
-	in := widget.Clickable(c, s.ID(), ui.Style{Dir: ui.Row, H: ui.Flex(1), Fill: fill, Help: "shell/tabs", Role: ui.RoleTab, Selected: on,
-		Label: s.Name(), Subject: kit.SessionSubject + string(s.ID()),
+	mono := func(size float32, w typeset.Weight) typeset.FontSpec {
+		return typeset.FontSpec{Family: typeset.Mono, Size: size, Weight: w}
+	}
+	in := widget.Clickable(c, s.ID(), ui.Style{Dir: ui.Column, H: ui.Px(tabH), Pad: ui.Insets{L: 12, T: 5, R: 14, B: 5}, Gap: 4, Main: ui.Center,
+		NoHover: true, Help: "shell/tabs", Role: ui.RoleTab, Selected: on, Label: s.Name(), Subject: kit.SessionSubject + string(s.ID()),
 		Drag: &ui.DragData{Kind: tabDragKind, Data: s.ID(), Label: s.Name()}, Drop: []string{tabDragKind}, NoFocus: true}, func(c *ui.Ctx) {
 		hover := widget.PointerIn(c)
-		c.Column("in", ui.Style{H: ui.Flex(1)}, func(c *ui.Ctx) {
-			edge := color.NRGBA{}
-			if on {
-				edge = th.C(tTabEdgeOn)
+		switch {
+		case on:
+			widget.Joined(c, "surface", th.C(tTabOn), tabRadius)
+		case hover:
+			widget.Joined(c, "surface", th.C(tTabHover), tabRadius)
+		}
+		c.Row("top", ui.Style{H: ui.Px(16), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+			kit.StatusMark(c, "mark", s.Status(), 9)
+			if t.renaming == s.ID() {
+				t.nameField(c, h, s)
+			} else {
+				c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: weight(on)}, Color: name})
 			}
-			c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
-			// An 11px mark on 9px of padding keeps the tab the mockup's width.
-			c.Row("body", ui.Style{H: ui.Flex(1), Pad: ui.Insets{L: 9, R: 12}, Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
-				kit.StatusMark(c, "mark", s.Status(), 9)
-				if t.renaming == s.ID() {
-					t.nameField(c, h, s)
-				} else {
-					c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: name})
+			if hover {
+				if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close " + s.Name(), Help: "shell/tabs", Size: 16}) {
+					closeSession(h, s.ID())
 				}
-				if w := statusWord(s); w != "" {
-					c.Text("mini", w, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.Medium}, Color: th.C(tTabMini)})
+			}
+		})
+		c.Row("state", ui.Style{H: ui.Px(12), Gap: 7, Cross: ui.Center, Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {
+			if w := statusWord(s); w != "" {
+				col := th.C(tTabMini)
+				if s.Status() == core.StatusNeedsYou || s.Status() == core.StatusPermission {
+					col = th.C(kit.StatusTokens[s.Status()])
 				}
-				if inbox, ok := kit.InboxOf(h); ok {
-					if n, tone := inbox.Count(string(s.ID())); n > 0 {
-						fill, ok := th.Color(tone)
-						if !ok {
-							fill = th.C(theme.StatusPermission)
-						}
-						kit.CountPill(c, "asks", n, fill)
+				c.Text("mini", w, ui.TextStyle{Font: mono(10, typeset.Medium), Color: col})
+			}
+			if inbox, ok := kit.InboxOf(h); ok {
+				if n, tone := inbox.Count(string(s.ID())); n > 0 {
+					fill, ok := th.Color(tone)
+					if !ok {
+						fill = th.C(theme.StatusPermission)
 					}
+					kit.CountPill(c, "asks", n, fill)
 				}
-				if n := s.Unseen(); n > 0 {
-					c.Text("errs", fmt.Sprintf("✕%d", n), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold},
-						Color: th.C(theme.Error)})
-				}
-				if hover {
-					if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close " + s.Name(), Help: "shell/tabs", Size: 16}) {
-						closeSession(h, s.ID())
-					}
-				} else if i < 9 {
-					c.Text("key", fmt.Sprintf("⌘%d", i+1), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium},
-						Color: th.C(tTabKey)})
-				}
-			})
+			}
+			if n := s.Unseen(); n > 0 {
+				c.Text("errs", fmt.Sprintf("✕%d", n), ui.TextStyle{Font: mono(10, typeset.SemiBold), Color: th.C(theme.Error)})
+			}
+			if i < 9 {
+				c.Text("key", fmt.Sprintf("⌘%d", i+1), ui.TextStyle{Font: mono(9.5, typeset.Medium), Color: th.C(tTabKey)})
+			}
 		})
 	})
 	if in.Clicked {
@@ -227,6 +252,14 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 			}
 		}
 	}
+}
+
+// weight is a tab name's: the one in front's is heavier.
+func weight(on bool) typeset.Weight {
+	if on {
+		return typeset.SemiBold
+	}
+	return typeset.Normal
 }
 
 // tabDragKind is what a session's tab carries as it's dragged along the tabs.

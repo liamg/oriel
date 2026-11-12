@@ -1,20 +1,19 @@
 backdrop #060606
-rect 0,0 1400x38 fill #0c0c0b
-effect glow-disc 16.86,14.16 11x11 blur 4 #ff8a1f38
-effect glow 28.96,14.16 2.8600006x11 blur 4 #ff8a1f4d
+rect 0,0 1400x50 fill #030302
+effect glow-disc 16.86,20.16 11x11 blur 4 #ff8a1f38
+effect glow 28.96,20.16 2.8600006x11 blur 4 #ff8a1f4d
 path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
-text "ORIEL" @44,23.152 #ece6d8 Space Grotesk 12
-rect 101.9375,0 1x38 fill #24221d
-clip 102.9375,0 671.2438x38 r 0
+text "ORIEL" @44,29.152 #ece6d8 Space Grotesk 12
+clip 101.9375,0 672.2438x50 r 0
 pop
-text "✕ deploys: init.lua:64: oriel.http.get isn't available until network approvals" @788.1813,10.2 #ff5f6d JetBrains Mono 10
-text "INBOX" @1288.1813,13.710001 #b3ab99 JetBrains Mono 10.5
-rect 1339.15,0 46.849976x18.539999 radius 4 stroke 1 #332f27
-text "⌥ HUD" @1346.15,12.69 #b3ab99 JetBrains Mono 9.5
-rect 0,38 44x847.48 fill #0c0c0b
-clip 0,38 43x847.48 r 0
-  text "»" @17.601562,57.356 #7c7566 JetBrains Mono 12.1
+text "✕ deploys: init.lua:64: oriel.http.get isn't available until network approvals" @788.1813,25.27 #ff5f6d JetBrains Mono 10
+text "INBOX" @1288.1813,28.779999 #b3ab99 JetBrains Mono 10.5
+rect 1339.15,15.07 46.849976x18.54 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1346.15,27.759998 #b3ab99 JetBrains Mono 9.5
+rect 0,50 44x835.48 fill #0c0c0b
+clip 0,50 43x835.48 r 0
+  text "»" @17.601562,69.356 #7c7566 JetBrains Mono 12.1
   path 7 segments stroke 1.4545455 #7c7566
   path 6 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -35,7 +34,7 @@ clip 0,38 43x847.48 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
-  rect 9.5,242 24x1 fill #332f27
+  rect 9.5,254 24x1 fill #332f27
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
@@ -89,8 +88,8 @@ clip 0,38 43x847.48 r 0
   path 2 segments stroke 1.4545455 #7c7566
   path 2 segments stroke 1.4545455 #7c7566
 pop
-rect 43,38 1x847.48 fill #24221d
-rect 44,38 1356x847.48 fill #060606
+rect 43,50 1x835.48 fill #24221d
+rect 44,50 1356x835.48 fill #060606
 rect 44,625.48 716x260 fill #0c0c0b
 clip 44,625.48 716x260 r 0
   rect 44,625.48 716x30 fill #0c0c0b
@@ -119,246 +118,246 @@ clip 44,625.48 716x260 r 0
     text "tool" @68,861.88 #7c7566 JetBrains Mono 12
   pop
 pop
-rect 760,38 640x847.48 fill #0c0c0b
-clip 760,38 640x847.48 r 0
-  rect 760,38 640x30 fill #0c0c0b
-  text "HOOKS" @774,57.600002 #7c7566 JetBrains Mono 10
-  text "✕" @1380.7031,57.96 #7c7566 JetBrains Mono 11
-  rect 760,68 640x1 fill #24221d
-  clip 760,69 640x816.48 r 0
-    clip 770,79 620x796.48 r 0
-      text ":HOOKS" @784,99.2 #ffd23f JetBrains Mono 10
-      text "27 hooks · 12 events" @830,99.71 #7c7566 JetBrains Mono 10.5
-      text "EVENT" @784,118.55 #7c7566 JetBrains Mono 9.5
-      text "HOOK" @932,118.55 #7c7566 JetBrains Mono 9.5
-      text "KIND" @1110,118.55 #7c7566 JetBrains Mono 9.5
-      text "SOURCE" @1198,118.55 #7c7566 JetBrains Mono 9.5
-      text "P99" @1406,118.55 #7c7566 JetBrains Mono 9.5
-      text "BufRead" @784,143.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,131.81 170x15.179993 r 0
-        text "files outside the sess…" @932,143.54 #b3ab99 JetBrains Mono 11.5
+rect 760,50 640x835.48 fill #0c0c0b
+clip 760,50 640x835.48 r 0
+  rect 760,50 640x30 fill #0c0c0b
+  text "HOOKS" @774,69.6 #7c7566 JetBrains Mono 10
+  text "✕" @1380.7031,69.96 #7c7566 JetBrains Mono 11
+  rect 760,80 640x1 fill #24221d
+  clip 760,81 640x804.48 r 0
+    clip 770,91 620x784.48 r 0
+      text ":HOOKS" @784,111.2 #ffd23f JetBrains Mono 10
+      text "27 hooks · 12 events" @830,111.71 #7c7566 JetBrains Mono 10.5
+      text "EVENT" @784,130.55 #7c7566 JetBrains Mono 9.5
+      text "HOOK" @932,130.55 #7c7566 JetBrains Mono 9.5
+      text "KIND" @1110,130.55 #7c7566 JetBrains Mono 9.5
+      text "SOURCE" @1198,130.55 #7c7566 JetBrains Mono 9.5
+      text "P99" @1406,130.55 #7c7566 JetBrains Mono 9.5
+      text "BufRead" @784,155.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,143.81 170x15.179993 r 0
+        text "files outside the sess…" @932,155.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "REWRITE" @1110,142.82 #b98aff JetBrains Mono 9.5
-      clip 1198,132.14 200x14.520004 r 0
-        text "builtin:sessions" @1198,143.36 #ffd23f JetBrains Mono 11
+      text "REWRITE" @1110,154.81999 #b98aff JetBrains Mono 9.5
+      clip 1198,144.14 200x14.520004 r 0
+        text "builtin:sessions" @1198,155.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,143.36 #4f4a40 JetBrains Mono 11
-      text "BufWritePost" @784,173.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,161.81 170x15.179993 r 0
-        text "tell the language serv…" @932,173.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,155.36 #4f4a40 JetBrains Mono 11
+      text "BufWritePost" @784,185.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,173.81 170x15.179993 r 0
+        text "tell the language serv…" @932,185.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,172.81999 #b98aff JetBrains Mono 9.5
-      clip 1198,162.14 200x14.520004 r 0
-        text "builtin:lsp" @1198,173.36 #ffd23f JetBrains Mono 11
+      text "—" @1110,184.81999 #b98aff JetBrains Mono 9.5
+      clip 1198,174.14 200x14.520004 r 0
+        text "builtin:lsp" @1198,185.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,173.36 #4f4a40 JetBrains Mono 11
-      text "BufWritePost" @784,203.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,191.81 170x15.179993 r 0
-        text "send the prompts to th…" @932,203.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,185.36 #4f4a40 JetBrains Mono 11
+      text "BufWritePost" @784,215.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,203.81 170x15.179993 r 0
+        text "send the prompts to th…" @932,215.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,202.81999 #b98aff JetBrains Mono 9.5
-      clip 1198,192.14 200x14.520004 r 0
-        text "builtin:prompts" @1198,203.36 #ffd23f JetBrains Mono 11
+      text "—" @1110,214.81999 #b98aff JetBrains Mono 9.5
+      clip 1198,204.14 200x14.520004 r 0
+        text "builtin:prompts" @1198,215.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,203.36 #4f4a40 JetBrains Mono 11
-      text "BufWritePre" @784,233.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,221.81 170x15.179993 r 0
-        text "—" @932,233.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,215.36 #4f4a40 JetBrains Mono 11
+      text "BufWritePre" @784,245.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,233.81 170x15.179993 r 0
+        text "—" @932,245.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,232.81999 #b98aff JetBrains Mono 9.5
-      clip 1198,222.14 200x14.520004 r 0
-        text "init.lua:21" @1198,233.36 #ffd23f JetBrains Mono 11
+      text "—" @1110,244.81999 #b98aff JetBrains Mono 9.5
+      clip 1198,234.14 200x14.520004 r 0
+        text "init.lua:21" @1198,245.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,233.36 #4f4a40 JetBrains Mono 11
-      text "CommentSend" @784,263.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,251.81 170x15.179993 r 0
-        text "—" @932,263.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,245.36 #4f4a40 JetBrains Mono 11
+      text "CommentSend" @784,275.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,263.81 170x15.179993 r 0
+        text "—" @932,275.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,262.81998 #b98aff JetBrains Mono 9.5
-      clip 1198,252.14 200x14.520004 r 0
-        text "init.lua:29" @1198,263.36 #ffd23f JetBrains Mono 11
+      text "—" @1110,274.82 #b98aff JetBrains Mono 9.5
+      clip 1198,264.13998 200x14.519989 r 0
+        text "init.lua:29" @1198,275.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,263.36 #4f4a40 JetBrains Mono 11
-      text "Commit" @784,293.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,281.81 170x15.179993 r 0
-        text "—" @932,293.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,275.36 #4f4a40 JetBrains Mono 11
+      text "Commit" @784,305.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,293.81 170x15.179993 r 0
+        text "—" @932,305.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "—" @1110,292.82 #b98aff JetBrains Mono 9.5
-      clip 1198,282.13998 200x14.519989 r 0
-        text "init.lua:23" @1198,293.36 #ffd23f JetBrains Mono 11
+      text "—" @1110,304.82 #b98aff JetBrains Mono 9.5
+      clip 1198,294.13998 200x14.519989 r 0
+        text "init.lua:23" @1198,305.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,293.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,323.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,311.81 170x15.179993 r 0
-        text "the layout kept for th…" @932,323.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,305.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,335.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,323.81 170x15.179993 r 0
+        text "the layout kept for th…" @932,335.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,322.82 #b98aff JetBrains Mono 9.5
-      clip 1198,312.13998 200x14.519989 r 0
-        text "builtin:layout" @1198,323.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,334.82 #b98aff JetBrains Mono 9.5
+      clip 1198,324.13998 200x14.519989 r 0
+        text "builtin:layout" @1198,335.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,323.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,353.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,341.81 170x15.179993 r 0
-        text "git's work tree" @932,353.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,335.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,365.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,353.81 170x15.179993 r 0
+        text "git's work tree" @932,365.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,352.82 #b98aff JetBrains Mono 9.5
-      clip 1198,342.13998 200x14.519989 r 0
-        text "builtin:git" @1198,353.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,364.82 #b98aff JetBrains Mono 9.5
+      clip 1198,354.13998 200x14.519989 r 0
+        text "builtin:git" @1198,365.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,353.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,383.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,371.81 170x15.179993 r 0
-        text "the sidebar kept for t…" @932,383.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,365.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,395.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,383.81 170x15.179993 r 0
+        text "the sidebar kept for t…" @932,395.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,382.82 #b98aff JetBrains Mono 9.5
-      clip 1198,372.13998 200x14.519989 r 0
-        text "builtin:rail" @1198,383.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,394.82 #b98aff JetBrains Mono 9.5
+      clip 1198,384.13998 200x14.519989 r 0
+        text "builtin:rail" @1198,395.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,383.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,413.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,401.81 170x15.179993 r 0
-        text "the sidebar's selectio…" @932,413.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,395.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,425.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,413.81 170x15.179993 r 0
+        text "the sidebar's selectio…" @932,425.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,412.82 #b98aff JetBrains Mono 9.5
-      clip 1198,402.13998 200x14.519989 r 0
-        text "builtin:rail" @1198,413.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,424.82 #b98aff JetBrains Mono 9.5
+      clip 1198,414.13998 200x14.519989 r 0
+        text "builtin:rail" @1198,425.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,413.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,443.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,431.81 170x15.179993 r 0
-        text "the explorer's selecti…" @932,443.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,425.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,455.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,443.81 170x15.179993 r 0
+        text "the explorer's selecti…" @932,455.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,442.82 #b98aff JetBrains Mono 9.5
-      clip 1198,432.13998 200x14.519989 r 0
-        text "builtin:explorer" @1198,443.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,454.82 #b98aff JetBrains Mono 9.5
+      clip 1198,444.13998 200x14.519989 r 0
+        text "builtin:explorer" @1198,455.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,443.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,473.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,461.81 170x15.179993 r 0
-        text "the editor's directory" @932,473.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,455.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,485.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,473.81 170x15.179993 r 0
+        text "the editor's directory" @932,485.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,472.82 #b98aff JetBrains Mono 9.5
-      clip 1198,462.13998 200x14.519989 r 0
-        text "builtin:editor" @1198,473.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,484.82 #b98aff JetBrains Mono 9.5
+      clip 1198,474.13998 200x14.519989 r 0
+        text "builtin:editor" @1198,485.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,473.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,503.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,491.81 170x15.179993 r 0
-        text "search starts afresh i…" @932,503.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,485.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,515.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,503.81 170x15.179993 r 0
+        text "search starts afresh i…" @932,515.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,502.82 #b98aff JetBrains Mono 9.5
-      clip 1198,492.13998 200x14.519989 r 0
-        text "builtin:search" @1198,503.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,514.82 #b98aff JetBrains Mono 9.5
+      clip 1198,504.13998 200x14.519989 r 0
+        text "builtin:search" @1198,515.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,503.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,533.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,521.81 170x15.179993 r 0
-        text "language servers for t…" @932,533.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,515.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,545.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,533.81 170x15.179993 r 0
+        text "language servers for t…" @932,545.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,532.82 #b98aff JetBrains Mono 9.5
-      clip 1198,522.14 200x14.52002 r 0
-        text "builtin:lsp" @1198,533.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,544.82 #b98aff JetBrains Mono 9.5
+      clip 1198,534.14 200x14.52002 r 0
+        text "builtin:lsp" @1198,545.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,533.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,563.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,551.81 170x15.179993 r 0
-        text "a walkthrough is of it…" @932,563.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,545.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,575.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,563.81 170x15.179993 r 0
+        text "a walkthrough is of it…" @932,575.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,562.82 #b98aff JetBrains Mono 9.5
-      clip 1198,552.14 200x14.52002 r 0
-        text "builtin:explain.change" @1198,563.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,574.82 #b98aff JetBrains Mono 9.5
+      clip 1198,564.14 200x14.52002 r 0
+        text "builtin:explain.change" @1198,575.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,563.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,593.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,581.81 170x15.179993 r 0
-        text "the terminal screens k…" @932,593.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,575.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,605.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,593.81 170x15.179993 r 0
+        text "the terminal screens k…" @932,605.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,592.82 #b98aff JetBrains Mono 9.5
-      clip 1198,582.14 200x14.52002 r 0
-        text "builtin:terminal" @1198,593.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,604.82 #b98aff JetBrains Mono 9.5
+      clip 1198,594.14 200x14.52002 r 0
+        text "builtin:terminal" @1198,605.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,593.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,623.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,611.81 170x15.179993 r 0
-        text "the project settings o…" @932,623.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,605.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,635.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,623.81 170x15.179993 r 0
+        text "the project settings o…" @932,635.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,622.82 #b98aff JetBrains Mono 9.5
-      clip 1198,612.14 200x14.52002 r 0
-        text "builtin:settings" @1198,623.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,634.82 #b98aff JetBrains Mono 9.5
+      clip 1198,624.14 200x14.52002 r 0
+        text "builtin:settings" @1198,635.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,623.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,653.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,641.81 170x15.179993 r 0
-        text "opens the plan of a pl…" @932,653.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,635.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,665.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,653.81 170x15.179993 r 0
+        text "opens the plan of a pl…" @932,665.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,652.82 #b98aff JetBrains Mono 9.5
-      clip 1198,642.14 200x14.52002 r 0
-        text "builtin:plan" @1198,653.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,664.82 #b98aff JetBrains Mono 9.5
+      clip 1198,654.14 200x14.52002 r 0
+        text "builtin:plan" @1198,665.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,653.36 #4f4a40 JetBrains Mono 11
-      text "DirChanged" @784,683.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,671.81 170x15.179993 r 0
-        text "the project's own plug…" @932,683.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,665.36 #4f4a40 JetBrains Mono 11
+      text "DirChanged" @784,695.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,683.81 170x15.179993 r 0
+        text "the project's own plug…" @932,695.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,682.82 #b98aff JetBrains Mono 9.5
-      clip 1198,672.14 200x14.52002 r 0
-        text "builtin:catalog" @1198,683.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,694.82 #b98aff JetBrains Mono 9.5
+      clip 1198,684.14 200x14.52002 r 0
+        text "builtin:catalog" @1198,695.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,683.36 #4f4a40 JetBrains Mono 11
-      text "Permission" @784,713.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,701.81 170x15.179993 r 0
-        text "—" @932,713.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,695.36 #4f4a40 JetBrains Mono 11
+      text "Permission" @784,725.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,713.81 170x15.179993 r 0
+        text "—" @932,725.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "DECIDE" @1110,712.82 #b98aff JetBrains Mono 9.5
-      clip 1198,702.14 200x14.52002 r 0
-        text "init.lua:34" @1198,713.36 #ffd23f JetBrains Mono 11
+      text "DECIDE" @1110,724.82 #b98aff JetBrains Mono 9.5
+      clip 1198,714.14 200x14.52002 r 0
+        text "init.lua:34" @1198,725.36 #ffd23f JetBrains Mono 11
       pop
-      text "<1ms" @1406,713.36 #b3ab99 JetBrains Mono 11
-      text "PrMerged" @784,743.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,731.81 170x15.179993 r 0
-        text "the ticket's tracker m…" @932,743.54 #b3ab99 JetBrains Mono 11.5
+      text "<1ms" @1406,725.36 #b3ab99 JetBrains Mono 11
+      text "PrMerged" @784,755.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,743.81 170x15.179993 r 0
+        text "the ticket's tracker m…" @932,755.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,742.82 #b98aff JetBrains Mono 9.5
-      clip 1198,732.14 200x14.52002 r 0
-        text "builtin:tickets" @1198,743.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,754.82 #b98aff JetBrains Mono 9.5
+      clip 1198,744.14 200x14.52002 r 0
+        text "builtin:tickets" @1198,755.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,743.36 #4f4a40 JetBrains Mono 11
-      text "PrMerged" @784,773.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,761.81 170x15.179993 r 0
-        text "archive the session on…" @932,773.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,755.36 #4f4a40 JetBrains Mono 11
+      text "PrMerged" @784,785.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,773.81 170x15.179993 r 0
+        text "archive the session on…" @932,785.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,772.82 #b98aff JetBrains Mono 9.5
-      clip 1198,762.14 200x14.52002 r 0
-        text "builtin:sessionend" @1198,773.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,784.82 #b98aff JetBrains Mono 9.5
+      clip 1198,774.14 200x14.52002 r 0
+        text "builtin:sessionend" @1198,785.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,773.36 #4f4a40 JetBrains Mono 11
-      text "PrPushed" @784,803.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,791.81 170x15.179993 r 0
-        text "fetch a reviewed PR it…" @932,803.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,785.36 #4f4a40 JetBrains Mono 11
+      text "PrPushed" @784,815.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,803.81 170x15.179993 r 0
+        text "fetch a reviewed PR it…" @932,815.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,802.82 #b98aff JetBrains Mono 9.5
-      clip 1198,792.14 200x14.52002 r 0
-        text "builtin:pr-review" @1198,803.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,814.82 #b98aff JetBrains Mono 9.5
+      clip 1198,804.14 200x14.52002 r 0
+        text "builtin:pr-review" @1198,815.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,803.36 #4f4a40 JetBrains Mono 11
-      text "PrSeen" @784,833.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,821.81 170x15.179993 r 0
-        text "the ticket's tracker l…" @932,833.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,815.36 #4f4a40 JetBrains Mono 11
+      text "PrSeen" @784,845.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,833.81 170x15.179993 r 0
+        text "the ticket's tracker l…" @932,845.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,832.82 #b98aff JetBrains Mono 9.5
-      clip 1198,822.14 200x14.52002 r 0
-        text "builtin:tickets" @1198,833.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,844.82 #b98aff JetBrains Mono 9.5
+      clip 1198,834.14 200x14.52002 r 0
+        text "builtin:tickets" @1198,845.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,833.36 #4f4a40 JetBrains Mono 11
-      text "SessionStart" @784,863.54 #ece6d8 JetBrains Mono 11.5
-      clip 932,851.81 170x15.179993 r 0
-        text "the ticket's tracker m…" @932,863.54 #b3ab99 JetBrains Mono 11.5
+      text "—" @1406,845.36 #4f4a40 JetBrains Mono 11
+      text "SessionStart" @784,875.54 #ece6d8 JetBrains Mono 11.5
+      clip 932,863.81 170x15.179993 r 0
+        text "the ticket's tracker m…" @932,875.54 #b3ab99 JetBrains Mono 11.5
       pop
-      text "OBSERVE" @1110,862.82 #b98aff JetBrains Mono 9.5
-      clip 1198,852.14 200x14.52002 r 0
-        text "builtin:tickets" @1198,863.36 #ffd23f JetBrains Mono 11
+      text "OBSERVE" @1110,874.82 #b98aff JetBrains Mono 9.5
+      clip 1198,864.14 200x14.52002 r 0
+        text "builtin:tickets" @1198,875.36 #ffd23f JetBrains Mono 11
       pop
-      text "—" @1406,863.36 #4f4a40 JetBrains Mono 11
+      text "—" @1406,875.36 #4f4a40 JetBrains Mono 11
     pop
   pop
 pop
