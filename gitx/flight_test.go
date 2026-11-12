@@ -227,3 +227,29 @@ func TestFingerprintFollowsTheCode(t *testing.T) {
 		t.Errorf("a clean tree after the commit fingerprints %s, want %s", fp("HEAD"), clean)
 	}
 }
+
+// A repo with no commits yet (just git init, files written) is on its branch all the same: Branch names it, and
+// Flight reads it with everything in it uncommitted, rather than failing on a HEAD with nothing to point at.
+func TestARepoWithNoCommitsYetIsOnItsBranch(t *testing.T) {
+	gittest.Isolate(t)
+	g := gittest.New(t)
+	g.Write(map[string]string{"main.go": "package main\n"})
+	r := gitx.Repo{Dir: g.Dir}
+	ctx := context.Background()
+	if b, err := r.Branch(ctx); err != nil || b != "main" {
+		t.Fatalf("Branch = %q, %v; want main", b, err)
+	}
+	f, err := r.Flight(ctx, "")
+	if err != nil {
+		t.Fatalf("Flight: %v", err)
+	}
+	if f.Branch != "main" || !slices.ContainsFunc(f.Uncommitted, func(fs gitx.FileState) bool { return fs.Path == "main.go" }) {
+		t.Errorf("flight on %q with uncommitted %+v, want main.go on main", f.Branch, f.Uncommitted)
+	}
+	// Detached, it's still "HEAD", as it was.
+	g.Commit("Ada", "first")
+	g.Git("checkout", "-q", "--detach")
+	if b, err := r.Branch(ctx); err != nil || b != "HEAD" {
+		t.Errorf("detached: Branch = %q, %v; want HEAD", b, err)
+	}
+}
