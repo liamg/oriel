@@ -20,8 +20,9 @@ import (
 
 // Utility agents: an agent with no session, started through
 // its provider like any other (Claude in its PTY with the mod), in a folder of Oriel's, on a small model, offered
-// only the app's tools for it. It reads; every permission it asks for is refused but the provider tools it's
-// allowed, and nobody answers its questions. The caller holds a *Utility while it wants it: the agent stops at
+// only the app's tools for it. It reads: its gate never asks (agent.PolicyRefuse), refusing all but the app's
+// tools and the provider tools it's allowed; nobody answers its questions, and a dialog its terminal shows is
+// cancelled. The caller holds a *Utility while it wants it: the agent stops at
 // its Close.
 
 // UtilitySpec is a utility agent to start.
@@ -106,7 +107,11 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	sess, err := p.Start(ctx, agent.StartSpec{Cwd: dir, Model: model, Policy: agent.PolicyAsk, Exec: x.deps.Exec(),
+	if spec.Web {
+		spec.Allow = append(slices.Clone(spec.Allow), agent.WebToolsOf(p)...)
+	}
+	// It only reads, and nobody is there to ask: its gate never asks, and refuses what isn't allowed ahead.
+	sess, err := p.Start(ctx, agent.StartSpec{Cwd: dir, Model: model, Policy: agent.PolicyRefuse, Allow: spec.Allow, Exec: x.deps.Exec(),
 		Pack:     agent.Pack{Name: spec.Name, Skill: spec.Name, Text: spec.Pack},
 		Prompt:   spec.Prompt,
 		Tools:    x.deps.Tools(hostcore.ToolsReq{Agent: spec.Name}),
@@ -127,9 +132,6 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 		delete(x.runs, id)
 		x.mu.Unlock()
 	}()
-	if spec.Web {
-		spec.Allow = append(slices.Clone(spec.Allow), agent.WebToolsOf(p)...)
-	}
 	if err := send(UtilityEvent{Type: "ready", ID: id, Provider: p.ID(), Model: model}); err != nil {
 		return err
 	}
@@ -179,6 +181,13 @@ func utilityEvent(ctx context.Context, sess agent.Session, spec UtilitySpec, ev 
 			d = agent.Decision{Allow: true}
 		}
 		_ = sess.Answer(ctx, ev.ID, d)
+	case agent.Dialog:
+		// A dialog in its terminal waits on a key nobody will press: it's cancelled, as its Esc does.
+		if ev.Shown {
+			if t := sess.Terminal(); t != nil {
+				_, _ = t.Write([]byte{0x1b})
+			}
+		}
 	case agent.Question:
 		_ = sess.Answer(ctx, ev.ID, agent.Decision{Note: "Nobody answers questions here: ask in your answer instead, and end the turn."})
 	case agent.TurnEnd:

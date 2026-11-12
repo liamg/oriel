@@ -156,7 +156,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 	s.TypeInto("Ask the assistant", "what needs me?")
 	s.Press("<CR>")
 	ua := lw.Fake.WaitStarted(t)
-	if ua.Spec.Pack.Skill != "assistant" || !strings.Contains(ua.Spec.Pack.Text, "Oriel's assistant") || ua.Spec.Policy != agent.PolicyAsk {
+	if ua.Spec.Pack.Skill != "assistant" || !strings.Contains(ua.Spec.Pack.Text, "Oriel's assistant") || ua.Spec.Policy != agent.PolicyRefuse {
 		t.Errorf("the utility agent: %+v", ua.Spec.Pack)
 	}
 	if !regexp.MustCompile(`^\[\w{3} \d+ \w{3} \d\d:\d\d, typed\] what needs me\?$`).MatchString(ua.Spec.Prompt) {

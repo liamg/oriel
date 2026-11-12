@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,17 +29,20 @@ var passEnv = []string{
 	"BASH_MAX_OUTPUT_LENGTH",
 }
 
-// skipEnv is what a Claude Code session sets for its own processes, which the defaults leave out: Oriel started
-// from inside one isn't that session's child. The sandbox's sign-in is Oriel's to hand over.
-var skipEnv = []string{
+// ParentSession is what a Claude Code session sets for its own processes, as patterns: Oriel started from inside one
+// isn't that session's child, and nor is a claude Oriel starts.
+var ParentSession = []string{
+	"CLAUDECODE",
 	"CLAUDE_CODE_ENTRYPOINT",
 	"CLAUDE_CODE_EXECPATH",
 	"CLAUDE_CODE_SSE_PORT",
 	"CLAUDE_CODE_CHILD_SESSION",
 	"CLAUDE_CODE_SESSION_*",
 	"CLAUDE_CODE_MESSAGING_*",
-	"CLAUDE_CODE_OAUTH_TOKEN",
 }
+
+// skipEnv is what the defaults leave out: a parent session's own, and the sign-in, which is Oriel's to hand over.
+var skipEnv = append(slices.Clone(ParentSession), "CLAUDE_CODE_OAUTH_TOKEN")
 
 // urlEnv are the model endpoints, whose localhost means the host.
 var urlEnv = []string{"ANTHROPIC_BASE_URL", "ANTHROPIC_BEDROCK_BASE_URL", "ANTHROPIC_VERTEX_BASE_URL"}

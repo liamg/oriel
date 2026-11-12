@@ -339,6 +339,8 @@ func TestRateLimits(t *testing.T) {
 //
 // ref:   codex/codex-rs/protocol/src/protocol.rs
 // quote: "Internal policy for projects marked untrusted. Commands require"
+// ref:   codex/codex-rs/protocol/src/protocol.rs
+// quote: "Never ask the user to approve commands. Failures are immediately returned"
 func TestGate(t *testing.T) {
 	for _, tc := range []struct {
 		policy            agent.Policy
@@ -353,6 +355,9 @@ func TestGate(t *testing.T) {
 		{agent.PolicyBypass, true, "never", "danger-full-access", false},
 		{agent.PolicyLight, true, "never", "danger-full-access", false},
 		{agent.PolicyAsk, true, "never", "danger-full-access", false},
+		// Refuse never asks and only reads, sandboxed or not.
+		{agent.PolicyRefuse, false, "never", "read-only", false},
+		{agent.PolicyRefuse, true, "never", "read-only", false},
 	} {
 		s := agent.StartSpec{Policy: tc.policy}
 		if tc.sandboxed {

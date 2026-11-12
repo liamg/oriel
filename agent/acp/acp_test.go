@@ -236,3 +236,26 @@ func TestPermissionOptions(t *testing.T) {
 		}
 	}
 }
+
+// ref:   acp/docs/tool-calls.mdx#Permission Options
+// quote: "`reject_once` - Reject this operation only this time"
+// Refuse asks no one either: what it doesn't allow ahead is rejected at once, what it does goes ahead.
+func TestRefuseAsksNobody(t *testing.T) {
+	for _, allow := range []bool{false, true} {
+		s := start(t, agent.StartSpec{})
+		s.S.(*session).spec.Policy = agent.PolicyRefuse
+		if allow {
+			s.S.(*session).spec.Allow = []string{"Bash"}
+		}
+		s.Send("run a command")
+		got := s.Reply()
+		if want := map[bool]string{false: "denied", true: "ran: ok"}[allow]; !strings.Contains(got, want) {
+			t.Errorf("allowed %v: %q, want %q", allow, got, want)
+		}
+		for _, ev := range s.Events {
+			if _, ok := ev.(agent.Permission); ok {
+				t.Errorf("allowed %v: refuse asked", allow)
+			}
+		}
+	}
+}

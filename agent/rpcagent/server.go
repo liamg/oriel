@@ -327,7 +327,7 @@ func (s *server) start(_ context.Context, p agent.Provider, sp startParams) (any
 		x.cleanup()
 		return nil, err
 	}
-	spec := agent.StartSpec{Cwd: w.Cwd, Model: w.Model, Effort: w.Effort, Prompt: w.Prompt, Policy: w.Policy, Mode: w.Mode, Protect: w.Protect,
+	spec := agent.StartSpec{Cwd: w.Cwd, Model: w.Model, Effort: w.Effort, Prompt: w.Prompt, Policy: w.Policy, Allow: w.Allow, Mode: w.Mode, Protect: w.Protect,
 		Env: w.Env, StateDir: w.StateDir, Memory: w.Memory, NoMCP: w.NoMCP, Exec: remoteExec{srv: s, session: sp.Session},
 		Pack: agent.Pack{Name: w.Pack.Name, Skill: w.Pack.Skill, Text: w.Pack.Text, Tools: w.Pack.Tools}}
 	for _, t := range w.Tools {

@@ -216,6 +216,9 @@ type StartSpec struct {
 	// Unattended is an agent nobody watches: a permission or question nobody answers soon is refused with a reason,
 	// and its own terminal never opens a dialog to wait on someone at it.
 	Unattended bool
+	// Allow are the provider's own tools that go ahead without asking (WebSearch): under PolicyRefuse, the only
+	// ones besides Oriel's and those its gate never asks about.
+	Allow []string
 }
 
 // Offered are the tools offered to the agent now.
@@ -246,6 +249,7 @@ const (
 	PolicyLight  Policy = "light"  // edits go ahead, shell commands ask
 	PolicyBypass Policy = "bypass" // nothing asks: only inside a sandbox
 	PolicyAuto   Policy = "auto"   // the agent's own judgement asks only of what's risky (Claude's auto mode); light elsewhere
+	PolicyRefuse Policy = "refuse" // nothing asks: what isn't allowed ahead (Oriel's tools, Allow) is refused at once
 )
 
 // HookSocketEnv names the unix socket a provider's agent calls back to it over (hooks, its MCP tools). A sandbox
