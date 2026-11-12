@@ -67,6 +67,11 @@ type Inbox struct {
 	sel       string // the panel's selected row, its card open under it
 	list      kit.Scroll
 	panelLeft float32 // where the Inbox panel's left edge was last drawn, so the stack sits beside it
+
+	front    core.SessionID // the session in front as the overlay last saw it
+	frontAt  time.Time      // when it came to the front, on the UI's clock
+	promptUp time.Time      // when a prompt was last up, on the UI's clock
+	prompted string         // the prompt up in the last frame, by key; "" for none
 }
 
 // inboxRow is a card as the inbox last had it, and whether its source has let it go (answered: history now).
@@ -80,6 +85,9 @@ type inboxRow struct {
 // typingPause is how long typing must stop before a card goes over the window, so it doesn't cover the text being
 // written or catch a key meant for it.
 const typingPause = 1200 * time.Millisecond
+
+// PromptPauseOption is how long no key must go down before a Prompt card comes up.
+const PromptPauseOption = "inbox.prompt_pause"
 
 func (r *inboxRow) waiting() bool { return !r.gone && !r.card.Done }
 
@@ -108,6 +116,14 @@ func (x *Inbox) Activate(_ context.Context, h plugin.Host) error {
 		return &ui.Func{Key: "inbox", Fn: x.overlay}
 	})))
 	x.Add(h.Contribute(registry.Service{Name: kit.InboxService, Impl: inboxService{x}, Source: "builtin:inbox"}))
+	x.Add(h.Option(registry.OptionSpec{Name: PromptPauseOption, Type: registry.Duration, Default: 3 * time.Second, Scopes: registry.ScopeUser,
+		Validate: func(v any) error {
+			if v.(time.Duration) < 0 {
+				return fmt.Errorf("a pause can't be negative")
+			}
+			return nil
+		},
+		Help: "How long no key must go down before a prompt (an agent's permission) comes up in the middle of the window, so it never takes a key meant for what you're typing. 0 shows it at once."}))
 	x.Add(h.Contribute(uireg.Indicator{Name: "inbox", Slot: uireg.SlotTitleBar, Global: true, Order: 80, Help: inboxHelp + "#title-bar",
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "inbox", Fn: x.indicator}, nil }}))
 	return nil
@@ -136,9 +152,14 @@ func (x *Inbox) commands() []registry.Command {
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "view.toggle", open)
 			}},
-		{ID: "inbox.dismiss", Title: "Take a card off the stack over the window: {id} (source/id), or the top one; it waits on in the Inbox panel",
+		{ID: "inbox.dismiss", Title: "Take a card off the window: {id} (source/id), or the prompt up, or the top of the stack; it waits on in the Inbox panel",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := a.String("id")
+				if id == "" {
+					x.mu.Lock()
+					id = x.prompted
+					x.mu.Unlock()
+				}
 				if id == "" {
 					if st := x.stacked(); len(st) > 0 {
 						id = st[0].card.Key()
@@ -201,11 +222,12 @@ func (x *Inbox) gather() []*inboxRow {
 	return out
 }
 
-// stacked are the cards over the window: waiting, to interrupt, not dismissed; banner ones first.
+// stacked are the cards over the window: waiting, to interrupt, not dismissed; banner ones first. Prompts aren't
+// stacked: they come up one at a time (prompt).
 func (x *Inbox) stacked() []*inboxRow {
 	var out []*inboxRow
 	for _, r := range x.gather() {
-		if r.waiting() && (r.card.Interrupt || r.card.Banner) && !x.isDismissed(r.card.Key()) && (r.card.Banner || !x.isInline(r.card.Key())) {
+		if r.waiting() && !r.card.Prompt && (r.card.Interrupt || r.card.Banner) && !x.isDismissed(r.card.Key()) && (r.card.Banner || !x.isInline(r.card.Key())) {
 			out = append(out, r)
 		}
 	}
@@ -282,7 +304,10 @@ func (s inboxService) Waiting() []kit.WaitingCard {
 }
 
 func (s inboxService) Count(session string) (int, string) { return s.x.Count(session) }
-func (s inboxService) ShowInline(keys map[string]bool)    { s.x.showInline(keys) }
+func (s inboxService) Calling(session string) (string, string, bool) {
+	return s.x.Calling(session)
+}
+func (s inboxService) ShowInline(keys map[string]bool) { s.x.showInline(keys) }
 func (s inboxService) Card(c *ui.Ctx, card uireg.InboxCard) {
 	s.x.card(c, &inboxRow{card: card}, false)
 }
@@ -298,6 +323,83 @@ func (x *Inbox) Count(session string) (n int, tone string) {
 		}
 	}
 	return n, tone
+}
+
+// Calling says a Prompt card waits in session while another is in front: the newest's key, and its tone.
+func (x *Inbox) Calling(session string) (key, tone string, ok bool) {
+	if session == "" || core.SessionID(session) == x.h.State().Focus {
+		return "", "", false
+	}
+	for _, r := range x.gather() {
+		if r.waiting() && r.card.Prompt && r.card.Session == session {
+			key, tone, ok = r.card.Key(), r.card.Tone, true
+		}
+	}
+	return key, tone, ok
+}
+
+// prompt is the Prompt card up in the middle of the window now, if any: the first waiting for the session in front
+// (or none), not put off, once no key has gone down for the pause; at once if none has since the session came to
+// the front or a prompt was last up, as the keys that answered that one were its, not typing. Coming to the front
+// brings back the session's prompts that were put off.
+func (x *Inbox) prompt(c *ui.Ctx) *inboxRow {
+	now := c.Now()
+	focus := x.h.State().Focus
+	rows := x.gather()
+	x.mu.Lock()
+	if focus != x.front {
+		x.front, x.frontAt = focus, now
+		for _, r := range rows {
+			if r.card.Prompt && r.card.Session == string(focus) {
+				delete(x.dismissed, r.card.Key())
+			}
+		}
+	}
+	frontAt, promptUp := x.frontAt, x.promptUp
+	var next *inboxRow
+	for _, r := range rows {
+		if !r.waiting() || !r.card.Prompt || x.dismissed[r.card.Key()] || r.card.Session != "" && r.card.Session != string(focus) {
+			continue
+		}
+		if next == nil || !r.shown.IsZero() && next.shown.IsZero() {
+			next = r
+		}
+	}
+	x.prompted = ""
+	x.mu.Unlock()
+	if next == nil {
+		return nil
+	}
+	if next.shown.IsZero() {
+		last, pause := c.LastKey(), x.promptPause()
+		if !last.IsZero() && last.After(frontAt) && last.After(promptUp) && now.Sub(last) < pause {
+			c.WakeAt(last.Add(pause))
+			return nil
+		}
+		next.shown = now
+	}
+	x.mu.Lock()
+	x.promptUp, x.prompted = now, next.card.Key()
+	x.mu.Unlock()
+	return next
+}
+
+func (x *Inbox) promptPause() time.Duration {
+	v, _, _ := x.h.Options().Get(PromptPauseOption, registry.At{})
+	d, _ := v.(time.Duration)
+	return d
+}
+
+// promptDialog draws a Prompt card in the middle of the window over a scrim, its keys answering it; closing it puts
+// it off.
+func (x *Inbox) promptDialog(c *ui.Ctx, r *inboxRow) {
+	k := r.card.Key()
+	place := uireg.CardPlace{Stacked: true, TakeFocus: true, Dismiss: func() { x.dismiss(k) }}
+	if widget.Dialog(c, "prompt", widget.DialogOpts{Label: cmp.Or(r.card.Title, r.card.Kicker), Help: inboxHelp + "#prompts"}, func(c *ui.Ctx) {
+		c.Box(k, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.draw(c, r, place) })
+	}) {
+		x.dismiss(k)
+	}
 }
 
 // waitingCount is how many cards wait, in every session and none.
@@ -325,10 +427,6 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 		r.shown = c.Now()
 		return false
 	})
-	if len(all) == 0 {
-		return
-	}
-	th := c.Theme()
 	var banner, stack, dialog []*inboxRow
 	for _, r := range all {
 		if r.card.Dialog {
@@ -349,11 +447,17 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 		})
 	}
 	if len(dialog) > 0 {
+		x.mu.Lock()
+		x.prompted = ""
+		x.mu.Unlock()
 		x.dialog(c, dialog[0])
+	} else if p := x.prompt(c); p != nil {
+		x.promptDialog(c, p)
 	}
 	if len(stack) == 0 {
 		return
 	}
+	th := c.Theme()
 	corner := widget.AreaFloat(c, widget.AreaMain, render.Point{X: 1, Y: 1}, render.Point{X: 1, Y: 1}, render.Point{X: -16, Y: -10})
 	if x.panelShown() {
 		x.mu.Lock()
@@ -400,16 +504,19 @@ func (x *Inbox) card(c *ui.Ctx, r *inboxRow, stacked bool) {
 	if stacked {
 		p.Dismiss = func() { x.dismiss(k) }
 	}
-	c.Box(k, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-		if r.card.Draw != nil {
-			draw := r.card.Draw
-			if err := registry.Call(func() error { draw(c, "card", p); return nil }); err != nil {
-				c.Text("err", r.card.Title+": "+err.Error(), kit.MonoFont(10, c.Theme().C(theme.Error)))
-			}
-			return
+	c.Box(k, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { x.draw(c, r, p) })
+}
+
+// draw draws a row's card where p says: its own Draw, or its face.
+func (x *Inbox) draw(c *ui.Ctx, r *inboxRow, p uireg.CardPlace) {
+	if r.card.Draw != nil {
+		draw := r.card.Draw
+		if err := registry.Call(func() error { draw(c, "card", p); return nil }); err != nil {
+			c.Text("err", r.card.Title+": "+err.Error(), kit.MonoFont(10, c.Theme().C(theme.Error)))
 		}
-		x.face(c, r.card, p)
-	})
+		return
+	}
+	x.face(c, r.card, p)
 }
 
 // face is a card with no Draw of its own: its fields in an action card, its actions running their commands.

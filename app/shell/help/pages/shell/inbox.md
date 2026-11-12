@@ -50,6 +50,20 @@ A question that confirms something you just did (**Merge into main…**, discard
 of the window, not a card in the stack. Its buttons answer it; Escape or a click outside cancels it. A notice asks
 this way when it sets `Confirm`; an inbox card when it sets `Dialog`.
 
+## Prompts {#prompts}
+
+An agent's permission is a prompt: it comes up in the middle of the window over a dimmed background, holding the
+keys, so its keys (`y`, `a`, `n`…) answer it. It waits until no key has gone down for three seconds
+(`inbox.prompt_pause`), so it never takes a key meant for what you're typing; if you've already stopped, it comes up
+at once. Prompts come one at a time, in the order they came: once one is answered, here or anywhere else, or the agent
+withdraws it, the next comes up straight away. Only the session in front prompts. A prompt in a session behind
+waits, and that session's tab calls for you: it pulses in the prompt's colour a few times, then stays lit until you
+go to it ([Session tabs](shell/tabs)), and going to it brings the prompt up at once. Escape, its ✕ or a click
+outside puts a prompt off: it waits on in the Inbox panel and the agent console, and comes up again the next time
+its session comes to the front. A card is a prompt when it sets `Prompt`.
+
+{{options "inbox"}}
+
 ## Adding cards {#plugins}
 
 Cards come from inbox sources (`uireg.InboxSource`): the asks of every session are one; a plugin adds its own with

@@ -289,6 +289,30 @@ func TestLuaInboxCards(t *testing.T) {
 	s.Node("Deploy api to prod? (answered)")
 }
 
+// A Lua plugin's card with prompt comes up in the middle of the window, as an agent's permission does, and its action
+// answers it.
+func TestLuaPromptCards(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	var deployed []string
+	s.Registry().Command(registry.Command{ID: "deploy.approve", Run: func(_ registry.Ctx, a registry.Args) error {
+		deployed = append(deployed, a.String("env"))
+		return nil
+	}})
+	s.Lua(`L.inbox.add({ id = "d1", type = "deploy", title = "Deploy api to prod?", prompt = true,
+		actions = { { label = "Approve", key = "y", primary = true, command = "deploy.approve", args = { env = "prod" } } } })`)
+	s.Frame()
+	s.Frame()
+	s.NodeRole(render.RoleDialog, "Deploy api to prod?")
+	s.ClickTop("Approve")
+	s.Frame()
+	if len(deployed) != 1 || deployed[0] != "prod" {
+		t.Fatalf("Approve ran deploy.approve with %v", deployed)
+	}
+	if s.FindRole(render.RoleDialog, "Deploy api to prod?") != nil {
+		t.Error("the answered prompt is still up")
+	}
+}
+
 // A notice that asks something (a question) is an inbox card, whoever sent it: stacked while it
 // waits, answered by its actions, then history. One that only tells stays a toast.
 func TestNoticesThatAskAreInboxCards(t *testing.T) {

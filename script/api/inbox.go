@@ -16,7 +16,7 @@ import (
 //oriel:api name=inbox cap=ui
 type Inbox struct{ a *APIs }
 
-//oriel:api doc="Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } } }. An action runs its command or its function and answers the card: it goes to the inbox's history."
+//oriel:api doc="Adds a card to the inbox, or replaces the one with its id: { id, type, title, sub (its inbox row's second line), group (agents, bus, github or sandbox: its filter), mine, session, icon, tone (a theme token), kicker, detail, code, note, interrupt (stacks over the window while it waits), banner (on its own at the top), prompt (in the middle of the window, one at a time, while its session is in front and once typing pauses; its tab calls for you while it is behind), done (history only), expires (seconds from now: a countdown ring), body (oriel.ui nodes under its text, or fn() returning them: choices, a field to type an answer), actions = { { label, key, primary, command, args, run = fn() } } }. An action runs its command or its function and answers the card: it goes to the inbox's history."
 func (i Inbox) Add(card script.Table, where string) error {
 	c := uireg.InboxCard{ID: str(card, "id"), Type: str(card, "type"), Title: str(card, "title"), Sub: str(card, "sub"), Group: str(card, "group"),
 		Session: str(card, "session"), Icon: str(card, "icon"), Tone: str(card, "tone"), Kicker: str(card, "kicker"), Detail: str(card, "detail"),
@@ -30,6 +30,7 @@ func (i Inbox) Add(card script.Table, where string) error {
 	c.Mine, _ = card["mine"].(bool)
 	c.Interrupt, _ = card["interrupt"].(bool)
 	c.Banner, _ = card["banner"].(bool)
+	c.Prompt, _ = card["prompt"].(bool)
 	c.Done, _ = card["done"].(bool)
 	if s, ok := card["expires"].(float64); ok && s > 0 {
 		c.Expires = c.Created.Add(time.Duration(s * float64(time.Second)))
