@@ -99,6 +99,7 @@ func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.
 		c.Column("center", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			x.slots(c, kit.DiffHeader, st.root, vc.Width)
 			x.body(c, vc, st, gs, root)
+			lineKeys(c, st)
 		})
 		if len(right) > 0 {
 			c.Column("right", ui.Style{W: ui.Px(360), H: ui.Flex(1), Fill: th.C(tDiffFiles)}, func(c *ui.Ctx) {
@@ -676,15 +677,12 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 	me := diffSel{file: at.file, hunk: at.hunk, line: k}
 	sel := st.sel == me
 	fill, edge, word := lineTones(th, l.Op)
-	if sel {
-		fill = th.C(tDiffSelected)
-	}
 	key := lineKey(l)
 	row := c.Next(key)
 	st.ids[me] = row
 	h0, cross := x.rowFit()
-	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Cross: cross, Fill: fill, Role: ui.RoleListItem, Selected: sel,
-		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, func(c *ui.Ctx) {
+	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Cross: cross, Fill: fill,
+		Label: strings.TrimRight(l.Text, "\r\n"), Help: "files/diff#hunks"}, sel, func(c *ui.Ctx) {
 		x.hoverSign(c, row, ds)
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		lineNo(c, "o", l.Old)
@@ -695,9 +693,41 @@ func (x *Diff) unifiedRow(c *ui.Ctx, st *diffState, at diffSel, k int, h diffHun
 			}
 		})
 		diffCode(c, h.spans[k], h.marks[k], word, x.codeFit(st, at.file))
-	}).Clicked {
+	})
+	x.lineClicked(st, me, in)
+}
+
+// lineClicked selects the line a click is on, and opens it in the editor on a double click.
+func (x *Diff) lineClicked(st *diffState, me diffSel, in ui.Interaction) {
+	if in.Clicked || in.DoubleClicked {
 		st.sel = me
 	}
+	if in.DoubleClicked {
+		if err := x.source(st, nil); err != nil {
+			x.h.Log().Warn("diff", "err", err)
+		}
+	}
+}
+
+// lineKeys is the foot of the diff while a line is selected: where it is, and the keys that act on it.
+func lineKeys(c *ui.Ctx, st *diffState) {
+	path, line, _, ok := st.selLine()
+	if !ok || st.sel.line < 0 {
+		return
+	}
+	th := c.Theme()
+	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	c.Row("keys", ui.Style{W: ui.Flex(1), H: ui.Px(26), Gap: 12, Pad: ui.PadXY(14, 0), Cross: ui.Center, Fill: th.C(tDiffFiles), Role: ui.RoleGroup,
+		Label: "Keys for the selected line", Help: "files/diff#keys"}, func(c *ui.Ctx) {
+		rel, err := filepath.Rel(st.root, path)
+		if err != nil {
+			rel = path
+		}
+		c.Text("at", fmt.Sprintf("%s:%d", filepath.ToSlash(rel), line), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+		for i, k := range [][2]string{{"gc", "comment"}, {"ga", "ask"}, {"o", "open"}, {"?", "explain"}} {
+			kit.KeyHint(c, i, k[0], k[1])
+		}
+	})
 }
 
 func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h diffHunk, ds lineDecor) {
@@ -716,7 +746,11 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 	}
 	side := func(c *ui.Ctx, key string, i int, old bool) {
 		if i < 0 {
-			c.Box(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tDiffEmpty)}, nil)
+			fill := th.C(tDiffEmpty)
+			if sel {
+				fill = render.Color{}
+			}
+			c.Box(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: fill}, nil)
 			return
 		}
 		l := h.Lines[i]
@@ -726,7 +760,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		}
 		fill, edge, word := lineTones(th, op)
 		if sel {
-			fill = th.C(tDiffSelected)
+			fill = render.Color{} // the row's selection shows through
 		}
 		_, cross := x.rowFit()
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: cross, Fill: fill, Clip: true}, func(c *ui.Ctx) {
@@ -747,14 +781,12 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		label = strings.TrimRight(h.Lines[k].Text, "\r\n")
 	}
 	h0, _ := x.rowFit()
-	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Role: ui.RoleListItem, Selected: sel, Label: label,
-		Help: "files/diff#hunks"}, func(c *ui.Ctx) {
+	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Label: label, Help: "files/diff#hunks"}, sel, func(c *ui.Ctx) {
 		side(c, "old", p[0], true)
 		c.Box("mid", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
 		side(c, "new", p[1], false)
-	}).Clicked {
-		st.sel = me
-	}
+	})
+	x.lineClicked(st, me, in)
 }
 
 // lineKey is a diff line's row's key: its line in the file (the new side's, or the old side's for a removal) and its

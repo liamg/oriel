@@ -28,8 +28,9 @@ Each file has a header with its path and size, and how many of its hunks are rev
 ## Hunks {#hunks}
 
 Each hunk starts with git's `@@` line and the function, method or type it's in. Removed lines are red and added
-ones green, the words that changed in a changed line marked brighter. A click selects a line; threads open between
-the lines they're about, as in the editor.
+ones green, the words that changed in a changed line marked brighter. A click selects a line: it's filled and edged
+in the accent, and the foot of the diff says where it is and the keys that act on it (`gc` comment, `ga` ask the
+agent, `o` open it in the editor, `?` explain). A double click opens it in the editor. Threads open between the lines they're about, as in the editor.
 
 ## Unchanged lines {#context}
 
