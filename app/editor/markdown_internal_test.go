@@ -99,12 +99,12 @@ func TestMarkdownTables(t *testing.T) {
 			// quote: "The header row must match the [delimiter row] in the number of cells.  If not, a table will not be recognized"
 			name: "a header that doesn't match its delimiter row",
 			src:  "| abc | def |\n| --- |\n| bar |",
-			want: []mdBlock{{Kind: mdPara, Text: "| abc | def | | --- | | bar |", Line: 1, End: 3}},
+			want: []mdBlock{{Kind: mdPara, Text: "| abc | def |\n| --- |\n| bar |", Line: 1, End: 3}},
 		},
 		{
 			name: "pipes with no delimiter row",
 			src:  "a | b\nc | d",
-			want: []mdBlock{{Kind: mdPara, Text: "a | b c | d", Line: 1, End: 2}},
+			want: []mdBlock{{Kind: mdPara, Text: "a | b\nc | d", Line: 1, End: 2}},
 		},
 		{
 			// ref:   gfm/spec.md#Tables (extension)
@@ -144,17 +144,23 @@ func TestMarkdownTables(t *testing.T) {
 	}
 }
 
-// mdParse keeps each block's source lines, so a thread on a line finds its block: a paragraph runs to its last line,
-// a list item takes its continuation lines, and a fence its body.
+// mdParse keeps each block's source lines, so a thread on a line finds its block: a paragraph runs to its last line
+// (its newlines kept, for a comment's line breaks), a list item takes its continuation lines, and a fence its body; a
+// fence indented under a list item is the item's, its lines out of the fence's indent.
+//
+// ref:   gfm/spec.md#Fenced code blocks
+// quote: "If the leading code fence is indented N spaces, then up to N spaces of indentation are removed from each line of the content (if present)."
 func TestMarkdownBlocksKeepTheirLines(t *testing.T) {
-	src := "# Title\n\nFirst line\nsecond line.\n\n- one\n  more\n- two\n\n```mermaid\nflowchart LR\n```\n---\n"
+	src := "# Title\n\nFirst line\nsecond line.\n\n- one\n  more\n- two\n\n```mermaid\nflowchart LR\n```\n---\n- three:\n  ```go\n    x := 1\n  y\n  ```\n"
 	want := []mdBlock{
 		{Kind: mdHeading, Level: 1, Text: "Title", Line: 1, End: 1},
-		{Kind: mdPara, Text: "First line second line.", Line: 3, End: 4},
-		{Kind: mdItem, Mark: "•", Text: "one more", Line: 6, End: 7},
+		{Kind: mdPara, Text: "First line\nsecond line.", Line: 3, End: 4},
+		{Kind: mdItem, Mark: "•", Text: "one\nmore", Line: 6, End: 7},
 		{Kind: mdItem, Mark: "•", Text: "two", Line: 8, End: 8},
 		{Kind: mdCode, Lang: "mermaid", Code: []string{"flowchart LR"}, Line: 10, End: 12},
 		{Kind: mdRule, Line: 13, End: 13},
+		{Kind: mdItem, Mark: "•", Text: "three:", Line: 14, End: 14},
+		{Kind: mdCode, Level: 1, Lang: "go", Code: []string{"  x := 1", "y"}, Line: 15, End: 18},
 	}
 	got := mdParse(src)
 	if len(got) != len(want) {
@@ -366,7 +372,7 @@ func TestMarkdownImagesStayWhereTheyreWritten(t *testing.T) {
 			{Text: "see", Line: 1, End: 1}, {Images: []string{"a.png"}, Line: 1, End: 1}, {Text: "then", Line: 1, End: 1},
 			{Images: []string{"b.png", "c.png"}, Line: 1, End: 1}, {Text: "done", Line: 1, End: 1}}},
 		{"at the end", "Look at this\n![x](x.png)", []got{{Text: "Look at this", Line: 1, End: 1}, {Images: []string{"x.png"}, Line: 2, End: 2}}},
-		{"only text", "no images\nhere", []got{{Text: "no images here", Line: 1, End: 2}}},
+		{"only text", "no images\nhere", []got{{Text: "no images\nhere", Line: 1, End: 2}}},
 	} {
 		var bs []got
 		for _, b := range mdParse(c.src) {
