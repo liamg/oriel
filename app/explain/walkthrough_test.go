@@ -231,7 +231,7 @@ func TestExplainChangeFromChangedUnits(t *testing.T) {
 func TestExplainChangeFromTheDiff(t *testing.T) {
 	s, f, pricing, _ := walkScene(t)
 	s.Run("diff.open", registry.Args{"path": pricing})
-	s.Until("the diff", func() bool { s.Frame(); return strings.Contains(s.Text(), "CHANGES") })
+	s.Until("the diff", func() bool { s.Frame(); return strings.Contains(s.Text(), "Explain this change") })
 	s.ClickTop("Explain this change")
 	walkSettle(s)
 	wantText(t, s, "the walkthrough", "EXPLAIN THIS CHANGE", "Ties round to even")

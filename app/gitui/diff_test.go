@@ -87,7 +87,7 @@ func showDiff(app *apptest.Window) {
 	app.TypeKeys("<M-1>")
 	app.WaitText("CHANGED 2")
 	app.ClickText("round.go")
-	app.WaitFrame("the diff", func(s string) bool { return apptest.HasAll(s, "CHANGES", "func roundHalfEven", "MARK REVIEWED") })
+	app.WaitFrame("the diff", func(s string) bool { return apptest.HasAll(s, "func roundHalfEven", "MARK REVIEWED") })
 	app.WaitGit() // the status still coming in builds the diff again, under a click
 }
 
@@ -160,30 +160,26 @@ func TestDiffUnifiedIsRemembered(t *testing.T) {
 	})
 }
 
-// ]h and [h move between hunks, r marks the selected one
-// reviewed (MARK REVIEWED becomes ✓ REVIEWED), and the file's box in CHANGES is half ticked until every hunk is, then
-// ticked; a click on the box takes the file's marks off.
+// ]h and [h move between hunks, and r marks the selected one reviewed (MARK REVIEWED becomes ✓ REVIEWED), or takes
+// the mark off again; the file's header counts them.
 func TestDiffHunkKeysAndReviewed(t *testing.T) {
 	r := rig.DiffRepo(t)
 	app := openDiff(t, r, nil)
-	box := "Reviewed: internal/pricing/round.go"
 	app.TypeKeys("]h")
 	app.TypeKeys("r")
 	app.WaitFrame("the first hunk reviewed", func(s string) bool {
 		return strings.Count(s, "REVIEWED") == 2 && strings.Contains(s, "MARK REVIEWED") && strings.Contains(s, "1/2 hunks reviewed")
 	})
-	if n := app.Access(box); n == nil || n.Checked != nil && *n.Checked {
-		t.Errorf("a half-reviewed file's box: %+v", n)
-	}
 	app.TypeKeys("]h")
 	app.TypeKeys("r")
-	app.WaitFrame("both hunks reviewed", func(s string) bool { return !strings.Contains(s, "MARK REVIEWED") && strings.Contains(s, "REVIEWED") })
-	app.WaitAccess("the file's box ticked", func(r *apptest.Window) bool { n := r.Access(box); return n != nil && n.Checked != nil && *n.Checked })
-	app.ClickAccess(box)
-	app.WaitFrame("the marks off", func(s string) bool { return strings.Count(s, "MARK REVIEWED") == 2 })
+	app.WaitFrame("both hunks reviewed", func(s string) bool {
+		return !strings.Contains(s, "MARK REVIEWED") && strings.Contains(s, "REVIEWED")
+	})
 	app.TypeKeys("[h")
 	app.TypeKeys("r")
-	app.WaitFrame("the first hunk reviewed again", func(s string) bool { return strings.Count(s, "MARK REVIEWED") == 1 })
+	app.WaitFrame("the first hunk's mark off", func(s string) bool {
+		return strings.Count(s, "MARK REVIEWED") == 1 && strings.Contains(s, "1/2 hunks reviewed")
+	})
 }
 
 // "?" explains the selected line's code unit through explain.unit, dimmed until it's registered.
@@ -269,9 +265,9 @@ func TestDiffCommentOpensAThreadBetweenTheLines(t *testing.T) {
 	r.WaitFrame("the thread between the diff's lines", func(s string) bool { return apptest.HasAll(s, "Thread", "L8", "Negative ties?", "Truncate") })
 }
 
-// The pointer on a diff's line shows the same + in its gutter as the editor's: clicking it opens a thread on that
-// line, which reaches the agent anchored there.
-func TestAPlusOnADiffLineOpensAThread(t *testing.T) {
+// A click on a diff's line opens a thread on it, which reaches the agent anchored there. The diff has no + in its
+// gutter for that: the click is the way.
+func TestAClickOnADiffLineOpensAThread(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := r.ProjectDir("w")
 	path := filepath.Join(dir, "round.go")
@@ -286,8 +282,11 @@ func TestAPlusOnADiffLineOpensAThread(t *testing.T) {
 	r.WaitFrame("the diff against main", func(s string) bool { return strings.Contains(s, "@@ -5,8 +5,12 @@") })
 	r.WaitGit()
 	r.Hover("Truncate", "Truncate")
-	r.WaitAccess("line 8's + with the pointer on it", func(r *apptest.Window) bool { return r.Access("Comment on line 8") != nil })
-	r.ClickAccess("Comment on line 8")
+	r.Idle()
+	if r.Access("Comment on line 8") != nil {
+		t.Error("the diff's line shows a + under the pointer")
+	}
+	r.ClickText("Truncate")
 	r.WaitText("New thread")
 	r.TypeText("Negative ties?")
 	r.WaitText("Negative ties?")

@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 )
 
 // A file's diff from Uncommitted is against the last commit: what isn't committed, in a tab of its own; from Changed,
@@ -58,7 +59,18 @@ func TestUncommittedsDiffListsAStagedAndEditedFileOnce(t *testing.T) {
 		return s.Find("two, staged") != nil && s.Find("nine, not staged") != nil
 	})
 	s.Quiet()
-	if want := "1 file · +" + f[0] + " −" + f[1]; !strings.Contains(s.Text(), want) {
-		t.Errorf("the list's heading isn't %q:\n%s", want, s.Text())
+	stats := 0
+	var walk func(n *render.AccessNode)
+	walk = func(n *render.AccessNode) {
+		if n.Name == "+"+f[0]+" -"+f[1] {
+			stats++
+		}
+		for _, k := range n.Children {
+			walk(k)
+		}
+	}
+	walk(s.UI().AccessTree())
+	if stats != 1 {
+		t.Errorf("%d file headers counted +%s -%s, want 1:\n%s", stats, f[0], f[1], s.Text())
 	}
 }
