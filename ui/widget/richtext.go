@@ -38,10 +38,24 @@ type richPiece struct {
 
 // richLayout is a paragraph's words, measured: each code span whole; the width of a space; how each span is drawn.
 type richLayout struct {
-	pieces []richPiece
-	gap    float32
-	style  func(Span) ui.TextStyle
-	code   ui.TextStyle
+	pieces  []richPiece
+	gap     float32
+	style   func(Span) ui.TextStyle
+	code    ui.TextStyle
+	measure func(Span, string) float32
+}
+
+// split is p broken into pieces no wider than width, as WrapCode breaks a line: after a space, else anywhere.
+func (l richLayout) split(c *ui.Ctx, p richPiece, width float32) []richPiece {
+	pad := float32(0)
+	if p.span.Code {
+		pad = 8
+	}
+	var out []richPiece
+	for i, ln := range codeLines(c.Shaper(), p.text, max(width-pad, 1), l.style(p.span).Font) {
+		out = append(out, richPiece{text: ln.text, span: p.span, width: l.measure(p.span, ln.text), space: p.space && i == 0})
+	}
+	return out
 }
 
 func richMeasure(c *ui.Ctx, spans []Span, base ui.TextStyle, o RichOpts) richLayout {
@@ -95,7 +109,7 @@ func richMeasure(c *ui.Ctx, spans []Span, base ui.TextStyle, o RichOpts) richLay
 			space = true
 		}
 	}
-	return richLayout{pieces: pieces, gap: c.Shaper().Shape(" ", base.Font).Advance, style: style, code: code}
+	return richLayout{pieces: pieces, gap: c.Shaper().Shape(" ", base.Font).Advance, style: style, code: code, measure: measure}
 }
 
 // widths are the paragraph's width on one line and its widest piece: the narrowest it wraps to.
@@ -110,15 +124,19 @@ func (l richLayout) widths() (line, widest float32) {
 	return line, widest
 }
 
-// Rich is a paragraph of spans wrapped to width at word boundaries (a code span stays whole), each line a row: plain
-// and bold runs in base, code in mono on a tint. It returns the number of lines.
+// Rich is a paragraph of spans wrapped to width at word boundaries (a code span stays whole unless it's wider than
+// a line, when it breaks as WrapCode breaks code; so does a word too wide), each line a row: plain and bold runs in
+// base, code in mono on a tint. It returns the number of lines.
 func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o RichOpts) int {
 	l := richMeasure(c, spans, base, o)
-	pieces, gap, style, code := l.pieces, l.gap, l.style, l.code
+	gap, style, code := l.gap, l.style, l.code
 	var lines [][]richPiece
 	var joins []string // what a wrapped line joins the one before with, copied
 	var x float32
-	for _, p := range pieces {
+	newLine := func(join string) {
+		lines, joins, x = append(lines, nil), append(joins, join), 0
+	}
+	place := func(p richPiece) {
 		add := p.width
 		if p.space && x > 0 {
 			add += gap
@@ -128,11 +146,24 @@ func Rich(c *ui.Ctx, key any, spans []Span, width float32, base ui.TextStyle, o 
 			if p.space {
 				join = " "
 			}
-			lines, joins = append(lines, nil), append(joins, join)
-			x, add, p.space = 0, p.width, false
+			newLine(join)
+			add, p.space = p.width, false
 		}
 		lines[len(lines)-1] = append(lines[len(lines)-1], p)
 		x += add
+	}
+	for _, p := range l.pieces {
+		switch {
+		case p.width > width:
+			for i, q := range l.split(c, p, width) {
+				if i > 0 {
+					newLine("")
+				}
+				place(q)
+			}
+		default:
+			place(p)
+		}
 	}
 	st := ui.Style{Gap: 3, Role: ui.RoleText, Label: richText(spans)}
 	if o.Align != ui.Start {
