@@ -10,7 +10,85 @@ permissions:
   contents: read
 
 jobs:
+  # What doesn't depend on the platform runs once, on Linux; what does (vet, the suite, the native build) runs on
+  # both. The suite is split in two (make test-shard) so its halves run at once.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - name: Install Gio's Linux deps, Mesa and Xvfb
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
+      - run: make lint
+        env:
+          ORIEL_LEAK_DENYLIST: ${{ secrets.ORIEL_LEAK_DENYLIST }}
+
   test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        shard: [1, 2]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Spotlight indexes the checkout, the caches and what the tests make, and on a three-core runner starves them.
+      - name: Turn Spotlight off
+        if: runner.os == 'macOS'
+        run: sudo mdutil -a -i off
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore the downloads (.github/fetch.sh)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/oriel-ci
+          key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('.github/workflows/*.yml') }}
+          restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - name: Install Gio's Linux deps, Mesa and Xvfb
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
+      - name: Install delve and debugpy, so the dap tests run live too
+        if: matrix.shard == 2
+        shell: bash
+        run: |
+          go install github.com/go-delve/delve/cmd/dlv@v1.27.2
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          .github/fetch.sh debugpy.whl https://files.pythonhosted.org/packages/56/3d/c7dc9f35bc9e22cdb53679f844bee40fd5cff871862f60595869a433400d/debugpy-1.8.22-py2.py3-none-any.whl a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947
+          mkdir -p "$RUNNER_TEMP/py" && unzip -q debugpy.whl -d "$RUNNER_TEMP/py"
+          echo "PYTHONPATH=$RUNNER_TEMP/py" >> "$GITHUB_ENV"
+      # macOS runners have three cores: two test packages at once, so their windows don't starve each other.
+      - name: make test-shard (under Xvfb on Linux, for render/gio's window test)
+        shell: bash
+        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-shard SHARD=${{ matrix.shard }}; else GOFLAGS=-p=2 make test-shard SHARD=${{ matrix.shard }}; fi
+
+  framecheck:
+    # The snapshot and lag suites again, with the frame-path I/O check.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Spotlight indexes the checkout, the caches and what the tests make, and on a three-core runner starves them.
+      - name: Turn Spotlight off
+        if: runner.os == 'macOS'
+        run: sudo mdutil -a -i off
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - name: Install Gio's Linux deps, Mesa and Xvfb
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
+      - shell: bash
+        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else GOFLAGS=-p=2 make test-framecheck; fi
+
+  build:
+    # vet (it builds the platform's cgo), then the native libraries and the binary.
     strategy:
       fail-fast: false
       matrix:
@@ -34,27 +112,7 @@ jobs:
       - name: Install Gio's Linux deps, Mesa and Xvfb
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libwayland-dev libx11-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libgles2-mesa-dev libegl1-mesa-dev libffi-dev libxcursor-dev libxfixes-dev libvulkan-dev libgl1-mesa-dri xvfb
-      - run: make check
-        env:
-          ORIEL_LEAK_DENYLIST: ${{ secrets.ORIEL_LEAK_DENYLIST }}
-      - name: Install delve and debugpy, so the dap tests run live too
-        shell: bash
-        run: |
-          go install github.com/go-delve/delve/cmd/dlv@v1.27.2
-          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-          .github/fetch.sh debugpy.whl https://files.pythonhosted.org/packages/56/3d/c7dc9f35bc9e22cdb53679f844bee40fd5cff871862f60595869a433400d/debugpy-1.8.22-py2.py3-none-any.whl a9e9d3550e15ca479c59333e90845029190531f0cacfedab3b815a57bd913947
-          mkdir -p "$RUNNER_TEMP/py" && unzip -q debugpy.whl -d "$RUNNER_TEMP/py"
-          echo "PYTHONPATH=$RUNNER_TEMP/py" >> "$GITHUB_ENV"
-      # macOS runners have three cores: two test packages at once, so their windows don't starve each other.
-      - name: make test (under Xvfb on Linux, for render/gio's window test)
-        shell: bash
-        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test; else GOFLAGS=-p=2 make test; fi
-      - name: Snapshot and lag suites with the frame-path I/O check
-        shell: bash
-        run: if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a make test-framecheck; else GOFLAGS=-p=2 make test-framecheck; fi
-      - name: Race detector on the packages where it's quick
-        if: runner.os == 'Linux'
-        run: go test -race -shuffle=on ./text/... ./toml/... ./semver/... ./regex/... ./update/... ./registry/... ./core/... ./lsp/... ./dap/... ./fswatch/... ./gitx/...
+      - run: make vet
       - name: Install zig 0.16.0, for the native libraries make build links
         shell: bash
         run: |
@@ -67,16 +125,36 @@ jobs:
           echo "ZIG=$RUNNER_TEMP/zig/zig" >> "$GITHUB_ENV"
       - run: make native
       - run: make build
-      - name: Install nvim for the oracle
-        shell: bash
+
+  race:
+    # The race detector on the packages where it's quick.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - run: go test -race -shuffle=on ./text/... ./toml/... ./semver/... ./regex/... ./update/... ./registry/... ./core/... ./lsp/... ./dap/... ./fswatch/... ./gitx/...
+
+  oracle:
+    # vim's expectations checked against headless nvim. The vim packages are pure Go, so Linux alone.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Restore the downloads (.github/fetch.sh)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/oriel-ci
+          key: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('.github/workflows/*.yml') }}
+          restore-keys: downloads-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.11"
+      - name: Install nvim
         run: |
-          case "$RUNNER_OS" in
-            Linux) asset=nvim-linux-x86_64; sum=38a7c6317f94503841096c00e8fde05ef04b9472fc9d7d62b6e033cecd6f7991 ;;
-            macOS) asset=nvim-macos-arm64; sum=9c84686ce84bbab725ff3d88ca3ac1d6da5a72128b68d9dd8094e34d4049a126 ;;
-          esac
-          .github/fetch.sh nvim.tar.gz "https://github.com/neovim/neovim/releases/download/v0.11.7/$asset.tar.gz" $sum
+          .github/fetch.sh nvim.tar.gz https://github.com/neovim/neovim/releases/download/v0.11.7/nvim-linux-x86_64.tar.gz 38a7c6317f94503841096c00e8fde05ef04b9472fc9d7d62b6e033cecd6f7991
           tar -xzf nvim.tar.gz -C "$RUNNER_TEMP"
-          echo "ORIEL_NVIM=$RUNNER_TEMP/$asset/bin/nvim" >> "$GITHUB_ENV"
+          echo "ORIEL_NVIM=$RUNNER_TEMP/nvim-linux-x86_64/bin/nvim" >> "$GITHUB_ENV"
       - run: make oracle
 
   grammars:
