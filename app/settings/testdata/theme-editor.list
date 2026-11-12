@@ -286,7 +286,7 @@ clip 44,0 1556x974 r 0
       rect 367,114 32x32 fill #1f1c0f radius 7
       rect 361,121 2x18 fill #ffd23f radius 1
       text "⌥" @379.10156,134.68 #ffd23f JetBrains Mono 13
-      text "⌕" @379.10156,170.68 #7c7566 JetBrains Mono 13
+      text "⌕" @378.8828,170.68 #7c7566 JetBrains Mono 13
       text "±" @379.10156,206.68 #7c7566 JetBrains Mono 13
       rect 384,189 13x13 fill #ff9b45 radius 7
       text "7" @387.79688,198.56 #111111 JetBrains Mono 8.5
@@ -295,7 +295,7 @@ clip 44,0 1556x974 r 0
       text "2" @387.79688,234.56 #111111 JetBrains Mono 8.5
       text "▷" @379.10156,278.68 #7c7566 JetBrains Mono 13
       text "⎇" @376.35156,314.68 #7c7566 JetBrains Mono 13
-      text "⚙" @379.10156,1018.68 #7c7566 JetBrains Mono 13
+      text "⚙" @376.8672,1018.68 #7c7566 JetBrains Mono 13
       rect 405,106 250x924 fill #0c0c0b
       rect 654,106 1x924 fill #24221d
       rect 405,135 249x1 fill #24221d
@@ -672,7 +672,7 @@ clip 44,0 1556x974 r 0
       text "✓" @1594,450.66522 #4fe0a0 Inter 12
       text "Half-even for minor units" @1611.3594,450.66522 #b3ab99 Inter 12
       text "◐" @1594,474.66522 #4cc9f0 Inter 12
-      text "Negative tie handling" @1608.625,474.66522 #ece6d8 Inter 12
+      text "Negative tie handling" @1611.4844,474.66522 #ece6d8 Inter 12
       text "○" @1594,498.66522 #7c7566 Inter 12
       text "Currency precision table" @1611.7188,498.66522 #b3ab99 Inter 12
       text "○" @1594,522.6652 #7c7566 Inter 12

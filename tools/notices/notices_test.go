@@ -45,6 +45,9 @@ func tree(t *testing.T) (root, goroot string) {
 	write(t, root, "syntax/queries/SOURCE", "source: https://github.com/nvim-treesitter/nvim-treesitter\ncommit: f00\n")
 	write(t, root, "render/typeset/fonts/inter/OFL.txt", "ofl inter\n")
 	write(t, root, "render/typeset/fonts/inter/SOURCE", "source: https://example.com/inter.zip\n")
+	write(t, root, "render/typeset/fonts/twemoji/SOURCE", "source: https://example.com/twemoji.ttf\nlicense: Apache-2.0 AND CC-BY-4.0\ntexts: LICENSE.md, CC-BY-4.0.txt\n")
+	write(t, root, "render/typeset/fonts/twemoji/LICENSE.md", "twemoji code and art\n")
+	write(t, root, "render/typeset/fonts/twemoji/CC-BY-4.0.txt", "cc by\n")
 	write(t, root, "theme/themes/oriel.toml", "# Oriel's built-in theme\nname = \"oriel\"\n")
 	write(t, root, "theme/themes/nord.toml", "# Nord, by Arctic Ice Studio (MIT): nordtheme.com\nname = \"nord\"\n")
 	write(t, root, "theme/themes/licenses/nord.txt", "mit nord\n")
@@ -76,6 +79,7 @@ func TestPartsCoverVendorAndEmbedded(t *testing.T) {
 		"tree-sitter grammar: hcl, terraform": {"syntax/grammars/licenses/g_tree-sitter-hcl.txt"},
 		"nvim-treesitter queries":             {"syntax/queries/LICENSE"},
 		"Font: inter":                         {"render/typeset/fonts/inter/OFL.txt"},
+		"Font: twemoji":                       {"render/typeset/fonts/twemoji/LICENSE.md", "render/typeset/fonts/twemoji/CC-BY-4.0.txt"},
 		"Theme: Nord, by Arctic Ice Studio":   {"theme/themes/licenses/nord.txt"},
 	}
 	if len(got) != len(want) {
@@ -147,6 +151,27 @@ func TestAVendoredModuleWithoutALicenceFails(t *testing.T) {
 	}
 	if _, err := Parts(root, goroot); err == nil {
 		t.Error("a vendored module with no licence made notices")
+	}
+}
+
+// A font is credited under the licence its SOURCE names (OFL-1.1 in OFL.txt when it names none); one with no
+// licence text fails rather than go uncredited.
+func TestAFontIsCreditedUnderItsLicence(t *testing.T) {
+	root, goroot := tree(t)
+	parts, err := Parts(root, goroot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lic := map[string]string{}
+	for _, p := range parts {
+		lic[p.Name] = p.Licence
+	}
+	if lic["Font: inter"] != "OFL-1.1" || lic["Font: twemoji"] != "Apache-2.0 AND CC-BY-4.0" {
+		t.Errorf("licences = %q, %q", lic["Font: inter"], lic["Font: twemoji"])
+	}
+	write(t, root, "render/typeset/fonts/bare/SOURCE", "source: https://example.com/bare.ttf\n")
+	if _, err := Parts(root, goroot); err == nil {
+		t.Error("a font with no licence text made notices")
 	}
 }
 

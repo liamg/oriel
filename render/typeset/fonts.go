@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"fmt"
+	"image/color"
 	"io/fs"
 	"path"
 	"sync"
@@ -11,6 +12,7 @@ import (
 
 	gtfont "github.com/go-text/typesetting/font"
 	ot "github.com/go-text/typesetting/font/opentype"
+	"github.com/go-text/typesetting/font/opentype/tables"
 )
 
 //go:embed fonts/*/*.ttf
@@ -43,6 +45,40 @@ func newFace(f *gtfont.Font, name string, d gtfont.Description) *Face {
 func (f *Face) Has(r rune) bool {
 	_, ok := f.face.NominalGlyph(r)
 	return ok
+}
+
+// layer is one layer of a colour glyph: an outline in a palette colour, or in the text's own (Foreground).
+type layer struct {
+	ID         GlyphID
+	Color      color.NRGBA
+	Foreground bool
+}
+
+// layers are gid's COLR version 0 layers, bottom first, in the default palette's colours; palette index 0xFFFF is the
+// text's own colour. None when the face draws gid as one outline.
+func (f *Face) layers(gid GlyphID) []layer {
+	p, ok := f.face.GlyphDataColor(gtfont.GID(gid))
+	if !ok {
+		return nil
+	}
+	ls, ok := p.Paint.(tables.PaintColrLayersResolved)
+	if !ok || len(f.face.CPAL) == 0 {
+		return nil
+	}
+	pal := f.face.CPAL[0]
+	out := make([]layer, 0, len(ls))
+	for _, l := range ls {
+		if l.PaletteIndex == 0xFFFF {
+			out = append(out, layer{ID: GlyphID(l.GlyphID), Foreground: true})
+			continue
+		}
+		if int(l.PaletteIndex) >= len(pal) {
+			continue
+		}
+		c := pal[l.PaletteIndex]
+		out = append(out, layer{ID: GlyphID(l.GlyphID), Color: color.NRGBA{R: c.Red, G: c.Green, B: c.Blue, A: c.Alpha}})
+	}
+	return out
 }
 
 // Upem is the face's units per em.

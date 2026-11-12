@@ -8,6 +8,7 @@ package gio
 import (
 	"image"
 	"image/color"
+	"image/draw"
 	"math"
 	"slices"
 
@@ -327,6 +328,17 @@ func (c *Frame) Glyphs(run *typeset.Run, at render.Point, col color.NRGBA) {
 		ck := covKey{face: g.Face.ID, gid: g.ID, ppem: int32(math.Round(float64(ppem * 64))), sub: sub}
 		gk := glyphKey{ck, col}
 		e, ok := c.atlas.Lookup(gk)
+		if !ok && typeset.IsColour(g.Face, g.ID) {
+			cg := typeset.RasteriseColour(g.Face, g.ID, ppem, sub, col)
+			if cg.Img == nil {
+				e = c.atlas.Add(gk, image.Point{}, image.Point{}, nil)
+			} else {
+				e = c.atlas.Add(gk, cg.Img.Bounds().Size(), cg.Off, func(dst *image.RGBA, p image.Point) {
+					draw.Draw(dst, image.Rectangle{Min: p, Max: p.Add(cg.Img.Bounds().Size())}, cg.Img, image.Point{}, draw.Src)
+				})
+			}
+			ok = true
+		}
 		if !ok {
 			cov, ok := c.covs[ck]
 			if !ok {
