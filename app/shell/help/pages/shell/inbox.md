@@ -52,7 +52,8 @@ this way when it sets `Confirm`; an inbox card when it sets `Dialog`.
 
 ## Prompts {#prompts}
 
-An agent's permission is a prompt: it comes up in the middle of the window over a dimmed background, holding the
+What holds an agent until you allow or deny it is a prompt: a permission, a gateway's call (a push, leaving the
+sandbox) and a connection the sandbox holds. It comes up in the middle of the window over a dimmed background, holding the
 keys, so its keys (`y`, `a`, `n`…) answer it. It waits until no key has gone down for three seconds
 (`inbox.prompt_pause`), so it never takes a key meant for what you're typing; if you've already stopped, it comes up
 at once. Prompts come one at a time, in the order they came: once one is answered, here or anywhere else, or the agent

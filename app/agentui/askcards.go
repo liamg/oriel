@@ -40,15 +40,22 @@ func (x *Console) askCards() []uireg.InboxCard {
 				Draw: func(c *ui.Ctx, key string, p uireg.CardPlace) {
 					x.askCard(c, key, se, a, p, false)
 				}}
-			// Over the window, key touches and the gateway's (run on host…) come at the top, where they're seen.
-			card.Top = a.Kind == core.AskKey || a.Kind == core.AskGateway
-			card.Prompt = a.Kind == core.AskPermission
+			// What holds the agent until you allow or deny it (its own gate, the gateway's call, a connection the egress
+			// proxy holds) comes up as a prompt; a key touch comes at the top of the window, where it's seen.
+			card.Prompt = asksYou(a.Kind)
+			card.Top = a.Kind == core.AskKey
 			title, sub := x.askRow(se, a)
 			card.Title, card.Sub = title, kit.JoinParts(sub, kit.Label(se))
 			out = append(out, card)
 		}
 	}
 	return out
+}
+
+// asksYou says asks of kind k come up as prompts in the middle of the window: those that hold the agent until you
+// allow or deny them.
+func asksYou(k core.AskKind) bool {
+	return k == core.AskPermission || k == core.AskGateway || k == core.AskNetwork
 }
 
 // askGroup is the Inbox filter an ask is under.

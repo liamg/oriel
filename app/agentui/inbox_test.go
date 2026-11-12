@@ -170,8 +170,9 @@ func TestInboxEscapeDismissesAndFilters(t *testing.T) {
 	}
 }
 
-// Each ask's card acts where it's drawn (the network, gateway, question and security-key cards answer the ask
-// through ask.answer) and its ✕ dismisses it while the tab still counts it.
+// Each ask's card acts where it's drawn and answers the ask through ask.answer: the security key's at the top of
+// the window, the sandbox's (network, then gateway) as prompts in the middle one at a time, the question in the
+// stack; a card's ✕ dismisses it while the tab still counts it.
 func TestAskCardsActAndDismiss(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	s.Now = apptest.At(14, 30, 0)
@@ -195,34 +196,33 @@ func TestAskCardsActAndDismiss(t *testing.T) {
 			ans = m["Which colour?"]
 		}
 		got = append(got, a.String("ask")+"="+ans+a.String("scope"))
-		return nil
+		return s.Store().Apply(core.AskClosed{Session: se.ID, ID: a.String("ask"), Decision: a.String("decision")})
 	}})
 	s.Frame()
-	// The key touch and the gateway's ask wait at the top; the stack holds back to a count until they're dealt with.
-	for _, w := range []string{"Touch your security key", "git push · e2e · flaky-e2e", "git push origin rethink/rounding", "+2 more waiting"} {
+	s.Frame()
+	s.Node("4 waiting on you")
+	// The key's touch at the top; the first of the sandbox's asks in the middle, the gateway's after it.
+	for _, w := range []string{"Touch your security key", "git push · e2e · flaky-e2e", "Network: proxy.golang.org:443"} {
 		if !strings.Contains(s.FullText(), w) {
 			t.Errorf("the frame lacks %q:\n%s", w, s.FullText())
 		}
 	}
-	if strings.Contains(s.FullText(), "Network: proxy.golang.org:443") {
-		t.Errorf("the stack shows under the cards at the top:\n%s", s.FullText())
+	if strings.Contains(s.FullText(), "git push origin rethink/rounding") {
+		t.Errorf("the gateway's prompt is up beside the network's:\n%s", s.FullText())
 	}
-	s.Node("4 waiting on you")
-	s.ClickTop("Cancel")
-	s.ClickTop("Allow")
-	s.ClickNode("Dismiss") // the key's
-	if strings.Contains(s.Text(), "Touch your security key") {
-		t.Error("the dismissed key card is still shown")
-	}
-	s.ClickNode("Dismiss") // the gateway's
-	s.Until("the stack, once the top is clear", func() bool { return strings.Contains(s.FullText(), "Network: proxy.golang.org:443") })
+	s.Now = s.Now.Add(time.Second) // past the moment a prompt ignores input as it comes up
 	s.ClickTop("Once")
+	s.Until("the gateway's prompt, next", func() bool { return strings.Contains(s.FullText(), "git push origin rethink/rounding") })
+	s.Now = s.Now.Add(time.Second)
+	s.ClickTop("Allow")
+	s.Until("the prompts done", func() bool { return !strings.Contains(s.FullText(), "git push origin rethink/rounding") })
+	s.ClickTop("Cancel") // the key's, at the top
+	s.Until("the question", func() bool { return strings.Contains(s.FullText(), "green") })
 	s.ClickTop("green")
-	want := []string{"k1=deny", "g1=allow", "n1=allow", "q1=green"}
+	want := []string{"n1=allow", "g1=allow", "k1=deny", "q1=green"}
 	if strings.Join(got, " ") != strings.Join(want, " ") {
 		t.Errorf("the cards answered %v, want %v", got, want)
 	}
-	s.Node("4 waiting on you")
 }
 
 // A commit whose signing waits shows "Touch your security key" over the window,

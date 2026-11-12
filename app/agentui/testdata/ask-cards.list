@@ -119,36 +119,32 @@ text "✕" @16,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @27.59375,990.95996 #b3ab99 JetBrains Mono 11
 text "⚠" @48.1875,990.95996 #b3ab99 JetBrains Mono 11
 text "0" @59.78125,990.95996 #b3ab99 JetBrains Mono 11
-rect 580,60 440x151.66452 fill #0c0c0b radius 8 stroke 1 #ff9b458c
-text "PRICING-ROUNDING · GATEWAY" @594,84.420006 #ff9b45 JetBrains Mono 9.5
-text "✕" @994,84.564 #7c7566 JetBrains Mono 9.900001
-rect 594,110.83225 7x7 fill #ff9b45 radius 3.5
-text "git push origin rethink/rounding" @609,111.109375 #ece6d8 Inter 12.5
-text "3 commits · +184 -22" @609,126.814514 #7c7566 JetBrains Mono 9.5
-rect 594,138.66452 72.40625x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Allow" @604,156.02975 #141006 Inter 12
-rect 642.40625,144.16452 14x15 radius 3 stroke 1 #14100666
-text "y" @646.40625,155.08452 #141006cc JetBrains Mono 9.5
-rect 674.40625,138.66452 81.6875x26 fill #191815 radius 6 stroke 1 #332f27
-text "Always" @684.40625,156.02975 #ece6d8 Inter 12
-rect 732.09375,144.16452 14x15 radius 3 stroke 1 #ece6d866
-text "a" @736.09375,155.08452 #ece6d8cc JetBrains Mono 9.5
-rect 764.09375,138.66452 69.828125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Deny" @774.09375,156.02975 #ece6d8 Inter 12
-rect 809.9219,144.16452 14x15 radius 3 stroke 1 #ece6d866
-text "n" @813.9219,155.08452 #ece6d8cc JetBrains Mono 9.5
-rect 841.9219,138.66452 59.125x26 fill #191815 radius 6 stroke 1 #332f27
-text "Details" @851.9219,156.02975 #ece6d8 Inter 12
-rect 594,173.66452 87.0625x26 fill #191815 radius 6 stroke 1 #332f27
-text "Console" @604,191.02975 #ece6d8 Inter 12
-rect 657.0625,179.16452 14x15 radius 3 stroke 1 #ece6d866
-text "g" @661.0625,190.08452 #ece6d8cc JetBrains Mono 9.5
-text "rule: git push origin rethink/*" @820,190.08452 #7c7566 JetBrains Mono 9.5
-text "+3 more waiting" @1346.75,954.60004 #7c7566 JetBrains Mono 10
-rect 1444.75,938 139.25x26 radius 6 stroke 1 #332f27
-text "Open the inbox" @1454.75,955.36523 #ece6d8 Inter 12
-rect 1548,943.5 26x15 radius 3 stroke 1 #ece6d866
-text "⇧⌘I" @1552,954.42 #ece6d8cc JetBrains Mono 9.5
+rect 1144,705.62646 440x258.37354 fill #0c0c0b radius 8 stroke 1 #ff5f6d8c
+text "PRICING-ROUNDING · QUESTION" @1158,730.04645 #ff5f6d JetBrains Mono 9.5
+text "✕" @1558,730.1905 #7c7566 JetBrains Mono 9.900001
+rect 1158,748.6887 7x7 fill #ff5f6d radius 3.5
+text "Claude asks" @1173,756.73584 #ece6d8 Inter 12.5
+text "Is pricing.RoundMinor safe to call for JPY amounts, or does it" @1158,780.86035 #ece6d8 Inter 12.5
+text "assume 2 decimal places?" @1158,798.98486 #ece6d8 Inter 12.5
+rect 1158,808 412x32 radius 6 stroke 1 #332f27
+text "○" @1168,827.95996 #ffd23f JetBrains Mono 11
+text "Safe: precision comes from the currency table" @1182.5938,828.5471 #ece6d8 Inter 12.5
+text "1" @1554,827.60004 #4f4a40 JetBrains Mono 10
+rect 1158,846 412x32 radius 6 stroke 1 #332f27
+text "○" @1168,865.95996 #ffd23f JetBrains Mono 11
+text "Not yet: lands with rethink/rounding" @1182.5938,866.5471 #ece6d8 Inter 12.5
+text "2" @1554,865.60004 #4f4a40 JetBrains Mono 10
+rect 1158,887 412x30 fill #060606 radius 6
+clip 1158,887 412x30 r 6
+  text "or type an answer: ⏎ sends it" @1168,906.5471 #7c7566 Inter 12.5
+pop
+rect 1158,887 412x30 radius 6 stroke 1 #332f27
+rect 1158,926 59.125x26 fill #191815 radius 6 stroke 1 #332f27
+text "Details" @1168,943.36523 #ece6d8 Inter 12
+rect 1225.125,926 87.0625x26 fill #191815 radius 6 stroke 1 #332f27
+text "Console" @1235.125,943.36523 #ece6d8 Inter 12
+rect 1288.1875,931.5 14x15 radius 3 stroke 1 #ece6d866
+text "g" @1292.1875,942.42 #ece6d8cc JetBrains Mono 9.5
 rect 0,0 1600x1000 fill #030508b8
 rect 580,401.74774 440x196.50452 fill #0c0c0b radius 8 stroke 1 #b98aff8c
 text "ENG-2231 SEARCH API · PERMISSION" @594,426.16776 #b98aff JetBrains Mono 9.5

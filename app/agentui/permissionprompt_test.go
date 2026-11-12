@@ -237,24 +237,93 @@ func TestPermissionPromptsComeOneByOne(t *testing.T) {
 	wantNoPrompt(t, s, "the last ask was withdrawn")
 }
 
-// A card for over the window that comes while you type in a text field (a gateway's call, at the top) waits for you
-// to stop for a moment: it doesn't cover what you're writing or catch a key meant for it.
+// A card for over the window that comes while you type in a text field (a security key's touch, at the top) waits
+// for you to stop for a moment: it doesn't cover what you're writing or catch a key meant for it. (The sandbox's asks
+// are prompts, waiting as permissions do: TestTheSandboxsAsksArePromptsToo.)
 func TestAStackedCardWaitsForTypingToStop(t *testing.T) {
 	s, _ := promptScene(t)
 	s.Type("i", "r", "o")
-	s.Apply(core.AskOpened{Session: "alpha", Ask: core.Ask{ID: "g1", Kind: core.AskGateway, Tool: "git push", Summary: "git push origin round"}})
+	s.Apply(core.AskOpened{Session: "alpha", Ask: core.Ask{ID: "k1", Kind: core.AskKey, Summary: "git push origin round"}})
 	s.Frame()
 	for _, k := range []string{"u", "n", "d"} {
 		s.Now = s.Now.Add(time.Second)
 		s.Type(k)
-		if strings.Contains(s.Text(), "git push origin round") {
+		if strings.Contains(s.Text(), "Touch your security key") {
 			t.Fatalf("the card went over the window while typing:\n%s", s.Text())
 		}
 	}
 	s.Now = s.Now.Add(2 * time.Second)
 	s.Frame()
 	s.Frame()
-	if !s.Has("git push origin round", "round") {
+	if !s.Has("Touch your security key", "round") {
 		t.Errorf("once typing stopped, no card, or what was typed went elsewhere:\n%s", s.Text())
 	}
+}
+
+// promptNamed is the prompt dialog named name, or nil.
+func promptNamed(s *apptest.Scene, name string) *render.AccessNode {
+	var find func(n *render.AccessNode) *render.AccessNode
+	find = func(n *render.AccessNode) *render.AccessNode {
+		if n.Role == render.RoleDialog && n.Name == name {
+			return n
+		}
+		for _, k := range n.Children {
+			if f := find(k); f != nil {
+				return f
+			}
+		}
+		return nil
+	}
+	return find(s.Access())
+}
+
+// The sandbox's asks hold the agent on you just as a permission does: a gateway's call (a push, leaving the sandbox)
+// and a connection the egress proxy holds come up as prompts the same way, centred and one at a time, after the
+// permission that came first; behind, the session's tab calls for them.
+func TestTheSandboxsAsksArePromptsToo(t *testing.T) {
+	s, got := promptScene(t)
+	s.Apply(core.AskOpened{Session: "alpha", Ask: permission("p1", "make e2e")})
+	s.Apply(core.AskOpened{Session: "alpha", Ask: core.Ask{ID: "g1", Kind: core.AskGateway, Tool: "git push", Summary: "git push origin round"}})
+	s.Apply(core.AskOpened{Session: "alpha", Ask: core.Ask{ID: "n1", Kind: core.AskNetwork, Host: "registry.npmjs.org"}})
+	s.Frame()
+	s.Frame()
+	wantPrompt(t, s, "make e2e")
+	s.Now = s.Now.Add(time.Second) // past the moment a prompt ignores keys as it comes up
+	s.Press("y")
+	s.Frame()
+	s.Frame()
+	for _, step := range []struct{ name, key, answer string }{
+		{"git push origin round", "y", "g1=allow"},
+		{"Network: registry.npmjs.org", "y", "n1=always"}, // y on a network ask allows the host
+	} {
+		p := promptNamed(s, step.name)
+		if p == nil {
+			t.Fatalf("no prompt %q:\n%s", step.name, s.Text())
+		}
+		if !p.Modal {
+			t.Errorf("%q doesn't hold focus", step.name)
+		}
+		win, box := apptest.Centre(render.Rect{Max: apptest.MockupSize}), apptest.Centre(p.Bounds)
+		if dx, dy := box.X-win.X, box.Y-win.Y; dx < -2 || dx > 2 || dy < -2 || dy > 2 {
+			t.Errorf("%q's centre is %v, the window's %v", step.name, box, win)
+		}
+		s.Now = s.Now.Add(time.Second)
+		s.Press(step.key)
+		s.Frame()
+		s.Frame()
+		if (*got)[len(*got)-1] != step.answer {
+			t.Errorf("answered %v, want %s last", *got, step.answer)
+		}
+	}
+	if p := promptNamed(s, "Network: registry.npmjs.org"); p != nil {
+		t.Error("the network prompt stayed up once answered")
+	}
+
+	s.Apply(core.AskOpened{Session: "beta", Ask: core.Ask{ID: "g2", Kind: core.AskGateway, Tool: "git push", Summary: "git push origin beta"}})
+	s.Frame()
+	s.Frame()
+	if promptNamed(s, "git push origin beta") != nil {
+		t.Error("beta's gateway ask came up over alpha")
+	}
+	s.Within("beta", "Calls for you")
 }
