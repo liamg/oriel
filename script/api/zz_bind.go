@@ -479,6 +479,12 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return nil, x.Kind(c.String(0), c.Table(1), c.Where())
 			},
+			"unsaved": func(c *script.Args) ([]any, error) {
+				if err := a.check("session.control"); err != nil {
+					return nil, err
+				}
+				return nil, x.Unsaved(c.String(0), c.Fn(1), c.Where())
+			},
 		})
 	}
 	{

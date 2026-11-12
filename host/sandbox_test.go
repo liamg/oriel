@@ -40,6 +40,7 @@ type sandboxRig struct {
 	hold     chan struct{} // when set, a launch reports a step and waits on it
 	swept    chan bool     // when set, each sweep sends whether the session's sandbox was attached
 	root     string        // the root swept asks about
+	stopped  chan string   // when set, each Stop sends the root it stopped
 }
 
 // fakeBackend launches an echo in place of the agent.
@@ -63,7 +64,12 @@ func (f fakeBackend) Launch(ctx context.Context, root, cwd string, argv []string
 
 func (fakeBackend) Available() error { return nil }
 
-func (fakeBackend) Stop(context.Context, string) error { return nil }
+func (f fakeBackend) Stop(_ context.Context, root string) error {
+	if f.s.stopped != nil {
+		f.s.stopped <- root
+	}
+	return nil
+}
 
 func (fakeBackend) Health(context.Context, sandbox.Config) []sandbox.Problem { return nil }
 

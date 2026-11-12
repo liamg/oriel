@@ -186,7 +186,7 @@ func (h *session) launch(ctx context.Context, cancel context.CancelFunc, prompt 
 	}
 	spec := agent.StartSpec{Cwd: hostcore.AgentDir(se), Model: se.Agent.Model, Effort: se.Agent.Effort, Policy: agent.Policy(se.Agent.Policy),
 		Tools: x.tools(h), ToolsNow: func() []agent.Tool { return x.tools(h) }, Protect: x.Protected(se), Exec: x.deps.Exec(), StateDir: filepath.Join(x.env.SessionDir(h.id), "agent"),
-		Env: []string{"ORIEL_SESSION=" + string(h.id)}, Prompt: prompt, Prices: x.deps.Prices}
+		Env: x.env.AgentEnv(h.id), Prompt: prompt, Prices: x.deps.Prices}
 	if m := hostcore.Memories(se); len(m) > 0 {
 		spec.Memory = m[0].Dir
 	}

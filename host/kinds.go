@@ -28,7 +28,7 @@ var (
 		About: "The agent drafts the plan in PLAN.md, you annotate it, and Start work implements it in these worktrees."}
 	ReviewKind = core.KindSpec{Kind: core.KindReview, Title: "Review PR", Desc: "someone else's change", From: core.FromPR, Pack: "review",
 		Worktrees: core.WorktreesPR, Launcher: true, Order: 30,
-		Caps:  []core.Capability{core.AddProjects, core.Delete, core.OwnsBranch, core.CommentsInDiff, core.RestartsAgent},
+		Caps:  []core.Capability{core.AddProjects, core.Delete, core.OwnsBranch, core.CommentsInDiff, core.RestartsAgent, core.DeletesOnEnd},
 		About: "The PR's head is checked out read-only from the repo whose remote it's on, and the agent reviews it.",
 		// The Explorer on what the PR changes, its diff in front and the review tab behind.
 		Opens: []core.KindCall{{Command: "explorer.scope", Args: map[string]any{"scope": "changed"}}, {Command: "ship.pr.open"},

@@ -33,19 +33,20 @@ type Server struct {
 	lag    bool                  // PRs made while it's set are left out of listings, as GitHub's search lags
 	unseen map[string]bool       // owner/name#number: made while lagging
 
-	login       string                         // who the fake's client is: what it posts is by them
-	review      map[string][]*gh.ReviewComment // by owner/name#number
-	reviews     map[string][]gh.Review
-	issue       map[string][]*gh.IssueComment
-	resolved    map[int64]bool                  // review threads resolved, by their first comment
-	members     map[string][]string             // org → logins
-	sizes       map[string]PRSize               // by owner/name#number
-	diffLines   map[string][]string             // by owner/name#number: where a review may comment
-	teams       map[string][]string             // org/team → logins
-	commits     map[string][]string             // by owner/name#number, oldest first
-	prReactions map[string]gh.Reactions         // by owner/name#number: the PR's own
-	reacted     map[string]bool                 // "owner/name#number content": the signed-in user's own reactions
-	asked       map[string]map[string]time.Time // by owner/name#number: when each reviewer was last asked
+	login        string                         // who the fake's client is: what it posts is by them
+	review       map[string][]*gh.ReviewComment // by owner/name#number
+	reviews      map[string][]gh.Review
+	issue        map[string][]*gh.IssueComment
+	resolved     map[int64]bool          // review threads resolved, by their first comment
+	members      map[string][]string     // org → logins
+	sizes        map[string]PRSize       // by owner/name#number
+	diffLines    map[string][]string     // by owner/name#number: where a review may comment
+	teams        map[string][]string     // org/team → logins
+	commits      map[string][]string     // by owner/name#number, oldest first
+	prReactions  map[string]gh.Reactions // by owner/name#number: the PR's own
+	reacted      map[string]int64        // "owner/name#number content": the signed-in user's own reactions, by id
+	nextReaction int64
+	asked        map[string]map[string]time.Time // by owner/name#number: when each reviewer was last asked
 
 	mergeRepo  map[string]MergeRepo // by owner/name
 	mergeable  map[string][2]string // by owner/name#number: mergeable, mergeStateStatus
@@ -59,7 +60,7 @@ func New(t testing.TB) *Server {
 	s := &Server{now: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC), nextID: 790, prs: map[string][]*gh.PR{}, checks: map[string][]gh.Check{}, flows: map[int64]int64{},
 		logs: map[int64]string{}, fail: map[string]*gh.Error{}, login: "you", review: map[string][]*gh.ReviewComment{}, reviews: map[string][]gh.Review{},
 		issue: map[string][]*gh.IssueComment{}, resolved: map[int64]bool{}, members: map[string][]string{}, sizes: map[string]PRSize{}, diffLines: map[string][]string{},
-		teams: map[string][]string{}, commits: map[string][]string{}, prReactions: map[string]gh.Reactions{}, reacted: map[string]bool{}, asked: map[string]map[string]time.Time{},
+		teams: map[string][]string{}, commits: map[string][]string{}, prReactions: map[string]gh.Reactions{}, reacted: map[string]int64{}, asked: map[string]map[string]time.Time{},
 		mergeRepo: map[string]MergeRepo{}, mergeable: map[string][2]string{}, mergedWith: map[string]string{}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /repos/{owner}/{name}/pulls", s.listPRs)
@@ -79,6 +80,8 @@ func New(t testing.TB) *Server {
 	mux.HandleFunc("GET /repos/{owner}/{name}/issues/{num}", s.getIssue)
 	mux.HandleFunc("POST /repos/{owner}/{name}/issues/{num}/comments", s.addIssueComment)
 	mux.HandleFunc("POST /repos/{owner}/{name}/issues/{num}/reactions", s.addReaction)
+	mux.HandleFunc("GET /repos/{owner}/{name}/issues/{num}/reactions", s.listReactions)
+	mux.HandleFunc("DELETE /repos/{owner}/{name}/issues/{num}/reactions/{id}", s.deleteReaction)
 	mux.HandleFunc("GET /orgs/{org}/members/{user}", s.member)
 	mux.HandleFunc("GET /search/issues", s.search)
 	mux.HandleFunc("GET /user", s.user)

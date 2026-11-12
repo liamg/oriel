@@ -124,7 +124,7 @@ func TestParseProcArgs(t *testing.T) {
 	b := binary.NativeEndian.AppendUint32(nil, 2)
 	b = append(b, "/usr/bin/claude\x00\x00\x00\x00claude\x00--resume\x00HOME=/u\x00ORIEL_SESSION=s-9\x00\x00junk"...)
 	args, env := parseProcArgs(b)
-	if !slices.Equal(args, []string{"claude", "--resume"}) || !slices.Equal(env, []string{"HOME=/u", "ORIEL_SESSION=s-9"}) || sessionIn(env) != "s-9" {
+	if !slices.Equal(args, []string{"claude", "--resume"}) || !slices.Equal(env, []string{"HOME=/u", "ORIEL_SESSION=s-9"}) || func() string { s, _ := sessionIn(env); return s }() != "s-9" {
 		t.Errorf("args %q, env %q", args, env)
 	}
 }

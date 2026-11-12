@@ -40,6 +40,12 @@ func (w *Host) ReactPR(ctx context.Context, r PRReactReq) (err error) {
 	return w.code.ReactPR(ctx, r)
 }
 
+// UnreactPR takes back the user's reaction to a pull request.
+func (w *Host) UnreactPR(ctx context.Context, r PRReactReq) (err error) {
+	defer w.recover("UnreactPR", &err)
+	return w.code.UnreactPR(ctx, r)
+}
+
 // SyncGitHub mirrors the review of each of a session's projects' PRs into its threads.
 func (w *Host) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error) {
 	defer w.recover("SyncGitHub", &err)

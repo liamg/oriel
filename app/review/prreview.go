@@ -185,7 +185,7 @@ func (x *PRReview) options() []registry.OptionSpec {
 		{Name: optAutoRereview, Type: registry.Bool, Default: true,
 			Help: "When the author pushes to a pull request under review, fetch it and ask the agent to review what changed."},
 		{Name: optStartReaction, Type: registry.String, Default: "👀",
-			Help: "React to a pull request with this emoji when a review session starts on it, where its host takes reactions. Empty for none."},
+			Help: "React to a pull request with this emoji when a review session starts on it, where its host takes reactions, and take it back once you send your review. Empty for none."},
 	}
 	for i := range out {
 		out[i].Section, out[i].Scopes = "review", registry.ScopeUser

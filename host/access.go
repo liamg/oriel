@@ -85,6 +85,7 @@ type Access interface {
 	PRReview(ctx context.Context, r PRReviewReq) (PRReview, error)
 	SubmitPRReview(ctx context.Context, r PRSubmitReq) error
 	ReactPR(ctx context.Context, r PRReactReq) error
+	UnreactPR(ctx context.Context, r PRReactReq) error
 	ReviewQueue(ctx context.Context, r ReviewQueueReq) ([]gh.Asked, error)
 	SearchPRs(ctx context.Context, r PRsReq) ([]gh.Found, error)
 	GitHubPRFor(ctx context.Context, r GitHubReq) (*gh.PR, error)

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 )
 
 // Reactions are the emoji people reacted with, by GitHub's name for each ("+1", "heart"…), and how many.
@@ -44,6 +46,33 @@ func (a API) PRReactions(ctx context.Context, repo Repo, number int) (Reactions,
 // ReactPR reacts to a pull request with content, one of ReactionNames. Reacting again with the same is a no-op.
 func (a API) ReactPR(ctx context.Context, repo Repo, number int, content string) error {
 	return a.T.Do(ctx, "POST", repoPath(repo, fmt.Sprintf("issues/%d/reactions", number)), map[string]string{"content": content}, nil)
+}
+
+// UnreactPR takes back the signed-in user's content reaction to a pull request: GitHub deletes a reaction by its id,
+// so the PR's reactions of that kind are listed for the user's own. Having none is no error.
+func (a API) UnreactPR(ctx context.Context, repo Repo, number int, content string) error {
+	me, err := a.Me(ctx)
+	if err != nil {
+		return err
+	}
+	var rs []struct {
+		ID   int64 `json:"id"`
+		User struct {
+			Login string `json:"login"`
+		} `json:"user"`
+	}
+	path := repoPath(repo, fmt.Sprintf("issues/%d/reactions", number))
+	if err := a.T.Do(ctx, "GET", path+"?content="+url.QueryEscape(content)+"&per_page=100", nil, &rs); err != nil {
+		return err
+	}
+	for _, r := range rs {
+		if r.ID != 0 && strings.EqualFold(r.User.Login, me) {
+			if err := a.T.Do(ctx, "DELETE", fmt.Sprintf("%s/%d", path, r.ID), nil, nil); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // ReactionName is GitHub's name for emoji; "" for one GitHub doesn't offer.

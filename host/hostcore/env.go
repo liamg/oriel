@@ -1,6 +1,8 @@
 package hostcore
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/sysload"
 )
 
 // Env is what each part of the host runs in: its home, its clock and log, and when it closes.
@@ -47,6 +50,18 @@ func (e Env) Go(where string, fn func()) {
 // SessionDir is where a session's log and files are kept.
 func (e Env) SessionDir(id core.SessionID) string {
 	return filepath.Join(e.Home, "sessions", string(id))
+}
+
+// SessionKey names session id's processes apart from another Oriel's session of the same name: its directory, hashed.
+func (e Env) SessionKey(id core.SessionID) string {
+	sum := sha256.Sum256([]byte(e.SessionDir(id)))
+	return hex.EncodeToString(sum[:8])
+}
+
+// AgentEnv is what an agent of session id runs with on top of its own environment, which every process it starts
+// inherits: the session, and its key, by which what's left running is found when the session ends.
+func (e Env) AgentEnv(id core.SessionID) []string {
+	return []string{sysload.SessionEnv + "=" + string(id), sysload.SessionKeyEnv + "=" + e.SessionKey(id)}
 }
 
 // RetiredID is the mark a deleted session leaves: while it's there no session started later takes its id, so

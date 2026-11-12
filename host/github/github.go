@@ -122,6 +122,15 @@ func (x *GitHub) ReactPR(ctx context.Context, r PRReactReq) error {
 	return x.githubOn(gitx.Repo{}, r.Host, r.Token).ReactPR(ctx, repo, n, r.Content)
 }
 
+// UnreactPR takes back the user's reaction to a pull request, if they have it.
+func (x *GitHub) UnreactPR(ctx context.Context, r PRReactReq) error {
+	repo, n, err := gh.ParsePR(r.URL)
+	if err != nil {
+		return err
+	}
+	return x.githubOn(gitx.Repo{}, r.Host, r.Token).UnreactPR(ctx, repo, n, r.Content)
+}
+
 // Trust is whose GitHub text the agent may read (crit's trusted orgs): members of Orgs and the Users named. With
 // neither set, the repository's owner is the trusted org.
 type Trust struct {

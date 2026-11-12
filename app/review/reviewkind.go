@@ -44,6 +44,7 @@ func (x *PRReview) contributeKind() {
 			return nil
 		}}}))
 	x.Add(h.Contribute(registry.SessionDone{Name: "review.approved", Done: approved, Source: "builtin:pr-review"}))
+	x.Add(h.Contribute(registry.SessionUnsaved{Name: "review.unsent", Unsaved: x.unsent, Source: "builtin:pr-review"}))
 	x.Add(h.Contribute(registry.Service{Name: kit.ReviewsService, Impl: reviewsService{x}, Source: "builtin:pr-review"}))
 	x.Add(h.Contribute(uireg.SlotView{Name: "review.pr", Slot: kit.PRView, Kinds: []core.Kind{core.KindReview}, Source: "builtin:pr-review",
 		View: reviewTab{x}}))
@@ -53,6 +54,31 @@ func (x *PRReview) contributeKind() {
 func approved(se core.SessionState) string {
 	if d := reviewDraft(se); d != nil && len(d.Sent) > 0 && d.Sent[len(d.Sent)-1].Verdict == registry.VerdictApprove {
 		return "You approved " + kit.Label(se) + "."
+	}
+	return ""
+}
+
+// unsent says a review has comments kept, or a summary of the user's, not yet posted to a pull request still open.
+func (x *PRReview) unsent(se core.SessionState) string {
+	pr := reviewPR(se)
+	if pr == "" || x.ended(pr) {
+		return ""
+	}
+	d := x.draft(se)
+	n := 0
+	for _, it := range reviewItems(se, d) {
+		if it.kept() {
+			n++
+		}
+	}
+	summary := strings.TrimSpace(d.Summary) != "" && !isAutoSummary(d.Summary)
+	switch {
+	case n > 0 && summary:
+		return fmt.Sprintf("Your review isn't sent: %s and its summary, lost.", kit.Counted(n, "comment"))
+	case n > 0:
+		return fmt.Sprintf("Your review isn't sent: %s, lost.", kit.Counted(n, "comment"))
+	case summary:
+		return "Your review isn't sent: its summary, lost."
 	}
 	return ""
 }

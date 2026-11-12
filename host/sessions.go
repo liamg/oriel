@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/host/worktree"
 )
 
@@ -121,7 +122,32 @@ func (w *Host) archive(ctx context.Context, se core.SessionState, discard bool) 
 		}
 	}
 	w.run.Stop(se.ID, "archived", core.StoppedByYou)
+	w.reap(se.ID)
 	return w.work.Archive(ctx, se, discard)
+}
+
+// reapRounds bounds how often reap looks again for what the processes it killed started meanwhile.
+const reapRounds = 5
+
+// reap kills what session id's agents left running: every process that carries its key, however it was started
+// (a shell's detached job, a server started with setsid, one re-parented when its shell exited), and what each
+// started. It looks again after each kill for anything started between the look and the kill.
+func (w *Host) reap(id core.SessionID) {
+	key := w.env.SessionKey(id)
+	for range reapRounds {
+		ps, err := sysload.Keyed(key)
+		if err != nil {
+			w.env.Log.Warn("end: listing the session's processes", "session", id, "err", err)
+			return
+		}
+		if len(ps) == 0 {
+			return
+		}
+		for _, p := range ps {
+			w.env.Log.Info("end: stopping a process the session left running", "session", id, "pid", p.PID, "command", p.Command)
+		}
+		sysload.Kill(ps)
+	}
 }
 
 func (w *Host) delete(ctx context.Context, se core.SessionState) error {
@@ -129,6 +155,7 @@ func (w *Host) delete(ctx context.Context, se core.SessionState) error {
 		return fmt.Errorf("%s isn't Oriel's to delete: archive it instead", se.ID)
 	}
 	w.run.Stop(se.ID, "deleted", "")
+	w.reap(se.ID)
 	if err := w.work.Delete(ctx, se); err != nil {
 		return err
 	}

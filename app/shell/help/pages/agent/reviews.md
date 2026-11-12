@@ -61,7 +61,7 @@ are shown to you only; the agent never gets them from here.
 A review session's agent gets its review as a request, **Review api#812**, so it's in Requests like any other. It
 starts at once, while you read, on the PR's head, read-only, and leaves its findings as threads on their lines; the
 AI review runs beside it. As it starts it reacts 👀 to the PR, where the code host takes reactions, so its author sees
-it's being read (`review.start_reaction` picks another emoji, or none). Ship and Git aren't offered: there's nothing of yours to commit or ship.
+it's being read, and takes it back once you send your review (`review.start_reaction` picks another emoji, or none). Ship and Git aren't offered: there's nothing of yours to commit or ship.
 
 The session opens on the **Explorer**, set to Changed, which compares with the branch the PR merges into, so it lists
 only the PR's files; the PR's **diff** is in front, to read from the top, and its **Review** tab behind it. The agent's
@@ -133,7 +133,8 @@ stands, closing those the new commits fixed. **Fetch latest** (`review.pr.fetch`
 
 When the author replies on a comment you posted, a notice says so, with the first line of the reply. Once the PR is
 merged or closed, the tab says so, nothing more can be posted, and syncing stops; **Archive this review** (there, or
-under **Sent** once you've posted) puts the session away.
+under **Sent** once you've posted) puts the session away. Closing its tab deletes it, asking first only
+while you have comments kept or a summary written that you haven't sent ([Ending a session](shell/tabs#end)).
 
 A review the assistant started in the background opens the same way, on the Explorer and the PR's diff, the first
 time you bring it to the front. If the agent answers its request without resolving it, the review counts as done once it stops.
