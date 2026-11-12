@@ -183,13 +183,16 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 			widget.Rich(c, "t", spans, width-24-indent, body, widget.RichOpts{})
 		})
 	case mdCode:
-		c.Column("code", ui.Style{W: ui.Px(width), Pad: ui.Pad(14), Gap: 3, Radius: 6, Stroke: th.C(tMdCodeBorder), Border: 1, Fill: th.C(theme.BgSurface)},
-			func(c *ui.Ctx) {
-				if b.Lang != "" {
-					c.Text("lang", mdFenceKicker(c, b), kit.KickerFont(th.C(theme.FgFaint)))
-				}
-				widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-28, 3, kit.MonoFont(12, th.C(theme.FgMuted)))
-			})
+		indent := mdCodeIndent(b, 16)
+		c.Row("code", ui.Style{W: ui.Px(width), Pad: ui.Insets{L: indent}}, func(c *ui.Ctx) {
+			c.Column("box", ui.Style{W: ui.Flex(1), Pad: ui.Pad(14), Gap: 3, Radius: 6, Stroke: th.C(tMdCodeBorder), Border: 1, Fill: th.C(theme.BgSurface)},
+				func(c *ui.Ctx) {
+					if b.Lang != "" {
+						c.Text("lang", mdFenceKicker(c, b), kit.KickerFont(th.C(theme.FgFaint)))
+					}
+					widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-indent-28, 3, kit.MonoFont(12, th.C(theme.FgMuted)))
+				})
+		})
 	case mdRule:
 		c.Box("hr", ui.Style{W: ui.Px(width), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 	case mdTable:

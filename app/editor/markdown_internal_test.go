@@ -145,9 +145,13 @@ func TestMarkdownTables(t *testing.T) {
 }
 
 // mdParse keeps each block's source lines, so a thread on a line finds its block: a paragraph runs to its last line,
-// a list item takes its continuation lines, and a fence its body.
+// a list item takes its continuation lines, and a fence its body; a fence indented under a list item is the item's,
+// its lines out of the fence's indent.
+//
+// ref:   gfm/spec.md#Fenced code blocks
+// quote: "If the leading code fence is indented N spaces, then up to N spaces of indentation are removed from each line of the content (if present)."
 func TestMarkdownBlocksKeepTheirLines(t *testing.T) {
-	src := "# Title\n\nFirst line\nsecond line.\n\n- one\n  more\n- two\n\n```mermaid\nflowchart LR\n```\n---\n"
+	src := "# Title\n\nFirst line\nsecond line.\n\n- one\n  more\n- two\n\n```mermaid\nflowchart LR\n```\n---\n- three:\n  ```go\n    x := 1\n  y\n  ```\n"
 	want := []mdBlock{
 		{Kind: mdHeading, Level: 1, Text: "Title", Line: 1, End: 1},
 		{Kind: mdPara, Text: "First line second line.", Line: 3, End: 4},
@@ -155,6 +159,8 @@ func TestMarkdownBlocksKeepTheirLines(t *testing.T) {
 		{Kind: mdItem, Mark: "•", Text: "two", Line: 8, End: 8},
 		{Kind: mdCode, Lang: "mermaid", Code: []string{"flowchart LR"}, Line: 10, End: 12},
 		{Kind: mdRule, Line: 13, End: 13},
+		{Kind: mdItem, Mark: "•", Text: "three:", Line: 14, End: 14},
+		{Kind: mdCode, Level: 1, Lang: "go", Code: []string{"  x := 1", "y"}, Line: 15, End: 18},
 	}
 	got := mdParse(src)
 	if len(got) != len(want) {
