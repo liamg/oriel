@@ -64,7 +64,7 @@ func details(ps []Proc) {
 			ps[i].Command = strings.TrimSpace(strings.ReplaceAll(string(b), "\x00", " "))
 		}
 		if b, err := os.ReadFile(dir + "/environ"); err == nil {
-			ps[i].Session = sessionIn(strings.Split(string(b), "\x00"))
+			ps[i].Session, ps[i].Key = sessionIn(strings.Split(string(b), "\x00"))
 		}
 	}
 }
