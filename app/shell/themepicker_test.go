@@ -86,7 +86,7 @@ func TestThemeOptionIsAMenu(t *testing.T) {
 	if sp.Choices == nil {
 		t.Fatal("ui.theme has no choices")
 	}
-	if got := strings.Join(sp.Choices(), " "); got != "abyss aurora catppuccin dawn dracula dusk ember everforest graphite gruvbox hacker kanagawa neon nord obsidian one-dark oriel plum rose-pine solarized tokyonight verdigris" {
+	if got := strings.Join(sp.Choices(), " "); got != "abyss aurora bloodthirsty catppuccin dawn dracula dusk ember everforest graphite gruvbox hacker kanagawa neon nord obsidian one-dark oriel plum rose-pine solarized tokyonight verdigris" {
 		t.Errorf("choices %q", got)
 	}
 	s.Run("Settings", registry.Args{"args": "ui"})

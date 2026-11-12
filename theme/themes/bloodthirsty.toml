@@ -1,0 +1,44 @@
+# Bloodthirsty: red phosphor on black. Text and code are reds and embers; status keeps its own hues, and "needs
+# you" is the one pure, bright red, hotter than any text, so it still cuts through.
+name = "bloodthirsty"
+extends = "oriel"
+variant = "dark"
+
+[effects]
+glow = 1
+
+[component]
+"selection"      = { color = "alpha(accent, 48%)", on = "bg.base" }
+"text.selection" = "alpha(accent, 48%)"
+
+[palette]
+bg0 = "#000000"
+bg1 = "#180909"
+bg2 = "mix(bg1, bg3, 45%)"
+bg3 = "#240d0d"
+bg4 = "#3a1414"
+line  = "#240d0d"
+line2 = "#3a1414"
+fg      = "#f5b8b0"
+fg2     = "#d98a80"
+fg3     = "#a05a52"
+fg4     = "#73403a"
+accent  = "#ff3b3b"
+accent2 = "#8a1414"
+ink     = "#000000"
+brand   = "#ff3b3b"
+green   = "#5fdc7a"
+amber   = "#ffb347"
+red     = "#ff2a2a"
+cyan    = "#4fd8e0"
+violet  = "#b57afc"
+pink    = "#ff8ad0"
+blue    = "#508eff"
+"syn.keyword"   = "#ff3b3b"
+"syn.string"    = "#ff9a7a"
+"syn.number"    = "#ffb347"
+"syn.function"  = "#ff7070"
+"syn.type"      = "#e8879e"
+"syn.comment"   = "#7d4a44"
+"syn.punct"     = "#b8706a"
+"syn.variable"  = "#f5b8b0"
