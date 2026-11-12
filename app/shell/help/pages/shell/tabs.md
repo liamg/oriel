@@ -22,7 +22,8 @@ comes, then stays lit until you go to it, when the permission comes up at once
 
 - Click a tab, or press `⌘1` to `⌘9`, to bring that session to the front.
 - Drag a tab onto another to move it to its place (`session.tab.move`); `⌘1` to `⌘9` follow the order.
-- Its `✕` ends the session: its agent stops and it's archived, asking first when something would be lost
+- Its `✕`, shown under the pointer at the tab's end (the name gives up room for it, so the tab keeps its width), ends
+  the session: its agent stops and it's archived, asking first when something would be lost
   ([Ending a session](#end)).
 - Right-click a tab for **Rename…** (edit the name in the tab; ⏎ keeps it, Escape drops it), **Close tab** and **End session…**.
 

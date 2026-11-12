@@ -198,9 +198,17 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 	mono := func(size float32, w typeset.Weight) typeset.FontSpec {
 		return typeset.FontSpec{Family: typeset.Mono, Size: size, Weight: w}
 	}
-	in := widget.Clickable(c, s.ID(), ui.Style{Dir: ui.Column, H: ui.Px(tabH), Pad: ui.Insets{L: 12, T: 5, R: 14, B: 5}, Gap: 4, Main: ui.Center,
+	// Under the pointer, the tab keeps the width it had before, and its ✕ takes room from the end of its name.
+	st := ui.Style{Dir: ui.Column, H: ui.Px(tabH), Pad: ui.Insets{L: 12, T: 5, R: 14, B: 5}, Gap: 4, Main: ui.Center,
 		NoHover: true, Help: "shell/tabs", Role: ui.RoleTab, Selected: on, Label: s.Name(), Subject: kit.SessionSubject + string(s.ID()),
-		Drag: &ui.DragData{Kind: tabDragKind, Data: s.ID(), Label: s.Name()}, Drop: []string{tabDragKind}, NoFocus: true}, func(c *ui.Ctx) {
+		Drag: &ui.DragData{Kind: tabDragKind, Data: s.ID(), Label: s.Name()}, Drop: []string{tabDragKind}, NoFocus: true}
+	id := c.Next(s.ID())
+	if c.PointerOver(id) {
+		if r, ok := c.Rect(id); ok {
+			st.W = ui.Px(r.Dx())
+		}
+	}
+	in := widget.Clickable(c, s.ID(), st, func(c *ui.Ctx) {
 		hover := widget.PointerIn(c)
 		switch {
 		case on:
@@ -211,17 +219,23 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 		if !on {
 			callFrom(c, h, s)
 		}
-		c.Row("top", ui.Style{H: ui.Px(16), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
+		top := ui.Style{H: ui.Px(16), Gap: 7, Cross: ui.Center}
+		if hover {
+			top.W = ui.Flex(1)
+		}
+		c.Row("top", top, func(c *ui.Ctx) {
 			kit.StatusMark(c, "mark", s.Status(), 9)
 			if t.renaming == s.ID() {
 				t.nameField(c, h, s)
-			} else {
-				c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: weight(on)}, Color: name})
-			}
-			if hover {
+			} else if hover {
+				c.Row("name", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
+					c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: weight(on)}, Color: name})
+				})
 				if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close " + s.Name(), Help: "shell/tabs", Size: 16}) {
 					closeSession(h, s.ID())
 				}
+			} else {
+				c.Text("name", s.Name(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: weight(on)}, Color: name})
 			}
 		})
 		c.Row("state", ui.Style{H: ui.Px(12), Gap: 7, Cross: ui.Center, Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {

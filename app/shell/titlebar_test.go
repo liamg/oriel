@@ -116,6 +116,37 @@ func TestSessionTabCloses(t *testing.T) {
 	}
 }
 
+// A tab has room for its ✕ before the pointer comes: under the pointer, the ✕ shows and no tab changes width or
+// moves.
+func TestASessionTabsCloseShowsWithoutResizingIt(t *testing.T) {
+	s := apptest.New(t, apptest.Options{Size: render.Point{X: 1600, Y: 120}})
+	openTabFixture(t, s.Store(), tabFixture[:3])
+	s.Frame()
+	names := []string{"pricing-rounding", "ENG-2231 search api", "review #4410"}
+	bounds := func() []render.Rect {
+		var out []render.Rect
+		for _, n := range names {
+			out = append(out, s.Within("Sessions", n).Bounds)
+		}
+		return out
+	}
+	before := bounds()
+	if s.Find("Close review #4410") != nil {
+		t.Fatal("a tab away from the pointer shows its ✕")
+	}
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: apptest.Centre(before[2])})
+	s.Frame()
+	s.Frame()
+	if s.Find("Close review #4410") == nil {
+		t.Fatal("the tab under the pointer doesn't show its ✕")
+	}
+	for i, r := range bounds() {
+		if r != before[i] {
+			t.Errorf("%s moved from %v to %v as the ✕ showed", names[i], before[i], r)
+		}
+	}
+}
+
 // glyphColour is the colour the frame draws text s in.
 func glyphColour(l *render.List, s string) (render.Color, bool) {
 	for _, op := range l.Ops {
