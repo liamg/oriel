@@ -194,7 +194,8 @@ agent that loses its sign-in is started once again on the host's, handed over af
   - Focus has one owner, the toolkit. A view marks its default target and moves focus on purpose with
     `Ctx.RequestFocus`.
   - Text never runs out of its box: a row too narrow cuts its text with "…". Strips of tabs scroll sideways
-    (`widget.Strip`); tables scroll (`ScrollX`); a chip that must stay whole is `Keep`.
+    (`widget.Strip`); tables scroll (`ScrollX`); rows that scroll across together, as a diff's lines do, name one
+    `ScrollWith`; a chip that must stay whole is `Keep`.
   - Text selects and copies by default: a drag, a double click (a word) or a triple click (a node's text), then the
     platform's copy key. A selection stays in the nearest `Selectable` box, else the nearest that scrolls or floats,
     else the window. Controls, menus and popovers never select, and `NoSelect` opts a box out.

@@ -68,6 +68,7 @@ type state struct {
 	shown, easeFrom [2]float32
 	asked           [2]float32
 	easing, placed  bool
+	sharedAt        int // for a ScrollWith id: the frame its ext started being gathered in
 	bar             barFade
 	data            any // a widget's own state: State[T]
 }
@@ -182,6 +183,7 @@ type flags struct {
 	interactive, focusable, disabled bool
 	scrollX, scrollY, wheel          bool
 	sideways                         bool
+	scrollWith                       ID
 	bars                             Bars
 	cursor                           render.Cursor
 	tooltip, help, keyMode, subject  string
@@ -325,7 +327,7 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable, focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, scrollWith: s.ScrollWith, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
 				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop, actions: s.Actions}
 		}
 	}
@@ -405,7 +407,7 @@ func (u *UI) Scroll(id ID) render.Point {
 // ScrollBy moves id's scroll offset at once, from where it's drawn, as far as its last layout had to scroll; a box
 // not laid out yet is clamped by its first.
 func (u *UI) ScrollBy(id ID, dx, dy float32) {
-	st := u.state(id)
+	st := u.state(u.scroller(id))
 	st.seen = u.frame
 	st.stopEasing()
 	was := st.scroll
@@ -423,10 +425,10 @@ func (u *UI) ScrollBy(id ID, dx, dy float32) {
 // ScrollTo sets id's scroll offset, which the next layout clamps to the content. Once the box has been laid out it
 // glides there, over a view's length at most.
 func (u *UI) ScrollTo(id ID, p render.Point) {
-	st := u.state(id)
+	st := u.state(u.scroller(id))
 	st.seen = u.frame
 	to := [2]float32{p.X, p.Y}
-	if !st.placed || u.opts.ReducedMotion || u.opts.MotionSpeed <= 0 {
+	if !st.placed || st.sharedAt != 0 || u.opts.ReducedMotion || u.opts.MotionSpeed <= 0 {
 		st.scroll, st.shown = to, to
 		return
 	}
@@ -443,6 +445,14 @@ func (u *UI) ScrollTo(id ID, p render.Point) {
 	}
 	st.scroll, st.asked, st.easing = to, to, true
 	u.springs[childID(id, motionKey{"scroll"})] = &spring{x: 0, at: u.now(), seen: u.frame}
+}
+
+// scroller is the id whose offset id's box scrolls by: its ScrollWith, else its own.
+func (u *UI) scroller(id ID) ID {
+	if w := u.flags[id].scrollWith; w != 0 {
+		return w
+	}
+	return id
 }
 
 // ScrollShown is id's scroll offset as it's drawn, which lags Scroll while a ScrollTo glides.
@@ -899,22 +909,13 @@ func (u *UI) place(e *elem, x, y float32) {
 	for axis := range 2 {
 		a, b := e.pad(axis)
 		inner[axis] = e.size[axis] - a - b
-		if e.scrolls(axis) {
-			ext := e.content[axis] - a - b
-			if e.main(axis) {
-				ext = 0
-				for i, c := range kids {
-					ext += c.size[axis]
-					if i > 0 {
-						ext += e.style.Gap
-					}
-				}
-			} else {
-				ext = 0
-				for _, c := range kids {
-					ext = max(ext, c.size[axis])
-				}
-			}
+		if e.scrolls(axis) && e.style.ScrollWith != 0 {
+			ext := e.extent(kids, axis)
+			off := u.shared(e.style.ScrollWith, axis, ext-inner[axis])
+			st.scroll[axis], st.shown[axis], st.ext[axis], st.view[axis], st.placed = off, off, ext, inner[axis], true
+			origin[axis] -= off
+		} else if e.scrolls(axis) {
+			ext := e.extent(kids, axis)
 			if e.style.Follow && st.atEnd(axis) {
 				st.scroll[axis] = ext - inner[axis]
 			}
@@ -986,6 +987,41 @@ func (u *UI) place(e *elem, x, y float32) {
 		off += c.size[m] + gap
 	}
 	u.floatKids(e)
+}
+
+// extent is how far a scrolling box's flow children reach along axis.
+func (e *elem) extent(kids []*elem, axis int) float32 {
+	var ext float32
+	for i, c := range kids {
+		switch {
+		case !e.main(axis):
+			ext = max(ext, c.size[axis])
+		case i > 0:
+			ext += c.size[axis] + e.style.Gap
+		default:
+			ext += c.size[axis]
+		}
+	}
+	return ext
+}
+
+// shared is the offset along axis of the boxes scrolling with id, one of which reaches rng past its view. The first
+// of them in a frame clamps the offset to how far the widest went last frame, so all are drawn at one offset.
+func (u *UI) shared(id ID, axis int, rng float32) float32 {
+	g := u.state(id)
+	g.seen = u.frame
+	if g.sharedAt != u.frame {
+		if g.placed {
+			for ax := range 2 {
+				g.scroll[ax] = max(0, min(g.scroll[ax], g.ext[ax]))
+			}
+		}
+		g.sharedAt, g.placed, g.easing = u.frame, true, false
+		g.ext, g.view = [2]float32{}, [2]float32{}
+	}
+	g.ext[axis] = max(g.ext[axis], rng)
+	g.shown = g.scroll
+	return g.scroll[axis]
 }
 
 func (u *UI) floatKids(e *elem) {
