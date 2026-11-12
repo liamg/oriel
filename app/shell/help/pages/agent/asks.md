@@ -94,6 +94,9 @@ Inbox panel opens its thread. It stays in its thread until it's answered, wherev
 withdraws it: resolving the thread meanwhile leaves it there. From its field, `⇧⇥` moves back onto its options and
 `Space` picks one.
 
+Once answered, the question and your answer stay in the thread as its last two comments, marked **question** and
+**answered**, so the conversation reads back whole.
+
 ## Login
 
 The agent's login stopped working: an expired or revoked login, or none. Every session with that provider waits on

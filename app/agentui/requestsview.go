@@ -362,6 +362,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 				if cm.Btw {
 					widget.Chip(c, "btw", "btw", th.C(theme.Accent), "agent/requests#btw")
 				}
+				askedChip(c, cm)
 				// A progress note is "working on it" only while it's the agent's last word on an open request.
 				if cm.Progress && t.Open() && lastAgentComment(t) == cm.ID {
 					widget.Chip(c, "progress", "working on it", th.C(theme.StatusWorking), "agent/requests#request")

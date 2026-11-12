@@ -6,7 +6,9 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // A question is asked in a thread: it's drawn at the foot of that thread's card wherever threads are drawn (between
@@ -46,4 +48,16 @@ func (x *Console) openThread(id core.SessionID, tid core.ThreadID) {
 		return
 	}
 	x.run(context.Background(), "session.open", registry.Args{"id": string(id), "then": []any{map[string]any{"command": "request.open", "args": open}}})
+}
+
+// askedChip marks a comment that's an answered question: the agent's question, or your answer to it.
+func askedChip(c *ui.Ctx, cm core.Comment) {
+	if !cm.Asked {
+		return
+	}
+	label := "answered"
+	if cm.Author == core.AuthorAgent {
+		label = "question"
+	}
+	widget.Chip(c, "asked", label, c.Theme().C(theme.FgMuted), "agent/asks#question")
 }
