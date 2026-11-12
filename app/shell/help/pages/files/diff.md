@@ -31,6 +31,15 @@ Each hunk starts with git's `@@` line and the function, method or type it's in. 
 ones green, the words that changed in a changed line marked brighter. A click selects a line; threads open between
 the lines they're about, as in the editor.
 
+## Unchanged lines {#context}
+
+A hunk shows three unchanged lines either side of its change; the rest are hidden behind a row saying how many. Its
+arrows show them as GitHub's do, 20 lines a click: **↑** above the first hunk shows lines up from it, **↓** below the
+last shows lines down to the file's end, and between two hunks **↓** shows lines down from the hunk above and **↑**
+lines up from the one below, until 20 or fewer are left, which **↕** shows at once. `zo` shows 20 lines each side
+of the selected hunk, `zR` every hidden line of the file (`diff.context.more`). The lines stay shown until the
+file's change does. Threads on them show under them, but comments are made on the diff's own lines.
+
 ## Long lines {#wrap}
 
 **wrap** in a file's header (or `diff.wrap`) wraps long lines onto the rows below, or stops; it's the editor's
@@ -55,8 +64,8 @@ The `?` at a hunk's left, or `?` on a selected line, asks for the code there to 
 ## Keys {#keys}
 
 `]h` and `[h` go between hunks, `j` and `k` between lines, `r` marks the hunk reviewed, `gc` opens a thread on the
-line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file, and `zl`,
-`zh`, `zL` and `zH` scroll across. The pointer on a line shows a **+** at the left of its gutter that opens a thread
+line (or the hunk's lines), `?` explains, `o` opens the line in the editor, `⏎` shows or folds the file, `zo` and
+`zR` show hidden lines, and `zl`, `zh`, `zL` and `zH` scroll across. The pointer on a line shows a **+** at the left of its gutter that opens a thread
 on it too (see [Between the lines](agent/requests#inline)).
 
 {{keys "diff.*"}}

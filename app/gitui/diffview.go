@@ -487,9 +487,13 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 		decor := x.h.Decorate(uireg.DecorationCtx{Window: DiffView + ":" + st.root, Presenter: diffPresenter, Now: c.Now(), Name: f.Path,
 			Path: filepath.Join(st.root, filepath.FromSlash(f.Path)), Buffer: buf, Snap: snap, Top: 0, Bottom: snap.Lines(), FileBytes: snap.Bytes,
 			Wake: c.WakeAt})
+		gaps := hiddenGaps(d)
+		fc := st.context(f.Path, d.hunks)
 		for i, h := range d.hunks {
+			reveal = append(reveal, x.gapRows(c, st, f.Path, d, fc, gaps[i], layout, decor)...)
 			reveal = append(reveal, x.hunk(c, st, f.Path, i, h, layout, decor)...)
 		}
+		reveal = append(reveal, x.gapRows(c, st, f.Path, d, fc, gaps[len(d.hunks)], layout, decor)...)
 	})
 	return reveal
 }
@@ -537,28 +541,7 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 				}
 			}
 		})
-		blocks := func(key any, line int) {
-			for _, d := range decor[line-1] {
-				if d.Kind != uireg.Block || d.Node == nil || line <= 0 {
-					continue
-				}
-				k := fmt.Sprint(key, ".", d.Priority)
-				if f, ok := d.Node.(*ui.Func); ok && f.Key != nil {
-					k = fmt.Sprint(f.Key)
-				}
-				id := c.Next(k)
-				c.Box(k, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 62, R: 14, T: 8, B: 10}}, func(c *ui.Ctx) {
-					if f, ok := d.Node.(*ui.Func); ok {
-						f.Fn(c)
-						return
-					}
-					c.Node(d.Node)
-				})
-				if d.Reveal {
-					reveal = append(reveal, id)
-				}
-			}
-		}
+		blocks := func(key any, line int) { reveal = append(reveal, lineBlocks(c, decor, key, line)...) }
 		if layout == "unified" {
 			for k, l := range h.Lines {
 				x.unifiedRow(c, st, at, k, h, lineDecor{decor, l.New})
@@ -579,6 +562,32 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 			}
 		}
 	})
+	return reveal
+}
+
+// lineBlocks draws the Block decorations of new line (from 1) under it, and returns those that asked to be brought
+// into view.
+func lineBlocks(c *ui.Ctx, decor map[int][]uireg.Decoration, key any, line int) (reveal []ui.ID) {
+	for _, d := range decor[line-1] {
+		if d.Kind != uireg.Block || d.Node == nil || line <= 0 {
+			continue
+		}
+		k := fmt.Sprint(key, ".", d.Priority)
+		if f, ok := d.Node.(*ui.Func); ok && f.Key != nil {
+			k = fmt.Sprint(f.Key)
+		}
+		id := c.Next(k)
+		c.Box(k, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 62, R: 14, T: 8, B: 10}}, func(c *ui.Ctx) {
+			if f, ok := d.Node.(*ui.Func); ok {
+				f.Fn(c)
+				return
+			}
+			c.Node(d.Node)
+		})
+		if d.Reveal {
+			reveal = append(reveal, id)
+		}
+	}
 	return reveal
 }
 

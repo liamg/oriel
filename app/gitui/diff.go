@@ -122,6 +122,7 @@ type diffState struct {
 	slider  map[string]bool            // image files shown as a slider, not side by side
 	waiting map[string]time.Time       // files whose diff is being made, since when
 	pan     []diffPan                  // sideways scrolls asked for, for the next frame
+	ctx     map[string]*fileContext    // each file's hidden lines shown
 	codeW   float32                    // the width a line's code had last frame
 }
 
@@ -159,6 +160,8 @@ func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 		{Keys: "?", Command: "diff.explain", Desc: "Explain"},
 		{Keys: "o", Command: "diff.source", Desc: "Open in the editor"},
 		{Keys: "<CR>", Command: "diff.expand", Desc: "Show or fold the file"},
+		{Keys: "zo", Command: "diff.context.more", Desc: "Show hidden lines around the hunk"},
+		{Keys: "zR", Command: "diff.context.more", Args: registry.Args{"all": true}, Desc: "Show every hidden line of the file"},
 		{Keys: "zl", Command: "diff.scroll", Args: registry.Args{"columns": 1}, Desc: "Scroll right"},
 		{Keys: "zh", Command: "diff.scroll", Args: registry.Args{"columns": -1}, Desc: "Scroll left"},
 		{Keys: "zL", Command: "diff.scroll", Args: registry.Args{"halves": 1}, Desc: "Scroll right half a screen"},
@@ -222,6 +225,8 @@ func (x *Diff) commands() []registry.Command {
 			}
 			return x.setWrap(on)
 		}},
+		{ID: "diff.context.more", Title: "Show unchanged lines the diff hides: {path}'s (the selected file's) gap {gap} (0 above the first hunk) {dir} up, down or all, by {lines} (20); without a gap, both ways around the selected hunk, or with {all} every one",
+			Available: has, Run: on(x.moreContext)},
 		{ID: "diff.scroll", Title: "Scroll the selected file's lines across, with 'wrap' off: by {columns}, or {halves} of the view; less than 0 goes left", Available: has,
 			Run: on(func(st *diffState, a registry.Args) error {
 				st.pan = append(st.pan, diffPan{file: st.sel.file, columns: a.Int("columns"), halves: a.Int("halves")})
