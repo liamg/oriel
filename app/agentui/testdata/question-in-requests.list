@@ -118,54 +118,53 @@ clip 44,50 320x924 r 0
   rect 44,80 320x1 fill #24221d
   clip 44,81 320x893 r 0
     rect 44,81 320x893 fill #0c0c0b
-    text "REQUESTS" @60,103.020004 #7c7566 JetBrains Mono 9.5
-    text "⇧⌘R" @330,103.2 #4f4a40 JetBrains Mono 10
-    rect 60,124.2 288x30 fill #060606 radius 6
-    clip 60,124.2 288x30 r 6
-      text "⌕ search requests…" @70,143.74712 #7c7566 Inter 12.5
+    rect 60,93 260x30 fill #060606 radius 6
+    clip 60,93 260x30 r 6
+      text "⌕ search requests…" @70,112.54712 #7c7566 Inter 12.5
     pop
-    rect 60,124.2 288x30 radius 6 stroke 1 #332f27
-    clip 44,164.2 320x762.8 r 0
-      text "WORKING" @60,185.89 #4cc9f0 JetBrains Mono 9.5
-      rect 44,194.73999 320x70.10901 fill #1f1c0f
-      rect 44,194.73999 2x70.10901 fill #ffd23f
-      rect 60,208.10474 7x7 fill #4cc9f0 radius 3.5
-      text "Negative values round the wrong way" @76,216.33374 #ece6d8 Inter 13
-      text "Claude: Right — Floor rounds toward -∞, so -…" @76,235.09448 #7c7566 Inter 12
-      text "round.go:46" @76,252.69902 #4f4a40 JetBrains Mono 10.5
-      text " · 2 msgs" @148.53125,252.69902 #4f4a40 JetBrains Mono 10.5
-      text " · 1m" @207.875,252.69902 #4f4a40 JetBrains Mono 10.5
-      text "NEEDS YOU" @60,286.53903 #ff5f6d JetBrains Mono 9.5
-      rect 60,308.75378 7x7 fill #ff5f6d radius 3.5
-      text "Move currency precision table to config?" @76,316.9828 #ece6d8 Inter 13
-      text "Claude: Which would you rather?" @76,335.74353 #7c7566 Inter 12
-      text "PLAN.md:22" @76,353.34805 #4f4a40 JetBrains Mono 10.5
-      text " · 3 msgs" @141.9375,353.34805 #4f4a40 JetBrains Mono 10.5
-      text " · 4m" @201.28125,353.34805 #4f4a40 JetBrains Mono 10.5
-      text "OPEN" @60,387.18805 #7c7566 JetBrains Mono 9.5
-      rect 60,409.40277 7x7 fill #7c7566 radius 3.5
-      text "Add a fuzz test for RoundMinor" @76,417.63177 #ece6d8 Inter 13
-      text "queued · sends when the current turn ends" @76,436.39252 #7c7566 Inter 12
-      text "whole change" @76,453.99704 #4f4a40 JetBrains Mono 10.5
-      text " · 1 msg" @155.125,453.99704 #4f4a40 JetBrains Mono 10.5
-      text " · 2m" @207.875,453.99704 #4f4a40 JetBrains Mono 10.5
-      rect 60,479.51184 7x7 fill #7c7566 radius 3.5
-      text "btw — why decimal and not big.Rat?" @76,487.74084 #ece6d8 Inter 13
-      text "Claude: decimal keeps the scale, so money pr…" @76,506.5016 #7c7566 Inter 12
-      text "btw" @76,524.10614 #4f4a40 JetBrains Mono 10.5
-      text " · 9m" @95.78125,524.10614 #4f4a40 JetBrains Mono 10.5
-      text "RESOLVED" @60,558.2761 #4fe0a0 JetBrains Mono 9.5
-      text "2" @342,558.4561 #7c7566 JetBrains Mono 10
-      rect 60,580.82086 7x7 fill #4fe0a0 radius 3.5
-      text "Use banker's rounding for JPY" @76,589.04987 #b3ab99 Inter 13
-      text "tiers.go:12" @76,610.8956 #4f4a40 JetBrains Mono 10.5
-      text " · 1 msg" @148.53125,610.8956 #4f4a40 JetBrains Mono 10.5
-      text " · 12m" @201.28125,610.8956 #4f4a40 JetBrains Mono 10.5
-      rect 60,636.41034 7x7 fill #4fe0a0 radius 3.5
-      text "Rename Mode → RoundingMode" @76,644.63934 #b3ab99 Inter 13
-      text "round.go:8" @76,666.4851 #4f4a40 JetBrains Mono 10.5
-      text " · 1 msg" @141.9375,666.4851 #4f4a40 JetBrains Mono 10.5
-      text " · 19m" @194.6875,666.4851 #4f4a40 JetBrains Mono 10.5
+    rect 60,93 260x30 radius 6 stroke 1 #332f27
+    text "⇧⌘R" @330,111.6 #4f4a40 JetBrains Mono 10
+    clip 44,133 320x794 r 0
+      text "WORKING" @60,154.69 #4cc9f0 JetBrains Mono 9.5
+      rect 44,163.54 320x70.109024 fill #1f1c0f
+      rect 44,163.54 2x70.109024 fill #ffd23f
+      rect 60,176.90474 7x7 fill #4cc9f0 radius 3.5
+      text "Negative values round the wrong way" @76,185.13374 #ece6d8 Inter 13
+      text "Claude: Right — Floor rounds toward -∞, so -…" @76,203.89449 #7c7566 Inter 12
+      text "round.go:46" @76,221.49902 #4f4a40 JetBrains Mono 10.5
+      text " · 2 msgs" @148.53125,221.49902 #4f4a40 JetBrains Mono 10.5
+      text " · 1m" @207.875,221.49902 #4f4a40 JetBrains Mono 10.5
+      text "NEEDS YOU" @60,255.33902 #ff5f6d JetBrains Mono 9.5
+      rect 60,277.55377 7x7 fill #ff5f6d radius 3.5
+      text "Move currency precision table to config?" @76,285.78278 #ece6d8 Inter 13
+      text "Claude: Which would you rather?" @76,304.54352 #7c7566 Inter 12
+      text "PLAN.md:22" @76,322.14804 #4f4a40 JetBrains Mono 10.5
+      text " · 3 msgs" @141.9375,322.14804 #4f4a40 JetBrains Mono 10.5
+      text " · 4m" @201.28125,322.14804 #4f4a40 JetBrains Mono 10.5
+      text "OPEN" @60,355.98804 #7c7566 JetBrains Mono 9.5
+      rect 60,378.2028 7x7 fill #7c7566 radius 3.5
+      text "Add a fuzz test for RoundMinor" @76,386.4318 #ece6d8 Inter 13
+      text "queued · sends when the current turn ends" @76,405.19254 #7c7566 Inter 12
+      text "whole change" @76,422.79706 #4f4a40 JetBrains Mono 10.5
+      text " · 1 msg" @155.125,422.79706 #4f4a40 JetBrains Mono 10.5
+      text " · 2m" @207.875,422.79706 #4f4a40 JetBrains Mono 10.5
+      rect 60,448.31183 7x7 fill #7c7566 radius 3.5
+      text "btw — why decimal and not big.Rat?" @76,456.54083 #ece6d8 Inter 13
+      text "Claude: decimal keeps the scale, so money pr…" @76,475.30157 #7c7566 Inter 12
+      text "btw" @76,492.9061 #4f4a40 JetBrains Mono 10.5
+      text " · 9m" @95.78125,492.9061 #4f4a40 JetBrains Mono 10.5
+      text "RESOLVED" @60,527.0761 #4fe0a0 JetBrains Mono 9.5
+      text "2" @342,527.2561 #7c7566 JetBrains Mono 10
+      rect 60,549.62085 7x7 fill #4fe0a0 radius 3.5
+      text "Use banker's rounding for JPY" @76,557.84985 #b3ab99 Inter 13
+      text "tiers.go:12" @76,579.6956 #4f4a40 JetBrains Mono 10.5
+      text " · 1 msg" @148.53125,579.6956 #4f4a40 JetBrains Mono 10.5
+      text " · 12m" @201.28125,579.6956 #4f4a40 JetBrains Mono 10.5
+      rect 60,605.2103 7x7 fill #4fe0a0 radius 3.5
+      text "Rename Mode → RoundingMode" @76,613.43933 #b3ab99 Inter 13
+      text "round.go:8" @76,635.2851 #4f4a40 JetBrains Mono 10.5
+      text " · 1 msg" @141.9375,635.2851 #4f4a40 JetBrains Mono 10.5
+      text " · 19m" @194.6875,635.2851 #4f4a40 JetBrains Mono 10.5
     pop
     rect 44,927 320x1 fill #24221d
     rect 60,938 93.921875x26 fill #ffd23f radius 6 stroke 1 #ffd23f

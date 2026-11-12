@@ -274,7 +274,7 @@ func TestSidebarPanelsReplaceEachOther(t *testing.T) {
 		if !shell.RailEntryActive(s.Host(), e, p.scope) {
 			t.Errorf("%s is showing, and its rail entry isn't lit", e.Title)
 		}
-		if k := kit.KeyLabel("<D-R>"); p.entry == "requests" && !strings.Contains(s.Text(), "REQUESTS\n"+k) {
+		if k := kit.KeyLabel("<D-R>"); p.entry == "requests" && !strings.Contains(s.Text(), "⌕ search requests…\n"+k) {
 			t.Errorf("Requests doesn't show its key %s:\n%s", k, s.Text())
 		}
 	}

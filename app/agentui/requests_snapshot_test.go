@@ -94,3 +94,13 @@ func TestRequestsHaveNoFilterChips(t *testing.T) {
 		t.Error("the search field went with them")
 	}
 }
+
+// The view says "Requests" once: its tab names it, so the list doesn't head itself again.
+func TestRequestsAreNamedOnce(t *testing.T) {
+	s := requestsScene(t)
+	s.Run("view.open", registry.Args{"id": kit.RequestsView, "place": "dock", "edge": "left", "size": 320})
+	s.Frame()
+	if n := strings.Count(s.Text(), "REQUESTS"); n != 1 {
+		t.Errorf("REQUESTS is drawn %d times, want once, on the tab", n)
+	}
+}

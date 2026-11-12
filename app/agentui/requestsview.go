@@ -59,15 +59,13 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 		}
 		st := x.state(se.ID)
 		sel, _ := x.selection(se, st)
-		c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 12, B: 10}, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", "REQUESTS", kit.KickerFont(th.C(theme.FgFaint)))
-			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		c.Row("search", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 12, B: 10}, Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+			widget.Input(c, "q", &st.query, widget.InputOpts{Label: "Search requests", Placeholder: "⌕ search requests…", Help: "agent/requests#search",
+				Width: ui.Flex(1)})
+			// The panel's own key, where its name used to repeat the tab's.
 			if k := kit.BoundKey(x.h, "view.toggle", requestsArgs()); k != "" {
 				c.Text("keys", k, kit.MonoFont(10, th.C(theme.FgGhost)))
 			}
-		})
-		c.Box("search", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 8, B: 10}}, func(c *ui.Ctx) {
-			widget.Input(c, "q", &st.query, widget.InputOpts{Label: "Search requests", Placeholder: "⌕ search requests…", Help: "agent/requests#search"})
 		})
 		listID := c.Next("list")
 		if st.focusList {
