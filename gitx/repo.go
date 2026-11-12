@@ -134,8 +134,12 @@ func (r Repo) Files(ctx context.Context) ([]string, error) {
 	return slices.Compact(files), nil
 }
 
-// Branch is the branch checked out, or "HEAD" when it's detached.
+// Branch is the branch checked out, or "HEAD" when it's detached. A branch with no commits yet (a repo just
+// made) is named too: HEAD points at it, though there's nothing for HEAD to resolve to.
 func (r Repo) Branch(ctx context.Context) (string, error) {
+	if out, err := r.git(ctx, "symbolic-ref", "--short", "-q", "HEAD"); err == nil {
+		return strings.TrimSpace(string(out)), nil
+	}
 	out, err := r.git(ctx, "rev-parse", "--abbrev-ref", "HEAD")
 	return strings.TrimSpace(string(out)), err
 }

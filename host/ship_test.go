@@ -279,3 +279,20 @@ func TestGitHubIsAskedThroughTheHostsHTTP(t *testing.T) {
 type roundTrip func(*http.Request) (*http.Response, error)
 
 func (f roundTrip) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+
+// A directory opened as it is, just git init'ed with files in it and no commit yet, reads as its branch with those
+// files to commit, not a git error.
+func TestShipReadsARepoWithNoCommitsYet(t *testing.T) {
+	r := newRig(t)
+	g := gittest.New(t)
+	g.Write(map[string]string{"main.go": "package main\n"})
+	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: g.Dir})
+	for name, s := range r.ship(id, false) {
+		if s.GitError != "" {
+			t.Errorf("%s: git error %q", name, s.GitError)
+		}
+		if s.Branch != "main" || len(s.Files) != 1 || s.Files[0].Path != "main.go" {
+			t.Errorf("%s: on %q with files %+v, want main.go to commit on main", name, s.Branch, s.Files)
+		}
+	}
+}
