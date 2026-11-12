@@ -41,7 +41,7 @@ func (x *GitHub) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err err
 			}
 		} else {
 			var ok bool
-			if ghRepo, ok = gh.ParseRepo(x.remoteURL(ctx, repo)); !ok {
+			if ghRepo, ok = gh.ParseRepo(x.remoteURL(ctx, repo, false)); !ok {
 				continue
 			}
 			g := x.githubFor(ctx, se.ID, p.Name, repo, ghRepo, "", "", p.Branch, r.Fresh)

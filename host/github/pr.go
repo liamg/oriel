@@ -43,7 +43,7 @@ func (x *GitHub) githubProject(ctx context.Context, r GitHubReq) (gh.Client, gh.
 	if err != nil {
 		return nil, gh.Repo{}, err
 	}
-	ghRepo, ok := repoOf(r, x.remoteURL(ctx, repo))
+	ghRepo, ok := repoOf(r, x.remoteURL(ctx, repo, false))
 	if !ok {
 		return nil, gh.Repo{}, fmt.Errorf("%s's origin isn't on GitHub", p.Name)
 	}
@@ -72,7 +72,7 @@ func (x *GitHub) GitHubPRFor(ctx context.Context, r GitHubReq) (_ *gh.PR, err er
 	if err != nil {
 		return nil, err
 	}
-	ghRepo, ok := repoOf(r, x.remoteURL(ctx, repo))
+	ghRepo, ok := repoOf(r, x.remoteURL(ctx, repo, false))
 	if !ok {
 		return nil, fmt.Errorf("%s's origin isn't on GitHub", p.Name)
 	}

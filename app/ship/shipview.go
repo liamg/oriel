@@ -445,11 +445,19 @@ const (
 	stillReading = "Still reading the projects' git and pull requests"
 )
 
+// noOriginWhy is why a project can't push for want of origin: the remotes it has instead, when it has some.
+func noOriginWhy(s shipRead) string {
+	if len(s.Remotes) > 0 {
+		return "This repo has no remote named origin (it has " + strings.Join(s.Remotes, ", ") + "): Oriel pushes to origin"
+	}
+	return noOrigin
+}
+
 // cantPush is why a project's branch can't be pushed, if it can't.
 func cantPush(s shipRead) string {
 	switch {
 	case !s.Remote:
-		return noOrigin
+		return noOriginWhy(s)
 	case s.Off != nil:
 		return offWhy(s)
 	case s.Branch == "":
