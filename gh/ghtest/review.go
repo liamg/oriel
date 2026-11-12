@@ -221,16 +221,75 @@ func (s *Server) addReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := prKey(repo, p.Number)
-	if s.reacted[key+" "+in.Content] {
-		reply(w, 200, map[string]any{"content": in.Content})
+	if id := s.reacted[key+" "+in.Content]; id != 0 {
+		reply(w, 200, map[string]any{"id": id, "content": in.Content})
 		return
 	}
 	if s.prReactions[key] == nil {
 		s.prReactions[key] = gh.Reactions{}
 	}
 	s.prReactions[key][in.Content]++
-	s.reacted[key+" "+in.Content] = true
-	reply(w, 201, map[string]any{"content": in.Content})
+	s.nextReaction++
+	s.reacted[key+" "+in.Content] = s.nextReaction
+	reply(w, 201, map[string]any{"id": s.nextReaction, "content": in.Content})
+}
+
+// listReactions lists a PR's reactions, of ?content= when given: the signed-in user's own by their ids, everyone
+// else's as "someone".
+func (s *Server) listReactions(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	repo, p := s.find(r)
+	if p == nil {
+		notFound(w)
+		return
+	}
+	key := prKey(repo, p.Number)
+	type user struct {
+		Login string `json:"login"`
+	}
+	type reaction struct {
+		ID      int64  `json:"id"`
+		Content string `json:"content"`
+		User    user   `json:"user"`
+	}
+	out := []reaction{}
+	for _, content := range gh.ReactionNames {
+		if want := r.URL.Query().Get("content"); want != "" && want != content {
+			continue
+		}
+		n := s.prReactions[key][content]
+		if id := s.reacted[key+" "+content]; id != 0 {
+			out = append(out, reaction{ID: id, Content: content, User: user{s.login}})
+			n--
+		}
+		for range n {
+			out = append(out, reaction{Content: content, User: user{"someone"}})
+		}
+	}
+	reply(w, 200, out)
+}
+
+// deleteReaction takes back one of the signed-in user's reactions to a PR; another's can't be.
+func (s *Server) deleteReaction(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	repo, p := s.find(r)
+	if p == nil {
+		notFound(w)
+		return
+	}
+	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	key := prKey(repo, p.Number)
+	for _, content := range gh.ReactionNames {
+		if id != 0 && s.reacted[key+" "+content] == id {
+			delete(s.reacted, key+" "+content)
+			s.prReactions[key][content]--
+			w.WriteHeader(204)
+			return
+		}
+	}
+	notFound(w)
 }
 
 func (s *Server) getIssue(w http.ResponseWriter, r *http.Request) {

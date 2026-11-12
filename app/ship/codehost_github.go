@@ -43,7 +43,7 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 			Probe:     x.probe},
 		Tokens: registry.TokenSources{Env: []string{"GH_TOKEN", "GITHUB_TOKEN"}, HostedEnv: []string{"GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"},
 			Command: []string{"gh", "auth", "token", "--hostname", "{host}"}, Optional: true},
-		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react,
+		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
 		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Source: "builtin:github"}))
 	return nil
@@ -240,6 +240,18 @@ func (x *GitHubHost) react(ctx context.Context, s registry.Site, url, emoji stri
 		return err
 	}
 	return w.ReactPR(ctx, host.PRReactReq{URL: url, Host: s.Host, Token: x.token(s), Content: name})
+}
+
+func (x *GitHubHost) unreact(ctx context.Context, s registry.Site, url, emoji string) error {
+	name := gh.ReactionName(emoji)
+	if name == "" {
+		return nil // never reacted with it: GitHub has no such reaction
+	}
+	w, err := x.host()
+	if err != nil {
+		return err
+	}
+	return w.UnreactPR(ctx, host.PRReactReq{URL: url, Host: s.Host, Token: x.token(s), Content: name})
 }
 
 // githubCheckout is where a review fetches a GitHub PR from: the repo its URL names, and pull/N/head.
