@@ -1,6 +1,6 @@
 GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.9.0
 
-.PHONY: test test-chaos perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck
+.PHONY: test test-shard test-chaos perf test-framecheck test-vt test-voice vet helper build run app dmg native oracle check fmt-check depcheck refcheck leakcheck vendor-check notices notices-check vulncheck lint
 
 GOARCH ?= $(shell go env GOARCH)
 VERSION ?= dev
@@ -13,6 +13,16 @@ LDFLAGS := -X github.com/liamg/oriel/cmd/oriel/cli.version=$(VERSION) $(if $(REL
 # Nothing in it measures the machine: those are make perf's.
 test:
 	go test -shuffle=on ./...
+
+# test-shard runs half the suite, SHARD=1 or SHARD=2, so CI can run the halves at once. Shard 1 is the slowest app
+# packages, listed; shard 2 is everything else, so a new package lands there without a change here.
+SHARD1 := ./app/ship ./app/agentui ./app/sessions ./app/shell ./app/lang ./app/explain ./app/review
+test-shard:
+	@case "$(SHARD)" in \
+		1) go test -shuffle=on $(SHARD1) ;; \
+		2) one=$$(go list $(SHARD1)) && go test -shuffle=on $$(go list ./... | grep -vxF "$$one") ;; \
+		*) echo "make test-shard: SHARD=1 or SHARD=2" >&2; exit 2 ;; \
+	esac
 
 # test-chaos runs the suite with the work started off the loop (plugin.Go, plugin.Load, kit.Busy, a plugin.Cache's
 # fetches, the host's jobs) slowed by a random while: a test that passes only because that work was quick fails here,
@@ -92,7 +102,10 @@ native:
 	term/ghostty/native/build.sh $(shell go env GOOS)_$(shell go env GOARCH)
 	voice/native/build.sh $(shell go env GOOS)_$(shell go env GOARCH)
 
-check: fmt-check vet depcheck refcheck leakcheck vendor-check notices-check
+check: vet lint
+
+# lint is check without vet: what doesn't depend on the platform, so CI runs it once.
+lint: fmt-check depcheck refcheck leakcheck vendor-check notices-check
 
 fmt-check:
 	@out=$$(gofmt -l $$(go list -f '{{.Dir}}' ./...)); if [ -n "$$out" ]; then echo "gofmt needed:"; echo "$$out"; exit 1; fi
