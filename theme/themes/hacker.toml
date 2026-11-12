@@ -1,0 +1,40 @@
+# Hacker: green phosphor on black, an old terminal in a dark room. Text and code are greens; status keeps its own
+# hues so a session's state still reads at a glance.
+name = "hacker"
+extends = "oriel"
+variant = "dark"
+
+[effects]
+glow = 1
+
+[palette]
+bg0 = "#000000"
+bg1 = "#06100a"
+bg2 = "mix(bg1, bg3, 45%)"
+bg3 = "#0d1f12"
+bg4 = "#163420"
+line  = "#0d1f12"
+line2 = "#163420"
+fg      = "#a6f5b4"
+fg2     = "#74d488"
+fg3     = "#3f9354"
+fg4     = "#2b6a3b"
+accent  = "#39ff6a"
+accent2 = "#127a33"
+ink     = "#000000"
+brand   = "#39ff6a"
+green   = "#39ff6a"
+amber   = "#e8d24a"
+red     = "#ff4d4d"
+cyan    = "#3fe0e0"
+violet  = "#b57afc"
+pink    = "#ff7ac8"
+blue    = "#4f8dff"
+"syn.keyword"   = "#39ff6a"
+"syn.string"    = "#c6ff7a"
+"syn.number"    = "#e8d24a"
+"syn.function"  = "#7dffc0"
+"syn.type"      = "#4ff0c8"
+"syn.comment"   = "#3a7a4a"
+"syn.punct"     = "#5aae6e"
+"syn.variable"  = "#a6f5b4"
