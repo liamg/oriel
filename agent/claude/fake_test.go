@@ -71,7 +71,7 @@ func fakeClaude(args []string) int {
 		case "--permission-mode":
 			i++
 			f.mode = args[i]
-		case "--model", "--effort", "--mcp-config":
+		case "--model", "--effort", "--mcp-config", "--settings":
 			i++
 		case "--strict-mcp-config", "--":
 		default:
@@ -361,6 +361,8 @@ func (f *fake) turn(text string) {
 			f.result("toolu_bash", "ok", false)
 			answer = f.say("ran: ok")
 		}
+	case "call a connector":
+		answer = f.connector(turnID)
 	case "ask me":
 		qs := map[string]any{"questions": []any{map[string]any{"question": "Which colour?", "header": "Colour", "multiSelect": false,
 			"options": []any{map[string]any{"label": "red", "description": "warm"}, map[string]any{"label": "blue", "description": "cool"}}}}}
@@ -415,6 +417,37 @@ func (f *fake) turn(text string) {
 		"rateLimits": fakeRateLimits,
 		"background": background,
 	}, nil)
+}
+
+// fakeConnector is the claude.ai connector tool the fake calls.
+const fakeConnector = "mcp__claude_ai_Claude_Docs__guide"
+
+// connector calls a claude.ai connector's tool as Claude Code 2.1.322 decides it: the mod's check first; its ask
+// fires PermissionRequest, which the mod hands to Oriel, in every mode (bypassPermissions and dontAsk included, as
+// the real claude did); with no word from the check, the mode decides.
+func (f *fake) connector(turnID string) string {
+	input := json.RawMessage(`{"items":["topic.index"]}`)
+	f.use("toolu_conn", fakeConnector, input)
+	var c checkOut
+	_ = f.hook("check", checkIn{Tool: fakeConnector, Input: input}, &c)
+	decision, message := c.Decision, c.Reason
+	switch {
+	case decision == "ask", decision == "" && f.mode == "default":
+		var p permissionOut
+		_ = f.hook("permission", permissionIn{ID: "perm-" + turnID, Tool: fakeConnector, Input: input,
+			Suggestions: json.RawMessage(`[{"type":"addRules","rules":[{"toolName":"` + fakeConnector + `"}],"behavior":"allow","destination":"localSettings"}]`)}, &p)
+		decision, message = p.Decision, p.Message
+	case decision == "" && f.mode == "dontAsk":
+		decision, message = "deny", "Permission to use "+fakeConnector+" has been denied because Claude Code is running in don't ask mode."
+	case decision == "":
+		decision = "allow"
+	}
+	if decision != "allow" {
+		f.result("toolu_conn", message, true)
+		return f.say("denied: " + message)
+	}
+	f.result("toolu_conn", "the index", false)
+	return f.say("ran: the index")
 }
 
 // fakeHarness starts the provider against the fake, in a HOME of its own.

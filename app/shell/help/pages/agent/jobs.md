@@ -11,7 +11,8 @@ agent running it adds them, from the repos Oriel knows, as worktrees of the run'
 `~/.oriel/jobs`, and each run is a session of kind job in a fresh workspace, given the prompt as `JOB.md`.
 
 Nobody is there to answer a run's questions, so its agent runs in its own auto mode: Claude's asks only of what it
-judges risky. In a sandbox nothing asks; the sandbox is the gate.
+judges risky. In a sandbox nothing asks; the sandbox is the gate. A call to an MCP tool asks you whatever the mode
+([MCP calls](agent/asks#mcp)), and the run waits for your answer.
 
 ## The Jobs page {#page}
 

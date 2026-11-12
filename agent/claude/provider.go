@@ -565,11 +565,12 @@ func inherited(environ []string) []string {
 	})
 }
 
-// processEnv is what claude's environment adds to Oriel's own: the mod's way back, and for an agent nobody watches,
-// unattendedEnv. spec.Env comes last, so a caller's own value stands.
+// processEnv is what claude's environment adds to Oriel's own: the mod's way back, claude.ai's connectors off for a
+// session without MCP servers, and for an agent nobody watches, unattendedEnv. spec.Env comes last, so a caller's own
+// value stands. A sandbox keeps the connectors: every MCP call asks Oriel (guard.Check), bypassPermissions or not.
 func processEnv(spec agent.StartSpec, sock, orielBin string) []string {
 	env := []string{"ORIEL_SPAWNED=1", "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1", agent.HookSocketEnv + "=" + sock, "ORIEL_BIN=" + orielBin}
-	if spec.Sandbox != nil || spec.NoMCP {
+	if spec.NoMCP {
 		env = append(env, "ENABLE_CLAUDEAI_MCP_SERVERS=false")
 	}
 	if spec.Unattended {

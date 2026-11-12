@@ -163,6 +163,13 @@ package names it.
 Claude runs as its interactive CLI in a PTY, with Oriel's mod for hooks, never `claude -p` (that path is billed per
 token). Codex runs as `codex app-server` over stdio.
 
+The guard rails every agent is held to are `agent/guard`'s `Check`, ahead of the agent's own gate. It allows
+Oriel's own tools (and in a sandbox the gateway's, which gates its own calls) and puts every other MCP call to Oriel:
+Claude's mod answers its tool check "ask", which raises the PermissionRequest the mod hands to the session host's
+permission layers in any of Claude's modes, bypassPermissions included. An agent nobody can ask (`PolicyRefuse`) is
+answered in the check instead (its `Allow` goes ahead, the rest is refused), as Claude's dontAsk refuses a plugin's
+ask outright.
+
 A sandbox knows no provider: each backend asks the session's provider what its agent needs where the backend puts it
 (`agent.Sandboxed`: its binary for that platform, its config and sign-in in a directory of its own, the host
 variables and endpoints it inherits, the hosts it reaches, the user's MCP servers for the gateway), and gives it that.

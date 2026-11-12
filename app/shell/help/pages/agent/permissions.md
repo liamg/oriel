@@ -31,6 +31,9 @@ Each row says what a call meets (allowed, asks you, denied) and where that comes
 settings, your settings, always on this machine, read-only (allowed by default), or the built-in default. The menu
 sets this session's own rule for the tool, or drops it.
 
+A sandboxed Claude reaches MCP servers only through the gateway, so it has none of your claude.ai connectors. Any
+other MCP tool it calls asks you, bypass or not ([MCP calls](agent/asks#mcp)).
+
 ## Network {#network}
 
 The network rules in force, most local first: this session's, project settings, your settings, what you allowed

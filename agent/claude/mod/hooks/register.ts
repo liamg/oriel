@@ -287,12 +287,18 @@ export function register(on: On): void {
     return next(e)
   }).catch(passOn)
 
-  // The guard rails are Oriel's: it allows, denies, or leaves the call to the mode and its dialog.
+  // The guard rails are Oriel's: it allows, denies, asks, or leaves the call to the mode and its dialog. Its ask
+  // fires PermissionRequest in every mode, which Oriel answers below; a deny or a rule of the user's own settings
+  // (core's verdict) still stands over it.
   on('tool.check', async ($, e, next) => {
     if (!st.active) return next(e)
     const out = await host($, st, 'check', { tool: e.tool, input: e.input, agentId: e.agentId })
-    if (out?.decision === 'allow' || out?.decision === 'deny') {
-      return { decision: out.decision, reason: out.reason ? String(out.reason) : undefined }
+    const reason = out?.reason ? String(out.reason) : undefined
+    if (out?.decision === 'allow' || out?.decision === 'deny') return { decision: out.decision, reason }
+    if (out?.decision === 'ask') {
+      const core = await next(e)
+      if (core.decision === 'deny' || (core.decision === 'allow' && core.rule)) return core
+      return { decision: 'ask', reason }
     }
     return next(e)
   }).catch(passOn)

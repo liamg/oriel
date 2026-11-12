@@ -50,6 +50,11 @@ func TestGuardRails(t *testing.T) {
 		{"a GitHub MCP review reply", spec, "mcp__github__add_reply_to_pull_request_comment", `{}`, "deny", "never post"},
 		{"the gateway's GitHub comment tool", sandboxed, "mcp__oriel-gw__github__add_issue_comment", `{}`, "deny", "never post"},
 		{"reading the review on the host", spec, "Bash", `{"command":"gh api repos/acme/api/pulls/7/comments"}`, "", ""},
+		// Every other MCP call is put to Oriel, whatever the mode; the gateway gates its own.
+		{"a claude.ai connector asks Oriel", spec, "mcp__claude_ai_Claude_Docs__guide", `{}`, "ask", "Oriel"},
+		{"a connector in a sandbox asks Oriel", sandboxed, "mcp__claude_ai_Claude_Docs__guide", `{}`, "ask", "Oriel"},
+		{"the user's own server asks Oriel", spec, "mcp__linear__list_issues", `{}`, "ask", "Oriel"},
+		{"the gateway's tools go ahead", sandboxed, "mcp__oriel-gw__oriel__push", `{}`, "allow", ""},
 	}
 	for _, c := range cases {
 		got := check(c.spec, c.tool, json.RawMessage(c.input))
