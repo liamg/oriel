@@ -81,3 +81,29 @@ func TestCommentCodeWraps(t *testing.T) {
 		})
 	}
 }
+
+// A comment keeps the lines it was written in, as GitHub's comments do: a newline is a line break (a blank line still
+// starts a paragraph), in a paragraph and a list item alike.
+//
+// ref:   github-docs/basic-writing-and-formatting-syntax.md#Line breaks
+// quote: "If you're writing in issues, pull requests, or discussions in a repository, {% data variables.product.github %} will render a line break automatically:"
+// ref:   gfm/spec.md#Soft line breaks
+// quote: "A renderer may also provide an option to render soft line breaks as hard line breaks."
+func TestCommentKeepsItsLineBreaks(t *testing.T) {
+	body := "Floor goes the wrong way.\nAnd for zero?\n\nTwo cases:\n- negatives\n  and zero\n- the rest"
+	for _, where := range []string{"inline", "request"} {
+		t.Run(where, func(t *testing.T) {
+			s := commentScene(t, where, body)
+			if text := s.Text(); !apptest.HasAll(text, "\nFloor goes the wrong way.\nAnd for zero?\n", "\nTwo cases:\n", "\nnegatives\nand zero\n", "\nthe rest\n") {
+				t.Errorf("the comment's lines are joined:\n%s", text)
+			}
+			first, second := runsWith(s, "Floor goes the wrong way."), runsWith(s, "And for zero?")
+			if len(first) == 0 || len(second) != 1 {
+				t.Fatalf("the comment's lines aren't drawn: %+v, %+v", first, second)
+			}
+			if a, b := first[len(first)-1], second[0]; b.At.Y <= a.At.Y || b.At.X != a.At.X {
+				t.Errorf("the second line isn't under the first: %+v, %+v", a, b)
+			}
+		})
+	}
+}

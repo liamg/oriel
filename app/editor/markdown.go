@@ -34,7 +34,7 @@ const (
 // mdBlock is one block of markdown and the source lines it came from, so a thread can be anchored to it.
 type mdBlock struct {
 	Kind      mdKind
-	Text      string   // a paragraph's, heading's or item's inline markdown
+	Text      string   // a paragraph's, heading's or item's inline markdown, its source's newlines kept
 	Level     int      // a heading's level; an item's depth; a fence's in a list item, its item's depth + 1
 	Mark      string   // an item's bullet, or its number
 	Lang      string   // a fence's info string
@@ -71,7 +71,7 @@ func mdBlocks(src string) []mdBlock {
 		l := strings.TrimRight(lines[i], "\r")
 		t := strings.TrimSpace(l)
 		if t != "" && para >= 0 && !mdImageLine(t) && !strings.HasPrefix(t, "```") && t != "---" && t != "***" && !strings.HasPrefix(t, "#") && !listItem.MatchString(l) && !startsHTMLBlock(l) && mdTableAt(lines, i) == nil {
-			out[para].Text += " " + t
+			out[para].Text += "\n" + t
 			out[para].End = i + 1
 			continue
 		}
@@ -107,7 +107,7 @@ func mdBlocks(src string) []mdBlock {
 			for i+1 < len(lines) && strings.HasPrefix(lines[i+1], "  ") && !listItem.MatchString(lines[i+1]) && strings.TrimSpace(lines[i+1]) != "" &&
 				!strings.HasPrefix(strings.TrimSpace(lines[i+1]), "```") {
 				i++
-				b.Text += " " + strings.TrimSpace(lines[i])
+				b.Text += "\n" + strings.TrimSpace(lines[i])
 				b.End = i + 1
 			}
 			out = append(out, b)
@@ -275,6 +275,7 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 	if o.Group == "" {
 		o.Group = fmt.Sprint("md:", c.Next(key))
 	}
+	prose := widget.RichOpts{Breaks: o.Breaks}
 	c.Column(key, ui.Style{W: ui.Px(width), Gap: 8, Selectable: true}, func(c *ui.Ctx) {
 		for k, b := range mdParsed(c, src) {
 			if len(b.Images) > 0 {
@@ -304,10 +305,10 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 				indent := float32(b.Level) * 14
 				c.Row(fmt.Sprint("li", k), ui.Style{Gap: 8, Pad: ui.Insets{L: 4 + indent}}, func(c *ui.Ctx) {
 					c.Text("mark", b.Mark, body)
-					widget.Rich(c, "t", kit.MDSpans(b.Text), width-22-indent, body, widget.RichOpts{})
+					widget.Rich(c, "t", kit.MDSpans(b.Text), width-22-indent, body, prose)
 				})
 			default:
-				mdAligned(c, fmt.Sprint("p", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, kit.MDSpans(b.Text), width, body, widget.RichOpts{}) })
+				mdAligned(c, fmt.Sprint("p", k), b.Align, width, func(c *ui.Ctx, key any) { widget.Rich(c, key, kit.MDSpans(b.Text), width, body, prose) })
 			}
 		}
 	})

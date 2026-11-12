@@ -39,6 +39,10 @@ requests it spawned, and other requests about the same file.
 
 ## Comments {#comments}
 
+A comment reads as markdown the way GitHub shows a comment: each line you write stays a line (a blank line starts a
+new paragraph), and a code block's long lines wrap, in a list item too. A markdown file's preview joins a
+paragraph's lines, as a document does.
+
 A comment's **⋯**, at its top right while the pointer is over it: **Copy** takes its text as it reads, **Copy as
 markdown** its source, and **View markdown** shows the source in a dialog. While a message of yours waits for the agent
 (queued), the menu also has **Edit**, which puts it back in the composer (sending replaces it, the messages after it
