@@ -116,7 +116,7 @@ func (x *Plugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabSta
 		if !d.First.IsZero() {
 			first, last := d.First.In(x.Loc), d.Last.In(x.Loc)
 			day := first.Format("Jan 2")
-			if now := x.Now().In(x.Loc); first.YearDay() == now.YearDay() && first.Year() == now.Year() {
+			if now := x.now().In(x.Loc); first.YearDay() == now.YearDay() && first.Year() == now.Year() {
 				day = "today"
 			}
 			meta = append(meta, fmt.Sprintf("%s %s – %s", day, first.Format("15:04"), last.Format("15:04")))

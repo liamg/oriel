@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -23,9 +24,9 @@ type Loop interface {
 type Fetcher[T any] func(ctx context.Context, report func(note string, frac float64)) (T, error)
 
 type LoadOpts struct {
-	Timeout time.Duration    // a fetch running longer fails; none when 0
-	Now     func() time.Time // the clock loads are timed by; the window's (Host.UI) or time.Now when nil
-	Name    string           // what it loads, named to a test waiting for it ("load" when empty)
+	Timeout time.Duration // a fetch running longer fails; none when 0
+	Clock   clock.Clock   // the clock loads are timed by; the window's (Host.UI) or the system's when nil
+	Name    string        // what it loads, named to a test waiting for it ("load" when empty)
 }
 
 // Load runs a fetch off the loop and tracks it for the widgets that draw it (ui.Async, ui.Busy). Its
@@ -197,12 +198,12 @@ func (l *Load[T]) ended() {
 // goroutine, for a registry.Busy.
 func (l *Load[T]) Busy() bool { return l.busy.Load() }
 
-func (l *Load[T]) now() time.Time { return loopNow(l.h, l.opts.Now) }
+func (l *Load[T]) now() time.Time { return loopNow(l.h, l.opts.Clock) }
 
-// loopNow is now(), else the window's clock when h has a window, else time.Now.
-func loopNow(h Loop, now func() time.Time) time.Time {
-	if now != nil {
-		return now()
+// loopNow is c's time, else the window's clock when h has a window, else the system's.
+func loopNow(h Loop, c clock.Clock) time.Time {
+	if c != nil {
+		return c.Now()
 	}
 	if h, ok := h.(interface{ UI() UIView }); ok {
 		if u := h.UI(); u != nil {

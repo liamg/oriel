@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 )
 
@@ -222,8 +223,8 @@ type RegistryResolver struct {
 	Hold     time.Duration // how long a trusted tag waits before it's offered
 	Updates  string        // auto, ask or manual
 	Platform string        // os/arch
-	Now      func() time.Time
-	Temp     string // where archives are downloaded
+	Clock    clock.Clock   // the system's if nil
+	Temp     string        // where archives are downloaded
 
 	mu     sync.Mutex
 	update map[string]bool // ids to take the newest of at the next sync
@@ -367,10 +368,7 @@ func (r *RegistryResolver) candidates(ctx context.Context, f Found) ([]candidate
 	if err != nil {
 		return out, fmt.Errorf("%s's tags: %w", f.ID, err)
 	}
-	now := time.Now()
-	if r.Now != nil {
-		now = r.Now()
-	}
+	now := clock.Or(r.Clock).Now()
 	for tag, commit := range tags {
 		pv, err := plugin.ParseVersion(tag)
 		if err != nil || seen[pv.String()] || f.Revoked[pv.String()] != "" {

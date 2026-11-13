@@ -120,9 +120,8 @@ type Conversation struct {
 	ConfirmWait, UndoWait time.Duration
 	// Progress is the line shown while a tool runs; "" shows none.
 	Progress func(tool string) string
-	// Now is the clock: it stamps turns, so the agent can resolve "ten minutes ago".
-	Now func() time.Time
-	// Clock times the idle end and a confirmation's wait; nil is the system's.
+	// Clock stamps turns, so the agent can resolve "ten minutes ago", and times the idle end and a confirmation's
+	// wait; nil is the system's.
 	Clock clock.Clock
 	// Changed is told whenever the log changes, from any goroutine.
 	Changed func()
@@ -152,7 +151,7 @@ type turn struct {
 // New is a conversation that starts its agent with start; one left idle ends.
 func New(start Starter) *Conversation {
 	return &Conversation{Start: start, Idle: 15 * time.Minute, ConfirmWait: 2 * time.Minute, UndoWait: 10 * time.Second,
-		Now: time.Now, asks: map[string]chan bool{}, undo: map[string]func(context.Context) error{}, stop: make(chan struct{})}
+		asks: map[string]chan bool{}, undo: map[string]func(context.Context) error{}, stop: make(chan struct{})}
 }
 
 // Log is the conversation so far, and whether a turn is running.
@@ -180,7 +179,7 @@ func (c *Conversation) emitLocked(e Entry) Entry {
 	c.seq++
 	e.Seq = c.seq
 	if e.At.IsZero() {
-		e.At = c.Now()
+		e.At = c.now()
 	}
 	c.entries = append(c.entries, e)
 	if len(c.entries) > keepEntries {
@@ -245,8 +244,8 @@ func (c *Conversation) Confirm(ctx context.Context, tool, line string, card any)
 	expired := make(chan struct{})
 	c.mu.Lock()
 	c.asks[id] = ch
-	e := c.emitLocked(Entry{Kind: KindConfirm, ID: id, Tool: tool, Text: line, Card: card, Voice: c.cur.voice, Until: c.Now().Add(c.ConfirmWait)})
-	t := clock.Or(c.Clock).AfterFunc(c.ConfirmWait, func() { close(expired) })
+	e := c.emitLocked(Entry{Kind: KindConfirm, ID: id, Tool: tool, Text: line, Card: card, Voice: c.cur.voice, Until: c.now().Add(c.ConfirmWait)})
+	t := c.clock().AfterFunc(c.ConfirmWait, func() { close(expired) })
 	c.mu.Unlock()
 	defer t.Stop()
 
@@ -265,7 +264,7 @@ func (c *Conversation) Confirm(ctx context.Context, tool, line string, card any)
 	if _, waiting := c.asks[id]; waiting {
 		delete(c.asks, id)
 		if !c.busy && c.agent != nil {
-			c.reapAfterLocked(c.Idle - c.Now().Sub(c.last))
+			c.reapAfterLocked(c.Idle - c.now().Sub(c.last))
 		}
 	} else if ans == NoAnswer || ans == Dropped {
 		// Answered as it timed out: the answer stands.
@@ -319,7 +318,7 @@ func (c *Conversation) Acted(a Act) Entry {
 	defer c.mu.Unlock()
 	e := Entry{Kind: KindAction, ID: newID(), Tool: a.Tool, Text: a.Line, Detail: a.Detail, Open: a.Open, OpenArgs: a.OpenArgs, Voice: c.cur.voice}
 	if a.Undo != nil {
-		e.Until = c.Now().Add(c.UndoWait)
+		e.Until = c.now().Add(c.UndoWait)
 		c.undo[e.ID] = a.Undo
 	}
 	return c.emitLocked(e)
@@ -342,7 +341,7 @@ func (c *Conversation) Undo(ctx context.Context, id string) error {
 	if !ok {
 		return errors.New("that can't be undone")
 	}
-	if c.Now().After(until) {
+	if c.now().After(until) {
 		return errors.New("it's too late to undo that")
 	}
 	err := fn(ctx)
@@ -418,7 +417,7 @@ func (c *Conversation) stamp(t turn) string {
 	if t.voice {
 		how = "spoken"
 	}
-	return fmt.Sprintf("[%s, %s] %s", c.Now().Format("Mon 2 Jan 15:04"), how, t.text)
+	return fmt.Sprintf("[%s, %s] %s", c.now().Format("Mon 2 Jan 15:04"), how, t.text)
 }
 
 // nextLocked starts the next queued turn when the agent is free, starting the agent first if there's none.
@@ -433,7 +432,7 @@ func (c *Conversation) nextLocked() {
 	}
 	t := c.queue[0]
 	c.queue = c.queue[1:]
-	c.cur, c.replied, c.said, c.last = t, false, "", c.Now()
+	c.cur, c.replied, c.said, c.last = t, false, "", c.now()
 	c.busy = true
 	text := c.stamp(t)
 	if c.agent == nil {
@@ -544,7 +543,7 @@ func (c *Conversation) signal(gen int, s Signal) {
 			c.replied = true
 			c.emitLocked(Entry{Kind: KindReply, Text: strings.TrimSpace(c.said), Voice: c.cur.voice})
 		}
-		c.last = c.Now()
+		c.last = c.now()
 		c.busy = false
 		c.reapAfterLocked(c.Idle)
 		c.changedLocked()
@@ -561,9 +560,12 @@ func (c *Conversation) SetIdle(d time.Duration) {
 	}
 	c.Idle = d
 	if c.agent != nil && !c.busy && len(c.asks) == 0 {
-		c.reapAfterLocked(d - c.Now().Sub(c.last))
+		c.reapAfterLocked(d - c.now().Sub(c.last))
 	}
 }
+
+func (c *Conversation) clock() clock.Clock { return clock.Or(c.Clock) }
+func (c *Conversation) now() time.Time     { return c.clock().Now() }
 
 // reapAfterLocked sets the reaper to check the conversation after d.
 func (c *Conversation) reapAfterLocked(d time.Duration) {
@@ -576,7 +578,7 @@ func (c *Conversation) reapAfterLocked(d time.Duration) {
 	if c.reaper != nil {
 		c.reaper.Stop()
 	}
-	c.reaper = clock.Or(c.Clock).AfterFunc(d, c.ReapIdle)
+	c.reaper = c.clock().AfterFunc(d, c.ReapIdle)
 }
 
 // minReap keeps a clock that doesn't move (a test's) from checking without pause.
@@ -589,7 +591,7 @@ func (c *Conversation) ReapIdle() {
 	if c.agent == nil || c.busy || len(c.asks) > 0 {
 		return // what ends the turn or the question sets the reaper again
 	}
-	if left := c.Idle - c.Now().Sub(c.last); left > 0 {
+	if left := c.Idle - c.now().Sub(c.last); left > 0 {
 		c.reapAfterLocked(left)
 		return
 	}

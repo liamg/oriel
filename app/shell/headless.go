@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/internal/fsx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -40,8 +41,8 @@ type Headless struct {
 
 // HeadlessOpts is how a Headless app is drawn.
 type HeadlessOpts struct {
-	Size  render.Point     // 1280×800 if zero
-	Clock func() time.Time // the window's clock (oriel.now, countdowns); time.Now if nil
+	Size  render.Point // 1280×800 if zero
+	Clock clock.Clock  // the window's clock (oriel.now, countdowns); the system's if nil
 	// FontDirs are where its installed fonts are (ui.font): none if nil, so a scene draws the same everywhere.
 	FontDirs []string
 }
@@ -74,9 +75,6 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 	}
 	if o.Size == (render.Point{}) {
 		o.Size = render.Point{X: 1280, Y: 800}
-	}
-	if o.Clock == nil {
-		o.Clock = time.Now
 	}
 	ts, err := typeset.NewBundled()
 	if err != nil {

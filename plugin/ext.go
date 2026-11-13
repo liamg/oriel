@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -108,6 +109,7 @@ type UIView interface {
 	TakesText() bool             // the focused node inserts typed text: a text field, an editor in insert mode
 	Key(ev render.KeyEvent) bool // types a key at the focused node, past the keymaps, for its next frame
 	Now() time.Time              // the window's clock: what the frames are drawn at, a test's fixed time
+	Clock() clock.Clock          // the same clock, as a clock.Clock
 	Frames() int                 // how many frames have been built, to tell one frame from the next
 }
 

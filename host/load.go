@@ -27,7 +27,7 @@ func (w *Host) machineStateWith(r sysload.Reading) core.MachineState {
 	}
 	return core.MachineState{Host: host, OS: runtime.GOOS, Arch: runtime.GOARCH, Version: w.opts.Version,
 		Providers: providers, Sandboxes: sandboxes, Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal,
-		Sampled: w.opts.Now().UTC(), SignedOut: w.runPart.LostLogins()}
+		Sampled: w.opts.Clock.Now().UTC(), SignedOut: w.runPart.LostLogins()}
 }
 
 // SampleLoad reports the machine's load each time s says it moved, until ctx ends.

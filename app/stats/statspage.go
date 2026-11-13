@@ -121,7 +121,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 		case meta.state.Phase == widget.Pending:
 			widget.Busy(c, "scanned", meta.state, widget.BusyOpts{Label: "Scanning", Size: 11, Help: "agent/stats#page"})
 		case !meta.at.IsZero():
-			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.Now()})
+			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.now()})
 		}
 		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
 			x.run("stats.session", registry.Args{"id": one[0]})
@@ -164,7 +164,7 @@ func (x *Plugin) toolbar(c *ui.Ctx) {
 		from, to := x.span(x.q)
 		pick := widget.DateRange{From: from, To: to.AddDate(0, 0, -1)}
 		if widget.DatePopover(c, "pick", anchor, &x.picking, &pick, widget.DatePickerOpts{Label: "Custom range", Help: "agent/stats#range",
-			Today: x.Now(), Location: x.Loc}) {
+			Today: x.now(), Location: x.Loc}) {
 			x.custom(pick)
 		}
 		c.Text("by", "GROUP BY", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.SemiBold, Tracking: .12},
@@ -628,7 +628,7 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 			kit.TextCell(c, 3, cols[3].W, kit.Count(g.Requests), muted)
 			kit.TextCell(c, 4, cols[4].W, kit.Money(g.Cost), fg)
 			kit.Cell(c, 5, cols[5].W, false, func(c *ui.Ctx) {
-				widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.Now()})
+				widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.now()})
 			})
 			return
 		}
@@ -642,7 +642,7 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 		}
 		kit.Cell(c, 5, cols[5].W, true, func(c *ui.Ctx) { shareBar(c, "share", share, tone, 90, fmt.Sprintf("%.1f%%", share*100)) })
 		kit.Cell(c, 6, cols[6].W, false, func(c *ui.Ctx) {
-			widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.Now()})
+			widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.now()})
 		})
 		kit.Cell(c, 7, cols[7].W, false, func(c *ui.Ctx) {
 			widget.Chart(c, "spark", []widget.ChartSeries{{Name: g.Label, Values: g.Series, Tone: tone}}, widget.ChartOpts{Kind: widget.ChartSpark,

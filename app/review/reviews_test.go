@@ -9,11 +9,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -598,11 +598,8 @@ func hasValue(n *render.AccessNode, v string) bool {
 func TestReviewsPageReopensFromCache(t *testing.T) {
 	s, _, hub, _ := reviewScene(t)
 	x := reviewsOf(s)
-	var mu sync.Mutex
-	now := time.Now()
-	clock := func() time.Time { mu.Lock(); defer mu.Unlock(); return now }
-	pass := func(d time.Duration) { mu.Lock(); now = now.Add(d); mu.Unlock() }
-	x.SetClock(clock)
+	clk := clocktest.New(time.Now())
+	x.SetClock(clk)
 	const detail = "internal/ratelimit/bucket.go"
 	s.Run("reviews.open", nil)
 	s.Until("the detail", func() bool { return strings.Contains(s.Text(), detail) })
@@ -618,7 +615,7 @@ func TestReviewsPageReopensFromCache(t *testing.T) {
 	reopen := func(after time.Duration) int {
 		x.ClosePage()
 		s.Frame()
-		pass(after)
+		clk.Advance(after)
 		from := len(hub.Calls())
 		s.Run("reviews.open", nil)
 		s.Frame()

@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -46,7 +47,7 @@ var (
 type GitHub struct {
 	kit.Disposer
 	h      plugin.Host
-	now    func() time.Time
+	clock  clock.Clock
 	ctx    context.Context
 	cancel context.CancelFunc
 	busy   kit.Busy
@@ -82,9 +83,6 @@ func (x *GitHub) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github
 func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "github", Busy: x.busy.Busy, Source: "builtin:github"}))
 	x.h = h
-	if x.now == nil {
-		x.now = time.Now
-	}
 	x.mirrors, x.syncing, x.forwarding, x.editing = map[core.SessionID]githubMirror{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
 	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
@@ -326,8 +324,8 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		delete(x.syncing, id)
 		delete(x.synced, id)
 		close(done)
-		x.lastSync[id] = x.now()
-		g := githubMirror{Mirror: m, at: x.now()}
+		x.lastSync[id] = clock.Or(x.clock).Now()
+		g := githubMirror{Mirror: m, at: clock.Or(x.clock).Now()}
 		if err != nil {
 			g = x.mirrors[id]
 			g.err = err.Error()
@@ -361,7 +359,7 @@ func (x *GitHub) syncedAgo(id core.SessionID) time.Duration {
 	if !ok {
 		return time.Duration(1<<63 - 1)
 	}
-	return x.now().Sub(at)
+	return clock.Or(x.clock).Now().Sub(at)
 }
 
 func (x *GitHub) mirror(id core.SessionID) (githubMirror, bool) {

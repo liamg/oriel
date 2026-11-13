@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -57,9 +58,9 @@ var runFilters = []string{"", host.RunRunning, host.RunDone, host.RunBlocked, ho
 
 type Jobs struct {
 	kit.Disposer
-	h   plugin.Host
-	now func() time.Time
-	loc *time.Location
+	h     plugin.Host
+	clock clock.Clock
+	loc   *time.Location
 
 	open      bool
 	selKey    string // the selected job's name
@@ -128,9 +129,6 @@ func (x *Jobs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "jobs"} }
 func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.JobKind}, Source: "builtin:jobs"}))
-	if x.now == nil {
-		x.now = time.Now
-	}
 	if x.loc == nil {
 		x.loc = time.Local
 	}
@@ -513,3 +511,5 @@ func scheduleFrom(v any) (host.Schedule, error) {
 	}
 	return s, s.Check()
 }
+
+func (x *Jobs) now() time.Time { return clock.Or(x.clock).Now() }

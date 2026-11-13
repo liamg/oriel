@@ -2,18 +2,19 @@ package rig
 
 import (
 	"context"
-	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/isolate"
 )
 
@@ -37,30 +38,12 @@ func (FakeSandbox) Exec() agent.Exec     { return NopExec{} }
 func (FakeSandbox) Spec() *agent.Sandbox { return &agent.Sandbox{} }
 func (FakeSandbox) Close() error         { return nil }
 
-// Clock is the session host's clock, which a test moves.
-type Clock struct {
-	mu sync.Mutex
-	t  time.Time
-}
-
-func (c *Clock) Now() time.Time {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.t
-}
-
-func (c *Clock) Set(t time.Time) {
-	c.mu.Lock()
-	c.t = t
-	c.mu.Unlock()
-}
-
 // Jobs is a fixture machine, mbp: api, web and pricing, six jobs, and their runs with transcripts to cost them.
 type Jobs struct {
 	T      *testing.T
 	W      *host.Host
 	Claude *LoggedFake
-	Clock  *Clock
+	Clock  *clocktest.Fake // the session host's clock, which a test moves
 	Repos  map[string]string
 }
 
@@ -71,7 +54,7 @@ func NewJobs(t *testing.T, sandboxes ...string) *Jobs {
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	t.Setenv("GIT_CONFIG_SYSTEM", "/dev/null")
 	t.Setenv("USER", "tester")
-	r := &Jobs{T: t, Claude: NewLoggedFake(), Clock: &Clock{t: StatsNow},
+	r := &Jobs{T: t, Claude: NewLoggedFake(), Clock: clocktest.New(StatsNow),
 		Repos: map[string]string{}}
 	r.Claude.Name = "claude"
 	root := t.TempDir()
@@ -85,7 +68,7 @@ func NewJobs(t *testing.T, sandboxes ...string) *Jobs {
 	}
 	providers := &agent.Providers{}
 	providers.Register(r.Claude)
-	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: NopExec{}, Load: SteadyLoad, Now: r.Clock.Now, NoAutoName: true, HTTP: isolate.Net(t),
+	w, err := host.New(host.Options{Home: t.TempDir(), Providers: providers, Exec: NopExec{}, Load: SteadyLoad, Clock: r.Clock, NoAutoName: true, HTTP: isolate.Net(t),
 		Sandbox: FakeSandboxes{sandboxes}, Packs: func(name string) (agent.Pack, bool) { return agent.Pack{Name: name, Skill: name}, true }})
 	if err != nil {
 		t.Fatal(err)

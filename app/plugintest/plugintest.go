@@ -8,12 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/hosttest"
@@ -35,9 +35,8 @@ type Options struct {
 // App is a running app, driven from the test's goroutine.
 type App struct {
 	*app.Headless
-	t   testing.TB
-	mu  sync.Mutex
-	now time.Time
+	t     testing.TB
+	clock *clocktest.Fake
 }
 
 // New starts the app with a home, config and state directory of the test's, and stops it when the test ends.
@@ -57,8 +56,8 @@ func New(t testing.TB, o Options) *App {
 	if o.Config != nil {
 		o.Config(&cfg)
 	}
-	a := &App{t: t, now: o.Now}
-	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: a.Now})
+	a := &App{t: t, clock: clocktest.New(o.Now)}
+	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: a.clock})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,18 +72,10 @@ func New(t testing.TB, o Options) *App {
 }
 
 // Now is the app's clock.
-func (a *App) Now() time.Time {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.now
-}
+func (a *App) Now() time.Time { return a.clock.Now() }
 
 // SetNow sets the app's clock.
-func (a *App) SetNow(t time.Time) {
-	a.mu.Lock()
-	a.now = t
-	a.mu.Unlock()
-}
+func (a *App) SetNow(t time.Time) { a.clock.Set(t) }
 
 // Main runs the package's tests: call it from TestMain. A plugin's process starts in the OS sandbox through the
 // test binary, which Main lets it do.

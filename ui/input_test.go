@@ -9,13 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 )
-
-type clock struct{ t time.Time }
-
-func (c *clock) now() time.Time          { return c.t }
-func (c *clock) advance(d time.Duration) { c.t = c.t.Add(d) }
 
 var (
 	idle    = render.Color{R: 0x19, G: 0x18, B: 0x15, A: 255}
@@ -53,13 +49,13 @@ func screen(c *Ctx) {
 
 type harness struct {
 	u   *UI
-	clk *clock
+	clk *clocktest.Fake
 	ops []render.Op
 }
 
 func newHarness() *harness {
-	h := &harness{u: newUI(), clk: &clock{t: time.Unix(1000, 0)}}
-	h.u.SetClock(h.clk.now)
+	h := &harness{u: newUI(), clk: clocktest.New(time.Unix(1000, 0))}
+	h.u.SetClock(h.clk)
 	h.frame()
 	return h
 }
@@ -96,14 +92,14 @@ func TestStateSnapshots(t *testing.T) {
 	snap("disabled quit under the pointer")
 	h.pointer(render.PointerMove, 20, 20)
 	h.frame()
-	h.clk.advance(400 * time.Millisecond)
+	h.clk.Advance(400 * time.Millisecond)
 	if strings.Contains(h.frame(), "Save the file") {
 		t.Error("tooltip before its delay")
 	}
-	if want := h.clk.t.Add(100 * time.Millisecond); !h.u.NextFrame().Equal(want) {
+	if want := h.clk.Now().Add(100 * time.Millisecond); !h.u.NextFrame().Equal(want) {
 		t.Errorf("next frame at %v, want the tooltip's delay at %v", h.u.NextFrame(), want)
 	}
-	h.clk.advance(100 * time.Millisecond)
+	h.clk.Advance(100 * time.Millisecond)
 	snap("tooltip")
 
 	path := filepath.Join("testdata", "states.golden")
@@ -127,8 +123,8 @@ func TestTooltipKeepsAnEarlierWake(t *testing.T) {
 		screen(c)
 		c.WakeAt(c.Now())
 	})
-	if got := h.u.NextFrame(); !got.Equal(h.clk.t) {
-		t.Errorf("next frame at %v, want now (%v)", got, h.clk.t)
+	if got := h.u.NextFrame(); !got.Equal(h.clk.Now()) {
+		t.Errorf("next frame at %v, want now (%v)", got, h.clk.Now())
 	}
 }
 
@@ -230,8 +226,8 @@ func TestWheelScrollsWhatsUnderThePointer(t *testing.T) {
 func TestSprings(t *testing.T) {
 	u := newUI()
 	u.opts.ReducedMotion = false
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	target := float32(0)
 	var x float32
 	frame := func() { u.Layout(render.Point{X: 10, Y: 10}, func(c *Ctx) { x = c.Anim("slide", target) }) }
@@ -242,7 +238,7 @@ func TestSprings(t *testing.T) {
 	target = 100
 	var xs []float32
 	for range 60 {
-		clk.advance(time.Second / 120)
+		clk.Advance(time.Second / 120)
 		frame()
 		xs = append(xs, x)
 	}
@@ -262,7 +258,7 @@ func TestSprings(t *testing.T) {
 	o.ReducedMotion = true
 	u.SetOptions(o)
 	target = 0
-	clk.advance(time.Second / 120)
+	clk.Advance(time.Second / 120)
 	frame()
 	if x != 0 || !u.NextFrame().IsZero() {
 		t.Errorf("with reduced motion: %v, next frame %v; want 0 at once", x, u.NextFrame())
@@ -432,8 +428,8 @@ func TestHeldAlone(t *testing.T) {
 	}
 	h.u.Chord() // a key typed with nothing held
 	h.u.Mods(render.ModAlt)
-	t0 := h.clk.t
-	h.clk.advance(300 * time.Millisecond)
+	t0 := h.clk.Now()
+	h.clk.Advance(300 * time.Millisecond)
 	if m, since := alone(); m != render.ModAlt || !since.Equal(t0) {
 		t.Errorf("⌥ down: %v since %v, want ⌥ since %v", m, since, t0)
 	}
@@ -447,7 +443,7 @@ func TestHeldAlone(t *testing.T) {
 		t.Errorf("⌥ again after letting go: %v", m)
 	}
 	h.u.Mods(render.ModAlt | render.ModSuper)
-	if m, since := alone(); m != render.ModAlt|render.ModSuper || !since.Equal(h.clk.t) {
+	if m, since := alone(); m != render.ModAlt|render.ModSuper || !since.Equal(h.clk.Now()) {
 		t.Errorf("⌥⌘: %v since %v", m, since)
 	}
 	h.u.Mods(render.ModAlt)
@@ -474,8 +470,8 @@ func TestLastKey(t *testing.T) {
 		t.Fatalf("a last key before any: %v", at)
 	}
 	h.u.KeyDown()
-	t0 := h.clk.t
-	h.clk.advance(2 * time.Second)
+	t0 := h.clk.Now()
+	h.clk.Advance(2 * time.Second)
 	if at := last(); !at.Equal(t0) {
 		t.Errorf("the last key at %v, want %v", at, t0)
 	}
@@ -485,8 +481,8 @@ func TestLastKey(t *testing.T) {
 		t.Errorf("a press moved the last key to %v", at)
 	}
 	h.u.KeyDown()
-	if at := last(); !at.Equal(h.clk.t) {
-		t.Errorf("the last key at %v, want %v", at, h.clk.t)
+	if at := last(); !at.Equal(h.clk.Now()) {
+		t.Errorf("the last key at %v, want %v", at, h.clk.Now())
 	}
 }
 
@@ -537,7 +533,7 @@ func TestPointerMovesThatChangeNothing(t *testing.T) {
 	if !move(23, 21, render.ButtonPrimary) {
 		t.Error("a move with a button held doesn't ask for a frame")
 	}
-	h.clk.advance(time.Second)
+	h.clk.Advance(time.Second)
 	if !strings.Contains(h.frame(), "Save the file") {
 		t.Fatal("no tooltip")
 	}
@@ -612,22 +608,22 @@ func TestDoubleClick(t *testing.T) {
 	if !save.Clicked || save.DoubleClicked {
 		t.Fatalf("one click: clicked %v, double %v", save.Clicked, save.DoubleClicked)
 	}
-	h.clk.advance(DoubleClick / 2)
+	h.clk.Advance(DoubleClick / 2)
 	click(20)
 	if !save.Clicked || !save.DoubleClicked {
 		t.Errorf("a second click soon after: clicked %v, double %v", save.Clicked, save.DoubleClicked)
 	}
-	h.clk.advance(DoubleClick / 2)
+	h.clk.Advance(DoubleClick / 2)
 	click(20)
 	if save.DoubleClicked {
 		t.Error("a third click made a second double-click")
 	}
-	h.clk.advance(DoubleClick * 2)
+	h.clk.Advance(DoubleClick * 2)
 	click(20)
 	if save.DoubleClicked {
 		t.Error("two slow clicks made a double-click")
 	}
-	h.clk.advance(DoubleClick / 4)
+	h.clk.Advance(DoubleClick / 4)
 	click(110)
 	if quit.DoubleClicked || !quit.Clicked {
 		t.Errorf("a click on another node after one on save: double %v", quit.DoubleClicked)
@@ -636,9 +632,9 @@ func TestDoubleClick(t *testing.T) {
 
 // Text with a tooltip in a clickable row shows its tooltip once the pointer rests on it, and a click on it is the row's.
 func TestTooltipInAClickableRow(t *testing.T) {
-	clk := &clock{t: time.Unix(1000, 0)}
+	clk := clocktest.New(time.Unix(1000, 0))
 	u := newUI()
-	u.SetClock(clk.now)
+	u.SetClock(clk)
 	var row Interaction
 	frame := func() string {
 		return describe(paintOps(u, render.Point{X: 300, Y: 100}, func(c *Ctx) {
@@ -654,7 +650,7 @@ func TestTooltipInAClickableRow(t *testing.T) {
 		t.Error("a move onto text with a tooltip doesn't ask for a frame")
 	}
 	frame()
-	clk.advance(time.Second)
+	clk.Advance(time.Second)
 	if !strings.Contains(frame(), "14:03:12") {
 		t.Error("no tooltip over the text")
 	}
@@ -737,9 +733,9 @@ func TestWheelOverWhatCantScroll(t *testing.T) {
 // A tooltip can be drawn by a view of its own, for more than a line of text: it comes up after the same delay, over
 // everything, and goes when the pointer does.
 func TestATooltipCanBeAView(t *testing.T) {
-	clk := &clock{t: time.Unix(1000, 0)}
+	clk := clocktest.New(time.Unix(1000, 0))
 	u := newUI()
-	u.SetClock(clk.now)
+	u.SetClock(clk)
 	frame := func() string {
 		return describe(paintOps(u, render.Point{X: 400, Y: 200}, func(c *Ctx) {
 			c.Box("pr", Style{W: Px(200), H: Px(30), Tooltip: "acme/api#812", TooltipView: func(c *Ctx) {
@@ -756,13 +752,13 @@ func TestATooltipCanBeAView(t *testing.T) {
 	if strings.Contains(frame(), "by mkhan") {
 		t.Error("the view before the tooltip's delay")
 	}
-	clk.advance(time.Second)
+	clk.Advance(time.Second)
 	got := frame()
 	if !strings.Contains(got, "by mkhan · asked: you, ana") || !strings.Contains(got, "acme/api#812") {
 		t.Errorf("no view for the tooltip:\n%s", got)
 	}
 	u.Pointer(render.PointerEvent{Kind: render.PointerLeave})
-	clk.advance(time.Second)
+	clk.Advance(time.Second)
 	if strings.Contains(frame(), "by mkhan") {
 		t.Error("the tooltip stayed once the pointer left")
 	}

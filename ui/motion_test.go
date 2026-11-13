@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 )
 
@@ -22,15 +23,15 @@ func TestMotionSettlesWithin250ms(t *testing.T) {
 type motionCase struct {
 	t     *testing.T
 	u     *UI
-	clk   *clock
+	clk   *clocktest.Fake
 	build func(c *Ctx)
 	out   []string
 }
 
 func newMotion(t *testing.T, reduced bool, build func(c *Ctx)) *motionCase {
 	u := newUI()
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	o := u.Options()
 	o.ReducedMotion = reduced
 	u.SetOptions(o)
@@ -47,7 +48,7 @@ func (m *motionCase) frame() string {
 func (m *motionCase) step(name string, d time.Duration) {
 	var got string
 	for el := time.Duration(0); el < d; el += time.Second / 120 {
-		m.clk.advance(time.Second / 120)
+		m.clk.Advance(time.Second / 120)
 		got = m.frame()
 	}
 	if d == 0 {
@@ -216,7 +217,7 @@ func TestToolkitMotion(t *testing.T) {
 		}, nil, func(m *motionCase, _ *toolkitScene) {
 			move(m, 5, 5)
 			m.frame()
-			m.clk.advance(m.u.opts.TooltipDelay)
+			m.clk.Advance(m.u.opts.TooltipDelay)
 		}},
 		{"scroll-to", func(st *toolkitScene) func(c *Ctx) {
 			return func(c *Ctx) {

@@ -74,7 +74,7 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 	out := make([]shipRead, len(ships))
 	var wg sync.WaitGroup
 	for i, s := range ships {
-		out[i] = shipRead{Ship: s, GitRead: x.Clock()}
+		out[i] = shipRead{Ship: s, GitRead: x.now()}
 		hs, repo, ok := kit.SitesOf(x.h).Remote(s.Origin)
 		if !ok {
 			hostname, _, parsed := registry.ParseRemote(s.Origin)
@@ -118,16 +118,16 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	x.cache.mu.Lock()
 	g, ok := x.cache.read[key]
 	x.cache.mu.Unlock()
-	if ok && !fresh && x.Clock().Sub(g.at) < prTTL {
+	if ok && !fresh && x.now().Sub(g.at) < prTTL {
 		return g
 	}
-	g = prRead{at: x.Clock()}
+	g = prRead{at: x.now()}
 	h, repo := *s.Code, s.codeRepo(id)
 	pr, err := forBranch(ctx, h, repo, s.Branch)
 	x.cache.mu.Lock()
 	if r, ok := x.cache.raised[key]; ok {
 		switch {
-		case pr != nil || x.Clock().Sub(r.at) >= raisedHold:
+		case pr != nil || x.now().Sub(r.at) >= raisedHold:
 			delete(x.cache.raised, key)
 		case err == nil:
 			raised := r.pr
@@ -230,7 +230,7 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 	if x.cache.raised == nil {
 		x.cache.raised = map[string]raisedPR{}
 	}
-	x.cache.raised[formKey(se.ID, s.Project)+"/"+s.Branch] = raisedPR{pr: *pr, at: x.Clock()}
+	x.cache.raised[formKey(se.ID, s.Project)+"/"+s.Branch] = raisedPR{pr: *pr, at: x.now()}
 	x.cache.mu.Unlock()
 	if len(r.Reviewers) > 0 && h.RequestReviewers != nil {
 		if err := registry.Call(func() error { return h.RequestReviewers(ctx, repo, *pr, r.Reviewers) }); err != nil {
@@ -334,9 +334,9 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 	if x.mirrored == nil {
 		x.mirrored = map[core.SessionID]time.Time{}
 	}
-	due := fresh || x.Clock().Sub(x.mirrored[id]) >= mirrorEvery
+	due := fresh || x.now().Sub(x.mirrored[id]) >= mirrorEvery
 	if due {
-		x.mirrored[id] = x.Clock()
+		x.mirrored[id] = x.now()
 	}
 	x.mu.Unlock()
 	c, err := kit.CodeHostCalls(x.h)

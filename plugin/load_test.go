@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -102,7 +103,7 @@ func TestLoadLifecycle(t *testing.T) {
 			return "", errors.New("no agents")
 		}
 		return v, nil
-	}, LoadOpts{Now: func() time.Time { return now }})
+	}, LoadOpts{Clock: clocktest.New(now)})
 
 	if s := l.State(); s.Phase != ui.Idle {
 		t.Fatalf("before Start: %v", s.Phase)

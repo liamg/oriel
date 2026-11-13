@@ -260,7 +260,7 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 // usageCard is every provider's windows, the session in front's first: what the title bar's card shows.
 func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 	th := c.Theme()
-	now := x.Now()
+	now := x.now()
 	us := slices.Clone(x.h.State().Usage)
 	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int {
 		switch {
@@ -342,7 +342,7 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			st := x.h.State()
-			now := x.Now()
+			now := x.now()
 			var read time.Time
 			for _, u := range st.Usage {
 				if u.Sampled.After(read) {

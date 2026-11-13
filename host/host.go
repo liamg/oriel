@@ -42,6 +42,7 @@ import (
 	"github.com/liamg/oriel/host/sandboxhost"
 	"github.com/liamg/oriel/host/utility"
 	"github.com/liamg/oriel/host/worktree"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sysload"
 )
@@ -53,7 +54,7 @@ type Options struct {
 	Exec      agent.Exec // how agents' processes start; required to start one
 	OrielBin  string     // the oriel binary the agents' hooks run; os.Executable() if ""
 	Log       *slog.Logger
-	Now       func() time.Time
+	Clock     clock.Clock            // the system's if nil
 	Load      func() sysload.Reading // the machine's load; a sysload.Reader of its own if nil
 	Version   string
 	// Sandbox makes the container, gateway and egress proxy for a session that asks for one; nil refuses.
@@ -132,7 +133,7 @@ func New(opts Options) (*Host, error) {
 		return nil, err
 	}
 	w := &Host{opts: opts, store: eventstore.New(), log: opts.Log, closed: make(chan struct{})}
-	w.env = hostcore.Env{Home: opts.Home, Log: opts.Log, Now: func() time.Time { return w.opts.Now() }, Closed: w.closed, Work: &w.going}
+	w.env = hostcore.Env{Home: opts.Home, Log: opts.Log, Clock: opts.Clock, Closed: w.closed, Work: &w.going}
 	if err := w.parts(); err != nil {
 		return nil, err
 	}
@@ -168,9 +169,7 @@ func defaults(opts *Options) error {
 	if opts.Log == nil {
 		opts.Log = slog.New(slog.DiscardHandler)
 	}
-	if opts.Now == nil {
-		opts.Now = time.Now
-	}
+	opts.Clock = clock.Or(opts.Clock)
 	if opts.Load == nil {
 		opts.Load = sysload.NewReader().Read
 	}

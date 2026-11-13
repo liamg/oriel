@@ -44,10 +44,10 @@ func TestDots(t *testing.T) {
 	if slices.Equal(before, []uint8{before[0], before[0], before[0]}) {
 		t.Errorf("the dots are all one brightness while moving: %v", before)
 	}
-	if next := h.u.NextFrame(); next.IsZero() || next.After(h.now.Add(dotsCycle/dotsSteps)) {
-		t.Errorf("moving dots asked for their next frame at %v (now %v)", next, h.now)
+	if next := h.u.NextFrame(); next.IsZero() || next.After(h.clock.Now().Add(dotsCycle/dotsSteps)) {
+		t.Errorf("moving dots asked for their next frame at %v (now %v)", next, h.clock.Now())
 	}
-	h.now = h.now.Add(dotsCycle / 3)
+	h.clock.Advance(dotsCycle / 3)
 	h.frame()
 	if slices.Equal(alphas(h), before) {
 		t.Error("the wave didn't move as time passed")
@@ -56,7 +56,7 @@ func TestDots(t *testing.T) {
 	still := motionHarness(t, true, build)
 	still.frame()
 	before = alphas(still)
-	still.now = still.now.Add(dotsCycle / 3)
+	still.clock.Advance(dotsCycle / 3)
 	still.frame()
 	if !slices.Equal(alphas(still), before) {
 		t.Error("with reduced motion the dots moved")

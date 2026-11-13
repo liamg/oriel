@@ -18,6 +18,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -58,7 +59,7 @@ type overview struct {
 	mu    sync.Mutex
 	cards map[string]*card
 	scans map[string]*scan
-	now   func() time.Time
+	clock clock.Clock
 	busy  kit.Busy // a card's reads and panels, off the loop
 }
 
@@ -103,9 +104,6 @@ func (o *overview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "over
 
 func (o *overview) Activate(_ context.Context, h plugin.Host) error {
 	o.h, o.cards, o.scans = h, map[string]*card{}, map[string]*scan{}
-	if o.now == nil {
-		o.now = time.Now
-	}
 	for _, p := range []uireg.OverviewPanel{
 		{Name: "languages", Title: "Languages", Order: 10, Width: 330, Repos: true, Dirs: true, Compute: o.languages},
 		{Name: "activity", Title: "Commit activity", Order: 20, Repos: true, Compute: o.activity},
@@ -679,7 +677,7 @@ const (
 
 func (o *overview) activity(ctx registry.Ctx, dir string) (ui.Node, error) {
 	r := gitx.Repo{Dir: dir}
-	now := o.now()
+	now := clock.Or(o.clock).Now()
 	end := now.AddDate(0, 0, 6-int(now.Weekday())) // the Saturday ending this week
 	start := time.Date(end.Year(), end.Month(), end.Day(), 0, 0, 0, 0, end.Location()).AddDate(0, 0, -7*heatWeeks+1)
 	times, err := r.CommitTimes(ctx, start)
@@ -732,7 +730,7 @@ func (o *overview) activity(ctx registry.Ctx, dir string) (ui.Node, error) {
 				c.Box("rule", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: th.C(theme.LineStrong)}, nil)
 				c.Column("text", ui.Style{Gap: 3}, func(c *ui.Ctx) {
 					c.Text("subject", last.Subject, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(theme.FgMuted)})
-					widget.Ago(c, "meta", last.When, widget.AgoOpts{Text: faint, Long: true, Now: o.now(), Prefix: last.Hash + " · " + last.Author + " · "})
+					widget.Ago(c, "meta", last.When, widget.AgoOpts{Text: faint, Long: true, Now: clock.Or(o.clock).Now(), Prefix: last.Hash + " · " + last.Author + " · "})
 				})
 			})
 		})

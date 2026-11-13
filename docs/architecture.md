@@ -268,11 +268,13 @@ connects it to the platform:
   `kit.Busy` or `kit.Work` counts it; a `kit.Work.Loop` that runs as long as the plugin doesn't); `apptest`'s `Quiet`
   runs frames and the loop's queue until none is busy, and `ClickOn`, `ClickText`, `WantText` and `WantFrame` settle
   so first. A test of what shows while work is under way looks inside `Midway`.
-- Code that times things takes an `internal/clock.Clock` (`watch.Options.Clock`, `kit.Still.Clock`,
-  `app.Config.Clock`); its tests move an `internal/clock/clocktest` clock, so what's timed happens exactly when they
-  say. A plugin times its work by the window's (`registry.Registry.Clock`). A Scene's is its `Now`, and what's timed
-  on it waits for the scene to move on: `Scene.Advance`, or `Quiet`, which steps to the next timer when that's all
-  it would wait for. `fswatch.NewScripted` is a file watcher whose events are the test's: the watch manager's tests send them, and
+- Code that times or stamps things takes an `internal/clock.Clock` (`watch.Options.Clock`, `kit.Still.Clock`,
+  `app.Config.Clock`, `ui.UI.SetClock`), never a `func() time.Time`, and reads it through `clock.Or`: nil is the
+  system's. Its tests move an `internal/clock/clocktest` clock (`Advance`, or `Set` to put it anywhere), so what's
+  timed happens exactly when they say. A plugin times its work by the window's (`registry.Registry.Clock`) and reads
+  the frames' time as `UIView.Clock`. A Scene's is its `Now` (`Scene.Clock`), and what's timed on it waits for the
+  scene to move on: `Scene.Advance`, or `Quiet`, which steps to the next timer when that's all it would wait for.
+  `fswatch.NewScripted` is a file watcher whose events are the test's: the watch manager's tests send them, and
   only `fswatch`'s own test the OS's. A scene with `ScriptedFiles` (every `ShipScene`) gives the app such watchers:
   `Scene.WriteFiles` writes and says what changed, returning once every manager has taken it in, so the OS's late
   events for a test's own setup never move a count of reads.

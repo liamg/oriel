@@ -99,15 +99,14 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 		return buf.String()
 	}
 
-	now := r.w.opts.Now
-	r.w.opts.Now = func() time.Time { panic("the clock broke") }
+	r.clock.breakWith("the clock broke")
 	_, err := r.w.Start(context.Background(), core.SessionSpec{Kind: core.KindPlan})
-	r.w.opts.Now = now
+	r.clock.breakWith("")
 	if err == nil || !strings.Contains(err.Error(), "the clock broke") {
 		t.Errorf("Start = %v, want the panic as an error", err)
 	}
 
-	r.w.opts.Now = func() time.Time { panic("no load") }
+	r.clock.breakWith("no load")
 	ctx, cancel := context.WithCancel(context.Background())
 	load := sysload.NewSampler(time.Second, func() sysload.Reading { return sysload.Reading{CPU: 34, Cores: 4} })
 	load.Clock = clocktest.New(r.now())
@@ -121,7 +120,7 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 	until(t, "SampleLoad's panic logged", func() bool { return strings.Contains(logged(), "no load") })
 	cancel()
 	<-sampled
-	r.w.opts.Now = now
+	r.clock.breakWith("")
 
 	r.w.SetApp(App{Decide: func(context.Context, Decide) Verdict { panic("a hook broke") }})
 	id, a := r.workSession("Work")

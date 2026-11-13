@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -53,7 +54,7 @@ type Ship struct {
 	kit.Disposer
 	ConfigDir string // the user's config directory, for their prompts
 	h         plugin.Host
-	Clock     func() time.Time // the time Ship reads ages by; time.Now if nil
+	Clock     clock.Clock // the time Ship reads ages by; the system's if nil
 	ctx       context.Context
 	cancel    context.CancelFunc
 	busy      kit.Busy                          // reads and steps
@@ -103,9 +104,6 @@ func (x *Ship) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ship"} }
 func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "ship", Busy: x.busy.Busy, Source: "builtin:ship"}))
 	x.h = h
-	if x.Clock == nil {
-		x.Clock = time.Now
-	}
 	x.reports = map[core.SessionID]*shipReport{}
 	x.commits, x.prs, x.renaming = map[string]*commitForm{}, map[string]*prForm{}, map[string]*renameForm{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
@@ -610,7 +608,7 @@ func (x *Ship) gates() {
 			note = strings.Join(f[:2], " ")
 		}
 		if !last.Ended.IsZero() {
-			note += " " + widget.AgoLong(x.Clock(), last.Ended)
+			note += " " + widget.AgoLong(x.now(), last.Ended)
 		}
 		if !last.OK {
 			return registry.Gate{State: registry.GateFail, Note: note}
@@ -781,3 +779,5 @@ func (x *Ship) Fixture(id core.SessionID, loading bool, fn func([]Read) []Read) 
 	}
 	x.reports[id] = &shipReport{ships: fn(ships), loading: loading, doing: map[string]string{}, failed: map[string]string{}, fixed: true}
 }
+
+func (x *Ship) now() time.Time { return clock.Or(x.Clock).Now() }

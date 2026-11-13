@@ -161,7 +161,7 @@ func New(t testing.TB, o Options) *Scene {
 		o.Config(&cfg)
 	}
 	s.Logs = cfg.Logs
-	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: func() time.Time { return s.Now }, FontDirs: o.FontDirs})
+	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: s.Clock(), FontDirs: o.FontDirs})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -857,6 +857,13 @@ var Day = time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)
 func At(h, m, s int) time.Time {
 	return Day.Add(time.Duration(h)*time.Hour + time.Duration(m)*time.Minute + time.Duration(s)*time.Second)
 }
+
+// Clock is the scene's clock: it reads Now, and what's timed on it runs as Advance or Quiet passes it.
+func (s *Scene) Clock() clock.Clock { return s.clock }
+
+// NowClock reads the scene's Now, but what's timed on it runs by the system's clock, which neither Advance nor Quiet
+// moves: for timers a test shouldn't step to, such as a conversation's idle end.
+func (s *Scene) NowClock() clock.Clock { return nowClock(func() time.Time { return s.Now }) }
 
 // nowClock is a clock.Clock that reads now; its timers are the real clock's.
 type nowClock func() time.Time

@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -36,7 +37,7 @@ type GitSigns struct {
 	kit.Disposer
 	Editor *Editor
 	h      plugin.Host
-	Now    func() time.Time // the clock blame's ages are by
+	Clock  clock.Clock // the clock blame's ages are by; the system's if nil
 
 	mu       sync.Mutex
 	watched  map[*gitx.Status]func() // the projects' trees whose changes stale their bases and blames
@@ -122,9 +123,6 @@ func (g *GitSigns) watch(tree string, st *gitx.Status) {
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }, Source: "builtin:gitsigns"}))
 	g.h = h
-	if g.Now == nil {
-		g.Now = time.Now
-	}
 	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
 	g.watched = map[*gitx.Status]func(){}
@@ -478,7 +476,7 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 		s, style = bl.Author, "git.blame.other"
 	}
 	if bl.Kind != gitx.NotCommitted {
-		s += " · " + widget.AgoLabel(g.Now(), bl.When) + " ago · " + bl.Summary
+		s += " · " + widget.AgoLabel(clock.Or(g.Clock).Now(), bl.When) + " ago · " + bl.Summary
 		ctx.RefreshAt(ctx.Now.Add(time.Minute))
 	}
 	return uireg.Decoration{Kind: uireg.VirtualText, Line: line, Text: s, Style: style, Priority: -1}, true

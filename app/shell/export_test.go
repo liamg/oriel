@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -81,7 +82,7 @@ type Overview = overview
 
 const PanelBudget = panelBudget
 
-func (o *overview) SetClock(now func() time.Time) { o.now = now }
+func (o *overview) SetClock(c clock.Clock) { o.clock = c }
 
 // Done says every card's header and panels have been computed.
 func (o *overview) Done() bool {

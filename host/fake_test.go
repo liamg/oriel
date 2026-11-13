@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/internal/isolate"
 )
 
@@ -24,8 +25,7 @@ type rig struct {
 	home  string
 	fake  *agenttest.Fake
 	repo  *gittest.Repo
-	mu    sync.Mutex
-	at    time.Time        // the host's clock: read through now, set through setNow
+	clock *rigClock        // the host's clock: read through now, set through setNow
 	more  []agent.Provider // beside the fake
 	tools []string         // the packs' tools
 	log   *slog.Logger     // the host's log; none if nil
@@ -42,7 +42,7 @@ func newRig(t *testing.T, more ...agent.Provider) *rig {
 	t.Setenv("GIT_COMMITTER_NAME", "Fixture")
 	t.Setenv("GIT_COMMITTER_EMAIL", "fixture@example.com")
 	t.Setenv("USER", "tester")
-	r := &rig{t: t, home: t.TempDir(), fake: agenttest.NewFake(), at: time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC),
+	r := &rig{t: t, home: t.TempDir(), fake: agenttest.NewFake(), clock: &rigClock{Fake: clocktest.New(time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC))},
 		more: more}
 	r.repo = gittest.New(t)
 	r.repo.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
@@ -60,7 +60,7 @@ func (r *rig) open() {
 			providers.Register(p)
 		}
 	}
-	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Now: r.now, Log: r.log, HTTP: isolate.Net(r.t),
+	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Clock: r.clock, Log: r.log, HTTP: isolate.Net(r.t),
 		Packs: func(name string) (agent.Pack, bool) {
 			return agent.Pack{Name: name, Skill: name, Text: "pack " + name, Tools: r.tools}, true
 		}})
@@ -71,16 +71,32 @@ func (r *rig) open() {
 	r.t.Cleanup(func() { w.Close() })
 }
 
-func (r *rig) now() time.Time {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.at
+func (r *rig) now() time.Time { return r.clock.Fake.Now() }
+
+func (r *rig) setNow(t time.Time) { r.clock.Set(t) }
+
+// rigClock is a clock a test moves, or breaks: while broke is set, Now panics with it.
+type rigClock struct {
+	*clocktest.Fake
+	mu    sync.Mutex
+	broke string
 }
 
-func (r *rig) setNow(t time.Time) {
-	r.mu.Lock()
-	r.at = t
-	r.mu.Unlock()
+func (c *rigClock) Now() time.Time {
+	c.mu.Lock()
+	broke := c.broke
+	c.mu.Unlock()
+	if broke != "" {
+		panic(broke)
+	}
+	return c.Fake.Now()
+}
+
+// breakWith has Now panic with why; "" mends it.
+func (c *rigClock) breakWith(why string) {
+	c.mu.Lock()
+	c.broke = why
+	c.mu.Unlock()
 }
 
 // restart closes the host and starts another on the same home.

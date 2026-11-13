@@ -15,11 +15,11 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Registry is the checkouts the host knows (repos.json), and what the Repos page does to them.
@@ -34,14 +34,14 @@ type Registry struct {
 // New reads the registry from env's home; defaultDir is where clones go when repos.dir isn't set.
 func New(env hostcore.Env, st hostcore.State, defaultDir func() string) (*Registry, error) {
 	x := &Registry{env: env, st: st, defaultDir: defaultDir,
-		list: &repoList{path: filepath.Join(env.Home, "repos.json"), now: env.Now, scanned: map[string]bool{}}}
+		list: &repoList{path: filepath.Join(env.Home, "repos.json"), clock: clock.Or(env.Clock), scanned: map[string]bool{}}}
 	return x, x.list.load()
 }
 
 // repoList is the checkouts the host knows, kept in repos.json, and the paths the user removed.
 type repoList struct {
 	path    string
-	now     func() time.Time
+	clock   clock.Clock
 	mu      sync.Mutex
 	list    []core.Repo
 	ignored []string
@@ -121,7 +121,7 @@ func (r *repoList) add(ctx context.Context, path string, src core.RepoSource) (_
 	}
 	remote, _ := g.Origin(ctx) // a repo with no origin, or one git can't read, is still added
 	repo := core.Repo{ID: id, Path: top, Remote: remote, BaseBranch: g.DefaultBranch(ctx), Source: src,
-		Added: r.now().UTC()}
+		Added: r.clock.Now().UTC()}
 	r.list = append(r.list, repo)
 	return repo, true, r.save()
 }
@@ -151,7 +151,7 @@ func (r *repoList) used(id core.RepoID) error {
 		return nil
 	}
 	r.list = slices.Clone(r.list)
-	r.list[i].Used = r.now().UTC()
+	r.list[i].Used = r.clock.Now().UTC()
 	return r.save()
 }
 

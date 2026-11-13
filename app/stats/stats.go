@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/host/stats"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -82,9 +83,9 @@ type fetched[T any] struct {
 
 type Plugin struct {
 	kit.Disposer
-	h   plugin.Host
-	Now func() time.Time // the clock; time.Now if nil
-	Loc *time.Location   // where days start; time.Local if nil
+	h     plugin.Host
+	Clock clock.Clock    // the system's if nil
+	Loc   *time.Location // where days start; time.Local if nil
 
 	open    bool       // the Stats page
 	picking bool       // its custom range's date picker is open
@@ -105,7 +106,7 @@ type Plugin struct {
 	history  fetched[[]core.ProviderUsage]
 	inflight map[string]time.Time   // when each fetch running was asked for
 	asked    map[string]time.Time   // when each read subscribed but not yet run was asked for
-	clock    time.Time              // Now, as the last frame that asked for a read saw it: the time reads off the loop go by
+	frameNow time.Time              // now, as the last frame that asked for a read saw it: the time reads off the loop go by
 	subs     kit.Subs               // the reads frames keep asking for, from the app's manager
 	used     map[string]bool        // the reads asked for since the last frame
 	forced   map[string]bool        // reads to ask again however young their answer: a retry, or agents moving on
@@ -121,9 +122,6 @@ func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "stats"
 func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "stats", Busy: x.Busy, Source: "builtin:stats"}))
 	x.h = h
-	if x.Now == nil {
-		x.Now = time.Now
-	}
 	if x.Loc == nil {
 		x.Loc = time.Local
 	}
@@ -133,7 +131,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.reports = map[string]fetched[stats.Report]{}
 	x.details = map[string]fetched[stats.Detail]{}
 	x.inflight, x.asked, x.used, x.forced = map[string]time.Time{}, map[string]time.Time{}, map[string]bool{}, map[string]bool{}
-	x.reading = plugin.NewLoad(h, x.readUsage, plugin.LoadOpts{Timeout: 2 * time.Minute, Now: func() time.Time { return x.Now() }})
+	x.reading = plugin.NewLoad(h, x.readUsage, plugin.LoadOpts{Timeout: 2 * time.Minute})
 	x.Add(h.Option(registry.OptionSpec{Name: SplitOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Split a multi-repo session's cost over its repos, each request charged to the repo its file tool calls worked in. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
 	x.Add(h.Option(registry.OptionSpec{Name: AccountsOption, Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
@@ -491,13 +489,13 @@ func (x *Plugin) span(q statsQuery) (time.Time, time.Time) {
 	if days == 0 {
 		days = 30
 	}
-	now := x.Now().In(x.Loc)
+	now := x.now().In(x.Loc)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.Loc).AddDate(0, 0, 1)
 	return end.AddDate(0, 0, -days), end
 }
 
 func (x *Plugin) offset() int {
-	_, off := x.Now().In(x.Loc).Zone()
+	_, off := x.now().In(x.Loc).Zone()
 	return off
 }
 
@@ -577,7 +575,7 @@ var statsNeed = watch.Need{MaxAge: kit.RefetchAfter}
 func (x *Plugin) keep(key, what string, cached func() time.Time, ask func() (any, error), store func(any, error, time.Time)) time.Time {
 	x.mu.Lock()
 	x.used[key] = true
-	x.clock = x.Now()
+	x.frameNow = x.now()
 	x.mu.Unlock()
 	m := kit.ManagerFor(x.h, "")
 	if m == nil {
@@ -585,8 +583,8 @@ func (x *Plugin) keep(key, what string, cached func() time.Time, ask func() (any
 	}
 	x.subs.Hold(key, m, statsNeed, func() kit.Closer {
 		x.mu.Lock()
-		if at := cached(); x.forced[key] || at.IsZero() || x.clock.Sub(at) >= kit.RefetchAfter {
-			x.asked[key] = x.clock
+		if at := cached(); x.forced[key] || at.IsZero() || x.frameNow.Sub(at) >= kit.RefetchAfter {
+			x.asked[key] = x.frameNow
 		}
 		x.mu.Unlock()
 		src := kit.Every("stats:"+key, func(context.Context) error {
@@ -595,15 +593,15 @@ func (x *Plugin) keep(key, what string, cached func() time.Time, ask func() (any
 			delete(x.asked, key)
 			forced := x.forced[key]
 			delete(x.forced, key)
-			if at := cached(); !forced && !at.IsZero() && x.clock.Sub(at) < kit.RefetchAfter {
+			if at := cached(); !forced && !at.IsZero() && x.frameNow.Sub(at) < kit.RefetchAfter {
 				x.mu.Unlock()
 				return nil // the answer kept is young enough
 			}
-			x.inflight[key] = cmp.Or(asked, x.clock)
+			x.inflight[key] = cmp.Or(asked, x.frameNow)
 			x.mu.Unlock()
 			v, err := ask()
 			x.h.Do(func() {
-				at := x.Now()
+				at := x.now()
 				x.mu.Lock()
 				store(v, err, at)
 				delete(x.inflight, key)
@@ -636,7 +634,7 @@ func (x *Plugin) fresher() {
 	x.mu.Lock()
 	var stale []string
 	for key, f := range x.reports {
-		if x.Now().Sub(f.at) > liveAfter && x.inflight[key].IsZero() {
+		if x.now().Sub(f.at) > liveAfter && x.inflight[key].IsZero() {
 			stale = append(stale, key)
 			x.forced[key] = true
 		}
@@ -701,7 +699,7 @@ func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 	if w, _ := kit.StatsCalls(x.h); w != nil {
 		x.keep("usage.history", "usage history", func() time.Time { return x.history.at }, func() (any, error) {
 			x.mu.Lock()
-			since := x.clock.Add(-8 * 24 * time.Hour)
+			since := x.frameNow.Add(-8 * 24 * time.Hour)
 			x.mu.Unlock()
 			return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil
 		}, func(v any, err error, at time.Time) {
@@ -740,7 +738,7 @@ func (x *Plugin) refreshUsage(registry.Ctx) error {
 
 // figure is the cost of today or this week, for the sidebar and the start view.
 func (x *Plugin) figure(span string) string {
-	now := x.Now().In(x.Loc)
+	now := x.now().In(x.Loc)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.Loc).AddDate(0, 0, 1)
 	from := end.AddDate(0, 0, -1)
 	if span == "week" {
@@ -782,7 +780,7 @@ func (x *Plugin) frontUsage() (core.ProviderUsage, bool) {
 	if u, ok := x.sessionUsage(us); ok {
 		return u, true
 	}
-	used := usedProviders(st, x.Now())
+	used := usedProviders(st, x.now())
 	if i := slices.IndexFunc(us, func(u core.ProviderUsage) bool { return used[u.Provider] }); i >= 0 {
 		return us[i], true
 	}
@@ -888,3 +886,5 @@ func pagesSource(h plugin.Host) uireg.PickerSource {
 
 // accountKey is an account's plan as the Usage page keys it.
 func accountKey(u core.ProviderUsage) string { return u.Provider + "|" + u.Account }
+
+func (x *Plugin) now() time.Time { return clock.Or(x.Clock).Now() }

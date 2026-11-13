@@ -2,7 +2,6 @@ package apptest
 
 import (
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/ship"
@@ -101,7 +100,7 @@ func ShipSession(t *testing.T) (*Scene, core.SessionState) {
 	se, reads := rig.ShipSession(t, s.Now)
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
 	x := PluginOf[*ship.Ship](s, "ship")
-	x.Clock = func() time.Time { return s.Now }
+	x.Clock = s.Clock()
 	x.Fixture(se.ID, false, func([]ship.Read) []ship.Read { return reads(GitHubCode(s)) })
 	return s, se
 }

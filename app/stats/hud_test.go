@@ -190,7 +190,7 @@ L.hud.indicator("meeting", L.ui.indicator{ label = "NEXT MEETING", value = "none
 func TestHUDUsageIsOfTheProvidersInUse(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	s.Now = apptest.At(14, 0, 0)
-	apptest.PluginOf[*stats.Plugin](s, "stats").Now = func() time.Time { return s.Now }
+	apptest.PluginOf[*stats.Plugin](s, "stats").Clock = s.Clock()
 	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "w", Name: "w", Kind: core.KindWork, Created: s.Now.Add(-time.Hour),
 		Agent: core.AgentState{Provider: "claude"}}})
 	codex := core.ProviderUsage{Provider: "codex", Account: "me@x", Sampled: s.Now,

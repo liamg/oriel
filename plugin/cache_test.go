@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -217,15 +218,15 @@ func TestCacheBoundsBytes(t *testing.T) {
 
 func TestCacheRefetchesAfterMaxAge(t *testing.T) {
 	g := newGate()
-	now := time.Unix(1000, 0)
-	c, lp, _ := cacheFor(g, CacheOpts[string, string]{MaxAge: time.Minute, Now: func() time.Time { return now }})
+	clk := clocktest.New(time.Unix(1000, 0))
+	c, lp, _ := cacheFor(g, CacheOpts[string, string]{MaxAge: time.Minute, Clock: clk})
 	g.answer("a", "A1")
 	lp.until(t, func() bool { _, s := c.Get("a"); return s.Phase == ui.Ready })
-	now = now.Add(30 * time.Second)
+	clk.Advance(30 * time.Second)
 	if _, s := c.Get("a"); s.Phase != ui.Ready || g.count(g.calls, "a") != 1 {
 		t.Fatalf("a fresh value was fetched again: %+v", s)
 	}
-	now = now.Add(31 * time.Second)
+	clk.Advance(31 * time.Second)
 	if v, s := c.Get("a"); v != "A1" || !s.Stale {
 		t.Fatalf("an old value shows %q %+v, want it stale while it's fetched", v, s)
 	}

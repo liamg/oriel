@@ -138,7 +138,7 @@ func (x *Catalog) newResolver() catalog.Resolver {
 	u, _, _ := o.Get("registry.updates", registry.At{})
 	hold, _, _ := o.Get("registry.trusted_hold", registry.At{})
 	r := &catalog.RegistryResolver{Client: c, GitHub: x.github(), Updates: u.(string), Hold: hold.(time.Duration),
-		Platform: runtime.GOOS + "/" + runtime.GOARCH, Now: x.h.UI().Now}
+		Platform: runtime.GOOS + "/" + runtime.GOARCH, Clock: x.h.UI().Clock()}
 	for id := range updates {
 		r.Update(id)
 	}
