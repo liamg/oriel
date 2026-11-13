@@ -175,7 +175,7 @@ func (a *APIs) declare(t script.Table, where string) error {
 	a.own(a.Host.Option(sp))
 	if fn, ok := t["on_change"].(*script.Fn); ok {
 		o := a.Host.Options()
-		a.own(disposeFunc(o.Watch(name, func() {
+		a.own(registry.DisposeFunc(o.Watch(name, func() {
 			a.Host.Do(func() {
 				v, _, _ := o.Get(name, registry.At{})
 				a.callback(script.Table{"on_change": fn}, "on_change", v)

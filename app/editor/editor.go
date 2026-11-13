@@ -136,7 +136,7 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 		at.Buffer, at.Window = buf, win
 		return at
 	}})
-	x.Add(kit.OnDispose(h.Layout().OnClose(func(v layout.ViewRef) {
+	x.Add(registry.DisposeFunc(h.Layout().OnClose(func(v layout.ViewRef) {
 		if id, ok := windowOf(v); ok {
 			x.e.WindowClosed(id)
 			delete(x.present, id)

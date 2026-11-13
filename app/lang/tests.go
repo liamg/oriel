@@ -102,12 +102,12 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "tests", Busy: x.work.Busy, Source: "builtin:tests"}))
 	x.h = h
 	x.set = testrun.Builtin()
-	x.Add(kit.OnDispose(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
+	x.Add(registry.DisposeFunc(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.found = map[*text.Buffer]*discovery{}
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.HistoryFile, Load: x.loadHistory})
-	x.Add(kit.OnDispose(x.state.Close))
+	x.Add(registry.DisposeFunc(x.state.Close))
 	// The files git sees change are read again, in whichever work tree the window is on.
-	x.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
+	x.Add(registry.DisposeFunc(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
 		ws := x.workspace().Root
 		for _, p := range paths {
 			// One told late, of the tree the window has left, isn't this directory's.

@@ -100,7 +100,7 @@ func (r *reg) OnFault(fn func(Fault)) Disposable {
 	defer r.faults.mu.Unlock()
 	tok := r.tokens.Add(1)
 	r.faults.subs = append(r.faults.subs, entry[func(Fault)]{tok, fn})
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.faults.mu.Lock()
 		defer r.faults.mu.Unlock()
 		r.faults.subs = slices.DeleteFunc(r.faults.subs, func(e entry[func(Fault)]) bool { return e.token == tok })
@@ -113,7 +113,7 @@ func (r *reg) OnFailure(fn func(Failure)) Disposable {
 	defer r.faults.mu.Unlock()
 	tok := r.tokens.Add(1)
 	r.faults.fsubs = append(r.faults.fsubs, entry[func(Failure)]{tok, fn})
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.faults.mu.Lock()
 		defer r.faults.mu.Unlock()
 		r.faults.fsubs = slices.DeleteFunc(r.faults.fsubs, func(e entry[func(Failure)]) bool { return e.token == tok })

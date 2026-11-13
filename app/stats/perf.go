@@ -87,8 +87,8 @@ func (x *Perf) commands() []registry.Command {
 func (x *Perf) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.shown = &kit.WhileShown{Want: x.want, Focus: h}
-	x.Add(kit.OnDispose(h.Framed(x.shown.Framed)))
-	x.Add(kit.OnDispose(x.shown.Drop))
+	x.Add(registry.DisposeFunc(h.Framed(x.shown.Framed)))
+	x.Add(registry.DisposeFunc(x.shown.Drop))
 	x.Add(&x.work)
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))

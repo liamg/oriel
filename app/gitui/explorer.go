@@ -177,7 +177,7 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
 	if e.Git != nil {
 		e.Git.scope = e.scope
-		e.Add(kit.OnDispose(func() { e.Git.scope = nil }))
+		e.Add(registry.DisposeFunc(func() { e.Git.scope = nil }))
 	}
 	e.kept = map[core.SessionID]explorerKept{}
 	e.cols.status, e.cols.lines, e.cols.diag = true, true, true
@@ -208,7 +208,7 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	}
 	e.watchScratch()
 	e.Add(h.View(kit.ExplorerView, explorerView{e}))
-	e.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(string, []string) {
+	e.Add(registry.DisposeFunc(kit.GitOf(h).WatchWindow(func(string, []string) {
 		e.hunks.mu.Lock()
 		e.hunks.loaded = false
 		e.hunks.mu.Unlock()

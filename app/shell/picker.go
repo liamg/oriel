@@ -83,7 +83,7 @@ func (p *picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker
 
 func (p *picker) Activate(_ context.Context, h plugin.Host) error {
 	p.h, p.picked, p.ranks = h, map[string]bool{}, newRankings(h)
-	p.Add(kit.OnDispose(p.ranks.reset))
+	p.Add(registry.DisposeFunc(p.ranks.reset))
 	p.Add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
 		src, _ := a["source"].(string)
 		return src == "" || slices.ContainsFunc(h.Pickers(), func(s uireg.PickerSource) bool { return s.ID == src })

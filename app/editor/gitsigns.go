@@ -133,8 +133,8 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		Help: "What the gutter marks a file's changes against: as the Explorer's scope has it (scope: Uncommitted's against the last commit, Changed's against the branch's base), where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
-	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) })))
-	g.Add(kit.OnDispose(func() {
+	g.Add(registry.DisposeFunc(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) })))
+	g.Add(registry.DisposeFunc(func() {
 		g.mu.Lock()
 		defer g.mu.Unlock()
 		for _, cancel := range g.watched {

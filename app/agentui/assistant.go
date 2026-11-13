@@ -94,10 +94,10 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 	x.conv.Progress = assistantProgress
 	x.conv.Changed = func() { h.Do(x.changed) }
 	x.setIdle()
-	x.Add(kit.OnDispose(h.Options().Watch("assistant.idle", func() { h.Do(x.setIdle) })))
-	x.Add(kit.OnDispose(x.conv.Close))
+	x.Add(registry.DisposeFunc(h.Options().Watch("assistant.idle", func() { h.Do(x.setIdle) })))
+	x.Add(registry.DisposeFunc(x.conv.Close))
 	x.Add(&x.work)
-	x.Add(kit.OnDispose(x.places.Wait))
+	x.Add(registry.DisposeFunc(x.places.Wait))
 	x.Add(h.Contribute(registry.Busy{Name: "assistant", Busy: x.places.Busy, Source: "builtin:assistant"}))
 	x.Add(h.Contribute(registry.AgentOwner{Agent: kit.AssistantAgent, Confirm: x.confirm, Acted: x.acted, Source: "builtin:assistant"}))
 	x.Add(h.Contribute(uireg.InboxSource{Name: kit.AssistantAgent, Cards: x.inboxCards, Source: "builtin:assistant"}))

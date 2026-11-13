@@ -101,7 +101,7 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.ThreadSource{Origin: core.OriginGitHub, Title: "GitHub review", Head: x.head, Comment: x.comment}))
 	x.Add(h.Contribute(uireg.ThreadSource{Origin: core.OriginCodeHost, Title: "Review", Head: x.head, Comment: x.comment}))
 	x.Add(h.View(GitHubStatusView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "github", Fn: x.statusSegment} })))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.SessionFocused:
 			if ev.ID != "" && x.syncedAgo(ev.ID) >= githubPoll { // one synced lately stands: each sync asks for every PR's comments

@@ -239,14 +239,13 @@ func (s stacks[K, T]) remove(k K, tok int64) {
 	}
 }
 
+// DisposeFunc is fn as a Disposable: what undoes a registration, a subscription's cancel. It runs fn once, however
+// often it's disposed.
+func DisposeFunc(fn func()) Disposable { return disposeFunc(sync.OnceFunc(fn)) }
+
 type disposeFunc func()
 
 func (f disposeFunc) Dispose() { f() }
-
-func disposeOnce(fn func()) Disposable {
-	var once sync.Once
-	return disposeFunc(func() { once.Do(fn) })
-}
 
 const sep = "\x00"
 
@@ -328,7 +327,7 @@ func (r *reg) Command(c Command) Disposable {
 	defer r.mu.Unlock()
 	tok := r.commands.push(c.ID, c, r.tokens.Add(1))
 	r.cmdList = nil
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.commands.remove(c.ID, tok)
@@ -348,7 +347,7 @@ func (r *reg) Keymap(k Keymap) Disposable {
 	}
 	tok := r.keymaps.push(key, k, r.tokens.Add(1))
 	r.sorted = nil
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.keymaps.remove(key, tok)
@@ -380,7 +379,7 @@ func (r *reg) Input(e input.Engine) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	tok := r.inputs.push(e.ID(), e, r.tokens.Add(1))
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.inputs.remove(e.ID(), tok)
@@ -410,7 +409,7 @@ func (r *reg) Theme(s theme.Source) Disposable {
 	tok := r.tokens.Add(1)
 	r.themes = append(r.themes, entry[theme.Source]{tok, s})
 	r.themeGen++
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.themes = slices.DeleteFunc(r.themes, func(e entry[theme.Source]) bool { return e.token == tok })

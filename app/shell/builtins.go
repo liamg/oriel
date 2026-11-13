@@ -179,7 +179,7 @@ func (o *uiOptions) fonts(h plugin.Host) {
 				}
 			})
 		}
-		o.Add(kit.OnDispose(h.Options().Watch(r.name, apply)))
+		o.Add(registry.DisposeFunc(h.Options().Watch(r.name, apply)))
 		if v, _, _ := h.Options().Get(r.name, registry.At{}); v != "" && v != nil {
 			apply()
 		}

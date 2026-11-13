@@ -117,7 +117,7 @@ var projectPanels = []struct {
 func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 	r.h = h
 	r.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "sidebar", Path: func() string { return r.sh.dirState("sidebar") }, Load: r.loadForm})
-	r.Add(kit.OnDispose(r.state.Close))
+	r.Add(registry.DisposeFunc(r.state.Close))
 	r.Add(kit.OnDirChanged(h, "the sidebar's selection is of its directory", func(kit.DirChanged) { r.sel = 0 }))
 	r.Add(h.Option(registry.OptionSpec{Name: "sidebar.form", Type: registry.Enum, Values: []string{"auto", "wide", "narrow"}, Default: "auto",
 		Scopes: registry.ScopeUser, Help: "How a window's project sidebar starts: wide, narrow (an icon strip), or auto, wide with two or more projects. «/» switch a window's, which it remembers."}))

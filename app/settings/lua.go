@@ -101,7 +101,7 @@ func (x *Lua) Activate(_ context.Context, h plugin.Host) error {
 	})
 	w.Add(x.initLua())
 	w.AddTree(filepath.Join(x.Dir, "lua"), nil)
-	x.Add(kit.OnDispose(func() {
+	x.Add(registry.DisposeFunc(func() {
 		w.Close()
 		if x.apis != nil {
 			x.apis.Dispose()

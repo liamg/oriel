@@ -51,7 +51,7 @@ func (o *omnibox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "omnib
 func (o *omnibox) Activate(_ context.Context, h plugin.Host) error {
 	o.h = h
 	o.ranks = newRankings(h)
-	o.Add(kit.OnDispose(o.ranks.reset))
+	o.Add(registry.DisposeFunc(o.ranks.reset))
 	o.Add(h.Command(registry.Command{ID: "omnibox.open", Title: "Search everything", Run: func(_ registry.Ctx, a registry.Args) error {
 		o.open, o.focus, o.sel = true, true, 0
 		o.ranks.reset()

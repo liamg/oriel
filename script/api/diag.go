@@ -31,7 +31,7 @@ func (d Diagnostics) Set(owner, file string, list any) error {
 			Severity: cmpOr(str(t, "severity"), registry.SevError), Message: str(t, "message")})
 	}
 	d.a.Host.SetDiagnostics(owner, file, ds)
-	d.a.own(disposeFunc(func() { d.a.Host.SetDiagnostics(owner, file, nil) }))
+	d.a.own(registry.DisposeFunc(func() { d.a.Host.SetDiagnostics(owner, file, nil) }))
 	return nil
 }
 
@@ -45,10 +45,6 @@ func (d Diagnostics) List() []any {
 	}
 	return out
 }
-
-type disposeFunc func()
-
-func (f disposeFunc) Dispose() { f() }
 
 // cmpOr is the first of ss that isn't empty.
 func cmpOr(ss ...string) string { return cmp.Or(ss...) }
@@ -78,7 +74,7 @@ func (c Coverage) Set(owner, file string, hits any) error {
 		m[line-1] = int(n)
 	}
 	c.a.Host.SetCoverage(owner, file, m)
-	c.a.own(disposeFunc(func() { c.a.Host.SetCoverage(owner, file, nil) }))
+	c.a.own(registry.DisposeFunc(func() { c.a.Host.SetCoverage(owner, file, nil) }))
 	return nil
 }
 

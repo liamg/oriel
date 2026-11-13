@@ -90,7 +90,7 @@ func (x *HUD) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.View(HUDView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "hud", Fn: x.drawer} })))
 	x.Add(h.Contribute(uireg.Indicator{Name: "hud", Slot: uireg.SlotTitleBar, Global: true, Order: 90, Help: kit.HUDHelp,
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "hud", Fn: x.button}, nil }}))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		name := core.EventName(ev)
 		hit := false
 		for _, c := range h.Contributions("hud.indicator") {

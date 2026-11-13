@@ -130,15 +130,15 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 			s.follow(ctx)
 		})
 	}))
-	s.Add(kit.OnDispose(s.work.Stop))
-	s.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	s.Add(registry.DisposeFunc(s.work.Stop))
+	s.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced:
 			s.kick() // a session's project may have a file of its own
 		}
 	})))
-	s.Add(kit.OnDispose(h.Options().Registered(s.kick))) // a new option may take a key the files had waiting
-	s.Add(kit.OnDispose(s.untrack))
+	s.Add(registry.DisposeFunc(h.Options().Registered(s.kick))) // a new option may take a key the files had waiting
+	s.Add(registry.DisposeFunc(s.untrack))
 	return nil
 }
 

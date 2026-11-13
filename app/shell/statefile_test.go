@@ -51,7 +51,7 @@ func (p *keeper) Activate(_ context.Context, h plugin.Host) error {
 			p.leaves++
 			return []byte(p.text + " left")
 		}})
-	p.Add(kit.OnDispose(p.f.Close))
+	p.Add(registry.DisposeFunc(p.f.Close))
 	return nil
 }
 

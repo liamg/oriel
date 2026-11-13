@@ -54,7 +54,7 @@ func (x *Watches) Activate(ctx context.Context, h plugin.Host) error {
 	x.sessions, x.trees, x.named = map[core.SessionID]*watch.Manager{}, map[treeKey]*gitsrc.Tree{}, map[string][]named{}
 	x.app = x.manager("app")
 	x.sync(h.State())
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced, core.SessionArchived, core.SessionClosed:
 			x.sync(h.State())
@@ -184,7 +184,7 @@ func (x *Watches) Register(n registry.Named) registry.Disposable {
 	id := x.next
 	x.named[n.Name] = append(x.named[n.Name], named{n, id})
 	x.mu.Unlock()
-	return kit.OnDispose(func() {
+	return registry.DisposeFunc(func() {
 		x.mu.Lock()
 		defer x.mu.Unlock()
 		x.named[n.Name] = slices.DeleteFunc(x.named[n.Name], func(e named) bool { return e.id == id })

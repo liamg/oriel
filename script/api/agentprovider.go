@@ -78,7 +78,7 @@ func (g Agent) Provider(spec script.Table, where string) error {
 	}
 	a.own(a.Host.Contribute(ap))
 	if c, ok := p.(interface{ Close() error }); ok {
-		a.own(disposeFunc(func() { c.Close() }))
+		a.own(registry.DisposeFunc(func() { c.Close() }))
 	}
 	return nil
 }

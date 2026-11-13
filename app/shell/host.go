@@ -9,8 +9,6 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/liamg/oriel/app/kit"
-
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -106,7 +104,7 @@ func (h *pluginHost) Load(p plugin.Plugin) (registry.Disposable, error) {
 		return nil, err
 	}
 	h.sh.loaded = append(h.sh.loaded, p)
-	return kit.OnDispose(func() {
+	return registry.DisposeFunc(func() {
 		h.sh.loaded = slices.DeleteFunc(h.sh.loaded, func(q plugin.Plugin) bool { return q == p })
 		if err := p.Deactivate(context.Background()); err != nil {
 			h.log.Warn("stopping a plugin", "plugin", p.Manifest().ID, "err", err)

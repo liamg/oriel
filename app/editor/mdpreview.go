@@ -76,8 +76,8 @@ func (x *Markdown) Activate(_ context.Context, h plugin.Host) error {
 		x.Pictures.SetRemote(on == true)
 	}
 	remoteImages()
-	x.Add(kit.OnDispose(h.Options().Watch(RemoteImagesOption, remoteImages)))
-	x.Add(kit.OnDispose(func() { x.Pictures.SetRemote(true) }))
+	x.Add(registry.DisposeFunc(h.Options().Watch(RemoteImagesOption, remoteImages)))
+	x.Add(registry.DisposeFunc(func() { x.Pictures.SetRemote(true) }))
 	x.Add(h.Command(registry.Command{ID: "MarkdownPreview", Title: "Preview the markdown file in the focused window, or edit it again",
 		Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "editor.present", registry.Args{"name": "markdown"})

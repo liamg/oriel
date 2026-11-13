@@ -455,7 +455,7 @@ func (o *options) register(s OptionSpec) (Disposable, error) {
 	for _, fn := range added {
 		fn()
 	}
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 		o.specs.remove(s.Name, tok)

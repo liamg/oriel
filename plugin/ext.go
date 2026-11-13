@@ -118,5 +118,5 @@ type Hint = registry.Hint
 
 // ProvideUI gives h's window's widgets v as their service of type T (ui.Provide): the app's widget.Dictator.
 func ProvideUI[T any](h Host, v T) registry.Disposable {
-	return disposeFunc(h.ProvideUI(reflect.TypeFor[T](), v))
+	return registry.DisposeFunc(h.ProvideUI(reflect.TypeFor[T](), v))
 }

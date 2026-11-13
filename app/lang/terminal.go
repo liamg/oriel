@@ -108,7 +108,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	x.saved, x.dir = map[string][]byte{}, kit.WindowDir(h)
 	x.mu.Unlock()
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "terminal screens", Path: x.SavedAt, Load: x.loadSaved, Leave: x.leave})
-	x.Add(kit.OnDispose(x.state.Close))
+	x.Add(registry.DisposeFunc(x.state.Close))
 	if x.CacheDir != "" {
 		ghostty.SetCacheDir(filepath.Join(x.CacheDir, "wasm"))
 	}

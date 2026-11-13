@@ -67,9 +67,9 @@ func (x *Repos) Activate(_ context.Context, h plugin.Host) error {
 	for _, sp := range repoOptions() {
 		x.Add(h.Option(sp))
 	}
-	x.Add(kit.OnDispose(h.Options().Watch("repos.dir", x.sendDir)))
+	x.Add(registry.DisposeFunc(h.Options().Watch("repos.dir", x.sendDir)))
 	x.sendDir()
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.ReposChanged); ok && x.byHand(ev) {
 			h.Do(func() { x.discover(false) })
 		}

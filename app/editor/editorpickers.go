@@ -291,7 +291,7 @@ type filesKey struct {
 func (x *Editor) filesSource() uireg.PickerSource {
 	files := &fileList{dir: x.dir, redraw: x.h.Redraw}
 	x.listed = files
-	x.Add(kit.OnDispose(files.busy.Wait))
+	x.Add(registry.DisposeFunc(files.busy.Wait))
 	openNames := func() []string {
 		var open []string
 		for _, b := range x.e.BufferList() {

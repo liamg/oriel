@@ -130,7 +130,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 		x.pushed(core.SessionID(ev.Session), ev.Head)
 		return registry.Verdict{}, nil
 	}))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if _, said := ev.(core.TranscriptAppended); said { // an agent's words move no thread, draft or state watch reads
 			return
 		}
@@ -169,7 +169,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 			return n
 		}}))
 	x.Add(h.Contribute(uireg.ThreadFoot{Name: "review", Draw: x.foot, Source: "builtin:pr-review"}))
-	x.Add(kit.OnDispose(h.Layout().OnShow(func(v layout.ViewRef) {
+	x.Add(registry.DisposeFunc(h.Layout().OnShow(func(v layout.ViewRef) {
 		if se, ok := front(); ok && v.ID == kit.PRView {
 			x.form(se.ID).focus = true
 		}

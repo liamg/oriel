@@ -92,10 +92,6 @@ type method struct {
 
 func NewMethods() *Methods { return &Methods{m: map[string][]method{}} }
 
-type disposeFunc func()
-
-func (f disposeFunc) Dispose() { f() }
-
 // Add makes m callable; a method of the same name is shadowed until it's disposed.
 func (ms *Methods) Add(m Method) registry.Disposable {
 	if m.Cap == "" {
@@ -106,7 +102,7 @@ func (ms *Methods) Add(m Method) registry.Disposable {
 	n := ms.n
 	ms.m[m.Name] = append(ms.m[m.Name], method{m, n})
 	ms.mu.Unlock()
-	return disposeFunc(func() {
+	return registry.DisposeFunc(func() {
 		ms.mu.Lock()
 		defer ms.mu.Unlock()
 		ms.m[m.Name] = slices.DeleteFunc(ms.m[m.Name], func(x method) bool { return x.n == n })

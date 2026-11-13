@@ -191,7 +191,7 @@ type decorState struct {
 func (r *reg) Decorations(id string, p DecorationProvider) registry.Disposable {
 	d := r.Contribute(NamedProvider{id, p})
 	r.DecorationsChanged(id)
-	return disposeOnce(func() {
+	return registry.DisposeFunc(func() {
 		d.Dispose()
 		r.DecorationsChanged(id)
 	})

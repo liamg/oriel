@@ -4,7 +4,6 @@ package sessions
 
 import (
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
@@ -66,9 +65,9 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 			x.Add(h.Contribute(registry.Service{Name: part.name, Impl: part.impl, Source: "builtin:sessions"}))
 		}
 		w.SetKinds(registryKinds{h})
-		x.Add(kit.OnDispose(func() { w.SetKinds(nil) }))
+		x.Add(registry.DisposeFunc(func() { w.SetKinds(nil) }))
 		w.SetProviders(func() []agent.Provider { return registryProviders(h) })
-		x.Add(kit.OnDispose(func() { w.SetProviders(nil) }))
+		x.Add(registry.DisposeFunc(func() { w.SetProviders(nil) }))
 	}
 }
 

@@ -98,7 +98,7 @@ func (r *reg) Hook(h Hook) Disposable {
 	id := fmt.Sprintf("%s#%d", h.Event, r.hooks.next)
 	r.hooks.byID[id] = &hookEntry{h: h, id: id}
 	r.hooks.order = append(r.hooks.order, id)
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.hooks.mu.Lock()
 		defer r.hooks.mu.Unlock()
 		delete(r.hooks.byID, id)
@@ -131,7 +131,7 @@ func (r *reg) DeclareEvent(e EventInfo) Disposable {
 		r.hooks.events = map[string]EventInfo{}
 	}
 	r.hooks.events[e.Name] = e
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.hooks.mu.Lock()
 		defer r.hooks.mu.Unlock()
 		delete(r.hooks.events, e.Name)

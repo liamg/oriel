@@ -151,7 +151,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.bases, x.answers, x.kept = map[string]*explainBase{}, map[answerKey]*answer{}, map[string]*answer{}
 	x.Add(h.Contribute(registry.Service{Name: kit.ExplainService, Impl: x, Source: "builtin:explain"}))
 	if st := kit.GitOf(h).Tree("").Status(); st != nil {
-		x.Add(kit.OnDispose(st.Watch(func([]string) {
+		x.Add(registry.DisposeFunc(st.Watch(func([]string) {
 			x.mu.Lock()
 			for _, b := range x.bases {
 				b.loaded = false

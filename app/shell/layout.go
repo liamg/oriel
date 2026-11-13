@@ -63,7 +63,7 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 		path = func() string { return l.sh.dirState("layout") }
 	}
 	l.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "layout", Path: path, Load: func(b []byte) { l.saved = b }})
-	l.Add(kit.OnDispose(l.state.Close))
+	l.Add(registry.DisposeFunc(l.state.Close))
 	// A view put in front is what the user asked to see: the page over the layout gives way to it.
 	l.root.OnShow(func(layout.ViewRef) { closePlaces(h) })
 	l.Add(h.DeclareEvent(registry.EventInfo{Name: registry.EventName[kit.DirChanged](), Fired: true, Payload: kit.DirChanged{},

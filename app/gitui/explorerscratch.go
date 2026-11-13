@@ -18,10 +18,10 @@ const scratchID = "\x03"
 
 func (e *Explorer) watchScratch() {
 	e.scratch = kit.NewDirTree(e.h)
-	e.Add(kit.OnDispose(e.scratch.Close))
+	e.Add(registry.DisposeFunc(e.scratch.Close))
 	e.pads = plugin.NewCache(e.h, func(ctx context.Context, id core.SessionID) (string, error) { return scratchpadOf(ctx, e.h, id) },
 		plugin.CacheOpts[core.SessionID, string]{MaxEntries: 16})
-	e.Add(kit.OnDispose(e.pads.Close))
+	e.Add(registry.DisposeFunc(e.pads.Close))
 }
 
 // scratchRoot is the scratchpad's row in All, its folders under it, when the session in front has one.

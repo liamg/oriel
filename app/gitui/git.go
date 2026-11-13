@@ -88,15 +88,15 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 		g.rememberRoot(h.Here().Project, root)
 		g.hold(root)
 	}
-	g.Add(kit.OnDispose(func() { g.release() }))
-	g.Add(kit.OnDispose(g.closeParked))
-	g.Add(kit.OnDispose(g.told.Stop))
+	g.Add(registry.DisposeFunc(func() { g.release() }))
+	g.Add(registry.DisposeFunc(g.closeParked))
+	g.Add(registry.DisposeFunc(g.told.Stop))
 	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) { g.follow() }))
 	for _, c := range g.commands() {
 		g.Add(h.Command(c))
 	}
 	g.activateCommit(h)
-	g.Add(kit.OnDispose(h.Framed(g.framed)))
+	g.Add(registry.DisposeFunc(h.Framed(g.framed)))
 	return nil
 }
 

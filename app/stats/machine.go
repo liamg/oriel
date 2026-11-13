@@ -50,9 +50,9 @@ func (x *Machine) Activate(_ context.Context, h plugin.Host) error {
 	if x.Load != nil {
 		x.shown.Want = x.Load.Want
 	}
-	x.Add(kit.OnDispose(h.Framed(x.shown.Framed)))
-	x.Add(kit.OnDispose(x.shown.Drop))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(registry.DisposeFunc(h.Framed(x.shown.Framed)))
+	x.Add(registry.DisposeFunc(x.shown.Drop))
+	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.MachineChanged); ok {
 			x.sampled(ev.Machine)
 		}

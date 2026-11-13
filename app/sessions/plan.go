@@ -86,7 +86,7 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.Contribute(uireg.RailEntry{Name: "plan-docs", Icon: "doc", Title: "Plan docs", Command: "view.toggle", Args: planDocsArgs(),
 		Order: 45, Shown: func(string) bool { se, ok := x.front(); return ok && se.Planning() }}))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if _, ok := ev.(core.SessionFocused); ok {
 			h.Do(x.openIfPlanning)
 		}

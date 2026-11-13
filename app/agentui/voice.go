@@ -89,16 +89,16 @@ func (x *Voice) Activate(_ context.Context, h plugin.Host) error {
 	if x.whisper.Settings == nil {
 		x.whisper.Settings = func() voice.Settings { return voice.Settings{Model: x.str("voice.model"), URL: x.str("voice.url")} }
 	}
-	x.Add(kit.OnDispose(x.whisper.Close))
+	x.Add(registry.DisposeFunc(x.whisper.Close))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
-	x.Add(kit.OnDispose(x.whisper.OnChange(func() { h.Do(x.refresh) })))
+	x.Add(registry.DisposeFunc(x.whisper.OnChange(func() { h.Do(x.refresh) })))
 	for _, name := range []string{"voice.dictation", "voice.model", "voice.url"} {
-		x.Add(kit.OnDispose(h.Options().Watch(name, func() { h.Do(x.settle) })))
+		x.Add(registry.DisposeFunc(h.Options().Watch(name, func() { h.Do(x.settle) })))
 	}
 	x.settle()
-	x.Add(kit.OnDispose(func() {
+	x.Add(registry.DisposeFunc(func() {
 		x.Stop()
 		if x.provided != nil {
 			x.provided.Dispose()

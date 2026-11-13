@@ -74,7 +74,7 @@ func (x *Workspace) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*wsState{}
 	x.dirs = kit.NewDirTree(h)
-	x.Add(kit.OnDispose(x.dirs.Close))
+	x.Add(registry.DisposeFunc(x.dirs.Close))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}

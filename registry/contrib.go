@@ -20,7 +20,7 @@ func (r *reg) Contribute(c Contribution) Disposable {
 	tok := r.contribs.push(k, c, r.tokens.Add(1))
 	r.contribBy = nil
 	r.contribGen++
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.contribs.remove(k, tok)

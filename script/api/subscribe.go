@@ -64,7 +64,7 @@ func (r Root) Subscribe(name string, spec script.Table) (script.Table, error) {
 			a.later(fn, luaValue(v))
 		})
 	})
-	a.own(subDisposable{sub.Close})
+	a.own(registry.DisposeFunc(sub.Close))
 	method := func(f func()) script.GoFunc {
 		return script.Method(func(*script.Args) ([]any, error) {
 			f()
@@ -248,7 +248,3 @@ func errText(err error) any {
 	}
 	return err.Error()
 }
-
-type subDisposable struct{ close func() }
-
-func (d subDisposable) Dispose() { d.close() }

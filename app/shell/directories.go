@@ -152,5 +152,5 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 			}
 			return sh.openDir(ctx, h, it.Data.(string))
 		},
-	}, kit.OnDispose(func() { all.work.Stop(); all.busy.Wait() })
+	}, registry.DisposeFunc(func() { all.work.Stop(); all.busy.Wait() })
 }

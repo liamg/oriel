@@ -27,15 +27,10 @@ type Disposer []registry.Disposable
 
 func (d *Disposer) Add(x registry.Disposable) { *d = append(*d, x) }
 
-// OnDispose is a func as a Disposable: a subscription's cancel.
-type OnDispose func()
-
-func (f OnDispose) Dispose() { f() }
-
 // Lifetime is a context that ends when d is disposed: for what a plugin waits on off the loop.
 func (d *Disposer) Lifetime() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
-	d.Add(OnDispose(cancel))
+	d.Add(registry.DisposeFunc(cancel))
 	return ctx
 }
 
@@ -144,7 +139,7 @@ type Signals struct {
 }
 
 // On calls fn each time, until cancelled.
-func (s *Signals) On(fn func()) (cancel OnDispose) {
+func (s *Signals) On(fn func()) (cancel func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.fns == nil {
