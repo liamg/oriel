@@ -15,9 +15,9 @@ var Known = []string{
 	// in the same click, so the page and the options agree at the next frame.
 	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: os.ReadFile",
 	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: os.MkdirAll",
-	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: os.WriteFile",
+	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).edit: atomicfile.Write",
 	"app/settings.(*Plugin).build.func1.func1.func2.func1 → app/settings.(*Plugin).trustFile: os.ReadFile",
-	"app/settings.(*Plugin).footer.func1 → app/settings.(*Plugin).undoLast: os.WriteFile",
+	"app/settings.(*Plugin).footer.func1 → app/settings.(*Plugin).undoLast: atomicfile.Write",
 	"app/settings.(*Plugin).footer.func1 → app/settings.(*Plugin).undoLast: os.Remove",
 
 	// The theme editor's edits: the theme resolves from the file it writes, so it's written before the next frame.

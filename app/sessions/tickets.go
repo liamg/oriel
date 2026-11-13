@@ -41,9 +41,9 @@ type ticketList struct {
 	tickets  []registry.Ticket
 	err      string
 	answered bool
-	at       time.Time     // when it answered; zero to ask again
-	busy     chan struct{} // closed when the ask under way answers
-	since    time.Time     // when the ask under way started
+	at       time.Time   // when it answered; zero to ask again
+	ask      kit.Refetch // the ask under way
+	since    time.Time   // when the ask under way started
 }
 
 // ticketRow is a row of the omnibox's tickets: a ticket, or what a tracker needs first.
@@ -177,7 +177,7 @@ func ticketSession(h plugin.Host, key string) (core.Session, bool) {
 func continueLabel(se core.Session) string { return "Continue · " + se.Name() }
 
 // fresh asks a tracker for its list when it has none or it's stale, and gives the ask under way, if any.
-func (x *Tickets) fresh(tr registry.TicketTracker) <-chan struct{} {
+func (x *Tickets) fresh(tr registry.TicketTracker, refresh bool) <-chan struct{} {
 	if tr.Assigned == nil || x.needsKey(tr) {
 		return nil
 	}
@@ -188,20 +188,32 @@ func (x *Tickets) fresh(tr registry.TicketTracker) <-chan struct{} {
 		l = &ticketList{}
 		x.lists[tr.Name] = l
 	}
-	if l.busy != nil {
-		return l.busy
+	if busy := l.ask.Busy(); busy != nil {
+		l.ask.Begin(refresh) // a refresh: the ask under way may have started before what it's for
+		return busy
 	}
 	if !l.at.IsZero() && time.Since(l.at) < ticketsStale {
 		return nil
 	}
-	done := make(chan struct{})
-	l.busy, l.since = done, kit.WindowNow(x.h)
+	done, _ := l.ask.Begin(false)
+	l.since = kit.WindowNow(x.h)
 	x.work.Go(func(ctx context.Context) {
 		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		ts, err := registry.AssignedTickets(ctx, tr)
+		var ts []registry.Ticket
+		var err error
+		for {
+			ts, err = registry.AssignedTickets(ctx, tr)
+			x.mu.Lock()
+			again := l.ask.Again() && err == nil && ctx.Err() == nil
+			x.mu.Unlock()
+			if !again {
+				break
+			}
+		}
 		x.mu.Lock()
-		l.busy, l.at, l.answered = nil, time.Now(), true
+		l.ask.End()
+		l.at, l.answered = time.Now(), true
 		if err != nil {
 			l.err = err.Error()
 		} else {
@@ -212,6 +224,12 @@ func (x *Tickets) fresh(tr registry.TicketTracker) <-chan struct{} {
 		x.h.Redraw()
 	})
 	return done
+}
+
+// refresh asks a tracker for its list again now: once more after the ask under way, if there is one.
+func (x *Tickets) refresh(tr registry.TicketTracker) {
+	x.stale(tr.Name)
+	x.fresh(tr, true)
 }
 
 // stale marks a tracker's list to be asked for again.
@@ -225,8 +243,7 @@ func (x *Tickets) stale(name string) {
 
 func (x *Tickets) refreshAll() {
 	for _, tr := range registry.TicketTrackers(x.h) {
-		x.stale(tr.Name)
-		x.fresh(tr)
+		x.refresh(tr)
 	}
 }
 
@@ -248,7 +265,7 @@ func (x *Tickets) listState(name string) widget.LoadState {
 	switch {
 	case l == nil:
 		return widget.LoadState{}
-	case l.busy != nil:
+	case l.ask.Busy() != nil:
 		return widget.LoadState{Phase: widget.Pending, Since: l.since, Stale: l.answered}
 	case l.err != "" && l.tickets == nil:
 		return widget.LoadState{Phase: widget.Failed, Err: errors.New(l.err)}
@@ -281,7 +298,7 @@ func (x *Tickets) rows() []ticketRow {
 			out = append(out, ticketRow{tracker: tr, action: "key"})
 			continue
 		}
-		x.fresh(tr)
+		x.fresh(tr, false)
 		ts, err, _ := x.list(tr.Name)
 		if err != "" && ts == nil {
 			out = append(out, ticketRow{tracker: tr, action: "refresh", err: err})
@@ -392,8 +409,7 @@ func (x *Tickets) source() uireg.PickerSource {
 			case "key":
 				return x.h.Run(ctx, "secrets.set", registry.Args{"name": r.tracker.Secret})
 			case "refresh":
-				x.stale(r.tracker.Name)
-				x.fresh(r.tracker)
+				x.refresh(r.tracker)
 				return nil
 			}
 			if se, ok := ticketSession(x.h, r.ticket.Key); ok {
@@ -537,7 +553,7 @@ func (x *Tickets) toolMyTickets(ctx registry.Ctx, _ map[string]any) (any, error)
 	trackers := registry.TicketTrackers(x.h)
 	var waits []<-chan struct{}
 	for _, tr := range trackers {
-		if w := x.fresh(tr); w != nil {
+		if w := x.fresh(tr, false); w != nil {
 			waits = append(waits, w)
 		}
 	}

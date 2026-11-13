@@ -1,0 +1,4 @@
+source: https://github.com/github/docs
+commit: 2b4f2c7398e04ee8d02adca7440e4286d20c78b9
+path: src/graphql/data/fpt/schema.docs.graphql (GitHub's public GraphQL API schema, github.com)
+license: MIT, the repository's LICENSE-CODE for its code (see LICENSE)

@@ -80,7 +80,17 @@ func (x *GitHubHost) requested(ctx context.Context, s registry.Site) ([]registry
 	out := make([]registry.ReviewRequest, 0, len(queue))
 	for _, a := range queue {
 		r := registry.ReviewRequest{URL: a.URL, Repo: a.Repo, Number: a.Number, Title: a.Title, Author: a.Author, Draft: a.Draft, Asked: a.Asked,
-			Since: a.Since, Adds: a.Additions, Dels: a.Deletions, Files: a.Files, CI: ciWord(a.CI)}
+			Since: a.Since, Adds: a.Additions, Dels: a.Deletions, Files: a.Files, CI: ciWord(a.CI), Base: a.Base, Head: a.Head,
+			Opened: a.Created, Updated: a.Updated}
+		for _, who := range a.Reviewers {
+			if strings.Contains(who, "/") {
+				who = "@" + who
+			}
+			r.Reviewers = append(r.Reviewers, registry.PRReviewer{Login: who, State: "requested"})
+		}
+		for _, rv := range a.Reviews {
+			r.Reviewers = append(r.Reviewers, registry.PRReviewer{Login: rv.User, State: reviewWord(rv.State)})
+		}
 		if a.Via != "" {
 			r.Via = "@" + a.Via
 		}
@@ -99,6 +109,11 @@ func (x *GitHubHost) requested(ctx context.Context, s registry.Site) ([]registry
 		out = append(out, r)
 	}
 	return out, nil
+}
+
+// reviewWord is a GitHub review's state as a reviewer's is said: "approved", "changes" or "commented".
+func reviewWord(state string) string {
+	return cmp.Or(map[string]string{gh.ReviewApproved: "approved", gh.ReviewChangesRequested: "changes"}[state], "commented")
 }
 
 // ciWord is a check state as a review request says it.
@@ -151,8 +166,7 @@ func (x *GitHubHost) lookup(ctx context.Context, s registry.Site, url string) (r
 	}
 	sort.Strings(done)
 	for _, who := range done {
-		state := map[string]string{gh.ReviewApproved: "approved", gh.ReviewChangesRequested: "changes"}[states[who]]
-		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: who, State: cmp.Or(state, "commented")})
+		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: who, State: reviewWord(states[who])})
 	}
 	for _, f := range p.Files {
 		d.Files = append(d.Files, registry.PRFileChange{Path: f.Path, Adds: f.Additions, Dels: f.Deletions})

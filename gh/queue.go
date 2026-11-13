@@ -23,13 +23,14 @@ type Asked struct {
 	Additions int
 	Deletions int
 	Files     int
-	CI        string // CheckPass, CheckFail or CheckPending; "" no checks
+	CI        string   // CheckPass, CheckFail or CheckPending; "" no checks
+	Reviews   []Review // each reviewer's latest review, User and State
 }
 
 const queueQuery = `query($q: String!) {
   viewer { login }
   search(type: ISSUE, query: $q, first: 50) { nodes { ... on PullRequest {
-    number title url isDraft state createdAt updatedAt additions deletions changedFiles
+    number title url isDraft state createdAt updatedAt additions deletions changedFiles baseRefName headRefName
     author { login } repository { nameWithOwner }
     reviewRequests(first: 30) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { combinedSlug } } } }
     timelineItems(last: 30, itemTypes: [REVIEW_REQUESTED_EVENT]) { nodes { ... on ReviewRequestedEvent { createdAt requestedReviewer { __typename ... on User { login } ... on Team { combinedSlug } } } } }
@@ -55,6 +56,8 @@ type gqlAsked struct {
 	Additions    int       `json:"additions"`
 	Deletions    int       `json:"deletions"`
 	ChangedFiles int       `json:"changedFiles"`
+	BaseRefName  string    `json:"baseRefName"`
+	HeadRefName  string    `json:"headRefName"`
 	Author       *restUser `json:"author"`
 	Repository   struct {
 		NameWithOwner string `json:"nameWithOwner"`
@@ -143,13 +146,16 @@ func (r gqlReviewer) name() string {
 
 func (n gqlAsked) asked(me string) Asked {
 	out := Asked{Found: Found{Repo: n.Repository.NameWithOwner, Updated: n.UpdatedAt, PR: PR{Number: n.Number, Title: n.Title, URL: n.URL,
-		State: strings.ToLower(n.State), Draft: n.IsDraft, Created: n.CreatedAt}}, Additions: n.Additions, Deletions: n.Deletions, Files: n.ChangedFiles,
+		State: strings.ToLower(n.State), Draft: n.IsDraft, Created: n.CreatedAt, Base: n.BaseRefName, Head: n.HeadRefName}}, Additions: n.Additions, Deletions: n.Deletions, Files: n.ChangedFiles,
 		Asked: n.CreatedAt}
 	if n.Author != nil {
 		out.Author = n.Author.Login
 	}
 	var teams []string
 	for _, rr := range n.ReviewRequests.Nodes {
+		if who := rr.RequestedReviewer.name(); who != "" {
+			out.Reviewers = append(out.Reviewers, who)
+		}
 		switch who := rr.RequestedReviewer; {
 		case who.Typename == "Team":
 			teams = append(teams, who.CombinedSlug)
@@ -171,6 +177,9 @@ func (n gqlAsked) asked(me string) Asked {
 	}
 	var at string
 	for _, rv := range n.LatestReviews.Nodes {
+		if rv.Author != nil {
+			out.Reviews = append(out.Reviews, Review{User: rv.Author.Login, State: rv.State})
+		}
 		if rv.Author != nil && strings.EqualFold(rv.Author.Login, me) {
 			out.Mine = rv.State
 			if rv.Commit != nil {

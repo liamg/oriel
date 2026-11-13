@@ -733,3 +733,37 @@ func TestWheelOverWhatCantScroll(t *testing.T) {
 		t.Errorf("scrolled to %v, want its end at 120", got)
 	}
 }
+
+// A tooltip can be drawn by a view of its own, for more than a line of text: it comes up after the same delay, over
+// everything, and goes when the pointer does.
+func TestATooltipCanBeAView(t *testing.T) {
+	clk := &clock{t: time.Unix(1000, 0)}
+	u := newUI()
+	u.SetClock(clk.now)
+	frame := func() string {
+		return describe(paintOps(u, render.Point{X: 400, Y: 200}, func(c *Ctx) {
+			c.Box("pr", Style{W: Px(200), H: Px(30), Tooltip: "acme/api#812", TooltipView: func(c *Ctx) {
+				c.Column("tip", Style{Gap: 4}, func(c *Ctx) {
+					c.Text("key", "acme/api#812", body)
+					c.Text("who", "by mkhan · asked: you, ana", body)
+				})
+			}}, func(c *Ctx) { c.Text("t", "Rate-limit…", body) })
+		}))
+	}
+	frame()
+	u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 10, Y: 10}})
+	frame()
+	if strings.Contains(frame(), "by mkhan") {
+		t.Error("the view before the tooltip's delay")
+	}
+	clk.advance(time.Second)
+	got := frame()
+	if !strings.Contains(got, "by mkhan · asked: you, ana") || !strings.Contains(got, "acme/api#812") {
+		t.Errorf("no view for the tooltip:\n%s", got)
+	}
+	u.Pointer(render.PointerEvent{Kind: render.PointerLeave})
+	clk.advance(time.Second)
+	if strings.Contains(frame(), "by mkhan") {
+		t.Error("the tooltip stayed once the pointer left")
+	}
+}
