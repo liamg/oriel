@@ -38,7 +38,8 @@ type selPos struct {
 
 // selScope is the box whose text a press at p selects: the nearest Selectable box, else the nearest that scrolls or
 // floats, else the window's. It's 0 when the press is on a control (anything clickable or focusable but a scroll box:
-// a button, an input, a list; a drag source), on NoSelect, or in a menu or popover.
+// a button, an input, a list; a drag source), on NoSelect, or in a menu or popover, met before a Selectable box: one
+// that takes focus or clicks itself (a page, a card) still selects.
 func (u *UI) selScope(p render.Point) ID {
 	start := ID(0)
 	if hits := u.Hit(p); len(hits) > 0 {
@@ -54,10 +55,13 @@ func (u *UI) selScope(p render.Point) ID {
 		}
 		s := e.style
 		switch {
+		case s.Selectable && !s.NoSelect: // a page, pane, window or card that takes focus or clicks still holds its text
+			if scope != 0 {
+				return scope // a scroll box in it holds the selection, which scrolls it
+			}
+			return id
 		case !selects(s):
 			return 0
-		case s.Selectable:
-			return id
 		case scope == 0 && (s.ScrollX || s.ScrollY || s.Float != nil):
 			scope = id
 		}

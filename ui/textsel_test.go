@@ -281,3 +281,57 @@ func TestATripleClickTakenLateStillSelectsTheLine(t *testing.T) {
 		t.Errorf("three clicks a second apart selected %q, want nothing", got)
 	}
 }
+
+// A box that takes focus or clicks for its own sake (a page, a pane, a window, a card) and is Selectable holds a
+// selection all the same: its text selects and copies, a drag across it isn't its click, and a control in it still
+// takes its own. Without Selectable, such a box's text doesn't select.
+func TestSelectableInsideAFocusableBox(t *testing.T) {
+	u := newUI()
+	st, _ := theme.Stack(theme.Builtins(), "oriel")
+	th, _ := theme.Resolve(st, theme.Dark)
+	u.SetTheme(th)
+	clip := &memClip{}
+	u.SetClipboard(clip)
+	var card, button Interaction
+	frame := func() {
+		u.Frame(new(render.List).Record(1), render.Point{X: 400, Y: 300}, func(c *Ctx) {
+			c.Column("all", Style{W: Px(300)}, func(c *Ctx) {
+				id := c.Next("card")
+				card = c.Interaction(id)
+				c.Column("card", Style{W: Px(300), Interactive: true, Focusable: true, KeyMode: "card", Selectable: true}, func(c *Ctx) {
+					c.Text("err", "dial tcp: connection refused", body)
+					b := c.Next("ok")
+					button = c.Interaction(b)
+					c.Box("ok", Style{W: Px(60), H: Px(20), Interactive: true}, nil)
+				})
+				c.Column("plain", Style{W: Px(300), Focusable: true, KeyMode: "card"}, func(c *Ctx) {
+					c.Text("t", "not selectable", body)
+				})
+			})
+		})
+	}
+	frame()
+	drag := func(from, to render.Point) string {
+		press(u, frame, from, 0)
+		u.Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: to})
+		frame()
+		release(u, frame, to)
+		clip.text = ""
+		u.Key(render.KeyEvent{Key: "c", Mods: render.ModSuper})
+		return clip.text
+	}
+	if got := drag(render.Point{X: 0, Y: 7}, render.Point{X: 290, Y: 7}); got != "dial tcp: connection refused" {
+		t.Errorf("a drag across the card's text copied %q", got)
+	}
+	if card.Clicked {
+		t.Error("the drag that selected the card's text was its click")
+	}
+	press(u, frame, render.Point{X: 10, Y: 25}, 0)
+	release(u, frame, render.Point{X: 10, Y: 25})
+	if !button.Clicked {
+		t.Error("the button in the card didn't take its click")
+	}
+	if got := drag(render.Point{X: 0, Y: 47}, render.Point{X: 80, Y: 47}); got != "" {
+		t.Errorf("a focusable box that isn't Selectable gave up its text: %q", got)
+	}
+}

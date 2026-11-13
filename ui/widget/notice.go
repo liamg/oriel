@@ -273,7 +273,7 @@ func NoticeCard(c *ui.Ctx, key any, o NoticeCardOpts) NoticeCardResult {
 		w = 440
 	}
 	c.Column(key, ui.Style{W: ui.Px(w), Pad: ui.PadXY(14, 12), Gap: 9, Fill: col(c, tToastBg), Stroke: alpha(o.Tone, .55), Border: 1, Radius: 8,
-		Interactive: true, Focusable: true, KeyMode: "toast", Help: o.Help, Role: ui.RoleStatus, Label: o.Title + ": " + o.Body}, func(c *ui.Ctx) {
+		Interactive: true, Focusable: true, Selectable: true, KeyMode: "toast", Help: o.Help, Role: ui.RoleStatus, Label: o.Title + ": " + o.Body}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: o.Tone}, nil)
 			c.Text("title", strings.ToUpper(o.Title), monoText(9.5, typeset.SemiBold, o.Tone, .14))
