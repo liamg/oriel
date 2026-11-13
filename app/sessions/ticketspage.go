@@ -144,8 +144,7 @@ func (x *Tickets) act(r ticketRow, kind core.Kind, resume bool) {
 		}
 		return
 	case "refresh":
-		x.stale(r.tracker.Name)
-		x.fresh(r.tracker)
+		x.refresh(r.tracker)
 		return
 	}
 	if se, ok := ticketSession(x.h, r.ticket.Key); ok && resume {
