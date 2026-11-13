@@ -12,7 +12,8 @@ import (
 )
 
 // SetFindings records findings as the user changed them: dismissed, or back.
-func (x *Reviews) SetFindings(r core.FindingsRecorded) error {
+func (x *Reviews) SetFindings(r core.FindingsRecorded) (err error) {
+	defer x.env.Recover("SetFindings", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return err

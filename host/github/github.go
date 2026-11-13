@@ -24,6 +24,7 @@ type PRsReq struct {
 
 // SearchPRs finds pull requests across GitHub as the user's gh is signed in.
 func (x *GitHub) SearchPRs(ctx context.Context, r PRsReq) (_ []gh.Found, err error) {
+	defer x.env.Recover("SearchPRs", &err)
 	if strings.TrimSpace(r.Query) == "" {
 		return nil, errors.New("no search")
 	}
@@ -32,6 +33,7 @@ func (x *GitHub) SearchPRs(ctx context.Context, r PRsReq) (_ []gh.Found, err err
 
 // ReviewQueue is the user's review queue on GitHub, as their gh is signed in (gh.API.ReviewQueue).
 func (x *GitHub) ReviewQueue(ctx context.Context, r ReviewQueueReq) (_ []gh.Asked, err error) {
+	defer x.env.Recover("ReviewQueue", &err)
 	return x.githubOn(gitx.Repo{}, r.Host, r.Token).ReviewQueue(ctx)
 }
 
@@ -63,6 +65,7 @@ type PRReviewReq struct {
 // PRReview reads a pull request in full: its details, files, reviews, the checks on its head, and its commits,
 // comments and reactions when GitHub gives them.
 func (x *GitHub) PRReview(ctx context.Context, r PRReviewReq) (_ PRReview, err error) {
+	defer x.env.Recover("PRReview", &err)
 	repo, n, err := gh.ParsePR(r.URL)
 	if err != nil {
 		return PRReview{}, err
@@ -98,6 +101,7 @@ type PRSubmitReq struct {
 
 // SubmitPRReview submits the user's review of a pull request: never an agent's (NoPosting).
 func (x *GitHub) SubmitPRReview(ctx context.Context, r PRSubmitReq) (err error) {
+	defer x.env.Recover("SubmitPRReview", &err)
 	repo, n, err := gh.ParsePR(r.URL)
 	if err != nil {
 		return err
@@ -114,7 +118,8 @@ type PRReactReq struct {
 }
 
 // ReactPR reacts to a pull request as the user.
-func (x *GitHub) ReactPR(ctx context.Context, r PRReactReq) error {
+func (x *GitHub) ReactPR(ctx context.Context, r PRReactReq) (err error) {
+	defer x.env.Recover("ReactPR", &err)
 	repo, n, err := gh.ParsePR(r.URL)
 	if err != nil {
 		return err
@@ -123,7 +128,8 @@ func (x *GitHub) ReactPR(ctx context.Context, r PRReactReq) error {
 }
 
 // UnreactPR takes back the user's reaction to a pull request, if they have it.
-func (x *GitHub) UnreactPR(ctx context.Context, r PRReactReq) error {
+func (x *GitHub) UnreactPR(ctx context.Context, r PRReactReq) (err error) {
+	defer x.env.Recover("UnreactPR", &err)
 	repo, n, err := gh.ParsePR(r.URL)
 	if err != nil {
 		return err

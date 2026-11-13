@@ -27,12 +27,12 @@ func (w *Host) machineStateWith(r sysload.Reading) core.MachineState {
 	}
 	return core.MachineState{Host: host, OS: runtime.GOOS, Arch: runtime.GOARCH, Version: w.opts.Version,
 		Providers: providers, Sandboxes: sandboxes, Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal,
-		Sampled: w.opts.Now().UTC(), SignedOut: w.run.LostLogins()}
+		Sampled: w.opts.Now().UTC(), SignedOut: w.runPart.LostLogins()}
 }
 
 // SampleLoad reports the machine's load each time s says it moved, until ctx ends.
 func (w *Host) SampleLoad(ctx context.Context, s *sysload.Sampler) {
-	defer w.recover("SampleLoad", nil)
+	defer w.env.Recover("SampleLoad", nil)
 	for {
 		select {
 		case <-ctx.Done():
@@ -41,7 +41,7 @@ func (w *Host) SampleLoad(ctx context.Context, s *sysload.Sampler) {
 			return
 		case r := <-s.Changes():
 			func() {
-				defer w.recover("SampleLoad", nil)
+				defer w.env.Recover("SampleLoad", nil)
 				_ = w.emit(core.MachineChanged{Machine: w.machineStateWith(r)})
 			}()
 		}

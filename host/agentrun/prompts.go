@@ -42,7 +42,8 @@ func (x *Runner) loadPrompts() {
 // SetPrompts is the user's versions of the prompts (agent/prompts), sent by the app on connect and whenever one
 // changes. They're the source of truth from then on: a built-in pack is theirs or the default, never an older
 // file's. Each workspace's notes are written again with the coding style.
-func (x *Runner) SetPrompts(o prompts.Overrides) error {
+func (x *Runner) SetPrompts(o prompts.Overrides) (err error) {
+	defer x.env.Recover("SetPrompts", &err)
 	if o == nil {
 		o = prompts.Overrides{}
 	}
@@ -66,6 +67,7 @@ func (x *Runner) SetPrompts(o prompts.Overrides) error {
 
 // Prompts is the user's versions of the prompts the app last sent, and whether it has.
 func (x *Runner) Prompts() (prompts.Overrides, bool) {
+	defer x.env.Recover("Prompts", nil)
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.prompts, x.promptsSent

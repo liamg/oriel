@@ -94,6 +94,7 @@ func (s *Stats) RestoreUsage() {
 
 // UsageHistory is the plan readings the host has kept, oldest first.
 func (s *Stats) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
+	defer s.env.Recover("UsageHistory", nil)
 	s.usageMu.Lock()
 	defer s.usageMu.Unlock()
 	return readUsage(s.usagePath(), r.Provider, r.Since)
@@ -101,7 +102,8 @@ func (s *Stats) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
 
 // ReadUsage asks every provider for its plan's windows now, all at once, and reports each that's newer than the one
 // held.
-func (s *Stats) ReadUsage(ctx context.Context) error {
+func (s *Stats) ReadUsage(ctx context.Context) (err error) {
+	defer s.env.Recover("ReadUsage", &err)
 	ps := s.providers.List()
 	errs := make([]error, len(ps))
 	var wg sync.WaitGroup

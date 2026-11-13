@@ -35,7 +35,8 @@ type WorkspacePath struct {
 }
 
 // Workspace reads session id's workspace. A session that isn't sandboxed has its directories only.
-func (x *Boxes) Workspace(ctx context.Context, id core.SessionID) (Workspace, error) {
+func (x *Boxes) Workspace(ctx context.Context, id core.SessionID) (_ Workspace, err error) {
+	defer x.deps.Env.Recover("Workspace", &err)
 	se, err := x.deps.State.Session(id)
 	if err != nil {
 		return Workspace{}, err
@@ -115,7 +116,8 @@ func (x *Boxes) backendFor(b *Box, cfg sandbox.Config) (sandbox.Backend, error) 
 
 // RebuildSandbox builds session id's image again, skipping the cache, then restarts its agent on it once the turn
 // ends, resumed.
-func (x *Boxes) RebuildSandbox(ctx context.Context, id core.SessionID) error {
+func (x *Boxes) RebuildSandbox(ctx context.Context, id core.SessionID) (err error) {
+	defer x.deps.Env.Recover("RebuildSandbox", &err)
 	se, err := x.deps.State.Session(id)
 	if err != nil {
 		return err
@@ -143,7 +145,8 @@ func (x *Boxes) RebuildSandbox(ctx context.Context, id core.SessionID) error {
 }
 
 // RestartSandbox restarts session id's agent in a new sandbox once its turn ends, resumed.
-func (x *Boxes) RestartSandbox(id core.SessionID) error {
+func (x *Boxes) RestartSandbox(id core.SessionID) (err error) {
+	defer x.deps.Env.Recover("RestartSandbox", &err)
 	b := x.of(id)
 	if b == nil {
 		return fmt.Errorf("session %s's agent isn't running in a sandbox", id)
@@ -154,7 +157,8 @@ func (x *Boxes) RestartSandbox(id core.SessionID) error {
 
 // SandboxShell is the command that runs a shell in session id's running sandbox, in cwd (the workspace when cwd is
 // outside it): what a terminal runs for a sandboxed session.
-func (x *Boxes) SandboxShell(ctx context.Context, id core.SessionID, cwd string) (sandbox.Command, error) {
+func (x *Boxes) SandboxShell(ctx context.Context, id core.SessionID, cwd string) (_ sandbox.Command, err error) {
+	defer x.deps.Env.Recover("SandboxShell", &err)
 	b := x.of(id)
 	if b == nil {
 		return sandbox.Command{}, fmt.Errorf("session %s's agent isn't running in a sandbox", id)

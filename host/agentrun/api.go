@@ -12,6 +12,7 @@ import (
 
 // Answer answers an ask.
 func (x *Runner) Answer(r AnswerReq) (err error) {
+	defer x.env.Recover("Answer", &err)
 	h, _ := x.sessionFor(r.Session, false)
 	if h == nil {
 		return errors.New("nothing in that session is asking")
@@ -21,6 +22,7 @@ func (x *Runner) Answer(r AnswerReq) (err error) {
 
 // Ask is the app asking the user for a session's agent, as its own gate would (an agent tool that asks first).
 func (x *Runner) Ask(ctx context.Context, r AskReq) (_ Verdict, err error) {
+	defer x.env.Recover("Ask", &err)
 	h, _ := x.sessionFor(r.Session, false)
 	if h == nil {
 		return Verdict{}, fmt.Errorf("session %s isn't running", r.Session)
@@ -41,6 +43,7 @@ func (x *Runner) Ask(ctx context.Context, r AskReq) (_ Verdict, err error) {
 
 // Send is a message to the agent outside any thread: sent now if it's free, queued for the turn's end if not.
 func (x *Runner) Send(r SendReq) (err error) {
+	defer x.env.Recover("Send", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return err
@@ -57,6 +60,7 @@ func (x *Runner) Send(r SendReq) (err error) {
 
 // Fork answers a side question from the session's agent, outside its conversation.
 func (x *Runner) Fork(ctx context.Context, id core.SessionID, prompt string) (_ string, err error) {
+	defer x.env.Recover("Fork", &err)
 	h, _ := x.sessionFor(id, false)
 	if h == nil || !h.running() {
 		return "", errors.New("the session's agent isn't running")
@@ -66,7 +70,8 @@ func (x *Runner) Fork(ctx context.Context, id core.SessionID, prompt string) (_ 
 
 // StopProcess stops a process the agent's last turn left running (AgentState.Processes), by its ID; an error if its
 // provider can't.
-func (x *Runner) StopProcess(ctx context.Context, id core.SessionID, process string) error {
+func (x *Runner) StopProcess(ctx context.Context, id core.SessionID, process string) (err error) {
+	defer x.env.Recover("StopProcess", &err)
 	h, _ := x.sessionFor(id, false)
 	if h == nil || !h.running() {
 		return errors.New("the agent isn't running")
@@ -90,6 +95,7 @@ func (x *Runner) StopProcess(ctx context.Context, id core.SessionID, process str
 
 // Interrupt stops the turn the agent is on.
 func (x *Runner) Interrupt(id core.SessionID) (err error) {
+	defer x.env.Recover("Interrupt", &err)
 	h, _ := x.sessionFor(id, false)
 	if h == nil || !h.running() {
 		return errors.New("the agent isn't running")

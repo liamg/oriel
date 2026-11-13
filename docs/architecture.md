@@ -19,7 +19,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `term` | the terminal model behind `term.Emulator`; `term/ghostty` (libghostty-vt, wasm or native), `term/pty`, `term/tty` (a terminal's modes) |
 | `core` | sessions, workspaces, threads, tasks and the typed events that change them: pure state and logic |
 | `agent` | the `Provider` interface, its optional ones (`Featured`, `Sandboxed`, `LoginStarter`, `Logged`, `UsageLogs`, `Discovered`) and transcript types; `agent/usage` (what a log says an agent used, as provider-neutral events: each provider reads its own log format into them, and one with no log writes them, which `host/stats` counts); `agent/claude` (and `agent/claude/claudebox`, what it needs in a sandbox), `agent/codex`; `agent/rpcagent` (the Oriel agent protocol: any provider over JSON-RPC, for plugins), `agent/acp` (any Agent Client Protocol agent), `agent/mcptools` (a session's tools as the MCP server oriel); `agent/price` (a `Book` of models' list prices, read from cost.dev's model list, with the snapshot vendored in `spec/cost-dev` as its default: every cost estimate prices tokens with one, a provider with `StartSpec.Prices`); `agent/agenttest` (the conformance suite, a fake provider and one that plays the suite) |
-| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State |
+| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State; it embeds the parts whose calls are its own, so their entry points are the host's methods |
 | `sandbox` | sandbox backends, the gateway, egress, the static Linux helper the app embeds |
 | `gitx`, `gh` | git and GitHub |
 | `watch` | freshness managers: sources kept up to date only while something subscribes; `watch/gitsrc`, a work tree's git status as sources |
@@ -61,8 +61,8 @@ Every seam that may be swapped is an interface in the consuming package, with im
 - The UI reads the materialised `core.State` and never asks the host on a frame. Calls into the host run off the UI
   goroutine.
 - Event logs are JSON lines; `core.Replay` reproduces a state byte for byte. Times are stored in UTC.
-- Every exported host method, every goroutine it starts and every callback into the app recovers a panic, logs it
-  and returns it as an error.
+- Every exported host method (a part's own, for one the host embeds), every goroutine it starts and every callback
+  into the app recovers a panic (`hostcore.Env.Recover`), logs it and returns it as an error.
 
 ## Registry and services
 

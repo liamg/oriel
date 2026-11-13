@@ -16,6 +16,7 @@ import (
 // Comment adds your comment to a thread, opening one if needed, and hands it to the agent: at once if it's idle,
 // after an interrupt if urgent, else when the turn ends.
 func (x *Runner) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err error) {
+	defer x.env.Recover("Comment", &err)
 	if strings.TrimSpace(r.Body) == "" && len(r.Images) == 0 {
 		return "", errors.New("the comment is empty")
 	}
@@ -88,6 +89,7 @@ func (x *Runner) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, er
 
 // SetThread changes a thread's status, urgency or title. Resolving one completes the tasks it asked for.
 func (x *Runner) SetThread(r ThreadReq) (err error) {
+	defer x.env.Recover("SetThread", &err)
 	t, err := x.mutateThread(r.Session, r.Thread, func(t *core.Thread) error {
 		if r.Status != "" {
 			t.Status = r.Status
@@ -210,6 +212,7 @@ func ModelName(id string) string {
 
 // SetTask adds or changes a task from the app.
 func (x *Runner) SetTask(id core.SessionID, t core.Task) (err error) {
+	defer x.env.Recover("SetTask", &err)
 	if t.ID == "" {
 		t.ID = x.nextTaskID(id)
 		t.Created = x.env.Now().UTC()

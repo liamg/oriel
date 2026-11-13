@@ -78,7 +78,8 @@ func (x *Reviews) Settle(se core.SessionState) {
 // AIReview reviews a session's change on the session agent's provider and model unless the request picks one. The
 // reviewer is a short-lived session of the provider on the ai-review pack, which reads but changes nothing, and reports each finding
 // with its finding tool. It runs in the background; its findings are session events as they come.
-func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (string, error) {
+func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (_ string, err error) {
+	defer x.env.Recover("AIReview", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return "", err

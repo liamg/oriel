@@ -22,15 +22,15 @@ type ProviderInfo struct {
 // ProviderInfo is each provider as the launcher shows it: installed, logged in, its models, its usage. The
 // providers are asked at once, so it takes as long as the slowest.
 func (w *Host) ProviderInfo(ctx context.Context) []ProviderInfo {
-	defer w.recover("ProviderInfo", nil)
+	defer w.env.Recover("ProviderInfo", nil)
 	st := w.store.State()
-	lost := w.run.LostLogins()
+	lost := w.runPart.LostLogins()
 	ps := w.opts.Providers.List()
 	out := make([]ProviderInfo, len(ps))
 	var wg sync.WaitGroup
 	for i, p := range ps {
 		wg.Go(func() {
-			defer w.recover("ProviderInfo", nil)
+			defer w.env.Recover("ProviderInfo", nil)
 			info := ProviderInfo{ID: p.ID(), Has: agent.FeaturesOf(p)}
 			dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			inst, err := p.Detect(dctx)
@@ -64,7 +64,7 @@ func (w *Host) ProviderInfo(ctx context.Context) []ProviderInfo {
 // (registry.AgentProvider). The sessions handed over to a provider known only now are resumed, and every plan's
 // windows read; nil takes them away.
 func (w *Host) SetProviders(src func() []agent.Provider) {
-	defer w.recover("SetProviders", nil)
+	defer w.env.Recover("SetProviders", nil)
 	w.opts.Providers.SetSource(src)
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
 	if src == nil {

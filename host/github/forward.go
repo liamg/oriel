@@ -13,6 +13,7 @@ import (
 
 // ForwardGitHub posts the agent's draft reply to GitHub as the user, once, and marks it sent.
 func (x *GitHub) ForwardGitHub(ctx context.Context, r ForwardReq) (_ core.Comment, err error) {
+	defer x.env.Recover("ForwardGitHub", &err)
 	return x.forward(r, func(t core.Thread, body string) (int64, string, error) {
 		if t.Hosted.Host != "" {
 			return 0, "", errors.New("this thread isn't from GitHub")
@@ -41,6 +42,7 @@ func (x *GitHub) ForwardGitHub(ctx context.Context, r ForwardReq) (_ core.Commen
 // ForwardHost posts a draft reply on a thread mirrored from another code host with post, which returns the host's
 // id for it, and marks it sent. A mirror meanwhile waits for the mark, so the reply's echo is recognised.
 func (x *GitHub) ForwardHost(ctx context.Context, r ForwardReq, post func(ctx context.Context, t core.Thread, body string) (string, error)) (_ core.Comment, err error) {
+	defer x.env.Recover("ForwardHost", &err)
 	return x.forward(r, func(t core.Thread, body string) (int64, string, error) {
 		key, err := post(ctx, t, body)
 		return 0, key, err
@@ -64,6 +66,7 @@ func (x *GitHub) forward(r ForwardReq, post func(t core.Thread, body string) (nu
 
 // EditDraft rewrites a draft reply before it's forwarded.
 func (x *GitHub) EditDraft(r DraftEditReq) (err error) {
+	defer x.env.Recover("EditDraft", &err)
 	body := strings.TrimSpace(r.Body)
 	if body == "" {
 		return errors.New("the draft is empty")
@@ -92,6 +95,7 @@ type ResolveReq struct {
 
 // ResolveGitHub resolves or reopens a review thread on GitHub, and records that it is.
 func (x *GitHub) ResolveGitHub(ctx context.Context, r ResolveReq) (err error) {
+	defer x.env.Recover("ResolveGitHub", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return err
@@ -114,6 +118,7 @@ func (x *GitHub) ResolveGitHub(ctx context.Context, r ResolveReq) (err error) {
 // MarkHostResolved records that a mirrored thread is resolved, or open, on its code host: once the user's resolve has
 // reached it.
 func (x *GitHub) MarkHostResolved(r ResolveReq) (err error) {
+	defer x.env.Recover("MarkHostResolved", &err)
 	_, err = hostcore.MutateThread(x.st, x.env.Now(), r.Session, r.Thread, func(t *core.Thread) error {
 		if t.Hosted == nil {
 			return fmt.Errorf("thread %s isn't from a code host", r.Thread)

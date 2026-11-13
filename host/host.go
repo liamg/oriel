@@ -80,6 +80,20 @@ type Options struct {
 	NoAutoName bool
 }
 
+// The host's parts, by the names it embeds them under.
+type (
+	logsPart    = persist.Logs
+	statsPart   = persist.Stats
+	reposPart   = repos.Registry
+	runPart     = agentrun.Runner
+	boxesPart   = sandboxhost.Boxes
+	codePart    = github.GitHub
+	jobsPart    = jobs.Jobs
+	utilityPart = utility.Utilities
+	reviewsPart = aireview.Reviews
+	workPart    = worktree.Worktrees
+)
+
 // Host hosts sessions.
 type Host struct {
 	opts  Options
@@ -89,17 +103,19 @@ type Host struct {
 	kinds kinds
 	edit  sync.Mutex // one read-modify-write of a session's state at a time (State.Mutate)
 
-	logs    *persist.Logs
-	stats   *persist.Stats
-	prices  *pricing.Pricing
-	repos   *repos.Registry
-	work    *worktree.Worktrees
-	run     *agentrun.Runner
-	boxes   *sandboxhost.Boxes
-	code    *github.GitHub
-	jobs    *jobs.Jobs
-	utility *utility.Utilities
-	reviews *aireview.Reviews
+	// The parts whose calls are the host's own, embedded: their methods are the host's, each recovering a panic.
+	*logsPart
+	*statsPart
+	*reposPart
+	*runPart
+	*boxesPart
+	*codePart
+	*jobsPart
+	*utilityPart
+	*reviewsPart
+	*workPart
+
+	prices *pricing.Pricing
 
 	closed   chan struct{}
 	going    hostcore.Jobs // the env's goroutines (hostcore.Env.Go)
@@ -120,20 +136,20 @@ func New(opts Options) (*Host, error) {
 	if err := w.parts(); err != nil {
 		return nil, err
 	}
-	if err := w.logs.Restore(w.store); err != nil {
+	if err := w.logsPart.Restore(w.store); err != nil {
 		return nil, err
 	}
 	strip := persist.NewStrip(opts.Home)
 	if err := strip.Restore(w.store); err != nil {
 		w.log.Warn("the tab strip as it was left", "err", err)
 	}
-	w.stats.RestoreUsage()
-	w.store.Subscribe(core.Filter{}, w.logs.Record)
+	w.statsPart.RestoreUsage()
+	w.store.Subscribe(core.Filter{}, w.logsPart.Record)
 	strip.Track(w.store)
 	w.settle()
 	_ = w.emit(core.MachineChanged{Machine: w.machineState()})
-	w.repos.Changed()
-	w.run.RulesChanged()
+	w.reposPart.Changed()
+	w.runPart.RulesChanged()
 	w.resumeHandedOver()
 	return w, nil
 }
@@ -172,28 +188,28 @@ func defaults(opts *Options) error {
 // parts makes the host's parts, each given what it needs of the others.
 func (w *Host) parts() error {
 	st := state{w}
-	w.logs = persist.NewLogs(w.env, st)
+	w.logsPart = persist.NewLogs(w.env, st)
 	w.prices = pricing.New(w.env, pricing.Deps{Client: func() *http.Client { return w.opts.HTTP },
 		URL: func() string { return w.opts.PricesURL }})
-	w.stats = persist.NewStats(w.env, st, w.opts.Providers, w.prices.Book)
+	w.statsPart = persist.NewStats(w.env, st, w.opts.Providers, w.prices.Book)
 	var err error
-	if w.repos, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
+	if w.reposPart, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
 		return err
 	}
-	w.work = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.repos.Resolve, AddRepo: w.repos.Add,
-		Repos: w.repos.Repos, ReposDir: w.repos.Dir, NotesFiles: w.notesFiles})
-	w.run = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
+	w.workPart = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.reposPart.Resolve, AddRepo: w.reposPart.Add,
+		Repos: w.reposPart.Repos, ReposDir: w.reposPart.Dir, NotesFiles: w.notesFiles})
+	w.runPart = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
 		MCPServers:   w.mcpServers,
 		Exec:         func() agent.Exec { return w.opts.Exec },
 		Sandbox:      func() hostcore.SandboxFactory { return w.opts.Sandbox },
 		Packs:        w.opts.Packs,
 		KeyWait:      func() time.Duration { return w.opts.KeyWait },
-		Repos:        w.repos.Repos,
+		Repos:        w.reposPart.Repos,
 		AddRepo:      w.AddRepo,
-		AccountOf:    w.stats.AccountOf,
-		Record:       w.stats.Record,
-		UsageSampled: w.stats.UsageSampled,
-		PROpen:       func(id core.SessionID, project, branch string) bool { return w.code.PROpen(id, project, branch) },
+		AccountOf:    w.statsPart.AccountOf,
+		Record:       w.statsPart.Record,
+		UsageSampled: w.statsPart.UsageSampled,
+		PROpen:       func(id core.SessionID, project, branch string) bool { return w.codePart.PROpen(id, project, branch) },
 		RenameBranch: func(ctx context.Context, id core.SessionID, project, name string) error {
 			return w.ShipRename(ctx, RenameReq{Session: id, Project: project, Name: name})
 		},
@@ -202,25 +218,25 @@ func (w *Host) parts() error {
 		},
 		MachineChanged: func() { _ = w.emit(core.MachineChanged{Machine: w.machineState()}) },
 		Prices:         w.prices})
-	if w.boxes, err = sandboxhost.New(w.sandboxDeps()); err != nil {
+	if w.boxesPart, err = sandboxhost.New(w.sandboxDeps()); err != nil {
 		return err
 	}
-	w.code = github.New(w.env, st, github.Deps{Kinds: &w.kinds, Keyed: w.run.Keyed, Wake: w.run.Wake,
+	w.codePart = github.New(w.env, st, github.Deps{Kinds: &w.kinds, Keyed: w.runPart.Keyed, Wake: w.runPart.Wake,
 		Client:        func() func(string, []string) gh.Client { return w.opts.GitHub },
 		HTTP:          func() *http.Client { return w.opts.HTTP },
 		BranchRenamed: worktree.BranchRenamed})
-	w.jobs = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
-		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxes.Config().Default != "host" }})
-	w.utility = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
-		Tools: w.run.AppTools, SignedOut: w.run.SignedOut})
-	w.reviews = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
+	w.jobsPart = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
+		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxesPart.Config().Default != "host" }})
+	w.utilityPart = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
+		Tools: w.runPart.AppTools, SignedOut: w.runPart.SignedOut})
+	w.reviewsPart = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
 		Pack: func(name string) (agent.Pack, bool) {
 			if w.opts.Packs == nil {
 				return agent.Pack{}, false
 			}
-			return w.run.Pack(name)
+			return w.runPart.Pack(name)
 		},
-		Protected: w.run.Protected, SignedOut: w.run.SignedOut})
+		Protected: w.runPart.Protected, SignedOut: w.runPart.SignedOut})
 	return nil
 }
 
@@ -228,32 +244,32 @@ func (w *Host) parts() error {
 func (w *Host) sandboxDeps() sandboxhost.Deps {
 	return sandboxhost.Deps{Env: w.env, State: state{w},
 		Keyed: func(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
-			return w.run.Keyed(ctx, id, what, project, fn)
+			return w.runPart.Keyed(ctx, id, what, project, fn)
 		},
-		Config:          func() sandbox.Config { return w.boxes.Config() },
+		Config:          func() sandbox.Config { return w.boxesPart.Config() },
 		Providers:       w.opts.Providers.List,
 		Factory:         func() hostcore.SandboxFactory { return w.opts.Sandbox },
-		Live:            func(id core.SessionID) hostcore.Sandbox { return w.run.Sandbox(id) },
-		Running:         func() []hostcore.Sandbox { return w.run.Sandboxes() },
-		Repos:           func() []core.Repo { return w.repos.Repos() },
+		Live:            func(id core.SessionID) hostcore.Sandbox { return w.runPart.Sandbox(id) },
+		Running:         func() []hostcore.Sandbox { return w.runPart.Sandboxes() },
+		Repos:           func() []core.Repo { return w.reposPart.Repos() },
 		AddRepo:         w.AddRepo,
-		Note:            func(id core.SessionID, it core.Item) { w.run.AppendItem(id, it) },
-		SetAgent:        func(id core.SessionID, fn func(a *core.AgentState)) { w.run.SetAgent(id, fn) },
-		RestartWhenIdle: w.run.RestartWhenIdle}
+		Note:            func(id core.SessionID, it core.Item) { w.runPart.AppendItem(id, it) },
+		SetAgent:        func(id core.SessionID, fn func(a *core.AgentState)) { w.runPart.SetAgent(id, fn) },
+		RestartWhenIdle: w.runPart.RestartWhenIdle}
 }
 
 // settle puts back what the last process left running when it ended without handing over.
 func (w *Host) settle() {
-	w.run.Settle()
+	w.runPart.Settle()
 	for _, se := range w.store.State().Sessions {
-		w.reviews.Settle(se)
+		w.reviewsPart.Settle(se)
 	}
 }
 
 // HandOver stops every agent for the next start to resume, then closes the host: Oriel quitting.
 func (w *Host) HandOver() {
-	defer w.recover("HandOver", nil)
-	w.run.HandOver()
+	defer w.env.Recover("HandOver", nil)
+	w.runPart.HandOver()
 	w.Close()
 }
 
@@ -263,12 +279,12 @@ func (w *Host) Store() core.Store { return w.store }
 // Close stops every agent, without handing them over, and closes the logs. Only the first call does anything.
 func (w *Host) Close() error {
 	w.stopOnce.Do(func() {
-		defer w.recover("Close", &w.closeErr)
+		defer w.env.Recover("Close", &w.closeErr)
 		close(w.closed)
-		w.run.Close()
+		w.runPart.Close()
 		w.waitGoing()
-		w.stats.Close()
-		w.closeErr = errors.Join(w.closeErr, w.logs.Close())
+		w.statsPart.Close()
+		w.closeErr = errors.Join(w.closeErr, w.logsPart.Close())
 	})
 	return w.closeErr
 }
@@ -281,7 +297,7 @@ const closeWait = 5 * time.Second
 func (w *Host) waitGoing() {
 	done := make(chan struct{})
 	go func() {
-		w.reviews.Wait()
+		w.reviewsPart.Wait()
 		w.going.Wait()
 		close(done)
 	}()
@@ -304,7 +320,7 @@ func (w *Host) notesFiles() []string { return agent.NotesFiles(w.opts.Providers.
 // Busy names the host's work under way off its callers that will end on its own: agents starting, resumes,
 // notices. A test waits for none before it counts what that work does.
 func (w *Host) Busy() []string {
-	out := w.run.Starting()
+	out := w.runPart.Starting()
 	for _, j := range w.going.Running() {
 		if name, _, _ := strings.Cut(j, " ×"); !slices.Contains(lastingJobs, name) {
 			out = append(out, j)
@@ -355,8 +371,8 @@ func (s state) Mutate(id core.SessionID, fn func(se core.SessionState) error) er
 // mcpServers are the MCP servers a session's agent reaches of its own: in a sandbox, those its gateway carries; on
 // this machine, the ones installed for its provider.
 func (w *Host) mcpServers(se core.SessionState) []agent.MCPServer {
-	if se.Agent.Sandboxed && w.boxes != nil {
-		return w.boxes.MCPServers()
+	if se.Agent.Sandboxed && w.boxesPart != nil {
+		return w.boxesPart.MCPServers()
 	}
 	if w.opts.Providers == nil {
 		return nil

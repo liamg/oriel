@@ -210,16 +210,21 @@ func (x *Registry) Resolve(ctx context.Context, ref string) (core.Repo, error) {
 func (x *Registry) Find(ref string) (core.Repo, bool) { return x.list.find(ref) }
 
 // Repos is the registered checkouts.
-func (x *Registry) Repos() []core.Repo { return x.list.all() }
+func (x *Registry) Repos() []core.Repo {
+	defer x.env.Recover("Repos", nil)
+	return x.list.all()
+}
 
 // AddRepoPath registers the checkout at path, or returns it if it's already registered.
-func (x *Registry) AddRepoPath(ctx context.Context, path string) (core.Repo, error) {
+func (x *Registry) AddRepoPath(ctx context.Context, path string) (_ core.Repo, err error) {
+	defer x.env.Recover("AddRepoPath", &err)
 	return x.Add(ctx, path, core.RepoAdded)
 }
 
 // RemoveRepo unregisters a repo, leaving its files, and keeps discovery from adding it back. A live session with a
 // worktree of it stops it.
-func (x *Registry) RemoveRepo(id core.RepoID) error {
+func (x *Registry) RemoveRepo(id core.RepoID) (err error) {
+	defer x.env.Recover("RemoveRepo", &err)
 	r, ok := x.list.find(string(id))
 	if !ok {
 		return fmt.Errorf("no repo %q", id)
@@ -251,6 +256,7 @@ type RepoCheck struct {
 
 // CheckRepoPath says what adding the checkout at path would do, without adding it.
 func (x *Registry) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
+	defer x.env.Recover("CheckRepoPath", nil)
 	abs, err := filepath.Abs(p)
 	if err != nil {
 		return RepoCheck{Error: err.Error()}
@@ -294,6 +300,7 @@ func CloneName(url string) string {
 
 // CloneParent is the folder clones go in by default: the one most known repos share, else the repos directory.
 func (x *Registry) CloneParent() string {
+	defer x.env.Recover("CloneParent", nil)
 	n := map[string]int{}
 	best := ""
 	for _, r := range x.list.all() {
@@ -311,6 +318,7 @@ func (x *Registry) CloneParent() string {
 
 // SetReposDir sets where clones and new repos go when nothing else says (repos.dir); "" puts back the default.
 func (x *Registry) SetReposDir(dir string) {
+	defer x.env.Recover("SetReposDir", nil)
 	x.list.mu.Lock()
 	defer x.list.mu.Unlock()
 	x.list.dir = expandHome(strings.TrimSpace(dir))
@@ -324,7 +332,8 @@ func (x *Registry) Dir() string {
 }
 
 // CloneTarget says where a clone would go and what's there.
-func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (CloneTarget, error) {
+func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (_ CloneTarget, err error) {
+	defer x.env.Recover("CloneTarget", &err)
 	url := strings.TrimSpace(r.URL)
 	name := hostcore.Sanitise(r.Name)
 	if name == "" {
@@ -345,7 +354,8 @@ func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (CloneTarget, er
 
 // CloneRepo clones a repo with the user's own git and credentials, and registers it. A checkout already there of
 // the same URL is registered as it is. Cancelling ctx stops the clone and takes away what it made.
-func (x *Registry) CloneRepo(ctx context.Context, r CloneReq) (core.Repo, error) {
+func (x *Registry) CloneRepo(ctx context.Context, r CloneReq) (_ core.Repo, err error) {
+	defer x.env.Recover("CloneRepo", &err)
 	url := strings.TrimSpace(r.URL)
 	if url == "" {
 		return core.Repo{}, errors.New("clone what? No URL")
