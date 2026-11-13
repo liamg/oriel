@@ -3,12 +3,10 @@ package shell
 import (
 	"io"
 	"log/slog"
-	"testing"
 	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/internal/testhook"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -203,6 +201,3 @@ func RailEntryActive(h plugin.Host, e uireg.RailEntry, project string) bool {
 
 // Selected is the omnibox's selected row.
 func (o *omnibox) Selected() int { return o.sel }
-
-// SetNow has the window's notices read the time from fn until the test ends.
-func SetNow(t *testing.T, fn func() time.Time) { testhook.Set(t, &now, fn) }

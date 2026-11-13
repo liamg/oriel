@@ -216,7 +216,7 @@ func (h *pluginHost) Notify(n core.Notice) {
 	if n.Source == "" {
 		n.Source = h.source
 	}
-	if err := h.store.Apply(core.Notified{Notice: redactNotice(n, h.logs.Redact)}); err != nil {
+	if err := h.store.Apply(core.Notified{Notice: redactNotice(n, h.logs.Redact, h.sh.now())}); err != nil {
 		h.log.Error("notify", "id", n.ID, "err", err)
 	}
 }

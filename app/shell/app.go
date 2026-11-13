@@ -432,12 +432,7 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 			return u.Frames()
 		}
 		return 0
-	}, Now: func() time.Time {
-		if u := sh.ui.Load(); u != nil {
-			return u.Now()
-		}
-		return time.Now()
-	}})
+	}, Now: sh.now})
 	sh.polls, sh.tools = &kit.PollSet{}, search.NewTools()
 	sh.kept = newKeptStore(cfg.StateDir, log)
 	sh.kept.writer.track = sh.inflight.begin
@@ -499,4 +494,12 @@ func lastMove(ev render.Event, events <-chan render.Event) (render.Event, render
 			return m, nil
 		}
 	}
+}
+
+// now is the window's clock (ui.UI.Now), which a test moves; the system's until the window's UI is made.
+func (sh *shell) now() time.Time {
+	if u := sh.ui.Load(); u != nil {
+		return u.Now()
+	}
+	return time.Now()
 }

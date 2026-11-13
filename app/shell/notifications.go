@@ -83,11 +83,11 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.Add(h.Contribute(registry.Busy{Name: "notices", Busy: n.writes.Busy, Source: "builtin:notices"}))
 	cfg := n.sh.cfg
 	n.Add(h.OnFault(func(f registry.Fault) {
-		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir)})
+		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 	}))
 	n.Add(h.OnFailure(func(f registry.Failure) {
 		if f.InARow < registry.FailLimit { // the fault that turns it off says so, on the same row
-			cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir)})
+			cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 		}
 	}))
 	if n.sh.cfg.CrashDir != "" && !n.sh.crashSeen {

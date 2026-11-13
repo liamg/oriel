@@ -26,20 +26,18 @@ import (
 	"github.com/liamg/oriel/script"
 )
 
-// now is the clock notices are stamped with.
-var now = time.Now
-
-func redactNotice(n core.Notice, r *logs.Redactor) core.Notice {
+// redactNotice is n with secrets taken out of its text, stamped now if it has no time.
+func redactNotice(n core.Notice, r *logs.Redactor, now time.Time) core.Notice {
 	n.Text, n.Detail = r.Redact(n.Text), r.Redact(n.Detail)
 	if n.Time.IsZero() {
-		n.Time = now()
+		n.Time = now
 	}
 	return n
 }
 
 // faultNotice is the error notice for a contribution turned off: its stack or trace as the detail, and an action
 // to turn it back on. One turned off for its errors in a row is the row its errors were, now saying so.
-func faultNotice(f registry.Fault, l *Logs, dir string) core.Notice {
+func faultNotice(f registry.Fault, l *Logs, dir string, now time.Time) core.Notice {
 	n := core.Notice{ID: "turned-off." + f.Kind + "." + f.ID, Severity: core.SevError, Source: cmp.Or(f.Source, "core"),
 		Text: fmt.Sprintf("%s %s is turned off: %v", f.Kind, f.ID, f.Err)}
 	if f.Errors > 0 {
@@ -53,18 +51,18 @@ func faultNotice(f registry.Fault, l *Logs, dir string) core.Notice {
 			n.Location = fr.Loc()
 		}
 	}
-	return redactNotice(kit.WithTrace(n, f.Err, dir, "Open at line"), l.Redact)
+	return redactNotice(kit.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
 }
 
 // failureNotice is a contribution's error, or a warning about it, as a notice: one row for each contribution,
 // counting its errors.
-func failureNotice(f registry.Failure, l *Logs, dir string) core.Notice {
+func failureNotice(f registry.Failure, l *Logs, dir string, now time.Time) core.Notice {
 	n := core.Notice{ID: "failed." + f.Kind + "." + f.ID, Severity: core.SevError, Source: cmp.Or(f.Source, "core"),
 		Title: contribTitle(f.Kind), Text: f.Err.Error()}
 	if f.Warn {
 		n.ID, n.Severity = "slow."+f.Kind+"."+f.ID, core.SevWarning
 	}
-	return redactNotice(kit.WithTrace(n, f.Err, dir, "Open at line"), l.Redact)
+	return redactNotice(kit.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
 }
 
 func contribTitle(kind string) string {
@@ -89,14 +87,14 @@ func contribName(kind, id string) string {
 }
 
 // commandNotice is the notice for a command that failed when its key was pressed.
-func commandNotice(r registry.Registry, id string, err error, dir string) core.Notice {
+func commandNotice(r registry.Registry, id string, err error, dir string, now time.Time) core.Notice {
 	src := "core"
 	for _, c := range r.Commands() {
 		if c.ID == id && c.Source != "" {
 			src = c.Source
 		}
 	}
-	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now(), Key: true}
+	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now, Key: true}
 	return kit.WithTrace(n, err, dir, "Open at line")
 }
 
@@ -156,7 +154,7 @@ func (sh *shell) dropped(ev render.DropEvent) {
 	}
 	for _, p := range ev.Paths {
 		if err := sh.cfg.Registry.Run(context.Background(), "editor.open", registry.Args{"path": p}); err != nil {
-			sh.store.Apply(core.Notified{Notice: core.Notice{ID: "drop.open", Severity: core.SevWarning, Source: "core", Text: err.Error(), Time: now()}})
+			sh.store.Apply(core.Notified{Notice: core.Notice{ID: "drop.open", Severity: core.SevWarning, Source: "core", Text: err.Error(), Time: sh.now()}})
 		}
 	}
 }
