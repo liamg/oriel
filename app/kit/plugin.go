@@ -85,6 +85,9 @@ func (p *PollSet) Start(d time.Duration) (stop func()) {
 
 // Reset forgets all but what's running now.
 func (p *PollSet) Reset() {
+	if p == nil {
+		return
+	}
 	f := p.FastestNow()
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -93,6 +96,9 @@ func (p *PollSet) Reset() {
 
 // FastestSince is the shortest period running since the last reset, or 0.
 func (p *PollSet) FastestSince() time.Duration {
+	if p == nil {
+		return 0
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.fastest
@@ -116,6 +122,9 @@ func (t *Ticker) Stop() {
 
 // FastestNow is the shortest period running now, or 0.
 func (p *PollSet) FastestNow() time.Duration {
+	if p == nil {
+		return 0
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	var f time.Duration
