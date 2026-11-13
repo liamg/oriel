@@ -64,7 +64,9 @@ func Publish(ctx context.Context, o PublishOpts) (Published, error) {
 	if c, err := r.Run(ctx, "rev-parse", "--verify", "-q", tag+"^{commit}"); err != nil || strings.TrimSpace(c) != commit {
 		return out, fmt.Errorf("HEAD isn't tagged %s: tag the version you publish (git tag %s && git push origin %s)", tag, tag, tag)
 	}
-	if r.Dirty(ctx) {
+	if dirty, err := r.Dirty(ctx); err != nil {
+		return out, err
+	} else if dirty {
 		return out, errors.New("the work tree has changes: publish exactly what's tagged")
 	}
 	repo, ok := githubRepo(r.RemoteURL(ctx))

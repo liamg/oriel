@@ -159,7 +159,8 @@ func (x *Registry) Housekeeping(ctx context.Context, req HousekeepReq) (p Housek
 		s := StaleBranch{Name: b.Name, Why: why, When: b.When, Session: sessions[b.Name]}
 		if i := slices.IndexFunc(wts, func(t gitx.Worktree) bool { return t.Branch == b.Name && !t.Prunable }); i >= 0 {
 			s.Worktree = wts[i].Dir
-			s.Dirty = gitx.Repo{Dir: s.Worktree}.Dirty(ctx)
+			dirty, err := gitx.Repo{Dir: s.Worktree}.Dirty(ctx)
+			s.Dirty = dirty || err != nil // a status git can't read isn't clean: housekeeping keeps it unless forced
 		}
 		p.Branches = append(p.Branches, s)
 	}

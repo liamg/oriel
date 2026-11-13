@@ -42,7 +42,10 @@ func (x *Runner) draftsDue(ctx context.Context, id core.SessionID) []dueDraft {
 		if _, err := repo.Head(ctx); err != nil {
 			continue
 		}
-		dirty := repo.Dirty(ctx)
+		dirty, err := repo.Dirty(ctx)
+		if err != nil {
+			continue
+		}
 		base := repo.FlightBase(ctx, p.Base)
 		ahead := false
 		if base != "" {

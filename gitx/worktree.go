@@ -264,10 +264,14 @@ func (r Repo) Head(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-// Dirty reports whether the work tree has uncommitted changes.
-func (r Repo) Dirty(ctx context.Context) bool {
+// Dirty reports whether the work tree has uncommitted changes, or why git couldn't say. A caller guarding what would
+// lose work refuses on the error; one only showing it counts the error as dirty.
+func (r Repo) Dirty(ctx context.Context) (bool, error) {
 	out, err := r.git(ctx, "status", "--porcelain")
-	return err == nil && strings.TrimSpace(string(out)) != ""
+	if err != nil {
+		return false, fmt.Errorf("reading %s's status: %w", r.Dir, err)
+	}
+	return strings.TrimSpace(string(out)) != "", nil
 }
 
 // ValidBranch says why git wouldn't take name for a new branch, or nil.
