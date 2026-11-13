@@ -1,6 +1,7 @@
 package ratchet
 
 import (
+	"go/ast"
 	"os"
 	"reflect"
 	"strings"
@@ -20,6 +21,7 @@ var ceilings = map[string]int{
 	"functions over 120 lines in app/":     0,
 	"files over 900 lines in app/":         0,
 	"functions over 120 lines in host/":    0,
+	"functions over 120 lines elsewhere":   35,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
 	"RequestFocus calls outside ui/":       37,
@@ -62,6 +64,17 @@ var stateAllowed = map[string]string{
 	"agent/packs.sources":   "the embedded packs, parsed at init",
 	"agent/prompts.builtin": "the embedded prompts, parsed at init",
 	"text.boundaryCache":    "a test's memo of a pure function",
+}
+
+// handWritten are files less those generated.
+func handWritten(files []File) []File {
+	var out []File
+	for _, f := range files {
+		if !ast.IsGenerated(f.AST) {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // tests are files' tests alone.
@@ -144,6 +157,7 @@ func TestRatchets(t *testing.T) {
 		"files over 900 lines in app/":         LongFiles(app, 900),
 		"functions over 120 lines in host/":    LongFuncs(host, 120),
 		"files over 900 lines in host/":        LongFiles(host, 900),
+		"functions over 120 lines elsewhere":   LongFuncs(handWritten(without(all, "app/", "host/", "third_party/")), 120),
 		"Focus calls outside ui/":              UICalls(notUI, "Focus", "FocusInto"),
 		"RequestFocus calls outside ui/":       UICalls(notUI, "RequestFocus"),
 		"multi-line Input outside Prose":       Multiline(notUI),

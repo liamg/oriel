@@ -101,7 +101,7 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
 ## Ratchets
 
 - `tools/ratchet` counts what the code is moving away from: kind special cases, `*shell` outside `app/shell` (at 0),
-  `cfg.Store`/`cfg.Host`, long functions and files in `app/` and `host/` (both at 0), `Focus` calls (at 0),
+  `cfg.Store`/`cfg.Host`, long functions and files in `app/` and `host/` (both at 0) and long functions elsewhere, `Focus` calls (at 0),
   multi-line `widget.Input`s outside `ui/`, and `time.Sleep` in tests: a test waits for the work (`apptest`'s `Quiet`,
   a `registry.Busy`) or moves a clock of its own (`internal/clock/clocktest`), never for a while
   (`docs/architecture.md`, "Testing"). A count may only fall: never raise a ceiling; lower it when your change
