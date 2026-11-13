@@ -8,7 +8,7 @@ A Lua or WASM plugin that uses only this API isn't required to be AGPL: license 
 ## oriel
 
 - `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
-- `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments.
+- `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments. Deprecated: use oriel.run.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
 - `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
 - `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode a value as JSON text.
@@ -19,6 +19,7 @@ A Lua or WASM plugin that uses only this API isn't required to be AGPL: license 
 - `oriel.on(event, opts?, fn)` (`ui`): Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc.
 - `oriel.placeholder(name, spec, fn)` (`ui`): Stand in for what fn provides, until it's first used, as a lazy plugin does: spec has commands (globs: 'Jira*'), keys ('<leader>f' in normal mode, or 'global <D-j>'), events ('SessionStart', or 'BufRead *.go'), filetypes ('go'), omnibox (prefixes) and views (globs over view ids, for view.open). The first use calls fn, then goes on as if it had all been there; load:<name> calls it now.
 - `oriel.read(path)` (capability by target): A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read.
+- `oriel.run(id, args?)` (`ui`): Run a command by its id, with arguments.
 - `oriel.source(name, spec?)` (`ui`): Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick.
 - `oriel.sources()` (`ui`): The names of the sources oriel.subscribe takes.
 - `oriel.statusline(fn)` (`ui`): Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session.

@@ -34,9 +34,12 @@ func (r Root) Command(name string, fn *script.Fn, opts script.Table, where strin
 }
 
 //oriel:api doc="Run a command by its id, with arguments." optional=args
-func (r Root) Cmd(id string, args script.Table) error {
+func (r Root) Run(id string, args script.Table) error {
 	return r.a.Host.Run(context.Background(), id, registry.Args(args))
 }
+
+//oriel:api doc="Run a command by its id, with arguments." optional=args deprecated="use oriel.run"
+func (r Root) Cmd(id string, args script.Table) error { return r.Run(id, args) }
 
 //oriel:api doc="Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc." optional=opts
 func (r Root) On(event string, opts any, fn any, where string) error {

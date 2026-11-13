@@ -47,8 +47,8 @@ L.keymap.set("n", ",", "my.thing", { nowait = true })       -- don't wait for ",
 
 -- commands
 L.command("Ship", function(args)
-  L.cmd("git.commit", { draft = true })
-  L.cmd("pr.raise", { verify = true })
+  L.run("git.commit", { draft = true })
+  L.run("pr.raise", { verify = true })
 end, { desc = "commit, then verify & raise" })
 
 -- events: observe / veto / rewrite / decide

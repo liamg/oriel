@@ -48,6 +48,7 @@ function oriel.asset(path) end
 --- Run a command by its id, with arguments.
 ---@param id string
 ---@param args? table
+---@deprecated use oriel.run
 function oriel.cmd(id, args) end
 
 --- Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
@@ -103,6 +104,11 @@ function oriel.placeholder(name, spec, fn) end
 ---@param path string
 ---@return string?,string?
 function oriel.read(path) end
+
+--- Run a command by its id, with arguments.
+---@param id string
+---@param args? table
+function oriel.run(id, args) end
 
 --- Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick.
 ---@param name string

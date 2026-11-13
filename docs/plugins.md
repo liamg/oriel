@@ -160,7 +160,7 @@ L.view.override("saves", function()
   end
   return L.ui.column{
     L.ui.list(files, function(f) return L.ui.text(f) end),
-    L.ui.button{ id = "saves.clear", label = "Clear", on_click = function() L.cmd("saves.clear") end },
+    L.ui.button{ id = "saves.clear", label = "Clear", on_click = function() L.run("saves.clear") end },
     gap = 8,
   }
 end)
@@ -179,7 +179,7 @@ L.command("saves.clear", function()
   L.hud.refresh("saves")
 end, { desc = "Forget this session's saves" })
 
-L.command("Saves", function() L.cmd("view.toggle", panel) end, { desc = "Show or hide this session's saves" })
+L.command("Saves", function() L.run("view.toggle", panel) end, { desc = "Show or hide this session's saves" })
 
 L.keymap.set("n", "<leader>S", "Saves", { desc = "Saves" })
 
@@ -187,7 +187,7 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
 ```
 
 - `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments.
-- `oriel.cmd(id, args)` runs any command, here the built-in `view.toggle`.
+- `oriel.run(id, args)` runs any command, here the built-in `view.toggle`.
 - `oriel.keymap.set(modes, lhs, rhs, opts)` maps keys to a command id or a Lua function, in `n`, `i`, `x` or a
   panel's own mode.
 - `oriel.rail.add` adds an entry to the sidebar. `icon` is a built-in icon's name or a glyph. `scope` is `session`

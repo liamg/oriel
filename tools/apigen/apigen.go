@@ -3,6 +3,7 @@
 //
 //	//oriel:api name=keymap cap=ui doc="…"      on a type: a namespace (empty for oriel's own functions), and its intro
 //	//oriel:api doc="…" optional=a,b returns=t  on its methods: a function
+//	//oriel:api … deprecated="use oriel.run"     a function kept for old callers: LuaLS flags it, the reference says so
 //
 // cap is the capability a plugin needs to call a function, on its namespace or, overriding it, on the
 // function; cap=target means the function checks its own, against what it's called on (a path, a program). Every
@@ -34,6 +35,8 @@ type Func struct {
 	Optional map[string]bool
 	Returns  string // the Lua return type, when annotated
 	Cap      string // the capability the glue checks; "target" when the function checks its own
+	// Deprecated says what to use instead of a function kept only for old callers; "" for one that isn't.
+	Deprecated string
 }
 
 // CapTarget is a function that checks its capability itself, against its target.
@@ -121,7 +124,7 @@ func Parse(dir string) ([]Namespace, error) {
 			return nil, fmt.Errorf("%s.%s is annotated, but %s isn't a namespace", recv, d.Name.Name, recv)
 		}
 		fn := Func{Go: d.Name.Name, Lua: luaName(d.Name.Name), Doc: a["doc"], Returns: a["returns"], Optional: map[string]bool{},
-			Cap: cmpOr(a["cap"], ns.Cap)}
+			Cap: cmpOr(a["cap"], ns.Cap), Deprecated: a["deprecated"]}
 		if fn.Cap == "" {
 			return nil, fmt.Errorf("%s.%s declares no capability: add cap=… to it or to %s", recv, d.Name.Name, ns.Type)
 		}
@@ -289,6 +292,9 @@ func Types(nss []Namespace, version string) []byte {
 			if ret != "" {
 				fmt.Fprintf(&b, "---@return %s\n", ret)
 			}
+			if f.Deprecated != "" {
+				fmt.Fprintf(&b, "---@deprecated %s\n", f.Deprecated)
+			}
 			fmt.Fprintf(&b, "function %s.%s(%s) end\n\n", table, f.Lua, strings.Join(names, ", "))
 		}
 	}
@@ -322,7 +328,11 @@ func Docs(nss []Namespace, version string) []byte {
 				}
 				ps = append(ps, n)
 			}
-			fmt.Fprintf(&b, "- `%s.%s(%s)` (%s): %s\n", name, f.Lua, strings.Join(ps, ", "), capDoc(f.Cap), f.Doc)
+			doc := f.Doc
+			if f.Deprecated != "" {
+				doc += " Deprecated: " + f.Deprecated + "."
+			}
+			fmt.Fprintf(&b, "- `%s.%s(%s)` (%s): %s\n", name, f.Lua, strings.Join(ps, ", "), capDoc(f.Cap), doc)
 		}
 	}
 	return []byte(b.String())

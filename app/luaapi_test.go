@@ -91,8 +91,10 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`select(2, L.read("/nonexistent/x"))`, `"open /nonexistent/x: no such file or directory"`},
 		{`L.exec({ "echo", "hi" })`, `"hi\n"`},
 		{`L.exec({ "pwd" }, { cwd = "/" })`, `"/\n"`},
-		{`(L.cmd("Remember", { x = 7 })) == nil`, "true"},
+		{`(L.run("Remember", { x = 7 })) == nil`, "true"},
 		{`L.remembered`, "7"},
+		{`(L.cmd("Remember", { x = 8 })) == nil`, "true"}, // deprecated, kept for old configs
+		{`L.remembered`, "8"},
 	} {
 		if got := settings.Show(s.Lua(c.line)[0]); got != c.want {
 			t.Errorf("%s = %s, want %s", c.line, got, c.want)
@@ -102,7 +104,7 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		`L.json("{")`:              "oriel.json:",
 		`L.exec({ "false" })`:      "oriel.exec: false: exit status 1",
 		`L.exec({})`:               "oriel.exec: no program",
-		`L.cmd("no.such.command")`: "oriel.cmd:",
+		`L.run("no.such.command")`: "oriel.run:",
 	} {
 		if err := s.LuaErr(line); !strings.Contains(err, want) {
 			t.Errorf("%s: %s, want %q in it", line, err, want)
