@@ -10,7 +10,8 @@ A Lua or WASM plugin that uses only this API isn't required to be AGPL: license 
 - `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
 - `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments. Deprecated: use oriel.run.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
-- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
+- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
+- `oriel.exec_async(argv, opts?, fn)` (`exec`): Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default).
 - `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode any other value as JSON text. Deprecated: use oriel.json_encode or oriel.json_decode, which can encode a string.
 - `oriel.json_decode(s)` (`ui`): Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
 - `oriel.json_encode(v)` (`ui`): Encode a value as JSON text: a table, a string, a number, a boolean.

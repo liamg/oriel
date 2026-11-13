@@ -237,7 +237,7 @@ func TestCodeSiteAliases(t *testing.T) {
 }
 
 // docs/examples/gitea: "an error in a later callback hangs silently". A code host's answer that a later callback
-// (an exec's on_done, an http.request's) would have given fails with that callback's error, at once.
+// (an exec_async's, an http.request's) would have given fails with that callback's error, at once.
 func TestLuaCodeHostCallbackError(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	m, err := plugin.ParseManifest([]byte("id = \"acme/broken\"\nversion = \"0.1.0\"\ndescription = \"x\"\n[permissions]\nexec = { commands = [\"true\"] }\n"))
@@ -249,7 +249,7 @@ func TestLuaCodeHostCallbackError(t *testing.T) {
 	vm := s.PluginVM(plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
 	src := `oriel.code.host{ name = "broken", sites = { { host = "broken.dev" } },
   requested = function(site, done)
-    oriel.exec({ "true" }, { on_done = function() local rows = nil; for _ in ipairs(rows) do end; done({}) end })
+    oriel.exec_async({ "true" }, {}, function() local rows = nil; for _ in ipairs(rows) do end; done({}) end)
   end }`
 	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(src)}); err != nil {
 		t.Fatal(err)

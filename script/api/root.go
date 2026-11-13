@@ -166,19 +166,49 @@ func (r Root) Asset(path string) (string, error) {
 	return string(b), err
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't)." optional=opts returns=string? cap=exec
+//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async)." optional=opts returns=string? cap=exec
 func (r Root) Exec(argv []string, opts script.Table) (any, error) {
+	if done, ok := opts["on_done"].(*script.Fn); ok {
+		return nil, r.ExecAsync(argv, opts, done)
+	}
+	run, err := r.program(argv, opts)
+	if err != nil {
+		return nil, err
+	}
+	return run()
+}
+
+//oriel:api doc="Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default)." optional=opts cap=exec
+func (r Root) ExecAsync(argv []string, opts script.Table, fn *script.Fn) error {
+	if fn == nil {
+		return fmt.Errorf("no function for the output")
+	}
+	run, err := r.program(argv, opts)
+	if err != nil {
+		return err
+	}
+	plugin.Go(r.a.Host, "oriel.exec_async "+argv[0], func() {
+		out, err := run()
+		var msg any
+		if err != nil {
+			msg = err.Error()
+		}
+		r.a.Host.Do(func() { r.a.later(fn, out, msg) })
+	})
+	return nil
+}
+
+// program resolves argv's program once, checks the plugin may run it, and returns what runs that same file.
+func (r Root) program(argv []string, opts script.Table) (func() (string, error), error) {
 	if len(argv) == 0 {
 		return nil, fmt.Errorf("no program")
 	}
+	dir := expand(str(opts, "cwd"))
+	prog, err := resolveProgram(argv[0], dir)
+	if err != nil {
+		return nil, err
+	}
 	if !r.a.Plugin.Trusted() {
-		prog, err := exec.LookPath(expand(argv[0]))
-		if err != nil {
-			return nil, err
-		}
-		if prog, err = filepath.Abs(prog); err != nil {
-			return nil, err
-		}
 		if err := r.a.Check(plugin.CapExec, plugin.RealPath(prog)); err != nil {
 			return nil, err
 		}
@@ -187,32 +217,35 @@ func (r Root) Exec(argv []string, opts script.Table) (any, error) {
 	if secs == 0 {
 		secs = 10
 	}
-	run := func() (string, error) {
+	return func() (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
 		defer cancel()
-		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-		cmd.Dir = expand(str(opts, "cwd"))
+		cmd := exec.CommandContext(ctx, prog, argv[1:]...)
+		cmd.Dir = dir
 		var out, errb bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &errb
 		if err := cmd.Run(); err != nil {
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
 		}
 		return out.String(), nil
-	}
-	done, ok := opts["on_done"].(*script.Fn)
-	if !ok {
-		out, err := run()
-		return out, err
-	}
-	go func() {
-		out, err := run()
-		var msg any
-		if err != nil {
-			msg = err.Error()
+	}, nil
+}
+
+// resolveProgram is the absolute path of the program name runs: ~ is home, a path (./tool, bin/tool) is in dir (the
+// process's own directory if ""), and a bare name is looked for on PATH.
+func resolveProgram(name, dir string) (string, error) {
+	p := expand(name)
+	if strings.ContainsRune(p, filepath.Separator) {
+		if !filepath.IsAbs(p) && dir != "" {
+			p = filepath.Join(dir, p)
 		}
-		r.a.Host.Do(func() { r.a.later(done, out, msg) })
-	}()
-	return nil, nil
+		return filepath.Abs(p)
+	}
+	found, err := exec.LookPath(p)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Abs(found)
 }
 
 //oriel:api doc="The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown." returns=number

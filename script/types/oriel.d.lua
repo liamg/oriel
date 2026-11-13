@@ -57,11 +57,17 @@ function oriel.cmd(id, args) end
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
+--- Run a program, argv as a list, and return what it printed; an error if it fails. ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
 ---@param argv string|string[]
 ---@param opts? table
 ---@return string?
 function oriel.exec(argv, opts) end
+
+--- Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default).
+---@param argv string|string[]
+---@param opts? table
+---@param fn function
+function oriel.exec_async(argv, opts, fn) end
 
 --- Decode JSON text to a table, or encode any other value as JSON text.
 ---@param v any

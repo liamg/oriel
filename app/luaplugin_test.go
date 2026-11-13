@@ -230,14 +230,14 @@ func TestLuaNowAndPlatform(t *testing.T) {
 	}
 }
 
-// oriel.exec with on_done runs in the background: the call returns at once, and on_done gets the output, or why
-// it failed, on the loop.
+// oriel.exec_async runs in the background: the call returns at once, and fn gets the output, or why it failed, on
+// the loop. oriel.exec's on_done, deprecated, is the same.
 func TestLuaExecInBackground(t *testing.T) {
 	if _, err := exec.LookPath("sh"); err != nil {
 		t.Skip(err)
 	}
 	s := apptest.LuaScene(t, "")
-	if got := s.Lua(`L.exec({ "sh", "-c", "sleep 0.1; echo hi" }, { on_done = function(out, err) said, failed = out, err end })`); len(got) != 1 || got[0] != nil {
+	if got := s.Lua(`L.exec_async({ "sh", "-c", "sleep 0.1; echo hi" }, {}, function(out, err) said, failed = out, err end)`); len(got) != 0 {
 		t.Errorf("returned %v, want nothing", got)
 	}
 	if global(lua(s).VM(), "said") != nil {
@@ -251,6 +251,32 @@ func TestLuaExecInBackground(t *testing.T) {
 	s.Until("the failure", func() bool { return global(lua(s).VM(), "failed") != nil })
 	if f, _ := global(lua(s).VM(), "failed").(string); !strings.Contains(f, "exit status 3") || !strings.Contains(f, "nope") {
 		t.Errorf("failed = %q", f)
+	}
+}
+
+// A plugin's exec is checked against the program it runs: a relative one (./tool) is cwd's, both when its grant is
+// checked and when it runs, so a grant for that file lets it run, and nothing else of the name does.
+func TestLuaExecChecksTheProgramItRuns(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	dir := t.TempDir()
+	tool := filepath.Join(dir, "tool")
+	os.WriteFile(tool, []byte("#!/bin/sh\necho mine\n"), 0o755)
+	other := t.TempDir()
+	os.WriteFile(filepath.Join(other, "tool"), []byte("#!/bin/sh\necho other\n"), 0o755)
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	g.Grant("acme/x", []plugin.Grant{{Cap: plugin.CapExec, Scope: []string{plugin.RealPath(tool)}}})
+	vm := s.PluginVM(plugin.Caller{ID: "acme/x", Dir: t.TempDir(), Guard: g})
+	if err := luaErr(t, vm, `said = oriel.exec({ "./tool" }, { cwd = "`+dir+`" })`); err != "" {
+		t.Fatalf("the granted program: %s", err)
+	}
+	if got := global(vm, "said"); got != "mine\n" {
+		t.Errorf("it printed %q", got)
+	}
+	if err := luaErr(t, vm, `oriel.exec({ "./tool" }, { cwd = "`+other+`" })`); !strings.Contains(err, "capability isn't declared") {
+		t.Errorf("another directory's tool: %q, want it refused", err)
 	}
 }
 

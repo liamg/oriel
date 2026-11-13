@@ -34,6 +34,12 @@ func (a *APIs) bind(vm *script.VM) {
 				v, err := x.Exec(c.Strings(0), c.Table(1))
 				return []any{v}, err
 			},
+			"exec_async": func(c *script.Args) ([]any, error) {
+				if err := a.check("exec"); err != nil {
+					return nil, err
+				}
+				return nil, x.ExecAsync(c.Strings(0), c.Table(1), c.Fn(2))
+			},
 			"json": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
