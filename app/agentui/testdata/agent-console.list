@@ -253,7 +253,7 @@ clip 44,50 1556x924 r 0
       text "rule: Bash(go test:*)" @220.5,678.42584 #7c7566 JetBrains Mono 9.5
       rect 206.5,703.2759 900x122.66449 fill #0c0c0b radius 8 stroke 1 #4cc9f08c
       rect 220.5,727.10815 7x7 fill #4cc9f0 radius 3.5
-      text "The sandbox holds a connection to proxy.golang.org" @235.5,727.38525 #ece6d8 Inter 12.5
+      text "The agent is trying to connect to proxy.golang.org" @235.5,727.38525 #ece6d8 Inter 12.5
       text "ENG-2231 search api · CONNECT :443" @235.5,743.0904 #7c7566 JetBrains Mono 9.5
       clip 220.5,754.94037 234.59998x24 r 5
         rect 220.5,754.94037 131.19998x24 fill #1f1c0f
@@ -416,7 +416,7 @@ clip 420,324.4906 760x351.0188 r 12
   text "g" @1058.1375,356.9106 #ece6d8cc JetBrains Mono 9.5
   text "1 OF 1" @1088.1375,357.2706 #7c7566 JetBrains Mono 10.5
   text "✕" @1151.1016,357.84662 #7c7566 JetBrains Mono 12.1
-  text "The sandbox holds a connection to proxy.golang.org" @442,392.95935 #ece6d8 Inter 17
+  text "The agent is trying to connect to proxy.golang.org" @442,392.95935 #ece6d8 Inter 17
   text "ENG-2231 search api · CONNECT :443" @442,414.27994 #7c7566 JetBrains Mono 11
   rect 442,431.57996 2x36.929504 fill #332f27
   text "WHY" @456,443.77997 #7c7566 JetBrains Mono 10

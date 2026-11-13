@@ -59,7 +59,7 @@ func (x *Console) decide(th *theme.Resolved, se core.SessionState, a core.Ask) d
 		if err != nil {
 			host = a.Host
 		}
-		d.title = "The sandbox holds a connection to " + host
+		d.title = "The agent is trying to connect to " + host
 		d.where = kit.JoinParts(label, a.Detail)
 		if port != "" {
 			d.where = kit.JoinParts(label, "CONNECT :"+port)

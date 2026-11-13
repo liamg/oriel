@@ -423,7 +423,7 @@ func (b *Box) notSaved(what string, err error) {
 func (b *Box) ApproveEgress(ctx context.Context, host string, port int) (egress.Answer, error) {
 	hp := net.JoinHostPort(host, strconv.Itoa(port))
 	ask := core.Ask{Kind: core.AskNetwork, Host: hp, Summary: "Connect to " + hp, Rule: "net(" + hp + ")",
-		Detail: "The sandbox's first connection to " + hp + "; it is held until you answer."}
+		Detail: "The agent is trying to connect to " + hp + " for the first time; it waits until you answer."}
 	v, err := b.approve(ctx, ask)
 	if err != nil {
 		return egress.Answer{}, err

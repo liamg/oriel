@@ -181,7 +181,7 @@ type AskKind string
 const (
 	AskPermission AskKind = "permission" // layer 1: the agent's own gate
 	AskQuestion   AskKind = "question"   // the agent asked something
-	AskNetwork    AskKind = "network"    // layer 3: the egress proxy holds a connection
+	AskNetwork    AskKind = "network"    // layer 3: the agent is trying to connect to a host
 	AskGateway    AskKind = "gateway"    // layer 3: the gateway holds a call
 	AskLogin      AskKind = "login"      // the agent's login is gone
 	AskKey        AskKind = "key"        // a git operation has waited long enough that it's likely waiting on a security-key touch

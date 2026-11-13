@@ -143,8 +143,8 @@ func TestPromptLayouts(t *testing.T) {
 	t.Run("network", func(t *testing.T) {
 		s, _ := cardScene(t, size)
 		ask(s, core.Ask{ID: "n1", Kind: core.AskNetwork, Host: "proxy.golang.org:443", Rule: "net(proxy.golang.org:443)",
-			Detail: "The sandbox's first connection to proxy.golang.org:443; it is held until you answer."})
-		s.WantFrame("PRICING-ROUNDING · NETWORK", "The sandbox holds a connection to proxy.golang.org", "pricing-rounding · CONNECT :443",
+			Detail: "The agent is trying to connect to proxy.golang.org:443 for the first time; it waits until you answer."})
+		s.WantFrame("PRICING-ROUNDING · NETWORK", "The agent is trying to connect to proxy.golang.org", "pricing-rounding · CONNECT :443",
 			"proxy.golang.org", "*.golang.org")
 		wantAnswers(t, s, "Once, o", "Allow for this session, a, proxy.golang.org", "Allow for all sessions, ⇧A, proxy.golang.org · every session", "Deny, n")
 		s.Golden("prompt-network")
