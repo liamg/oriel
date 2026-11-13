@@ -51,7 +51,7 @@ func centred(w *apptest.Window, text string) bool {
 // it it is, and whatever was open and scrolled before.
 func TestDiffOpenLandsOnTheLine(t *testing.T) {
 	r := jumpRepo(t, 12)
-	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: r.Dir})
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
 	jump := func(file string, line int, text string) {
 		t.Helper()
 		if err := app.Do(func() error {
@@ -79,7 +79,7 @@ func shows(w *apptest.Window, text string) bool {
 // hunk: collapsed or not, far down or not.
 func TestDiffOpenExpandsTheFile(t *testing.T) {
 	r := jumpRepo(t, 12)
-	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: r.Dir})
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
 	if err := app.Do(func() error {
 		return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": filepath.Join(r.Dir, "f00.go"), "line": 285})
 	}); err != nil {
@@ -109,7 +109,7 @@ func TestDiffOpenExpandsTheFile(t *testing.T) {
 // diff.open's line on the old side (a comment on removed code) lands on the removed line.
 func TestDiffOpenLandsOnAnOldLine(t *testing.T) {
 	r := jumpRepo(t, 6)
-	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: r.Dir})
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
 	app.Do(func() error {
 		return app.Host.Run(context.Background(), "diff.layout", registry.Args{"layout": "unified"})
 	})

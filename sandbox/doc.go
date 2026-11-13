@@ -38,7 +38,7 @@
 //   - agentsock.Serve(ctx, &agentsock.Handler{...}, SocketPath(root), portFile)
 //     with Token from Load(root).AgentToken; portFile is PortPath(root) when
 //     the backend ServesPort, else "".
-//   - Backend.Launch(ctx, root, cwd, argv, LaunchOptions{Config: cfg,
+//   - Backend.Launch(ctx, root, cwd, argv, LaunchOpts{Config: cfg,
 //     Provider, Agent, ...}) asks the provider what its agent needs at the
 //     place the backend puts it (Needs: its binaries, mounts, env, hosts), and
 //     returns the command to run under the agent's PTY with those needs; the

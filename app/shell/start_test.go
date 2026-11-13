@@ -24,7 +24,7 @@ import (
 
 // With nothing open the window shows the start view: the actions with their keys, and the logo for recents.
 func TestStartViewAtLaunch(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir()})
 	r.WaitFrame("the start view", func(s string) bool {
 		return apptest.HasAll(s, "New Session", "Quick Session", "Resume a Session", "Open Directory", "Settings", "⌘N", "⇧⌘N", "⌘O", "⇧⌘O", "⌘,")
 	})
@@ -33,7 +33,7 @@ func TestStartViewAtLaunch(t *testing.T) {
 // An entry runs its command on Enter; one whose command isn't registered doesn't, and a plugin adds its own.
 func TestStartViewEntries(t *testing.T) {
 	ran := make(chan string, 4)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Setup: func(h plugin.Host) {
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Setup: func(h plugin.Host) {
 		h.Command(registry.Command{ID: "test.hello", Run: func(registry.Ctx, registry.Args) error { ran <- "hello"; return nil }})
 		h.Contribute(uireg.StartEntry{Name: "hello", Title: "Say hello", Desc: "A plugin's action", Command: "test.hello", Order: 5})
 	}})
@@ -53,7 +53,7 @@ func TestOpenDirectory(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "proj")
 	os.MkdirAll(dir, 0o755)
 	os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hi\n"), 0o644)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: state})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: state})
 	r.WaitText("Open Directory")
 	if err := r.Do(func() error {
 		return r.Host.Run(context.Background(), "directory.open", registry.Args{"path": dir})
@@ -66,7 +66,7 @@ func TestOpenDirectory(t *testing.T) {
 	r.TypeKeys("<Space><Space>")
 	r.WaitText("hello.txt")
 
-	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: state})
+	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: state})
 	r2.WaitFrame("proj in the recents", func(s string) bool {
 		return apptest.HasAll(s, "proj", "DIRECTORIES")
 	})
@@ -265,7 +265,7 @@ func TestStartViewHoverLink(t *testing.T) {
 // The window opens where it was when it last closed: its frame is kept in the state directory.
 func TestWindowPlaceKept(t *testing.T) {
 	state := t.TempDir()
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: state})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: state})
 	if f := r.Win.Opts().Frame; f != (render.Rect{}) {
 		t.Fatalf("the first window asked for %v", f)
 	}
@@ -274,7 +274,7 @@ func TestWindowPlaceKept(t *testing.T) {
 	r.Win.Move(moved)
 	r.Stop()
 
-	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: state})
+	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: state})
 	if f := r2.Win.Opts().Frame; f != moved {
 		t.Errorf("the next window asked for %v, want %v", f, moved)
 	}
@@ -336,7 +336,7 @@ func TestStartViewKeepsToItsOwnKeys(t *testing.T) {
 		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-y>", Command: "test.global"})
 		h.Keymap(registry.Keymap{Mode: "n", Keys: "<Space>z", Command: "test.normal"})
 	}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Setup: setup})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Setup: setup})
 	r.WaitText("Open Directory")
 	r.TypeKeys("<D-y>")
 	r.TypeKeys("<Space>z")
@@ -348,7 +348,7 @@ func TestStartViewKeepsToItsOwnKeys(t *testing.T) {
 	default:
 	}
 
-	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Setup: setup})
+	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: t.TempDir(), Setup: setup})
 	r2.TypeKeys("<D-y>")
 	apptest.Recv(t, "a global key to run with a directory open", ran)
 }
@@ -416,7 +416,7 @@ func TestDirectoriesWalkHomeOffTheLoop(t *testing.T) {
 // The window opens on the chosen theme's background, so it isn't white until the first frame.
 func TestWindowOpensOnTheThemesBackground(t *testing.T) {
 	for _, v := range []theme.Variant{theme.Dark, theme.Light} {
-		r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Setup: func(h plugin.Host) {
+		r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Setup: func(h plugin.Host) {
 			h.Options().Set("ui.variant", registry.LayerUser, registry.At{}, string(v))
 		}})
 		st, err := theme.Stack(theme.Builtins(), "oriel")
@@ -438,7 +438,7 @@ func TestWindowOpensOnTheThemesBackground(t *testing.T) {
 // swap waits for it.
 func TestStartedRunsOnceTheWindowIsUp(t *testing.T) {
 	started := make(chan struct{}, 2)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Started = func() { started <- struct{}{} } }})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Started = func() { started <- struct{}{} } }})
 	apptest.Recv(t, "Started", started)
 	r.Idle()
 	select {

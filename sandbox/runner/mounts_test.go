@@ -80,7 +80,7 @@ func TestMountsShareGoCache(t *testing.T) {
 	if fi, err := os.Stat(sources[0]); err != nil || !fi.IsDir() {
 		t.Fatalf("go cache dir: %v", err)
 	}
-	env := agentEnv(t.TempDir(), id, sandbox.LaunchOptions{Environ: []string{"GOMODCACHE=/host/mod"}}, agent.SandboxNeeds{})
+	env := agentEnv(t.TempDir(), id, sandbox.LaunchOpts{Environ: []string{"GOMODCACHE=/host/mod"}}, agent.SandboxNeeds{})
 	if env["GOMODCACHE"] != GoCacheDir+"/mod" || env["GOCACHE"] != GoCacheDir+"/build" {
 		t.Fatalf("GOMODCACHE=%q GOCACHE=%q", env["GOMODCACHE"], env["GOCACHE"])
 	}

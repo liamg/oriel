@@ -21,7 +21,7 @@ type Backend interface {
 	// Launch readies root's sandbox for an agent in cwd running argv, and
 	// returns the command to run under the PTY in its place. A slow step says
 	// what it's doing with Report(ctx, …).
-	Launch(ctx context.Context, root, cwd string, argv []string, o LaunchOptions) (Command, error)
+	Launch(ctx context.Context, root, cwd string, argv []string, o LaunchOpts) (Command, error)
 	// Stop ends what Launch started for root. The workspace is untouched.
 	Stop(ctx context.Context, root string) error
 	// Available says whether this machine can run it at all: its OS, its tools installed.
@@ -50,7 +50,7 @@ type Rebuilder interface {
 
 // Sheller is a backend that can run a shell in root's sandbox beside its agent, in cwd: what a terminal runs.
 type Sheller interface {
-	Shell(ctx context.Context, root, cwd string, o LaunchOptions) (Command, error)
+	Shell(ctx context.Context, root, cwd string, o LaunchOpts) (Command, error)
 }
 
 // ShellArgv is the shell a sandbox's terminal runs: bash where the image has it, else sh.
@@ -82,8 +82,8 @@ type Command struct {
 	Needs agent.SandboxNeeds
 }
 
-// LaunchOptions are the host facts a launch needs.
-type LaunchOptions struct {
+// LaunchOpts are the host facts a launch needs.
+type LaunchOpts struct {
 	// Environ is the environment the sandbox's allowlist picks from.
 	Environ []string
 	// Extra env the agent always gets (ORIEL_SPAWNED and friends).

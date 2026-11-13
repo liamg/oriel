@@ -433,7 +433,7 @@ func TestSidebarFormDockAndAvailability(t *testing.T) {
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	state := t.TempDir()
 	dir := fixtureRepo(t, t.TempDir(), "blog", "main", map[string]string{"a.md": "a\n"}, 0, false)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: dir})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	run := func(id string, args registry.Args) {
 		t.Helper()
 		if err := r.Do(func() error { return r.Host.Run(context.Background(), id, args) }); err != nil {
@@ -452,7 +452,7 @@ func TestSidebarFormDockAndAvailability(t *testing.T) {
 	run("sidebar.form", registry.Args{"form": "narrow"})
 	r.WaitText("»")
 	r.Stop()
-	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: dir})
+	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	r2.WaitText("»")
 	r2.Stop()
 
@@ -473,7 +473,7 @@ func TestSidebarAddsAProject(t *testing.T) {
 	billing := filepath.Join(t.TempDir(), "billing")
 	rig.Git(t, filepath.Dir(billing), "init", "-q", "-b", "main", billing)
 	rig.Git(t, billing, "commit", "-q", "--allow-empty", "-m", "first")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	rig.WaitState(t, r.Store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err := r.Do(func() error {
 		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}})

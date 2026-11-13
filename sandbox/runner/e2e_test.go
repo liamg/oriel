@@ -117,7 +117,7 @@ func (f fixture) run(t *testing.T, script string, environ ...string) string {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	argv, _, err := Launch(ctx, f.root, f.root, []string{"bash", "-c", script}, sandbox.LaunchOptions{Environ: environ, Config: f.cfg,
+	argv, _, err := Launch(ctx, f.root, f.root, []string{"bash", "-c", script}, sandbox.LaunchOpts{Environ: environ, Config: f.cfg,
 		Provider: "claude", Agent: &claude.Provider{}})
 	if err != nil {
 		t.Fatal(err)

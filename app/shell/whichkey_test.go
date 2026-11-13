@@ -29,7 +29,7 @@ func whichKeyApp(t *testing.T) *apptest.Window {
 
 func whichKeyAppWith(t *testing.T, opts func(h plugin.Host)) *apptest.Window {
 	t.Helper()
-	r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"a.txt": "alpha beta\n"}, Files: []string{"a.txt"}, Keys: agentKeys,
+	r := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"a.txt": "alpha beta\n"}, Files: []string{"a.txt"}, Keys: agentKeys,
 		Setup: func(h plugin.Host) {
 			h.Command(registry.Command{ID: "test.noop", Run: func(registry.Ctx, registry.Args) error { return nil }})
 			opts(h)

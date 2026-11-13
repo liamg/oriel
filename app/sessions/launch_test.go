@@ -32,7 +32,7 @@ func TestTheWindowComesBackAsItWasLeft(t *testing.T) {
 		}
 	}
 	tabs := lw.W.Store().State().Tabs
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	w.WaitText("front")
 	if text := w.Win.Frames()[0].Text(); !strings.Contains(text, "Opening front…") {
 		t.Errorf("the first frame isn't the opening view:\n%s", text)
@@ -70,7 +70,7 @@ func TestWithTabsOpenItNeverOpensOnTheStartView(t *testing.T) {
 	if f := lw.W.Store().State().Focus; f != "" {
 		t.Fatalf("%s in front before the window opens", f)
 	}
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	w.WaitFrame("the first tab in front", func(string) bool { return w.Store.State().Focus == lw.W.Store().State().Tabs[0] })
 	w.Idle()
 	for i, f := range w.Win.Frames() {
@@ -98,7 +98,7 @@ func TestClosingTheFrontTabBringsAnotherToTheFront(t *testing.T) {
 	if err := lw.W.Store().Apply(core.SessionFocused{ID: ids[1]}); err != nil {
 		t.Fatal(err)
 	}
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	w.WaitFrame("goes in front", func(string) bool { return w.Store.State().Focus == ids[1] })
 	if err := lw.W.Store().Apply(core.TabClosed{ID: ids[1]}); err != nil {
 		t.Fatal(err)
@@ -129,7 +129,7 @@ func TestReopenedAfterACloseItComesBackOnTheSessionInFront(t *testing.T) {
 		}
 	}
 	state := t.TempDir()
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: state, Config: apptest.Connect(lw.W)})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: state, Config: apptest.Connect(lw.W)})
 	w.WaitFrame("the first tab in front", func(string) bool { return w.Store.State().Focus == ids["first"] })
 	w.Run("session.focus", registry.Args{"id": string(ids["front"])})
 	w.WaitFrame("the session in front", func(s string) bool { return !strings.Contains(s, "Open Directory") && !strings.Contains(s, "Opening") })
@@ -142,7 +142,7 @@ func TestReopenedAfterACloseItComesBackOnTheSessionInFront(t *testing.T) {
 		t.Fatal(err)
 	}
 	lw = rig.NewHostWith(t, host.Options{Home: home})
-	again := apptest.NewWindow(t, apptest.WindowOptions{State: state, Config: apptest.Connect(lw.W)})
+	again := apptest.NewWindow(t, apptest.WindowOpts{State: state, Config: apptest.Connect(lw.W)})
 	again.WaitText("front")
 	again.Idle()
 	if text := again.Win.Frames()[len(again.Win.Frames())-1].Text(); strings.Contains(text, "Open Directory") {

@@ -29,7 +29,7 @@ func (b imageBackend) Describe(_ context.Context, root string, _ sandbox.Config)
 	return d
 }
 
-func (imageBackend) Shell(_ context.Context, _, cwd string, _ sandbox.LaunchOptions) (sandbox.Command, error) {
+func (imageBackend) Shell(_ context.Context, _, cwd string, _ sandbox.LaunchOpts) (sandbox.Command, error) {
 	return sandbox.Command{Argv: []string{"sh", "-c", "echo shell-in-the-sandbox; exec cat"}, Env: os.Environ()}, nil
 }
 
@@ -52,7 +52,7 @@ type heldShell struct {
 	held chan struct{}
 }
 
-func (b heldShell) Shell(ctx context.Context, root, cwd string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (b heldShell) Shell(ctx context.Context, root, cwd string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	<-b.held
 	return b.imageBackend.Shell(ctx, root, cwd, o)
 }

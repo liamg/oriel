@@ -32,7 +32,7 @@ func TestNeedsAskTheProviderAtItsDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := &asks{needs: agent.SandboxNeeds{Mounts: []agent.Mount{{Host: "/h/x", Sandbox: "/a/x"}}}}
-	o := LaunchOptions{Provider: "codex", Agent: p, StateDir: filepath.Join(root, "state"), Environ: []string{"OPENAI_API_KEY=k", "GITHUB_TOKEN=g"},
+	o := LaunchOpts{Provider: "codex", Agent: p, StateDir: filepath.Join(root, "state"), Environ: []string{"OPENAI_API_KEY=k", "GITHUB_TOKEN=g"},
 		Config: Config{Env: []string{"OPENAI_*"}}}
 	n, err := Needs(context.Background(), root, root, o, agent.SandboxPlace{OS: "linux", Arch: "arm64"})
 	if err != nil {

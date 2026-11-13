@@ -80,7 +80,7 @@ func TestAStateFileFollowsTheWindow(t *testing.T) {
 	os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644)
 	os.WriteFile(filepath.Join(files, "b.txt"), []byte("kept in b"), 0o644)
 	p := &keeper{files: files}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
 	r.WaitFor("a's file loaded", func() bool { return strings.Join(p.loaded(), "|") == "kept in a" })
 
 	r.Do(func() error { p.text = "written"; p.f.Write([]byte("written")); return nil })
@@ -104,7 +104,7 @@ func TestAStateFileBackOnADirectoryReadsItsWrite(t *testing.T) {
 	}
 	os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644)
 	p := &keeper{files: files}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
 	r.WaitFor("a's file loaded", func() bool { return strings.Join(p.loaded(), "|") == "kept in a" })
 	if err := r.Do(func() error {
 		w, _ := kit.WindowOf(r.Host)
@@ -138,7 +138,7 @@ func TestBackOnADirectoryKeepsItsViews(t *testing.T) {
 	for _, d := range []string{a, b} {
 		os.MkdirAll(d, 0o755)
 	}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{&plainView{}}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{&plainView{}}})
 	r.WaitGone("Opening")
 	if err := r.Do(func() error {
 		return r.Host.Run(context.Background(), "view.open", registry.Args{"id": "test/plain", "instance": "one", "place": "tab"})
@@ -184,7 +184,7 @@ func TestAStateFileBackOnADirectoryReadsAnEditSince(t *testing.T) {
 	}
 	os.WriteFile(filepath.Join(files, "a.txt"), []byte("kept in a"), 0o644)
 	p := &keeper{files: files}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: a, Plugins: []plugin.Plugin{p}})
 	r.WaitFor("a's file loaded", func() bool { return strings.Join(p.loaded(), "|") == "kept in a" })
 	move := func(dir string) {
 		t.Helper()

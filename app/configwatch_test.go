@@ -19,7 +19,7 @@ func hostHasCommand(h plugin.Host, id string) bool {
 
 // A hand edit to settings.toml applies, seen by watching the file rather than a fast poll.
 func TestSettingsFileIsWatched(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir()})
 	r.WaitText("Open Directory")
 	if err := os.WriteFile(filepath.Join(r.ConfigDir, "settings.toml"), []byte("[whichkey]\nenabled = false\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestSettingsFileIsWatched(t *testing.T) {
 
 // Saving init.lua loads it again, seen by watching it.
 func TestInitLuaIsWatched(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir()})
 	r.WaitText("Open Directory")
 	conf := r.ConfigDir
 	src := `oriel.command("HelloWatched", function() end, { desc = "hi" })`

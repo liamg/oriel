@@ -33,7 +33,7 @@ func quitScene(t *testing.T, job *host.Job, change ...func(*apptest.Config)) (r 
 	a = lw.Fake.WaitStarted(t)
 	a.WaitSent(t)
 	connect := apptest.Connect(lw.W)
-	r = apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: func(cfg *apptest.Config) {
+	r = apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: func(cfg *apptest.Config) {
 		connect(cfg)
 		for _, f := range change {
 			f(cfg)

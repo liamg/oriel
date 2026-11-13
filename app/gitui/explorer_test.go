@@ -519,7 +519,7 @@ func TestExplorerLuaBadge(t *testing.T) {
 func TestExplorerComesBackAsLeftAfterARestart(t *testing.T) {
 	state, repo := t.TempDir(), explorerRepo(t)
 	flat := func(s string) bool { return strings.Contains(s, "tree") && !strings.Contains(s, "\nbilling\n") }
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: repo.Dir})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: repo.Dir})
 	r.Run("view.toggle", registry.Args{"id": kit.ExplorerView, "place": "dock", "edge": "left"})
 	r.WaitText("CHG 6")
 	r.ClickText("CHG 6")
@@ -530,7 +530,7 @@ func TestExplorerComesBackAsLeftAfterARestart(t *testing.T) {
 	r.WaitText("s stage · u unstage")
 	r.Stop()
 
-	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: repo.Dir})
+	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: repo.Dir})
 	r2.WaitText("s stage · u unstage")
 	r2.ClickText("CHG 6")
 	r2.WaitFrame("Changed, flat", flat)

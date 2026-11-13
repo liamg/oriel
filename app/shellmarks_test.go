@@ -21,7 +21,7 @@ import (
 func TestShellCommandsMarkOnlyWhatChanged(t *testing.T) {
 	spawned := spawns(t)
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W), Timeout: time.Minute})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W), Timeout: time.Minute})
 	other := rig.NewRepo(t, filepath.Join(t.TempDir(), "billing"))
 	id, err := lw.W.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Name: "two", Provider: "fake",
 		Repos: []core.RepoID{core.RepoID(lw.Repo), core.RepoID(other)}})

@@ -99,7 +99,7 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 	if allow := x.Servers; allow != nil {
 		installed = func(s lsp.ServerSpec) bool { return allow(s) && lsp.Installed(s) }
 	}
-	x.m = lsp.NewManager(lsp.ManagerOptions{
+	x.m = lsp.NewManager(lsp.ManagerOpts{
 		Installed: installed,
 		Servers: func() []lsp.ServerSpec {
 			var out []lsp.ServerSpec

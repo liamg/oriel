@@ -119,7 +119,7 @@ func (b Engine) with(ctx context.Context) (context.Context, container.Engine, er
 	return container.WithEngine(ctx, e), e, err
 }
 
-func (b Engine) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (b Engine) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	ctx, _, err := b.with(ctx)
 	if err != nil {
 		return sandbox.Command{}, err
@@ -171,7 +171,7 @@ func (b Engine) Rebuild(ctx context.Context, root string, cfg sandbox.Config) er
 	return Rebuild(ctx, root, cfg)
 }
 
-func (b Engine) Shell(ctx context.Context, root, cwd string, _ sandbox.LaunchOptions) (sandbox.Command, error) {
+func (b Engine) Shell(ctx context.Context, root, cwd string, _ sandbox.LaunchOpts) (sandbox.Command, error) {
 	ctx, e, err := b.with(ctx)
 	if err != nil {
 		return sandbox.Command{}, err

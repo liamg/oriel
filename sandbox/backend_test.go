@@ -16,7 +16,7 @@ type testBackend struct {
 
 func (b testBackend) Name() string     { return b.name }
 func (b testBackend) Available() error { return b.err }
-func (testBackend) Launch(context.Context, string, string, []string, LaunchOptions) (Command, error) {
+func (testBackend) Launch(context.Context, string, string, []string, LaunchOpts) (Command, error) {
 	return Command{}, nil
 }
 func (testBackend) Stop(context.Context, string) error                { return nil }

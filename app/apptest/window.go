@@ -51,8 +51,8 @@ type Window struct {
 	plugins map[string]plugin.Plugin // each active, by id
 }
 
-// WindowOptions are the app a Window runs.
-type WindowOptions struct {
+// WindowOpts are the app a Window runs.
+type WindowOpts struct {
 	State   string            // the state directory
 	WorkDir string            // the directory it opens
 	Setup   func(plugin.Host) // runs as the test's own plugin starts
@@ -89,7 +89,7 @@ func (g *grab) Deactivate(context.Context) error { return nil }
 func windowNow() time.Time { return time.Time{} }
 
 // NewWindow runs the app on a headless window until the test ends.
-func NewWindow(t *testing.T, o WindowOptions) *Window {
+func NewWindow(t *testing.T, o WindowOpts) *Window {
 	t.Helper()
 	isolate.Test(t)
 	ctx, cancel := context.WithTimeout(context.Background(), cmp.Or(o.Timeout, WindowTimeout))
@@ -146,7 +146,7 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 func HostWindow(t *testing.T) (*Window, *rig.Host) {
 	t.Helper()
 	h := rig.NewHost(t)
-	return NewWindow(t, WindowOptions{State: t.TempDir(), Config: Connect(h.W)}), h
+	return NewWindow(t, WindowOpts{State: t.TempDir(), Config: Connect(h.W)}), h
 }
 
 // WindowPlugin is the plugin w started as id, as a T; the test fails without one. Use it on the loop (Do).
@@ -631,11 +631,11 @@ func AgentWindow(t *testing.T) (*Window, *agenttest.FakeSession, *rig.Host) {
 // AgentWindowOn is AgentWindow on the host given.
 func AgentWindowOn(t *testing.T, h *rig.Host) (*Window, *agenttest.FakeSession, *rig.Host) {
 	t.Helper()
-	return AgentWindowWith(t, h, WindowOptions{})
+	return AgentWindowWith(t, h, WindowOpts{})
 }
 
 // AgentWindowWith is AgentWindowOn with the window's options: its plugins, a config change past the host's.
-func AgentWindowWith(t *testing.T, h *rig.Host, o WindowOptions) (*Window, *agenttest.FakeSession, *rig.Host) {
+func AgentWindowWith(t *testing.T, h *rig.Host, o WindowOpts) (*Window, *agenttest.FakeSession, *rig.Host) {
 	t.Helper()
 	more := o.Config
 	o.Config = func(c *app.Config) {

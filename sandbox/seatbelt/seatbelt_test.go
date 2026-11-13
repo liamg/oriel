@@ -220,7 +220,7 @@ func TestCommand(t *testing.T) {
 	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	c, err := s.command(context.Background(), root, root, []string{"claude"}, sandbox.LaunchOptions{Environ: []string{"PATH=/usr/bin", "SECRET=x"},
+	c, err := s.command(context.Background(), root, root, []string{"claude"}, sandbox.LaunchOpts{Environ: []string{"PATH=/usr/bin", "SECRET=x"},
 		Provider: "agent", Agent: needer{bin: bin, host: transcripts, at: "projects"}})
 	if err != nil {
 		t.Fatal(err)

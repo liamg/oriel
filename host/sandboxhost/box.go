@@ -570,7 +570,7 @@ func (b *Box) wrap(ctx context.Context, cmd *exec.Cmd) (*exec.Cmd, error) {
 	if cwd == "" {
 		cwd = b.root
 	}
-	o := sandbox.LaunchOptions{Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg, Provider: b.provider, Agent: b.agent,
+	o := sandbox.LaunchOpts{Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg, Provider: b.provider, Agent: b.agent,
 		StateDir: b.stateDir}
 	if hook := o.Extra[agent.HookSocketEnv]; hook != "" {
 		b.mu.Lock()

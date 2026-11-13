@@ -181,7 +181,7 @@ func TestManager(t *testing.T) {
 		{Name: "fake", Language: []string{"go"}, Cmd: []string{"fake"}, Roots: []string{"go.mod"}},
 	}
 	var stderrFor []string
-	m := NewManager(ManagerOptions{
+	m := NewManager(ManagerOpts{
 		Servers:   func() []ServerSpec { return specs },
 		Installed: func(s ServerSpec) bool { return s.Name != "missing" },
 		Stderr: func(s ServerSpec, root string) io.Writer {
@@ -279,7 +279,7 @@ func TestManager(t *testing.T) {
 }
 
 func TestSpecForOrder(t *testing.T) {
-	m := NewManager(ManagerOptions{
+	m := NewManager(ManagerOpts{
 		Servers: func() []ServerSpec {
 			return []ServerSpec{{Name: "a", Language: []string{"x"}, Order: 1}, {Name: "b", Language: []string{"x"}}}
 		},
@@ -291,7 +291,7 @@ func TestSpecForOrder(t *testing.T) {
 }
 
 func TestSpecForPrefersInstalled(t *testing.T) {
-	m := NewManager(ManagerOptions{
+	m := NewManager(ManagerOpts{
 		Servers:   func() []ServerSpec { return Builtins() },
 		Installed: func(s ServerSpec) bool { return s.Name == "vtsls" },
 	})
@@ -311,7 +311,7 @@ func TestShutdownStopsAServerStillStarting(t *testing.T) {
 	f := &fleet{t: t, caps: `{"textDocumentSync":2}`}
 	gate, launched := make(chan struct{}), make(chan struct{})
 	spec := ServerSpec{Name: "fake", Language: []string{"go"}, Cmd: []string{"fake"}, Roots: []string{"go.mod"}}
-	m := NewManager(ManagerOptions{
+	m := NewManager(ManagerOpts{
 		Servers:   func() []ServerSpec { return []ServerSpec{spec} },
 		Installed: func(ServerSpec) bool { return true },
 		Client: Options{Launch: func(ctx context.Context, s ServerSpec, root string, stderr io.Writer) (Process, error) {

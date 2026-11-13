@@ -36,7 +36,7 @@ type sandboxRig struct {
 	f        *Sandboxes
 	remote   string
 	launched chan []string
-	opts     chan sandbox.LaunchOptions
+	opts     chan sandbox.LaunchOpts
 	hold     chan struct{} // when set, a launch reports a step and waits on it
 	swept    chan bool     // when set, each sweep sends whether the session's sandbox was attached
 	root     string        // the root swept asks about
@@ -48,7 +48,7 @@ type fakeBackend struct{ s *sandboxRig }
 
 func (fakeBackend) Name() string { return "fake" }
 
-func (f fakeBackend) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (f fakeBackend) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	f.s.launched <- argv
 	f.s.opts <- o
 	if f.s.hold != nil {
@@ -97,7 +97,7 @@ func newSandboxRig(t *testing.T, more ...agent.Provider) *sandboxRig {
 	remote := filepath.Join(t.TempDir(), "origin.git")
 	r.repo.Git("init", "-q", "--bare", remote)
 	r.repo.Git("remote", "add", "origin", remote)
-	s := &sandboxRig{rig: r, remote: remote, launched: make(chan []string, 4), opts: make(chan sandbox.LaunchOptions, 4)}
+	s := &sandboxRig{rig: r, remote: remote, launched: make(chan []string, 4), opts: make(chan sandbox.LaunchOpts, 4)}
 	s.f = NewSandboxFactory(nil)
 	s.f.Backend = func(sandbox.Config) (sandbox.Backend, error) { return fakeBackend{s}, nil }
 	s.f.Available = func() []string { return []string{"fake"} }

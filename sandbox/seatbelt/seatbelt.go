@@ -52,7 +52,7 @@ func Available() error {
 	return nil
 }
 
-func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	if err := Available(); err != nil {
 		return sandbox.Command{}, err
 	}
@@ -60,7 +60,7 @@ func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, 
 }
 
 // Shell is a shell under root's profile, as the agent runs.
-func (s *Seatbelt) Shell(ctx context.Context, root, cwd string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) Shell(ctx context.Context, root, cwd string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	if err := Available(); err != nil {
 		return sandbox.Command{}, err
 	}
@@ -68,7 +68,7 @@ func (s *Seatbelt) Shell(ctx context.Context, root, cwd string, o sandbox.Launch
 }
 
 // command writes root's profile and returns the agent's command under it.
-func (s *Seatbelt) command(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) command(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	if rec, ok := sandbox.Load(root); !ok || !rec.Sandboxed() {
 		return sandbox.Command{}, errors.New("this workspace is not sandboxed")
 	}

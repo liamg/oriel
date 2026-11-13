@@ -140,7 +140,7 @@ func TestRailPluginEntries(t *testing.T) {
 
 // The key of an entry that isn't available yet says so, rather than failing.
 func TestRailKeyUnavailable(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Setup: func(h plugin.Host) {
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: t.TempDir(), Setup: func(h plugin.Host) {
 		h.Contribute(laterEntry)
 		h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-L>", Command: "project.panel", Args: registry.Args{"name": "later"}, Desc: "Later"})
 	}})

@@ -29,7 +29,7 @@ func (registers) Deactivate(context.Context) error { return nil }
 func TestNoRawTerminalWithoutOne(t *testing.T) {
 	lw := rig.NewHost(t)
 	lw.Fake.Has = &agent.Features{Fork: true}
-	r, _, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{Plugins: []plugin.Plugin{registers{lw.Fake}}})
+	r, _, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{Plugins: []plugin.Plugin{registers{lw.Fake}}})
 	r.TypeKeys("<D-A>")
 	s := r.WaitText("SESSION STATS")
 	if strings.Contains(s, "Raw terminal") {
@@ -47,7 +47,7 @@ func TestABrowserLoginFromTheCard(t *testing.T) {
 	lw := rig.NewHost(t)
 	lw.Fake.Has = &agent.Features{Login: true}
 	desk := &apptest.Desktop{}
-	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{Config: func(c *apptest.Config) { c.Desktop = desk }})
+	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{Config: func(c *apptest.Config) { c.Desktop = desk }})
 	lw.Fake.SignIn(false)
 	a.Emit(agent.AuthExpired{Provider: "fake", Detail: "fake is signed out", Shell: "fake login"})
 	r.WaitFrame("the card", func(s string) bool {
@@ -68,7 +68,7 @@ func TestABrowserLoginFromTheCard(t *testing.T) {
 // provider's command in a terminal on this machine.
 func TestAHostLoginFromTheCard(t *testing.T) {
 	lw := rig.NewHost(t)
-	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{})
+	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{})
 	lw.Fake.SignIn(false)
 	a.Emit(agent.AuthExpired{Provider: "fake", Detail: "fake is signed out", Shell: "fake login",
 		HostCommand: []string{"sh", "-c", "echo signing-in-on-the-host; exec cat"}})

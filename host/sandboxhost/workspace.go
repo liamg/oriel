@@ -166,5 +166,5 @@ func (x *Boxes) SandboxShell(ctx context.Context, id core.SessionID, cwd string)
 	if rel, err := filepath.Rel(b.root, cwd); cwd == "" || err != nil || strings.HasPrefix(rel, "..") {
 		cwd = b.root
 	}
-	return sh.Shell(ctx, b.root, cwd, sandbox.LaunchOptions{Environ: os.Environ(), Config: b.cfg})
+	return sh.Shell(ctx, b.root, cwd, sandbox.LaunchOpts{Environ: os.Environ(), Config: b.cfg})
 }

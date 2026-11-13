@@ -22,7 +22,7 @@ func TestLogPanelShowsNewRecords(t *testing.T) {
 
 // Records written with the log panel closed draw no frame; with it open, they show.
 func TestLogRecordsDrawOnlyWhileThePanelShows(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir()})
 	r.WaitText("ORIEL")
 	log := r.Host.Log()
 	r.Idle()
