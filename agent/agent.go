@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -81,6 +82,17 @@ type Features struct {
 	// Notes is the file it reads standing instructions from at the root of where it starts ("CLAUDE.md"), which a
 	// workspace's notes are written to; AGENTS.md, which most agents read, if "".
 	Notes string
+}
+
+// NotesFiles are the files a workspace's notes are written to for ps: AGENTS.md, and each one's own (Features.Notes).
+func NotesFiles(ps []Provider) []string {
+	out := []string{"AGENTS.md"}
+	for _, p := range ps {
+		if n := FeaturesOf(p).Notes; n != "" && !slices.Contains(out, n) {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 // FeaturesOf are p's Features.

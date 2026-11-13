@@ -201,6 +201,3 @@ func OwnBranch(p core.Project) (string, error) {
 	}
 	return p.Branch, nil
 }
-
-// NotesFiles are the agent notes generated at a workspace's root: CLAUDE.md for Claude, AGENTS.md for Codex.
-var NotesFiles = []string{"CLAUDE.md", "AGENTS.md"}

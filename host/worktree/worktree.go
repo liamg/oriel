@@ -6,6 +6,7 @@ package worktree
 import (
 	"context"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 )
@@ -28,11 +29,21 @@ type Deps struct {
 	Repos func() []core.Repo
 	// ReposDir is where new repos go when nothing else says.
 	ReposDir func() string
+	// NotesFiles are the agents' notes files a workspace keeps out of its git (agent.NotesFiles).
+	NotesFiles func() []string
 }
 
 // New makes workspaces under env's home.
 func New(env hostcore.Env, st hostcore.State, deps Deps) *Worktrees {
 	return &Worktrees{env: env, st: st, deps: deps}
+}
+
+// notesFiles are the agents' notes files, AGENTS.md alone with no Deps.NotesFiles.
+func (x *Worktrees) notesFiles() []string {
+	if x.deps.NotesFiles == nil {
+		return agent.NotesFiles(nil)
+	}
+	return x.deps.NotesFiles()
 }
 
 // worktrees are the session's projects that are worktrees Oriel made.

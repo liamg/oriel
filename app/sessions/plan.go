@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -190,8 +191,13 @@ func (x *Plan) docs(se core.SessionState, st *planState) (docs []planDoc, loadin
 		was[d.path] = d
 	}
 	st.docs = []planDoc{}
+	var providers []agent.Provider
+	for _, p := range registry.AgentProviders(x.h) {
+		providers = append(providers, p.Provider)
+	}
+	notes := agent.NotesFiles(providers)
 	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") || slices.Contains(host.NotesFiles, e.Name()) {
+		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") || slices.Contains(notes, e.Name()) {
 			continue
 		}
 		path := filepath.Join(se.Dir, e.Name())

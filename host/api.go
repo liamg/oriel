@@ -177,8 +177,6 @@ const (
 )
 
 var (
-	// NotesFiles are the agent notes generated at a workspace's root: CLAUDE.md for Claude, AGENTS.md for Codex.
-	NotesFiles = hostcore.NotesFiles
 	// Templates a new repo can start from, besides any git URL (a GitHub template repo).
 	Templates = worktree.Templates
 	// ErrKeyCancelled is a git operation stopped from its security-key card.

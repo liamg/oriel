@@ -49,9 +49,9 @@ func (x *AIReview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ai-r
 func (x *AIReview) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "aireview", Busy: x.busy.Busy, Source: "builtin:aireview"}))
 	x.h = h
-	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
+	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.String, Choices: kit.ProviderChoices(h), Default: "auto",
 		Scopes: registry.ScopeUser,
-		Help:   "The provider AI reviews run on: claude, codex; auto, the session agent's."}))
+		Help:   "The provider AI reviews run on, by name; auto, the session agent's."}))
 	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.model", Type: registry.String, Default: "default", Choices: func() []string { return []string{"default"} },
 		Scopes: registry.ScopeUser, Help: "The model AI reviews run on: default, the session agent's (or the picked provider's default); or a model's name."}))
 	x.Add(h.Contribute(registry.ShipGate{Name: "ai-review", Title: "AI review", Order: 60, Check: x.shipGate, Source: "builtin:ai-review"}))

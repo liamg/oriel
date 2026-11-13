@@ -78,8 +78,8 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Contribute(d))
 	}
 	for _, o := range []registry.OptionSpec{
-		{Name: "assistant.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
-			Help: "The agent the assistant runs on: claude or codex; auto picks the first installed and signed in."},
+		{Name: "assistant.provider", Type: registry.String, Choices: kit.ProviderChoices(h), Default: "auto",
+			Help: "The agent the assistant runs on, by its provider's name; auto picks the first installed and signed in."},
 		{Name: "assistant.model", Type: registry.String, Default: "default", Choices: func() []string { return []string{"default", "small"} },
 			Help: "The assistant's model: default, the provider's default model; small, its small one (Claude's Haiku); or a model's name."},
 		{Name: "assistant.web", Type: registry.Bool, Default: true,

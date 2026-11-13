@@ -108,7 +108,7 @@ func inPlace(ctx context.Context, se *core.SessionState, spec core.SessionSpec) 
 func (x *Worktrees) workspace(ctx context.Context, se *core.SessionState, spec core.SessionSpec, k core.KindSpec, branch string) error {
 	root := filepath.Join(x.env.WorkspacesDir(), string(se.ID))
 	m := Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(spec.Kind), Ticket: spec.Ticket, Model: spec.Model}
-	if err := newWorkspace(ctx, root, m); err != nil {
+	if err := newWorkspace(ctx, root, m, x.notesFiles()); err != nil {
 		return err
 	}
 	se.Dir = root

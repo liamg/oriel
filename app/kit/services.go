@@ -141,6 +141,17 @@ type Stats interface {
 
 func StatsOf(r registry.Registry) (Stats, bool) { return registry.ServiceOf[Stats](r, StatsService) }
 
+// ProviderChoices are what an option naming an agent provider offers: auto, then each provider registered.
+func ProviderChoices(r registry.Registry) func() []string {
+	return func() []string {
+		out := []string{"auto"}
+		for _, p := range registry.AgentProviders(r) {
+			out = append(out, p.Name)
+		}
+		return out
+	}
+}
+
 // RefetchAfter is how old an answer gets before it's asked for again while it's shown.
 const RefetchAfter = time.Minute
 

@@ -113,18 +113,12 @@ func (x *Runner) WriteNotes(id core.SessionID) {
 	}
 }
 
-// notesFiles are the files the notes go in: AGENTS.md, and each provider's own (agent.Features.Notes).
+// notesFiles are the files the notes go in (agent.NotesFiles).
 func (x *Runner) notesFiles() []string {
-	out := []string{"AGENTS.md"}
 	if x.deps.Providers == nil {
-		return out
+		return agent.NotesFiles(nil)
 	}
-	for _, p := range x.deps.Providers.List() {
-		if n := agent.FeaturesOf(p).Notes; n != "" && !slices.Contains(out, n) {
-			out = append(out, n)
-		}
-	}
-	return out
+	return agent.NotesFiles(x.deps.Providers.List())
 }
 
 // agentNotes are a workspace's notes; with branches, each project's branch, and how to change it.

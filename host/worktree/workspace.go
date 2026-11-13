@@ -103,7 +103,7 @@ func (m Manifest) past() []core.PastPR {
 }
 
 // newWorkspace makes an empty workspace at root: a git repo of its own, so plan docs diff as added files.
-func newWorkspace(ctx context.Context, root string, m Manifest) error {
+func newWorkspace(ctx context.Context, root string, m Manifest, notes []string) error {
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func newWorkspace(ctx context.Context, root string, m Manifest) error {
 	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
 		return err
 	}
-	ignore := ManifestFile + "\n" + ReposDir + "/\n" + strings.Join(hostcore.NotesFiles, "\n") + "\n"
+	ignore := ManifestFile + "\n" + ReposDir + "/\n" + strings.Join(notes, "\n") + "\n"
 	if err := os.WriteFile(exclude, []byte(ignore), 0o644); err != nil {
 		return err
 	}

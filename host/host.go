@@ -181,7 +181,7 @@ func (w *Host) parts() error {
 		return err
 	}
 	w.work = worktree.New(w.env, st, worktree.Deps{Kinds: &w.kinds, Resolve: w.repos.Resolve, AddRepo: w.repos.Add,
-		Repos: w.repos.Repos, ReposDir: w.repos.Dir})
+		Repos: w.repos.Repos, ReposDir: w.repos.Dir, NotesFiles: w.notesFiles})
 	w.run = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
 		MCPServers:   w.mcpServers,
 		Exec:         func() agent.Exec { return w.opts.Exec },
@@ -298,7 +298,10 @@ func (w *Host) waitGoing() {
 var lastingJobs = []string{"an agent's events", "a utility agent", "a permission", "a question", "Terminal", "a terminal dialog",
 	"a sign-in", "usage", "a stuck fetch"}
 
-// Busy names the host's work under way off its callers that will end on its own: agents starting, resumes, marks,
+// notesFiles are the files the providers' agents read a workspace's notes from (agent.NotesFiles).
+func (w *Host) notesFiles() []string { return agent.NotesFiles(w.opts.Providers.List()) }
+
+// Busy names the host's work under way off its callers that will end on its own: agents starting, resumes,
 // notices. A test waits for none before it counts what that work does.
 func (w *Host) Busy() []string {
 	out := w.run.Starting()

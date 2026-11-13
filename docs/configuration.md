@@ -151,7 +151,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | |
 | `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | |
-| `review.ai.provider` | `auto`: the session agent's; or `claude`, `codex` | app | |
+| `review.ai.provider` | `auto`: the session agent's; or a provider's name (`claude`, `codex`, a plugin's) | app | |
 | `review.ai.model` | `default`: the session agent's, or the picked provider's default; or a model's name | app | |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | |
@@ -230,7 +230,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `voice.recorder` | `oriel`: Oriel captures it (Core Audio on macOS, PulseAudio or PipeWire on Linux); or a program: `pw-record`, `parecord`, `arecord` (Linux), `rec` (sox), `ffmpeg` | app | |
 | `voice.speech` | `system` (say, spd-say or espeak), `piper` or `off`: how replies are spoken | app | |
 | `voice.piper_voice` | a Piper voice's name in `~/.oriel/piper`; empty uses the first there | app | |
-| `assistant.provider` | `auto`: the first agent installed and signed in; or `claude`, `codex` | app | |
+| `assistant.provider` | `auto`: the first agent installed and signed in; or a provider's name (`claude`, `codex`, a plugin's) | app | |
 | `assistant.model` | `default`: the provider's default model; `small`, its small one (Claude's Haiku); or a model's name | app | |
 | `assistant.web` | true: the assistant may search the web (the provider's WebSearch and WebFetch) | app | |
 | `assistant.idle` | 15: minutes of quiet before a conversation ends and the next starts afresh | app | |
