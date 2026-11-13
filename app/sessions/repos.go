@@ -114,18 +114,26 @@ func (x *Repos) commands() []registry.Command {
 				if path == "" {
 					return errors.New("add which checkout? Give its {path}")
 				}
+				then, err := kit.CallsOf(a["then"])
+				if err != nil {
+					return err
+				}
 				w, _ := kit.RepoCalls(x.h)
 				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.add." + path, Doing: "Adding " + kit.TildePath(path)},
 					func(ctx context.Context) (core.Repo, error) { return w.AddRepoPath(ctx, path) },
-					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, a["then"], r.ID) })
+					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, then, r.ID) })
 			}},
 		{ID: "repos.clone", Title: "Clone {url} into {parent} as {name}, and register it; {then} runs with {repo} once it's added", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
+				then, err := kit.CallsOf(a["then"])
+				if err != nil {
+					return err
+				}
 				w, _ := kit.RepoCalls(x.h)
 				req := host.CloneReq{URL: a.String("url"), Parent: a.String("parent"), Name: a.String("name")}
 				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.clone." + req.URL, Doing: "Cloning " + req.URL},
 					func(ctx context.Context) (core.Repo, error) { return w.CloneRepo(ctx, req) },
-					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, a["then"], r.ID) })
+					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, then, r.ID) })
 			}},
 		{ID: "repos.remove", Title: "Unregister {repo} and stop discovery adding it back; its files stay", Available: has,
 			Run: func(_ registry.Ctx, a registry.Args) error {
@@ -244,12 +252,8 @@ func (x *Repos) find(ref string) (core.Repo, bool) {
 }
 
 // then runs each of then's calls with {repo} merged into its args.
-func (x *Repos) then(ctx context.Context, then any, id core.RepoID) error {
-	calls, err := kit.CallsOf(then)
-	if err != nil {
-		return err
-	}
-	for _, c := range calls {
+func (x *Repos) then(ctx context.Context, then []kit.Call, id core.RepoID) error {
+	for _, c := range then {
 		a := registry.Args{}
 		for k, v := range c.Args {
 			a[k] = v

@@ -532,10 +532,10 @@ func (x *Jobs) summary(r runRow) string {
 // openRun brings a run's session up: its console the main tab, the sidebar narrow.
 func (x *Jobs) openRun(id core.SessionID) {
 	x.open = false
-	x.runInBackground("session.open", registry.Args{"id": string(id), "then": []any{
-		registry.Args{"command": "view.open", "args": registry.Args{"id": kit.AgentConsoleView, "place": "tab", "title": "Agent"}},
-		registry.Args{"command": "sidebar.form", "args": registry.Args{"form": "narrow"}},
-	}})
+	x.runInBackground("session.open", registry.Args{"id": string(id), "then": kit.Then(
+		kit.Call{Command: "view.open", Args: registry.Args{"id": kit.AgentConsoleView, "place": "tab", "title": "Agent"}},
+		kit.Call{Command: "sidebar.form", Args: registry.Args{"form": "narrow"}},
+	)})
 }
 
 func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {

@@ -339,7 +339,7 @@ func (x *Sessions) addSource(h plugin.Host) uireg.PickerSource {
 				return errors.New("no session is in front")
 			}
 			if it.ID == addNewRepo {
-				return h.Run(ctx, "repos.new", registry.Args{"then": []any{map[string]any{"command": "session.add-repo"}}})
+				return h.Run(ctx, "repos.new", registry.Args{"then": kit.Then(kit.Call{Command: "session.add-repo"})})
 			}
 			before := se.Projects()
 			repo := it.ID
@@ -420,17 +420,22 @@ func (x *Sessions) sendRestart() {
 
 // start starts a session and brings it to the front, unless {background}.
 func (x *Sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
+	then, err := kit.CallsOf(a["then"])
+	if err != nil {
+		return "", err
+	}
 	id, err := x.launch(ctx, a)
 	if err != nil {
 		return "", err
 	}
-	return id, x.front(id, a)
+	return id, x.front(id, a.Bool("background"), then)
 }
 
 // startCommand is session.start: the kind's Prepare and the host's start (a PR's lookup and checkout, worktrees)
 // off the loop, then the session to the front.
 func (x *Sessions) startCommand(ctx registry.Ctx, a registry.Args) error {
-	if _, err := kit.CallsOf(a["then"]); err != nil {
+	then, err := kit.CallsOf(a["then"])
+	if err != nil {
 		return err
 	}
 	if _, err := x.host(); err != nil {
@@ -439,7 +444,7 @@ func (x *Sessions) startCommand(ctx registry.Ctx, a registry.Args) error {
 	n := x.starts.Add(1)
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: fmt.Sprintf("session.start.%d", n), Doing: "Starting " + startName(a)},
 		func(ctx context.Context) (core.SessionID, error) { return x.launch(ctx, a) },
-		func(_ registry.Ctx, id core.SessionID) error { return x.front(id, a) })
+		func(_ registry.Ctx, id core.SessionID) error { return x.front(id, a.Bool("background"), then) })
 }
 
 // startName is how session.start's a names the session to the user, before it has an id.
@@ -452,9 +457,6 @@ func startName(a registry.Args) string {
 
 // launch prepares and starts a session from a, and fires SessionStart on the loop.
 func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID, error) {
-	if _, err := kit.CallsOf(a["then"]); err != nil {
-		return "", err
-	}
 	spec := kit.SpecFrom(a)
 	if on, _, _ := x.h.Options().Get(autoNameOption, registry.At{}); on == true && spec.Name == "" {
 		spec.AutoName = true
@@ -477,15 +479,13 @@ func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID,
 	return id, nil
 }
 
-// front brings a started session to the front, or with {background} opens its tab behind the one in front, and runs
-// a's {then} once the window is on it.
-func (x *Sessions) front(id core.SessionID, a registry.Args) error {
-	if a.Bool("background") {
+// front brings a started session to the front, or in the background opens its tab behind the one in front, and
+// runs then once the window is on it.
+func (x *Sessions) front(id core.SessionID, background bool, then []kit.Call) error {
+	if background {
 		return x.h.Apply(core.TabOpened{ID: id})
 	}
-	then, _ := kit.CallsOf(a["then"])
-	kit.After(x.h, id, append([]kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(id)}}}, then...))
-	return x.h.Apply(core.SessionFocused{ID: id})
+	return kit.Focus(x.h, id, then)
 }
 
 // open brings a session to the front, resuming it if it's stopped, and runs then once the window is on it: after it
@@ -495,10 +495,7 @@ func (x *Sessions) open(ctx context.Context, id core.SessionID, then []kit.Call)
 	if !ok {
 		return fmt.Errorf("no session %q", id)
 	}
-	front := func() error {
-		kit.After(x.h, id, append([]kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(id)}}}, then...))
-		return x.h.Apply(core.SessionFocused{ID: id})
-	}
+	front := func() error { return kit.Focus(x.h, id, then) }
 	if st := se.Snapshot(); st.Archived || (st.Agent.Provider != "" && !st.Agent.Running) {
 		w, err := x.host()
 		if err != nil {

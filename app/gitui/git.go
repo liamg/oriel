@@ -651,10 +651,10 @@ func (s gitTrees) Scope() gitx.Scope {
 	}
 	return s.g.scope()
 }
-func (s gitTrees) Holding(p string) registry.GitTree     { return s.g.holding(p) }
+func (s gitTrees) Holding(p string) registry.GitTree      { return s.g.holding(p) }
 func (s gitTrees) Run(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
-func (s gitTrees) Reload()                               { s.g.reload() }
-func (s gitTrees) Busy() bool                            { return s.g.running.Load() > 0 || s.g.reading() }
+func (s gitTrees) Reload()                                { s.g.reload() }
+func (s gitTrees) Busy() bool                             { return s.g.running.Load() > 0 || s.g.reading() }
 func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {
 	return s.g.watchWindow(fn)
 }

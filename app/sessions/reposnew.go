@@ -37,7 +37,7 @@ type addRepo struct {
 	path, url, parent, name string
 	note                    string // why it's asked, over the fields
 	urlName                 string // the name the URL gave: the name field follows the URL while it holds this
-	then                    any
+	then                    []kit.Call
 	focus                   bool
 
 	key      string    // what the fields held when they last changed
@@ -68,10 +68,11 @@ func expandTilde(p string) string {
 }
 
 func (x *Repos) newDialog(a registry.Args) error {
-	if _, err := kit.CallsOf(a["then"]); err != nil {
+	then, err := kit.CallsOf(a["then"])
+	if err != nil {
 		return err
 	}
-	f := &addRepo{path: a.String("path"), url: a.String("url"), parent: a.String("parent"), name: a.String("name"), note: a.String("note"), then: a["then"], focus: true}
+	f := &addRepo{path: a.String("path"), url: a.String("url"), parent: a.String("parent"), name: a.String("name"), note: a.String("note"), then: then, focus: true}
 	if a.String("mode") == "clone" || f.url != "" {
 		f.mode = 1
 	}

@@ -643,12 +643,12 @@ func (x *PRReview) hear(se core.SessionState) {
 	x.h.Notify(core.Notice{ID: "review.pr.reply." + string(se.ID), Severity: core.SevInfo, Session: se.ID, Title: last.Name + " replied",
 		Text: fmt.Sprintf("On %s, %s:%d: %s", kit.Label(se), at.Anchor.File, at.Anchor.Line, kit.FirstLine(last.Body)),
 		Actions: []core.Action{{Title: "Open the thread", Command: "session.open", Args: map[string]any{"id": string(se.ID),
-			"then": []any{map[string]any{"command": "request.open", "args": map[string]any{"thread": string(at.ID)}}}}}}})
+			"then": kit.Then(kit.Call{Command: "request.open", Args: registry.Args{"thread": string(at.ID)}})}}}})
 }
 
 func openReview(id core.SessionID) core.Action {
 	return core.Action{Title: "Open the review", Command: "session.open",
-		Args: map[string]any{"id": string(id), "then": []any{map[string]any{"command": "ship.pr.open"}}}}
+		Args: map[string]any{"id": string(id), "then": kit.Then(kit.Call{Command: "ship.pr.open"})}}
 }
 
 // saveSummary keeps the summary as typed in the session, once typing has stopped for a moment.

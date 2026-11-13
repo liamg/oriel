@@ -33,17 +33,33 @@ func SpecFrom(a registry.Args) core.SessionSpec {
 	return s
 }
 
-// open brings a session to the front, resuming an archived one.
-// Call is a command to run, with its args.
+// Call is a command to run, with its args: one step of a then, what a command runs once it's done.
 type Call struct {
 	Command string
 	Args    registry.Args
 }
 
-// CallsOf reads a list of {command, args}.
+// Then is calls as a command's then argument travels, through Lua and JSON as well as Go: a list of
+// {command, args}, which CallsOf reads back.
+func Then(calls ...Call) []any {
+	out := make([]any, 0, len(calls))
+	for _, c := range calls {
+		m := map[string]any{"command": c.Command}
+		if c.Args != nil {
+			m["args"] = map[string]any(c.Args)
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
+// CallsOf reads a then: a list of {command, args} (Then), or the calls themselves.
 func CallsOf(v any) ([]Call, error) {
 	if v == nil {
 		return nil, nil
+	}
+	if calls, ok := v.([]Call); ok {
+		return calls, nil
 	}
 	list, ok := v.([]any)
 	if !ok {

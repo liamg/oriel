@@ -130,11 +130,7 @@ func (x *navPlugin) move(ctx context.Context, dir int) error {
 		}
 		kit.RunCalls(x.h, then)
 	default:
-		var calls []any
-		for _, c := range then {
-			calls = append(calls, registry.Args{"command": c.Command, "args": c.Args})
-		}
-		return x.h.Run(ctx, "session.focus", registry.Args{"id": string(to.session), "then": calls})
+		return x.h.Run(ctx, "session.focus", registry.Args{"id": string(to.session), "then": kit.Then(then...)})
 	}
 	return nil
 }

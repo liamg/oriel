@@ -602,7 +602,7 @@ func (x *Reviews) cloneFirst(ctx context.Context, r reviewRow, command string, a
 		func(ctx registry.Ctx, url string) error {
 			return h.Run(ctx, "repos.new", registry.Args{"mode": "clone", "url": url,
 				"note": "You don't have " + req.Repo + " cloned. Clone it to review " + shortKey(req) + "; the review starts once it's added.",
-				"then": []any{map[string]any{"command": command, "args": args}}})
+				"then": kit.Then(kit.Call{Command: command, Args: args})})
 		})
 	return true
 }

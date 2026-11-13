@@ -144,7 +144,7 @@ func (x *Console) commands() []registry.Command {
 		{ID: "agent.console.show", Title: "Show {id}'s agent console: its session in front, and the console open on it",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "session.open", registry.Args{"id": string(session(a)),
-					"then": []any{map[string]any{"command": "view.open", "args": map[string]any(open)}}})
+					"then": kit.Then(kit.Call{Command: "view.open", Args: open})})
 			}},
 		{ID: "agent.console.next", Title: "Agent console: the next block", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
 		{ID: "agent.console.prev", Title: "Agent console: the block before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},

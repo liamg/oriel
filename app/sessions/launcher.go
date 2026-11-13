@@ -324,7 +324,7 @@ func (x *Launcher) args() registry.Args {
 		a["repos"] = repos
 	}
 	if a.String("prompt") != "" || a.String("ticket") != "" {
-		a["then"] = []any{map[string]any{"command": "request.open"}} // the first request, as the agent gets it
+		a["then"] = kit.Then(kit.Call{Command: "request.open"}) // the first request, as the agent gets it
 	}
 	return a
 }
