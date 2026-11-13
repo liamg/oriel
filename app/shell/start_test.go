@@ -42,9 +42,9 @@ func TestStartViewEntries(t *testing.T) {
 	if got := apptest.Recv(t, "Enter to run the selected entry", ran); got != "hello" {
 		t.Fatalf("ran %q", got)
 	}
-	r.TypeKeys("j<CR>")    // New Session: no session host, so it does nothing
+	r.TypeKeys("j<CR>")     // New Session: no session host, so it does nothing
 	r.TypeKeys("jjjjj<CR>") // past Quick Session, Resume, Reviews and Open Directory
-	r.WaitText("SETTINGS") // the settings page's heading
+	r.WaitText("SETTINGS")  // the settings page's heading
 }
 
 // Open Directory on a path reopens the window on it, and remembers it for the next launch's recents.
