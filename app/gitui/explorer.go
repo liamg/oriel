@@ -285,7 +285,7 @@ func (e *Explorer) commands() []registry.Command {
 		}},
 		{ID: "explorer.commit", Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().root(), "all": a["all"] == true})
+				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().Root(), "all": a["all"] == true})
 			}},
 		{ID: "explorer.diff", Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {
@@ -370,7 +370,7 @@ func (e *Explorer) shown() *gitx.State {
 	if e.cols.lines || e.scope() != gitx.All {
 		return e.git().withCounts()
 	}
-	return e.git().state()
+	return e.git().State()
 }
 
 // selectedFile is the selected row's file, in the scope showing.
@@ -420,7 +420,7 @@ func (e *Explorer) build(c *ui.Ctx) {
 	}
 	e.readBadges()
 	c.Column("explorer", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(kit.TExplorerBg), Help: "files/explorer", Role: ui.RoleRegion, Label: "Explorer"}, func(c *ui.Ctx) {
-		if e.git().ready && e.git().root() == "" {
+		if e.git().ready && e.git().Root() == "" {
 			c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Gap: 6}, func(c *ui.Ctx) {
 				c.Text("t", "Not a git repository", kit.MonoTok(c, 11.5, theme.FgMuted))
 				c.Text("d", "Open a directory inside a work tree to see its changes.", kit.MonoTok(c, 10.5, theme.FgFaint))
@@ -550,7 +550,7 @@ func (e *Explorer) activate(id string, sc gitx.Scope) {
 // items are a scope's rows: Uncommitted's in sections, Changed's flat or as a tree, All's as a tree under the
 // project's root.
 func (e *Explorer) items(c *ui.Ctx, st *gitx.State, sc gitx.Scope) []widget.TreeItem {
-	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().root(), changedOnly: e.changedOnly, hidden: e.hidden, layout: e.layout(),
+	key := explorerRowsKey{st: st, sc: sc, th: c.Theme(), root: e.git().Root(), changedOnly: e.changedOnly, hidden: e.hidden, layout: e.layout(),
 		statusCol: e.cols.status}
 	switch {
 	case sc == gitx.Uncommitted:
@@ -608,7 +608,7 @@ func (e *Explorer) buildItems(th *theme.Resolved, st *gitx.State, sc gitx.Scope)
 	if e.changedOnly || !e.hidden {
 		files = slices.DeleteFunc(slices.Clone(files), func(f gitx.FileState) bool { return f.Code == 0 && (e.changedOnly || isHidden(f.Path)) })
 	}
-	root := filepath.Base(e.git().root())
+	root := filepath.Base(e.git().Root())
 	note := st.Branch
 	if st.Ahead > 0 {
 		note += fmt.Sprintf(" · ↑%d", st.Ahead)

@@ -230,7 +230,7 @@ func (g *Git) commands() []registry.Command {
 				return fmt.Errorf("not in a git repository")
 			}
 			for i, p := range ps {
-				ps[i] = t.rel(p)
+				ps[i] = t.Rel(p)
 			}
 			g.async(func(ctx context.Context) error { return fn(ctx, t.status.Repo(), ps) }, t)
 			return nil
@@ -248,7 +248,7 @@ func (g *Git) commands() []registry.Command {
 				if a["confirm"] != true {
 					ps := paths(a)
 					for i, p := range ps {
-						ps[i] = g.holding(p).rel(p)
+						ps[i] = g.holding(p).Rel(p)
 					}
 					h.Notify(core.Notice{ID: "git.discard", Severity: core.SevQuestion, Confirm: true, Title: "Discard changes?",
 						Text: "Throw away the unstaged changes to " + strings.Join(ps, ", ") + "? Untracked files are deleted.",
@@ -370,7 +370,7 @@ func (g *Git) setNested(dir string, n bool) {
 func (g *Git) holding(p string) *gitTree {
 	if filepath.IsAbs(p) {
 		for _, t := range g.trees() {
-			if t.root() != "" && kit.Within(p, t.root()) {
+			if t.Root() != "" && kit.Within(p, t.Root()) {
 				return t
 			}
 		}
@@ -436,7 +436,7 @@ func (g *Git) state() *gitx.State {
 	if g == nil {
 		return nil
 	}
-	return g.gitTree.state()
+	return g.gitTree.State()
 }
 
 func (g *Git) load() widget.LoadState {
@@ -450,14 +450,14 @@ func (g *Git) root() string {
 	if g == nil {
 		return ""
 	}
-	return g.gitTree.root()
+	return g.gitTree.Root()
 }
 
 func (g *Git) rel(p string) string {
 	if g == nil {
 		return p
 	}
-	return g.gitTree.rel(p)
+	return g.gitTree.Rel(p)
 }
 
 func (g *Git) now() time.Time { return kit.WindowNow(g.h) }
@@ -605,7 +605,7 @@ func (t *gitTree) Load() registry.Load {
 	if t == nil {
 		return registry.Load{Done: true}
 	}
-	if !t.ready || t.status != nil && t.state() == nil {
+	if !t.ready || t.status != nil && t.State() == nil {
 		t.mu.Lock()
 		err := t.failed
 		t.mu.Unlock()
@@ -616,10 +616,7 @@ func (t *gitTree) Load() registry.Load {
 
 func (t *gitTree) load() widget.LoadState { return kit.LoadState(t.Load()) }
 
-func (t *gitTree) Root() string         { return t.root() }
-func (t *gitTree) State() *gitx.State   { return t.state() }
 func (t *gitTree) Counted() *gitx.State { return t.withCounts() }
-func (t *gitTree) Rel(p string) string  { return t.rel(p) }
 func (t *gitTree) Status() *gitx.Status {
 	if t == nil {
 		return nil
@@ -662,7 +659,7 @@ func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {
 }
 
 // state is the last status read, nil outside a repo or before the first.
-func (t *gitTree) state() *gitx.State {
+func (t *gitTree) State() *gitx.State {
 	if t == nil || t.status == nil {
 		return nil
 	}
@@ -683,7 +680,7 @@ func (t *gitTree) busy() bool {
 // withCounts is the status with line counts, kept read while something asks for it each frame; the status
 // without them until they're first read.
 func (t *gitTree) withCounts() *gitx.State {
-	st := t.state()
+	st := t.State()
 	if st == nil {
 		return nil
 	}
@@ -722,7 +719,7 @@ func (t *gitTree) manager() *watch.Manager {
 	return w.App()
 }
 
-func (t *gitTree) root() string {
+func (t *gitTree) Root() string {
 	if t == nil || t.status == nil {
 		return ""
 	}
@@ -730,21 +727,21 @@ func (t *gitTree) root() string {
 }
 
 // rel is a path relative to the repo's root, as git names it, from one that's absolute or relative to the work dir.
-func (t *gitTree) rel(p string) string {
-	if t.root() == "" {
+func (t *gitTree) Rel(p string) string {
+	if t.Root() == "" {
 		return p
 	}
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(t.work, p)
 	}
-	if r, err := filepath.Rel(t.root(), p); err == nil {
+	if r, err := filepath.Rel(t.Root(), p); err == nil {
 		return filepath.ToSlash(r)
 	}
 	return p
 }
 
 // abs is a repo path as a path on disk.
-func (t *gitTree) abs(rel string) string { return filepath.Join(t.root(), filepath.FromSlash(rel)) }
+func (t *gitTree) abs(rel string) string { return filepath.Join(t.Root(), filepath.FromSlash(rel)) }
 
 // settled says every work tree asked for has had its root looked for.
 func (g *Git) settled() bool {

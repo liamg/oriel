@@ -40,7 +40,7 @@ func pathOf(subject string) string { return strings.TrimPrefix(subject, kit.Path
 
 // subject is what the row for rel stands for to its right-click menu.
 func (e *Explorer) subject(rel string) string {
-	if e.git().root() == "" {
+	if e.git().Root() == "" {
 		return ""
 	}
 	p := e.git().abs(rel)
@@ -68,12 +68,12 @@ func (e *Explorer) readOnly(path string) string {
 func (e *Explorer) absPath(a registry.Args) (string, error) {
 	p := strings.TrimSpace(a.String("path"))
 	switch {
-	case p == "" && e.git().root() == "":
+	case p == "" && e.git().Root() == "":
 		return "", errors.New("which path? {path}")
 	case p == "":
-		return e.git().root(), nil
+		return e.git().Root(), nil
 	case !filepath.IsAbs(p):
-		p = filepath.Join(e.git().root(), p)
+		p = filepath.Join(e.git().Root(), p)
 	}
 	return filepath.Clean(p), nil
 }
@@ -152,7 +152,7 @@ func (e *Explorer) fileCommands() []registry.Command {
 				return err
 			}
 			if a.Bool("relative") {
-				if r, err := filepath.Rel(e.git().root(), p); err == nil && !strings.HasPrefix(r, "..") {
+				if r, err := filepath.Rel(e.git().Root(), p); err == nil && !strings.HasPrefix(r, "..") {
 					p = filepath.ToSlash(r)
 				}
 			}
