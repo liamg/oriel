@@ -26,8 +26,8 @@ const (
 
 // OptionDef is one of the engine's options, for a host that keeps them (the IDE's settings).
 type OptionDef struct {
-	Name    string   // vim's name: "shiftwidth"
-	Short   string   // "sw"
+	Name    string // vim's name: "shiftwidth"
+	Short   string // "sw"
 	Kind    OptionKind
 	Values  []string // an enum's
 	Default any

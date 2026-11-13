@@ -569,7 +569,9 @@ var chartFormats = map[string]func(float64) string{
 }
 
 // tone is a colour from Lua: a theme token's name, or #rrggbb.
-func tone(th *theme.Resolved, v string, fallback render.Color) render.Color { return th.Tone(v, fallback) }
+func tone(th *theme.Resolved, v string, fallback render.Color) render.Color {
+	return th.Tone(v, fallback)
+}
 
 // chart builds an oriel.ui.chart node with widget.Chart, as the built-in pages draw theirs.
 func chart(c *ui.Ctx, n script.Table, a *APIs) {

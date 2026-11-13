@@ -124,6 +124,6 @@ func (d Decision) Decided() bool { return d == DecisionAllow || d == DecisionDen
 // Verdict is what the policy hooks said: allow, deny, or "" to ask the user.
 type Verdict struct {
 	Decision Decision `json:"decision,omitempty"`
-	Note     string `json:"note,omitempty"`
-	By       string `json:"by,omitempty"`
+	Note     string   `json:"note,omitempty"`
+	By       string   `json:"by,omitempty"`
 }

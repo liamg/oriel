@@ -138,22 +138,22 @@ type (
 )
 
 const (
-	DraftByYou    = hostcore.DraftByYou
-	AIReviewPack  = aireview.AIReviewPack
-	BatchLead     = agentrun.BatchLead
-	NoticeLead    = agentrun.NoticeLead
-	NoPosting     = agentrun.NoPosting
-	KeyWait       = agentrun.KeyWait
-	ForAll        = agentrun.ForAll
+	DraftByYou   = hostcore.DraftByYou
+	AIReviewPack = aireview.AIReviewPack
+	BatchLead    = agentrun.BatchLead
+	NoticeLead   = agentrun.NoticeLead
+	NoPosting    = agentrun.NoPosting
+	KeyWait      = agentrun.KeyWait
+	ForAll       = agentrun.ForAll
 	// An ask's answers (Decision).
 	DecisionAllow   = agentrun.DecisionAllow
 	DecisionAlways  = agentrun.DecisionAlways
 	DecisionDeny    = agentrun.DecisionDeny
 	DecisionAnswer  = agentrun.DecisionAnswer
 	DecisionRecheck = agentrun.DecisionRecheck
-	GatewayServer = sandboxhost.GatewayServer
-	ManifestFile  = worktree.ManifestFile
-	ReposDir      = worktree.ReposDir
+	GatewayServer   = sandboxhost.GatewayServer
+	ManifestFile    = worktree.ManifestFile
+	ReposDir        = worktree.ReposDir
 
 	SourceSession  = sandboxhost.SourceSession
 	SourceProject  = sandboxhost.SourceProject
