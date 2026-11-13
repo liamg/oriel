@@ -139,7 +139,7 @@ func (w *whichKey) build(c *ui.Ctx) {
 		Float: &ui.Float{Point: &at, Self: render.Point{X: .5, Y: 1}}, Role: ui.RoleDialog, Label: "Keys that can follow"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(16, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			for i, k := range p.Keys {
-				c.Box(i, ui.Style{}, func(c *ui.Ctx) { kit.KbdKey(c, keyCap(k)) })
+				c.Box(i, ui.Style{}, func(c *ui.Ctx) { kit.KbdKey(c, kit.KeyLabel(k)) })
 			}
 			if title != "" {
 				c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(tWKGroup)})
@@ -159,7 +159,7 @@ func (w *whichKey) build(c *ui.Ctx) {
 						}
 						e := es[i]
 						c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(10, 0), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-							c.Text("k", keyCap(e.key), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Weight: typeset.SemiBold}, Color: th.C(tWKKey)})
+							c.Text("k", kit.KeyLabel(e.key), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Weight: typeset.SemiBold}, Color: th.C(tWKKey)})
 							c.Text("arrow", "→", mono(11, theme.FgGhost))
 							desc := tWKDesc
 							if e.group {
@@ -179,15 +179,4 @@ func (w *whichKey) build(c *ui.Ctx) {
 			}
 		})
 	})
-}
-
-// keyCap is a key as which-key shows it: the space bar as ␣.
-func keyCap(k string) string {
-	switch k {
-	case " ", "<Space>":
-		return "␣"
-	case "<CR>":
-		return "⏎"
-	}
-	return k
 }

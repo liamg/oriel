@@ -331,7 +331,7 @@ func (v *helpView) page(c *ui.Ctx) {
 						c.Text("covers", "covers: "+strings.Join(p.Covers, ", "), small)
 					}
 					c.Box("gap2", ui.Style{H: ui.Flex(1)}, nil)
-					c.Text("nav", "^o back · ^i forward · esc close", small)
+					c.Text("nav", kit.KeyLabel("<C-o>")+" back · "+kit.KeyLabel("<C-i>")+" forward · esc close", small)
 				})
 			})
 		})
@@ -412,7 +412,7 @@ func (v *helpView) keys(c *ui.Ctx, key any, glob string) {
 		c.Text("label", "KEYS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium, Tracking: .14}, Color: th.C(tHelpLabel)})
 		for i, k := range rows {
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 14, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
-				c.Row("k", ui.Style{W: ui.Px(140)}, func(c *ui.Ctx) { kit.KbdKey(c, keyCap(k.Keys)) })
+				c.Row("k", ui.Style{W: ui.Px(140)}, func(c *ui.Ctx) { kit.KbdKey(c, kit.KeyLabel(k.Keys)) })
 				desc := k.Desc
 				if desc == "" {
 					desc = k.Command
@@ -525,7 +525,7 @@ func (v *helpView) expand(b help.Block) string {
 	case "keys":
 		for _, k := range v.h.Keymaps() {
 			if ok, _ := path.Match(b.Text, k.Command); ok && k.Command != "" {
-				lines = append(lines, fmt.Sprintf("- %s (%s mode): %s", keyCap(k.Keys), k.Mode, cmp.Or(k.Desc, k.Command)))
+				lines = append(lines, fmt.Sprintf("- %s (%s, %s mode): %s", kit.KeyLabel(k.Keys), k.Keys, k.Mode, cmp.Or(k.Desc, k.Command)))
 			}
 		}
 		if len(lines) > 0 {

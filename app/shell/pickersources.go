@@ -23,7 +23,8 @@ func keymapsSource(h plugin.Host, configDir string) uireg.PickerSource {
 				if label == "" {
 					label = k.Command
 				}
-				out = append(out, uireg.PickerItem{ID: fmt.Sprint(i), Label: label + " " + k.Keys, Detail: k.Mode + " · " + k.Command, Note: k.Source,
+				out = append(out, uireg.PickerItem{ID: fmt.Sprint(i), Label: label + " " + kit.KeyLabel(k.Keys), Detail: k.Mode + " · " + k.Command,
+					Desc: k.Keys, // matched, so <C-r> finds it, but shown as the keyboard has it Note: k.Source,
 					Icon: "⌨", Data: k})
 			}
 			return out
@@ -32,7 +33,7 @@ func keymapsSource(h plugin.Host, configDir string) uireg.PickerSource {
 			k := it.Data.(registry.Keymap)
 			return &ui.Func{Key: "keymap", Fn: func(c *ui.Ctx) {
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-					kit.PreviewHead(c, k.Mode, ui.TextStyle{Color: c.Theme().C(tOmniMatch)}, k.Keys)
+					kit.PreviewHead(c, k.Mode, ui.TextStyle{Color: c.Theme().C(tOmniMatch)}, kit.KeyLabel(k.Keys))
 					kit.PreviewField(c, "command", k.Command)
 					if len(k.Args) > 0 {
 						kit.PreviewField(c, "args", fmt.Sprint(k.Args))

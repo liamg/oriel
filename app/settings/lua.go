@@ -512,7 +512,7 @@ func (x *Lua) keymapRows() []registry.InspectRow {
 			if k.Mode != m || k.Command == "" {
 				continue
 			}
-			out = append(out, registry.InspectRow{Key: k.Keys, Value: k.Command, Source: k.Source, Faded: won[k.Keys]})
+			out = append(out, registry.InspectRow{Key: kit.KeyLabel(k.Keys), Value: k.Command, Source: k.Source, Faded: won[k.Keys]})
 			won[k.Keys] = true
 		}
 	}

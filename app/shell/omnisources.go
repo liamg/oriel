@@ -71,7 +71,7 @@ func commandsSource(h plugin.Host) uireg.PickerSource {
 			keys := map[string]string{}
 			for _, k := range h.Keymaps() {
 				if _, ok := keys[k.Command]; !ok {
-					keys[k.Command] = k.Keys
+					keys[k.Command] = kit.KeyLabel(k.Keys)
 				}
 			}
 			var out []uireg.PickerItem
@@ -95,7 +95,7 @@ func commandsSource(h plugin.Host) uireg.PickerSource {
 					}
 					kit.PreviewField(c, "source", cmd.Source)
 					for i, k := range keysFor(cmd.ID) {
-						kit.PreviewField(c, fmt.Sprint("keys ", i+1), k.Mode+" "+k.Keys)
+						kit.PreviewField(c, fmt.Sprint("keys ", i+1), k.Mode+" "+kit.KeyLabel(k.Keys))
 					}
 				})
 			}}

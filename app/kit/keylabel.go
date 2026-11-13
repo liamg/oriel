@@ -9,7 +9,8 @@ import (
 var keyMods = map[byte]string{'C': "⌃", 'M': "⌥", 'D': "⌘", 'S': "⇧"}
 
 var keyNames = map[string]string{"CR": "↵", "Esc": "esc", "Space": "␣", "BS": "⌫", "Tab": "⇥", "lt": "<", "Up": "↑", "Down": "↓",
-	"Left": "←", "Right": "→", "X1Mouse": "mouse back", "X2Mouse": "mouse forward"}
+	"Left": "←", "Right": "→", "Del": "⌦", "Home": "↖", "End": "↘", "PageUp": "⇞", "PageDown": "⇟", "Insert": "ins",
+	"Leader": "leader", "LocalLeader": "localleader", "X1Mouse": "mouse back", "X2Mouse": "mouse forward"}
 
 // KeyLabel writes keys in vim notation as a keyboard shows them: "<D-E>" is ⌘⇧E, "<C-w>c" is ⌃W c, "<Space>f" is ␣f.
 func KeyLabel(keys string) string {
