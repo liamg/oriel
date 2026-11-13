@@ -192,7 +192,7 @@ func (x *GitHub) follow() {
 			return budgetedSync{watch.Subscribe(m, src, need, "github: review sync"), x.budget.Use(key, githubRequests)}
 		})
 	}
-	x.subs.Only(keep)
+	x.subs.KeepOnly(keep)
 }
 
 // budgetedSync is a sync's subscription, counted against the budget until it's closed.

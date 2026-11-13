@@ -155,9 +155,9 @@ func (r *Reads) highlight(k highlightKey) *SourceFile {
 	return f
 }
 
-// Land takes in the reads that have landed since it last ran. The window calls it as each frame starts, so a read
+// Drain takes in the reads that have landed since it last ran. The window calls it as each frame starts, so a read
 // lands though the view that asked for it has gone.
-func (r *Reads) Land() { r.q.run() }
+func (r *Reads) Drain() { r.q.run() }
 
 func (r *Reads) note(st ui.LoadState) {
 	if st.Phase == ui.Pending {

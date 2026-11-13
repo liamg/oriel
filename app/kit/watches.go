@@ -119,8 +119,8 @@ func (s *Subs) Drop(key string) {
 	}
 }
 
-// Only closes every subscription not in keep.
-func (s *Subs) Only(keep map[string]bool) {
+// KeepOnly closes every subscription not in keep.
+func (s *Subs) KeepOnly(keep map[string]bool) {
 	s.mu.Lock()
 	var gone []Closer
 	for k, h := range s.held {
@@ -159,7 +159,7 @@ func (s *Subs) Len() int {
 }
 
 // Close closes them all.
-func (s *Subs) Close() { s.Only(nil) }
+func (s *Subs) Close() { s.KeepOnly(nil) }
 
 // Budget shares an API's request allowance between the sources polling it: each says how many requests a read
 // makes, and Interval stretches every poll so that together they keep to PerHour. A rate limit hit doubles the

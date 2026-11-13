@@ -501,7 +501,7 @@ func mdPicture(pics *kit.Pictures, src, dir string) (pc *kit.Picture, why string
 	case src == "":
 		return &kit.Picture{}, "an image with no source"
 	case strings.HasPrefix(src, "data:"):
-		pc = pics.Data(src)
+		pc = pics.FromDataURI(src)
 	case strings.HasPrefix(src, "//"):
 		pc = pics.Remote("https:" + src)
 	case strings.HasPrefix(src, "http://"), strings.HasPrefix(src, "https://"):

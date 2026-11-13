@@ -628,7 +628,7 @@ func (x *Plugin) framed() {
 	used := x.used
 	x.used = map[string]bool{}
 	x.mu.Unlock()
-	x.subs.Only(used)
+	x.subs.KeepOnly(used)
 }
 
 // fresher reads again what's older than liveAfter: the agents it counts have moved on.

@@ -109,8 +109,8 @@ func PicturesOf(c *ui.Ctx) *Pictures {
 // SetRemote fetches remote images, or (off) answers each with an error saying markdown.remote_images is off.
 func (p *Pictures) SetRemote(on bool) { p.remoteOff.Store(!on) }
 
-// Made is the picture make makes from from, kept under key until from changes: an icon tinted from its image.
-func (p *Pictures) Made(key string, from any, make func() *Picture) *Picture {
+// Memo is the picture make makes from from, kept under key until from changes: an icon tinted from its image.
+func (p *Pictures) Memo(key string, from any, make func() *Picture) *Picture {
 	if m, ok := p.made[key]; ok && m.from == from {
 		return m.pc
 	}
@@ -147,8 +147,8 @@ func (p *Pictures) File(path string) *Picture {
 	return p.picture(p.files.Get(path))
 }
 
-// Data is the picture a data: URI holds, decoded once.
-func (p *Pictures) Data(uri string) *Picture {
+// FromDataURI is the picture a data: URI holds, decoded once.
+func (p *Pictures) FromDataURI(uri string) *Picture {
 	p.q.run()
 	return p.picture(p.data.Get(uri))
 }

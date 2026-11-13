@@ -617,7 +617,7 @@ func (t *gitTree) Load() registry.Load {
 
 func (t *gitTree) load() widget.LoadState { return kit.LoadState(t.Load()) }
 
-func (t *gitTree) Counted() *gitx.State { return t.withCounts() }
+func (t *gitTree) StateWithCounts() *gitx.State { return t.withCounts() }
 func (t *gitTree) Status() *gitx.Status {
 	if t == nil {
 		return nil

@@ -69,7 +69,7 @@ func (x *Ship) follow() (started []core.SessionID) {
 			return budgeted{watch.Subscribe(m, prs, need, "ship: pull requests"), x.budget.Use(prs.Key, prRequests)}
 		})
 	}
-	x.subs.Only(keep)
+	x.subs.KeepOnly(keep)
 	x.mu.Lock()
 	x.projects = map[core.SessionID][]core.Project{}
 	for _, se := range st.Sessions {

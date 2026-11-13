@@ -36,7 +36,7 @@ type noTree struct{}
 
 func (noTree) Root() string         { return "" }
 func (noTree) State() *gitx.State   { return nil }
-func (noTree) Counted() *gitx.State { return nil }
+func (noTree) StateWithCounts() *gitx.State { return nil }
 func (noTree) Remote() string       { return "" }
 func (noTree) Status() *gitx.Status { return nil }
 func (noTree) Rel(p string) string  { return p }

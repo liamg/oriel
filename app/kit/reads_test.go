@@ -27,7 +27,7 @@ func TestAReadLandsWithoutAnotherAsk(t *testing.T) {
 	if !rd.Busy() {
 		t.Fatal("a read landed and not taken in, and the reads aren't busy")
 	}
-	rd.Land()
+	rd.Drain()
 	if rd.Busy() {
 		t.Errorf("busy once the read is taken in: %v", rd.Pending())
 	}
