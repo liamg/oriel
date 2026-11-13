@@ -175,7 +175,10 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 					if k := kit.BoundKey(h, "session.new", nil); k != "" {
 						tip += " " + k
 					}
-					if widget.IconButton(c, "b", "+", widget.IconButtonOpts{Label: "New session", Tooltip: tip, Help: "shell/tabs", Size: 22}) {
+					if k := kit.BoundKey(h, "session.quick", nil); k != "" {
+						tip += " · quick session " + k + ", or right-click"
+					}
+					if widget.IconButton(c, "b", "+", widget.IconButtonOpts{Label: "New session", Tooltip: tip, Help: kit.NewSessionHelp, Size: 22}) {
 						h.Run(context.Background(), "session.new", nil)
 					}
 				})

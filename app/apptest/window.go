@@ -576,6 +576,19 @@ func (w *Window) ClickAccessIn(within, label string) {
 	}, render.ButtonPrimary)
 }
 
+// RightClickAccess right-clicks the control named label, found in the window's accessibility tree where it's
+// settled: for its menu.
+func (w *Window) RightClickAccess(label string) {
+	w.T.Helper()
+	w.clickOn(fmt.Sprintf("%q to right-click", label), func(headless.Frame) (render.Point, bool) {
+		n := w.lastAccess("", label)
+		if n == nil {
+			return render.Point{}, false
+		}
+		return Centre(n.Bounds), true
+	}, render.ButtonSecondary)
+}
+
 // lastAccess is the last node on screen named label inside a node named within (anywhere when within is empty), or nil.
 func (w *Window) lastAccess(within, label string) *render.AccessNode {
 	var found *render.AccessNode
