@@ -101,7 +101,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.menu
 
-- `oriel.menu.add(spec)` (`ui`): Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
+- `oriel.menu.add(spec)` (`ui`): Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
 
 ## oriel.overview
 
@@ -154,7 +154,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.status
 
-- `oriel.status.rule(fn)` (`ui`): A status rule: fn(session) returns a status colour name, or nil to leave it.
+- `oriel.status.rule(fn, opts?)` (`ui`): A status rule: fn(session) returns a status colour name, or nil to leave it. opts: name (one of its own if omitted), which a later rule of the name replaces.
 
 ## oriel.thread
 

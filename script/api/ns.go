@@ -487,9 +487,16 @@ func (h HUD) Refresh(name string) error {
 //oriel:api name=status cap=ui
 type Status struct{ a *APIs }
 
-//oriel:api doc="A status rule: fn(session) returns a status colour name, or nil to leave it."
-func (s Status) Rule(fn *script.Fn, where string) error {
-	s.a.own(s.a.Host.Contribute(registry.StatusRule{Name: where, Source: where, Rule: func(sess map[string]any) (string, error) {
+//oriel:api doc="A status rule: fn(session) returns a status colour name, or nil to leave it. opts: name (one of its own if omitted), which a later rule of the name replaces." optional=opts
+func (s Status) Rule(fn *script.Fn, opts script.Table, where string) error {
+	name := str(opts, "name")
+	if name == "" {
+		s.a.mu.Lock()
+		s.a.n++
+		name = fmt.Sprintf("%s#%d", where, s.a.n)
+		s.a.mu.Unlock()
+	}
+	s.a.own(s.a.Host.Contribute(registry.StatusRule{Name: name, Source: where, Rule: func(sess map[string]any) (string, error) {
 		out, err := s.a.VM.Call(fn, sess)
 		if err != nil || len(out) == 0 {
 			return "", err

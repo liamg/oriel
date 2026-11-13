@@ -81,7 +81,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.lsp.server(spec)", Doc: "Register a language server: { name, languages = { \\", Cap: "exec"},
 	},
 	"menu": {
-		{Call: "oriel.menu.add(spec)", Doc: "Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.", Cap: "ui"},
+		{Call: "oriel.menu.add(spec)", Doc: "Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.", Cap: "ui"},
 	},
 	"overview": {
 		{Call: "oriel.overview.add(spec)", Doc: "Add a panel to the project overview's cards: { name, title, order (50 by default), repos = true, dirs = true, compute = fn(dir) }. compute returns rows, each { label, value }, and runs on the app's loop, so keep it quick.", Cap: "ui"},
@@ -123,7 +123,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.start.add(spec)", Doc: "Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note, shown, unlisted }. It's dimmed while the command isn't available, and listed only while shown = fn() returns true, when there's a shown. link = true makes it a small link under the actions. note = fn() is its figure, beside its title. unlisted = true draws nothing: only its command's keys work on the start view, which keeps other keys out.", Cap: "ui"},
 	},
 	"status": {
-		{Call: "oriel.status.rule(fn)", Doc: "A status rule: fn(session) returns a status colour name, or nil to leave it.", Cap: "ui"},
+		{Call: "oriel.status.rule(fn, opts?)", Doc: "A status rule: fn(session) returns a status colour name, or nil to leave it. opts: name (one of its own if omitted), which a later rule of the name replaces.", Cap: "ui"},
 	},
 	"thread": {
 		{Call: "oriel.thread.list()", Doc: "The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent) }.", Cap: "agent.read"},

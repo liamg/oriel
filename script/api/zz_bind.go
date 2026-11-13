@@ -546,7 +546,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Rule(c.Fn(0), c.Where())
+				return nil, x.Rule(c.Fn(0), c.Table(1), c.Where())
 			},
 		})
 	}

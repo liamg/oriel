@@ -270,6 +270,34 @@ L.status.rule(function(sess) if sess.red then return "error" end end)
 	}
 }
 
+// Menu entries and status rules added in a loop are each their own: a name the call gives, else one of its own, never
+// only the line that made it, which every pass shares.
+func TestLuaMenuAndStatusRulesFromALoop(t *testing.T) {
+	s := apptest.LuaScene(t, `local L = oriel
+for _, l in ipairs({ "One", "Two" }) do L.menu.add{ label = l, run = "noop" } end
+L.menu.add{ name = "mine", label = "Three", run = "noop" }
+for _, c in ipairs({ "error", "warn" }) do L.status.rule(function() return c end) end
+L.status.rule(function() end, { name = "named" })
+`)
+	var menus []string
+	for _, c := range s.Registry().Contributions("menu.item") {
+		menus = append(menus, c.(registry.MenuItem).Label)
+	}
+	if !slices.Contains(menus, "One") || !slices.Contains(menus, "Two") || !slices.Contains(menus, "Three") {
+		t.Errorf("menu entries %q, want One, Two and Three", menus)
+	}
+	var rules []string
+	for _, c := range s.Registry().Contributions("status.rule") {
+		r := c.(registry.StatusRule)
+		v, _ := r.Rule(nil)
+		rules = append(rules, r.Name+"="+v)
+	}
+	if len(rules) != 3 || !slices.ContainsFunc(rules, func(r string) bool { return strings.HasSuffix(r, "=error") }) ||
+		!slices.ContainsFunc(rules, func(r string) bool { return strings.HasSuffix(r, "=warn") }) || !slices.Contains(rules, "named=") {
+		t.Errorf("status rules %q, want both of the loop's and the named one", rules)
+	}
+}
+
 // L.language adds a language the editor picks by extension.
 func TestLuaLanguage(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
