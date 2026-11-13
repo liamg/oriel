@@ -508,6 +508,9 @@ func (x *Walkthrough) stage(c *ui.Ctx, w *walkthrough) {
 	stageID := c.Next("stage")
 	in := c.Interaction(stageID)
 	if s.path == "" {
+		if x.diagram(c, stageID, s) {
+			return
+		}
 		c.Column("stage", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 			msg := "This step is about the change as a whole."
 			if s.missing {
@@ -575,6 +578,33 @@ func (x *Walkthrough) stage(c *ui.Ctx, w *walkthrough) {
 		})
 		x.notes(c, w, s, ps, area, cardX, notesW)
 	})
+}
+
+// diagram draws a step with no file's diagram in the room a file would take, centred and scaled down to fit it, with
+// what it is over it. It answers false when the step has none it can draw.
+func (x *Walkthrough) diagram(c *ui.Ctx, stageID ui.ID, s walkStep) bool {
+	if s.Diagram == "" || s.missing {
+		return false
+	}
+	l, err := kit.DiagramOf(c, s.Diagram)
+	if err != nil || l == nil {
+		return false
+	}
+	th := c.Theme()
+	area := render.XYWH(0, 0, 1200, 600)
+	if r, ok := c.Rect(stageID); ok {
+		area = r
+	}
+	// As wide as fits, and no taller than the stage leaves under the kicker.
+	width := min(area.Dx()-80, l.Size.X)
+	if h := area.Dy() - 90; h > 0 && l.Size.Y*width/l.Size.X > h {
+		width = l.Size.X * h / l.Size.Y
+	}
+	c.Column("stage", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 14, Clip: true}, func(c *ui.Ctx) {
+		c.Text("kicker", kit.DiagramKicker(l), kit.KickerFont(th.C(theme.FgFaint)))
+		kit.Diagram(c, "diagram", l, max(width, 80), kit.MarkdownOpts{Help: walkHelp})
+	})
+	return true
 }
 
 // codeColsMost is the widest the stage's code column grows for its file, in columns: a stray long line runs under the
