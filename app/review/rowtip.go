@@ -83,10 +83,12 @@ func rowTipLines(q registry.ReviewRequest, now time.Time) []string {
 	}
 	add(size, files)
 	var asked, reviewed []string
-	for _, rv := range q.Reviewers {
+	for _, rv := range kit.MergeReviewers(q.Reviewers) {
 		switch rv.State {
 		case "requested":
 			asked = append(asked, rv.Login)
+		case registry.ReviewReRequested:
+			asked = append(asked, rv.Login+" (again)")
 		case "changes":
 			reviewed = append(reviewed, rv.Login+" changes requested")
 		case "":
