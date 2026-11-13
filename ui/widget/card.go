@@ -151,7 +151,7 @@ func ActionCard(c *ui.Ctx, key any, o ActionCardOpts, body func(c *ui.Ctx)) Acti
 			res.Dismissed = true
 		}
 	}
-	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(14, 12), Gap: 9, Fill: fill, Stroke: alpha(o.Tone, .55), Border: 1, Radius: 8, Focusable: true,
+	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(14, 12), Gap: 9, Fill: fill, Stroke: alpha(o.Tone, .55), Border: 1, Radius: 8, Focusable: true, Selectable: true,
 		FocusOnOpen: o.TakeFocus, KeyMode: "card", Help: o.Help, Role: ui.RoleGroup, Label: label}, func(c *ui.Ctx) {
 		if o.Kicker != "" {
 			c.Row("kicker", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

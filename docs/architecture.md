@@ -212,7 +212,9 @@ agent that loses its sign-in is started once again on the host's, handed over af
     `ScrollWith`; a chip that must stay whole is `Keep`.
   - Text selects and copies by default: a drag, a double click (a word) or a triple click (a node's text), then the
     platform's copy key. A selection stays in the nearest `Selectable` box, else the nearest that scrolls or floats,
-    else the window. Controls, menus and popovers never select, and `NoSelect` opts a box out.
+    else the window. Controls, menus and popovers never select, and `NoSelect` opts a box out. A box that takes focus or
+    clicks for its own sake and holds text (a page, a pane, a window, a toast or ask card, a prompt) is `Selectable`, so
+    a message or error in it is copied rather than retyped; a drag that selects isn't its click.
   - A drag goes as far as the pointer: it measures from where the press went down (`Interaction.PressedAt`), and a
     release the loop gets behind moves no frame has seen yet waits for that frame (`UI.Dragged`).
   - Loading looks the same everywhere: `plugin.Load` tracks a fetch, `widget.Async` and `widget.Busy` draw it.

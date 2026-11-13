@@ -459,7 +459,7 @@ func leaf(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, content Cont
 			if c.PressedWithin(body) && !c.FocusWithin(body) {
 				c.FocusInto(body) // a press on what takes no focus focuses the pane
 			}
-			c.Column("content", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Interactive: true, Help: HelpPane, Role: ui.RoleGroup,
+			c.Column("content", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Interactive: true, Selectable: true, Help: HelpPane, Role: ui.RoleGroup,
 				Label: title(v)}, func(c *ui.Ctx) {
 				content(c, v, focused)
 			})

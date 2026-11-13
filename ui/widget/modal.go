@@ -124,7 +124,7 @@ func Page(c *ui.Ctx, key any, open *bool, o PageOpts, body func(c *ui.Ctx)) {
 	}
 	c.Column(key, ui.Style{W: ui.Px(r.Dx()), H: ui.Px(r.Dy()), Z: ui.LayerPage, Fill: col(c, tPageBg), Clip: true, Trap: true,
 		Enter: &ui.Transition{Fade: true, Shift: render.Point{Y: 6}}, Exit: fadeIn,
-		Focusable: true, KeyMode: cmp.Or(o.KeyMode, "page"), Float: &ui.Float{Point: &r.Min}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, body)
+		Focusable: true, Selectable: true, KeyMode: cmp.Or(o.KeyMode, "page"), Float: &ui.Float{Point: &r.Min}, Role: ui.RoleDialog, Label: o.Label, Help: o.Help}, body)
 }
 
 // Toast is a notification card. It stays until dismissed, or for TTL when that's set.
