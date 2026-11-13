@@ -66,6 +66,9 @@ type Error struct {
 
 func (e *Error) Error() string { return fmt.Sprintf("Azure DevOps: %s (HTTP %d)", e.Message, e.Status) }
 
+// HTTPStatus is the status it was answered with (registry.TokenRefused).
+func (e *Error) HTTPStatus() int { return e.Status }
+
 // do calls the API with a site's token and decodes its answer into out (which may be nil).
 func (c Client) do(ctx context.Context, site Site, method, raw string, in, out any) error {
 	u, err := url.Parse(raw)

@@ -53,6 +53,30 @@ type Error struct {
 
 func (e *Error) Error() string { return fmt.Sprintf("jsonrpc %d: %s", e.Code, e.Message) }
 
+// RPCCode is its code, as a Coded error's.
+func (e *Error) RPCCode() int { return int(e.Code) }
+
+// Coded is an error of a caller's own that knows its JSON-RPC code: a reply sends it with that code and its own
+// message.
+type Coded interface {
+	error
+	RPCCode() int
+}
+
+// wireError is err as a reply sends it: an *Error as it is, a Coded one with its code, anything else an internal
+// error.
+func wireError(err error) *Error {
+	var e *Error
+	if errors.As(err, &e) {
+		return e
+	}
+	var c Coded
+	if errors.As(err, &c) {
+		return &Error{Code: int64(c.RPCCode()), Message: err.Error()}
+	}
+	return &Error{Code: InternalError, Message: err.Error()}
+}
+
 // Message is any JSON-RPC message: a request has an ID and a Method, a notification only a Method, a response
 // an ID and a Result or an Error.
 type Message struct {
@@ -113,11 +137,7 @@ func (r *Request) Reply(result any, err error) error {
 			}
 		}
 		if err != nil {
-			var e *Error
-			if !errors.As(err, &e) {
-				e = &Error{Code: InternalError, Message: err.Error()}
-			}
-			m.Error = e
+			m.Error = wireError(err)
 		}
 		serr = r.c.send(m, nil)
 	})

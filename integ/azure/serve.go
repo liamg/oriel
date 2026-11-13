@@ -19,7 +19,7 @@ import (
 )
 
 // CodeNoKey is the JSON-RPC error of a request made before the site's token is set.
-const CodeNoKey = -32010
+const CodeNoKey = registry.CodeSecretUnset
 
 // CodeRepo is registry.CodeRepo as the Lua sends it, with its site.
 type CodeRepo struct {
@@ -139,7 +139,7 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 
 // noKey is err, said plainly when it's the host saying the site's token isn't set.
 func noKey(err error) error {
-	if strings.Contains(err.Error(), " isn't set") {
+	if registry.SecretUnset(err) {
 		return &jsonrpc.Error{Code: CodeNoKey, Message: "no Azure DevOps token yet"}
 	}
 	return err

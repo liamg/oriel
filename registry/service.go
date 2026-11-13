@@ -53,6 +53,17 @@ const (
 	HostStatsService     = "host.stats"
 )
 
+// CodeSecretUnset is the JSON-RPC error a host request (http.request) answers when a secret it names isn't set:
+// a plugin's process tests the code, not the message.
+const CodeSecretUnset = -32010
+
+// SecretUnset says err is a host request's answer that a secret it named isn't set: an error that knows its JSON-RPC
+// code (jsonrpc.Coded) and says CodeSecretUnset.
+func SecretUnset(err error) bool {
+	var c interface{ RPCCode() int }
+	return errors.As(err, &c) && c.RPCCode() == CodeSecretUnset
+}
+
 func EditorsOf(r Contributions) (Editors, bool)     { return ServiceOf[Editors](r, EditorsService) }
 func GitTreesOf(r Contributions) (GitTrees, bool)   { return ServiceOf[GitTrees](r, GitTreesService) }
 func CodeSitesOf(r Contributions) (CodeSites, bool) { return ServiceOf[CodeSites](r, CodeSitesService) }

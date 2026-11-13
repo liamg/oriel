@@ -339,7 +339,7 @@ func (c *codeSites) Warm(ctx context.Context, hs registry.HostSite) {
 
 // Refuse marks the token hs last sent as refused, when err is the host saying so (a 401), and says whether it was.
 func (c *codeSites) Refuse(hs registry.HostSite, err error) bool {
-	if err == nil || hs.Site.Secret == "" || !strings.Contains(err.Error(), "401") {
+	if hs.Site.Secret == "" || !registry.TokenRefused(err) {
 		return false
 	}
 	c.mu.Lock()

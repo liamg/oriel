@@ -180,13 +180,13 @@ func TestCodeSiteTokens(t *testing.T) {
 	if len(ran) != 0 {
 		t.Errorf("ran %q though the environment had one", ran)
 	}
-	sites.Refuse(hs, errors.New("GitLab: 401 Unauthorized"))
+	sites.Refuse(hs, errors.New("GitLab: the token was refused (HTTP 401)")) // as integ/gitlab writes it
 	sites.Warm(context.Background(), hs)
 	read()
 	if got := token(); got != "from-glab" || len(ran) != 1 || ran[0] != "glab config get token --host gitlab.com" {
 		t.Errorf("after the environment's was refused: %q, ran %q", got, ran)
 	}
-	sites.Refuse(hs, errors.New("GitLab: 401 Unauthorized"))
+	sites.Refuse(hs, errors.New("GitLab: the token was refused (HTTP 401)")) // as integ/gitlab writes it
 	if got := token(); got != "" || sites.Keyed(hs) {
 		t.Errorf("every source refused: %q, keyed %v", got, sites.Keyed(hs))
 	}

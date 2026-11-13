@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"net/http"
 	"regexp"
 	"slices"
 	"strconv"
@@ -396,3 +397,19 @@ func HostByName(r Contributions, name string) (CodeHost, bool) {
 	}
 	return CodeHost{}, false
 }
+
+// TokenRefused says err is a code host refusing the token it was sent: HTTP 401. An error that knows its status
+// (HTTPStatus) says so; one that crossed a plugin's Lua as text says "HTTP 401", as code hosts' errors are written
+// ("GitLab: the token was refused (HTTP 401)", "Gitea: HTTP 401 …").
+func TokenRefused(err error) bool {
+	if err == nil {
+		return false
+	}
+	var s interface{ HTTPStatus() int }
+	if errors.As(err, &s) {
+		return s.HTTPStatus() == http.StatusUnauthorized
+	}
+	return refusedText.MatchString(err.Error())
+}
+
+var refusedText = regexp.MustCompile(`\bHTTP 401\b`)

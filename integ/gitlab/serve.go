@@ -14,7 +14,7 @@ import (
 )
 
 // CodeNoKey is the JSON-RPC error of a request made before the token is set.
-const CodeNoKey = -32010
+const CodeNoKey = registry.CodeSecretUnset
 
 // Repo is a project as the code host's functions are asked about it, with the site it's on.
 type Repo struct {
@@ -62,7 +62,7 @@ func (s *Server) client(site Site) (Client, error) {
 			req["body"] = string(body)
 		}
 		status, resp, _, err := s.Request(ctx, req)
-		if err != nil && strings.Contains(err.Error(), site.Secret+" isn't set") {
+		if registry.SecretUnset(err) {
 			return 0, nil, &jsonrpc.Error{Code: CodeNoKey, Message: "no GitLab token for " + cmp.Or(site.Host, "the site") + " yet"}
 		}
 		return status, []byte(resp), err
