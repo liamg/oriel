@@ -18,14 +18,12 @@ import (
 )
 
 // DialHTTP speaks the Streamable HTTP transport to url. hdr is added to every
-// request. auth, when non-nil, supplies the bearer token and is consulted on
-// a 401.
-func DialHTTP(ctx context.Context, url string, hdr http.Header, auth TokenSource) (*Client, error) {
+// request.
+func DialHTTP(ctx context.Context, url string, hdr http.Header) (*Client, error) {
 	c := &Client{}
 	t := &httpTransport{
 		url:    url,
 		hdr:    hdr,
-		auth:   auth,
 		hc:     &http.Client{},
 		handle: c.handle,
 		reinit: c.initialize,
@@ -42,7 +40,6 @@ func DialHTTP(ctx context.Context, url string, hdr http.Header, auth TokenSource
 type httpTransport struct {
 	url    string
 	hdr    http.Header
-	auth   TokenSource
 	hc     *http.Client
 	handle func(*message)
 	reinit func(context.Context) error
@@ -124,28 +121,8 @@ func (t *httpTransport) reset(ctx context.Context, old string) error {
 	return t.reinit(ctx)
 }
 
-// do sends one HTTP request, retrying once with a fresh token on 401.
+// do sends one HTTP request.
 func (t *httpTransport) do(ctx context.Context, method string, body []byte) (*http.Response, error) {
-	token := ""
-	if t.auth != nil {
-		var err error
-		if token, err = t.auth.Token(ctx); err != nil {
-			return nil, err
-		}
-	}
-	resp, err := t.doOnce(ctx, method, body, token)
-	if err != nil || resp.StatusCode != http.StatusUnauthorized || t.auth == nil {
-		return resp, err
-	}
-	wa := resp.Header.Get("WWW-Authenticate")
-	_ = resp.Body.Close()
-	if token, err = t.auth.Unauthorized(ctx, token, wa); err != nil {
-		return nil, fmt.Errorf("mcp: authorization: %w", err)
-	}
-	return t.doOnce(ctx, method, body, token)
-}
-
-func (t *httpTransport) doOnce(ctx context.Context, method string, body []byte, token string) (*http.Response, error) {
 	var r io.Reader
 	if body != nil {
 		r = bytes.NewReader(body)
@@ -173,9 +150,6 @@ func (t *httpTransport) doOnce(ctx context.Context, method string, body []byte, 
 	}
 	if s := t.sessionID(); s != "" {
 		req.Header.Set("Mcp-Session-Id", s)
-	}
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	return t.hc.Do(req)
 }
@@ -331,16 +305,8 @@ func (t *httpTransport) close() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if resp, err := t.doOnce(ctx, http.MethodDelete, nil, t.currentToken(ctx)); err == nil {
+	if resp, err := t.do(ctx, http.MethodDelete, nil); err == nil {
 		_ = resp.Body.Close()
 	}
 	return nil
-}
-
-func (t *httpTransport) currentToken(ctx context.Context) string {
-	if t.auth == nil {
-		return ""
-	}
-	tok, _ := t.auth.Token(ctx)
-	return tok
 }

@@ -157,8 +157,6 @@ type Upstreams struct {
 	Servers []Server
 	// Cache is the directory each server's tool list is kept in, between sandboxes; "" keeps none.
 	Cache string
-	// Auth supplies OAuth for an http server; nil means none.
-	Auth func(s Server) mcp.TokenSource
 	// OnChange is told when a server's tool list changes.
 	OnChange func()
 
@@ -354,12 +352,7 @@ func (c *conn) dial(ctx context.Context, u *Upstreams, s Server) (*mcp.Client, e
 		for k, v := range s.Headers {
 			hdr.Set(k, v)
 		}
-		var auth mcp.TokenSource
-		if u.Auth != nil {
-			auth = u.Auth(s)
-		}
-		// The dial itself may wait on the user signing in.
-		client, err = mcp.DialHTTP(ctx, s.URL, hdr, auth)
+		client, err = mcp.DialHTTP(ctx, s.URL, hdr)
 	default:
 		err = errors.New("unsupported transport")
 	}
