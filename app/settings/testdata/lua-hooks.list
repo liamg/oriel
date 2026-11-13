@@ -93,9 +93,9 @@ rect 44,50 1356x835.48 fill #060606
 rect 44,625.48 716x260 fill #0c0c0b
 clip 44,625.48 716x260 r 0
   rect 44,625.48 716x30 fill #0c0c0b
-  rect 44,625.48 716x2 fill #ffd23f
-  text "LUA" @58,645.08 #7c7566 JetBrains Mono 10
-  text "✕" @740.7031,645.43994 #7c7566 JetBrains Mono 11
+  text "LUA" @58,643.08 #7c7566 JetBrains Mono 10
+  text "✕" @740.7031,643.43994 #7c7566 JetBrains Mono 11
+  rect 44,653.48 716x2 fill #ffd23f
   rect 44,655.48 716x1 fill #24221d
   clip 44,656.48 716x229 r 0
     text ":LUA" @68,686.68 #ffd23f JetBrains Mono 10
@@ -121,8 +121,8 @@ pop
 rect 760,50 640x835.48 fill #0c0c0b
 clip 760,50 640x835.48 r 0
   rect 760,50 640x30 fill #0c0c0b
-  text "HOOKS" @774,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @1380.7031,69.96 #7c7566 JetBrains Mono 11
+  text "HOOKS" @774,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @1380.7031,67.96 #7c7566 JetBrains Mono 11
   rect 760,80 640x1 fill #24221d
   clip 760,81 640x804.48 r 0
     clip 770,91 620x784.48 r 0

@@ -4,9 +4,9 @@ clip 0,0 1600x974 r 0
   rect 0,0 1600x30 fill #0b1620
   clip 0,0 1600x30 r 0
     rect 0,0 98.265625x30 fill #0f1c28
-    rect 0,0 98.265625x2 fill #5cc8ff
-    text "round.go" @14,20.365234 #ece6d8 Inter 12
-    text "✕" @78.96875,19.96 #7c7566 JetBrains Mono 11
+    text "round.go" @14,18.365234 #ece6d8 Inter 12
+    text "✕" @78.96875,17.96 #7c7566 JetBrains Mono 11
+    rect 0,28 98.265625x2 fill #5cc8ff
   pop
   rect 0,30 1600x1 fill #24221d
   clip 0,31 1600x943 r 0

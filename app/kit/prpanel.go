@@ -183,6 +183,7 @@ func WrapUnder(c *ui.Ctx, key string, row ui.ID, text string, ts ui.TextStyle) {
 // ReviewersBox is the Reviews box: each reviewer with where they stand, approved, changes, commented or waiting.
 func ReviewersBox(c *ui.Ctx, reviewers []registry.PRReviewer) {
 	th := c.Theme()
+	reviewers = MergeReviewers(reviewers)
 	PRBox(c, "reviews", "REVIEWS", func(c *ui.Ctx) {
 		if len(reviewers) == 0 {
 			c.Row("none", ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center}, func(c *ui.Ctx) {
@@ -199,6 +200,8 @@ func ReviewersBox(c *ui.Ctx, reviewers []registry.PRReviewer) {
 				word, tone = "changes", th.C(theme.Error)
 			case registry.ReviewCommented:
 				word = "commented"
+			case registry.ReviewReRequested:
+				word, tone = "re-requested", th.C(theme.Accent)
 			}
 			c.Row(r.Login, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: r.Login + " " + word}, func(c *ui.Ctx) {
 				ReviewerAvatar(c, r.Login)
@@ -207,6 +210,26 @@ func ReviewersBox(c *ui.Ctx, reviewers []registry.PRReviewer) {
 			})
 		}
 	}, nil)
+}
+
+// MergeReviewers lists each reviewer once, where they first come: one who's asked and has also reviewed (asked again
+// since) is re-requested, not waiting and reviewed both.
+func MergeReviewers(rs []registry.PRReviewer) []registry.PRReviewer {
+	var out []registry.PRReviewer
+	at := map[string]int{}
+	for _, r := range rs {
+		i, seen := at[r.Login]
+		switch {
+		case !seen:
+			at[r.Login] = len(out)
+			out = append(out, r)
+		case out[i].State == "requested" || r.State == "requested":
+			out[i].State = registry.ReviewReRequested
+		default:
+			out[i].State = r.State // the later review
+		}
+	}
+	return out
 }
 
 // ReviewerName is a reviewer as shown: a team without its org.

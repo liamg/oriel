@@ -95,8 +95,8 @@ clip 44,50 606x924 r 0
   rect 44,50 606x30 fill #0c0c0b
   clip 44,50 606x30 r 0
     rect 44,50 98.265625x30 fill #121210
-    text "round.go" @58,70.365234 #ece6d8 Inter 12
-    text "✕" @122.96875,69.96 #7c7566 JetBrains Mono 11
+    text "round.go" @58,68.365234 #ece6d8 Inter 12
+    text "✕" @122.96875,67.96 #7c7566 JetBrains Mono 11
   pop
   rect 44,80 606x1 fill #24221d
   clip 44,81 606x893 r 0
@@ -582,8 +582,8 @@ clip 651,50 529x924 r 0
   rect 651,50 529x30 fill #0c0c0b
   clip 651,50 529x30 r 0
     rect 651,50 108.953125x30 fill #121210
-    text "Dashboard" @665,70.365234 #ece6d8 Inter 12
-    text "✕" @740.65625,69.96 #7c7566 JetBrains Mono 11
+    text "Dashboard" @665,68.365234 #ece6d8 Inter 12
+    text "✕" @740.65625,67.96 #7c7566 JetBrains Mono 11
   pop
   rect 651,80 529x1 fill #24221d
   clip 651,81 529x893 r 0
@@ -601,9 +601,9 @@ pop
 rect 1180,50 420x924 fill #0c0c0b
 clip 1180,50 420x924 r 0
   rect 1180,50 420x30 fill #0c0c0b
-  rect 1180,50 420x2 fill #ffd23f
-  text "DEPLOYS" @1194,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @1580.7031,69.96 #7c7566 JetBrains Mono 11
+  text "DEPLOYS" @1194,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @1580.7031,67.96 #7c7566 JetBrains Mono 11
+  rect 1180,78 420x2 fill #ffd23f
   rect 1180,80 420x1 fill #24221d
   clip 1180,81 420x893 r 0
     text "DEPLOYS" @1204,116.22 #ffd23f JetBrains Mono 11

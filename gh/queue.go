@@ -18,7 +18,8 @@ type Asked struct {
 	Requested bool      // the user's review is asked for now, of them or a team of theirs
 	Via       string    // the team asked ("acme/platform"), when it wasn't the user
 	Asked     time.Time // when last asked; its creation when GitHub doesn't say
-	Mine      string    // the user's latest review: ReviewApproved…; "" none
+	Mine      string    // the user's latest review, a comment-only one too: ReviewApproved…; "" none
+	Answered  bool      // the user reviewed, or commented in the conversation, since last asked: it's the author's move
 	Since     int       // commits since that review
 	Additions int
 	Deletions int
@@ -35,6 +36,8 @@ const queueQuery = `query($q: String!) {
     reviewRequests(first: 30) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { combinedSlug } } } }
     timelineItems(last: 30, itemTypes: [REVIEW_REQUESTED_EVENT]) { nodes { ... on ReviewRequestedEvent { createdAt requestedReviewer { __typename ... on User { login } ... on Team { combinedSlug } } } } }
     latestReviews(first: 30) { nodes { author { login } state commit { oid } } }
+    reviews(last: 50) { nodes { author { login } state submittedAt commit { oid } } }
+    comments(last: 50) { nodes { author { login } createdAt } }
     commits(last: 100) { nodes { commit { oid statusCheckRollup { state } } } }
   } } }
 }`
@@ -73,6 +76,22 @@ type gqlAsked struct {
 			RequestedReviewer gqlReviewer `json:"requestedReviewer"`
 		} `json:"nodes"`
 	} `json:"timelineItems"`
+	Reviews struct {
+		Nodes []struct {
+			Author    *restUser `json:"author"`
+			State     string    `json:"state"`
+			Submitted time.Time `json:"submittedAt"`
+			Commit    *struct {
+				OID string `json:"oid"`
+			} `json:"commit"`
+		} `json:"nodes"`
+	} `json:"reviews"`
+	Comments struct {
+		Nodes []struct {
+			Author  *restUser `json:"author"`
+			Created time.Time `json:"createdAt"`
+		} `json:"nodes"`
+	} `json:"comments"`
 	LatestReviews struct {
 		Nodes []struct {
 			Author *restUser `json:"author"`
@@ -175,18 +194,32 @@ func (n gqlAsked) asked(me string) Asked {
 			out.Asked = ev.CreatedAt
 		}
 	}
-	var at string
 	for _, rv := range n.LatestReviews.Nodes {
-		if rv.Author != nil {
+		if rv.Author != nil && !strings.EqualFold(rv.Author.Login, me) {
 			out.Reviews = append(out.Reviews, Review{User: rv.Author.Login, State: rv.State})
 		}
-		if rv.Author != nil && strings.EqualFold(rv.Author.Login, me) {
-			out.Mine = rv.State
-			if rv.Commit != nil {
-				at = rv.Commit.OID
-			}
+	}
+	// The user's own from every review: latestReviews leaves out one that only commented.
+	var at string
+	var answered time.Time
+	for _, rv := range n.Reviews.Nodes {
+		if rv.Author == nil || !strings.EqualFold(rv.Author.Login, me) || rv.State == "PENDING" || rv.State == "DISMISSED" {
+			continue
+		}
+		out.Mine, answered = rv.State, rv.Submitted
+		if rv.Commit != nil {
+			at = rv.Commit.OID
 		}
 	}
+	if out.Mine != "" {
+		out.Reviews = append(out.Reviews, Review{User: me, State: out.Mine})
+	}
+	for _, c := range n.Comments.Nodes {
+		if c.Author != nil && strings.EqualFold(c.Author.Login, me) && c.Created.After(answered) {
+			answered = c.Created
+		}
+	}
+	out.Answered = out.Requested && answered.After(out.Asked)
 	commits := n.Commits.Nodes
 	if at != "" {
 		for i, c := range commits {

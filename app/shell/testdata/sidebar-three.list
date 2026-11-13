@@ -167,10 +167,10 @@ rect 224,50 536x344 fill #060606
 rect 224,50 300x344 fill #0c0c0b
 clip 224,50 300x344 r 0
   rect 224,50 300x30 fill #0c0c0b
-  rect 238,62.5 7x7 fill #4cc9f0 radius 1
-  text "admin-ui" @253,70.14 #ece6d8 JetBrains Mono 11.5
-  text "EXPLORER" @318.625,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @504.70312,69.96 #7c7566 JetBrains Mono 11
+  rect 238,60.5 7x7 fill #4cc9f0 radius 1
+  text "admin-ui" @253,68.14 #ece6d8 JetBrains Mono 11.5
+  text "EXPLORER" @318.625,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @504.70312,67.96 #7c7566 JetBrains Mono 11
   rect 224,80 300x1 fill #24221d
   clip 224,81 300x313 r 0
     rect 224,81 300x313 fill #0c0c0b
@@ -284,14 +284,14 @@ pop
 clip 524,50 236x344 r 0
   rect 524,50 236x30 fill #0c0c0b
   clip 524,50 236x30 r 0
-    rect 503.15625,62.5 7x7 fill #4cc9f0 radius 1
-    text "FilterBar.tsx" @517.15625,70.365234 #7c7566 Inter 12
-    text "M" @591.84375,69.42 #ff9b45 JetBrains Mono 9.5
+    rect 503.15625,60.5 7x7 fill #4cc9f0 radius 1
+    text "FilterBar.tsx" @517.15625,68.365234 #7c7566 Inter 12
+    text "M" @591.84375,67.42 #ff9b45 JetBrains Mono 9.5
     rect 630.84375,50 129.15625x30 fill #121210
-    rect 630.84375,50 129.15625x2 fill #ffd23f
-    rect 644.84375,62.5 7x7 fill #b98aff radius 1
-    text "usage.proto" @658.84375,70.365234 #ece6d8 Inter 12
-    text "✕" @740.7031,69.96 #7c7566 JetBrains Mono 11
+    rect 644.84375,60.5 7x7 fill #b98aff radius 1
+    text "usage.proto" @658.84375,68.365234 #ece6d8 Inter 12
+    text "✕" @740.7031,67.96 #7c7566 JetBrains Mono 11
+    rect 630.84375,78 129.15625x2 fill #ffd23f
   pop
   rect 524,80 236x1 fill #24221d
   clip 524,81 236x313 r 0

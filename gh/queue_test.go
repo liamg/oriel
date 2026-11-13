@@ -102,3 +102,42 @@ func TestReviewQueueSaysWhoIsAskedAndWhatGoesWhere(t *testing.T) {
 		}
 	}
 }
+
+// Your move is answered by a review of any kind, a comment-only one too, or a comment in the conversation, made since
+// you were last asked: until you're asked again, the pull request waits on its author, not you. Asked again after a
+// review that only commented, it's re-requested.
+//
+// ref:   github-graphql/schema.docs.graphql
+// quote: "A list of reviews associated with the pull request."
+func TestReviewQueueCountsCommentsAsAnswers(t *testing.T) {
+	s := ghtest.New(t)
+	c := client(t, "http", s)
+	ctx := context.Background()
+	again := s.AddPR("acme/coast", gh.PR{Title: "notify on drift", Author: "owen", Reviewers: []string{"you"}})
+	s.AddReview("acme/coast", again.Number, gh.Review{User: "you", State: gh.ReviewCommented})
+	if err := c.RequestReviewers(ctx, gh.Repo{Owner: "acme", Name: "coast"}, again.Number, []string{"you"}); err != nil {
+		t.Fatal(err)
+	}
+	said := s.AddPR("acme/unfair", gh.PR{Title: "tidy the README", Author: "bot", Reviewers: []string{"you"}})
+	s.AddIssueComment("acme/unfair", said.Number, gh.IssueComment{User: "you", Body: "Looks fine, but the badge is broken."})
+	waiting := s.AddPR("acme/lib", gh.PR{Title: "bump deps", Author: "dan", Reviewers: []string{"you"}})
+	s.AddIssueComment("acme/lib", waiting.Number, gh.IssueComment{User: "dan", Body: "ready for a look"})
+
+	got, err := c.ReviewQueue(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	by := map[int]gh.Asked{}
+	for _, a := range got {
+		by[a.Number] = a
+	}
+	if a := by[again.Number]; !a.Requested || a.Mine != gh.ReviewCommented || a.Answered {
+		t.Errorf("asked again after commenting: requested %v, mine %q, answered %v", a.Requested, a.Mine, a.Answered)
+	}
+	if a := by[said.Number]; !a.Requested || !a.Answered {
+		t.Errorf("commented in the conversation since asked: requested %v, answered %v", a.Requested, a.Answered)
+	}
+	if a := by[waiting.Number]; !a.Requested || a.Answered {
+		t.Errorf("only the author commented: requested %v, answered %v", a.Requested, a.Answered)
+	}
+}

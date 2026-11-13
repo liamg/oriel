@@ -120,7 +120,8 @@ type Style struct {
 	// Selectable makes it the box a selection stays in, with the text cursor over it. All text selects with the pointer
 	// and copies with the platform's copy key by default, in the nearest Selectable, scrolling or floating box (else the
 	// window): a drag across text nodes, a double click a word, a triple a node's text. Controls keep their clicks, and
-	// their text, menus and popovers' never selects.
+	// their text, menus and popovers' never selects; a box that's Selectable itself selects even when it takes focus or
+	// clicks (a page, a pane, a window, a card), and a drag that selects isn't its click.
 	Selectable bool
 	// NoSelect keeps its text from being selected: a press on it starts no selection, and one around it skips it.
 	NoSelect bool

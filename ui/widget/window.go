@@ -93,7 +93,7 @@ func Window(c *ui.Ctx, key any, st *WindowState, o WindowOpts, body func(c *ui.C
 	at := rect.Min
 	edge, glow := col(c, tWindowEdge), col(c, tWindowGlow)
 	c.Column(key, ui.Style{W: ui.Px(rect.Dx()), H: ui.Px(rect.Dy()), Fill: col(c, tWindowBg), Stroke: edge, Border: 1, Radius: 10,
-		Clip: true, Z: o.Z, Float: &ui.Float{Point: &at}, Interactive: true, NoHover: true, Focusable: true, KeyMode: o.KeyMode,
+		Clip: true, Z: o.Z, Float: &ui.Float{Point: &at}, Interactive: true, NoHover: true, Focusable: true, KeyMode: o.KeyMode, Selectable: true,
 		Role: ui.RoleDialog, Label: cmpOr(o.Label, o.Title), Help: o.Help,
 		Enter: &ui.Transition{Shift: render.Point{Y: 16}, Fade: true}, Exit: &ui.Transition{Shift: render.Point{Y: 16}, Fade: true}},
 		func(c *ui.Ctx) {
