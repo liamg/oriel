@@ -550,9 +550,7 @@ func (x *Requests) openAnchor(ctx context.Context) error {
 
 // run runs a command from a click, saying what went wrong in a notice.
 func (x *Requests) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error(), Time: time.Now()})
-	}
+	kit.RunOrNotify(x.h, "requests", id, a)
 }
 
 // threadsSource is the threads picker (␣t): every request of the session in front.

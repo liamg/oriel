@@ -2,8 +2,6 @@ package ship
 
 import (
 	"cmp"
-	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
@@ -48,13 +46,7 @@ func (x *Ship) views() {
 }
 
 func (x *Ship) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		if errors.Is(err, kit.ErrStopped) {
-			return
-		}
-		x.h.Log().Error("ship", "command", id, "err", err)
-		x.h.Notify(core.Notice{ID: "ship.error", Severity: core.SevError, Key: true, Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "ship", id, a)
 }
 
 // here is the session in front and a docked view's project ("" is the open one's).

@@ -366,11 +366,7 @@ type threadCardOpts struct {
 func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread, reply *string, send func(), o threadCardOpts) {
 	th := c.Theme()
 	id := t.ID
-	run := func(cmd string, a registry.Args) {
-		if err := h.Run(context.Background(), cmd, a); err != nil {
-			h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
-		}
-	}
+	run := func(cmd string, a registry.Args) { runOrSay(h, cmd, a) }
 	src, sourced := uireg.ThreadSourceFor(h, t.Origin)
 	title := "Thread"
 	if sourced && src.Title != "" {

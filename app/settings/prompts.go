@@ -12,7 +12,6 @@ import (
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -383,8 +382,7 @@ func (x *Prompts) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 
 func (x *Prompts) run(id string, a registry.Args) {
 	x.err = ""
-	if err := x.h.Run(context.Background(), id, a); err != nil {
+	if err := kit.RunOrNotify(x.h, "prompts", id, a); err != nil {
 		x.err = err.Error()
-		x.h.Notify(core.Notice{ID: "prompts", Severity: core.SevError, Text: err.Error()})
 	}
 }

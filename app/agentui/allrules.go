@@ -2,10 +2,8 @@ package agentui
 
 import (
 	"cmp"
-	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -83,7 +81,5 @@ func (x *Permissions) rulesSection(c *ui.Ctx) {
 }
 
 func (x *Permissions) removeRule(rule string) {
-	if err := x.h.Run(context.Background(), "rules.remove", registry.Args{"rule": rule}); err != nil {
-		x.h.Notify(core.Notice{ID: "rules", Severity: core.SevError, Source: "permissions", Text: err.Error(), Time: time.Now()})
-	}
+	x.run("rules.remove", registry.Args{"rule": rule})
 }

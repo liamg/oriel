@@ -349,9 +349,7 @@ func (x *End) view(c *ui.Ctx) {
 }
 
 func (x *End) run(id string) {
-	if err := x.h.Run(context.Background(), id, nil); err != nil {
-		x.h.Notify(core.Notice{ID: id, Severity: core.SevError, Source: "sessionend", Key: true, Text: err.Error(), Time: time.Now()})
-	}
+	kit.RunOrNotify(x.h, "sessionend", id, nil)
 }
 
 // body is the choice, what it does, and what would be lost, project by project.

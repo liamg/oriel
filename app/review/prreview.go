@@ -5,7 +5,6 @@ package review
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -678,7 +677,5 @@ func reviewRequest(se core.SessionState) (core.Thread, bool) {
 }
 
 func (x *PRReview) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil && !errors.Is(err, kit.ErrStopped) {
-		x.h.Notify(core.Notice{ID: "review.pr.error", Severity: core.SevError, Key: true, Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "review.pr", id, a)
 }

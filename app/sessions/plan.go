@@ -295,9 +295,7 @@ func editing(se core.SessionState) string {
 }
 
 func (x *Plan) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "plan", Severity: core.SevError, Source: "plan", Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "plan", id, a)
 }
 
 type planView struct{ x *Plan }

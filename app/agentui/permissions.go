@@ -168,9 +168,7 @@ func (x *Permissions) change(id core.SessionID, fn func(host.SandboxCalls) error
 }
 
 func (x *Permissions) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "permissions", Severity: core.SevError, Source: "permissions", Text: err.Error(), Time: time.Now()})
-	}
+	kit.RunOrNotify(x.h, "permissions", id, a)
 }
 
 type permsView struct{ x *Permissions }

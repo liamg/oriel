@@ -214,9 +214,7 @@ func (x *Workspace) rebuild(id core.SessionID) error {
 }
 
 func (x *Workspace) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "workspace", Severity: core.SevError, Source: "workspace", Text: err.Error(), Time: time.Now()})
-	}
+	kit.RunOrNotify(x.h, "workspace", id, a)
 }
 
 // The page.

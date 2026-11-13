@@ -1,7 +1,6 @@
 package stats
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"slices"
@@ -138,9 +137,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 }
 
 func (x *Plugin) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Log().Error("stats", "command", id, "err", err)
-	}
+	kit.RunOrNotify(x.h, "stats", id, a)
 }
 
 // toolbar is the range, the grouping, the filter chips and the split toggle.

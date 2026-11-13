@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"strings"
@@ -143,4 +144,16 @@ func WordsOf(h *registry.CodeHost) registry.Words {
 		return registry.CodeHost{}.Said()
 	}
 	return h.Said()
+}
+
+// RunOrNotify runs cmd from a click or a key, and says why it failed in a notice from source: one row per source,
+// stamped with the window's clock. A hook's stop (ErrStopped) is shown where the step was asked for, so it's none.
+// It returns the error, for a page that also shows it inline.
+func RunOrNotify(h plugin.Host, source, cmd string, a registry.Args) error {
+	err := h.Run(context.Background(), cmd, a)
+	if err != nil && !errors.Is(err, ErrStopped) {
+		h.Log().Warn(source, "command", cmd, "err", err)
+		h.Notify(core.Notice{ID: source + ".error", Severity: core.SevError, Source: source, Key: true, Text: err.Error(), Time: WindowNow(h)})
+	}
+	return err
 }

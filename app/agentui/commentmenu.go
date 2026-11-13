@@ -1,7 +1,6 @@
 package agentui
 
 import (
-	"context"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -40,16 +39,12 @@ func commentMenu(c *ui.Ctx, h plugin.Host, t core.Thread, cm core.Comment, shown
 	case 1:
 		kit.CopyText(h, cm.Body)
 	case 2:
-		if err := h.Run(context.Background(), "comment.markdown", registry.Args{"title": cmTitle(h, cm), "body": cm.Body}); err != nil {
-			h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
-		}
+		runOrSay(h, "comment.markdown", registry.Args{"title": cmTitle(h, cm), "body": cm.Body})
 	}
 }
 
 func runOrSay(h plugin.Host, cmd string, a registry.Args) {
-	if err := h.Run(context.Background(), cmd, a); err != nil {
-		h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
-	}
+	kit.RunOrNotify(h, "requests", cmd, a)
 }
 
 func cmTitle(h plugin.Host, cm core.Comment) string {

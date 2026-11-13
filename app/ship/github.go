@@ -475,9 +475,7 @@ func (x *GitHub) save(a registry.Args) error {
 }
 
 func (x *GitHub) run(cmd string, a registry.Args) {
-	if err := x.h.Run(context.Background(), cmd, a); err != nil {
-		x.h.Notify(core.Notice{ID: "github", Severity: core.SevError, Source: "github", Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "github", cmd, a)
 }
 
 // head is a GitHub thread's card head after "GitHub review": its line, the reviewer, where they stand, the sync.
