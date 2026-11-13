@@ -3,6 +3,7 @@ package kit
 import (
 	"context"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
 )
@@ -12,18 +13,23 @@ func GitOf(r registry.Registry) registry.GitTrees {
 	if t, ok := registry.GitTreesOf(r); ok {
 		return t
 	}
-	return noTrees{}
+	return noTrees{r}
 }
 
-type noTrees struct{}
+// noTrees is a window with no git service: what it's asked to write says so rather than vanish.
+type noTrees struct{ r registry.Registry }
 
 func (noTrees) Tree(string) registry.GitTree              { return noTree{} }
 func (noTrees) Holding(string) registry.GitTree           { return noTree{} }
 func (noTrees) WatchWindow(func(string, []string)) func() { return func() {} }
-func (noTrees) Do(func(ctx context.Context) error)        {}
-func (noTrees) Reload()                                   {}
-func (noTrees) Scope() gitx.Scope                         { return gitx.All }
-func (noTrees) Busy() bool                                { return false }
+func (t noTrees) Run(func(ctx context.Context) error) {
+	if n, ok := t.r.(interface{ Notify(core.Notice) }); ok {
+		n.Notify(core.Notice{ID: "git.none", Severity: core.SevError, Source: "git", Text: "There's no git service in this window to run that."})
+	}
+}
+func (noTrees) Reload()           {}
+func (noTrees) Scope() gitx.Scope { return gitx.All }
+func (noTrees) Busy() bool        { return false }
 
 // noTree is outside any repo.
 type noTree struct{}

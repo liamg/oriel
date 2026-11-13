@@ -14,7 +14,7 @@ func TestSerialRunsInOrderWithoutWaiting(t *testing.T) {
 	var got []int
 	gate := make(chan struct{})
 	for i := range 5 { // the first holds the rest until the gate opens: a Do that waited would never return
-		s.Do(func() {
+		s.Queue(func() {
 			if i == 0 {
 				<-gate
 			}

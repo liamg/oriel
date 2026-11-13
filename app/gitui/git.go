@@ -179,7 +179,7 @@ func (g *Git) notify(root string, paths []string) {
 	}
 	g.mu.Unlock()
 	// Off the loop and in order: a status is often set in a frame's build, and a watcher reads files.
-	g.told.Do(func() {
+	g.told.Queue(func() {
 		for _, fn := range fns {
 			fn(root, paths)
 		}
@@ -652,7 +652,7 @@ func (s gitTrees) Scope() gitx.Scope {
 	return s.g.scope()
 }
 func (s gitTrees) Holding(p string) registry.GitTree     { return s.g.holding(p) }
-func (s gitTrees) Do(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
+func (s gitTrees) Run(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
 func (s gitTrees) Reload()                               { s.g.reload() }
 func (s gitTrees) Busy() bool                            { return s.g.running.Load() > 0 || s.g.reading() }
 func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {

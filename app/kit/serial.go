@@ -13,8 +13,8 @@ type Serial struct {
 	wg      Busy
 }
 
-// Do queues fn; nothing once stopped.
-func (s *Serial) Do(fn func()) {
+// Queue queues fn; nothing once stopped.
+func (s *Serial) Queue(fn func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.stopped {

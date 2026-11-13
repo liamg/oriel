@@ -266,13 +266,13 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 		if widget.Button(c, "del", label, widget.ButtonOpts{Ghost: true, Help: "agent/jobs#job"}) {
 			if x.confirm == key {
 				x.confirm = ""
-				x.do("jobs.delete", args)
+				x.runInBackground("jobs.delete", args)
 			} else {
 				x.confirm = key
 			}
 		}
 		if widget.Button(c, "run", "▶ Run", widget.ButtonOpts{Primary: true, Key: "⌘↵", Help: "agent/jobs#job"}) {
-			x.do("jobs.run", args)
+			x.runInBackground("jobs.run", args)
 		}
 	})
 	c.Row("meta", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -448,7 +448,7 @@ func (x *Jobs) schedule(c *ui.Ctx, j host.Job) {
 				}
 				return
 			}
-			x.do("jobs.save", args)
+			x.runInBackground("jobs.save", args)
 		}
 		c.Text("n", "runs while Oriel is open · skips while the last run is going", kit.MonoFont(10, th.C(theme.FgGhost)))
 	})
@@ -532,7 +532,7 @@ func (x *Jobs) summary(r runRow) string {
 // openRun brings a run's session up: its console the main tab, the sidebar narrow.
 func (x *Jobs) openRun(id core.SessionID) {
 	x.open = false
-	x.do("session.open", registry.Args{"id": string(id), "then": []any{
+	x.runInBackground("session.open", registry.Args{"id": string(id), "then": []any{
 		registry.Args{"command": "view.open", "args": registry.Args{"id": kit.AgentConsoleView, "place": "tab", "title": "Agent"}},
 		registry.Args{"command": "sidebar.form", "args": registry.Args{"form": "narrow"}},
 	}})
@@ -596,7 +596,7 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 			if widget.Button(c, "del", label, widget.ButtonOpts{Ghost: true, Help: "agent/jobs#runs"}) {
 				if x.confirm == string(r.se.ID) {
 					x.confirm = ""
-					x.do("session.delete", registry.Args{"id": string(r.se.ID)})
+					x.runInBackground("session.delete", registry.Args{"id": string(r.se.ID)})
 				} else {
 					x.confirm = string(r.se.ID)
 				}

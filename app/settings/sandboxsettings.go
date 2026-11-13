@@ -267,7 +267,7 @@ func (x *SandboxSettings) send() {
 	if !x.queued.CompareAndSwap(false, true) {
 		return
 	}
-	x.sends.Do(func() {
+	x.sends.Queue(func() {
 		x.queued.Store(false)
 		h := x.h
 		cfg := sandboxConfig(h.Options(), projectRoots(kit.WindowDir(h), h.State())) // the window's project's file may add rules

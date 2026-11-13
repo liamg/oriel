@@ -525,7 +525,7 @@ func (g *GitSigns) stage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error
 	}
 	contents := p.FileBytes()
 	repo := g.repo(f)
-	kit.GitOf(g.h).Do(func(ctx context.Context) error { return repo.StageHunk(ctx, f.rel, contents, h) })
+	kit.GitOf(g.h).Run(func(ctx context.Context) error { return repo.StageHunk(ctx, f.rel, contents, h) })
 	return nil
 }
 
@@ -542,7 +542,7 @@ func (g *GitSigns) unstage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) err
 		}
 	}
 	repo := g.repo(f)
-	kit.GitOf(g.h).Do(func(ctx context.Context) error {
+	kit.GitOf(g.h).Run(func(ctx context.Context) error {
 		staged, err := repo.StagedHunks(ctx, f.rel)
 		if err != nil {
 			return err
