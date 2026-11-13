@@ -13,6 +13,19 @@ type Contribution interface {
 	ContributionName() string
 }
 
+// ContributionsOf are the contributions of T's kind (its ContributionKind), as Ts: the kind comes from the type, so
+// it can't be mistyped, and one of another type registered under the kind is left out rather than cast.
+func ContributionsOf[T Contribution](r Contributions) []T {
+	var zero T
+	var out []T
+	for _, c := range r.Contributions(zero.ContributionKind()) {
+		if t, ok := c.(T); ok {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
 func (r *reg) Contribute(c Contribution) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -156,13 +156,7 @@ const RefetchAfter = time.Minute
 
 // Prompts are the prompts registered with r's window, beside agent/prompts' own: plugins' (prompts.Prepare).
 func Prompts(r registry.Registry) []prompts.Def {
-	var out []prompts.Def
-	for _, c := range r.Contributions("prompt") {
-		if d, ok := c.(prompts.Def); ok {
-			out = append(out, d)
-		}
-	}
-	return out
+	return registry.ContributionsOf[prompts.Def](r)
 }
 
 // RenderPrompt is one of agent/prompts as the user has it, its placeholders filled.

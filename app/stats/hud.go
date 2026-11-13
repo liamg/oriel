@@ -93,8 +93,8 @@ func (x *HUD) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		name := core.EventName(ev)
 		hit := false
-		for _, c := range h.Contributions("hud.indicator") {
-			if ind := c.(uireg.Indicator); slices.Contains(ind.On, name) {
+		for _, ind := range registry.ContributionsOf[uireg.Indicator](h) {
+			if slices.Contains(ind.On, name) {
 				x.mu.Lock()
 				if b := x.cache[ind.Name]; b != nil {
 					b.dirty, hit = true, true

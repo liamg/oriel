@@ -163,8 +163,7 @@ func placeShown(r registry.Registry) bool {
 
 // closePlaces puts away every place showing, as something else is put in front.
 func closePlaces(r registry.Registry) {
-	for _, c := range r.Contributions("place") {
-		p := c.(uireg.Place)
+	for _, p := range registry.ContributionsOf[uireg.Place](r) {
 		if p.Shown == nil || p.Close == nil {
 			continue
 		}

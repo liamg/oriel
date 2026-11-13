@@ -25,8 +25,8 @@ func (s Service) ContributionName() string { return s.Name }
 
 // ServiceOf is the service registered as name, if there is one and it's a T.
 func ServiceOf[T any](r Contributions, name string) (T, bool) {
-	for _, c := range r.Contributions("service") {
-		if s := c.(Service); s.Name == name {
+	for _, s := range ContributionsOf[Service](r) {
+		if s.Name == name {
 			t, ok := s.Impl.(T)
 			return t, ok
 		}

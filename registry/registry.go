@@ -546,8 +546,7 @@ func (r *reg) sortKeymaps() {
 
 func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	exclusive := map[string]func(Keymap) bool{}
-	for _, c := range r.Contributions("keys.exclusive") {
-		e := c.(ExclusiveKeys)
+	for _, e := range ContributionsOf[ExclusiveKeys](r) {
 		active := true
 		if e.Active != nil {
 			Call(func() error { active = e.Active(); return nil })

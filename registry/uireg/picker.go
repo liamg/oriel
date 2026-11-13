@@ -72,8 +72,7 @@ func (r *reg) Picker(s PickerSource) registry.Disposable { return r.Contribute(s
 
 func (r *reg) Pickers() []PickerSource {
 	var out []PickerSource
-	for _, c := range r.Contributions("picker") {
-		s := c.(PickerSource)
+	for _, s := range registry.ContributionsOf[PickerSource](r) {
 		ok := s.Available == nil
 		if !ok {
 			registry.Call(func() error { ok = s.Available(); return nil })
@@ -82,8 +81,8 @@ func (r *reg) Pickers() []PickerSource {
 			out = append(out, s)
 		}
 	}
-	for _, c := range r.Contributions("placeholder.omnibox") {
-		out = append(out, r.holding(c.(registry.OmniboxHolder)))
+	for _, c := range registry.ContributionsOf[registry.OmniboxHolder](r) {
+		out = append(out, r.holding(c))
 	}
 	slices.SortFunc(out, func(a, b PickerSource) int { return cmp.Or(cmp.Compare(a.Order, b.Order), cmp.Compare(a.ID, b.ID)) })
 	return out

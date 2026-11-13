@@ -486,8 +486,8 @@ func Centre(r render.Rect) render.Point {
 
 // place is the place named name (a page: "stats", "usage"), if one's registered.
 func (s *Scene) place(name string) (uireg.Place, bool) {
-	for _, c := range s.Registry().Contributions("place") {
-		if p := c.(uireg.Place); p.Name == name {
+	for _, p := range registry.ContributionsOf[uireg.Place](s.Registry()) {
+		if p.Name == name {
 			return p, true
 		}
 	}
@@ -648,8 +648,8 @@ func (s *Scene) HasCommand(id string) bool {
 
 // InboxCard is the card id from the inbox source named source.
 func (s *Scene) InboxCard(source, id string) (uireg.InboxCard, bool) {
-	for _, c := range s.Registry().Contributions("inbox.source") {
-		if src := c.(uireg.InboxSource); src.Name == source {
+	for _, src := range registry.ContributionsOf[uireg.InboxSource](s.Registry()) {
+		if src.Name == source {
 			for _, card := range src.Cards() {
 				if card.ID == id {
 					return card, true

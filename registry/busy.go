@@ -20,8 +20,8 @@ func (b Busy) ContributionName() string { return b.Name }
 // BusyNow are the names of the work under way now, sorted.
 func BusyNow(r Contributions) []string {
 	var out []string
-	for _, c := range r.Contributions("busy") {
-		if b := c.(Busy); b.Busy != nil && b.Busy() {
+	for _, b := range ContributionsOf[Busy](r) {
+		if b.Busy != nil && b.Busy() {
 			name := b.Name
 			if b.What != nil {
 				if w := b.What(); len(w) > 0 {

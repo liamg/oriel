@@ -104,9 +104,7 @@ func (p ProjectState) ContributionName() string { return p.Name }
 // ProjectStateParts are every ProjectState's parts for a project, by Order; one that panics gives none.
 func ProjectStateParts(r registry.Contributions, project, dir string) []StatePart {
 	var ss []ProjectState
-	for _, c := range r.Contributions("project.state") {
-		ss = append(ss, c.(ProjectState))
-	}
+	ss = append(ss, registry.ContributionsOf[ProjectState](r)...)
 	slices.SortFunc(ss, func(a, b ProjectState) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})
@@ -148,9 +146,7 @@ func (e StartEntry) ContributionName() string { return e.Name }
 // RailEntries are the rail's entries, top ones then bottom ones, each by Order.
 func RailEntries(r registry.Contributions) []RailEntry {
 	var out []RailEntry
-	for _, c := range r.Contributions("rail.entry") {
-		out = append(out, c.(RailEntry))
-	}
+	out = append(out, registry.ContributionsOf[RailEntry](r)...)
 	slices.SortFunc(out, func(a, b RailEntry) int {
 		if a.Bottom != b.Bottom {
 			if a.Bottom {
@@ -191,8 +187,8 @@ func (e StartEntry) Is() bool {
 // StartEntries are the start view's actions that are shown, by Order.
 func StartEntries(r registry.Contributions) []StartEntry {
 	var out []StartEntry
-	for _, c := range r.Contributions("start.entry") {
-		if e := c.(StartEntry); e.Is() {
+	for _, e := range registry.ContributionsOf[StartEntry](r) {
+		if e.Is() {
 			out = append(out, e)
 		}
 	}
@@ -219,8 +215,8 @@ func (p Place) ContributionName() string { return p.Name }
 
 // PlaceByName is the place called name.
 func PlaceByName(r registry.Contributions, name string) (Place, bool) {
-	for _, c := range r.Contributions("place") {
-		if p := c.(Place); p.Name == name {
+	for _, p := range registry.ContributionsOf[Place](r) {
+		if p.Name == name {
 			return p, true
 		}
 	}
@@ -229,8 +225,7 @@ func PlaceByName(r registry.Contributions, name string) (Place, bool) {
 
 // ShownPlace is the place showing now, "" for none; ok is false while two are, as one opens over another.
 func ShownPlace(r registry.Contributions) (name string, ok bool) {
-	for _, c := range r.Contributions("place") {
-		p := c.(Place)
+	for _, p := range registry.ContributionsOf[Place](r) {
 		shown := false
 		if p.Shown != nil {
 			registry.Call(func() error { shown = p.Shown(); return nil })
@@ -266,9 +261,7 @@ func (p OverviewPanel) ContributionName() string { return p.Name }
 // OverviewPanels are the overview's panels by Order.
 func OverviewPanels(r registry.Contributions) []OverviewPanel {
 	var out []OverviewPanel
-	for _, c := range r.Contributions("overview.panel") {
-		out = append(out, c.(OverviewPanel))
-	}
+	out = append(out, registry.ContributionsOf[OverviewPanel](r)...)
 	slices.SortFunc(out, func(a, b OverviewPanel) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})
@@ -290,9 +283,7 @@ func (s SettingsSection) ContributionName() string { return s.Name }
 // SettingsSections are the settings page's own sections, by name.
 func SettingsSections(r registry.Contributions) []SettingsSection {
 	var out []SettingsSection
-	for _, c := range r.Contributions("settings.section") {
-		out = append(out, c.(SettingsSection))
-	}
+	out = append(out, registry.ContributionsOf[SettingsSection](r)...)
 	slices.SortFunc(out, func(a, b SettingsSection) int { return strings.Compare(a.Name, b.Name) })
 	return out
 }
@@ -331,8 +322,8 @@ const (
 // Indicators are the indicators in slot, by Order then name.
 func Indicators(r registry.Contributions, slot string) []Indicator {
 	var out []Indicator
-	for _, c := range r.Contributions("hud.indicator") {
-		if i := c.(Indicator); i.Slot == slot {
+	for _, i := range registry.ContributionsOf[Indicator](r) {
+		if i.Slot == slot {
 			out = append(out, i)
 		}
 	}

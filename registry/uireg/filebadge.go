@@ -28,9 +28,7 @@ func (b FileBadge) ContributionName() string { return b.Name }
 // FileBadges are the Explorer's file badges, by Order.
 func FileBadges(r registry.Contributions) []FileBadge {
 	var out []FileBadge
-	for _, c := range r.Contributions("file.badge") {
-		out = append(out, c.(FileBadge))
-	}
+	out = append(out, registry.ContributionsOf[FileBadge](r)...)
 	slices.SortFunc(out, func(a, b FileBadge) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})

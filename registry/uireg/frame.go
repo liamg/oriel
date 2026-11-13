@@ -64,9 +64,7 @@ func (f Frame) ContributionName() string { return f.ID }
 // FrameFor is the frame the window takes for w.
 func FrameFor(r registry.Contributions, w Window) (Frame, bool) {
 	var fs []Frame
-	for _, c := range r.Contributions("frame") {
-		fs = append(fs, c.(Frame))
-	}
+	fs = append(fs, registry.ContributionsOf[Frame](r)...)
 	slices.SortStableFunc(fs, func(a, b Frame) int { return a.Order - b.Order })
 	for _, f := range fs {
 		ok := f.When == nil

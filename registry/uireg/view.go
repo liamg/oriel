@@ -142,8 +142,8 @@ func (v SlotView) ContributionName() string { return v.Name }
 // slotView is the view standing in for id on the session in front, if one does.
 func slotView(r registry.Contributions, id string) (SlotView, bool) {
 	var cands []SlotView
-	for _, c := range r.Contributions("view.slot") {
-		if v := c.(SlotView); v.Slot == id {
+	for _, v := range registry.ContributionsOf[SlotView](r) {
+		if v.Slot == id {
 			cands = append(cands, v)
 		}
 	}

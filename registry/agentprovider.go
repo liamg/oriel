@@ -27,8 +27,8 @@ func (p AgentProvider) ContributionSource() string { return p.Source }
 // AgentProviders are the providers registered, by Order, then name.
 func AgentProviders(r Contributions) []AgentProvider {
 	var out []AgentProvider
-	for _, c := range r.Contributions("agent.provider") {
-		if p, ok := c.(AgentProvider); ok && p.Provider != nil {
+	for _, p := range ContributionsOf[AgentProvider](r) {
+		if p.Provider != nil {
 			out = append(out, p)
 		}
 	}

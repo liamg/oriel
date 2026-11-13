@@ -25,8 +25,8 @@ func contributedIcon(r registry.Registry, pictures *kit.Pictures, name string, c
 	}
 	var ic registry.Icon
 	found := false
-	for _, c := range r.Contributions("icon") {
-		if i := c.(registry.Icon); i.Name == name {
+	for _, i := range registry.ContributionsOf[registry.Icon](r) {
+		if i.Name == name {
 			ic, found = i, true
 		}
 	}

@@ -34,10 +34,10 @@ func (noTrees) Busy() bool        { return false }
 // noTree is outside any repo.
 type noTree struct{}
 
-func (noTree) Root() string         { return "" }
-func (noTree) State() *gitx.State   { return nil }
+func (noTree) Root() string                 { return "" }
+func (noTree) State() *gitx.State           { return nil }
 func (noTree) StateWithCounts() *gitx.State { return nil }
-func (noTree) Remote() string       { return "" }
-func (noTree) Status() *gitx.Status { return nil }
-func (noTree) Rel(p string) string  { return p }
-func (noTree) Load() registry.Load  { return registry.Load{Done: true} }
+func (noTree) Remote() string               { return "" }
+func (noTree) Status() *gitx.Status         { return nil }
+func (noTree) Rel(p string) string          { return p }
+func (noTree) Load() registry.Load          { return registry.Load{Done: true} }

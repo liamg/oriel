@@ -380,9 +380,7 @@ var ErrNotOffered = errors.New("the code host doesn't offer that")
 // CodeHosts are the hosts by Order, then name.
 func CodeHosts(r Contributions) []CodeHost {
 	var out []CodeHost
-	for _, c := range r.Contributions("code.host") {
-		out = append(out, c.(CodeHost))
-	}
+	out = append(out, ContributionsOf[CodeHost](r)...)
 	slices.SortFunc(out, func(a, b CodeHost) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})
