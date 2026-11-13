@@ -2,9 +2,12 @@ package typeset
 
 import (
 	"image"
+	"image/color"
 	"math"
+	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -295,6 +298,187 @@ func TestCarets(t *testing.T) {
 			if offs[0] != 0 || offs[len(offs)-1] != len(text) {
 				t.Errorf("%s %q: carets %v don't run from 0 to %d", f.Family, text, offs, len(text))
 			}
+		}
+	}
+}
+
+// agentSymbols are emoji and symbols agents put in their replies and tool output, as typed: an emoji with its
+// variation selector, a skin tone, a ZWJ sequence, Claude Code's own marks (⏺ ⎿ ✻ ✳ ✢) and keyboard symbols.
+var agentSymbols = []string{
+	"✅", "❌", "⚠️", "🚀", "🎉", "👍", "🔥", "💡", "📝", "🐛", "✨", "🔧", "🧪", "📦", "🔍", "⏳", "🟢", "🟡", "🔴",
+	"✓", "✗", "✔", "✘", "★", "☆", "●", "○", "◆", "◇", "■", "□", "▶", "◀", "☐", "☑", "☒", "♻️", "ℹ️",
+	"⏺", "⎿", "⏵", "✻", "✳", "✢", "⚡", "⏱", "⌘", "⌥", "⇧", "⏎", "⎋", "⌫", "→", "⇒", "…",
+	"👍🏽", "👨‍💻", "1️⃣",
+}
+
+// Every one of them draws from the bundled faces alone, in the editor's face, its italic and the UI's: no tofu
+// (glyph 0, .notdef), whatever fonts the machine has.
+func TestAgentSymbolsDrawFromTheBundledFaces(t *testing.T) {
+	ts, err := NewBundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []FontSpec{{Family: Mono, Size: 13}, {Family: Mono, Size: 13, Italic: true}, {Family: UI, Size: 13}} {
+		for _, s := range agentSymbols {
+			run := ts.Shape("a "+s+" b", f)
+			for _, g := range run.Glyphs {
+				if g.ID == 0 {
+					t.Errorf("%s italic=%v: %q (%U) has tofu from %s", f.Family, f.Italic, s, []rune(s), g.Face.Name)
+					break
+				}
+			}
+		}
+	}
+}
+
+// A sequence is one cluster from one face: a variation selector, skin tone or joiner never splits it into a face of
+// its own.
+func TestAnEmojiSequenceIsShapedByOneFace(t *testing.T) {
+	ts, err := NewBundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{"⚠️", "👍🏽", "👨‍💻", "1️⃣"} {
+		run := ts.Shape(s, FontSpec{Family: Mono, Size: 13})
+		for _, g := range run.Glyphs {
+			if g.Face != run.Glyphs[0].Face {
+				t.Errorf("%q (%U) is drawn by %s and %s", s, []rune(s), run.Glyphs[0].Face.Name, g.Face.Name)
+				break
+			}
+		}
+	}
+}
+
+// A symbol both a symbol face and an emoji face have is drawn in the text's weight from the symbol face, unless the
+// emoji presentation selector asks for the emoji; one only an emoji face has comes from it either way.
+//
+// ref:   unicode/tr51.html#def_emoji_presentation_selector
+// quote: "used to request an emoji presentation for an emoji character."
+func TestASymbolLooksLikeTextUnlessAskedToBeAnEmoji(t *testing.T) {
+	ts, err := NewBundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		text  string
+		emoji bool
+	}{{"⏺", false}, {"✳", false}, {"⏺️", true}, {"✳️", true}, {"🚀", true}, {"1️⃣", true}} {
+		run := ts.Shape(tt.text, FontSpec{Family: Mono, Size: 13})
+		if got := run.Glyphs[0].Face.Family == Emoji || run.Glyphs[0].Face.Family == EmojiMono; got != tt.emoji {
+			t.Errorf("%q (%U) drawn by %s; want the emoji face: %v", tt.text, []rune(tt.text), run.Glyphs[0].Face.Name, tt.emoji)
+		}
+	}
+}
+
+// Every emoji Unicode lists, up to its latest version, is drawn in colour as one emoji: a sequence (a skin tone, a
+// family, a flag, a keycap) joined into one glyph from the colour emoji face, with no tofu.
+//
+// ref:   unicode/emoji-test.txt
+// quote: "This file provides data for testing which emoji forms should be in keyboards and which should also be displayed/processed."
+func TestEveryEmojiIsDrawnInColour(t *testing.T) {
+	ts, err := NewBundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile("../../spec/unicode/emoji-test.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, bad := 0, 0
+	for _, line := range strings.Split(string(b), "\n") {
+		cps, rest, ok := strings.Cut(line, ";")
+		if !ok || strings.HasPrefix(line, "#") || !strings.HasPrefix(strings.TrimSpace(rest), "fully-qualified") {
+			continue
+		}
+		var rs []rune
+		for _, h := range strings.Fields(cps) {
+			v, err := strconv.ParseUint(h, 16, 32)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rs = append(rs, rune(v))
+		}
+		n++
+		s := string(rs)
+		run := ts.Shape(s, FontSpec{Family: Mono, Size: 13})
+		var drawn []Glyph
+		for _, g := range run.Glyphs {
+			if g.ID == 0 || g.Face.Family != Emoji {
+				drawn = nil
+				break
+			}
+			if IsColour(g.Face, g.ID) {
+				drawn = append(drawn, g)
+			}
+		}
+		if len(drawn) != 1 {
+			if bad++; bad <= 20 {
+				t.Errorf("%q (%U): %d glyphs, from %s", s, rs, len(run.Glyphs), run.Glyphs[0].Face.Name)
+			}
+		}
+	}
+	if n < 3900 {
+		t.Errorf("read %d emoji from the list", n)
+	}
+	if bad > 20 {
+		t.Errorf("and %d more", bad-20)
+	}
+}
+
+// A colour glyph's layers are painted in their own colours.
+func TestAColourGlyphIsPaintedInItsColours(t *testing.T) {
+	ts, err := NewBundled()
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := ts.Shape("🚀", FontSpec{Family: Mono, Size: 13}).Glyphs[0]
+	cg := RasteriseColour(g.Face, g.ID, 64, 0, color.NRGBA{A: 255})
+	if cg.Img == nil {
+		t.Fatal("no image")
+	}
+	cols := map[[3]uint8]bool{}
+	for i := 0; i < len(cg.Img.Pix); i += 4 {
+		if p := cg.Img.Pix[i : i+4]; p[3] == 255 {
+			cols[[3]uint8{p[0], p[1], p[2]}] = true
+		}
+	}
+	if len(cols) < 3 {
+		t.Errorf("the rocket is painted in %d colours", len(cols))
+	}
+}
+
+// The characters drawn as emoji by default are those Unicode gives Emoji_Presentation.
+//
+// ref:   unicode/tr51.html#def_emoji_presentation
+// quote: "A character that, by default, should appear with an emoji presentation in well-formed sequences, rather than a text presentation."
+func TestEmojiPresentationIsUnicodes(t *testing.T) {
+	b, err := os.ReadFile("../../spec/unicode/emoji-data.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[rune]bool{}
+	for _, line := range strings.Split(string(b), "\n") {
+		line, _, _ = strings.Cut(line, "#")
+		cps, prop, ok := strings.Cut(line, ";")
+		if !ok || strings.TrimSpace(prop) != "Emoji_Presentation" {
+			continue
+		}
+		lo, hi, _ := strings.Cut(strings.TrimSpace(cps), "..")
+		a, _ := strconv.ParseUint(lo, 16, 32)
+		z := a
+		if hi != "" {
+			z, _ = strconv.ParseUint(hi, 16, 32)
+		}
+		for r := a; r <= z; r++ {
+			want[rune(r)] = true
+		}
+	}
+	if len(want) < 1000 {
+		t.Fatalf("read %d characters", len(want))
+	}
+	for r := rune(0); r <= 0x10FFFF; r++ {
+		if defaultEmoji(r) != want[r] {
+			t.Errorf("%U: defaultEmoji %v, Unicode %v", r, defaultEmoji(r), want[r])
 		}
 	}
 }

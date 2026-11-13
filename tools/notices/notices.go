@@ -59,17 +59,11 @@ func Parts(root, goroot string) ([]Part, error) {
 	parts = append(parts, grammars...)
 	parts = append(parts, Part{Name: "nvim-treesitter queries", Licence: "Apache-2.0", Source: source(root, "syntax/queries/SOURCE"),
 		Texts: []string{"syntax/queries/LICENSE"}})
-	fonts, err := filepath.Glob(filepath.Join(root, "render", "typeset", "fonts", "*", "OFL.txt"))
+	fonts, err := fonts(root)
 	if err != nil {
 		return nil, err
 	}
-	slices.Sort(fonts)
-	for _, f := range fonts {
-		dir := filepath.Dir(f)
-		rel, _ := filepath.Rel(root, dir)
-		parts = append(parts, Part{Name: "Font: " + filepath.Base(dir), Licence: "OFL-1.1",
-			Source: source(root, filepath.ToSlash(filepath.Join(rel, "SOURCE"))), Texts: []string{filepath.ToSlash(filepath.Join(rel, "OFL.txt"))}})
-	}
+	parts = append(parts, fonts...)
 	themes, err := themes(root)
 	if err != nil {
 		return nil, err
@@ -186,6 +180,52 @@ func grammars(root string) ([]Part, error) {
 		parts = append(parts, p)
 	}
 	return parts, nil
+}
+
+// fonts are the bundled fonts, each under the licence its SOURCE names ("license:", its texts in "texts:"), or
+// OFL-1.1 in OFL.txt when it names none. A font whose licence text is missing fails.
+func fonts(root string) ([]Part, error) {
+	srcs, err := filepath.Glob(filepath.Join(root, "render", "typeset", "fonts", "*", "SOURCE"))
+	if err != nil {
+		return nil, err
+	}
+	slices.Sort(srcs)
+	var parts []Part
+	for _, src := range srcs {
+		dir := filepath.Dir(src)
+		rel, _ := filepath.Rel(root, dir)
+		rel = filepath.ToSlash(rel)
+		lic, texts := field(src, "license"), field(src, "texts")
+		if lic == "" {
+			lic, texts = "OFL-1.1", "OFL.txt"
+		}
+		p := Part{Name: "Font: " + filepath.Base(dir), Licence: lic, Source: source(root, rel+"/SOURCE")}
+		for _, t := range strings.Split(texts, ",") {
+			if t = strings.TrimSpace(t); t == "" {
+				continue
+			}
+			if _, err := os.Stat(filepath.Join(dir, t)); err != nil {
+				return nil, fmt.Errorf("font %s: its licence text %s: %w", filepath.Base(dir), t, err)
+			}
+			p.Texts = append(p.Texts, rel+"/"+t)
+		}
+		parts = append(parts, p)
+	}
+	return parts, nil
+}
+
+// field is a SOURCE file's "key:" line, or "".
+func field(file, key string) string {
+	b, err := os.ReadFile(file)
+	if err != nil {
+		return ""
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		if k, v, ok := strings.Cut(l, ":"); ok && k == key {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 // source is a SOURCE file's "source:" line, with its commit when it has one.

@@ -1,0 +1,3 @@
+source: https://github.com/google/fonts/raw/35e77c3854970a550d9894a85aba21420813a019/ofl/notoemoji/NotoEmoji%5Bwght%5D.ttf
+sha256: de6c18832938afc99caf132b39d6a30a19bac7f2e812e28db2535b4608d27551
+files: ofl/notoemoji/NotoEmoji[wght].ttf (as NotoEmoji.ttf), OFL.txt; monochrome outlines, the variable font at its default weight

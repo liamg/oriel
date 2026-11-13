@@ -18,9 +18,11 @@ const (
 
 // Families of the bundled fonts.
 const (
-	Mono    = "JetBrains Mono"
-	UI      = "Inter"
-	Display = "Space Grotesk"
+	Mono      = "JetBrains Mono"
+	UI        = "Inter"
+	Display   = "Space Grotesk"
+	Emoji     = "Twemoji"    // colour, for what no other face has and what asks to look like an emoji
+	EmojiMono = "Noto Emoji" // monochrome outlines, for emoji newer than Emoji's
 )
 
 // Feature turns an OpenType feature on or off: {"liga", 0} turns ligatures off.

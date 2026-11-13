@@ -59,7 +59,7 @@ rect 43,50 1x924 fill #24221d
 rect 6,58 32x32 fill #1f1c0f radius 7
 rect 0,65 2x18 fill #ffd23f radius 1
 text "⌥" @18.101562,78.68 #ffd23f JetBrains Mono 13
-text "⌕" @18.101562,114.68 #7c7566 JetBrains Mono 13
+text "⌕" @17.882812,114.68 #7c7566 JetBrains Mono 13
 text "±" @18.101562,150.68 #7c7566 JetBrains Mono 13
 rect 23,133 13x13 fill #ff9b45 radius 7
 text "7" @26.796875,142.56 #111111 JetBrains Mono 8.5
@@ -68,7 +68,7 @@ rect 23,169 13x13 fill #ff9b45 radius 7
 text "2" @26.796875,178.56 #111111 JetBrains Mono 8.5
 text "▷" @18.101562,222.68 #7c7566 JetBrains Mono 13
 text "⎇" @15.3515625,258.68 #7c7566 JetBrains Mono 13
-text "⚙" @18.101562,962.68 #7c7566 JetBrains Mono 13
+text "⚙" @15.8671875,962.68 #7c7566 JetBrains Mono 13
 rect 44,50 250x924 fill #0c0c0b
 rect 293,50 1x924 fill #24221d
 rect 44,79 249x1 fill #24221d
@@ -445,7 +445,7 @@ text "Add RoundingMode type" @1250.3594,370.66522 #b3ab99 Inter 12
 text "✓" @1233,394.66522 #4fe0a0 Inter 12
 text "Half-even for minor units" @1250.3594,394.66522 #b3ab99 Inter 12
 text "◐" @1233,418.66522 #4cc9f0 Inter 12
-text "Negative tie handling" @1247.625,418.66522 #ece6d8 Inter 12
+text "Negative tie handling" @1250.4844,418.66522 #ece6d8 Inter 12
 text "○" @1233,442.66522 #7c7566 Inter 12
 text "Currency precision table" @1250.7188,442.66522 #b3ab99 Inter 12
 text "○" @1233,466.66522 #7c7566 Inter 12

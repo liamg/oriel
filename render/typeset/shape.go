@@ -125,6 +125,10 @@ func (t *Typesetter) shape(text string, f FontSpec) *Run {
 		var next *Face
 		if i < len(runes) {
 			next = t.faceFor(face, runes, i)
+			// A sequence stays in its first rune's face, so the face can join it into one glyph.
+			if inSequence(runes[i]) || runes[i-1] == zwj && cur.Has(runes[i]) {
+				next = cur
+			}
 			if next == cur {
 				continue
 			}
@@ -135,16 +139,54 @@ func (t *Typesetter) shape(text string, f FontSpec) *Run {
 	return run
 }
 
-// faceFor is primary if it has runes[i], else another bundled face that does, else a system fallback
-// that does, else primary (as tofu) after asking for a fallback.
+const zwj = 0x200D
+
+// inSequence is a rune that only modifies or joins the one before it: a variation selector, the zero width joiner,
+// the keycap, a skin tone, or a tag (a subdivision flag's).
+func inSequence(r rune) bool {
+	return r == 0xFE0E || r == 0xFE0F || r == zwj || r == 0x20E3 || r >= 0x1F3FB && r <= 0x1F3FF || r >= 0xE0020 && r <= 0xE007F
+}
+
+// asEmoji is runes[i] to be drawn as an emoji: an emoji by default (Emoji_Presentation) not asked to look like text,
+// or one followed by the emoji presentation selector, a keycap or a skin tone.
+func asEmoji(runes []rune, i int) bool {
+	var n rune
+	if i+1 < len(runes) {
+		n = runes[i+1]
+	}
+	return defaultEmoji(runes[i]) && n != 0xFE0E || n == 0xFE0F || n == 0x20E3 || n >= 0x1F3FB && n <= 0x1F3FF
+}
+
+// faceFor is the face for runes[i]: a bundled emoji face for one asked to look like an emoji; else primary if it
+// has it, else another bundled face that does (the emoji faces last), else a system fallback that does, else primary
+// (as tofu) after asking for a fallback.
 func (t *Typesetter) faceFor(primary *Face, runes []rune, i int) *Face {
 	r := runes[i]
+	if asEmoji(runes, i) {
+		for _, fam := range []string{Emoji, EmojiMono} {
+			for _, fc := range t.bundled {
+				if fc.Family == fam && fc.Has(r) {
+					return fc
+				}
+			}
+		}
+	}
 	if primary.Has(r) || r < 0x20 {
 		return primary
 	}
-	for _, fc := range t.bundled {
-		if fc.Italic == primary.Italic && fc.Has(r) {
-			return fc
+	// A bundled face of the primary's style first, then any (the emoji and symbol faces have no italic), then the
+	// emoji faces, whose symbols are drawn as emoji rather than in the text's weight: colour, then monochrome.
+	text := func(fc *Face) bool { return fc.Family != Emoji && fc.Family != EmojiMono }
+	for _, pass := range []func(*Face) bool{
+		func(fc *Face) bool { return text(fc) && fc.Italic == primary.Italic },
+		text,
+		func(fc *Face) bool { return fc.Family == Emoji },
+		func(fc *Face) bool { return fc.Family == EmojiMono },
+	} {
+		for _, fc := range t.bundled {
+			if pass(fc) && fc.Has(r) {
+				return fc
+			}
 		}
 	}
 	for _, fc := range t.extra {

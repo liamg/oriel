@@ -2,6 +2,7 @@ package typeset
 
 import (
 	"image"
+	"image/color"
 	"math"
 
 	ot "github.com/go-text/typesetting/font/opentype"
@@ -84,4 +85,61 @@ func rasterise(segs []ot.Segment, scale, sub float32) Coverage {
 	mask := image.NewAlpha(image.Rect(0, 0, w, h))
 	r.Draw(mask, mask.Bounds(), image.Opaque, image.Point{})
 	return Coverage{Mask: mask, Off: image.Pt(x0, y0)}
+}
+
+// Colour is a colour glyph's image, premultiplied, placed relative to the pen as Coverage is.
+type Colour struct {
+	Img *image.RGBA // nil for an empty glyph
+	Off image.Point
+}
+
+// IsColour reports whether face draws gid in colour: its COLR layers rather than one outline.
+func IsColour(face *Face, gid GlyphID) bool { return len(face.layers(gid)) > 0 }
+
+// RasteriseColour draws face's colour glyph gid as Rasterise draws an outline: each of its layers, bottom first, in
+// its palette colour, or fg where the layer takes the text's own.
+func RasteriseColour(face *Face, gid GlyphID, ppem float32, sub uint8, fg color.NRGBA) Colour {
+	type layer struct {
+		cov Coverage
+		col color.NRGBA
+	}
+	var ls []layer
+	var bounds image.Rectangle
+	for _, l := range face.layers(gid) {
+		cov := Rasterise(face, l.ID, ppem, sub)
+		if cov.Mask == nil {
+			continue
+		}
+		col := l.Color
+		if l.Foreground {
+			col = fg
+		}
+		ls = append(ls, layer{cov, col})
+		bounds = bounds.Union(cov.Mask.Bounds().Add(cov.Off))
+	}
+	if bounds.Empty() {
+		return Colour{}
+	}
+	img := image.NewRGBA(image.Rect(0, 0, bounds.Dx(), bounds.Dy()))
+	for _, l := range ls {
+		at := l.cov.Off.Sub(bounds.Min)
+		b := l.cov.Mask.Bounds()
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			for x := b.Min.X; x < b.Max.X; x++ {
+				c := l.cov.Mask.AlphaAt(x, y).A
+				if c == 0 {
+					continue
+				}
+				a := uint32(c) * uint32(l.col.A) / 255
+				i := img.PixOffset(at.X+x-b.Min.X, at.Y+y-b.Min.Y)
+				px := img.Pix[i : i+4 : i+4]
+				inv := 255 - a
+				px[0] = uint8((uint32(l.col.R)*a + uint32(px[0])*inv) / 255)
+				px[1] = uint8((uint32(l.col.G)*a + uint32(px[1])*inv) / 255)
+				px[2] = uint8((uint32(l.col.B)*a + uint32(px[2])*inv) / 255)
+				px[3] = uint8(a + uint32(px[3])*inv/255)
+			}
+		}
+	}
+	return Colour{Img: img, Off: bounds.Min}
 }
