@@ -192,7 +192,7 @@ func gitignoreEscape(p string) string {
 
 // files are the files under dir git doesn't ignore, or every file outside dot-directories when it isn't a repo.
 func files(ctx context.Context, dir string) []string {
-	if root, ok := gitx.Root(ctx, dir); ok && filepath.Clean(root) == filepath.Clean(dir) {
+	if root, err := gitx.Root(ctx, dir); err == nil && filepath.Clean(root) == filepath.Clean(dir) {
 		if fs, err := (gitx.Repo{Dir: dir}).Files(ctx); err == nil {
 			return fs
 		}

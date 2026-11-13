@@ -100,7 +100,7 @@ func (r *repoList) add(ctx context.Context, path string, src core.RepoSource) (_
 	if err != nil {
 		return core.Repo{}, false, err
 	}
-	top, err := gitx.TopLevel(ctx, abs)
+	top, err := gitx.Root(ctx, abs)
 	if err != nil {
 		return core.Repo{}, false, fmt.Errorf("%s is not a git repository", path)
 	}
@@ -119,7 +119,8 @@ func (r *repoList) add(ctx context.Context, path string, src core.RepoSource) (_
 	for n := 2; slices.ContainsFunc(r.list, func(x core.Repo) bool { return x.ID == id }); n++ {
 		id = core.RepoID(fmt.Sprintf("%s-%d", hostcore.Sanitise(filepath.Base(top)), n))
 	}
-	repo := core.Repo{ID: id, Path: top, Remote: g.RemoteURL(ctx), BaseBranch: g.DefaultBranch(ctx), Source: src,
+	remote, _ := g.Origin(ctx) // a repo with no origin, or one git can't read, is still added
+	repo := core.Repo{ID: id, Path: top, Remote: remote, BaseBranch: g.DefaultBranch(ctx), Source: src,
 		Added: r.now().UTC()}
 	r.list = append(r.list, repo)
 	return repo, true, r.save()
@@ -254,13 +255,14 @@ func (x *Registry) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
 	if err != nil {
 		return RepoCheck{Error: err.Error()}
 	}
-	top, err := gitx.TopLevel(ctx, abs)
+	top, err := gitx.Root(ctx, abs)
 	if err != nil {
 		return RepoCheck{Error: "not a git repository"}
 	}
 	main := gitx.Repo{Dir: top}.MainClone(ctx)
 	g := gitx.Repo{Dir: main}
-	c = RepoCheck{Path: main, Worktree: main != top, Remote: g.RemoteURL(ctx)}
+	remote, _ := g.Origin(ctx)
+	c = RepoCheck{Path: main, Worktree: main != top, Remote: remote}
 	c.Branch = g.CurrentBranch(ctx)
 	if r, ok := x.list.find(main); ok {
 		c.Known = r.ID
@@ -335,7 +337,8 @@ func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (CloneTarget, er
 	t := CloneTarget{Dir: filepath.Join(parent, name), Name: name}
 	if _, err := os.Stat(t.Dir); err == nil {
 		t.Exists = true
-		t.Same = gitx.IsRepo(t.Dir) && (gitx.Repo{Dir: t.Dir}).RemoteURL(ctx) == url
+		origin, err := gitx.Repo{Dir: t.Dir}.Origin(ctx)
+		t.Same = gitx.IsRepo(t.Dir) && err == nil && origin == url
 	}
 	return t, nil
 }

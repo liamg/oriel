@@ -96,7 +96,7 @@ func inPlace(ctx context.Context, se *core.SessionState, spec core.SessionSpec) 
 	}
 	se.Dir = dir
 	p := core.Project{Name: filepath.Base(dir), Dir: dir, Primary: true}
-	if top, err := gitx.TopLevel(ctx, dir); err == nil && top == dir {
+	if top, err := gitx.Root(ctx, dir); err == nil && top == dir {
 		p.Branch, _ = gitx.Repo{Dir: dir}.Branch(ctx)
 		se.Branch = p.Branch
 	}

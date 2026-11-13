@@ -37,7 +37,7 @@ func (d Draft) Empty() bool { return strings.TrimSpace(d.Title+d.Body) == "" }
 func DraftCode(ctx context.Context, repo gitx.Repo, base, kind string) string {
 	since := "HEAD"
 	if kind == "pr" && base != "" {
-		if mb := repo.MergeBase(ctx, base); mb != "" {
+		if mb := repo.ForkPoint(ctx, base); mb != "" {
 			since = mb
 		}
 	}

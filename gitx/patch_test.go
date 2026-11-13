@@ -23,10 +23,10 @@ func TestSnapshotDiffs(t *testing.T) {
 	r.Write(map[string]string{"currency.go": "package pricing\n\nvar half = 1\n"})
 	ctx := context.Background()
 	repo := Repo{Dir: r.Dir}
-	if got := repo.MergeBase(ctx, ""); got != base {
+	if got := repo.ForkPoint(ctx, ""); got != base {
 		t.Errorf("merge-base %q, want %q", got, base)
 	}
-	if got := repo.MergeBase(ctx, "main"); got != base {
+	if got := repo.ForkPoint(ctx, "main"); got != base {
 		t.Errorf("merge-base with main %q, want %q", got, base)
 	}
 	snap, err := repo.Snapshot(ctx)

@@ -215,7 +215,7 @@ func TestFingerprintFollowsTheCode(t *testing.T) {
 	if untracked == edited || fp("HEAD") == untracked {
 		t.Fatal("an untracked file's content doesn't count")
 	}
-	base := r.MergeBase(ctx, "origin/main")
+	base := r.ForkPoint(ctx, "origin/main")
 	if base == "" {
 		t.Fatal("no merge base with origin/main")
 	}

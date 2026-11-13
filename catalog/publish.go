@@ -69,7 +69,8 @@ func Publish(ctx context.Context, o PublishOpts) (Published, error) {
 	} else if dirty {
 		return out, errors.New("the work tree has changes: publish exactly what's tagged")
 	}
-	repo, ok := githubRepo(r.RemoteURL(ctx))
+	origin, _ := r.Origin(ctx) // none, or git couldn't say: not a GitHub repo
+	repo, ok := githubRepo(origin)
 	if !ok {
 		return out, errors.New("origin isn't a GitHub repository")
 	}

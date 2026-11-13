@@ -19,7 +19,8 @@ func (x *Watches) builtins() []registry.Named {
 		if dir == "" {
 			return "", errors.New("no dir: the work tree to read")
 		}
-		root, ok := gitx.Root(context.Background(), dir)
+		root, rootErr := gitx.Root(context.Background(), dir)
+		ok := rootErr == nil
 		if !ok {
 			return "", fmt.Errorf("%s isn't in a git work tree", dir)
 		}

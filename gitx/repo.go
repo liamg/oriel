@@ -259,13 +259,13 @@ func (r Repo) Authors(ctx context.Context) ([]Author, error) {
 	return as, nil
 }
 
-// Root is the top of the work tree dir is in, and whether it's in one.
-func Root(ctx context.Context, dir string) (string, bool) {
+// Root is the top of the work tree dir is in, or why git can't say: it isn't in one, or git failed.
+func Root(ctx context.Context, dir string) (string, error) {
 	out, err := Repo{Dir: dir}.git(ctx, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return "", false
+		return "", err
 	}
-	return filepath.FromSlash(strings.TrimSpace(string(out))), true
+	return filepath.FromSlash(strings.TrimSpace(string(out))), nil
 }
 
 // Dirs are a work tree's git folder, and the repository's own that holds its refs: the same but for a linked

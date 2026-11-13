@@ -119,7 +119,7 @@ func TestClone(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := gitx.Repo{Dir: dir}
-	if got := r.RemoteURL(ctx); got != bare {
+	if got, err := r.Origin(ctx); err != nil || got != bare {
 		t.Errorf("the clone's origin is %q, want %q", got, bare)
 	}
 	if !gitx.IsRepo(dir) {

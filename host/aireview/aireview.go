@@ -157,7 +157,7 @@ func changeOf(ctx context.Context, se core.SessionState, rv *core.AIReview, last
 			if pr.Detached {
 				base = "" // a review's start, not a branch it left
 			}
-			rp.Since = repo.MergeBase(ctx, base)
+			rp.Since = repo.ForkPoint(ctx, base)
 			rp.From = rp.Since
 		}
 		if rp.From == "" {

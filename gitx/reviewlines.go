@@ -90,7 +90,7 @@ func patchPath(s, prefix string) string {
 // (BaseRef's when base is "") to HEAD: by file, then side as PatchLines has them. A file missing from it isn't in
 // the change.
 func (r Repo) ReviewLines(ctx context.Context, base string) (map[string]map[string]map[int]bool, error) {
-	diff, err := r.Diff(ctx, r.MergeBase(ctx, base), "HEAD")
+	diff, err := r.Diff(ctx, r.ForkPoint(ctx, base), "HEAD")
 	if err != nil {
 		return nil, err
 	}

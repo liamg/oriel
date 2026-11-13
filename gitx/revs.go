@@ -105,10 +105,13 @@ func (r Repo) ChangedFiles(ctx context.Context, base string) ([]string, error) {
 	return strings.Fields(string(out)), nil
 }
 
-// CurrentBranch is the branch checked out, or "" on a detached HEAD.
+// CurrentBranch is Branch's answer, with "" for a detached HEAD or a branch git couldn't name.
 func (r Repo) CurrentBranch(ctx context.Context) string {
-	out, _ := r.git(ctx, "branch", "--show-current")
-	return strings.TrimSpace(string(out))
+	b, err := r.Branch(ctx)
+	if err != nil || b == "HEAD" {
+		return ""
+	}
+	return b
 }
 
 // ObjectsKiB is the size of the object store, loose and packed.

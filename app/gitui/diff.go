@@ -328,7 +328,7 @@ func knownTarget(h plugin.Host, path string) (clean, dir, root string, err error
 
 // gitRoot is the work tree git finds dir in.
 func gitRoot(ctx context.Context, path, dir string) (string, error) {
-	if r, ok := gitx.Root(ctx, dir); ok {
+	if r, err := gitx.Root(ctx, dir); err == nil {
 		return r, nil
 	}
 	return "", fmt.Errorf("%s isn't in a git repository", path)

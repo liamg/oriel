@@ -107,7 +107,8 @@ func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
 	if dir == "" {
 		return "", false
 	}
-	return gitx.Root(ctx, dir)
+	root, err := gitx.Root(ctx, dir)
+	return root, err == nil
 }
 
 // hold reads the work tree at root as the window's, for good: Tree("") is it until the window moves (DirChanged).
@@ -153,7 +154,8 @@ func (g *Git) follow() {
 	}
 	g.running.Add(1)
 	g.busy.Go(func() {
-		root, ok := gitx.Root(context.Background(), dir)
+		root, rootErr := gitx.Root(context.Background(), dir)
+		ok := rootErr == nil
 		g.h.Do(func() {
 			defer g.running.Add(-1)
 			if g.work != dir { // moved on again while it looked
@@ -321,7 +323,8 @@ func (g *Git) tree(dir string) *gitTree {
 	g.others[dir] = t
 	g.running.Add(1)
 	g.busy.Go(func() {
-		root, ok := gitx.Root(context.Background(), dir)
+		root, rootErr := gitx.Root(context.Background(), dir)
+		ok := rootErr == nil
 		// The loop reads the tree's fields unlocked, so they're set there; Busy holds until they are.
 		g.h.Do(func() {
 			defer g.running.Add(-1)
