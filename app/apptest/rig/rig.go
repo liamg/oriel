@@ -497,6 +497,19 @@ type Host struct {
 	Repo string
 }
 
+// Settle waits for the host's work off its callers to end (host.Host.Busy): what a test waits for before it counts
+// what that work did.
+func (h *Host) Settle(t testing.TB) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for busy := h.W.Busy(); len(busy) > 0; busy = h.W.Busy() {
+		if time.Now().After(deadline) {
+			t.Fatalf("the host's work never ended: still running %q%s", busy, Stuck())
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
 // NewHost is a session host with the fake provider, or the fakes given (named as the providers they stand for).
 func NewHost(t *testing.T, fakes ...*agenttest.Fake) *Host {
 	t.Helper()

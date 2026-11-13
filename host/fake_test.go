@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -148,20 +146,7 @@ func (r *rig) eventually(id core.SessionID, what string, cond func(core.SessionS
 // settle waits for the host's work off its callers to end: agents starting, resumes, marks, notices.
 func (r *rig) settle() {
 	r.t.Helper()
-	// The jobs that run as long as what they serve.
-	lasting := []string{"an agent's events", "a utility agent", "a permission", "a question", "Terminal", "a terminal dialog",
-		"a sign-in", "usage", "a stuck fetch"}
-	busy := func() []string {
-		out := r.w.run.Starting()
-		for _, j := range r.w.going.Running() {
-			name, _, _ := strings.Cut(j, " ×")
-			if !slices.Contains(lasting, name) {
-				out = append(out, j)
-			}
-		}
-		return out
-	}
-	until(r.t, "the host's work to end", func() bool { return len(busy()) == 0 }, func() string { return fmt.Sprintf("still running %q", busy()) })
+	until(r.t, "the host's work to end", func() bool { return len(r.w.Busy()) == 0 }, func() string { return fmt.Sprintf("still running %q", r.w.Busy()) })
 }
 
 // noneSent checks a was given nothing: once its events are handled and the host's work has ended, nothing is on its way.

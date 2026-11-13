@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -291,6 +292,22 @@ func (w *Host) waitGoing() {
 	case <-t.C:
 		w.log.Warn("closing without waiting any longer", "still running", strings.Join(w.going.Running(), ", "))
 	}
+}
+
+// lastingJobs are the host's jobs that run as long as what they serve, so never end on their own.
+var lastingJobs = []string{"an agent's events", "a utility agent", "a permission", "a question", "Terminal", "a terminal dialog",
+	"a sign-in", "usage", "a stuck fetch"}
+
+// Busy names the host's work under way off its callers that will end on its own: agents starting, resumes, marks,
+// notices. A test waits for none before it counts what that work does.
+func (w *Host) Busy() []string {
+	out := w.run.Starting()
+	for _, j := range w.going.Running() {
+		if name, _, _ := strings.Cut(j, " ×"); !slices.Contains(lastingJobs, name) {
+			out = append(out, j)
+		}
+	}
+	return out
 }
 
 // emit applies an event to the host's state.

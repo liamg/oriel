@@ -34,13 +34,10 @@ func TestShellCommandsMarkOnlyWhatChanged(t *testing.T) {
 		return len(slices.DeleteFunc(spawned(), func(s string) bool { return !strings.HasPrefix(s, "git,") }))
 	}
 	quiet := func() int {
-		for n := -1; ; time.Sleep(400 * time.Millisecond) {
-			if m := gits(); m == n {
-				return m
-			} else {
-				n = m
-			}
-		}
+		a.Handled(t)
+		lw.Settle(t)
+		r.Drain()
+		return gits()
 	}
 	bash := func(id, cmd string) {
 		in, _ := json.Marshal(map[string]string{"command": cmd})
