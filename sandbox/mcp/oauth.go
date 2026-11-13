@@ -115,13 +115,13 @@ const flowTimeout = 10 * time.Minute
 
 // Token returns the stored access token, refreshing it first if expired.
 func (o *OAuth) Token(ctx context.Context) (string, error) {
-	a, _ := o.load()
+	a := o.load()
 	if a.AccessToken == "" || !a.expired() || a.RefreshToken == "" {
 		return a.AccessToken, nil
 	}
 	o.flow.Lock()
 	defer o.flow.Unlock()
-	a, _ = o.load()
+	a = o.load()
 	if a.expired() && a.RefreshToken != "" {
 		if na, err := o.refresh(ctx, a); err == nil {
 			return na.AccessToken, nil
@@ -135,7 +135,7 @@ func (o *OAuth) Token(ctx context.Context) (string, error) {
 func (o *OAuth) Unauthorized(ctx context.Context, rejected, wwwAuthenticate string) (string, error) {
 	o.flow.Lock()
 	defer o.flow.Unlock()
-	a, _ := o.load()
+	a := o.load()
 	if a.AccessToken != "" && a.AccessToken != rejected {
 		return a.AccessToken, nil
 	}
@@ -187,13 +187,15 @@ func callbackPage(w http.ResponseWriter, status int, msg string) {
 	_, _ = fmt.Fprintf(w, "<!doctype html><meta charset=utf-8><title>oriel</title><p style=\"font-family:sans-serif\">%s</p>\n", html.EscapeString(msg))
 }
 
-func (o *OAuth) load() (StoredAuth, bool) {
+// load is the stored sign-in, or none.
+func (o *OAuth) load() StoredAuth {
 	if o.Store != nil {
-		return o.Store.Load()
+		a, _ := o.Store.Load()
+		return a
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	return o.mem, o.mem != StoredAuth{}
+	return o.mem
 }
 
 func (o *OAuth) save(a StoredAuth) error {
@@ -277,7 +279,7 @@ func (o *OAuth) authorize(ctx context.Context, wwwAuthenticate string) (string, 
 	if err != nil {
 		return "", err
 	}
-	a, _ := o.load()
+	a := o.load()
 	if a.Issuer != "" && a.Issuer != md.Issuer {
 		a.ClientID, a.ClientSecret = "", ""
 	}

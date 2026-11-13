@@ -107,16 +107,16 @@ func relTo(dir, path string) string {
 }
 
 // findUp walks up from dir to the first directory holding one of names.
-func findUp(dir string, names ...string) (string, string, bool) {
+func findUp(dir string, names ...string) (string, bool) {
 	for {
 		for _, n := range names {
 			if fileExists(filepath.Join(dir, n)) {
-				return dir, n, true
+				return dir, true
 			}
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", "", false
+			return "", false
 		}
 		dir = parent
 	}

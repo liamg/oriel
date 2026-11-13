@@ -534,19 +534,18 @@ func (x *Plugin) setDepth(name string) error {
 	return nil
 }
 
-// content is a crumb's text now, and its hash.
-func (x *Plugin) content(cd *explainCard, i int) ([]byte, string, bool) {
+// contentHash is the hash of a crumb's text now.
+func (x *Plugin) contentHash(cd *explainCard, i int) (string, bool) {
 	r, ok := cd.rangeOf(i)
 	if !ok {
-		return nil, "", false
+		return "", false
 	}
-	b := cd.buf.Snapshot().Slice(r)
-	return b, unitHash(cd.crumbs[i].kind, b), true
+	return unitHash(cd.crumbs[i].kind, cd.buf.Snapshot().Slice(r)), true
 }
 
 // changed is whether the step shown has changed since it was explained.
 func (x *Plugin) changed(cd *explainCard) bool {
-	_, h, ok := x.content(cd, cd.sel)
+	h, ok := x.contentHash(cd, cd.sel)
 	return ok && cd.crumbs[cd.sel].hash != "" && h != cd.crumbs[cd.sel].hash
 }
 
@@ -565,7 +564,7 @@ func (x *Plugin) ensure() {
 		return
 	}
 	cr := &cd.crumbs[cd.sel]
-	_, h, ok := x.content(cd, cd.sel)
+	h, ok := x.contentHash(cd, cd.sel)
 	if !ok {
 		return
 	}
@@ -600,7 +599,7 @@ func (x *Plugin) markedAs(buf *text.Buffer, kind string, off int) string {
 
 func (x *Plugin) refresh() error {
 	if cd := x.card; cd != nil {
-		_, h, _ := x.content(cd, cd.sel)
+		h, _ := x.contentHash(cd, cd.sel)
 		cd.crumbs[cd.sel].hash = h
 		x.ensure()
 	}

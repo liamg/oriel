@@ -46,7 +46,7 @@ type goModule struct {
 
 // module is the module a directory is in: its root and path, read from go.mod.
 func (g *Go) module(dir string) (goModule, bool) {
-	root, _, ok := findUp(dir, "go.mod")
+	root, ok := findUp(dir, "go.mod")
 	if !ok {
 		return goModule{}, false
 	}
