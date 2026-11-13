@@ -63,10 +63,21 @@ function oriel.command(name, fn, opts) end
 ---@return string?
 function oriel.exec(argv, opts) end
 
---- Decode JSON text to a table, or encode a value as JSON text.
+--- Decode JSON text to a table, or encode any other value as JSON text.
 ---@param v any
 ---@return any
+---@deprecated use oriel.json_encode or oriel.json_decode, which can encode a string
 function oriel.json(v) end
+
+--- Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
+---@param s string
+---@return any
+function oriel.json_decode(s) end
+
+--- Encode a value as JSON text: a table, a string, a number, a boolean.
+---@param v any
+---@return string
+function oriel.json_encode(v) end
 
 --- A load for oriel.ui.async and busy: fn(done) starts the work on the loop and calls done(value) when it has it, or done(nil, err) when it failed (from an oriel.http.request answer, say). opts: timeout (seconds; a load still running then fails). Returns a handle: h:start() (once; does nothing while loading or loaded), h:reload() (keeps the value on show), h:reset(), h:value(), h:state() ({ phase = idle|pending|ready|failed, error, stale, note, elapsed }).
 ---@param fn function
@@ -239,7 +250,7 @@ function oriel.explorer.badge(spec) end
 ---@class oriel.http
 oriel.http = {}
 
---- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+--- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json_encode(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
 ---@param spec table
 ---@param fn function
 function oriel.http.request(spec, fn) end

@@ -11,7 +11,9 @@ A Lua or WASM plugin that uses only this API isn't required to be AGPL: license 
 - `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments. Deprecated: use oriel.run.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
 - `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
-- `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode a value as JSON text.
+- `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode any other value as JSON text. Deprecated: use oriel.json_encode or oriel.json_decode, which can encode a string.
+- `oriel.json_decode(s)` (`ui`): Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
+- `oriel.json_encode(v)` (`ui`): Encode a value as JSON text: a table, a string, a number, a boolean.
 - `oriel.load(fn, opts?)` (`ui`): A load for oriel.ui.async and busy: fn(done) starts the work on the loop and calls done(value) when it has it, or done(nil, err) when it failed (from an oriel.http.request answer, say). opts: timeout (seconds; a load still running then fails). Returns a handle: h:start() (once; does nothing while loading or loaded), h:reload() (keeps the value on show), h:reset(), h:value(), h:state() ({ phase = idle|pending|ready|failed, error, stale, note, elapsed }).
 - `oriel.log(msg, lvl)` (`ui`): Write to Oriel's log: level is debug, info, warn or error.
 - `oriel.notify(msg, lvl)` (`ui`): Tell the user something, through the one path every notice takes: level is info, warn, error or question (it waits in the inbox until dismissed).
@@ -69,7 +71,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.http
 
-- `oriel.http.request(spec, fn)` (capability by target): Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+- `oriel.http.request(spec, fn)` (capability by target): Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json_encode(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
 
 ## oriel.hud
 

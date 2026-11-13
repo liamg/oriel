@@ -95,7 +95,7 @@ L.statusline(function(w)
 end)
 
 L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
-  local n = L.json(L.http.get("https://deploy.internal/api/pending")).count
+  local n = L.json_decode(L.http.get("https://deploy.internal/api/pending")).count
   return L.ui.indicator{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
 end)
 

@@ -214,7 +214,7 @@ Then make the request. A webhook is a secret that's a whole URL, so it goes as `
 L.command("saves.post", function()
   L.http.request({ method = "POST", url_secret = "SLACK_WEBHOOK",
     headers = { ["Content-Type"] = "application/json" },
-    body = L.json({ text = #saved() .. " files saved" }) }, function(res, err)
+    body = L.json_encode({ text = #saved() .. " files saved" }) }, function(res, err)
     if err then
       return L.notify("Slack: " .. tostring(err), "error")
     end

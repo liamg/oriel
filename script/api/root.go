@@ -224,17 +224,27 @@ func (r Root) Now() float64 {
 	return float64(t.UnixMicro()) / 1e6
 }
 
-//oriel:api doc="Decode JSON text to a table, or encode a value as JSON text." returns=any
-func (r Root) JSON(v any) (any, error) {
-	if s, ok := v.(string); ok {
-		var out any
-		if err := json.Unmarshal([]byte(s), &out); err != nil {
-			return nil, err
-		}
-		return out, nil
-	}
+//oriel:api doc="Encode a value as JSON text: a table, a string, a number, a boolean." returns=string
+func (r Root) JSONEncode(v any) (string, error) {
 	b, err := json.Marshal(v)
 	return string(b), err
+}
+
+//oriel:api doc="Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil." returns=any
+func (r Root) JSONDecode(s string) (any, error) {
+	var out any
+	if err := json.Unmarshal([]byte(s), &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+//oriel:api doc="Decode JSON text to a table, or encode any other value as JSON text." returns=any deprecated="use oriel.json_encode or oriel.json_decode, which can encode a string"
+func (r Root) JSON(v any) (any, error) {
+	if s, ok := v.(string); ok {
+		return r.JSONDecode(s)
+	}
+	return r.JSONEncode(v)
 }
 
 //oriel:api doc="Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."

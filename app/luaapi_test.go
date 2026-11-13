@@ -85,7 +85,11 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 	file := filepath.Join(t.TempDir(), "f.txt")
 	os.WriteFile(file, []byte("hello"), 0o644)
 	for _, c := range []struct{ line, want string }{
-		{`L.json('{"a":[1,2]}').a[2]`, "2"},
+		{`L.json_decode('{"a":[1,2]}').a[2]`, "2"},
+		{`L.json_encode({ a = 1 })`, `"{\"a\":1}"`},
+		{`L.json_encode("hello")`, `"\"hello\""`},
+		{`L.json_decode('"hello"')`, `"hello"`},
+		{`L.json('{"a":[1,2]}').a[2]`, "2"}, // deprecated, kept for old configs
 		{`L.json({ a = 1 })`, `"{\"a\":1}"`},
 		{`L.read("` + file + `")`, `"hello"`},
 		{`select(2, L.read("/nonexistent/x"))`, `"open /nonexistent/x: no such file or directory"`},
@@ -101,7 +105,7 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		}
 	}
 	for line, want := range map[string]string{
-		`L.json("{")`:              "oriel.json:",
+		`L.json_decode("{")`:       "oriel.json_decode:",
 		`L.exec({ "false" })`:      "oriel.exec: false: exit status 1",
 		`L.exec({})`:               "oriel.exec: no program",
 		`L.run("no.such.command")`: "oriel.run:",

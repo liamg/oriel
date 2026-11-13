@@ -41,6 +41,20 @@ func (a *APIs) bind(vm *script.VM) {
 				v, err := x.JSON(c.Any(0))
 				return []any{v}, err
 			},
+			"json_decode": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				v, err := x.JSONDecode(c.String(0))
+				return []any{v}, err
+			},
+			"json_encode": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				v, err := x.JSONEncode(c.Any(0))
+				return []any{v}, err
+			},
 			"load": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
