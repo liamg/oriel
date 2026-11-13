@@ -119,7 +119,7 @@ func openLog(log string) (*os.File, error) {
 	return os.Create(log)
 }
 
-// ProjectImage is the tag for a project's own approved Dockerfile.
+// ProjectImage is the tag for a project's own Dockerfile.
 func ProjectImage(dockerfile string) string {
 	sum := sha256.Sum256([]byte(dockerfile))
 	return "oriel-project:" + hex.EncodeToString(sum[:])[:12]
