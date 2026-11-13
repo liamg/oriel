@@ -1173,7 +1173,7 @@ func (e *Engine) exSet(args string) error {
 			name = name[2:]
 		}
 		if d, ok := optionDef(name); ok {
-			if d.Kind != "bool" && (!on || invert) {
+			if d.Kind != BoolKind && (!on || invert) {
 				return errUnknownOption.with(a)
 			}
 			if invert {
