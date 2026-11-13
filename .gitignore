@@ -9,3 +9,6 @@ sandbox/helper/bin/*
 
 # signing identities (scripts/macos-signing-cert.sh)
 *.p12
+
+# desloppify local state
+.desloppify/
