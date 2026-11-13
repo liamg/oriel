@@ -30,8 +30,9 @@ type CodeHost struct {
 	Shape  *regexp.Regexp
 	Setup  SiteSetup
 	Tokens TokenSources
-	// Allow lets the host's plugin reach a site set up for it: its hostname, and the site's secret there.
-	Allow func(host, secret string)
+	// Allow lets the host's plugin reach a site, for why: its hostname, and the site's secret there if secret isn't
+	// "". undo takes that back.
+	Allow func(host, secret, why string) (undo func())
 
 	Requested func(ctx context.Context, s Site) ([]ReviewRequest, error) // open pull requests asking you, and those you're part way through
 	Lookup    func(ctx context.Context, s Site, url string) (ReviewDetail, error)

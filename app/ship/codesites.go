@@ -155,7 +155,7 @@ func (c *codeSites) site(h registry.CodeHost, hostname string) registry.HostSite
 	c.allowed[hs.Key()] = true
 	c.mu.Unlock()
 	if allow {
-		h.Allow(hostname, hs.Site.Secret)
+		h.Allow(hostname, hs.Site.Secret, "a server of yours set up as "+h.Label())
 	}
 	return hs
 }
@@ -198,14 +198,17 @@ func (c *codeSites) Probe(ctx context.Context, hostname string) (registry.HostSi
 		if h.Setup.Probe == nil {
 			continue
 		}
-		if h.Allow != nil {
-			h.Allow(hostname, "")
+		undo := func() {}
+		if h.Allow != nil { // for the probe alone: kept only if the server says it's this host's
+			undo = h.Allow(hostname, "", "probing "+hostname+" for "+h.Label())
 		}
 		var yes bool
 		if registry.Call(func() (err error) { yes, err = h.Setup.Probe(ctx, hostname); return err }) == nil && yes {
+			undo()
 			c.Remember(hostname, h.Name, "")
 			return c.site(h, hostname), true
 		}
+		undo()
 	}
 	return registry.HostSite{}, false
 }

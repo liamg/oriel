@@ -83,14 +83,14 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 			}
 		}
 	}
-	if g, ok := a.Plugin.Guard.(*plugin.Grants); ok {
+	if g := a.Plugin.Guard; g != nil {
 		id := a.Plugin.ID
-		h.Allow = func(host, secret string) {
-			gs := []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{host}, Why: "a server of yours you set up as " + h.Label()}}
+		h.Allow = func(host, secret, why string) (undo func()) {
+			gs := []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{host}, Why: why}}
 			if secret != "" {
-				gs = append(gs, plugin.Grant{Cap: plugin.CapSecrets, Scope: []string{secret + "@" + host}})
+				gs = append(gs, plugin.Grant{Cap: plugin.CapSecrets, Scope: []string{secret + "@" + host}, Why: why})
 			}
-			g.Add(id, gs...)
+			return g.Widen(id, why, gs...)
 		}
 	}
 	if f := fn("requested"); f != nil {

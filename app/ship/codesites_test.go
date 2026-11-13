@@ -28,7 +28,10 @@ func testGitLab(probe func(string) bool, allowed *[]string) registry.CodeHost {
 		Setup: registry.SiteSetup{API: "https://{host}/api/v4", Secret: "GITLAB_TOKEN", TokenURL: "https://{host}/-/user_settings/personal_access_tokens",
 			TokenHelp: "A personal access token with the api scope.",
 			Probe:     func(_ context.Context, host string) (bool, error) { return probe != nil && probe(host), nil }},
-		Allow: func(host, secret string) { *allowed = append(*allowed, host+" "+secret) }}
+		Allow: func(host, secret, _ string) func() {
+			*allowed = append(*allowed, host+" "+secret)
+			return func() { *allowed = append(*allowed, "undo "+host) }
+		}}
 }
 
 // "The first step that answers wins, and the answer is kept per hostname: you
@@ -59,6 +62,14 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 		if n, h, r := at(remote); [3]string{n, h, r} != want {
 			t.Errorf("%s: %s %s %s, want %v", remote, n, h, r, want)
 		}
+	}
+
+	// A probe is let reach the server only while it asks: one that answers no takes its grant back.
+	if _, ok := sites.Probe(context.Background(), "nope.acme.test"); ok {
+		t.Error("a server no probe claimed was found")
+	}
+	if got := strings.Join(allowed, ","); !strings.Contains(got, "nope.acme.test ,undo nope.acme.test") {
+		t.Errorf("a probe that answered no kept its grant: %q", allowed)
 	}
 
 	// gh's own config names a GitHub Enterprise server; glab's a GitLab.

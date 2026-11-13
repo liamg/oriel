@@ -184,3 +184,29 @@ func TestCheckProgram(t *testing.T) {
 		t.Error("a program the grant doesn't name was allowed")
 	}
 }
+
+// Widen grants a plugin more at run time, where the audit shows it and why, and its undo takes exactly that back.
+func TestWidenIsAuditedAndUndone(t *testing.T) {
+	g := NewGrants()
+	g.Grant("p/q", []Grant{{Cap: CapNet, Scope: []string{"api.example.com"}}})
+	undo := g.Widen("p/q", "probing git.acme.corp for GitLab", Grant{Cap: CapNet, Scope: []string{"git.acme.corp"}})
+	if err := g.Check("p/q", CapNet, "git.acme.corp"); err != nil {
+		t.Fatalf("widened: %v", err)
+	}
+	var widened *Use
+	for _, u := range g.Audit() {
+		if u.Why != "" {
+			widened = &u
+		}
+	}
+	if widened == nil || widened.Cap != CapNet || widened.Target != "git.acme.corp" || widened.Why != "probing git.acme.corp for GitLab" {
+		t.Errorf("the audit has no widening: %+v", g.Audit())
+	}
+	undo()
+	if err := g.Check("p/q", CapNet, "git.acme.corp"); err == nil {
+		t.Error("undone, it still reaches git.acme.corp")
+	}
+	if err := g.Check("p/q", CapNet, "api.example.com"); err != nil {
+		t.Errorf("undo took the declared grant too: %v", err)
+	}
+}
