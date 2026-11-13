@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -36,6 +37,7 @@ type codeSites struct {
 
 	mu      sync.Mutex
 	probed  map[string]bool             // hostnames probed, whatever they answered
+	offered map[string]bool             // hostnames a host's Shape matched, offered for setup
 	allowed map[string]bool             // the sites their plugins were let reach, by key
 	ran     map[string]string           // each site secret's command's answer, "" for none
 	served  map[string]string           // the source each site secret was last answered from: "secret", "env:X", "command"
@@ -49,7 +51,7 @@ func newCodeSites(h plugin.Host) *codeSites {
 	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
 		dir = x
 	}
-	return &codeSites{h: h, config: dir, probed: map[string]bool{}, allowed: map[string]bool{}, ran: map[string]string{}, served: map[string]string{},
+	return &codeSites{h: h, config: dir, probed: map[string]bool{}, offered: map[string]bool{}, allowed: map[string]bool{}, ran: map[string]string{}, served: map[string]string{},
 		refused: map[string]map[string]bool{}, env: os.LookupEnv, run: runToken}
 }
 
@@ -141,10 +143,26 @@ func (c *codeSites) at(hostname, whole string) (registry.HostSite, bool) {
 	}
 	for _, h := range hosts {
 		if h.Shape != nil && h.Shape.MatchString(whole) {
-			return c.site(h, hostname), true
+			c.offer(h, hostname)
+			return registry.HostSite{}, false
 		}
 	}
 	return registry.HostSite{}, false
+}
+
+// offer asks, once, whether hostname is h's server, as its remotes' shape says: its plugin isn't let reach a server
+// until you set it up (code.setup), which names it h's.
+func (c *codeSites) offer(h registry.CodeHost, hostname string) {
+	c.mu.Lock()
+	done := c.offered[hostname]
+	c.offered[hostname] = true
+	c.mu.Unlock()
+	if done {
+		return
+	}
+	c.h.Notify(core.Notice{ID: "code.offer." + hostname, Severity: core.SevInfo, Source: "code hosts", Title: h.Label(),
+		Text:    hostname + "'s remotes look like " + h.Label() + "'s. Set it up to let its plugin reach the server.",
+		Actions: []core.Action{{Title: "Set up…", Command: "code.setup", Args: map[string]any{"hostname": hostname, "code_host": h.Name}}}})
 }
 
 // site is h's self-hosted site at hostname, its plugin let reach it.

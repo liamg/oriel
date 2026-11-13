@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/ship"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -56,7 +57,7 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 		"https://github.com/acme/api.git":         {"github", "github.com", "acme/api"},
 		"git@github.com:acme/api.git":             {"github", "github.com", "acme/api"},
 		"https://gitlab.com/acme/group/web.git":   {"gitlab", "gitlab.com", "acme/group/web"},
-		"https://tfs.acme.corp/Coll/web/_git/api": {"azure", "tfs.acme.corp", "api"},
+		"https://tfs.acme.corp/Coll/web/_git/api": {}, // its shape is Azure DevOps', but you haven't set it up
 		"git@ghe.acme.corp:acme/api.git":          {},
 	} {
 		if n, h, r := at(remote); [3]string{n, h, r} != want {
@@ -70,6 +71,24 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 	}
 	if got := strings.Join(allowed, ","); !strings.Contains(got, "nope.acme.test ,undo nope.acme.test") {
 		t.Errorf("a probe that answered no kept its grant: %q", allowed)
+	}
+
+	// A remote whose shape alone says it's a host's server isn't its plugin's to reach until you say so: a notice offers
+	// to set it up, once.
+	var offer core.Notification
+	for _, n := range s.Store().State().Notifications {
+		if strings.Contains(n.Text, "tfs.acme.corp") {
+			offer = n
+		}
+	}
+	if len(offer.Actions) == 0 || offer.Actions[0].Command != "code.setup" || offer.Actions[0].Args["code_host"] != "azure" {
+		t.Errorf("no offer to set tfs.acme.corp up as Azure DevOps: %+v", offer)
+	}
+	if err := sites.Remember("tfs.acme.corp", "azure", ""); err != nil {
+		t.Fatal(err)
+	}
+	if n, h, r := at("https://tfs.acme.corp/Coll/web/_git/api"); [3]string{n, h, r} != [3]string{"azure", "tfs.acme.corp", "api"} {
+		t.Errorf("once set up: %s %s %s", n, h, r)
 	}
 
 	// gh's own config names a GitHub Enterprise server; glab's a GitLab.

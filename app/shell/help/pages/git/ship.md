@@ -184,8 +184,9 @@ click one to open it on its code host.
 
 A project's PR goes to the code host its origin is on. github.com, gitlab.com and dev.azure.com are known by name. For
 a server of your own, Oriel looks in turn at `code.hosts` (hostname → host), the servers gh and glab are logged into,
-the URL's shape (`/_git/` is Azure DevOps), and then asks the server itself, once and without a token. If none of those
-tells, **Set up…** on the PR step asks you. **Set up…** (`code.setup`) is also where a server's token goes: the API URL
+and then asks the server itself, once and without a token. A URL whose shape says whose it is (`/_git/` is Azure
+DevOps) isn't enough to let that host's plugin reach the server: a notice offers to set it up. If none of those tells,
+**Set up…** on the PR step asks you. **Set up…** (`code.setup`) is also where a server's token goes: the API URL
 (`code.api` when it isn't the usual one), the token with the host's instructions and **Create a token ↗**, kept as
 its own secret (`GITLAB_TOKEN:git.acme.corp`) and sent only to that server, by that host's plugin. It's asked once per
 server and used for every repo on it. **None of these** leaves the server's PR steps off.
