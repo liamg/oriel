@@ -23,7 +23,8 @@ type Factory func(Init) (agent.Provider, error)
 // drainTimeout bounds how long closing a session waits for its last events to be sent.
 const drainTimeout = 5 * time.Second
 
-// Serve serves the provider f makes over r and w (a process plugin's stdin and stdout) until the connection closes.
+// Serve serves the provider f makes over r and w (a process plugin's stdin and stdout) until the connection closes,
+// and says why it broke: nil when Oriel closed it.
 // Its sessions get a StartSpec whose Tools and Exec call back to Oriel, so their processes run where Oriel runs
 // the session's: in its sandbox, when it has one.
 func Serve(r io.Reader, w io.Writer, f Factory) error {
@@ -31,7 +32,7 @@ func Serve(r io.Reader, w io.Writer, f Factory) error {
 		ready: make(chan struct{})}
 	// The connection reads as it's made: what arrives waits for s.peer to be set before it's handled.
 	set := make(chan struct{})
-	s.peer = NewConn(r, w, Handler{
+	c := newConn(r, w, Handler{
 		Request: func(ctx context.Context, method string, raw json.RawMessage) (any, error) {
 			<-set
 			return s.request(ctx, method, raw)
@@ -40,6 +41,7 @@ func Serve(r io.Reader, w io.Writer, f Factory) error {
 			<-set
 			s.notify(method, raw)
 		}})
+	s.peer = c
 	close(set)
 	<-s.peer.Done()
 	s.mu.Lock()
@@ -59,7 +61,7 @@ func Serve(r io.Reader, w io.Writer, f Factory) error {
 		x.stop()
 		x.cleanup()
 	}
-	return nil
+	return c.broke()
 }
 
 type server struct {

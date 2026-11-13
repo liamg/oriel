@@ -3,8 +3,10 @@ package rpcagent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"sync"
+	"syscall"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/jsonrpc"
@@ -30,7 +32,9 @@ type Dialer func(ctx context.Context, h Handler) (Peer, error)
 
 // NewConn is the protocol over r and w, a message a line, its messages going to h: a call's result after the
 // notifications sent before it, as the protocol promises (an event before the call that ends its session).
-func NewConn(r io.Reader, w io.Writer, h Handler) Peer {
+func NewConn(r io.Reader, w io.Writer, h Handler) Peer { return newConn(r, w, h) }
+
+func newConn(r io.Reader, w io.Writer, h Handler) *conn {
 	return &conn{c: jsonrpc.NewConn(r, w, jsonrpc.Handlers{
 		Request: func(req *jsonrpc.Request) {
 			go func() {
@@ -56,6 +60,17 @@ func Pipe(r io.Reader, w io.Writer) Dialer {
 }
 
 type conn struct{ c *jsonrpc.Conn }
+
+// broke is why the connection stopped when that wasn't the other side closing it (its end of the pipe gone, at a
+// read or a write), or nil.
+func (c *conn) broke() error {
+	err := c.c.Err()
+	if err == nil || err == jsonrpc.ErrClosed || errors.Is(err, io.ErrClosedPipe) || errors.Is(err, io.EOF) ||
+		errors.Is(err, syscall.EPIPE) {
+		return nil
+	}
+	return err
+}
 
 func (c *conn) Call(ctx context.Context, method string, params any) (json.RawMessage, error) {
 	return c.c.CallRaw(ctx, method, params)

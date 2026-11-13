@@ -282,7 +282,7 @@ func (c *Conn) read() {
 			if err == io.EOF || errors.Is(err, io.ErrClosedPipe) {
 				err = ErrClosed
 			} else {
-				err = fmt.Errorf("%w: %v", ErrClosed, err)
+				err = fmt.Errorf("%w: %w", ErrClosed, err)
 			}
 			c.fail(err)
 			return
@@ -470,7 +470,7 @@ func (c *Conn) write() {
 				continue
 			}
 			if err := c.opt.Framing.Write(c.w, b); err != nil {
-				werr = fmt.Errorf("%w: %v", ErrClosed, err)
+				werr = fmt.Errorf("%w: %w", ErrClosed, err)
 				c.qmu.Lock()
 				if c.werr == nil {
 					c.werr = werr
