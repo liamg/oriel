@@ -84,7 +84,7 @@ func (p *Scripted) open(ctx context.Context, id string, spec agent.StartSpec) (*
 		if err != nil {
 			return nil, err
 		}
-		s.term = &ptyTerminal{pty: pty, viewers: map[chan []byte]struct{}{}, drained: make(chan struct{})}
+		s.term = &ptyTerminal{pty: pty, drained: make(chan struct{})}
 		go s.term.drain()
 	}
 	s.emit(agent.Ready{ID: id})
@@ -300,12 +300,9 @@ func (s *scripted) Close() error {
 
 // ptyTerminal is a PTY as views watch it.
 type ptyTerminal struct {
-	pty     agent.PTY
-	drained chan struct{}
-
-	mu      sync.Mutex
-	shown   []byte
-	viewers map[chan []byte]struct{}
+	pty          agent.PTY
+	drained      chan struct{}
+	agent.Fanout // what views see: Attach
 }
 
 func (t *ptyTerminal) drain() {
@@ -314,49 +311,15 @@ func (t *ptyTerminal) drain() {
 	for {
 		n, err := t.pty.Read(b)
 		if n > 0 {
-			chunk := append([]byte(nil), b[:n]...)
-			t.mu.Lock()
-			t.shown = append(t.shown, chunk...)
-			for ch := range t.viewers {
-				select {
-				case ch <- chunk:
-				default:
-				}
-			}
-			t.mu.Unlock()
+			t.Feed(b[:n])
 		}
 		if err != nil {
 			break
 		}
 	}
 	t.pty.Wait()
-	t.mu.Lock()
-	for ch := range t.viewers {
-		close(ch)
-	}
-	t.viewers = nil
-	t.mu.Unlock()
+	t.Close()
 }
 
 func (t *ptyTerminal) Write(p []byte) (int, error) { return t.pty.Write(p) }
 func (t *ptyTerminal) Resize(cols, rows int) error { return t.pty.Resize(cols, rows) }
-
-func (t *ptyTerminal) Attach() ([]byte, <-chan []byte, func()) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	ch := make(chan []byte, 64)
-	backlog := append([]byte(nil), t.shown...)
-	if t.viewers == nil {
-		close(ch)
-		return backlog, ch, func() {}
-	}
-	t.viewers[ch] = struct{}{}
-	return backlog, ch, func() {
-		t.mu.Lock()
-		defer t.mu.Unlock()
-		if _, ok := t.viewers[ch]; ok {
-			delete(t.viewers, ch)
-			close(ch)
-		}
-	}
-}
