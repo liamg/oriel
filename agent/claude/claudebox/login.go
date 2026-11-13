@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -72,6 +73,8 @@ type Box struct {
 	KeepEvery time.Duration
 	// Clock times KeepLogins and tells how near its end a sign-in is; nil is the system's.
 	Clock clock.Clock
+	// HTTP downloads Claude Code for a sandbox; http.DefaultClient if nil.
+	HTTP *http.Client
 
 	keychainMu    sync.Mutex
 	keychainLogin Login

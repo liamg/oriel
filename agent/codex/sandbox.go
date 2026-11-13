@@ -6,8 +6,6 @@ import (
 	"cmp"
 	"compress/gzip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/release"
 	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/toml"
 )
@@ -215,7 +214,7 @@ func (p *Provider) download(ctx context.Context, at agent.SandboxPlace, version,
 			Digest string `json:"digest"`
 		} `json:"assets"`
 	}
-	if err := getJSON(ctx, api+"/releases/tags/rust-v"+version, &rel); err != nil {
+	if err := release.GetJSON(ctx, p.HTTP, api+"/releases/tags/rust-v"+version, http.Header{"Accept": {"application/vnd.github+json"}}, &rel); err != nil {
 		return "", err
 	}
 	name := "codex-" + triple + ".tar.gz"
@@ -234,7 +233,7 @@ func (p *Provider) download(ctx context.Context, at agent.SandboxPlace, version,
 	if !ok || sum == "" {
 		return "", fmt.Errorf("codex %s's %s has no sha256 digest to check it against", version, name)
 	}
-	archive, err := getVerified(ctx, asset.URL, sum)
+	archive, err := release.Verified(ctx, p.HTTP, asset.URL, sum, maxArchive, "Codex")
 	if err != nil {
 		return "", err
 	}
@@ -245,56 +244,11 @@ func (p *Provider) download(ctx context.Context, at agent.SandboxPlace, version,
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return "", err
 	}
-	tmp := dst + ".part"
-	if err := os.WriteFile(tmp, bin, 0o755); err != nil {
-		return "", err
-	}
-	return dst, os.Rename(tmp, dst)
-}
-
-func getJSON(ctx context.Context, url string, v any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GET %s: %s", url, resp.Status)
-	}
-	return json.NewDecoder(resp.Body).Decode(v)
+	return dst, atomicfile.Write(dst, bin, 0o755)
 }
 
 // maxArchive bounds a release archive's download.
 const maxArchive = 512 << 20
-
-func getVerified(ctx context.Context, url, sum string) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GET %s: %s", url, resp.Status)
-	}
-	b, err := io.ReadAll(io.LimitReader(resp.Body, maxArchive))
-	if err != nil {
-		return nil, err
-	}
-	got := sha256.Sum256(b)
-	if hex.EncodeToString(got[:]) != strings.ToLower(sum) {
-		return nil, errors.New("the Codex download does not match its digest")
-	}
-	return b, nil
-}
 
 // untar is the file named name in a .tar.gz.
 func untar(archive []byte, name string) ([]byte, error) {

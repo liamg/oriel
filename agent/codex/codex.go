@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"slices"
@@ -29,6 +30,8 @@ type Provider struct {
 	OrielBin string // the binary that serves `hook mcp`; "" is this one
 	// ReleasesAPI is where a sandbox's codex is downloaded from: GitHub's API for openai/codex if "".
 	ReleasesAPI string
+	// HTTP downloads codex for a sandbox; http.DefaultClient if nil.
+	HTTP *http.Client
 
 	downloads sync.Mutex // one download at a time
 }
