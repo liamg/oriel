@@ -287,6 +287,7 @@ func (g *Git) framed() {
 	}
 }
 
+// trees are the work trees the window reads other than its own.
 func (g *Git) trees() []*gitTree {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -477,7 +478,7 @@ func (g *Git) unread(dir string) {
 
 // found sets the tree's root; the caller keeps others off it.
 func (t *gitTree) found(root string) {
-	t.src = t.g.trees_(root, t.sessionFor(root))
+	t.src = t.g.treeSource(root, t.sessionFor(root))
 	t.status = gitx.NewStatus(t.src.Repo())
 }
 
@@ -502,8 +503,8 @@ func (t *gitTree) sessionFor(root string) core.SessionID {
 	return t.session
 }
 
-// trees_ is root's sources from the session's manager.
-func (g *Git) trees_(root string, id core.SessionID) *gitsrc.Tree {
+// treeSource is root's git sources, from the session's freshness manager, else its own.
+func (g *Git) treeSource(root string, id core.SessionID) *gitsrc.Tree {
 	if w, ok := registry.WatchesOf(g.h); ok {
 		return w.Tree(id, root)
 	}
