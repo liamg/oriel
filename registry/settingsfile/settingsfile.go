@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/toml"
 )
 
@@ -50,7 +51,7 @@ func (t Trust) Add(file string, src []byte) error {
 	if err := os.MkdirAll(filepath.Dir(t.Path), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(t.Path, doc.Bytes(), 0o644)
+	return atomicfile.Write(t.Path, doc.Bytes(), 0o644)
 }
 
 func hash(src []byte) string {

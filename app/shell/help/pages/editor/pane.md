@@ -146,7 +146,8 @@ touched, by file and nested as the code is, with whether it's been explained, is
 a walkthrough of the branch's whole change: every changed file in every project, against where the branch left its
 base. It answers in steps, each about some lines of a file, with notes pinned to parts of them, and ends with a
 summary. The step's file is shown with the lines its notes are on lit in their colours and the rest dimmed, each note
-beside its lines with a leader line. The dock along the bottom has a chip for every step across files and repos;
+beside its lines with a leader line; a step opens with its first note in view. The summary shows a diagram of how the
+change fits together when the agent gives one (a mermaid flowchart or sequence diagram). The dock along the bottom has a chip for every step across files and repos;
 click one, or press `←` and `→`, to move between them. `j` and `k` pick the line **Comment on** opens a thread on
 (`c`), and **Ask about this step** (`a`) writes a request with the step attached. `q` or Escape closes the
 walkthrough; Explain this change brings it back as it was.
