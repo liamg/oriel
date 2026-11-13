@@ -188,6 +188,7 @@ type flags struct {
 	bars                             Bars
 	cursor                           render.Cursor
 	tooltip, help, keyMode, subject  string
+	tipView                          func(c *Ctx)
 	trap, text                       bool
 	z                                int
 	parent                           ID
@@ -322,13 +323,13 @@ func (u *UI) Layout(size render.Point, build func(c *Ctx)) {
 		if s.Selectable && s.Cursor == 0 {
 			s.Cursor = render.CursorText
 		}
-		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.Help != "" || s.Subject != "" || s.Trap {
+		if s.Interactive || s.Focusable || s.Disabled || s.ScrollX || s.ScrollY || s.Cursor != 0 || s.Tooltip != "" || s.TooltipView != nil || s.Help != "" || s.Subject != "" || s.Trap {
 			var parent ID
 			if e.parent != nil {
 				parent = e.parent.id
 			}
 			u.flags[id] = flags{interactive: s.Interactive || s.Focusable, focusable: s.Focusable, disabled: s.Disabled,
-				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, scrollWith: s.ScrollWith, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
+				scrollX: s.ScrollX, scrollY: s.ScrollY, wheel: s.Wheel, sideways: s.Sideways, scrollWith: s.ScrollWith, bars: s.Bars, cursor: s.Cursor, tooltip: s.Tooltip, tipView: s.TooltipView, help: s.Help, subject: s.Subject, keyMode: s.KeyMode,
 				trap: s.Trap, text: s.Text && !s.Disabled, z: s.Z, parent: parent, drag: s.Drag, drop: s.Drop, actions: s.Actions}
 		}
 	}
@@ -359,8 +360,8 @@ func (u *UI) Layered(z int) bool {
 // tooltip shows the tooltip under the pointer once the pointer has rested on it for the delay.
 func (u *UI) tooltip() {
 	in := &u.in
-	tip := u.flags[in.tip].tooltip
-	if tip == "" || !in.inside || in.active != 0 {
+	tip, view := u.flags[in.tip].tooltip, u.flags[in.tip].tipView
+	if tip == "" && view == nil || !in.inside || in.active != 0 {
 		return
 	}
 	due := in.tipAt.Add(u.opts.TooltipDelay)
@@ -375,6 +376,10 @@ func (u *UI) tooltip() {
 	c := &Ctx{u: u, e: u.root}
 	c.Box(tooltipKey{}, Style{Pad: PadXY(8, 4), Fill: u.opts.TooltipFill, Stroke: u.opts.TooltipStroke, Border: 1, Radius: 4,
 		Enter: &Transition{Fade: true, Shift: render.Point{Y: 3}}, Exit: &Transition{Fade: true}, Z: LayerTooltip, Float: &Float{Point: &at, Offset: render.Point{X: 12, Y: 18}}, Scale: u.opts.TooltipScale}, func(c *Ctx) {
+		if view != nil {
+			view(c)
+			return
+		}
 		c.Text(nil, tip, u.opts.Tooltip)
 	})
 }

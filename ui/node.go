@@ -156,16 +156,17 @@ type Style struct {
 	NoFocus     bool // a drag source or target the pointer alone moves: what it's in has the keys, so it isn't focused
 	Disabled    bool // takes neither, and hides what's under it from the pointer
 	Cursor      render.Cursor
-	NoHover     bool      // draws its own hover and press, so a clickable box doesn't get the toolkit's wash
-	Sink        bool      // its content sinks a pixel while it's pressed, as a button's does
-	Tooltip     string    // shown after the pointer rests on it
-	Help        string    // its help page and anchor, "hud/usage#weekly-window"
-	Subject     string    // what it stands for to a right-click menu: "session:fix-login"
-	KeyMode     string    // when focused, keymaps in this mode come first and unmapped keys come to it
-	Text        bool      // typed characters insert text here, so dictation may type into it (UI.TakesText)
-	Trap        bool      // keeps keyboard focus inside while it's up, as a modal does
-	Drag        *DragData // dragging it carries this, to a node that takes its kind (dnd.go)
-	Drop        []string  // the kinds of drag it takes; one let go over it is its Interaction's Dropped
+	NoHover     bool         // draws its own hover and press, so a clickable box doesn't get the toolkit's wash
+	Sink        bool         // its content sinks a pixel while it's pressed, as a button's does
+	Tooltip     string       // shown after the pointer rests on it
+	TooltipView func(c *Ctx) // draws the tooltip in place of Tooltip's text, which stays its words for the accessibility tree
+	Help        string       // its help page and anchor, "hud/usage#weekly-window"
+	Subject     string       // what it stands for to a right-click menu: "session:fix-login"
+	KeyMode     string       // when focused, keymaps in this mode come first and unmapped keys come to it
+	Text        bool         // typed characters insert text here, so dictation may type into it (UI.TakesText)
+	Trap        bool         // keeps keyboard focus inside while it's up, as a modal does
+	Drag        *DragData    // dragging it carries this, to a node that takes its kind (dnd.go)
+	Drop        []string     // the kinds of drag it takes; one let go over it is its Interaction's Dropped
 
 	// DefaultFocus marks where focus goes when what it's in opens or is activated (Ctx.FocusInto), or when an
 	// overlay over it closes and what had focus before is gone.
