@@ -52,16 +52,10 @@ func (o *omnibox) Results(moving bool) []group { g, _ := o.results(moving); retu
 func (o *omnibox) Open() bool                  { return o.open }
 func (o *omnibox) Close()                      { o.open = false }
 
-func (p *picker) Open() bool                                        { return p.open }
-func (p *picker) Close()                                            { p.open = false }
-func (p *picker) Reopen()                                           { p.open = true }
-func (p *picker) Source() string                                    { return p.source }
-func (p *picker) Query() string                                     { return p.query }
-func (p *picker) Selected() int                                     { return p.sel }
-func (p *picker) Select(i int)                                      { p.sel = i }
-func (p *picker) Pick(id string)                                    { p.picked[id] = true }
-func (p *picker) Actions(s uireg.PickerSource) []uireg.PickerAction { return p.actions(s) }
-func (p *picker) Act(a uireg.PickerAction, g group)                 { p.act(a, g) }
+func (p *picker) Open() bool     { return p.open }
+func (p *picker) Source() string { return p.source }
+func (p *picker) Query() string  { return p.query }
+func (p *picker) Selected() int  { return p.sel }
 
 // SetKeys has the window's keys go through r, as its loop's do.
 func SetKeys(h *Headless, r *registry.Resolver) { h.sh.keys = r }
