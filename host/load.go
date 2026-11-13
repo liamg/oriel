@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/sysload"
 )
 
 // machineState is this machine as the app shows it, with a fresh reading of its load.

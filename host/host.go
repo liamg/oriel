@@ -40,10 +40,10 @@ import (
 	"github.com/liamg/oriel/host/pricing"
 	"github.com/liamg/oriel/host/repos"
 	"github.com/liamg/oriel/host/sandboxhost"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/host/utility"
 	"github.com/liamg/oriel/host/worktree"
 	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/sysload"
 )
 
 // Options configure a host.

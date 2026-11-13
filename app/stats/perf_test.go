@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/stats"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/sysload"
 )
 
 // The status line's CPU opens the Performance page: Oriel's own load and frames, the machine's, the processes

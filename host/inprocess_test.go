@@ -13,8 +13,8 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/internal/clock/clocktest"
+	"github.com/liamg/oriel/sysload"
 )
 
 // The app's store is the host's: what the host does is in it at once, with this machine's state.

@@ -9,10 +9,10 @@ import (
 	"github.com/liamg/oriel/app/settings"
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/catalog"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/sysload"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/watch"
 )

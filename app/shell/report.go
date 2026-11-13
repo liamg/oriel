@@ -16,7 +16,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/host/search"
+	"github.com/liamg/oriel/search"
 	"github.com/liamg/oriel/theme"
 
 	"github.com/liamg/oriel/plugin"

@@ -19,9 +19,9 @@ import (
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/sandbox/agentcmd"
 	"github.com/liamg/oriel/sandbox/helper"
+	"github.com/liamg/oriel/sysload"
 )
 
 // orielHome is ~/.oriel: sessions, workspaces, repos.

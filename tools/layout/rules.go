@@ -28,6 +28,10 @@ var Rules = []Rule{
 	apart("host/agentrun"), apart("host/aireview"), apart("host/github"), apart("host/jobs"), apart("host/persist"),
 	apart("host/pricing"), apart("host/repos"), apart("host/sandboxhost"), apart("host/utility"), apart("host/worktree"),
 	{From: []string{"host/hostcore", "host/hosttest"}, Never: hostParts},
+	// host/stats is a library the parts and the app share: it reads logs and counts, and reaches no part.
+	{From: []string{"host/stats"}, Never: append([]string{"app", "ui", "render"}, hostParts...)},
+	// Libraries the host and the app both use, reaching neither.
+	{From: []string{"search", "sysload"}, Never: []string{"app", "host", "ui", "render"}},
 }
 
 // hostParts are the session host's parts (docs/architecture.md, "Layering").

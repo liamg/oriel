@@ -16,9 +16,9 @@ import (
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/sysload"
 )
 
 // spawns puts shims for the commands Oriel runs on PATH, each noting its run in a log, and counts the runs logged.

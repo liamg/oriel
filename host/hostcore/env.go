@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/sysload"
 )
 
 // Env is what each part of the host runs in: its home, its clock and log, and when it closes.

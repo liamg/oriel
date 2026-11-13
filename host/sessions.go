@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/host/worktree"
+	"github.com/liamg/oriel/sysload"
 )
 
 // Start starts a session of the spec's kind.

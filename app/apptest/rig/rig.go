@@ -27,8 +27,8 @@ import (
 	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/internal/isolate"
+	"github.com/liamg/oriel/sysload"
 )
 
 // NopExec runs nothing.

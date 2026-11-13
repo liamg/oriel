@@ -12,10 +12,10 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/search"
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui"
