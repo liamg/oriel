@@ -52,7 +52,7 @@ func (h *session) answer(r AnswerReq) error {
 		return fmt.Errorf("nothing is asking %q", r.Ask)
 	}
 	ch <- r
-	_ = h.r.st.Emit(core.AskClosed{Session: h.id, ID: r.Ask, Decision: r.Decision, Note: r.Note})
+	_ = h.r.st.Emit(core.AskClosed{Session: h.id, ID: r.Ask, Decision: string(r.Decision), Note: r.Note})
 	return nil
 }
 
@@ -69,16 +69,16 @@ func (h *session) permission(sess agent.Session, p agent.Permission) {
 		return
 	}
 	if v, ok := h.r.policy(h.id, ask); ok {
-		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Allow: v.Decision == "allow", Note: v.Note})
+		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Allow: v.Decision == DecisionAllow, Note: v.Note})
 		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: h.r.env.Now().UTC(),
-			Text: fmt.Sprintf("%s %s by %s", p.Tool, map[bool]string{true: "allowed", false: "denied"}[v.Decision == "allow"], v.By)})
+			Text: fmt.Sprintf("%s %s by %s", p.Tool, map[bool]string{true: "allowed", false: "denied"}[v.Decision == DecisionAllow], v.By)})
 		return
 	}
 	a, ok := h.askUser(h.ctx, ask)
 	if !ok {
 		return
 	}
-	d := agent.Decision{Allow: a.Decision == "allow" || a.Decision == "always", Always: a.Decision == "always", Note: a.Note}
+	d := agent.Decision{Allow: a.Decision.Allows(), Always: a.Decision == DecisionAlways, Note: a.Note}
 	if !d.Allow && d.Note == "" {
 		d.Note = "Denied by the user in Oriel."
 	} else if !d.Allow {
@@ -213,16 +213,16 @@ func questionSummary(qs []core.Question) string {
 // approve is layer 3 asking: a connection or gateway call waits while the user decides.
 func (h *session) approve(ctx context.Context, ask core.Ask) (hostcore.Approval, error) {
 	if v, ok := h.r.policy(h.id, ask); ok {
-		return hostcore.Approval{Allow: v.Decision == "allow", By: v.By, Note: v.Note}, nil
+		return hostcore.Approval{Allow: v.Decision == DecisionAllow, By: v.By, Note: v.Note}, nil
 	}
 	a, ok := h.askUser(ctx, ask)
 	if !ok {
 		return hostcore.Approval{}, ctx.Err()
 	}
-	if a.Decision == "always" {
+	if a.Decision == DecisionAlways {
 		h.remember(ask, a)
 	}
-	return hostcore.Approval{Allow: a.Decision == "allow" || a.Decision == "always", Scope: a.Scope, All: a.For == ForAll, By: "the user",
+	return hostcore.Approval{Allow: a.Decision.Allows(), Scope: a.Scope, All: a.For == ForAll, By: "the user",
 		Note: a.Note}, nil
 }
 
@@ -312,11 +312,11 @@ func (x *Runner) policy(id core.SessionID, ask core.Ask) (Verdict, bool) {
 	}
 	for _, r := range se.Rules {
 		if matchRule(r, ask) {
-			return Verdict{Decision: "allow", By: "rule " + r}, true
+			return Verdict{Decision: DecisionAllow, By: "rule " + r}, true
 		}
 	}
 	if r, ok := x.allRule(ask); ok {
-		return Verdict{Decision: "allow", By: "rule " + r + " for all sessions"}, true
+		return Verdict{Decision: DecisionAllow, By: "rule " + r + " for all sessions"}, true
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()

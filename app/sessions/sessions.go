@@ -617,7 +617,7 @@ func askForSession(ctx context.Context, w host.SessionCalls, call host.ToolCall,
 	if err != nil {
 		return false, err
 	}
-	if v.Decision == "allow" {
+	if v.Decision == host.DecisionAllow {
 		return true, nil
 	}
 	if v.Note != "" {
@@ -647,26 +647,30 @@ func (x *Sessions) decide(ctx context.Context, h plugin.Host, d host.Decide) hos
 	}
 	switch {
 	case v.Veto:
-		return host.Verdict{Decision: "deny", Note: v.Reason, By: "a Permission hook"}
+		return host.Verdict{Decision: host.DecisionDeny, Note: v.Reason, By: "a Permission hook"}
 	case !v.Decided:
 		return host.Verdict{}
 	}
-	switch val := v.Value.(type) {
+	return hookVerdict(v.Value)
+}
+
+// hookVerdict reads a Permission hook's answer, in any of the shapes it may give ("allow", true, a
+// registry.PermissionVerdict, a {decision, note} table), as allow or deny; anything else leaves the ask to the user.
+func hookVerdict(answer any) host.Verdict {
+	var dec, note string
+	switch val := answer.(type) {
 	case string:
-		if val == "allow" || val == "deny" {
-			return host.Verdict{Decision: val, By: "a Permission hook"}
-		}
-	case registry.PermissionVerdict:
-		return host.Verdict{Decision: val.Decision, Note: val.Note, By: "a Permission hook"}
-	case map[string]any:
-		dec, _ := val["decision"].(string)
-		note, _ := val["note"].(string)
-		return host.Verdict{Decision: dec, Note: note, By: "a Permission hook"}
+		dec = val
 	case bool:
-		if val {
-			return host.Verdict{Decision: "allow", By: "a Permission hook"}
-		}
-		return host.Verdict{Decision: "deny", By: "a Permission hook"}
+		dec = map[bool]string{true: "allow", false: "deny"}[val]
+	case registry.PermissionVerdict:
+		dec, note = val.Decision, val.Note
+	case map[string]any:
+		dec, _ = val["decision"].(string)
+		note, _ = val["note"].(string)
+	}
+	if d := host.Decision(dec); d.Decided() {
+		return host.Verdict{Decision: d, Note: note, By: "a Permission hook"}
 	}
 	return host.Verdict{}
 }

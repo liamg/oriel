@@ -36,11 +36,10 @@ type Request struct {
 	AlwaysAsk bool     `json:"alwaysAsk,omitempty"`
 }
 
-// The decisions a card returns.
+// The decisions a card returns: Once, Session, or Deny (policy.go's).
 const (
 	Once    = "once"
 	Session = "session"
-	Refuse  = "deny"
 )
 
 // Answer is the user's decision on a Request.
@@ -147,7 +146,7 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 	defer func() {
 		if err != nil {
 			entry.Error = err.Error()
-		} else if res.IsError && entry.Decision != Refuse {
+		} else if res.IsError && entry.Decision != Deny {
 			entry.Error = res.Text()
 		}
 		if g.Log != nil {
@@ -173,7 +172,7 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 			}
 		}
 		if up == nil {
-			entry.Decision = Refuse
+			entry.Decision = Deny
 			return mcp.TextResult("oriel: no tool called "+name, true), nil
 		}
 		req.Description = up.Description
@@ -190,17 +189,17 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 	}
 	switch action {
 	case Deny:
-		entry.Decision = Refuse
+		entry.Decision = Deny
 		return mcp.TextResult("oriel: "+name+" is denied by the user's settings.", true), nil
 	case Ask:
 		ans, err := g.ask(ctx, req)
 		if err != nil {
-			entry.Decision = Refuse
+			entry.Decision = Deny
 			return mcp.TextResult("oriel: nobody answered the request to use "+name+", so it was denied.", true), nil
 		}
 		entry.Decision = ans.Decision
 		if ans.Decision != Once && ans.Decision != Session {
-			entry.Decision = Refuse
+			entry.Decision = Deny
 			msg := "oriel: " + cmp.Or(ans.By, "the user") + " denied " + name + "."
 			if n := strings.TrimSpace(ans.Note); n != "" {
 				msg += " They said: " + n

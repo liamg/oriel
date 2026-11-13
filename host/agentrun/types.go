@@ -61,7 +61,7 @@ type ThreadReq struct {
 type AnswerReq struct {
 	Session  core.SessionID    `json:"session"`
 	Ask      string            `json:"ask"`
-	Decision string            `json:"decision"` // allow, always, deny, answer; recheck for a login
+	Decision Decision          `json:"decision"`
 	Note     string            `json:"note,omitempty"`
 	Answers  map[string]string `json:"answers,omitempty"`
 	Scope    string            `json:"scope,omitempty"` // a network rule's host pattern
@@ -104,9 +104,26 @@ type Decide struct {
 	Ask     core.Ask       `json:"ask"`
 }
 
+// Decision is an answer to an ask, or a policy's verdict on one.
+type Decision string
+
+const (
+	DecisionAllow   Decision = "allow"   // this once
+	DecisionAlways  Decision = "always"  // and from now on, a rule (AnswerReq.For says how far it reaches)
+	DecisionDeny    Decision = "deny"    // with a note for the agent
+	DecisionAnswer  Decision = "answer"  // a question's answers (AnswerReq.Answers)
+	DecisionRecheck Decision = "recheck" // look at a login again
+)
+
+// Allows says the decision lets the ask go ahead.
+func (d Decision) Allows() bool { return d == DecisionAllow || d == DecisionAlways }
+
+// Decided says a policy settled the ask itself: allowed or denied, not left to the user.
+func (d Decision) Decided() bool { return d == DecisionAllow || d == DecisionDeny }
+
 // Verdict is what the policy hooks said: allow, deny, or "" to ask the user.
 type Verdict struct {
-	Decision string `json:"decision,omitempty"`
+	Decision Decision `json:"decision,omitempty"`
 	Note     string `json:"note,omitempty"`
 	By       string `json:"by,omitempty"`
 }

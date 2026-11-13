@@ -409,7 +409,7 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 	if err != nil {
 		return err
 	}
-	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: a.String("decision"), Note: a.String("note"), Scope: a.String("scope"), For: a.String("for")}
+	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: host.Decision(a.String("decision")), Note: a.String("note"), Scope: a.String("scope"), For: a.String("for")}
 	switch m := a["answers"].(type) {
 	case map[string]string:
 		r.Answers = m

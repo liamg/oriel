@@ -33,7 +33,7 @@ func (g gatewayHost) Approve(ctx context.Context, r gateway.Request) (gateway.An
 		return gateway.Answer{}, err
 	}
 	if !v.Allow {
-		return gateway.Answer{Decision: gateway.Refuse, By: v.By, Note: v.Note}, nil
+		return gateway.Answer{Decision: gateway.Deny, By: v.By, Note: v.Note}, nil
 	}
 	ans := gateway.Answer{Decision: gateway.Once, Run: r.Tool == gateway.Prefix+"ask_user_to_run"}
 	if g.b.ruled(ask.Rule) {

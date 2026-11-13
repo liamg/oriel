@@ -32,7 +32,7 @@ func (x *Runner) Ask(ctx context.Context, r AskReq) (_ Verdict, err error) {
 	if err != nil {
 		return Verdict{}, err
 	}
-	v := Verdict{Decision: "deny", By: a.By, Note: a.Note}
+	v := Verdict{Decision: DecisionDeny, By: a.By, Note: a.Note}
 	if a.Allow {
 		v.Decision = "allow"
 	}

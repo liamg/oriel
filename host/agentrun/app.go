@@ -69,7 +69,7 @@ func (x *Runner) decide(ctx context.Context, d Decide) (v Verdict, ok bool) {
 		return Verdict{}, false
 	}
 	v = a.Decide(ctx, d)
-	return v, v.Decision == "allow" || v.Decision == "deny"
+	return v, v.Decision.Decided()
 }
 
 // appWatches is session id's freshness manager in the app, or nil.

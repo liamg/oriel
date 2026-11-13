@@ -53,6 +53,7 @@ type (
 	ToolCall     = agentrun.ToolCall
 	Decide       = agentrun.Decide
 	Verdict      = agentrun.Verdict
+	Decision     = agentrun.Decision
 )
 
 // Workspaces.
@@ -144,6 +145,12 @@ const (
 	NoPosting     = agentrun.NoPosting
 	KeyWait       = agentrun.KeyWait
 	ForAll        = agentrun.ForAll
+	// An ask's answers (Decision).
+	DecisionAllow   = agentrun.DecisionAllow
+	DecisionAlways  = agentrun.DecisionAlways
+	DecisionDeny    = agentrun.DecisionDeny
+	DecisionAnswer  = agentrun.DecisionAnswer
+	DecisionRecheck = agentrun.DecisionRecheck
 	GatewayServer = sandboxhost.GatewayServer
 	ManifestFile  = worktree.ManifestFile
 	ReposDir      = worktree.ReposDir
