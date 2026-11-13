@@ -337,6 +337,7 @@ func TestDetailsShowCallsAndAsksInFull(t *testing.T) {
 	allow := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: rig.ToolInput(map[string]string{"command": long})})
 	r.WaitText("Fake wants to run a command")
 	r.ClickAccess("Dismiss") // the prompt waits on in the console, whose card has its Details
+	r.WaitAccess("the prompt gone from over the window", func(w *apptest.Window) bool { return w.Access("Dismiss") == nil })
 	r.ClickTop("Details")
 	r.WaitText("ASK · PERMISSION")
 	r.WaitText("INPUT")
