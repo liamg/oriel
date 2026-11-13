@@ -113,6 +113,7 @@ func (x *Launcher) Activate(_ context.Context, h plugin.Host) error {
 			return nil
 		}}))
 	x.Add(h.Keymap(registry.Keymap{Mode: LauncherKeyMode, Keys: "<D-CR>", Command: "session.launch", Desc: "Start the session"}))
+	x.addQuick(h, has)
 	x.Add(h.View(kit.OverlayPrefix+"launcher", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "launcher", Fn: x.build}
 	})))

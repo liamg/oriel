@@ -26,7 +26,7 @@ import (
 func TestStartViewAtLaunch(t *testing.T) {
 	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
 	r.WaitFrame("the start view", func(s string) bool {
-		return apptest.HasAll(s, "New Session", "Resume a Session", "Open Directory", "Settings", "⌘N", "⌘O", "⇧⌘O", "⌘,")
+		return apptest.HasAll(s, "New Session", "Quick Session", "Resume a Session", "Open Directory", "Settings", "⌘N", "⇧⌘N", "⌘O", "⇧⌘O", "⌘,")
 	})
 }
 
@@ -43,7 +43,7 @@ func TestStartViewEntries(t *testing.T) {
 		t.Fatalf("ran %q", got)
 	}
 	r.TypeKeys("j<CR>")    // New Session: no session host, so it does nothing
-	r.TypeKeys("jjjj<CR>") // past Resume, Reviews and Open Directory
+	r.TypeKeys("jjjjj<CR>") // past Quick Session, Resume, Reviews and Open Directory
 	r.WaitText("SETTINGS") // the settings page's heading
 }
 
