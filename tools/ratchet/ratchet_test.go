@@ -25,6 +25,9 @@ var ceilings = map[string]int{
 	"RequestFocus calls outside ui/":       37,
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
+	// The rest of the tree (cmd, sandbox, render, regex, integ…) is held to the same rule from here, its count only
+	// falling: what's truly process-wide (a cgo callback's map, an init-time registry) goes in stateAllowed with why.
+	"mutable package-level vars elsewhere": 117,
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
@@ -113,9 +116,18 @@ func TestRatchets(t *testing.T) {
 	}
 	all = without(all, "tools/", "spec/")
 	notUI := without(all, "ui/")
-	product, err := ParseAll(root, "app", "plugin", "ui", "gitx", "core", "registry", "host", "agent")
+	productDirs := []string{"app", "plugin", "ui", "gitx", "core", "registry", "host", "agent"}
+	product, err := ParseAll(root, productDirs...)
 	if err != nil {
 		t.Fatal(err)
+	}
+	rest, err := ParseAll(root, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rest = without(rest, "tools/", "spec/", "vendor/", "third_party/", ".claude/", ".git/")
+	for _, d := range productDirs {
+		rest = without(rest, d+"/")
 	}
 	withTests, err := ParseAll(root, ".")
 	if err != nil {
@@ -136,6 +148,7 @@ func TestRatchets(t *testing.T) {
 		"RequestFocus calls outside ui/":       UICalls(notUI, "RequestFocus"),
 		"multi-line Input outside Prose":       Multiline(notUI),
 		"mutable package-level vars":           MutableVars(product, layout.Module, stateAllowed),
+		"mutable package-level vars elsewhere": MutableVars(rest, layout.Module, stateAllowed),
 		"tests writing package-level vars":     allowedOut(TestVarWrites(withTests, layout.Module), stateAllowed),
 		"time.Sleep in tests":                  PkgSelectors(tests(withTests), "time", "Sleep"),
 		"go statements in app/":                GoStmts(without(app, "app/apptest/")),
