@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/rpcagent"
@@ -123,6 +122,6 @@ func envOf(v any) []string {
 	for k, x := range tableOf(v) {
 		env = append(env, k+"="+fmt.Sprint(x))
 	}
-	sort.Strings(env)
+	slices.Sort(env)
 	return env
 }

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -134,8 +133,8 @@ func TestPytestDiscoverMatchesCollect(t *testing.T) {
 			want = append(want, l)
 		}
 	}
-	sort.Strings(got)
-	sort.Strings(want)
+	slices.Sort(got)
+	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("discovered %q\npytest     %q", got, want)
 	}

@@ -5,7 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -88,7 +89,7 @@ type Gateway struct {
 func (g *Gateway) Tools(ctx context.Context) ([]mcp.Tool, error) {
 	levels := g.levels()
 	var out []mcp.Tool
-	for _, name := range sortedKeys(g.Builtins) {
+	for _, name := range slices.Sorted(maps.Keys(g.Builtins)) {
 		b := g.Builtins[name]
 		if b.Direct || Decide(name, false, levels) != Deny {
 			out = append(out, b.Tool)
@@ -122,7 +123,7 @@ type ToolPolicy struct {
 func (g *Gateway) Policy(ctx context.Context) []ToolPolicy {
 	levels := g.levels()
 	var out []ToolPolicy
-	for _, name := range sortedKeys(g.Builtins) {
+	for _, name := range slices.Sorted(maps.Keys(g.Builtins)) {
 		b := g.Builtins[name]
 		p := ToolPolicy{Name: name, Server: ServerOf(name), Description: b.Tool.Description, Builtin: true, Why: Explain(name, false, levels)}
 		if b.Direct || (b.AlwaysAsk && p.Action != Deny) {
@@ -160,7 +161,7 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 	if builtin {
 		req.Description = b.Tool.Description
 		req.AlwaysAsk = b.AlwaysAsk
-		req.Siblings = sortedKeys(g.Builtins)
+		req.Siblings = slices.Sorted(maps.Keys(g.Builtins))
 	} else {
 		tools, _ := g.Up.Tools(ctx)
 		for i, t := range tools {
@@ -265,7 +266,7 @@ func (g *Gateway) remember(req Request, ans Answer) error {
 		rules = append(rules, Rule{Tool: req.Server + "__*", Action: Allow})
 	} else {
 		tools := append([]string{req.Tool}, ans.Tools...)
-		sort.Strings(tools)
+		slices.Sort(tools)
 		for i, t := range tools {
 			if i > 0 && tools[i-1] == t {
 				continue

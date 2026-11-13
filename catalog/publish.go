@@ -5,10 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/gitx"
@@ -143,7 +145,7 @@ func versionEntry(version, commit, pr string, archives map[string]string, built 
 	}
 	if len(archives) > 0 {
 		var parts []string
-		for _, p := range sortedKeys(archives) {
+		for _, p := range slices.Sorted(maps.Keys(archives)) {
 			parts = append(parts, fmt.Sprintf("%q = %q", p, archives[p]))
 		}
 		fmt.Fprintf(&b, "archives = { %s }\n", strings.Join(parts, ", "))

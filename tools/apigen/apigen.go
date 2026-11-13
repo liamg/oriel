@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"unicode"
 )
@@ -151,10 +151,10 @@ func Parse(dir string) ([]Namespace, error) {
 	}
 	var out []Namespace
 	for _, ns := range byType {
-		sort.Slice(ns.Funcs, func(i, j int) bool { return ns.Funcs[i].Lua < ns.Funcs[j].Lua })
+		slices.SortFunc(ns.Funcs, func(a, b Func) int { return cmp.Compare(a.Lua, b.Lua) })
 		out = append(out, *ns)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	slices.SortFunc(out, func(a, b Namespace) int { return cmp.Compare(a.Name, b.Name) })
 	return out, nil
 }
 

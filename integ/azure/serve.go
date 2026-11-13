@@ -9,7 +9,6 @@ import (
 	"io"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -75,7 +74,7 @@ func (s *Server) learn(site Site, orgs ...string) {
 			s.orgs[site.API] = append(s.orgs[site.API], o)
 		}
 	}
-	sort.Strings(s.orgs[site.API])
+	slices.Sort(s.orgs[site.API])
 }
 
 func (s *Server) known(site Site) []string {

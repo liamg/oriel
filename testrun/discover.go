@@ -2,8 +2,9 @@ package testrun
 
 import (
 	"bytes"
+	"cmp"
 	"path/filepath"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/liamg/oriel/syntax"
@@ -80,7 +81,7 @@ func byCapture(ms []syntax.Match, name string) []node {
 			}
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Range.Start < out[j].Range.Start })
+	slices.SortStableFunc(out, func(a, b node) int { return cmp.Compare(a.Range.Start, b.Range.Start) })
 	return out
 }
 
@@ -123,5 +124,5 @@ func findUp(dir string, names ...string) (string, string, bool) {
 
 // sortItems puts items in line order, keeping the order of those on one line.
 func sortItems(items []Item) {
-	sort.SliceStable(items, func(i, j int) bool { return items[i].Line < items[j].Line })
+	slices.SortStableFunc(items, func(a, b Item) int { return cmp.Compare(a.Line, b.Line) })
 }

@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -210,7 +210,15 @@ func workspaceTools(root string) []Tool {
 	if rec, _ := sandbox.Load(root); rec.Repo != "" {
 		dirs = append(dirs, root)
 	} else if ws, ok := sandbox.LoadManifest(root); ok {
-		sort.SliceStable(ws.Projects, func(i, j int) bool { return ws.Projects[i].Primary && !ws.Projects[j].Primary })
+		slices.SortStableFunc(ws.Projects, func(a, b sandbox.Project) int { // the primary first
+			switch {
+			case a.Primary == b.Primary:
+				return 0
+			case a.Primary:
+				return -1
+			}
+			return 1
+		})
 		for _, p := range ws.Projects {
 			dirs = append(dirs, filepath.Join(root, p.Dir))
 		}

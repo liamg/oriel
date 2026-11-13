@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -166,7 +166,7 @@ func (x *GitHubHost) lookup(ctx context.Context, s registry.Site, url string) (r
 	for who := range states {
 		done = append(done, who)
 	}
-	sort.Strings(done)
+	slices.Sort(done)
 	for _, who := range done {
 		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: who, State: reviewWord(states[who])})
 	}
@@ -220,7 +220,7 @@ func prEvents(p host.PRReview) []registry.PREvent {
 		out = append(out, registry.PREvent{Kind: registry.PREventComment, Who: c.User, At: c.Created, Text: c.Body, Ref: ref, URL: c.URL,
 			Reactions: reactionsOf(c.Reactions)})
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].At.Before(out[j].At) })
+	slices.SortStableFunc(out, func(a, b registry.PREvent) int { return a.At.Compare(b.At) })
 	return out
 }
 

@@ -3,7 +3,6 @@ package testrun
 import (
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -124,8 +123,8 @@ func TestJSDiscoverMatchesRun(t *testing.T) {
 					ran = append(ran, e.Test)
 				}
 			}
-			sort.Strings(got)
-			sort.Strings(ran)
+			slices.Sort(got)
+			slices.Sort(ran)
 			if !slices.Equal(got, ran) {
 				t.Errorf("discovered %q\nran        %q", got, ran)
 			}
@@ -157,7 +156,7 @@ func TestJSSelected(t *testing.T) {
 				ran = append(ran, name)
 			}
 		}
-		sort.Strings(ran)
+		slices.Sort(ran)
 		if want := []string{"add(2, 2) -> 5", "outer > inner > nested pass"}; !slices.Equal(ran, want) {
 			t.Errorf("%s ran %q, want %q", rec, ran, want)
 		}

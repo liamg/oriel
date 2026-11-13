@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -176,7 +175,7 @@ func (*Seatbelt) Health(_ context.Context, cfg sandbox.Config) []sandbox.Problem
 		}
 	}
 	if len(unused) > 0 {
-		sort.Strings(unused)
+		slices.Sort(unused)
 		out = append(out, sandbox.Problem{Code: "settings-unused",
 			Message: strings.Join(unused, ", ") + " only apply to docker sandboxes",
 			Fix:     "Clear them, or set sandbox.backend to docker."})
@@ -336,6 +335,6 @@ func environ(env map[string]string) []string {
 	for k, v := range env {
 		out = append(out, k+"="+v)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }

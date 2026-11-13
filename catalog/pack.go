@@ -3,6 +3,7 @@ package catalog
 import (
 	"archive/tar"
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -13,7 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -239,7 +240,7 @@ func goBinaries(ctx context.Context, dir, goos, goarch, goCmd string) ([]entry, 
 	if len(pkgs) == 0 {
 		return nil, errors.New("binaries are declared, but there's no command under cmd/ to build")
 	}
-	sort.Strings(pkgs)
+	slices.Sort(pkgs)
 	if goCmd == "" {
 		goCmd = "go"
 	}
@@ -269,7 +270,7 @@ func goBinaries(ctx context.Context, dir, goos, goarch, goCmd string) ([]entry, 
 
 // writeArchive writes a reproducible .tar.gz: entries sorted, fixed times, owners and modes.
 func writeArchive(path string, es []entry) (Archive, error) {
-	sort.Slice(es, func(i, j int) bool { return es[i].name < es[j].name })
+	slices.SortFunc(es, func(a, b entry) int { return cmp.Compare(a.name, b.name) })
 	var buf bytes.Buffer
 	zw, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
 	tw := tar.NewWriter(zw)

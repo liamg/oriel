@@ -3,6 +3,7 @@ package catalog
 import (
 	"errors"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -45,7 +46,7 @@ func LoadLock(path string) (*Lock, error) {
 }
 
 // IDs are the plugins it locks, sorted.
-func (l *Lock) IDs() []string { return sortedKeys(l.doc.Value()) }
+func (l *Lock) IDs() []string { return slices.Sorted(maps.Keys(l.doc.Value())) }
 
 // Get is what it records of id.
 func (l *Lock) Get(id string) (Locked, bool) {

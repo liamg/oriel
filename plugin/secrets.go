@@ -5,7 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/liamg/oriel/internal/atomicfile"
@@ -81,6 +81,6 @@ func (f *SecretFile) SecretNames() []string {
 	for k := range m {
 		out = append(out, k)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }

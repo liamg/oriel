@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"sync"
 
 	"github.com/liamg/oriel/core"
@@ -119,7 +118,7 @@ func (ms *Methods) Names() []string {
 			out = append(out, n)
 		}
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 

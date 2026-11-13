@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -530,7 +531,7 @@ func (x *Catalog) cards() []uireg.InboxCard {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	var out []uireg.InboxCard
-	for _, id := range sortedKeys(x.waiting) {
+	for _, id := range slices.Sorted(maps.Keys(x.waiting)) {
 		st := x.waiting[id]
 		detail := "It asks for more than oriel-lock.toml covers, so it isn't loaded until you accept."
 		if st.From != nil {
@@ -547,7 +548,7 @@ func (x *Catalog) cards() []uireg.InboxCard {
 				{Label: "Uninstall", Key: "u", Command: "plugins.uninstall", Args: registry.Args{"id": id, "scope": scopeOf(st.Entry)}},
 			}})
 	}
-	for _, id := range sortedKeys(x.revoked) {
+	for _, id := range slices.Sorted(maps.Keys(x.revoked)) {
 		st := x.revoked[id]
 		out = append(out, uireg.InboxCard{ID: "revoked:" + id, Type: "plugin-revoked", Icon: "✕", Tone: "error", Interrupt: true,
 			Kicker: "PLUGIN · REVOKED", Title: id + " " + st.Locked.Version + " is disabled", Sub: "plugins · " + strings.TrimPrefix(st.Locked.Source, "registry:"),
@@ -557,7 +558,7 @@ func (x *Catalog) cards() []uireg.InboxCard {
 				{Label: "Uninstall", Key: "x", Command: "plugins.uninstall", Args: registry.Args{"id": id, "scope": scopeOf(st.Entry)}},
 			}})
 	}
-	for _, id := range sortedKeys(x.offers) {
+	for _, id := range slices.Sorted(maps.Keys(x.offers)) {
 		st := x.offers[id]
 		out = append(out, uireg.InboxCard{ID: "update:" + id, Type: "plugin-update", Icon: "↑", Tone: "accent",
 			Kicker: "PLUGIN · UPDATE", Title: id + " " + st.Update, Sub: "plugins · " + st.Locked.Version + " → " + st.Update,
@@ -625,15 +626,6 @@ func (x *Catalog) Statuses() []catalog.Status {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return slices.Clone(x.statuses)
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	ks := make([]string, 0, len(m))
-	for k := range m {
-		ks = append(ks, k)
-	}
-	slices.Sort(ks)
-	return ks
 }
 
 // Sync syncs again; the channel closes once it has, with what it found applied.

@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"path"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/liamg/oriel/agent"
@@ -102,7 +101,7 @@ func EnvFile(env map[string]string) string {
 	for k := range env {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 	var b strings.Builder
 	for _, k := range keys {
 		v := env[k]

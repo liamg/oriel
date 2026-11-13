@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -56,7 +57,7 @@ func (c PRCheck) Run(ctx context.Context) (PRReport, error) {
 	}
 	var rep PRReport
 	var comment strings.Builder
-	for _, id := range sortedKeys(head) {
+	for _, id := range slices.Sorted(maps.Keys(head)) {
 		h := head[id]
 		b, had := base[id]
 		if had && sameListing(b, h) {
@@ -70,7 +71,7 @@ func (c PRCheck) Run(ctx context.Context) (PRReport, error) {
 		rep.Problems = append(rep.Problems, probs...)
 		comment.WriteString(section)
 	}
-	for _, id := range sortedKeys(base) {
+	for _, id := range slices.Sorted(maps.Keys(base)) {
 		if _, ok := head[id]; !ok {
 			fmt.Fprintf(&comment, "## %s\n\nRemoved from the registry: it's no longer offered, and installs of it stop resolving.\n\n", id)
 		}
@@ -135,7 +136,7 @@ func (c PRCheck) listing(ctx context.Context, id string, prev *Listing, l Listin
 	case !l.Trusted && prev != nil && prev.Trusted:
 		s.WriteString("**No longer trusted**: only reviewed versions are offered.\n\n")
 	}
-	for _, v := range sortedKeys(l.Revoked) {
+	for _, v := range slices.Sorted(maps.Keys(l.Revoked)) {
 		if prev == nil || prev.Revoked[v] == "" {
 			fmt.Fprintf(&s, "**Revoked %s**: %s. It's disabled wherever it's installed at the next index fetch.\n\n", v, l.Revoked[v])
 		}

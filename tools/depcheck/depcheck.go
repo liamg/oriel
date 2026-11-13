@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -121,7 +121,7 @@ func Check(allow Allowlist, mods []Module) []string {
 			problems = append(problems, fmt.Sprintf("%s %s (required by %s) is not in tools/depcheck/allowed.txt; ask before adding it", m.Path, m.Version, m.From))
 		}
 	}
-	sort.Strings(problems)
+	slices.Sort(problems)
 	return problems
 }
 

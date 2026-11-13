@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -199,7 +201,7 @@ func (c *Client) All() []Found {
 	}
 	c.mu.Unlock()
 	var out []Found
-	for _, id := range sortedKeys(ids) {
+	for _, id := range slices.Sorted(maps.Keys(ids)) {
 		if f, ok := c.Find(id); ok {
 			out = append(out, f)
 		}

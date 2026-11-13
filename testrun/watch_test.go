@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"testing"
 )
 
@@ -14,7 +13,7 @@ func packagesOf(items []Item) []string {
 	for _, it := range items {
 		out = append(out, it.Package)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
@@ -62,7 +61,7 @@ func TestGoWatchRerunsAffectedPackages(t *testing.T) {
 		for _, p := range run.Packages {
 			ran = append(ran, p.Package)
 		}
-		sort.Strings(ran)
+		slices.Sort(ran)
 		if !slices.Equal(ran, c.want) || run.Status != StatusPassed || run.By != ByWatch {
 			t.Errorf("saving %s ran %q (%s by %s), want %q passed\n%s", c.saved, ran, run.Status, run.By, c.want, run.Stderr)
 		}

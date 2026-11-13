@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"go/ast"
 	"path"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -266,7 +266,7 @@ func (g *graph) reach() []Hit {
 			roots = append(roots, k)
 		}
 	}
-	sort.Strings(roots)
+	slices.Sort(roots)
 	seen := map[string]bool{}
 	var out []Hit
 	var walk func(k string, chain []string)

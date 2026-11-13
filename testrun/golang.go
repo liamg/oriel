@@ -2,12 +2,13 @@ package testrun
 
 import (
 	"bufio"
+	"cmp"
 	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -146,7 +147,7 @@ func (g *Go) Discover(src Source) []Item {
 	for _, r := range tableRuns {
 		calls = append(calls, call{r, true})
 	}
-	sort.SliceStable(calls, func(i, j int) bool { return calls[i].n.Range.Start < calls[j].n.Range.Start })
+	slices.SortStableFunc(calls, func(a, b call) int { return cmp.Compare(a.n.Range.Start, b.n.Range.Start) })
 	parents := append(append(append([]node(nil), funcs...), runs...), tableRuns...) // under a table run, a name isn't known
 	for _, cl := range calls {
 		parent, ok := innermost(parents, cl.n)
@@ -172,7 +173,7 @@ func (g *Go) Discover(src Source) []Item {
 			items = append(items, Item{Package: pkg, Name: name, Path: append(append([]string(nil), pathOf(pname)...), row.name), File: src.Path, Line: row.line, Kind: KindRow})
 		}
 	}
-	sort.SliceStable(items, func(i, j int) bool { return items[i].Line < items[j].Line })
+	slices.SortStableFunc(items, func(a, b Item) int { return cmp.Compare(a.Line, b.Line) })
 	return items
 }
 

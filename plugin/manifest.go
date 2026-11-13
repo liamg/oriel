@@ -1,12 +1,12 @@
 package plugin
 
 import (
+	"cmp"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/liamg/oriel/toml"
@@ -88,7 +88,7 @@ func ParseManifest(src []byte) (Manifest, error) {
 		if m.Permissions, err = permissions("", p); err != nil {
 			return m, err
 		}
-		sort.Slice(m.Permissions, func(i, j int) bool { return m.Permissions[i].Cap < m.Permissions[j].Cap })
+		slices.SortFunc(m.Permissions, func(a, b Grant) int { return cmp.Compare(a.Cap, b.Cap) })
 	}
 	return m, nil
 }
@@ -133,7 +133,7 @@ func permissions(prefix string, t map[string]any) ([]Grant, error) {
 					return nil, fmt.Errorf("oriel.toml: %s doesn't take %q", name, sk)
 				}
 			}
-			sort.Strings(g.Scope)
+			slices.Sort(g.Scope)
 		default:
 			return nil, fmt.Errorf("oriel.toml: %s is a list, a table or true", name)
 		}

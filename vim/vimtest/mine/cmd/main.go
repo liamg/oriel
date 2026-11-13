@@ -4,12 +4,12 @@
 package main
 
 import (
+	"cmp"
 	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -153,7 +153,7 @@ func report(drops []mine.Drop, verbose bool) {
 	for _, c := range cats {
 		list = append(list, c)
 	}
-	sort.Slice(list, func(i, j int) bool { return list[i].asserts > list[j].asserts })
+	slices.SortFunc(list, func(a, b *cat) int { return cmp.Compare(b.asserts, a.asserts) })
 	fmt.Println("dropped asserts by reason:")
 	for _, c := range list {
 		fmt.Printf("  %5d  %s\n", c.asserts, c.name)

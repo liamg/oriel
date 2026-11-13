@@ -2,6 +2,7 @@ package testrun
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -11,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -162,7 +162,7 @@ func (g *Go) Affected(ws Workspace, file string) ([]Item, error) {
 			out = append(out, goPackageItem(p))
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Package < out[j].Package })
+	slices.SortFunc(out, func(a, b Item) int { return cmp.Compare(a.Package, b.Package) })
 	return out, nil
 }
 

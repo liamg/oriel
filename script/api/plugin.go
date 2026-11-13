@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
@@ -137,7 +137,7 @@ func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
 	for k, v := range tableOf(opts["env"]) {
 		env = append(env, k+"="+fmt.Sprint(v))
 	}
-	sort.Strings(env)
+	slices.Sort(env)
 	o := plugin.SpawnOpts{Args: strs(opts["args"]), Dir: expand(str(opts, "cwd")), Env: env, Request: handle, Notify: handle}
 	if f, ok := opts["on_exit"].(*script.Fn); ok {
 		o.Exit = func(err error) {
@@ -245,7 +245,7 @@ func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 		})),
 		"exports": script.GoFunc(script.Method(func(*script.Args) ([]any, error) {
 			ex := mod.Exports()
-			sort.Strings(ex)
+			slices.Sort(ex)
 			return []any{ex}, nil
 		})),
 		"close": script.GoFunc(script.Method(func(*script.Args) ([]any, error) {

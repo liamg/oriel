@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -72,7 +72,7 @@ func Discover(installed []agent.MCPServer, extra map[string]json.RawMessage, hid
 		seen[name] = true
 		out = append(out, s)
 	}
-	for _, name := range sortedKeys(extra) {
+	for _, name := range slices.Sorted(maps.Keys(extra)) {
 		var raw rawServer
 		if json.Unmarshal(extra[name], &raw) == nil {
 			add(name, "oriel", raw, nil)
@@ -138,15 +138,6 @@ var badName = regexp.MustCompile(`[^A-Za-z0-9_-]+`)
 
 func cleanName(s string) string {
 	return strings.Trim(badName.ReplaceAllString(strings.ToLower(s), "_"), "_")
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // ToolName is how an upstream tool is offered: <server>__<tool>, within the

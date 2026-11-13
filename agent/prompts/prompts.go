@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/liamg/oriel/agent"
@@ -300,7 +299,7 @@ func loadDefaults() ([]Def, error) {
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	var out []Def
 	for _, name := range names {
 		b, err := fs.ReadFile(defaultFiles, name)

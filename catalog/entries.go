@@ -2,6 +2,7 @@ package catalog
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -43,7 +44,7 @@ func (e Entry) Registry() bool { return e.Git == "" && e.Path == "" }
 func ParseEntries(t map[string]any) ([]Entry, []error) {
 	var out []Entry
 	var errs []error
-	for _, id := range sortedKeys(t) {
+	for _, id := range slices.Sorted(maps.Keys(t)) {
 		e := Entry{ID: id, Enabled: true}
 		if plugin.CheckID(id) != nil {
 			errs = append(errs, fmt.Errorf("[plugins] %q isn't <owner>/<name>", id))
@@ -134,13 +135,4 @@ func strs(v any) []string {
 		return out
 	}
 	return nil
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	ks := make([]string, 0, len(m))
-	for k := range m {
-		ks = append(ks, k)
-	}
-	slices.Sort(ks)
-	return ks
 }
