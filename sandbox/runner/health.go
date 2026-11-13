@@ -48,11 +48,6 @@ func Health(ctx context.Context, cfg sandbox.Config, fix string) []sandbox.Probl
 	if p, ok := helperProblem(); !ok {
 		out = append(out, p)
 	}
-	for _, p := range PendingDockerfiles(cfg) {
-		out = append(out, sandbox.Problem{Code: "dockerfile-pending", Pending: &p,
-			Message: p.Repo + " has a sandbox Dockerfile waiting for your approval; its sessions use the base image until then",
-			Fix:     "Read it and approve it in Settings → Sandbox."})
-	}
 	return out
 }
 
