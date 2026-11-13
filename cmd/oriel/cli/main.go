@@ -25,7 +25,6 @@ import (
 	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/sandbox/helper"
-	"github.com/liamg/oriel/sandbox/runner"
 	"github.com/liamg/oriel/term/shellenv"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/update"
@@ -45,7 +44,6 @@ func Main() {
 		fmt.Fprintln(os.Stderr, "oriel:", helper.ErrMissing)
 		os.Exit(1)
 	}
-	runner.SetHelper(helper.Binary)
 	if len(args) > 0 && args[0] == "app" {
 		args = args[1:]
 	}

@@ -41,6 +41,8 @@ type Factory struct {
 	Backend func(cfg sandbox.Config) (sandbox.Backend, error)
 	// Available are the backends this machine can run; sandbox.AvailableBackends.
 	Available func() []string
+	// Helper is the sandbox helper the app carries, for a backend whose sandboxes run it (sandbox.HelperRunner).
+	Helper func() ([]byte, error)
 
 	mu       sync.Mutex
 	deps     Deps
@@ -61,7 +63,11 @@ func (s *Factory) BackendFor(cfg sandbox.Config) (sandbox.Backend, error) {
 	if s.Backend == nil {
 		return nil, errors.New("no sandbox backends")
 	}
-	return s.Backend(cfg)
+	b, err := s.Backend(cfg)
+	if h, ok := b.(sandbox.HelperRunner); ok && err == nil {
+		b = h.WithHelper(s.Helper)
+	}
+	return b, err
 }
 
 func (s *Factory) Sweep(ctx context.Context, attached, known func(root string) bool) []string {
@@ -70,7 +76,7 @@ func (s *Factory) Sweep(ctx context.Context, attached, known func(root string) b
 	for _, name := range s.Available() {
 		named := cfg
 		named.Backend = name
-		if b, err := s.Backend(named); err == nil {
+		if b, err := s.BackendFor(named); err == nil {
 			out = append(out, b.Sweep(ctx, attached)...)
 		}
 	}
@@ -156,7 +162,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 	if se.Agent.Backend != "" {
 		cfg.Backend = se.Agent.Backend
 	}
-	backend, err := s.Backend(cfg)
+	backend, err := s.BackendFor(cfg)
 	if err != nil {
 		return nil, err
 	}

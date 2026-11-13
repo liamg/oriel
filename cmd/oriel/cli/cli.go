@@ -21,6 +21,7 @@ import (
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/sandbox/agentcmd"
+	"github.com/liamg/oriel/sandbox/helper"
 )
 
 // orielHome is ~/.oriel: sessions, workspaces, repos.
@@ -40,6 +41,7 @@ func newHost(home string, log *slog.Logger, load *sysload.Sampler) (*host.Host, 
 		log.Warn("prompt packs", "err", err)
 	}
 	sandboxes := host.NewSandboxFactory(nil)
+	sandboxes.Helper = helper.Binary // the static Linux oriel its containers run
 	// A built-in kind's pack is the built-in one, or the user's version the app sends (prompts.set); agents/ adds kinds.
 	builtinOr := func(name string) (agent.Pack, bool) {
 		if src, ok := packs.Source(name); ok {

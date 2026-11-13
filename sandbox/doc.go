@@ -49,7 +49,8 @@
 //     the agents' "hook" (Claude's mod) through hookcall.Main, and "hook mcp"
 //     (Oriel's tools as an MCP server) through mcpstdio.Main. In docker it is
 //     runner.OrielBinary: cmd/oriel-sandbox built static for Linux, which the
-//     app embeds (package helper, `make helper`) and hands over with
-//     runner.SetHelper. Under seatbelt it is the running binary.
+//     app embeds (package helper, `make helper`) and the host's sandbox
+//     factory hands to the backend (HelperRunner.WithHelper). Under seatbelt
+//     it is the running binary.
 //   - Backend.Sweep, then Sweep, run hourly (host.SweepSandboxes).
 package sandbox

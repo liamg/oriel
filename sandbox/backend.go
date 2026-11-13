@@ -15,6 +15,13 @@ import (
 // macOS). Every backend gets the same egress
 // proxy, gateway and session sockets; it decides only how the agent's
 // process is fenced in.
+// HelperRunner is a Backend whose sandboxes run the app's sandbox helper (package sandbox/helper's: a static Linux
+// oriel), handed to it by the host that holds it.
+type HelperRunner interface {
+	// WithHelper is the backend running helper's binary.
+	WithHelper(helper func() ([]byte, error)) Backend
+}
+
 type Backend interface {
 	// Name is the backend's name in sandbox.backend.
 	Name() string

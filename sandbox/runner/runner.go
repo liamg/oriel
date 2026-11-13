@@ -49,7 +49,7 @@ func SocketsMount(e container.Engine) bool { return runtime.GOOS == "linux" && !
 // Launch readies root's sandbox for an agent in cwd running argv, and returns
 // the command to run under the PTY in its place, with what the agent's
 // provider said it needs.
-func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) ([]string, agent.SandboxNeeds, error) {
+func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts, helper func() ([]byte, error)) ([]string, agent.SandboxNeeds, error) {
 	engine := container.EngineOf(ctx)
 	rec, ok := sandbox.Load(root)
 	if !ok || !rec.Sandboxed() {
@@ -80,7 +80,7 @@ func Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.Laun
 		return nil, agent.SandboxNeeds{}, err
 	}
 	st.Mark("agent's needs")
-	orielBin, err := OrielBinary()
+	orielBin, err := OrielBinary(helper)
 	if err != nil {
 		return nil, agent.SandboxNeeds{}, err
 	}

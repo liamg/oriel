@@ -19,6 +19,14 @@ type Engine struct {
 	Find func() (container.Engine, error)
 	// Fix says how to install or start it.
 	Fix string
+	// Helper is the sandbox helper its containers run (sandbox.HelperRunner); none until the host hands it over.
+	Helper func() ([]byte, error)
+}
+
+// WithHelper is b running helper's binary in its containers (sandbox.HelperRunner).
+func (b Engine) WithHelper(helper func() ([]byte, error)) sandbox.Backend {
+	b.Helper = helper
+	return b
 }
 
 // The engines oriel knows. Docker drives whatever daemon the docker CLI's
@@ -124,7 +132,7 @@ func (b Engine) Launch(ctx context.Context, root, cwd string, argv []string, o s
 	if err != nil {
 		return sandbox.Command{}, err
 	}
-	cmd, needs, err := Launch(ctx, root, cwd, argv, o)
+	cmd, needs, err := Launch(ctx, root, cwd, argv, o, b.Helper)
 	if err != nil {
 		return sandbox.Command{}, err
 	}
@@ -144,7 +152,7 @@ func (b Engine) Health(ctx context.Context, cfg sandbox.Config) []sandbox.Proble
 	if err != nil {
 		return []sandbox.Problem{{Code: "engine-missing", Message: err.Error(), Fix: b.Fix, Blocking: true}}
 	}
-	return Health(ctx, cfg, b.Fix)
+	return Health(ctx, cfg, b.Fix, b.Helper)
 }
 
 func (b Engine) Sweep(ctx context.Context, attached func(root string) bool) []string {
