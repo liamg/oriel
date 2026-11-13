@@ -180,7 +180,7 @@ clip 420,324.4906 760x351.0188 r 12
   text "g" @1058.1375,356.9106 #ece6d8cc JetBrains Mono 9.5
   text "1 OF 1" @1088.1375,357.2706 #7c7566 JetBrains Mono 10.5
   text "✕" @1151.1016,357.84662 #7c7566 JetBrains Mono 12.1
-  text "The sandbox holds a connection to proxy.golang.org" @442,392.95935 #ece6d8 Inter 17
+  text "The agent is trying to connect to proxy.golang.org" @442,392.95935 #ece6d8 Inter 17
   text "ENG-2231 search api · CONNECT :443" @442,414.27994 #7c7566 JetBrains Mono 11
   rect 442,431.57996 2x36.929504 fill #332f27
   text "WHY" @456,443.77997 #7c7566 JetBrains Mono 10

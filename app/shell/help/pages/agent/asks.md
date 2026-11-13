@@ -59,7 +59,7 @@ their own gate does.
 
 ## Network
 
-The sandbox holds a connection to a host until you answer. Above the answers, choose what they apply to: the host
+The agent is trying to connect to a host, and the connection waits until you answer. Above the answers, choose what they apply to: the host
 (`proxy.golang.org`), or every host under its domain (`*.golang.org`), with a click or `←`/`→`. **Once** (`o`) lets
 this connection through; **Allow for this session** (`a`) allows what you chose for the rest of the session;
 **Allow for all sessions** (`⇧A`) for every session; **Deny** (`n`) refuses it, and the agent sees a refused

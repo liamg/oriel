@@ -210,7 +210,7 @@ func questionSummary(qs []core.Question) string {
 	return qs[0].Question
 }
 
-// approve is layer 3 asking: the sandbox holds a connection or a gateway call while the user decides.
+// approve is layer 3 asking: a connection or gateway call waits while the user decides.
 func (h *session) approve(ctx context.Context, ask core.Ask) (hostcore.Approval, error) {
 	if v, ok := h.r.policy(h.id, ask); ok {
 		return hostcore.Approval{Allow: v.Decision == "allow", By: v.By, Note: v.Note}, nil
