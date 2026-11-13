@@ -80,7 +80,8 @@ type Config struct {
 	Secrets plugin.Secrets
 	// Quit asks the window to quit as its close button does, without asking about scheduled jobs.
 	Quit <-chan struct{}
-	// Clock is what the window paces its redraws by: the sessions behind the one in front; the system's if nil.
+	// Clock is what the window times its work by (registry.Registry.Clock) and paces the redraws of the sessions behind
+	// the one in front by; the system's if nil.
 	Clock clock.Clock
 }
 
@@ -204,7 +205,6 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 
 	cancel := cfg.Store.Subscribe(core.Filter{}, behindPaced(cfg.Store, cfg.Clock, poke))
 	defer cancel()
-	cfg.Logs.OnShownWrite(poke)
 
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
 	l.stalls = startStallTrace(cfg.Trace, log)
@@ -398,7 +398,7 @@ func (cfg *Config) defaults() {
 		cfg.Store = eventstore.New()
 	}
 	if cfg.Registry == nil {
-		cfg.Registry = uireg.New()
+		cfg.Registry = uireg.NewWith(registry.Config{Clock: cfg.Clock})
 	}
 	if cfg.Logs == nil {
 		cfg.Logs = NewLogs(LogOpts{})
@@ -424,6 +424,7 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 	notices := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })
 	sh := &shell{cfg: cfg, builtins: builtins, store: cfg.Store, events: events, poke: poke, reopen: make(chan reopenTo, 1), focus: newWindowFocus()}
 	sh.dir.Store(&cfg.WorkDir)
+	cfg.Logs.OnShownWrite(poke)
 	sh.holds.done = true // nothing waits to be laid out yet
 	sh.reads = kit.NewReads(kit.ReadsOpts{Client: cfg.ImageNet, Wake: poke, Watch: cfg.FSWatch, Frame: func() int {
 		if u := sh.ui.Load(); u != nil {

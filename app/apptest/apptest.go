@@ -50,10 +50,10 @@ var Timeout = 15 * time.Second
 // running alongside isn't a warning in the frame. TestSlowHookWarns holds the real one.
 const HookBudget = 10 * time.Millisecond
 
-// testRegistry is the registry a test's app starts with, timing hooks on now: a hook's time is the scene's clock's,
+// testRegistry is the registry a test's app starts with, timing its work on c: a hook's time is the scene's clock's,
 // not how busy the machine running the test is.
-func testRegistry(now func() time.Time) uireg.Registry {
-	r := uireg.NewWith(registry.Config{Clock: nowClock(now)})
+func testRegistry(c clock.Clock) uireg.Registry {
+	r := uireg.NewWith(registry.Config{Clock: c})
 	r.Option(registry.OptionSpec{Name: "hooks.budget", Type: registry.Duration, Default: HookBudget, Scopes: registry.ScopeUser,
 		Source: "builtin:apptest", Help: "How long a hook may take, on two calls running, before it's a warning: hooks run on the hot path."})
 	return r
@@ -129,6 +129,7 @@ type Scene struct {
 	// it.
 	OverviewOff registry.Disposable
 	midway      bool             // looks don't settle the app first (Midway)
+	clock       *sceneClock      // the registry's: Now, and what's timed on it
 	files       *fswatch.Scripts // the app's file watchers, with ScriptedFiles
 }
 
@@ -145,8 +146,9 @@ func New(t testing.TB, o Options) *Scene {
 	os.MkdirAll(conf, 0o755)
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644)
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
+	s.clock = &sceneClock{now: func() time.Time { return s.Now }}
 	cfg := app.Config{
-		Window: app.Window{Store: eventstore.New(), Registry: testRegistry(func() time.Time { return s.Now }), Logs: app.NewLogs(app.LogOpts{}),
+		Window: app.Window{Store: eventstore.New(), Registry: testRegistry(s.clock), Logs: app.NewLogs(app.LogOpts{}),
 			ConfigDir: conf, CrashDir: o.CrashDir, Version: "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t),
 			ImageNet: cmp.Or(o.ImageNet, isolate.Net(t))},
 		LanguageServers: TestServers, SandboxBackends: Backends, Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)},

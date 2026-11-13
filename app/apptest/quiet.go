@@ -31,6 +31,9 @@ func (s *Scene) Quiet() {
 			continue
 		}
 		calm = 0
+		if !s.Queued() && !s.Poked() && s.stepClock() {
+			continue
+		}
 		if time.Now().After(deadline) {
 			if s.Poked() {
 				busy = append(busy, "a redraw asked for each frame")

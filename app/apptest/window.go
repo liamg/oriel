@@ -105,7 +105,7 @@ func NewWindow(t *testing.T, o WindowOpts) *Window {
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
 	cfg := app.Config{
-		Window: app.Window{Store: w.Store, Registry: testRegistry(windowNow), ConfigDir: w.ConfigDir, StateDir: o.State, WorkDir: o.WorkDir,
+		Window: app.Window{Store: w.Store, Registry: testRegistry(nowClock(windowNow)), ConfigDir: w.ConfigDir, StateDir: o.State, WorkDir: o.WorkDir,
 			Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t),
 			Logs: app.NewLogs(app.LogOpts{Level: slog.LevelDebug})},
 		LanguageServers: TestServers, SandboxBackends: Backends, Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)},

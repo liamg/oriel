@@ -36,6 +36,8 @@ type Registry interface {
 	// Holder is what provides the placeholder standing for a contribution of kind and name, if one does: what opens
 	// a view calls it before it finds the view.
 	Holder(kind, name string) (provide func() error, ok bool)
+	// Clock is what the window's work is timed by: a debounce, a hook's budget. A test's moves only when it says.
+	Clock() clock.Clock
 }
 
 // Commands are what runs by id.
@@ -300,6 +302,8 @@ type Config struct {
 }
 
 func New() Registry { return NewWith(Config{}) }
+
+func (r *reg) Clock() clock.Clock { return r.clock }
 
 // NewWith is New, with o.
 func NewWith(o Config) Registry {

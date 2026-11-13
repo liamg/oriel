@@ -125,7 +125,7 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	if g.Now == nil {
 		g.Now = time.Now
 	}
-	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }}
+	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
 	g.watched = map[*gitx.Status]func(){}
 	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"scope", "branch", "head", "index"},
@@ -178,14 +178,6 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 func (g *GitSigns) Deactivate(ctx context.Context) error {
 	g.busy.Wait()
 	return g.Disposer.Deactivate(ctx)
-}
-
-// Wait waits for its git work off the loop.
-func (g *GitSigns) Wait() {
-	for g.typing.Held() {
-		time.Sleep(5 * time.Millisecond)
-	}
-	g.busy.Wait()
 }
 
 // gitFile is a buffer's file as git names it, in the work tree of tree: its project's directory, "" for the window's.
