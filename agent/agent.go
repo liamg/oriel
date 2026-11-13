@@ -241,15 +241,15 @@ func ToolNames(tools []Tool) []string {
 // UnattendedRefusal is what an unattended agent is told of an ask nobody answered.
 const UnattendedRefusal = "Nobody is here to answer this: carry on without it, or say in your reply what the user should do."
 
-// Policy is how much the agent's own gate asks.
-type Policy string
+// Policy is how much the agent's own gate asks (core.Policy).
+type Policy = core.Policy
 
 const (
-	PolicyAsk    Policy = "ask"    // every tool the agent would ask about
-	PolicyLight  Policy = "light"  // edits go ahead, shell commands ask
-	PolicyBypass Policy = "bypass" // nothing asks: only inside a sandbox
-	PolicyAuto   Policy = "auto"   // the agent's own judgement asks only of what's risky (Claude's auto mode); light elsewhere
-	PolicyRefuse Policy = "refuse" // nothing asks: what isn't allowed ahead (Oriel's tools, Allow) is refused at once
+	PolicyAsk    = core.PolicyAsk
+	PolicyLight  = core.PolicyLight
+	PolicyBypass = core.PolicyBypass
+	PolicyAuto   = core.PolicyAuto
+	PolicyRefuse = core.PolicyRefuse
 )
 
 // HookSocketEnv names the unix socket a provider's agent calls back to it over (hooks, its MCP tools). A sandbox

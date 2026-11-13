@@ -171,12 +171,16 @@ func (x *Console) rules(c *ui.Ctx, se core.SessionState) {
 	case se.Agent.Sandboxed:
 		// The agent asks nothing itself in a sandbox: the sandbox and its gateway are the gate.
 		rs = append(rs, rule{"tools · auto", tRuleAllow})
-	case se.Agent.Policy == "ask":
+	case se.Agent.Policy == core.PolicyAsk:
 		rs = append(rs, rule{"edit · ask", tRuleAsk}, rule{"bash · ask", tRuleAsk})
-	case se.Agent.Policy == "light":
+	case se.Agent.Policy == core.PolicyLight:
 		rs = append(rs, rule{"edit · auto", tRuleAllow}, rule{"bash · ask", tRuleAsk})
-	case se.Agent.Policy == "bypass":
+	case se.Agent.Policy == core.PolicyAuto:
+		rs = append(rs, rule{"tools · the agent judges", tRuleAsk})
+	case se.Agent.Policy == core.PolicyBypass:
 		rs = append(rs, rule{"tools · auto", tRuleAllow})
+	case se.Agent.Policy == core.PolicyRefuse:
+		rs = append(rs, rule{"tools · refused unless allowed", tRuleDeny})
 	}
 	if se.Agent.Sandboxed {
 		net := cmp.Or(se.Agent.Network, "ask")

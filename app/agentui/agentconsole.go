@@ -49,6 +49,7 @@ var (
 	tAskKey        = theme.Declare("ask.key", "cyan")
 	tRuleAllow     = theme.Declare("agent.rule.allow", "ok")
 	tRuleAsk       = theme.Declare("agent.rule.ask", "pink")
+	tRuleDeny      = theme.Declare("agent.rule.deny", "error")
 )
 
 // Console is the console view, the asks' cards over every view, and the commands both run.
@@ -328,7 +329,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 		}
 		widget.Chip(c, "sandbox", where, th.C(theme.FgMuted), help)
 	case a.Policy != "":
-		widget.Chip(c, "policy", "gate "+a.Policy, th.C(theme.FgMuted), help)
+		widget.Chip(c, "policy", "gate "+string(a.Policy), th.C(theme.FgMuted), help)
 	}
 }
 

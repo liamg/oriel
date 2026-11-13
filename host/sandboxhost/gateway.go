@@ -261,8 +261,8 @@ func (g gatewayHost) RequestHost(ctx context.Context, why string) (bool, string)
 	}
 	g.b.d.SetAgent(g.b.id, func(a *core.AgentState) {
 		a.Sandboxed = false
-		if a.Policy == "bypass" {
-			a.Policy = "ask"
+		if a.Policy == core.PolicyBypass {
+			a.Policy = core.PolicyAsk
 		}
 		a.Mode = "" // a mode switched to inside the sandbox doesn't follow it out: the host's gate decides
 	})
