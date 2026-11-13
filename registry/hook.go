@@ -111,7 +111,7 @@ func (r *reg) Hooks() []HookInfo {
 	var out []HookInfo
 	for _, id := range r.hooks.order {
 		e := r.hooks.byID[id]
-		out = append(out, HookInfo{Hook: e.h, ID: id, Calls: e.calls, P99: p99(e.times), Off: r.faults.isOff(KindHook, id), Did: e.did})
+		out = append(out, HookInfo{Hook: e.h, ID: id, Calls: e.calls, P99: p99(e.times), Off: r.faults.whyOff(KindHook, id), Did: e.did})
 	}
 	slices.SortStableFunc(out, func(a, b HookInfo) int {
 		return cmp.Or(cmp.Compare(a.Event, b.Event), cmp.Compare(a.Priority, b.Priority))
@@ -164,7 +164,7 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 	var run []*hookEntry
 	for _, id := range r.hooks.order {
 		e := r.hooks.byID[id]
-		if e.h.Event != event || e.h.Fn == nil || r.faults.isOff(KindHook, id) != nil {
+		if e.h.Event != event || e.h.Fn == nil || r.faults.whyOff(KindHook, id) != nil {
 			continue
 		}
 		if !matchSubject(e.h.Pattern, subject) {

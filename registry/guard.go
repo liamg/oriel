@@ -88,7 +88,8 @@ func (f *faults) fault(ft Fault) {
 	}
 }
 
-func (f *faults) isOff(kind, id string) error {
+// whyOff is why a contribution is turned off, or nil.
+func (f *faults) whyOff(kind, id string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.off[offKey{kind, id}]
@@ -174,7 +175,7 @@ func (r *reg) TurnOn(kind, id string) {
 	delete(r.faults.inARow, offKey{kind, id})
 }
 
-func (r *reg) IsOff(kind, id string) error { return r.faults.isOff(kind, id) }
+func (r *reg) WhyOff(kind, id string) error { return r.faults.whyOff(kind, id) }
 
 func (r *reg) TurnedOff() []Off {
 	r.faults.mu.Lock()

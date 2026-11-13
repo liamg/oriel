@@ -134,8 +134,8 @@ type Faults interface {
 	// TurnOff turns a contribution off with the error that caused it; TurnOn turns it back on.
 	TurnOff(kind, id string, err error)
 	TurnOn(kind, id string)
-	IsOff(kind, id string) error // why it's turned off; nil while it's on
-	TurnedOff() []Off            // sorted by kind, then id
+	WhyOff(kind, id string) error // why the contribution is turned off; nil while it's on
+	TurnedOff() []Off             // sorted by kind, then id
 }
 
 type Disposable interface{ Dispose() }
@@ -450,7 +450,7 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 	if c.Run == nil {
 		return fmt.Errorf("command %q has no Run", id)
 	}
-	if err := r.faults.isOff(KindCommand, id); err != nil {
+	if err := r.faults.whyOff(KindCommand, id); err != nil {
 		return fmt.Errorf("command %q is turned off: %w", id, err)
 	}
 	err := Call(func() error { return c.Run(ctx, args) })
@@ -467,7 +467,7 @@ func (r *reg) Available(id string, args Args) bool {
 	if !ok && r.commandHolder(id) != nil {
 		return true
 	}
-	if !ok || c.Run == nil || r.faults.isOff(KindCommand, id) != nil {
+	if !ok || c.Run == nil || r.faults.whyOff(KindCommand, id) != nil {
 		return false
 	}
 	if c.When != "" && !FrontCan(r, c.When) {

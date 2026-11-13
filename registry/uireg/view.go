@@ -170,7 +170,7 @@ type guardedView struct {
 }
 
 func (g guardedView) Build(vc ViewCtx) ui.Node {
-	if err := g.r.IsOff(registry.KindView, g.id); err != nil {
+	if err := g.r.WhyOff(registry.KindView, g.id); err != nil {
 		return offNode(g.id, err)
 	}
 	var n ui.Node
