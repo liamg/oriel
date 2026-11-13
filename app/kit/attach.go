@@ -19,7 +19,7 @@ import (
 // session's projects is a link to it; any other file is copied where the agent can read it (host.Attach) first.
 func PastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 	return func(p widget.Pasted) string {
-		w, err := SessionHost(h)
+		w, err := SessionCalls(h)
 		if err != nil {
 			return ""
 		}

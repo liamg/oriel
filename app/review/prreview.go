@@ -269,7 +269,7 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) <-c
 	x.drafts[id] = &d
 	x.seq++
 	n := x.seq
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.ShipCalls(x.h)
 	if err != nil {
 		close(done)
 		return done

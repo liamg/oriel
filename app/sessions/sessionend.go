@@ -247,7 +247,7 @@ func (x *End) confirm(ctx registry.Ctx) error {
 
 // end closes the session's tab, then ends it off the loop; an archive offers Undo while its branches stay.
 func (x *End) end(ctx registry.Ctx, r host.EndReq) error {
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.SessionCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
 	}

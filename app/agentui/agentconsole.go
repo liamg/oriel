@@ -356,8 +356,8 @@ func (x *Console) provider(session core.SessionID, id string) (host.ProviderInfo
 	return host.ProviderInfo{}, false
 }
 
-func (x *Console) client(id core.SessionID) (host.Access, error) {
-	return kit.SessionHost(x.h)
+func (x *Console) client(id core.SessionID) (host.SessionCalls, error) {
+	return kit.SessionCalls(x.h)
 }
 
 // move selects the next or previous block.

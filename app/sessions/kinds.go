@@ -56,7 +56,15 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 	}}))
 	x.Add(h.Contribute(registry.Service{Name: registry.SessionsService, Impl: sessionsService{x}, Source: "builtin:sessions"}))
 	if w := x.Host; w != nil {
-		x.Add(h.Contribute(registry.Service{Name: registry.HostService, Impl: host.Access(w), Source: "builtin:sessions"}))
+		for _, part := range []struct {
+			name string
+			impl any
+		}{{registry.HostSessionsService, host.SessionCalls(w)},
+			{registry.HostSandboxesService, host.SandboxCalls(w)}, {registry.HostShipsService, host.ShipCalls(w)},
+			{registry.HostCodeHostsService, host.CodeHostCalls(w)}, {registry.HostReposService, host.RepoCalls(w)},
+			{registry.HostJobsService, host.JobCalls(w)}, {registry.HostStatsService, host.StatsCalls(w)}} {
+			x.Add(h.Contribute(registry.Service{Name: part.name, Impl: part.impl, Source: "builtin:sessions"}))
+		}
 		w.SetKinds(registryKinds{h})
 		x.Add(kit.OnDispose(func() { w.SetKinds(nil) }))
 		w.SetProviders(func() []agent.Provider { return registryProviders(h) })

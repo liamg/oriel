@@ -306,7 +306,7 @@ type repoLine struct {
 }
 
 func (x *Assistant) repos(context.Context) []repoLine {
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.RepoCalls(x.h)
 	if err != nil {
 		return nil
 	}
@@ -439,7 +439,7 @@ func (x *Assistant) toolStop(ctx registry.Ctx, p map[string]any) (any, error) {
 		return nil, err
 	}
 	return registry.Acted{Result: "stopped", Line: "stopped " + kit.Label(s), Undo: func(ctx registry.Ctx) error {
-		c, err := kit.SessionHost(x.h)
+		c, err := kit.SessionCalls(x.h)
 		if err != nil {
 			return err
 		}
@@ -512,7 +512,7 @@ type jobLine struct {
 }
 
 func (x *Assistant) jobs(context.Context) []jobLine {
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.JobCalls(x.h)
 	if err != nil {
 		return nil
 	}
@@ -589,7 +589,7 @@ func (x *Assistant) toolRunJob(ctx registry.Ctx, p map[string]any) (any, error) 
 	if err != nil {
 		return nil, err
 	}
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.JobCalls(x.h)
 	if err != nil {
 		return nil, err
 	}
@@ -614,7 +614,7 @@ type prLine struct {
 
 func (x *Assistant) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
 	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
-		c, err := kit.SessionHost(x.h)
+		c, err := kit.CodeHostCalls(x.h)
 		if err != nil {
 			return nil, err
 		}

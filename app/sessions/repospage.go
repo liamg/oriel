@@ -54,7 +54,7 @@ type repoDetail struct {
 func (x *Repos) detail(id core.RepoID) *repoDetail {
 	d := x.details[id]
 	if d == nil {
-		w, _ := kit.SessionHost(x.h)
+		w, _ := kit.RepoCalls(x.h)
 		d = &repoDetail{facts: plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.RepoFacts, error) {
 			if w == nil {
 				return host.RepoFacts{}, errors.New("there are no repos in this window")
@@ -72,7 +72,7 @@ func (x *Repos) readFacts(id core.RepoID) { x.detail(id).facts.Reload() }
 // readPlan reads what housekeeping would clean, fetching first if asked.
 func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 	d := x.detail(id)
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.RepoCalls(x.h)
 	if d.planBusy || w == nil {
 		return
 	}
@@ -97,9 +97,9 @@ func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 }
 
 // act runs a host call for a repo off the loop, then reads its facts again.
-func (x *Repos) act(id core.RepoID, what string, fn func(ctx context.Context, w host.Access) (string, error)) {
+func (x *Repos) act(id core.RepoID, what string, fn func(ctx context.Context, w host.RepoCalls) (string, error)) {
 	d := x.detail(id)
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.RepoCalls(x.h)
 	if d.busy != "" || w == nil {
 		return
 	}
@@ -313,7 +313,7 @@ func (x *Repos) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			busy := d.busy != ""
 			if r.Remote != "" && widget.Button(c, "fetch", "Fetch", widget.ButtonOpts{Key: "f", Disabled: busy, Busy: d.busy == "fetch", BusyLabel: "Fetching",
 				Help: "agent/repos#detail"}) {
-				x.act(r.ID, "fetch", func(ctx context.Context, w host.Access) (string, error) {
+				x.act(r.ID, "fetch", func(ctx context.Context, w host.RepoCalls) (string, error) {
 					return "fetched", w.FetchRepo(ctx, r.ID)
 				})
 				d.plan = nil
@@ -621,7 +621,7 @@ func (x *Repos) clean(id core.RepoID, d *repoDetail) {
 			}
 		}
 	}
-	x.act(id, "clean", func(ctx context.Context, w host.Access) (string, error) {
+	x.act(id, "clean", func(ctx context.Context, w host.RepoCalls) (string, error) {
 		res, err := w.Housekeep(ctx, req)
 		x.h.Do(func() {
 			d.results = map[string]string{}
@@ -669,7 +669,7 @@ type tagForm struct {
 }
 
 func (x *Repos) loadTag(id core.RepoID, t *tagForm) {
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.RepoCalls(x.h)
 	if t.loading || w == nil {
 		return
 	}
@@ -849,7 +849,7 @@ func (x *Repos) createTag(id core.RepoID, t *tagForm) {
 	t.busy, t.err = true, ""
 	a := registry.Args{"repo": string(id), "branch": t.branch, "name": strings.TrimSpace(t.name), "message": t.message,
 		"pull": t.pull && t.preview.Remote, "sign": t.sign && t.preview.Signing, "push": t.push && t.preview.Remote}
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.RepoCalls(x.h)
 	plugin.Go(x.h, "repos: tag "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -882,7 +882,7 @@ func (x *Repos) tagDone(c *ui.Ctx, r core.Repo, t *tagForm) {
 			c.Text("p", "push failed: "+kit.FirstLine(res.PushErr), kit.MonoFont(10.5, th.C(theme.Error)))
 			if widget.Button(c, "again", "Push again", widget.ButtonOpts{Busy: x.detail(r.ID).busy == "push", BusyLabel: "Pushing", Help: "agent/repos#tags"}) {
 				name := res.Name
-				x.act(r.ID, "push", func(ctx context.Context, w host.Access) (string, error) {
+				x.act(r.ID, "push", func(ctx context.Context, w host.RepoCalls) (string, error) {
 					err := w.PushTag(ctx, r.ID, name)
 					if err == nil {
 						x.h.Do(func() { res.Pushed, res.PushErr = true, "" })

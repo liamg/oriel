@@ -103,7 +103,7 @@ func (sh *shell) drain(r *quitDrain) {
 }
 
 // poll reads which sessions are mid-turn, and which jobs are scheduled.
-func (r *quitDrain) poll(w host.Access, st core.State) []core.SessionState {
+func (r *quitDrain) poll(w host.JobCalls, st core.State) []core.SessionState {
 	busy := slices.DeleteFunc(slices.Clone(st.Sessions), func(se core.SessionState) bool { return !se.Agent.Working })
 	jobs := slices.DeleteFunc(w.Jobs(), func(j host.Job) bool { return j.Schedule.Every == "" })
 	r.mu.Lock()
@@ -130,7 +130,7 @@ func (sh *shell) handOver(r *quitDrain) error {
 	tick := kit.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
 	// A quit as the window opens waits for the sessions plugin to bring the host's calls.
-	w, err := kit.SessionHost(sh.cfg.Registry)
+	w, err := kit.SessionCalls(sh.cfg.Registry)
 	for err != nil && sh.holdsClose {
 		select {
 		case <-r.now:
@@ -141,12 +141,16 @@ func (sh *shell) handOver(r *quitDrain) error {
 			return nil
 		case <-tick.C:
 		}
-		w, err = kit.SessionHost(sh.cfg.Registry)
+		w, err = kit.SessionCalls(sh.cfg.Registry)
 	}
 	if err != nil {
 		return nil
 	}
-	if busy := r.poll(w, sh.store.State()); len(busy) == 0 && len(r.jobs) > 0 && r.ask {
+	jobs, err := kit.JobCalls(sh.cfg.Registry)
+	if err != nil {
+		return nil
+	}
+	if busy := r.poll(jobs, sh.store.State()); len(busy) == 0 && len(r.jobs) > 0 && r.ask {
 		r.confirm.Store(true)
 		sh.poke()
 		select {
@@ -156,7 +160,7 @@ func (sh *shell) handOver(r *quitDrain) error {
 		}
 	}
 waiting:
-	for len(r.poll(w, sh.store.State())) > 0 {
+	for len(r.poll(jobs, sh.store.State())) > 0 {
 		sh.poke()
 		select {
 		case <-r.now:

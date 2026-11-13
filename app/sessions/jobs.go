@@ -135,11 +135,15 @@ func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 		x.loc = time.Local
 	}
 	x.loads = plugin.NewLoad(h, func(context.Context, func(string, float64)) (jobsData, error) {
-		w, _ := kit.SessionHost(x.h)
-		if w == nil {
-			return jobsData{}, errors.New("there are no sessions in this window")
+		jobs, err := kit.JobCalls(x.h)
+		if err != nil {
+			return jobsData{}, err
 		}
-		return jobsData{jobs: w.Jobs(), repos: w.Repos(), at: x.now()}, nil
+		repos, err := kit.RepoCalls(x.h)
+		if err != nil {
+			return jobsData{}, err
+		}
+		return jobsData{jobs: jobs.Jobs(), repos: repos.Repos(), at: x.now()}, nil
 	}, plugin.LoadOpts{Timeout: 20 * time.Second})
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -197,7 +201,7 @@ func (x *Jobs) commands() []registry.Command {
 				if id == "" {
 					id = h.State().Focus
 				}
-				c, err := kit.SessionHost(x.h)
+				c, err := kit.SessionCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -325,8 +329,8 @@ func (x *Jobs) target(a registry.Args) (host.Job, error) {
 	return host.Job{}, fmt.Errorf("no job %q", name)
 }
 
-func (x *Jobs) client() (host.Access, error) {
-	return kit.SessionHost(x.h)
+func (x *Jobs) client() (host.JobCalls, error) {
+	return kit.JobCalls(x.h)
 }
 
 // save is jobs.save: the job named, with what the args give changed, or a new one; it returns the job as saved.

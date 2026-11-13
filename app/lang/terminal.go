@@ -315,11 +315,11 @@ func (x *Terminals) focusedOrLast() *terminal {
 
 // sandboxed says a terminal opened with a runs a shell in the sandbox of the session in front, beside its agent:
 // one with no program or source of its own while that session is sandboxed. Others run here.
-func (x *Terminals) sandboxed(a registry.Args) (host.Access, core.SessionID, bool) {
+func (x *Terminals) sandboxed(a registry.Args) (host.SandboxCalls, core.SessionID, bool) {
 	if src, _ := a["source"].(TermSource); src != nil || len(strList(a["cmd"])) > 0 || len(strList(a["args"])) > 0 || a.Bool("host") {
 		return nil, "", false
 	}
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.SandboxCalls(x.h)
 	if w == nil {
 		return nil, "", false
 	}

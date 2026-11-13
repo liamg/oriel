@@ -244,7 +244,7 @@ func (x *Assistant) Prompt() string {
 
 // startAgent starts the conversation's agent: a utility agent.
 func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Agent, error) {
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.SessionCalls(x.h)
 	if err != nil {
 		return nil, err
 	}

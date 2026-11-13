@@ -159,9 +159,9 @@ func (x *Ship) Deactivate(ctx context.Context) error {
 
 func (x *Ship) focused() core.SessionID { return x.h.State().Focus }
 
-// client is the session host.
-func (x *Ship) client(id core.SessionID) (host.Access, error) {
-	return kit.SessionHost(x.h)
+// client is the session host's ship calls.
+func (x *Ship) client(id core.SessionID) (host.ShipCalls, error) {
+	return kit.ShipCalls(x.h)
 }
 
 // session is the session in front, or {id}.
@@ -455,8 +455,13 @@ func (x *Ship) Wait() { x.wait() }
 // step runs one step on a project off the loop, showing doing while it runs and until the project's been read after
 // it, so its panel never shows the state from before; then done, if it succeeded, on the loop. A failure is kept for
 // the project and sent as a notice. The session is read again after, fetched.
-func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c host.Access) error, done ...func()) error {
-	c, err := x.client(id)
+func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c host.ShipCalls) error, done ...func()) error {
+	return stepWith(x, kit.ShipCalls, id, project, doing, fn, done...)
+}
+
+// stepWith is step with the part of the session host part gives.
+func stepWith[T any](x *Ship, part func(registry.Registry) (T, error), id core.SessionID, project, doing string, fn func(ctx context.Context, c T) error, done ...func()) error {
+	c, err := part(x.h)
 	if err != nil {
 		return err
 	}

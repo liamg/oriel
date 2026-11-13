@@ -275,7 +275,7 @@ func (x *Verify) record(q *quiz, result string) {
 		At: time.Now()}
 	log := x.h.Log().With("session", string(q.session))
 	log.Info("verification "+result, "right", v.Count(core.VerdictRight), "partly", v.Count(core.VerdictPartly), "wrong", v.Count(core.VerdictWrong))
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.ShipCalls(x.h)
 	if err != nil {
 		log.Error("verification not recorded", "err", err)
 		return

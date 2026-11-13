@@ -284,8 +284,8 @@ func (x *GitHub) session(a registry.Args) (core.SessionState, bool) {
 	return se, err == nil
 }
 
-func (x *GitHub) client(id core.SessionID) (host.Access, error) {
-	return kit.SessionHost(x.h)
+func (x *GitHub) client(id core.SessionID) (host.CodeHostCalls, error) {
+	return kit.CodeHostCalls(x.h)
 }
 
 // trust is the trusted orgs and users, from the options.

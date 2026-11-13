@@ -115,7 +115,7 @@ func (x *Workspace) commands() []registry.Command {
 		{ID: "workspace.restart", Title: "Restart the agent of {id}, the session in front by default, in a new sandbox once its turn ends",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
-				w, err := kit.SessionHost(x.h)
+				w, err := kit.SandboxCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -136,7 +136,7 @@ func (x *Workspace) state(id core.SessionID) *wsState {
 	}
 	st = &wsState{}
 	st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.Workspace, error) {
-		w, _ := kit.SessionHost(x.h)
+		w, _ := kit.SessionCalls(x.h)
 		if w == nil {
 			return host.Workspace{}, errors.New("there are no sessions in this window")
 		}
@@ -188,7 +188,7 @@ func readTail(path string, n int64) (string, error) {
 
 // rebuild builds session id's image again in the background, the build log following it.
 func (x *Workspace) rebuild(id core.SessionID) error {
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.SandboxCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
 	}

@@ -112,8 +112,8 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
   the host as a `host/hostcore` State, and never imports another; only the `host` facade wires them together.
 - `cfg.Store` and `cfg.Host` are at 0: a plugin reads and changes the state through its `plugin.Host` (`State`,
   `Apply`), and reaches the session host and other features through registry services (`Editors`, `GitTrees`,
-  `CodeSites`, `Ships`, `Sessions`, `host.Access`; `docs/architecture.md`, "Registry and services"), commands and hook events,
-  never another plugin's fields.
+  `CodeSites`, `Ships`, `Sessions`, the host's parts such as `host.SessionCalls`; `docs/architecture.md`, "Registry
+  and services"), commands and hook events, never another plugin's fields.
 - Kind special cases are at 0: code asks a session's kind (`registry.Can`, `Label`, `Chips`, kind-scoped
   contributions) rather than comparing `core.Kind*` or reading another kind's data. A kind's own files say so with a
   `//oriel:kind <kind>` line, and only they may name it (`docs/architecture.md`, "Sessions and kinds").

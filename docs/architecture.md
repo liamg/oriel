@@ -72,7 +72,7 @@ plugin uses, so each can be replaced, removed or configured from Lua.
 
 What crosses features is a service, a command, a hook event or a core event, never another plugin's fields. A plugin
 offers a typed service with `registry.Service{Name, Impl}` and others find it with `registry.ServiceOf[T]`; the
-built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and `host.Access`. A plugin reads and
+built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and the session host's parts (`host.SessionCalls`, `host.RepoCalls`…). A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it

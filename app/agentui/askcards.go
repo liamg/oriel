@@ -501,7 +501,7 @@ func removeStr(xs []string, s string) []string {
 // agentTerm is an agent's raw terminal, as a terminal view's source: what it shows streams in, and what you type
 // goes back.
 type agentTerm struct {
-	c      host.Access
+	c      host.SessionCalls
 	id     core.SessionID
 	s      <-chan []byte
 	cancel context.CancelFunc
@@ -510,7 +510,7 @@ type agentTerm struct {
 	rest []byte
 }
 
-func newAgentTerm(c host.Access, id core.SessionID) (*agentTerm, error) {
+func newAgentTerm(c host.SessionCalls, id core.SessionID) (*agentTerm, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s, err := c.Terminal(ctx, id)
 	if err != nil {

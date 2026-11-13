@@ -111,7 +111,7 @@ func (x *Jobs) show(f *jobForm) {
 	x.closeForm()
 	f.picked = f.agent != ""
 	f.agents = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
-		c, err := x.client()
+		c, err := kit.SessionCalls(x.h)
 		if err != nil {
 			return nil, err
 		}

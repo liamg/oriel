@@ -18,17 +18,40 @@ import (
 
 var ErrNoSessions = errors.New("there are no sessions in this window")
 
-// SessionHost is the session host's calls (registry.HostService), or why there are none.
-func SessionHost(r registry.Registry) (host.Access, error) {
-	if w, ok := registry.ServiceOf[host.Access](r, registry.HostService); ok {
+// The session host's parts' calls, each its own service, or why there are none.
+func SessionCalls(r registry.Registry) (host.SessionCalls, error) {
+	return hostPart[host.SessionCalls](r, registry.HostSessionsService)
+}
+func SandboxCalls(r registry.Registry) (host.SandboxCalls, error) {
+	return hostPart[host.SandboxCalls](r, registry.HostSandboxesService)
+}
+func ShipCalls(r registry.Registry) (host.ShipCalls, error) {
+	return hostPart[host.ShipCalls](r, registry.HostShipsService)
+}
+func CodeHostCalls(r registry.Registry) (host.CodeHostCalls, error) {
+	return hostPart[host.CodeHostCalls](r, registry.HostCodeHostsService)
+}
+func RepoCalls(r registry.Registry) (host.RepoCalls, error) {
+	return hostPart[host.RepoCalls](r, registry.HostReposService)
+}
+func JobCalls(r registry.Registry) (host.JobCalls, error) {
+	return hostPart[host.JobCalls](r, registry.HostJobsService)
+}
+func StatsCalls(r registry.Registry) (host.StatsCalls, error) {
+	return hostPart[host.StatsCalls](r, registry.HostStatsService)
+}
+
+func hostPart[T any](r registry.Registry, name string) (T, error) {
+	if w, ok := registry.ServiceOf[T](r, name); ok {
 		return w, nil
 	}
-	return nil, ErrNoSessions
+	var none T
+	return none, ErrNoSessions
 }
 
 // HasSessions says the window has a session host.
 func HasSessions(r registry.Registry) bool {
-	_, err := SessionHost(r)
+	_, err := SessionCalls(r)
 	return err == nil
 }
 
@@ -66,13 +89,13 @@ func SessionFrom(h plugin.Host, a registry.Args) (core.SessionState, error) {
 	return s.FromArgs(a)
 }
 
-// SessionArgs is sessionFrom, and the session host.
-func SessionArgs(h plugin.Host, a registry.Args) (core.SessionState, host.Access, error) {
+// SessionArgs is SessionFrom, and the session host's session calls.
+func SessionArgs(h plugin.Host, a registry.Args) (core.SessionState, host.SessionCalls, error) {
 	se, err := SessionFrom(h, a)
 	if err != nil {
 		return se, nil, err
 	}
-	w, err := SessionHost(h)
+	w, err := SessionCalls(h)
 	return se, w, err
 }
 

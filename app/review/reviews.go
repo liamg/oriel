@@ -651,7 +651,7 @@ func (x *Reviews) startBehind(ctx registry.Ctx, url string) error {
 		return nil
 	}
 	h, st := x.h, x.h.State()
-	w, err := kit.SessionHost(h)
+	w, err := kit.SessionCalls(h)
 	if err != nil {
 		return err
 	}

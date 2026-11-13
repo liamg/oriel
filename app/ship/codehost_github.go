@@ -49,7 +49,7 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-func (x *GitHubHost) host() (host.Access, error) { return kit.SessionHost(x.h) }
+func (x *GitHubHost) host() (host.CodeHostCalls, error) { return kit.CodeHostCalls(x.h) }
 
 // probe says hostname is a GitHub Enterprise server: its /api/v3/meta answers GitHub's JSON with no token.
 func (x *GitHubHost) probe(ctx context.Context, hostname string) (bool, error) {

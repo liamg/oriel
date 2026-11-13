@@ -49,7 +49,7 @@ func (e *Explorer) openScratch(id string) {
 
 // scratchpadOf is where session id's agent keeps its scratch files on this machine: a sandboxed agent's temp dir.
 func scratchpadOf(ctx context.Context, h plugin.Host, id core.SessionID) (string, error) {
-	w, err := kit.SessionHost(h)
+	w, err := kit.SessionCalls(h)
 	if err != nil || id == "" {
 		return "", nil
 	}

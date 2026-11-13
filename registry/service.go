@@ -42,7 +42,15 @@ const (
 	CodeSitesService = "code.sites"
 	ShipsService     = "ships"
 	SessionsService  = "sessions"
-	HostService      = "host" // the session host's calls (host.Access)
+
+	// The session host's parts' calls, each its own service (host.SessionCalls, host.SandboxCalls…).
+	HostSessionsService  = "host.sessions"
+	HostSandboxesService = "host.sandboxes"
+	HostShipsService     = "host.ships"
+	HostCodeHostsService = "host.codehosts"
+	HostReposService     = "host.repos"
+	HostJobsService      = "host.jobs"
+	HostStatsService     = "host.stats"
 )
 
 func EditorsOf(r Contributions) (Editors, bool)     { return ServiceOf[Editors](r, EditorsService) }

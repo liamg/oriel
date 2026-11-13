@@ -67,7 +67,7 @@ func (x *Plan) openStartWork() error {
 	if se.Agent.Provider != "" {
 		id := se.Agent.Provider
 		d.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.ProviderInfo, error) {
-			c, err := kit.SessionHost(x.h)
+			c, err := kit.SessionCalls(x.h)
 			if err != nil {
 				return host.ProviderInfo{}, err
 			}

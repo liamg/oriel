@@ -11,9 +11,20 @@ import (
 	"github.com/liamg/oriel/sandbox"
 )
 
-// Access is the session host as the app's plugins call it: the registry's "host" service.
+// Access is every part's calls: what *Host implements. A plugin takes only the part it uses (SessionCalls,
+// SandboxCalls…), each the registry service of its own name ("host.sessions", "host.sandboxes"…).
 type Access interface {
-	// Sessions
+	SessionCalls
+	SandboxCalls
+	ShipCalls
+	CodeHostCalls
+	RepoCalls
+	JobCalls
+	StatsCalls
+}
+
+// SessionCalls start, steer and end sessions: the registry's "host.sessions" service.
+type SessionCalls interface {
 	Start(ctx context.Context, spec core.SessionSpec) (core.SessionID, error)
 	StartWork(ctx context.Context, r StartWorkReq) error
 	Stop(ctx context.Context, id core.SessionID) error
@@ -29,8 +40,6 @@ type Access interface {
 	AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) error
 	Send(r SendReq) error
 	Answer(r AnswerReq) error
-	AddRule(kind core.AskKind, rule string) error
-	RemoveRule(rule string) error
 	StartLogin(ctx context.Context, provider string) (string, error)
 	Ask(ctx context.Context, r AskReq) (Verdict, error)
 	Comment(ctx context.Context, r CommentReq) (core.ThreadID, error)
@@ -46,8 +55,12 @@ type Access interface {
 	SetPrompts(o prompts.Overrides) error
 	SetRestartOnExit(on bool)
 	HandOver()
+}
 
-	// Sandboxes and permissions
+// SandboxCalls are the sessions' sandboxes and what they may do: the registry's "host.sandboxes" service.
+type SandboxCalls interface {
+	AddRule(kind core.AskKind, rule string) error
+	RemoveRule(rule string) error
 	Permissions(ctx context.Context, id core.SessionID) (Permissions, error)
 	SetToolRule(id core.SessionID, tool, action string) error
 	SetNetRule(id core.SessionID, host string, port int, action string, private bool) error
@@ -55,8 +68,10 @@ type Access interface {
 	RebuildSandbox(ctx context.Context, id core.SessionID) error
 	SandboxShell(ctx context.Context, id core.SessionID, cwd string) (sandbox.Command, error)
 	SetSandboxConfig(cfg sandbox.Config) error
+}
 
-	// Review and ship
+// ShipCalls review a session's work and ship it: the registry's "host.ships" service.
+type ShipCalls interface {
 	SetReviewed(r core.HunksReviewed) error
 	SetReviewDraft(r core.ReviewDrafted) error
 	SetFindings(r core.FindingsRecorded) error
@@ -74,8 +89,10 @@ type Access interface {
 	ShipMergeDefault(ctx context.Context, r ShipRef) (gitx.Merge, error)
 	NextPR(ctx context.Context, r NextPRReq) error
 	UpdatePR(ctx context.Context, id core.SessionID) (map[string]PRMove, error)
+}
 
-	// Code hosts
+// CodeHostCalls are the code hosts' pull requests and review threads: the registry's "host.codehosts" service.
+type CodeHostCalls interface {
 	SyncGitHub(ctx context.Context, r MirrorReq) (Mirror, error)
 	ResolveGitHub(ctx context.Context, r ResolveReq) error
 	MarkHostResolved(r ResolveReq) error
@@ -99,8 +116,10 @@ type Access interface {
 	GitHubMergeState(ctx context.Context, r GitHubReq) (gh.MergeState, error)
 	GitHubMerge(ctx context.Context, r GitHubReq) error
 	GitHubDeleteBranch(ctx context.Context, r GitHubReq) error
+}
 
-	// Repos
+// RepoCalls add, clone, tidy and tag the host's repositories: the registry's "host.repos" service.
+type RepoCalls interface {
 	Repos() []core.Repo
 	AddRepoPath(ctx context.Context, path string) (core.Repo, error)
 	CheckRepoPath(ctx context.Context, p string) RepoCheck
@@ -117,14 +136,18 @@ type Access interface {
 	TagPreview(ctx context.Context, id core.RepoID, branch string) (TagPreview, error)
 	Tag(ctx context.Context, req TagReq) (Tagged, error)
 	PushTag(ctx context.Context, id core.RepoID, name string) error
+}
 
-	// Jobs
+// JobCalls are the scheduled jobs: the registry's "host.jobs" service.
+type JobCalls interface {
 	Jobs() []Job
 	SaveJob(j Job) (Job, error)
 	DeleteJob(name string) error
 	RunJob(ctx context.Context, name string) (core.SessionID, error)
+}
 
-	// Stats and usage
+// StatsCalls read the agents' usage and the sessions' stats: the registry's "host.stats" service.
+type StatsCalls interface {
 	ReadUsage(ctx context.Context) error
 	StatsQuery(q stats.Query) stats.Report
 	SessionStats(r StatsSessionReq) (stats.Detail, error)

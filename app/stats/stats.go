@@ -183,7 +183,7 @@ func (p *Page) Activate(_ context.Context, h plugin.Host) error {
 
 // readUsage is Refresh's read of every provider's plan windows, off the loop.
 func (x *Plugin) readUsage(ctx context.Context, _ func(string, float64)) (struct{}, error) {
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.StatsCalls(x.h)
 	if w == nil {
 		return struct{}{}, errors.New("there are no sessions in this window")
 	}
@@ -536,7 +536,7 @@ func fetchState(since time.Time, have bool, err error) widget.LoadState {
 func (x *Plugin) report(q stats.Query) (stats.Report, reportMeta) {
 	key := queryKey(q)
 	var since time.Time
-	if w, _ := kit.SessionHost(x.h); w != nil {
+	if w, _ := kit.StatsCalls(x.h); w != nil {
 		since = x.keep(key, "report", func() time.Time { return x.reports[key].at }, func() (any, error) { return w.StatsQuery(q), nil }, func(v any, err error, at time.Time) {
 			r, _ := v.(stats.Report)
 			x.reports[key] = fetched[stats.Report]{v: r, at: at, err: err}
@@ -668,7 +668,7 @@ func (x *Plugin) detail(id core.SessionID) (stats.Detail, bool) {
 func (x *Plugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) {
 	key := x.detailKey(id)
 	var since time.Time
-	if w, _ := kit.SessionHost(x.h); w != nil {
+	if w, _ := kit.StatsCalls(x.h); w != nil {
 		req := host.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
 		since = x.keep(key, "session", func() time.Time { return x.details[key].at }, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
 			d, _ := v.(stats.Detail)
@@ -698,7 +698,7 @@ func (x *Plugin) retryDetail(id core.SessionID) {
 
 // usageHistory is the readings of an account's plan over the last week, oldest first.
 func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
-	if w, _ := kit.SessionHost(x.h); w != nil {
+	if w, _ := kit.StatsCalls(x.h); w != nil {
 		x.keep("usage.history", "usage history", func() time.Time { return x.history.at }, func() (any, error) {
 			x.mu.Lock()
 			since := x.clock.Add(-8 * 24 * time.Hour)

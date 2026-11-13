@@ -339,7 +339,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 		x.mirrored[id] = x.Clock()
 	}
 	x.mu.Unlock()
-	c, err := x.client(id)
+	c, err := kit.CodeHostCalls(x.h)
 	if !due || err != nil {
 		return
 	}
@@ -379,7 +379,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 // forwardHost posts a draft reply on a thread mirrored from a code host other than GitHub, as the user, and marks it
 // sent.
 func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment string) error {
-	c, err := x.client(se.ID)
+	c, err := kit.CodeHostCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -397,7 +397,7 @@ func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment s
 		return err
 	}
 	repo, pr := s.codeRepo(se.ID), *s.PR
-	return x.step(se.ID, s.Project, "Forwarding", func(ctx context.Context, c host.Access) error {
+	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, "Forwarding", func(ctx context.Context, c host.CodeHostCalls) error {
 		_, err := c.ForwardHost(ctx, req, func(ctx context.Context, t core.Thread, body string) (posted string, err error) {
 			rt := registry.ReviewThread{ID: t.Hosted.Key, URL: t.Hosted.URL, Outdated: t.Hosted.Outdated}
 			if a := t.Anchor; a != nil && rt.ID != "" {
@@ -425,7 +425,7 @@ func (x *Ship) resolveHost(se core.SessionState, t core.Thread, resolved bool) e
 	if a := t.Anchor; a != nil {
 		rt.Path, rt.Line, rt.Old = a.File, a.Line, a.Side == "old"
 	}
-	return x.step(se.ID, s.Project, map[bool]string{true: "Resolving", false: "Reopening"}[resolved], func(ctx context.Context, c host.Access) error {
+	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, map[bool]string{true: "Resolving", false: "Reopening"}[resolved], func(ctx context.Context, c host.CodeHostCalls) error {
 		if err := registry.Call(func() error { return h.Resolve(ctx, repo, pr, rt, resolved) }); err != nil {
 			return err
 		}

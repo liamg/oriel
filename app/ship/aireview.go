@@ -170,11 +170,11 @@ func (x *AIReview) session(a registry.Args) (core.SessionState, error) {
 	return kit.SessionFrom(x.h, a)
 }
 
-func (x *AIReview) client(a registry.Args) (host.Access, error) {
+func (x *AIReview) client(a registry.Args) (host.ShipCalls, error) {
 	if _, err := x.session(a); err != nil {
 		return nil, err
 	}
-	return kit.SessionHost(x.h)
+	return kit.ShipCalls(x.h)
 }
 
 // run asks the session host for a review, with the user's prompt when they have one.
@@ -220,7 +220,7 @@ func (x *AIReview) run(a registry.Args) error {
 }
 
 func (x *AIReview) setFinding(se core.SessionState, f core.Finding) error {
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}

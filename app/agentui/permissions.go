@@ -76,7 +76,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "permissions.tool", Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
-				return x.change(id, func(w host.Access) error { return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action"))) })
+				return x.change(id, func(w host.SandboxCalls) error { return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action"))) })
 			}},
 		{ID: "permissions.net", Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
 			Run: func(_ registry.Ctx, a registry.Args) error {
@@ -85,7 +85,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 				if err != nil {
 					return err
 				}
-				return x.change(id, func(w host.Access) error {
+				return x.change(id, func(w host.SandboxCalls) error {
 					return w.SetNetRule(id, h, port, noneAsEmpty(a.String("action")), a.Bool("private"))
 				})
 			}},
@@ -141,7 +141,7 @@ func (x *Permissions) state(id core.SessionID) *permsState {
 	if st == nil {
 		st = &permsState{}
 		st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.Permissions, error) {
-			w, err := kit.SessionHost(x.h)
+			w, err := kit.SandboxCalls(x.h)
 			if err != nil {
 				return host.Permissions{}, err
 			}
@@ -153,8 +153,8 @@ func (x *Permissions) state(id core.SessionID) *permsState {
 }
 
 // change runs a change on the host and reads the session again.
-func (x *Permissions) change(id core.SessionID, fn func(host.Access) error) error {
-	w, err := kit.SessionHost(x.h)
+func (x *Permissions) change(id core.SessionID, fn func(host.SandboxCalls) error) error {
+	w, err := kit.SandboxCalls(x.h)
 	if err != nil {
 		return err
 	}

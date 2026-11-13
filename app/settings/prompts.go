@@ -175,7 +175,7 @@ func (x *Prompts) set(id, text string) error {
 // changed reads the prompts again and sends them to the session host.
 func (x *Prompts) changed() {
 	x.o = x.store().Load()
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.SessionCalls(x.h)
 	if err != nil {
 		return
 	}

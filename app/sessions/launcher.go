@@ -144,7 +144,7 @@ func (x *Launcher) openWith(a registry.Args) {
 
 // load reads the kinds, which are local, at once; the providers' probe runs off the loop.
 func (x *Launcher) load(want core.Kind) {
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.SessionCalls(x.h)
 	if err != nil {
 		x.loadErr = err.Error()
 		return

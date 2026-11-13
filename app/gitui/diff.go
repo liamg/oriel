@@ -396,7 +396,7 @@ func (x *Diff) marks(root, file string) map[string]bool {
 
 // record applies a review event: through the session host, so it lasts, or for as long as the window outside a
 // session. ev's session, and its project outside one, are filled in.
-func (x *Diff) record(root string, ev core.Event, send func(c host.Access, sid core.SessionID, project string) error) error {
+func (x *Diff) record(root string, ev core.Event, send func(c host.ShipCalls, sid core.SessionID, project string) error) error {
 	se, project, ok := x.session(root)
 	if !ok {
 		x.mu.Lock()
@@ -407,9 +407,7 @@ func (x *Diff) record(root string, ev core.Event, send func(c host.Access, sid c
 		x.h.Redraw()
 		return err
 	}
-	var c host.Access
-	var err error
-	c, err = kit.SessionHost(x.h)
+	c, err := kit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -427,7 +425,7 @@ func (x *Diff) setMarks(root, file string, ids []string, on bool) error {
 		return nil
 	}
 	local := core.HunksReviewed{Session: localReviews, Project: root, File: file, Hunks: slices.Clone(ids), Reviewed: on}
-	return x.record(root, local, func(c host.Access, sid core.SessionID, project string) error {
+	return x.record(root, local, func(c host.ShipCalls, sid core.SessionID, project string) error {
 		ev := local
 		ev.Session, ev.Project = sid, project
 		return c.SetReviewed(ev)
