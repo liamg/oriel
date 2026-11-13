@@ -20,6 +20,7 @@ type Span struct {
 	Text   string
 	Code   bool
 	Bold   bool
+	Italic bool
 	Strike bool
 	Tone   render.Color // a code span's colour, on a tint of it: a name in its own colour
 }
@@ -78,6 +79,9 @@ func richMeasure(c *ui.Ctx, spans []Span, base ui.TextStyle, o RichOpts) richLay
 			st = bold
 		default:
 			st = base
+		}
+		if s.Italic && !s.Code {
+			st.Font.Italic = true
 		}
 		if s.Strike {
 			st.Color = struck.Color
