@@ -79,6 +79,10 @@ func ProjectInitials(name string) string {
 	return string(rs)
 }
 
+// NewSessionHelp is the title bar's + button's help, which its right-click menu (Quick session, New session…) is
+// contributed to.
+const NewSessionHelp = "shell/tabs#new"
+
 // BoundKey is the key bound to command with args right now, as the keyboard shows it ("⌘⇧E"), or "".
 func BoundKey(h plugin.Host, command string, args registry.Args) string {
 	for _, k := range h.KeymapsFor(command) {

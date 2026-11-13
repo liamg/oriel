@@ -27,6 +27,11 @@ comes, then stays lit until you go to it, when the permission comes up at once
   ([Ending a session](#end)).
 - Right-click a tab for **Rename…** (edit the name in the tab; ⏎ keeps it, Escape drops it), **Close tab** and **End session…**.
 
+## New session {#new}
+
+The `+` after the tabs opens the launcher (`⌘N`). Right-click it for **Quick session** (`⇧⌘N`), a session started at
+once on the defaults ([Quick session](agent/launcher#quick)), and **New session…**.
+
 ## When Oriel starts {#launch}
 
 Oriel opens as you left it: the tabs that were open, in their order, with the session that was in front in front
