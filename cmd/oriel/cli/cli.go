@@ -3,13 +3,14 @@ package cli
 import (
 	"context"
 	"fmt"
-	"github.com/liamg/oriel/app/agents"
-	"github.com/liamg/oriel/plugin"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/liamg/oriel/app/agents"
+	"github.com/liamg/oriel/plugin"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/claude"
@@ -31,11 +32,9 @@ func orielHome() string {
 	return filepath.Join(home, ".oriel")
 }
 
-// machineLoad reads the machine's load in-process, only while it's wanted, and says when it moves.
-var machineLoad = sysload.NewSampler(5*time.Second, nil)
-
-// newHost is the session host with the built-in prompt packs. Its agent providers are the app's (app/agents).
-func newHost(home string, log *slog.Logger) (*host.Host, error) {
+// newHost is the session host with the built-in prompt packs, reading the machine's load from load. Its agent
+// providers are the app's (app/agents).
+func newHost(home string, log *slog.Logger, load *sysload.Sampler) (*host.Host, error) {
 	kinds := &packs.Set{}
 	if _, err := kinds.LoadDir(filepath.Join(app.DefaultConfigDir(), "agents")); err != nil {
 		log.Warn("prompt packs", "err", err)
@@ -50,7 +49,7 @@ func newHost(home string, log *slog.Logger) (*host.Host, error) {
 		return kinds.Get(name)
 	}
 	w, err := host.New(host.Options{Home: home, Exec: hostexec.Exec{}, Sandbox: sandboxes, Packs: builtinOr, Log: log, Version: version,
-		Load: machineLoad.Last})
+		Load: load.Last})
 	if err != nil {
 		return nil, err
 	}
@@ -63,9 +62,9 @@ func builtinAgents(home string) []plugin.Plugin { return agents.Builtins(filepat
 
 // startHost starts the session host's background work until ctx ends: the machine's load, the sandbox sweep, the
 // jobs' schedules and the prices. The plan windows are read once the app gives the host its providers.
-func startHost(ctx context.Context, w *host.Host, log *slog.Logger) {
-	go machineLoad.Run(ctx)
-	go w.SampleLoad(ctx, machineLoad)
+func startHost(ctx context.Context, w *host.Host, log *slog.Logger, load *sysload.Sampler) {
+	go load.Run(ctx)
+	go w.SampleLoad(ctx, load)
 	go w.SweepSandboxes(ctx, time.Hour)
 	go w.RunSchedules(ctx, 30*time.Second)
 	go w.RefreshPrices(ctx)

@@ -14,9 +14,11 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/cmd/oriel/dev"
+	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/integ"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
@@ -74,14 +76,16 @@ func runApp(args []string) {
 	}
 	log := cfg.Logs.Logger("host")
 	loginPath(log, fromTerminal)
-	w, err := newHost(home, log)
+	// load reads the machine's load in-process, only while it's wanted, and says when it moves.
+	load := sysload.NewSampler(5*time.Second, nil)
+	w, err := newHost(home, log, load)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no sessions:", err)
 		os.Exit(1)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	startHost(ctx, w, log)
-	cfg.Host, cfg.Load = w, machineLoad
+	startHost(ctx, w, log, load)
+	cfg.Host, cfg.Load = w, load
 	cfg.Agents = builtinAgents(home)
 	cfg.Logs.Router.Sessions = w.Logs()
 	be, err := gio.New()
