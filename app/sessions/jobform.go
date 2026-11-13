@@ -193,7 +193,7 @@ func (x *Jobs) dialog(c *ui.Ctx) {
 	if f.name != "" {
 		title = "Edit " + f.name
 	}
-	widget.Modal(c, "jobform", &open, title, widget.ModalOpts{Width: 620, Help: "agent/jobs#new"}, func(c *ui.Ctx) { x.formBody(c, f) })
+	widget.Modal(c, "jobform", &open, widget.ModalOpts{Title: title, Width: 620, Help: "agent/jobs#new"}, func(c *ui.Ctx) { x.formBody(c, f) })
 	if !open {
 		x.closeForm()
 	}

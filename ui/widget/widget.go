@@ -1,6 +1,10 @@
 // Package widget is the toolkit's widgets: buttons, chips, inputs, lists, trees, tabs, menus, context menus,
 // popovers, modals, toasts and sliders. They're built only on ui's public API, as a plugin's widgets would be, and
 // paint with theme tokens they declare.
+//
+// The surfaces that close take one of two contracts. One given an open *bool (Modal, Page) closes itself, setting it
+// false on Escape or a click outside. One that isn't (Dialog, Scrim) returns closed, and its caller closes it. Each
+// takes its title and accessible name in its Opts.
 package widget
 
 import (

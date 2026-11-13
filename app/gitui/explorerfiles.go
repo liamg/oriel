@@ -383,7 +383,7 @@ func (e *Explorer) askView(c *ui.Ctx) {
 	}
 	open := true
 	title := map[string]string{"file": "New file", "folder": "New folder", "rename": "Rename " + filepath.Base(f.path)}[f.kind]
-	widget.Modal(c, "explorer-ask", &open, title, widget.ModalOpts{Width: 460, Help: filesHelp}, func(c *ui.Ctx) {
+	widget.Modal(c, "explorer-ask", &open, widget.ModalOpts{Title: title, Width: 460, Help: filesHelp}, func(c *ui.Ctx) {
 		th := c.Theme()
 		where := "in " + kit.TildePath(f.path)
 		if f.kind == "rename" {

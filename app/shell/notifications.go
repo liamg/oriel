@@ -360,7 +360,7 @@ func (n *notices) crashModal(c *ui.Ctx) {
 	}
 	cr := n.crashes[0]
 	title := "Oriel quit unexpectedly last time"
-	widget.Modal(c, "crash", &n.modal, title, widget.ModalOpts{Width: 720, Help: "errors#crash"}, func(c *ui.Ctx) {
+	widget.Modal(c, "crash", &n.modal, widget.ModalOpts{Title: title, Width: 720, Help: "errors#crash"}, func(c *ui.Ctx) {
 		muted := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: c.Theme().C(theme.FgMuted)}
 		c.Text("when", fmt.Sprintf("%s · %s", cr.Time.Local().Format("2006-01-02 15:04"), cr.Version),
 			ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: c.Theme().C(theme.FgFaint)})

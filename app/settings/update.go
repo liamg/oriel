@@ -714,7 +714,7 @@ func (x *Update) cardView(c *ui.Ctx) {
 		title = "Oriel " + m.Version
 	}
 	th := c.Theme()
-	widget.Modal(c, "updatecard", &open, title, widget.ModalOpts{Width: 620, Help: updateHelp + "#card"}, func(c *ui.Ctx) {
+	widget.Modal(c, "updatecard", &open, widget.ModalOpts{Title: title, Width: 620, Help: updateHelp + "#card"}, func(c *ui.Ctx) {
 		ready, isReady := x.ready()
 		switch {
 		case u == nil:

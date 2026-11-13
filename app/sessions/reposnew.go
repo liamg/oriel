@@ -102,7 +102,7 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 		return
 	}
 	open := true
-	widget.Modal(c, "reposnew", &open, "Add repo", widget.ModalOpts{Width: 620, Help: "agent/repos#add"}, func(c *ui.Ctx) { x.dialogBody(c, f) })
+	widget.Modal(c, "reposnew", &open, widget.ModalOpts{Title: "Add repo", Width: 620, Help: "agent/repos#add"}, func(c *ui.Ctx) { x.dialogBody(c, f) })
 	if open {
 		return
 	}

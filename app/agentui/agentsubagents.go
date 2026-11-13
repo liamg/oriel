@@ -64,7 +64,7 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 		return
 	}
 	th := c.Theme()
-	widget.Modal(c, "subagent", &open, cmp.Or(s.Description, "Subagent"), widget.ModalOpts{Width: 680, Help: subagentsHelp}, func(c *ui.Ctx) {
+	widget.Modal(c, "subagent", &open, widget.ModalOpts{Title: cmp.Or(s.Description, "Subagent"), Width: 680, Help: subagentsHelp}, func(c *ui.Ctx) {
 		state := "done"
 		if s.Running {
 			state = "running"

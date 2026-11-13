@@ -266,7 +266,7 @@ func TestPopoverAndModal(t *testing.T) {
 			c.Text(nil, "hello", ui.TextStyle{})
 		})
 		modal = c.Next("modal")
-		Modal(c, "modal", &mOpen, "Settings", ModalOpts{Width: 300, Help: "test/modal"}, func(c *ui.Ctx) {
+		Modal(c, "modal", &mOpen, ModalOpts{Title: "Settings", Width: 300, Help: "test/modal"}, func(c *ui.Ctx) {
 			inner = c.Next("ok")
 			Button(c, "ok", "OK", ButtonOpts{Help: "test/button"})
 			cancel = c.Next("cancel")

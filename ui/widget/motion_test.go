@@ -131,7 +131,7 @@ func menuScene(s *motionState) func(c *ui.Ctx) {
 
 func modalScene(s *motionState) func(c *ui.Ctx) {
 	return func(c *ui.Ctx) {
-		Modal(c, "modal", &s.modal, "Crash report", ModalOpts{Width: 300}, func(c *ui.Ctx) {
+		Modal(c, "modal", &s.modal, ModalOpts{Title: "Crash report", Width: 300}, func(c *ui.Ctx) {
 			c.Text("t", "Oriel stopped.", ui.TextStyle{})
 		})
 	}
