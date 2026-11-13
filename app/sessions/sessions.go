@@ -702,7 +702,7 @@ func (x *Sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if r.Format != "" {
 		b.WriteString("\n\n" + r.Format)
 	}
-	return w.Fork(id, b.String())
+	return w.Fork(ctx, id, b.String())
 }
 
 // explainer is who answers explain: the session in front's agent, forked.
@@ -724,12 +724,12 @@ func (x *Sessions) explainerByline() string {
 }
 
 // fork answers a side question from a tool-less fork of the session's agent.
-func (x *Sessions) fork(_ context.Context, r registry.ForkRequest) (string, error) {
+func (x *Sessions) fork(ctx context.Context, r registry.ForkRequest) (string, error) {
 	w, err := x.host()
 	if err != nil {
 		return "", err
 	}
-	return w.Fork(core.SessionID(r.Session), r.Prompt)
+	return w.Fork(ctx, core.SessionID(r.Session), r.Prompt)
 }
 
 // forker is who answers a session's side questions: "claude · fork, no tools"; "" for an agent whose provider

@@ -3,6 +3,7 @@ package host
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -484,6 +485,27 @@ func TestBtwIsAnsweredByAFork(t *testing.T) {
 		t.Errorf("answer = %+v", c)
 	}
 	r.noneSent(a)
+}
+
+// A fork asked with a context runs on it: its deadline is the fork's, and one already ended asks nothing.
+func TestAForkRunsOnTheAskersContext(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Work")
+	a.WaitSent(t)
+	r.eventually(id, "the agent running", func(se core.SessionState) bool { return se.Agent.Running })
+	by := time.Now().Add(time.Hour)
+	ctx, cancel := context.WithDeadline(context.Background(), by)
+	defer cancel()
+	if _, err := r.w.Fork(ctx, id, "why?"); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.ForkDeadline(); !got.Equal(by) {
+		t.Errorf("the fork's deadline = %v, want the asker's %v", got, by)
+	}
+	cancel()
+	if _, err := r.w.Fork(ctx, id, "why?"); !errors.Is(err, context.Canceled) {
+		t.Errorf("a fork on an ended context = %v, want it cancelled", err)
+	}
 }
 
 // Pin as note is a thread opened resolved; it stays with the user and never reaches the agent.

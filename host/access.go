@@ -27,7 +27,7 @@ type SessionCalls interface {
 	Interrupt(id core.SessionID) error
 	StopProcess(ctx context.Context, id core.SessionID, process string) error
 	Rename(id core.SessionID, name string) error
-	Fork(id core.SessionID, prompt string) (string, error)
+	Fork(ctx context.Context, id core.SessionID, prompt string) (string, error)
 	AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) error
 	Send(r SendReq) error
 	Answer(r AnswerReq) error

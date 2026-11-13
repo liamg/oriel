@@ -56,12 +56,12 @@ func (x *Runner) Send(r SendReq) (err error) {
 }
 
 // Fork answers a side question from the session's agent, outside its conversation.
-func (x *Runner) Fork(id core.SessionID, prompt string) (_ string, err error) {
+func (x *Runner) Fork(ctx context.Context, id core.SessionID, prompt string) (_ string, err error) {
 	h, _ := x.sessionFor(id, false)
 	if h == nil || !h.running() {
 		return "", errors.New("the session's agent isn't running")
 	}
-	return h.fork(prompt)
+	return h.fork(ctx, prompt)
 }
 
 // StopProcess stops a process the agent's last turn left running (AgentState.Processes), by its ID; an error if its

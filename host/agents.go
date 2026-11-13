@@ -83,9 +83,9 @@ func (w *Host) Send(r SendReq) (err error) {
 }
 
 // Fork is agentrun.Runner.Fork, with a panic recovered.
-func (w *Host) Fork(id core.SessionID, prompt string) (_ string, err error) {
+func (w *Host) Fork(ctx context.Context, id core.SessionID, prompt string) (_ string, err error) {
 	defer w.recover("Fork", &err)
-	return w.run.Fork(id, prompt)
+	return w.run.Fork(ctx, id, prompt)
 }
 
 // StopProcess is agentrun.Runner.StopProcess, with a panic recovered.

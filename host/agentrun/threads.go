@@ -144,7 +144,7 @@ func (x *Runner) answerBtw(id core.SessionID, tid core.ThreadID) {
 	if h == nil || !h.running() {
 		body = "No answer: the agent isn't running, so there's nothing to fork."
 	} else {
-		ans, err := h.fork(btwPrompt(t))
+		ans, err := h.fork(h.ctx, btwPrompt(t))
 		if err != nil {
 			body = "No answer: " + err.Error()
 		} else {

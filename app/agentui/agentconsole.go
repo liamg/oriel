@@ -447,7 +447,7 @@ func (x *Console) fork(id core.SessionID, prompt string) error {
 	st.forks = append(st.forks, forkAnswer{q: prompt, since: kit.WindowNow(x.h)})
 	n := len(st.forks) - 1
 	plugin.Go(x.h, "a side question", func() {
-		out, err := c.Fork(id, prompt)
+		out, err := c.Fork(x.Lifetime(), id, prompt)
 		x.h.Do(func() {
 			if n < len(st.forks) {
 				st.forks[n].a, st.forks[n].err, st.forks[n].done = out, err, true
