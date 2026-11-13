@@ -233,7 +233,7 @@ func (x *Assistant) changed() {
 
 func (x *Assistant) optInt(name string) int { n, _ := x.opt(name).(int); return n }
 
-// prompt is what the assistant is told as a conversation starts: the user's version of it, filled in.
+// Prompt is what the assistant is told as a conversation starts: the user's version of it, filled in.
 func (x *Assistant) Prompt() string {
 	registered := kit.Prompts(x.h)
 	o := prompts.Store{Dir: x.ConfigDir, Registered: registered}.Load()

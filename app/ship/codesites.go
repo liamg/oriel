@@ -72,7 +72,7 @@ func (c *codeSites) optionMap(name string) map[string]string {
 	return m
 }
 
-// named is the code host the user, gh or glab names hostname as.
+// Named is the code host the user, gh or glab names hostname as.
 func (c *codeSites) Named(hostname string) (string, bool) {
 	if n, ok := c.optionMap(CodeHostsOption)[hostname]; ok {
 		return n, true
@@ -160,7 +160,7 @@ func (c *codeSites) site(h registry.CodeHost, hostname string) registry.HostSite
 	return hs
 }
 
-// remote is the host, site and repo of a git remote.
+// Remote is the host, site and repo of a git remote.
 func (c *codeSites) Remote(remote string) (registry.HostSite, string, bool) {
 	hostname, path, ok := registry.ParseRemote(remote)
 	if !ok {
@@ -174,7 +174,7 @@ func (c *codeSites) Remote(remote string) (registry.HostSite, string, bool) {
 	return hs, repo, ok
 }
 
-// url is the host and site of a pull request's URL.
+// URL is the host and site of a pull request's URL.
 func (c *codeSites) URL(raw string) (registry.HostSite, bool) {
 	hostname, path, ok := registry.ParseRemote(raw)
 	if !ok {
@@ -184,7 +184,7 @@ func (c *codeSites) URL(raw string) (registry.HostSite, bool) {
 	return hs, ok && hs.TakesPath(path)
 }
 
-// probe asks each host's probe whether hostname is one of its servers, once a hostname; a host that answers is kept
+// Probe asks each host's probe whether hostname is one of its servers, once a hostname; a host that answers is kept
 // in code.hosts.
 func (c *codeSites) Probe(ctx context.Context, hostname string) (registry.HostSite, bool) {
 	c.mu.Lock()
@@ -210,7 +210,7 @@ func (c *codeSites) Probe(ctx context.Context, hostname string) (registry.HostSi
 	return registry.HostSite{}, false
 }
 
-// remember keeps hostname as host name's, with its API URL when given.
+// Remember keeps hostname as host name's, with its API URL when given.
 func (c *codeSites) Remember(hostname, name, api string) error {
 	set := func(option, v string) error {
 		m := maps.Clone(c.optionMap(option))
@@ -247,7 +247,7 @@ func (c *codeSites) sites(h registry.CodeHost) []registry.HostSite {
 	return out
 }
 
-// reviewSources are every host's sites, for a host that asks for reviews.
+// ReviewSources are every host's sites, for a host that asks for reviews.
 func (c *codeSites) ReviewSources() []registry.HostSite {
 	var out []registry.HostSite
 	for _, h := range registry.CodeHosts(c.h) {
@@ -258,7 +258,7 @@ func (c *codeSites) ReviewSources() []registry.HostSite {
 	return out
 }
 
-// keyed says hs has a token the host hasn't refused, or can do without one.
+// Keyed says hs has a token the host hasn't refused, or can do without one.
 func (c *codeSites) Keyed(hs registry.HostSite) bool {
 	if hs.Site.Secret == "" {
 		return true
@@ -283,7 +283,7 @@ func (c *codeSites) siteOf(name string) (registry.HostSite, bool) {
 	return registry.HostSite{}, false
 }
 
-// token is a site secret's value: the one set, then the host's environment variables, then its command's answer
+// Token is a site secret's value: the one set, then the host's environment variables, then its command's answer
 // (once warm has run it), each skipped once the host refused it.
 // Token is the secret name: a site's token from wherever it's found, else what set has (kit.SiteTokens).
 func (c *codeSites) Token(name string, set plugin.Secrets) (string, bool) {
@@ -312,7 +312,7 @@ func (c *codeSites) Token(name string, set plugin.Secrets) (string, bool) {
 	return "", false
 }
 
-// warm runs a site's token command, off the loop, if nothing else has a token and it hasn't run.
+// Warm runs a site's token command, off the loop, if nothing else has a token and it hasn't run.
 func (c *codeSites) Warm(ctx context.Context, hs registry.HostSite) {
 	name := hs.Site.Secret
 	if name == "" || len(hs.Tokens.Command) == 0 {
@@ -337,7 +337,7 @@ func (c *codeSites) Warm(ctx context.Context, hs registry.HostSite) {
 	c.mu.Unlock()
 }
 
-// refuse marks the token hs last sent as refused, when err is the host saying so (a 401), and says whether it was.
+// Refuse marks the token hs last sent as refused, when err is the host saying so (a 401), and says whether it was.
 func (c *codeSites) Refuse(hs registry.HostSite, err error) bool {
 	if err == nil || hs.Site.Secret == "" || !strings.Contains(err.Error(), "401") {
 		return false
@@ -352,7 +352,7 @@ func (c *codeSites) Refuse(hs registry.HostSite, err error) bool {
 	return true
 }
 
-// forget clears what the host refused of a site's tokens, as a new one is set.
+// Forget clears what the host refused of a site's tokens, as a new one is set.
 // Forget forgets that the secret name was refused (kit.SiteTokens).
 func (c *codeSites) Forget(name string) {
 	c.mu.Lock()
@@ -393,7 +393,7 @@ func (x *CodeSites) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-// trustedUser says code.trusted_users names login.
+// TrustedUser says code.trusted_users names login.
 func (c *codeSites) TrustedUser(login string) bool {
 	v, _, _ := c.h.Options().Get("code.trusted_users", registry.At{})
 	l, _ := v.([]string)

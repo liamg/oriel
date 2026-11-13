@@ -330,7 +330,6 @@ func clipOutput(s string) string {
 	return s[:max/2] + "\n…\n" + s[len(s)-max/2:]
 }
 
-// toolTitle is a tool call in one line, as the console shows it: "Read internal/ratelimit/limiter.go".
 // toolTitleIn is toolTitle with the thread an Oriel tool names given by its heading, not its id.
 func toolTitleIn(se core.SessionState, tool string, input json.RawMessage) string {
 	title := toolTitle(tool, input)
@@ -352,6 +351,7 @@ func clipTitle(s string, n int) string {
 	return s
 }
 
+// toolTitle is a tool call in one line, as the console shows it: "Read internal/ratelimit/limiter.go".
 func toolTitle(tool string, input json.RawMessage) string {
 	var in map[string]any
 	_ = json.Unmarshal(input, &in)

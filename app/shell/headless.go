@@ -193,10 +193,10 @@ func (h *Headless) Poked() bool { return h.poked.Load() }
 // List is the last frame's display list.
 func (h *Headless) List() *render.List { return h.list }
 
-// RunQueued runs the work plugins handed the loop (Host.Do).
 // Queued says the loop has been handed work it hasn't run.
 func (h *Headless) Queued() bool { return h.sh.queued() }
 
+// RunQueued runs the work plugins handed the loop (Host.Do).
 func (h *Headless) RunQueued() {
 	defer fsx.Enter()()
 	h.sh.runTodo()

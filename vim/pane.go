@@ -227,7 +227,7 @@ func (e *Engine) WindowClosed(id WindowID) {
 	}
 }
 
-// Windows is every window, in the layout's order, then any the layout doesn't show.
+// WindowIDs are every window's id, in the layout's order, then any the layout doesn't show.
 func (e *Engine) WindowIDs() []WindowID {
 	var out []WindowID
 	for _, w := range e.order() {

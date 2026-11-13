@@ -280,7 +280,7 @@ func (x *Ship) stepRow(c *ui.Ctx, key string, n, cur int, done bool, card func(c
 	})
 }
 
-// card is a step's box: its header line, and a body when it's open.
+// shipCard is a step's box: its header line, and a body when it's open.
 func shipCard(c *ui.Ctx, open bool, head func(c *ui.Ctx), body func(c *ui.Ctx)) {
 	th := c.Theme()
 	edge := th.C(tShipCard)

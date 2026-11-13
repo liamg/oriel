@@ -82,7 +82,7 @@ func SaveManifest(root string, m Manifest) error {
 	return os.WriteFile(filepath.Join(root, ManifestFile), append(b, '\n'), 0o644)
 }
 
-// Projects is the manifest's projects with absolute directories.
+// projects are the manifest's projects with absolute directories.
 func (m Manifest) projects(root string) []core.Project {
 	out := make([]core.Project, 0, len(m.Projects))
 	for _, p := range m.Projects {

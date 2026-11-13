@@ -647,7 +647,6 @@ func (x *Plugin) fresher() {
 	}
 }
 
-// detail is a session's stats once read.
 // Busy says whether a read it asked the session host for is still out, or about to be.
 func (x *Plugin) Busy() bool {
 	x.mu.Lock()
@@ -659,6 +658,7 @@ func (x *Plugin) Busy() bool {
 // Session is a session's stats, once they've been read (kit.Stats).
 func (x *Plugin) Session(id core.SessionID) (stats.Detail, bool) { return x.detail(id) }
 
+// detail is a session's stats once read.
 func (x *Plugin) detail(id core.SessionID) (stats.Detail, bool) {
 	d, s := x.detailLoad(id)
 	return d, s.Phase == widget.Ready || s.Stale

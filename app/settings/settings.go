@@ -288,7 +288,6 @@ func (s *Plugin) addOthers() {
 	}
 }
 
-// loadAll reads each file that changed since it was last read, and reports whether any did.
 // Reload reads the settings files again, as a change to one does; it says whether any value changed.
 func (s *Plugin) Reload() bool {
 	s.addOthers()
@@ -296,6 +295,7 @@ func (s *Plugin) Reload() bool {
 	return s.loadAll()
 }
 
+// loadAll reads each file that changed since it was last read, and reports whether any did.
 func (s *Plugin) loadAll() bool {
 	s.loadMu.Lock()
 	defer s.loadMu.Unlock()

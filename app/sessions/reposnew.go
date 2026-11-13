@@ -113,7 +113,7 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 	x.dialog = nil
 }
 
-// field is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ adds.
+// dialogField is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ adds.
 func (x *Repos) dialogField(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
 	if focus {
 		c.RequestFocus(c.Next(key))

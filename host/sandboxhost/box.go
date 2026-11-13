@@ -241,7 +241,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 	return b, nil
 }
 
-// serve runs a socket server until the box closes; an error it meets at once is Open's.
+// hookSocket is the provider's hook socket on the host.
 func (b *Box) hookSocket() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -283,6 +283,7 @@ func closeWrite(c net.Conn) {
 	}
 }
 
+// serve runs a socket server until the box closes; an error it meets at once is Open's.
 func (b *Box) serve(run func(ctx context.Context) error) error {
 	errc := make(chan error, 1)
 	b.served.Add(1)

@@ -40,7 +40,7 @@ func (x *Markdown) Text(c *ui.Ctx, key any, src string, width float32, body ui.T
 	markdownText(c, key, src, width, body)
 }
 
-// TextIn is Text with its images found from o.Dir (kit.Markdown).
+// Title is src's first level-1 heading, as plain text (kit.Markdown).
 func (x *Markdown) Title(src string) (string, bool) {
 	for _, b := range mdParse(src) {
 		if b.Kind == mdHeading && b.Level == 1 {
@@ -50,6 +50,7 @@ func (x *Markdown) Title(src string) (string, bool) {
 	return "", false
 }
 
+// TextIn is Text with its images found from o.Dir (kit.Markdown).
 func (x *Markdown) TextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle, o kit.MarkdownOpts) {
 	markdownTextIn(c, key, src, width, body, o)
 }
