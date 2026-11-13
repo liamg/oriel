@@ -443,7 +443,7 @@ func (p *picker) footer(c *ui.Ctx, s uireg.PickerSource, place bool) {
 			acts = p.actions(s)
 		}
 		for _, a := range acts {
-			hint(strings.NewReplacer("<C-", "^", ">", "").Replace(a.Key), a.Title)
+			hint(kit.KeyLabel(a.Key), a.Title)
 		}
 		if place {
 			hint("^␣", "multi-select")
