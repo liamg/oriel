@@ -98,11 +98,11 @@ rect 44,50 1556x924 fill #060606
 clip 44,50 1556x924 r 0
   rect 44,50 1556x30 fill #0c0c0b
   clip 44,50 1556x30 r 0
-    text "round.go" @58,70.365234 #7c7566 Inter 12
+    text "round.go" @58,68.365234 #7c7566 Inter 12
     rect 142.26562,50 89.6875x30 fill #121210
-    rect 142.26562,50 89.6875x2 fill #ffd23f
-    text "tiers.go" @156.26562,70.365234 #ece6d8 Inter 12
-    text "✕" @212.65625,69.96 #7c7566 JetBrains Mono 11
+    text "tiers.go" @156.26562,68.365234 #ece6d8 Inter 12
+    text "✕" @212.65625,67.96 #7c7566 JetBrains Mono 11
+    rect 142.26562,78 89.6875x2 fill #ffd23f
   pop
   rect 44,80 1556x1 fill #24221d
   clip 44,81 1556x893 r 0

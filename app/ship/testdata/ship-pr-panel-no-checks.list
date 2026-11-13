@@ -151,11 +151,11 @@ rect 224,50 1376x924 fill #060606
 rect 224,50 250x924 fill #0c0c0b
 clip 224,50 250x924 r 0
   rect 224,50 250x30 fill #0c0c0b
-  rect 224,50 250x2 fill #ffd23f
-  rect 238,62.5 7x7 fill #b98aff radius 1
-  text "web-dashboard" @253,70.14 #ece6d8 JetBrains Mono 11.5
-  text "PULL REQU…" @354.64062,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @454.70312,69.96 #7c7566 JetBrains Mono 11
+  rect 238,60.5 7x7 fill #b98aff radius 1
+  text "web-dashboard" @253,68.14 #ece6d8 JetBrains Mono 11.5
+  text "PULL REQU…" @354.64062,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @454.70312,67.96 #7c7566 JetBrains Mono 11
+  rect 224,78 250x2 fill #ffd23f
   rect 224,80 250x1 fill #24221d
   clip 224,81 250x893 r 0
     clip 234,91 230x873 r 0

@@ -108,8 +108,8 @@ clip 44,50 1176x924 r 0
   rect 44,50 1176x30 fill #0c0c0b
   clip 44,50 1176x30 r 0
     rect 44,50 98.265625x30 fill #121210
-    text "round.go" @58,70.365234 #ece6d8 Inter 12
-    text "✕" @122.96875,69.96 #7c7566 JetBrains Mono 11
+    text "round.go" @58,68.365234 #ece6d8 Inter 12
+    text "✕" @122.96875,67.96 #7c7566 JetBrains Mono 11
   pop
   rect 44,80 1176x1 fill #24221d
   clip 44,81 1176x893 r 0
@@ -378,9 +378,9 @@ pop
 rect 1220,50 380x924 fill #0c0c0b
 clip 1220,50 380x924 r 0
   rect 1220,50 380x30 fill #0c0c0b
-  rect 1220,50 380x2 fill #ffd23f
-  text "SESSION" @1234,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @1580.7031,69.96 #7c7566 JetBrains Mono 11
+  text "SESSION" @1234,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @1580.7031,67.96 #7c7566 JetBrains Mono 11
+  rect 1220,78 380x2 fill #ffd23f
   rect 1220,80 380x1 fill #24221d
   clip 1220,81 380x893 r 0
     rect 1220,81 380x893 fill #0c0c0b

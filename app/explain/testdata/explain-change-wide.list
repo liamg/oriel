@@ -136,9 +136,9 @@ clip 224,50 2336x924 r 0
   rect 224,50 2336x30 fill #0c0c0b
   clip 224,50 2336x30 r 0
     rect 224,50 156.89062x30 fill #121210
-    rect 224,50 156.89062x2 fill #ffd23f
-    text "Explain this change" @238,70.365234 #ece6d8 Inter 12
-    text "✕" @361.59375,69.96 #7c7566 JetBrains Mono 11
+    text "Explain this change" @238,68.365234 #ece6d8 Inter 12
+    text "✕" @361.59375,67.96 #7c7566 JetBrains Mono 11
+    rect 224,78 156.89062x2 fill #ffd23f
   pop
   rect 224,80 2336x1 fill #24221d
   clip 224,81 2336x893 r 0
