@@ -100,6 +100,7 @@ type Contributions interface {
 	Contributions(kind string) []Contribution            // by name; shared, not to be changed
 	Contribution(kind, name string) (Contribution, bool) // the one that wins name
 	ContributionsGen() int                               // a generation that moves whenever a contribution comes or goes
+	ContributionKinds() []string                         // every kind there's a contribution of, sorted
 }
 
 // Help are the help pages.

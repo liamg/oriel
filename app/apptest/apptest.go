@@ -62,7 +62,7 @@ func testRegistry(now func() time.Time) uireg.Registry {
 // InitLua is the init.lua a scene's config starts with: a keymap, a mode's key and a Permission hook.
 const InitLua = `local L = oriel
 L.keymap.set({ "n", "x" }, "ga", function() L.thread.new() end)
-L.keymap.set("requests", "x", "thread.resolve")
+L.keymap.set("requests", "x", "request.resolve")
 
 -- auto-allow test runs in this workspace
 L.on("Permission", function(ev)

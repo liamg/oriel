@@ -101,6 +101,20 @@ What a plugin remembers per session across restarts (a panel's scope, that a kin
 keeps with `Host.Keep` and reads with `Host.Kept` (`oriel.session.keep` and `kept` in Lua): the window saves it in the
 state directory until the session is gone.
 
+### Command names
+
+A command's id is lower-case dotted words, the thing first and what's done to it last: `noun[.noun].verb`, a word's
+parts joined by `_` (`term.host.open`, `review.pr.submit`, `settings.reset_all`). The verb is one of a fixed set
+(`commandVerbs` in `app/commands_test.go`): `open`, `close` and `toggle`, not `show` and `hide`; `confirm` and
+`cancel` for a dialog's buttons. An ex command's capitalised name (`:Settings`) is an alias of the command it runs,
+not an id of its own.
+
+Two tests in `app` hold this. `TestCommandNamesFollowTheConvention` counts the built-in commands named before the
+convention against a ceiling that only falls. `TestNamedCommandsAreRegistered` checks that every command something
+names is registered: a keymap's, any contribution's `Command` (menu items, start and rail entries…), a help page's
+`{{keys}}`, and an id written out in a `Run` in the code. Ids are strings, so a rename that misses one would
+otherwise leave a key or button doing nothing.
+
 ## Freshness
 
 Nothing polls or watches on its own. What a feature wants kept up to date is a source (`watch.Source`: files, a work

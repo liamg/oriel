@@ -44,6 +44,19 @@ func (r *reg) ContributionsGen() int {
 	return r.contribGen
 }
 
+func (r *reg) ContributionKinds() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var out []string
+	for k := range r.contribs {
+		if kind, _, ok := strings.Cut(k, "\x00"); ok && !slices.Contains(out, kind) {
+			out = append(out, kind)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
 func (r *reg) Contributions(kind string) []Contribution {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -104,7 +104,7 @@ func (x *Tickets) commands() []registry.Command {
 		{ID: "tickets.open", Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("tracker"))
 		}},
-		{ID: "tickets.show", Title: "Open {ticket} in a tab of its own: its title, state, fields and description in full", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "ticket.open", Title: "Open {ticket} in a tab of its own: its title, state, fields and description in full", Run: func(ctx registry.Ctx, a registry.Args) error {
 			key := strings.TrimSpace(a.String("ticket"))
 			if key == "" {
 				return fmt.Errorf("say which {ticket}")

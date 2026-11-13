@@ -10,16 +10,16 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 )
 
-// addQuick adds Quick session: session.quick, ⇧⌘N, the start view's entry and the tabs' + menu.
+// addQuick adds Quick session: session.quick.start, ⇧⌘N, the start view's entry and the tabs' + menu.
 func (x *Launcher) addQuick(h plugin.Host, has func(registry.Args) bool) {
-	x.Add(h.Command(registry.Command{ID: "session.quick",
+	x.Add(h.Command(registry.Command{ID: "session.quick.start",
 		Title:     "Quick session: a work session on the defaults New session's Start uses, with no repos and no prompt",
 		Available: has, Run: func(registry.Ctx, registry.Args) error { x.quick(); return nil }}))
-	x.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-N>", Command: "session.quick", Desc: "Quick Session"}))
-	x.Add(h.Contribute(uireg.StartEntry{Name: "session.quick", Icon: "agent", Title: "Quick Session",
-		Desc: "A work session on your defaults, no repos and no questions", Command: "session.quick", Order: 15, Source: "builtin:launcher"}))
+	x.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-N>", Command: "session.quick.start", Desc: "Quick Session"}))
+	x.Add(h.Contribute(uireg.StartEntry{Name: "session.quick.start", Icon: "agent", Title: "Quick Session",
+		Desc: "A work session on your defaults, no repos and no questions", Command: "session.quick.start", Order: 15, Source: "builtin:launcher"}))
 	for _, it := range []registry.MenuItem{
-		{Name: "session.quick", Label: "Quick session", Order: 10, Command: "session.quick"},
+		{Name: "session.quick.start", Label: "Quick session", Order: 10, Command: "session.quick.start"},
 		{Name: "session.new", Label: "New session…", Order: 20, Command: "session.new"},
 	} {
 		it.Group, it.When, it.Source = "new", registry.MenuWhen{Help: kit.NewSessionHelp}, "builtin:launcher"
@@ -56,7 +56,7 @@ func (x *Launcher) quick() {
 			return h.Run(ctx, "session.start", a)
 		})
 		if err != nil {
-			h.Notify(core.Notice{ID: "session.quick", Severity: core.SevError, Key: true, Text: "Quick session: " + err.Error()})
+			h.Notify(core.Notice{ID: "session.quick.start", Severity: core.SevError, Key: true, Text: "Quick session: " + err.Error()})
 		}
 	})
 }

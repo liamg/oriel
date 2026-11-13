@@ -11,7 +11,7 @@ The launcher starts a session: `⌘N`, **New Session** on the start view, or `se
 
 ## Quick session {#quick}
 
-**Quick session** (`⇧⌘N`, `session.quick`, **Quick Session** on the start view, or right-click the tabs' `+`) skips the
+**Quick session** (`⇧⌘N`, `session.quick.start`, **Quick Session** on the start view, or right-click the tabs' `+`) skips the
 launcher: it starts what Start would with nothing changed, a Work session on the default agent and model (the last
 session's, else the first that's signed in), sandboxed as `sandbox.default` says, with no repos and no prompt. Add
 repos and say what to do once it's open.

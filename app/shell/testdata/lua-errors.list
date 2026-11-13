@@ -161,8 +161,8 @@ clip 44,50 1356x464 r 0
         text "\"x\"" @322.15625,170.36 #a5e075 JetBrains Mono 13.5
         text "," @347.375,170.36 #89ddff JetBrains Mono 13.5
         text " " @355.78125,170.36 #ece6d8 JetBrains Mono 13.5
-        text "\"thread.resolve\"" @364.1875,170.36 #a5e075 JetBrains Mono 13.5
-        text ")" @498.6875,170.36 #89ddff JetBrains Mono 13.5
+        text "\"request.resolve\"" @364.1875,170.36 #a5e075 JetBrains Mono 13.5
+        text ")" @507.09375,170.36 #89ddff JetBrains Mono 13.5
         text "4" @83.59375,191.36 #4f4a40 JetBrains Mono 13.5
         text "5" @83.59375,212.36 #4f4a40 JetBrains Mono 13.5
         text "-- auto-allow test runs in this workspace" @112,212.36 #5c6b7e JetBrains Mono 13.5
