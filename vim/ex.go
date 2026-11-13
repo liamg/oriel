@@ -1022,7 +1022,6 @@ func (e *Engine) substitute(v *view, r exRange, re *vimregex.Regex, rep string, 
 			}
 		}
 		if pending {
-			lastLine = line
 			l := v.line(line)
 			out.Write(l[copied:])
 			start := v.s.LineStart(line)

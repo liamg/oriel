@@ -334,7 +334,6 @@ func (x *Catalog) kick() {
 				}
 			}
 			var sts []catalog.Status
-			var removed []string
 			for i, f := range files {
 				others := files[:i:i]
 				others = append(others, files[i+1:]...)
@@ -347,13 +346,12 @@ func (x *Catalog) kick() {
 					return false
 				}
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-				s, r, err := f.m.Sync(ctx, f.entries, keep)
+				s, _, err := f.m.Sync(ctx, f.entries, keep) // apply stops what's no longer listed
 				cancel()
 				if err != nil {
 					x.h.Notify(core.Notice{ID: "plugins.sync", Severity: core.SevError, Title: "Plugins", Text: err.Error()})
 				}
 				sts = append(sts, s...)
-				removed = append(removed, r...)
 			}
 			x.mu.Lock()
 			idle := len(sts) == 0 && !x.busy

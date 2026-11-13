@@ -640,8 +640,6 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		}
 		_, cross := x.rowFit()
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: cross, Fill: fill, Clip: true}, func(c *ui.Ctx) {
-			if !old {
-			}
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 			n := l.New
 			if old {

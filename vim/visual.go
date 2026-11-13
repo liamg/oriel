@@ -991,7 +991,6 @@ func (e *Engine) shiftBlockLeft(v *view, line, left, amount int) (string, bool) 
 		// A character straddles the block's start: start after it.
 		_, n := v.char(Pos{line, f})
 		nonWhite += n
-		nonWhiteCol = v.vcol(line, nonWhite)
 	}
 	for nonWhite < len(l) && isWhite(rune(l[nonWhite])) {
 		nonWhite++
