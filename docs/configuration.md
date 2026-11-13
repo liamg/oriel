@@ -94,10 +94,10 @@ L.statusline(function(w)
   }
 end)
 
-L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
+L.hud.indicator("deploys", function()
   local n = L.json_decode(L.http.get("https://deploy.internal/api/pending")).count
   return L.ui.indicator{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
-end)
+end, { slot = "titlebar.right", every = "30s" })
 
 L.view.override("requests", function(s)            -- replace a built-in panel
   return L.ui.list(s.threads:filter("open"):sort("age"), require("my.thread_row"))
@@ -111,7 +111,7 @@ L.decor.provider("coverage", function(buf, top, bot)
 end)
 
 -- status colours are rules too
-L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
+L.status.rule("hotfix", function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
 ```
 
 ## Option list

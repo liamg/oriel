@@ -134,15 +134,15 @@ func TestHUDOverOtherOverlays(t *testing.T) {
 func TestHUDBoundToEvents(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 builds = 0
-L.hud.indicator("loads", { slot = "statusline.right", on = { "MachineChanged" } }, function()
+L.hud.indicator("loads", function()
   builds = builds + 1
   return L.ui.indicator{ label = "BUILDS", value = builds }
-end)
-L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
+end, { slot = "statusline.right", on = { "MachineChanged" } })
+L.hud.indicator("deploys", function()
   builds = builds + 100
   return L.ui.indicator{ label = "DEPLOY", value = builds }
-end)
-L.hud.indicator("meeting", { slot = "hud.today" }, L.ui.indicator{ label = "NEXT MEETING", value = "none" })
+end, { slot = "titlebar.right", every = "30s" })
+L.hud.indicator("meeting", L.ui.indicator{ label = "NEXT MEETING", value = "none" }, { slot = "hud.today" })
 `)
 	s.Now = apptest.At(14, 0, 0)
 	for range 5 {

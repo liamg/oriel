@@ -438,8 +438,8 @@ func (s Session) id(id string) core.SessionID {
 //oriel:api name=hud cap=ui
 type HUD struct{ a *APIs }
 
-//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh."
-func (h HUD) Indicator(name string, opts script.Table, build any, where string) error {
+//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh." optional=opts
+func (h HUD) Indicator(name string, build any, opts script.Table, where string) error {
 	every, _ := time.ParseDuration(str(opts, "every"))
 	fn, _ := build.(*script.Fn)
 	if fn == nil {
@@ -487,14 +487,10 @@ func (h HUD) Refresh(name string) error {
 //oriel:api name=status cap=ui
 type Status struct{ a *APIs }
 
-//oriel:api doc="A status rule: fn(session) returns a status colour name, or nil to leave it. opts: name (one of its own if omitted), which a later rule of the name replaces." optional=opts
-func (s Status) Rule(fn *script.Fn, opts script.Table, where string) error {
-	name := str(opts, "name")
-	if name == "" {
-		s.a.mu.Lock()
-		s.a.n++
-		name = fmt.Sprintf("%s#%d", where, s.a.n)
-		s.a.mu.Unlock()
+//oriel:api doc="A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it."
+func (s Status) Rule(name string, fn *script.Fn, where string) error {
+	if name == "" || fn == nil {
+		return fmt.Errorf("a status rule needs a name and a function")
 	}
 	s.a.own(s.a.Host.Contribute(registry.StatusRule{Name: name, Source: where, Rule: func(sess map[string]any) (string, error) {
 		out, err := s.a.VM.Call(fn, sess)

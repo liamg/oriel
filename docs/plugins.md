@@ -139,9 +139,9 @@ Hooks run on the UI loop: keep them quick. One that panics, or errors 3 times in
 ## Step 4: a status line indicator
 
 ```lua
-L.hud.indicator("saves", { slot = "statusline.right" }, function()
+L.hud.indicator("saves", function()
   return L.ui.text(L.option["plugin.saves.label"] .. " " .. #saved(), "dim")
-end)
+end, { slot = "statusline.right" })
 ```
 
 The slot is one of `titlebar.right`, `statusline.left`, `statusline.right`, `hud` or `hud.today`. The

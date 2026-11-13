@@ -284,8 +284,7 @@ func TestLuaExecChecksTheProgramItRuns(t *testing.T) {
 
 // oriel.ui.ring draws widget.Ring: the label in the middle, read out with its name.
 func TestLuaRing(t *testing.T) {
-	s := apptest.LuaScene(t, `oriel.hud.indicator("dial", { slot = "statusline.right" },
-  oriel.ui.ring{ value = 0.3, label = "18m", name = "next meeting in", size = 20, color = "warn" })`)
+	s := apptest.LuaScene(t, `oriel.hud.indicator("dial", oriel.ui.ring{ value = 0.3, label = "18m", name = "next meeting in", size = 20, color = "warn" }, { slot = "statusline.right" })`)
 	s.Frame()
 	s.Frame()
 	s.WantFrame("18m")
@@ -296,8 +295,7 @@ func TestLuaRing(t *testing.T) {
 
 // oriel.ui.spinner draws widget.Spinner, read out as what's in progress.
 func TestLuaSpinner(t *testing.T) {
-	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", { slot = "statusline.right" },
-  oriel.ui.spinner{ name = "syncing the wiki", size = 12, color = "accent" })`)
+	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", oriel.ui.spinner{ name = "syncing the wiki", size = 12, color = "accent" }, { slot = "statusline.right" })`)
 	s.Frame()
 	s.Frame()
 	if n := s.Node("syncing the wiki"); n.Role != "status" {
@@ -307,8 +305,7 @@ func TestLuaSpinner(t *testing.T) {
 
 // oriel.ui.dots draws widget.Dots, read out as what's going on.
 func TestLuaDots(t *testing.T) {
-	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", { slot = "statusline.right" },
-  oriel.ui.dots{ name = "the wiki bot is writing", size = 4, color = "accent" })`)
+	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", oriel.ui.dots{ name = "the wiki bot is writing", size = 4, color = "accent" }, { slot = "statusline.right" })`)
 	s.Frame()
 	s.Frame()
 	if n := s.Node("the wiki bot is writing"); n.Role != "status" {

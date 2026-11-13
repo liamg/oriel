@@ -264,11 +264,11 @@ function oriel.http.request(spec, fn) end
 ---@class oriel.hud
 oriel.hud = {}
 
---- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+--- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 ---@param name string
----@param opts table
 ---@param build any
-function oriel.hud.indicator(name, opts, build) end
+---@param opts? table
+function oriel.hud.indicator(name, build, opts) end
 
 --- Builds the indicator name again now.
 ---@param name string
@@ -454,10 +454,10 @@ function oriel.start.add(spec) end
 ---@class oriel.status
 oriel.status = {}
 
---- A status rule: fn(session) returns a status colour name, or nil to leave it. opts: name (one of its own if omitted), which a later rule of the name replaces.
+--- A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it.
+---@param name string
 ---@param fn function
----@param opts? table
-function oriel.status.rule(fn, opts) end
+function oriel.status.rule(name, fn) end
 
 ---@class oriel.thread
 oriel.thread = {}

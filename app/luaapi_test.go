@@ -249,10 +249,10 @@ end)
 // HUD indicators and status rules are contributions their features will draw and ask; calling them gives what Lua made.
 func TestLuaTatAndStatusRule(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
-L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
+L.hud.indicator("deploys", function()
   return L.ui.indicator{ label = "DEPLOY", value = 3 }
-end)
-L.status.rule(function(sess) if sess.red then return "error" end end)
+end, { slot = "titlebar.right", every = "30s" })
+L.status.rule("red", function(sess) if sess.red then return "error" end end)
 `)
 	var indicator uireg.Indicator
 	for _, ind := range uireg.Indicators(s.Registry(), uireg.SlotTitleBar) {
@@ -275,14 +275,14 @@ L.status.rule(function(sess) if sess.red then return "error" end end)
 	}
 }
 
-// Menu entries and status rules added in a loop are each their own: a name the call gives, else one of its own, never
-// only the line that made it, which every pass shares.
+// Menu entries and status rules added in a loop are each their own: by the name the call gives (a menu entry's is
+// its line and label without one), never only the line that made it, which every pass shares.
 func TestLuaMenuAndStatusRulesFromALoop(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
 for _, l in ipairs({ "One", "Two" }) do L.menu.add{ label = l, run = "noop" } end
 L.menu.add{ name = "mine", label = "Three", run = "noop" }
-for _, c in ipairs({ "error", "warn" }) do L.status.rule(function() return c end) end
-L.status.rule(function() end, { name = "named" })
+for _, c in ipairs({ "error", "warn" }) do L.status.rule(c, function() return c end) end
+L.status.rule("named", function() end)
 `)
 	var menus []string
 	for _, c := range s.Registry().Contributions("menu.item") {

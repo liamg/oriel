@@ -78,7 +78,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.hud
 
-- `oriel.hud.indicator(name, opts, build)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+- `oriel.hud.indicator(name, build, opts?)` (`ui`): An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 - `oriel.hud.refresh(name)` (`ui`): Builds the indicator name again now.
 - `oriel.hud.set(name, nodes)` (`ui`): Shows nodes in the indicator name now: until it's built again, for one built by a function; for good, for one given its nodes.
 
@@ -154,7 +154,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.status
 
-- `oriel.status.rule(fn, opts?)` (`ui`): A status rule: fn(session) returns a status colour name, or nil to leave it. opts: name (one of its own if omitted), which a later rule of the name replaces.
+- `oriel.status.rule(name, fn)` (`ui`): A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it.
 
 ## oriel.thread
 

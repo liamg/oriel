@@ -299,7 +299,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Indicator(c.String(0), c.Table(1), c.Any(2), c.Where())
+				return nil, x.Indicator(c.String(0), c.Any(1), c.Table(2), c.Where())
 			},
 			"refresh": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
@@ -545,7 +545,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Rule(c.Fn(0), c.Table(1), c.Where())
+				return nil, x.Rule(c.String(0), c.Fn(1), c.Where())
 			},
 		})
 	}
