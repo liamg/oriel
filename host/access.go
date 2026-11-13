@@ -11,17 +11,8 @@ import (
 	"github.com/liamg/oriel/sandbox"
 )
 
-// Access is every part's calls: what *Host implements. A plugin takes only the part it uses (SessionCalls,
-// SandboxCalls…), each the registry service of its own name ("host.sessions", "host.sandboxes"…).
-type Access interface {
-	SessionCalls
-	SandboxCalls
-	ShipCalls
-	CodeHostCalls
-	RepoCalls
-	JobCalls
-	StatsCalls
-}
+// The session host's calls, part by part, as the app's plugins make them: each part is the registry service of its
+// own name ("host.sessions", "host.sandboxes"…), and a plugin takes only the part it uses.
 
 // SessionCalls start, steer and end sessions: the registry's "host.sessions" service.
 type SessionCalls interface {
@@ -153,5 +144,3 @@ type StatsCalls interface {
 	SessionStats(r StatsSessionReq) (stats.Detail, error)
 	UsageHistory(r UsageHistoryReq) []core.ProviderUsage
 }
-
-var _ Access = (*Host)(nil)

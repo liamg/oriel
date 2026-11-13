@@ -6,12 +6,6 @@ import (
 	"github.com/liamg/oriel/plugin"
 )
 
-// Counter counts work started and finished: a Busy or a sync.WaitGroup.
-type Counter interface {
-	Add(n int)
-	Done()
-}
-
 // Busy counts work running off the loop, like a sync.WaitGroup that may be waited on while more is added: a test
 // waits for a plugin's work as frames start more.
 type Busy struct {

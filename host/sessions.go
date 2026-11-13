@@ -12,8 +12,6 @@ import (
 	"github.com/liamg/oriel/host/worktree"
 )
 
-var _ core.Sessions = (*Host)(nil)
-
 // Start starts a session of the spec's kind.
 func (w *Host) Start(ctx context.Context, spec core.SessionSpec) (_ core.SessionID, err error) {
 	defer w.recover("Start", &err)
