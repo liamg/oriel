@@ -122,13 +122,13 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 		for first := drawn; len(t.after) > 0 && (first || !l.owed(&t, dirty)); first = false {
 			ev := t.after[0]
 			t.after = t.after[1:]
-			l.feed(ctx, &t, ev)
+			l.feedAndAsk(ctx, &t, ev)
 		}
 		l.arm(timer, &t)
 		if t.held != nil {
 			ev := t.held
 			t.held = nil
-			l.take(ctx, &t, ev, dirty)
+			l.deferOrFeed(ctx, &t, ev, dirty)
 			continue
 		}
 		select {
@@ -160,7 +160,7 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 				return nil
 			}
 			ev, t.held = lastMove(ev, w.Events())
-			l.take(ctx, &t, ev, dirty)
+			l.deferOrFeed(ctx, &t, ev, dirty)
 		}
 	}
 }
@@ -183,20 +183,21 @@ func (l *loop) takeWaiting(ctx context.Context, t *turn, dirty <-chan struct{}) 
 				return true // the moves read past were the rest
 			}
 		}
-		l.take(ctx, t, ev, dirty)
+		l.deferOrFeed(ctx, t, ev, dirty)
 	}
 	return true
 }
 
-// take feeds ev in, or, when it's a key and a frame is owed, keeps it until that frame is drawn: a key goes to what
-// has focus in the frame drawn before it, as the one typing it saw, while the pointer goes to what's on screen.
+// deferOrFeed feeds ev in (feedAndAsk), or, when it's a key and a frame is owed, keeps it until that frame is
+// drawn: a key goes to what has focus in the frame drawn before it, as the one typing it saw, while the pointer goes
+// to what's on screen.
 // What comes after a kept event waits behind it.
-func (l *loop) take(ctx context.Context, t *turn, ev render.Event, dirty <-chan struct{}) {
+func (l *loop) deferOrFeed(ctx context.Context, t *turn, ev render.Event, dirty <-chan struct{}) {
 	if len(t.after) > 0 || l.waitsForFrame(ev) && l.owed(t, dirty) {
 		t.after = append(t.after, ev)
 		return
 	}
-	l.feed(ctx, t, ev)
+	l.feedAndAsk(ctx, t, ev)
 }
 
 // owed says a frame has been asked for and not drawn, a hidden window's aside.
@@ -316,10 +317,10 @@ func earliest(a, b time.Time) time.Time {
 	return a
 }
 
-// feed handles ev, asking for a frame when it changed what one shows: a pointer move often doesn't.
-func (l *loop) feed(ctx context.Context, t *turn, ev render.Event) {
+// feedAndAsk dispatches ev, asking for a frame when it changed what one shows: a pointer move often doesn't.
+func (l *loop) feedAndAsk(ctx context.Context, t *turn, ev render.Event) {
 	var changed bool
-	l.timed(func() { changed = l.handle(ctx, ev) })
+	l.timed(func() { changed = l.dispatch(ctx, ev) })
 	if changed {
 		t.pace.Ask()
 	}
@@ -442,8 +443,8 @@ func resolveTheme(sources []theme.Source, name string, v theme.Variant) (*theme.
 	return theme.Resolve(st, theme.Effective(st, v))
 }
 
-// handle feeds ev in. It reports whether the next frame can differ for it.
-func (l *loop) handle(ctx context.Context, ev render.Event) bool {
+// dispatch applies ev to the window. It reports whether the next frame can differ for it.
+func (l *loop) dispatch(ctx context.Context, ev render.Event) bool {
 	switch ev := ev.(type) {
 	case render.PointerEvent:
 		changed := l.ui.Pointer(ev)
