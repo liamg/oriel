@@ -23,7 +23,7 @@ import (
 )
 
 // Merge… on a project's PR (the merge guard): its code host's blockers, the session's own and the
-// PrMerge hook's are shown first, Continue or Cancel; one the host would refuse turns Continue off. It merges at the
+// ShipMerge hook's are shown first, Continue or Cancel; one the host would refuse turns Continue off. It merges at the
 // head the dialog showed, with ship.merge_method's method when the repo allows it.
 
 // MergeKeyMode is the merge dialog's keys: ⏎ merges, Esc cancels.
@@ -31,9 +31,9 @@ const MergeKeyMode = "ship.merge"
 
 const mergeHelp = "git/ship#merge"
 
-// PrMerge is the PrMerge hook's event: a pull request about to be merged from the Ship page. A veto doesn't stop it:
+// ShipMerge is the ShipMerge hook's event: a pull request about to be merged from the Ship page. A veto doesn't stop it:
 // its reason is one more blocker in the dialog, for the user to weigh.
-type PrMerge struct {
+type ShipMerge struct {
 	Session string `json:"session"`
 	Project string `json:"project"`
 	Number  int    `json:"number"`
@@ -79,7 +79,7 @@ func (x *Ship) activateMerge(h plugin.Host) {
 		Values: []string{"repo", registry.MergeSquash, registry.MergeCommit, registry.MergeRebase}, Default: "repo",
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "How Merge… merges a pull request: squash, merge or rebase; repo, the repo's own default, else squash, else what it allows."}))
-	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrMerge", Fired: true, Payload: PrMerge{},
+	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipMerge", Fired: true, Payload: ShipMerge{},
 		Doc: "A pull request about to be merged from the Ship page; a veto's reason is shown as one more reason to wait, which the user can still merge past. { session, project, number, url, title, method }"}))
 	open := func(registry.Args) bool { return x.merging != nil }
 	inFront := func(registry.Args) bool { _, ok := x.session(nil); return ok }
@@ -159,8 +159,8 @@ func (x *Ship) readMerge(a *mergeAsk) {
 			want, _ := v.(string)
 			pick := methods.Pick(kit.Unless(want, "repo"))
 			a.method = max(0, slices.Index(a.methods, pick))
-			ev := &PrMerge{Session: string(se.ID), Project: p, Number: pr.Number, URL: pr.URL, Title: pr.Title, Method: pick}
-			if v, _ := x.h.Fire(context.Background(), "PrMerge", pr.URL, ev); v.Veto {
+			ev := &ShipMerge{Session: string(se.ID), Project: p, Number: pr.Number, URL: pr.URL, Title: pr.Title, Method: pick}
+			if v, _ := x.h.Fire(context.Background(), "ShipMerge", pr.URL, ev); v.Veto {
 				a.blockers = append(a.blockers, registry.MergeBlocker{Kind: "hook", Text: v.Reason})
 			}
 		})

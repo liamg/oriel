@@ -149,7 +149,7 @@ conflicts, behind its base, missing required reviews, and a PR before it in the 
 Continue is off. With nothing in the way it's **Merge**. The method is `ship.merge_method` when the repo allows it, else
 the repo's own default, else squash, and can be changed for this merge; **Delete the branch** deletes it on the host
 after. It merges the commit the dialog showed: a push since makes the host refuse it. Plugins add reasons with the
-`PrMerge` hook. The agent can't merge.
+`ShipMerge` hook. The agent can't merge.
 
 Once every project's pull request is merged, the page's main button is **Finish session**, and so is the merged PR's:
 it opens the End session dialog (see Session tabs). `session.archive_on_merge` archives the session by itself instead,
