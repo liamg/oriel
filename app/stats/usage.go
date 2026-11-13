@@ -326,9 +326,7 @@ func providerMark(c *ui.Ctx, provider string) {
 		if p, ok := r.Contribution("agent.provider", provider); ok {
 			ap, _ := p.(registry.AgentProvider)
 			letters = cmp.Or(ap.Mark, letters)
-			if ap.Tone != "" {
-				tone = th.C(theme.Declare(ap.Tone, theme.FgMuted.Name()))
-			}
+			tone = th.Tone(ap.Tone, tone)
 		}
 	}
 	c.Box("mark", ui.Style{W: ui.Px(18), H: ui.Px(18), Radius: 4, Fill: theme.WithAlpha(tone, .85), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {

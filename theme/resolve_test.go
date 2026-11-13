@@ -262,3 +262,28 @@ func TestEffectiveVariant(t *testing.T) {
 		}
 	}
 }
+
+// Tone resolves what a plugin names, a token, a palette colour or a colour as written, and declares nothing.
+func TestTone(t *testing.T) {
+	th, err := Resolve([]*Spec{oriel(t)}, Dark)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := len(Tokens())
+	fb := Color{R: 1, G: 2, B: 3, A: 255}
+	if c := th.Tone("", fb); c != fb {
+		t.Errorf("empty = %v", c)
+	}
+	if c := th.Tone("fg", fb); c != th.C(Fg) {
+		t.Errorf("a token = %v, want %v", c, th.C(Fg))
+	}
+	if c := th.Tone("#ff0000", fb); c != (Color{R: 255, A: 255}) {
+		t.Errorf("a hex colour = %v", c)
+	}
+	if c := th.Tone("no-such-thing", fb); c != fb {
+		t.Errorf("an unknown name = %v, want the fallback", c)
+	}
+	if after := len(Tokens()); after != before {
+		t.Errorf("Tone declared %d tokens", after-before)
+	}
+}

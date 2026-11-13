@@ -44,6 +44,21 @@ func (r *Resolved) C(id TokenID) Color {
 	return Color{}
 }
 
+// Tone is a colour a plugin names: a token or palette name the theme resolves, else a colour as written (#rrggbb,
+// rgb(…)), else fallback when it's neither or "". It declares nothing, so it's safe while a frame is drawn.
+func (r *Resolved) Tone(name string, fallback Color) Color {
+	if name == "" {
+		return fallback
+	}
+	if c, ok := r.Color(name); ok {
+		return c
+	}
+	if c, err := ParseColor(name); err == nil {
+		return c
+	}
+	return fallback
+}
+
 // Color looks a token, then a palette colour, up by name.
 func (r *Resolved) Color(name string) (Color, bool) {
 	if c, ok := r.byName[name]; ok {
