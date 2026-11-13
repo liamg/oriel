@@ -491,29 +491,22 @@ func TestPointerMovesOverNothingDrawNothing(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "init.lua"), []byte(`oriel.option["ui.reduced_motion"] = true`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	b := bootIn(t, dir, pointy{})
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	b.win.WaitFrame(ctx, func(headless.Frame) bool { return true })
-	settled := func() int {
-		n := len(b.win.Frames())
-		for {
-			time.Sleep(200 * time.Millisecond)
-			if m := len(b.win.Frames()); m == n || ctx.Err() != nil {
-				return m
-			}
-			n = len(b.win.Frames())
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Config: func(c *app.Config) {
+		c.ConfigDir = dir
+		c.Plugins = append(c.Plugins, pointy{})
+	}})
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})
+	s.Quiet()
+	s.Frame()
+	asked := 0
+	for i := range 100 {
+		if s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300 + float32(i), Y: 300}}) {
+			asked++
 		}
 	}
-	b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})
-	before := settled()
-	for i := range 100 {
-		b.win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300 + float32(i), Y: 300}})
+	if asked > 0 || s.Poked() || !s.UI().NextFrame().IsZero() {
+		t.Errorf("100 moves over an empty view asked for frames: %d moves, poked %t, next frame at %v", asked, s.Poked(), s.UI().NextFrame())
 	}
-	if after := settled(); after != before {
-		t.Errorf("100 moves over an empty view built %d frames", after-before)
-	}
-	b.close(t)
 }
 
 // menuView is a plugin view showing a menu at the root view's corner.
