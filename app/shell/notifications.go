@@ -95,20 +95,19 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 		n.crashes = PendingCrashes(n.sh.cfg.CrashDir)
 		n.modal = len(n.crashes) > 0
 	}
-	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	openLog := func(ctx registry.Ctx, a registry.Args) error {
 		if seq, ok := argSeq(a); ok {
 			n.panel.reveal(seq)
 		}
-		if s := str(a, "severity"); s != "" {
+		if s := a.String("severity"); s != "" {
 			n.panel.only(core.Severity(s))
 		}
 		return h.Run(ctx, "view.open", registry.Args{"id": "log", "place": "dock", "edge": "bottom", "title": "Log", "size": 360})
 	}
 	for _, c := range []registry.Command{
 		{ID: "Log", Title: "Open the log, or set its level (:Log level debug)", Run: func(ctx registry.Ctx, a registry.Args) error {
-			lv := str(a, "level")
-			if f := strings.Fields(str(a, "args")); len(f) == 2 && f[0] == "level" {
+			lv := a.String("level")
+			if f := strings.Fields(a.String("args")); len(f) == 2 && f[0] == "level" {
 				lv = f[1]
 			}
 			if lv == "" {
@@ -151,7 +150,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			return fmt.Errorf("no notification %d", seq)
 		}},
 		{ID: "contribution.turn_on", Title: "Turn a contribution that was turned off back on", Run: func(_ registry.Ctx, a registry.Args) error {
-			kind, id := str(a, "kind"), str(a, "id")
+			kind, id := a.String("kind"), a.String("id")
 			h.TurnOn(kind, id)
 			h.Notify(core.Notice{ID: "turned-on." + kind + "." + id, Severity: core.SevInfo, Source: "core", Text: fmt.Sprintf("%s %s is back on", kind, id)})
 			return nil

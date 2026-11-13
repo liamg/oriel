@@ -158,6 +158,17 @@ func (a Args) Int(k string) int {
 	return 0
 }
 
+// Float is the numeric argument k as a float: a float64 from Lua or JSON, an int from Go; 0 if it's neither.
+func (a Args) Float(k string) float64 {
+	switch n := a[k].(type) {
+	case float64:
+		return n
+	case int:
+		return float64(n)
+	}
+	return 0
+}
+
 // Bool is the boolean argument k.
 func (a Args) Bool(k string) bool { b, _ := a[k].(bool); return b }
 

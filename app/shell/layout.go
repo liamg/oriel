@@ -187,7 +187,6 @@ func (l *layoutPlugin) newPanes(h plugin.Host) panes.Panes {
 
 // commands are view.open and the layout's own.
 func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
-	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	focused := func() (layout.ViewRef, error) {
 		if l.root.Focus == nil {
 			return layout.ViewRef{}, fmt.Errorf("no view has focus")
@@ -195,7 +194,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 		return *l.root.Focus, nil
 	}
 	viewRegistered := func(a registry.Args) bool {
-		id := str(a, "id")
+		id := a.String("id")
 		if id == "" {
 			return true
 		}
@@ -205,25 +204,21 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 	}
 	return []registry.Command{
 		{ID: "view.open", Title: "Open a view: {id, instance, place, edge, side, size, beside, title, project}; alone, in a dock, closes what was there; fixed, it can't be dragged away", Available: viewRegistered, Run: func(_ registry.Ctx, a registry.Args) error {
-			id := str(a, "id")
+			id := a.String("id")
 			if _, ok := viewFor(h, id); !ok {
 				return fmt.Errorf("no view %q", id)
 			}
-			place := layout.Placement(str(a, "place"))
+			place := layout.Placement(a.String("place"))
 			if place == "" {
 				place = layout.Tab
 			}
-			size, _ := a["size"].(float64)
-			if n, ok := a["size"].(int); ok {
-				size = float64(n)
-			}
-			o := layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side")), Size: float32(size), Alone: a["alone"] == true,
+			o := layout.Opts{Edge: layout.Edge(a.String("edge")), Side: layout.Side(a.String("side")), Size: float32(a.Float("size")), Alone: a["alone"] == true,
 				Fixed: a["fixed"] == true}
-			if b := str(a, "beside"); b != "" {
+			if b := a.String("beside"); b != "" {
 				id, inst, _ := strings.Cut(b, "#")
 				o.Beside = &layout.ViewRef{ID: id, Instance: inst}
 			}
-			return l.root.Open(layout.ViewRef{ID: id, Instance: str(a, "instance"), Title: str(a, "title"), Project: str(a, "project")}, place, o)
+			return l.root.Open(layout.ViewRef{ID: id, Instance: a.String("instance"), Title: a.String("title"), Project: a.String("project")}, place, o)
 		}},
 		{ID: "view.toggle", Title: "Show a view {id} (for a {project}), or close it if it's showing", Available: viewRegistered,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -239,7 +234,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 				return h.Run(ctx, "view.open", a)
 			}},
 		{ID: "view.close", Title: "Close a view: the focused one, or {id, instance, project}; with {docked}, only one outside the main area or a page on Home", Run: func(_ registry.Ctx, a registry.Args) error {
-			if id := str(a, "id"); id != "" {
+			if id := a.String("id"); id != "" {
 				if v, ok := l.matching(a, l.root.All()); ok {
 					l.root.Close(v)
 				}
@@ -260,7 +255,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			if err != nil {
 				return err
 			}
-			return l.root.Move(v, layout.Placement(str(a, "place")), layout.Opts{Edge: layout.Edge(str(a, "edge")), Side: layout.Side(str(a, "side"))})
+			return l.root.Move(v, layout.Placement(a.String("place")), layout.Opts{Edge: layout.Edge(a.String("edge")), Side: layout.Side(a.String("side"))})
 		}},
 		{ID: "layout.zoom", Title: "Zoom the focused view (toggle)", Run: func(registry.Ctx, registry.Args) error {
 			v, err := focused()
@@ -270,11 +265,11 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			return err
 		}},
 		{ID: "layout.focus", Title: "Focus the view in a direction", Run: func(_ registry.Ctx, a registry.Args) error {
-			l.root.FocusDir(layout.Dir(str(a, "dir")), l.rects)
+			l.root.FocusDir(layout.Dir(a.String("dir")), l.rects)
 			return nil
 		}},
 		{ID: "layout.dock", Title: "Toggle a dock", Run: func(_ registry.Ctx, a registry.Args) error {
-			l.root.ToggleDock(layout.Edge(str(a, "edge")))
+			l.root.ToggleDock(layout.Edge(a.String("edge")))
 			return nil
 		}},
 		{ID: "layout.equalize", Title: "Even out the splits", Run: func(registry.Ctx, registry.Args) error {
@@ -282,13 +277,13 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			return nil
 		}},
 		{ID: "layout.save", Title: "Save the layout by name", Run: func(_ registry.Ctx, a registry.Args) error {
-			l.snaps[str(a, "name")] = l.root.Save()
+			l.snaps[a.String("name")] = l.root.Save()
 			return nil
 		}},
 		{ID: "layout.restore", Title: "Restore a saved layout", Run: func(_ registry.Ctx, a registry.Args) error {
-			s, ok := l.snaps[str(a, "name")]
+			s, ok := l.snaps[a.String("name")]
 			if !ok {
-				return fmt.Errorf("no layout %q", str(a, "name"))
+				return fmt.Errorf("no layout %q", a.String("name"))
 			}
 			return l.root.Load(s)
 		}},

@@ -55,7 +55,7 @@ func (o *omnibox) Activate(_ context.Context, h plugin.Host) error {
 	o.Add(h.Command(registry.Command{ID: "omnibox.open", Title: "Search everything", Run: func(_ registry.Ctx, a registry.Args) error {
 		o.open, o.focus, o.sel = true, true, 0
 		o.ranks.reset()
-		o.query, _ = a["query"].(string)
+		o.query = a.String("query")
 		o.scope, _ = a["scope"].(string)
 		return nil
 	}}))
