@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -64,12 +65,16 @@ func callbackPort() int {
 // RedirectURL is where an authorization server sends the browser back.
 func RedirectURL() string { return fmt.Sprintf("http://127.0.0.1:%d/callback", callbackPort()) }
 
-// ServeCallback listens for the redirect for as long as one sign-in takes.
-// done closes once the callback has been handled.
+// ServeCallback listens for the redirect for as long as one sign-in takes, where o's redirect URL (the one the
+// authorization server was given) says. done closes once the callback has been handled.
 func ServeCallback(o *mcp.OAuth) (done <-chan struct{}, stop func(), err error) {
+	u, err := url.Parse(o.RedirectURL)
+	if err != nil || u.Host == "" {
+		return nil, nil, fmt.Errorf("the sign-in's redirect URL %q has no host", o.RedirectURL)
+	}
 	var ln net.Listener
 	for range 20 {
-		ln, err = net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", callbackPort()))
+		ln, err = net.Listen("tcp", u.Host)
 		if err == nil {
 			break
 		}

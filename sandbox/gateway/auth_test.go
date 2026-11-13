@@ -3,9 +3,13 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/liamg/oriel/sandbox/mcp"
 )
 
 // signInServer is an MCP endpoint that wants OAuth, with just enough metadata
@@ -64,4 +68,26 @@ func TestRecommendedParse(t *testing.T) {
 			t.Errorf("%s does not make a server", r.Name)
 		}
 	}
+}
+
+// The callback listens where the redirect URL sent to the authorization server says, whatever the port file holds
+// now: a sign-in whose port couldn't be kept still comes back to it.
+func TestServeCallbackListensOnTheRedirectURLsPort(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := ln.Addr().(*net.TCPAddr).Port
+	ln.Close()
+	o := &mcp.OAuth{RedirectURL: fmt.Sprintf("http://127.0.0.1:%d/callback", port)}
+	_, stop, err := ServeCallback(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stop()
+	c, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		t.Fatalf("nothing listens on the redirect URL's port %d: %v", port, err)
+	}
+	c.Close()
 }
