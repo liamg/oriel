@@ -143,7 +143,7 @@ clip 44,50 1556x924 r 0
         text "Read" @238.5,174.27844 #ece6d8 Inter 12.5
         text "internal/ratelimit/limiter.go" @278.25,173.87132 #b3ab99 JetBrains Mono 11.5
         text "142 lines · 0.1s" @972.5,173.33131 #4f4a40 JetBrains Mono 10
-        text "⤢" @1082.5,173.29533 #7c7566 JetBrains Mono 9.900001
+        text "⤢" @1081.75,173.29533 #7c7566 JetBrains Mono 9.900001
       pop
       rect 206.5,153.73132 900x32 radius 6 stroke 1 #24221d
       rect 206.5,195.73132 900x32 fill #0c0c0b radius 6
@@ -152,7 +152,7 @@ clip 44,50 1556x924 r 0
         text "Search" @238.5,216.27844 #ece6d8 Inter 12.5
         text "\"Reserve(\" in internal/" @290.79688,215.87132 #b3ab99 JetBrains Mono 11.5
         text "4 hits · 0.2s" @990.5,215.33131 #4f4a40 JetBrains Mono 10
-        text "⤢" @1082.5,215.29533 #7c7566 JetBrains Mono 9.900001
+        text "⤢" @1081.75,215.29533 #7c7566 JetBrains Mono 9.900001
       pop
       rect 206.5,195.73132 900x32 radius 6 stroke 1 #24221d
       rect 206.5,237.73132 900x28.519989 fill #0c0c0b radius 6
@@ -173,7 +173,7 @@ clip 44,50 1556x924 r 0
         text "-1" @971.65625,322.55133 #ff5f6d JetBrains Mono 10.5
         text "view in diff ↗" @992.84375,322.13657 #ffd23f Inter 12
         rect 992.84375,326.0311 75.65625x1 fill #ffd23fb3
-        text "⤢" @1082.5,322.33533 #7c7566 JetBrains Mono 9.900001
+        text "⤢" @1081.75,322.33533 #7c7566 JetBrains Mono 9.900001
         text "87" @218.5,350.23132 #4f4a40 JetBrains Mono 11
         text "" @262.5,350.41135 #4f4a40 JetBrains Mono 11.5
         text "    if !res.OK() {" @284.5,350.41135 #b3ab99 JetBrains Mono 11.5
@@ -206,7 +206,7 @@ clip 44,50 1556x924 r 0
         text "+18" @965.0625,486.55133 #4fe0a0 JetBrains Mono 10.5
         text "view in diff ↗" @992.84375,486.13657 #ffd23f Inter 12
         rect 992.84375,490.0311 75.65625x1 fill #ffd23fb3
-        text "⤢" @1082.5,486.33533 #7c7566 JetBrains Mono 9.900001
+        text "⤢" @1081.75,486.33533 #7c7566 JetBrains Mono 9.900001
       pop
       rect 206.5,466.77133 900x40 radius 6 stroke 1 #24221d
       rect 206.5,516.77136 900x32 fill #0c0c0b radius 6
@@ -216,7 +216,7 @@ clip 44,50 1556x924 r 0
         text "go vet ./internal/api/..." @277.625,536.9113 #b3ab99 JetBrains Mono 11.5
         text "1 line · 2.3s" @975.90625,536.3714 #4f4a40 JetBrains Mono 10
         text "▸" @1061.9062,536.7313 #7c7566 JetBrains Mono 11
-        text "⤢" @1082.5,536.3354 #7c7566 JetBrains Mono 9.900001
+        text "⤢" @1081.75,536.3354 #7c7566 JetBrains Mono 9.900001
       pop
       rect 206.5,516.77136 900x32 radius 6 stroke 1 #24221d
       rect 206.5,558.77136 900x134.50452 fill #0c0c0b radius 8 stroke 1 #b98aff8c

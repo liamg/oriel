@@ -95,10 +95,6 @@ func prDescription(c *ui.Ctx, r registry.Registry, full registry.ReviewDetail, w
 	})
 }
 
-// reactionWords are the common reactions as the renderer can draw them: it has no colour emoji.
-var reactionWords = map[string]string{"👍": "+1", "👎": "−1", "😄": "laugh", "🎉": "hooray", "😕": "confused", "❤️": "♥", "❤": "♥",
-	"🚀": "rocket", "👀": "eyes"}
-
 // reactions are emoji reactions, each with how many reacted so.
 func reactions(c *ui.Ctx, key string, rs []registry.PRReaction) {
 	if len(rs) == 0 {
@@ -109,7 +105,7 @@ func reactions(c *ui.Ctx, key string, rs []registry.PRReaction) {
 		for i, re := range rs {
 			c.Row(i, ui.Style{Pad: ui.PadXY(7, 2), Gap: 4, Cross: ui.Center, Radius: 10, Stroke: th.C(theme.Line), Border: 1,
 				Role: ui.RoleText, Label: fmt.Sprintf("%s %d", re.Emoji, re.Count)}, func(c *ui.Ctx) {
-				c.Text("e", cmp.Or(reactionWords[re.Emoji], re.Emoji), kit.UIFont(12, th.C(theme.Fg)))
+				c.Text("e", re.Emoji, kit.UIFont(12, th.C(theme.Fg)))
 				c.Text("n", fmt.Sprint(re.Count), kit.MonoFont(10.5, th.C(theme.FgMuted)))
 			})
 		}

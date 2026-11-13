@@ -409,6 +409,11 @@ func (f *Frame) Glyphs(run *typeset.Run, at render.Point, col color.NRGBA) {
 		}
 		ix, sub := typeset.SubStep(pen + g.X*f.scale)
 		k := covKey{g.Face.ID, g.ID, int32(math.Round(float64(ppem * 64))), sub}
+		y := base + int(math.Round(float64(g.Y*f.scale)))
+		if typeset.IsColour(g.Face, g.ID) {
+			f.colourGlyph(typeset.RasteriseColour(g.Face, g.ID, ppem, sub, col), ix, y)
+			continue
+		}
 		cov, ok := f.covs[k]
 		if !ok {
 			cov = typeset.Rasterise(g.Face, g.ID, ppem, sub)
@@ -429,6 +434,22 @@ func (f *Frame) Glyphs(run *typeset.Run, at render.Point, col color.NRGBA) {
 					}
 				}
 			}
+		}
+	}
+}
+
+// colourGlyph blends a colour glyph's premultiplied image with its pen at (x, y).
+func (f *Frame) colourGlyph(cg typeset.Colour, x, y int) {
+	if cg.Img == nil {
+		return
+	}
+	o := image.Pt(x, y).Add(cg.Off)
+	area := cg.Img.Rect.Add(o).Intersect(f.clipBounds())
+	for py := area.Min.Y; py < area.Max.Y; py++ {
+		for px := area.Min.X; px < area.Max.X; px++ {
+			i := cg.Img.PixOffset(px-o.X, py-o.Y)
+			p := cg.Img.Pix[i : i+4 : i+4]
+			f.blendPremul(px, py, p[0], p[1], p[2], p[3])
 		}
 	}
 }

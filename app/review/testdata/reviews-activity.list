@@ -288,12 +288,12 @@ clip 0,0 1600x974 r 0
     rect 459,245.12 1123x82.78903 radius 6 stroke 1 #24221d
     text "DESCRIPTION" @471,264.81 #7c7566 JetBrains Mono 9.5
     text "Adds a token bucket per API key." @471,288.25375 #b3ab99 Inter 13
-    rect 471,299.3895 37.40625x18.519531 radius 10 stroke 1 #24221d
-    text "+1" @478,313.0145 #ece6d8 Inter 12
-    text "3" @494.8125,312.42926 #b3ab99 JetBrains Mono 10.5
-    rect 514.40625,299.3895 60.6875x18.519531 radius 10 stroke 1 #24221d
-    text "rocket" @521.40625,313.0145 #ece6d8 Inter 12
-    text "1" @561.5,312.42926 #b3ab99 JetBrains Mono 10.5
+    rect 471,299.3895 39.53125x18.519531 radius 10 stroke 1 #24221d
+    text "👍" @478,313.0145 #ece6d8 Inter 12
+    text "3" @496.9375,312.42926 #b3ab99 JetBrains Mono 10.5
+    rect 516.53125,299.3895 39.53125x18.519531 radius 10 stroke 1 #24221d
+    text "🚀" @523.53125,313.0145 #ece6d8 Inter 12
+    text "1" @542.46875,312.42926 #b3ab99 JetBrains Mono 10.5
     rect 459,339.90903 1123x206.93112 radius 6 stroke 1 #24221d
     text "ACTIVITY  4" @471,359.59903 #7c7566 JetBrains Mono 9.5
     text "●" @471,382.37653 #b3ab99 Inter 12
@@ -303,9 +303,9 @@ clip 0,0 1600x974 r 0
     pop
     text "just now" @1517.25,381.7913 #7c7566 JetBrains Mono 10.5
     text "Ready for a look." @493,401.68292 #b3ab99 Inter 12.5
-    rect 493,410.69806 51.671875x18.519531 radius 10 stroke 1 #24221d
-    text "eyes" @500,424.32306 #ece6d8 Inter 12
-    text "2" @531.0781,423.73782 #b3ab99 JetBrains Mono 10.5
+    rect 493,410.69806 39.53125x18.519531 radius 10 stroke 1 #24221d
+    text "👀" @500,424.32306 #ece6d8 Inter 12
+    text "2" @518.9375,423.73782 #b3ab99 JetBrains Mono 10.5
     text "●" @471,449.14508 #b3ab99 Inter 12
     text "priya" @493,449.32697 #ece6d8 Inter 12.5
     clip 532.7969,437.2176 976.4531x15.124512 r 0

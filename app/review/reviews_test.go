@@ -144,7 +144,7 @@ func TestReviewsPageActivity(t *testing.T) {
 	s.Run("reviews.open", nil)
 	s.Until("the activity", func() bool { return strings.Contains(s.Text(), "ACTIVITY") })
 	text := strings.ReplaceAll(s.Text(), "\n", " ")
-	want := []string{"DESCRIPTION", "+1", "3", "rocket", "1", "ACTIVITY  4", "mkhan", "commented", "Ready for a look.", "eyes", "2", "priya", "commented on internal/ratelimit/bucket.go:3", "Why",
+	want := []string{"DESCRIPTION", "👍", "3", "🚀", "1", "ACTIVITY  4", "mkhan", "commented", "Ready for a look.", "👀", "2", "priya", "commented on internal/ratelimit/bucket.go:3", "Why",
 		"mkhan", "pushed a1b2c3d", "commit a1b2c3d", "priya", "requested changes", "Charge the request's cost."}
 	at := 0
 	for _, w := range want {
