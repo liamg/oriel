@@ -25,7 +25,7 @@ func TestKeyLabel(t *testing.T) {
 // Every key vim's notation names reads as a keyboard shows it, a glyph where there's one, its modifiers as ⌃⌥⇧⌘ in
 // the order macOS writes them; an alias reads as the key it stands for.
 //
-// ref:   nvim/intro.txt *key-notation*
+// ref:   nvim/intro.txt *<A-*
 // quote: "same as <M-…>"
 func TestKeyLabelReadsVimsNotation(t *testing.T) {
 	for _, tt := range []struct{ keys, want string }{
