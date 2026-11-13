@@ -62,9 +62,7 @@ func TestACommentReachesTheAgent(t *testing.T) {
 	if !th.Busy || !th.Comments[0].Delivered {
 		t.Errorf("thread after delivery = %+v", th)
 	}
-	if r.session(id).Status != core.StatusWorking {
-		t.Errorf("status = %s", r.session(id).Status)
-	}
+	r.eventually(id, "working", func(se core.SessionState) bool { return se.Status == core.StatusWorking })
 }
 
 // Mid-turn a comment waits for the turn's end; an urgent one interrupts it.
@@ -126,9 +124,8 @@ func TestTheAgentRepliesWithEvidence(t *testing.T) {
 		t.Errorf("touched = %+v", th.Touched)
 	}
 	a.Emit(agent.TurnEnd{})
-	if se := r.eventually(id, "needs you", func(se core.SessionState) bool { return !se.Agent.Working }); se.Status != core.StatusNeedsYou {
-		t.Errorf("after the reply, status = %s", se.Status)
-	}
+	// The status follows the turn's end in an event of its own: wait for it, not for the agent stopping.
+	r.eventually(id, "needs you", func(se core.SessionState) bool { return !se.Agent.Working && se.Status == core.StatusNeedsYou })
 }
 
 // An agent that answers its first turn before its start has returned answers comments it was given: they count as
@@ -661,8 +658,9 @@ func TestBackgroundWorkKeepsTheTurnsThreadsBusy(t *testing.T) {
 	}
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.TurnEnd{Background: []core.BackgroundTask{{Kind: "shell", Description: "go test ./..."}}})
-	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return se.Agent.Stats.Turns == 2 })
-	se := r.session(id)
+	se := r.eventually(id, "the turn to end, still working", func(se core.SessionState) bool {
+		return se.Agent.Stats.Turns == 2 && se.Status == core.StatusWorking
+	})
 	if th, _ := se.Thread(tid); !th.Busy {
 		t.Errorf("the thread stopped being busy with the suite still running")
 	}

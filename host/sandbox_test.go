@@ -697,7 +697,7 @@ func TestStartDoesNotWaitForTheSandbox(t *testing.T) {
 		t.Fatal("Start waited for the sandbox")
 	}
 	se := s.eventually(id, "the sandbox's step", func(se core.SessionState) bool {
-		return se.Agent.Starting != nil && se.Agent.Starting.Step == "Building the sandbox image"
+		return se.Agent.Starting != nil && se.Agent.Starting.Step == "Building the sandbox image" && se.Status == core.StatusWorking
 	})
 	if se.Agent.Starting.Note != "Only the first time" || se.Agent.Starting.Since.IsZero() || se.Agent.Running {
 		t.Errorf("while starting: %+v", se.Agent)
