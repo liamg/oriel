@@ -240,3 +240,8 @@ func (w *Host) Rename(id core.SessionID, name string) (err error) {
 	defer w.recover("Rename", &err)
 	return w.emit(core.SessionRenamed{ID: id, Name: strings.TrimSpace(name)})
 }
+
+// resumeHandedOver is agentrun.Runner.ResumeHandedOver, resuming through Resume.
+func (w *Host) resumeHandedOver() {
+	w.run.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
+}

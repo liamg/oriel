@@ -2,14 +2,11 @@ package host
 
 import (
 	"context"
-	"os"
-	"runtime"
 	"sync"
 	"time"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
 )
 
 // ProviderInfo is a provider as the launcher shows it.
@@ -63,45 +60,6 @@ func (w *Host) ProviderInfo(ctx context.Context) []ProviderInfo {
 	return out
 }
 
-// machineState is this machine as the app shows it, with a fresh reading of its load.
-func (w *Host) machineState() core.MachineState { return w.machineStateWith(w.opts.Load()) }
-
-// machineStateWith is this machine as the app shows it, with the reading r.
-func (w *Host) machineStateWith(r sysload.Reading) core.MachineState {
-	host, _ := os.Hostname()
-	var providers []string
-	if w.opts.Providers != nil {
-		for _, p := range w.opts.Providers.List() {
-			providers = append(providers, p.ID())
-		}
-	}
-	var sandboxes []string
-	if w.opts.Sandbox != nil {
-		sandboxes = w.opts.Sandbox.Backends()
-	}
-	return core.MachineState{Host: host, OS: runtime.GOOS, Arch: runtime.GOARCH, Version: w.opts.Version,
-		Providers: providers, Sandboxes: sandboxes, Cores: r.Cores, CPU: r.CPU / 100, Mem: r.MemUsed, MemTotal: r.MemTotal,
-		Sampled: w.opts.Now().UTC(), SignedOut: w.run.LostLogins()}
-}
-
-// SampleLoad reports the machine's load each time s says it moved, until ctx ends.
-func (w *Host) SampleLoad(ctx context.Context, s *sysload.Sampler) {
-	defer w.recover("SampleLoad", nil)
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-w.closed:
-			return
-		case r := <-s.Changes():
-			func() {
-				defer w.recover("SampleLoad", nil)
-				_ = w.emit(core.MachineChanged{Machine: w.machineStateWith(r)})
-			}()
-		}
-	}
-}
-
 // SetProviders sets where the host finds providers past its own (Options.Providers): the app's registry
 // (registry.AgentProvider). The sessions handed over to a provider known only now are resumed, and every plan's
 // windows read; nil takes them away.
@@ -125,8 +83,4 @@ func (w *Host) SetProviders(src func() []agent.Provider) {
 		}()
 		_ = w.ReadUsage(ctx) // each provider's failure is logged and kept in the state
 	})
-}
-
-func (w *Host) resumeHandedOver() {
-	w.run.ResumeHandedOver(func(id core.SessionID) error { return w.Resume(context.Background(), id) })
 }
