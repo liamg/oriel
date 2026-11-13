@@ -275,9 +275,9 @@ pop
 rect 1220,50 380x924 fill #0c0c0b
 clip 1220,50 380x924 r 0
   rect 1220,50 380x30 fill #0c0c0b
-  rect 1220,50 380x2 fill #ffd23f
-  text "INBOX" @1234,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @1580.7031,69.96 #7c7566 JetBrains Mono 11
+  text "INBOX" @1234,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @1580.7031,67.96 #7c7566 JetBrains Mono 11
+  rect 1220,78 380x2 fill #ffd23f
   rect 1220,80 380x1 fill #24221d
   clip 1220,81 380x893 r 0
     rect 1230,91 360x873 fill #0c0c0b

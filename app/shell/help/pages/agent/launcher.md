@@ -47,7 +47,9 @@ says so instead of its plan. A plugin can add an agent here, or take a built-in'
 
 Agents are found on your shell's `PATH`. Opened from the Finder, the Dock or a launcher rather than a terminal, Oriel
 asks your login shell for it as it starts (`$SHELL -i -l`, its config files read, with `ORIEL_RESOLVING_ENVIRONMENT=1`
-set so your config can skip anything slow), and keeps the desktop's directories after it.
+set so your config can skip anything slow), and keeps the desktop's directories after it. It takes the shell's ssh
+agent too (`SSH_AUTH_SOCK`, when it's a socket that's there), so a key the shell's config reaches, such as one kept in
+1Password, works for git and for the agent a sandbox is lent, as it does in a terminal.
 
 When the ticket already has a session, Start continues it on the agent it runs on, and this says which in place of
 the agents. **Start another** brings them back, for a new session on the ticket.

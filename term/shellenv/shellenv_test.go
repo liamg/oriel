@@ -1,6 +1,7 @@
 package shellenv
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -114,5 +115,49 @@ func TestMerge(t *testing.T) {
 	got := Merge("/opt/tools/bin:/usr/bin:/bin", "/usr/bin:/bin:/usr/sbin:/opt/tools/bin:")
 	if want := "/opt/tools/bin:/usr/bin:/bin:/usr/sbin"; got != want {
 		t.Errorf("Merge = %q, want %q", got, want)
+	}
+}
+
+// The ssh agent the shell's config points at comes too: a key kept in 1Password (or any agent the shell's config
+// starts or names) is reached by git and the sandboxes' forwarded agent as it is from a terminal.
+func TestEnvTakesTheShellsSSHAgent(t *testing.T) {
+	isolate.Test(t)
+	sh := fakeShell(t, `SSH_AUTH_SOCK=/home/u/.1password/agent.sock; export SSH_AUTH_SOCK`, "/usr/bin:/bin")
+	got, err := Env(t.Context(), sh, Timeout)
+	if err != nil || got.Path != "/usr/bin:/bin" || got.SSHAuthSock != "/home/u/.1password/agent.sock" {
+		t.Fatalf("Env = %+v, %v", got, err)
+	}
+	none := fakeShell(t, `unset SSH_AUTH_SOCK`, "/usr/bin:/bin")
+	if got, err := Env(t.Context(), none, Timeout); err != nil || got.SSHAuthSock != "" || got.Path != "/usr/bin:/bin" {
+		t.Fatalf("with no agent, Env = %+v, %v", got, err)
+	}
+}
+
+// The shell's agent is taken only when it's a socket that's there: a stale one from an old session, or what an error
+// printed, leaves the desktop's.
+func TestAgentSocketIsTakenOnlyWhenItsThere(t *testing.T) {
+	isolate.Test(t)
+	dir, err := os.MkdirTemp("/tmp", "agent") // short: a socket's path has a length limit
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	sock := filepath.Join(dir, "a.sock")
+	l, err := net.Listen("unix", sock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { l.Close() })
+	plain := filepath.Join(dir, "file")
+	if err := os.WriteFile(plain, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct {
+		in   string
+		want bool
+	}{{sock, true}, {"", false}, {filepath.Join(dir, "gone.sock"), false}, {plain, false}, {"agent.sock", false}} {
+		if got := agentSocket(tc.in); got != tc.want {
+			t.Errorf("agentSocket(%q) = %v, want %v", tc.in, got, tc.want)
+		}
 	}
 }

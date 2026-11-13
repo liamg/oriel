@@ -153,9 +153,9 @@ clip 224,50 1376x924 r 0
   rect 224,50 1376x30 fill #0c0c0b
   clip 224,50 1376x30 r 0
     rect 224,50 72.046875x30 fill #121210
-    rect 224,50 72.046875x2 fill #ffd23f
-    text "Ship" @238,70.365234 #ece6d8 Inter 12
-    text "✕" @276.75,69.96 #7c7566 JetBrains Mono 11
+    text "Ship" @238,68.365234 #ece6d8 Inter 12
+    text "✕" @276.75,67.96 #7c7566 JetBrains Mono 11
+    rect 224,78 72.046875x2 fill #ffd23f
   pop
   rect 224,80 1376x1 fill #24221d
   clip 224,81 1376x893 r 0

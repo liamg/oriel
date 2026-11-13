@@ -197,7 +197,7 @@ func PromptCard(c *ui.Ctx, key any, o PromptCardOpts) PromptCardResult {
 	room := min(win.Y*promptDetail, most-rest)
 	muted := monoText(11, typeset.Medium, col(c, tPromptMuted), 0)
 	c.Column(key, ui.Style{W: ui.Px(width), H: ui.Size{Kind: ui.Fit}.Clamp(0, most), Pad: ui.Insets{T: 16, B: 18}, Fill: col(c, tPromptBg),
-		Stroke: o.Tone, Border: 1, Radius: 12, Clip: true, Focusable: true, FocusOnOpen: o.TakeFocus, KeyMode: "card", Help: o.Help,
+		Stroke: o.Tone, Border: 1, Radius: 12, Clip: true, Focusable: true, Selectable: true, FocusOnOpen: o.TakeFocus, KeyMode: "card", Help: o.Help,
 		Role: ui.RoleGroup, Label: label}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: promptPad, R: 14}, Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("kicker", strings.ToUpper(o.Kicker), monoText(10.5, typeset.SemiBold, o.Tone, .18))

@@ -95,6 +95,8 @@ func (x *GitHubHost) requested(ctx context.Context, s registry.Site) ([]registry
 			r.Via = "@" + a.Via
 		}
 		switch {
+		case a.Requested && a.Answered: // reviewed, or commented in the conversation, since asked: the author's move
+			r.State = reviewWord(a.Mine)
 		case a.Requested && a.Mine == "":
 			r.State = registry.ReviewNew
 		case a.Requested:

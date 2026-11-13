@@ -459,7 +459,7 @@ func leaf(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, content Cont
 			if c.PressedWithin(body) && !c.FocusWithin(body) {
 				c.FocusInto(body) // a press on what takes no focus focuses the pane
 			}
-			c.Column("content", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Interactive: true, Help: HelpPane, Role: ui.RoleGroup,
+			c.Column("content", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Interactive: true, Selectable: true, Help: HelpPane, Role: ui.RoleGroup,
 				Label: title(v)}, func(c *ui.Ctx) {
 				content(c, v, focused)
 			})
@@ -559,7 +559,9 @@ func tab(c *ui.Ctx, r *layout.Root, st *viewState, l *layout.Node, i int, v layo
 		tabStyle.W, tabStyle.Fill, tabStyle.Role, tabStyle.Selected = ui.Flex(1), render.Color{}, ui.RoleNone, false
 	}
 	c.Column(v, tabStyle, func(c *ui.Ctx) {
-		c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
+		// The focused tab's accent runs along its foot, against its view: along its head it would sit against the
+		// session tabs above and read as theirs.
+		defer c.Box("edge", ui.Style{W: ui.Flex(1), H: ui.Px(2), Fill: edge}, nil)
 		if head {
 			c.Row("label", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 14, R: 6}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				if led {

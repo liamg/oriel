@@ -101,16 +101,17 @@ func runApp(args []string) {
 	gio.Main()
 }
 
-// loginPath gives the process the PATH the user's login shell builds, when it wasn't started from a terminal: opened
-// from the Finder, the Dock or a launcher, it has the desktop's, and the agents' programs (claude, codex) aren't on it.
+// loginPath gives the process the PATH and ssh agent the user's login shell sets up, when it wasn't started from a
+// terminal: opened from the Finder, the Dock or a launcher, it has the desktop's, so the agents' programs (claude,
+// codex) aren't on its PATH, and a key in the agent the shell names (1Password's) isn't reached.
 func loginPath(log *slog.Logger, fromTerminal bool) {
 	if fromTerminal {
 		return
 	}
-	if p, err := shellenv.Apply(context.Background()); err != nil {
+	if v, err := shellenv.Apply(context.Background()); err != nil {
 		log.Warn("the login shell's PATH couldn't be read; keeping the desktop's", "shell", shellenv.Shell(), "err", err)
 	} else {
-		log.Info("PATH from the login shell", "shell", shellenv.Shell(), "path", p)
+		log.Info("PATH and ssh agent from the login shell", "shell", shellenv.Shell(), "path", v.Path, "ssh_auth_sock", v.SSHAuthSock)
 	}
 }
 
