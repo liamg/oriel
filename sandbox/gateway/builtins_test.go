@@ -181,3 +181,20 @@ func TestFailedRunIDs(t *testing.T) {
 		t.Fatalf("failed runs %v", got)
 	}
 }
+
+// A builtin given arguments it can't read refuses, rather than act on empty ones: a commit with a message that was
+// a number isn't made with no message.
+func TestBuiltinsRefuseArgumentsTheyCantRead(t *testing.T) {
+	h := newFakeHost(t)
+	b := Builtins(h)
+	res, err := b[Prefix+"commit"].Run(context.Background(), []byte(`{"message": 42}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError || len(h.commits) != 0 {
+		t.Errorf("result %+v, commits %q: want it refused and nothing committed", res, h.commits)
+	}
+	if res, _ := b[Prefix+"push"].Run(context.Background(), nil); res.IsError {
+		t.Errorf("no arguments at all: %+v, want the defaults", res)
+	}
+}
