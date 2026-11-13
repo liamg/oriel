@@ -57,7 +57,7 @@ func ParseManifest(src []byte) (Manifest, error) {
 	}
 	v := doc.Value()
 	m := Manifest{ID: tstr(v["id"]), Version: tstr(v["version"]), Oriel: tstr(v["oriel"]), Description: tstr(v["description"]),
-		License: tstr(v["license"]), Icon: tstr(v["icon"]), Runs: tstr(v["runs"]), Binaries: tstrs(v["binaries"])}
+		License: tstr(v["license"]), Icon: tstr(v["icon"]), Runs: tstr(v["runs"]), Binaries: Strings(v["binaries"])}
 	if err := CheckID(m.ID); err != nil {
 		return m, fmt.Errorf("oriel.toml: %w", err)
 	}
@@ -119,7 +119,7 @@ func permissions(prefix string, t map[string]any) ([]Grant, error) {
 				continue
 			}
 		case string, []any:
-			g.Scope = tstrs(v)
+			g.Scope = Strings(v)
 		case map[string]any:
 			g.Why = tstr(v["why"])
 			for sk, sv := range v {
@@ -128,7 +128,7 @@ func permissions(prefix string, t map[string]any) ([]Grant, error) {
 				case c == CapSecrets && tstr(sv) != "":
 					g.Scope = append(g.Scope, sk+"@"+tstr(sv)) // NAME = "host": bound to the host
 				case slices.Contains([]string{"hosts", "paths", "scope", "commands", "tools", "names"}, sk):
-					g.Scope = append(g.Scope, tstrs(sv)...)
+					g.Scope = append(g.Scope, Strings(sv)...)
 				default:
 					return nil, fmt.Errorf("oriel.toml: %s doesn't take %q", name, sk)
 				}
@@ -150,7 +150,9 @@ func tstr(v any) string {
 	return s
 }
 
-func tstrs(v any) []string {
+// Strings is a decoded value (TOML, JSON, Lua) as a list of strings: one string is a list of one, and a list keeps
+// its strings.
+func Strings(v any) []string {
 	switch v := v.(type) {
 	case string:
 		return []string{v}

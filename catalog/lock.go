@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/toml"
 )
 
@@ -55,7 +56,7 @@ func (l *Lock) Get(id string) (Locked, bool) {
 		return Locked{}, false
 	}
 	e := Locked{Source: str(t["source"]), Version: str(t["version"]), Commit: str(t["commit"]), Badge: str(t["badge"]),
-		Capabilities: strs(t["capabilities"])}
+		Capabilities: plugin.Strings(t["capabilities"])}
 	if a, ok := t["archives"].(map[string]any); ok {
 		e.Archives = map[string]string{}
 		for k, v := range a {

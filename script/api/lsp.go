@@ -14,7 +14,7 @@ type LSP struct{ a *APIs }
 
 //oriel:api doc="Register a language server: { name, languages = { \"go\" }, cmd = { \"gopls\" }, roots = { \"go.mod\" }, settings = {…}, init = {…}, order }. One with a built-in's name replaces it; order picks among a language's servers, lowest first."
 func (l LSP) Server(spec script.Table, where string) error {
-	s := lang.LSPServer{Name: str(spec, "name"), Language: strs(spec["languages"]), Cmd: strs(spec["cmd"]), Roots: strs(spec["roots"]),
+	s := lang.LSPServer{Name: str(spec, "name"), Language: plugin.Strings(spec["languages"]), Cmd: plugin.Strings(spec["cmd"]), Roots: plugin.Strings(spec["roots"]),
 		Source: where}
 	if s.Name == "" || len(s.Language) == 0 || len(s.Cmd) == 0 {
 		return fmt.Errorf("a language server needs a name, languages and a cmd")

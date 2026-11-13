@@ -83,8 +83,8 @@ func (r Root) Placeholder(name string, spec script.Table, fn *script.Fn, where s
 	if fn == nil {
 		return fmt.Errorf("%s: no function", name)
 	}
-	lz := plugin.Lazy{Commands: strs(spec["commands"]), Events: strs(spec["events"]), Keys: strs(spec["keys"]),
-		Filetypes: strs(spec["filetypes"]), Omnibox: strs(spec["omnibox"]), Views: strs(spec["views"])}
+	lz := plugin.Lazy{Commands: plugin.Strings(spec["commands"]), Events: plugin.Strings(spec["events"]), Keys: plugin.Strings(spec["keys"]),
+		Filetypes: plugin.Strings(spec["filetypes"]), Omnibox: plugin.Strings(spec["omnibox"]), Views: plugin.Strings(spec["views"])}
 	r.a.own(r.a.Host.Placeholder(lz.Placeholder(r.a.Host, name, where, func() error { _, err := r.a.VM.Call(fn); return err })))
 	return nil
 }

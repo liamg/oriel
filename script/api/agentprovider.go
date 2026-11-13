@@ -52,7 +52,7 @@ func (g Agent) Provider(spec script.Table, where string) error {
 	case program != "" && bridge != "":
 		return fmt.Errorf("agent provider %s has both a program and the %s bridge", name, bridge)
 	case program != "":
-		o.Dial = a.agentDialer(program, strs(spec["args"]), envOf(spec["env"]))
+		o.Dial = a.agentDialer(program, plugin.Strings(spec["args"]), envOf(spec["env"]))
 	case bridge != "":
 		raw, err := json.Marshal(emptyNil(config))
 		if err != nil {
@@ -90,7 +90,7 @@ func (g Agent) Bridge(spec script.Table, where string) error {
 		return errors.New("an agent bridge needs a name and a program")
 	}
 	a.own(a.Host.Contribute(rpcagent.Bridge{Name: name, Title: str(spec, "title"), Source: where,
-		Dial: a.agentDialer(program, strs(spec["args"]), envOf(spec["env"]))}))
+		Dial: a.agentDialer(program, plugin.Strings(spec["args"]), envOf(spec["env"]))}))
 	return nil
 }
 

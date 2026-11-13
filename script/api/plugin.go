@@ -140,7 +140,7 @@ func (p Process) Spawn(path string, opts script.Table) ([]any, error) {
 		env = append(env, k+"="+fmt.Sprint(v))
 	}
 	slices.Sort(env)
-	o := plugin.SpawnOpts{Args: strs(opts["args"]), Dir: expand(str(opts, "cwd")), Env: env, Request: handle, Notify: handle}
+	o := plugin.SpawnOpts{Args: plugin.Strings(opts["args"]), Dir: expand(str(opts, "cwd")), Env: env, Request: handle, Notify: handle}
 	if f, ok := opts["on_exit"].(*script.Fn); ok {
 		o.Exit = func(err error) {
 			var msg any

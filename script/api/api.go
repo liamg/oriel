@@ -148,22 +148,6 @@ func str(t script.Table, k string) string {
 	return s
 }
 
-func strs(v any) []string {
-	switch v := v.(type) {
-	case string:
-		return []string{v}
-	case []any:
-		var out []string
-		for _, x := range v {
-			if s, ok := x.(string); ok {
-				out = append(out, s)
-			}
-		}
-		return out
-	}
-	return nil
-}
-
 func level(s string) string {
 	switch strings.ToLower(s) {
 	case "error", "warn", "warning", "debug":

@@ -10,6 +10,7 @@ import (
 	"unicode"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -283,7 +284,7 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			}
 		case "select":
 			key := cmp.Or(str(n, "id"), str(n, "label"), "select")
-			if v, ok := widget.Select(c, key, str(n, "value"), strs(n["options"]), widget.SelectOpts{Label: cmp.Or(str(n, "label"), key),
+			if v, ok := widget.Select(c, key, str(n, "value"), plugin.Strings(n["options"]), widget.SelectOpts{Label: cmp.Or(str(n, "label"), key),
 				Help: "plugins/lua#ui"}); ok {
 				a.callback(n, "on_change", v)
 			}
@@ -386,7 +387,7 @@ func async(c *ui.Ctx, n script.Table, a *APIs) {
 // on_drop = fn(kind, data)) inside a box that is one, and reports whether it did.
 func dnd(c *ui.Ctx, n script.Table, a *APIs) bool {
 	spec, _ := n["drag"].(script.Table)
-	accepts := strs(n["accepts"])
+	accepts := plugin.Strings(n["accepts"])
 	if spec == nil && len(accepts) == 0 {
 		return false
 	}
@@ -606,7 +607,7 @@ func chart(c *ui.Ctx, n script.Table, a *APIs) {
 	o.YFormat = o.Format
 	o.Legend, _ = n["legend"].(bool)
 	o.Hover, _ = n["hover"].(bool)
-	o.Labels = strs(n["labels"])
+	o.Labels = plugin.Strings(n["labels"])
 	for _, x := range items(n["marks"]) {
 		if t, ok := x.(script.Table); ok {
 			d, _ := t["dashed"].(bool)

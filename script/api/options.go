@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/script"
@@ -150,7 +151,7 @@ func (a *APIs) declare(t script.Table, where string) error {
 	if name == "" || !ok {
 		return fmt.Errorf("an option needs a name and a type (bool, int, float, string, enum, duration, key, list, map or table): %v", t)
 	}
-	sp := registry.OptionSpec{Name: name, Section: str(t, "section"), Type: typ, Values: strs(t["values"]), Help: str(t, "help"),
+	sp := registry.OptionSpec{Name: name, Section: str(t, "section"), Type: typ, Values: plugin.Strings(t["values"]), Help: str(t, "help"),
 		Min: num(t["min"]), Max: num(t["max"]), Step: num(t["step"]), Follows: str(t, "follows"), Scopes: registry.ScopeUser, Source: where}
 	if !a.Plugin.Trusted() {
 		_, plugin, _ := strings.Cut(a.Plugin.ID, "/")

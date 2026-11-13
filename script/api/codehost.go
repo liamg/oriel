@@ -43,7 +43,7 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 	if sites, ok := spec["sites"].([]any); ok {
 		for _, x := range sites {
 			if t, ok := x.(script.Table); ok {
-				h.Sites = append(h.Sites, registry.Site{Host: str(t, "host"), API: str(t, "api"), Secret: str(t, "secret"), Aliases: strs(t["aliases"])})
+				h.Sites = append(h.Sites, registry.Site{Host: str(t, "host"), API: str(t, "api"), Secret: str(t, "secret"), Aliases: plugin.Strings(t["aliases"])})
 			}
 		}
 	}
@@ -57,7 +57,7 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 	}
 	fn := func(k string) *script.Fn { f, _ := spec[k].(*script.Fn); return f }
 	if t, ok := spec["tokens"].(script.Table); ok {
-		h.Tokens = registry.TokenSources{Env: strs(t["env"]), HostedEnv: strs(t["hosted_env"]), Command: strs(t["command"])}
+		h.Tokens = registry.TokenSources{Env: plugin.Strings(t["env"]), HostedEnv: plugin.Strings(t["hosted_env"]), Command: plugin.Strings(t["command"])}
 		h.Tokens.Optional, _ = t["optional"].(bool)
 		// An env var is read under a secret the plugin declares by its name; a command needs its exec grant.
 		for _, e := range append(slices.Clone(h.Tokens.Env), h.Tokens.HostedEnv...) {
@@ -290,7 +290,7 @@ func timeOf(v any) time.Time {
 }
 
 func reviewDetailOf(t script.Table) registry.ReviewDetail {
-	d := registry.ReviewDetail{Base: str(t, "base"), Head: str(t, "head"), Commit: str(t, "commit"), State: str(t, "state"), Mergeable: str(t, "mergeable"), Labels: strs(t["labels"]),
+	d := registry.ReviewDetail{Base: str(t, "base"), Head: str(t, "head"), Commit: str(t, "commit"), State: str(t, "state"), Mergeable: str(t, "mergeable"), Labels: plugin.Strings(t["labels"]),
 		Body: str(t, "body"), Clone: str(t, "clone")}
 	if rq, ok := t["request"].(script.Table); ok {
 		d.Request = reviewRequestOf(rq)

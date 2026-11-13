@@ -160,8 +160,8 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	async, _ := spec["async"].(bool)
 	confirm, _ := spec["confirm"].(*script.Fn)
 	t := registry.AgentTool{Name: str(spec, "name"), Desc: str(spec, "desc"), Params: params, Source: where,
-		ReadOnly: readOnly, Reads: str(spec, "reads"), For: strs(spec["for"]), Adds: str(spec, "adds"),
-		CoveredBy: strs(spec["covered_by"]),
+		ReadOnly: readOnly, Reads: str(spec, "reads"), For: plugin.Strings(spec["for"]), Adds: str(spec, "adds"),
+		CoveredBy: plugin.Strings(spec["covered_by"]),
 		Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
 			var out any
 			var err error
@@ -358,7 +358,7 @@ func (g Agent) Fork(req script.Table, fn *script.Fn) error {
 
 //oriel:api doc="A prompt pack: { prompt, tools }, for sessions to start with." cap=agent.prompt
 func (g Agent) Pack(name string, spec script.Table, where string) error {
-	g.a.own(g.a.Host.Contribute(registry.PromptPack{Name: name, Prompt: str(spec, "prompt"), Tools: strs(spec["tools"]), Source: where}))
+	g.a.own(g.a.Host.Contribute(registry.PromptPack{Name: name, Prompt: str(spec, "prompt"), Tools: plugin.Strings(spec["tools"]), Source: where}))
 	return nil
 }
 
@@ -446,7 +446,7 @@ func (h HUD) Indicator(name string, opts script.Table, build any, where string) 
 		h.a.setIndicator(name, build)
 	}
 	ind := uireg.Indicator{Name: name, Slot: str(opts, "slot"), Title: str(opts, "title"), Help: str(opts, "help"), Every: every,
-		On: strs(opts["on"]), Source: where,
+		On: plugin.Strings(opts["on"]), Source: where,
 		Build: func(registry.Ctx) (ui.Node, error) {
 			v, set := h.a.takeIndicator(name, fn != nil)
 			if fn != nil && !set {
@@ -600,8 +600,8 @@ func (l Language) Add(spec script.Table, where string) error {
 	if name == "" {
 		return fmt.Errorf("a language needs a name")
 	}
-	lang := registry.Language{Name: name, Extensions: strs(spec["extensions"]), Filenames: strs(spec["filenames"]),
-		Shebangs: strs(spec["shebangs"]), Queries: map[string]string{}, Source: where}
+	lang := registry.Language{Name: name, Extensions: plugin.Strings(spec["extensions"]), Filenames: plugin.Strings(spec["filenames"]),
+		Shebangs: plugin.Strings(spec["shebangs"]), Queries: map[string]string{}, Source: where}
 	if g := expand(str(spec, "grammar")); g != "" {
 		lang.Grammar = func() ([]byte, error) { return os.ReadFile(g) }
 	}
