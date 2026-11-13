@@ -13,6 +13,7 @@ import (
 
 // Loop is what a Load needs of its host: a way back to the app's loop, and a frame.
 type Loop interface {
+	Tracker // the fetch is counted as under way, so a wait for the app to settle sees it
 	Do(fn func())
 	Redraw()
 }

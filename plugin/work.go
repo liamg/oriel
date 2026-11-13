@@ -13,21 +13,20 @@ type Tracker interface {
 	Begin(what string) (end func())
 }
 
-// Begin counts what as under way on h, when h tracks work (Tracker), until end; end may be called more than once.
-func Begin(h any, what string) (end func()) {
-	t, ok := h.(Tracker)
-	if !ok {
+// Begin counts what as under way on h until end; end may be called more than once. A nil h counts nothing.
+func Begin(h Tracker, what string) (end func()) {
+	if h == nil {
 		return func() {}
 	}
 	var once sync.Once
-	done := t.Begin(what)
+	done := h.Begin(what)
 	return func() { once.Do(done) }
 }
 
 // Go runs fn on a goroutine of its own, counted as under way on h until it returns. What fn hands the loop (Do)
 // before it returns is queued by then, so a wait for the app to settle sees one or the other. It's for work that
 // ends: what runs as long as the plugin does is a kit.Work Loop's.
-func Go(h any, what string, fn func()) {
+func Go(h Tracker, what string, fn func()) {
 	end := Begin(h, what)
 	go func() {
 		defer end()

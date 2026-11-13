@@ -27,6 +27,7 @@ type Plugin interface {
 
 // Host is what a plugin sees of the app: the registry, what's drawn included (uireg), and the app's own calls.
 type Host interface {
+	Tracker // what a plugin runs off the loop (Go, Load) is counted, so a wait for the app to settle sees it
 	uireg.Registry
 	Session(id core.SessionID) (core.Session, bool)
 	Sessions() []core.Session

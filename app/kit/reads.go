@@ -227,6 +227,9 @@ func (l *landing) Do(fn func()) {
 
 func (l *landing) Redraw() { l.wake() }
 
+// Begin counts nothing (plugin.Tracker): the window waits for the reads through Reads.Busy, its registry.Busy.
+func (l *landing) Begin(string) (end func()) { return func() {} }
+
 func (l *landing) run() {
 	l.mu.Lock()
 	fns := l.fns
