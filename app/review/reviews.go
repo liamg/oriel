@@ -51,9 +51,9 @@ type reviewList struct {
 	reqs     []registry.ReviewRequest
 	err      string
 	answered bool
-	at       time.Time     // when it answered; zero to ask again
-	busy     chan struct{} // closed when the ask under way answers
-	since    time.Time     // when the ask under way started
+	at       time.Time   // when it answered; zero to ask again
+	ask      kit.Refetch // the ask under way
+	since    time.Time   // when the ask under way started
 }
 
 // reviewRow is a row of the page and the omnibox: a request, or what a source needs first.
@@ -282,7 +282,7 @@ func (x *Reviews) asking() bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	for _, l := range x.lists {
-		if l.busy != nil {
+		if l.ask.Busy() != nil {
 			return true
 		}
 	}
@@ -300,22 +300,34 @@ func (x *Reviews) fresh(s registry.HostSite, stale time.Duration) <-chan struct{
 		l = &reviewList{}
 		x.lists[s.Key()] = l
 	}
-	if l.busy != nil {
-		return l.busy
+	if busy := l.ask.Busy(); busy != nil {
+		l.ask.Begin(stale == 0) // a refresh: the ask under way may have started before what it's for
+		return busy
 	}
 	if !l.at.IsZero() && x.now().Sub(l.at) < stale {
 		return nil
 	}
-	done := make(chan struct{})
-	l.busy, l.since = done, kit.WindowNow(x.h)
+	done, _ := l.ask.Begin(false)
+	l.since = kit.WindowNow(x.h)
 	plugin.Go(x.h, "reviews: requests from "+s.Key(), func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
 		defer cancel()
-		rs, err := registry.RequestedReviews(ctx, s)
+		var rs []registry.ReviewRequest
+		var err error
+		for {
+			rs, err = registry.RequestedReviews(ctx, s)
+			x.mu.Lock()
+			again := l.ask.Again() && err == nil && ctx.Err() == nil
+			x.mu.Unlock()
+			if !again {
+				break
+			}
+		}
 		refused := kit.SitesOf(x.h).Refuse(s, err)
 		x.mu.Lock()
 		before, had := l.reqs, l.answered
-		l.busy, l.at, l.answered = nil, x.now(), true
+		l.ask.End()
+		l.at, l.answered = x.now(), true
 		if refused {
 			l.at = time.Time{}
 		}
@@ -413,7 +425,7 @@ func (x *Reviews) listState(name string) widget.LoadState {
 	switch {
 	case l == nil:
 		return widget.LoadState{}
-	case l.busy != nil:
+	case l.ask.Busy() != nil:
 		return widget.LoadState{Phase: widget.Pending, Since: l.since, Stale: l.answered}
 	case l.err != "" && l.reqs == nil:
 		return widget.LoadState{Phase: widget.Failed, Err: errors.New(l.err)}
