@@ -122,13 +122,13 @@ func reviewWord(state string) string {
 func ciWord(state string) string {
 	switch state {
 	case gh.CheckPass:
-		return "ok"
+		return registry.CheckOK
 	case gh.CheckFail:
-		return "failed"
+		return registry.CheckFailed
 	case gh.CheckPending:
-		return "running"
+		return registry.CheckRunning
 	case gh.CheckSkipped:
-		return "skipped"
+		return registry.CheckSkipped
 	}
 	return ""
 }
