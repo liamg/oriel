@@ -61,3 +61,14 @@ func TestNumberedDiff(t *testing.T) {
 		t.Errorf("changed lines %d-%d, want 2-12", first, last)
 	}
 }
+
+// A step may carry a mermaid diagram, the summary most often: its source is kept as given.
+func TestParseWalkthroughDiagram(t *testing.T) {
+	steps, err := parseWalkthrough("```json\n" + `{"steps": [{"title": "Summary", "prose": "p", "diagram": "flowchart LR\n  A[Line] --> B[Invoice]"}]}` + "\n```")
+	if err != nil || len(steps) != 1 {
+		t.Fatalf("%+v %v", steps, err)
+	}
+	if got := steps[0].Diagram; got != "flowchart LR\n  A[Line] --> B[Invoice]" {
+		t.Errorf("diagram %q", got)
+	}
+}

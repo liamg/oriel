@@ -6,35 +6,10 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/diagram"
-	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
-	"github.com/liamg/oriel/ui/widget"
 )
-
-// mdDiagramFonts are what a markdown diagram is set in.
-var mdDiagramFonts = diagram.Fonts{
-	Label: typeset.FontSpec{Family: typeset.UI, Size: 13},
-	Small: typeset.FontSpec{Family: typeset.UI, Size: 11.5},
-	Title: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .14},
-}
-
-type mdDiagramKey struct {
-	src string
-	sh  typeset.Shaper
-}
-
-type mdDiagramLaid struct {
-	l   *diagram.Layout
-	err error
-}
-
-// mdDiagrams are a UI's mermaid fences parsed and laid out, once per source and shaper, the most recently drawn kept.
-type mdDiagrams struct {
-	*kit.Memo[mdDiagramKey, mdDiagramLaid]
-}
 
 func isMermaid(b mdBlock) bool {
 	f := strings.Fields(b.Lang)
@@ -43,17 +18,7 @@ func isMermaid(b mdBlock) bool {
 
 // mdDiagramOf is a mermaid fence's diagram laid out, or why it isn't drawn.
 func mdDiagramOf(c *ui.Ctx, b mdBlock) (*diagram.Layout, error) {
-	sh := c.Shaper()
-	cache := ui.Keep(c, func() mdDiagrams { return mdDiagrams{kit.NewMemo[mdDiagramKey, mdDiagramLaid](128)} })
-	k := mdDiagramKey{strings.Join(b.Code, "\n"), sh}
-	laid := cache.Get(k, func() mdDiagramLaid {
-		d, err := diagram.Parse(k.src)
-		if err != nil {
-			return mdDiagramLaid{err: err}
-		}
-		return mdDiagramLaid{l: d.Layout(sh, mdDiagramFonts)}
-	})
-	return laid.l, laid.err
+	return kit.DiagramOf(c, strings.Join(b.Code, "\n"))
 }
 
 // mdFenceKicker is a fence's label over its code: its language, and for a mermaid fence drawn as code, why.
@@ -74,38 +39,6 @@ func mdFenceKicker(c *ui.Ctx, b mdBlock) string {
 	return k
 }
 
-// mdDiagramLabel is what a diagram is called for a screen reader and in the lightbox: its kind and its nodes.
-func mdDiagramLabel(l *diagram.Layout) string {
-	var names []string
-	for _, n := range l.Nodes {
-		names = append(names, strings.ReplaceAll(n.Label, "\n", " "))
-	}
-	kind := "Flowchart"
-	if l.Kind == "sequence" {
-		kind = "Sequence diagram"
-	}
-	return kind + ": " + strings.Join(names, ", ")
-}
-
-// mdDiagramKicker is the label over a drawn diagram, as 05-plan has it: "MERMAID · FLOWCHART".
-func mdDiagramKicker(l *diagram.Layout) string {
-	return "MERMAID · " + strings.ToUpper(l.Kind)
-}
-
-// mdDiagram draws a laid-out diagram centred in width and scaled down to fit it, zoomable in the document's lightbox
-// group.
-func mdDiagram(c *ui.Ctx, key any, l *diagram.Layout, width float32, o mdOpts) {
-	th := c.Theme()
-	pal := diagram.ThemePalette(th)
-	v := widget.Vector{Size: l.Size, Fill: th.C(theme.BgSurface), Draw: func(f render.Frame, r render.Rect) { l.Draw(f, r, pal) }}
-	for _, tr := range l.Truncated {
-		v.Tips = append(v.Tips, widget.VectorTip{Rect: tr.Rect, Text: tr.Text})
-	}
-	c.Column(key, ui.Style{W: ui.Px(width), Cross: ui.Center}, func(c *ui.Ctx) {
-		widget.VectorImage(c, "d", v, min(l.Size.X, width), widget.ImageOpts{Label: mdDiagramLabel(l), Help: o.Help, Zoom: true, Group: o.Group})
-	})
-}
-
 // mdDiagramBox is mdDiagram in a fence's box: a document's, with the kicker over it, or the compact one threads and
 // tickets draw. It returns false for a fence it doesn't draw.
 func mdDiagramBox(c *ui.Ctx, key any, b mdBlock, width float32, o mdOpts, doc bool) bool {
@@ -119,13 +52,13 @@ func mdDiagramBox(c *ui.Ctx, key any, b mdBlock, width float32, o mdOpts, doc bo
 	th := c.Theme()
 	if !doc {
 		c.Column(key, ui.Style{W: ui.Px(width), Pad: ui.Pad(8), Radius: 4, Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
-			mdDiagram(c, "d", l, width-16, o)
+			kit.Diagram(c, "d", l, width-16, o)
 		})
 		return true
 	}
 	c.Column(key, ui.Style{W: ui.Px(width), Pad: ui.Pad(14), Gap: 12, Radius: 6, Stroke: th.C(tMdCodeBorder), Border: 1, Fill: th.C(theme.BgSurface)}, func(c *ui.Ctx) {
-		c.Text("lang", mdDiagramKicker(l), kit.KickerFont(th.C(theme.FgFaint)))
-		mdDiagram(c, "d", l, width-28, o)
+		c.Text("lang", kit.DiagramKicker(l), kit.KickerFont(th.C(theme.FgFaint)))
+		kit.Diagram(c, "d", l, width-28, o)
 	})
 	return true
 }

@@ -18,6 +18,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/settingsfile"
@@ -711,7 +712,7 @@ func (s *Plugin) edit(path string, undo bool, fn func(doc *toml.Document) error)
 	if undo {
 		s.undo = append(s.undo, settingsUndo{path: path, src: src, had: had})
 	}
-	return out, os.WriteFile(path, out, 0o644)
+	return out, atomicfile.Write(path, out, 0o644) // a crash, or a read, mid-write never finds the settings empty
 }
 
 func (s *Plugin) undoLast() error {
@@ -723,7 +724,7 @@ func (s *Plugin) undoLast() error {
 	s.undo = s.undo[:n-1]
 	var err error
 	if u.had {
-		err = os.WriteFile(u.path, u.src, 0o644)
+		err = atomicfile.Write(u.path, u.src, 0o644)
 	} else {
 		err = os.Remove(u.path)
 	}

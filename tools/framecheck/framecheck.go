@@ -30,6 +30,8 @@ var io = map[string][]string{
 	"net":           {"Dial", "DialTimeout", "Listen", "ListenPacket", "LookupHost", "LookupIP", "LookupAddr", "LookupCNAME"},
 	"path/filepath": {"Walk", "WalkDir", "Glob", "EvalSymlinks", "Abs"},
 	"io/ioutil":     nil,
+	// atomicfile.Write is os.WriteFile written so a crash never leaves the file empty: the same I/O.
+	"github.com/liamg/oriel/internal/atomicfile": {"Write"},
 }
 
 // Hit is I/O reachable from a frame: the call, and the chain of functions from the frame's code to it.
