@@ -529,8 +529,8 @@ func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws host.W
 	wsRow(c, x.h, "built", "State", built, false)
 	x.actions(c, s, st, ws)
 	if strings.Contains(ws.ImageFrom, ".oriel/") {
-		widget.Wrap(c, "branch", "Oriel builds a repo's Dockerfile from its default branch, never from a session's: a change the agent makes here "+
-			"takes effect once it's merged.", 620, kit.UIFont(12, th.C(theme.FgFaint)))
+		widget.Wrap(c, "branch", "Oriel reads a repo's Dockerfile from the repo's own checkout, committed or not, else from its default branch; "+
+			"never from a session's worktree. With no FROM, it's built on the base image.", 620, kit.UIFont(12, th.C(theme.FgFaint)))
 	}
 	if ws.Dockerfile == "" {
 		widget.Wrap(c, "named", "This image is named in your settings: Oriel runs it as it is and doesn't build it.", 620, kit.UIFont(12, th.C(theme.FgFaint)))
