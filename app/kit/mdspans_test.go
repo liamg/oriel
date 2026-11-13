@@ -116,3 +116,22 @@ func TestMDSpansReadEmphasisAsTheSpecDoes(t *testing.T) {
 	}
 	t.Logf("%d of the spec's examples", n)
 }
+
+// A GitHub emoji code reads as its emoji, as GitHub draws it, everywhere but code; one GitHub draws as a picture of its
+// own (:shipit:) and a name that's no emoji's stay as written.
+//
+// ref:   github-docs/basic-writing-and-formatting-syntax.md#Using emojis
+// quote: "You can add emoji to your writing by typing `:EMOJICODE:`, a colon followed by the name of the emoji."
+func TestMDSpansReadGitHubEmojiCodes(t *testing.T) {
+	for _, tt := range []struct{ in, want string }{
+		{"@octocat :+1: This PR looks great - it's ready to merge! :shipit:", "[]@octocat 👍 This PR looks great - it's ready to merge! :shipit:"},
+		{":rocket: shipped :tada:", "[]🚀 shipped 🎉"},
+		{"*all :white_check_mark:*", "[i]all ✅"},
+		{"`:rocket:` stays code", "[c]:rocket:[] stays code"},
+		{"at 10:30:00, :nope: and a:rocket:b", "[]at 10:30:00, :nope: and a:rocket:b"},
+	} {
+		if got := fromSpans(kit.MDSpans(tt.in)).String(); got != tt.want {
+			t.Errorf("%q:\n got  %s\n want %s", tt.in, got, tt.want)
+		}
+	}
+}

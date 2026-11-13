@@ -1,6 +1,7 @@
 package kit
 
 import (
+	_ "embed"
 	"regexp"
 	"strings"
 	"unicode"
@@ -105,6 +106,12 @@ func mdTokens(s string) []mdTok {
 					continue
 				}
 			}
+		case c == ':':
+			if name, e, ok := emojiCodeAt(s, i); ok {
+				b.WriteString(e)
+				i += len(name) + 1
+				continue
+			}
 		case c == '*' || c == '_' || c == '~':
 			j := i
 			for j < len(s) && s[j] == c {
@@ -195,6 +202,39 @@ func mdEmphasis(toks []mdTok) {
 			}
 		}
 	}
+}
+
+//go:embed gemoji/shortcodes.txt
+var emojiCodes string // GitHub's emoji codes, "name emoji" a line, sorted (gemoji/SOURCE)
+
+// emojiCodeAt reads a GitHub emoji code, :name:, at s[i], as GitHub writes it as its emoji: one of gemoji's names,
+// not inside a word.
+func emojiCodeAt(s string, i int) (name, emoji string, ok bool) {
+	if i > 0 && mdWordByte(s[i-1]) {
+		return "", "", false
+	}
+	j := i + 1
+	for j < len(s) && (mdWordByte(s[j]) || s[j] == '_' || s[j] == '+' || s[j] == '-') {
+		j++
+	}
+	if j == i+1 || j >= len(s) || s[j] != ':' || j+1 < len(s) && mdWordByte(s[j+1]) {
+		return "", "", false
+	}
+	name = s[i+1 : j]
+	at := len(name) + 1 // past "name " on the first line
+	if !strings.HasPrefix(emojiCodes, name+" ") {
+		k := strings.Index(emojiCodes, "\n"+name+" ")
+		if k < 0 {
+			return "", "", false
+		}
+		at += k + 1
+	}
+	emoji, _, _ = strings.Cut(emojiCodes[at:], "\n")
+	return name, emoji, true
+}
+
+func mdWordByte(b byte) bool {
+	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9'
 }
 
 // mdSpace is Unicode whitespace as CommonMark has it: Zs, tab, newline, form feed, carriage return.

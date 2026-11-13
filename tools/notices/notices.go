@@ -59,6 +59,8 @@ func Parts(root, goroot string) ([]Part, error) {
 	parts = append(parts, grammars...)
 	parts = append(parts, Part{Name: "nvim-treesitter queries", Licence: "Apache-2.0", Source: source(root, "syntax/queries/SOURCE"),
 		Texts: []string{"syntax/queries/LICENSE"}})
+	parts = append(parts, Part{Name: "gemoji (GitHub's emoji codes)", Licence: "MIT", Source: source(root, "app/kit/gemoji/SOURCE"),
+		Texts: []string{"app/kit/gemoji/LICENSE"}})
 	fonts, err := fonts(root)
 	if err != nil {
 		return nil, err

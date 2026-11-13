@@ -695,3 +695,17 @@ func TestReviewsRowMenuStartsInBackground(t *testing.T) {
 	s.ClickText("Start review")
 	s.Until("the launcher", func() bool { return s.Find("New session") != nil })
 }
+
+// A comment's GitHub emoji codes read as their emoji, as GitHub shows them.
+//
+// ref:   github-docs/basic-writing-and-formatting-syntax.md#Using emojis
+// quote: "You can add emoji to your writing by typing `:EMOJICODE:`, a colon followed by the name of the emoji."
+func TestReviewsPageShowsEmojiCodes(t *testing.T) {
+	s, _, hub, prs := reviewScene(t)
+	hub.AddIssueComment("acme/api", prs["ratelimit"].Number, gh.IssueComment{User: "mkhan", Body: ":+1: Ready for a look :rocket:"})
+	s.Run("reviews.open", nil)
+	s.Until("the comment", func() bool { return strings.Contains(s.Text(), "Ready for a look") })
+	if !strings.Contains(s.Text(), "👍 Ready for a look 🚀") {
+		t.Errorf("the comment reads:\n%s", s.Text())
+	}
+}

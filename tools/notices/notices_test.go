@@ -43,6 +43,8 @@ func tree(t *testing.T) (root, goroot string) {
 	write(t, root, "syntax/grammars/licenses/g_tree-sitter-hcl.txt", "apache\n")
 	write(t, root, "syntax/queries/LICENSE", "apache\n")
 	write(t, root, "syntax/queries/SOURCE", "source: https://github.com/nvim-treesitter/nvim-treesitter\ncommit: f00\n")
+	write(t, root, "app/kit/gemoji/LICENSE", "mit gemoji\n")
+	write(t, root, "app/kit/gemoji/SOURCE", "source: https://github.com/github/gemoji\ncommit: f00\n")
 	write(t, root, "render/typeset/fonts/inter/OFL.txt", "ofl inter\n")
 	write(t, root, "render/typeset/fonts/inter/SOURCE", "source: https://example.com/inter.zip\n")
 	write(t, root, "render/typeset/fonts/twemoji/SOURCE", "source: https://example.com/twemoji.ttf\nlicense: Apache-2.0 AND CC-BY-4.0\ntexts: LICENSE.md, CC-BY-4.0.txt\n")
@@ -78,6 +80,7 @@ func TestPartsCoverVendorAndEmbedded(t *testing.T) {
 		"tree-sitter grammar: go":             {"syntax/grammars/licenses/tree-sitter_tree-sitter-go.txt"},
 		"tree-sitter grammar: hcl, terraform": {"syntax/grammars/licenses/g_tree-sitter-hcl.txt"},
 		"nvim-treesitter queries":             {"syntax/queries/LICENSE"},
+		"gemoji (GitHub's emoji codes)":       {"app/kit/gemoji/LICENSE"},
 		"Font: inter":                         {"render/typeset/fonts/inter/OFL.txt"},
 		"Font: twemoji":                       {"render/typeset/fonts/twemoji/LICENSE.md", "render/typeset/fonts/twemoji/CC-BY-4.0.txt"},
 		"Theme: Nord, by Arctic Ice Studio":   {"theme/themes/licenses/nord.txt"},
