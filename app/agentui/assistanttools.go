@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/testrun"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // The assistant's own tools, offered only to it. Reading tools read; the ones that
@@ -570,7 +571,7 @@ func (x *Assistant) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.
 	title := cmp.Or(j.Title, j.Name)
 	last := "never run"
 	if j.LastRun != "" {
-		last = j.LastRun + ", " + kit.Ago(time.Now(), j.at) + " ago"
+		last = j.LastRun + ", " + widget.AgoLabel(time.Now(), j.at) + " ago"
 	}
 	c := registry.Confirmation{Title: "Run a job", Lead: "The assistant wants to run this saved job now, in a fresh workspace:",
 		Rows: []registry.ConfirmRow{{Key: "job", Value: title}, {Key: "last run", Value: last}},
@@ -789,7 +790,7 @@ func (x *Assistant) toolChangedFiles(ctx registry.Ctx, p map[string]any) (any, e
 				continue
 			}
 			if fi, err := os.Stat(abs); err == nil {
-				l.modified, l.Ago = fi.ModTime(), kit.Ago(now, fi.ModTime())
+				l.modified, l.Ago = fi.ModTime(), widget.AgoLabel(now, fi.ModTime())
 			}
 			out = append(out, l)
 		}

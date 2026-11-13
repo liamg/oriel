@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ui/widget"
 )
 
 // Duration is a span to two units at most, the second dropped when it's 0: "<1ms", "4.1ms", "1.2s", "38s",
@@ -111,10 +110,6 @@ func TildePath(p string) string {
 	return p
 }
 
-// Ago is how long before now t was, shortly: 10m, 2h, 3d, 1w. Drawn on its own, it's widget.Ago, with the full time
-// on hover.
-func Ago(now, t time.Time) string { return widget.AgoLabel(now, t) }
-
 // Money is dollars as the pages show them: $412.80, $15.2k.
 func Money(v float64) string {
 	if v >= 10_000 {
@@ -148,8 +143,6 @@ func Count(n int64) string {
 
 // Counted is n of what: "1 session", "64 sessions".
 func Counted(n int, what string) string { return fmt.Sprintf("%d %s", n, Plural(n, what, what+"s")) }
-
-func AgoText(now, t time.Time) string { return widget.AgoLong(now, t) }
 
 // SessionDir is where the window opens for a session: its primary project, or its own directory.
 func SessionDir(se core.SessionState) string {

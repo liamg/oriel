@@ -64,10 +64,10 @@ func rowTipLines(q registry.ReviewRequest, now time.Time) []string {
 		opened = "opened by " + q.Author
 	}
 	if !q.Opened.IsZero() {
-		opened = strings.TrimSpace(cmp.Or(opened, "opened") + " " + kit.AgoText(now, q.Opened))
+		opened = strings.TrimSpace(cmp.Or(opened, "opened") + " " + widget.AgoLong(now, q.Opened))
 	}
 	if !q.Updated.IsZero() {
-		updated = "updated " + kit.AgoText(now, q.Updated)
+		updated = "updated " + widget.AgoLong(now, q.Updated)
 	}
 	add(opened, updated)
 	if q.Head != "" && q.Base != "" {

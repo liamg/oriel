@@ -50,7 +50,7 @@ type decisionOption struct {
 
 // decide is ask a as a decision in session se.
 func (x *Console) decide(th *theme.Resolved, se core.SessionState, a core.Ask) decision {
-	prov := kit.ProviderName(x.h, se.Agent.Provider)
+	prov := registry.ProviderTitle(x.h, se.Agent.Provider)
 	d := decision{why: askWhy(se, a)}
 	label := kit.Label(se)
 	switch a.Kind {

@@ -182,7 +182,7 @@ func EditedAgo(now, t time.Time) string {
 	if d := now.Sub(t); d < time.Minute {
 		return fmt.Sprintf("%ds ago", max(int(d.Seconds()), 0))
 	}
-	return Ago(now, t) + " ago"
+	return widget.AgoLabel(now, t) + " ago"
 }
 
 // MainInput is what a hook matches a tool's input on: a shell's command, an edit's path, else the JSON.
@@ -205,10 +205,7 @@ var (
 	TDiagWarning = theme.Declare("diagnostic.warning", "warn")
 )
 
-// ProviderName is what an agent provider is called, as its plugin registered it (registry.AgentProvider).
-func ProviderName(r registry.Contributions, p string) string { return registry.ProviderTitle(r, p) }
-
-// ProviderNameIn is ProviderName from the registry c is drawn with.
+// ProviderNameIn is what agent provider p is called (registry.ProviderTitle), from the registry c is drawn with.
 func ProviderNameIn(c *ui.Ctx, p string) string {
 	r, _ := ui.Service[registry.Registry](c)
 	return registry.ProviderTitle(r, p)

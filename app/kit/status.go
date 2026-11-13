@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // StatusOrder is the statuses, most urgent first.
@@ -33,7 +34,7 @@ func Why(s core.SessionState, now time.Time) string {
 		}
 		for _, it := range slices.Backward(s.Transcript) {
 			if !it.Time.IsZero() {
-				return "replied " + Ago(now, it.Time)
+				return "replied " + widget.AgoLabel(now, it.Time)
 			}
 		}
 	case core.StatusWorking:

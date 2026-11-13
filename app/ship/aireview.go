@@ -366,7 +366,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 			case !inSession:
 				note = "AI review runs in a session: this repo isn't one's."
 			case reviewed && last.Running:
-				note = kit.ProviderName(x.h, last.Provider) + " is reviewing the change…"
+				note = registry.ProviderTitle(x.h, last.Provider) + " is reviewing the change…"
 			case !reviewed:
 				note = "No AI review yet. Review changes asks an agent to read this change."
 			case last.Error != "":
@@ -390,7 +390,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				what := "the session's agent"
 				if v, _, _ := x.h.Options().Get("review.ai.provider", registry.At{}); v != "auto" && v != nil {
-					what = kit.ProviderName(x.h, fmt.Sprint(v))
+					what = registry.ProviderTitle(x.h, fmt.Sprint(v))
 				}
 				c.Text("what", what, kit.MonoFont(10, th.C(theme.FgGhost)))
 			})

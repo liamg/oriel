@@ -243,7 +243,7 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 			continue
 		}
 		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out", Time: time.Now(),
-			Text: kit.ProviderName(x.h, l.Provider) + " needs you to log in: " + l.Detail + "."}
+			Text: registry.ProviderTitle(x.h, l.Provider) + " needs you to log in: " + l.Detail + "."}
 		switch {
 		case l.Browser:
 			n.Text += " Log in opens its sign-in in your browser."

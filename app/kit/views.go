@@ -145,7 +145,7 @@ func Stat(c *ui.Ctx, key, name, value string, tone render.Color) {
 // StatAgo is a Stat whose value is how long ago at was, then suffix.
 func StatAgo(c *ui.Ctx, key, name string, at time.Time, suffix string, tone render.Color) {
 	th := c.Theme()
-	c.Row(key, ui.Style{W: ui.Flex(1), Cross: ui.Center, Role: ui.RoleText, Label: name + " " + Ago(c.Now(), at) + suffix}, func(c *ui.Ctx) {
+	c.Row(key, ui.Style{W: ui.Flex(1), Cross: ui.Center, Role: ui.RoleText, Label: name + " " + widget.AgoLabel(c.Now(), at) + suffix}, func(c *ui.Ctx) {
 		c.Text("n", name, MonoFont(11.5, th.C(theme.FgMuted)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		widget.Ago(c, "v", at, widget.AgoOpts{Text: MonoFont(11.5, tone), Suffix: suffix})

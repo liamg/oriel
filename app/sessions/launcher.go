@@ -386,7 +386,7 @@ func (x *Launcher) continuing(c *ui.Ctx, se core.Session) {
 	a := se.Snapshot().Agent
 	on := "no agent"
 	if a.Provider != "" {
-		on = kit.ProviderName(x.h, a.Provider)
+		on = registry.ProviderTitle(x.h, a.Provider)
 		if a.Model != "" {
 			on += " · " + a.Model
 		}
@@ -686,7 +686,7 @@ func (x *Launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 	if on {
 		fill, line = th.C(tLaunchCardOn), th.C(tLaunchLineOn)
 	}
-	name := kit.ProviderName(x.h, p.ID)
+	name := registry.ProviderTitle(x.h, p.ID)
 	in := widget.Clickable(c, "provider."+p.ID, ui.Style{Dir: ui.Column, W: ui.Flex(1), Pad: ui.Pad(12), Gap: 10, Fill: fill, Stroke: line, Border: 1, Radius: 8,
 		NoHover: true, Label: name, Selected: on, Help: "agent/launcher#agent"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -844,7 +844,7 @@ func (x *Launcher) preflight() [][2]string {
 	agent := "none"
 	switch {
 	case x.provider != "":
-		agent = strings.TrimSpace(kit.ProviderName(x.h, x.provider) + " " + x.model)
+		agent = strings.TrimSpace(registry.ProviderTitle(x.h, x.provider) + " " + x.model)
 	case !x.noAgent && x.providersState().Loading():
 		agent = "waiting on the probe"
 	case !x.noAgent:

@@ -76,7 +76,9 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "permissions.tool", Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
-				return x.change(id, func(w host.SandboxCalls) error { return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action"))) })
+				return x.change(id, func(w host.SandboxCalls) error {
+					return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action")))
+				})
 			}},
 		{ID: "permissions.net", Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
 			Run: func(_ registry.Ctx, a registry.Args) error {

@@ -96,7 +96,7 @@ func AgoFine(now, t time.Time) string {
 	if d := now.Sub(t); d >= time.Second && d < time.Minute {
 		return fmt.Sprintf("%ds ago", int(d.Seconds()))
 	}
-	return AgoText(now, t)
+	return widget.AgoLong(now, t)
 }
 
 // ChecksSummary is a PR's checks in a line: all passed, how many fail, how many run, or none.

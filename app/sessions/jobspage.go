@@ -283,7 +283,7 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 		}
 		dot := func(k string) { c.Text(k, "·", kit.MonoFont(11, th.C(theme.FgGhost))) }
 		dot("d1")
-		agent := strings.TrimSpace(strings.ToLower(kit.ProviderName(x.h, j.Provider)) + " " + j.Model + " " + j.Effort)
+		agent := strings.TrimSpace(strings.ToLower(registry.ProviderTitle(x.h, j.Provider)) + " " + j.Model + " " + j.Effort)
 		if j.Provider == "" {
 			agent = "the first agent installed"
 		}

@@ -518,7 +518,7 @@ func (x *Plan) header(c *ui.Ctx, se core.SessionState, st *planState, d planDoc,
 		c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		var who []string
 		if se.Agent.Provider != "" {
-			who = append(who, strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)))
+			who = append(who, strings.ToLower(registry.ProviderTitle(x.h, se.Agent.Provider)))
 		}
 		if se.Agent.Model != "" {
 			who = append(who, se.Agent.Model)

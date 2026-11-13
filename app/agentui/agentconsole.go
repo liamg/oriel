@@ -261,7 +261,7 @@ type consoleView struct{ x *Console }
 
 func (v consoleView) Title(string) string {
 	if se, ok := v.x.front(); ok && se.Agent.Provider != "" {
-		return "Agent · " + kit.ProviderName(v.x.h, se.Agent.Provider)
+		return "Agent · " + registry.ProviderTitle(v.x.h, se.Agent.Provider)
 	}
 	return "Agent"
 }
@@ -472,10 +472,10 @@ func (x *Console) hasTerminal(id core.SessionID) bool {
 func (x *Console) rawTerminal(ctx registry.Ctx, id core.SessionID, typed string) error {
 	if se, ok := x.h.Session(id); ok {
 		if !x.hasTerminal(id) {
-			return fmt.Errorf("%s has no terminal of its own", kit.ProviderName(x.h, se.Snapshot().Agent.Provider))
+			return fmt.Errorf("%s has no terminal of its own", registry.ProviderTitle(x.h, se.Snapshot().Agent.Provider))
 		}
 		if a := se.Snapshot().Agent; a.Starting != nil {
-			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", kit.ProviderName(x.h, a.Provider), a.Starting.Step)
+			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", registry.ProviderTitle(x.h, a.Provider), a.Starting.Step)
 		}
 	}
 	c, err := x.client(id)
@@ -552,7 +552,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	a := se.Agent
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(16, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		name := kit.ProviderName(x.h, a.Provider)
+		name := registry.ProviderTitle(x.h, a.Provider)
 		c.Box("badge", ui.Style{W: ui.Px(22), H: ui.Px(22), Radius: 5, Fill: th.C(theme.BgOverlay), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", strings.ToUpper(name[:min(2, len(name))]), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold},
 				Color: th.C(theme.Fg)})

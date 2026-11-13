@@ -610,7 +610,7 @@ func (x *Ship) gates() {
 			note = strings.Join(f[:2], " ")
 		}
 		if !last.Ended.IsZero() {
-			note += " " + kit.AgoText(x.Clock(), last.Ended)
+			note += " " + widget.AgoLong(x.Clock(), last.Ended)
 		}
 		if !last.OK {
 			return registry.Gate{State: registry.GateFail, Note: note}

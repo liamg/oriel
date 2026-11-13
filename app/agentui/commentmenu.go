@@ -54,7 +54,7 @@ func runOrSay(h plugin.Host, cmd string, a registry.Args) {
 
 func cmTitle(h plugin.Host, cm core.Comment) string {
 	if cm.Author == core.AuthorAgent {
-		return kit.ProviderName(h, cm.Name)
+		return registry.ProviderTitle(h, cm.Name)
 	}
 	if cm.Name != "" {
 		return cm.Name

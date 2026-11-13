@@ -460,7 +460,7 @@ func (x *Perf) watches(c *ui.Ctx, s perfSnap, width float32) {
 		}
 		last := "—"
 		if !w.LastRead.IsZero() {
-			last = kit.AgoText(time.Now(), w.LastRead)
+			last = widget.AgoLong(time.Now(), w.LastRead)
 		}
 		if w.Err != nil {
 			last = "failed: " + w.Err.Error()

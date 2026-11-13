@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -56,7 +57,7 @@ func (x *Plugin) sessionUsage(us []core.ProviderUsage) (core.ProviderUsage, bool
 func (x *Plugin) unread(c *ui.Ctx, u core.ProviderUsage) {
 	th := c.Theme()
 	st := x.h.State()
-	name := kit.ProviderName(x.h, u.Provider)
+	name := registry.ProviderTitle(x.h, u.Provider)
 	c.Column("unread", ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: name}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			providerMark(c, u.Provider)

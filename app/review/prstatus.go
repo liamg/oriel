@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // prStatus is what a pull request's status boxes show: its detail once read, and the fields only its page knows.
@@ -131,7 +132,7 @@ func prActivity(c *ui.Ctx, r registry.Registry, events []registry.PREvent, width
 						Color: th.C(theme.Fg)})
 					c.Row("verb", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("v", verb, kit.UIFont(12.5, th.C(theme.FgMuted))) })
 					if !e.At.IsZero() {
-						c.Text("at", kit.AgoText(c.Now(), e.At), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+						c.Text("at", widget.AgoLong(c.Now(), e.At), kit.MonoFont(10.5, th.C(theme.FgFaint)))
 					}
 				})
 				if body := activityBody(e); body != "" || len(e.Reactions) > 0 {

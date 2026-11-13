@@ -567,7 +567,7 @@ func (x *Requests) threadsSource() uireg.PickerSource {
 			now := time.Now()
 			for _, t := range x.visible(se, &requestsState{}) {
 				g := kit.GroupOf(t)
-				it := uireg.PickerItem{ID: string(t.ID), Label: t.Heading(), Detail: threadPlace(t), Note: kit.Ago(now, t.Updated),
+				it := uireg.PickerItem{ID: string(t.ID), Label: t.Heading(), Detail: threadPlace(t), Note: widget.AgoLabel(now, t.Updated),
 					IconStyle: groupTokens[g].Name(), Data: t}
 				if g == kit.GroupNeedsYou {
 					it.Boost = 30
@@ -595,9 +595,9 @@ func statusLabel(r registry.Contributions, se core.SessionState, t core.Thread) 
 	switch g := kit.GroupOf(t); g {
 	case kit.GroupWorking:
 		if !t.Active {
-			return kit.ProviderName(r, se.Agent.Provider) + " · has it", tQueued // handed it with others, not on it yet
+			return registry.ProviderTitle(r, se.Agent.Provider) + " · has it", tQueued // handed it with others, not on it yet
 		}
-		return kit.ProviderName(r, se.Agent.Provider) + " · working", theme.StatusWorking
+		return registry.ProviderTitle(r, se.Agent.Provider) + " · working", theme.StatusWorking
 	case kit.GroupNeedsYou:
 		return "needs you", theme.StatusNeedsYou
 	case kit.GroupResolved:
@@ -634,7 +634,7 @@ func preview(r registry.Contributions, se core.SessionState, t core.Thread) stri
 	case c.Author == core.AuthorYou && !c.Delivered && se.Agent.Working:
 		return "queued · sends when the current turn ends"
 	case c.Author == core.AuthorAgent:
-		return kit.ProviderName(r, cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
+		return registry.ProviderTitle(r, cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
 	}
 	return core.Summary(c.Body)
 }

@@ -425,7 +425,7 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 	// row is a label and its value at the right: value, or how long ago at was.
 	row := func(c *ui.Ctx, key any, label, value string, at time.Time, tone render.Color, lead func(c *ui.Ctx)) {
 		if !at.IsZero() {
-			value = kit.Ago(now, at)
+			value = widget.AgoLabel(now, at)
 		}
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: label + " " + value}, func(c *ui.Ctx) {
 			if lead != nil {

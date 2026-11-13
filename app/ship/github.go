@@ -550,7 +550,7 @@ func syncedAgo(now, t time.Time) string {
 	if d := now.Sub(t); d < time.Minute {
 		return fmt.Sprintf("%ds ago", max(int(d.Seconds()), 0))
 	}
-	return kit.Ago(now, t) + " ago"
+	return widget.AgoLabel(now, t) + " ago"
 }
 
 // comment is what goes under a draft reply: ↗ Forward to GitHub, Edit, and the promise; or the draft being edited.
@@ -604,7 +604,7 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Ghost: true, Disabled: busy, Help: "git/github#forward"}) {
 			x.run("github.edit", args)
 		}
-		c.Text("never", kit.ProviderName(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
+		c.Text("never", registry.ProviderTitle(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
 			kit.UIFont(11, th.C(theme.FgFaint)))
 	})
 }

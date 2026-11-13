@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -485,7 +486,7 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 		s, style = bl.Author, "git.blame.other"
 	}
 	if bl.Kind != gitx.NotCommitted {
-		s += " · " + kit.Ago(g.Now(), bl.When) + " ago · " + bl.Summary
+		s += " · " + widget.AgoLabel(g.Now(), bl.When) + " ago · " + bl.Summary
 		ctx.RefreshAt(ctx.Now.Add(time.Minute))
 	}
 	return uireg.Decoration{Kind: uireg.VirtualText, Line: line, Text: s, Style: style, Priority: -1}, true

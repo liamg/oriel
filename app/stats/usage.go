@@ -40,7 +40,7 @@ type reading struct {
 
 // failureText is why a provider's last read got no windows, in words.
 func failureText(r registry.Contributions, f core.UsageFailure) string {
-	name := kit.ProviderName(r, f.Provider)
+	name := registry.ProviderTitle(r, f.Provider)
 	switch {
 	case f.Probe && f.Started:
 		return name + " started but reported no usage"
@@ -227,7 +227,7 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 	th := c.Theme()
 	anchor := c.Next("usage")
 	out := len(x.h.State().SignedOut(u)) > 0
-	stroke, label := th.C(theme.LineStrong), cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))+" usage"
+	stroke, label := th.C(theme.LineStrong), cmp.Or(u.Plan, registry.ProviderTitle(x.h, u.Provider))+" usage"
 	if out {
 		stroke, label = th.C(theme.Error), label+", signed out"
 	}
@@ -279,7 +279,7 @@ func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 		hist := x.usageHistory(u)
 		c.Row(fmt.Sprint("p", i), ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			providerMark(c, u.Provider)
-			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
+			c.Text("n", cmp.Or(u.Plan, registry.ProviderTitle(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			sub := x.accountLabel(u.Account, u.AccountName)
 			if u.Same(front) {
@@ -407,10 +407,10 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 func (x *Plugin) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Time) {
 	th := c.Theme()
 	hist := x.usageHistory(u)
-	c.Column(fmt.Sprint("prov", i), ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))}, func(c *ui.Ctx) {
+	c.Column(fmt.Sprint("prov", i), ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: cmp.Or(u.Plan, registry.ProviderTitle(x.h, u.Provider))}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			providerMark(c, u.Provider)
-			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold},
+			c.Text("n", cmp.Or(u.Plan, registry.ProviderTitle(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			if u.Tier != "" {
 				widget.Chip(c, "tier", u.Tier, th.C(tUsageWeek), "agent/usage#accounts")
@@ -841,7 +841,7 @@ func (x *Plugin) accountSwitch(c *ui.Ctx, cur core.ProviderUsage) {
 	for i, u := range us {
 		label := x.accountTitle(u)
 		if len(u.Windows) == 0 && u.Account == "" {
-			label = kit.ProviderName(x.h, u.Provider)
+			label = registry.ProviderTitle(x.h, u.Provider)
 		}
 		labels = append(labels, strings.ToUpper(label))
 		tiers = append(tiers, u.Tier)

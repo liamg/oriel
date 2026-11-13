@@ -76,7 +76,7 @@ func (x *Plan) openStartWork() error {
 					return p, nil
 				}
 			}
-			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", kit.ProviderName(x.h, id))
+			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", registry.ProviderTitle(x.h, id))
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
 		d.providers.Start()
 	}
@@ -240,7 +240,7 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 		kit.ToggleRow(c, "clear", "Clear the plan's threads", "resolved go · open and deferred go into the prompt", &d.clear, false, startWorkHelp)
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Agent", strings.TrimSpace(kit.ProviderName(x.h, d.provider.ID)+" · model · effort"))
+		kit.Heading(c, "head", "Agent", strings.TrimSpace(registry.ProviderTitle(x.h, d.provider.ID)+" · model · effort"))
 		note := "from the plan docs and the work pack"
 		if !d.fresh {
 			note = "keeps the plan's conversation"
