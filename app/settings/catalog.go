@@ -180,12 +180,12 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.InboxSource{Name: "plugins", Cards: x.cards, Source: "builtin:catalog"}))
 	x.pageCommands(h)
 	cancel := h.Options().Watch(PluginsOption, x.kick)
-	x.Add(registry.DisposeFunc(cancel))
+	x.Add(cancel)
 	for _, o := range []string{"registry.sources", "registry.keys"} {
-		x.Add(registry.DisposeFunc(h.Options().Watch(o, func() { x.work.Go(x.refresh) })))
+		x.Add(h.Options().Watch(o, func() { x.work.Go(x.refresh) }))
 	}
 	for _, o := range []string{"registry.updates", "registry.trusted_hold"} {
-		x.Add(registry.DisposeFunc(h.Options().Watch(o, x.kick)))
+		x.Add(h.Options().Watch(o, x.kick))
 	}
 	x.work.Loop(func(ctx context.Context) {
 		t := kit.NewTicker(kit.PollsOf(x.h), registryEvery)
@@ -217,7 +217,7 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 	x.readBundled()
 	listed := func(id string) bool { return x.listed()[id] }
 	x.syncBundled(listed)
-	x.Add(registry.DisposeFunc(h.Options().Watch(BundledDisabledOption, func() { x.syncBundled(listed) })))
+	x.Add(h.Options().Watch(BundledDisabledOption, func() { x.syncBundled(listed) }))
 	// A project's own plugins run while the window is on it: they start and stop as it comes and goes.
 	x.Add(kit.OnDirChanged(h, "the project's own plugins", func(kit.DirChanged) {
 		x.syncBundled(listed)

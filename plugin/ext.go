@@ -46,7 +46,7 @@ type Host interface {
 	Apply(ev core.Event) error
 	// Subscribe calls fn with every event the filter matches, from whichever goroutine applied it; Do gets back
 	// to the loop. cancel stops it.
-	Subscribe(f core.Filter, fn func(core.Event)) (cancel func())
+	Subscribe(f core.Filter, fn func(core.Event)) registry.Disposable
 	// Here is where the user is, for reading options: the session in front, the project, and the focused editor's
 	// buffer and window.
 	Here() registry.At
@@ -63,7 +63,7 @@ type Host interface {
 	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
 	// ProvideUI gives the window's widgets a service of type t (ui.ProvideType), as ProvideUI[T] does; a later one
 	// of a type shadows it until removed. Call it on the loop.
-	ProvideUI(t reflect.Type, v any) (remove func())
+	ProvideUI(t reflect.Type, v any) registry.Disposable
 	// WindowFocus is whether the window has the OS's focus, and a channel closed when that changes (FocusGained,
 	// FocusLost): for work that slows while the window is behind another app. Safe from any goroutine.
 	WindowFocus() (focused bool, changed <-chan struct{})
@@ -77,7 +77,7 @@ type Host interface {
 	Claim(key string) (release func(), ok bool)
 	// Framed calls fn on the loop after each frame the window draws, until cancelled: for what a view wants only
 	// while it's drawn.
-	Framed(fn func()) (cancel func())
+	Framed(fn func()) registry.Disposable
 	CurrentTheme() *theme.Resolved // the theme the window is drawn in
 	// Load starts p as a plugin of its own, on a host whose source is its id, as a plugin manager does; Dispose
 	// stops it. Call it on the loop.
@@ -119,5 +119,5 @@ type Hint = registry.Hint
 
 // ProvideUI gives h's window's widgets v as their service of type T (ui.Provide): the app's widget.Dictator.
 func ProvideUI[T any](h Host, v T) registry.Disposable {
-	return registry.DisposeFunc(h.ProvideUI(reflect.TypeFor[T](), v))
+	return h.ProvideUI(reflect.TypeFor[T](), v)
 }

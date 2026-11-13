@@ -94,7 +94,7 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 	x.conv.Progress = assistantProgress
 	x.conv.Changed = func() { h.Do(x.changed) }
 	x.setIdle()
-	x.Add(registry.DisposeFunc(h.Options().Watch("assistant.idle", func() { h.Do(x.setIdle) })))
+	x.Add(h.Options().Watch("assistant.idle", func() { h.Do(x.setIdle) }))
 	x.Add(registry.DisposeFunc(x.conv.Close))
 	x.Add(&x.work)
 	x.Add(registry.DisposeFunc(x.places.Wait))

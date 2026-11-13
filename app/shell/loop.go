@@ -70,7 +70,7 @@ func (l *loop) open(poke func()) []func() {
 	l.themeGen = -1
 	var stops []func()
 	for _, opt := range []string{"ui.theme", "ui.variant"} {
-		stops = append(stops, reg.Options().Watch(opt, l.retheme))
+		stops = append(stops, reg.Options().Watch(opt, l.retheme).Dispose)
 	}
 	for _, e := range []registry.EventInfo{
 		{Name: "FocusGained", Doc: "The window came to the front.", Payload: WindowFocus{}, Fired: true},

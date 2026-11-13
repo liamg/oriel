@@ -54,12 +54,12 @@ func (x *Watches) Activate(ctx context.Context, h plugin.Host) error {
 	x.sessions, x.trees, x.named = map[core.SessionID]*watch.Manager{}, map[treeKey]*gitsrc.Tree{}, map[string][]named{}
 	x.app = x.manager("app")
 	x.sync(h.State())
-	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced, core.SessionArchived, core.SessionClosed:
 			x.sync(h.State())
 		}
-	})))
+	}))
 	life := x.Lifetime()
 	x.wg.Go(func() { x.follow(life) })
 	for _, n := range x.builtins() {

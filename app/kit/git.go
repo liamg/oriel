@@ -19,9 +19,11 @@ func GitOf(r registry.Registry) registry.GitTrees {
 // noTrees is a window with no git service: what it's asked to write says so rather than vanish.
 type noTrees struct{ r registry.Registry }
 
-func (noTrees) Tree(string) registry.GitTree              { return noTree{} }
-func (noTrees) Holding(string) registry.GitTree           { return noTree{} }
-func (noTrees) WatchWindow(func(string, []string)) func() { return func() {} }
+func (noTrees) Tree(string) registry.GitTree    { return noTree{} }
+func (noTrees) Holding(string) registry.GitTree { return noTree{} }
+func (noTrees) WatchWindow(func(string, []string)) registry.Disposable {
+	return registry.DisposeFunc(func() {})
+}
 func (t noTrees) Run(func(ctx context.Context) error) {
 	if n, ok := t.r.(interface{ Notify(core.Notice) }); ok {
 		n.Notify(core.Notice{ID: "git.none", Severity: core.SevError, Source: "git", Text: "There's no git service in this window to run that."})

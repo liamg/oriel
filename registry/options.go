@@ -230,9 +230,9 @@ type Options interface {
 	Lookup(name string, l Layer, at At) (any, bool) // the value set at exactly l, if any
 	Spec(name string) (OptionSpec, bool)            // by name or alias
 	Specs() []OptionSpec                            // sorted by name
-	Watch(name string, fn func()) (cancel func())
+	Watch(name string, fn func()) Disposable
 	// Registered calls fn after each option is registered: a key a settings file had waiting may be one now.
-	Registered(fn func()) (cancel func())
+	Registered(fn func()) Disposable
 }
 
 type valueKey struct {
@@ -413,7 +413,7 @@ func (o *options) Specs() []OptionSpec {
 	return out
 }
 
-func (o *options) Watch(name string, fn func()) (cancel func()) {
+func (o *options) Watch(name string, fn func()) Disposable {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if n, ok := o.aliases[name]; ok {
@@ -425,14 +425,14 @@ func (o *options) Watch(name string, fn func()) (cancel func()) {
 	id := o.next
 	o.next++
 	o.watches[name][id] = fn
-	return func() {
+	return DisposeFunc(func() {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 		delete(o.watches[name], id)
-	}
+	})
 }
 
-func (o *options) Registered(fn func()) (cancel func()) {
+func (o *options) Registered(fn func()) Disposable {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.added == nil {
@@ -441,11 +441,11 @@ func (o *options) Registered(fn func()) (cancel func()) {
 	id := o.next
 	o.next++
 	o.added[id] = fn
-	return func() {
+	return DisposeFunc(func() {
 		o.mu.Lock()
 		defer o.mu.Unlock()
 		delete(o.added, id)
-	}
+	})
 }
 
 func (o *options) register(s OptionSpec) (Disposable, error) {

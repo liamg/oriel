@@ -111,7 +111,7 @@ func TestOptionWatchAndDispose(t *testing.T) {
 		seen = append(seen, v)
 	})
 	o.Set("ui.blink", registry.LayerUser, registry.At{}, time.Second)
-	cancel()
+	cancel.Dispose()
 	o.Set("ui.blink", registry.LayerUser, registry.At{}, 2*time.Second)
 	if len(seen) != 1 || seen[0] != time.Second {
 		t.Errorf("watch saw %v", seen)
@@ -232,7 +232,7 @@ func TestOptionFollows(t *testing.T) {
 		Scopes: registry.ScopeUser})
 	o := r.Options()
 	heard := 0
-	defer o.Watch("ui.tooltip.font_size", func() { heard++ })()
+	defer o.Watch("ui.tooltip.font_size", func() { heard++ }).Dispose()
 	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0)
 	if v, l, _ := o.Get("ui.tooltip.font_size", registry.At{}); v != 16.0 || l != registry.LayerDefault {
 		t.Errorf("following ui.font_size at 16: %v from %v", v, l)
@@ -295,7 +295,7 @@ func TestOptionRegistered(t *testing.T) {
 	cancel := r.Options().Registered(func() { heard++ })
 	r.Option(registry.OptionSpec{Name: "a.one", Type: registry.Bool, Default: false, Scopes: registry.ScopeUser})
 	r.Option(registry.OptionSpec{Name: "a.two", Type: registry.Bool, Default: false, Scopes: registry.ScopeUser})
-	cancel()
+	cancel.Dispose()
 	r.Option(registry.OptionSpec{Name: "a.three", Type: registry.Bool, Default: false, Scopes: registry.ScopeUser})
 	if heard != 2 {
 		t.Errorf("heard %d registrations, want 2", heard)

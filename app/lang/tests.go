@@ -107,7 +107,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.HistoryFile, Load: x.loadHistory})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	// The files git sees change are read again, in whichever work tree the window is on.
-	x.Add(registry.DisposeFunc(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
+	x.Add(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
 		ws := x.workspace().Root
 		for _, p := range paths {
 			// One told late, of the tree the window has left, isn't this directory's.
@@ -115,7 +115,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 				x.rescan(p)
 			}
 		}
-	})))
+	}))
 	// A directory's tests stay with it: the window back on one shows them at once, and reads only what changed.
 	x.Add(kit.OnDirChanged(h, "the tests of the directory", func(ev kit.DirChanged) {
 		x.mu.Lock()

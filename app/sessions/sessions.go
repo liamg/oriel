@@ -56,12 +56,12 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.contributeKinds(h)
 	landAtLaunch(h)
-	x.Add(registry.DisposeFunc(keepATabInFront(h)))
+	x.Add(keepATabInFront(h))
 	x.Add(h.Option(registry.OptionSpec{Name: autoNameOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Name a session started from a request, and the request, with a small model (Claude's Haiku). Off, the name is the request's first words."}))
 	x.Add(h.Option(registry.OptionSpec{Name: restartOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Start an open session's agent again, on its conversation, when it exits on its own. One that exits 3 times in 2 minutes stays stopped."}))
-	x.Add(registry.DisposeFunc(h.Options().Watch(restartOption, x.sendRestart)))
+	x.Add(h.Options().Watch(restartOption, x.sendRestart))
 	x.sendRestart()
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
@@ -85,7 +85,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 		Doc: "A comment about to go to an agent; a rewrite changes it, a veto stops it. { session, thread, file, line, body, urgent, btw }"}))
 	working := map[core.SessionID]bool{}
 	var signedOut []core.Login
-	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.MachineChanged:
 			was := signedOut
@@ -110,7 +110,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 				})
 			}
 		}
-	})))
+	}))
 	x.Add(h.Picker(x.addSource(h)))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -379,7 +379,7 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 			default:
 			}
 		})
-		defer stop()
+		defer stop.Dispose()
 		err := plugin.Await(x.ctx, func(ctx registry.Ctx) error {
 			return h.Run(ctx, "session.add-repo", registry.Args{"id": string(id), "repo": repo})
 		})

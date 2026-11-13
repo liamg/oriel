@@ -151,9 +151,9 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range x.contributions() {
 		x.Add(h.Contribute(c))
 	}
-	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, x.seen)))
+	x.Add(h.Subscribe(core.Filter{}, x.seen))
 	x.Add(h.Picker(pagesSource(h)))
-	x.Add(registry.DisposeFunc(h.Framed(x.framed)))
+	x.Add(h.Framed(x.framed))
 	x.Add(registry.DisposeFunc(x.subs.Close))
 	return nil
 }

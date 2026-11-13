@@ -97,7 +97,7 @@ func (x *Voice) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(registry.DisposeFunc(x.whisper.OnChange(func() { h.Do(x.refresh) })))
 	for _, name := range []string{"voice.dictation", "voice.model", "voice.url"} {
-		x.Add(registry.DisposeFunc(h.Options().Watch(name, func() { h.Do(x.settle) })))
+		x.Add(h.Options().Watch(name, func() { h.Do(x.settle) }))
 	}
 	x.settle()
 	x.Add(registry.DisposeFunc(func() {

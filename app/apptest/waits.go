@@ -101,8 +101,8 @@ func (w *Window) look() (busy []string, built <-chan struct{}) {
 	w.Do(func() error {
 		busy = append(registry.BusyNow(w.Host), dueSources(w.Host, w.Store.State())...)
 		var once sync.Once
-		var cancel func()
-		cancel = w.Host.Framed(func() { once.Do(func() { cancel(); close(done) }) })
+		var cancel registry.Disposable
+		cancel = w.Host.Framed(func() { once.Do(func() { cancel.Dispose(); close(done) }) })
 		return nil
 	})
 	return busy, done

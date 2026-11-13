@@ -177,7 +177,7 @@ type GitTrees interface {
 	// WatchWindow calls fn with the window's work tree's root and the paths its status saw change, for whichever
 	// directory the window is on: it carries on as the window moves, calling fn once with no paths when it's on
 	// another tree (root "" outside a repo). fn is called off the loop, one call at a time, in order. Cancel stops it.
-	WatchWindow(fn func(root string, paths []string)) (cancel func())
+	WatchWindow(fn func(root string, paths []string)) Disposable
 	// Scope is what the window's git views show: the Explorer's scope, Changed (the branch against its base),
 	// Uncommitted (what isn't committed) or All. What marks changes elsewhere (the editor's gutter) follows it.
 	Scope() gitx.Scope

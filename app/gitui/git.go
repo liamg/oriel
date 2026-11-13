@@ -96,7 +96,7 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 		g.Add(h.Command(c))
 	}
 	g.activateCommit(h)
-	g.Add(registry.DisposeFunc(h.Framed(g.framed)))
+	g.Add(h.Framed(g.framed))
 	return nil
 }
 
@@ -658,8 +658,8 @@ func (s gitTrees) Holding(p string) registry.GitTree      { return s.g.holding(p
 func (s gitTrees) Run(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
 func (s gitTrees) Reload()                                { s.g.reload() }
 func (s gitTrees) Busy() bool                             { return s.g.running.Load() > 0 || s.g.reading() }
-func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {
-	return s.g.watchWindow(fn)
+func (s gitTrees) WatchWindow(fn func(root string, paths []string)) registry.Disposable {
+	return registry.DisposeFunc(s.g.watchWindow(fn))
 }
 
 // state is the last status read, nil outside a repo or before the first.

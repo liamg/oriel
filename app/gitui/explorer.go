@@ -208,11 +208,11 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	}
 	e.watchScratch()
 	e.Add(h.View(kit.ExplorerView, explorerView{e}))
-	e.Add(registry.DisposeFunc(kit.GitOf(h).WatchWindow(func(string, []string) {
+	e.Add(kit.GitOf(h).WatchWindow(func(string, []string) {
 		e.hunks.mu.Lock()
 		e.hunks.loaded = false
 		e.hunks.mu.Unlock()
-	})))
+	}))
 	e.Add(kit.OnDirChanged(h, "the explorer's selection is of its directory", func(kit.DirChanged) {
 		e.selected, e.work, e.rows.key = "", nil, explorerRowsKey{}
 	}))

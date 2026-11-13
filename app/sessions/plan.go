@@ -86,11 +86,11 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.Contribute(uireg.RailEntry{Name: "plan-docs", Icon: "doc", Title: "Plan docs", Command: "view.toggle", Args: planDocsArgs(),
 		Order: 45, Shown: func(string) bool { se, ok := x.front(); return ok && se.Planning() }}))
-	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if _, ok := ev.(core.SessionFocused); ok {
 			h.Do(x.openIfPlanning)
 		}
-	})))
+	}))
 	h.Do(x.openIfPlanning)
 	// Once the window is on a planning session's directory, after its layout comes back.
 	x.Add(kit.OnDirChanged(h, "opens the plan of a planning session the window moves onto", func(kit.DirChanged) { h.Do(x.openIfPlanning) }))

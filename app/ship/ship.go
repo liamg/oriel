@@ -127,7 +127,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.commands()
 	x.views()
 	x.budget.PerHour = prBudget
-	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.SessionFocused, core.TabOpened, core.TabClosed, core.SessionOpened, core.SessionArchived, core.SessionClosed:
 			for _, id := range x.follow() {
@@ -145,7 +145,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 		case core.DraftSaved:
 			x.readSoon(ev.Session, ev.Project, false)
 		}
-	})))
+	}))
 	x.follow()
 	return nil
 }

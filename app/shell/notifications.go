@@ -77,7 +77,7 @@ func (n *notices) Manifest() plugin.Manifest { return plugin.Manifest{ID: "notic
 func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.h, n.hovered = h, map[uint64]time.Time{}
 	n.panel = newLogPanel(n.sh, h)
-	n.Add(registry.DisposeFunc(h.Framed(n.panel.shown.Framed)))
+	n.Add(h.Framed(n.panel.shown.Framed))
 	n.Add(registry.DisposeFunc(n.panel.shown.Drop))
 	n.Add(registry.DisposeFunc(n.writes.Wait))
 	n.Add(h.Contribute(registry.Busy{Name: "notices", Busy: n.writes.Busy, Source: "builtin:notices"}))

@@ -251,7 +251,7 @@ func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 	o := h.Options()
 	for _, sp := range sandboxOptions(o, h, x.Backends) {
 		x.Add(h.Option(sp))
-		x.Add(registry.DisposeFunc(o.Watch(sp.Name, x.send)))
+		x.Add(o.Watch(sp.Name, x.send))
 	}
 	x.Add(registry.DisposeFunc(x.sends.Stop))
 	x.Add(h.Contribute(registry.Busy{Name: "sandbox.settings", Busy: x.sends.Busy, Source: "builtin:sandbox.settings"}))

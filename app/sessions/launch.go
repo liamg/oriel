@@ -60,7 +60,7 @@ func landAtLaunch(h plugin.Host) {
 
 // keepATabInFront brings the first open tab to the front whenever tabs are open and none is: the start view is
 // for when there are none.
-func keepATabInFront(h plugin.Host) (cancel func()) {
+func keepATabInFront(h plugin.Host) registry.Disposable {
 	return h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.TabClosed, core.TabsRestored, core.SessionClosed, core.SessionArchived:

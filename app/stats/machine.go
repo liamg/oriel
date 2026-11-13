@@ -50,13 +50,13 @@ func (x *Machine) Activate(_ context.Context, h plugin.Host) error {
 	if x.Load != nil {
 		x.shown.Want = x.Load.Want
 	}
-	x.Add(registry.DisposeFunc(h.Framed(x.shown.Framed)))
+	x.Add(h.Framed(x.shown.Framed))
 	x.Add(registry.DisposeFunc(x.shown.Drop))
-	x.Add(registry.DisposeFunc(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.MachineChanged); ok {
 			x.sampled(ev.Machine)
 		}
-	})))
+	}))
 	x.Add(h.Contribute(uireg.Indicator{Name: "machine", Slot: uireg.SlotHUD, Order: 20, Title: "This machine", Help: kit.HUDHelp + "#machine",
 		Note:  func() string { return fmt.Sprintf("%dm", int(loadSpan.Minutes())) },
 		Build: func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: "machine", Fn: x.panel}, nil }}))

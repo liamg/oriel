@@ -36,8 +36,8 @@ func (sh *shell) host(source string) *pluginHost {
 
 func (h *pluginHost) Layout() *layout.Root { return h.sh.layout.root }
 
-func (h *pluginHost) Subscribe(f core.Filter, fn func(core.Event)) func() {
-	return h.store.Subscribe(f, fn)
+func (h *pluginHost) Subscribe(f core.Filter, fn func(core.Event)) registry.Disposable {
+	return registry.DisposeFunc(h.store.Subscribe(f, fn))
 }
 func (h *pluginHost) Redraw() { h.sh.poke() }
 
@@ -176,7 +176,9 @@ func (h *pluginHost) Log() *slog.Logger                              { return h.
 func (h *pluginHost) State() core.State                              { return h.store.State() }
 func (h *pluginHost) Apply(ev core.Event) error                      { return h.store.Apply(ev) }
 func (h *pluginHost) WindowFocus() (bool, <-chan struct{})           { return h.sh.focus.now() }
-func (h *pluginHost) Framed(fn func()) func()                        { return h.sh.framed.On(fn) }
+func (h *pluginHost) Framed(fn func()) registry.Disposable {
+	return registry.DisposeFunc(h.sh.framed.On(fn))
+}
 
 func (h *pluginHost) KeyModes() []string {
 	if h.sh.modes == nil {
