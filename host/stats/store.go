@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/agent/price"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // cacheVersion changes with the shape of a scan: a stats file from another is dropped and the logs read again.
@@ -144,8 +145,5 @@ func (s *Store) save() {
 	if os.MkdirAll(filepath.Dir(s.file), 0o755) != nil {
 		return
 	}
-	tmp := s.file + ".tmp"
-	if os.WriteFile(tmp, b, 0o644) == nil {
-		_ = os.Rename(tmp, s.file)
-	}
+	_ = atomicfile.Write(s.file, b, 0o644)
 }

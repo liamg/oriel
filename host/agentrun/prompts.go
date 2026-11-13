@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // promptsPath is where the host keeps the prompts the app last sent, for sessions that start while no app is
@@ -49,11 +50,7 @@ func (x *Runner) SetPrompts(o prompts.Overrides) error {
 	if err != nil {
 		return err
 	}
-	tmp := x.promptsPath() + ".tmp"
-	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, x.promptsPath()); err != nil {
+	if err := atomicfile.Write(x.promptsPath(), append(b, '\n'), 0o600); err != nil {
 		return err
 	}
 	x.mu.Lock()

@@ -12,11 +12,17 @@ import (
 // Write puts data in name's place at once: written beside it, synced, then renamed over it, so a reader (or the
 // next start, after a crash) finds the old file or the new one, never an empty or half-written one. A symlink stays
 // one: its target is what's replaced. A file already there keeps its permissions; perm is a new one's.
-func Write(name string, data []byte, perm fs.FileMode) error {
+func Write(name string, data []byte, perm fs.FileMode) error { return write(name, data, perm, true) }
+
+// WriteSecret is Write for what only the user may read (tokens, credentials): the file is 0600 afterwards, whatever
+// it was before, and never readable by others while it's written.
+func WriteSecret(name string, data []byte) error { return write(name, data, 0o600, false) }
+
+func write(name string, data []byte, perm fs.FileMode, keepPerm bool) error {
 	if real, err := filepath.EvalSymlinks(name); err == nil {
 		name = real
 	}
-	if fi, err := os.Stat(name); err == nil {
+	if fi, err := os.Stat(name); err == nil && keepPerm {
 		perm = fi.Mode().Perm() // as os.WriteFile leaves a file it overwrites
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(name), "."+filepath.Base(name)+".*")

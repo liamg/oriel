@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // maxArtifact bounds what an update can make this machine write.
@@ -417,11 +419,7 @@ func writeJSON(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return atomicfile.Write(path, b, 0o644)
 }
 
 func readJSON(path string, v any) error {

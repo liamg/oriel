@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -260,11 +261,7 @@ func SyncLogin(root string, l Login) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, want, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return atomicfile.WriteSecret(path, want)
 }
 
 // SyncLogins refreshes the sign-in in every sandbox on this machine.

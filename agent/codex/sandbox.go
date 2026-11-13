@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/toml"
 )
 
@@ -114,11 +115,7 @@ func syncLogin(hostHome, dir string) error {
 	if cur, err := os.ReadFile(path); err == nil && bytes.Equal(cur, out) {
 		return nil
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, out, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return atomicfile.WriteSecret(path, out)
 }
 
 func refreshToken(authJSON []byte) string {

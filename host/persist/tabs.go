@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Strip keeps the window's tab strip as it was left (tabs.json): the sessions' logs bring each tab back, but not their
@@ -60,8 +61,7 @@ func (s *Strip) save(st core.State) {
 	if err != nil {
 		return
 	}
-	tmp := s.path + ".tmp"
-	if os.WriteFile(tmp, b, 0o600) == nil && os.Rename(tmp, s.path) == nil {
+	if atomicfile.Write(s.path, b, 0o600) == nil {
 		s.last = t
 	}
 }

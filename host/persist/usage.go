@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // UsageHistoryReq asks for the plan readings a host has kept: a provider's, or every one, since a time.
@@ -58,10 +59,7 @@ func (s *Stats) pruneUsage(path string) {
 		b, _ := json.Marshal(u)
 		buf.Write(append(b, '\n'))
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, buf.Bytes(), 0o644) == nil {
-		_ = os.Rename(tmp, path)
-	}
+	_ = atomicfile.Write(path, buf.Bytes(), 0o644)
 }
 
 func readUsage(path, provider string, since time.Time) []core.ProviderUsage {

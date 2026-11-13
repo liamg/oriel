@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/internal/fsx"
 	"github.com/liamg/oriel/regex"
 )
@@ -339,20 +340,5 @@ func (f FileEdit) Write(dir string) error {
 	if !bytes.Equal(cur, f.Old) {
 		return fmt.Errorf("%s changed since the search; search again", f.Path)
 	}
-	st, err := os.Stat(p)
-	if err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(p), ".oriel-replace-*")
-	if err != nil {
-		return err
-	}
-	if _, err := tmp.Write(f.New); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
-	}
-	tmp.Close()
-	os.Chmod(tmp.Name(), st.Mode().Perm())
-	return os.Rename(tmp.Name(), p)
+	return atomicfile.Write(p, f.New, 0o644) // a file already there keeps its mode
 }

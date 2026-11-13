@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Jobs are the saved jobs, each a file under the host's jobs/, and their schedules.
@@ -89,11 +90,7 @@ func (x *Jobs) writeJob(j Job) error {
 	if err != nil {
 		return err
 	}
-	tmp := x.jobPath(j.Name) + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, x.jobPath(j.Name))
+	return atomicfile.Write(x.jobPath(j.Name), b, 0o600)
 }
 
 // Jobs is every job, the most recently changed first.

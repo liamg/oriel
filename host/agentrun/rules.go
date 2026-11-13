@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // ForAll is AnswerReq.For's "all sessions": an always that makes a rule every session meets.
@@ -67,12 +68,7 @@ func (r *allRules) edit(fn func([]core.Rule) ([]core.Rule, error)) error {
 	if err := os.MkdirAll(filepath.Dir(r.path), 0o700); err != nil {
 		return err
 	}
-	tmp := r.path + ".tmp"
-	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, r.path); err != nil {
-		_ = os.Remove(tmp)
+	if err := atomicfile.Write(r.path, append(b, '\n'), 0o600); err != nil {
 		return err
 	}
 	r.list = next

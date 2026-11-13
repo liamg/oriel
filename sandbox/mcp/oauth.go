@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // TokenSource supplies bearer tokens to the HTTP transport.
@@ -76,23 +78,7 @@ func (p fileStore) Save(a StoredAuth) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	f, err := os.CreateTemp(dir, ".auth-*")
-	if err != nil {
-		return err
-	}
-	defer func() { _ = os.Remove(f.Name()) }()
-	if err := f.Chmod(0o600); err != nil {
-		_ = f.Close()
-		return err
-	}
-	if _, err := f.Write(b); err != nil {
-		_ = f.Close()
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	return os.Rename(f.Name(), string(p))
+	return atomicfile.WriteSecret(string(p), b)
 }
 
 // OAuth is a TokenSource implementing the MCP authorization spec: discovery,

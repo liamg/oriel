@@ -15,6 +15,7 @@ import (
 
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Every is how often the list is fetched again.
@@ -191,9 +192,5 @@ func (p *Pricing) writeCache(c cache) error {
 	if err := os.MkdirAll(p.env.Home, 0o755); err != nil {
 		return err
 	}
-	tmp := p.file() + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, p.file())
+	return atomicfile.Write(p.file(), data, 0o644)
 }
