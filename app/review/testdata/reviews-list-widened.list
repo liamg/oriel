@@ -5,14 +5,12 @@ effect glow 28.96,20.16 2.8600006x11 blur 4 #ff8a1f4d
 path 6 segments stroke 1.76 #ffd23f
 path 5 segments fill #ff8a1f
 text "ORIEL" @44,29.152 #ece6d8 Space Grotesk 12
-clip 101.9375,0 1332.8375x50 r 0
+clip 101.9375,0 1354.2438x50 r 0
   text "+" @132.03906,33.356 #7c7566 JetBrains Mono 12.1
 pop
-text "INBOX" @1466.775,28.779999 #b3ab99 JetBrains Mono 10.5
-rect 1505.7438,17.5 15.40625x15 fill #b98aff radius 7.5
-text "1" @1510.7438,28.240002 #141006 JetBrains Mono 9
-rect 1539.15,14.5 46.849976x18.54 radius 4 stroke 1 #332f27
-text "⌥ HUD" @1546.15,27.189999 #b3ab99 JetBrains Mono 9.5
+text "INBOX" @1488.1813,28.779999 #b3ab99 JetBrains Mono 10.5
+rect 1539.15,15.07 46.849976x18.54 radius 4 stroke 1 #332f27
+text "⌥ HUD" @1546.15,27.759998 #b3ab99 JetBrains Mono 9.5
 clip 0,50 1600x924 r 0
   text "START" @265,306.41998 #7c7566 JetBrains Mono 9.5
   rect 265,319.27 520x66 fill #1d1a0f radius 10 stroke 1 #ffd23f73
@@ -305,12 +303,3 @@ clip 0,0 1600x974 r 0
   pop
 pop
 rect 939.5,43 2x931 fill #ffd23f
-rect 1144,862.8755 440x101.12451 fill #0c0c0b radius 8 stroke 1 #ffd23f8c
-text "REVIEW REQUESTED" @1158,887.2955 #ffd23f JetBrains Mono 9.5
-text "✕" @1558,887.4395 #7c7566 JetBrains Mono 9.900001
-rect 1158,905.93774 7x7 fill #ffd23f radius 3.5
-text "mkhan asked you to review api#796" @1173,913.98486 #ece6d8 Inter 12.5
-rect 1158,926 176.67188x26 fill #ffd23f radius 6 stroke 1 #ffd23f
-text "Start review in background" @1168,943.36523 #141006 Inter 12
-rect 1342.6719,926 56.859375x26 fill #191815 radius 6 stroke 1 #332f27
-text "Ignore" @1352.6719,943.36523 #ece6d8 Inter 12
