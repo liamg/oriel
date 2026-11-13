@@ -8,13 +8,14 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/agent/price"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // cacheVersion changes with the shape of a scan: a stats file from another is dropped and the logs read again.
-const cacheVersion = 4
+const cacheVersion = 5
 
-// Log is a file a session's agent writes, in a format Read knows.
+// Log is a file a session's agent writes, in a format the store's formats name.
 type Log struct {
 	Path   string `json:"path"`
 	Format string `json:"format"`
@@ -23,8 +24,9 @@ type Log struct {
 // Store keeps every session's scans, and keeps them in a stats file, so a restart reads only what's been written
 // since rather than every log again. A log read at other prices than the book's is read again, if it's still there.
 type Store struct {
-	file   string
-	prices func() *price.Book
+	file    string
+	prices  func() *price.Book
+	formats func(name string) (usage.Format, bool)
 
 	mu       sync.Mutex
 	loaded   bool
@@ -34,9 +36,9 @@ type Store struct {
 }
 
 // NewStore keeps its scans in file ("" keeps them in memory only), priced with the book prices gives (the
-// snapshot's if nil).
-func NewStore(file string, prices func() *price.Book) *Store {
-	return &Store{file: file, prices: prices, scans: map[string]*Scan{}}
+// snapshot's if nil). formats finds how a log in each format is read; a log in one it doesn't know isn't read.
+func NewStore(file string, prices func() *price.Book, formats func(name string) (usage.Format, bool)) *Store {
+	return &Store{file: file, prices: prices, formats: formats, scans: map[string]*Scan{}}
 }
 
 // book is the prices to read with.
@@ -71,10 +73,15 @@ func (s *Store) Scan(session string, logs []Log) []*Scan {
 		k := key(session, l.Path)
 		sc := s.scans[k]
 		fi, err := statLog(l.Path)
+		var f usage.Format
+		if s.formats != nil {
+			f, _ = s.formats(l.Format)
+		}
 		if sc == nil || err == nil && sc.Priced != b.Version() {
-			sc = New(l.Path, l.Format)
+			sc = New(l.Path, f)
 			s.scans[k] = sc
 		}
+		sc.format = f
 		if err == nil && (fi.Size() != sc.Size || sc.Offset == 0) {
 			sc.Prices(b)
 			s.dirty = sc.Read() || s.dirty

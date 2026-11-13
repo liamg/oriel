@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/internal/chaos"
 
 	"github.com/liamg/oriel/agent"
@@ -32,7 +33,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 			}
 		})
 	case agent.TurnStart:
-		h.r.deps.Record(h.snapshot(), stats.Event{At: now, Kind: "turn"})
+		h.r.deps.Record(h.snapshot(), usage.Event{At: now, Kind: "turn"})
 		h.mu.Lock()
 		h.working, h.turnAt, h.runs = true, now, nil // a turn's claims are backed by its own runs
 		h.mu.Unlock()
@@ -49,7 +50,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		h.appendItem(core.Item{ID: id, Kind: kind, Text: ev.Text, Partial: ev.Partial, Agent: ev.Agent, Time: now})
 	case agent.ToolCall:
 		se := h.snapshot()
-		h.r.deps.Record(se, stats.Event{At: now, Kind: "tool", ID: ev.ID, Name: ev.Tool, Input: ev.Input, Agent: ev.Agent, Model: se.Agent.Model,
+		h.r.deps.Record(se, usage.Event{At: now, Kind: "tool", ID: ev.ID, Name: ev.Tool, Input: ev.Input, Agent: ev.Agent, Model: se.Agent.Model,
 			Effort: se.Agent.Effort, Cwd: hostcore.AgentDir(se)})
 		h.mu.Lock()
 		h.calls[ev.ID] = ev
@@ -65,7 +66,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 			h.subagentTool(ev.Agent)
 		}
 	case agent.ToolResult:
-		h.r.deps.Record(h.snapshot(), stats.Event{At: now, Kind: "result", ID: ev.ID, Error: ev.IsError})
+		h.r.deps.Record(h.snapshot(), usage.Event{At: now, Kind: "result", ID: ev.ID, Error: ev.IsError})
 		h.toolResult(ev, now)
 	case agent.Permission:
 		x.env.Go("a permission", func() { h.permission(sess, ev) })
@@ -76,7 +77,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 	case agent.TurnEnd:
 		se := h.snapshot()
 		u := ev.Usage
-		h.r.deps.Record(se, stats.Event{At: now, Kind: "request", Model: se.Agent.Model, Effort: se.Agent.Effort, Window: int64(u.ContextMax),
+		h.r.deps.Record(se, usage.Event{At: now, Kind: "request", Model: se.Agent.Model, Effort: se.Agent.Effort, Window: int64(u.ContextMax),
 			Tokens: stats.Tokens{Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite5m: u.CacheWrite}})
 		if u.Output > 0 {
 			h.mu.Lock()

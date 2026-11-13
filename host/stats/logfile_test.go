@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/liamg/oriel/agent/codex"
 )
 
 // A rollout fixture and the zstd CLI's level-3 compression of it.
@@ -34,13 +36,13 @@ func TestCompressedRollout(t *testing.T) {
 	dir := t.TempDir()
 	plain := filepath.Join(dir, "rollout-2026-10-01T09-00-00-0199a213-81c0-7800-8aa1-bbab2a035a53.jsonl")
 	copyFile(t, plainRollout, plain)
-	want := New(plain, FormatCodex)
+	want := New(plain, codex.UsageLog)
 	if !want.Read() || want.Requests == 0 || want.Cwd != "/work/project" {
 		t.Fatalf("plain rollout: %d requests, cwd %q", want.Requests, want.Cwd)
 	}
 
 	copyFile(t, compressedRollout, plain+".zst")
-	got := New(plain+".zst", FormatCodex)
+	got := New(plain+".zst", codex.UsageLog)
 	if !got.Read() || got.Requests != want.Requests || got.Tokens != want.Tokens || got.ToolCalls != want.ToolCalls || got.Turns != want.Turns {
 		t.Errorf("compressed: %d requests, %+v, %d calls; want %d, %+v, %d", got.Requests, got.Tokens, got.ToolCalls,
 			want.Requests, want.Tokens, want.ToolCalls)
@@ -55,7 +57,7 @@ func TestCompressedRollout(t *testing.T) {
 	if err := os.WriteFile(plain, half, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	s := New(plain, FormatCodex)
+	s := New(plain, codex.UsageLog)
 	s.Read()
 	if s.Requests == 0 || s.Requests >= want.Requests {
 		t.Fatalf("half the rollout: %d requests of %d", s.Requests, want.Requests)
@@ -70,11 +72,11 @@ func TestCompressedRollout(t *testing.T) {
 	}
 
 	// The store reads it by either path.
-	st := NewStore("", nil)
-	if sc := st.Scan("a", []Log{{Path: plain + ".zst", Format: FormatCodex}}); sc[0].Requests != want.Requests {
+	st := NewStore("", nil, testFormats)
+	if sc := st.Scan("a", []Log{{Path: plain + ".zst", Format: codex.UsageLog.Name}}); sc[0].Requests != want.Requests {
 		t.Errorf("store scan: %d requests", sc[0].Requests)
 	}
-	if sc := st.Scan("b", []Log{{Path: plain, Format: FormatCodex}}); sc[0].Requests != want.Requests {
+	if sc := st.Scan("b", []Log{{Path: plain, Format: codex.UsageLog.Name}}); sc[0].Requests != want.Requests {
 		t.Errorf("store scan by the plain path: %d requests", sc[0].Requests)
 	}
 
@@ -82,7 +84,7 @@ func TestCompressedRollout(t *testing.T) {
 	if err := os.WriteFile(plain+".zst", []byte("not zstd\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if New(plain+".zst", FormatCodex).Read() {
+	if New(plain+".zst", codex.UsageLog).Read() {
 		t.Error("read a .zst that isn't zstd")
 	}
 }

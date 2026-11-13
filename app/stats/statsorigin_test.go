@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
@@ -35,7 +36,7 @@ func outside(t *testing.T, r *rig.Stats) string {
 	if err := os.WriteFile(p, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	r.Claude.Found(agent.Transcript{Session: "lint", Logs: []agent.Log{{Path: p, Format: hoststats.FormatClaude}}, Modified: rig.StatsNow})
+	r.Claude.Found(agent.Transcript{Session: "lint", Logs: []agent.Log{{Path: p, Format: claude.UsageLog.Name}}, Modified: rig.StatsNow})
 	return "claude:lint"
 }
 

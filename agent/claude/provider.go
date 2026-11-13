@@ -254,9 +254,9 @@ func (*Provider) Logs(cwd, session string) []agent.Log {
 		return nil
 	}
 	main := transcript.Path(transcript.ConfigDir(nil), cwd, session)
-	out := []agent.Log{{Path: main, Format: "claude"}}
+	out := []agent.Log{{Path: main, Format: UsageLog.Name}}
 	for _, p := range transcript.Subagents(main) {
-		out = append(out, agent.Log{Path: p, Format: "claude"})
+		out = append(out, agent.Log{Path: p, Format: UsageLog.Name})
 	}
 	return out
 }

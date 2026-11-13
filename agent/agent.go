@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent/price"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
 )
 
@@ -29,6 +30,12 @@ type Provider interface {
 // worker keeps a record of the events of a provider that doesn't.
 type Logged interface {
 	Logs(cwd, session string) []Log
+}
+
+// UsageLogs is a provider whose logs are in formats of its own: how each is read (Log.Format names one). A log in
+// usage.Events needs none.
+type UsageLogs interface {
+	UsageFormats() []usage.Format
 }
 
 // Discovered is a provider that can find every session log it keeps on this machine, whoever started the session (a
