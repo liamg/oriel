@@ -470,6 +470,7 @@ func TestBtwIsAnsweredByAFork(t *testing.T) {
 	r := newRig(t)
 	id, a := r.workSession("Work")
 	a.WaitSent(t)
+	r.eventually(id, "the agent running", func(se core.SessionState) bool { return se.Agent.Running }) // its first turn is sent as it launches
 	tid, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "why decimal and not big.Rat?", Btw: true})
 	if err != nil {
 		t.Fatal(err)
