@@ -1,0 +1,4 @@
+source: https://github.com/github/gemoji
+commit: fadaeaf1f1a9be82b321316a6c5502e43138b2f6
+path: db/emoji.json, each alias and its emoji, one "alias emoji" a line (as shortcodes.txt); LICENSE
+license: MIT (see LICENSE)
