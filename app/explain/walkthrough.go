@@ -69,6 +69,7 @@ type walkthrough struct {
 	line    int  // the line of the step's file a comment is about
 	top     int  // the first line shown
 	follow  bool // scroll to the line: it was moved
+	reveal  bool // the step just opened: scroll its first note into view
 	by      string
 
 	srcs    kit.FileSrcs    // the step files' text now, by path
@@ -288,7 +289,7 @@ func (x *Walkthrough) goTo(i int) {
 	if len(s.Notes) > 0 {
 		w.line = s.Notes[0].Start
 	}
-	w.top, w.follow = max(s.from-3, 1), false
+	w.top, w.follow, w.reveal = max(s.from-3, 1), false, true
 	clear(w.cardH)
 }
 
@@ -524,13 +525,20 @@ func (x *Walkthrough) stage(c *ui.Ctx, w *walkthrough) {
 		return
 	}
 	hl, lines := src.Around(x.h, s.path, 1, 0, math.MaxInt32), src.Lines()
-	area := render.XYWH(0, 0, 1200, 600)
+	area, laid := render.XYWH(0, 0, 1200, 600), false
 	if r, ok := c.Rect(stageID); ok {
-		area = r
+		area, laid = r, true
 	}
 	rows := max(int(area.Dy()/m.LineH)-1, 1)
 	if in.Scroll.Y != 0 {
 		w.top += int(math.Round(float64(in.Scroll.Y / m.LineH)))
+	}
+	if w.reveal && laid {
+		// From a little above the step, unless that leaves its first note out of sight: then from a little above it.
+		if len(s.Notes) > 0 && s.Notes[0].Start > w.top+rows-4 {
+			w.top = max(s.Notes[0].Start-3, 1)
+		}
+		w.reveal = false
 	}
 	if w.follow {
 		w.top = min(w.top, w.line)
@@ -545,13 +553,14 @@ func (x *Walkthrough) stage(c *ui.Ctx, w *walkthrough) {
 	textX := gutter + 4
 	notesW := float32(440)
 	codeW := max(area.Dx()-notesW-110, area.Dx()*.5)
+	codeW = min(codeW, textX+float32(min(max(widestLine(lines), 40), codeColsMost))*m.CharW+24) // the notes sit beside the code
 	notesW = min(notesW, area.Dx()-codeW-90)
 	cardX := codeW + 70
 	rowY := func(l int) float32 { return float32(l-w.top)*m.LineH + 10 }
 
 	c.Box("stage", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Clip: true, Wheel: true, Help: walkHelp}, func(c *ui.Ctx) {
 		codeID := c.Next("code")
-		click := widget.Clickable(c, "code", ui.Style{Dir: ui.Column, W: ui.Px(codeW), Pad: ui.Insets{T: 10}, NoHover: true, Cursor: render.CursorText,
+		click := widget.Clickable(c, "code", ui.Style{Dir: ui.Column, W: ui.Px(codeW), Pad: ui.Insets{T: 10}, Clip: true, NoHover: true, Cursor: render.CursorText,
 			Role: ui.RoleTextBox, Label: s.rel, Help: walkHelp}, func(c *ui.Ctx) {
 			for l := w.top; l <= last; l++ {
 				x.codeRow(c, w, s, hl, lines, l, gutter, m)
@@ -566,6 +575,19 @@ func (x *Walkthrough) stage(c *ui.Ctx, w *walkthrough) {
 		})
 		x.notes(c, w, s, ps, area, cardX, notesW)
 	})
+}
+
+// codeColsMost is the widest the stage's code column grows for its file, in columns: a stray long line runs under the
+// notes rather than pushing them across the window.
+const codeColsMost = 110
+
+// widestLine is the widest of lines, in columns, tabs expanded.
+func widestLine(lines []string) int {
+	widest := 0
+	for _, l := range lines {
+		widest = max(widest, utf8.RuneCountInString(kit.ExpandTabs(l)))
+	}
+	return widest
 }
 
 // placedNote is a note's card on the stage: its top, height, and where its leader starts.
