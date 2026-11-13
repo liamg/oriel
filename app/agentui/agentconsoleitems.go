@@ -149,7 +149,7 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 				c.Text("sum", strings.Join(summary, " · "), kit.MonoFont(10, th.C(theme.FgGhost)))
 			}
 			if r, ok := runOf(se, it.ID); ok {
-				kit.EvidenceChip(c, "run", x.h, se.ID, r.ID, kit.RunLabel(r), r.OK)
+				kit.EvidenceChip(c, x.h, "run", se.ID, r.ID, kit.RunLabel(r), r.OK)
 			}
 			if hasOutput && core.ShellTool(it.Tool) {
 				c.Text("fold", map[bool]string{true: "▾", false: "▸"}[open], kit.MonoFont(11, th.C(theme.FgFaint)))

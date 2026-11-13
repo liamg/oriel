@@ -90,7 +90,7 @@ func prDescription(c *ui.Ctx, r registry.Registry, full registry.ReviewDetail, w
 	th := c.Theme()
 	reviewCard(c, "description", "DESCRIPTION", ui.Flex(1), func(c *ui.Ctx) {
 		if strings.TrimSpace(full.Body) != "" {
-			kit.MarkdownText(c, r, "body", full.Body, width, kit.UIFont(13, th.C(theme.FgMuted)))
+			kit.MarkdownText(c, r, "body", full.Body, width, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 		}
 		reactions(c, "reactions", full.Reactions)
 	})
@@ -138,7 +138,7 @@ func prActivity(c *ui.Ctx, r registry.Registry, events []registry.PREvent, width
 				if body := activityBody(e); body != "" || len(e.Reactions) > 0 {
 					c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Gap: 6}, func(c *ui.Ctx) {
 						if body != "" {
-							kit.MarkdownTextIn(c, r, "md", body, width-46, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.CommentMarkdown())
+							kit.MarkdownText(c, r, "md", body, width-46, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.CommentMarkdown())
 						}
 						reactions(c, "reactions", e.Reactions)
 					})

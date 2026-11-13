@@ -446,7 +446,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			})
 		default:
 			c.Text("cap", "WHAT THE AUTHOR GETS", kit.MonoFont(9.5, th.C(theme.FgFaint)))
-			kit.MarkdownTextIn(c, x.h, "words", it.words(), width-60, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			kit.MarkdownText(c, x.h, "words", it.words(), width-60, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 		}
 		if f.asking == it.id {
 			widget.Input(c, "ask", &f.ask, widget.InputOpts{Label: "How should it change?", Placeholder: "How should the agent reword it?", EnterSubmits: true,
@@ -465,7 +465,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			return
 		}
 		reviewCard(c, "reworded", "THE AGENT'S REWORDING", ui.Flex(1), func(c *ui.Ctx) {
-			kit.MarkdownTextIn(c, x.h, "t", text, width-84, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			kit.MarkdownText(c, x.h, "t", text, width-84, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 			c.Row("btns", ui.Style{Gap: 8, Main: ui.End, W: ui.Flex(1)}, func(c *ui.Ctx) {
 				if widget.Button(c, "keep", "Keep mine", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					x.run("review.pr.rework.drop", registry.Args{"id": string(se.ID), "item": it.id})
@@ -560,11 +560,11 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 18}, Gap: 12}, func(c *ui.Ctx) {
 				c.Text("scap", "SUMMARY", kit.MonoFont(9.5, th.C(theme.FgFaint)))
-				kit.MarkdownTextIn(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+				kit.MarkdownText(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 				for i, it := range items {
 					c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 						c.Text("at", fmt.Sprintf("%s:%d", it.at.File, it.at.Line), kit.MonoFont(10.5, th.C(theme.Accent)))
-						kit.MarkdownTextIn(c, x.h, "b", comments[i].Body, w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+						kit.MarkdownText(c, x.h, "b", comments[i].Body, w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 					})
 				}
 				c.Text("note", "A comment off the diff's lines goes on its file; one on a file the PR doesn't change, in the summary.", kit.MonoFont(10, th.C(theme.FgFaint)))

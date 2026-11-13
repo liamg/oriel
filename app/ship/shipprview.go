@@ -95,7 +95,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 		})
 		if t, ok := ciTrouble(s); ok {
 			c.Row("ci", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-				kit.AskTwinsLabelled(c, x.h, "ship.ci."+s.Project, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+				kit.AskTwins(c, x.h, "ship.ci."+s.Project, t, kit.AskTwinsOpts{Help: "git/ship#checks", Explain: "Explain with agent", Fix: "Fix CI with agent"})
 			})
 		}
 		kit.ExplainKept(c, x.h, "ship.ci."+s.Project, "git/ship#checks")

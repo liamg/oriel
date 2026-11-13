@@ -421,7 +421,7 @@ func (x *Ship) behind(c *ui.Ctx, se core.SessionState, s shipRead) {
 				kit.MonoFont(10.5, th.C(theme.Warn)))
 			if t, ok := conflictTrouble(s); ok {
 				c.Row("twins", ui.Style{Gap: 8}, func(c *ui.Ctx) {
-					kit.AskTwinsLabelled(c, x.h, "ship.conflict."+s.Project, t, "git/ship#sync", "Explain with agent", "Fix conflicts with agent")
+					kit.AskTwins(c, x.h, "ship.conflict."+s.Project, t, kit.AskTwinsOpts{Help: "git/ship#sync", Explain: "Explain with agent", Fix: "Fix conflicts with agent"})
 				})
 				kit.ExplainKept(c, x.h, "ship.conflict."+s.Project, "git/ship#sync")
 			}

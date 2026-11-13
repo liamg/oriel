@@ -13,7 +13,6 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/ui"
-	"github.com/liamg/oriel/ui/widget"
 )
 
 var ErrNoSessions = errors.New("there are no sessions in this window")
@@ -122,15 +121,6 @@ func MarkdownTitle(r registry.Registry, src string) (string, bool) {
 		return md.Title(src)
 	}
 	return "", false
-}
-
-// MarkdownText draws src as the window's markdown service does, or wrapped as it is without one.
-func MarkdownText(c *ui.Ctx, r registry.Registry, key any, src string, width float32, body ui.TextStyle) {
-	if md, ok := registry.ServiceOf[Markdown](r, MarkdownService); ok {
-		md.Text(c, key, src, width, body)
-		return
-	}
-	widget.Wrap(c, key, src, width, body)
 }
 
 // Indicators build indicators to draw inside another panel, as the HUD keeps them.

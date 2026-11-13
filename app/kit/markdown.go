@@ -260,8 +260,9 @@ type MarkdownOpts struct {
 // CommentMarkdown is how a comment draws its markdown, as GitHub draws a comment's: each newline a line break.
 func CommentMarkdown() MarkdownOpts { return MarkdownOpts{Breaks: true} }
 
-// MarkdownTextIn is MarkdownText as o says: its images found from o.Dir, its newlines line breaks with o.Breaks.
-func MarkdownTextIn(c *ui.Ctx, r registry.Registry, key any, src string, width float32, body ui.TextStyle, o MarkdownOpts) {
+// MarkdownText draws src as the window's markdown service does, as o says (its images found from o.Dir, its newlines
+// line breaks with o.Breaks), or wrapped as it is without one.
+func MarkdownText(c *ui.Ctx, r registry.Registry, key any, src string, width float32, body ui.TextStyle, o MarkdownOpts) {
 	if md, ok := registry.ServiceOf[Markdown](r, MarkdownService); ok {
 		md.TextIn(c, key, src, width, body, o)
 		return
@@ -271,7 +272,7 @@ func MarkdownTextIn(c *ui.Ctx, r registry.Registry, key any, src string, width f
 
 // DocText draws markdown as a doc reads, a hover's or an answer's: the UI face, muted.
 func DocText(c *ui.Ctx, r registry.Registry, key any, src string, width float32) {
-	MarkdownText(c, r, key, src, width, UIFont(12, c.Theme().C(theme.FgMuted)))
+	MarkdownText(c, r, key, src, width, UIFont(12, c.Theme().C(theme.FgMuted)), MarkdownOpts{})
 }
 
 // PlainText is markdown as it reads, without its marks: headings, quotes, fences, emphasis, code ticks and links'

@@ -435,7 +435,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 							}
 							askedChip(c, cm)
 						})
-						kit.MarkdownTextIn(c, h, "body", cm.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						kit.MarkdownText(c, h, "body", cm.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 						if sourced && src.Comment != nil {
 							src.Comment(c, string(se.ID), string(id), cm.ID, inner)
 						}

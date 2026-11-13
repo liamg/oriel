@@ -272,7 +272,7 @@ func (o *overview) cardView(c *ui.Ctx, dir string) {
 			}
 			c.Column("readme", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 10, Role: ui.RoleRegion, Label: cd.readme.name}, func(c *ui.Ctx) {
 				kit.Caption(c, "title", cd.readme.name)
-				kit.MarkdownTextIn(c, o.h, "md", cd.readme.text, width, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{Dir: dir,
+				kit.MarkdownText(c, o.h, "md", cd.readme.text, width, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{Dir: dir,
 					Group: "readme:" + dir, Help: "shell/overview"})
 			})
 		}

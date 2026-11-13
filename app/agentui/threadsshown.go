@@ -161,7 +161,7 @@ func threadsPopover(c *ui.Ctx, h plugin.Host, se core.SessionState, line int, ts
 					}
 					c.Column(j, ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 						c.Text("who", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
-						kit.MarkdownTextIn(c, h, "body", cm.Body, 340, kit.UIFont(12, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						kit.MarkdownText(c, h, "body", cm.Body, 340, kit.UIFont(12, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 					})
 				}
 			})

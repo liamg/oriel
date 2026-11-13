@@ -170,7 +170,7 @@ func CheckRow(c *ui.Ctx, key any, ch registry.Check, now time.Time) {
 
 // WrapUnder is text wrapped to the width row had last frame, indented under its glyph; cut to a line until it's laid
 // out.
-func WrapUnder(c *ui.Ctx, key string, row ui.ID, text string, ts ui.TextStyle) {
+func WrapUnder(c *ui.Ctx, key any, row ui.ID, text string, ts ui.TextStyle) {
 	c.Row(key, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Clip: true}, func(c *ui.Ctx) {
 		if r, ok := c.Rect(row); ok && r.Dx() > 60 {
 			widget.Wrap(c, "w", text, r.Dx()-22, ts)

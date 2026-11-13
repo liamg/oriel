@@ -237,7 +237,7 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	c.Column("threads", ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 		gone, carried := threadCounts(se)
 		kit.Heading(c, "head", "Threads", fmt.Sprintf("%d %s · %d carried", gone, kit.Plural(gone, "goes", "go"), carried))
-		kit.ToggleRow(c, "clear", "Clear the plan's threads", "resolved go · open and deferred go into the prompt", &d.clear, false, startWorkHelp)
+		kit.ToggleRow(c, "clear", "Clear the plan's threads", &d.clear, kit.ToggleRowOpts{Note: "resolved go · open and deferred go into the prompt", Help: startWorkHelp})
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 		kit.Heading(c, "head", "Agent", strings.TrimSpace(registry.ProviderTitle(x.h, d.provider.ID)+" · model · effort"))
@@ -245,7 +245,7 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 		if !d.fresh {
 			note = "keeps the plan's conversation"
 		}
-		kit.ToggleRow(c, "fresh", "Restart the agent with a fresh context", note, &d.fresh, se.Agent.Provider == "", startWorkHelp)
+		kit.ToggleRow(c, "fresh", "Restart the agent with a fresh context", &d.fresh, kit.ToggleRowOpts{Note: note, Disabled: se.Agent.Provider == "", Help: startWorkHelp})
 		models := func(c *ui.Ctx) {
 			p := d.provider
 			if len(p.Models) == 0 && d.model != "" {

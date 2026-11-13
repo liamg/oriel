@@ -51,7 +51,7 @@ func RunLabel(r core.TestRun) string {
 }
 
 // EvidenceChip is a link to a test run: ✓ or ✕, its counts and id; a click opens the run.
-func EvidenceChip(c *ui.Ctx, key any, h plugin.Host, session core.SessionID, run, label string, ok bool) {
+func EvidenceChip(c *ui.Ctx, h plugin.Host, key any, session core.SessionID, run, label string, ok bool) {
 	th := c.Theme()
 	tone, glyph := th.C(TToolOK), "✓"
 	if !ok {

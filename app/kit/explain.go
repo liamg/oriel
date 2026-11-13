@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"cmp"
 	"context"
 	"maps"
 
@@ -11,14 +12,18 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// AskTwins are "ask agent to explain" and "ask agent to fix" about t, side by side: explain sits next to fix
-// everywhere. Explain answers under key, which ExplainKept draws where it was asked; fix writes a request.
-func AskTwins(c *ui.Ctx, h plugin.Host, key string, t registry.Trouble, help string) {
-	AskTwinsLabelled(c, h, key, t, help, "ask agent to explain", "ask agent to fix")
+// AskTwinsOpts are the twins' help, and their buttons' own words ("Explain with agent", "Fix CI with agent") when
+// they aren't "ask agent to explain" and "ask agent to fix".
+type AskTwinsOpts struct {
+	Help         string
+	Explain, Fix string
 }
 
-// AskTwinsLabelled is AskTwins with its buttons' own words ("Explain with agent", "Fix CI with agent").
-func AskTwinsLabelled(c *ui.Ctx, h plugin.Host, key string, t registry.Trouble, help, explainLabel, fixLabel string) {
+// AskTwins are "ask agent to explain" and "ask agent to fix" about t, side by side: explain sits next to fix
+// everywhere. Explain answers under key (an explain key, which ExplainKept draws where it was asked); fix writes a
+// request.
+func AskTwins(c *ui.Ctx, h plugin.Host, key string, t registry.Trouble, o AskTwinsOpts) {
+	help, explainLabel, fixLabel := o.Help, cmp.Or(o.Explain, "ask agent to explain"), cmp.Or(o.Fix, "ask agent to fix")
 	fix := t.Args()
 	explain := maps.Clone(fix)
 	explain["key"] = key

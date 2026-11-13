@@ -730,7 +730,7 @@ func (x *Update) cardView(c *ui.Ctx) {
 				notes = "This release has no notes."
 			}
 			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}}, func(c *ui.Ctx) {
-				kit.MarkdownText(c, x.h, "md", notes, 556, kit.UIFont(12.5, th.C(theme.FgMuted)))
+				kit.MarkdownText(c, x.h, "md", notes, 556, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 			})
 		case busy != "":
 		default:

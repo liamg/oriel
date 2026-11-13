@@ -39,8 +39,16 @@ func ModelSelects(c *ui.Ctx, p host.ProviderInfo, model, effort string, disabled
 	return model, effort, picked
 }
 
+// ToggleRowOpts are a ToggleRow's note at the right, whether it's off limits, and its help.
+type ToggleRowOpts struct {
+	Note     string
+	Disabled bool
+	Help     string
+}
+
 // ToggleRow is a toggle with its label, and a note at the right.
-func ToggleRow(c *ui.Ctx, key any, label, note string, on *bool, disabled bool, help string) {
+func ToggleRow(c *ui.Ctx, key any, label string, on *bool, o ToggleRowOpts) {
+	note, disabled, help := o.Note, o.Disabled, o.Help
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		if widget.Toggle(c, "t", *on, widget.ToggleOpts{Label: label, Disabled: disabled, Help: help}) {
@@ -74,7 +82,7 @@ func SettingBackend(h plugin.Host) string {
 // SandboxToggles are where an agent runs: in a sandbox, in which backend when this machine has more than one, and
 // with an open network there.
 func SandboxToggles(c *ui.Ctx, on, openNet *bool, pick BackendPick, help string) {
-	ToggleRow(c, "sandbox", "Sandbox", SandboxNoun(pick.Current())+" · gateway for git & gh", on, false, help)
+	ToggleRow(c, "sandbox", "Sandbox", on, ToggleRowOpts{Note: SandboxNoun(pick.Current()) + " · gateway for git & gh", Help: help})
 	if *on && pick.Chosen != nil && len(pick.Offered) > 1 {
 		c.Row("backend", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			labels := make([]string, len(pick.Offered))
@@ -89,7 +97,7 @@ func SandboxToggles(c *ui.Ctx, on, openNet *bool, pick BackendPick, help string)
 			}
 		})
 	}
-	ToggleRow(c, "network", "Open network", "ask per new host when off", openNet, !*on, help)
+	ToggleRow(c, "network", "Open network", openNet, ToggleRowOpts{Note: "ask per new host when off", Disabled: !*on, Help: help})
 }
 
 // SandboxNoun is what a backend runs an agent in.

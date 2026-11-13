@@ -133,7 +133,7 @@ func (x *Console) toolDetail(c *ui.Ctx, se core.SessionState, it core.Item, widt
 			c.Text("d", d, kit.MonoFont(11, th.C(theme.FgFaint)))
 		}
 		if r, ok := runOf(se, it.ID); ok {
-			kit.EvidenceChip(c, "run", x.h, se.ID, r.ID, kit.RunLabel(r), r.OK)
+			kit.EvidenceChip(c, x.h, "run", se.ID, r.ID, kit.RunLabel(r), r.OK)
 		}
 	})
 	if core.ShellTool(it.Tool) {
