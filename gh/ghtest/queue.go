@@ -148,7 +148,7 @@ func (s *Server) queue(w http.ResponseWriter, vars map[string]any) {
 		}
 		nodes = append(nodes, map[string]any{"number": h.p.Number, "title": h.p.Title, "url": h.p.URL, "isDraft": h.p.Draft,
 			"state": strings.ToUpper(h.p.State), "createdAt": h.p.Created, "updatedAt": h.p.Created, "additions": z.Additions,
-			"deletions": z.Deletions, "changedFiles": len(z.Files), "author": map[string]string{"login": cmpOr(cmpOr(z.Author, h.p.Author), s.login)},
+			"deletions": z.Deletions, "changedFiles": len(z.Files), "baseRefName": h.p.Base, "headRefName": h.p.Head, "author": map[string]string{"login": cmpOr(cmpOr(z.Author, h.p.Author), s.login)},
 			"repository": map[string]string{"nameWithOwner": h.repo}, "reviewRequests": map[string]any{"nodes": requests},
 			"timelineItems": map[string]any{"nodes": events}, "latestReviews": map[string]any{"nodes": latest},
 			"commits": map[string]any{"nodes": commits}})

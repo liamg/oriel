@@ -37,6 +37,13 @@ type ReviewRequest struct {
 	Files  int       `json:"files,omitempty"`
 	CI     string    `json:"ci,omitempty"`     // "ok", "failed", "running"; "" none
 	Source string    `json:"source,omitempty"` // the source's Title, filled in by RequestedReviews
+	// Reviewers are who's asked (State "requested", a team as "@org/team") and who has reviewed, by their latest
+	// review ("approved", "changes", "commented").
+	Reviewers []PRReviewer `json:"reviewers,omitempty"`
+	Base      string       `json:"base,omitempty"` // the branch it goes into
+	Head      string       `json:"head,omitempty"` // its own branch
+	Opened    time.Time    `json:"opened,omitzero"`
+	Updated   time.Time    `json:"updated,omitzero"`
 }
 
 // Waiting says the next move is yours: you're asked, and haven't answered since.

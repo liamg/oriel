@@ -527,7 +527,7 @@ func (u *UI) topTip(p render.Point) ID {
 	for _, id := range u.Hit(p) {
 		f := u.flags[id]
 		switch {
-		case f.tooltip != "":
+		case f.tooltip != "" || f.tipView != nil:
 			return id
 		case f.disabled:
 			return 0
