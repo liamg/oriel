@@ -87,7 +87,7 @@ func bootIn(t *testing.T, configDir string, plugins ...plugin.Plugin) *booted {
 	b := &booted{store: eventstore.New(), done: make(chan error, 1)}
 	go func() {
 		// A directory is open: the start view keeps to its own keys (TestStartViewKeepsToItsOwnKeys).
-		b.done <- app.Run(ctx, be, app.Config{Store: b.store, Plugins: plugins, ConfigDir: configDir, StateDir: t.TempDir(), WorkDir: t.TempDir()})
+		b.done <- app.Run(ctx, be, app.Config{Window: app.Window{Store: b.store, Plugins: plugins, ConfigDir: configDir, StateDir: t.TempDir(), WorkDir: t.TempDir()}})
 	}()
 	select {
 	case b.win = <-be.Windows():

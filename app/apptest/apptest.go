@@ -145,10 +145,12 @@ func New(t testing.TB, o Options) *Scene {
 	os.MkdirAll(conf, 0o755)
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644)
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
-	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(func() time.Time { return s.Now }), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
-		LanguageServers: TestServers,
-		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t), ImageNet: cmp.Or(o.ImageNet, isolate.Net(t)), SandboxBackends: Backends,
-		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
+	cfg := app.Config{
+		Window: app.Window{Store: eventstore.New(), Registry: testRegistry(func() time.Time { return s.Now }), Logs: app.NewLogs(app.LogOpts{}),
+			ConfigDir: conf, CrashDir: o.CrashDir, Version: "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t),
+			ImageNet: cmp.Or(o.ImageNet, isolate.Net(t))},
+		LanguageServers: TestServers, SandboxBackends: Backends, Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)},
+	}
 	if o.ScriptedFiles {
 		s.files = &fswatch.Scripts{}
 		cfg.FSWatch = s.files.New

@@ -104,8 +104,12 @@ func NewWindow(t *testing.T, o WindowOptions) *Window {
 	g := &grab{keys: o.Keys, setup: o.Setup}
 	w := &Window{T: t, Store: eventstore.New(), Dir: o.WorkDir, done: make(chan error, 1), plugins: map[string]plugin.Plugin{}}
 	w.ConfigDir = t.TempDir()
-	cfg := app.Config{Store: w.Store, Registry: testRegistry(windowNow), ConfigDir: w.ConfigDir, LanguageServers: TestServers, StateDir: o.State, WorkDir: o.WorkDir, Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t), SandboxBackends: Backends,
-		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}, Logs: app.NewLogs(app.LogOpts{Level: slog.LevelDebug})}
+	cfg := app.Config{
+		Window: app.Window{Store: w.Store, Registry: testRegistry(windowNow), ConfigDir: w.ConfigDir, StateDir: o.State, WorkDir: o.WorkDir,
+			Files: o.Files, Plugins: append(o.Plugins, g), Net: isolate.Net(t), ImageNet: isolate.Net(t),
+			Logs: app.NewLogs(app.LogOpts{Level: slog.LevelDebug})},
+		LanguageServers: TestServers, SandboxBackends: Backends, Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)},
+	}
 	if o.Config != nil {
 		o.Config(&cfg)
 		w.Store, w.ConfigDir = cfg.Store, cfg.ConfigDir

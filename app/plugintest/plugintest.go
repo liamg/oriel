@@ -52,7 +52,7 @@ func New(t testing.TB, o Options) *App {
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	cfg := app.Config{ConfigDir: filepath.Join(home, ".config", "oriel"), StateDir: filepath.Join(home, "state"), Version: "dev"}
+	cfg := app.Config{Window: app.Window{ConfigDir: filepath.Join(home, ".config", "oriel"), StateDir: filepath.Join(home, "state"), Version: "dev"}}
 	os.MkdirAll(cfg.ConfigDir, 0o755)
 	if o.Config != nil {
 		o.Config(&cfg)
