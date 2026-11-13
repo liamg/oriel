@@ -172,12 +172,6 @@ func TestSandboxExecConfines(t *testing.T) {
 	}
 }
 
-func TestRegistered(t *testing.T) {
-	if b, err := sandbox.BackendFor(sandbox.Config{Backend: "seatbelt"}); err != nil || b.Name() != "seatbelt" {
-		t.Errorf("BackendFor(seatbelt) = %v, %v", b, err)
-	}
-}
-
 // needer is a provider whose agent needs a binary on its PATH and a host directory at another path.
 type needer struct{ bin, host, at string }
 

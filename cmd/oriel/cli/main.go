@@ -76,7 +76,9 @@ func runApp(args []string) {
 	loginPath(log, fromTerminal)
 	// load reads the machine's load in-process, only while it's wanted, and says when it moves.
 	load := sysload.NewSampler(5*time.Second, nil)
-	w, err := newHost(home, log, load)
+	sandboxes := newSandboxes()
+	cfg.SandboxBackends = sandboxes.Offered
+	w, err := newHost(home, log, load, sandboxes)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no sessions:", err)
 		os.Exit(1)

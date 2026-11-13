@@ -34,8 +34,7 @@ type Config struct {
 	// LanguageServers says which language servers may start, of those installed; every one if nil. Tests keep the
 	// machine's own (gopls…) out, and run the recorded ones they register.
 	LanguageServers func(lsp.ServerSpec) bool
-	// SandboxBackends are the sandbox backends this machine can run, the default first; sandbox.AvailableBackends
-	// if nil.
+	// SandboxBackends are the sandbox backends the settings offer, the default first; docker alone if nil.
 	SandboxBackends func() []string
 	// GitHub is how plugins and the plugin registries are read; GitHub's API with your gh login's token if nil.
 	GitHub *catalog.GitHub

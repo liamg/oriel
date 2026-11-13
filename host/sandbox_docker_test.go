@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/sandbox"
+	"github.com/liamg/oriel/host/sandboxhost"
 )
 
 // The real container: the agent's command runs inside it, behind the egress proxy.
@@ -21,7 +21,7 @@ func TestSandboxRunsInDocker(t *testing.T) {
 		t.Skip("no docker")
 	}
 	s := newSandboxRig(t)
-	s.f.Backend = sandbox.BackendFor
+	s.f.Backend = sandboxhost.Known().For
 	_, spec, b := s.sandboxed()
 	defer b.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)

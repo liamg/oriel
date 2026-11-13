@@ -27,7 +27,7 @@ var ceilings = map[string]int{
 	"mutable package-level vars":           0,
 	// The rest of the tree (cmd, sandbox, render, regex, integ…) is held to the same rule from here, its count only
 	// falling: what's truly process-wide (a cgo callback's map, an init-time registry) goes in stateAllowed with why.
-	"mutable package-level vars elsewhere": 117,
+	"mutable package-level vars elsewhere": 115,
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).

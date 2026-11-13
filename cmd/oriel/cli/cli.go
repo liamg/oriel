@@ -33,15 +33,20 @@ func orielHome() string {
 	return filepath.Join(home, ".oriel")
 }
 
-// newHost is the session host with the built-in prompt packs, reading the machine's load from load. Its agent
-// providers are the app's (app/agents).
-func newHost(home string, log *slog.Logger, load *sysload.Sampler) (*host.Host, error) {
+// newSandboxes is the host's sandbox factory, carrying the helper its containers run.
+func newSandboxes() *host.Sandboxes {
+	s := host.NewSandboxFactory(nil)
+	s.Helper = helper.Binary // the static Linux oriel its containers run
+	return s
+}
+
+// newHost is the session host with the built-in prompt packs and sandboxes, reading the machine's load from load. Its
+// agent providers are the app's (app/agents).
+func newHost(home string, log *slog.Logger, load *sysload.Sampler, sandboxes *host.Sandboxes) (*host.Host, error) {
 	kinds := &packs.Set{}
 	if _, err := kinds.LoadDir(filepath.Join(app.DefaultConfigDir(), "agents")); err != nil {
 		log.Warn("prompt packs", "err", err)
 	}
-	sandboxes := host.NewSandboxFactory(nil)
-	sandboxes.Helper = helper.Binary // the static Linux oriel its containers run
 	// A built-in kind's pack is the built-in one, or the user's version the app sends (prompts.set); agents/ adds kinds.
 	builtinOr := func(name string) (agent.Pack, bool) {
 		if src, ok := packs.Source(name); ok {

@@ -39,12 +39,6 @@ var (
 	Podman   = Engine{Label: "podman", Find: findPodman, Fix: "Install Podman, and on macOS run `podman machine start`."}
 )
 
-func init() {
-	for _, e := range []Engine{Docker, OrbStack, Colima, Podman} {
-		sandbox.Register(e)
-	}
-}
-
 // Where the alternatives keep their docker sockets, under the home directory.
 var (
 	orbStackSockets = []string{".orbstack/run/docker.sock"}

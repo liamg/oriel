@@ -35,8 +35,6 @@ type proxy struct {
 	cancel context.CancelFunc
 }
 
-func init() { sandbox.Register(&Seatbelt{}) }
-
 func (*Seatbelt) Name() string { return "seatbelt" }
 
 func (*Seatbelt) Available() error { return Available() }

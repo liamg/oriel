@@ -112,16 +112,14 @@ const (
 	defaultPids    = container.DefaultPidsLimit
 )
 
-// offeredBackends are the sandbox backends this machine can run (available), the default first; docker and the
-// rest when it can run none.
+// offeredBackends are the sandbox backends to offer (available), the default first; docker when there are none.
 func offeredBackends(available func() []string) []string {
-	if available == nil {
-		available = sandbox.AvailableBackends
+	if available != nil {
+		if a := available(); len(a) > 0 {
+			return a
+		}
 	}
-	if a := available(); len(a) > 0 {
-		return a
-	}
-	return append([]string{"docker"}, slices.DeleteFunc(sandbox.Backends(), func(b string) bool { return b == "docker" })...)
+	return []string{"docker"}
 }
 
 // envNames are the host's environment variables, by name.
@@ -237,7 +235,7 @@ func projectRoots(workDir string, st core.State) []string {
 // changes.
 type SandboxSettings struct {
 	kit.Disposer
-	// Backends are the sandbox backends this machine can run, the default first; sandbox.AvailableBackends if nil.
+	// Backends are the sandbox backends to offer, the default first; docker alone if nil.
 	Backends func() []string
 	h        plugin.Host
 	sends    kit.Serial  // the settings, going to the host
