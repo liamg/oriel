@@ -46,12 +46,8 @@ func (h *pluginHost) DecorationsChanged(id string) {
 	h.sh.poke()
 }
 
-func (h *pluginHost) Do(fn func()) {
-	h.sh.todoMu.Lock()
-	h.sh.todo = append(h.sh.todo, fn)
-	h.sh.todoMu.Unlock()
-	h.sh.poke()
-}
+// Do runs fn on the app's loop.
+func (h *pluginHost) Do(fn func()) { h.sh.do(fn) }
 
 // queued says the loop has been handed work it hasn't run.
 func (sh *shell) queued() bool {

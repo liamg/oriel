@@ -214,9 +214,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 		defer stop()
 	}
 	if cfg.Started != nil {
-		sh.todoMu.Lock()
-		sh.todo = append(sh.todo, cfg.Started)
-		sh.todoMu.Unlock()
+		sh.do(cfg.Started)
 	}
 	defer sh.relaunchAfter(&err)
 	return l.serve(ctx, p, dirty)
