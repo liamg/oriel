@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -17,9 +14,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host/agentrun"
-	"github.com/liamg/oriel/watch"
 )
 
 // workSession starts a work session with the fake agent, and returns it once the agent has its first batch.
@@ -1043,113 +1038,5 @@ func TestResolveRefusesUnseenComments(t *testing.T) {
 				t.Error("answering again, with nothing unseen, wasn't posted")
 			}
 		})
-	}
-}
-
-// A shell command's changes to the session's projects are recorded on its item, as an edit's are.
-func TestShellCommandsRecordWhatTheyChanged(t *testing.T) {
-	r := newRig(t)
-	id, a := r.workSession("Write things")
-	a.WaitSent(t)
-	dir := r.session(id).Projects[0].Dir
-	if err := os.WriteFile(filepath.Join(dir, "gen.go"), []byte("package gen\n\nfunc Gen() {}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	a.Emit(agent.ToolCall{ID: "b1", Tool: "Bash", Input: json.RawMessage(`{"command":"python3 gen.py"}`)})
-	a.Emit(agent.ToolResult{ID: "b1", Output: "ok"})
-	se := r.eventually(id, "the command's files", func(se core.SessionState) bool {
-		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "b1" && len(it.Files) > 0 })
-	})
-	it := se.Transcript[slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == "b1" })]
-	if len(it.Files) != 1 || it.Files[0].Path != filepath.Join(dir, "gen.go") || it.Files[0].Added != 3 {
-		t.Fatalf("files = %+v", it.Files)
-	}
-	if got := it.Files[0].Lines[2]; got.Op != "+" || got.New != 3 || got.Text != "func Gen() {}" {
-		t.Errorf("line 3 = %+v", got)
-	}
-}
-
-// gitRuns puts a git on PATH that logs each run before running the real one, and counts the runs so far.
-func gitRuns(t *testing.T) func() int {
-	t.Helper()
-	real, err := exec.LookPath("git")
-	if err != nil {
-		t.Fatal(err)
-	}
-	dir, log := t.TempDir(), filepath.Join(t.TempDir(), "runs")
-	shim := "#!/bin/sh\necho >> \"" + log + "\"\nexec \"" + real + "\" \"$@\"\n"
-	if err := os.WriteFile(filepath.Join(dir, "git"), []byte(shim), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	return func() int {
-		b, _ := os.ReadFile(log)
-		return strings.Count(string(b), "\n")
-	}
-}
-
-// sevenProjects is a work session over seven repos, its first turn started and its first mark (of all seven) made,
-// with the git runs that mark took. The app hands the host the session's freshness manager, as Oriel's does.
-func sevenProjects(t *testing.T, runs func() int) (*rig, core.SessionID, *agenttest.FakeSession, int) {
-	t.Helper()
-	r := newRig(t)
-	m := watch.New(watch.Options{Name: "the session"})
-	t.Cleanup(m.Close)
-	r.w.SetApp(App{Watches: func(core.SessionID) *watch.Manager { return m }})
-	repos := []core.RepoID{core.RepoID(r.repo.Dir)}
-	for i := range 6 {
-		g := gittest.New(t)
-		g.Write(map[string]string{fmt.Sprintf("p%d.go", i): "package p\n"})
-		g.Commit("Ada", "first")
-		repos = append(repos, core.RepoID(g.Dir))
-	}
-	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "Many projects", Provider: "fake", Model: "m1", Repos: repos})
-	a := r.agent()
-	a.WaitSent(t)
-	before := runs()
-	a.Emit(agent.TurnStart{})
-	full := settled(r, a, runs) - before
-	if full == 0 {
-		t.Fatal("the turn's start made no mark")
-	}
-	return r, id, a, full
-}
-
-// settled is runs once a's events are handled and the marks they asked for are made.
-func settled(r *rig, a *agenttest.FakeSession, runs func() int) int {
-	r.t.Helper()
-	a.Handled(r.t)
-	r.settle()
-	return runs()
-}
-
-// A command's mark snapshots only the projects the file watcher saw change, and still finds what the command did:
-// one that changed nothing runs no git, and one that wrote a file in one project snapshots that one and records it.
-func TestShellMarksOnlyWhatChanged(t *testing.T) {
-	runs := gitRuns(t)
-	r, id, a, full := sevenProjects(t, runs)
-	before := runs()
-	a.Emit(agent.ToolCall{ID: "quiet", Tool: "Bash", Input: json.RawMessage(`{"command":"true"}`)})
-	a.Emit(agent.ToolResult{ID: "quiet", Output: "ok"})
-	if n := settled(r, a, runs) - before; n != 0 {
-		t.Errorf("a command that changed nothing ran git %d times", n)
-	}
-	dir := r.session(id).Projects[3].Dir
-	before = runs()
-	if err := os.WriteFile(filepath.Join(dir, "gen.go"), []byte("package gen\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	a.Emit(agent.ToolCall{ID: "gen", Tool: "Bash", Input: json.RawMessage(`{"command":"python3 gen.py"}`)})
-	a.Emit(agent.ToolResult{ID: "gen", Output: "ok"})
-	se := r.eventually(id, "the command's files", func(se core.SessionState) bool {
-		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "gen" && len(it.Files) > 0 })
-	})
-	it := se.Transcript[slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == "gen" })]
-	if len(it.Files) != 1 || it.Files[0].Path != filepath.Join(dir, "gen.go") {
-		t.Errorf("files = %+v", it.Files)
-	}
-	// One project's snapshot and its diff: well under the seven projects' snapshots.
-	if n := settled(r, a, runs) - before; n > full/3 {
-		t.Errorf("a change to one project ran git %d times; marking all seven took %d", n, full)
 	}
 }

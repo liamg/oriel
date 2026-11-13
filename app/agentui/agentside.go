@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -27,7 +26,7 @@ import (
 const ConsoleSide = kit.ConsoleSide
 
 // side is the console's right column: what plugins add, the session's stats, its tasks and subagents, the plans'
-// usage, what this turn touched, and the rules in force.
+// usage, and the rules in force.
 func (x *Console) side(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	kit.Scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
@@ -43,7 +42,6 @@ func (x *Console) side(c *ui.Ctx, se core.SessionState) {
 			x.tasks(c, se)
 			x.subagents(c, se)
 			x.usage(c, se)
-			x.touched(c, se)
 			x.rules(c, se)
 		})
 }
@@ -117,46 +115,6 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 			}
 		})
 	}
-}
-
-// turnEdits are the files the latest turn edited, with their lines added and removed, in the order first edited.
-func turnEdits(se core.SessionState) []core.FileDiff {
-	start := 0
-	for i := len(se.Transcript) - 1; i >= 0; i-- {
-		if se.Transcript[i].Kind == core.ItemUser {
-			start = i
-			break
-		}
-	}
-	var out []core.FileDiff
-	for _, it := range se.Transcript[start:] {
-		for _, d := range it.FileDiffs() {
-			if i := slices.IndexFunc(out, func(o core.FileDiff) bool { return o.Path == d.Path }); i >= 0 {
-				out[i].Added += d.Added
-				out[i].Removed += d.Removed
-				continue
-			}
-			out = append(out, core.FileDiff{Path: d.Path, Added: d.Added, Removed: d.Removed})
-		}
-	}
-	return out
-}
-
-func (x *Console) touched(c *ui.Ctx, se core.SessionState) {
-	edits := turnEdits(se)
-	if len(edits) == 0 {
-		return
-	}
-	th := c.Theme()
-	kit.Section(c, "touched", "This turn touched", "", func(c *ui.Ctx) {
-		for i, d := range edits {
-			c.Row(i, ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("n", filepath.Base(d.Path), kit.MonoFont(11.5, th.C(theme.FgMuted)))
-				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				widget.DiffStat(c, "s", d.Added, d.Removed, widget.DiffStatOpts{})
-			})
-		}
-	})
 }
 
 // rules are what lets the agent through: its gate, the sandbox's, and the "Always" rules made in this workspace.
