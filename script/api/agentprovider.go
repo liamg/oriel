@@ -25,7 +25,7 @@ func (g Agent) Provider(spec script.Table, where string) error {
 	if name == "" {
 		return errors.New("an agent provider needs a name")
 	}
-	o := rpcagent.Options{Name: name, Allow: func(path string) error { return a.Plugin.Check(plugin.CapExec, plugin.RealPath(path)) }}
+	o := rpcagent.Options{Name: name, Allow: func(path string) error { _, err := a.Plugin.CheckProgram(path, ""); return err }}
 	o.Logged, _ = spec["logs"].(bool)
 	o.Discovered, _ = spec["discover"].(bool)
 	if f, ok := spec["features"].(script.Table); ok {

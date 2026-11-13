@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -149,9 +150,9 @@ func expand(p string) string {
 
 //oriel:api doc="A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read." returns="string?,string?" cap=target
 func (r Root) Read(path string) ([]any, error) {
-	p := r.a.Plugin.Path(path)
+	p := plugin.RealPath(r.a.Plugin.Path(path)) // checked and read as one path, symlinks followed
 	if !r.a.Plugin.Own(p) {
-		if err := r.a.Check(plugin.CapFSRead, plugin.RealPath(p)); err != nil {
+		if err := r.a.Check(plugin.CapFSRead, p); err != nil {
 			return nil, err
 		}
 	}
@@ -230,14 +231,16 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		return nil, fmt.Errorf("no program")
 	}
 	dir := expand(str(opts, "cwd"))
-	prog, err := resolveProgram(argv[0], dir)
+	prog, err := r.a.Plugin.CheckProgram(argv[0], cmp.Or(dir, mustGetwd()))
 	if err != nil {
-		return nil, &notFound{err}
+		return nil, err
 	}
-	if !r.a.Plugin.Trusted() {
-		if err := r.a.Check(plugin.CapExec, plugin.RealPath(prog)); err != nil {
-			return nil, err
+	if !strings.ContainsRune(prog, filepath.Separator) {
+		if prog, err = exec.LookPath(prog); err != nil {
+			return nil, &notFound{err}
 		}
+	} else if _, err := os.Stat(prog); err != nil {
+		return nil, &notFound{err}
 	}
 	secs, _ := opts["timeout"].(float64)
 	if secs == 0 {
@@ -255,23 +258,6 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 		}
 		return out.String(), nil
 	}, nil
-}
-
-// resolveProgram is the absolute path of the program name runs: ~ is home, a path (./tool, bin/tool) is in dir (the
-// process's own directory if ""), and a bare name is looked for on PATH.
-func resolveProgram(name, dir string) (string, error) {
-	p := expand(name)
-	if strings.ContainsRune(p, filepath.Separator) {
-		if !filepath.IsAbs(p) && dir != "" {
-			p = filepath.Join(dir, p)
-		}
-		return filepath.Abs(p)
-	}
-	found, err := exec.LookPath(p)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Abs(found)
 }
 
 //oriel:api doc="The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown." returns=number
@@ -309,4 +295,10 @@ func (r Root) JSON(v any) (any, error) {
 //oriel:api doc="Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."
 func (r Root) Statusline(fn *script.Fn, where string) error {
 	return View{r.a}.Override("app.statusline", fn, where)
+}
+
+// mustGetwd is the process's directory, where a program named by a relative path runs without a cwd.
+func mustGetwd() string {
+	d, _ := os.Getwd()
+	return d
 }

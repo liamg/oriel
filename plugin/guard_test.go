@@ -159,3 +159,28 @@ runs = "everywhere"`} {
 		}
 	}
 }
+
+// CheckProgram checks the program that will run: a path the plugin names is its own directory's (or the given
+// one's), absolute, so a grant for its bin/server never lets the project's bin/server run; a bare name is checked
+// as named.
+func TestCheckProgram(t *testing.T) {
+	dir := t.TempDir()
+	server := filepath.Join(dir, "bin", "server")
+	os.MkdirAll(filepath.Dir(server), 0o755)
+	os.WriteFile(server, []byte("#!/bin/sh\n"), 0o755)
+	g := NewGrants()
+	g.Grant("p/q", []Grant{{Cap: CapExec, Scope: []string{RealPath(server), "gopls"}}})
+	c := Caller{ID: "p/q", Dir: dir, Guard: g}
+	if got, err := c.CheckProgram("bin/server", ""); err != nil || got != RealPath(server) {
+		t.Errorf("its own bin/server: %q, %v", got, err)
+	}
+	if _, err := c.CheckProgram("bin/server", t.TempDir()); err == nil {
+		t.Error("another directory's bin/server was allowed")
+	}
+	if got, err := c.CheckProgram("gopls", ""); err != nil || got != "gopls" {
+		t.Errorf("a bare name: %q, %v", got, err)
+	}
+	if _, err := c.CheckProgram("rm", ""); err == nil {
+		t.Error("a program the grant doesn't name was allowed")
+	}
+}

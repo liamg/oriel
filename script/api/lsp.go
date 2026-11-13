@@ -19,11 +19,11 @@ func (l LSP) Server(spec script.Table, where string) error {
 	if s.Name == "" || len(s.Language) == 0 || len(s.Cmd) == 0 {
 		return fmt.Errorf("a language server needs a name, languages and a cmd")
 	}
-	if !l.a.Plugin.Trusted() {
-		if err := l.a.Check(plugin.CapExec, s.Cmd[0]); err != nil {
-			return err
-		}
+	prog, err := l.a.Plugin.CheckProgram(s.Cmd[0], "")
+	if err != nil {
+		return err
 	}
+	s.Cmd[0] = prog // a path the plugin's, not the project's the server runs in
 	if o, ok := spec["order"].(float64); ok {
 		s.Order = int(o)
 	}

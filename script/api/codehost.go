@@ -66,9 +66,11 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 			}
 		}
 		if len(h.Tokens.Command) > 0 {
-			if err := a.Plugin.Check(plugin.CapExec, h.Tokens.Command[0]); err != nil {
+			prog, err := a.Plugin.CheckProgram(h.Tokens.Command[0], "")
+			if err != nil {
 				return fmt.Errorf("the code host's token command: %w", err)
 			}
+			h.Tokens.Command[0] = prog
 		}
 	}
 	if t, ok := spec["setup"].(script.Table); ok {
