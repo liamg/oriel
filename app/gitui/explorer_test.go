@@ -223,16 +223,14 @@ func TestExplorerStagesFiles(t *testing.T) {
 func TestExplorerOpensFiles(t *testing.T) {
 	s, r := explorerScene(t)
 	s.Run("explorer.scope", registry.Args{"scope": "changed"})
-	s.Frame()
-	s.Frame()
+	s.Quiet() // the scope's files are read off the loop
 	s.Click(s.TextPoint("currency.go"), 0)
 	s.Frame()
 	if file, ok := diffOf(s).SelectedFile(r.Dir); !s.Showing(gitui.DiffView) || !ok || file != "internal/pricing/currency.go" {
 		t.Fatalf("a click on currency.go in Changed didn't open its diff")
 	}
 	s.Run("explorer.scope", registry.Args{"scope": "all"})
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 	s.Click(s.TextPoint("go.mod"), 0)
 	s.Frame()
 	eds, _ := registry.EditorsOf(s.Registry())
