@@ -131,9 +131,9 @@ rect 150,50 610x344 fill #060606
 rect 150,50 300x344 fill #0c0c0b
 clip 150,50 300x344 r 0
   rect 150,50 300x30 fill #0c0c0b
-  rect 150,50 300x2 fill #ffd23f
-  text "EXPLORER" @164,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @430.70312,69.96 #7c7566 JetBrains Mono 11
+  text "EXPLORER" @164,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @430.70312,67.96 #7c7566 JetBrains Mono 11
+  rect 150,78 300x2 fill #ffd23f
   rect 150,80 300x1 fill #24221d
   clip 150,81 300x313 r 0
     rect 150,81 300x313 fill #0c0c0b

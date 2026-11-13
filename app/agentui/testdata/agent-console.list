@@ -111,9 +111,9 @@ clip 44,50 1556x924 r 0
   rect 44,50 1556x30 fill #0c0c0b
   clip 44,50 1556x30 r 0
     rect 44,50 127.71875x30 fill #121210
-    rect 44,50 127.71875x2 fill #ffd23f
-    text "Agent · Codex" @58,70.365234 #ece6d8 Inter 12
-    text "✕" @152.42188,69.96 #7c7566 JetBrains Mono 11
+    text "Agent · Codex" @58,68.365234 #ece6d8 Inter 12
+    text "✕" @152.42188,67.96 #7c7566 JetBrains Mono 11
+    rect 44,78 127.71875x2 fill #ffd23f
   pop
   rect 44,80 1556x1 fill #24221d
   clip 44,81 1556x893 r 0

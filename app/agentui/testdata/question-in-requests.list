@@ -113,8 +113,8 @@ rect 44,50 1556x924 fill #060606
 rect 44,50 320x924 fill #0c0c0b
 clip 44,50 320x924 r 0
   rect 44,50 320x30 fill #0c0c0b
-  text "REQUESTS" @58,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @344.70312,69.96 #7c7566 JetBrains Mono 11
+  text "REQUESTS" @58,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @344.70312,67.96 #7c7566 JetBrains Mono 11
   rect 44,80 320x1 fill #24221d
   clip 44,81 320x893 r 0
     rect 44,81 320x893 fill #0c0c0b
@@ -176,9 +176,9 @@ clip 364,50 1236x924 r 0
   rect 364,50 1236x30 fill #0c0c0b
   clip 364,50 1236x30 r 0
     rect 364,50 261.98438x30 fill #121210
-    rect 364,50 261.98438x2 fill #ffd23f
-    text "Negative values round the wrong way" @378,70.365234 #ece6d8 Inter 12
-    text "✕" @606.6875,69.96 #7c7566 JetBrains Mono 11
+    text "Negative values round the wrong way" @378,68.365234 #ece6d8 Inter 12
+    text "✕" @606.6875,67.96 #7c7566 JetBrains Mono 11
+    rect 364,78 261.98438x2 fill #ffd23f
   pop
   rect 364,80 1236x1 fill #24221d
   clip 364,81 1236x893 r 0

@@ -780,3 +780,34 @@ func TestDragIntoTabsBetween(t *testing.T) {
 		t.Errorf("tabs %v, want %s", got, want)
 	}
 }
+
+// The focused tab's accent runs along its foot, where it meets its view: along its head it sat against the session
+// tabs above, and read as theirs.
+func TestFocusedTabsAccentIsAlongItsFoot(t *testing.T) {
+	h := newHarness(t)
+	h.frame()
+	var title *render.Op
+	for i, op := range h.list.Ops {
+		if op.Kind == render.OpGlyphs && op.Run.Text == code.String() && h.isTab(op) {
+			title = &h.list.Ops[i]
+			break
+		}
+	}
+	if title == nil {
+		t.Fatal("no tab for the code view")
+	}
+	found := false
+	for _, op := range h.list.Ops {
+		r := op.Rect
+		if op.Kind != render.OpRect || r.Dy() != 2 || r.Min.X > title.At.X || r.Max.X < title.At.X+title.Run.Advance {
+			continue
+		}
+		found = true
+		if r.Min.Y < title.At.Y {
+			t.Errorf("the focused tab's accent is at %v, above its title (baseline %v): want it along the tab's foot", r.Min.Y, title.At.Y)
+		}
+	}
+	if !found {
+		t.Error("the focused tab has no accent")
+	}
+}

@@ -116,11 +116,11 @@ rect 44,50 716x344 fill #060606
 rect 44,50 380x344 fill #0c0c0b
 clip 44,50 380x344 r 0
   rect 44,50 380x30 fill #0c0c0b
-  rect 44,50 380x2 fill #ffd23f
-  rect 58,62.5 7x7 fill #b98aff radius 1
-  text "api" @73,70.14 #ece6d8 JetBrains Mono 11.5
-  text "SEARCH" @102.609375,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @404.70312,69.96 #7c7566 JetBrains Mono 11
+  rect 58,60.5 7x7 fill #b98aff radius 1
+  text "api" @73,68.14 #ece6d8 JetBrains Mono 11.5
+  text "SEARCH" @102.609375,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @404.70312,67.96 #7c7566 JetBrains Mono 11
+  rect 44,78 380x2 fill #ffd23f
   rect 44,80 380x1 fill #24221d
   clip 44,81 380x313 r 0
     rect 44,81 380x313 fill #0c0c0b

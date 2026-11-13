@@ -94,8 +94,8 @@ rect 44,50 1022.6666x590.6667 fill #060606
 rect 44,50 250x590.6667 fill #0c0c0b
 clip 44,50 250x590.6667 r 0
   rect 44,50 250x30 fill #0c0c0b
-  text "EXPLORER" @58,69.6 #7c7566 JetBrains Mono 10
-  text "✕" @274.70312,69.96 #7c7566 JetBrains Mono 11
+  text "EXPLORER" @58,67.6 #7c7566 JetBrains Mono 10
+  text "✕" @274.70312,67.96 #7c7566 JetBrains Mono 11
   rect 44,80 250x1 fill #24221d
   clip 44,81 250x559.6667 r 0
     rect 44,81 250x559.6667 fill #0c0c0b
@@ -212,10 +212,10 @@ clip 294,50 772.6666x590.6667 r 0
   rect 294,50 772.6666x30 fill #0c0c0b
   clip 294,50 772.6666x30 r 0
     rect 294,50 111.265625x30 fill #121210
-    rect 294,50 111.265625x2 fill #ffd23f
-    text "round.go" @308,70.365234 #ece6d8 Inter 12
-    text "M" @366.26562,69.42 #ff9b45 JetBrains Mono 9.5
-    text "✕" @385.96875,69.96 #7c7566 JetBrains Mono 11
+    text "round.go" @308,68.365234 #ece6d8 Inter 12
+    text "M" @366.26562,67.42 #ff9b45 JetBrains Mono 9.5
+    text "✕" @385.96875,67.96 #7c7566 JetBrains Mono 11
+    rect 294,78 111.265625x2 fill #ffd23f
   pop
   rect 294,80 772.6666x1 fill #24221d
   clip 294,81 772.6666x559.6667 r 0
