@@ -247,6 +247,8 @@ func TestLuaExecInBackground(t *testing.T) {
 	if said, failed := global(lua(s).VM(), "said"), global(lua(s).VM(), "failed"); said != "hi\n" || failed != nil {
 		t.Errorf("said %q, failed %v", said, failed)
 	}
+	s.Lua(`L.exec_async({ "/no/such/program" }, {}, function(out, err) missing = err end)`)
+	s.Until("the missing program", func() bool { return global(lua(s).VM(), "missing") != nil })
 	s.Lua(`L.exec({ "sh", "-c", "echo nope >&2; exit 3" }, { on_done = function(out, err) failed = err end })`)
 	s.Until("the failure", func() bool { return global(lua(s).VM(), "failed") != nil })
 	if f, _ := global(lua(s).VM(), "failed").(string); !strings.Contains(f, "exit status 3") || !strings.Contains(f, "nope") {

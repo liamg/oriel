@@ -63,7 +63,7 @@ function oriel.command(name, fn, opts) end
 ---@return string?,string?
 function oriel.exec(argv, opts) end
 
---- Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default).
+--- Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too.
 ---@param argv string|string[]
 ---@param opts? table
 ---@param fn function
@@ -345,10 +345,10 @@ function oriel.place.add(spec) end
 ---@class oriel.process
 oriel.process = {}
 
---- Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop().
+--- Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop(); or nil and why, when the program isn't there.
 ---@param path string
 ---@param opts? table
----@return table
+---@return table?,string?
 function oriel.process.spawn(path, opts) end
 
 ---@class oriel.rail
@@ -612,9 +612,9 @@ function oriel.view.override(id, fn) end
 ---@class oriel.wasm
 oriel.wasm = {}
 
---- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close().
+--- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close(); or nil and why, when the file isn't there.
 ---@param path string
 ---@param opts? table
----@return table
+---@return table?,string?
 function oriel.wasm.load(path, opts) end
 

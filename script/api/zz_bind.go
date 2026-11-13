@@ -413,8 +413,7 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Process{a: a}
 		vm.Bind("process", map[string]script.GoFunc{
 			"spawn": func(c *script.Args) ([]any, error) {
-				v, err := x.Spawn(c.String(0), c.Table(1))
-				return []any{v}, err
+				return x.Spawn(c.String(0), c.Table(1))
 			},
 		})
 	}
@@ -742,8 +741,7 @@ func (a *APIs) bind(vm *script.VM) {
 		x := WASM{a: a}
 		vm.Bind("wasm", map[string]script.GoFunc{
 			"load": func(c *script.Args) ([]any, error) {
-				v, err := x.Load(c.String(0), c.Table(1))
-				return []any{v}, err
+				return x.Load(c.String(0), c.Table(1))
 			},
 		})
 	}

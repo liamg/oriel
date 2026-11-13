@@ -97,6 +97,11 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`L.exec({ "pwd" }, { cwd = "/" })`, `"/\n"`},
 		{`select(2, L.exec({ "false" }))`, `"false: exit status 1: "`},
 		{`(L.exec({ "false" }))`, "nil"},
+		{`(L.exec({ "/no/such/program" }))`, "nil"},
+		{`(L.process.spawn("/no/such/program"))`, "nil"},
+		{`select(2, L.process.spawn("/no/such/program")) ~= nil`, "true"},
+		{`(L.wasm.load("/no/such/module.wasm"))`, "nil"},
+		{`select(2, L.wasm.load("/no/such/module.wasm")) ~= nil`, "true"},
 		{`(L.run("Remember", { x = 7 })) == nil`, "true"},
 		{`L.remembered`, "7"},
 		{`(L.cmd("Remember", { x = 8 })) == nil`, "true"}, // deprecated, kept for old configs

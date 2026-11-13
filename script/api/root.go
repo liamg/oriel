@@ -180,8 +180,7 @@ func (r Root) Exec(argv []string, opts script.Table) ([]any, error) {
 		return nil, r.ExecAsync(argv, opts, done)
 	}
 	run, err := r.program(argv, opts)
-	var missing *notFound
-	if errors.As(err, &missing) {
+	if missing(err) {
 		return []any{nil, err.Error()}, nil
 	}
 	if err != nil {
@@ -200,12 +199,17 @@ type notFound struct{ err error }
 func (e *notFound) Error() string { return e.err.Error() }
 func (e *notFound) Unwrap() error { return e.err }
 
-//oriel:api doc="Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default)." optional=opts cap=exec
+//oriel:api doc="Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too." optional=opts cap=exec
 func (r Root) ExecAsync(argv []string, opts script.Table, fn *script.Fn) error {
 	if fn == nil {
 		return fmt.Errorf("no function for the output")
 	}
 	run, err := r.program(argv, opts)
+	if missing(err) {
+		why := err.Error()
+		r.a.Host.Do(func() { r.a.later(fn, nil, why) })
+		return nil
+	}
 	if err != nil {
 		return err
 	}

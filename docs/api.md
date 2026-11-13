@@ -13,7 +13,7 @@ A failure the caller may expect (a file or program that isn't there, a program t
 - `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments. Deprecated: use oriel.run.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
 - `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
-- `oriel.exec_async(argv, opts?, fn)` (`exec`): Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default).
+- `oriel.exec_async(argv, opts?, fn)` (`exec`): Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too.
 - `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode any other value as JSON text. Deprecated: use oriel.json_encode or oriel.json_decode, which can encode a string.
 - `oriel.json_decode(s)` (`ui`): Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
 - `oriel.json_encode(v)` (`ui`): Encode a value as JSON text: a table, a string, a number, a boolean.
@@ -117,7 +117,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.process
 
-- `oriel.process.spawn(path, opts?)` (capability by target): Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop().
+- `oriel.process.spawn(path, opts?)` (capability by target): Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop(); or nil and why, when the program isn't there.
 
 ## oriel.rail
 
@@ -198,4 +198,4 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.wasm
 
-- `oriel.wasm.load(path, opts?)` (capability by target): Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close().
+- `oriel.wasm.load(path, opts?)` (capability by target): Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close(); or nil and why, when the file isn't there.
