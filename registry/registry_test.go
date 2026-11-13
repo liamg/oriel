@@ -2,6 +2,7 @@ package registry_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/liamg/oriel/registry"
@@ -134,5 +135,26 @@ func TestKeymapsForFollowsAddAndDispose(t *testing.T) {
 	}
 	if got := r.KeymapsFor("missing"); len(got) != 0 {
 		t.Errorf("KeymapsFor(missing) = %v", got)
+	}
+}
+
+type kindStub struct{ kind, name string }
+
+func (k kindStub) ContributionKind() string { return k.kind }
+func (k kindStub) ContributionName() string { return k.name }
+
+// ContributionKinds are the kinds there's a contribution of now, each once, sorted: what goes when its last goes.
+func TestContributionKinds(t *testing.T) {
+	r := registry.New()
+	r.Contribute(kindStub{"start.entry", "b"})
+	r.Contribute(kindStub{"menu.item", "a"})
+	off := r.Contribute(kindStub{"rail.entry", "c"})
+	r.Contribute(kindStub{"menu.item", "z"})
+	if got := r.ContributionKinds(); !slices.Equal(got, []string{"menu.item", "rail.entry", "start.entry"}) {
+		t.Errorf("kinds %v", got)
+	}
+	off.Dispose()
+	if got := r.ContributionKinds(); slices.Contains(got, "rail.entry") {
+		t.Errorf("a kind with none left is still listed: %v", got)
 	}
 }
