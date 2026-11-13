@@ -75,6 +75,7 @@ func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Keymap(k))
 	}
 	x.Add(h.View(kit.OverlayPrefix+"tickets", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "tickets", Fn: x.pageView} })))
+	x.Add(h.View(kit.TicketView, ticketTab{x}))
 	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it into progress"}, func(_ registry.Ctx, ev *kit.SessionStart) (registry.Verdict, error) {
 		x.started(*ev)
 		return registry.Verdict{}, nil
@@ -102,6 +103,13 @@ func (x *Tickets) commands() []registry.Command {
 		}},
 		{ID: "tickets.open", Title: "Open the tickets page: every tracker's tickets, or one {tracker}'s", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.openPage(a.String("tracker"))
+		}},
+		{ID: "tickets.show", Title: "Open {ticket} in a tab of its own: its title, state, fields and description in full", Run: func(ctx registry.Ctx, a registry.Args) error {
+			key := strings.TrimSpace(a.String("ticket"))
+			if key == "" {
+				return fmt.Errorf("say which {ticket}")
+			}
+			return x.h.Run(ctx, "view.open", registry.Args{"id": kit.TicketView, "instance": key, "place": "tab"})
 		}},
 		{ID: "tickets.refresh", Title: "Ask every tracker for your tickets again now", Run: func(registry.Ctx, registry.Args) error {
 			x.refreshAll()
