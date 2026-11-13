@@ -12,8 +12,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				v, err := x.Asset(c.String(0))
-				return []any{v}, err
+				return x.Asset(c.String(0))
 			},
 			"cmd": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
@@ -31,8 +30,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("exec"); err != nil {
 					return nil, err
 				}
-				v, err := x.Exec(c.Strings(0), c.Table(1))
-				return []any{v}, err
+				return x.Exec(c.Strings(0), c.Table(1))
 			},
 			"exec_async": func(c *script.Args) ([]any, error) {
 				if err := a.check("exec"); err != nil {

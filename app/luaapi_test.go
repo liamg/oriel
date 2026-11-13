@@ -95,6 +95,8 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`select(2, L.read("/nonexistent/x"))`, `"open /nonexistent/x: no such file or directory"`},
 		{`L.exec({ "echo", "hi" })`, `"hi\n"`},
 		{`L.exec({ "pwd" }, { cwd = "/" })`, `"/\n"`},
+		{`select(2, L.exec({ "false" }))`, `"false: exit status 1: "`},
+		{`(L.exec({ "false" }))`, "nil"},
 		{`(L.run("Remember", { x = 7 })) == nil`, "true"},
 		{`L.remembered`, "7"},
 		{`(L.cmd("Remember", { x = 8 })) == nil`, "true"}, // deprecated, kept for old configs
@@ -106,7 +108,6 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 	}
 	for line, want := range map[string]string{
 		`L.json_decode("{")`:       "oriel.json_decode:",
-		`L.exec({ "false" })`:      "oriel.exec: false: exit status 1",
 		`L.exec({})`:               "oriel.exec: no program",
 		`L.run("no.such.command")`: "oriel.run:",
 	} {

@@ -5,12 +5,14 @@ Version 0.6.0. Licensed under the Apache License 2.0 ([examples/LICENSE](example
 
 A Lua or WASM plugin that uses only this API isn't required to be AGPL: license it as you like. A native (Go) plugin built into Oriel becomes part of it, and is AGPL-3.0-or-later as Oriel is ([CONTRIBUTING.md](../CONTRIBUTING.md)).
 
+A failure the caller may expect (a file or program that isn't there, a program that fails) is returned: nil, and why. A mistake in the call (a missing argument, a path out of bounds, a capability the plugin didn't declare) raises an error.
+
 ## oriel
 
-- `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
+- `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
 - `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments. Deprecated: use oriel.run.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
-- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed; an error if it fails. ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
+- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
 - `oriel.exec_async(argv, opts?, fn)` (`exec`): Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default).
 - `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode any other value as JSON text. Deprecated: use oriel.json_encode or oriel.json_decode, which can encode a string.
 - `oriel.json_decode(s)` (`ui`): Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.

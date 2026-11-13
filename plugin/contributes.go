@@ -319,7 +319,7 @@ func Asset(dir, name string) ([]byte, error) {
 	root := filepath.Join(dir, AssetsDir)
 	r, err := filepath.EvalSymlinks(root)
 	if err != nil {
-		return nil, fmt.Errorf("asset %s: the plugin has no %s/", name, AssetsDir)
+		return nil, fmt.Errorf("asset %s: the plugin has no %s/: %w", name, AssetsDir, fs.ErrNotExist)
 	}
 	real, err := filepath.EvalSymlinks(f)
 	if err != nil {

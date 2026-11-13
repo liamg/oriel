@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -160,23 +162,43 @@ func (r Root) Read(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
-//oriel:api doc="One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability." returns=string
-func (r Root) Asset(path string) (string, error) {
+//oriel:api doc="One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability." returns="string?,string?"
+func (r Root) Asset(path string) ([]any, error) {
 	b, err := plugin.Asset(r.a.Plugin.Dir, path)
-	return string(b), err
+	if errors.Is(err, fs.ErrNotExist) {
+		return []any{nil, err.Error()}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async)." optional=opts returns=string? cap=exec
-func (r Root) Exec(argv []string, opts script.Table) (any, error) {
+//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async)." optional=opts returns="string?,string?" cap=exec
+func (r Root) Exec(argv []string, opts script.Table) ([]any, error) {
 	if done, ok := opts["on_done"].(*script.Fn); ok {
 		return nil, r.ExecAsync(argv, opts, done)
 	}
 	run, err := r.program(argv, opts)
+	var missing *notFound
+	if errors.As(err, &missing) {
+		return []any{nil, err.Error()}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	return run()
+	out, err := run()
+	if err != nil {
+		return []any{nil, err.Error()}, nil
+	}
+	return []any{out}, nil
 }
+
+// notFound is a program that isn't there: a failure the caller may expect, not a mistake in the call.
+type notFound struct{ err error }
+
+func (e *notFound) Error() string { return e.err.Error() }
+func (e *notFound) Unwrap() error { return e.err }
 
 //oriel:api doc="Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default)." optional=opts cap=exec
 func (r Root) ExecAsync(argv []string, opts script.Table, fn *script.Fn) error {
@@ -206,7 +228,7 @@ func (r Root) program(argv []string, opts script.Table) (func() (string, error),
 	dir := expand(str(opts, "cwd"))
 	prog, err := resolveProgram(argv[0], dir)
 	if err != nil {
-		return nil, err
+		return nil, &notFound{err}
 	}
 	if !r.a.Plugin.Trusted() {
 		if err := r.a.Check(plugin.CapExec, plugin.RealPath(prog)); err != nil {

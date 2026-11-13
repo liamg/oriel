@@ -40,9 +40,9 @@
 ---@field api { version: string }
 oriel = {}
 
---- One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
+--- One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
 ---@param path string
----@return string
+---@return string?,string?
 function oriel.asset(path) end
 
 --- Run a command by its id, with arguments.
@@ -57,10 +57,10 @@ function oriel.cmd(id, args) end
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed; an error if it fails. ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
+--- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
 ---@param argv string|string[]
 ---@param opts? table
----@return string?
+---@return string?,string?
 function oriel.exec(argv, opts) end
 
 --- Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop. opts: cwd, timeout (seconds, 10 by default).
