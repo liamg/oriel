@@ -100,7 +100,7 @@ func (f *Fake) serve(conn net.Conn) {
 	seqs := map[int]int{} // recorded client seq → the live one
 	closed := false
 	for i, e := range f.t.Entries {
-		body := f.vars.concrete(e.Msg)
+		body := f.vars.Concrete(e.Msg)
 		var rec dap.Message
 		if err := json.Unmarshal(body, &rec); err != nil {
 			f.fail("entry %d: %v", i, err)

@@ -68,7 +68,7 @@ func (r *Recorder) add(dir string, body []byte) {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.entries = append(r.entries, Entry{Dir: dir, Msg: r.Vars.abstract(buf.Bytes())})
+	r.entries = append(r.entries, Entry{Dir: dir, Msg: r.Vars.Abstract(buf.Bytes())})
 }
 
 type recorded struct {

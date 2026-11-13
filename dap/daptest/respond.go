@@ -62,7 +62,7 @@ func (r *Responder) serve(conn net.Conn, done chan struct{}) {
 	}
 	var entries []entry
 	for _, e := range r.t.Entries {
-		body := r.vars.concrete(e.Msg)
+		body := r.vars.Concrete(e.Msg)
 		var m dap.Message
 		if json.Unmarshal(body, &m) == nil {
 			entries = append(entries, entry{e.Dir, m, body})
@@ -140,7 +140,7 @@ func (r *Responder) response(seq int) ([]byte, bool) {
 		if e.Dir != Recv {
 			continue
 		}
-		body := r.vars.concrete(e.Msg)
+		body := r.vars.Concrete(e.Msg)
 		var m dap.Message
 		if json.Unmarshal(body, &m) == nil && m.Type == "response" && m.RequestSeq == seq {
 			return body, true
