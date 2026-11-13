@@ -905,19 +905,3 @@ func TestUsageCarriesTheTier(t *testing.T) {
 		t.Errorf("usage = %+v", u)
 	}
 }
-
-// ref:   semver/semver.md#Semantic Versioning Specification (SemVer)
-// quote: "Major, minor, and patch versions are always compared numerically."
-func TestVersionLess(t *testing.T) {
-	for _, tc := range []struct {
-		a, b string
-		want bool
-	}{
-		{"2.1.283", "2.1.284", true}, {"2.1.284", "2.1.284", false}, {"2.10.0", "2.9.9", false},
-		{"2.1", "2.1.284", true}, {"3", "2.1.284", false}, {"2.1.284", "2", false},
-	} {
-		if got := versionLess(tc.a, tc.b); got != tc.want {
-			t.Errorf("versionLess(%q, %q) = %v, want %v", tc.a, tc.b, got, tc.want)
-		}
-	}
-}

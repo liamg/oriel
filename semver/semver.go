@@ -51,6 +51,14 @@ func (v Version) String() string {
 	return s
 }
 
+// Less says version a comes before b, each as ParsePartial reads it ("2.1" is 2.1.0); a version that doesn't parse
+// ("dev") is never before or after another.
+func Less(a, b string) bool {
+	x, _, errA := ParsePartial(a)
+	y, _, errB := ParsePartial(b)
+	return errA == nil && errB == nil && x.Compare(y) < 0
+}
+
 // Compare orders versions as semver.org does: a pre-release comes before its release.
 func (v Version) Compare(w Version) int {
 	if c := cmp.Or(cmp.Compare(v.Major, w.Major), cmp.Compare(v.Minor, w.Minor), cmp.Compare(v.Patch, w.Patch)); c != 0 {

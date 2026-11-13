@@ -102,16 +102,10 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 	if in.LoggedIn {
 		in.Login = loginMark(home())
 	}
-	if versionLess(in.Version, minVersion) {
+	if semver.Less(in.Version, minVersion) {
 		in.Note = fmt.Sprintf("Codex %s is too old for Oriel, which needs %s or newer: update codex.", in.Version, minVersion)
 	}
 	return in, nil
-}
-
-func versionLess(a, b string) bool {
-	x, _, errA := semver.ParsePartial(a)
-	y, _, errB := semver.ParsePartial(b)
-	return errA == nil && errB == nil && x.Compare(y) < 0
 }
 
 // parseVersion takes "codex-cli 0.98.0" to "0.98.0".

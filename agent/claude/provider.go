@@ -98,7 +98,7 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 		}
 	}
 	switch {
-	case versionLess(in.Version, minVersion):
+	case semver.Less(in.Version, minVersion):
 		in.Note = fmt.Sprintf("Claude Code %s is too old for Oriel, which needs %s or newer: run claude update.", in.Version, minVersion)
 	case !in.LoggedIn:
 		in.Note = "Not signed in: run claude and /login."
@@ -106,12 +106,6 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 		in.Note = "Signed in with an API key: billed per token, not to a subscription."
 	}
 	return in, nil
-}
-
-func versionLess(a, b string) bool {
-	x, _, errA := semver.ParsePartial(a)
-	y, _, errB := semver.ParsePartial(b)
-	return errA == nil && errB == nil && x.Compare(y) < 0
 }
 
 // login reads the sign-in from Claude's files, without asking the network (subscription), else an API key. mark
