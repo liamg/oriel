@@ -1,4 +1,4 @@
-package lang_test
+package terminal_test
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/app/lang"
+	"github.com/liamg/oriel/app/terminal"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/render"
@@ -20,12 +20,12 @@ import (
 // :term opens a shell docked at the bottom; typing goes to it and its output is drawn from the VT's grid.
 func TestTerminalRunsAShell(t *testing.T) {
 	s := termScene(t, registry.Args{"cmd": []string{"sh"}, "env": []string{"PS1=$ "}})
-	w := s.Host().Layout().Find(layout.ViewRef{ID: lang.TerminalView, Instance: "1"})
+	w := s.Host().Layout().Find(layout.ViewRef{ID: terminal.TerminalView, Instance: "1"})
 	if w == nil || w.Placement != layout.Docked || w.Edge != layout.Bottom {
 		t.Fatalf("the terminal is at %+v", w)
 	}
 	waitTerm(t, s, "$")
-	if m := s.KeyModes()[0]; m != lang.TerminalKeyMode {
+	if m := s.KeyModes()[0]; m != terminal.TerminalKeyMode {
 		t.Fatalf("keys go to %q", m)
 	}
 	typeTerm(s, "echo hel''lo")
@@ -37,12 +37,12 @@ func TestTerminalRunsAShell(t *testing.T) {
 // The placements are the layout's: :term! opens in the main area, and a terminal moves like any pane.
 func TestTerminalPlacements(t *testing.T) {
 	s := termScene(t, registry.Args{"cmd": []string{"sh"}, "bang": true})
-	w := s.Host().Layout().Find(layout.ViewRef{ID: lang.TerminalView, Instance: "1"})
+	w := s.Host().Layout().Find(layout.ViewRef{ID: terminal.TerminalView, Instance: "1"})
 	if w == nil || w.Placement != layout.Tab {
 		t.Fatalf(":term! is at %+v", w)
 	}
 	s.Run("layout.move", registry.Args{"place": "float"})
-	if w := s.Host().Layout().Find(layout.ViewRef{ID: lang.TerminalView, Instance: "1"}); w == nil || w.Placement != layout.Floating {
+	if w := s.Host().Layout().Find(layout.ViewRef{ID: terminal.TerminalView, Instance: "1"}); w == nil || w.Placement != layout.Floating {
 		t.Errorf("after ⌃W F: %+v", w)
 	}
 }
@@ -52,7 +52,7 @@ func TestTerminalNormalMode(t *testing.T) {
 	s := termScene(t, registry.Args{"cmd": []string{"sh", "-c", "printf 'first line\\nsecond line\\n'; exec cat"}})
 	waitTerm(t, s, "second line")
 	s.Press(`<C-\><C-n>`)
-	if m := s.KeyModes()[0]; m != lang.TerminalNormalKeyMode {
+	if m := s.KeyModes()[0]; m != terminal.TerminalNormalKeyMode {
 		t.Fatalf("after ⌃\\ ⌃N keys go to %q", m)
 	}
 	wantText(t, s, "the mode", "TERM-NORMAL")
@@ -61,7 +61,7 @@ func TestTerminalNormalMode(t *testing.T) {
 		t.Errorf("yy yanked %q", got)
 	}
 	typeTerm(s, "i")
-	if m := s.KeyModes()[0]; m != lang.TerminalKeyMode {
+	if m := s.KeyModes()[0]; m != terminal.TerminalKeyMode {
 		t.Errorf("i went back to %q", m)
 	}
 }
@@ -140,7 +140,7 @@ func TestTerminalKeepsControlKeys(t *testing.T) {
 	s.Press("<C-w>")
 	waitTerm(t, s, "027") // od's octal for ⌃W, which reached the program
 	for _, k := range []string{"<C-Esc>", `<C-\><C-n>`} {
-		m, _ := s.Registry().Lookup([]string{lang.TerminalKeyMode}, keymap.Parse(k))
+		m, _ := s.Registry().Lookup([]string{terminal.TerminalKeyMode}, keymap.Parse(k))
 		if m == nil || m.Command != "term.normal" {
 			t.Errorf("%s in a terminal is %+v", k, m)
 		}
@@ -158,20 +158,20 @@ func TestTerminalClickMovesKeys(t *testing.T) {
 	s.Run("term.open", registry.Args{"cmd": []string{"sh", "-c", "exec cat"}})
 	s.Frame()
 	s.Frame()
-	if m := s.KeyModes()[0]; m != lang.TerminalKeyMode {
+	if m := s.KeyModes()[0]; m != terminal.TerminalKeyMode {
 		t.Fatalf("an opened terminal doesn't take the keys: %q", m)
 	}
 	s.Click(render.Point{X: s.Size().X / 2, Y: s.Size().Y / 4}, 0)
 	s.Frame()
-	if m := s.KeyModes()[0]; m == lang.TerminalKeyMode {
+	if m := s.KeyModes()[0]; m == terminal.TerminalKeyMode {
 		t.Fatalf("after a click in the main area keys still go to %q", m)
 	}
-	if slices.Contains(s.KeyModesFor("<C-w>"), lang.TerminalKeyMode) || !slices.Contains(s.KeyModesFor("<C-w>"), "global") {
+	if slices.Contains(s.KeyModesFor("<C-w>"), terminal.TerminalKeyMode) || !slices.Contains(s.KeyModesFor("<C-w>"), "global") {
 		t.Errorf("⌃W outside the terminal goes to %v", s.KeyModesFor("<C-w>"))
 	}
 	s.Click(render.Point{X: s.Size().X / 2, Y: s.Size().Y - s.Size().Y/8}, 0)
 	s.Frame()
-	if m := s.KeyModes()[0]; m != lang.TerminalKeyMode {
+	if m := s.KeyModes()[0]; m != terminal.TerminalKeyMode {
 		t.Errorf("after a click on the terminal keys go to %q", m)
 	}
 }
@@ -183,7 +183,7 @@ func TestTerminalNormalKeepsColours(t *testing.T) {
 	s.Press("<C-Esc>")
 	typeTerm(s, "gg")
 	s.Frame()
-	plain := s.UI().Theme().C(kit.TTermFg)
+	plain := s.UI().Theme().C(terminal.TTermFg)
 	for _, op := range s.List().Ops {
 		if op.Kind == render.OpGlyphs && op.Run.Text == "red line" {
 			if op.Color == plain {

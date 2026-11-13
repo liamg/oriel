@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/app/stats"
+	"github.com/liamg/oriel/app/terminal"
 	"github.com/liamg/oriel/app/watches"
 	"github.com/liamg/oriel/plugin"
 )
@@ -39,7 +40,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		lang.TestsEntries(), &lang.Tests{HistoryFile: dirState("tests")}, lang.DebugEntries(),
 		&lang.Debug{StateFile: dirState("debug"), Logger: c.Logs.Logger},
 		&explain.Plugin{}, &explain.Walkthrough{ConfigDir: c.ConfigDir},
-		&lang.Terminals{CacheDir: c.CacheDir, SavedAt: dirState("terminals"), Clipboard: p.Clipboard},
+		&terminal.Terminals{CacheDir: c.CacheDir, SavedAt: dirState("terminals"), Clipboard: p.Clipboard},
 		&settings.Plugin{ConfigDir: c.ConfigDir}, &ship.CodeSites{}, &appsessions.Sessions{Host: c.Host, ConfigDir: c.ConfigDir},
 		p.Quit, &settings.SandboxSettings{Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
 		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &appsessions.Jobs{}, &appsessions.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},

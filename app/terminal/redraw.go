@@ -1,25 +1,27 @@
-package kit
+package terminal
 
 import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/ui"
 )
 
-// PacedRedraw asks for frames from a goroutine that changes what's shown often, as a terminal's output does: at
+// pacedRedraw asks for frames from a goroutine that changes what's shown often, as a terminal's output does: at
 // most one an Interval (ui.FrameInterval when 0), and one at the interval's end for changes inside it.
-type PacedRedraw struct {
+type pacedRedraw struct {
 	Interval time.Duration
 	Redraw   func()
+	Clock    clock.Clock // the system's when nil
 
 	mu    sync.Mutex
 	last  time.Time
-	timer *time.Timer // set while the trailing frame is waiting
+	timer clock.Timer // set while the trailing frame is waiting
 }
 
 // Ask notes a change to draw; safe from any goroutine.
-func (p *PacedRedraw) Ask() {
+func (p *pacedRedraw) Ask() {
 	p.mu.Lock()
 	if p.timer != nil {
 		p.mu.Unlock()
@@ -29,25 +31,26 @@ func (p *PacedRedraw) Ask() {
 	if iv == 0 {
 		iv = ui.FrameInterval
 	}
-	if wait := iv - time.Since(p.last); wait > 0 {
-		p.timer = time.AfterFunc(wait, p.fire)
+	c := clock.Or(p.Clock)
+	if wait := iv - c.Now().Sub(p.last); wait > 0 {
+		p.timer = c.AfterFunc(wait, p.fire)
 		p.mu.Unlock()
 		return
 	}
-	p.last = time.Now()
+	p.last = c.Now()
 	p.mu.Unlock()
 	p.Redraw()
 }
 
-func (p *PacedRedraw) fire() {
+func (p *pacedRedraw) fire() {
 	p.mu.Lock()
-	p.timer, p.last = nil, time.Now()
+	p.timer, p.last = nil, clock.Or(p.Clock).Now()
 	p.mu.Unlock()
 	p.Redraw()
 }
 
 // Stop drops a trailing frame still waiting.
-func (p *PacedRedraw) Stop() {
+func (p *pacedRedraw) Stop() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.timer != nil {

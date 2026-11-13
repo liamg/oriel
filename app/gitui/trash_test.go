@@ -1,4 +1,4 @@
-package kit
+package gitui
 
 import (
 	"os"
@@ -23,7 +23,7 @@ func TestTrash(t *testing.T) {
 		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if err := Trash(p); err != nil {
+		if err := trash(p); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := os.Stat(p); !os.IsNotExist(err) {

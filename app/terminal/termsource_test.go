@@ -1,4 +1,4 @@
-package lang_test
+package terminal_test
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/lang"
+	"github.com/liamg/oriel/app/terminal"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
@@ -45,7 +45,7 @@ func TestTerminalShowsASource(t *testing.T) {
 	pr, pw := io.Pipe()
 	src := &pipeSource{out: pr, in: pw, typed: make(chan []byte, 16)}
 	t.Cleanup(func() { pw.Close() })
-	s.Run("term.open", registry.Args{"source": lang.TermSource(src), "title": "agent · w"})
+	s.Run("term.open", registry.Args{"source": terminal.TermSource(src), "title": "agent · w"})
 	go pw.Write([]byte("hello from elsewhere\r\n"))
 	s.Until("the source's text", func() bool { return s.Has("hello from elsewhere") })
 	s.Press("x")
@@ -62,7 +62,7 @@ func TestTerminalOpenedAgainStopsTheOneBefore(t *testing.T) {
 		pr, pw := io.Pipe()
 		src := &pipeSource{out: pr, in: pw, typed: make(chan []byte, 16), closed: make(chan struct{})}
 		t.Cleanup(func() { pw.Close() })
-		s.Run("term.open", registry.Args{"source": lang.TermSource(src), "title": "agent · w", "instance": "agent-w"})
+		s.Run("term.open", registry.Args{"source": terminal.TermSource(src), "title": "agent · w", "instance": "agent-w"})
 		return src
 	}
 	first := open()
@@ -80,7 +80,7 @@ func TestTerminalWheelGoesToAProgramThatAsks(t *testing.T) {
 	pr, pw := io.Pipe()
 	src := &pipeSource{out: pr, in: pw, typed: make(chan []byte, 64)}
 	t.Cleanup(func() { pw.Close() })
-	s.Run("term.open", registry.Args{"source": lang.TermSource(src), "title": "agent · w"})
+	s.Run("term.open", registry.Args{"source": terminal.TermSource(src), "title": "agent · w"})
 	var lines strings.Builder
 	for i := range 200 {
 		fmt.Fprintf(&lines, "line %03d\r\n", i)

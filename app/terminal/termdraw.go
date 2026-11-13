@@ -1,4 +1,4 @@
-package kit
+package terminal
 
 import (
 	"image/color"
@@ -29,8 +29,8 @@ var (
 	}()
 )
 
-// TermColour is a cell colour in the theme's terminal palette.
-func TermColour(th *theme.Resolved, c term.Color, def color.NRGBA) color.NRGBA {
+// termColour is a cell colour in the theme's terminal palette.
+func termColour(th *theme.Resolved, c term.Color, def color.NRGBA) color.NRGBA {
 	switch c.Kind() {
 	case term.ColorPalette:
 		i := c.Index()
@@ -71,9 +71,9 @@ type termRun struct {
 	underline term.Underline
 }
 
-// DrawTermLine draws a row of cells in base, lineH high: backgrounds, then text in runs of one style, each at its
+// drawCells draws a row of cells in base, lineH high: backgrounds, then text in runs of one style, each at its
 // cell's column so wide characters keep the grid, and box-drawing and block characters drawn as shapes so they join.
-func DrawTermLine(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells []term.Cell, x0, y, charW float32, base typeset.FontSpec, lineH float32) {
+func drawCells(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells []term.Cell, x0, y, charW float32, base typeset.FontSpec, lineH float32) {
 	defFg := th.C(TTermFg)
 	var run *termRun
 	flush := func() {
@@ -108,7 +108,7 @@ func DrawTermLine(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells [
 		if cell.Width == term.SpacerTail || cell.Width == term.SpacerHead {
 			continue
 		}
-		fg, bg := TermColour(th, cell.FG, defFg), TermColour(th, cell.BG, color.NRGBA{})
+		fg, bg := termColour(th, cell.FG, defFg), termColour(th, cell.BG, color.NRGBA{})
 		if cell.Attrs&term.Inverse != 0 {
 			fg, bg = bg, fg
 			if fg.A == 0 {

@@ -1,4 +1,4 @@
-package lang_test
+package terminal_test
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package lang
+package terminal
 
 import (
 	"cmp"
@@ -58,7 +58,7 @@ type Terminals struct {
 	next  int
 	saved map[string][]byte // screens kept when the app stopped, by instance
 	work  kit.Work          // the readers: each runs as long as its program
-	paced kit.PacedRedraw   // output's frames
+	paced pacedRedraw       // output's frames
 }
 
 // TermSource is what a terminal shows and types into: a program in a PTY, or a stream from elsewhere, such as an

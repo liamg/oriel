@@ -1,4 +1,4 @@
-package lang
+package terminal
 
 import (
 	"context"
@@ -147,7 +147,7 @@ func (x *Terminals) draw(c *ui.Ctx, t *terminal) {
 	if t.normal {
 		mode = TerminalNormalKeyMode
 	}
-	c.Box("term", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(kit.TTermBg), Clip: true, Focusable: true, DefaultFocus: true, KeyMode: mode, Wheel: true,
+	c.Box("term", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(TTermBg), Clip: true, Focusable: true, DefaultFocus: true, KeyMode: mode, Wheel: true,
 		Cursor: render.CursorText, Help: "terminal", Role: ui.RoleTextBox, Label: t.title()}, func(c *ui.Ctx) {
 		if t.normal {
 			x.drawNormal(c, t, charW)
@@ -196,7 +196,7 @@ func (x *Terminals) draw(c *ui.Ctx, t *terminal) {
 				case term.ShapeUnderline:
 					rc.Min.Y = cy + termLineH - 2
 				}
-				f.Rect(rc, render.Style{Fill: theme.WithAlpha(th.C(kit.TTermCursor), .85)})
+				f.Rect(rc, render.Style{Fill: theme.WithAlpha(th.C(TTermCursor), .85)})
 			}
 		})
 		if t.done {
@@ -210,7 +210,7 @@ func (x *Terminals) draw(c *ui.Ctx, t *terminal) {
 
 // drawTermLine draws a row of cells in the terminal's font.
 func drawTermLine(f render.Frame, sh typeset.Shaper, th *theme.Resolved, cells []term.Cell, x0, y, charW float32) {
-	kit.DrawTermLine(f, sh, th, cells, x0, y, charW, termFont, termLineH)
+	drawCells(f, sh, th, cells, x0, y, charW, termFont, termLineH)
 }
 
 // drawNormal is terminal-normal mode: the scrollback as vim's window shows it, with its cursor and Visual area.
@@ -250,12 +250,12 @@ func (x *Terminals) drawNormal(c *ui.Ctx, t *terminal, charW float32) {
 				drawTermLine(f, c.Shaper(), th, t.cells[line], x0, y, charW)
 			} else if s := string(snap.Line(line)); s != "" {
 				g := c.Shaper().Shape(s, termFont)
-				f.Glyphs(g, render.Point{X: x0, Y: y + (termLineH+g.Ascent-g.Descent)/2}, th.C(kit.TTermFg))
+				f.Glyphs(g, render.Point{X: x0, Y: y + (termLineH+g.Ascent-g.Descent)/2}, th.C(TTermFg))
 			}
 			if line == cur.Line {
 				cx := x0 + float32(p.VCol(line, cur.Col))*charW
 				f.Rect(render.Rect{Min: render.Point{X: cx, Y: y}, Max: render.Point{X: cx + charW, Y: y + termLineH}},
-					render.Style{Fill: theme.WithAlpha(th.C(kit.TTermCursor), .7)})
+					render.Style{Fill: theme.WithAlpha(th.C(TTermCursor), .7)})
 			}
 		}
 	})

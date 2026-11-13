@@ -298,7 +298,7 @@ func (e *Explorer) remove(path string, confirm, permanent bool) error {
 		if err := os.RemoveAll(path); err != nil {
 			return err
 		}
-	} else if err := kit.Trash(path); err != nil {
+	} else if err := trash(path); err != nil {
 		e.h.Notify(core.Notice{ID: "explorer.delete", Severity: core.SevError, Source: "explorer", Text: err.Error(),
 			Actions: []core.Action{{Title: "Delete for good…", Command: "explorer.delete", Args: map[string]any{"path": path, "permanent": true}}}})
 		return nil

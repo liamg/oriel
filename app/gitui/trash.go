@@ -1,4 +1,4 @@
-package kit
+package gitui
 
 import (
 	"errors"
@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// Trash moves path to the user's trash: ~/.Trash on macOS, the freedesktop.org trash ($XDG_DATA_HOME/Trash) on
+// trash moves path to the user's trash: ~/.Trash on macOS, the freedesktop.org trash ($XDG_DATA_HOME/Trash) on
 // Linux, with what restoring it needs. It moves, never copies: a path on another disk from the trash is refused.
-func Trash(path string) error {
+func trash(path string) error {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return err
