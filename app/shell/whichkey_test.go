@@ -131,15 +131,32 @@ func TestWhichKeySnapshot(t *testing.T) {
 
 // Once which-key shows a prefix, it waits for the next key past keymap.timeoutlen, as which-key.nvim does.
 func TestWhichKeyHoldsThePrefix(t *testing.T) {
-	r := whichKeyAppWith(t, func(h plugin.Host) {
-		h.Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 500*time.Millisecond)
-	})
-	r.TypeKeys("<Space>")
-	r.WaitText("shown after 300ms")
-	time.Sleep(time.Second)
-	if fs := r.Win.Frames(); !strings.Contains(fs[len(fs)-1].Text(), "shown after 300ms") {
-		t.Fatalf("which-key went after keymap.timeoutlen:\n%s", fs[len(fs)-1].Text())
+	s := apptest.EditorScene(t)
+	s.Registry().Command(registry.Command{ID: "test.noop", Run: func(registry.Ctx, registry.Args) error { return nil }})
+	for _, k := range agentKeys {
+		s.Registry().Keymap(k)
 	}
-	r.TypeKeys("a")
-	r.WaitText("Interrupt agent")
+	if err := s.Registry().Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 500*time.Millisecond); err != nil {
+		t.Fatal(err)
+	}
+	keys := registry.NewResolver(s.Registry())
+	shell.SetKeys(s.Headless, keys)
+	start := s.Now
+	keys.Feed([]string{"n", "global"}, " ", start)
+	s.Now = start.Add(shell.WhichKeyDelay)
+	s.Frame()
+	if !strings.Contains(s.Text(), "+agent") {
+		t.Fatalf("which-key not shown after its delay:\n%s", s.Text())
+	}
+	s.Now = start.Add(time.Second) // past keymap.timeoutlen: the loop's key timer fires
+	keys.Timeout(s.Now)
+	s.Frame()
+	if !strings.Contains(s.Text(), "+agent") {
+		t.Fatalf("which-key went after keymap.timeoutlen:\n%s", s.Text())
+	}
+	keys.Feed([]string{"n", "global"}, "a", s.Now)
+	s.Frame()
+	if !strings.Contains(s.Text(), "Interrupt agent") {
+		t.Errorf("the prefix wasn't held for a:\n%s", s.Text())
+	}
 }
