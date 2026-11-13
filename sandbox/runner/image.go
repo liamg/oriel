@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/container"
@@ -18,18 +17,25 @@ import (
 // DockerfilePath is where a repository asks for its own sandbox image.
 const DockerfilePath = ".oriel/sandbox.Dockerfile"
 
-// Image picks root's image, building it if needed: the image named in
-// settings, else the primary project's approved Dockerfile, else the base.
+// Image picks root's image, building it if needed: the project's image named in settings, else the primary
+// project's Dockerfile, else the image named in settings, else the base.
 func Image(ctx context.Context, root string, cfg sandbox.Config) (string, error) {
 	p := pick(root, cfg)
 	if p.dockerfile == "" {
 		return p.tag, nil
 	}
+	if err := ensureBase(ctx, p); err != nil {
+		return "", err
+	}
 	return p.tag, ensureImage(ctx, p.tag, p.dockerfile)
 }
 
-// picked is the image root's sandbox runs: its tag, its source ("" for one named in settings) and where it comes from.
-type picked struct{ tag, dockerfile, from string }
+// picked is the image root's sandbox runs: its tag, its source ("" for one named in settings) and where it comes
+// from. onBase marks a Dockerfile built on the base, which has to be there first.
+type picked struct {
+	tag, dockerfile, from string
+	onBase                bool
+}
 
 func pick(root string, cfg sandbox.Config) picked {
 	if ws, ok := sandbox.LoadManifest(root); ok {
@@ -42,10 +48,12 @@ func pick(root string, cfg sandbox.Config) picked {
 				return picked{tag: ps.Image, from: "sandbox.image for " + filepath.Base(p.Repo)}
 			}
 			if df, ok := RepoDockerfile(p.Repo); ok {
-				if ps.Dockerfile == container.Sum(df) {
-					return picked{tag: container.ProjectImage(df), dockerfile: df, from: filepath.Base(p.Repo) + "'s " + DockerfilePath}
+				from := filepath.Base(p.Repo) + "'s " + DockerfilePath
+				if hasFrom(df) {
+					return picked{tag: container.ProjectImage(df), dockerfile: df, from: from}
 				}
-				notePending(p.Repo, df)
+				df = "FROM " + container.BaseImage() + "\n" + df
+				return picked{tag: container.ProjectImage(df), dockerfile: df, from: from + " on the base image", onBase: true}
 			}
 		}
 	}
@@ -53,6 +61,25 @@ func pick(root string, cfg sandbox.Config) picked {
 		return picked{tag: cfg.Image, from: "sandbox.image"}
 	}
 	return picked{tag: container.BaseImage(), dockerfile: container.BaseDockerfile, from: "the base image"}
+}
+
+// hasFrom says whether df names its own base image. One without adds to Oriel's base.
+func hasFrom(df string) bool {
+	for line := range strings.SplitSeq(df, "\n") {
+		if word, _, _ := strings.Cut(strings.TrimSpace(line), " "); strings.EqualFold(word, "FROM") {
+			return true
+		}
+	}
+	return false
+}
+
+// ensureBase fetches the base a Dockerfile builds on: its FROM names a local tag, which a build would otherwise
+// look for on a registry.
+func ensureBase(ctx context.Context, p picked) error {
+	if !p.onBase {
+		return nil
+	}
+	return ensureImage(ctx, container.BaseImage(), container.BaseDockerfile)
 }
 
 // BuildLog is the file tag's last build wrote to.
@@ -77,6 +104,9 @@ func Rebuild(ctx context.Context, root string, cfg sandbox.Config) error {
 	p := pick(root, cfg)
 	if p.dockerfile == "" {
 		return fmt.Errorf("the sandbox runs %s, named in %s: Oriel doesn't build it", p.tag, p.from)
+	}
+	if err := ensureBase(ctx, p); err != nil {
+		return err
 	}
 	return container.Rebuild(ctx, p.tag, p.dockerfile, BuildLog(p.tag))
 }
@@ -135,64 +165,17 @@ func containerMounts(ctx context.Context, name string) ([]sandbox.Bind, bool) {
 	return binds, running == "true"
 }
 
-// RepoDockerfile reads the repo's sandbox Dockerfile from its default branch,
-// never from a worktree the agent can edit.
+// RepoDockerfile reads the repo's sandbox Dockerfile: the checkout's, committed or not, else its default branch's.
 func RepoDockerfile(repo string) (string, bool) {
+	if b, err := os.ReadFile(filepath.Join(repo, DockerfilePath)); err == nil && strings.TrimSpace(string(b)) != "" {
+		return string(b), true
+	}
 	base := defaultBranch(repo)
 	out, err := sandbox.Git(repo, "show", base+":"+DockerfilePath)
 	if err != nil || strings.TrimSpace(out) == "" {
 		return "", false
 	}
 	return out, true
-}
-
-var pendingMu sync.Mutex
-
-func pendingPath() string { return filepath.Join(sandbox.Base(), "pending-dockerfiles.json") }
-
-func notePending(repo, df string) {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
-	all := loadPending()
-	all[repo] = sandbox.Pending{Repo: repo, Sum: container.Sum(df), Dockerfile: df}
-	savePending(all)
-}
-
-func loadPending() map[string]sandbox.Pending {
-	out := map[string]sandbox.Pending{}
-	if b, err := os.ReadFile(pendingPath()); err == nil {
-		_ = json.Unmarshal(b, &out)
-	}
-	return out
-}
-
-func savePending(all map[string]sandbox.Pending) {
-	b, _ := json.MarshalIndent(all, "", "  ")
-	_ = os.MkdirAll(sandbox.Base(), 0o700)
-	_ = os.WriteFile(pendingPath(), b, 0o600)
-}
-
-// PendingDockerfiles lists the Dockerfiles awaiting approval, dropping any
-// that have since been approved or removed.
-func PendingDockerfiles(cfg sandbox.Config) []sandbox.Pending {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
-	all := loadPending()
-	var out []sandbox.Pending
-	approved := false
-	for repo, p := range all {
-		if cfg.Projects[repo].Dockerfile == p.Sum {
-			delete(all, repo)
-			approved = true
-			continue
-		}
-		out = append(out, p)
-	}
-	if approved {
-		savePending(all)
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Repo < out[j].Repo })
-	return out
 }
 
 // defaultBranch is repo's default branch: origin's HEAD, else the first of
