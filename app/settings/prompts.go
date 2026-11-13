@@ -62,12 +62,12 @@ func (x *Prompts) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range x.keymaps() {
 		x.Add(h.Keymap(k))
 	}
-	x.Add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "send the prompts to the session host", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
-		if w, ok := ev.(*kit.BufWritePost); ok && x.isPromptFile(w.File) {
+	x.Add(registry.On(h, registry.Hook{Label: "send the prompts to the session host"}, func(_ registry.Ctx, w *kit.BufWritePost) (registry.Verdict, error) {
+		if x.isPromptFile(w.File) {
 			x.changed()
 		}
 		return registry.Verdict{}, nil
-	}}))
+	}))
 	x.Add(h.Contribute(kit.PagePlace("prompts", "Prompts", "prompts.open", &x.open)))
 	x.Add(h.Contribute(uireg.SettingsSection{Name: "prompts", Build: x.section, Source: "builtin:prompts"}))
 	x.Add(h.View(kit.OverlayPrefix+"prompts", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "prompts", Fn: x.page} })))

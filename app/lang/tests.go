@@ -148,12 +148,12 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range x.keymaps() {
 		x.Add(h.Keymap(k))
 	}
-	x.Add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "re-run the tests the save affects", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
-		if w, ok := ev.(*kit.BufWritePost); ok && x.watch {
+	x.Add(registry.On(h, registry.Hook{Label: "re-run the tests the save affects"}, func(_ registry.Ctx, w *kit.BufWritePost) (registry.Verdict, error) {
+		if x.watch {
 			x.watchSaved(w.File)
 		}
 		return registry.Verdict{}, nil
-	}}))
+	}))
 	for _, a := range x.editorActions() {
 		x.Add(h.Contribute(a))
 	}

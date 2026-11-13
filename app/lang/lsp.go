@@ -159,17 +159,15 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 		},
 	})
 	x.Add(h.Decorations("lsp", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
-	x.Add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "tell the language server", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
-		if w, ok := ev.(*kit.BufWritePost); ok {
-			x.mu.Lock()
-			d := x.docs[w.File]
-			x.mu.Unlock()
-			if d != nil && d.client != nil {
-				x.m.Save(d.path, d.buf.Snapshot())
-			}
+	x.Add(registry.On(h, registry.Hook{Label: "tell the language server"}, func(_ registry.Ctx, w *kit.BufWritePost) (registry.Verdict, error) {
+		x.mu.Lock()
+		d := x.docs[w.File]
+		x.mu.Unlock()
+		if d != nil && d.client != nil {
+			x.m.Save(d.path, d.buf.Snapshot())
 		}
 		return registry.Verdict{}, nil
-	}}))
+	}))
 	x.Add(h.Contribute(registry.KeyLayer{Name: "completion", Mode: CompletionKeyMode, Active: func() bool { return x.comp.open }}))
 	x.Add(h.Contribute(registry.KeyLayer{Name: "lsp.hover", Mode: HoverKeyMode, Active: func() bool { return x.hover != nil }}))
 	x.lspCommands(h)
