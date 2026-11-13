@@ -13,7 +13,8 @@ const (
 	exitWindow = 2 * time.Minute
 )
 
-// SetRestartOnExit says whether an agent that exits on its own is started again (sessions.restart_on_exit).
+// SetRestartOnExit says whether an agent that exits on its own is started again (sessions.restart_on_exit), unless
+// it keeps exiting (exitLimit times within exitWindow).
 func (x *Runner) SetRestartOnExit(on bool) {
 	x.mu.Lock()
 	x.keepExited = !on

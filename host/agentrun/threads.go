@@ -86,7 +86,7 @@ func (x *Runner) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, er
 	return t.ID, nil
 }
 
-// SetThread changes a thread's status. Resolving one completes the tasks it asked for.
+// SetThread changes a thread's status, urgency or title. Resolving one completes the tasks it asked for.
 func (x *Runner) SetThread(r ThreadReq) (err error) {
 	t, err := x.mutateThread(r.Session, r.Thread, func(t *core.Thread) error {
 		if r.Status != "" {

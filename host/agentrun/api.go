@@ -64,7 +64,8 @@ func (x *Runner) Fork(id core.SessionID, prompt string) (_ string, err error) {
 	return h.fork(prompt)
 }
 
-// StopProcess stops a process the agent's last turn left running (AgentState.Processes), by its ID.
+// StopProcess stops a process the agent's last turn left running (AgentState.Processes), by its ID; an error if its
+// provider can't.
 func (x *Runner) StopProcess(ctx context.Context, id core.SessionID, process string) error {
 	h, _ := x.sessionFor(id, false)
 	if h == nil || !h.running() {

@@ -21,13 +21,13 @@ func (w *Host) SessionStats(r StatsSessionReq) (_ stats.Detail, err error) {
 	return w.stats.Session(r)
 }
 
-// UsageHistory is the plan readings the host has kept, oldest first.
+// UsageHistory is persist.Stats.UsageHistory, with a panic recovered.
 func (w *Host) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
 	defer w.recover("UsageHistory", nil)
 	return w.stats.UsageHistory(r)
 }
 
-// ReadUsage asks every provider for its plan's windows now, and reports each that's newer than the one held.
+// ReadUsage is persist.Stats.ReadUsage, with a panic recovered.
 func (w *Host) ReadUsage(ctx context.Context) (err error) {
 	defer w.recover("ReadUsage", &err)
 	return w.stats.ReadUsage(ctx)

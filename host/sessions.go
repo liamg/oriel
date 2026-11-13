@@ -229,8 +229,7 @@ func (w *Host) NextPR(ctx context.Context, r NextPRReq) (err error) {
 	return nil
 }
 
-// UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
-// the projects that moved.
+// UpdatePR is worktree.Worktrees.UpdatePR, with a panic recovered.
 func (w *Host) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]PRMove, err error) {
 	defer w.recover("UpdatePR", &err)
 	return w.work.UpdatePR(ctx, id)

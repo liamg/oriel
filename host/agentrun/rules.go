@@ -83,7 +83,8 @@ func (x *Runner) RulesChanged() {
 	_ = x.st.Emit(core.RulesChanged{Rules: x.rules.all()})
 }
 
-// AddRule makes rule one for all sessions, answering asks of kind in every session before a card.
+// AddRule makes rule one for all sessions, answering asks of kind in every session before a card, from now on and
+// after a restart.
 func (x *Runner) AddRule(kind core.AskKind, rule string) error {
 	if rule == "" {
 		return errors.New("a rule needs something to allow")
