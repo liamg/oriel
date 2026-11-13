@@ -210,6 +210,14 @@ func (s OptionSpec) inRange(f float64) error {
 	return nil
 }
 
+// Option is option name's value at at as a T, and whether it's there as one: false when it's unknown or of another
+// type, with T's zero value.
+func Option[T any](o Options, name string, at At) (T, bool) {
+	v, _, err := o.Get(name, at)
+	t, ok := v.(T)
+	return t, ok && err == nil
+}
+
 // Options holds every option's values, layer by layer.
 type Options interface {
 	// Get resolves name (or an alias) at a place: the value and the layer it came from.

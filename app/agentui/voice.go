@@ -69,13 +69,15 @@ func (x *Voice) Manifest() plugin.Manifest {
 	return plugin.Manifest{ID: "voice", Lazy: kit.LazyOn(x.commands(), nil)}
 }
 
-func (x *Voice) opt(name string) any {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	return v
+func (x *Voice) str(name string) string {
+	s, _ := registry.Option[string](x.h.Options(), name, registry.At{})
+	return s
 }
 
-func (x *Voice) str(name string) string { s, _ := x.opt(name).(string); return s }
-func (x *Voice) on(name string) bool    { b, _ := x.opt(name).(bool); return b }
+func (x *Voice) on(name string) bool {
+	b, _ := registry.Option[bool](x.h.Options(), name, registry.At{})
+	return b
+}
 
 func (x *Voice) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h

@@ -255,9 +255,9 @@ func (x *Reviews) pollEvery() time.Duration {
 	return 5 * time.Minute
 }
 
+// optBool is a boolean option, true unless it's set false.
 func (x *Reviews) optBool(name string) bool {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	b, ok := v.(bool)
+	b, ok := registry.Option[bool](x.h.Options(), name, registry.At{})
 	return b || !ok
 }
 

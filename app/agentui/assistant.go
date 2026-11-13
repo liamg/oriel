@@ -170,13 +170,15 @@ func (x *Assistant) commands() []registry.Command {
 	}
 }
 
-func (x *Assistant) opt(name string) any {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	return v
+func (x *Assistant) str(name string) string {
+	s, _ := registry.Option[string](x.h.Options(), name, registry.At{})
+	return s
 }
 
-func (x *Assistant) str(name string) string { s, _ := x.opt(name).(string); return s }
-func (x *Assistant) bool(name string) bool  { b, _ := x.opt(name).(bool); return b }
+func (x *Assistant) bool(name string) bool {
+	b, _ := registry.Option[bool](x.h.Options(), name, registry.At{})
+	return b
+}
 
 func (x *Assistant) setOpen(open bool) {
 	x.open = open
@@ -231,7 +233,10 @@ func (x *Assistant) changed() {
 	x.h.Redraw()
 }
 
-func (x *Assistant) optInt(name string) int { n, _ := x.opt(name).(int); return n }
+func (x *Assistant) optInt(name string) int {
+	n, _ := registry.Option[int](x.h.Options(), name, registry.At{})
+	return n
+}
 
 // Prompt is what the assistant is told as a conversation starts: the user's version of it, filled in.
 func (x *Assistant) Prompt() string {

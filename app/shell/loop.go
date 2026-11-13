@@ -411,8 +411,8 @@ func (l *loop) loadTheme() {
 // the built-in one, with the error.
 func chosenTheme(reg registry.Registry, osLight bool) (*theme.Resolved, error) {
 	name, variant := "oriel", theme.Dark
-	if v, _, err := reg.Options().Get("ui.theme", registry.At{}); err == nil {
-		name = v.(string)
+	if v, ok := registry.Option[string](reg.Options(), "ui.theme", registry.At{}); ok {
+		name = v
 	}
 	if v, _, err := reg.Options().Get("ui.variant", registry.At{}); err == nil {
 		variant = theme.Variant(v.(string))

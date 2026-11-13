@@ -414,8 +414,8 @@ func (x *Sessions) sendRestart() {
 	if x.Host == nil {
 		return
 	}
-	on, _, _ := x.h.Options().Get(restartOption, registry.At{})
-	x.Host.SetRestartOnExit(on != false)
+	on, set := registry.Option[bool](x.h.Options(), restartOption, registry.At{})
+	x.Host.SetRestartOnExit(on || !set) // on unless it's set false
 }
 
 // start starts a session and brings it to the front, unless {background}.
@@ -458,7 +458,7 @@ func startName(a registry.Args) string {
 // launch prepares and starts a session from a, and fires SessionStart on the loop.
 func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID, error) {
 	spec := kit.SpecFrom(a)
-	if on, _, _ := x.h.Options().Get(autoNameOption, registry.At{}); on == true && spec.Name == "" {
+	if on, _ := registry.Option[bool](x.h.Options(), autoNameOption, registry.At{}); on && spec.Name == "" {
 		spec.AutoName = true
 	}
 	w, err := x.host()

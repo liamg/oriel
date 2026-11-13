@@ -180,14 +180,12 @@ func (x *Repos) count() string {
 func isFound(r core.Repo) bool { return r.Source == core.RepoDiscovered && r.Used.IsZero() }
 
 func (x *Repos) optBool(name string) bool {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	b, _ := v.(bool)
+	b, _ := registry.Option[bool](x.h.Options(), name, registry.At{})
 	return b
 }
 
 func (x *Repos) optString(name string) string {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	s, _ := v.(string)
+	s, _ := registry.Option[string](x.h.Options(), name, registry.At{})
 	return s
 }
 

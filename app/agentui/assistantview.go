@@ -447,7 +447,7 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 			x.sideList(c, now, log, heading, row)
 		})
 		spoken := "on"
-		if s, _ := x.opt("voice.speech").(string); s == "off" {
+		if x.str("voice.speech") == "off" {
 			spoken = "off"
 		}
 		c.Row("voice", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
