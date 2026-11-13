@@ -158,3 +158,30 @@ func SessionDir(se core.SessionState) string {
 	}
 	return se.Dir
 }
+
+// Tokens is a count as the session stats show it: 950, 38k, 1.42M.
+func Tokens(n int64) string {
+	switch {
+	case n >= 1_000_000:
+		return fmt.Sprintf("%.2fM", float64(n)/1e6)
+	case n >= 10_000:
+		return fmt.Sprintf("%dk", n/1000)
+	case n >= 1000:
+		return fmt.Sprintf("%.1fk", float64(n)/1000)
+	}
+	return fmt.Sprint(n)
+}
+
+// ProjectInitials are a project's two letters for the narrow sidebar: "admin-ui" is AD.
+func ProjectInitials(name string) string {
+	var rs []rune
+	for _, r := range strings.ToUpper(name) {
+		if r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			rs = append(rs, r)
+		}
+		if len(rs) == 2 {
+			break
+		}
+	}
+	return string(rs)
+}

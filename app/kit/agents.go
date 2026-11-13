@@ -12,7 +12,9 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
 )
 
@@ -202,3 +204,12 @@ var (
 	TDiagError   = theme.Declare("diagnostic.error", "error")
 	TDiagWarning = theme.Declare("diagnostic.warning", "warn")
 )
+
+// ProviderName is what an agent provider is called, as its plugin registered it (registry.AgentProvider).
+func ProviderName(r registry.Contributions, p string) string { return registry.ProviderTitle(r, p) }
+
+// ProviderNameIn is ProviderName from the registry c is drawn with.
+func ProviderNameIn(c *ui.Ctx, p string) string {
+	r, _ := ui.Service[registry.Registry](c)
+	return registry.ProviderTitle(r, p)
+}

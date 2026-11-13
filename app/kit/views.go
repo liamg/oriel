@@ -10,7 +10,11 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
+	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // The window's views, which a plugin may replace.
@@ -110,4 +114,40 @@ func SidebarArgs(command string, a registry.Args) registry.Args {
 	a = maps.Clone(a)
 	a["alone"], a["fixed"] = true, true
 	return a
+}
+
+// Section is one of the side's blocks: a kicker with a note at its right, then body.
+func Section(c *ui.Ctx, key, title, note string, body func(c *ui.Ctx)) {
+	th := c.Theme()
+	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 9, Role: ui.RoleGroup, Label: title}, func(c *ui.Ctx) {
+		c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Text("k", strings.ToUpper(title), KickerFont(th.C(theme.FgFaint)))
+			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+			if note != "" {
+				c.Text("n", note, MonoFont(9.5, th.C(theme.FgGhost)))
+			}
+		})
+		body(c)
+	})
+	c.Box(key+".rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+}
+
+// Stat is a row of a side section: a name, and its value at the right in tone.
+func Stat(c *ui.Ctx, key, name, value string, tone render.Color) {
+	th := c.Theme()
+	c.Row(key, ui.Style{W: ui.Flex(1), Cross: ui.Center, Role: ui.RoleText, Label: name + " " + value}, func(c *ui.Ctx) {
+		c.Text("n", name, MonoFont(11.5, th.C(theme.FgMuted)))
+		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		c.Text("v", value, MonoFont(11.5, tone))
+	})
+}
+
+// StatAgo is a Stat whose value is how long ago at was, then suffix.
+func StatAgo(c *ui.Ctx, key, name string, at time.Time, suffix string, tone render.Color) {
+	th := c.Theme()
+	c.Row(key, ui.Style{W: ui.Flex(1), Cross: ui.Center, Role: ui.RoleText, Label: name + " " + Ago(c.Now(), at) + suffix}, func(c *ui.Ctx) {
+		c.Text("n", name, MonoFont(11.5, th.C(theme.FgMuted)))
+		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		widget.Ago(c, "v", at, widget.AgoOpts{Text: MonoFont(11.5, tone), Suffix: suffix})
+	})
 }

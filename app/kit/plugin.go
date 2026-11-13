@@ -200,3 +200,15 @@ func (w *WhileShown) Drop() {
 		w.release = nil
 	}
 }
+
+// OpenURL opens url in the OS's default app for it (system.open).
+func OpenURL(h plugin.Host, url string) error {
+	return h.Run(context.Background(), "system.open", registry.Args{"url": url})
+}
+
+// CopyText puts s on the system clipboard (system.copy).
+func CopyText(h plugin.Host, s string) {
+	if err := h.Run(context.Background(), "system.copy", registry.Args{"text": s}); err != nil {
+		h.Log().Warn("copy", "err", err)
+	}
+}

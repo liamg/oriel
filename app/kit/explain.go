@@ -2,12 +2,13 @@ package kit
 
 import (
 	"context"
+	"maps"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"maps"
 )
 
 // AskTwins are "ask agent to explain" and "ask agent to fix" about t, side by side: explain sits next to fix

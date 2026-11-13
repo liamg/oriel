@@ -2,14 +2,15 @@ package kit
 
 import (
 	"cmp"
+	"slices"
+	"strings"
+
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"slices"
-	"strings"
 )
 
 // ModelSelects are a provider's model and effort menus, at model and effort ("" is the default effort). It reports

@@ -67,3 +67,8 @@ func EvidenceChip(c *ui.Ctx, key any, h plugin.Host, session core.SessionID, run
 		_ = h.Run(context.Background(), "test.run.show", registry.Args{"id": run, "session": string(session)})
 	}
 }
+
+var TMeterContext = theme.Declare("agent.meter.context", "amber")
+
+// StartingHelp is the help on an agent starting.
+const StartingHelp = "agent/console#starting"

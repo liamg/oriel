@@ -2,11 +2,12 @@ package kit
 
 import (
 	"errors"
+	"slices"
+	"strings"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
-	"slices"
-	"strings"
 
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
