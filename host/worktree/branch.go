@@ -50,7 +50,7 @@ func (x *Worktrees) NewBranch(ctx context.Context, r NewBranchReq) (string, erro
 	if err := hostcore.SetProjectBranch(x.st, se.ID, p.Name, name, base); err != nil {
 		return "", err
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return name, nil
 }
 
@@ -83,7 +83,7 @@ func (x *Worktrees) Adopt(ctx context.Context, id core.SessionID, project string
 	if err := hostcore.SetProjectBranch(x.st, se.ID, p.Name, repo.CurrentBranch(ctx), ""); err != nil {
 		return err
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return nil
 }
 

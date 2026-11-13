@@ -109,6 +109,6 @@ func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (map[string
 	if err := x.st.Emit(core.ProjectsChanged{ID: se.ID, Branch: se.Branch, Projects: projects, Past: se.Past, Started: se.Started}); err != nil {
 		return nil, err
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return moved, nil
 }

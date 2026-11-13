@@ -71,7 +71,7 @@ func (x *Worktrees) NextPR(ctx context.Context, r NextPRReq) error {
 	for _, kind := range []string{"commit", "pr"} {
 		x.env.DropDraft(se.ID, p.Name, kind)
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return nil
 }
 
