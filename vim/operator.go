@@ -226,17 +226,23 @@ func (e *Engine) yank(v *view, r oprange, reg rune) {
 
 // deleteRegs fills the registers a deletion writes.
 func (e *Engine) deleteRegs(v *view, r oprange, reg rune) {
+	oneLine := r.kind != linewise && r.lines() == 1
+	e.storeDeleted(r.regText(v), reg, !oneLine || r.useRegOne, oneLine)
+}
+
+// storeDeleted fills the registers deleted text goes to: reg when it's named, and "1 (shifting the numbered ones down)
+// when numbered, or "- when it's small and no register was named.
+func (e *Engine) storeDeleted(val edit.Register, reg rune, numbered, small bool) {
 	if reg == '_' {
 		return
 	}
-	val := r.regText(v)
 	if reg == '"' {
 		reg = 0
 	}
 	if reg != 0 {
 		e.setReg(reg, val)
 	}
-	if r.kind == linewise || r.lines() > 1 || r.useRegOne {
+	if numbered {
 		for n := '9'; n > '1'; n-- {
 			if prev, ok := e.ed.Register(n - 1); ok {
 				e.ed.SetRegister(n, prev)
@@ -250,7 +256,7 @@ func (e *Engine) deleteRegs(v *view, r oprange, reg rune) {
 			e.unnamed = unicode.ToLower(reg)
 		}
 	}
-	if reg == 0 && r.kind != linewise && r.lines() == 1 {
+	if reg == 0 && small {
 		e.setReg('-', val)
 	}
 }
