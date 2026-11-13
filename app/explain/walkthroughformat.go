@@ -27,6 +27,7 @@ type walkStep struct {
 	Project, File string // as the answer names them
 	Start, End    int    // 1-based lines; 0 for a step with no code (the summary)
 	Notes         []walkNote
+	Diagram       string // a mermaid diagram of what it's about, drawn where a file would be: the summary's, most often
 
 	path     string // the file, absolute; "" for a step with no code
 	proj     string // its project's name
@@ -109,6 +110,7 @@ type rawStep struct {
 	Prose   string    `json:"prose"`
 	Text    string    `json:"text"`
 	Notes   []rawNote `json:"notes"`
+	Diagram string    `json:"diagram"`
 }
 
 var (
@@ -158,7 +160,7 @@ func decodeSteps(src string) []walkStep {
 	var out []walkStep
 	for _, r := range raw {
 		s := walkStep{Title: strings.TrimSpace(r.Title), Prose: strings.TrimSpace(cmp.Or(r.Prose, r.Text)), Project: strings.TrimSpace(r.Project),
-			File: strings.TrimSpace(strings.TrimPrefix(r.File, "./"))}
+			File: strings.TrimSpace(strings.TrimPrefix(r.File, "./")), Diagram: strings.TrimSpace(r.Diagram)}
 		if s.Title == "" && s.Prose == "" {
 			continue
 		}

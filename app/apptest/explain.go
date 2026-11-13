@@ -97,6 +97,12 @@ func (s *Scene) UnitMarks() map[int]string {
 // (Total.tsx changed), with a fake explainer that writes rig.WalkAnswer; it answers the two projects' directories.
 func WalkScene(t *testing.T) (s *Scene, f *FakeExplainer, pricing, billing string) {
 	t.Helper()
+	return WalkSceneAt(t, render.Point{X: 1600, Y: 1000})
+}
+
+// WalkSceneAt is WalkScene in a window of size.
+func WalkSceneAt(t *testing.T, size render.Point) (s *Scene, f *FakeExplainer, pricing, billing string) {
+	t.Helper()
 	p := gittest.New(t)
 	p.Write(map[string]string{"round.go": rig.ExplainBase, "internal/billing/invoice.go": rig.InvoiceBase})
 	p.Commit("Ada", "rounding")
@@ -105,7 +111,7 @@ func WalkScene(t *testing.T) (s *Scene, f *FakeExplainer, pricing, billing strin
 	b.Write(map[string]string{"Total.tsx": "export const Total = ({ lines }) => sum(lines);\n"})
 	b.Commit("Ada", "total")
 	b.Write(map[string]string{"Total.tsx": "export const Total = ({ lines }) => sumRounded(lines);\n"})
-	s = New(t, Options{WorkDir: p.Dir, Size: render.Point{X: 1600, Y: 1000}})
+	s = New(t, Options{WorkDir: p.Dir, Size: size})
 	se := core.SessionState{ID: "pricing-rounding", Name: "pricing-rounding", Kind: core.KindWork, Dir: p.Dir,
 		Projects: []core.Project{{Name: "pricing", Repo: p.Dir, Dir: p.Dir, Branch: "rethink/rounding", Primary: true},
 			{Name: "billing-ui", Repo: b.Dir, Dir: b.Dir, Branch: "rethink/rounding"}},
