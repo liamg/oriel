@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"net/url"
@@ -72,7 +73,7 @@ func (c Client) Lookup(ctx context.Context, url string) (registry.ReviewDetail, 
 	}
 	d := registry.ReviewDetail{Request: registry.ReviewRequest{URL: m.WebURL, Repo: path, Number: m.IID, Title: m.Title, Author: m.Author.Username,
 		Draft: m.Draft, Asked: when(m.CreatedAt)}, Base: m.TargetBranch, Head: m.SourceBranch, Labels: m.Labels, Body: m.Description,
-		Clone: "https://" + cmpOr(c.Host, Public.Host) + "/" + path + ".git"}
+		Clone: "https://" + cmp.Or(c.Host, Public.Host) + "/" + path + ".git"}
 	switch {
 	case m.HasConflicts:
 		d.Mergeable = "conflicts"
@@ -87,7 +88,7 @@ func (c Client) Lookup(ctx context.Context, url string) (registry.ReviewDetail, 
 	}
 	for _, rv := range rs {
 		state := map[string]string{"approved": "approved", "requested_changes": "changes", "reviewed": "commented"}[rv.State]
-		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: rv.User.Username, State: cmpOr(state, "requested")})
+		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: rv.User.Username, State: cmp.Or(state, "requested")})
 	}
 	diffs, err := c.Diffs(ctx, path, iid)
 	if err != nil {
@@ -406,13 +407,6 @@ func counted(n int, what string) string {
 	return fmt.Sprintf("%d %ss", n, what)
 }
 
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
-}
-
 func queryEscape(s string) string { return strings.ReplaceAll(url.QueryEscape(s), "+", "%20") }
 
 // Threads are an MR's review threads, mirrored into the session: one per diff discussion, and one with no id for its
@@ -462,7 +456,7 @@ func (c Client) Threads(ctx context.Context, path string, pr registry.PR) ([]reg
 		t := registry.ReviewThread{ID: d.ID, Path: first.Position.NewPath, Line: first.Position.NewLine, Resolved: &resolved,
 			Reviewer: first.Author.Username, State: registry.ReviewCommented, URL: fmt.Sprintf("%s#note_%d", m.WebURL, first.ID)}
 		if t.Line == 0 {
-			t.Path, t.Line, t.Old = cmpOr(first.Position.OldPath, t.Path), first.Position.OldLine, true
+			t.Path, t.Line, t.Old = cmp.Or(first.Position.OldPath, t.Path), first.Position.OldLine, true
 		}
 		if approved[t.Reviewer] {
 			t.State = registry.ReviewApproved

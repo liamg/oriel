@@ -1,6 +1,7 @@
 package ghtest
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -139,13 +140,13 @@ func (s *Server) merge(w http.ResponseWriter, r *http.Request) {
 		reply(w, 405, map[string]string{"message": "Pull Request is still a draft"})
 	case s.mergeable[k][0] == "CONFLICTING":
 		reply(w, 405, map[string]string{"message": "Pull Request is not mergeable"})
-	case !slices.Contains(m.Methods, cmpOr(in.Method, "merge")):
+	case !slices.Contains(m.Methods, cmp.Or(in.Method, "merge")):
 		reply(w, 405, map[string]string{"message": "Merge method not allowed for this repository"})
 	case in.SHA != "" && in.SHA != s.sha(repo, p):
 		reply(w, 409, map[string]string{"message": "Head branch was modified. Review and try the merge again."})
 	default:
 		p.State, p.Merged = "closed", true
-		s.mergedWith[k] = cmpOr(in.Method, "merge")
+		s.mergedWith[k] = cmp.Or(in.Method, "merge")
 		reply(w, 200, map[string]any{"merged": true, "message": "Pull Request successfully merged"})
 	}
 }

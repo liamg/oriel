@@ -1,6 +1,7 @@
 package ghtest
 
 import (
+	"cmp"
 	"net/http"
 	"slices"
 	"strings"
@@ -88,7 +89,7 @@ func (s *Server) match(q string) []hit {
 			case "is":
 				in = v == "pr" || v == "open" && h.p.Open() || v == "closed" && !h.p.Open()
 			case "author":
-				in = cmpOr(h.p.Author, s.login) == me(v)
+				in = cmp.Or(h.p.Author, s.login) == me(v)
 			case "review-requested":
 				in = slices.ContainsFunc(h.p.Reviewers, func(who string) bool { return who == me(v) || slices.Contains(s.teams[who], me(v)) })
 			case "reviewed-by":
@@ -159,7 +160,7 @@ func (s *Server) queue(w http.ResponseWriter, vars map[string]any) {
 		}
 		nodes = append(nodes, map[string]any{"number": h.p.Number, "title": h.p.Title, "url": h.p.URL, "isDraft": h.p.Draft,
 			"state": strings.ToUpper(h.p.State), "createdAt": h.p.Created, "updatedAt": h.p.Created, "additions": z.Additions,
-			"deletions": z.Deletions, "changedFiles": len(z.Files), "baseRefName": h.p.Base, "headRefName": h.p.Head, "author": map[string]string{"login": cmpOr(cmpOr(z.Author, h.p.Author), s.login)},
+			"deletions": z.Deletions, "changedFiles": len(z.Files), "baseRefName": h.p.Base, "headRefName": h.p.Head, "author": map[string]string{"login": cmp.Or(cmp.Or(z.Author, h.p.Author), s.login)},
 			"repository": map[string]string{"nameWithOwner": h.repo}, "reviewRequests": map[string]any{"nodes": requests},
 			"timelineItems": map[string]any{"nodes": events}, "latestReviews": map[string]any{"nodes": latest},
 			"reviews": map[string]any{"nodes": all}, "comments": map[string]any{"nodes": said},

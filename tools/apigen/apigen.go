@@ -13,6 +13,7 @@ package apigen
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"go/ast"
 	"go/format"
@@ -124,7 +125,7 @@ func Parse(dir string) ([]Namespace, error) {
 			return nil, fmt.Errorf("%s.%s is annotated, but %s isn't a namespace", recv, d.Name.Name, recv)
 		}
 		fn := Func{Go: d.Name.Name, Lua: luaName(d.Name.Name), Doc: a["doc"], Returns: a["returns"], Optional: map[string]bool{},
-			Cap: cmpOr(a["cap"], ns.Cap), Deprecated: a["deprecated"]}
+			Cap: cmp.Or(a["cap"], ns.Cap), Deprecated: a["deprecated"]}
 		if fn.Cap == "" {
 			return nil, fmt.Errorf("%s.%s declares no capability: add cap=… to it or to %s", recv, d.Name.Name, ns.Type)
 		}
@@ -155,13 +156,6 @@ func Parse(dir string) ([]Namespace, error) {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, nil
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 func exprString(e ast.Expr) string {

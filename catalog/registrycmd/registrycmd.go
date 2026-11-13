@@ -3,6 +3,7 @@
 package registrycmd
 
 import (
+	"cmp"
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
@@ -47,7 +48,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	ctx := context.Background()
-	gh := catalog.GitHub{Token: cmpOr(os.Getenv("GH_TOKEN"), os.Getenv("GITHUB_TOKEN"))}
+	gh := catalog.GitHub{Token: cmp.Or(os.Getenv("GH_TOKEN"), os.Getenv("GITHUB_TOKEN"))}
 	switch args[0] {
 	case "check":
 		if *base == "" || *author == "" {
@@ -96,7 +97,7 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		to := cmpOr(*out, dir)
+		to := cmp.Or(*out, dir)
 		if err := os.MkdirAll(to, 0o755); err != nil {
 			return err
 		}
@@ -157,11 +158,4 @@ func plural(n int, one, many string) string {
 		return one
 	}
 	return many
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }

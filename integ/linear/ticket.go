@@ -1,6 +1,7 @@
 package linear
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
@@ -120,7 +121,7 @@ func (c Client) Ticket(ctx context.Context, key string) (Ticket, error) {
 	for _, n := range is.Comments.Nodes {
 		who := "someone"
 		if n.User != nil {
-			who = cmpOr(n.User.DisplayName, n.User.Name)
+			who = cmp.Or(n.User.DisplayName, n.User.Name)
 		}
 		t.Comments = append(t.Comments, Comment{Author: who, Body: n.Body, At: n.CreatedAt})
 	}
@@ -201,7 +202,7 @@ func (t Ticket) Context() string {
 	if len(t.Attachments) > 0 {
 		fmt.Fprintf(&b, "\n## Attachments (%d)\n\n", len(t.Attachments))
 		for _, a := range t.Attachments {
-			line := "- " + cmpOr(a.Title, a.URL)
+			line := "- " + cmp.Or(a.Title, a.URL)
 			if a.Subtitle != "" {
 				line += " (" + a.Subtitle + ")"
 			}
@@ -305,11 +306,4 @@ func plural(n int, what string) string {
 		return "1 " + what
 	}
 	return fmt.Sprintf("%d %ss", n, what)
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }

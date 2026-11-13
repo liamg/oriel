@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"cmp"
 	"encoding/json"
 	"strings"
 	"time"
@@ -85,7 +86,7 @@ func (s *Scan) codex(r *rolloutLine) {
 			}
 			st.Total = t
 			tk := Tokens{Input: max(in-cached, 0), CacheRead: max(cached, 0), Output: out}
-			model := cmpOr(st.Model, "unknown")
+			model := cmp.Or(st.Model, "unknown")
 			s.request("", request{At: r.Timestamp, Model: model, Effort: st.Effort, Tokens: tk, Costs: tk.Of(s.rate(model, false, tk))},
 				"", p.Info.Window)
 		}

@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"cmp"
 	"fmt"
 	"maps"
 	"slices"
@@ -241,7 +242,7 @@ func MapField(c *ui.Ctx, key any, m map[string]string, o MapEditorOpts) (map[str
 	var out map[string]string
 	changed := false
 	c.Row(key, ui.Style{Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("n", count(len(m), cmpOr(o.ValueLabel, "entry")), uiText(c, 12.5, typeset.Normal, col(c, tEditorNote)))
+		c.Text("n", count(len(m), cmp.Or(o.ValueLabel, "entry")), uiText(c, 12.5, typeset.Normal, col(c, tEditorNote)))
 		if Button(c, "edit", "Edit…", ButtonOpts{Disabled: o.Disabled, Help: o.Help}) {
 			*open = true
 		}
@@ -267,13 +268,6 @@ func count(n int, noun string) string {
 	return fmt.Sprintf("%d %s", n, plural)
 }
 
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
-}
-
 // MapEditor is a dialog over a scrim editing m while *open: a row per entry, its key and value edited in place and ✕
 // to remove it, and a row that adds one. An entry that doesn't pass Validate, or repeats a key, says why under it,
 // and Save waits until none does; what's typed in the add row is saved too. Escape, Cancel or a click on the scrim discards; Save applies, returning the map
@@ -292,7 +286,7 @@ func MapEditor(c *ui.Ctx, key any, open *bool, m map[string]string, o MapEditorO
 			st.entries = append(st.entries, entry{k, m[k]})
 		}
 	}
-	kl, vl := cmpOr(o.KeyLabel, "key"), cmpOr(o.ValueLabel, "value")
+	kl, vl := cmp.Or(o.KeyLabel, "key"), cmp.Or(o.ValueLabel, "value")
 	check := func(i int, e entry) error {
 		if strings.TrimSpace(e.k) == "" {
 			return fmt.Errorf("each %s needs a %s", vl, kl)

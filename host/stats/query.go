@@ -42,7 +42,7 @@ func originLabel(o string) string {
 }
 
 // originOf is a session's origin: Oriel's unless it says otherwise.
-func originOf(s Session) string { return cmpOr(s.Origin, OriginOriel) }
+func originOf(s Session) string { return cmp.Or(s.Origin, OriginOriel) }
 
 // Account is a provider's account a session ran on from At: its identity, and how it reads.
 type Account struct {
@@ -420,22 +420,22 @@ func (t *tally) partsOf(s Session, shares []Share) func(sl *Slot, w float64) []p
 			repos = append(repos, rp.Name)
 		}
 		return func(_ *Slot, w float64) []part {
-			return []part{{key: s.ID, label: cmpOr(s.Name, s.ID), repos: repos, origin: originOf(s), w: w}}
+			return []part{{key: s.ID, label: cmp.Or(s.Name, s.ID), repos: repos, origin: originOf(s), w: w}}
 		}
 	case ByOrigin:
 		return func(_ *Slot, w float64) []part {
 			return []part{{key: originOf(s), label: originLabel(originOf(s)), w: w}}
 		}
 	case ByKind:
-		return func(_ *Slot, w float64) []part { return []part{{key: s.Kind, label: cmpOr(s.Kind, "none"), w: w}} }
+		return func(_ *Slot, w float64) []part { return []part{{key: s.Kind, label: cmp.Or(s.Kind, "none"), w: w}} }
 	case ByProvider:
 		return func(_ *Slot, w float64) []part {
-			return []part{{key: s.Provider, label: cmpOr(s.Provider, "none"), w: w}}
+			return []part{{key: s.Provider, label: cmp.Or(s.Provider, "none"), w: w}}
 		}
 	case ByAccount:
 		return func(sl *Slot, w float64) []part {
 			a := s.accountAt(sl.Hour)
-			return []part{{key: a.ID, label: cmpOr(a.Name, a.ID, "unknown account"), w: w}}
+			return []part{{key: a.ID, label: cmp.Or(a.Name, a.ID, "unknown account"), w: w}}
 		}
 	case ByModel:
 		return func(sl *Slot, w float64) []part {

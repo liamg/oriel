@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 	"time"
@@ -145,7 +146,7 @@ var zeros = map[registry.OptionType]any{registry.Bool: false, registry.Int: 0, r
 // A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
 func (a *APIs) declare(t script.Table, where string) error {
 	name := str(t, "name")
-	typ, ok := optionTypes[cmpOr(str(t, "type"), "string")]
+	typ, ok := optionTypes[cmp.Or(str(t, "type"), "string")]
 	if name == "" || !ok {
 		return fmt.Errorf("an option needs a name and a type (bool, int, float, string, enum, duration, key, list, map or table): %v", t)
 	}
@@ -156,7 +157,7 @@ func (a *APIs) declare(t script.Table, where string) error {
 		if !strings.HasPrefix(name, "plugin."+plugin+".") {
 			return fmt.Errorf("%s: a plugin's options are named plugin.%s.<option>", name, plugin)
 		}
-		sp.Section = cmpOr(sp.Section, plugin)
+		sp.Section = cmp.Or(sp.Section, plugin)
 	}
 	sp.Default = zeros[typ]
 	if typ == registry.Enum && len(sp.Values) > 0 {

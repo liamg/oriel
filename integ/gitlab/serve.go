@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -62,7 +63,7 @@ func (s *Server) client(site Site) (Client, error) {
 		}
 		status, resp, _, err := s.Request(ctx, req)
 		if err != nil && strings.Contains(err.Error(), site.Secret+" isn't set") {
-			return 0, nil, &jsonrpc.Error{Code: CodeNoKey, Message: "no GitLab token for " + cmpOr(site.Host, "the site") + " yet"}
+			return 0, nil, &jsonrpc.Error{Code: CodeNoKey, Message: "no GitLab token for " + cmp.Or(site.Host, "the site") + " yet"}
 		}
 		return status, []byte(resp), err
 	}}, nil

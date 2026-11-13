@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -205,14 +206,7 @@ func account(env []string) (id, name string) {
 	default:
 		id = a.Email
 	}
-	return id, cmpOr(a.Email, a.OrgName)
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
+	return id, cmp.Or(a.Email, a.OrgName)
 }
 
 func plan(kind string) string {
@@ -242,7 +236,7 @@ func (p *Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
 		client = http.DefaultClient
 	}
 	var err error
-	if u, ok, aerr := p.apiUsage(ctx, client, cmpOr(p.UsageURL, UsageAPI)); ok && aerr == nil {
+	if u, ok, aerr := p.apiUsage(ctx, client, cmp.Or(p.UsageURL, UsageAPI)); ok && aerr == nil {
 		p.usage.mu.Lock()
 		if u.Sampled.After(p.usage.last.Sampled) {
 			p.usage.last = u

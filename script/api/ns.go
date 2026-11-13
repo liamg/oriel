@@ -199,8 +199,8 @@ func (g Agent) Tool(spec script.Table, where string) error {
 					}
 				}
 			}
-			c.Title = cmpOr(c.Title, str(spec, "name"))
-			c.Line = cmpOr(c.Line, c.Title)
+			c.Title = cmp.Or(c.Title, str(spec, "name"))
+			c.Line = cmp.Or(c.Line, c.Title)
 			return c, nil
 		}
 	}
@@ -269,7 +269,7 @@ func (g Agent) Explainer(spec script.Table, where string) error {
 	e := registry.Explainer{Name: str(spec, "name"), Source: where,
 		Explain: func(_ context.Context, r registry.ExplainRequest) (string, error) {
 			out, err := g.a.VM.Call(run, script.Table{"kind": r.Kind, "subject": r.Subject, "context": r.Context, "files": r.Files,
-				"depth": cmpOr(r.Depth, registry.ExplainBrief), "format": r.Format})
+				"depth": cmp.Or(r.Depth, registry.ExplainBrief), "format": r.Format})
 			if err != nil || len(out) == 0 {
 				return "", err
 			}
@@ -320,7 +320,7 @@ func (g Agent) Fork(req script.Table, fn *script.Fn) error {
 	if prompt == "" || fn == nil {
 		return fmt.Errorf("fork needs a prompt and a function for the answer")
 	}
-	session := cmpOr(str(req, "session"), string(g.a.Host.State().Focus))
+	session := cmp.Or(str(req, "session"), string(g.a.Host.State().Focus))
 	if session == "" {
 		var newest time.Time
 		for _, se := range g.a.Host.Sessions() {

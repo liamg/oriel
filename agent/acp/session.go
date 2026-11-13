@@ -1,6 +1,7 @@
 package acp
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -645,7 +646,7 @@ func (s *session) permission(ctx context.Context, params json.RawMessage) (any, 
 	}
 	if d.d.Note != "" {
 		s.mu.Lock()
-		s.notes = append(s.notes, fmt.Sprintf("The user denied %s: %s", cmpOr(tc.Title, tc.tool()), d.d.Note))
+		s.notes = append(s.notes, fmt.Sprintf("The user denied %s: %s", cmp.Or(tc.Title, tc.tool()), d.d.Note))
 		s.mu.Unlock()
 	}
 	if d.d.Always {
@@ -691,7 +692,7 @@ func (s *session) elicit(ctx context.Context, params json.RawMessage) (any, erro
 	byQuestion := map[string]string{}
 	for _, name := range names {
 		f := p.Schema.Properties[name]
-		q := core.Question{Question: cmpOr(f.Title, f.Description, name), Options: f.Enum}
+		q := core.Question{Question: cmp.Or(f.Title, f.Description, name), Options: f.Enum}
 		if len(names) == 1 && p.Message != "" {
 			q.Question = p.Message
 		} else {
@@ -727,13 +728,4 @@ func (s *session) elicit(ctx context.Context, params json.RawMessage) (any, erro
 		}
 	}
 	return map[string]any{"action": "accept", "content": content}, nil
-}
-
-func cmpOr(vs ...string) string {
-	for _, v := range vs {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }

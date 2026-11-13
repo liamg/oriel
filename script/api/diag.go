@@ -28,7 +28,7 @@ func (d Diagnostics) Set(owner, file string, list any) error {
 		col, _ := t["col"].(float64)
 		end, _ := t["end_col"].(float64)
 		ds = append(ds, registry.Diagnostic{Line: int(line) - 1, From: max(0, int(col)-1), To: max(0, int(end)-1),
-			Severity: cmpOr(str(t, "severity"), registry.SevError), Message: str(t, "message")})
+			Severity: cmp.Or(str(t, "severity"), registry.SevError), Message: str(t, "message")})
 	}
 	d.a.Host.SetDiagnostics(owner, file, ds)
 	d.a.own(registry.DisposeFunc(func() { d.a.Host.SetDiagnostics(owner, file, nil) }))
@@ -47,7 +47,6 @@ func (d Diagnostics) List() []any {
 }
 
 // cmpOr is the first of ss that isn't empty.
-func cmpOr(ss ...string) string { return cmp.Or(ss...) }
 
 //oriel:api name=coverage cap=ui
 type Coverage struct{ a *APIs }

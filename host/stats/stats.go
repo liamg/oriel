@@ -8,6 +8,7 @@ package stats
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"path/filepath"
 	"strconv"
@@ -349,7 +350,7 @@ func (s *Scan) claude(r *record) {
 	}
 	agent := ""
 	if r.IsSidechain {
-		agent = cmpOr(r.AgentID, "subagent")
+		agent = cmp.Or(r.AgentID, "subagent")
 	}
 	model := ModelName(r.Message.Model)
 	var blocks []block
@@ -721,12 +722,12 @@ func place(input json.RawMessage, cwd string) string {
 		return ""
 	}
 	for _, f := range in.Files {
-		in.FilePath = cmpOr(in.FilePath, f.Path)
+		in.FilePath = cmp.Or(in.FilePath, f.Path)
 	}
-	if p := abs(cmpOr(in.FilePath, in.NotebookPath), cwd); p != "" {
+	if p := abs(cmp.Or(in.FilePath, in.NotebookPath), cwd); p != "" {
 		return filepath.Dir(p)
 	}
-	return cmpOr(abs(in.Path, cwd), abs(cwd, cwd))
+	return cmp.Or(abs(in.Path, cwd), abs(cwd, cwd))
 }
 
 // ModelName is the model id with any deployment suffix cut off: the million-token variant is the same model.
@@ -738,13 +739,4 @@ func ModelName(id string) string {
 		id = id[:i]
 	}
 	return strings.TrimSpace(id)
-}
-
-func cmpOr(xs ...string) string {
-	for _, x := range xs {
-		if x != "" {
-			return x
-		}
-	}
-	return ""
 }

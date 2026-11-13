@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -294,7 +295,7 @@ func (s *Server) merge(ctx context.Context, r Repo, pr registry.PR, o registry.M
 	if msg := strings.TrimSpace(o.Title + "\n\n" + o.Body); msg != "" {
 		opts["mergeCommitMessage"] = msg
 	}
-	in := map[string]any{"status": "completed", "lastMergeSourceCommit": map[string]any{"commitId": cmpOr(o.Head, pr.Head)}, "completionOptions": opts}
+	in := map[string]any{"status": "completed", "lastMergeSourceCommit": map[string]any{"commitId": cmp.Or(o.Head, pr.Head)}, "completionOptions": opts}
 	_, err := s.Client.Update(ctx, r, pr.Number, in)
 	return err
 }
@@ -332,7 +333,7 @@ func (s *Server) threads(ctx context.Context, r Repo, n int) ([]registry.ReviewT
 			}
 			at, _ := time.Parse(time.RFC3339, cm.Published)
 			notes = append(notes, registry.ReviewNote{ID: strconv.Itoa(t.ID) + "/" + strconv.Itoa(cm.ID),
-				Author: cmpOr(cm.Author.UniqueName, cm.Author.DisplayName), Body: cm.Content, At: at, Member: members[cm.Author.ID]})
+				Author: cmp.Or(cm.Author.UniqueName, cm.Author.DisplayName), Body: cm.Content, At: at, Member: members[cm.Author.ID]})
 		}
 		if len(notes) == 0 {
 			continue
@@ -351,7 +352,7 @@ func (s *Server) threads(ctx context.Context, r Repo, n int) ([]registry.ReviewT
 			rt.Line, rt.Old = t.Context.Left.Line, true
 		}
 		first := t.Comments[0].Author
-		rt.Reviewer, rt.State = cmpOr(first.UniqueName, first.DisplayName), stateOf(votes[first.ID])
+		rt.Reviewer, rt.State = cmp.Or(first.UniqueName, first.DisplayName), stateOf(votes[first.ID])
 		out = append(out, rt)
 	}
 	if len(general.Comments) > 0 {
@@ -479,7 +480,7 @@ func (s *Server) lookup(ctx context.Context, site Site, raw string) (registry.Re
 	d := registry.ReviewDetail{Request: registry.ReviewRequest{URL: r.Web() + "/pullrequest/" + strconv.Itoa(n), Repo: r.Project + "/" + r.Name,
 		Number: n, Title: pr.Title, Author: pr.CreatedBy.DisplayName, Draft: pr.IsDraft},
 		Base: strings.TrimPrefix(pr.Target, "refs/heads/"), Head: strings.TrimPrefix(pr.Source, "refs/heads/"), Body: pr.Description,
-		Clone: cmpOr(pr.Repository.RemoteURL, r.Web())}
+		Clone: cmp.Or(pr.Repository.RemoteURL, r.Web())}
 	switch pr.MergeStatus {
 	case "succeeded":
 		d.Mergeable = "yes"
@@ -494,7 +495,7 @@ func (s *Server) lookup(ctx context.Context, site Site, raw string) (registry.Re
 		case rv.Vote < 0:
 			state = "changes"
 		}
-		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: cmpOr(rv.UniqueName, rv.DisplayName), State: state})
+		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: cmp.Or(rv.UniqueName, rv.DisplayName), State: state})
 	}
 	changes, err := c.Changes(ctx, r, n)
 	if err != nil {
@@ -553,7 +554,7 @@ func prOf(r Repo, p PullRequest) registry.PR {
 		out.State = "open"
 	}
 	for _, rv := range p.Reviewers {
-		out.Reviewers = append(out.Reviewers, cmpOr(rv.UniqueName, rv.DisplayName))
+		out.Reviewers = append(out.Reviewers, cmp.Or(rv.UniqueName, rv.DisplayName))
 	}
 	return out
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -26,7 +27,7 @@ func (p Picker) Source(spec script.Table, where string) error {
 	if id == "" || items == nil {
 		return errors.New("a picker source needs an id and items")
 	}
-	s := uireg.PickerSource{ID: id, Title: cmpOr(str(spec, "title"), id), Prefix: str(spec, "prefix"), Order: 50, Source: where}
+	s := uireg.PickerSource{ID: id, Title: cmp.Or(str(spec, "title"), id), Prefix: str(spec, "prefix"), Order: 50, Source: where}
 	if o, ok := spec["order"].(float64); ok {
 		s.Order = int(o)
 	}

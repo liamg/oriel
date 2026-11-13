@@ -3,6 +3,7 @@ package codex
 import (
 	"archive/tar"
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -206,7 +207,7 @@ func (p *Provider) download(ctx context.Context, at agent.SandboxPlace, version,
 	if at.Report != nil {
 		at.Report("Downloading Codex "+version+" for the sandbox", "Once for each version: later sessions reuse it.")
 	}
-	api := cmpOr(p.ReleasesAPI, githubAPI)
+	api := cmp.Or(p.ReleasesAPI, githubAPI)
 	var rel struct {
 		Assets []struct {
 			Name   string `json:"name"`
@@ -349,11 +350,4 @@ func (*Provider) MCPServers() []agent.MCPServer {
 		}
 	}
 	return out
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }

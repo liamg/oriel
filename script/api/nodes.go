@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -204,15 +205,15 @@ func build(c *ui.Ctx, v any, a *APIs) {
 			c.Text(nil, str(n, "text"), ui.TextStyle{Font: font, Color: col})
 		case "ring":
 			size, _ := n["size"].(float64)
-			widget.Ring(c, cmpOr(str(n, "id"), str(n, "name"), "ring"), widget.RingOpts{Frac: num(n["value"]), Label: str(n, "label"),
+			widget.Ring(c, cmp.Or(str(n, "id"), str(n, "name"), "ring"), widget.RingOpts{Frac: num(n["value"]), Label: str(n, "label"),
 				Tone: tone(th, str(n, "color"), render.Color{}), Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
 		case "spinner":
 			size, _ := n["size"].(float64)
-			widget.Spinner(c, cmpOr(str(n, "id"), str(n, "name"), "spinner"), widget.SpinnerOpts{Tone: tone(th, str(n, "color"), render.Color{}),
+			widget.Spinner(c, cmp.Or(str(n, "id"), str(n, "name"), "spinner"), widget.SpinnerOpts{Tone: tone(th, str(n, "color"), render.Color{}),
 				Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
 		case "dots":
 			size, _ := n["size"].(float64)
-			widget.Dots(c, cmpOr(str(n, "id"), str(n, "name"), "dots"), widget.DotsOpts{Tone: tone(th, str(n, "color"), render.Color{}),
+			widget.Dots(c, cmp.Or(str(n, "id"), str(n, "name"), "dots"), widget.DotsOpts{Tone: tone(th, str(n, "color"), render.Color{}),
 				Size: float32(size), Name: str(n, "name"), Help: "plugins/lua#ui"})
 		case "busy":
 			size, _ := n["size"].(float64)
@@ -224,14 +225,14 @@ func build(c *ui.Ctx, v any, a *APIs) {
 					o.Clock = -1
 				}
 			}
-			widget.Busy(c, cmpOr(str(n, "id"), str(n, "label"), "busy"), s, o)
+			widget.Busy(c, cmp.Or(str(n, "id"), str(n, "label"), "busy"), s, o)
 		case "progress":
 			h, _ := n["height"].(float64)
 			frac := -1.0
 			if v, ok := n["value"].(float64); ok {
 				frac = max(0, min(1, v))
 			}
-			widget.ProgressBar(c, cmpOr(str(n, "id"), str(n, "label"), "progress"), widget.ProgressOpts{Frac: frac, Height: float32(h), Label: str(n, "label"),
+			widget.ProgressBar(c, cmp.Or(str(n, "id"), str(n, "label"), "progress"), widget.ProgressOpts{Frac: frac, Height: float32(h), Label: str(n, "label"),
 				Tone: tone(th, str(n, "color"), render.Color{}), Help: "plugins/lua#ui"})
 		case "skeleton":
 			skeleton(c, n)
@@ -246,19 +247,19 @@ func build(c *ui.Ctx, v any, a *APIs) {
 		case "indicator":
 			indicator(c, n, th)
 		case "button":
-			key := cmpOr(str(n, "id"), str(n, "label"))
+			key := cmp.Or(str(n, "id"), str(n, "label"))
 			primary, _ := n["primary"].(bool)
 			busy, _ := n["busy"].(bool)
 			if widget.Button(c, key, str(n, "label"), widget.ButtonOpts{Primary: primary, Busy: busy, BusyLabel: str(n, "busy_label"), Help: "plugins/lua#ui"}) {
 				a.callback(n, "on_click")
 			}
 		case "input":
-			key := cmpOr(str(n, "id"), str(n, "label"), "input")
+			key := cmp.Or(str(n, "id"), str(n, "label"), "input")
 			text := str(n, "value")
 			c.Box(key, ui.Style{W: ui.Px(220)}, func(c *ui.Ctx) {
 				lines, _ := n["lines"].(float64)
 				enter, _ := n["enter_submits"].(bool)
-				label := cmpOr(str(n, "label"), key)
+				label := cmp.Or(str(n, "label"), key)
 				var res widget.InputResult
 				if lines > 1 {
 					res = widget.Prose(c, "in", &text, widget.ProseOpts{Label: label, Placeholder: str(n, "placeholder"),
@@ -275,27 +276,27 @@ func build(c *ui.Ctx, v any, a *APIs) {
 				}
 			})
 		case "toggle":
-			key := cmpOr(str(n, "id"), str(n, "label"), "toggle")
+			key := cmp.Or(str(n, "id"), str(n, "label"), "toggle")
 			on, _ := n["on"].(bool)
-			if widget.Toggle(c, key, on, widget.ToggleOpts{Label: cmpOr(str(n, "label"), key), Help: "plugins/lua#ui"}) {
+			if widget.Toggle(c, key, on, widget.ToggleOpts{Label: cmp.Or(str(n, "label"), key), Help: "plugins/lua#ui"}) {
 				a.callback(n, "on_change", !on)
 			}
 		case "select":
-			key := cmpOr(str(n, "id"), str(n, "label"), "select")
-			if v, ok := widget.Select(c, key, str(n, "value"), strs(n["options"]), widget.SelectOpts{Label: cmpOr(str(n, "label"), key),
+			key := cmp.Or(str(n, "id"), str(n, "label"), "select")
+			if v, ok := widget.Select(c, key, str(n, "value"), strs(n["options"]), widget.SelectOpts{Label: cmp.Or(str(n, "label"), key),
 				Help: "plugins/lua#ui"}); ok {
 				a.callback(n, "on_change", v)
 			}
 		case "chart":
 			chart(c, n, a)
 		case "date_picker":
-			key := cmpOr(str(n, "id"), str(n, "label"), "date_picker")
+			key := cmp.Or(str(n, "id"), str(n, "label"), "date_picker")
 			var r widget.DateRange
 			if v, err := widget.ParseDateRange(str(n, "from")+".."+str(n, "to"), time.Local); err == nil {
 				r = v
 			}
-			if v, ok := widget.DateSelect(c, key, r, widget.DateSelectOpts{Label: cmpOr(str(n, "label"), key),
-				Placeholder: cmpOr(str(n, "placeholder"), "pick dates"), Help: "plugins/lua#ui"}); ok {
+			if v, ok := widget.DateSelect(c, key, r, widget.DateSelectOpts{Label: cmp.Or(str(n, "label"), key),
+				Placeholder: cmp.Or(str(n, "placeholder"), "pick dates"), Help: "plugins/lua#ui"}); ok {
 				a.callback(n, "on_change", v.From.Format(time.DateOnly), v.To.Format(time.DateOnly))
 			}
 		case "list":
@@ -337,7 +338,7 @@ func skeleton(c *ui.Ctx, n script.Table) {
 	if str(n, "direction") != "column" {
 		o.Dir = ui.Row
 	}
-	widget.Skeleton(c, cmpOr(str(n, "id"), str(n, "label"), "skeleton"), o)
+	widget.Skeleton(c, cmp.Or(str(n, "id"), str(n, "label"), "skeleton"), o)
 }
 
 var policies = map[string]widget.Policy{"inline": widget.Inline, "block": widget.Block, "gate": widget.Gate, "optional": widget.Optional}
@@ -366,7 +367,7 @@ func async(c *ui.Ctx, n script.Table, a *APIs) {
 		out, err := a.VM.Call(fn, v)
 		o.IsEmpty = err == nil && len(out) > 0 && out[0] == true
 	}
-	widget.Async(c, cmpOr(str(n, "id"), str(n, "label"), "async"), l.State(), o, func(c *ui.Ctx) {
+	widget.Async(c, cmp.Or(str(n, "id"), str(n, "label"), "async"), l.State(), o, func(c *ui.Ctx) {
 		fn, ok := n["body"].(*script.Fn)
 		if !ok {
 			return
@@ -389,14 +390,14 @@ func dnd(c *ui.Ctx, n script.Table, a *APIs) bool {
 	if spec == nil && len(accepts) == 0 {
 		return false
 	}
-	key := cmpOr(str(n, "id"), str(n, "label"), "dnd")
+	key := cmp.Or(str(n, "id"), str(n, "label"), "dnd")
 	id := c.Next(key)
 	if d := c.Interaction(id).Dropped; d != nil {
 		a.callback(n, "on_drop", d.Kind, d.Data)
 	}
-	st := ui.Style{W: ui.Flex(1), Drop: accepts, Help: "plugins/lua#ui", Role: ui.RoleGroup, Label: cmpOr(str(n, "label"), key)}
+	st := ui.Style{W: ui.Flex(1), Drop: accepts, Help: "plugins/lua#ui", Role: ui.RoleGroup, Label: cmp.Or(str(n, "label"), key)}
 	if spec != nil {
-		st.Drag = &ui.DragData{Kind: str(spec, "kind"), Data: spec["data"], Label: cmpOr(str(spec, "label"), str(spec, "kind"))}
+		st.Drag = &ui.DragData{Kind: str(spec, "kind"), Data: spec["data"], Label: cmp.Or(str(spec, "label"), str(spec, "kind"))}
 		st.Label = st.Drag.Label
 	}
 	inner := script.Table{}
@@ -448,7 +449,7 @@ func indicator(c *ui.Ctx, n script.Table, th *theme.Resolved) {
 			o.Dot = th.C(tok)
 		}
 	}
-	widget.Indicator(c, cmpOr(str(n, "id"), str(n, "label"), "indicator"), o)
+	widget.Indicator(c, cmp.Or(str(n, "id"), str(n, "label"), "indicator"), o)
 }
 
 // toTable is an event as Lua sees it: a struct's fields under snake_case names, or a map as it is.
@@ -601,7 +602,7 @@ func chart(c *ui.Ctx, n script.Table, a *APIs) {
 		series = append(series, s)
 	}
 	o := widget.ChartOpts{Kind: chartKinds[str(n, "kind")], Height: float32(num(n["height"])), Max: num(n["max"]), YTicks: int(num(n["y_ticks"])),
-		Format: chartFormats[str(n, "format")], Highlight: -1, Label: cmpOr(str(n, "label"), "chart"), Help: "plugins/lua#ui"}
+		Format: chartFormats[str(n, "format")], Highlight: -1, Label: cmp.Or(str(n, "label"), "chart"), Help: "plugins/lua#ui"}
 	o.YFormat = o.Format
 	o.Legend, _ = n["legend"].(bool)
 	o.Hover, _ = n["hover"].(bool)
@@ -617,7 +618,7 @@ func chart(c *ui.Ctx, n script.Table, a *APIs) {
 			o.Bands = append(o.Bands, widget.ChartBand{From: num(t["from"]) - 1, To: num(t["to"]) - 1, Label: str(t, "label")})
 		}
 	}
-	key := cmpOr(str(n, "id"), str(n, "label"), "chart")
+	key := cmp.Or(str(n, "id"), str(n, "label"), "chart")
 	if res := widget.Chart(c, key, series, o); res.Clicked {
 		a.callback(n, "on_click", float64(res.Series+1), float64(res.Point+1))
 	}

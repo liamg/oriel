@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -43,7 +44,7 @@ type Published struct {
 // and the tag at HEAD, packs it as the registry's CI will, and opens a PR that adds a [[versions]] entry, or the
 // plugin.toml of a new plugin. A trusted plugin has nothing to publish: its tag is checked and Oriel follows it.
 func Publish(ctx context.Context, o PublishOpts) (Published, error) {
-	reg := cmpOr(o.Registry, DefaultRepo)
+	reg := cmp.Or(o.Registry, DefaultRepo)
 	m, err := plugin.LoadManifest(o.Dir)
 	if err != nil {
 		return Published{}, err
@@ -224,7 +225,7 @@ func (g GH) OpenPR(ctx context.Context, registry, branch, path, title, body stri
 		return "", err
 	}
 	def := r.DefaultBranch(ctx)
-	if _, err := r.Run(ctx, "checkout", "-q", "-B", branch, "upstream/"+cmpOr(def, "main")); err != nil {
+	if _, err := r.Run(ctx, "checkout", "-q", "-B", branch, "upstream/"+cmp.Or(def, "main")); err != nil {
 		return "", err
 	}
 	write := func(b []byte, msg string) error {
