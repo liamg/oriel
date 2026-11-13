@@ -2,6 +2,7 @@ package gh_test
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/liamg/oriel/gh"
@@ -64,5 +65,40 @@ func TestReviewQueue(t *testing.T) {
 				t.Errorf("commented: %+v", a)
 			}
 		})
+	}
+}
+
+// Each pull request on the queue says who else is asked, who has reviewed it and how, and which branch goes into
+// which, from the same search.
+//
+// ref:   github-graphql/schema.docs.graphql
+// quote: "A list of review requests associated with the pull request."
+func TestReviewQueueSaysWhoIsAskedAndWhatGoesWhere(t *testing.T) {
+	s := ghtest.New(t)
+	c := client(t, "http", s)
+	pr := s.AddPR("acme/api", gh.PR{Title: "rate-limit search", Author: "mkhan", Head: "rate-limit", Base: "main",
+		Reviewers: []string{"you", "ana", "acme/platform"}})
+	s.AddReview("acme/api", pr.Number, gh.Review{User: "jsato", State: gh.ReviewApproved})
+	s.AddReview("acme/api", pr.Number, gh.Review{User: "bnoor", State: gh.ReviewCommented})
+	s.AddReview("acme/api", pr.Number, gh.Review{User: "bnoor", State: gh.ReviewChangesRequested})
+	got, err := c.ReviewQueue(context.Background())
+	if err != nil || len(got) != 1 {
+		t.Fatalf("queue %+v, %v", got, err)
+	}
+	a := got[0]
+	if !slices.Equal(a.Reviewers, []string{"you", "ana", "acme/platform"}) {
+		t.Errorf("asked %v", a.Reviewers)
+	}
+	if a.Base != "main" || a.Head != "rate-limit" {
+		t.Errorf("branches %q ← %q", a.Base, a.Head)
+	}
+	want := []gh.Review{{User: "jsato", State: gh.ReviewApproved}, {User: "bnoor", State: gh.ReviewChangesRequested}}
+	if len(a.Reviews) != len(want) {
+		t.Fatalf("reviews %+v", a.Reviews)
+	}
+	for i, w := range want {
+		if a.Reviews[i].User != w.User || a.Reviews[i].State != w.State {
+			t.Errorf("review %d = %+v, want %+v", i, a.Reviews[i], w)
+		}
 	}
 }

@@ -39,7 +39,15 @@ type reviewsPage struct {
 	scope       int    // into reviewScopes
 	sel         string // the selected request's URL
 	err         string
+	list        widget.SplitState // the list's width, dragged by its right edge
 }
+
+// The list's width: as it opens, the narrowest its rows read in, and the least it leaves the detail.
+const (
+	listDefault   = 440
+	listMin       = 340
+	detailLeastAt = 420
+)
 
 // reviewDetail is a request as its source's lookup told it.
 type reviewDetail struct {
@@ -228,8 +236,10 @@ func (x *Reviews) pageView(c *ui.Ctx) {
 			th := c.Theme()
 			x.pageHeader(c, rows)
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-				x.pageList(c, rows)
-				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				split := widget.SplitterOpts{Default: listDefault, Min: listMin, Max: c.Size().X - detailLeastAt, Label: "Resize the list",
+					Help: reviewsHelp + "#list"}
+				x.pageList(c, rows, x.page.list.Width(split))
+				widget.Splitter(c, "divider", &x.page.list, split)
 				c.Column("detail", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12,
 					Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 					if r, ok := x.selectedRow(rows); ok {
@@ -303,9 +313,9 @@ func atoiOr(s string) int {
 }
 
 // pageList is the requests, filtered, under Waiting on you and In progress, then what a source needs first.
-func (x *Reviews) pageList(c *ui.Ctx, rows []reviewRow) {
+func (x *Reviews) pageList(c *ui.Ctx, rows []reviewRow, width float32) {
 	th := c.Theme()
-	c.Column("list", ui.Style{W: ui.Px(440), H: ui.Flex(1), Fill: th.C(theme.BgSurface)}, func(c *ui.Ctx) {
+	c.Column("list", ui.Style{W: ui.Px(width), H: ui.Flex(1), Fill: th.C(theme.BgSurface)}, func(c *ui.Ctx) {
 		c.Row("filter", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, T: 10, B: 6}}, func(c *ui.Ctx) {
 			if x.page.focusFilter {
 				c.RequestFocus(c.Next("q"))
@@ -481,7 +491,11 @@ func (x *Reviews) reviewRowView(c *ui.Ctx, r reviewRow, many bool) {
 	if r.req != nil {
 		subject = requestSubject + r.req.URL
 	}
-	c.Row("row", ui.Style{W: ui.Flex(1), Fill: fill, Subject: subject}, func(c *ui.Ctx) {
+	rs := ui.Style{W: ui.Flex(1), Fill: fill, Subject: subject}
+	if r.req != nil {
+		rs.Tooltip, rs.TooltipView = reviewRowLabel(r), func(c *ui.Ctx) { x.rowTip(c, r, many) }
+	}
+	c.Row("row", rs, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		if r.req == nil {
 			c.Row("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 14, T: 9, B: 9}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

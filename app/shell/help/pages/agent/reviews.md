@@ -29,6 +29,11 @@ where you asked for changes or commented and it's their move. Drafts are last in
 - **changes requested** / **commented**: their move. It doesn't count, and comes back as re-requested.
 - **draft**: never counts.
 
+Rest the pointer on a row for what it hasn't room for: the whole title, the repo and number, who opened it and when,
+which branch goes into which, its size and checks, who's asked and who has reviewed it so far. Drag the list's right
+edge to widen it for long titles (it stops where its rows still read, and leaves the pull request room); double-click
+the edge to put it back.
+
 `j`/`k` move, `/` filters by title, repo or author. A source that needs its token, or failed, says so at the foot,
 with **Set token** or **Retry**. A new ask that counts is a notice ("mkhan asked you to review api#812") unless
 `reviews.notify` is off.

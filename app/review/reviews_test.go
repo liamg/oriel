@@ -462,7 +462,9 @@ oriel.code.host{ name = "gitlab", title = "GitLab", order = 20, takes = [[/-/mer
   sites = { { host = "gitlab.com", api = "https://gitlab.com/api/v4" } }, path = [[^/?(.+?)(?:\.git)?/?$]],
   requested = function(site, done)
     done({ { url = "https://gitlab.com/acme/gateway/-/merge_requests/57", repo = "acme/gateway", number = 57,
-      title = "Drop the legacy v1 webhooks", author = "rlopez", asked = "2026-10-19T09:00:00Z", adds = 12, dels = 1204 } })
+      title = "Drop the legacy v1 webhooks", author = "rlopez", asked = "2026-10-19T09:00:00Z", adds = 12, dels = 1204,
+      base = "main", head = "rl/drop-v1", opened = "2026-10-18T09:00:00Z",
+      reviewers = { { login = "you", state = "requested" }, { login = "@acme/platform", state = "requested" }, { login = "ana", state = "changes" } } } })
   end,
   checkout = function(site, url, done) done({ remote = "acme/gateway", ref = "merge-requests/57/head" }) end }
 `
