@@ -381,7 +381,16 @@ func (x *Plan) docsView(c *ui.Ctx) {
 		c.Column("source", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 9, Role: ui.RoleGroup, Label: "Source"}, func(c *ui.Ctx) {
 			c.Text("k", "SOURCE", kit.KickerFont(th.C(theme.FgFaint)))
 			if se.Ticket != "" {
-				widget.Chip(c, "ticket", se.Ticket, th.C(theme.Accent), "agent/plan#docs")
+				// The ticket opens in a tab of its own: the prompt it started with is its text, too long for this column.
+				if widget.Clickable(c, "ticket", ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(8, 6), Gap: 8, Cross: ui.Center, Radius: 4,
+					Label: "Ticket " + se.Ticket, Help: "agent/plan#docs"}, func(c *ui.Ctx) {
+					kit.Icon(c, x.h, "i", "doc", 12, th.C(theme.Accent))
+					c.Text("k", "Ticket", kit.UIFont(12.5, th.C(theme.FgMuted)))
+					c.Text("key", se.Ticket, kit.MonoFont(12, th.C(theme.Accent)))
+				}).Clicked {
+					x.run("tickets.show", registry.Args{"ticket": se.Ticket})
+				}
+				return
 			}
 			prompt := se.Prompt
 			if t, ok := se.Thread(se.PlanThread()); ok && prompt == "" {

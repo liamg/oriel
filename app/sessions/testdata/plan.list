@@ -175,17 +175,18 @@ clip 224,50 260x924 r 0
     pop
     rect 224,225.2 260x1 fill #24221d
     text "SOURCE" @240,249.89 #7c7566 JetBrains Mono 9.5
-    rect 240,261.74 66.56x16.540009 fill #ffd23f12 radius 10 stroke 1 #ffd23f59
-    text "ENG-2231" @247,273.43 #ffd23f JetBrains Mono 9.5
-    text "Rounding on invoices drifts by 1¢ for" @240,298.905 #7c7566 Inter 12
-    text "tiered usage plans." @240,316.42453 #7c7566 Inter 12
-    text "PROJECTS" @240,347.00906 #7c7566 JetBrains Mono 9.5
-    rect 240,362.44907 6x6 fill #7c7566 radius 3
-    text "pricing" @254,369.58908 #ece6d8 JetBrains Mono 11.5
-    text "rethink/rounding" @362.5,369.22906 #7c7566 JetBrains Mono 10.5
-    rect 240,385.62906 6x6 fill #7c7566 radius 3
-    text "billing-ui" @254,392.76907 #ece6d8 JetBrains Mono 11.5
-    text "rethink/rounding" @362.5,392.40906 #7c7566 JetBrains Mono 10.5
+    path 6 segments stroke 1.25 #ffd23f
+    path 3 segments stroke 1.25 #ffd23f
+    path 3 segments stroke 1.25 #ffd23f
+    text "Ticket" @268,280.20712 #b3ab99 Inter 12.5
+    text "ENG-2231" @313.9375,279.97998 #ffd23f JetBrains Mono 12
+    text "PROJECTS" @240,317.27 #7c7566 JetBrains Mono 9.5
+    rect 240,332.71 6x6 fill #7c7566 radius 3
+    text "pricing" @254,339.85 #ece6d8 JetBrains Mono 11.5
+    text "rethink/rounding" @362.5,339.49 #7c7566 JetBrains Mono 10.5
+    rect 240,355.88998 6x6 fill #7c7566 radius 3
+    text "billing-ui" @254,363.03 #ece6d8 JetBrains Mono 11.5
+    text "rethink/rounding" @362.5,362.66998 #7c7566 JetBrains Mono 10.5
     rect 224,878.31085 260x1 fill #24221d
     text "READINESS" @240,903.6608 #7c7566 JetBrains Mono 9.5
     text "3 open" @428.4375,904.0209 #b3ab99 JetBrains Mono 10.5

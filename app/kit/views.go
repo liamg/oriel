@@ -40,6 +40,8 @@ const (
 	RequestsView = "requests"
 	// RequestView is a thread's own tab: the request, its comments and the reply box.
 	RequestView = "request"
+	// TicketView is a ticket's own tab, its key the instance: its title, state, fields and description in full.
+	TicketView = "ticket"
 	// PermissionsView is what the session in front's sandboxed agent may do: the asks waiting on you, each gateway
 	// tool and network rule in force with where it comes from, and every connection it made or tried.
 	PermissionsView = "agent.permissions"

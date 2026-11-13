@@ -33,6 +33,9 @@ description, how many comments and attachments it has, and what blocks it.
 - **Work** (`w`) opens the launcher on a work session, for when no plan is needed.
 - **Open** (`o`) opens the ticket in its tracker, in the browser.
 
+`tickets.show` opens a ticket in a tab of its own, with the same view and room to read its description; a plan's
+docs open its ticket this way.
+
 ## As the work goes {#moves}
 
 A session started from a ticket moves it into progress, then into review once its PR is raised, and links the PR
