@@ -347,7 +347,7 @@ func (e *Engine) SetQuickfix(title string, items []QfItem) {
 
 // QuickfixJump goes to entry idx of the quickfix list, as :cc does.
 func (e *Engine) QuickfixJump(idx int) error {
-	err := e.qfJump(false, idx)
+	err := e.qfJump(false, idx, false)
 	e.updateTop(e.view())
 	e.sync()
 	return err

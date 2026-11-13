@@ -62,7 +62,7 @@ func (e *Engine) operator(v *view, c cmd) {
 		if s.noAdjust {
 			r = oprange{start: s.start, end: s.end, kind: exclusive, curStart: s.start}
 		} else {
-			r = e.adjust(v, s.start, s.end, s.kind, false)
+			r = e.adjust(v, s.start, s.end, s.kind)
 		}
 	default:
 		t, ok := motions[c.key](e, v, motionCtx{count: c.count, arg: c.arg, op: c.op, key: c.key, search: c.searchTarget})
@@ -83,7 +83,7 @@ func (e *Engine) operator(v *view, c cmd) {
 		}
 		from := e.cur
 		from, to = includeFolds(v, from, to, t.kind)
-		r = e.adjust(v, from, to, t.kind, true)
+		r = e.adjust(v, from, to, t.kind)
 		r.useRegOne = regOneMotions[c.key]
 	}
 	e.applyOp(v, c, r, oldWant)
@@ -124,7 +124,7 @@ func (e *Engine) applyOp(v *view, c cmd, r oprange, oldWant int) {
 }
 
 // adjust orders from and to into a range and applies vim's rules for exclusive motions.
-func (e *Engine) adjust(v *view, from, to Pos, kind motionKind, fromCursor bool) oprange {
+func (e *Engine) adjust(v *view, from, to Pos, kind motionKind) oprange {
 	start, end := from, to
 	if less(to, from) {
 		start, end = to, from
