@@ -162,6 +162,6 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.view.override(id, fn)", Doc: "Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes.", Cap: "ui"},
 	},
 	"wasm": {
-		{Call: "oriel.wasm.load(path, opts?)", Doc: "Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close(); or nil and why, when the file isn't there.", Cap: "target"},
+		{Call: "oriel.wasm.load(path, opts?)", Doc: "Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:call_json(fn, value) with JSON (both answer at once; a process's proc:request answers in a callback), mod:exports(), mod:close(); or nil and why, when the file isn't there.", Cap: "target"},
 	},
 }

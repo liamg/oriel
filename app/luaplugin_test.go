@@ -107,8 +107,8 @@ func TestLuaWASM(t *testing.T) {
 	vm := s.PluginVM(plugin.Caller{ID: "acme/w", Dir: dir, Guard: plugin.NewGrants()})
 	if err := luaErr(t, vm, `local m = oriel.wasm.load("m.wasm", { on = { ["fs.read"] = function(p) return "lua read " .. p.path end } })
 sum = m:call("add", 2, 3)
-echoed = m:request("echo", { result = { a = 1 } }).a
-asked = m:request("ask", { path = "/x" })
+echoed = m:call_json("echo", { result = { a = 1 } }).a
+asked = m:call_json("ask", { path = "/x" })
 n = #m:exports()`); err != "" {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ n = #m:exports()`); err != "" {
 		}
 	}
 	vm2 := s.PluginVM(plugin.Caller{ID: "acme/w2", Dir: dir, Guard: plugin.NewGrants()})
-	if err := luaErr(t, vm2, `oriel.wasm.load("m.wasm"):request("ask", { path = "/etc/hostname" })`); !strings.Contains(err, `"fs.read" capability isn't declared`) {
+	if err := luaErr(t, vm2, `oriel.wasm.load("m.wasm"):call_json("ask", { path = "/etc/hostname" })`); !strings.Contains(err, `"fs.read" capability isn't declared`) {
 		t.Errorf("the module's undeclared host call: %s", err)
 	}
 }

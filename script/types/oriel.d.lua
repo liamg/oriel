@@ -612,7 +612,7 @@ function oriel.view.override(id, fn) end
 ---@class oriel.wasm
 oriel.wasm = {}
 
---- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close(); or nil and why, when the file isn't there.
+--- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:call_json(fn, value) with JSON (both answer at once; a process's proc:request answers in a callback), mod:exports(), mod:close(); or nil and why, when the file isn't there.
 ---@param path string
 ---@param opts? table
 ---@return table?,string?

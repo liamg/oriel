@@ -203,7 +203,7 @@ func (p Process) Spawn(path string, opts script.Table) ([]any, error) {
 //oriel:api name=wasm cap=target
 type WASM struct{ a *APIs }
 
-//oriel:api doc="Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close(); or nil and why, when the file isn't there." optional=opts returns="table?,string?"
+//oriel:api doc="Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:call_json(fn, value) with JSON (both answer at once; a process's proc:request answers in a callback), mod:exports(), mod:close(); or nil and why, when the file isn't there." optional=opts returns="table?,string?"
 func (w WASM) Load(path string, opts script.Table) ([]any, error) {
 	a := w.a
 	h := newHandlers(tableOf(opts["on"]))
@@ -242,7 +242,7 @@ func (w WASM) Load(path string, opts script.Table) ([]any, error) {
 			}
 			return res, nil
 		})),
-		"request": script.GoFunc(script.Method(func(c *script.Args) ([]any, error) {
+		"call_json": script.GoFunc(script.Method(func(c *script.Args) ([]any, error) {
 			ctx, cancel := watchdog(script.InterruptAfter)
 			defer cancel()
 			raw, err := mod.Request(ctx, c.String(0), c.Any(1))
