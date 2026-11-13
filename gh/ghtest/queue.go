@@ -131,9 +131,20 @@ func (s *Server) queue(w http.ResponseWriter, vars map[string]any) {
 			}
 			last[r.User] = r
 		}
+		var all, said []map[string]any
 		for _, u := range order {
 			r := last[u]
+			if r.State == gh.ReviewCommented {
+				continue // GitHub's latestReviews leaves out a reviewer whose latest review only commented
+			}
 			latest = append(latest, map[string]any{"author": map[string]string{"login": u}, "state": r.State, "commit": map[string]string{"oid": r.Commit}})
+		}
+		for _, r := range s.reviews[k] {
+			all = append(all, map[string]any{"author": map[string]string{"login": r.User}, "state": r.State, "submittedAt": r.Submitted,
+				"commit": map[string]string{"oid": r.Commit}})
+		}
+		for _, c := range s.issue[k] {
+			said = append(said, map[string]any{"author": map[string]string{"login": c.User}, "createdAt": c.Created})
 		}
 		shas := s.commits[k]
 		if len(shas) == 0 && z.HeadSHA != "" {
@@ -151,6 +162,7 @@ func (s *Server) queue(w http.ResponseWriter, vars map[string]any) {
 			"deletions": z.Deletions, "changedFiles": len(z.Files), "baseRefName": h.p.Base, "headRefName": h.p.Head, "author": map[string]string{"login": cmpOr(cmpOr(z.Author, h.p.Author), s.login)},
 			"repository": map[string]string{"nameWithOwner": h.repo}, "reviewRequests": map[string]any{"nodes": requests},
 			"timelineItems": map[string]any{"nodes": events}, "latestReviews": map[string]any{"nodes": latest},
+			"reviews": map[string]any{"nodes": all}, "comments": map[string]any{"nodes": said},
 			"commits": map[string]any{"nodes": commits}})
 	}
 	reply(w, 200, map[string]any{"data": map[string]any{"viewer": map[string]string{"login": s.login}, "search": map[string]any{"nodes": nodes}}})
