@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
 )
@@ -35,10 +36,13 @@ func TestReviewsRowTooltipSaysWhoAndWhere(t *testing.T) {
 	n := prs["ratelimit"].Number
 	hub.AddReview("acme/api", n, gh.Review{User: "jsato", State: gh.ReviewApproved})
 	s.Run("reviews.open", nil)
-	s.Run("reviews.refresh", nil)
-	s.Quiet()
 	s.Until("the requests", func() bool { return strings.Contains(s.Text(), "Retry flaky S3") })
-	text := hoverTip(s, "Rate-limit the search")
+	s.Run("reviews.refresh", nil)
+	var text string
+	s.Until("the list asked again, with jsato's review", func() bool {
+		text = hoverTip(s, "Rate-limit the search")
+		return strings.Contains(text, "Reviewed: jsato approved")
+	})
 	for _, want := range []string{"acme/api#" + strconv.Itoa(n), "Rate-limit the search endpoint per API key", "opened by mkhan",
 		"mk/search-ratelimit → main", "+214 −38", "Asked: you", "Reviewed: jsato approved"} {
 		if !strings.Contains(text, want) {
@@ -76,6 +80,10 @@ func TestReviewsRowTooltipFromAPluginsHost(t *testing.T) {
 func TestReviewsListIsResized(t *testing.T) {
 	s, _, hub, _ := reviewScene(t)
 	long := "Rework the rate limiter so that per-key buckets refill continuously instead of once a minute, with burst"
+	// No notice of the new ask: whether it's still up when the frame is kept would depend on how fast the list came.
+	if err := s.Registry().Options().Set("reviews.notify", registry.LayerUser, registry.At{}, false); err != nil {
+		t.Fatal(err)
+	}
 	hub.AddPR("acme/api", gh.PR{Title: long, Author: "mkhan", Reviewers: []string{"you"}})
 	s.Run("reviews.open", nil)
 	s.Run("reviews.refresh", nil)
