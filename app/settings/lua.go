@@ -72,7 +72,6 @@ type replLine struct {
 
 // Events features fire later, declared now so hooks on them show what they wait for.
 var laterEvents = []registry.EventInfo{
-	{Name: "PrRaise", Doc: "A pull request about to be raised; a veto stops it. { project, title }"},
 	{Name: "ModeChanged", Doc: "The editor's mode changing (not fired yet). { old, new }"},
 }
 
