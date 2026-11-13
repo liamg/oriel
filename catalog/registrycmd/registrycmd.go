@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/catalog"
-	"github.com/liamg/oriel/tools/depcheck"
+	"github.com/liamg/oriel/internal/gomod"
 )
 
 // Usage is the commands' usage.
@@ -54,13 +54,13 @@ func Run(args []string, stdout, stderr io.Writer) error {
 		if *base == "" || *author == "" {
 			return errors.New("check needs --base and --author")
 		}
-		c := catalog.PRCheck{Base: *base, Head: *head, Author: *author, Org: gh, Asset: gh.Asset, Allow: depcheck.Allowlist{}}
+		c := catalog.PRCheck{Base: *base, Head: *head, Author: *author, Org: gh, Asset: gh.Asset, Allow: gomod.Allowlist{}}
 		if *allow != "" {
 			f, err := os.Open(*allow)
 			if err != nil {
 				return err
 			}
-			c.Allow, err = depcheck.ParseAllowlist(f)
+			c.Allow, err = gomod.ParseAllowlist(f)
 			f.Close()
 			if err != nil {
 				return err

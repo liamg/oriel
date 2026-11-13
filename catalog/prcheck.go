@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/gomod"
 	"github.com/liamg/oriel/plugin"
-	"github.com/liamg/oriel/tools/depcheck"
 )
 
 // Org answers whether a GitHub user may publish for an owner: the owner, or a member of the org.
@@ -29,8 +29,8 @@ type PRCheck struct {
 	Base, Head string // registry checkouts: the PR's base and its head
 	Author     string // who opened the PR
 	Org        Org
-	Allow      depcheck.Allowlist // Oriel's tools/depcheck/allowed.txt
-	Go         string             // the go command; "go" if ""
+	Allow      gomod.Allowlist // Oriel's tools/depcheck/allowed.txt
+	Go         string          // the go command; "go" if ""
 	// Fetch checks a plugin's repository out at a commit, into a directory of its own. Git over https if nil.
 	Fetch func(ctx context.Context, repo, commit string) (string, error)
 	// Tag is the commit a tag points at. git ls-remote if nil.
@@ -316,20 +316,20 @@ func (c PRCheck) version(ctx context.Context, id string, prev *Listing, l Listin
 		}
 	}
 	if isGo {
-		mods, err := depcheck.Requires(filepath.Join(dir, "go.mod"))
+		mods, err := gomod.Requires(filepath.Join(dir, "go.mod"))
 		if err != nil {
 			fail("go.mod: %v", err)
 		}
 		for i := range mods {
 			mods[i].From = "go.mod"
 		}
-		outside := depcheck.Check(c.Allow, mods)
+		outside := gomod.Outside(c.Allow, mods)
 		if len(outside) == 0 {
 			row("go deps", fmt.Sprintf("%d · all allowlisted", len(mods)))
 		} else {
 			row("go deps", fmt.Sprintf("%d · %d outside the allowlist (shown at install)", len(mods), len(outside)))
 			for _, o := range outside {
-				fmt.Fprintf(&s, "- ⚠ %s\n", strings.SplitN(o, " (", 2)[0])
+				fmt.Fprintf(&s, "- ⚠ %s %s\n", o.Path, o.Version)
 			}
 			s.WriteString("\n")
 		}
