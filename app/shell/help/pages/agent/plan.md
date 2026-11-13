@@ -26,7 +26,7 @@ out struck through. Click a line, or move with `j` and `k` and press `c` or `⏎
 Every doc at the workspace root, `PLAN.md` first, with how many of its threads need you (red), are being worked on
 (blue) or are open. Clicking one shows it, bringing the plan to the front from behind whatever tab was there. Below
 them: where the plan came from, and the repos it's about with their branch. A plan started from a ticket shows
-**Ticket ENG-2231**, which opens the ticket in a tab of its own (`tickets.show`); otherwise, the prompt it started with.
+**Ticket ENG-2231**, which opens the ticket in a tab of its own (`ticket.open`); otherwise, the prompt it started with.
 
 ## Threads
 

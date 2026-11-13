@@ -388,7 +388,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 					c.Text("k", "Ticket", kit.UIFont(12.5, th.C(theme.FgMuted)))
 					c.Text("key", se.Ticket, kit.MonoFont(12, th.C(theme.Accent)))
 				}).Clicked {
-					x.run("tickets.show", registry.Args{"ticket": se.Ticket})
+					x.run("ticket.open", registry.Args{"ticket": se.Ticket})
 				}
 				return
 			}
