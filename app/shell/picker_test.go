@@ -32,7 +32,7 @@ func TestPickerSources(t *testing.T) {
 		{"buffers", "round", "internal/pricing/round.go", "decimal.NewFromInt(7)"},
 		{"symbols", "PFT", "PriceForTier", "func PriceForTier"},
 		{"symbols.file", "", "PriceForTier", "func PriceForTier"},
-		{"keymaps", "picker resume", "picker.resume", "<Space>'"},
+		{"keymaps", "picker resume", "picker.resume", "␣ '"},
 		{"commands", "omnibox", "omnibox.open", "Search everything"},
 	} {
 		t.Run(tt.source, func(t *testing.T) {

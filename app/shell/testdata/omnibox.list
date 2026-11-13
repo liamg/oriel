@@ -287,8 +287,8 @@ clip 250,92 1100x660 r 10
     text "inbox." @296,427.729 #ece6d8 Inter 13
     text "pr" @333.4375,427.729 #ffd23f Inter 13
     text "ev" @346.70312,427.729 #ece6d8 Inter 13
-    rect 897,415.4 34x15.200012 fill #121210 radius 4 stroke 1 #332f27
-    text "<Up>" @902,426.6 #b3ab99 JetBrains Mono 10
+    rect 915,415.4 16x15.200012 fill #121210 radius 4 stroke 1 #332f27
+    text "↑" @920,426.6 #b3ab99 JetBrains Mono 10
     text "FILES" @268,455.42 #7c7566 JetBrains Mono 9.5
     rect 274.5,477.5 7x7 fill #4cc9f0 radius 3.5
     text "internal/" @296,485.729 #ece6d8 Inter 13

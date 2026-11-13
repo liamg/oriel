@@ -82,7 +82,7 @@ func TestAssistantSearchesTheHelp(t *testing.T) {
 	}
 	var sec struct{ ID, Title, Text string }
 	if json.Unmarshal([]byte(out), &sec) != nil || sec.Title != "Help" || !strings.Contains(sec.Text, "Keys:\n") ||
-		!strings.Contains(sec.Text, "(help mode): Back") {
+		!strings.Contains(sec.Text, ", help mode): Back") {
 		t.Fatalf("help_read: %s", out)
 	}
 	if _, err := settleCall(s, t, asstCall(ua, "open_help", map[string]any{"id": "shell/help"})); err != nil {

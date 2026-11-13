@@ -530,84 +530,84 @@ clip 20,109.110016 816x516.78 r 8
   rect 20,273.83002 816x1 fill #24221d
   text "KEYMAPS HERE" @34,292.52002 #7c7566 JetBrains Mono 9.5
   clip 160,282.83002 220x15.179993 r 0
-    text "ga" @160,294.56003 #ece6d8 JetBrains Mono 11.5
+    text "g a" @160,294.56003 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,282.83002 352.0625x15.179993 r 0
     text "lua.1" @392,294.56003 #b3ab99 JetBrains Mono 11.5
   pop
   text "init.lua:2" @756.0625,294.05002 #ffd23f JetBrains Mono 11
   clip 160,302.01 220x15.179993 r 0
-    text "<C-Down>" @160,313.74002 #ece6d8 JetBrains Mono 11.5
+    text "⌃↓" @160,313.74002 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,302.01 325.6875x15.179993 r 0
     text "editor.multi.down" @392,313.74002 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,313.23 #ffd23f JetBrains Mono 11
   clip 160,321.19 220x15.179993 r 0
-    text "<C-S-v>" @160,332.92 #ece6d8 JetBrains Mono 11.5
+    text "⌃⇧V" @160,332.92 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,321.19 325.6875x15.179993 r 0
     text "editor.paste" @392,332.92 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,332.41 #ffd23f JetBrains Mono 11
   clip 160,340.37003 220x15.179993 r 0
-    text "<C-Up>" @160,352.10004 #ece6d8 JetBrains Mono 11.5
+    text "⌃↑" @160,352.10004 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,340.37003 325.6875x15.179993 r 0
     text "editor.multi.up" @392,352.10004 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,351.59003 #ffd23f JetBrains Mono 11
   clip 160,359.55002 220x15.179993 r 0
-    text "<C-n>" @160,371.28003 #ece6d8 JetBrains Mono 11.5
+    text "⌃N" @160,371.28003 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,359.55002 325.6875x15.179993 r 0
     text "editor.multi.next" @392,371.28003 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,370.77002 #ffd23f JetBrains Mono 11
   clip 160,378.73 220x15.179993 r 0
-    text "<D-a>" @160,390.46002 #ece6d8 JetBrains Mono 11.5
+    text "⌘A" @160,390.46002 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,378.73 325.6875x15.179993 r 0
     text "editor.select-all" @392,390.46002 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,389.95 #ffd23f JetBrains Mono 11
   clip 160,397.91003 220x15.179993 r 0
-    text "<D-v>" @160,409.64005 #ece6d8 JetBrains Mono 11.5
+    text "⌘V" @160,409.64005 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,397.91003 325.6875x15.179993 r 0
     text "editor.paste" @392,409.64005 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,409.13004 #ffd23f JetBrains Mono 11
   clip 160,417.09003 220x15.179993 r 0
-    text "<Space>'" @160,428.82004 #ece6d8 JetBrains Mono 11.5
+    text "␣ '" @160,428.82004 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,417.09003 325.6875x15.179993 r 0
     text "picker.resume" @392,428.82004 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,428.31003 #ffd23f JetBrains Mono 11
   clip 160,436.27002 220x15.179993 r 0
-    text "<Space>*" @160,448.00003 #ece6d8 JetBrains Mono 11.5
+    text "␣ *" @160,448.00003 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,436.27002 325.6875x15.179993 r 0
     text "editor.grep-word" @392,448.00003 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,447.49002 #ffd23f JetBrains Mono 11
   clip 160,455.45 220x15.179993 r 0
-    text "<Space>," @160,467.18002 #ece6d8 JetBrains Mono 11.5
+    text "␣ ," @160,467.18002 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,455.45 325.6875x15.179993 r 0
     text "picker.open" @392,467.18002 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,466.67 #ffd23f JetBrains Mono 11
   clip 160,474.63 220x15.179993 r 0
-    text "<Space>/" @160,486.36002 #ece6d8 JetBrains Mono 11.5
+    text "␣ /" @160,486.36002 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,474.63 325.6875x15.179993 r 0
     text "picker.open" @392,486.36002 #b3ab99 JetBrains Mono 11.5
   pop
   text "builtin:editor" @729.6875,485.85 #ffd23f JetBrains Mono 11
   clip 160,493.81 220x15.179993 r 0
-    text "<Space>:" @160,505.54 #ece6d8 JetBrains Mono 11.5
+    text "␣ :" @160,505.54 #ece6d8 JetBrains Mono 11.5
   pop
   clip 392,493.81 325.6875x15.179993 r 0
     text "picker.open" @392,505.54 #b3ab99 JetBrains Mono 11.5

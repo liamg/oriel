@@ -129,7 +129,7 @@ func TestSampleInitLua(t *testing.T) {
 	}
 
 	// :Hooks, :Keys and :Commands list them.
-	for _, view := range []struct{ cmd, query, want string }{{"Hooks", "", "staging"}, {"Hooks", "", "Permission"}, {"Keys", "agent.review", "<Space>rr"},
+	for _, view := range []struct{ cmd, query, want string }{{"Hooks", "", "staging"}, {"Hooks", "", "Permission"}, {"Keys", "agent.review", "␣ r r"},
 		{"Commands", "Ship", "Ship"}} {
 		s.Run(view.cmd, nil)
 		s.Frame()

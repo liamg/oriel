@@ -47,12 +47,12 @@ var movePlacements = []struct {
 	label, keys string
 	args        registry.Args
 }{
-	{"Dock bottom", "^W J", registry.Args{"place": "dock", "edge": "bottom"}},
-	{"Split in main, right", "^W L", registry.Args{"place": "split", "side": "right"}},
-	{"Tab in main", "^W T", registry.Args{"place": "tab"}},
-	{"Float", "^W F", registry.Args{"place": "float"}},
-	{"Zoom (toggle)", "^W Z", nil},
-	{"Drop-down (quake)", "^`", registry.Args{"place": "dropdown"}},
+	{"Dock bottom", "<C-w>J", registry.Args{"place": "dock", "edge": "bottom"}},
+	{"Split in main, right", "<C-w>L", registry.Args{"place": "split", "side": "right"}},
+	{"Tab in main", "<C-w>T", registry.Args{"place": "tab"}},
+	{"Float", "<C-w>F", registry.Args{"place": "float"}},
+	{"Zoom (toggle)", "<C-w>Z", nil},
+	{"Drop-down (quake)", "<C-`>", registry.Args{"place": "dropdown"}},
 }
 
 func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
@@ -376,7 +376,7 @@ func (l *layoutPlugin) matching(a registry.Args, vs []layout.ViewRef) (layout.Vi
 func (l *layoutPlugin) moveMenu(c *ui.Ctx, h plugin.Host) {
 	items := make([]widget.MenuItem, len(movePlacements))
 	for i, p := range movePlacements {
-		items[i] = widget.MenuItem{Label: p.label, Shortcut: p.keys, Help: panes.HelpPane}
+		items[i] = widget.MenuItem{Label: p.label, Shortcut: kit.KeyLabel(p.keys), Help: panes.HelpPane}
 	}
 	at := widget.AreaFloat(c, widget.AreaMain, render.Point{X: 1}, render.Point{}, render.Point{X: -340, Y: 2})
 	menu := ui.Child(c.Next("move"), "menu")
