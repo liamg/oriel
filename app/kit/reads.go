@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/watch"
 )
 
 // ReadsService is the window's Reads.
@@ -46,7 +46,9 @@ type ReadsOpts struct {
 	Wake   func()       // asks for a frame as a read lands
 	Frame  func() int   // the frame being built; reads not asked for since are cancelled. None if nil
 	Clock  clock.Clock  // the window's clock; the system's if nil
-	Watch  func() (*fswatch.Watcher, error)
+	// Watches is the window's watch manager, which watches what files and folders were read from; none if nil
+	// (they're read again by age).
+	Watches func() *watch.Manager
 }
 
 func NewReads(o ReadsOpts) *Reads {
@@ -58,10 +60,10 @@ func NewReads(o ReadsOpts) *Reads {
 	}
 	q := &landing{wake: o.Wake}
 	r := &Reads{q: q, frame: o.Frame, asked: -1}
-	r.Files = plugin.NewFiles(q, plugin.CacheOpts[string, plugin.File]{Frame: o.Frame, Clock: o.Clock, Watch: o.Watch})
-	r.Dirs = plugin.NewDirs(q, plugin.CacheOpts[string, []fs.DirEntry]{Frame: o.Frame, Clock: o.Clock, Watch: o.Watch})
+	r.Files = plugin.NewFiles(q, plugin.CacheOpts[string, plugin.File]{Frame: o.Frame, Clock: o.Clock, Watches: o.Watches})
+	r.Dirs = plugin.NewDirs(q, plugin.CacheOpts[string, []fs.DirEntry]{Frame: o.Frame, Clock: o.Clock, Watches: o.Watches})
 	r.Stats = plugin.NewCache(q, func(_ context.Context, p string) (fs.FileInfo, error) { return os.Stat(p) },
-		plugin.CacheOpts[string, fs.FileInfo]{Frame: o.Frame, Clock: o.Clock, Watch: o.Watch, Path: func(p string) string { return p }})
+		plugin.CacheOpts[string, fs.FileInfo]{Frame: o.Frame, Clock: o.Clock, Watches: o.Watches, Path: func(p string) string { return p }})
 	r.Reals = plugin.NewCache(q, func(_ context.Context, p string) (string, error) { return filepath.EvalSymlinks(p) },
 		plugin.CacheOpts[string, string]{Frame: o.Frame, Clock: o.Clock, MaxAge: 10 * time.Second})
 	r.Programs = plugin.NewCache(q, func(_ context.Context, name string) (string, error) { return exec.LookPath(name) },
@@ -85,7 +87,7 @@ func ReadsOf(r registry.Registry) (*Reads, bool) {
 // ReadsIn are the reads c's UI was given; its own for a UI that wasn't.
 func ReadsIn(c *ui.Ctx) *Reads {
 	return ui.Keep(c, func() *Reads {
-		return NewReads(ReadsOpts{Watch: func() (*fswatch.Watcher, error) { return nil, fswatch.ErrUnsupported }})
+		return NewReads(ReadsOpts{})
 	})
 }
 
@@ -168,11 +170,19 @@ func (r *Reads) note(st ui.LoadState) {
 
 // Busy says whether a read from disk the latest frame asked for is still under way, or one has landed it hasn't
 // shown. A remote picture's fetch doesn't count.
-func (r *Reads) Busy() bool { return r.asked == r.frame() || r.q.queued() }
+func (r *Reads) Busy() bool { return r.asked == r.frame() || r.q.queued() || len(r.rereading()) > 0 }
+
+// rereading are the files and folders read whose change is being taken in.
+func (r *Reads) rereading() []string {
+	return slices.Concat(r.Files.Rereading(), r.Dirs.Rereading(), r.Stats.Rereading(), r.Pictures.files.Rereading())
+}
 
 // Pending names the reads under way, for a test that never settles.
 func (r *Reads) Pending() []string {
 	var out []string
+	for _, p := range r.rereading() {
+		out = append(out, "changed "+p)
+	}
 	for _, p := range r.Files.Fetching() {
 		out = append(out, "file "+p)
 	}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/edit"
+	"github.com/liamg/oriel/watch"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
@@ -429,7 +430,7 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 	sh.dir.Store(&cfg.WorkDir)
 	cfg.Logs.OnShownWrite(poke)
 	sh.holds.done = true // nothing waits to be laid out yet
-	sh.reads = kit.NewReads(kit.ReadsOpts{Client: cfg.ImageNet, Wake: poke, Watch: cfg.FSWatch, Frame: func() int {
+	sh.reads = kit.NewReads(kit.ReadsOpts{Client: cfg.ImageNet, Wake: poke, Watches: func() *watch.Manager { return kit.ManagerFor(cfg.Registry, "") }, Frame: func() int {
 		if u := sh.ui.Load(); u != nil {
 			return u.Frames()
 		}

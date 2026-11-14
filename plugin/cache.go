@@ -3,34 +3,36 @@ package plugin
 import (
 	"container/list"
 	"context"
-	"path/filepath"
-	"sync"
+	"os"
 	"time"
 
-	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/watch"
 )
 
 type CacheOpts[K comparable, V any] struct {
 	MaxEntries int           // values kept; 0 is 256
 	MaxBytes   int64         // their total Size; 0 is no bound
 	Size       func(V) int64 // a value's bytes, for MaxBytes
-	// Path is the file or folder a key is read from, or "": a change there, seen by the OS's watcher, makes its
-	// value stale.
+	// Path is the file or folder a key is read from, or "": a change there, seen through Watches, makes its value
+	// stale.
 	Path func(K) string
+	// Watches is the window's watch manager, which watches each Path as it watches every source: through the OS, by
+	// polling when it can't, and paused in a background window. nil, or nil from it, and keys with a Path go by
+	// MaxAge (2s when 0).
+	Watches func() *watch.Manager
 	// MaxAge is how old a value may be before the next Get fetches it again: for keys without a Path, or all of
-	// them when the OS can't watch (then 2s when 0). 0 keeps a value until Invalidate.
+	// them with no Watches. 0 keeps a value until Invalidate.
 	MaxAge  time.Duration
 	Timeout time.Duration // a fetch running longer fails; none when 0
 	Clock   clock.Clock   // the window's clock (Host.UI) or the system's when nil
 	Frame   func() int    // the frame being built (Host.UI's Frames) when nil
-	Watch   func() (*fswatch.Watcher, error)
 }
 
 const (
 	cacheEntries = 256
-	pollAge      = 2 * time.Second // MaxAge for watched keys once the OS can't watch
+	pollAge      = 2 * time.Second // MaxAge for keys with a Path when nothing watches it
 )
 
 // Cache is a keyed cache whose values are fetched off the loop. Get never blocks: a miss starts a fetch and a
@@ -47,12 +49,29 @@ type Cache[K comparable, V any] struct {
 	bytes int64
 	frame int // the frame of the latest Get
 
-	watch     sync.Once
-	wmu       sync.Mutex
-	w         *fswatch.Watcher // nil until a watched key is fetched, or when the OS can't watch
-	unwatched bool             // the OS can't watch: watched keys go by MaxAge
-	paths     map[string]map[K]bool
-	closed    chan struct{}
+	paths  map[string]*cachePath[K] // the paths read from, each watched while a key read from it is kept
+	closed chan struct{}
+}
+
+// cachePath is a path keys were read from: the keys, and the watch on it.
+type cachePath[K comparable] struct {
+	keys map[K]bool
+	sub  watch.Sub[fileSig]
+}
+
+// fileSig is what a path looked like on disk: a change to it is a new one.
+type fileSig struct {
+	exists bool
+	size   int64
+	mtime  int64
+}
+
+func sigOf(path string) fileSig {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return fileSig{}
+	}
+	return fileSig{exists: true, size: fi.Size(), mtime: fi.ModTime().UnixNano()}
 }
 
 type cacheEntry[K comparable, V any] struct {
@@ -68,16 +87,15 @@ type cacheEntry[K comparable, V any] struct {
 	stop  context.CancelFunc // set while a fetch runs
 	asked int                // the frame that last asked for it
 	path  string
+	sig   fileSig // path as the last fetch found it
+	fsig  fileSig // path as the running fetch found it
 }
 
 func NewCache[K comparable, V any](h Loop, fetch func(context.Context, K) (V, error), o CacheOpts[K, V]) *Cache[K, V] {
 	if o.MaxEntries <= 0 {
 		o.MaxEntries = cacheEntries
 	}
-	if o.Watch == nil {
-		o.Watch = fswatch.New
-	}
-	return &Cache[K, V]{h: h, fetch: fetch, o: o, m: map[K]*cacheEntry[K, V]{}, paths: map[string]map[K]bool{}, closed: make(chan struct{})}
+	return &Cache[K, V]{h: h, fetch: fetch, o: o, m: map[K]*cacheEntry[K, V]{}, paths: map[string]*cachePath[K]{}, closed: make(chan struct{})}
 }
 
 // Get is k's value and its load's state. A miss, or a stale value, starts a fetch.
@@ -109,6 +127,17 @@ func (c *Cache[K, V]) Fetching() []K {
 	return out
 }
 
+// Rereading are the paths whose change the watch is taking in: values read from them are about to go stale.
+func (c *Cache[K, V]) Rereading() []string {
+	var out []string
+	for path, p := range c.paths {
+		if p.sub.Valid() && p.sub.Busy() {
+			out = append(out, path)
+		}
+	}
+	return out
+}
+
 // Invalidate makes k's value stale: the next Get fetches it again, showing it meanwhile.
 func (c *Cache[K, V]) Invalidate(k K) {
 	if e := c.m[k]; e != nil {
@@ -130,9 +159,10 @@ func (c *Cache[K, V]) Close() {
 	for _, e := range c.m {
 		c.cancel(e)
 	}
-	c.watch.Do(func() {})
-	if w := c.watcher(); w != nil {
-		w.Close()
+	for _, p := range c.paths {
+		if p.sub.Valid() {
+			p.sub.Close()
+		}
 	}
 }
 
@@ -141,7 +171,7 @@ func (c *Cache[K, V]) isStale(e *cacheEntry[K, V]) bool {
 		return true
 	}
 	age := c.o.MaxAge
-	if e.path != "" && !c.unwatched {
+	if p := c.paths[e.path]; e.path != "" && p != nil && p.sub.Valid() {
 		age = 0
 	} else if e.path != "" && age == 0 {
 		age = pollAge
@@ -195,9 +225,15 @@ func (c *Cache[K, V]) start(e *cacheEntry[K, V]) {
 	k, path := e.key, e.path
 	go func() {
 		Chaos()
+		var sig fileSig
 		if path != "" {
-			c.watchPath(path)
+			sig = sigOf(path) // before the read, so a change during it shows as one
 		}
+		c.h.Do(func() {
+			if e.gen == gen {
+				e.fsig = sig
+			}
+		})
 		v, err := runFetch(ctx, c.o.Timeout, func(ctx context.Context) (V, error) { return c.fetch(ctx, k) })
 		stop()
 		c.h.Do(func() { c.land(e, gen, v, err) })
@@ -209,12 +245,15 @@ func (c *Cache[K, V]) land(e *cacheEntry[K, V], gen int, v V, err error) {
 	if e.gen != gen || c.m[e.key] != e {
 		return
 	}
-	e.stop, e.stale, e.at = nil, false, c.now()
+	e.stop, e.stale, e.at, e.sig = nil, false, c.now(), e.fsig
 	if e.path != "" {
-		if c.paths[e.path] == nil {
-			c.paths[e.path] = map[K]bool{}
+		p := c.watchPath(e.path)
+		p.keys[e.key] = true
+		if p.sub.Valid() {
+			if now, _, ok := p.sub.Get(); ok && now != e.sig {
+				e.stale = true // the watch has seen it change since the read began
+			}
 		}
-		c.paths[e.path][e.key] = true
 	}
 	switch {
 	case err == nil:
@@ -252,61 +291,54 @@ func (c *Cache[K, V]) drop(e *cacheEntry[K, V]) {
 	c.lru.Remove(e.el)
 	delete(c.m, e.key)
 	c.bytes -= e.size
-	if ks := c.paths[e.path]; ks != nil {
-		delete(ks, e.key)
-		if len(ks) == 0 {
+	if p := c.paths[e.path]; p != nil {
+		delete(p.keys, e.key)
+		if len(p.keys) == 0 {
 			delete(c.paths, e.path)
-			if w := c.watcher(); w != nil {
-				go w.Remove(e.path)
+			if p.sub.Valid() {
+				p.sub.Close()
 			}
 		}
 	}
 }
 
-// watchPath watches p, starting the watcher the first time; off the loop.
-func (c *Cache[K, V]) watchPath(p string) {
-	c.watch.Do(func() {
-		w, err := c.o.Watch()
-		if err != nil {
-			c.h.Do(func() { c.unwatched = true })
-			return
-		}
-		c.wmu.Lock()
-		c.w = w
-		c.wmu.Unlock()
-		go c.changes(w)
-	})
-	if w := c.watcher(); w != nil && w.Add(p) != nil {
-		c.h.Do(func() { c.unwatched = true })
+// watchPath is path's entry, watched through Watches from the first key read from it; on the loop.
+func (c *Cache[K, V]) watchPath(path string) *cachePath[K] {
+	if p := c.paths[path]; p != nil {
+		return p
 	}
-}
-
-func (c *Cache[K, V]) watcher() *fswatch.Watcher {
-	c.wmu.Lock()
-	defer c.wmu.Unlock()
-	return c.w
-}
-
-func (c *Cache[K, V]) changes(w *fswatch.Watcher) {
-	for ev := range w.Events() {
-		c.h.Do(func() {
-			if ev.Err != nil {
-				c.unwatched = true
-			}
-			c.changed(ev.Path)
-			ev.Done() // taken in: a test's scripted change waits for it
-		})
+	p := &cachePath[K]{keys: map[K]bool{}}
+	c.paths[path] = p
+	var m *watch.Manager
+	if c.o.Watches != nil {
+		m = c.o.Watches()
+	}
+	if m == nil {
+		return p
+	}
+	src := watch.Source[fileSig]{Key: "cache:" + path, Files: []watch.Files{{Path: path}},
+		Same: func(a, b fileSig) bool { return a == b },
+		Read: func(watch.Reader) (fileSig, error) { return sigOf(path), nil }}
+	p.sub = watch.SubscribeFunc(m, src, watch.Need{}, "a cached read", func() {
+		c.h.Do(func() { c.changed(path) })
 		c.h.Redraw()
-	}
+	})
+	return p
 }
 
-// changed makes stale the values read from p, or from the folder it's in.
-func (c *Cache[K, V]) changed(p string) {
-	for _, q := range []string{p, filepath.Dir(p)} {
-		for k := range c.paths[q] {
-			if e := c.m[k]; e != nil {
-				e.stale = true
-			}
+// changed makes stale the values read from path that the watch's reading of it no longer matches.
+func (c *Cache[K, V]) changed(path string) {
+	p := c.paths[path]
+	if p == nil || !p.sub.Valid() {
+		return
+	}
+	now, _, ok := p.sub.Get()
+	if !ok {
+		return
+	}
+	for k := range p.keys {
+		if e := c.m[k]; e != nil && e.sig != now {
+			e.stale = true
 		}
 	}
 }

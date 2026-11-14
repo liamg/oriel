@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/watch"
 )
 
 // gate is a fetch that waits for each key's answer, counting calls and cancels.
@@ -76,9 +77,6 @@ func cacheFor(g *gate, o CacheOpts[string, string]) (*Cache[string, string], *lo
 	g.counted = lp.Redraw // the loop looks again when a fetch begins or ends
 	if o.Frame == nil {
 		o.Frame = fr.get
-	}
-	if o.Watch == nil {
-		o.Watch = func() (*fswatch.Watcher, error) { return nil, fswatch.ErrUnsupported }
 	}
 	return NewCache(lp, g.fetch, o), lp, fr
 }
@@ -234,6 +232,7 @@ func TestCacheRefetchesAfterMaxAge(t *testing.T) {
 	lp.until(t, func() bool { v, _ := c.Get("a"); return v == "A2" })
 }
 
+// A key read from a path is read again once the window's watch manager sees the path change, and not before.
 func TestCacheWatchesPaths(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "f.txt")
@@ -241,15 +240,13 @@ func TestCacheWatchesPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	lp, fr := newLoop(), &frames{}
-	var script *fswatch.Script
+	w, script := fswatch.NewScripted()
+	m := watch.New(watch.Options{Name: "test", Watch: func() (*fswatch.Watcher, error) { return w, nil }})
+	defer m.Close()
 	c := NewCache(lp, func(ctx context.Context, k string) (string, error) {
 		b, err := os.ReadFile(k)
 		return string(b), err
-	}, CacheOpts[string, string]{Path: func(k string) string { return k }, Frame: fr.get, Watch: func() (*fswatch.Watcher, error) {
-		w, s := fswatch.NewScripted()
-		script = s
-		return w, nil
-	}})
+	}, CacheOpts[string, string]{Path: func(k string) string { return k }, Frame: fr.get, Watches: func() *watch.Manager { return m }})
 	defer c.Close()
 	lp.until(t, func() bool { v, _ := c.Get(p); return v == "one" })
 	if v, _ := c.Get(p); v != "one" {
