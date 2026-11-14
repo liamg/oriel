@@ -51,13 +51,13 @@ type Deps struct {
 	// its gateway carries. Nil for none.
 	MCPServers func(se core.SessionState) []agent.MCPServer
 	// Exec is how agents' processes start.
-	Exec func() agent.Exec
+	Exec agent.Exec
 	// Sandbox makes a sandboxed session's sandbox; nil when this machine can't run one.
-	Sandbox func() hostcore.SandboxFactory
+	Sandbox hostcore.SandboxFactory
 	// Packs finds a kind's prompt pack, before the user's versions; nil for none.
 	Packs func(name string) (agent.Pack, bool)
 	// KeyWait is how long a git operation runs before its session asks for a security-key touch; never if negative.
-	KeyWait func() time.Duration
+	KeyWait time.Duration
 	// Repos are the registered checkouts, which an agent never edits.
 	Repos func() []core.Repo
 	// AddRepo brings a registered repo, by name or path, into a session as a project of its own.

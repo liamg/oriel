@@ -26,7 +26,7 @@ type Deps struct {
 	// Providers are the agent providers the host knows, whose installed MCP servers every sandbox's gateway carries.
 	Providers func() []agent.Provider
 	// Factory is the host's sandbox factory; nil when this machine can't run one.
-	Factory func() hostcore.SandboxFactory
+	Factory hostcore.SandboxFactory
 	// Live is session id's sandbox while its agent runs in one, else nil.
 	Live func(id core.SessionID) hostcore.Sandbox
 	// Running are the sandboxes agents run in now.
@@ -73,7 +73,7 @@ func Of(sb hostcore.Sandbox) *Box {
 
 // Sweep removes what sandboxes no session uses left behind, now and then every interval, until ctx ends.
 func (x *Boxes) Sweep(ctx context.Context, every time.Duration) {
-	f := x.deps.Factory()
+	f := x.deps.Factory
 	if f == nil {
 		return
 	}

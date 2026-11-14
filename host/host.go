@@ -188,8 +188,7 @@ func defaults(opts *Options) error {
 func (w *Host) parts() error {
 	st := state{w}
 	w.logsPart = persist.NewLogs(w.env, st)
-	w.prices = pricing.New(w.env, pricing.Deps{Client: func() *http.Client { return w.opts.HTTP },
-		URL: func() string { return w.opts.PricesURL }})
+	w.prices = pricing.New(w.env, pricing.Deps{Client: w.opts.HTTP, URL: w.opts.PricesURL})
 	w.statsPart = persist.NewStats(w.env, st, w.opts.Providers, w.prices.Book)
 	var err error
 	if w.reposPart, err = repos.New(w.env, st, func() string { return w.opts.ReposDir }); err != nil {
@@ -199,10 +198,10 @@ func (w *Host) parts() error {
 		Repos: w.reposPart.Repos, ReposDir: w.reposPart.Dir, NotesFiles: w.notesFiles})
 	w.runPart = agentrun.New(w.env, st, agentrun.Deps{Providers: w.opts.Providers, Kinds: &w.kinds,
 		MCPServers:   w.mcpServers,
-		Exec:         func() agent.Exec { return w.opts.Exec },
-		Sandbox:      func() hostcore.SandboxFactory { return w.opts.Sandbox },
+		Exec:         w.opts.Exec,
+		Sandbox:      w.opts.Sandbox,
 		Packs:        w.opts.Packs,
-		KeyWait:      func() time.Duration { return w.opts.KeyWait },
+		KeyWait:      w.opts.KeyWait,
 		Repos:        w.reposPart.Repos,
 		AddRepo:      w.AddRepo,
 		AccountOf:    w.statsPart.AccountOf,
@@ -221,14 +220,14 @@ func (w *Host) parts() error {
 		return err
 	}
 	w.codePart = github.New(w.env, st, github.Deps{Kinds: &w.kinds, Keyed: w.runPart.Keyed, Wake: w.runPart.Wake,
-		Client:        func() func(string, []string) gh.Client { return w.opts.GitHub },
-		HTTP:          func() *http.Client { return w.opts.HTTP },
+		Client:        w.opts.GitHub,
+		HTTP:          w.opts.HTTP,
 		BranchRenamed: worktree.BranchRenamed})
 	w.jobsPart = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
 		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxesPart.Config().Default != "host" }})
-	w.utilityPart = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
+	w.utilityPart = utility.New(w.env, utility.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
 		Tools: w.runPart.AppTools, SignedOut: w.runPart.SignedOut})
-	w.reviewsPart = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: func() agent.Exec { return w.opts.Exec },
+	w.reviewsPart = aireview.New(w.env, st, aireview.Deps{Providers: w.opts.Providers, Exec: w.opts.Exec,
 		Pack: func(name string) (agent.Pack, bool) {
 			if w.opts.Packs == nil {
 				return agent.Pack{}, false
@@ -247,7 +246,7 @@ func (w *Host) sandboxDeps() sandboxhost.Deps {
 		},
 		Config:          func() sandbox.Config { return w.boxesPart.Config() },
 		Providers:       w.opts.Providers.List,
-		Factory:         func() hostcore.SandboxFactory { return w.opts.Sandbox },
+		Factory:         w.opts.Sandbox,
 		Live:            func(id core.SessionID) hostcore.Sandbox { return w.runPart.Sandbox(id) },
 		Running:         func() []hostcore.Sandbox { return w.runPart.Sandboxes() },
 		Repos:           func() []core.Repo { return w.reposPart.Repos() },

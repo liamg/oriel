@@ -32,8 +32,8 @@ const maxBody = 16 << 20
 
 // Deps are what the book needs of the host.
 type Deps struct {
-	Client func() *http.Client // http.DefaultClient if nil, or it gives nil
-	URL    func() string       // price.URL if nil, or it gives ""
+	Client *http.Client // http.DefaultClient if nil
+	URL    string       // price.URL if ""
 }
 
 // Pricing keeps the live book.
@@ -152,8 +152,8 @@ func (p *Pricing) fetch(ctx context.Context, etag string) ([]byte, string, error
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	url := price.URL
-	if p.deps.URL != nil && p.deps.URL() != "" {
-		url = p.deps.URL()
+	if p.deps.URL != "" {
+		url = p.deps.URL
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -164,8 +164,8 @@ func (p *Pricing) fetch(ctx context.Context, etag string) ([]byte, string, error
 		req.Header.Set("If-None-Match", etag)
 	}
 	client := http.DefaultClient
-	if p.deps.Client != nil && p.deps.Client() != nil {
-		client = p.deps.Client()
+	if p.deps.Client != nil {
+		client = p.deps.Client
 	}
 	resp, err := client.Do(req)
 	if err != nil {
