@@ -26,3 +26,20 @@ func TestHostPartsStayApart(t *testing.T) {
 		t.Errorf("violations %q, want %q", got, want)
 	}
 }
+
+// A Built rule counts what a package builds with, not what its tests import.
+func TestBuiltRulesLeaveTestsOut(t *testing.T) {
+	m := func(p string) string { return Module + "/" + p }
+	pkgs := []Package{
+		{ImportPath: m("app/kit"), Deps: []string{m("core")}, XTestImports: []string{m("app/apptest")}},
+		{ImportPath: m("app/apptest"), Deps: []string{m("host/agentrun")}},
+	}
+	rule := Rule{From: []string{"app/kit"}, Never: []string{"host/agentrun"}}
+	if got := Check(pkgs, []Rule{rule}); len(got) != 1 {
+		t.Errorf("a rule counting tests: %v", got)
+	}
+	rule.Built = true
+	if got := Check(pkgs, []Rule{rule}); len(got) != 0 {
+		t.Errorf("a Built rule: %v", got)
+	}
+}

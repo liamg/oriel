@@ -14,6 +14,7 @@ type Rule struct {
 	From   []string
 	Never  []string
 	Except []string
+	Built  bool // only what the package builds with counts: its tests may reach further (a whole app, to drive it)
 }
 
 // Rules are the layering every change keeps (docs/architecture.md).
@@ -108,6 +109,10 @@ func Check(pkgs []Package, rules []Rule) []Violation {
 		slices.Sort(reach)
 		reach = slices.Compact(reach)
 		for _, r := range rules {
+			reach := reach
+			if r.Built {
+				reach = p.Deps
+			}
 			if slices.ContainsFunc(r.Except, func(e string) bool { return under(p.ImportPath, e) }) {
 				continue
 			}
