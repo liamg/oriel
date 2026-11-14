@@ -413,7 +413,6 @@ func (e *Engine) changeCase(v *view, r oprange, op string) {
 	if r.kind == linewise && (r.lines() == 1 || r.visual) {
 		e.cur.Col = 0
 	} else if r.kind == linewise {
-		e.cur.Col = min(e.cur.Col, e.changeCursor.Col)
 		e.cur = e.changeCursor
 		e.cur.Line = r.start.Line
 	}

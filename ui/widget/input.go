@@ -511,12 +511,23 @@ func (ff *fieldFrame) key(k render.KeyEvent) {
 		}
 	case "delete-back", "delete-word-back", "delete-line-back":
 		if lo == hi {
-			lo = map[string]int{"delete-back": max(lo-1, 0), "delete-word-back": ff.word(wordLeft, 0, lo), "delete-line-back": ff.line().from}[key]
+			switch key {
+			case "delete-back":
+				lo = max(lo-1, 0)
+			case "delete-word-back":
+				lo = ff.word(wordLeft, 0, lo)
+			case "delete-line-back":
+				lo = ff.line().from
+			}
 		}
 		cut()
 	case "delete", "delete-word":
 		if lo == hi {
-			hi = map[string]int{"delete": min(hi+1, len(ff.runes)), "delete-word": ff.word(wordRight, len(ff.runes), hi)}[key]
+			if key == "delete" {
+				hi = min(hi+1, len(ff.runes))
+			} else {
+				hi = ff.word(wordRight, len(ff.runes), hi)
+			}
 		}
 		cut()
 	default:
