@@ -295,8 +295,7 @@ func (x *GitHub) client(id core.SessionID) (host.CodeHostCalls, error) {
 // trust is the trusted orgs and users, from the options.
 func (x *GitHub) trust() host.Trust {
 	list := func(name string) []string {
-		v, _, _ := x.h.Options().Get(name, registry.At{})
-		l, _ := v.([]string)
+		l, _ := registry.Option[[]string](x.h.Options(), name, registry.At{})
 		return l
 	}
 	return host.Trust{Orgs: list("github.trusted_orgs"), Users: list("github.trusted_users")}

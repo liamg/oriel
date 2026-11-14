@@ -334,8 +334,8 @@ func (x *Terminals) sandboxed(a registry.Args) (host.SandboxCalls, core.SessionI
 
 // shell is what a new terminal runs: terminal.shell, else $SHELL, else sh.
 func (x *Terminals) shell() []string {
-	if v, _, err := x.h.Options().Get("terminal.shell", x.h.Here()); err == nil {
-		if s, _ := v.(string); strings.TrimSpace(os.ExpandEnv(s)) != "" {
+	if s, ok := registry.Option[string](x.h.Options(), "terminal.shell", x.h.Here()); ok {
+		if strings.TrimSpace(os.ExpandEnv(s)) != "" {
 			return strings.Fields(os.ExpandEnv(s))
 		}
 	}

@@ -240,8 +240,7 @@ func (x *Reviews) poll() {
 
 // tooOld says r was asked longer ago than reviews.max_age; one with no time asked never is.
 func (x *Reviews) tooOld(r registry.ReviewRequest) bool {
-	v, _, _ := x.h.Options().Get("reviews.max_age", registry.At{})
-	d, _ := v.(time.Duration)
+	d, _ := registry.Option[time.Duration](x.h.Options(), "reviews.max_age", registry.At{})
 	if d <= 0 || r.Asked.IsZero() {
 		return false
 	}
@@ -253,8 +252,7 @@ func (x *Reviews) tooOld(r registry.ReviewRequest) bool {
 }
 
 func (x *Reviews) pollEvery() time.Duration {
-	v, _, _ := x.h.Options().Get("reviews.poll", registry.At{})
-	if d, ok := v.(time.Duration); ok && d > 0 {
+	if d, ok := registry.Option[time.Duration](x.h.Options(), "reviews.poll", registry.At{}); ok && d > 0 {
 		return d
 	}
 	return 5 * time.Minute

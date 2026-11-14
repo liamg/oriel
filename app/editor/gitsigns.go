@@ -245,8 +245,7 @@ func (g *GitSigns) source(f gitFile, index bool) (gitSource, bool) {
 // base is what the gutter marks changes against, git.gutter.base resolved: scope follows the Explorer's, the last
 // commit while it shows Uncommitted, else the branch's base.
 func (g *GitSigns) base() string {
-	v, _, _ := g.h.Options().Get("git.gutter.base", g.h.Here())
-	base, _ := v.(string)
+	base, _ := registry.Option[string](g.h.Options(), "git.gutter.base", g.h.Here())
 	if base == "scope" || base == "" {
 		if kit.GitOf(g.h).Scope() == gitx.Uncommitted {
 			return "head"

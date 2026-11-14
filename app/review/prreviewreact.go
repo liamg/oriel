@@ -24,8 +24,7 @@ func (x *PRReview) unreactOnSent(id core.SessionID) {
 // can (has).
 func (x *PRReview) startReaction(id core.SessionID, what string, do func(context.Context, registry.HostSite, string, string) error,
 	has func(registry.HostSite) bool) {
-	emoji, _, _ := x.h.Options().Get(optStartReaction, registry.At{})
-	e, _ := emoji.(string)
+	e, _ := registry.Option[string](x.h.Options(), optStartReaction, registry.At{})
 	se, ok := x.h.Session(id)
 	if e == "" || !ok {
 		return

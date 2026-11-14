@@ -411,8 +411,7 @@ func (x *Inbox) queued(r *inboxRow) (n, of int) {
 }
 
 func (x *Inbox) promptPause() time.Duration {
-	v, _, _ := x.h.Options().Get(PromptPauseOption, registry.At{})
-	d, _ := v.(time.Duration)
+	d, _ := registry.Option[time.Duration](x.h.Options(), PromptPauseOption, registry.At{})
 	return d
 }
 

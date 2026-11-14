@@ -378,8 +378,7 @@ func (r *Rail) formNow(w kit.Here) string {
 	if r.form != "" {
 		return r.form
 	}
-	v, _, _ := r.h.Options().Get("sidebar.form", registry.At{})
-	if f, _ := v.(string); f == "wide" || f == "narrow" {
+	if f, _ := registry.Option[string](r.h.Options(), "sidebar.form", registry.At{}); f == "wide" || f == "narrow" {
 		return f
 	}
 	if w.Many() {
