@@ -183,7 +183,7 @@ func (p *Search) shownPath(path string) string {
 		return path
 	}
 	w := kit.ProjectsHere(p.h)
-	if pr, ok := w.Of(path); ok && w.Many() {
+	if pr, ok := w.ProjectOf(path); ok && w.Many() {
 		if r, err := filepath.Rel(pr.Dir, path); err == nil {
 			return pr.Name + "/" + filepath.ToSlash(r)
 		}
@@ -325,7 +325,7 @@ func (v searchView) Build(vc uireg.ViewCtx) ui.Node {
 }
 
 // rows are the results' rows, and how many matches and files they hold.
-func (p *Search) rows(w kit.Here) ([]searchRow, int, int) {
+func (p *Search) rows(w kit.WindowProjects) ([]searchRow, int, int) {
 	key := searchShownKey{}
 	if p.allProjects && w.Many() {
 		for _, pr := range w.Projects {
@@ -339,7 +339,7 @@ func (p *Search) rows(w kit.Here) ([]searchRow, int, int) {
 		return p.shown.rows, p.shown.n, p.shown.files
 	}
 	rows := rowsOf(p.results(), func(path string) string {
-		if pr, ok := w.Of(path); ok && key.projects != "" {
+		if pr, ok := w.ProjectOf(path); ok && key.projects != "" {
 			return pr.Name
 		}
 		return ""
@@ -473,7 +473,7 @@ func (p *Search) row(c *ui.Ctx, r searchRow) {
 
 // rowPath is a file as its header names it: relative to its project, or to the work dir.
 func (p *Search) rowPath(path string) string {
-	if pr, ok := kit.ProjectsHere(p.h).Of(path); ok {
+	if pr, ok := kit.ProjectsHere(p.h).ProjectOf(path); ok {
 		if r, err := filepath.Rel(pr.Dir, path); err == nil {
 			return filepath.ToSlash(r)
 		}

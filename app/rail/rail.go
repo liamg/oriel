@@ -374,7 +374,7 @@ func (r *Rail) open(ctx registry.Ctx, p core.Project) error {
 func (r *Rail) Form() string { return r.formNow(kit.ProjectsHere(r.h)) }
 
 // formNow is the window's form: its own, else the option's, auto being wide with projects to choose between.
-func (r *Rail) formNow(w kit.Here) string {
+func (r *Rail) formNow(w kit.WindowProjects) string {
 	if r.form != "" {
 		return r.form
 	}
@@ -388,7 +388,7 @@ func (r *Rail) formNow(w kit.Here) string {
 }
 
 // canAdd says the user can add a project to the session in front: there are sessions, and it isn't a directory.
-func (r *Rail) canAdd(w kit.Here) bool {
+func (r *Rail) canAdd(w kit.WindowProjects) bool {
 	return w.Session != nil && registry.Can(r.h, w.Session.Kind, core.AddProjects) && r.h.Available("project.add", nil)
 }
 
@@ -411,7 +411,7 @@ const (
 	rowGap
 )
 
-func (r *Rail) rows(w kit.Here, wide bool) []sideRow {
+func (r *Rail) rows(w kit.WindowProjects, wide bool) []sideRow {
 	rows := []sideRow{{kind: rowHeading}}
 	var kind core.Kind
 	if w.Session != nil {
@@ -530,7 +530,7 @@ func (r *Rail) label(row sideRow) string {
 	return ""
 }
 
-func (r *Rail) tooltip(w kit.Here, row sideRow, wide bool) string {
+func (r *Rail) tooltip(w kit.WindowProjects, row sideRow, wide bool) string {
 	switch row.kind {
 	case rowProject:
 		if wide {
@@ -573,7 +573,7 @@ func noteOf(row sideRow) string {
 	return note
 }
 
-func (r *Rail) activate(w kit.Here, row sideRow) {
+func (r *Rail) activate(w kit.WindowProjects, row sideRow) {
 	ctx := context.Background()
 	if uireg.PlaceShown(r.h) {
 		uireg.ClosePlaces(r.h)
@@ -619,7 +619,7 @@ func (l stateLine) texts() []string {
 
 // stateLine is a project's header line: branch and ahead/behind, its changes ("read-only" for a project the session
 // only reads), then what plugins add (a PR, CI).
-func (r *Rail) stateLine(w kit.Here, p core.Project) stateLine {
+func (r *Rail) stateLine(w kit.WindowProjects, p core.Project) stateLine {
 	th := r.h.CurrentTheme()
 	if th == nil {
 		return nil
@@ -658,7 +658,7 @@ func (r *Rail) stateLine(w kit.Here, p core.Project) stateLine {
 }
 
 // wideRow draws a row of the wide sidebar.
-func (r *Rail) wideRow(c *ui.Ctx, w kit.Here, row sideRow) {
+func (r *Rail) wideRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 	th := c.Theme()
 	switch row.kind {
 	case rowHeading:
@@ -695,7 +695,7 @@ func (r *Rail) wideRow(c *ui.Ctx, w kit.Here, row sideRow) {
 }
 
 // addButton is + in the sidebar's heading: add a project to the session.
-func (r *Rail) addButton(c *ui.Ctx, w kit.Here) {
+func (r *Rail) addButton(c *ui.Ctx, w kit.WindowProjects) {
 	if r.canAdd(w) && widget.IconButton(c, "add", "+", widget.IconButtonOpts{Label: "Add a project", Help: "shell/rail", Size: 20}) {
 		if err := r.h.Run(context.Background(), "project.add", nil); err != nil {
 			r.h.Log().Error("sidebar", "add", err)
@@ -704,7 +704,7 @@ func (r *Rail) addButton(c *ui.Ctx, w kit.Here) {
 }
 
 // header is a project's two lines: twisty, colour, name and ⌃n; then its state.
-func (r *Rail) header(c *ui.Ctx, w kit.Here, row sideRow) {
+func (r *Rail) header(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 	th := c.Theme()
 	open := row.project.Name == w.Open
 	fill := render.Color{}
@@ -784,7 +784,7 @@ func (r *Rail) wideEntry(c *ui.Ctx, row sideRow) {
 }
 
 // narrowRow draws a row of the icon strip.
-func (r *Rail) narrowRow(c *ui.Ctx, w kit.Here, row sideRow) {
+func (r *Rail) narrowRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 	th := c.Theme()
 	cell := func(key string, h float32, body func(c *ui.Ctx)) {
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(h), Main: ui.Center, Cross: ui.Center}, body)
