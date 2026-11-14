@@ -33,7 +33,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 			}
 		})
 	case agent.TurnStart:
-		h.r.deps.Record(h.snapshot(), usage.Event{At: now, Kind: "turn"})
+		x.deps.Record(h.snapshot(), usage.Event{At: now, Kind: "turn"})
 		h.mu.Lock()
 		h.working, h.turnAt, h.runs = true, now, nil // a turn's claims are backed by its own runs
 		h.mu.Unlock()
@@ -49,24 +49,9 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		}
 		h.appendItem(core.Item{ID: id, Kind: kind, Text: ev.Text, Partial: ev.Partial, Agent: ev.Agent, Time: now})
 	case agent.ToolCall:
-		se := h.snapshot()
-		h.r.deps.Record(se, usage.Event{At: now, Kind: "tool", ID: ev.ID, Name: ev.Tool, Input: ev.Input, Agent: ev.Agent, Model: se.Agent.Model,
-			Effort: se.Agent.Effort, Cwd: hostcore.AgentDir(se)})
-		h.mu.Lock()
-		h.calls[ev.ID] = ev
-		if ev.Model != "" && ev.Agent == "" {
-			h.model = ev.Model
-		}
-		h.mu.Unlock()
-		it := core.Item{ID: ev.ID, Kind: core.ItemTool, Tool: ev.Tool, Input: string(ev.Input), Title: toolTitleIn(se, ev.Tool, ev.Input),
-			Agent: ev.Agent, Time: now}
-		h.appendItem(it)
-		h.setAgent(func(a *core.AgentState) { a.Stats.ToolCalls++ })
-		if ev.Agent != "" {
-			h.subagentTool(ev.Agent)
-		}
+		h.toolCall(ev, now)
 	case agent.ToolResult:
-		h.r.deps.Record(h.snapshot(), usage.Event{At: now, Kind: "result", ID: ev.ID, Error: ev.IsError})
+		x.deps.Record(h.snapshot(), usage.Event{At: now, Kind: "result", ID: ev.ID, Error: ev.IsError})
 		h.toolResult(ev, now)
 	case agent.Permission:
 		x.env.Go("a permission", func() { h.permission(sess, ev) })
@@ -77,7 +62,7 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 	case agent.TurnEnd:
 		se := h.snapshot()
 		u := ev.Usage
-		h.r.deps.Record(se, usage.Event{At: now, Kind: "request", Model: se.Agent.Model, Effort: se.Agent.Effort, Window: int64(u.ContextMax),
+		x.deps.Record(se, usage.Event{At: now, Kind: "request", Model: se.Agent.Model, Effort: se.Agent.Effort, Window: int64(u.ContextMax),
 			Tokens: stats.Tokens{Input: u.Input, Output: u.Output, CacheRead: u.CacheRead, CacheWrite5m: u.CacheWrite}})
 		if u.Output > 0 {
 			h.mu.Lock()
@@ -94,28 +79,13 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 			h.setAgent(func(a *core.AgentState) { a.RanOn(now, ev.Usage.Account, ev.Usage.AccountName) })
 		}
 	case agent.AuthExpired:
-		h.mu.Lock()
-		h.relogin = h.relogin || h.working
-		h.mu.Unlock()
-		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemError, Text: "Signed out: " + ev.Detail, Time: now})
-		if !h.retryLogin(ev) {
-			x.LoginLost(h.id, ev)
-		}
+		h.authExpired(ev, now)
 	case agent.AuthRestored:
 		if x.SignedOut(ev.Provider) {
 			x.env.Go("a login check", func() { x.CheckLogin(ev.Provider, true) })
 		}
 	case agent.Stale:
-		h.mu.Lock()
-		working := h.working
-		if working {
-			h.restartWhy = ev.Why
-		}
-		h.mu.Unlock()
-		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: now, Text: "Restarting the agent: " + ev.Why})
-		if !working {
-			h.restart(ev.Why)
-		}
+		h.stale(ev, now)
 	case agent.ModeChanged:
 		h.setAgent(func(a *core.AgentState) { a.Mode = ev.Mode })
 	case agent.Dialog:
@@ -125,6 +95,50 @@ func (h *session) handle(sess agent.Session, ev agent.Event) {
 		if ev.Err != "" {
 			h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Text: "The agent exited: " + ev.Err, Time: now})
 		}
+	}
+}
+
+// toolCall records a call the agent made and shows it.
+func (h *session) toolCall(ev agent.ToolCall, now time.Time) {
+	se := h.snapshot()
+	h.r.deps.Record(se, usage.Event{At: now, Kind: "tool", ID: ev.ID, Name: ev.Tool, Input: ev.Input, Agent: ev.Agent, Model: se.Agent.Model,
+		Effort: se.Agent.Effort, Cwd: hostcore.AgentDir(se)})
+	h.mu.Lock()
+	h.calls[ev.ID] = ev
+	if ev.Model != "" && ev.Agent == "" {
+		h.model = ev.Model
+	}
+	h.mu.Unlock()
+	h.appendItem(core.Item{ID: ev.ID, Kind: core.ItemTool, Tool: ev.Tool, Input: string(ev.Input), Title: toolTitleIn(se, ev.Tool, ev.Input),
+		Agent: ev.Agent, Time: now})
+	h.setAgent(func(a *core.AgentState) { a.Stats.ToolCalls++ })
+	if ev.Agent != "" {
+		h.subagentTool(ev.Agent)
+	}
+}
+
+// authExpired is the agent signed out: it says so, and signs in again once, or tells the user.
+func (h *session) authExpired(ev agent.AuthExpired, now time.Time) {
+	h.mu.Lock()
+	h.relogin = h.relogin || h.working
+	h.mu.Unlock()
+	h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemError, Text: "Signed out: " + ev.Detail, Time: now})
+	if !h.retryLogin(ev) {
+		h.r.LoginLost(h.id, ev)
+	}
+}
+
+// stale is the agent asking to be restarted: now when idle, else once its turn ends.
+func (h *session) stale(ev agent.Stale, now time.Time) {
+	h.mu.Lock()
+	working := h.working
+	if working {
+		h.restartWhy = ev.Why
+	}
+	h.mu.Unlock()
+	h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: now, Text: "Restarting the agent: " + ev.Why})
+	if !working {
+		h.restart(ev.Why)
 	}
 }
 
