@@ -115,16 +115,10 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 }
 
 // dialogField is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ adds.
-func (x *Repos) dialogField(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
-	if focus {
-		c.RequestFocus(c.Next(key))
-	}
-	o.Label, o.Placeholder, o.Help, o.TabMoves, o.KeyMode = label, placeholder, "agent/repos#add", true, RepoNewKeyMode
-	if r := widget.Input(c, key, text, o); r.Cancelled {
-		x.closeDialog()
-	} else if r.Submitted {
-		x.submitDialog()
-	}
+// repoField is one of the Add repo dialog's fields.
+func (x *Repos) repoField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
+	o.Help, o.TabMoves, o.KeyMode = "agent/repos#add", true, RepoNewKeyMode
+	dialogField(c, key, text, o, focus, x.closeDialog, x.submitDialog)
 }
 
 // probeKey is what the fields name that needs checking.
@@ -257,7 +251,7 @@ func (x *Repos) dirMode(c *ui.Ctx, f *addRepo, focus bool) {
 	c.Column("dir", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		kit.Heading(c, "h", "Directory", "a checkout, or a worktree of one")
 		c.Row("row", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			x.dialogField(c, "path", &f.path, "Directory", "~/src/my-project", focus, widget.InputOpts{})
+			x.repoField(c, "path", &f.path, focus, widget.InputOpts{Label: "Directory", Placeholder: "~/src/my-project"})
 			if kit.ReadsIn(c).HasChooseDir() && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
 				x.work.Loop(func(ctx context.Context) {
 					dir, err := kit.ChooseDir(ctx)
@@ -325,10 +319,10 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 	}
 	c.Column("clone", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		labelled(c, "url", "URL", func(c *ui.Ctx) {
-			x.dialogField(c, "url", &f.url, "URL", "https://github.com/owner/repo", focus, widget.InputOpts{})
+			x.repoField(c, "url", &f.url, focus, widget.InputOpts{Label: "URL", Placeholder: "https://github.com/owner/repo"})
 		})
 		labelled(c, "parent", "Parent folder", func(c *ui.Ctx) {
-			x.dialogField(c, "parent", &f.parent, "Parent folder", "~/src", false, widget.InputOpts{})
+			x.repoField(c, "parent", &f.parent, false, widget.InputOpts{Label: "Parent folder", Placeholder: "~/src"})
 			if kit.ReadsIn(c).HasChooseDir() && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
 				x.work.Loop(func(ctx context.Context) {
 					dir, err := kit.ChooseDir(ctx)
@@ -348,7 +342,7 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 			labelled(c, "hint", "", func(c *ui.Ctx) { c.Text("t", h, kit.MonoFont(10.5, th.C(theme.Warn))) })
 		}
 		labelled(c, "name", "Folder name", func(c *ui.Ctx) {
-			x.dialogField(c, "name", &f.name, "Folder name", "my-project", false, widget.InputOpts{})
+			x.repoField(c, "name", &f.name, false, widget.InputOpts{Label: "Folder name", Placeholder: "my-project"})
 		})
 		into := ""
 		if p, n := expandTilde(f.parent), host.Sanitise(f.name); p != "" && n != "" {
