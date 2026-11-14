@@ -172,14 +172,12 @@ func (x *Update) commands() []registry.Command {
 }
 
 func (x *Update) mode() string {
-	v, _, _ := x.h.Options().Get("updates.mode", registry.At{})
-	s, _ := v.(string)
+	s, _ := registry.Option[string](x.h.Options(), "updates.mode", registry.At{})
 	return s
 }
 
 func (x *Update) channel() string {
-	v, _, _ := x.h.Options().Get("updates.channel", registry.At{})
-	s, _ := v.(string)
+	s, _ := registry.Option[string](x.h.Options(), "updates.channel", registry.At{})
 	return s
 }
 

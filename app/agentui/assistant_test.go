@@ -304,18 +304,18 @@ func TestPluginToolsReachTheAssistant(t *testing.T) {
 	requested := ""
 	for _, tool := range []registry.AgentTool{
 		{Name: "my_tickets", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "linear", Desc: "The user's Linear tickets.",
-			Run: func(registry.Ctx, map[string]any) (any, error) {
+			Run: func(registry.Ctx, registry.Args) (any, error) {
 				return []map[string]string{{"key": "ENG-2231", "title": "search api", "state": "In Progress"}}, nil
 			}},
 		{Name: "builds", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "builds", Desc: "The builds running and how they went.",
-			Run: func(registry.Ctx, map[string]any) (any, error) { return "2 PRs failing CI", nil }},
+			Run: func(registry.Ctx, registry.Args) (any, error) { return "2 PRs failing CI", nil }},
 		{Name: "request_review", For: []string{kit.AssistantAgent}, Params: map[string]string{"pr": "string", "who": "string?"},
 			Desc: "Ask someone on agentbus to review a pull request.",
-			Confirm: func(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+			Confirm: func(_ registry.Ctx, p registry.Args) (registry.Confirmation, error) {
 				return registry.Confirmation{Title: "Ask for a review", Lead: "The assistant wants to ask @" + p["who"].(string) + " to review " + p["pr"].(string),
 					Line: "ask for a review"}, nil
 			},
-			Run: func(_ registry.Ctx, p map[string]any) (any, error) {
+			Run: func(_ registry.Ctx, p registry.Args) (any, error) {
 				requested = p["who"].(string)
 				return registry.Acted{Line: "asked @" + requested + " to review acme/api#4421"}, nil
 			}},

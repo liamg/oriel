@@ -139,7 +139,7 @@ func (x *HUD) node(c *ui.Ctx, ind uireg.Indicator) (ui.Node, error) {
 	if due {
 		var n ui.Node
 		err := registry.Call(func() (err error) { n, err = ind.Build(context.Background()); return })
-		x.h.Report("hud.indicator", ind.Name, err)
+		x.h.Report(ind.ContributionKind(), ind.Name, err)
 		b = &builtIndicator{node: n, err: err, at: now}
 		x.mu.Lock()
 		x.cache[ind.Name] = b
@@ -178,14 +178,12 @@ func (x *HUD) Node(c *ui.Ctx, ind uireg.Indicator) ui.Node {
 
 // holdKey is the modifier that pulls the HUD down, or 0 for none.
 func (x *HUD) holdKey() render.Mods {
-	v, _, _ := x.h.Options().Get(HoldOption, registry.At{})
-	s, _ := v.(string)
+	s, _ := registry.Option[string](x.h.Options(), HoldOption, registry.At{})
 	return holdMods[s]
 }
 
 func (x *HUD) holdDelay() time.Duration {
-	v, _, _ := x.h.Options().Get(HoldDelayOption, registry.At{})
-	ms, _ := v.(int)
+	ms, _ := registry.Option[int](x.h.Options(), HoldDelayOption, registry.At{})
 	return time.Duration(ms) * time.Millisecond
 }
 

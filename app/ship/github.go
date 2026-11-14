@@ -87,12 +87,12 @@ func (m githubMirror) ended() bool {
 func (x *GitHub) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github"} }
 
 func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "github", Busy: x.busy.Busy, Source: "builtin:github"}))
+	x.Add(h.Contribute(registry.Busy{Name: "github", Busy: x.busy.Busy}))
 	x.h = h
 	x.mirrors, x.syncing, x.forwarding, x.editing = map[core.SessionID]githubMirror{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
 	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
-	x.Add(h.Contribute(registry.Service{Name: prui.PRReviewsService, Impl: githubReviews{x}, Source: "builtin:github"}))
+	x.Add(h.Contribute(registry.Service{Name: prui.PRReviewsService, Impl: githubReviews{x}}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrPushed", Fired: true, Payload: kit.PrPushed{},
 		Doc: "A session's pull request's head, each time GitHub is read for it; the subject is the session. { session, project, head }"}))
 	x.Add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
@@ -295,8 +295,7 @@ func (x *GitHub) client(id core.SessionID) (host.CodeHostCalls, error) {
 // trust is the trusted orgs and users, from the options.
 func (x *GitHub) trust() host.Trust {
 	list := func(name string) []string {
-		v, _, _ := x.h.Options().Get(name, registry.At{})
-		l, _ := v.([]string)
+		l, _ := registry.Option[[]string](x.h.Options(), name, registry.At{})
 		return l
 	}
 	return host.Trust{Orgs: list("github.trusted_orgs"), Users: list("github.trusted_users")}

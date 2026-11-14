@@ -91,8 +91,7 @@ func movedOnMerged(se core.SessionState, project string) bool {
 // is Uncommitted.
 func ArchivesOnMerge(h plugin.Host, se core.SessionState, ships []registry.ProjectShip) bool {
 	primary, _ := se.Primary()
-	v, _, _ := h.Options().Get(ArchiveOnMergeOption, registry.At{Project: primary.Dir, Session: string(se.ID)})
-	on, _ := v.(bool)
+	on, _ := registry.Option[bool](h.Options(), ArchiveOnMergeOption, registry.At{Project: primary.Dir, Session: string(se.ID)})
 	return on && !se.Archived && AllMerged(se, ships) && Uncommitted(ships) == 0
 }
 

@@ -40,8 +40,7 @@ func (x *VoiceEntries) Activate(ctx context.Context, h plugin.Host) error {
 }
 
 func (x *VoiceEntries) settle() {
-	v, _, _ := x.h.Options().Get("voice.dictation", registry.At{})
-	on, _ := v.(bool)
+	on, _ := registry.Option[bool](x.h.Options(), "voice.dictation", registry.At{})
 	switch {
 	case on && x.stub == nil:
 		x.stub = plugin.ProvideUI[widget.Dictator](x.h, voiceStub{x})

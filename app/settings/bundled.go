@@ -57,8 +57,7 @@ func (x *Catalog) self() []string {
 // syncBundled runs each bundled plugin that's neither turned off nor installed, and stops the rest. It runs on the
 // loop.
 func (x *Catalog) syncBundled(installed func(id string) bool) {
-	v, _, _ := x.h.Options().Get(BundledDisabledOption, registry.At{})
-	off, _ := v.([]string)
+	off, _ := registry.Option[[]string](x.h.Options(), BundledDisabledOption, registry.At{})
 	for _, id := range x.bundledIDs {
 		bp := x.bundled[id]
 		want := "loaded"

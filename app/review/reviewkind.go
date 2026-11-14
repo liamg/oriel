@@ -35,7 +35,7 @@ func reviewDraft(se core.SessionState) *core.ReviewDraft {
 // Raise PR's.
 func (x *PRReview) contributeKind() {
 	h := x.h
-	x.Add(h.Contribute(registry.KindEntry{Source: "builtin:pr-review", SessionKind: registry.Kind{KindSpec: host.ReviewKind,
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.ReviewKind,
 		PrepareFunc: x.prepare,
 		ChipsFunc: func(se core.SessionState) []registry.Chip {
 			if pr := reviewPR(se); pr != "" {
@@ -43,11 +43,10 @@ func (x *PRReview) contributeKind() {
 			}
 			return nil
 		}}}))
-	x.Add(h.Contribute(registry.SessionDone{Name: "review.approved", Done: approved, Source: "builtin:pr-review"}))
-	x.Add(h.Contribute(registry.SessionUnsaved{Name: "review.unsent", Unsaved: x.unsent, Source: "builtin:pr-review"}))
-	x.Add(h.Contribute(registry.Service{Name: kit.ReviewsService, Impl: reviewsService{x}, Source: "builtin:pr-review"}))
-	x.Add(h.Contribute(uireg.SlotView{Name: "review.pr", Slot: kit.PRView, Kinds: []core.Kind{core.KindReview}, Source: "builtin:pr-review",
-		View: reviewTab{x}}))
+	x.Add(h.Contribute(registry.SessionDone{Name: "review.approved", Done: approved}))
+	x.Add(h.Contribute(registry.SessionUnsaved{Name: "review.unsent", Unsaved: x.unsent}))
+	x.Add(h.Contribute(registry.Service{Name: kit.ReviewsService, Impl: reviewsService{x}}))
+	x.Add(h.Contribute(uireg.SlotView{Name: "review.pr", Slot: kit.PRView, Kinds: []core.Kind{core.KindReview}, View: reviewTab{x}}))
 }
 
 // approved says a review is done once the last review the user sent of its PR approved it.

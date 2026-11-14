@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -97,8 +96,8 @@ func (x *Assistant) run(ctx context.Context, id string, args registry.Args) erro
 	})
 }
 
-func (x *Assistant) toolReply(_ registry.Ctx, p map[string]any) (any, error) {
-	text := kit.ParamString(p, "text")
+func (x *Assistant) toolReply(_ registry.Ctx, p registry.Args) (any, error) {
+	text := p.Trimmed("text")
 	if text == "" {
 		return nil, errors.New("the reply is empty")
 	}
@@ -164,7 +163,7 @@ func (x *Assistant) lineOf(st core.State, s core.SessionState, now time.Time) se
 	return l
 }
 
-func (x *Assistant) toolSessions(registry.Ctx, map[string]any) (any, error) {
+func (x *Assistant) toolSessions(registry.Ctx, registry.Args) (any, error) {
 	st := x.h.State()
 	now := time.Now()
 	var ss []core.SessionState
@@ -188,7 +187,7 @@ func finished(s core.SessionState) bool {
 	return s.Archived || s.Agent.Provider != "" && !s.Agent.Live()
 }
 
-func (x *Assistant) toolPastSessions(registry.Ctx, map[string]any) (any, error) {
+func (x *Assistant) toolPastSessions(registry.Ctx, registry.Args) (any, error) {
 	st := x.h.State()
 	var ss []core.SessionState
 	for _, s := range st.Sessions {
@@ -233,8 +232,8 @@ func (x *Assistant) session(ref string) (core.SessionState, error) {
 	return core.SessionState{}, fmt.Errorf("more than one session is called %q: ask which, by id", ref)
 }
 
-func (x *Assistant) toolOpenSession(ctx registry.Ctx, p map[string]any) (any, error) {
-	s, err := x.session(kit.ParamString(p, "id"))
+func (x *Assistant) toolOpenSession(ctx registry.Ctx, p registry.Args) (any, error) {
+	s, err := x.session(p.Trimmed("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -244,12 +243,12 @@ func (x *Assistant) toolOpenSession(ctx registry.Ctx, p map[string]any) (any, er
 	return registry.Acted{Result: "opened", Line: "opened " + kit.Label(s)}, nil
 }
 
-func (x *Assistant) toolRenameSession(ctx registry.Ctx, p map[string]any) (any, error) {
-	s, err := x.session(kit.ParamString(p, "id"))
+func (x *Assistant) toolRenameSession(ctx registry.Ctx, p registry.Args) (any, error) {
+	s, err := x.session(p.Trimmed("id"))
 	if err != nil {
 		return nil, err
 	}
-	name := kit.ParamString(p, "name")
+	name := p.Trimmed("name")
 	if name == "" {
 		return nil, errors.New("what should it be called?")
 	}
@@ -262,8 +261,8 @@ func (x *Assistant) toolRenameSession(ctx registry.Ctx, p map[string]any) (any, 
 	}}, nil
 }
 
-func (x *Assistant) toolResumeSession(ctx registry.Ctx, p map[string]any) (any, error) {
-	s, err := x.session(kit.ParamString(p, "id"))
+func (x *Assistant) toolResumeSession(ctx registry.Ctx, p registry.Args) (any, error) {
+	s, err := x.session(p.Trimmed("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -278,10 +277,10 @@ func (x *Assistant) toolResumeSession(ctx registry.Ctx, p map[string]any) (any, 
 	}}, nil
 }
 
-func (x *Assistant) toolNewSession(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *Assistant) toolNewSession(ctx registry.Ctx, p registry.Args) (any, error) {
 	args := registry.Args{}
 	for _, k := range []string{"kind", "prompt", "repos"} {
-		if v := kit.ParamString(p, k); v != "" {
+		if v := p.Trimmed(k); v != "" {
 			args[k] = v
 		}
 	}
@@ -291,8 +290,8 @@ func (x *Assistant) toolNewSession(ctx registry.Ctx, p map[string]any) (any, err
 	return registry.Acted{Result: "the launcher is open for the user to finish", Line: "opened the launcher"}, nil
 }
 
-func (x *Assistant) toolSettings(ctx registry.Ctx, p map[string]any) (any, error) {
-	if err := x.run(ctx, "settings.open", registry.Args{"section": kit.ParamString(p, "section"), "query": kit.ParamString(p, "query")}); err != nil {
+func (x *Assistant) toolSettings(ctx registry.Ctx, p registry.Args) (any, error) {
+	if err := x.run(ctx, "settings.open", registry.Args{"section": p.Trimmed("section"), "query": p.Trimmed("query")}); err != nil {
 		return nil, err
 	}
 	return registry.Acted{Result: "opened", Line: "opened settings"}, nil
@@ -321,7 +320,7 @@ func (x *Assistant) repos(context.Context) []repoLine {
 	return out
 }
 
-func (x *Assistant) toolRepos(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Assistant) toolRepos(ctx registry.Ctx, _ registry.Args) (any, error) {
 	out := x.repos(ctx)
 	if out == nil {
 		out = []repoLine{}
@@ -360,8 +359,8 @@ type startReq struct {
 	repo         repoLine
 }
 
-func (x *Assistant) startReq(ctx context.Context, p map[string]any) (startReq, error) {
-	r := startReq{kind: cmp.Or(kit.ParamString(p, "kind"), "plan"), prompt: kit.ParamString(p, "prompt")}
+func (x *Assistant) startReq(ctx context.Context, p registry.Args) (startReq, error) {
+	r := startReq{kind: cmp.Or(p.Trimmed("kind"), "plan"), prompt: p.Trimmed("prompt")}
 	if startNotes[r.kind] == "" {
 		return r, fmt.Errorf("kind is plan or work, not %q", r.kind)
 	}
@@ -369,11 +368,11 @@ func (x *Assistant) startReq(ctx context.Context, p map[string]any) (startReq, e
 		return r, errors.New("what should the session do? prompt is empty")
 	}
 	var err error
-	r.repo, err = x.repo(ctx, kit.ParamString(p, "repo"))
+	r.repo, err = x.repo(ctx, p.Trimmed("repo"))
 	return r, err
 }
 
-func (x *Assistant) confirmStart(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+func (x *Assistant) confirmStart(ctx registry.Ctx, p registry.Args) (registry.Confirmation, error) {
 	r, err := x.startReq(ctx, p)
 	if err != nil {
 		return registry.Confirmation{}, err
@@ -394,7 +393,7 @@ func (x *Assistant) startSession(ctx registry.Ctx, a registry.Args) (core.Sessio
 	return s.Start(ctx, a)
 }
 
-func (x *Assistant) toolStart(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *Assistant) toolStart(ctx registry.Ctx, p registry.Args) (any, error) {
 	r, err := x.startReq(ctx, p)
 	if err != nil {
 		return nil, err
@@ -414,8 +413,8 @@ func (x *Assistant) started(id core.SessionID, line, detail string) registry.Act
 		Undo: func(ctx registry.Ctx) error { return x.run(ctx, "session.delete", registry.Args{"id": string(id)}) }}
 }
 
-func (x *Assistant) confirmStop(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
-	s, err := x.session(kit.ParamString(p, "id"))
+func (x *Assistant) confirmStop(_ registry.Ctx, p registry.Args) (registry.Confirmation, error) {
+	s, err := x.session(p.Trimmed("id"))
 	if err != nil {
 		return registry.Confirmation{}, err
 	}
@@ -431,8 +430,8 @@ func (x *Assistant) confirmStop(_ registry.Ctx, p map[string]any) (registry.Conf
 	return c, nil
 }
 
-func (x *Assistant) toolStop(ctx registry.Ctx, p map[string]any) (any, error) {
-	s, err := x.session(kit.ParamString(p, "id"))
+func (x *Assistant) toolStop(ctx registry.Ctx, p registry.Args) (any, error) {
+	s, err := x.session(p.Trimmed("id"))
 	if err != nil {
 		return nil, err
 	}
@@ -465,8 +464,8 @@ func (x *Assistant) reviewOf(url string) (core.SessionState, bool) {
 	return core.SessionState{}, false
 }
 
-func (x *Assistant) confirmReview(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
-	url, key, err := pullRequest(kit.ParamString(p, "pr"))
+func (x *Assistant) confirmReview(_ registry.Ctx, p registry.Args) (registry.Confirmation, error) {
+	url, key, err := pullRequest(p.Trimmed("pr"))
 	if err != nil {
 		return registry.Confirmation{}, err
 	}
@@ -481,8 +480,8 @@ func (x *Assistant) confirmReview(_ registry.Ctx, p map[string]any) (registry.Co
 	return c, nil
 }
 
-func (x *Assistant) toolReview(ctx registry.Ctx, p map[string]any) (any, error) {
-	url, key, err := pullRequest(kit.ParamString(p, "pr"))
+func (x *Assistant) toolReview(ctx registry.Ctx, p registry.Args) (any, error) {
+	url, key, err := pullRequest(p.Trimmed("pr"))
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +537,7 @@ func (x *Assistant) jobs(context.Context) []jobLine {
 	return out
 }
 
-func (x *Assistant) toolJobs(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Assistant) toolJobs(ctx registry.Ctx, _ registry.Args) (any, error) {
 	out := x.jobs(ctx)
 	if out == nil {
 		out = []jobLine{}
@@ -546,8 +545,8 @@ func (x *Assistant) toolJobs(ctx registry.Ctx, _ map[string]any) (any, error) {
 	return out, nil
 }
 
-func (x *Assistant) job(ctx context.Context, p map[string]any) (jobLine, error) {
-	name := kit.ParamString(p, "name")
+func (x *Assistant) job(ctx context.Context, p registry.Args) (jobLine, error) {
+	name := p.Trimmed("name")
 	var hits []jobLine
 	for _, j := range x.jobs(ctx) {
 		if j.Name == name || strings.EqualFold(j.Title, name) {
@@ -563,7 +562,7 @@ func (x *Assistant) job(ctx context.Context, p map[string]any) (jobLine, error) 
 	return jobLine{}, fmt.Errorf("more than one job is called %s: ask which", name)
 }
 
-func (x *Assistant) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+func (x *Assistant) confirmRunJob(ctx registry.Ctx, p registry.Args) (registry.Confirmation, error) {
 	j, err := x.job(ctx, p)
 	if err != nil {
 		return registry.Confirmation{}, err
@@ -585,7 +584,7 @@ func (x *Assistant) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.
 	return c, nil
 }
 
-func (x *Assistant) toolRunJob(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *Assistant) toolRunJob(ctx registry.Ctx, p registry.Args) (any, error) {
 	j, err := x.job(ctx, p)
 	if err != nil {
 		return nil, err
@@ -613,8 +612,8 @@ type prLine struct {
 	Session string `json:"session,omitempty"` // the open session on it
 }
 
-func (x *Assistant) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
-	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Assistant) toolPRs(query string) func(registry.Ctx, registry.Args) (any, error) {
+	return func(ctx registry.Ctx, _ registry.Args) (any, error) {
 		g, err := kit.GitHubOf(x.h)
 		if err != nil {
 			return nil, err
@@ -638,7 +637,7 @@ func (x *Assistant) toolPRs(query string) func(registry.Ctx, map[string]any) (an
 	}
 }
 
-func (x *Assistant) toolUsage(registry.Ctx, map[string]any) (any, error) {
+func (x *Assistant) toolUsage(registry.Ctx, registry.Args) (any, error) {
 	type window struct {
 		Name   string `json:"name"`
 		Used   string `json:"used"`
@@ -669,19 +668,6 @@ func (x *Assistant) toolUsage(registry.Ctx, map[string]any) (any, error) {
 	return map[string]any{"now": time.Now().Format(time.RFC3339), "plans": out}, nil
 }
 
-func pint(p map[string]any, k string) int {
-	switch v := p[k].(type) {
-	case float64:
-		return int(v)
-	case int:
-		return v
-	case string:
-		n, _ := strconv.Atoi(strings.TrimSpace(v))
-		return n
-	}
-	return 0
-}
-
 // whereLine is what's in front of the user, as the assistant reads it.
 type whereLine struct {
 	Session  string        `json:"session,omitempty"`
@@ -699,7 +685,7 @@ type projectLine struct {
 	Dir    string `json:"dir"`
 }
 
-func (x *Assistant) toolWhere(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Assistant) toolWhere(ctx registry.Ctx, _ registry.Args) (any, error) {
 	var at registry.At
 	var w kit.Here
 	if err := kit.OnLoop(ctx, x.h, func() { at, w = x.h.Here(), kit.ProjectsHere(x.h) }); err != nil {
@@ -760,13 +746,13 @@ type asstFile struct {
 	modified time.Time
 }
 
-func (x *Assistant) toolChangedFiles(ctx registry.Ctx, p map[string]any) (any, error) {
-	s, err := x.sessionOr(kit.ParamString(p, "session"))
+func (x *Assistant) toolChangedFiles(ctx registry.Ctx, p registry.Args) (any, error) {
+	s, err := x.sessionOr(p.Trimmed("session"))
 	if err != nil {
 		return nil, err
 	}
 	projects := s.Projects
-	if name := kit.ParamString(p, "project"); name != "" {
+	if name := p.Trimmed("project"); name != "" {
 		pr, err := projectOf(s, name)
 		if err != nil {
 			return nil, err
@@ -796,7 +782,7 @@ func (x *Assistant) toolChangedFiles(ctx registry.Ctx, p map[string]any) (any, e
 		}
 	}
 	slices.SortStableFunc(out, func(a, b asstFile) int { return b.modified.Compare(a.modified) })
-	if n := pint(p, "limit"); n > 0 && n < len(out) {
+	if n := p.Int("limit"); n > 0 && n < len(out) {
 		out = out[:n]
 	} else if len(out) > 50 {
 		out = out[:50]
@@ -819,12 +805,12 @@ func (x *Assistant) bringUp(ctx registry.Ctx, s core.SessionState, p core.Projec
 	return nil
 }
 
-func (x *Assistant) toolOpenProject(ctx registry.Ctx, p map[string]any) (any, error) {
-	s, err := x.sessionOr(kit.ParamString(p, "session"))
+func (x *Assistant) toolOpenProject(ctx registry.Ctx, p registry.Args) (any, error) {
+	s, err := x.sessionOr(p.Trimmed("session"))
 	if err != nil {
 		return nil, err
 	}
-	pr, err := projectOf(s, kit.ParamString(p, "project"))
+	pr, err := projectOf(s, p.Trimmed("project"))
 	if err != nil {
 		return nil, err
 	}
@@ -834,16 +820,16 @@ func (x *Assistant) toolOpenProject(ctx registry.Ctx, p map[string]any) (any, er
 	return registry.Acted{Result: "opened", Line: "opened " + pr.Name + " in " + kit.Label(s)}, nil
 }
 
-func (x *Assistant) toolFocusFile(ctx registry.Ctx, p map[string]any) (any, error) {
-	s, err := x.sessionOr(kit.ParamString(p, "session"))
+func (x *Assistant) toolFocusFile(ctx registry.Ctx, p registry.Args) (any, error) {
+	s, err := x.sessionOr(p.Trimmed("session"))
 	if err != nil {
 		return nil, err
 	}
-	path := kit.ParamString(p, "path")
+	path := p.Trimmed("path")
 	if path == "" {
 		return nil, errors.New("which file?")
 	}
-	name := kit.ParamString(p, "project")
+	name := p.Trimmed("project")
 	if name == "" && filepath.IsAbs(path) {
 		for _, pr := range s.Projects {
 			if kit.Inside(path, pr.Dir) {
@@ -863,7 +849,7 @@ func (x *Assistant) toolFocusFile(ctx registry.Ctx, p map[string]any) (any, erro
 		return nil, fmt.Errorf("there's no %s in %s: read changed_files again", path, pr.Name)
 	}
 	open := map[string]any{"path": abs}
-	line := pint(p, "line")
+	line := p.Int("line")
 	if line > 0 {
 		open["line"] = line
 	}

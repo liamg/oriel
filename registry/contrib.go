@@ -2,6 +2,7 @@ package registry
 
 import (
 	"encoding/json"
+	"reflect"
 	"slices"
 	"strings"
 )
@@ -50,6 +51,39 @@ func (r *reg) Contribution(kind, name string) (Contribution, bool) {
 
 // Sourced is a contribution that says who registered it, for the faults it causes.
 type Sourced interface{ ContributionSource() string }
+
+// SourceOf is who registered c: its ContributionSource, else its Source field; "" when it has neither.
+func SourceOf(c Contribution) string {
+	if s, ok := c.(Sourced); ok {
+		return s.ContributionSource()
+	}
+	if f, ok := sourceField(reflect.ValueOf(c)); ok {
+		return f.String()
+	}
+	return ""
+}
+
+// WithSourceOf is c with src for its Source field when it has one left empty.
+func WithSourceOf(c Contribution, src string) Contribution {
+	v := reflect.ValueOf(c)
+	if f, ok := sourceField(v); !ok || f.String() != "" {
+		return c
+	}
+	cp := reflect.New(v.Type()).Elem()
+	cp.Set(v)
+	cp.FieldByName("Source").SetString(src)
+	out, _ := cp.Interface().(Contribution)
+	return out
+}
+
+// sourceField is a struct's string Source field.
+func sourceField(v reflect.Value) (reflect.Value, bool) {
+	if v.Kind() != reflect.Struct {
+		return reflect.Value{}, false
+	}
+	f := v.FieldByName("Source")
+	return f, f.IsValid() && f.Kind() == reflect.String
+}
 
 func (r *reg) ContributionsGen() int {
 	r.mu.Lock()
@@ -107,8 +141,8 @@ type AgentTool struct {
 	Reads string
 	// Confirm makes it an act that waits for the user's yes: what it will do, shown by the agent's owner before Run.
 	// It returns Granted when this call needs no yes, and an error to refuse it.
-	Confirm func(ctx Ctx, params map[string]any) (Confirmation, error)
-	Run     func(ctx Ctx, params map[string]any) (any, error)
+	Confirm func(ctx Ctx, params Args) (Confirmation, error)
+	Run     func(ctx Ctx, params Args) (any, error)
 	// Adds makes it a part of another tool's answer rather than a tool of its own: when the tool named Adds is
 	// called, the answer is each one's result under its Reads (or Name): agentbus's review requests beside GitHub's.
 	Adds string

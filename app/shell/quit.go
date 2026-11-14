@@ -224,7 +224,7 @@ func (x *quitDialog) Manifest() plugin.Manifest { return plugin.Manifest{ID: "qu
 func (x *quitDialog) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.Add(h.Keymap(registry.Keymap{Mode: QuitKeyMode, Keys: "<D-CR>", Command: "quit.now", Desc: "Don't wait for the turns"}))
-	x.Add(h.Contribute(registry.ExclusiveKeys{Mode: QuitKeyMode, Source: "builtin:quit"}))
+	x.Add(h.Contribute(registry.ExclusiveKeys{Mode: QuitKeyMode}))
 	x.Add(h.View(kit.OverlayPrefix+"quit", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "quit", Fn: x.drainView}
 	})))

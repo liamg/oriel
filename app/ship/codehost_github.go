@@ -39,7 +39,7 @@ func (x *GitHubHost) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gi
 func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.clients = gh.Clients{Client: x.Client, HTTP: h.Net}
-	x.Add(h.Contribute(registry.Service{Name: kit.GitHubService, Impl: githubSearch{x}, Source: "builtin:github"}))
+	x.Add(h.Contribute(registry.Service{Name: kit.GitHubService, Impl: githubSearch{x}}))
 	x.Add(h.Contribute(registry.CodeHost{Name: "github", Title: "GitHub", Icon: "pullrequest", Order: 10,
 		Sites: []registry.Site{{Host: "github.com", Secret: "GITHUB_TOKEN", Aliases: []string{"ssh.github.com"}}}, Path: githubPath, Takes: githubPRPath,
 		Setup: registry.SiteSetup{Secret: "GITHUB_TOKEN", TokenURL: "https://{host}/settings/tokens/new?scopes=repo,read:org&description=Oriel",
@@ -49,7 +49,7 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 			Command: []string{"gh", "auth", "token", "--hostname", "{host}"}, Optional: true},
 		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
-		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Source: "builtin:github"}))
+		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge}))
 	return nil
 }
 

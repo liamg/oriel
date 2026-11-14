@@ -56,7 +56,7 @@ func (x *Prompts) store() prompts.Store {
 }
 
 func (x *Prompts) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "prompts", Busy: x.busy.Busy, Source: "builtin:prompts"}))
+	x.Add(h.Contribute(registry.Busy{Name: "prompts", Busy: x.busy.Busy}))
 	x.h, x.drafts = h, map[string]string{}
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -71,7 +71,7 @@ func (x *Prompts) Activate(_ context.Context, h plugin.Host) error {
 		return registry.Verdict{}, nil
 	}))
 	x.Add(h.Contribute(kit.PagePlace("prompts", "Prompts", "prompts.open", &x.open)))
-	x.Add(h.Contribute(uireg.SettingsSection{Name: "prompts", Build: x.section, Source: "builtin:prompts"}))
+	x.Add(h.Contribute(uireg.SettingsSection{Name: "prompts", Build: x.section}))
 	x.Add(h.View(kit.OverlayPrefix+"prompts", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "prompts", Fn: x.page} })))
 	x.changed() // the session host has the user's prompts from the start
 	return nil

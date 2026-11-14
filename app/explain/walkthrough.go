@@ -86,7 +86,7 @@ type walkthrough struct {
 func (x *Walkthrough) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain.change"} }
 
 func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "walkthrough", Busy: x.busy.Busy, Source: "builtin:walkthrough"}))
+	x.Add(h.Contribute(registry.Busy{Name: "walkthrough", Busy: x.busy.Busy}))
 	x.h = h
 	x.Add(kit.OnDirChanged(h, "a walkthrough is of its directory", func(kit.DirChanged) { x.w = nil }))
 	for _, c := range x.commands() {

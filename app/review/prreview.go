@@ -109,7 +109,7 @@ func (it reviewItem) both() bool { return it.thread != "" && it.finding != "" }
 func (x *PRReview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "pr-review"} }
 
 func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "prreview", Busy: x.busy.Busy, Source: "builtin:prreview"}))
+	x.Add(h.Contribute(registry.Busy{Name: "prreview", Busy: x.busy.Busy}))
 	x.h, x.details, x.forms = h, map[string]*reviewDetail{}, map[core.SessionID]*reviewForm{}
 	x.fetching, x.saved = map[core.SessionID]bool{}, map[core.SessionID]int{}
 	x.drafts, x.asking, x.heard = map[core.SessionID]*core.ReviewDraft{}, map[core.SessionID]bool{}, map[core.SessionID]int{}
@@ -147,8 +147,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 		return se, err == nil && reviewPR(se) != ""
 	}
 	x.Add(h.Contribute(uireg.RailEntry{Name: "review", Icon: "pullrequest", Title: "Review", Command: "ship.pr.open", Scope: uireg.ScopeProjectEntry,
-		Order: 40, Kinds: []core.Kind{core.KindReview}, Source: "builtin:pr-review",
-		Shown: func(project string) bool {
+		Order: 40, Kinds: []core.Kind{core.KindReview}, Shown: func(project string) bool {
 			se, ok := front()
 			p, _ := prProject(se)
 			return ok && (project == "" || project == p.Name)
@@ -169,7 +168,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return n
 		}}))
-	x.Add(h.Contribute(uireg.ThreadFoot{Name: "review", Draw: x.foot, Source: "builtin:pr-review"}))
+	x.Add(h.Contribute(uireg.ThreadFoot{Name: "review", Draw: x.foot}))
 	x.Add(registry.DisposeFunc(h.Layout().OnShow(func(v layout.ViewRef) {
 		if se, ok := front(); ok && v.ID == kit.PRView {
 			x.form(se.ID).focus = true

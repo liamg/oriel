@@ -1,6 +1,7 @@
 package registry_test
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -284,5 +285,29 @@ func TestResolveExclusiveMode(t *testing.T) {
 	}
 	if got := trace(registry.NewResolver(r), []string{"n", "global"}, time.Unix(0, 0), "<D-k>"); got != "run:omnibox.open" {
 		t.Errorf("⌘K outside the exclusive mode: %q", got)
+	}
+}
+
+// A contribution registered through a plugin's registry says that plugin, unless it names another source, and a
+// fault in it is that plugin's.
+func TestContributionsTakeTheirPluginsSource(t *testing.T) {
+	r := registry.New()
+	a := registry.WithSource(r, "builtin:stats")
+	a.Contribute(registry.Busy{Name: "reads", Busy: func() bool { return false }})
+	a.Contribute(registry.Busy{Name: "theirs", Busy: func() bool { return false }, Source: "other"})
+	for name, want := range map[string]string{"reads": "builtin:stats", "theirs": "other"} {
+		c, ok := r.Contribution(registry.Busy{}.ContributionKind(), name)
+		if !ok {
+			t.Fatalf("no busy %s", name)
+		}
+		if got := registry.SourceOf(c); got != want {
+			t.Errorf("%s's source is %q, want %q", name, got, want)
+		}
+	}
+	var got []registry.Fault
+	r.OnFault(func(f registry.Fault) { got = append(got, f) })
+	r.TurnOff(registry.Busy{}.ContributionKind(), "reads", errors.New("broke"))
+	if len(got) != 1 || got[0].Source != "builtin:stats" {
+		t.Errorf("the fault: %+v, want it builtin:stats's", got)
 	}
 }

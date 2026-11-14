@@ -84,11 +84,12 @@ type sourced struct {
 	src  string
 }
 
-func (s sourced) Command(c registry.Command) registry.Disposable      { return s.pure.Command(c) }
-func (s sourced) Keymap(k registry.Keymap) registry.Disposable        { return s.pure.Keymap(k) }
-func (s sourced) Hook(h registry.Hook) registry.Disposable            { return s.pure.Hook(h) }
-func (s sourced) Option(o registry.OptionSpec) registry.Disposable    { return s.pure.Option(o) }
-func (s sourced) HelpPages(h registry.HelpSource) registry.Disposable { return s.pure.HelpPages(h) }
+func (s sourced) Command(c registry.Command) registry.Disposable         { return s.pure.Command(c) }
+func (s sourced) Keymap(k registry.Keymap) registry.Disposable           { return s.pure.Keymap(k) }
+func (s sourced) Hook(h registry.Hook) registry.Disposable               { return s.pure.Hook(h) }
+func (s sourced) Option(o registry.OptionSpec) registry.Disposable       { return s.pure.Option(o) }
+func (s sourced) HelpPages(h registry.HelpSource) registry.Disposable    { return s.pure.HelpPages(h) }
+func (s sourced) Contribute(c registry.Contribution) registry.Disposable { return s.pure.Contribute(c) }
 
 func (s sourced) Picker(p PickerSource) registry.Disposable {
 	if p.Source == "" {

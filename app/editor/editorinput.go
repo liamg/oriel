@@ -54,8 +54,8 @@ type paneInput struct {
 
 func (x *Editor) inputFor(p vim.Pane) input.State {
 	id := "vim"
-	if v, _, err := x.h.Options().Get(InputOption, registry.At{Buffer: p.Name()}); err == nil {
-		id, _ = v.(string)
+	if v, ok := registry.Option[string](x.h.Options(), InputOption, registry.At{Buffer: p.Name()}); ok {
+		id = v
 	}
 	if id == "vim" {
 		return vimState{x}

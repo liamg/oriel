@@ -168,7 +168,7 @@ func (x *Catalog) Deactivate(ctx context.Context) error {
 }
 
 func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "catalog", Busy: x.work.Busy, Source: "builtin:catalog"}))
+	x.Add(h.Contribute(registry.Busy{Name: "catalog", Busy: x.work.Busy}))
 	x.h = h
 	x.loaded, x.waiting, x.failed = map[string]*loadedPlugin{}, map[string]catalog.Status{}, map[string]string{}
 	x.updates = map[string]bool{}
@@ -179,7 +179,7 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
-	x.Add(h.Contribute(uireg.InboxSource{Name: "plugins", Cards: x.cards, Source: "builtin:catalog"}))
+	x.Add(h.Contribute(uireg.InboxSource{Name: "plugins", Cards: x.cards}))
 	x.pageCommands(h)
 	cancel := h.Options().Watch(PluginsOption, x.kick)
 	x.Add(cancel)
