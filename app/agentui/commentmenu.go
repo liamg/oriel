@@ -3,6 +3,8 @@ package agentui
 import (
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -49,7 +51,7 @@ func runOrSay(h plugin.Host, cmd string, a registry.Args) {
 
 func cmTitle(h plugin.Host, cm core.Comment) string {
 	if cm.Author == core.AuthorAgent {
-		return registry.ProviderTitle(h, cm.Name)
+		return services.ProviderTitle(h, cm.Name)
 	}
 	if cm.Name != "" {
 		return cm.Name

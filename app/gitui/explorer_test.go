@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/gitui"
@@ -233,7 +235,7 @@ func TestExplorerOpensFiles(t *testing.T) {
 	s.Quiet()
 	s.Click(s.TextPoint("go.mod"), 0)
 	s.Frame()
-	eds, _ := registry.EditorsOf(s.Registry())
+	eds, _ := services.EditorsOf(s.Registry())
 	b, ok := eds.Current()
 	if !ok || b.Path != filepath.Join(r.Dir, "go.mod") {
 		t.Fatalf("a click on go.mod opened %+v", b.Path)

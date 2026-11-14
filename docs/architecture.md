@@ -25,7 +25,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `watch` | freshness managers: sources kept up to date only while something subscribes; `watch/gitsrc`, a work tree's git status as sources |
 | `fswatch`, `search`, `sysload`, `semver` | file and folder changes from the OS; project search and replace (ripgrep, or the same in Go); how busy the machine is; semantic versions |
 | `integ/*` | code hosts and trackers (GitLab, Azure, Linear) |
-| `registry` | the contribution registry, pure: commands, keymaps, options, events and hooks, kinds, services, help; `registry/uireg` is what's drawn (views, decorations, pickers, the rail…); `registry/lang` holds language servers and debug adapters |
+| `registry` | the contribution registry, pure: commands, keymaps, options, events and hooks, kinds, services, help; `registry/uireg` is what's drawn (views, decorations, pickers, the rail…); `registry/lang` holds language servers and debug adapters; `registry/services` holds the built-in services' contracts made of the editor, git, watches and agents (`Editors`, `GitTrees`, `Watches`, `AgentProvider`), so the registry itself reaches none of them |
 | `plugin` | the plugin host: manifests, process RPC, wasm, permissions, `plugin.Load` |
 | `script` | the Lua VM and the `oriel.*` bindings (`script/api`, documented in [api.md](api.md)) |
 | `catalog` | the plugin registry client and the plugin manager |
@@ -73,7 +73,7 @@ plugin uses, so each can be replaced, removed or configured from Lua.
 
 What crosses features is a service, a command, a hook event or a core event, never another plugin's fields. A plugin
 offers a typed service with `registry.Service{Name, Impl}` and others find it with `registry.ServiceOf[T]`; the
-built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and the session host's parts (`host.SessionCalls`, `host.RepoCalls`…). A plugin reads and
+built-ins include `Editors`, `GitTrees` (`registry/services`), `CodeSites`, `Ships`, `Sessions` and the session host's parts (`host.SessionCalls`, `host.RepoCalls`…). A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
@@ -164,7 +164,7 @@ line, and only they may name it.
 ## Agent providers
 
 An agent provider (Claude, Codex, or a plugin's) is an `agent.Provider`, registered by its plugin as a
-`registry.AgentProvider`: its name, title and square, and the provider. The built-ins are plugins too (`app/agents`),
+`services.AgentProvider` (`registry/services`): its name, title and square, and the provider. The built-ins are plugins too (`app/agents`),
 so a plugin registering a provider under the same name replaces one. The sessions plugin gives the session host the
 registry's providers (`host.SetProviders`); a session handed over when Oriel quit resumes once its provider is back.
 A plugin's provider that isn't Go is an `rpcagent.Client`: the whole provider, sessions and all, over the Oriel agent

@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -192,7 +194,7 @@ func (x *Plan) docs(se core.SessionState, st *planState) (docs []planDoc, loadin
 	}
 	st.docs = []planDoc{}
 	var providers []agent.Provider
-	for _, p := range registry.AgentProviders(x.h) {
+	for _, p := range services.AgentProviders(x.h) {
 		providers = append(providers, p.Provider)
 	}
 	notes := agent.NotesFiles(providers)
@@ -522,7 +524,7 @@ func (x *Plan) header(c *ui.Ctx, se core.SessionState, st *planState, d planDoc,
 		c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		var who []string
 		if se.Agent.Provider != "" {
-			who = append(who, strings.ToLower(registry.ProviderTitle(x.h, se.Agent.Provider)))
+			who = append(who, strings.ToLower(services.ProviderTitle(x.h, se.Agent.Provider)))
 		}
 		if se.Agent.Model != "" {
 			who = append(who, se.Agent.Model)

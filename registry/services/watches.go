@@ -1,7 +1,8 @@
-package registry
+package services
 
 import (
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
 	"github.com/liamg/oriel/watch/gitsrc"
 )
@@ -20,7 +21,7 @@ type Watches interface {
 	// Sources are the sources plugins have registered by name (oriel.source), for subscribing by name.
 	Source(name string) (Named, bool)
 	// Register adds a named source; it's taken back when the returned Disposable is.
-	Register(n Named) Disposable
+	Register(n Named) registry.Disposable
 	Names() []string
 }
 
@@ -33,4 +34,6 @@ type Named struct {
 	Make func(id core.SessionID, args map[string]any) (watch.Source[any], error)
 }
 
-func WatchesOf(r Contributions) (Watches, bool) { return ServiceOf[Watches](r, WatchesService) }
+func WatchesOf(r registry.Contributions) (Watches, bool) {
+	return registry.ServiceOf[Watches](r, WatchesService)
+}

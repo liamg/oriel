@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -93,9 +95,9 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	now := c.Now()
 	for i, u := range us {
-		title, note := "Plan usage", cmp.Or(u.Plan, registry.ProviderTitle(x.h, u.Provider))
+		title, note := "Plan usage", cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider))
 		if i > 0 || u.Provider != se.Agent.Provider {
-			title, note = cmp.Or(u.Plan, registry.ProviderTitle(x.h, u.Provider)), "other sessions"
+			title, note = cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider)), "other sessions"
 		}
 		kit.Section(c, "usage."+u.Provider, title, note, func(c *ui.Ctx) {
 			for j, w := range u.Windows {
@@ -269,7 +271,7 @@ func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time)
 			c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("k", "SESSION", kit.KickerFont(th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("who", strings.Join(slices.DeleteFunc([]string{strings.ToLower(registry.ProviderTitle(h, se.Agent.Provider)), se.Agent.Model, se.Agent.Effort},
+				c.Text("who", strings.Join(slices.DeleteFunc([]string{strings.ToLower(services.ProviderTitle(h, se.Agent.Provider)), se.Agent.Model, se.Agent.Effort},
 					func(s string) bool { return s == "" || s == "agent" }), " · "), kit.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			c.Row("a", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

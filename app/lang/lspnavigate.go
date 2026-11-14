@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -187,7 +189,7 @@ func (x *LSP) jump(l lsp.Location) {
 	if l.Target != nil {
 		r = *l.Target
 	}
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return
 	}
@@ -646,7 +648,7 @@ var substituteRe = regexp.MustCompile(`^:(?:%|[0-9.,$]*)s/\\<(\w+)\\>/(\w*)/`)
 
 // substitution is the word a :s on the command line replaces and what with, when a server could rename it instead.
 func (x *LSP) substitution() (old, new string, ok bool) {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return "", "", false
 	}

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -145,7 +147,7 @@ func StatsOf(r registry.Registry) (Stats, bool) { return registry.ServiceOf[Stat
 func ProviderChoices(r registry.Registry) func() []string {
 	return func() []string {
 		out := []string{"auto"}
-		for _, p := range registry.AgentProviders(r) {
+		for _, p := range services.AgentProviders(r) {
 			out = append(out, p.Name)
 		}
 		return out

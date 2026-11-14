@@ -1,9 +1,11 @@
 // Package agents is the built-in agent providers, Claude and Codex, each a plugin that registers its provider
-// (registry.AgentProvider) as any plugin's would.
+// (services.AgentProvider) as any plugin's would.
 package agents
 
 import (
 	"context"
+
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/claude"
@@ -37,7 +39,7 @@ func (x *Claude) Activate(_ context.Context, h plugin.Host) error {
 			return s
 		}}
 	}
-	x.Add(h.Contribute(registry.AgentProvider{Name: "claude", Title: "Claude", Mark: "C", Tone: "usage.weekly", Order: 10,
+	x.Add(h.Contribute(services.AgentProvider{Name: "claude", Title: "Claude", Mark: "C", Tone: "usage.weekly", Order: 10,
 		Provider: p, Source: "builtin:claude"}))
 	return nil
 }
@@ -55,7 +57,7 @@ func (x *Codex) Activate(_ context.Context, h plugin.Host) error {
 	if p == nil {
 		p = &codex.Provider{}
 	}
-	x.Add(h.Contribute(registry.AgentProvider{Name: "codex", Title: "Codex", Mark: "CX", Order: 20, Provider: p, Source: "builtin:codex"}))
+	x.Add(h.Contribute(services.AgentProvider{Name: "codex", Title: "Codex", Mark: "CX", Order: 20, Provider: p, Source: "builtin:codex"}))
 	return nil
 }
 

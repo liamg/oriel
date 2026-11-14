@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -417,7 +419,7 @@ func cells(texts ...string) [][]widget.Span {
 
 // watchStats are the sources every freshness manager keeps: the app's, then each open session's.
 func (x *Perf) watchStats() []watchStat {
-	w, ok := registry.WatchesOf(x.h)
+	w, ok := services.WatchesOf(x.h)
 	if !ok {
 		return nil
 	}

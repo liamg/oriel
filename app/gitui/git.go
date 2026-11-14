@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -24,7 +26,7 @@ import (
 var treeNeed = watch.Need{}
 
 // Git is the work trees' git status for the explorer, the gutters and the pickers, and the git.* commands that change
-// it. Each tree's status is a subscription to its session's manager (registry.Watches): the work dir's for as long as
+// it. Each tree's status is a subscription to its session's manager (services.Watches): the work dir's for as long as
 // the plugin runs, others' for as long as something keeps using them, frame to frame. Outside a repo a tree has no
 // status and the commands say so.
 type Git struct {
@@ -82,7 +84,7 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 	g.h = h
 	g.others, g.parked, g.roots = map[string]*gitTree{}, map[string]*parkedTree{}, map[string]string{}
 	g.gitTree = gitTree{g: g, held: true}
-	g.Add(h.Contribute(registry.Service{Name: registry.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
+	g.Add(h.Contribute(registry.Service{Name: services.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
 	g.watchers = map[int]func(string, []string){}
 	if root, ok := g.findRoot(ctx, h.Here().Project); ok {
 		g.rememberRoot(h.Here().Project, root)
@@ -508,7 +510,7 @@ func (t *gitTree) sessionFor(root string) core.SessionID {
 
 // treeSource is root's git sources, from the session's freshness manager, else its own.
 func (g *Git) treeSource(root string, id core.SessionID) *gitsrc.Tree {
-	if w, ok := registry.WatchesOf(g.h); ok {
+	if w, ok := services.WatchesOf(g.h); ok {
 		return w.Tree(id, root)
 	}
 	return gitsrc.New(root, nil)
@@ -647,14 +649,14 @@ func (t *gitTree) Remote() string {
 // gitTrees is git's GitTrees service.
 type gitTrees struct{ g *Git }
 
-func (s gitTrees) Tree(dir string) registry.GitTree { return s.g.tree(dir) }
+func (s gitTrees) Tree(dir string) services.GitTree { return s.g.tree(dir) }
 func (s gitTrees) Scope() gitx.Scope {
 	if s.g.scope == nil {
 		return gitx.All
 	}
 	return s.g.scope()
 }
-func (s gitTrees) Holding(p string) registry.GitTree      { return s.g.holding(p) }
+func (s gitTrees) Holding(p string) services.GitTree      { return s.g.holding(p) }
 func (s gitTrees) Run(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
 func (s gitTrees) Reload()                                { s.g.reload() }
 func (s gitTrees) Busy() bool                             { return s.g.running.Load() > 0 || s.g.reading() }
@@ -712,7 +714,7 @@ func (t *gitTree) withCounts() *gitx.State {
 
 // manager is the tree's session's manager, else the app's; t.mu is held.
 func (t *gitTree) manager() *watch.Manager {
-	w, ok := registry.WatchesOf(t.g.h)
+	w, ok := services.WatchesOf(t.g.h)
 	if !ok || t.src == nil {
 		return nil
 	}

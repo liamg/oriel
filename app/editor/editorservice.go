@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/registry"
@@ -25,44 +27,44 @@ func (s editors) focused() bool {
 	return f != nil && f.ID == kit.EditorView
 }
 
-func (s editors) Focused() (registry.EditorBuffer, bool) {
+func (s editors) Focused() (services.EditorBuffer, bool) {
 	if !s.focused() {
-		return registry.EditorBuffer{}, false
+		return services.EditorBuffer{}, false
 	}
 	return s.Current()
 }
 
-func (s editors) Current() (registry.EditorBuffer, bool) {
+func (s editors) Current() (services.EditorBuffer, bool) {
 	p, ok := s.x.e.Pane(s.x.e.WindowID())
 	if !ok {
-		return registry.EditorBuffer{}, false
+		return services.EditorBuffer{}, false
 	}
 	c := p.Cursor()
-	return registry.EditorBuffer{Path: s.x.path(p), Text: p.Buffer(), Cursor: text.Pos{Line: c.Line, Col: c.Col}, Modified: p.Modified(),
+	return services.EditorBuffer{Path: s.x.path(p), Text: p.Buffer(), Cursor: text.Pos{Line: c.Line, Col: c.Col}, Modified: p.Modified(),
 		Bytes: p.FileBytes}, true
 }
 
-func (s editors) Buffer(path string) (registry.EditorBuffer, bool) {
+func (s editors) Buffer(path string) (services.EditorBuffer, bool) {
 	f, ok := s.x.openBuffer(path)
 	if !ok {
-		return registry.EditorBuffer{}, false
+		return services.EditorBuffer{}, false
 	}
 	s.x.lookAtDisk(time.Now())
 	return fileBuffer(f), true
 }
 
 // fileBuffer is a listed buffer with a file, as the service gives it.
-func fileBuffer(f vim.FileState) registry.EditorBuffer {
-	return registry.EditorBuffer{Path: f.File.Path, Text: f.Text, Modified: f.Modified, Bytes: f.Bytes,
+func fileBuffer(f vim.FileState) services.EditorBuffer {
+	return services.EditorBuffer{Path: f.File.Path, Text: f.Text, Modified: f.Modified, Bytes: f.Bytes,
 		Encode: func(b []byte) []byte { return edit.Encode(b, f.File.Format, false) }}
 }
 
-func (s editors) Buffers() []registry.EditorBuffer {
+func (s editors) Buffers() []services.EditorBuffer {
 	if s.x.e == nil {
 		return nil
 	}
 	s.x.lookAtDisk(time.Now())
-	var out []registry.EditorBuffer
+	var out []services.EditorBuffer
 	for _, f := range s.x.e.Files() {
 		if f.File != nil {
 			out = append(out, fileBuffer(f))
@@ -113,15 +115,15 @@ func (s editors) At(at registry.At) registry.At {
 	return at
 }
 
-func (s editors) Pending() registry.Pending { return s.x.pending() }
+func (s editors) Pending() services.Pending { return s.x.pending() }
 
-func (s editors) Hints(keys []string) []registry.Hint {
+func (s editors) Hints(keys []string) []services.Hint {
 	if !s.focused() || !isVim(s.x.inputFor(s.x.current())) || s.x.e.Mode() != "normal" {
 		return nil
 	}
-	var out []registry.Hint
+	var out []services.Hint
 	for _, h := range vim.HintsFor(keys) {
-		out = append(out, registry.Hint{Keys: h.Keys, Desc: h.Desc})
+		out = append(out, services.Hint{Keys: h.Keys, Desc: h.Desc})
 	}
 	return out
 }
@@ -182,14 +184,14 @@ func visualRange(e *vim.Engine, p vim.Pane) (text.Range, bool) {
 	return text.Range{Start: a, End: max(a, z)}, true
 }
 
-func (s editors) Quickfix() (string, []registry.QuickfixItem) {
+func (s editors) Quickfix() (string, []services.QuickfixItem) {
 	if s.x.e == nil {
 		return "", nil
 	}
 	items, title, _ := s.x.e.Quickfix()
-	var out []registry.QuickfixItem
+	var out []services.QuickfixItem
 	for _, q := range items {
-		out = append(out, registry.QuickfixItem{Path: q.Name, Line: q.Line, Col: q.Col, Text: q.Text})
+		out = append(out, services.QuickfixItem{Path: q.Name, Line: q.Line, Col: q.Col, Text: q.Text})
 	}
 	return title, out
 }

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -600,7 +602,7 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Ghost: true, Disabled: busy, Help: "git/github#forward"}) {
 			x.run("github.edit", args)
 		}
-		c.Text("never", registry.ProviderTitle(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
+		c.Text("never", services.ProviderTitle(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
 			kit.UIFont(11, th.C(theme.FgFaint)))
 	})
 }

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -205,8 +207,8 @@ var (
 	TDiagWarning = theme.Declare("diagnostic.warning", "warn")
 )
 
-// ProviderNameIn is what agent provider p is called (registry.ProviderTitle), from the registry c is drawn with.
+// ProviderNameIn is what agent provider p is called (services.ProviderTitle), from the registry c is drawn with.
 func ProviderNameIn(c *ui.Ctx, p string) string {
 	r, _ := ui.Service[registry.Registry](c)
-	return registry.ProviderTitle(r, p)
+	return services.ProviderTitle(r, p)
 }

@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/editor"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -71,7 +73,7 @@ func (s *Scene) WaitSearch(want string) string {
 }
 
 // Idle waits until the app has nothing under way or due, over two frames running: no contributor busy
-// (registry.Busy), no read a frame asked for (kit.Reads) under way, and no watched source (registry.Watches)
+// (registry.Busy), no read a frame asked for (kit.Reads) under way, and no watched source (services.Watches)
 // reading, or due a read for a subscriber that wants one now. Each look waits for the frame built after it (the
 // look asks for one), so what that frame starts is seen by the next. It's what the app is when it's left alone: not
 // a while, the work done. It fails the test, naming what's still at work, if that never comes. The window must be
@@ -110,7 +112,7 @@ func (w *Window) look() (busy []string, built <-chan struct{}) {
 
 // dueSources are the keys of the sources the app's and each session's managers are reading, or would read now.
 func dueSources(r registry.Registry, st core.State) []string {
-	ws, ok := registry.WatchesOf(r)
+	ws, ok := services.WatchesOf(r)
 	if !ok {
 		return nil
 	}

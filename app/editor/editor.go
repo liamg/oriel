@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/vimreg"
 	"github.com/liamg/oriel/edit"
@@ -130,7 +132,7 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return out
 	})
-	x.Add(h.Contribute(registry.Service{Name: registry.EditorsService, Impl: editors{x}, Source: "builtin:editor"}))
+	x.Add(h.Contribute(registry.Service{Name: services.EditorsService, Impl: editors{x}, Source: "builtin:editor"}))
 	x.e.SetSettings(vimreg.Settings{Options: h.Options(), At: func(buf, win string) registry.At {
 		at := h.Here()
 		at.Buffer, at.Window = buf, win

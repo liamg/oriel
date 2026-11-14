@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -283,7 +285,7 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 		}
 		dot := func(k string) { c.Text(k, "·", kit.MonoFont(11, th.C(theme.FgGhost))) }
 		dot("d1")
-		agent := strings.TrimSpace(strings.ToLower(registry.ProviderTitle(x.h, j.Provider)) + " " + j.Model + " " + j.Effort)
+		agent := strings.TrimSpace(strings.ToLower(services.ProviderTitle(x.h, j.Provider)) + " " + j.Model + " " + j.Effort)
 		if j.Provider == "" {
 			agent = "the first agent installed"
 		}

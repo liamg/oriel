@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/registry"
@@ -12,9 +14,9 @@ import (
 	"github.com/liamg/oriel/watch"
 )
 
-// ManagerFor is session id's freshness manager (registry.Watches): the app's for "", and nil without one.
+// ManagerFor is session id's freshness manager (services.Watches): the app's for "", and nil without one.
 func ManagerFor(r registry.Registry, id core.SessionID) *watch.Manager {
-	if w, ok := registry.WatchesOf(r); ok {
+	if w, ok := services.WatchesOf(r); ok {
 		return w.For(id)
 	}
 	return nil

@@ -7,14 +7,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
 )
 
-// Ship's reads are subscriptions to its sessions' managers (registry.Watches):
+// Ship's reads are subscriptions to its sessions' managers (services.Watches):
 //
 //   - the git of each session with a tab, each project read again when its work tree's refs or files change, at
 //     most every shipPoll: the others' readings stand, and a session coming to the front has nothing to read;
@@ -95,7 +96,7 @@ func (x *Ship) openPRs(id core.SessionID) bool {
 
 // localSources are a session's git as Ship reads it: each writable project read again when its refs or files change.
 func (x *Ship) localSources(se core.SessionState) []watch.Source[time.Time] {
-	w, ok := registry.WatchesOf(x.h)
+	w, ok := services.WatchesOf(x.h)
 	if !ok {
 		return nil
 	}

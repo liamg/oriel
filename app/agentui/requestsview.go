@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -345,7 +347,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 			c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				name := cmp.Or(cm.Name, "you")
 				if cm.Author == core.AuthorAgent {
-					name = registry.ProviderTitle(x.h, cm.Name)
+					name = services.ProviderTitle(x.h, cm.Name)
 				}
 				defer func() {
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -477,7 +479,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			var who []string
 			if se.Agent.Provider != "" {
-				who = append(who, strings.ToLower(registry.ProviderTitle(x.h, se.Agent.Provider)))
+				who = append(who, strings.ToLower(services.ProviderTitle(x.h, se.Agent.Provider)))
 			}
 			if se.Agent.Model != "" {
 				who = append(who, se.Agent.Model)
@@ -658,7 +660,7 @@ func (x *Requests) summaryRow(c *ui.Ctx, se core.SessionState, t core.Thread, no
 	case kit.GroupResolved:
 		note = []widget.AgoPart{{Text: "resolved"}}
 	case kit.GroupWorking:
-		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: strings.ToLower(registry.ProviderTitle(x.h, se.Agent.Provider)) + " working"}}
+		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: strings.ToLower(services.ProviderTitle(x.h, se.Agent.Provider)) + " working"}}
 	case kit.GroupNeedsYou:
 		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: "awaiting you"}}
 	default:

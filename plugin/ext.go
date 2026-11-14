@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
@@ -113,11 +115,11 @@ type UIView interface {
 	Frames() int                 // how many frames have been built, to tell one frame from the next
 }
 
-// Pending is a key sequence waiting for more (registry.Pending).
-type Pending = registry.Pending
+// Pending is a key sequence waiting for more (services.Pending).
+type Pending = services.Pending
 
-// Hint is a key that can come next, and what it does (registry.Hint).
-type Hint = registry.Hint
+// Hint is a key that can come next, and what it does (services.Hint).
+type Hint = services.Hint
 
 // ProvideUI gives h's window's widgets v as their service of type T (ui.Provide): the app's widget.Dictator.
 func ProvideUI[T any](h Host, v T) registry.Disposable {

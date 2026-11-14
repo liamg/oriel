@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -101,7 +103,7 @@ func (x *Requests) newInline(a registry.Args) error {
 		n.review, n.toAuthor = true, a.String("to") != "agent"
 	}
 	if n.line < 0 {
-		ed, ok := registry.EditorsOf(x.h)
+		ed, ok := services.EditorsOf(x.h)
 		if !ok {
 			return errors.New("no editor")
 		}

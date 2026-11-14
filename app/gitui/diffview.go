@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
@@ -66,7 +68,7 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 }
 
 // loaded is the diff of a work tree whose status has been read.
-func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.GitTree, gs *gitx.State, root ui.ID) {
+func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.GitTree, gs *gitx.State, root ui.ID) {
 	th := c.Theme()
 	c.Row("loaded", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		files := gs.Files(gitx.Changed)

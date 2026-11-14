@@ -1,4 +1,4 @@
-package registry
+package services
 
 import (
 	"cmp"
@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/registry"
 )
 
 // AgentProvider is a kind of agent sessions run (Claude, Codex, a plugin's), as its plugin brings it. The session
@@ -25,9 +26,9 @@ func (p AgentProvider) ContributionName() string   { return p.Name }
 func (p AgentProvider) ContributionSource() string { return p.Source }
 
 // AgentProviders are the providers registered, by Order, then name.
-func AgentProviders(r Contributions) []AgentProvider {
+func AgentProviders(r registry.Contributions) []AgentProvider {
 	var out []AgentProvider
-	for _, p := range ContributionsOf[AgentProvider](r) {
+	for _, p := range registry.ContributionsOf[AgentProvider](r) {
 		if p.Provider != nil {
 			out = append(out, p)
 		}
@@ -37,7 +38,7 @@ func AgentProviders(r Contributions) []AgentProvider {
 }
 
 // ProviderTitle is what a provider is called: its registered Title, else its name capitalised; "Agent" for none.
-func ProviderTitle(r Contributions, name string) string {
+func ProviderTitle(r registry.Contributions, name string) string {
 	if name == "" {
 		return "Agent"
 	}

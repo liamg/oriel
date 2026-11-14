@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
@@ -102,7 +104,7 @@ func (x *Plugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabSta
 		c.Text("n", name, kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		var meta []string
 		if a.Provider != "" {
-			meta = append(meta, strings.ToLower(registry.ProviderTitle(x.h, a.Provider)))
+			meta = append(meta, strings.ToLower(services.ProviderTitle(x.h, a.Provider)))
 		}
 		if d.Origin == stats.OriginOutside {
 			meta = append(meta, "outside Oriel")

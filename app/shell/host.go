@@ -9,6 +9,8 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -82,7 +84,7 @@ func (h *pluginHost) Here() registry.At {
 	if at.Session == "" {
 		at.Session = noSession
 	}
-	if ed, ok := registry.EditorsOf(h); ok {
+	if ed, ok := services.EditorsOf(h); ok {
 		at = ed.At(at)
 	}
 	return at
@@ -136,12 +138,12 @@ func (h *pluginHost) Pending() plugin.Pending {
 		if m := k.Complete(); m != nil && acceptKey(h.sh.cfg.Registry, p.Modes, p.Keys) {
 			p.Runs = cmp.Or(m.Desc, m.Command)
 		}
-		if ed, ok := registry.EditorsOf(h); ok {
+		if ed, ok := services.EditorsOf(h); ok {
 			p.Hints = ed.Hints(p.Keys) // keys no mapping takes go on to the engine
 		}
 		return p
 	}
-	if ed, ok := registry.EditorsOf(h); ok {
+	if ed, ok := services.EditorsOf(h); ok {
 		return ed.Pending()
 	}
 	return plugin.Pending{}

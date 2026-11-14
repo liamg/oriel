@@ -11,7 +11,7 @@ import (
 )
 
 // PathWatch calls changed, off the loop, when what it watches changes: a subscription to a files source in the app's
-// freshness manager (registry.Watches), which watches through the OS, polls every poll when it can't, and reads
+// freshness manager (services.Watches), which watches through the OS, polls every poll when it can't, and reads
 // nothing while the window is behind another app, catching up once it's back. A burst of changes is one call.
 type PathWatch struct {
 	changed func()

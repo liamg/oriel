@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -593,9 +595,9 @@ func statusLabel(r registry.Contributions, se core.SessionState, t core.Thread) 
 	switch g := kit.GroupOf(t); g {
 	case kit.GroupWorking:
 		if !t.Active {
-			return registry.ProviderTitle(r, se.Agent.Provider) + " · has it", tQueued // handed it with others, not on it yet
+			return services.ProviderTitle(r, se.Agent.Provider) + " · has it", tQueued // handed it with others, not on it yet
 		}
-		return registry.ProviderTitle(r, se.Agent.Provider) + " · working", theme.StatusWorking
+		return services.ProviderTitle(r, se.Agent.Provider) + " · working", theme.StatusWorking
 	case kit.GroupNeedsYou:
 		return "needs you", theme.StatusNeedsYou
 	case kit.GroupResolved:
@@ -632,7 +634,7 @@ func preview(r registry.Contributions, se core.SessionState, t core.Thread) stri
 	case c.Author == core.AuthorYou && !c.Delivered && se.Agent.Working:
 		return "queued · sends when the current turn ends"
 	case c.Author == core.AuthorAgent:
-		return registry.ProviderTitle(r, cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
+		return services.ProviderTitle(r, cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
 	}
 	return core.Summary(c.Body)
 }

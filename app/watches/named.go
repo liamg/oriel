@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
 )
 
 // builtins are the sources subscribed to by name (oriel.subscribe): files, and a work tree's git.
-func (x *Watches) builtins() []registry.Named {
+func (x *Watches) builtins() []services.Named {
 	tree := func(id core.SessionID, args map[string]any) (string, error) {
 		dir, _ := args["dir"].(string)
 		if dir == "" {
@@ -26,8 +27,8 @@ func (x *Watches) builtins() []registry.Named {
 		}
 		return root, nil
 	}
-	status := func(name string, counted bool) registry.Named {
-		return registry.Named{Name: name, Doc: "a work tree's git status { branch, head, base, upstream, ahead, behind, files = { { path, code, area, add, del } } }: dir",
+	status := func(name string, counted bool) services.Named {
+		return services.Named{Name: name, Doc: "a work tree's git status { branch, head, base, upstream, ahead, behind, files = { { path, code, area, add, del } } }: dir",
 			Make: func(id core.SessionID, args map[string]any) (watch.Source[any], error) {
 				root, err := tree(id, args)
 				if err != nil {
@@ -41,7 +42,7 @@ func (x *Watches) builtins() []registry.Named {
 				return watch.Derive(src.Key+":lua", src, func(st *gitx.State) (any, error) { return statusValue(st), nil }), nil
 			}}
 	}
-	return []registry.Named{
+	return []services.Named{
 		{Name: "files", Doc: "the paths that changed under path (tree = true for everything under a folder)",
 			Make: func(id core.SessionID, args map[string]any) (watch.Source[any], error) {
 				path, _ := args["path"].(string)

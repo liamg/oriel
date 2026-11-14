@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -801,7 +803,7 @@ func (x *Plugin) accountLabel(account, name string) string {
 
 // accountTitle is an account as the Usage page's switcher names it: its label and plan.
 func (x *Plugin) accountTitle(u core.ProviderUsage) string {
-	return x.accountLabel(u.Account, u.AccountName) + " · " + cmp.Or(u.Plan, registry.ProviderTitle(x.h, u.Provider))
+	return x.accountLabel(u.Account, u.AccountName) + " · " + cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider))
 }
 
 // openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel the Stats page found.

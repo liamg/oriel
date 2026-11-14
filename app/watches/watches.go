@@ -10,6 +10,8 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
@@ -37,7 +39,7 @@ type Watches struct {
 }
 
 type named struct {
-	registry.Named
+	services.Named
 	id int
 }
 
@@ -65,7 +67,7 @@ func (x *Watches) Activate(ctx context.Context, h plugin.Host) error {
 	for _, n := range x.builtins() {
 		x.Add(x.Register(n))
 	}
-	x.Add(h.Contribute(registry.Service{Name: registry.WatchesService, Impl: x, Source: "builtin:watches"}))
+	x.Add(h.Contribute(registry.Service{Name: services.WatchesService, Impl: x, Source: "builtin:watches"}))
 	return nil
 }
 
@@ -168,17 +170,17 @@ func (x *Watches) Tree(id core.SessionID, root string) *gitsrc.Tree {
 	return t
 }
 
-func (x *Watches) Source(name string) (registry.Named, bool) {
+func (x *Watches) Source(name string) (services.Named, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	ns := x.named[name]
 	if len(ns) == 0 {
-		return registry.Named{}, false
+		return services.Named{}, false
 	}
 	return ns[len(ns)-1].Named, true
 }
 
-func (x *Watches) Register(n registry.Named) registry.Disposable {
+func (x *Watches) Register(n services.Named) registry.Disposable {
 	x.mu.Lock()
 	x.next++
 	id := x.next

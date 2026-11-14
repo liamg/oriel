@@ -61,7 +61,7 @@ func (w *Host) ProviderInfo(ctx context.Context) []ProviderInfo {
 }
 
 // SetProviders sets where the host finds providers past its own (Options.Providers): the app's registry
-// (registry.AgentProvider). The sessions handed over to a provider known only now are resumed, and every plan's
+// (services.AgentProvider). The sessions handed over to a provider known only now are resumed, and every plan's
 // windows read; nil takes them away.
 func (w *Host) SetProviders(src func() []agent.Provider) {
 	defer w.env.Recover("SetProviders", nil)

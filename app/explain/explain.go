@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -167,7 +169,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "explain.selection", Title: "Explain the Visual selection", Run: func(registry.Ctx, registry.Args) error { return x.explainSelection() }},
 		{ID: "explain.this", Title: "Explain this: the selection, or the unit at the cursor",
 			Run: func(_ registry.Ctx, a registry.Args) error {
-				if ed, ok := registry.EditorsOf(h); ok && strings.HasPrefix(ed.Mode(), "visual") {
+				if ed, ok := services.EditorsOf(h); ok && strings.HasPrefix(ed.Mode(), "visual") {
 					return x.explainSelection()
 				}
 				return x.explainUnit(registry.Args{})
@@ -289,7 +291,7 @@ func (x *Plugin) notify(err error) {
 
 // changedIn is how many hunks and changed units an open file has.
 func (x *Plugin) changedIn(path string) (hunks, units int) {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return 0, 0
 	}
@@ -308,7 +310,7 @@ func (x *Plugin) changedIn(path string) (hunks, units int) {
 // focused is whether the card has the keys: it's open, and the editor's cursor is in normal mode inside what it explains.
 func (x *Plugin) focused() bool {
 	cd := x.card
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if cd == nil || !ok || ed.Mode() != "normal" {
 		return false
 	}
@@ -338,7 +340,7 @@ func firstNonBlank(snap text.Snapshot, line int) int {
 
 // explainUnit explains the unit at {file}'s {line}, or at the cursor; at the cursor, again on the unit shown widens.
 func (x *Plugin) explainUnit(a registry.Args) error {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")
 	}
@@ -396,17 +398,17 @@ func unitOnLine(units []text.Unit, snap text.Snapshot, line, at int) int {
 }
 
 // current is the editor's current window's buffer.
-func (x *Plugin) current() (registry.EditorBuffer, bool) {
-	ed, ok := registry.EditorsOf(x.h)
+func (x *Plugin) current() (services.EditorBuffer, bool) {
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
-		return registry.EditorBuffer{}, false
+		return services.EditorBuffer{}, false
 	}
 	return ed.Current()
 }
 
 // explainSelection explains the Visual selection, inside the units around it, and leaves Visual mode.
 func (x *Plugin) explainSelection() error {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")
 	}
@@ -628,7 +630,7 @@ func codeOf(snap text.Snapshot, r text.Range) string {
 
 // relName is a path as the work tree names it.
 func (x *Plugin) relName(path string) string {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return path
 	}

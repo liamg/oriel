@@ -6,10 +6,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
-	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -55,7 +56,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 	us, failed := x.hudUsage()
 	for i, f := range failed {
 		c.Row(fmt.Sprint("failed", i), ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", strings.ToUpper(registry.ProviderTitle(x.h, f.Provider)), kit.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
+			c.Text("t", strings.ToUpper(services.ProviderTitle(x.h, f.Provider)), kit.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
 			c.Row("e", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 				c.Text("e", "plan couldn't be read", kit.MonoFont(10.5, th.C(theme.Warn)))
 			})
@@ -79,7 +80,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 		hist := x.usageHistory(u)
 		c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 			c.Row("h", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-				parts := []string{strings.ToUpper(registry.ProviderTitle(x.h, u.Provider)), x.accountLabel(u.Account, u.AccountName)}
+				parts := []string{strings.ToUpper(services.ProviderTitle(x.h, u.Provider)), x.accountLabel(u.Account, u.AccountName)}
 				if u.Tier != "" {
 					parts = append(parts, strings.ToUpper(u.Tier))
 				}

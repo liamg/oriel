@@ -8,6 +8,7 @@ import (
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 )
 
 // registryKinds is the session host's KindSource: the kinds registered with the app, a plugin's as well as the
@@ -25,7 +26,7 @@ func (k registryKinds) Kind(kind core.Kind) (core.KindSpec, bool) {
 // registryProviders are the agent providers registered with the app, by Order.
 func registryProviders(r registry.Contributions) []agent.Provider {
 	var out []agent.Provider
-	for _, p := range registry.AgentProviders(r) {
+	for _, p := range services.AgentProviders(r) {
 		out = append(out, p.Provider)
 	}
 	return out

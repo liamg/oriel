@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -602,7 +604,7 @@ func (x *Diff) source(st *diffState, _ registry.Args) error {
 
 // diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed, or
 // styled when the view asks for one (styled) and it's plain. current is false while the diff is older than the file.
-func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, styled, head bool) (d *diffFile, current bool) {
+func (x *Diff) diffFor(tree services.GitTree, st *gitx.State, f gitx.FileState, styled, head bool) (d *diffFile, current bool) {
 	root := tree.Root()
 	work := filepath.Join(root, filepath.FromSlash(f.Path))
 	rev := st.BaseHash
@@ -613,9 +615,9 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 	if f.Code == 'A' || f.Code == '?' {
 		in.rev = ""
 	}
-	var buf registry.EditorBuffer
+	var buf services.EditorBuffer
 	open := false
-	if ed, ok := registry.EditorsOf(x.h); ok {
+	if ed, ok := services.EditorsOf(x.h); ok {
 		buf, open = ed.Buffer(work)
 	}
 	if open {

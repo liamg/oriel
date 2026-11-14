@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -182,7 +184,7 @@ func (g *GitSigns) Deactivate(ctx context.Context) error {
 type gitFile struct{ tree, rel, abs string }
 
 // treeOf is f's work tree.
-func (g *GitSigns) treeOf(f gitFile) registry.GitTree { return kit.GitOf(g.h).Tree(f.tree) }
+func (g *GitSigns) treeOf(f gitFile) services.GitTree { return kit.GitOf(g.h).Tree(f.tree) }
 
 // repo is f's repo; fileOf has found it.
 func (g *GitSigns) repo(f gitFile) gitx.Repo { return g.treeOf(f).Status().Repo() }

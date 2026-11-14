@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/internal/fsx"
 	"github.com/liamg/oriel/render/raster"
@@ -61,7 +63,7 @@ func (l *loop) open(poke func()) []func() {
 	sh.keys, sh.modes = l.keys, l.modes
 	sh.ui.Store(l.ui)
 	l.keys.Raw = func() bool {
-		ed, ok := registry.EditorsOf(reg)
+		ed, ok := services.EditorsOf(reg)
 		return ok && len(ed.Pending().Keys) > 0
 	}
 	sh.theme, sh.shot = func() *theme.Resolved { return l.theme }, l.shot

@@ -5,6 +5,8 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
@@ -227,7 +229,7 @@ func ViewProject(h plugin.Host, w Here, v layout.ViewRef) (core.Project, bool) {
 
 // RepoAt is the git repo whose root is dir: the GitTrees' own, sharing their cache, when they've read it.
 func RepoAt(r registry.Registry, dir string) gitx.Repo {
-	if gt, ok := registry.GitTreesOf(r); ok {
+	if gt, ok := services.GitTreesOf(r); ok {
 		if t := gt.Holding(dir); t.Status() != nil && filepath.Clean(t.Root()) == filepath.Clean(dir) {
 			return t.Status().Repo()
 		}

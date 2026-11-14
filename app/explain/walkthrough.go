@@ -10,6 +10,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -219,7 +221,7 @@ func (x *Walkthrough) start() error {
 		return errors.New("there's no project here to explain the change of")
 	}
 	open := map[string]openText{}
-	if ed, ok := registry.EditorsOf(x.h); ok {
+	if ed, ok := services.EditorsOf(x.h); ok {
 		for _, b := range ed.Buffers() {
 			open[filepath.Clean(b.Path)] = openText{src: b.Text.Snapshot().Bytes(), file: b.Bytes()}
 		}

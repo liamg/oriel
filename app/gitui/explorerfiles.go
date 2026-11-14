@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -309,7 +311,7 @@ func (e *Explorer) remove(path string, confirm, permanent bool) error {
 
 // stillOpen says so when the editor holds the file that was at path: its buffer keeps what was there.
 func (e *Explorer) stillOpen(path, what string, actions []core.Action) {
-	eds, ok := registry.EditorsOf(e.h)
+	eds, ok := services.EditorsOf(e.h)
 	if !ok {
 		return
 	}

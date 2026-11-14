@@ -15,6 +15,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/fuzzy"
 	"github.com/liamg/oriel/core"
@@ -631,7 +633,7 @@ func (x *LSP) accept() error {
 	if !ok {
 		return nil
 	}
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return nil
 	}

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -76,7 +78,7 @@ func (x *Plan) openStartWork() error {
 					return p, nil
 				}
 			}
-			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", registry.ProviderTitle(x.h, id))
+			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", services.ProviderTitle(x.h, id))
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
 		d.providers.Start()
 	}
@@ -240,7 +242,7 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 		kit.ToggleRow(c, "clear", "Clear the plan's threads", &d.clear, kit.ToggleRowOpts{Note: "resolved go · open and deferred go into the prompt", Help: startWorkHelp})
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Agent", strings.TrimSpace(registry.ProviderTitle(x.h, d.provider.ID)+" · model · effort"))
+		kit.Heading(c, "head", "Agent", strings.TrimSpace(services.ProviderTitle(x.h, d.provider.ID)+" · model · effort"))
 		note := "from the plan docs and the work pack"
 		if !d.fresh {
 			note = "keeps the plan's conversation"

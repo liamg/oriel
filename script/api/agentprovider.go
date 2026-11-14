@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/rpcagent"
 	"github.com/liamg/oriel/plugin"
@@ -70,7 +72,7 @@ func (g Agent) Provider(spec script.Table, where string) error {
 		return fmt.Errorf("agent provider %s needs a program, or a bridge's config (acp = { command = … })", name)
 	}
 	p := rpcagent.New(o)
-	ap := registry.AgentProvider{Name: name, Title: str(spec, "title"), Mark: str(spec, "mark"), Tone: str(spec, "tone"), Order: 50,
+	ap := services.AgentProvider{Name: name, Title: str(spec, "title"), Mark: str(spec, "mark"), Tone: str(spec, "tone"), Order: 50,
 		Provider: p, Source: where}
 	if n, ok := spec["order"].(float64); ok {
 		ap.Order = int(n)

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -75,7 +77,7 @@ func askGroup(k core.AskKind) string {
 
 // askRow is an ask as a row of the Inbox panel: its title, and what it's about.
 func (x *Console) askRow(se core.SessionState, a core.Ask) (title, sub string) {
-	prov := registry.ProviderTitle(x.h, se.Agent.Provider)
+	prov := services.ProviderTitle(x.h, se.Agent.Provider)
 	switch a.Kind {
 	case core.AskPermission:
 		return "Permission: " + a.Tool + "(" + cmp.Or(a.Summary, kit.MainInput(a.Input)) + ")", strings.ToLower(prov)
@@ -142,7 +144,7 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 	if kicker {
 		k.o.Kicker = kit.Label(se) + " · " + string(a.Kind)
 	}
-	prov := registry.ProviderTitle(x.h, se.Agent.Provider)
+	prov := services.ProviderTitle(x.h, se.Agent.Provider)
 	switch a.Kind {
 	case core.AskPermission, core.AskNetwork, core.AskGateway:
 		x.decisionCard(th, k, se, a, st, kicker)
@@ -268,7 +270,7 @@ func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a c
 	if a.Login != nil {
 		l = *a.Login
 	}
-	k.o.Title = registry.ProviderTitle(r, l.Provider) + " needs you to log in"
+	k.o.Title = services.ProviderTitle(r, l.Provider) + " needs you to log in"
 	k.o.Detail = l.Detail
 	if !kicker {
 		k.o.Kicker = "login"

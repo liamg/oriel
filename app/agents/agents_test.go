@@ -3,6 +3,8 @@ package agents_test
 import (
 	"testing"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/app/agents"
 	"github.com/liamg/oriel/app/apptest"
@@ -15,7 +17,7 @@ import (
 func TestTheBuiltInProvidersArePlugins(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Agents = agents.Builtins("") }})
 	r := s.Registry()
-	ps := registry.AgentProviders(r)
+	ps := services.AgentProviders(r)
 	if len(ps) != 2 || ps[0].Name != "claude" || ps[0].Title != "Claude" || ps[0].Mark != "C" || ps[1].Name != "codex" ||
 		ps[1].Title != "Codex" || ps[1].Mark != "CX" {
 		t.Fatalf("providers = %+v", ps)

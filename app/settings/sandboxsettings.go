@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -140,7 +142,7 @@ func upstreamNames(o registry.Options, r registry.Contributions) []string {
 	m, _, _ := o.Get("sandbox.servers", registry.At{})
 	servers, _ := mcpServers(m)
 	var providers []agent.Provider
-	for _, p := range registry.AgentProviders(r) {
+	for _, p := range services.AgentProviders(r) {
 		providers = append(providers, p.Provider)
 	}
 	var out []string

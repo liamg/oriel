@@ -3,14 +3,16 @@ package kit
 import (
 	"context"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
 )
 
-// GitOf is the window's git trees (registry.GitTreesService), or ones that know no repo.
-func GitOf(r registry.Registry) registry.GitTrees {
-	if t, ok := registry.GitTreesOf(r); ok {
+// GitOf is the window's git trees (services.GitTreesService), or ones that know no repo.
+func GitOf(r registry.Registry) services.GitTrees {
+	if t, ok := services.GitTreesOf(r); ok {
 		return t
 	}
 	return noTrees{r}
@@ -19,8 +21,8 @@ func GitOf(r registry.Registry) registry.GitTrees {
 // noTrees is a window with no git service: what it's asked to write says so rather than vanish.
 type noTrees struct{ r registry.Registry }
 
-func (noTrees) Tree(string) registry.GitTree    { return noTree{} }
-func (noTrees) Holding(string) registry.GitTree { return noTree{} }
+func (noTrees) Tree(string) services.GitTree    { return noTree{} }
+func (noTrees) Holding(string) services.GitTree { return noTree{} }
 func (noTrees) WatchWindow(func(string, []string)) registry.Disposable {
 	return registry.DisposeFunc(func() {})
 }

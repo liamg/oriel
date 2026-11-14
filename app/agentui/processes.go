@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -50,7 +52,7 @@ func (x *Console) stopProcess(ctx registry.Ctx, a registry.Args) error {
 	}
 	if !x.canStop(id) {
 		se, _ := x.h.Session(id)
-		return fmt.Errorf("%s can't stop the processes it leaves running", registry.ProviderTitle(x.h, se.Snapshot().Agent.Provider))
+		return fmt.Errorf("%s can't stop the processes it leaves running", services.ProviderTitle(x.h, se.Snapshot().Agent.Provider))
 	}
 	c, err := x.client(id)
 	if err != nil {
