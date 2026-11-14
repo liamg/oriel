@@ -44,11 +44,15 @@ func (s *Stats) recordUsage(u core.ProviderUsage) {
 		s.pruneUsage(path)
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-	if err != nil {
-		return
+	if err == nil {
+		_, err = f.Write(append(b, '\n'))
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
 	}
-	defer f.Close()
-	_, _ = f.Write(append(b, '\n'))
+	if err != nil {
+		s.env.Log.Warn("plan usage reading not kept", "path", path, "err", err)
+	}
 }
 
 // pruneUsage drops the readings older than UsageKeep.
@@ -59,7 +63,9 @@ func (s *Stats) pruneUsage(path string) {
 		b, _ := json.Marshal(u)
 		buf.Write(append(b, '\n'))
 	}
-	_ = atomicfile.Write(path, buf.Bytes(), 0o644)
+	if err := atomicfile.Write(path, buf.Bytes(), 0o644); err != nil {
+		s.env.Log.Warn("plan usage readings not pruned", "path", path, "err", err)
+	}
 }
 
 func readUsage(path, provider string, since time.Time) []core.ProviderUsage {

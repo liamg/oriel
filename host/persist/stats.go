@@ -330,13 +330,17 @@ func (s *Stats) Record(se core.SessionState, ev usage.Event) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	path := s.eventsLog(se.ID)
-	if os.MkdirAll(filepath.Dir(path), 0o755) != nil {
-		return
+	err = os.MkdirAll(filepath.Dir(path), 0o755)
+	if err == nil {
+		var f *os.File
+		if f, err = os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+			_, err = f.Write(append(b, '\n'))
+			if cerr := f.Close(); err == nil {
+				err = cerr
+			}
+		}
 	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
-		return
+		s.env.Log.Warn("agent event not recorded", "session", se.ID, "path", path, "err", err)
 	}
-	defer f.Close()
-	_, _ = f.Write(append(b, '\n'))
 }
