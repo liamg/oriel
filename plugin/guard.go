@@ -82,13 +82,6 @@ func (g *Grants) Grant(plugin string, gs []Grant) {
 	g.grants[plugin] = gs
 }
 
-// Add grants plugin more, at runtime: a self-hosted code host's server, once the user sets it up.
-func (g *Grants) Add(plugin string, gs ...Grant) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	g.grants[plugin] = append(g.grants[plugin], gs...)
-}
-
 // Widen is Guard.Widen.
 func (g *Grants) Widen(plugin, why string, gs ...Grant) (undo func()) {
 	g.mu.Lock()
