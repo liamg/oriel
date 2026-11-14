@@ -187,7 +187,9 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
 ```
 
 - `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments.
-- `oriel.run(id, args)` runs any command, here the built-in `view.toggle`.
+- `oriel.run(id, args)` runs a command, here the built-in `view.toggle`. A command that does what a capability
+  guards needs it: `ask.answer` and `rules.add` need `gate`, `session.start` and `session.stop` `session.control`,
+  `agent.send` `agent.prompt`.
 - `oriel.keymap.set(modes, lhs, rhs, opts)` maps keys to a command id or a Lua function, in `n`, `i`, `x` or a
   panel's own mode.
 - `oriel.rail.add` adds an entry to the sidebar. `icon` is a built-in icon's name or a glyph. `scope` is `session`

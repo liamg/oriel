@@ -179,7 +179,7 @@ func (x *Requests) commands() []registry.Command {
 		return out
 	}
 	return []registry.Command{
-		{ID: "request.comment", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} ({col} through {end_line}:{end_col}) or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
+		{ID: "request.comment", Grant: "agent.prompt", Title: "Comment on a request: {thread} of {id} (the session in front by default), or a new one about {file}:{line} ({col} through {end_line}:{end_col}) or the whole change; {body}, {title}, {urgent} interrupts the turn, {btw} asks a fork on the side, {status} opens a new one resolved (a note the agent doesn't get); a new one rated {severity}, opened from the AI review's {finding}; {outgoing} a new one for a pull request's author, in the review you'll submit, not the agent's to answer",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.commentOn(ctx, a) }},
 		{ID: "request.rename", Title: "Rename a request: {thread} of {id}, the one selected by default, to {name}; with no {name}, edit it in its header",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -207,15 +207,15 @@ func (x *Requests) commands() []registry.Command {
 				st.rename.Start(t.Heading())
 				return x.h.Run(ctx, "view.open", registry.Args{"id": RequestView, "place": "tab"})
 			}},
-		{ID: "request.edit-queued", Title: "Change a comment of yours the agent hasn't had yet: {comment} of {thread} to {body}, {urgent} interrupting the turn, {btw} asking a fork on the side instead; with no {body}, edit it in the composer",
+		{ID: "request.edit-queued", Grant: "agent.prompt", Title: "Change a comment of yours the agent hasn't had yet: {comment} of {thread} to {body}, {urgent} interrupting the turn, {btw} asking a fork on the side instead; with no {body}, edit it in the composer",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, false) }},
-		{ID: "request.delete-queued", Title: "Delete a comment of yours the agent hasn't had yet: {comment} of {thread}; the ones after it stay",
+		{ID: "request.delete-queued", Grant: "agent.prompt", Title: "Delete a comment of yours the agent hasn't had yet: {comment} of {thread}; the ones after it stay",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error { return x.editQueued(ctx, a, true) }},
 		{ID: "comment.markdown", Title: "Show a comment's markdown as written: {body}, headed {title}", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.md = mdViewer{title: a.String("title"), body: a.String("body"), open: true}
 			return nil
 		}},
-		{ID: "request.resolve", Title: "Resolve a request: {thread} of {id}, the one selected by default; or set its {status}: open, resolved, deferred, dismissed",
+		{ID: "request.resolve", Grant: "agent.prompt", Title: "Resolve a request: {thread} of {id}, the one selected by default; or set its {status}: open, resolved, deferred, dismissed",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				a = selected(a)
 				if a.String("thread") == "" {
@@ -223,13 +223,13 @@ func (x *Requests) commands() []registry.Command {
 				}
 				return x.setThread(a)
 			}},
-		{ID: "request.reopen", Title: "Reopen a resolved request: {thread}, the one selected by default", Available: inFront,
+		{ID: "request.reopen", Grant: "agent.prompt", Title: "Reopen a resolved request: {thread}, the one selected by default", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				a = selected(a)
 				a["status"] = string(core.ThreadOpen)
 				return x.setThread(a)
 			}},
-		{ID: "request.new", Title: "Write a new request: {text} to start from, {context} attached, about {file}:{line} or the whole change", Available: inFront,
+		{ID: "request.new", Grant: "agent.prompt", Title: "Write a new request: {text} to start from, {context} attached, about {file}:{line} or the whole change", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.newRequest(ctx, a) }},
 		{ID: "request.open", Title: "Open a request: {thread}, the one selected by default, or with {first} the session's first, in the main area",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -250,14 +250,14 @@ func (x *Requests) commands() []registry.Command {
 		}},
 		{ID: "request.anchor", Title: "Requests: open the selected request's anchor in the editor", Available: inFront,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.openAnchor(ctx) }},
-		{ID: "request.send", Title: "Requests: send what's in the composer; {urgent} interrupts the turn", Available: inFront,
+		{ID: "request.send", Grant: "agent.prompt", Title: "Requests: send what's in the composer; {urgent} interrupts the turn", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				st := x.state("")
 				return x.send(ctx, st, x.target(st), a.Bool("urgent"))
 			}},
 		{ID: "request.attach", Title: "Attach to the request being written: {items} ({path, line, text} each), or {text} with a {title}", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.attach(ctx, a) }},
-		{ID: "thread.new", Title: "Open a thread on {file}'s {line}:{col} through {end_line}:{end_col}, or the selection, or the cursor's place, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
+		{ID: "thread.new", Grant: "agent.prompt", Title: "Open a thread on {file}'s {line}:{col} through {end_line}:{end_col}, or the selection, or the cursor's place, between the lines: {to} the agent, to ask it, or the author, a comment in the review you'll submit (a review session's default)",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error { return x.newInline(a) }},
 		{ID: "threads.toggle", Title: "Show or hide the threads of the file in a {window}, the focused one by default",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.toggleThreads(a) }},
