@@ -143,7 +143,7 @@ func (x *Tests) panelView(c *ui.Ctx) {
 						}
 					}
 				})
-				c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "edge")
 				c.Column("output", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 8), Gap: 6}, func(c *ui.Ctx) {
 					c.Row("tabs", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 						name := ""

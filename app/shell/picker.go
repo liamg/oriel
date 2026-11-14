@@ -200,11 +200,11 @@ func (p *picker) build(c *ui.Ctx) {
 			Radius: 10, Clip: true, Trap: true, Interactive: true, Float: &ui.Float{Point: &at, Self: render.Point{X: .5}}, Role: ui.RoleDialog, Label: s.Title},
 			func(c *ui.Ctx) {
 				p.sourceStrip(c, s)
-				c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "rule")
 				c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 					c.Column("left", ui.Style{W: ui.Px(560), H: ui.Flex(1)}, func(c *ui.Ctx) {
 						p.input(c, inputID, s, g)
-						c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+						widget.Rule(c, "rule")
 						c.Column("list", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 6, R: 6, T: 6}}, func(c *ui.Ctx) {
 							if len(g.hits) > 0 {
 								rows := c.List("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, len(g.hits), pickerRowH, func(c *ui.Ctx, i int) {
@@ -219,7 +219,7 @@ func (p *picker) build(c *ui.Ctx) {
 								"shell/pickers")
 						})
 					})
-					c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+					widget.VRule(c, "divider")
 					c.Column("preview", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(14), Clip: true, Role: ui.RoleRegion, Label: "Preview"}, func(c *ui.Ctx) {
 						if len(g.hits) > 0 && s.Preview != nil {
 							var n ui.Node
@@ -229,7 +229,7 @@ func (p *picker) build(c *ui.Ctx) {
 						}
 					})
 				})
-				c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "rule2")
 				p.footer(c, s, len(g.hits) > 0 && g.hits[p.sel].item.Path != "")
 			})
 	}) {

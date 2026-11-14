@@ -101,7 +101,7 @@ func (x *Ship) page(c *ui.Ctx) {
 					}
 				})
 			})
-			c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "divider")
 			c.Column("side", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 				x.gatesList(c, se)
 				x.mergeOrder(c, se, ships)
@@ -178,7 +178,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 			}
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 // columnHeader is a project's name, colour, branch and base, and a chip for where it stands.
@@ -284,7 +284,7 @@ func shipCard(c *ui.Ctx, open bool, head func(c *ui.Ctx), body func(c *ui.Ctx)) 
 	c.Column("box", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: edge, Border: 1, Fill: th.C(tShipCardBg), Clip: true}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(36), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, head)
 		if body != nil {
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 8}, body)
 		}
 	})
@@ -553,7 +553,7 @@ func (x *Ship) gatesList(c *ui.Ctx, se core.SessionState) {
 		})
 	}
 	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 }
 
@@ -580,7 +580,7 @@ func (x *Ship) mergeOrder(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 		})
 	}
 	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 }
 

@@ -214,17 +214,17 @@ func (x *Consent) view(c *ui.Ctx) {
 			Radius: 10, Clip: true, Trap: true, Interactive: true, Focusable: true, KeyMode: ConsentKeyMode,
 			Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Role: ui.RoleDialog, Label: label, Help: consentHelp}, func(c *ui.Ctx) {
 			x.header(c, a.c)
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("caps", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 20, R: 20, T: 18, B: 18}, Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 					consentRows(c, a.c, w-side-1-40)
 				})
-				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "divider")
 				c.Column("side", ui.Style{W: ui.Px(side), H: ui.Flex(1), Pad: ui.Pad(18), Gap: 10, ScrollY: true}, func(c *ui.Ctx) {
 					consentSide(c, a.c, side-36)
 				})
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			x.footer(c, a.c)
 		})
 		for _, k := range c.Interaction(box).Keys {

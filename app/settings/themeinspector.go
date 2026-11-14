@@ -22,12 +22,12 @@ func (e *ThemeEditor) inspector(c *ui.Ctx, th *theme.Resolved) {
 	c.Column("inspect", ui.Style{W: ui.Px(340), H: ui.Flex(1), Fill: th.C(tThemePanel)}, func(c *ui.Ctx) {
 		c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Clip: true}, func(c *ui.Ctx) {
 			e.chain(c, th)
-			c.Box("r1", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "r1")
 			e.value(c, th)
-			c.Box("r2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "r2")
 			e.contrast(c, th)
 		})
-		c.Box("r3", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "r3")
 		c.Row("acts", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Cross: ui.Center}, func(c *ui.Ctx) {
 			if widget.Button(c, "reset", "Reset to inherited", widget.ButtonOpts{Help: "shell/theme#toml"}) {
 				e.fail(e.reset(e.sel))

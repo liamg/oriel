@@ -313,7 +313,7 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 			f.Mark, f.Title, f.Size = true, rel(sel.Path), 12
 			f.Build(c, nil)
 		})
-		c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+		widget.VRule(c, "edge")
 		listID := c.Column("list", ui.Style{W: ui.Px(300), H: ui.Flex(1), Pad: ui.PadXY(0, 8), ScrollY: true}, func(c *ui.Ctx) {
 			c.Row("count", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 2)}, func(c *ui.Ctx) {
 				c.Text("t", fmt.Sprintf("%d references to %s", len(pk.refs), pk.name), kit.MonoTok(c, 10, theme.FgFaint))

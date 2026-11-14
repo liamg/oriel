@@ -366,7 +366,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", fmt.Sprintf("%d %s", len(docs), kit.Plural(len(docs), "file", "files")), kit.MonoFont(10, th.C(theme.FgFaint)))
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		if len(docs) == 0 && !loading {
 			c.Box("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12)}, func(c *ui.Ctx) {
 				widget.Wrap(c, "t", "No docs yet: the agent writes PLAN.md here.", 220, kit.UIFont(12, th.C(theme.FgFaint)))
@@ -383,7 +383,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 				x.run("plan.open", registry.Args{"doc": docs[st.docSel].name})
 			}
 		}
-		c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule2")
 		c.Column("source", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 9, Role: ui.RoleGroup, Label: "Source"}, func(c *ui.Ctx) {
 			c.Text("k", "SOURCE", kit.KickerFont(th.C(theme.FgFaint)))
 			if se.Ticket != "" {
@@ -426,7 +426,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 			})
 		}
 		c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
-		c.Box("rule3", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule3")
 		open, frac := readiness(se)
 		c.Column("ready", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 9, Role: ui.RoleGroup, Label: "Readiness", Help: "agent/plan#readiness"},
 			func(c *ui.Ctx) {
@@ -501,7 +501,7 @@ func (x *Plan) view(c *ui.Ctx, vc uireg.ViewCtx) {
 		docs, loading := x.docs(se, st)
 		d, has := x.current(st, docs)
 		x.header(c, se, st, d, has)
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		if !has && loading {
 			return
 		}

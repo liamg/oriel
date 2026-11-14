@@ -304,12 +304,12 @@ func (v *helpView) page(c *ui.Ctx) {
 				widget.Chip(c, "file", path.Join(p.Source, p.File), th.C(theme.FgFaint), "shell/help")
 				kit.KbdKey(c, "esc")
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(28), Gap: 12, ScrollY: true}, func(c *ui.Ctx) {
 					v.body(c, v.cur, min(880, size.X-32)-260-56)
 				})
-				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "divider")
 				c.Column("side", ui.Style{W: ui.Px(250), H: ui.Flex(1), Pad: ui.Pad(16), Gap: 8, Clip: true}, func(c *ui.Ctx) {
 					c.Text("related", "RELATED", label)
 					for i, r := range p.Related {

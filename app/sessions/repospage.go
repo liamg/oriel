@@ -150,7 +150,7 @@ func (x *Repos) page(c *ui.Ctx) {
 		x.header(c)
 		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			x.list(c, rows)
-			c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "divider")
 			c.Column("detail", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14,
 				Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 				r, ok := x.find(string(x.sel))
@@ -194,7 +194,7 @@ func (x *Repos) header(c *ui.Ctx) {
 			x.open = false
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 func (x *Repos) run(id string, a registry.Args) {
@@ -233,7 +233,7 @@ func (x *Repos) list(c *ui.Ctx, rows []core.Repo) {
 				}
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
 			kit.Note(c, "a", "~/.oriel/repos.json · removing one forgets it")
 			kit.Note(c, "b", "files are never deleted; removed repos stay removed")
@@ -378,7 +378,7 @@ func repoCard(c *ui.Ctx, key, title, note string, right func(c *ui.Ctx), body fu
 				right(c)
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Gap: 10}, body)
 	})
 }

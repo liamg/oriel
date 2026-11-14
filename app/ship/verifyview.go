@@ -67,15 +67,15 @@ func (x *Verify) dialog(c *ui.Ctx) {
 			Clip: true, Trap: true, Interactive: true, Focusable: true, KeyMode: VerifyKeyMode, Float: &ui.Float{Point: &at, Self: render.Point{X: .5}},
 			Role: ui.RoleDialog, Label: "Verify before raising", Help: verifyHelp}, func(c *ui.Ctx) {
 			x.header(c, q)
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			x.chat(c, q)
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			if q.result == "" {
 				x.composer(c, q)
 			} else {
 				x.outcome(c, q)
 			}
-			c.Box("rule3", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule3")
 			x.footer(c, q)
 		})
 	})
@@ -135,9 +135,9 @@ func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 				qq := q.qs[i]
 				c.Column(i, ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					c.Row("num", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Box("l", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+						widget.Rule(c, "l")
 						c.Text("t", fmt.Sprintf("QUESTION %d", i+1), kit.KickerFont(th.C(theme.FgGhost)))
-						c.Box("r", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+						widget.Rule(c, "r")
 					})
 					x.theirs(c, "q", q, qq.Question, width)
 					if qq.Answer != "" {

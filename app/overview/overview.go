@@ -268,10 +268,10 @@ func (o *Overview) cardView(c *ui.Ctx, dir string) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			o.branch(c, cd)
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		o.panels(c, dir, cd)
 		if cd.readme.text != "" {
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			width := float32(800)
 			if r, ok := c.Rect(c.Next("readme")); ok {
 				width = r.Dx() - 36
@@ -306,14 +306,13 @@ func readReadme(dir string) readme {
 
 // panels are dir's card's panels, side by side.
 func (o *Overview) panels(c *ui.Ctx, dir string, cd *card) {
-	th := c.Theme()
 	c.Row("panels", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		ps := slices.DeleteFunc(uireg.OverviewPanels(o.h), func(p uireg.OverviewPanel) bool {
 			return cd.panels[p.Name] == nil
 		})
 		for i, p := range ps {
 			if i > 0 {
-				c.Box(fmt.Sprint("sep", i), ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, fmt.Sprint("sep", i))
 			}
 			w := ui.Flex(1)
 			if p.Width > 0 {

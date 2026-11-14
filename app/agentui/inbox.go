@@ -764,7 +764,7 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 		})
 		inds := uireg.Indicators(x.h, uireg.SlotInboxFoot)
 		if is, ok := kit.IndicatorsOf(x.h); ok && len(inds) > 0 {
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.Insets{L: 16, R: 16}, Gap: 10, Cross: ui.Center, Clip: true,
 				Help: inboxHelp + "#foot"}, func(c *ui.Ctx) {
 				for _, ind := range inds {

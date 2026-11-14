@@ -199,7 +199,7 @@ func (x *Repos) dialogBody(c *ui.Ctx, f *addRepo) {
 	} else {
 		x.cloneMode(c, f, focus)
 	}
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		phase, frac, parsed := gitx.ParseProgress(f.progress)
 		switch {

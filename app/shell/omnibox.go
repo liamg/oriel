@@ -168,13 +168,13 @@ func (o *omnibox) build(c *ui.Ctx) {
 				}
 				o.chips(c)
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("list", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 8, R: 8, T: 12}, ScrollY: true}, func(c *ui.Ctx) {
 					o.list(c, groups)
 					pickerWaitRow(c, o.wait.state(c.Now(), len(busy) > 0), strings.Join(busy, " and ")+" still loading", len(groups) == 0, "shell/omnibox")
 				})
-				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "divider")
 				c.Column("preview", ui.Style{W: ui.Px(400), H: ui.Flex(1), Pad: ui.Pad(18), Clip: true, Role: ui.RoleRegion, Label: "Preview"}, func(c *ui.Ctx) {
 					if len(flat) > 0 && flat[o.sel].src.Preview != nil {
 						h := flat[o.sel]
@@ -185,7 +185,7 @@ func (o *omnibox) build(c *ui.Ctx) {
 					}
 				})
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(18, 0), Gap: 16, Cross: ui.Center}, func(c *ui.Ctx) {
 				hint := func(k, what string) {
 					c.Row(what, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {

@@ -41,7 +41,7 @@ func (x *Jobs) page(c *ui.Ctx) {
 		x.header(c, rows)
 		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			x.list(c, rows)
-			c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "divider")
 			c.Column("detail", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12,
 				Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 				r, _, ok := x.selected(rows)
@@ -87,7 +87,7 @@ func (x *Jobs) header(c *ui.Ctx, rows []jobRow) {
 			x.open = false
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 func (x *Jobs) run(id string, a registry.Args) {
@@ -139,7 +139,7 @@ func (x *Jobs) list(c *ui.Ctx, rows []jobRow) {
 				}
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
 			kit.Note(c, "a", "~/.oriel/jobs · one file per job")
 			kit.Note(c, "b", "runs are workspaces; deleting a job keeps them")
