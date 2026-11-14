@@ -277,9 +277,15 @@ func matchRule(rule string, ask core.Ask) bool {
 	arg = strings.TrimSuffix(arg, ")")
 	cmd := hostcore.ParseArgs(json.RawMessage(ask.Input)).Str("command")
 	if prefix, ok := strings.CutSuffix(arg, ":*"); ok {
-		return cmd == prefix || strings.HasPrefix(cmd, prefix+" ")
+		return simpleCommand(cmd) && (cmd == prefix || strings.HasPrefix(cmd, prefix+" "))
 	}
 	return cmd == arg
+}
+
+// simpleCommand says cmd is one command alone: nothing chained, piped, backgrounded, redirected or substituted, any
+// of which could run more than a rule for its first words allows. One that isn't asks.
+func simpleCommand(cmd string) bool {
+	return !strings.ContainsAny(cmd, ";&|<>`\n\r") && !strings.Contains(cmd, "$(")
 }
 
 func hostMatch(pattern, host string) bool {
