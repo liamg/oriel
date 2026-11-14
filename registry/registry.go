@@ -171,6 +171,30 @@ func (a Args) Float(k string) float64 {
 	return 0
 }
 
+// Maps is the list argument k of tables: a []map[string]any or []Args from Go, a list of tables from Lua or JSON;
+// what isn't a table is left out.
+func (a Args) Maps(k string) []Args {
+	var out []Args
+	switch v := a[k].(type) {
+	case []Args:
+		out = append(out, v...)
+	case []map[string]any:
+		for _, m := range v {
+			out = append(out, Args(m))
+		}
+	case []any:
+		for _, x := range v {
+			switch m := x.(type) {
+			case map[string]any:
+				out = append(out, Args(m))
+			case Args:
+				out = append(out, m)
+			}
+		}
+	}
+	return out
+}
+
 // Bool is the boolean argument k.
 func (a Args) Bool(k string) bool { b, _ := a[k].(bool); return b }
 

@@ -76,7 +76,7 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 			}
 			return focus(core.SessionID(id), then...)
 		}
-		n, _ := a["n"].(int)
+		n := a.Int("n")
 		ss := openTabs(h.State())
 		if n < 1 || n > len(ss) {
 			return fmt.Errorf("no session %d", n)
