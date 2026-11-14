@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/syntax"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -104,6 +105,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "tests", Busy: x.work.Busy, Source: "builtin:tests"}))
 	x.h = h
 	x.set = testrun.Builtin()
+	x.set.Languages = func() *syntax.Set { return kit.Languages(h) }
 	x.Add(registry.DisposeFunc(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.found = map[*text.Buffer]*discovery{}
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.HistoryFile, Load: x.loadHistory})

@@ -70,8 +70,9 @@ type Source struct {
 	Path string // absolute
 	Text text.Snapshot
 	// Syntax runs a named query over the buffer's parsed tree: its *syntax.Document, kept up to date as it's
-	// edited. Nil parses Text afresh.
-	Syntax Querier
+	// edited. Nil parses Text afresh, in the language its path names in Languages (the built-ins if nil).
+	Syntax    Querier
+	Languages *syntax.Set
 }
 
 // Querier runs a named query; *syntax.Document and *syntax.Parser are both one.
