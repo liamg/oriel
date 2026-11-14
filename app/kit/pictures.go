@@ -22,7 +22,6 @@ import (
 
 	_ "golang.org/x/image/webp"
 
-	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/render/svg"
@@ -65,7 +64,7 @@ func NewPictures(client *http.Client, wake func()) *Pictures {
 	if wake == nil {
 		wake = func() {}
 	}
-	return newPictures(&landing{wake: wake}, ReadsOpts{Client: client, Watch: func() (*fswatch.Watcher, error) { return nil, fswatch.ErrUnsupported }})
+	return newPictures(&landing{wake: wake}, ReadsOpts{Client: client})
 }
 
 func newPictures(q *landing, o ReadsOpts) *Pictures {
@@ -86,7 +85,7 @@ func newPictures(q *landing, o ReadsOpts) *Pictures {
 		}
 		return decoded(b)
 	}, plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes, Size: size, Frame: frame, Clock: o.Clock,
-		Watch: o.Watch, Path: func(p string) string { return p }})
+		Watches: o.Watches, Path: func(p string) string { return p }})
 	p.data = plugin.NewCache(q, func(_ context.Context, uri string) (*Picture, error) { return dataPicture(uri) },
 		plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes, Size: size, Frame: frame, Clock: o.Clock})
 	p.remote = plugin.NewCache(q, p.fetch, plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes,
