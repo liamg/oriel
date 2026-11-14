@@ -184,6 +184,7 @@ func TestAzureShipAndReviews(t *testing.T) {
 	az.AddPR("acme", "web", "api", azure.PullRequest{Title: "Retry uploads with jitter", CreatedBy: priya, Source: "refs/heads/retry",
 		Target: "refs/heads/main", Reviewers: []azure.Reviewer{{Identity: azuretest.Me}}})
 	s.Run("reviews.open", nil)
+	s.Run("reviews.refresh", nil) // a list read before the PR was added may still be in hand
 	s.Until("the request", func() bool { return strings.Contains(s.Text(), "Retry uploads with jitter") })
 	s.WantFrame("web/api#58", "Priya K")
 

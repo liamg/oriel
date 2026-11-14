@@ -197,17 +197,19 @@ func TestJobsEntryPoints(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	x := jobsOf(s)
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	s.Frame()
+	s.Quiet() // laid out where it stays: a click lands on what a person would see
 	if !s.Registry().Available("jobs.open", nil) || s.Node("Jobs").Disabled {
 		t.Error("the sidebar's Jobs is still dimmed")
 	}
 	s.Click(apptest.Centre(s.Node("Jobs").Bounds), 0)
+	s.Quiet()
 	if !x.Open() {
 		t.Error("the sidebar's Jobs didn't open the page")
 	}
 	x.Close()
-	s.Frame()
+	s.Quiet()
 	s.Click(apptest.Centre(s.StartCard("Jobs").Bounds), 0)
+	s.Quiet()
 	if !x.Open() {
 		t.Error("the start view's Jobs link didn't open the page")
 	}
