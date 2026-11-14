@@ -24,20 +24,26 @@ var runtime struct {
 	cm       wazero.CompiledModule
 	mu       sync.Mutex
 	cacheDir string
+	made     bool // the runtime is made: its cache dir is fixed
 }
 
-// SetCacheDir keeps the compiled module in dir, so it compiles once per version rather than once per run. It takes
-// effect only before the first terminal is made.
-func SetCacheDir(dir string) {
+// SetCacheDir keeps the compiled module in dir, so it compiles once per version rather than once per run. Once a
+// terminal has been made the runtime is, and another dir is refused.
+func SetCacheDir(dir string) error {
 	runtime.mu.Lock()
 	defer runtime.mu.Unlock()
+	if runtime.made && dir != runtime.cacheDir {
+		return fmt.Errorf("ghostty: the terminal runtime is running with the cache %q already, so %q isn't used", runtime.cacheDir, dir)
+	}
 	runtime.cacheDir = dir
+	return nil
 }
 
 func compiled() (wazero.Runtime, wazero.CompiledModule, error) {
 	runtime.once.Do(func() {
 		runtime.mu.Lock()
 		dir := runtime.cacheDir
+		runtime.made = true
 		runtime.mu.Unlock()
 		ctx := context.Background()
 		cfg := wazero.NewRuntimeConfig()
