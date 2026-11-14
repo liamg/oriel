@@ -55,7 +55,7 @@ func TestCommitStagedWithTrailer(t *testing.T) {
 	if err != nil || len(staged) != 1 || staged[0] != "a.go" {
 		t.Fatalf("staged: %v %v", staged, err)
 	}
-	hash, err := repo.CommitStaged(context.Background(), "feat: x\n\nAdds x.", "Reviewed-By: Ada")
+	hash, err := repo.Commit(context.Background(), "feat: x\n\nAdds x.", CommitOpts{Trailers: []string{"Reviewed-By: Ada"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestCommitStagedWithTrailer(t *testing.T) {
 	if got := strings.TrimSpace(r.Git("show", "--name-only", "--format=", "HEAD")); got != "a.go" {
 		t.Errorf("committed %q, want only what was staged", got)
 	}
-	if _, err := repo.CommitStaged(context.Background(), "  "); err == nil {
+	if _, err := repo.Commit(context.Background(), "  ", CommitOpts{}); err == nil {
 		t.Error("committed with no message")
 	}
 }

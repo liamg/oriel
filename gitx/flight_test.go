@@ -65,7 +65,7 @@ func TestFlightReadsEachStep(t *testing.T) {
 		t.Fatalf("uncommitted = %q, want %q", got, want)
 	}
 
-	if err := r.Commit(ctx, "feat: take\n\nTakes one.\nThen another.", "limiter.go"); err != nil {
+	if _, err := r.Commit(ctx, "feat: take\n\nTakes one.\nThen another.", gitx.CommitOpts{Paths: []string{"limiter.go"}}); err != nil {
 		t.Fatal(err)
 	}
 	f, _ = r.Flight(ctx, "main")
@@ -79,7 +79,7 @@ func TestFlightReadsEachStep(t *testing.T) {
 	if err := r.Push(ctx, "feature"); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.Commit(ctx, "test: more"); err != nil {
+	if _, err := r.Commit(ctx, "test: more", gitx.CommitOpts{All: true}); err != nil {
 		t.Fatal(err)
 	}
 	f, _ = r.Flight(ctx, "main")
@@ -220,7 +220,7 @@ func TestFingerprintFollowsTheCode(t *testing.T) {
 		t.Fatal("no merge base with origin/main")
 	}
 	before := fp(base)
-	if err := r.Commit(ctx, "feat: x"); err != nil {
+	if _, err := r.Commit(ctx, "feat: x", gitx.CommitOpts{All: true}); err != nil {
 		t.Fatal(err)
 	}
 	if after := fp(base); after != before {
