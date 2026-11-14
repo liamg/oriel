@@ -386,5 +386,5 @@ func (x *GitHub) ShipDraft(ctx context.Context, r DraftReq) (err error) {
 		return nil
 	}
 	code := hostcore.DraftCode(ctx, repo, repo.FlightBase(ctx, p.Base), r.Kind)
-	return x.env.WriteDraft(r.Session, p.Name, r.Kind, r.Title, r.Body, hostcore.DraftByYou, code)
+	return x.env.WriteDraft(r.Session, p.Name, r.Kind, hostcore.Draft{Title: r.Title, Body: r.Body, By: hostcore.DraftByYou, Code: code})
 }

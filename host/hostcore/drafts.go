@@ -74,8 +74,10 @@ func (e Env) ReadDraft(id core.SessionID, project, kind string) Draft {
 	return d
 }
 
-// WriteDraft keeps a project's draft, as by wrote it against the code fingerprinted code.
-func (e Env) WriteDraft(id core.SessionID, project, kind, title, body, by, code string) error {
+// WriteDraft keeps a project's draft of kind: its Title, Body, who wrote it (By) and the code it was written against
+// (Code). Saved and Stale are ReadDraft's.
+func (e Env) WriteDraft(id core.SessionID, project, kind string, d Draft) error {
+	title, body := d.Title, d.Body
 	path := e.draftPath(id, project, kind)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
@@ -90,10 +92,10 @@ func (e Env) WriteDraft(id core.SessionID, project, kind, title, body, by, code 
 	if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
 		return err
 	}
-	if err := os.WriteFile(strings.TrimSuffix(path, ".md")+".code", []byte(code), 0o600); err != nil {
+	if err := os.WriteFile(strings.TrimSuffix(path, ".md")+".code", []byte(d.Code), 0o600); err != nil {
 		return err
 	}
-	return os.WriteFile(strings.TrimSuffix(path, ".md")+".by", []byte(by), 0o600)
+	return os.WriteFile(strings.TrimSuffix(path, ".md")+".by", []byte(d.By), 0o600)
 }
 
 // DropDraft forgets a project's draft.
