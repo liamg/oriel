@@ -15,6 +15,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -45,7 +47,7 @@ type LSP struct {
 	Servers func(lsp.ServerSpec) bool        // which servers may start, of those installed; every one if nil
 	h       plugin.Host
 	m       *lsp.Manager
-	work    kit.Work
+	work    work.Work
 
 	mu       sync.Mutex
 	docs     map[string]*lspDoc // by path
@@ -60,7 +62,7 @@ type LSP struct {
 	rename    *renamePrompt
 	callItems []uireg.PickerItem
 	preview   kit.FilePreview
-	typing    kit.Still[*lspDoc] // a document's inlay hints wait for it to be still (hintsQuiet) once it has some
+	typing    work.Still[*lspDoc] // a document's inlay hints wait for it to be still (hintsQuiet) once it has some
 }
 
 // hintsQuiet is how long a document being typed in waits, still, before its inlay hints are asked for again.
@@ -92,7 +94,7 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "lsp", Busy: x.work.Busy, Source: "builtin:lsp"}))
 	x.h = h
 	x.docs, x.statuses = map[string]*lspDoc{}, map[string]lsp.Status{}
-	x.typing = kit.Still[*lspDoc]{Wait: hintsQuiet, Wake: func() { h.DecorationsChanged("lsp") }, Clock: h.Clock()}
+	x.typing = work.Still[*lspDoc]{Wait: hintsQuiet, Wake: func() { h.DecorationsChanged("lsp") }, Clock: h.Clock()}
 	for _, s := range lsp.Builtins() {
 		s.Source = "builtin:lsp"
 		x.Add(h.Contribute(reglang.LSPServer(s)))

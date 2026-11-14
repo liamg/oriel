@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -53,7 +55,7 @@ type Plugin struct {
 	parsers map[string]*syntax.Parser // by language
 
 	mu        sync.Mutex
-	busy      kit.Busy
+	busy      work.Busy
 	bufs      map[*text.Buffer]*fileUnits
 	computing map[*text.Buffer]bool
 	seen      map[*text.Buffer]seenVersion // the version last seen, and since when

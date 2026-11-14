@@ -265,10 +265,10 @@ connects it to the platform:
   as a user would; `render/snapshot` compares display lists and perceptual PNG diffs. The fixture workspace is held
   to the reference mockups in `testdata/mockups`.
 - Tests wait for work, never for a while. What a plugin does off the loop it reports as a `registry.Busy` (a
-  `kit.Busy` or `kit.Work` counts it; a `kit.Work.Loop` that runs as long as the plugin doesn't); `apptest`'s `Quiet`
+  `work.Busy` or `work.Work` (`app/kit/work`) counts it; a `work.Work.Loop` that runs as long as the plugin doesn't); `apptest`'s `Quiet`
   runs frames and the loop's queue until none is busy, and `ClickOn`, `ClickText`, `WantText` and `WantFrame` settle
   so first. A test of what shows while work is under way looks inside `Midway`.
-- Code that times or stamps things takes an `internal/clock.Clock` (`watch.Options.Clock`, `kit.Still.Clock`,
+- Code that times or stamps things takes an `internal/clock.Clock` (`watch.Options.Clock`, `work.Still.Clock`,
   `app.Config.Clock`, `ui.UI.SetClock`), never a `func() time.Time`, and reads it through `clock.Or`: nil is the
   system's. Its tests move an `internal/clock/clocktest` clock (`Advance`, or `Set` to put it anywhere), so what's
   timed happens exactly when they say. A plugin times its work by the window's (`registry.Registry.Clock`) and reads

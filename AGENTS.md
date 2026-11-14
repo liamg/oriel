@@ -71,7 +71,7 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
   clock of its own (`internal/clock/clocktest`); what's timed takes an `internal/clock.Clock`. What only a wall clock
   can measure (latency, a while left idle) goes behind the `perf` build tag and runs with `make perf`, never in
   `go test ./...` (`docs/architecture.md`, "Testing"). Work off the loop starts through `plugin.Go`, a
-  `plugin.Load`, a contributed `kit.Busy` or `kit.Work` (its `Loop` for what lives as long as the plugin), never a
+  `plugin.Load`, a contributed `work.Busy` or `work.Work` (`app/kit/work`) (its `Loop` for what lives as long as the plugin), never a
   bare `go`, so a wait sees it; a snapshot or assertion comes after `Quiet` (`WantFrame`, `Golden`), or inside
   `Midway` when it's of the work under way. `make test-chaos` slows that work at random: run it on what you change.
 - **Test the way it's used.** Drive a control through the toolkit (click it, press keys on it, with timeouts on and

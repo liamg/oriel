@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -70,7 +72,7 @@ type Update struct {
 	since  time.Time // when it started
 	card   bool
 	failed string         // the last check's or install's error, for the card
-	work   kit.Work       // the timer's checks
+	work   work.Work      // the timer's checks
 	run    *updateRun     // the update the Updating page shows, if any
 	start  sync.WaitGroup // an automatic start's check, while it runs
 	page   bool           // the Updating page is up

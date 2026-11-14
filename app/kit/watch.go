@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/watch"
 )
@@ -22,7 +24,7 @@ type PathWatch struct {
 	files []watch.Files
 	sub   watch.Sub[[]string]
 	gen   int
-	kicks Busy // Kick's calls with nothing watched
+	kicks work.Busy // Kick's calls with nothing watched
 }
 
 // WatchPaths watches with r's app manager, polling every poll once it can't.

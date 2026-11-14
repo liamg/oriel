@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -44,7 +46,7 @@ type Perf struct {
 	h     plugin.Host
 	open  bool
 	shown *kit.WhileShown
-	work  kit.Work // sampling, while the page is up
+	work  work.Work // sampling, while the page is up
 
 	mu   sync.Mutex
 	snap perfSnap

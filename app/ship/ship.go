@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -57,7 +59,7 @@ type Ship struct {
 	Clock     clock.Clock // the time Ship reads ages by; the system's if nil
 	ctx       context.Context
 	cancel    context.CancelFunc
-	busy      kit.Busy                          // reads and steps
+	busy      work.Busy                         // reads and steps
 	saving    sync.WaitGroup                    // drafts the user typed, on their way to the session host
 	subs      kit.Subs                          // what it reads, from the sessions' managers (shipwatch.go)
 	budget    kit.Budget                        // background PR polls' requests

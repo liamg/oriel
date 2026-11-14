@@ -1,14 +1,14 @@
-package kit_test
+package work_test
 
 import (
 	"testing"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/work"
 )
 
 // One ask at a time; a refresh while one is out marks it to go again, once; a plain ask while one is out doesn't.
 func TestRefetch(t *testing.T) {
-	var r kit.Refetch
+	var r work.Refetch
 	done, started := r.Begin(false)
 	if !started || r.Busy() == nil {
 		t.Fatal("the first ask didn't start")

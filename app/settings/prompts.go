@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
@@ -36,7 +38,7 @@ type Prompts struct {
 	ConfigDir string
 	h         plugin.Host
 	sending   sync.Mutex // one send to the session host at a time, each of the prompts as they are then
-	busy      kit.Busy   // the sends
+	busy      work.Busy  // the sends
 
 	open   bool
 	sel    string

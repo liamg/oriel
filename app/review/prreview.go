@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -43,7 +45,7 @@ const (
 type PRReview struct {
 	kit.Disposer
 	h    plugin.Host
-	busy kit.Busy
+	busy work.Busy
 
 	mu       sync.Mutex
 	details  map[string]*reviewDetail // by URL

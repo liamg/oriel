@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/assistant"
@@ -59,8 +61,8 @@ type Assistant struct {
 	win        widget.WindowState
 	placed     render.Rect // where the window was last saved
 
-	work   kit.Work   // the agents' pumps
-	places kit.Writer // the window's place, saved
+	work   work.Work   // the agents' pumps
+	places work.Writer // the window's place, saved
 
 	mu  sync.Mutex
 	ran string // what the conversation runs on: "claude · haiku"

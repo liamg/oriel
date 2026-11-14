@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -63,7 +65,7 @@ type Tests struct {
 	scanGen  int                                  // which scan is the window's directory's: one of a directory left is dropped
 	byKey    map[string]testrun.Item              // scanned by key, made when asked for
 	pkgs     map[string]bool
-	work     kit.Work
+	work     work.Work
 
 	panel testsPanel
 }

@@ -1,4 +1,4 @@
-package kit
+package work
 
 // Refetch is a list asked for off the loop, one ask at a time. A refresh asked for while an ask is under way makes that
 // ask go once more as it answers: it may have started before what the refresh is for. Its methods are called with

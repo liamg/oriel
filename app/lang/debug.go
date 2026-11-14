@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
@@ -151,7 +153,7 @@ type Debug struct {
 	watches []string
 	sess    *debugSession
 	console []consoleLine
-	work    kit.Work
+	work    work.Work
 	mu      sync.Mutex // guards sess.client for the goroutines that use it
 
 	panel  debugPanel

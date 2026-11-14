@@ -11,6 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -45,7 +47,7 @@ type Voice struct {
 	h      plugin.Host
 
 	whisper  *voice.Whisper
-	work     kit.Work            // a download's watch
+	work     work.Work           // a download's watch
 	provided registry.Disposable // the Dictator, while voice.dictation is on
 
 	// On the loop.

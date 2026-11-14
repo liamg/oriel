@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/internal/clock"
@@ -63,7 +65,7 @@ type Overview struct {
 	cards   map[string]*card
 	scans   map[string]*scan
 	clock   clock.Clock
-	busy    kit.Busy // a card's reads and panels, off the loop
+	busy    work.Busy // a card's reads and panels, off the loop
 }
 
 // card is one directory's results, for the HEAD they were computed at.

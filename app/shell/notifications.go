@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -68,8 +70,8 @@ type notices struct {
 	panel   *logPanel
 	crashes []Crash
 	modal   bool
-	events  string     // :Events filter
-	writes  kit.Writer // crash reports deleted
+	events  string      // :Events filter
+	writes  work.Writer // crash reports deleted
 }
 
 func (n *notices) Manifest() plugin.Manifest { return plugin.Manifest{ID: "notices"} }

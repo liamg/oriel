@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -52,7 +54,7 @@ type GitHub struct {
 	clock  clock.Clock
 	ctx    context.Context
 	cancel context.CancelFunc
-	busy   kit.Busy
+	busy   work.Busy
 	subs   kit.Subs   // the syncs it keeps, from the sessions' managers
 	budget kit.Budget // review sessions' syncs, behind the one in front
 

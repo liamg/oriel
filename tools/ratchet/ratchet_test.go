@@ -35,7 +35,7 @@ var ceilings = map[string]int{
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
 	"time.Sleep in tests": 27,
 	// Work started with a bare go statement is counted by nothing, so a test can't wait for it: plugin.Go, a
-	// plugin.Load, kit.Busy or kit.Work (whose Loop is for what runs as long as the plugin) count it.
+	// plugin.Load, work.Busy or work.Work (whose Loop is for what runs as long as the plugin) count it.
 	"go statements in app/": 6,
 	// What only a wall clock can measure runs behind the perf build tag (make perf), never in go test ./...
 	"wall-clock measures in tests": 4,

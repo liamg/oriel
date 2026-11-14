@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -28,7 +30,7 @@ const ticketsStale = 10 * time.Minute
 type Tickets struct {
 	kit.Disposer
 	h    plugin.Host
-	work kit.Work // the trackers' calls, stopped with it
+	work work.Work // the trackers' calls, stopped with it
 
 	mu      sync.Mutex
 	lists   map[string]*ticketList   // by tracker
@@ -41,9 +43,9 @@ type ticketList struct {
 	tickets  []registry.Ticket
 	err      string
 	answered bool
-	at       time.Time   // when it answered; zero to ask again
-	ask      kit.Refetch // the ask under way
-	since    time.Time   // when the ask under way started
+	at       time.Time    // when it answered; zero to ask again
+	ask      work.Refetch // the ask under way
+	since    time.Time    // when the ask under way started
 }
 
 // ticketRow is a row of the omnibox's tickets: a ticket, or what a tracker needs first.

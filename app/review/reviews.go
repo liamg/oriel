@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/clock"
@@ -54,9 +56,9 @@ type reviewList struct {
 	reqs     []registry.ReviewRequest
 	err      string
 	answered bool
-	at       time.Time   // when it answered; zero to ask again
-	ask      kit.Refetch // the ask under way
-	since    time.Time   // when the ask under way started
+	at       time.Time    // when it answered; zero to ask again
+	ask      work.Refetch // the ask under way
+	since    time.Time    // when the ask under way started
 }
 
 // reviewRow is a row of the page and the omnibox: a request, or what a source needs first.

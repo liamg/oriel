@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -35,9 +37,9 @@ type Repos struct {
 	err     string
 	details map[core.RepoID]*repoDetail
 
-	dialog   *addRepo // the Add repo dialog, while it's open
-	scanning bool     // Scan for repos is running
-	work     kit.Work // the folder choosers open, closed with it
+	dialog   *addRepo  // the Add repo dialog, while it's open
+	scanning bool      // Scan for repos is running
+	work     work.Work // the folder choosers open, closed with it
 }
 
 func (x *Repos) Manifest() plugin.Manifest { return plugin.Manifest{ID: "repos"} }

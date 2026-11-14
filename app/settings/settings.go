@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/atomicfile"
@@ -73,8 +75,8 @@ type Plugin struct {
 	files         *watch.Manager // reads the files, and again on hand edits
 	filesDone     func()
 	loadMu        sync.Mutex
-	specs         int      // how many options there were at the last read
-	work          kit.Work // a move's swap of project files, off the loop
+	specs         int       // how many options there were at the last read
+	work          work.Work // a move's swap of project files, off the loop
 
 	open    bool
 	query   string

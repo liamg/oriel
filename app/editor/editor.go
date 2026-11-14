@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -55,7 +57,7 @@ type Editor struct {
 		walks   int // for the tests
 	}
 	docs    map[*text.Buffer]*highlighter
-	busy    kit.Busy // parsers being made and files read, off the loop
+	busy    work.Busy // parsers being made and files read, off the loop
 	madeMu  sync.Mutex
 	made    map[*syntax.Document]bool // made, not yet handed to the loop
 	stopped bool                      // deactivated: a document made since is closed where it's made

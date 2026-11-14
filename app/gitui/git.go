@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -35,7 +37,7 @@ type Git struct {
 	scope   func() gitx.Scope // the Explorer's, while it's active: GitTrees.Scope
 	h       plugin.Host
 	links   kit.Links // the dirs asked about, resolved
-	busy    kit.Busy
+	busy    work.Busy
 	running atomic.Int32 // the work busy waits on
 
 	mu        sync.Mutex
@@ -48,7 +50,7 @@ type Git struct {
 	watchers map[int]func(root string, paths []string)
 	nextW    int
 	unwatch  func()
-	told     kit.Serial // the watchers' calls, off the loop
+	told     work.Serial // the watchers' calls, off the loop
 
 	ask *commitAsk // the commit dialog, while it's open
 }

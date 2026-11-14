@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -35,8 +37,8 @@ type dirList struct {
 	repos   map[string]bool
 	walking bool
 	done    bool // a walk has finished
-	busy    kit.Busy
-	work    kit.Work // the OS chooser, open while a person picks
+	busy    work.Busy
+	work    work.Work // the OS chooser, open while a person picks
 }
 
 // list is the directories found by the last walk and which are repos, starting a walk when it's due.

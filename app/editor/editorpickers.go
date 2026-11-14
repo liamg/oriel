@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/regex"
@@ -195,7 +197,7 @@ type fileList struct {
 	files   []string
 	walking bool
 	done    bool // a walk has finished
-	busy    kit.Busy
+	busy    work.Busy
 }
 
 const (

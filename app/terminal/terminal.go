@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/vimreg"
 	"github.com/liamg/oriel/core"
@@ -57,7 +59,7 @@ type Terminals struct {
 	dir   string                          // the directory terms are of
 	next  int
 	saved map[string][]byte // screens kept when the app stopped, by instance
-	work  kit.Work          // the readers: each runs as long as its program
+	work  work.Work         // the readers: each runs as long as its program
 	paced pacedRedraw       // output's frames
 }
 

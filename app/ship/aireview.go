@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent/packs"
@@ -42,7 +44,7 @@ type AIReview struct {
 
 	filter    string // a severity the cards are narrowed to, or ""
 	dismissed bool   // dismissed findings are shown too
-	busy      kit.Busy
+	busy      work.Busy
 	asked     map[core.SessionID]bool // a review asked for and not answered yet
 }
 

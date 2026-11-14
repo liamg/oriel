@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -48,9 +50,9 @@ type GitSigns struct {
 	blames   map[gitFile]*gitBlame
 	hunks    map[bufAgainst]*bufHunks
 	previews map[gitFile]int // the hunk previewed in each file, by its new start
-	typing   kit.Still[any]  // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
+	typing   work.Still[any] // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
 	diffs    int             // diffs begun off the loop, for the tests
-	busy     kit.Busy
+	busy     work.Busy
 }
 
 type gitBase struct {
@@ -125,7 +127,7 @@ func (g *GitSigns) watch(tree string, st *gitx.Status) {
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }, Source: "builtin:gitsigns"}))
 	g.h = h
-	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
+	g.typing = work.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
 	g.watched = map[*gitx.Status]func(){}
 	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"scope", "branch", "head", "index"},

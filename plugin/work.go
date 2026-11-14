@@ -25,7 +25,7 @@ func Begin(h Tracker, what string) (end func()) {
 
 // Go runs fn on a goroutine of its own, counted as under way on h until it returns. What fn hands the loop (Do)
 // before it returns is queued by then, so a wait for the app to settle sees one or the other. It's for work that
-// ends: what runs as long as the plugin does is a kit.Work Loop's.
+// ends: what runs as long as the plugin does is a work.Work Loop's.
 func Go(h Tracker, what string, fn func()) {
 	end := Begin(h, what)
 	go func() {

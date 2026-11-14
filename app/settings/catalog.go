@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/core"
@@ -39,7 +41,7 @@ type Catalog struct {
 	Bundled                                []plugin.Bundled // shipped in the binary
 	Self                                   []string         // the command that runs oriel itself, for bundled plugins' processes; this executable if nil
 	h                                      plugin.Host
-	work                                   kit.Work // every goroutine it starts, stopped with it
+	work                                   work.Work // every goroutine it starts, stopped with it
 
 	mu       sync.Mutex
 	syncing  bool

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -153,7 +155,7 @@ type explorerHunks struct {
 	staged   []gitx.Hunk
 	unstaged []gitx.Hunk
 	gen      int // moves when the hunks or their path do
-	busy     kit.Busy
+	busy     work.Busy
 }
 
 // show makes path the file whose hunks these are: another's are dropped, to be read again.

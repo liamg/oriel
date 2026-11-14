@@ -3,6 +3,8 @@ package kit
 import (
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/diagram"
 	"github.com/liamg/oriel/render/typeset"
@@ -30,13 +32,13 @@ type diagramLaid struct {
 
 // diagrams are a UI's mermaid sources parsed and laid out, once per source and shaper, the most recently drawn kept.
 type diagrams struct {
-	*Memo[diagramKey, diagramLaid]
+	*work.Memo[diagramKey, diagramLaid]
 }
 
 // DiagramOf is a mermaid source laid out, or why it isn't drawn (a *diagram.UnsupportedError or *diagram.SyntaxError).
 func DiagramOf(c *ui.Ctx, src string) (*diagram.Layout, error) {
 	sh := c.Shaper()
-	cache := ui.Keep(c, func() diagrams { return diagrams{NewMemo[diagramKey, diagramLaid](128)} })
+	cache := ui.Keep(c, func() diagrams { return diagrams{work.NewMemo[diagramKey, diagramLaid](128)} })
 	k := diagramKey{src, sh}
 	laid := cache.Get(k, func() diagramLaid {
 		d, err := diagram.Parse(k.src)

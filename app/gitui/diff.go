@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -69,7 +71,7 @@ type Diff struct {
 	stats      map[diffKey]kit.FileStat // each changed file's size and time on disk, read off the loop
 	statting   bool
 	rechecking bool // a frame is set for when the stats read last go stale
-	busy       kit.Busy
+	busy       work.Busy
 	limit      chan struct{} // diffs made at once
 }
 

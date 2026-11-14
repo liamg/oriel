@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/svg"
@@ -55,11 +57,11 @@ func mdParse(src string) []mdBlock {
 }
 
 // mdDocs are a UI's markdown sources parsed, the most recently drawn kept.
-type mdDocs struct{ *kit.Memo[string, []mdBlock] }
+type mdDocs struct{ *work.Memo[string, []mdBlock] }
 
 // mdParsed is src's blocks, parsed once while it's drawn.
 func mdParsed(c *ui.Ctx, src string) []mdBlock {
-	docs := ui.Keep(c, func() mdDocs { return mdDocs{kit.NewMemo[string, []mdBlock](256)} })
+	docs := ui.Keep(c, func() mdDocs { return mdDocs{work.NewMemo[string, []mdBlock](256)} })
 	return docs.Get(src, func() []mdBlock { return mdParse(src) })
 }
 

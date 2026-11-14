@@ -10,6 +10,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -50,7 +52,7 @@ type Walkthrough struct {
 	kit.Disposer
 	ConfigDir string // the user's config
 	h         plugin.Host
-	busy      kit.Busy
+	busy      work.Busy
 	metrics   kit.PaneMetrics // the code's, as the editor draws it
 
 	w     *walkthrough // on the loop only

@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent"
@@ -240,7 +242,7 @@ type SandboxSettings struct {
 	// Backends are the sandbox backends to offer, the default first; docker alone if nil.
 	Backends func() []string
 	h        plugin.Host
-	sends    kit.Serial  // the settings, going to the host
+	sends    work.Serial // the settings, going to the host
 	queued   atomic.Bool // a send is queued and hasn't started
 }
 

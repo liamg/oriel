@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -58,7 +60,7 @@ type Search struct {
 	since   time.Time // when the search running began
 	err     error
 	cancel  context.CancelFunc
-	busy    kit.Busy
+	busy    work.Busy
 
 	plan *editPlan // the edits being previewed
 
