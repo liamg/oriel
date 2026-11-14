@@ -45,6 +45,7 @@ func assistantScene(t *testing.T, o host.Options, mic *voicetest.Mic, tr *voicet
 	}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
+		cfg.GitHubClient = o.GitHub
 		cfg.Voice = agentui.VoiceConfig{Mic: mic, Transcriber: tr, Speaker: sp}
 	}})
 	s.Now = asstNow

@@ -615,11 +615,11 @@ type prLine struct {
 
 func (x *Assistant) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
 	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
-		c, err := kit.CodeHostCalls(x.h)
+		g, err := kit.GitHubOf(x.h)
 		if err != nil {
 			return nil, err
 		}
-		found, err := c.SearchPRs(ctx, host.PRsReq{Query: query})
+		found, err := g.SearchPRs(ctx, query)
 		if err != nil {
 			return nil, err
 		}

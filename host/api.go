@@ -85,12 +85,6 @@ type (
 	DraftReq        = github.DraftReq
 	RenameReq       = github.RenameReq
 	OffBranch       = hostcore.OffBranch
-	PRsReq          = github.PRsReq
-	ReviewQueueReq  = github.ReviewQueueReq
-	PRReview        = github.PRReview
-	PRReviewReq     = github.PRReviewReq
-	PRSubmitReq     = github.PRSubmitReq
-	PRReactReq      = github.PRReactReq
 	Trust           = github.Trust
 	MirrorReq       = github.MirrorReq
 	Mirror          = github.Mirror

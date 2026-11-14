@@ -257,11 +257,12 @@ func TestCodeSiteAliases(t *testing.T) {
 		t.Errorf("review sources %q, want %q", keys, want)
 	}
 	s.Run("reviews.open", nil)
-	s.Frame()
+	s.Quiet()
 	text := s.Text()
-	gitlab, azure := strings.Index(text, "GitLab needs a token to list your reviews"), strings.Index(text, "Azure DevOps needs a token to list your reviews")
-	if n := strings.Count(text, "needs a token to list your reviews"); n != 2 || gitlab < 0 || azure < gitlab {
-		t.Errorf("%d token asks, want GitLab's then Azure DevOps':\n%s", n, text)
+	github, gitlab := strings.Index(text, "GitHub needs a token to list your reviews"), strings.Index(text, "GitLab needs a token to list your reviews")
+	azure := strings.Index(text, "Azure DevOps needs a token to list your reviews")
+	if n := strings.Count(text, "needs a token to list your reviews"); n != 3 || github < 0 || gitlab < github || azure < gitlab {
+		t.Errorf("%d token asks, want GitHub's, GitLab's then Azure DevOps':\n%s", n, text)
 	}
 
 }

@@ -53,6 +53,7 @@ func reviewScene(t *testing.T) (*apptest.Scene, *rig.Host, *ghtest.Server, map[s
 	state := t.TempDir()
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
+		apptest.GitHub(hub)(cfg)
 		cfg.StateDir = state // the layout and what plugins keep, as a window's are
 	}})
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
