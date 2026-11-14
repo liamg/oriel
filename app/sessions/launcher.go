@@ -481,20 +481,20 @@ func (x *Launcher) header(c *ui.Ctx) {
 
 // field is a text field of the launcher's: Tab moves on, Escape closes, ⌘↵ starts; lines > 1 makes it a Prose.
 func (x *Launcher) field(c *ui.Ctx, key any, text *string, label, placeholder string, first bool, w ui.Size, lines int) {
-	id := c.Next(key)
-	if first && x.focusField {
-		c.RequestFocus(id)
+	focus := first && x.focusField
+	if focus {
 		x.focusField = false
 	}
-	var r widget.InputResult
-	if lines > 1 {
-		r = widget.Prose(c, key, text, widget.ProseOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
-			KeyMode: LauncherKeyMode, Width: w, Lines: lines, MinLines: 2})
-	} else {
-		r = widget.Input(c, key, text, widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
-			KeyMode: LauncherKeyMode, Width: w})
+	if lines <= 1 {
+		o := widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true, KeyMode: LauncherKeyMode, Width: w}
+		dialogField(c, key, text, o, focus, x.close, nil)
+		return
 	}
-	if r.Cancelled {
+	if focus {
+		c.RequestFocus(c.Next(key))
+	}
+	if widget.Prose(c, key, text, widget.ProseOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
+		KeyMode: LauncherKeyMode, Width: w, Lines: lines, MinLines: 2}).Cancelled {
 		x.close()
 	}
 }

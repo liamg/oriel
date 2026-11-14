@@ -204,14 +204,10 @@ func (x *Jobs) dialog(c *ui.Ctx) {
 }
 
 // field is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ saves and runs.
-func (x *Jobs) field(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
-	if focus {
-		c.RequestFocus(c.Next(key))
-	}
-	o.Label, o.Placeholder, o.Help, o.TabMoves, o.KeyMode = label, placeholder, "agent/jobs#new", true, JobFormKeyMode
-	if widget.Input(c, key, text, o).Cancelled {
-		x.closeForm()
-	}
+// jobField is one of the job form's fields.
+func (x *Jobs) jobField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
+	o.Help, o.TabMoves, o.KeyMode = "agent/jobs#new", true, JobFormKeyMode
+	dialogField(c, key, text, o, focus, x.closeForm, nil)
 }
 
 func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
@@ -221,7 +217,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 	f.settle(x.h.State())
 	c.Column("title", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		kit.Heading(c, "h", "Title", "from the prompt's first line when empty")
-		x.field(c, "title", &f.title, "Title", "a name for the list", focus, widget.InputOpts{})
+		x.jobField(c, "title", &f.title, focus, widget.InputOpts{Label: "Title", Placeholder: "a name for the list"})
 	})
 	c.Column("prompt", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		kit.Heading(c, "h", "Prompt", "markdown · name the repos it needs")
@@ -274,7 +270,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 			}
 			c.Text("at", "at", kit.MonoFont(11, th.C(theme.FgFaint)))
 			_, err := time.Parse("15:04", strings.TrimSpace(f.at))
-			x.field(c, "time", &f.at, "At", "07:00", false, widget.InputOpts{Width: ui.Px(80), Invalid: err != nil,
+			x.jobField(c, "time", &f.at, false, widget.InputOpts{Label: "At", Placeholder: "07:00", Width: ui.Px(80), Invalid: err != nil,
 				Accept: func(r rune) bool { return r >= '0' && r <= '9' || r == ':' }})
 		})
 	})
