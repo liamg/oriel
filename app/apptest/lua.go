@@ -33,7 +33,14 @@ func (s *Scene) LuaErr(line string) string {
 // LuaScene is a scene whose init.lua is initLua.
 func LuaScene(t *testing.T, initLua string) *Scene {
 	t.Helper()
-	s := New(t, Options{WorkDir: t.TempDir(), Size: render.Point{X: 1400, Y: 900}})
+	return LuaSceneAt(t, t.TempDir(), initLua)
+}
+
+// LuaSceneAt is LuaScene with its window on dir. Its file watchers hear only what the test says changed, so writing
+// init.lua doesn't reload it a second time, late, under the test.
+func LuaSceneAt(t *testing.T, dir, initLua string) *Scene {
+	t.Helper()
+	s := New(t, Options{WorkDir: dir, Size: render.Point{X: 1400, Y: 900}, ScriptedFiles: true})
 	if err := os.WriteFile(filepath.Join(s.ConfigDir, "init.lua"), []byte(initLua), 0o644); err != nil {
 		t.Fatal(err)
 	}
