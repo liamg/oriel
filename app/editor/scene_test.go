@@ -152,7 +152,7 @@ func runEditorWith(t *testing.T, files map[string]string, open []string, plugins
 			t.Fatal(err)
 		}
 	}
-	w := apptest.NewWindow(t, apptest.WindowOptions{WorkDir: dir, Files: open, Plugins: plugins, Setup: func(h plugin.Host) {
+	w := apptest.NewWindow(t, apptest.WindowOpts{WorkDir: dir, Files: open, Plugins: plugins, Setup: func(h plugin.Host) {
 		for _, k := range keys {
 			h.Keymap(k)
 		}

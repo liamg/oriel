@@ -319,7 +319,7 @@ func TestReviewChecksOutTheSourcesRef(t *testing.T) {
 	origin.Git("checkout", "-q", "main")
 	clone := &gittest.Repo{T: t, Dir: t.TempDir(), When: origin.When}
 	clone.Git("clone", "-q", origin.Dir, ".")
-	if _, err := r.w.repos.Add(ctx, clone.Dir, core.RepoAdded); err != nil {
+	if _, err := r.w.reposPart.Add(ctx, clone.Dir, core.RepoAdded); err != nil {
 		t.Fatal(err)
 	}
 	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: "https://gitlab.com/group/gateway/-/merge_requests/57",
@@ -349,7 +349,7 @@ func TestNewRepoInitsAndRegisters(t *testing.T) {
 	if out := (&gittest.Repo{T: t, Dir: dir}).Git("log", "--oneline"); strings.Count(out, "\n") != 1 {
 		t.Errorf("log = %q, want one commit", out)
 	}
-	if _, ok := r.w.repos.Find(dir); !ok {
+	if _, ok := r.w.reposPart.Find(dir); !ok {
 		t.Error("the new repo isn't registered")
 	}
 	se := r.session(id)

@@ -133,7 +133,7 @@ func TestPullRequestFlow(t *testing.T) {
 			if want := []string{"lint:pass", "unit:fail", "e2e:pending", "preview deploy:pending"}; !slices.Equal(states, want) {
 				t.Fatalf("checks %q, want %q", states, want)
 			}
-			if d := cs[0].Took(t0); d != 38*time.Second {
+			if d := cs[0].Completed.Sub(cs[0].Started); d != 38*time.Second {
 				t.Errorf("lint took %v", d)
 			}
 			log, err := c.Log(ctx, acme, cs[1])

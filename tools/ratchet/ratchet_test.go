@@ -1,6 +1,7 @@
 package ratchet
 
 import (
+	"go/ast"
 	"os"
 	"reflect"
 	"strings"
@@ -20,17 +21,21 @@ var ceilings = map[string]int{
 	"functions over 120 lines in app/":     0,
 	"files over 900 lines in app/":         0,
 	"functions over 120 lines in host/":    0,
+	"functions over 120 lines elsewhere":   35,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
 	"RequestFocus calls outside ui/":       37,
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
+	// The rest of the tree (cmd, sandbox, render, regex, integ…) is held to the same rule from here, its count only
+	// falling: what's truly process-wide (a cgo callback's map, an init-time registry) goes in stateAllowed with why.
+	"mutable package-level vars elsewhere": 114,
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
-	"time.Sleep in tests": 34,
+	"time.Sleep in tests": 27,
 	// Work started with a bare go statement is counted by nothing, so a test can't wait for it: plugin.Go, a
-	// plugin.Load, kit.Busy or kit.Work (whose Loop is for what runs as long as the plugin) count it.
+	// plugin.Load, work.Busy or work.Work (whose Loop is for what runs as long as the plugin) count it.
 	"go statements in app/": 6,
 	// What only a wall clock can measure runs behind the perf build tag (make perf), never in go test ./...
 	"wall-clock measures in tests": 4,
@@ -59,6 +64,17 @@ var stateAllowed = map[string]string{
 	"agent/packs.sources":   "the embedded packs, parsed at init",
 	"agent/prompts.builtin": "the embedded prompts, parsed at init",
 	"text.boundaryCache":    "a test's memo of a pure function",
+}
+
+// handWritten are files less those generated.
+func handWritten(files []File) []File {
+	var out []File
+	for _, f := range files {
+		if !ast.IsGenerated(f.AST) {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // tests are files' tests alone.
@@ -113,9 +129,18 @@ func TestRatchets(t *testing.T) {
 	}
 	all = without(all, "tools/", "spec/")
 	notUI := without(all, "ui/")
-	product, err := ParseAll(root, "app", "plugin", "ui", "gitx", "core", "registry", "host", "agent")
+	productDirs := []string{"app", "plugin", "ui", "gitx", "core", "registry", "host", "agent"}
+	product, err := ParseAll(root, productDirs...)
 	if err != nil {
 		t.Fatal(err)
+	}
+	rest, err := ParseAll(root, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rest = without(rest, "tools/", "spec/", "vendor/", "third_party/", ".claude/", ".git/")
+	for _, d := range productDirs {
+		rest = without(rest, d+"/")
 	}
 	withTests, err := ParseAll(root, ".")
 	if err != nil {
@@ -132,10 +157,12 @@ func TestRatchets(t *testing.T) {
 		"files over 900 lines in app/":         LongFiles(app, 900),
 		"functions over 120 lines in host/":    LongFuncs(host, 120),
 		"files over 900 lines in host/":        LongFiles(host, 900),
+		"functions over 120 lines elsewhere":   LongFuncs(handWritten(without(all, "app/", "host/", "third_party/")), 120),
 		"Focus calls outside ui/":              UICalls(notUI, "Focus", "FocusInto"),
 		"RequestFocus calls outside ui/":       UICalls(notUI, "RequestFocus"),
 		"multi-line Input outside Prose":       Multiline(notUI),
 		"mutable package-level vars":           MutableVars(product, layout.Module, stateAllowed),
+		"mutable package-level vars elsewhere": MutableVars(rest, layout.Module, stateAllowed),
 		"tests writing package-level vars":     allowedOut(TestVarWrites(withTests, layout.Module), stateAllowed),
 		"time.Sleep in tests":                  PkgSelectors(tests(withTests), "time", "Sleep"),
 		"go statements in app/":                GoStmts(without(app, "app/apptest/")),

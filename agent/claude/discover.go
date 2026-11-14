@@ -43,12 +43,12 @@ func (*Provider) Discover() []agent.Transcript {
 			continue
 		}
 		t := agent.Transcript{Session: strings.TrimSuffix(filepath.Base(main), ".jsonl"), Modified: fi.ModTime(),
-			Logs: []agent.Log{{Path: main, Format: "claude"}}}
+			Logs: []agent.Log{{Path: main, Format: UsageLog.Name}}}
 		for _, p := range transcript.Subagents(main) {
 			if fi, err := os.Stat(p); err == nil && fi.ModTime().After(t.Modified) {
 				t.Modified = fi.ModTime()
 			}
-			t.Logs = append(t.Logs, agent.Log{Path: p, Format: "claude"})
+			t.Logs = append(t.Logs, agent.Log{Path: p, Format: UsageLog.Name})
 		}
 		out = append(out, t)
 	}

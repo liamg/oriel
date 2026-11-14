@@ -9,12 +9,17 @@ import (
 	"github.com/liamg/oriel/app/explain"
 	"github.com/liamg/oriel/app/gitui"
 	"github.com/liamg/oriel/app/lang"
+	"github.com/liamg/oriel/app/luaconfig"
+	"github.com/liamg/oriel/app/overview"
+	"github.com/liamg/oriel/app/rail"
 	"github.com/liamg/oriel/app/review"
 	appsessions "github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/app/settings"
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/app/stats"
+	"github.com/liamg/oriel/app/terminal"
+	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/app/watches"
 	"github.com/liamg/oriel/plugin"
 )
@@ -31,7 +36,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	// The agent providers come before the plugins and config that may register their own under the same name.
 	out = append(out, cfg.Agents...)
 	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages"), CacheDir: c.CacheDir}, p.Themes, p.Layout, gits,
-		p.Rail, &gitui.Explorer{Git: gits}, p.Start, p.Overview, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
+		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
 		&stats.HUD{}, &agentui.Inbox{}, p.Omnibox, p.Picker, p.WhichKey, &settings.Consent{}, p.Help, p.Nav, p.Menus,
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},
@@ -39,15 +44,15 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		lang.TestsEntries(), &lang.Tests{HistoryFile: dirState("tests")}, lang.DebugEntries(),
 		&lang.Debug{StateFile: dirState("debug"), Logger: c.Logs.Logger},
 		&explain.Plugin{}, &explain.Walkthrough{ConfigDir: c.ConfigDir},
-		&lang.Terminals{CacheDir: c.CacheDir, SavedAt: dirState("terminals"), Clipboard: p.Clipboard},
+		&terminal.Terminals{CacheDir: c.CacheDir, SavedAt: dirState("terminals"), Clipboard: p.Clipboard},
 		&settings.Plugin{ConfigDir: c.ConfigDir}, &ship.CodeSites{}, &appsessions.Sessions{Host: c.Host, ConfigDir: c.ConfigDir},
 		p.Quit, &settings.SandboxSettings{Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
 		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &appsessions.Jobs{}, &appsessions.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
-		&settings.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, agentui.NewVoiceEntries(voice), voice,
-		&agentui.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &appsessions.Tickets{}, &review.Reviews{}, &ship.GitHubHost{},
+		&updates.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, agentui.NewVoiceEntries(voice), voice,
+		&agentui.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &appsessions.Tickets{}, &review.Reviews{}, &ship.GitHubHost{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
 		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &ship.GitHub{}, &settings.Secrets{},
-		&settings.Lua{Dir: c.ConfigDir}, &settings.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
+		&luaconfig.Lua{Dir: c.ConfigDir}, &settings.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
 	)
 }

@@ -1,3 +1,5 @@
+// Package editor is the text editor: buffers in panes, its vim or plain input, git signs, markdown and its preview,
+// and the pickers and search it brings.
 package editor
 
 import (
@@ -12,15 +14,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/vimreg"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/edit/input"
-	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/search"
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui"
@@ -53,7 +59,7 @@ type Editor struct {
 		walks   int // for the tests
 	}
 	docs    map[*text.Buffer]*highlighter
-	busy    kit.Busy // parsers being made and files read, off the loop
+	busy    work.Busy // parsers being made and files read, off the loop
 	madeMu  sync.Mutex
 	made    map[*syntax.Document]bool // made, not yet handed to the loop
 	stopped bool                      // deactivated: a document made since is closed where it's made
@@ -130,13 +136,13 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return out
 	})
-	x.Add(h.Contribute(registry.Service{Name: registry.EditorsService, Impl: editors{x}, Source: "builtin:editor"}))
+	x.Add(h.Contribute(registry.Service{Name: services.EditorsService, Impl: editors{x}, Source: "builtin:editor"}))
 	x.e.SetSettings(vimreg.Settings{Options: h.Options(), At: func(buf, win string) registry.At {
 		at := h.Here()
 		at.Buffer, at.Window = buf, win
 		return at
 	}})
-	x.Add(kit.OnDispose(h.Layout().OnClose(func(v layout.ViewRef) {
+	x.Add(registry.DisposeFunc(h.Layout().OnClose(func(v layout.ViewRef) {
 		if id, ok := windowOf(v); ok {
 			x.e.WindowClosed(id)
 			delete(x.present, id)
@@ -187,22 +193,21 @@ func (x *Editor) follow(dir string) {
 
 // commands are the editor's commands.
 func (x *Editor) commands(h plugin.Host) []registry.Command {
-	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	return []registry.Command{
 		{ID: "editor.open", Title: "Open a file in the editor, at {line} if given, in a {place}: tab, split or vsplit",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				viewed, err := x.open(ctx, str(a, "path"), str(a, "place"))
+				viewed, err := x.open(ctx, a.String("path"), a.String("place"))
 				if err != nil {
 					return err
 				}
-				if n := argInt(a["line"]); n > 0 && !viewed {
+				if n := a.Int("line"); n > 0 && !viewed {
 					x.e.Run(fmt.Sprint(n))
 				}
 				return nil
 			}},
 		{ID: "editor.keys", Title: "Type keys into the editor, as a mapping's right-hand side", Run: func(_ registry.Ctx, a registry.Args) error {
 			noremap, _ := a["noremap"].(bool)
-			x.e.TypeMapped(keymap.Parse(str(a, "keys")), noremap)
+			x.e.TypeMapped(keymap.Parse(a.String("keys")), noremap)
 			return nil
 		}},
 		{ID: "editor.copy", Title: "Copy the selection to the system clipboard", Run: func(registry.Ctx, registry.Args) error { return x.clip("copy") }},
@@ -230,9 +235,9 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 		}},
 		{ID: "editor.keep", Title: "Keep a buffer's changes over its file's", Run: func(registry.Ctx, registry.Args) error { return nil }},
 		{ID: "editor.input", Title: "Change the input engine of the current buffer", Run: func(_ registry.Ctx, a registry.Args) error {
-			id := str(a, "engine")
+			id := a.String("engine")
 			if id == "" {
-				id = str(a, "args")
+				id = a.String("args")
 			}
 			if _, ok := h.InputByID(id); !ok {
 				return fmt.Errorf("no input engine %q: %s", id, strings.Join(h.Inputs(), ", "))
@@ -259,15 +264,10 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 		}},
 		{ID: "quickfix.set", Title: "Make a new quickfix list: {title}, {items} of {path, line, col, text}", Run: func(_ registry.Ctx, a registry.Args) error {
 			var items []vim.QfItem
-			raw, _ := a["items"].([]map[string]any)
-			for _, it := range raw {
-				name, _ := it["path"].(string)
-				text, _ := it["text"].(string)
-				line, _ := it["line"].(int)
-				col, _ := it["col"].(int)
-				items = append(items, vim.QfItem{Name: name, Line: line, Col: col, Text: text})
+			for _, it := range a.Maps("items") {
+				items = append(items, vim.QfItem{Name: it.String("path"), Line: it.Int("line"), Col: it.Int("col"), Text: it.String("text")})
 			}
-			x.e.SetQuickfix(str(a, "title"), items)
+			x.e.SetQuickfix(a.String("title"), items)
 			return nil
 		}},
 		{ID: "editor.multi.next", Title: "Add a cursor at the next match of the word under the cursor", Run: func(registry.Ctx, registry.Args) error {
@@ -283,7 +283,7 @@ func (x *Editor) commands(h plugin.Host) []registry.Command {
 			return nil
 		}},
 		{ID: "editor.present", Title: "Show a {window} (the focused one by default) with the presenter {name} (the first that takes its file by default), or as text again when it shows it already",
-			Run: func(_ registry.Ctx, a registry.Args) error { return x.presentIn(str(a, "window"), str(a, "name")) }},
+			Run: func(_ registry.Ctx, a registry.Args) error { return x.presentIn(a.String("window"), a.String("name")) }},
 		{ID: "editor.grep-word", Title: "Grep the word under the cursor", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "picker.open", registry.Args{"source": "grep", "query": `\b` + regexp.QuoteMeta(x.e.WordUnderCursor()) + `\b`})
 		}},
@@ -427,17 +427,6 @@ func (x *Editor) relName(path string) string {
 		return rel
 	}
 	return path
-}
-
-// argInt is a command's numeric argument: an int from Go, a float64 from Lua or JSON.
-func argInt(v any) int {
-	switch n := v.(type) {
-	case int:
-		return n
-	case float64:
-		return int(n)
-	}
-	return 0
 }
 
 // pending is the focused editor's engine waiting for more keys: vim's g, z or a count, emacs's C-x.

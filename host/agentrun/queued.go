@@ -84,17 +84,18 @@ type UnqueueReq struct {
 }
 
 // Unqueue drops a queued message. One the agent has been given already is gone from the queue, so it refuses.
-func (x *Runner) Unqueue(r UnqueueReq) error {
-	var err error
+func (x *Runner) Unqueue(r UnqueueReq) (err error) {
+	defer x.env.Recover("Unqueue", &err)
+	var refused error
 	merr := x.st.Mutate(r.Session, func(se core.SessionState) error {
 		a := se.Agent
 		if r.Index < 0 || r.Index >= len(a.Queue) || a.Queue[r.Index] != r.Text {
-			err = errors.New("the agent already has it")
+			refused = errors.New("the agent already has it")
 			return nil
 		}
 		a.Queue = slices.Delete(slices.Clone(a.Queue), r.Index, r.Index+1)
-		err = x.st.Emit(core.AgentChanged{ID: r.Session, Agent: a})
+		refused = x.st.Emit(core.AgentChanged{ID: r.Session, Agent: a})
 		return nil
 	})
-	return errors.Join(merr, err)
+	return errors.Join(merr, refused)
 }

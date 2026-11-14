@@ -8,6 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -36,7 +40,7 @@ func (x *Console) canStop(id core.SessionID) bool {
 	if !ok {
 		return false
 	}
-	f, _ := kit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
+	f, _ := agentkit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
 	return f.StopProcesses
 }
 
@@ -50,7 +54,7 @@ func (x *Console) stopProcess(ctx registry.Ctx, a registry.Args) error {
 	}
 	if !x.canStop(id) {
 		se, _ := x.h.Session(id)
-		return fmt.Errorf("%s can't stop the processes it leaves running", kit.ProviderName(x.h, se.Snapshot().Agent.Provider))
+		return fmt.Errorf("%s can't stop the processes it leaves running", services.ProviderTitle(x.h, se.Snapshot().Agent.Provider))
 	}
 	c, err := x.client(id)
 	if err != nil {
@@ -118,7 +122,7 @@ func (x *Console) processes(c *ui.Ctx, se core.SessionState, st *consoleState, w
 						done := registry.OnDone(context.Background(), func(err error) {
 							delete(st.stopping, key)
 							if err != nil {
-								x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
+								x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error()})
 							}
 						})
 						_ = x.h.Run(done, "agent.process.stop", registry.Args{"session": string(se.ID), "id": t.ID})

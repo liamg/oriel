@@ -44,7 +44,7 @@ func (c *Cargo) nextest(ws Workspace) bool {
 
 // cargoCrate is a crate's root and package name, read from its Cargo.toml.
 func cargoCrate(dir string) (root, name string, ok bool) {
-	root, _, ok = findUp(dir, "Cargo.toml")
+	root, ok = findUp(dir, "Cargo.toml")
 	if !ok {
 		return "", "", false
 	}

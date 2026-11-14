@@ -23,7 +23,7 @@ func TestAddRepoFromTheLauncher(t *testing.T) {
 		t.Fatal(err)
 	}
 	other := rig.NewRepo(t, filepath.Join(t.TempDir(), "billing"))
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 
@@ -60,7 +60,7 @@ func TestCloneFromTheDialog(t *testing.T) {
 	if out, err := exec.Command("git", "clone", "-q", "--bare", lw.Repo, bare).CombinedOutput(); err != nil {
 		t.Fatalf("%v\n%s", err, out)
 	}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the repos", func(st core.State) bool { return len(st.Repos) >= 2 })
 	if err := r.Do(func() error { return r.Host.Run(ctx, "repos.new", registry.Args{"mode": "clone"}) }); err != nil {
 		t.Fatal(err)
@@ -90,7 +90,7 @@ func TestReposPageCleansAndTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the repo", func(st core.State) bool { return len(st.Repos) == 1 })
 	if err := r.Do(func() error { return r.Host.Run(ctx, "repos.open", registry.Args{"repo": string(repo.ID)}) }); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestReposPageRemoves(t *testing.T) {
 	lw := rig.NewHost(t)
 	ctx := context.Background()
 	repo, _ := lw.W.AddRepoPath(ctx, lw.Repo)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the repo", func(st core.State) bool { return len(st.Repos) == 1 })
 	if err := r.Do(func() error { return r.Host.Run(ctx, "repos.open", registry.Args{"repo": string(repo.ID)}) }); err != nil {
 		t.Fatal(err)

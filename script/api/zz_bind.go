@@ -12,8 +12,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				v, err := x.Asset(c.String(0))
-				return []any{v}, err
+				return x.Asset(c.String(0))
 			},
 			"cmd": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
@@ -31,14 +30,33 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("exec"); err != nil {
 					return nil, err
 				}
-				v, err := x.Exec(c.Strings(0), c.Table(1))
-				return []any{v}, err
+				return x.Exec(c.Strings(0), c.Table(1))
+			},
+			"exec_async": func(c *script.Args) ([]any, error) {
+				if err := a.check("exec"); err != nil {
+					return nil, err
+				}
+				return nil, x.ExecAsync(c.Strings(0), c.Any(1), c.Any(2))
 			},
 			"json": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
 				v, err := x.JSON(c.Any(0))
+				return []any{v}, err
+			},
+			"json_decode": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				v, err := x.JSONDecode(c.String(0))
+				return []any{v}, err
+			},
+			"json_encode": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				v, err := x.JSONEncode(c.Any(0))
 				return []any{v}, err
 			},
 			"load": func(c *script.Args) ([]any, error) {
@@ -82,6 +100,12 @@ func (a *APIs) bind(vm *script.VM) {
 			},
 			"read": func(c *script.Args) ([]any, error) {
 				return x.Read(c.String(0))
+			},
+			"run": func(c *script.Args) ([]any, error) {
+				if err := a.check("ui"); err != nil {
+					return nil, err
+				}
+				return nil, x.Run(c.String(0), c.Table(1))
 			},
 			"source": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
@@ -275,7 +299,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Indicator(c.String(0), c.Table(1), c.Any(2), c.Where())
+				return nil, x.Indicator(c.String(0), c.Any(1), c.Table(2), c.Where())
 			},
 			"refresh": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
@@ -389,8 +413,7 @@ func (a *APIs) bind(vm *script.VM) {
 		x := Process{a: a}
 		vm.Bind("process", map[string]script.GoFunc{
 			"spawn": func(c *script.Args) ([]any, error) {
-				v, err := x.Spawn(c.String(0), c.Table(1))
-				return []any{v}, err
+				return x.Spawn(c.String(0), c.Table(1))
 			},
 		})
 	}
@@ -522,7 +545,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Rule(c.Fn(0), c.Where())
+				return nil, x.Rule(c.String(0), c.Fn(1), c.Where())
 			},
 		})
 	}
@@ -718,8 +741,7 @@ func (a *APIs) bind(vm *script.VM) {
 		x := WASM{a: a}
 		vm.Bind("wasm", map[string]script.GoFunc{
 			"load": func(c *script.Args) ([]any, error) {
-				v, err := x.Load(c.String(0), c.Table(1))
-				return []any{v}, err
+				return x.Load(c.String(0), c.Table(1))
 			},
 		})
 	}

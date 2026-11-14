@@ -74,7 +74,7 @@ func (x *Workspace) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*wsState{}
 	x.dirs = kit.NewDirTree(h)
-	x.Add(kit.OnDispose(x.dirs.Close))
+	x.Add(registry.DisposeFunc(x.dirs.Close))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
@@ -115,7 +115,7 @@ func (x *Workspace) commands() []registry.Command {
 		{ID: "workspace.restart", Title: "Restart the agent of {id}, the session in front by default, in a new sandbox once its turn ends",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
-				w, err := kit.SessionHost(x.h)
+				w, err := kit.SandboxCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -136,7 +136,7 @@ func (x *Workspace) state(id core.SessionID) *wsState {
 	}
 	st = &wsState{}
 	st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.Workspace, error) {
-		w, _ := kit.SessionHost(x.h)
+		w, _ := kit.SessionCalls(x.h)
 		if w == nil {
 			return host.Workspace{}, errors.New("there are no sessions in this window")
 		}
@@ -188,7 +188,7 @@ func readTail(path string, n int64) (string, error) {
 
 // rebuild builds session id's image again in the background, the build log following it.
 func (x *Workspace) rebuild(id core.SessionID) error {
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.SandboxCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
 	}
@@ -206,7 +206,7 @@ func (x *Workspace) rebuild(id core.SessionID) error {
 			st.load.Reload()
 			st.log.Reload()
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "workspace.rebuild", Severity: core.SevError, Source: "workspace", Text: err.Error(), Time: time.Now()})
+				x.h.Notify(core.Notice{ID: "workspace.rebuild", Severity: core.SevError, Source: "workspace", Text: err.Error()})
 			}
 		})
 	})
@@ -214,9 +214,7 @@ func (x *Workspace) rebuild(id core.SessionID) error {
 }
 
 func (x *Workspace) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "workspace", Severity: core.SevError, Source: "workspace", Text: err.Error(), Time: time.Now()})
-	}
+	kit.RunOrNotify(x.h, "workspace", id, a)
 }
 
 // The page.

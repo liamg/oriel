@@ -71,7 +71,7 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
   clock of its own (`internal/clock/clocktest`); what's timed takes an `internal/clock.Clock`. What only a wall clock
   can measure (latency, a while left idle) goes behind the `perf` build tag and runs with `make perf`, never in
   `go test ./...` (`docs/architecture.md`, "Testing"). Work off the loop starts through `plugin.Go`, a
-  `plugin.Load`, a contributed `kit.Busy` or `kit.Work` (its `Loop` for what lives as long as the plugin), never a
+  `plugin.Load`, a contributed `work.Busy` or `work.Work` (`app/kit/work`) (its `Loop` for what lives as long as the plugin), never a
   bare `go`, so a wait sees it; a snapshot or assertion comes after `Quiet` (`WantFrame`, `Golden`), or inside
   `Midway` when it's of the work under way. `make test-chaos` slows that work at random: run it on what you change.
 - **Test the way it's used.** Drive a control through the toolkit (click it, press keys on it, with timeouts on and
@@ -101,7 +101,7 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
 ## Ratchets
 
 - `tools/ratchet` counts what the code is moving away from: kind special cases, `*shell` outside `app/shell` (at 0),
-  `cfg.Store`/`cfg.Host`, long functions and files in `app/` and `host/` (both at 0), `Focus` calls (at 0),
+  `cfg.Store`/`cfg.Host`, long functions and files in `app/` and `host/` (both at 0) and long functions elsewhere, `Focus` calls (at 0),
   multi-line `widget.Input`s outside `ui/`, and `time.Sleep` in tests: a test waits for the work (`apptest`'s `Quiet`,
   a `registry.Busy`) or moves a clock of its own (`internal/clock/clocktest`), never for a while
   (`docs/architecture.md`, "Testing"). A count may only fall: never raise a ceiling; lower it when your change
@@ -112,8 +112,8 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
   the host as a `host/hostcore` State, and never imports another; only the `host` facade wires them together.
 - `cfg.Store` and `cfg.Host` are at 0: a plugin reads and changes the state through its `plugin.Host` (`State`,
   `Apply`), and reaches the session host and other features through registry services (`Editors`, `GitTrees`,
-  `CodeSites`, `Ships`, `Sessions`, `host.Access`; `docs/architecture.md`, "Registry and services"), commands and hook events,
-  never another plugin's fields.
+  `CodeSites`, `Ships`, `Sessions`, the host's parts such as `host.SessionCalls`; `docs/architecture.md`, "Registry
+  and services"), commands and hook events, never another plugin's fields.
 - Kind special cases are at 0: code asks a session's kind (`registry.Can`, `Label`, `Chips`, kind-scoped
   contributions) rather than comparing `core.Kind*` or reading another kind's data. A kind's own files say so with a
   `//oriel:kind <kind>` line, and only they may name it (`docs/architecture.md`, "Sessions and kinds").

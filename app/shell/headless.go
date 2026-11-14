@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/internal/fsx"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -40,8 +41,8 @@ type Headless struct {
 
 // HeadlessOpts is how a Headless app is drawn.
 type HeadlessOpts struct {
-	Size  render.Point     // 1280×800 if zero
-	Clock func() time.Time // the window's clock (oriel.now, countdowns); time.Now if nil
+	Size  render.Point // 1280×800 if zero
+	Clock clock.Clock  // the window's clock (oriel.now, countdowns); the system's if nil
 	// FontDirs are where its installed fonts are (ui.font): none if nil, so a scene draws the same everywhere.
 	FontDirs []string
 }
@@ -74,9 +75,6 @@ func NewHeadless(cfg Config, builtins Builtins, o HeadlessOpts) (*Headless, erro
 	}
 	if o.Size == (render.Point{}) {
 		o.Size = render.Point{X: 1280, Y: 800}
-	}
-	if o.Clock == nil {
-		o.Clock = time.Now
 	}
 	ts, err := typeset.NewBundled()
 	if err != nil {
@@ -193,10 +191,10 @@ func (h *Headless) Poked() bool { return h.poked.Load() }
 // List is the last frame's display list.
 func (h *Headless) List() *render.List { return h.list }
 
-// RunQueued runs the work plugins handed the loop (Host.Do).
 // Queued says the loop has been handed work it hasn't run.
 func (h *Headless) Queued() bool { return h.sh.queued() }
 
+// RunQueued runs the work plugins handed the loop (Host.Do).
 func (h *Headless) RunQueued() {
 	defer fsx.Enter()()
 	h.sh.runTodo()
@@ -410,13 +408,3 @@ func (h *Headless) Drop(ev render.DropEvent) { h.sh.dropped(ev) }
 
 // ReopenAsked says the window has been asked to open again on another directory or session.
 func (h *Headless) ReopenAsked() bool { return len(h.sh.reopen) > 0 }
-
-// SidebarForm is the form the sidebar takes for the projects here: wide, narrow, one, or none.
-func (h *Headless) SidebarForm() string {
-	for _, p := range h.plugins {
-		if r, ok := p.(*rail); ok {
-			return r.formNow(kit.ProjectsHere(h.host))
-		}
-	}
-	return ""
-}

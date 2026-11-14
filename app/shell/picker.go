@@ -83,18 +83,18 @@ func (p *picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker
 
 func (p *picker) Activate(_ context.Context, h plugin.Host) error {
 	p.h, p.picked, p.ranks = h, map[string]bool{}, newRankings(h)
-	p.Add(kit.OnDispose(p.ranks.reset))
+	p.Add(registry.DisposeFunc(p.ranks.reset))
 	p.Add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
-		src, _ := a["source"].(string)
+		src := a.String("source")
 		return src == "" || slices.ContainsFunc(h.Pickers(), func(s uireg.PickerSource) bool { return s.ID == src })
 	}, Run: func(_ registry.Ctx, a registry.Args) error {
-		src, _ := a["source"].(string)
+		src := a.String("source")
 		if !slices.ContainsFunc(h.Pickers(), func(s uireg.PickerSource) bool { return s.ID == src }) {
 			return fmt.Errorf("no picker source %q", src)
 		}
 		p.open, p.focus, p.source, p.sel, p.picked, p.hovered = true, true, src, 0, map[string]bool{}, ""
 		p.ranks.reset()
-		p.query, _ = a["query"].(string)
+		p.query = a.String("query")
 		if s, ok := p.src(); ok {
 			p.sel = startAt(s, p.query, h)
 		}
@@ -443,7 +443,7 @@ func (p *picker) footer(c *ui.Ctx, s uireg.PickerSource, place bool) {
 			acts = p.actions(s)
 		}
 		for _, a := range acts {
-			hint(strings.NewReplacer("<C-", "^", ">", "").Replace(a.Key), a.Title)
+			hint(kit.KeyLabel(a.Key), a.Title)
 		}
 		if place {
 			hint("^␣", "multi-select")

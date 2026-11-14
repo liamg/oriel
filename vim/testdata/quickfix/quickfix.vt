@@ -713,6 +713,50 @@ expect:
 msg:    (2 of 2): b
 bufs:   1# 2%
 
+=== with 'nohidden', :cc won't leave a changed buffer for another
+ref:    quickfix.txt *:cc*
+quote:  "Without [!] this doesn't work when jumping to another buffer, the current buffer has been changed, there is the only window for the buffer and both 'hidden' and 'autowrite' are off."
+given:
+  o|ne
+  two
+  three
+keys:   :file x.txt<CR>:enew<CR>iy1<CR>y2<Esc>:file y.txt<CR>:cgetexpr ["y.txt:2:1:a", "x.txt:3:1:b"]<CR>:set nohidden<CR>:cc 2<CR>
+expect:
+  y1
+  y|2
+msg:    E37: No write since last change (add ! to override)
+bufs:   1# 2%
+
+=== with 'nohidden', :cc! leaves a changed buffer, losing its changes
+ref:    quickfix.txt *:cc*
+quote:  "When jumping to another buffer with [!] any changes to the current buffer are lost, unless 'hidden' is set or there is another window for this buffer."
+given:
+  o|ne
+  two
+  three
+keys:   :file x.txt<CR>:enew<CR>iy1<CR>y2<Esc>:file y.txt<CR>:cgetexpr ["y.txt:2:1:a", "x.txt:3:1:b"]<CR>:set nohidden<CR>:cc! 2<CR>
+expect:
+  one
+  two
+  |three
+msg:    (2 of 2): b
+bufs:   1% 2#
+
+=== with 'nohidden', :cnext! leaves a changed buffer too
+ref:    quickfix.txt *:cnext*
+quote:  "See |:cc| for [!] and 'switchbuf'."
+given:
+  o|ne
+  two
+  three
+keys:   :file x.txt<CR>:enew<CR>iy1<CR>y2<Esc>:file y.txt<CR>:cgetexpr ["y.txt:2:1:a", "x.txt:3:1:b"]<CR>:set nohidden<CR>:cnext<CR>:cnext!<CR>
+expect:
+  one
+  two
+  |three
+msg:    (2 of 2): b
+bufs:   1% 2#
+
 === :colder goes back to the previous list without jumping
 ref:    quickfix.txt *:colder*
 quote:  "Go to older error list."

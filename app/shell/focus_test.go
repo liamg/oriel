@@ -12,7 +12,7 @@ import (
 // The window losing and getting focus fires FocusLost and FocusGained, once each.
 func TestFocusHooks(t *testing.T) {
 	got := make(chan string, 8)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Setup: func(h plugin.Host) {
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Setup: func(h plugin.Host) {
 		for _, ev := range []string{"FocusLost", "FocusGained"} {
 			h.Hook(registry.Hook{Event: ev, Fn: func(registry.Ctx, any) (registry.Verdict, error) {
 				got <- ev

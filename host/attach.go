@@ -27,7 +27,7 @@ type AttachReq struct {
 // Attach keeps a file for a session's agent in the session's agent folder, which a sandboxed agent sees too, and
 // returns where it is.
 func (w *Host) Attach(r AttachReq) (_ string, err error) {
-	defer w.recover("Attach", &err)
+	defer w.env.Recover("Attach", &err)
 	if _, err := w.session(r.Session); err != nil {
 		return "", err
 	}

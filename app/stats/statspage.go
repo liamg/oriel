@@ -1,7 +1,6 @@
 package stats
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"slices"
@@ -80,7 +79,7 @@ func (x *Plugin) reportBody(c *ui.Ctx, q stats.Query, r stats.Report) {
 			tokensByKind(c, r.Tokens, r.Costs)
 			modelsCard(c, r.Models)
 			toolsByErrors(c, r.Tools)
-			kit.StatsCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { kit.Note(c, "n", "cost by hour · local") }, func(c *ui.Ctx) {
+			widget.DataCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { kit.Note(c, "n", "cost by hour · local") }, func(c *ui.Ctx) {
 				hoursChart(c, "chart", r.Hours, 88)
 			})
 		})
@@ -122,7 +121,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 		case meta.state.Phase == widget.Pending:
 			widget.Busy(c, "scanned", meta.state, widget.BusyOpts{Label: "Scanning", Size: 11, Help: "agent/stats#page"})
 		case !meta.at.IsZero():
-			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.Now()})
+			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.now()})
 		}
 		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
 			x.run("stats.session", registry.Args{"id": one[0]})
@@ -138,9 +137,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 }
 
 func (x *Plugin) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Log().Error("stats", "command", id, "err", err)
-	}
+	kit.RunOrNotify(x.h, "stats", id, a)
 }
 
 // toolbar is the range, the grouping, the filter chips and the split toggle.
@@ -167,7 +164,7 @@ func (x *Plugin) toolbar(c *ui.Ctx) {
 		from, to := x.span(x.q)
 		pick := widget.DateRange{From: from, To: to.AddDate(0, 0, -1)}
 		if widget.DatePopover(c, "pick", anchor, &x.picking, &pick, widget.DatePickerOpts{Label: "Custom range", Help: "agent/stats#range",
-			Today: x.Now(), Location: x.Loc}) {
+			Today: x.now(), Location: x.Loc}) {
 			x.custom(pick)
 		}
 		c.Text("by", "GROUP BY", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.SemiBold, Tracking: .12},
@@ -455,7 +452,7 @@ func (x *Plugin) chart(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 	if x.hover >= 0 && x.hover < len(series) {
 		hl = x.hover
 	}
-	kit.StatsCard(c, "chart", w, "COST PER "+what+" PER DAY", sub, func(c *ui.Ctx) {
+	widget.DataCard(c, "chart", w, "COST PER "+what+" PER DAY", sub, func(c *ui.Ctx) {
 		if q.Group == stats.BySession {
 			return
 		}
@@ -497,7 +494,7 @@ func (x *Plugin) legend(c *ui.Ctx, series []widget.ChartSeries, perLine int) {
 			c.Row(l, ui.Style{Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 				for i, s := range series[l*perLine : min(len(series), (l+1)*perLine)] {
 					c.Row(i, ui.Style{Gap: 5, Cross: ui.Center}, func(c *ui.Ctx) {
-						kit.Swatch(c, "sw", s.Tone)
+						widget.Swatch(c, "sw", s.Tone)
 						c.Text("n", s.Name, kit.MonoFont(10.5, th.C(theme.FgMuted)))
 					})
 				}
@@ -525,13 +522,13 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 	if q.Group == stats.ByDay {
 		sorted = "by date"
 	}
-	kit.StatsCard(c, "table", w, strings.ToUpper(what)+"S", fmt.Sprintf("%s · %s", kit.Counted(len(r.Groups), what), sorted), right, func(c *ui.Ctx) {
-		cols := []kit.StatsCol{{Title: strings.ToUpper(what), W: 0}, {Title: "SESSIONS", W: 70}, {Title: "REQUESTS", W: 80}, {Title: "TOKENS", W: 70}, {Title: "COST", W: 80}, {Title: "SHARE", W: 150},
+	widget.DataCard(c, "table", w, strings.ToUpper(what)+"S", fmt.Sprintf("%s · %s", kit.Counted(len(r.Groups), what), sorted), right, func(c *ui.Ctx) {
+		cols := []widget.DataCol{{Title: strings.ToUpper(what), W: 0}, {Title: "SESSIONS", W: 70}, {Title: "REQUESTS", W: 80}, {Title: "TOKENS", W: 70}, {Title: "COST", W: 80}, {Title: "SHARE", W: 150},
 			{Title: "LAST ACTIVE", W: 90}, {Title: "30 DAYS", W: 130}, {Title: "", W: 20}}
 		if q.Group == stats.BySession {
-			cols = []kit.StatsCol{{Title: "SESSION", W: 0}, {Title: "REPOS", W: 200}, {Title: "DAYS", W: 50}, {Title: "REQUESTS", W: 80}, {Title: "COST", W: 80}, {Title: "LAST ACTIVE", W: 90}}
+			cols = []widget.DataCol{{Title: "SESSION", W: 0}, {Title: "REPOS", W: 200}, {Title: "DAYS", W: 50}, {Title: "REQUESTS", W: 80}, {Title: "COST", W: 80}, {Title: "LAST ACTIVE", W: 90}}
 		}
-		kit.TableHead(c, cols)
+		widget.DataHead(c, cols)
 		shown := r.Groups
 		const most = 12
 		if len(shown) > most {
@@ -554,13 +551,13 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 				}
 			}
 			c.Row("more", ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center}, func(c *ui.Ctx) {
-				kit.Cell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", fmt.Sprintf("%d more", len(rest)), kit.MonoFont(11, th.C(theme.FgFaint))) })
+				widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", fmt.Sprintf("%d more", len(rest)), kit.MonoFont(11, th.C(theme.FgFaint))) })
 				if q.Group == stats.BySession {
-					kit.TextCell(c, 1, cols[1].W, strings.Join(repos, ", "), th.C(theme.FgGhost))
-					kit.TextCell(c, 2, cols[2].W, "", th.C(theme.FgGhost))
-					kit.TextCell(c, 3, cols[3].W, kit.Count(req), th.C(theme.FgMuted))
-					kit.TextCell(c, 4, cols[4].W, kit.Money(cost), th.C(theme.FgMuted))
-					kit.TextCell(c, 5, cols[5].W, "", th.C(theme.FgGhost))
+					widget.DataText(c, 1, cols[1].W, strings.Join(repos, ", "), th.C(theme.FgGhost))
+					widget.DataText(c, 2, cols[2].W, "", th.C(theme.FgGhost))
+					widget.DataText(c, 3, cols[3].W, kit.Count(req), th.C(theme.FgMuted))
+					widget.DataText(c, 4, cols[4].W, kit.Money(cost), th.C(theme.FgMuted))
+					widget.DataText(c, 5, cols[5].W, "", th.C(theme.FgGhost))
 				}
 			})
 		}
@@ -568,20 +565,20 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 		t := r.Totals
 		c.Row("total", ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center, Role: ui.RoleText, Label: "total"}, func(c *ui.Ctx) {
 			fg := th.C(theme.Fg)
-			kit.Cell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", "total", kit.MonoFont(11, fg)) })
+			widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", "total", kit.MonoFont(11, fg)) })
 			if q.Group == stats.BySession {
-				kit.TextCell(c, 1, cols[1].W, fmt.Sprintf("%d of %d span several repos", t.MultiRepo, t.Sessions), th.C(theme.FgGhost))
-				kit.TextCell(c, 2, cols[2].W, "", fg)
-				kit.TextCell(c, 3, cols[3].W, kit.Count(t.Requests), fg)
-				kit.TextCell(c, 4, cols[4].W, kit.Money(t.Cost), fg)
-				kit.TextCell(c, 5, cols[5].W, "", fg)
+				widget.DataText(c, 1, cols[1].W, fmt.Sprintf("%d of %d span several repos", t.MultiRepo, t.Sessions), th.C(theme.FgGhost))
+				widget.DataText(c, 2, cols[2].W, "", fg)
+				widget.DataText(c, 3, cols[3].W, kit.Count(t.Requests), fg)
+				widget.DataText(c, 4, cols[4].W, kit.Money(t.Cost), fg)
+				widget.DataText(c, 5, cols[5].W, "", fg)
 				return
 			}
-			kit.TextCell(c, 1, cols[1].W, fmt.Sprint(t.Sessions), fg)
-			kit.TextCell(c, 2, cols[2].W, kit.Count(t.Requests), fg)
-			kit.TextCell(c, 3, cols[3].W, kit.Count(t.Tokens.Total()), fg)
-			kit.TextCell(c, 4, cols[4].W, kit.Money(t.Cost), fg)
-			kit.Cell(c, 5, 0, true, func(c *ui.Ctx) {
+			widget.DataText(c, 1, cols[1].W, fmt.Sprint(t.Sessions), fg)
+			widget.DataText(c, 2, cols[2].W, kit.Count(t.Requests), fg)
+			widget.DataText(c, 3, cols[3].W, kit.Count(t.Tokens.Total()), fg)
+			widget.DataText(c, 4, cols[4].W, kit.Money(t.Cost), fg)
+			widget.DataCell(c, 5, 0, true, func(c *ui.Ctx) {
 				if q.Group == stats.ByRepo && q.Split {
 					c.Text("t", fmt.Sprintf("%d repo-sessions from %d", t.Pairs, t.Sessions), kit.MonoFont(10.5, th.C(theme.FgGhost)))
 				}
@@ -590,7 +587,7 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 	})
 }
 
-func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit.StatsCol, tone render.Color, bySession bool) {
+func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []widget.DataCol, tone render.Color, bySession bool) {
 	th := c.Theme()
 	on := i == x.sel || i == x.hover
 	fill := render.Color{}
@@ -605,18 +602,18 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 		}
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		fg, muted := th.C(theme.Fg), th.C(theme.FgMuted)
-		kit.Cell(c, 0, cols[0].W, true, func(c *ui.Ctx) {
-			kit.Swatch(c, "sw", tone)
+		widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) {
+			widget.Swatch(c, "sw", tone)
 			c.Text("t", g.Label, kit.Mono(11.5, typeset.Medium, fg))
 			if g.Origin == stats.OriginOutside {
 				c.Text("o", "outside", kit.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
 		if bySession {
-			kit.Cell(c, 1, cols[1].W, true, func(c *ui.Ctx) {
+			widget.DataCell(c, 1, cols[1].W, true, func(c *ui.Ctx) {
 				for j, rp := range g.Repos {
 					c.Row(j, ui.Style{Gap: 4, Cross: ui.Center}, func(c *ui.Ctx) {
-						kit.Swatch(c, "sw", kit.RepoTone(th, x.h.State(), rp, j))
+						widget.Swatch(c, "sw", kit.RepoTone(th, x.h.State(), rp, j))
 						c.Text("t", rp, kit.MonoFont(11, muted))
 					})
 				}
@@ -627,31 +624,31 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 					days++
 				}
 			}
-			kit.TextCell(c, 2, cols[2].W, fmt.Sprint(days), muted)
-			kit.TextCell(c, 3, cols[3].W, kit.Count(g.Requests), muted)
-			kit.TextCell(c, 4, cols[4].W, kit.Money(g.Cost), fg)
-			kit.Cell(c, 5, cols[5].W, false, func(c *ui.Ctx) {
-				widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.Now()})
+			widget.DataText(c, 2, cols[2].W, fmt.Sprint(days), muted)
+			widget.DataText(c, 3, cols[3].W, kit.Count(g.Requests), muted)
+			widget.DataText(c, 4, cols[4].W, kit.Money(g.Cost), fg)
+			widget.DataCell(c, 5, cols[5].W, false, func(c *ui.Ctx) {
+				widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.now()})
 			})
 			return
 		}
-		kit.TextCell(c, 1, cols[1].W, fmt.Sprint(g.Sessions), muted)
-		kit.TextCell(c, 2, cols[2].W, kit.Count(g.Requests), muted)
-		kit.TextCell(c, 3, cols[3].W, kit.Count(g.Tokens), muted)
-		kit.TextCell(c, 4, cols[4].W, kit.Money(g.Cost), fg)
+		widget.DataText(c, 1, cols[1].W, fmt.Sprint(g.Sessions), muted)
+		widget.DataText(c, 2, cols[2].W, kit.Count(g.Requests), muted)
+		widget.DataText(c, 3, cols[3].W, kit.Count(g.Tokens), muted)
+		widget.DataText(c, 4, cols[4].W, kit.Money(g.Cost), fg)
 		share := 0.0
 		if r.Totals.Cost > 0 {
 			share = g.Cost / r.Totals.Cost
 		}
-		kit.Cell(c, 5, cols[5].W, true, func(c *ui.Ctx) { shareBar(c, "share", share, tone, 90, fmt.Sprintf("%.1f%%", share*100)) })
-		kit.Cell(c, 6, cols[6].W, false, func(c *ui.Ctx) {
-			widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.Now()})
+		widget.DataCell(c, 5, cols[5].W, true, func(c *ui.Ctx) { shareBar(c, "share", share, tone, 90, fmt.Sprintf("%.1f%%", share*100)) })
+		widget.DataCell(c, 6, cols[6].W, false, func(c *ui.Ctx) {
+			widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.now()})
 		})
-		kit.Cell(c, 7, cols[7].W, false, func(c *ui.Ctx) {
+		widget.DataCell(c, 7, cols[7].W, false, func(c *ui.Ctx) {
 			widget.Chart(c, "spark", []widget.ChartSeries{{Name: g.Label, Values: g.Series, Tone: tone}}, widget.ChartOpts{Kind: widget.ChartSpark,
 				Width: ui.Px(120), Highlight: -1, Label: g.Label + " by day", Help: "agent/stats#table"})
 		})
-		kit.TextCell(c, 8, cols[8].W, "›", th.C(theme.FgGhost))
+		widget.DataText(c, 8, cols[8].W, "›", th.C(theme.FgGhost))
 	})
 	if in.Hovered || in.Inside {
 		x.hovering = i
@@ -665,21 +662,21 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []kit
 // tokensByKind is the tokens and their cost by kind, with a strip of the cost.
 func tokensByKind(c *ui.Ctx, t stats.Tokens, cost stats.Costs) {
 	th := c.Theme()
-	kit.StatsCard(c, "kinds", ui.Flex(1), "TOKENS BY KIND", "", func(c *ui.Ctx) { kit.Note(c, "n", "tokens · cost") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "kinds", ui.Flex(1), "TOKENS BY KIND", "", func(c *ui.Ctx) { kit.Note(c, "n", "tokens · cost") }, func(c *ui.Ctx) {
 		var strip []widget.ChartSeries
 		for _, k := range kinds {
 			strip = append(strip, widget.ChartSeries{Name: k.name, Values: []float64{k.cost(cost)}, Tone: th.C(k.tone)})
 		}
 		widget.Chart(c, "strip", strip, widget.ChartOpts{Kind: widget.ChartStrip, Highlight: -1, Label: "Cost by token kind", Help: "agent/stats#chart"})
 		for _, k := range []int{0, 2, 1, 3, 4} {
-			kit.KV(c, k, th.C(kinds[k].tone), kinds[k].name, "", kit.Count(kinds[k].tok(t)), kit.Money(kinds[k].cost(cost)))
+			widget.KV(c, k, th.C(kinds[k].tone), kinds[k].name, "", kit.Count(kinds[k].tok(t)), kit.Money(kinds[k].cost(cost)))
 		}
 	})
 }
 
 func modelsCard(c *ui.Ctx, ms []stats.Model) {
 	th := c.Theme()
-	kit.StatsCard(c, "models", ui.Flex(1), "MODELS", "", func(c *ui.Ctx) { kit.Note(c, "n", "req · tokens · cost") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "models", ui.Flex(1), "MODELS", "", func(c *ui.Ctx) { kit.Note(c, "n", "req · tokens · cost") }, func(c *ui.Ctx) {
 		var strip []widget.ChartSeries
 		for i, m := range ms {
 			strip = append(strip, widget.ChartSeries{Name: m.Name, Values: []float64{m.Cost}, Tone: greyTone(th, i)})
@@ -693,7 +690,7 @@ func modelsCard(c *ui.Ctx, ms []stats.Model) {
 			if m.Sidechain > m.Requests/2 {
 				sub = "subagents"
 			}
-			kit.KV(c, i, render.Color{}, m.Name, sub, kit.Count(m.Requests), kit.Count(m.Tokens), kit.Money(m.Cost))
+			widget.KV(c, i, render.Color{}, m.Name, sub, kit.Count(m.Requests), kit.Count(m.Tokens), kit.Money(m.Cost))
 		}
 		kit.Note(c, "n", "bar is share of cost")
 	})
@@ -718,7 +715,7 @@ func toolsByErrors(c *ui.Ctx, tools []stats.ToolRow) {
 		}
 		return 0
 	})
-	kit.StatsCard(c, "tools", ui.Flex(1), "TOOLS BY ERROR RATE", "", func(c *ui.Ctx) { kit.Note(c, "n", "≥ 100 calls") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "tools", ui.Flex(1), "TOOLS BY ERROR RATE", "", func(c *ui.Ctx) { kit.Note(c, "n", "≥ 100 calls") }, func(c *ui.Ctx) {
 		if len(ts) == 0 {
 			kit.Note(c, "none", "no tool has 100 calls in this range")
 		}

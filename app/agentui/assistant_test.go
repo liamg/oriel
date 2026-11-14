@@ -45,10 +45,11 @@ func assistantScene(t *testing.T, o host.Options, mic *voicetest.Mic, tr *voicet
 	}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
+		cfg.GitHubClient = o.GitHub
 		cfg.Voice = agentui.VoiceConfig{Mic: mic, Transcriber: tr, Speaker: sp}
 	}})
 	s.Now = asstNow
-	assistantOf(s).SetNow(func() time.Time { return s.Now })
+	assistantOf(s).SetClock(s.NowClock())
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Frame()
 	return s, lw, sp
@@ -125,7 +126,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 		s.Reopen()
 		return s.Host().Here().Project == kit.SessionDir(other.Snapshot())
 	})
-	assistantOf(s).SetNow(func() time.Time { return s.Now })
+	assistantOf(s).SetClock(s.NowClock())
 	s.Frame()
 
 	// ⌘/ floats its window over a page that's open, with the composer focused; esc minimises it, leaving the page.
@@ -417,7 +418,7 @@ func asstWorkScene(t *testing.T) (*apptest.Scene, *agenttest.FakeSession, core.S
 		return ok && len(se.Snapshot().Projects) == 2
 	})
 	s.Until("the window to follow the session", s.Reopen)
-	assistantOf(s).SetNow(func() time.Time { return s.Now })
+	assistantOf(s).SetClock(s.NowClock())
 	s.Frame()
 	se, _ := st.Session(st.Focus)
 	s.Run("assistant.open", registry.Args{"text": "where's that test I was working on?"})

@@ -34,7 +34,9 @@ func (x *Worktrees) NextPR(ctx context.Context, r NextPRReq) error {
 	if err != nil {
 		return err
 	}
-	if repo.Dirty(ctx) {
+	if dirty, err := repo.Dirty(ctx); err != nil {
+		return err
+	} else if dirty {
 		return fmt.Errorf("%s has uncommitted changes on %s: commit or discard them first", p.Name, branch)
 	}
 	main := gitx.Repo{Dir: p.Repo}
@@ -69,7 +71,7 @@ func (x *Worktrees) NextPR(ctx context.Context, r NextPRReq) error {
 	for _, kind := range []string{"commit", "pr"} {
 		x.env.DropDraft(se.ID, p.Name, kind)
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return nil
 }
 

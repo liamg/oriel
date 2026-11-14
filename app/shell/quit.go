@@ -29,7 +29,7 @@ const QuitKeyMode = "quit"
 const quitHelp = "shell/quit"
 
 // quitWait is how long a quit waits for agents mid-turn before cutting their turns short.
-var quitWait = 60 * time.Second
+const quitWait = 60 * time.Second
 
 var errQuitCancelled = errors.New("quit cancelled")
 
@@ -60,8 +60,9 @@ func (r *quitDrain) cancelQuit() {
 	}
 }
 
-func newDrain(ask bool) *quitDrain {
-	return &quitDrain{deadline: time.Now().Add(quitWait), now: make(chan struct{}), cancel: make(chan struct{}), focus: true, ask: ask}
+// newDrain is a quit asked at now, which waits until quitWait after it.
+func newDrain(ask bool, now time.Time) *quitDrain {
+	return &quitDrain{deadline: now.Add(quitWait), now: make(chan struct{}), cancel: make(chan struct{}), focus: true, ask: ask}
 }
 
 func (sh *shell) closeWindow() {
@@ -82,7 +83,7 @@ func (sh *shell) quit(ask bool) {
 		sh.closeWindow()
 		return
 	}
-	sh.drain(newDrain(ask))
+	sh.drain(newDrain(ask, sh.now()))
 }
 
 func (sh *shell) drain(r *quitDrain) {
@@ -103,7 +104,7 @@ func (sh *shell) drain(r *quitDrain) {
 }
 
 // poll reads which sessions are mid-turn, and which jobs are scheduled.
-func (r *quitDrain) poll(w host.Access, st core.State) []core.SessionState {
+func (r *quitDrain) poll(w host.JobCalls, st core.State) []core.SessionState {
 	busy := slices.DeleteFunc(slices.Clone(st.Sessions), func(se core.SessionState) bool { return !se.Agent.Working })
 	jobs := slices.DeleteFunc(w.Jobs(), func(j host.Job) bool { return j.Schedule.Every == "" })
 	r.mu.Lock()
@@ -125,28 +126,33 @@ func (r *quitDrain) stoppingNow() []core.SessionID {
 }
 
 func (sh *shell) handOver(r *quitDrain) error {
-	wait := time.NewTimer(time.Until(r.deadline))
+	expired := make(chan struct{})
+	wait := windowClock{sh}.AfterFunc(r.deadline.Sub(sh.now()), func() { close(expired) })
 	defer wait.Stop()
 	tick := kit.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
 	// A quit as the window opens waits for the sessions plugin to bring the host's calls.
-	w, err := kit.SessionHost(sh.cfg.Registry)
+	w, err := kit.SessionCalls(sh.cfg.Registry)
 	for err != nil && sh.holdsClose {
 		select {
 		case <-r.now:
 			return nil
 		case <-r.cancel:
 			return errQuitCancelled
-		case <-wait.C:
+		case <-expired:
 			return nil
 		case <-tick.C:
 		}
-		w, err = kit.SessionHost(sh.cfg.Registry)
+		w, err = kit.SessionCalls(sh.cfg.Registry)
 	}
 	if err != nil {
 		return nil
 	}
-	if busy := r.poll(w, sh.store.State()); len(busy) == 0 && len(r.jobs) > 0 && r.ask {
+	jobs, err := kit.JobCalls(sh.cfg.Registry)
+	if err != nil {
+		return nil
+	}
+	if busy := r.poll(jobs, sh.store.State()); len(busy) == 0 && len(r.jobs) > 0 && r.ask {
 		r.confirm.Store(true)
 		sh.poke()
 		select {
@@ -156,14 +162,14 @@ func (sh *shell) handOver(r *quitDrain) error {
 		}
 	}
 waiting:
-	for len(r.poll(w, sh.store.State())) > 0 {
+	for len(r.poll(jobs, sh.store.State())) > 0 {
 		sh.poke()
 		select {
 		case <-r.now:
 			break waiting
 		case <-r.cancel:
 			return errQuitCancelled
-		case <-wait.C:
+		case <-expired:
 			break waiting
 		case <-tick.C:
 		}

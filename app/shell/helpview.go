@@ -56,13 +56,12 @@ func (v *helpView) Activate(_ context.Context, h plugin.Host) error {
 	if dir := filepath.Join(v.configDir, "help"); dirExists(dir) {
 		v.Add(h.HelpPages(registry.HelpSource{FS: os.DirFS(dir), Source: "config"}))
 	}
-	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	for _, c := range []registry.Command{
 		{ID: "help.open", Title: "Open a help page: {id}, page#anchor", Run: func(_ registry.Ctx, a registry.Args) error {
-			return v.show(str(a, "id"))
+			return v.show(a.String("id"))
 		}},
 		{ID: "help", Title: "Help on a topic", Run: func(_ registry.Ctx, a registry.Args) error {
-			topic := strings.TrimSpace(str(a, "args") + str(a, "topic"))
+			topic := strings.TrimSpace(a.String("args") + a.String("topic"))
 			if topic == "" {
 				return v.show("shell/help")
 			}

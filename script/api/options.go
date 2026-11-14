@@ -1,10 +1,12 @@
 package api
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/settingsfile"
 	"github.com/liamg/oriel/script"
@@ -145,18 +147,18 @@ var zeros = map[registry.OptionType]any{registry.Bool: false, registry.Int: 0, r
 // A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.
 func (a *APIs) declare(t script.Table, where string) error {
 	name := str(t, "name")
-	typ, ok := optionTypes[cmpOr(str(t, "type"), "string")]
+	typ, ok := optionTypes[cmp.Or(str(t, "type"), "string")]
 	if name == "" || !ok {
 		return fmt.Errorf("an option needs a name and a type (bool, int, float, string, enum, duration, key, list, map or table): %v", t)
 	}
-	sp := registry.OptionSpec{Name: name, Section: str(t, "section"), Type: typ, Values: strs(t["values"]), Help: str(t, "help"),
+	sp := registry.OptionSpec{Name: name, Section: str(t, "section"), Type: typ, Values: plugin.Strings(t["values"]), Help: str(t, "help"),
 		Min: num(t["min"]), Max: num(t["max"]), Step: num(t["step"]), Follows: str(t, "follows"), Scopes: registry.ScopeUser, Source: where}
 	if !a.Plugin.Trusted() {
 		_, plugin, _ := strings.Cut(a.Plugin.ID, "/")
 		if !strings.HasPrefix(name, "plugin."+plugin+".") {
 			return fmt.Errorf("%s: a plugin's options are named plugin.%s.<option>", name, plugin)
 		}
-		sp.Section = cmpOr(sp.Section, plugin)
+		sp.Section = cmp.Or(sp.Section, plugin)
 	}
 	sp.Default = zeros[typ]
 	if typ == registry.Enum && len(sp.Values) > 0 {
@@ -175,12 +177,12 @@ func (a *APIs) declare(t script.Table, where string) error {
 	a.own(a.Host.Option(sp))
 	if fn, ok := t["on_change"].(*script.Fn); ok {
 		o := a.Host.Options()
-		a.own(disposeFunc(o.Watch(name, func() {
+		a.own(o.Watch(name, func() {
 			a.Host.Do(func() {
 				v, _, _ := o.Get(name, registry.At{})
 				a.callback(script.Table{"on_change": fn}, "on_change", v)
 			})
-		})))
+		}))
 	}
 	a.ApplyPending()
 	return nil

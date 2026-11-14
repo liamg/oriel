@@ -7,6 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -67,7 +71,7 @@ func (x *Plan) openStartWork() error {
 	if se.Agent.Provider != "" {
 		id := se.Agent.Provider
 		d.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.ProviderInfo, error) {
-			c, err := kit.SessionHost(x.h)
+			c, err := kit.SessionCalls(x.h)
 			if err != nil {
 				return host.ProviderInfo{}, err
 			}
@@ -76,7 +80,7 @@ func (x *Plan) openStartWork() error {
 					return p, nil
 				}
 			}
-			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", kit.ProviderName(x.h, id))
+			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", services.ProviderTitle(x.h, id))
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
 		d.providers.Start()
 	}
@@ -237,22 +241,22 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	c.Column("threads", ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 		gone, carried := threadCounts(se)
 		kit.Heading(c, "head", "Threads", fmt.Sprintf("%d %s · %d carried", gone, kit.Plural(gone, "goes", "go"), carried))
-		kit.ToggleRow(c, "clear", "Clear the plan's threads", "resolved go · open and deferred go into the prompt", &d.clear, false, startWorkHelp)
+		agentkit.ToggleRow(c, "clear", "Clear the plan's threads", &d.clear, agentkit.ToggleRowOpts{Note: "resolved go · open and deferred go into the prompt", Help: startWorkHelp})
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Agent", strings.TrimSpace(kit.ProviderName(x.h, d.provider.ID)+" · model · effort"))
+		kit.Heading(c, "head", "Agent", strings.TrimSpace(services.ProviderTitle(x.h, d.provider.ID)+" · model · effort"))
 		note := "from the plan docs and the work pack"
 		if !d.fresh {
 			note = "keeps the plan's conversation"
 		}
-		kit.ToggleRow(c, "fresh", "Restart the agent with a fresh context", note, &d.fresh, se.Agent.Provider == "", startWorkHelp)
+		agentkit.ToggleRow(c, "fresh", "Restart the agent with a fresh context", &d.fresh, agentkit.ToggleRowOpts{Note: note, Disabled: se.Agent.Provider == "", Help: startWorkHelp})
 		models := func(c *ui.Ctx) {
 			p := d.provider
 			if len(p.Models) == 0 && d.model != "" {
 				p.Models = []agent.Model{{ID: d.model}}
 			}
 			if len(p.Models) > 0 {
-				if m, e, ok := kit.ModelSelects(c, p, d.model, d.effort, false, startWorkHelp); ok {
+				if m, e, ok := agentkit.ModelSelects(c, p, d.model, d.effort, false, startWorkHelp); ok {
 					d.model, d.effort = m, e
 				}
 			}
@@ -285,7 +289,7 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	}
 	c.Column("run", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
 		kit.Heading(c, "head", "Run on", "")
-		kit.SandboxToggles(c, &d.sandbox, &d.openNet, kit.BackendPick{Setting: cmp.Or(d.backend, kit.SettingBackend(x.h))}, startWorkHelp)
+		agentkit.SandboxToggles(c, &d.sandbox, &d.openNet, agentkit.BackendPick{Setting: cmp.Or(d.backend, agentkit.SettingBackend(x.h))}, startWorkHelp)
 	})
 }
 

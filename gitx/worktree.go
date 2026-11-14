@@ -21,12 +21,6 @@ func (r Repo) Run(ctx context.Context, args ...string) (string, error) {
 	return string(out), err
 }
 
-// TopLevel is the top of the work tree holding dir.
-func TopLevel(ctx context.Context, dir string) (string, error) {
-	out, err := Repo{Dir: dir}.git(ctx, "rev-parse", "--show-toplevel")
-	return strings.TrimSpace(string(out)), err
-}
-
 // MainClone is the clone a worktree belongs to, or the repo itself when it is one. New worktrees are made from it.
 func (r Repo) MainClone(ctx context.Context) string {
 	if fi, err := os.Stat(filepath.Join(r.Dir, ".git")); err == nil && fi.IsDir() {
@@ -135,12 +129,6 @@ func (r Repo) Remotes(ctx context.Context) ([]string, error) {
 // fails, saying what git said.
 func Clone(ctx context.Context, url, dir string) error {
 	return CloneProgress(ctx, url, dir, nil)
-}
-
-// RemoteURL is the URL of origin as it's configured (before any url.insteadOf), or "": none, or git couldn't say.
-func (r Repo) RemoteURL(ctx context.Context) string {
-	url, _ := r.Origin(ctx)
-	return url
 }
 
 // Origin is the URL of origin as it's configured (before any url.insteadOf): "" with no error when there's none
@@ -264,10 +252,14 @@ func (r Repo) Head(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-// Dirty reports whether the work tree has uncommitted changes.
-func (r Repo) Dirty(ctx context.Context) bool {
+// Dirty reports whether the work tree has uncommitted changes, or why git couldn't say. A caller guarding what would
+// lose work refuses on the error; one only showing it counts the error as dirty.
+func (r Repo) Dirty(ctx context.Context) (bool, error) {
 	out, err := r.git(ctx, "status", "--porcelain")
-	return err == nil && strings.TrimSpace(string(out)) != ""
+	if err != nil {
+		return false, fmt.Errorf("reading %s's status: %w", r.Dir, err)
+	}
+	return strings.TrimSpace(string(out)) != "", nil
 }
 
 // ValidBranch says why git wouldn't take name for a new branch, or nil.

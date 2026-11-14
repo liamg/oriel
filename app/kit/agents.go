@@ -8,11 +8,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
+	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
 )
 
@@ -180,7 +184,7 @@ func EditedAgo(now, t time.Time) string {
 	if d := now.Sub(t); d < time.Minute {
 		return fmt.Sprintf("%ds ago", max(int(d.Seconds()), 0))
 	}
-	return Ago(now, t) + " ago"
+	return widget.AgoLabel(now, t) + " ago"
 }
 
 // MainInput is what a hook matches a tool's input on: a shell's command, an edit's path, else the JSON.
@@ -202,3 +206,9 @@ var (
 	TDiagError   = theme.Declare("diagnostic.error", "error")
 	TDiagWarning = theme.Declare("diagnostic.warning", "warn")
 )
+
+// ProviderNameIn is what agent provider p is called (services.ProviderTitle), from the registry c is drawn with.
+func ProviderNameIn(c *ui.Ctx, p string) string {
+	r, _ := ui.Service[registry.Registry](c)
+	return services.ProviderTitle(r, p)
+}

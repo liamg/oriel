@@ -53,7 +53,7 @@ type AgentState struct {
 	Working     bool             `json:"working,omitempty"`  // a turn is running
 	TurnStarted time.Time        `json:"turnStarted,omitzero"`
 	Error       string           `json:"error,omitempty"`  // the last failure, until a turn succeeds
-	Policy      string           `json:"policy,omitempty"` // the agent's own gate: ask, light, auto or bypass
+	Policy      Policy           `json:"policy,omitempty"` // the agent's own gate
 	Mode        string           `json:"mode,omitempty"`   // the agent's own permission mode as it last said, in its provider's terms: what its conversation resumes in
 	Sandboxed   bool             `json:"sandboxed,omitempty"`
 	Network     string           `json:"network,omitempty"`    // in a sandbox: ask or open
@@ -304,3 +304,14 @@ func (s SessionState) Run(id string) (TestRun, bool) {
 	}
 	return TestRun{}, false
 }
+
+// Policy is how much an agent's own gate asks.
+type Policy string
+
+const (
+	PolicyAsk    Policy = "ask"    // every tool the agent would ask about
+	PolicyLight  Policy = "light"  // edits go ahead, shell commands ask
+	PolicyBypass Policy = "bypass" // nothing asks: only inside a sandbox
+	PolicyAuto   Policy = "auto"   // the agent's own judgement asks only of what's risky (Claude's auto mode); light elsewhere
+	PolicyRefuse Policy = "refuse" // nothing asks: what isn't allowed ahead (Oriel's tools, Allow) is refused at once
+)

@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -104,7 +105,7 @@ func (ps *Processes) Spawn(p Caller, name string, o SpawnOpts) (*Process, error)
 		}
 		cmd.Env = append(append(pluginEnv(tmp), data...), o.Env...)
 	}
-	cmd.Dir = cmpOr(o.Dir, p.Dir)
+	cmd.Dir = cmp.Or(o.Dir, p.Dir)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -351,11 +352,4 @@ func (pr *Process) stopAfter() time.Duration {
 		return 2 * time.Second
 	}
 	return pr.stopper
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }

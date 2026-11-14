@@ -25,8 +25,8 @@ import (
 	"github.com/liamg/oriel/sandbox/agentsock"
 	"github.com/liamg/oriel/sandbox/egress"
 	"github.com/liamg/oriel/sandbox/gateway"
-	_ "github.com/liamg/oriel/sandbox/runner"
-	_ "github.com/liamg/oriel/sandbox/seatbelt"
+	"github.com/liamg/oriel/sandbox/runner"
+	"github.com/liamg/oriel/sandbox/seatbelt"
 )
 
 // GatewayServer is the gateway's name in the agent's MCP config.
@@ -37,10 +37,12 @@ const GatewayServer = "oriel-gw"
 type Factory struct {
 	// Config is the sandbox's settings; nil means the attached host's, as the app last sent them.
 	Config func() sandbox.Config
-	// Backend is the backend a config names; sandbox.BackendFor.
+	// Backend is the backend a config names; Known's.
 	Backend func(cfg sandbox.Config) (sandbox.Backend, error)
-	// Available are the backends this machine can run; sandbox.AvailableBackends.
+	// Available are the backends this machine can run; Known's.
 	Available func() []string
+	// Helper is the sandbox helper the app carries, for a backend whose sandboxes run it (sandbox.HelperRunner).
+	Helper func() ([]byte, error)
 
 	mu       sync.Mutex
 	deps     Deps
@@ -49,19 +51,37 @@ type Factory struct {
 
 var _ hostcore.SandboxFactory = (*Factory)(nil)
 
-// NewFactory makes the real sandbox factory.
+// Known are the backends Oriel can run sandboxes in, the most preferred first.
+func Known() sandbox.Backends {
+	return sandbox.Backends{runner.Docker, runner.OrbStack, runner.Colima, runner.Podman, &seatbelt.Seatbelt{}}
+}
+
+// NewFactory makes the real sandbox factory, over the Known backends.
 func NewFactory(config func() sandbox.Config) *Factory {
-	return &Factory{Config: config, Backend: sandbox.BackendFor, Available: sandbox.AvailableBackends}
+	known := Known()
+	return &Factory{Config: config, Backend: known.For, Available: known.Available}
 }
 
 func (s *Factory) Backends() []string { return s.Available() }
+
+// Offered are the backends to choose from: those this machine can run, else every one Known, to set up.
+func (s *Factory) Offered() []string {
+	if a := s.Available(); len(a) > 0 {
+		return a
+	}
+	return Known().Names()
+}
 
 // BackendFor is the backend cfg names.
 func (s *Factory) BackendFor(cfg sandbox.Config) (sandbox.Backend, error) {
 	if s.Backend == nil {
 		return nil, errors.New("no sandbox backends")
 	}
-	return s.Backend(cfg)
+	b, err := s.Backend(cfg)
+	if h, ok := b.(sandbox.HelperRunner); ok && err == nil {
+		b = h.WithHelper(s.Helper)
+	}
+	return b, err
 }
 
 func (s *Factory) Sweep(ctx context.Context, attached, known func(root string) bool) []string {
@@ -70,7 +90,7 @@ func (s *Factory) Sweep(ctx context.Context, attached, known func(root string) b
 	for _, name := range s.Available() {
 		named := cfg
 		named.Backend = name
-		if b, err := s.Backend(named); err == nil {
+		if b, err := s.BackendFor(named); err == nil {
 			out = append(out, b.Sweep(ctx, attached)...)
 		}
 	}
@@ -156,7 +176,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 	if se.Agent.Backend != "" {
 		cfg.Backend = se.Agent.Backend
 	}
-	backend, err := s.Backend(cfg)
+	backend, err := s.BackendFor(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +261,7 @@ func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostco
 	return b, nil
 }
 
-// serve runs a socket server until the box closes; an error it meets at once is Open's.
+// hookSocket is the provider's hook socket on the host.
 func (b *Box) hookSocket() string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -283,6 +303,7 @@ func closeWrite(c net.Conn) {
 	}
 }
 
+// serve runs a socket server until the box closes; an error it meets at once is Open's.
 func (b *Box) serve(run func(ctx context.Context) error) error {
 	errc := make(chan error, 1)
 	b.served.Add(1)
@@ -569,7 +590,7 @@ func (b *Box) wrap(ctx context.Context, cmd *exec.Cmd) (*exec.Cmd, error) {
 	if cwd == "" {
 		cwd = b.root
 	}
-	o := sandbox.LaunchOptions{Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg, Provider: b.provider, Agent: b.agent,
+	o := sandbox.LaunchOpts{Environ: os.Environ(), Extra: extraEnv(cmd.Env), Config: b.cfg, Provider: b.provider, Agent: b.agent,
 		StateDir: b.stateDir}
 	if hook := o.Extra[agent.HookSocketEnv]; hook != "" {
 		b.mu.Lock()

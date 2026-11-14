@@ -309,6 +309,10 @@ clip 250,92 1100x660 r 10
     text "roundHalfEven" @296,607.729 #ece6d8 Inter 13
     text "internal/pricing/round.go:39" @397.32812,606.78 #7c7566 JetBrains Mono 10.5
     text "function" @883,606.60004 #4f4a40 JetBrains Mono 10
+    text "REVIEWS" @268,635.42 #7c7566 JetBrains Mono 9.5
+    text "⇄" @274.0625,665.36523 #b98aff Inter 12
+    text "Set your GitHub token" @296,665.729 #ece6d8 Inter 13
+    text "to list the pull requests waiting on your review" @441.6875,664.78 #7c7566 JetBrains Mono 10.5
   pop
   rect 949,151 1x566 fill #24221d
   clip 950,151 400x566 r 0

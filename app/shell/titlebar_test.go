@@ -79,6 +79,11 @@ func TestSessionTabsAreTheOpenSessions(t *testing.T) {
 	if f := s.Store().State().Focus; f != "s1" {
 		t.Errorf("⌘2 focused %s, want the second tab opened, s1", f)
 	}
+	// From Lua, whose numbers are floats.
+	s.Lua(`L.run("session.focus", { n = 1 })`)
+	if f := s.Store().State().Focus; f != "s3" {
+		t.Errorf(`L.run("session.focus", { n = 1 }) focused %s, want the first tab opened, s3`, f)
+	}
 }
 
 // A tab's ✕ closes the tab, not the session, and the front passes to its neighbour; the last one leaves the start view.

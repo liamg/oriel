@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
 )
@@ -252,15 +253,15 @@ func TestWrappedTextCopiesJoined(t *testing.T) {
 // a second apart, on a machine slow to draw, still selects the line; and presses that really were far apart don't.
 func TestATripleClickTakenLateStillSelectsTheLine(t *testing.T) {
 	u, _, frame, _ := selScene(t)
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	at, when := render.Point{X: 50, Y: 7}, time.Unix(1000, 0)
 	for i := range 3 {
 		ev := render.PointerEvent{Pos: at, Buttons: render.ButtonPrimary, At: when.Add(time.Duration(i) * 50 * time.Millisecond)}
 		ev.Kind = render.PointerPress
 		u.Pointer(ev)
 		frame()
-		clk.advance(time.Second) // the loop was busy between this press and its release
+		clk.Advance(time.Second) // the loop was busy between this press and its release
 		ev.Kind = render.PointerRelease
 		u.Pointer(ev)
 		frame()

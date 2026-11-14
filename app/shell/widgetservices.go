@@ -5,6 +5,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -36,7 +37,7 @@ func (w *widgetServices) set(u *ui.UI, t reflect.Type) {
 	ui.ProvideType(u, t, v)
 }
 
-func (h *pluginHost) ProvideUI(t reflect.Type, v any) func() {
+func (h *pluginHost) ProvideUI(t reflect.Type, v any) registry.Disposable {
 	w := &h.sh.widgets
 	s := &widgetService{v}
 	w.mu.Lock()
@@ -46,7 +47,7 @@ func (h *pluginHost) ProvideUI(t reflect.Type, v any) func() {
 	w.by[t] = append(w.by[t], s)
 	w.set(h.sh.ui.Load(), t)
 	w.mu.Unlock()
-	return func() {
+	return registry.DisposeFunc(func() {
 		w.mu.Lock()
 		defer w.mu.Unlock()
 		w.by[t] = slices.DeleteFunc(w.by[t], func(x *widgetService) bool { return x == s })
@@ -54,5 +55,5 @@ func (h *pluginHost) ProvideUI(t reflect.Type, v any) func() {
 			delete(w.by, t)
 		}
 		w.set(h.sh.ui.Load(), t)
-	}
+	})
 }

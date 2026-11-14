@@ -208,7 +208,8 @@ func gatherChange(ctx context.Context, projects []walkProject, open map[string]o
 	ch := &walkChange{projects: projects}
 	seen := map[string]bool{}
 	for _, p := range projects {
-		root, ok := gitx.Root(ctx, p.dir)
+		root, rootErr := gitx.Root(ctx, p.dir)
+		ok := rootErr == nil
 		if !ok {
 			ch.skipped = append(ch.skipped, p.name)
 			continue

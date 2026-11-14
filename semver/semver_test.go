@@ -60,3 +60,20 @@ func TestParseBuildMetadataWithHyphen(t *testing.T) {
 		}
 	}
 }
+
+// ref:   semver/semver.md#Semantic Versioning Specification (SemVer)
+// quote: "Major, minor, and patch versions are always compared numerically."
+func TestLess(t *testing.T) {
+	for _, tc := range []struct {
+		a, b string
+		want bool
+	}{
+		{"2.1.283", "2.1.284", true}, {"2.1.284", "2.1.284", false}, {"2.10.0", "2.9.9", false},
+		{"2.1", "2.1.284", true}, {"3", "2.1.284", false}, {"2.1.284", "2", false},
+		{"dev", "2.1.284", false}, {"2.1.284", "dev", false},
+	} {
+		if got := Less(tc.a, tc.b); got != tc.want {
+			t.Errorf("Less(%q, %q) = %v, want %v", tc.a, tc.b, got, tc.want)
+		}
+	}
+}

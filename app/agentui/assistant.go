@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/assistant"
@@ -59,8 +61,8 @@ type Assistant struct {
 	win        widget.WindowState
 	placed     render.Rect // where the window was last saved
 
-	work   kit.Work   // the agents' pumps
-	places kit.Writer // the window's place, saved
+	work   work.Work   // the agents' pumps
+	places work.Writer // the window's place, saved
 
 	mu  sync.Mutex
 	ran string // what the conversation runs on: "claude · haiku"
@@ -78,8 +80,8 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Contribute(d))
 	}
 	for _, o := range []registry.OptionSpec{
-		{Name: "assistant.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
-			Help: "The agent the assistant runs on: claude or codex; auto picks the first installed and signed in."},
+		{Name: "assistant.provider", Type: registry.String, Choices: kit.ProviderChoices(h), Default: "auto",
+			Help: "The agent the assistant runs on, by its provider's name; auto picks the first installed and signed in."},
 		{Name: "assistant.model", Type: registry.String, Default: "default", Choices: func() []string { return []string{"default", "small"} },
 			Help: "The assistant's model: default, the provider's default model; small, its small one (Claude's Haiku); or a model's name."},
 		{Name: "assistant.web", Type: registry.Bool, Default: true,
@@ -94,10 +96,10 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 	x.conv.Progress = assistantProgress
 	x.conv.Changed = func() { h.Do(x.changed) }
 	x.setIdle()
-	x.Add(kit.OnDispose(h.Options().Watch("assistant.idle", func() { h.Do(x.setIdle) })))
-	x.Add(kit.OnDispose(x.conv.Close))
+	x.Add(h.Options().Watch("assistant.idle", func() { h.Do(x.setIdle) }))
+	x.Add(registry.DisposeFunc(x.conv.Close))
 	x.Add(&x.work)
-	x.Add(kit.OnDispose(x.places.Wait))
+	x.Add(registry.DisposeFunc(x.places.Wait))
 	x.Add(h.Contribute(registry.Busy{Name: "assistant", Busy: x.places.Busy, Source: "builtin:assistant"}))
 	x.Add(h.Contribute(registry.AgentOwner{Agent: kit.AssistantAgent, Confirm: x.confirm, Acted: x.acted, Source: "builtin:assistant"}))
 	x.Add(h.Contribute(uireg.InboxSource{Name: kit.AssistantAgent, Cards: x.inboxCards, Source: "builtin:assistant"}))
@@ -170,13 +172,15 @@ func (x *Assistant) commands() []registry.Command {
 	}
 }
 
-func (x *Assistant) opt(name string) any {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	return v
+func (x *Assistant) str(name string) string {
+	s, _ := registry.Option[string](x.h.Options(), name, registry.At{})
+	return s
 }
 
-func (x *Assistant) str(name string) string { s, _ := x.opt(name).(string); return s }
-func (x *Assistant) bool(name string) bool  { b, _ := x.opt(name).(bool); return b }
+func (x *Assistant) bool(name string) bool {
+	b, _ := registry.Option[bool](x.h.Options(), name, registry.At{})
+	return b
+}
 
 func (x *Assistant) setOpen(open bool) {
 	x.open = open
@@ -231,9 +235,12 @@ func (x *Assistant) changed() {
 	x.h.Redraw()
 }
 
-func (x *Assistant) optInt(name string) int { n, _ := x.opt(name).(int); return n }
+func (x *Assistant) optInt(name string) int {
+	n, _ := registry.Option[int](x.h.Options(), name, registry.At{})
+	return n
+}
 
-// prompt is what the assistant is told as a conversation starts: the user's version of it, filled in.
+// Prompt is what the assistant is told as a conversation starts: the user's version of it, filled in.
 func (x *Assistant) Prompt() string {
 	registered := kit.Prompts(x.h)
 	o := prompts.Store{Dir: x.ConfigDir, Registered: registered}.Load()
@@ -244,7 +251,7 @@ func (x *Assistant) Prompt() string {
 
 // startAgent starts the conversation's agent: a utility agent.
 func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Agent, error) {
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.SessionCalls(x.h)
 	if err != nil {
 		return nil, err
 	}

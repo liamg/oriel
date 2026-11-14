@@ -26,8 +26,8 @@ func TestServices(t *testing.T) {
 	if se, _ := registry.FrontSession(r); se.ID != "a" {
 		t.Errorf("front = %q once the later one is gone", se.ID)
 	}
-	r.Contribute(registry.Service{Name: registry.EditorsService, Impl: "not an editor"})
-	if _, ok := registry.EditorsOf(r); ok {
+	r.Contribute(registry.Service{Name: "other", Impl: "not sessions"})
+	if _, ok := registry.ServiceOf[registry.Sessions](r, "other"); ok {
 		t.Error("a service of the wrong type")
 	}
 }

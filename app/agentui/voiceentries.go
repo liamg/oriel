@@ -29,8 +29,8 @@ func (x *VoiceEntries) Activate(ctx context.Context, h plugin.Host) error {
 	if err := x.Entries.Activate(ctx, h); err != nil {
 		return err
 	}
-	x.Add(kit.OnDispose(h.Options().Watch("voice.dictation", func() { h.Do(x.settle) })))
-	x.Add(kit.OnDispose(func() {
+	x.Add(h.Options().Watch("voice.dictation", func() { h.Do(x.settle) }))
+	x.Add(registry.DisposeFunc(func() {
 		if x.stub != nil {
 			x.stub.Dispose()
 		}

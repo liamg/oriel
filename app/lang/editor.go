@@ -3,6 +3,8 @@ package lang
 import (
 	"log/slog"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
@@ -11,7 +13,7 @@ import (
 
 // window is the editor's current window; its Text is nil before there's one.
 func window(r registry.Registry) registry.EditorWindow {
-	if ed, ok := registry.EditorsOf(r); ok {
+	if ed, ok := services.EditorsOf(r); ok {
 		if w, ok := ed.Window(""); ok {
 			return w
 		}
@@ -21,7 +23,7 @@ func window(r registry.Registry) registry.EditorWindow {
 
 // editorMode is the current editor window's mode: "normal", "insert"…
 func editorMode(r registry.Registry) string {
-	if ed, ok := registry.EditorsOf(r); ok {
+	if ed, ok := services.EditorsOf(r); ok {
 		return ed.Mode()
 	}
 	return ""
@@ -29,23 +31,23 @@ func editorMode(r registry.Registry) string {
 
 // editorDir is the directory the editor's relative file names are under.
 func editorDir(r registry.Registry) string {
-	if ed, ok := registry.EditorsOf(r); ok {
+	if ed, ok := services.EditorsOf(r); ok {
 		return ed.Dir()
 	}
 	return ""
 }
 
 // openBuffer is the listed buffer holding the file at path, if one does.
-func openBuffer(r registry.Registry, path string) (registry.EditorBuffer, bool) {
-	if ed, ok := registry.EditorsOf(r); ok {
+func openBuffer(r registry.Registry, path string) (services.EditorBuffer, bool) {
+	if ed, ok := services.EditorsOf(r); ok {
 		return ed.Buffer(path)
 	}
-	return registry.EditorBuffer{}, false
+	return services.EditorBuffer{}, false
 }
 
 // syntaxOf is buf's parse, once the editor has made it.
 func syntaxOf(r registry.Registry, buf *text.Buffer) (*syntax.Document, bool) {
-	if ed, ok := registry.EditorsOf(r); ok {
+	if ed, ok := services.EditorsOf(r); ok {
 		return ed.Syntax(buf)
 	}
 	return nil, false

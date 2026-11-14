@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/liamg/oriel/plugin"
@@ -111,7 +110,7 @@ func luaFiles(dir string) []string {
 		}
 		return nil
 	})
-	sort.Strings(out[min(1, len(out)):])
+	slices.Sort(out[min(1, len(out)):])
 	return out
 }
 
@@ -271,6 +270,6 @@ func longClose(open string) string {
 }
 
 func sorted(s []string) []string {
-	sort.Strings(s)
+	slices.Sort(s)
 	return s
 }

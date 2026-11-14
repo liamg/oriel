@@ -78,6 +78,19 @@ func (c *Fake) Advance(d time.Duration) {
 	}
 }
 
+// Set puts the clock at t: on, as Advance does, or back, running nothing.
+func (c *Fake) Set(t time.Time) {
+	c.mu.Lock()
+	d := t.Sub(c.now)
+	if d < 0 {
+		c.now = t
+	}
+	c.mu.Unlock()
+	if d >= 0 {
+		c.Advance(d)
+	}
+}
+
 // Next is when the first function waiting is due, if one is.
 func (c *Fake) Next() (time.Time, bool) {
 	c.mu.Lock()

@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -85,7 +86,7 @@ type UI struct {
 	text  TextStyle
 	opts  Options
 	frame int
-	clock func() time.Time
+	clock clock.Clock
 
 	root    *elem
 	byID    map[ID]*elem

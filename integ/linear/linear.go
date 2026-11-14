@@ -46,7 +46,7 @@ func (c Client) Do(ctx context.Context, query string, vars map[string]any, out a
 	}
 	if err := json.Unmarshal(resp, &env); err != nil {
 		if status == 401 {
-			return errors.New("linear: the API key was refused")
+			return errors.New("linear: the API key was refused (HTTP 401)")
 		}
 		return fmt.Errorf("linear: %d: %w", status, err)
 	}

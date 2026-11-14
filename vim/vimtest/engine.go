@@ -3,6 +3,7 @@ package vimtest
 import (
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"testing"
@@ -130,12 +131,12 @@ func (c Case) Diff(got Result) []string {
 	if c.Mode != "" && c.Mode != got.Mode {
 		add("mode: got %s, want %s", got.Mode, c.Mode)
 	}
-	for _, r := range sortedKeys(c.Regs) {
+	for _, r := range slices.Sorted(maps.Keys(c.Regs)) {
 		if want, have := regString(c.Regs[r]), regString(got.Regs[r]); want != have {
 			add("register %q: got %s, want %s", r, have, want)
 		}
 	}
-	for _, r := range sortedKeys(c.Marks) {
+	for _, r := range slices.Sorted(maps.Keys(c.Marks)) {
 		if want, have := posString(c.Marks[r]), posString(got.Marks[r]); want != have {
 			add("mark %q: got %s, want %s", r, have, want)
 		}
@@ -198,13 +199,4 @@ func posString(p *Pos) string {
 		return unset
 	}
 	return p.String()
-}
-
-func sortedKeys[V any](m map[rune]V) []rune {
-	keys := make([]rune, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
 }

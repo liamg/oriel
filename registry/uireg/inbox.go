@@ -105,8 +105,7 @@ func (c InboxCard) Key() string { return c.From + "/" + c.ID }
 // none.
 func InboxCards(r registry.Contributions) []InboxCard {
 	var out []InboxCard
-	for _, c := range r.Contributions("inbox.source") {
-		s := c.(InboxSource)
+	for _, s := range registry.ContributionsOf[InboxSource](r) {
 		if s.Cards == nil {
 			continue
 		}

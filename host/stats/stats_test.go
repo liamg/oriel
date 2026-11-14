@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/agent/price"
+	"github.com/liamg/oriel/agent/usage"
 )
 
 // asst is an assistant record of Claude Code's log: a message with its usage and content blocks.
@@ -60,7 +62,7 @@ func TestScanCountsTokensToolsAndCost(t *testing.T) {
 		user("2026-09-01T10:00:05Z", `{"type":"tool_result","tool_use_id":"t1"}`),
 		asst("2026-09-01T10:00:07Z", "claude-opus-5", "high", `{"type":"text","text":"done"}`, 10, 20, 2_000_000, 1000, 0),
 	)
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	if s.Requests != 2 || s.Turns != 1 {
 		t.Errorf("requests %d, turns %d: want 2 and 1", s.Requests, s.Turns)
@@ -100,7 +102,7 @@ func TestOneMessageOverSeveralRecordsCountsOnce(t *testing.T) {
 		asstID("m1", "2026-09-01T10:00:01Z", "claude-opus-5", "high", `{"type":"text","text":"y"}`, 10, 5, 0, 0, 0),
 		asstID("m2", "2026-09-01T10:00:09Z", "claude-opus-5", "high", `{"type":"text","text":"z"}`, 20, 2, 0, 0, 0),
 	)
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	if s.Requests != 2 || s.Tokens.Input != 30 || s.Tokens.Output != 7 {
 		t.Errorf("requests %d, tokens %+v: want 2 requests of 30 in and 7 out", s.Requests, s.Tokens)
@@ -114,7 +116,7 @@ func TestToolTimingsErrorsAndMedian(t *testing.T) {
 		user("2026-09-01T10:00:00.050Z", `{"type":"tool_result","tool_use_id":"b"}`),
 		user("2026-09-01T10:00:30Z", `{"type":"tool_result","tool_use_id":"a","is_error":true}`),
 	)
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	bash, read := s.Tools["Bash"], s.Tools["Read"]
 	if s.ToolErrors != 1 || bash.Errors != 1 || read.Errors != 0 {
@@ -140,7 +142,7 @@ func TestToolTimingsErrorsAndMedian(t *testing.T) {
 
 func TestReadResumesFromTheOffset(t *testing.T) {
 	p := write(t, asst("2026-09-01T10:00:00Z", "claude-sonnet-5", "medium", `{"type":"text","text":"a"}`, 5, 5, 0, 0, 0))
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	off := s.Offset
 	appendTo(t, p, asst("2026-09-01T10:01:00Z", "claude-sonnet-5", "medium", `{"type":"text","text":"b"}`, 7, 7, 0, 0, 0))
@@ -157,7 +159,7 @@ func TestPartialTrailingLineIsLeftForNextTime(t *testing.T) {
 	full := asst("2026-09-01T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 1, 1, 0, 0, 0)
 	p := filepath.Join(t.TempDir(), "s.jsonl")
 	os.WriteFile(p, []byte(full+"\n"+full[:len(full)/2]), 0o644)
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	if s.Requests != 1 {
 		t.Fatalf("requests = %d, want 1: the half line can't count", s.Requests)
@@ -172,7 +174,7 @@ func TestPartialTrailingLineIsLeftForNextTime(t *testing.T) {
 func TestShrunkFileIsReadFromTheStart(t *testing.T) {
 	long := asst("2026-09-01T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"aaaaaaaaaaaaaaaaaaaa"}`, 9, 9, 0, 0, 0)
 	p := write(t, long, long)
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	os.WriteFile(p, []byte(asst("2026-09-02T10:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 1, 1, 0, 0, 0)+"\n"), 0o644)
 	s.Read()
@@ -188,7 +190,7 @@ func TestActiveTimeIgnoresLongGaps(t *testing.T) {
 		asst("2026-09-01T12:00:30Z", "claude-opus-5", "high", `{"type":"text","text":"c"}`, 1, 1, 0, 0, 0),
 		asst("2026-09-01T12:01:00Z", "claude-opus-5", "high", `{"type":"text","text":"d"}`, 1, 1, 0, 0, 0),
 	)
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	if s.ActiveS != 60 {
 		t.Errorf("active = %ds, want 60", s.ActiveS)
@@ -201,7 +203,7 @@ func TestCompactionIsTheContextDropping(t *testing.T) {
 		asst("2026-09-01T10:01:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 1, 1, 41_000, 0, 0),
 		asst("2026-09-01T10:02:00Z", "claude-opus-5", "high", `{"type":"text","text":"c"}`, 1, 1, 30_000, 0, 0),
 	)
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	if len(s.Compactions) != 1 || s.Compactions[0].From != 168_001 || s.Compactions[0].To != 41_001 {
 		t.Errorf("compactions = %+v, want one from 168k to 41k", s.Compactions)
@@ -216,7 +218,7 @@ func TestEventsFormat(t *testing.T) {
 		`{"at":"2026-09-01T10:00:03Z","kind":"result","id":"c1","error":true}`,
 		`{"at":"2026-09-01T10:00:09Z","kind":"request","model":"gpt-5-codex","effort":"high","tokens":{"input":1000000,"output":100000}}`,
 	)
-	s := New(p, FormatEvents)
+	s := New(p, usage.Events)
 	s.Read()
 	if s.Turns != 1 || s.Requests != 1 || s.ToolErrors != 1 || s.Paths["/w/api/x.go"] != 1 {
 		t.Errorf("scan = %d turns, %d requests, %d errors, paths %v", s.Turns, s.Requests, s.ToolErrors, s.Paths)
@@ -250,7 +252,7 @@ func fixture(t *testing.T, id, workspace string) Session {
 }
 
 func readNew(p string) *Scan {
-	s := New(p, FormatClaude)
+	s := New(p, claude.UsageLog)
 	s.Read()
 	return s
 }
@@ -347,8 +349,8 @@ func TestStoreRescansOnlyWhatWasAppended(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "stats.json")
 	first := asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1000, 0, 0, 0)
 	p := write(t, first)
-	logs := []Log{{Path: p, Format: FormatClaude}}
-	st := NewStore(file, nil)
+	logs := []Log{{Path: p, Format: claude.UsageLog.Name}}
+	st := NewStore(file, nil, testFormats)
 	if sc := st.Scan("s", logs); sc[0].Requests != 1 {
 		t.Fatalf("first scan: %d requests", sc[0].Requests)
 	}
@@ -357,7 +359,7 @@ func TestStoreRescansOnlyWhatWasAppended(t *testing.T) {
 	b, _ := os.ReadFile(p)
 	os.WriteFile(p, []byte(strings.Replace(string(b), `"output_tokens":1000`, `"output_tokens":9999`, 1)), 0o644)
 	appendTo(t, p, asst("2026-10-01T09:01:00Z", "claude-opus-5", "high", `{"type":"text","text":"b"}`, 0, 1, 0, 0, 0))
-	sc := NewStore(file, nil).Scan("s", logs)
+	sc := NewStore(file, nil, testFormats).Scan("s", logs)
 	if sc[0].Requests != 2 || sc[0].Tokens.Output != 1001 {
 		t.Errorf("after a restart: %d requests, %d output; want 2 and 1001", sc[0].Requests, sc[0].Tokens.Output)
 	}
@@ -371,10 +373,10 @@ func TestStoreRepricesWhenThePricesChange(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "stats.json")
 	kept := write(t, asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1_000_000, 0, 0, 0))
 	gone := write(t, asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1_000_000, 0, 0, 0))
-	logs := []Log{{Path: kept, Format: FormatClaude}, {Path: gone, Format: FormatClaude}}
+	logs := []Log{{Path: kept, Format: claude.UsageLog.Name}, {Path: gone, Format: claude.UsageLog.Name}}
 	book := price.Default()
 	prices := func() *price.Book { return book }
-	st := NewStore(file, prices)
+	st := NewStore(file, prices, testFormats)
 	if sc := st.Scan("s", logs); !near(sc[0].Cost(), 25) || !near(sc[1].Cost(), 25) {
 		t.Fatalf("at the snapshot's prices: $%v and $%v, want $25 each", sc[0].Cost(), sc[1].Cost())
 	}
@@ -386,7 +388,7 @@ func TestStoreRepricesWhenThePricesChange(t *testing.T) {
 	}
 	book = cheaper
 	os.Remove(gone)
-	sc := NewStore(file, prices).Scan("s", logs)
+	sc := NewStore(file, prices, testFormats).Scan("s", logs)
 	if !near(sc[0].Cost(), 2) || sc[0].Requests != 1 {
 		t.Errorf("read again: $%v over %d requests, want $2 over 1", sc[0].Cost(), sc[0].Requests)
 	}
@@ -532,10 +534,10 @@ func TestAccountAtTheTime(t *testing.T) {
 // Scans write nothing; one Save writes what they all read, and a Save with nothing new writes nothing.
 func TestStoreSavesOnce(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "stats.json")
-	st := NewStore(file, nil)
+	st := NewStore(file, nil, testFormats)
 	for i := range 3 {
 		p := write(t, asst("2026-10-01T09:00:00Z", "claude-opus-5", "high", `{"type":"text","text":"a"}`, 0, 1, 0, 0, 0))
-		st.Scan(fmt.Sprint("s", i), []Log{{Path: p, Format: FormatClaude}})
+		st.Scan(fmt.Sprint("s", i), []Log{{Path: p, Format: claude.UsageLog.Name}})
 	}
 	if _, err := os.Stat(file); err == nil {
 		t.Fatal("a scan wrote the stats file")

@@ -95,18 +95,6 @@ func (c Check) State() string {
 	return CheckFail
 }
 
-// Took is how long it ran, or has been running at now.
-func (c Check) Took(now time.Time) time.Duration {
-	if c.Started.IsZero() {
-		return 0
-	}
-	end := c.Completed
-	if end.IsZero() {
-		end = now
-	}
-	return end.Sub(c.Started)
-}
-
 // NewPR is a pull request to open.
 type NewPR struct {
 	Title, Body, Head, Base string
@@ -178,6 +166,9 @@ type Error struct {
 }
 
 func (e *Error) Error() string { return fmt.Sprintf("GitHub: %s (HTTP %d)", e.Message, e.Status) }
+
+// HTTPStatus is the status it was answered with (registry.TokenRefused).
+func (e *Error) HTTPStatus() int { return e.Status }
 
 // NotFound reports whether err is GitHub's 404.
 func NotFound(err error) bool {

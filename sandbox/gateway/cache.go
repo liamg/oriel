@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/sandbox/mcp"
 )
 
@@ -55,15 +56,7 @@ func (u *Upstreams) keep(s Server, tools []mcp.Tool) {
 	if err != nil || os.MkdirAll(u.Cache, 0o700) != nil {
 		return
 	}
-	f, err := os.CreateTemp(u.Cache, s.Name+".*.tmp")
-	if err != nil {
-		return
-	}
-	_, werr := f.Write(b)
-	cerr := f.Close()
-	if werr != nil || cerr != nil || os.Chmod(f.Name(), 0o600) != nil || os.Rename(f.Name(), u.cachePath(s)) != nil {
-		_ = os.Remove(f.Name())
-	}
+	_ = atomicfile.Write(u.cachePath(s), b, 0o600)
 }
 
 func sameTools(a, b []mcp.Tool) bool {

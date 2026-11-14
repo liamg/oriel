@@ -4,6 +4,7 @@
 package azure
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -65,6 +66,9 @@ type Error struct {
 
 func (e *Error) Error() string { return fmt.Sprintf("Azure DevOps: %s (HTTP %d)", e.Message, e.Status) }
 
+// HTTPStatus is the status it was answered with (registry.TokenRefused).
+func (e *Error) HTTPStatus() int { return e.Status }
+
 // do calls the API with a site's token and decodes its answer into out (which may be nil).
 func (c Client) do(ctx context.Context, site Site, method, raw string, in, out any) error {
 	u, err := url.Parse(raw)
@@ -86,19 +90,12 @@ func (c Client) do(ctx context.Context, site Site, method, raw string, in, out a
 			Message string `json:"message"`
 		}
 		json.Unmarshal(body, &e)
-		return &Error{Status: status, Message: cmpOr(e.Message, strconv.Itoa(status))}
+		return &Error{Status: status, Message: cmp.Or(e.Message, strconv.Itoa(status))}
 	}
 	if out == nil || len(body) == 0 {
 		return nil
 	}
 	return json.Unmarshal(body, out)
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 // Repo is a repository on a site: its organization (none on a server), project and name. Root is where its

@@ -1,6 +1,7 @@
 package syntax
 
 import (
+	"cmp"
 	"slices"
 	"sort"
 	"sync"
@@ -171,7 +172,7 @@ func (d *Document) rehighlight(spans []Span, dirty []text.Range) ([]Span, error)
 		}
 	}
 	out = append(out, spans[i:]...)
-	sort.SliceStable(out, func(a, b int) bool { return out[a].Range.Start < out[b].Range.Start })
+	slices.SortStableFunc(out, func(a, b Span) int { return cmp.Compare(a.Range.Start, b.Range.Start) })
 	return out, err
 }
 
@@ -186,7 +187,7 @@ func lines(s text.Snapshot, rs []text.Range) []text.Range {
 		}
 		rs[i] = text.Range{Start: a, End: b}
 	}
-	sort.Slice(rs, func(i, j int) bool { return rs[i].Start < rs[j].Start })
+	slices.SortFunc(rs, func(a, b text.Range) int { return cmp.Compare(a.Start, b.Start) })
 	var out []text.Range
 	for _, r := range rs {
 		if k := len(out) - 1; k >= 0 && r.Start <= out[k].End {

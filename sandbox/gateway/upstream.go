@@ -7,12 +7,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -72,7 +72,7 @@ func Discover(installed []agent.MCPServer, extra map[string]json.RawMessage, hid
 		seen[name] = true
 		out = append(out, s)
 	}
-	for _, name := range sortedKeys(extra) {
+	for _, name := range slices.Sorted(maps.Keys(extra)) {
 		var raw rawServer
 		if json.Unmarshal(extra[name], &raw) == nil {
 			add(name, "oriel", raw, nil)
@@ -140,15 +140,6 @@ func cleanName(s string) string {
 	return strings.Trim(badName.ReplaceAllString(strings.ToLower(s), "_"), "_")
 }
 
-func sortedKeys[V any](m map[string]V) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
-}
-
 // ToolName is how an upstream tool is offered: <server>__<tool>, within the
 // 64 characters a tool name may have.
 func ToolName(server, tool string) string {
@@ -166,8 +157,6 @@ type Upstreams struct {
 	Servers []Server
 	// Cache is the directory each server's tool list is kept in, between sandboxes; "" keeps none.
 	Cache string
-	// Auth supplies OAuth for an http server; nil means none.
-	Auth func(s Server) mcp.TokenSource
 	// OnChange is told when a server's tool list changes.
 	OnChange func()
 
@@ -363,12 +352,7 @@ func (c *conn) dial(ctx context.Context, u *Upstreams, s Server) (*mcp.Client, e
 		for k, v := range s.Headers {
 			hdr.Set(k, v)
 		}
-		var auth mcp.TokenSource
-		if u.Auth != nil {
-			auth = u.Auth(s)
-		}
-		// The dial itself may wait on the user signing in.
-		client, err = mcp.DialHTTP(ctx, s.URL, hdr, auth)
+		client, err = mcp.DialHTTP(ctx, s.URL, hdr)
 	default:
 		err = errors.New("unsupported transport")
 	}

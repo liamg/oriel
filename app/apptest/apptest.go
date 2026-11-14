@@ -19,6 +19,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/agents"
+	"github.com/liamg/oriel/app/rail"
 	"github.com/liamg/oriel/tools/perf"
 
 	"github.com/liamg/oriel/registry/uireg"
@@ -50,10 +51,10 @@ var Timeout = 15 * time.Second
 // running alongside isn't a warning in the frame. TestSlowHookWarns holds the real one.
 const HookBudget = 10 * time.Millisecond
 
-// testRegistry is the registry a test's app starts with, timing hooks on now: a hook's time is the scene's clock's,
+// testRegistry is the registry a test's app starts with, timing its work on c: a hook's time is the scene's clock's,
 // not how busy the machine running the test is.
-func testRegistry(now func() time.Time) uireg.Registry {
-	r := uireg.NewWith(registry.Config{Clock: nowClock(now)})
+func testRegistry(c clock.Clock) uireg.Registry {
+	r := uireg.NewWith(registry.Config{Clock: c})
 	r.Option(registry.OptionSpec{Name: "hooks.budget", Type: registry.Duration, Default: HookBudget, Scopes: registry.ScopeUser,
 		Source: "builtin:apptest", Help: "How long a hook may take, on two calls running, before it's a warning: hooks run on the hot path."})
 	return r
@@ -129,6 +130,7 @@ type Scene struct {
 	// it.
 	OverviewOff registry.Disposable
 	midway      bool             // looks don't settle the app first (Midway)
+	clock       *sceneClock      // the registry's: Now, and what's timed on it
 	files       *fswatch.Scripts // the app's file watchers, with ScriptedFiles
 }
 
@@ -145,10 +147,13 @@ func New(t testing.TB, o Options) *Scene {
 	os.MkdirAll(conf, 0o755)
 	os.WriteFile(filepath.Join(conf, "init.lua"), []byte(InitLua), 0o644)
 	s := &Scene{T: t, Desktop: &Desktop{}, ConfigDir: conf}
-	cfg := app.Config{Store: eventstore.New(), Registry: testRegistry(func() time.Time { return s.Now }), Logs: app.NewLogs(app.LogOpts{}), ConfigDir: conf, CrashDir: o.CrashDir,
-		LanguageServers: TestServers,
-		Version:         "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t), ImageNet: cmp.Or(o.ImageNet, isolate.Net(t)), SandboxBackends: Backends,
-		Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)}}
+	s.clock = &sceneClock{now: func() time.Time { return s.Now }}
+	cfg := app.Config{
+		Window: app.Window{Store: eventstore.New(), Registry: testRegistry(s.clock), Logs: app.NewLogs(app.LogOpts{}),
+			ConfigDir: conf, CrashDir: o.CrashDir, Version: "v0.4.2", WorkDir: o.WorkDir, Desktop: s.Desktop, Net: isolate.Net(t),
+			ImageNet: cmp.Or(o.ImageNet, isolate.Net(t))},
+		LanguageServers: TestServers, SandboxBackends: Backends, Voice: app.VoiceConfig{Whisper: OfflineWhisper(t)},
+	}
 	if o.ScriptedFiles {
 		s.files = &fswatch.Scripts{}
 		cfg.FSWatch = s.files.New
@@ -157,7 +162,7 @@ func New(t testing.TB, o Options) *Scene {
 		o.Config(&cfg)
 	}
 	s.Logs = cfg.Logs
-	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: func() time.Time { return s.Now }, FontDirs: o.FontDirs})
+	h, err := app.NewHeadless(cfg, app.HeadlessOpts{Size: o.Size, Clock: s.Clock(), FontDirs: o.FontDirs})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -484,8 +489,8 @@ func Centre(r render.Rect) render.Point {
 
 // place is the place named name (a page: "stats", "usage"), if one's registered.
 func (s *Scene) place(name string) (uireg.Place, bool) {
-	for _, c := range s.Registry().Contributions("place") {
-		if p := c.(uireg.Place); p.Name == name {
+	for _, p := range registry.ContributionsOf[uireg.Place](s.Registry()) {
+		if p.Name == name {
 			return p, true
 		}
 	}
@@ -646,8 +651,8 @@ func (s *Scene) HasCommand(id string) bool {
 
 // InboxCard is the card id from the inbox source named source.
 func (s *Scene) InboxCard(source, id string) (uireg.InboxCard, bool) {
-	for _, c := range s.Registry().Contributions("inbox.source") {
-		if src := c.(uireg.InboxSource); src.Name == source {
+	for _, src := range registry.ContributionsOf[uireg.InboxSource](s.Registry()) {
+		if src.Name == source {
 			for _, card := range src.Cards() {
 				if card.ID == id {
 					return card, true
@@ -789,6 +794,12 @@ func (s *Scene) WaitFor(want string) string {
 	}
 }
 
+// PointerLeaves moves the pointer out of the window, as a person does once they've clicked, so nothing shows its hover.
+func (s *Scene) PointerLeaves() {
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerLeave})
+	s.Frame()
+}
+
 // RightClick right-clicks p, and answers the frame's text after: the menu it opened.
 func (s *Scene) RightClick(p render.Point) string {
 	s.Frame()
@@ -854,9 +865,19 @@ func At(h, m, s int) time.Time {
 	return Day.Add(time.Duration(h)*time.Hour + time.Duration(m)*time.Minute + time.Duration(s)*time.Second)
 }
 
+// Clock is the scene's clock: it reads Now, and what's timed on it runs as Advance or Quiet passes it.
+func (s *Scene) Clock() clock.Clock { return s.clock }
+
+// NowClock reads the scene's Now, but what's timed on it runs by the system's clock, which neither Advance nor Quiet
+// moves: for timers a test shouldn't step to, such as a conversation's idle end.
+func (s *Scene) NowClock() clock.Clock { return nowClock(func() time.Time { return s.Now }) }
+
 // nowClock is a clock.Clock that reads now; its timers are the real clock's.
 type nowClock func() time.Time
 
 func (c nowClock) Now() time.Time { return c() }
 
 func (nowClock) AfterFunc(d time.Duration, f func()) clock.Timer { return clock.Real().AfterFunc(d, f) }
+
+// SidebarForm is the form the sidebar takes for the projects here: wide, narrow, one, or none.
+func (s *Scene) SidebarForm() string { return PluginOf[*rail.Rail](s, "rail").Form() }

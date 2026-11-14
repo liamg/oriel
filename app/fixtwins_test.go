@@ -12,7 +12,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/app/lang"
+	"github.com/liamg/oriel/app/terminal"
 	"github.com/liamg/oriel/gh"
 
 	"github.com/liamg/oriel/core"
@@ -78,7 +78,7 @@ var fixEntries = []fixEntry{
 	{"a failed terminal command", "command", func(t *testing.T) *apptest.Scene {
 		s := apptest.TermScene(t, registry.Args{"cmd": []string{"sh", "-c", rig.ShellMarks}})
 		s.WaitTerm("still oops")
-		r, ok := s.Host().PaneRect(layout.ViewRef{ID: lang.TerminalView, Instance: "1"})
+		r, ok := s.Host().PaneRect(layout.ViewRef{ID: terminal.TerminalView, Instance: "1"})
 		if !ok {
 			t.Fatal("no terminal pane")
 		}

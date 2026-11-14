@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -13,7 +14,7 @@ import (
 type harness struct {
 	t     *testing.T
 	u     *ui.UI
-	now   time.Time
+	clock *clocktest.Fake
 	size  render.Point
 	build func(c *ui.Ctx)
 	list  *render.List
@@ -43,8 +44,8 @@ func newHarness(t *testing.T, v theme.Variant, size render.Point, build func(c *
 	o := u.Options()
 	o.ReducedMotion = true // snapshots and behaviour are of the settled UI; motion has its own tests
 	u.SetOptions(o)
-	h := &harness{t: t, u: u, now: time.Unix(1000, 0), size: size, build: build}
-	u.SetClock(func() time.Time { return h.now })
+	h := &harness{t: t, u: u, clock: clocktest.New(time.Unix(1000, 0)), size: size, build: build}
+	u.SetClock(h.clock)
 	h.frame()
 	return h
 }

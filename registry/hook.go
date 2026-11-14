@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -98,7 +97,7 @@ func (r *reg) Hook(h Hook) Disposable {
 	id := fmt.Sprintf("%s#%d", h.Event, r.hooks.next)
 	r.hooks.byID[id] = &hookEntry{h: h, id: id}
 	r.hooks.order = append(r.hooks.order, id)
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.hooks.mu.Lock()
 		defer r.hooks.mu.Unlock()
 		delete(r.hooks.byID, id)
@@ -112,13 +111,10 @@ func (r *reg) Hooks() []HookInfo {
 	var out []HookInfo
 	for _, id := range r.hooks.order {
 		e := r.hooks.byID[id]
-		out = append(out, HookInfo{Hook: e.h, ID: id, Calls: e.calls, P99: p99(e.times), Off: r.faults.isOff(KindHook, id), Did: e.did})
+		out = append(out, HookInfo{Hook: e.h, ID: id, Calls: e.calls, P99: p99(e.times), Off: r.faults.whyOff(KindHook, id), Did: e.did})
 	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Event != out[j].Event {
-			return out[i].Event < out[j].Event
-		}
-		return out[i].Priority < out[j].Priority
+	slices.SortStableFunc(out, func(a, b HookInfo) int {
+		return cmp.Or(cmp.Compare(a.Event, b.Event), cmp.Compare(a.Priority, b.Priority))
 	})
 	return out
 }
@@ -131,7 +127,7 @@ func (r *reg) DeclareEvent(e EventInfo) Disposable {
 		r.hooks.events = map[string]EventInfo{}
 	}
 	r.hooks.events[e.Name] = e
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.hooks.mu.Lock()
 		defer r.hooks.mu.Unlock()
 		delete(r.hooks.events, e.Name)
@@ -168,7 +164,7 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 	var run []*hookEntry
 	for _, id := range r.hooks.order {
 		e := r.hooks.byID[id]
-		if e.h.Event != event || e.h.Fn == nil || r.faults.isOff(KindHook, id) != nil {
+		if e.h.Event != event || e.h.Fn == nil || r.faults.whyOff(KindHook, id) != nil {
 			continue
 		}
 		if !matchSubject(e.h.Pattern, subject) {
@@ -177,7 +173,7 @@ func (r *reg) Fire(ctx Ctx, event, subject string, ev any) (Verdict, []error) {
 		run = append(run, e)
 	}
 	r.hooks.mu.Unlock()
-	sort.SliceStable(run, func(i, j int) bool { return run[i].h.Priority < run[j].h.Priority })
+	slices.SortStableFunc(run, func(a, b *hookEntry) int { return cmp.Compare(a.h.Priority, b.h.Priority) })
 	var errs []error
 	for _, e := range run {
 		var v Verdict

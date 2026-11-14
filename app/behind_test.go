@@ -26,7 +26,7 @@ func (c *redraws) AfterFunc(d time.Duration, f func()) clock.Timer {
 // shows of it keeps up a few times a second.
 func TestASessionBehindStreamsAtAFewFramesASecond(t *testing.T) {
 	c := &redraws{Fake: clocktest.New(time.Date(2026, 11, 9, 9, 0, 0, 0, time.UTC))}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Clock = c }})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Clock = c }})
 	front := core.SessionState{ID: "front", Name: "front", Kind: core.KindWork}
 	bg := core.SessionState{ID: "bg", Name: "behind", Kind: core.KindWork}
 	apply := func(ev core.Event) {

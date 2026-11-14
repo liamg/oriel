@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -175,7 +176,7 @@ func BuildIndex(root, registry string, now time.Time) (Index, error) {
 		return Index{}, err
 	}
 	ix := Index{Registry: registry, Built: now.UTC()}
-	for _, id := range sortedKeys(ls) {
+	for _, id := range slices.Sorted(maps.Keys(ls)) {
 		ix.Plugins = append(ix.Plugins, ls[id])
 	}
 	return ix, nil
@@ -237,12 +238,17 @@ func ArchiveName(id, version, platform string) string {
 
 // sortVersions orders versions newest first.
 func sortVersions(vs []string) {
-	sort.SliceStable(vs, func(i, j int) bool {
-		a, aerr := plugin.ParseVersion(vs[i])
-		b, berr := plugin.ParseVersion(vs[j])
-		if aerr != nil || berr != nil {
-			return aerr == nil
+	slices.SortStableFunc(vs, func(x, y string) int {
+		a, aerr := plugin.ParseVersion(x)
+		b, berr := plugin.ParseVersion(y)
+		switch { // a version that parses first
+		case aerr != nil && berr != nil:
+			return 0
+		case aerr != nil:
+			return 1
+		case berr != nil:
+			return -1
 		}
-		return a.Compare(b) > 0
+		return b.Compare(a)
 	})
 }

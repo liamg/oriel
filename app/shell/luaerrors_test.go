@@ -3,9 +3,6 @@ package shell_test
 import (
 	"context"
 	"testing"
-	"time"
-
-	"github.com/liamg/oriel/app/shell"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/registry"
@@ -15,7 +12,6 @@ import (
 func TestLuaErrorsSnapshot(t *testing.T) {
 	s := apptest.LuaScene(t, apptest.InitLua)
 	s.Now = apptest.At(14, 7, 3)
-	shell.SetNow(t, func() time.Time { return s.Now })
 	for range 3 {
 		s.Registry().Fire(context.Background(), "Permission", "", map[string]any{"tool": "Bash", "input": "go test ./..."})
 	}

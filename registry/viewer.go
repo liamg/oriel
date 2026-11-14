@@ -23,9 +23,7 @@ func (v FileViewer) ContributionName() string { return v.Name }
 // ViewerFor is the viewer that shows path: the first by Order, then name, whose When claims it.
 func ViewerFor(r Contributions, path string) (FileViewer, bool) {
 	var all []FileViewer
-	for _, c := range r.Contributions("file.viewer") {
-		all = append(all, c.(FileViewer))
-	}
+	all = append(all, ContributionsOf[FileViewer](r)...)
 	slices.SortFunc(all, func(a, b FileViewer) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})

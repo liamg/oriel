@@ -21,7 +21,7 @@ func (imageBackend) Describe(_ context.Context, root string, _ sandbox.Config) s
 	return sandbox.Description{Container: "oriel-x", Image: "img:1", Running: true, Places: map[string]string{sandbox.TmpDir(root): "/tmp/claude-1"}}
 }
 
-func (imageBackend) Shell(_ context.Context, root, cwd string, _ sandbox.LaunchOptions) (sandbox.Command, error) {
+func (imageBackend) Shell(_ context.Context, root, cwd string, _ sandbox.LaunchOpts) (sandbox.Command, error) {
 	return sandbox.Command{Argv: []string{"shell-in", root, cwd}}, nil
 }
 

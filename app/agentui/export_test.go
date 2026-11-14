@@ -1,8 +1,7 @@
 package agentui
 
 import (
-	"time"
-
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/render"
 )
 
@@ -15,6 +14,6 @@ type (
 	WhereLine   = whereLine
 )
 
-func (x *Assistant) SetNow(now func() time.Time) { x.conv.Now = now }
-func (x *Assistant) Open() bool                  { return x.open }
-func (x *Assistant) WindowRect() render.Rect     { return x.win.Rect }
+func (x *Assistant) SetClock(c clock.Clock)  { x.conv.Clock = c }
+func (x *Assistant) Open() bool              { return x.open }
+func (x *Assistant) WindowRect() render.Rect { return x.win.Rect }

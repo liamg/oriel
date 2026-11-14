@@ -199,10 +199,10 @@ func (p *detectPanics) Detect(ctx context.Context) (agent.Install, error) {
 func TestALoginCheckOutlivesAFailedMark(t *testing.T) {
 	p := &detectPanics{Fake: &agenttest.Fake{Name: "flaky"}}
 	r := newRig(t, p)
-	r.w.run.LoginLost("", agent.AuthExpired{Provider: "flaky", Account: "u1", Detail: "gone"})
+	r.w.runPart.LoginLost("", agent.AuthExpired{Provider: "flaky", Account: "u1", Detail: "gone"})
 	until(t, "the login's read", func() bool { return p.calls.Load() > 0 })
 	done := make(chan bool)
-	go func() { done <- r.w.run.CheckLogin("flaky", false) }()
+	go func() { done <- r.w.runPart.CheckLogin("flaky", false) }()
 	select {
 	case <-done:
 	case <-time.After(waitTimeout):

@@ -36,8 +36,12 @@ func (x *Worktrees) NewBranch(ctx context.Context, r NewBranchReq) (string, erro
 	} else if main.HasBranch(ctx, name) {
 		return "", fmt.Errorf("there's a branch %s already: pick another name", name)
 	}
-	if !r.Carry && repo.Dirty(ctx) {
-		return "", fmt.Errorf("%s has uncommitted changes: commit them first, or start the new branch with carry to take them along", p.Name)
+	if !r.Carry {
+		if dirty, err := repo.Dirty(ctx); err != nil {
+			return "", err
+		} else if dirty {
+			return "", fmt.Errorf("%s has uncommitted changes: commit them first, or start the new branch with carry to take them along", p.Name)
+		}
 	}
 	base := main.SyncedBase(ctx)
 	if err := repo.CheckoutNew(ctx, name, base); err != nil {
@@ -46,7 +50,7 @@ func (x *Worktrees) NewBranch(ctx context.Context, r NewBranchReq) (string, erro
 	if err := hostcore.SetProjectBranch(x.st, se.ID, p.Name, name, base); err != nil {
 		return "", err
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return name, nil
 }
 
@@ -79,7 +83,7 @@ func (x *Worktrees) Adopt(ctx context.Context, id core.SessionID, project string
 	if err := hostcore.SetProjectBranch(x.st, se.ID, p.Name, repo.CurrentBranch(ctx), ""); err != nil {
 		return err
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return nil
 }
 

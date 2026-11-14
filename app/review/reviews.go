@@ -12,8 +12,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -43,17 +46,19 @@ type Reviews struct {
 	lists   map[string]*reviewList   // by source
 	details map[string]*reviewDetail // by URL, as the page asked
 	page    reviewsPage
-	now     func() time.Time // when lists and details were read
+	clock   clock.Clock // when lists and details were read; the system's if nil
 }
+
+func (x *Reviews) now() time.Time { return clock.Or(x.clock).Now() }
 
 // reviewList is what a source last said of the pull requests waiting on you.
 type reviewList struct {
 	reqs     []registry.ReviewRequest
 	err      string
 	answered bool
-	at       time.Time   // when it answered; zero to ask again
-	ask      kit.Refetch // the ask under way
-	since    time.Time   // when the ask under way started
+	at       time.Time    // when it answered; zero to ask again
+	ask      work.Refetch // the ask under way
+	since    time.Time    // when the ask under way started
 }
 
 // reviewRow is a row of the page and the omnibox: a request, or what a source needs first.
@@ -71,7 +76,7 @@ func (r reviewRow) waiting() bool { return r.req != nil && r.req.Waiting() && r.
 func (x *Reviews) Manifest() plugin.Manifest { return plugin.Manifest{ID: "reviews"} }
 
 func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
-	x.h, x.lists, x.details, x.now = h, map[string]*reviewList{}, map[string]*reviewDetail{}, time.Now
+	x.h, x.lists, x.details = h, map[string]*reviewList{}, map[string]*reviewDetail{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.Add(h.Contribute(registry.Busy{Name: "reviews", Busy: x.asking, Source: "builtin:reviews"}))
 	for _, o := range x.options() {
@@ -255,9 +260,9 @@ func (x *Reviews) pollEvery() time.Duration {
 	return 5 * time.Minute
 }
 
+// optBool is a boolean option, true unless it's set false.
 func (x *Reviews) optBool(name string) bool {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	b, ok := v.(bool)
+	b, ok := registry.Option[bool](x.h.Options(), name, registry.At{})
 	return b || !ok
 }
 
@@ -276,7 +281,6 @@ func prSession(h plugin.Host, url string) (core.Session, bool) {
 	return kit.NewestSession(h, func(st core.SessionState) bool { return strings.EqualFold(strings.TrimSuffix(reviewPR(st), "/"), url) })
 }
 
-// fresh asks a source for its list when it has none or it's older than stale, and gives the ask under way, if any.
 // asking says a code host's been asked for its requests and hasn't answered.
 func (x *Reviews) asking() bool {
 	x.mu.Lock()
@@ -289,6 +293,7 @@ func (x *Reviews) asking() bool {
 	return false
 }
 
+// fresh asks a source for its list when it has none or it's older than stale, and gives the ask under way, if any.
 func (x *Reviews) fresh(s registry.HostSite, stale time.Duration) <-chan struct{} {
 	if s.Requested == nil || x.needsKey(s) {
 		return nil
@@ -364,7 +369,7 @@ func (x *Reviews) notifyNew(s registry.HostSite, before, now []registry.ReviewRe
 			continue
 		}
 		id := "reviews.asked:" + r.URL
-		x.h.Notify(core.Notice{ID: id, Severity: core.SevQuestion, Source: s.Source, Title: "Review requested", Text: askedText(r), Time: time.Now(),
+		x.h.Notify(core.Notice{ID: id, Severity: core.SevQuestion, Source: s.Source, Title: "Review requested", Text: askedText(r),
 			Actions: []core.Action{
 				{Title: "Start review in background", Command: "reviews.start-background", Args: map[string]any{"url": r.URL}},
 				{Title: "Ignore", Command: "notice.dismiss", Args: map[string]any{"id": id}},
@@ -602,7 +607,7 @@ func (x *Reviews) cloneFirst(ctx context.Context, r reviewRow, command string, a
 		func(ctx registry.Ctx, url string) error {
 			return h.Run(ctx, "repos.new", registry.Args{"mode": "clone", "url": url,
 				"note": "You don't have " + req.Repo + " cloned. Clone it to review " + shortKey(req) + "; the review starts once it's added.",
-				"then": []any{map[string]any{"command": command, "args": args}}})
+				"then": kit.Then(kit.Call{Command: command, Args: args})})
 		})
 	return true
 }
@@ -651,7 +656,7 @@ func (x *Reviews) startBehind(ctx registry.Ctx, url string) error {
 		return nil
 	}
 	h, st := x.h, x.h.State()
-	w, err := kit.SessionHost(h)
+	w, err := kit.SessionCalls(h)
 	if err != nil {
 		return err
 	}

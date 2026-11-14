@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"sort"
+
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/rpcagent"
@@ -26,7 +27,7 @@ func (g Agent) Provider(spec script.Table, where string) error {
 	if name == "" {
 		return errors.New("an agent provider needs a name")
 	}
-	o := rpcagent.Options{Name: name, Allow: func(path string) error { return a.Plugin.Check(plugin.CapExec, plugin.RealPath(path)) }}
+	o := rpcagent.Options{Name: name, Allow: func(path string) error { _, err := a.Plugin.CheckProgram(path, ""); return err }}
 	o.Logged, _ = spec["logs"].(bool)
 	o.Discovered, _ = spec["discover"].(bool)
 	if f, ok := spec["features"].(script.Table); ok {
@@ -53,7 +54,7 @@ func (g Agent) Provider(spec script.Table, where string) error {
 	case program != "" && bridge != "":
 		return fmt.Errorf("agent provider %s has both a program and the %s bridge", name, bridge)
 	case program != "":
-		o.Dial = a.agentDialer(program, strs(spec["args"]), envOf(spec["env"]))
+		o.Dial = a.agentDialer(program, plugin.Strings(spec["args"]), envOf(spec["env"]))
 	case bridge != "":
 		raw, err := json.Marshal(emptyNil(config))
 		if err != nil {
@@ -71,14 +72,14 @@ func (g Agent) Provider(spec script.Table, where string) error {
 		return fmt.Errorf("agent provider %s needs a program, or a bridge's config (acp = { command = … })", name)
 	}
 	p := rpcagent.New(o)
-	ap := registry.AgentProvider{Name: name, Title: str(spec, "title"), Mark: str(spec, "mark"), Tone: str(spec, "tone"), Order: 50,
+	ap := services.AgentProvider{Name: name, Title: str(spec, "title"), Mark: str(spec, "mark"), Tone: str(spec, "tone"), Order: 50,
 		Provider: p, Source: where}
 	if n, ok := spec["order"].(float64); ok {
 		ap.Order = int(n)
 	}
 	a.own(a.Host.Contribute(ap))
 	if c, ok := p.(interface{ Close() error }); ok {
-		a.own(disposeFunc(func() { c.Close() }))
+		a.own(registry.DisposeFunc(func() { c.Close() }))
 	}
 	return nil
 }
@@ -91,7 +92,7 @@ func (g Agent) Bridge(spec script.Table, where string) error {
 		return errors.New("an agent bridge needs a name and a program")
 	}
 	a.own(a.Host.Contribute(rpcagent.Bridge{Name: name, Title: str(spec, "title"), Source: where,
-		Dial: a.agentDialer(program, strs(spec["args"]), envOf(spec["env"]))}))
+		Dial: a.agentDialer(program, plugin.Strings(spec["args"]), envOf(spec["env"]))}))
 	return nil
 }
 
@@ -123,6 +124,6 @@ func envOf(v any) []string {
 	for k, x := range tableOf(v) {
 		env = append(env, k+"="+fmt.Sprint(x))
 	}
-	sort.Strings(env)
+	slices.Sort(env)
 	return env
 }

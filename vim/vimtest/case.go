@@ -358,7 +358,6 @@ func parseBufs(s string) (*string, error) {
 	return &out, nil
 }
 
-// parsePos reads `line:col`: 1-based line, 0-based byte column, as in :marks.
 // parseJump reads `line:col`, or `line:col@N` for an entry in buffer N when that isn't the current one.
 func parseJump(s string) (Jump, error) {
 	at, buf, ok := strings.Cut(s, "@")
@@ -376,6 +375,7 @@ func parseJump(s string) (Jump, error) {
 	return Jump{p, n}, nil
 }
 
+// parsePos reads `line:col`: 1-based line, 0-based byte column, as in :marks.
 func parsePos(s string) (Pos, error) {
 	l, c, ok := strings.Cut(s, ":")
 	line, err1 := strconv.Atoi(l)

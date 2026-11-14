@@ -605,7 +605,7 @@ func (e *Engine) exec(c cmd) {
 	}
 }
 
-// startChange begins recording a change for ".".
+// newGroup is the undo group a change joins: the outer one while a command groups its changes, else a new one.
 func (e *Engine) newGroup() text.UndoGroup {
 	if e.outerGroup != 0 {
 		return e.outerGroup
@@ -613,6 +613,7 @@ func (e *Engine) newGroup() text.UndoGroup {
 	return e.ed.NewGroup()
 }
 
+// startChange begins recording a change for ".".
 func (e *Engine) startChange(c cmd) {
 	if c.op == "y" {
 		e.rec = nil

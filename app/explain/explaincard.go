@@ -140,7 +140,9 @@ func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
 					st = widget.LoadState{Phase: widget.Pending, Since: c.Now()}
 				}
 				widget.Async(c, "answer", st, widget.AsyncOpts{Label: "Asking", Retry: func() { run("explain.refresh", nil) }, Help: help},
-					func(c *ui.Ctx) { kit.MarkdownText(c, x.h, "md", a.text, width-28, kit.UIFont(13, th.C(theme.FgMuted))) })
+					func(c *ui.Ctx) {
+						kit.MarkdownText(c, x.h, "md", a.text, width-28, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+					})
 				if x.changed(cd) {
 					c.Row("changed", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Text("t", "changed since it was explained", kit.MonoFont(10.5, th.C(tUnitsChanged)))

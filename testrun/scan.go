@@ -28,6 +28,7 @@ func (s *Set) Scan(ctx context.Context, ws Workspace) []Item {
 	if len(as) == 0 {
 		return nil
 	}
+	langs := s.langs()
 	paths := make(chan string)
 	var (
 		mu  sync.Mutex
@@ -45,7 +46,7 @@ func (s *Set) Scan(ctx context.Context, ws Workspace) []Item {
 				}
 			}()
 			for path := range paths {
-				items := scanFile(path, as, ps)
+				items := scanFile(path, as, ps, langs)
 				mu.Lock()
 				out = append(out, items...)
 				mu.Unlock()
@@ -76,11 +77,12 @@ func (s *Set) Scan(ctx context.Context, ws Workspace) []Item {
 // ScanFile is the tests in one file on disk, found by the first of the workspace's adapters that takes it for a
 // test file; none when it's gone.
 func (s *Set) ScanFile(ws Workspace, path string) []Item {
-	return scanFile(path, s.Detect(ws), nil)
+	return scanFile(path, s.Detect(ws), nil, s.langs())
 }
 
-// scanFile discovers path's tests, parsing it with the parsers in ps, borrowed as they're needed, when ps isn't nil.
-func scanFile(path string, as []Adapter, ps map[*syntax.Language]*syntax.Parser) []Item {
+// scanFile discovers path's tests, in its language among langs, parsing it with the parsers in ps, borrowed as
+// they're needed, when ps isn't nil.
+func scanFile(path string, as []Adapter, ps map[*syntax.Language]*syntax.Parser, langs *syntax.Set) []Item {
 	for _, a := range as {
 		if f, ok := a.(TestFiler); !ok || !f.TestFile(path) {
 			continue
@@ -89,8 +91,8 @@ func scanFile(path string, as []Adapter, ps map[*syntax.Language]*syntax.Parser)
 		if err != nil {
 			return nil
 		}
-		src := Source{Path: path, Text: text.New(b, text.Author{}).Snapshot()}
-		if l, ok := Languages().ForFile(path, firstLine(src.Text)); ok && ps != nil {
+		src := Source{Path: path, Text: text.New(b, text.Author{}).Snapshot(), Languages: langs}
+		if l, ok := langs.ForFile(path, firstLine(src.Text)); ok && ps != nil {
 			p := ps[l]
 			if p == nil {
 				if p, err = syntax.Borrow(l); err != nil {

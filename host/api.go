@@ -53,6 +53,7 @@ type (
 	ToolCall     = agentrun.ToolCall
 	Decide       = agentrun.Decide
 	Verdict      = agentrun.Verdict
+	Decision     = agentrun.Decision
 )
 
 // Workspaces.
@@ -84,12 +85,6 @@ type (
 	DraftReq        = github.DraftReq
 	RenameReq       = github.RenameReq
 	OffBranch       = hostcore.OffBranch
-	PRsReq          = github.PRsReq
-	ReviewQueueReq  = github.ReviewQueueReq
-	PRReview        = github.PRReview
-	PRReviewReq     = github.PRReviewReq
-	PRSubmitReq     = github.PRSubmitReq
-	PRReactReq      = github.PRReactReq
 	Trust           = github.Trust
 	MirrorReq       = github.MirrorReq
 	Mirror          = github.Mirror
@@ -137,16 +132,22 @@ type (
 )
 
 const (
-	DraftByYou    = hostcore.DraftByYou
-	AIReviewPack  = aireview.AIReviewPack
-	BatchLead     = agentrun.BatchLead
-	NoticeLead    = agentrun.NoticeLead
-	NoPosting     = agentrun.NoPosting
-	KeyWait       = agentrun.KeyWait
-	ForAll        = agentrun.ForAll
-	GatewayServer = sandboxhost.GatewayServer
-	ManifestFile  = worktree.ManifestFile
-	ReposDir      = worktree.ReposDir
+	DraftByYou   = hostcore.DraftByYou
+	AIReviewPack = aireview.AIReviewPack
+	BatchLead    = agentrun.BatchLead
+	NoticeLead   = agentrun.NoticeLead
+	NoPosting    = agentrun.NoPosting
+	KeyWait      = agentrun.KeyWait
+	ForAll       = agentrun.ForAll
+	// An ask's answers (Decision).
+	DecisionAllow   = agentrun.DecisionAllow
+	DecisionAlways  = agentrun.DecisionAlways
+	DecisionDeny    = agentrun.DecisionDeny
+	DecisionAnswer  = agentrun.DecisionAnswer
+	DecisionRecheck = agentrun.DecisionRecheck
+	GatewayServer   = sandboxhost.GatewayServer
+	ManifestFile    = worktree.ManifestFile
+	ReposDir        = worktree.ReposDir
 
 	SourceSession  = sandboxhost.SourceSession
 	SourceProject  = sandboxhost.SourceProject
@@ -170,8 +171,6 @@ const (
 )
 
 var (
-	// NotesFiles are the agent notes generated at a workspace's root: CLAUDE.md for Claude, AGENTS.md for Codex.
-	NotesFiles = hostcore.NotesFiles
 	// Templates a new repo can start from, besides any git URL (a GitHub template repo).
 	Templates = worktree.Templates
 	// ErrKeyCancelled is a git operation stopped from its security-key card.

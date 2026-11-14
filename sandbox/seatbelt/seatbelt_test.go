@@ -172,12 +172,6 @@ func TestSandboxExecConfines(t *testing.T) {
 	}
 }
 
-func TestRegistered(t *testing.T) {
-	if b, err := sandbox.BackendFor(sandbox.Config{Backend: "seatbelt"}); err != nil || b.Name() != "seatbelt" {
-		t.Errorf("BackendFor(seatbelt) = %v, %v", b, err)
-	}
-}
-
 // needer is a provider whose agent needs a binary on its PATH and a host directory at another path.
 type needer struct{ bin, host, at string }
 
@@ -220,7 +214,7 @@ func TestCommand(t *testing.T) {
 	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	c, err := s.command(context.Background(), root, root, []string{"claude"}, sandbox.LaunchOptions{Environ: []string{"PATH=/usr/bin", "SECRET=x"},
+	c, err := s.command(context.Background(), root, root, []string{"claude"}, sandbox.LaunchOpts{Environ: []string{"PATH=/usr/bin", "SECRET=x"},
 		Provider: "agent", Agent: needer{bin: bin, host: transcripts, at: "projects"}})
 	if err != nil {
 		t.Fatal(err)

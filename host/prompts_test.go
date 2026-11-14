@@ -95,7 +95,7 @@ func TestNoNotesInTheUsersOwnDirectory(t *testing.T) {
 	}
 	r.start(core.SessionSpec{Kind: core.KindDirect, Dir: r.repo.Dir, Provider: "fake"})
 	r.agent()
-	for _, name := range NotesFiles {
+	for _, name := range r.w.notesFiles() {
 		if _, err := os.Stat(filepath.Join(r.repo.Dir, name)); err == nil {
 			t.Errorf("%s was written in the user's checkout", name)
 		}

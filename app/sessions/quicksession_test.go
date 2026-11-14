@@ -24,7 +24,7 @@ func startedAs(se core.SessionState) string {
 // sandbox.default says, with no repos and no prompt.
 func TestQuickSessionIsTheLaunchersDefaults(t *testing.T) {
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 	r.Do(func() error { // the test host has no sandbox factory
@@ -68,7 +68,7 @@ func TestQuickSessionIsTheLaunchersDefaults(t *testing.T) {
 // Quick Session is on the start view, under New Session, and on the + button's menu.
 func TestQuickSessionIsOffered(t *testing.T) {
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitText("Quick Session")
 	r.Do(func() error { // the test host has no sandbox factory

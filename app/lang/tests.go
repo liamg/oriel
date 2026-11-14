@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/syntax"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -63,7 +66,7 @@ type Tests struct {
 	scanGen  int                                  // which scan is the window's directory's: one of a directory left is dropped
 	byKey    map[string]testrun.Item              // scanned by key, made when asked for
 	pkgs     map[string]bool
-	work     kit.Work
+	work     work.Work
 
 	panel testsPanel
 }
@@ -102,12 +105,13 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "tests", Busy: x.work.Busy, Source: "builtin:tests"}))
 	x.h = h
 	x.set = testrun.Builtin()
-	x.Add(kit.OnDispose(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
+	x.set.Languages = func() *syntax.Set { return kit.Languages(h) }
+	x.Add(registry.DisposeFunc(testrun.Contribute(x.set, h.Contributions(testrun.ContributionKind))))
 	x.found = map[*text.Buffer]*discovery{}
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "test runs", Path: x.HistoryFile, Load: x.loadHistory})
-	x.Add(kit.OnDispose(x.state.Close))
+	x.Add(registry.DisposeFunc(x.state.Close))
 	// The files git sees change are read again, in whichever work tree the window is on.
-	x.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
+	x.Add(kit.GitOf(h).WatchWindow(func(root string, paths []string) {
 		ws := x.workspace().Root
 		for _, p := range paths {
 			// One told late, of the tree the window has left, isn't this directory's.
@@ -115,7 +119,7 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 				x.rescan(p)
 			}
 		}
-	})))
+	}))
 	// A directory's tests stay with it: the window back on one shows them at once, and reads only what changed.
 	x.Add(kit.OnDirChanged(h, "the tests of the directory", func(ev kit.DirChanged) {
 		x.mu.Lock()
@@ -148,12 +152,12 @@ func (x *Tests) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range x.keymaps() {
 		x.Add(h.Keymap(k))
 	}
-	x.Add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "re-run the tests the save affects", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
-		if w, ok := ev.(*kit.BufWritePost); ok && x.watch {
+	x.Add(registry.On(h, registry.Hook{Label: "re-run the tests the save affects"}, func(_ registry.Ctx, w *kit.BufWritePost) (registry.Verdict, error) {
+		if x.watch {
 			x.watchSaved(w.File)
 		}
 		return registry.Verdict{}, nil
-	}}))
+	}))
 	for _, a := range x.editorActions() {
 		x.Add(h.Contribute(a))
 	}

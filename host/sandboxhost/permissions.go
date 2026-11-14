@@ -45,7 +45,8 @@ type ToolPermission struct {
 }
 
 // Permissions reads session id's sandbox permissions. A session whose agent isn't running in a sandbox has none.
-func (x *Boxes) Permissions(ctx context.Context, id core.SessionID) (Permissions, error) {
+func (x *Boxes) Permissions(ctx context.Context, id core.SessionID) (_ Permissions, err error) {
+	defer x.deps.Env.Recover("Permissions", &err)
 	b := x.of(id)
 	if b == nil {
 		return Permissions{}, nil
@@ -54,7 +55,8 @@ func (x *Boxes) Permissions(ctx context.Context, id core.SessionID) (Permissions
 }
 
 // SetToolRule sets session id's own rule for a gateway tool: allow, ask or deny, or "" to drop it.
-func (x *Boxes) SetToolRule(id core.SessionID, tool, action string) error {
+func (x *Boxes) SetToolRule(id core.SessionID, tool, action string) (err error) {
+	defer x.deps.Env.Recover("SetToolRule", &err)
 	switch action {
 	case "", gateway.Allow, gateway.Ask, gateway.Deny:
 	default:
@@ -76,9 +78,16 @@ func (x *Boxes) SetToolRule(id core.SessionID, tool, action string) error {
 	})
 }
 
-// SetNetRule allows or blocks host[:port] for the rest of session id ("allow", "block"), or drops the session's
+// A network rule's actions (SetNetRule).
+const (
+	NetAllow = "allow"
+	NetBlock = "block"
+)
+
+// SetNetRule allows or blocks host[:port] for the rest of session id (NetAllow, NetBlock), or drops the session's
 // rule for it ("").
-func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action string, private bool) error {
+func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action string, private bool) (err error) {
+	defer x.deps.Env.Recover("SetNetRule", &err)
 	b := x.of(id)
 	if b == nil {
 		return fmt.Errorf("session %s isn't sandboxed", id)
@@ -88,8 +97,8 @@ func (x *Boxes) SetNetRule(id core.SessionID, host string, port int, action stri
 		return errors.New("a network rule needs a host")
 	}
 	switch action {
-	case "allow", "block":
-		return b.egress.SetRule(host, port, action == "allow", private)
+	case NetAllow, NetBlock:
+		return b.egress.SetRule(host, port, action == NetAllow, private)
 	case "":
 		return b.egress.UpdateGrants(func(rules []egress.Rule) []egress.Rule {
 			return slices.DeleteFunc(rules, func(r egress.Rule) bool { return r.Host == host && r.Port == port })

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"sort"
+	"slices"
 )
 
 // Ext is a msgpack plugin value; nvim uses them for Buffer, Window and Tabpage handles.
@@ -69,7 +69,7 @@ func encode(w *bufio.Writer, v any) error {
 		for k := range v {
 			keys = append(keys, k)
 		}
-		sort.Strings(keys)
+		slices.Sort(keys)
 		for _, k := range keys {
 			encode(w, k)
 			if err := encode(w, v[k]); err != nil {

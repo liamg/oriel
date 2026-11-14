@@ -75,7 +75,7 @@ func ProjectsTool(ctx context.Context, se core.SessionState) (string, error) {
 	var out []row
 	for _, p := range se.Projects {
 		out = append(out, row{Name: p.Name, Dir: p.Dir, Branch: p.Branch, Base: p.Base, Primary: p.Primary, ReadOnly: p.ReadOnly,
-			Dirty: !p.ReadOnly && gitx.Repo{Dir: p.Dir}.Dirty(ctx)})
+			Dirty: !p.ReadOnly && dirtyOrUnknown(ctx, p.Dir)})
 	}
 	b, err := json.MarshalIndent(out, "", "  ")
 	return string(b), err
@@ -101,4 +101,10 @@ func SignedIn(ctx context.Context, p agent.Provider) bool {
 	defer cancel()
 	in, err := p.Detect(dctx)
 	return err == nil && in.LoggedIn
+}
+
+// dirtyOrUnknown is whether dir's work tree has uncommitted changes, counting a status git can't read as changes.
+func dirtyOrUnknown(ctx context.Context, dir string) bool {
+	dirty, err := gitx.Repo{Dir: dir}.Dirty(ctx)
+	return dirty || err != nil
 }

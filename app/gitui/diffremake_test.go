@@ -59,7 +59,7 @@ func TestDiffSelectedLineSurvivesARemake(t *testing.T) {
 	r.Commit("Ada", "base")
 	r.Git("checkout", "-q", "-b", "pricing-rounding")
 	r.Write(map[string]string{"round.go": rig.RoundAgent})
-	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: r.Dir})
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
 	path := filepath.Join(r.Dir, "round.go")
 	if err := app.Do(func() error {
 		return app.Host.Run(context.Background(), "diff.open", registry.Args{"path": path, "line": 8})

@@ -4,11 +4,12 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -19,12 +20,15 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// GitHubHost is GitHub as a code host, built in on the user's own gh, run by the session host with the checkout's
-// env: one GraphQL search per list for the Reviews page, the REST calls for a PR in full, GitHub's pull/N/head to check
-// one out, and a project's PR raised, read and merged.
+// GitHubHost is GitHub as a code host, built in on the user's own token: one GraphQL search per list for the Reviews
+// page, the REST calls for a PR in full, reviews and reactions, GitHub's pull/N/head to check one out, and the search
+// the GitHub service offers. A project's PR is raised, read and merged by the session host, with the checkout's env.
 type GitHubHost struct {
 	kit.Disposer
-	h plugin.Host
+	// Client is the GitHub client its calls go through; GitHub's API with the user's token if nil (gh.Clients).
+	Client  func(dir string, env []string) gh.Client
+	h       plugin.Host
+	clients gh.Clients
 }
 
 var (
@@ -36,6 +40,8 @@ func (x *GitHubHost) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gi
 
 func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
+	x.clients = gh.Clients{Client: x.Client, HTTP: h.Net}
+	x.Add(h.Contribute(registry.Service{Name: kit.GitHubService, Impl: githubSearch{x}, Source: "builtin:github"}))
 	x.Add(h.Contribute(registry.CodeHost{Name: "github", Title: "GitHub", Icon: "pullrequest", Order: 10,
 		Sites: []registry.Site{{Host: "github.com", Secret: "GITHUB_TOKEN", Aliases: []string{"ssh.github.com"}}}, Path: githubPath, Takes: githubPRPath,
 		Setup: registry.SiteSetup{Secret: "GITHUB_TOKEN", TokenURL: "https://{host}/settings/tokens/new?scopes=repo,read:org&description=Oriel",
@@ -49,7 +55,20 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-func (x *GitHubHost) host() (host.Access, error) { return kit.SessionHost(x.h) }
+func (x *GitHubHost) host() (host.CodeHostCalls, error) { return kit.CodeHostCalls(x.h) }
+
+// on is the client for a GitHub server, with its token, else the one found for it.
+func (x *GitHubHost) on(s registry.Site) gh.Client { return x.clients.On("", nil, s.Host, x.token(s)) }
+
+// githubSearch is the GitHub service: github.com's search, with the token found for it.
+type githubSearch struct{ x *GitHubHost }
+
+func (g githubSearch) SearchPRs(ctx context.Context, query string) ([]gh.Found, error) {
+	if strings.TrimSpace(query) == "" {
+		return nil, errors.New("no search")
+	}
+	return g.x.clients.On("", nil, "", "").SearchPRs(ctx, query)
+}
 
 // probe says hostname is a GitHub Enterprise server: its /api/v3/meta answers GitHub's JSON with no token.
 func (x *GitHubHost) probe(ctx context.Context, hostname string) (bool, error) {
@@ -69,11 +88,7 @@ func (x *GitHubHost) probe(ctx context.Context, hostname string) (bool, error) {
 }
 
 func (x *GitHubHost) requested(ctx context.Context, s registry.Site) ([]registry.ReviewRequest, error) {
-	w, err := x.host()
-	if err != nil {
-		return nil, err
-	}
-	queue, err := w.ReviewQueue(ctx, host.ReviewQueueReq{Host: s.Host, Token: x.token(s)})
+	queue, err := x.on(s).ReviewQueue(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -122,27 +137,26 @@ func reviewWord(state string) string {
 func ciWord(state string) string {
 	switch state {
 	case gh.CheckPass:
-		return "ok"
+		return registry.CheckOK
 	case gh.CheckFail:
-		return "failed"
+		return registry.CheckFailed
 	case gh.CheckPending:
-		return "running"
+		return registry.CheckRunning
 	case gh.CheckSkipped:
-		return "skipped"
+		return registry.CheckSkipped
 	}
 	return ""
 }
 
 func (x *GitHubHost) lookup(ctx context.Context, s registry.Site, url string) (registry.ReviewDetail, error) {
-	w, err := x.host()
+	repo, n, err := gh.ParsePR(url)
 	if err != nil {
 		return registry.ReviewDetail{}, err
 	}
-	p, err := w.PRReview(ctx, host.PRReviewReq{URL: url, Host: s.Host, Token: x.token(s)})
+	p, err := readPR(ctx, x.on(s), repo, n)
 	if err != nil {
 		return registry.ReviewDetail{}, err
 	}
-	repo, n, _ := gh.ParsePR(url)
 	d := registry.ReviewDetail{Request: registry.ReviewRequest{URL: cmp.Or(p.URL, url), Repo: repo.String(), Number: n, Title: p.Title, Author: p.Author,
 		Draft: p.Draft, Adds: p.Additions, Dels: p.Deletions, Files: p.ChangedFiles}, Base: p.Base, Head: p.Head, Commit: p.HeadSHA, Labels: p.Labels, Body: p.Body,
 		Clone: "https://github.com/" + repo.String() + ".git", State: p.State}
@@ -166,7 +180,7 @@ func (x *GitHubHost) lookup(ctx context.Context, s registry.Site, url string) (r
 	for who := range states {
 		done = append(done, who)
 	}
-	sort.Strings(done)
+	slices.Sort(done)
 	for _, who := range done {
 		d.Reviewers = append(d.Reviewers, registry.PRReviewer{Login: who, State: reviewWord(states[who])})
 	}
@@ -179,6 +193,42 @@ func (x *GitHubHost) lookup(ctx context.Context, s registry.Site, url string) (r
 	d.Events = prEvents(p)
 	d.Reactions = reactionsOf(p.Reactions)
 	return d, nil
+}
+
+// prInFull is a pull request in full, as a review shows it.
+type prInFull struct {
+	gh.PRDetails
+	Files        []gh.PRFile
+	Reviews      []gh.Review
+	Checks       []gh.Check
+	Commits      []gh.PRCommit
+	Comments     []gh.IssueComment
+	LineComments []gh.ReviewComment
+	Reactions    gh.Reactions // the PR's own
+}
+
+// readPR reads a pull request in full: its details, files, reviews, the checks on its head, and its commits,
+// comments and reactions when GitHub gives them.
+func readPR(ctx context.Context, c gh.Client, repo gh.Repo, n int) (prInFull, error) {
+	var out prInFull
+	var err error
+	if out.PRDetails, err = c.PRDetails(ctx, repo, n); err != nil {
+		return prInFull{}, err
+	}
+	if out.Files, err = c.PRFiles(ctx, repo, n); err != nil {
+		return prInFull{}, err
+	}
+	if out.Reviews, err = c.Reviews(ctx, repo, n); err != nil {
+		return prInFull{}, err
+	}
+	if out.HeadSHA != "" {
+		out.Checks, _ = c.Checks(ctx, repo, out.HeadSHA)
+	}
+	out.Commits, _ = c.PRCommits(ctx, repo, n)
+	out.Comments, _ = c.IssueComments(ctx, repo, n)
+	out.LineComments, _ = c.ReviewComments(ctx, repo, n)
+	out.Reactions, _ = c.PRReactions(ctx, repo, n)
+	return out, nil
 }
 
 // reactionsOf is GitHub's reactions as emoji and counts, in the order GitHub shows them.
@@ -194,7 +244,7 @@ func reactionsOf(r gh.Reactions) []registry.PRReaction {
 
 // prEvents is a PR's history, oldest first: its commits, its reviews, and the comments in its conversation and on its
 // lines. A review that only carries line comments is left to them.
-func prEvents(p host.PRReview) []registry.PREvent {
+func prEvents(p prInFull) []registry.PREvent {
 	var out []registry.PREvent
 	for _, c := range p.Commits {
 		subject, _, _ := strings.Cut(c.Message, "\n")
@@ -220,16 +270,12 @@ func prEvents(p host.PRReview) []registry.PREvent {
 		out = append(out, registry.PREvent{Kind: registry.PREventComment, Who: c.User, At: c.Created, Text: c.Body, Ref: ref, URL: c.URL,
 			Reactions: reactionsOf(c.Reactions)})
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].At.Before(out[j].At) })
+	slices.SortStableFunc(out, func(a, b registry.PREvent) int { return a.At.Compare(b.At) })
 	return out
 }
 
 // submit posts the user's review of a GitHub PR, its comments on the lines they're about.
 func (x *GitHubHost) submit(ctx context.Context, s registry.Site, url string, r registry.ReviewSubmit) error {
-	w, err := x.host()
-	if err != nil {
-		return err
-	}
 	event := map[string]string{registry.VerdictApprove: "APPROVE", registry.VerdictChanges: "REQUEST_CHANGES", registry.VerdictComment: "COMMENT"}[r.Event]
 	if event == "" {
 		return fmt.Errorf("no such review as %q", r.Event)
@@ -242,7 +288,11 @@ func (x *GitHubHost) submit(ctx context.Context, s registry.Site, url string, r 
 		}
 		in.Comments = append(in.Comments, gh.ReviewComment{Path: c.Path, Line: c.Line, OriginalLine: c.StartLine, Side: side, Body: c.Body})
 	}
-	return w.SubmitPRReview(ctx, host.PRSubmitReq{URL: url, Host: s.Host, Token: x.token(s), In: in})
+	repo, n, err := gh.ParsePR(url)
+	if err != nil {
+		return err
+	}
+	return x.on(s).SubmitReview(ctx, repo, n, in)
 }
 
 // react reacts to a GitHub PR with one of the emoji GitHub offers.
@@ -251,11 +301,11 @@ func (x *GitHubHost) react(ctx context.Context, s registry.Site, url, emoji stri
 	if name == "" {
 		return fmt.Errorf("GitHub has no %s reaction", emoji)
 	}
-	w, err := x.host()
+	repo, n, err := gh.ParsePR(url)
 	if err != nil {
 		return err
 	}
-	return w.ReactPR(ctx, host.PRReactReq{URL: url, Host: s.Host, Token: x.token(s), Content: name})
+	return x.on(s).ReactPR(ctx, repo, n, name)
 }
 
 func (x *GitHubHost) unreact(ctx context.Context, s registry.Site, url, emoji string) error {
@@ -263,11 +313,11 @@ func (x *GitHubHost) unreact(ctx context.Context, s registry.Site, url, emoji st
 	if name == "" {
 		return nil // never reacted with it: GitHub has no such reaction
 	}
-	w, err := x.host()
+	repo, n, err := gh.ParsePR(url)
 	if err != nil {
 		return err
 	}
-	return w.UnreactPR(ctx, host.PRReactReq{URL: url, Host: s.Host, Token: x.token(s), Content: name})
+	return x.on(s).UnreactPR(ctx, repo, n, name)
 }
 
 // githubCheckout is where a review fetches a GitHub PR from: the repo its URL names, and pull/N/head.

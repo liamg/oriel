@@ -685,19 +685,19 @@ clip 180,108 1240x720 r 10
   text "↵" @199,815.60004 #b3ab99 JetBrains Mono 10
   text "open" @219.95312,815.60004 #7c7566 JetBrains Mono 10
   rect 257.95312,804.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
-  text "^v" @262.95312,815.60004 #b3ab99 JetBrains Mono 10
+  text "⌃V" @262.95312,815.60004 #b3ab99 JetBrains Mono 10
   text "vsplit" @285.95312,815.60004 #7c7566 JetBrains Mono 10
   rect 335.95312,804.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
-  text "^s" @340.95312,815.60004 #b3ab99 JetBrains Mono 10
+  text "⌃S" @340.95312,815.60004 #b3ab99 JetBrains Mono 10
   text "split" @363.95312,815.60004 #7c7566 JetBrains Mono 10
   rect 407.95312,804.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
-  text "^t" @412.95312,815.60004 #b3ab99 JetBrains Mono 10
+  text "⌃T" @412.95312,815.60004 #b3ab99 JetBrains Mono 10
   text "tab" @435.95312,815.60004 #7c7566 JetBrains Mono 10
   rect 467.95312,804.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
-  text "^q" @472.95312,815.60004 #b3ab99 JetBrains Mono 10
+  text "⌃Q" @472.95312,815.60004 #b3ab99 JetBrains Mono 10
   text "to quickfix" @495.95312,815.60004 #7c7566 JetBrains Mono 10
   rect 575.9531,804.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
-  text "^a" @580.9531,815.60004 #b3ab99 JetBrains Mono 10
+  text "⌃A" @580.9531,815.60004 #b3ab99 JetBrains Mono 10
   text "attach to request" @603.9531,815.60004 #7c7566 JetBrains Mono 10
   rect 719.9531,804.4 22x15.200012 fill #121210 radius 4 stroke 1 #332f27
   text "^␣" @724.9531,815.60004 #b3ab99 JetBrains Mono 10

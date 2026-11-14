@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"testing"
 
@@ -177,8 +176,8 @@ func TestGoDiscoverMatchesRun(t *testing.T) {
 		}
 	}
 	got := itemNames(items)
-	sort.Strings(got)
-	sort.Strings(ran)
+	slices.Sort(got)
+	slices.Sort(ran)
 	if !slices.Equal(got, ran) {
 		t.Errorf("discovered %q\nran        %q", got, ran)
 	}

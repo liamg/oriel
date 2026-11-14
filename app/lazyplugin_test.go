@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/updates"
 
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -211,6 +212,6 @@ func consent(s *apptest.Scene) *settings.Consent {
 	return apptest.PluginOf[*settings.Consent](s, "consent")
 }
 
-func updates(s *apptest.Scene) *settings.Update {
-	return apptest.PluginOf[*settings.Update](s, "update")
+func updatesOf(s *apptest.Scene) *updates.Update {
+	return apptest.PluginOf[*updates.Update](s, "update")
 }

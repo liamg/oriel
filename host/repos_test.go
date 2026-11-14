@@ -128,7 +128,7 @@ func TestScanFindsSiblings(t *testing.T) {
 	if _, err := r.w.AddRepoPath(ctx, filepath.Join(src, "removed")); err != nil {
 		t.Fatal(err)
 	}
-	removed, _ := r.w.repos.Find(filepath.Join(src, "removed"))
+	removed, _ := r.w.reposPart.Find(filepath.Join(src, "removed"))
 	if err := r.w.RemoveRepo(removed.ID); err != nil {
 		t.Fatal(err)
 	}

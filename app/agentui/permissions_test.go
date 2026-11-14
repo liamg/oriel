@@ -41,7 +41,7 @@ func sandboxedSessionOn(t *testing.T, backend sandbox.Backend) (*apptest.Window,
 	f.Available = func() []string { return []string{"test"} }
 	lw := rig.NewHostWith(t, host.Options{Sandbox: f, Home: home})
 	f.Attach(lw.W)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err = r.Do(func() error {
 		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "provider": "fake", "repos": lw.Repo,

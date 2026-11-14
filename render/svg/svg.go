@@ -4,6 +4,7 @@ package svg
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/xml"
 	"errors"
 	"io"
@@ -425,7 +426,7 @@ func (r *reader) gradient(id string) *render.Gradient {
 			continue
 		}
 		p := props(k)
-		c, _ := parseColor(cmpOr(p["stop-color"], "black"))
+		c, _ := parseColor(cmp.Or(p["stop-color"], "black"))
 		if o, ok := fraction(p["stop-opacity"]); ok {
 			c.A = uint8(float32(c.A) * o)
 		}
@@ -630,13 +631,6 @@ func parsePaint(s string) (paint, string) {
 		return paint{set: true, c: render.Color{A: 255}}, ""
 	}
 	return paint{set: true, c: c}, ""
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 func mix(a, b render.Color) render.Color {

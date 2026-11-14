@@ -17,16 +17,16 @@ end
 
 L.command("hello.count", more)
 
-L.hud.indicator("hello", { slot = "inbox.foot", every = "1s" }, function()
+L.hud.indicator("hello", function()
   return L.ui.row{
     L.ui.button{ id = "more", label = "More", on_click = more },
     L.ui.text(greeting() .. " · " .. count),
     L.ui.text(os.date("!%H:%M:%S", math.floor(L.now()))),
     gap = 8,
   }
-end)
+end, { slot = "inbox.foot", every = "1s" })
 
-L.hud.indicator("hello.say", { slot = "hud", title = "HELLO" }, function()
+L.hud.indicator("hello.say", function()
   local draft = L.ui.state("hello.say", { text = "" })
   return L.ui.input{ id = "say", value = draft.text, placeholder = "say something…", label = "Greeting",
     on_change = function(t)
@@ -34,7 +34,7 @@ L.hud.indicator("hello.say", { slot = "hud", title = "HELLO" }, function()
       L.hud.refresh("hello.say")
     end,
     on_submit = function(t) L.option["plugin.hello.greeting"] = t end }
-end)
+end, { slot = "hud", title = "HELLO" })
 
 L.agent.tool{ name = "greet", ["for"] = { "assistant" }, read_only = true, async = true, desc = "Greet someone.",
   params = { who = "string" },

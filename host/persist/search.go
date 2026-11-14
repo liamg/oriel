@@ -24,6 +24,7 @@ type Hit struct {
 
 // Search finds text in sessions' threads and transcripts: archived ones keep theirs, so they stay searchable.
 func (l *Logs) Search(q SearchReq) (out []Hit) {
+	defer l.env.Recover("Search", nil)
 	needle := strings.ToLower(strings.TrimSpace(q.Query))
 	if needle == "" {
 		return nil

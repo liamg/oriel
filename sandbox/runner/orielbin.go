@@ -6,35 +6,19 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/liamg/oriel/sandbox"
 )
 
-var (
-	helperMu sync.Mutex
-	helper   func() ([]byte, error)
-)
-
-// SetHelper gives the backend the sandbox helper the app carries (package helper): the static Linux oriel its
-// containers run.
-func SetHelper(f func() ([]byte, error)) {
-	helperMu.Lock()
-	helper = f
-	helperMu.Unlock()
-}
-
 // errNoHelper is a backend given no helper.
 var errNoHelper = errors.New("this oriel carries no sandbox helper: build it with `make build`, or set ORIEL_SANDBOX_BIN")
 
-// OrielBinary is the oriel the container runs: ORIEL_SANDBOX_BIN when set, else the helper the app carries, written
-// out once per build. Each build gets a file of its own: running containers have the old one bind-mounted.
-func OrielBinary() (string, error) {
+// OrielBinary is the oriel the container runs: ORIEL_SANDBOX_BIN when set, else helper's (the one the app carries),
+// written out once per build. Each build gets a file of its own: running containers have the old one bind-mounted.
+func OrielBinary(helper func() ([]byte, error)) (string, error) {
 	if p := os.Getenv("ORIEL_SANDBOX_BIN"); p != "" {
 		return p, nil
 	}
-	helperMu.Lock()
-	defer helperMu.Unlock()
 	if helper == nil {
 		return "", errNoHelper
 	}
@@ -58,8 +42,8 @@ func OrielBinary() (string, error) {
 }
 
 // helperProblem is what stops the backend handing its containers an oriel.
-func helperProblem() (sandbox.Problem, bool) {
-	if _, err := OrielBinary(); err != nil {
+func helperProblem(helper func() ([]byte, error)) (sandbox.Problem, bool) {
+	if _, err := OrielBinary(helper); err != nil {
 		return sandbox.Problem{Code: "oriel-helper-missing", Blocking: true, Message: "Sandboxes have no oriel to run: " + err.Error(),
 			Fix: "Build Oriel with `make build`, which embeds its sandbox helper."}, false
 	}

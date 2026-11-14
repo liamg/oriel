@@ -38,7 +38,7 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 	rig.Git(t, lw.Repo, "remote", "add", "origin", lw.Repo)
 	rig.Git(t, lw.Repo, "update-ref", "refs/pull/7/head", "HEAD")
 	parent, plain := t.TempDir(), t.TempDir()
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 	// The test host has no sandbox factory.
@@ -146,7 +146,7 @@ func TestLauncherModesStartTheirPacks(t *testing.T) {
 // link in its field.
 func TestLauncherPastedPRPicksReview(t *testing.T) {
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 	r.TypeKeys("<D-n>")
@@ -187,7 +187,7 @@ func launcherModes(n *render.AccessNode) []string {
 // With a session host, the start view's session entries light up on their own, and its recents list the sessions.
 func TestStartViewListsSessions(t *testing.T) {
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.WaitText("Open Directory") // one there at launch is landed on, past the start view
 	if _, err := lw.W.Start(context.Background(), core.SessionSpec{Kind: core.KindWork, Name: "pricing-rounding", Repos: []core.RepoID{core.RepoID(lw.Repo)}}); err != nil {
 		t.Fatal(err)
@@ -208,7 +208,7 @@ func TestFilesOutsideTheSessionOpenReadOnly(t *testing.T) {
 	lw := rig.NewHost(t)
 	outside := filepath.Join(t.TempDir(), "other.go")
 	os.WriteFile(outside, []byte("package other\n"), 0o644)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := r.Do(func() error {
 		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "w", "repos": []string{lw.Repo}})
@@ -287,7 +287,7 @@ func TestLauncherSnapshot(t *testing.T) {
 // scrim closes on a click outside it.
 func TestLauncherCloses(t *testing.T) {
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 	for _, close := range []func(){
@@ -322,7 +322,7 @@ func TestLauncherCloses(t *testing.T) {
 // one picked.
 func TestLauncherPicksSandboxBackend(t *testing.T) {
 	jr := rig.NewJobs(t, "docker", "seatbelt")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(jr.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(jr.W)})
 	r.UntilState("the machine's sandboxes", func(st core.State) bool { return len(st.Machine.Sandboxes) == 2 })
 	r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
 	r.TypeKeys("<D-n>")
@@ -469,7 +469,7 @@ func TestLauncherContinuingSaysWhichAgent(t *testing.T) {
 	alpha, beta := agenttest.NewFake(), agenttest.NewFake()
 	alpha.Name, beta.Name = "alpha", "beta"
 	lw := rig.NewHost(t, alpha, beta)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	r.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := r.Do(func() error {
 		if err := r.Host.Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil {

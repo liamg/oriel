@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -97,7 +98,7 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 		}
 	}
 	switch {
-	case versionLess(in.Version, minVersion):
+	case semver.Less(in.Version, minVersion):
 		in.Note = fmt.Sprintf("Claude Code %s is too old for Oriel, which needs %s or newer: run claude update.", in.Version, minVersion)
 	case !in.LoggedIn:
 		in.Note = "Not signed in: run claude and /login."
@@ -105,12 +106,6 @@ func (p *Provider) Detect(ctx context.Context) (agent.Install, error) {
 		in.Note = "Signed in with an API key: billed per token, not to a subscription."
 	}
 	return in, nil
-}
-
-func versionLess(a, b string) bool {
-	x, _, errA := semver.ParsePartial(a)
-	y, _, errB := semver.ParsePartial(b)
-	return errA == nil && errB == nil && x.Compare(y) < 0
 }
 
 // login reads the sign-in from Claude's files, without asking the network (subscription), else an API key. mark
@@ -205,14 +200,7 @@ func account(env []string) (id, name string) {
 	default:
 		id = a.Email
 	}
-	return id, cmpOr(a.Email, a.OrgName)
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
+	return id, cmp.Or(a.Email, a.OrgName)
 }
 
 func plan(kind string) string {
@@ -242,7 +230,7 @@ func (p *Provider) Usage(ctx context.Context) (core.ProviderUsage, error) {
 		client = http.DefaultClient
 	}
 	var err error
-	if u, ok, aerr := p.apiUsage(ctx, client, cmpOr(p.UsageURL, UsageAPI)); ok && aerr == nil {
+	if u, ok, aerr := p.apiUsage(ctx, client, cmp.Or(p.UsageURL, UsageAPI)); ok && aerr == nil {
 		p.usage.mu.Lock()
 		if u.Sampled.After(p.usage.last.Sampled) {
 			p.usage.last = u
@@ -266,9 +254,9 @@ func (*Provider) Logs(cwd, session string) []agent.Log {
 		return nil
 	}
 	main := transcript.Path(transcript.ConfigDir(nil), cwd, session)
-	out := []agent.Log{{Path: main, Format: "claude"}}
+	out := []agent.Log{{Path: main, Format: UsageLog.Name}}
 	for _, p := range transcript.Subagents(main) {
-		out = append(out, agent.Log{Path: p, Format: "claude"})
+		out = append(out, agent.Log{Path: p, Format: UsageLog.Name})
 	}
 	return out
 }

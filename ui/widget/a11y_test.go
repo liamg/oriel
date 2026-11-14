@@ -4,8 +4,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/liamg/oriel/render"
 	"testing"
+
+	"github.com/liamg/oriel/render"
 
 	"github.com/liamg/oriel/render/snapshot"
 	"github.com/liamg/oriel/theme"

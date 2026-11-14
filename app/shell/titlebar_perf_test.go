@@ -22,7 +22,7 @@ func TestSessionKeysSwitchInOneFrameBudget(t *testing.T) {
 	defer cancel()
 	store := eventstore.New()
 	openTabFixture(t, store, tabFixture)
-	win := apptest.NewWindow(t, apptest.WindowOptions{WorkDir: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Store = store }}).Win
+	win := apptest.NewWindow(t, apptest.WindowOpts{WorkDir: t.TempDir(), Config: func(cfg *apptest.Config) { cfg.Store = store }}).Win
 	first, err := win.WaitFrame(ctx, func(f headless.Frame) bool { return strings.Contains(f.Text(), "review #4410") })
 	if err != nil {
 		t.Fatal(err)

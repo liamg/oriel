@@ -3,10 +3,10 @@ package review
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -16,10 +16,10 @@ func (x *Reviews) Count() int     { return x.count() }
 func (x *Reviews) PageOpen() bool { return x.page.open }
 func (x *Reviews) ClosePage()     { x.page.open = false }
 
-// SetClock has the page judge how old lists and details are by now.
-func (x *Reviews) SetClock(now func() time.Time) {
+// SetClock has the page judge how old lists and details are by c.
+func (x *Reviews) SetClock(c clock.Clock) {
 	x.mu.Lock()
-	x.now = now
+	x.clock = c
 	x.mu.Unlock()
 }
 

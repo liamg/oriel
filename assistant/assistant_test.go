@@ -76,7 +76,6 @@ func newRig(t *testing.T) *rig {
 	})
 	r.c.Changed = r.poke
 	r.c.Clock = r.clock
-	r.c.Now = func() time.Time { return time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC) }
 	t.Cleanup(r.c.Close)
 	return r
 }
@@ -221,8 +220,7 @@ func TestConfirmations(t *testing.T) {
 // Every action has an undo with a countdown.
 func TestActionsCanBeUndoneForAWhile(t *testing.T) {
 	r := newRig(t)
-	now := time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC)
-	r.c.Now = func() time.Time { return now }
+	now := r.clock.Now()
 	undone := 0
 	e := r.c.Acted(Act{Tool: "review_pr", Line: "started a review of acme/api#4410", Open: "session.open", OpenArgs: map[string]any{"id": "rv"},
 		Undo: func(context.Context) error { undone++; return nil }})
@@ -236,7 +234,7 @@ func TestActionsCanBeUndoneForAWhile(t *testing.T) {
 		t.Error("undone twice")
 	}
 	late := r.c.Acted(Act{Line: "renamed", Undo: func(context.Context) error { undone++; return nil }})
-	now = now.Add(time.Minute)
+	r.clock.Advance(time.Minute)
 	if err := r.c.Undo(context.Background(), late.ID); err == nil || undone != 1 {
 		t.Error("undone after its countdown")
 	}
@@ -308,7 +306,6 @@ func TestInterrupt(t *testing.T) {
 // An idle conversation ends at its deadline, from a timer set to it rather than a once-a-second check.
 func TestIdleConversationEndsOnTime(t *testing.T) {
 	r := newRig(t)
-	r.c.Now = r.clock.Now
 	r.c.Idle = 100 * time.Millisecond
 	r.c.Say("hi", false)
 	_, a := r.started()
@@ -335,7 +332,6 @@ func (r *rig) wantEndedAfter(d time.Duration, a *fakeAgent) {
 // Shortening Idle while a conversation waits re-arms its reaper to the new deadline, rather than the old one.
 func TestShorterIdleRearmsTheReaper(t *testing.T) {
 	r := newRig(t)
-	r.c.Now = r.clock.Now
 	r.c.SetIdle(time.Hour)
 	r.c.Say("hi", false)
 	_, a := r.started()

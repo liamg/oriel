@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -21,9 +22,9 @@ type CacheOpts[K comparable, V any] struct {
 	// MaxAge is how old a value may be before the next Get fetches it again: for keys without a Path, or all of
 	// them when the OS can't watch (then 2s when 0). 0 keeps a value until Invalidate.
 	MaxAge  time.Duration
-	Timeout time.Duration    // a fetch running longer fails; none when 0
-	Now     func() time.Time // the window's clock (Host.UI) or time.Now when nil
-	Frame   func() int       // the frame being built (Host.UI's Frames) when nil
+	Timeout time.Duration // a fetch running longer fails; none when 0
+	Clock   clock.Clock   // the window's clock (Host.UI) or the system's when nil
+	Frame   func() int    // the frame being built (Host.UI's Frames) when nil
 	Watch   func() (*fswatch.Watcher, error)
 }
 
@@ -310,7 +311,7 @@ func (c *Cache[K, V]) changed(p string) {
 	}
 }
 
-func (c *Cache[K, V]) now() time.Time { return loopNow(c.h, c.o.Now) }
+func (c *Cache[K, V]) now() time.Time { return loopNow(c.h, c.o.Clock) }
 
 func (c *Cache[K, V]) curFrame() int {
 	if c.o.Frame != nil {

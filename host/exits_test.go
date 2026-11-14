@@ -42,11 +42,15 @@ func TestAnAgentThatKeepsExitingStaysStopped(t *testing.T) {
 		t.Errorf("stopped by %q", se.Agent.StoppedBy)
 	}
 	var notice core.Notice
-	for _, n := range r.w.Store().State().Notifications {
-		if n.ID == "agent.exits" && n.Session == id {
-			notice = n.Notice
+	until(t, "the notice", func() bool {
+		for _, n := range r.w.Store().State().Notifications {
+			if n.ID == "agent.exits" && n.Session == id {
+				notice = n.Notice
+				return true
+			}
 		}
-	}
+		return false
+	})
 	if len(notice.Actions) != 1 || notice.Actions[0].Command != "session.open" {
 		t.Errorf("notice = %+v", notice)
 	}

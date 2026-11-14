@@ -8,10 +8,12 @@ import (
 	"errors"
 	"io"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/liamg/oriel/agent/price"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
 )
 
@@ -29,6 +31,12 @@ type Provider interface {
 // worker keeps a record of the events of a provider that doesn't.
 type Logged interface {
 	Logs(cwd, session string) []Log
+}
+
+// UsageLogs is a provider whose logs are in formats of its own: how each is read (Log.Format names one). A log in
+// usage.Events needs none.
+type UsageLogs interface {
+	UsageFormats() []usage.Format
 }
 
 // Discovered is a provider that can find every session log it keeps on this machine, whoever started the session (a
@@ -74,6 +82,17 @@ type Features struct {
 	// Notes is the file it reads standing instructions from at the root of where it starts ("CLAUDE.md"), which a
 	// workspace's notes are written to; AGENTS.md, which most agents read, if "".
 	Notes string
+}
+
+// NotesFiles are the files a workspace's notes are written to for ps: AGENTS.md, and each one's own (Features.Notes).
+func NotesFiles(ps []Provider) []string {
+	out := []string{"AGENTS.md"}
+	for _, p := range ps {
+		if n := FeaturesOf(p).Notes; n != "" && !slices.Contains(out, n) {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 // FeaturesOf are p's Features.
@@ -241,15 +260,15 @@ func ToolNames(tools []Tool) []string {
 // UnattendedRefusal is what an unattended agent is told of an ask nobody answered.
 const UnattendedRefusal = "Nobody is here to answer this: carry on without it, or say in your reply what the user should do."
 
-// Policy is how much the agent's own gate asks.
-type Policy string
+// Policy is how much the agent's own gate asks (core.Policy).
+type Policy = core.Policy
 
 const (
-	PolicyAsk    Policy = "ask"    // every tool the agent would ask about
-	PolicyLight  Policy = "light"  // edits go ahead, shell commands ask
-	PolicyBypass Policy = "bypass" // nothing asks: only inside a sandbox
-	PolicyAuto   Policy = "auto"   // the agent's own judgement asks only of what's risky (Claude's auto mode); light elsewhere
-	PolicyRefuse Policy = "refuse" // nothing asks: what isn't allowed ahead (Oriel's tools, Allow) is refused at once
+	PolicyAsk    = core.PolicyAsk
+	PolicyLight  = core.PolicyLight
+	PolicyBypass = core.PolicyBypass
+	PolicyAuto   = core.PolicyAuto
+	PolicyRefuse = core.PolicyRefuse
 )
 
 // HookSocketEnv names the unix socket a provider's agent calls back to it over (hooks, its MCP tools). A sandbox

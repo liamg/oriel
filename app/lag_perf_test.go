@@ -43,7 +43,7 @@ func lagRepo(t *testing.T) string {
 
 // lagApp is the app on a repo with the Explorer open on All, settled.
 func lagApp(t *testing.T) *apptest.Window {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: lagRepo(t)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: lagRepo(t)})
 	r.Do(func() error {
 		return r.Host.Run(context.Background(), "view.toggle", registry.Args{"id": kit.ExplorerView})
 	})
@@ -277,7 +277,7 @@ func TestMenuHoverLagBudget(t *testing.T) {
 // diffs not made until they're opened.
 func TestExplorerHoverLagOverManyChangesBudget(t *testing.T) {
 	dir := rig.ChangedRepo(t, 4000)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: dir})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: dir})
 	r.Do(func() error {
 		return r.Host.Run(context.Background(), "view.toggle", registry.Args{"id": kit.ExplorerView})
 	})

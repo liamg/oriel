@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/internal/fsx"
 	"github.com/liamg/oriel/render/raster"
@@ -61,7 +63,7 @@ func (l *loop) open(poke func()) []func() {
 	sh.keys, sh.modes = l.keys, l.modes
 	sh.ui.Store(l.ui)
 	l.keys.Raw = func() bool {
-		ed, ok := registry.EditorsOf(reg)
+		ed, ok := services.EditorsOf(reg)
 		return ok && len(ed.Pending().Keys) > 0
 	}
 	sh.theme, sh.shot = func() *theme.Resolved { return l.theme }, l.shot
@@ -70,7 +72,7 @@ func (l *loop) open(poke func()) []func() {
 	l.themeGen = -1
 	var stops []func()
 	for _, opt := range []string{"ui.theme", "ui.variant"} {
-		stops = append(stops, reg.Options().Watch(opt, l.retheme))
+		stops = append(stops, reg.Options().Watch(opt, l.retheme).Dispose)
 	}
 	for _, e := range []registry.EventInfo{
 		{Name: "FocusGained", Doc: "The window came to the front.", Payload: WindowFocus{}, Fired: true},
@@ -122,13 +124,13 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 		for first := drawn; len(t.after) > 0 && (first || !l.owed(&t, dirty)); first = false {
 			ev := t.after[0]
 			t.after = t.after[1:]
-			l.feed(ctx, &t, ev)
+			l.feedAndAsk(ctx, &t, ev)
 		}
 		l.arm(timer, &t)
 		if t.held != nil {
 			ev := t.held
 			t.held = nil
-			l.take(ctx, &t, ev, dirty)
+			l.deferOrFeed(ctx, &t, ev, dirty)
 			continue
 		}
 		select {
@@ -160,7 +162,7 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 				return nil
 			}
 			ev, t.held = lastMove(ev, w.Events())
-			l.take(ctx, &t, ev, dirty)
+			l.deferOrFeed(ctx, &t, ev, dirty)
 		}
 	}
 }
@@ -183,20 +185,21 @@ func (l *loop) takeWaiting(ctx context.Context, t *turn, dirty <-chan struct{}) 
 				return true // the moves read past were the rest
 			}
 		}
-		l.take(ctx, t, ev, dirty)
+		l.deferOrFeed(ctx, t, ev, dirty)
 	}
 	return true
 }
 
-// take feeds ev in, or, when it's a key and a frame is owed, keeps it until that frame is drawn: a key goes to what
-// has focus in the frame drawn before it, as the one typing it saw, while the pointer goes to what's on screen.
+// deferOrFeed feeds ev in (feedAndAsk), or, when it's a key and a frame is owed, keeps it until that frame is
+// drawn: a key goes to what has focus in the frame drawn before it, as the one typing it saw, while the pointer goes
+// to what's on screen.
 // What comes after a kept event waits behind it.
-func (l *loop) take(ctx context.Context, t *turn, ev render.Event, dirty <-chan struct{}) {
+func (l *loop) deferOrFeed(ctx context.Context, t *turn, ev render.Event, dirty <-chan struct{}) {
 	if len(t.after) > 0 || l.waitsForFrame(ev) && l.owed(t, dirty) {
 		t.after = append(t.after, ev)
 		return
 	}
-	l.feed(ctx, t, ev)
+	l.feedAndAsk(ctx, t, ev)
 }
 
 // owed says a frame has been asked for and not drawn, a hidden window's aside.
@@ -316,10 +319,10 @@ func earliest(a, b time.Time) time.Time {
 	return a
 }
 
-// feed handles ev, asking for a frame when it changed what one shows: a pointer move often doesn't.
-func (l *loop) feed(ctx context.Context, t *turn, ev render.Event) {
+// feedAndAsk dispatches ev, asking for a frame when it changed what one shows: a pointer move often doesn't.
+func (l *loop) feedAndAsk(ctx context.Context, t *turn, ev render.Event) {
 	var changed bool
-	l.timed(func() { changed = l.handle(ctx, ev) })
+	l.timed(func() { changed = l.dispatch(ctx, ev) })
 	if changed {
 		t.pace.Ask()
 	}
@@ -410,8 +413,8 @@ func (l *loop) loadTheme() {
 // the built-in one, with the error.
 func chosenTheme(reg registry.Registry, osLight bool) (*theme.Resolved, error) {
 	name, variant := "oriel", theme.Dark
-	if v, _, err := reg.Options().Get("ui.theme", registry.At{}); err == nil {
-		name = v.(string)
+	if v, ok := registry.Option[string](reg.Options(), "ui.theme", registry.At{}); ok {
+		name = v
 	}
 	if v, _, err := reg.Options().Get("ui.variant", registry.At{}); err == nil {
 		variant = theme.Variant(v.(string))
@@ -442,8 +445,8 @@ func resolveTheme(sources []theme.Source, name string, v theme.Variant) (*theme.
 	return theme.Resolve(st, theme.Effective(st, v))
 }
 
-// handle feeds ev in. It reports whether the next frame can differ for it.
-func (l *loop) handle(ctx context.Context, ev render.Event) bool {
+// dispatch applies ev to the window. It reports whether the next frame can differ for it.
+func (l *loop) dispatch(ctx context.Context, ev render.Event) bool {
 	switch ev := ev.(type) {
 	case render.PointerEvent:
 		changed := l.ui.Pointer(ev)
@@ -491,7 +494,7 @@ func (l *loop) handle(ctx context.Context, ev render.Event) bool {
 			}
 			return true
 		}
-		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, time.Now()))
+		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, l.sh.now()))
 	}
 	return true
 }
@@ -550,7 +553,7 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		if k := a.Keymap; !l.ready(k) {
 			if k.Desc != "" {
 				l.store.Apply(core.Notified{Notice: core.Notice{ID: "command.unavailable." + k.Command, Severity: core.SevInfo, Source: "core",
-					Text: k.Desc + " isn't available yet", Time: now()}})
+					Text: k.Desc + " isn't available yet", Time: l.sh.now()}})
 			}
 			continue
 		}
@@ -558,7 +561,7 @@ func (l *loop) run(ctx context.Context, acts []registry.Action) {
 		l.timed(func() { err = l.reg.Run(ctx, a.Keymap.Command, a.Keymap.Args) })
 		if err != nil {
 			if _, ok := err.(*registry.Panic); !ok {
-				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir)})
+				l.store.Apply(core.Notified{Notice: commandNotice(l.reg, a.Keymap.Command, err, l.sh.cfg.ConfigDir, l.sh.now())})
 			}
 		}
 	}

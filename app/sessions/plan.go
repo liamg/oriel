@@ -9,6 +9,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -86,11 +89,11 @@ func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.Contribute(uireg.RailEntry{Name: "plan-docs", Icon: "doc", Title: "Plan docs", Command: "view.toggle", Args: planDocsArgs(),
 		Order: 45, Shown: func(string) bool { se, ok := x.front(); return ok && se.Planning() }}))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if _, ok := ev.(core.SessionFocused); ok {
 			h.Do(x.openIfPlanning)
 		}
-	})))
+	}))
 	h.Do(x.openIfPlanning)
 	// Once the window is on a planning session's directory, after its layout comes back.
 	x.Add(kit.OnDirChanged(h, "opens the plan of a planning session the window moves onto", func(kit.DirChanged) { h.Do(x.openIfPlanning) }))
@@ -190,8 +193,13 @@ func (x *Plan) docs(se core.SessionState, st *planState) (docs []planDoc, loadin
 		was[d.path] = d
 	}
 	st.docs = []planDoc{}
+	var providers []agent.Provider
+	for _, p := range services.AgentProviders(x.h) {
+		providers = append(providers, p.Provider)
+	}
+	notes := agent.NotesFiles(providers)
 	for _, e := range entries {
-		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") || slices.Contains(host.NotesFiles, e.Name()) {
+		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".md") || slices.Contains(notes, e.Name()) {
 			continue
 		}
 		path := filepath.Join(se.Dir, e.Name())
@@ -295,9 +303,7 @@ func editing(se core.SessionState) string {
 }
 
 func (x *Plan) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "plan", Severity: core.SevError, Source: "plan", Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "plan", id, a)
 }
 
 type planView struct{ x *Plan }
@@ -518,7 +524,7 @@ func (x *Plan) header(c *ui.Ctx, se core.SessionState, st *planState, d planDoc,
 		c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		var who []string
 		if se.Agent.Provider != "" {
-			who = append(who, strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)))
+			who = append(who, strings.ToLower(services.ProviderTitle(x.h, se.Agent.Provider)))
 		}
 		if se.Agent.Model != "" {
 			who = append(who, se.Agent.Model)

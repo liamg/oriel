@@ -1,9 +1,10 @@
 package testrun
 
 import (
+	"cmp"
 	"encoding/json"
 	"io"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 )
@@ -144,7 +145,7 @@ func (h *History) FlakyTests() []string {
 			out = append(out, k)
 		}
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
@@ -158,7 +159,7 @@ func (h *History) Failing() []string {
 			out = append(out, k)
 		}
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
@@ -176,12 +177,7 @@ func (h *History) Slowest(n int) []string {
 		}
 	}
 	h.mu.Unlock()
-	sort.Slice(all, func(i, j int) bool {
-		if all[i].d != all[j].d {
-			return all[i].d > all[j].d
-		}
-		return all[i].k < all[j].k
-	})
+	slices.SortFunc(all, func(a, b kd) int { return cmp.Or(cmp.Compare(b.d, a.d), cmp.Compare(a.k, b.k)) })
 	if n > 0 && len(all) > n {
 		all = all[:n]
 	}

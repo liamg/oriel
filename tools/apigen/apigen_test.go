@@ -64,3 +64,28 @@ func (X) Run() {}
 		}
 	}
 }
+
+// A function annotated deprecated="…" says so where a plugin author meets it: LuaLS flags its calls, and the
+// reference marks it, saying what to use instead.
+func TestDeprecated(t *testing.T) {
+	dir := t.TempDir()
+	src := `package api
+
+//oriel:api name=x cap=ui
+type X struct{}
+
+//oriel:api doc="Run it." deprecated="use oriel.x.go"
+func (X) Run() {}
+`
+	os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o644)
+	nss, err := Parse(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if types := string(Types(nss, "1")); !strings.Contains(types, "---@deprecated use oriel.x.go\nfunction oriel.x.run(") {
+		t.Errorf("the types don't deprecate it:\n%s", types)
+	}
+	if docs := string(Docs(nss, "1")); !strings.Contains(docs, "Run it. Deprecated: use oriel.x.go.") {
+		t.Errorf("the reference doesn't deprecate it:\n%s", docs)
+	}
+}

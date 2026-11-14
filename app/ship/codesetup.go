@@ -154,7 +154,7 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 	}
 	th := c.Theme()
 	open := true
-	widget.Modal(c, "codesetup", &open, "Set up "+a.hostname, widget.ModalOpts{Width: 540, Help: codeSetupHelp}, func(c *ui.Ctx) {
+	widget.Modal(c, "codesetup", &open, widget.ModalOpts{Title: "Set up " + a.hostname, Width: 540, Help: codeSetupHelp}, func(c *ui.Ctx) {
 		if len(a.hosts) > 1 {
 			widget.Wrap(c, "which", "Which code host is "+a.hostname+"?", 500, kit.UIFont(13, th.C(theme.Fg)))
 			labels := make([]string, 0, len(a.hosts)+1)

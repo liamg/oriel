@@ -10,15 +10,17 @@ import (
 )
 
 type ModalOpts struct {
+	Title string  // its head's title
 	Width float32 // 600 by default
+	Label string  // its accessible name; Title if ""
 	Help  string
 }
 
 type modalState struct{ shown bool }
 
-// Modal shows a card over a scrim while *open, holding keyboard focus inside it. Escape, or a click on
-// the scrim, closes it.
-func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(c *ui.Ctx)) {
+// Modal shows a card with o.Title at its head over a scrim while *open, holding keyboard focus inside it. Escape, or a
+// click on the scrim, closes it.
+func Modal(c *ui.Ctx, key any, open *bool, o ModalOpts, body func(c *ui.Ctx)) {
 	id := c.Next(key)
 	st := ui.State[modalState](c, id)
 	if !*open {
@@ -48,9 +50,9 @@ func Modal(c *ui.Ctx, key any, open *bool, title string, o ModalOpts, body func(
 	centre := render.Point{X: size.X / 2, Y: size.Y / 2}
 	c.Column(key, ui.Style{W: ui.Px(w), Fill: col(c, tModalBg), Stroke: col(c, tModalBorder), Border: 1, Radius: 10, Z: ui.LayerDialog, Clip: true,
 		Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Enter: riseIn, Exit: fade, Trap: true, Focusable: true, KeyMode: "modal", Help: o.Help,
-		Role: ui.RoleDialog, Label: title}, func(c *ui.Ctx) {
+		Role: ui.RoleDialog, Label: cmp.Or(o.Label, o.Title)}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(40), Pad: ui.PadXY(16, 0), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("title", title, uiText(c, 13, typeset.SemiBold, col(c, tModalTitle)))
+			c.Text("title", o.Title, uiText(c, 13, typeset.SemiBold, col(c, tModalTitle)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			kbd(c, "esc")
 		})

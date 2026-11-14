@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
@@ -54,5 +53,5 @@ func Env(t testing.TB) hostcore.Env {
 	isolate.Test(t)
 	closed := make(chan struct{})
 	t.Cleanup(func() { close(closed) })
-	return hostcore.Env{Home: t.TempDir(), Log: slog.New(slog.DiscardHandler), Now: time.Now, Closed: closed, Work: &hostcore.Jobs{}}
+	return hostcore.Env{Home: t.TempDir(), Log: slog.New(slog.DiscardHandler), Closed: closed, Work: &hostcore.Jobs{}}
 }

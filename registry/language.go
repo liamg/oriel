@@ -23,7 +23,7 @@ func (r *reg) Language(l Language) Disposable {
 	defer r.mu.Unlock()
 	tok := r.languages.push(l.Name, l, r.tokens.Add(1))
 	r.langGen++
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.languages.remove(l.Name, tok)

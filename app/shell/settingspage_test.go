@@ -21,7 +21,7 @@ func TestSettingsKeepsTheSidebar(t *testing.T) {
 	if x := left(apptest.New(t, apptest.Options{})); x != 0 {
 		t.Errorf("settings opened from the start view starts at x %v, beside the sidebar", x)
 	}
-	over := sessionScene(t, core.KindWork, sidebarFixture(t), sidebarSize)
+	over := apptest.SessionScene(t, core.KindWork, apptest.SidebarProjects(t), apptest.SidebarSize)
 	explorer := over.Node("Explorer").Bounds
 	if x := left(over); x < explorer.Max.X {
 		t.Errorf("settings over a project starts at x %v, over the sidebar (to %v)", x, explorer.Max.X)

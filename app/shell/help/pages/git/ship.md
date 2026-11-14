@@ -149,7 +149,7 @@ conflicts, behind its base, missing required reviews, and a PR before it in the 
 Continue is off. With nothing in the way it's **Merge**. The method is `ship.merge_method` when the repo allows it, else
 the repo's own default, else squash, and can be changed for this merge; **Delete the branch** deletes it on the host
 after. It merges the commit the dialog showed: a push since makes the host refuse it. Plugins add reasons with the
-`PrMerge` hook. The agent can't merge.
+`ShipMerge` hook. The agent can't merge.
 
 Once every project's pull request is merged, the page's main button is **Finish session**, and so is the merged PR's:
 it opens the End session dialog (see Session tabs). `session.archive_on_merge` archives the session by itself instead,
@@ -184,8 +184,9 @@ click one to open it on its code host.
 
 A project's PR goes to the code host its origin is on. github.com, gitlab.com and dev.azure.com are known by name. For
 a server of your own, Oriel looks in turn at `code.hosts` (hostname → host), the servers gh and glab are logged into,
-the URL's shape (`/_git/` is Azure DevOps), and then asks the server itself, once and without a token. If none of those
-tells, **Set up…** on the PR step asks you. **Set up…** (`code.setup`) is also where a server's token goes: the API URL
+and then asks the server itself, once and without a token. A URL whose shape says whose it is (`/_git/` is Azure
+DevOps) isn't enough to let that host's plugin reach the server: a notice offers to set it up. If none of those tells,
+**Set up…** on the PR step asks you. **Set up…** (`code.setup`) is also where a server's token goes: the API URL
 (`code.api` when it isn't the usual one), the token with the host's instructions and **Create a token ↗**, kept as
 its own secret (`GITLAB_TOKEN:git.acme.corp`) and sent only to that server, by that host's plugin. It's asked once per
 server and used for every repo on it. **None of these** leaves the server's PR steps off.

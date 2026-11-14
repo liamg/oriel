@@ -26,8 +26,8 @@ func TestCloneRegistersTheRepo(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(repo.Path, "round.go")); err != nil {
 		t.Errorf("the clone has no files: %v", err)
 	}
-	if got, ok := r.w.repos.Find("pricing"); !ok || got.Path != repo.Path {
-		t.Errorf("not registered: %+v", r.w.repos.Repos())
+	if got, ok := r.w.reposPart.Find("pricing"); !ok || got.Path != repo.Path {
+		t.Errorf("not registered: %+v", r.w.reposPart.Repos())
 	}
 	again, err := r.w.CloneRepo(ctx, CloneReq{URL: bare})
 	if err != nil || again.ID != repo.ID {

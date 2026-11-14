@@ -11,7 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -32,7 +32,7 @@ func sample(t *testing.T) string {
 	return s[:strings.Index(s, "```")]
 }
 
-func lua(s *apptest.Scene) *settings.Lua { return apptest.PluginOf[*settings.Lua](s, "lua") }
+func lua(s *apptest.Scene) *luaconfig.Lua { return apptest.PluginOf[*luaconfig.Lua](s, "lua") }
 
 // luaSceneAt is apptest.LuaScene with its window on dir.
 func luaSceneAt(t *testing.T, dir, initLua string) *apptest.Scene {

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -68,8 +70,8 @@ type notices struct {
 	panel   *logPanel
 	crashes []Crash
 	modal   bool
-	events  string     // :Events filter
-	writes  kit.Writer // crash reports deleted
+	events  string      // :Events filter
+	writes  work.Writer // crash reports deleted
 }
 
 func (n *notices) Manifest() plugin.Manifest { return plugin.Manifest{ID: "notices"} }
@@ -77,17 +79,17 @@ func (n *notices) Manifest() plugin.Manifest { return plugin.Manifest{ID: "notic
 func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.h, n.hovered = h, map[uint64]time.Time{}
 	n.panel = newLogPanel(n.sh, h)
-	n.Add(kit.OnDispose(h.Framed(n.panel.shown.Framed)))
-	n.Add(kit.OnDispose(n.panel.shown.Drop))
-	n.Add(kit.OnDispose(n.writes.Wait))
+	n.Add(h.Framed(n.panel.shown.Framed))
+	n.Add(registry.DisposeFunc(n.panel.shown.Drop))
+	n.Add(registry.DisposeFunc(n.writes.Wait))
 	n.Add(h.Contribute(registry.Busy{Name: "notices", Busy: n.writes.Busy, Source: "builtin:notices"}))
 	cfg := n.sh.cfg
 	n.Add(h.OnFault(func(f registry.Fault) {
-		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir)})
+		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 	}))
 	n.Add(h.OnFailure(func(f registry.Failure) {
 		if f.InARow < registry.FailLimit { // the fault that turns it off says so, on the same row
-			cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir)})
+			cfg.Store.Apply(core.Notified{Notice: failureNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
 		}
 	}))
 	if n.sh.cfg.CrashDir != "" && !n.sh.crashSeen {
@@ -95,20 +97,19 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 		n.crashes = PendingCrashes(n.sh.cfg.CrashDir)
 		n.modal = len(n.crashes) > 0
 	}
-	str := func(a registry.Args, k string) string { s, _ := a[k].(string); return s }
 	openLog := func(ctx registry.Ctx, a registry.Args) error {
 		if seq, ok := argSeq(a); ok {
 			n.panel.reveal(seq)
 		}
-		if s := str(a, "severity"); s != "" {
+		if s := a.String("severity"); s != "" {
 			n.panel.only(core.Severity(s))
 		}
 		return h.Run(ctx, "view.open", registry.Args{"id": "log", "place": "dock", "edge": "bottom", "title": "Log", "size": 360})
 	}
 	for _, c := range []registry.Command{
 		{ID: "Log", Title: "Open the log, or set its level (:Log level debug)", Run: func(ctx registry.Ctx, a registry.Args) error {
-			lv := str(a, "level")
-			if f := strings.Fields(str(a, "args")); len(f) == 2 && f[0] == "level" {
+			lv := a.String("level")
+			if f := strings.Fields(a.String("args")); len(f) == 2 && f[0] == "level" {
 				lv = f[1]
 			}
 			if lv == "" {
@@ -151,7 +152,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			return fmt.Errorf("no notification %d", seq)
 		}},
 		{ID: "contribution.turn_on", Title: "Turn a contribution that was turned off back on", Run: func(_ registry.Ctx, a registry.Args) error {
-			kind, id := str(a, "kind"), str(a, "id")
+			kind, id := a.String("kind"), a.String("id")
 			h.TurnOn(kind, id)
 			h.Notify(core.Notice{ID: "turned-on." + kind + "." + id, Severity: core.SevInfo, Source: "core", Text: fmt.Sprintf("%s %s is back on", kind, id)})
 			return nil
@@ -360,7 +361,7 @@ func (n *notices) crashModal(c *ui.Ctx) {
 	}
 	cr := n.crashes[0]
 	title := "Oriel quit unexpectedly last time"
-	widget.Modal(c, "crash", &n.modal, title, widget.ModalOpts{Width: 720, Help: "errors#crash"}, func(c *ui.Ctx) {
+	widget.Modal(c, "crash", &n.modal, widget.ModalOpts{Title: title, Width: 720, Help: "errors#crash"}, func(c *ui.Ctx) {
 		muted := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: c.Theme().C(theme.FgMuted)}
 		c.Text("when", fmt.Sprintf("%s · %s", cr.Time.Local().Format("2006-01-02 15:04"), cr.Version),
 			ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: c.Theme().C(theme.FgFaint)})

@@ -1,3 +1,5 @@
+// Package gitui is git in the window: the explorer, diffs, the commit dialog, and each work tree's status as the
+// panels read it.
 package gitui
 
 import (
@@ -8,6 +10,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -24,7 +30,7 @@ import (
 var treeNeed = watch.Need{}
 
 // Git is the work trees' git status for the explorer, the gutters and the pickers, and the git.* commands that change
-// it. Each tree's status is a subscription to its session's manager (registry.Watches): the work dir's for as long as
+// it. Each tree's status is a subscription to its session's manager (services.Watches): the work dir's for as long as
 // the plugin runs, others' for as long as something keeps using them, frame to frame. Outside a repo a tree has no
 // status and the commands say so.
 type Git struct {
@@ -33,7 +39,7 @@ type Git struct {
 	scope   func() gitx.Scope // the Explorer's, while it's active: GitTrees.Scope
 	h       plugin.Host
 	links   kit.Links // the dirs asked about, resolved
-	busy    kit.Busy
+	busy    work.Busy
 	running atomic.Int32 // the work busy waits on
 
 	mu        sync.Mutex
@@ -46,7 +52,7 @@ type Git struct {
 	watchers map[int]func(root string, paths []string)
 	nextW    int
 	unwatch  func()
-	told     kit.Serial // the watchers' calls, off the loop
+	told     work.Serial // the watchers' calls, off the loop
 
 	ask *commitAsk // the commit dialog, while it's open
 }
@@ -82,21 +88,21 @@ func (g *Git) Activate(ctx context.Context, h plugin.Host) error {
 	g.h = h
 	g.others, g.parked, g.roots = map[string]*gitTree{}, map[string]*parkedTree{}, map[string]string{}
 	g.gitTree = gitTree{g: g, held: true}
-	g.Add(h.Contribute(registry.Service{Name: registry.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
+	g.Add(h.Contribute(registry.Service{Name: services.GitTreesService, Impl: gitTrees{g}, Source: "builtin:git"}))
 	g.watchers = map[int]func(string, []string){}
 	if root, ok := g.findRoot(ctx, h.Here().Project); ok {
 		g.rememberRoot(h.Here().Project, root)
 		g.hold(root)
 	}
-	g.Add(kit.OnDispose(func() { g.release() }))
-	g.Add(kit.OnDispose(g.closeParked))
-	g.Add(kit.OnDispose(g.told.Stop))
+	g.Add(registry.DisposeFunc(func() { g.release() }))
+	g.Add(registry.DisposeFunc(g.closeParked))
+	g.Add(registry.DisposeFunc(g.told.Stop))
 	g.Add(kit.OnDirChanged(h, "git's work tree", func(kit.DirChanged) { g.follow() }))
 	for _, c := range g.commands() {
 		g.Add(h.Command(c))
 	}
 	g.activateCommit(h)
-	g.Add(kit.OnDispose(h.Framed(g.framed)))
+	g.Add(h.Framed(g.framed))
 	return nil
 }
 
@@ -107,7 +113,8 @@ func (g *Git) findRoot(ctx context.Context, dir string) (string, bool) {
 	if dir == "" {
 		return "", false
 	}
-	return gitx.Root(ctx, dir)
+	root, err := gitx.Root(ctx, dir)
+	return root, err == nil
 }
 
 // hold reads the work tree at root as the window's, for good: Tree("") is it until the window moves (DirChanged).
@@ -153,7 +160,8 @@ func (g *Git) follow() {
 	}
 	g.running.Add(1)
 	g.busy.Go(func() {
-		root, ok := gitx.Root(context.Background(), dir)
+		root, rootErr := gitx.Root(context.Background(), dir)
+		ok := rootErr == nil
 		g.h.Do(func() {
 			defer g.running.Add(-1)
 			if g.work != dir { // moved on again while it looked
@@ -179,7 +187,7 @@ func (g *Git) notify(root string, paths []string) {
 	}
 	g.mu.Unlock()
 	// Off the loop and in order: a status is often set in a frame's build, and a watcher reads files.
-	g.told.Do(func() {
+	g.told.Queue(func() {
 		for _, fn := range fns {
 			fn(root, paths)
 		}
@@ -230,7 +238,7 @@ func (g *Git) commands() []registry.Command {
 				return fmt.Errorf("not in a git repository")
 			}
 			for i, p := range ps {
-				ps[i] = t.rel(p)
+				ps[i] = t.Rel(p)
 			}
 			g.async(func(ctx context.Context) error { return fn(ctx, t.status.Repo(), ps) }, t)
 			return nil
@@ -248,7 +256,7 @@ func (g *Git) commands() []registry.Command {
 				if a["confirm"] != true {
 					ps := paths(a)
 					for i, p := range ps {
-						ps[i] = g.holding(p).rel(p)
+						ps[i] = g.holding(p).Rel(p)
 					}
 					h.Notify(core.Notice{ID: "git.discard", Severity: core.SevQuestion, Confirm: true, Title: "Discard changes?",
 						Text: "Throw away the unstaged changes to " + strings.Join(ps, ", ") + "? Untracked files are deleted.",
@@ -287,6 +295,7 @@ func (g *Git) framed() {
 	}
 }
 
+// trees are the work trees the window reads other than its own.
 func (g *Git) trees() []*gitTree {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -320,7 +329,8 @@ func (g *Git) tree(dir string) *gitTree {
 	g.others[dir] = t
 	g.running.Add(1)
 	g.busy.Go(func() {
-		root, ok := gitx.Root(context.Background(), dir)
+		root, rootErr := gitx.Root(context.Background(), dir)
+		ok := rootErr == nil
 		// The loop reads the tree's fields unlocked, so they're set there; Busy holds until they are.
 		g.h.Do(func() {
 			defer g.running.Add(-1)
@@ -370,7 +380,7 @@ func (g *Git) setNested(dir string, n bool) {
 func (g *Git) holding(p string) *gitTree {
 	if filepath.IsAbs(p) {
 		for _, t := range g.trees() {
-			if t.root() != "" && kit.Within(p, t.root()) {
+			if t.Root() != "" && kit.Within(p, t.Root()) {
 				return t
 			}
 		}
@@ -436,7 +446,7 @@ func (g *Git) state() *gitx.State {
 	if g == nil {
 		return nil
 	}
-	return g.gitTree.state()
+	return g.gitTree.State()
 }
 
 func (g *Git) load() widget.LoadState {
@@ -450,14 +460,14 @@ func (g *Git) root() string {
 	if g == nil {
 		return ""
 	}
-	return g.gitTree.root()
+	return g.gitTree.Root()
 }
 
 func (g *Git) rel(p string) string {
 	if g == nil {
 		return p
 	}
-	return g.gitTree.rel(p)
+	return g.gitTree.Rel(p)
 }
 
 func (g *Git) now() time.Time { return kit.WindowNow(g.h) }
@@ -477,7 +487,7 @@ func (g *Git) unread(dir string) {
 
 // found sets the tree's root; the caller keeps others off it.
 func (t *gitTree) found(root string) {
-	t.src = t.g.trees_(root, t.sessionFor(root))
+	t.src = t.g.treeSource(root, t.sessionFor(root))
 	t.status = gitx.NewStatus(t.src.Repo())
 }
 
@@ -502,9 +512,9 @@ func (t *gitTree) sessionFor(root string) core.SessionID {
 	return t.session
 }
 
-// trees_ is root's sources from the session's manager.
-func (g *Git) trees_(root string, id core.SessionID) *gitsrc.Tree {
-	if w, ok := registry.WatchesOf(g.h); ok {
+// treeSource is root's git sources, from the session's freshness manager, else its own.
+func (g *Git) treeSource(root string, id core.SessionID) *gitsrc.Tree {
+	if w, ok := services.WatchesOf(g.h); ok {
 		return w.Tree(id, root)
 	}
 	return gitsrc.New(root, nil)
@@ -605,7 +615,7 @@ func (t *gitTree) Load() registry.Load {
 	if t == nil {
 		return registry.Load{Done: true}
 	}
-	if !t.ready || t.status != nil && t.state() == nil {
+	if !t.ready || t.status != nil && t.State() == nil {
 		t.mu.Lock()
 		err := t.failed
 		t.mu.Unlock()
@@ -616,10 +626,7 @@ func (t *gitTree) Load() registry.Load {
 
 func (t *gitTree) load() widget.LoadState { return kit.LoadState(t.Load()) }
 
-func (t *gitTree) Root() string         { return t.root() }
-func (t *gitTree) State() *gitx.State   { return t.state() }
-func (t *gitTree) Counted() *gitx.State { return t.withCounts() }
-func (t *gitTree) Rel(p string) string  { return t.rel(p) }
+func (t *gitTree) StateWithCounts() *gitx.State { return t.withCounts() }
 func (t *gitTree) Status() *gitx.Status {
 	if t == nil {
 		return nil
@@ -646,23 +653,23 @@ func (t *gitTree) Remote() string {
 // gitTrees is git's GitTrees service.
 type gitTrees struct{ g *Git }
 
-func (s gitTrees) Tree(dir string) registry.GitTree { return s.g.tree(dir) }
+func (s gitTrees) Tree(dir string) services.GitTree { return s.g.tree(dir) }
 func (s gitTrees) Scope() gitx.Scope {
 	if s.g.scope == nil {
 		return gitx.All
 	}
 	return s.g.scope()
 }
-func (s gitTrees) Holding(p string) registry.GitTree     { return s.g.holding(p) }
-func (s gitTrees) Do(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
-func (s gitTrees) Reload()                               { s.g.reload() }
-func (s gitTrees) Busy() bool                            { return s.g.running.Load() > 0 || s.g.reading() }
-func (s gitTrees) WatchWindow(fn func(root string, paths []string)) func() {
-	return s.g.watchWindow(fn)
+func (s gitTrees) Holding(p string) services.GitTree      { return s.g.holding(p) }
+func (s gitTrees) Run(fn func(ctx context.Context) error) { s.g.async(fn, &s.g.gitTree) }
+func (s gitTrees) Reload()                                { s.g.reload() }
+func (s gitTrees) Busy() bool                             { return s.g.running.Load() > 0 || s.g.reading() }
+func (s gitTrees) WatchWindow(fn func(root string, paths []string)) registry.Disposable {
+	return registry.DisposeFunc(s.g.watchWindow(fn))
 }
 
 // state is the last status read, nil outside a repo or before the first.
-func (t *gitTree) state() *gitx.State {
+func (t *gitTree) State() *gitx.State {
 	if t == nil || t.status == nil {
 		return nil
 	}
@@ -683,7 +690,7 @@ func (t *gitTree) busy() bool {
 // withCounts is the status with line counts, kept read while something asks for it each frame; the status
 // without them until they're first read.
 func (t *gitTree) withCounts() *gitx.State {
-	st := t.state()
+	st := t.State()
 	if st == nil {
 		return nil
 	}
@@ -711,7 +718,7 @@ func (t *gitTree) withCounts() *gitx.State {
 
 // manager is the tree's session's manager, else the app's; t.mu is held.
 func (t *gitTree) manager() *watch.Manager {
-	w, ok := registry.WatchesOf(t.g.h)
+	w, ok := services.WatchesOf(t.g.h)
 	if !ok || t.src == nil {
 		return nil
 	}
@@ -722,7 +729,7 @@ func (t *gitTree) manager() *watch.Manager {
 	return w.App()
 }
 
-func (t *gitTree) root() string {
+func (t *gitTree) Root() string {
 	if t == nil || t.status == nil {
 		return ""
 	}
@@ -730,21 +737,21 @@ func (t *gitTree) root() string {
 }
 
 // rel is a path relative to the repo's root, as git names it, from one that's absolute or relative to the work dir.
-func (t *gitTree) rel(p string) string {
-	if t.root() == "" {
+func (t *gitTree) Rel(p string) string {
+	if t.Root() == "" {
 		return p
 	}
 	if !filepath.IsAbs(p) {
 		p = filepath.Join(t.work, p)
 	}
-	if r, err := filepath.Rel(t.root(), p); err == nil {
+	if r, err := filepath.Rel(t.Root(), p); err == nil {
 		return filepath.ToSlash(r)
 	}
 	return p
 }
 
 // abs is a repo path as a path on disk.
-func (t *gitTree) abs(rel string) string { return filepath.Join(t.root(), filepath.FromSlash(rel)) }
+func (t *gitTree) abs(rel string) string { return filepath.Join(t.Root(), filepath.FromSlash(rel)) }
 
 // settled says every work tree asked for has had its root looked for.
 func (g *Git) settled() bool {

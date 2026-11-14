@@ -49,7 +49,7 @@ func (p *Provider) Discover() []agent.Transcript {
 			if err != nil {
 				return nil
 			}
-			out = append(out, agent.Transcript{Session: id, Logs: []agent.Log{{Path: path, Format: "codex"}}, Modified: fi.ModTime()})
+			out = append(out, agent.Transcript{Session: id, Logs: []agent.Log{{Path: path, Format: UsageLog.Name}}, Modified: fi.ModTime()})
 			return nil
 		})
 	}

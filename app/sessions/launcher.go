@@ -11,6 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -144,7 +148,7 @@ func (x *Launcher) openWith(a registry.Args) {
 
 // load reads the kinds, which are local, at once; the providers' probe runs off the loop.
 func (x *Launcher) load(want core.Kind) {
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.SessionCalls(x.h)
 	if err != nil {
 		x.loadErr = err.Error()
 		return
@@ -324,7 +328,7 @@ func (x *Launcher) args() registry.Args {
 		a["repos"] = repos
 	}
 	if a.String("prompt") != "" || a.String("ticket") != "" {
-		a["then"] = []any{map[string]any{"command": "request.open"}} // the first request, as the agent gets it
+		a["then"] = kit.Then(kit.Call{Command: "request.open"}) // the first request, as the agent gets it
 	}
 	return a
 }
@@ -386,7 +390,7 @@ func (x *Launcher) continuing(c *ui.Ctx, se core.Session) {
 	a := se.Snapshot().Agent
 	on := "no agent"
 	if a.Provider != "" {
-		on = kit.ProviderName(x.h, a.Provider)
+		on = services.ProviderTitle(x.h, a.Provider)
 		if a.Model != "" {
 			on += " · " + a.Model
 		}
@@ -686,7 +690,7 @@ func (x *Launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 	if on {
 		fill, line = th.C(tLaunchCardOn), th.C(tLaunchLineOn)
 	}
-	name := kit.ProviderName(x.h, p.ID)
+	name := services.ProviderTitle(x.h, p.ID)
 	in := widget.Clickable(c, "provider."+p.ID, ui.Style{Dir: ui.Column, W: ui.Flex(1), Pad: ui.Pad(12), Gap: 10, Fill: fill, Stroke: line, Border: 1, Radius: 8,
 		NoHover: true, Label: name, Selected: on, Help: "agent/launcher#agent"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -708,7 +712,7 @@ func (x *Launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 			if on {
 				effort = x.effort
 			}
-			if m, e, ok := kit.ModelSelects(c, p, model, effort, false, "agent/launcher#agent"); ok {
+			if m, e, ok := agentkit.ModelSelects(c, p, model, effort, false, "agent/launcher#agent"); ok {
 				x.pickProvider(p.ID)
 				x.model, x.effort = m, e
 			}
@@ -772,8 +776,8 @@ func (x *Launcher) noAgentCard(c *ui.Ctx, k core.KindSpec) {
 // runsIn is where the session runs: in a sandbox or not, which backend, and its network.
 func (x *Launcher) runsIn(c *ui.Ctx) {
 	kit.Heading(c, "head", "Runs in", "")
-	pick := kit.BackendPick{Chosen: &x.backend, Setting: kit.SettingBackend(x.h), Offered: x.h.State().Machine.Sandboxes}
-	kit.SandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#runs-in")
+	pick := agentkit.BackendPick{Chosen: &x.backend, Setting: agentkit.SettingBackend(x.h), Offered: x.h.State().Machine.Sandboxes}
+	agentkit.SandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#runs-in")
 }
 
 // side is the recent prompts, and what starting will do.
@@ -844,7 +848,7 @@ func (x *Launcher) preflight() [][2]string {
 	agent := "none"
 	switch {
 	case x.provider != "":
-		agent = strings.TrimSpace(kit.ProviderName(x.h, x.provider) + " " + x.model)
+		agent = strings.TrimSpace(services.ProviderTitle(x.h, x.provider) + " " + x.model)
 	case !x.noAgent && x.providersState().Loading():
 		agent = "waiting on the probe"
 	case !x.noAgent:
@@ -853,7 +857,7 @@ func (x *Launcher) preflight() [][2]string {
 	rows = append(rows, [2]string{"agent", agent}, [2]string{"prompt pack", cmp.Or(k.Pack, "none")})
 	runs, network := "on this machine", "this machine's"
 	if x.sandbox {
-		runs, network = "in a "+kit.SandboxNoun(kit.BackendPick{Chosen: &x.backend, Setting: kit.SettingBackend(x.h)}.Current()), "ask per new host"
+		runs, network = "in a "+agentkit.SandboxNoun(agentkit.BackendPick{Chosen: &x.backend, Setting: agentkit.SettingBackend(x.h)}.Current()), "ask per new host"
 		if x.openNet {
 			network = "open"
 		}

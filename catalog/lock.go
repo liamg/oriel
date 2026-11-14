@@ -3,10 +3,12 @@ package catalog
 import (
 	"errors"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/toml"
 )
 
@@ -45,7 +47,7 @@ func LoadLock(path string) (*Lock, error) {
 }
 
 // IDs are the plugins it locks, sorted.
-func (l *Lock) IDs() []string { return sortedKeys(l.doc.Value()) }
+func (l *Lock) IDs() []string { return slices.Sorted(maps.Keys(l.doc.Value())) }
 
 // Get is what it records of id.
 func (l *Lock) Get(id string) (Locked, bool) {
@@ -54,7 +56,7 @@ func (l *Lock) Get(id string) (Locked, bool) {
 		return Locked{}, false
 	}
 	e := Locked{Source: str(t["source"]), Version: str(t["version"]), Commit: str(t["commit"]), Badge: str(t["badge"]),
-		Capabilities: strs(t["capabilities"])}
+		Capabilities: plugin.Strings(t["capabilities"])}
 	if a, ok := t["archives"].(map[string]any); ok {
 		e.Archives = map[string]string{}
 		for k, v := range a {

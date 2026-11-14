@@ -160,8 +160,8 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	async, _ := spec["async"].(bool)
 	confirm, _ := spec["confirm"].(*script.Fn)
 	t := registry.AgentTool{Name: str(spec, "name"), Desc: str(spec, "desc"), Params: params, Source: where,
-		ReadOnly: readOnly, Reads: str(spec, "reads"), For: strs(spec["for"]), Adds: str(spec, "adds"),
-		CoveredBy: strs(spec["covered_by"]),
+		ReadOnly: readOnly, Reads: str(spec, "reads"), For: plugin.Strings(spec["for"]), Adds: str(spec, "adds"),
+		CoveredBy: plugin.Strings(spec["covered_by"]),
 		Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
 			var out any
 			var err error
@@ -199,8 +199,8 @@ func (g Agent) Tool(spec script.Table, where string) error {
 					}
 				}
 			}
-			c.Title = cmpOr(c.Title, str(spec, "name"))
-			c.Line = cmpOr(c.Line, c.Title)
+			c.Title = cmp.Or(c.Title, str(spec, "name"))
+			c.Line = cmp.Or(c.Line, c.Title)
 			return c, nil
 		}
 	}
@@ -269,7 +269,7 @@ func (g Agent) Explainer(spec script.Table, where string) error {
 	e := registry.Explainer{Name: str(spec, "name"), Source: where,
 		Explain: func(_ context.Context, r registry.ExplainRequest) (string, error) {
 			out, err := g.a.VM.Call(run, script.Table{"kind": r.Kind, "subject": r.Subject, "context": r.Context, "files": r.Files,
-				"depth": cmpOr(r.Depth, registry.ExplainBrief), "format": r.Format})
+				"depth": cmp.Or(r.Depth, registry.ExplainBrief), "format": r.Format})
 			if err != nil || len(out) == 0 {
 				return "", err
 			}
@@ -320,7 +320,7 @@ func (g Agent) Fork(req script.Table, fn *script.Fn) error {
 	if prompt == "" || fn == nil {
 		return fmt.Errorf("fork needs a prompt and a function for the answer")
 	}
-	session := cmpOr(str(req, "session"), string(g.a.Host.State().Focus))
+	session := cmp.Or(str(req, "session"), string(g.a.Host.State().Focus))
 	if session == "" {
 		var newest time.Time
 		for _, se := range g.a.Host.Sessions() {
@@ -358,7 +358,7 @@ func (g Agent) Fork(req script.Table, fn *script.Fn) error {
 
 //oriel:api doc="A prompt pack: { prompt, tools }, for sessions to start with." cap=agent.prompt
 func (g Agent) Pack(name string, spec script.Table, where string) error {
-	g.a.own(g.a.Host.Contribute(registry.PromptPack{Name: name, Prompt: str(spec, "prompt"), Tools: strs(spec["tools"]), Source: where}))
+	g.a.own(g.a.Host.Contribute(registry.PromptPack{Name: name, Prompt: str(spec, "prompt"), Tools: plugin.Strings(spec["tools"]), Source: where}))
 	return nil
 }
 
@@ -438,15 +438,15 @@ func (s Session) id(id string) core.SessionID {
 //oriel:api name=hud cap=ui
 type HUD struct{ a *APIs }
 
-//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh."
-func (h HUD) Indicator(name string, opts script.Table, build any, where string) error {
+//oriel:api doc="An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh." optional=opts
+func (h HUD) Indicator(name string, build any, opts script.Table, where string) error {
 	every, _ := time.ParseDuration(str(opts, "every"))
 	fn, _ := build.(*script.Fn)
 	if fn == nil {
 		h.a.setIndicator(name, build)
 	}
 	ind := uireg.Indicator{Name: name, Slot: str(opts, "slot"), Title: str(opts, "title"), Help: str(opts, "help"), Every: every,
-		On: strs(opts["on"]), Source: where,
+		On: plugin.Strings(opts["on"]), Source: where,
 		Build: func(registry.Ctx) (ui.Node, error) {
 			v, set := h.a.takeIndicator(name, fn != nil)
 			if fn != nil && !set {
@@ -487,9 +487,12 @@ func (h HUD) Refresh(name string) error {
 //oriel:api name=status cap=ui
 type Status struct{ a *APIs }
 
-//oriel:api doc="A status rule: fn(session) returns a status colour name, or nil to leave it."
-func (s Status) Rule(fn *script.Fn, where string) error {
-	s.a.own(s.a.Host.Contribute(registry.StatusRule{Name: where, Source: where, Rule: func(sess map[string]any) (string, error) {
+//oriel:api doc="A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it."
+func (s Status) Rule(name string, fn *script.Fn, where string) error {
+	if name == "" || fn == nil {
+		return fmt.Errorf("a status rule needs a name and a function")
+	}
+	s.a.own(s.a.Host.Contribute(registry.StatusRule{Name: name, Source: where, Rule: func(sess map[string]any) (string, error) {
 		out, err := s.a.VM.Call(fn, sess)
 		if err != nil || len(out) == 0 {
 			return "", err
@@ -593,8 +596,8 @@ func (l Language) Add(spec script.Table, where string) error {
 	if name == "" {
 		return fmt.Errorf("a language needs a name")
 	}
-	lang := registry.Language{Name: name, Extensions: strs(spec["extensions"]), Filenames: strs(spec["filenames"]),
-		Shebangs: strs(spec["shebangs"]), Queries: map[string]string{}, Source: where}
+	lang := registry.Language{Name: name, Extensions: plugin.Strings(spec["extensions"]), Filenames: plugin.Strings(spec["filenames"]),
+		Shebangs: plugin.Strings(spec["shebangs"]), Queries: map[string]string{}, Source: where}
 	if g := expand(str(spec, "grammar")); g != "" {
 		lang.Grammar = func() ([]byte, error) { return os.ReadFile(g) }
 	}

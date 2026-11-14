@@ -19,7 +19,7 @@ func TestEditorOpenLandsOnTheLine(t *testing.T) {
 	for i := 1; i <= 600; i++ {
 		fmt.Fprintf(&b, "// line %d\n", i)
 	}
-	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Write: map[string]string{"long.go": b.String(), "other.go": "package p\n"}})
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Write: map[string]string{"long.go": b.String(), "other.go": "package p\n"}})
 	x := apptest.WindowPlugin[*editor.Editor](app, "editor")
 	open := func(file string, line int, place string) {
 		t.Helper()

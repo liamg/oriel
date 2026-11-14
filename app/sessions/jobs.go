@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -57,9 +58,9 @@ var runFilters = []string{"", host.RunRunning, host.RunDone, host.RunBlocked, ho
 
 type Jobs struct {
 	kit.Disposer
-	h   plugin.Host
-	now func() time.Time
-	loc *time.Location
+	h     plugin.Host
+	clock clock.Clock
+	loc   *time.Location
 
 	open      bool
 	selKey    string // the selected job's name
@@ -128,18 +129,19 @@ func (x *Jobs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "jobs"} }
 func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.JobKind}, Source: "builtin:jobs"}))
-	if x.now == nil {
-		x.now = time.Now
-	}
 	if x.loc == nil {
 		x.loc = time.Local
 	}
 	x.loads = plugin.NewLoad(h, func(context.Context, func(string, float64)) (jobsData, error) {
-		w, _ := kit.SessionHost(x.h)
-		if w == nil {
-			return jobsData{}, errors.New("there are no sessions in this window")
+		jobs, err := kit.JobCalls(x.h)
+		if err != nil {
+			return jobsData{}, err
 		}
-		return jobsData{jobs: w.Jobs(), repos: w.Repos(), at: x.now()}, nil
+		repos, err := kit.RepoCalls(x.h)
+		if err != nil {
+			return jobsData{}, err
+		}
+		return jobsData{jobs: jobs.Jobs(), repos: repos.Repos(), at: x.now()}, nil
 	}, plugin.LoadOpts{Timeout: 20 * time.Second})
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -197,7 +199,7 @@ func (x *Jobs) commands() []registry.Command {
 				if id == "" {
 					id = h.State().Focus
 				}
-				c, err := kit.SessionHost(x.h)
+				c, err := kit.SessionCalls(x.h)
 				if err != nil {
 					return err
 				}
@@ -325,8 +327,8 @@ func (x *Jobs) target(a registry.Args) (host.Job, error) {
 	return host.Job{}, fmt.Errorf("no job %q", name)
 }
 
-func (x *Jobs) client() (host.Access, error) {
-	return kit.SessionHost(x.h)
+func (x *Jobs) client() (host.JobCalls, error) {
+	return kit.JobCalls(x.h)
 }
 
 // save is jobs.save: the job named, with what the args give changed, or a new one; it returns the job as saved.
@@ -398,8 +400,8 @@ func (x *Jobs) deleteJob(ctx context.Context, a registry.Args) error {
 	return nil
 }
 
-// do runs a command off the loop, as a click asks, and shows what went wrong on the page.
-func (x *Jobs) do(id string, a registry.Args) {
+// runInBackground is run off the loop, as a click asks: what went wrong shows on the page.
+func (x *Jobs) runInBackground(id string, a registry.Args) {
 	plugin.Go(x.h, "jobs: "+id, func() {
 		err := x.h.Run(context.Background(), id, a)
 		x.h.Do(func() {
@@ -509,3 +511,5 @@ func scheduleFrom(v any) (host.Schedule, error) {
 	}
 	return s, s.Check()
 }
+
+func (x *Jobs) now() time.Time { return clock.Or(x.clock).Now() }

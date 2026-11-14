@@ -6,14 +6,6 @@ import (
 	"github.com/liamg/oriel/toml"
 )
 
-var semantic = map[string]bool{}
-
-func init() {
-	for _, t := range Tokens() {
-		semantic[t.Name] = true // everything declared before init is theme's own
-	}
-}
-
 // Section is where a name's override goes in a theme file: [palette] for "palette:x", [syntax] for a capture,
 // [semantic] for theme's own tokens and [component] for the rest.
 func Section(name string) []string {

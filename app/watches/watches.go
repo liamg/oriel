@@ -10,6 +10,8 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
@@ -37,7 +39,7 @@ type Watches struct {
 }
 
 type named struct {
-	registry.Named
+	services.Named
 	id int
 }
 
@@ -54,18 +56,18 @@ func (x *Watches) Activate(ctx context.Context, h plugin.Host) error {
 	x.sessions, x.trees, x.named = map[core.SessionID]*watch.Manager{}, map[treeKey]*gitsrc.Tree{}, map[string][]named{}
 	x.app = x.manager("app")
 	x.sync(h.State())
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced, core.SessionArchived, core.SessionClosed:
 			x.sync(h.State())
 		}
-	})))
+	}))
 	life := x.Lifetime()
 	x.wg.Go(func() { x.follow(life) })
 	for _, n := range x.builtins() {
 		x.Add(x.Register(n))
 	}
-	x.Add(h.Contribute(registry.Service{Name: registry.WatchesService, Impl: x, Source: "builtin:watches"}))
+	x.Add(h.Contribute(registry.Service{Name: services.WatchesService, Impl: x, Source: "builtin:watches"}))
 	return nil
 }
 
@@ -168,23 +170,23 @@ func (x *Watches) Tree(id core.SessionID, root string) *gitsrc.Tree {
 	return t
 }
 
-func (x *Watches) Source(name string) (registry.Named, bool) {
+func (x *Watches) Source(name string) (services.Named, bool) {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	ns := x.named[name]
 	if len(ns) == 0 {
-		return registry.Named{}, false
+		return services.Named{}, false
 	}
 	return ns[len(ns)-1].Named, true
 }
 
-func (x *Watches) Register(n registry.Named) registry.Disposable {
+func (x *Watches) Register(n services.Named) registry.Disposable {
 	x.mu.Lock()
 	x.next++
 	id := x.next
 	x.named[n.Name] = append(x.named[n.Name], named{n, id})
 	x.mu.Unlock()
-	return kit.OnDispose(func() {
+	return registry.DisposeFunc(func() {
 		x.mu.Lock()
 		defer x.mu.Unlock()
 		x.named[n.Name] = slices.DeleteFunc(x.named[n.Name], func(e named) bool { return e.id == id })

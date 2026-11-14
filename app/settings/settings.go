@@ -1,3 +1,5 @@
+// Package settings is the settings pages: the options, themes and their editor, prompts, secrets, sandboxes, plugins
+// and their registry, the consent asked before a plugin runs, and About.
 package settings
 
 import (
@@ -15,6 +17,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -71,8 +75,8 @@ type Plugin struct {
 	files         *watch.Manager // reads the files, and again on hand edits
 	filesDone     func()
 	loadMu        sync.Mutex
-	specs         int      // how many options there were at the last read
-	work          kit.Work // a move's swap of project files, off the loop
+	specs         int       // how many options there were at the last read
+	work          work.Work // a move's swap of project files, off the loop
 
 	open    bool
 	query   string
@@ -130,15 +134,15 @@ func (s *Plugin) Activate(_ context.Context, h plugin.Host) error {
 			s.follow(ctx)
 		})
 	}))
-	s.Add(kit.OnDispose(s.work.Stop))
-	s.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	s.Add(registry.DisposeFunc(s.work.Stop))
+	s.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev.(type) {
 		case core.SessionOpened, core.SessionSynced:
 			s.kick() // a session's project may have a file of its own
 		}
-	})))
-	s.Add(kit.OnDispose(h.Options().Registered(s.kick))) // a new option may take a key the files had waiting
-	s.Add(kit.OnDispose(s.untrack))
+	}))
+	s.Add(h.Options().Registered(s.kick)) // a new option may take a key the files had waiting
+	s.Add(registry.DisposeFunc(s.untrack))
 	return nil
 }
 
@@ -288,7 +292,6 @@ func (s *Plugin) addOthers() {
 	}
 }
 
-// loadAll reads each file that changed since it was last read, and reports whether any did.
 // Reload reads the settings files again, as a change to one does; it says whether any value changed.
 func (s *Plugin) Reload() bool {
 	s.addOthers()
@@ -296,6 +299,7 @@ func (s *Plugin) Reload() bool {
 	return s.loadAll()
 }
 
+// loadAll reads each file that changed since it was last read, and reports whether any did.
 func (s *Plugin) loadAll() bool {
 	s.loadMu.Lock()
 	defer s.loadMu.Unlock()

@@ -78,20 +78,20 @@ func WhoAmI(ctx context.Context) string {
 }
 
 // Gate is the agent's own gate for a spec: the light gate inside a sandbox by default.
-func Gate(spec core.SessionSpec) string { return GateOf(spec, core.KindSpec{}) }
+func Gate(spec core.SessionSpec) core.Policy { return GateOf(spec, core.KindSpec{}) }
 
 // GateOf is the agent's own gate for a session of kind k as spec asks: spec's, else k's, else light in a sandbox and ask out of one.
-func GateOf(spec core.SessionSpec, k core.KindSpec) string {
+func GateOf(spec core.SessionSpec, k core.KindSpec) core.Policy {
 	if spec.Sandbox.Gate != "" {
-		return spec.Sandbox.Gate
+		return core.Policy(spec.Sandbox.Gate)
 	}
 	if k.AgentGate != "" {
-		return k.AgentGate
+		return core.Policy(k.AgentGate)
 	}
 	if spec.Sandbox.Container {
-		return "light"
+		return core.PolicyLight
 	}
-	return "ask"
+	return core.PolicyAsk
 }
 
 // AgentDir is where a session's agent starts: the workspace, or the directory itself.
@@ -201,6 +201,3 @@ func OwnBranch(p core.Project) (string, error) {
 	}
 	return p.Branch, nil
 }
-
-// NotesFiles are the agent notes generated at a workspace's root: CLAUDE.md for Claude, AGENTS.md for Codex.
-var NotesFiles = []string{"CLAUDE.md", "AGENTS.md"}

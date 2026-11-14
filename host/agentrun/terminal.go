@@ -9,7 +9,8 @@ import (
 
 // Terminal is the agent's raw terminal: what it has shown, then what it shows, until ctx ends or the agent
 // stops.
-func (x *Runner) Terminal(ctx context.Context, id core.SessionID) (<-chan []byte, error) {
+func (x *Runner) Terminal(ctx context.Context, id core.SessionID) (_ <-chan []byte, err error) {
+	defer x.env.Recover("Terminal", &err)
 	h, _ := x.sessionFor(id, false)
 	if h == nil {
 		return nil, errors.New("the agent isn't running")
@@ -53,7 +54,8 @@ func (x *Runner) Terminal(ctx context.Context, id core.SessionID) (<-chan []byte
 }
 
 // TermInput types into the agent's terminal, and resizes it.
-func (x *Runner) TermInput(r TermReq) error {
+func (x *Runner) TermInput(r TermReq) (err error) {
+	defer x.env.Recover("TermInput", &err)
 	h, _ := x.sessionFor(r.Session, false)
 	if h == nil {
 		return errors.New("the agent isn't running")

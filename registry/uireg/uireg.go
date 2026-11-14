@@ -103,9 +103,3 @@ func (s sourced) View(id string, v View) registry.Disposable {
 	}
 	return s.Registry.View(id, v)
 }
-
-func disposeOnce(fn func()) registry.Disposable { return disposeFunc(sync.OnceFunc(fn)) }
-
-type disposeFunc func()
-
-func (f disposeFunc) Dispose() { f() }

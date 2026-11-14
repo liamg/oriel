@@ -247,7 +247,7 @@ func (x *Secrets) dialog(c *ui.Ctx) {
 	}
 	th := c.Theme()
 	open := true
-	widget.Modal(c, "secretdlg", &open, "Set "+d.name, widget.ModalOpts{Width: 520, Help: secretsHelp}, func(c *ui.Ctx) {
+	widget.Modal(c, "secretdlg", &open, widget.ModalOpts{Title: "Set " + d.name, Width: 520, Help: secretsHelp}, func(c *ui.Ctx) {
 		note := "not set yet"
 		if d.set {
 			note = "set: this replaces it"

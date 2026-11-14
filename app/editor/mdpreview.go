@@ -35,12 +35,7 @@ type Markdown struct {
 
 func (x *Markdown) Manifest() plugin.Manifest { return plugin.Manifest{ID: "markdown"} }
 
-// Text draws src as markdown, wrapped to width (kit.Markdown).
-func (x *Markdown) Text(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle) {
-	markdownText(c, key, src, width, body)
-}
-
-// TextIn is Text with its images found from o.Dir (kit.Markdown).
+// Title is src's first level-1 heading, as plain text (kit.Markdown).
 func (x *Markdown) Title(src string) (string, bool) {
 	for _, b := range mdParse(src) {
 		if b.Kind == mdHeading && b.Level == 1 {
@@ -50,6 +45,7 @@ func (x *Markdown) Title(src string) (string, bool) {
 	return "", false
 }
 
+// TextIn draws src as markdown, wrapped to width, its images found from o.Dir (kit.Markdown).
 func (x *Markdown) TextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle, o kit.MarkdownOpts) {
 	markdownTextIn(c, key, src, width, body, o)
 }
@@ -76,8 +72,8 @@ func (x *Markdown) Activate(_ context.Context, h plugin.Host) error {
 		x.Pictures.SetRemote(on == true)
 	}
 	remoteImages()
-	x.Add(kit.OnDispose(h.Options().Watch(RemoteImagesOption, remoteImages)))
-	x.Add(kit.OnDispose(func() { x.Pictures.SetRemote(true) }))
+	x.Add(h.Options().Watch(RemoteImagesOption, remoteImages))
+	x.Add(registry.DisposeFunc(func() { x.Pictures.SetRemote(true) }))
 	x.Add(h.Command(registry.Command{ID: "MarkdownPreview", Title: "Preview the markdown file in the focused window, or edit it again",
 		Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "editor.present", registry.Args{"name": "markdown"})

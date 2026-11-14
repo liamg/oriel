@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -550,9 +552,7 @@ func (x *Requests) openAnchor(ctx context.Context) error {
 
 // run runs a command from a click, saying what went wrong in a notice.
 func (x *Requests) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error(), Time: time.Now()})
-	}
+	kit.RunOrNotify(x.h, "requests", id, a)
 }
 
 // threadsSource is the threads picker (␣t): every request of the session in front.
@@ -567,7 +567,7 @@ func (x *Requests) threadsSource() uireg.PickerSource {
 			now := time.Now()
 			for _, t := range x.visible(se, &requestsState{}) {
 				g := kit.GroupOf(t)
-				it := uireg.PickerItem{ID: string(t.ID), Label: t.Heading(), Detail: threadPlace(t), Note: kit.Ago(now, t.Updated),
+				it := uireg.PickerItem{ID: string(t.ID), Label: t.Heading(), Detail: threadPlace(t), Note: widget.AgoLabel(now, t.Updated),
 					IconStyle: groupTokens[g].Name(), Data: t}
 				if g == kit.GroupNeedsYou {
 					it.Boost = 30
@@ -595,9 +595,9 @@ func statusLabel(r registry.Contributions, se core.SessionState, t core.Thread) 
 	switch g := kit.GroupOf(t); g {
 	case kit.GroupWorking:
 		if !t.Active {
-			return kit.ProviderName(r, se.Agent.Provider) + " · has it", tQueued // handed it with others, not on it yet
+			return services.ProviderTitle(r, se.Agent.Provider) + " · has it", tQueued // handed it with others, not on it yet
 		}
-		return kit.ProviderName(r, se.Agent.Provider) + " · working", theme.StatusWorking
+		return services.ProviderTitle(r, se.Agent.Provider) + " · working", theme.StatusWorking
 	case kit.GroupNeedsYou:
 		return "needs you", theme.StatusNeedsYou
 	case kit.GroupResolved:
@@ -634,7 +634,7 @@ func preview(r registry.Contributions, se core.SessionState, t core.Thread) stri
 	case c.Author == core.AuthorYou && !c.Delivered && se.Agent.Working:
 		return "queued · sends when the current turn ends"
 	case c.Author == core.AuthorAgent:
-		return kit.ProviderName(r, cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
+		return services.ProviderTitle(r, cmp.Or(c.Name, se.Agent.Provider)) + ": " + core.Summary(c.Body)
 	}
 	return core.Summary(c.Body)
 }
@@ -688,7 +688,7 @@ func (x *Requests) commentOn(ctx registry.Ctx, a registry.Args) error {
 	}
 	req := host.CommentReq{Session: se.ID, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
 		Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding"), Outgoing: a.Bool("outgoing"),
-		Images: kit.LocalImages(ev.Body)}
+		Images: localImages(ev.Body)}
 	if ev.Thread == "" && ev.File != "" {
 		req.Anchor = anchorIn(se, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		req.Anchor.Col, req.Anchor.EndCol = a.Int("col"), a.Int("end_col")

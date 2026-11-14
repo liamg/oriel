@@ -178,7 +178,8 @@ func (h *session) askLogin(key string) {
 
 // StartLogin begins provider's sign-in from Oriel (agent.LoginStarter), and returns where the user signs in. Once it
 // succeeds the provider's flags clear, as Check again would.
-func (x *Runner) StartLogin(ctx context.Context, provider string) (string, error) {
+func (x *Runner) StartLogin(ctx context.Context, provider string) (_ string, err error) {
+	defer x.env.Recover("StartLogin", &err)
 	p, ok := x.deps.Providers.Get(provider)
 	if !ok {
 		return "", fmt.Errorf("no agent provider %q", provider)

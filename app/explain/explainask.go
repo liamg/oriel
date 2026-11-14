@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -248,7 +250,7 @@ func (x *Plugin) ask(a registry.Args) error {
 	f, key := a.String("file"), a.String("key")
 	if f != "" && key == "" {
 		line := max(a.Int("line"), 1)
-		ed, ok := registry.EditorsOf(x.h)
+		ed, ok := services.EditorsOf(x.h)
 		if !ok {
 			return errors.New("no editor")
 		}
@@ -344,7 +346,7 @@ func (x *Plugin) pin(ctx registry.Ctx) error {
 
 // requestThis writes a request about the selection, the unit at the cursor, or the cursor's place.
 func (x *Plugin) requestThis(ctx registry.Ctx, what string) error {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")
 	}

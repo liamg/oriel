@@ -68,7 +68,9 @@ func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnl
 				common
 				Name string `json:"name"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			c, err := newGHCaller(h, in.Project, in.Repo)
 			if err != nil {
 				return result("", err)
@@ -93,7 +95,9 @@ func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnl
 				Branch   string `json:"branch"`
 				Limit    int    `json:"limit"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			c, err := newGHCaller(h, in.Project, in.Repo)
 			if err != nil {
 				return result("", err)
@@ -120,7 +124,9 @@ func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnl
 				Base string `json:"base"`
 				Head string `json:"head"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			c, err := newGHCaller(h, in.Project, in.Repo)
 			if err != nil {
 				return result("", err)
@@ -137,7 +143,9 @@ func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnl
 				common
 				Prefix string `json:"prefix"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			c, err := newGHCaller(h, in.Project, in.Repo)
 			if err != nil {
 				return result("", err)
@@ -154,7 +162,9 @@ func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnl
 				SHA     string `json:"sha"`
 				Message string `json:"message"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			if in.Tag == "" || in.SHA == "" {
 				return result("", fmt.Errorf("tag and sha are required"))
 			}

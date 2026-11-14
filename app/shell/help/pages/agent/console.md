@@ -83,7 +83,7 @@ The model's reasoning, dimmed and folded.
 ## Session stats {#stats}
 
 What the session has used: its context window, cache hits, turns and tool calls, tokens, an estimate of the cost, and
-how long its turns ran. Then each provider's plan windows, this session's first, and the files this turn touched.
+how long its turns ran. Then each provider's plan windows, this session's first.
 
 ## Subagents {#subagents}
 

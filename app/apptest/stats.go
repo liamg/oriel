@@ -8,13 +8,14 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/stats"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
 )
 
-// StatsClock has the stats plugin read the time from now, in loc: a scene's fixed clock.
-func (s *Scene) StatsClock(now func() time.Time, loc *time.Location) {
+// StatsClock has the stats plugin read the time from c, in loc: a scene's fixed clock.
+func (s *Scene) StatsClock(c clock.Clock, loc *time.Location) {
 	x := PluginOf[*stats.Plugin](s, "stats")
-	x.Now, x.Loc = now, loc
+	x.Clock, x.Loc = c, loc
 }
 
 // SettleStats frames until the stats plugin has read what it was asked for.
@@ -51,7 +52,7 @@ func StatsScene(t *testing.T) (*Scene, *rig.Stats, *stats.Plugin) {
 	s := New(t, Options{Config: func(cfg *Config) { Connect(r.W, r.Claude, r.Codex)(cfg); cfg.WorkDir = work }})
 	s.Now = rig.StatsNow
 	x := PluginOf[*stats.Plugin](s, "stats")
-	x.Now, x.Loc = func() time.Time { return s.Now }, time.UTC
+	x.Clock, x.Loc = s.Clock(), time.UTC
 	rig.WaitState(t, s.Store(), "the sessions and readings", func(st core.State) bool {
 		return !st.Machine.Sampled.IsZero() && len(st.Sessions) == len(rig.FxSessions) && len(st.Usage) == 2 &&
 			st.Usage[0].Sampled.After(rig.StatsNow.Add(-time.Minute))

@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,7 +23,7 @@ type GitHub struct {
 
 func (g GitHub) get(ctx context.Context, url, accept string) (*http.Response, error) {
 	if !strings.HasPrefix(url, "http") {
-		url = strings.TrimSuffix(cmpOr(g.Base, "https://api.github.com"), "/") + url
+		url = strings.TrimSuffix(cmp.Or(g.Base, "https://api.github.com"), "/") + url
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -167,11 +168,4 @@ func (g GitHub) json(ctx context.Context, url string, v any) error {
 		return fmt.Errorf("%s: GitHub answered %s", url, r.Status)
 	}
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }

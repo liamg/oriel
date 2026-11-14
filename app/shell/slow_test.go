@@ -83,7 +83,7 @@ func TestRepoFetchLeavesTheLoopDrawing(t *testing.T) {
 		t.Fatal(err)
 	}
 	started, release := blockGit(t, "fetch")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	notice := "repos.fetch." + string(repo.ID)
 	fetched := func(core.State) bool {
 		return exec.Command("git", "-C", lw.Repo, "rev-parse", "--verify", "-q", "refs/remotes/origin/main").Run() == nil
@@ -100,7 +100,7 @@ func TestRepoFetchLeavesTheLoopDrawing(t *testing.T) {
 func TestSessionArchiveLeavesTheLoopDrawing(t *testing.T) {
 	lw := rig.NewHost(t)
 	started, release := blockGit(t, "worktree remove")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	rig.WaitState(t, r.Store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	if err := r.Do(func() error {
 		return r.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}})
@@ -136,14 +136,14 @@ func TestSlowWorkIsEachWindowsOwn(t *testing.T) {
 			return r.Host.Run(context.Background(), "test.slow", nil)
 		})
 	}
-	a := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"a.txt": "a\n"}, Files: []string{"a.txt"}})
+	a := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"a.txt": "a\n"}, Files: []string{"a.txt"}})
 	if err := slow(a); err != nil {
 		t.Fatal(err)
 	}
 	if err := a.Do(func() error { return a.Host.Run(context.Background(), "test.slow", nil) }); !errors.Is(err, plugin.ErrBusy) {
 		t.Errorf("the same work again in the same window: %v", err)
 	}
-	b := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"b.txt": "b\n"}, Files: []string{"b.txt"}})
+	b := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"b.txt": "b\n"}, Files: []string{"b.txt"}})
 	if err := slow(b); err != nil {
 		t.Errorf("the same work in another window: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestSlowWorkIsEachWindowsOwn(t *testing.T) {
 func TestSessionStartLeavesTheLoopDrawing(t *testing.T) {
 	lw := rig.NewHost(t)
 	started, release := blockGit(t, "worktree add")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	rig.WaitState(t, r.Store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	slowCommand(t, r, started, release, "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}}, nil,
 		func(st core.State) bool { return st.Focus == "rounding" })
@@ -163,7 +163,7 @@ func TestSessionStartLeavesTheLoopDrawing(t *testing.T) {
 func TestOpenDirectoryLeavesTheLoopDrawing(t *testing.T) {
 	lw := rig.NewHost(t)
 	started, release := blockGit(t, "--show-toplevel")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	rig.WaitState(t, r.Store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	slowCommand(t, r, started, release, "directory.open", registry.Args{"path": lw.Repo}, nil, func(st core.State) bool {
 		se, ok := st.Session(st.Focus)
@@ -184,7 +184,7 @@ func TestRepoTagLeavesTheLoopDrawing(t *testing.T) {
 		}
 	}
 	started, release := blockGit(t, "-a")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	tagged := func(core.State) bool {
 		return exec.Command("git", "-C", lw.Repo, "rev-parse", "--verify", "-q", "refs/tags/v0.1.0").Run() == nil
 	}
@@ -200,7 +200,7 @@ func TestRepoHousekeepLeavesTheLoopDrawing(t *testing.T) {
 		t.Fatal(err)
 	}
 	started, release := blockGit(t, "prune")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	notice := "repos.housekeep." + string(repo.ID)
 	var seen bool
 	slowCommand(t, r, started, release, "repos.housekeep", registry.Args{"repo": string(repo.ID), "prune": true}, func() {
@@ -236,7 +236,7 @@ func (p *coverWatch) Deactivate(context.Context) error {
 // the plugins, which go on running.
 func TestSwitchDrawsTheCoverAndKeepsThePlugins(t *testing.T) {
 	p := &coverWatch{}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{p}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{p}})
 	p.win = r
 	dir := t.TempDir()
 	if err := r.Do(func() error {

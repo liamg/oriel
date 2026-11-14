@@ -120,7 +120,7 @@ func (r *reg) Placeholder(p Placeholder) Disposable {
 			d.Dispose()
 		}
 	})
-	return disposeFunc(ph.drop)
+	return DisposeFunc(ph.drop)
 }
 
 // provide drops ph and calls its Provide, once.

@@ -244,6 +244,7 @@ type FakeSession struct {
 	closed      bool
 	answers     map[string]chan agent.Decision
 	stopped     []string
+	forkBy      time.Time // the last fork's deadline
 	quiet       bool
 }
 
@@ -294,6 +295,13 @@ func (s *FakeSession) StopProcess(_ context.Context, id string) error {
 	return nil
 }
 
+// ForkDeadline is the deadline the last fork was given.
+func (s *FakeSession) ForkDeadline() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.forkBy
+}
+
 // Stopped are the processes it was asked to stop, in order.
 func (s *FakeSession) Stopped() []string {
 	s.mu.Lock()
@@ -301,8 +309,14 @@ func (s *FakeSession) Stopped() []string {
 	return slices.Clone(s.stopped)
 }
 
-// Fork answers "fork says: " and the end of the prompt.
-func (s *FakeSession) Fork(_ context.Context, f agent.ForkSpec) (string, error) {
+// Fork answers "fork says: " and the end of the prompt, unless ctx has ended.
+func (s *FakeSession) Fork(ctx context.Context, f agent.ForkSpec) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	s.mu.Lock()
+	s.forkBy, _ = ctx.Deadline()
+	s.mu.Unlock()
 	p := f.Prompt
 	if len(p) > 40 {
 		p = p[len(p)-40:]

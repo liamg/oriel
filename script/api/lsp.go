@@ -14,16 +14,16 @@ type LSP struct{ a *APIs }
 
 //oriel:api doc="Register a language server: { name, languages = { \"go\" }, cmd = { \"gopls\" }, roots = { \"go.mod\" }, settings = {…}, init = {…}, order }. One with a built-in's name replaces it; order picks among a language's servers, lowest first."
 func (l LSP) Server(spec script.Table, where string) error {
-	s := lang.LSPServer{Name: str(spec, "name"), Language: strs(spec["languages"]), Cmd: strs(spec["cmd"]), Roots: strs(spec["roots"]),
+	s := lang.LSPServer{Name: str(spec, "name"), Language: plugin.Strings(spec["languages"]), Cmd: plugin.Strings(spec["cmd"]), Roots: plugin.Strings(spec["roots"]),
 		Source: where}
 	if s.Name == "" || len(s.Language) == 0 || len(s.Cmd) == 0 {
 		return fmt.Errorf("a language server needs a name, languages and a cmd")
 	}
-	if !l.a.Plugin.Trusted() {
-		if err := l.a.Check(plugin.CapExec, s.Cmd[0]); err != nil {
-			return err
-		}
+	prog, err := l.a.Plugin.CheckProgram(s.Cmd[0], "")
+	if err != nil {
+		return err
 	}
+	s.Cmd[0] = prog // a path the plugin's, not the project's the server runs in
 	if o, ok := spec["order"].(float64); ok {
 		s.Order = int(o)
 	}

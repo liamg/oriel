@@ -6,6 +6,7 @@ package worktree
 import (
 	"context"
 
+	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 )
@@ -28,11 +29,21 @@ type Deps struct {
 	Repos func() []core.Repo
 	// ReposDir is where new repos go when nothing else says.
 	ReposDir func() string
+	// NotesFiles are the agents' notes files a workspace keeps out of its git (agent.NotesFiles).
+	NotesFiles func() []string
 }
 
 // New makes workspaces under env's home.
 func New(env hostcore.Env, st hostcore.State, deps Deps) *Worktrees {
 	return &Worktrees{env: env, st: st, deps: deps}
+}
+
+// notesFiles are the agents' notes files, AGENTS.md alone with no Deps.NotesFiles.
+func (x *Worktrees) notesFiles() []string {
+	if x.deps.NotesFiles == nil {
+		return agent.NotesFiles(nil)
+	}
+	return x.deps.NotesFiles()
 }
 
 // worktrees are the session's projects that are worktrees Oriel made.
@@ -46,15 +57,16 @@ func worktrees(se core.SessionState) []core.Project {
 	return out
 }
 
-// SaveProjects writes a workspace's projects back to its manifest.
-func (x *Worktrees) SaveProjects(id core.SessionID) {
+// SaveProjects writes a workspace's projects back to its manifest, which a restore reads; a workspace with no
+// manifest has nothing to write.
+func (x *Worktrees) SaveProjects(id core.SessionID) error {
 	se, err := x.st.Session(id)
 	if err != nil {
-		return
+		return err
 	}
 	m, ok := LoadManifest(se.Dir)
 	if !ok {
-		return
+		return nil
 	}
 	for i, e := range m.Projects {
 		for _, p := range se.Projects {
@@ -69,7 +81,18 @@ func (x *Worktrees) SaveProjects(id core.SessionID) {
 			}
 		}
 	}
-	_ = SaveManifest(se.Dir, m)
+	return SaveManifest(se.Dir, m)
+}
+
+// recordProjects is SaveProjects after a change that's already made: a manifest it can't write doesn't undo the
+// change, so it's said, not returned.
+func (x *Worktrees) recordProjects(id core.SessionID) {
+	if err := x.SaveProjects(id); err != nil {
+		x.env.Log.Error("workspace manifest", "session", id, "err", err)
+		_ = x.st.Emit(core.Notified{Notice: core.Notice{ID: "workspace.manifest", Severity: core.SevWarning, Source: "host",
+			Session: id, Title: "Workspace not saved", Text: "Its branches couldn't be recorded, so restoring it may show old ones: " + err.Error(),
+			Time: x.env.Now().UTC()}})
+	}
 }
 
 // BranchRenamed records a project's branch's new name in the manifest of the workspace at root.

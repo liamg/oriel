@@ -2,6 +2,7 @@ package claudebox
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,12 +25,12 @@ func MCPServers(home string) []agent.MCPServer {
 	if b, err := os.ReadFile(claudeJSON); err == nil {
 		_ = json.Unmarshal(b, &state)
 	}
-	for _, name := range sortedKeys(state.MCPServers) {
+	for _, name := range slices.Sorted(maps.Keys(state.MCPServers)) {
 		out = append(out, agent.MCPServer{Name: name, Source: "user", Config: state.MCPServers[name]})
 	}
 	for _, p := range enabledPlugins(filepath.Join(home, ".claude")) {
 		servers := pluginServers(p.path)
-		for _, name := range sortedKeys(servers) {
+		for _, name := range slices.Sorted(maps.Keys(servers)) {
 			out = append(out, agent.MCPServer{Name: name, Source: "plugin:" + p.name, Config: servers[name],
 				Vars: map[string]string{"CLAUDE_PLUGIN_ROOT": p.path}})
 		}
@@ -54,7 +55,7 @@ func enabledPlugins(claudeDir string) []plugin {
 		_ = json.Unmarshal(b, &installed)
 	}
 	var out []plugin
-	for _, id := range sortedKeys(installed.Plugins) {
+	for _, id := range slices.Sorted(maps.Keys(installed.Plugins)) {
 		if !settings.EnabledPlugins[id] {
 			continue
 		}
@@ -98,14 +99,5 @@ func pluginServers(dir string) map[string]json.RawMessage {
 		}
 		_ = json.Unmarshal(b, &out)
 	}
-	return out
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	slices.Sort(out)
 	return out
 }

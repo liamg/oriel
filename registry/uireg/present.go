@@ -122,8 +122,7 @@ func (c *PresentCtx) LineBlocks(n int) []int {
 // Presenters are the presenters for a file, by Order then name.
 func Presenters(r registry.Contributions, path string) []BufferPresenter {
 	var out []BufferPresenter
-	for _, c := range r.Contributions("buffer.presenter") {
-		p := c.(BufferPresenter)
+	for _, p := range registry.ContributionsOf[BufferPresenter](r) {
 		ok := p.When == nil
 		if !ok {
 			registry.Call(func() error { ok = p.When(path); return nil })
@@ -140,8 +139,8 @@ func Presenters(r registry.Contributions, path string) []BufferPresenter {
 
 // PresenterNamed is the presenter registered as name.
 func PresenterNamed(r registry.Contributions, name string) (BufferPresenter, bool) {
-	for _, c := range r.Contributions("buffer.presenter") {
-		if p := c.(BufferPresenter); p.Name == name {
+	for _, p := range registry.ContributionsOf[BufferPresenter](r) {
+		if p.Name == name {
 			return p, true
 		}
 	}

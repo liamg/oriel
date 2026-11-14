@@ -5,7 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -35,11 +36,10 @@ type Request struct {
 	AlwaysAsk bool     `json:"alwaysAsk,omitempty"`
 }
 
-// The decisions a card returns.
+// The decisions a card returns: Once, Session, or Deny (policy.go's).
 const (
 	Once    = "once"
 	Session = "session"
-	Refuse  = "deny"
 )
 
 // Answer is the user's decision on a Request.
@@ -88,7 +88,7 @@ type Gateway struct {
 func (g *Gateway) Tools(ctx context.Context) ([]mcp.Tool, error) {
 	levels := g.levels()
 	var out []mcp.Tool
-	for _, name := range sortedKeys(g.Builtins) {
+	for _, name := range slices.Sorted(maps.Keys(g.Builtins)) {
 		b := g.Builtins[name]
 		if b.Direct || Decide(name, false, levels) != Deny {
 			out = append(out, b.Tool)
@@ -122,7 +122,7 @@ type ToolPolicy struct {
 func (g *Gateway) Policy(ctx context.Context) []ToolPolicy {
 	levels := g.levels()
 	var out []ToolPolicy
-	for _, name := range sortedKeys(g.Builtins) {
+	for _, name := range slices.Sorted(maps.Keys(g.Builtins)) {
 		b := g.Builtins[name]
 		p := ToolPolicy{Name: name, Server: ServerOf(name), Description: b.Tool.Description, Builtin: true, Why: Explain(name, false, levels)}
 		if b.Direct || (b.AlwaysAsk && p.Action != Deny) {
@@ -146,7 +146,7 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 	defer func() {
 		if err != nil {
 			entry.Error = err.Error()
-		} else if res.IsError && entry.Decision != Refuse {
+		} else if res.IsError && entry.Decision != Deny {
 			entry.Error = res.Text()
 		}
 		if g.Log != nil {
@@ -160,7 +160,7 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 	if builtin {
 		req.Description = b.Tool.Description
 		req.AlwaysAsk = b.AlwaysAsk
-		req.Siblings = sortedKeys(g.Builtins)
+		req.Siblings = slices.Sorted(maps.Keys(g.Builtins))
 	} else {
 		tools, _ := g.Up.Tools(ctx)
 		for i, t := range tools {
@@ -172,7 +172,7 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 			}
 		}
 		if up == nil {
-			entry.Decision = Refuse
+			entry.Decision = Deny
 			return mcp.TextResult("oriel: no tool called "+name, true), nil
 		}
 		req.Description = up.Description
@@ -189,17 +189,17 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 	}
 	switch action {
 	case Deny:
-		entry.Decision = Refuse
+		entry.Decision = Deny
 		return mcp.TextResult("oriel: "+name+" is denied by the user's settings.", true), nil
 	case Ask:
 		ans, err := g.ask(ctx, req)
 		if err != nil {
-			entry.Decision = Refuse
+			entry.Decision = Deny
 			return mcp.TextResult("oriel: nobody answered the request to use "+name+", so it was denied.", true), nil
 		}
 		entry.Decision = ans.Decision
 		if ans.Decision != Once && ans.Decision != Session {
-			entry.Decision = Refuse
+			entry.Decision = Deny
 			msg := "oriel: " + cmp.Or(ans.By, "the user") + " denied " + name + "."
 			if n := strings.TrimSpace(ans.Note); n != "" {
 				msg += " They said: " + n
@@ -265,7 +265,7 @@ func (g *Gateway) remember(req Request, ans Answer) error {
 		rules = append(rules, Rule{Tool: req.Server + "__*", Action: Allow})
 	} else {
 		tools := append([]string{req.Tool}, ans.Tools...)
-		sort.Strings(tools)
+		slices.Sort(tools)
 		for i, t := range tools {
 			if i > 0 && tools[i-1] == t {
 				continue

@@ -3,7 +3,8 @@ package ship
 import (
 	"testing"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 )
@@ -28,7 +29,7 @@ func TestPanelLinesAlwaysSaySomething(t *testing.T) {
 				t.Errorf("%s: %s has no word: %+v", name, l.key, l)
 			}
 		}
-		if state, text := kit.ChecksSummary(s.Checks); state == "" || text == "" {
+		if state, text := prui.ChecksSummary(s.Checks); state == "" || text == "" {
 			t.Errorf("%s: the checks summary is empty", name)
 		}
 	}

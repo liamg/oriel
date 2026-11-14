@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
@@ -50,11 +52,11 @@ func hudDivider(c *ui.Ctx, key any) {
 // usagePanel is every account's windows, the account in front first, each with where its burn takes it by the reset.
 func (x *Plugin) usagePanel(c *ui.Ctx) {
 	th := c.Theme()
-	now := x.Now()
+	now := x.now()
 	us, failed := x.hudUsage()
 	for i, f := range failed {
 		c.Row(fmt.Sprint("failed", i), ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", strings.ToUpper(kit.ProviderName(x.h, f.Provider)), kit.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
+			c.Text("t", strings.ToUpper(services.ProviderTitle(x.h, f.Provider)), kit.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
 			c.Row("e", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 				c.Text("e", "plan couldn't be read", kit.MonoFont(10.5, th.C(theme.Warn)))
 			})
@@ -78,7 +80,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 		hist := x.usageHistory(u)
 		c.Column(i, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 			c.Row("h", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-				parts := []string{strings.ToUpper(kit.ProviderName(x.h, u.Provider)), x.accountLabel(u.Account, u.AccountName)}
+				parts := []string{strings.ToUpper(services.ProviderTitle(x.h, u.Provider)), x.accountLabel(u.Account, u.AccountName)}
 				if u.Tier != "" {
 					parts = append(parts, strings.ToUpper(u.Tier))
 				}
@@ -153,14 +155,14 @@ func (x *Plugin) usageNote() string {
 	if len(us) == 0 {
 		return ""
 	}
-	return kit.Counted(len(us), "account") + " · read " + kit.AgoText(x.Now(), read)
+	return kit.Counted(len(us), "account") + " · read " + widget.AgoLong(x.now(), read)
 }
 
 // todayPanel is today's totals: tokens, cost, the cache's share and the requests opened today; then the hud.today
 // slot's indicators.
 func (x *Plugin) todayPanel(c *ui.Ctx) {
 	th := c.Theme()
-	now := x.Now().In(x.Loc)
+	now := x.now().In(x.Loc)
 	from := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.Loc)
 	r, _ := x.report(stats.Query{From: from, To: from.AddDate(0, 0, 1), Offset: x.offset(), Split: true})
 	tok := r.Totals.Tokens
@@ -211,7 +213,7 @@ const usedWithin = 14 * 24 * time.Hour
 func (x *Plugin) hudUsage() (us []core.ProviderUsage, failed []core.UsageFailure) {
 	st := x.h.State()
 	front, _ := x.frontUsage()
-	used := usedProviders(st, x.Now())
+	used := usedProviders(st, x.now())
 	for _, u := range st.Usage {
 		if len(used) == 0 || used[u.Provider] {
 			us = append(us, u)

@@ -7,15 +7,11 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/lang"
-	"github.com/liamg/oriel/registry"
 )
 
 func lspOf(s *apptest.Scene) *lang.LSP     { return apptest.PluginOf[*lang.LSP](s, "lsp") }
 func testsOf(s *apptest.Scene) *lang.Tests { return apptest.PluginOf[*lang.Tests](s, "tests") }
 func debugOf(s *apptest.Scene) *lang.Debug { return apptest.PluginOf[*lang.Debug](s, "debug") }
-func termsOf(s *apptest.Scene) *lang.Terminals {
-	return apptest.PluginOf[*lang.Terminals](s, "terminal")
-}
 
 func lspScene(t *testing.T, fixture, server, file string) (*apptest.Scene, string) {
 	return apptest.LSPScene(t, fixture, server, file)
@@ -45,12 +41,3 @@ func runDone(t *testing.T, s *apptest.Scene) {
 	t.Helper()
 	s.RunDone()
 }
-
-func waitTerm(t *testing.T, s *apptest.Scene, want string) string {
-	t.Helper()
-	return s.WaitTerm(want)
-}
-
-func typeTerm(s *apptest.Scene, keys ...string) { s.TypeTerm(keys...) }
-
-func termScene(t *testing.T, args registry.Args) *apptest.Scene { return apptest.TermScene(t, args) }

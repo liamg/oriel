@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -208,10 +209,7 @@ func (w *stateWriter) run(end func()) {
 		}
 		w.mu.Unlock()
 		os.MkdirAll(filepath.Dir(path), 0o755)
-		tmp := path + ".tmp"
-		if os.WriteFile(tmp, b, 0o600) == nil {
-			os.Rename(tmp, path)
-		}
+		atomicfile.Write(path, b, 0o600)
 	}
 }
 

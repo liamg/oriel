@@ -23,14 +23,14 @@ func TestAgo(t *testing.T) {
 	if next := h.u.NextFrame(); !next.Equal(at.Add(6 * time.Minute)) {
 		t.Errorf("next frame at %v, want when it turns 6m", next)
 	}
-	h.now = h.now.Add(50 * time.Second)
+	h.clock.Advance(50 * time.Second)
 	h.frame()
 	if !h.drew("6m") {
 		t.Errorf("a minute on, drew %q", h.texts())
 	}
 	h.pointer(render.PointerMove, 0, 14, 16)
 	h.frame()
-	h.now = h.now.Add(2 * time.Second)
+	h.clock.Advance(2 * time.Second)
 	h.frame()
 	if !strings.Contains(strings.Join(h.texts(), "|"), Timestamp(at)) {
 		t.Errorf("no tooltip with the full time %q: %q", Timestamp(at), h.texts())

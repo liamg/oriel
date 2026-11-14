@@ -79,9 +79,7 @@ func (e Explainer) ContributionName() string { return e.Name }
 // Explainers are the explainers by Order, then name.
 func Explainers(r Contributions) []Explainer {
 	var out []Explainer
-	for _, c := range r.Contributions("explainer") {
-		out = append(out, c.(Explainer))
-	}
+	out = append(out, ContributionsOf[Explainer](r)...)
 	slices.SortFunc(out, func(a, b Explainer) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})
@@ -139,8 +137,7 @@ func (a EditorAction) ContributionName() string { return a.Name }
 // EditorActions are the actions for a file, by Order.
 func EditorActions(r Contributions, path string) []EditorAction {
 	var out []EditorAction
-	for _, c := range r.Contributions("editor.action") {
-		a := c.(EditorAction)
+	for _, a := range ContributionsOf[EditorAction](r) {
 		ok := a.When == nil
 		if !ok {
 			Call(func() error { ok = a.When(path); return nil })

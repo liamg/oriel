@@ -170,9 +170,9 @@ func TestInputMultiClickSelects(t *testing.T) {
 	if got := selected(); got != "round half even\n" {
 		t.Errorf("a triple click selected %q, want the line", got)
 	}
-	h.now = h.now.Add(time.Second)
+	h.clock.Advance(time.Second)
 	h.click(x, y)
-	h.now = h.now.Add(time.Second)
+	h.clock.Advance(time.Second)
 	h.click(x, y)
 	if got := selected(); got != "" {
 		t.Errorf("two slow clicks selected %q", got)

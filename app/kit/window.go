@@ -132,9 +132,9 @@ func WindowOf(r registry.Registry) (Window, bool) {
 	return registry.ServiceOf[Window](r, WindowService)
 }
 
-// Moves says whether the window opens again on session id's directory as it comes to the front: one in another
+// WindowMovesFor says whether the window opens again on session id's directory as it comes to the front: one in another
 // directory.
-func Moves(h plugin.Host, id core.SessionID) bool {
+func WindowMovesFor(h plugin.Host, id core.SessionID) bool {
 	w, ok := WindowOf(h)
 	se, has := h.Session(id)
 	if !ok || !has {
@@ -149,17 +149,24 @@ func After(h plugin.Host, id core.SessionID, then []Call) {
 	if len(then) == 0 {
 		return
 	}
-	if w, ok := WindowOf(h); ok && Moves(h, id) {
+	if w, ok := WindowOf(h); ok && WindowMovesFor(h, id) {
 		w.AfterReopen(id, then)
 		return
 	}
 	h.Do(func() { RunCalls(h, then) })
 }
 
+// Focus brings session id to the front: its kind's opening commands (session.opens), then then, run once the window
+// is on it.
+func Focus(h plugin.Host, id core.SessionID, then []Call) error {
+	After(h, id, append([]Call{{Command: "session.opens", Args: registry.Args{"id": string(id)}}}, then...))
+	return h.Apply(core.SessionFocused{ID: id})
+}
+
 // Follow opens the window again on session id, when it's in another directory.
 func Follow(h plugin.Host, id core.SessionID) {
 	w, ok := WindowOf(h)
-	if !ok || !Moves(h, id) {
+	if !ok || !WindowMovesFor(h, id) {
 		return
 	}
 	se, _ := h.Session(id)

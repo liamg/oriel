@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -37,7 +39,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 	if wake := x.saveSummary(se, f, c.Now()); !wake.IsZero() {
 		c.WakeAt(wake)
 	}
-	kit.PRFrame(c, "frame", reviewedStatus(full), func(c *ui.Ctx) {
+	prui.PRFrame(c, "frame", reviewedStatus(full), func(c *ui.Ctx) {
 		x.pageHead(c, se, src, full)
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		x.pageBanner(c, se, f, full, p, done)
@@ -81,15 +83,15 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 }
 
 // reviewedStatus is where the reviewed PR stands, from its state and its reviewers'; none while its host hasn't said.
-func reviewedStatus(full registry.ReviewDetail) kit.PRStatus {
+func reviewedStatus(full registry.ReviewDetail) prui.PRStatus {
 	if full.State == "" {
-		return kit.PRStatus{}
+		return prui.PRStatus{}
 	}
 	var reviews []string
 	for _, r := range full.Reviewers {
 		reviews = append(reviews, r.State)
 	}
-	return kit.PRStatusOf(full.State, false, full.Request.Draft, reviews)
+	return prui.PRStatusOf(full.State, false, full.Request.Draft, reviews)
 }
 
 // pageHead is the tab's top bar: the PR's ref and title, and its open and fetch buttons.
@@ -99,7 +101,7 @@ func (x *PRReview) pageHead(c *ui.Ctx, se core.SessionState, src registry.HostSi
 		c.Text("h", "REVIEW", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Text("ref", kit.Label(se), kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		if full.State != "" { // until its host says, it's no state at all
-			kit.PRBadge(c, x.h, "state", reviewedStatus(full), prReviewHelp)
+			prui.PRBadge(c, x.h, "state", reviewedStatus(full), prReviewHelp)
 		}
 		c.Row("title", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("t", full.Request.Title, kit.UIFont(13, th.C(theme.FgMuted)))
@@ -323,7 +325,7 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 				c.RequestFocus(c.Next("go"))
 				f.focus = false
 			}
-			widget.Chip(c, "sev", strings.ToUpper(kit.SeverityShort(cmp.Or(it.severity(), "note"))), kit.SeverityTone(th, it.severity()), prReviewHelp)
+			widget.Chip(c, "sev", strings.ToUpper(prui.SeverityShort(cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewHelp)
 			at := widget.Clickable(c, "at", ui.Style{Role: ui.RoleLink, Label: "Show " + place, Tooltip: "Show it in the diff", Help: prReviewKeysHelp},
 				func(c *ui.Ctx) { c.Text("t", place, kit.MonoFont(11, th.C(theme.Accent))) })
 			if at.Clicked {
@@ -446,7 +448,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			})
 		default:
 			c.Text("cap", "WHAT THE AUTHOR GETS", kit.MonoFont(9.5, th.C(theme.FgFaint)))
-			kit.MarkdownTextIn(c, x.h, "words", it.words(), width-60, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			kit.MarkdownText(c, x.h, "words", it.words(), width-60, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 		}
 		if f.asking == it.id {
 			widget.Input(c, "ask", &f.ask, widget.InputOpts{Label: "How should it change?", Placeholder: "How should the agent reword it?", EnterSubmits: true,
@@ -465,7 +467,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			return
 		}
 		reviewCard(c, "reworded", "THE AGENT'S REWORDING", ui.Flex(1), func(c *ui.Ctx) {
-			kit.MarkdownTextIn(c, x.h, "t", text, width-84, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			kit.MarkdownText(c, x.h, "t", text, width-84, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 			c.Row("btns", ui.Style{Gap: 8, Main: ui.End, W: ui.Flex(1)}, func(c *ui.Ctx) {
 				if widget.Button(c, "keep", "Keep mine", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					x.run("review.pr.rework.drop", registry.Args{"id": string(se.ID), "item": it.id})
@@ -560,11 +562,11 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 18}, Gap: 12}, func(c *ui.Ctx) {
 				c.Text("scap", "SUMMARY", kit.MonoFont(9.5, th.C(theme.FgFaint)))
-				kit.MarkdownTextIn(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+				kit.MarkdownText(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 				for i, it := range items {
 					c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 						c.Text("at", fmt.Sprintf("%s:%d", it.at.File, it.at.Line), kit.MonoFont(10.5, th.C(theme.Accent)))
-						kit.MarkdownTextIn(c, x.h, "b", comments[i].Body, w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+						kit.MarkdownText(c, x.h, "b", comments[i].Body, w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 					})
 				}
 				c.Text("note", "A comment off the diff's lines goes on its file; one on a file the PR doesn't change, in the summary.", kit.MonoFont(10, th.C(theme.FgFaint)))
@@ -643,7 +645,7 @@ func (x *PRReview) foot(c *ui.Ctx, session, thread string, where uireg.ThreadWhe
 				state = "not sent unless you keep it"
 			}
 			c.Text("cap", "YOUR REVIEW", kit.MonoFont(9.5, th.C(theme.FgFaint)))
-			widget.Chip(c, "sev", strings.ToUpper(kit.SeverityShort(cmp.Or(it.severity(), "note"))), kit.SeverityTone(th, it.severity()), prReviewKeysHelp)
+			widget.Chip(c, "sev", strings.ToUpper(prui.SeverityShort(cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewKeysHelp)
 			c.Row("state", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", state, kit.MonoFont(10.5, th.C(theme.FgMuted))) })
 			if it.pick.State != core.PickKeep && widget.Button(c, "keep", "Keep", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
 				x.run("review.pr.pick", a(registry.Args{"state": core.PickKeep}))

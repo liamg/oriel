@@ -51,7 +51,7 @@ func (e *Engine) setMark(r rune) {
 	}
 }
 
-// Marks returns the position of each set mark among names, for snapshots: ' and ` read the previous context mark.
+// Mark is where mark r is, if it's set: ' and ` read the previous context mark.
 func (e *Engine) Mark(r rune) (Pos, bool) {
 	switch r {
 	case '\'', '`':

@@ -3,24 +3,29 @@ package persist
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"sync"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Strip keeps the window's tab strip as it was left (tabs.json): the sessions' logs bring each tab back, but not their
 // order across sessions, nor which one was in front.
 type Strip struct {
 	path string
+	log  *slog.Logger
 	mu   sync.Mutex
 	last core.TabsRestored
 }
 
-// NewStrip keeps the strip in home.
-func NewStrip(home string) *Strip { return &Strip{path: filepath.Join(home, "tabs.json")} }
+// NewStrip keeps the strip in home, logging to log what it can't save.
+func NewStrip(home string, log *slog.Logger) *Strip {
+	return &Strip{path: filepath.Join(home, "tabs.json"), log: log}
+}
 
 // Restore puts the strip back on store as it was last saved, if it was.
 func (s *Strip) Restore(store core.Store) error {
@@ -57,11 +62,12 @@ func (s *Strip) save(st core.State) {
 		return
 	}
 	b, err := json.Marshal(t)
+	if err == nil {
+		err = atomicfile.Write(s.path, b, 0o600)
+	}
 	if err != nil {
+		s.log.Warn("the tab strip not saved", "path", s.path, "err", err)
 		return
 	}
-	tmp := s.path + ".tmp"
-	if os.WriteFile(tmp, b, 0o600) == nil && os.Rename(tmp, s.path) == nil {
-		s.last = t
-	}
+	s.last = t
 }

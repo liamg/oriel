@@ -174,7 +174,7 @@ func (e *Engine) exQuickfix(name, args string, r exRange, bang bool, line string
 	default:
 		return errUnknownCommand.with(name)
 	}
-	return e.qfJump(loc, idx)
+	return e.qfJump(loc, idx, bang)
 }
 
 // step moves n valid entries on from idx, stopping at the last one there is.
@@ -296,14 +296,14 @@ func (e *Engine) fillList(loc bool, kind string, items []string, title string) e
 			break
 		}
 	}
-	return e.qfJump(loc, first)
+	return e.qfJump(loc, first, false)
 }
 
-// qfJump makes entry idx current and goes to it, in the window the list belongs to.
-func (e *Engine) qfJump(loc bool, idx int) error {
+// qfJump makes entry idx current and goes to it, in the window the list belongs to; force abandons a changed buffer
+// that 'hidden' would otherwise keep it from leaving. A jump that can't leave the buffer leaves the entry as it was.
+func (e *Engine) qfJump(loc bool, idx int, force bool) error {
 	s := e.stack(loc, false)
 	l := s.list()
-	l.idx = idx
 	en := l.entries[idx]
 	e.leaveQfWindow(loc)
 	msg := msgQfEntry.with(idx+1, len(l.entries), en.text)
@@ -323,7 +323,7 @@ func (e *Engine) qfJump(loc bool, idx int) error {
 		}
 		if b != e.buffer {
 			b.unlisted = false
-			if err := e.editBuffer(b, false); err != nil {
+			if err := e.editBuffer(b, force); err != nil {
 				return err
 			}
 		} else {
@@ -340,6 +340,7 @@ func (e *Engine) qfJump(loc bool, idx int) error {
 		e.setWant(v)
 		e.openCursorFold()
 	}
+	l.idx = idx
 	e.refreshQfCursor(s)
 	e.notify(msg)
 	return nil
@@ -520,7 +521,7 @@ func (e *Engine) qfDo(loc bool, cmd string) error {
 		if !en.valid {
 			continue
 		}
-		if err := e.qfJump(loc, i); err != nil {
+		if err := e.qfJump(loc, i, false); err != nil {
 			return err
 		}
 		if err := e.exec1(e.view(), cmd); err != nil {
@@ -594,7 +595,7 @@ func (e *Engine) vimgrep(loc bool, args, title string) error {
 	if strings.Contains(flags, "j") {
 		return nil
 	}
-	return e.qfJump(loc, 0)
+	return e.qfJump(loc, 0, false)
 }
 
 // qfEnter is <CR> in a quickfix or location-list window: jump to the entry under the cursor.
@@ -604,7 +605,7 @@ func (e *Engine) qfEnter() {
 		return
 	}
 	loc := e.window.locOwner != nil
-	if err := e.qfJump(loc, min(e.cur.Line, len(s.list().entries)-1)); err != nil {
+	if err := e.qfJump(loc, min(e.cur.Line, len(s.list().entries)-1), false); err != nil {
 		e.fail(err)
 	}
 }

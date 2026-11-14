@@ -20,7 +20,7 @@ func TestADisabledButtonSaysWhy(t *testing.T) {
 	})
 	h.pointer(render.PointerMove, 0, 20, 20)
 	h.frame()
-	h.now = h.now.Add(2 * time.Second)
+	h.clock.Advance(2 * time.Second)
 	h.frame()
 	if !strings.Contains(strings.Join(h.texts(), "|"), "Nothing to push") {
 		t.Errorf("no tooltip saying why: %q", h.texts())

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/url"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -191,7 +190,7 @@ func (c Client) AssignedIssues(ctx context.Context) ([]Issue, error) {
 			}
 			blockedBy = append(blockedBy, b.Identifier)
 		}
-		sort.Slice(blockedBy, func(i, j int) bool { return lessTicketKey(blockedBy[i], blockedBy[j]) })
+		slices.SortFunc(blockedBy, registry.CompareTicketKeys)
 		issues = append(issues, Issue{
 			PR:  pr,
 			Key: n.Identifier, Title: n.Title, URL: n.URL,
@@ -223,9 +222,6 @@ func hiddenState(name, typ string) bool {
 func sortIssues(issues []Issue) {
 	slices.SortStableFunc(issues, func(a, b Issue) int { return registry.CompareTickets(a.Ticket(), b.Ticket()) })
 }
-
-// lessTicketKey compares ticket keys by prefix, then numerically: FIX-9 before FIX-10.
-func lessTicketKey(a, b string) bool { return registry.CompareTicketKeys(a, b) < 0 }
 
 // stage is a Linear state's stage: its type, and In Review by name, since Linear files it under started.
 func stage(name, typ string) string {

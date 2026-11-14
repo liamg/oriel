@@ -90,7 +90,7 @@ func TestInputShowsNextFrame(t *testing.T) {
 	if !on {
 		t.Fatal("a click didn't flip the toggle")
 	}
-	if next := h.u.NextFrame(); next.IsZero() || next.After(h.now) {
+	if next := h.u.NextFrame(); next.IsZero() || next.After(h.clock.Now()) {
 		t.Errorf("the frame that read the click asks for the next at %v, want now: the flip shows a frame late", next)
 	}
 	h.frame()

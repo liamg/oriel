@@ -20,14 +20,15 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
+	"github.com/liamg/oriel/agent/claude"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/host/stats"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/internal/isolate"
+	"github.com/liamg/oriel/sysload"
 )
 
 // NopExec runs nothing.
@@ -151,11 +152,14 @@ func (f *LoggedFake) Discover() []agent.Transcript {
 	return slices.Clone(f.found)
 }
 
+// UsageFormats are its logs' formats: Claude's.
+func (*LoggedFake) UsageFormats() []usage.Format { return []usage.Format{claude.UsageLog} }
+
 func (f *LoggedFake) Logs(cwd, _ string) []agent.Log {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if p, ok := f.logs[cwd]; ok {
-		return []agent.Log{{Path: p, Format: stats.FormatClaude}}
+		return []agent.Log{{Path: p, Format: claude.UsageLog.Name}}
 	}
 	return nil
 }

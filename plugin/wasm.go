@@ -84,12 +84,13 @@ func (w *WASM) runtime(ctx context.Context) (wazero.Runtime, error) {
 // other file its fs.read grant. A module's _initialize runs; a command's _start doesn't.
 func (w *WASM) Load(ctx context.Context, p Caller, name string, o WASMOpts) (*Module, error) {
 	path := p.Path(name)
-	if !p.Own(path) {
-		if err := p.Check(CapFSRead, RealPath(path)); err != nil {
+	real := RealPath(path) // checked and read as one path, symlinks followed
+	if !p.Own(real) {
+		if err := p.Check(CapFSRead, real); err != nil {
 			return nil, err
 		}
 	}
-	code, err := os.ReadFile(path)
+	code, err := os.ReadFile(real)
 	if err != nil {
 		return nil, err
 	}

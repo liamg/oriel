@@ -59,7 +59,7 @@ func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 		_, err := r.w.ShipCommit(context.Background(), ShipCommitReq{Session: id, Project: p.Name, Message: "two"})
 		done <- err
 	}()
-	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok })
+	se := r.eventually(id, "the key ask", func(se core.SessionState) bool { _, ok := keyAsk(se); return ok && se.Status == core.StatusNeedsYou })
 	if a, _ := keyAsk(se); a.Summary != "git commit" || se.Status != core.StatusNeedsYou {
 		t.Errorf("asked %+v with the session %s", a, se.Status)
 	}

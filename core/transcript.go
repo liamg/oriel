@@ -32,30 +32,21 @@ type FileDiff struct {
 
 // Item is one block of the agent's transcript: prose, a tool call and its result, an error.
 type Item struct {
-	ID       string     `json:"id"`
-	Kind     ItemKind   `json:"kind"`
-	Text     string     `json:"text,omitempty"`
-	Tool     string     `json:"tool,omitempty"`
-	Input    string     `json:"input,omitempty"`  // a tool's input, JSON
-	Title    string     `json:"title,omitempty"`  // a tool call in a line: "Read internal/ratelimit/limiter.go"
-	Output   string     `json:"output,omitempty"` // a tool's result, clipped
-	IsError  bool       `json:"isError,omitempty"`
-	Done     bool       `json:"done,omitempty"`    // a tool call that has its result
-	Partial  bool       `json:"partial,omitempty"` // prose still streaming
-	Diff     *FileDiff  `json:"diff,omitempty"`
-	Files    []FileDiff `json:"files,omitempty"` // what a shell command changed in the session's projects
-	Agent    string     `json:"agent,omitempty"` // the subagent it belongs to; "" for the main loop
-	Time     time.Time  `json:"time,omitzero"`
-	Duration int64      `json:"duration,omitempty"` // milliseconds a tool took
+	ID       string    `json:"id"`
+	Kind     ItemKind  `json:"kind"`
+	Text     string    `json:"text,omitempty"`
+	Tool     string    `json:"tool,omitempty"`
+	Input    string    `json:"input,omitempty"`  // a tool's input, JSON
+	Title    string    `json:"title,omitempty"`  // a tool call in a line: "Read internal/ratelimit/limiter.go"
+	Output   string    `json:"output,omitempty"` // a tool's result, clipped
+	IsError  bool      `json:"isError,omitempty"`
+	Done     bool      `json:"done,omitempty"`    // a tool call that has its result
+	Partial  bool      `json:"partial,omitempty"` // prose still streaming
+	Diff     *FileDiff `json:"diff,omitempty"`
+	Agent    string    `json:"agent,omitempty"` // the subagent it belongs to; "" for the main loop
+	Time     time.Time `json:"time,omitzero"`
+	Duration int64     `json:"duration,omitempty"` // milliseconds a tool took
 }
 
 // MaxTranscript is how many items a session's state keeps; its log keeps them all.
 const MaxTranscript = 2000
-
-// FileDiffs are what the item did to files: its edit's diff, then the files its shell command changed.
-func (it Item) FileDiffs() []FileDiff {
-	if it.Diff == nil {
-		return it.Files
-	}
-	return append([]FileDiff{*it.Diff}, it.Files...)
-}

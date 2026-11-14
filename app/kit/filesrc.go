@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui"
@@ -32,7 +34,7 @@ func BufferOn(r registry.Registry, path string) *text.Buffer {
 	if r == nil {
 		return nil
 	}
-	if ed, ok := registry.EditorsOf(r); ok {
+	if ed, ok := services.EditorsOf(r); ok {
 		if b, ok := ed.Buffer(path); ok {
 			return b.Text
 		}
@@ -41,11 +43,11 @@ func BufferOn(r registry.Registry, path string) *text.Buffer {
 }
 
 // Buffers are the editor's listed buffers that hold files; r may be nil.
-func Buffers(r registry.Registry) []registry.EditorBuffer {
+func Buffers(r registry.Registry) []services.EditorBuffer {
 	if r == nil {
 		return nil
 	}
-	if ed, ok := registry.EditorsOf(r); ok {
+	if ed, ok := services.EditorsOf(r); ok {
 		return ed.Buffers()
 	}
 	return nil

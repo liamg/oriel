@@ -24,7 +24,7 @@ var (
 // Health checks this machine can run sandboxed agents on ctx's engine, starting
 // the base image build in the background if it is missing. fix says how to
 // install or start the engine.
-func Health(ctx context.Context, cfg sandbox.Config, fix string) []sandbox.Problem {
+func Health(ctx context.Context, cfg sandbox.Config, fix string, helper func() ([]byte, error)) []sandbox.Problem {
 	var out []sandbox.Problem
 	info, err := container.Ping(ctx)
 	if err != nil {
@@ -45,7 +45,7 @@ func Health(ctx context.Context, cfg sandbox.Config, fix string) []sandbox.Probl
 			out = append(out, p)
 		}
 	}
-	if p, ok := helperProblem(); !ok {
+	if p, ok := helperProblem(helper); !ok {
 		out = append(out, p)
 	}
 	for _, p := range PendingDockerfiles(cfg) {

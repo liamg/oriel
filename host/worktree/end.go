@@ -16,7 +16,9 @@ import (
 // CheckClean refuses a session whose worktrees have uncommitted work: removing them would lose it.
 func CheckClean(ctx context.Context, se core.SessionState) error {
 	for _, p := range worktrees(se) {
-		if (gitx.Repo{Dir: p.Dir}).Dirty(ctx) {
+		if dirty, err := (gitx.Repo{Dir: p.Dir}).Dirty(ctx); err != nil {
+			return fmt.Errorf("%s: can't tell whether it has uncommitted work: %w", p.Name, err)
+		} else if dirty {
 			return fmt.Errorf("%s has uncommitted work: commit or discard it first", p.Name)
 		}
 	}

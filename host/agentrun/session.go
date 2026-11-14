@@ -43,17 +43,11 @@ type session struct {
 	items        map[string]core.Item
 	waiting      map[string]chan AnswerReq // asks the user hasn't answered
 	turnAt       time.Time
-	drafts       bool                    // its pack fills the Ship page's drafts (commit_draft)
-	nudged       map[string]string       // project/kind → the code it was last asked to draft for
-	carriedAt    string                  // what it owed when last told to carry on
-	carried      int                     // times told to carry on since the user last wrote
-	trees        map[string]string       // each project's work tree at the last mark, by directory
-	markq        []func([]core.FileDiff) // marks waiting to run, each with what to do with its changes
-	marking      bool                    // a goroutine is running markq
-	markFull     bool                    // a mark waiting snapshots every project
-	markAt       time.Time               // when the newest waiting mark was asked for
-	watch        *treeWatch              // which projects changed since their last mark, while the agent runs
-	exits        []time.Time             // when the agent last exited on its own, within exitWindow
+	drafts       bool              // its pack fills the Ship page's drafts (commit_draft)
+	nudged       map[string]string // project/kind → the code it was last asked to draft for
+	carriedAt    string            // what it owed when last told to carry on
+	carried      int               // times told to carry on since the user last wrote
+	exits        []time.Time       // when the agent last exited on its own, within exitWindow
 }
 
 func (h *session) running() bool {
@@ -286,8 +280,8 @@ func (h *session) unresponsive() bool {
 // stop stops the agent, and its threads wait for it to come back; by is who did (core.StoppedByYou…), "" for a stop that isn't one: a restart, a delete.
 func (h *session) stop(why, by string) {
 	h.mu.Lock()
-	sess, box, cancel, watch := h.sess, h.box, h.cancel, h.watch
-	h.sess, h.box, h.cancel, h.working, h.restartWhy, h.watch = nil, nil, nil, false, "", nil
+	sess, box, cancel := h.sess, h.box, h.cancel
+	h.sess, h.box, h.cancel, h.working, h.restartWhy = nil, nil, nil, false, ""
 	waiting := h.waiting
 	h.waiting = map[string]chan AnswerReq{}
 	h.mu.Unlock()
@@ -304,7 +298,6 @@ func (h *session) stop(why, by string) {
 	if cancel != nil {
 		cancel()
 	}
-	watch.close()
 	h.setAgent(func(a *core.AgentState) { a.Stopped(by, h.r.env.Now()) })
 	h.r.env.Log.Info("agent stopped", "session", h.id, "why", why)
 }

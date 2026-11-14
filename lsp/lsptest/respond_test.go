@@ -33,7 +33,7 @@ func TestResponder(t *testing.T) {
 			spec = s
 		}
 	}
-	m := lsp.NewManager(lsp.ManagerOptions{Servers: func() []lsp.ServerSpec { return []lsp.ServerSpec{spec} },
+	m := lsp.NewManager(lsp.ManagerOpts{Servers: func() []lsp.ServerSpec { return []lsp.ServerSpec{spec} },
 		Installed: func(lsp.ServerSpec) bool { return true },
 		Client:    lsp.Options{Launch: r.Launcher(), OnDiagnostics: func(s lsp.DiagnosticSet) { diags <- s }}})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

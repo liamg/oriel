@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 )
@@ -896,8 +897,8 @@ func (u *UI) Cursor() render.Cursor {
 	return render.CursorDefault
 }
 
-// SetClock replaces time.Now, for tests.
-func (u *UI) SetClock(now func() time.Time) { u.clock = now }
+// SetClock sets the clock the UI reads; nil is the system's.
+func (u *UI) SetClock(c clock.Clock) { u.clock = c }
 
 // Frames is how many frames have been built.
 func (u *UI) Frames() int { return u.frame }
@@ -905,12 +906,10 @@ func (u *UI) Frames() int { return u.frame }
 // Now is the time on the UI's clock: the frame's, a test's fixed one.
 func (u *UI) Now() time.Time { return u.now() }
 
-func (u *UI) now() time.Time {
-	if u.clock != nil {
-		return u.clock()
-	}
-	return time.Now()
-}
+// Clock is the UI's clock, the system's unless SetClock set one.
+func (u *UI) Clock() clock.Clock { return clock.Or(u.clock) }
+
+func (u *UI) now() time.Time { return u.Clock().Now() }
 
 // WokenBy says what asked for the next frame in the last build: the keys down to the element whose WakeAt did,
 // "animation" for a spring, "toolkit" for the UI's own, or "" for nothing.

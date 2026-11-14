@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/fuzzy"
 	"github.com/liamg/oriel/core"
@@ -55,7 +57,7 @@ func (v lspOverlay) Build(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "lsp", F
 
 // overlay draws the popups at the editor's cursor, and closes those the cursor has left.
 func (x *LSP) overlay(c *ui.Ctx) {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return
 	}
@@ -326,7 +328,7 @@ func (v lspStatus) Build(uireg.ViewCtx) ui.Node {
 }
 
 func (x *LSP) statusSegment(c *ui.Ctx) {
-	if ed, ok := registry.EditorsOf(x.h); !ok || !ed.Shown() {
+	if ed, ok := services.EditorsOf(x.h); !ok || !ed.Shown() {
 		return
 	}
 	_, _, d := x.current()

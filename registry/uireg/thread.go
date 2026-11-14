@@ -25,8 +25,8 @@ func ThreadSourceFor(r registry.Contributions, origin string) (ThreadSource, boo
 	if origin == "" {
 		return ThreadSource{}, false
 	}
-	for _, c := range r.Contributions("thread.source") {
-		if s := c.(ThreadSource); s.Origin == origin {
+	for _, s := range registry.ContributionsOf[ThreadSource](r) {
+		if s.Origin == origin {
 			return s, true
 		}
 	}
@@ -56,8 +56,8 @@ func (f ThreadFoot) ContributionName() string { return f.Name }
 
 // DrawThreadFeet draws every ThreadFoot's for a thread, in the card's own column: a foot keys its nodes by its Name.
 func DrawThreadFeet(r registry.Contributions, c *ui.Ctx, session, thread string, where ThreadWhere, width float32) {
-	for _, x := range r.Contributions("thread.foot") {
-		if f := x.(ThreadFoot); f.Draw != nil {
+	for _, f := range registry.ContributionsOf[ThreadFoot](r) {
+		if f.Draw != nil {
 			_ = registry.Call(func() error { f.Draw(c, session, thread, where, width); return nil })
 		}
 	}

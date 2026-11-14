@@ -23,3 +23,23 @@ func TestManifestCarriesTheMemory(t *testing.T) {
 		t.Errorf("memory = %+v, want %+v", m, want)
 	}
 }
+
+// The factory offers every backend Oriel has, docker preferred.
+func TestKnownBackends(t *testing.T) {
+	want := []string{"docker", "orbstack", "colima", "podman", "seatbelt"}
+	if got := Known().Names(); !slices.Equal(got, want) {
+		t.Errorf("known = %v, want %v", got, want)
+	}
+}
+
+// With no backend it can run, the factory offers every one, to set up.
+func TestOfferedWithNoneAvailable(t *testing.T) {
+	f := &Factory{Available: func() []string { return nil }}
+	if got := f.Offered(); !slices.Equal(got, Known().Names()) {
+		t.Errorf("offered = %v, want %v", got, Known().Names())
+	}
+	f.Available = func() []string { return []string{"podman"} }
+	if got := f.Offered(); !slices.Equal(got, []string{"podman"}) {
+		t.Errorf("offered = %v, want podman", got)
+	}
+}

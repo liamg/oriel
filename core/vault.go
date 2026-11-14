@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Sealed is an event holding text its log mustn't keep: Seal is the event as the log has it, and that text by key;
@@ -66,11 +68,7 @@ func (v *Vault) Put(texts map[string]string) error {
 	if err := os.MkdirAll(filepath.Dir(v.path), 0o700); err != nil {
 		return err
 	}
-	tmp := v.path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, v.path)
+	return atomicfile.WriteSecret(v.path, b)
 }
 
 // sealThreads are threads with each redacted comment's body taken out into texts.

@@ -25,8 +25,8 @@ func contributedIcon(r registry.Registry, pictures *kit.Pictures, name string, c
 	}
 	var ic registry.Icon
 	found := false
-	for _, c := range r.Contributions("icon") {
-		if i := c.(registry.Icon); i.Name == name {
+	for _, i := range registry.ContributionsOf[registry.Icon](r) {
+		if i.Name == name {
 			ic, found = i, true
 		}
 	}
@@ -44,7 +44,7 @@ func contributedIcon(r registry.Registry, pictures *kit.Pictures, name string, c
 		}
 		from = file.Img
 	}
-	pc := pictures.Made(key, from, func() *kit.Picture {
+	pc := pictures.Memo(key, from, func() *kit.Picture {
 		pc := &kit.Picture{}
 		var src image.Image
 		if img, ok := from.(image.Image); ok {

@@ -10,9 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -53,10 +56,10 @@ type Ship struct {
 	kit.Disposer
 	ConfigDir string // the user's config directory, for their prompts
 	h         plugin.Host
-	Clock     func() time.Time // the time Ship reads ages by; time.Now if nil
+	Clock     clock.Clock // the time Ship reads ages by; the system's if nil
 	ctx       context.Context
 	cancel    context.CancelFunc
-	busy      kit.Busy                          // reads and steps
+	busy      work.Busy                         // reads and steps
 	saving    sync.WaitGroup                    // drafts the user typed, on their way to the session host
 	subs      kit.Subs                          // what it reads, from the sessions' managers (shipwatch.go)
 	budget    kit.Budget                        // background PR polls' requests
@@ -103,9 +106,6 @@ func (x *Ship) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ship"} }
 func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "ship", Busy: x.busy.Busy, Source: "builtin:ship"}))
 	x.h = h
-	if x.Clock == nil {
-		x.Clock = time.Now
-	}
 	x.reports = map[core.SessionID]*shipReport{}
 	x.commits, x.prs, x.renaming = map[string]*commitForm{}, map[string]*prForm{}, map[string]*renameForm{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
@@ -127,7 +127,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.commands()
 	x.views()
 	x.budget.PerHour = prBudget
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.SessionFocused, core.TabOpened, core.TabClosed, core.SessionOpened, core.SessionArchived, core.SessionClosed:
 			for _, id := range x.follow() {
@@ -145,7 +145,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 		case core.DraftSaved:
 			x.readSoon(ev.Session, ev.Project, false)
 		}
-	})))
+	}))
 	x.follow()
 	return nil
 }
@@ -159,9 +159,9 @@ func (x *Ship) Deactivate(ctx context.Context) error {
 
 func (x *Ship) focused() core.SessionID { return x.h.State().Focus }
 
-// client is the session host.
-func (x *Ship) client(id core.SessionID) (host.Access, error) {
-	return kit.SessionHost(x.h)
+// client is the session host's ship calls.
+func (x *Ship) client(id core.SessionID) (host.ShipCalls, error) {
+	return kit.ShipCalls(x.h)
 }
 
 // session is the session in front, or {id}.
@@ -455,8 +455,13 @@ func (x *Ship) Wait() { x.wait() }
 // step runs one step on a project off the loop, showing doing while it runs and until the project's been read after
 // it, so its panel never shows the state from before; then done, if it succeeded, on the loop. A failure is kept for
 // the project and sent as a notice. The session is read again after, fetched.
-func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c host.Access) error, done ...func()) error {
-	c, err := x.client(id)
+func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c host.ShipCalls) error, done ...func()) error {
+	return stepWith(x, kit.ShipCalls, id, project, doing, fn, done...)
+}
+
+// stepWith is step with the part of the session host part gives.
+func stepWith[T any](x *Ship, part func(registry.Registry) (T, error), id core.SessionID, project, doing string, fn func(ctx context.Context, c T) error, done ...func()) error {
+	c, err := part(x.h)
 	if err != nil {
 		return err
 	}
@@ -605,7 +610,7 @@ func (x *Ship) gates() {
 			note = strings.Join(f[:2], " ")
 		}
 		if !last.Ended.IsZero() {
-			note += " " + kit.AgoText(x.Clock(), last.Ended)
+			note += " " + widget.AgoLong(x.now(), last.Ended)
 		}
 		if !last.OK {
 			return registry.Gate{State: registry.GateFail, Note: note}
@@ -776,3 +781,5 @@ func (x *Ship) Fixture(id core.SessionID, loading bool, fn func([]Read) []Read) 
 	}
 	x.reports[id] = &shipReport{ships: fn(ships), loading: loading, doing: map[string]string{}, failed: map[string]string{}, fixed: true}
 }
+
+func (x *Ship) now() time.Time { return clock.Or(x.Clock).Now() }

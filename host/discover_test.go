@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/agent/claude/transcript"
 	"github.com/liamg/oriel/agent/codex"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/host/stats"
@@ -25,12 +26,14 @@ func (claudeLike) Logs(cwd, session string) []agent.Log {
 	return (&claude.Provider{}).Logs(cwd, session)
 }
 func (claudeLike) Discover() []agent.Transcript { return (&claude.Provider{}).Discover() }
+func (claudeLike) UsageFormats() []usage.Format { return (&claude.Provider{}).UsageFormats() }
 
 // codexLike is a fake that finds its rollouts where Codex keeps them, and keeps no log the host reads: its sessions'
 // events are the host's record.
 type codexLike struct{ *agenttest.Fake }
 
 func (codexLike) Discover() []agent.Transcript { return (&codex.Provider{}).Discover() }
+func (codexLike) UsageFormats() []usage.Format { return (&codex.Provider{}).UsageFormats() }
 
 func writeLines(t *testing.T, path string, lines ...string) {
 	t.Helper()

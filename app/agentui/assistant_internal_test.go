@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -37,8 +38,8 @@ func TestOriBlinks(t *testing.T) {
 // hidden it holds still, asking for no frames.
 func TestOriRestsUnfocused(t *testing.T) {
 	u := testUI(t)
-	now := time.Unix(1000, 0)
-	u.SetClock(func() time.Time { return now })
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	for _, busy := range []bool{true, false} {
 		frame := func() {
 			u.Layout(render.Point{X: 40, Y: 40}, func(c *ui.Ctx) { ori(c, "ori", 24, oriMood{busy: busy}) })
@@ -50,7 +51,7 @@ func TestOriRestsUnfocused(t *testing.T) {
 			t.Fatalf("busy %v: focused, Ori asked for no frame", busy)
 		}
 		if busy {
-			now = next
+			clk.Set(next)
 			frame()
 			if step := u.NextFrame().Sub(next); step < ui.DecorInterval {
 				t.Errorf("busy: frames %v apart, want at most 15 a second", step)
@@ -92,7 +93,7 @@ func testUI(t *testing.T) *ui.UI {
 func TestWorkingLineRestsUnfocused(t *testing.T) {
 	u := testUI(t)
 	now := time.Unix(1000, 0)
-	u.SetClock(func() time.Time { return now })
+	u.SetClock(clocktest.New(now))
 	se := core.SessionState{Agent: core.AgentState{Working: true, TurnStarted: now.Add(-time.Minute)}}
 	frame := func() { u.Layout(render.Point{X: 400, Y: 40}, func(c *ui.Ctx) { workingLine(c, "w", se, ui.Flex(1)) }) }
 	frame()

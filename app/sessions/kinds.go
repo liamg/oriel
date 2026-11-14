@@ -4,11 +4,11 @@ package sessions
 
 import (
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 )
 
 // registryKinds is the session host's KindSource: the kinds registered with the app, a plugin's as well as the
@@ -26,7 +26,7 @@ func (k registryKinds) Kind(kind core.Kind) (core.KindSpec, bool) {
 // registryProviders are the agent providers registered with the app, by Order.
 func registryProviders(r registry.Contributions) []agent.Provider {
 	var out []agent.Provider
-	for _, p := range registry.AgentProviders(r) {
+	for _, p := range services.AgentProviders(r) {
 		out = append(out, p.Provider)
 	}
 	return out
@@ -56,11 +56,19 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 	}}))
 	x.Add(h.Contribute(registry.Service{Name: registry.SessionsService, Impl: sessionsService{x}, Source: "builtin:sessions"}))
 	if w := x.Host; w != nil {
-		x.Add(h.Contribute(registry.Service{Name: registry.HostService, Impl: host.Access(w), Source: "builtin:sessions"}))
+		for _, part := range []struct {
+			name string
+			impl any
+		}{{registry.HostSessionsService, host.SessionCalls(w)},
+			{registry.HostSandboxesService, host.SandboxCalls(w)}, {registry.HostShipsService, host.ShipCalls(w)},
+			{registry.HostCodeHostsService, host.CodeHostCalls(w)}, {registry.HostReposService, host.RepoCalls(w)},
+			{registry.HostJobsService, host.JobCalls(w)}, {registry.HostStatsService, host.StatsCalls(w)}} {
+			x.Add(h.Contribute(registry.Service{Name: part.name, Impl: part.impl, Source: "builtin:sessions"}))
+		}
 		w.SetKinds(registryKinds{h})
-		x.Add(kit.OnDispose(func() { w.SetKinds(nil) }))
+		x.Add(registry.DisposeFunc(func() { w.SetKinds(nil) }))
 		w.SetProviders(func() []agent.Provider { return registryProviders(h) })
-		x.Add(kit.OnDispose(func() { w.SetProviders(nil) }))
+		x.Add(registry.DisposeFunc(func() { w.SetProviders(nil) }))
 	}
 }
 

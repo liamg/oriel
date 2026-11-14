@@ -20,14 +20,20 @@ type Rule struct {
 var Rules = []Rule{
 	{From: []string{"text", "edit", "vim", "syntax", "lsp", "dap", "jsonrpc", "core", "agent", "term"}, Never: []string{"ui", "render"}},
 	{From: []string{"plugin"}, Never: []string{"ui/widget"}},
-	// The registry is pure contributions; what's drawn is registry/uireg's, and language tooling registry/lang's.
-	{From: []string{"registry"}, Never: []string{"ui", "render", "lsp", "dap"}, Except: []string{"registry/uireg", "registry/lang"}},
+	// The registry is pure contributions; what's drawn is registry/uireg's, language tooling registry/lang's, and the
+	// built-in services' contracts, made of the editor, git, watches and agents, registry/services'.
+	{From: []string{"registry"}, Never: []string{"ui", "render", "lsp", "dap", "syntax", "gitx", "watch", "agent"},
+		Except: []string{"registry/uireg", "registry/lang", "registry/services"}},
 	{From: []string{"registry/uireg"}, Never: []string{"lsp", "dap"}},
 	{From: []string{"registry/lang"}, Never: []string{"ui", "render"}},
 	// The session host's parts meet only in its facade, each seeing the host as a host/hostcore State.
 	apart("host/agentrun"), apart("host/aireview"), apart("host/github"), apart("host/jobs"), apart("host/persist"),
 	apart("host/pricing"), apart("host/repos"), apart("host/sandboxhost"), apart("host/utility"), apart("host/worktree"),
 	{From: []string{"host/hostcore", "host/hosttest"}, Never: hostParts},
+	// host/stats is a library the parts and the app share: it reads logs and counts, and reaches no part.
+	{From: []string{"host/stats"}, Never: append([]string{"app", "ui", "render"}, hostParts...)},
+	// Libraries the host and the app both use, reaching neither.
+	{From: []string{"search", "sysload"}, Never: []string{"app", "host", "ui", "render"}},
 }
 
 // hostParts are the session host's parts (docs/architecture.md, "Layering").

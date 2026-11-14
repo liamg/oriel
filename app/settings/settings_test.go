@@ -346,7 +346,7 @@ func (fontShown) Activate(_ context.Context, h plugin.Host) error {
 // The window moving onto a directory waits behind its opening cover for the project's settings there: the first
 // frame laid out on it has them.
 func TestAMoveBringsTheProjectsSettings(t *testing.T) {
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{fontShown{}}})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{fontShown{}}})
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".oriel", "settings.toml")
 	src := []byte("[editor]\nfont_size = 21\n")

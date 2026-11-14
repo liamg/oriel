@@ -13,6 +13,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -20,7 +24,6 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
-	"github.com/liamg/oriel/watch"
 )
 
 // Sessions is the app's side of the session host (docs/architecture.md): it follows the session in front with the
@@ -50,18 +53,17 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 			Tools:    func(r host.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
 			CallTool: func(ctx context.Context, call host.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
 			Decide:   func(ctx context.Context, d host.Decide) host.Verdict { return x.decide(ctx, h, d) },
-			Watches:  func(id core.SessionID) *watch.Manager { return kit.ManagerFor(h, id) },
 		})
-		x.Add(kit.OnDispose(func() { w.SetApp(host.App{}) }))
+		x.Add(registry.DisposeFunc(func() { w.SetApp(host.App{}) }))
 	}
 	x.contributeKinds(h)
 	landAtLaunch(h)
-	x.Add(kit.OnDispose(keepATabInFront(h)))
+	x.Add(keepATabInFront(h))
 	x.Add(h.Option(registry.OptionSpec{Name: autoNameOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Name a session started from a request, and the request, with a small model (Claude's Haiku). Off, the name is the request's first words."}))
 	x.Add(h.Option(registry.OptionSpec{Name: restartOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Start an open session's agent again, on its conversation, when it exits on its own. One that exits 3 times in 2 minutes stays stopped."}))
-	x.Add(kit.OnDispose(h.Options().Watch(restartOption, x.sendRestart)))
+	x.Add(h.Options().Watch(restartOption, x.sendRestart))
 	x.sendRestart()
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
@@ -85,7 +87,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 		Doc: "A comment about to go to an agent; a rewrite changes it, a veto stops it. { session, thread, file, line, body, urgent, btw }"}))
 	working := map[core.SessionID]bool{}
 	var signedOut []core.Login
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.MachineChanged:
 			was := signedOut
@@ -110,7 +112,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 				})
 			}
 		}
-	})))
+	}))
 	x.Add(h.Picker(x.addSource(h)))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -180,34 +182,34 @@ func (x *Sessions) commands() []registry.Command {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
 			}},
 		{ID: "session.stop", Title: "Stop the agent of {id}, or the session in front", Available: named,
-			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w host.Access, id core.SessionID) error { return w.Stop(ctx, id) })},
+			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error { return w.Stop(ctx, id) })},
 		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
-			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w host.Access, id core.SessionID) error { return w.Archive(ctx, id) })},
+			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error { return w.Archive(ctx, id) })},
 		{ID: "session.start-work", Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
 			Available: planning,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.start-work", "Starting work on", func(ctx context.Context, w host.Access, id core.SessionID) error {
+				return x.slowSession("session.start-work", "Starting work on", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
 		{ID: "session.configure", Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
 			Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.configure", "Switching the agent of", func(ctx context.Context, w host.Access, id core.SessionID) error {
+				return x.slowSession("session.configure", "Switching the agent of", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.Configure(ctx, host.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
 				})(ctx, a)
 			}},
 		{ID: "session.interrupt", Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
-			Run: x.onSession(func(_ context.Context, w host.Access, id core.SessionID) error { return w.Interrupt(id) })},
+			Run: x.onSession(func(_ context.Context, w host.SessionCalls, id core.SessionID) error { return w.Interrupt(id) })},
 		{ID: "session.rename", Title: "Rename {id}, or the session in front: {name}", Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.onSession(func(_ context.Context, w host.Access, id core.SessionID) error {
+				return x.onSession(func(_ context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.Rename(id, a.String("name"))
 				})(ctx, a)
 			}},
 		{ID: "session.add-repo", Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.add-repo", "Adding "+a.String("repo")+" to", func(ctx context.Context, w host.Access, id core.SessionID) error {
+				return x.slowSession("session.add-repo", "Adding "+a.String("repo")+" to", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.AddRepo(ctx, id, core.RepoID(a.String("repo")))
 				})(ctx, a)
 			}},
@@ -242,8 +244,8 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 		if slices.ContainsFunc(was, l.Same) {
 			continue
 		}
-		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out", Time: time.Now(),
-			Text: kit.ProviderName(x.h, l.Provider) + " needs you to log in: " + l.Detail + "."}
+		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out",
+			Text: services.ProviderTitle(x.h, l.Provider) + " needs you to log in: " + l.Detail + "."}
 		switch {
 		case l.Browser:
 			n.Text += " Log in opens its sign-in in your browser."
@@ -259,7 +261,7 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 }
 
 // host is the session host, or why there's none.
-func (x *Sessions) host() (host.Access, error) {
+func (x *Sessions) host() (host.SessionCalls, error) {
 	if x.Host == nil {
 		return nil, errors.New("there are no sessions in this window")
 	}
@@ -269,7 +271,7 @@ func (x *Sessions) host() (host.Access, error) {
 func (x *Sessions) focused() core.SessionID { return x.h.State().Focus }
 
 // onSession runs fn on the session {id}, or the one in front.
-func (x *Sessions) onSession(fn func(context.Context, host.Access, core.SessionID) error) func(registry.Ctx, registry.Args) error {
+func (x *Sessions) onSession(fn func(context.Context, host.SessionCalls, core.SessionID) error) func(registry.Ctx, registry.Args) error {
 	return func(ctx registry.Ctx, a registry.Args) error {
 		id := core.SessionID(a.String("id"))
 		if id == "" {
@@ -288,8 +290,8 @@ func (x *Sessions) onSession(fn func(context.Context, host.Access, core.SessionI
 
 // slowSession is onSession for host work that runs off the loop (plugin.RunSlow): doing, then the session, says what
 // it is.
-func (x *Sessions) slowSession(command, doing string, fn func(context.Context, host.Access, core.SessionID) error) func(registry.Ctx, registry.Args) error {
-	return x.onSession(func(ctx context.Context, w host.Access, id core.SessionID) error {
+func (x *Sessions) slowSession(command, doing string, fn func(context.Context, host.SessionCalls, core.SessionID) error) func(registry.Ctx, registry.Args) error {
+	return x.onSession(func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
 		return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: command + "." + string(id), Doing: doing + " " + x.label(id)},
 			func(ctx context.Context) (struct{}, error) { return struct{}{}, fn(ctx, w, id) }, nil)
 	})
@@ -339,7 +341,7 @@ func (x *Sessions) addSource(h plugin.Host) uireg.PickerSource {
 				return errors.New("no session is in front")
 			}
 			if it.ID == addNewRepo {
-				return h.Run(ctx, "repos.new", registry.Args{"then": []any{map[string]any{"command": "session.add-repo"}}})
+				return h.Run(ctx, "repos.new", registry.Args{"then": kit.Then(kit.Call{Command: "session.add-repo"})})
 			}
 			before := se.Projects()
 			repo := it.ID
@@ -379,7 +381,7 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 			default:
 			}
 		})
-		defer stop()
+		defer stop.Dispose()
 		err := plugin.Await(x.ctx, func(ctx registry.Ctx) error {
 			return h.Run(ctx, "session.add-repo", registry.Args{"id": string(id), "repo": repo})
 		})
@@ -414,23 +416,28 @@ func (x *Sessions) sendRestart() {
 	if x.Host == nil {
 		return
 	}
-	on, _, _ := x.h.Options().Get(restartOption, registry.At{})
-	x.Host.SetRestartOnExit(on != false)
+	on, set := registry.Option[bool](x.h.Options(), restartOption, registry.At{})
+	x.Host.SetRestartOnExit(on || !set) // on unless it's set false
 }
 
 // start starts a session and brings it to the front, unless {background}.
 func (x *Sessions) start(ctx context.Context, a registry.Args) (core.SessionID, error) {
+	then, err := kit.CallsOf(a["then"])
+	if err != nil {
+		return "", err
+	}
 	id, err := x.launch(ctx, a)
 	if err != nil {
 		return "", err
 	}
-	return id, x.front(id, a)
+	return id, x.front(id, a.Bool("background"), then)
 }
 
 // startCommand is session.start: the kind's Prepare and the host's start (a PR's lookup and checkout, worktrees)
 // off the loop, then the session to the front.
 func (x *Sessions) startCommand(ctx registry.Ctx, a registry.Args) error {
-	if _, err := kit.CallsOf(a["then"]); err != nil {
+	then, err := kit.CallsOf(a["then"])
+	if err != nil {
 		return err
 	}
 	if _, err := x.host(); err != nil {
@@ -439,7 +446,7 @@ func (x *Sessions) startCommand(ctx registry.Ctx, a registry.Args) error {
 	n := x.starts.Add(1)
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: fmt.Sprintf("session.start.%d", n), Doing: "Starting " + startName(a)},
 		func(ctx context.Context) (core.SessionID, error) { return x.launch(ctx, a) },
-		func(_ registry.Ctx, id core.SessionID) error { return x.front(id, a) })
+		func(_ registry.Ctx, id core.SessionID) error { return x.front(id, a.Bool("background"), then) })
 }
 
 // startName is how session.start's a names the session to the user, before it has an id.
@@ -452,11 +459,8 @@ func startName(a registry.Args) string {
 
 // launch prepares and starts a session from a, and fires SessionStart on the loop.
 func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID, error) {
-	if _, err := kit.CallsOf(a["then"]); err != nil {
-		return "", err
-	}
 	spec := kit.SpecFrom(a)
-	if on, _, _ := x.h.Options().Get(autoNameOption, registry.At{}); on == true && spec.Name == "" {
+	if on, _ := registry.Option[bool](x.h.Options(), autoNameOption, registry.At{}); on && spec.Name == "" {
 		spec.AutoName = true
 	}
 	w, err := x.host()
@@ -477,15 +481,13 @@ func (x *Sessions) launch(ctx context.Context, a registry.Args) (core.SessionID,
 	return id, nil
 }
 
-// front brings a started session to the front, or with {background} opens its tab behind the one in front, and runs
-// a's {then} once the window is on it.
-func (x *Sessions) front(id core.SessionID, a registry.Args) error {
-	if a.Bool("background") {
+// front brings a started session to the front, or in the background opens its tab behind the one in front, and
+// runs then once the window is on it.
+func (x *Sessions) front(id core.SessionID, background bool, then []kit.Call) error {
+	if background {
 		return x.h.Apply(core.TabOpened{ID: id})
 	}
-	then, _ := kit.CallsOf(a["then"])
-	kit.After(x.h, id, append([]kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(id)}}}, then...))
-	return x.h.Apply(core.SessionFocused{ID: id})
+	return kit.Focus(x.h, id, then)
 }
 
 // open brings a session to the front, resuming it if it's stopped, and runs then once the window is on it: after it
@@ -495,10 +497,7 @@ func (x *Sessions) open(ctx context.Context, id core.SessionID, then []kit.Call)
 	if !ok {
 		return fmt.Errorf("no session %q", id)
 	}
-	front := func() error {
-		kit.After(x.h, id, append([]kit.Call{{Command: "session.opens", Args: registry.Args{"id": string(id)}}}, then...))
-		return x.h.Apply(core.SessionFocused{ID: id})
-	}
+	front := func() error { return kit.Focus(x.h, id, then) }
 	if st := se.Snapshot(); st.Archived || (st.Agent.Provider != "" && !st.Agent.Running) {
 		w, err := x.host()
 		if err != nil {
@@ -588,7 +587,7 @@ func (x *Sessions) agentName(id core.SessionID, agent string) (string, bool) {
 
 // callTool runs a tool for an agent. A session's agent is owned by the host: an act there is asked through the
 // session's rules, the policy hooks and then the user's card, as the agent's own gate is.
-func (x *Sessions) callTool(ctx context.Context, h plugin.Host, w host.Access, call host.ToolCall) (string, error) {
+func (x *Sessions) callTool(ctx context.Context, h plugin.Host, w host.SessionCalls, call host.ToolCall) (string, error) {
 	name, utility := x.agentName(call.Session, call.Agent)
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
 		if t.Name != call.Tool || t.Run == nil {
@@ -613,14 +612,14 @@ func (x *Sessions) callTool(ctx context.Context, h plugin.Host, w host.Access, c
 }
 
 // askForSession asks for a session's agent's act. The rule "Always" makes is the tool's name.
-func askForSession(ctx context.Context, w host.Access, call host.ToolCall, cf registry.Confirmation) (bool, error) {
+func askForSession(ctx context.Context, w host.SessionCalls, call host.ToolCall, cf registry.Confirmation) (bool, error) {
 	tool := "mcp__oriel__" + call.Tool
 	v, err := w.Ask(ctx, host.AskReq{Session: call.Session, Ask: core.Ask{Kind: core.AskPermission, Tool: tool,
 		Summary: cmp.Or(cf.Line, cf.Title), Detail: cf.Lead, Input: string(call.Args), Rule: tool}})
 	if err != nil {
 		return false, err
 	}
-	if v.Decision == "allow" {
+	if v.Decision == host.DecisionAllow {
 		return true, nil
 	}
 	if v.Note != "" {
@@ -650,26 +649,30 @@ func (x *Sessions) decide(ctx context.Context, h plugin.Host, d host.Decide) hos
 	}
 	switch {
 	case v.Veto:
-		return host.Verdict{Decision: "deny", Note: v.Reason, By: "a Permission hook"}
+		return host.Verdict{Decision: host.DecisionDeny, Note: v.Reason, By: "a Permission hook"}
 	case !v.Decided:
 		return host.Verdict{}
 	}
-	switch val := v.Value.(type) {
+	return hookVerdict(v.Value)
+}
+
+// hookVerdict reads a Permission hook's answer, in any of the shapes it may give ("allow", true, a
+// registry.PermissionVerdict, a {decision, note} table), as allow or deny; anything else leaves the ask to the user.
+func hookVerdict(answer any) host.Verdict {
+	var dec, note string
+	switch val := answer.(type) {
 	case string:
-		if val == "allow" || val == "deny" {
-			return host.Verdict{Decision: val, By: "a Permission hook"}
-		}
-	case registry.PermissionVerdict:
-		return host.Verdict{Decision: val.Decision, Note: val.Note, By: "a Permission hook"}
-	case map[string]any:
-		dec, _ := val["decision"].(string)
-		note, _ := val["note"].(string)
-		return host.Verdict{Decision: dec, Note: note, By: "a Permission hook"}
+		dec = val
 	case bool:
-		if val {
-			return host.Verdict{Decision: "allow", By: "a Permission hook"}
-		}
-		return host.Verdict{Decision: "deny", By: "a Permission hook"}
+		dec = map[bool]string{true: "allow", false: "deny"}[val]
+	case registry.PermissionVerdict:
+		dec, note = val.Decision, val.Note
+	case map[string]any:
+		dec, _ = val["decision"].(string)
+		note, _ = val["note"].(string)
+	}
+	if d := host.Decision(dec); d.Decided() {
+		return host.Verdict{Decision: d, Note: note, By: "a Permission hook"}
 	}
 	return host.Verdict{}
 }
@@ -702,7 +705,7 @@ func (x *Sessions) explain(ctx context.Context, r registry.ExplainRequest) (stri
 	if r.Format != "" {
 		b.WriteString("\n\n" + r.Format)
 	}
-	return w.Fork(id, b.String())
+	return w.Fork(ctx, id, b.String())
 }
 
 // explainer is who answers explain: the session in front's agent, forked.
@@ -724,12 +727,12 @@ func (x *Sessions) explainerByline() string {
 }
 
 // fork answers a side question from a tool-less fork of the session's agent.
-func (x *Sessions) fork(_ context.Context, r registry.ForkRequest) (string, error) {
+func (x *Sessions) fork(ctx context.Context, r registry.ForkRequest) (string, error) {
 	w, err := x.host()
 	if err != nil {
 		return "", err
 	}
-	return w.Fork(core.SessionID(r.Session), r.Prompt)
+	return w.Fork(ctx, core.SessionID(r.Session), r.Prompt)
 }
 
 // forker is who answers a session's side questions: "claude · fork, no tools"; "" for an agent whose provider
@@ -740,7 +743,7 @@ func (x *Sessions) forker(id string) string {
 		return ""
 	}
 	p := se.Snapshot().Agent.Provider
-	if f, known := kit.ProviderFeatures(x.h, p); known && !f.Fork {
+	if f, known := agentkit.ProviderFeatures(x.h, p); known && !f.Fork {
 		return ""
 	}
 	return cmp.Or(p, "the agent") + " · fork, no tools"

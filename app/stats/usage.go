@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
@@ -40,7 +42,7 @@ type reading struct {
 
 // failureText is why a provider's last read got no windows, in words.
 func failureText(r registry.Contributions, f core.UsageFailure) string {
-	name := kit.ProviderName(r, f.Provider)
+	name := services.ProviderTitle(r, f.Provider)
 	switch {
 	case f.Probe && f.Started:
 		return name + " started but reported no usage"
@@ -227,7 +229,7 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 	th := c.Theme()
 	anchor := c.Next("usage")
 	out := len(x.h.State().SignedOut(u)) > 0
-	stroke, label := th.C(theme.LineStrong), cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))+" usage"
+	stroke, label := th.C(theme.LineStrong), cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider))+" usage"
 	if out {
 		stroke, label = th.C(theme.Error), label+", signed out"
 	}
@@ -260,7 +262,7 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 // usageCard is every provider's windows, the session in front's first: what the title bar's card shows.
 func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 	th := c.Theme()
-	now := x.Now()
+	now := x.now()
 	us := slices.Clone(x.h.State().Usage)
 	slices.SortStableFunc(us, func(a, b core.ProviderUsage) int {
 		switch {
@@ -279,7 +281,7 @@ func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 		hist := x.usageHistory(u)
 		c.Row(fmt.Sprint("p", i), ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			providerMark(c, u.Provider)
-			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
+			c.Text("n", cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			sub := x.accountLabel(u.Account, u.AccountName)
 			if u.Same(front) {
@@ -324,11 +326,9 @@ func providerMark(c *ui.Ctx, provider string) {
 	letters, tone := kit.ProjectInitials(provider), th.C(theme.FgMuted)
 	if r, ok := ui.Service[registry.Registry](c); ok {
 		if p, ok := r.Contribution("agent.provider", provider); ok {
-			ap, _ := p.(registry.AgentProvider)
+			ap, _ := p.(services.AgentProvider)
 			letters = cmp.Or(ap.Mark, letters)
-			if ap.Tone != "" {
-				tone = th.C(theme.Declare(ap.Tone, theme.FgMuted.Name()))
-			}
+			tone = th.Tone(ap.Tone, tone)
 		}
 	}
 	c.Box("mark", ui.Style{W: ui.Px(18), H: ui.Px(18), Radius: 4, Fill: theme.WithAlpha(tone, .85), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -344,7 +344,7 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 		func(c *ui.Ctx) {
 			th := c.Theme()
 			st := x.h.State()
-			now := x.Now()
+			now := x.now()
 			var read time.Time
 			for _, u := range st.Usage {
 				if u.Sampled.After(read) {
@@ -407,10 +407,10 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 func (x *Plugin) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Time) {
 	th := c.Theme()
 	hist := x.usageHistory(u)
-	c.Column(fmt.Sprint("prov", i), ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))}, func(c *ui.Ctx) {
+	c.Column(fmt.Sprint("prov", i), ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleGroup, Label: cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider))}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			providerMark(c, u.Provider)
-			c.Text("n", cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold},
+			c.Text("n", cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 15, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			if u.Tier != "" {
 				widget.Chip(c, "tier", u.Tier, th.C(tUsageWeek), "agent/usage#accounts")
@@ -460,11 +460,11 @@ func (x *Plugin) providerLine(u core.ProviderUsage) string {
 func (x *Plugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 	th := c.Theme()
 	w := r.w
-	line := th.C(kit.TStatsCardLine)
+	line := th.C(widget.TDataCardLine)
 	if !r.runsOut.IsZero() {
 		line = theme.WithAlpha(th.C(tUsageOut), .6)
 	}
-	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 8, Fill: th.C(kit.TStatsCard), Stroke: line, Border: 1, Radius: 8, Role: ui.RoleGroup,
+	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 8, Fill: th.C(widget.TDataCard), Stroke: line, Border: 1, Radius: 8, Role: ui.RoleGroup,
 		Label: windowLabel(w), Help: "agent/usage#windows"}, func(c *ui.Ctx) {
 		c.Row("hd", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", windowLabel(w), kit.KickerFont(th.C(theme.FgMuted)))
@@ -672,7 +672,7 @@ func (x *Plugin) weekChart(c *ui.Ctx, u core.ProviderUsage, hist []core.Provider
 			legend = append(legend, s)
 		}
 	}
-	kit.StatsCard(c, "week", ui.Flex(2), "WINDOW USAGE · LAST 7 DAYS", "↺ resets · dashed: at this rate", func(c *ui.Ctx) { x.legend(c, legend, 0) },
+	widget.DataCard(c, "week", ui.Flex(2), "WINDOW USAGE · LAST 7 DAYS", "↺ resets · dashed: at this rate", func(c *ui.Ctx) { x.legend(c, legend, 0) },
 		func(c *ui.Ctx) {
 			widget.Chart(c, "c", series, widget.ChartOpts{Height: 170, Max: 100, Labels: labels, LabelEvery: 1, YTicks: 2,
 				YFormat: func(v float64) string { return fmt.Sprintf("%.0f%%", v) }, Format: func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
@@ -778,7 +778,7 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 			x.burnWin[accountKey(u)] = pick
 		}
 	}
-	kit.StatsCard(c, "burned", ui.Flex(1), title, "", right, func(c *ui.Ctx) {
+	widget.DataCard(c, "burned", ui.Flex(1), title, "", right, func(c *ui.Ctx) {
 		kit.Note(c, "since", "since "+from.In(x.Loc).Format("Mon 15:04")+" · by repo, multi-repo sessions split as in Stats")
 		var strip []widget.ChartSeries
 		st := x.h.State()
@@ -792,7 +792,7 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 		total := outside
 		for i, row := range rows {
 			total += row.points
-			kit.KV(c, i, kit.RepoTone(th, st, row.key, i), row.key, "", fmt.Sprintf("%d sess", row.sessions),
+			widget.KV(c, i, kit.RepoTone(th, st, row.key, i), row.key, "", fmt.Sprintf("%d sess", row.sessions),
 				fmt.Sprintf("%.0fpt", row.points), kit.Money(row.cost))
 		}
 		if outside > 0 {
@@ -800,9 +800,9 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 			if out.sessions > 0 {
 				sess, cost = fmt.Sprintf("%d sess", out.sessions), kit.Money(out.cost)
 			}
-			kit.KV(c, "out", th.C(tStatsOther), "outside Oriel", "", sess, fmt.Sprintf("%.0fpt", outside), cost)
+			widget.KV(c, "out", th.C(tStatsOther), "outside Oriel", "", sess, fmt.Sprintf("%.0fpt", outside), cost)
 		}
-		kit.KV(c, "total", render.Color{}, "total", "", "", fmt.Sprintf("%.0fpt", total), "")
+		widget.KV(c, "total", render.Color{}, "total", "", "", fmt.Sprintf("%.0fpt", total), "")
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			kit.Note(c, "n", "pt: points of the window · $ est. from the price table")
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -841,7 +841,7 @@ func (x *Plugin) accountSwitch(c *ui.Ctx, cur core.ProviderUsage) {
 	for i, u := range us {
 		label := x.accountTitle(u)
 		if len(u.Windows) == 0 && u.Account == "" {
-			label = kit.ProviderName(x.h, u.Provider)
+			label = services.ProviderTitle(x.h, u.Provider)
 		}
 		labels = append(labels, strings.ToUpper(label))
 		tiers = append(tiers, u.Tier)

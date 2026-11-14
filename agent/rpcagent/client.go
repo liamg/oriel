@@ -395,7 +395,7 @@ func (c *Client) notify(method string, params json.RawMessage) {
 		var e sessionParams
 		json.Unmarshal(params, &e)
 		if s := c.session(e.Session); s != nil {
-			s.term.feed(unb64(e.Data))
+			s.term.Feed(unb64(e.Data))
 		}
 	case "login/done":
 		var l loginParams

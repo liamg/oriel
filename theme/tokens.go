@@ -54,50 +54,62 @@ func Tokens() []Token {
 	return append([]Token(nil), tokens...)
 }
 
+// semantic are theme's own tokens' names: what a theme file sets under [semantic] (Section).
+var semantic = map[string]bool{}
+
+// semanticToken is Declare for one of theme's own tokens.
+func semanticToken(name, def string) TokenID { return semanticOn(name, def, "") }
+
+// semanticOn is DeclareOn for one of theme's own tokens.
+func semanticOn(name, def, on string) TokenID {
+	semantic[name] = true
+	return DeclareOn(name, def, on)
+}
+
 // Semantic tokens: what every component reads.
 var (
-	BgBase    = Declare("bg.base", "bg0")
-	BgSurface = Declare("bg.surface", "bg1")
-	BgRaised  = Declare("bg.raised", "bg2")
-	BgOverlay = Declare("bg.overlay", "bg3")
-	BgStrong  = Declare("bg.strong", "bg4")
+	BgBase    = semanticToken("bg.base", "bg0")
+	BgSurface = semanticToken("bg.surface", "bg1")
+	BgRaised  = semanticToken("bg.raised", "bg2")
+	BgOverlay = semanticToken("bg.overlay", "bg3")
+	BgStrong  = semanticToken("bg.strong", "bg4")
 
-	Line       = Declare("line", "line")
-	LineStrong = Declare("line.strong", "line2")
+	Line       = semanticToken("line", "line")
+	LineStrong = semanticToken("line.strong", "line2")
 
-	Fg      = Declare("fg", "fg")
-	FgMuted = Declare("fg.muted", "fg2")
-	FgFaint = Declare("fg.faint", "fg3")
-	FgGhost = Declare("fg.ghost", "fg4")
+	Fg      = semanticToken("fg", "fg")
+	FgMuted = semanticToken("fg.muted", "fg2")
+	FgFaint = semanticToken("fg.faint", "fg3")
+	FgGhost = semanticToken("fg.ghost", "fg4")
 
-	Accent       = Declare("accent", "accent")
-	AccentStrong = Declare("accent.strong", "accent2")
-	AccentBg     = DeclareOn("accent.bg", "alpha(accent, 8%)", "bg.surface")
-	AccentInk    = Declare("accent.ink", "ink") // text on the accent
-	Brand        = Declare("brand", "brand")    // the logo's cursor, debug mode
+	Accent       = semanticToken("accent", "accent")
+	AccentStrong = semanticToken("accent.strong", "accent2")
+	AccentBg     = semanticOn("accent.bg", "alpha(accent, 8%)", "bg.surface")
+	AccentInk    = semanticToken("accent.ink", "ink") // text on the accent
+	Brand        = semanticToken("brand", "brand")    // the logo's cursor, debug mode
 
-	Warn  = Declare("warn", "amber")
-	Error = Declare("error", "red")
-	OK    = Declare("ok", "green")
+	Warn  = semanticToken("warn", "amber")
+	Error = semanticToken("error", "red")
+	OK    = semanticToken("ok", "green")
 
-	Recording = Declare("recording", "amber") // a field being dictated into
+	Recording = semanticToken("recording", "amber") // a field being dictated into
 
-	StatusNeedsYou   = Declare("status.needs_you", "red")
-	StatusPermission = Declare("status.permission", "violet")
-	StatusWorking    = Declare("status.working", "cyan")
-	StatusCI         = Declare("status.ci", "blue")
-	StatusReviewer   = Declare("status.reviewer", "pink")
-	StatusQuiet      = Declare("status.quiet", "green")
-	StatusOff        = Declare("status.off", "fg.ghost")
+	StatusNeedsYou   = semanticToken("status.needs_you", "red")
+	StatusPermission = semanticToken("status.permission", "violet")
+	StatusWorking    = semanticToken("status.working", "cyan")
+	StatusCI         = semanticToken("status.ci", "blue")
+	StatusReviewer   = semanticToken("status.reviewer", "pink")
+	StatusQuiet      = semanticToken("status.quiet", "green")
+	StatusOff        = semanticToken("status.off", "fg.ghost")
 
-	DiffAdd = DeclareOn("diff.add", "alpha(green, 7%)", "bg.base")
-	DiffDel = DeclareOn("diff.del", "alpha(red, 7%)", "bg.base")
+	DiffAdd = semanticOn("diff.add", "alpha(green, 7%)", "bg.base")
+	DiffDel = semanticOn("diff.del", "alpha(red, 7%)", "bg.base")
 
-	Selection = DeclareOn("selection", "alpha(accent, 28%)", "bg.base")
-	FocusRing = Declare("focus.ring", "accent")
+	Selection = semanticOn("selection", "alpha(accent, 28%)", "bg.base")
+	FocusRing = semanticToken("focus.ring", "accent")
 	// Scrollbars, drawn over a scrolling box's content.
-	ScrollThumb    = Declare("scrollbar.thumb", "alpha(fg, 22%)")
-	ScrollThumbHot = Declare("scrollbar.thumb.hot", "alpha(fg, 42%)")
-	Hover          = Declare("hover", "alpha(fg, 4%)")   // washed over what's clickable under the pointer
-	Pressed        = Declare("pressed", "alpha(fg, 8%)") // and while it's pressed
+	ScrollThumb    = semanticToken("scrollbar.thumb", "alpha(fg, 22%)")
+	ScrollThumbHot = semanticToken("scrollbar.thumb.hot", "alpha(fg, 42%)")
+	Hover          = semanticToken("hover", "alpha(fg, 4%)")   // washed over what's clickable under the pointer
+	Pressed        = semanticToken("pressed", "alpha(fg, 8%)") // and while it's pressed
 )

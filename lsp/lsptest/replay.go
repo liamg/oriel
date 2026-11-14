@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/internal/transcript"
 	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp"
 )
@@ -75,6 +76,7 @@ type received struct {
 }
 
 func (f *Fake) serve(conn net.Conn, root string) {
+	vars := transcript.MachineVars(root)
 	defer close(f.done)
 	defer conn.Close()
 	in := make(chan received, 256)
@@ -103,7 +105,7 @@ func (f *Fake) serve(conn net.Conn, root string) {
 			return
 		}
 		if e.Dir == Recv {
-			body := concrete(e.Msg, root)
+			body := vars.Concrete(e.Msg)
 			if rec.IsResponse() {
 				live, ok := ids[jsonrpc.IDKey(rec.ID)]
 				if !ok {
@@ -121,7 +123,7 @@ func (f *Fake) serve(conn net.Conn, root string) {
 			}
 			continue
 		}
-		want := concrete(e.Msg, root)
+		want := vars.Concrete(e.Msg)
 		deadline := time.After(f.timeout)
 		for {
 			if j := match(pending, rec, want); j >= 0 {

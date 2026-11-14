@@ -13,7 +13,7 @@ import (
 )
 
 // CodeNoKey is the JSON-RPC error of a request made before the API key is set.
-const CodeNoKey = -32010
+const CodeNoKey = registry.CodeSecretUnset
 
 // Params are what the plugin's Lua sends.
 type Params struct {
@@ -99,7 +99,7 @@ func (s *Server) Handle(ctx context.Context, method string, raw json.RawMessage)
 
 // noKey is err, said plainly when it's the host saying the API key isn't set.
 func noKey(err error) error {
-	if strings.Contains(err.Error(), Secret+" isn't set") {
+	if registry.SecretUnset(err) {
 		return &jsonrpc.Error{Code: CodeNoKey, Message: "no Linear API key yet"}
 	}
 	return err

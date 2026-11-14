@@ -19,7 +19,7 @@ import (
 // The app mirrors the host's sessions, starts one through a command, and the window follows it.
 func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 	lw := rig.NewHost(t)
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	err := w.Do(func() error {
 		return w.Host.Run(context.Background(), "session.start", registry.Args{"kind": "work", "name": "rounding", "repos": []string{lw.Repo}})
@@ -44,7 +44,7 @@ func TestTheWindowFollowsTheSessionInFront(t *testing.T) {
 // time, so committing and raising a PR work there as in any session.
 func TestOpenDirectoryIsADirectSession(t *testing.T) {
 	lw := rig.NewHost(t)
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	open := func() core.SessionState {
 		if err := w.Do(func() error {
@@ -75,7 +75,7 @@ func TestOpenDirectoryIsADirectSession(t *testing.T) {
 // oriel <dir> opens on the directory's direct session too.
 func TestLaunchOnADirectoryIsADirectSession(t *testing.T) {
 	lw := rig.NewHost(t)
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: lw.Repo, Config: apptest.Connect(lw.W)})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: lw.Repo, Config: apptest.Connect(lw.W)})
 	st := w.UntilState("a direct session in front", func(st core.State) bool {
 		se, ok := st.Session(st.Focus)
 		return ok && se.Snapshot().Kind == core.KindDirect && se.Snapshot().Dir == lw.Repo
@@ -88,7 +88,7 @@ func TestLaunchOnADirectoryIsADirectSession(t *testing.T) {
 // A Permission hook answers before the user is asked.
 func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 	lw := rig.NewHost(t)
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W), Setup: func(h plugin.Host) {
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W), Setup: func(h plugin.Host) {
 		h.Hook(registry.Hook{Event: "Permission", Kind: registry.Decide, Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 			p := ev.(registry.PermissionEvent)
 			if p.Tool == "Bash" && strings.HasPrefix(p.Input, "go test ") {
@@ -118,7 +118,7 @@ func TestPermissionHooksAnswerForTheUser(t *testing.T) {
 func TestAgentToolsRunInTheApp(t *testing.T) {
 	lw := rig.NewHost(t)
 	var session string
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W), Setup: func(h plugin.Host) {
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W), Setup: func(h plugin.Host) {
 		h.Contribute(registry.AgentTool{Name: "staging_logs", Desc: "Tail the staging logs", Params: map[string]string{"service": "string", "lines": "number?"},
 			ReadOnly: true, Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
 				session = registry.SessionOf(ctx)
@@ -148,7 +148,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 func TestAgentTurnEndFires(t *testing.T) {
 	lw := rig.NewHost(t)
 	ended := make(chan string, 4)
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W), Setup: func(h plugin.Host) {
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W), Setup: func(h plugin.Host) {
 		h.Hook(registry.Hook{Event: "AgentTurnEnd", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 			ended <- ev.(kit.AgentTurnEnd).Session
 			return registry.Verdict{}, nil

@@ -10,7 +10,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -75,7 +76,7 @@ func askGroup(k core.AskKind) string {
 
 // askRow is an ask as a row of the Inbox panel: its title, and what it's about.
 func (x *Console) askRow(se core.SessionState, a core.Ask) (title, sub string) {
-	prov := kit.ProviderName(x.h, se.Agent.Provider)
+	prov := services.ProviderTitle(x.h, se.Agent.Provider)
 	switch a.Kind {
 	case core.AskPermission:
 		return "Permission: " + a.Tool + "(" + cmp.Or(a.Summary, kit.MainInput(a.Input)) + ")", strings.ToLower(prov)
@@ -142,7 +143,7 @@ func (x *Console) askCard(c *ui.Ctx, key string, se core.SessionState, a core.As
 	if kicker {
 		k.o.Kicker = kit.Label(se) + " · " + string(a.Kind)
 	}
-	prov := kit.ProviderName(x.h, se.Agent.Provider)
+	prov := services.ProviderTitle(x.h, se.Agent.Provider)
 	switch a.Kind {
 	case core.AskPermission, core.AskNetwork, core.AskGateway:
 		x.decisionCard(th, k, se, a, st, kicker)
@@ -268,7 +269,7 @@ func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a c
 	if a.Login != nil {
 		l = *a.Login
 	}
-	k.o.Title = kit.ProviderName(r, l.Provider) + " needs you to log in"
+	k.o.Title = services.ProviderTitle(r, l.Provider) + " needs you to log in"
 	k.o.Detail = l.Detail
 	if !kicker {
 		k.o.Kicker = "login"
@@ -286,7 +287,7 @@ func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a c
 	case l.Shell != "":
 		k.o.Note = "run " + l.Shell + " in a terminal"
 	}
-	k.add("Check again", "c", !canLogIn(l), registry.Args{"decision": "recheck"})
+	k.add("Check again", "c", !canLogIn(l), registry.Args{"decision": string(host.DecisionRecheck)})
 }
 
 func (k *askCardParts) terminal(a core.Ask, prov string, kicker bool) {
@@ -304,7 +305,7 @@ func (x *Console) keyCard(k *askCardParts, se core.SessionState, a core.Ask) {
 	k.o.Title = "Touch your security key"
 	k.o.Detail = kit.JoinParts(a.Summary, a.Detail, kit.Label(se))
 	k.o.Icon = func(c *ui.Ctx, tone render.Color) { kit.Icon(c, x.h, "icon", "key", 15, tone) }
-	k.add("Cancel", "c", false, registry.Args{"decision": "deny"})
+	k.add("Cancel", "c", false, registry.Args{"decision": string(host.DecisionDeny)})
 }
 
 func (x *Console) questionCard(k *askCardParts, se core.SessionState, a core.Ask, st *consoleState, prov string) {
@@ -371,7 +372,7 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 					err = kit.OpenURL(x.h, url)
 				}
 				if err != nil {
-					x.h.Notify(core.Notice{ID: "agent.login", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
+					x.h.Notify(core.Notice{ID: "agent.login", Severity: core.SevError, Source: "agent", Text: err.Error()})
 				}
 			})
 		})
@@ -397,7 +398,7 @@ func (x *Console) noteInput(c *ui.Ctx, se core.SessionState, a core.Ask, st *con
 		send := widget.Button(c, "send", "Deny with this note", widget.ButtonOpts{Help: "agent/asks#deny-with-a-note"})
 		switch {
 		case r.Submitted || send:
-			x.run(context.Background(), "ask.answer", registry.Args{"id": string(se.ID), "ask": a.ID, "decision": "deny", "note": st.note})
+			x.run(context.Background(), "ask.answer", registry.Args{"id": string(se.ID), "ask": a.ID, "decision": string(host.DecisionDeny), "note": st.note})
 			st.focus = true
 		case r.Cancelled:
 			st.noting, st.note, st.focus = "", "", true
@@ -501,7 +502,7 @@ func removeStr(xs []string, s string) []string {
 // agentTerm is an agent's raw terminal, as a terminal view's source: what it shows streams in, and what you type
 // goes back.
 type agentTerm struct {
-	c      host.Access
+	c      host.SessionCalls
 	id     core.SessionID
 	s      <-chan []byte
 	cancel context.CancelFunc
@@ -510,7 +511,7 @@ type agentTerm struct {
 	rest []byte
 }
 
-func newAgentTerm(c host.Access, id core.SessionID) (*agentTerm, error) {
+func newAgentTerm(c host.SessionCalls, id core.SessionID) (*agentTerm, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s, err := c.Terminal(ctx, id)
 	if err != nil {

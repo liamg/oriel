@@ -149,7 +149,7 @@ func TestACardThatTakesFocusAnswersItsKeysOnceUp(t *testing.T) {
 	if picked != -1 {
 		t.Fatalf("a key typed as the card appeared picked %d", picked)
 	}
-	h.now = h.now.Add(CardKeyGuard)
+	h.clock.Advance(CardKeyGuard)
 	h.frame()
 	h.keys("y")
 	h.frame()

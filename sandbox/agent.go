@@ -173,7 +173,7 @@ func AttachmentsDir(stateDir string) string { return filepath.Join(stateDir, "at
 
 // Needs are what the agent of o's provider needs in root's sandbox, at the place the backend puts it (OS, Arch,
 // Home, Shared, UID); the rest of the place is the sandbox's. A blocking problem refuses the launch.
-func Needs(ctx context.Context, root, cwd string, o LaunchOptions, at agent.SandboxPlace) (agent.SandboxNeeds, error) {
+func Needs(ctx context.Context, root, cwd string, o LaunchOpts, at agent.SandboxPlace) (agent.SandboxNeeds, error) {
 	if o.Agent == nil {
 		return agent.SandboxNeeds{}, nil
 	}
@@ -235,7 +235,7 @@ func Prepare(root string) error {
 // AgentEnv is the environment every backend gives its agent: the host's allowlisted variables (the env settings,
 // else the defaults and what n passes), n's own and o.Extra, over at, the backend's own places (HOME, PATH, the
 // sockets). With rewrite, localhost endpoints point at HostGateway.
-func AgentEnv(root string, o LaunchOptions, n agent.SandboxNeeds, rewrite bool, at map[string]string) map[string]string {
+func AgentEnv(root string, o LaunchOpts, n agent.SandboxNeeds, rewrite bool, at map[string]string) map[string]string {
 	env := HostEnv(o.Environ, o.Config.Env, n)
 	if rewrite {
 		env = FilterEnv(o.Environ, o.Config.Env, n)

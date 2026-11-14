@@ -3,6 +3,7 @@
 package ghtest
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -266,19 +267,12 @@ func (s *Server) listPRs(w http.ResponseWriter, r *http.Request) {
 	state := r.URL.Query().Get("state")
 	out := []map[string]any{}
 	for _, p := range slices.Backward(s.prs[repo]) { // newest first, as GitHub sorts them
-		if head != "" && p.Head != head || state != "all" && p.State != cmpOr(state, "open") || s.unseen[repo+"#"+strconv.Itoa(p.Number)] {
+		if head != "" && p.Head != head || state != "all" && p.State != cmp.Or(state, "open") || s.unseen[repo+"#"+strconv.Itoa(p.Number)] {
 			continue
 		}
 		out = append(out, s.restPR(repo, p))
 	}
 	reply(w, 200, out)
-}
-
-func cmpOr(s, d string) string {
-	if s == "" {
-		return d
-	}
-	return s
 }
 
 func (s *Server) createPR(w http.ResponseWriter, r *http.Request) {
@@ -490,7 +484,7 @@ func (s *Server) search(w http.ResponseWriter, r *http.Request) {
 	items := []map[string]any{}
 	for _, h := range s.match(r.URL.Query().Get("q")) {
 		items = append(items, map[string]any{"number": h.p.Number, "title": h.p.Title, "html_url": h.p.URL, "state": h.p.State,
-			"draft": h.p.Draft, "created_at": h.p.Created, "updated_at": h.p.Created, "user": map[string]string{"login": cmpOr(h.p.Author, s.login)},
+			"draft": h.p.Draft, "created_at": h.p.Created, "updated_at": h.p.Created, "user": map[string]string{"login": cmp.Or(h.p.Author, s.login)},
 			"repository_url": s.URL + "/repos/" + h.repo, "pull_request": map[string]any{"html_url": h.p.URL}})
 	}
 	reply(w, 200, map[string]any{"total_count": len(items), "items": items})

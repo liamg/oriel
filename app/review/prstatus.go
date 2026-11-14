@@ -7,11 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // prStatus is what a pull request's status boxes show: its detail once read, and the fields only its page knows.
@@ -26,26 +29,26 @@ type prStatus struct {
 // prStatusBoxes are a pull request's Checks, Pull request and Reviews boxes, as the Ship panel draws them.
 func prStatusBoxes(c *ui.Ctx, s prStatus) {
 	full := s.full
-	kit.PRBox(c, "checks", "CHECKS", func(c *ui.Ctx) {
+	prui.PRBox(c, "checks", "CHECKS", func(c *ui.Ctx) {
 		if !s.done {
-			kit.PRLine(c, "asking", "doing", "Checks", "asking "+cmp.Or(s.host, "the code host"))
+			prui.PRLine(c, "asking", "doing", "Checks", "asking "+cmp.Or(s.host, "the code host"))
 			return
 		}
-		kit.ChecksBody(c, full.Checks)
+		prui.ChecksBody(c, full.Checks)
 	}, func(c *ui.Ctx) {
 		at := ""
 		if full.Commit != "" {
 			at = "at " + kit.ShortSHA(full.Commit)
 		}
-		kit.Freshness(c, "checked", s.read, 0, at)
+		prui.Freshness(c, "checked", s.read, 0, at)
 	})
-	kit.PRBox(c, "pr", "PULL REQUEST", func(c *ui.Ctx) {
+	prui.PRBox(c, "pr", "PULL REQUEST", func(c *ui.Ctx) {
 		if !s.done {
-			kit.PRLine(c, "state", "doing", "State", "asking")
+			prui.PRLine(c, "state", "doing", "State", "asking")
 		} else {
-			kit.PRLine(c, "state", prStateLine(full.State), "State", cmp.Or(full.State, "unknown"))
+			prui.PRLine(c, "state", prStateLine(full.State), "State", cmp.Or(full.State, "unknown"))
 			state, note := mergeLine(full.Mergeable)
-			kit.PRLine(c, "mergeable", state, "Mergeable", note)
+			prui.PRLine(c, "mergeable", state, "Mergeable", note)
 		}
 		for _, f := range s.fields {
 			kit.PreviewField(c, f[0], f[1])
@@ -55,7 +58,7 @@ func prStatusBoxes(c *ui.Ctx, s prStatus) {
 		}
 	}, nil)
 	if s.done {
-		kit.ReviewersBox(c, full.Reviewers)
+		prui.ReviewersBox(c, full.Reviewers)
 	}
 }
 
@@ -89,7 +92,7 @@ func prDescription(c *ui.Ctx, r registry.Registry, full registry.ReviewDetail, w
 	th := c.Theme()
 	reviewCard(c, "description", "DESCRIPTION", ui.Flex(1), func(c *ui.Ctx) {
 		if strings.TrimSpace(full.Body) != "" {
-			kit.MarkdownText(c, r, "body", full.Body, width, kit.UIFont(13, th.C(theme.FgMuted)))
+			kit.MarkdownText(c, r, "body", full.Body, width, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 		}
 		reactions(c, "reactions", full.Reactions)
 	})
@@ -131,13 +134,13 @@ func prActivity(c *ui.Ctx, r registry.Registry, events []registry.PREvent, width
 						Color: th.C(theme.Fg)})
 					c.Row("verb", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("v", verb, kit.UIFont(12.5, th.C(theme.FgMuted))) })
 					if !e.At.IsZero() {
-						c.Text("at", kit.AgoText(c.Now(), e.At), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+						c.Text("at", widget.AgoLong(c.Now(), e.At), kit.MonoFont(10.5, th.C(theme.FgFaint)))
 					}
 				})
 				if body := activityBody(e); body != "" || len(e.Reactions) > 0 {
 					c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Gap: 6}, func(c *ui.Ctx) {
 						if body != "" {
-							kit.MarkdownTextIn(c, r, "md", body, width-46, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.CommentMarkdown())
+							kit.MarkdownText(c, r, "md", body, width-46, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.CommentMarkdown())
 						}
 						reactions(c, "reactions", e.Reactions)
 					})
@@ -152,7 +155,7 @@ func activityLine(c *ui.Ctx, e registry.PREvent) (glyph, verb string, tone color
 	th := c.Theme()
 	switch e.Kind {
 	case registry.PREventPush:
-		return "↑", "pushed " + kit.ShortSHA(e.Ref) + "  " + e.Text, th.C(kit.TPRRunning)
+		return "↑", "pushed " + kit.ShortSHA(e.Ref) + "  " + e.Text, th.C(prui.TPRRunning)
 	case registry.PREventReview:
 		switch e.State {
 		case "approved":

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent/claude/transcript"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Claude Code's own files, which Oriel only ever merges into: a key it doesn't name is put back untouched, and a
@@ -182,29 +183,7 @@ func saveFile(path string, m map[string]any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	mode := os.FileMode(0o600)
-	if fi, err := os.Stat(path); err == nil {
-		mode = fi.Mode().Perm()
-	}
-	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".oriel-*")
-	if err != nil {
-		return err
-	}
-	tmp := f.Name()
-	_, err = f.Write(b)
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err == nil {
-		err = os.Chmod(tmp, mode)
-	}
-	if err == nil {
-		err = os.Rename(tmp, path)
-	}
-	if err != nil {
-		_ = os.Remove(tmp)
-	}
-	return err
+	return atomicfile.Write(path, b, 0o600) // a file already there keeps its mode
 }
 
 var lockWait = 10 * time.Second

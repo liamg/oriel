@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -73,11 +75,11 @@ func (x *Ship) editPR(id core.SessionID, project string, edit bool) {
 func (x *Ship) prTabBody(c *ui.Ctx, se core.SessionState, p string) {
 	s, _ := x.ship(se.ID, p)
 	f := x.prForm(se.ID, s)
-	var status kit.PRStatus
+	var status prui.PRStatus
 	if s.PR != nil && !f.editing {
 		status = x.prStatus(se, s)
 	}
-	kit.PRFrame(c, "frame", status, func(c *ui.Ctx) { x.prTabContent(c, se, s, f) })
+	prui.PRFrame(c, "frame", status, func(c *ui.Ctx) { x.prTabContent(c, se, s, f) })
 }
 
 // prTabContent is the tab's header and body: a raised PR's overview, or the form.
@@ -217,7 +219,7 @@ func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float
 		x.checks(c, s)
 		if t, ok := ciTrouble(s); ok && s.PR.Open() {
 			c.Row("ci", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-				kit.AskTwinsLabelled(c, x.h, "ship.ci."+s.Project, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+				kit.AskTwins(c, x.h, "ship.ci."+s.Project, t, kit.AskTwinsOpts{Help: "git/ship#checks", Explain: "Explain with agent", Fix: "Fix CI with agent"})
 			})
 		}
 		kit.ExplainKept(c, x.h, "ship.ci."+s.Project, "git/ship#checks")
@@ -228,7 +230,7 @@ func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float
 			c.Text("none", "No description.", kit.UIFont(12, th.C(theme.FgFaint)))
 			return
 		}
-		kit.MarkdownText(c, x.h, "md", s.PR.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)))
+		kit.MarkdownText(c, x.h, "md", s.PR.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 	})
 	section("review", func(c *ui.Ctx) { x.reviewThreads(c, se, s, inner) })
 }
@@ -295,7 +297,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 							widget.Ago(c, "at", cm.Time, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint))})
 						}
 					})
-					kit.MarkdownTextIn(c, x.h, "body", cm.Body, width, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+					kit.MarkdownText(c, x.h, "body", cm.Body, width, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 				})
 			}
 			if n := len(t.Drafts()); n > 0 {
@@ -345,7 +347,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8)}, func(c *ui.Ctx) {
 			if f.tab == 1 {
-				kit.MarkdownText(c, x.h, "preview", f.body, max(200, c.Size().X-40), kit.UIFont(12.5, th.C(theme.FgMuted)))
+				kit.MarkdownText(c, x.h, "preview", f.body, max(200, c.Size().X-40), kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				return
 			}
 			if r := widget.Prose(c, "body", &f.body, widget.ProseOpts{Label: "Body", Placeholder: "What and why", Lines: 18, MinLines: 10,
@@ -388,8 +390,8 @@ func (x *Ship) reviewerRows(c *ui.Ctx, s shipRead, f *prForm) {
 	}
 	for _, r := range rs {
 		c.Row(r, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			kit.ReviewerAvatar(c, r)
-			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", kit.ReviewerName(r), kit.UIFont(12.5, th.C(theme.FgMuted))) })
+			prui.ReviewerAvatar(c, r)
+			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", prui.ReviewerName(r), kit.UIFont(12.5, th.C(theme.FgMuted))) })
 			note := "added"
 			if slices.Contains(s.Owners, r) {
 				note = "CODEOWNERS"

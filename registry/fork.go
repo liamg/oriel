@@ -31,9 +31,7 @@ func (f Forker) ContributionName() string { return f.Name }
 // Forkers are the forkers by Order, then name.
 func Forkers(r Contributions) []Forker {
 	var out []Forker
-	for _, c := range r.Contributions("forker") {
-		out = append(out, c.(Forker))
-	}
+	out = append(out, ContributionsOf[Forker](r)...)
 	slices.SortFunc(out, func(a, b Forker) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})

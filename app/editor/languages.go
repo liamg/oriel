@@ -30,7 +30,7 @@ func (x *Languages) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lan
 
 func (x *Languages) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.packs = h, map[string]registry.Disposable{}
-	x.Add(kit.OnDispose(func() { x.packs = nil }))
+	x.Add(registry.DisposeFunc(func() { x.packs = nil }))
 	x.Add(h.Command(registry.Command{ID: "languages.install", Title: "Install the grammar pack in the .tar.gz at {path}, if it's one this build of Oriel lists",
 		Run: func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("path")) }}))
 	if x.CacheDir != "" {

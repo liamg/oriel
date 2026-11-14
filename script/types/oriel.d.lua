@@ -40,14 +40,15 @@
 ---@field api { version: string }
 oriel = {}
 
---- One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
+--- One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
 ---@param path string
----@return string
+---@return string?,string?
 function oriel.asset(path) end
 
 --- Run a command by its id, with arguments.
 ---@param id string
 ---@param args? table
+---@deprecated use oriel.run
 function oriel.cmd(id, args) end
 
 --- Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
@@ -56,16 +57,33 @@ function oriel.cmd(id, args) end
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't).
+--- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
 ---@param argv string|string[]
 ---@param opts? table
----@return string?
+---@return string?,string?
 function oriel.exec(argv, opts) end
 
---- Decode JSON text to a table, or encode a value as JSON text.
+--- Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too.
+---@param argv string|string[]
+---@param opts? any
+---@param fn any
+function oriel.exec_async(argv, opts, fn) end
+
+--- Decode JSON text to a table, or encode any other value as JSON text.
 ---@param v any
 ---@return any
+---@deprecated use oriel.json_encode or oriel.json_decode, which can encode a string
 function oriel.json(v) end
+
+--- Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
+---@param s string
+---@return any
+function oriel.json_decode(s) end
+
+--- Encode a value as JSON text: a table, a string, a number, a boolean.
+---@param v any
+---@return string
+function oriel.json_encode(v) end
 
 --- A load for oriel.ui.async and busy: fn(done) starts the work on the loop and calls done(value) when it has it, or done(nil, err) when it failed (from an oriel.http.request answer, say). opts: timeout (seconds; a load still running then fails). Returns a handle: h:start() (once; does nothing while loading or loaded), h:reload() (keeps the value on show), h:reset(), h:value(), h:state() ({ phase = idle|pending|ready|failed, error, stale, note, elapsed }).
 ---@param fn function
@@ -103,6 +121,11 @@ function oriel.placeholder(name, spec, fn) end
 ---@param path string
 ---@return string?,string?
 function oriel.read(path) end
+
+--- Run a command by its id, with arguments.
+---@param id string
+---@param args? table
+function oriel.run(id, args) end
 
 --- Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick.
 ---@param name string
@@ -159,7 +182,7 @@ function oriel.agent.tool(spec) end
 ---@class oriel.code
 oriel.code = {}
 
---- A code host (GitLab, Azure DevOps…): where pull requests live. Oriel builds the Reviews page, the sidebar's pill, the notices and the assistant's review_requests on its review functions, and the Ship page's pull request step (raise, edit, ready, checks, merge) on the rest. { name, title, icon, order (50), words = { short ('PR', 'MR'), long ('pull request'), sigil ('#', '!') }, sites = { { host, api, secret, aliases } } its public servers (aliases: other hostnames its remotes use for one, its ssh hosts: 'ssh.dev.azure.com'), path = a regular expression over a git remote's path whose first group is the repo's name, takes = one over a pull request URL's path, shape = one over a whole remote URL that alone says a server is this host's (Azure DevOps' '/_git/'), setup = { api = 'https://{host}/api/v4', secret = 'GITLAB_TOKEN', token_url, token_help, probe = fn(host, done) answering true for a server of this host's, from a request that sends no token } for a server of your own, and the functions, each answering with done(value) or done(nil, err), now or later. A site is { host, api, secret }: a server you set up has its own secret, 'GITLAB_TOKEN:git.acme.corp', and the plugin is let reach it. Reviews, per site: requested = fn(site, done) with the open pull requests asking you, and those you're part way through; lookup = fn(site, url, done) with one in full; checkout = fn(site, url, done) with { remote, ref }: a substring of the registered repo's remote, and the refspec a review session fetches; submit = fn(site, url, review, done) posts the user's review from a review session's pull request tab, review = { event ('approve', 'changes', 'comment'), body, commit = the head it read, comments = { { path, line, start_line, old = on the removed code, body } } }; react = fn(site, url, emoji, done) reacts to the pull request as you when a review session starts on it, with review.start_reaction ('👀'); unreact = fn(site, url, emoji, done) takes that reaction back once you've sent your review (not having it is no error). Ship, each given repo = { session, project, remote, repo, site }: for_branch = fn(repo, branch, done) with the branch's pull request, open first, or nil; create = fn(repo, { title, body, branch, base, draft }, done); edit = fn(repo, pr, title, body, done); ready = fn(repo, pr, done); request_reviewers = fn(repo, pr, { logins }, done); checks = fn(repo, pr, done) with { { name, state ('ok', 'failed', 'running', 'queued', 'skipped'), url, started, completed, detail = a failing one's log line } }; merge_methods = fn(repo, pr, done) with { allowed = { 'merge', 'squash', 'rebase' }, default }; blockers = fn(repo, pr, done) with { { kind, count, text, hard = the host would refuse, url } }; merge = fn(repo, pr, { method, head, title, body, delete_branch }, done). Review mirroring: threads = fn(repo, pr, done) with { { id ('' or nil for the conversation), path, line, old, outdated, resolved, reviewer, state ('changes', 'approved', 'commented'), url, comments = { { id, author, body, at, member = the author belongs to the repo, so the agent may read it } } } }; reply = fn(repo, pr, thread = { id, path, line, old, url }, body, done) with the new comment's id, posting the draft the user forwards (thread.id empty: the conversation); resolve = fn(repo, pr, thread, resolved, done) resolves a review thread there, or reopens it, when the user does in Oriel. Every answer crosses as JSON: an empty table is an empty list or object. A pull request is { number, id, title, body, url, author, state ('open', 'closed'), draft, merged, branch, base, head = its commit, reviewers }. A missing function's part isn't offered. A request is { url, repo, number, title, author, draft, asked (RFC 3339, or seconds since 1970), via (the team asked, '' for you), state ('new', 're-requested', 'changes', 'commented', 'approved'), since (commits since your review), adds, dels, files, ci ('ok', 'failed', 'running'), base, head (its branch), opened, updated (times as asked's), reviewers = { { login ('@org/team' for a team), state ('requested', 'approved', 'changes', 'commented') } } who's asked and who has reviewed, shown when its row is hovered }. A detail is { request, base, head, commit = the head's, state ('open', 'closed', 'merged'), mergeable, labels = { names }, reviewers = { { login, state } }, body, files = { { path, adds, dels } }, checks, clone = the repo's clone URL, for Add repo…, events = { { kind ('push', 'review', 'comment'), who, at (RFC 3339), text, state = a review's ('approved', 'changes', 'commented', 'dismissed'), ref = a push's commit or a line comment's 'path:line', url, reactions } } oldest first, reactions = { { emoji ('👍'), count } } the PR's own; a host without reactions leaves them out }.
+--- A code host (GitLab, Azure DevOps…): where pull requests live. Oriel builds the Reviews page, the sidebar's pill, the notices and the assistant's review_requests on its review functions, and the Ship page's pull request step (raise, edit, ready, checks, merge) on the rest. { name, title, icon, order (50), words = { short ('PR', 'MR'), long ('pull request'), sigil ('#', '!') }, sites = { { host, api, secret, aliases } } its public servers (aliases: other hostnames its remotes use for one, its ssh hosts: 'ssh.dev.azure.com'), path = a regular expression over a git remote's path whose first group is the repo's name, takes = one over a pull request URL's path, shape = one over a whole remote URL that says a server looks like this host's (Azure DevOps' '/_git/'), which Oriel offers to set up as one, setup = { api = 'https://{host}/api/v4', secret = 'GITLAB_TOKEN', token_url, token_help, probe = fn(host, done) answering true for a server of this host's, from a request that sends no token } for a server of your own, and the functions, each answering with done(value) or done(nil, err), now or later. A site is { host, api, secret }: a server you set up has its own secret, 'GITLAB_TOKEN:git.acme.corp', and the plugin is let reach it. Reviews, per site: requested = fn(site, done) with the open pull requests asking you, and those you're part way through; lookup = fn(site, url, done) with one in full; checkout = fn(site, url, done) with { remote, ref }: a substring of the registered repo's remote, and the refspec a review session fetches; submit = fn(site, url, review, done) posts the user's review from a review session's pull request tab, review = { event ('approve', 'changes', 'comment'), body, commit = the head it read, comments = { { path, line, start_line, old = on the removed code, body } } }; react = fn(site, url, emoji, done) reacts to the pull request as you when a review session starts on it, with review.start_reaction ('👀'); unreact = fn(site, url, emoji, done) takes that reaction back once you've sent your review (not having it is no error). Ship, each given repo = { session, project, remote, repo, site }: for_branch = fn(repo, branch, done) with the branch's pull request, open first, or nil; create = fn(repo, { title, body, branch, base, draft }, done); edit = fn(repo, pr, title, body, done); ready = fn(repo, pr, done); request_reviewers = fn(repo, pr, { logins }, done); checks = fn(repo, pr, done) with { { name, state ('ok', 'failed', 'running', 'queued', 'skipped'), url, started, completed, detail = a failing one's log line } }; merge_methods = fn(repo, pr, done) with { allowed = { 'merge', 'squash', 'rebase' }, default }; blockers = fn(repo, pr, done) with { { kind, count, text, hard = the host would refuse, url } }; merge = fn(repo, pr, { method, head, title, body, delete_branch }, done). Review mirroring: threads = fn(repo, pr, done) with { { id ('' or nil for the conversation), path, line, old, outdated, resolved, reviewer, state ('changes', 'approved', 'commented'), url, comments = { { id, author, body, at, member = the author belongs to the repo, so the agent may read it } } } }; reply = fn(repo, pr, thread = { id, path, line, old, url }, body, done) with the new comment's id, posting the draft the user forwards (thread.id empty: the conversation); resolve = fn(repo, pr, thread, resolved, done) resolves a review thread there, or reopens it, when the user does in Oriel. Every answer crosses as JSON: an empty table is an empty list or object. A pull request is { number, id, title, body, url, author, state ('open', 'closed'), draft, merged, branch, base, head = its commit, reviewers }. An err that says HTTP 401 ('GitLab: the token was refused (HTTP 401)') is the host refusing the site's token, which Oriel stops sending. A missing function's part isn't offered. A request is { url, repo, number, title, author, draft, asked (RFC 3339, or seconds since 1970), via (the team asked, '' for you), state ('new', 're-requested', 'changes', 'commented', 'approved'), since (commits since your review), adds, dels, files, ci ('ok', 'failed', 'running'), base, head (its branch), opened, updated (times as asked's), reviewers = { { login ('@org/team' for a team), state ('requested', 'approved', 'changes', 'commented') } } who's asked and who has reviewed, shown when its row is hovered }. A detail is { request, base, head, commit = the head's, state ('open', 'closed', 'merged'), mergeable, labels = { names }, reviewers = { { login, state } }, body, files = { { path, adds, dels } }, checks, clone = the repo's clone URL, for Add repo…, events = { { kind ('push', 'review', 'comment'), who, at (RFC 3339), text, state = a review's ('approved', 'changes', 'commented', 'dismissed'), ref = a push's commit or a line comment's 'path:line', url, reactions } } oldest first, reactions = { { emoji ('👍'), count } } the PR's own; a host without reactions leaves them out }.
 ---@param spec table
 function oriel.code.host(spec) end
 
@@ -233,7 +256,7 @@ function oriel.explorer.badge(spec) end
 ---@class oriel.http
 oriel.http = {}
 
---- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
+--- Make an HTTP request off the loop, and call fn(res, err) on it when it's answered: res is { status, body, headers } (headers by lower-case name), err why it failed. spec: { method (GET by default), url, headers = { Name = value }, body (a string: oriel.json_encode(t) for JSON), auth, url_secret, timeout (seconds, 30 by default) }. The host must be in the plugin's net grant. A secret is named, never read: auth = 'NAME' sends it in the Authorization header, as a bearer token unless auth_scheme says another: 'none' sends it as it is, 'basic' as HTTP Basic's password, and any other word goes before it ('token' for Gitea: 'token <secret>'), url_secret = 'NAME' is a secret that is the whole URL (an incoming webhook, in place of url); each goes only to the host its secrets grant binds it to, over https, and no answer or error shows it.
 ---@param spec table
 ---@param fn function
 function oriel.http.request(spec, fn) end
@@ -241,11 +264,11 @@ function oriel.http.request(spec, fn) end
 ---@class oriel.hud
 oriel.hud = {}
 
---- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. build is fn() returning oriel.ui nodes, or the nodes. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
+--- An indicator in a slot: titlebar.right, statusline.left, statusline.right, hud (a panel of the HUD), or hud.today. build is fn() returning oriel.ui nodes, or the nodes. opts { slot, order, every = '30s', on = { event names }, title, note, span, help }. It's built again every `every`, on each event named in `on`, and by oriel.hud.set or oriel.hud.refresh.
 ---@param name string
----@param opts table
 ---@param build any
-function oriel.hud.indicator(name, opts, build) end
+---@param opts? table
+function oriel.hud.indicator(name, build, opts) end
 
 --- Builds the indicator name again now.
 ---@param name string
@@ -294,7 +317,7 @@ function oriel.lsp.server(spec) end
 ---@class oriel.menu
 oriel.menu = {}
 
---- Add a right-click menu entry: { label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
+--- Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.
 ---@param spec table
 function oriel.menu.add(spec) end
 
@@ -322,10 +345,10 @@ function oriel.place.add(spec) end
 ---@class oriel.process
 oriel.process = {}
 
---- Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop().
+--- Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop(); or nil and why, when the program isn't there.
 ---@param path string
 ---@param opts? table
----@return table
+---@return table?,string?
 function oriel.process.spawn(path, opts) end
 
 ---@class oriel.rail
@@ -431,9 +454,10 @@ function oriel.start.add(spec) end
 ---@class oriel.status
 oriel.status = {}
 
---- A status rule: fn(session) returns a status colour name, or nil to leave it.
+--- A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it.
+---@param name string
 ---@param fn function
-function oriel.status.rule(fn) end
+function oriel.status.rule(name, fn) end
 
 ---@class oriel.thread
 oriel.thread = {}
@@ -588,9 +612,9 @@ function oriel.view.override(id, fn) end
 ---@class oriel.wasm
 oriel.wasm = {}
 
---- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close().
+--- Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:call_json(fn, value) with JSON (both answer at once; a process's proc:request answers in a callback), mod:exports(), mod:close(); or nil and why, when the file isn't there.
 ---@param path string
 ---@param opts? table
----@return table
+---@return table?,string?
 function oriel.wasm.load(path, opts) end
 

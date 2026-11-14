@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -16,6 +17,24 @@ type loop struct {
 	todo []func()
 	dos  int           // how many were ever queued
 	poke chan struct{} // something was queued
+	busy int           // work counted as under way (Tracker)
+}
+
+func (l *loop) Begin(string) (end func()) {
+	l.mu.Lock()
+	l.busy++
+	l.mu.Unlock()
+	return func() {
+		l.mu.Lock()
+		l.busy--
+		l.mu.Unlock()
+	}
+}
+
+func (l *loop) underWay() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.busy
 }
 
 func newLoop() *loop { return &loop{poke: make(chan struct{}, 1)} }
@@ -84,7 +103,7 @@ func TestLoadLifecycle(t *testing.T) {
 			return "", errors.New("no agents")
 		}
 		return v, nil
-	}, LoadOpts{Now: func() time.Time { return now }})
+	}, LoadOpts{Clock: clocktest.New(now)})
 
 	if s := l.State(); s.Phase != ui.Idle {
 		t.Fatalf("before Start: %v", s.Phase)
@@ -125,6 +144,22 @@ func TestLoadLifecycle(t *testing.T) {
 	}
 	if v, _ := l.Value(); v != "claude" {
 		t.Errorf("value after a failed reload: %q", v)
+	}
+}
+
+// A fetch is counted as under way on the loop it lands on until it's done, so a wait for the app to settle sees it.
+func TestLoadCountsItsFetch(t *testing.T) {
+	lp := newLoop()
+	release := make(chan struct{})
+	l := NewLoad(lp, func(context.Context, func(string, float64)) (int, error) { <-release; return 1, nil }, LoadOpts{})
+	l.Start()
+	if n := lp.underWay(); n != 1 {
+		t.Errorf("while it fetches, %d under way, want 1", n)
+	}
+	close(release)
+	lp.until(t, func() bool { return l.State().Phase == ui.Ready })
+	if n := lp.underWay(); n != 0 {
+		t.Errorf("once it's landed, %d under way, want 0", n)
 	}
 }
 

@@ -39,3 +39,19 @@ func TestAdvanceRunsWhatsDueInOrder(t *testing.T) {
 		t.Errorf("now +%v, %d waiting", got, c.Waiting())
 	}
 }
+
+// Set moves the clock on as Advance does, running what's due, or back without running anything.
+func TestSetMovesEitherWay(t *testing.T) {
+	start := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
+	c := New(start)
+	ran := 0
+	c.AfterFunc(time.Minute, func() { ran++ })
+	c.Set(start.Add(-time.Hour))
+	if !c.Now().Equal(start.Add(-time.Hour)) || ran != 0 {
+		t.Fatalf("back: now %v, ran %d", c.Now(), ran)
+	}
+	c.Set(start.Add(time.Hour))
+	if !c.Now().Equal(start.Add(time.Hour)) || ran != 1 {
+		t.Errorf("on: now %v, ran %d", c.Now(), ran)
+	}
+}

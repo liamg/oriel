@@ -14,6 +14,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
+	"github.com/liamg/oriel/agent/claude"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host/hostcore"
@@ -30,11 +32,13 @@ type loggedFake struct {
 	logs map[string]string // agent dir → transcript
 }
 
+func (*loggedFake) UsageFormats() []usage.Format { return []usage.Format{claude.UsageLog} }
+
 func (f *loggedFake) Logs(cwd, _ string) []agent.Log {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if p, ok := f.logs[cwd]; ok {
-		return []agent.Log{{Path: p, Format: stats.FormatClaude}}
+		return []agent.Log{{Path: p, Format: claude.UsageLog.Name}}
 	}
 	return nil
 }

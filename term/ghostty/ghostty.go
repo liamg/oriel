@@ -14,17 +14,18 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/term"
 )
 
 // Options configure a terminal. The zero value is usable.
 type Options struct {
-	Scrollback  int              // bytes of scrollback kept; 0 is 10 MB
-	Reply       func(p []byte)   // answers to queries (DA, DSR…) for the PTY; called from Write, not to call the Terminal
-	HoldTimeout time.Duration    // how long synchronized output may hold a frame; 0 is a second
-	MaxCommands int              // shell commands remembered; 0 is 1000
-	Now         func() time.Time // the clock for HoldTimeout; nil is time.Now
-	Backend     string           // "native" or "wasm"; "" is native where it's built in (the ghostty_native tag), else wasm
+	Scrollback  int            // bytes of scrollback kept; 0 is 10 MB
+	Reply       func(p []byte) // answers to queries (DA, DSR…) for the PTY; called from Write, not to call the Terminal
+	HoldTimeout time.Duration  // how long synchronized output may hold a frame; 0 is a second
+	MaxCommands int            // shell commands remembered; 0 is 1000
+	Clock       clock.Clock    // the clock for HoldTimeout; nil is the system's
+	Backend     string         // "native" or "wasm"; "" is native where it's built in (the ghostty_native tag), else wasm
 }
 
 const (
@@ -71,9 +72,7 @@ func New(cols, rows int, opts Options) (*Terminal, error) {
 	if opts.HoldTimeout <= 0 {
 		opts.HoldTimeout = time.Second
 	}
-	if opts.Now == nil {
-		opts.Now = time.Now
-	}
+	opts.Clock = clock.Or(opts.Clock)
 	m, err := newMachine(opts.Backend, cols, rows, opts.Scrollback)
 	if err != nil {
 		return nil, fmt.Errorf("ghostty: %w", err)
@@ -156,7 +155,7 @@ func (t *Terminal) drain() {
 	}
 	t.stale |= int(ev) & (evTitle | evPwd)
 	if ev&evHold != 0 {
-		t.heldAt = t.opts.Now()
+		t.heldAt = t.opts.Clock.Now()
 	}
 	t.held = t.m.held()
 }
@@ -256,7 +255,7 @@ func (t *Terminal) Grid() term.Grid {
 		t.lines = make([]term.Line, rows)
 		t.gridCols = cols
 	}
-	force := t.held && t.opts.Now().Sub(t.heldAt) >= t.opts.HoldTimeout
+	force := t.held && t.opts.Clock.Now().Sub(t.heldAt) >= t.opts.HoldTimeout
 	b := t.m.out(t.m.call("oriel_grid", b2u(all), b2u(force)))
 	for i := range t.lines {
 		t.lines[i].Dirty = false

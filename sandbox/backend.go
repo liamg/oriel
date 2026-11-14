@@ -1,15 +1,20 @@
 package sandbox
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"slices"
-	"sort"
 	"strings"
-	"sync"
 
 	"github.com/liamg/oriel/agent"
 )
+
+// HelperRunner is a Backend whose sandboxes run the app's sandbox helper (package sandbox/helper's: a static Linux
+// oriel), handed to it by the host that holds it.
+type HelperRunner interface {
+	// WithHelper is the backend running helper's binary.
+	WithHelper(helper func() ([]byte, error)) Backend
+}
 
 // Backend confines an agent to its workspace: a container (docker, or an
 // alternative engine such as orbstack), or the OS's own sandbox (seatbelt on
@@ -22,7 +27,7 @@ type Backend interface {
 	// Launch readies root's sandbox for an agent in cwd running argv, and
 	// returns the command to run under the PTY in its place. A slow step says
 	// what it's doing with Report(ctx, …).
-	Launch(ctx context.Context, root, cwd string, argv []string, o LaunchOptions) (Command, error)
+	Launch(ctx context.Context, root, cwd string, argv []string, o LaunchOpts) (Command, error)
 	// Stop ends what Launch started for root. The workspace is untouched.
 	Stop(ctx context.Context, root string) error
 	// Available says whether this machine can run it at all: its OS, its tools installed.
@@ -51,7 +56,7 @@ type Rebuilder interface {
 
 // Sheller is a backend that can run a shell in root's sandbox beside its agent, in cwd: what a terminal runs.
 type Sheller interface {
-	Shell(ctx context.Context, root, cwd string, o LaunchOptions) (Command, error)
+	Shell(ctx context.Context, root, cwd string, o LaunchOpts) (Command, error)
 }
 
 // ShellArgv is the shell a sandbox's terminal runs: bash where the image has it, else sh.
@@ -83,8 +88,8 @@ type Command struct {
 	Needs agent.SandboxNeeds
 }
 
-// LaunchOptions are the host facts a launch needs.
-type LaunchOptions struct {
+// LaunchOpts are the host facts a launch needs.
+type LaunchOpts struct {
 	// Environ is the environment the sandbox's allowlist picks from.
 	Environ []string
 	// Extra env the agent always gets (ORIEL_SPAWNED and friends).
@@ -127,81 +132,47 @@ func Blocking(ps []Problem) (Problem, bool) {
 	return Problem{}, false
 }
 
-// Preference orders the backends for DefaultBackend; those it leaves out
-// come after, by name.
-var Preference = []string{"docker", "orbstack", "colima", "podman", "seatbelt"}
+// Backends are the backends a host can run sandboxes in, the most preferred first.
+type Backends []Backend
 
-// DefaultBackend runs sandboxes when sandbox.backend names none: the first
-// this machine can run, or docker when it can run none.
-func DefaultBackend() string {
-	if a := AvailableBackends(); len(a) > 0 {
+// Names are every backend's name, in order.
+func (bs Backends) Names() []string {
+	out := make([]string, 0, len(bs))
+	for _, b := range bs {
+		out = append(out, b.Name())
+	}
+	return out
+}
+
+// Available are the names of the backends this machine can run, in order.
+func (bs Backends) Available() []string {
+	var out []string
+	for _, b := range bs {
+		if b.Available() == nil {
+			out = append(out, b.Name())
+		}
+	}
+	return out
+}
+
+// Default runs sandboxes when sandbox.backend names none: the first this machine can run, else the first.
+func (bs Backends) Default() string {
+	if a := bs.Available(); len(a) > 0 {
 		return a[0]
 	}
-	return "docker"
-}
-
-var (
-	backendsMu sync.Mutex
-	backends   = map[string]Backend{}
-)
-
-// Register makes b available to sandbox.backend under its name, replacing
-// any backend of that name.
-func Register(b Backend) {
-	backendsMu.Lock()
-	defer backendsMu.Unlock()
-	backends[b.Name()] = b
-}
-
-// Backends are the registered backends' names, sorted.
-func Backends() []string {
-	backendsMu.Lock()
-	defer backendsMu.Unlock()
-	out := make([]string, 0, len(backends))
-	for name := range backends {
-		out = append(out, name)
+	if len(bs) > 0 {
+		return bs[0].Name()
 	}
-	sort.Strings(out)
-	return out
+	return ""
 }
 
-// AvailableBackends are the names of the registered backends this machine
-// can run, in Preference order.
-func AvailableBackends() []string {
-	var out []string
-	for _, name := range byPreference(Backends()) {
-		backendsMu.Lock()
-		b := backends[name]
-		backendsMu.Unlock()
-		if b.Available() == nil {
-			out = append(out, name)
+// For is the backend cfg names, or the Default.
+func (bs Backends) For(cfg Config) (Backend, error) {
+	name := cmp.Or(cfg.Backend, bs.Default())
+	for _, b := range bs {
+		if b.Name() == name {
+			return b, nil
 		}
 	}
-	return out
-}
-
-func byPreference(names []string) []string {
-	rank := func(n string) int {
-		if i := slices.Index(Preference, n); i >= 0 {
-			return i
-		}
-		return len(Preference)
-	}
-	slices.SortStableFunc(names, func(a, b string) int { return rank(a) - rank(b) })
-	return names
-}
-
-// BackendFor is the backend cfg names, or DefaultBackend.
-func BackendFor(cfg Config) (Backend, error) {
-	name := cfg.Backend
-	if name == "" {
-		name = DefaultBackend()
-	}
-	backendsMu.Lock()
-	b, ok := backends[name]
-	backendsMu.Unlock()
-	if !ok {
-		return nil, fmt.Errorf("no sandbox backend %q (have %s)", name, strings.Join(Backends(), ", "))
-	}
-	return b, nil
+	return nil, fmt.Errorf("no sandbox backend %q (have %s)", name, strings.Join(bs.Names(), ", "))
 }

@@ -34,9 +34,7 @@ func (s LSPServer) ContributionName() string { return s.Name }
 // LSPServers are the registered language servers by Order, then name.
 func LSPServers(r registry.Contributions) []LSPServer {
 	var out []LSPServer
-	for _, c := range r.Contributions("lsp.server") {
-		out = append(out, c.(LSPServer))
-	}
+	out = append(out, registry.ContributionsOf[LSPServer](r)...)
 	slices.SortFunc(out, func(a, b LSPServer) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})
@@ -67,9 +65,7 @@ func (a DebugAdapter) ContributionName() string { return a.Name }
 // DebugAdapters are the registered debug adapters by Order, then name.
 func DebugAdapters(r registry.Contributions) []DebugAdapter {
 	var out []DebugAdapter
-	for _, c := range r.Contributions("dap.adapter") {
-		out = append(out, c.(DebugAdapter))
-	}
+	out = append(out, registry.ContributionsOf[DebugAdapter](r)...)
 	slices.SortFunc(out, func(a, b DebugAdapter) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})

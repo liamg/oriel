@@ -35,7 +35,8 @@ func sentFrom(se core.SessionState, c gh.ReviewComment) core.ThreadID {
 }
 
 // SetReviewDraft keeps the review the user is writing of a review session's pull request.
-func (x *GitHub) SetReviewDraft(r core.ReviewDrafted) error {
+func (x *GitHub) SetReviewDraft(r core.ReviewDrafted) (err error) {
+	defer x.env.Recover("SetReviewDraft", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return err

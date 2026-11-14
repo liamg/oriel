@@ -9,7 +9,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -38,8 +38,8 @@ func (sh *shell) host(source string) *pluginHost {
 
 func (h *pluginHost) Layout() *layout.Root { return h.sh.layout.root }
 
-func (h *pluginHost) Subscribe(f core.Filter, fn func(core.Event)) func() {
-	return h.store.Subscribe(f, fn)
+func (h *pluginHost) Subscribe(f core.Filter, fn func(core.Event)) registry.Disposable {
+	return registry.DisposeFunc(h.store.Subscribe(f, fn))
 }
 func (h *pluginHost) Redraw() { h.sh.poke() }
 
@@ -48,12 +48,8 @@ func (h *pluginHost) DecorationsChanged(id string) {
 	h.sh.poke()
 }
 
-func (h *pluginHost) Do(fn func()) {
-	h.sh.todoMu.Lock()
-	h.sh.todo = append(h.sh.todo, fn)
-	h.sh.todoMu.Unlock()
-	h.sh.poke()
-}
+// Do runs fn on the app's loop.
+func (h *pluginHost) Do(fn func()) { h.sh.do(fn) }
 
 // queued says the loop has been handed work it hasn't run.
 func (sh *shell) queued() bool {
@@ -88,7 +84,7 @@ func (h *pluginHost) Here() registry.At {
 	if at.Session == "" {
 		at.Session = noSession
 	}
-	if ed, ok := registry.EditorsOf(h); ok {
+	if ed, ok := services.EditorsOf(h); ok {
 		at = ed.At(at)
 	}
 	return at
@@ -106,7 +102,7 @@ func (h *pluginHost) Load(p plugin.Plugin) (registry.Disposable, error) {
 		return nil, err
 	}
 	h.sh.loaded = append(h.sh.loaded, p)
-	return kit.OnDispose(func() {
+	return registry.DisposeFunc(func() {
 		h.sh.loaded = slices.DeleteFunc(h.sh.loaded, func(q plugin.Plugin) bool { return q == p })
 		if err := p.Deactivate(context.Background()); err != nil {
 			h.log.Warn("stopping a plugin", "plugin", p.Manifest().ID, "err", err)
@@ -142,12 +138,12 @@ func (h *pluginHost) Pending() plugin.Pending {
 		if m := k.Complete(); m != nil && acceptKey(h.sh.cfg.Registry, p.Modes, p.Keys) {
 			p.Runs = cmp.Or(m.Desc, m.Command)
 		}
-		if ed, ok := registry.EditorsOf(h); ok {
+		if ed, ok := services.EditorsOf(h); ok {
 			p.Hints = ed.Hints(p.Keys) // keys no mapping takes go on to the engine
 		}
 		return p
 	}
-	if ed, ok := registry.EditorsOf(h); ok {
+	if ed, ok := services.EditorsOf(h); ok {
 		return ed.Pending()
 	}
 	return plugin.Pending{}
@@ -182,7 +178,9 @@ func (h *pluginHost) Log() *slog.Logger                              { return h.
 func (h *pluginHost) State() core.State                              { return h.store.State() }
 func (h *pluginHost) Apply(ev core.Event) error                      { return h.store.Apply(ev) }
 func (h *pluginHost) WindowFocus() (bool, <-chan struct{})           { return h.sh.focus.now() }
-func (h *pluginHost) Framed(fn func()) func()                        { return h.sh.framed.On(fn) }
+func (h *pluginHost) Framed(fn func()) registry.Disposable {
+	return registry.DisposeFunc(h.sh.framed.On(fn))
+}
 
 func (h *pluginHost) KeyModes() []string {
 	if h.sh.modes == nil {
@@ -218,7 +216,7 @@ func (h *pluginHost) Notify(n core.Notice) {
 	if n.Source == "" {
 		n.Source = h.source
 	}
-	if err := h.store.Apply(core.Notified{Notice: redactNotice(n, h.logs.Redact)}); err != nil {
+	if err := h.store.Apply(core.Notified{Notice: redactNotice(n, h.logs.Redact, h.sh.now())}); err != nil {
 		h.log.Error("notify", "id", n.ID, "err", err)
 	}
 }

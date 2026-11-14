@@ -75,3 +75,32 @@ func TestRedactedBodiesWithoutAVault(t *testing.T) {
 		t.Errorf("the log holds the redacted body:\n%s", log.String())
 	}
 }
+
+// A vault that can't keep a redacted body stops the log, as any failed write does: the event isn't written with its
+// body cut out, which nothing could ever restore, and the recorder says why.
+func TestAVaultThatCantWriteStopsTheLog(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root writes to a read-only directory")
+	}
+	dir := t.TempDir()
+	vault, err := core.OpenVault(filepath.Join(dir, "redacted.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Chmod(dir, 0o500)
+	t.Cleanup(func() { os.Chmod(dir, 0o700) })
+	var log bytes.Buffer
+	rec := core.NewRecorder(&log).Keep(vault)
+	a := New()
+	a.Subscribe(core.Filter{}, rec.Record)
+	thread := core.Thread{ID: "t1", Status: core.ThreadOpen, Comments: []core.Comment{
+		{ID: "c1", Author: core.AuthorHost, Name: "mallory", Body: "secret", Redacted: true}}}
+	a.Apply(core.SessionSynced{Session: core.SessionState{ID: "pr", Kind: core.KindWork}})
+	a.Apply(core.ThreadUpdated{Session: "pr", Thread: thread})
+	if rec.Err() == nil {
+		t.Error("the recorder reports no error")
+	}
+	if strings.Contains(log.String(), "ThreadUpdated") {
+		t.Errorf("the event was logged without its body:\n%s", log.String())
+	}
+}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/host/hosttest"
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 // newer is a list built after the snapshot, in cost.dev's shape, pricing one model.
@@ -143,18 +144,8 @@ func TestOldCacheIsPassedOver(t *testing.T) {
 // Run fetches at once, then on a tick a day after the last fetch; after one fails, on a tick an hour after it.
 func TestRunFetchesDaily(t *testing.T) {
 	env := hosttest.Env(t)
-	var mu sync.Mutex
-	now := time.Date(2026, 10, 22, 9, 0, 0, 0, time.UTC)
-	env.Now = func() time.Time {
-		mu.Lock()
-		defer mu.Unlock()
-		return now
-	}
-	at := func(d time.Duration) {
-		mu.Lock()
-		now = now.Add(d)
-		mu.Unlock()
-	}
+	clk := clocktest.New(time.Date(2026, 10, 22, 9, 0, 0, 0, time.UTC))
+	env.Clock = clk
 	s := newServer(t, newer)
 	p := New(env, deps(s))
 	ctx, cancel := context.WithCancel(context.Background())
@@ -178,19 +169,19 @@ func TestRunFetchesDaily(t *testing.T) {
 		}
 	}
 	hits(1)
-	at(23 * time.Hour)
+	clk.Advance(23 * time.Hour)
 	hits(1)
-	at(time.Hour)
+	clk.Advance(time.Hour)
 	hits(2)
 	if r := sol(p.Book()); r.In != 3 {
 		t.Errorf("gpt-6.1-sol = %+v", r)
 	}
 
 	s.serve("not json")
-	at(24 * time.Hour)
+	clk.Advance(24 * time.Hour)
 	hits(3)
-	at(59 * time.Minute)
+	clk.Advance(59 * time.Minute)
 	hits(3)
-	at(time.Minute)
+	clk.Advance(time.Minute)
 	hits(4)
 }

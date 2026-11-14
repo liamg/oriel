@@ -12,6 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -112,16 +116,14 @@ const (
 	defaultPids    = container.DefaultPidsLimit
 )
 
-// offeredBackends are the sandbox backends this machine can run (available), the default first; docker and the
-// rest when it can run none.
+// offeredBackends are the sandbox backends to offer (available), the default first; docker when there are none.
 func offeredBackends(available func() []string) []string {
-	if available == nil {
-		available = sandbox.AvailableBackends
+	if available != nil {
+		if a := available(); len(a) > 0 {
+			return a
+		}
 	}
-	if a := available(); len(a) > 0 {
-		return a
-	}
-	return append([]string{"docker"}, slices.DeleteFunc(sandbox.Backends(), func(b string) bool { return b == "docker" })...)
+	return []string{"docker"}
 }
 
 // envNames are the host's environment variables, by name.
@@ -142,7 +144,7 @@ func upstreamNames(o registry.Options, r registry.Contributions) []string {
 	m, _, _ := o.Get("sandbox.servers", registry.At{})
 	servers, _ := mcpServers(m)
 	var providers []agent.Provider
-	for _, p := range registry.AgentProviders(r) {
+	for _, p := range services.AgentProviders(r) {
 		providers = append(providers, p.Provider)
 	}
 	var out []string
@@ -237,10 +239,10 @@ func projectRoots(workDir string, st core.State) []string {
 // changes.
 type SandboxSettings struct {
 	kit.Disposer
-	// Backends are the sandbox backends this machine can run, the default first; sandbox.AvailableBackends if nil.
+	// Backends are the sandbox backends to offer, the default first; docker alone if nil.
 	Backends func() []string
 	h        plugin.Host
-	sends    kit.Serial  // the settings, going to the host
+	sends    work.Serial // the settings, going to the host
 	queued   atomic.Bool // a send is queued and hasn't started
 }
 
@@ -251,9 +253,9 @@ func (x *SandboxSettings) Activate(_ context.Context, h plugin.Host) error {
 	o := h.Options()
 	for _, sp := range sandboxOptions(o, h, x.Backends) {
 		x.Add(h.Option(sp))
-		x.Add(kit.OnDispose(o.Watch(sp.Name, x.send)))
+		x.Add(o.Watch(sp.Name, x.send))
 	}
-	x.Add(kit.OnDispose(x.sends.Stop))
+	x.Add(registry.DisposeFunc(x.sends.Stop))
 	x.Add(h.Contribute(registry.Busy{Name: "sandbox.settings", Busy: x.sends.Busy, Source: "builtin:sandbox.settings"}))
 	if kit.HasSessions(h) {
 		x.send()
@@ -267,11 +269,11 @@ func (x *SandboxSettings) send() {
 	if !x.queued.CompareAndSwap(false, true) {
 		return
 	}
-	x.sends.Do(func() {
+	x.sends.Queue(func() {
 		x.queued.Store(false)
 		h := x.h
 		cfg := sandboxConfig(h.Options(), projectRoots(kit.WindowDir(h), h.State())) // the window's project's file may add rules
-		if w, err := kit.SessionHost(h); err == nil {
+		if w, err := kit.SandboxCalls(h); err == nil {
 			if err := w.SetSandboxConfig(cfg); err != nil {
 				h.Log().Warn("sandbox settings", "err", err)
 			}

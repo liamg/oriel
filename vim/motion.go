@@ -552,7 +552,7 @@ func searchChar(e *Engine, v *view, key string, r rune, count int, repeat bool) 
 			}
 			// Without "," in 'cpoptions', ; after t skips a match right next to the cursor.
 			if till && repeat && n == count {
-				adj := col
+				var adj int
 				if fwd {
 					adj = v.prevCol(e.cur.Line, col)
 				} else {

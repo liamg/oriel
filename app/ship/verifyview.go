@@ -44,9 +44,7 @@ func verdictTone(th *theme.Resolved, v string) render.Color {
 }
 
 func (x *Verify) run(id string) {
-	if err := x.h.Run(context.Background(), id, nil); err != nil {
-		x.h.Notify(core.Notice{ID: "verify", Severity: core.SevError, Key: true, Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "verify", id, nil)
 }
 
 // dialog is VERIFY THIS CHANGE over everything, while a quiz is open.

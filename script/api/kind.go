@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 )
@@ -18,13 +19,13 @@ func luaKind(a *APIs, name string, spec script.Table) (registry.Kind, error) {
 	k := registry.Kind{KindSpec: core.KindSpec{Kind: core.Kind(name), Title: cmp.Or(str(spec, "title"), name), Desc: str(spec, "desc"),
 		About: str(spec, "about"), From: core.From(str(spec, "from")), Pack: cmp.Or(str(spec, "pack"), name),
 		Worktrees:  core.Worktrees(cmp.Or(str(spec, "worktrees"), string(core.WorktreesNow))),
-		PromptFile: str(spec, "prompt_file"), AgentGate: str(spec, "agent_gate"), Order: 100}, GateNames: strs(spec["gates"])}
+		PromptFile: str(spec, "prompt_file"), AgentGate: str(spec, "agent_gate"), Order: 100}, GateNames: plugin.Strings(spec["gates"])}
 	k.NeedsRepo, _ = spec["needs_repo"].(bool)
 	k.Launcher, _ = spec["launcher"].(bool)
 	if o, ok := spec["order"].(float64); ok {
 		k.Order = int(o)
 	}
-	for _, c := range strs(spec["can"]) {
+	for _, c := range plugin.Strings(spec["can"]) {
 		k.Caps = append(k.Caps, core.Capability(c))
 	}
 	if opens, ok := spec["opens"].([]any); ok {

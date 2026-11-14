@@ -251,7 +251,7 @@ func testHTTPClient(t *testing.T, sse bool) {
 	ctx := context.Background()
 	s, srv := newHTTPServer(t, sse)
 	hdr := http.Header{"X-Static": {"yes"}}
-	c, err := DialHTTP(ctx, srv.URL, hdr, nil)
+	c, err := DialHTTP(ctx, srv.URL, hdr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,7 +306,7 @@ func TestClientHTTPSSE(t *testing.T)  { testHTTPClient(t, true) }
 
 func TestClientHTTPError(t *testing.T) {
 	_, srv := newHTTPServer(t, false)
-	c, err := DialHTTP(context.Background(), srv.URL, nil, nil)
+	c, err := DialHTTP(context.Background(), srv.URL, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

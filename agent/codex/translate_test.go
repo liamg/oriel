@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
+	"github.com/liamg/oriel/semver"
 )
 
 // A subagent the agent spawns is a Subagent, what its thread does is its, and a collab call's last state finishes it.
@@ -262,7 +263,7 @@ func TestUsageProbeFailed(t *testing.T) {
 
 // A codex older than the protocol Oriel speaks says so.
 func TestTooOld(t *testing.T) {
-	if !versionLess("0.162.1", minVersion) || versionLess("0.163.0", minVersion) || versionLess("0.170.2", minVersion) {
+	if !semver.Less("0.162.1", minVersion) || semver.Less("0.163.0", minVersion) || semver.Less("0.170.2", minVersion) {
 		t.Errorf("minVersion %s", minVersion)
 	}
 }

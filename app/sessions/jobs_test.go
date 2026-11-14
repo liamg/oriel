@@ -197,17 +197,19 @@ func TestJobsEntryPoints(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	x := jobsOf(s)
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	s.Frame()
+	s.Quiet() // laid out where it stays: a click lands on what a person would see
 	if !s.Registry().Available("jobs.open", nil) || s.Node("Jobs").Disabled {
 		t.Error("the sidebar's Jobs is still dimmed")
 	}
 	s.Click(apptest.Centre(s.Node("Jobs").Bounds), 0)
+	s.Quiet()
 	if !x.Open() {
 		t.Error("the sidebar's Jobs didn't open the page")
 	}
 	x.Close()
-	s.Frame()
+	s.Quiet()
 	s.Click(apptest.Centre(s.StartCard("Jobs").Bounds), 0)
+	s.Quiet()
 	if !x.Open() {
 		t.Error("the start view's Jobs link didn't open the page")
 	}
@@ -244,8 +246,8 @@ func jobsScene(t *testing.T) (*apptest.Scene, *rig.Jobs, *sessions.Jobs) {
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W)})
 	s.Now = rig.StatsNow
 	x := jobsOf(s)
-	x.SetClock(func() time.Time { return s.Now }, time.UTC)
-	s.StatsClock(func() time.Time { return s.Now }, time.UTC)
+	x.SetClock(s.Clock(), time.UTC)
+	s.StatsClock(s.Clock(), time.UTC)
 	st := s.UntilState("the runs", func(st core.State) bool { return !st.Machine.Sampled.IsZero() && len(st.Sessions) == 12 })
 	for _, se := range st.Sessions {
 		if host.RunOf(se).Status == host.RunRunning {
@@ -358,8 +360,8 @@ func TestARunOpensInItsSessionTab(t *testing.T) {
 	s.Until("the window asked to open on the run", func() bool { return s.ReopenAsked() })
 	s.Reopen()
 	x = jobsOf(s)
-	x.SetClock(func() time.Time { return s.Now }, time.UTC)
-	s.StatsClock(func() time.Time { return s.Now }, time.UTC)
+	x.SetClock(s.Clock(), time.UTC)
+	s.StatsClock(s.Clock(), time.UTC)
 	s.Until("the run in front, its console the main tab", func() bool {
 		for _, v := range s.Host().Layout().Visible() {
 			if w := s.Host().Layout().Find(v); v.ID == kit.AgentConsoleView && w.Placement == layout.Tab {
@@ -392,7 +394,7 @@ func TestASkippedRunShowsInTheList(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(r.W)})
 	s.Now = rig.StatsNow
 	x := jobsOf(s)
-	x.SetClock(func() time.Time { return s.Now }, time.UTC)
+	x.SetClock(s.Clock(), time.UTC)
 	s.UntilState("the run", func(st core.State) bool { _, ok := jobRun(st, j.Name); return ok })
 	s.Run("jobs.open", nil)
 	settleJobs(s, x)

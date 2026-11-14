@@ -113,8 +113,11 @@ func TestFlightReadsEachStep(t *testing.T) {
 	if !errors.Is(err, gitx.ErrConflict) || !strings.Contains(err.Error(), "limiter.go") {
 		t.Fatalf("rebase = %v", err)
 	}
-	if now, _ := r.Head(ctx); now != head || r.Dirty(ctx) {
-		t.Fatalf("a conflicting rebase wasn't undone: %s → %s, dirty %v", head, now, r.Dirty(ctx))
+	if now, _ := r.Head(ctx); now != head {
+		t.Fatalf("a conflicting rebase wasn't undone: %s → %s", head, now)
+	}
+	if dirty, err := r.Dirty(ctx); dirty || err != nil {
+		t.Fatalf("a conflicting rebase left the tree dirty %v, %v", dirty, err)
 	}
 }
 
@@ -212,7 +215,7 @@ func TestFingerprintFollowsTheCode(t *testing.T) {
 	if untracked == edited || fp("HEAD") == untracked {
 		t.Fatal("an untracked file's content doesn't count")
 	}
-	base := r.MergeBase(ctx, "origin/main")
+	base := r.ForkPoint(ctx, "origin/main")
 	if base == "" {
 		t.Fatal("no merge base with origin/main")
 	}

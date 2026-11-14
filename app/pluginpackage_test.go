@@ -129,6 +129,8 @@ local hello = L.asset("greeting.txt")
 L.command("Greet", function() L.notify(hello) end)
 local ok, err = pcall(L.asset, "../oriel.toml")
 L.command("Escape", function() L.notify(tostring(ok) .. " " .. tostring(err)) end)
+local none, why = L.asset("missing.txt")
+L.command("Missing", function() L.notify(tostring(none) .. ": " .. tostring(why)) end)
 `,
 		"assets/greeting.txt": "Hello from an asset",
 	})
@@ -140,6 +142,7 @@ L.command("Escape", function() L.notify(tostring(ok) .. " " .. tostring(err)) en
 	}
 	runCommand(s, t, "Greet")
 	runCommand(s, t, "Escape")
+	runCommand(s, t, "Missing")
 	var texts []string
 	for _, n := range s.Store().State().Notifications {
 		texts = append(texts, n.Title+n.Text)
@@ -150,6 +153,9 @@ L.command("Escape", function() L.notify(tostring(ok) .. " " .. tostring(err)) en
 	}
 	if !strings.Contains(joined, "false") || !strings.Contains(joined, "isn't a path under assets/") {
 		t.Errorf("notices %q, want reading outside assets/ refused", texts)
+	}
+	if !strings.Contains(joined, "nil: asset missing.txt:") {
+		t.Errorf("notices %q, want a missing asset to be nil and why", texts)
 	}
 }
 

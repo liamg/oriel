@@ -1,157 +1,24 @@
 package host
 
 import (
-	"context"
-
-	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// SetApp installs the app's callbacks; App{} takes them away.
-func (w *Host) SetApp(a App) { w.run.SetApp(a) }
-
-// SetRestartOnExit says whether an agent that exits on its own is started again, unless it keeps exiting.
-func (w *Host) SetRestartOnExit(on bool) { w.run.SetRestartOnExit(on) }
-
-// Comment adds your comment to a thread, opening one if needed, and hands it to the agent: at once if it's idle,
-// after an interrupt if urgent, else when the turn ends.
-func (w *Host) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err error) {
-	defer w.recover("Comment", &err)
-	return w.run.Comment(ctx, r)
-}
-
-// SetThread changes a thread's status or title. Resolving one completes the tasks it asked for.
-func (w *Host) SetThread(r ThreadReq) (err error) {
-	defer w.recover("SetThread", &err)
-	return w.run.SetThread(r)
-}
+// SetApp is agentrun.Runner.SetApp.
+func (w *Host) SetApp(a App) { w.runPart.SetApp(a) }
 
 // EditQueued changes or deletes a comment of the user's the agent hasn't been given yet.
 func (w *Host) EditQueued(r QueuedReq) (err error) {
-	defer w.recover("EditQueued", &err)
-	err = w.run.EditQueued(r)
+	defer w.env.Recover("EditQueued", &err)
+	err = w.runPart.EditQueued(r)
 	w.restatus(r.Session)
 	return err
 }
 
-// Unqueue takes a message for the agent out of the queue before it's sent.
-func (w *Host) Unqueue(r UnqueueReq) (err error) {
-	defer w.recover("Unqueue", &err)
-	return w.run.Unqueue(r)
-}
-
-// SetTask adds or changes a task from the app.
-func (w *Host) SetTask(id core.SessionID, t core.Task) (err error) {
-	defer w.recover("SetTask", &err)
-	return w.run.SetTask(id, t)
-}
-
-// Answer answers an ask.
-func (w *Host) Answer(r AnswerReq) (err error) {
-	defer w.recover("Answer", &err)
-	return w.run.Answer(r)
-}
-
-// AddRule makes rule one for all sessions: asks of kind it covers go through in every session without a card, from
-// now on and after a restart.
-func (w *Host) AddRule(kind core.AskKind, rule string) (err error) {
-	defer w.recover("AddRule", &err)
-	return w.run.AddRule(kind, rule)
-}
-
-// RemoveRule drops a rule for all sessions: what it allowed asks again.
-func (w *Host) RemoveRule(rule string) (err error) {
-	defer w.recover("RemoveRule", &err)
-	return w.run.RemoveRule(rule)
-}
-
-// StartLogin signs provider in from Oriel, where it can (agent.LoginStarter): the URL to open in a browser. Its
-// lost-login cards clear once the sign-in succeeds.
-func (w *Host) StartLogin(ctx context.Context, provider string) (_ string, err error) {
-	defer w.recover("StartLogin", &err)
-	return w.run.StartLogin(ctx, provider)
-}
-
-// Ask is the app asking the user for a session's agent, as its own gate would (an agent tool that asks first).
-func (w *Host) Ask(ctx context.Context, r AskReq) (_ Verdict, err error) {
-	defer w.recover("Ask", &err)
-	return w.run.Ask(ctx, r)
-}
-
-// Send is a message to the agent outside any thread: sent now if it's free, queued for the turn's end if not.
-func (w *Host) Send(r SendReq) (err error) {
-	defer w.recover("Send", &err)
-	return w.run.Send(r)
-}
-
-// Fork answers a side question from the session's agent, outside its conversation.
-func (w *Host) Fork(id core.SessionID, prompt string) (_ string, err error) {
-	defer w.recover("Fork", &err)
-	return w.run.Fork(id, prompt)
-}
-
-// StopProcess stops a process the agent's last turn left running, by its ID; an error if its provider can't.
-func (w *Host) StopProcess(ctx context.Context, id core.SessionID, process string) (err error) {
-	defer w.recover("StopProcess", &err)
-	return w.run.StopProcess(ctx, id, process)
-}
-
-// Interrupt stops the turn the agent is on.
-func (w *Host) Interrupt(id core.SessionID) (err error) {
-	defer w.recover("Interrupt", &err)
-	return w.run.Interrupt(id)
-}
-
-// Terminal is the agent's raw terminal: what it has shown, then what it shows, until ctx ends or the agent
-// stops.
-func (w *Host) Terminal(ctx context.Context, id core.SessionID) (_ <-chan []byte, err error) {
-	defer w.recover("Terminal", &err)
-	return w.run.Terminal(ctx, id)
-}
-
-// TermInput types into the agent's terminal, and resizes it.
-func (w *Host) TermInput(r TermReq) (err error) {
-	defer w.recover("TermInput", &err)
-	return w.run.TermInput(r)
-}
-
-// SetPrompts is the user's versions of the prompts (agent/prompts), sent by the app on connect and whenever one
-// changes. They're the source of truth from then on: a built-in pack is theirs or the default, never an older
-// file's. Each workspace's notes are written again with the coding style.
-func (w *Host) SetPrompts(o prompts.Overrides) (err error) {
-	defer w.recover("SetPrompts", &err)
-	return w.run.SetPrompts(o)
-}
-
-// Prompts is the user's versions of the prompts the app last sent, and whether it has.
-func (w *Host) Prompts() (_ prompts.Overrides, _ bool) {
-	defer w.recover("Prompts", nil)
-	return w.run.Prompts()
-}
-
-// StartUtility starts a utility agent; it runs until Close.
-func (w *Host) StartUtility(ctx context.Context, spec UtilitySpec) (_ *Utility, err error) {
-	defer w.recover("StartUtility", &err)
-	return w.utility.StartUtility(ctx, spec)
-}
-
-// AIReview reviews a session's change with an agent other than the session's own. It runs
-// in the background; its findings are session events as they come.
-func (w *Host) AIReview(ctx context.Context, r AIReviewReq) (_ string, err error) {
-	defer w.recover("AIReview", &err)
-	return w.reviews.AIReview(ctx, r)
-}
-
-// SetFindings records findings as the user changed them: dismissed, or back.
-func (w *Host) SetFindings(r core.FindingsRecorded) (err error) {
-	defer w.recover("SetFindings", &err)
-	return w.reviews.SetFindings(r)
-}
-
 // RecordRun keeps a test run in its session, and returns its ID.
 func (w *Host) RecordRun(id core.SessionID, run core.TestRun) (_ string, err error) {
-	defer w.recover("RecordRun", &err)
+	defer w.env.Recover("RecordRun", &err)
 	if run.ID == "" {
 		run.ID = hostcore.NewID(4)
 	}
@@ -160,12 +27,12 @@ func (w *Host) RecordRun(id core.SessionID, run core.TestRun) (_ string, err err
 
 // SetReviewed marks a file's changes reviewed, or takes the marks off.
 func (w *Host) SetReviewed(r core.HunksReviewed) (err error) {
-	defer w.recover("SetReviewed", &err)
+	defer w.env.Recover("SetReviewed", &err)
 	return w.emit(r)
 }
 
 // RecordVerified keeps a verify quiz's result in the session.
 func (w *Host) RecordVerified(v core.Verified) (err error) {
-	defer w.recover("RecordVerified", &err)
+	defer w.env.Recover("RecordVerified", &err)
 	return w.emit(v)
 }

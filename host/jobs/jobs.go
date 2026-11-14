@@ -18,6 +18,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Jobs are the saved jobs, each a file under the host's jobs/, and their schedules.
@@ -89,15 +90,12 @@ func (x *Jobs) writeJob(j Job) error {
 	if err != nil {
 		return err
 	}
-	tmp := x.jobPath(j.Name) + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, x.jobPath(j.Name))
+	return atomicfile.Write(x.jobPath(j.Name), b, 0o600)
 }
 
 // Jobs is every job, the most recently changed first.
 func (x *Jobs) Jobs() []Job {
+	defer x.env.Recover("Jobs", nil)
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.jobs()
@@ -128,6 +126,7 @@ func (x *Jobs) jobs() []Job {
 // SaveJob writes a job: a new one when j has no Name (named from its title, stepping aside from a name in use), else
 // the job of that name, rewritten.
 func (x *Jobs) SaveJob(j Job) (_ Job, err error) {
+	defer x.env.Recover("SaveJob", &err)
 	j.Prompt, j.Title = strings.TrimSpace(j.Prompt), strings.TrimSpace(j.Title)
 	if j.Prompt == "" {
 		return Job{}, errors.New("a job is a prompt: say what it should do")
@@ -174,6 +173,7 @@ func (x *Jobs) SaveJob(j Job) (_ Job, err error) {
 
 // DeleteJob forgets a job. Its runs are sessions of their own, and stay.
 func (x *Jobs) DeleteJob(name string) (err error) {
+	defer x.env.Recover("DeleteJob", &err)
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	name = hostcore.Sanitise(name)
@@ -194,6 +194,7 @@ func promptTitle(prompt string) string {
 
 // RunJob starts a run of a job: a session of kind job on its pins.
 func (x *Jobs) RunJob(ctx context.Context, name string) (_ core.SessionID, err error) {
+	defer x.env.Recover("RunJob", &err)
 	x.mu.Lock()
 	j, ok := x.loadJob(hostcore.Sanitise(name))
 	x.mu.Unlock()
@@ -223,6 +224,7 @@ func (x *Jobs) runJob(ctx context.Context, j Job) (core.SessionID, error) {
 // RunDue starts every scheduled job due since its last occurrence (or since it was saved), once however many it
 // missed while the host was off, skipping one whose last run is still going.
 func (x *Jobs) RunDue(ctx context.Context) {
+	defer x.env.Recover("RunDue", nil)
 	x.mu.Lock()
 	now := x.env.Now()
 	var due []Job
@@ -264,6 +266,7 @@ func (x *Jobs) running(job string) bool {
 
 // RunSchedules runs the jobs' schedules every interval until ctx ends: while the host is awake.
 func (x *Jobs) RunSchedules(ctx context.Context, every time.Duration) {
+	defer x.env.Recover("RunSchedules", nil)
 	t := time.NewTicker(every)
 	defer t.Stop()
 	for {

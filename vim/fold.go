@@ -346,10 +346,6 @@ func (e *Engine) moveFold(updown, forward bool, count int) (int, bool) {
 					if i+1 < len(fs) && fs[i+1].top > cur {
 						found = fs[i+1].top
 					}
-				} else if !ok {
-					if i > 0 && fs[i-1].end < cur {
-						found = fs[i-1].end
-					}
 				} else if i > 0 && fs[i-1].end < cur {
 					found = fs[i-1].end
 				}

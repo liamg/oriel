@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/catalog"
@@ -38,7 +41,7 @@ type Catalog struct {
 	Bundled                                []plugin.Bundled // shipped in the binary
 	Self                                   []string         // the command that runs oriel itself, for bundled plugins' processes; this executable if nil
 	h                                      plugin.Host
-	work                                   kit.Work // every goroutine it starts, stopped with it
+	work                                   work.Work // every goroutine it starts, stopped with it
 
 	mu       sync.Mutex
 	syncing  bool
@@ -137,7 +140,7 @@ func (x *Catalog) newResolver() catalog.Resolver {
 	u, _, _ := o.Get("registry.updates", registry.At{})
 	hold, _, _ := o.Get("registry.trusted_hold", registry.At{})
 	r := &catalog.RegistryResolver{Client: c, GitHub: x.github(), Updates: u.(string), Hold: hold.(time.Duration),
-		Platform: runtime.GOOS + "/" + runtime.GOARCH, Now: x.h.UI().Now}
+		Platform: runtime.GOOS + "/" + runtime.GOARCH, Clock: x.h.UI().Clock()}
 	for id := range updates {
 		r.Update(id)
 	}
@@ -179,12 +182,12 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.InboxSource{Name: "plugins", Cards: x.cards, Source: "builtin:catalog"}))
 	x.pageCommands(h)
 	cancel := h.Options().Watch(PluginsOption, x.kick)
-	x.Add(kit.OnDispose(cancel))
+	x.Add(cancel)
 	for _, o := range []string{"registry.sources", "registry.keys"} {
-		x.Add(kit.OnDispose(h.Options().Watch(o, func() { x.work.Go(x.refresh) })))
+		x.Add(h.Options().Watch(o, func() { x.work.Go(x.refresh) }))
 	}
 	for _, o := range []string{"registry.updates", "registry.trusted_hold"} {
-		x.Add(kit.OnDispose(h.Options().Watch(o, x.kick)))
+		x.Add(h.Options().Watch(o, x.kick))
 	}
 	x.work.Loop(func(ctx context.Context) {
 		t := kit.NewTicker(kit.PollsOf(x.h), registryEvery)
@@ -203,7 +206,7 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 			}
 		}
 	})
-	x.Add(kit.OnDispose(func() {
+	x.Add(registry.DisposeFunc(func() {
 		x.mu.Lock()
 		loaded := x.loaded
 		x.loaded = map[string]*loadedPlugin{}
@@ -216,7 +219,7 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 	x.readBundled()
 	listed := func(id string) bool { return x.listed()[id] }
 	x.syncBundled(listed)
-	x.Add(kit.OnDispose(h.Options().Watch(BundledDisabledOption, func() { x.syncBundled(listed) })))
+	x.Add(h.Options().Watch(BundledDisabledOption, func() { x.syncBundled(listed) }))
 	// A project's own plugins run while the window is on it: they start and stop as it comes and goes.
 	x.Add(kit.OnDirChanged(h, "the project's own plugins", func(kit.DirChanged) {
 		x.syncBundled(listed)
@@ -333,7 +336,6 @@ func (x *Catalog) kick() {
 				}
 			}
 			var sts []catalog.Status
-			var removed []string
 			for i, f := range files {
 				others := files[:i:i]
 				others = append(others, files[i+1:]...)
@@ -346,13 +348,12 @@ func (x *Catalog) kick() {
 					return false
 				}
 				ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-				s, r, err := f.m.Sync(ctx, f.entries, keep)
+				s, _, err := f.m.Sync(ctx, f.entries, keep) // apply stops what's no longer listed
 				cancel()
 				if err != nil {
 					x.h.Notify(core.Notice{ID: "plugins.sync", Severity: core.SevError, Title: "Plugins", Text: err.Error()})
 				}
 				sts = append(sts, s...)
-				removed = append(removed, r...)
 			}
 			x.mu.Lock()
 			idle := len(sts) == 0 && !x.busy
@@ -530,7 +531,7 @@ func (x *Catalog) cards() []uireg.InboxCard {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	var out []uireg.InboxCard
-	for _, id := range sortedKeys(x.waiting) {
+	for _, id := range slices.Sorted(maps.Keys(x.waiting)) {
 		st := x.waiting[id]
 		detail := "It asks for more than oriel-lock.toml covers, so it isn't loaded until you accept."
 		if st.From != nil {
@@ -547,7 +548,7 @@ func (x *Catalog) cards() []uireg.InboxCard {
 				{Label: "Uninstall", Key: "u", Command: "plugins.uninstall", Args: registry.Args{"id": id, "scope": scopeOf(st.Entry)}},
 			}})
 	}
-	for _, id := range sortedKeys(x.revoked) {
+	for _, id := range slices.Sorted(maps.Keys(x.revoked)) {
 		st := x.revoked[id]
 		out = append(out, uireg.InboxCard{ID: "revoked:" + id, Type: "plugin-revoked", Icon: "✕", Tone: "error", Interrupt: true,
 			Kicker: "PLUGIN · REVOKED", Title: id + " " + st.Locked.Version + " is disabled", Sub: "plugins · " + strings.TrimPrefix(st.Locked.Source, "registry:"),
@@ -557,7 +558,7 @@ func (x *Catalog) cards() []uireg.InboxCard {
 				{Label: "Uninstall", Key: "x", Command: "plugins.uninstall", Args: registry.Args{"id": id, "scope": scopeOf(st.Entry)}},
 			}})
 	}
-	for _, id := range sortedKeys(x.offers) {
+	for _, id := range slices.Sorted(maps.Keys(x.offers)) {
 		st := x.offers[id]
 		out = append(out, uireg.InboxCard{ID: "update:" + id, Type: "plugin-update", Icon: "↑", Tone: "accent",
 			Kicker: "PLUGIN · UPDATE", Title: id + " " + st.Update, Sub: "plugins · " + st.Locked.Version + " → " + st.Update,
@@ -625,15 +626,6 @@ func (x *Catalog) Statuses() []catalog.Status {
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return slices.Clone(x.statuses)
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	ks := make([]string, 0, len(m))
-	for k := range m {
-		ks = append(ks, k)
-	}
-	slices.Sort(ks)
-	return ks
 }
 
 // Sync syncs again; the channel closes once it has, with what it found applied.

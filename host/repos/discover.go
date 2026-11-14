@@ -18,6 +18,7 @@ const scanCap = 200
 // ScanRepos registers the siblings of the known repos: for each folder one sits in, the git repos directly in it
 // that are their own main clone. A folder read before is skipped unless all is set; removed repos stay removed.
 func (x *Registry) ScanRepos(ctx context.Context, all bool) (added []core.Repo, err error) {
+	defer x.env.Recover("ScanRepos", &err)
 	home, _ := os.UserHomeDir()
 	var parents []string
 	for _, r := range x.list.all() {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/price"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
@@ -118,8 +119,31 @@ func (s *Stats) pricedBy() stats.Prices {
 
 // Store is the stats' store of scanned logs.
 func (s *Stats) Store() *stats.Store {
-	s.once.Do(func() { s.data = stats.NewStore(filepath.Join(s.env.Home, "stats.json"), s.prices) })
+	s.once.Do(func() {
+		s.data = stats.NewStore(filepath.Join(s.env.Home, "stats.json"), s.prices, s.format)
+		s.data.Log = s.env.Log
+	})
 	return s.data
+}
+
+// format is how a log in the format named is read: the record's, or a provider's own.
+func (s *Stats) format(name string) (usage.Format, bool) {
+	if name == usage.Events.Name {
+		return usage.Events, true
+	}
+	if s.providers == nil {
+		return usage.Format{}, false
+	}
+	for _, p := range s.providers.List() {
+		if u, ok := p.(agent.UsageLogs); ok {
+			for _, f := range u.UsageFormats() {
+				if f.Name == name {
+					return f, true
+				}
+			}
+		}
+	}
+	return usage.Format{}, false
 }
 
 // eventsLog is where the host records a session's agent events, for a provider with no log of its own.
@@ -141,7 +165,7 @@ func (s *Stats) logsOf(se core.SessionState) []stats.Log {
 			return out
 		}
 	}
-	return []stats.Log{{Path: s.eventsLog(se.ID), Format: stats.FormatEvents}}
+	return []stats.Log{{Path: s.eventsLog(se.ID), Format: usage.Events.Name}}
 }
 
 // Sessions are the host's sessions as the stats see them, their logs read up to now, then the providers' logs no
@@ -296,7 +320,7 @@ func (s *Stats) Session(r StatsSessionReq) (stats.Detail, error) {
 }
 
 // Record adds an agent event to the session's record, for a provider that keeps no log of its own.
-func (s *Stats) Record(se core.SessionState, ev stats.Event) {
+func (s *Stats) Record(se core.SessionState, ev usage.Event) {
 	if p, ok := s.providers.Get(se.Agent.Provider); !ok {
 		return
 	} else if _, logged := p.(agent.Logged); logged {
@@ -309,13 +333,17 @@ func (s *Stats) Record(se core.SessionState, ev stats.Event) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	path := s.eventsLog(se.ID)
-	if os.MkdirAll(filepath.Dir(path), 0o755) != nil {
-		return
+	err = os.MkdirAll(filepath.Dir(path), 0o755)
+	if err == nil {
+		var f *os.File
+		if f, err = os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644); err == nil {
+			_, err = f.Write(append(b, '\n'))
+			if cerr := f.Close(); err == nil {
+				err = cerr
+			}
+		}
 	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
-		return
+		s.env.Log.Warn("agent event not recorded", "session", se.ID, "path", path, "err", err)
 	}
-	defer f.Close()
-	_, _ = f.Write(append(b, '\n'))
 }

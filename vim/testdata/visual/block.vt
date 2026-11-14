@@ -427,3 +427,98 @@ expect:
   abcd
   e|fgh
 marks:  <=1:3 >=2:1
+
+=== block d over lines shifts the numbered registers, even into a named one
+ref:    change.txt *quote2*
+quote:  "Numbered register 1 contains the text deleted by the most recent delete or change command (even when the command specified another register), unless the text is less than one line (the small delete register is used then)."
+given:
+  zero
+  a|bcd
+  efgh
+  ijkl
+keys:   kdd<C-v>jl"ad
+expect:
+  a|d
+  eh
+  ijkl
+regs:   "a = "bc\nfg"   "1 = "bc\nfg"   "2 = "zero\n"   "- = (unset)
+
+=== block d within a line goes to the small delete register
+ref:    change.txt *quote2*
+quote:  "unless the text is less than one line (the small delete register is used then)."
+given:
+  zero
+  a|bcd
+  efgh
+keys:   kddl<C-v>ld
+expect:
+  a|b
+  efgh
+regs:   "" = "cd"   "- = "cd"   "1 = "zero\n"   "2 = (unset)
+
+=== block d within a line into a named register leaves the small delete register
+ref:    change.txt *quote2*
+quote:  "unless the text is less than one line (the small delete register is used then)."
+given:
+  zero
+  a|bcd
+  efgh
+keys:   kddl<C-v>l"bd
+expect:
+  a|b
+  efgh
+regs:   "b = "cd"   "- = (unset)   "1 = "zero\n"   "2 = (unset)
+
+=== block c over lines shifts the numbered registers
+ref:    change.txt *quote2*
+quote:  "Numbered register 1 contains the text deleted by the most recent delete or change command (even when the command specified another register), unless the text is less than one line (the small delete register is used then)."
+given:
+  zero
+  a|bcd
+  efgh
+  ijkl
+keys:   kdd<C-v>jlcX<Esc>
+expect:
+  a|Xd
+  eXh
+  ijkl
+regs:   "" = "bc\nfg"   "1 = "bc\nfg"   "2 = "zero\n"
+
+=== block c within a line goes to the small delete register
+ref:    change.txt *quote2*
+quote:  "unless the text is less than one line (the small delete register is used then)."
+given:
+  zero
+  a|bcd
+  efgh
+keys:   kddl<C-v>lcX<Esc>
+expect:
+  ab|X
+  efgh
+regs:   "" = "cd"   "- = "cd"   "1 = "zero\n"   "2 = (unset)
+
+=== block p over lines shifts the numbered registers with the text it replaced
+ref:    change.txt *quote2*
+quote:  "With each successive deletion or change, Vim shifts the previous contents of register 1 into register 2, 2 into 3, and so forth, losing the previous contents of register 9."
+given:
+  zero
+  a|bcd
+  efgh
+keys:   kddyl<C-v>jlp
+expect:
+  a|bd
+  ebh
+regs:   "" = "bc\nfg"   "0 = "b"   "1 = "bc\nfg"   "2 = "zero\n"
+
+=== block p within a line puts the text it replaced in the small delete register
+ref:    change.txt *quote2*
+quote:  "unless the text is less than one line (the small delete register is used then)."
+given:
+  zero
+  a|bcd
+  efgh
+keys:   kddyl<C-v>lp
+expect:
+  a|bd
+  efgh
+regs:   "" = "bc"   "- = "bc"   "0 = "b"   "1 = "zero\n"

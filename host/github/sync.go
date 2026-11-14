@@ -16,6 +16,7 @@ import (
 
 // SyncGitHub mirrors the review of each of a session's projects' PRs into its threads.
 func (x *GitHub) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error) {
+	defer x.env.Recover("SyncGitHub", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return Mirror{}, err

@@ -45,7 +45,7 @@ func BenchmarkAnimatingFrame(b *testing.B) {
 		if i%20 == 0 {
 			kick()
 		}
-		h.now = h.now.Add(time.Second / 120)
+		h.clock.Advance(time.Second / 120)
 		h.frame()
 	}
 }

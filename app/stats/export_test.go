@@ -1,13 +1,11 @@
 package stats
 
 import (
-	"maps"
-	"slices"
-	"time"
-
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/watch"
 )
 
 // What the package's outside tests read of a plugin.
@@ -27,25 +25,9 @@ func (x *Plugin) UsageAccount() (core.ProviderUsage, bool) { return x.usageAccou
 func (x *Plugin) FrontUsage() (core.ProviderUsage, bool)   { return x.frontUsage() }
 func (m *Machine) LoadOf() []float64                       { return m.loadOf() }
 
-// ForgetReports drops every report read, so the next frame asks again.
-func (x *Plugin) ForgetReports() {
-	x.mu.Lock()
-	keys := slices.Collect(maps.Keys(x.reports))
-	clear(x.reports)
-	for _, k := range keys {
-		x.forced[k] = true
-	}
-	x.mu.Unlock()
-	for _, k := range keys {
-		x.subs.Refresh(k)
-	}
-}
-
-// FailDetail makes a session's stats a read that failed with err at at.
-func (x *Plugin) FailDetail(id core.SessionID, err error, at time.Time) {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	x.details[x.detailKey(id)] = fetched[stats.Detail]{at: at, err: err}
+// RefreshReports reads every report again.
+func (x *Plugin) RefreshReports() {
+	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) { sub.Refresh() })
 }
 
 var Hours = hours

@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // The files of a release besides its artifacts.
@@ -228,10 +230,7 @@ func (c Cache) Open(ctx context.Context, m Manifest, a Artifact) (io.ReadCloser,
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(path+".tmp", body, 0o644); err != nil {
-		return nil, err
-	}
-	if err := os.Rename(path+".tmp", path); err != nil {
+	if err := atomicfile.Write(path, body, 0o644); err != nil {
 		return nil, err
 	}
 	return os.Open(path)

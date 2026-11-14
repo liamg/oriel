@@ -31,7 +31,7 @@ func (x *Ship) mergeDefault(_ registry.Ctx, se core.SessionState, p string, a re
 		return nil
 	}
 	x.h.Dismiss("ship.merge-default")
-	return x.step(se.ID, p, mergeStep, func(ctx context.Context, c host.Access) error {
+	return x.step(se.ID, p, mergeStep, func(ctx context.Context, c host.ShipCalls) error {
 		m, err := c.ShipMergeDefault(ctx, host.ShipRef{Session: se.ID, Project: p})
 		if err != nil {
 			return err
@@ -70,7 +70,7 @@ func (x *Ship) nextPR(se core.SessionState, p string, done *registry.PR) error {
 		req.Head = done.Head
 	}
 	x.h.Dismiss(nextPRAsk(p))
-	return x.step(se.ID, p, nextPRStep, func(ctx context.Context, c host.Access) error {
+	return x.step(se.ID, p, nextPRStep, func(ctx context.Context, c host.ShipCalls) error {
 		return c.NextPR(ctx, req)
 	}, func() { delete(x.prs, formKey(se.ID, p)) })
 }

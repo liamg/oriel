@@ -46,7 +46,7 @@ func TestKeysReadAsAKeyboardShowsThem(t *testing.T) {
 		t.Errorf("the help page's footer doesn't say ⌃O back · ⌃I forward:\n%s", s.FullText())
 	}
 	s.Golden("help-keys")
-	help(s).Close()
+	s.Press("<Esc>")
 
 	s.Run("picker.open", registry.Args{"source": "keymaps", "query": "New Session"})
 	s.Frame()

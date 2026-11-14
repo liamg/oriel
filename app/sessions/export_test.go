@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/host/stats"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -16,7 +17,7 @@ func (x *Jobs) Busy() bool      { return x.busy() }
 func (x *Jobs) Submit(run bool) { x.submit(run) }
 
 // SetClock has the page read the time from now, in loc.
-func (x *Jobs) SetClock(now func() time.Time, loc *time.Location) { x.now, x.loc = now, loc }
+func (x *Jobs) SetClock(c clock.Clock, loc *time.Location) { x.clock, x.loc = c, loc }
 
 // Form is the New job dialog's job, while it's open.
 func (x *Jobs) Form() (prompt, agent string, open bool) {

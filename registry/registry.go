@@ -36,6 +36,8 @@ type Registry interface {
 	// Holder is what provides the placeholder standing for a contribution of kind and name, if one does: what opens
 	// a view calls it before it finds the view.
 	Holder(kind, name string) (provide func() error, ok bool)
+	// Clock is what the window's work is timed by: a debounce, a hook's budget. A test's moves only when it says.
+	Clock() clock.Clock
 }
 
 // Commands are what runs by id.
@@ -134,8 +136,8 @@ type Faults interface {
 	// TurnOff turns a contribution off with the error that caused it; TurnOn turns it back on.
 	TurnOff(kind, id string, err error)
 	TurnOn(kind, id string)
-	IsOff(kind, id string) error // why it's turned off; nil while it's on
-	TurnedOff() []Off            // sorted by kind, then id
+	WhyOff(kind, id string) error // why the contribution is turned off; nil while it's on
+	TurnedOff() []Off             // sorted by kind, then id
 }
 
 type Disposable interface{ Dispose() }
@@ -156,6 +158,41 @@ func (a Args) Int(k string) int {
 		return int(n)
 	}
 	return 0
+}
+
+// Float is the numeric argument k as a float: a float64 from Lua or JSON, an int from Go; 0 if it's neither.
+func (a Args) Float(k string) float64 {
+	switch n := a[k].(type) {
+	case float64:
+		return n
+	case int:
+		return float64(n)
+	}
+	return 0
+}
+
+// Maps is the list argument k of tables: a []map[string]any or []Args from Go, a list of tables from Lua or JSON;
+// what isn't a table is left out.
+func (a Args) Maps(k string) []Args {
+	var out []Args
+	switch v := a[k].(type) {
+	case []Args:
+		out = append(out, v...)
+	case []map[string]any:
+		for _, m := range v {
+			out = append(out, Args(m))
+		}
+	case []any:
+		for _, x := range v {
+			switch m := x.(type) {
+			case map[string]any:
+				out = append(out, Args(m))
+			case Args:
+				out = append(out, m)
+			}
+		}
+	}
+	return out
 }
 
 // Bool is the boolean argument k.
@@ -239,14 +276,13 @@ func (s stacks[K, T]) remove(k K, tok int64) {
 	}
 }
 
+// DisposeFunc is fn as a Disposable: what undoes a registration, a subscription's cancel. It runs fn once, however
+// often it's disposed.
+func DisposeFunc(fn func()) Disposable { return disposeFunc(sync.OnceFunc(fn)) }
+
 type disposeFunc func()
 
 func (f disposeFunc) Dispose() { f() }
-
-func disposeOnce(fn func()) Disposable {
-	var once sync.Once
-	return disposeFunc(func() { once.Do(fn) })
-}
 
 const sep = "\x00"
 
@@ -291,6 +327,8 @@ type Config struct {
 
 func New() Registry { return NewWith(Config{}) }
 
+func (r *reg) Clock() clock.Clock { return r.clock }
+
 // NewWith is New, with o.
 func NewWith(o Config) Registry {
 	r := &reg{
@@ -328,7 +366,7 @@ func (r *reg) Command(c Command) Disposable {
 	defer r.mu.Unlock()
 	tok := r.commands.push(c.ID, c, r.tokens.Add(1))
 	r.cmdList = nil
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.commands.remove(c.ID, tok)
@@ -348,7 +386,7 @@ func (r *reg) Keymap(k Keymap) Disposable {
 	}
 	tok := r.keymaps.push(key, k, r.tokens.Add(1))
 	r.sorted = nil
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.keymaps.remove(key, tok)
@@ -380,7 +418,7 @@ func (r *reg) Input(e input.Engine) Disposable {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	tok := r.inputs.push(e.ID(), e, r.tokens.Add(1))
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.inputs.remove(e.ID(), tok)
@@ -410,7 +448,7 @@ func (r *reg) Theme(s theme.Source) Disposable {
 	tok := r.tokens.Add(1)
 	r.themes = append(r.themes, entry[theme.Source]{tok, s})
 	r.themeGen++
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.themes = slices.DeleteFunc(r.themes, func(e entry[theme.Source]) bool { return e.token == tok })
@@ -451,7 +489,7 @@ func (r *reg) run(ctx Ctx, id string, args Args) error {
 	if c.Run == nil {
 		return fmt.Errorf("command %q has no Run", id)
 	}
-	if err := r.faults.isOff(KindCommand, id); err != nil {
+	if err := r.faults.whyOff(KindCommand, id); err != nil {
 		return fmt.Errorf("command %q is turned off: %w", id, err)
 	}
 	err := Call(func() error { return c.Run(ctx, args) })
@@ -468,7 +506,7 @@ func (r *reg) Available(id string, args Args) bool {
 	if !ok && r.commandHolder(id) != nil {
 		return true
 	}
-	if !ok || c.Run == nil || r.faults.isOff(KindCommand, id) != nil {
+	if !ok || c.Run == nil || r.faults.whyOff(KindCommand, id) != nil {
 		return false
 	}
 	if c.When != "" && !FrontCan(r, c.When) {
@@ -536,8 +574,7 @@ func (r *reg) sortKeymaps() {
 
 func (r *reg) Lookup(modes []string, keys []string) (*Keymap, bool) {
 	exclusive := map[string]func(Keymap) bool{}
-	for _, c := range r.Contributions("keys.exclusive") {
-		e := c.(ExclusiveKeys)
+	for _, e := range ContributionsOf[ExclusiveKeys](r) {
 		active := true
 		if e.Active != nil {
 			Call(func() error { active = e.Active(); return nil })

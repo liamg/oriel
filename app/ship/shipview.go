@@ -2,13 +2,13 @@ package ship
 
 import (
 	"cmp"
-	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/liamg/oriel/app/kit/prui"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -23,15 +23,15 @@ import (
 )
 
 var (
-	tShipCard     = kit.TPRCard
+	tShipCard     = prui.TPRCard
 	tShipCardOpen = theme.DeclareOn("ship.card.open.border", "alpha(amber, 55%)", "bg.base")
-	tShipCardBg   = kit.TPRCardBg
+	tShipCardBg   = prui.TPRCardBg
 	tShipDone     = theme.Declare("ship.step.done", "ok")
-	tShipTodo     = kit.TPRTodo
+	tShipTodo     = prui.TPRTodo
 	tShipRail     = theme.Declare("ship.rail", "line.strong")
 	tShipHash     = theme.Declare("ship.commit.hash", "brand")
-	tShipLink     = kit.TPRLink
-	tShipCI       = kit.TPRRunning
+	tShipLink     = prui.TPRLink
+	tShipCI       = prui.TPRRunning
 )
 
 func (x *Ship) views() {
@@ -48,13 +48,7 @@ func (x *Ship) views() {
 }
 
 func (x *Ship) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil {
-		if errors.Is(err, kit.ErrStopped) {
-			return
-		}
-		x.h.Log().Error("ship", "command", id, "err", err)
-		x.h.Notify(core.Notice{ID: "ship.error", Severity: core.SevError, Key: true, Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "ship", id, a)
 }
 
 // here is the session in front and a docked view's project ("" is the open one's).
@@ -280,7 +274,7 @@ func (x *Ship) stepRow(c *ui.Ctx, key string, n, cur int, done bool, card func(c
 	})
 }
 
-// card is a step's box: its header line, and a body when it's open.
+// shipCard is a step's box: its header line, and a body when it's open.
 func shipCard(c *ui.Ctx, open bool, head func(c *ui.Ctx), body func(c *ui.Ctx)) {
 	th := c.Theme()
 	edge := th.C(tShipCard)
@@ -429,7 +423,7 @@ func (x *Ship) behind(c *ui.Ctx, se core.SessionState, s shipRead) {
 				kit.MonoFont(10.5, th.C(theme.Warn)))
 			if t, ok := conflictTrouble(s); ok {
 				c.Row("twins", ui.Style{Gap: 8}, func(c *ui.Ctx) {
-					kit.AskTwinsLabelled(c, x.h, "ship.conflict."+s.Project, t, "git/ship#sync", "Explain with agent", "Fix conflicts with agent")
+					kit.AskTwins(c, x.h, "ship.conflict."+s.Project, t, kit.AskTwinsOpts{Help: "git/ship#sync", Explain: "Explain with agent", Fix: "Fix conflicts with agent"})
 				})
 				kit.ExplainKept(c, x.h, "ship.conflict."+s.Project, "git/ship#sync")
 			}
@@ -607,7 +601,7 @@ func (x *Ship) previous(c *ui.Ctx, se core.SessionState, project string) {
 	for i, pr := range past {
 		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			state := cmp.Or(pr.State, "merged here")
-			widget.Chip(c, "state", state, kit.PRStateTone(c, state), "git/ship#next")
+			widget.Chip(c, "state", state, prui.PRStateTone(c, state), "git/ship#next")
 			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 				label := pr.Branch
 				if pr.Number > 0 {

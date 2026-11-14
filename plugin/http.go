@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/registry"
 )
 
 // Network is what the http.request host method sends through: the client (egress filtered, in a session's
@@ -90,9 +92,17 @@ func requestURL(n Network, r HTTPRequest) (*url.URL, error) {
 	return u, nil
 }
 
-func unset(name string) error {
-	return fmt.Errorf("the secret %s isn't set: run :Secret %s to set it", name, name)
+func unset(name string) error { return SecretUnset{Name: name} }
+
+// SecretUnset is a request that names a secret that isn't set; a plugin's process gets it as
+// registry.CodeSecretUnset.
+type SecretUnset struct{ Name string }
+
+func (e SecretUnset) Error() string {
+	return fmt.Sprintf("the secret %s isn't set: run :Secret %s to set it", e.Name, e.Name)
 }
+
+func (SecretUnset) RPCCode() int { return registry.CodeSecretUnset }
 
 // Fetch makes r's request for p once the guard allows each secret it names to go to the request's host. A
 // request carrying a secret goes over https only and doesn't follow redirects, and each redirect meets the net grant; no error or answer carries the

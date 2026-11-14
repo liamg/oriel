@@ -22,7 +22,7 @@ func motionHarness(t *testing.T, reduced bool, build func(c *ui.Ctx)) *harness {
 
 func (h *harness) advance(d time.Duration) {
 	for el := time.Duration(0); el < d; el += time.Second / 120 {
-		h.now = h.now.Add(time.Second / 120)
+		h.clock.Advance(time.Second / 120)
 		h.frame()
 	}
 }
@@ -97,7 +97,7 @@ func TestWidgetMotion(t *testing.T) {
 			if !reduced && start == settled {
 				t.Errorf("%s doesn't move", name)
 			}
-			if !h.u.NextFrame().IsZero() && h.u.NextFrame().Equal(h.now) {
+			if !h.u.NextFrame().IsZero() && h.u.NextFrame().Equal(h.clock.Now()) {
 				t.Errorf("%s is still moving after 310 ms", name)
 			}
 		}
@@ -131,7 +131,7 @@ func menuScene(s *motionState) func(c *ui.Ctx) {
 
 func modalScene(s *motionState) func(c *ui.Ctx) {
 	return func(c *ui.Ctx) {
-		Modal(c, "modal", &s.modal, "Crash report", ModalOpts{Width: 300}, func(c *ui.Ctx) {
+		Modal(c, "modal", &s.modal, ModalOpts{Title: "Crash report", Width: 300}, func(c *ui.Ctx) {
 			c.Text("t", "Oriel stopped.", ui.TextStyle{})
 		})
 	}

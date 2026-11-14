@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/liamg/oriel/agent/codex"
 )
 
 // rollout is a line of a Codex rollout: {timestamp, type, payload}.
@@ -48,7 +50,7 @@ func codexLog(t *testing.T) string {
 // ref:   cost-dev/models.json
 // quote: pb_openai_gpt-5_direct_realtime_global_usd_20260814","verified_at":"2026-08-14T12:42:53Z","source_id":"source:openai-pricing"},"prices":{"cached_input_tokens_per_1000000":"0.125","input_tokens_per_1000000":"1.25","output_tokens_per_1000000":"10"}
 func TestCodexRollout(t *testing.T) {
-	s := New(codexLog(t), FormatCodex)
+	s := New(codexLog(t), codex.UsageLog)
 	s.Read()
 	if s.Requests != 2 || s.Turns != 1 || s.ToolCalls != 1 || s.Cwd != "/w/api" || s.Title != "fix the flaky test" {
 		t.Errorf("scan = %d requests, %d turns, %d tool calls, cwd %q, title %q", s.Requests, s.Turns, s.ToolCalls, s.Cwd, s.Title)
@@ -77,7 +79,7 @@ func TestCodexRolloutResumes(t *testing.T) {
 		rollout("2026-10-01T09:00:01.000Z", "turn_context", `{"cwd":"/w/api","model":"gpt-5-codex","effort":"low"}`),
 		tokenCount("2026-10-01T09:00:05.000Z", 1000, 0, 100),
 	)
-	s := New(p, FormatCodex)
+	s := New(p, codex.UsageLog)
 	s.Read()
 	appendTo(t, p, tokenCount("2026-10-01T09:00:09.000Z", 3000, 1000, 300))
 	s.Read()
@@ -150,7 +152,7 @@ func TestCodexPatchTouchesFiles(t *testing.T) {
 		rollout("2026-10-01T09:00:01.000Z", "turn_context", `{"cwd":"/w/api","model":"gpt-5-codex","effort":"high"}`),
 		rollout("2026-10-01T09:00:05.000Z", "response_item", `{"type":"custom_tool_call","name":"apply_patch","input":`+string(in)+`,"call_id":"c1"}`),
 		rollout("2026-10-01T09:00:06.000Z", "response_item", `{"type":"function_call","name":"apply_patch","arguments":`+string(argsIn)+`,"call_id":"c2"}`),
-	), FormatCodex)
+	), codex.UsageLog)
 	s.Read()
 	if s.Paths["/w/api/web/a.go"] != 2 || s.Paths["/w/api/b.go"] != 2 || len(s.Paths) != 2 {
 		t.Errorf("paths = %v", s.Paths)

@@ -221,7 +221,7 @@ func TestLuaPresenterMapsRowsToLines(t *testing.T) {
 func TestPresentationComesBackAfterARestart(t *testing.T) {
 	state, dir := t.TempDir(), t.TempDir()
 	os.WriteFile(filepath.Join(dir, "notes.md"), []byte(notesMD()), 0o644)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: dir})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	r.Run("editor.open", registry.Args{"path": filepath.Join(dir, "notes.md")})
 	r.Run("editor.present", registry.Args{"name": "markdown"})
 	r.WaitFrame("the preview", func(s string) bool {
@@ -229,7 +229,7 @@ func TestPresentationComesBackAfterARestart(t *testing.T) {
 	})
 	r.Stop()
 
-	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: dir})
+	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	r2.WaitFrame("the preview back", func(s string) bool {
 		return apptest.HasAll(s, "Intro paragraph.", "Edit") && !strings.Contains(s, "Preview")
 	})

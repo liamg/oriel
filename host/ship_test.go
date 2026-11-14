@@ -265,10 +265,13 @@ func TestGitHubIsAskedThroughTheHostsHTTP(t *testing.T) {
 	var asked []string
 	r.w.opts.HTTP = &http.Client{Transport: roundTrip(func(req *http.Request) (*http.Response, error) {
 		asked = append(asked, req.URL.Host)
-		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{"data":{"search":{"nodes":[]}}}`)),
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[]`)),
 			Header: http.Header{"Content-Type": {"application/json"}}, Request: req}, nil
 	})}
-	if _, err := r.w.SearchPRs(context.Background(), PRsReq{Query: "is:open"}); err != nil {
+	blog, _ := githubRepo(t, "blog", map[string]string{"post.md": "# One\n"})
+	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: blog.Dir})
+	p, _ := r.session(id).Primary()
+	if _, err := r.w.GitHubPRFor(context.Background(), GitHubReq{Session: id, Project: p.Name, Branch: "main"}); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(asked, []string{"api.github.com"}) {

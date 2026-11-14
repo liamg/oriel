@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/syntax"
@@ -41,10 +42,10 @@ type Reads struct {
 
 // ReadsOpts are how a window's reads are made.
 type ReadsOpts struct {
-	Client *http.Client     // what remote pictures are fetched with; public addresses only if nil
-	Wake   func()           // asks for a frame as a read lands
-	Frame  func() int       // the frame being built; reads not asked for since are cancelled. None if nil
-	Now    func() time.Time // the window's clock; time.Now if nil
+	Client *http.Client // what remote pictures are fetched with; public addresses only if nil
+	Wake   func()       // asks for a frame as a read lands
+	Frame  func() int   // the frame being built; reads not asked for since are cancelled. None if nil
+	Clock  clock.Clock  // the window's clock; the system's if nil
 	Watch  func() (*fswatch.Watcher, error)
 }
 
@@ -57,17 +58,17 @@ func NewReads(o ReadsOpts) *Reads {
 	}
 	q := &landing{wake: o.Wake}
 	r := &Reads{q: q, frame: o.Frame, asked: -1}
-	r.Files = plugin.NewFiles(q, plugin.CacheOpts[string, plugin.File]{Frame: o.Frame, Now: o.Now, Watch: o.Watch})
-	r.Dirs = plugin.NewDirs(q, plugin.CacheOpts[string, []fs.DirEntry]{Frame: o.Frame, Now: o.Now, Watch: o.Watch})
+	r.Files = plugin.NewFiles(q, plugin.CacheOpts[string, plugin.File]{Frame: o.Frame, Clock: o.Clock, Watch: o.Watch})
+	r.Dirs = plugin.NewDirs(q, plugin.CacheOpts[string, []fs.DirEntry]{Frame: o.Frame, Clock: o.Clock, Watch: o.Watch})
 	r.Stats = plugin.NewCache(q, func(_ context.Context, p string) (fs.FileInfo, error) { return os.Stat(p) },
-		plugin.CacheOpts[string, fs.FileInfo]{Frame: o.Frame, Now: o.Now, Watch: o.Watch, Path: func(p string) string { return p }})
+		plugin.CacheOpts[string, fs.FileInfo]{Frame: o.Frame, Clock: o.Clock, Watch: o.Watch, Path: func(p string) string { return p }})
 	r.Reals = plugin.NewCache(q, func(_ context.Context, p string) (string, error) { return filepath.EvalSymlinks(p) },
-		plugin.CacheOpts[string, string]{Frame: o.Frame, Now: o.Now, MaxAge: 10 * time.Second})
+		plugin.CacheOpts[string, string]{Frame: o.Frame, Clock: o.Clock, MaxAge: 10 * time.Second})
 	r.Programs = plugin.NewCache(q, func(_ context.Context, name string) (string, error) { return exec.LookPath(name) },
-		plugin.CacheOpts[string, string]{Frame: o.Frame, Now: o.Now, MaxAge: time.Minute})
+		plugin.CacheOpts[string, string]{Frame: o.Frame, Clock: o.Clock, MaxAge: time.Minute})
 	r.Highlights = plugin.NewCache(q, func(_ context.Context, k highlightKey) (*SourceFile, error) {
 		return highlightIn(k.lang, k.path, k.src.b, k.line, k.before, k.after), nil
-	}, plugin.CacheOpts[highlightKey, *SourceFile]{MaxEntries: 64, Frame: o.Frame, Now: o.Now})
+	}, plugin.CacheOpts[highlightKey, *SourceFile]{MaxEntries: 64, Frame: o.Frame, Clock: o.Clock})
 	r.Pictures = newPictures(q, o)
 	r.Pictures.note = r.note
 	return r
@@ -155,9 +156,9 @@ func (r *Reads) highlight(k highlightKey) *SourceFile {
 	return f
 }
 
-// Land takes in the reads that have landed since it last ran. The window calls it as each frame starts, so a read
+// Drain takes in the reads that have landed since it last ran. The window calls it as each frame starts, so a read
 // lands though the view that asked for it has gone.
-func (r *Reads) Land() { r.q.run() }
+func (r *Reads) Drain() { r.q.run() }
 
 func (r *Reads) note(st ui.LoadState) {
 	if st.Phase == ui.Pending {
@@ -226,6 +227,9 @@ func (l *landing) Do(fn func()) {
 }
 
 func (l *landing) Redraw() { l.wake() }
+
+// Begin counts nothing (plugin.Tracker): the window waits for the reads through Reads.Busy, its registry.Busy.
+func (l *landing) Begin(string) (end func()) { return func() {} }
 
 func (l *landing) run() {
 	l.mu.Lock()

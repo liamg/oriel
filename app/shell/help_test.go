@@ -18,12 +18,12 @@ func help(s *apptest.Scene) *shell.Help { return apptest.PluginOf[*shell.Help](s
 func TestHelpLint(t *testing.T) {
 	s := omniScene(t, "pri")
 	s.Lint("omnibox")
-	omni(s).Close()
+	s.Press("<Esc>")
 	s.Run("picker.open", registry.Args{"source": "files", "query": "go"})
 	s.Frame()
 	s.Frame()
 	s.Lint("picker")
-	picker(s).Close()
+	s.Press("<Esc>")
 	for i, sev := range []core.Severity{core.SevError, core.SevWarning, core.SevInfo} {
 		s.Host().Notify(core.Notice{ID: fmt.Sprint("n", i), Severity: sev, Text: "a notice", Time: s.Now,
 			Actions: []core.Action{{Title: "Do it", Command: "Log"}}})
@@ -36,12 +36,15 @@ func TestHelpLint(t *testing.T) {
 	s.Frame()
 	s.Frame()
 	s.Lint("a help page")
-	help(s).Close()
+	s.Press("<Esc>")
+	if help(s).Open() {
+		t.Fatal("Escape didn't close the help page")
+	}
 	s.Run("help.mode", nil)
 	s.Frame()
 	s.Frame()
 	s.Lint("help mode")
-	help(s).EndHelpMode()
+	s.Press("<Esc>")
 	s.Run("theme.edit", nil)
 	s.Frame()
 	s.Frame()
@@ -87,14 +90,14 @@ func TestHelpWays(t *testing.T) {
 	if hv.Page() != "shell/omnibox" {
 		t.Errorf("forward went to %q", hv.Page())
 	}
-	hv.Close()
+	s.Press("<Esc>")
 	s.Frame()
 	// F1 on what has focus: the editor pane.
 	s.Run("help.focused", nil)
 	if hv.Page() != "editor/pane" {
 		t.Errorf("F1 opened %q", hv.Page())
 	}
-	hv.Close()
+	s.Press("<Esc>")
 	// Right-click anything: Help is its menu's last item.
 	s.Frame()
 	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: render.Point{X: 300, Y: 300}})

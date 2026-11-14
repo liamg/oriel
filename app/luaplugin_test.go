@@ -107,8 +107,8 @@ func TestLuaWASM(t *testing.T) {
 	vm := s.PluginVM(plugin.Caller{ID: "acme/w", Dir: dir, Guard: plugin.NewGrants()})
 	if err := luaErr(t, vm, `local m = oriel.wasm.load("m.wasm", { on = { ["fs.read"] = function(p) return "lua read " .. p.path end } })
 sum = m:call("add", 2, 3)
-echoed = m:request("echo", { result = { a = 1 } }).a
-asked = m:request("ask", { path = "/x" })
+echoed = m:call_json("echo", { result = { a = 1 } }).a
+asked = m:call_json("ask", { path = "/x" })
 n = #m:exports()`); err != "" {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ n = #m:exports()`); err != "" {
 		}
 	}
 	vm2 := s.PluginVM(plugin.Caller{ID: "acme/w2", Dir: dir, Guard: plugin.NewGrants()})
-	if err := luaErr(t, vm2, `oriel.wasm.load("m.wasm"):request("ask", { path = "/etc/hostname" })`); !strings.Contains(err, `"fs.read" capability isn't declared`) {
+	if err := luaErr(t, vm2, `oriel.wasm.load("m.wasm"):call_json("ask", { path = "/etc/hostname" })`); !strings.Contains(err, `"fs.read" capability isn't declared`) {
 		t.Errorf("the module's undeclared host call: %s", err)
 	}
 }
@@ -230,14 +230,14 @@ func TestLuaNowAndPlatform(t *testing.T) {
 	}
 }
 
-// oriel.exec with on_done runs in the background: the call returns at once, and on_done gets the output, or why
-// it failed, on the loop.
+// oriel.exec_async runs in the background: the call returns at once, and fn gets the output, or why it failed, on
+// the loop. oriel.exec's on_done, deprecated, is the same.
 func TestLuaExecInBackground(t *testing.T) {
 	if _, err := exec.LookPath("sh"); err != nil {
 		t.Skip(err)
 	}
 	s := apptest.LuaScene(t, "")
-	if got := s.Lua(`L.exec({ "sh", "-c", "sleep 0.1; echo hi" }, { on_done = function(out, err) said, failed = out, err end })`); len(got) != 1 || got[0] != nil {
+	if got := s.Lua(`L.exec_async({ "sh", "-c", "sleep 0.1; echo hi" }, {}, function(out, err) said, failed = out, err end)`); len(got) != 0 {
 		t.Errorf("returned %v, want nothing", got)
 	}
 	if global(lua(s).VM(), "said") != nil {
@@ -247,6 +247,9 @@ func TestLuaExecInBackground(t *testing.T) {
 	if said, failed := global(lua(s).VM(), "said"), global(lua(s).VM(), "failed"); said != "hi\n" || failed != nil {
 		t.Errorf("said %q, failed %v", said, failed)
 	}
+	// opts is optional: fn may come straight after argv.
+	s.Lua(`L.exec_async({ "/no/such/program" }, function(out, err) missing = err end)`)
+	s.Until("the missing program", func() bool { return global(lua(s).VM(), "missing") != nil })
 	s.Lua(`L.exec({ "sh", "-c", "echo nope >&2; exit 3" }, { on_done = function(out, err) failed = err end })`)
 	s.Until("the failure", func() bool { return global(lua(s).VM(), "failed") != nil })
 	if f, _ := global(lua(s).VM(), "failed").(string); !strings.Contains(f, "exit status 3") || !strings.Contains(f, "nope") {
@@ -254,10 +257,35 @@ func TestLuaExecInBackground(t *testing.T) {
 	}
 }
 
+// A plugin's exec is checked against the program it runs: a relative one (./tool) is cwd's, both when its grant is
+// checked and when it runs, so a grant for that file lets it run, and nothing else of the name does.
+func TestLuaExecChecksTheProgramItRuns(t *testing.T) {
+	if _, err := exec.LookPath("sh"); err != nil {
+		t.Skip(err)
+	}
+	dir := t.TempDir()
+	tool := filepath.Join(dir, "tool")
+	os.WriteFile(tool, []byte("#!/bin/sh\necho mine\n"), 0o755)
+	other := t.TempDir()
+	os.WriteFile(filepath.Join(other, "tool"), []byte("#!/bin/sh\necho other\n"), 0o755)
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	g.Grant("acme/x", []plugin.Grant{{Cap: plugin.CapExec, Scope: []string{plugin.RealPath(tool)}}})
+	vm := s.PluginVM(plugin.Caller{ID: "acme/x", Dir: t.TempDir(), Guard: g})
+	if err := luaErr(t, vm, `said = oriel.exec({ "./tool" }, { cwd = "`+dir+`" })`); err != "" {
+		t.Fatalf("the granted program: %s", err)
+	}
+	if got := global(vm, "said"); got != "mine\n" {
+		t.Errorf("it printed %q", got)
+	}
+	if err := luaErr(t, vm, `oriel.exec({ "./tool" }, { cwd = "`+other+`" })`); !strings.Contains(err, "capability isn't declared") {
+		t.Errorf("another directory's tool: %q, want it refused", err)
+	}
+}
+
 // oriel.ui.ring draws widget.Ring: the label in the middle, read out with its name.
 func TestLuaRing(t *testing.T) {
-	s := apptest.LuaScene(t, `oriel.hud.indicator("dial", { slot = "statusline.right" },
-  oriel.ui.ring{ value = 0.3, label = "18m", name = "next meeting in", size = 20, color = "warn" })`)
+	s := apptest.LuaScene(t, `oriel.hud.indicator("dial", oriel.ui.ring{ value = 0.3, label = "18m", name = "next meeting in", size = 20, color = "warn" }, { slot = "statusline.right" })`)
 	s.Frame()
 	s.Frame()
 	s.WantFrame("18m")
@@ -268,8 +296,7 @@ func TestLuaRing(t *testing.T) {
 
 // oriel.ui.spinner draws widget.Spinner, read out as what's in progress.
 func TestLuaSpinner(t *testing.T) {
-	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", { slot = "statusline.right" },
-  oriel.ui.spinner{ name = "syncing the wiki", size = 12, color = "accent" })`)
+	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", oriel.ui.spinner{ name = "syncing the wiki", size = 12, color = "accent" }, { slot = "statusline.right" })`)
 	s.Frame()
 	s.Frame()
 	if n := s.Node("syncing the wiki"); n.Role != "status" {
@@ -279,8 +306,7 @@ func TestLuaSpinner(t *testing.T) {
 
 // oriel.ui.dots draws widget.Dots, read out as what's going on.
 func TestLuaDots(t *testing.T) {
-	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", { slot = "statusline.right" },
-  oriel.ui.dots{ name = "the wiki bot is writing", size = 4, color = "accent" })`)
+	s := apptest.LuaScene(t, `oriel.hud.indicator("busy", oriel.ui.dots{ name = "the wiki bot is writing", size = 4, color = "accent" }, { slot = "statusline.right" })`)
 	s.Frame()
 	s.Frame()
 	if n := s.Node("the wiki bot is writing"); n.Role != "status" {

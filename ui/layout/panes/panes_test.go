@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/raster"
 	"github.com/liamg/oriel/render/snapshot"
@@ -56,7 +57,7 @@ type harness struct {
 	r     *layout.Root
 	panes Panes
 	list  *render.List
-	now   time.Time
+	clock *clocktest.Fake
 	held  bool // the primary button is down, for moves
 }
 
@@ -74,8 +75,8 @@ func newHarness(t *testing.T) *harness {
 	u := ui.New(ts, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}})
 	u.SetTheme(th)
 	u.SetOptions(func() ui.Options { o := u.Options(); o.ReducedMotion = true; return o }())
-	h := &harness{t: t, u: u, r: start(t), now: time.Unix(1000, 0)}
-	u.SetClock(func() time.Time { return h.now })
+	h := &harness{t: t, u: u, r: start(t), clock: clocktest.New(time.Unix(1000, 0))}
+	u.SetClock(h.clock)
 	h.frame()
 	h.frame()
 	return h
@@ -280,7 +281,7 @@ func TestDockMotion(t *testing.T) {
 		var b strings.Builder
 		step := func(name string, d time.Duration) {
 			for el := time.Duration(0); el < d; el += time.Second / 120 {
-				h.now = h.now.Add(time.Second / 120)
+				h.clock.Advance(time.Second / 120)
 				h.frame()
 			}
 			if d == 0 {
@@ -299,7 +300,7 @@ func TestDockMotion(t *testing.T) {
 			name = "testdata/dock-motion-reduced.list"
 		}
 		snapshot.Golden(t, name, []byte(b.String()))
-		if !h.u.NextFrame().IsZero() && h.u.NextFrame().Equal(h.now) {
+		if !h.u.NextFrame().IsZero() && h.u.NextFrame().Equal(h.clock.Now()) {
 			t.Error("the dock is still moving after 310 ms")
 		}
 	}
@@ -393,7 +394,7 @@ func TestTabProjectAndLead(t *testing.T) {
 		t.Error("no lead square on the code tab")
 	}
 	h.ptr(render.PointerMove, at)
-	h.now = h.now.Add(time.Second)
+	h.clock.Advance(time.Second)
 	h.frame()
 	h.frame()
 	tipped := false
@@ -702,7 +703,7 @@ func TestLongTitleIsCut(t *testing.T) {
 		t.Fatal("no tab for the long title")
 	}
 	h.ptr(render.PointerMove, at)
-	h.now = h.now.Add(time.Second)
+	h.clock.Advance(time.Second)
 	h.frame()
 	h.frame()
 	if !slices.ContainsFunc(h.list.Ops, func(op render.Op) bool {

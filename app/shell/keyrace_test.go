@@ -23,7 +23,7 @@ func TestGGGoesToTheTop(t *testing.T) {
 	for i := 1; i <= 50; i++ {
 		fmt.Fprintf(&body, "line %d\n", i)
 	}
-	r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"a.txt": body.String()}, Files: []string{"a.txt"}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"a.txt": body.String()}, Files: []string{"a.txt"}})
 	r.WaitText("line 1")
 	for _, pause := range []time.Duration{0, 80 * time.Millisecond, 450 * time.Millisecond, 1200 * time.Millisecond} {
 		r.TypeKeys("G")

@@ -3,7 +3,6 @@ package shell_test
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/render"
@@ -20,25 +19,26 @@ func TestLogPanelShowsNewRecords(t *testing.T) {
 	s.WantFrame("written while it shows")
 }
 
-// Records written with the log panel closed draw no frame; with it open, they show.
+// Records written with the log panel closed ask for no frame; with it open, they do, and show.
 func TestLogRecordsDrawOnlyWhileThePanelShows(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
-	r.WaitText("ORIEL")
-	log := r.Host.Log()
-	r.Idle()
-	before := len(r.Win.Frames())
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	log := s.Logs.Logger("core")
+	s.Quiet()
+	s.Frame()
 	for i := range 5 {
 		log.Info("written while the panel is closed", "i", i)
-		time.Sleep(20 * time.Millisecond)
 	}
-	time.Sleep(200 * time.Millisecond)
-	if n := len(r.Win.Frames()) - before; n > 1 {
-		t.Errorf("5 records drew %d frames with the log panel closed", n)
+	if s.Poked() {
+		t.Error("records asked for a frame with the log panel closed")
 	}
-	r.Run("Log", nil)
-	r.WaitText("written while the panel is closed")
+	s.Run("Log", nil)
+	s.WantFrame("written while the panel is closed")
+	s.Frame()
 	log.Info("written while it shows")
-	r.WaitText("written while it shows")
+	if !s.Poked() {
+		t.Error("a record asked for no frame with the log panel open")
+	}
+	s.WantFrame("written while it shows")
 }
 
 // longErr is a warning's err too long for its row: its end only shows once the row's expanded.

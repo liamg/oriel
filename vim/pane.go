@@ -227,7 +227,7 @@ func (e *Engine) WindowClosed(id WindowID) {
 	}
 }
 
-// Windows is every window, in the layout's order, then any the layout doesn't show.
+// WindowIDs are every window's id, in the layout's order, then any the layout doesn't show.
 func (e *Engine) WindowIDs() []WindowID {
 	var out []WindowID
 	for _, w := range e.order() {
@@ -347,7 +347,7 @@ func (e *Engine) SetQuickfix(title string, items []QfItem) {
 
 // QuickfixJump goes to entry idx of the quickfix list, as :cc does.
 func (e *Engine) QuickfixJump(idx int) error {
-	err := e.qfJump(false, idx)
+	err := e.qfJump(false, idx, false)
 	e.updateTop(e.view())
 	e.sync()
 	return err

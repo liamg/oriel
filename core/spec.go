@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"time"
 )
 
@@ -65,12 +64,4 @@ type SessionSpec struct {
 	Job      string        `json:"job,omitempty"`      // the saved job this is a run of
 	// AutoName has a small model name the session and its first request from the prompt, once it has started.
 	AutoName bool `json:"autoName,omitempty"`
-}
-
-// Sessions starts and moves sessions; the session host implements it.
-type Sessions interface {
-	Start(ctx context.Context, s SessionSpec) (SessionID, error)
-	AddRepo(ctx context.Context, id SessionID, r RepoID) error
-	Archive(ctx context.Context, id SessionID) error
-	Resume(ctx context.Context, id SessionID) error
 }

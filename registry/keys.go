@@ -15,8 +15,7 @@ func (l KeyLayer) ContributionName() string { return l.Name }
 // ActiveKeyModes are the modes of the layers active now, by name.
 func ActiveKeyModes(r Contributions) []string {
 	var out []string
-	for _, c := range r.Contributions("key.layer") {
-		l := c.(KeyLayer)
+	for _, l := range ContributionsOf[KeyLayer](r) {
 		on := false
 		Call(func() error { on = l.Active != nil && l.Active(); return nil })
 		if on {
@@ -40,8 +39,7 @@ func (h CmdlineHint) ContributionName() string { return h.Name }
 // CmdlineHints are the hints that apply to line, by name.
 func CmdlineHints(r Contributions, line string) []string {
 	var out []string
-	for _, c := range r.Contributions("cmdline.hint") {
-		h := c.(CmdlineHint)
+	for _, h := range ContributionsOf[CmdlineHint](r) {
 		s := ""
 		Call(func() error { s = h.Hint(line); return nil })
 		if s != "" {
@@ -76,8 +74,8 @@ func (r RawKeys) ContributionName() string { return r.Mode }
 
 // IsRawKeyMode reports whether mode takes control keys itself.
 func IsRawKeyMode(r Contributions, mode string) bool {
-	for _, c := range r.Contributions("keys.raw") {
-		if c.(RawKeys).Mode == mode {
+	for _, k := range ContributionsOf[RawKeys](r) {
+		if k.Mode == mode {
 			return true
 		}
 	}

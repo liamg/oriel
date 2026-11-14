@@ -1,3 +1,5 @@
+// Package explain explains code to the user: a unit or a branch's change, asked of an agent, with walkthroughs and the
+// Changed units panel.
 package explain
 
 import (
@@ -10,6 +12,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -51,7 +57,7 @@ type Plugin struct {
 	parsers map[string]*syntax.Parser // by language
 
 	mu        sync.Mutex
-	busy      kit.Busy
+	busy      work.Busy
 	bufs      map[*text.Buffer]*fileUnits
 	computing map[*text.Buffer]bool
 	seen      map[*text.Buffer]seenVersion // the version last seen, and since when
@@ -151,7 +157,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.bases, x.answers, x.kept = map[string]*explainBase{}, map[answerKey]*answer{}, map[string]*answer{}
 	x.Add(h.Contribute(registry.Service{Name: kit.ExplainService, Impl: x, Source: "builtin:explain"}))
 	if st := kit.GitOf(h).Tree("").Status(); st != nil {
-		x.Add(kit.OnDispose(st.Watch(func([]string) {
+		x.Add(registry.DisposeFunc(st.Watch(func([]string) {
 			x.mu.Lock()
 			for _, b := range x.bases {
 				b.loaded = false
@@ -167,7 +173,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "explain.selection", Title: "Explain the Visual selection", Run: func(registry.Ctx, registry.Args) error { return x.explainSelection() }},
 		{ID: "explain.this", Title: "Explain this: the selection, or the unit at the cursor",
 			Run: func(_ registry.Ctx, a registry.Args) error {
-				if ed, ok := registry.EditorsOf(h); ok && strings.HasPrefix(ed.Mode(), "visual") {
+				if ed, ok := services.EditorsOf(h); ok && strings.HasPrefix(ed.Mode(), "visual") {
 					return x.explainSelection()
 				}
 				return x.explainUnit(registry.Args{})
@@ -289,7 +295,7 @@ func (x *Plugin) notify(err error) {
 
 // changedIn is how many hunks and changed units an open file has.
 func (x *Plugin) changedIn(path string) (hunks, units int) {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return 0, 0
 	}
@@ -308,7 +314,7 @@ func (x *Plugin) changedIn(path string) (hunks, units int) {
 // focused is whether the card has the keys: it's open, and the editor's cursor is in normal mode inside what it explains.
 func (x *Plugin) focused() bool {
 	cd := x.card
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if cd == nil || !ok || ed.Mode() != "normal" {
 		return false
 	}
@@ -338,7 +344,7 @@ func firstNonBlank(snap text.Snapshot, line int) int {
 
 // explainUnit explains the unit at {file}'s {line}, or at the cursor; at the cursor, again on the unit shown widens.
 func (x *Plugin) explainUnit(a registry.Args) error {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")
 	}
@@ -396,17 +402,17 @@ func unitOnLine(units []text.Unit, snap text.Snapshot, line, at int) int {
 }
 
 // current is the editor's current window's buffer.
-func (x *Plugin) current() (registry.EditorBuffer, bool) {
-	ed, ok := registry.EditorsOf(x.h)
+func (x *Plugin) current() (services.EditorBuffer, bool) {
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
-		return registry.EditorBuffer{}, false
+		return services.EditorBuffer{}, false
 	}
 	return ed.Current()
 }
 
 // explainSelection explains the Visual selection, inside the units around it, and leaves Visual mode.
 func (x *Plugin) explainSelection() error {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return errors.New("no editor")
 	}
@@ -534,19 +540,18 @@ func (x *Plugin) setDepth(name string) error {
 	return nil
 }
 
-// content is a crumb's text now, and its hash.
-func (x *Plugin) content(cd *explainCard, i int) ([]byte, string, bool) {
+// contentHash is the hash of a crumb's text now.
+func (x *Plugin) contentHash(cd *explainCard, i int) (string, bool) {
 	r, ok := cd.rangeOf(i)
 	if !ok {
-		return nil, "", false
+		return "", false
 	}
-	b := cd.buf.Snapshot().Slice(r)
-	return b, unitHash(cd.crumbs[i].kind, b), true
+	return unitHash(cd.crumbs[i].kind, cd.buf.Snapshot().Slice(r)), true
 }
 
 // changed is whether the step shown has changed since it was explained.
 func (x *Plugin) changed(cd *explainCard) bool {
-	_, h, ok := x.content(cd, cd.sel)
+	h, ok := x.contentHash(cd, cd.sel)
 	return ok && cd.crumbs[cd.sel].hash != "" && h != cd.crumbs[cd.sel].hash
 }
 
@@ -565,7 +570,7 @@ func (x *Plugin) ensure() {
 		return
 	}
 	cr := &cd.crumbs[cd.sel]
-	_, h, ok := x.content(cd, cd.sel)
+	h, ok := x.contentHash(cd, cd.sel)
 	if !ok {
 		return
 	}
@@ -600,7 +605,7 @@ func (x *Plugin) markedAs(buf *text.Buffer, kind string, off int) string {
 
 func (x *Plugin) refresh() error {
 	if cd := x.card; cd != nil {
-		_, h, _ := x.content(cd, cd.sel)
+		h, _ := x.contentHash(cd, cd.sel)
 		cd.crumbs[cd.sel].hash = h
 		x.ensure()
 	}
@@ -629,7 +634,7 @@ func codeOf(snap text.Snapshot, r text.Range) string {
 
 // relName is a path as the work tree names it.
 func (x *Plugin) relName(path string) string {
-	ed, ok := registry.EditorsOf(x.h)
+	ed, ok := services.EditorsOf(x.h)
 	if !ok {
 		return path
 	}

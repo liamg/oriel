@@ -15,7 +15,7 @@ import (
 
 // ui.font_size zooms the window, so every part grows together; ⌘= ⌘- ⌘0 step it.
 func TestUIFontSizeZoomsTheWindow(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir()})
 	before := r.Win.Size()
 	waitZoom := func(what string, z float32) {
 		t.Helper()

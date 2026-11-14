@@ -4,13 +4,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 )
 
 // scroller is a 200×100 scrolling column of n 20-pixel rows.
 type scroller struct {
 	u     *UI
-	clk   *clock
+	clk   *clocktest.Fake
 	id    ID
 	n     int
 	ops   []render.Op
@@ -18,8 +19,8 @@ type scroller struct {
 }
 
 func newScroller(n int, bars Bars) *scroller {
-	s := &scroller{u: newUI(), clk: &clock{t: time.Unix(0, 0)}, n: n}
-	s.u.SetClock(s.clk.now)
+	s := &scroller{u: newUI(), clk: clocktest.New(time.Unix(0, 0)), n: n}
+	s.u.SetClock(s.clk)
 	s.u.opts.ScrollThumb = render.Color{R: 1, G: 2, B: 3, A: 0x80}
 	s.u.opts.ScrollThumbHot = render.Color{R: 4, G: 5, B: 6, A: 0xff}
 	build := func(c *Ctx) {
@@ -54,7 +55,7 @@ func (s *scroller) thumb() (render.Rect, render.Color, bool) {
 // settle runs the clock on until what's moving has settled.
 func (s *scroller) settle() {
 	for range 30 {
-		s.clk.advance(10 * time.Millisecond)
+		s.clk.Advance(10 * time.Millisecond)
 		s.frame()
 	}
 }
@@ -97,7 +98,7 @@ func TestScrollbarShowsWhileHoveredOrScrolled(t *testing.T) {
 	if !ok || r.Min.Y < 25 {
 		t.Fatalf("no bar, or not moved down, just after a scroll: %v %v", ok, r)
 	}
-	s.clk.advance(barLinger)
+	s.clk.Advance(barLinger)
 	s.frame()
 	s.settle()
 	if _, _, ok := s.thumb(); ok {
@@ -239,7 +240,7 @@ func TestFollowLetsGoWhenScrolled(t *testing.T) {
 	s := newScroller(20, BarsAuto)
 	opts := s.u.opts
 	s.u = newUI()
-	s.u.SetClock(s.clk.now)
+	s.u.SetClock(s.clk)
 	s.u.opts = opts
 	s.build = func(c *Ctx) {
 		s.id = c.Column("list", Style{W: Px(200), H: Px(100), ScrollY: true, Follow: true}, func(c *Ctx) {

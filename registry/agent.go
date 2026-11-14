@@ -13,9 +13,7 @@ import (
 // AgentTools are the agent tools (contrib.go), by name.
 func AgentTools(r Contributions) []AgentTool {
 	var out []AgentTool
-	for _, c := range r.Contributions("agent.tool") {
-		out = append(out, c.(AgentTool))
-	}
+	out = append(out, ContributionsOf[AgentTool](r)...)
 	slices.SortFunc(out, func(a, b AgentTool) int { return strings.Compare(a.Name, b.Name) })
 	return out
 }
@@ -166,8 +164,8 @@ func WithOwner(ctx Ctx, o AgentOwner) Ctx { return context.WithValue(ctx, ownerK
 
 // OwnerOf is the owner of an agent, if it has one.
 func OwnerOf(r Contributions, agent string) (AgentOwner, bool) {
-	for _, c := range r.Contributions("agent.owner") {
-		if o := c.(AgentOwner); o.Agent == agent {
+	for _, o := range ContributionsOf[AgentOwner](r) {
+		if o.Agent == agent {
 			return o, true
 		}
 	}

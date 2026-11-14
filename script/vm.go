@@ -1,6 +1,7 @@
 package script
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -10,7 +11,6 @@ import (
 	"runtime"
 	"runtime/debug"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -317,7 +317,7 @@ func (vm *VM) Stats() []Stat {
 		}
 		out = append(out, Stat{Source: src, Calls: s.calls, Total: s.total, Max: s.max, P99: p})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Source < out[j].Source })
+	slices.SortFunc(out, func(a, b Stat) int { return cmp.Compare(a.Source, b.Source) })
 	return out
 }
 
@@ -686,7 +686,7 @@ func (vm *VM) Keys(path string) []string {
 			out = append(out, string(s))
 		}
 	})
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 

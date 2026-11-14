@@ -239,16 +239,16 @@ func TestGutterWaitsForTypingToStop(t *testing.T) {
 	g := signsOf(s)
 	before := g.Diffs()
 	keys(s, "ggO")
-	for _, k := range "typing" { // as quick as a person types: a diff has time to end between keys
+	for _, k := range "typing" { // as quick as a person types: well inside the wait between keys
 		keys(s, string(k))
 		s.Frame()
-		time.Sleep(60 * time.Millisecond)
+		s.Advance(60 * time.Millisecond)
 		s.RunQueued()
 		s.Frame()
 	}
 	keys(s, "<Esc>")
 	s.Frame()
-	if n := g.Diffs() - before; n > 2 {
+	if n := g.Diffs() - before; n > 0 {
 		t.Errorf("typing 6 letters began %d diffs", n)
 	}
 	settle(s)

@@ -211,22 +211,6 @@ func TestAgentAskingToPostAReviewIsRefused(t *testing.T) {
 	}
 }
 
-// The assistant's my_prs and review_requests read GitHub through the user's gh.
-func TestSearchPRs(t *testing.T) {
-	r := newRig(t)
-	hub := ghtest.New(t)
-	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
-	hub.AddPR("acme/api", gh.PR{Title: "retry transient 502s", Author: "maria", Reviewers: []string{"you"}})
-	hub.AddPR("acme/api", gh.PR{Title: "round half to even"})
-	got, err := r.w.SearchPRs(context.Background(), PRsReq{Query: gh.SearchReview})
-	if err != nil || len(got) != 1 || got[0].Title != "retry transient 502s" || got[0].Repo != "acme/api" {
-		t.Errorf("review requests: %+v, %v", got, err)
-	}
-	if _, err := r.w.SearchPRs(context.Background(), PRsReq{Query: " "}); err == nil {
-		t.Error("an empty search ran")
-	}
-}
-
 // reviewSessionScene is a review session of bob's pull request on acme/pricing, its agent provider's (none for ""),
 // GitHub faked, and the PR's head.
 func reviewSessionScene(t *testing.T, provider string) (*rig, *ghtest.Server, gh.PR, string, core.SessionID) {

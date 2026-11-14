@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -13,22 +15,44 @@ import (
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/ui"
-	"github.com/liamg/oriel/ui/widget"
 )
 
 var ErrNoSessions = errors.New("there are no sessions in this window")
 
-// SessionHost is the session host's calls (registry.HostService), or why there are none.
-func SessionHost(r registry.Registry) (host.Access, error) {
-	if w, ok := registry.ServiceOf[host.Access](r, registry.HostService); ok {
+// The session host's parts' calls, each its own service, or why there are none.
+func SessionCalls(r registry.Registry) (host.SessionCalls, error) {
+	return hostPart[host.SessionCalls](r, registry.HostSessionsService)
+}
+func SandboxCalls(r registry.Registry) (host.SandboxCalls, error) {
+	return hostPart[host.SandboxCalls](r, registry.HostSandboxesService)
+}
+func ShipCalls(r registry.Registry) (host.ShipCalls, error) {
+	return hostPart[host.ShipCalls](r, registry.HostShipsService)
+}
+func CodeHostCalls(r registry.Registry) (host.CodeHostCalls, error) {
+	return hostPart[host.CodeHostCalls](r, registry.HostCodeHostsService)
+}
+func RepoCalls(r registry.Registry) (host.RepoCalls, error) {
+	return hostPart[host.RepoCalls](r, registry.HostReposService)
+}
+func JobCalls(r registry.Registry) (host.JobCalls, error) {
+	return hostPart[host.JobCalls](r, registry.HostJobsService)
+}
+func StatsCalls(r registry.Registry) (host.StatsCalls, error) {
+	return hostPart[host.StatsCalls](r, registry.HostStatsService)
+}
+
+func hostPart[T any](r registry.Registry, name string) (T, error) {
+	if w, ok := registry.ServiceOf[T](r, name); ok {
 		return w, nil
 	}
-	return nil, ErrNoSessions
+	var none T
+	return none, ErrNoSessions
 }
 
 // HasSessions says the window has a session host.
 func HasSessions(r registry.Registry) bool {
-	_, err := SessionHost(r)
+	_, err := SessionCalls(r)
 	return err == nil
 }
 
@@ -66,13 +90,13 @@ func SessionFrom(h plugin.Host, a registry.Args) (core.SessionState, error) {
 	return s.FromArgs(a)
 }
 
-// SessionArgs is sessionFrom, and the session host.
-func SessionArgs(h plugin.Host, a registry.Args) (core.SessionState, host.Access, error) {
+// SessionArgs is SessionFrom, and the session host's session calls.
+func SessionArgs(h plugin.Host, a registry.Args) (core.SessionState, host.SessionCalls, error) {
 	se, err := SessionFrom(h, a)
 	if err != nil {
 		return se, nil, err
 	}
-	w, err := SessionHost(h)
+	w, err := SessionCalls(h)
 	return se, w, err
 }
 
@@ -85,9 +109,8 @@ const (
 
 // Markdown draws markdown, as the markdown plugin renders it.
 type Markdown interface {
-	// Text draws src wrapped to width, its body in body's style.
-	Text(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle)
-	// TextIn is Text as o says: its images found from o.Dir, its newlines line breaks with o.Breaks.
+	// TextIn draws src wrapped to width, its body in body's style, as o says: its images found from o.Dir, its
+	// newlines line breaks with o.Breaks.
 	TextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle, o MarkdownOpts)
 	// Title is src's first level-1 heading, as plain text.
 	Title(src string) (string, bool)
@@ -99,15 +122,6 @@ func MarkdownTitle(r registry.Registry, src string) (string, bool) {
 		return md.Title(src)
 	}
 	return "", false
-}
-
-// MarkdownText draws src as the window's markdown service does, or wrapped as it is without one.
-func MarkdownText(c *ui.Ctx, r registry.Registry, key any, src string, width float32, body ui.TextStyle) {
-	if md, ok := registry.ServiceOf[Markdown](r, MarkdownService); ok {
-		md.Text(c, key, src, width, body)
-		return
-	}
-	widget.Wrap(c, key, src, width, body)
 }
 
 // Indicators build indicators to draw inside another panel, as the HUD keeps them.
@@ -128,18 +142,23 @@ type Stats interface {
 
 func StatsOf(r registry.Registry) (Stats, bool) { return registry.ServiceOf[Stats](r, StatsService) }
 
+// ProviderChoices are what an option naming an agent provider offers: auto, then each provider registered.
+func ProviderChoices(r registry.Registry) func() []string {
+	return func() []string {
+		out := []string{"auto"}
+		for _, p := range services.AgentProviders(r) {
+			out = append(out, p.Name)
+		}
+		return out
+	}
+}
+
 // RefetchAfter is how old an answer gets before it's asked for again while it's shown.
 const RefetchAfter = time.Minute
 
 // Prompts are the prompts registered with r's window, beside agent/prompts' own: plugins' (prompts.Prepare).
 func Prompts(r registry.Registry) []prompts.Def {
-	var out []prompts.Def
-	for _, c := range r.Contributions("prompt") {
-		if d, ok := c.(prompts.Def); ok {
-			out = append(out, d)
-		}
-	}
-	return out
+	return registry.ContributionsOf[prompts.Def](r)
 }
 
 // RenderPrompt is one of agent/prompts as the user has it, its placeholders filled.

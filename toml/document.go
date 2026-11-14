@@ -6,7 +6,6 @@ import (
 	"math"
 	"reflect"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -318,7 +317,7 @@ func encode(v any) (string, error) {
 		for _, k := range rv.MapKeys() {
 			keys = append(keys, k.String())
 		}
-		sort.Strings(keys)
+		slices.Sort(keys)
 		if len(keys) == 0 {
 			return "{}", nil
 		}

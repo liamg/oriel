@@ -12,9 +12,9 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/agent/prompts"
+	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
-	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/testrun"
 )
 
@@ -65,7 +65,7 @@ type Deps struct {
 	// AccountOf is the account a provider is signed in to.
 	AccountOf func(provider string) (string, string)
 	// Record keeps an agent event in its session's record, for a provider with no log of its own.
-	Record func(se core.SessionState, ev stats.Event)
+	Record func(se core.SessionState, ev usage.Event)
 	// UsageSampled reports a plan reading, and keeps it.
 	UsageSampled func(u core.ProviderUsage)
 	// RenameBranch renames the session's branch for a project.

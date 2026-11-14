@@ -11,10 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/host/stats"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -73,18 +76,17 @@ func cloneFilters(f map[string][]string) map[string][]string {
 	return out
 }
 
-// fetched is the session host's last answer.
-type fetched[T any] struct {
-	v   T
-	at  time.Time
-	err error
+// answer is the session host's answer to a read, and when it came, on the plugin's clock.
+type answer[T any] struct {
+	v  T
+	at time.Time
 }
 
 type Plugin struct {
 	kit.Disposer
-	h   plugin.Host
-	Now func() time.Time // the clock; time.Now if nil
-	Loc *time.Location   // where days start; time.Local if nil
+	h     plugin.Host
+	Clock clock.Clock    // the system's if nil
+	Loc   *time.Location // where days start; time.Local if nil
 
 	open    bool       // the Stats page
 	picking bool       // its custom range's date picker is open
@@ -100,15 +102,10 @@ type Plugin struct {
 	burnWin   map[string]int // the Usage page's window picked for "burned the window", by account
 
 	mu       sync.Mutex
-	reports  map[string]fetched[stats.Report] // by query
-	details  map[string]fetched[stats.Detail] // by session and split
-	history  fetched[[]core.ProviderUsage]
-	inflight map[string]time.Time   // when each fetch running was asked for
-	asked    map[string]time.Time   // when each read subscribed but not yet run was asked for
-	clock    time.Time              // Now, as the last frame that asked for a read saw it: the time reads off the loop go by
-	subs     kit.Subs               // the reads frames keep asking for, from the app's manager
+	frameNow time.Time              // now, as the last frame that asked for a read saw it: the time reads off the loop go by
+	subs     kit.Subs               // the reads, from the app's manager: those no frame asks for are paused
 	used     map[string]bool        // the reads asked for since the last frame
-	forced   map[string]bool        // reads to ask again however young their answer: a retry, or agents moving on
+	since    map[string]time.Time   // when frames first saw each read running, for its load
 	live     []core.ProviderUsage   // readings since the history was fetched, from UsageSampled
 	reading  *plugin.Load[struct{}] // Refresh's read of every provider's windows
 }
@@ -121,19 +118,14 @@ func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "stats"
 func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "stats", Busy: x.Busy, Source: "builtin:stats"}))
 	x.h = h
-	if x.Now == nil {
-		x.Now = time.Now
-	}
 	if x.Loc == nil {
 		x.Loc = time.Local
 	}
 	x.q = statsQuery{rng: 1, group: stats.ByRepo, filters: map[string][]string{}}
 	x.hover = -1
 	x.burnWin = map[string]int{}
-	x.reports = map[string]fetched[stats.Report]{}
-	x.details = map[string]fetched[stats.Detail]{}
-	x.inflight, x.asked, x.used, x.forced = map[string]time.Time{}, map[string]time.Time{}, map[string]bool{}, map[string]bool{}
-	x.reading = plugin.NewLoad(h, x.readUsage, plugin.LoadOpts{Timeout: 2 * time.Minute, Now: func() time.Time { return x.Now() }})
+	x.used, x.since = map[string]bool{}, map[string]time.Time{}
+	x.reading = plugin.NewLoad(h, x.readUsage, plugin.LoadOpts{Timeout: 2 * time.Minute})
 	x.Add(h.Option(registry.OptionSpec{Name: SplitOption, Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Split a multi-repo session's cost over its repos, each request charged to the repo its file tool calls worked in. Off, each repo is charged the whole session. The Stats page's toggle and the session tab's \"count whole session in each\" set it."}))
 	x.Add(h.Option(registry.OptionSpec{Name: AccountsOption, Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser,
@@ -151,10 +143,10 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range x.contributions() {
 		x.Add(h.Contribute(c))
 	}
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, x.seen)))
+	x.Add(h.Subscribe(core.Filter{}, x.seen))
 	x.Add(h.Picker(pagesSource(h)))
-	x.Add(kit.OnDispose(h.Framed(x.framed)))
-	x.Add(kit.OnDispose(x.subs.Close))
+	x.Add(h.Framed(x.framed))
+	x.Add(registry.DisposeFunc(x.subs.Close))
 	return nil
 }
 
@@ -183,16 +175,12 @@ func (p *Page) Activate(_ context.Context, h plugin.Host) error {
 
 // readUsage is Refresh's read of every provider's plan windows, off the loop.
 func (x *Plugin) readUsage(ctx context.Context, _ func(string, float64)) (struct{}, error) {
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.StatsCalls(x.h)
 	if w == nil {
 		return struct{}{}, errors.New("there are no sessions in this window")
 	}
 	err := w.ReadUsage(ctx)
-	x.h.Do(func() {
-		x.mu.Lock()
-		x.history = fetched[[]core.ProviderUsage]{}
-		x.mu.Unlock()
-	})
+	x.subs.Refresh(historyKey)
 	return struct{}{}, err
 }
 
@@ -491,13 +479,13 @@ func (x *Plugin) span(q statsQuery) (time.Time, time.Time) {
 	if days == 0 {
 		days = 30
 	}
-	now := x.Now().In(x.Loc)
+	now := x.now().In(x.Loc)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.Loc).AddDate(0, 0, 1)
 	return end.AddDate(0, 0, -days), end
 }
 
 func (x *Plugin) offset() int {
-	_, off := x.Now().In(x.Loc).Zone()
+	_, off := x.now().In(x.Loc).Zone()
 	return off
 }
 
@@ -518,147 +506,120 @@ type reportMeta struct {
 	state widget.LoadState
 }
 
-// fetchState is a cached answer's load state: Pending while a fetch runs (Stale when there's an answer to show),
-// Failed when the last fetch failed with nothing to show.
-func fetchState(since time.Time, have bool, err error) widget.LoadState {
-	switch {
-	case !since.IsZero():
-		return widget.LoadState{Phase: widget.Pending, Since: since, Stale: have, Err: err}
-	case !have && err != nil:
-		return widget.LoadState{Phase: widget.Failed, Err: err}
-	case !have:
-		return widget.LoadState{Phase: widget.Idle}
-	}
-	return widget.LoadState{Phase: widget.Ready, Err: err}
-}
-
 // report is q's answer as last read, read through the app's manager while frames ask for it.
 func (x *Plugin) report(q stats.Query) (stats.Report, reportMeta) {
-	key := queryKey(q)
-	var since time.Time
-	if w, _ := kit.SessionHost(x.h); w != nil {
-		since = x.keep(key, "report", func() time.Time { return x.reports[key].at }, func() (any, error) { return w.StatsQuery(q), nil }, func(v any, err error, at time.Time) {
-			r, _ := v.(stats.Report)
-			x.reports[key] = fetched[stats.Report]{v: r, at: at, err: err}
-		})
+	w, _ := kit.StatsCalls(x.h)
+	if w == nil {
+		return stats.Report{Points: q.Points()}, reportMeta{}
 	}
-	x.mu.Lock()
-	f, ok := x.reports[key]
-	x.mu.Unlock()
-	var meta reportMeta
-	if ok && f.err == nil {
-		meta.at = f.at
+	a, state := keep(x, queryKey(q), "report", func() (stats.Report, error) { return w.StatsQuery(q), nil })
+	if a.at.IsZero() {
+		return stats.Report{Points: q.Points()}, reportMeta{state: state}
 	}
-	meta.state = fetchState(since, ok && f.err == nil, f.err)
-	if !ok || f.err != nil {
-		return stats.Report{Points: q.Points()}, meta
-	}
-	return f.v, meta
+	return a.v, reportMeta{at: a.at, state: state}
 }
 
-// retryReport forgets q's answer and reads it again.
+// retryReport reads q's answer again.
 func (x *Plugin) retryReport(q stats.Query) {
-	key := queryKey(q)
-	x.mu.Lock()
-	delete(x.reports, key)
-	x.forced[key] = true
-	x.mu.Unlock()
-	x.subs.Refresh(key)
+	x.subs.Refresh(queryKey(q))
 	x.h.Redraw()
 }
 
 // statsNeed is how fresh what the stats show is kept: a minute old at most, nothing behind another app.
 var statsNeed = watch.Need{MaxAge: kit.RefetchAfter}
 
-// keep has key read through the app's manager for as long as frames keep asking for it: at once, then every
-// kit.RefetchAfter, and sooner once agents have moved on (seen). A read skips asking while the answer kept (cached,
-// x.mu held) is younger than kit.RefetchAfter, unless a retry forced it. ask runs off the loop; store keeps its
-// answer on the loop, x.mu held. It answers when the read running, or about to run, was asked for; zero with none.
-func (x *Plugin) keep(key, what string, cached func() time.Time, ask func() (any, error), store func(any, error, time.Time)) time.Time {
+// keep is key's answer, read through the app's manager while frames keep asking for it: at once, then every
+// kit.RefetchAfter, and sooner once agents have moved on (seen); a read no frame asks for is paused, keeping its
+// answer. ask runs off the loop; a failure after an answer keeps that answer.
+func keep[T any](x *Plugin, key, what string, ask func() (T, error)) (answer[T], widget.LoadState) {
 	x.mu.Lock()
 	x.used[key] = true
-	x.clock = x.Now()
+	x.frameNow = x.now()
 	x.mu.Unlock()
 	m := kit.ManagerFor(x.h, "")
 	if m == nil {
-		return time.Time{}
+		return answer[T]{}, widget.LoadState{}
 	}
 	x.subs.Hold(key, m, statsNeed, func() kit.Closer {
-		x.mu.Lock()
-		if at := cached(); x.forced[key] || at.IsZero() || x.clock.Sub(at) >= kit.RefetchAfter {
-			x.asked[key] = x.clock
-		}
-		x.mu.Unlock()
-		src := kit.Every("stats:"+key, func(context.Context) error {
-			x.mu.Lock()
-			asked := x.asked[key]
-			delete(x.asked, key)
-			forced := x.forced[key]
-			delete(x.forced, key)
-			if at := cached(); !forced && !at.IsZero() && x.clock.Sub(at) < kit.RefetchAfter {
-				x.mu.Unlock()
-				return nil // the answer kept is young enough
-			}
-			x.inflight[key] = cmp.Or(asked, x.clock)
-			x.mu.Unlock()
+		var last *answer[T] // reads run one at a time
+		src := watch.Source[answer[T]]{Key: "stats:" + key, Poll: true, Read: func(watch.Reader) (answer[T], error) {
 			v, err := ask()
-			x.h.Do(func() {
-				at := x.Now()
-				x.mu.Lock()
-				store(v, err, at)
-				delete(x.inflight, key)
-				x.mu.Unlock()
-			})
-			x.h.Redraw()
-			return err
-		}, nil)
-		return watch.Subscribe(m, src, statsNeed, "stats: "+what)
+			if err != nil && last != nil {
+				return *last, nil
+			}
+			x.mu.Lock()
+			a := answer[T]{v: v, at: x.frameNow}
+			x.mu.Unlock()
+			if err == nil {
+				last = &a
+			}
+			return a, err
+		}}
+		return watch.SubscribeFunc(m, src, statsNeed, "stats: "+what, x.h.Redraw)
 	})
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	if at, ok := x.inflight[key]; ok {
-		return at
+	sub, ok := kit.Held[answer[T]](&x.subs, key)
+	if !ok {
+		return answer[T]{}, widget.LoadState{}
 	}
-	return x.asked[key]
+	a, _, have := sub.Get()
+	return a, x.loadState(key, have, sub.Err(), sub.Busy())
 }
 
-// framed lets go of the reads no frame asked for since the last.
+// loadState is a read's state for the widgets: Pending while it runs (Stale when there's an answer to show), Failed
+// when it failed with nothing to show.
+func (x *Plugin) loadState(key string, have bool, err error, busy bool) widget.LoadState {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	if !busy {
+		delete(x.since, key)
+	}
+	switch {
+	case busy:
+		since, ok := x.since[key]
+		if !ok {
+			since = x.frameNow
+			x.since[key] = since
+		}
+		return widget.LoadState{Phase: widget.Pending, Since: since, Stale: have, Err: err}
+	case !have && err != nil:
+		return widget.LoadState{Phase: widget.Failed, Err: err}
+	case !have:
+		return widget.LoadState{Phase: widget.Idle}
+	}
+	return widget.LoadState{Phase: widget.Ready}
+}
+
+// framed pauses the reads no frame asked for since the last.
 func (x *Plugin) framed() {
 	x.mu.Lock()
 	used := x.used
 	x.used = map[string]bool{}
-	x.mu.Unlock()
-	x.subs.Only(used)
-}
-
-// fresher reads again what's older than liveAfter: the agents it counts have moved on.
-func (x *Plugin) fresher() {
-	x.mu.Lock()
-	var stale []string
-	for key, f := range x.reports {
-		if x.Now().Sub(f.at) > liveAfter && x.inflight[key].IsZero() {
-			stale = append(stale, key)
-			x.forced[key] = true
+	for key := range x.since {
+		if !used[key] {
+			delete(x.since, key)
 		}
 	}
 	x.mu.Unlock()
-	for _, key := range stale {
-		x.subs.Refresh(key)
-	}
+	x.subs.PauseOnly(used)
 }
 
-// detail is a session's stats once read.
-// Busy says whether a read it asked the session host for is still out, or about to be.
-func (x *Plugin) Busy() bool {
-	x.mu.Lock()
-	n := len(x.inflight)
-	x.mu.Unlock()
-	return n > 0 || x.subs.Busy()
+// fresher reads again the reports older than liveAfter: the agents they count have moved on.
+func (x *Plugin) fresher() {
+	now := x.now()
+	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
+		if a, _, ok := sub.Get(); ok && now.Sub(a.at) > liveAfter && !sub.Busy() {
+			sub.Refresh()
+		}
+	})
 }
+
+// Busy says whether a read it asked the session host for is still out, or about to be.
+func (x *Plugin) Busy() bool { return x.subs.Busy() }
 
 // Session is a session's stats, once they've been read (kit.Stats).
 func (x *Plugin) Session(id core.SessionID) (stats.Detail, bool) { return x.detail(id) }
 
+// detail is a session's stats once read.
 func (x *Plugin) detail(id core.SessionID) (stats.Detail, bool) {
 	d, s := x.detailLoad(id)
 	return d, s.Phase == widget.Ready || s.Stale
@@ -666,53 +627,41 @@ func (x *Plugin) detail(id core.SessionID) (stats.Detail, bool) {
 
 // detailLoad is a session's stats (an Oriel session's, or one outside Oriel), read while frames ask, and its load.
 func (x *Plugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) {
-	key := x.detailKey(id)
-	var since time.Time
-	if w, _ := kit.SessionHost(x.h); w != nil {
-		req := host.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
-		since = x.keep(key, "session", func() time.Time { return x.details[key].at }, func() (any, error) { return w.SessionStats(req) }, func(v any, err error, at time.Time) {
-			d, _ := v.(stats.Detail)
-			if _, had := x.details[key]; err == nil || !had {
-				x.details[key] = fetched[stats.Detail]{v: d, at: at, err: err}
-			}
-		})
+	w, _ := kit.StatsCalls(x.h)
+	if w == nil {
+		return stats.Detail{}, widget.LoadState{}
 	}
-	x.mu.Lock()
-	f, ok := x.details[key]
-	x.mu.Unlock()
-	return f.v, fetchState(since, ok && f.err == nil, f.err)
+	req := host.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
+	a, state := keep(x, x.detailKey(id), "session", func() (stats.Detail, error) { return w.SessionStats(req) })
+	return a.v, state
 }
 
 func (x *Plugin) detailKey(id core.SessionID) string { return fmt.Sprintf("%s|%v", id, x.split()) }
 
-// retryDetail forgets a session's failed answer and reads it again.
+// retryDetail reads a session's stats again.
 func (x *Plugin) retryDetail(id core.SessionID) {
-	key := x.detailKey(id)
-	x.mu.Lock()
-	delete(x.details, key)
-	x.forced[key] = true
-	x.mu.Unlock()
-	x.subs.Refresh(key)
+	x.subs.Refresh(x.detailKey(id))
 	x.h.Redraw()
 }
 
+// historyKey is the plan readings' read.
+const historyKey = "usage.history"
+
 // usageHistory is the readings of an account's plan over the last week, oldest first.
 func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
-	if w, _ := kit.SessionHost(x.h); w != nil {
-		x.keep("usage.history", "usage history", func() time.Time { return x.history.at }, func() (any, error) {
+	var hist []core.ProviderUsage
+	if w, _ := kit.StatsCalls(x.h); w != nil {
+		a, _ := keep(x, historyKey, "usage history", func() ([]core.ProviderUsage, error) {
 			x.mu.Lock()
-			since := x.clock.Add(-8 * 24 * time.Hour)
+			since := x.frameNow.Add(-8 * 24 * time.Hour)
 			x.mu.Unlock()
 			return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil
-		}, func(v any, err error, at time.Time) {
-			h, _ := v.([]core.ProviderUsage)
-			x.history = fetched[[]core.ProviderUsage]{v: h, at: at, err: err}
 		})
+		hist = a.v
 	}
-	x.mu.Lock()
 	var out []core.ProviderUsage
 	var last time.Time
-	for _, u := range x.history.v {
+	for _, u := range hist {
 		if u.Same(acct) {
 			out = append(out, u)
 			if u.Sampled.After(last) {
@@ -720,6 +669,7 @@ func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 			}
 		}
 	}
+	x.mu.Lock()
 	for _, u := range x.live {
 		if u.Same(acct) && u.Sampled.After(last) {
 			out = append(out, u)
@@ -740,7 +690,7 @@ func (x *Plugin) refreshUsage(registry.Ctx) error {
 
 // figure is the cost of today or this week, for the sidebar and the start view.
 func (x *Plugin) figure(span string) string {
-	now := x.Now().In(x.Loc)
+	now := x.now().In(x.Loc)
 	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, x.Loc).AddDate(0, 0, 1)
 	from := end.AddDate(0, 0, -1)
 	if span == "week" {
@@ -782,7 +732,7 @@ func (x *Plugin) frontUsage() (core.ProviderUsage, bool) {
 	if u, ok := x.sessionUsage(us); ok {
 		return u, true
 	}
-	used := usedProviders(st, x.Now())
+	used := usedProviders(st, x.now())
 	if i := slices.IndexFunc(us, func(u core.ProviderUsage) bool { return used[u.Provider] }); i >= 0 {
 		return us[i], true
 	}
@@ -803,7 +753,7 @@ func (x *Plugin) accountLabel(account, name string) string {
 
 // accountTitle is an account as the Usage page's switcher names it: its label and plan.
 func (x *Plugin) accountTitle(u core.ProviderUsage) string {
-	return x.accountLabel(u.Account, u.AccountName) + " · " + cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))
+	return x.accountLabel(u.Account, u.AccountName) + " · " + cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider))
 }
 
 // openSession opens a session's stats as a main tab: an Oriel session's, or one outside Oriel the Stats page found.
@@ -827,16 +777,17 @@ func (x *Plugin) openSession(ctx registry.Ctx, id core.SessionID) error {
 
 // found is a session's row in any answer the Stats page has had grouped by session.
 func (x *Plugin) found(id core.SessionID) (stats.Group, bool) {
-	x.mu.Lock()
-	defer x.mu.Unlock()
-	for _, f := range x.reports {
-		for _, g := range f.v.Groups {
+	var found stats.Group
+	ok := false
+	kit.EachHeld(&x.subs, func(_ string, sub watch.Sub[answer[stats.Report]]) {
+		a, _, _ := sub.Get()
+		for _, g := range a.v.Groups {
 			if g.Key == string(id) && g.Origin != "" {
-				return g, true
+				found, ok = g, true
 			}
 		}
-	}
-	return stats.Group{}, false
+	})
+	return found, ok
 }
 
 // csv is the page's table.
@@ -888,3 +839,5 @@ func pagesSource(h plugin.Host) uireg.PickerSource {
 
 // accountKey is an account's plan as the Usage page keys it.
 func accountKey(u core.ProviderUsage) string { return u.Provider + "|" + u.Account }
+
+func (x *Plugin) now() time.Time { return clock.Or(x.Clock).Now() }

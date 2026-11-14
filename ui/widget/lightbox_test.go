@@ -329,7 +329,7 @@ func TestVectorTips(t *testing.T) {
 		rest := func(x, y float32) {
 			h.pointer(render.PointerMove, 0, x, y)
 			h.frame()
-			h.now = h.now.Add(time.Second)
+			h.clock.Advance(time.Second)
 			h.frame()
 			h.frame()
 		}

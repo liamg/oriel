@@ -44,7 +44,7 @@ func (x *Runner) Keyed(ctx context.Context, id core.SessionID, what, project str
 			stop()
 		}()
 		a, ok := x.sessionOf(id).askUser(askCtx, core.Ask{Kind: core.AskKey, Summary: what, Detail: project})
-		if ok && a.Decision == "deny" {
+		if ok && a.Decision == DecisionDeny {
 			cancel(ErrKeyCancelled)
 		}
 	}()

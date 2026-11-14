@@ -2,13 +2,8 @@ package claudebox
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/release"
 )
 
 // releases is where Claude Code's own installer downloads from.
@@ -100,7 +96,7 @@ func (x *Box) download(ctx context.Context, at agent.SandboxPlace, version strin
 			Checksum string `json:"checksum"`
 		} `json:"platforms"`
 	}
-	if err := getJSON(ctx, releases+"/"+version+"/manifest.json", &manifest); err != nil {
+	if err := release.GetJSON(ctx, x.HTTP, releases+"/"+version+"/manifest.json", nil, &manifest); err != nil {
 		return "", err
 	}
 	want := manifest.Platforms[platform].Checksum
@@ -110,60 +106,8 @@ func (x *Box) download(ctx context.Context, at agent.SandboxPlace, version strin
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return "", err
 	}
-	tmp := dst + ".part"
-	if err := fetchVerified(ctx, releases+"/"+version+"/"+platform+"/claude", tmp, want); err != nil {
-		_ = os.Remove(tmp)
-		return "", err
-	}
-	if err := os.Chmod(tmp, 0o755); err != nil {
-		return "", err
-	}
-	return dst, os.Rename(tmp, dst)
+	return dst, release.DownloadVerified(ctx, x.HTTP, releases+"/"+version+"/"+platform+"/claude", want, dst, 0o755, maxBinary, "Claude Code")
 }
 
-func getJSON(ctx context.Context, url string, v any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GET %s: %s", url, resp.Status)
-	}
-	return json.NewDecoder(resp.Body).Decode(v)
-}
-
-func fetchVerified(ctx context.Context, url, dst, sum string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GET %s: %s", url, resp.Status)
-	}
-	f, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
-	if err != nil {
-		return err
-	}
-	h := sha256.New()
-	_, err = io.Copy(io.MultiWriter(f, h), resp.Body)
-	if cerr := f.Close(); err == nil {
-		err = cerr
-	}
-	if err != nil {
-		return err
-	}
-	if got := hex.EncodeToString(h.Sum(nil)); got != sum {
-		return fmt.Errorf("the Claude Code download does not match its checksum")
-	}
-	return nil
-}
+// maxBinary bounds Claude Code's download.
+const maxBinary = 1 << 30

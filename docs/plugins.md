@@ -139,9 +139,9 @@ Hooks run on the UI loop: keep them quick. One that panics, or errors 3 times in
 ## Step 4: a status line indicator
 
 ```lua
-L.hud.indicator("saves", { slot = "statusline.right" }, function()
+L.hud.indicator("saves", function()
   return L.ui.text(L.option["plugin.saves.label"] .. " " .. #saved(), "dim")
-end)
+end, { slot = "statusline.right" })
 ```
 
 The slot is one of `titlebar.right`, `statusline.left`, `statusline.right`, `hud` or `hud.today`. The
@@ -160,7 +160,7 @@ L.view.override("saves", function()
   end
   return L.ui.column{
     L.ui.list(files, function(f) return L.ui.text(f) end),
-    L.ui.button{ id = "saves.clear", label = "Clear", on_click = function() L.cmd("saves.clear") end },
+    L.ui.button{ id = "saves.clear", label = "Clear", on_click = function() L.run("saves.clear") end },
     gap = 8,
   }
 end)
@@ -179,7 +179,7 @@ L.command("saves.clear", function()
   L.hud.refresh("saves")
 end, { desc = "Forget this session's saves" })
 
-L.command("Saves", function() L.cmd("view.toggle", panel) end, { desc = "Show or hide this session's saves" })
+L.command("Saves", function() L.run("view.toggle", panel) end, { desc = "Show or hide this session's saves" })
 
 L.keymap.set("n", "<leader>S", "Saves", { desc = "Saves" })
 
@@ -187,7 +187,7 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
 ```
 
 - `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments.
-- `oriel.cmd(id, args)` runs any command, here the built-in `view.toggle`.
+- `oriel.run(id, args)` runs any command, here the built-in `view.toggle`.
 - `oriel.keymap.set(modes, lhs, rhs, opts)` maps keys to a command id or a Lua function, in `n`, `i`, `x` or a
   panel's own mode.
 - `oriel.rail.add` adds an entry to the sidebar. `icon` is a built-in icon's name or a glyph. `scope` is `session`
@@ -214,7 +214,7 @@ Then make the request. A webhook is a secret that's a whole URL, so it goes as `
 L.command("saves.post", function()
   L.http.request({ method = "POST", url_secret = "SLACK_WEBHOOK",
     headers = { ["Content-Type"] = "application/json" },
-    body = L.json({ text = #saved() .. " files saved" }) }, function(res, err)
+    body = L.json_encode({ text = #saved() .. " files saved" }) }, function(res, err)
     if err then
       return L.notify("Slack: " .. tostring(err), "error")
     end

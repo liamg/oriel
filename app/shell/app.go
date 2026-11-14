@@ -22,13 +22,13 @@ import (
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/search"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 )
@@ -80,7 +80,8 @@ type Config struct {
 	Secrets plugin.Secrets
 	// Quit asks the window to quit as its close button does, without asking about scheduled jobs.
 	Quit <-chan struct{}
-	// Clock is what the window paces its redraws by: the sessions behind the one in front; the system's if nil.
+	// Clock is what the window times its work by (registry.Registry.Clock) and paces the redraws of the sessions behind
+	// the one in front by; the system's if nil.
 	Clock clock.Clock
 }
 
@@ -92,13 +93,15 @@ type Builtins func(Parts) []plugin.Plugin
 type Parts struct {
 	Config Config // as it is when the plugins are made: WorkDir and Files are where the window started
 	// DirState is a state file kept for the directory the window is on now (Config.DirState), as it moves.
-	DirState  func(name string) string
+	DirState func(name string) string
+	// WorkDir is the directory the window is on now.
+	WorkDir   func() string
 	Clipboard edit.Clipboard // the system clipboard, as the editor's registers see it
 	Pictures  *kit.Pictures  // the window's images
 	Tools     *search.Tools  // the machine's search tools
 
-	UI, Frames, Themes, Layout, Rail, Start, Overview, Introspect, StatusLine, SessionTabs plugin.Plugin
-	Omnibox, Picker, WhichKey, Help, Nav, Menus, Notices, Desktop, Quit                    plugin.Plugin
+	UI, Frames, Themes, Layout, Start, Introspect, StatusLine, SessionTabs plugin.Plugin
+	Omnibox, Picker, WhichKey, Help, Nav, Menus, Notices, Desktop, Quit    plugin.Plugin
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -150,9 +153,11 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	probed := make(chan struct{}) // rg, off the loop, so the search panel finds the answer waiting
 	go func() { sh.tools.Ripgrep(); close(probed) }()
 	defer func() { <-probed }()
-	sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
+	if sh.recents == nil {
+		sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
+	}
 	if cfg.WorkDir != "" {
-		sh.recents.add(cfg.WorkDir, time.Now())
+		sh.recents.add(cfg.WorkDir, sh.now())
 	}
 	defer func() {
 		if v := recover(); v != nil {
@@ -204,7 +209,6 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 
 	cancel := cfg.Store.Subscribe(core.Filter{}, behindPaced(cfg.Store, cfg.Clock, poke))
 	defer cancel()
-	cfg.Logs.OnShownWrite(poke)
 
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
 	l.stalls = startStallTrace(cfg.Trace, log)
@@ -214,9 +218,7 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 		defer stop()
 	}
 	if cfg.Started != nil {
-		sh.todoMu.Lock()
-		sh.todo = append(sh.todo, cfg.Started)
-		sh.todoMu.Unlock()
+		sh.do(cfg.Started)
 	}
 	defer sh.relaunchAfter(&err)
 	return l.serve(ctx, p, dirty)
@@ -276,7 +278,7 @@ func (p *running) reopen(to reopenTo, log *slog.Logger) error {
 	p.sh.traceMove(log, to)
 	p.sh.move(p.ctx, to)
 	if to.session == "" && to.dir != "" {
-		p.sh.recents.add(to.dir, time.Now())
+		p.sh.recents.add(to.dir, p.sh.now())
 	}
 	return nil
 }
@@ -400,7 +402,7 @@ func (cfg *Config) defaults() {
 		cfg.Store = eventstore.New()
 	}
 	if cfg.Registry == nil {
-		cfg.Registry = uireg.New()
+		cfg.Registry = uireg.NewWith(registry.Config{Clock: cfg.Clock})
 	}
 	if cfg.Logs == nil {
 		cfg.Logs = NewLogs(LogOpts{})
@@ -426,20 +428,19 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 	notices := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) { logNotice(cfg.Store, log, ev) })
 	sh := &shell{cfg: cfg, builtins: builtins, store: cfg.Store, events: events, poke: poke, reopen: make(chan reopenTo, 1), focus: newWindowFocus()}
 	sh.dir.Store(&cfg.WorkDir)
+	cfg.Logs.OnShownWrite(poke)
 	sh.holds.done = true // nothing waits to be laid out yet
 	sh.reads = kit.NewReads(kit.ReadsOpts{Client: cfg.ImageNet, Wake: poke, Watch: cfg.FSWatch, Frame: func() int {
 		if u := sh.ui.Load(); u != nil {
 			return u.Frames()
 		}
 		return 0
-	}, Now: func() time.Time {
-		if u := sh.ui.Load(); u != nil {
-			return u.Now()
-		}
-		return time.Now()
-	}})
+	}, Clock: windowClock{sh}})
 	sh.polls, sh.tools = &kit.PollSet{}, search.NewTools()
 	sh.kept = newKeptStore(cfg.StateDir, log)
+	if cfg.StateDir != "" {
+		sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
+	}
 	sh.kept.writer.track = sh.inflight.begin
 	gone := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.SessionClosed); ok {
@@ -500,3 +501,21 @@ func lastMove(ev render.Event, events <-chan render.Event) (render.Event, render
 		}
 	}
 }
+
+// windowClock is the window's clock once it's open, the system's until then.
+type windowClock struct{ sh *shell }
+
+func (c windowClock) clock() clock.Clock {
+	if u := c.sh.ui.Load(); u != nil {
+		return u.Clock()
+	}
+	return clock.Real()
+}
+
+func (c windowClock) Now() time.Time { return c.clock().Now() }
+func (c windowClock) AfterFunc(d time.Duration, f func()) clock.Timer {
+	return c.clock().AfterFunc(d, f)
+}
+
+// now is the time on the window's clock.
+func (sh *shell) now() time.Time { return windowClock{sh}.Now() }

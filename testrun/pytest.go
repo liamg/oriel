@@ -53,7 +53,7 @@ func (p *Pytest) python(ws Workspace) string {
 // pytestRoot is the directory pytest's node ids are relative to: the nearest one up with a config file, else
 // the file's own (pytest's rootdir rules, simplified).
 func pytestRoot(file string) string {
-	if root, _, ok := findUp(filepath.Dir(file), "pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"); ok {
+	if root, ok := findUp(filepath.Dir(file), "pytest.ini", ".pytest.ini", "pyproject.toml", "tox.ini", "setup.cfg"); ok {
 		return root
 	}
 	return filepath.Dir(file)

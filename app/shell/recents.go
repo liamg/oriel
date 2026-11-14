@@ -7,6 +7,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 const maxRecents = 12
@@ -78,12 +80,11 @@ func (r *recents) save(ds []recentDir) error {
 	if err := os.MkdirAll(filepath.Dir(r.path), 0o755); err != nil {
 		return err
 	}
-	tmp := r.path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+	if err := atomicfile.Write(r.path, b, 0o644); err != nil {
 		return err
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.read = nil
-	return os.Rename(tmp, r.path)
+	return nil
 }

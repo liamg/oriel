@@ -371,25 +371,18 @@ clip 44,50 1556x924 r 0
       rect 1286,658.609 298x4 fill #24221d radius 2
       rect 1286,658.609 211.57996x4 fill #ff9b45 radius 2
       rect 1270,676.609 330x1 fill #24221d
-      text "THIS TURN TOUCHED" @1286,701.299 #7c7566 JetBrains Mono 9.5
-      text "handler.go" @1286,724.87897 #b3ab99 JetBrains Mono 11.5
-      text "+3" @1551.625,724.519 #4fe0a0 JetBrains Mono 10.5
-      text "-1" @1570.8125,724.519 #ff5f6d JetBrains Mono 10.5
-      text "handler_test.go" @1286,749.05896 #b3ab99 JetBrains Mono 11.5
-      text "+18" @1564.2188,748.699 #4fe0a0 JetBrains Mono 10.5
-      rect 1270,766.50903 330x1 fill #24221d
-      text "RULES IN FORCE" @1286,791.19904 #7c7566 JetBrains Mono 9.5
-      rect 1286,803.049 92.839966x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
-      text "TOOLS · AUTO" @1293,814.739 #4fe0a0 JetBrains Mono 9.5
-      rect 1384.84,803.049 73.130005x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
-      text "NET · ASK" @1391.84,814.739 #ff7ad6 JetBrains Mono 9.5
-      rect 1286,828.58905 132.26001x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
-      text "GIT PUSH · GATEWAY" @1293,840.27905 #ff7ad6 JetBrains Mono 9.5
-      rect 1424.26,828.58905 105.97998x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
-      text "BASH(GO VET:*)" @1431.26,840.27905 #4fe0a0 JetBrains Mono 9.5
-      text "Permissions and connections ›" @1286,865.754 #ffd23f Inter 12
-      rect 1286,869.64856 176.46875x1 fill #ffd23fb3
-      rect 1270,884.64856 330x1 fill #24221d
+      text "RULES IN FORCE" @1286,701.299 #7c7566 JetBrains Mono 9.5
+      rect 1286,713.149 92.839966x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
+      text "TOOLS · AUTO" @1293,724.839 #4fe0a0 JetBrains Mono 9.5
+      rect 1384.84,713.149 73.130005x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
+      text "NET · ASK" @1391.84,724.839 #ff7ad6 JetBrains Mono 9.5
+      rect 1286,738.689 132.26001x16.539978 fill #ff7ad612 radius 10 stroke 1 #ff7ad659
+      text "GIT PUSH · GATEWAY" @1293,750.379 #ff7ad6 JetBrains Mono 9.5
+      rect 1424.26,738.689 105.97998x16.539978 fill #4fe0a012 radius 10 stroke 1 #4fe0a059
+      text "BASH(GO VET:*)" @1431.26,750.379 #4fe0a0 JetBrains Mono 9.5
+      text "Permissions and connections ›" @1286,775.854 #ffd23f Inter 12
+      rect 1286,779.74854 176.46875x1 fill #ffd23fb3
+      rect 1270,794.74854 330x1 fill #24221d
     pop
   pop
 pop

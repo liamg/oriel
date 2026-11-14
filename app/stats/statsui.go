@@ -70,7 +70,7 @@ func costTile(c *ui.Ctx, value string, p stats.Prices, sub func(c *ui.Ctx)) {
 // tipTile is a statsTile with a tooltip.
 func tipTile(c *ui.Ctx, key any, label, value, small, tip string, sub func(c *ui.Ctx)) {
 	th := c.Theme()
-	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 11, R: 11, T: 8, B: 9}, Gap: 6, Fill: th.C(kit.TStatsCard), Stroke: th.C(kit.TStatsCardLine),
+	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 11, R: 11, T: 8, B: 9}, Gap: 6, Fill: th.C(widget.TDataCard), Stroke: th.C(widget.TDataCardLine),
 		Border: 1, Radius: 8, Clip: true, Role: ui.RoleGroup, Label: label + " " + value, Tooltip: tip}, func(c *ui.Ctx) {
 		c.Text("l", label, kit.KickerFont(th.C(theme.FgFaint)))
 		c.Row("v", ui.Style{Gap: 4, Cross: ui.End}, func(c *ui.Ctx) {

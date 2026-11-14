@@ -213,7 +213,7 @@ func (s *session) finish(drain bool) {
 	} else {
 		s.events.drop()
 	}
-	s.term.close()
+	s.term.Close()
 	s.tools.Close()
 	s.c.mu.Lock()
 	var ps []*proc
@@ -394,39 +394,15 @@ type writerFunc func([]byte)
 
 func (f writerFunc) Write(p []byte) (int, error) { f(p); return len(p), nil }
 
-// backlogSize is how much of what a terminal showed a newly attached view gets.
-const backlogSize = 256 << 10
-
 // terminal is a plugin session's terminal as views watch it: what the plugin said it showed.
 type terminal struct {
 	write  func([]byte) error
 	resize func(cols, rows int) error
 
-	mu      sync.Mutex
-	buf     []byte
-	viewers map[chan []byte]struct{}
-	closed  bool
+	agent.Fanout // what views see: Attach; fed what the plugin says it showed
 }
 
-func newTerminal() *terminal { return &terminal{viewers: map[chan []byte]struct{}{}} }
-
-func (t *terminal) feed(p []byte) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.closed {
-		return
-	}
-	t.buf = append(t.buf, p...)
-	if len(t.buf) > 2*backlogSize {
-		t.buf = append([]byte(nil), t.buf[len(t.buf)-backlogSize:]...)
-	}
-	for ch := range t.viewers {
-		select {
-		case ch <- p:
-		default:
-		}
-	}
-}
+func newTerminal() *terminal { return &terminal{} }
 
 func (t *terminal) Write(p []byte) (int, error) {
 	if err := t.write(p); err != nil {
@@ -436,37 +412,3 @@ func (t *terminal) Write(p []byte) (int, error) {
 }
 
 func (t *terminal) Resize(cols, rows int) error { return t.resize(cols, rows) }
-
-func (t *terminal) Attach() ([]byte, <-chan []byte, func()) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	backlog := t.buf
-	if len(backlog) > backlogSize {
-		backlog = backlog[len(backlog)-backlogSize:]
-	}
-	backlog = append([]byte(nil), backlog...)
-	ch := make(chan []byte, 256)
-	if t.closed {
-		close(ch)
-		return backlog, ch, func() {}
-	}
-	t.viewers[ch] = struct{}{}
-	return backlog, ch, func() {
-		t.mu.Lock()
-		defer t.mu.Unlock()
-		if _, ok := t.viewers[ch]; ok {
-			delete(t.viewers, ch)
-			close(ch)
-		}
-	}
-}
-
-func (t *terminal) close() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.closed = true
-	for ch := range t.viewers {
-		close(ch)
-	}
-	t.viewers = map[chan []byte]struct{}{}
-}

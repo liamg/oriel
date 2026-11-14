@@ -161,7 +161,7 @@ func TestAskOnceSessionDeny(t *testing.T) {
 	}
 
 	// Deny carries the note back to the agent.
-	h.answer = Answer{Decision: Refuse, Note: "not today"}
+	h.answer = Answer{Decision: Deny, Note: "not today"}
 	out, ok := h.call(t, "aws__delete_bucket")
 	if ok || !strings.Contains(out, "not today") {
 		t.Fatalf("deny: %q %v", out, ok)

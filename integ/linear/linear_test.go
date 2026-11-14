@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/integ/linear/lineartest"
+	"github.com/liamg/oriel/registry"
 )
 
 // recorded is a client of the recorded API, with the key it accepts.
@@ -86,7 +87,8 @@ func TestPRFromURL(t *testing.T) {
 }
 
 func TestLessTicketKey(t *testing.T) {
-	if !lessTicketKey("FIX-9", "FIX-10") || lessTicketKey("FIX-10", "FIX-9") || !lessTicketKey("ENG-1", "FIX-1") || lessTicketKey("NOPE", "FIX-1") {
+	less := func(a, b string) bool { return registry.CompareTicketKeys(a, b) < 0 }
+	if !less("FIX-9", "FIX-10") || less("FIX-10", "FIX-9") || !less("ENG-1", "FIX-1") || less("NOPE", "FIX-1") {
 		t.Error("ticket keys out of order")
 	}
 }

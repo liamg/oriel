@@ -1022,7 +1022,6 @@ func (e *Engine) substitute(v *view, r exRange, re *vimregex.Regex, rep string, 
 			}
 		}
 		if pending {
-			lastLine = line
 			l := v.line(line)
 			out.Write(l[copied:])
 			start := v.s.LineStart(line)
@@ -1174,7 +1173,7 @@ func (e *Engine) exSet(args string) error {
 			name = name[2:]
 		}
 		if d, ok := optionDef(name); ok {
-			if d.Kind != "bool" && (!on || invert) {
+			if d.Kind != BoolKind && (!on || invert) {
 				return errUnknownOption.with(a)
 			}
 			if invert {

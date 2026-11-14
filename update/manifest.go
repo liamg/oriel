@@ -122,8 +122,9 @@ func ReleaseKeys(s string) ([]ed25519.PublicKey, error) {
 	return keys, nil
 }
 
-// Newer says whether version a is newer than b. Versions are semver, with or without a leading v; a pre-release
-// (1.8.0-nightly.20261015) comes before its release. A version that doesn't parse ("dev") is never newer or older.
+// Newer says whether version a is newer than b. Versions are whole semver (semver.Parse, not semver.Less's partial
+// ones: a release names all three parts), with or without a leading v; a pre-release (1.8.0-nightly.20261015) comes
+// before its release. A version that doesn't parse ("dev") is never newer or older.
 func Newer(a, b string) bool {
 	av, err := semver.Parse(a)
 	if err != nil {

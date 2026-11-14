@@ -8,6 +8,7 @@ import (
 	"io"
 	"sync"
 
+	"github.com/liamg/oriel/internal/transcript"
 	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp"
 )
@@ -19,7 +20,7 @@ type Recorder struct {
 	Drop map[string]bool
 
 	mu      sync.Mutex
-	root    string
+	vars    transcript.Vars // the machine's paths, written as variables
 	entries []Entry
 }
 
@@ -34,7 +35,7 @@ func (r *Recorder) Launcher(launch lsp.Launcher) lsp.Launcher {
 			return nil, err
 		}
 		r.mu.Lock()
-		r.root = root
+		r.vars = transcript.MachineVars(root)
 		r.mu.Unlock()
 		return &recorded{Process: p, r: r}, nil
 	}
@@ -63,7 +64,7 @@ func (r *Recorder) add(dir string, body []byte) {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.entries = append(r.entries, Entry{Dir: dir, Msg: abstract(buf.Bytes(), r.root)})
+	r.entries = append(r.entries, Entry{Dir: dir, Msg: r.vars.Abstract(buf.Bytes())})
 }
 
 type recorded struct {

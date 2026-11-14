@@ -4,6 +4,8 @@ import (
 	"image"
 	"testing"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
@@ -14,9 +16,9 @@ import (
 )
 
 // Editor is the editor as a plugin reaches it, its Editors service; the test fails without one.
-func (s *Scene) Editor() registry.Editors {
+func (s *Scene) Editor() services.Editors {
 	s.T.Helper()
-	ed, ok := registry.EditorsOf(s.Registry())
+	ed, ok := services.EditorsOf(s.Registry())
 	if !ok {
 		s.T.Fatal("no editor")
 	}

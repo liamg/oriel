@@ -25,17 +25,17 @@ func TestPulse(t *testing.T) {
 	if h.u.NextFrame().IsZero() {
 		t.Error("a pulse under way asked for no frame")
 	}
-	h.now = h.now.Add(500 * time.Millisecond)
+	h.clock.Advance(500 * time.Millisecond)
 	h.frame()
 	if got < 0.99 {
 		t.Errorf("half a period in, %v, want full", got)
 	}
-	h.now = h.now.Add(1250 * time.Millisecond)
+	h.clock.Advance(1250 * time.Millisecond)
 	h.frame()
 	if got <= 0.4 || got >= 1 {
 		t.Errorf("a quarter into its second pulse, %v, want between rest and full", got)
 	}
-	h.now = h.now.Add(time.Second)
+	h.clock.Advance(time.Second)
 	h.frame()
 	if got != 0.4 {
 		t.Errorf("past its pulses, %v, want its rest", got)
@@ -45,7 +45,7 @@ func TestPulse(t *testing.T) {
 	}
 	call = "p2"
 	h.frame()
-	h.now = h.now.Add(500 * time.Millisecond)
+	h.clock.Advance(500 * time.Millisecond)
 	h.frame()
 	if got < 0.99 {
 		t.Errorf("a new call half a period in, %v, want full", got)
@@ -53,7 +53,7 @@ func TestPulse(t *testing.T) {
 
 	still := motionHarness(t, true, build)
 	still.frame()
-	still.now = still.now.Add(500 * time.Millisecond)
+	still.clock.Advance(500 * time.Millisecond)
 	still.frame()
 	if got != 0.4 {
 		t.Errorf("with reduced motion, %v, want its rest", got)
@@ -62,7 +62,7 @@ func TestPulse(t *testing.T) {
 	away := motionHarness(t, false, build)
 	away.u.SetWindow(false, true)
 	away.frame()
-	away.now = away.now.Add(500 * time.Millisecond)
+	away.clock.Advance(500 * time.Millisecond)
 	away.frame()
 	if got != 0.4 {
 		t.Errorf("unfocused, %v, want its rest", got)

@@ -15,7 +15,7 @@ import (
 func TestAClickGoesToTheFrameItWasMadeOn(t *testing.T) {
 	ran := make(chan string, 4)
 	var host plugin.Host
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Setup: func(h plugin.Host) {
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Setup: func(h plugin.Host) {
 		host = h
 		for _, id := range []string{"first", "above"} {
 			h.Command(registry.Command{ID: "test." + id, Run: func(registry.Ctx, registry.Args) error { ran <- id; return nil }})

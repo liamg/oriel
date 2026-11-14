@@ -23,6 +23,7 @@ import (
 	_ "golang.org/x/image/webp"
 
 	"github.com/liamg/oriel/fswatch"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/render/svg"
 	"github.com/liamg/oriel/sandbox/egress"
@@ -44,8 +45,8 @@ type Pictures struct {
 	client    *http.Client // what remote images are fetched with
 	mu        sync.Mutex
 	retries   map[string]retry // failed remote fetches, by URL
-	// Now is the clock a failed fetch's retry is timed by.
-	Now func() time.Time
+	// Clock is the clock a failed fetch's retry is timed by; the system's if nil.
+	Clock clock.Clock
 }
 
 type made struct {
@@ -76,7 +77,7 @@ func newPictures(q *landing, o ReadsOpts) *Pictures {
 	if frame == nil {
 		frame = func() int { return 0 }
 	}
-	p := &Pictures{q: q, client: client, Now: time.Now, made: map[string]made{}, retries: map[string]retry{}, note: func(ui.LoadState) {}}
+	p := &Pictures{q: q, client: client, made: map[string]made{}, retries: map[string]retry{}, note: func(ui.LoadState) {}}
 	size := func(pc *Picture) int64 { return pc.Bytes }
 	p.files = plugin.NewCache(q, func(_ context.Context, path string) (*Picture, error) {
 		b, err := os.ReadFile(path)
@@ -84,12 +85,12 @@ func newPictures(q *landing, o ReadsOpts) *Pictures {
 			return nil, err
 		}
 		return decoded(b)
-	}, plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes, Size: size, Frame: frame, Now: o.Now,
+	}, plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes, Size: size, Frame: frame, Clock: o.Clock,
 		Watch: o.Watch, Path: func(p string) string { return p }})
 	p.data = plugin.NewCache(q, func(_ context.Context, uri string) (*Picture, error) { return dataPicture(uri) },
-		plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes, Size: size, Frame: frame, Now: o.Now})
+		plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes, Size: size, Frame: frame, Clock: o.Clock})
 	p.remote = plugin.NewCache(q, p.fetch, plugin.CacheOpts[string, *Picture]{MaxEntries: maxPictures, MaxBytes: maxPictureBytes,
-		Size: size, Frame: frame, Now: o.Now, Timeout: remoteTimeout})
+		Size: size, Frame: frame, Clock: o.Clock, Timeout: remoteTimeout})
 	return p
 }
 
@@ -109,8 +110,8 @@ func PicturesOf(c *ui.Ctx) *Pictures {
 // SetRemote fetches remote images, or (off) answers each with an error saying markdown.remote_images is off.
 func (p *Pictures) SetRemote(on bool) { p.remoteOff.Store(!on) }
 
-// Made is the picture make makes from from, kept under key until from changes: an icon tinted from its image.
-func (p *Pictures) Made(key string, from any, make func() *Picture) *Picture {
+// Memo is the picture make makes from from, kept under key until from changes: an icon tinted from its image.
+func (p *Pictures) Memo(key string, from any, make func() *Picture) *Picture {
 	if m, ok := p.made[key]; ok && m.from == from {
 		return m.pc
 	}
@@ -147,8 +148,8 @@ func (p *Pictures) File(path string) *Picture {
 	return p.picture(p.files.Get(path))
 }
 
-// Data is the picture a data: URI holds, decoded once.
-func (p *Pictures) Data(uri string) *Picture {
+// FromDataURI is the picture a data: URI holds, decoded once.
+func (p *Pictures) FromDataURI(uri string) *Picture {
 	p.q.run()
 	return p.picture(p.data.Get(uri))
 }
@@ -271,7 +272,7 @@ func (p *Pictures) Remote(src string) *Picture {
 		p.mu.Lock()
 		at := p.retries[src].at
 		p.mu.Unlock()
-		if !p.Now().Before(at) {
+		if !clock.Or(p.Clock).Now().Before(at) {
 			p.remote.Invalidate(src)
 			pc, st = p.remote.Get(src)
 		} else {
@@ -298,7 +299,7 @@ func (p *Pictures) fetch(ctx context.Context, src string) (*Picture, error) {
 		return pc, nil
 	}
 	tries := p.retries[src].tries
-	p.retries[src] = retry{tries: tries + 1, at: p.Now().Add(min(retryFirst<<min(tries, 10), retryMax))}
+	p.retries[src] = retry{tries: tries + 1, at: clock.Or(p.Clock).Now().Add(min(retryFirst<<min(tries, 10), retryMax))}
 	return nil, err
 }
 

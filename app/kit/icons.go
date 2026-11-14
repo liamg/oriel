@@ -1,13 +1,15 @@
 package kit
 
 import (
+	"image"
+	"math"
+
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
-	"image"
-	"math"
 )
 
 // icons are the built-in icon set, drawn as strokes in a 16-unit square, so they don't depend on a font having
@@ -310,4 +312,34 @@ func contributedIcon(r registry.Registry, name string, col render.Color) image.I
 		return s.IconImage(name, col)
 	}
 	return nil
+}
+
+var TLogoRing = theme.Declare("logo.ring", "accent")
+
+var TLogoCursor = theme.Declare("logo.cursor", "brand")
+
+var TWordmark = theme.Declare("logo.wordmark", "fg")
+
+// Logo is the o▌ mark: a ring in the accent and a tall cursor in the brand orange, each with a faint glow.
+func Logo(f render.Frame, r render.Rect, th *theme.Resolved) { LogoLit(f, r, th, true, 1) }
+
+// LogoLit is the logo with its cursor shown or not, as it blinks, and its glow scaled by glow.
+func LogoLit(f render.Frame, r render.Rect, th *theme.Resolved, lit bool, glow float64) {
+	s := r.Dx() / 100
+	cx, cy := r.Min.X+38*s, r.Min.Y+r.Dy()/2+3*s
+	ring, cursor := th.C(TLogoRing), th.C(TLogoCursor)
+	if r.Dx() <= 64 {
+		f.Effect(render.GlowDisc, render.XYWH(cx-25*s, cy-25*s, 50*s, 50*s), 4, theme.WithAlpha(cursor, min(.22*glow, 1))) // a big logo glows from its bar alone: this would fill the ring
+	}
+	bar := render.XYWH(r.Min.X+68*s, r.Min.Y+r.Dy()/2-22*s, 13*s, 50*s)
+	if lit {
+		f.Effect(render.Glow, bar, 4, theme.WithAlpha(cursor, min(.3*glow, 1)))
+	}
+	f.Path(render.Ellipse(render.XYWH(cx-21*s, cy-21*s, 42*s, 42*s)), render.Style{Stroke: ring, Width: 8 * s})
+	if !lit {
+		return
+	}
+	var p render.Path // a path, not a rect, so the bar isn't snapped to pixels and stays level with the ring
+	p.MoveTo(bar.Min).LineTo(render.Point{X: bar.Max.X, Y: bar.Min.Y}).LineTo(bar.Max).LineTo(render.Point{X: bar.Min.X, Y: bar.Max.Y}).Close()
+	f.Path(&p, render.Style{Fill: cursor})
 }

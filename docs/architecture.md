@@ -18,13 +18,14 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `testrun` | test discovery and runner adapters (go, pytest, vitest/jest, cargo), results, coverage |
 | `term` | the terminal model behind `term.Emulator`; `term/ghostty` (libghostty-vt, wasm or native), `term/pty`, `term/tty` (a terminal's modes) |
 | `core` | sessions, workspaces, threads, tasks and the typed events that change them: pure state and logic |
-| `agent` | the `Provider` interface, its optional ones (`Featured`, `Sandboxed`, `LoginStarter`, `Logged`, `Discovered`) and transcript types; `agent/claude` (and `agent/claude/claudebox`, what it needs in a sandbox), `agent/codex`; `agent/rpcagent` (the Oriel agent protocol: any provider over JSON-RPC, for plugins), `agent/acp` (any Agent Client Protocol agent), `agent/mcptools` (a session's tools as the MCP server oriel); `agent/price` (a `Book` of models' list prices, read from cost.dev's model list, with the snapshot vendored in `spec/cost-dev` as its default: every cost estimate prices tokens with one, a provider with `StartSpec.Prices`); `agent/agenttest` (the conformance suite, a fake provider and one that plays the suite) |
-| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State |
+| `agent` | the `Provider` interface, its optional ones (`Featured`, `Sandboxed`, `LoginStarter`, `Logged`, `UsageLogs`, `Discovered`) and transcript types; `agent/usage` (what a log says an agent used, as provider-neutral events: each provider reads its own log format into them, and one with no log writes them, which `host/stats` counts); `agent/claude` (and `agent/claude/claudebox`, what it needs in a sandbox), `agent/codex`; `agent/rpcagent` (the Oriel agent protocol: any provider over JSON-RPC, for plugins), `agent/acp` (any Agent Client Protocol agent), `agent/mcptools` (a session's tools as the MCP server oriel); `agent/price` (a `Book` of models' list prices, read from cost.dev's model list, with the snapshot vendored in `spec/cost-dev` as its default: every cost estimate prices tokens with one, a provider with `StartSpec.Prices`); `agent/agenttest` (the conformance suite, a fake provider and one that plays the suite); `agent/eventq` (an unbounded queue in front of a session's events), `agent/hostexec` (a provider's processes on this machine, outside any sandbox), `agent/packs` (each kind's prompt pack and the Oriel tools it expects), `agent/prompts` (the prompts the user can edit) |
+| `host` | the session host: a facade over its parts (`host/worktree`, `host/agentrun`, `host/sandboxhost`, `host/github`, `host/repos`, `host/jobs`, `host/utility`, `host/aireview`, `host/persist`, `host/pricing`: the live price book, cost.dev's list fetched at start and daily and kept in `~/.oriel/prices.json`), each seeing the host only as a `host/hostcore` State; it embeds the parts whose calls are its own, so their entry points are the host's methods; `host/stats`, a library the parts and the app share (the stats counted from the agents' logs), reaching no part |
 | `sandbox` | sandbox backends, the gateway, egress, the static Linux helper the app embeds |
 | `gitx`, `gh` | git and GitHub |
 | `watch` | freshness managers: sources kept up to date only while something subscribes; `watch/gitsrc`, a work tree's git status as sources |
+| `fswatch`, `search`, `sysload`, `semver` | file and folder changes from the OS; project search and replace (ripgrep, or the same in Go); how busy the machine is; semantic versions |
 | `integ/*` | code hosts and trackers (GitLab, Azure, Linear) |
-| `registry` | the contribution registry, pure: commands, keymaps, options, events and hooks, kinds, services, help; `registry/uireg` is what's drawn (views, decorations, pickers, the rail…); `registry/lang` holds language servers and debug adapters |
+| `registry` | the contribution registry, pure: commands, keymaps, options, events and hooks, kinds, services, help; `registry/uireg` is what's drawn (views, decorations, pickers, the rail…); `registry/lang` holds language servers and debug adapters; `registry/services` holds the built-in services' contracts made of the editor, git, watches and agents (`Editors`, `GitTrees`, `Watches`, `AgentProvider`), so the registry itself reaches none of them |
 | `plugin` | the plugin host: manifests, process RPC, wasm, permissions, `plugin.Load` |
 | `script` | the Lua VM and the `oriel.*` bindings (`script/api`, documented in [api.md](api.md)) |
 | `catalog` | the plugin registry client and the plugin manager |
@@ -32,7 +33,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `ui` | the immediate-mode toolkit: layout, input routing, focus, accessibility; `ui/widget` (every control), `ui/layout` (the window's tree of views as data) |
 | `theme`, `toml` | theme files and token resolution; a round-tripping TOML 1.0 editor for settings and themes |
 | `zstd` | a Zstandard (RFC 8878) decoder: whole buffers or streamed within a frame's window; Codex's compressed rollouts |
-| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` |
+| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` (with `app/kit/work`, `app/kit/prui` and `app/kit/agentkit` for what only some share) |
 | `assistant`, `voice`, `update` | the assistant's conversation; dictation; signed self-update |
 | `cmd/oriel` | the binary and its subcommands |
 | `tools` | checks run by tests and CI: `layout`, `ratchet`, `depcheck`, `refcheck`, `leakcheck`, `framecheck`, `apigen`, `notices`, `perf` |
@@ -61,8 +62,8 @@ Every seam that may be swapped is an interface in the consuming package, with im
 - The UI reads the materialised `core.State` and never asks the host on a frame. Calls into the host run off the UI
   goroutine.
 - Event logs are JSON lines; `core.Replay` reproduces a state byte for byte. Times are stored in UTC.
-- Every exported host method, every goroutine it starts and every callback into the app recovers a panic, logs it
-  and returns it as an error.
+- Every exported host method (a part's own, for one the host embeds), every goroutine it starts and every callback
+  into the app recovers a panic (`hostcore.Env.Recover`), logs it and returns it as an error.
 
 ## Registry and services
 
@@ -72,7 +73,7 @@ plugin uses, so each can be replaced, removed or configured from Lua.
 
 What crosses features is a service, a command, a hook event or a core event, never another plugin's fields. A plugin
 offers a typed service with `registry.Service{Name, Impl}` and others find it with `registry.ServiceOf[T]`; the
-built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships`, `Sessions` and `host.Access`. A plugin reads and
+built-ins include `Editors`, `GitTrees` (`registry/services`), `CodeSites`, `Ships`, `Sessions` and the session host's parts (`host.SessionCalls`, `host.RepoCalls`…). A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
@@ -163,7 +164,7 @@ line, and only they may name it.
 ## Agent providers
 
 An agent provider (Claude, Codex, or a plugin's) is an `agent.Provider`, registered by its plugin as a
-`registry.AgentProvider`: its name, title and square, and the provider. The built-ins are plugins too (`app/agents`),
+`services.AgentProvider` (`registry/services`): its name, title and square, and the provider. The built-ins are plugins too (`app/agents`),
 so a plugin registering a provider under the same name replaces one. The sessions plugin gives the session host the
 registry's providers (`host.SetProviders`); a session handed over when Oriel quit resumes once its provider is back.
 A plugin's provider that isn't Go is an `rpcagent.Client`: the whole provider, sessions and all, over the Oriel agent
@@ -264,12 +265,16 @@ connects it to the platform:
   as a user would; `render/snapshot` compares display lists and perceptual PNG diffs. The fixture workspace is held
   to the reference mockups in `testdata/mockups`.
 - Tests wait for work, never for a while. What a plugin does off the loop it reports as a `registry.Busy` (a
-  `kit.Busy` or `kit.Work` counts it; a `kit.Work.Loop` that runs as long as the plugin doesn't); `apptest`'s `Quiet`
+  `work.Busy` or `work.Work` (`app/kit/work`) counts it; a `work.Work.Loop` that runs as long as the plugin doesn't); `apptest`'s `Quiet`
   runs frames and the loop's queue until none is busy, and `ClickOn`, `ClickText`, `WantText` and `WantFrame` settle
   so first. A test of what shows while work is under way looks inside `Midway`.
-- Code that times things takes an `internal/clock.Clock` (`watch.Options.Clock`, `kit.Still.Clock`,
-  `app.Config.Clock`); its tests move an `internal/clock/clocktest` clock, so what's timed happens exactly when they
-  say. `fswatch.NewScripted` is a file watcher whose events are the test's: the watch manager's tests send them, and
+- Code that times or stamps things takes an `internal/clock.Clock` (`watch.Options.Clock`, `work.Still.Clock`,
+  `app.Config.Clock`, `ui.UI.SetClock`), never a `func() time.Time`, and reads it through `clock.Or`: nil is the
+  system's. Its tests move an `internal/clock/clocktest` clock (`Advance`, or `Set` to put it anywhere), so what's
+  timed happens exactly when they say. A plugin times its work by the window's (`registry.Registry.Clock`) and reads
+  the frames' time as `UIView.Clock`. A Scene's is its `Now` (`Scene.Clock`), and what's timed on it waits for the
+  scene to move on: `Scene.Advance`, or `Quiet`, which steps to the next timer when that's all it would wait for.
+  `fswatch.NewScripted` is a file watcher whose events are the test's: the watch manager's tests send them, and
   only `fswatch`'s own test the OS's. A scene with `ScriptedFiles` (every `ShipScene`) gives the app such watchers:
   `Scene.WriteFiles` writes and says what changed, returning once every manager has taken it in, so the OS's late
   events for a test's own setup never move a count of reads.

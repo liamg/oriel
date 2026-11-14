@@ -83,8 +83,8 @@ func (e KindEntry) ContributionName() string { return string(e.Spec().Kind) }
 // Kinds are the session kinds, by Order then kind.
 func Kinds(r Contributions) []SessionKind {
 	var out []SessionKind
-	for _, c := range r.Contributions("session.kind") {
-		out = append(out, c.(KindEntry).SessionKind)
+	for _, e := range ContributionsOf[KindEntry](r) {
+		out = append(out, e.SessionKind)
 	}
 	slices.SortStableFunc(out, func(a, b SessionKind) int {
 		return cmp.Or(cmp.Compare(a.Spec().Order, b.Spec().Order), strings.Compare(string(a.Spec().Kind), string(b.Spec().Kind)))
@@ -94,8 +94,8 @@ func Kinds(r Contributions) []SessionKind {
 
 // KindOf is the kind registered as k.
 func KindOf(r Contributions, k core.Kind) (SessionKind, bool) {
-	for _, c := range r.Contributions("session.kind") {
-		if e := c.(KindEntry); e.Spec().Kind == k {
+	for _, e := range ContributionsOf[KindEntry](r) {
+		if e.Spec().Kind == k {
 			return e.SessionKind, true
 		}
 	}
@@ -137,8 +137,7 @@ func Chips(r Contributions, se core.SessionState) []Chip {
 	if sk, ok := KindOf(r, se.Kind); ok {
 		Call(func() error { out = sk.Chips(se); return nil })
 	}
-	for _, c := range r.Contributions("card.chips") {
-		cc := c.(CardChips)
+	for _, cc := range ContributionsOf[CardChips](r) {
 		Call(func() error { out = append(out, cc.Chips(se)...); return nil })
 	}
 	return out
@@ -157,8 +156,7 @@ func (d SessionDone) ContributionName() string { return d.Name }
 
 // Done is why se looks finished, the first SessionDone contribution's answer that isn't ""; "" for not finished.
 func Done(r Contributions, se core.SessionState) string {
-	for _, c := range r.Contributions("session.done") {
-		d := c.(SessionDone)
+	for _, d := range ContributionsOf[SessionDone](r) {
 		why := ""
 		Call(func() error { why = d.Done(se); return nil })
 		if why != "" {
@@ -182,8 +180,7 @@ func (u SessionUnsaved) ContributionName() string { return u.Name }
 // Unsaved is what ending se would lose, each SessionUnsaved contribution's answer that isn't "".
 func Unsaved(r Contributions, se core.SessionState) []string {
 	var out []string
-	for _, c := range r.Contributions("session.unsaved") {
-		u := c.(SessionUnsaved)
+	for _, u := range ContributionsOf[SessionUnsaved](r) {
 		what := ""
 		Call(func() error { what = u.Unsaved(se); return nil })
 		if what != "" {

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/term"
 )
 
@@ -231,19 +232,19 @@ func TestPaste(t *testing.T) {
 // ref:   libghostty-vt/stream_terminal.zig
 // quote: "The caller must use a timeout so that a program that never"
 func TestHoldTimeout(t *testing.T) {
-	now := time.Unix(0, 0)
-	e := mustNew(t, 10, 1, Options{HoldTimeout: time.Second, Now: func() time.Time { return now }})
+	clk := clocktest.New(time.Unix(0, 0))
+	e := mustNew(t, 10, 1, Options{HoldTimeout: time.Second, Clock: clk})
 	e.Write([]byte("abc"))
 	e.Grid()
 	e.Write([]byte("\x1b[?2026hXYZ"))
 	if got := screen(e.Grid())[0]; got != "abc       " || !e.Held() {
 		t.Errorf("held frame = %q, held %v", got, e.Held())
 	}
-	now = now.Add(999 * time.Millisecond)
+	clk.Advance(999 * time.Millisecond)
 	if got := screen(e.Grid())[0]; got != "abc       " {
 		t.Errorf("frame before the timeout = %q", got)
 	}
-	now = now.Add(time.Millisecond)
+	clk.Advance(time.Millisecond)
 	if got := screen(e.Grid())[0]; got != "abcXYZ    " {
 		t.Errorf("frame after the timeout = %q", got)
 	}

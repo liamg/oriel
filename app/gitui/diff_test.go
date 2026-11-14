@@ -76,7 +76,7 @@ func wordOn(f headless.Frame, s string, col render.Color) (render.Op, bool) {
 // openDiff starts the app on the repo and opens round.go's diff from the Explorer's Changed scope.
 func openDiff(t *testing.T, r *gittest.Repo, setup func(h plugin.Host)) *apptest.Window {
 	t.Helper()
-	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: r.Dir, Setup: setup})
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir, Setup: setup})
 	showDiff(app)
 	return app
 }
@@ -329,7 +329,7 @@ func TestDiffSplitLongAddedLineKeepsItsSide(t *testing.T) {
 	r.Write(map[string]string{"round.go": "package p\n", "go.mod": "module x\n"})
 	r.Commit("Ada", "base")
 	r.Write(map[string]string{"round.go": "package p\n\nfunc a() {\n\tfor ctor, w := range map[string]want{\n\t\t`OpenAiChatModel.builder().apiKey(key)`: {},\n\t}\n}\n"})
-	app := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: r.Dir})
+	app := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: r.Dir})
 	app.TypeKeys("<M-1>")
 	app.WaitText("CHANGED 1")
 	app.ClickText("round.go")

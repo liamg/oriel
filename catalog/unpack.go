@@ -9,7 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/liamg/oriel/plugin"
 )
@@ -67,6 +67,6 @@ func Unpack(archive, dir string) ([]string, error) {
 		}
 		files = append(files, h.Name)
 	}
-	sort.Strings(files)
+	slices.Sort(files)
 	return files, nil
 }

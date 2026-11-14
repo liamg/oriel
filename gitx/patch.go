@@ -7,9 +7,10 @@ import (
 	"strings"
 )
 
-// MergeBase is the abbreviated commit the branch left base at (BaseRef's when base is ""), else HEAD's when there's
-// no base to compare with; "" in a repo with no commits.
-func (r Repo) MergeBase(ctx context.Context, base string) string {
+// ForkPoint is the abbreviated commit the branch left base at, their merge base (BaseRef's when base is ""), else
+// HEAD's when there's no base to compare with; "" in a repo with no commits. MergeBaseOf is any two commits', with
+// git's error.
+func (r Repo) ForkPoint(ctx context.Context, base string) string {
 	if base == "" {
 		branch, _ := r.Branch(ctx)
 		base = r.BaseRef(ctx, branch)

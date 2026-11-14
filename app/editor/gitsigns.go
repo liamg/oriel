@@ -10,15 +10,21 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/vim"
 )
 
@@ -35,7 +41,7 @@ type GitSigns struct {
 	kit.Disposer
 	Editor *Editor
 	h      plugin.Host
-	Now    func() time.Time // the clock blame's ages are by
+	Clock  clock.Clock // the clock blame's ages are by; the system's if nil
 
 	mu       sync.Mutex
 	watched  map[*gitx.Status]func() // the projects' trees whose changes stale their bases and blames
@@ -44,9 +50,9 @@ type GitSigns struct {
 	blames   map[gitFile]*gitBlame
 	hunks    map[bufAgainst]*bufHunks
 	previews map[gitFile]int // the hunk previewed in each file, by its new start
-	typing   kit.Still[any]  // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
+	typing   work.Still[any] // a buffer's hunks and blame wait for it to be still (signsQuiet) once it has some
 	diffs    int             // diffs begun off the loop, for the tests
-	busy     kit.Busy
+	busy     work.Busy
 }
 
 type gitBase struct {
@@ -121,10 +127,7 @@ func (g *GitSigns) watch(tree string, st *gitx.Status) {
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }, Source: "builtin:gitsigns"}))
 	g.h = h
-	if g.Now == nil {
-		g.Now = time.Now
-	}
-	g.typing = kit.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }}
+	g.typing = work.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
 	g.watched = map[*gitx.Status]func(){}
 	g.Add(h.Option(registry.OptionSpec{Name: "git.gutter.base", Type: registry.Enum, Values: []string{"scope", "branch", "head", "index"},
@@ -132,8 +135,8 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		Help: "What the gutter marks a file's changes against: as the Explorer's scope has it (scope: Uncommitted's against the last commit, Changed's against the branch's base), where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
-	g.Add(kit.OnDispose(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) })))
-	g.Add(kit.OnDispose(func() {
+	g.Add(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) }))
+	g.Add(registry.DisposeFunc(func() {
 		g.mu.Lock()
 		defer g.mu.Unlock()
 		for _, cancel := range g.watched {
@@ -179,19 +182,11 @@ func (g *GitSigns) Deactivate(ctx context.Context) error {
 	return g.Disposer.Deactivate(ctx)
 }
 
-// Wait waits for its git work off the loop.
-func (g *GitSigns) Wait() {
-	for g.typing.Held() {
-		time.Sleep(5 * time.Millisecond)
-	}
-	g.busy.Wait()
-}
-
 // gitFile is a buffer's file as git names it, in the work tree of tree: its project's directory, "" for the window's.
 type gitFile struct{ tree, rel, abs string }
 
 // treeOf is f's work tree.
-func (g *GitSigns) treeOf(f gitFile) registry.GitTree { return kit.GitOf(g.h).Tree(f.tree) }
+func (g *GitSigns) treeOf(f gitFile) services.GitTree { return kit.GitOf(g.h).Tree(f.tree) }
 
 // repo is f's repo; fileOf has found it.
 func (g *GitSigns) repo(f gitFile) gitx.Repo { return g.treeOf(f).Status().Repo() }
@@ -485,7 +480,7 @@ func (g *GitSigns) blameLine(ctx uireg.DecorationCtx, f gitFile) (uireg.Decorati
 		s, style = bl.Author, "git.blame.other"
 	}
 	if bl.Kind != gitx.NotCommitted {
-		s += " · " + kit.Ago(g.Now(), bl.When) + " ago · " + bl.Summary
+		s += " · " + widget.AgoLabel(clock.Or(g.Clock).Now(), bl.When) + " ago · " + bl.Summary
 		ctx.RefreshAt(ctx.Now.Add(time.Minute))
 	}
 	return uireg.Decoration{Kind: uireg.VirtualText, Line: line, Text: s, Style: style, Priority: -1}, true
@@ -524,7 +519,7 @@ func (g *GitSigns) stage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error
 	}
 	contents := p.FileBytes()
 	repo := g.repo(f)
-	kit.GitOf(g.h).Do(func(ctx context.Context) error { return repo.StageHunk(ctx, f.rel, contents, h) })
+	kit.GitOf(g.h).Run(func(ctx context.Context) error { return repo.StageHunk(ctx, f.rel, contents, h) })
 	return nil
 }
 
@@ -541,7 +536,7 @@ func (g *GitSigns) unstage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) err
 		}
 	}
 	repo := g.repo(f)
-	kit.GitOf(g.h).Do(func(ctx context.Context) error {
+	kit.GitOf(g.h).Run(func(ctx context.Context) error {
 		staged, err := repo.StagedHunks(ctx, f.rel)
 		if err != nil {
 			return err

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
@@ -52,7 +54,7 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 	c.Row("diff", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tDiffBg), Role: ui.RoleRegion, Label: "Diff", Help: "files/diff"}, func(c *ui.Ctx) {
 		trees := kit.GitOf(x.h)
 		tree := trees.Tree(st.root)
-		gs := tree.Counted()
+		gs := tree.StateWithCounts()
 		widget.Async(c, "load", kit.LoadState(tree.Load()), widget.AsyncOpts{Policy: widget.Block, Label: "Reading " + filepath.Base(st.root) + "'s changes",
 			Empty: filepath.Base(st.root) + " isn't in a git repository: there are no changes to show.", IsEmpty: gs == nil,
 			Retry: trees.Reload, Help: "files/diff"}, func(c *ui.Ctx) { x.loaded(c, vc, st, tree, gs, root) })
@@ -66,7 +68,7 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 }
 
 // loaded is the diff of a work tree whose status has been read.
-func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree registry.GitTree, gs *gitx.State, root ui.ID) {
+func (x *Diff) loaded(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, tree services.GitTree, gs *gitx.State, root ui.ID) {
 	th := c.Theme()
 	c.Row("loaded", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 		files := gs.Files(gitx.Changed)
@@ -640,8 +642,6 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 		}
 		_, cross := x.rowFit()
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: cross, Fill: fill, Clip: true}, func(c *ui.Ctx) {
-			if !old {
-			}
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 			n := l.New
 			if old {

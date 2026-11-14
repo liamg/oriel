@@ -3,9 +3,14 @@ package stats_test
 import (
 	"errors"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host"
+	hoststats "github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -35,20 +40,43 @@ func TestStatsPageLoadsWithASkeleton(t *testing.T) {
 	}
 }
 
+// failingStats is the session host's stats, but one session's can't be read.
+type failingStats struct {
+	host.StatsCalls
+	id    core.SessionID
+	asked atomic.Int32
+}
+
+func (f *failingStats) SessionStats(r host.StatsSessionReq) (hoststats.Detail, error) {
+	if r.Session == f.id {
+		f.asked.Add(1)
+		return hoststats.Detail{}, errors.New("the transcript is gone")
+	}
+	return f.StatsCalls.SessionStats(r)
+}
+
 // A session's stats that can't be read say why, with Retry, which asks again; they never sit on a loading line.
 func TestSessionStatsFailureRetries(t *testing.T) {
 	s, r, x := statsScene(t)
 	id := r.IDs["pricing-rounding"]
-	x.FailDetail(id, errors.New("the transcript is gone"), s.Now)
+	w, err := kit.StatsCalls(s.Registry())
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := &failingStats{StatsCalls: w, id: id}
+	s.Registry().Contribute(registry.Service{Name: registry.HostStatsService, Impl: host.StatsCalls(f), Source: "test"})
 	s.Run("stats.session", registry.Args{"id": string(id)})
+	settle(s, x)
 	s.Now = s.Now.Add(time.Second)
 	s.Frame()
 	s.WantFrame("the transcript is gone", "Retry")
+	before := f.asked.Load()
 	s.ClickNode("Retry")
-	if !x.Busy() {
+	settle(s, x)
+	if f.asked.Load() == before {
 		t.Error("Retry didn't ask again")
 	}
-	settle(s, x)
+	s.WantFrame("the transcript is gone", "Retry")
 }
 
 // Usage's Refresh reads the windows off the loop: the button is busy, and can't be pressed again, until it's done.

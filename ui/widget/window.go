@@ -1,6 +1,7 @@
 package widget
 
 import (
+	"cmp"
 	"fmt"
 	"image/color"
 
@@ -94,7 +95,7 @@ func Window(c *ui.Ctx, key any, st *WindowState, o WindowOpts, body func(c *ui.C
 	edge, glow := col(c, tWindowEdge), col(c, tWindowGlow)
 	c.Column(key, ui.Style{W: ui.Px(rect.Dx()), H: ui.Px(rect.Dy()), Fill: col(c, tWindowBg), Stroke: edge, Border: 1, Radius: 10,
 		Clip: true, Z: o.Z, Float: &ui.Float{Point: &at}, Interactive: true, NoHover: true, Focusable: true, KeyMode: o.KeyMode, Selectable: true,
-		Role: ui.RoleDialog, Label: cmpOr(o.Label, o.Title), Help: o.Help,
+		Role: ui.RoleDialog, Label: cmp.Or(o.Label, o.Title), Help: o.Help,
 		Enter: &ui.Transition{Shift: render.Point{Y: 16}, Fade: true}, Exit: &ui.Transition{Shift: render.Point{Y: 16}, Fade: true}},
 		func(c *ui.Ctx) {
 			c.Box("glow", ui.Style{Float: &ui.Float{Fill: true}, W: ui.Flex(1), H: ui.Flex(1), Z: ui.LayerUnder}, func(c *ui.Ctx) {
@@ -109,7 +110,7 @@ func Window(c *ui.Ctx, key any, st *WindowState, o WindowOpts, body func(c *ui.C
 			if windowPartDrag(c, st, partHead, view, o.Min, func(c *ui.Ctx, key any, s ui.Style) {
 				s.W, s.H = ui.Flex(1), ui.Px(windowHeadH)
 				s.Dir, s.Pad, s.Gap, s.Cross, s.Fill = ui.Row, ui.PadXY(10, 0), 8, ui.Center, col(c, tWindowHead)
-				s.Label = cmpOr(o.Title, o.Label)
+				s.Label = cmp.Or(o.Title, o.Label)
 				c.Box(key, s, func(c *ui.Ctx) {
 					if o.Lead != nil {
 						o.Lead(c)
