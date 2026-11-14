@@ -106,7 +106,7 @@ func (x *End) commands() []registry.Command {
 	}
 	open := func(registry.Args) bool { return x.ask != nil }
 	return []registry.Command{
-		{ID: "session.end", Title: "End {id}, or the session in front: {how} archive or delete, {discard} uncommitted work, {delete_branch}; no {how} opens the dialog",
+		{ID: "session.end", Grant: "session.control", Title: "End {id}, or the session in front: {how} archive or delete, {discard} uncommitted work, {delete_branch}; no {how} opens the dialog",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus)))
 				switch a.String("how") {
@@ -122,7 +122,7 @@ func (x *End) commands() []registry.Command {
 			Available: has, Run: func(_ registry.Ctx, a registry.Args) error {
 				return x.close(core.SessionID(cmp.Or(a.String("id"), string(h.State().Focus))))
 			}},
-		{ID: "session.end.confirm", Title: "End the session as the End session dialog says", Available: open,
+		{ID: "session.end.confirm", Grant: "session.control", Title: "End the session as the End session dialog says", Available: open,
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.confirm(ctx) }},
 		{ID: "session.end.cancel", Title: "Close the End session dialog, ending nothing", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.ask = nil; return nil }},

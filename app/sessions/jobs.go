@@ -193,7 +193,7 @@ func (x *Jobs) commands() []registry.Command {
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.runJob(ctx, a) }},
 		{ID: "jobs.delete", Title: "Delete a job: {name}; its runs stay", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.deleteJob(ctx, a) }},
-		{ID: "session.delete", Title: "Delete a session: {id}, or the one in front; its worktrees, workspace and log go, the repos stay", Available: has,
+		{ID: "session.delete", Grant: "session.control", Title: "Delete a session: {id}, or the one in front; its worktrees, workspace and log go, the repos stay", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := core.SessionID(a.String("id"))
 				if id == "" {

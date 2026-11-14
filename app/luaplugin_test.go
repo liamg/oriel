@@ -77,6 +77,33 @@ own = oriel.read("notes.txt")`); err != "" {
 	}
 }
 
+// oriel.run needs what a command does guarded: a plugin can't answer an agent's ask, stop a session or prompt an
+// agent through a command when the API's own call for it would refuse. Every command's Grant is a capability.
+func TestPluginRunNeedsTheCommandsCapability(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	vm := s.PluginVM(plugin.Caller{ID: "acme/run", Guard: g})
+	for src, capability := range map[string]string{
+		`oriel.run("ask.answer", { decision = "always" })`: `"gate"`,
+		`oriel.run("rules.add", { rule = "Bash(*)" })`:     `"gate"`,
+		`oriel.run("session.stop")`:                        `"session.control"`,
+		`oriel.run("agent.send", { text = "hi" })`:         `"agent.prompt"`,
+	} {
+		if err := luaErr(t, vm, src); !strings.Contains(err, capability+" capability isn't declared") {
+			t.Errorf("%s: %q, want an error naming %s", src, err, capability)
+		}
+	}
+	g.Grant("acme/run", []plugin.Grant{{Cap: plugin.CapSessionControl}})
+	if err := luaErr(t, vm, `oriel.run("session.stop")`); strings.Contains(err, "capability isn't declared") {
+		t.Errorf("with session.control: %s", err)
+	}
+	for _, c := range s.Registry().Commands() {
+		if _, ok := plugin.Capability(c.Grant).Info(); c.Grant != "" && !ok {
+			t.Errorf("%s needs %q, which isn't a capability", c.ID, c.Grant)
+		}
+	}
+}
+
 // The gate capability covers veto / decide hooks. A plugin may observe an event, but its veto without gate is an
 // error, not a veto.
 func TestPluginGateHooks(t *testing.T) {

@@ -24,7 +24,7 @@ const rulesHelp = "agent/asks#all-sessions"
 // before a card.
 func (x *Permissions) rulesCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "rules.add", Title: "Allow {rule} in every session without asking: {kind} permission (Bash(go test:*), Edit, a tool), gateway (a gateway's tool) or network (net(*.golang.org:443))",
+		{ID: "rules.add", Grant: "gate", Title: "Allow {rule} in every session without asking: {kind} permission (Bash(go test:*), Edit, a tool), gateway (a gateway's tool) or network (net(*.golang.org:443))",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				w, err := kit.SandboxCalls(x.h)
 				if err != nil {
@@ -32,7 +32,7 @@ func (x *Permissions) rulesCommands() []registry.Command {
 				}
 				return w.AddRule(core.AskKind(cmp.Or(a.String("kind"), string(core.AskPermission))), a.String("rule"))
 			}},
-		{ID: "rules.remove", Title: "Stop allowing {rule} in every session: what it let through asks again",
+		{ID: "rules.remove", Grant: "gate", Title: "Stop allowing {rule} in every session: what it let through asks again",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				rule := a.String("rule")
 				if rule == "" {
