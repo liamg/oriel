@@ -423,7 +423,7 @@ func (p *Search) build(c *ui.Ctx) {
 		c.Row("actions", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 8), Gap: 8, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
 			if widget.Button(c, "replace", "Replace all…", widget.ButtonOpts{Disabled: p.replace == "" || n == 0 || !done, Help: "files/search#replace"}) {
 				if err := p.preview(context.Background()); err != nil {
-					p.h.Notify(core.Notice{ID: "search.replace", Severity: core.SevError, Key: true, Text: err.Error()})
+					kit.NotifyError(p.h, "search.replace", err, true)
 				}
 			}
 			if widget.Button(c, "qf", "→ quickfix", widget.ButtonOpts{Ghost: true, Disabled: n == 0, Help: "files/search"}) {
@@ -529,7 +529,7 @@ func (p *Search) open(r searchRow) {
 		path, line = r.match.Path, r.match.Line
 	}
 	if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": path, "line": line}); err != nil {
-		p.h.Notify(core.Notice{ID: "search.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		p.h.Notify(core.Notice{ID: "search.open", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}
 }
 
@@ -638,7 +638,7 @@ func (p *Search) buildPreview(c *ui.Ctx) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Button(c, "apply", "Apply", widget.ButtonOpts{Primary: true, Disabled: len(plan.edits) == 0, Help: "files/search#replace"}) {
 				if err := p.apply(context.Background()); err != nil {
-					p.h.Notify(core.Notice{ID: "search.replace", Severity: core.SevError, Key: true, Text: err.Error()})
+					kit.NotifyError(p.h, "search.replace", err, true)
 				}
 			}
 			if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Help: "files/search#replace"}) {

@@ -709,11 +709,11 @@ func (x *LSP) startHover(ctx registry.Ctx) error {
 		return c.Hover(ctx, lsp.Loc{Path: path, Pos: text.Pos{Line: pos.Line, Col: pos.Col}})
 	}, func(hv *lsp.Hover, err error) {
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "lsp.hover", Severity: core.SevWarning, Key: true, Text: err.Error()})
+			x.h.Notify(core.Notice{ID: "lsp.hover", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 			return
 		}
 		if hv == nil || strings.TrimSpace(hv.Contents.Text) == "" {
-			x.h.Notify(core.Notice{ID: "lsp.hover", Severity: core.SevInfo, Key: true, Text: "Nothing to show here"})
+			x.h.Notify(core.Notice{ID: "lsp.hover", Severity: core.SevInfo, AutoClear: true, Text: "Nothing to show here"})
 			return
 		}
 		x.hover = &hoverCard{at: text.Pos{Line: pos.Line, Col: pos.Col}, path: path, md: hv.Contents}
@@ -778,12 +778,12 @@ func (x *LSP) codeActions(ctx registry.Ctx) error {
 		func(as []lsp.Action, err error) {
 			answered()
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevWarning, Key: true, Text: err.Error()})
+				x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 				as = nil
 			}
 			if len(as) == 0 && len(agent) == 0 {
 				if err == nil {
-					x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevInfo, Key: true, Text: "No code actions here"})
+					x.h.Notify(core.Notice{ID: "lsp.code_actions", Severity: core.SevInfo, AutoClear: true, Text: "No code actions here"})
 				}
 				return
 			}
@@ -809,14 +809,10 @@ func (x *LSP) runAction(m *actionMenu, a lsp.Action) {
 				_, err := m.client.ExecuteCommand(ctx, cmd)
 				return struct{}{}, err
 			},
-				func(_ struct{}, err error) {
-					if err != nil {
-						x.h.Notify(core.Notice{ID: "lsp.code_action", Severity: core.SevError, Key: true, Text: err.Error()})
-					}
-				})
+				func(_ struct{}, err error) { kit.NotifyError(x.h, "lsp.code_action", err, false) })
 		}
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "lsp.code_action", Severity: core.SevError, Key: true, Text: err.Error()})
+			kit.NotifyError(x.h, "lsp.code_action", err, true)
 		}
 	})
 }

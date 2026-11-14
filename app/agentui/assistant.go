@@ -424,7 +424,7 @@ func (x *Assistant) undo(id string) error {
 	}
 	plugin.Go(x.h, "the assistant's undo", func() {
 		if err := x.conv.Undo(context.Background(), e.ID); err != nil {
-			x.h.Notify(core.Notice{ID: "assistant.undo", Severity: core.SevError, Key: true, Text: "Couldn't undo it: " + err.Error()})
+			x.h.Notify(core.Notice{ID: "assistant.undo", Severity: core.SevError, AutoClear: true, Text: "Couldn't undo it: " + err.Error()})
 		}
 	})
 	return nil

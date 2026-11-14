@@ -289,7 +289,7 @@ func (x *Plugin) Busy() bool {
 }
 
 func (x *Plugin) notify(err error) {
-	x.h.Notify(core.Notice{ID: "explain", Severity: core.SevWarning, Source: "explain", Key: true, Text: err.Error()})
+	x.h.Notify(core.Notice{ID: "explain", Severity: core.SevWarning, Source: "explain", AutoClear: true, Text: err.Error()})
 }
 
 // changedIn is how many hunks and changed units an open file has.

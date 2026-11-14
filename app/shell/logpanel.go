@@ -464,7 +464,7 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 					for i, a := range actions {
 						if widget.Button(c, i, a.Title, widget.ButtonOpts{Primary: i == 0, Help: "errors#log"}) {
 							if err := p.h.Run(context.Background(), a.Command, registry.Args(a.Args)); err != nil {
-								p.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
+								p.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, AutoClear: true, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
 							}
 						}
 					}
@@ -527,7 +527,7 @@ func (p *logPanel) frames(c *ui.Ctx, frames []Frame, failing string) {
 			})
 			if in.Clicked && f.Line > 0 {
 				if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": p.resolve(f.File), "line": f.Line}); err != nil {
-					p.h.Notify(core.Notice{ID: "log.open-frame", Severity: core.SevWarning, Source: "core", Key: true, Text: err.Error()})
+					p.h.Notify(core.Notice{ID: "log.open-frame", Severity: core.SevWarning, Source: "core", AutoClear: true, Text: err.Error()})
 				}
 			}
 		}

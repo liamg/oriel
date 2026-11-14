@@ -126,7 +126,7 @@ func (p *Problems) view(c *ui.Ctx) {
 			})
 			if in.Clicked {
 				if err := p.h.Run(context.Background(), "editor.open", registry.Args{"path": d.File, "line": d.Line + 1}); err != nil {
-					p.h.Notify(core.Notice{ID: "problems.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
+					p.h.Notify(core.Notice{ID: "problems.open", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 				}
 			}
 		})

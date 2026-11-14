@@ -377,7 +377,7 @@ func (e *ThemeEditor) undoLast() error {
 
 func (e *ThemeEditor) fail(err error) {
 	if err != nil {
-		e.h.Notify(core.Notice{ID: "theme.edit", Severity: core.SevError, Title: "Theme", Text: err.Error()})
+		e.h.Notify(core.Notice{ID: "theme.edit", Severity: core.SevError, AutoClear: true, Title: "Theme", Text: err.Error()})
 	}
 }
 

@@ -37,18 +37,18 @@ type Action struct {
 // ID is stable ("vim.unsaved", "lsp.crashed"); Source says who sent it ("vim", "plugin:linear", "init.lua").
 // Session is the session whose log it belongs in, or "" for Oriel's.
 type Notice struct {
-	ID       string    `json:"id"`
-	Severity Severity  `json:"severity"`
-	Source   string    `json:"source"`
-	Session  SessionID `json:"session,omitempty"`
-	Title    string    `json:"title,omitempty"` // a short heading: "Config error", "gopls restarted"
-	Text     string    `json:"text"`
-	Detail   string    `json:"detail,omitempty"`   // a stack trace, a command's stderr
-	Location string    `json:"location,omitempty"` // file:line
-	Actions  []Action  `json:"actions,omitempty"`
-	Time     time.Time `json:"time"`
-	Key      bool      `json:"key,omitempty"`     // in answer to a key just typed, so it goes sooner
-	Confirm  bool      `json:"confirm,omitempty"` // a question confirming what the user just did: a dialog in the window's middle
+	ID        string    `json:"id"`
+	Severity  Severity  `json:"severity"`
+	Source    string    `json:"source"`
+	Session   SessionID `json:"session,omitempty"`
+	Title     string    `json:"title,omitempty"` // a short heading: "Config error", "gopls restarted"
+	Text      string    `json:"text"`
+	Detail    string    `json:"detail,omitempty"`   // a stack trace, a command's stderr
+	Location  string    `json:"location,omitempty"` // file:line
+	Actions   []Action  `json:"actions,omitempty"`
+	Time      time.Time `json:"time"`
+	AutoClear bool      `json:"autoClear,omitempty"` // clears itself after a while: it answers what the user just did, who saw it
+	Confirm   bool      `json:"confirm,omitempty"`   // a question confirming what the user just did: a dialog in the window's middle
 }
 
 // Notification is one row of the history: a notice and how many times it has repeated.

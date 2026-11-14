@@ -677,7 +677,7 @@ func (x *Tests) start(req testrun.Request) error {
 			x.h.DecorationsChanged("tests")
 			if run == nil {
 				if err != nil {
-					x.h.Notify(core.Notice{ID: "tests.run", Severity: core.SevError, Text: err.Error()})
+					kit.NotifyError(x.h, "tests.run", err, false)
 				}
 				return
 			}

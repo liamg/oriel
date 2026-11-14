@@ -160,6 +160,6 @@ func (m *contextMenus) run(it registry.MenuItem) {
 		return m.h.Run(ctx, it.Command, args)
 	})
 	if err != nil {
-		m.h.Notify(core.Notice{ID: "menu." + it.Name, Severity: core.SevError, Source: it.Source, Key: true, Text: it.Label + ": " + err.Error()})
+		m.h.Notify(core.Notice{ID: "menu." + it.Name, Severity: core.SevError, Source: it.Source, AutoClear: true, Text: it.Label + ": " + err.Error()})
 	}
 }

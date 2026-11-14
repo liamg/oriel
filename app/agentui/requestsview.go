@@ -464,7 +464,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 		switch {
 		case r.Submitted:
 			if err := x.send(context.Background(), st, id, false); err != nil {
-				x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+				kit.NotifyError(x.h, "requests", err, true)
 			}
 		case r.Cancelled && d.editing != "":
 			*d = draft{}
@@ -488,7 +488,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			if widget.Button(c, "send", "Send", widget.ButtonOpts{Primary: true, Key: "⏎", Disabled: strings.TrimSpace(d.body()) == "",
 				Help: "agent/requests#composer"}) {
 				if err := x.send(context.Background(), st, id, false); err != nil {
-					x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+					kit.NotifyError(x.h, "requests", err, true)
 				}
 			}
 		})

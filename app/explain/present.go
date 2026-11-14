@@ -262,7 +262,7 @@ func (f *presentFocus) comment(i, part int) {
 	}
 	f.opened = true
 	if err := f.h.Run(context.Background(), "thread.new", a); err != nil {
-		f.h.Notify(core.Notice{ID: "present", Severity: core.SevWarning, Source: "editor", Key: true, Text: err.Error()})
+		f.h.Notify(core.Notice{ID: "present", Severity: core.SevWarning, Source: "editor", AutoClear: true, Text: err.Error()})
 	}
 }
 

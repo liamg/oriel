@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
@@ -106,7 +105,7 @@ func (h *editorHost) Command(name, args string, bang bool) bool {
 	ctx := context.Background()
 	run := func(id string, a registry.Args) bool {
 		if err := h.x.h.Run(ctx, id, a); err != nil {
-			h.x.h.Notify(core.Notice{ID: "editor.command", Severity: core.SevError, Source: "editor", Key: true, Text: err.Error()})
+			kit.NotifyError(h.x.h, "editor.command", err, true)
 		}
 		return true
 	}
@@ -123,7 +122,7 @@ func (h *editorHost) Command(name, args string, bang bool) bool {
 		return false
 	}
 	if err != nil {
-		h.x.h.Notify(core.Notice{ID: "editor.command", Severity: core.SevError, Source: "editor", Key: true, Text: err.Error()})
+		kit.NotifyError(h.x.h, "editor.command", err, true)
 	}
 	return true
 }

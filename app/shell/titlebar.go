@@ -314,7 +314,7 @@ func (t *sessionTabs) nameField(c *ui.Ctx, h plugin.Host, s core.Session) {
 	}
 	if done && name != "" && name != s.Name() {
 		if err := h.Run(context.Background(), "session.rename", registry.Args{"id": string(s.ID()), "name": name}); err != nil {
-			h.Notify(core.Notice{ID: "session.rename", Severity: core.SevError, Source: "sessiontabs", Text: err.Error()})
+			kit.NotifyError(h, "session.rename", err, true)
 		}
 	}
 }
@@ -339,7 +339,7 @@ func closeSession(h plugin.Host, id core.SessionID) {
 		cmd = "session.close-tab"
 	}
 	if err := h.Run(context.Background(), cmd, args); err != nil {
-		h.Notify(core.Notice{ID: cmd, Severity: core.SevError, Source: "shell", Key: true, Text: err.Error()})
+		kit.NotifyError(h, cmd, err, true)
 	}
 }
 

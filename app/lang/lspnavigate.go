@@ -81,9 +81,9 @@ func (x *LSP) navigation(h plugin.Host) {
 				answered()
 				switch {
 				case err != nil:
-					h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: err.Error()})
+					h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 				case len(ls) == 0:
-					h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevInfo, Key: true, Text: "No " + what + " found"})
+					h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevInfo, AutoClear: true, Text: "No " + what + " found"})
 				case len(ls) == 1:
 					x.jump(ls[0])
 				default:
@@ -157,15 +157,15 @@ func (x *LSP) whenStarted(d *lspDoc, what string, again func() error) bool {
 		return false
 	}
 	const id = "lsp.starting"
-	x.h.Notify(core.Notice{ID: id, Severity: core.SevInfo, Key: true, Text: "Starting the " + d.lang + " language server…"})
+	x.h.Notify(core.Notice{ID: id, Severity: core.SevInfo, AutoClear: true, Text: "Starting the " + d.lang + " language server…"})
 	d.ready = append(d.ready, func() {
 		x.h.Dismiss(id)
 		if d.client == nil {
-			x.h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: "The " + d.lang + " language server didn't start: :LspInfo says why"})
+			x.h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, AutoClear: true, Text: "The " + d.lang + " language server didn't start: :LspInfo says why"})
 			return
 		}
 		if err := again(); err != nil {
-			x.h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, Key: true, Text: err.Error()})
+			x.h.Notify(core.Notice{ID: "lsp." + what, Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 		}
 	})
 	return true
@@ -174,7 +174,7 @@ func (x *LSP) whenStarted(d *lspDoc, what string, again func() error) bool {
 // waiting says a request is waiting on c once it has gone slowAnswer unanswered; call what it returns with the answer.
 func (x *LSP) waiting(c *lsp.Client) (answered func()) {
 	slow := time.AfterFunc(slowAnswer, func() {
-		x.h.Notify(core.Notice{ID: "lsp.waiting", Severity: core.SevInfo, Key: true, Text: "Waiting for " + c.Status().Server + " (" + c.Status().State.String() + ")…"})
+		x.h.Notify(core.Notice{ID: "lsp.waiting", Severity: core.SevInfo, AutoClear: true, Text: "Waiting for " + c.Status().Server + " (" + c.Status().State.String() + ")…"})
 	})
 	return func() {
 		if !slow.Stop() {
@@ -194,7 +194,7 @@ func (x *LSP) jump(l lsp.Location) {
 		return
 	}
 	if err := ed.JumpTo(l.Path, r.Start); err != nil {
-		x.h.Notify(core.Notice{ID: "lsp.jump", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		x.h.Notify(core.Notice{ID: "lsp.jump", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}
 }
 
@@ -251,7 +251,7 @@ func (x *LSP) references() error {
 			if err != nil {
 				text = err.Error()
 			}
-			x.h.Notify(core.Notice{ID: "lsp.references", Severity: core.SevInfo, Key: true, Text: text})
+			x.h.Notify(core.Notice{ID: "lsp.references", Severity: core.SevInfo, AutoClear: true, Text: text})
 			return
 		}
 		slices.SortStableFunc(ls, func(a, b lsp.Location) int {
@@ -374,7 +374,7 @@ func (x *LSP) startRename() error {
 			err = fmt.Errorf("%s can't rename what's under the cursor", c.Status().Server)
 		}
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "lsp.rename", Severity: core.SevWarning, Key: true, Text: err.Error()})
+			x.h.Notify(core.Notice{ID: "lsp.rename", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 			return
 		}
 		old := word
@@ -422,9 +422,7 @@ func (x *LSP) doRename(rp *renamePrompt) {
 		if err == nil {
 			err = x.previewEdit(fmt.Sprintf("Rename %s → %s", rp.old, rp.value), rp.c.Spec().Name, *e)
 		}
-		if err != nil {
-			x.h.Notify(core.Notice{ID: "lsp.rename", Severity: core.SevError, Key: true, Text: err.Error()})
-		}
+		kit.NotifyError(x.h, "lsp.rename", err, false)
 	})
 }
 
@@ -624,7 +622,7 @@ func (x *LSP) calls(ctx registry.Ctx, incoming bool) error {
 	}, func(items []uireg.PickerItem, err error) {
 		answered()
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "lsp.calls", Severity: core.SevWarning, Key: true, Text: err.Error()})
+			x.h.Notify(core.Notice{ID: "lsp.calls", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 			return
 		}
 		x.callItems = items

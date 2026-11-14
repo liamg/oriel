@@ -510,7 +510,7 @@ func (e *Explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 			widget.DiffStat(c, "total", x.add, x.del, widget.DiffStatOpts{})
 			if widget.Button(c, "commit", "Commit…", widget.ButtonOpts{Ghost: true, Key: "c", Help: "files/commit"}) {
 				if err := e.h.Run(context.Background(), "explorer.commit", nil); err != nil {
-					e.h.Notify(core.Notice{ID: "git.commit", Severity: core.SevError, Key: true, Text: err.Error()})
+					kit.NotifyError(e.h, "git.commit", err, true)
 				}
 			}
 		}
@@ -545,7 +545,7 @@ func (e *Explorer) activate(id string, sc gitx.Scope) {
 		err = e.h.Run(ctx, "editor.open", registry.Args{"path": e.git().abs(p)})
 	}
 	if err != nil {
-		e.h.Notify(core.Notice{ID: "explorer.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		e.h.Notify(core.Notice{ID: "explorer.open", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}
 }
 
