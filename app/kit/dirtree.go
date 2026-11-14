@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
+	"github.com/liamg/oriel/watch"
 )
 
 // DirMax is the most of a folder's entries a DirTree shows; one more row counts the rest.
@@ -48,7 +49,8 @@ type DirTree struct {
 func NewDirTree(h plugin.Host) *DirTree {
 	d := &DirTree{h: h, entries: map[string][]DirEntry{}, wanted: map[string]bool{}}
 	d.cache = plugin.NewCache(h, func(_ context.Context, dir string) ([]DirEntry, error) { return ReadDirEntries(dir), nil },
-		plugin.CacheOpts[string, []DirEntry]{MaxEntries: 64, Path: func(dir string) string { return dir }})
+		plugin.CacheOpts[string, []DirEntry]{MaxEntries: 64, Path: func(dir string) string { return dir },
+			Watches: func() *watch.Manager { return ManagerFor(h, "") }})
 	return d
 }
 

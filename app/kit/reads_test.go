@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/liamg/oriel/fswatch"
 )
 
 // A read lands at the next frame though no view asks for it again: the view that asked has gone.
@@ -16,8 +14,7 @@ func TestAReadLandsWithoutAnotherAsk(t *testing.T) {
 	}
 	frame := 1
 	woke := make(chan struct{}, 8)
-	rd := NewReads(ReadsOpts{Frame: func() int { return frame }, Wake: func() { woke <- struct{}{} },
-		Watch: func() (*fswatch.Watcher, error) { return nil, fswatch.ErrUnsupported }})
+	rd := NewReads(ReadsOpts{Frame: func() int { return frame }, Wake: func() { woke <- struct{}{} }})
 	t.Cleanup(rd.Close)
 	if _, st := rd.File(p); !st.Loading() {
 		t.Fatalf("the first read = %+v, want it under way", st)
