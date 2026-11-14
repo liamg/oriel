@@ -25,7 +25,7 @@ import (
 // processCommands act on what the agent's last turn left running that won't wake it.
 func (x *Console) processCommands() []registry.Command {
 	return []registry.Command{
-		{ID: "agent.process.stop", Title: "Stop a process the last turn of {session}'s agent (the session in front's) left running: {id}",
+		{ID: "agent.process.stop", Grant: "session.control", Title: "Stop a process the last turn of {session}'s agent (the session in front's) left running: {id}",
 			Available: func(a registry.Args) bool { return x.canStop(x.processSession(a)) }, Run: x.stopProcess},
 	}
 }

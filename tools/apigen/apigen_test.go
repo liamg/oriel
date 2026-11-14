@@ -63,6 +63,10 @@ func (X) Run() {}
 			t.Errorf("the glue doesn't check %s:\n%s", want, b)
 		}
 	}
+	os.WriteFile(filepath.Join(dir, "x.go"), []byte(strings.Replace(src, "cap=exec", "cap=exce", 1)), 0o644)
+	if _, err := Parse(dir); err == nil || !strings.Contains(err.Error(), "isn't a capability") {
+		t.Errorf("a misspelt capability: %v", err)
+	}
 }
 
 // A function annotated deprecated="…" says so where a plugin author meets it: LuaLS flags its calls, and the

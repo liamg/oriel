@@ -249,7 +249,10 @@ type Command struct {
 	// nobody has registered can't.
 	Available func(args Args) bool
 	// When makes it available only while the session in front's kind can do this (registry.FrontCan).
-	When   Capability
+	When Capability
+	// Grant is the plugin capability ("gate", "session.control") a plugin must hold to run it with oriel.run: what
+	// the command does that the API's own calls guard. "" for none.
+	Grant  string
 	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 

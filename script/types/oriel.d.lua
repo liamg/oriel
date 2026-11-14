@@ -122,7 +122,7 @@ function oriel.placeholder(name, spec, fn) end
 ---@return string?,string?
 function oriel.read(path) end
 
---- Run a command by its id, with arguments.
+--- Run a command by its id, with arguments. A command that does what a capability guards (answering an agent's ask, starting or stopping a session, prompting an agent) needs that capability.
 ---@param id string
 ---@param args? table
 function oriel.run(id, args) end
