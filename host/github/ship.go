@@ -26,7 +26,7 @@ type Ship struct {
 	Branch    string       `json:"branch,omitempty"`
 	Base      string       `json:"base,omitempty"`      // the branch it merges into: main
 	Default   string       `json:"default,omitempty"`   // the repo's default branch, when it has it locally: main
-	Remote    bool         `json:"remote,omitempty"`    // it has an origin to push to
+	HasOrigin bool         `json:"hasOrigin,omitempty"` // it has an origin to push to
 	Origin    string       `json:"origin,omitempty"`    // origin's URL
 	Remotes   []string     `json:"remotes,omitempty"`   // the repo's remotes, when none is origin
 	ReadOnly  bool         `json:"readOnly,omitempty"`  // a pinned or read-only worktree, with nothing to ship
@@ -173,8 +173,8 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 		s.Branch = hostcore.DirectBranch(ctx, p, repo).Branch
 	}
 	s.Origin = x.remoteURL(ctx, repo, fresh)
-	s.Remote = s.Origin != ""
-	if !s.Remote {
+	s.HasOrigin = s.Origin != ""
+	if !s.HasOrigin {
 		s.Remotes, _ = repo.Remotes(ctx)
 	}
 	if s.ReadOnly {
@@ -182,7 +182,7 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 	}
 	s.Default = localDefault(ctx, repo)
 	s.Template, s.TemplateFile = gh.Template(p.Dir)
-	if fresh && s.Remote {
+	if fresh && s.HasOrigin {
 		_ = repo.Fetch(ctx) // offline, it's behind by what it last saw
 	}
 	f, err := repo.Flight(ctx, s.Base)

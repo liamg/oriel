@@ -450,7 +450,7 @@ func noOriginWhy(s shipRead) string {
 // cantPushWhy is why a project's branch can't be pushed, if it can't.
 func cantPushWhy(s shipRead) string {
 	switch {
-	case !s.Remote:
+	case !s.HasOrigin:
 		return noOriginWhy(s)
 	case s.Off != nil:
 		return offWhy(s)
@@ -495,7 +495,7 @@ func (x *Ship) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 			note += " · rebased: replaces " + kit.Counted(s.Replaced, "commit") + " on origin"
 		}
 		stepTitle(c, "Unpushed", note)
-		if s.Remote && widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push"})) {
+		if s.HasOrigin && widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push"})) {
 			x.run("ship.push", registry.Args{"project": s.Project})
 		}
 	}, func(c *ui.Ctx) {

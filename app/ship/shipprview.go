@@ -28,7 +28,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 			note = "needs your " + s.Code.Label() + " token for " + s.Site.Host
 		case s.Unknown != "":
 			note = s.Unknown + " isn't a code host Oriel knows yet"
-		case s.Remote:
+		case s.HasOrigin:
 			note = "origin isn't on a code host Oriel knows"
 		}
 		shipCard(c, false, func(c *ui.Ctx) {
