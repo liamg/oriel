@@ -47,7 +47,6 @@ var ceilings = map[string]int{
 
 // stateAllowed are the package-level vars MutableVars may pass over, by "dir.name", and why each is safe to share.
 var stateAllowed = map[string]string{
-	"app/kit.langSets":      "keyed by window registry, and a window's dropped as it closes (ForgetLanguages)",
 	"plugin.native":         "linked-in native plugins, registered from their init (oriel build --with)",
 	"ui/widget.fadeIn":      "a transition read, never written",
 	"ui/widget.tickIn":      "a transition read, never written",

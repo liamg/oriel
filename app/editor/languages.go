@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
@@ -29,6 +30,7 @@ func (x *Languages) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lan
 
 func (x *Languages) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.packs = h, map[string]registry.Disposable{}
+	x.Add(h.Contribute(registry.Service{Name: kit.LanguagesService, Impl: &languageSet{r: h}}))
 	x.Add(registry.DisposeFunc(func() { x.packs = nil }))
 	x.Add(h.Command(registry.Command{ID: "languages.install", Title: "Install the grammar pack in the .tar.gz at {path}, if it's one this build of Oriel lists",
 		Run: func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("path")) }}))
@@ -81,4 +83,22 @@ func (x *Languages) install(path string) error {
 		return err
 	}
 	return x.load(name)
+}
+
+// languageSet is the window's languages as one syntax.Set, made again when the registry's change (kit.LanguageSet).
+type languageSet struct {
+	r   registry.Registry
+	mu  sync.Mutex
+	gen int
+	set *syntax.Set
+}
+
+func (l *languageSet) Set() *syntax.Set {
+	_, gen := l.r.Languages()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.set == nil || l.gen != gen {
+		l.set, l.gen = kit.LanguageSetOf(l.r), gen
+	}
+	return l.set
 }
