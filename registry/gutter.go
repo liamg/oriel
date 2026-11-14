@@ -23,8 +23,7 @@ func (a GutterAction) ContributionName() string { return a.Name }
 // GutterActionFor is the gutter action for a file, if any applies.
 func GutterActionFor(r Contributions, path string) (GutterAction, bool) {
 	var out []GutterAction
-	for _, c := range r.Contributions("editor.gutter") {
-		a := c.(GutterAction)
+	for _, a := range ContributionsOf[GutterAction](r) {
 		ok := a.When == nil
 		if !ok {
 			Call(func() error { ok = a.When(path); return nil })

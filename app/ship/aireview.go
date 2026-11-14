@@ -9,6 +9,12 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -40,7 +46,7 @@ type AIReview struct {
 
 	filter    string // a severity the cards are narrowed to, or ""
 	dismissed bool   // dismissed findings are shown too
-	busy      kit.Busy
+	busy      work.Busy
 	asked     map[core.SessionID]bool // a review asked for and not answered yet
 }
 
@@ -49,9 +55,9 @@ func (x *AIReview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ai-r
 func (x *AIReview) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "aireview", Busy: x.busy.Busy, Source: "builtin:aireview"}))
 	x.h = h
-	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.Enum, Values: []string{"auto", "claude", "codex"}, Default: "auto",
+	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.provider", Type: registry.String, Choices: kit.ProviderChoices(h), Default: "auto",
 		Scopes: registry.ScopeUser,
-		Help:   "The provider AI reviews run on: claude, codex; auto, the session agent's."}))
+		Help:   "The provider AI reviews run on, by name; auto, the session agent's."}))
 	x.Add(h.Option(registry.OptionSpec{Name: "review.ai.model", Type: registry.String, Default: "default", Choices: func() []string { return []string{"default"} },
 		Scopes: registry.ScopeUser, Help: "The model AI reviews run on: default, the session agent's (or the picked provider's default); or a model's name."}))
 	x.Add(h.Contribute(registry.ShipGate{Name: "ai-review", Title: "AI review", Order: 60, Check: x.shipGate, Source: "builtin:ai-review"}))
@@ -170,11 +176,11 @@ func (x *AIReview) session(a registry.Args) (core.SessionState, error) {
 	return kit.SessionFrom(x.h, a)
 }
 
-func (x *AIReview) client(a registry.Args) (host.Access, error) {
+func (x *AIReview) client(a registry.Args) (host.ShipCalls, error) {
 	if _, err := x.session(a); err != nil {
 		return nil, err
 	}
-	return kit.SessionHost(x.h)
+	return kit.ShipCalls(x.h)
 }
 
 // run asks the session host for a review, with the user's prompt when they have one.
@@ -220,7 +226,7 @@ func (x *AIReview) run(a registry.Args) error {
 }
 
 func (x *AIReview) setFinding(se core.SessionState, f core.Finding) error {
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -339,8 +345,8 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 					if n == 0 {
 						continue
 					}
-					label := fmt.Sprintf("%d %s", n, strings.ToUpper(kit.SeverityShort(s)))
-					if widget.ToggleChip(c, s, label, x.filter == s, widget.ToggleChipOpts{Tone: kit.SeverityTone(th, s), Help: findHelp + "#severity",
+					label := fmt.Sprintf("%d %s", n, strings.ToUpper(prui.SeverityShort(s)))
+					if widget.ToggleChip(c, s, label, x.filter == s, widget.ToggleChipOpts{Tone: prui.SeverityTone(th, s), Help: findHelp + "#severity",
 						Tooltip: "Show only these"}) != (x.filter == s) {
 						x.h.Run(context.Background(), "review.ai.filter", registry.Args{"severity": s})
 					}
@@ -366,7 +372,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 			case !inSession:
 				note = "AI review runs in a session: this repo isn't one's."
 			case reviewed && last.Running:
-				note = kit.ProviderName(x.h, last.Provider) + " is reviewing the change…"
+				note = services.ProviderTitle(x.h, last.Provider) + " is reviewing the change…"
 			case !reviewed:
 				note = "No AI review yet. Review changes asks an agent to read this change."
 			case last.Error != "":
@@ -390,7 +396,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				what := "the session's agent"
 				if v, _, _ := x.h.Options().Get("review.ai.provider", registry.At{}); v != "auto" && v != nil {
-					what = kit.ProviderName(x.h, fmt.Sprint(v))
+					what = services.ProviderTitle(x.h, fmt.Sprint(v))
 				}
 				c.Text("what", what, kit.MonoFont(10, th.C(theme.FgGhost)))
 			})
@@ -419,7 +425,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 // card is one finding: its severity and category, title, place (a click shows it in the diff), body and actions.
 func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width float32) {
 	th := c.Theme()
-	tone := kit.SeverityTone(th, f.Severity)
+	tone := prui.SeverityTone(th, f.Severity)
 	fg, title := th.C(theme.FgFaint), th.C(theme.Fg)
 	if f.Dismissed {
 		title = th.C(theme.FgFaint)
@@ -439,7 +445,7 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: tone, Float: &ui.Float{Fill: true}}, nil)
 			c.Column("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 10, T: 9, B: 9}, Gap: 4}, func(c *ui.Ctx) {
 				c.Row("kicker", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-					widget.Chip(c, "sev", kit.SeverityShort(f.Severity), tone, findHelp+"#severity")
+					widget.Chip(c, "sev", prui.SeverityShort(f.Severity), tone, findHelp+"#severity")
 					if f.Category != "" {
 						widget.Chip(c, "cat", f.Category, th.C(theme.FgMuted), findHelp+"#findings")
 					}

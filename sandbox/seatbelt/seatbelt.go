@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -36,8 +35,6 @@ type proxy struct {
 	cancel context.CancelFunc
 }
 
-func init() { sandbox.Register(&Seatbelt{}) }
-
 func (*Seatbelt) Name() string { return "seatbelt" }
 
 func (*Seatbelt) Available() error { return Available() }
@@ -53,7 +50,7 @@ func Available() error {
 	return nil
 }
 
-func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	if err := Available(); err != nil {
 		return sandbox.Command{}, err
 	}
@@ -61,7 +58,7 @@ func (s *Seatbelt) Launch(ctx context.Context, root, cwd string, argv []string, 
 }
 
 // Shell is a shell under root's profile, as the agent runs.
-func (s *Seatbelt) Shell(ctx context.Context, root, cwd string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) Shell(ctx context.Context, root, cwd string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	if err := Available(); err != nil {
 		return sandbox.Command{}, err
 	}
@@ -69,7 +66,7 @@ func (s *Seatbelt) Shell(ctx context.Context, root, cwd string, o sandbox.Launch
 }
 
 // command writes root's profile and returns the agent's command under it.
-func (s *Seatbelt) command(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (s *Seatbelt) command(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	if rec, ok := sandbox.Load(root); !ok || !rec.Sandboxed() {
 		return sandbox.Command{}, errors.New("this workspace is not sandboxed")
 	}
@@ -176,7 +173,7 @@ func (*Seatbelt) Health(_ context.Context, cfg sandbox.Config) []sandbox.Problem
 		}
 	}
 	if len(unused) > 0 {
-		sort.Strings(unused)
+		slices.Sort(unused)
 		out = append(out, sandbox.Problem{Code: "settings-unused",
 			Message: strings.Join(unused, ", ") + " only apply to docker sandboxes",
 			Fix:     "Clear them, or set sandbox.backend to docker."})
@@ -336,6 +333,6 @@ func environ(env map[string]string) []string {
 	for k, v := range env {
 		out = append(out, k+"="+v)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }

@@ -17,7 +17,7 @@ func TestLayoutComesBackAfterARestart(t *testing.T) {
 	state, dir := t.TempDir(), t.TempDir()
 	os.WriteFile(filepath.Join(dir, "a.go"), []byte("package a\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "b.go"), []byte("package b\n\nfunc B() {\n\treturn\n}\n"), 0o644)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: dir})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	run := func(id string, args registry.Args) {
 		t.Helper()
 		if err := r.Do(func() error { return r.Host.Run(context.Background(), id, args) }); err != nil {
@@ -33,7 +33,7 @@ func TestLayoutComesBackAfterARestart(t *testing.T) {
 	r.WaitText("3:6")
 	r.Stop()
 
-	r2 := apptest.NewWindow(t, apptest.WindowOptions{State: state, WorkDir: dir})
+	r2 := apptest.NewWindow(t, apptest.WindowOpts{State: state, WorkDir: dir})
 	r2.WaitFrame("the layout back", func(s string) bool { return apptest.HasAll(s, "EXPLORER", "a.go", "b.go", "3:6", "restored-term") })
 	var all []layout.ViewRef
 	var left bool

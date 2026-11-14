@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -57,7 +57,7 @@ func (c *Coverage) Ranges(file string) []LineRange {
 	for l := range lines {
 		keys = append(keys, l)
 	}
-	sort.Ints(keys)
+	slices.Sort(keys)
 	var out []LineRange
 	for _, l := range keys {
 		cov := lines[l] > 0

@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // promptsPath is where the host keeps the prompts the app last sent, for sessions that start while no app is
@@ -41,7 +42,8 @@ func (x *Runner) loadPrompts() {
 // SetPrompts is the user's versions of the prompts (agent/prompts), sent by the app on connect and whenever one
 // changes. They're the source of truth from then on: a built-in pack is theirs or the default, never an older
 // file's. Each workspace's notes are written again with the coding style.
-func (x *Runner) SetPrompts(o prompts.Overrides) error {
+func (x *Runner) SetPrompts(o prompts.Overrides) (err error) {
+	defer x.env.Recover("SetPrompts", &err)
 	if o == nil {
 		o = prompts.Overrides{}
 	}
@@ -49,11 +51,7 @@ func (x *Runner) SetPrompts(o prompts.Overrides) error {
 	if err != nil {
 		return err
 	}
-	tmp := x.promptsPath() + ".tmp"
-	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, x.promptsPath()); err != nil {
+	if err := atomicfile.Write(x.promptsPath(), append(b, '\n'), 0o600); err != nil {
 		return err
 	}
 	x.mu.Lock()
@@ -69,6 +67,7 @@ func (x *Runner) SetPrompts(o prompts.Overrides) error {
 
 // Prompts is the user's versions of the prompts the app last sent, and whether it has.
 func (x *Runner) Prompts() (prompts.Overrides, bool) {
+	defer x.env.Recover("Prompts", nil)
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.prompts, x.promptsSent
@@ -116,18 +115,12 @@ func (x *Runner) WriteNotes(id core.SessionID) {
 	}
 }
 
-// notesFiles are the files the notes go in: AGENTS.md, and each provider's own (agent.Features.Notes).
+// notesFiles are the files the notes go in (agent.NotesFiles).
 func (x *Runner) notesFiles() []string {
-	out := []string{"AGENTS.md"}
 	if x.deps.Providers == nil {
-		return out
+		return agent.NotesFiles(nil)
 	}
-	for _, p := range x.deps.Providers.List() {
-		if n := agent.FeaturesOf(p).Notes; n != "" && !slices.Contains(out, n) {
-			out = append(out, n)
-		}
-	}
-	return out
+	return agent.NotesFiles(x.deps.Providers.List())
 }
 
 // agentNotes are a workspace's notes; with branches, each project's branch, and how to change it.

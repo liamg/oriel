@@ -47,8 +47,8 @@ L.keymap.set("n", ",", "my.thing", { nowait = true })       -- don't wait for ",
 
 -- commands
 L.command("Ship", function(args)
-  L.cmd("git.commit", { draft = true })
-  L.cmd("pr.raise", { verify = true })
+  L.run("git.commit", { draft = true })
+  L.run("pr.raise", { verify = true })
 end, { desc = "commit, then verify & raise" })
 
 -- events: observe / veto / rewrite / decide
@@ -94,10 +94,10 @@ L.statusline(function(w)
   }
 end)
 
-L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
-  local n = L.json(L.http.get("https://deploy.internal/api/pending")).count
+L.hud.indicator("deploys", function()
+  local n = L.json_decode(L.http.get("https://deploy.internal/api/pending")).count
   return L.ui.indicator{ label = "DEPLOY", value = n, tone = n > 0 and "warn" or "ok" }
-end)
+end, { slot = "titlebar.right", every = "30s" })
 
 L.view.override("requests", function(s)            -- replace a built-in panel
   return L.ui.list(s.threads:filter("open"):sort("age"), require("my.thread_row"))
@@ -111,7 +111,7 @@ L.decor.provider("coverage", function(buf, top, bot)
 end)
 
 -- status colours are rules too
-L.status.rule(function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
+L.status.rule("hotfix", function(s) if s.kind == "hotfix" and not s.pr_merged then return "red" end end)
 ```
 
 ## Option list
@@ -151,7 +151,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `git.blame.inline` | true: who last changed the cursor's line, after it | app | |
 | `debug.inline_values` | true: while paused, the frame's variables after the lines that name them | app | |
 | `diff.layout` | `split`: the review diff's old and new side by side; `unified`, one above the other | app | |
-| `review.ai.provider` | `auto`: the session agent's; or `claude`, `codex` | app | |
+| `review.ai.provider` | `auto`: the session agent's; or a provider's name (`claude`, `codex`, a plugin's) | app | |
 | `review.ai.model` | `default`: the session agent's, or the picked provider's default; or a model's name | app | |
 | `github.trusted_orgs` | `[]`: GitHub orgs whose members' review comments the agent may read; empty means the repository's owner | app | |
 | `github.trusted_users` | `[]`: GitHub logins whose review comments the agent may read, beside the trusted orgs' members | app | |
@@ -230,7 +230,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `voice.recorder` | `oriel`: Oriel captures it (Core Audio on macOS, PulseAudio or PipeWire on Linux); or a program: `pw-record`, `parecord`, `arecord` (Linux), `rec` (sox), `ffmpeg` | app | |
 | `voice.speech` | `system` (say, spd-say or espeak), `piper` or `off`: how replies are spoken | app | |
 | `voice.piper_voice` | a Piper voice's name in `~/.oriel/piper`; empty uses the first there | app | |
-| `assistant.provider` | `auto`: the first agent installed and signed in; or `claude`, `codex` | app | |
+| `assistant.provider` | `auto`: the first agent installed and signed in; or a provider's name (`claude`, `codex`, a plugin's) | app | |
 | `assistant.model` | `default`: the provider's default model; `small`, its small one (Claude's Haiku); or a model's name | app | |
 | `assistant.web` | true: the assistant may search the web (the provider's WebSearch and WebFetch) | app | |
 | `assistant.idle` | 15: minutes of quiet before a conversation ends and the next starts afresh | app | |

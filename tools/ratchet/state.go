@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
 )
 
 // Package-level state: a package-level var that holds mutable state is shared by every app, window and host in the
@@ -19,7 +20,8 @@ import (
 
 // pureCalls make values nothing writes to later.
 var pureCalls = []string{
-	"regexp.MustCompile", "errors.New", "fmt.Errorf", "theme.Declare", "theme.DeclareOn", "strings.NewReplacer",
+	"regexp.MustCompile", "errors.New", "fmt.Errorf", "theme.Declare", "theme.DeclareOn", "theme.semanticToken",
+	"theme.semanticOn", "strings.NewReplacer",
 	"template.Must", "time.Date", "time.Duration", "json.RawMessage", "slices.Clone", "append", "float32", "reflect.TypeFor",
 	"strings.Replace", "strings.ReplaceAll", "strings.Repeat", "strings.Join", "fmt.Sprintf", "filepath.Join",
 }
@@ -131,7 +133,9 @@ func MutableVars(files []File, module string, allowed map[string]string) []Hit {
 						hits = append(hits, Hit{pos(f, n), n.Name + " is a " + typeName(vs.Type) + " for its methods to change"})
 					case written[v]:
 						hits = append(hits, Hit{pos(f, n), n.Name + " written after it's declared"})
-					case stateful(vs.Type) || stateful(val):
+					case sentinel(n.Name):
+						// a sentinel error, made once: a write to it is caught above
+					case stateful(f.AST.Name.Name, vs.Type) || stateful(f.AST.Name.Name, val):
 						hits = append(hits, Hit{pos(f, n), n.Name + " holds a lock, atomic, channel or pointer"})
 					}
 				}
@@ -157,8 +161,18 @@ func embedded(g *ast.GenDecl, vs *ast.ValueSpec) bool {
 	return false
 }
 
-// stateful says e's type or value is a lock, an atomic, a channel, or a pointer to something made.
-func stateful(e ast.Expr) bool {
+// sentinel says name is a sentinel error's, by Go's naming: errX, ErrX.
+func sentinel(name string) bool {
+	rest, ok := strings.CutPrefix(name, "err")
+	if !ok {
+		rest, ok = strings.CutPrefix(name, "Err")
+	}
+	return ok && rest != "" && unicode.IsUpper(rune(rest[0]))
+}
+
+// stateful says e's type or value is a lock, an atomic, a channel, or a pointer to something made. pkg is the
+// package e is in, so a call to one of its own pure functions is known as the qualified name pureCalls lists.
+func stateful(pkg string, e ast.Expr) bool {
 	if e == nil {
 		return false
 	}
@@ -185,7 +199,7 @@ func stateful(e ast.Expr) bool {
 			switch {
 			case name == "make" || name == "new":
 				found = true
-			case !slices.Contains(pureCalls, name) && !conversion(n):
+			case !slices.Contains(pureCalls, name) && !slices.Contains(pureCalls, pkg+"."+name) && !conversion(n):
 				found = true
 			}
 		}

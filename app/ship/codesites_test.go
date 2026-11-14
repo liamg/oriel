@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/ship"
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/isolate"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -28,7 +29,10 @@ func testGitLab(probe func(string) bool, allowed *[]string) registry.CodeHost {
 		Setup: registry.SiteSetup{API: "https://{host}/api/v4", Secret: "GITLAB_TOKEN", TokenURL: "https://{host}/-/user_settings/personal_access_tokens",
 			TokenHelp: "A personal access token with the api scope.",
 			Probe:     func(_ context.Context, host string) (bool, error) { return probe != nil && probe(host), nil }},
-		Allow: func(host, secret string) { *allowed = append(*allowed, host+" "+secret) }}
+		Allow: func(host, secret, _ string) func() {
+			*allowed = append(*allowed, host+" "+secret)
+			return func() { *allowed = append(*allowed, "undo "+host) }
+		}}
 }
 
 // "The first step that answers wins, and the answer is kept per hostname: you
@@ -53,12 +57,38 @@ func TestCodeSitesFindTheHost(t *testing.T) {
 		"https://github.com/acme/api.git":         {"github", "github.com", "acme/api"},
 		"git@github.com:acme/api.git":             {"github", "github.com", "acme/api"},
 		"https://gitlab.com/acme/group/web.git":   {"gitlab", "gitlab.com", "acme/group/web"},
-		"https://tfs.acme.corp/Coll/web/_git/api": {"azure", "tfs.acme.corp", "api"},
+		"https://tfs.acme.corp/Coll/web/_git/api": {}, // its shape is Azure DevOps', but you haven't set it up
 		"git@ghe.acme.corp:acme/api.git":          {},
 	} {
 		if n, h, r := at(remote); [3]string{n, h, r} != want {
 			t.Errorf("%s: %s %s %s, want %v", remote, n, h, r, want)
 		}
+	}
+
+	// A probe is let reach the server only while it asks: one that answers no takes its grant back.
+	if _, ok := sites.Probe(context.Background(), "nope.acme.test"); ok {
+		t.Error("a server no probe claimed was found")
+	}
+	if got := strings.Join(allowed, ","); !strings.Contains(got, "nope.acme.test ,undo nope.acme.test") {
+		t.Errorf("a probe that answered no kept its grant: %q", allowed)
+	}
+
+	// A remote whose shape alone says it's a host's server isn't its plugin's to reach until you say so: a notice offers
+	// to set it up, once.
+	var offer core.Notification
+	for _, n := range s.Store().State().Notifications {
+		if strings.Contains(n.Text, "tfs.acme.corp") {
+			offer = n
+		}
+	}
+	if len(offer.Actions) == 0 || offer.Actions[0].Command != "code.setup" || offer.Actions[0].Args["code_host"] != "azure" {
+		t.Errorf("no offer to set tfs.acme.corp up as Azure DevOps: %+v", offer)
+	}
+	if err := sites.Remember("tfs.acme.corp", "azure", ""); err != nil {
+		t.Fatal(err)
+	}
+	if n, h, r := at("https://tfs.acme.corp/Coll/web/_git/api"); [3]string{n, h, r} != [3]string{"azure", "tfs.acme.corp", "api"} {
+		t.Errorf("once set up: %s %s %s", n, h, r)
 	}
 
 	// gh's own config names a GitHub Enterprise server; glab's a GitLab.
@@ -180,13 +210,13 @@ func TestCodeSiteTokens(t *testing.T) {
 	if len(ran) != 0 {
 		t.Errorf("ran %q though the environment had one", ran)
 	}
-	sites.Refuse(hs, errors.New("GitLab: 401 Unauthorized"))
+	sites.Refuse(hs, errors.New("GitLab: the token was refused (HTTP 401)")) // as integ/gitlab writes it
 	sites.Warm(context.Background(), hs)
 	read()
 	if got := token(); got != "from-glab" || len(ran) != 1 || ran[0] != "glab config get token --host gitlab.com" {
 		t.Errorf("after the environment's was refused: %q, ran %q", got, ran)
 	}
-	sites.Refuse(hs, errors.New("GitLab: 401 Unauthorized"))
+	sites.Refuse(hs, errors.New("GitLab: the token was refused (HTTP 401)")) // as integ/gitlab writes it
 	if got := token(); got != "" || sites.Keyed(hs) {
 		t.Errorf("every source refused: %q, keyed %v", got, sites.Keyed(hs))
 	}
@@ -227,17 +257,18 @@ func TestCodeSiteAliases(t *testing.T) {
 		t.Errorf("review sources %q, want %q", keys, want)
 	}
 	s.Run("reviews.open", nil)
-	s.Frame()
+	s.Quiet()
 	text := s.Text()
-	gitlab, azure := strings.Index(text, "GitLab needs a token to list your reviews"), strings.Index(text, "Azure DevOps needs a token to list your reviews")
-	if n := strings.Count(text, "needs a token to list your reviews"); n != 2 || gitlab < 0 || azure < gitlab {
-		t.Errorf("%d token asks, want GitLab's then Azure DevOps':\n%s", n, text)
+	github, gitlab := strings.Index(text, "GitHub needs a token to list your reviews"), strings.Index(text, "GitLab needs a token to list your reviews")
+	azure := strings.Index(text, "Azure DevOps needs a token to list your reviews")
+	if n := strings.Count(text, "needs a token to list your reviews"); n != 3 || github < 0 || gitlab < github || azure < gitlab {
+		t.Errorf("%d token asks, want GitHub's, GitLab's then Azure DevOps':\n%s", n, text)
 	}
 
 }
 
 // docs/examples/gitea: "an error in a later callback hangs silently". A code host's answer that a later callback
-// (an exec's on_done, an http.request's) would have given fails with that callback's error, at once.
+// (an exec_async's, an http.request's) would have given fails with that callback's error, at once.
 func TestLuaCodeHostCallbackError(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	m, err := plugin.ParseManifest([]byte("id = \"acme/broken\"\nversion = \"0.1.0\"\ndescription = \"x\"\n[permissions]\nexec = { commands = [\"true\"] }\n"))
@@ -249,7 +280,7 @@ func TestLuaCodeHostCallbackError(t *testing.T) {
 	vm := s.PluginVM(plugin.Caller{ID: m.ID, Dir: t.TempDir(), Guard: g})
 	src := `oriel.code.host{ name = "broken", sites = { { host = "broken.dev" } },
   requested = function(site, done)
-    oriel.exec({ "true" }, { on_done = function() local rows = nil; for _ in ipairs(rows) do end; done({}) end })
+    oriel.exec_async({ "true" }, {}, function() local rows = nil; for _ in ipairs(rows) do end; done({}) end)
   end }`
 	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(src)}); err != nil {
 		t.Fatal(err)

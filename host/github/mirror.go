@@ -212,6 +212,7 @@ type ReviewComment struct {
 
 // MirrorReview brings a PR's review threads into the session, and hands the agent what's new.
 func (x *GitHub) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error) {
+	defer x.env.Recover("MirrorReview", &err)
 	if r.Host == "" {
 		return errors.New("which code host's review?")
 	}
@@ -262,7 +263,8 @@ type ForwardedReq struct {
 }
 
 // DraftOf is a thread's draft reply to forward: its body, refusing one that isn't a draft or has gone already.
-func (x *GitHub) DraftOf(r ForwardReq) (core.Thread, string, error) {
+func (x *GitHub) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {
+	defer x.env.Recover("DraftOf", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return core.Thread{}, "", err
@@ -293,6 +295,7 @@ func (x *GitHub) DraftOf(r ForwardReq) (core.Thread, string, error) {
 // Forwarded marks a draft reply sent, once its code host has it. A mirror can meanwhile take its echo for a new
 // comment: ForwardHost posts and marks with mirroring held off.
 func (x *GitHub) Forwarded(r ForwardedReq) (_ core.Comment, err error) {
+	defer x.env.Recover("Forwarded", &err)
 	x.mirror.mu.Lock()
 	defer x.mirror.mu.Unlock()
 	return x.forwarded(r.Session, r.Thread, r.Comment, 0, r.HostID)

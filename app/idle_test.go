@@ -16,9 +16,9 @@ import (
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
+	"github.com/liamg/oriel/sysload"
 )
 
 // spawns puts shims for the commands Oriel runs on PATH, each noting its run in a log, and counts the runs logged.
@@ -47,7 +47,7 @@ func spawns(t *testing.T) func() []string {
 func idleWindow(t *testing.T) *apptest.Window {
 	t.Helper()
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W), Timeout: time.Minute})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W), Timeout: time.Minute})
 	rig.WaitState(t, r.Store, "the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	var working bool
 	for _, name := range []string{"one", "two", "three"} {
@@ -99,7 +99,7 @@ func TestMachineLoadIsReadWhileShown(t *testing.T) {
 	defer cancel()
 	go load.Run(ctx)
 	lw := rig.NewHost(t)
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: func(cfg *apptest.Config) {
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
 		cfg.Load = load
 	}})
@@ -120,7 +120,7 @@ func TestMachineLoadIsReadWhileShown(t *testing.T) {
 
 // A hidden window draws no frames; what changed meanwhile is drawn once it shows.
 func TestNoFramesWhileHidden(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir()})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir()})
 	r.WaitText("")
 	r.Win.Send(render.VisibleEvent{Visible: false})
 	if err := r.Do(func() error { return nil }); err != nil { // the loop has taken the event

@@ -33,10 +33,16 @@ func CloneDepth(ctx context.Context, url, dir string, depth int) error {
 }
 
 // Rev is the commit ref names, or an error when it names none.
-func (r Repo) Rev(ctx context.Context, ref string) (string, error) { return r.rev(ctx, ref) }
+func (r Repo) Rev(ctx context.Context, ref string) (string, error) {
+	out, err := r.git(ctx, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+	return strings.TrimSpace(string(out)), err
+}
 
 // Verify says ref names a commit.
-func (r Repo) Verify(ctx context.Context, ref string) bool { return r.verify(ctx, ref) }
+func (r Repo) Verify(ctx context.Context, ref string) bool {
+	_, err := r.Rev(ctx, ref)
+	return err == nil
+}
 
 // MergeBaseOf is the best common ancestor of a and b.
 func (r Repo) MergeBaseOf(ctx context.Context, a, b string) (string, error) {
@@ -73,7 +79,10 @@ func (r Repo) Switch(ctx context.Context, branch string) error {
 }
 
 // Ancestor says a is reachable from b: b holds every commit of a.
-func (r Repo) Ancestor(ctx context.Context, a, b string) bool { return r.ancestor(ctx, a, b) }
+func (r Repo) Ancestor(ctx context.Context, a, b string) bool {
+	_, err := r.git(ctx, "merge-base", "--is-ancestor", a, b)
+	return err == nil
+}
 
 // Detach checks out rev with no branch.
 func (r Repo) Detach(ctx context.Context, rev string) error {
@@ -96,10 +105,13 @@ func (r Repo) ChangedFiles(ctx context.Context, base string) ([]string, error) {
 	return strings.Fields(string(out)), nil
 }
 
-// CurrentBranch is the branch checked out, or "" on a detached HEAD.
+// CurrentBranch is Branch's answer, with "" for a detached HEAD or a branch git couldn't name.
 func (r Repo) CurrentBranch(ctx context.Context) string {
-	out, _ := r.git(ctx, "branch", "--show-current")
-	return strings.TrimSpace(string(out))
+	b, err := r.Branch(ctx)
+	if err != nil || b == "HEAD" {
+		return ""
+	}
+	return b
 }
 
 // ObjectsKiB is the size of the object store, loose and packed.

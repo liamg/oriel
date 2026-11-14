@@ -10,6 +10,12 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/diagrams"
+
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -48,7 +54,7 @@ type Walkthrough struct {
 	kit.Disposer
 	ConfigDir string // the user's config
 	h         plugin.Host
-	busy      kit.Busy
+	busy      work.Busy
 	metrics   kit.PaneMetrics // the code's, as the editor draws it
 
 	w     *walkthrough // on the loop only
@@ -219,7 +225,7 @@ func (x *Walkthrough) start() error {
 		return errors.New("there's no project here to explain the change of")
 	}
 	open := map[string]openText{}
-	if ed, ok := registry.EditorsOf(x.h); ok {
+	if ed, ok := services.EditorsOf(x.h); ok {
 		for _, b := range ed.Buffers() {
 			open[filepath.Clean(b.Path)] = openText{src: b.Text.Snapshot().Bytes(), file: b.Bytes()}
 		}
@@ -586,7 +592,7 @@ func (x *Walkthrough) diagram(c *ui.Ctx, stageID ui.ID, s walkStep) bool {
 	if s.Diagram == "" || s.missing {
 		return false
 	}
-	l, err := kit.DiagramOf(c, s.Diagram)
+	l, err := diagrams.Of(c, s.Diagram)
 	if err != nil || l == nil {
 		return false
 	}
@@ -601,8 +607,8 @@ func (x *Walkthrough) diagram(c *ui.Ctx, stageID ui.ID, s walkStep) bool {
 		width = l.Size.X * h / l.Size.Y
 	}
 	c.Column("stage", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 14, Clip: true}, func(c *ui.Ctx) {
-		c.Text("kicker", kit.DiagramKicker(l), kit.KickerFont(th.C(theme.FgFaint)))
-		kit.Diagram(c, "diagram", l, max(width, 80), kit.MarkdownOpts{Help: walkHelp})
+		c.Text("kicker", diagrams.Kicker(l), kit.KickerFont(th.C(theme.FgFaint)))
+		diagrams.Draw(c, "diagram", l, max(width, 80), kit.MarkdownOpts{Help: walkHelp})
 	})
 	return true
 }
@@ -681,7 +687,7 @@ func (x *Walkthrough) notes(c *ui.Ctx, w *walkthrough, s walkStep, ps []placedNo
 			id := widget.Annotation(c, "card", widget.AnnotationOpts{N: noteMark(p.i), Title: n.Title, Tone: noteTone(th, p.i),
 				Width: ui.Px(notesW), Ground: th.C(kit.TEditorBg), Help: walkHelp}, func(c *ui.Ctx) {
 				if n.Text != "" {
-					kit.MarkdownText(c, x.h, "md", n.Text, notesW-28, widget.AnnotationBody(c))
+					kit.MarkdownText(c, x.h, "md", n.Text, notesW-28, widget.AnnotationBody(c), kit.MarkdownOpts{})
 				}
 			})
 			if r, ok := c.Rect(id); ok && r.Dy() != w.cardH[p.i] {
@@ -788,7 +794,7 @@ func (x *Walkthrough) dock(c *ui.Ctx, w *walkthrough) {
 			c.Column("text", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 				c.Text("title", s.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 19, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 				if s.Prose != "" {
-					kit.MarkdownText(c, x.h, "prose", s.Prose, width, kit.UIFont(13.5, th.C(theme.FgMuted)))
+					kit.MarkdownText(c, x.h, "prose", s.Prose, width, kit.UIFont(13.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				}
 				c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 					if widget.Button(c, "ask", "Ask about this step", widget.ButtonOpts{Ghost: true, Help: walkHelp,

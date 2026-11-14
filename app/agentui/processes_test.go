@@ -21,7 +21,7 @@ var devServer = core.BackgroundTask{ID: "1001", Kind: "terminal", Description: "
 func TestStopAProcessTheTurnLeftRunning(t *testing.T) {
 	lw := rig.NewHost(t)
 	lw.Fake.Has = &agent.Features{Terminal: true, Fork: true, StopProcesses: true}
-	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{Plugins: []plugin.Plugin{registers{lw.Fake}}})
+	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{Plugins: []plugin.Plugin{registers{lw.Fake}}})
 	r.TypeKeys("<D-A>")
 	r.WaitText("SESSION STATS")
 	a.Emit(agent.TurnStart{})
@@ -39,7 +39,7 @@ func TestStopAProcessTheTurnLeftRunning(t *testing.T) {
 func TestNoStopWithoutTheFeature(t *testing.T) {
 	lw := rig.NewHost(t)
 	lw.Fake.Has = &agent.Features{Terminal: true, Fork: true}
-	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{Plugins: []plugin.Plugin{registers{lw.Fake}}})
+	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{Plugins: []plugin.Plugin{registers{lw.Fake}}})
 	r.TypeKeys("<D-A>")
 	r.WaitText("SESSION STATS")
 	a.Emit(agent.TurnStart{})

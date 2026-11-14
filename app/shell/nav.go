@@ -130,11 +130,7 @@ func (x *navPlugin) move(ctx context.Context, dir int) error {
 		}
 		kit.RunCalls(x.h, then)
 	default:
-		var calls []any
-		for _, c := range then {
-			calls = append(calls, registry.Args{"command": c.Command, "args": c.Args})
-		}
-		return x.h.Run(ctx, "session.focus", registry.Args{"id": string(to.session), "then": calls})
+		return x.h.Run(ctx, "session.focus", registry.Args{"id": string(to.session), "then": kit.Then(then...)})
 	}
 	return nil
 }
@@ -157,25 +153,4 @@ func (x *navPlugin) reachable(s navStop) bool {
 		}
 	}
 	return true
-}
-
-// placeShown says a place (a page) is showing over the layout.
-func placeShown(r registry.Registry) bool {
-	name, ok := uireg.ShownPlace(r)
-	return name != "" || !ok
-}
-
-// closePlaces puts away every place showing, as something else is put in front.
-func closePlaces(r registry.Registry) {
-	for _, c := range r.Contributions("place") {
-		p := c.(uireg.Place)
-		if p.Shown == nil || p.Close == nil {
-			continue
-		}
-		shown := false
-		registry.Call(func() error { shown = p.Shown(); return nil })
-		if shown {
-			registry.Call(func() error { p.Close(); return nil })
-		}
-	}
 }

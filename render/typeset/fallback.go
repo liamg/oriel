@@ -2,13 +2,14 @@ package typeset
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -269,7 +270,7 @@ func systemFontFiles() []string {
 			}
 			return 99
 		}
-		sort.SliceStable(systemFonts, func(i, j int) bool { return rank(systemFonts[i]) < rank(systemFonts[j]) })
+		slices.SortStableFunc(systemFonts, func(a, b string) int { return cmp.Compare(rank(a), rank(b)) })
 	})
 	return systemFonts
 }

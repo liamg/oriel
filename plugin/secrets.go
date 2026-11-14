@@ -5,8 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"sync"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // Secrets is where named secrets are kept. Plugins never read
@@ -68,11 +70,7 @@ func (f *SecretFile) SetSecret(name, value string) error {
 	if err := os.MkdirAll(filepath.Dir(f.Path), 0o700); err != nil {
 		return err
 	}
-	tmp := f.Path + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, f.Path)
+	return atomicfile.WriteSecret(f.Path, b)
 }
 
 func (f *SecretFile) SecretNames() []string {
@@ -83,6 +81,6 @@ func (f *SecretFile) SecretNames() []string {
 	for k := range m {
 		out = append(out, k)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }

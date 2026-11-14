@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -40,7 +42,7 @@ func pathOf(subject string) string { return strings.TrimPrefix(subject, kit.Path
 
 // subject is what the row for rel stands for to its right-click menu.
 func (e *Explorer) subject(rel string) string {
-	if e.git().root() == "" {
+	if e.git().Root() == "" {
 		return ""
 	}
 	p := e.git().abs(rel)
@@ -68,12 +70,12 @@ func (e *Explorer) readOnly(path string) string {
 func (e *Explorer) absPath(a registry.Args) (string, error) {
 	p := strings.TrimSpace(a.String("path"))
 	switch {
-	case p == "" && e.git().root() == "":
+	case p == "" && e.git().Root() == "":
 		return "", errors.New("which path? {path}")
 	case p == "":
-		return e.git().root(), nil
+		return e.git().Root(), nil
 	case !filepath.IsAbs(p):
-		p = filepath.Join(e.git().root(), p)
+		p = filepath.Join(e.git().Root(), p)
 	}
 	return filepath.Clean(p), nil
 }
@@ -152,7 +154,7 @@ func (e *Explorer) fileCommands() []registry.Command {
 				return err
 			}
 			if a.Bool("relative") {
-				if r, err := filepath.Rel(e.git().root(), p); err == nil && !strings.HasPrefix(r, "..") {
+				if r, err := filepath.Rel(e.git().Root(), p); err == nil && !strings.HasPrefix(r, "..") {
 					p = filepath.ToSlash(r)
 				}
 			}
@@ -298,7 +300,7 @@ func (e *Explorer) remove(path string, confirm, permanent bool) error {
 		if err := os.RemoveAll(path); err != nil {
 			return err
 		}
-	} else if err := kit.Trash(path); err != nil {
+	} else if err := trash(path); err != nil {
 		e.h.Notify(core.Notice{ID: "explorer.delete", Severity: core.SevError, Source: "explorer", Text: err.Error(),
 			Actions: []core.Action{{Title: "Delete for good…", Command: "explorer.delete", Args: map[string]any{"path": path, "permanent": true}}}})
 		return nil
@@ -309,7 +311,7 @@ func (e *Explorer) remove(path string, confirm, permanent bool) error {
 
 // stillOpen says so when the editor holds the file that was at path: its buffer keeps what was there.
 func (e *Explorer) stillOpen(path, what string, actions []core.Action) {
-	eds, ok := registry.EditorsOf(e.h)
+	eds, ok := services.EditorsOf(e.h)
 	if !ok {
 		return
 	}
@@ -383,7 +385,7 @@ func (e *Explorer) askView(c *ui.Ctx) {
 	}
 	open := true
 	title := map[string]string{"file": "New file", "folder": "New folder", "rename": "Rename " + filepath.Base(f.path)}[f.kind]
-	widget.Modal(c, "explorer-ask", &open, title, widget.ModalOpts{Width: 460, Help: filesHelp}, func(c *ui.Ctx) {
+	widget.Modal(c, "explorer-ask", &open, widget.ModalOpts{Title: title, Width: 460, Help: filesHelp}, func(c *ui.Ctx) {
 		th := c.Theme()
 		where := "in " + kit.TildePath(f.path)
 		if f.kind == "rename" {

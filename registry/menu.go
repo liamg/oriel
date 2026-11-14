@@ -78,8 +78,7 @@ func (m MenuItem) Matches(at MenuCtx) bool {
 // MenuItems are r's menu items that apply at at, grouped and ordered, each fix with its explain twin after it.
 func MenuItems(r Contributions, at MenuCtx) []MenuItem {
 	var out []MenuItem
-	for _, c := range r.Contributions("menu.item") {
-		m := c.(MenuItem)
+	for _, m := range ContributionsOf[MenuItem](r) {
 		if !m.Matches(at) {
 			continue
 		}

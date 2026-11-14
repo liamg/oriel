@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"flag"
@@ -47,7 +48,7 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 		}
 		s.With = append(s.With, m)
 	}
-	switch b := cmpOr(*base, version); {
+	switch b := cmp.Or(*base, version); {
 	case b == "dev":
 		return errors.New("this is a dev build: give --oriel a version or a checkout")
 	case strings.HasPrefix(b, "v"):
@@ -60,13 +61,6 @@ func runBuild(args []string, stdout, stderr io.Writer) error {
 	}
 	fmt.Fprintln(stdout, "wrote", s.Output)
 	return nil
-}
-
-func cmpOr(a, b string) string {
-	if a != "" {
-		return a
-	}
-	return b
 }
 
 type multi []string

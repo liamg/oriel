@@ -39,18 +39,13 @@ func (r Repo) FlightBase(ctx context.Context, base string) string {
 		br, _ := r.Branch(ctx)
 		return r.BaseRef(ctx, br)
 	}
-	if r.verify(ctx, "refs/remotes/origin/"+base) {
+	if r.Verify(ctx, "refs/remotes/origin/"+base) {
 		return "origin/" + base
 	}
-	if r.verify(ctx, "refs/heads/"+base) {
+	if r.Verify(ctx, "refs/heads/"+base) {
 		return base
 	}
 	return ""
-}
-
-func (r Repo) verify(ctx context.Context, ref string) bool {
-	_, err := r.rev(ctx, ref)
-	return err == nil
 }
 
 // Flight reads the branch's way to a pull request against base ("main"; "" for origin's default).
@@ -80,7 +75,7 @@ func (r Repo) Flight(ctx context.Context, base string) (*Flight, error) {
 	}
 	slices.SortFunc(f.Uncommitted, func(a, b FileState) int { return strings.Compare(a.Path, b.Path) })
 	f.Base = r.FlightBase(ctx, base)
-	if f.Base == "" || !r.verify(ctx, "HEAD") {
+	if f.Base == "" || !r.Verify(ctx, "HEAD") {
 		return f, nil
 	}
 	if out, err := r.git(ctx, "rev-list", "--count", "HEAD.."+f.Base); err == nil {
@@ -91,7 +86,7 @@ func (r Repo) Flight(ctx context.Context, base string) (*Flight, error) {
 	}
 	f.Commits, _ = r.log(ctx, f.Base+"..HEAD")
 	f.Unpushed = f.Commits
-	if f.Branch != "HEAD" && r.verify(ctx, "refs/remotes/origin/"+f.Branch) {
+	if f.Branch != "HEAD" && r.Verify(ctx, "refs/remotes/origin/"+f.Branch) {
 		f.Pushed = true
 		f.Unpushed, _ = r.log(ctx, "origin/"+f.Branch+"..HEAD")
 		if out, err := r.git(ctx, "rev-list", "--count", "HEAD..origin/"+f.Branch); err == nil {
@@ -161,7 +156,7 @@ func (r Repo) RenameBranch(ctx context.Context, old, name string) error {
 	if _, err := r.git(ctx, "check-ref-format", "--branch", name); err != nil {
 		return fmt.Errorf("%q isn't a branch name git takes", name)
 	}
-	if r.verify(ctx, "refs/heads/"+name) {
+	if r.Verify(ctx, "refs/heads/"+name) {
 		return fmt.Errorf("there's a branch %s already", name)
 	}
 	if _, err := r.git(ctx, "branch", "-m", old, name); err != nil {

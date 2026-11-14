@@ -36,7 +36,7 @@ func (p *counted) Deactivate(context.Context) error {
 func TestFollowingASessionKeepsThePluginsRunning(t *testing.T) {
 	lw := rig.NewHost(t)
 	p := &counted{}
-	w := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W), Plugins: []plugin.Plugin{p}})
+	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W), Plugins: []plugin.Plugin{p}})
 	w.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	dirOf := func(id core.SessionID) string {
 		se, _ := w.Store.Session(id)
@@ -106,7 +106,7 @@ func (p *holding) Activate(_ context.Context, h plugin.Host) error {
 // directory is laid out once it lets go.
 func TestAMoveWaitsForWhatHoldsIt(t *testing.T) {
 	p := &holding{release: make(chan func(), 1)}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{p}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: t.TempDir(), Plugins: []plugin.Plugin{p}})
 	dir := t.TempDir()
 	if err := r.Do(func() error {
 		w, _ := kit.WindowOf(r.Host)

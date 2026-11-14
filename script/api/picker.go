@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -26,7 +27,7 @@ func (p Picker) Source(spec script.Table, where string) error {
 	if id == "" || items == nil {
 		return errors.New("a picker source needs an id and items")
 	}
-	s := uireg.PickerSource{ID: id, Title: cmpOr(str(spec, "title"), id), Prefix: str(spec, "prefix"), Order: 50, Source: where}
+	s := uireg.PickerSource{ID: id, Title: cmp.Or(str(spec, "title"), id), Prefix: str(spec, "prefix"), Order: 50, Source: where}
 	if o, ok := spec["order"].(float64); ok {
 		s.Order = int(o)
 	}
@@ -236,8 +237,8 @@ func (a *APIs) later(fn *script.Fn, args ...any) {
 
 func ticketOf(t script.Table) registry.Ticket {
 	tk := registry.Ticket{Key: str(t, "key"), Title: str(t, "title"), URL: str(t, "url"), State: str(t, "state"), Stage: str(t, "stage"),
-		Project: str(t, "project"), Priority: int(num(t["priority"])), PriorityLabel: str(t, "priority_label"), BlockedBy: strs(t["blocked_by"]),
-		Summary: str(t, "summary"), Description: str(t, "description"), Facts: strs(t["facts"]), Context: str(t, "context")}
+		Project: str(t, "project"), Priority: int(num(t["priority"])), PriorityLabel: str(t, "priority_label"), BlockedBy: plugin.Strings(t["blocked_by"]),
+		Summary: str(t, "summary"), Description: str(t, "description"), Facts: plugin.Strings(t["facts"]), Context: str(t, "context")}
 	tk.Blocked, _ = t["blocked"].(bool)
 	tk.Blocked = tk.Blocked || len(tk.BlockedBy) > 0
 	if pr, ok := t["pr"].(script.Table); ok {

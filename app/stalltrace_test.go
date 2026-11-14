@@ -14,7 +14,7 @@ import (
 // With --trace, a stall writes the execution trace of the seconds before it, for go tool trace.
 func TestSlowFrameWritesTrace(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "stall.trace")
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), WorkDir: t.TempDir(), Config: func(c *apptest.Config) { c.Trace = path }})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), WorkDir: t.TempDir(), Config: func(c *apptest.Config) { c.Trace = path }})
 	r.Win.Send(render.SlowFrameEvent{Waited: 900 * time.Millisecond})
 	var b []byte
 	apptest.Poll(t, "a trace written for the slow frame", func() bool {

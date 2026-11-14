@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -96,7 +95,7 @@ func TestCargoSelected(t *testing.T) {
 				ran = append(ran, strings.ReplaceAll(k, "\x00", " "))
 			}
 		}
-		sort.Strings(ran)
+		slices.Sort(ran)
 		if want := []string{"lib tests::inner::deep", "test/integration adds"}; !slices.Equal(ran, want) {
 			t.Errorf("%s ran %q, want %q", rec, ran, want)
 		}
@@ -122,8 +121,8 @@ func TestCargoDiscoverMatchesRun(t *testing.T) {
 			ran = append(ran, e.Package+" "+e.Test)
 		}
 	}
-	sort.Strings(got)
-	sort.Strings(ran)
+	slices.Sort(got)
+	slices.Sort(ran)
 	if !slices.Equal(got, ran) {
 		t.Errorf("discovered %q\nran        %q", got, ran)
 	}

@@ -48,8 +48,8 @@ plugin's are named `plugin.<name>.…` and saved under `[plugin.<name>]`.
 ## Time and programs {#time}
 
 `L.now()` is Oriel's clock in seconds (use it, not `os.time`, for anything you show: tests can fix it), and
-`L.platform` the OS (`darwin`, `linux`). `L.exec(argv, { on_done = fn(output, err) })` runs a program without holding
-up the window.
+`L.platform` the OS (`darwin`, `linux`). `L.exec_async(argv, opts, fn(output, err))` runs a program without holding up
+the window.
 
 ## Later features {#later}
 

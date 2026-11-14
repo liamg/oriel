@@ -339,7 +339,10 @@ func TestGitPanelInAnOpenedDirectory(t *testing.T) {
 	hub := ghtest.New(t)
 	lw := rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
 	blog, up := shipRepo(t, "blog", map[string]string{"post.md": "# One\n"})
-	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
+	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
+		apptest.Connect(lw.W)(cfg)
+		apptest.GitHub(hub)(cfg)
+	}})
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("directory.open", registry.Args{"path": blog})
 	st := s.UntilState("the directory's session in front", func(st core.State) bool {

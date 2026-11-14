@@ -64,7 +64,8 @@ type PRMove struct {
 
 // UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
 // the projects that moved.
-func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (map[string]PRMove, error) {
+func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]PRMove, err error) {
+	defer x.env.Recover("UpdatePR", &err)
 	se, err := x.st.Session(id)
 	if err != nil {
 		return nil, err
@@ -109,6 +110,6 @@ func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (map[string
 	if err := x.st.Emit(core.ProjectsChanged{ID: se.ID, Branch: se.Branch, Projects: projects, Past: se.Past, Started: se.Started}); err != nil {
 		return nil, err
 	}
-	x.SaveProjects(se.ID)
+	x.recordProjects(se.ID)
 	return moved, nil
 }

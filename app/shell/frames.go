@@ -32,7 +32,7 @@ func (x *frames) Manifest() plugin.Manifest { return plugin.Manifest{ID: "frames
 func (x *frames) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.Frame{ID: WorkspaceFrame, Order: 50, When: sessionRunning, Regions: []uireg.Region{
 		{View: kit.TitleBarView, Area: uireg.AreaTop},
-		{View: RailView, Area: uireg.AreaLeft},
+		{View: kit.RailView, Area: uireg.AreaLeft},
 		{View: kit.RootView, Area: uireg.AreaMain},
 		{View: kit.StatusLineView, Area: uireg.AreaBottom},
 		{View: NotificationsView, Area: uireg.AreaOver},
@@ -111,7 +111,7 @@ func frameWindow(st core.State, dir string) uireg.Window {
 // that landed since the last frame are taken in first, whether or not this one asks for them.
 func buildWindow(c *ui.Ctx, reg uireg.Registry, size render.Point, win uireg.Window) {
 	if rd, ok := kit.ReadsOf(reg); ok {
-		rd.Land()
+		rd.Drain()
 	}
 	f, _ := uireg.FrameFor(reg, win)
 	vc := uireg.ViewCtx{Width: size.X, Height: size.Y, Session: win.Session}

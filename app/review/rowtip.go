@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -64,10 +66,10 @@ func rowTipLines(q registry.ReviewRequest, now time.Time) []string {
 		opened = "opened by " + q.Author
 	}
 	if !q.Opened.IsZero() {
-		opened = strings.TrimSpace(cmp.Or(opened, "opened") + " " + kit.AgoText(now, q.Opened))
+		opened = strings.TrimSpace(cmp.Or(opened, "opened") + " " + widget.AgoLong(now, q.Opened))
 	}
 	if !q.Updated.IsZero() {
-		updated = "updated " + kit.AgoText(now, q.Updated)
+		updated = "updated " + widget.AgoLong(now, q.Updated)
 	}
 	add(opened, updated)
 	if q.Head != "" && q.Base != "" {
@@ -83,7 +85,7 @@ func rowTipLines(q registry.ReviewRequest, now time.Time) []string {
 	}
 	add(size, files)
 	var asked, reviewed []string
-	for _, rv := range kit.MergeReviewers(q.Reviewers) {
+	for _, rv := range prui.MergeReviewers(q.Reviewers) {
 		switch rv.State {
 		case "requested":
 			asked = append(asked, rv.Login)

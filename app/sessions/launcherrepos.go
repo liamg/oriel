@@ -77,7 +77,7 @@ func (x *Launcher) reposSection(c *ui.Ctx, k core.KindSpec) {
 	all := x.repoChoices()
 	addNew := func(c *ui.Ctx) {
 		if widget.Button(c, "addrepo", "+ Add repo", widget.ButtonOpts{Help: "agent/launcher#repositories"}) {
-			if err := x.h.Run(context.Background(), "repos.new", registry.Args{"then": []any{map[string]any{"command": "launcher.pick-repo"}}}); err != nil {
+			if err := x.h.Run(context.Background(), "repos.new", registry.Args{"then": kit.Then(kit.Call{Command: "launcher.pick-repo"})}); err != nil {
 				x.err = err.Error()
 			}
 		}

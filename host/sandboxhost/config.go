@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/gateway"
 )
@@ -42,11 +43,7 @@ func (x *Boxes) SetConfig(cfg sandbox.Config) error {
 	if err != nil {
 		return err
 	}
-	tmp := x.configPath() + ".tmp"
-	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, x.configPath()); err != nil {
+	if err := atomicfile.Write(x.configPath(), append(b, '\n'), 0o600); err != nil {
 		return err
 	}
 	x.cfgMu.Lock()

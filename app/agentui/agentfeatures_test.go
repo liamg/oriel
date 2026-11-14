@@ -6,13 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
-	"github.com/liamg/oriel/registry"
 )
 
 // registers is a plugin that registers the fake as its provider, as a plugin's agent would.
@@ -20,7 +21,7 @@ type registers struct{ p agent.Provider }
 
 func (r registers) Manifest() plugin.Manifest { return plugin.Manifest{ID: "test.provider"} }
 func (r registers) Activate(_ context.Context, h plugin.Host) error {
-	h.Contribute(registry.AgentProvider{Name: r.p.ID(), Title: "Fake", Provider: r.p, Source: "test"})
+	h.Contribute(services.AgentProvider{Name: r.p.ID(), Title: "Fake", Provider: r.p, Source: "test"})
 	return nil
 }
 func (registers) Deactivate(context.Context) error { return nil }
@@ -29,7 +30,7 @@ func (registers) Deactivate(context.Context) error { return nil }
 func TestNoRawTerminalWithoutOne(t *testing.T) {
 	lw := rig.NewHost(t)
 	lw.Fake.Has = &agent.Features{Fork: true}
-	r, _, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{Plugins: []plugin.Plugin{registers{lw.Fake}}})
+	r, _, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{Plugins: []plugin.Plugin{registers{lw.Fake}}})
 	r.TypeKeys("<D-A>")
 	s := r.WaitText("SESSION STATS")
 	if strings.Contains(s, "Raw terminal") {
@@ -47,7 +48,7 @@ func TestABrowserLoginFromTheCard(t *testing.T) {
 	lw := rig.NewHost(t)
 	lw.Fake.Has = &agent.Features{Login: true}
 	desk := &apptest.Desktop{}
-	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{Config: func(c *apptest.Config) { c.Desktop = desk }})
+	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{Config: func(c *apptest.Config) { c.Desktop = desk }})
 	lw.Fake.SignIn(false)
 	a.Emit(agent.AuthExpired{Provider: "fake", Detail: "fake is signed out", Shell: "fake login"})
 	r.WaitFrame("the card", func(s string) bool {
@@ -68,7 +69,7 @@ func TestABrowserLoginFromTheCard(t *testing.T) {
 // provider's command in a terminal on this machine.
 func TestAHostLoginFromTheCard(t *testing.T) {
 	lw := rig.NewHost(t)
-	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOptions{})
+	r, a, _ := apptest.AgentWindowWith(t, lw, apptest.WindowOpts{})
 	lw.Fake.SignIn(false)
 	a.Emit(agent.AuthExpired{Provider: "fake", Detail: "fake is signed out", Shell: "fake login",
 		HostCommand: []string{"sh", "-c", "echo signing-in-on-the-host; exec cat"}})

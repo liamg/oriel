@@ -66,7 +66,7 @@ end)
 
 -- a command and a key that open the panel
 L.command("Deploys", function()
-  L.cmd("view.open", { id = "deploys", place = "dock", edge = "right", title = "Deploys", size = 420 })
+  L.run("view.open", { id = "deploys", place = "dock", edge = "right", title = "Deploys", size = 420 })
 end, { desc = "Show the deploys panel" })
 L.keymap.set("n", "<leader>D", "Deploys", { desc = "Deploys" })
 `

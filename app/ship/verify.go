@@ -15,6 +15,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -49,7 +51,7 @@ type Verify struct {
 	h         plugin.Host
 	ctx       context.Context
 	cancel    context.CancelFunc
-	busy      kit.Busy
+	busy      work.Busy
 
 	// On the loop.
 	quizzes map[core.SessionID]*quiz
@@ -275,7 +277,7 @@ func (x *Verify) record(q *quiz, result string) {
 		At: time.Now()}
 	log := x.h.Log().With("session", string(q.session))
 	log.Info("verification "+result, "right", v.Count(core.VerdictRight), "partly", v.Count(core.VerdictPartly), "wrong", v.Count(core.VerdictWrong))
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.ShipCalls(x.h)
 	if err != nil {
 		log.Error("verification not recorded", "err", err)
 		return

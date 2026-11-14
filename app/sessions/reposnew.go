@@ -37,7 +37,7 @@ type addRepo struct {
 	path, url, parent, name string
 	note                    string // why it's asked, over the fields
 	urlName                 string // the name the URL gave: the name field follows the URL while it holds this
-	then                    any
+	then                    []kit.Call
 	focus                   bool
 
 	key      string    // what the fields held when they last changed
@@ -68,14 +68,15 @@ func expandTilde(p string) string {
 }
 
 func (x *Repos) newDialog(a registry.Args) error {
-	if _, err := kit.CallsOf(a["then"]); err != nil {
+	then, err := kit.CallsOf(a["then"])
+	if err != nil {
 		return err
 	}
-	f := &addRepo{path: a.String("path"), url: a.String("url"), parent: a.String("parent"), name: a.String("name"), note: a.String("note"), then: a["then"], focus: true}
+	f := &addRepo{path: a.String("path"), url: a.String("url"), parent: a.String("parent"), name: a.String("name"), note: a.String("note"), then: then, focus: true}
 	if a.String("mode") == "clone" || f.url != "" {
 		f.mode = 1
 	}
-	if w, _ := kit.SessionHost(x.h); f.parent == "" && w != nil {
+	if w, _ := kit.RepoCalls(x.h); f.parent == "" && w != nil {
 		f.parent = kit.TildePath(w.CloneParent())
 	}
 	if f.name == "" {
@@ -102,7 +103,7 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 		return
 	}
 	open := true
-	widget.Modal(c, "reposnew", &open, "Add repo", widget.ModalOpts{Width: 620, Help: "agent/repos#add"}, func(c *ui.Ctx) { x.dialogBody(c, f) })
+	widget.Modal(c, "reposnew", &open, widget.ModalOpts{Title: "Add repo", Width: 620, Help: "agent/repos#add"}, func(c *ui.Ctx) { x.dialogBody(c, f) })
 	if open {
 		return
 	}
@@ -113,7 +114,7 @@ func (x *Repos) dialogView(c *ui.Ctx) {
 	x.dialog = nil
 }
 
-// field is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ adds.
+// dialogField is a text field of the dialog's: Tab moves on, Escape closes, ⌘↵ adds.
 func (x *Repos) dialogField(c *ui.Ctx, key string, text *string, label, placeholder string, focus bool, o widget.InputOpts) {
 	if focus {
 		c.RequestFocus(c.Next(key))
@@ -143,7 +144,7 @@ func (x *Repos) probe(c *ui.Ctx, f *addRepo) {
 	if k := f.probeKey(); k != f.key {
 		f.key, f.keyAt = k, now
 	}
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.RepoCalls(x.h)
 	if w == nil || f.probing || f.key == f.probed {
 		return
 	}
@@ -340,7 +341,7 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 				})
 			}
 		})
-		if w, _ := kit.SessionHost(x.h); w != nil && expandTilde(f.parent) == w.CloneParent() && len(x.repos()) > 0 {
+		if w, _ := kit.RepoCalls(x.h); w != nil && expandTilde(f.parent) == w.CloneParent() && len(x.repos()) > 0 {
 			labelled(c, "where", "", func(c *ui.Ctx) { kit.Note(c, "t", "where most of your repos are") })
 		}
 		if h := f.parentHint(); h != "" {
@@ -422,7 +423,7 @@ func (f *addRepo) blocked() string {
 
 func (x *Repos) submitDialog() {
 	f := x.dialog
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.RepoCalls(x.h)
 	if f == nil || f.busy || w == nil {
 		return
 	}

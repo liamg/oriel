@@ -184,7 +184,7 @@ func (x *Tests) agentRun(c *ui.Ctx) {
 		return
 	}
 	c.Text("agent", "AGENT", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: c.Theme().C(theme.FgFaint)})
-	kit.EvidenceChip(c, "agentrun", x.h, se.ID(), last.ID, kit.RunLabel(last), last.OK)
+	kit.EvidenceChip(c, x.h, "agentrun", se.ID(), last.ID, kit.RunLabel(last), last.OK)
 }
 
 // lastRunLine is the last run: its number, trigger, scope, counts and who started it.

@@ -92,9 +92,7 @@ func (t TicketTracker) Label() string { return cmp.Or(t.Title, t.Name) }
 // TicketTrackers are the trackers by Order, then name.
 func TicketTrackers(r Contributions) []TicketTracker {
 	var out []TicketTracker
-	for _, c := range r.Contributions("ticket.tracker") {
-		out = append(out, c.(TicketTracker))
-	}
+	out = append(out, ContributionsOf[TicketTracker](r)...)
 	slices.SortFunc(out, func(a, b TicketTracker) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})

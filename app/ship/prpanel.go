@@ -6,6 +6,8 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -45,7 +47,7 @@ func (x *Ship) panelHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 	}
 	c.Row("sub", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 		word := x.prPanelState(se, s)
-		widget.Chip(c, "state", word, kit.PRStateTone(c, word), "git/ship#pr")
+		widget.Chip(c, "state", word, prui.PRStateTone(c, word), "git/ship#pr")
 		c.Row("s", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("s", sub, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
 		if widget.IconButton(c, "refresh", "↻", widget.IconButtonOpts{Label: "Read again: fetch origin, ask " + cmp.Or(labelOf(s), "the code host"),
 			Help: "git/ship#pr", Disabled: x.report(se.ID).loading}) {
@@ -63,7 +65,7 @@ func checksFoot(c *ui.Ctx, s shipRead) {
 		th := c.Theme()
 		text := "couldn't reach " + cmp.Or(labelOf(s), "the code host")
 		if !s.PRRead.IsZero() {
-			text += " · " + kit.AgoFine(c.Now(), s.PRRead)
+			text += " · " + prui.AgoFine(c.Now(), s.PRRead)
 		}
 		c.Text("f", text, kit.MonoFont(10, th.C(theme.Error)))
 		return
@@ -72,7 +74,7 @@ func checksFoot(c *ui.Ctx, s shipRead) {
 	if s.PR != nil && s.PR.Head != "" {
 		at = "at " + shortSHA(s.PR.Head)
 	}
-	kit.Freshness(c, "checked", s.PRRead, 3*prTTL, at)
+	prui.Freshness(c, "checked", s.PRRead, 3*prTTL, at)
 }
 
 // labelOf is the project's code host's name, "" for none.
@@ -87,17 +89,17 @@ func shortSHA(h string) string { return h[:min(7, len(h))] }
 
 func (x *Ship) checksBox(c *ui.Ctx, s shipRead) {
 	th := c.Theme()
-	kit.PRBox(c, "checks", "CHECKS", func(c *ui.Ctx) {
-		sum := kit.ChecksBody(c, s.Checks)
+	prui.PRBox(c, "checks", "CHECKS", func(c *ui.Ctx) {
+		sum := prui.ChecksBody(c, s.Checks)
 		if s.FailLine != "" {
-			kit.WrapUnder(c, "fail", sum, s.FailLine, kit.MonoFont(10, th.C(theme.Error)))
+			prui.WrapUnder(c, "fail", sum, s.FailLine, kit.MonoFont(10, th.C(theme.Error)))
 		}
 		if s.HostError != "" {
-			kit.WrapUnder(c, "herr", sum, s.HostError, kit.MonoFont(10, th.C(theme.Error)))
+			prui.WrapUnder(c, "herr", sum, s.HostError, kit.MonoFont(10, th.C(theme.Error)))
 		}
 		if t, ok := ciTrouble(s); ok && s.PR.Open() {
 			c.Column("ci", ui.Style{Gap: 6, Pad: ui.Insets{T: 4}}, func(c *ui.Ctx) {
-				kit.AskTwinsLabelled(c, x.h, "ship.ci."+s.Project, t, "git/ship#checks", "Explain with agent", "Fix CI with agent")
+				kit.AskTwins(c, x.h, "ship.ci."+s.Project, t, kit.AskTwinsOpts{Help: "git/ship#checks", Explain: "Explain with agent", Fix: "Fix CI with agent"})
 			})
 		}
 		kit.ExplainKept(c, x.h, "ship.ci."+s.Project, "git/ship#checks")
@@ -126,7 +128,7 @@ func (x *Ship) reviewsBox(c *ui.Ctx, s shipRead) {
 	for i, r := range who {
 		rs[i] = registry.PRReviewer{Login: r, State: state[r]}
 	}
-	kit.ReviewersBox(c, rs)
+	prui.ReviewersBox(c, rs)
 }
 
 // remoteAhead says the PR's head isn't the commit checked out here, with nothing here to push: someone pushed.
@@ -175,11 +177,11 @@ func branchLines(s shipRead) []branchLine {
 }
 
 func (x *Ship) branchBox(c *ui.Ctx, s shipRead) {
-	kit.PRBox(c, "branch", "BRANCH", func(c *ui.Ctx) {
+	prui.PRBox(c, "branch", "BRANCH", func(c *ui.Ctx) {
 		for _, l := range branchLines(s) {
-			kit.PRLine(c, l.key, l.state, l.label, l.note)
+			prui.PRLine(c, l.key, l.state, l.label, l.note)
 		}
-	}, func(c *ui.Ctx) { kit.Freshness(c, "git read", s.GitRead, 0, "") })
+	}, func(c *ui.Ctx) { prui.Freshness(c, "git read", s.GitRead, 0, "") })
 }
 
 // checklistBody is the Pull request panel once the project's been read.

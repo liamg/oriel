@@ -10,14 +10,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render/typeset"
+	"github.com/liamg/oriel/search"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -58,7 +60,7 @@ type Search struct {
 	since   time.Time // when the search running began
 	err     error
 	cancel  context.CancelFunc
-	busy    kit.Busy
+	busy    work.Busy
 
 	plan *editPlan // the edits being previewed
 

@@ -3,7 +3,8 @@ package shell
 import (
 	"sync"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 )
@@ -23,7 +24,7 @@ type fonts struct {
 	listed  []string
 	read    bool
 	reading bool
-	using   kit.Busy
+	using   work.Busy
 }
 
 // contributeFonts offers the shaper's fonts as the registry's Fonts, when it can draw with installed ones.

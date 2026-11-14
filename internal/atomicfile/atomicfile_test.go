@@ -45,3 +45,32 @@ func TestWrite(t *testing.T) {
 		t.Error("a file in a directory that isn't there was written")
 	}
 }
+
+// WriteSecret is Write for what only the user may read: the file is 0600 afterwards, even one that was readable by
+// others before, and a new one is never readable by others, not even for a moment.
+func TestWriteSecret(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "secrets.json")
+	if err := os.WriteFile(path, []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteSecret(path, []byte(`{"token":"x"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(path); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Errorf("mode %v, %v", fi.Mode().Perm(), err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != `{"token":"x"}` {
+		t.Errorf("it holds %q", b)
+	}
+	fresh := filepath.Join(dir, "new.json")
+	if err := WriteSecret(fresh, []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(fresh); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Errorf("new file's mode %v, %v", fi.Mode().Perm(), err)
+	}
+	if es, _ := os.ReadDir(dir); len(es) != 2 {
+		t.Errorf("left beside it: %v", es)
+	}
+}

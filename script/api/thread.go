@@ -1,6 +1,7 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"slices"
 
@@ -22,7 +23,7 @@ func (t Thread) List() []any {
 	ths := slices.Clone(se.Snapshot().Threads)
 	out := make([]any, 0, len(ths))
 	for _, th := range ths {
-		row := script.Table{"id": string(th.ID), "title": th.Heading(), "status": cmpOr(string(th.Status), string(core.ThreadOpen)),
+		row := script.Table{"id": string(th.ID), "title": th.Heading(), "status": cmp.Or(string(th.Status), string(core.ThreadOpen)),
 			"busy": th.Busy, "urgent": th.Urgent, "btw": th.Btw, "comments": len(th.Comments)}
 		if a := th.Anchor; a != nil {
 			row["file"], row["line"] = a.File, a.Line

@@ -13,7 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -121,7 +121,7 @@ func (s Spec) args(mode ...string) []string {
 	for k, v := range s.Labels {
 		labels = append(labels, k+"="+v)
 	}
-	sort.Strings(labels)
+	slices.Sort(labels)
 	for _, l := range labels {
 		args = append(args, "--label", l)
 	}

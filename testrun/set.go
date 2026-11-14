@@ -1,6 +1,10 @@
 package testrun
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/liamg/oriel/syntax"
+)
 
 // ContributionKind is the registry contribution kind a plugin adds an adapter with.
 const ContributionKind = "testrun.adapter"
@@ -17,8 +21,19 @@ func (c Contribution) ContributionName() string { return c.Adapter.Name() }
 // Set is the adapters a workspace's tests can be run with. An adapter registered later shadows an earlier one of
 // the same name until it's removed. It's safe for concurrent use.
 type Set struct {
+	// Languages are the languages a file's tests are parsed in: the window's, so a language a plugin adds has its
+	// tests.scm used too; the built-ins if nil.
+	Languages func() *syntax.Set
+
 	mu   sync.Mutex
 	list []*entry
+}
+
+func (s *Set) langs() *syntax.Set {
+	if s.Languages == nil {
+		return syntax.Builtin()
+	}
+	return s.Languages()
 }
 
 type entry struct{ a Adapter }
@@ -110,6 +125,9 @@ func (s *Set) Detect(ws Workspace) []Adapter {
 
 // Discover finds the tests in a buffer with the first of the workspace's adapters that finds any.
 func (s *Set) Discover(ws Workspace, src Source) (Adapter, []Item) {
+	if src.Languages == nil {
+		src.Languages = s.langs()
+	}
 	for _, a := range s.Detect(ws) {
 		if items := a.Discover(src); len(items) > 0 {
 			return a, items

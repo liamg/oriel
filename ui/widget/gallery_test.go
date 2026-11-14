@@ -74,7 +74,7 @@ func (g *gallery) build(c *ui.Ctx) {
 		g.target = c.Box("target", ui.Style{W: ui.Px(120), H: ui.Px(24), Fill: th.C(theme.BgRaised), Radius: 4, Interactive: true, Help: "hud/usage#weekly-window"}, nil)
 		ContextMenu(c, "ctx", g.target, items[:2])
 	})
-	Modal(c, "modal", &g.modalOpen, "Settings", ModalOpts{Width: 360, Help: "gallery/modal"}, func(c *ui.Ctx) {
+	Modal(c, "modal", &g.modalOpen, ModalOpts{Title: "Settings", Width: 360, Help: "gallery/modal"}, func(c *ui.Ctx) {
 		c.Text("t", "A modal holds focus until it closes.", ui.TextStyle{})
 		Button(c, "ok", "OK", ButtonOpts{Primary: true, Help: "gallery/button"})
 	})

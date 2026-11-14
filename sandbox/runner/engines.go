@@ -19,6 +19,14 @@ type Engine struct {
 	Find func() (container.Engine, error)
 	// Fix says how to install or start it.
 	Fix string
+	// Helper is the sandbox helper its containers run (sandbox.HelperRunner); none until the host hands it over.
+	Helper func() ([]byte, error)
+}
+
+// WithHelper is b running helper's binary in its containers (sandbox.HelperRunner).
+func (b Engine) WithHelper(helper func() ([]byte, error)) sandbox.Backend {
+	b.Helper = helper
+	return b
 }
 
 // The engines oriel knows. Docker drives whatever daemon the docker CLI's
@@ -30,12 +38,6 @@ var (
 	Colima   = Engine{Label: "colima", Find: findColima, Fix: "Install Colima (brew install colima) and run `colima start`."}
 	Podman   = Engine{Label: "podman", Find: findPodman, Fix: "Install Podman, and on macOS run `podman machine start`."}
 )
-
-func init() {
-	for _, e := range []Engine{Docker, OrbStack, Colima, Podman} {
-		sandbox.Register(e)
-	}
-}
 
 // Where the alternatives keep their docker sockets, under the home directory.
 var (
@@ -119,12 +121,12 @@ func (b Engine) with(ctx context.Context) (context.Context, container.Engine, er
 	return container.WithEngine(ctx, e), e, err
 }
 
-func (b Engine) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOptions) (sandbox.Command, error) {
+func (b Engine) Launch(ctx context.Context, root, cwd string, argv []string, o sandbox.LaunchOpts) (sandbox.Command, error) {
 	ctx, _, err := b.with(ctx)
 	if err != nil {
 		return sandbox.Command{}, err
 	}
-	cmd, needs, err := Launch(ctx, root, cwd, argv, o)
+	cmd, needs, err := Launch(ctx, root, cwd, argv, o, b.Helper)
 	if err != nil {
 		return sandbox.Command{}, err
 	}
@@ -144,7 +146,7 @@ func (b Engine) Health(ctx context.Context, cfg sandbox.Config) []sandbox.Proble
 	if err != nil {
 		return []sandbox.Problem{{Code: "engine-missing", Message: err.Error(), Fix: b.Fix, Blocking: true}}
 	}
-	return Health(ctx, cfg, b.Fix)
+	return Health(ctx, cfg, b.Fix, b.Helper)
 }
 
 func (b Engine) Sweep(ctx context.Context, attached func(root string) bool) []string {
@@ -171,7 +173,7 @@ func (b Engine) Rebuild(ctx context.Context, root string, cfg sandbox.Config) er
 	return Rebuild(ctx, root, cfg)
 }
 
-func (b Engine) Shell(ctx context.Context, root, cwd string, _ sandbox.LaunchOptions) (sandbox.Command, error) {
+func (b Engine) Shell(ctx context.Context, root, cwd string, _ sandbox.LaunchOpts) (sandbox.Command, error) {
 	ctx, e, err := b.with(ctx)
 	if err != nil {
 		return sandbox.Command{}, err

@@ -81,7 +81,9 @@ func (r Repo) FastForward(ctx context.Context, branch string) error {
 	ctx, cancel := context.WithTimeout(ctx, FetchTimeout)
 	defer cancel()
 	if cur, _ := r.Branch(ctx); cur == branch {
-		if r.Dirty(ctx) {
+		if dirty, err := r.Dirty(ctx); err != nil {
+			return err
+		} else if dirty {
 			return fmt.Errorf("%s has uncommitted changes: commit or stash them first", branch)
 		}
 		if _, err := r.git(ctx, "pull", "--quiet", "--ff-only"); err != nil {

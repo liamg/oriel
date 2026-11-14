@@ -273,7 +273,8 @@ type Utility struct {
 }
 
 // StartUtility starts a utility agent; it runs until Close.
-func (x *Utilities) StartUtility(ctx context.Context, spec UtilitySpec) (*Utility, error) {
+func (x *Utilities) StartUtility(ctx context.Context, spec UtilitySpec) (_ *Utility, err error) {
+	defer x.env.Recover("StartUtility", &err)
 	run, cancel := context.WithCancel(context.Background())
 	events := make(chan UtilityEvent, 64)
 	started := make(chan error, 1)

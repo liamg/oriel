@@ -31,7 +31,10 @@ func gitPanelScene(t *testing.T, prepare func(dir string)) (s *apptest.Scene, x 
 	if prepare != nil {
 		prepare(blog)
 	}
-	s = apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
+	s = apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
+		apptest.Connect(lw.W)(cfg)
+		apptest.GitHub(hub)(cfg)
+	}})
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("directory.open", registry.Args{"path": blog})
 	st := s.UntilState("the directory's session in front", func(st core.State) bool {

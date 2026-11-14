@@ -88,7 +88,8 @@ func (f *faults) fault(ft Fault) {
 	}
 }
 
-func (f *faults) isOff(kind, id string) error {
+// whyOff is why a contribution is turned off, or nil.
+func (f *faults) whyOff(kind, id string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.off[offKey{kind, id}]
@@ -100,7 +101,7 @@ func (r *reg) OnFault(fn func(Fault)) Disposable {
 	defer r.faults.mu.Unlock()
 	tok := r.tokens.Add(1)
 	r.faults.subs = append(r.faults.subs, entry[func(Fault)]{tok, fn})
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.faults.mu.Lock()
 		defer r.faults.mu.Unlock()
 		r.faults.subs = slices.DeleteFunc(r.faults.subs, func(e entry[func(Fault)]) bool { return e.token == tok })
@@ -113,7 +114,7 @@ func (r *reg) OnFailure(fn func(Failure)) Disposable {
 	defer r.faults.mu.Unlock()
 	tok := r.tokens.Add(1)
 	r.faults.fsubs = append(r.faults.fsubs, entry[func(Failure)]{tok, fn})
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.faults.mu.Lock()
 		defer r.faults.mu.Unlock()
 		r.faults.fsubs = slices.DeleteFunc(r.faults.fsubs, func(e entry[func(Failure)]) bool { return e.token == tok })
@@ -174,7 +175,7 @@ func (r *reg) TurnOn(kind, id string) {
 	delete(r.faults.inARow, offKey{kind, id})
 }
 
-func (r *reg) IsOff(kind, id string) error { return r.faults.isOff(kind, id) }
+func (r *reg) WhyOff(kind, id string) error { return r.faults.whyOff(kind, id) }
 
 func (r *reg) TurnedOff() []Off {
 	r.faults.mu.Lock()

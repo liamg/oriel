@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -45,7 +47,7 @@ func (x *Requests) hiddenIn(window, path string) bool {
 
 // window is an editor window with a file: {window}, or the focused one.
 func (x *Requests) window(a registry.Args) (registry.EditorWindow, error) {
-	eds, ok := registry.EditorsOf(x.h)
+	eds, ok := services.EditorsOf(x.h)
 	if !ok {
 		return registry.EditorWindow{}, errors.New("no editor")
 	}
@@ -110,7 +112,7 @@ func (x *Requests) threadsAction() registry.EditorAction {
 // hiddenLayer is active while the focused editor window hides its threads and its cursor is on a line with some.
 func (x *Requests) hiddenLayer() registry.KeyLayer {
 	return registry.KeyLayer{Name: "threads.hidden", Mode: ThreadsHiddenKeyMode, Active: func() bool {
-		eds, ok := registry.EditorsOf(x.h)
+		eds, ok := services.EditorsOf(x.h)
 		f := x.h.Layout().Focus
 		if !ok || f == nil || f.ID != kit.EditorView {
 			return false
@@ -161,7 +163,7 @@ func threadsPopover(c *ui.Ctx, h plugin.Host, se core.SessionState, line int, ts
 					}
 					c.Column(j, ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 						c.Text("who", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
-						kit.MarkdownTextIn(c, h, "body", cm.Body, 340, kit.UIFont(12, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						kit.MarkdownText(c, h, "body", cm.Body, 340, kit.UIFont(12, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 					})
 				}
 			})

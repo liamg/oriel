@@ -57,8 +57,8 @@ func (c Contributes) Patterns() [][2]string {
 }
 
 func contributes(t map[string]any) (Contributes, error) {
-	c := Contributes{Themes: tstrs(t["themes"]), Fonts: tstrs(t["fonts"]), Languages: tstrs(t["languages"]),
-		Prompts: tstrs(t["prompts"]), Help: tstrs(t["help"]), Icons: tstr(t["icons"])}
+	c := Contributes{Themes: Strings(t["themes"]), Fonts: Strings(t["fonts"]), Languages: Strings(t["languages"]),
+		Prompts: Strings(t["prompts"]), Help: Strings(t["help"]), Icons: tstr(t["icons"])}
 	for k := range t {
 		switch k {
 		case "themes", "fonts", "icons", "languages", "prompts", "help":
@@ -291,7 +291,7 @@ func ReadLanguagePack(dir string) (registry.Language, error) {
 		if n := tstr(v["name"]); n != "" {
 			l.Name = n
 		}
-		l.Extensions, l.Filenames, l.Shebangs = tstrs(v["extensions"]), tstrs(v["filenames"]), tstrs(v["shebangs"])
+		l.Extensions, l.Filenames, l.Shebangs = Strings(v["extensions"]), Strings(v["filenames"]), Strings(v["shebangs"])
 	} else if !errors.Is(err, fs.ErrNotExist) {
 		return l, err
 	}
@@ -319,7 +319,7 @@ func Asset(dir, name string) ([]byte, error) {
 	root := filepath.Join(dir, AssetsDir)
 	r, err := filepath.EvalSymlinks(root)
 	if err != nil {
-		return nil, fmt.Errorf("asset %s: the plugin has no %s/", name, AssetsDir)
+		return nil, fmt.Errorf("asset %s: the plugin has no %s/: %w", name, AssetsDir, fs.ErrNotExist)
 	}
 	real, err := filepath.EvalSymlinks(f)
 	if err != nil {

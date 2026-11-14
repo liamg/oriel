@@ -5,15 +5,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/watch"
 )
 
-// ManagerFor is session id's freshness manager (registry.Watches): the app's for "", and nil without one.
+// ManagerFor is session id's freshness manager (services.Watches): the app's for "", and nil without one.
 func ManagerFor(r registry.Registry, id core.SessionID) *watch.Manager {
-	if w, ok := registry.WatchesOf(r); ok {
+	if w, ok := services.WatchesOf(r); ok {
 		return w.For(id)
 	}
 	return nil
@@ -51,22 +54,26 @@ type Closer interface {
 	Valid() bool
 	Refresh()
 	Busy() bool
+	Pause()
+	Resume()
 }
 
-// Subs are a plugin's subscriptions by key: Hold keeps one, Only closes those not named.
+// Subs are a plugin's subscriptions by key: Hold keeps one, KeepOnly closes those not named and PauseOnly pauses
+// them.
 type Subs struct {
 	mu   sync.Mutex
 	held map[string]heldSub
 }
 
 type heldSub struct {
-	m    *watch.Manager
-	sub  Closer
-	need watch.Need
+	m      *watch.Manager
+	sub    Closer
+	need   watch.Need
+	paused bool
 }
 
 // Hold keeps key subscribed in m with need: open makes the subscription the first time, or again when m has
-// changed; after that only its need is changed.
+// changed; after that only its need is changed, and it's resumed if paused.
 func (s *Subs) Hold(key string, m *watch.Manager, need watch.Need, open func() Closer) {
 	if m == nil {
 		s.Drop(key)
@@ -81,9 +88,14 @@ func (s *Subs) Hold(key string, m *watch.Manager, need watch.Need, open func() C
 		if h.need != need {
 			h.sub.SetNeed(need)
 			h.need = need
-			s.held[key] = h
 		}
+		resume := h.paused
+		h.paused = false
+		s.held[key] = h
 		s.mu.Unlock()
+		if resume {
+			h.sub.Resume()
+		}
 		return
 	}
 	delete(s.held, key)
@@ -118,8 +130,8 @@ func (s *Subs) Drop(key string) {
 	}
 }
 
-// Only closes every subscription not in keep.
-func (s *Subs) Only(keep map[string]bool) {
+// KeepOnly closes every subscription not in keep.
+func (s *Subs) KeepOnly(keep map[string]bool) {
 	s.mu.Lock()
 	var gone []Closer
 	for k, h := range s.held {
@@ -131,6 +143,47 @@ func (s *Subs) Only(keep map[string]bool) {
 	s.mu.Unlock()
 	for _, c := range gone {
 		c.Close()
+	}
+}
+
+// PauseOnly pauses every subscription not in keep: each keeps its reading, and reads nothing until held again.
+func (s *Subs) PauseOnly(keep map[string]bool) {
+	s.mu.Lock()
+	var pause []Closer
+	for k, h := range s.held {
+		if !keep[k] && !h.paused {
+			h.paused = true
+			s.held[k] = h
+			pause = append(pause, h.sub)
+		}
+	}
+	s.mu.Unlock()
+	for _, c := range pause {
+		c.Pause()
+	}
+}
+
+// Held is key's subscription, when it's held and a watch.Sub[T].
+func Held[T any](s *Subs, key string) (watch.Sub[T], bool) {
+	s.mu.Lock()
+	h, ok := s.held[key]
+	s.mu.Unlock()
+	sub, typed := h.sub.(watch.Sub[T])
+	return sub, ok && typed
+}
+
+// EachHeld calls fn with each subscription held that's a watch.Sub[T].
+func EachHeld[T any](s *Subs, fn func(key string, sub watch.Sub[T])) {
+	s.mu.Lock()
+	subs := map[string]watch.Sub[T]{}
+	for k, h := range s.held {
+		if sub, ok := h.sub.(watch.Sub[T]); ok {
+			subs[k] = sub
+		}
+	}
+	s.mu.Unlock()
+	for k, sub := range subs {
+		fn(k, sub)
 	}
 }
 
@@ -158,7 +211,7 @@ func (s *Subs) Len() int {
 }
 
 // Close closes them all.
-func (s *Subs) Close() { s.Only(nil) }
+func (s *Subs) Close() { s.KeepOnly(nil) }
 
 // Budget shares an API's request allowance between the sources polling it: each says how many requests a read
 // makes, and Interval stretches every poll so that together they keep to PerHour. A rate limit hit doubles the
@@ -209,4 +262,15 @@ func (b *Budget) Limited() {
 	b.mu.Lock()
 	b.backed = time.Now().Add(15 * time.Minute)
 	b.mu.Unlock()
+}
+
+// LoadState is a load as the toolkit shows it.
+func LoadState(l registry.Load) widget.LoadState {
+	switch {
+	case l.Done:
+		return widget.LoadState{Phase: widget.Ready}
+	case l.Err != nil:
+		return widget.LoadState{Phase: widget.Failed, Err: l.Err}
+	}
+	return widget.LoadState{Phase: widget.Pending, Since: l.Since}
 }

@@ -7,6 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -111,7 +115,7 @@ func (x *Jobs) show(f *jobForm) {
 	x.closeForm()
 	f.picked = f.agent != ""
 	f.agents = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
-		c, err := x.client()
+		c, err := kit.SessionCalls(x.h)
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +197,7 @@ func (x *Jobs) dialog(c *ui.Ctx) {
 	if f.name != "" {
 		title = "Edit " + f.name
 	}
-	widget.Modal(c, "jobform", &open, title, widget.ModalOpts{Width: 620, Help: "agent/jobs#new"}, func(c *ui.Ctx) { x.formBody(c, f) })
+	widget.Modal(c, "jobform", &open, widget.ModalOpts{Title: title, Width: 620, Help: "agent/jobs#new"}, func(c *ui.Ctx) { x.formBody(c, f) })
 	if !open {
 		x.closeForm()
 	}
@@ -310,7 +314,7 @@ func (x *Jobs) agentChoices(c *ui.Ctx, f *jobForm, agents []host.ProviderInfo) {
 	items := make([]widget.Choice, len(agents))
 	cur := 0
 	for i, p := range agents {
-		items[i] = widget.Choice{Title: kit.ProviderName(x.h, p.ID), Desc: providerNote(p, x.h.State().Usage)}
+		items[i] = widget.Choice{Title: services.ProviderTitle(x.h, p.ID), Desc: providerNote(p, x.h.State().Usage)}
 		if p.ID == f.agent {
 			cur = i
 		}
@@ -319,7 +323,7 @@ func (x *Jobs) agentChoices(c *ui.Ctx, f *jobForm, agents []host.ProviderInfo) {
 		f.agent, f.model, f.effort = agents[cur].ID, kit.DefaultModel(agents[cur]), ""
 	}
 	if p := agents[cur]; len(p.Models) > 0 {
-		if m, e, ok := kit.ModelSelects(c, p, cmp.Or(f.model, kit.DefaultModel(p)), f.effort, false, "agent/jobs#new"); ok {
+		if m, e, ok := agentkit.ModelSelects(c, p, cmp.Or(f.model, kit.DefaultModel(p)), f.effort, false, "agent/jobs#new"); ok {
 			f.agent, f.model, f.effort = p.ID, m, e
 		}
 	}

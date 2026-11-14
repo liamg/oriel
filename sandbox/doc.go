@@ -38,7 +38,7 @@
 //   - agentsock.Serve(ctx, &agentsock.Handler{...}, SocketPath(root), portFile)
 //     with Token from Load(root).AgentToken; portFile is PortPath(root) when
 //     the backend ServesPort, else "".
-//   - Backend.Launch(ctx, root, cwd, argv, LaunchOptions{Config: cfg,
+//   - Backend.Launch(ctx, root, cwd, argv, LaunchOpts{Config: cfg,
 //     Provider, Agent, ...}) asks the provider what its agent needs at the
 //     place the backend puts it (Needs: its binaries, mounts, env, hosts), and
 //     returns the command to run under the agent's PTY with those needs; the
@@ -49,7 +49,8 @@
 //     the agents' "hook" (Claude's mod) through hookcall.Main, and "hook mcp"
 //     (Oriel's tools as an MCP server) through mcpstdio.Main. In docker it is
 //     runner.OrielBinary: cmd/oriel-sandbox built static for Linux, which the
-//     app embeds (package helper, `make helper`) and hands over with
-//     runner.SetHelper. Under seatbelt it is the running binary.
+//     app embeds (package helper, `make helper`) and the host's sandbox
+//     factory hands to the backend (HelperRunner.WithHelper). Under seatbelt
+//     it is the running binary.
 //   - Backend.Sweep, then Sweep, run hourly (host.SweepSandboxes).
 package sandbox

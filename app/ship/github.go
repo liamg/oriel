@@ -11,10 +11,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -46,10 +53,10 @@ var (
 type GitHub struct {
 	kit.Disposer
 	h      plugin.Host
-	now    func() time.Time
+	clock  clock.Clock
 	ctx    context.Context
 	cancel context.CancelFunc
-	busy   kit.Busy
+	busy   work.Busy
 	subs   kit.Subs   // the syncs it keeps, from the sessions' managers
 	budget kit.Budget // review sessions' syncs, behind the one in front
 
@@ -82,13 +89,10 @@ func (x *GitHub) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github
 func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Busy{Name: "github", Busy: x.busy.Busy, Source: "builtin:github"}))
 	x.h = h
-	if x.now == nil {
-		x.now = time.Now
-	}
 	x.mirrors, x.syncing, x.forwarding, x.editing = map[core.SessionID]githubMirror{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
 	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
-	x.Add(h.Contribute(registry.Service{Name: kit.PRReviewsService, Impl: githubReviews{x}, Source: "builtin:github"}))
+	x.Add(h.Contribute(registry.Service{Name: prui.PRReviewsService, Impl: githubReviews{x}, Source: "builtin:github"}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrPushed", Fired: true, Payload: kit.PrPushed{},
 		Doc: "A session's pull request's head, each time GitHub is read for it; the subject is the session. { session, project, head }"}))
 	x.Add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
@@ -101,7 +105,7 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.ThreadSource{Origin: core.OriginGitHub, Title: "GitHub review", Head: x.head, Comment: x.comment}))
 	x.Add(h.Contribute(uireg.ThreadSource{Origin: core.OriginCodeHost, Title: "Review", Head: x.head, Comment: x.comment}))
 	x.Add(h.View(GitHubStatusView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "github", Fn: x.statusSegment} })))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		switch ev := ev.(type) {
 		case core.SessionFocused:
 			if ev.ID != "" && x.syncedAgo(ev.ID) >= githubPoll { // one synced lately stands: each sync asks for every PR's comments
@@ -113,7 +117,7 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 		case core.ThreadUpdated:
 			h.Do(func() { x.resolveHost(ev.Session, ev.Thread) })
 		}
-	})))
+	}))
 	x.budget.PerHour = githubBudget
 	x.follow()
 	return nil
@@ -192,7 +196,7 @@ func (x *GitHub) follow() {
 			return budgetedSync{watch.Subscribe(m, src, need, "github: review sync"), x.budget.Use(key, githubRequests)}
 		})
 	}
-	x.subs.Only(keep)
+	x.subs.KeepOnly(keep)
 }
 
 // budgetedSync is a sync's subscription, counted against the budget until it's closed.
@@ -284,8 +288,8 @@ func (x *GitHub) session(a registry.Args) (core.SessionState, bool) {
 	return se, err == nil
 }
 
-func (x *GitHub) client(id core.SessionID) (host.Access, error) {
-	return kit.SessionHost(x.h)
+func (x *GitHub) client(id core.SessionID) (host.CodeHostCalls, error) {
+	return kit.CodeHostCalls(x.h)
 }
 
 // trust is the trusted orgs and users, from the options.
@@ -326,8 +330,8 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		delete(x.syncing, id)
 		delete(x.synced, id)
 		close(done)
-		x.lastSync[id] = x.now()
-		g := githubMirror{Mirror: m, at: x.now()}
+		x.lastSync[id] = clock.Or(x.clock).Now()
+		g := githubMirror{Mirror: m, at: clock.Or(x.clock).Now()}
 		if err != nil {
 			g = x.mirrors[id]
 			g.err = err.Error()
@@ -361,7 +365,7 @@ func (x *GitHub) syncedAgo(id core.SessionID) time.Duration {
 	if !ok {
 		return time.Duration(1<<63 - 1)
 	}
-	return x.now().Sub(at)
+	return clock.Or(x.clock).Now().Sub(at)
 }
 
 func (x *GitHub) mirror(id core.SessionID) (githubMirror, bool) {
@@ -475,9 +479,7 @@ func (x *GitHub) save(a registry.Args) error {
 }
 
 func (x *GitHub) run(cmd string, a registry.Args) {
-	if err := x.h.Run(context.Background(), cmd, a); err != nil {
-		x.h.Notify(core.Notice{ID: "github", Severity: core.SevError, Source: "github", Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "github", cmd, a)
 }
 
 // head is a GitHub thread's card head after "GitHub review": its line, the reviewer, where they stand, the sync.
@@ -550,7 +552,7 @@ func syncedAgo(now, t time.Time) string {
 	if d := now.Sub(t); d < time.Minute {
 		return fmt.Sprintf("%ds ago", max(int(d.Seconds()), 0))
 	}
-	return kit.Ago(now, t) + " ago"
+	return widget.AgoLabel(now, t) + " ago"
 }
 
 // comment is what goes under a draft reply: ↗ Forward to GitHub, Edit, and the promise; or the draft being edited.
@@ -604,7 +606,7 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Ghost: true, Disabled: busy, Help: "git/github#forward"}) {
 			x.run("github.edit", args)
 		}
-		c.Text("never", kit.ProviderName(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
+		c.Text("never", services.ProviderTitle(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
 			kit.UIFont(11, th.C(theme.FgFaint)))
 	})
 }

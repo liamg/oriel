@@ -36,17 +36,17 @@ func (r Repo) MergeInto(ctx context.Context, into, from string, tree func(dir st
 		return m, fmt.Errorf("can't merge %q into %q", from, into)
 	}
 	var err error
-	if m.Old, err = r.rev(ctx, "refs/heads/"+into); err != nil {
+	if m.Old, err = r.Rev(ctx, "refs/heads/"+into); err != nil {
 		return m, fmt.Errorf("there's no branch %s", into)
 	}
-	head, err := r.rev(ctx, "refs/heads/"+from)
+	head, err := r.Rev(ctx, "refs/heads/"+from)
 	if err != nil {
 		return m, fmt.Errorf("there's no branch %s", from)
 	}
-	if r.ancestor(ctx, head, m.Old) {
+	if r.Ancestor(ctx, head, m.Old) {
 		return m, fmt.Errorf("%w: %s has everything on %s", ErrUpToDate, into, from)
 	}
-	if r.ancestor(ctx, m.Old, head) {
+	if r.Ancestor(ctx, m.Old, head) {
 		m.New, m.FastForward = head, true
 	} else if m.New, err = r.mergeCommit(ctx, m.Old, head, fmt.Sprintf("Merge branch '%s' into %s", from, into)); err != nil {
 		return m, err
@@ -72,17 +72,6 @@ func (r Repo) MergeInto(ctx context.Context, into, from string, tree func(dir st
 		return m, fmt.Errorf("moving %s in %s: %w", into, m.Tree, err)
 	}
 	return m, nil
-}
-
-func (r Repo) rev(ctx context.Context, ref string) (string, error) {
-	out, err := r.git(ctx, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
-	return strings.TrimSpace(string(out)), err
-}
-
-// ancestor says a is reachable from b.
-func (r Repo) ancestor(ctx context.Context, a, b string) bool {
-	_, err := r.git(ctx, "merge-base", "--is-ancestor", a, b)
-	return err == nil
 }
 
 // mergeTree writes the tree merging theirs into ours, without a work tree, or names the files it conflicts in.

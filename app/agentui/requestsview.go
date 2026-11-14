@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -345,7 +347,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 			c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				name := cmp.Or(cm.Name, "you")
 				if cm.Author == core.AuthorAgent {
-					name = kit.ProviderName(x.h, cm.Name)
+					name = services.ProviderTitle(x.h, cm.Name)
 				}
 				defer func() {
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -375,11 +377,11 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					}
 				}
 			})
-			kit.MarkdownTextIn(c, x.h, "body", cm.Body, inner, kit.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
+			kit.MarkdownText(c, x.h, "body", cm.Body, inner, kit.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
 			if sourced && src.Comment != nil {
 				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
 			}
-			shown := kit.LocalImages(cm.Body)
+			shown := localImages(cm.Body)
 			for i, img := range cm.Images {
 				if slices.Contains(shown, img) {
 					continue
@@ -458,7 +460,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			placeholder = "Reply, or ask more"
 		}
 		r := widget.Prose(c, "input", &d.text, widget.ProseOpts{Label: "Write to the request", Placeholder: placeholder, KeyMode: RequestComposerKeyMode,
-			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: kit.PastedFiles(x.h, se.ID)})
+			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: pastedFiles(x.h, se.ID)})
 		switch {
 		case r.Submitted:
 			if err := x.send(context.Background(), st, id, false); err != nil {
@@ -477,7 +479,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			var who []string
 			if se.Agent.Provider != "" {
-				who = append(who, strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)))
+				who = append(who, strings.ToLower(services.ProviderTitle(x.h, se.Agent.Provider)))
 			}
 			if se.Agent.Model != "" {
 				who = append(who, se.Agent.Model)
@@ -658,7 +660,7 @@ func (x *Requests) summaryRow(c *ui.Ctx, se core.SessionState, t core.Thread, no
 	case kit.GroupResolved:
 		note = []widget.AgoPart{{Text: "resolved"}}
 	case kit.GroupWorking:
-		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: strings.ToLower(kit.ProviderName(x.h, se.Agent.Provider)) + " working"}}
+		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: strings.ToLower(services.ProviderTitle(x.h, se.Agent.Provider)) + " working"}}
 	case kit.GroupNeedsYou:
 		note = []widget.AgoPart{{Text: threadPlace(t)}, {Text: "awaiting you"}}
 	default:

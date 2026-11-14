@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/registry"
@@ -362,7 +364,7 @@ func (x *Plugin) changedFiles() ([]changedFile, bool) {
 	}
 	x.panel.loading, x.panel.since = true, kit.WindowNow(x.h)
 	rev, repo, root := st.BaseHash, g.Status().Repo(), g.Root()
-	bufs := map[string]registry.EditorBuffer{}
+	bufs := map[string]services.EditorBuffer{}
 	for _, f := range kit.Buffers(x.h) {
 		bufs[filepath.Clean(f.Path)] = f
 	}

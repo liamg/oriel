@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -101,7 +103,7 @@ func (x *Requests) newInline(a registry.Args) error {
 		n.review, n.toAuthor = true, a.String("to") != "agent"
 	}
 	if n.line < 0 {
-		ed, ok := registry.EditorsOf(x.h)
+		ed, ok := services.EditorsOf(x.h)
 		if !ok {
 			return errors.New("no editor")
 		}
@@ -366,11 +368,7 @@ type threadCardOpts struct {
 func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread, reply *string, send func(), o threadCardOpts) {
 	th := c.Theme()
 	id := t.ID
-	run := func(cmd string, a registry.Args) {
-		if err := h.Run(context.Background(), cmd, a); err != nil {
-			h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
-		}
-	}
+	run := func(cmd string, a registry.Args) { runOrSay(h, cmd, a) }
 	src, sourced := uireg.ThreadSourceFor(h, t.Origin)
 	title := "Thread"
 	if sourced && src.Title != "" {
@@ -439,7 +437,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 							}
 							askedChip(c, cm)
 						})
-						kit.MarkdownTextIn(c, h, "body", cm.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						kit.MarkdownText(c, h, "body", cm.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 						if sourced && src.Comment != nil {
 							src.Comment(c, string(se.ID), string(id), cm.ID, inner)
 						}
@@ -460,7 +458,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 				c.RequestFocus(c.Next("reply"))
 			}
 			if widget.Prose(c, "reply", reply, widget.ProseOpts{Label: "Reply to the thread", Placeholder: "Reply…", Lines: commentLines, EnterSubmits: true,
-				Help: "agent/requests#inline", Files: kit.PastedFiles(h, se.ID)}).Submitted {
+				Help: "agent/requests#inline", Files: pastedFiles(h, se.ID)}).Submitted {
 				send()
 			}
 		})
@@ -524,7 +522,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			}
 			var files func(widget.Pasted) string
 			if se, ok := x.front(); ok && !n.toAuthor {
-				files = kit.PastedFiles(x.h, se.ID)
+				files = pastedFiles(x.h, se.ID)
 			}
 			r := widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
 				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files})

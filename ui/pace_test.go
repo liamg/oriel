@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/render"
 )
 
@@ -37,8 +38,8 @@ func TestPacerHoldsTheTrailingFrame(t *testing.T) {
 func TestDecorativeStepsAtMost8HzAndStopsUnfocused(t *testing.T) {
 	u := newUI()
 	u.opts.ReducedMotion = false
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	var phase float64
 	var moving bool
 	build := func(c *Ctx) { phase, moving = c.Decorative(time.Second, 100) }
@@ -46,16 +47,16 @@ func TestDecorativeStepsAtMost8HzAndStopsUnfocused(t *testing.T) {
 	if !moving {
 		t.Fatal("a focused window's loop is still")
 	}
-	frames, end := 0, clk.t.Add(time.Second)
+	frames, end := 0, clk.Now().Add(time.Second)
 	for next := u.NextFrame(); next.Before(end); next = u.NextFrame() {
-		clk.t = next
+		clk.Set(next)
 		paintOps(u, render.Point{X: 100, Y: 100}, build)
 		frames++
 	}
 	if frames > 8 {
 		t.Fatalf("%d frames in a second, over 8", frames)
 	}
-	clk.t = time.Unix(1000, 0).Add(250 * time.Millisecond)
+	clk.Set(time.Unix(1000, 0).Add(250 * time.Millisecond))
 	paintOps(u, render.Point{X: 100, Y: 100}, build)
 	if phase < .2 || phase > .3 {
 		t.Fatalf("phase %v a quarter of the way through", phase)
@@ -75,10 +76,10 @@ func TestDecorativeStepsAtMost8HzAndStopsUnfocused(t *testing.T) {
 
 func TestHiddenWindowHoldsWakeUps(t *testing.T) {
 	u := newUI()
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	u.SetWindow(true, false)
-	paintOps(u, render.Point{X: 100, Y: 100}, func(c *Ctx) { c.WakeAt(clk.t.Add(time.Second)) })
+	paintOps(u, render.Point{X: 100, Y: 100}, func(c *Ctx) { c.WakeAt(clk.Now().Add(time.Second)) })
 	if !u.NextFrame().IsZero() {
 		t.Fatal("a hidden window asked for a frame")
 	}
@@ -92,8 +93,8 @@ func TestHiddenWindowHoldsWakeUps(t *testing.T) {
 func TestWokenByNamesTheLoop(t *testing.T) {
 	u := newUI()
 	u.opts.ReducedMotion = false
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	paintOps(u, render.Point{X: 100, Y: 100}, func(c *Ctx) {
 		c.Column("panel", Style{}, func(c *Ctx) {
 			c.Row("status", Style{}, func(c *Ctx) { c.Decorative(time.Second, 10) })
@@ -113,8 +114,8 @@ func TestWokenByNamesTheLoop(t *testing.T) {
 func TestAnimateRepaintsWithoutBuilding(t *testing.T) {
 	u := newUI()
 	u.opts.ReducedMotion = false
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	builds := 0
 	var drawn []float64
 	build := func(c *Ctx) {
@@ -128,8 +129,8 @@ func TestAnimateRepaintsWithoutBuilding(t *testing.T) {
 		if next.IsZero() {
 			t.Fatal("a moving loop asked for no frame")
 		}
-		clk.t = next
-		if !u.Repaintable(clk.t) {
+		clk.Set(next)
+		if !u.Repaintable(clk.Now()) {
 			t.Fatal("a frame for a loop's step needs a build")
 		}
 		var l render.List
@@ -141,8 +142,8 @@ func TestAnimateRepaintsWithoutBuilding(t *testing.T) {
 	if want := []float64{0, .25, .5, .75}; !slices.Equal(drawn, want) {
 		t.Fatalf("painted phases %v, want %v", drawn, want)
 	}
-	u.wakeAt(clk.t)
-	if u.Repaintable(clk.t) {
+	u.wakeAt(clk.Now())
+	if u.Repaintable(clk.Now()) {
 		t.Fatal("a frame something else asked for is only repainted")
 	}
 }
@@ -151,8 +152,8 @@ func TestAnimateRepaintsWithoutBuilding(t *testing.T) {
 func TestAnimateOutOfSightIsStill(t *testing.T) {
 	u := newUI()
 	u.opts.ReducedMotion = false
-	clk := &clock{t: time.Unix(1000, 0)}
-	u.SetClock(clk.now)
+	clk := clocktest.New(time.Unix(1000, 0))
+	u.SetClock(clk)
 	moving := false
 	build := func(c *Ctx) {
 		c.Column("list", Style{W: Px(50), H: Px(20), ScrollY: true}, func(c *Ctx) {

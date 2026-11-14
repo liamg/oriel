@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -35,7 +35,7 @@ func TestMapOptionLayers(t *testing.T) {
 		t.Errorf("at the project: %v from %v", v, l)
 	}
 	// The window is on work, so Lua reads the project's value there.
-	if got := settings.Show(s.Lua(`oriel.option["test.hosts"].db`)[0]); got != `"192.168.0.9"` {
+	if got := luaconfig.Show(s.Lua(`oriel.option["test.hosts"].db`)[0]); got != `"192.168.0.9"` {
 		t.Errorf("reading it in Lua: %s", got)
 	}
 	o.Unset("test.hosts", registry.LayerLua, registry.At{})

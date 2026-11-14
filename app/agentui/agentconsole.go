@@ -1,3 +1,5 @@
+// Package agentui is the agent's side of the window: the agent console, its prompt cards and asks, the assistant (Ori),
+// dictation, and the agent's tools a session offers.
 package agentui
 
 import (
@@ -9,6 +11,10 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/app/kit/agentkit"
+
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -49,6 +55,7 @@ var (
 	tAskKey        = theme.Declare("ask.key", "cyan")
 	tRuleAllow     = theme.Declare("agent.rule.allow", "ok")
 	tRuleAsk       = theme.Declare("agent.rule.ask", "pink")
+	tRuleDeny      = theme.Declare("agent.rule.deny", "error")
 )
 
 // Console is the console view, the asks' cards over every view, and the commands both run.
@@ -144,7 +151,7 @@ func (x *Console) commands() []registry.Command {
 		{ID: "agent.console.show", Title: "Show {id}'s agent console: its session in front, and the console open on it",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return h.Run(ctx, "session.open", registry.Args{"id": string(session(a)),
-					"then": []any{map[string]any{"command": "view.open", "args": map[string]any(open)}}})
+					"then": kit.Then(kit.Call{Command: "view.open", Args: open})})
 			}},
 		{ID: "agent.console.next", Title: "Agent console: the next block", Run: func(registry.Ctx, registry.Args) error { x.move(1); return nil }},
 		{ID: "agent.console.prev", Title: "Agent console: the block before", Run: func(registry.Ctx, registry.Args) error { x.move(-1); return nil }},
@@ -242,10 +249,10 @@ func (x *Console) keymaps() []registry.Keymap {
 		{Keys: "<CR>", Command: "agent.console.fold", Desc: "Fold or unfold"},
 		{Keys: "i", Command: "agent.console.compose", Desc: "Write to the agent"},
 		{Keys: "<Esc>", Command: "agent.console.escape", Desc: "Interrupt, or close"},
-		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": "allow"}, Desc: "Allow once"},
-		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": "always"}, Desc: "Allow for this session"},
-		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": "always", "for": forAll}, Desc: "Allow for all sessions"},
-		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": "deny"}, Desc: "Deny"},
+		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAllow)}, Desc: "Allow once"},
+		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAlways)}, Desc: "Allow for this session"},
+		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAlways), "for": forAll}, Desc: "Allow for all sessions"},
+		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionDeny)}, Desc: "Deny"},
 		{Keys: "N", Command: "ask.deny-note", Desc: "Deny with a note"},
 	} {
 		k.Mode = AgentKeyMode
@@ -261,7 +268,7 @@ type consoleView struct{ x *Console }
 
 func (v consoleView) Title(string) string {
 	if se, ok := v.x.front(); ok && se.Agent.Provider != "" {
-		return "Agent · " + kit.ProviderName(v.x.h, se.Agent.Provider)
+		return "Agent · " + services.ProviderTitle(v.x.h, se.Agent.Provider)
 	}
 	return "Agent"
 }
@@ -306,7 +313,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 	a := se.Agent
 	const help = "agent/console#composer"
 	if p, ok := x.provider(se.ID, a.Provider); ok && len(p.Models) > 0 {
-		if m, e, picked := kit.ModelSelects(c, p, cmp.Or(a.Model, kit.DefaultModel(p)), a.Effort, a.Working, help); picked {
+		if m, e, picked := agentkit.ModelSelects(c, p, cmp.Or(a.Model, kit.DefaultModel(p)), a.Effort, a.Working, help); picked {
 			x.run(context.Background(), "session.configure", registry.Args{"id": string(se.ID), "model": m, "effort": e})
 		}
 		if a.Working {
@@ -322,13 +329,13 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 	}
 	switch {
 	case a.Sandboxed:
-		where := kit.SandboxNoun(cmp.Or(a.Backend, kit.SettingBackend(x.h)))
+		where := agentkit.SandboxNoun(cmp.Or(a.Backend, agentkit.SettingBackend(x.h)))
 		if a.Network != "" {
 			where += " · net " + a.Network
 		}
 		widget.Chip(c, "sandbox", where, th.C(theme.FgMuted), help)
 	case a.Policy != "":
-		widget.Chip(c, "policy", "gate "+a.Policy, th.C(theme.FgMuted), help)
+		widget.Chip(c, "policy", "gate "+string(a.Policy), th.C(theme.FgMuted), help)
 	}
 }
 
@@ -356,8 +363,8 @@ func (x *Console) provider(session core.SessionID, id string) (host.ProviderInfo
 	return host.ProviderInfo{}, false
 }
 
-func (x *Console) client(id core.SessionID) (host.Access, error) {
-	return kit.SessionHost(x.h)
+func (x *Console) client(id core.SessionID) (host.SessionCalls, error) {
+	return kit.SessionCalls(x.h)
 }
 
 // move selects the next or previous block.
@@ -408,7 +415,7 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 	if err != nil {
 		return err
 	}
-	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: a.String("decision"), Note: a.String("note"), Scope: a.String("scope"), For: a.String("for")}
+	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: host.Decision(a.String("decision")), Note: a.String("note"), Scope: a.String("scope"), For: a.String("for")}
 	switch m := a["answers"].(type) {
 	case map[string]string:
 		r.Answers = m
@@ -418,11 +425,14 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 			r.Answers[k] = fmt.Sprint(v)
 		}
 	}
-	if r.Decision == "" {
-		r.Decision = "allow"
-	}
 	if len(r.Answers) > 0 {
-		r.Decision = "answer"
+		r.Decision = host.DecisionAnswer
+	}
+	switch r.Decision {
+	case host.DecisionAllow, host.DecisionAlways, host.DecisionDeny, host.DecisionAnswer, host.DecisionRecheck:
+	default:
+		// An answer that doesn't say what it decides decides nothing: it never lets the call through.
+		return fmt.Errorf("ask.answer: decision %q isn't one of allow, always, deny, answer or recheck", r.Decision)
 	}
 	if st := x.by[id]; st != nil && st.noting == ask.ID {
 		st.noting, st.note = "", ""
@@ -447,7 +457,7 @@ func (x *Console) fork(id core.SessionID, prompt string) error {
 	st.forks = append(st.forks, forkAnswer{q: prompt, since: kit.WindowNow(x.h)})
 	n := len(st.forks) - 1
 	plugin.Go(x.h, "a side question", func() {
-		out, err := c.Fork(id, prompt)
+		out, err := c.Fork(x.Lifetime(), id, prompt)
 		x.h.Do(func() {
 			if n < len(st.forks) {
 				st.forks[n].a, st.forks[n].err, st.forks[n].done = out, err, true
@@ -464,7 +474,7 @@ func (x *Console) hasTerminal(id core.SessionID) bool {
 	if !ok {
 		return true
 	}
-	f, known := kit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
+	f, known := agentkit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
 	return !known || f.Terminal
 }
 
@@ -472,10 +482,10 @@ func (x *Console) hasTerminal(id core.SessionID) bool {
 func (x *Console) rawTerminal(ctx registry.Ctx, id core.SessionID, typed string) error {
 	if se, ok := x.h.Session(id); ok {
 		if !x.hasTerminal(id) {
-			return fmt.Errorf("%s has no terminal of its own", kit.ProviderName(x.h, se.Snapshot().Agent.Provider))
+			return fmt.Errorf("%s has no terminal of its own", services.ProviderTitle(x.h, se.Snapshot().Agent.Provider))
 		}
 		if a := se.Snapshot().Agent; a.Starting != nil {
-			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", kit.ProviderName(x.h, a.Provider), a.Starting.Step)
+			return fmt.Errorf("%s has no terminal yet: it's still starting (%s)", services.ProviderTitle(x.h, a.Provider), a.Starting.Step)
 		}
 	}
 	c, err := x.client(id)
@@ -552,7 +562,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	a := se.Agent
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(16, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		name := kit.ProviderName(x.h, a.Provider)
+		name := services.ProviderTitle(x.h, a.Provider)
 		c.Box("badge", ui.Style{W: ui.Px(22), H: ui.Px(22), Radius: 5, Fill: th.C(theme.BgOverlay), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", strings.ToUpper(name[:min(2, len(name))]), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold},
 				Color: th.C(theme.Fg)})
@@ -590,7 +600,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 // run runs a command from a click, saying what went wrong in a notice.
 func (x *Console) run(ctx context.Context, id string, a registry.Args) {
 	if err := x.h.Run(ctx, id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
+		x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error()})
 	}
 }
 

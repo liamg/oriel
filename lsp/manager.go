@@ -16,8 +16,8 @@ import (
 // ErrNoServer is Open's answer for a language no installed server serves.
 var ErrNoServer = errors.New("lsp: no server for the language")
 
-// ManagerOptions are what a Manager needs from the app.
-type ManagerOptions struct {
+// ManagerOpts are what a Manager needs from the app.
+type ManagerOpts struct {
 	// Servers lists the specs to choose from, read on every Open: the registry's lsp.server contributions.
 	Servers func() []ServerSpec
 	// Installed says whether a spec's server can run; nil looks its command up on PATH.
@@ -33,7 +33,7 @@ type ManagerOptions struct {
 // Manager starts servers as files open, one per server and project root, and routes each file's
 // notifications and requests to its server. It is safe for concurrent use.
 type Manager struct {
-	opts ManagerOptions
+	opts ManagerOpts
 
 	mu      sync.Mutex
 	clients map[clientKey]*Client
@@ -56,7 +56,7 @@ type openDoc struct {
 	snap     text.Snapshot
 }
 
-func NewManager(o ManagerOptions) *Manager {
+func NewManager(o ManagerOpts) *Manager {
 	return &Manager{opts: o, clients: map[clientKey]*Client{}, starts: map[clientKey]*start{}, docs: map[string]*openDoc{}}
 }
 

@@ -7,11 +7,11 @@ local L = oriel
 local function api(site, method, path, body, done)
   L.http.request({ method = method, url = site.api .. path, auth = site.secret, auth_scheme = "token",
     headers = { ["Content-Type"] = "application/json", Accept = "application/json" },
-    body = body and L.json(body) or nil }, function(res, err)
+    body = body and L.json_encode(body) or nil }, function(res, err)
     if err then return done(nil, err) end
     if res.status >= 400 then return done(nil, "Gitea: HTTP " .. res.status .. " " .. (res.body or "")) end
     if res.body == nil or res.body == "" then return done({}) end
-    done(L.json(res.body) or {})
+    done(L.json_decode(res.body) or {})
   end)
 end
 

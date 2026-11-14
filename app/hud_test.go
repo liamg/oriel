@@ -22,10 +22,10 @@ import (
 func TestHUDSnapshot(t *testing.T) {
 	s, r, _ := apptest.StatsScene(t)
 	if err := os.WriteFile(filepath.Join(s.ConfigDir, "init.lua"), []byte(`local L = oriel
-L.hud.indicator("next-meeting", { slot = "hud.today" }, L.ui.row{
+L.hud.indicator("next-meeting", L.ui.row{
   L.ui.indicator{ label = "NEXT MEETING · 14:30", value = "Pricing sync" },
   L.ui.text("meet.google.com · 4 people", "faint"),
-})
+}, { slot = "hud.today" })
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}

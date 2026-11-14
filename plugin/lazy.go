@@ -21,8 +21,8 @@ func (l Lazy) Empty() bool {
 
 // ParseLazy reads a lazy table, a manifest's or a [plugins] entry's.
 func ParseLazy(t map[string]any) Lazy {
-	return Lazy{Commands: tstrs(t["commands"]), Events: tstrs(t["events"]), Keys: tstrs(t["keys"]), Filetypes: tstrs(t["filetypes"]),
-		Omnibox: tstrs(t["omnibox"]), Views: tstrs(t["views"])}
+	return Lazy{Commands: Strings(t["commands"]), Events: Strings(t["events"]), Keys: Strings(t["keys"]), Filetypes: Strings(t["filetypes"]),
+		Omnibox: Strings(t["omnibox"]), Views: Strings(t["views"])}
 }
 
 // Triggers are the triggers' words, as the Plugins page lists them.

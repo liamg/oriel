@@ -86,7 +86,9 @@ func (r *Recorder) write(ev Event) error {
 		var texts map[string]string
 		ev, texts = s.Seal()
 		if r.vault != nil && len(texts) > 0 {
-			_ = r.vault.Put(texts)
+			if err := r.vault.Put(texts); err != nil {
+				return fmt.Errorf("core: keeping %s's redacted text: %w", name, err) // logged without it, it's gone
+			}
 		}
 	}
 	b, err := json.Marshal(ev)

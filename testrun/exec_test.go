@@ -2,13 +2,14 @@ package testrun
 
 import (
 	"context"
-	"github.com/liamg/oriel/internal/testhook"
 	"io"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/testhook"
 )
 
 func goBasic(t *testing.T) (Workspace, string) {

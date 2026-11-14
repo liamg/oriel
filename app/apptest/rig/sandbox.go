@@ -12,7 +12,7 @@ import (
 type EchoBackend struct{}
 
 func (EchoBackend) Name() string { return "test" }
-func (EchoBackend) Launch(context.Context, string, string, []string, sandbox.LaunchOptions) (sandbox.Command, error) {
+func (EchoBackend) Launch(context.Context, string, string, []string, sandbox.LaunchOpts) (sandbox.Command, error) {
 	return sandbox.Command{Argv: []string{"echo", "in the sandbox"}, Env: os.Environ()}, nil
 }
 func (EchoBackend) Available() error                                         { return nil }

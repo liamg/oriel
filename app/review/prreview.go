@@ -5,12 +5,13 @@ package review
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -44,7 +45,7 @@ const (
 type PRReview struct {
 	kit.Disposer
 	h    plugin.Host
-	busy kit.Busy
+	busy work.Busy
 
 	mu       sync.Mutex
 	details  map[string]*reviewDetail // by URL
@@ -130,7 +131,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 		x.pushed(core.SessionID(ev.Session), ev.Head)
 		return registry.Verdict{}, nil
 	}))
-	x.Add(kit.OnDispose(h.Subscribe(core.Filter{}, func(ev core.Event) {
+	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if _, said := ev.(core.TranscriptAppended); said { // an agent's words move no thread, draft or state watch reads
 			return
 		}
@@ -139,7 +140,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 			return
 		}
 		h.Do(func() { x.watch(id) })
-	})))
+	}))
 	// A review's own entry in place of Raise PR's checklist: its tab, and how many comments are still to triage.
 	front := func() (core.SessionState, bool) {
 		se, err := x.session(nil)
@@ -169,7 +170,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 			return n
 		}}))
 	x.Add(h.Contribute(uireg.ThreadFoot{Name: "review", Draw: x.foot, Source: "builtin:pr-review"}))
-	x.Add(kit.OnDispose(h.Layout().OnShow(func(v layout.ViewRef) {
+	x.Add(registry.DisposeFunc(h.Layout().OnShow(func(v layout.ViewRef) {
 		if se, ok := front(); ok && v.ID == kit.PRView {
 			x.form(se.ID).focus = true
 		}
@@ -269,7 +270,7 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) <-c
 	x.drafts[id] = &d
 	x.seq++
 	n := x.seq
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.ShipCalls(x.h)
 	if err != nil {
 		close(done)
 		return done
@@ -643,12 +644,12 @@ func (x *PRReview) hear(se core.SessionState) {
 	x.h.Notify(core.Notice{ID: "review.pr.reply." + string(se.ID), Severity: core.SevInfo, Session: se.ID, Title: last.Name + " replied",
 		Text: fmt.Sprintf("On %s, %s:%d: %s", kit.Label(se), at.Anchor.File, at.Anchor.Line, kit.FirstLine(last.Body)),
 		Actions: []core.Action{{Title: "Open the thread", Command: "session.open", Args: map[string]any{"id": string(se.ID),
-			"then": []any{map[string]any{"command": "request.open", "args": map[string]any{"thread": string(at.ID)}}}}}}})
+			"then": kit.Then(kit.Call{Command: "request.open", Args: registry.Args{"thread": string(at.ID)}})}}}})
 }
 
 func openReview(id core.SessionID) core.Action {
 	return core.Action{Title: "Open the review", Command: "session.open",
-		Args: map[string]any{"id": string(id), "then": []any{map[string]any{"command": "ship.pr.open"}}}}
+		Args: map[string]any{"id": string(id), "then": kit.Then(kit.Call{Command: "ship.pr.open"})}}
 }
 
 // saveSummary keeps the summary as typed in the session, once typing has stopped for a moment.
@@ -678,7 +679,5 @@ func reviewRequest(se core.SessionState) (core.Thread, bool) {
 }
 
 func (x *PRReview) run(id string, a registry.Args) {
-	if err := x.h.Run(context.Background(), id, a); err != nil && !errors.Is(err, kit.ErrStopped) {
-		x.h.Notify(core.Notice{ID: "review.pr.error", Severity: core.SevError, Key: true, Text: err.Error()})
-	}
+	kit.RunOrNotify(x.h, "review.pr", id, a)
 }

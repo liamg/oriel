@@ -159,3 +159,54 @@ runs = "everywhere"`} {
 		}
 	}
 }
+
+// CheckProgram checks the program that will run: a path the plugin names is its own directory's (or the given
+// one's), absolute, so a grant for its bin/server never lets the project's bin/server run; a bare name is checked
+// as named.
+func TestCheckProgram(t *testing.T) {
+	dir := t.TempDir()
+	server := filepath.Join(dir, "bin", "server")
+	os.MkdirAll(filepath.Dir(server), 0o755)
+	os.WriteFile(server, []byte("#!/bin/sh\n"), 0o755)
+	g := NewGrants()
+	g.Grant("p/q", []Grant{{Cap: CapExec, Scope: []string{RealPath(server), "gopls"}}})
+	c := Caller{ID: "p/q", Dir: dir, Guard: g}
+	if got, err := c.CheckProgram("bin/server", ""); err != nil || got != RealPath(server) {
+		t.Errorf("its own bin/server: %q, %v", got, err)
+	}
+	if _, err := c.CheckProgram("bin/server", t.TempDir()); err == nil {
+		t.Error("another directory's bin/server was allowed")
+	}
+	if got, err := c.CheckProgram("gopls", ""); err != nil || got != "gopls" {
+		t.Errorf("a bare name: %q, %v", got, err)
+	}
+	if _, err := c.CheckProgram("rm", ""); err == nil {
+		t.Error("a program the grant doesn't name was allowed")
+	}
+}
+
+// Widen grants a plugin more at run time, where the audit shows it and why, and its undo takes exactly that back.
+func TestWidenIsAuditedAndUndone(t *testing.T) {
+	g := NewGrants()
+	g.Grant("p/q", []Grant{{Cap: CapNet, Scope: []string{"api.example.com"}}})
+	undo := g.Widen("p/q", "probing git.acme.corp for GitLab", Grant{Cap: CapNet, Scope: []string{"git.acme.corp"}})
+	if err := g.Check("p/q", CapNet, "git.acme.corp"); err != nil {
+		t.Fatalf("widened: %v", err)
+	}
+	var widened *Use
+	for _, u := range g.Audit() {
+		if u.Why != "" {
+			widened = &u
+		}
+	}
+	if widened == nil || widened.Cap != CapNet || widened.Target != "git.acme.corp" || widened.Why != "probing git.acme.corp for GitLab" {
+		t.Errorf("the audit has no widening: %+v", g.Audit())
+	}
+	undo()
+	if err := g.Check("p/q", CapNet, "git.acme.corp"); err == nil {
+		t.Error("undone, it still reaches git.acme.corp")
+	}
+	if err := g.Check("p/q", CapNet, "api.example.com"); err != nil {
+		t.Errorf("undo took the declared grant too: %v", err)
+	}
+}

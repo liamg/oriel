@@ -83,7 +83,7 @@ func TestEventsViewCloses(t *testing.T) {
 
 // Every built-in view opened in the layout closes from the keyboard with ⌃W c.
 func TestEveryViewClosesWithCtrlWC(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"a.txt": "alpha\n"}})
+	r := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"a.txt": "alpha\n"}})
 	var views []string
 	for _, id := range r.Host.Views() {
 		if !strings.HasPrefix(id, "app.") {
@@ -108,7 +108,7 @@ func TestEveryViewClosesWithCtrlWC(t *testing.T) {
 func TestCmdWClosesTheTabInFront(t *testing.T) {
 	for _, mode := range []string{"normal", "insert"} {
 		t.Run(mode, func(t *testing.T) {
-			r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"a.txt": "alpha\n", "b.txt": "bravo\n"}, Files: []string{"a.txt", "b.txt"}})
+			r := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"a.txt": "alpha\n", "b.txt": "bravo\n"}, Files: []string{"a.txt", "b.txt"}})
 			r.WaitText("bravo")
 			if mode == "insert" {
 				r.TypeKeys("i")

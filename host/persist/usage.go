@@ -14,6 +14,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // UsageHistoryReq asks for the plan readings a host has kept: a provider's, or every one, since a time.
@@ -43,11 +44,15 @@ func (s *Stats) recordUsage(u core.ProviderUsage) {
 		s.pruneUsage(path)
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-	if err != nil {
-		return
+	if err == nil {
+		_, err = f.Write(append(b, '\n'))
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
 	}
-	defer f.Close()
-	_, _ = f.Write(append(b, '\n'))
+	if err != nil {
+		s.env.Log.Warn("plan usage reading not kept", "path", path, "err", err)
+	}
 }
 
 // pruneUsage drops the readings older than UsageKeep.
@@ -58,9 +63,8 @@ func (s *Stats) pruneUsage(path string) {
 		b, _ := json.Marshal(u)
 		buf.Write(append(b, '\n'))
 	}
-	tmp := path + ".tmp"
-	if os.WriteFile(tmp, buf.Bytes(), 0o644) == nil {
-		_ = os.Rename(tmp, path)
+	if err := atomicfile.Write(path, buf.Bytes(), 0o644); err != nil {
+		s.env.Log.Warn("plan usage readings not pruned", "path", path, "err", err)
 	}
 }
 
@@ -96,6 +100,7 @@ func (s *Stats) RestoreUsage() {
 
 // UsageHistory is the plan readings the host has kept, oldest first.
 func (s *Stats) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
+	defer s.env.Recover("UsageHistory", nil)
 	s.usageMu.Lock()
 	defer s.usageMu.Unlock()
 	return readUsage(s.usagePath(), r.Provider, r.Since)
@@ -103,7 +108,8 @@ func (s *Stats) UsageHistory(r UsageHistoryReq) []core.ProviderUsage {
 
 // ReadUsage asks every provider for its plan's windows now, all at once, and reports each that's newer than the one
 // held.
-func (s *Stats) ReadUsage(ctx context.Context) error {
+func (s *Stats) ReadUsage(ctx context.Context) (err error) {
+	defer s.env.Recover("ReadUsage", &err)
 	ps := s.providers.List()
 	errs := make([]error, len(ps))
 	var wg sync.WaitGroup

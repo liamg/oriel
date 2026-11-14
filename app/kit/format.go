@@ -1,5 +1,7 @@
-// Package kit is what the app's features share: fonts, theme tokens, formatters, session helpers and the usual
-// plugin plumbing.
+// Package kit is what every one of the app's features shares: fonts, theme tokens, formatters, session and git
+// helpers, the cross-feature services' contracts (Reviews, Inbox, Explains…) and the usual plugin plumbing. What only
+// some share has a package of its own under it: kit/work (work off the loop), kit/prui (pull request views),
+// kit/diagrams (mermaid diagrams), kit/agentkit (agent pickers); general controls belong in ui/widget.
 package kit
 
 import (
@@ -12,7 +14,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/ui/widget"
 )
 
 // Duration is a span to two units at most, the second dropped when it's 0: "<1ms", "4.1ms", "1.2s", "38s",
@@ -111,10 +112,6 @@ func TildePath(p string) string {
 	return p
 }
 
-// Ago is how long before now t was, shortly: 10m, 2h, 3d, 1w. Drawn on its own, it's widget.Ago, with the full time
-// on hover.
-func Ago(now, t time.Time) string { return widget.AgoLabel(now, t) }
-
 // Money is dollars as the pages show them: $412.80, $15.2k.
 func Money(v float64) string {
 	if v >= 10_000 {
@@ -149,12 +146,37 @@ func Count(n int64) string {
 // Counted is n of what: "1 session", "64 sessions".
 func Counted(n int, what string) string { return fmt.Sprintf("%d %s", n, Plural(n, what, what+"s")) }
 
-func AgoText(now, t time.Time) string { return widget.AgoLong(now, t) }
-
 // SessionDir is where the window opens for a session: its primary project, or its own directory.
 func SessionDir(se core.SessionState) string {
 	if p, ok := se.Primary(); ok && p.Dir != "" {
 		return p.Dir
 	}
 	return se.Dir
+}
+
+// Tokens is a count as the session stats show it: 950, 38k, 1.42M.
+func Tokens(n int64) string {
+	switch {
+	case n >= 1_000_000:
+		return fmt.Sprintf("%.2fM", float64(n)/1e6)
+	case n >= 10_000:
+		return fmt.Sprintf("%dk", n/1000)
+	case n >= 1000:
+		return fmt.Sprintf("%.1fk", float64(n)/1000)
+	}
+	return fmt.Sprint(n)
+}
+
+// ProjectInitials are a project's two letters for the narrow sidebar: "admin-ui" is AD.
+func ProjectInitials(name string) string {
+	var rs []rune
+	for _, r := range strings.ToUpper(name) {
+		if r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			rs = append(rs, r)
+		}
+		if len(rs) == 2 {
+			break
+		}
+	}
+	return string(rs)
 }

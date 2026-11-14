@@ -191,7 +191,7 @@ type decorState struct {
 func (r *reg) Decorations(id string, p DecorationProvider) registry.Disposable {
 	d := r.Contribute(NamedProvider{id, p})
 	r.DecorationsChanged(id)
-	return disposeOnce(func() {
+	return registry.DisposeFunc(func() {
 		d.Dispose()
 		r.DecorationsChanged(id)
 	})
@@ -272,7 +272,7 @@ func (r *reg) Decorate(ctx DecorationCtx) map[int][]Decoration {
 	from := make([]*decorAsked, 0, len(provs))
 	var wake time.Time
 	for i, prov := range provs {
-		if r.IsOff(registry.KindDecoration, prov.ID) != nil {
+		if r.WhyOff(registry.KindDecoration, prov.ID) != nil {
 			continue
 		}
 		var key any

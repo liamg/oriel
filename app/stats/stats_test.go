@@ -27,7 +27,7 @@ func statsScene(t *testing.T) (*apptest.Scene, *rig.Stats, *stats.Plugin) {
 // statsOf is the scene's stats plugin, on the scene's clock and in UTC.
 func statsOf(s *apptest.Scene) *stats.Plugin {
 	x := apptest.PluginOf[*stats.Plugin](s, "stats")
-	x.Now, x.Loc = func() time.Time { return s.Now }, time.UTC
+	x.Clock, x.Loc = s.Clock(), time.UTC
 	return x
 }
 

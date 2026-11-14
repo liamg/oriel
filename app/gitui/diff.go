@@ -14,6 +14,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -67,7 +71,7 @@ type Diff struct {
 	stats      map[diffKey]kit.FileStat // each changed file's size and time on disk, read off the loop
 	statting   bool
 	rechecking bool // a frame is set for when the stats read last go stale
-	busy       kit.Busy
+	busy       work.Busy
 	limit      chan struct{} // diffs made at once
 }
 
@@ -328,7 +332,7 @@ func knownTarget(h plugin.Host, path string) (clean, dir, root string, err error
 
 // gitRoot is the work tree git finds dir in.
 func gitRoot(ctx context.Context, path, dir string) (string, error) {
-	if r, ok := gitx.Root(ctx, dir); ok {
+	if r, err := gitx.Root(ctx, dir); err == nil {
 		return r, nil
 	}
 	return "", fmt.Errorf("%s isn't in a git repository", path)
@@ -396,7 +400,7 @@ func (x *Diff) marks(root, file string) map[string]bool {
 
 // record applies a review event: through the session host, so it lasts, or for as long as the window outside a
 // session. ev's session, and its project outside one, are filled in.
-func (x *Diff) record(root string, ev core.Event, send func(c host.Access, sid core.SessionID, project string) error) error {
+func (x *Diff) record(root string, ev core.Event, send func(c host.ShipCalls, sid core.SessionID, project string) error) error {
 	se, project, ok := x.session(root)
 	if !ok {
 		x.mu.Lock()
@@ -407,9 +411,7 @@ func (x *Diff) record(root string, ev core.Event, send func(c host.Access, sid c
 		x.h.Redraw()
 		return err
 	}
-	var c host.Access
-	var err error
-	c, err = kit.SessionHost(x.h)
+	c, err := kit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -427,7 +429,7 @@ func (x *Diff) setMarks(root, file string, ids []string, on bool) error {
 		return nil
 	}
 	local := core.HunksReviewed{Session: localReviews, Project: root, File: file, Hunks: slices.Clone(ids), Reviewed: on}
-	return x.record(root, local, func(c host.Access, sid core.SessionID, project string) error {
+	return x.record(root, local, func(c host.ShipCalls, sid core.SessionID, project string) error {
 		ev := local
 		ev.Session, ev.Project = sid, project
 		return c.SetReviewed(ev)
@@ -604,7 +606,7 @@ func (x *Diff) source(st *diffState, _ registry.Args) error {
 
 // diffFor is a file's diff as last made, and makes it again (off the loop) when what it's made from has changed, or
 // styled when the view asks for one (styled) and it's plain. current is false while the diff is older than the file.
-func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, styled, head bool) (d *diffFile, current bool) {
+func (x *Diff) diffFor(tree services.GitTree, st *gitx.State, f gitx.FileState, styled, head bool) (d *diffFile, current bool) {
 	root := tree.Root()
 	work := filepath.Join(root, filepath.FromSlash(f.Path))
 	rev := st.BaseHash
@@ -615,9 +617,9 @@ func (x *Diff) diffFor(tree registry.GitTree, st *gitx.State, f gitx.FileState, 
 	if f.Code == 'A' || f.Code == '?' {
 		in.rev = ""
 	}
-	var buf registry.EditorBuffer
+	var buf services.EditorBuffer
 	open := false
-	if ed, ok := registry.EditorsOf(x.h); ok {
+	if ed, ok := services.EditorsOf(x.h); ok {
 		buf, open = ed.Buffer(work)
 	}
 	if open {

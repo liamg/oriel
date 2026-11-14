@@ -62,7 +62,7 @@ func (e *Engine) operator(v *view, c cmd) {
 		if s.noAdjust {
 			r = oprange{start: s.start, end: s.end, kind: exclusive, curStart: s.start}
 		} else {
-			r = e.adjust(v, s.start, s.end, s.kind, false)
+			r = e.adjust(v, s.start, s.end, s.kind)
 		}
 	default:
 		t, ok := motions[c.key](e, v, motionCtx{count: c.count, arg: c.arg, op: c.op, key: c.key, search: c.searchTarget})
@@ -83,7 +83,7 @@ func (e *Engine) operator(v *view, c cmd) {
 		}
 		from := e.cur
 		from, to = includeFolds(v, from, to, t.kind)
-		r = e.adjust(v, from, to, t.kind, true)
+		r = e.adjust(v, from, to, t.kind)
 		r.useRegOne = regOneMotions[c.key]
 	}
 	e.applyOp(v, c, r, oldWant)
@@ -124,7 +124,7 @@ func (e *Engine) applyOp(v *view, c cmd, r oprange, oldWant int) {
 }
 
 // adjust orders from and to into a range and applies vim's rules for exclusive motions.
-func (e *Engine) adjust(v *view, from, to Pos, kind motionKind, fromCursor bool) oprange {
+func (e *Engine) adjust(v *view, from, to Pos, kind motionKind) oprange {
 	start, end := from, to
 	if less(to, from) {
 		start, end = to, from
@@ -226,17 +226,23 @@ func (e *Engine) yank(v *view, r oprange, reg rune) {
 
 // deleteRegs fills the registers a deletion writes.
 func (e *Engine) deleteRegs(v *view, r oprange, reg rune) {
+	oneLine := r.kind != linewise && r.lines() == 1
+	e.storeDeleted(r.regText(v), reg, !oneLine || r.useRegOne, oneLine)
+}
+
+// storeDeleted fills the registers deleted text goes to: reg when it's named, and "1 (shifting the numbered ones down)
+// when numbered, or "- when it's small and no register was named.
+func (e *Engine) storeDeleted(val edit.Register, reg rune, numbered, small bool) {
 	if reg == '_' {
 		return
 	}
-	val := r.regText(v)
 	if reg == '"' {
 		reg = 0
 	}
 	if reg != 0 {
 		e.setReg(reg, val)
 	}
-	if r.kind == linewise || r.lines() > 1 || r.useRegOne {
+	if numbered {
 		for n := '9'; n > '1'; n-- {
 			if prev, ok := e.ed.Register(n - 1); ok {
 				e.ed.SetRegister(n, prev)
@@ -250,7 +256,7 @@ func (e *Engine) deleteRegs(v *view, r oprange, reg rune) {
 			e.unnamed = unicode.ToLower(reg)
 		}
 	}
-	if reg == 0 && r.kind != linewise && r.lines() == 1 {
+	if reg == 0 && small {
 		e.setReg('-', val)
 	}
 }
@@ -407,7 +413,6 @@ func (e *Engine) changeCase(v *view, r oprange, op string) {
 	if r.kind == linewise && (r.lines() == 1 || r.visual) {
 		e.cur.Col = 0
 	} else if r.kind == linewise {
-		e.cur.Col = min(e.cur.Col, e.changeCursor.Col)
 		e.cur = e.changeCursor
 		e.cur.Line = r.start.Line
 	}

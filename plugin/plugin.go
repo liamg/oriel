@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
+	"strings"
 	"sync"
 
 	"github.com/liamg/oriel/core"
@@ -41,6 +42,20 @@ func (p Caller) Check(c Capability, target string) error {
 		return nil
 	}
 	return p.Guard.Check(p.ID, c, target)
+}
+
+// CheckProgram checks the plugin may run name (CapExec) and says what to run: a path (./tool, bin/server, ~/bin/x)
+// is resolved against dir (the plugin's own directory if "") and run as the absolute path checked; a bare name is
+// checked as named, and found on PATH where it's run, as the grant's name is.
+func (p Caller) CheckProgram(name, dir string) (string, error) {
+	prog := Expand(name)
+	if strings.ContainsRune(prog, filepath.Separator) {
+		if !filepath.IsAbs(prog) {
+			prog = filepath.Join(cmp.Or(dir, p.Dir), prog)
+		}
+		prog = RealPath(filepath.Clean(prog))
+	}
+	return prog, p.Check(CapExec, prog)
 }
 
 // Path is a path the plugin named: under its directory when relative, ~ its home.
@@ -92,10 +107,6 @@ type method struct {
 
 func NewMethods() *Methods { return &Methods{m: map[string][]method{}} }
 
-type disposeFunc func()
-
-func (f disposeFunc) Dispose() { f() }
-
 // Add makes m callable; a method of the same name is shadowed until it's disposed.
 func (ms *Methods) Add(m Method) registry.Disposable {
 	if m.Cap == "" {
@@ -106,7 +117,7 @@ func (ms *Methods) Add(m Method) registry.Disposable {
 	n := ms.n
 	ms.m[m.Name] = append(ms.m[m.Name], method{m, n})
 	ms.mu.Unlock()
-	return disposeFunc(func() {
+	return registry.DisposeFunc(func() {
 		ms.mu.Lock()
 		defer ms.mu.Unlock()
 		ms.m[m.Name] = slices.DeleteFunc(ms.m[m.Name], func(x method) bool { return x.n == n })
@@ -123,7 +134,7 @@ func (ms *Methods) Names() []string {
 			out = append(out, n)
 		}
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
@@ -205,7 +216,7 @@ func HostMethods(r Reporter) *Methods {
 		if !filepath.IsAbs(p) {
 			return nil, errors.New("fs.read: the path must be absolute")
 		}
-		b, err := os.ReadFile(p)
+		b, err := os.ReadFile(RealPath(p)) // what the grant was checked against (Target)
 		return string(b), err
 	}})
 	ms.Add(Method{Name: "fs.write", Cap: CapFSWrite, Target: path, Run: func(_ context.Context, _ Caller, raw json.RawMessage) (any, error) {

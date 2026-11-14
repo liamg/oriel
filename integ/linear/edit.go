@@ -1,6 +1,7 @@
 package linear
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strings"
@@ -116,7 +117,7 @@ func (c Client) Update(ctx context.Context, key string, ch Change) (Edit, error)
 	}
 	if ch.Priority != nil {
 		p := int(*ch.Priority)
-		input["priority"], did = p, append(did, "priority "+cmpOr(t.PriorityLabel, "none")+" → "+priorityNames[p])
+		input["priority"], did = p, append(did, "priority "+cmp.Or(t.PriorityLabel, "none")+" → "+priorityNames[p])
 	}
 	if ch.Assignee != "" {
 		id, name, err := c.person(ctx, ch.Assignee, t.viewer)
@@ -126,7 +127,7 @@ func (c Client) Update(ctx context.Context, key string, ch Change) (Edit, error)
 		if id == "" {
 			input["assigneeId"], did = nil, append(did, "unassigned")
 		} else {
-			input["assigneeId"], did = id, append(did, "assignee "+cmpOr(t.Assignee, "nobody")+" → "+name)
+			input["assigneeId"], did = id, append(did, "assignee "+cmp.Or(t.Assignee, "nobody")+" → "+name)
 		}
 	}
 	if ch.Project != "" {
@@ -135,9 +136,9 @@ func (c Client) Update(ctx context.Context, key string, ch Change) (Edit, error)
 			return Edit{}, err
 		}
 		if id == "" {
-			input["projectId"], did = nil, append(did, "out of "+cmpOr(t.Project, "no project"))
+			input["projectId"], did = nil, append(did, "out of "+cmp.Or(t.Project, "no project"))
 		} else {
-			input["projectId"], did = id, append(did, "project "+cmpOr(t.Project, "none")+" → "+name)
+			input["projectId"], did = id, append(did, "project "+cmp.Or(t.Project, "none")+" → "+name)
 		}
 	}
 	ok, err := c.UpdateIssue(ctx, t.ID, input)

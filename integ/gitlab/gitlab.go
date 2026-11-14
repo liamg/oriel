@@ -50,6 +50,9 @@ type Error struct {
 
 func (e *Error) Error() string { return fmt.Sprintf("GitLab: %s (HTTP %d)", e.Message, e.Status) }
 
+// HTTPStatus is the status it was answered with (registry.TokenRefused).
+func (e *Error) HTTPStatus() int { return e.Status }
+
 // call sends in as JSON (nil for none) and decodes the answer into out (nil to drop it).
 func (c Client) call(ctx context.Context, method, path string, in, out any) error {
 	var body []byte

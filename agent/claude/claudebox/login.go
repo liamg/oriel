@@ -5,6 +5,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/internal/atomicfile"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -71,6 +73,8 @@ type Box struct {
 	KeepEvery time.Duration
 	// Clock times KeepLogins and tells how near its end a sign-in is; nil is the system's.
 	Clock clock.Clock
+	// HTTP downloads Claude Code for a sandbox; http.DefaultClient if nil.
+	HTTP *http.Client
 
 	keychainMu    sync.Mutex
 	keychainLogin Login
@@ -260,11 +264,7 @@ func SyncLogin(root string, l Login) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, want, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return atomicfile.WriteSecret(path, want)
 }
 
 // SyncLogins refreshes the sign-in in every sandbox on this machine.

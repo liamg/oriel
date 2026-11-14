@@ -1,11 +1,12 @@
 package testrun
 
 import (
+	"cmp"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"os/exec"
-	"sort"
+	"slices"
 	"time"
 )
 
@@ -166,7 +167,7 @@ func (r *Run) Slowest(n int) []*Result {
 			out = append(out, x)
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Duration > out[j].Duration })
+	slices.SortStableFunc(out, func(a, b *Result) int { return cmp.Compare(b.Duration, a.Duration) })
 	if n > 0 && len(out) > n {
 		out = out[:n]
 	}

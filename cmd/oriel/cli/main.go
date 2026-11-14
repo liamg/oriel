@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/cmd/oriel/dev"
@@ -23,7 +24,7 @@ import (
 	"github.com/liamg/oriel/plugin/ossandbox"
 	"github.com/liamg/oriel/render/gio"
 	"github.com/liamg/oriel/sandbox/helper"
-	"github.com/liamg/oriel/sandbox/runner"
+	"github.com/liamg/oriel/sysload"
 	"github.com/liamg/oriel/term/shellenv"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/update"
@@ -43,7 +44,6 @@ func Main() {
 		fmt.Fprintln(os.Stderr, "oriel:", helper.ErrMissing)
 		os.Exit(1)
 	}
-	runner.SetHelper(helper.Binary)
 	if len(args) > 0 && args[0] == "app" {
 		args = args[1:]
 	}
@@ -74,14 +74,18 @@ func runApp(args []string) {
 	}
 	log := cfg.Logs.Logger("host")
 	loginPath(log, fromTerminal)
-	w, err := newHost(home, log)
+	// load reads the machine's load in-process, only while it's wanted, and says when it moves.
+	load := sysload.NewSampler(5*time.Second, nil)
+	sandboxes := newSandboxes()
+	cfg.SandboxBackends = sandboxes.Offered
+	w, err := newHost(home, log, load, sandboxes)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "oriel: no sessions:", err)
 		os.Exit(1)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	startHost(ctx, w, log)
-	cfg.Host, cfg.Load = w, machineLoad
+	startHost(ctx, w, log, load)
+	cfg.Host, cfg.Load = w, load
 	cfg.Agents = builtinAgents(home)
 	cfg.Logs.Router.Sessions = w.Logs()
 	be, err := gio.New()

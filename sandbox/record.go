@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // The ways a session can run.
@@ -190,11 +192,7 @@ func Save(r Record) error {
 	if err != nil {
 		return err
 	}
-	tmp := recordPath(r.Root) + ".tmp"
-	if err := os.WriteFile(tmp, b, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, recordPath(r.Root))
+	return atomicfile.Write(recordPath(r.Root), b, 0o600)
 }
 
 // Update applies edit to root's record and saves it.

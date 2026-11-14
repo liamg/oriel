@@ -48,6 +48,7 @@ type RepoFacts struct {
 
 // RepoFacts reads a checkout's facts.
 func (x *Registry) RepoFacts(ctx context.Context, id core.RepoID) (f RepoFacts, err error) {
+	defer x.env.Recover("RepoFacts", &err)
 	r, g, err := x.repoGit(id)
 	if err != nil {
 		return RepoFacts{}, err
@@ -73,6 +74,7 @@ func (x *Registry) RepoFacts(ctx context.Context, id core.RepoID) (f RepoFacts, 
 
 // FetchRepo fetches a checkout's remote, pruning branches it deleted.
 func (x *Registry) FetchRepo(ctx context.Context, id core.RepoID) (err error) {
+	defer x.env.Recover("FetchRepo", &err)
 	_, g, err := x.repoGit(id)
 	if err != nil {
 		return err
@@ -121,6 +123,7 @@ type Cleaned struct {
 // Housekeeping reads what a checkout has to clean: local branches merged into its default, or whose upstream was
 // deleted, and worktrees whose directory is gone. Never the default branch or the checkout's own.
 func (x *Registry) Housekeeping(ctx context.Context, req HousekeepReq) (p HousekeepPlan, err error) {
+	defer x.env.Recover("Housekeeping", &err)
 	r, g, err := x.repoGit(req.Repo)
 	if err != nil {
 		return HousekeepPlan{}, err
@@ -159,7 +162,8 @@ func (x *Registry) Housekeeping(ctx context.Context, req HousekeepReq) (p Housek
 		s := StaleBranch{Name: b.Name, Why: why, When: b.When, Session: sessions[b.Name]}
 		if i := slices.IndexFunc(wts, func(t gitx.Worktree) bool { return t.Branch == b.Name && !t.Prunable }); i >= 0 {
 			s.Worktree = wts[i].Dir
-			s.Dirty = gitx.Repo{Dir: s.Worktree}.Dirty(ctx)
+			dirty, err := gitx.Repo{Dir: s.Worktree}.Dirty(ctx)
+			s.Dirty = dirty || err != nil // a status git can't read isn't clean: housekeeping keeps it unless forced
 		}
 		p.Branches = append(p.Branches, s)
 	}
@@ -190,6 +194,7 @@ func (x *Registry) sessionBranches(path string) map[string]string {
 // Housekeep deletes the branches asked for, each with its worktree, and prunes stale worktrees if asked. Only
 // branches the plan offers go; a dirty worktree goes only when forced. Each has its own result.
 func (x *Registry) Housekeep(ctx context.Context, req HousekeepReq) (out []Cleaned, err error) {
+	defer x.env.Recover("Housekeep", &err)
 	_, g, err := x.repoGit(req.Repo)
 	if err != nil {
 		return nil, err
@@ -246,6 +251,7 @@ type TagPreview struct {
 
 // TagPreview reads a checkout's branches and tags, and the commit branch ("" for the default) is at.
 func (x *Registry) TagPreview(ctx context.Context, id core.RepoID, branch string) (p TagPreview, err error) {
+	defer x.env.Recover("TagPreview", &err)
 	r, g, err := x.repoGit(id)
 	if err != nil {
 		return TagPreview{}, err
@@ -290,6 +296,7 @@ type Tagged struct {
 
 // Tag makes an annotated tag on a branch: fast-forwarded first if asked, and pushed (that tag alone) if asked.
 func (x *Registry) Tag(ctx context.Context, req TagReq) (t Tagged, err error) {
+	defer x.env.Recover("Tag", &err)
 	r, g, err := x.repoGit(req.Repo)
 	if err != nil {
 		return Tagged{}, err
@@ -327,6 +334,7 @@ func (x *Registry) Tag(ctx context.Context, req TagReq) (t Tagged, err error) {
 
 // PushTag pushes one tag to a checkout's origin.
 func (x *Registry) PushTag(ctx context.Context, id core.RepoID, name string) (err error) {
+	defer x.env.Recover("PushTag", &err)
 	_, g, err := x.repoGit(id)
 	if err != nil {
 		return err

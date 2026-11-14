@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"net/http"
 	"regexp"
 	"slices"
 	"strconv"
@@ -29,8 +30,9 @@ type CodeHost struct {
 	Shape  *regexp.Regexp
 	Setup  SiteSetup
 	Tokens TokenSources
-	// Allow lets the host's plugin reach a site set up for it: its hostname, and the site's secret there.
-	Allow func(host, secret string)
+	// Allow lets the host's plugin reach a site, for why: its hostname, and the site's secret there if secret isn't
+	// "". undo takes that back.
+	Allow func(host, secret, why string) (undo func())
 
 	Requested func(ctx context.Context, s Site) ([]ReviewRequest, error) // open pull requests asking you, and those you're part way through
 	Lookup    func(ctx context.Context, s Site, url string) (ReviewDetail, error)
@@ -378,9 +380,7 @@ var ErrNotOffered = errors.New("the code host doesn't offer that")
 // CodeHosts are the hosts by Order, then name.
 func CodeHosts(r Contributions) []CodeHost {
 	var out []CodeHost
-	for _, c := range r.Contributions("code.host") {
-		out = append(out, c.(CodeHost))
-	}
+	out = append(out, ContributionsOf[CodeHost](r)...)
 	slices.SortFunc(out, func(a, b CodeHost) int {
 		return cmp.Or(cmp.Compare(a.Order, b.Order), strings.Compare(a.Name, b.Name))
 	})
@@ -396,3 +396,19 @@ func HostByName(r Contributions, name string) (CodeHost, bool) {
 	}
 	return CodeHost{}, false
 }
+
+// TokenRefused says err is a code host refusing the token it was sent: HTTP 401. An error that knows its status
+// (HTTPStatus) says so; one that crossed a plugin's Lua as text says "HTTP 401", as code hosts' errors are written
+// ("GitLab: the token was refused (HTTP 401)", "Gitea: HTTP 401 …").
+func TokenRefused(err error) bool {
+	if err == nil {
+		return false
+	}
+	var s interface{ HTTPStatus() int }
+	if errors.As(err, &s) {
+		return s.HTTPStatus() == http.StatusUnauthorized
+	}
+	return refusedText.MatchString(err.Error())
+}
+
+var refusedText = regexp.MustCompile(`\bHTTP 401\b`)

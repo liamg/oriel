@@ -2,9 +2,12 @@ package api
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,9 +37,12 @@ func (r Root) Command(name string, fn *script.Fn, opts script.Table, where strin
 }
 
 //oriel:api doc="Run a command by its id, with arguments." optional=args
-func (r Root) Cmd(id string, args script.Table) error {
+func (r Root) Run(id string, args script.Table) error {
 	return r.a.Host.Run(context.Background(), id, registry.Args(args))
 }
+
+//oriel:api doc="Run a command by its id, with arguments." optional=args deprecated="use oriel.run"
+func (r Root) Cmd(id string, args script.Table) error { return r.Run(id, args) }
 
 //oriel:api doc="Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc." optional=opts
 func (r Root) On(event string, opts any, fn any, where string) error {
@@ -78,8 +84,8 @@ func (r Root) Placeholder(name string, spec script.Table, fn *script.Fn, where s
 	if fn == nil {
 		return fmt.Errorf("%s: no function", name)
 	}
-	lz := plugin.Lazy{Commands: strs(spec["commands"]), Events: strs(spec["events"]), Keys: strs(spec["keys"]),
-		Filetypes: strs(spec["filetypes"]), Omnibox: strs(spec["omnibox"]), Views: strs(spec["views"])}
+	lz := plugin.Lazy{Commands: plugin.Strings(spec["commands"]), Events: plugin.Strings(spec["events"]), Keys: plugin.Strings(spec["keys"]),
+		Filetypes: plugin.Strings(spec["filetypes"]), Omnibox: plugin.Strings(spec["omnibox"]), Views: plugin.Strings(spec["views"])}
 	r.a.own(r.a.Host.Placeholder(lz.Placeholder(r.a.Host, name, where, func() error { _, err := r.a.VM.Call(fn); return err })))
 	return nil
 }
@@ -144,9 +150,9 @@ func expand(p string) string {
 
 //oriel:api doc="A file's contents, or nil and why not. ~ is your home; a relative path is in the plugin's (or your config's) directory. A plugin reads its own files freely, anything else with fs.read." returns="string?,string?" cap=target
 func (r Root) Read(path string) ([]any, error) {
-	p := r.a.Plugin.Path(path)
+	p := plugin.RealPath(r.a.Plugin.Path(path)) // checked and read as one path, symlinks followed
 	if !r.a.Plugin.Own(p) {
-		if err := r.a.Check(plugin.CapFSRead, plugin.RealPath(p)); err != nil {
+		if err := r.a.Check(plugin.CapFSRead, p); err != nil {
 			return nil, err
 		}
 	}
@@ -157,59 +163,107 @@ func (r Root) Read(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
-//oriel:api doc="One of the plugin's own assets, read-only: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability." returns=string
-func (r Root) Asset(path string) (string, error) {
+//oriel:api doc="One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability." returns="string?,string?"
+func (r Root) Asset(path string) ([]any, error) {
 	b, err := plugin.Asset(r.a.Plugin.Dir, path)
-	return string(b), err
+	if errors.Is(err, fs.ErrNotExist) {
+		return []any{nil, err.Error()}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed; an error if it fails. opts: cwd, timeout (seconds, 10 by default), on_done = fn(output, err): run it in the background instead, without holding up the window, and call on_done with what it printed and why it failed (nil if it didn't)." optional=opts returns=string? cap=exec
-func (r Root) Exec(argv []string, opts script.Table) (any, error) {
+//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async)." optional=opts returns="string?,string?" cap=exec
+func (r Root) Exec(argv []string, opts script.Table) ([]any, error) {
+	if done, ok := opts["on_done"].(*script.Fn); ok {
+		return nil, r.ExecAsync(argv, opts, done)
+	}
+	run, err := r.program(argv, opts)
+	if missing(err) {
+		return []any{nil, err.Error()}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	out, err := run()
+	if err != nil {
+		return []any{nil, err.Error()}, nil
+	}
+	return []any{out}, nil
+}
+
+// notFound is a program that isn't there: a failure the caller may expect, not a mistake in the call.
+type notFound struct{ err error }
+
+func (e *notFound) Error() string { return e.err.Error() }
+func (e *notFound) Unwrap() error { return e.err }
+
+//oriel:api doc="Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too." optional=opts cap=exec
+func (r Root) ExecAsync(argv []string, opts any, fn any) error {
+	f, ok := opts.(*script.Fn)
+	var o script.Table
+	if !ok {
+		o, _ = opts.(script.Table)
+		f, ok = fn.(*script.Fn)
+	}
+	if !ok {
+		return fmt.Errorf("no function for the output")
+	}
+	run, err := r.program(argv, o)
+	if missing(err) {
+		why := err.Error()
+		r.a.Host.Do(func() { r.a.later(f, nil, why) })
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	plugin.Go(r.a.Host, "oriel.exec_async "+argv[0], func() {
+		out, err := run()
+		var msg any
+		if err != nil {
+			msg = err.Error()
+		}
+		r.a.Host.Do(func() { r.a.later(f, out, msg) })
+	})
+	return nil
+}
+
+// program resolves argv's program once, checks the plugin may run it, and returns what runs that same file.
+func (r Root) program(argv []string, opts script.Table) (func() (string, error), error) {
 	if len(argv) == 0 {
 		return nil, fmt.Errorf("no program")
 	}
-	if !r.a.Plugin.Trusted() {
-		prog, err := exec.LookPath(expand(argv[0]))
-		if err != nil {
-			return nil, err
+	dir := expand(str(opts, "cwd"))
+	prog, err := r.a.Plugin.CheckProgram(argv[0], cmp.Or(dir, mustGetwd()))
+	if err != nil {
+		return nil, err
+	}
+	if !strings.ContainsRune(prog, filepath.Separator) {
+		if prog, err = exec.LookPath(prog); err != nil {
+			return nil, &notFound{err}
 		}
-		if prog, err = filepath.Abs(prog); err != nil {
-			return nil, err
-		}
-		if err := r.a.Check(plugin.CapExec, plugin.RealPath(prog)); err != nil {
-			return nil, err
-		}
+	} else if _, err := os.Stat(prog); err != nil {
+		return nil, &notFound{err}
 	}
 	secs, _ := opts["timeout"].(float64)
 	if secs == 0 {
 		secs = 10
 	}
-	run := func() (string, error) {
+	return func() (string, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(secs*float64(time.Second)))
 		defer cancel()
-		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
-		cmd.Dir = expand(str(opts, "cwd"))
+		cmd := exec.CommandContext(ctx, prog, argv[1:]...)
+		cmd.Dir = dir
 		var out, errb bytes.Buffer
 		cmd.Stdout, cmd.Stderr = &out, &errb
 		if err := cmd.Run(); err != nil {
 			return out.String(), fmt.Errorf("%s: %v: %s", argv[0], err, strings.TrimSpace(errb.String()))
 		}
 		return out.String(), nil
-	}
-	done, ok := opts["on_done"].(*script.Fn)
-	if !ok {
-		out, err := run()
-		return out, err
-	}
-	go func() {
-		out, err := run()
-		var msg any
-		if err != nil {
-			msg = err.Error()
-		}
-		r.a.Host.Do(func() { r.a.later(done, out, msg) })
-	}()
-	return nil, nil
+	}, nil
 }
 
 //oriel:api doc="The time on Oriel's clock, in seconds since 1970 with a fraction: the window's clock, which a test can fix, so prefer it to os.time for anything shown." returns=number
@@ -221,20 +275,36 @@ func (r Root) Now() float64 {
 	return float64(t.UnixMicro()) / 1e6
 }
 
-//oriel:api doc="Decode JSON text to a table, or encode a value as JSON text." returns=any
-func (r Root) JSON(v any) (any, error) {
-	if s, ok := v.(string); ok {
-		var out any
-		if err := json.Unmarshal([]byte(s), &out); err != nil {
-			return nil, err
-		}
-		return out, nil
-	}
+//oriel:api doc="Encode a value as JSON text: a table, a string, a number, a boolean." returns=string
+func (r Root) JSONEncode(v any) (string, error) {
 	b, err := json.Marshal(v)
 	return string(b), err
+}
+
+//oriel:api doc="Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil." returns=any
+func (r Root) JSONDecode(s string) (any, error) {
+	var out any
+	if err := json.Unmarshal([]byte(s), &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+//oriel:api doc="Decode JSON text to a table, or encode any other value as JSON text." returns=any deprecated="use oriel.json_encode or oriel.json_decode, which can encode a string"
+func (r Root) JSON(v any) (any, error) {
+	if s, ok := v.(string); ok {
+		return r.JSONDecode(s)
+	}
+	return r.JSONEncode(v)
 }
 
 //oriel:api doc="Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."
 func (r Root) Statusline(fn *script.Fn, where string) error {
 	return View{r.a}.Override("app.statusline", fn, where)
+}
+
+// mustGetwd is the process's directory, where a program named by a relative path runs without a cwd.
+func mustGetwd() string {
+	d, _ := os.Getwd()
+	return d
 }

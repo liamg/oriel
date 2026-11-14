@@ -829,63 +829,26 @@ func (e *Engine) blockOp(v *view, op string, c cmd) {
 	startPos := Pos{top, spans[0].from}
 	text_ := func(sp span) string { return string(v.line(sp.line)[sp.from:sp.to]) }
 	switch op {
-	case "y", "d":
+	case "y", "d", "c":
 		var parts []string
 		for _, sp := range spans {
 			parts = append(parts, text_(sp))
 		}
 		val := edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise}
-		reg := c.reg
 		if op == "y" {
+			reg := c.reg
 			if reg == 0 || reg == '"' {
 				reg = '0'
 			}
 			if reg != '_' {
 				e.setReg(reg, val)
 			}
-		} else if reg != '_' {
-			if reg != 0 && reg != '"' {
-				e.setReg(reg, val)
-			}
-			if len(spans) > 1 || reg == 0 || reg == '"' {
-				for n := '9'; n > '1'; n-- {
-					if prev, ok := e.ed.Register(n - 1); ok {
-						e.ed.SetRegister(n, prev)
-					}
-				}
-				e.ed.SetRegister('1', val)
-				e.unnamed = '1'
-			}
-		}
-		if op == "d" {
-			var rs []text.Replace
-			for _, sp := range spans {
-				st := v.s.LineStart(sp.line)
-				if sp.to > sp.from {
-					rs = append(rs, text.Replace{Range: text.Range{Start: st + sp.from, End: st + sp.to}})
-				}
-			}
 			e.cur = startPos
-			if len(rs) > 0 {
-				e.do(e.group, rs...)
-			}
+			e.clamp(e.view())
+			e.setWant(e.view())
+			return
 		}
-		e.cur = startPos
-		e.clamp(e.view())
-		e.setWant(e.view())
-	case "c":
-		var parts []string
-		for _, sp := range spans {
-			parts = append(parts, text_(sp))
-		}
-		val := edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise}
-		if c.reg != '_' {
-			if c.reg != 0 && c.reg != '"' {
-				e.setReg(c.reg, val)
-			}
-			e.ed.SetRegister('1', val)
-			e.unnamed = '1'
-		}
+		e.storeDeleted(val, c.reg, len(spans) > 1, len(spans) == 1)
 		var rs []text.Replace
 		for _, sp := range spans {
 			st := v.s.LineStart(sp.line)
@@ -897,7 +860,12 @@ func (e *Engine) blockOp(v *view, op string, c cmd) {
 		if len(rs) > 0 {
 			e.do(e.group, rs...)
 		}
-		e.blockInsert(top, bot, left, false, c)
+		if op == "c" {
+			e.blockInsert(top, bot, left, false, c)
+			return
+		}
+		e.clamp(e.view())
+		e.setWant(e.view())
 	case "I":
 		e.cur = startPos
 		e.blockInsert(top, bot, left, false, c)
@@ -991,7 +959,6 @@ func (e *Engine) shiftBlockLeft(v *view, line, left, amount int) (string, bool) 
 		// A character straddles the block's start: start after it.
 		_, n := v.char(Pos{line, f})
 		nonWhite += n
-		nonWhiteCol = v.vcol(line, nonWhite)
 	}
 	for nonWhite < len(l) && isWhite(rune(l[nonWhite])) {
 		nonWhite++
@@ -1152,9 +1119,7 @@ func (e *Engine) blockPut(v *view, firstCol, top, bot, left, right int, c cmd, k
 		nv = e.view()
 		e.cur = Pos{bot + 1, nv.firstNonBlank(bot + 1)}
 		if !keep {
-			e.setReg('"', edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise})
-			e.ed.SetRegister('1', edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise})
-			e.unnamed = '1'
+			e.storeDeleted(edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise}, 0, len(parts) > 1, len(parts) == 1)
 		}
 		return
 	}
@@ -1173,9 +1138,7 @@ func (e *Engine) blockPut(v *view, firstCol, top, bot, left, right int, c cmd, k
 	e.cur = Pos{top, firstCol}
 	e.do(e.group, rs...)
 	if !keep {
-		e.setReg('"', edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise})
-		e.ed.SetRegister('1', edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise})
-		e.unnamed = '1'
+		e.storeDeleted(edit.Register{Text: strings.Join(parts, "\n"), Kind: edit.Blockwise}, 0, len(parts) > 1, len(parts) == 1)
 	}
 	nv := e.view()
 	e.cur = Pos{top, firstCol}

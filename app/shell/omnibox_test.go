@@ -122,7 +122,7 @@ func TestOmniboxRanksManyFilesOffTheLoop(t *testing.T) {
 
 // ⌘K, a query and Enter open what it found.
 func TestOmniboxOpensAFile(t *testing.T) {
-	r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"a.txt": "alpha\n", "deep/tiers.go": "package deep\n\nfunc PriceForTier() {}\n"},
+	r := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"a.txt": "alpha\n", "deep/tiers.go": "package deep\n\nfunc PriceForTier() {}\n"},
 		Files: []string{"a.txt"}})
 	r.WaitText("alpha")
 	r.TypeKeys("<D-k>")
@@ -188,7 +188,7 @@ func runsIn(s *apptest.Scene, r render.Rect, sep string) string {
 func TestOmniboxOpensASymbol(t *testing.T) {
 	for _, q := range []string{"#setDetails", "setDetails"} {
 		t.Run(q, func(t *testing.T) {
-			r := apptest.NewWindow(t, apptest.WindowOptions{Write: map[string]string{"deep/tiers.go": "package deep\n\nfunc setDetails() {}\n"},
+			r := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"deep/tiers.go": "package deep\n\nfunc setDetails() {}\n"},
 				Files: []string{"deep/tiers.go"}})
 			r.WaitText("func setDetails")
 			r.TypeKeys("<D-k>")

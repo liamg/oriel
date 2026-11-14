@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,6 +22,18 @@ func toolResult(err error, ok string) mcp.CallResult {
 		return mcp.TextResult(err.Error(), true)
 	}
 	return mcp.TextResult(ok, false)
+}
+
+// decodeArgs reads a tool call's arguments into in: none at all are the defaults, and ones that don't fit refuse
+// the call rather than run it on empty values.
+func decodeArgs(args json.RawMessage, in any) error {
+	if len(bytes.TrimSpace(args)) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(args, in); err != nil {
+		return fmt.Errorf("the tool's arguments: %w", err)
+	}
+	return nil
 }
 
 type projectArg struct {
@@ -47,7 +60,9 @@ func Builtins(h Host) map[string]Builtin {
 	sync := func(run func(context.Context, string) error, done string) func(context.Context, json.RawMessage) (mcp.CallResult, error) {
 		return func(ctx context.Context, args json.RawMessage) (mcp.CallResult, error) {
 			var in projectArg
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			return toolResult(run(ctx, in.Project), done), nil
 		}
 	}
@@ -60,7 +75,9 @@ func Builtins(h Host) map[string]Builtin {
 				Files   []string `json:"files"`
 				Project string   `json:"project"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			n, err := h.Commit(ctx, in.Project, in.Message, in.Files)
 			return toolResult(err, fmt.Sprintf("Committed %d file(s).", n)), nil
 		})
@@ -78,7 +95,9 @@ func Builtins(h Host) map[string]Builtin {
 				Body    string `json:"body"`
 				Project string `json:"project"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			url, err := h.CreatePR(ctx, in.Project, in.Title, in.Body)
 			if errors.Is(err, ErrVerify) {
 				return mcp.TextResult("The user has to verify this change in Oriel before it is raised. Ask them to press Verify & raise on the Pull request page.", true), nil
@@ -95,7 +114,9 @@ func Builtins(h Host) map[string]Builtin {
 				Project string `json:"project"`
 				Logs    bool   `json:"logs"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			return ciReport(ctx, h, in.Project, in.Logs), nil
 		})
 	add("repos", "List the user's repositories that could join this workspace, by name and host path. The sandbox cannot see them itself; pass a path to oriel__add_project.",
@@ -120,7 +141,9 @@ func Builtins(h Host) map[string]Builtin {
 			var in struct {
 				Repo string `json:"repo"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			a, err := h.AddProject(ctx, in.Repo)
 			if err != nil {
 				return mcp.TextResult(err.Error(), true), nil
@@ -136,7 +159,9 @@ func Builtins(h Host) map[string]Builtin {
 					Command string `json:"command"`
 					Cwd     string `json:"cwd"`
 				}
-				_ = json.Unmarshal(args, &in)
+				if err := decodeArgs(args, &in); err != nil {
+					return toolResult(err, ""), nil
+				}
 				return h.RunOnHost(ctx, in.Command, in.Cwd), nil
 			}
 			var sb strings.Builder
@@ -155,7 +180,9 @@ func Builtins(h Host) map[string]Builtin {
 			var in struct {
 				Minutes int `json:"minutes"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			until, err := h.SSHAgent(ctx, time.Duration(in.Minutes)*time.Minute)
 			if err != nil {
 				return mcp.TextResult(err.Error(), true), nil
@@ -177,7 +204,9 @@ func Builtins(h Host) map[string]Builtin {
 			var in struct {
 				Why string `json:"why"`
 			}
-			_ = json.Unmarshal(args, &in)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
+			}
 			ok, msg := h.RequestHost(ctx, in.Why)
 			return mcp.TextResult(msg, !ok), nil
 		},

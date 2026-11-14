@@ -19,6 +19,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 // A remote image's client dials no loopback or private address, whatever the URL names.
@@ -77,9 +79,9 @@ func TestRemotePictureRetries(t *testing.T) {
 	files := map[string][]byte{}
 	release, client := remotePictures(t, files)
 	release()
-	now := time.Now()
+	clk := clocktest.New(time.Now())
 	pics := testPictures(t, client)
-	pics.Now = func() time.Time { return now }
+	pics.Clock = clk
 	settled := func() *Picture {
 		t.Helper()
 		pc := pics.Remote(src)
@@ -90,11 +92,11 @@ func TestRemotePictureRetries(t *testing.T) {
 		t.Fatal("the first fetch didn't fail")
 	}
 	files[src] = pngBytes(t, solidImage(4, 4, color.NRGBA{R: 200, A: 255}))
-	now = now.Add(10 * time.Second)
+	clk.Advance(10 * time.Second)
 	if pc := settled(); pc.Img != nil {
 		t.Error("fetched again before its backoff")
 	}
-	now = now.Add(time.Minute)
+	clk.Advance(time.Minute)
 	if pc := settled(); pc.Img == nil {
 		t.Errorf("not fetched again after its backoff: %v", pc.Err)
 	}

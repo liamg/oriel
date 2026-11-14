@@ -40,7 +40,7 @@ func (x *Launcher) quick() {
 	st := h.State()
 	plugin.Go(h, "launcher: quick session", func() {
 		err := plugin.Await(life, func(ctx registry.Ctx) error {
-			c, err := kit.SessionHost(h)
+			c, err := kit.SessionCalls(h)
 			if err != nil {
 				return err
 			}

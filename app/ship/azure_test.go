@@ -87,6 +87,7 @@ func TestAzureShipAndReviews(t *testing.T) {
 	dash := azureRepo(t, "dashboard")
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
+		apptest.GitHub(hub)(cfg)
 		cfg.Net, cfg.Secrets = az.Client(), secrets
 	}})
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })

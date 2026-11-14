@@ -37,10 +37,10 @@ func TestSpinner(t *testing.T) {
 		t.Errorf("its accessible name: %+v", n)
 	}
 	before := start(h)
-	if next := h.u.NextFrame(); next.IsZero() || next.After(h.now.Add(spinnerTurn/spinnerSteps)) {
-		t.Errorf("a turning spinner asked for its next frame at %v (now %v)", next, h.now)
+	if next := h.u.NextFrame(); next.IsZero() || next.After(h.clock.Now().Add(spinnerTurn/spinnerSteps)) {
+		t.Errorf("a turning spinner asked for its next frame at %v (now %v)", next, h.clock.Now())
 	}
-	h.now = h.now.Add(spinnerTurn / 4)
+	h.clock.Advance(spinnerTurn / 4)
 	h.frame()
 	if start(h) == before {
 		t.Error("the arc didn't move as time passed")
@@ -49,7 +49,7 @@ func TestSpinner(t *testing.T) {
 	still := motionHarness(t, true, build)
 	still.frame()
 	before = start(still)
-	still.now = still.now.Add(spinnerTurn / 4)
+	still.clock.Advance(spinnerTurn / 4)
 	still.frame()
 	if start(still) != before {
 		t.Error("with reduced motion the arc moved")

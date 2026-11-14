@@ -132,9 +132,7 @@ func TestRunStatuses(t *testing.T) {
 	if got := RunOf(r.session(id)); got.Status != RunBlocked || got.Summary != "react-router 6.28 breaks loaders. Needs a call: bump and fix, or pin?" {
 		t.Errorf("blocked run = %+v", got)
 	}
-	if se := r.session(id); se.Status != core.StatusNeedsYou {
-		t.Errorf("a blocked run's session is %s, want needs_you: it's in Requests", se.Status)
-	}
+	r.eventually(id, "the blocked run's session in Requests", func(se core.SessionState) bool { return se.Status == core.StatusNeedsYou })
 
 	id, _, _ = run()
 	if err := r.w.Stop(ctx, id); err != nil {

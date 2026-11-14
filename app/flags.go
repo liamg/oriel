@@ -44,14 +44,16 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 		}
 	}
 	return Config{
-		Logs: NewLogs(LogOpts{File: filepath.Join(logs.Dir(), "oriel.log"), SessionLogs: logs.Dirs{Root: filepath.Join(state, "sessions")},
-			Level: lv}),
-		CrashDir:   filepath.Join(state, "crashes"),
-		Version:    version,
-		Debug:      *debug,
+		Window: Window{
+			Logs: NewLogs(LogOpts{File: filepath.Join(logs.Dir(), "oriel.log"), SessionLogs: logs.Dirs{Root: filepath.Join(state, "sessions")},
+				Level: lv}),
+			CrashDir: filepath.Join(state, "crashes"),
+			Version:  version,
+			Debug:    *debug,
+			Trace:    *tracefile,
+			Files:    files,
+			WorkDir:  dir,
+		},
 		CPUProfile: *cpuprofile,
-		Trace:      *tracefile,
-		Files:      files,
-		WorkDir:    dir,
 	}, nil
 }

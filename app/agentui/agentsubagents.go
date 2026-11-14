@@ -64,7 +64,7 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 		return
 	}
 	th := c.Theme()
-	widget.Modal(c, "subagent", &open, cmp.Or(s.Description, "Subagent"), widget.ModalOpts{Width: 680, Help: subagentsHelp}, func(c *ui.Ctx) {
+	widget.Modal(c, "subagent", &open, widget.ModalOpts{Title: cmp.Or(s.Description, "Subagent"), Width: 680, Help: subagentsHelp}, func(c *ui.Ctx) {
 		state := "done"
 		if s.Running {
 			state = "running"
@@ -101,7 +101,7 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 				}
 				c.Column("box", ui.Style{W: ui.Flex(1), H: ui.Px(200), Pad: ui.Pad(12), Fill: th.C(theme.BgBase), Stroke: th.C(theme.Line), Border: 1,
 					Radius: 6, ScrollY: true}, func(c *ui.Ctx) {
-					kit.MarkdownText(c, x.h, "md", part.body, 630, kit.UIFont(12.5, th.C(theme.FgMuted)))
+					kit.MarkdownText(c, x.h, "md", part.body, 630, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				})
 			})
 		}

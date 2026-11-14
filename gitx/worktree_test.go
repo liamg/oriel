@@ -71,8 +71,8 @@ func TestAddWorktreeOnAFreshBranch(t *testing.T) {
 			t.Errorf("MainClone = %q, want %q", got, clone.Dir)
 		}
 	}
-	if wt.Dirty(ctx) {
-		t.Error("a fresh worktree is dirty")
+	if dirty, err := wt.Dirty(ctx); dirty || err != nil {
+		t.Errorf("a fresh worktree: dirty %v, %v", dirty, err)
 	}
 	if err := r.RemoveWorktree(ctx, dir, false); err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestClone(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := gitx.Repo{Dir: dir}
-	if got := r.RemoteURL(ctx); got != bare {
+	if got, err := r.Origin(ctx); err != nil || got != bare {
 		t.Errorf("the clone's origin is %q, want %q", got, bare)
 	}
 	if !gitx.IsRepo(dir) {
@@ -152,5 +152,25 @@ func TestSyncBranchSaysWhenItCantFastForward(t *testing.T) {
 	clone.Git("reset", "-q", "--hard", "HEAD~1")
 	if ref, err := r.SyncBranch(ctx, "main"); ref != "main" || err != nil {
 		t.Errorf("behind origin: %q, %v", ref, err)
+	}
+}
+
+// Dirty says what git status says, and why it can't: a status that fails isn't clean, since what it guards (removing
+// a worktree, switching branches) would lose work it couldn't see.
+func TestDirty(t *testing.T) {
+	ctx := context.Background()
+	r := gittest.New(t)
+	r.Write(map[string]string{"a.txt": "a\n"})
+	r.Commit("Ada <ada@example.com>", "first")
+	repo := gitx.Repo{Dir: r.Dir}
+	if dirty, err := repo.Dirty(ctx); dirty || err != nil {
+		t.Errorf("a clean tree: dirty %v, %v", dirty, err)
+	}
+	r.Write(map[string]string{"a.txt": "b\n"})
+	if dirty, err := repo.Dirty(ctx); !dirty || err != nil {
+		t.Errorf("a changed tree: dirty %v, %v", dirty, err)
+	}
+	if _, err := (gitx.Repo{Dir: t.TempDir()}).Dirty(ctx); err == nil {
+		t.Error("a directory that isn't a repo reads as clean, with no error")
 	}
 }

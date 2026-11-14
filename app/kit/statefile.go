@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/watch"
 )
@@ -33,7 +35,7 @@ type StateFile struct {
 	m     *watch.Manager
 	done  func() // closes m, when it's its own
 	moved func()
-	w     Writer
+	w     work.Writer
 	subs  sync.WaitGroup // subscribing off the loop, after a move
 
 	mu      sync.Mutex

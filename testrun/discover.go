@@ -2,48 +2,34 @@ package testrun
 
 import (
 	"bytes"
+	"cmp"
 	"path/filepath"
-	"sort"
-	"sync"
+	"slices"
 
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/text"
 )
 
-// Languages is the set discovery finds a buffer's language in, when its Source has no Syntax; the built-ins by
-// default. The app sets it to the registry's languages, so a language a plugin adds has its tests.scm used too.
-var Languages = syntax.Builtin
-
-// parsers are kept per language, for buffers with no document of their own.
-var parsers struct {
-	mu sync.Mutex
-	by map[*syntax.Language]*syntax.Parser
-}
-
-// testMatches runs the "tests" query over src: through its document when it has one, else on a parser of the
-// language its path names.
+// testMatches runs the "tests" query over src: through its document when it has one, else on a parser, borrowed for
+// the call, of the language its path names in src.Languages.
 func testMatches(src Source) []syntax.Match {
 	if src.Syntax != nil {
 		ms, _ := src.Syntax.Query("tests")
 		return ms
 	}
-	l, ok := Languages().ForFile(src.Path, firstLine(src.Text))
+	langs := src.Languages
+	if langs == nil {
+		langs = syntax.Builtin()
+	}
+	l, ok := langs.ForFile(src.Path, firstLine(src.Text))
 	if !ok {
 		return nil
 	}
-	parsers.mu.Lock()
-	defer parsers.mu.Unlock()
-	if parsers.by == nil {
-		parsers.by = map[*syntax.Language]*syntax.Parser{}
+	p, err := syntax.Borrow(l)
+	if err != nil {
+		return nil
 	}
-	p := parsers.by[l]
-	if p == nil {
-		var err error
-		if p, err = syntax.NewParser(l); err != nil {
-			return nil
-		}
-		parsers.by[l] = p
-	}
+	defer p.Release()
 	p.ParseSnapshot(src.Text)
 	ms, _ := p.Query("tests")
 	return ms
@@ -80,7 +66,7 @@ func byCapture(ms []syntax.Match, name string) []node {
 			}
 		}
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Range.Start < out[j].Range.Start })
+	slices.SortStableFunc(out, func(a, b node) int { return cmp.Compare(a.Range.Start, b.Range.Start) })
 	return out
 }
 
@@ -106,16 +92,16 @@ func relTo(dir, path string) string {
 }
 
 // findUp walks up from dir to the first directory holding one of names.
-func findUp(dir string, names ...string) (string, string, bool) {
+func findUp(dir string, names ...string) (string, bool) {
 	for {
 		for _, n := range names {
 			if fileExists(filepath.Join(dir, n)) {
-				return dir, n, true
+				return dir, true
 			}
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", "", false
+			return "", false
 		}
 		dir = parent
 	}
@@ -123,5 +109,5 @@ func findUp(dir string, names ...string) (string, string, bool) {
 
 // sortItems puts items in line order, keeping the order of those on one line.
 func sortItems(items []Item) {
-	sort.SliceStable(items, func(i, j int) bool { return items[i].Line < items[j].Line })
+	slices.SortStableFunc(items, func(a, b Item) int { return cmp.Compare(a.Line, b.Line) })
 }

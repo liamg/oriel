@@ -17,7 +17,7 @@ func (r *reg) HelpPages(s HelpSource) Disposable {
 	tok := r.tokens.Add(1)
 	r.help = append(r.help, entry[HelpSource]{tok, s})
 	r.helpGen++
-	return disposeOnce(func() {
+	return DisposeFunc(func() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.help = slices.DeleteFunc(r.help, func(e entry[HelpSource]) bool { return e.token == tok })

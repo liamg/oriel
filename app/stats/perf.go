@@ -11,12 +11,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/sysload"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -42,7 +46,7 @@ type Perf struct {
 	h     plugin.Host
 	open  bool
 	shown *kit.WhileShown
-	work  kit.Work // sampling, while the page is up
+	work  work.Work // sampling, while the page is up
 
 	mu   sync.Mutex
 	snap perfSnap
@@ -87,8 +91,8 @@ func (x *Perf) commands() []registry.Command {
 func (x *Perf) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.shown = &kit.WhileShown{Want: x.want, Focus: h}
-	x.Add(kit.OnDispose(h.Framed(x.shown.Framed)))
-	x.Add(kit.OnDispose(x.shown.Drop))
+	x.Add(h.Framed(x.shown.Framed))
+	x.Add(registry.DisposeFunc(x.shown.Drop))
 	x.Add(&x.work)
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -417,7 +421,7 @@ func cells(texts ...string) [][]widget.Span {
 
 // watchStats are the sources every freshness manager keeps: the app's, then each open session's.
 func (x *Perf) watchStats() []watchStat {
-	w, ok := registry.WatchesOf(x.h)
+	w, ok := services.WatchesOf(x.h)
 	if !ok {
 		return nil
 	}
@@ -460,7 +464,7 @@ func (x *Perf) watches(c *ui.Ctx, s perfSnap, width float32) {
 		}
 		last := "—"
 		if !w.LastRead.IsZero() {
-			last = kit.AgoText(time.Now(), w.LastRead)
+			last = widget.AgoLong(time.Now(), w.LastRead)
 		}
 		if w.Err != nil {
 			last = "failed: " + w.Err.Error()

@@ -74,7 +74,7 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 	out := make([]shipRead, len(ships))
 	var wg sync.WaitGroup
 	for i, s := range ships {
-		out[i] = shipRead{Ship: s, GitRead: x.Clock()}
+		out[i] = shipRead{Ship: s, GitRead: x.now()}
 		hs, repo, ok := kit.SitesOf(x.h).Remote(s.Origin)
 		if !ok {
 			hostname, _, parsed := registry.ParseRemote(s.Origin)
@@ -118,16 +118,16 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	x.cache.mu.Lock()
 	g, ok := x.cache.read[key]
 	x.cache.mu.Unlock()
-	if ok && !fresh && x.Clock().Sub(g.at) < prTTL {
+	if ok && !fresh && x.now().Sub(g.at) < prTTL {
 		return g
 	}
-	g = prRead{at: x.Clock()}
+	g = prRead{at: x.now()}
 	h, repo := *s.Code, s.codeRepo(id)
 	pr, err := forBranch(ctx, h, repo, s.Branch)
 	x.cache.mu.Lock()
 	if r, ok := x.cache.raised[key]; ok {
 		switch {
-		case pr != nil || x.Clock().Sub(r.at) >= raisedHold:
+		case pr != nil || x.now().Sub(r.at) >= raisedHold:
 			delete(x.cache.raised, key)
 		case err == nil:
 			raised := r.pr
@@ -230,7 +230,7 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 	if x.cache.raised == nil {
 		x.cache.raised = map[string]raisedPR{}
 	}
-	x.cache.raised[formKey(se.ID, s.Project)+"/"+s.Branch] = raisedPR{pr: *pr, at: x.Clock()}
+	x.cache.raised[formKey(se.ID, s.Project)+"/"+s.Branch] = raisedPR{pr: *pr, at: x.now()}
 	x.cache.mu.Unlock()
 	if len(r.Reviewers) > 0 && h.RequestReviewers != nil {
 		if err := registry.Call(func() error { return h.RequestReviewers(ctx, repo, *pr, r.Reviewers) }); err != nil {
@@ -334,12 +334,12 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 	if x.mirrored == nil {
 		x.mirrored = map[core.SessionID]time.Time{}
 	}
-	due := fresh || x.Clock().Sub(x.mirrored[id]) >= mirrorEvery
+	due := fresh || x.now().Sub(x.mirrored[id]) >= mirrorEvery
 	if due {
-		x.mirrored[id] = x.Clock()
+		x.mirrored[id] = x.now()
 	}
 	x.mu.Unlock()
-	c, err := x.client(id)
+	c, err := kit.CodeHostCalls(x.h)
 	if !due || err != nil {
 		return
 	}
@@ -379,7 +379,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 // forwardHost posts a draft reply on a thread mirrored from a code host other than GitHub, as the user, and marks it
 // sent.
 func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment string) error {
-	c, err := x.client(se.ID)
+	c, err := kit.CodeHostCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -397,7 +397,7 @@ func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment s
 		return err
 	}
 	repo, pr := s.codeRepo(se.ID), *s.PR
-	return x.step(se.ID, s.Project, "Forwarding", func(ctx context.Context, c host.Access) error {
+	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, "Forwarding", func(ctx context.Context, c host.CodeHostCalls) error {
 		_, err := c.ForwardHost(ctx, req, func(ctx context.Context, t core.Thread, body string) (posted string, err error) {
 			rt := registry.ReviewThread{ID: t.Hosted.Key, URL: t.Hosted.URL, Outdated: t.Hosted.Outdated}
 			if a := t.Anchor; a != nil && rt.ID != "" {
@@ -425,7 +425,7 @@ func (x *Ship) resolveHost(se core.SessionState, t core.Thread, resolved bool) e
 	if a := t.Anchor; a != nil {
 		rt.Path, rt.Line, rt.Old = a.File, a.Line, a.Side == "old"
 	}
-	return x.step(se.ID, s.Project, map[bool]string{true: "Resolving", false: "Reopening"}[resolved], func(ctx context.Context, c host.Access) error {
+	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, map[bool]string{true: "Resolving", false: "Reopening"}[resolved], func(ctx context.Context, c host.CodeHostCalls) error {
 		if err := registry.Call(func() error { return h.Resolve(ctx, repo, pr, rt, resolved) }); err != nil {
 			return err
 		}

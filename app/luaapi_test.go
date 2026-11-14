@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/registry"
@@ -50,8 +50,8 @@ func TestLuaRegex(t *testing.T) {
 	} {
 		got := s.Lua(`{ L.regex.find("` + c.pcre + `", "` + c.subject + `") }`)
 		want := s.Lua(`{ string.find("` + c.subject + `", "` + c.lua + `") }`)
-		if settings.Show(got[0]) != settings.Show(want[0]) {
-			t.Errorf("find(%q, %q) = %s, string.find gives %s", c.pcre, c.subject, settings.Show(got[0]), settings.Show(want[0]))
+		if luaconfig.Show(got[0]) != luaconfig.Show(want[0]) {
+			t.Errorf("find(%q, %q) = %s, string.find gives %s", c.pcre, c.subject, luaconfig.Show(got[0]), luaconfig.Show(want[0]))
 		}
 	}
 	for line, want := range map[string]string{
@@ -65,7 +65,7 @@ func TestLuaRegex(t *testing.T) {
 		`L.regex.replace("(\\w+)@", "x@ y@", "$1!")`:            `"x! y!"`,
 		`L.regex.find("(?<=a)b", "ab")`:                         "2",
 	} {
-		if got := settings.Show(s.Lua(line)[0]); got != want {
+		if got := luaconfig.Show(s.Lua(line)[0]); got != want {
 			t.Errorf("%s = %s, want %s", line, got, want)
 		}
 	}
@@ -85,24 +85,36 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 	file := filepath.Join(t.TempDir(), "f.txt")
 	os.WriteFile(file, []byte("hello"), 0o644)
 	for _, c := range []struct{ line, want string }{
-		{`L.json('{"a":[1,2]}').a[2]`, "2"},
+		{`L.json_decode('{"a":[1,2]}').a[2]`, "2"},
+		{`L.json_encode({ a = 1 })`, `"{\"a\":1}"`},
+		{`L.json_encode("hello")`, `"\"hello\""`},
+		{`L.json_decode('"hello"')`, `"hello"`},
+		{`L.json('{"a":[1,2]}').a[2]`, "2"}, // deprecated, kept for old configs
 		{`L.json({ a = 1 })`, `"{\"a\":1}"`},
 		{`L.read("` + file + `")`, `"hello"`},
 		{`select(2, L.read("/nonexistent/x"))`, `"open /nonexistent/x: no such file or directory"`},
 		{`L.exec({ "echo", "hi" })`, `"hi\n"`},
 		{`L.exec({ "pwd" }, { cwd = "/" })`, `"/\n"`},
-		{`(L.cmd("Remember", { x = 7 })) == nil`, "true"},
+		{`select(2, L.exec({ "false" }))`, `"false: exit status 1: "`},
+		{`(L.exec({ "false" }))`, "nil"},
+		{`(L.exec({ "/no/such/program" }))`, "nil"},
+		{`(L.process.spawn("/no/such/program"))`, "nil"},
+		{`select(2, L.process.spawn("/no/such/program")) ~= nil`, "true"},
+		{`(L.wasm.load("/no/such/module.wasm"))`, "nil"},
+		{`select(2, L.wasm.load("/no/such/module.wasm")) ~= nil`, "true"},
+		{`(L.run("Remember", { x = 7 })) == nil`, "true"},
 		{`L.remembered`, "7"},
+		{`(L.cmd("Remember", { x = 8 })) == nil`, "true"}, // deprecated, kept for old configs
+		{`L.remembered`, "8"},
 	} {
-		if got := settings.Show(s.Lua(c.line)[0]); got != c.want {
+		if got := luaconfig.Show(s.Lua(c.line)[0]); got != c.want {
 			t.Errorf("%s = %s, want %s", c.line, got, c.want)
 		}
 	}
 	for line, want := range map[string]string{
-		`L.json("{")`:              "oriel.json:",
-		`L.exec({ "false" })`:      "oriel.exec: false: exit status 1",
+		`L.json_decode("{")`:       "oriel.json_decode:",
 		`L.exec({})`:               "oriel.exec: no program",
-		`L.cmd("no.such.command")`: "oriel.cmd:",
+		`L.run("no.such.command")`: "oriel.run:",
 	} {
 		if err := s.LuaErr(line); !strings.Contains(err, want) {
 			t.Errorf("%s: %s, want %q in it", line, err, want)
@@ -136,7 +148,7 @@ L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severit
 	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "lint"}) {
 		t.Fatalf("diagnostics %+v", ds)
 	}
-	if got := settings.Show(s.Lua(`L.diagnostics.list()[1].line`)[0]); got != "3" {
+	if got := luaconfig.Show(s.Lua(`L.diagnostics.list()[1].line`)[0]); got != "3" {
 		t.Errorf("list's line %s", got)
 	}
 	if err := s.LuaErr(`L.diagnostics.set("x", "/f", { 1 })`); !strings.Contains(err, "a diagnostic is a table") {
@@ -172,7 +184,7 @@ L.option["ui.variant"] = nil
 			t.Errorf("%s: %s", line, err)
 		}
 	}
-	if got := settings.Show(s.Lua(`L.option.tabstop`)[0]); got != "4" {
+	if got := luaconfig.Show(s.Lua(`L.option.tabstop`)[0]); got != "4" {
 		t.Errorf("reading L.option.tabstop: %s", got)
 	}
 }
@@ -237,10 +249,10 @@ end)
 // HUD indicators and status rules are contributions their features will draw and ask; calling them gives what Lua made.
 func TestLuaTatAndStatusRule(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
-L.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
+L.hud.indicator("deploys", function()
   return L.ui.indicator{ label = "DEPLOY", value = 3 }
-end)
-L.status.rule(function(sess) if sess.red then return "error" end end)
+end, { slot = "titlebar.right", every = "30s" })
+L.status.rule("red", function(sess) if sess.red then return "error" end end)
 `)
 	var indicator uireg.Indicator
 	for _, ind := range uireg.Indicators(s.Registry(), uireg.SlotTitleBar) {
@@ -260,6 +272,34 @@ L.status.rule(function(sess) if sess.red then return "error" end end)
 	}
 	if v, _ := rule.Rule(map[string]any{}); v != "" {
 		t.Errorf("rule on another: %q", v)
+	}
+}
+
+// Menu entries and status rules added in a loop are each their own: by the name the call gives (a menu entry's is
+// its line and label without one), never only the line that made it, which every pass shares.
+func TestLuaMenuAndStatusRulesFromALoop(t *testing.T) {
+	s := apptest.LuaScene(t, `local L = oriel
+for _, l in ipairs({ "One", "Two" }) do L.menu.add{ label = l, run = "noop" } end
+L.menu.add{ name = "mine", label = "Three", run = "noop" }
+for _, c in ipairs({ "error", "warn" }) do L.status.rule(c, function() return c end) end
+L.status.rule("named", function() end)
+`)
+	var menus []string
+	for _, c := range s.Registry().Contributions("menu.item") {
+		menus = append(menus, c.(registry.MenuItem).Label)
+	}
+	if !slices.Contains(menus, "One") || !slices.Contains(menus, "Two") || !slices.Contains(menus, "Three") {
+		t.Errorf("menu entries %q, want One, Two and Three", menus)
+	}
+	var rules []string
+	for _, c := range s.Registry().Contributions("status.rule") {
+		r := c.(registry.StatusRule)
+		v, _ := r.Rule(nil)
+		rules = append(rules, r.Name+"="+v)
+	}
+	if len(rules) != 3 || !slices.ContainsFunc(rules, func(r string) bool { return strings.HasSuffix(r, "=error") }) ||
+		!slices.ContainsFunc(rules, func(r string) bool { return strings.HasSuffix(r, "=warn") }) || !slices.Contains(rules, "named=") {
+		t.Errorf("status rules %q, want both of the loop's and the named one", rules)
 	}
 }
 
@@ -286,10 +326,10 @@ L.coverage.set("jest", "/p/a.ts", { [3] = 2, [5] = 0 })
 	if got := s.Registry().CoverageFor("/p/a.ts"); len(got) != 2 || got[2] != 2 || got[4] != 0 {
 		t.Fatalf("coverage %v", got)
 	}
-	if got := settings.Show(s.Lua(`#L.coverage.lines("/p/a.ts", 1, 4)`)[0]); got != "1" {
+	if got := luaconfig.Show(s.Lua(`#L.coverage.lines("/p/a.ts", 1, 4)`)[0]); got != "1" {
 		t.Errorf("lines 1–4: %s", got)
 	}
-	if got := settings.Show(s.Lua(`L.coverage.lines("/p/a.ts", 1, 9)[2].hit`)[0]); got != "false" {
+	if got := luaconfig.Show(s.Lua(`L.coverage.lines("/p/a.ts", 1, 9)[2].hit`)[0]); got != "false" {
 		t.Errorf("line 5's hit: %s", got)
 	}
 	s.WriteConfig(map[string]string{"init.lua": ""})

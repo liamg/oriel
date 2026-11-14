@@ -15,11 +15,11 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
+	"github.com/liamg/oriel/internal/clock"
 )
 
 // Registry is the checkouts the host knows (repos.json), and what the Repos page does to them.
@@ -34,14 +34,14 @@ type Registry struct {
 // New reads the registry from env's home; defaultDir is where clones go when repos.dir isn't set.
 func New(env hostcore.Env, st hostcore.State, defaultDir func() string) (*Registry, error) {
 	x := &Registry{env: env, st: st, defaultDir: defaultDir,
-		list: &repoList{path: filepath.Join(env.Home, "repos.json"), now: env.Now, scanned: map[string]bool{}}}
+		list: &repoList{path: filepath.Join(env.Home, "repos.json"), clock: clock.Or(env.Clock), scanned: map[string]bool{}}}
 	return x, x.list.load()
 }
 
 // repoList is the checkouts the host knows, kept in repos.json, and the paths the user removed.
 type repoList struct {
 	path    string
-	now     func() time.Time
+	clock   clock.Clock
 	mu      sync.Mutex
 	list    []core.Repo
 	ignored []string
@@ -100,7 +100,7 @@ func (r *repoList) add(ctx context.Context, path string, src core.RepoSource) (_
 	if err != nil {
 		return core.Repo{}, false, err
 	}
-	top, err := gitx.TopLevel(ctx, abs)
+	top, err := gitx.Root(ctx, abs)
 	if err != nil {
 		return core.Repo{}, false, fmt.Errorf("%s is not a git repository", path)
 	}
@@ -119,8 +119,9 @@ func (r *repoList) add(ctx context.Context, path string, src core.RepoSource) (_
 	for n := 2; slices.ContainsFunc(r.list, func(x core.Repo) bool { return x.ID == id }); n++ {
 		id = core.RepoID(fmt.Sprintf("%s-%d", hostcore.Sanitise(filepath.Base(top)), n))
 	}
-	repo := core.Repo{ID: id, Path: top, Remote: g.RemoteURL(ctx), BaseBranch: g.DefaultBranch(ctx), Source: src,
-		Added: r.now().UTC()}
+	remote, _ := g.Origin(ctx) // a repo with no origin, or one git can't read, is still added
+	repo := core.Repo{ID: id, Path: top, Remote: remote, BaseBranch: g.DefaultBranch(ctx), Source: src,
+		Added: r.clock.Now().UTC()}
 	r.list = append(r.list, repo)
 	return repo, true, r.save()
 }
@@ -150,7 +151,7 @@ func (r *repoList) used(id core.RepoID) error {
 		return nil
 	}
 	r.list = slices.Clone(r.list)
-	r.list[i].Used = r.now().UTC()
+	r.list[i].Used = r.clock.Now().UTC()
 	return r.save()
 }
 
@@ -209,16 +210,21 @@ func (x *Registry) Resolve(ctx context.Context, ref string) (core.Repo, error) {
 func (x *Registry) Find(ref string) (core.Repo, bool) { return x.list.find(ref) }
 
 // Repos is the registered checkouts.
-func (x *Registry) Repos() []core.Repo { return x.list.all() }
+func (x *Registry) Repos() []core.Repo {
+	defer x.env.Recover("Repos", nil)
+	return x.list.all()
+}
 
 // AddRepoPath registers the checkout at path, or returns it if it's already registered.
-func (x *Registry) AddRepoPath(ctx context.Context, path string) (core.Repo, error) {
+func (x *Registry) AddRepoPath(ctx context.Context, path string) (_ core.Repo, err error) {
+	defer x.env.Recover("AddRepoPath", &err)
 	return x.Add(ctx, path, core.RepoAdded)
 }
 
 // RemoveRepo unregisters a repo, leaving its files, and keeps discovery from adding it back. A live session with a
 // worktree of it stops it.
-func (x *Registry) RemoveRepo(id core.RepoID) error {
+func (x *Registry) RemoveRepo(id core.RepoID) (err error) {
+	defer x.env.Recover("RemoveRepo", &err)
 	r, ok := x.list.find(string(id))
 	if !ok {
 		return fmt.Errorf("no repo %q", id)
@@ -250,17 +256,19 @@ type RepoCheck struct {
 
 // CheckRepoPath says what adding the checkout at path would do, without adding it.
 func (x *Registry) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
+	defer x.env.Recover("CheckRepoPath", nil)
 	abs, err := filepath.Abs(p)
 	if err != nil {
 		return RepoCheck{Error: err.Error()}
 	}
-	top, err := gitx.TopLevel(ctx, abs)
+	top, err := gitx.Root(ctx, abs)
 	if err != nil {
 		return RepoCheck{Error: "not a git repository"}
 	}
 	main := gitx.Repo{Dir: top}.MainClone(ctx)
 	g := gitx.Repo{Dir: main}
-	c = RepoCheck{Path: main, Worktree: main != top, Remote: g.RemoteURL(ctx)}
+	remote, _ := g.Origin(ctx)
+	c = RepoCheck{Path: main, Worktree: main != top, Remote: remote}
 	c.Branch = g.CurrentBranch(ctx)
 	if r, ok := x.list.find(main); ok {
 		c.Known = r.ID
@@ -292,6 +300,7 @@ func CloneName(url string) string {
 
 // CloneParent is the folder clones go in by default: the one most known repos share, else the repos directory.
 func (x *Registry) CloneParent() string {
+	defer x.env.Recover("CloneParent", nil)
 	n := map[string]int{}
 	best := ""
 	for _, r := range x.list.all() {
@@ -309,6 +318,7 @@ func (x *Registry) CloneParent() string {
 
 // SetReposDir sets where clones and new repos go when nothing else says (repos.dir); "" puts back the default.
 func (x *Registry) SetReposDir(dir string) {
+	defer x.env.Recover("SetReposDir", nil)
 	x.list.mu.Lock()
 	defer x.list.mu.Unlock()
 	x.list.dir = expandHome(strings.TrimSpace(dir))
@@ -322,7 +332,8 @@ func (x *Registry) Dir() string {
 }
 
 // CloneTarget says where a clone would go and what's there.
-func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (CloneTarget, error) {
+func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (_ CloneTarget, err error) {
+	defer x.env.Recover("CloneTarget", &err)
 	url := strings.TrimSpace(r.URL)
 	name := hostcore.Sanitise(r.Name)
 	if name == "" {
@@ -335,14 +346,16 @@ func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (CloneTarget, er
 	t := CloneTarget{Dir: filepath.Join(parent, name), Name: name}
 	if _, err := os.Stat(t.Dir); err == nil {
 		t.Exists = true
-		t.Same = gitx.IsRepo(t.Dir) && (gitx.Repo{Dir: t.Dir}).RemoteURL(ctx) == url
+		origin, err := gitx.Repo{Dir: t.Dir}.Origin(ctx)
+		t.Same = gitx.IsRepo(t.Dir) && err == nil && origin == url
 	}
 	return t, nil
 }
 
 // CloneRepo clones a repo with the user's own git and credentials, and registers it. A checkout already there of
 // the same URL is registered as it is. Cancelling ctx stops the clone and takes away what it made.
-func (x *Registry) CloneRepo(ctx context.Context, r CloneReq) (core.Repo, error) {
+func (x *Registry) CloneRepo(ctx context.Context, r CloneReq) (_ core.Repo, err error) {
+	defer x.env.Recover("CloneRepo", &err)
 	url := strings.TrimSpace(r.URL)
 	if url == "" {
 		return core.Repo{}, errors.New("clone what? No URL")

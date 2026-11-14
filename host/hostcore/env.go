@@ -11,17 +11,21 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/sysload"
+	"github.com/liamg/oriel/internal/clock"
+	"github.com/liamg/oriel/sysload"
 )
 
 // Env is what each part of the host runs in: its home, its clock and log, and when it closes.
 type Env struct {
 	Home   string // ~/.oriel
 	Log    *slog.Logger
-	Now    func() time.Time
+	Clock  clock.Clock // the system's if nil
 	Closed <-chan struct{}
 	Work   *Jobs // what Go starts, which the host waits for as it closes
 }
+
+// Now is the time on the host's clock.
+func (e Env) Now() time.Time { return clock.Or(e.Clock).Now() }
 
 // Recover turns a panic into an error, logged, so it can't take the window down. Deferred first in every entry point
 // the app calls; err may be nil when there's nothing to return it in.

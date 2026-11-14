@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // ForAll is AnswerReq.For's "all sessions": an always that makes a rule every session meets.
@@ -67,12 +68,7 @@ func (r *allRules) edit(fn func([]core.Rule) ([]core.Rule, error)) error {
 	if err := os.MkdirAll(filepath.Dir(r.path), 0o700); err != nil {
 		return err
 	}
-	tmp := r.path + ".tmp"
-	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, r.path); err != nil {
-		_ = os.Remove(tmp)
+	if err := atomicfile.Write(r.path, append(b, '\n'), 0o600); err != nil {
 		return err
 	}
 	r.list = next
@@ -87,8 +83,10 @@ func (x *Runner) RulesChanged() {
 	_ = x.st.Emit(core.RulesChanged{Rules: x.rules.all()})
 }
 
-// AddRule makes rule one for all sessions, answering asks of kind in every session before a card.
-func (x *Runner) AddRule(kind core.AskKind, rule string) error {
+// AddRule makes rule one for all sessions, answering asks of kind in every session before a card, from now on and
+// after a restart.
+func (x *Runner) AddRule(kind core.AskKind, rule string) (err error) {
+	defer x.env.Recover("AddRule", &err)
 	if rule == "" {
 		return errors.New("a rule needs something to allow")
 	}
@@ -97,7 +95,7 @@ func (x *Runner) AddRule(kind core.AskKind, rule string) error {
 	default:
 		return fmt.Errorf("%q asks don't take rules", kind)
 	}
-	err := x.rules.edit(func(rs []core.Rule) ([]core.Rule, error) {
+	err = x.rules.edit(func(rs []core.Rule) ([]core.Rule, error) {
 		if slices.ContainsFunc(rs, func(r core.Rule) bool { return r.Rule == rule && r.Kind == kind }) {
 			return rs, nil
 		}
@@ -111,8 +109,9 @@ func (x *Runner) AddRule(kind core.AskKind, rule string) error {
 }
 
 // RemoveRule drops a rule for all sessions: what it allowed asks again.
-func (x *Runner) RemoveRule(rule string) error {
-	err := x.rules.edit(func(rs []core.Rule) ([]core.Rule, error) {
+func (x *Runner) RemoveRule(rule string) (err error) {
+	defer x.env.Recover("RemoveRule", &err)
+	err = x.rules.edit(func(rs []core.Rule) ([]core.Rule, error) {
 		n := len(rs)
 		rs = slices.DeleteFunc(rs, func(r core.Rule) bool { return r.Rule == rule })
 		if len(rs) == n {

@@ -137,7 +137,7 @@ func (x *Tests) failureView(c *ui.Ctx, f failure) {
 			if widget.Button(c, "debug", "debug this case", widget.ButtonOpts{Disabled: !x.h.Available("debug.test", nil), Help: "editor/pane#tests"}) {
 				x.h.Run(ctx, "debug.test", registry.Args{"key": key, "file": fl.Loc.File, "line": fl.Loc.Line + 1})
 			}
-			kit.AskTwins(c, x.h, failureKey(key), failureTrouble(res, x.testSource(res)), "editor/pane#tests")
+			kit.AskTwins(c, x.h, failureKey(key), failureTrouble(res, x.testSource(res)), kit.AskTwinsOpts{Help: "editor/pane#tests"})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("since", x.failingSince(key), mono(10.5, theme.FgFaint))
 		})

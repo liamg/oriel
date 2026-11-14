@@ -164,16 +164,26 @@ func (h *session) queue(text string, urgent bool) error {
 	return queued
 }
 
-// fork asks the agent a side question outside the conversation.
-func (h *session) fork(prompt string) (string, error) {
+// forkTimeout bounds a fork whose asker gave it no deadline.
+const forkTimeout = 3 * time.Minute
+
+// fork asks the agent a side question outside the conversation. It ends with ctx, or the session, whichever is first;
+// forkTimeout bounds it when ctx has no deadline.
+func (h *session) fork(ctx context.Context, prompt string) (string, error) {
 	h.mu.Lock()
 	sess := h.sess
 	h.mu.Unlock()
 	if sess == nil {
 		return "", errors.New("the agent isn't running")
 	}
-	ctx, cancel := context.WithTimeout(h.ctx, 3*time.Minute)
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	defer context.AfterFunc(h.ctx, cancel)()
+	if _, ok := ctx.Deadline(); !ok {
+		var stop context.CancelFunc
+		ctx, stop = context.WithTimeout(ctx, forkTimeout)
+		defer stop()
+	}
 	return sess.Fork(ctx, agent.ForkSpec{Prompt: prompt})
 }
 

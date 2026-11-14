@@ -9,7 +9,10 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -27,6 +30,7 @@ type Plugin interface {
 
 // Host is what a plugin sees of the app: the registry, what's drawn included (uireg), and the app's own calls.
 type Host interface {
+	Tracker // what a plugin runs off the loop (Go, Load) is counted, so a wait for the app to settle sees it
 	uireg.Registry
 	Session(id core.SessionID) (core.Session, bool)
 	Sessions() []core.Session
@@ -45,7 +49,7 @@ type Host interface {
 	Apply(ev core.Event) error
 	// Subscribe calls fn with every event the filter matches, from whichever goroutine applied it; Do gets back
 	// to the loop. cancel stops it.
-	Subscribe(f core.Filter, fn func(core.Event)) (cancel func())
+	Subscribe(f core.Filter, fn func(core.Event)) registry.Disposable
 	// Here is where the user is, for reading options: the session in front, the project, and the focused editor's
 	// buffer and window.
 	Here() registry.At
@@ -62,7 +66,7 @@ type Host interface {
 	UI() UIView                                    // what the window shows: focus, help ids, right-clicks
 	// ProvideUI gives the window's widgets a service of type t (ui.ProvideType), as ProvideUI[T] does; a later one
 	// of a type shadows it until removed. Call it on the loop.
-	ProvideUI(t reflect.Type, v any) (remove func())
+	ProvideUI(t reflect.Type, v any) registry.Disposable
 	// WindowFocus is whether the window has the OS's focus, and a channel closed when that changes (FocusGained,
 	// FocusLost): for work that slows while the window is behind another app. Safe from any goroutine.
 	WindowFocus() (focused bool, changed <-chan struct{})
@@ -76,7 +80,7 @@ type Host interface {
 	Claim(key string) (release func(), ok bool)
 	// Framed calls fn on the loop after each frame the window draws, until cancelled: for what a view wants only
 	// while it's drawn.
-	Framed(fn func()) (cancel func())
+	Framed(fn func()) registry.Disposable
 	CurrentTheme() *theme.Resolved // the theme the window is drawn in
 	// Load starts p as a plugin of its own, on a host whose source is its id, as a plugin manager does; Dispose
 	// stops it. Call it on the loop.
@@ -107,16 +111,17 @@ type UIView interface {
 	TakesText() bool             // the focused node inserts typed text: a text field, an editor in insert mode
 	Key(ev render.KeyEvent) bool // types a key at the focused node, past the keymaps, for its next frame
 	Now() time.Time              // the window's clock: what the frames are drawn at, a test's fixed time
+	Clock() clock.Clock          // the same clock, as a clock.Clock
 	Frames() int                 // how many frames have been built, to tell one frame from the next
 }
 
-// Pending is a key sequence waiting for more (registry.Pending).
-type Pending = registry.Pending
+// Pending is a key sequence waiting for more (services.Pending).
+type Pending = services.Pending
 
-// Hint is a key that can come next, and what it does (registry.Hint).
-type Hint = registry.Hint
+// Hint is a key that can come next, and what it does (services.Hint).
+type Hint = services.Hint
 
 // ProvideUI gives h's window's widgets v as their service of type T (ui.Provide): the app's widget.Dictator.
 func ProvideUI[T any](h Host, v T) registry.Disposable {
-	return disposeFunc(h.ProvideUI(reflect.TypeFor[T](), v))
+	return h.ProvideUI(reflect.TypeFor[T](), v)
 }

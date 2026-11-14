@@ -27,15 +27,10 @@ type Disposer []registry.Disposable
 
 func (d *Disposer) Add(x registry.Disposable) { *d = append(*d, x) }
 
-// OnDispose is a func as a Disposable: a subscription's cancel.
-type OnDispose func()
-
-func (f OnDispose) Dispose() { f() }
-
 // Lifetime is a context that ends when d is disposed: for what a plugin waits on off the loop.
 func (d *Disposer) Lifetime() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
-	d.Add(OnDispose(cancel))
+	d.Add(registry.DisposeFunc(cancel))
 	return ctx
 }
 
@@ -85,6 +80,9 @@ func (p *PollSet) Start(d time.Duration) (stop func()) {
 
 // Reset forgets all but what's running now.
 func (p *PollSet) Reset() {
+	if p == nil {
+		return
+	}
 	f := p.FastestNow()
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -93,6 +91,9 @@ func (p *PollSet) Reset() {
 
 // FastestSince is the shortest period running since the last reset, or 0.
 func (p *PollSet) FastestSince() time.Duration {
+	if p == nil {
+		return 0
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.fastest
@@ -116,6 +117,9 @@ func (t *Ticker) Stop() {
 
 // FastestNow is the shortest period running now, or 0.
 func (p *PollSet) FastestNow() time.Duration {
+	if p == nil {
+		return 0
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	var f time.Duration
@@ -135,7 +139,7 @@ type Signals struct {
 }
 
 // On calls fn each time, until cancelled.
-func (s *Signals) On(fn func()) (cancel OnDispose) {
+func (s *Signals) On(fn func()) (cancel func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.fns == nil {
@@ -198,5 +202,17 @@ func (w *WhileShown) Drop() {
 	if w.release != nil {
 		w.release()
 		w.release = nil
+	}
+}
+
+// OpenURL opens url in the OS's default app for it (system.open).
+func OpenURL(h plugin.Host, url string) error {
+	return h.Run(context.Background(), "system.open", registry.Args{"url": url})
+}
+
+// CopyText puts s on the system clipboard (system.copy).
+func CopyText(h plugin.Host, s string) {
+	if err := h.Run(context.Background(), "system.copy", registry.Args{"text": s}); err != nil {
+		h.Log().Warn("copy", "err", err)
 	}
 }

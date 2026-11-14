@@ -169,7 +169,7 @@ func Lightbox(c *ui.Ctx, key any, open *bool, items []LightboxItem, at *int, o L
 			}
 			st.held, st.moved, st.from, st.start = true, false, from, st.off
 		}
-		if abs(p.X-st.from.X)+abs(p.Y-st.from.Y) > 3 {
+		if abs32(p.X-st.from.X)+abs32(p.Y-st.from.Y) > 3 {
 			st.moved = true
 		}
 		if st.moved && st.zoom != 0 {
@@ -264,11 +264,4 @@ func lightboxButton(c *ui.Ctx, key any, glyph, label, tip string, off bool, fg, 
 		Label: label, Tooltip: tip, Help: help}, func(c *ui.Ctx) {
 		c.Text("g", glyph, uiText(c, 17, typeset.Medium, fg))
 	}).Clicked
-}
-
-func abs(v float32) float32 {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

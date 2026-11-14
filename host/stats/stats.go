@@ -1,28 +1,22 @@
 // Package stats turns agents' session logs into numbers worth charting: tokens and cost by kind, model and effort,
 // tool calls with their errors and timings, when the work happened, and which files it touched. It's crit's
-// internal/stats, read per session: Claude Code's own log (FormatClaude), Codex's rollout (FormatCodex), or the record
-// Oriel keeps of a provider's events (FormatEvents).
+// internal/stats, read per session from its logs, each in a usage.Format: a provider's own (agent.UsageLogs), or the
+// record Oriel keeps of a provider's events (usage.Events).
 //
 // Reading is incremental: a log is append-only, so a scan resumes at the byte the last one stopped at.
 package stats
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/agent/claude/transcript"
 	"github.com/liamg/oriel/agent/price"
-)
-
-// Log formats.
-const (
-	FormatClaude = "claude" // <config>/projects/<slug>/<id>.jsonl and its subagents'
-	FormatEvents = "events" // Oriel's record of a provider's events (Event)
-	FormatCodex  = "codex"  // $CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl
+	"github.com/liamg/oriel/agent/usage"
 )
 
 // idleGap is the silence that ends a working stretch: anything longer isn't counted as active time.
@@ -176,11 +170,13 @@ type Scan struct {
 	Pending map[string]Pending `json:"pending,omitempty"`
 	LastMsg string             `json:"lastMsg,omitempty"`
 	LastReq *request           `json:"lastReq,omitempty"`
-	Codex   *codexState        `json:"codex,omitempty"`
+	// State is what the log's reader carries to the next read (usage.Reader.State).
+	State json.RawMessage `json:"state,omitempty"`
 	// Priced is the version of the book the costs are at.
 	Priced string `json:"priced,omitempty"`
 
-	prices *price.Book // the snapshot's if nil
+	prices *price.Book  // the snapshot's if nil
+	format usage.Format // how the log is read: none reads nothing
 }
 
 // Pending is a tool call waiting for its result.
@@ -203,9 +199,9 @@ type request struct {
 	Sidechain bool      `json:"sidechain,omitempty"`
 }
 
-// New starts a scan of path in format.
-func New(path, format string) *Scan {
-	return &Scan{Path: path, Format: format}
+// New starts a scan of path in format f.
+func New(path string, f usage.Format) *Scan {
+	return &Scan{Path: path, Format: f.Name, format: f}
 }
 
 // Prices sets what the reads from now on price tokens with.
@@ -243,13 +239,16 @@ func (s *Scan) ensure() {
 // Read takes in everything appended since the last read, and reports whether there was anything. A file that has
 // shrunk is read again from the start.
 func (s *Scan) Read() bool {
+	if s.format.Reader == nil {
+		return false
+	}
 	s.ensure()
 	data, size, shrunk, err := tail(s.Path, s.Offset)
 	if err != nil {
 		return false
 	}
 	if shrunk {
-		*s = Scan{Path: s.Path, Format: s.Format, Priced: s.Priced, prices: s.prices}
+		*s = Scan{Path: s.Path, Format: s.Format, Priced: s.Priced, prices: s.prices, format: s.format}
 		s.ensure()
 		if data, size, _, err = tail(s.Path, 0); err != nil {
 			return false
@@ -263,133 +262,15 @@ func (s *Scan) Read() bool {
 	if end < 0 {
 		return false // a write in flight
 	}
+	rd := s.format.Reader(s.State)
 	for line := range bytes.SplitSeq(data[:end], []byte("\n")) {
-		if len(line) == 0 {
-			continue
-		}
-		switch s.Format {
-		case FormatEvents:
-			var ev Event
-			if json.Unmarshal(line, &ev) == nil {
-				s.event(ev)
-			}
-			continue
-		case FormatCodex:
-			var r rolloutLine
-			if json.Unmarshal(line, &r) == nil {
-				s.codex(&r)
-			}
-			continue
-		}
-		var r record
-		if json.Unmarshal(line, &r) == nil {
-			s.claude(&r)
+		if len(line) > 0 {
+			rd.Line(line, s.event)
 		}
 	}
+	s.State = rd.State()
 	s.Offset += int64(end) + 1
 	return true
-}
-
-// record is the part of a Claude Code log line read here.
-type record struct {
-	Type        string    `json:"type"`
-	Timestamp   time.Time `json:"timestamp"`
-	Cwd         string    `json:"cwd"`
-	Effort      string    `json:"effort"`
-	IsSidechain bool      `json:"isSidechain"`
-	IsMeta      bool      `json:"isMeta"`
-	AgentID     string    `json:"agentId"`
-	Message     struct {
-		ID      string          `json:"id"`
-		Model   string          `json:"model"`
-		Content json.RawMessage `json:"content"`
-		Usage   *usage          `json:"usage"`
-	} `json:"message"`
-}
-
-type usage struct {
-	Input       int64  `json:"input_tokens"`
-	CacheCreate int64  `json:"cache_creation_input_tokens"`
-	CacheRead   int64  `json:"cache_read_input_tokens"`
-	Output      int64  `json:"output_tokens"`
-	Speed       string `json:"speed"`
-	Creation    *struct {
-		FiveMin int64 `json:"ephemeral_5m_input_tokens"`
-		OneHour int64 `json:"ephemeral_1h_input_tokens"`
-	} `json:"cache_creation"`
-}
-
-func (u *usage) tokens() Tokens {
-	t := Tokens{Input: u.Input, Output: u.Output, CacheRead: u.CacheRead}
-	if u.Creation != nil && (u.Creation.FiveMin > 0 || u.Creation.OneHour > 0) {
-		t.CacheWrite5m, t.CacheWrite1h = u.Creation.FiveMin, u.Creation.OneHour
-		return t
-	}
-	t.CacheWrite5m = u.CacheCreate // older logs don't say for how long: five minutes is the default
-	return t
-}
-
-type block struct {
-	Type      string          `json:"type"`
-	Name      string          `json:"name"`
-	ID        string          `json:"id"`
-	Input     json.RawMessage `json:"input"`
-	ToolUseID string          `json:"tool_use_id"`
-	IsError   bool            `json:"is_error"`
-	Text      string          `json:"text"`
-}
-
-func (s *Scan) claude(r *record) {
-	if r.Cwd != "" && s.Cwd == "" {
-		s.Cwd = r.Cwd
-	}
-	s.clock(r.Timestamp)
-	if r.Type != "assistant" && r.Type != "user" {
-		return
-	}
-	agent := ""
-	if r.IsSidechain {
-		agent = cmpOr(r.AgentID, "subagent")
-	}
-	model := ModelName(r.Message.Model)
-	var blocks []block
-	if json.Unmarshal(r.Message.Content, &blocks) != nil {
-		var text string
-		if r.Type == "user" && !r.IsMeta && agent == "" && json.Unmarshal(r.Message.Content, &text) == nil && prompt(text) {
-			s.prompted(r.Timestamp, text)
-		}
-		return
-	}
-	if r.Type == "user" && !r.IsMeta && agent == "" && len(blocks) > 0 && blocks[0].Type == "text" && prompt(blocks[0].Text) {
-		s.prompted(r.Timestamp, blocks[0].Text)
-	}
-	for _, b := range blocks {
-		if b.Type == "tool_use" {
-			s.moved(b.Name, b.Input)
-		}
-	}
-	if r.Type == "assistant" && r.Message.Usage != nil {
-		g := r.Message.Usage
-		rate := s.rate(model, g.Speed == "fast", g.tokens())
-		s.request(r.Message.ID, request{At: r.Timestamp, Model: model, Effort: r.Effort, Tokens: g.tokens(), Costs: g.tokens().Of(rate),
-			Sidechain: agent != ""}, agent, transcript.ContextWindow(model, g.tokens().Prompt()))
-	}
-	for _, b := range blocks {
-		switch b.Type {
-		case "tool_use":
-			s.call(b.ID, b.Name, b.Input, r.Timestamp, model, r.Effort)
-		case "tool_result":
-			s.result(b.ToolUseID, b.IsError, r.Timestamp)
-		}
-	}
-}
-
-// prompted is a turn the user started with text: the first is the log's title.
-func (s *Scan) prompted(at time.Time, text string) {
-	s.turn(at)
-	if s.Title == "" {
-		s.Title = titleOf(text)
-	}
 }
 
 // titleOf is a prompt's first line, cut to a title's length.
@@ -401,50 +282,33 @@ func titleOf(text string) string {
 	return strings.TrimSpace(t)
 }
 
-// prompt says whether a user message's text is something the user said, not what the system wrapped in tags.
-func prompt(text string) bool {
-	t := strings.TrimSpace(text)
-	return t != "" && !strings.HasPrefix(t, "<")
-}
-
-// Event is a line of Oriel's record of a provider's events: a turn starting, a request with its tokens, a tool
-// call, or its result.
-type Event struct {
-	At     time.Time       `json:"at"`
-	Kind   string          `json:"kind"` // turn, request, tool, result
-	Model  string          `json:"model,omitempty"`
-	Effort string          `json:"effort,omitempty"`
-	Agent  string          `json:"agent,omitempty"` // a subagent's id
-	Window int64           `json:"window,omitempty"`
-	Tokens Tokens          `json:"tokens,omitzero"`
-	ID     string          `json:"id,omitempty"`
-	Name   string          `json:"name,omitempty"`
-	Input  json.RawMessage `json:"input,omitempty"`
-	Error  bool            `json:"error,omitempty"`
-	Cwd    string          `json:"cwd,omitempty"`
-}
-
-func (s *Scan) event(ev Event) {
+// event counts what a log says happened.
+func (s *Scan) event(ev usage.Event) {
 	if ev.Cwd != "" && s.Cwd == "" {
 		s.Cwd = ev.Cwd
 	}
 	s.clock(ev.At)
 	model := ""
 	if ev.Model != "" {
-		model = ModelName(ev.Model)
+		model = usage.ModelName(ev.Model)
 	}
 	switch ev.Kind {
-	case "turn":
+	case usage.Turn:
 		if ev.Agent == "" {
 			s.turn(ev.At)
+			if ev.Text != "" && s.Title == "" {
+				s.Title = titleOf(ev.Text)
+			}
 		}
-	case "request":
-		model = ModelName(ev.Model)
-		s.request("", request{At: ev.At, Model: model, Effort: ev.Effort, Tokens: ev.Tokens, Costs: ev.Tokens.Of(s.rate(model, false, ev.Tokens)),
+	case usage.Place:
+		s.moved(ev.Name, ev.Input)
+	case usage.Request:
+		model = usage.ModelName(ev.Model)
+		s.request(ev.Msg, request{At: ev.At, Model: model, Effort: ev.Effort, Tokens: ev.Tokens, Costs: ev.Tokens.Of(s.rate(model, ev.Fast, ev.Tokens)),
 			Sidechain: ev.Agent != ""}, ev.Agent, ev.Window)
-	case "tool":
+	case usage.Tool:
 		s.call(ev.ID, ev.Name, ev.Input, ev.At, model, ev.Effort)
-	case "result":
+	case usage.Result:
 		s.result(ev.ID, ev.Error, ev.At)
 	}
 }
@@ -721,30 +585,10 @@ func place(input json.RawMessage, cwd string) string {
 		return ""
 	}
 	for _, f := range in.Files {
-		in.FilePath = cmpOr(in.FilePath, f.Path)
+		in.FilePath = cmp.Or(in.FilePath, f.Path)
 	}
-	if p := abs(cmpOr(in.FilePath, in.NotebookPath), cwd); p != "" {
+	if p := abs(cmp.Or(in.FilePath, in.NotebookPath), cwd); p != "" {
 		return filepath.Dir(p)
 	}
-	return cmpOr(abs(in.Path, cwd), abs(cwd, cwd))
-}
-
-// ModelName is the model id with any deployment suffix cut off: the million-token variant is the same model.
-func ModelName(id string) string {
-	if id == "" {
-		return "unknown"
-	}
-	if i := strings.IndexByte(id, '['); i > 0 {
-		id = id[:i]
-	}
-	return strings.TrimSpace(id)
-}
-
-func cmpOr(xs ...string) string {
-	for _, x := range xs {
-		if x != "" {
-			return x
-		}
-	}
-	return ""
+	return cmp.Or(abs(in.Path, cwd), abs(cwd, cwd))
 }

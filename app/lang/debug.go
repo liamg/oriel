@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
@@ -151,7 +153,7 @@ type Debug struct {
 	watches []string
 	sess    *debugSession
 	console []consoleLine
-	work    kit.Work
+	work    work.Work
 	mu      sync.Mutex // guards sess.client for the goroutines that use it
 
 	panel  debugPanel
@@ -194,7 +196,7 @@ func (x *Debug) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.bps = map[string][]debugBreakpoint{}
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "breakpoints and watches", Path: x.StateFile, Load: x.load})
-	x.Add(kit.OnDispose(x.state.Close))
+	x.Add(registry.DisposeFunc(x.state.Close))
 	x.Add(kit.OnDirChanged(h, "a debug session is of its directory", func(kit.DirChanged) { x.follow() }))
 	x.Add(h.Decorations("debug", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	x.Add(h.Contribute(registry.GutterAction{Name: "debug.breakpoint", Command: "debug.breakpoint.toggle", Order: 50, When: x.debuggable,

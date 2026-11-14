@@ -16,7 +16,10 @@ func picker(s *apptest.Scene) *shell.Picker { return apptest.PluginOf[*shell.Pic
 // pickerScene is omniScene's world with a picker open on source.
 func pickerScene(t *testing.T, source, query string) *apptest.Scene {
 	s := omniScene(t, "")
-	omni(s).Close()
+	s.Press("<Esc>")
+	if omni(s).Open() {
+		t.Fatal("Escape didn't close the omnibox")
+	}
 	s.Run("picker.open", registry.Args{"source": source, "query": query})
 	s.Frame()
 	s.Frame()
@@ -90,9 +93,11 @@ func mustSource(t *testing.T, s *apptest.Scene, id string) uireg.PickerSource {
 func TestPickerResumes(t *testing.T) {
 	s := pickerScene(t, "files", "go")
 	p := picker(s)
-	p.Select(1)
-	p.Close()
-	s.Frame()
+	s.Press("<Down>")
+	s.Press("<Esc>")
+	if p.Open() {
+		t.Fatal("Escape left the picker open")
+	}
 	s.EditorKeys(" '")
 	s.Run("picker.resume", nil)
 	s.Frame()
@@ -107,26 +112,18 @@ func TestPickerActions(t *testing.T) {
 	p := picker(s)
 	src := mustSource(t, s, "files")
 	g, _ := shell.RankSource(s.Headless, src, ".go", shell.PickerMax)
-	var qf uireg.PickerAction
-	var attach uireg.PickerAction
-	for _, a := range p.Actions(src) {
-		switch a.Key {
-		case "<C-q>":
-			qf = a
-		case "<C-a>":
-			attach = a
-		}
-	}
-	p.Act(qf, g)
+	s.Press("<C-q>")
 	title, items := s.Editor().Quickfix()
 	if len(items) != 2 || !strings.HasPrefix(title, "Files") || items[0].Path == "" {
 		t.Errorf("quickfix: %q %+v", title, items)
 	}
 	var got registry.Args
 	s.Registry().Command(registry.Command{ID: "request.attach", Run: func(_ registry.Ctx, a registry.Args) error { got = a; return nil }})
-	p.Reopen()
-	p.Pick(g.Items()[1].ID)
-	p.Act(attach, g)
+	s.Run("picker.resume", nil)
+	s.Frame()
+	s.Press("<Down>")
+	s.Press("<C-Space>") // picks the second
+	s.Press("<C-a>")
 	refs, _ := got["items"].([]any)
 	if len(refs) != 1 || refs[0].(map[string]any)["path"] != g.Items()[1].Path {
 		t.Errorf("attach got %+v", got)

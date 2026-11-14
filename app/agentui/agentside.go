@@ -4,10 +4,11 @@ import (
 	"cmp"
 	"context"
 	"fmt"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -27,7 +28,7 @@ import (
 const ConsoleSide = kit.ConsoleSide
 
 // side is the console's right column: what plugins add, the session's stats, its tasks and subagents, the plans'
-// usage, what this turn touched, and the rules in force.
+// usage, and the rules in force.
 func (x *Console) side(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	kit.Scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
@@ -43,7 +44,6 @@ func (x *Console) side(c *ui.Ctx, se core.SessionState) {
 			x.tasks(c, se)
 			x.subagents(c, se)
 			x.usage(c, se)
-			x.touched(c, se)
 			x.rules(c, se)
 		})
 }
@@ -95,9 +95,9 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	now := c.Now()
 	for i, u := range us {
-		title, note := "Plan usage", cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider))
+		title, note := "Plan usage", cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider))
 		if i > 0 || u.Provider != se.Agent.Provider {
-			title, note = cmp.Or(u.Plan, kit.ProviderName(x.h, u.Provider)), "other sessions"
+			title, note = cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider)), "other sessions"
 		}
 		kit.Section(c, "usage."+u.Provider, title, note, func(c *ui.Ctx) {
 			for j, w := range u.Windows {
@@ -119,46 +119,6 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 	}
 }
 
-// turnEdits are the files the latest turn edited, with their lines added and removed, in the order first edited.
-func turnEdits(se core.SessionState) []core.FileDiff {
-	start := 0
-	for i := len(se.Transcript) - 1; i >= 0; i-- {
-		if se.Transcript[i].Kind == core.ItemUser {
-			start = i
-			break
-		}
-	}
-	var out []core.FileDiff
-	for _, it := range se.Transcript[start:] {
-		for _, d := range it.FileDiffs() {
-			if i := slices.IndexFunc(out, func(o core.FileDiff) bool { return o.Path == d.Path }); i >= 0 {
-				out[i].Added += d.Added
-				out[i].Removed += d.Removed
-				continue
-			}
-			out = append(out, core.FileDiff{Path: d.Path, Added: d.Added, Removed: d.Removed})
-		}
-	}
-	return out
-}
-
-func (x *Console) touched(c *ui.Ctx, se core.SessionState) {
-	edits := turnEdits(se)
-	if len(edits) == 0 {
-		return
-	}
-	th := c.Theme()
-	kit.Section(c, "touched", "This turn touched", "", func(c *ui.Ctx) {
-		for i, d := range edits {
-			c.Row(i, ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("n", filepath.Base(d.Path), kit.MonoFont(11.5, th.C(theme.FgMuted)))
-				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				widget.DiffStat(c, "s", d.Added, d.Removed, widget.DiffStatOpts{})
-			})
-		}
-	})
-}
-
 // rules are what lets the agent through: its gate, the sandbox's, and the "Always" rules made in this workspace.
 func (x *Console) rules(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
@@ -171,12 +131,16 @@ func (x *Console) rules(c *ui.Ctx, se core.SessionState) {
 	case se.Agent.Sandboxed:
 		// The agent asks nothing itself in a sandbox: the sandbox and its gateway are the gate.
 		rs = append(rs, rule{"tools · auto", tRuleAllow})
-	case se.Agent.Policy == "ask":
+	case se.Agent.Policy == core.PolicyAsk:
 		rs = append(rs, rule{"edit · ask", tRuleAsk}, rule{"bash · ask", tRuleAsk})
-	case se.Agent.Policy == "light":
+	case se.Agent.Policy == core.PolicyLight:
 		rs = append(rs, rule{"edit · auto", tRuleAllow}, rule{"bash · ask", tRuleAsk})
-	case se.Agent.Policy == "bypass":
+	case se.Agent.Policy == core.PolicyAuto:
+		rs = append(rs, rule{"tools · the agent judges", tRuleAsk})
+	case se.Agent.Policy == core.PolicyBypass:
 		rs = append(rs, rule{"tools · auto", tRuleAllow})
+	case se.Agent.Policy == core.PolicyRefuse:
+		rs = append(rs, rule{"tools · refused unless allowed", tRuleDeny})
 	}
 	if se.Agent.Sandboxed {
 		net := cmp.Or(se.Agent.Network, "ask")
@@ -307,7 +271,7 @@ func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time)
 			c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("k", "SESSION", kit.KickerFont(th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("who", strings.Join(slices.DeleteFunc([]string{strings.ToLower(kit.ProviderName(h, se.Agent.Provider)), se.Agent.Model, se.Agent.Effort},
+				c.Text("who", strings.Join(slices.DeleteFunc([]string{strings.ToLower(services.ProviderTitle(h, se.Agent.Provider)), se.Agent.Model, se.Agent.Effort},
 					func(s string) bool { return s == "" || s == "agent" }), " · "), kit.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			c.Row("a", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

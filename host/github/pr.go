@@ -12,8 +12,8 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// A session's project's pull request on GitHub, for the app's GitHub code host: each call is made with the checkout's
-// gh and env, so a sandboxed workspace's goes through its gateway.
+// A session's project's pull request on GitHub, for the app's GitHub code host: each call goes to GitHub's API from
+// the host, with the token the request carries or the one found for the server.
 
 // GitHubReq names a session's project, and what the call needs of its PR.
 type GitHubReq struct {
@@ -68,6 +68,7 @@ func (r GitHubReq) prNumber() (int, error) {
 
 // GitHubPRFor is the branch's PR: its open one, else the newest; nil for none.
 func (x *GitHub) GitHubPRFor(ctx context.Context, r GitHubReq) (_ *gh.PR, err error) {
+	defer x.env.Recover("GitHubPRFor", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return nil, err
@@ -107,6 +108,7 @@ func (x *GitHub) githubFor(ctx context.Context, id core.SessionID, project strin
 
 // GitHubCreate raises a PR, from a branch of the session's only: ownBranch.
 func (x *GitHub) GitHubCreate(ctx context.Context, r GitHubReq) (_ *gh.PR, err error) {
+	defer x.env.Recover("GitHubCreate", &err)
 	_, p, _, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return nil, err
@@ -127,6 +129,7 @@ func (x *GitHub) GitHubCreate(ctx context.Context, r GitHubReq) (_ *gh.PR, err e
 
 // GitHubEdit sets a PR's title and body.
 func (x *GitHub) GitHubEdit(ctx context.Context, r GitHubReq) (_ *gh.PR, err error) {
+	defer x.env.Recover("GitHubEdit", &err)
 	n, err := r.prNumber()
 	if err != nil {
 		return nil, err
@@ -140,6 +143,7 @@ func (x *GitHub) GitHubEdit(ctx context.Context, r GitHubReq) (_ *gh.PR, err err
 
 // GitHubReady takes a draft PR out of draft.
 func (x *GitHub) GitHubReady(ctx context.Context, r GitHubReq) (err error) {
+	defer x.env.Recover("GitHubReady", &err)
 	if _, err := r.prNumber(); err != nil {
 		return err
 	}
@@ -152,6 +156,7 @@ func (x *GitHub) GitHubReady(ctx context.Context, r GitHubReq) (err error) {
 
 // GitHubReviewers asks people and teams to review a PR.
 func (x *GitHub) GitHubReviewers(ctx context.Context, r GitHubReq) (err error) {
+	defer x.env.Recover("GitHubReviewers", &err)
 	n, err := r.prNumber()
 	if err != nil {
 		return err
@@ -165,6 +170,7 @@ func (x *GitHub) GitHubReviewers(ctx context.Context, r GitHubReq) (err error) {
 
 // GitHubChecks are the checks on a PR's branch.
 func (x *GitHub) GitHubChecks(ctx context.Context, r GitHubReq) (_ GitHubChecks, err error) {
+	defer x.env.Recover("GitHubChecks", &err)
 	c, repo, err := x.githubProject(ctx, r)
 	if err != nil {
 		return GitHubChecks{}, err
@@ -186,6 +192,7 @@ func (x *GitHub) GitHubChecks(ctx context.Context, r GitHubReq) (_ GitHubChecks,
 
 // GitHubMergeState is what merging a PR now would meet.
 func (x *GitHub) GitHubMergeState(ctx context.Context, r GitHubReq) (_ gh.MergeState, err error) {
+	defer x.env.Recover("GitHubMergeState", &err)
 	n, err := r.prNumber()
 	if err != nil {
 		return gh.MergeState{}, err
@@ -199,6 +206,7 @@ func (x *GitHub) GitHubMergeState(ctx context.Context, r GitHubReq) (_ gh.MergeS
 
 // GitHubMerge merges a PR at the head the user saw.
 func (x *GitHub) GitHubMerge(ctx context.Context, r GitHubReq) (err error) {
+	defer x.env.Recover("GitHubMerge", &err)
 	n, err := r.prNumber()
 	if err != nil {
 		return err
@@ -212,6 +220,7 @@ func (x *GitHub) GitHubMerge(ctx context.Context, r GitHubReq) (err error) {
 
 // GitHubDeleteBranch deletes a merged PR's branch on GitHub.
 func (x *GitHub) GitHubDeleteBranch(ctx context.Context, r GitHubReq) (err error) {
+	defer x.env.Recover("GitHubDeleteBranch", &err)
 	c, repo, err := x.githubProject(ctx, r)
 	if err != nil {
 		return err

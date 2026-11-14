@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/liamg/oriel/internal/transcript"
 	"github.com/liamg/oriel/jsonrpc"
 	"github.com/liamg/oriel/lsp"
 )
@@ -52,6 +53,7 @@ type answer struct {
 }
 
 func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
+	vars := transcript.MachineVars(root)
 	defer close(done)
 	defer conn.Close()
 	answers := map[string][]answer{}
@@ -60,7 +62,7 @@ func (r *Responder) serve(conn net.Conn, root string, done chan struct{}) {
 	var params = map[string]json.RawMessage{}
 	diags := map[string]json.RawMessage{} // uri → the last publishDiagnostics
 	for _, e := range r.t.Entries {
-		msg := concrete(e.Msg, root)
+		msg := vars.Concrete(e.Msg)
 		var m jsonrpc.Message
 		if json.Unmarshal(msg, &m) != nil {
 			continue

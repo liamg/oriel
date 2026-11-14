@@ -242,14 +242,14 @@ func TestLSPInlayHintsWaitForTypingToStop(t *testing.T) {
 		t.Fatal("no inlay hints asked for on opening the file")
 	}
 	s.EditorKeys("ggO")
-	for _, k := range "typing" { // as quick as a person types: an answer has time to come between keys
+	for _, k := range "typing" { // as quick as a person types: well inside the wait between keys
 		s.EditorKeys(string(k))
 		s.Frame()
-		time.Sleep(60 * time.Millisecond)
+		s.Advance(60 * time.Millisecond)
 		s.RunQueued()
 		s.Frame()
 	}
-	if n := hints() - before; n > 2 {
+	if n := hints() - before; n > 0 {
 		t.Errorf("typing 6 letters asked for inlay hints %d times", n)
 	}
 }

@@ -240,6 +240,7 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	app := giteaRepo(t, "app")
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
+		apptest.GitHub(hub)(cfg)
 		cfg.Net, cfg.Secrets = hosttest.Net(gt.Server), secrets
 	}})
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })

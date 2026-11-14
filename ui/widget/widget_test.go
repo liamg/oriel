@@ -266,7 +266,7 @@ func TestPopoverAndModal(t *testing.T) {
 			c.Text(nil, "hello", ui.TextStyle{})
 		})
 		modal = c.Next("modal")
-		Modal(c, "modal", &mOpen, "Settings", ModalOpts{Width: 300, Help: "test/modal"}, func(c *ui.Ctx) {
+		Modal(c, "modal", &mOpen, ModalOpts{Title: "Settings", Width: 300, Help: "test/modal"}, func(c *ui.Ctx) {
 			inner = c.Next("ok")
 			Button(c, "ok", "OK", ButtonOpts{Help: "test/button"})
 			cancel = c.Next("cancel")
@@ -324,10 +324,10 @@ func TestToasts(t *testing.T) {
 	if ts.Len() != 2 {
 		t.Fatalf("%d toasts", ts.Len())
 	}
-	if want := h.now.Add(3 * time.Second); !h.u.NextFrame().Equal(want) {
+	if want := h.clock.Now().Add(3 * time.Second); !h.u.NextFrame().Equal(want) {
 		t.Errorf("next frame %v, want the timeout at %v", h.u.NextFrame(), want)
 	}
-	h.now = h.now.Add(3 * time.Second)
+	h.clock.Advance(3 * time.Second)
 	h.frame()
 	if ts.Len() != 1 {
 		t.Errorf("after its TTL: %d toasts", ts.Len())

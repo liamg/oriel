@@ -2,7 +2,6 @@ package apptest
 
 import (
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/ship"
@@ -40,6 +39,7 @@ func ShipSceneWith(t *testing.T, setup func(*Scene), more ...func(*Config)) (s *
 	web, webUp := rig.ShipRepo(t, "web-dashboard", map[string]string{"src/usage.ts": "export const usage = 1\n"})
 	s = New(t, Options{ScriptedFiles: true, Config: func(cfg *Config) {
 		Connect(lw.W)(cfg)
+		GitHub(hub)(cfg)
 		for _, m := range more {
 			m(cfg)
 		}
@@ -101,7 +101,12 @@ func ShipSession(t *testing.T) (*Scene, core.SessionState) {
 	se, reads := rig.ShipSession(t, s.Now)
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
 	x := PluginOf[*ship.Ship](s, "ship")
-	x.Clock = func() time.Time { return s.Now }
+	x.Clock = s.Clock()
 	x.Fixture(se.ID, false, func([]ship.Read) []ship.Read { return reads(GitHubCode(s)) })
 	return s, se
+}
+
+// GitHub is a config change that has GitHub's code host ask hub, as host.Options.GitHub has the session host.
+func GitHub(hub *ghtest.Server) func(*Config) {
+	return func(cfg *Config) { cfg.GitHubClient = func(string, []string) gh.Client { return hub.Client() } }
 }

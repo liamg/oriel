@@ -1,13 +1,14 @@
 package runner
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 
@@ -131,7 +132,7 @@ func containerMounts(ctx context.Context, name string) ([]sandbox.Bind, bool) {
 	for _, m := range ms {
 		binds = append(binds, sandbox.Bind{Host: m.Source, Agent: m.Destination, ReadOnly: !m.RW})
 	}
-	sort.Slice(binds, func(i, j int) bool { return binds[i].Agent < binds[j].Agent })
+	slices.SortFunc(binds, func(a, b sandbox.Bind) int { return cmp.Compare(a.Agent, b.Agent) })
 	return binds, running == "true"
 }
 
@@ -191,7 +192,7 @@ func PendingDockerfiles(cfg sandbox.Config) []sandbox.Pending {
 	if approved {
 		savePending(all)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Repo < out[j].Repo })
+	slices.SortFunc(out, func(a, b sandbox.Pending) int { return cmp.Compare(a.Repo, b.Repo) })
 	return out
 }
 

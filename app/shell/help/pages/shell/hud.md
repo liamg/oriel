@@ -52,9 +52,9 @@ Indicators are small live readouts in fixed slots: the title bar's right (`title
 ## From Lua {#lua}
 
 ```lua
-oriel.hud.indicator("deploys", { slot = "titlebar.right", every = "30s" }, function()
+oriel.hud.indicator("deploys", function()
   return oriel.ui.indicator{ label = "DEPLOY", value = 4, tone = "warn" }
-end)
+end, { slot = "titlebar.right", every = "30s" })
 oriel.hud.set("deploys", oriel.ui.indicator{ label = "DEPLOY", value = 0 })   -- show this now
 oriel.hud.refresh("deploys")                                                  -- or build it again now
 ```

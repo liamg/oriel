@@ -2,12 +2,12 @@ package dap
 
 import (
 	"bufio"
+	"cmp"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 )
 
@@ -229,10 +229,7 @@ func inferPython(file string) (LaunchConfig, bool) {
 
 // SortSpecs orders adapters as they're tried: by Order, then name.
 func SortSpecs(specs []AdapterSpec) {
-	sort.SliceStable(specs, func(i, j int) bool {
-		if specs[i].Order != specs[j].Order {
-			return specs[i].Order < specs[j].Order
-		}
-		return specs[i].Name < specs[j].Name
+	slices.SortStableFunc(specs, func(a, b AdapterSpec) int {
+		return cmp.Or(cmp.Compare(a.Order, b.Order), cmp.Compare(a.Name, b.Name))
 	})
 }

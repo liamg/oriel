@@ -108,7 +108,7 @@ func commitFiles(st *gitx.State, all bool) []string {
 // A status still being read is waited for, until commitWait from started.
 func (g *Git) commit(root string, a registry.Args, started time.Time) error {
 	t := g.tree(root)
-	st := t.state()
+	st := t.State()
 	later := func() error {
 		if time.Since(started) > commitWait {
 			return fmt.Errorf("%s's status didn't settle; try again", filepath.Base(root))

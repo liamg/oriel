@@ -1,13 +1,16 @@
 package catalog
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/gitx"
@@ -43,7 +46,7 @@ type Published struct {
 // and the tag at HEAD, packs it as the registry's CI will, and opens a PR that adds a [[versions]] entry, or the
 // plugin.toml of a new plugin. A trusted plugin has nothing to publish: its tag is checked and Oriel follows it.
 func Publish(ctx context.Context, o PublishOpts) (Published, error) {
-	reg := cmpOr(o.Registry, DefaultRepo)
+	reg := cmp.Or(o.Registry, DefaultRepo)
 	m, err := plugin.LoadManifest(o.Dir)
 	if err != nil {
 		return Published{}, err
@@ -61,10 +64,13 @@ func Publish(ctx context.Context, o PublishOpts) (Published, error) {
 	if c, err := r.Run(ctx, "rev-parse", "--verify", "-q", tag+"^{commit}"); err != nil || strings.TrimSpace(c) != commit {
 		return out, fmt.Errorf("HEAD isn't tagged %s: tag the version you publish (git tag %s && git push origin %s)", tag, tag, tag)
 	}
-	if r.Dirty(ctx) {
+	if dirty, err := r.Dirty(ctx); err != nil {
+		return out, err
+	} else if dirty {
 		return out, errors.New("the work tree has changes: publish exactly what's tagged")
 	}
-	repo, ok := githubRepo(r.RemoteURL(ctx))
+	origin, _ := r.Origin(ctx) // none, or git couldn't say: not a GitHub repo
+	repo, ok := githubRepo(origin)
 	if !ok {
 		return out, errors.New("origin isn't a GitHub repository")
 	}
@@ -142,7 +148,7 @@ func versionEntry(version, commit, pr string, archives map[string]string, built 
 	}
 	if len(archives) > 0 {
 		var parts []string
-		for _, p := range sortedKeys(archives) {
+		for _, p := range slices.Sorted(maps.Keys(archives)) {
 			parts = append(parts, fmt.Sprintf("%q = %q", p, archives[p]))
 		}
 		fmt.Fprintf(&b, "archives = { %s }\n", strings.Join(parts, ", "))
@@ -224,7 +230,7 @@ func (g GH) OpenPR(ctx context.Context, registry, branch, path, title, body stri
 		return "", err
 	}
 	def := r.DefaultBranch(ctx)
-	if _, err := r.Run(ctx, "checkout", "-q", "-B", branch, "upstream/"+cmpOr(def, "main")); err != nil {
+	if _, err := r.Run(ctx, "checkout", "-q", "-B", branch, "upstream/"+cmp.Or(def, "main")); err != nil {
 		return "", err
 	}
 	write := func(b []byte, msg string) error {

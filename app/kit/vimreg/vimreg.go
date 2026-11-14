@@ -41,14 +41,14 @@ func Specs() []registry.OptionSpec {
 			s.Aliases = append(s.Aliases, d.Short)
 		}
 		switch d.Kind {
-		case "bool":
+		case vim.BoolKind:
 			s.Type = registry.Bool
-		case "int":
+		case vim.IntKind:
 			s.Type = registry.Int
 			s.Min, s.Max = float64(d.Min), math.MaxInt32
-		case "enum":
+		case vim.EnumKind:
 			s.Type = registry.Enum
-		default:
+		default: // vim.StringKind
 			s.Type = registry.String
 		}
 		switch d.Scope {

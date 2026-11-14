@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -45,6 +46,7 @@ type Use struct {
 	Cap     Capability
 	Target  string
 	Allowed bool
+	Why     string // a grant widened at run time (Widen): what it was widened for
 }
 
 // Guard is the check every host API call from a plugin goes through.
@@ -52,6 +54,9 @@ type Guard interface {
 	Check(plugin string, c Capability, target string) error // nil, or a *NotDeclared
 	Audit() []Use
 	Declared(plugin string) []Grant // what the plugin was granted, to build its OS sandbox from
+	// Widen grants the plugin gs at run time, beyond what it declared, for why, which the audit records; undo takes
+	// exactly gs back.
+	Widen(plugin, why string, gs ...Grant) (undo func())
 }
 
 // AuditSize is how many uses Grants keeps.
@@ -82,6 +87,28 @@ func (g *Grants) Add(plugin string, gs ...Grant) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.grants[plugin] = append(g.grants[plugin], gs...)
+}
+
+// Widen is Guard.Widen.
+func (g *Grants) Widen(plugin, why string, gs ...Grant) (undo func()) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.grants[plugin] = append(g.grants[plugin], gs...)
+	for _, gr := range gs {
+		g.audit = append(g.audit, Use{Time: time.Now(), Plugin: plugin, Cap: gr.Cap, Target: strings.Join(gr.Scope, ", "), Allowed: true, Why: why})
+	}
+	if len(g.audit) > AuditSize {
+		g.audit = g.audit[len(g.audit)-AuditSize:]
+	}
+	return sync.OnceFunc(func() {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		for _, gr := range gs {
+			if i := slices.IndexFunc(g.grants[plugin], func(x Grant) bool { return x.Cap == gr.Cap && slices.Equal(x.Scope, gr.Scope) && x.Why == gr.Why }); i >= 0 {
+				g.grants[plugin] = slices.Delete(g.grants[plugin], i, i+1)
+			}
+		}
+	})
 }
 
 // Revoke takes everything from plugin.

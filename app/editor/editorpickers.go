@@ -10,12 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host/search"
 	"github.com/liamg/oriel/regex"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/search"
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/text"
 	"github.com/liamg/oriel/ui"
@@ -195,7 +197,7 @@ type fileList struct {
 	files   []string
 	walking bool
 	done    bool // a walk has finished
-	busy    kit.Busy
+	busy    work.Busy
 }
 
 const (
@@ -291,7 +293,7 @@ type filesKey struct {
 func (x *Editor) filesSource() uireg.PickerSource {
 	files := &fileList{dir: x.dir, redraw: x.h.Redraw}
 	x.listed = files
-	x.Add(kit.OnDispose(files.busy.Wait))
+	x.Add(registry.DisposeFunc(files.busy.Wait))
 	openNames := func() []string {
 		var open []string
 		for _, b := range x.e.BufferList() {

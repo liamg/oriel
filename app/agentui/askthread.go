@@ -3,6 +3,7 @@ package agentui
 import (
 	"context"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -47,7 +48,7 @@ func (x *Console) openThread(id core.SessionID, tid core.ThreadID) {
 		x.run(context.Background(), "request.open", open)
 		return
 	}
-	x.run(context.Background(), "session.open", registry.Args{"id": string(id), "then": []any{map[string]any{"command": "request.open", "args": open}}})
+	x.run(context.Background(), "session.open", registry.Args{"id": string(id), "then": kit.Then(kit.Call{Command: "request.open", Args: open})})
 }
 
 // askedChip marks a comment that's an answered question: the agent's question, or your answer to it.

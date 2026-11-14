@@ -23,15 +23,15 @@ func TestBusy(t *testing.T) {
 	h := newHarness(t, theme.Dark, render.Point{X: 640, Y: 100}, func(c *ui.Ctx) {
 		id = Busy(c, "b", s, BusyOpts{Label: "Checking which agents are installed", Help: "test/busy"})
 	})
-	s = LoadState{Phase: Pending, Since: h.now}
+	s = LoadState{Phase: Pending, Since: h.clock.Now()}
 	h.frame()
 	if out := drawn(h); !strings.Contains(out, `"Checking which agents are installed…"`) || strings.Contains(out, "0s") {
 		t.Errorf("at once: %s", out)
 	}
-	if next := h.u.NextFrame(); !next.Equal(h.now.Add(3 * time.Second)) {
+	if next := h.u.NextFrame(); !next.Equal(h.clock.Now().Add(3 * time.Second)) {
 		t.Errorf("asked for a frame at %v, want when the clock shows", next)
 	}
-	h.now = h.now.Add(12 * time.Second)
+	h.clock.Advance(12 * time.Second)
 	s.Note = "probing codex"
 	h.frame()
 	if out := drawn(h); !strings.Contains(out, `"Checking which agents are installed… probing codex"`) || !strings.Contains(out, `"· 12s"`) {
@@ -40,7 +40,7 @@ func TestBusy(t *testing.T) {
 	if n := h.access(id); n == nil || n.Name != "Checking which agents are installed… probing codex 12s" {
 		t.Errorf("read out as: %+v", n)
 	}
-	h.now = h.now.Add(65 * time.Second)
+	h.clock.Advance(65 * time.Second)
 	h.frame()
 	if out := drawn(h); !strings.Contains(out, `"· 1m 17s"`) {
 		t.Errorf("after minutes: %s", out)
@@ -78,7 +78,7 @@ func TestProgressBar(t *testing.T) {
 	frac = -1
 	h.frame()
 	before := bars(h)
-	h.now = h.now.Add(progressSweep / 4)
+	h.clock.Advance(progressSweep / 4)
 	h.frame()
 	if after := bars(h); len(after) != 1 || len(before) != 1 || after[0] == before[0] {
 		t.Errorf("the sliding bar didn't move: %v → %v", before, after)
@@ -92,7 +92,7 @@ func TestProgressBar(t *testing.T) {
 		t.Errorf("a still bar is striped, not a solid segment: %v", b)
 	}
 	before2 := drawn(still)
-	still.now = still.now.Add(progressSweep / 4)
+	still.clock.Advance(progressSweep / 4)
 	still.frame()
 	if drawn(still) != before2 {
 		t.Error("with reduced motion the bar moved")
@@ -164,7 +164,7 @@ func TestAsync(t *testing.T) {
 		id = Async(c, "a", s, AsyncOpts{Label: "Reading jobs", Empty: "No jobs yet", IsEmpty: empty, Retry: func() { retried++ }, Help: "test/async"},
 			func(c *ui.Ctx) { c.Text("body", "the jobs", ui.TextStyle{}) })
 	})
-	start := h.now
+	start := h.clock.Now()
 	s = LoadState{Phase: Pending, Since: start}
 	h.frame()
 	if out := drawn(h); strings.Contains(out, "Reading jobs") || strings.Contains(out, "the jobs") {
@@ -173,30 +173,30 @@ func TestAsync(t *testing.T) {
 	if next := h.u.NextFrame(); !next.Equal(start.Add(asyncDelay)) {
 		t.Errorf("woke at %v, want the end of the delay", next)
 	}
-	h.now = start.Add(200 * time.Millisecond)
+	h.clock.Set(start.Add(200 * time.Millisecond))
 	h.frame()
 	if out := drawn(h); !strings.Contains(out, `"Reading jobs…"`) {
 		t.Errorf("after the delay: %s", out)
 	}
 	s = LoadState{Phase: Ready}
-	h.now = start.Add(300 * time.Millisecond)
+	h.clock.Set(start.Add(300 * time.Millisecond))
 	h.frame()
 	if out := drawn(h); !strings.Contains(out, `"Reading jobs…"`) || strings.Contains(out, "the jobs") {
 		t.Errorf("loaded before MinShow: %s", out)
 	}
-	h.now = start.Add(500 * time.Millisecond)
+	h.clock.Set(start.Add(500 * time.Millisecond))
 	h.frame()
 	if out := drawn(h); !strings.Contains(out, `"the jobs"`) || strings.Contains(out, "Reading jobs") {
 		t.Errorf("after MinShow: %s", out)
 	}
 
 	// A fast load never shows the loading view.
-	s = LoadState{Phase: Pending, Since: h.now, Stale: true, Progress: .5}
+	s = LoadState{Phase: Pending, Since: h.clock.Now(), Stale: true, Progress: .5}
 	h.frame()
 	if out := drawn(h); strings.Contains(out, "640x2") {
 		t.Errorf("a refresh bar within the delay: %s", out)
 	}
-	h.now = h.now.Add(200 * time.Millisecond)
+	h.clock.Advance(200 * time.Millisecond)
 	h.frame()
 	if out := drawn(h); !strings.Contains(out, `"the jobs"`) {
 		t.Errorf("reloading drops the body: %s", out)
@@ -293,7 +293,7 @@ func TestLoadingSnapshots(t *testing.T) {
 	size := render.Point{X: 900, Y: 560}
 	for _, v := range []theme.Variant{theme.Dark, theme.Light} {
 		h := newHarness(t, v, size, func(*ui.Ctx) {})
-		h.build = loadingSheet(h.now)
+		h.build = loadingSheet(h.clock.Now())
 		h.frame()
 		h.frame()
 		snapshot.Golden(t, "testdata/loading-"+string(v)+".list", []byte(drawn(h)))

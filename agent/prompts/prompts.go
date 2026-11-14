@@ -11,11 +11,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/packs"
+	"github.com/liamg/oriel/internal/atomicfile"
 )
 
 // StyleID is the coding style: written into the workspace's generated CLAUDE.md, and {{style}} in any prompt.
@@ -283,11 +283,7 @@ func (s Store) Set(id, text string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(text), 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return atomicfile.Write(path, []byte(text), 0o644)
 }
 
 // Reset drops the user's version, so the default applies again.
@@ -303,7 +299,7 @@ func loadDefaults() ([]Def, error) {
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(names)
+	slices.Sort(names)
 	var out []Def
 	for _, name := range names {
 		b, err := fs.ReadFile(defaultFiles, name)

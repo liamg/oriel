@@ -17,7 +17,7 @@ import (
 //oriel:api name=code cap=ui
 type CodeAPI struct{ a *APIs }
 
-//oriel:api doc="A code host (GitLab, Azure DevOps…): where pull requests live. Oriel builds the Reviews page, the sidebar's pill, the notices and the assistant's review_requests on its review functions, and the Ship page's pull request step (raise, edit, ready, checks, merge) on the rest. { name, title, icon, order (50), words = { short ('PR', 'MR'), long ('pull request'), sigil ('#', '!') }, sites = { { host, api, secret, aliases } } its public servers (aliases: other hostnames its remotes use for one, its ssh hosts: 'ssh.dev.azure.com'), path = a regular expression over a git remote's path whose first group is the repo's name, takes = one over a pull request URL's path, shape = one over a whole remote URL that alone says a server is this host's (Azure DevOps' '/_git/'), setup = { api = 'https://{host}/api/v4', secret = 'GITLAB_TOKEN', token_url, token_help, probe = fn(host, done) answering true for a server of this host's, from a request that sends no token } for a server of your own, and the functions, each answering with done(value) or done(nil, err), now or later. A site is { host, api, secret }: a server you set up has its own secret, 'GITLAB_TOKEN:git.acme.corp', and the plugin is let reach it. Reviews, per site: requested = fn(site, done) with the open pull requests asking you, and those you're part way through; lookup = fn(site, url, done) with one in full; checkout = fn(site, url, done) with { remote, ref }: a substring of the registered repo's remote, and the refspec a review session fetches; submit = fn(site, url, review, done) posts the user's review from a review session's pull request tab, review = { event ('approve', 'changes', 'comment'), body, commit = the head it read, comments = { { path, line, start_line, old = on the removed code, body } } }; react = fn(site, url, emoji, done) reacts to the pull request as you when a review session starts on it, with review.start_reaction ('👀'); unreact = fn(site, url, emoji, done) takes that reaction back once you've sent your review (not having it is no error). Ship, each given repo = { session, project, remote, repo, site }: for_branch = fn(repo, branch, done) with the branch's pull request, open first, or nil; create = fn(repo, { title, body, branch, base, draft }, done); edit = fn(repo, pr, title, body, done); ready = fn(repo, pr, done); request_reviewers = fn(repo, pr, { logins }, done); checks = fn(repo, pr, done) with { { name, state ('ok', 'failed', 'running', 'queued', 'skipped'), url, started, completed, detail = a failing one's log line } }; merge_methods = fn(repo, pr, done) with { allowed = { 'merge', 'squash', 'rebase' }, default }; blockers = fn(repo, pr, done) with { { kind, count, text, hard = the host would refuse, url } }; merge = fn(repo, pr, { method, head, title, body, delete_branch }, done). Review mirroring: threads = fn(repo, pr, done) with { { id ('' or nil for the conversation), path, line, old, outdated, resolved, reviewer, state ('changes', 'approved', 'commented'), url, comments = { { id, author, body, at, member = the author belongs to the repo, so the agent may read it } } } }; reply = fn(repo, pr, thread = { id, path, line, old, url }, body, done) with the new comment's id, posting the draft the user forwards (thread.id empty: the conversation); resolve = fn(repo, pr, thread, resolved, done) resolves a review thread there, or reopens it, when the user does in Oriel. Every answer crosses as JSON: an empty table is an empty list or object. A pull request is { number, id, title, body, url, author, state ('open', 'closed'), draft, merged, branch, base, head = its commit, reviewers }. A missing function's part isn't offered. A request is { url, repo, number, title, author, draft, asked (RFC 3339, or seconds since 1970), via (the team asked, '' for you), state ('new', 're-requested', 'changes', 'commented', 'approved'), since (commits since your review), adds, dels, files, ci ('ok', 'failed', 'running'), base, head (its branch), opened, updated (times as asked's), reviewers = { { login ('@org/team' for a team), state ('requested', 'approved', 'changes', 'commented') } } who's asked and who has reviewed, shown when its row is hovered }. A detail is { request, base, head, commit = the head's, state ('open', 'closed', 'merged'), mergeable, labels = { names }, reviewers = { { login, state } }, body, files = { { path, adds, dels } }, checks, clone = the repo's clone URL, for Add repo…, events = { { kind ('push', 'review', 'comment'), who, at (RFC 3339), text, state = a review's ('approved', 'changes', 'commented', 'dismissed'), ref = a push's commit or a line comment's 'path:line', url, reactions } } oldest first, reactions = { { emoji ('👍'), count } } the PR's own; a host without reactions leaves them out }."
+//oriel:api doc="A code host (GitLab, Azure DevOps…): where pull requests live. Oriel builds the Reviews page, the sidebar's pill, the notices and the assistant's review_requests on its review functions, and the Ship page's pull request step (raise, edit, ready, checks, merge) on the rest. { name, title, icon, order (50), words = { short ('PR', 'MR'), long ('pull request'), sigil ('#', '!') }, sites = { { host, api, secret, aliases } } its public servers (aliases: other hostnames its remotes use for one, its ssh hosts: 'ssh.dev.azure.com'), path = a regular expression over a git remote's path whose first group is the repo's name, takes = one over a pull request URL's path, shape = one over a whole remote URL that says a server looks like this host's (Azure DevOps' '/_git/'), which Oriel offers to set up as one, setup = { api = 'https://{host}/api/v4', secret = 'GITLAB_TOKEN', token_url, token_help, probe = fn(host, done) answering true for a server of this host's, from a request that sends no token } for a server of your own, and the functions, each answering with done(value) or done(nil, err), now or later. A site is { host, api, secret }: a server you set up has its own secret, 'GITLAB_TOKEN:git.acme.corp', and the plugin is let reach it. Reviews, per site: requested = fn(site, done) with the open pull requests asking you, and those you're part way through; lookup = fn(site, url, done) with one in full; checkout = fn(site, url, done) with { remote, ref }: a substring of the registered repo's remote, and the refspec a review session fetches; submit = fn(site, url, review, done) posts the user's review from a review session's pull request tab, review = { event ('approve', 'changes', 'comment'), body, commit = the head it read, comments = { { path, line, start_line, old = on the removed code, body } } }; react = fn(site, url, emoji, done) reacts to the pull request as you when a review session starts on it, with review.start_reaction ('👀'); unreact = fn(site, url, emoji, done) takes that reaction back once you've sent your review (not having it is no error). Ship, each given repo = { session, project, remote, repo, site }: for_branch = fn(repo, branch, done) with the branch's pull request, open first, or nil; create = fn(repo, { title, body, branch, base, draft }, done); edit = fn(repo, pr, title, body, done); ready = fn(repo, pr, done); request_reviewers = fn(repo, pr, { logins }, done); checks = fn(repo, pr, done) with { { name, state ('ok', 'failed', 'running', 'queued', 'skipped'), url, started, completed, detail = a failing one's log line } }; merge_methods = fn(repo, pr, done) with { allowed = { 'merge', 'squash', 'rebase' }, default }; blockers = fn(repo, pr, done) with { { kind, count, text, hard = the host would refuse, url } }; merge = fn(repo, pr, { method, head, title, body, delete_branch }, done). Review mirroring: threads = fn(repo, pr, done) with { { id ('' or nil for the conversation), path, line, old, outdated, resolved, reviewer, state ('changes', 'approved', 'commented'), url, comments = { { id, author, body, at, member = the author belongs to the repo, so the agent may read it } } } }; reply = fn(repo, pr, thread = { id, path, line, old, url }, body, done) with the new comment's id, posting the draft the user forwards (thread.id empty: the conversation); resolve = fn(repo, pr, thread, resolved, done) resolves a review thread there, or reopens it, when the user does in Oriel. Every answer crosses as JSON: an empty table is an empty list or object. A pull request is { number, id, title, body, url, author, state ('open', 'closed'), draft, merged, branch, base, head = its commit, reviewers }. An err that says HTTP 401 ('GitLab: the token was refused (HTTP 401)') is the host refusing the site's token, which Oriel stops sending. A missing function's part isn't offered. A request is { url, repo, number, title, author, draft, asked (RFC 3339, or seconds since 1970), via (the team asked, '' for you), state ('new', 're-requested', 'changes', 'commented', 'approved'), since (commits since your review), adds, dels, files, ci ('ok', 'failed', 'running'), base, head (its branch), opened, updated (times as asked's), reviewers = { { login ('@org/team' for a team), state ('requested', 'approved', 'changes', 'commented') } } who's asked and who has reviewed, shown when its row is hovered }. A detail is { request, base, head, commit = the head's, state ('open', 'closed', 'merged'), mergeable, labels = { names }, reviewers = { { login, state } }, body, files = { { path, adds, dels } }, checks, clone = the repo's clone URL, for Add repo…, events = { { kind ('push', 'review', 'comment'), who, at (RFC 3339), text, state = a review's ('approved', 'changes', 'commented', 'dismissed'), ref = a push's commit or a line comment's 'path:line', url, reactions } } oldest first, reactions = { { emoji ('👍'), count } } the PR's own; a host without reactions leaves them out }."
 func (r CodeAPI) Host(spec script.Table, where string) error {
 	a := r.a
 	name := str(spec, "name")
@@ -43,7 +43,7 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 	if sites, ok := spec["sites"].([]any); ok {
 		for _, x := range sites {
 			if t, ok := x.(script.Table); ok {
-				h.Sites = append(h.Sites, registry.Site{Host: str(t, "host"), API: str(t, "api"), Secret: str(t, "secret"), Aliases: strs(t["aliases"])})
+				h.Sites = append(h.Sites, registry.Site{Host: str(t, "host"), API: str(t, "api"), Secret: str(t, "secret"), Aliases: plugin.Strings(t["aliases"])})
 			}
 		}
 	}
@@ -57,7 +57,7 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 	}
 	fn := func(k string) *script.Fn { f, _ := spec[k].(*script.Fn); return f }
 	if t, ok := spec["tokens"].(script.Table); ok {
-		h.Tokens = registry.TokenSources{Env: strs(t["env"]), HostedEnv: strs(t["hosted_env"]), Command: strs(t["command"])}
+		h.Tokens = registry.TokenSources{Env: plugin.Strings(t["env"]), HostedEnv: plugin.Strings(t["hosted_env"]), Command: plugin.Strings(t["command"])}
 		h.Tokens.Optional, _ = t["optional"].(bool)
 		// An env var is read under a secret the plugin declares by its name; a command needs its exec grant.
 		for _, e := range append(slices.Clone(h.Tokens.Env), h.Tokens.HostedEnv...) {
@@ -66,9 +66,11 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 			}
 		}
 		if len(h.Tokens.Command) > 0 {
-			if err := a.Plugin.Check(plugin.CapExec, h.Tokens.Command[0]); err != nil {
+			prog, err := a.Plugin.CheckProgram(h.Tokens.Command[0], "")
+			if err != nil {
 				return fmt.Errorf("the code host's token command: %w", err)
 			}
+			h.Tokens.Command[0] = prog
 		}
 	}
 	if t, ok := spec["setup"].(script.Table); ok {
@@ -81,14 +83,14 @@ func (r CodeAPI) Host(spec script.Table, where string) error {
 			}
 		}
 	}
-	if g, ok := a.Plugin.Guard.(*plugin.Grants); ok {
+	if g := a.Plugin.Guard; g != nil {
 		id := a.Plugin.ID
-		h.Allow = func(host, secret string) {
-			gs := []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{host}, Why: "a server of yours you set up as " + h.Label()}}
+		h.Allow = func(host, secret, why string) (undo func()) {
+			gs := []plugin.Grant{{Cap: plugin.CapNet, Scope: []string{host}, Why: why}}
 			if secret != "" {
-				gs = append(gs, plugin.Grant{Cap: plugin.CapSecrets, Scope: []string{secret + "@" + host}})
+				gs = append(gs, plugin.Grant{Cap: plugin.CapSecrets, Scope: []string{secret + "@" + host}, Why: why})
 			}
-			g.Add(id, gs...)
+			return g.Widen(id, why, gs...)
 		}
 	}
 	if f := fn("requested"); f != nil {
@@ -290,7 +292,7 @@ func timeOf(v any) time.Time {
 }
 
 func reviewDetailOf(t script.Table) registry.ReviewDetail {
-	d := registry.ReviewDetail{Base: str(t, "base"), Head: str(t, "head"), Commit: str(t, "commit"), State: str(t, "state"), Mergeable: str(t, "mergeable"), Labels: strs(t["labels"]),
+	d := registry.ReviewDetail{Base: str(t, "base"), Head: str(t, "head"), Commit: str(t, "commit"), State: str(t, "state"), Mergeable: str(t, "mergeable"), Labels: plugin.Strings(t["labels"]),
 		Body: str(t, "body"), Clone: str(t, "clone")}
 	if rq, ok := t["request"].(script.Table); ok {
 		d.Request = reviewRequestOf(rq)

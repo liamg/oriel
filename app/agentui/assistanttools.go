@@ -22,6 +22,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/testrun"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // The assistant's own tools, offered only to it. Reading tools read; the ones that
@@ -306,7 +307,7 @@ type repoLine struct {
 }
 
 func (x *Assistant) repos(context.Context) []repoLine {
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.RepoCalls(x.h)
 	if err != nil {
 		return nil
 	}
@@ -439,7 +440,7 @@ func (x *Assistant) toolStop(ctx registry.Ctx, p map[string]any) (any, error) {
 		return nil, err
 	}
 	return registry.Acted{Result: "stopped", Line: "stopped " + kit.Label(s), Undo: func(ctx registry.Ctx) error {
-		c, err := kit.SessionHost(x.h)
+		c, err := kit.SessionCalls(x.h)
 		if err != nil {
 			return err
 		}
@@ -512,7 +513,7 @@ type jobLine struct {
 }
 
 func (x *Assistant) jobs(context.Context) []jobLine {
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.JobCalls(x.h)
 	if err != nil {
 		return nil
 	}
@@ -570,7 +571,7 @@ func (x *Assistant) confirmRunJob(ctx registry.Ctx, p map[string]any) (registry.
 	title := cmp.Or(j.Title, j.Name)
 	last := "never run"
 	if j.LastRun != "" {
-		last = j.LastRun + ", " + kit.Ago(time.Now(), j.at) + " ago"
+		last = j.LastRun + ", " + widget.AgoLabel(time.Now(), j.at) + " ago"
 	}
 	c := registry.Confirmation{Title: "Run a job", Lead: "The assistant wants to run this saved job now, in a fresh workspace:",
 		Rows: []registry.ConfirmRow{{Key: "job", Value: title}, {Key: "last run", Value: last}},
@@ -589,7 +590,7 @@ func (x *Assistant) toolRunJob(ctx registry.Ctx, p map[string]any) (any, error) 
 	if err != nil {
 		return nil, err
 	}
-	c, err := kit.SessionHost(x.h)
+	c, err := kit.JobCalls(x.h)
 	if err != nil {
 		return nil, err
 	}
@@ -614,11 +615,11 @@ type prLine struct {
 
 func (x *Assistant) toolPRs(query string) func(registry.Ctx, map[string]any) (any, error) {
 	return func(ctx registry.Ctx, _ map[string]any) (any, error) {
-		c, err := kit.SessionHost(x.h)
+		g, err := kit.GitHubOf(x.h)
 		if err != nil {
 			return nil, err
 		}
-		found, err := c.SearchPRs(ctx, host.PRsReq{Query: query})
+		found, err := g.SearchPRs(ctx, query)
 		if err != nil {
 			return nil, err
 		}
@@ -789,7 +790,7 @@ func (x *Assistant) toolChangedFiles(ctx registry.Ctx, p map[string]any) (any, e
 				continue
 			}
 			if fi, err := os.Stat(abs); err == nil {
-				l.modified, l.Ago = fi.ModTime(), kit.Ago(now, fi.ModTime())
+				l.modified, l.Ago = fi.ModTime(), widget.AgoLabel(now, fi.ModTime())
 			}
 			out = append(out, l)
 		}
@@ -805,18 +806,13 @@ func (x *Assistant) toolChangedFiles(ctx registry.Ctx, p map[string]any) (any, e
 
 // bringUp brings a session's project to the front, then runs then there: in place when it's the session in front,
 // else once the window is on it.
-func (x *Assistant) bringUp(ctx registry.Ctx, s core.SessionState, p core.Project, then ...map[string]any) error {
-	calls := append([]map[string]any{{"command": "project.open", "args": map[string]any{"project": p.Name}}}, then...)
+func (x *Assistant) bringUp(ctx registry.Ctx, s core.SessionState, p core.Project, then ...kit.Call) error {
+	calls := append([]kit.Call{{Command: "project.open", Args: registry.Args{"project": p.Name}}}, then...)
 	if s.ID != x.h.State().Focus {
-		list := make([]any, len(calls))
-		for i, c := range calls {
-			list[i] = c
-		}
-		return x.run(ctx, "session.open", registry.Args{"id": string(s.ID), "then": list})
+		return x.run(ctx, "session.open", registry.Args{"id": string(s.ID), "then": kit.Then(calls...)})
 	}
 	for _, c := range calls {
-		args, _ := c["args"].(map[string]any)
-		if err := x.run(ctx, c["command"].(string), registry.Args(args)); err != nil {
+		if err := x.run(ctx, c.Command, c.Args); err != nil {
 			return err
 		}
 	}
@@ -871,7 +867,7 @@ func (x *Assistant) toolFocusFile(ctx registry.Ctx, p map[string]any) (any, erro
 	if line > 0 {
 		open["line"] = line
 	}
-	if err := x.bringUp(ctx, s, pr, map[string]any{"command": "editor.open", "args": open}); err != nil {
+	if err := x.bringUp(ctx, s, pr, kit.Call{Command: "editor.open", Args: open}); err != nil {
 		return nil, err
 	}
 	rel, _ := filepath.Rel(pr.Dir, abs)

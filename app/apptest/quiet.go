@@ -31,6 +31,9 @@ func (s *Scene) Quiet() {
 			continue
 		}
 		calm = 0
+		if !s.Queued() && !s.Poked() && s.stepClock() {
+			continue
+		}
 		if time.Now().After(deadline) {
 			if s.Poked() {
 				busy = append(busy, "a redraw asked for each frame")
@@ -41,7 +44,7 @@ func (s *Scene) Quiet() {
 	}
 }
 
-// Idle is Quiet, and more: no watched source (registry.Watches) reading or due a read, no read a frame asked for
+// Idle is Quiet, and more: no watched source (services.Watches) reading or due a read, no read a frame asked for
 // (kit.Reads) under way and no git tree reading, two frames running, as Window.Idle. It's what a test that counts
 // reads waits for before it counts, since a read's end can start another.
 func (s *Scene) Idle() {

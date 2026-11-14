@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"runtime"
 	"strings"
@@ -367,5 +368,21 @@ func TestInOrderResultsFollowTheirNotifications(t *testing.T) {
 	defer mu.Unlock()
 	if len(seen) != 20 {
 		t.Errorf("the result came after %d of its 20 notifications", len(seen))
+	}
+}
+
+// codedErr is an error of a caller's own that knows its JSON-RPC code.
+type codedErr struct{}
+
+func (codedErr) Error() string { return "the secret X isn't set" }
+func (codedErr) RPCCode() int  { return -32010 }
+
+// A reply's error that says its code (RPCCode) goes with that code and its own message, wrapped or not.
+func TestAnErrorThatKnowsItsCode(t *testing.T) {
+	server := Handlers{Request: func(r *Request) { r.Reply(nil, fmt.Errorf("asking: %w", codedErr{})) }}
+	c, _ := pair(t, Handlers{}, server, Options{})
+	var e *Error
+	if err := c.Call(context.Background(), "x", nil, nil); !errors.As(err, &e) || e.Code != -32010 || e.Message != "asking: the secret X isn't set" {
+		t.Errorf("err = %v", err)
 	}
 }

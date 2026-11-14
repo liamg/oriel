@@ -209,7 +209,7 @@ func TestPromptCardIgnoresKeysAsItAppears(t *testing.T) {
 	if picked != -1 {
 		t.Fatal("a key typed as it appeared answered it")
 	}
-	h.now = h.now.Add(CardKeyGuard)
+	h.clock.Advance(CardKeyGuard)
 	h.frame()
 	h.keys("y")
 	if picked != 0 {

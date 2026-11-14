@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/clock/clocktest"
 )
 
 // fixtureRegistry is a registry's published release: its signed index.
@@ -133,14 +135,15 @@ func TestTrustedHold(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 10, 15, 12, 0, 0, 0, time.UTC)
+	clk := clocktest.New(now)
 	tags := fakeTags{tags: map[string]string{"v0.2.0": commitA, "v0.3.0": commitB, "v0.4.0": commitC},
 		times: map[string]time.Time{commitA: now.Add(-72 * time.Hour), commitB: now.Add(-48 * time.Hour), commitC: now.Add(-time.Hour)}}
-	r := &RegistryResolver{Client: c, GitHub: tags, Hold: 24 * time.Hour, Platform: "linux/amd64", Now: func() time.Time { return now }}
+	r := &RegistryResolver{Client: c, GitHub: tags, Hold: 24 * time.Hour, Platform: "linux/amd64", Clock: clk}
 	res, err := r.Resolve(context.Background(), Entry{ID: "liamg/surround", Range: "*"}, nil)
 	if err != nil || res.Version != "0.2.0" || res.Badge != BadgeTrusted || res.Commit != commitA {
 		t.Errorf("an hour-old tag and a revoked one: resolved %+v, %v; want 0.2.0", res.Locked, err)
 	}
-	r.Now = func() time.Time { return now.Add(24 * time.Hour) }
+	clk.Advance(24 * time.Hour)
 	if res, _ := r.Resolve(context.Background(), Entry{ID: "liamg/surround", Range: "*"}, nil); res.Version != "0.4.0" {
 		t.Errorf("after the hold: %s, want 0.4.0", res.Version)
 	}

@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/script"
 )
@@ -13,7 +13,7 @@ import (
 // Lua evaluates line in the user's Lua (init.lua's VM), oriel as L, and answers what it returns.
 func (s *Scene) Lua(line string) []any {
 	s.T.Helper()
-	out, err := PluginOf[*settings.Lua](s, "lua").VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; return " + line)})
+	out, err := PluginOf[*luaconfig.Lua](s, "lua").VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; return " + line)})
 	if err != nil {
 		s.T.Fatalf("%s: %v", line, err)
 	}
@@ -23,7 +23,7 @@ func (s *Scene) Lua(line string) []any {
 // LuaErr is the error line raises in the user's Lua; the test fails if it raises none.
 func (s *Scene) LuaErr(line string) string {
 	s.T.Helper()
-	_, err := PluginOf[*settings.Lua](s, "lua").VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; " + line)})
+	_, err := PluginOf[*luaconfig.Lua](s, "lua").VM().Eval(script.Chunk{Name: "test", Source: []byte("local L = oriel; " + line)})
 	if err == nil {
 		s.T.Fatalf("%s: no error", line)
 	}
@@ -37,9 +37,9 @@ func LuaScene(t *testing.T, initLua string) *Scene {
 	if err := os.WriteFile(filepath.Join(s.ConfigDir, "init.lua"), []byte(initLua), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	PluginOf[*settings.Lua](s, "lua").Reload(false)
+	PluginOf[*luaconfig.Lua](s, "lua").Reload(false)
 	return s
 }
 
 // ReloadLua loads init.lua again, quietly, as a change to it would.
-func (s *Scene) ReloadLua() { PluginOf[*settings.Lua](s, "lua").Reload(false) }
+func (s *Scene) ReloadLua() { PluginOf[*luaconfig.Lua](s, "lua").Reload(false) }

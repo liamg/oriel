@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/registry/services"
+
 	"github.com/liamg/oriel/agent/hostexec"
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/app/apptest/rig"
@@ -16,7 +18,6 @@ import (
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/integ/acp"
 	"github.com/liamg/oriel/plugin"
-	"github.com/liamg/oriel/registry"
 )
 
 // A Lua plugin brings an agent served by its own process: the launcher offers it with what its process detects,
@@ -44,7 +45,7 @@ func TestPluginAgentProvider(t *testing.T) {
 	if s, _ := find("scripted"); len(s.Models) != 1 || s.Models[0].ID != "s1" {
 		t.Errorf("scripted = %+v", s)
 	}
-	if got := registry.ProviderTitle(a.Registry(), "claude"); got != "Not Claude" {
+	if got := services.ProviderTitle(a.Registry(), "claude"); got != "Not Claude" {
 		t.Errorf("claude is called %q", got)
 	}
 
@@ -127,8 +128,8 @@ func TestACPExample(t *testing.T) {
 	if p.ID != "example/gemini" {
 		t.Errorf("loaded %q", p.ID)
 	}
-	ps := registry.AgentProviders(a.Registry())
-	i := slices.IndexFunc(ps, func(p registry.AgentProvider) bool { return p.Name == "gemini" })
+	ps := services.AgentProviders(a.Registry())
+	i := slices.IndexFunc(ps, func(p services.AgentProvider) bool { return p.Name == "gemini" })
 	if i < 0 || ps[i].Title != "Gemini" || ps[i].Mark != "G" {
 		t.Fatalf("providers = %+v", ps)
 	}

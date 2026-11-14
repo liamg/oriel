@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -203,7 +202,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 		return
 	}
 	if err := x.end(ctx, host.EndReq{Session: id}); err != nil {
-		x.h.Notify(core.Notice{ID: "session.end." + string(id), Severity: core.SevError, Session: id, Text: err.Error(), Time: time.Now()})
+		x.h.Notify(core.Notice{ID: "session.end." + string(id), Severity: core.SevError, Session: id, Text: err.Error()})
 	}
 }
 
@@ -247,7 +246,7 @@ func (x *End) confirm(ctx registry.Ctx) error {
 
 // end closes the session's tab, then ends it off the loop; an archive offers Undo while its branches stay.
 func (x *End) end(ctx registry.Ctx, r host.EndReq) error {
-	w, _ := kit.SessionHost(x.h)
+	w, _ := kit.SessionCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
 	}
@@ -267,7 +266,7 @@ func (x *End) end(ctx registry.Ctx, r host.EndReq) error {
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "session.end." + string(r.Session), Doing: doing},
 		func(ctx context.Context) (struct{}, error) { return struct{}{}, w.End(ctx, r) },
 		func(registry.Ctx, struct{}) error {
-			n := core.Notice{ID: "session.ended." + string(r.Session), Severity: core.SevInfo, Time: time.Now(), Text: "Deleted " + name + "."}
+			n := core.Notice{ID: "session.ended." + string(r.Session), Severity: core.SevInfo, Text: "Deleted " + name + "."}
 			if !r.Delete {
 				n.Session, n.Text = r.Session, "Archived "+name+"."
 				if !r.DeleteBranch {
@@ -296,7 +295,7 @@ func (x *End) view(c *ui.Ctx) {
 		x.ask = nil
 		x.h.Do(func() {
 			if err := x.end(context.Background(), host.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
-				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, Session: a.id, Text: err.Error(), Time: time.Now()})
+				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, Session: a.id, Text: err.Error()})
 			}
 		})
 		return
@@ -349,9 +348,7 @@ func (x *End) view(c *ui.Ctx) {
 }
 
 func (x *End) run(id string) {
-	if err := x.h.Run(context.Background(), id, nil); err != nil {
-		x.h.Notify(core.Notice{ID: id, Severity: core.SevError, Source: "sessionend", Key: true, Text: err.Error(), Time: time.Now()})
-	}
+	kit.RunOrNotify(x.h, "sessionend", id, nil)
 }
 
 // body is the choice, what it does, and what would be lost, project by project.

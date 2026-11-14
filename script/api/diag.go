@@ -28,10 +28,10 @@ func (d Diagnostics) Set(owner, file string, list any) error {
 		col, _ := t["col"].(float64)
 		end, _ := t["end_col"].(float64)
 		ds = append(ds, registry.Diagnostic{Line: int(line) - 1, From: max(0, int(col)-1), To: max(0, int(end)-1),
-			Severity: cmpOr(str(t, "severity"), registry.SevError), Message: str(t, "message")})
+			Severity: cmp.Or(str(t, "severity"), registry.SevError), Message: str(t, "message")})
 	}
 	d.a.Host.SetDiagnostics(owner, file, ds)
-	d.a.own(disposeFunc(func() { d.a.Host.SetDiagnostics(owner, file, nil) }))
+	d.a.own(registry.DisposeFunc(func() { d.a.Host.SetDiagnostics(owner, file, nil) }))
 	return nil
 }
 
@@ -46,12 +46,7 @@ func (d Diagnostics) List() []any {
 	return out
 }
 
-type disposeFunc func()
-
-func (f disposeFunc) Dispose() { f() }
-
 // cmpOr is the first of ss that isn't empty.
-func cmpOr(ss ...string) string { return cmp.Or(ss...) }
 
 //oriel:api name=coverage cap=ui
 type Coverage struct{ a *APIs }
@@ -78,7 +73,7 @@ func (c Coverage) Set(owner, file string, hits any) error {
 		m[line-1] = int(n)
 	}
 	c.a.Host.SetCoverage(owner, file, m)
-	c.a.own(disposeFunc(func() { c.a.Host.SetCoverage(owner, file, nil) }))
+	c.a.own(registry.DisposeFunc(func() { c.a.Host.SetCoverage(owner, file, nil) }))
 	return nil
 }
 

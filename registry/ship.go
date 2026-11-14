@@ -58,8 +58,7 @@ func ShipGates(r Contributions, session, kind string) []ShipGateState {
 		Call(func() error { only = k.Gates(); return nil })
 	}
 	var gs []ShipGate
-	for _, c := range r.Contributions("ship.gate") {
-		g := c.(ShipGate)
+	for _, g := range ContributionsOf[ShipGate](r) {
 		if g.Check != nil && (only == nil || slices.Contains(only, g.Name)) {
 			gs = append(gs, g)
 		}
@@ -130,8 +129,8 @@ func (a PRActionState) RunArgs() Args {
 // PRActions are the actions for pr, by Order; one that panics or gives no label is left out.
 func PRActions(r Contributions, pr PullRequest) []PRActionState {
 	var as []PRAction
-	for _, c := range r.Contributions("ship.pr.action") {
-		if a := c.(PRAction); a.Label != nil {
+	for _, a := range ContributionsOf[PRAction](r) {
+		if a.Label != nil {
 			as = append(as, a)
 		}
 	}

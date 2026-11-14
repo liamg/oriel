@@ -11,6 +11,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -45,7 +47,7 @@ type Voice struct {
 	h      plugin.Host
 
 	whisper  *voice.Whisper
-	work     kit.Work            // a download's watch
+	work     work.Work           // a download's watch
 	provided registry.Disposable // the Dictator, while voice.dictation is on
 
 	// On the loop.
@@ -69,13 +71,15 @@ func (x *Voice) Manifest() plugin.Manifest {
 	return plugin.Manifest{ID: "voice", Lazy: kit.LazyOn(x.commands(), nil)}
 }
 
-func (x *Voice) opt(name string) any {
-	v, _, _ := x.h.Options().Get(name, registry.At{})
-	return v
+func (x *Voice) str(name string) string {
+	s, _ := registry.Option[string](x.h.Options(), name, registry.At{})
+	return s
 }
 
-func (x *Voice) str(name string) string { s, _ := x.opt(name).(string); return s }
-func (x *Voice) on(name string) bool    { b, _ := x.opt(name).(bool); return b }
+func (x *Voice) on(name string) bool {
+	b, _ := registry.Option[bool](x.h.Options(), name, registry.At{})
+	return b
+}
 
 func (x *Voice) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
@@ -89,16 +93,16 @@ func (x *Voice) Activate(_ context.Context, h plugin.Host) error {
 	if x.whisper.Settings == nil {
 		x.whisper.Settings = func() voice.Settings { return voice.Settings{Model: x.str("voice.model"), URL: x.str("voice.url")} }
 	}
-	x.Add(kit.OnDispose(x.whisper.Close))
+	x.Add(registry.DisposeFunc(x.whisper.Close))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
-	x.Add(kit.OnDispose(x.whisper.OnChange(func() { h.Do(x.refresh) })))
+	x.Add(registry.DisposeFunc(x.whisper.OnChange(func() { h.Do(x.refresh) })))
 	for _, name := range []string{"voice.dictation", "voice.model", "voice.url"} {
-		x.Add(kit.OnDispose(h.Options().Watch(name, func() { h.Do(x.settle) })))
+		x.Add(h.Options().Watch(name, func() { h.Do(x.settle) }))
 	}
 	x.settle()
-	x.Add(kit.OnDispose(func() {
+	x.Add(registry.DisposeFunc(func() {
 		x.Stop()
 		if x.provided != nil {
 			x.provided.Dispose()

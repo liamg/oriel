@@ -51,7 +51,7 @@ func TestLauncherClosesWhileTheAgentStarts(t *testing.T) {
 	if _, err := lw.W.AddRepoPath(context.Background(), lw.Repo); err != nil {
 		t.Fatal(err)
 	}
-	r := apptest.NewWindow(t, apptest.WindowOptions{State: t.TempDir(), Config: apptest.Connect(lw.W)})
+	r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W)})
 	defer func() {
 		select {
 		case <-hold:

@@ -10,9 +10,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/app/kit/work"
+
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -37,7 +38,7 @@ type Prompts struct {
 	ConfigDir string
 	h         plugin.Host
 	sending   sync.Mutex // one send to the session host at a time, each of the prompts as they are then
-	busy      kit.Busy   // the sends
+	busy      work.Busy  // the sends
 
 	open   bool
 	sel    string
@@ -63,12 +64,12 @@ func (x *Prompts) Activate(_ context.Context, h plugin.Host) error {
 	for _, k := range x.keymaps() {
 		x.Add(h.Keymap(k))
 	}
-	x.Add(h.Hook(registry.Hook{Event: "BufWritePost", Label: "send the prompts to the session host", Fn: func(_ registry.Ctx, ev any) (registry.Verdict, error) {
-		if w, ok := ev.(*kit.BufWritePost); ok && x.isPromptFile(w.File) {
+	x.Add(registry.On(h, registry.Hook{Label: "send the prompts to the session host"}, func(_ registry.Ctx, w *kit.BufWritePost) (registry.Verdict, error) {
+		if x.isPromptFile(w.File) {
 			x.changed()
 		}
 		return registry.Verdict{}, nil
-	}}))
+	}))
 	x.Add(h.Contribute(kit.PagePlace("prompts", "Prompts", "prompts.open", &x.open)))
 	x.Add(h.Contribute(uireg.SettingsSection{Name: "prompts", Build: x.section, Source: "builtin:prompts"}))
 	x.Add(h.View(kit.OverlayPrefix+"prompts", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "prompts", Fn: x.page} })))
@@ -175,7 +176,7 @@ func (x *Prompts) set(id, text string) error {
 // changed reads the prompts again and sends them to the session host.
 func (x *Prompts) changed() {
 	x.o = x.store().Load()
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.SessionCalls(x.h)
 	if err != nil {
 		return
 	}
@@ -383,8 +384,7 @@ func (x *Prompts) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 
 func (x *Prompts) run(id string, a registry.Args) {
 	x.err = ""
-	if err := x.h.Run(context.Background(), id, a); err != nil {
+	if err := kit.RunOrNotify(x.h, "prompts", id, a); err != nil {
 		x.err = err.Error()
-		x.h.Notify(core.Notice{ID: "prompts", Severity: core.SevError, Text: err.Error()})
 	}
 }

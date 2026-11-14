@@ -3,13 +3,9 @@ package shell
 import (
 	"io"
 	"log/slog"
-	"testing"
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/internal/testhook"
-	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -52,18 +48,11 @@ func SourceLoading(s uireg.PickerSource) bool { return sourceLoading(s) }
 
 func (o *omnibox) Results(moving bool) []group { g, _ := o.results(moving); return g }
 func (o *omnibox) Open() bool                  { return o.open }
-func (o *omnibox) Close()                      { o.open = false }
 
-func (p *picker) Open() bool                                        { return p.open }
-func (p *picker) Close()                                            { p.open = false }
-func (p *picker) Reopen()                                           { p.open = true }
-func (p *picker) Source() string                                    { return p.source }
-func (p *picker) Query() string                                     { return p.query }
-func (p *picker) Selected() int                                     { return p.sel }
-func (p *picker) Select(i int)                                      { p.sel = i }
-func (p *picker) Pick(id string)                                    { p.picked[id] = true }
-func (p *picker) Actions(s uireg.PickerSource) []uireg.PickerAction { return p.actions(s) }
-func (p *picker) Act(a uireg.PickerAction, g group)                 { p.act(a, g) }
+func (p *picker) Open() bool     { return p.open }
+func (p *picker) Source() string { return p.source }
+func (p *picker) Query() string  { return p.query }
+func (p *picker) Selected() int  { return p.sel }
 
 // SetKeys has the window's keys go through r, as its loop's do.
 func SetKeys(h *Headless, r *registry.Resolver) { h.sh.keys = r }
@@ -77,33 +66,10 @@ type Help = helpView
 
 func (v *helpView) Open() bool   { return v.open }
 func (v *helpView) Page() string { return v.cur }
-func (v *helpView) Close()       { v.open = false }
-func (v *helpView) EndHelpMode() { v.mode = false }
 
 // LastMove is the last of a run of pointer moves waiting from ev, and the event read after the run.
 func LastMove(ev render.Event, events <-chan render.Event) (render.Event, render.Event) {
 	return lastMove(ev, events)
-}
-
-type Overview = overview
-
-const PanelBudget = panelBudget
-
-func (o *overview) SetClock(now func() time.Time) { o.now = now }
-
-// Done says every card's header and panels have been computed.
-func (o *overview) Done() bool {
-	for _, cd := range o.cards {
-		if cd.git && cd.header == nil {
-			return false
-		}
-		for _, p := range cd.panels {
-			if !p.done {
-				return false
-			}
-		}
-	}
-	return len(o.cards) > 0
 }
 
 // TabNameOn is the token the session in front's tab name is drawn in.
@@ -153,25 +119,11 @@ func logPanelOf(h *Headless) *logPanel {
 	return p.(*notices).panel
 }
 
-// SetLogScope shows the log panel's records of scope.
-func SetLogScope(h *Headless, scope int) { logPanelOf(h).scope = scope }
-
 // LogOpenRow is the log panel's expanded row's key; "" with none.
 func LogOpenRow(h *Headless) string { return logPanelOf(h).open }
 
-// FoldLogRow folds the log panel's expanded row.
-func FoldLogRow(h *Headless) { logPanelOf(h).open = "" }
-
 // ToastTTL is how long a notification's toast stays; 0 until it's answered.
 func ToastTTL(n core.Notification) time.Duration { return toastTTL(n) }
-
-// Draining has the window show a quit waiting until deadline on busy, mid-turn, and the scheduled jobs.
-func Draining(h *Headless, deadline time.Time, busy []core.SessionState, jobs []host.Job) {
-	h.sh.draining.Store(&quitDrain{deadline: deadline, focus: true, polled: true, busy: busy, jobs: jobs})
-}
-
-// KeepRecents keeps the window's recent directories in path, as Run does in its state directory.
-func KeepRecents(h *Headless, path string) { h.sh.recents = &recents{path: path} }
 
 // AddRecent adds dir to the recent directories, opened at at.
 func AddRecent(h *Headless, dir string, at time.Time) error { return h.sh.recents.add(dir, at) }
@@ -196,13 +148,5 @@ func PaneLead(h *Headless, v layout.ViewRef) (render.Color, bool) { return h.sh.
 // PaneTip is a tab's tooltip.
 func PaneTip(h *Headless, v layout.ViewRef) string { return h.sh.layout.panes.Tip(v) }
 
-// RailEntryActive says e's panel is showing for project, as its rail entry is lit.
-func RailEntryActive(h plugin.Host, e uireg.RailEntry, project string) bool {
-	return active(h, e, project)
-}
-
 // Selected is the omnibox's selected row.
 func (o *omnibox) Selected() int { return o.sel }
-
-// SetNow has the window's notices read the time from fn until the test ends.
-func SetNow(t *testing.T, fn func() time.Time) { testhook.Set(t, &now, fn) }

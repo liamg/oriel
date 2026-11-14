@@ -28,7 +28,7 @@ import (
 // shows while the window is about to open again on another directory or session.
 const (
 	StartView          = "app.start"
-	OverviewView       = "app.overview"
+	OverviewView       = kit.OverviewView
 	OpeningView        = "app.opening"
 	OverviewPanelsView = kit.OverviewPanelsView
 )
@@ -114,7 +114,7 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 	}
 	s.Add(h.Command(registry.Command{ID: "directory.open", Title: "Open a directory as it is, with no worktree or branch: {path}, or pick one",
 		Run: func(ctx registry.Ctx, a registry.Args) error {
-			p, _ := a["path"].(string)
+			p := a.String("path")
 			if p == "" {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "directories"})
 			}

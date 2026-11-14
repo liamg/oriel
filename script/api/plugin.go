@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
-	"sort"
+	"os/exec"
+	"slices"
 	"sync"
 	"time"
 
@@ -121,8 +123,8 @@ func decode(raw json.RawMessage) any {
 //oriel:api name=process cap=target
 type Process struct{ a *APIs }
 
-//oriel:api doc="Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop()." optional=opts returns=table
-func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
+//oriel:api doc="Start a process plugin that speaks JSON-RPC 2.0 over stdio, a message a line: path is the plugin's own binary (relative to its directory: no grant needed) or a program its exec grant names. A plugin's process runs in an OS sandbox (Landlock, sandbox-exec) holding only what its grants allow; its stderr goes to the log. opts: args, cwd, env = { NAME = value }, on = { method = fn(params) returning the result } answering its requests and notifications (others go to the host: log, notify, fs.read, fs.write), on_exit = fn(err). Returns a process: proc:request(method, params, fn(result, err)), proc:notify(method, params), proc:on(method, fn), proc:pid(), proc:running(), proc:stop(); or nil and why, when the program isn't there." optional=opts returns="table?,string?"
+func (p Process) Spawn(path string, opts script.Table) ([]any, error) {
 	a := p.a
 	h := newHandlers(tableOf(opts["on"]))
 	handle := func(method string, params json.RawMessage) (any, bool, error) {
@@ -137,8 +139,8 @@ func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
 	for k, v := range tableOf(opts["env"]) {
 		env = append(env, k+"="+fmt.Sprint(v))
 	}
-	sort.Strings(env)
-	o := plugin.SpawnOpts{Args: strs(opts["args"]), Dir: expand(str(opts, "cwd")), Env: env, Request: handle, Notify: handle}
+	slices.Sort(env)
+	o := plugin.SpawnOpts{Args: plugin.Strings(opts["args"]), Dir: expand(str(opts, "cwd")), Env: env, Request: handle, Notify: handle}
 	if f, ok := opts["on_exit"].(*script.Fn); ok {
 		o.Exit = func(err error) {
 			var msg any
@@ -149,10 +151,13 @@ func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
 		}
 	}
 	proc, err := a.processes().Spawn(a.Plugin, path, o)
+	if missing(err) {
+		return []any{nil, err.Error()}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	return script.Table{
+	return []any{script.Table{
 		"request": script.GoFunc(script.Method(func(c *script.Args) ([]any, error) {
 			method, params, fn := c.String(0), c.Any(1), c.Fn(2)
 			if fn == nil {
@@ -192,14 +197,14 @@ func (p Process) Spawn(path string, opts script.Table) (script.Table, error) {
 			go proc.Stop()
 			return nil, nil
 		})),
-	}, nil
+	}}, nil
 }
 
 //oriel:api name=wasm cap=target
 type WASM struct{ a *APIs }
 
-//oriel:api doc="Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:request(fn, value) with JSON, mod:exports(), mod:close()." optional=opts returns=table
-func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
+//oriel:api doc="Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:call_json(fn, value) with JSON (both answer at once; a process's proc:request answers in a callback), mod:exports(), mod:close(); or nil and why, when the file isn't there." optional=opts returns="table?,string?"
+func (w WASM) Load(path string, opts script.Table) ([]any, error) {
 	a := w.a
 	h := newHandlers(tableOf(opts["on"]))
 	ctx, cancel := watchdog(script.LoadBudget)
@@ -213,10 +218,13 @@ func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 			v, err := a.call(f, params)
 			return v, true, err
 		}})
+	if missing(err) {
+		return []any{nil, err.Error()}, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	return script.Table{
+	return []any{script.Table{
 		"call": script.GoFunc(script.Method(func(c *script.Args) ([]any, error) {
 			var args []float64
 			for i := 1; i < c.Len(); i++ {
@@ -234,7 +242,7 @@ func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 			}
 			return res, nil
 		})),
-		"request": script.GoFunc(script.Method(func(c *script.Args) ([]any, error) {
+		"call_json": script.GoFunc(script.Method(func(c *script.Args) ([]any, error) {
 			ctx, cancel := watchdog(script.InterruptAfter)
 			defer cancel()
 			raw, err := mod.Request(ctx, c.String(0), c.Any(1))
@@ -245,13 +253,13 @@ func (w WASM) Load(path string, opts script.Table) (script.Table, error) {
 		})),
 		"exports": script.GoFunc(script.Method(func(*script.Args) ([]any, error) {
 			ex := mod.Exports()
-			sort.Strings(ex)
+			slices.Sort(ex)
 			return []any{ex}, nil
 		})),
 		"close": script.GoFunc(script.Method(func(*script.Args) ([]any, error) {
 			return nil, mod.Close(context.Background())
 		})),
-	}, nil
+	}}, nil
 }
 
 // watchdog is a module call's context, stopped past budget as Lua is: InterruptAfter for a call, LoadBudget
@@ -263,4 +271,10 @@ func watchdog(budget time.Duration) (context.Context, context.CancelFunc) {
 func tableOf(v any) script.Table {
 	t, _ := v.(script.Table)
 	return t
+}
+
+// missing is a file or program that isn't there: a failure the caller may expect, returned as nil and why.
+func missing(err error) bool {
+	var nf *notFound
+	return err != nil && (errors.Is(err, fs.ErrNotExist) || errors.Is(err, exec.ErrNotFound) || errors.As(err, &nf))
 }

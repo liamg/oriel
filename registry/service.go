@@ -7,9 +7,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/syntax"
-	"github.com/liamg/oriel/text"
 )
 
 // Service is an object a plugin provides for other plugins to call, by name: the editors,
@@ -25,8 +22,8 @@ func (s Service) ContributionName() string { return s.Name }
 
 // ServiceOf is the service registered as name, if there is one and it's a T.
 func ServiceOf[T any](r Contributions, name string) (T, bool) {
-	for _, c := range r.Contributions("service") {
-		if s := c.(Service); s.Name == name {
+	for _, s := range ContributionsOf[Service](r) {
+		if s.Name == name {
 			t, ok := s.Impl.(T)
 			return t, ok
 		}
@@ -37,16 +34,31 @@ func ServiceOf[T any](r Contributions, name string) (T, bool) {
 
 // The built-in services' names.
 const (
-	EditorsService   = "editors"
-	GitTreesService  = "git.trees"
 	CodeSitesService = "code.sites"
 	ShipsService     = "ships"
 	SessionsService  = "sessions"
-	HostService      = "host" // the session host's calls (host.Access)
+
+	// The session host's parts' calls, each its own service (host.SessionCalls, host.SandboxCalls…).
+	HostSessionsService  = "host.sessions"
+	HostSandboxesService = "host.sandboxes"
+	HostShipsService     = "host.ships"
+	HostCodeHostsService = "host.codehosts"
+	HostReposService     = "host.repos"
+	HostJobsService      = "host.jobs"
+	HostStatsService     = "host.stats"
 )
 
-func EditorsOf(r Contributions) (Editors, bool)     { return ServiceOf[Editors](r, EditorsService) }
-func GitTreesOf(r Contributions) (GitTrees, bool)   { return ServiceOf[GitTrees](r, GitTreesService) }
+// CodeSecretUnset is the JSON-RPC error a host request (http.request) answers when a secret it names isn't set:
+// a plugin's process tests the code, not the message.
+const CodeSecretUnset = -32010
+
+// SecretUnset says err is a host request's answer that a secret it named isn't set: an error that knows its JSON-RPC
+// code (jsonrpc.Coded) and says CodeSecretUnset.
+func SecretUnset(err error) bool {
+	var c interface{ RPCCode() int }
+	return errors.As(err, &c) && c.RPCCode() == CodeSecretUnset
+}
+
 func CodeSitesOf(r Contributions) (CodeSites, bool) { return ServiceOf[CodeSites](r, CodeSitesService) }
 func ShipsOf(r Contributions) (Ships, bool)         { return ServiceOf[Ships](r, ShipsService) }
 func SessionsOf(r Contributions) (Sessions, bool)   { return ServiceOf[Sessions](r, SessionsService) }
@@ -75,107 +87,6 @@ func SessionFromArgs(a Args, front core.SessionID, get func(core.SessionID) (cor
 		return core.SessionState{}, fmt.Errorf("no session %q", id)
 	}
 	return se, nil
-}
-
-// Editors is the text editor as other plugins use it: its buffers, the one in front, and its own pending keys.
-type Editors interface {
-	Dir() string // the directory relative file names are under
-	// Focused is the current window's buffer while an editor window has the focus.
-	Focused() (EditorBuffer, bool)
-	// Current is the current window's buffer, focused or not; false before there's one.
-	Current() (EditorBuffer, bool)
-	// Buffer is the listed buffer holding the file at path, if one does.
-	Buffer(path string) (EditorBuffer, bool)
-	// Window is the editor window id, or the current one for "".
-	Window(id string) (EditorWindow, bool)
-	Buffers() []EditorBuffer // the listed buffers that hold files
-	Mode() string            // the current window's mode: "normal", "insert", "visual"…
-	// Recording is the register vim's q is recording into, as typed ('A' appends to a).
-	Recording() (rune, bool)
-	// At is at with the current buffer and window, and the cursor's file and line, for reading options.
-	At(at At) At
-	// Pending is the focused editor's engine waiting for more keys: vim's g, z or a count, emacs's C-x.
-	Pending() Pending
-	// Hints are the focused editor engine's own commands after keys a mapping is waiting on.
-	Hints(keys []string) []Hint
-	Shown() bool // an editor window is in the layout
-	// Syntax is buf's parse, once the editor has made it.
-	Syntax(buf *text.Buffer) (*syntax.Document, bool)
-	SetCursor(pos text.Pos) // in the current window
-	// JumpTo goes to pos in the file at path as a vim jump in the current window, so ⌃O comes back.
-	JumpTo(path string, pos text.Pos) error
-	// Edit makes rs in the current window's buffer as the user's edit: one undoable step.
-	Edit(rs []text.Replace) error
-	Cmdline() (string, bool) // the command line's text, while it's open
-	// Selection is the current window's Visual selection, as a range of its text.
-	Selection() (text.Range, bool)
-	// Quickfix is the quickfix list (quickfix.set makes one): its title and its places.
-	Quickfix() (title string, items []QuickfixItem)
-}
-
-// QuickfixItem is a place in the quickfix list.
-type QuickfixItem struct {
-	Path      string // as the list names it
-	Line, Col int    // 1-based; Col 0 when there's none
-	Text      string
-}
-
-// EditorBuffer is an editor buffer.
-type EditorBuffer struct {
-	Path     string // absolute; "" for one with no file
-	Text     *text.Buffer
-	Cursor   text.Pos // the current window's, for the current buffer
-	Modified bool
-	Bytes    func() []byte       // its text as writing it would put it on disk
-	Encode   func([]byte) []byte // text as writing the buffer would put it on disk, in its file's format
-}
-
-// Pending is a key sequence waiting for more: a mapping's (looked up in Modes), or the focused editor engine's
-// own, with the keys that engine has next.
-type Pending struct {
-	Keys  []string // vim notation
-	Modes []string
-	Since time.Time
-	Hints []Hint
-	Runs  string // what ⏎ runs now, when the keys are a mapping of their own as well as the start of longer ones
-}
-
-// Hint is a key that can come next, and what it does.
-type Hint struct {
-	Keys, Desc string
-}
-
-// GitTrees are the git status of the work trees the window shows, each read in the background and watched.
-type GitTrees interface {
-	// Tree is dir's work tree: the window's when dir is "" or in it, else one read from the first ask.
-	Tree(dir string) GitTree
-	// Holding is the work tree already read whose root holds path, else the window's.
-	Holding(path string) GitTree
-	// Do runs fn off the loop, then reads the window's tree again; an error is a notice.
-	Do(fn func(ctx context.Context) error)
-	Reload()    // reads every tree again
-	Busy() bool // git work, or a tree's read, is running off the loop
-	// WatchWindow calls fn with the window's work tree's root and the paths its status saw change, for whichever
-	// directory the window is on: it carries on as the window moves, calling fn once with no paths when it's on
-	// another tree (root "" outside a repo). fn is called off the loop, one call at a time, in order. Cancel stops it.
-	WatchWindow(fn func(root string, paths []string)) (cancel func())
-	// Scope is what the window's git views show: the Explorer's scope, Changed (the branch against its base),
-	// Uncommitted (what isn't committed) or All. What marks changes elsewhere (the editor's gutter) follows it.
-	Scope() gitx.Scope
-}
-
-// GitTree is one work tree's git status.
-type GitTree interface {
-	Root() string       // the repo's root; "" outside a repo, or until it's found
-	State() *gitx.State // the last status read; nil outside a repo, or before the first
-	// Counted is State with each file's line counts, read only while something keeps asking for them, frame to
-	// frame; State until they're first read.
-	Counted() *gitx.State
-	Remote() string // origin's URL
-	// Status is the repo's status as it's read and watched: its Repo for git's other calls; nil outside a repo.
-	Status() *gitx.Status
-	Rel(path string) string // a path relative to the repo's root, as git names it
-	Load() Load             // how far its first read is
 }
 
 // Load is how far reading something is: Done once it's read (or there's nothing to read), Err while the read fails,

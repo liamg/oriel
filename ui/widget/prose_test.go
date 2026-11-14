@@ -110,15 +110,15 @@ func TestProseMicHidesWhileTyping(t *testing.T) {
 		t.Fatal("the mic shows while typing")
 	}
 	s.h.frame()
-	if next := s.h.u.NextFrame(); !next.Equal(s.h.now.Add(micReturn)) {
-		t.Errorf("next frame at %v; want 1.5s after the last key, %v", next, s.h.now.Add(micReturn))
+	if next := s.h.u.NextFrame(); !next.Equal(s.h.clock.Now().Add(micReturn)) {
+		t.Errorf("next frame at %v; want 1.5s after the last key, %v", next, s.h.clock.Now().Add(micReturn))
 	}
-	s.h.now = s.h.now.Add(micReturn - time.Millisecond)
+	s.h.clock.Advance(micReturn - time.Millisecond)
 	s.h.frame()
 	if s.micShown(0) {
 		t.Error("the mic is back before 1.5s")
 	}
-	s.h.now = s.h.now.Add(time.Millisecond)
+	s.h.clock.Advance(time.Millisecond)
 	s.h.frame()
 	if !s.micShown(0) {
 		t.Error("the mic isn't back 1.5s after the last key")
@@ -131,7 +131,7 @@ func TestProseMicHidesWhileTyping(t *testing.T) {
 // With no voice provider registered (voice off, or a plugin replaced it), no mic is drawn.
 func TestProseNoMicWithoutDictator(t *testing.T) {
 	s := newProse(t, 1, nil)
-	s.h.now = s.h.now.Add(time.Minute)
+	s.h.clock.Advance(time.Minute)
 	s.h.frame()
 	if s.micShown(0) {
 		t.Fatal("a mic shows with no Dictator")
@@ -262,7 +262,7 @@ func TestProseOneDictationAtATime(t *testing.T) {
 	s.clickMic(0)
 	s.d.hear("first", 0)
 	s.h.frame()
-	s.h.now = s.h.now.Add(time.Second)
+	s.h.clock.Advance(time.Second)
 	s.clickMic(1)
 	if s.d.target != s.ids[1] || !s.d.listening {
 		t.Fatal("the second field isn't dictated into")

@@ -19,7 +19,7 @@ func (x *PRReview) fetch(ctx registry.Ctx, a registry.Args) error {
 	if err != nil {
 		return err
 	}
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.ShipCalls(x.h)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 	}
 	x.fetching[id] = true
 	x.mu.Unlock()
-	w, err := kit.SessionHost(x.h)
+	w, err := kit.ShipCalls(x.h)
 	if err != nil {
 		return
 	}
