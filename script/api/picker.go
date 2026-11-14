@@ -19,13 +19,13 @@ import (
 //oriel:api name=picker cap=ui
 type Picker struct{ a *APIs }
 
-//oriel:api doc="A source of results for the omnibox and the pickers: { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, desc (matched, but left out of the row for the preview to show), note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label, detail and desc, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes."
+//oriel:api doc="A source of results for the omnibox and the pickers: { name, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, desc (matched, but left out of the row for the preview to show), note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label, detail and desc, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes."
 func (p Picker) Source(spec script.Table, where string) error {
 	a := p.a
-	id := str(spec, "id")
+	id := str(spec, "name")
 	items, _ := spec["items"].(*script.Fn)
 	if id == "" || items == nil {
-		return errors.New("a picker source needs an id and items")
+		return errors.New("a picker source needs a name and items")
 	}
 	s := uireg.PickerSource{ID: id, Title: cmp.Or(str(spec, "title"), id), Prefix: str(spec, "prefix"), Order: 50, Source: where}
 	if o, ok := spec["order"].(float64); ok {

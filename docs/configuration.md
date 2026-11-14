@@ -81,8 +81,8 @@ L.agent.tool{
 L.agent.explainer{ name = "local", order = 5, label = "a local model",   -- answers every "explain this" first
   byline = "written by a local model",                                  -- under a long answer: a walkthrough
   run = function(req) return my_model(req.subject .. "\n" .. req.context, req.depth, req.format) end }
-L.agent.pack("hotfix", { prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } })
-L.session.kind("hotfix", { pack = "hotfix", gates = { "tests", "threads" }, can = { "ships", "owns-changes", "owns-branch" } })
+L.agent.pack{ name = "hotfix", prompt = L.read("~/.config/oriel/agents/hotfix.md"), tools = { "staging_logs" } }
+L.session.kind{ name = "hotfix", pack = "hotfix", gates = { "tests", "threads" }, can = { "ships", "owns-changes", "owns-branch" } }
 
 -- views: statusline, HUD indicators, panels, all replaceable
 L.statusline(function(w)

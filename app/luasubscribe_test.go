@@ -16,7 +16,7 @@ import (
 func TestLuaSourceAndSubscribe(t *testing.T) {
 	s := apptest.LuaScene(t, `
 reads, seen = 0, nil
-oriel.source("demo.count", { poll = 0.05, read = function(args) reads = reads + 1; return { n = reads, who = args.who } end })
+oriel.source{ name = "demo.count", poll = 0.05, read = function(args) reads = reads + 1; return { n = reads, who = args.who } end }
 sub = oriel.subscribe("demo.count", { session = "app", who = "ada", max_age = 0.05, on_change = function(v) seen = v end })
 `)
 	s.Until("two readings", func() bool { return luaconfig.Show(s.Lua(`seen and seen.n >= 2`)[0]) == "true" })
