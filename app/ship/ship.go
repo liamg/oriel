@@ -266,12 +266,16 @@ func projectShips(reads []shipRead) []registry.ProjectShip {
 
 func (s ships) Refresh(id core.SessionID, fresh bool) { s.x.refresh(id, fresh) }
 
-func (s ships) ResolveThread(se core.SessionState, t core.Thread, resolved bool) error {
+func (s ships) ResolveThread(se core.SessionState, thread core.ThreadID, resolved bool) error {
+	t, ok := se.Thread(thread)
+	if !ok || t.Hosted == nil {
+		return fmt.Errorf("thread %s isn't from a code host", thread)
+	}
 	return s.x.resolveHost(se, t, resolved)
 }
 
-func (s ships) ForwardThread(se core.SessionState, thread core.ThreadID, comment string) error {
-	return s.x.forwardHost(se, thread, comment)
+func (s ships) ForwardThread(se core.SessionState, thread core.ThreadID, commentID string) error {
+	return s.x.forwardHost(se, thread, commentID)
 }
 
 // stepOpts are a step's button options while the project's steps run: busy, labelled as the step, while it's this

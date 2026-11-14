@@ -118,10 +118,12 @@ type Ships interface {
 	For(se core.SessionState) []ProjectShip
 	// Refresh reads id's projects again, fresh past what's cached.
 	Refresh(id core.SessionID, fresh bool)
-	// ResolveThread resolves a thread mirrored from a code host there, or reopens it.
-	ResolveThread(se core.SessionState, t core.Thread, resolved bool) error
-	// ForwardThread posts the user's forwarded draft on a mirrored thread to its host.
-	ForwardThread(se core.SessionState, thread core.ThreadID, comment string) error
+	// ResolveThread starts resolving a thread mirrored from a code host there, or reopening it. The error is only
+	// why it couldn't start; how it went shows on the project's step.
+	ResolveThread(se core.SessionState, thread core.ThreadID, resolved bool) error
+	// ForwardThread starts posting the user's draft reply, comment commentID, on a mirrored thread to its host. The
+	// error is only why it couldn't start; how it went shows on the project's step.
+	ForwardThread(se core.SessionState, thread core.ThreadID, commentID string) error
 }
 
 // ProjectShip is one of a session's projects as Ship read it.

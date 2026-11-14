@@ -261,7 +261,7 @@ func (x *GitHub) resolveHost(id core.SessionID, t core.Thread) {
 			return
 		}
 		if se, ok := x.h.Session(id); ok {
-			if err := s.ResolveThread(se.Snapshot(), t, want); err != nil {
+			if err := s.ResolveThread(se.Snapshot(), t.ID, want); err != nil {
 				fail(err)
 			}
 		}
