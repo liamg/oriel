@@ -114,7 +114,7 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	s.Run("ship.refresh", nil)
 	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, p); return len(sh.Files) == 1 })
 	s.Run("ship.commit", registry.Args{"project": p, "message": "feat: invoice PDFs"})
-	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, p); return sh.Commits == 1 && sh.Code != nil })
+	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, p); return sh.Commits == 1 && sh.CodeHost != nil })
 	s.Run("ship.open", nil)
 	s.Until("Raise MR", func() bool { return strings.Contains(s.Text(), "Raise MR…") })
 

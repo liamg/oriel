@@ -75,7 +75,7 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 
 	s := r.ship(id, true)
 	a := s["api"]
-	if a.Origin != "https://github.com/acme/api.git" || !a.Remote || a.Base != "main" || a.Branch != se.Branch || len(a.Files) != 0 || a.Commits != 0 {
+	if a.Origin != "https://github.com/acme/api.git" || !a.HasOrigin || a.Base != "main" || a.Branch != se.Branch || len(a.Files) != 0 || a.Commits != 0 {
 		t.Fatalf("a fresh project: %+v", a)
 	}
 	if a.Template != "## What\n\n## Why\n" || a.TemplateFile != ".github/pull_request_template.md" {
@@ -272,8 +272,8 @@ func TestShipSaysWhichRemotesARepoHasWithoutOrigin(t *testing.T) {
 	g.Git("remote", "add", "upstream", "https://github.com/acme/search-api.git")
 	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: g.Dir})
 	for name, s := range r.ship(id, false) {
-		if s.Remote || !slices.Equal(s.Remotes, []string{"upstream"}) {
-			t.Errorf("%s: remote %v with remotes %v, want none to push to and [upstream]", name, s.Remote, s.Remotes)
+		if s.HasOrigin || !slices.Equal(s.Remotes, []string{"upstream"}) {
+			t.Errorf("%s: remote %v with remotes %v, want none to push to and [upstream]", name, s.HasOrigin, s.Remotes)
 		}
 	}
 }

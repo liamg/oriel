@@ -120,7 +120,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 	raisable, pushable, w := 0, 0, registry.CodeHost{}.Said()
 	for _, s := range ships {
 		switch {
-		case s.ReadOnly || s.Code == nil:
+		case s.ReadOnly || s.CodeHost == nil:
 		case s.PR.Open():
 			if len(s.Unpushed) > 0 {
 				pushable++
@@ -447,10 +447,10 @@ func noOriginWhy(s shipRead) string {
 	return noOrigin
 }
 
-// cantPush is why a project's branch can't be pushed, if it can't.
-func cantPush(s shipRead) string {
+// cantPushWhy is why a project's branch can't be pushed, if it can't.
+func cantPushWhy(s shipRead) string {
 	switch {
-	case !s.Remote:
+	case !s.HasOrigin:
 		return noOriginWhy(s)
 	case s.Off != nil:
 		return offWhy(s)
@@ -495,7 +495,7 @@ func (x *Ship) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 			note += " · rebased: replaces " + kit.Counted(s.Replaced, "commit") + " on origin"
 		}
 		stepTitle(c, "Unpushed", note)
-		if s.Remote && widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push"})) {
+		if s.HasOrigin && widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push"})) {
 			x.run("ship.push", registry.Args{"project": s.Project})
 		}
 	}, func(c *ui.Ctx) {
@@ -562,7 +562,7 @@ func (x *Ship) mergeOrder(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 	th := c.Theme()
 	var rows []shipRead
 	for _, s := range ships {
-		if !s.ReadOnly && s.Code != nil {
+		if !s.ReadOnly && s.CodeHost != nil {
 			rows = append(rows, s)
 		}
 	}

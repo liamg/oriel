@@ -50,7 +50,7 @@ type SessionCalls interface {
 // SandboxCalls are the sessions' sandboxes and what they may do: the registry's "host.sandboxes" service.
 type SandboxCalls interface {
 	AddRule(kind core.AskKind, rule string) error
-	RemoveRule(rule string) error
+	RemoveRule(kind core.AskKind, rule string) error
 	Permissions(ctx context.Context, id core.SessionID) (Permissions, error)
 	SetToolRule(id core.SessionID, tool, action string) error
 	SetNetRule(id core.SessionID, host string, port int, action string, private bool) error

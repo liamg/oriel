@@ -120,25 +120,33 @@ func (r Repo) conflicts(ctx context.Context, onto string) []string {
 	return files
 }
 
-// Commit commits paths (every change when there are none) with message, as the user's git identity has it.
-func (r Repo) Commit(ctx context.Context, message string, paths ...string) error {
-	_, err := r.CommitWith(ctx, message, nil, paths...)
-	return err
+// CommitOpts say what a commit takes: what's staged when they name nothing, else Paths' changes or All of them.
+type CommitOpts struct {
+	Paths    []string // these paths' changes, staged or not, untracked files among them
+	All      bool     // every change, untracked files too
+	Trailers []string // "Verified-By: quiz", added as git commit --trailer adds them
 }
 
-// CommitWith is Commit with trailers ("Verified-By: quiz"), and returns the new commit's hash.
-func (r Repo) CommitWith(ctx context.Context, message string, trailers []string, paths ...string) (string, error) {
+// Commit commits what o says with message, as the repo's git identity has it (signed if git signs), and returns the
+// new commit's hash.
+func (r Repo) Commit(ctx context.Context, message string, o CommitOpts) (string, error) {
 	if strings.TrimSpace(message) == "" {
 		return "", errors.New("a commit needs a message")
 	}
-	add := []string{"add", "-A"}
-	if len(paths) > 0 {
-		add = append(append(add, "--"), paths...)
+	if o.All || len(o.Paths) > 0 {
+		add := []string{"add", "-A"}
+		if !o.All {
+			add = append(append(add, "--"), o.Paths...)
+		}
+		if _, err := r.git(ctx, add...); err != nil {
+			return "", err
+		}
 	}
-	if _, err := r.git(ctx, add...); err != nil {
-		return "", err
+	paths := o.Paths
+	if o.All {
+		paths = nil
 	}
-	return r.commit(ctx, message, trailers, paths)
+	return r.commit(ctx, message, o.Trailers, paths)
 }
 
 // Push pushes HEAD to origin's branch, and tracks it. A branch rebased since its last push replaces origin's, with a

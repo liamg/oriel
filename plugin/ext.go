@@ -93,7 +93,8 @@ type Host interface {
 	Shot(th *theme.Resolved) *image.RGBA
 }
 
-// UIView is the window's widget tree as plugins may read it, last frame's.
+// UIView is what the window shows, last frame's, as plugins may read it, and the few ways they act on it: moving
+// focus, a drag and a key, and taking a help request.
 type UIView interface {
 	Focused() ui.ID
 	Layered(z int) bool // last frame drew a float on layer z (ui.LayerPage: a full-window page is up)
@@ -103,7 +104,7 @@ type UIView interface {
 	SubjectAt(target ui.ID, p render.Point) string
 	HelpNodes() []ui.HelpNode
 	ContextClick() (ui.ID, render.Point, bool)
-	HelpRequest() (string, bool)
+	TakeHelpRequest() (string, bool)
 	Rect(id ui.ID) (render.Rect, bool)
 	FocusNext(dir int) // moves keyboard focus to the next focusable node (back with -1), wrapping
 	DragKey() bool     // picks up the focused node's drag, or drops the one held on it (ui/dnd.go)

@@ -106,7 +106,7 @@ func (x *Ship) shipCommands() []registry.Command {
 				se, _ := x.session(a)
 				var errs []error
 				for _, s := range x.report(se.ID).ships {
-					if !s.ReadOnly && s.Remote {
+					if !s.ReadOnly && s.HasOrigin {
 						errs = append(errs, x.sync(se, s.Project))
 					}
 				}
@@ -361,7 +361,7 @@ func (x *Ship) raise(ctx registry.Ctx, se core.SessionState, p string, a registr
 func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 	var reqs []prReq
 	for _, s := range x.report(se.ID).ships {
-		if s.ReadOnly || s.Code == nil || s.Commits == 0 && s.PR == nil {
+		if s.ReadOnly || s.CodeHost == nil || s.Commits == 0 && s.PR == nil {
 			continue
 		}
 		req, err := x.raiseReq(ctx, se, s.Project, registry.Args{}, true)

@@ -51,10 +51,10 @@ func initRepo(ctx context.Context, dir, template, name, you string) error {
 		return err
 	}
 	g := gitx.Repo{Dir: dir}
-	if err := g.Commit(ctx, "Start "+name); err != nil {
+	if err := commitAll(ctx, g, "Start "+name); err != nil {
 		// git has no identity for the user yet.
 		g.Env = []string{"GIT_AUTHOR_NAME=Oriel", "GIT_AUTHOR_EMAIL=oriel@localhost", "GIT_COMMITTER_NAME=Oriel", "GIT_COMMITTER_EMAIL=oriel@localhost"}
-		return g.Commit(ctx, "Start "+name)
+		return commitAll(ctx, g, "Start "+name)
 	}
 	return nil
 }
@@ -65,4 +65,10 @@ func goName(name string) string {
 		s = "x" + s
 	}
 	return s
+}
+
+// commitAll commits every change in g with message.
+func commitAll(ctx context.Context, g gitx.Repo, message string) error {
+	_, err := g.Commit(ctx, message, gitx.CommitOpts{All: true})
+	return err
 }

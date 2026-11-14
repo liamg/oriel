@@ -170,12 +170,6 @@ func (r Repo) CommitTimes(ctx context.Context, since time.Time) ([]time.Time, er
 	return ts, nil
 }
 
-// CommitStaged commits what's staged with message, adding each trailer ("Verified-By: quiz") as git commit
-// --trailer does, and returns the new commit's hash. It commits as the repo's git identity, signed if git signs.
-func (r Repo) CommitStaged(ctx context.Context, message string, trailers ...string) (string, error) {
-	return r.commit(ctx, message, trailers, nil)
-}
-
 // commit commits what's staged (or, with paths, only those paths) with message and its trailers, and returns the
 // new commit's hash.
 func (r Repo) commit(ctx context.Context, message string, trailers, paths []string) (string, error) {

@@ -21,19 +21,19 @@ import (
 func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 	th := c.Theme()
 	w := s.words()
-	if s.Code == nil || s.Unkeyed {
+	if s.CodeHost == nil || s.Unkeyed {
 		note := "no remote"
 		switch {
 		case s.Unkeyed:
-			note = "needs your " + s.Code.Label() + " token for " + s.Site.Host
-		case s.Unknown != "":
-			note = s.Unknown + " isn't a code host Oriel knows yet"
-		case s.Remote:
+			note = "needs your " + s.CodeHost.Label() + " token for " + s.Site.Host
+		case s.UnknownHost != "":
+			note = s.UnknownHost + " isn't a code host Oriel knows yet"
+		case s.HasOrigin:
 			note = "origin isn't on a code host Oriel knows"
 		}
 		shipCard(c, false, func(c *ui.Ctx) {
 			stepTitle(c, sentence(w.Long), note)
-			if (s.Unkeyed || s.Unknown != "") && widget.Button(c, "setup", "Set up…", widget.ButtonOpts{Help: codeSetupHelp}) {
+			if (s.Unkeyed || s.UnknownHost != "") && widget.Button(c, "setup", "Set up…", widget.ButtonOpts{Help: codeSetupHelp}) {
 				x.run("code.setup", setupArgs(s))
 			}
 		}, nil)
@@ -91,7 +91,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 				x.nextButton(c, se, s, false)
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if widget.Button(c, "browse", "Open on "+s.Code.Label()+" ↗", widget.ButtonOpts{Help: "git/ship#pr"}) {
+			if widget.Button(c, "browse", "Open on "+s.CodeHost.Label()+" ↗", widget.ButtonOpts{Help: "git/ship#pr"}) {
 				x.run("ship.browse", registry.Args{"project": s.Project})
 			}
 		})
@@ -113,7 +113,7 @@ func (x *Ship) nextButton(c *ui.Ctx, se core.SessionState, s shipRead, primary b
 		if widget.Button(c, "next", "Start next "+w.Short, x.stepOpts(se.ID, s.Project, nextPRStep, widget.ButtonOpts{Primary: primary, Help: "git/ship#next"})) {
 			x.run("ship.next-pr", registry.Args{"project": s.Project})
 		}
-	case s.Code == nil:
+	case s.CodeHost == nil:
 	case s.PR == nil:
 		if widget.Button(c, "raise", "Raise "+w.Short, widget.ButtonOpts{Primary: primary, Help: "git/ship#raise"}) {
 			x.run("ship.pr.open", registry.Args{"project": s.Project})
@@ -166,7 +166,7 @@ func (x *Ship) readyButton(c *ui.Ctx, se core.SessionState, s shipRead) {
 
 // mergeButton is Merge…, on an open PR whose code host merges.
 func (x *Ship) mergeButton(c *ui.Ctx, se core.SessionState, s shipRead) {
-	if s.PR.Open() && s.Code != nil && s.Code.Merge != nil && widget.Button(c, "merge", "Merge…", x.stepOpts(se.ID, s.Project, "Merging", widget.ButtonOpts{Help: mergeHelp})) {
+	if s.PR.Open() && s.CodeHost != nil && s.CodeHost.Merge != nil && widget.Button(c, "merge", "Merge…", x.stepOpts(se.ID, s.Project, "Merging", widget.ButtonOpts{Help: mergeHelp})) {
 		x.run("ship.merge", registry.Args{"project": s.Project})
 	}
 }
@@ -243,7 +243,7 @@ func (x *Ship) links(c *ui.Ctx, se core.SessionState, s shipRead) {
 	var order, before, after []string
 	seen := false
 	for _, o := range ships {
-		if o.ReadOnly || o.Code == nil {
+		if o.ReadOnly || o.CodeHost == nil {
 			continue
 		}
 		order = append(order, o.Project)

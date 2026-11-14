@@ -75,8 +75,8 @@ func LanguageFor(r registry.Registry, path string, src []byte) (*syntax.Language
 
 var TLogFailLine = theme.DeclareOn("log.source.failing", "alpha(error, 8%)", "bg.base")
 
-// SourceFile is a few lines around a failing one, highlighted with tree-sitter.
-type SourceFile struct {
+// HighlightedExcerpt is a few lines around a failing one, highlighted with tree-sitter.
+type HighlightedExcerpt struct {
 	path  string
 	line  int
 	lines []string
@@ -95,17 +95,17 @@ type Span struct {
 }
 
 // HighlightAround is the lines from before lines above line to after lines below it, highlighted.
-func HighlightAround(r registry.Registry, path string, src []byte, line, before, after int) *SourceFile {
+func HighlightAround(r registry.Registry, path string, src []byte, line, before, after int) *HighlightedExcerpt {
 	lang, _ := LanguageFor(r, path, src)
 	return highlightIn(lang, path, src, line, before, after)
 }
 
 // highlightIn is HighlightAround in lang; plain text when it's nil.
-func highlightIn(lang *syntax.Language, path string, src []byte, line, before, after int) *SourceFile {
+func highlightIn(lang *syntax.Language, path string, src []byte, line, before, after int) *HighlightedExcerpt {
 	all := strings.Split(string(src), "\n")
 	first := max(1, line-before)
 	last := min(len(all), line+after)
-	f := &SourceFile{path: path, line: line, First: first}
+	f := &HighlightedExcerpt{path: path, line: line, First: first}
 	if first > last {
 		return f
 	}
@@ -156,7 +156,7 @@ func SplitSpans(ln string, off int, hl []syntax.Span) []Span {
 	return out
 }
 
-func (f *SourceFile) Build(c *ui.Ctx, n *core.Notification) {
+func (f *HighlightedExcerpt) Build(c *ui.Ctx, n *core.Notification) {
 	th := c.Theme()
 	if f.Theme != nil {
 		th = f.Theme
