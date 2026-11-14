@@ -80,7 +80,7 @@ func (x *Plugin) sessionTab(c *ui.Ctx, id core.SessionID) {
 				c.Row("low", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					toolsCard(c, d.Tools, d.Totals)
 					c.Column("side", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-						kit.StatsCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { kit.Note(c, "n", "cost by hour started") }, func(c *ui.Ctx) {
+						widget.DataCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { kit.Note(c, "n", "cost by hour started") }, func(c *ui.Ctx) {
 							hoursChart(c, "chart", d.Hours, 70)
 						})
 						effortCard(c, d.Efforts)
@@ -186,7 +186,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 func (x *Plugin) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
 	th := c.Theme()
 	if len(d.Buckets) == 0 {
-		kit.StatsCard(c, "time", ui.Flex(2.2), "COST OVER THE SESSION", "", nil, func(c *ui.Ctx) { kit.Note(c, "none", "no requests yet") })
+		widget.DataCard(c, "time", ui.Flex(2.2), "COST OVER THE SESSION", "", nil, func(c *ui.Ctx) { kit.Note(c, "none", "no requests yet") })
 		return
 	}
 	span := int64(300)
@@ -257,7 +257,7 @@ func (x *Plugin) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
 	if inTokens {
 		title = "TOKENS OVER THE SESSION"
 	}
-	kit.StatsCard(c, "time", ui.Flex(2.2), title, step+" · by token kind", func(c *ui.Ctx) { x.legend(c, series, 0) }, func(c *ui.Ctx) {
+	widget.DataCard(c, "time", ui.Flex(2.2), title, step+" · by token kind", func(c *ui.Ctx) { x.legend(c, series, 0) }, func(c *ui.Ctx) {
 		widget.Chart(c, "c", series, widget.ChartOpts{Height: 150, Labels: labels, YTicks: 2, YFormat: yfmt, Format: format, Hover: true, Highlight: -1,
 			Bands: bands, Marks: marks, Ticks: ticks, TicksLabel: "turns", Label: "Cost over the session " + kind, Help: "agent/stats#session"})
 	})
@@ -268,7 +268,7 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 	th := c.Theme()
 	st := x.h.State()
 	whole := !x.split()
-	kit.StatsCard(c, "repos", ui.Flex(1), "COST PER REPO", "", func(c *ui.Ctx) {
+	widget.DataCard(c, "repos", ui.Flex(1), "COST PER REPO", "", func(c *ui.Ctx) {
 		if widget.Toggle(c, "whole", whole, widget.ToggleOpts{Label: "Count whole session in each", Help: "agent/stats#split"}) {
 			x.run("stats.split", registry.Args{"on": whole})
 		}
@@ -282,7 +282,7 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 			widget.Chart(c, "strip", strip, widget.ChartOpts{Kind: widget.ChartStrip, Highlight: -1, Label: "Cost per repo", Help: "agent/stats#split"})
 		}
 		for i, r := range d.Repos {
-			kit.KV(c, i, kit.RepoTone(th, st, r.Repo, i), r.Repo, "", fmt.Sprintf("%d%%", kit.Pct(r.Share)), kit.Money(r.Cost))
+			widget.KV(c, i, kit.RepoTone(th, st, r.Repo, i), r.Repo, "", fmt.Sprintf("%d%%", kit.Pct(r.Share)), kit.Money(r.Cost))
 		}
 		switch {
 		case len(d.Repos) > 1 && whole:
@@ -301,17 +301,17 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 			if m.Sidechain > m.Requests/2 {
 				sub = "subagents"
 			}
-			kit.KV(c, "m"+fmt.Sprint(i), greyTone(th, i), m.Name, sub, kit.Count(m.Requests), kit.Count(m.Tokens), kit.Money(m.Cost))
+			widget.KV(c, "m"+fmt.Sprint(i), greyTone(th, i), m.Name, sub, kit.Count(m.Requests), kit.Count(m.Tokens), kit.Money(m.Cost))
 		}
 	})
 }
 
 // toolsCard is each tool's calls, errors, how long they took and the median.
 func toolsCard(c *ui.Ctx, tools []stats.ToolRow, t stats.Totals) {
-	kit.StatsCard(c, "tools", ui.Flex(2.2), "TOOLS", fmt.Sprintf("%s · %s", kit.Counted(int(t.ToolCalls), "call"), kit.Counted(int(t.ToolErrors), "error")),
+	widget.DataCard(c, "tools", ui.Flex(2.2), "TOOLS", fmt.Sprintf("%s · %s", kit.Counted(int(t.ToolCalls), "call"), kit.Counted(int(t.ToolErrors), "error")),
 		func(c *ui.Ctx) { kit.Note(c, "n", "time per call") }, func(c *ui.Ctx) {
-			cols := []kit.StatsCol{{Title: "TOOL", W: 0}, {Title: "CALLS", W: 70}, {Title: "ERRORS", W: 70}, {Title: "ERR %", W: 70}, {Title: ".1S 1S 10S 1M 1M+", W: 130}, {Title: "P50", W: 70}, {Title: "CALLS", W: 160}}
-			kit.TableHead(c, cols)
+			cols := []widget.DataCol{{Title: "TOOL", W: 0}, {Title: "CALLS", W: 70}, {Title: "ERRORS", W: 70}, {Title: "ERR %", W: 70}, {Title: ".1S 1S 10S 1M 1M+", W: 130}, {Title: "P50", W: 70}, {Title: "CALLS", W: 160}}
+			widget.DataHead(c, cols)
 			most := int64(1)
 			for _, tr := range tools {
 				most = max(most, tr.Calls)
@@ -339,24 +339,24 @@ func toolsCard(c *ui.Ctx, tools []stats.ToolRow, t stats.Totals) {
 		})
 }
 
-func toolRow(c *ui.Ctx, key any, tr stats.ToolRow, cols []kit.StatsCol, most int64) {
+func toolRow(c *ui.Ctx, key any, tr stats.ToolRow, cols []widget.DataCol, most int64) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center, Role: ui.RoleText, Label: tr.Name}, func(c *ui.Ctx) {
-		kit.Cell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", tr.Name, kit.Mono(11.5, typeset.Medium, th.C(theme.Fg))) })
-		kit.TextCell(c, 1, cols[1].W, kit.Count(tr.Calls), th.C(theme.Fg))
+		widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", tr.Name, kit.Mono(11.5, typeset.Medium, th.C(theme.Fg))) })
+		widget.DataText(c, 1, cols[1].W, kit.Count(tr.Calls), th.C(theme.Fg))
 		errTone := th.C(tStatsBad)
 		if tr.Errors == 0 {
 			errTone = th.C(theme.FgGhost)
 		}
-		kit.TextCell(c, 2, cols[2].W, fmt.Sprint(tr.Errors), errTone)
+		widget.DataText(c, 2, cols[2].W, fmt.Sprint(tr.Errors), errTone)
 		rate := "–"
 		if tr.Errors > 0 && tr.Calls > 0 {
 			rate = fmt.Sprintf("%.1f%%", float64(tr.Errors)/float64(tr.Calls)*100)
 		}
-		kit.TextCell(c, 3, cols[3].W, rate, errTone)
-		kit.Cell(c, 4, cols[4].W, false, func(c *ui.Ctx) { durations(c, tr.Buckets) })
-		kit.TextCell(c, 5, cols[5].W, duration(tr.P50), th.C(theme.FgMuted))
-		kit.Cell(c, 6, cols[6].W, true, func(c *ui.Ctx) {
+		widget.DataText(c, 3, cols[3].W, rate, errTone)
+		widget.DataCell(c, 4, cols[4].W, false, func(c *ui.Ctx) { durations(c, tr.Buckets) })
+		widget.DataText(c, 5, cols[5].W, duration(tr.P50), th.C(theme.FgMuted))
+		widget.DataCell(c, 6, cols[6].W, true, func(c *ui.Ctx) {
 			shareBar(c, "bar", float64(tr.Calls)/float64(most), th.C(tStatsBarFill), 140, "")
 		})
 	})
@@ -394,7 +394,7 @@ func duration(ms int64) string {
 
 func effortCard(c *ui.Ctx, es []stats.Effort) {
 	th := c.Theme()
-	kit.StatsCard(c, "effort", ui.Flex(1), "EFFORT", "", func(c *ui.Ctx) { kit.Note(c, "n", "req · cost") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "effort", ui.Flex(1), "EFFORT", "", func(c *ui.Ctx) { kit.Note(c, "n", "req · cost") }, func(c *ui.Ctx) {
 		var total int64
 		for _, e := range es {
 			total += e.Requests
@@ -412,7 +412,7 @@ func effortCard(c *ui.Ctx, es []stats.Effort) {
 			if total > 0 {
 				share = kit.Pct(float64(e.Requests) / float64(total))
 			}
-			kit.KV(c, i, render.Color{}, e.Name, "", fmt.Sprintf("%d%%", share), fmt.Sprint(e.Requests), kit.Money(e.Cost))
+			widget.KV(c, i, render.Color{}, e.Name, "", fmt.Sprintf("%d%%", share), fmt.Sprint(e.Requests), kit.Money(e.Cost))
 		}
 	})
 }

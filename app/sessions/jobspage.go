@@ -355,7 +355,7 @@ func (x *Jobs) prompt(c *ui.Ctx, j host.Job) {
 	for i, n := range names {
 		tones[n] = kit.RepoTone(th, st, n, i)
 	}
-	kit.StatsCard(c, "prompt", ui.Flex(1), "PROMPT", "JOB.md for each run", func(c *ui.Ctx) {
+	widget.DataCard(c, "prompt", ui.Flex(1), "PROMPT", "JOB.md for each run", func(c *ui.Ctx) {
 		if len(names) == 0 {
 			kit.Note(c, "none", "names no repo · the agent adds what it needs")
 			return
@@ -466,7 +466,7 @@ func (x *Jobs) cost(r runRow) (float64, []stats.Share, bool) {
 	return r.se.Agent.Stats.Cost, nil, r.se.Agent.Stats.Cost > 0
 }
 
-var runCols = []kit.StatsCol{{Title: "STATUS", W: 96}, {Title: "STARTED", W: 120}, {Title: "REPOS", W: 200}, {Title: "SUMMARY", W: 0}, {Title: "COST", W: 78}, {Title: "TOOK", W: 48}, {Title: "", W: 160}}
+var runCols = []widget.DataCol{{Title: "STATUS", W: 96}, {Title: "STARTED", W: 120}, {Title: "REPOS", W: 200}, {Title: "SUMMARY", W: 0}, {Title: "COST", W: 78}, {Title: "TOOK", W: 48}, {Title: "", W: 160}}
 
 func (x *Jobs) runs(c *ui.Ctx, r jobRow) {
 	th := c.Theme()
@@ -475,10 +475,10 @@ func (x *Jobs) runs(c *ui.Ctx, r jobRow) {
 	slices.SortStableFunc(all, func(a, b runRow) int { return b.start().Compare(a.start()) })
 	shown := slices.DeleteFunc(all, func(rr runRow) bool { return want != "" && rr.run.Status != want })
 	labels := []string{"ALL", "RUNNING", "DONE", "BLOCKED", "STOPPED"}
-	kit.StatsCard(c, "runs", ui.Flex(1), "RUNS", fmt.Sprintf("%d · newest first · each a session of kind job", len(r.runs)), func(c *ui.Ctx) {
+	widget.DataCard(c, "runs", ui.Flex(1), "RUNS", fmt.Sprintf("%d · newest first · each a session of kind job", len(r.runs)), func(c *ui.Ctx) {
 		widget.Segmented(c, "filter", labels, &x.runFilter, widget.SegmentedOpts{Label: "Show runs", Help: "agent/jobs#runs"})
 	}, func(c *ui.Ctx) {
-		kit.TableHead(c, runCols)
+		widget.DataHead(c, runCols)
 		if len(shown) == 0 {
 			c.Row("none", ui.Style{W: ui.Flex(1), H: ui.Px(30), Pad: ui.PadXY(6, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 				msg := "No runs yet: ▶ Run starts one."
@@ -544,20 +544,20 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 	th := c.Theme()
 	st := x.h.State()
 	c.Row("row", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 5), Cross: ui.Center}, func(c *ui.Ctx) {
-		kit.Cell(c, 0, runCols[0].W, true, func(c *ui.Ctx) {
+		widget.DataCell(c, 0, runCols[0].W, true, func(c *ui.Ctx) {
 			widget.Chip(c, "st", r.run.Status, th.C(runTone(r.run.Status)), "agent/jobs#runs")
 		})
-		kit.Cell(c, 1, runCols[1].W, true, func(c *ui.Ctx) { c.Text("t", x.started(r.start()), kit.MonoFont(11, th.C(theme.Fg))) })
+		widget.DataCell(c, 1, runCols[1].W, true, func(c *ui.Ctx) { c.Text("t", x.started(r.start()), kit.MonoFont(11, th.C(theme.Fg))) })
 		if r.skipped() {
 			c.Column(3, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: runCols[2].W + 6, R: 6}}, func(c *ui.Ctx) {
 				c.Text("t", r.run.Summary, kit.UIFont(12, th.C(theme.FgFaint)))
 			})
 			return
 		}
-		kit.Cell(c, 2, runCols[2].W, true, func(c *ui.Ctx) {
+		widget.DataCell(c, 2, runCols[2].W, true, func(c *ui.Ctx) {
 			for j, p := range r.run.Repos {
 				c.Row(j, ui.Style{Gap: 4, Cross: ui.Center}, func(c *ui.Ctx) {
-					kit.Swatch(c, "sw", kit.RepoTone(th, st, p, j))
+					widget.Swatch(c, "sw", kit.RepoTone(th, st, p, j))
 					c.Text("t", p, kit.MonoFont(11, th.C(theme.FgMuted)))
 				})
 			}
@@ -573,13 +573,13 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 			}
 			widget.Wrap(c, "t", x.summary(r), width, kit.UIFont(12, tone))
 		})
-		kit.Cell(c, 4, runCols[4].W, false, func(c *ui.Ctx) { x.costCell(c, r) })
+		widget.DataCell(c, 4, runCols[4].W, false, func(c *ui.Ctx) { x.costCell(c, r) })
 		took := ""
 		if d := x.took(r); d > 0 {
 			took = kit.Duration(d)
 		}
-		kit.TextCell(c, 5, runCols[5].W, took, th.C(theme.FgMuted))
-		kit.Cell(c, 6, runCols[6].W, false, func(c *ui.Ctx) {
+		widget.DataText(c, 5, runCols[5].W, took, th.C(theme.FgMuted))
+		widget.DataCell(c, 6, runCols[6].W, false, func(c *ui.Ctx) {
 			live := r.se.Agent.Running
 			label := "Resume"
 			if live {
@@ -635,7 +635,7 @@ func (x *Jobs) costCell(c *ui.Ctx, r runRow) {
 	widget.HoverCard(c, "split", anchor, widget.HoverCardOpts{Label: "Cost by repo", Help: "agent/jobs#cost", Width: 190}, func(c *ui.Ctx) {
 		c.Text("t", r.se.Created.In(x.loc).Format("Jan 2")+" run · "+kit.Money(cost)+" est.", kit.Mono(11, typeset.SemiBold, th.C(theme.Fg)))
 		for i, s := range shares {
-			kit.KV(c, i, kit.RepoTone(th, st, s.Repo, i), s.Repo, "", kit.Money(s.Cost))
+			widget.KV(c, i, kit.RepoTone(th, st, s.Repo, i), s.Repo, "", kit.Money(s.Cost))
 		}
 		c.Text("more", "session stats ›", kit.MonoFont(10.5, th.C(theme.Accent)))
 	})
@@ -662,15 +662,15 @@ func (x *Jobs) more(c *ui.Ctx, rest []runRow) {
 		textCellLeft(c, 0, runCols[0].W, fmt.Sprintf("%d more", len(rest)), faint)
 		textCellLeft(c, 1, runCols[1].W, "since "+rest[len(rest)-1].start().In(x.loc).Format("Jan 2"), th.C(theme.FgGhost))
 		textCellLeft(c, 2, runCols[2].W, "", faint)
-		kit.Cell(c, 3, 0, true, func(c *ui.Ctx) { c.Text("t", strings.Join(parts, ", "), kit.UIFont(12, th.C(theme.FgGhost))) })
-		kit.TextCell(c, 4, runCols[4].W, kit.Money(total), th.C(theme.FgMuted))
-		kit.TextCell(c, 5, runCols[5].W, "", faint)
-		kit.TextCell(c, 6, runCols[6].W, "", faint)
+		widget.DataCell(c, 3, 0, true, func(c *ui.Ctx) { c.Text("t", strings.Join(parts, ", "), kit.UIFont(12, th.C(theme.FgGhost))) })
+		widget.DataText(c, 4, runCols[4].W, kit.Money(total), th.C(theme.FgMuted))
+		widget.DataText(c, 5, runCols[5].W, "", faint)
+		widget.DataText(c, 6, runCols[6].W, "", faint)
 	})
 }
 
 func textCellLeft(c *ui.Ctx, key any, w float32, s string, tone render.Color) {
-	kit.Cell(c, key, w, true, func(c *ui.Ctx) { c.Text("t", s, kit.MonoFont(11, tone)) })
+	widget.DataCell(c, key, w, true, func(c *ui.Ctx) { c.Text("t", s, kit.MonoFont(11, tone)) })
 }
 
 // consoleSide is a run's job in its agent console: the job, how this run is going and the last one
@@ -729,11 +729,11 @@ func (x *Jobs) consoleSide(c *ui.Ctx, id core.SessionID) {
 			widget.Chart(c, "split", strip, widget.ChartOpts{Kind: widget.ChartStrip, Highlight: -1, Label: "Cost by repo", Help: "agent/jobs#cost"})
 		}
 		for i, s := range shares {
-			kit.KV(c, i, kit.RepoTone(th, st, s.Repo, i), s.Repo, "", kit.Money(s.Cost))
+			widget.KV(c, i, kit.RepoTone(th, st, s.Repo, i), s.Repo, "", kit.Money(s.Cost))
 		}
 		for i, n := range x.named(row.job) {
 			if !slices.ContainsFunc(shares, func(s stats.Share) bool { return s.Repo == n }) && !slices.Contains(cur.run.Repos, n) {
-				kit.KV(c, fmt.Sprint("todo", i), theme.WithAlpha(kit.RepoTone(th, st, n, i), .4), n, "", "not yet")
+				widget.KV(c, fmt.Sprint("todo", i), theme.WithAlpha(kit.RepoTone(th, st, n, i), .4), n, "", "not yet")
 			}
 		}
 		kit.Stat(c, "total", "total est.", kit.Money(cost), th.C(theme.Fg))

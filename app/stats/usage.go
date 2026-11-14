@@ -460,11 +460,11 @@ func (x *Plugin) providerLine(u core.ProviderUsage) string {
 func (x *Plugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 	th := c.Theme()
 	w := r.w
-	line := th.C(kit.TStatsCardLine)
+	line := th.C(widget.TDataCardLine)
 	if !r.runsOut.IsZero() {
 		line = theme.WithAlpha(th.C(tUsageOut), .6)
 	}
-	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 8, Fill: th.C(kit.TStatsCard), Stroke: line, Border: 1, Radius: 8, Role: ui.RoleGroup,
+	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 8, Fill: th.C(widget.TDataCard), Stroke: line, Border: 1, Radius: 8, Role: ui.RoleGroup,
 		Label: windowLabel(w), Help: "agent/usage#windows"}, func(c *ui.Ctx) {
 		c.Row("hd", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", windowLabel(w), kit.KickerFont(th.C(theme.FgMuted)))
@@ -672,7 +672,7 @@ func (x *Plugin) weekChart(c *ui.Ctx, u core.ProviderUsage, hist []core.Provider
 			legend = append(legend, s)
 		}
 	}
-	kit.StatsCard(c, "week", ui.Flex(2), "WINDOW USAGE · LAST 7 DAYS", "↺ resets · dashed: at this rate", func(c *ui.Ctx) { x.legend(c, legend, 0) },
+	widget.DataCard(c, "week", ui.Flex(2), "WINDOW USAGE · LAST 7 DAYS", "↺ resets · dashed: at this rate", func(c *ui.Ctx) { x.legend(c, legend, 0) },
 		func(c *ui.Ctx) {
 			widget.Chart(c, "c", series, widget.ChartOpts{Height: 170, Max: 100, Labels: labels, LabelEvery: 1, YTicks: 2,
 				YFormat: func(v float64) string { return fmt.Sprintf("%.0f%%", v) }, Format: func(v float64) string { return fmt.Sprintf("%.0f%%", v) },
@@ -778,7 +778,7 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 			x.burnWin[accountKey(u)] = pick
 		}
 	}
-	kit.StatsCard(c, "burned", ui.Flex(1), title, "", right, func(c *ui.Ctx) {
+	widget.DataCard(c, "burned", ui.Flex(1), title, "", right, func(c *ui.Ctx) {
 		kit.Note(c, "since", "since "+from.In(x.Loc).Format("Mon 15:04")+" · by repo, multi-repo sessions split as in Stats")
 		var strip []widget.ChartSeries
 		st := x.h.State()
@@ -792,7 +792,7 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 		total := outside
 		for i, row := range rows {
 			total += row.points
-			kit.KV(c, i, kit.RepoTone(th, st, row.key, i), row.key, "", fmt.Sprintf("%d sess", row.sessions),
+			widget.KV(c, i, kit.RepoTone(th, st, row.key, i), row.key, "", fmt.Sprintf("%d sess", row.sessions),
 				fmt.Sprintf("%.0fpt", row.points), kit.Money(row.cost))
 		}
 		if outside > 0 {
@@ -800,9 +800,9 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 			if out.sessions > 0 {
 				sess, cost = fmt.Sprintf("%d sess", out.sessions), kit.Money(out.cost)
 			}
-			kit.KV(c, "out", th.C(tStatsOther), "outside Oriel", "", sess, fmt.Sprintf("%.0fpt", outside), cost)
+			widget.KV(c, "out", th.C(tStatsOther), "outside Oriel", "", sess, fmt.Sprintf("%.0fpt", outside), cost)
 		}
-		kit.KV(c, "total", render.Color{}, "total", "", "", fmt.Sprintf("%.0fpt", total), "")
+		widget.KV(c, "total", render.Color{}, "total", "", "", fmt.Sprintf("%.0fpt", total), "")
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			kit.Note(c, "n", "pt: points of the window · $ est. from the price table")
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
