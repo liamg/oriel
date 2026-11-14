@@ -117,7 +117,7 @@ func (x *Ship) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 		}
 	})
 	c.Row("steps", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-		why := cantPush(s)
+		why := cantPushWhy(s)
 		if widget.Button(c, "push", pushLabel(s), x.stepOpts(se.ID, s.Project, "Pushing", widget.ButtonOpts{Help: "git/ship#push",
 			Disabled: why != "", Why: why, Primary: len(s.Unpushed) > 0 && s.Behind == 0})) {
 			x.run("ship.push", registry.Args{"project": s.Project})

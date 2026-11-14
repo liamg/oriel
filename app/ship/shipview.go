@@ -447,8 +447,8 @@ func noOriginWhy(s shipRead) string {
 	return noOrigin
 }
 
-// cantPush is why a project's branch can't be pushed, if it can't.
-func cantPush(s shipRead) string {
+// cantPushWhy is why a project's branch can't be pushed, if it can't.
+func cantPushWhy(s shipRead) string {
 	switch {
 	case !s.Remote:
 		return noOriginWhy(s)
