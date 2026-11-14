@@ -420,6 +420,7 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 		ds := decor[line]
 		bg, edge := lineBg(th, ds)
 		segs := rowSegs(p, line, m)
+		pr := paneRow{p: p, line: line, id: rowID, folded: folded, x0: gw + 4, m: m, ds: ds, segs: segs}
 		cross := ui.Center
 		if len(segs) > 1 {
 			cross = ui.Start
@@ -442,7 +443,7 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 			}
 			c.Box("gap", ui.Style{W: ui.Px(4)}, nil)
 			if !folded {
-				x.selections(c, p, line, gw+4, m, ds, segs)
+				x.selections(c, pr)
 			}
 			if folded {
 				x.foldRow(c, snap, line, foldEnd)
@@ -464,9 +465,9 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 				}
 			})
 		})
-		spans(c, th, p, line, ds, rowID, gw+4, m, segs)
-		x.overlay(c, p, rowID, line, folded, gw, m, ds, segs)
-		ids, reveal := blocks(c, line, ds, gw+4)
+		spans(c, th, pr)
+		x.overlay(c, pr)
+		ids, reveal := blocks(c, pr)
 		for i, id := range ids {
 			r, ok := c.Rect(id)
 			if !ok {
@@ -621,8 +622,22 @@ func (x *Editor) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 	})
 }
 
+// paneRow is one buffer line being drawn: its pane, line and row id, whether it's folded, where its text starts past
+// the gutter (x0), the pane's metrics, its decorations and the screen rows it wraps onto.
+type paneRow struct {
+	p      vim.Pane
+	line   int
+	id     ui.ID
+	folded bool
+	x0     float32
+	m      kit.PaneMetrics
+	ds     []uireg.Decoration
+	segs   []rowSeg
+}
+
 // selections draws a row's selection, and each multi-cursor region on it, under its text.
-func (x *Editor) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m kit.PaneMetrics, ds []uireg.Decoration, segs []rowSeg) {
+func (x *Editor) selections(c *ui.Ctx, r paneRow) {
+	p, line, x0, m, ds, segs := r.p, r.line, r.x0, r.m, r.ds, r.segs
 	fill := c.Theme().C(theme.Selection)
 	box := func(key any, from, to, extra int) {
 		a, z := p.VCol(line, from)+inlayShift(ds, from, true), p.VCol(line, to)+inlayShift(ds, to, false)+extra
@@ -652,7 +667,8 @@ func (x *Editor) selections(c *ui.Ctx, p vim.Pane, line int, x0 float32, m kit.P
 }
 
 // overlay draws, on the cursor's row of the current window, the cursor over its text, and the other cursors.
-func (x *Editor) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bool, gw float32, m kit.PaneMetrics, ds []uireg.Decoration, segs []rowSeg) {
+func (x *Editor) overlay(c *ui.Ctx, r paneRow) {
+	p, rowID, line, folded, x0, m, ds, segs := r.p, r.id, r.line, r.folded, r.x0, r.m, r.ds, r.segs
 	th := c.Theme()
 	cur := p.Cursor()
 	showCursor := p.Current() && line == cur.Line && x.e.Mode() != "cmdline"
@@ -671,7 +687,6 @@ func (x *Editor) overlay(c *ui.Ctx, p vim.Pane, rowID ui.ID, line int, folded bo
 		return
 	}
 	b := p.Buf().Line(line)
-	x0 := gw + 4
 	// at is where screen column vc is on the line: its segment's x and y, or false when it doesn't show.
 	at := func(vc int) (float32, float32, bool) {
 		for i, g := range segs {
