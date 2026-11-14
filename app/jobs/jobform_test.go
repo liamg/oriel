@@ -1,4 +1,4 @@
-package sessions_test
+package jobs_test
 
 import (
 	"strings"

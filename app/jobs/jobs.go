@@ -1,6 +1,7 @@
 //oriel:kind job
 
-package sessions
+// Package jobs is the Jobs page: saved prompts run as sessions of their own, by hand or on a schedule, and their runs.
+package jobs
 
 import (
 	"context"

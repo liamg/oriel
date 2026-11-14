@@ -18,16 +18,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func jobsOf(s *apptest.Scene) *sessions.Jobs { return apptest.PluginOf[*sessions.Jobs](s, "jobs") }
 func launcherOf(s *apptest.Scene) *sessions.Launcher {
 	return apptest.PluginOf[*sessions.Launcher](s, "launcher")
-}
-
-// settleJobs frames until the Jobs page, what else the app is working on (a console's models) and the stats it
-// shows have been read.
-func settleJobs(s *apptest.Scene, x *sessions.Jobs) {
-	s.T.Helper()
-	s.Until("the jobs", func() bool { return !x.Busy() })
-	s.Quiet()
-	s.SettleStats()
 }

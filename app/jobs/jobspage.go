@@ -1,6 +1,6 @@
 //oriel:kind job
 
-package sessions
+package jobs
 
 import (
 	"cmp"

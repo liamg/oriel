@@ -8,6 +8,7 @@ import (
 	"github.com/liamg/oriel/app/editor"
 	"github.com/liamg/oriel/app/explain"
 	"github.com/liamg/oriel/app/gitui"
+	"github.com/liamg/oriel/app/jobs"
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/app/overview"
@@ -52,7 +53,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&terminal.Terminals{SavedAt: dirState("terminals"), Clipboard: p.Clipboard},
 		&settings.Plugin{ConfigDir: c.ConfigDir}, &ship.CodeSites{}, &appsessions.Sessions{ConfigDir: c.ConfigDir},
 		p.Quit, &settings.SandboxSettings{Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
-		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &appsessions.Jobs{}, &repos.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
+		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &jobs.Jobs{}, &repos.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
 		&updates.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, agentui.NewVoiceEntries(voice), voice,
 		&agentui.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &ship.GitHubHost{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},

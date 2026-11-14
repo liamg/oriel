@@ -1,4 +1,4 @@
-package sessions_test
+package jobs_test
 
 import (
 	"context"
@@ -10,8 +10,8 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/jobs"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -166,12 +166,14 @@ func TestSaveAsJobFromTheLauncher(t *testing.T) {
 	x := jobsOf(s)
 	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
 	s.Run("session.new", registry.Args{"prompt": "Draft this week's changelog from the PRs merged since Monday."})
-	l := launcherOf(s)
-	s.Until("the launcher's agents", func() bool { return l.Provider() != "" })
+	s.Until("the launcher's agents", func() bool {
+		return s.Has("Save as job") && !strings.Contains(s.Text(), "Checking which agents are installed")
+	})
 	s.Click(apptest.Centre(s.Node("Save as job").Bounds), 0)
+	s.Quiet()
 	prompt, agent, form := x.Form()
-	if l.Open() || !form {
-		t.Fatalf("Save as job: launcher open %v, dialog %v", l.Open(), form)
+	if launcher := s.Has("Save as job"); launcher || !form {
+		t.Fatalf("Save as job: launcher open %v, dialog %v", launcher, form)
 	}
 	if prompt != "Draft this week's changelog from the PRs merged since Monday." || agent != "fake" {
 		t.Errorf("the dialog holds %q on %q", prompt, agent)
@@ -239,7 +241,7 @@ func TestJobsEntryPoints(t *testing.T) {
 }
 
 // jobsScene is the app on a fixed machine and clock, the Jobs page open.
-func jobsScene(t *testing.T) (*apptest.Scene, *rig.Jobs, *sessions.Jobs) {
+func jobsScene(t *testing.T) (*apptest.Scene, *rig.Jobs, *jobs.Jobs) {
 	t.Helper()
 	r := rig.NewJobs(t)
 	r.Build()
@@ -426,29 +428,4 @@ func TestTheJobPromptTakesLines(t *testing.T) {
 	if js := lw.W.Jobs(); len(js) != 1 || js[0].Prompt != "Sweep stale deps.\nKeep majors." {
 		t.Errorf("the job: %+v", js)
 	}
-}
-
-// The launcher's prompt takes several lines too; ⌘⏎ starts.
-func TestTheLauncherPromptTakesLines(t *testing.T) {
-	lw := rig.NewHost(t)
-	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
-	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
-	if err := s.Host().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil { // no sandbox here
-		t.Fatal(err)
-	}
-	s.Run("session.new", registry.Args{"kind": "plan"})
-	l := launcherOf(s)
-	s.Until("the launcher's agents", func() bool { return l.Provider() != "" })
-	s.TypeInto("Prompt", "notes")
-	s.Type("CR", "x")
-	if l.Prompt() != "notes\nx" || !l.Open() {
-		t.Fatalf("⏎ in the launcher's prompt: %q, open %v", l.Prompt(), l.Open())
-	}
-	s.Press("<D-CR>")
-	if a := lw.Fake.WaitStarted(t); a == nil {
-		t.Fatal("⌘⏎ didn't start it")
-	}
-	s.UntilState("the session", func(st core.State) bool {
-		return len(st.Sessions) == 1 && st.Sessions[0].Prompt == "notes\nx"
-	})
 }
