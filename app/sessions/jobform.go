@@ -13,7 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -27,7 +27,7 @@ import (
 var (
 	runsIn   = []string{"Sandbox", "Host", "Default"}
 	pinOf    = []string{"sandbox", "host", ""}
-	everyOf  = []string{"", host.EveryWeekday, host.EveryWeek, host.EveryDays}
+	everyOf  = []string{"", hostapi.EveryWeekday, hostapi.EveryWeek, hostapi.EveryDays}
 	everyFor = []string{"MANUAL", "WEEKDAYS", "WEEKLY", "CUSTOM"}
 )
 
@@ -46,30 +46,30 @@ type jobForm struct {
 	focus  bool
 	busy   bool
 	err    string
-	agents *plugin.Load[[]host.ProviderInfo]
+	agents *plugin.Load[[]hostapi.ProviderInfo]
 	picked bool // the agent was given, or picked once the providers arrived
 }
 
-func (f *jobForm) job() host.Job {
-	s := host.Schedule{Every: everyOf[f.every], At: strings.TrimSpace(f.at)}
+func (f *jobForm) job() hostapi.Job {
+	s := hostapi.Schedule{Every: everyOf[f.every], At: strings.TrimSpace(f.at)}
 	switch s.Every {
 	case "":
 		s.At = ""
-	case host.EveryWeek:
+	case hostapi.EveryWeek:
 		s.Days = []time.Weekday{days[f.day]}
-	case host.EveryDays:
+	case hostapi.EveryDays:
 		for _, d := range days {
 			if slices.Contains(f.custom, dayName(d)) {
 				s.Days = append(s.Days, d)
 			}
 		}
 	}
-	return host.Job{Name: f.name, Title: f.title, Prompt: f.prompt, Sandbox: pinOf[f.runsIn], Provider: f.agent,
+	return hostapi.Job{Name: f.name, Title: f.title, Prompt: f.prompt, Sandbox: pinOf[f.runsIn], Provider: f.agent,
 		Model: f.model, Effort: f.effort, Schedule: s}
 }
 
 // formFor is a dialog holding j.
-func formFor(j host.Job) *jobForm {
+func formFor(j hostapi.Job) *jobForm {
 	f := &jobForm{name: j.Name, title: j.Title, prompt: j.Prompt, runsIn: max(slices.Index(pinOf, j.Sandbox), 0),
 		agent: j.Provider, model: j.Model, effort: j.Effort, every: max(slices.Index(everyOf, j.Schedule.Every), 0), at: cmp.Or(j.Schedule.At, "07:00"),
 		focus: true}
@@ -84,7 +84,7 @@ func formFor(j host.Job) *jobForm {
 
 // newForm opens the dialog on a new job, with what the args give filled in.
 func (x *Jobs) newForm(a registry.Args) {
-	j := host.Job{Title: a.String("title"), Prompt: a.String("prompt"), Provider: a.String("provider"), Model: a.String("model"),
+	j := hostapi.Job{Title: a.String("title"), Prompt: a.String("prompt"), Provider: a.String("provider"), Model: a.String("model"),
 		Effort: a.String("effort")}
 	switch v := a["sandbox"].(type) {
 	case bool:
@@ -114,7 +114,7 @@ func (x *Jobs) editForm(a registry.Args, copy bool) error {
 func (x *Jobs) show(f *jobForm) {
 	x.closeForm()
 	f.picked = f.agent != ""
-	f.agents = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
+	f.agents = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]hostapi.ProviderInfo, error) {
 		c, err := kit.SessionCalls(x.h)
 		if err != nil {
 			return nil, err
@@ -249,7 +249,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 			switch everyOf[f.every] {
 			case "":
 				return
-			case host.EveryWeek:
+			case hostapi.EveryWeek:
 				var names []string
 				for _, d := range days {
 					names = append(names, dayName(d))
@@ -257,7 +257,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 				if v, ok := widget.Select(c, "day", dayName(days[f.day]), names, widget.SelectOpts{Label: "Day", Help: "agent/jobs#schedule", Width: 120}); ok {
 					f.day = slices.Index(names, v)
 				}
-			case host.EveryDays:
+			case hostapi.EveryDays:
 				if v, ok := widget.MultiSelect(c, "days", f.custom, func() []string {
 					var names []string
 					for _, d := range days {
@@ -281,7 +281,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 		} else {
 			file := f.name
 			if file == "" {
-				file = trimSlug(host.Sanitise(cmp.Or(f.title, kit.FirstLine(f.prompt))))
+				file = trimSlug(hostapi.Sanitise(cmp.Or(f.title, kit.FirstLine(f.prompt))))
 			}
 			c.Text("file", "→ "+cmp.Or(file, "job")+".json", kit.MonoFont(10.5, th.C(theme.FgGhost)))
 		}
@@ -306,7 +306,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 }
 
 // agentChoices are the agents read, the job's picked, with its model and effort.
-func (x *Jobs) agentChoices(c *ui.Ctx, f *jobForm, agents []host.ProviderInfo) {
+func (x *Jobs) agentChoices(c *ui.Ctx, f *jobForm, agents []hostapi.ProviderInfo) {
 	items := make([]widget.Choice, len(agents))
 	cur := 0
 	for i, p := range agents {

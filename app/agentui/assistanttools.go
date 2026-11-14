@@ -17,9 +17,10 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -458,7 +459,7 @@ func pullRequest(ref string) (url, key string, err error) {
 
 // reviewOf is the open session already on a pull request.
 func (x *Assistant) reviewOf(url string) (core.SessionState, bool) {
-	if s, ok := kit.ReviewSession(x.h, url); ok && !s.Snapshot().Archived {
+	if s, ok := services.ReviewSession(x.h, url); ok && !s.Snapshot().Archived {
 		return s.Snapshot(), true
 	}
 	return core.SessionState{}, false
@@ -524,11 +525,11 @@ func (x *Assistant) jobs(context.Context) []jobLine {
 			l.Schedule = j.Schedule.String()
 		}
 		for _, s := range st.Sessions {
-			if host.JobOf(s) != j.Name || s.Created.Before(l.at) {
+			if hostapi.JobOf(s) != j.Name || s.Created.Before(l.at) {
 				continue
 			}
-			r := host.RunOf(s)
-			l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == host.RunRunning
+			r := hostapi.RunOf(s)
+			l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == hostapi.RunRunning
 			l.LastAt = s.Created.Format(time.RFC3339)
 		}
 		out = append(out, l)
@@ -614,7 +615,7 @@ type prLine struct {
 
 func (x *Assistant) toolPRs(query string) func(registry.Ctx, registry.Args) (any, error) {
 	return func(ctx registry.Ctx, _ registry.Args) (any, error) {
-		g, err := kit.GitHubOf(x.h)
+		g, err := kit.GitHub(x.h)
 		if err != nil {
 			return nil, err
 		}

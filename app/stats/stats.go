@@ -11,15 +11,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/registry/services"
-
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/host/stats"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -322,7 +321,7 @@ func (x *Plugin) contributions() []registry.Contribution {
 		return func(registry.Ctx) (ui.Node, error) { return &ui.Func{Key: key, Fn: f}, nil }
 	}
 	return []registry.Contribution{
-		registry.Service{Name: kit.StatsService, Impl: x, Source: "stats"},
+		registry.Service{Name: services.StatsService, Impl: x, Source: "stats"},
 		kit.PagePlace("stats", "Stats", "stats.open", &x.open), // a place in the history before the page loads
 		kit.PagePlace("usage", "Usage", "usage.open", &x.usageOpen),
 		uireg.RailEntry{Name: "stats", Icon: "stats", Title: "Stats", Command: "stats.open", Scope: uireg.ScopeGlobalEntry, Order: 10,
@@ -615,7 +614,7 @@ func (x *Plugin) fresher() {
 // Busy says whether a read it asked the session host for is still out, or about to be.
 func (x *Plugin) Busy() bool { return x.subs.Busy() }
 
-// Session is a session's stats, once they've been read (kit.Stats).
+// Session is a session's stats, once they've been read (services.Stats).
 func (x *Plugin) Session(id core.SessionID) (stats.Detail, bool) { return x.detail(id) }
 
 // detail is a session's stats once read.
@@ -630,7 +629,7 @@ func (x *Plugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) 
 	if w == nil {
 		return stats.Detail{}, widget.LoadState{}
 	}
-	req := host.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
+	req := hostapi.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
 	a, state := keep(x, x.detailKey(id), "session", func() (stats.Detail, error) { return w.SessionStats(req) })
 	return a.v, state
 }
@@ -654,7 +653,7 @@ func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 			x.mu.Lock()
 			since := x.frameNow.Add(-8 * 24 * time.Hour)
 			x.mu.Unlock()
-			return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil
+			return w.UsageHistory(hostapi.UsageHistoryReq{Since: since}), nil
 		})
 		hist = a.v
 	}

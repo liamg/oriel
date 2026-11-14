@@ -47,7 +47,7 @@ func PagePlace(name, title, command string, open *bool) uireg.Place {
 	return uireg.Place{Name: name, Title: title, Command: command, Shown: func() bool { return *open }, Close: func() { *open = false }}
 }
 
-// PollSet is the periods of a window's periodic work while it runs (PollsOf). A nil one notes nothing.
+// PollSet is the periods of a window's periodic work while it runs (Polls). A nil one notes nothing.
 type PollSet struct {
 	mu      sync.Mutex
 	live    map[int]time.Duration

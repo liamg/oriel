@@ -12,8 +12,9 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -35,7 +36,7 @@ func reviewDraft(se core.SessionState) *core.ReviewDraft {
 // Raise PR's.
 func (x *PRReview) contributeKind() {
 	h := x.h
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.ReviewKind,
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: hostapi.ReviewKind,
 		PrepareFunc: x.prepare,
 		ChipsFunc: func(se core.SessionState) []registry.Chip {
 			if pr := reviewPR(se); pr != "" {
@@ -45,7 +46,7 @@ func (x *PRReview) contributeKind() {
 		}}}))
 	x.Add(h.Contribute(registry.SessionDone{Name: "review.approved", Done: approved}))
 	x.Add(h.Contribute(registry.SessionUnsaved{Name: "review.unsent", Unsaved: x.unsent}))
-	x.Add(h.Contribute(registry.Service{Name: kit.ReviewsService, Impl: reviewsService{x}}))
+	x.Add(h.Contribute(registry.Service{Name: services.ReviewsService, Impl: reviewsService{x}}))
 	x.Add(h.Contribute(uireg.SlotView{Name: "review.pr", Slot: kit.PRView, Kinds: []core.Kind{core.KindReview}, View: reviewTab{x}}))
 }
 
@@ -128,7 +129,7 @@ func (x *PRReview) prCheckout(ctx context.Context, spec *core.SessionSpec) error
 	if spec.PR == "" || spec.PRRef != "" {
 		return nil
 	}
-	src, ok := kit.SitesOf(x.h).URL(spec.PR)
+	src, ok := kit.Sites(x.h).URL(spec.PR)
 	if !ok || src.Checkout == nil {
 		return nil
 	}
@@ -147,7 +148,7 @@ func (x *PRReview) prName(spec *core.SessionSpec) {
 	if spec.PR == "" || spec.Name != "" || spec.Title != "" || spec.PRRemote == "" {
 		return
 	}
-	src, ok := kit.SitesOf(x.h).URL(spec.PR)
+	src, ok := kit.Sites(x.h).URL(spec.PR)
 	if !ok {
 		return
 	}
@@ -166,7 +167,7 @@ func (x *PRReview) prContext(ctx context.Context, spec *core.SessionSpec) {
 	if spec.PR == "" || spec.Context != "" && spec.PRBase != "" {
 		return
 	}
-	src, ok := kit.SitesOf(x.h).URL(spec.PR)
+	src, ok := kit.Sites(x.h).URL(spec.PR)
 	if !ok || src.Lookup == nil {
 		return
 	}

@@ -10,7 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -19,7 +19,7 @@ import (
 
 // shipRead is a project as the Ship page shows it: the host's reading of its git, and its pull request.
 type shipRead struct {
-	host.Ship
+	hostapi.Ship
 	CodeHost    *registry.CodeHost // the host origin is on; nil for none Oriel knows
 	Site        registry.Site      // which of its servers
 	Repo        string             // its name there: "acme/api"
@@ -78,19 +78,19 @@ type raisedPR struct {
 const raisedHold = 2 * time.Minute
 
 // withPRs is ships with each one's code host, PR and checks: the last prTTL's unless fresh.
-func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship, fresh bool) []shipRead {
+func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []hostapi.Ship, fresh bool) []shipRead {
 	out := make([]shipRead, len(ships))
 	var wg sync.WaitGroup
 	for i, s := range ships {
 		out[i] = shipRead{Ship: s, GitRead: x.now()}
-		hs, repo, ok := kit.SitesOf(x.h).Remote(s.Origin)
+		hs, repo, ok := kit.Sites(x.h).Remote(s.Origin)
 		if !ok {
 			hostname, _, parsed := registry.ParseRemote(s.Origin)
 			if !parsed {
 				continue
 			}
-			if _, ok = kit.SitesOf(x.h).Probe(ctx, hostname); ok {
-				hs, repo, ok = kit.SitesOf(x.h).Remote(s.Origin)
+			if _, ok = kit.Sites(x.h).Probe(ctx, hostname); ok {
+				hs, repo, ok = kit.Sites(x.h).Remote(s.Origin)
 			}
 			if !ok {
 				out[i].UnknownHost = hostname
@@ -98,8 +98,8 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 			}
 		}
 		out[i].CodeHost, out[i].Site, out[i].Repo = &hs.CodeHost, hs.Site, repo
-		kit.SitesOf(x.h).Warm(ctx, hs)
-		if !kit.SitesOf(x.h).Keyed(hs) {
+		kit.Sites(x.h).Warm(ctx, hs)
+		if !kit.Sites(x.h).Keyed(hs) {
 			out[i].Unkeyed = true
 			continue
 		}
@@ -109,8 +109,8 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 		wg.Go(func() {
 			g := x.prFor(ctx, id, out[i], fresh)
 			out[i].PR, out[i].Checks, out[i].FailLine, out[i].HostError, out[i].PRRead = g.pr, g.checks, g.failLine, errText(g.err), g.at
-			if g.err != nil && kit.SitesOf(x.h).Refuse(hs, g.err) {
-				out[i].Unkeyed = !kit.SitesOf(x.h).Keyed(hs)
+			if g.err != nil && kit.Sites(x.h).Refuse(hs, g.err) {
+				out[i].Unkeyed = !kit.Sites(x.h).Keyed(hs)
 				x.cache.mu.Lock()
 				delete(x.cache.read, formKey(id, s.Project)+"/"+s.Branch)
 				x.cache.mu.Unlock()
@@ -185,7 +185,7 @@ func (x *Ship) forBranch(ctx context.Context, h registry.CodeHost, repo registry
 // sawPR tells the session host whether a project's branch's PR is open.
 func (x *Ship) sawPR(repo registry.CodeRepo, branch string, open bool) {
 	if c, err := kit.ShipCalls(x.h); err == nil {
-		_ = c.SawPR(host.PRSeenReq{Session: core.SessionID(repo.Session), Project: repo.Project, Branch: branch, Open: open})
+		_ = c.SawPR(hostapi.PRSeenReq{Session: core.SessionID(repo.Session), Project: repo.Project, Branch: branch, Open: open})
 	}
 }
 
@@ -269,7 +269,7 @@ func (x *Ship) ownBranch(ctx context.Context, id core.SessionID, s shipRead) err
 	if err != nil {
 		return err
 	}
-	branch, err := c.ShipBranch(ctx, host.ShipRef{Session: id, Project: s.Project})
+	branch, err := c.ShipBranch(ctx, hostapi.ShipRef{Session: id, Project: s.Project})
 	if err != nil {
 		return err
 	}
@@ -389,7 +389,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 		h, repo, pr := *s.CodeHost, s.codeRepo(id), *s.PR
 		var ts []registry.ReviewThread
 		if err := registry.Call(func() (err error) { ts, err = h.Threads(ctx, repo, pr); return err }); err != nil {
-			kit.SitesOf(x.h).Refuse(registry.HostSite{CodeHost: h, Site: s.Site}, err)
+			kit.Sites(x.h).Refuse(registry.HostSite{CodeHost: h, Site: s.Site}, err)
 			x.h.Log().Debug("ship", "threads", s.Project, "err", err)
 			continue
 		}
@@ -399,13 +399,13 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 		}
 		x.reviewed[pr.URL] = reviewStates(ts)
 		x.mu.Unlock()
-		req := host.MirrorReviewReq{Session: id, Project: s.Project, Host: h.Name, Repo: s.Repo, PR: pr.Number, URL: pr.URL, Author: pr.Author}
+		req := hostapi.MirrorReviewReq{Session: id, Project: s.Project, Host: h.Name, Repo: s.Repo, PR: pr.Number, URL: pr.URL, Author: pr.Author}
 		for _, t := range ts {
-			rt := host.ReviewThread{Key: t.ID, Path: t.Path, Line: t.Line, Old: t.Old, Outdated: t.Outdated, Resolved: t.Resolved,
+			rt := hostapi.ReviewThread{Key: t.ID, Path: t.Path, Line: t.Line, Old: t.Old, Outdated: t.Outdated, Resolved: t.Resolved,
 				Reviewer: t.Reviewer, State: t.State, URL: t.URL}
 			for _, n := range t.Comments {
-				rt.Comments = append(rt.Comments, host.ReviewComment{Key: n.ID, User: n.Author, Body: n.Body, At: n.At,
-					Trusted: n.Member || kit.SitesOf(x.h).TrustedUser(n.Author)})
+				rt.Comments = append(rt.Comments, hostapi.ReviewComment{Key: n.ID, User: n.Author, Body: n.Body, At: n.At,
+					Trusted: n.Member || kit.Sites(x.h).TrustedUser(n.Author)})
 			}
 			req.Threads = append(req.Threads, rt)
 		}
@@ -422,7 +422,7 @@ func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment s
 	if err != nil {
 		return err
 	}
-	req := host.ForwardReq{Session: se.ID, Thread: thread, Comment: comment}
+	req := hostapi.ForwardReq{Session: se.ID, Thread: thread, Comment: comment}
 	t, _, err := c.DraftOf(req)
 	if err != nil {
 		return err
@@ -436,7 +436,7 @@ func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment s
 		return err
 	}
 	repo, pr := s.codeRepo(se.ID), *s.PR
-	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, "Forwarding", func(ctx context.Context, c host.CodeHostCalls) error {
+	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, "Forwarding", func(ctx context.Context, c hostapi.CodeHostCalls) error {
 		_, err := c.ForwardHost(ctx, req, func(ctx context.Context, t core.Thread, body string) (posted string, err error) {
 			rt := registry.ReviewThread{ID: t.Hosted.Key, URL: t.Hosted.URL, Outdated: t.Hosted.Outdated}
 			if a := t.Anchor; a != nil && rt.ID != "" {
@@ -464,10 +464,10 @@ func (x *Ship) resolveHost(se core.SessionState, t core.Thread, resolved bool) e
 	if a := t.Anchor; a != nil {
 		rt.Path, rt.Line, rt.Old = a.File, a.Line, a.Side == "old"
 	}
-	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, map[bool]string{true: "Resolving", false: "Reopening"}[resolved], func(ctx context.Context, c host.CodeHostCalls) error {
+	return stepWith(x, kit.CodeHostCalls, se.ID, s.Project, map[bool]string{true: "Resolving", false: "Reopening"}[resolved], func(ctx context.Context, c hostapi.CodeHostCalls) error {
 		if err := registry.Call(func() error { return h.Resolve(ctx, repo, pr, rt, resolved) }); err != nil {
 			return err
 		}
-		return c.MarkHostResolved(host.ResolveReq{Session: se.ID, Thread: t.ID, Resolved: resolved})
+		return c.MarkHostResolved(hostapi.ResolveReq{Session: se.ID, Thread: t.ID, Resolved: resolved})
 	})
 }

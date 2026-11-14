@@ -5,19 +5,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 )
 
-// ProviderInfo is a provider as the launcher shows it.
-type ProviderInfo struct {
-	ID      string             `json:"id"`
-	Install agent.Install      `json:"install"`
-	Has     agent.Features     `json:"has"` // what its sessions can do past the least (agent.Featured)
-	Models  []agent.Model      `json:"models,omitempty"`
-	Usage   core.ProviderUsage `json:"usage,omitzero"`
-	Error   string             `json:"error,omitempty"`
-}
+type ProviderInfo = hostapi.ProviderInfo
 
 // ProviderInfo is each provider as the launcher shows it: installed, logged in, its models, its usage. The
 // providers are asked at once, so it takes as long as the slowest.

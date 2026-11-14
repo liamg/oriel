@@ -38,11 +38,11 @@ func Languages(r registry.Registry) *syntax.Set {
 	if s, ok := registry.ServiceOf[LanguageSet](r, LanguagesService); ok {
 		return s.Set()
 	}
-	return LanguageSetOf(r)
+	return LanguageSetFrom(r)
 }
 
-// LanguageSetOf makes r's languages into a syntax.Set.
-func LanguageSetOf(r registry.Registry) *syntax.Set {
+// LanguageSetFrom makes r's languages into a syntax.Set.
+func LanguageSetFrom(r registry.Registry) *syntax.Set {
 	ls, _ := r.Languages()
 	var out []*syntax.Language
 	for _, l := range ls {

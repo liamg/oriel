@@ -12,7 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -43,7 +43,7 @@ type Permissions struct {
 
 // permsState is one session's view: its read, and what's picked and typed.
 type permsState struct {
-	load    *plugin.Load[host.Permissions]
+	load    *plugin.Load[hostapi.Permissions]
 	read    time.Time
 	pane    int // 0 rules, 1 connections
 	toolQ   string
@@ -76,7 +76,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 		{ID: "permissions.tool", Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
-				return x.change(id, func(w host.SandboxCalls) error {
+				return x.change(id, func(w hostapi.SandboxCalls) error {
 					return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action")))
 				})
 			}},
@@ -87,7 +87,7 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 				if err != nil {
 					return err
 				}
-				return x.change(id, func(w host.SandboxCalls) error {
+				return x.change(id, func(w hostapi.SandboxCalls) error {
 					return w.SetNetRule(id, h, port, noneAsEmpty(a.String("action")), a.Bool("private"))
 				})
 			}},
@@ -142,10 +142,10 @@ func (x *Permissions) state(id core.SessionID) *permsState {
 	st := x.by[id]
 	if st == nil {
 		st = &permsState{}
-		st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.Permissions, error) {
+		st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.Permissions, error) {
 			w, err := kit.SandboxCalls(x.h)
 			if err != nil {
-				return host.Permissions{}, err
+				return hostapi.Permissions{}, err
 			}
 			return w.Permissions(ctx, id)
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
@@ -155,7 +155,7 @@ func (x *Permissions) state(id core.SessionID) *permsState {
 }
 
 // change runs a change on the host and reads the session again.
-func (x *Permissions) change(id core.SessionID, fn func(host.SandboxCalls) error) error {
+func (x *Permissions) change(id core.SessionID, fn func(hostapi.SandboxCalls) error) error {
 	w, err := kit.SandboxCalls(x.h)
 	if err != nil {
 		return err
@@ -280,7 +280,7 @@ func actionTone(action string) theme.TokenID {
 var actionWord = map[string]string{gateway.Allow: "allowed", gateway.Ask: "asks you", gateway.Deny: "denied"}
 
 // tools are the gateway's tools by server: what a call meets, where that comes from, and the session's own say.
-func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p host.Permissions) {
+func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p hostapi.Permissions) {
 	th := c.Theme()
 	kit.KickerRow(c, "toolscap", "TOOLS")
 	widget.Input(c, "toolq", &st.toolQ, widget.InputOpts{Label: "Filter tools", Placeholder: "Filter tools", Width: ui.Px(280), Help: "agent/permissions#tools"})
@@ -309,7 +309,7 @@ func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p h
 				why += " · " + t.Rule
 			}
 			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
-			locked := t.Fixed || t.Action == gateway.Deny && t.Source != host.SourceSession
+			locked := t.Fixed || t.Action == gateway.Deny && t.Source != hostapi.SourceSession
 			if locked {
 				return
 			}
@@ -329,7 +329,7 @@ func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p h
 }
 
 // hosts are the network rules in force, most local first, and a way to add the session's own.
-func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p host.Permissions) {
+func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p hostapi.Permissions) {
 	th := c.Theme()
 	kit.KickerRow(c, "netcap", "NETWORK")
 	if !p.Filtered {
@@ -376,7 +376,7 @@ func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p h
 				why += " · private addresses too"
 			}
 			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
-			if r.Source == host.SourceSession && widget.Button(c, "rm", "Remove", widget.ButtonOpts{Ghost: true, Help: "agent/permissions#network"}) {
+			if r.Source == hostapi.SourceSession && widget.Button(c, "rm", "Remove", widget.ButtonOpts{Ghost: true, Help: "agent/permissions#network"}) {
 				x.run("permissions.net", registry.Args{"id": string(se.ID), "host": r.Host, "port": r.Port, "action": "none"})
 			}
 		})
@@ -438,7 +438,7 @@ func connWhy(e egress.Event) string {
 }
 
 // conns is every connection the agent made or tried, newest first, grouped by destination unless asked not to.
-func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p host.Permissions, now time.Time) {
+func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p hostapi.Permissions, now time.Time) {
 	th := c.Theme()
 	c.Row("bar", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		widget.Input(c, "q", &st.connQ, widget.InputOpts{Label: "Filter connections", Placeholder: "Filter by host, port or protocol", Width: ui.Px(300),

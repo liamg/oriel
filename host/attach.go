@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
 )
@@ -16,13 +17,7 @@ import (
 // maxAttach is the largest file a session's agent is handed.
 const maxAttach = 32 << 20
 
-// AttachReq is a file for a session's agent: Data (a pasted picture) named Name, or a copy of the file at Path.
-type AttachReq struct {
-	Session core.SessionID `json:"session"`
-	Name    string         `json:"name,omitempty"`
-	Data    []byte         `json:"data,omitempty"`
-	Path    string         `json:"path,omitempty"`
-}
+type AttachReq = hostapi.AttachReq
 
 // Attach keeps a file for a session's agent in the session's agent folder, which a sandboxed agent sees too, and
 // returns where it is.

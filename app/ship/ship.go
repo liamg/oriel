@@ -10,10 +10,11 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -23,7 +24,7 @@ import (
 )
 
 // The Ship page and its panels: each project's way from uncommitted work to a merged PR, read from
-// the session host (host.ShipRead) and its code host (codehost.go), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
+// the session host (hostapi.ShipRead) and its code host (codehost.go), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
 // the same way; the gates are ShipGate contributions, and ShipCommit and ShipRaise hooks can stop a step.
 
 // shipPoll is the most often the session in front's git is read again as it changes.
@@ -117,7 +118,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
 	x.Add(h.Contribute(uireg.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
-	x.Add(h.Contribute(registry.Service{Name: registry.ShipsService, Impl: ships{x}}))
+	x.Add(h.Contribute(registry.Service{Name: services.ShipsService, Impl: ships{x}}))
 	x.Add(h.Contribute(registry.CardChips{Name: "pr", Chips: x.prChips}))
 	x.Add(h.Contribute(registry.SessionDone{Name: "ship.merged", Done: x.shipped}))
 	x.gates()
@@ -159,7 +160,7 @@ func (x *Ship) Deactivate(ctx context.Context) error {
 func (x *Ship) focused() core.SessionID { return x.h.State().Focus }
 
 // client is the session host's ship calls.
-func (x *Ship) client(id core.SessionID) (host.ShipCalls, error) {
+func (x *Ship) client(id core.SessionID) (hostapi.ShipCalls, error) {
 	return kit.ShipCalls(x.h)
 }
 
@@ -224,7 +225,7 @@ func (r *shipReport) seen(now time.Time) {
 // ships is Ship's Ships service.
 type ships struct{ x *Ship }
 
-func (s ships) For(se core.SessionState) []registry.ProjectShip {
+func (s ships) For(se core.SessionState) []services.ProjectShip {
 	x := s.x
 	reads, _ := x.sessionShips(se)
 	x.mu.Lock()
@@ -251,14 +252,14 @@ func (s ships) For(se core.SessionState) []registry.ProjectShip {
 }
 
 // projectShips are reads as other plugins see them.
-func projectShips(reads []shipRead) []registry.ProjectShip {
-	out := make([]registry.ProjectShip, 0, len(reads))
+func projectShips(reads []shipRead) []services.ProjectShip {
+	out := make([]services.ProjectShip, 0, len(reads))
 	for _, p := range reads {
 		var files []string
 		for _, f := range p.Files {
 			files = append(files, f.Path)
 		}
-		out = append(out, registry.ProjectShip{Project: p.Project, ReadOnly: p.ReadOnly, Files: files, Unpushed: len(p.Unpushed), Commits: p.Commits,
+		out = append(out, services.ProjectShip{Project: p.Project, ReadOnly: p.ReadOnly, Files: files, Unpushed: len(p.Unpushed), Commits: p.Commits,
 			Pushed: p.Pushed, PR: p.PR, Code: p.CodeHost})
 	}
 	return out
@@ -346,8 +347,8 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) 
 	c, err := x.client(id)
 	if err == nil {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-		var read []host.Ship
-		if read, err = c.ShipRead(ctx, host.ShipReq{Session: id, Fresh: fresh}); err == nil {
+		var read []hostapi.Ship
+		if read, err = c.ShipRead(ctx, hostapi.ShipReq{Session: id, Fresh: fresh}); err == nil {
 			ships = x.withPRs(ctx, id, read, fresh)
 			x.mirrorReviews(ctx, id, ships, fresh)
 		}
@@ -458,7 +459,7 @@ func (x *Ship) Wait() { x.wait() }
 // step runs one step on a project off the loop, showing doing while it runs and until the project's been read after
 // it, so its panel never shows the state from before; then done, if it succeeded, on the loop. A failure is kept for
 // the project and sent as a notice. The session is read again after, fetched.
-func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c host.ShipCalls) error, done ...func()) error {
+func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c hostapi.ShipCalls) error, done ...func()) error {
 	return stepWith(x, kit.ShipCalls, id, project, doing, fn, done...)
 }
 
@@ -694,7 +695,7 @@ func (x *Ship) sessionShips(se core.SessionState) ([]shipRead, shipReport) {
 		if i >= 0 {
 			out = append(out, r.ships[i])
 		} else {
-			out = append(out, shipRead{Ship: host.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base}})
+			out = append(out, shipRead{Ship: hostapi.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base}})
 		}
 	}
 	return out, r
@@ -737,7 +738,7 @@ func conflictTrouble(s shipRead) (registry.Trouble, bool) {
 // prChips are the pull requests a session that ships has raised, as the window's Ships last read its projects: its
 // card names them.
 func (x *Ship) prChips(se core.SessionState) []registry.Chip {
-	s, ok := registry.ShipsOf(x.h)
+	s, ok := services.ShipsOf(x.h)
 	if !ok || !registry.Can(x.h, se.Kind, core.Ships) {
 		return nil
 	}
@@ -753,7 +754,7 @@ func (x *Ship) prChips(se core.SessionState) []registry.Chip {
 // shipped says a session that ships is done once every PR is merged and nothing is uncommitted or unpushed, as last
 // read.
 func (x *Ship) shipped(se core.SessionState) string {
-	s, ok := registry.ShipsOf(x.h)
+	s, ok := services.ShipsOf(x.h)
 	if !ok || !registry.Can(x.h, se.Kind, core.Ships) {
 		return ""
 	}

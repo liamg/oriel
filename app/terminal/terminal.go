@@ -21,7 +21,7 @@ import (
 	"github.com/liamg/oriel/app/kit/vimreg"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/sandbox"
@@ -313,7 +313,7 @@ func (x *Terminals) focusedOrLast() *terminal {
 
 // sandboxed says a terminal opened with a runs a shell in the sandbox of the session in front, beside its agent:
 // one with no program or source of its own while that session is sandboxed. Others run here.
-func (x *Terminals) sandboxed(a registry.Args) (host.SandboxCalls, core.SessionID, bool) {
+func (x *Terminals) sandboxed(a registry.Args) (hostapi.SandboxCalls, core.SessionID, bool) {
 	if src, _ := a["source"].(TermSource); src != nil || len(strList(a["cmd"])) > 0 || len(strList(a["args"])) > 0 || a.Bool("host") {
 		return nil, "", false
 	}

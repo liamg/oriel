@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/host/stats"
 )
 
 // StatsQuery answers a stats query over every session the host has.

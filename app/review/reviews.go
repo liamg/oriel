@@ -228,8 +228,8 @@ func (x *Reviews) poll() {
 	need := watch.Need{MaxAge: reviewsCheck, Background: watch.Slow, Slow: kit.UnfocusedPoll}
 	x.subs.Hold("reviews", m, need, func() kit.Closer {
 		src := kit.Every("reviews.requested", func(ctx context.Context) error {
-			for _, s := range kit.SitesOf(x.h).ReviewSources() {
-				kit.SitesOf(x.h).Warm(ctx, s)
+			for _, s := range kit.Sites(x.h).ReviewSources() {
+				kit.Sites(x.h).Warm(ctx, s)
 				x.fresh(s, x.pollEvery())
 			}
 			return nil
@@ -265,10 +265,10 @@ func (x *Reviews) optBool(name string) bool {
 }
 
 // any says whether a source is registered.
-func (x *Reviews) any() bool { return len(kit.SitesOf(x.h).ReviewSources()) > 0 }
+func (x *Reviews) any() bool { return len(kit.Sites(x.h).ReviewSources()) > 0 }
 
 // needsKey says the source can't answer until its secret is set.
-func (x *Reviews) needsKey(s registry.HostSite) bool { return !kit.SitesOf(x.h).Keyed(s) }
+func (x *Reviews) needsKey(s registry.HostSite) bool { return !kit.Sites(x.h).Keyed(s) }
 
 // prSession is the session reviewing url: a live one before an archived one, then the newest.
 func prSession(h plugin.Host, url string) (core.Session, bool) {
@@ -326,7 +326,7 @@ func (x *Reviews) fresh(s registry.HostSite, stale time.Duration) <-chan struct{
 				break
 			}
 		}
-		refused := kit.SitesOf(x.h).Refuse(s, err)
+		refused := kit.Sites(x.h).Refuse(s, err)
 		x.mu.Lock()
 		before, had := l.reqs, l.answered
 		l.ask.End()
@@ -414,7 +414,7 @@ func (x *Reviews) refreshAll() {
 		d.stale = true
 	}
 	x.mu.Unlock()
-	for _, s := range kit.SitesOf(x.h).ReviewSources() {
+	for _, s := range kit.Sites(x.h).ReviewSources() {
 		x.stale(s.Key())
 		x.fresh(s, 0)
 	}
@@ -463,7 +463,7 @@ func (x *Reviews) rows() []reviewRow {
 	var reqs []registry.ReviewRequest
 	var foot []reviewRow
 	sources := map[string]registry.HostSite{}
-	for _, s := range kit.SitesOf(x.h).ReviewSources() {
+	for _, s := range kit.Sites(x.h).ReviewSources() {
 		if s.Requested == nil {
 			continue
 		}
@@ -681,7 +681,7 @@ func (x *Reviews) startBehind(ctx registry.Ctx, url string) error {
 func (x *Reviews) source() uireg.PickerSource {
 	return uireg.PickerSource{ID: "reviews", Title: "Reviews", Order: 42, Available: x.any, Source: "builtin:reviews",
 		Loading: func() bool {
-			for _, s := range kit.SitesOf(x.h).ReviewSources() {
+			for _, s := range kit.Sites(x.h).ReviewSources() {
 				if kit.PendingFirst(x.listState(s.Key())) {
 					return true
 				}
@@ -690,7 +690,7 @@ func (x *Reviews) source() uireg.PickerSource {
 		},
 		Items: func(registry.Ctx, string) []uireg.PickerItem {
 			var out []uireg.PickerItem
-			for _, s := range kit.SitesOf(x.h).ReviewSources() {
+			for _, s := range kit.Sites(x.h).ReviewSources() {
 				x.fresh(s, x.pollEvery())
 			}
 			for _, r := range x.rows() {
@@ -768,7 +768,7 @@ type reviewLine struct {
 // toolReviewRequests is the assistant's review_requests: every source's requests as the page lists them, asked for
 // first when they're stale, and why a source has none.
 func (x *Reviews) toolReviewRequests(ctx registry.Ctx, _ registry.Args) (any, error) {
-	sources := kit.SitesOf(x.h).ReviewSources()
+	sources := kit.Sites(x.h).ReviewSources()
 	var waits []<-chan struct{}
 	for _, s := range sources {
 		if w := x.fresh(s, reviewsSoon); w != nil {

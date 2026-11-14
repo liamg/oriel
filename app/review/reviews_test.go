@@ -298,7 +298,7 @@ func TestReviewsNoticeOnANewAsk(t *testing.T) {
 		t.Errorf("%d notices for the first list", n)
 	}
 	pr := hub.AddPR("acme/gateway", gh.PR{Title: "Drop the legacy v1 webhooks", Author: "rlopez", Reviewers: []string{"you"}})
-	<-x.Fresh(kit.SitesOf(s.Registry()).ReviewSources()[0])
+	<-x.Fresh(kit.Sites(s.Registry()).ReviewSources()[0])
 	s.UntilState("the notice", func(st core.State) bool {
 		for _, n := range st.Notifications {
 			if n.Text == "rlopez asked you to review gateway#"+strconv.Itoa(pr.Number) {
@@ -320,7 +320,7 @@ func TestReviewsNoticeStartsAReviewBehind(t *testing.T) {
 	s.Frame()
 	ask := func(title string) gh.PR {
 		pr := hub.AddPR("acme/api", gh.PR{Title: title, Author: "rlopez", Reviewers: []string{"you"}})
-		<-x.Fresh(kit.SitesOf(s.Registry()).ReviewSources()[0])
+		<-x.Fresh(kit.Sites(s.Registry()).ReviewSources()[0])
 		s.Until("the toast", func() bool {
 			return s.Has("rlopez asked you to review api#"+strconv.Itoa(pr.Number), "Start review in background", "Ignore")
 		})

@@ -11,8 +11,8 @@ import (
 
 // A rollout fixture and the zstd CLI's level-3 compression of it.
 const (
-	plainRollout      = "../../zstd/testdata/rollout.jsonl"
-	compressedRollout = "../../zstd/testdata/rollout.jsonl.3.zst"
+	plainRollout      = "../../../zstd/testdata/rollout.jsonl"
+	compressedRollout = "../../../zstd/testdata/rollout.jsonl.3.zst"
 )
 
 func copyFile(t *testing.T, from, to string) {

@@ -14,7 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-func nextUtility(t *testing.T, u *Utility) UtilityEvent {
+func nextUtility(t *testing.T, u Utility) UtilityEvent {
 	t.Helper()
 	select {
 	case ev, ok := <-u.Events():

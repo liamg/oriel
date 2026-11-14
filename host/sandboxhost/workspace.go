@@ -8,31 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
 )
 
-// Workspace is where a session's agent works: its directories, and the sandbox it runs in.
-type Workspace struct {
-	Root      string
-	Sandboxed bool
-	// Running says the agent's sandbox is up now.
-	Running bool
-	Backend string
-	Paths   []WorkspacePath
-	// Rebuild says the backend can build the session's image again.
-	Rebuild bool
-	sandbox.Description
-}
+type Workspace = hostapi.Workspace
 
-// WorkspacePath is a directory a session uses: on the host, and where its sandboxed agent finds it.
-type WorkspacePath struct {
-	Name  string
-	Host  string
-	Agent string // "" where the agent sees it at the same path
-	Note  string
-}
+type WorkspacePath = hostapi.WorkspacePath
 
 // Workspace reads session id's workspace. A session that isn't sandboxed has its directories only.
 func (x *Boxes) Workspace(ctx context.Context, id core.SessionID) (_ Workspace, err error) {

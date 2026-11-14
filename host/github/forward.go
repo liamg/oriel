@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/hostcore"
@@ -86,12 +88,7 @@ func (x *GitHub) EditDraft(r DraftEditReq) (err error) {
 	return err
 }
 
-// ResolveReq resolves a thread mirrored from GitHub there too, or reopens it, as the user did in Oriel.
-type ResolveReq struct {
-	Session  core.SessionID `json:"session"`
-	Thread   core.ThreadID  `json:"thread"`
-	Resolved bool           `json:"resolved"`
-}
+type ResolveReq = hostapi.ResolveReq
 
 // ResolveGitHub resolves or reopens a review thread on GitHub, and records that it is.
 func (x *GitHub) ResolveGitHub(ctx context.Context, r ResolveReq) (err error) {

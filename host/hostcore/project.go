@@ -13,6 +13,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/sandbox"
 )
 
@@ -24,22 +25,7 @@ func NewID(n int) string {
 }
 
 // Sanitise reduces a string to a name safe for a directory and a git branch.
-func Sanitise(s string) string {
-	var sb strings.Builder
-	for _, r := range strings.TrimSpace(strings.ToLower(s)) {
-		switch {
-		case r >= 'a' && r <= 'z', r >= '0' && r <= '9', r == '-', r == '_':
-			sb.WriteRune(r)
-		case r == ' ', r == '.', r == '/':
-			sb.WriteRune('-')
-		}
-	}
-	out := sb.String()
-	for strings.Contains(out, "--") {
-		out = strings.ReplaceAll(out, "--", "-")
-	}
-	return strings.Trim(out, "-")
-}
+func Sanitise(s string) string { return hostapi.Sanitise(s) }
 
 // TrimWords keeps the first n hyphen-separated words of a name.
 func TrimWords(s string, n int) string {

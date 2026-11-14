@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 )
 
 // GitHubHost is GitHub as a code host, built in on the user's own token: one GraphQL search per list for the Reviews
@@ -39,7 +40,7 @@ func (x *GitHubHost) Manifest() plugin.Manifest { return plugin.Manifest{ID: "gi
 func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.clients = gh.Clients{Client: x.Client, HTTP: h.Net}
-	x.Add(h.Contribute(registry.Service{Name: kit.GitHubService, Impl: githubSearch{x}}))
+	x.Add(h.Contribute(registry.Service{Name: services.GitHubService, Impl: githubSearch{x}}))
 	x.Add(h.Contribute(registry.CodeHost{Name: "github", Title: "GitHub", Icon: "pullrequest", Order: 10,
 		Sites: []registry.Site{{Host: "github.com", Secret: "GITHUB_TOKEN", Aliases: []string{"ssh.github.com"}}}, Path: githubPath, Takes: githubPRPath,
 		Setup: registry.SiteSetup{Secret: "GITHUB_TOKEN", TokenURL: "https://{host}/settings/tokens/new?scopes=repo,read:org&description=Oriel",

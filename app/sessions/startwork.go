@@ -14,7 +14,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -37,10 +37,10 @@ type startWork struct {
 	sandbox, openNet bool
 	backend          string // the session's sandbox backend; "" is sandbox.backend
 	model, effort    string
-	shown            [2]string         // the model and effort it opened on: only a change is sent
-	shownRun         [2]bool           // and the sandbox and open network
-	provider         host.ProviderInfo // the session's provider, once the host says
-	providers        *plugin.Load[host.ProviderInfo]
+	shown            [2]string            // the model and effort it opened on: only a change is sent
+	shownRun         [2]bool              // and the sandbox and open network
+	provider         hostapi.ProviderInfo // the session's provider, once the host says
+	providers        *plugin.Load[hostapi.ProviderInfo]
 	branches         []startBranch
 	focus            bool // focus the dialog next frame
 	busy             bool
@@ -60,7 +60,7 @@ func (x *Plan) openStartWork() error {
 	d := &startWork{id: se.ID, clear: true, fresh: true, sandbox: se.Agent.Sandboxed, openNet: se.Agent.Network == "open", backend: se.Agent.Backend,
 		model: se.Agent.Model, effort: se.Agent.Effort, shown: [2]string{se.Agent.Model, se.Agent.Effort}, focus: true,
 		shownRun: [2]bool{se.Agent.Sandboxed, se.Agent.Network == "open"},
-		provider: host.ProviderInfo{ID: se.Agent.Provider}}
+		provider: hostapi.ProviderInfo{ID: se.Agent.Provider}}
 	for _, p := range se.Projects {
 		if p.ReadOnly && p.Repo != "" {
 			d.branches = append(d.branches, startBranch{project: p.Name, branch: p.Branch, planned: p.Branch})
@@ -70,17 +70,17 @@ func (x *Plan) openStartWork() error {
 	x.dialog = d
 	if se.Agent.Provider != "" {
 		id := se.Agent.Provider
-		d.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.ProviderInfo, error) {
+		d.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.ProviderInfo, error) {
 			c, err := kit.SessionCalls(x.h)
 			if err != nil {
-				return host.ProviderInfo{}, err
+				return hostapi.ProviderInfo{}, err
 			}
 			for _, p := range c.ProviderInfo(ctx) {
 				if p.ID == id {
 					return p, nil
 				}
 			}
-			return host.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", services.ProviderTitle(x.h, id))
+			return hostapi.ProviderInfo{}, fmt.Errorf("%s isn't set up on this machine", services.ProviderTitle(x.h, id))
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
 		d.providers.Start()
 	}

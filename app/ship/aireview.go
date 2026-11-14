@@ -18,7 +18,7 @@ import (
 	"github.com/liamg/oriel/agent/packs"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -38,7 +38,7 @@ var (
 )
 
 // AIReview is the cross-model AI review: its commands, options and the diff's column.
-// Reviews run on the session host (host.Host.AIReview); findings are session state.
+// Reviews run on the session host (hostapi.Host.AIReview); findings are session state.
 type AIReview struct {
 	kit.Disposer
 	ConfigDir string // the user's config directory, for their prompts
@@ -136,7 +136,7 @@ func (x *AIReview) commands() []registry.Command {
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				path := x.promptPath()
 				if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-					p, _ := packs.Get(host.AIReviewPack)
+					p, _ := packs.Get(hostapi.AIReviewPack)
 					if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 						return err
 					}
@@ -168,7 +168,7 @@ func (v aiReviewView) Shown(root string) bool {
 
 // promptPath is the user's own AI review prompt, which overrides the built-in pack.
 func (x *AIReview) promptPath() string {
-	return filepath.Join(x.ConfigDir, "agents", host.AIReviewPack+".md")
+	return filepath.Join(x.ConfigDir, "agents", hostapi.AIReviewPack+".md")
 }
 
 // session is the session {id}, or the one in front.
@@ -176,7 +176,7 @@ func (x *AIReview) session(a registry.Args) (core.SessionState, error) {
 	return kit.SessionFrom(x.h, a)
 }
 
-func (x *AIReview) client(a registry.Args) (host.ShipCalls, error) {
+func (x *AIReview) client(a registry.Args) (hostapi.ShipCalls, error) {
 	if _, err := x.session(a); err != nil {
 		return nil, err
 	}
@@ -200,10 +200,10 @@ func (x *AIReview) run(a registry.Args) error {
 	if x.asked[se.ID] {
 		return nil
 	}
-	req := host.AIReviewReq{Session: se.ID, Provider: kit.Unless(opt("review.ai.provider"), "auto"), Model: kit.Unless(opt("review.ai.model"), "default"),
+	req := hostapi.AIReviewReq{Session: se.ID, Provider: kit.Unless(opt("review.ai.provider"), "auto"), Model: kit.Unless(opt("review.ai.model"), "default"),
 		Full: a.Bool("full")}
 	if b, err := os.ReadFile(x.promptPath()); err == nil {
-		p, err := packs.FromText(string(b), host.AIReviewPack)
+		p, err := packs.FromText(string(b), hostapi.AIReviewPack)
 		if err != nil {
 			return fmt.Errorf("%s: %w", x.promptPath(), err)
 		}

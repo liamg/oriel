@@ -12,13 +12,13 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/headless"
 )
 
 // quitScene is the app on its session host, with a session whose agent is running.
-func quitScene(t *testing.T, job *host.Job, change ...func(*apptest.Config)) (r *apptest.Window, lw *rig.Host, a *agenttest.FakeSession) {
+func quitScene(t *testing.T, job *hostapi.Job, change ...func(*apptest.Config)) (r *apptest.Window, lw *rig.Host, a *agenttest.FakeSession) {
 	t.Helper()
 	lw = rig.NewHost(t)
 	if job != nil {
@@ -91,7 +91,7 @@ func TestTheQuitCommandHandsTheAgentsOver(t *testing.T) {
 // A quit from outside the window, a signal's, hands the agents over without waiting for scheduled jobs' Quit.
 func TestAQuitFromOutsideDoesNotAskAboutJobs(t *testing.T) {
 	quit := make(chan struct{}, 1)
-	r, lw, _ := quitScene(t, &host.Job{Title: "Sweep stale deps", Prompt: "sweep", Schedule: host.Schedule{Every: "weekdays", At: "07:00"}},
+	r, lw, _ := quitScene(t, &hostapi.Job{Title: "Sweep stale deps", Prompt: "sweep", Schedule: hostapi.Schedule{Every: "weekdays", At: "07:00"}},
 		func(cfg *apptest.Config) { cfg.Quit = quit })
 	quit <- struct{}{}
 	r.WaitExit()
@@ -166,8 +166,8 @@ func TestASecondQuitDoesNotWait(t *testing.T) {
 
 // Scheduled jobs warn that they won't run while Oriel is closed, and quits only when told to.
 func TestQuitWarnsOfScheduledJobs(t *testing.T) {
-	r, _, _ := quitScene(t, &host.Job{Title: "Sweep stale deps", Prompt: "sweep",
-		Schedule: host.Schedule{Every: "weekdays", At: "07:00"}})
+	r, _, _ := quitScene(t, &hostapi.Job{Title: "Sweep stale deps", Prompt: "sweep",
+		Schedule: hostapi.Schedule{Every: "weekdays", At: "07:00"}})
 	r.Win.RequestClose()
 	r.WaitFrame("the warning", func(s string) bool {
 		return apptest.HasAll(s, "QUITTING ORIEL", "Sweep stale deps", "Quit", "Cancel")
@@ -184,9 +184,9 @@ func TestQuitWarnsOfScheduledJobs(t *testing.T) {
 // quit back.
 func TestQuitDialogSnapshot(t *testing.T) {
 	s := apptest.New(t, apptest.Options{CrashDir: t.TempDir()})
-	jobs := quitJobs{{Name: "sweep", Title: "Sweep stale deps", Schedule: host.Schedule{Every: "weekdays", At: "07:00"}}}
-	s.Registry().Contribute(registry.Service{Name: registry.HostSessionsService, Impl: quitSessions{}})
-	s.Registry().Contribute(registry.Service{Name: registry.HostJobsService, Impl: jobs})
+	jobs := quitJobs{{Name: "sweep", Title: "Sweep stale deps", Schedule: hostapi.Schedule{Every: "weekdays", At: "07:00"}}}
+	s.Registry().Contribute(registry.Service{Name: hostapi.HostSessionsService, Impl: quitSessions{}})
+	s.Registry().Contribute(registry.Service{Name: hostapi.HostJobsService, Impl: jobs})
 	se := core.SessionState{ID: "rounding", Name: "Round half-even", Kind: core.KindWork, Status: core.StatusWorking}
 	se.Agent.Working = true
 	if err := s.Store().Apply(core.SessionSynced{Session: se}); err != nil {
@@ -209,15 +209,15 @@ func TestQuitDialogSnapshot(t *testing.T) {
 }
 
 // quitSessions is a session host with nothing to hand over.
-type quitSessions struct{ host.SessionCalls }
+type quitSessions struct{ hostapi.SessionCalls }
 
 func (quitSessions) HandOver() {}
 
 // quitJobs are a session host's scheduled jobs.
-type quitJobs []host.Job
+type quitJobs []hostapi.Job
 
-func (j quitJobs) Jobs() []host.Job                                     { return j }
-func (quitJobs) SaveJob(j host.Job) (host.Job, error)                   { return j, nil }
+func (j quitJobs) Jobs() []hostapi.Job                                  { return j }
+func (quitJobs) SaveJob(j hostapi.Job) (hostapi.Job, error)             { return j, nil }
 func (quitJobs) DeleteJob(string) error                                 { return nil }
 func (quitJobs) RunJob(context.Context, string) (core.SessionID, error) { return "", nil }
 

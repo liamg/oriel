@@ -6,21 +6,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 )
 
-type SearchReq struct {
-	Query    string `json:"query"`
-	Archived bool   `json:"archived,omitempty"` // archived sessions too
-}
+type SearchReq = hostapi.SearchReq
 
-// Hit is a match in a session's threads or transcript.
-type Hit struct {
-	Session core.SessionID `json:"session"`
-	Thread  core.ThreadID  `json:"thread,omitempty"`
-	Item    string         `json:"item,omitempty"`
-	Text    string         `json:"text"`
-}
+type Hit = hostapi.Hit
 
 // Search finds text in sessions' threads and transcripts: archived ones keep theirs, so they stay searchable.
 func (l *Logs) Search(q SearchReq) (out []Hit) {

@@ -3,7 +3,7 @@ package sessions
 import (
 	"testing"
 
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -12,14 +12,14 @@ import (
 func TestHookVerdict(t *testing.T) {
 	for _, tt := range []struct {
 		answer any
-		want   host.Decision
+		want   hostapi.Decision
 		note   string
 	}{
-		{"allow", host.DecisionAllow, ""},
-		{true, host.DecisionAllow, ""},
-		{false, host.DecisionDeny, ""},
-		{registry.PermissionVerdict{Decision: "deny", Note: "not on main"}, host.DecisionDeny, "not on main"},
-		{map[string]any{"decision": "allow", "note": "ok"}, host.DecisionAllow, "ok"},
+		{"allow", hostapi.DecisionAllow, ""},
+		{true, hostapi.DecisionAllow, ""},
+		{false, hostapi.DecisionDeny, ""},
+		{registry.PermissionVerdict{Decision: "deny", Note: "not on main"}, hostapi.DecisionDeny, "not on main"},
+		{map[string]any{"decision": "allow", "note": "ok"}, hostapi.DecisionAllow, "ok"},
 		{"always", "", ""},
 		{map[string]any{"decision": "alow"}, "", ""},
 		{registry.PermissionVerdict{Decision: "always"}, "", ""},

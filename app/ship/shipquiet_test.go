@@ -8,7 +8,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/ship"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/render"
 )
 
@@ -17,7 +17,7 @@ import (
 func TestShipPageFoldsQuietProjects(t *testing.T) {
 	s, se := shipSession(t)
 	shipOf(s).Fixture(se.ID, false, func(ships []ship.Read) []ship.Read {
-		ships[1] = ship.Read{Ship: host.Ship{Project: ships[1].Project, Branch: ships[1].Branch, Base: ships[1].Base, Pushed: true},
+		ships[1] = ship.Read{Ship: hostapi.Ship{Project: ships[1].Project, Branch: ships[1].Branch, Base: ships[1].Base, Pushed: true},
 			CodeHost: ships[1].CodeHost, Repo: ships[1].Repo, GitRead: s.Now.Add(-time.Minute)}
 		return ships
 	})

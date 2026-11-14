@@ -14,6 +14,7 @@ type Rule struct {
 	From   []string
 	Never  []string
 	Except []string
+	Built  bool // only what the package builds with counts: its tests may reach further (a whole app, to drive it)
 }
 
 // Rules are the layering every change keeps (docs/architecture.md).
@@ -30,10 +31,12 @@ var Rules = []Rule{
 	apart("host/agentrun"), apart("host/aireview"), apart("host/github"), apart("host/jobs"), apart("host/persist"),
 	apart("host/pricing"), apart("host/repos"), apart("host/sandboxhost"), apart("host/utility"), apart("host/worktree"),
 	{From: []string{"host/hostcore", "host/hosttest"}, Never: hostParts},
-	// host/stats is a library the parts and the app share: it reads logs and counts, and reaches no part.
-	{From: []string{"host/stats"}, Never: append([]string{"app", "ui", "render"}, hostParts...)},
+	// The features' shared kit sees the host only through its contracts (host/hostapi): not its parts, the sandboxes'
+	// backends or Lua.
+	{From: []string{"app/kit"}, Never: append([]string{"host/hostcore", "sandbox/container", "sandbox/seatbelt", "script"}, hostParts...),
+		Built: true},
 	// Libraries the host and the app both use, reaching neither.
-	{From: []string{"search", "sysload"}, Never: []string{"app", "host", "ui", "render"}},
+	{From: []string{"search", "sysload", "agent/usage/stats"}, Never: []string{"app", "host", "ui", "render"}},
 }
 
 // hostParts are the session host's parts (docs/architecture.md, "Layering").
@@ -110,6 +113,10 @@ func Check(pkgs []Package, rules []Rule) []Violation {
 		slices.Sort(reach)
 		reach = slices.Compact(reach)
 		for _, r := range rules {
+			reach := reach
+			if r.Built {
+				reach = p.Deps
+			}
 			if slices.ContainsFunc(r.Except, func(e string) bool { return under(p.ImportPath, e) }) {
 				continue
 			}

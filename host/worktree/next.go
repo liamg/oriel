@@ -6,19 +6,14 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// NextPRReq moves one project of a session on from its PR: Done is that PR as its code host has it, and Head the
-// commit it was at, whose commits count as the PR's even once it's squashed and its branch deleted.
-type NextPRReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Done    core.PastPR    `json:"done,omitzero"`
-	Head    string         `json:"head,omitempty"`
-}
+type NextPRReq = hostapi.NextPRReq
 
 // NextPR moves a project onto a fresh branch cut from its updated base, keeping the branch it leaves as a past PR.
 // It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.

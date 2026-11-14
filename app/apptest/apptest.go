@@ -732,7 +732,7 @@ func (s *Scene) WriteConfig(files map[string]string) {
 
 // WaitGit waits for the git work running off the loop, as the GitTrees service says, running what it hands the loop.
 func (s *Scene) WaitGit() {
-	for kit.GitOf(s.Registry()).Busy() {
+	for kit.Git(s.Registry()).Busy() {
 		s.RunQueued()
 		time.Sleep(time.Millisecond)
 	}
@@ -754,7 +754,7 @@ func (s *Scene) SettleGit() {
 	for {
 		s.Frame()
 		s.RunQueued()
-		if !kit.GitOf(s.Registry()).Busy() && s.gitRead() {
+		if !kit.Git(s.Registry()).Busy() && s.gitRead() {
 			s.Frame()
 			return
 		}
@@ -767,7 +767,7 @@ func (s *Scene) SettleGit() {
 
 // gitRead says the window's work tree and each project's have been read once.
 func (s *Scene) gitRead() bool {
-	trees := kit.GitOf(s.Registry())
+	trees := kit.Git(s.Registry())
 	dirs := []string{""}
 	for _, p := range kit.ProjectsHere(s.Host()).Projects {
 		dirs = append(dirs, p.Dir)

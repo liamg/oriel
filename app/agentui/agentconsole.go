@@ -18,7 +18,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -64,8 +64,8 @@ type Console struct {
 	h plugin.Host
 
 	by        map[core.SessionID]*consoleState
-	providers *plugin.Load[[]host.ProviderInfo] // the agents and their models, asked for once a composer shows
-	detail    *detailOpen                       // the details dialog, while it's open
+	providers *plugin.Load[[]hostapi.ProviderInfo] // the agents and their models, asked for once a composer shows
+	detail    *detailOpen                          // the details dialog, while it's open
 }
 
 // consoleState is one session's console: what's selected, folded, typed.
@@ -146,7 +146,7 @@ func (x *Console) commands() []registry.Command {
 				if err != nil {
 					return err
 				}
-				return c.Unqueue(host.UnqueueReq{Session: session(a), Index: a.Int("index"), Text: a.String("text")})
+				return c.Unqueue(hostapi.UnqueueReq{Session: session(a), Index: a.Int("index"), Text: a.String("text")})
 			}},
 		{ID: "agent.console.show", Title: "Show {id}'s agent console: its session in front, and the console open on it",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -185,7 +185,7 @@ func (x *Console) commands() []registry.Command {
 				if text == "" {
 					return errors.New("nothing to send")
 				}
-				return c.Send(host.SendReq{Session: id, Text: text, Urgent: a.Bool("urgent")})
+				return c.Send(hostapi.SendReq{Session: id, Text: text, Urgent: a.Bool("urgent")})
 			}},
 		{ID: "agent.console.send", Grant: "agent.prompt", Title: "Agent console: send what's in the composer; {urgent} interrupts the turn",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -249,10 +249,10 @@ func (x *Console) keymaps() []registry.Keymap {
 		{Keys: "<CR>", Command: "agent.console.fold", Desc: "Fold or unfold"},
 		{Keys: "i", Command: "agent.console.compose", Desc: "Write to the agent"},
 		{Keys: "<Esc>", Command: "agent.console.escape", Desc: "Interrupt, or close"},
-		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAllow)}, Desc: "Allow once"},
-		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAlways)}, Desc: "Allow for this session"},
-		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAlways), "for": forAll}, Desc: "Allow for all sessions"},
-		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionDeny)}, Desc: "Deny"},
+		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionAllow)}, Desc: "Allow once"},
+		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionAlways)}, Desc: "Allow for this session"},
+		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionAlways), "for": forAll}, Desc: "Allow for all sessions"},
+		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": string(hostapi.DecisionDeny)}, Desc: "Deny"},
 		{Keys: "N", Command: "ask.deny-note", Desc: "Deny with a note"},
 	} {
 		k.Mode = AgentKeyMode
@@ -341,14 +341,14 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 
 // provider is what the session host says of the agent provider id: its models and their efforts. The first ask
 // starts the probe, and it's not ok until that answers.
-func (x *Console) provider(session core.SessionID, id string) (host.ProviderInfo, bool) {
+func (x *Console) provider(session core.SessionID, id string) (hostapi.ProviderInfo, bool) {
 	l := x.providers
 	if l == nil {
 		w, err := x.client(session)
 		if err != nil {
-			return host.ProviderInfo{}, false
+			return hostapi.ProviderInfo{}, false
 		}
-		l = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
+		l = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]hostapi.ProviderInfo, error) {
 			return w.ProviderInfo(ctx), nil
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})
 		l.Start()
@@ -360,10 +360,10 @@ func (x *Console) provider(session core.SessionID, id string) (host.ProviderInfo
 			return p, true
 		}
 	}
-	return host.ProviderInfo{}, false
+	return hostapi.ProviderInfo{}, false
 }
 
-func (x *Console) client(id core.SessionID) (host.SessionCalls, error) {
+func (x *Console) client(id core.SessionID) (hostapi.SessionCalls, error) {
 	return kit.SessionCalls(x.h)
 }
 
@@ -415,7 +415,7 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 	if err != nil {
 		return err
 	}
-	r := host.AnswerReq{Session: id, Ask: ask.ID, Decision: host.Decision(a.String("decision")), Note: a.String("note"), Scope: a.String("scope"), For: a.String("for")}
+	r := hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: hostapi.Decision(a.String("decision")), Note: a.String("note"), Scope: a.String("scope"), For: a.String("for")}
 	switch m := a["answers"].(type) {
 	case map[string]string:
 		r.Answers = m
@@ -426,10 +426,10 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 		}
 	}
 	if len(r.Answers) > 0 {
-		r.Decision = host.DecisionAnswer
+		r.Decision = hostapi.DecisionAnswer
 	}
 	switch r.Decision {
-	case host.DecisionAllow, host.DecisionAlways, host.DecisionDeny, host.DecisionAnswer, host.DecisionRecheck:
+	case hostapi.DecisionAllow, hostapi.DecisionAlways, hostapi.DecisionDeny, hostapi.DecisionAnswer, hostapi.DecisionRecheck:
 	default:
 		// An answer that doesn't say what it decides decides nothing: it never lets the call through.
 		return fmt.Errorf("ask.answer: decision %q isn't one of allow, always, deny, answer or recheck", r.Decision)

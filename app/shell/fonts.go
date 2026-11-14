@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -15,7 +16,7 @@ type installable interface {
 	Use(role, family string) error
 }
 
-// fonts is the window's registry.Fonts, over its shaper.
+// fonts is the window's services.Fonts, over its shaper.
 type fonts struct {
 	sh   installable
 	poke func()
@@ -34,7 +35,7 @@ func contributeFonts(r registry.Registry, sh typeset.Shaper, poke func()) func()
 		return func() {}
 	}
 	f := &fonts{sh: in, poke: poke}
-	d := r.Contribute(registry.Service{Name: registry.FontsService, Impl: f, Source: "builtin:window"})
+	d := r.Contribute(registry.Service{Name: services.FontsService, Impl: f, Source: "builtin:window"})
 	b := r.Contribute(registry.Busy{Name: "fonts", Busy: f.using.Busy, Source: "builtin:window"})
 	return func() {
 		d.Dispose()

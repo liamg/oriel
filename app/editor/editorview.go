@@ -103,7 +103,7 @@ func (v editorView) Mark(instance string) (string, string) {
 	if path == "" {
 		return "", ""
 	}
-	t := kit.GitOf(v.x.h).Tree("")
+	t := kit.Git(v.x.h).Tree("")
 	f, ok := t.State().File(t.Rel(path))
 	if !ok || f.Code == 0 {
 		return "", ""

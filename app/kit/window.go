@@ -3,7 +3,6 @@ package kit
 import (
 	"io/fs"
 	"path/filepath"
-	"time"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
@@ -15,7 +14,6 @@ import (
 const (
 	ScriptsService  = "plugins.scripts"
 	BuiltinsService = "plugins.builtin"
-	QuitService     = "quit"
 )
 
 // ScriptOpts are where a script plugin's own files are and what it's granted.
@@ -45,33 +43,12 @@ type Builtins interface {
 	Builtins() []Builtin
 }
 
-// Quit is the window closing, its sessions' agents handed over first.
-type Quit interface {
-	// Quit closes the window once its agents are handed over; asked again while it waits, it doesn't wait.
-	Quit()
-	// Restart quits, then runs relaunch once the window has closed; a cancelled quit forgets it.
-	Restart(relaunch func() error)
-	// Draining is the hand-over a quit waits on, if one does. Call it on the loop.
-	Draining() (Drain, bool)
-}
-
-// Drain is a quit waiting for its sessions' turns to end, then handing their agents over.
-type Drain interface {
-	Hide(hidden bool) // the quit dialog's, for a page that tells the hand-over itself
-	Handing() bool    // the wait is over: the agents are stopping
-	Busy() (busy []core.SessionState, polled bool)
-	Deadline() time.Time // when it stops waiting
-	Now()                // stops waiting
-	Cancel()             // quits no more, unless it's handing over
-}
-
 func ScriptsOf(r registry.Registry) (Scripts, bool) {
 	return registry.ServiceOf[Scripts](r, ScriptsService)
 }
 func BuiltinsOf(r registry.Registry) (Builtins, bool) {
 	return registry.ServiceOf[Builtins](r, BuiltinsService)
 }
-func QuitOf(r registry.Registry) (Quit, bool) { return registry.ServiceOf[Quit](r, QuitService) }
 
 // WindowService is the window itself: the directory it's on, and moving it onto another.
 const WindowService = "window"
@@ -120,8 +97,8 @@ func OnDirChanged(r registry.Registry, label string, fn func(DirChanged)) regist
 	})
 }
 
-// PollsOf is r's window's periodic work; nil, noting nothing, without a window.
-func PollsOf(r registry.Registry) *PollSet {
+// Polls is r's window's periodic work; nil, noting nothing, without a window.
+func Polls(r registry.Registry) *PollSet {
 	if w, ok := WindowOf(r); ok {
 		return w.Polls()
 	}

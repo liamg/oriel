@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
@@ -54,13 +56,7 @@ func fetchPR(ctx context.Context, repo, from, ref string) error {
 	return nil
 }
 
-// PRMove is a review's project moved on to its pull request's new head: Commits on from From to To, one for a
-// force-push that rewrote it.
-type PRMove struct {
-	From    string `json:"from"`
-	To      string `json:"to"`
-	Commits int    `json:"commits"`
-}
+type PRMove = hostapi.PRMove
 
 // UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
 // the projects that moved.

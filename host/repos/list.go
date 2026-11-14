@@ -10,11 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/liamg/oriel/host/hostapi"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
@@ -244,15 +245,7 @@ func (x *Registry) RemoveRepo(id core.RepoID) (err error) {
 	return nil
 }
 
-// RepoCheck is what a path would add, as the Add repo dialog shows it while it's typed.
-type RepoCheck struct {
-	Path     string      `json:"path"`               // the checkout it adds: a worktree's main clone
-	Worktree bool        `json:"worktree,omitempty"` // the path is a worktree of Path
-	Branch   string      `json:"branch,omitempty"`
-	Remote   string      `json:"remote,omitempty"`
-	Known    core.RepoID `json:"known,omitempty"` // already registered as this
-	Error    string      `json:"error,omitempty"`
-}
+type RepoCheck = hostapi.RepoCheck
 
 // CheckRepoPath says what adding the checkout at path would do, without adding it.
 func (x *Registry) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
@@ -276,27 +269,12 @@ func (x *Registry) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
 	return c
 }
 
-// CloneReq is repos.clone: a URL, the folder its checkout goes in, and its name there.
-type CloneReq struct {
-	URL    string `json:"url"`
-	Parent string `json:"parent,omitempty"` // CloneParent if ""
-	Name   string `json:"name,omitempty"`   // the URL's last part if ""
-	// Progress has git's progress lines as the clone runs.
-	Progress func(line string) `json:"-"`
-}
+type CloneReq = hostapi.CloneReq
 
-// CloneTarget is where a clone would go, and what's there now.
-type CloneTarget struct {
-	Dir    string `json:"dir"`
-	Name   string `json:"name"`
-	Exists bool   `json:"exists,omitempty"` // something is at Dir
-	Same   bool   `json:"same,omitempty"`   // it's a clone of the URL: it's added as it is
-}
+type CloneTarget = hostapi.CloneTarget
 
 // CloneName is the folder a clone of url is named by default: its last part, with .git dropped.
-func CloneName(url string) string {
-	return hostcore.Sanitise(strings.TrimSuffix(path.Base(strings.TrimRight(strings.ReplaceAll(strings.TrimSpace(url), ":", "/"), "/")), ".git"))
-}
+func CloneName(url string) string { return hostapi.CloneName(url) }
 
 // CloneParent is the folder clones go in by default: the one most known repos share, else the repos directory.
 func (x *Registry) CloneParent() string {

@@ -10,13 +10,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/agent/usage"
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
-	"github.com/liamg/oriel/host/stats"
 )
 
 // The host reads its sessions' logs into stats (crit's internal/stats, per session) and answers StatsQuery and
@@ -25,12 +27,7 @@ import (
 // (agent.Discovered): one that no Oriel session owns, by its path or the provider's id for it, is a session outside
 // Oriel.
 
-// StatsSessionReq asks for one session's stats.
-type StatsSessionReq struct {
-	Session core.SessionID `json:"session"`
-	Split   bool           `json:"split,omitempty"`  // charge each repo its share; otherwise the whole session
-	Offset  int            `json:"offset,omitempty"` // the app's zone, seconds east of UTC
-}
+type StatsSessionReq = hostapi.StatsSessionReq
 
 // Stats are the stats and plan readings the host keeps.
 type Stats struct {

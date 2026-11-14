@@ -1,4 +1,6 @@
-package registry
+package services
+
+import "github.com/liamg/oriel/registry"
 
 // FontsService is the window's typefaces (Fonts).
 const FontsService = "fonts"
@@ -14,4 +16,6 @@ type Fonts interface {
 	Use(role, family string, done func(error))
 }
 
-func FontsOf(r Contributions) (Fonts, bool) { return ServiceOf[Fonts](r, FontsService) }
+func FontsOf(r registry.Contributions) (Fonts, bool) {
+	return registry.ServiceOf[Fonts](r, FontsService)
+}

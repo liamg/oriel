@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -140,7 +141,7 @@ func (x *Ship) prStatus(se core.SessionState, s shipRead) prui.PRStatus {
 		reviews = append(reviews, v)
 	}
 	x.mu.Unlock()
-	reviews = append(reviews, prui.PRReviewsOf(x.h, se.ID, s.PR.URL)...)
+	reviews = append(reviews, services.ReviewVerdicts(x.h, se.ID, s.PR.URL)...)
 	return prui.PRStatusOf(s.PR.State, s.PR.Merged, s.PR.Draft, reviews)
 }
 

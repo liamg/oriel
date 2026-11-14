@@ -211,7 +211,7 @@ func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
 	}
 	e.watchScratch()
 	e.Add(h.View(kit.ExplorerView, explorerView{e}))
-	e.Add(kit.GitOf(h).WatchWindow(func(string, []string) {
+	e.Add(kit.Git(h).WatchWindow(func(string, []string) {
 		e.hunks.mu.Lock()
 		e.hunks.loaded = false
 		e.hunks.mu.Unlock()

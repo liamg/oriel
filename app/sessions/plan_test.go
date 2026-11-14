@@ -12,7 +12,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/headless"
 )
@@ -166,12 +166,12 @@ func TestStartWorkDialog(t *testing.T) {
 		body   string
 		status core.ThreadStatus
 	}{{"Is half-even what finance wants?", core.ThreadDeferred}, {"Which currencies?", core.ThreadResolved}} {
-		tid, err := lw.W.Comment(ctx, host.CommentReq{Session: "rounding", Body: th.body,
+		tid, err := lw.W.Comment(ctx, hostapi.CommentReq{Session: "rounding", Body: th.body,
 			Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: 10}})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := lw.W.SetThread(host.ThreadReq{Session: "rounding", Thread: tid, Status: th.status}); err != nil {
+		if err := lw.W.SetThread(hostapi.ThreadReq{Session: "rounding", Thread: tid, Status: th.status}); err != nil {
 			t.Fatal(err)
 		}
 	}

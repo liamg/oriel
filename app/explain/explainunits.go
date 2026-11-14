@@ -142,7 +142,7 @@ func (x *Plugin) computeUnits(path string, src, file, base []byte, haveBase bool
 
 // baseOf is the branch's base's version of a file, loaded off the loop: ok is false until it's read, or outside a repo.
 func (x *Plugin) baseOf(abs string) (data []byte, gen int, ok bool) {
-	g := kit.GitOf(x.h).Tree("")
+	g := kit.Git(x.h).Tree("")
 	if g.Status() == nil || abs == "" {
 		return nil, 0, false
 	}
@@ -305,7 +305,7 @@ func (x *Plugin) openChanged(st *gitx.State) uint64 {
 	h := fnv.New64a()
 	var v [8]byte
 	for _, f := range kit.Buffers(x.h) {
-		if fs, ok := st.File(kit.GitOf(x.h).Tree("").Rel(f.Path)); !ok || fs.Code == 'D' || fs.Binary {
+		if fs, ok := st.File(kit.Git(x.h).Tree("").Rel(f.Path)); !ok || fs.Code == 'D' || fs.Binary {
 			continue
 		}
 		h.Write([]byte(filepath.Clean(f.Path)))
@@ -349,7 +349,7 @@ func (x *Plugin) restatPanel() {
 // changedFiles are the branch's changed files' units, worked out off the loop when the status, an open buffer or a
 // file on disk changes.
 func (x *Plugin) changedFiles() ([]changedFile, bool) {
-	g := kit.GitOf(x.h).Tree("")
+	g := kit.Git(x.h).Tree("")
 	st := g.State()
 	if st == nil {
 		return nil, false
@@ -533,7 +533,7 @@ func (x *Plugin) panelView(c *ui.Ctx) {
 				}
 			})
 		}
-		tree := kit.GitOf(x.h).Tree("")
+		tree := kit.Git(x.h).Tree("")
 		s := kit.LoadState(tree.Load())
 		empty := "The branch changes no code units."
 		switch {
@@ -543,7 +543,7 @@ func (x *Plugin) panelView(c *ui.Ctx) {
 			s = widget.LoadState{Phase: widget.Pending, Since: x.panel.since, Stale: len(roots) > 0}
 		}
 		c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 6)}, func(c *ui.Ctx) {
-			widget.Async(c, "units", s, widget.AsyncOpts{Label: "Reading the changes", Empty: empty, IsEmpty: len(roots) == 0, Retry: kit.GitOf(x.h).Reload,
+			widget.Async(c, "units", s, widget.AsyncOpts{Label: "Reading the changes", Empty: empty, IsEmpty: len(roots) == 0, Retry: kit.Git(x.h).Reload,
 				Help: "editor/pane#changed-units"}, func(c *ui.Ctx) {
 				res := widget.Tree(c, "tree", roots, widget.TreeOpts{Help: "editor/pane#changed-units", Label: "Changed units"})
 				if res.Activated != "" {

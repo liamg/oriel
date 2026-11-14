@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
-// Templates a new repo can start from, besides any git URL (a GitHub template repo).
-var Templates = []string{"empty", "go-module", "go-cli"}
+// Templates a new repo can start from, besides any git URL.
+var Templates = hostapi.Templates
 
 // initRepo makes a repo at dir from a template, with one commit, so worktrees can be cut from it.
 func initRepo(ctx context.Context, dir, template, name, you string) error {

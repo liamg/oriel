@@ -12,7 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -349,10 +349,10 @@ func (x *Ship) fileRows(c *ui.Ctx, se core.SessionState, s shipRead, f *commitFo
 }
 
 // draftChip says who wrote a draft, and whether the code has moved on since: "drafted by codex · stale".
-func draftChip(c *ui.Ctx, d host.Draft) {
+func draftChip(c *ui.Ctx, d hostapi.Draft) {
 	th := c.Theme()
 	text, tone := "drafted by "+d.By, th.C(tShipTodo)
-	if d.By == host.DraftByYou {
+	if d.By == hostapi.DraftByYou {
 		text, tone = "written by you", th.C(theme.FgMuted)
 	}
 	if d.Stale {
@@ -379,7 +379,7 @@ func (x *Ship) commitBox(c *ui.Ctx, se core.SessionState, s shipRead, f *commitF
 		} else if r.Submitted {
 			x.run("ship.commit", registry.Args{"project": s.Project})
 		}
-		x.keepTyped(c, &f.save, r.Changed, first, host.DraftReq{Session: se.ID, Project: s.Project, Kind: "commit", Body: f.message})
+		x.keepTyped(c, &f.save, r.Changed, first, hostapi.DraftReq{Session: se.ID, Project: s.Project, Kind: "commit", Body: f.message})
 	})
 	c.Row("buttons", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		if widget.Button(c, "commit", "Commit", x.stepOpts(se.ID, s.Project, "Committing", widget.ButtonOpts{Primary: true, Help: "git/ship#commit"})) {

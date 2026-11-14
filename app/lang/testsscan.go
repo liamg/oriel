@@ -16,7 +16,7 @@ func (x *Tests) scan() {
 		return
 	}
 	x.scanFrom = kit.WindowNow(x.h)
-	watched := kit.GitOf(x.h).Tree("").Root() != ""
+	watched := kit.Git(x.h).Tree("").Root() != ""
 	x.mu.Lock()
 	x.scans++
 	x.watched = watched

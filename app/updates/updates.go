@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -512,7 +513,7 @@ func (x *Update) restart() error {
 	}
 	page := x.page && x.run != nil
 	x.mu.Unlock()
-	q, ok := kit.QuitOf(x.h)
+	q, ok := services.QuitOf(x.h)
 	if !ok {
 		return errors.New("this window can't restart")
 	}
@@ -524,8 +525,8 @@ func (x *Update) restart() error {
 }
 
 // draining is the hand-over the restart's quit waits on, if one does.
-func (x *Update) draining() kit.Drain {
-	if q, ok := kit.QuitOf(x.h); ok {
+func (x *Update) draining() services.Drain {
+	if q, ok := services.QuitOf(x.h); ok {
 		if d, ok := q.Draining(); ok {
 			return d
 		}
@@ -660,7 +661,7 @@ func (x *Update) pageView(c *ui.Ctx) {
 }
 
 // drainSteps are the hand-over's lines: the turns it waits for, then the agents stopping, then the restart.
-func (x *Update) drainSteps(c *ui.Ctx, d kit.Drain, to string) {
+func (x *Update) drainSteps(c *ui.Ctx, d services.Drain, to string) {
 	if d == nil {
 		updateStepRow(c, "restart", updateLine{text: "Restarting into Oriel " + to, state: lineRunning})
 		return

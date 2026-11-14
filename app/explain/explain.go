@@ -156,7 +156,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	x.seen, x.later = map[*text.Buffer]seenVersion{}, map[*text.Buffer]*heldUnits{}
 	x.bases, x.answers, x.kept = map[string]*explainBase{}, map[answerKey]*answer{}, map[string]*answer{}
 	x.Add(h.Contribute(registry.Service{Name: kit.ExplainService, Impl: x}))
-	if st := kit.GitOf(h).Tree("").Status(); st != nil {
+	if st := kit.Git(h).Tree("").Status(); st != nil {
 		x.Add(registry.DisposeFunc(st.Watch(func([]string) {
 			x.mu.Lock()
 			for _, b := range x.bases {

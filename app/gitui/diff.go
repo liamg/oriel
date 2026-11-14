@@ -21,7 +21,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -324,7 +324,7 @@ func knownTarget(h plugin.Host, path string) (clean, dir, root string, err error
 		}
 		dir = filepath.Dir(dir)
 	}
-	if t := kit.GitOf(h).Holding(path); t.Root() != "" && kit.Within(path, t.Root()) {
+	if t := kit.Git(h).Holding(path); t.Root() != "" && kit.Within(path, t.Root()) {
 		root = t.Root()
 	}
 	return path, dir, root, nil
@@ -360,7 +360,7 @@ func (x *Diff) open(ctx registry.Ctx, path string, line int, old, head bool) err
 			st.reveal, st.goLine, st.goOld = true, line, old
 		}
 		st.focus = true
-		kit.GitOf(x.h).Tree(root)
+		kit.Git(x.h).Tree(root)
 		return x.h.Run(ctx, "view.open", registry.Args{"id": DiffView, "instance": diffInstance(root, head), "place": "tab"})
 	})
 }
@@ -400,7 +400,7 @@ func (x *Diff) marks(root, file string) map[string]bool {
 
 // record applies a review event: through the session host, so it lasts, or for as long as the window outside a
 // session. ev's session, and its project outside one, are filled in.
-func (x *Diff) record(root string, ev core.Event, send func(c host.ShipCalls, sid core.SessionID, project string) error) error {
+func (x *Diff) record(root string, ev core.Event, send func(c hostapi.ShipCalls, sid core.SessionID, project string) error) error {
 	se, project, ok := x.session(root)
 	if !ok {
 		x.mu.Lock()
@@ -429,7 +429,7 @@ func (x *Diff) setMarks(root, file string, ids []string, on bool) error {
 		return nil
 	}
 	local := core.HunksReviewed{Session: localReviews, Project: root, File: file, Hunks: slices.Clone(ids), Reviewed: on}
-	return x.record(root, local, func(c host.ShipCalls, sid core.SessionID, project string) error {
+	return x.record(root, local, func(c hostapi.ShipCalls, sid core.SessionID, project string) error {
 		ev := local
 		ev.Session, ev.Project = sid, project
 		return c.SetReviewed(ev)

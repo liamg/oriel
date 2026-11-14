@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -396,7 +397,7 @@ func TestTicketDoneAskedOnMerge(t *testing.T) {
 	hub.Merge("acme/search-api", prs["search-api"].Number)
 	s.Run("ship.refresh", nil)
 	s.ShipSettle("the first PR read merged", func() bool {
-		ships, _ := registry.ShipsOf(s.Registry())
+		ships, _ := services.ShipsOf(s.Registry())
 		for _, p := range ships.For(se.Snapshot()) {
 			if p.Project == "search-api" {
 				return p.PR != nil && p.PR.Merged

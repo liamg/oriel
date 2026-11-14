@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // keepNewer is a whole read numbered seq, ships, with the entry of each project read on its own since kept in its
@@ -78,7 +78,7 @@ func (x *Ship) readOne(id core.SessionID, project string, fresh bool) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-	read, err := c.ShipRead(ctx, host.ShipReq{Session: id, Projects: []string{project}})
+	read, err := c.ShipRead(ctx, hostapi.ShipReq{Session: id, Projects: []string{project}})
 	var ships []shipRead
 	if err == nil && len(read) == 1 {
 		ships = x.withPRs(ctx, id, read, fresh)

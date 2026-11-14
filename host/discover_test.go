@@ -14,9 +14,9 @@ import (
 	"github.com/liamg/oriel/agent/claude/transcript"
 	"github.com/liamg/oriel/agent/codex"
 	"github.com/liamg/oriel/agent/usage"
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
-	"github.com/liamg/oriel/host/stats"
 )
 
 // claudeLike is a fake that keeps and finds its logs where Claude Code does.

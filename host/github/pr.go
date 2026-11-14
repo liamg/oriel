@@ -3,6 +3,8 @@ package github
 import (
 	"context"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 )
@@ -10,13 +12,7 @@ import (
 // What the code hosts say of a session's branches' pull requests. The app's code hosts make the calls themselves;
 // the host keeps what they found, for the agent, and checks a PR is raised from the session's own branch.
 
-// PRSeenReq is what a code host last said of a project's branch: whether its pull request is open.
-type PRSeenReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Branch  string         `json:"branch"`
-	Open    bool           `json:"open,omitempty"`
-}
+type PRSeenReq = hostapi.PRSeenReq
 
 // SawPR keeps what a code host said of a branch's pull request.
 func (x *GitHub) SawPR(r PRSeenReq) (err error) {

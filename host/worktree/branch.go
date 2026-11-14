@@ -6,19 +6,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// NewBranchReq starts a fresh branch for a project: Name, else one made from the session's; Carry takes uncommitted
-// work along, which is refused otherwise.
-type NewBranchReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Name    string         `json:"name,omitempty"`
-	Carry   bool           `json:"carry,omitempty"`
-}
+type NewBranchReq = hostapi.NewBranchReq
 
 // NewBranch is a project's worktree on a fresh branch cut from its repo's default branch, freshly fetched, which
 // the session takes as its branch for it. The branch it leaves is kept, commits and all. It answers the new name.

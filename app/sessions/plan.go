@@ -14,7 +14,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -73,7 +73,7 @@ func (x *Plan) Manifest() plugin.Manifest { return plugin.Manifest{ID: "plan"} }
 func (x *Plan) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.life = h, x.Lifetime()
 	x.by = map[core.SessionID]*planState{}
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.PlanKind,
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: hostapi.PlanKind,
 		LabelFunc: func(se core.SessionState) string {
 			if se.Started {
 				return "plan → work"

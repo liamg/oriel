@@ -11,7 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/watch"
 )
 
@@ -140,7 +140,7 @@ func (x *Ship) prSource(id core.SessionID) watch.Source[time.Time] {
 func (x *Ship) readPRs(ctx context.Context, id core.SessionID) {
 	x.mu.Lock()
 	r := x.reports[id]
-	var base []host.Ship
+	var base []hostapi.Ship
 	var gitRead []time.Time
 	if r != nil {
 		for _, s := range r.ships {

@@ -10,9 +10,10 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -113,7 +114,7 @@ func (x *End) commands() []registry.Command {
 				case "":
 					return x.open(id)
 				case endArchive, endDelete:
-					return x.end(ctx, host.EndReq{Session: id, Delete: a.String("how") == endDelete, Discard: a.Bool("discard"),
+					return x.end(ctx, hostapi.EndReq{Session: id, Delete: a.String("how") == endDelete, Discard: a.Bool("discard"),
 						DeleteBranch: a.Bool("delete_branch")})
 				}
 				return fmt.Errorf("a session ends by archive or delete, not %q", a.String("how"))
@@ -135,7 +136,7 @@ func (x *End) open(id core.SessionID) error {
 		return fmt.Errorf("no session %q", id)
 	}
 	x.ask = &endAsk{id: id, focus: true}
-	if s, ok := registry.ShipsOf(x.h); ok {
+	if s, ok := services.ShipsOf(x.h); ok {
 		s.Refresh(id, true)
 	}
 	return nil
@@ -162,8 +163,8 @@ func (x *End) close(id core.SessionID) error {
 }
 
 // preview is the session's projects as Ship last read them, and how far that read is.
-func (x *End) preview(c *ui.Ctx, se core.SessionState) ([]registry.ProjectShip, widget.LoadState) {
-	s, ok := registry.ShipsOf(x.h)
+func (x *End) preview(c *ui.Ctx, se core.SessionState) ([]services.ProjectShip, widget.LoadState) {
+	s, ok := services.ShipsOf(x.h)
 	if !ok {
 		return nil, widget.LoadState{Phase: widget.Ready}
 	}
@@ -181,7 +182,7 @@ func (x *End) preview(c *ui.Ctx, se core.SessionState) ([]registry.ProjectShip, 
 }
 
 // leftMachine is whether anything of the session was pushed or raised: archiving keeps its history.
-func leftMachine(ships []registry.ProjectShip) bool {
+func leftMachine(ships []services.ProjectShip) bool {
 	for _, s := range ships {
 		if s.Pushed || s.PR != nil {
 			return true
@@ -193,7 +194,7 @@ func leftMachine(ships []registry.ProjectShip) bool {
 // archiveIfMerged archives id when session.archive_on_merge is on, every PR is merged and nothing is uncommitted.
 func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 	s, ok := x.h.State().Session(id)
-	ships, shipping := registry.ShipsOf(x.h)
+	ships, shipping := services.ShipsOf(x.h)
 	if !ok || !shipping {
 		return
 	}
@@ -201,7 +202,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 	if !kit.ArchivesOnMerge(x.h, se, ships.For(se)) {
 		return
 	}
-	if err := x.end(ctx, host.EndReq{Session: id}); err != nil {
+	if err := x.end(ctx, hostapi.EndReq{Session: id}); err != nil {
 		x.h.Notify(core.Notice{ID: "session.end." + string(id), Severity: core.SevError, Session: id, Text: err.Error()})
 	}
 }
@@ -209,7 +210,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 // settle picks the choice the dialog starts on, until one is picked: Delete for a kind that ends that way
 // (core.DeletesOnEnd); Archive once anything left the machine or when closing a tab of a session that isn't done;
 // Delete otherwise. A session whose kind can't be deleted (a direct one's directory isn't Oriel's) archives.
-func (a *endAsk) settle(canDelete, deletes bool, ships []registry.ProjectShip, st widget.LoadState) {
+func (a *endAsk) settle(canDelete, deletes bool, ships []services.ProjectShip, st widget.LoadState) {
 	switch {
 	case !canDelete:
 		a.how = 0
@@ -236,16 +237,16 @@ func (x *End) confirm(ctx registry.Ctx) error {
 		return fmt.Errorf("no session %q", a.id)
 	}
 	se := s.Snapshot()
-	var ships []registry.ProjectShip
-	if s, ok := registry.ShipsOf(x.h); ok {
+	var ships []services.ProjectShip
+	if s, ok := services.ShipsOf(x.h); ok {
 		ships = s.For(se)
 	}
 	x.ask = nil
-	return x.end(ctx, host.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && kit.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
+	return x.end(ctx, hostapi.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && kit.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
 }
 
 // end closes the session's tab, then ends it off the loop; an archive offers Undo while its branches stay.
-func (x *End) end(ctx registry.Ctx, r host.EndReq) error {
+func (x *End) end(ctx registry.Ctx, r hostapi.EndReq) error {
 	w, _ := kit.SessionCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
@@ -294,7 +295,7 @@ func (x *End) view(c *ui.Ctx) {
 	if a.closing && (a.done == "" || deletes) && st.Phase == widget.Ready && !slices.ContainsFunc(x.lossesOf(se, ships, a.deleteBranch), loss.matters) {
 		x.ask = nil
 		x.h.Do(func() {
-			if err := x.end(context.Background(), host.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
+			if err := x.end(context.Background(), hostapi.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
 				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, AutoClear: true, Session: a.id, Text: err.Error()})
 			}
 		})
@@ -352,7 +353,7 @@ func (x *End) run(id string) {
 }
 
 // body is the choice, what it does, and what would be lost, project by project.
-func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.ProjectShip, st widget.LoadState, width float32) {
+func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []services.ProjectShip, st widget.LoadState, width float32) {
 	th := c.Theme()
 	if registry.Can(x.h, se.Kind, core.Delete) {
 		was := a.how
@@ -373,7 +374,7 @@ func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.
 	widget.Wrap(c, "what", what, width, kit.UIFont(12.5, th.C(theme.FgMuted)))
 	widget.Async(c, "read", st, widget.AsyncOpts{Policy: widget.Gate, Label: "Reading what would be lost", Help: kit.EndHelp,
 		Retry: func() {
-			if s, ok := registry.ShipsOf(x.h); ok {
+			if s, ok := services.ShipsOf(x.h); ok {
 				s.Refresh(se.ID, true)
 			}
 		}}, func(c *ui.Ctx) {
@@ -402,7 +403,7 @@ func (l loss) matters() bool { return !l.info }
 // lossesOf are what plugins say would be lost, then, per project, what archiving or deleting se would lose or leave behind; then its agent and sandbox.
 // unsaved are what plugins say it would lose (registry.Unsaved); an open PR is listed when it's the session's own
 // (ownPRs).
-func lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch, ownPRs bool, unsaved []string) []loss {
+func lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch, ownPRs bool, unsaved []string) []loss {
 	var out []loss
 	for i, u := range unsaved {
 		out = append(out, loss{key: fmt.Sprintf("unsaved/%d", i), alarm: true, warn: true, text: u})
@@ -457,12 +458,12 @@ func lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch, 
 }
 
 // lossesOf is lossesOf for se, asking its kind and the plugins.
-func (x *End) lossesOf(se core.SessionState, ships []registry.ProjectShip, deleteBranch bool) []loss {
+func (x *End) lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch bool) []loss {
 	return lossesOf(se, ships, deleteBranch, registry.Can(x.h, se.Kind, core.Ships), registry.Unsaved(x.h, se))
 }
 
 // losses draws lossesOf, or that nothing is lost.
-func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []registry.ProjectShip, width float32) {
+func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []services.ProjectShip, width float32) {
 	th := c.Theme()
 	line := func(key, glyph string, tone render.Color, text string) {
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleText, Label: text}, func(c *ui.Ctx) {

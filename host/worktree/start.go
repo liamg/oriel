@@ -142,7 +142,7 @@ func (x *Worktrees) workspace(ctx context.Context, se *core.SessionState, spec c
 		}
 	}
 	if k.Worktrees != core.WorktreesStartWork {
-		se.Projects = m.projects(root)
+		se.Projects = manifestProjects(m, root)
 	}
 	if p, ok := se.Primary(); ok && p.Branch != "" {
 		se.Branch = p.Branch
@@ -222,4 +222,14 @@ func (x *Worktrees) newRepo(ctx context.Context, se *core.SessionState, spec cor
 	spec.Repos = []core.RepoID{r.ID}
 	k, _ := x.deps.Kinds.Get(core.KindPlan)
 	return x.workspace(ctx, se, spec, k, branch)
+}
+
+// manifestProjects are m's projects with absolute directories under root.
+func manifestProjects(m Manifest, root string) []core.Project {
+	out := make([]core.Project, 0, len(m.Projects))
+	for _, p := range m.Projects {
+		out = append(out, core.Project{Name: p.Name, Repo: p.Repo, Dir: filepath.Join(root, p.Dir), Branch: p.Branch, Base: p.Base,
+			Primary: p.Primary, Detached: p.Detached, Commit: p.Commit, ReadOnly: p.Detached})
+	}
+	return out
 }

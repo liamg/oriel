@@ -98,7 +98,7 @@ func (l *languageSet) Set() *syntax.Set {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.set == nil || l.gen != gen {
-		l.set, l.gen = kit.LanguageSetOf(l.r), gen
+		l.set, l.gen = kit.LanguageSetFrom(l.r), gen
 	}
 	return l.set
 }

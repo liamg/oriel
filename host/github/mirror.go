@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 )
@@ -174,41 +176,11 @@ func mergeMsgs(t *core.Thread, msgs []mirrorMsg) {
 	})
 }
 
-// MirrorReviewReq brings one PR's review from a code host other than GitHub into a session: Threads as the app read
-// them through the host's plugin. A thread with no Key is the PR's conversation.
-type MirrorReviewReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Host    string         `json:"host"` // the code host's name
-	Repo    string         `json:"repo"`
-	PR      int            `json:"pr"`
-	URL     string         `json:"url,omitempty"`
-	Author  string         `json:"author,omitempty"` // the PR's: in a review, what others wrote isn't the agent's to answer
-	Threads []ReviewThread `json:"threads"`
-}
+type MirrorReviewReq = hostapi.MirrorReviewReq
 
-// ReviewThread is a review thread as its code host has it.
-type ReviewThread struct {
-	Key      string          `json:"key,omitempty"`
-	Path     string          `json:"path,omitempty"`
-	Line     int             `json:"line,omitempty"`
-	Old      bool            `json:"old,omitempty"` // on the old side of the diff
-	Outdated bool            `json:"outdated,omitempty"`
-	Resolved *bool           `json:"resolved,omitempty"`
-	Reviewer string          `json:"reviewer,omitempty"`
-	State    string          `json:"state,omitempty"`
-	URL      string          `json:"url,omitempty"`
-	Comments []ReviewComment `json:"comments"`
-}
+type ReviewThread = hostapi.ReviewThread
 
-// ReviewComment is one comment of a ReviewThread; Trusted says the agent may read it.
-type ReviewComment struct {
-	Key     string    `json:"key"`
-	User    string    `json:"user"`
-	Body    string    `json:"body"`
-	At      time.Time `json:"at"`
-	Trusted bool      `json:"trusted,omitempty"`
-}
+type ReviewComment = hostapi.ReviewComment
 
 // MirrorReview brings a PR's review threads into the session, and hands the agent what's new.
 func (x *GitHub) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error) {
@@ -254,13 +226,7 @@ func (x *GitHub) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error
 	return nil
 }
 
-// ForwardedReq marks a draft reply sent: posted on its thread's code host as HostID.
-type ForwardedReq struct {
-	Session core.SessionID `json:"session"`
-	Thread  core.ThreadID  `json:"thread"`
-	Comment string         `json:"comment"`
-	HostID  string         `json:"hostId"`
-}
+type ForwardedReq = hostapi.ForwardedReq
 
 // DraftOf is a thread's draft reply to forward: its body, refusing one that isn't a draft or has gone already.
 func (x *GitHub) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {

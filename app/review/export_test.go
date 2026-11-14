@@ -8,6 +8,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 )
 
 // What the package's outside tests read of its plugins.
@@ -61,4 +62,4 @@ func (x *PRReview) PRDetail(url string) (state string, done bool) {
 // RefreshPR asks the host for it again.
 func (x *PRReview) RefreshPR(url string) { x.refresh(url) }
 
-func kitSites(x *PRReview) registry.CodeSites { return kit.SitesOf(x.h) }
+func kitSites(x *PRReview) services.CodeSites { return kit.Sites(x.h) }

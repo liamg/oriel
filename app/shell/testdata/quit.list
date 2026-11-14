@@ -45,23 +45,19 @@ clip 0,50 1600x924 r 0
   pop
   rect 735.21875,416.00998 33.78125x18.519989 fill #121210 radius 4 stroke 1 #332f27
   text "⇧⌘N" @742.21875,429.22998 #b3ab99 JetBrains Mono 11
-  opacity 0.42000002
-    rect 265,468.27 520x66.00003 fill #0c0c0b radius 10 stroke 1 #24221d
-    rect 281,482.27 38x38.00003 fill #1f1c0f radius 9
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 2 segments stroke 1.6363636 #7c7566
-    path 3 segments stroke 1.6363636 #7c7566
-    clip 335,484.0405 390.8125x34.459015 r 0
-      text "Resume a Session" @335,497.603 #ece6d8 Inter 14
-      rect 466.21875,485.57022 37.225006x13.880005 radius 8 stroke 1 #332f27
-      text "SOON" @472.21875,495.7502 #7c7566 JetBrains Mono 9
-      text "Pick up an existing session where it was left" @335,515.605 #7c7566 Inter 12
-    pop
-    rect 741.8125,492.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
-    text "⌘O" @748.8125,505.22998 #b3ab99 JetBrains Mono 11
+  rect 265,468.27 520x66.00003 fill #0c0c0b radius 10 stroke 1 #24221d
+  rect 281,482.27 38x38.00003 fill #1f1c0f radius 9
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 2 segments stroke 1.6363636 #ffd23f
+  path 3 segments stroke 1.6363636 #ffd23f
+  clip 335,484.0405 390.8125x34.459015 r 0
+    text "Resume a Session" @335,497.603 #ece6d8 Inter 14
+    text "Pick up an existing session where it was left" @335,515.605 #7c7566 Inter 12
   pop
+  rect 741.8125,492.00998 27.1875x18.519989 fill #121210 radius 4 stroke 1 #332f27
+  text "⌘O" @748.8125,505.22998 #b3ab99 JetBrains Mono 11
   rect 265,544.27 520x66 fill #0c0c0b radius 10 stroke 1 #24221d
   rect 281,558.27 38x38 fill #1f1c0f radius 9
   path 6 segments stroke 1.6363636 #ffd23f

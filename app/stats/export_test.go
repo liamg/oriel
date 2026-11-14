@@ -1,9 +1,9 @@
 package stats
 
 import (
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/ui/widget"
 	"github.com/liamg/oriel/watch"
 )

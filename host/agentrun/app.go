@@ -6,17 +6,13 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// App is what the host calls back in the app: the tools plugins offer agents and the policy hooks (layer 2). A nil func
-// is no app: no tools, no hook answers.
-type App struct {
-	Tools    func(hostcore.ToolsReq) []agent.Tool
-	CallTool func(context.Context, ToolCall) (string, error)
-	Decide   func(context.Context, Decide) Verdict
-}
+type App = hostapi.App
 
 // SetApp installs the app's callbacks; App{} takes them away.
 func (x *Runner) SetApp(a App) {

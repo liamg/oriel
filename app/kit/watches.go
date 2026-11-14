@@ -33,7 +33,7 @@ func FileManager(r registry.Registry, name string, poll time.Duration) (m *watch
 	if w, ok := WindowOf(r); ok {
 		start = w.FSWatch
 	}
-	m = watch.New(watch.Options{Name: name, Watch: start, Timing: watch.Timing{Fallback: poll}, Polls: PollsOf(r)})
+	m = watch.New(watch.Options{Name: name, Watch: start, Timing: watch.Timing{Fallback: poll}, Polls: Polls(r)})
 	return m, m.Close
 }
 

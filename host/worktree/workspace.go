@@ -10,56 +10,23 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
-	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// The workspace layout is crit's, unchanged: a directory holding the manifest, its own git repo
-// for plan docs, and one worktree per project under repos/.
 const (
-	ManifestFile = ".oriel-workspace.json"
-	ReposDir     = "repos"
+	ManifestFile = hostapi.ManifestFile
+	ReposDir     = hostapi.ReposDir
 )
 
-// Manifest is a workspace's record of itself. Its fields are crit's, so a crit workspace reads as one.
-type Manifest struct {
-	Name          string          `json:"name"`
-	CreatedAt     time.Time       `json:"createdAt"`
-	Projects      []ManifestEntry `json:"projects"`
-	Kind          string          `json:"kind,omitempty"`
-	Job           string          `json:"job,omitempty"`
-	WorkStartedAt time.Time       `json:"workStartedAt,omitzero"`
-	Ticket        string          `json:"ticket,omitempty"`
-	TicketTitle   string          `json:"ticketTitle,omitempty"`
-	TicketURL     string          `json:"ticketUrl,omitempty"`
-	Model         string          `json:"model,omitempty"`
-	Label         string          `json:"label,omitempty"`
-}
+type Manifest = hostapi.Manifest
 
-// ManifestEntry is a project as the manifest records it: Dir relative to the workspace, so it can move.
-type ManifestEntry struct {
-	Name     string       `json:"name"`
-	Repo     string       `json:"repo"`
-	Dir      string       `json:"dir"`
-	Branch   string       `json:"branch"`
-	Primary  bool         `json:"primary"`
-	Detached bool         `json:"detached,omitempty"`
-	Commit   string       `json:"commit,omitempty"`
-	Base     string       `json:"base,omitempty"`
-	Past     []ManifestPR `json:"past,omitempty"`
-}
+type ManifestEntry = hostapi.ManifestEntry
 
-type ManifestPR struct {
-	Branch   string    `json:"branch"`
-	Number   int       `json:"number"`
-	URL      string    `json:"url"`
-	Title    string    `json:"title"`
-	State    string    `json:"state"`
-	ClosedAt time.Time `json:"closedAt"`
-}
+type ManifestPR = hostapi.ManifestPR
 
 // LoadManifest reads root's manifest; ok is false when root isn't a workspace.
 func LoadManifest(root string) (m Manifest, ok bool) {
@@ -80,26 +47,6 @@ func SaveManifest(root string, m Manifest) error {
 		return err
 	}
 	return os.WriteFile(filepath.Join(root, ManifestFile), append(b, '\n'), 0o644)
-}
-
-// projects are the manifest's projects with absolute directories.
-func (m Manifest) projects(root string) []core.Project {
-	out := make([]core.Project, 0, len(m.Projects))
-	for _, p := range m.Projects {
-		out = append(out, core.Project{Name: p.Name, Repo: p.Repo, Dir: filepath.Join(root, p.Dir), Branch: p.Branch, Base: p.Base,
-			Primary: p.Primary, Detached: p.Detached, Commit: p.Commit, ReadOnly: p.Detached})
-	}
-	return out
-}
-
-func (m Manifest) past() []core.PastPR {
-	var out []core.PastPR
-	for _, p := range m.Projects {
-		for _, pr := range p.Past {
-			out = append(out, core.PastPR{Project: p.Name, Branch: pr.Branch, Number: pr.Number, URL: pr.URL, Title: pr.Title, State: pr.State, Closed: pr.ClosedAt})
-		}
-	}
-	return out
 }
 
 // newWorkspace makes an empty workspace at root: a git repo of its own, so plan docs diff as added files.

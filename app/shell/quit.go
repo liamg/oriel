@@ -12,9 +12,10 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -46,7 +47,7 @@ type quitDrain struct {
 	handing  atomic.Bool // the wait is over
 	mu       sync.Mutex
 	busy     []core.SessionState // sessions mid-turn, as last polled
-	jobs     []host.Job          // scheduled jobs, which don't run while Oriel is closed
+	jobs     []hostapi.Job       // scheduled jobs, which don't run while Oriel is closed
 	polled   bool
 	stopping []core.SessionID // the sessions whose agents were running when the wait ended, which the hand-over stops
 
@@ -104,16 +105,16 @@ func (sh *shell) drain(r *quitDrain) {
 }
 
 // poll reads which sessions are mid-turn, and which jobs are scheduled.
-func (r *quitDrain) poll(w host.JobCalls, st core.State) []core.SessionState {
+func (r *quitDrain) poll(w hostapi.JobCalls, st core.State) []core.SessionState {
 	busy := slices.DeleteFunc(slices.Clone(st.Sessions), func(se core.SessionState) bool { return !se.Agent.Working })
-	jobs := slices.DeleteFunc(w.Jobs(), func(j host.Job) bool { return j.Schedule.Every == "" })
+	jobs := slices.DeleteFunc(w.Jobs(), func(j hostapi.Job) bool { return j.Schedule.Every == "" })
 	r.mu.Lock()
 	r.busy, r.jobs, r.polled = busy, jobs, true
 	r.mu.Unlock()
 	return busy
 }
 
-func (r *quitDrain) shown() (busy []core.SessionState, jobs []host.Job, polled bool) {
+func (r *quitDrain) shown() (busy []core.SessionState, jobs []hostapi.Job, polled bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.busy, r.jobs, r.polled
@@ -230,7 +231,7 @@ func (x *quitDialog) Activate(_ context.Context, h plugin.Host) error {
 	})))
 	x.Add(h.Command(registry.Command{ID: "quit", Title: "Quit Oriel, handing its agents over",
 		Run: func(registry.Ctx, registry.Args) error {
-			if q, ok := kit.QuitOf(h); ok {
+			if q, ok := services.QuitOf(h); ok {
 				q.Quit()
 			}
 			return nil
@@ -356,7 +357,7 @@ func (x *quitDialog) stoppingBody(c *ui.Ctx, r *quitDrain, width float32) {
 	})
 }
 
-func (x *quitDialog) drainBody(c *ui.Ctx, r *quitDrain, busy []core.SessionState, jobs []host.Job, width float32) {
+func (x *quitDialog) drainBody(c *ui.Ctx, r *quitDrain, busy []core.SessionState, jobs []hostapi.Job, width float32) {
 	th := c.Theme()
 	if len(busy) > 0 {
 		remaining := max(r.deadline.Sub(c.Now()), 0)
