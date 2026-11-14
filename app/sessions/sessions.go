@@ -399,7 +399,7 @@ func (x *Sessions) addProject(id core.SessionID, repo string, before []core.Proj
 				err = h.Run(context.Background(), "project.open", registry.Args{"project": name})
 			}
 			if err != nil {
-				h.Notify(core.Notice{ID: notice, Severity: core.SevError, Source: "sessions", Key: true, Text: err.Error()})
+				kit.NotifyError(h, notice, err, false)
 			}
 		})
 		h.Redraw()

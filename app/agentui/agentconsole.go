@@ -600,7 +600,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 // run runs a command from a click, saying what went wrong in a notice.
 func (x *Console) run(ctx context.Context, id string, a registry.Args) {
 	if err := x.h.Run(ctx, id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error()})
+		kit.NotifyError(x.h, "agent.console", err, true)
 	}
 }
 
@@ -712,7 +712,7 @@ func (x *Console) composer(c *ui.Ctx, se core.SessionState, st *consoleState) {
 					if err := x.h.Run(context.Background(), "agent.unqueue", registry.Args{"id": string(se.ID), "index": i, "text": q}); err == nil {
 						st.draft, st.compose = strings.TrimSpace(q+"\n"+st.draft), true
 					} else {
-						x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error()})
+						kit.NotifyError(x.h, "agent.console", err, true)
 					}
 				}
 				if widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Cancel queued: " + kit.FirstLine(q), Help: "agent/console#composer", Size: 18}) {

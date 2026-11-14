@@ -283,7 +283,7 @@ func (x *PRReview) setDraft(id core.SessionID, fn func(d *core.ReviewDraft)) <-c
 		}
 		x.saved[id] = n
 		if err := w.SetReviewDraft(core.ReviewDrafted{Session: id, Draft: d}); err != nil {
-			x.h.Notify(core.Notice{ID: "review.pr.draft", Severity: core.SevError, Text: err.Error()})
+			kit.NotifyError(x.h, "review.pr.draft", err, false)
 		}
 	})
 	return done

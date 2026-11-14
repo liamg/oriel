@@ -417,7 +417,7 @@ func (x *Diff) record(root string, ev core.Event, send func(c host.ShipCalls, si
 	}
 	x.busy.Go(func() {
 		if err := send(c, se.ID, project); err != nil {
-			x.h.Notify(core.Notice{ID: "diff.review", Severity: core.SevError, Key: true, Text: err.Error()})
+			kit.NotifyError(x.h, "diff.review", err, false)
 		}
 	})
 	return nil

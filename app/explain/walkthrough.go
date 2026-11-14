@@ -108,7 +108,7 @@ func (x *Walkthrough) Activate(_ context.Context, h plugin.Host) error {
 				if widget.Button(c, "go", "Explain this change", widget.ButtonOpts{Disabled: !h.Available(registry.ExplainCommand, nil),
 					Help: "editor/pane#explain-change"}) {
 					if err := h.Run(context.Background(), "explain.change", nil); err != nil {
-						h.Notify(core.Notice{ID: "explain.change", Severity: core.SevWarning, Source: "explain", Key: true, Text: err.Error()})
+						h.Notify(core.Notice{ID: "explain.change", Severity: core.SevWarning, Source: "explain", AutoClear: true, Text: err.Error()})
 					}
 				}
 			})
@@ -184,7 +184,7 @@ func (x *Walkthrough) current() walkStep {
 }
 
 func (x *Walkthrough) notify(sev core.Severity, msg string) {
-	x.h.Notify(core.Notice{ID: "explain.change", Severity: sev, Source: "explain", Key: true, Text: msg})
+	x.h.Notify(core.Notice{ID: "explain.change", Severity: sev, Source: "explain", AutoClear: true, Text: msg})
 }
 
 // open shows the walkthrough, asking for one first unless there's one still good.

@@ -240,7 +240,7 @@ func (x *Lua) loadError(err error, kept bool) {
 	var e *script.Error
 	if errors.As(err, &e) {
 		file, _ := script.SplitLoc(e.Where())
-		n = kit.WithTrace(n, e, x.Dir, "Edit "+filepath.Base(cmp.Or(file, "init.lua")))
+		n = script.WithTrace(n, e, x.Dir, "Edit "+filepath.Base(cmp.Or(file, "init.lua")))
 		x.mark(e)
 	}
 	x.h.Notify(n)
@@ -284,12 +284,12 @@ func (x *Lua) eval(line string) {
 	x.history = append(x.history, line)
 	x.hist = len(x.history)
 	out, err := x.vm.Eval(script.Chunk{Name: "repl", Source: []byte("return unpack({ " + line + "\n})")})
-	if err != nil && (strings.Contains(err.Error(), "syntax error") || strings.Contains(err.Error(), "parse error")) {
+	if script.IsSyntax(err) {
 		out, err = x.vm.Eval(script.Chunk{Name: "repl", Source: []byte(line)})
 	}
 	if err != nil {
 		x.repl = append(x.repl, replLine{text: err.Error(), kind: 2})
-		if e, ok := err.(*script.Error); ok {
+		if e := (*script.Error)(nil); errors.As(err, &e) {
 			for _, f := range e.Frames() {
 				if !f.Go {
 					x.repl = append(x.repl, replLine{text: "  " + f.Loc() + ": " + f.Fn, kind: 3})

@@ -110,6 +110,6 @@ func signMenu(c *ui.Ctx, h plugin.Host, key any, id ui.ID, clicked bool, menu []
 
 func runSign(h plugin.Host, command string, args registry.Args) {
 	if err := h.Run(context.Background(), command, args); err != nil {
-		h.Notify(core.Notice{ID: "editor.sign", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		h.Notify(core.Notice{ID: "editor.sign", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}
 }

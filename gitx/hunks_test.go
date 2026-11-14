@@ -221,3 +221,24 @@ func TestFileAt(t *testing.T) {
 		t.Error("a file the revision hasn't got was found")
 	}
 }
+
+// A file git hasn't is all added, or has no staged hunks; git failing to read is an error, not a file that's all new.
+func TestHunksTellMissingFromFailed(t *testing.T) {
+	r, _ := hunkFixture(t)
+	ctx := context.Background()
+	repo := Repo{Dir: r.Dir}
+	if hs, err := repo.UnstagedHunks(ctx, "new.txt", []byte("a\nb\n")); err != nil || len(hs) != 1 || hs[0].NewLines != 2 || hs[0].OldLines != 0 {
+		t.Errorf("a new file: %+v, %v", hs, err)
+	}
+	if hs, err := repo.StagedHunks(ctx, "new.txt"); err != nil || len(hs) != 0 {
+		t.Errorf("a new file's staged hunks: %+v, %v", hs, err)
+	}
+	gone := Repo{Dir: filepath.Join(t.TempDir(), "no-repo")}
+	os.MkdirAll(gone.Dir, 0o755)
+	if _, err := gone.UnstagedHunks(ctx, "f.txt", []byte("x\n")); err == nil {
+		t.Error("outside a repo, the file read as all added")
+	}
+	if _, err := gone.StagedHunks(ctx, "f.txt"); err == nil {
+		t.Error("outside a repo, no staged hunks and no error")
+	}
+}

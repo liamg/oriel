@@ -218,7 +218,7 @@ func (x *AIReview) run(a registry.Args) error {
 		x.h.Do(func() { delete(x.asked, se.ID) })
 		x.h.Redraw()
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Key: true, Text: "AI review: " + err.Error()})
+			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Text: "AI review: " + err.Error()})
 		}
 	})
 	return nil
@@ -231,7 +231,7 @@ func (x *AIReview) setFinding(se core.SessionState, f core.Finding) error {
 	}
 	x.busy.Go(func() {
 		if err := c.SetFindings(core.FindingsRecorded{Session: se.ID, Findings: []core.Finding{f}}); err != nil {
-			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Key: true, Text: err.Error()})
+			kit.NotifyError(x.h, "review.ai", err, false)
 		}
 	})
 	return nil
@@ -435,7 +435,7 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 			a[k] = v
 		}
 		if err := x.h.Run(context.Background(), cmd, a); err != nil {
-			x.h.Notify(core.Notice{ID: "review.ai", Severity: core.SevError, Key: true, Text: err.Error()})
+			kit.NotifyError(x.h, "review.ai", err, true)
 		}
 	}
 	c.Box(f.ID, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 10, T: 8}}, func(c *ui.Ctx) {

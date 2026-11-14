@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/liamg/oriel/gh"
 	neturl "net/url"
 	"regexp"
 	"strconv"
@@ -41,8 +42,6 @@ func (c *ghCaller) api(ctx context.Context, path, jq string, args ...string) (st
 	return strings.TrimSpace(out), err
 }
 
-func notFound(err error) bool { return err != nil && strings.Contains(err.Error(), "HTTP 404") }
-
 func seg(s string) string { return neturl.PathEscape(s) }
 
 func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnly bool, run func(context.Context, json.RawMessage) (mcp.CallResult, error))) {
@@ -76,7 +75,7 @@ func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnl
 				return result("", err)
 			}
 			out, err := c.api(ctx, "actions/variables/"+seg(in.Name), `{found: true, name, value}`)
-			if notFound(err) {
+			if gh.NotFound(err) {
 				return result(`{"found":false}`, nil)
 			}
 			return result(out, err)
@@ -174,7 +173,7 @@ func ghBuiltins(h Host, add func(name, desc string, sch json.RawMessage, readOnl
 			}
 			if _, err := c.api(ctx, "git/ref/tags/"+seg(in.Tag), `.ref`); err == nil {
 				return result("", fmt.Errorf("tag %s already exists", in.Tag))
-			} else if !notFound(err) {
+			} else if !gh.NotFound(err) {
 				return result("", err)
 			}
 			target := in.SHA

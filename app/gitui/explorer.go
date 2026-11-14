@@ -154,14 +154,15 @@ type explorerHunks struct {
 	since    time.Time // when the loading began
 	staged   []gitx.Hunk
 	unstaged []gitx.Hunk
-	gen      int // moves when the hunks or their path do
+	err      error // why git couldn't read them
+	gen      int   // moves when the hunks or their path do
 	busy     work.Busy
 }
 
 // show makes path the file whose hunks these are: another's are dropped, to be read again.
 func (x *explorerHunks) show(path string) {
 	if x.path != path {
-		x.path, x.loaded, x.staged, x.unstaged = path, false, nil, nil
+		x.path, x.loaded, x.staged, x.unstaged, x.err = path, false, nil, nil, nil
 		x.gen++
 	}
 }
@@ -314,12 +315,15 @@ func (e *Explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 		t := e.git()
 		x.busy.Go(func() {
 			ctx, repo := context.Background(), t.status.Repo()
-			st, _ := repo.StagedHunks(ctx, path)
-			work, _ := os.ReadFile(t.abs(path))
-			un, _ := repo.UnstagedHunks(ctx, path, work)
+			st, err := repo.StagedHunks(ctx, path)
+			var un []gitx.Hunk
+			if err == nil {
+				work, _ := os.ReadFile(t.abs(path))
+				un, err = repo.UnstagedHunks(ctx, path, work)
+			}
 			x.mu.Lock()
 			if x.path == path {
-				x.staged, x.unstaged, x.loaded = st, un, true
+				x.staged, x.unstaged, x.err, x.loaded = st, un, err, true
 				x.gen++
 			}
 			x.loading = false
@@ -330,12 +334,17 @@ func (e *Explorer) fileHunks(path string) (staged, unstaged []gitx.Hunk, ok bool
 	return x.staged, x.unstaged, x.loaded
 }
 
-// hunksLoading is the selected file's hunks as a load, while Uncommitted waits on them.
+// hunksLoading is the selected file's hunks as a load, while Uncommitted waits on them or git couldn't read them.
 func (e *Explorer) hunksLoading(sc gitx.Scope) (widget.LoadState, bool) {
 	x := &e.hunks
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	if sc != gitx.Uncommitted || x.path == "" || x.loaded || !x.loading {
+	switch {
+	case sc != gitx.Uncommitted || x.path == "":
+		return widget.LoadState{}, false
+	case x.err != nil:
+		return widget.LoadState{Phase: widget.Failed, Err: x.err}, true
+	case x.loaded || !x.loading:
 		return widget.LoadState{}, false
 	}
 	return widget.LoadState{Phase: widget.Pending, Since: x.since}, true
@@ -510,7 +519,7 @@ func (e *Explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 			widget.DiffStat(c, "total", x.add, x.del, widget.DiffStatOpts{})
 			if widget.Button(c, "commit", "Commit…", widget.ButtonOpts{Ghost: true, Key: "c", Help: "files/commit"}) {
 				if err := e.h.Run(context.Background(), "explorer.commit", nil); err != nil {
-					e.h.Notify(core.Notice{ID: "git.commit", Severity: core.SevError, Key: true, Text: err.Error()})
+					kit.NotifyError(e.h, "git.commit", err, true)
 				}
 			}
 		}
@@ -545,7 +554,7 @@ func (e *Explorer) activate(id string, sc gitx.Scope) {
 		err = e.h.Run(ctx, "editor.open", registry.Args{"path": e.git().abs(p)})
 	}
 	if err != nil {
-		e.h.Notify(core.Notice{ID: "explorer.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		e.h.Notify(core.Notice{ID: "explorer.open", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}
 }
 

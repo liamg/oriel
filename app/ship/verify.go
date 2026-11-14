@@ -67,7 +67,7 @@ type quiz struct {
 	at       int       // the question being asked; those before it are graded
 	asking   bool      // waiting on the fork
 	since    time.Time // when it was asked
-	err      string
+	err      error
 	answer   string // the composer
 	notes    bool   // the answers go in the PR as reviewer notes
 	result   string // once every question is graded
@@ -203,7 +203,7 @@ func (x *Verify) start(q *quiz, se core.SessionState) {
 		q.projects = append(q.projects, p.Name)
 	}
 	q.by = cmp.Or(registry.ForkLabel(x.h, string(se.ID)), "fork, no tools")
-	q.qs, q.at, q.result, q.err, q.answer = nil, 0, "", "", ""
+	q.qs, q.at, q.result, q.err, q.answer = nil, 0, "", nil, ""
 	x.ask(q, x.questionsPrompt(se), func(out string) error {
 		qs := parseQuestions(out)
 		if len(qs) == 0 {
@@ -218,7 +218,7 @@ func (x *Verify) start(q *quiz, se core.SessionState) {
 func (x *Verify) ask(q *quiz, prompt string, got func(out string) error) {
 	q.gen++
 	gen := q.gen
-	q.asking, q.err, q.since = true, "", kit.WindowNow(x.h)
+	q.asking, q.err, q.since = true, nil, kit.WindowNow(x.h)
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, verifyTimeout)
 		out, _, err := registry.Fork(ctx, x.h, registry.ForkRequest{Session: string(q.session), Prompt: prompt})
@@ -232,7 +232,7 @@ func (x *Verify) ask(q *quiz, prompt string, got func(out string) error) {
 				err = got(out)
 			}
 			if err != nil {
-				q.err = err.Error()
+				q.err = err
 			}
 			q.scroll.Follow = true
 		})

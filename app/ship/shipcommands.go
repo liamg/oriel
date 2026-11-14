@@ -262,7 +262,7 @@ func (x *Ship) draftCommands() []registry.Command {
 					return fmt.Errorf("%s has no PR yet", p)
 				}
 				kit.CopyText(x.h, s.PR.URL)
-				x.h.Notify(core.Notice{ID: "ship.copied", Severity: core.SevInfo, Key: true, Title: p, Text: "Copied " + s.PR.URL})
+				x.h.Notify(core.Notice{ID: "ship.copied", Severity: core.SevInfo, AutoClear: true, Title: p, Text: "Copied " + s.PR.URL})
 				return nil
 			})},
 	}
@@ -388,7 +388,7 @@ func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 				return x.raisePR(cx, se, s, req)
 			})
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "ship." + req.Project, Severity: core.SevError, Key: true, Title: req.Project, Text: err.Error()})
+				x.h.Notify(core.Notice{ID: "ship." + req.Project, Severity: core.SevError, Title: req.Project, Text: err.Error()})
 				continue
 			}
 			<-done

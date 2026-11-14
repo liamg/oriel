@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"github.com/liamg/oriel/app/kit"
 	"os"
 	"time"
 
@@ -115,7 +116,7 @@ func (x *Editor) changedOnDisk(found []diskChange) {
 				err = x.e.ReloadBufferFrom(ch.num, data, read)
 			}
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "editor.reload", Severity: core.SevError, Source: "editor", Text: err.Error()})
+				kit.NotifyError(x.h, "editor.reload", err, false)
 			}
 			continue
 		}

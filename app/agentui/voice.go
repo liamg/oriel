@@ -192,7 +192,7 @@ func (x *Voice) refresh() {
 		x.h.Notify(core.Notice{ID: "voice.ready", Severity: core.SevInfo, Title: "Voice", Text: "Dictation is ready: click the mic in a text field."})
 	default:
 		x.waiting = false
-		x.h.Notify(core.Notice{ID: "voice.ready", Severity: core.SevError, Title: "Voice", Key: true, Text: r.String()})
+		x.h.Notify(core.Notice{ID: "voice.ready", Severity: core.SevError, Title: "Voice", Text: r.String()})
 	}
 }
 
@@ -242,7 +242,7 @@ func (x *Voice) Start(target ui.ID) error {
 			x.waiting = r.State == voice.Downloading
 			n := core.Notice{ID: "voice.ready", Severity: core.SevInfo, Title: "Preparing voice", Text: r.String()}
 			if !x.waiting {
-				n.Severity, n.Title, n.Key = core.SevError, "Voice", true
+				n.Severity, n.Title, n.AutoClear = core.SevError, "Voice", true
 			}
 			x.tell(n)
 			return errors.New(r.String())
@@ -250,7 +250,7 @@ func (x *Voice) Start(target ui.ID) error {
 	}
 	s, err := x.mic().Open(x.work.Ctx())
 	if err != nil {
-		x.tell(x.problem(err))
+		x.tell(x.problem(err, true))
 		return err
 	}
 	x.running = slices.DeleteFunc(x.running, func(d *voice.Dictation) bool {
@@ -311,16 +311,17 @@ func (x *Voice) pass(text string, final bool) {
 func (x *Voice) ended(err error) {
 	x.dict, x.listening, x.level, x.live = nil, false, 0, 0
 	if err != nil {
-		x.h.Notify(x.problem(err))
+		x.h.Notify(x.problem(err, false))
 	}
 }
 
 // tell notifies from a widget's build, after it.
 func (x *Voice) tell(n core.Notice) { x.h.Do(func() { x.h.Notify(n) }) }
 
-// problem is why voice didn't work, with the way to fix it when there's one.
-func (x *Voice) problem(err error) core.Notice {
-	n := core.Notice{ID: "voice", Severity: core.SevError, Title: "Voice", Key: true, Text: err.Error()}
+// problem is why voice didn't work, with the way to fix it when there's one. autoClear is for a failure in answer to
+// what the user just did; one offering a fix stays, for them to take it.
+func (x *Voice) problem(err error, autoClear bool) core.Notice {
+	n := core.Notice{ID: "voice", Severity: core.SevError, Title: "Voice", Text: err.Error()}
 	var noModel *voice.NoModelError
 	switch {
 	case errors.Is(err, voice.ErrMicDenied):
@@ -332,6 +333,7 @@ func (x *Voice) problem(err error) core.Notice {
 		n.Text = "Dictation needs the Whisper model " + noModel.Name + " (a one-off download)."
 		n.Actions = []core.Action{{Title: "Download", Command: "voice.download", Args: map[string]any{"model": noModel.Name}}}
 	}
+	n.AutoClear = autoClear && len(n.Actions) == 0
 	return n
 }
 
@@ -389,7 +391,7 @@ func (x *Voice) speak(text string) error {
 	}
 	plugin.Go(x.h, "speech", func() {
 		if err := s.Speak(context.Background(), text); err != nil {
-			x.h.Notify(x.problem(err))
+			x.h.Notify(x.problem(err, false))
 		}
 	})
 	return nil

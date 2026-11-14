@@ -266,7 +266,7 @@ func (x *LSP) actionsMenu(c *ui.Ctx, at render.Point) {
 			x.actions = nil
 			it := m.agent[index[chosen]-len(m.actions)]
 			if err := x.h.Run(context.Background(), it.Command, it.Args); err != nil {
-				x.h.Notify(core.Notice{ID: "lsp.code_action", Severity: core.SevWarning, Key: true, Text: err.Error()})
+				x.h.Notify(core.Notice{ID: "lsp.code_action", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 			}
 		case chosen >= 0 && index[chosen] >= 0:
 			x.actions = nil

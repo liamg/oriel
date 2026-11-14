@@ -1,10 +1,12 @@
 package catalog
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/liamg/oriel/gh"
 	"maps"
 	"os"
 	"os/exec"
@@ -190,17 +192,18 @@ type GH struct{}
 func (GH) gh(ctx context.Context, dir string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "gh", args...)
 	cmd.Dir = dir
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("gh %s: %v: %s", args[0], err, strings.TrimSpace(string(out)))
+	var out, errb bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errb
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("gh %s: %w", args[0], gh.CLIError(err, out.Bytes(), errb.String()))
 	}
-	return strings.TrimSpace(string(out)), nil
+	return strings.TrimSpace(out.String()), nil
 }
 
 func (g GH) Listing(ctx context.Context, registry, id string) ([]byte, bool, error) {
 	out, err := g.gh(ctx, "", "api", "-H", "Accept: application/vnd.github.raw", "repos/"+registry+"/contents/"+PluginsDir+"/"+id+"/"+PluginFile)
 	if err != nil {
-		if strings.Contains(err.Error(), "404") {
+		if gh.NotFound(err) {
 			return nil, false, nil
 		}
 		return nil, false, err

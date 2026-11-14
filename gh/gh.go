@@ -2,6 +2,7 @@ package gh
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -165,15 +166,20 @@ type Error struct {
 	Message string
 }
 
-func (e *Error) Error() string { return fmt.Sprintf("GitHub: %s (HTTP %d)", e.Message, e.Status) }
+func (e *Error) Error() string {
+	if e.Status == 0 {
+		return "GitHub: " + e.Message // gh failed before GitHub answered
+	}
+	return fmt.Sprintf("GitHub: %s (HTTP %d)", e.Message, e.Status)
+}
 
 // HTTPStatus is the status it was answered with (registry.TokenRefused).
 func (e *Error) HTTPStatus() int { return e.Status }
 
-// NotFound reports whether err is GitHub's 404.
+// NotFound reports whether err is, or wraps, GitHub's 404.
 func NotFound(err error) bool {
-	e, ok := err.(*Error)
-	return ok && e.Status == 404
+	var e *Error
+	return errors.As(err, &e) && e.Status == 404
 }
 
 var stamp = regexp.MustCompile(`^\d{4}-\d\d-\d\dT[\d:.]+Z\s*`)

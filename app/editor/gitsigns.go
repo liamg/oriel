@@ -542,7 +542,7 @@ func (g *GitSigns) unstage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) err
 		}
 		h, ok := hunkAt(staged, at)
 		if !ok {
-			g.h.Notify(core.Notice{ID: "git.hunk.unstage", Severity: core.SevInfo, Key: true, Text: "No staged hunk on this line"})
+			g.h.Notify(core.Notice{ID: "git.hunk.unstage", Severity: core.SevInfo, AutoClear: true, Text: "No staged hunk on this line"})
 			return nil
 		}
 		return repo.UnstageHunk(ctx, f.rel, h)

@@ -3,7 +3,6 @@ package ship
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -91,7 +90,7 @@ type shipReport struct {
 	loading bool
 	again   bool      // asked for again while loading: read once more when it's done
 	since   time.Time // when the read running started, on the window's clock; set by the first frame that sees it
-	err     string
+	err     error
 	doing   map[string]string // project → the step running: "Pushing"
 	failed  map[string]string // project → why its last step failed
 	started int               // reads started; a read older than the one last kept is dropped
@@ -194,8 +193,8 @@ func (x *Ship) loadState(c *ui.Ctx, id core.SessionID, project string) widget.Lo
 	}
 	r.seen(c.Now())
 	var err error
-	if r.err != "" {
-		err = errors.New(r.err)
+	if r.err != nil {
+		err = r.err
 	}
 	s := widget.LoadState{Since: r.since, Err: err, Progress: -1}
 	switch {
@@ -241,8 +240,8 @@ func (s ships) For(se core.SessionState) []registry.ProjectShip {
 		case r == nil:
 		case !slices.ContainsFunc(r.ships, func(s shipRead) bool { return s.Project == ps.Project }):
 			ps.Load.Since = r.since
-			if !r.loading && r.err != "" {
-				ps.Load.Err = errors.New(r.err)
+			if !r.loading && r.err != nil {
+				ps.Load.Err = r.err
 			}
 		default:
 			ps.Load.Done = true
@@ -368,10 +367,10 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) 
 	}
 	r.kept = n
 	if err != nil {
-		r.err = err.Error()
+		r.err = err
 	} else {
 		ships = r.keepNewer(ships, seq)
-		r.ships, r.err, r.read = ships, "", time.Now()
+		r.ships, r.err, r.read = ships, nil, time.Now()
 	}
 	seen, merged, asks := x.newPRs(id, ships)
 	x.mu.Unlock()
@@ -496,7 +495,7 @@ func stepWith[T any](x *Ship, part func(registry.Registry) (T, error), id core.S
 			}
 			x.mu.Unlock()
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Key: true, Title: project, Text: err.Error()})
+				x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Title: project, Text: err.Error()})
 			}
 		})
 	})
