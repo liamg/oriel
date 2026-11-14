@@ -14,7 +14,7 @@ func TestHostPartsStayApart(t *testing.T) {
 	}
 	m := func(p string) string { return Module + "/" + p }
 	pkgs := []Package{
-		{ImportPath: m("host/jobs"), Deps: []string{m("host/hostcore"), m("host/stats")}},
+		{ImportPath: m("host/jobs"), Deps: []string{m("host/hostcore"), m("agent/usage/stats")}},
 		{ImportPath: m("host/github"), TestImports: []string{m("host/hosttest")}, Deps: []string{m("host/worktree")}},
 		{ImportPath: m("host/hostcore"), Deps: []string{m("gitx")}},
 	}

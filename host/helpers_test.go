@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/sandboxhost"
-	"github.com/liamg/oriel/host/stats"
 )
 
 // What the tests reach in the host's parts, by the names they had in the host.

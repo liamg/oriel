@@ -13,9 +13,9 @@ import (
 	"github.com/liamg/oriel/internal/chaos"
 
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
-	"github.com/liamg/oriel/host/stats"
 )
 
 func (h *session) handle(sess agent.Session, ev agent.Event) {

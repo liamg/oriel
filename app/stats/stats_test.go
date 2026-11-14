@@ -10,12 +10,12 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
+	hoststats "github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
-	hoststats "github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )

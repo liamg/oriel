@@ -3,7 +3,7 @@ package sessions
 import (
 	"time"
 
-	"github.com/liamg/oriel/host/stats"
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/widget"

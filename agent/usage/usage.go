@@ -1,4 +1,4 @@
-// Package usage is what an agent's log says it used, in the terms every provider shares: the Events host/stats counts.
+// Package usage is what an agent's log says it used, in the terms every provider shares: the Events agent/usage/stats counts.
 // A provider whose log has a format of its own reads it with a Format of its own (agent.UsageLogs); one with none
 // writes Events, the Events format.
 package usage

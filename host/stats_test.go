@@ -16,11 +16,11 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/agent/usage"
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/host/persist"
-	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/internal/isolate"
 )
 

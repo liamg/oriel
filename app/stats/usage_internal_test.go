@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host/stats"
 )
 
 // The projection from fixture readings: 71% used, 1.1%/h over the last 24h, resetting in 44h 43m: it runs out

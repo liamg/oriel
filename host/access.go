@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/liamg/oriel/agent/prompts"
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/sandbox"
 )
 

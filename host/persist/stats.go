@@ -13,10 +13,10 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/price"
 	"github.com/liamg/oriel/agent/usage"
+	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostcore"
-	"github.com/liamg/oriel/host/stats"
 )
 
 // The host reads its sessions' logs into stats (crit's internal/stats, per session) and answers StatsQuery and
