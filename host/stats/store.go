@@ -2,6 +2,7 @@ package stats
 
 import (
 	"encoding/json"
+	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
@@ -24,6 +25,9 @@ type Log struct {
 // Store keeps every session's scans, and keeps them in a stats file, so a restart reads only what's been written
 // since rather than every log again. A log read at other prices than the book's is read again, if it's still there.
 type Store struct {
+	// Log is told what the store can't save; nothing is if nil.
+	Log *slog.Logger
+
 	file    string
 	prices  func() *price.Book
 	formats func(name string) (usage.Format, bool)
@@ -146,11 +150,13 @@ func (s *Store) save() {
 	}
 	c := cacheFile{Version: cacheVersion, Scans: maps.Clone(s.scans)}
 	b, err := json.Marshal(c)
-	if err != nil {
-		return
+	if err == nil {
+		err = os.MkdirAll(filepath.Dir(s.file), 0o755)
 	}
-	if os.MkdirAll(filepath.Dir(s.file), 0o755) != nil {
-		return
+	if err == nil {
+		err = atomicfile.Write(s.file, b, 0o644)
 	}
-	_ = atomicfile.Write(s.file, b, 0o644)
+	if err != nil && s.Log != nil {
+		s.Log.Warn("the stats file not saved", "path", s.file, "err", err)
+	}
 }

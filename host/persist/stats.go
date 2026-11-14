@@ -119,7 +119,10 @@ func (s *Stats) pricedBy() stats.Prices {
 
 // Store is the stats' store of scanned logs.
 func (s *Stats) Store() *stats.Store {
-	s.once.Do(func() { s.data = stats.NewStore(filepath.Join(s.env.Home, "stats.json"), s.prices, s.format) })
+	s.once.Do(func() {
+		s.data = stats.NewStore(filepath.Join(s.env.Home, "stats.json"), s.prices, s.format)
+		s.data.Log = s.env.Log
+	})
 	return s.data
 }
 
