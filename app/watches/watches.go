@@ -67,7 +67,7 @@ func (x *Watches) Activate(ctx context.Context, h plugin.Host) error {
 	for _, n := range x.builtins() {
 		x.Add(x.Register(n))
 	}
-	x.Add(h.Contribute(registry.Service{Name: services.WatchesService, Impl: x, Source: "builtin:watches"}))
+	x.Add(h.Contribute(registry.Service{Name: services.WatchesService, Impl: x}))
 	return nil
 }
 

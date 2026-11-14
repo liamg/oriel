@@ -51,7 +51,7 @@ func (x *Images) Manifest() plugin.Manifest { return plugin.Manifest{ID: "image"
 func (x *Images) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.Add(h.View(ImageView, imageView{x}))
-	x.Add(h.Contribute(registry.FileViewer{Name: "image", When: isMedia, View: ImageView, Order: 50, Help: imageHelp, Source: "builtin:image"}))
+	x.Add(h.Contribute(registry.FileViewer{Name: "image", When: isMedia, View: ImageView, Order: 50, Help: imageHelp}))
 	return nil
 }
 

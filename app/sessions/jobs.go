@@ -128,7 +128,7 @@ func (x *Jobs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "jobs"} }
 
 func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.JobKind}, Source: "builtin:jobs"}))
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.JobKind}}))
 	if x.loc == nil {
 		x.loc = time.Local
 	}

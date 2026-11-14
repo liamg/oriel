@@ -111,8 +111,7 @@ func (t *sessionTabs) Activate(_ context.Context, h plugin.Host) error {
 			return nil
 		}}))
 	t.Add(h.Contribute(registry.MenuItem{Name: "session.tab.rename", Label: "Rename…", Group: "session", Order: 5,
-		When: registry.MenuWhen{Subject: kit.SessionSubject, Help: "shell/tabs"}, Source: "builtin:sessiontabs",
-		Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
+		When: registry.MenuWhen{Subject: kit.SessionSubject, Help: "shell/tabs"}, Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
 			return h.Run(ctx, "session.tab.rename", registry.Args{"id": strings.TrimPrefix(at.Subject, kit.SessionSubject)})
 		}}))
 	t.Add(h.Picker(sessionsSource(h)))

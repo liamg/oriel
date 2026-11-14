@@ -162,7 +162,7 @@ func (s *start) Activate(_ context.Context, h plugin.Host) error {
 		s.Add(h.Keymap(k))
 	}
 	s.Add(h.Contribute(registry.ExclusiveKeys{Mode: EmptyKeyMode, Active: func() bool { return s.sh.cfg.WorkDir == "" },
-		Allow: func(k registry.Keymap) bool { return s.keeps(h, k) }, Source: "builtin:start"}))
+		Allow: func(k registry.Keymap) bool { return s.keeps(h, k) }}))
 	dirs, walks := directoriesSource(h, s.sh)
 	s.Add(h.Picker(dirs))
 	s.Add(walks)

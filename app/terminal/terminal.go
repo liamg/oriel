@@ -196,7 +196,7 @@ func (x *Terminals) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.RawKeys{Mode: TerminalKeyMode}))
 	x.renaming(h)
 	x.Add(h.Contribute(registry.MenuItem{Name: "term.fix", Label: "Ask the agent to fix the failed command", Group: "agent", Order: 10,
-		When: registry.MenuWhen{View: TerminalView}, Command: registry.FixCommand, Trouble: x.failedCommand, Source: "builtin:terminal"}))
+		When: registry.MenuWhen{View: TerminalView}, Command: registry.FixCommand, Trouble: x.failedCommand}))
 	x.Add(h.View(TerminalView, terminalView{x}))
 	return nil
 }
@@ -710,8 +710,7 @@ func (x *Terminals) renaming(h plugin.Host) {
 			return nil
 		}}))
 	x.Add(h.Contribute(registry.MenuItem{Name: "term.rename", Label: "Rename…", Group: "pane", Order: 80,
-		When: registry.MenuWhen{View: TerminalView, Help: panes.HelpTab}, Source: "builtin:terminal",
-		Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
+		When: registry.MenuWhen{View: TerminalView, Help: panes.HelpTab}, Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
 			return h.Run(ctx, "term.rename", registry.Args{"instance": at.Instance})
 		}}))
 }

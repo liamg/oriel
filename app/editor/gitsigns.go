@@ -125,7 +125,7 @@ func (g *GitSigns) watch(tree string, st *gitx.Status) {
 }
 
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
-	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }, Source: "builtin:gitsigns"}))
+	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }}))
 	g.h = h
 	g.typing = work.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
