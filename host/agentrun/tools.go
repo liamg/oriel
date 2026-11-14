@@ -517,7 +517,7 @@ func (h *session) toolDraft(kind string) func(context.Context, json.RawMessage) 
 		if kind == "commit" {
 			title, body = "", a.Str("message")
 		}
-		if err := h.r.env.WriteDraft(h.id, p.Name, kind, title, body, se.Agent.Provider, code); err != nil {
+		if err := h.r.env.WriteDraft(h.id, p.Name, kind, hostcore.Draft{Title: title, Body: body, By: se.Agent.Provider, Code: code}); err != nil {
 			return "", err
 		}
 		return "saved", h.r.st.Emit(core.DraftSaved{Session: h.id, Project: p.Name, Kind: kind})
