@@ -106,6 +106,14 @@ func TestGuardCommands(t *testing.T) {
 	if err := g.Check("p/q", CapExec, "/tmp/evil/sh"); err == nil {
 		t.Error("another program named sh")
 	}
+	// A grant of the path allows the bare name that finds it, as a grant of the name allows the path.
+	g.Grant("p/r", []Grant{{Cap: CapExec, Scope: []string{sh}}})
+	if err := g.Check("p/r", CapExec, "sh"); err != nil {
+		t.Errorf("sh, granted as %s: %v", sh, err)
+	}
+	if err := g.Check("p/r", CapExec, "ls"); err == nil {
+		t.Error("another program, granted sh's path")
+	}
 }
 
 // A full manifest, with [permissions] given as tables and in the short form (= true).
