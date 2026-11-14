@@ -111,7 +111,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
 				}
-				return nil, x.Source(c.String(0), c.Table(1), c.Where())
+				return nil, x.Source(c.Table(0), c.Where())
 			},
 			"sources": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
@@ -165,7 +165,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("agent.prompt"); err != nil {
 					return nil, err
 				}
-				return nil, x.Pack(c.String(0), c.Table(1), c.Where())
+				return nil, x.Pack(c.Table(0), c.Where())
 			},
 			"provider": func(c *script.Args) ([]any, error) {
 				if err := a.check("agent.provider"); err != nil {
@@ -500,7 +500,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("session.control"); err != nil {
 					return nil, err
 				}
-				return nil, x.Kind(c.String(0), c.Table(1), c.Where())
+				return nil, x.Kind(c.Table(0), c.Where())
 			},
 			"unsaved": func(c *script.Args) ([]any, error) {
 				if err := a.check("session.control"); err != nil {

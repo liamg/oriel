@@ -356,8 +356,12 @@ func (g Agent) Fork(req script.Table, fn *script.Fn) error {
 	return nil
 }
 
-//oriel:api doc="A prompt pack: { prompt, tools }, for sessions to start with." cap=agent.prompt
-func (g Agent) Pack(name string, spec script.Table, where string) error {
+//oriel:api doc="A prompt pack: { name, prompt, tools }, for sessions to start with." cap=agent.prompt
+func (g Agent) Pack(spec script.Table, where string) error {
+	name := str(spec, "name")
+	if name == "" {
+		return errors.New("a prompt pack needs a name")
+	}
 	g.a.own(g.a.Host.Contribute(registry.PromptPack{Name: name, Prompt: str(spec, "prompt"), Tools: plugin.Strings(spec["tools"]), Source: where}))
 	return nil
 }
@@ -365,8 +369,12 @@ func (g Agent) Pack(name string, spec script.Table, where string) error {
 //oriel:api name=session cap=session.control
 type Session struct{ a *APIs }
 
-//oriel:api doc="A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, agent_gate (the agent's own gate: ask, light, auto or bypass; ask by default), opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent, deletes-on-end }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base)."
-func (s Session) Kind(name string, spec script.Table, where string) error {
+//oriel:api doc="A kind of session, shadowing a built-in of the same name: { name, title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, agent_gate (the agent's own gate: ask, light, auto or bypass; ask by default), opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent, deletes-on-end }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base)."
+func (s Session) Kind(spec script.Table, where string) error {
+	name := str(spec, "name")
+	if name == "" {
+		return errors.New("a session kind needs a name")
+	}
 	k, err := luaKind(s.a, name, spec)
 	if err != nil {
 		return err

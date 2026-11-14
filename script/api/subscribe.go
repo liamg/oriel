@@ -88,14 +88,18 @@ func (r Root) Subscribe(name string, spec script.Table) (script.Table, error) {
 	}, nil
 }
 
-//oriel:api doc="Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick." optional=spec
-func (r Root) Source(name string, spec script.Table, where string) error {
+//oriel:api doc="Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has name, and files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick."
+func (r Root) Source(spec script.Table, where string) error {
 	a := r.a
+	name := str(spec, "name")
 	w, ok := services.WatchesOf(a.Host)
 	if !ok {
 		return errors.New("oriel.source: no freshness managers")
 	}
-	if name == "" || strings.HasPrefix(name, "git.") || name == "files" {
+	if name == "" {
+		return errors.New("oriel.source needs a name")
+	}
+	if strings.HasPrefix(name, "git.") || name == "files" {
 		return fmt.Errorf("oriel.source: %q is taken", name)
 	}
 	read, _ := spec["read"].(*script.Fn)
