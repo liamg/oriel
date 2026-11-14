@@ -1,11 +1,13 @@
 //go:build !darwin
 
-package kit
+package desktop
 
 import (
 	"context"
 	"os/exec"
 	"strings"
+
+	"github.com/liamg/oriel/app/kit"
 )
 
 // dirChoosers are the desktop's folder choosers, tried in order: GNOME's and KDE's.
@@ -39,8 +41,8 @@ func ChooseDirAvailable() bool {
 	return false
 }
 
-// HasChooseDir is ChooseDirAvailable for a frame: the choosers are looked up off the loop.
-func (r *Reads) HasChooseDir() bool {
+// HasChooseDir is ChooseDirAvailable for a frame, through r: the choosers are looked up off the loop.
+func HasChooseDir(r *kit.Reads) bool {
 	for _, c := range dirChoosers {
 		if r.Has(c[0]) {
 			return true

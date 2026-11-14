@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/desktop"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/hostapi"
@@ -252,9 +253,9 @@ func (x *Repos) dirMode(c *ui.Ctx, f *addRepo, focus bool) {
 		kit.Heading(c, "h", "Directory", "a checkout, or a worktree of one")
 		c.Row("row", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			x.repoField(c, "path", &f.path, focus, widget.InputOpts{Label: "Directory", Placeholder: "~/src/my-project"})
-			if kit.ReadsIn(c).HasChooseDir() && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
+			if desktop.HasChooseDir(kit.ReadsIn(c)) && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
 				x.work.Loop(func(ctx context.Context) {
-					dir, err := kit.ChooseDir(ctx)
+					dir, err := desktop.ChooseDir(ctx)
 					x.h.Do(func() {
 						if err == nil && dir != "" {
 							f.path = kit.TildePath(strings.TrimRight(dir, "/"))
@@ -323,9 +324,9 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 		})
 		labelled(c, "parent", "Parent folder", func(c *ui.Ctx) {
 			x.repoField(c, "parent", &f.parent, false, widget.InputOpts{Label: "Parent folder", Placeholder: "~/src"})
-			if kit.ReadsIn(c).HasChooseDir() && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
+			if desktop.HasChooseDir(kit.ReadsIn(c)) && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
 				x.work.Loop(func(ctx context.Context) {
-					dir, err := kit.ChooseDir(ctx)
+					dir, err := desktop.ChooseDir(ctx)
 					x.h.Do(func() {
 						if err == nil && dir != "" {
 							f.parent = kit.TildePath(strings.TrimRight(dir, "/"))

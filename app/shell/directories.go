@@ -12,6 +12,7 @@ import (
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/desktop"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -122,7 +123,7 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 					add(p, 50, "", isRepo(p))
 				}
 			}
-			if kit.ChooseDirAvailable() {
+			if desktop.ChooseDirAvailable() {
 				out = append(out, uireg.PickerItem{ID: "browse", Label: "Browse…", Detail: "the system's folder chooser", Icon: "…", Boost: 30})
 			}
 			for _, d := range sh.recents.list() {
@@ -140,7 +141,7 @@ func directoriesSource(h plugin.Host, sh *shell) (uireg.PickerSource, registry.D
 		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
 			if it.ID == "browse" {
 				all.work.Loop(func(cctx context.Context) { // waits on a person
-					dir, err := kit.ChooseDir(cctx)
+					dir, err := desktop.ChooseDir(cctx)
 					h.Do(func() {
 						if err == nil && dir != "" {
 							err = sh.openDir(context.Background(), h, dir)

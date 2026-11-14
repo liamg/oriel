@@ -1,9 +1,11 @@
-package kit
+package desktop
 
 import (
 	"context"
 	"os/exec"
 	"strings"
+
+	"github.com/liamg/oriel/app/kit"
 )
 
 // ChooseDir asks macOS for a folder with its own chooser; it closes when ctx ends.
@@ -24,5 +26,5 @@ func ChooseDir(ctx context.Context) (string, error) {
 // ChooseDirAvailable says the OS has a folder chooser.
 func ChooseDirAvailable() bool { return true }
 
-// HasChooseDir is ChooseDirAvailable for a frame.
-func (r *Reads) HasChooseDir() bool { return true }
+// HasChooseDir is ChooseDirAvailable for a frame, through r.
+func HasChooseDir(r *kit.Reads) bool { return true }
