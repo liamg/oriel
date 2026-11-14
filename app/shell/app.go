@@ -167,7 +167,6 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	p := &running{sh: sh, ctx: ctx}
 	defer func() {
 		err = errors.Join(err, p.deactivate(p.ctx))
-		kit.ForgetLanguages(cfg.Registry)
 	}()
 	if err := p.activate(); err != nil {
 		return err
