@@ -24,12 +24,12 @@ var ceilings = map[string]int{
 	"functions over 120 lines elsewhere":   35,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
-	"RequestFocus calls outside ui/":       37,
+	"RequestFocus calls outside ui/":       36,
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
 	// The rest of the tree (cmd, sandbox, render, regex, integ…) is held to the same rule from here, its count only
 	// falling: what's truly process-wide (a cgo callback's map, an init-time registry) goes in stateAllowed with why.
-	"mutable package-level vars elsewhere": 114,
+	"mutable package-level vars elsewhere": 104,
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).

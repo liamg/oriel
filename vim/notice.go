@@ -31,20 +31,12 @@ func (k noticeKind) with(args ...any) edit.Notice {
 	return n
 }
 
-// kinds is every notice kind, for tests.
-var kinds []noticeKind
-
-func kind(k noticeKind) noticeKind {
-	kinds = append(kinds, k)
-	return k
-}
-
 func errKind(id, text string) noticeKind {
-	return kind(noticeKind{id: "vim." + id, sev: edit.Error, text: text})
+	return noticeKind{id: "vim." + id, sev: edit.Error, text: text}
 }
 
 func infoKind(id, text string) noticeKind {
-	return kind(noticeKind{id: "vim." + id, sev: edit.Info, text: text})
+	return noticeKind{id: "vim." + id, sev: edit.Info, text: text}
 }
 
 func count(n, one, many string) string {
@@ -113,14 +105,14 @@ var (
 
 	msgOnlyWindow   = infoKind("only-window", "There's only one window")
 	msgReadOnlyFile = infoKind("opened-read-only", "Opened %s read-only: %s")
-	msgWritten      = kind(noticeKind{id: "vim.written", sev: edit.Info, textf: func(a []string) string {
+	msgWritten      = noticeKind{id: "vim.written", sev: edit.Info, textf: func(a []string) string {
 		what := "Wrote "
 		if a[1] == "1" {
 			what = "Wrote new file "
 		}
 		return what + a[0] + ": " + count(a[2], "line", "lines") + ", " + count(a[3], "byte", "bytes")
-	}})
-	askWriteChanged = kind(noticeKind{id: "vim.write-changed", sev: edit.Question, text: "%s changed on disk since it was read. Write it anyway? (y/n)"})
+	}}
+	askWriteChanged = noticeKind{id: "vim.write-changed", sev: edit.Question, text: "%s changed on disk since it was read. Write it anyway? (y/n)"}
 	msgNewestChange = infoKind("newest-change", "Already at the newest change")
 	msgOldestChange = infoKind("oldest-change", "Already at the oldest change")
 	msgFewerLines   = infoKind("fewer-lines", "%s fewer lines")
@@ -131,7 +123,7 @@ var (
 	msgNoLine       = infoKind("no-line", "The pattern matches no line: %s")
 	msgNoLists      = infoKind("no-lists", "No lists yet")
 	msgQfEntry      = infoKind("qf-entry", "(%s of %s): %s")
-	msgShifted      = kind(noticeKind{id: "vim.shifted", sev: edit.Info, textf: func(a []string) string {
+	msgShifted      = noticeKind{id: "vim.shifted", sev: edit.Info, textf: func(a []string) string {
 		verb := "Indented"
 		if a[1] == "<" {
 			verb = "Unindented"
@@ -141,32 +133,32 @@ var (
 			s += " " + a[2] + " times"
 		}
 		return s
-	}})
-	msgMatchCount = kind(noticeKind{id: "vim.match-count", sev: edit.Info, textf: func(a []string) string {
+	}}
+	msgMatchCount = noticeKind{id: "vim.match-count", sev: edit.Info, textf: func(a []string) string {
 		return count(a[0], "match", "matches") + " on " + count(a[1], "line", "lines")
-	}})
-	msgSubstituted = kind(noticeKind{id: "vim.substituted", sev: edit.Info, textf: func(a []string) string {
+	}}
+	msgSubstituted = noticeKind{id: "vim.substituted", sev: edit.Info, textf: func(a []string) string {
 		return count(a[0], "substitution", "substitutions") + " on " + count(a[1], "line", "lines")
-	}})
+	}}
 	// msgQfList is one list of the quickfix stack: its mark in a history (">", " " or ""), number, how many,
 	// size and title.
-	msgQfList = kind(noticeKind{id: "vim.qf-list", sev: edit.Info, textf: func(a []string) string {
+	msgQfList = noticeKind{id: "vim.qf-list", sev: edit.Info, textf: func(a []string) string {
 		s := "List " + a[1] + " of " + a[2] + ": " + count(a[3], "entry", "entries") + ", " + a[4]
 		if a[0] == ">" {
 			s = "> " + s
 		}
 		return s
-	}})
+	}}
 	// msgBufferLine is a line of :ls: number, flags ("%a", "#h"…), modified ("1" or ""), name and line.
-	msgBufferLine = kind(noticeKind{id: "vim.buffer-line", sev: edit.Info, textf: func(a []string) string {
+	msgBufferLine = noticeKind{id: "vim.buffer-line", sev: edit.Info, textf: func(a []string) string {
 		s := a[0] + " " + a[3]
 		if a[2] == "1" {
 			s += " (modified)"
 		}
 		return s + ", line " + a[4]
-	}})
+	}}
 	// msgFileInfo is CTRL-G: name, modified, not edited ("1" or ""), lines, and how far through the cursor is.
-	msgFileInfo = kind(noticeKind{id: "vim.file-info", sev: edit.Info, textf: func(a []string) string {
+	msgFileInfo = noticeKind{id: "vim.file-info", sev: edit.Info, textf: func(a []string) string {
 		s := a[0]
 		if a[1] == "1" {
 			s += " (modified)"
@@ -175,8 +167,8 @@ var (
 			return s + ", empty"
 		}
 		return s + ", " + count(a[3], "line", "lines") + ", " + a[4] + "%"
-	}})
-	askSwapRange = kind(noticeKind{id: "vim.swap-range", sev: edit.Question, text: "The range is backwards. Swap it? (y/n)"})
+	}}
+	askSwapRange = noticeKind{id: "vim.swap-range", sev: edit.Question, text: "The range is backwards. Swap it? (y/n)"}
 )
 
 func flag(b bool) string {
