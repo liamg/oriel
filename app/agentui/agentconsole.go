@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -309,7 +311,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 	a := se.Agent
 	const help = "agent/console#composer"
 	if p, ok := x.provider(se.ID, a.Provider); ok && len(p.Models) > 0 {
-		if m, e, picked := kit.ModelSelects(c, p, cmp.Or(a.Model, kit.DefaultModel(p)), a.Effort, a.Working, help); picked {
+		if m, e, picked := agentkit.ModelSelects(c, p, cmp.Or(a.Model, kit.DefaultModel(p)), a.Effort, a.Working, help); picked {
 			x.run(context.Background(), "session.configure", registry.Args{"id": string(se.ID), "model": m, "effort": e})
 		}
 		if a.Working {
@@ -325,7 +327,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 	}
 	switch {
 	case a.Sandboxed:
-		where := kit.SandboxNoun(cmp.Or(a.Backend, kit.SettingBackend(x.h)))
+		where := agentkit.SandboxNoun(cmp.Or(a.Backend, agentkit.SettingBackend(x.h)))
 		if a.Network != "" {
 			where += " · net " + a.Network
 		}
@@ -467,7 +469,7 @@ func (x *Console) hasTerminal(id core.SessionID) bool {
 	if !ok {
 		return true
 	}
-	f, known := kit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
+	f, known := agentkit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
 	return !known || f.Terminal
 }
 

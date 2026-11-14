@@ -458,7 +458,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 				c.RequestFocus(c.Next("reply"))
 			}
 			if widget.Prose(c, "reply", reply, widget.ProseOpts{Label: "Reply to the thread", Placeholder: "Reply…", Lines: commentLines, EnterSubmits: true,
-				Help: "agent/requests#inline", Files: kit.PastedFiles(h, se.ID)}).Submitted {
+				Help: "agent/requests#inline", Files: pastedFiles(h, se.ID)}).Submitted {
 				send()
 			}
 		})
@@ -522,7 +522,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			}
 			var files func(widget.Pasted) string
 			if se, ok := x.front(); ok && !n.toAuthor {
-				files = kit.PastedFiles(x.h, se.ID)
+				files = pastedFiles(x.h, se.ID)
 			}
 			r := widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
 				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files})

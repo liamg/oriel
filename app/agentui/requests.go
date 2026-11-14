@@ -688,7 +688,7 @@ func (x *Requests) commentOn(ctx registry.Ctx, a registry.Args) error {
 	}
 	req := host.CommentReq{Session: se.ID, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
 		Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding"), Outgoing: a.Bool("outgoing"),
-		Images: kit.LocalImages(ev.Body)}
+		Images: localImages(ev.Body)}
 	if ev.Thread == "" && ev.File != "" {
 		req.Anchor = anchorIn(se, ev.File, ev.Line, a.Int("end_line"), a.String("text"))
 		req.Anchor.Col, req.Anchor.EndCol = a.Int("col"), a.Int("end_col")

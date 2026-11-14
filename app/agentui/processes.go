@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -38,7 +40,7 @@ func (x *Console) canStop(id core.SessionID) bool {
 	if !ok {
 		return false
 	}
-	f, _ := kit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
+	f, _ := agentkit.ProviderFeatures(x.h, se.Snapshot().Agent.Provider)
 	return f.StopProcesses
 }
 

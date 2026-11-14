@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -321,7 +323,7 @@ func (x *Jobs) agentChoices(c *ui.Ctx, f *jobForm, agents []host.ProviderInfo) {
 		f.agent, f.model, f.effort = agents[cur].ID, kit.DefaultModel(agents[cur]), ""
 	}
 	if p := agents[cur]; len(p.Models) > 0 {
-		if m, e, ok := kit.ModelSelects(c, p, cmp.Or(f.model, kit.DefaultModel(p)), f.effort, false, "agent/jobs#new"); ok {
+		if m, e, ok := agentkit.ModelSelects(c, p, cmp.Or(f.model, kit.DefaultModel(p)), f.effort, false, "agent/jobs#new"); ok {
 			f.agent, f.model, f.effort = p.ID, m, e
 		}
 	}

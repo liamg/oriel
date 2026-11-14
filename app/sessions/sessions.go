@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent"
@@ -741,7 +743,7 @@ func (x *Sessions) forker(id string) string {
 		return ""
 	}
 	p := se.Snapshot().Agent.Provider
-	if f, known := kit.ProviderFeatures(x.h, p); known && !f.Fork {
+	if f, known := agentkit.ProviderFeatures(x.h, p); known && !f.Fork {
 		return ""
 	}
 	return cmp.Or(p, "the agent") + " · fork, no tools"

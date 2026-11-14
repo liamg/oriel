@@ -1,9 +1,13 @@
-package kit
+// Package agentkit is the agent controls the sessions and agent features share: picking a model, a sandbox backend
+// and its settings, and what a provider's sessions can do.
+package agentkit
 
 import (
 	"cmp"
 	"slices"
 	"strings"
+
+	"github.com/liamg/oriel/app/kit"
 
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
@@ -16,7 +20,7 @@ import (
 // ModelSelects are a provider's model and effort menus, at model and effort ("" is the default effort). It reports
 // a pick, with what's picked: a new model's effort is its default.
 func ModelSelects(c *ui.Ctx, p host.ProviderInfo, model, effort string, disabled bool, help string) (string, string, bool) {
-	name := ProviderNameIn(c, p.ID)
+	name := kit.ProviderNameIn(c, p.ID)
 	picked := false
 	c.Row("model", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		var ids, efforts []string
@@ -58,9 +62,9 @@ func ToggleRow(c *ui.Ctx, key any, label string, on *bool, o ToggleRowOpts) {
 		if disabled {
 			fg = th.C(theme.FgFaint)
 		}
-		c.Text("l", label, UIFont(12.5, fg))
+		c.Text("l", label, kit.UIFont(12.5, fg))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("n", note, MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
 	})
 }
 
@@ -90,7 +94,7 @@ func SandboxToggles(c *ui.Ctx, on, openNet *bool, pick BackendPick, help string)
 				labels[i] = strings.ToUpper(b)
 			}
 			at := slices.Index(pick.Offered, pick.Current())
-			c.Text("l", "Sandbox type", UIFont(12.5, c.Theme().C(theme.Fg)))
+			c.Text("l", "Sandbox type", kit.UIFont(12.5, c.Theme().C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Segmented(c, "pick", labels, &at, widget.SegmentedOpts{Label: "Sandbox type", Help: help}) {
 				*pick.Chosen = pick.Offered[at]
@@ -115,9 +119,3 @@ func (p BackendPick) Current() string {
 	}
 	return p.Setting
 }
-
-const SessionSubject = "session:"
-
-// PathSubject is what a file's or folder's row stands for: "path:" then its absolute path, a folder's ending in the
-// path separator.
-const PathSubject = "path:"

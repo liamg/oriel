@@ -381,7 +381,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 			if sourced && src.Comment != nil {
 				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
 			}
-			shown := kit.LocalImages(cm.Body)
+			shown := localImages(cm.Body)
 			for i, img := range cm.Images {
 				if slices.Contains(shown, img) {
 					continue
@@ -460,7 +460,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			placeholder = "Reply, or ask more"
 		}
 		r := widget.Prose(c, "input", &d.text, widget.ProseOpts{Label: "Write to the request", Placeholder: placeholder, KeyMode: RequestComposerKeyMode,
-			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: kit.PastedFiles(x.h, se.ID)})
+			Lines: commentLines, EnterSubmits: true, Help: "agent/requests#composer", Files: pastedFiles(x.h, se.ID)})
 		switch {
 		case r.Submitted:
 			if err := x.send(context.Background(), st, id, false); err != nil {

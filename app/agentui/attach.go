@@ -1,4 +1,4 @@
-package kit
+package agentui
 
 import (
 	"fmt"
@@ -8,18 +8,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// PastedFiles is what a field writing to session id's agent makes of pasted and dropped files and pictures
+// pastedFiles is what a field writing to session id's agent makes of pasted and dropped files and pictures
 // (widget.InputOpts.Files): markdown the thread shows and the agent reads. A picture is an image; a file in one of the
 // session's projects is a link to it; any other file is copied where the agent can read it (host.Attach) first.
-func PastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
+func pastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 	return func(p widget.Pasted) string {
-		w, err := SessionCalls(h)
+		w, err := kit.SessionCalls(h)
 		if err != nil {
 			return ""
 		}
@@ -59,12 +60,12 @@ func PastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 }
 
 func inProjects(ps []core.Project, path string) bool {
-	return slices.ContainsFunc(ps, func(p core.Project) bool { return Inside(path, p.Dir) })
+	return slices.ContainsFunc(ps, func(p core.Project) bool { return kit.Inside(path, p.Dir) })
 }
 
 // mdFile is a file as markdown: an image for a picture, else a link named name.
 func mdFile(name, path string) string {
-	if IsImage(path) {
+	if kit.IsImage(path) {
 		return "![" + name + "](" + mdDest(path) + ")"
 	}
 	return "[" + name + "](" + mdDest(path) + ")"
@@ -80,8 +81,8 @@ func mdDest(path string) string {
 
 var mdImage = regexp.MustCompile(`!\[[^\]]*\]\(\s*(<[^>]+>|[^)\s]+)`)
 
-// LocalImages are the pictures on this machine a markdown message shows: its images with absolute paths.
-func LocalImages(md string) []string {
+// localImages are the pictures on this machine a markdown message shows: its images with absolute paths.
+func localImages(md string) []string {
 	var out []string
 	for _, m := range mdImage.FindAllStringSubmatch(md, -1) {
 		p := strings.TrimPrefix(strings.Trim(m[1], "<>"), "file://")

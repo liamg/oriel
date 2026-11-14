@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/agentkit"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -710,7 +712,7 @@ func (x *Launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 			if on {
 				effort = x.effort
 			}
-			if m, e, ok := kit.ModelSelects(c, p, model, effort, false, "agent/launcher#agent"); ok {
+			if m, e, ok := agentkit.ModelSelects(c, p, model, effort, false, "agent/launcher#agent"); ok {
 				x.pickProvider(p.ID)
 				x.model, x.effort = m, e
 			}
@@ -774,8 +776,8 @@ func (x *Launcher) noAgentCard(c *ui.Ctx, k core.KindSpec) {
 // runsIn is where the session runs: in a sandbox or not, which backend, and its network.
 func (x *Launcher) runsIn(c *ui.Ctx) {
 	kit.Heading(c, "head", "Runs in", "")
-	pick := kit.BackendPick{Chosen: &x.backend, Setting: kit.SettingBackend(x.h), Offered: x.h.State().Machine.Sandboxes}
-	kit.SandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#runs-in")
+	pick := agentkit.BackendPick{Chosen: &x.backend, Setting: agentkit.SettingBackend(x.h), Offered: x.h.State().Machine.Sandboxes}
+	agentkit.SandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#runs-in")
 }
 
 // side is the recent prompts, and what starting will do.
@@ -855,7 +857,7 @@ func (x *Launcher) preflight() [][2]string {
 	rows = append(rows, [2]string{"agent", agent}, [2]string{"prompt pack", cmp.Or(k.Pack, "none")})
 	runs, network := "on this machine", "this machine's"
 	if x.sandbox {
-		runs, network = "in a "+kit.SandboxNoun(kit.BackendPick{Chosen: &x.backend, Setting: kit.SettingBackend(x.h)}.Current()), "ask per new host"
+		runs, network = "in a "+agentkit.SandboxNoun(agentkit.BackendPick{Chosen: &x.backend, Setting: agentkit.SettingBackend(x.h)}.Current()), "ask per new host"
 		if x.openNet {
 			network = "open"
 		}

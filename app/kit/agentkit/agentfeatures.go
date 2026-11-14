@@ -1,4 +1,4 @@
-package kit
+package agentkit
 
 import (
 	"github.com/liamg/oriel/agent"
