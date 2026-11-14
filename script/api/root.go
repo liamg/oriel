@@ -61,7 +61,7 @@ func (r Root) On(event string, opts any, fn any, where string) error {
 	h.Fn = func(_ registry.Ctx, ev any) (registry.Verdict, error) {
 		t := toTable(ev)
 		out, err := r.a.VM.Call(f, t)
-		if e, ok := err.(*script.Error); ok {
+		if e := (*script.Error)(nil); errors.As(err, &e) {
 			e.Traceback += "\n\toriel.on: dispatch · " + event
 		}
 		if err != nil {

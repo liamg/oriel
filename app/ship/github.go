@@ -76,7 +76,7 @@ type GitHub struct {
 type githubMirror struct {
 	host.Mirror
 	at  time.Time
-	err string
+	err error
 }
 
 // ended says every PR the mirror read is closed or merged.
@@ -223,8 +223,8 @@ func (x *GitHub) syncWait(ctx context.Context, id core.SessionID) error {
 	case <-done:
 	case <-ctx.Done():
 	}
-	if m, ok := x.mirror(id); ok && m.err != "" {
-		return errors.New(m.err)
+	if m, ok := x.mirror(id); ok && m.err != nil {
+		return m.err
 	}
 	return nil
 }
@@ -333,7 +333,7 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		g := githubMirror{Mirror: m, at: clock.Or(x.clock).Now()}
 		if err != nil {
 			g = x.mirrors[id]
-			g.err = err.Error()
+			g.err = err
 		}
 		x.mirrors[id] = g
 		again, queued := x.again[id]

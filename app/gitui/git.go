@@ -404,7 +404,7 @@ func (g *Git) async(fn func(ctx context.Context) error, trees ...*gitTree) {
 	g.busy.Go(func() {
 		defer g.running.Add(-1)
 		if err := fn(context.Background()); err != nil {
-			g.h.Notify(core.Notice{ID: "git.error", Severity: core.SevError, Key: true, Text: err.Error()})
+			kit.NotifyError(g.h, "git.error", err, false)
 		}
 		if len(trees) == 0 {
 			trees = append(g.trees(), &g.gitTree)

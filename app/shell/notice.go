@@ -51,7 +51,7 @@ func faultNotice(f registry.Fault, l *Logs, dir string, now time.Time) core.Noti
 			n.Location = fr.Loc()
 		}
 	}
-	return redactNotice(kit.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
+	return redactNotice(script.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
 }
 
 // failureNotice is a contribution's error, or a warning about it, as a notice: one row for each contribution,
@@ -62,7 +62,7 @@ func failureNotice(f registry.Failure, l *Logs, dir string, now time.Time) core.
 	if f.Warn {
 		n.ID, n.Severity = "slow."+f.Kind+"."+f.ID, core.SevWarning
 	}
-	return redactNotice(kit.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
+	return redactNotice(script.WithTrace(n, f.Err, dir, "Open at line"), l.Redact, now)
 }
 
 func contribTitle(kind string) string {
@@ -94,8 +94,8 @@ func commandNotice(r registry.Registry, id string, err error, dir string, now ti
 			src = c.Source
 		}
 	}
-	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now, Key: true}
-	return kit.WithTrace(n, err, dir, "Open at line")
+	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now, AutoClear: true}
+	return script.WithTrace(n, err, dir, "Open at line")
 }
 
 // logNotice writes each notice to its log, Oriel's or its session's, as a record linked to its history row.

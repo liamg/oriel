@@ -295,7 +295,7 @@ func (x *End) view(c *ui.Ctx) {
 		x.ask = nil
 		x.h.Do(func() {
 			if err := x.end(context.Background(), host.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
-				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, Session: a.id, Text: err.Error()})
+				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, AutoClear: true, Session: a.id, Text: err.Error()})
 			}
 		})
 		return

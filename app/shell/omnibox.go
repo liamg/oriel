@@ -255,7 +255,7 @@ func (o *omnibox) run(h hit) {
 		return
 	}
 	if err := registry.Call(func() error { return h.src.Run(context.Background(), h.item) }); err != nil {
-		o.h.Notify(core.Notice{ID: "omnibox.run", Severity: core.SevError, Source: h.src.Source, Key: true, Text: err.Error()})
+		o.h.Notify(core.Notice{ID: "omnibox.run", Severity: core.SevError, Source: h.src.Source, AutoClear: true, Text: err.Error()})
 	}
 }
 

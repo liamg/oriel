@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/gh"
 	"os"
 	"os/exec"
 	"regexp"
@@ -27,7 +28,7 @@ func RunGH(ctx context.Context, dir string, env []string, args ...string) (strin
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {
-		return out.String(), fmt.Errorf("gh %s: %s", strings.Join(args, " "), strings.TrimSpace(errb.String()))
+		return out.String(), fmt.Errorf("gh %s: %w", strings.Join(args, " "), gh.CLIError(err, out.Bytes(), errb.String()))
 	}
 	return out.String(), nil
 }

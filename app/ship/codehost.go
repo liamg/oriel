@@ -49,7 +49,15 @@ type prRead struct {
 	pr       *registry.PR
 	checks   []registry.Check
 	failLine string
-	err      string
+	err      error
+}
+
+// errText is err as a page says it; "" for none.
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 // prCache is the code hosts' last answers, by session/project/branch.
@@ -100,8 +108,8 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 		}
 		wg.Go(func() {
 			g := x.prFor(ctx, id, out[i], fresh)
-			out[i].PR, out[i].Checks, out[i].FailLine, out[i].HostError, out[i].PRRead = g.pr, g.checks, g.failLine, g.err, g.at
-			if g.err != "" && kit.SitesOf(x.h).Refuse(hs, errors.New(g.err)) {
+			out[i].PR, out[i].Checks, out[i].FailLine, out[i].HostError, out[i].PRRead = g.pr, g.checks, g.failLine, errText(g.err), g.at
+			if g.err != nil && kit.SitesOf(x.h).Refuse(hs, g.err) {
 				out[i].Unkeyed = !kit.SitesOf(x.h).Keyed(hs)
 				x.cache.mu.Lock()
 				delete(x.cache.read, formKey(id, s.Project)+"/"+s.Branch)
@@ -137,12 +145,12 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	x.cache.mu.Unlock()
 	switch {
 	case err != nil:
-		g.err = err.Error()
+		g.err = err
 	case pr != nil:
 		g.pr = pr
 		if h.Checks != nil {
 			if err := registry.Call(func() (err error) { g.checks, err = h.Checks(ctx, repo, *pr); return err }); err != nil {
-				g.err = err.Error()
+				g.err = err
 			}
 		}
 		for _, c := range g.checks {

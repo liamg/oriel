@@ -42,7 +42,7 @@ func (e *Explorer) scratchRoot(c *ui.Ctx, sc gitx.Scope) (widget.TreeItem, bool)
 func (e *Explorer) openScratch(id string) {
 	if p := e.scratch.Path(id, scratchID); p != "" {
 		if err := e.h.Run(context.Background(), "editor.open", registry.Args{"path": p}); err != nil {
-			e.h.Notify(core.Notice{ID: "explorer.open", Severity: core.SevWarning, Key: true, Text: err.Error()})
+			e.h.Notify(core.Notice{ID: "explorer.open", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 		}
 	}
 }

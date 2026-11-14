@@ -97,6 +97,27 @@ type CLI struct {
 
 var ghStatus = regexp.MustCompile(`\(HTTP (\d{3})\)`)
 
+// CLIError is what a gh command that failed with err says: GitHub's refusal, with the status gh printed and the
+// message from its JSON or stderr, when gh ran and exited non-zero; else err, gh not run or stopped.
+func CLIError(err error, stdout []byte, stderr string) error {
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) {
+		return fmt.Errorf("gh: %w", err)
+	}
+	msg, status := strings.TrimSpace(stderr), 0
+	if m := ghStatus.FindStringSubmatch(msg); m != nil {
+		status, _ = strconv.Atoi(m[1])
+		msg = strings.TrimSpace(strings.TrimPrefix(ghStatus.ReplaceAllString(msg, ""), "gh:"))
+	}
+	var e struct {
+		Message string `json:"message"`
+	}
+	if json.Unmarshal(stdout, &e) == nil && e.Message != "" {
+		msg = e.Message
+	}
+	return &Error{Status: status, Message: msg}
+}
+
 func (c CLI) Do(ctx context.Context, method, path string, in, out any) error {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
@@ -122,23 +143,7 @@ func (c CLI) Do(ctx context.Context, method, path string, in, out any) error {
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
-		var exit *exec.ExitError
-		if !errors.As(err, &exit) {
-			return fmt.Errorf("gh: %w", err)
-		}
-		status := 0
-		if m := ghStatus.FindStringSubmatch(msg); m != nil {
-			status, _ = strconv.Atoi(m[1])
-			msg = strings.TrimSpace(strings.TrimPrefix(ghStatus.ReplaceAllString(msg, ""), "gh:"))
-		}
-		var e struct {
-			Message string `json:"message"`
-		}
-		if json.Unmarshal(stdout.Bytes(), &e) == nil && e.Message != "" {
-			msg = e.Message
-		}
-		return &Error{Status: status, Message: msg}
+		return CLIError(err, stdout.Bytes(), stderr.String())
 	}
 	return decode(stdout.Bytes(), out)
 }

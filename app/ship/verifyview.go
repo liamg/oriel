@@ -156,15 +156,15 @@ func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 			switch {
 			case q.asking:
 				x.typing(c, q)
-			case q.err != "":
+			case q.err != nil:
 				c.Column("err", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-					widget.Wrap(c, "t", q.err, width, kit.MonoFont(11, th.C(theme.Error)))
+					widget.Wrap(c, "t", q.err.Error(), width, kit.MonoFont(11, th.C(theme.Error)))
 					if widget.Button(c, "retry", "Try again", widget.ButtonOpts{Help: verifyHelp}) {
 						if len(q.qs) == 0 {
 							x.run("verify.again")
 						} else {
 							q.qs[q.at].Answer, q.answer = "", q.qs[q.at].Answer
-							q.err = ""
+							q.err = nil
 						}
 					}
 				})
@@ -212,7 +212,7 @@ func (x *Verify) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
 					}
 					if widget.Link(c, "open", label, verifyHelp+"#file") {
 						if err := x.openAt(context.Background(), x.shown(), qq.File, qq.Line); err != nil {
-							x.h.Notify(core.Notice{ID: "verify", Severity: core.SevError, Key: true, Text: err.Error()})
+							kit.NotifyError(x.h, "verify", err, true)
 						}
 					}
 				})

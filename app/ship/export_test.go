@@ -1,6 +1,10 @@
 package ship
 
-import "github.com/liamg/oriel/core"
+import (
+	"errors"
+
+	"github.com/liamg/oriel/core"
+)
 
 // What the package's outside tests read and set of its plugins.
 
@@ -25,7 +29,7 @@ func (x *Ship) Pending(id core.SessionID) (fail func(err string), restore func()
 	fail = func(err string) {
 		x.mu.Lock()
 		defer x.mu.Unlock()
-		pending.loading, pending.err, pending.fixed = false, err, false
+		pending.loading, pending.err, pending.fixed = false, errors.New(err), false
 	}
 	restore = func() {
 		x.mu.Lock()

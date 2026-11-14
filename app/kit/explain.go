@@ -29,7 +29,7 @@ func AskTwins(c *ui.Ctx, h plugin.Host, key string, t registry.Trouble, o AskTwi
 	explain["key"] = key
 	run := func(cmd string, a registry.Args) {
 		if err := h.Run(context.Background(), cmd, a); err != nil {
-			h.Notify(core.Notice{ID: cmd, Severity: core.SevWarning, Source: "explain", Key: true, Text: err.Error()})
+			h.Notify(core.Notice{ID: cmd, Severity: core.SevWarning, Source: "explain", AutoClear: true, Text: err.Error()})
 		}
 	}
 	if widget.Button(c, "explain", explainLabel, widget.ButtonOpts{Disabled: !h.Available(registry.ExplainCommand, explain), Help: help}) {
