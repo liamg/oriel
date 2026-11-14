@@ -1,5 +1,7 @@
-// Package kit is what the app's features share: fonts, theme tokens, formatters, session helpers and the usual
-// plugin plumbing.
+// Package kit is what every one of the app's features shares: fonts, theme tokens, formatters, session and git
+// helpers, the cross-feature services' contracts (Reviews, Inbox, Explains…) and the usual plugin plumbing. What only
+// some share has a package of its own under it: kit/work (work off the loop), kit/prui (pull request views),
+// kit/agentkit (agent pickers); general controls belong in ui/widget.
 package kit
 
 import (

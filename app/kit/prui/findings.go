@@ -1,4 +1,4 @@
-package kit
+package prui
 
 import (
 	"github.com/liamg/oriel/render"

@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry/services"
@@ -343,8 +345,8 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 					if n == 0 {
 						continue
 					}
-					label := fmt.Sprintf("%d %s", n, strings.ToUpper(kit.SeverityShort(s)))
-					if widget.ToggleChip(c, s, label, x.filter == s, widget.ToggleChipOpts{Tone: kit.SeverityTone(th, s), Help: findHelp + "#severity",
+					label := fmt.Sprintf("%d %s", n, strings.ToUpper(prui.SeverityShort(s)))
+					if widget.ToggleChip(c, s, label, x.filter == s, widget.ToggleChipOpts{Tone: prui.SeverityTone(th, s), Help: findHelp + "#severity",
 						Tooltip: "Show only these"}) != (x.filter == s) {
 						x.h.Run(context.Background(), "review.ai.filter", registry.Args{"severity": s})
 					}
@@ -423,7 +425,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 // card is one finding: its severity and category, title, place (a click shows it in the diff), body and actions.
 func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width float32) {
 	th := c.Theme()
-	tone := kit.SeverityTone(th, f.Severity)
+	tone := prui.SeverityTone(th, f.Severity)
 	fg, title := th.C(theme.FgFaint), th.C(theme.Fg)
 	if f.Dismissed {
 		title = th.C(theme.FgFaint)
@@ -443,7 +445,7 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: tone, Float: &ui.Float{Fill: true}}, nil)
 			c.Column("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 10, T: 9, B: 9}, Gap: 4}, func(c *ui.Ctx) {
 				c.Row("kicker", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-					widget.Chip(c, "sev", kit.SeverityShort(f.Severity), tone, findHelp+"#severity")
+					widget.Chip(c, "sev", prui.SeverityShort(f.Severity), tone, findHelp+"#severity")
 					if f.Category != "" {
 						widget.Chip(c, "cat", f.Category, th.C(theme.FgMuted), findHelp+"#findings")
 					}
