@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
@@ -112,8 +113,8 @@ var projectPanels = []struct {
 }{
 	{"explorer", "files", "Explorer", kit.ExplorerView, "<D-E>", 10, 300},
 	{"search", "search", "Search", kit.SearchView, "<D-F>", 20, 380},
-	{"git", "git", "Git", kit.GitView, "<D-G>", 30, 0},
-	{"pull-request", "pullrequest", "Pull request", kit.PullRequestView, "", 40, 0},
+	{"git", "git", "Git", prui.GitView, "<D-G>", 30, 0},
+	{"pull-request", "pullrequest", "Pull request", prui.PullRequestView, "", 40, 0},
 }
 
 func (r *Rail) Activate(_ context.Context, h plugin.Host) error {

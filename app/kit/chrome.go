@@ -25,6 +25,9 @@ const TabsHelp = "shell/tabs"
 // contributed to.
 const NewSessionHelp = "shell/tabs#new"
 
+// EndHelp is the help on ending a session.
+const EndHelp = "shell/tabs#end"
+
 // TitleRight prefixes the names of the views a feature puts at the title bar's right.
 const TitleRight = "titlebar.right."
 

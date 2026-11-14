@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -86,11 +87,11 @@ func (x *End) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		x.Add(h.Contribute(it))
 	}
-	x.Add(h.Option(registry.OptionSpec{Name: kit.ArchiveOnMergeOption, Section: "git", Type: registry.Bool, Default: false,
+	x.Add(h.Option(registry.OptionSpec{Name: prui.ArchiveOnMergeOption, Section: "git", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "Archive a session by itself once every one of its pull requests is merged and nothing in its worktrees is uncommitted."}))
 	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "archive the session once all its PRs are merged (session.archive_on_merge)"},
-		func(ctx registry.Ctx, ev *kit.PrMerged) (registry.Verdict, error) {
+		func(ctx registry.Ctx, ev *prui.PrMerged) (registry.Verdict, error) {
 			x.archiveIfMerged(ctx, core.SessionID(ev.Session))
 			return registry.Verdict{}, nil
 		}))
@@ -199,7 +200,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 		return
 	}
 	se := s.Snapshot()
-	if !kit.ArchivesOnMerge(x.h, se, ships.For(se)) {
+	if !prui.ArchivesOnMerge(x.h, se, ships.For(se)) {
 		return
 	}
 	if err := x.end(ctx, hostapi.EndReq{Session: id}); err != nil {
@@ -242,7 +243,7 @@ func (x *End) confirm(ctx registry.Ctx) error {
 		ships = s.For(se)
 	}
 	x.ask = nil
-	return x.end(ctx, hostapi.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && kit.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
+	return x.end(ctx, hostapi.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && prui.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
 }
 
 // end closes the session's tab, then ends it off the loop; an archive offers Undo while its branches stay.
@@ -334,7 +335,7 @@ func (x *End) view(c *ui.Ctx) {
 					return
 				}
 				label := endHows[a.how]
-				if a.how == 0 && kit.Uncommitted(ships) > 0 {
+				if a.how == 0 && prui.Uncommitted(ships) > 0 {
 					label = "Discard and archive"
 				}
 				if widget.Button(c, "end", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Help: kit.EndHelp, Disabled: st.Loading()}) {
@@ -425,7 +426,7 @@ func lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch, 
 				text: fmt.Sprintf("%s: %s not pushed: %s", s.Project, kit.Counted(k, "commit"), fate)})
 		}
 		if ownPRs && s.PR.Open() {
-			w := kit.WordsOf(s.Code)
+			w := prui.WordsOf(s.Code)
 			out = append(out, loss{key: s.Project + "/pr", text: fmt.Sprintf("%s: %s%d stays open on %s", s.Project, w.Sigil, s.PR.Number, s.Code.Label())})
 		}
 	}

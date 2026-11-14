@@ -197,10 +197,10 @@ func (x *Ship) checks(c *ui.Ctx, s shipRead) {
 		}
 	}
 	if len(s.Checks) == 0 {
-		kit.SectionCap(c, "CHECKS · NONE YET")
+		prui.SectionCap(c, "CHECKS · NONE YET")
 		return
 	}
-	kit.SectionCap(c, fmt.Sprintf("CHECKS · %d OF %d", pass, len(s.Checks)))
+	prui.SectionCap(c, fmt.Sprintf("CHECKS · %d OF %d", pass, len(s.Checks)))
 	now := c.Now()
 	for i, ch := range s.Checks {
 		prui.CheckRow(c, i, ch, now)
@@ -216,7 +216,7 @@ func (x *Ship) checks(c *ui.Ctx, s shipRead) {
 func (x *Ship) reviewersLine(c *ui.Ctx, s shipRead, reviewers, owners []string) {
 	th := c.Theme()
 	c.Row("reviewers", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-		kit.SectionCap(c, "REVIEWERS")
+		prui.SectionCap(c, "REVIEWERS")
 		if len(reviewers) == 0 {
 			c.Text("none", "none yet", widget.UIFont(12, th.C(theme.FgFaint)))
 			return

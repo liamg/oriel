@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -87,7 +87,7 @@ func (x *Ship) afterMerge(id core.SessionID, p string, done *registry.PR) {
 		return
 	}
 	s, _ := x.ship(id, p)
-	if ships, _ := x.sessionShips(se); kit.ArchivesOnMerge(x.h, se, projectShips(ships)) {
+	if ships, _ := x.sessionShips(se); prui.ArchivesOnMerge(x.h, se, projectShips(ships)) {
 		return
 	}
 	if se.Agent.Working || len(s.Files) > 0 {

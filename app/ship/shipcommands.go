@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -56,7 +57,7 @@ func (x *Ship) shipCommands() []registry.Command {
 	return []registry.Command{
 		{ID: "ship.open", Title: "Open the Ship page: every project's way to a merged PR", Available: inFront,
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
-				return x.h.Run(ctx, "view.open", registry.Args{"id": kit.ShipView, "place": "tab", "title": "Ship"})
+				return x.h.Run(ctx, "view.open", registry.Args{"id": prui.ShipView, "place": "tab", "title": "Ship"})
 			}},
 		{ID: "ship.refresh", Title: "Read the session's projects again, from their worktrees and GitHub", Available: inFront,
 			Run: func(_ registry.Ctx, a registry.Args) error {
@@ -175,7 +176,7 @@ func (x *Ship) branchCommands() []registry.Command {
 						x.editPR(se.ID, p, a.Bool("edit"))
 					}
 				}
-				return x.h.Run(ctx, "view.open", registry.Args{"id": kit.PRView, "instance": p, "place": "tab"})
+				return x.h.Run(ctx, "view.open", registry.Args{"id": prui.PRView, "instance": p, "place": "tab"})
 			})},
 		{ID: "ship.fix-ci", Title: "Write a request asking the agent to fix a project's failing CI: {project}", Available: inFront,
 			Run: run(func(ctx registry.Ctx, se core.SessionState, p string, _ registry.Args) error {

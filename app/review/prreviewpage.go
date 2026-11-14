@@ -27,7 +27,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	src, ok := x.site(se)
 	if !ok {
-		kit.EmptyNote(c, "No code host has "+reviewPR(se)+": its plugin may be off.")
+		prui.EmptyNote(c, "No code host has "+reviewPR(se)+": its plugin may be off.")
 		return
 	}
 	d := x.detail(src, reviewPR(se))
@@ -67,7 +67,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 				}
 			})
 			widget.VRule(c, "divider")
-			c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 10, ScrollY: true}, func(c *ui.Ctx) {
+			c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(prui.TShipSide), Pad: ui.PadXY(16, 16), Gap: 10, ScrollY: true}, func(c *ui.Ctx) {
 				var fields [][2]string
 				if p.Commit != "" {
 					fields = append(fields, [2]string{"checkout", kit.ShortSHA(p.Commit)})
@@ -97,7 +97,7 @@ func reviewedStatus(full registry.ReviewDetail) prui.PRStatus {
 // pageHead is the tab's top bar: the PR's ref and title, and its open and fetch buttons.
 func (x *PRReview) pageHead(c *ui.Ctx, se core.SessionState, src registry.HostSite, full registry.ReviewDetail) {
 	th := c.Theme()
-	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(kit.TShipHead)}, func(c *ui.Ctx) {
+	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(prui.TShipHead)}, func(c *ui.Ctx) {
 		c.Text("h", "REVIEW", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Text("ref", kit.Label(se), widget.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		if full.State != "" { // until its host says, it's no state at all

@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/review"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -415,8 +416,8 @@ func TestReviewComesBackAsLeft(t *testing.T) {
 	s.Press("<M-2>")
 	s.Until("Uncommitted", func() bool { return s.Has("s stage · u unstage") })
 	s.Run("view.close", registry.Args{"id": kit.DiffView})
-	s.Run("view.close", registry.Args{"id": kit.PRView})
-	s.Until("the main area empty", func() bool { return !s.Showing(kit.DiffView) && !s.Showing(kit.PRView) })
+	s.Run("view.close", registry.Args{"id": prui.PRView})
+	s.Until("the main area empty", func() bool { return !s.Showing(kit.DiffView) && !s.Showing(prui.PRView) })
 
 	s.Run("session.open-dir", registry.Args{"dir": lw.Repo})
 	s.Until("the window on the repo", s.Reopen)
@@ -425,7 +426,7 @@ func TestReviewComesBackAsLeft(t *testing.T) {
 		s.Reopen()
 		return s.Showing(kit.ExplorerView) && s.Has("s stage · u unstage")
 	})
-	if s.Showing(kit.DiffView) || s.Showing(kit.PRView) {
+	if s.Showing(kit.DiffView) || s.Showing(prui.PRView) {
 		t.Error("the review's opening views opened again")
 	}
 	s.Press("<M-1>")

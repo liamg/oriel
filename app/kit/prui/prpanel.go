@@ -1,5 +1,5 @@
-// Package prui is the pull request views the Ship and Reviews features share: a PR's box, its checks and reviewers,
-// and its status line.
+// Package prui is what the Ship and Reviews features share of pull requests: a PR's box, its checks and reviewers,
+// its status line, the ship pages' views and captions, and the PR hooks' events.
 package prui
 
 import (
@@ -33,7 +33,7 @@ func PRBox(c *ui.Ctx, key, title string, body func(c *ui.Ctx), foot func(c *ui.C
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(TPRCard), Border: 1, Fill: th.C(TPRCardBg), Clip: true}, func(c *ui.Ctx) {
 		c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8), Gap: 2}, func(c *ui.Ctx) {
-			kit.SectionCap(c, title)
+			SectionCap(c, title)
 			body(c)
 		})
 		if foot != nil {

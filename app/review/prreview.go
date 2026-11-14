@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -127,7 +128,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 		x.reactOnStart(core.SessionID(ev.Session))
 		return registry.Verdict{}, nil
 	}))
-	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "fetch a reviewed PR its author pushed to"}, func(_ registry.Ctx, ev *kit.PrPushed) (registry.Verdict, error) {
+	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "fetch a reviewed PR its author pushed to"}, func(_ registry.Ctx, ev *prui.PrPushed) (registry.Verdict, error) {
 		x.pushed(core.SessionID(ev.Session), ev.Head)
 		return registry.Verdict{}, nil
 	}))
@@ -153,7 +154,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 			return ok && (project == "" || project == p.Name)
 		},
 		Active: func(string) bool {
-			return slices.ContainsFunc(h.Layout().Visible(), func(v layout.ViewRef) bool { return v.ID == kit.PRView })
+			return slices.ContainsFunc(h.Layout().Visible(), func(v layout.ViewRef) bool { return v.ID == prui.PRView })
 		},
 		Badge: func() int {
 			se, ok := front()
@@ -170,7 +171,7 @@ func (x *PRReview) Activate(_ context.Context, h plugin.Host) error {
 		}}))
 	x.Add(h.Contribute(uireg.ThreadFoot{Name: "review", Draw: x.foot}))
 	x.Add(registry.DisposeFunc(h.Layout().OnShow(func(v layout.ViewRef) {
-		if se, ok := front(); ok && v.ID == kit.PRView {
+		if se, ok := front(); ok && v.ID == prui.PRView {
 			x.form(se.ID).focus = true
 		}
 	})))

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/registry/services"
 
@@ -90,7 +91,7 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.Add(h.Contribute(registry.Service{Name: services.PRReviewsService, Impl: githubReviews{x}}))
-	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrPushed", Fired: true, Payload: kit.PrPushed{},
+	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrPushed", Fired: true, Payload: prui.PrPushed{},
 		Doc: "A session's pull request's head, each time GitHub is read for it; the subject is the session. { session, project, head }"}))
 	x.Add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
 		Help: "GitHub orgs whose members' review comments the agent may read. Text from anyone else is hidden from it. Empty: the repository's owner."}))
@@ -339,7 +340,7 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 		if err == nil {
 			for _, pr := range m.PRs {
 				if pr.Head != "" {
-					ev := kit.PrPushed{Session: string(id), Project: pr.Project, Head: pr.Head}
+					ev := prui.PrPushed{Session: string(id), Project: pr.Project, Head: pr.Head}
 					x.h.Do(func() { x.h.Fire(context.Background(), "PrPushed", ev.Session, &ev) })
 				}
 			}

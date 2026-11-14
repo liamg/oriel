@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -40,14 +41,14 @@ func (x *PRReview) contributeKind() {
 		PrepareFunc: x.prepare,
 		ChipsFunc: func(se core.SessionState) []registry.Chip {
 			if pr := reviewPR(se); pr != "" {
-				return []registry.Chip{{Text: kit.PRLabel(pr), Help: kit.TabsHelp, Link: pr}}
+				return []registry.Chip{{Text: prui.PRLabel(pr), Help: kit.TabsHelp, Link: pr}}
 			}
 			return nil
 		}}}))
 	x.Add(h.Contribute(registry.SessionDone{Name: "review.approved", Done: approved}))
 	x.Add(h.Contribute(registry.SessionUnsaved{Name: "review.unsent", Unsaved: x.unsent}))
 	x.Add(h.Contribute(registry.Service{Name: services.ReviewsService, Impl: reviewsService{x}}))
-	x.Add(h.Contribute(uireg.SlotView{Name: "review.pr", Slot: kit.PRView, Kinds: []core.Kind{core.KindReview}, View: reviewTab{x}}))
+	x.Add(h.Contribute(uireg.SlotView{Name: "review.pr", Slot: prui.PRView, Kinds: []core.Kind{core.KindReview}, View: reviewTab{x}}))
 }
 
 // approved says a review is done once the last review the user sent of its PR approved it.

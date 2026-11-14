@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -54,13 +54,13 @@ func TestShowcaseP6Ship(t *testing.T) {
 
 func TestShowcaseP6RaisePR(t *testing.T) {
 	s, _ := shipShowcase(t)
-	s.Run("view.close", registry.Args{"id": kit.ShipView})
+	s.Run("view.close", registry.Args{"id": prui.ShipView})
 	s.Run("project.panel", registry.Args{"name": "pull-request"})
 	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.Shot("p6-02-raise-pr")
 
 	d, _ := shipShowcase(t)
-	d.Run("view.close", registry.Args{"id": kit.ShipView})
+	d.Run("view.close", registry.Args{"id": prui.ShipView})
 	d.Run("project.open", registry.Args{"project": "web-dashboard"})
 	d.Run("project.panel", registry.Args{"name": "pull-request"})
 	d.Run("ship.pr.open", registry.Args{"project": "web-dashboard"})

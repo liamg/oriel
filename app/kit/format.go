@@ -180,3 +180,6 @@ func ProjectInitials(name string) string {
 	}
 	return string(rs)
 }
+
+// ShortSHA is a commit's first seven characters.
+func ShortSHA(s string) string { return s[:min(len(s), 7)] }

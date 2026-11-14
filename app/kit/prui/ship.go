@@ -1,8 +1,6 @@
-package kit
+package prui
 
 import (
-	"context"
-	"errors"
 	"slices"
 	"strings"
 
@@ -18,12 +16,6 @@ import (
 
 // PRView is Raise PR / Edit PR, a main tab; its instance is the project.
 const PRView = "pr"
-
-// ErrStopped is a step a hook stopped; its reason is shown where the step was asked for.
-var ErrStopped = errors.New("stopped by a hook")
-
-// ShortSHA is a commit's first seven characters.
-func ShortSHA(s string) string { return s[:min(len(s), 7)] }
 
 // The ship and review pages' header, side panel and section captions.
 var (
@@ -57,8 +49,6 @@ type PrPushed struct {
 	Project string `json:"project"`
 	Head    string `json:"head"`
 }
-
-const EndHelp = "shell/tabs#end"
 
 const ArchiveOnMergeOption = "session.archive_on_merge"
 
@@ -144,23 +134,4 @@ func WordsOf(h *registry.CodeHost) registry.Words {
 		return registry.CodeHost{}.Said()
 	}
 	return h.Said()
-}
-
-// RunOrNotify runs cmd from a click or a key, and says why it failed in a notice from source: one row per source.
-// It returns the error, for a page that also shows it inline.
-func RunOrNotify(h plugin.Host, source, cmd string, a registry.Args) error {
-	err := h.Run(context.Background(), cmd, a)
-	NotifyError(h, source+".error", err, true)
-	return err
-}
-
-// NotifyError says why something failed in a notice with id, and logs it; nil, or a hook's stop (ErrStopped, shown
-// where the step was asked for), is none. autoClear is for a failure in answer to what the user just did, which they
-// saw: its toast clears itself. Work that fails later, maybe while they look elsewhere, stays until it's dismissed.
-func NotifyError(h plugin.Host, id string, err error, autoClear bool) {
-	if err == nil || errors.Is(err, ErrStopped) {
-		return
-	}
-	h.Log().Warn(id, "err", err)
-	h.Notify(core.Notice{ID: id, Severity: core.SevError, Text: err.Error(), AutoClear: autoClear})
 }

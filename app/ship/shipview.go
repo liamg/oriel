@@ -35,16 +35,16 @@ var (
 )
 
 func (x *Ship) views() {
-	x.Add(x.h.View(kit.ShipView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
+	x.Add(x.h.View(prui.ShipView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "ship", Fn: func(c *ui.Ctx) { x.page(c) }}
 	})))
-	x.Add(x.h.View(kit.PullRequestView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
+	x.Add(x.h.View(prui.PullRequestView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "pull-request", Fn: func(c *ui.Ctx) { x.checklist(c, v.Project) }}
 	})))
-	x.Add(x.h.View(kit.GitView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
+	x.Add(x.h.View(prui.GitView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "git", Fn: func(c *ui.Ctx) { x.gitPanel(c, v.Project) }}
 	})))
-	x.Add(x.h.View(kit.PRView, prView{x}))
+	x.Add(x.h.View(prui.PRView, prView{x}))
 }
 
 func (x *Ship) run(id string, a registry.Args) {
@@ -70,7 +70,7 @@ func (x *Ship) page(c *ui.Ctx) {
 	se, _, ok := x.here("")
 	c.Column("page", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 		if !ok {
-			kit.EmptyNote(c, "Ship is a session's page: open a session with a repo that has a remote.")
+			prui.EmptyNote(c, "Ship is a session's page: open a session with a repo that has a remote.")
 			return
 		}
 		ships, rep := x.sessionShips(se)
@@ -102,7 +102,7 @@ func (x *Ship) page(c *ui.Ctx) {
 				})
 			})
 			widget.VRule(c, "divider")
-			c.Column("side", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
+			c.Column("side", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(prui.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 				x.gatesList(c, se)
 				x.mergeOrder(c, se, ships)
 				x.previous(c, se, "")
@@ -132,7 +132,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 			raisable++
 		}
 	}
-	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(22, 0), Gap: 14, Cross: ui.Center, Fill: th.C(kit.TShipHead)}, func(c *ui.Ctx) {
+	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(22, 0), Gap: 14, Cross: ui.Center, Fill: th.C(prui.TShipHead)}, func(c *ui.Ctx) {
 		c.Text("h", "SHIP", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06},
 			Color: th.C(theme.Fg)})
 		var meta []string
@@ -164,7 +164,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 		case raisable > 2:
 			label = fmt.Sprintf("Push + raise all %d %ss", raisable, w.Short)
 		}
-		if kit.AllMerged(se, projectShips(ships)) {
+		if prui.AllMerged(se, projectShips(ships)) {
 			if widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: kit.EndHelp, Disabled: waiting, Why: stillReading}) {
 				x.run("session.end", registry.Args{"id": string(se.ID)})
 			}
@@ -223,7 +223,7 @@ func statusChip(th *theme.Resolved, s shipRead) (string, render.Color) {
 func (x *Ship) column(c *ui.Ctx, se core.SessionState, s shipRead) {
 	th := c.Theme()
 	if s.ReadOnly {
-		kit.EmptyNote(c, "This worktree is pinned or read-only: nothing to ship from it.")
+		prui.EmptyNote(c, "This worktree is pinned or read-only: nothing to ship from it.")
 		return
 	}
 	if s.GitError != "" {
@@ -511,7 +511,7 @@ func (x *Ship) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 // gatesList is "before this ships": every gate's state for the session.
 func (x *Ship) gatesList(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
-	kit.SectionCap(c, "BEFORE THIS SHIPS")
+	prui.SectionCap(c, "BEFORE THIS SHIPS")
 	gs := registry.ShipGates(x.h, string(se.ID), string(se.Kind))
 	if len(gs) == 0 {
 		c.Text("none", "No gates for this session.", widget.UIFont(12, th.C(theme.FgFaint)))
@@ -569,7 +569,7 @@ func (x *Ship) mergeOrder(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 	if len(rows) < 2 {
 		return
 	}
-	kit.SectionCap(c, "MERGE ORDER")
+	prui.SectionCap(c, "MERGE ORDER")
 	for i, s := range rows {
 		c.Row(s.Project, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			pr := s.words().Sigil + "—"
@@ -597,7 +597,7 @@ func (x *Ship) previous(c *ui.Ctx, se core.SessionState, project string) {
 	if len(past) == 0 {
 		return
 	}
-	kit.SectionCap(c, "PREVIOUS")
+	prui.SectionCap(c, "PREVIOUS")
 	for i, pr := range past {
 		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			state := cmp.Or(pr.State, "merged here")
@@ -628,7 +628,7 @@ func (x *Ship) ticket(c *ui.Ctx, se core.SessionState) {
 		return
 	}
 	th := c.Theme()
-	kit.SectionCap(c, "TICKET")
+	prui.SectionCap(c, "TICKET")
 	c.Text("t", se.Ticket, widget.MonoFont(11.5, th.C(tShipLink)))
 }
 
@@ -639,7 +639,7 @@ func (x *Ship) checklist(c *ui.Ctx, project string) {
 	se, p, ok := x.here(project)
 	c.Column("pr", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4, ScrollY: true}, func(c *ui.Ctx) {
 		if !ok {
-			kit.EmptyNote(c, "Pull request is a session's project's: open a session.")
+			prui.EmptyNote(c, "Pull request is a session's project's: open a session.")
 			return
 		}
 		widget.Async(c, "load", x.loadState(c, se.ID, p), widget.AsyncOpts{Label: "Reading " + p, Retry: func() { x.refresh(se.ID, true) },

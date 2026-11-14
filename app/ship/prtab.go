@@ -47,7 +47,7 @@ func (x *Ship) prTab(c *ui.Ctx, project string) {
 	se, p, ok := x.here(project)
 	c.Column("prtab", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 		if !ok {
-			kit.EmptyNote(c, "Raise PR is a session's project's: open the session.")
+			prui.EmptyNote(c, "Raise PR is a session's project's: open the session.")
 			return
 		}
 		widget.Async(c, "load", x.loadState(c, se.ID, p), widget.AsyncOpts{Policy: widget.Block, Label: "Reading " + p, Retry: func() { x.refresh(se.ID, true) },
@@ -106,7 +106,7 @@ func (x *Ship) prTabContent(c *ui.Ctx, se core.SessionState, s shipRead, f *prFo
 			})
 		}
 		widget.VRule(c, "divider")
-		c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
+		c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(prui.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 			x.gatesList(c, se)
 			x.previous(c, se, s.Project)
 			x.ticket(c, se)
@@ -119,7 +119,7 @@ func (x *Ship) prTabContent(c *ui.Ctx, se core.SessionState, s shipRead, f *prFo
 func (x *Ship) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) {
 	th := c.Theme()
 	edit, w := s.PR.Open(), s.words()
-	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(kit.TShipHead)}, func(c *ui.Ctx) {
+	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(prui.TShipHead)}, func(c *ui.Ctx) {
 		title := "RAISE " + strings.ToUpper(w.Short)
 		if edit {
 			title = fmt.Sprintf("EDIT %s %s%d", strings.ToUpper(w.Short), w.Sigil, s.PR.Number)
@@ -158,7 +158,7 @@ func (x *Ship) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 func (x *Ship) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 	th := c.Theme()
 	w := s.words()
-	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(kit.TShipHead)}, func(c *ui.Ctx) {
+	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(prui.TShipHead)}, func(c *ui.Ctx) {
 		c.Text("h", fmt.Sprintf("%s %s%d", strings.ToUpper(w.Short), w.Sigil, s.PR.Number),
 			ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Box("sq", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: kit.TokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
@@ -177,7 +177,7 @@ func (x *Ship) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 			}
 		default:
 			ships, _ := x.sessionShips(se)
-			finish := kit.AllMerged(se, projectShips(ships))
+			finish := prui.AllMerged(se, projectShips(ships))
 			x.nextButton(c, se, s, !finish)
 			if finish && widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: kit.EndHelp}) {
 				x.run("session.end", registry.Args{"id": string(se.ID)})
@@ -225,7 +225,7 @@ func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float
 		kit.ExplainKept(c, x.h, "ship.ci."+s.Project, "git/ship#checks")
 	})
 	section("description", func(c *ui.Ctx) {
-		kit.SectionCap(c, "DESCRIPTION")
+		prui.SectionCap(c, "DESCRIPTION")
 		if strings.TrimSpace(s.PR.Body) == "" {
 			c.Text("none", "No description.", widget.UIFont(12, th.C(theme.FgFaint)))
 			return
@@ -255,11 +255,11 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 	th := c.Theme()
 	ts := prThreads(se, s)
 	if len(ts) == 0 {
-		kit.SectionCap(c, "REVIEW · NONE YET")
+		prui.SectionCap(c, "REVIEW · NONE YET")
 		c.Text("none", "No review comments yet.", widget.UIFont(12, th.C(theme.FgFaint)))
 		return
 	}
-	kit.SectionCap(c, "REVIEW · "+strings.ToUpper(kit.Counted(len(ts), "thread")))
+	prui.SectionCap(c, "REVIEW · "+strings.ToUpper(kit.Counted(len(ts), "thread")))
 	for _, t := range ts {
 		place := "conversation"
 		if a := t.Anchor; a != nil {
@@ -316,7 +316,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 	if e := x.failed(se.ID, s.Project); e != "" {
 		widget.Wrap(c, "failed", e, 600, widget.MonoFont(11, th.C(theme.Error)))
 	}
-	kit.SectionCap(c, "TITLE")
+	prui.SectionCap(c, "TITLE")
 	first := !f.edited
 	typed := false
 	if r := widget.Input(c, "title", &f.title, widget.InputOpts{Label: "Title", Placeholder: "feat(api): what it does", Help: "git/ship#raise"}); r.Changed {
@@ -324,7 +324,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 	}
 	c.Box("sp", ui.Style{H: ui.Px(4)}, nil)
 	c.Row("bodyhead", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-		kit.SectionCap(c, "BODY")
+		prui.SectionCap(c, "BODY")
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if !f.edited && !s.PR.Open() && !s.PRDraft.Empty() && s.PRDraft.By != "" {
 			draftChip(c, s.PRDraft)
@@ -362,11 +362,11 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 	c.Row("boxes", ui.Style{W: ui.Flex(1), Gap: 14}, func(c *ui.Ctx) {
 		c.Column("reviewers", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(12, 10), Gap: 6}, func(c *ui.Ctx) {
-			kit.SectionCap(c, "REVIEWERS")
+			prui.SectionCap(c, "REVIEWERS")
 			x.reviewerRows(c, s, f)
 		})
 		c.Column("linked", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(12, 10), Gap: 6}, func(c *ui.Ctx) {
-			kit.SectionCap(c, "SHIPS WITH")
+			prui.SectionCap(c, "SHIPS WITH")
 			if len(se.Projects) < 2 {
 				c.Text("none", "One project: it ships alone.", widget.UIFont(12, th.C(theme.FgFaint)))
 				return

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -83,11 +84,11 @@ func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
 		x.started(*ev)
 		return registry.Verdict{}, nil
 	}))
-	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker links the PR, and moves it into review"}, func(_ registry.Ctx, ev *kit.PrSeen) (registry.Verdict, error) {
+	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker links the PR, and moves it into review"}, func(_ registry.Ctx, ev *prui.PrSeen) (registry.Verdict, error) {
 		x.prSeen(*ev)
 		return registry.Verdict{}, nil
 	}))
-	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it to done once the session's PRs are merged"}, func(_ registry.Ctx, ev *kit.PrMerged) (registry.Verdict, error) {
+	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "the ticket's tracker moves it to done once the session's PRs are merged"}, func(_ registry.Ctx, ev *prui.PrMerged) (registry.Verdict, error) {
 		x.prMerged(*ev)
 		return registry.Verdict{}, nil
 	}))
@@ -474,7 +475,7 @@ func (x *Tickets) started(ev kit.SessionStart) {
 }
 
 // prSeen links a session's PR to its ticket, whoever raised it, and moves the ticket into review while it's open.
-func (x *Tickets) prSeen(ev kit.PrSeen) {
+func (x *Tickets) prSeen(ev prui.PrSeen) {
 	tr, ok := registry.TrackerFor(x.h, ev.Ticket)
 	if !ok {
 		return
@@ -499,7 +500,7 @@ func (x *Tickets) prSeen(ev kit.PrSeen) {
 }
 
 // prMerged moves a session's ticket to done once the last of its open PRs merges, whoever merged it.
-func (x *Tickets) prMerged(ev kit.PrMerged) {
+func (x *Tickets) prMerged(ev prui.PrMerged) {
 	if ev.Open > 0 {
 		return
 	}
