@@ -51,10 +51,10 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 - `oriel.coverage.lines(file, first, last)` (`ui`): A file's measured lines from first to last, each { n, hits, hit }, 1-based, from every owner.
 - `oriel.coverage.set(owner, file, hits)` (`ui`): Set owner's line coverage for a file, replacing its last: { [line] = hits }, 1-based, 0 for a line never run. The tests gutter shows it; an empty table clears it, and so does reloading the config.
 
-## oriel.decor
+## oriel.decorations
 
-- `oriel.decor.changed(name)` (`ui`): Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.
-- `oriel.decor.provider(name, fn)` (`ui`): Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).
+- `oriel.decorations.changed(name)` (`ui`): Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.
+- `oriel.decorations.provider(name, fn)` (`ui`): Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name).
 
 ## oriel.diagnostics
 

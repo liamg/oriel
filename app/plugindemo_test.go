@@ -60,7 +60,7 @@ L.view.override("statusline.right.50-ci", function()
 end)
 
 -- marks in the editor, on every buffer
-L.decor.provider("todo-owners", function(buf, top, bottom)
+L.decorations.provider("todo-owners", function(buf, top, bottom)
   return { { line = 3, sign = "◆", hl = "accent", text = "owned by @pricing-team" } }
 end)
 

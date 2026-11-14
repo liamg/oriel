@@ -211,7 +211,7 @@ func (a *APIs) bind(vm *script.VM) {
 	}
 	{
 		x := Decor{a: a}
-		vm.Bind("decor", map[string]script.GoFunc{
+		vm.Bind("decorations", map[string]script.GoFunc{
 			"changed": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
