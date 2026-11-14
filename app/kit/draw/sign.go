@@ -1,9 +1,10 @@
-package kit
+package draw
 
 import (
 	"cmp"
 	"context"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -19,12 +20,12 @@ import (
 // clicked, one with a Menu offers it on a right-click, and one with a Hover shows that card while the pointer is on it.
 func DrawSign(c *ui.Ctx, h plugin.Host, key any, d uireg.Decoration, size float32) {
 	th := c.Theme()
-	col := TokenColour(th, d.Style, th.C(theme.FgMuted))
+	col := kit.TokenColour(th, d.Style, th.C(theme.FgMuted))
 	draw := func(c *ui.Ctx) {
 		switch {
 		case d.Icon != "":
 			r, _ := ui.Service[registry.Registry](c)
-			Icon(c, r, "icon", d.Icon, 12, col)
+			kit.Icon(c, r, "icon", d.Icon, 12, col)
 			if d.Text != "" {
 				c.Box("n", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: 1}, Self: render.Point{X: .5, Y: .7}}}, func(c *ui.Ctx) {
 					c.Text("t", d.Text, widget.MonoFont(8, col))

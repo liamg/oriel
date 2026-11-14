@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -125,15 +126,15 @@ func (x *Console) toolDetail(c *ui.Ctx, se core.SessionState, it core.Item, widt
 			widget.Spinner(c, "spin", widget.SpinnerOpts{Name: "Running", Help: "agent/console#details"})
 			c.Text("s", "running", widget.MonoFont(11, th.C(tToolRunning)))
 		case it.IsError:
-			c.Text("s", "failed", widget.MonoFont(11, th.C(kit.TToolFailed)))
+			c.Text("s", "failed", widget.MonoFont(11, th.C(draw.TToolFailed)))
 		default:
-			c.Text("s", "done", widget.MonoFont(11, th.C(kit.TToolOK)))
+			c.Text("s", "done", widget.MonoFont(11, th.C(draw.TToolOK)))
 		}
 		if d := msText(it.Duration); d != "" {
 			c.Text("d", d, widget.MonoFont(11, th.C(theme.FgFaint)))
 		}
 		if r, ok := runOf(se, it.ID); ok {
-			kit.EvidenceChip(c, x.h, "run", se.ID, r.ID, kit.RunLabel(r), r.OK)
+			draw.EvidenceChip(c, x.h, "run", se.ID, r.ID, draw.RunLabel(r), r.OK)
 		}
 	})
 	if core.ShellTool(it.Tool) {

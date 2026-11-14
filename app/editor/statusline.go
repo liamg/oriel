@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/vim"
@@ -112,7 +113,7 @@ func (x *Editor) fileSegment(c *ui.Ctx) {
 		}
 	}
 	parts = append(parts, enc, eol)
-	c.Text("file", strings.Join(parts, " · "), kit.StatusText(c, kit.TStatusFg))
+	c.Text("file", strings.Join(parts, " · "), draw.StatusText(c, kit.TStatusFg))
 }
 
 // positionSegment is the cursor's line and column, and how far through the file it is.
@@ -124,8 +125,8 @@ func (x *Editor) positionSegment(c *ui.Ctx) {
 	cur := p.Cursor()
 	n := p.Buf().Lines()
 	c.Row("pos", ui.Style{Gap: 16, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("lc", fmt.Sprintf("%d:%d", cur.Line+1, p.VCol(cur.Line, cur.Col)+1), kit.StatusText(c, kit.TStatusFg))
-		c.Text("pct", fmt.Sprintf("≡ %d%%", (cur.Line+1)*100/max(n, 1)), kit.StatusText(c, kit.TStatusFg))
+		c.Text("lc", fmt.Sprintf("%d:%d", cur.Line+1, p.VCol(cur.Line, cur.Col)+1), draw.StatusText(c, kit.TStatusFg))
+		c.Text("pct", fmt.Sprintf("≡ %d%%", (cur.Line+1)*100/max(n, 1)), draw.StatusText(c, kit.TStatusFg))
 	})
 }
 
@@ -137,11 +138,11 @@ func (x *Editor) wrapSegment(c *ui.Ctx) {
 	on := x.current().Wrap()
 	tok, tip := theme.FgFaint, "Long lines run off the right: click to wrap them"
 	if on {
-		tok, tip = kit.TStatusStrong, "Long lines wrap: click to stop wrapping them"
+		tok, tip = draw.TStatusStrong, "Long lines wrap: click to stop wrapping them"
 	}
 	in := widget.Clickable(c, "wrap", ui.Style{Dir: ui.Row, H: ui.Flex(1), Cross: ui.Center, Role: ui.RoleButton, Label: "Wrap", Tooltip: tip,
 		Help: "editor/pane#wrap"}, func(c *ui.Ctx) {
-		c.Text("t", "wrap", kit.StatusText(c, tok))
+		c.Text("t", "wrap", draw.StatusText(c, tok))
 	})
 	if in.Clicked {
 		x.e.Run("set wrap!")

@@ -15,6 +15,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry/services"
@@ -61,7 +62,7 @@ type LSP struct {
 	peek      *refPeek
 	rename    *renamePrompt
 	callItems []uireg.PickerItem
-	preview   kit.FilePreview
+	preview   draw.FilePreview
 	typing    work.Still[*lspDoc] // a document's inlay hints wait for it to be still (hintsQuiet) once it has some
 }
 

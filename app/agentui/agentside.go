@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -59,7 +60,7 @@ func (x *Console) sessionStats(c *ui.Ctx, se core.SessionState) {
 		}
 		kit.Stat(c, "context", "context", ctxv, fg)
 		if t.ContextMax > 0 {
-			widget.Meter(c, "contextbar", float64(t.Context)/float64(t.ContextMax), widget.MeterOpts{Tone: th.C(kit.TMeterContext), Label: "context"})
+			widget.Meter(c, "contextbar", float64(t.Context)/float64(t.ContextMax), widget.MeterOpts{Tone: th.C(draw.TMeterContext), Label: "context"})
 		}
 		kit.Stat(c, "cache", "cache hit", fmt.Sprintf("%d%%", int(t.CacheHit()*100+.5)), fg)
 		kit.Stat(c, "turns", "turns · tool calls", fmt.Sprintf("%d · %d", t.Turns, t.ToolCalls), fg)
@@ -105,7 +106,7 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 				if !w.Resets.IsZero() && w.Resets.After(now) {
 					v += " · resets " + strings.ReplaceAll(kit.Duration(w.Resets.Sub(now)), " ", "")
 				}
-				tone := th.C(kit.TMeterContext)
+				tone := th.C(draw.TMeterContext)
 				if w.Used >= .9 {
 					tone = th.C(theme.Error)
 				}
@@ -280,7 +281,7 @@ func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time)
 				if t.ContextMax > 0 {
 					frac = float64(t.Context) / float64(t.ContextMax)
 				}
-				widget.Meter(c, "ctxbar", frac, widget.MeterOpts{Tone: th.C(kit.TMeterContext), Width: ui.Px(44), Label: "context"})
+				widget.Meter(c, "ctxbar", frac, widget.MeterOpts{Tone: th.C(draw.TMeterContext), Width: ui.Px(44), Label: "context"})
 				value(c, "ctxv", kit.Tokens(int64(t.Context)), fg)
 				c.Box("g1", ui.Style{W: ui.Px(6)}, nil)
 				label(c, "cache", "CACHE")
@@ -302,7 +303,7 @@ func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time)
 				case r.Failed > 0:
 					value(c, "testsv", fmt.Sprintf("%d fail", r.Failed), th.C(theme.Error))
 				default:
-					value(c, "testsv", fmt.Sprintf("%d ✓", r.Passed), th.C(kit.TToolOK))
+					value(c, "testsv", fmt.Sprintf("%d ✓", r.Passed), th.C(draw.TToolOK))
 				}
 				if se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)

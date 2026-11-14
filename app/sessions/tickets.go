@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -390,23 +391,23 @@ func (x *Tickets) source() uireg.PickerSource {
 					}
 					t := r.ticket
 					tone := ui.TextStyle{Color: kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent))}
-					kit.PreviewHead(c, t.Key+" · "+strings.ToUpper(t.State), tone, t.Title)
-					kit.PreviewField(c, "tracker", t.Tracker)
+					draw.PreviewHead(c, t.Key+" · "+strings.ToUpper(t.State), tone, t.Title)
+					draw.PreviewField(c, "tracker", t.Tracker)
 					if t.Project != "" {
-						kit.PreviewField(c, "project", t.Project)
+						draw.PreviewField(c, "project", t.Project)
 					}
 					if t.PriorityLabel != "" {
-						kit.PreviewField(c, "priority", t.PriorityLabel)
+						draw.PreviewField(c, "priority", t.PriorityLabel)
 					}
 					if t.PR != nil {
-						kit.PreviewField(c, "pr", strings.TrimSpace(fmt.Sprintf("#%d %s", t.PR.Number, t.PR.Repo)))
+						draw.PreviewField(c, "pr", strings.TrimSpace(fmt.Sprintf("#%d %s", t.PR.Number, t.PR.Repo)))
 					}
 					if t.Blocked {
-						kit.PreviewField(c, "blocked by", cmp.Or(strings.Join(t.BlockedBy, ", "), "another ticket"))
+						draw.PreviewField(c, "blocked by", cmp.Or(strings.Join(t.BlockedBy, ", "), "another ticket"))
 					}
 					hint := "↵ starts work on it: a plan, the ticket its context"
 					if se, ok := ticketSession(x.h, t.Key); ok {
-						kit.PreviewField(c, "session", se.Name())
+						draw.PreviewField(c, "session", se.Name())
 						hint = "↵ continues it in " + se.Name() + ", resumed if it's stopped or archived"
 					}
 					c.Text("hint", hint, widget.UIFont(11, th.C(theme.FgFaint)))

@@ -1,8 +1,9 @@
-package kit
+package draw
 
 import (
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -46,7 +47,7 @@ var statusGlyphs = map[core.Status]string{core.StatusNeedsYou: "!", core.StatusP
 // you, ? when it asks permission, ◌ waiting on CI, … on a reviewer, ✓ quiet, ○ off.
 func StatusMark(c *ui.Ctx, key any, s core.Status, size float32) {
 	th := c.Theme()
-	tone := th.C(StatusTokens[s])
+	tone := th.C(kit.StatusTokens[s])
 	c.Box(key, ui.Style{W: ui.Px(size + 2), Main: ui.Center, Cross: ui.Center, Role: ui.RoleText, Label: string(s)}, func(c *ui.Ctx) {
 		switch g, ok := statusGlyphs[s]; {
 		case s == core.StatusWorking:

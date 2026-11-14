@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent/usage/stats"
@@ -243,7 +244,7 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 			if qualifier(w) != "" {
 				continue
 			}
-			tone := th.C(kit.TMeterContext)
+			tone := th.C(draw.TMeterContext)
 			if w.Used >= .9 {
 				tone = th.C(theme.Error)
 			}

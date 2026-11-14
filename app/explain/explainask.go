@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/registry/services"
 
@@ -83,7 +84,7 @@ func (x *Plugin) Kept(c *ui.Ctx, key, help string) {
 	if r, ok := c.Rect(c.Next("explain")); ok && r.Dx() > 20 {
 		width = r.Dx() - 20
 	}
-	kit.Popup(c, "explain", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 6, Help: help}, func(c *ui.Ctx) {
+	draw.Popup(c, "explain", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 6, Help: help}, func(c *ui.Ctx) {
 		c.Text("label", "EXPLAIN · CHANGES NOTHING", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold,
 			Tracking: .14}, Color: th.C(theme.FgFaint)})
 		switch {

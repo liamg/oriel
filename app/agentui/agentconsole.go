@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/agentkit"
+	"github.com/liamg/oriel/app/kit/draw"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -44,7 +45,7 @@ var (
 	tBlockBg       = theme.Declare("agent.block.bg", "bg.surface")
 	tBlockLine     = theme.Declare("agent.block.border", "line")
 	tBlockSelected = theme.Declare("agent.block.selected", "accent")
-	tToolRunning   = kit.TStateRunning
+	tToolRunning   = draw.TStateRunning
 	tThinking      = theme.Declare("agent.thinking.fg", "fg.ghost")
 	tThreadKicker  = theme.Declare("agent.thread.kicker", "amber")
 	tQueued        = theme.Declare("agent.queued", "amber")

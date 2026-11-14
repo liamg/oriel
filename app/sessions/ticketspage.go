@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -432,25 +433,25 @@ func (x *Tickets) pageDetail(c *ui.Ctx, r ticketRow) {
 		}
 	})
 	c.Column("fields", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		kit.PreviewField(c, "tracker", r.tracker.Label())
+		draw.PreviewField(c, "tracker", r.tracker.Label())
 		if t.Project != "" {
-			kit.PreviewField(c, "project", t.Project)
+			draw.PreviewField(c, "project", t.Project)
 		}
 		if t.PriorityLabel != "" {
-			kit.PreviewField(c, "priority", t.PriorityLabel)
+			draw.PreviewField(c, "priority", t.PriorityLabel)
 		}
 		if t.PR != nil {
-			kit.PreviewField(c, "pr", strings.TrimSpace(fmt.Sprintf("#%d %s", t.PR.Number, t.PR.Repo)))
+			draw.PreviewField(c, "pr", strings.TrimSpace(fmt.Sprintf("#%d %s", t.PR.Number, t.PR.Repo)))
 		}
 		blockedBy := t.BlockedBy
 		if done && len(full.BlockedBy) > 0 {
 			blockedBy = full.BlockedBy
 		}
 		if t.Blocked || len(blockedBy) > 0 {
-			kit.PreviewField(c, "blocked by", cmp.Or(strings.Join(blockedBy, ", "), "another ticket"))
+			draw.PreviewField(c, "blocked by", cmp.Or(strings.Join(blockedBy, ", "), "another ticket"))
 		}
 		if se, ok := ticketSession(x.h, t.Key); ok {
-			kit.PreviewField(c, "session", se.Name())
+			draw.PreviewField(c, "session", se.Name())
 		}
 	})
 	switch {

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -592,7 +593,7 @@ func presentBlock(c *ui.Ctx, h plugin.Host, f *presentFocus, i int, b *uireg.Pre
 				if len(bd.signs) > 0 {
 					c.Row("signs", ui.Style{Gap: 2, Cross: ui.Center, Float: &ui.Float{Offset: render.Point{X: 2, Y: 3}}}, func(c *ui.Ctx) {
 						for k, d := range bd.signs {
-							kit.DrawSign(c, h, k, d, 13)
+							draw.DrawSign(c, h, k, d, 13)
 						}
 					})
 				}

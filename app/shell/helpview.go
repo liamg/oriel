@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script/api"
 
@@ -369,7 +370,7 @@ func (v *helpView) body(c *ui.Ctx, id string, width float32) {
 			case "code":
 				c.Column(i, ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Fill: th.C(theme.BgBase), Radius: 6}, func(c *ui.Ctx) {
 					for j, l := range strings.Split(b.Text, "\n") {
-						c.Text(j, kit.ExpandTabs(l), ui.TextStyle{Font: kit.CodeFont, Color: th.C(theme.Fg)})
+						c.Text(j, kit.ExpandTabs(l), ui.TextStyle{Font: draw.CodeFont, Color: th.C(theme.Fg)})
 					}
 				})
 			case "keys":
@@ -441,9 +442,9 @@ func (v *helpView) options(c *ui.Ctx, key any, prefix string) {
 		for i, s := range specs {
 			val, _, _ := v.h.Options().Get(s.Name, registry.At{})
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 14, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
-				c.Text("n", s.Name, ui.TextStyle{Font: kit.CodeFont, Color: th.C(theme.Fg)})
+				c.Text("n", s.Name, ui.TextStyle{Font: draw.CodeFont, Color: th.C(theme.Fg)})
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("v", fmt.Sprint(val), ui.TextStyle{Font: kit.CodeFont, Color: th.C(theme.FgMuted)})
+				c.Text("v", fmt.Sprint(val), ui.TextStyle{Font: draw.CodeFont, Color: th.C(theme.FgMuted)})
 			})
 		}
 	})
@@ -456,12 +457,12 @@ func (v *helpView) api(c *ui.Ctx, key any, ns string) {
 	fns := api.Reference[name]
 	c.Column(key, ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 		if len(fns) == 0 {
-			c.Text("none", "No functions in oriel."+name+".", ui.TextStyle{Font: kit.CodeFont, Color: th.C(theme.FgFaint)})
+			c.Text("none", "No functions in oriel."+name+".", ui.TextStyle{Font: draw.CodeFont, Color: th.C(theme.FgFaint)})
 			return
 		}
 		for i, f := range fns {
 			c.Column(i, ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
-				c.Text("call", f.Call, ui.TextStyle{Font: kit.CodeFont, Color: th.C(theme.Accent)})
+				c.Text("call", f.Call, ui.TextStyle{Font: draw.CodeFont, Color: th.C(theme.Accent)})
 				c.Text("doc", f.Doc, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13}, Color: th.C(theme.FgMuted)})
 			})
 		}

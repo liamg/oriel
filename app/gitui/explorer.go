@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -50,7 +51,7 @@ type Explorer struct {
 		key   explorerRowsKey
 		items []widget.TreeItem
 	}
-	scratch *kit.DirTree                          // the agent's scratchpad, under All
+	scratch *draw.DirTree                         // the agent's scratchpad, under All
 	pads    *plugin.Cache[core.SessionID, string] // each session's scratchpad on this machine; "" for none
 	badges  []fileBadge                           // the file badges' counts, as this frame draws them
 	ask     *fileAsk                              // the name the file dialog asks for, while it's open

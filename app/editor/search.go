@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 
@@ -670,7 +671,7 @@ func (p *Search) buildPreview(c *ui.Ctx) {
 // diffBlock draws a hunk as a unified diff: its header, the lines it removes, and with withNew, the lines it adds.
 func diffBlock(c *ui.Ctx, key any, h gitx.Hunk, withNew bool) {
 	th := c.Theme()
-	code := ui.TextStyle{Font: kit.CodeFont}
+	code := ui.TextStyle{Font: draw.CodeFont}
 	c.Column(key, ui.Style{W: ui.Flex(1), Radius: 4, Clip: true, Stroke: th.C(theme.Line), Border: 1}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 2), Fill: th.C(theme.BgRaised)}, func(c *ui.Ctx) {
 			c.Text("t", h.Header(), widget.MonoTok(c, 10.5, theme.FgFaint))

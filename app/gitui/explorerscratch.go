@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/plugin"
@@ -17,7 +18,7 @@ import (
 const scratchID = "\x03"
 
 func (e *Explorer) watchScratch() {
-	e.scratch = kit.NewDirTree(e.h)
+	e.scratch = draw.NewDirTree(e.h)
 	e.Add(registry.DisposeFunc(e.scratch.Close))
 	e.pads = plugin.NewCache(e.h, func(ctx context.Context, id core.SessionID) (string, error) { return scratchpadOf(ctx, e.h, id) },
 		plugin.CacheOpts[core.SessionID, string]{MaxEntries: 16})

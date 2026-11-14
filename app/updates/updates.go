@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/registry/services"
 
@@ -544,7 +545,7 @@ func (x *Update) statusSegment(c *ui.Ctx) {
 		label := "Update ready · restart"
 		in := widget.Clickable(c, "update", ui.Style{H: ui.Flex(1), Gap: 6, Cross: ui.Center, Help: updateHelp + "#ready", Role: ui.RoleButton,
 			Label: label, Tooltip: "Oriel " + v + " is installed: restart to run it"}, func(c *ui.Ctx) {
-			c.Text("t", "update ready · restart", kit.StatusText(c, theme.Accent))
+			c.Text("t", "update ready · restart", draw.StatusText(c, theme.Accent))
 		})
 		if in.Clicked {
 			if err := x.h.Run(context.Background(), "update.restart", nil); err != nil {
@@ -562,7 +563,7 @@ func (x *Update) statusSegment(c *ui.Ctx) {
 	}
 	in := widget.Clickable(c, "update", ui.Style{H: ui.Flex(1), Cross: ui.Center, Help: updateHelp + "#install", Role: ui.RoleButton,
 		Label: busy, Tooltip: "Show how the update is getting on"}, func(c *ui.Ctx) {
-		c.Text("t", text, kit.StatusText(c, kit.TStatusFg))
+		c.Text("t", text, draw.StatusText(c, kit.TStatusFg))
 	})
 	if in.Clicked && r != nil {
 		x.setPage(true)

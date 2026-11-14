@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/dap"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -451,10 +452,10 @@ func (x *Debug) statusSegment(c *ui.Ctx) {
 	}
 	c.Row("debug", ui.Style{H: ui.Flex(1), Gap: 10, Cross: ui.Center, Help: debugHelp, Role: ui.RoleStatus, Label: "Debugger"}, func(c *ui.Ctx) {
 		if where != "" {
-			c.Text("w", "● "+where, kit.StatusText(c, tDebugPaused))
+			c.Text("w", "● "+where, draw.StatusText(c, tDebugPaused))
 		}
 		if counts != "" {
-			c.Text("n", counts, kit.StatusText(c, kit.TStatusFg))
+			c.Text("n", counts, draw.StatusText(c, kit.TStatusFg))
 		}
 	})
 }

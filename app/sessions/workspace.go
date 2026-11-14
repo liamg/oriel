@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -51,7 +52,7 @@ type Workspace struct {
 	open bool
 	tab  int
 	by   map[core.SessionID]*wsState
-	dirs *kit.DirTree // the files tab's folders
+	dirs *draw.DirTree // the files tab's folders
 }
 
 // wsState is one session's page: its reads, and what's picked.
@@ -73,7 +74,7 @@ func (x *Workspace) Manifest() plugin.Manifest { return plugin.Manifest{ID: "wor
 func (x *Workspace) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*wsState{}
-	x.dirs = kit.NewDirTree(h)
+	x.dirs = draw.NewDirTree(h)
 	x.Add(registry.DisposeFunc(x.dirs.Close))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))

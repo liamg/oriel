@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -81,15 +82,15 @@ func (x *LSP) overlay(c *ui.Ctx) {
 	above := render.Point{X: r.Min.X, Y: r.Min.Y - 4}
 	if x.sig != nil {
 		at := above
-		c.Box("sig", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at, Self: render.Point{Y: 1}}, Scale: kit.PartScale(x.h.Options(), "ui.hover.font_size")},
+		c.Box("sig", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at, Self: render.Point{Y: 1}}, Scale: draw.PartScale(x.h.Options(), "ui.hover.font_size")},
 			func(c *ui.Ctx) { x.signatureCard(c) })
 	}
 	if x.comp.open {
-		c.Box("comp", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}, Scale: kit.PartScale(x.h.Options(), "ui.completion.font_size")},
+		c.Box("comp", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}, Scale: draw.PartScale(x.h.Options(), "ui.completion.font_size")},
 			func(c *ui.Ctx) { x.completionMenu(c) })
 	}
 	if x.hover != nil {
-		c.Box("hover", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}, Scale: kit.PartScale(x.h.Options(), "ui.hover.font_size")},
+		c.Box("hover", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &below}, Scale: draw.PartScale(x.h.Options(), "ui.hover.font_size")},
 			func(c *ui.Ctx) { x.hoverView(c) })
 	}
 	if x.actions != nil {
@@ -110,7 +111,7 @@ func (x *LSP) completionMenu(c *ui.Ctx) {
 	n := min(len(x.comp.shown), 10)
 	top := max(0, min(x.comp.sel-n+1, len(x.comp.shown)-n))
 	c.Row("menu", ui.Style{Gap: 0}, func(c *ui.Ctx) {
-		kit.Popup(c, "list", ui.Style{W: ui.Px(380), Pad: ui.PadXY(0, 4), Help: "editor/pane#completion", Role: ui.RoleList, Label: "Completions"}, func(c *ui.Ctx) {
+		draw.Popup(c, "list", ui.Style{W: ui.Px(380), Pad: ui.PadXY(0, 4), Help: "editor/pane#completion", Role: ui.RoleList, Label: "Completions"}, func(c *ui.Ctx) {
 			for i := top; i < top+n; i++ {
 				it := x.comp.items[x.comp.shown[i]]
 				fill := render.Color{}
@@ -124,7 +125,7 @@ func (x *LSP) completionMenu(c *ui.Ctx) {
 						func(c *ui.Ctx) {
 							c.Text("g", g, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(tok)})
 						})
-					label := ui.TextStyle{Font: kit.CodeMono, Color: th.C(theme.Fg)}
+					label := ui.TextStyle{Font: draw.CodeMono, Color: th.C(theme.Fg)}
 					_, hits, _ := fuzzy.Match(word, it.Label)
 					c.Row("label", ui.Style{}, func(c *ui.Ctx) {
 						marked(c, it.Label, hits, label, ui.TextStyle{Font: label.Font, Color: th.C(tCompMatch)})
@@ -146,9 +147,9 @@ func (x *LSP) completionMenu(c *ui.Ctx) {
 		if it.Detail == "" && it.Doc.Text == "" {
 			return
 		}
-		kit.Popup(c, "doc", ui.Style{W: ui.Px(300), Pad: ui.Pad(10), Gap: 8, Help: "editor/pane#completion"}, func(c *ui.Ctx) {
+		draw.Popup(c, "doc", ui.Style{W: ui.Px(300), Pad: ui.Pad(10), Gap: 8, Help: "editor/pane#completion"}, func(c *ui.Ctx) {
 			if it.Detail != "" {
-				c.Text("detail", it.Detail, ui.TextStyle{Font: kit.CodeMono, Color: th.C(theme.Fg)})
+				c.Text("detail", it.Detail, ui.TextStyle{Font: draw.CodeMono, Color: th.C(theme.Fg)})
 			}
 			if it.Doc.Text != "" {
 				markdown(c, x.h, "md", it.Doc, 280)
@@ -181,8 +182,8 @@ func (x *LSP) signatureCard(c *ui.Ctx) {
 	th := c.Theme()
 	h := x.sig.help
 	s := h.Signatures[min(max(h.Active, 0), len(h.Signatures)-1)]
-	kit.Popup(c, "card", ui.Style{Pad: ui.PadXY(10, 6), Gap: 4, Help: "editor/pane#signature"}, func(c *ui.Ctx) {
-		base := ui.TextStyle{Font: kit.CodeMono, Color: th.C(theme.FgMuted)}
+	draw.Popup(c, "card", ui.Style{Pad: ui.PadXY(10, 6), Gap: 4, Help: "editor/pane#signature"}, func(c *ui.Ctx) {
+		base := ui.TextStyle{Font: draw.CodeMono, Color: th.C(theme.FgMuted)}
 		lit := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12, Weight: typeset.SemiBold}, Color: th.C(tSigActive)}
 		c.Row("label", ui.Style{}, func(c *ui.Ctx) {
 			from, to := -1, -1
@@ -209,7 +210,7 @@ func (x *LSP) signatureCard(c *ui.Ctx) {
 
 // hoverView is the K card.
 func (x *LSP) hoverView(c *ui.Ctx) {
-	kit.Popup(c, "card", ui.Style{W: ui.Px(520), Pad: ui.Pad(12), Gap: 8, Help: "editor/pane#hover"}, func(c *ui.Ctx) {
+	draw.Popup(c, "card", ui.Style{W: ui.Px(520), Pad: ui.Pad(12), Gap: 8, Help: "editor/pane#hover"}, func(c *ui.Ctx) {
 		markdown(c, x.h, "md", x.hover.md, 494)
 		c.Text("keys", "esc to close", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: c.Theme().C(theme.FgGhost)})
 	})
@@ -359,8 +360,8 @@ func (x *LSP) statusSegment(c *ui.Ctx) {
 		dot, tok, state = "✕", theme.Error, "stopped"
 	}
 	c.Row("lsp", ui.Style{H: ui.Flex(1), Gap: 6, Cross: ui.Center, Help: "editor/pane#lsp", Role: ui.RoleStatus, Label: "Language server"}, func(c *ui.Ctx) {
-		c.Text("name", st.Server, kit.StatusText(c, kit.TStatusFg))
-		c.Text("dot", dot, kit.StatusText(c, tok))
-		c.Text("state", state, kit.StatusText(c, kit.TStatusFg))
+		c.Text("name", st.Server, draw.StatusText(c, kit.TStatusFg))
+		c.Text("dot", dot, draw.StatusText(c, tok))
+		c.Text("state", state, draw.StatusText(c, kit.TStatusFg))
 	})
 }

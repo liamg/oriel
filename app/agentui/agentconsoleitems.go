@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -100,12 +101,12 @@ func (x *Console) item(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, st *consoleState, width float32) {
 	th := c.Theme()
 	sel := st.sel == k
-	mark := kit.MarkRunning
+	mark := draw.MarkRunning
 	switch {
 	case it.IsError:
-		mark = kit.MarkFailed
+		mark = draw.MarkFailed
 	case it.Done:
-		mark = kit.MarkOK
+		mark = draw.MarkOK
 	}
 	title := cmp.Or(it.Title, it.Tool)
 	verb, rest, _ := strings.Cut(title, " ")
@@ -135,7 +136,7 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 			head.Expanded = &open
 		}
 		if widget.Clickable(c, "head", head, func(c *ui.Ctx) {
-			kit.StateMark(c, "mark", mark, it.Time, 10)
+			draw.StateMark(c, "mark", mark, it.Time, 10)
 			c.Text("verb", verb, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			c.Text("rest", rest, widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -149,7 +150,7 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 				c.Text("sum", strings.Join(summary, " · "), widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
 			if r, ok := runOf(se, it.ID); ok {
-				kit.EvidenceChip(c, x.h, "run", se.ID, r.ID, kit.RunLabel(r), r.OK)
+				draw.EvidenceChip(c, x.h, "run", se.ID, r.ID, draw.RunLabel(r), r.OK)
 			}
 			if hasOutput && core.ShellTool(it.Tool) {
 				c.Text("fold", map[bool]string{true: "▾", false: "▸"}[open], widget.MonoFont(11, th.C(theme.FgFaint)))
@@ -215,9 +216,9 @@ func miniDiff(c *ui.Ctx, d *core.FileDiff) {
 				numTok := theme.FgGhost
 				switch l.Op {
 				case "+":
-					numTok = kit.TToolOK
+					numTok = draw.TToolOK
 				case "-":
-					numTok = kit.TToolFailed
+					numTok = draw.TToolFailed
 				}
 				c.Box("n", ui.Style{W: ui.Px(32)}, func(c *ui.Ctx) { c.Text("t", n, widget.MonoFont(11, th.C(numTok))) })
 				c.Box("op", ui.Style{W: ui.Px(10)}, func(c *ui.Ctx) { c.Text("t", strings.TrimSpace(l.Op), widget.MonoFont(11.5, th.C(numTok))) })
@@ -257,7 +258,7 @@ func (x *Console) background(c *ui.Ctx, se core.SessionState, width float32, sel
 			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 10, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Description},
 				func(c *ui.Ctx) {
-					kit.StateMark(c, "mark", kit.MarkRunning, time.Time{}, 10)
+					draw.StateMark(c, "mark", draw.MarkRunning, time.Time{}, 10)
 					c.Text("kind", cmp.Or(t.Kind, "task"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.Medium},
 						Color: th.C(theme.Fg)})
 					c.Text("desc", t.Description, widget.UIFont(12, th.C(theme.FgMuted)))

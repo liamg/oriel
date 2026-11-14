@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/agentkit"
+	"github.com/liamg/oriel/app/kit/draw"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -104,7 +105,7 @@ func (x *Console) processes(c *ui.Ctx, se core.SessionState, st *consoleState, w
 			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
 			c.Row(t.ID, ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 10, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Description},
 				func(c *ui.Ctx) {
-					kit.StateMark(c, "mark", kit.MarkRunning, time.Time{}, 10)
+					draw.StateMark(c, "mark", draw.MarkRunning, time.Time{}, 10)
 					c.Text("kind", cmp.Or(t.Kind, "process"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.Medium},
 						Color: th.C(theme.Fg)})
 					c.Text("cmd", t.Description, widget.MonoFont(11.5, th.C(theme.FgMuted)))

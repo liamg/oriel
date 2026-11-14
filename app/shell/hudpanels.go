@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -69,7 +70,7 @@ func (t *sessionTabs) sessionsPanel(c *ui.Ctx, h plugin.Host) {
 	for _, s := range ss[:min(len(ss), 5)] {
 		if widget.Clickable(c, s.ID, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(19), Gap: 8, Cross: ui.Center, Label: kit.Label(s),
 			Help: kit.HUDHelp + "#sessions"}, func(c *ui.Ctx) {
-			kit.StatusMark(c, "mark", s.Status, 9)
+			draw.StatusMark(c, "mark", s.Status, 9)
 			c.Text("n", kit.Label(s), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("w", kit.Why(s, now), widget.MonoFont(10.5, th.C(theme.FgFaint)))

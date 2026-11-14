@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -50,7 +51,7 @@ func (i *introspect) Activate(_ context.Context, h plugin.Host) error {
 // uiOptions registers the toolkit's own options.
 type uiOptions struct{ kit.Disposer }
 
-const uiFontSize = kit.UIFontSize
+const uiFontSize = draw.UIFontSize
 
 // partSizes are the parts with their own text size: each option scales its part over ui.font_size.
 var partSizes = []struct{ name, help string }{

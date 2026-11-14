@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/theme"
@@ -36,7 +37,7 @@ func (x *Console) subagents(c *ui.Ctx, se core.SessionState) {
 			if widget.Clickable(c, s.ID, ui.Style{W: ui.Flex(1), Gap: 2, Dir: ui.Column, Clip: true,
 				Label: cmp.Or(s.Type, "agent") + " " + s.Description, Help: subagentsHelp}, func(c *ui.Ctx) {
 				c.Row("top", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-					kit.StateMark(c, "mark", subagentMark(s), s.Started, 10)
+					draw.StateMark(c, "mark", subagentMark(s), s.Started, 10)
 					c.Text("t", cmp.Or(s.Description, "subagent"), widget.UIFont(12.5, th.C(theme.Fg)))
 				})
 				c.Row("sub", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 20}, Clip: true}, func(c *ui.Ctx) {
@@ -70,15 +71,15 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 			state = "running"
 		}
 		c.Row("state", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			kit.StateMark(c, "mark", subagentMark(s), s.Started, 10)
+			draw.StateMark(c, "mark", subagentMark(s), s.Started, 10)
 			widget.Chip(c, "st", state, subagentTone(c, s), subagentsHelp)
 			c.Text("t", cmp.Or(s.Type, "agent")+" · "+subagentTook(s, c.Now()), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		if !s.Started.IsZero() {
-			kit.PreviewField(c, "started", s.Started.Local().Format("15:04:05"))
+			draw.PreviewField(c, "started", s.Started.Local().Format("15:04:05"))
 		}
 		if !s.Ended.IsZero() {
-			kit.PreviewField(c, "finished", s.Ended.Local().Format("15:04:05"))
+			draw.PreviewField(c, "finished", s.Ended.Local().Format("15:04:05"))
 		}
 		if len(s.Threads) > 0 {
 			var names []string
@@ -87,7 +88,7 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 					names = append(names, t.Heading())
 				}
 			}
-			kit.PreviewField(c, "requests", strings.Join(names, " · "))
+			draw.PreviewField(c, "requests", strings.Join(names, " · "))
 		}
 		for _, part := range []struct{ key, title, body, none string }{
 			{"prompt", "PROMPT", s.Prompt, "The agent gave it no prompt Oriel saw."},
@@ -113,16 +114,16 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 
 func subagentMark(s core.Subagent) string {
 	if s.Running {
-		return kit.MarkRunning
+		return draw.MarkRunning
 	}
-	return kit.MarkOK
+	return draw.MarkOK
 }
 
 func subagentTone(c *ui.Ctx, s core.Subagent) render.Color {
 	if s.Running {
 		return c.Theme().C(tToolRunning)
 	}
-	return c.Theme().C(kit.TToolOK)
+	return c.Theme().C(draw.TToolOK)
 }
 
 // subagentTook is how long a subagent ran, or has run so far, and the tools it used: "3:04 · 17 tools".

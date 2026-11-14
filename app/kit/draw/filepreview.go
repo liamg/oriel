@@ -1,9 +1,10 @@
-package kit
+package draw
 
 import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -13,7 +14,7 @@ import (
 // FilePreview is a picker's preview of a file's text, highlighted; it keeps the file it last showed.
 type FilePreview struct {
 	path string
-	src  FileText
+	src  kit.FileText
 }
 
 // Node is the file name (relative to dir) around line, 0-based; marked unless it's the first.
@@ -21,10 +22,10 @@ func (p *FilePreview) Node(r registry.Registry, dir, name string, line int) ui.N
 	return &ui.Func{Key: "file", Fn: func(c *ui.Ctx) {
 		path := filepath.Join(dir, name)
 		if p.path != path {
-			p.path, p.src = path, FileText{}
+			p.path, p.src = path, kit.FileText{}
 		}
-		rd, _ := ReadsOf(r)
-		src := p.src.Load(rd, BufferOn(r, path), path)
+		rd, _ := kit.ReadsOf(r)
+		src := p.src.Load(rd, kit.BufferOn(r, path), path)
 		if src.Missing() {
 			c.Text("err", fmt.Sprint(src.State().Err), ui.TextStyle{Color: c.Theme().C(theme.FgFaint)})
 			return

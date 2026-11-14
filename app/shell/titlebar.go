@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -221,7 +222,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 			top.W = ui.Flex(1)
 		}
 		c.Row("top", top, func(c *ui.Ctx) {
-			kit.StatusMark(c, "mark", s.Status(), 9)
+			draw.StatusMark(c, "mark", s.Status(), 9)
 			if t.renaming == s.ID() {
 				t.nameField(c, h, s)
 			} else if hover {
@@ -249,7 +250,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 					if !ok {
 						fill = th.C(theme.StatusPermission)
 					}
-					kit.CountPill(c, "asks", n, fill)
+					draw.CountPill(c, "asks", n, fill)
 				}
 			}
 			if n := s.Unseen(); n > 0 {

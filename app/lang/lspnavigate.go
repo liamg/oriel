@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -299,7 +300,7 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 		}
 		return p
 	}
-	c.Row("peek", ui.Style{W: ui.Flex(1), H: ui.Px(220), Fill: th.C(tPeekBg), Stroke: th.C(kit.TPopupLine), Border: 1, Radius: 6, Clip: true,
+	c.Row("peek", ui.Style{W: ui.Flex(1), H: ui.Px(220), Fill: th.C(tPeekBg), Stroke: th.C(draw.TPopupLine), Border: 1, Radius: 6, Clip: true,
 		Help: "editor/pane#references", Role: ui.RoleRegion, Label: "References"}, func(c *ui.Ctx) {
 		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(10, 8), Gap: 6}, func(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -335,7 +336,7 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 				in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(20), Pad: ui.Insets{L: 22, R: 10}, Gap: 8, Cross: ui.Center,
 					Fill: fill, Clip: true, Label: pk.texts[i], Help: "editor/pane#references"}, func(c *ui.Ctx) {
 					c.Text("l", fmt.Sprint(l.Range.Start.Line+1), widget.MonoTok(c, 10.5, theme.FgGhost))
-					c.Text("t", pk.texts[i], ui.TextStyle{Font: kit.CodeMono, Color: th.C(theme.FgMuted)})
+					c.Text("t", pk.texts[i], ui.TextStyle{Font: draw.CodeMono, Color: th.C(theme.FgMuted)})
 				})
 				if in.Clicked {
 					pk.sel = i
@@ -398,7 +399,7 @@ func (x *LSP) renameInput(c *ui.Ctx, at render.Point) {
 		c.RequestFocus(id)
 	}
 	c.Box("rename", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
-		kit.Popup(c, renameCard, ui.Style{W: ui.Px(320), Pad: ui.Pad(8), Gap: 6, Help: "editor/pane#rename"}, func(c *ui.Ctx) {
+		draw.Popup(c, renameCard, ui.Style{W: ui.Px(320), Pad: ui.Pad(8), Gap: 6, Help: "editor/pane#rename"}, func(c *ui.Ctx) {
 			c.Text("t", "RENAME "+rp.old, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .12},
 				Color: c.Theme().C(theme.FgFaint)})
 			res := widget.Input(c, renameIn, &rp.value, widget.InputOpts{Label: "New name", SelectOnFocus: true, Help: "editor/pane#rename"})

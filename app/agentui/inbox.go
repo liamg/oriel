@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -828,7 +829,7 @@ func (x *Inbox) indicator(c *ui.Ctx) {
 		Tooltip: "Everything waiting on you"}, func(c *ui.Ctx) {
 		c.Text("k", "INBOX", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Medium}, Color: th.C(theme.FgMuted)})
 		if n > 0 {
-			kit.CountPill(c, "n", n, th.C(tInboxCount))
+			draw.CountPill(c, "n", n, th.C(tInboxCount))
 		}
 	}).Clicked {
 		x.h.Run(context.Background(), "inbox.open", nil)

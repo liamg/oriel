@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/prui"
 
 	"github.com/liamg/oriel/app/kit"
@@ -51,10 +52,10 @@ func prStatusBoxes(c *ui.Ctx, s prStatus) {
 			prui.PRLine(c, "mergeable", state, "Mergeable", note)
 		}
 		for _, f := range s.fields {
-			kit.PreviewField(c, f[0], f[1])
+			draw.PreviewField(c, f[0], f[1])
 		}
 		if s.done && len(full.Labels) > 0 {
-			kit.PreviewField(c, "labels", strings.Join(full.Labels, " · "))
+			draw.PreviewField(c, "labels", strings.Join(full.Labels, " · "))
 		}
 	}, nil)
 	if s.done {

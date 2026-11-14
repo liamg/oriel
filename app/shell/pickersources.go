@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/uireg"
 
 	"github.com/liamg/oriel/plugin"
@@ -33,14 +34,14 @@ func keymapsSource(h plugin.Host, configDir string) uireg.PickerSource {
 			k := it.Data.(registry.Keymap)
 			return &ui.Func{Key: "keymap", Fn: func(c *ui.Ctx) {
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-					kit.PreviewHead(c, k.Mode, ui.TextStyle{Color: c.Theme().C(tOmniMatch)}, kit.KeyLabel(k.Keys))
-					kit.PreviewField(c, "command", k.Command)
+					draw.PreviewHead(c, k.Mode, ui.TextStyle{Color: c.Theme().C(tOmniMatch)}, kit.KeyLabel(k.Keys))
+					draw.PreviewField(c, "command", k.Command)
 					if len(k.Args) > 0 {
-						kit.PreviewField(c, "args", fmt.Sprint(k.Args))
+						draw.PreviewField(c, "args", fmt.Sprint(k.Args))
 					}
-					kit.PreviewField(c, "source", k.Source)
+					draw.PreviewField(c, "source", k.Source)
 					if k.Desc != "" {
-						kit.PreviewField(c, "desc", k.Desc)
+						draw.PreviewField(c, "desc", k.Desc)
 					}
 				})
 			}}

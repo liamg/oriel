@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/syntax"
 
@@ -772,10 +773,10 @@ func (x *Tests) statusSegment(c *ui.Ctx) {
 		passed, failed, _ = runs[len(runs)-1].Counts()
 	}
 	c.Row("tests", ui.Style{H: ui.Flex(1), Gap: 6, Cross: ui.Center, Help: "editor/pane#tests", Role: ui.RoleStatus, Label: "Tests"}, func(c *ui.Ctx) {
-		c.Text("l", label, kit.StatusText(c, kit.TStatusFg))
+		c.Text("l", label, draw.StatusText(c, kit.TStatusFg))
 		if failed > 0 {
-			c.Text("f", fmt.Sprintf("%d ✕", failed), kit.StatusText(c, tTestFailed))
+			c.Text("f", fmt.Sprintf("%d ✕", failed), draw.StatusText(c, tTestFailed))
 		}
-		c.Text("p", fmt.Sprintf("%d ✓", passed), kit.StatusText(c, tTestPassed))
+		c.Text("p", fmt.Sprintf("%d ✓", passed), draw.StatusText(c, tTestPassed))
 	})
 }

@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/edit/input"
 	"github.com/liamg/oriel/registry"
@@ -45,8 +46,8 @@ var (
 )
 
 // metrics are the panes' for editor.font_size and editor.line_height now.
-func (x *Editor) metrics(c *ui.Ctx) kit.PaneMetrics {
-	x.pane = kit.Metrics(c, x.h.Options(), x.pane)
+func (x *Editor) metrics(c *ui.Ctx) draw.PaneMetrics {
+	x.pane = draw.Metrics(c, x.h.Options(), x.pane)
 	return x.pane
 }
 
@@ -95,7 +96,7 @@ func (x *Editor) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 	if r, ok := c.Rect(codeID); ok && !presented {
 		// The rows the window has for text: what blocks between its lines took last frame doesn't show text, so the
 		// engine keeps the cursor clear of them.
-		x.rows[id] = max(int((r.Dy()-kit.CodePadT-x.blockPx[id])/m.LineH), 1)
+		x.rows[id] = max(int((r.Dy()-draw.CodePadT-x.blockPx[id])/m.LineH), 1)
 		x.e.SetRows(id, x.rows[id])
 		x.e.SetCols(id, max(int((r.Dx()-gutterWidth(p.Buf().Lines(), m)-4)/m.CharW), 1))
 		x.pointer(c, p, st, in, r, m)
@@ -107,14 +108,14 @@ func (x *Editor) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 		x.e.ScrollLeft(id, p.Left()+int(math.Round(float64(in.Scroll.X/m.CharW))))
 	}
 	p, _ = x.e.Pane(id) // what the keys left
-	c.Column("pane", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(kit.TEditorBg), Clip: true}, func(c *ui.Ctx) {
+	c.Column("pane", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(draw.TEditorBg), Clip: true}, func(c *ui.Ctx) {
 		x.breadcrumb(c, p, wp)
 		if presented {
 			x.presentPane(c, p, wp, pr, 0)
 			return
 		}
 		x.drawing = st
-		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{T: kit.CodePadT}, Clip: true, Focusable: true, DefaultFocus: true,
+		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{T: draw.CodePadT}, Clip: true, Focusable: true, DefaultFocus: true,
 			KeyMode: st.Mode().KeyMode, Text: st.Mode().Text, Wheel: true, Cursor: render.CursorText, Help: "editor/pane", Role: ui.RoleTextBox,
 			Label: p.Name()}, func(c *ui.Ctx) {
 			x.lines(c, p, m)
@@ -137,7 +138,7 @@ type paneDrag struct {
 // pointer is the mouse in window p (term.txt *mouse-overview*, 'mousemodel' "popup"): a click puts the cursor, a drag
 // selects, a double click selects the word and a triple the line, S-click extends the selection and A-drag selects a
 // block. The gutter runs its action instead.
-func (x *Editor) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Interaction, r render.Rect, m kit.PaneMetrics) {
+func (x *Editor) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Interaction, r render.Rect, m draw.PaneMetrics) {
 	if x.drags == nil {
 		x.drags = map[vim.WindowID]*paneDrag{}
 	}
@@ -192,7 +193,7 @@ func (x *Editor) pointer(c *ui.Ctx, p vim.Pane, st input.State, in ui.Interactio
 	}
 	// Dragging past the top or bottom scrolls, a line a frame.
 	switch {
-	case at.Y < r.Min.Y+kit.CodePadT:
+	case at.Y < r.Min.Y+draw.CodePadT:
 		x.e.ScrollTo(p.ID(), max(p.Top()-1, 0))
 		c.WakeAt(c.Now().Add(30 * time.Millisecond))
 	case at.Y > r.Max.Y:
@@ -257,8 +258,8 @@ type lineTop struct {
 }
 
 // posAt is the buffer position under at, and the line it's on.
-func (x *Editor) posAt(p vim.Pane, r render.Rect, at render.Point, m kit.PaneMetrics) (vim.Pos, int) {
-	row := int(math.Floor(float64((at.Y - r.Min.Y - kit.CodePadT) / m.LineH)))
+func (x *Editor) posAt(p vim.Pane, r render.Rect, at render.Point, m draw.PaneMetrics) (vim.Pos, int) {
+	row := int(math.Floor(float64((at.Y - r.Min.Y - draw.CodePadT) / m.LineH)))
 	line := p.Top()
 	if tops := x.lineTops[p.ID()]; len(tops) > 0 && tops[0].line == line {
 		i := max(sort.Search(len(tops), func(i int) bool { return tops[i].y > at.Y })-1, 0)
@@ -321,7 +322,7 @@ func (x *Editor) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
 		}
 	}
 	style := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: th.C(tCrumbFg)}
-	c.Row("crumb", ui.Style{W: ui.Flex(1), H: ui.Px(kit.CrumbH), Pad: ui.PadXY(14, 0), Gap: 6, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
+	c.Row("crumb", ui.Style{W: ui.Flex(1), H: ui.Px(draw.CrumbH), Pad: ui.PadXY(14, 0), Gap: 6, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
 		for i, part := range parts {
 			if i > 0 {
 				c.Text(fmt.Sprint("sep", i), "›", style)
@@ -380,7 +381,7 @@ func (x *Editor) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWin
 
 // lines draws the rows the window shows: the gutter, the text in its highlights, a closed fold as one row,
 // the Visual selection and the cursor.
-func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
+func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m draw.PaneMetrics) {
 	th := c.Theme()
 	code, haveCode := c.Rect(c.ID())
 	var blockPx float32
@@ -410,7 +411,7 @@ func (x *Editor) lines(c *ui.Ctx, p vim.Pane, m kit.PaneMetrics) {
 	decor := x.decorations(p, line, last, c.WakeAt)
 	cur := p.Cursor()
 	gw := gutterWidth(snap.Lines(), m)
-	numStyle := ui.TextStyle{Font: x.pane.Font, Color: th.C(kit.TGutterFg)}
+	numStyle := ui.TextStyle{Font: x.pane.Font, Color: th.C(draw.TGutterFg)}
 	for row := 0; row < rows && line < snap.Lines(); {
 		rowID := c.Next(line)
 		if r, ok := c.Rect(rowID); ok {
@@ -502,7 +503,7 @@ type rowSeg struct {
 
 // rowSegs are line's screen rows in window p: one per row of the pane's width with 'wrap', else one row of the
 // columns in view from the window's left column.
-func rowSegs(p vim.Pane, line int, m kit.PaneMetrics) []rowSeg {
+func rowSegs(p vim.Pane, line int, m draw.PaneMetrics) []rowSeg {
 	if !p.Wrap() {
 		to := math.MaxInt32
 		if cols := p.Cols(); cols > 0 {
@@ -519,7 +520,7 @@ func rowSegs(p vim.Pane, line int, m kit.PaneMetrics) []rowSeg {
 }
 
 // clip is screen columns [a, z) on segment g, as an x across the text and a width; false when none of it shows there.
-func (g rowSeg) clip(a, z int, m kit.PaneMetrics) (float32, float32, bool) {
+func (g rowSeg) clip(a, z int, m draw.PaneMetrics) (float32, float32, bool) {
 	a, z = max(a, g.from), min(z, g.to)
 	if z <= a {
 		return 0, 0, false
@@ -528,9 +529,9 @@ func (g rowSeg) clip(a, z int, m kit.PaneMetrics) (float32, float32, bool) {
 }
 
 // gutterWidth is the width of a window's gutter: its line numbers and signs.
-func gutterWidth(lines int, m kit.PaneMetrics) float32 {
+func gutterWidth(lines int, m draw.PaneMetrics) float32 {
 	digits := max(len(fmt.Sprint(lines)), 3)
-	return max(float32(kit.GutterW), float32(digits)*m.CharW+34)
+	return max(float32(draw.GutterW), float32(digits)*m.CharW+34)
 }
 
 // textRow draws a line's text in runs of one highlight each, tabs as the spaces up to the next stop, over screen
@@ -576,7 +577,7 @@ func (x *Editor) textRow(c *ui.Ctx, snap text.Snapshot, line int, hl []syntax.Sp
 			}
 			vcol += w
 		}
-		col := th.C(kit.TCodeFg)
+		col := th.C(draw.TCodeFg)
 		st := ui.TextStyle{Font: x.pane.Font, Color: col}
 		if capture != "" {
 			s := th.Syntax("@" + capture)
@@ -618,7 +619,7 @@ func (x *Editor) foldRow(c *ui.Ctx, snap text.Snapshot, line, end int) {
 	first := strings.TrimSpace(strings.ReplaceAll(string(snap.Line(line)), "\t", " "))
 	c.Row("fold", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tFoldBg), Cross: ui.Center, Gap: 10}, func(c *ui.Ctx) {
 		c.Text("text", "▸ "+first, ui.TextStyle{Font: x.pane.Font, Color: th.C(tFoldFg)})
-		c.Text("n", fmt.Sprintf("· %d lines", end-line+1), ui.TextStyle{Font: x.pane.Font, Color: th.C(kit.TGutterFg)})
+		c.Text("n", fmt.Sprintf("· %d lines", end-line+1), ui.TextStyle{Font: x.pane.Font, Color: th.C(draw.TGutterFg)})
 	})
 }
 
@@ -630,7 +631,7 @@ type paneRow struct {
 	id     ui.ID
 	folded bool
 	x0     float32
-	m      kit.PaneMetrics
+	m      draw.PaneMetrics
 	ds     []uireg.Decoration
 	segs   []rowSeg
 }
@@ -812,7 +813,7 @@ func (x *Editor) cmdline(c *ui.Ctx, line string) {
 	th := c.Theme()
 	c.Row("cmdline", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Gap: 0, Cross: ui.Center, Fill: th.C(tCmdlineBg),
 		Stroke: th.C(theme.LineStrong), Role: ui.RoleTextBox, Label: "Command line", Value: line}, func(c *ui.Ctx) {
-		c.Text("text", line, ui.TextStyle{Font: x.pane.Font, Color: th.C(kit.TCodeFg)})
+		c.Text("text", line, ui.TextStyle{Font: x.pane.Font, Color: th.C(draw.TCodeFg)})
 		c.Box("caret", ui.Style{W: ui.Px(2), H: ui.Px(16), Fill: th.C(tCursorBg)}, nil)
 		if hints := registry.CmdlineHints(x.h, line); len(hints) > 0 {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
