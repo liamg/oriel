@@ -361,7 +361,7 @@ func (x *Ship) raise(ctx registry.Ctx, se core.SessionState, p string, a registr
 func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 	var reqs []prReq
 	for _, s := range x.report(se.ID).ships {
-		if s.ReadOnly || s.Code == nil || s.Commits == 0 && s.PR == nil {
+		if s.ReadOnly || s.CodeHost == nil || s.Commits == 0 && s.PR == nil {
 			continue
 		}
 		req, err := x.raiseReq(ctx, se, s.Project, registry.Args{}, true)
