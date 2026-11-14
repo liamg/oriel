@@ -98,106 +98,137 @@ func Files(dir, pattern string) ([]string, error) {
 	return out, nil
 }
 
+// pluginFiles are a plugin's files, in its directory or an fs.FS: those a pattern matches, and each one's bytes and
+// base name.
+type pluginFiles struct {
+	match func(pattern string) ([]string, error)
+	read  func(name string) ([]byte, error)
+	base  func(name string) string
+}
+
+// dirFiles are the files in dir, symlinks out of it left out.
+func dirFiles(dir string) pluginFiles {
+	return pluginFiles{match: func(p string) ([]string, error) { return Files(dir, p) }, read: os.ReadFile, base: filepath.Base}
+}
+
+// fsFiles are the files in fsys.
+func fsFiles(fsys fs.FS) pluginFiles {
+	return pluginFiles{
+		match: func(p string) ([]string, error) { return fs.Glob(fsys, strings.TrimSuffix(p, "/")) },
+		read:  func(name string) ([]byte, error) { return fs.ReadFile(fsys, name) },
+		base:  path.Base,
+	}
+}
+
+// each runs do on every file the patterns under key match. A pattern matching nothing is an error, so a typo
+// doesn't pass for an empty plugin.
+func (f pluginFiles) each(key string, patterns []string, do func(name string) error) error {
+	for _, p := range patterns {
+		ms, err := f.match(p)
+		if err == nil && len(ms) == 0 {
+			err = fmt.Errorf("[contributes] %s: %q matches nothing", key, p)
+		}
+		if err != nil {
+			return err
+		}
+		for _, m := range ms {
+			if err := do(m); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// texts registers the plugin's prompt packs and help pages, which need only their files' bytes.
+func (f pluginFiles) texts(r registry.Registry, source string, c Contributes, ds *disposables) error {
+	err := f.each("prompts", c.Prompts, func(name string) error {
+		b, err := f.read(name)
+		if err != nil {
+			return err
+		}
+		base := f.base(name)
+		*ds = append(*ds, r.Contribute(registry.PromptPack{Name: strings.TrimSuffix(base, path.Ext(base)), Prompt: string(b), Source: source}))
+		return nil
+	})
+	if err != nil || len(c.Help) == 0 {
+		return err
+	}
+	pages := fstest.MapFS{}
+	err = f.each("help", c.Help, func(name string) error {
+		b, err := f.read(name)
+		if err == nil {
+			pages[f.base(name)] = &fstest.MapFile{Data: b, Mode: 0o444}
+		}
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	*ds = append(*ds, r.HelpPages(registry.HelpSource{FS: pages, Source: source}))
+	return nil
+}
+
 // Contribute registers what c declares from the plugin in dir, under source (its id): themes, grammar packs,
 // prompt packs and help pages, and its fonts and icons as contributions of kinds "font" and "icon". A pattern
 // matching nothing is an error, so a typo doesn't pass for an empty plugin.
 func Contribute(r registry.Registry, dir, source string, c Contributes) (registry.Disposable, error) {
 	var ds disposables
-	fail := func(err error) (registry.Disposable, error) {
+	f := dirFiles(dir)
+	err := f.each("themes", c.Themes, func(name string) error {
+		if _, err := (theme.File{Path: name}).Load(); err != nil {
+			return err
+		}
+		ds = append(ds, r.Theme(theme.File{Path: name}))
+		return nil
+	})
+	if err == nil {
+		err = f.each("languages", c.Languages, func(name string) error {
+			l, err := ReadLanguagePack(name)
+			if err == nil {
+				l.Source = source
+				ds = append(ds, r.Language(l))
+			}
+			return err
+		})
+	}
+	if err == nil {
+		err = f.texts(r, source, c, &ds)
+	}
+	if err == nil {
+		err = f.each("fonts", c.Fonts, func(name string) error {
+			ds = append(ds, r.Contribute(registry.Font{Name: filepath.Base(name), Path: name, Source: source}))
+			return nil
+		})
+	}
+	if err == nil && c.Icons != "" {
+		err = dirIcons(r, dir, source, c.Icons, &ds)
+	}
+	if err != nil {
 		ds.Dispose()
 		return nil, err
 	}
-	files := func(key, pattern string) ([]string, error) {
-		fs, err := Files(dir, pattern)
-		if err == nil && len(fs) == 0 {
-			err = fmt.Errorf("[contributes] %s: %q matches nothing", key, pattern)
-		}
-		return fs, err
-	}
-	for _, p := range c.Themes {
-		fs, err := files("themes", p)
-		if err != nil {
-			return fail(err)
-		}
-		for _, f := range fs {
-			if _, err := (theme.File{Path: f}).Load(); err != nil {
-				return fail(err)
-			}
-			ds = append(ds, r.Theme(theme.File{Path: f}))
-		}
-	}
-	for _, p := range c.Languages {
-		fs, err := files("languages", p)
-		if err != nil {
-			return fail(err)
-		}
-		for _, f := range fs {
-			l, err := ReadLanguagePack(f)
-			if err != nil {
-				return fail(err)
-			}
-			l.Source = source
-			ds = append(ds, r.Language(l))
-		}
-	}
-	for _, p := range c.Prompts {
-		fs, err := files("prompts", p)
-		if err != nil {
-			return fail(err)
-		}
-		for _, f := range fs {
-			b, err := os.ReadFile(f)
-			if err != nil {
-				return fail(err)
-			}
-			name := strings.TrimSuffix(filepath.Base(f), filepath.Ext(f))
-			ds = append(ds, r.Contribute(registry.PromptPack{Name: name, Prompt: string(b), Source: source}))
-		}
-	}
-	if len(c.Help) > 0 {
-		pages := fstest.MapFS{}
-		for _, p := range c.Help {
-			fs, err := files("help", p)
-			if err != nil {
-				return fail(err)
-			}
-			for _, f := range fs {
-				b, err := os.ReadFile(f)
-				if err != nil {
-					return fail(err)
-				}
-				pages[filepath.Base(f)] = &fstest.MapFile{Data: b, Mode: 0o444}
-			}
-		}
-		ds = append(ds, r.HelpPages(registry.HelpSource{FS: pages, Source: source}))
-	}
-	for _, p := range c.Fonts {
-		fs, err := files("fonts", p)
-		if err != nil {
-			return fail(err)
-		}
-		for _, f := range fs {
-			ds = append(ds, r.Contribute(registry.Font{Name: filepath.Base(f), Path: f, Source: source}))
-		}
-	}
-	if c.Icons != "" {
-		icons := filepath.Join(dir, filepath.FromSlash(strings.TrimSuffix(c.Icons, "/")))
-		if !(Caller{Dir: dir}).Own(icons) {
-			return fail(fmt.Errorf("[contributes] icons: %q isn't a directory in the plugin", c.Icons))
-		}
-		es, err := os.ReadDir(icons)
-		if err != nil {
-			return fail(err)
-		}
-		for _, e := range es {
-			if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
-				continue
-			}
-			name := strings.TrimSuffix(e.Name(), filepath.Ext(e.Name()))
-			ds = append(ds, r.Contribute(registry.Icon{Name: name, Path: filepath.Join(icons, e.Name()), Source: source}))
-		}
-	}
 	return ds, nil
+}
+
+// dirIcons registers each icon in the plugin's icons directory, by its path.
+func dirIcons(r registry.Registry, dir, source, icons string, ds *disposables) error {
+	at := filepath.Join(dir, filepath.FromSlash(strings.TrimSuffix(icons, "/")))
+	if !(Caller{Dir: dir}).Own(at) {
+		return fmt.Errorf("[contributes] icons: %q isn't a directory in the plugin", icons)
+	}
+	es, err := os.ReadDir(at)
+	if err != nil {
+		return err
+	}
+	for _, e := range es {
+		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		name := strings.TrimSuffix(e.Name(), filepath.Ext(e.Name()))
+		*ds = append(*ds, r.Contribute(registry.Icon{Name: name, Path: filepath.Join(at, e.Name()), Source: source}))
+	}
+	return nil
 }
 
 // ContributeFS is Contribute for a plugin with no directory, its files in fsys (a bundled plugin's): its prompt
@@ -207,67 +238,36 @@ func ContributeFS(r registry.Registry, fsys fs.FS, source string, c Contributes)
 		return nil, errors.New("[contributes] themes, languages and fonts need the plugin's directory")
 	}
 	var ds disposables
-	fail := func(err error) (registry.Disposable, error) {
+	err := fsFiles(fsys).texts(r, source, c, &ds)
+	if err == nil && c.Icons != "" {
+		err = fsIcons(r, fsys, source, c.Icons, &ds)
+	}
+	if err != nil {
 		ds.Dispose()
 		return nil, err
 	}
-	files := func(key, pattern string) ([]string, error) {
-		ms, err := fs.Glob(fsys, strings.TrimSuffix(pattern, "/"))
-		if err == nil && len(ms) == 0 {
-			err = fmt.Errorf("[contributes] %s: %q matches nothing", key, pattern)
-		}
-		return ms, err
-	}
-	for _, p := range c.Prompts {
-		ms, err := files("prompts", p)
-		if err != nil {
-			return fail(err)
-		}
-		for _, f := range ms {
-			b, err := fs.ReadFile(fsys, f)
-			if err != nil {
-				return fail(err)
-			}
-			name := strings.TrimSuffix(path.Base(f), path.Ext(f))
-			ds = append(ds, r.Contribute(registry.PromptPack{Name: name, Prompt: string(b), Source: source}))
-		}
-	}
-	if len(c.Help) > 0 {
-		pages := fstest.MapFS{}
-		for _, p := range c.Help {
-			ms, err := files("help", p)
-			if err != nil {
-				return fail(err)
-			}
-			for _, f := range ms {
-				b, err := fs.ReadFile(fsys, f)
-				if err != nil {
-					return fail(err)
-				}
-				pages[path.Base(f)] = &fstest.MapFile{Data: b, Mode: 0o444}
-			}
-		}
-		ds = append(ds, r.HelpPages(registry.HelpSource{FS: pages, Source: source}))
-	}
-	if c.Icons != "" {
-		dir := strings.TrimSuffix(c.Icons, "/")
-		es, err := fs.ReadDir(fsys, dir)
-		if err != nil {
-			return fail(fmt.Errorf("[contributes] icons: %w", err))
-		}
-		for _, e := range es {
-			if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
-				continue
-			}
-			b, err := fs.ReadFile(fsys, path.Join(dir, e.Name()))
-			if err != nil {
-				return fail(err)
-			}
-			name := strings.TrimSuffix(e.Name(), path.Ext(e.Name()))
-			ds = append(ds, r.Contribute(registry.Icon{Name: name, Data: b, Source: source}))
-		}
-	}
 	return ds, nil
+}
+
+// fsIcons registers each icon in fsys's icons directory, by its bytes.
+func fsIcons(r registry.Registry, fsys fs.FS, source, icons string, ds *disposables) error {
+	dir := strings.TrimSuffix(icons, "/")
+	es, err := fs.ReadDir(fsys, dir)
+	if err != nil {
+		return fmt.Errorf("[contributes] icons: %w", err)
+	}
+	for _, e := range es {
+		if e.IsDir() || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
+		b, err := fs.ReadFile(fsys, path.Join(dir, e.Name()))
+		if err != nil {
+			return err
+		}
+		name := strings.TrimSuffix(e.Name(), path.Ext(e.Name()))
+		*ds = append(*ds, r.Contribute(registry.Icon{Name: name, Data: b, Source: source}))
+	}
+	return nil
 }
 
 type disposables []registry.Disposable
