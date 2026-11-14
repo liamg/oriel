@@ -81,10 +81,10 @@ func (a *APIs) viewCtx(vc uireg.ViewCtx) script.Table {
 	return t
 }
 
-//oriel:api name=decor cap=ui
+//oriel:api name=decorations cap=ui
 type Decor struct{ a *APIs }
 
-//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name)."
+//oriel:api doc="Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name)."
 func (d Decor) Provider(name string, fn *script.Fn) error {
 	d.a.own(d.a.Host.Decorations(name, uireg.DecorationFunc(func(ctx uireg.DecorationCtx) []uireg.Decoration {
 		out, err := d.a.VM.Call(fn, ctx.Name, ctx.Top+1, ctx.Bottom+1)

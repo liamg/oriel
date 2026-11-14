@@ -104,7 +104,7 @@ L.view.override("requests", function(s)            -- replace a built-in panel
 end)
 
 -- decorations
-L.decor.provider("coverage", function(buf, top, bot)
+L.decorations.provider("coverage", function(buf, top, bot)
   return L.coverage.lines(buf, top, bot):map(function(l)
     return { line = l.n, sign = l.hit and "▎" or "", hl = l.hit and "CovHit" or "CovMiss" }
   end)
