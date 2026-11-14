@@ -151,7 +151,7 @@ func (g *Git) commit(root string, a registry.Args, started time.Time) error {
 				return err
 			}
 		}
-		_, err := repo.CommitStaged(ctx, message)
+		_, err := repo.Commit(ctx, message, gitx.CommitOpts{})
 		return err
 	}, t)
 	return nil

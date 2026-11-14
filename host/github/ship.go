@@ -91,7 +91,7 @@ type ShipCommitReq struct {
 	Session  core.SessionID `json:"session"`
 	Project  string         `json:"project"`
 	Message  string         `json:"message"`
-	Files    []string       `json:"files,omitempty"`
+	Files    []string       `json:"files,omitempty"`    // none commits every change, untracked files too
 	Trailers []string       `json:"trailers,omitempty"` // added to the message, as git commit --trailer does
 }
 
@@ -247,7 +247,7 @@ func (x *GitHub) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err
 	}
 	var hash string
 	err = x.deps.Keyed(ctx, r.Session, "git commit", p.Name, func(ctx context.Context) (err error) {
-		hash, err = repo.CommitWith(ctx, r.Message, r.Trailers, r.Files...)
+		hash, err = repo.Commit(ctx, r.Message, gitx.CommitOpts{Paths: r.Files, All: len(r.Files) == 0, Trailers: r.Trailers})
 		return err
 	})
 	if err != nil {
