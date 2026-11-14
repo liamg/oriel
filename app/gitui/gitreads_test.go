@@ -38,7 +38,7 @@ func TestStagingReadsOnlyItsTree(t *testing.T) {
 	s.WriteFiles(api, map[string]string{"staged.go": "package api\n"})
 	s.Until("the new file seen", func() bool {
 		s.Frame()
-		st := kit.GitOf(s.Registry()).Tree(api).State()
+		st := kit.Git(s.Registry()).Tree(api).State()
 		if st == nil {
 			return false
 		}
@@ -92,7 +92,7 @@ func TestComingBackSeesWhatChangedAway(t *testing.T) {
 	s.Reopen()
 	s.Until("the file written while away", func() bool {
 		s.Frame()
-		st := kit.GitOf(s.Registry()).Tree("").State()
+		st := kit.Git(s.Registry()).Tree("").State()
 		if st == nil {
 			return false
 		}

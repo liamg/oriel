@@ -757,7 +757,7 @@ func (w *Window) WaitGit() {
 	deadline := time.Now().Add(Timeout)
 	for {
 		var busy bool
-		w.Do(func() error { busy = kit.GitOf(w.Host).Busy(); return nil })
+		w.Do(func() error { busy = kit.Git(w.Host).Busy(); return nil })
 		if !busy {
 			return
 		}

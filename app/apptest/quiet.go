@@ -59,7 +59,7 @@ func (s *Scene) Idle() {
 		if rd, ok := kit.ReadsOf(s.Registry()); ok && rd.Busy() {
 			busy = append(busy, "the window's reads")
 		}
-		if kit.GitOf(s.Registry()).Busy() {
+		if kit.Git(s.Registry()).Busy() {
 			busy = append(busy, "git")
 		}
 		if len(busy) == 0 {

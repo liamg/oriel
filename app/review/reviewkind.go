@@ -129,7 +129,7 @@ func (x *PRReview) prCheckout(ctx context.Context, spec *core.SessionSpec) error
 	if spec.PR == "" || spec.PRRef != "" {
 		return nil
 	}
-	src, ok := kit.SitesOf(x.h).URL(spec.PR)
+	src, ok := kit.Sites(x.h).URL(spec.PR)
 	if !ok || src.Checkout == nil {
 		return nil
 	}
@@ -148,7 +148,7 @@ func (x *PRReview) prName(spec *core.SessionSpec) {
 	if spec.PR == "" || spec.Name != "" || spec.Title != "" || spec.PRRemote == "" {
 		return
 	}
-	src, ok := kit.SitesOf(x.h).URL(spec.PR)
+	src, ok := kit.Sites(x.h).URL(spec.PR)
 	if !ok {
 		return
 	}
@@ -167,7 +167,7 @@ func (x *PRReview) prContext(ctx context.Context, spec *core.SessionSpec) {
 	if spec.PR == "" || spec.Context != "" && spec.PRBase != "" {
 		return
 	}
-	src, ok := kit.SitesOf(x.h).URL(spec.PR)
+	src, ok := kit.Sites(x.h).URL(spec.PR)
 	if !ok || src.Lookup == nil {
 		return
 	}

@@ -120,7 +120,7 @@ func (x *Perf) want() func() {
 	if dir == "" {
 		dir, _ = os.UserHomeDir()
 	}
-	poll := kit.PollsOf(x.h).Start(x.every())
+	poll := kit.Polls(x.h).Start(x.every())
 	first := plugin.Begin(x.h, "the Performance page's first sample")
 	if !x.work.Loop(func(context.Context) {
 		defer close(done)

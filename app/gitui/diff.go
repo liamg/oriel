@@ -324,7 +324,7 @@ func knownTarget(h plugin.Host, path string) (clean, dir, root string, err error
 		}
 		dir = filepath.Dir(dir)
 	}
-	if t := kit.GitOf(h).Holding(path); t.Root() != "" && kit.Within(path, t.Root()) {
+	if t := kit.Git(h).Holding(path); t.Root() != "" && kit.Within(path, t.Root()) {
 		root = t.Root()
 	}
 	return path, dir, root, nil
@@ -360,7 +360,7 @@ func (x *Diff) open(ctx registry.Ctx, path string, line int, old, head bool) err
 			st.reveal, st.goLine, st.goOld = true, line, old
 		}
 		st.focus = true
-		kit.GitOf(x.h).Tree(root)
+		kit.Git(x.h).Tree(root)
 		return x.h.Run(ctx, "view.open", registry.Args{"id": DiffView, "instance": diffInstance(root, head), "place": "tab"})
 	})
 }

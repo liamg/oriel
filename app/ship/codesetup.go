@@ -83,7 +83,7 @@ func (x *CodeSites) openSetup(hostname, name string) error {
 	}
 	a := &siteAsk{hostname: hostname, focus: true}
 	if name == "" {
-		name, _ = kit.SitesOf(x.h).Named(hostname)
+		name, _ = kit.Sites(x.h).Named(hostname)
 	}
 	if name != "" {
 		h, ok := registry.HostByName(x.h, name)
@@ -116,14 +116,14 @@ func (x *CodeSites) saveSetup() error {
 	}
 	hs, ok := a.site()
 	if !ok {
-		if err := kit.SitesOf(x.h).Remember(a.hostname, "none", ""); err != nil {
+		if err := kit.Sites(x.h).Remember(a.hostname, "none", ""); err != nil {
 			return err
 		}
 		x.ask = nil
 		return nil
 	}
 	if _, public := hs.PublicSite(a.hostname); !public {
-		if err := kit.SitesOf(x.h).Remember(a.hostname, hs.Name, hs.Site.API); err != nil {
+		if err := kit.Sites(x.h).Remember(a.hostname, hs.Name, hs.Site.API); err != nil {
 			a.err = err
 			return err
 		}
@@ -133,7 +133,7 @@ func (x *CodeSites) saveSetup() error {
 			a.err = err
 			return err
 		}
-	} else if !kit.SitesOf(x.h).Keyed(hs) {
+	} else if !kit.Sites(x.h).Keyed(hs) {
 		a.err = errors.New("paste the token first")
 		return a.err
 	}
@@ -183,7 +183,7 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 			}
 			if hs.Site.Secret != "" {
 				note := "not set yet"
-				if kit.SitesOf(x.h).Keyed(hs) {
+				if kit.Sites(x.h).Keyed(hs) {
 					note = "set: this replaces it"
 				}
 				kit.Heading(c, "token", "Token", note)

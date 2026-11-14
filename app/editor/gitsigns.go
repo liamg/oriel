@@ -135,7 +135,7 @@ func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
 		Help: "What the gutter marks a file's changes against: as the Explorer's scope has it (scope: Uncommitted's against the last commit, Changed's against the branch's base), where the branch left its base (branch), the last commit (head) or what's staged (index)."}))
 	g.Add(h.Option(registry.OptionSpec{Name: "git.blame.inline", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help: "Show who last changed the cursor's line, and when, after it."}))
-	g.Add(kit.GitOf(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) }))
+	g.Add(kit.Git(h).WatchWindow(func(_ string, paths []string) { g.stale("", paths) }))
 	g.Add(registry.DisposeFunc(func() {
 		g.mu.Lock()
 		defer g.mu.Unlock()
@@ -186,7 +186,7 @@ func (g *GitSigns) Deactivate(ctx context.Context) error {
 type gitFile struct{ tree, rel, abs string }
 
 // treeOf is f's work tree.
-func (g *GitSigns) treeOf(f gitFile) services.GitTree { return kit.GitOf(g.h).Tree(f.tree) }
+func (g *GitSigns) treeOf(f gitFile) services.GitTree { return kit.Git(g.h).Tree(f.tree) }
 
 // repo is f's repo; fileOf has found it.
 func (g *GitSigns) repo(f gitFile) gitx.Repo { return g.treeOf(f).Status().Repo() }
@@ -247,7 +247,7 @@ func (g *GitSigns) source(f gitFile, index bool) (gitSource, bool) {
 func (g *GitSigns) base() string {
 	base, _ := registry.Option[string](g.h.Options(), "git.gutter.base", g.h.Here())
 	if base == "scope" || base == "" {
-		if kit.GitOf(g.h).Scope() == gitx.Uncommitted {
+		if kit.Git(g.h).Scope() == gitx.Uncommitted {
 			return "head"
 		}
 		return "branch"
@@ -518,7 +518,7 @@ func (g *GitSigns) stage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error
 	}
 	contents := p.FileBytes()
 	repo := g.repo(f)
-	kit.GitOf(g.h).Run(func(ctx context.Context) error { return repo.StageHunk(ctx, f.rel, contents, h) })
+	kit.Git(g.h).Run(func(ctx context.Context) error { return repo.StageHunk(ctx, f.rel, contents, h) })
 	return nil
 }
 
@@ -535,7 +535,7 @@ func (g *GitSigns) unstage(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) err
 		}
 	}
 	repo := g.repo(f)
-	kit.GitOf(g.h).Run(func(ctx context.Context) error {
+	kit.Git(g.h).Run(func(ctx context.Context) error {
 		staged, err := repo.StagedHunks(ctx, f.rel)
 		if err != nil {
 			return err

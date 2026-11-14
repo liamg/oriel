@@ -10,8 +10,8 @@ import (
 	"github.com/liamg/oriel/registry"
 )
 
-// GitOf is the window's git trees (services.GitTreesService), or ones that know no repo.
-func GitOf(r registry.Registry) services.GitTrees {
+// Git is the window's git trees (services.GitTreesService), or ones that know no repo.
+func Git(r registry.Registry) services.GitTrees {
 	if t, ok := services.GitTreesOf(r); ok {
 		return t
 	}

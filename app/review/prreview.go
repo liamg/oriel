@@ -303,7 +303,7 @@ func (x *PRReview) setPick(id core.SessionID, item string, fn func(p *core.Revie
 
 // site is the code host the session's pull request is on.
 func (x *PRReview) site(se core.SessionState) (registry.HostSite, bool) {
-	return kit.SitesOf(x.h).URL(reviewPR(se))
+	return kit.Sites(x.h).URL(reviewPR(se))
 }
 
 // detail is the pull request as its host last said, asked for the first time it's wanted, and again once forgotten.
@@ -352,7 +352,7 @@ func (x *PRReview) refresh(url string) {
 		d.refreshing = true
 	}
 	x.mu.Unlock()
-	src, ok := kit.SitesOf(x.h).URL(url)
+	src, ok := kit.Sites(x.h).URL(url)
 	if busy || !ok || src.Lookup == nil {
 		return
 	}

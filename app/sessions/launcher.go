@@ -226,7 +226,7 @@ func (x *Launcher) pastedPR(before string) {
 	if len([]rune(x.prompt))-len([]rune(before)) < 2 || strings.ContainsAny(url, " \n") {
 		return
 	}
-	if _, ok := kit.SitesOf(x.h).URL(url); !ok {
+	if _, ok := kit.Sites(x.h).URL(url); !ok {
 		return
 	}
 	i := slices.IndexFunc(x.kinds, func(k core.KindSpec) bool { return startsFrom(k) == core.FromPR })

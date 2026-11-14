@@ -304,7 +304,7 @@ func (x *Editor) filesSource() uireg.PickerSource {
 	return uireg.PickerSource{ID: "files", Title: "Files", Prefix: "@", Order: 30, Loading: files.loading,
 		Key: func() any {
 			list, _ := files.list()
-			k := filesKey{n: len(list), st: kit.GitOf(x.h).Tree("").State(), open: strings.Join(openNames(), "\x00")}
+			k := filesKey{n: len(list), st: kit.Git(x.h).Tree("").State(), open: strings.Join(openNames(), "\x00")}
 			if len(list) > 0 {
 				k.first = &list[0]
 			}
@@ -312,7 +312,7 @@ func (x *Editor) filesSource() uireg.PickerSource {
 		},
 		Items: func(registry.Ctx, string) []uireg.PickerItem {
 			open := openNames()
-			tree := kit.GitOf(x.h).Tree("")
+			tree := kit.Git(x.h).Tree("")
 			st := tree.State()
 			list, _ := files.list()
 			var out []uireg.PickerItem

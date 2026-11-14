@@ -41,8 +41,8 @@ type PRReviews interface {
 	Reviews(id core.SessionID, url string) []string
 }
 
-// PRReviewsOf are the reviewers' latest verdicts on the PR at url in session id, from whichever plugin keeps them.
-func PRReviewsOf(r registry.Contributions, id core.SessionID, url string) []string {
+// ReviewVerdicts are the reviewers' latest verdicts on the PR at url in session id, from whichever plugin keeps them.
+func ReviewVerdicts(r registry.Contributions, id core.SessionID, url string) []string {
 	if s, ok := registry.ServiceOf[PRReviews](r, PRReviewsService); ok {
 		var out []string
 		registry.Call(func() error { out = s.Reviews(id, url); return nil })

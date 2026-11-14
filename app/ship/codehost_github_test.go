@@ -42,7 +42,7 @@ func TestGitHubHostAsksThroughTheWindowsNet(t *testing.T) {
 	if _, err := h.Requested(ctx, h.Sites[0]); err != nil {
 		t.Fatal(err)
 	}
-	g, err := kit.GitHubOf(s.Registry())
+	g, err := kit.GitHub(s.Registry())
 	if err != nil {
 		t.Fatal(err)
 	}

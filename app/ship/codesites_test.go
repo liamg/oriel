@@ -156,8 +156,8 @@ func TestCodeSetupDialog(t *testing.T) {
 	if v, ok := secrets.Secret("GITLAB_TOKEN:git.acme.corp"); !ok || v != "glpat-XYZ" {
 		t.Errorf("the token: %q %v", v, ok)
 	}
-	hs, _, ok := kit.SitesOf(s.Registry()).Remote("git@git.acme.corp:platform/api.git")
-	if !ok || hs.Name != "gitlab" || !kit.SitesOf(s.Registry()).Keyed(hs) {
+	hs, _, ok := kit.Sites(s.Registry()).Remote("git@git.acme.corp:platform/api.git")
+	if !ok || hs.Name != "gitlab" || !kit.Sites(s.Registry()).Keyed(hs) {
 		t.Fatalf("the server isn't set up: %+v %v", hs, ok)
 	}
 	if !strings.Contains(strings.Join(allowed, ","), "git.acme.corp GITLAB_TOKEN:git.acme.corp") {
@@ -170,7 +170,7 @@ func TestCodeSetupDialog(t *testing.T) {
 	s.ClickText("None of these")
 	s.ClickText("Save")
 	s.Until("the dialog gone", func() bool { return !strings.Contains(s.Text(), "Which code host") })
-	if name, _ := kit.SitesOf(s.Registry()).Named("git.other.org"); name != "none" {
+	if name, _ := kit.Sites(s.Registry()).Named("git.other.org"); name != "none" {
 		t.Errorf("git.other.org is %q", name)
 	}
 }

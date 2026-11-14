@@ -116,7 +116,7 @@ func TestTheWindowsTreeKeepsItsStatusAcrossAMove(t *testing.T) {
 	var back *gitx.State
 	cancel := kit.OnDirChanged(s.Registry(), "the window's tree on the way back", func(ev kit.DirChanged) {
 		if ev.Dir == repo.Dir {
-			back = kit.GitOf(s.Registry()).Tree("").State()
+			back = kit.Git(s.Registry()).Tree("").State()
 		}
 	})
 	defer cancel.Dispose()

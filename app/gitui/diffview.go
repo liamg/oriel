@@ -52,7 +52,7 @@ func (x *Diff) view(c *ui.Ctx, vc uireg.ViewCtx) {
 	x.wrap = x.wraps()
 	root := c.Next("diff")
 	c.Row("diff", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tDiffBg), Role: ui.RoleRegion, Label: "Diff", Help: "files/diff"}, func(c *ui.Ctx) {
-		trees := kit.GitOf(x.h)
+		trees := kit.Git(x.h)
 		tree := trees.Tree(st.root)
 		gs := tree.StateWithCounts()
 		widget.Async(c, "load", kit.LoadState(tree.Load()), widget.AsyncOpts{Policy: widget.Block, Label: "Reading " + filepath.Base(st.root) + "'s changes",

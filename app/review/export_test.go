@@ -62,4 +62,4 @@ func (x *PRReview) PRDetail(url string) (state string, done bool) {
 // RefreshPR asks the host for it again.
 func (x *PRReview) RefreshPR(url string) { x.refresh(url) }
 
-func kitSites(x *PRReview) services.CodeSites { return kit.SitesOf(x.h) }
+func kitSites(x *PRReview) services.CodeSites { return kit.Sites(x.h) }

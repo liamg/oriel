@@ -83,14 +83,14 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []hostapi.S
 	var wg sync.WaitGroup
 	for i, s := range ships {
 		out[i] = shipRead{Ship: s, GitRead: x.now()}
-		hs, repo, ok := kit.SitesOf(x.h).Remote(s.Origin)
+		hs, repo, ok := kit.Sites(x.h).Remote(s.Origin)
 		if !ok {
 			hostname, _, parsed := registry.ParseRemote(s.Origin)
 			if !parsed {
 				continue
 			}
-			if _, ok = kit.SitesOf(x.h).Probe(ctx, hostname); ok {
-				hs, repo, ok = kit.SitesOf(x.h).Remote(s.Origin)
+			if _, ok = kit.Sites(x.h).Probe(ctx, hostname); ok {
+				hs, repo, ok = kit.Sites(x.h).Remote(s.Origin)
 			}
 			if !ok {
 				out[i].UnknownHost = hostname
@@ -98,8 +98,8 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []hostapi.S
 			}
 		}
 		out[i].CodeHost, out[i].Site, out[i].Repo = &hs.CodeHost, hs.Site, repo
-		kit.SitesOf(x.h).Warm(ctx, hs)
-		if !kit.SitesOf(x.h).Keyed(hs) {
+		kit.Sites(x.h).Warm(ctx, hs)
+		if !kit.Sites(x.h).Keyed(hs) {
 			out[i].Unkeyed = true
 			continue
 		}
@@ -109,8 +109,8 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []hostapi.S
 		wg.Go(func() {
 			g := x.prFor(ctx, id, out[i], fresh)
 			out[i].PR, out[i].Checks, out[i].FailLine, out[i].HostError, out[i].PRRead = g.pr, g.checks, g.failLine, errText(g.err), g.at
-			if g.err != nil && kit.SitesOf(x.h).Refuse(hs, g.err) {
-				out[i].Unkeyed = !kit.SitesOf(x.h).Keyed(hs)
+			if g.err != nil && kit.Sites(x.h).Refuse(hs, g.err) {
+				out[i].Unkeyed = !kit.Sites(x.h).Keyed(hs)
 				x.cache.mu.Lock()
 				delete(x.cache.read, formKey(id, s.Project)+"/"+s.Branch)
 				x.cache.mu.Unlock()
@@ -389,7 +389,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 		h, repo, pr := *s.CodeHost, s.codeRepo(id), *s.PR
 		var ts []registry.ReviewThread
 		if err := registry.Call(func() (err error) { ts, err = h.Threads(ctx, repo, pr); return err }); err != nil {
-			kit.SitesOf(x.h).Refuse(registry.HostSite{CodeHost: h, Site: s.Site}, err)
+			kit.Sites(x.h).Refuse(registry.HostSite{CodeHost: h, Site: s.Site}, err)
 			x.h.Log().Debug("ship", "threads", s.Project, "err", err)
 			continue
 		}
@@ -405,7 +405,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 				Reviewer: t.Reviewer, State: t.State, URL: t.URL}
 			for _, n := range t.Comments {
 				rt.Comments = append(rt.Comments, hostapi.ReviewComment{Key: n.ID, User: n.Author, Body: n.Body, At: n.At,
-					Trusted: n.Member || kit.SitesOf(x.h).TrustedUser(n.Author)})
+					Trusted: n.Member || kit.Sites(x.h).TrustedUser(n.Author)})
 			}
 			req.Threads = append(req.Threads, rt)
 		}

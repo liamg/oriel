@@ -142,7 +142,7 @@ func (r *Rail) Activate(_ context.Context, h plugin.Host) error {
 // entries are the built-in rail entries: each project's panels, Requests and Ship, with their keys.
 func (r *Rail) entries(h plugin.Host) {
 	remote := func(project string) bool {
-		return kit.GitOf(h).Tree(kit.ProjectsHere(h).Dir(project)).Remote() != ""
+		return kit.Git(h).Tree(kit.ProjectsHere(h).Dir(project)).Remote() != ""
 	}
 	for _, p := range projectPanels {
 		e := uireg.RailEntry{Name: p.name, Icon: p.icon, Title: p.title, Command: "view.toggle", Args: kit.ViewArgs(p.view, p.title, p.size),
@@ -159,7 +159,7 @@ func (r *Rail) entries(h plugin.Host) {
 				if p.ReadOnly {
 					return ""
 				}
-				if n := r.uncommitted(kit.GitOf(h).Tree(p.Dir).State()); n > 0 {
+				if n := r.uncommitted(kit.Git(h).Tree(p.Dir).State()); n > 0 {
 					return fmt.Sprint(n)
 				}
 				return ""
@@ -626,7 +626,7 @@ func (r *Rail) stateLine(w kit.WindowProjects, p core.Project) stateLine {
 	}
 	faint := th.C(theme.FgFaint)
 	var out stateLine
-	st := kit.GitOf(r.h).Tree(p.Dir).State()
+	st := kit.Git(r.h).Tree(p.Dir).State()
 	branch := p.Branch
 	if st != nil && st.Branch != "" {
 		branch = st.Branch

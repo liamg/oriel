@@ -178,7 +178,7 @@ func crumbLabels(cs []explainCrumb) []string {
 // history is why · history's context: the commits that last touched the lines (blame), and the session's PR.
 func (x *Plugin) history(ctx context.Context, path string, snap text.Snapshot, r text.Range) string {
 	var b strings.Builder
-	if g := kit.GitOf(x.h).Tree(""); g.Status() != nil {
+	if g := kit.Git(x.h).Tree(""); g.Status() != nil {
 		if blame, err := g.Status().Repo().Blame(ctx, g.Rel(path), snap.Bytes()); err == nil {
 			a, z := spanLines(snap, r)
 			seen := map[string]bool{}

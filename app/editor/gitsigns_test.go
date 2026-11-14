@@ -269,7 +269,7 @@ func TestAnotherFilesChangeKeepsTheBase(t *testing.T) {
 	r.Write(map[string]string{"other.txt": "another file\n"})
 	s.Until("the other file's status", func() bool {
 		s.Frame()
-		st := kit.GitOf(s.Registry()).Tree("").State()
+		st := kit.Git(s.Registry()).Tree("").State()
 		if st == nil {
 			return false
 		}

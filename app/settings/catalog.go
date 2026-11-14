@@ -190,7 +190,7 @@ func (x *Catalog) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Options().Watch(o, x.kick))
 	}
 	x.work.Loop(func(ctx context.Context) {
-		t := kit.NewTicker(kit.PollsOf(x.h), registryEvery)
+		t := kit.NewTicker(kit.Polls(x.h), registryEvery)
 		defer t.Stop()
 		for {
 			select {

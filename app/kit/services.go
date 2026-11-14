@@ -54,8 +54,8 @@ func HasSessions(r registry.Registry) bool {
 	return err == nil
 }
 
-// SitesOf is the CodeSites service, or one that knows no sites.
-func SitesOf(r registry.Registry) services.CodeSites {
+// Sites is the CodeSites service, or one that knows no sites.
+func Sites(r registry.Registry) services.CodeSites {
 	if s, ok := services.CodeSitesOf(r); ok {
 		return s
 	}

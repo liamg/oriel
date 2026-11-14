@@ -97,8 +97,8 @@ func OnDirChanged(r registry.Registry, label string, fn func(DirChanged)) regist
 	})
 }
 
-// PollsOf is r's window's periodic work; nil, noting nothing, without a window.
-func PollsOf(r registry.Registry) *PollSet {
+// Polls is r's window's periodic work; nil, noting nothing, without a window.
+func Polls(r registry.Registry) *PollSet {
 	if w, ok := WindowOf(r); ok {
 		return w.Polls()
 	}

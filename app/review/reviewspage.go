@@ -66,7 +66,7 @@ type reviewDetail struct {
 
 func (x *Reviews) openPage(source string) error {
 	source = strings.TrimSpace(source)
-	if source != "" && !slices.ContainsFunc(kit.SitesOf(x.h).ReviewSources(), func(s registry.HostSite) bool { return s.Name == source }) {
+	if source != "" && !slices.ContainsFunc(kit.Sites(x.h).ReviewSources(), func(s registry.HostSite) bool { return s.Name == source }) {
 		return fmt.Errorf("no review source %q", source)
 	}
 	x.page = reviewsPage{open: true, source: source, scope: x.page.scope}
@@ -91,7 +91,7 @@ func (x *Reviews) setScope(scope string) error {
 
 // pageSources are the sources the page lists.
 func (x *Reviews) pageSources() []registry.HostSite {
-	return slices.DeleteFunc(kit.SitesOf(x.h).ReviewSources(), func(s registry.HostSite) bool {
+	return slices.DeleteFunc(kit.Sites(x.h).ReviewSources(), func(s registry.HostSite) bool {
 		return s.Requested == nil || x.page.source != "" && s.Name != x.page.source
 	})
 }

@@ -615,7 +615,7 @@ type prLine struct {
 
 func (x *Assistant) toolPRs(query string) func(registry.Ctx, registry.Args) (any, error) {
 	return func(ctx registry.Ctx, _ registry.Args) (any, error) {
-		g, err := kit.GitHubOf(x.h)
+		g, err := kit.GitHub(x.h)
 		if err != nil {
 			return nil, err
 		}
