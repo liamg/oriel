@@ -92,8 +92,8 @@ func (x *Lua) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.View(kit.OverlayPrefix+"inspect", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "inspect", Fn: x.inspectView}
 	})))
-	x.Add(h.Contribute(registry.InspectSection{Name: "KEYMAPS HERE", Order: 50, Rows: x.keymapRows, Source: "builtin:lua"}))
-	x.Add(h.Contribute(registry.InspectSection{Name: "VIEWS", Order: 60, Rows: x.viewRows, Source: "builtin:lua"}))
+	x.Add(h.Contribute(registry.InspectSection{Name: "KEYMAPS HERE", Order: 50, Rows: x.keymapRows}))
+	x.Add(h.Contribute(registry.InspectSection{Name: "VIEWS", Order: 60, Rows: x.viewRows}))
 	x.Reload(false)
 	w := kit.WatchPaths(h, LuaPoll, func() {
 		if x.Changed() {

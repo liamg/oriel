@@ -155,7 +155,7 @@ type Presenter struct {
 func (x *Presenter) Manifest() plugin.Manifest { return plugin.Manifest{ID: "presenter"} }
 
 func (x *Presenter) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Service{Name: kit.PresenterService, Impl: x, Source: "builtin:presenter"}))
+	x.Add(h.Contribute(registry.Service{Name: kit.PresenterService, Impl: x}))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}

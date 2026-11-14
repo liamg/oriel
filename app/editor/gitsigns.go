@@ -125,7 +125,7 @@ func (g *GitSigns) watch(tree string, st *gitx.Status) {
 }
 
 func (g *GitSigns) Activate(_ context.Context, h plugin.Host) error {
-	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }, Source: "builtin:gitsigns"}))
+	g.Add(h.Contribute(registry.Busy{Name: "gitsigns", Busy: func() bool { return g.busy.Busy() || g.typing.Held() }}))
 	g.h = h
 	g.typing = work.Still[any]{Wait: signsQuiet, Wake: func() { h.DecorationsChanged("git.hunks") }, Clock: h.Clock()}
 	g.bases, g.blames, g.hunks, g.previews = map[gitSource]*gitBase{}, map[gitFile]*gitBlame{}, map[bufAgainst]*bufHunks{}, map[gitFile]int{}
@@ -245,8 +245,7 @@ func (g *GitSigns) source(f gitFile, index bool) (gitSource, bool) {
 // base is what the gutter marks changes against, git.gutter.base resolved: scope follows the Explorer's, the last
 // commit while it shows Uncommitted, else the branch's base.
 func (g *GitSigns) base() string {
-	v, _, _ := g.h.Options().Get("git.gutter.base", g.h.Here())
-	base, _ := v.(string)
+	base, _ := registry.Option[string](g.h.Options(), "git.gutter.base", g.h.Here())
 	if base == "scope" || base == "" {
 		if kit.GitOf(g.h).Scope() == gitx.Uncommitted {
 			return "head"

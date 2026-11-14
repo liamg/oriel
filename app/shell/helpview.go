@@ -470,8 +470,8 @@ func (v *helpView) api(c *ui.Ctx, key any, ns string) {
 
 const helpSearchHits = 8
 
-func (v *helpView) toolSearch(ctx registry.Ctx, p map[string]any) (any, error) {
-	q := strings.TrimSpace(kit.ParamString(p, "query"))
+func (v *helpView) toolSearch(ctx registry.Ctx, p registry.Args) (any, error) {
+	q := strings.TrimSpace(p.Trimmed("query"))
 	if q == "" {
 		return nil, errors.New("search for what?")
 	}
@@ -491,8 +491,8 @@ type helpSection struct {
 	Text  string `json:"text"`
 }
 
-func (v *helpView) toolRead(ctx registry.Ctx, p map[string]any) (any, error) {
-	id := kit.ParamString(p, "id")
+func (v *helpView) toolRead(ctx registry.Ctx, p registry.Args) (any, error) {
+	id := p.Trimmed("id")
 	var out helpSection
 	ok := false
 	if err := kit.OnLoop(ctx, v.h, func() { out.Title, out.Text, ok = v.index().SectionText(id, v.expand) }); err != nil {
@@ -505,8 +505,8 @@ func (v *helpView) toolRead(ctx registry.Ctx, p map[string]any) (any, error) {
 	return out, nil
 }
 
-func (v *helpView) toolOpen(ctx registry.Ctx, p map[string]any) (any, error) {
-	id := kit.ParamString(p, "id")
+func (v *helpView) toolOpen(ctx registry.Ctx, p registry.Args) (any, error) {
+	id := p.Trimmed("id")
 	var err error
 	if e := kit.OnLoop(ctx, v.h, func() { err = v.show(id) }); e != nil {
 		return nil, e

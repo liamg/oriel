@@ -155,8 +155,7 @@ func (x *Ship) readMerge(a *mergeAsk) {
 				return
 			}
 			a.pr, a.methods, a.blockers = pr, methods.Allowed, blockers
-			v, _, _ := x.h.Options().Get("ship.merge_method", registry.At{Project: sessionProjectDir(se, p), Session: string(se.ID)})
-			want, _ := v.(string)
+			want, _ := registry.Option[string](x.h.Options(), "ship.merge_method", registry.At{Project: sessionProjectDir(se, p), Session: string(se.ID)})
 			pick := methods.Pick(kit.Unless(want, "repo"))
 			a.method = max(0, slices.Index(a.methods, pick))
 			ev := &ShipMerge{Session: string(se.ID), Project: p, Number: pr.Number, URL: pr.URL, Title: pr.Title, Method: pick}

@@ -120,7 +120,7 @@ func TestAgentToolsRunInTheApp(t *testing.T) {
 	var session string
 	w := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(lw.W), Setup: func(h plugin.Host) {
 		h.Contribute(registry.AgentTool{Name: "staging_logs", Desc: "Tail the staging logs", Params: map[string]string{"service": "string", "lines": "number?"},
-			ReadOnly: true, Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
+			ReadOnly: true, Run: func(ctx registry.Ctx, p registry.Args) (any, error) {
 				session = registry.SessionOf(ctx)
 				return "logs of " + p["service"].(string), nil
 			}})

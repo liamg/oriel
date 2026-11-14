@@ -78,7 +78,7 @@ func (x *Reviews) Manifest() plugin.Manifest { return plugin.Manifest{ID: "revie
 func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.lists, x.details = h, map[string]*reviewList{}, map[string]*reviewDetail{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
-	x.Add(h.Contribute(registry.Busy{Name: "reviews", Busy: x.asking, Source: "builtin:reviews"}))
+	x.Add(h.Contribute(registry.Busy{Name: "reviews", Busy: x.asking}))
 	for _, o := range x.options() {
 		x.Add(h.Option(o))
 	}
@@ -93,9 +93,9 @@ func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 	shown := func(string) bool { return x.any() }
 	x.Add(h.Contribute(kit.PagePlace("reviews", "Reviews", "reviews.open", &x.page.open)))
 	x.Add(h.Contribute(uireg.RailEntry{Name: "reviews", Icon: "pullrequest", Title: "Reviews", Command: "reviews.open", Scope: uireg.ScopeGlobalEntry,
-		Order: 6, Badge: x.count, BadgeTone: "rail.badge.review", Active: func(string) bool { return x.page.open }, Shown: shown, Source: "builtin:reviews"}))
+		Order: 6, Badge: x.count, BadgeTone: "rail.badge.review", Active: func(string) bool { return x.page.open }, Shown: shown}))
 	x.Add(h.Contribute(uireg.StartEntry{Name: "reviews", Icon: "pullrequest", Title: "Reviews", Desc: "Pull requests that ask for your review",
-		Command: "reviews.open", Order: 26, Shown: x.any, Source: "builtin:reviews", Note: func() string {
+		Command: "reviews.open", Order: 26, Shown: x.any, Note: func() string {
 			if n := x.count(); n > 0 {
 				return fmt.Sprintf("%d waiting on you", n)
 			}
@@ -105,7 +105,7 @@ func (x *Reviews) Activate(_ context.Context, h plugin.Host) error {
 		x.Add(h.Contribute(it))
 	}
 	x.Add(h.Contribute(registry.AgentTool{Name: "review_requests", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "reviews",
-		Source: "builtin:reviews", Run: x.toolReviewRequests,
+		Run:  x.toolReviewRequests,
 		Desc: "Pull requests waiting on the user's review, from every code host (GitHub…), oldest ask first, then those they're part way through: number, title, repo, url, author, source, state (new, re-requested, changes, commented), the team asked if not them, draft, when asked, and the session on it if there is one."}))
 	x.poll()
 	return nil
@@ -240,8 +240,7 @@ func (x *Reviews) poll() {
 
 // tooOld says r was asked longer ago than reviews.max_age; one with no time asked never is.
 func (x *Reviews) tooOld(r registry.ReviewRequest) bool {
-	v, _, _ := x.h.Options().Get("reviews.max_age", registry.At{})
-	d, _ := v.(time.Duration)
+	d, _ := registry.Option[time.Duration](x.h.Options(), "reviews.max_age", registry.At{})
 	if d <= 0 || r.Asked.IsZero() {
 		return false
 	}
@@ -253,8 +252,7 @@ func (x *Reviews) tooOld(r registry.ReviewRequest) bool {
 }
 
 func (x *Reviews) pollEvery() time.Duration {
-	v, _, _ := x.h.Options().Get("reviews.poll", registry.At{})
-	if d, ok := v.(time.Duration); ok && d > 0 {
+	if d, ok := registry.Option[time.Duration](x.h.Options(), "reviews.poll", registry.At{}); ok && d > 0 {
 		return d
 	}
 	return 5 * time.Minute
@@ -769,7 +767,7 @@ type reviewLine struct {
 
 // toolReviewRequests is the assistant's review_requests: every source's requests as the page lists them, asked for
 // first when they're stale, and why a source has none.
-func (x *Reviews) toolReviewRequests(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Reviews) toolReviewRequests(ctx registry.Ctx, _ registry.Args) (any, error) {
 	sources := kit.SitesOf(x.h).ReviewSources()
 	var waits []<-chan struct{}
 	for _, s := range sources {

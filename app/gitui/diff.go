@@ -140,7 +140,7 @@ func (x *Diff) Manifest() plugin.Manifest { return plugin.Manifest{ID: "diff"} }
 
 func (x *Diff) Activate(_ context.Context, h plugin.Host) error {
 	// A diff waiting out diffRemakeGap is work that ends too: its remaking starts at the frame after.
-	x.Add(h.Contribute(registry.Busy{Name: "diff", Busy: func() bool { return x.busy.Busy() || x.remaking() }, Source: "builtin:diff"}))
+	x.Add(h.Contribute(registry.Busy{Name: "diff", Busy: func() bool { return x.busy.Busy() || x.remaking() }}))
 	x.h = h
 	x.by, x.files, x.loading = map[string]*diffState{}, map[diffKey]*diffFile{}, map[diffKey]bool{}
 	x.started, x.waking, x.styled = map[diffKey]time.Time{}, map[diffKey]bool{}, map[diffKey]bool{}

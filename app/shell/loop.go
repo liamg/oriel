@@ -416,8 +416,8 @@ func chosenTheme(reg registry.Registry, osLight bool) (*theme.Resolved, error) {
 	if v, ok := registry.Option[string](reg.Options(), "ui.theme", registry.At{}); ok {
 		name = v
 	}
-	if v, _, err := reg.Options().Get("ui.variant", registry.At{}); err == nil {
-		variant = theme.Variant(v.(string))
+	if v, ok := registry.Option[string](reg.Options(), "ui.variant", registry.At{}); ok {
+		variant = theme.Variant(v)
 	}
 	if variant != theme.Dark && variant != theme.Light {
 		variant = theme.Dark

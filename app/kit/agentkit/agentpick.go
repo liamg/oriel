@@ -78,8 +78,7 @@ type BackendPick struct {
 
 // SettingBackend is sandbox.backend.
 func SettingBackend(h plugin.Host) string {
-	v, _, _ := h.Options().Get("sandbox.backend", registry.At{})
-	s, _ := v.(string)
+	s, _ := registry.Option[string](h.Options(), "sandbox.backend", registry.At{})
 	return s
 }
 

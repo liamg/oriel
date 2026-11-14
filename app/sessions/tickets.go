@@ -59,7 +59,7 @@ type ticketRow struct {
 func (x *Tickets) Manifest() plugin.Manifest { return plugin.Manifest{ID: "tickets"} }
 
 func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "tickets", Busy: x.work.Busy, Source: "builtin:tickets"}))
+	x.Add(h.Contribute(registry.Busy{Name: "tickets", Busy: x.work.Busy}))
 	x.h, x.lists, x.details = h, map[string]*ticketList{}, map[string]*ticketDetail{}
 	x.Add(h.Contribute(kit.PagePlace("tickets", "Tickets", "tickets.open", &x.page.open)))
 	x.Add(h.Picker(x.source()))
@@ -91,7 +91,7 @@ func (x *Tickets) Activate(_ context.Context, h plugin.Host) error {
 		return registry.Verdict{}, nil
 	}))
 	x.Add(h.Contribute(registry.AgentTool{Name: "my_tickets", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "tickets",
-		Source: "builtin:tickets", Run: x.toolMyTickets,
+		Run:  x.toolMyTickets,
 		Desc: "The tickets assigned to the user in every ticket tracker (Linear…), most pressing first: key, tracker, title, state, project, priority, whether it's blocked, its PR and URL."}))
 	return nil
 }
@@ -559,7 +559,7 @@ type myTicket struct {
 
 // toolMyTickets is the assistant's my_tickets: every tracker's tickets as the omnibox lists them, asked for first
 // when they're stale, and why a tracker has none.
-func (x *Tickets) toolMyTickets(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Tickets) toolMyTickets(ctx registry.Ctx, _ registry.Args) (any, error) {
 	trackers := registry.TicketTrackers(x.h)
 	var waits []<-chan struct{}
 	for _, tr := range trackers {
