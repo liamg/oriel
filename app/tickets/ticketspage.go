@@ -1,4 +1,4 @@
-package sessions
+package tickets
 
 import (
 	"cmp"

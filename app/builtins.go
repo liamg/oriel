@@ -19,6 +19,7 @@ import (
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/app/stats"
 	"github.com/liamg/oriel/app/terminal"
+	"github.com/liamg/oriel/app/tickets"
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/app/watches"
 	"github.com/liamg/oriel/plugin"
@@ -52,7 +53,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		p.Quit, &settings.SandboxSettings{Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
 		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &appsessions.Jobs{}, &appsessions.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
 		&updates.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, agentui.NewVoiceEntries(voice), voice,
-		&agentui.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &appsessions.Tickets{}, &review.Reviews{}, &ship.GitHubHost{Client: cfg.GitHubClient},
+		&agentui.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &ship.GitHubHost{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
 		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &ship.GitHub{}, &settings.Secrets{},
 		&luaconfig.Lua{Dir: c.ConfigDir}, &settings.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,

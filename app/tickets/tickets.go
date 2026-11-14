@@ -1,4 +1,6 @@
-package sessions
+// Package tickets is the tickets page, the omnibox's tickets and what follows a session started from a ticket,
+// over every registry.TicketTracker.
+package tickets
 
 import (
 	"cmp"
