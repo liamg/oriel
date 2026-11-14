@@ -21,7 +21,13 @@ type File struct {
 }
 
 // Parse reads every non-test Go file under root's dirs, skipping vendor and testdata.
-func Parse(root string, dirs ...string) ([]File, error) {
+func Parse(root string, dirs ...string) ([]File, error) { return parse(root, false, dirs) }
+
+// ParseAll reads every Go file under root's dirs, tests too, skipping vendor and testdata.
+func ParseAll(root string, dirs ...string) ([]File, error) { return parse(root, true, dirs) }
+
+// parse reads the Go files under root's dirs, tests among them when tests is set.
+func parse(root string, tests bool, dirs []string) ([]File, error) {
 	var out []File
 	for _, d := range dirs {
 		err := filepath.WalkDir(filepath.Join(root, d), func(p string, e fs.DirEntry, err error) error {
@@ -34,7 +40,7 @@ func Parse(root string, dirs ...string) ([]File, error) {
 				}
 				return nil
 			}
-			if !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") {
+			if !strings.HasSuffix(p, ".go") || !tests && strings.HasSuffix(p, "_test.go") {
 				return nil
 			}
 			fset := token.NewFileSet()
