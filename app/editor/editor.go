@@ -86,7 +86,7 @@ type Editor struct {
 func (x *Editor) Manifest() plugin.Manifest { return plugin.Manifest{ID: "editor"} }
 
 func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "editor", Busy: func() bool { return x.busy.Busy() || x.listed != nil && x.listed.busy.Busy() }, Source: "builtin:editor"}))
+	x.Add(h.Contribute(registry.Busy{Name: "editor", Busy: func() bool { return x.busy.Busy() || x.listed != nil && x.listed.busy.Busy() }}))
 	x.h = h
 	x.dir = editorDir(h)
 	x.docs, x.rows, x.blockPx = map[*text.Buffer]*highlighter{}, map[vim.WindowID]int{}, map[vim.WindowID]float32{}
@@ -136,7 +136,7 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 		}
 		return out
 	})
-	x.Add(h.Contribute(registry.Service{Name: services.EditorsService, Impl: editors{x}, Source: "builtin:editor"}))
+	x.Add(h.Contribute(registry.Service{Name: services.EditorsService, Impl: editors{x}}))
 	x.e.SetSettings(vimreg.Settings{Options: h.Options(), At: func(buf, win string) registry.At {
 		at := h.Here()
 		at.Buffer, at.Window = buf, win

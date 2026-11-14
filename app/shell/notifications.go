@@ -82,7 +82,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.Add(h.Framed(n.panel.shown.Framed))
 	n.Add(registry.DisposeFunc(n.panel.shown.Drop))
 	n.Add(registry.DisposeFunc(n.writes.Wait))
-	n.Add(h.Contribute(registry.Busy{Name: "notices", Busy: n.writes.Busy, Source: "builtin:notices"}))
+	n.Add(h.Contribute(registry.Busy{Name: "notices", Busy: n.writes.Busy}))
 	cfg := n.sh.cfg
 	n.Add(h.OnFault(func(f registry.Fault) {
 		cfg.Store.Apply(core.Notified{Notice: faultNotice(f, cfg.Logs, cfg.ConfigDir, n.sh.now())})
@@ -166,7 +166,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 	n.Add(h.View("statusline.left.50-counts", uireg.GlobalView{View: uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "status", Fn: n.status}
 	})}))
-	n.Add(h.Contribute(uireg.InboxSource{Name: "notices", Cards: n.inboxCards, Source: "builtin:notices"}))
+	n.Add(h.Contribute(uireg.InboxSource{Name: "notices", Cards: n.inboxCards}))
 	n.Add(h.View("log", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "log", Fn: n.panel.build}
 	})))

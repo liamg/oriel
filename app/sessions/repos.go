@@ -65,7 +65,7 @@ func repoOptions() []registry.OptionSpec {
 func (x *Repos) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.details = h, map[core.RepoID]*repoDetail{}
 	x.Add(&x.work)
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.NewRepoKind}, Source: "builtin:repos"}))
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.NewRepoKind}}))
 	for _, sp := range repoOptions() {
 		x.Add(h.Option(sp))
 	}

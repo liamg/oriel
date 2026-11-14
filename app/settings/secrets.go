@@ -58,7 +58,7 @@ func (x *Secrets) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Keymap(registry.Keymap{Mode: SecretDialogMode, Keys: "<D-CR>", Command: "secrets.dialog.save", Desc: "Save"}))
 	x.Add(h.View(kit.OverlayPrefix+"secret", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "secret", Fn: x.dialog} })))
 	x.rows = map[string]*secretRow{}
-	x.Add(h.Contribute(uireg.SettingsSection{Name: "secrets", Build: x.section, Source: "builtin:secrets", Count: func() int {
+	x.Add(h.Contribute(uireg.SettingsSection{Name: "secrets", Build: x.section, Count: func() int {
 		n := 0
 		for _, d := range x.declared() {
 			if _, ok := x.h.Secrets().Secret(d.name); ok {

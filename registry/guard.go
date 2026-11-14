@@ -209,9 +209,7 @@ func (r *reg) sourceOf(kind, id string) string {
 		return ""
 	}
 	if c, ok := r.Contribution(kind, id); ok {
-		if s, ok := c.(Sourced); ok {
-			return s.ContributionSource()
-		}
+		return SourceOf(c)
 	}
 	return ""
 }

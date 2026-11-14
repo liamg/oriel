@@ -17,7 +17,7 @@ func (x *Launcher) addQuick(h plugin.Host, has func(registry.Args) bool) {
 		Available: has, Run: func(registry.Ctx, registry.Args) error { x.quick(); return nil }}))
 	x.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-N>", Command: "session.quick.start", Desc: "Quick Session"}))
 	x.Add(h.Contribute(uireg.StartEntry{Name: "session.quick.start", Icon: "agent", Title: "Quick Session",
-		Desc: "A work session on your defaults, no repos and no questions", Command: "session.quick.start", Order: 15, Source: "builtin:launcher"}))
+		Desc: "A work session on your defaults, no repos and no questions", Command: "session.quick.start", Order: 15}))
 	for _, it := range []registry.MenuItem{
 		{Name: "session.quick.start", Label: "Quick session", Order: 10, Command: "session.quick.start"},
 		{Name: "session.new", Label: "New session…", Order: 20, Command: "session.new"},

@@ -100,9 +100,9 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(registry.DisposeFunc(x.conv.Close))
 	x.Add(&x.work)
 	x.Add(registry.DisposeFunc(x.places.Wait))
-	x.Add(h.Contribute(registry.Busy{Name: "assistant", Busy: x.places.Busy, Source: "builtin:assistant"}))
-	x.Add(h.Contribute(registry.AgentOwner{Agent: kit.AssistantAgent, Confirm: x.confirm, Acted: x.acted, Source: "builtin:assistant"}))
-	x.Add(h.Contribute(uireg.InboxSource{Name: kit.AssistantAgent, Cards: x.inboxCards, Source: "builtin:assistant"}))
+	x.Add(h.Contribute(registry.Busy{Name: "assistant", Busy: x.places.Busy}))
+	x.Add(h.Contribute(registry.AgentOwner{Agent: kit.AssistantAgent, Confirm: x.confirm, Acted: x.acted}))
+	x.Add(h.Contribute(uireg.InboxSource{Name: kit.AssistantAgent, Cards: x.inboxCards}))
 	for _, t := range x.tools() {
 		t.For, t.Source = []string{kit.AssistantAgent}, "builtin:assistant"
 		x.Add(h.Contribute(t))
@@ -118,8 +118,7 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 			Args: registry.Args{"n": n}, Desc: fmt.Sprintf("Pick row %d", n)}))
 	}
 	x.Add(h.Contribute(uireg.RailEntry{Name: "assistant", Title: "Ori", Command: "assistant.toggle", Scope: uireg.ScopeGlobalEntry,
-		Order: 85, Bottom: true, Badge: x.unread, Active: func(string) bool { return x.open }, Source: "builtin:assistant",
-		Draw: func(c *ui.Ctx, key any, size float32, _ render.Color) {
+		Order: 85, Bottom: true, Badge: x.unread, Active: func(string) bool { return x.open }, Draw: func(c *ui.Ctx, key any, size float32, _ render.Color) {
 			ori(c, key, size, oriMood{busy: x.conv.Busy(), unread: x.unread() > 0})
 		}}))
 	x.win.Rect = x.loadPlace()

@@ -192,15 +192,14 @@ func DebugEntries() *kit.Entries {
 }
 
 func (x *Debug) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "debug", Busy: x.work.Busy, Source: "builtin:debug"}))
+	x.Add(h.Contribute(registry.Busy{Name: "debug", Busy: x.work.Busy}))
 	x.h = h
 	x.bps = map[string][]debugBreakpoint{}
 	x.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "breakpoints and watches", Path: x.StateFile, Load: x.load})
 	x.Add(registry.DisposeFunc(x.state.Close))
 	x.Add(kit.OnDirChanged(h, "a debug session is of its directory", func(kit.DirChanged) { x.follow() }))
 	x.Add(h.Decorations("debug", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
-	x.Add(h.Contribute(registry.GutterAction{Name: "debug.breakpoint", Command: "debug.breakpoint.toggle", Order: 50, When: x.debuggable,
-		Source: "builtin:debug"}))
+	x.Add(h.Contribute(registry.GutterAction{Name: "debug.breakpoint", Command: "debug.breakpoint.toggle", Order: 50, When: x.debuggable}))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}

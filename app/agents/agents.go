@@ -40,7 +40,7 @@ func (x *Claude) Activate(_ context.Context, h plugin.Host) error {
 		}}
 	}
 	x.Add(h.Contribute(services.AgentProvider{Name: "claude", Title: "Claude", Mark: "C", Tone: "usage.weekly", Order: 10,
-		Provider: p, Source: "builtin:claude"}))
+		Provider: p}))
 	return nil
 }
 
@@ -57,7 +57,7 @@ func (x *Codex) Activate(_ context.Context, h plugin.Host) error {
 	if p == nil {
 		p = &codex.Provider{}
 	}
-	x.Add(h.Contribute(services.AgentProvider{Name: "codex", Title: "Codex", Mark: "CX", Order: 20, Provider: p, Source: "builtin:codex"}))
+	x.Add(h.Contribute(services.AgentProvider{Name: "codex", Title: "Codex", Mark: "CX", Order: 20, Provider: p}))
 	return nil
 }
 

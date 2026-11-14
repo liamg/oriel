@@ -175,7 +175,7 @@ func (x *explorerHunks) mark() hunksMark {
 func (e *Explorer) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explorer"} }
 
 func (e *Explorer) Activate(_ context.Context, h plugin.Host) error {
-	e.Add(h.Contribute(registry.Busy{Name: "explorer", Busy: e.hunks.busy.Busy, Source: "builtin:explorer"}))
+	e.Add(h.Contribute(registry.Busy{Name: "explorer", Busy: e.hunks.busy.Busy}))
 	e.h = h
 	if e.Git != nil {
 		e.Git.scope = e.scope

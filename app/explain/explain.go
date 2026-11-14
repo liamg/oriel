@@ -150,12 +150,12 @@ func (cd *explainCard) breadcrumb() string {
 func (x *Plugin) Manifest() plugin.Manifest { return plugin.Manifest{ID: "explain"} }
 
 func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "explain", Busy: x.Busy, Source: "builtin:explain"}))
+	x.Add(h.Contribute(registry.Busy{Name: "explain", Busy: x.Busy}))
 	x.h = h
 	x.parsers, x.bufs, x.computing = map[string]*syntax.Parser{}, map[*text.Buffer]*fileUnits{}, map[*text.Buffer]bool{}
 	x.seen, x.later = map[*text.Buffer]seenVersion{}, map[*text.Buffer]*heldUnits{}
 	x.bases, x.answers, x.kept = map[string]*explainBase{}, map[answerKey]*answer{}, map[string]*answer{}
-	x.Add(h.Contribute(registry.Service{Name: kit.ExplainService, Impl: x, Source: "builtin:explain"}))
+	x.Add(h.Contribute(registry.Service{Name: kit.ExplainService, Impl: x}))
 	if st := kit.GitOf(h).Tree("").Status(); st != nil {
 		x.Add(registry.DisposeFunc(st.Watch(func([]string) {
 			x.mu.Lock()
@@ -217,7 +217,7 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		x.Add(h.Keymap(k))
 	}
-	x.Add(h.Contribute(registry.KeyLayer{Name: "explain.card", Mode: ExplainKeyMode, Active: x.focused, Source: "builtin:explain"}))
+	x.Add(h.Contribute(registry.KeyLayer{Name: "explain.card", Mode: ExplainKeyMode, Active: x.focused}))
 	x.Add(h.Decorations("explain", uireg.KeyedDecorations{Key: x.decorationKey, Make: x.decorations}))
 	for _, it := range []registry.MenuItem{
 		{Name: "explain.this", Label: "Explain this", Key: "␣ e", Group: "agent", Order: 5, Command: "explain.this"},
@@ -230,9 +230,8 @@ func (x *Plugin) Activate(_ context.Context, h plugin.Host) error {
 	}
 	x.Add(h.View(ChangedUnitsView, changedUnitsView{x}))
 	x.Add(h.Contribute(registry.EditorAction{Name: "explain.units", Label: "explain by unit", Command: "explain.units", Order: 60,
-		Help: "editor/pane#explain", Source: "builtin:explain",
-		When: func(path string) bool { _, n := x.changedIn(path); return n > 0 },
-		On:   func(registry.EditorWindow) bool { return h.Layout().Find(layout.ViewRef{ID: ChangedUnitsView}) != nil },
+		Help: "editor/pane#explain", When: func(path string) bool { _, n := x.changedIn(path); return n > 0 },
+		On: func(registry.EditorWindow) bool { return h.Layout().Find(layout.ViewRef{ID: ChangedUnitsView}) != nil },
 		Note: func(w registry.EditorWindow) string {
 			hunks, n := x.changedIn(w.Path)
 			return fmt.Sprintf("%d changed %s · %d %s", n, kit.Plural(n, "unit", "units"), hunks, kit.Plural(hunks, "hunk", "hunks"))

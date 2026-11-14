@@ -104,7 +104,7 @@ type shipReport struct {
 func (x *Ship) Manifest() plugin.Manifest { return plugin.Manifest{ID: "ship"} }
 
 func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "ship", Busy: x.busy.Busy, Source: "builtin:ship"}))
+	x.Add(h.Contribute(registry.Busy{Name: "ship", Busy: x.busy.Busy}))
 	x.h = h
 	x.reports = map[core.SessionID]*shipReport{}
 	x.commits, x.prs, x.renaming = map[string]*commitForm{}, map[string]*prForm{}, map[string]*renameForm{}
@@ -118,9 +118,9 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
 	x.Add(h.Contribute(uireg.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
-	x.Add(h.Contribute(registry.Service{Name: registry.ShipsService, Impl: ships{x}, Source: "builtin:ship"}))
-	x.Add(h.Contribute(registry.CardChips{Name: "pr", Chips: x.prChips, Source: "builtin:ship"}))
-	x.Add(h.Contribute(registry.SessionDone{Name: "ship.merged", Done: x.shipped, Source: "builtin:ship"}))
+	x.Add(h.Contribute(registry.Service{Name: registry.ShipsService, Impl: ships{x}}))
+	x.Add(h.Contribute(registry.CardChips{Name: "pr", Chips: x.prChips}))
+	x.Add(h.Contribute(registry.SessionDone{Name: "ship.merged", Done: x.shipped}))
 	x.gates()
 	x.activateMerge(h)
 	x.shadowEntries()

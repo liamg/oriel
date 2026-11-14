@@ -117,7 +117,7 @@ func (x *Inbox) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.View(kit.OverlayPrefix+"inbox", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "inbox", Fn: x.overlay}
 	})))
-	x.Add(h.Contribute(registry.Service{Name: kit.InboxService, Impl: inboxService{x}, Source: "builtin:inbox"}))
+	x.Add(h.Contribute(registry.Service{Name: kit.InboxService, Impl: inboxService{x}}))
 	x.Add(h.Option(registry.OptionSpec{Name: PromptPauseOption, Type: registry.Duration, Default: 3 * time.Second, Scopes: registry.ScopeUser,
 		Validate: func(v any) error {
 			if v.(time.Duration) < 0 {

@@ -366,7 +366,7 @@ text "CTX" @36,896.52 #7c7566 JetBrains Mono 10.5
 rect 944,12 440x96.43408 fill #121210 radius 8 stroke 1 #ff5f6d8c
 rect 958,27.154785 7x7 fill #ff5f6d radius 3.5
 text "ERROR" @973,34.074783 #ff5f6d JetBrains Mono 9.5
-text "core" @1017.65,34.074783 #7c7566 JetBrains Mono 9.5
+text "init.lua:63" @1017.65,34.074783 #7c7566 JetBrains Mono 9.5
 text "✕" @1361.4062,34.65625 #7c7566 Inter 11
 text "init.lua:64: oriel.http.get isn't available until network approvals" @958,58.418945 #ece6d8 Inter 12.5
 text "Open at line" @958,86.79932 #ffd23f Inter 12

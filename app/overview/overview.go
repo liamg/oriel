@@ -118,7 +118,7 @@ func (o *Overview) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		o.Add(h.Contribute(p))
 	}
-	o.Add(h.Contribute(registry.Busy{Name: "overview", Busy: o.busy.Busy, Source: "builtin:overview"}))
+	o.Add(h.Contribute(registry.Busy{Name: "overview", Busy: o.busy.Busy}))
 	o.Add(h.View(kit.OverviewView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "overview", Fn: o.build}
 	})))

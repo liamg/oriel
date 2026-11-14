@@ -79,7 +79,7 @@ type quiz struct {
 func (x *Verify) Manifest() plugin.Manifest { return plugin.Manifest{ID: "verify"} }
 
 func (x *Verify) Activate(_ context.Context, h plugin.Host) error {
-	x.Add(h.Contribute(registry.Busy{Name: "verify", Busy: x.busy.Busy, Source: "builtin:verify"}))
+	x.Add(h.Contribute(registry.Busy{Name: "verify", Busy: x.busy.Busy}))
 	x.h = h
 	x.quizzes = map[core.SessionID]*quiz{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())

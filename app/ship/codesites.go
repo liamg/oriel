@@ -408,8 +408,8 @@ func (x *CodeSites) Activate(_ context.Context, h plugin.Host) error {
 	for _, o := range x.sites.options() {
 		x.Add(h.Option(o))
 	}
-	x.Add(h.Contribute(registry.Service{Name: registry.CodeSitesService, Impl: x.sites, Source: "builtin:code-sites"}))
-	x.Add(h.Contribute(registry.Service{Name: kit.SiteTokensService, Impl: x.sites, Source: "builtin:code-sites"}))
+	x.Add(h.Contribute(registry.Service{Name: registry.CodeSitesService, Impl: x.sites}))
+	x.Add(h.Contribute(registry.Service{Name: kit.SiteTokensService, Impl: x.sites}))
 	x.activateSetup(h)
 	return nil
 }
