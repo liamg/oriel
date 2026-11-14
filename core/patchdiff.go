@@ -11,13 +11,15 @@ func PatchDiff(path, patch string) *FileDiff {
 	if patch == "" {
 		return d
 	}
-	oldN, newN := 0, 0
+	oldN, newN, inHunk := 0, 0, false
 	for _, l := range strings.Split(strings.TrimSuffix(patch, "\n"), "\n") {
 		switch {
 		case l == "":
 		case strings.HasPrefix(l, "@@"):
 			oldN, newN = hunkStart(l)
-		case strings.HasPrefix(l, "---"), strings.HasPrefix(l, "+++"), strings.HasPrefix(l, `\`):
+			inHunk = true
+		case !inHunk && (strings.HasPrefix(l, "---") || strings.HasPrefix(l, "+++")), strings.HasPrefix(l, `\`):
+			// the file headers, before the first hunk; a removed "-- x" line inside one is a line
 		case strings.HasPrefix(l, "+"):
 			d.Lines = append(d.Lines, DiffLine{Op: "+", New: newN, Text: l[1:]})
 			d.Added++
