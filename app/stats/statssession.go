@@ -68,7 +68,7 @@ func (x *Plugin) sessionTab(c *ui.Ctx, id core.SessionID) {
 	c.Column("tab", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase), Role: ui.RoleRegion, Label: "Session stats",
 		Help: "agent/stats#session"}, func(c *ui.Ctx) {
 		x.tabHeader(c, se, d, st)
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		widget.Async(c, "load", load, widget.AsyncOpts{Policy: widget.Block, Label: "Reading the session's transcript",
 			Retry: func() { x.retryDetail(id) }, Help: "agent/stats#session"}, func(c *ui.Ctx) {
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12}, func(c *ui.Ctx) {
@@ -290,7 +290,7 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 		case len(d.Repos) > 1:
 			kit.Note(c, "n", "each request charged to the repo its file tool calls worked in")
 		}
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Row("mh", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", "MODELS", kit.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)

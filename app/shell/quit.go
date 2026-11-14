@@ -278,7 +278,7 @@ func (x *quitDialog) drainView(c *ui.Ctx) {
 					c.Text("title", "SHUTTING DOWN", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
 						Color: th.C(theme.Fg)})
 				})
-				c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "rule")
 				c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 24, R: 24, T: 18, B: 20}, Gap: 12}, func(c *ui.Ctx) {
 					x.stoppingBody(c, r, w-48)
 				})
@@ -296,11 +296,11 @@ func (x *quitDialog) drainView(c *ui.Ctx) {
 					hide()
 				}
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 24, R: 24, T: 18, B: 20}, Gap: 12}, func(c *ui.Ctx) {
 				x.drainBody(c, r, busy, jobs, w-48)
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 12, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 				if widget.Button(c, "dismiss", "Cancel", widget.ButtonOpts{Key: "esc", Disabled: r.handing.Load(), Help: quitHelp}) {
 					hide()

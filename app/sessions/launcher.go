@@ -439,13 +439,13 @@ func (x *Launcher) build(c *ui.Ctx) {
 			Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Role: ui.RoleDialog, Label: "New session", Help: "agent/launcher"},
 			func(c *ui.Ctx) {
 				x.header(c)
-				c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "rule")
 				c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 					c.Column("form", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 24, R: 24, T: 20, B: 20}, Gap: 22, ScrollY: true}, x.form)
-					c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+					widget.VRule(c, "divider")
 					c.Column("side", ui.Style{W: ui.Px(330), H: ui.Flex(1), Pad: ui.Pad(16), Gap: 10}, x.side)
 				})
-				c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "rule2")
 				x.footer(c)
 			})
 	}) || escaped {
@@ -481,20 +481,20 @@ func (x *Launcher) header(c *ui.Ctx) {
 
 // field is a text field of the launcher's: Tab moves on, Escape closes, ⌘↵ starts; lines > 1 makes it a Prose.
 func (x *Launcher) field(c *ui.Ctx, key any, text *string, label, placeholder string, first bool, w ui.Size, lines int) {
-	id := c.Next(key)
-	if first && x.focusField {
-		c.RequestFocus(id)
+	focus := first && x.focusField
+	if focus {
 		x.focusField = false
 	}
-	var r widget.InputResult
-	if lines > 1 {
-		r = widget.Prose(c, key, text, widget.ProseOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
-			KeyMode: LauncherKeyMode, Width: w, Lines: lines, MinLines: 2})
-	} else {
-		r = widget.Input(c, key, text, widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
-			KeyMode: LauncherKeyMode, Width: w})
+	if lines <= 1 {
+		o := widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true, KeyMode: LauncherKeyMode, Width: w}
+		dialogField(c, key, text, o, focus, x.close, nil)
+		return
 	}
-	if r.Cancelled {
+	if focus {
+		c.RequestFocus(c.Next(key))
+	}
+	if widget.Prose(c, key, text, widget.ProseOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true,
+		KeyMode: LauncherKeyMode, Width: w, Lines: lines, MinLines: 2}).Cancelled {
 		x.close()
 	}
 }

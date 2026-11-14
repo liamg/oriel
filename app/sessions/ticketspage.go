@@ -192,7 +192,7 @@ func (x *Tickets) pageView(c *ui.Ctx) {
 			x.pageHeader(c)
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				x.pageList(c, rows)
-				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "divider")
 				c.Column("detail", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 12,
 					Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 					if r, ok := x.selectedRow(rows); ok {
@@ -234,7 +234,7 @@ func (x *Tickets) pageHeader(c *ui.Ctx) {
 			x.page.open = false
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 // pageList is the tickets, filtered, a row each, after what a tracker needs first.

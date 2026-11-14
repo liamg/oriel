@@ -46,6 +46,9 @@ type omnibox struct {
 	ranks *rankings
 }
 
+// The keys down from the omnibox to its search field, which its build and its key reading share.
+const omniBox, omniHead, omniInput = "box", "head", "input"
+
 func (o *omnibox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "omnibox"} }
 
 func (o *omnibox) Activate(_ context.Context, h plugin.Host) error {
@@ -126,7 +129,7 @@ func (o *omnibox) build(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	inputID := ui.Child(ui.Child(ui.Child(c.Next("omni"), "box"), "head"), "input")
+	inputID := ui.Path(c.Next("omni"), omniBox, omniHead, omniInput)
 	in := c.Interaction(inputID)
 	if o.focus {
 		o.focus = false
@@ -151,12 +154,12 @@ func (o *omnibox) build(c *ui.Ctx) {
 	size := c.Size()
 	centre := render.Point{X: size.X / 2, Y: 92}
 	if widget.Scrim(c, "omni", widget.ScrimOpts{Z: ui.LayerDialog, Fill: th.C(kit.TScrimOmni), Help: "shell/omnibox"}, func(c *ui.Ctx) {
-		c.Column("box", ui.Style{W: ui.Px(min(omniW, size.X-32)), H: ui.Px(min(omniH, size.Y-110)), Fill: th.C(kit.TOmniBg), Stroke: th.C(kit.TOmniBorder),
+		c.Column(omniBox, ui.Style{W: ui.Px(min(omniW, size.X-32)), H: ui.Px(min(omniH, size.Y-110)), Fill: th.C(kit.TOmniBg), Stroke: th.C(kit.TOmniBorder),
 			Border: 1, Radius: 10, Clip: true, Trap: true, Interactive: true, Float: &ui.Float{Point: &centre, Self: render.Point{X: .5}}, Role: ui.RoleDialog,
 			Label: "Search everything"}, func(c *ui.Ctx) {
-			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(58), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
+			c.Row(omniHead, ui.Style{W: ui.Flex(1), H: ui.Px(58), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("cmd", "⌘", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 18}, Color: th.C(theme.Accent)})
-				res := widget.Input(c, "input", &o.query, widget.InputOpts{Label: "Search", Placeholder: "Search sessions, commands, files, symbols…",
+				res := widget.Input(c, omniInput, &o.query, widget.InputOpts{Label: "Search", Placeholder: "Search sessions, commands, files, symbols…",
 					Width: ui.Flex(1), DefaultFocus: true, Help: "shell/omnibox"})
 				switch {
 				case res.Cancelled:
@@ -168,13 +171,13 @@ func (o *omnibox) build(c *ui.Ctx) {
 				}
 				o.chips(c)
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				c.Column("list", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 8, R: 8, T: 12}, ScrollY: true}, func(c *ui.Ctx) {
 					o.list(c, groups)
 					pickerWaitRow(c, o.wait.state(c.Now(), len(busy) > 0), strings.Join(busy, " and ")+" still loading", len(groups) == 0, "shell/omnibox")
 				})
-				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "divider")
 				c.Column("preview", ui.Style{W: ui.Px(400), H: ui.Flex(1), Pad: ui.Pad(18), Clip: true, Role: ui.RoleRegion, Label: "Preview"}, func(c *ui.Ctx) {
 					if len(flat) > 0 && flat[o.sel].src.Preview != nil {
 						h := flat[o.sel]
@@ -185,7 +188,7 @@ func (o *omnibox) build(c *ui.Ctx) {
 					}
 				})
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(18, 0), Gap: 16, Cross: ui.Center}, func(c *ui.Ctx) {
 				hint := func(k, what string) {
 					c.Row(what, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {

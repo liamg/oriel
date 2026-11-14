@@ -370,7 +370,7 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 					x.usageOpen = false
 				}
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
 				u, shown := x.usageAccount()
 				for i, f := range st.UsageFailures {

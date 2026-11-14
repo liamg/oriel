@@ -225,7 +225,6 @@ func (x *Workspace) page(c *ui.Ctx) {
 	}
 	widget.Page(c, "workspace", &x.open, widget.PageOpts{KeyMode: WorkspaceKeyMode, Label: "Workspace page", Help: workspaceHelp},
 		func(c *ui.Ctx) {
-			th := c.Theme()
 			se, ok := x.h.State().Session(x.h.State().Focus)
 			if !ok {
 				x.header(c, core.SessionState{}, nil)
@@ -249,7 +248,7 @@ func (x *Workspace) page(c *ui.Ctx) {
 			}
 			c.WakeAt(now.Add(every))
 			x.header(c, s, st)
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			if x.tab == wsPermissions {
 				if v, ok := x.h.ViewByID(kit.PermissionsView); ok {
 					c.Node(v.Build(uireg.ViewCtx{}))

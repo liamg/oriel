@@ -41,7 +41,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 	}
 	prui.PRFrame(c, "frame", reviewedStatus(full), func(c *ui.Ctx) {
 		x.pageHead(c, se, src, full)
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		x.pageBanner(c, se, f, full, p, done)
 		c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			width := float32(640)
@@ -66,7 +66,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 					x.overview(c, full, width)
 				}
 			})
-			c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "divider")
 			c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 10, ScrollY: true}, func(c *ui.Ctx) {
 				var fields [][2]string
 				if p.Commit != "" {
@@ -176,7 +176,7 @@ func (x *PRReview) banner(c *ui.Ctx, text, action string, do func()) {
 			do()
 		}
 	})
-	c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule2")
 }
 
 // progress is where the two reviewers are: the agent, and the AI review beside it.
@@ -257,7 +257,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 		for _, it := range items {
 			x.itemRow(c, se, f, it, width)
 		}
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Row("summaryhead", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Row("t", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Text("t", "SUMMARY", kit.MonoFont(10, th.C(theme.FgFaint))) })
 			asked := x.draft(se).SummaryAsk != ""
@@ -559,7 +559,7 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 					f.preview = ""
 				}
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 18}, Gap: 12}, func(c *ui.Ctx) {
 				c.Text("scap", "SUMMARY", kit.MonoFont(9.5, th.C(theme.FgFaint)))
 				kit.MarkdownText(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
@@ -571,7 +571,7 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 				}
 				c.Text("note", "A comment off the diff's lines goes on its file; one on a file the PR doesn't change, in the summary.", kit.MonoFont(10, th.C(theme.FgFaint)))
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			// An approval's summary on a review that isn't one asks first: it says the opposite of the verdict.
 			odd := f.preview != registry.VerdictApprove && strings.EqualFold(strings.TrimRight(strings.TrimSpace(f.body), ".!"), "LGTM")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 10, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
