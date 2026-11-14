@@ -44,9 +44,6 @@ func (r Root) Run(id string, args script.Table) error {
 	return r.a.Host.Run(context.Background(), id, registry.Args(args))
 }
 
-//oriel:api doc="Run a command by its id, with arguments." optional=args deprecated="use oriel.run"
-func (r Root) Cmd(id string, args script.Table) error { return r.Run(id, args) }
-
 //oriel:api doc="Hook an event: fn(ev) observes it; returns false, reason to veto it, a changed ev to rewrite it, or a value to decide it. opts: pattern (a glob over the event's file), priority, desc." optional=opts
 func (r Root) On(event string, opts any, fn any, where string) error {
 	f, ok := opts.(*script.Fn)
@@ -178,11 +175,8 @@ func (r Root) Asset(path string) ([]any, error) {
 	return []any{string(b)}, nil
 }
 
-//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async)." optional=opts returns="string?,string?" cap=exec
+//oriel:api doc="Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default)." optional=opts returns="string?,string?" cap=exec
 func (r Root) Exec(argv []string, opts script.Table) ([]any, error) {
-	if done, ok := opts["on_done"].(*script.Fn); ok {
-		return nil, r.ExecAsync(argv, opts, done)
-	}
 	run, err := r.program(argv, opts)
 	if missing(err) {
 		return []any{nil, err.Error()}, nil
@@ -291,14 +285,6 @@ func (r Root) JSONDecode(s string) (any, error) {
 		return nil, err
 	}
 	return out, nil
-}
-
-//oriel:api doc="Decode JSON text to a table, or encode any other value as JSON text." returns=any deprecated="use oriel.json_encode or oriel.json_decode, which can encode a string"
-func (r Root) JSON(v any) (any, error) {
-	if s, ok := v.(string); ok {
-		return r.JSONDecode(s)
-	}
-	return r.JSONEncode(v)
 }
 
 //oriel:api doc="Replace the status line: fn(w) returns oriel.ui nodes; w has the window's session."

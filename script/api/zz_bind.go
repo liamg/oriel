@@ -14,12 +14,6 @@ func (a *APIs) bind(vm *script.VM) {
 				}
 				return x.Asset(c.String(0))
 			},
-			"cmd": func(c *script.Args) ([]any, error) {
-				if err := a.check("ui"); err != nil {
-					return nil, err
-				}
-				return nil, x.Cmd(c.String(0), c.Table(1))
-			},
 			"command": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
 					return nil, err
@@ -37,13 +31,6 @@ func (a *APIs) bind(vm *script.VM) {
 					return nil, err
 				}
 				return nil, x.ExecAsync(c.Strings(0), c.Any(1), c.Any(2))
-			},
-			"json": func(c *script.Args) ([]any, error) {
-				if err := a.check("ui"); err != nil {
-					return nil, err
-				}
-				v, err := x.JSON(c.Any(0))
-				return []any{v}, err
 			},
 			"json_decode": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {
