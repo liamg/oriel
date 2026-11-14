@@ -688,7 +688,7 @@ func (x *Jobs) consoleSide(c *ui.Ctx, id core.SessionID) {
 		}
 	}
 	cur := runRow{se: se, run: hostapi.RunOf(se)}
-	kit.Section(c, "job", "Job", "", func(c *ui.Ctx) {
+	widget.Section(c, "job", "Job", "", func(c *ui.Ctx) {
 		c.Row("title", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 			widget.Wrap(c, "t", cmp.Or(row.job.Title, hostapi.JobOf(se)), 240, widget.UIFont(13, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -705,20 +705,20 @@ func (x *Jobs) consoleSide(c *ui.Ctx, id core.SessionID) {
 		if d := x.took(cur); d > 0 {
 			started += " · " + kit.Duration(d)
 		}
-		kit.Stat(c, "started", "started", started, th.C(theme.Fg))
+		widget.Stat(c, "started", "started", started, th.C(theme.Fg))
 		for _, rr := range row.runs {
 			if rr.se.Created.Before(se.Created) {
 				last := rr.run.Status
 				if d := rr.run.Took(); d > 0 {
 					last += " · " + kit.Duration(d)
 				}
-				kit.Stat(c, "last", "last run", last, th.C(runTone(rr.run.Status)))
+				widget.Stat(c, "last", "last run", last, th.C(runTone(rr.run.Status)))
 				break
 			}
 		}
 	})
 	cost, shares, _ := x.cost(cur)
-	kit.Section(c, "repos", "Repos touched", "cost so far", func(c *ui.Ctx) {
+	widget.Section(c, "repos", "Repos touched", "cost so far", func(c *ui.Ctx) {
 		st := x.h.State()
 		var strip []widget.ChartSeries
 		for i, s := range shares {
@@ -735,9 +735,9 @@ func (x *Jobs) consoleSide(c *ui.Ctx, id core.SessionID) {
 				widget.KV(c, fmt.Sprint("todo", i), theme.WithAlpha(kit.RepoTone(th, st, n, i), .4), n, "", "not yet")
 			}
 		}
-		kit.Stat(c, "total", "total est.", kit.Money(cost), th.C(theme.Fg))
+		widget.Stat(c, "total", "total est.", kit.Money(cost), th.C(theme.Fg))
 	})
-	kit.Section(c, "ends", "When it ends", "", func(c *ui.Ctx) {
+	widget.Section(c, "ends", "When it ends", "", func(c *ui.Ctx) {
 		widget.Wrap(c, "t", "The run row gets its status and the agent's summary; blocked also lands in Requests.", 290, widget.UIFont(12, th.C(theme.FgFaint)))
 	})
 }

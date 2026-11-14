@@ -31,7 +31,7 @@ func (x *Console) subagents(c *ui.Ctx, se core.SessionState) {
 		}
 	}
 	now := c.Now()
-	kit.Section(c, "subagents", "Subagents", fmt.Sprintf("%d running", running), func(c *ui.Ctx) {
+	widget.Section(c, "subagents", "Subagents", fmt.Sprintf("%d running", running), func(c *ui.Ctx) {
 		for i := len(se.Subagents) - 1; i >= 0; i-- {
 			s := se.Subagents[i]
 			if widget.Clickable(c, s.ID, ui.Style{W: ui.Flex(1), Gap: 2, Dir: ui.Column, Clip: true,

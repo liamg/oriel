@@ -504,31 +504,31 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 		c.Column("top", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Clip: true}, func(c *ui.Ctx) {
 			fg := th.C(theme.Fg)
 			if !has {
-				kit.Section(c, "this", "This request", "", func(c *ui.Ctx) {
+				widget.Section(c, "this", "This request", "", func(c *ui.Ctx) {
 					anchor := "whole change"
 					if a := st.newAnchor; a != nil {
 						anchor = fmt.Sprintf("%s:%d", filepath.Base(a.File), a.Line)
 					}
-					kit.Stat(c, "anchor", "anchor", anchor, fg)
+					widget.Stat(c, "anchor", "anchor", anchor, fg)
 				})
 				return
 			}
-			kit.Section(c, "this", "This request", "", func(c *ui.Ctx) {
-				kit.Stat(c, "anchor", "anchor", threadPlace(t), fg)
+			widget.Section(c, "this", "This request", "", func(c *ui.Ctx) {
+				widget.Stat(c, "anchor", "anchor", threadPlace(t), fg)
 				by := ""
 				if cm, ok := firstComment(t); ok && cm.Name != "" {
 					by = " · " + cm.Name
 				}
-				kit.StatAgo(c, "opened", "opened", t.Created, by, fg)
+				widget.StatAgo(c, "opened", "opened", t.Created, by, fg)
 				word, tok := statusLabel(x.h, se, t)
 				if kit.GroupOf(t) == kit.GroupWorking && se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 					d := now.Sub(se.Agent.TurnStarted)
 					word = fmt.Sprintf("working · %d:%02d", int(d.Minutes()), int(d.Seconds())%60)
 				}
-				kit.Stat(c, "agent", "agent", word, th.C(tok))
+				widget.Stat(c, "agent", "agent", word, th.C(tok))
 			})
 			if len(t.Touched) > 0 {
-				kit.Section(c, "changed", "Changed by this request", "", func(c *ui.Ctx) {
+				widget.Section(c, "changed", "Changed by this request", "", func(c *ui.Ctx) {
 					for i, f := range t.Touched {
 						c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 							c.Text("m", "M", widget.MonoFont(11.5, th.C(theme.Warn)))
@@ -556,7 +556,7 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 				}
 			}
 			if len(tasks)+len(spawned) > 0 {
-				kit.Section(c, "spawned", "Spawned", "", func(c *ui.Ctx) {
+				widget.Section(c, "spawned", "Spawned", "", func(c *ui.Ctx) {
 					for _, o := range spawned {
 						x.threadLink(c, se, o)
 					}
@@ -564,7 +564,7 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 				})
 			}
 			if len(related) > 0 {
-				kit.Section(c, "related", "Related", "", func(c *ui.Ctx) {
+				widget.Section(c, "related", "Related", "", func(c *ui.Ctx) {
 					for _, o := range related {
 						x.threadLink(c, se, o)
 					}
@@ -636,7 +636,7 @@ func (x *Requests) summary(c *ui.Ctx) {
 			}
 			widget.Rule(c, "rule")
 			done, all := taskCount(se.Tasks)
-			kit.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) {
+			widget.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) {
 				if all == 0 {
 					c.Text("none", "No tasks yet: the agent adds them as it plans.", widget.UIFont(12, th.C(theme.FgGhost)))
 				}

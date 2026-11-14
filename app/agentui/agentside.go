@@ -53,18 +53,18 @@ func (x *Console) sessionStats(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	t := se.Agent.Stats
 	fg := th.C(theme.Fg)
-	kit.Section(c, "stats", "Session stats", se.Agent.Provider, func(c *ui.Ctx) {
+	widget.Section(c, "stats", "Session stats", se.Agent.Provider, func(c *ui.Ctx) {
 		ctxv := kit.Tokens(int64(t.Context))
 		if t.ContextMax > 0 {
 			ctxv += " / " + kit.Tokens(int64(t.ContextMax))
 		}
-		kit.Stat(c, "context", "context", ctxv, fg)
+		widget.Stat(c, "context", "context", ctxv, fg)
 		if t.ContextMax > 0 {
 			widget.Meter(c, "contextbar", float64(t.Context)/float64(t.ContextMax), widget.MeterOpts{Tone: th.C(draw.TMeterContext), Label: "context"})
 		}
-		kit.Stat(c, "cache", "cache hit", fmt.Sprintf("%d%%", int(t.CacheHit()*100+.5)), fg)
-		kit.Stat(c, "turns", "turns · tool calls", fmt.Sprintf("%d · %d", t.Turns, t.ToolCalls), fg)
-		kit.Stat(c, "tokens", "tokens in / out", kit.Tokens(t.Input+t.CacheRead+t.CacheWrite)+" / "+kit.Tokens(t.Output), fg)
+		widget.Stat(c, "cache", "cache hit", fmt.Sprintf("%d%%", int(t.CacheHit()*100+.5)), fg)
+		widget.Stat(c, "turns", "turns · tool calls", fmt.Sprintf("%d · %d", t.Turns, t.ToolCalls), fg)
+		widget.Stat(c, "tokens", "tokens in / out", kit.Tokens(t.Input+t.CacheRead+t.CacheWrite)+" / "+kit.Tokens(t.Output), fg)
 		c.Row("cost", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("n", "cost (est.)", widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -74,7 +74,7 @@ func (x *Console) sessionStats(c *ui.Ctx, se core.SessionState) {
 		if se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 			run += c.Now().Sub(se.Agent.TurnStarted)
 		}
-		kit.Stat(c, "running", "running", kit.Duration(run), fg)
+		widget.Stat(c, "running", "running", kit.Duration(run), fg)
 	})
 }
 
@@ -100,7 +100,7 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 		if i > 0 || u.Provider != se.Agent.Provider {
 			title, note = cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider)), "other sessions"
 		}
-		kit.Section(c, "usage."+u.Provider, title, note, func(c *ui.Ctx) {
+		widget.Section(c, "usage."+u.Provider, title, note, func(c *ui.Ctx) {
 			for j, w := range u.Windows {
 				v := fmt.Sprintf("%d%%", int(w.Used*100+.5))
 				if !w.Resets.IsZero() && w.Resets.After(now) {
@@ -110,11 +110,11 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 				if w.Used >= .9 {
 					tone = th.C(theme.Error)
 				}
-				kit.Stat(c, fmt.Sprint("w", j), w.Name, v, th.C(theme.Fg))
+				widget.Stat(c, fmt.Sprint("w", j), w.Name, v, th.C(theme.Fg))
 				widget.Meter(c, fmt.Sprint("bar", j), w.Used, widget.MeterOpts{Tone: tone, Label: w.Name})
 			}
 			if u.Credits != "" {
-				kit.Stat(c, "credits", "credits", u.Credits, th.C(theme.Fg))
+				widget.Stat(c, "credits", "credits", u.Credits, th.C(theme.Fg))
 			}
 		})
 	}
@@ -157,7 +157,7 @@ func (x *Console) rules(c *ui.Ctx, se core.SessionState) {
 	if len(rs) == 0 {
 		return
 	}
-	kit.Section(c, "rules", "Rules in force", "", func(c *ui.Ctx) {
+	widget.Section(c, "rules", "Rules in force", "", func(c *ui.Ctx) {
 		// Chips flow onto rows of about the column's width.
 		var rows [][]rule
 		w := 0
@@ -243,7 +243,7 @@ func (x *Console) tasks(c *ui.Ctx, se core.SessionState) {
 		return
 	}
 	done, all := taskCount(se.Tasks)
-	kit.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) { taskRail(c, "rail", se.Tasks) })
+	widget.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) { taskRail(c, "rail", se.Tasks) })
 }
 
 // latestRun is the session's last test run.
