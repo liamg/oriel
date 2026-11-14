@@ -10,6 +10,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/liamg/oriel/app/kit/diagrams"
+
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry/services"
@@ -590,7 +592,7 @@ func (x *Walkthrough) diagram(c *ui.Ctx, stageID ui.ID, s walkStep) bool {
 	if s.Diagram == "" || s.missing {
 		return false
 	}
-	l, err := kit.DiagramOf(c, s.Diagram)
+	l, err := diagrams.Of(c, s.Diagram)
 	if err != nil || l == nil {
 		return false
 	}
@@ -605,8 +607,8 @@ func (x *Walkthrough) diagram(c *ui.Ctx, stageID ui.ID, s walkStep) bool {
 		width = l.Size.X * h / l.Size.Y
 	}
 	c.Column("stage", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 14, Clip: true}, func(c *ui.Ctx) {
-		c.Text("kicker", kit.DiagramKicker(l), kit.KickerFont(th.C(theme.FgFaint)))
-		kit.Diagram(c, "diagram", l, max(width, 80), kit.MarkdownOpts{Help: walkHelp})
+		c.Text("kicker", diagrams.Kicker(l), kit.KickerFont(th.C(theme.FgFaint)))
+		diagrams.Draw(c, "diagram", l, max(width, 80), kit.MarkdownOpts{Help: walkHelp})
 	})
 	return true
 }
