@@ -32,7 +32,7 @@ func (x *Permissions) rulesCommands() []registry.Command {
 				}
 				return w.AddRule(core.AskKind(cmp.Or(a.String("kind"), string(core.AskPermission))), a.String("rule"))
 			}},
-		{ID: "rules.remove", Grant: "gate", Title: "Stop allowing {rule} in every session: what it let through asks again",
+		{ID: "rules.remove", Grant: "gate", Title: "Stop allowing {rule} in every session: what it let through asks again; {kind} as rules.add's",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				rule := a.String("rule")
 				if rule == "" {
@@ -42,7 +42,7 @@ func (x *Permissions) rulesCommands() []registry.Command {
 				if err != nil {
 					return err
 				}
-				return w.RemoveRule(rule)
+				return w.RemoveRule(core.AskKind(cmp.Or(a.String("kind"), string(core.AskPermission))), rule)
 			}},
 	}
 }
@@ -74,12 +74,9 @@ func (x *Permissions) rulesSection(c *ui.Ctx) {
 					Text: ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: th.C(theme.FgFaint)}})
 			}
 			if widget.Button(c, "remove", "Remove", widget.ButtonOpts{Ghost: true, Help: rulesHelp}) {
-				x.removeRule(r.Rule)
+				x.run("rules.remove", registry.Args{"kind": string(r.Kind), "rule": r.Rule})
 			}
 		})
 	}
 }
 
-func (x *Permissions) removeRule(rule string) {
-	x.run("rules.remove", registry.Args{"rule": rule})
-}

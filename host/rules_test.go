@@ -94,7 +94,7 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 	a4.WaitSent(t)
 	r.noCard(four, a4, goTest("p5", "./..."))
 
-	if err := r.w.RemoveRule("Bash(go test:*)"); err != nil {
+	if err := r.w.RemoveRule(core.AskPermission, "Bash(go test:*)"); err != nil {
 		t.Fatal(err)
 	}
 	if rules := r.w.Store().State().Rules; len(rules) != 0 {
@@ -105,7 +105,7 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 	if d := <-ans; d.Allow {
 		t.Error("denied, yet allowed")
 	}
-	if err := r.w.RemoveRule("Bash(go test:*)"); err == nil {
+	if err := r.w.RemoveRule(core.AskPermission, "Bash(go test:*)"); err == nil {
 		t.Error("removed a rule that isn't there")
 	}
 }
@@ -165,5 +165,21 @@ func TestARuleAllowsOnlyItsOwnCommand(t *testing.T) {
 		if d := <-ans; d.Allow {
 			t.Errorf("%q went through under Bash(go test:*)", cmd)
 		}
+	}
+}
+
+// A rule is removed under its own kind: the same text as another kind's rule leaves that one.
+func TestRemoveRuleKeepsAnotherKindsRule(t *testing.T) {
+	r := newRig(t)
+	for _, k := range []core.AskKind{core.AskPermission, core.AskGateway} {
+		if err := r.w.AddRule(k, "lookup"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := r.w.RemoveRule(core.AskGateway, "lookup"); err != nil {
+		t.Fatal(err)
+	}
+	if rules := r.w.Store().State().Rules; len(rules) != 1 || rules[0].Kind != core.AskPermission {
+		t.Errorf("left %+v, want only the permission rule", rules)
 	}
 }
