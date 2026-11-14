@@ -65,8 +65,8 @@ function oriel.exec(argv, opts) end
 
 --- Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too.
 ---@param argv string|string[]
----@param opts? table
----@param fn function
+---@param opts? any
+---@param fn any
 function oriel.exec_async(argv, opts, fn) end
 
 --- Decode JSON text to a table, or encode any other value as JSON text.

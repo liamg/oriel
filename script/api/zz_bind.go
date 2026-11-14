@@ -36,7 +36,7 @@ func (a *APIs) bind(vm *script.VM) {
 				if err := a.check("exec"); err != nil {
 					return nil, err
 				}
-				return nil, x.ExecAsync(c.Strings(0), c.Table(1), c.Fn(2))
+				return nil, x.ExecAsync(c.Strings(0), c.Any(1), c.Any(2))
 			},
 			"json": func(c *script.Args) ([]any, error) {
 				if err := a.check("ui"); err != nil {

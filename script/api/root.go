@@ -201,14 +201,20 @@ func (e *notFound) Error() string { return e.err.Error() }
 func (e *notFound) Unwrap() error { return e.err }
 
 //oriel:api doc="Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too." optional=opts cap=exec
-func (r Root) ExecAsync(argv []string, opts script.Table, fn *script.Fn) error {
-	if fn == nil {
+func (r Root) ExecAsync(argv []string, opts any, fn any) error {
+	f, ok := opts.(*script.Fn)
+	var o script.Table
+	if !ok {
+		o, _ = opts.(script.Table)
+		f, ok = fn.(*script.Fn)
+	}
+	if !ok {
 		return fmt.Errorf("no function for the output")
 	}
-	run, err := r.program(argv, opts)
+	run, err := r.program(argv, o)
 	if missing(err) {
 		why := err.Error()
-		r.a.Host.Do(func() { r.a.later(fn, nil, why) })
+		r.a.Host.Do(func() { r.a.later(f, nil, why) })
 		return nil
 	}
 	if err != nil {
@@ -220,7 +226,7 @@ func (r Root) ExecAsync(argv []string, opts script.Table, fn *script.Fn) error {
 		if err != nil {
 			msg = err.Error()
 		}
-		r.a.Host.Do(func() { r.a.later(fn, out, msg) })
+		r.a.Host.Do(func() { r.a.later(f, out, msg) })
 	})
 	return nil
 }
