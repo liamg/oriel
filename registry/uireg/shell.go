@@ -71,8 +71,8 @@ func (e RailEntry) For(r registry.Contributions, k core.Kind) bool {
 	return registry.ForSession(r, k, e.Kinds, e.When)
 }
 
-// Is says whether the entry is listed for project, asking its Shown.
-func (e RailEntry) Is(project string) bool {
+// Listed says whether the entry is listed for project, asking its Shown.
+func (e RailEntry) Listed(project string) bool {
 	if e.Shown == nil {
 		return true
 	}
@@ -174,8 +174,8 @@ func GlobalEntries(r registry.Contributions) []RailEntry {
 	return slices.DeleteFunc(RailEntries(r), func(e RailEntry) bool { return e.Scope != ScopeGlobalEntry })
 }
 
-// Is says whether the entry is listed, asking its Shown.
-func (e StartEntry) Is() bool {
+// Listed says whether the entry is listed, asking its Shown.
+func (e StartEntry) Listed() bool {
 	if e.Shown == nil {
 		return true
 	}
@@ -188,7 +188,7 @@ func (e StartEntry) Is() bool {
 func StartEntries(r registry.Contributions) []StartEntry {
 	var out []StartEntry
 	for _, e := range registry.ContributionsOf[StartEntry](r) {
-		if e.Is() {
+		if e.Listed() {
 			out = append(out, e)
 		}
 	}

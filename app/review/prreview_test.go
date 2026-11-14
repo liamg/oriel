@@ -100,7 +100,7 @@ func TestReviewSessionPRTab(t *testing.T) {
 		t.Fatalf("the review's name %q and request %+v", se.Name, se.Threads)
 	}
 	for _, e := range uireg.RailEntries(s.Registry()) {
-		listed := e.For(s.Registry(), se.Kind) && e.Is("")
+		listed := e.For(s.Registry(), se.Kind) && e.Listed("")
 		if (e.Name == "ship" || e.Name == "git" || e.Name == "pull-request") && listed {
 			t.Errorf("%s is offered in a review", e.Name)
 		}
