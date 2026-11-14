@@ -122,6 +122,10 @@ func TestAzureShipAndReviews(t *testing.T) {
 		t.Fatalf("the PR on Azure DevOps: %+v", prs)
 	}
 	s.Until("the PR's number", func() bool { return strings.Contains(s.Text(), "!57 · feat: weekly chart") })
+	// The agent keeps the branch's name while its PR is open, as on GitHub.
+	if _, err := ag.CallErr("rename_branch", map[string]any{"name": "you/chart"}); err == nil || !strings.Contains(err.Error(), "is open") {
+		t.Errorf("renamed the branch under its open PR: %v", err)
+	}
 
 	// Review mirroring: the reviewer's thread on a line becomes the session's, the agent's draft reply is forwarded by
 	// github.forward into that thread on Azure DevOps, and the draft is marked sent.

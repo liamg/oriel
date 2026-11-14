@@ -106,11 +106,12 @@ type DraftReq struct {
 	Drop    bool           `json:"drop,omitempty"`
 }
 
-// shipState is what the host keeps between reads: each branch's PR on GitHub, for review mirroring, and when each
-// project was last synced.
+// shipState is what the host keeps between reads: each branch's PR on GitHub, for review mirroring, which branches'
+// PRs a code host last found open, and when each project was last synced.
 type shipState struct {
 	mu     sync.Mutex
 	github map[string]githubRead // by session/project/branch
+	open   map[string]bool       // by session/project/branch
 	synced map[string]time.Time  // by session/project
 }
 

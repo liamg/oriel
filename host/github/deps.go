@@ -38,7 +38,7 @@ type Deps struct {
 
 // New is the code host side of st's sessions.
 func New(env hostcore.Env, st hostcore.State, deps Deps) *GitHub {
-	x := &GitHub{env: env, st: st, deps: deps, ship: shipState{github: map[string]githubRead{}, synced: map[string]time.Time{}}}
+	x := &GitHub{env: env, st: st, deps: deps, ship: shipState{github: map[string]githubRead{}, open: map[string]bool{}, synced: map[string]time.Time{}}}
 	x.clients = gh.Clients{HTTP: deps.HTTP, Client: func(dir string, env []string) gh.Client {
 		if c := deps.Client(); c != nil {
 			return c(dir, env)
@@ -46,12 +46,4 @@ func New(env hostcore.Env, st hostcore.State, deps Deps) *GitHub {
 		return nil
 	}}
 	return x
-}
-
-// PROpen says the last GitHub reading of a branch found its PR open, whose page shows the PR rather than a draft.
-func (x *GitHub) PROpen(id core.SessionID, project, branch string) bool {
-	x.ship.mu.Lock()
-	defer x.ship.mu.Unlock()
-	g, ok := x.ship.github[shipKey(id, project)+"/"+branch]
-	return ok && g.pr.Open()
 }

@@ -171,7 +171,7 @@ func (x *Ship) readMerge(a *mergeAsk) {
 // mergeRead is the PR now, the methods its repo allows, and every blocker: the host's, then the session's.
 func (x *Ship) mergeRead(ctx context.Context, se core.SessionState, s shipRead, h registry.CodeHost) (registry.PR, registry.MergeMethods, []registry.MergeBlocker, error) {
 	repo := s.codeRepo(se.ID)
-	pr, err := forBranch(ctx, h, repo, s.Branch)
+	pr, err := x.forBranch(ctx, h, repo, s.Branch)
 	if err != nil {
 		return registry.PR{}, registry.MergeMethods{}, nil, err
 	}
@@ -295,6 +295,7 @@ func (x *Ship) confirmMerge() error {
 			return err
 		}
 		x.mergedHere(a.se.ID, a.s, pr)
+		x.sawPR(repo, a.s.Branch, false)
 		return nil
 	}, func() {
 		done := pr
