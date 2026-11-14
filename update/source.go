@@ -3,7 +3,6 @@ package update
 import (
 	"context"
 	"crypto/ed25519"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,9 +10,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/internal/atomicfile"
 )
 
@@ -76,68 +75,55 @@ type GitHub struct {
 	Client *http.Client // http.DefaultClient if nil
 
 	mu     sync.Mutex
-	assets map[string]string // the last release's asset API URLs, by name
+	assets map[string]gh.Asset // the last release's, by name
 }
 
-type ghRelease struct {
-	Draft      bool `json:"draft"`
-	Prerelease bool `json:"prerelease"`
-	Assets     []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"assets"`
-}
+func (g *GitHub) rest() gh.REST { return gh.REST{Base: g.Base, Token: g.Token, Client: g.Client} }
 
 // Latest is the newest release with a manifest: a pre-release counts only on the nightly channel.
 func (g *GitHub) Latest(ctx context.Context, channel string) (Release, error) {
-	base := g.Base
-	if base == "" {
-		base = "https://api.github.com/"
-	}
-	r, err := g.get(ctx, strings.TrimSuffix(base, "/")+"/repos/"+g.Repo+"/releases?per_page=30", "application/vnd.github+json")
+	list, err := g.rest().Releases(ctx, g.Repo, 30)
 	if err != nil {
-		return Release{}, err
-	}
-	defer r.Close()
-	var list []ghRelease
-	if err := json.NewDecoder(r).Decode(&list); err != nil {
-		return Release{}, err
+		return Release{}, g.private(ctx, err)
 	}
 	for _, rel := range list {
 		if rel.Draft || rel.Prerelease && channel != Nightly {
 			continue
 		}
-		assets := map[string]string{}
-		for _, a := range rel.Assets {
-			assets[a.Name] = a.URL
-		}
-		if assets[ManifestFile] == "" || assets[SignatureFile] == "" {
+		_, m := rel.Asset(ManifestFile)
+		_, sig := rel.Asset(SignatureFile)
+		if !m || !sig {
 			continue
+		}
+		assets := map[string]gh.Asset{}
+		for _, a := range rel.Assets {
+			assets[a.Name] = a
 		}
 		g.mu.Lock()
 		g.assets = assets
 		g.mu.Unlock()
-		m, err := g.read(ctx, ManifestFile)
+		man, err := g.read(ctx, ManifestFile)
 		if err != nil {
 			return Release{}, err
 		}
-		sig, err := g.read(ctx, SignatureFile)
+		signature, err := g.read(ctx, SignatureFile)
 		if err != nil {
 			return Release{}, err
 		}
-		return Release{Manifest: m, Signature: sig}, nil
+		return Release{Manifest: man, Signature: signature}, nil
 	}
 	return Release{}, fmt.Errorf("%s has no %s release", g.Repo, channel)
 }
 
 func (g *GitHub) Open(ctx context.Context, name string) (io.ReadCloser, error) {
 	g.mu.Lock()
-	url := g.assets[name]
+	a, ok := g.assets[name]
 	g.mu.Unlock()
-	if url == "" {
+	if !ok {
 		return nil, fmt.Errorf("the release has no %s", name)
 	}
-	return g.get(ctx, url, "application/octet-stream")
+	rc, err := g.rest().OpenAsset(ctx, a)
+	return rc, g.private(ctx, err)
 }
 
 func (g *GitHub) read(ctx context.Context, name string) ([]byte, error) {
@@ -149,50 +135,17 @@ func (g *GitHub) read(ctx context.Context, name string) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(r, 1<<20))
 }
 
-func (g *GitHub) get(ctx context.Context, url, accept string) (io.ReadCloser, error) {
-	tok := ""
+// private says, of GitHub's 404 read with no token, that a private repo needs one.
+func (g *GitHub) private(ctx context.Context, err error) error {
+	if !gh.NotFound(err) {
+		return err
+	}
 	if g.Token != nil {
-		var err error
-		if tok, err = g.Token(ctx); err != nil {
-			return nil, err
+		if tok, _ := g.Token(ctx); tok != "" {
+			return err
 		}
 	}
-	resp, err := g.do(ctx, url, accept, tok)
-	if err == nil && tok != "" && resp.StatusCode == http.StatusUnauthorized {
-		// A public repo reads without the token GitHub refused.
-		resp.Body.Close()
-		tok = ""
-		resp, err = g.do(ctx, url, accept, "")
-	}
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode >= 300 {
-		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		resp.Body.Close()
-		err := fmt.Errorf("GitHub: %s (HTTP %d)", strings.TrimSpace(string(b)), resp.StatusCode)
-		if tok == "" && resp.StatusCode == http.StatusNotFound {
-			err = fmt.Errorf("%w: a private repo needs a GitHub token (GH_TOKEN, or gh auth login)", err)
-		}
-		return nil, err
-	}
-	return resp.Body, nil
-}
-
-func (g *GitHub) do(ctx context.Context, url, accept, tok string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", accept)
-	if tok != "" {
-		req.Header.Set("Authorization", "Bearer "+tok)
-	}
-	c := g.Client
-	if c == nil {
-		c = http.DefaultClient
-	}
-	return c.Do(req)
+	return fmt.Errorf("%w: a private repo needs a GitHub token (GH_TOKEN, or gh auth login)", err)
 }
 
 // Cache keeps each artifact the app downloads, checked against the manifest.
