@@ -33,7 +33,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `ui` | the immediate-mode toolkit: layout, input routing, focus, accessibility; `ui/widget` (every control), `ui/layout` (the window's tree of views as data) |
 | `theme`, `toml` | theme files and token resolution; a round-tripping TOML 1.0 editor for settings and themes |
 | `zstd` | a Zstandard (RFC 8878) decoder: whole buffers or streamed within a frame's window; Codex's compressed rollouts |
-| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` (with `app/kit/work`, `app/kit/prui` and `app/kit/agentkit` for what only some share) |
+| `app` | the desktop app: `app/shell` is the window every feature lives in, features live in `app/<feature>`, and they share `app/kit` (with `app/kit/draw` for what they draw alike with the app's types, `app/kit/edits` for a buffer's text, `app/kit/desktop` for the desktop's folder chooser, and `app/kit/work`, `app/kit/prui` and `app/kit/agentkit` for what only some share); what draws nothing of the app's is `ui/widget`'s |
 | `assistant`, `voice`, `update` | the assistant's conversation; dictation; signed self-update |
 | `cmd/oriel` | the binary and its subcommands |
 | `tools` | checks run by tests and CI: `layout`, `ratchet`, `depcheck`, `refcheck`, `leakcheck`, `framecheck`, `apigen`, `notices`, `perf` |
