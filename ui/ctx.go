@@ -556,3 +556,11 @@ func (c *Ctx) Help(id ID) string { return c.u.Help(id) }
 
 // Child is the id a child built with key under parent gets (the first with that key).
 func Child(parent ID, key any) ID { return childID(parent, key) }
+
+// Path is the id of the node keys reach down from parent, each a child of the one before.
+func Path(parent ID, keys ...any) ID {
+	for _, k := range keys {
+		parent = childID(parent, k)
+	}
+	return parent
+}
