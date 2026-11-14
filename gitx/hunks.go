@@ -3,8 +3,10 @@ package gitx
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -291,18 +293,38 @@ func isHash(rev string) bool {
 	return len(rev) >= 7 && len(rev) <= 64 && strings.Trim(rev, "0123456789abcdef") == ""
 }
 
-// UnstagedHunks are the hunks from the index's version of path to contents: a buffer's text, saved or not.
+// blobRead is blob, telling a file that isn't there (ok false, nil error) from git failing to say.
+func (r Repo) blobRead(ctx context.Context, spec string) ([]byte, bool, error) {
+	out, err := r.git(ctx, "cat-file", "blob", spec)
+	if err == nil {
+		return out, true, nil
+	}
+	_, verr := r.git(ctx, "rev-parse", "--verify", "--quiet", spec)
+	if exit := (*exec.ExitError)(nil); errors.As(verr, &exit) && exit.ExitCode() == 1 {
+		return nil, false, nil // no such file there
+	}
+	return nil, false, err
+}
+
+// UnstagedHunks are the hunks from the index's version of path to contents: a buffer's text, saved or not. A file
+// not in the index is all added.
 func (r Repo) UnstagedHunks(ctx context.Context, path string, contents []byte) ([]Hunk, error) {
-	idx, _ := r.IndexFile(ctx, path)
+	idx, _, err := r.blobRead(ctx, ":"+path)
+	if err != nil {
+		return nil, err
+	}
 	return DiffLines(idx, contents), nil
 }
 
-// StagedHunks are the hunks from HEAD's version of path to the index's.
+// StagedHunks are the hunks from HEAD's version of path to the index's; none when the index hasn't it.
 func (r Repo) StagedHunks(ctx context.Context, path string) ([]Hunk, error) {
-	head, _ := r.HeadFile(ctx, path)
-	idx, ok := r.IndexFile(ctx, path)
-	if !ok {
-		return nil, nil
+	head, _, err := r.blobRead(ctx, "HEAD:"+path)
+	if err != nil {
+		return nil, err
+	}
+	idx, ok, err := r.blobRead(ctx, ":"+path)
+	if err != nil || !ok {
+		return nil, err
 	}
 	return DiffLines(head, idx), nil
 }
