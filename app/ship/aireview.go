@@ -194,8 +194,7 @@ func (x *AIReview) run(a registry.Args) error {
 		return err
 	}
 	opt := func(name string) string {
-		v, _, _ := x.h.Options().Get(name, registry.At{})
-		s, _ := v.(string)
+		s, _ := registry.Option[string](x.h.Options(), name, registry.At{})
 		return s
 	}
 	if x.asked[se.ID] {

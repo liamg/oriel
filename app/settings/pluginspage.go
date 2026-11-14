@@ -140,8 +140,7 @@ func (x *Catalog) turnBundled(ctx registry.Ctx, id string, on bool) error {
 	if x.bundled[id] == nil {
 		return fmt.Errorf("%q isn't bundled with Oriel: uninstall it instead", id)
 	}
-	v, _, _ := x.h.Options().Get(BundledDisabledOption, registry.At{})
-	off, _ := v.([]string)
+	off, _ := registry.Option[[]string](x.h.Options(), BundledDisabledOption, registry.At{})
 	off = slices.DeleteFunc(slices.Clone(off), func(s string) bool { return s == id })
 	if !on {
 		off = append(off, id)

@@ -69,8 +69,7 @@ func (c *codeSites) options() []registry.OptionSpec {
 }
 
 func (c *codeSites) optionMap(name string) map[string]string {
-	v, _, _ := c.h.Options().Get(name, registry.At{})
-	m, _ := v.(map[string]string)
+	m, _ := registry.Option[map[string]string](c.h.Options(), name, registry.At{})
 	return m
 }
 
@@ -416,7 +415,6 @@ func (x *CodeSites) Activate(_ context.Context, h plugin.Host) error {
 
 // TrustedUser says code.trusted_users names login.
 func (c *codeSites) TrustedUser(login string) bool {
-	v, _, _ := c.h.Options().Get("code.trusted_users", registry.At{})
-	l, _ := v.([]string)
+	l, _ := registry.Option[[]string](c.h.Options(), "code.trusted_users", registry.At{})
 	return slices.ContainsFunc(l, func(u string) bool { return strings.EqualFold(strings.TrimPrefix(u, "@"), login) })
 }

@@ -236,8 +236,8 @@ func (f *liveFile) changed() {
 }
 
 func (e *ThemeEditor) themeName() string {
-	if v, _, err := e.h.Options().Get("ui.theme", registry.At{}); err == nil {
-		return v.(string)
+	if v, ok := registry.Option[string](e.h.Options(), "ui.theme", registry.At{}); ok {
+		return v
 	}
 	return "oriel"
 }

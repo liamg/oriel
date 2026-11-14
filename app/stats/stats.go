@@ -342,8 +342,7 @@ func (x *Plugin) contributions() []registry.Contribution {
 
 // split is stats.split_sessions.
 func (x *Plugin) split() bool {
-	v, _, _ := x.h.Options().Get(SplitOption, registry.At{})
-	on, ok := v.(bool)
+	on, ok := registry.Option[bool](x.h.Options(), SplitOption, registry.At{})
 	return on || !ok
 }
 

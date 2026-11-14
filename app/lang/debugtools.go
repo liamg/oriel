@@ -65,8 +65,7 @@ func accessOptions() []registry.OptionSpec {
 
 // level is how far the agent may take an action: allow, ask or off.
 func (x *Debug) level(action string) string {
-	v, _, _ := x.h.Options().Get(debugAccessOption(action), registry.At{})
-	if s, _ := v.(string); slices.Contains(debugLevels, s) {
+	if s, _ := registry.Option[string](x.h.Options(), debugAccessOption(action), registry.At{}); slices.Contains(debugLevels, s) {
 		return s
 	}
 	return "off"
