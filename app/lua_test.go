@@ -15,7 +15,6 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
-	"github.com/liamg/oriel/render"
 )
 
 // sample is docs/configuration.md's init.lua, as written there.
@@ -33,17 +32,6 @@ func sample(t *testing.T) string {
 }
 
 func lua(s *apptest.Scene) *luaconfig.Lua { return apptest.PluginOf[*luaconfig.Lua](s, "lua") }
-
-// luaSceneAt is apptest.LuaScene with its window on dir.
-func luaSceneAt(t *testing.T, dir, initLua string) *apptest.Scene {
-	t.Helper()
-	s := apptest.New(t, apptest.Options{WorkDir: dir, Size: render.Point{X: 1400, Y: 900}})
-	if err := os.WriteFile(filepath.Join(s.ConfigDir, "init.lua"), []byte(initLua), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	s.ReloadLua()
-	return s
-}
 
 func noticesWith(st core.State, id string) []core.Notification {
 	var out []core.Notification

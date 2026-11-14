@@ -1,7 +1,6 @@
 package app_test
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,7 +15,7 @@ import (
 func TestLuaSourceAndSubscribe(t *testing.T) {
 	s := apptest.LuaScene(t, `
 reads, seen = 0, nil
-oriel.source("demo.count", { poll = 0.05, read = function(args) reads = reads + 1; return { n = reads, who = args.who } end })
+oriel.source{ name = "demo.count", poll = 0.05, read = function(args) reads = reads + 1; return { n = reads, who = args.who } end }
 sub = oriel.subscribe("demo.count", { session = "app", who = "ada", max_age = 0.05, on_change = function(v) seen = v end })
 `)
 	s.Until("two readings", func() bool { return luaconfig.Show(s.Lua(`seen and seen.n >= 2`)[0]) == "true" })
@@ -42,7 +41,7 @@ func TestLuaSubscribeFiles(t *testing.T) {
 	s := apptest.LuaScene(t, `changed = nil
 sub = oriel.subscribe("files", { session = "app", path = "`+filepath.ToSlash(dir)+`", tree = true, on_change = function(v) changed = v end })`)
 	s.Until("the first reading", func() bool { return luaconfig.Show(s.Lua(`changed ~= nil`)[0]) == "true" })
-	os.WriteFile(filepath.Join(dir, "x.txt"), []byte("x"), 0o644)
+	s.WriteFiles(dir, map[string]string{"x.txt": "x"})
 	s.Until("x.txt", func() bool { return strings.Contains(luaconfig.Show(s.Lua(`changed`)[0]), "x.txt") })
 	if got := s.LuaErr(`oriel.subscribe("nope", {})`); !strings.Contains(got, "no source") {
 		t.Errorf("an unknown source: %s", got)

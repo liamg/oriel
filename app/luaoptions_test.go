@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/registry"
@@ -15,7 +16,7 @@ import (
 // A map option is a TOML table (inline or its own), a Lua table, and a value at any layer.
 func TestMapOptionLayers(t *testing.T) {
 	work := t.TempDir()
-	s := luaSceneAt(t, work, "oriel.option[\"test.hosts\"] = { db = \"10.0.0.2\", [\"cache-1\"] = \"10.0.0.3\" }\n")
+	s := apptest.LuaSceneAt(t, work, "oriel.option[\"test.hosts\"] = { db = \"10.0.0.2\", [\"cache-1\"] = \"10.0.0.3\" }\n")
 	s.Registry().Option(registry.OptionSpec{Name: "test.hosts", Type: registry.Map, Default: map[string]string{}, Scopes: registry.ScopeUser | registry.ScopeProject,
 		KeyLabel: "name", ValueLabel: "address"})
 	s.ReloadLua()

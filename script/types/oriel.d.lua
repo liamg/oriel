@@ -6,7 +6,7 @@
 ---@field agent oriel.agent
 ---@field code oriel.code
 ---@field coverage oriel.coverage
----@field decor oriel.decor
+---@field decorations oriel.decorations
 ---@field diagnostics oriel.diagnostics
 ---@field editor oriel.editor
 ---@field explorer oriel.explorer
@@ -45,19 +45,13 @@ oriel = {}
 ---@return string?,string?
 function oriel.asset(path) end
 
---- Run a command by its id, with arguments.
----@param id string
----@param args? table
----@deprecated use oriel.run
-function oriel.cmd(id, args) end
-
 --- Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
 ---@param name string
 ---@param fn function
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
+--- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default).
 ---@param argv string|string[]
 ---@param opts? table
 ---@return string?,string?
@@ -68,12 +62,6 @@ function oriel.exec(argv, opts) end
 ---@param opts? any
 ---@param fn any
 function oriel.exec_async(argv, opts, fn) end
-
---- Decode JSON text to a table, or encode any other value as JSON text.
----@param v any
----@return any
----@deprecated use oriel.json_encode or oriel.json_decode, which can encode a string
-function oriel.json(v) end
 
 --- Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
 ---@param s string
@@ -127,10 +115,9 @@ function oriel.read(path) end
 ---@param args? table
 function oriel.run(id, args) end
 
---- Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick.
----@param name string
----@param spec? table
-function oriel.source(name, spec) end
+--- Add a source oriel.subscribe can name, kept fresh only while something subscribes to it: spec has name, and files (paths; { path = dir, tree = true } for a folder and all under it), or poll (seconds, or a duration such as '5m': the most often it's read), and read = fn(args, changed), which returns the reading (a plain value or table). args are the subscription's spec; changed are the files that changed since the last read. read runs on the loop: keep it quick.
+---@param spec table
+function oriel.source(spec) end
 
 --- The names of the sources oriel.subscribe takes.
 ---@return table
@@ -166,10 +153,9 @@ function oriel.agent.fork(req, fn) end
 ---@param spec table
 function oriel.agent.forker(spec) end
 
---- A prompt pack: { prompt, tools }, for sessions to start with.
----@param name string
+--- A prompt pack: { name, prompt, tools }, for sessions to start with.
 ---@param spec table
-function oriel.agent.pack(name, spec) end
+function oriel.agent.pack(spec) end
 
 --- An agent sessions can run, as the launcher offers Claude and Codex, shadowing a built-in of the same name (name = 'claude' replaces Claude): { name, title, mark (its square's letters), tone (a theme token), order (lower is offered first; Claude is 10), features = { terminal, fork, images, sandbox, login, stop_processes, notes = 'AGENTS.md' } (what it does before its process has said, in initialize), logs, discover (it answers those calls) }, and how it's served: program = 'bin/my-agent' with args and env = { NAME = value }, a process speaking the Oriel agent protocol (docs/agent-protocol.md) that starts on first use, OS-sandboxed by the plugin's grants as any process plugin is; or a bridge's config under the bridge's name: acp = { command = { 'gemini', '--experimental-acp' }, env, models = { { id, name, default } }, login = 'gemini', hosts = { 'generativelanguage.googleapis.com' }, tools = { 'node@22', 'npm:@google/gemini-cli@0.9.0' }, pass_env = { 'GEMINI_*' }, home = { '.gemini' } } runs an Agent Client Protocol agent through the bundled ACP bridge; hosts, tools, pass_env and home are what it needs in a sandbox: the hosts it reaches, the mise tools a container installs to run it (macOS's sandbox runs your installed program), the host variables it inherits, and the entries of your home it keeps its sign-in in, which it sees, read-write, at the sandbox's home. What the agent runs outside a session's sandbox needs the plugin's exec grant for it: the ACP agent's command too.
 ---@param spec table
@@ -202,17 +188,17 @@ function oriel.coverage.lines(file, first, last) end
 ---@param hits any
 function oriel.coverage.set(owner, file, hits) end
 
----@class oriel.decor
-oriel.decor = {}
+---@class oriel.decorations
+oriel.decorations = {}
 
 --- Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.
 ---@param name string
-function oriel.decor.changed(name) end
+function oriel.decorations.changed(name) end
 
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decor.changed(name).
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name).
 ---@param name string
 ---@param fn function
-function oriel.decor.provider(name, fn) end
+function oriel.decorations.provider(name, fn) end
 
 ---@class oriel.diagnostics
 oriel.diagnostics = {}
@@ -331,7 +317,7 @@ function oriel.overview.add(spec) end
 ---@class oriel.picker
 oriel.picker = {}
 
---- A source of results for the omnibox and the pickers: { id, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, desc (matched, but left out of the row for the preview to show), note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label, detail and desc, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.
+--- A source of results for the omnibox and the pickers: { name, title, prefix ('!' narrows the omnibox to it), order (50), picker_only, items = fn(query), run = fn(item), preview = fn(item), loading = fn() }. items returns a list of { label, detail, desc (matched, but left out of the row for the preview to show), note, icon, icon_style, badge, badge_style, key, boost, id, ... }; the omnibox matches the query against label, detail and desc, and the item comes back to run and preview as it was given, so keep your own fields on it. items runs as the omnibox draws: answer from what you have, and fetch in the background; while loading returns true the picker shows it's still loading, and says there are no matches only once it doesn't. preview returns oriel.ui nodes.
 ---@param spec table
 function oriel.picker.source(spec) end
 
@@ -423,10 +409,9 @@ function oriel.session.keep(id, key, value) end
 ---@return any
 function oriel.session.kept(id, key) end
 
---- A kind of session, shadowing a built-in of the same name: { title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, agent_gate (the agent's own gate: ask, light, auto or bypass; ask by default), opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent, deletes-on-end }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).
----@param name string
+--- A kind of session, shadowing a built-in of the same name: { name, title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, agent_gate (the agent's own gate: ask, light, auto or bypass; ask by default), opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent, deletes-on-end }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).
 ---@param spec table
-function oriel.session.kind(name, spec) end
+function oriel.session.kind(spec) end
 
 --- Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it.
 ---@param name string

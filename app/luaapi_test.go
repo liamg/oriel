@@ -89,8 +89,6 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`L.json_encode({ a = 1 })`, `"{\"a\":1}"`},
 		{`L.json_encode("hello")`, `"\"hello\""`},
 		{`L.json_decode('"hello"')`, `"hello"`},
-		{`L.json('{"a":[1,2]}').a[2]`, "2"}, // deprecated, kept for old configs
-		{`L.json({ a = 1 })`, `"{\"a\":1}"`},
 		{`L.read("` + file + `")`, `"hello"`},
 		{`select(2, L.read("/nonexistent/x"))`, `"open /nonexistent/x: no such file or directory"`},
 		{`L.exec({ "echo", "hi" })`, `"hi\n"`},
@@ -104,8 +102,6 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`select(2, L.wasm.load("/no/such/module.wasm")) ~= nil`, "true"},
 		{`(L.run("Remember", { x = 7 })) == nil`, "true"},
 		{`L.remembered`, "7"},
-		{`(L.cmd("Remember", { x = 8 })) == nil`, "true"}, // deprecated, kept for old configs
-		{`L.remembered`, "8"},
 	} {
 		if got := luaconfig.Show(s.Lua(c.line)[0]); got != c.want {
 			t.Errorf("%s = %s, want %s", c.line, got, c.want)
@@ -225,7 +221,7 @@ end)
 // A decoration provider in Lua marks lines in the editor: a sign and virtual text, 1-based, and a chip.
 func TestLuaDecorations(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
-L.decor.provider("todo", function(buf, top, bottom)
+L.decorations.provider("todo", function(buf, top, bottom)
   return { { line = 2, sign = "T", hl = "warn", text = "todo here" }, { line = 3, text = "x = 1", bg = "bg.raised" }, "not a table" }
 end)
 `)
@@ -343,7 +339,7 @@ L.coverage.set("jest", "/p/a.ts", { [3] = 2, [5] = 0 })
 // command isn't there is left out.
 func TestLuaSignMenu(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
-L.decor.provider("owners", function(buf, top, bottom)
+L.decorations.provider("owners", function(buf, top, bottom)
   return { { line = 2, sign = "◆", tooltip = "Owner", menu = {
     { label = "Show owner", command = "owners.show", args = { who = "ana" } },
     { label = "Missing", command = "owners.nothing" },
@@ -371,7 +367,7 @@ end)
 // every_line it's on each line, and runs with the line it's on.
 func TestLuaSignOnHover(t *testing.T) {
 	s := apptest.LuaScene(t, `local L = oriel
-L.decor.provider("peek", function(buf, top, bottom)
+L.decorations.provider("peek", function(buf, top, bottom)
   return { { line = 2, sign = "◆", tooltip = "Peek", command = "peek.show", on_hover = true },
     { every_line = true, sign = "✚", tooltip = "Note line {line}", command = "peek.note", args = { why = "x" }, on_hover = true } }
 end)

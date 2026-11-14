@@ -20,10 +20,10 @@ func TestLuaSessionKind(t *testing.T) {
 	lw := rig.NewHost(t)
 	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
 	s.Now = time.Now()
-	s.Lua(`L.session.kind("incident", { title = "Incident", launcher = true, order = 70, can = { "ships" },
+	s.Lua(`L.session.kind{ name = "incident", title = "Incident", launcher = true, order = 70, can = { "ships" },
 		label = function(se) return "incident · " .. se.name end,
 		chips = function(se) return { "P1", { text = "pager", help = "agent/sessions" } } end,
-		prepare = function(spec) return { title = "pager: " .. spec.prompt } end })`)
+		prepare = function(spec) return { title = "pager: " .. spec.prompt } end }`)
 	var got []string
 	for _, k := range appsessions.LauncherKinds(registry.Kinds(s.Registry()), "") {
 		got = append(got, string(k.Kind))
