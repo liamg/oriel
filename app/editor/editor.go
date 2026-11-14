@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry/services"
@@ -100,7 +101,7 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 	if x.Clipboard != nil {
 		x.ed.SetClipboard(x.Clipboard)
 	}
-	x.ed.OnNotice(func(n edit.Notice) { h.Notify(kit.FromEdit(n, "vim")) })
+	x.ed.OnNotice(func(n edit.Notice) { h.Notify(edits.FromEdit(n, "vim")) })
 	x.e = vim.New(x.ed)
 	x.fileHost = &editorHost{x: x, disk: vim.Disk{Dir: x.dir}}
 	x.e.SetHost(x.fileHost)

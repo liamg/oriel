@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -594,7 +595,7 @@ func (p *Search) apply(ctx registry.Ctx) error {
 				errs = append(errs, f.Path+" changed since the preview")
 				continue
 			}
-			if _, err := buf.Text.Apply(text.Edit{Ranges: kit.HunkEdits(buf.Text.Snapshot(), f.Hunks), Author: text.Author{Kind: text.User}}); err != nil {
+			if _, err := buf.Text.Apply(text.Edit{Ranges: edits.HunkEdits(buf.Text.Snapshot(), f.Hunks), Author: text.Author{Kind: text.User}}); err != nil {
 				errs = append(errs, f.Path+": "+err.Error())
 				continue
 			}

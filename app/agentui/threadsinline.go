@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -115,9 +116,9 @@ func (x *Requests) newInline(a registry.Args) error {
 		}
 		snap := b.Text.Snapshot()
 		n.path, n.buf = b.Path, b.Text
-		at := kit.PlaceAt(snap, b.Cursor)
+		at := edits.PlaceAt(snap, b.Cursor)
 		if r, ok := ed.Selection(); ok {
-			at = kit.PlaceOf(snap, r)
+			at = edits.PlaceOf(snap, r)
 		}
 		n.line, n.end, n.col, n.endCol = at.Line-1, at.EndLine-1, at.Col, at.EndCol
 		n.text = string(snap.Line(n.line))

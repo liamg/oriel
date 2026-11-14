@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry/services"
@@ -559,7 +560,7 @@ func (g *GitSigns) reset(x *Editor, p vim.Pane, f gitFile, hs []gitx.Hunk) error
 	if h.NewLines == 0 {
 		line = h.NewStart
 	}
-	_, err := p.Editor().Do([]text.Replace{kit.LineReplace(p.Buf(), line, h.NewLines, h.Old)}, 0)
+	_, err := p.Editor().Do([]text.Replace{edits.LineReplace(p.Buf(), line, h.NewLines, h.Old)}, 0)
 	return err
 }
 

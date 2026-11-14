@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry/services"
@@ -814,7 +815,7 @@ func (x *Diff) newBuffer(st *diffState, file string, d *diffFile) *text.Buffer {
 	case b.from != d:
 		snap := b.buf.Snapshot()
 		if old := snap.Bytes(); !bytes.Equal(old, d.newText) {
-			_, err := b.buf.Apply(text.Edit{Ranges: kit.HunkEdits(snap, gitx.DiffLines(old, d.newText)), Author: text.Author{Kind: text.File}})
+			_, err := b.buf.Apply(text.Edit{Ranges: edits.HunkEdits(snap, gitx.DiffLines(old, d.newText)), Author: text.Author{Kind: text.File}})
 			if err != nil || !bytes.Equal(b.buf.Snapshot().Bytes(), d.newText) {
 				b.buf = text.New(d.newText, text.Author{Kind: text.File})
 			}
