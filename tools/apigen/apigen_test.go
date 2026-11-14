@@ -92,4 +92,7 @@ func (X) Run() {}
 	if docs := string(Docs(nss, "1")); !strings.Contains(docs, "Run it. Deprecated: use oriel.x.go.") {
 		t.Errorf("the reference doesn't deprecate it:\n%s", docs)
 	}
+	if ref := string(Reference("api", nss)); !strings.Contains(ref, `Doc: "Run it. Deprecated: use oriel.x.go."`) {
+		t.Errorf("the in-app reference doesn't deprecate it:\n%s", ref)
+	}
 }
