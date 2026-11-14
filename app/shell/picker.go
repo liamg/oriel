@@ -41,6 +41,11 @@ type picker struct {
 	ranks   *rankings
 }
 
+// The keys down from the picker to its filter, which its build and its key reading share.
+const (
+	pickerBox, pickerBody, pickerLeft, pickerHead, pickerInput = "box", "body", "left", "head", "input"
+)
+
 // sourceWait is how long the sources shown have been loading, for their Busy row.
 type sourceWait struct {
 	on    bool
@@ -179,7 +184,7 @@ func (p *picker) build(c *ui.Ctx) {
 		return
 	}
 	th := c.Theme()
-	inputID := ui.Child(ui.Child(ui.Child(ui.Child(ui.Child(c.Next("picker"), "box"), "body"), "left"), "head"), "input")
+	inputID := ui.Path(c.Next("picker"), pickerBox, pickerBody, pickerLeft, pickerHead, pickerInput)
 	keys := c.Interaction(inputID).Keys
 	g, _ := p.ranks.rank(s, p.query, pickerMax, len(keys) > 0)
 	p.keys(c, s, g, keys)
@@ -196,13 +201,13 @@ func (p *picker) build(c *ui.Ctx) {
 	size := c.Size()
 	at := render.Point{X: size.X / 2, Y: 108}
 	if widget.Scrim(c, "picker", widget.ScrimOpts{Z: ui.LayerDialog, Fill: th.C(kit.TScrimOmni), Help: "shell/pickers"}, func(c *ui.Ctx) {
-		c.Column("box", ui.Style{W: ui.Px(min(1240, size.X-32)), H: ui.Px(min(720, size.Y-130)), Fill: th.C(kit.TOmniBg), Stroke: th.C(kit.TOmniBorder), Border: 1,
+		c.Column(pickerBox, ui.Style{W: ui.Px(min(1240, size.X-32)), H: ui.Px(min(720, size.Y-130)), Fill: th.C(kit.TOmniBg), Stroke: th.C(kit.TOmniBorder), Border: 1,
 			Radius: 10, Clip: true, Trap: true, Interactive: true, Float: &ui.Float{Point: &at, Self: render.Point{X: .5}}, Role: ui.RoleDialog, Label: s.Title},
 			func(c *ui.Ctx) {
 				p.sourceStrip(c, s)
 				widget.Rule(c, "rule")
-				c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
-					c.Column("left", ui.Style{W: ui.Px(560), H: ui.Flex(1)}, func(c *ui.Ctx) {
+				c.Row(pickerBody, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
+					c.Column(pickerLeft, ui.Style{W: ui.Px(560), H: ui.Flex(1)}, func(c *ui.Ctx) {
 						p.input(c, inputID, s, g)
 						widget.Rule(c, "rule")
 						c.Column("list", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 6, R: 6, T: 6}}, func(c *ui.Ctx) {
@@ -407,9 +412,9 @@ func (p *picker) input(c *ui.Ctx, id ui.ID, s uireg.PickerSource, g group) {
 		p.focus = false
 		c.RequestFocus(id)
 	}
-	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(46), Pad: ui.PadXY(14, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+	c.Row(pickerHead, ui.Style{W: ui.Flex(1), H: ui.Px(46), Pad: ui.PadXY(14, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("prompt", "❯", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 16}, Color: th.C(theme.Accent)})
-		res := widget.Input(c, "input", &p.query, widget.InputOpts{Label: "Filter " + s.Title, Width: ui.Flex(1), DefaultFocus: true, Help: "shell/pickers"})
+		res := widget.Input(c, pickerInput, &p.query, widget.InputOpts{Label: "Filter " + s.Title, Width: ui.Flex(1), DefaultFocus: true, Help: "shell/pickers"})
 		switch {
 		case res.Cancelled:
 			p.close(true)

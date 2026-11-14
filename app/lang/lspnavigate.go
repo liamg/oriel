@@ -386,19 +386,22 @@ func (x *LSP) startRename() error {
 	return nil
 }
 
+// The keys down from the rename prompt to its field, which its build and its focus share.
+const renameCard, renameIn = "card", "in"
+
 // renameInput is the prompt at the cursor; Enter asks the server, then shows the rename as a diff.
 func (x *LSP) renameInput(c *ui.Ctx, at render.Point) {
 	rp := x.rename
-	id := ui.Child(ui.Child(c.Next("rename"), "card"), "in")
+	id := ui.Path(c.Next("rename"), renameCard, renameIn)
 	if !rp.asked {
 		rp.asked = true
 		c.RequestFocus(id)
 	}
 	c.Box("rename", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
-		kit.Popup(c, "card", ui.Style{W: ui.Px(320), Pad: ui.Pad(8), Gap: 6, Help: "editor/pane#rename"}, func(c *ui.Ctx) {
+		kit.Popup(c, renameCard, ui.Style{W: ui.Px(320), Pad: ui.Pad(8), Gap: 6, Help: "editor/pane#rename"}, func(c *ui.Ctx) {
 			c.Text("t", "RENAME "+rp.old, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .12},
 				Color: c.Theme().C(theme.FgFaint)})
-			res := widget.Input(c, "in", &rp.value, widget.InputOpts{Label: "New name", SelectOnFocus: true, Help: "editor/pane#rename"})
+			res := widget.Input(c, renameIn, &rp.value, widget.InputOpts{Label: "New name", SelectOnFocus: true, Help: "editor/pane#rename"})
 			switch {
 			case res.Cancelled:
 				x.rename = nil
