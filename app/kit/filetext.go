@@ -12,9 +12,9 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// FileSrc is a file's text as it is now: an open buffer's, else what's on disk, read through the window's Reads and
+// FileText is a file's text as it is now: an open buffer's, else what's on disk, read through the window's Reads and
 // read again when it changes. What's made from the text (its lines, its highlighting) is kept until the text changes.
-type FileSrc struct {
+type FileText struct {
 	Src     []byte // nil while the file's first read is under way
 	Gen     int    // moves whenever src does
 	buf     *text.Buffer
@@ -24,7 +24,7 @@ type FileSrc struct {
 	ls      []string
 	ref     *srcBytes // this version of Src
 	rd      *Reads
-	hl      *SourceFile
+	hl      *HighlightedExcerpt
 	hlAt    [3]int // the line, before and after hl was made for
 	hlDone  bool   // hl is highlighted, not the plain text shown meanwhile
 }
@@ -54,7 +54,7 @@ func Buffers(r registry.Registry) []services.EditorBuffer {
 }
 
 // Load brings f up to date with path: buf is the buffer open on it, or nil; else the file is read through rd.
-func (f *FileSrc) Load(rd *Reads, buf *text.Buffer, path string) *FileSrc {
+func (f *FileText) Load(rd *Reads, buf *text.Buffer, path string) *FileText {
 	if buf != nil {
 		if snap := buf.Snapshot(); f.buf != buf || f.version != snap.Version() || f.Src == nil {
 			f.set(snap.Bytes())
@@ -91,12 +91,12 @@ func SameBytes(a, b []byte) bool {
 }
 
 // Loading is whether the file's first read is under way.
-func (f *FileSrc) Loading() bool { return f.Src == nil && f.state.Loading() }
+func (f *FileText) Loading() bool { return f.Src == nil && f.state.Loading() }
 
 // State is the file's read's state.
-func (f *FileSrc) State() ui.LoadState { return f.state }
+func (f *FileText) State() ui.LoadState { return f.state }
 
-func (f *FileSrc) set(src []byte) {
+func (f *FileText) set(src []byte) {
 	if src == nil {
 		src = []byte{}
 	}
@@ -105,10 +105,10 @@ func (f *FileSrc) set(src []byte) {
 }
 
 // Missing is whether there's neither a buffer nor a file.
-func (f *FileSrc) Missing() bool { return f.buf == nil && f.missing }
+func (f *FileText) Missing() bool { return f.buf == nil && f.missing }
 
 // Lines are the text's lines, without their endings.
-func (f *FileSrc) Lines() []string {
+func (f *FileText) Lines() []string {
 	if f.ls == nil {
 		f.ls = FileLines(f.Src)
 	}
@@ -117,7 +117,7 @@ func (f *FileSrc) Lines() []string {
 
 // Around is HighlightAround of the text, highlighted off the loop through the window's reads: plain text until it's
 // made.
-func (f *FileSrc) Around(r registry.Registry, path string, line, before, after int) *SourceFile {
+func (f *FileText) Around(r registry.Registry, path string, line, before, after int) *HighlightedExcerpt {
 	at := [3]int{line, before, after}
 	if f.hl != nil && f.hlAt == at && f.hlDone {
 		return f.hl
@@ -141,14 +141,14 @@ func (f *FileSrc) Around(r registry.Registry, path string, line, before, after i
 	return f.hl
 }
 
-// FileSrcs are files' texts by path.
-type FileSrcs map[string]*FileSrc
+// FileTexts are files' texts by path.
+type FileTexts map[string]*FileText
 
 // Of is path's text, as Load has it, read through r's Reads.
-func (fs FileSrcs) Of(r registry.Registry, path string) *FileSrc {
+func (fs FileTexts) Of(r registry.Registry, path string) *FileText {
 	f := fs[path]
 	if f == nil {
-		f = &FileSrc{}
+		f = &FileText{}
 		fs[path] = f
 	}
 	rd, _ := ReadsOf(r)
