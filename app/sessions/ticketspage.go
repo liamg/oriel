@@ -148,7 +148,7 @@ func (x *Tickets) act(r ticketRow, kind core.Kind, resume bool) {
 		x.refresh(r.tracker)
 		return
 	}
-	if se, ok := ticketSession(x.h, r.ticket.Key); ok && resume {
+	if se, ok := kit.TicketSession(x.h, r.ticket.Key); ok && resume {
 		run("session.open", registry.Args{"id": string(se.ID())})
 		return
 	}
@@ -374,7 +374,7 @@ func (x *Tickets) ticketRowView(c *ui.Ctx, r ticketRow, many bool) {
 				c.Text("t", t.Title, widget.UIFont(13, th.C(theme.Fg)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if t.State != "" {
-					widget.Chip(c, "st", t.State, kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), ticketsHelp+"#list")
+					widget.Chip(c, "st", t.State, kit.TokenColour(th, kit.TicketStageTone(t.Stage), th.C(theme.Accent)), ticketsHelp+"#list")
 				}
 			})
 			c.Row("l2", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -392,8 +392,8 @@ func (x *Tickets) ticketRowView(c *ui.Ctx, r ticketRow, many bool) {
 				if t.Blocked {
 					c.Text("b", "blocked", widget.MonoFont(10, th.C(theme.Warn)))
 				}
-				if se, ok := ticketSession(x.h, t.Key); ok {
-					c.Text("se", continueLabel(se), widget.MonoFont(10, th.C(theme.Accent)))
+				if se, ok := kit.TicketSession(x.h, t.Key); ok {
+					c.Text("se", kit.ContinueLabel(se), widget.MonoFont(10, th.C(theme.Accent)))
 				}
 			})
 		})
@@ -412,15 +412,15 @@ func (x *Tickets) pageDetail(c *ui.Ctx, r ticketRow) {
 	c.Row("kicker", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("k", t.Key, widget.MonoFont(11, th.C(theme.FgMuted)))
 		if t.State != "" {
-			widget.Chip(c, "st", t.State, kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), help)
+			widget.Chip(c, "st", t.State, kit.TokenColour(th, kit.TicketStageTone(t.Stage), th.C(theme.Accent)), help)
 		}
 	})
 	widget.Wrap(c, "title", t.Title, 640, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 17, Weight: typeset.SemiBold},
 		Color: th.C(theme.Fg)})
 	c.Row("acts", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		plan := "Plan"
-		if se, ok := ticketSession(x.h, t.Key); ok {
-			plan = continueLabel(se)
+		if se, ok := kit.TicketSession(x.h, t.Key); ok {
+			plan = kit.ContinueLabel(se)
 		}
 		if widget.Button(c, "plan", plan, widget.ButtonOpts{Primary: true, Key: "↵", Help: help}) {
 			x.act(r, core.KindPlan, true)
@@ -450,7 +450,7 @@ func (x *Tickets) pageDetail(c *ui.Ctx, r ticketRow) {
 		if t.Blocked || len(blockedBy) > 0 {
 			draw.PreviewField(c, "blocked by", cmp.Or(strings.Join(blockedBy, ", "), "another ticket"))
 		}
-		if se, ok := ticketSession(x.h, t.Key); ok {
+		if se, ok := kit.TicketSession(x.h, t.Key); ok {
 			draw.PreviewField(c, "session", se.Name())
 		}
 	})

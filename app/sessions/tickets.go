@@ -176,18 +176,6 @@ func (x *Tickets) askKey(ctx registry.Ctx, name string) error {
 	return fmt.Errorf("no ticket tracker %q takes a key", name)
 }
 
-// ticketSession is the session to continue a ticket in, rather than start another: one whose ticket is key.
-func ticketSession(h plugin.Host, key string) (core.Session, bool) {
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return nil, false
-	}
-	return kit.NewestSession(h, func(st core.SessionState) bool { return strings.EqualFold(strings.TrimSpace(st.Ticket), key) })
-}
-
-// continueLabel is how a ticket with a session says so: "Continue · fix-prices".
-func continueLabel(se core.Session) string { return "Continue · " + se.Name() }
-
 // fresh asks a tracker for its list when it has none or it's stale, and gives the ask under way, if any.
 func (x *Tickets) fresh(tr registry.TicketTracker, refresh bool) <-chan struct{} {
 	if tr.Assigned == nil || x.needsKey(tr) {
@@ -324,17 +312,6 @@ func (x *Tickets) rows() []ticketRow {
 	return out
 }
 
-// stageTone is a stage's colour: violet before it starts, cyan in progress, pink in review.
-func stageTone(stage string) string {
-	switch stage {
-	case registry.TicketStarted:
-		return "status.working"
-	case registry.TicketInReview:
-		return "status.reviewer"
-	}
-	return "status.permission"
-}
-
 // ticketNote is a row's note: its PR, blocked, its priority.
 func ticketNote(t registry.Ticket) string {
 	var parts []string
@@ -372,9 +349,9 @@ func (x *Tickets) source() uireg.PickerSource {
 				default:
 					t := r.ticket
 					it.ID, it.Label, it.Detail, it.Note = t.Key, t.Key+" "+t.Title, t.Project, ticketNote(*t)
-					it.Badge, it.BadgeStyle = t.State, stageTone(t.Stage)
-					if se, ok := ticketSession(x.h, t.Key); ok {
-						it.Note = continueLabel(se) // the PR and priority are in the preview
+					it.Badge, it.BadgeStyle = t.State, kit.TicketStageTone(t.Stage)
+					if se, ok := kit.TicketSession(x.h, t.Key); ok {
+						it.Note = kit.ContinueLabel(se) // the PR and priority are in the preview
 					}
 				}
 				out = append(out, it)
@@ -391,7 +368,7 @@ func (x *Tickets) source() uireg.PickerSource {
 						return
 					}
 					t := r.ticket
-					tone := ui.TextStyle{Color: kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent))}
+					tone := ui.TextStyle{Color: kit.TokenColour(th, kit.TicketStageTone(t.Stage), th.C(theme.Accent))}
 					draw.PreviewHead(c, t.Key+" · "+strings.ToUpper(t.State), tone, t.Title)
 					draw.PreviewField(c, "tracker", t.Tracker)
 					if t.Project != "" {
@@ -407,7 +384,7 @@ func (x *Tickets) source() uireg.PickerSource {
 						draw.PreviewField(c, "blocked by", cmp.Or(strings.Join(t.BlockedBy, ", "), "another ticket"))
 					}
 					hint := "↵ starts work on it: a plan, the ticket its context"
-					if se, ok := ticketSession(x.h, t.Key); ok {
+					if se, ok := kit.TicketSession(x.h, t.Key); ok {
 						draw.PreviewField(c, "session", se.Name())
 						hint = "↵ continues it in " + se.Name() + ", resumed if it's stopped or archived"
 					}
@@ -424,7 +401,7 @@ func (x *Tickets) source() uireg.PickerSource {
 				x.refresh(r.tracker)
 				return nil
 			}
-			if se, ok := ticketSession(x.h, r.ticket.Key); ok {
+			if se, ok := kit.TicketSession(x.h, r.ticket.Key); ok {
 				return x.h.Run(ctx, "session.open", registry.Args{"id": string(se.ID())})
 			}
 			return x.h.Run(ctx, "session.new", registry.Args{"kind": string(core.KindPlan), "ticket": r.ticket.Key})

@@ -380,7 +380,7 @@ func (x *Launcher) continues() (core.Session, bool) {
 	if t := strings.TrimSpace(x.ticket); t != "" && strings.EqualFold(t, x.another) {
 		return nil, false
 	}
-	return ticketSession(x.h, x.ticket)
+	return kit.TicketSession(x.h, x.ticket)
 }
 
 // continuing is the agent column while Start continues se: the agent se runs on, which Start keeps, and Start
@@ -643,7 +643,7 @@ func (x *Launcher) ticketCard(c *ui.Ctx) {
 	se, cont := x.continues()
 	switch {
 	case t == nil && cont && !x.card.busy:
-		c.Text("ticket-continue", continueLabel(se), widget.MonoFont(10.5, th.C(theme.Accent)))
+		c.Text("ticket-continue", kit.ContinueLabel(se), widget.MonoFont(10.5, th.C(theme.Accent)))
 		return
 	case x.card.busy:
 		widget.Busy(c, "ticket-wait", widget.LoadState{Phase: widget.Pending, Since: x.card.since},
@@ -661,7 +661,7 @@ func (x *Launcher) ticketCard(c *ui.Ctx) {
 		c.Column("id", ui.Style{W: ui.Px(110), Gap: 6}, func(c *ui.Ctx) {
 			c.Text("key", t.Key, widget.MonoFont(11, th.C(theme.Accent)))
 			if t.State != "" {
-				widget.Chip(c, "state", t.State, kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), help)
+				widget.Chip(c, "state", t.State, kit.TokenColour(th, kit.TicketStageTone(t.Stage), th.C(theme.Accent)), help)
 			}
 		})
 		c.Column("body", ui.Style{W: ui.Flex(1), Gap: 6, Clip: true}, func(c *ui.Ctx) {
@@ -673,7 +673,7 @@ func (x *Launcher) ticketCard(c *ui.Ctx) {
 				c.Text("facts", strings.Join(t.Facts, "   "), widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 			if cont {
-				c.Text("continue", continueLabel(se), widget.MonoFont(10.5, th.C(theme.Accent)))
+				c.Text("continue", kit.ContinueLabel(se), widget.MonoFont(10.5, th.C(theme.Accent)))
 			}
 		})
 		if widget.IconButton(c, "drop", "✕", widget.IconButtonOpts{Label: "Take " + t.Key + " off", Help: help, Size: 18}) {
