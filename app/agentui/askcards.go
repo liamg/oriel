@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -373,7 +372,7 @@ func (x *Console) logIn(ctx registry.Ctx, a registry.Args) error {
 					err = kit.OpenURL(x.h, url)
 				}
 				if err != nil {
-					x.h.Notify(core.Notice{ID: "agent.login", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
+					x.h.Notify(core.Notice{ID: "agent.login", Severity: core.SevError, Source: "agent", Text: err.Error()})
 				}
 			})
 		})

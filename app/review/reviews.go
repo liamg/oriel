@@ -281,7 +281,6 @@ func prSession(h plugin.Host, url string) (core.Session, bool) {
 	return kit.NewestSession(h, func(st core.SessionState) bool { return strings.EqualFold(strings.TrimSuffix(reviewPR(st), "/"), url) })
 }
 
-// fresh asks a source for its list when it has none or it's older than stale, and gives the ask under way, if any.
 // asking says a code host's been asked for its requests and hasn't answered.
 func (x *Reviews) asking() bool {
 	x.mu.Lock()
@@ -294,6 +293,7 @@ func (x *Reviews) asking() bool {
 	return false
 }
 
+// fresh asks a source for its list when it has none or it's older than stale, and gives the ask under way, if any.
 func (x *Reviews) fresh(s registry.HostSite, stale time.Duration) <-chan struct{} {
 	if s.Requested == nil || x.needsKey(s) {
 		return nil
@@ -369,7 +369,7 @@ func (x *Reviews) notifyNew(s registry.HostSite, before, now []registry.ReviewRe
 			continue
 		}
 		id := "reviews.asked:" + r.URL
-		x.h.Notify(core.Notice{ID: id, Severity: core.SevQuestion, Source: s.Source, Title: "Review requested", Text: askedText(r), Time: time.Now(),
+		x.h.Notify(core.Notice{ID: id, Severity: core.SevQuestion, Source: s.Source, Title: "Review requested", Text: askedText(r),
 			Actions: []core.Action{
 				{Title: "Start review in background", Command: "reviews.start-background", Args: map[string]any{"url": r.URL}},
 				{Title: "Ignore", Command: "notice.dismiss", Args: map[string]any{"id": id}},

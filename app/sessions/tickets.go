@@ -437,7 +437,7 @@ func (x *Tickets) moved(tr registry.TicketTracker, key string, m registry.Ticket
 	}
 	x.stale(tr.Name)
 	x.h.Notify(core.Notice{ID: "tickets.moved", Severity: core.SevInfo, Source: tr.Source,
-		Text: key + " moved to " + m.State + " in " + tr.Label(), Time: time.Now()})
+		Text: key + " moved to " + m.State + " in " + tr.Label()})
 }
 
 // trackerCall runs a call to a tracker off the loop, with a time limit; a failure goes to the log.
@@ -521,7 +521,7 @@ func (x *Tickets) askDone(key string, session core.SessionID) {
 		Actions: []core.Action{
 			{Title: "Mark done", Command: "tickets.done", Args: map[string]any{"ticket": key}},
 			{Title: "Not yet", Command: "notice.dismiss", Args: map[string]any{"id": askDoneID(key)}},
-		}, Time: time.Now()})
+		}})
 }
 
 // markDone moves a ticket to its tracker's done, as the user asked; a failure is shown, not only logged.
@@ -535,7 +535,7 @@ func (x *Tickets) markDone(key string) error {
 		m, err := tr.Done(ctx, key)
 		if err != nil {
 			x.h.Notify(core.Notice{ID: "tickets.done-failed", Severity: core.SevError, Source: tr.Source,
-				Text: key + " couldn't be marked done in " + tr.Label() + ": " + err.Error(), Time: time.Now()})
+				Text: key + " couldn't be marked done in " + tr.Label() + ": " + err.Error()})
 			return err
 		}
 		x.moved(tr, key, m)

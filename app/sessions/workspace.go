@@ -206,7 +206,7 @@ func (x *Workspace) rebuild(id core.SessionID) error {
 			st.load.Reload()
 			st.log.Reload()
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "workspace.rebuild", Severity: core.SevError, Source: "workspace", Text: err.Error(), Time: time.Now()})
+				x.h.Notify(core.Notice{ID: "workspace.rebuild", Severity: core.SevError, Source: "workspace", Text: err.Error()})
 			}
 		})
 	})

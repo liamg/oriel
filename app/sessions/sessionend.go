@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -203,7 +202,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 		return
 	}
 	if err := x.end(ctx, host.EndReq{Session: id}); err != nil {
-		x.h.Notify(core.Notice{ID: "session.end." + string(id), Severity: core.SevError, Session: id, Text: err.Error(), Time: time.Now()})
+		x.h.Notify(core.Notice{ID: "session.end." + string(id), Severity: core.SevError, Session: id, Text: err.Error()})
 	}
 }
 
@@ -267,7 +266,7 @@ func (x *End) end(ctx registry.Ctx, r host.EndReq) error {
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "session.end." + string(r.Session), Doing: doing},
 		func(ctx context.Context) (struct{}, error) { return struct{}{}, w.End(ctx, r) },
 		func(registry.Ctx, struct{}) error {
-			n := core.Notice{ID: "session.ended." + string(r.Session), Severity: core.SevInfo, Time: time.Now(), Text: "Deleted " + name + "."}
+			n := core.Notice{ID: "session.ended." + string(r.Session), Severity: core.SevInfo, Text: "Deleted " + name + "."}
 			if !r.Delete {
 				n.Session, n.Text = r.Session, "Archived "+name+"."
 				if !r.DeleteBranch {
@@ -296,7 +295,7 @@ func (x *End) view(c *ui.Ctx) {
 		x.ask = nil
 		x.h.Do(func() {
 			if err := x.end(context.Background(), host.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
-				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, Session: a.id, Text: err.Error(), Time: time.Now()})
+				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, Session: a.id, Text: err.Error()})
 			}
 		})
 		return

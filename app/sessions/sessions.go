@@ -244,7 +244,7 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 		if slices.ContainsFunc(was, l.Same) {
 			continue
 		}
-		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out", Time: time.Now(),
+		n := core.Notice{ID: "agent.login", Severity: core.SevError, Source: source + ":" + l.Provider, Title: "Signed out",
 			Text: services.ProviderTitle(x.h, l.Provider) + " needs you to log in: " + l.Detail + "."}
 		switch {
 		case l.Browser:

@@ -153,7 +153,7 @@ func RunOrNotify(h plugin.Host, source, cmd string, a registry.Args) error {
 	err := h.Run(context.Background(), cmd, a)
 	if err != nil && !errors.Is(err, ErrStopped) {
 		h.Log().Warn(source, "command", cmd, "err", err)
-		h.Notify(core.Notice{ID: source + ".error", Severity: core.SevError, Source: source, Key: true, Text: err.Error(), Time: WindowNow(h)})
+		h.Notify(core.Notice{ID: source + ".error", Severity: core.SevError, Source: source, Key: true, Text: err.Error()})
 	}
 	return err
 }

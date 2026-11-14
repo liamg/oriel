@@ -7,7 +7,6 @@ import (
 	"image/color"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -341,7 +340,7 @@ func closeSession(h plugin.Host, id core.SessionID) {
 		cmd = "session.close-tab"
 	}
 	if err := h.Run(context.Background(), cmd, args); err != nil {
-		h.Notify(core.Notice{ID: cmd, Severity: core.SevError, Source: "shell", Key: true, Text: err.Error(), Time: time.Now()})
+		h.Notify(core.Notice{ID: cmd, Severity: core.SevError, Source: "shell", Key: true, Text: err.Error()})
 	}
 }
 

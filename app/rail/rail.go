@@ -370,10 +370,10 @@ func (r *Rail) open(ctx registry.Ctx, p core.Project) error {
 	return nil
 }
 
-// formNow is the window's form: its own, else the option's, auto being wide with projects to choose between.
 // Form is the form the sidebar takes for the projects here: wide, narrow, one, or none.
 func (r *Rail) Form() string { return r.formNow(kit.ProjectsHere(r.h)) }
 
+// formNow is the window's form: its own, else the option's, auto being wide with projects to choose between.
 func (r *Rail) formNow(w kit.Here) string {
 	if r.form != "" {
 		return r.form

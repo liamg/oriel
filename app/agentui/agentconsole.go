@@ -600,7 +600,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 // run runs a command from a click, saying what went wrong in a notice.
 func (x *Console) run(ctx context.Context, id string, a registry.Args) {
 	if err := x.h.Run(ctx, id, a); err != nil {
-		x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
+		x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error()})
 	}
 }
 

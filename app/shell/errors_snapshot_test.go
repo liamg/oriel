@@ -146,7 +146,7 @@ func TestErrorViewsHaveHelp(t *testing.T) {
 // An engine's edit.Notice becomes a core event, Notified.
 func TestEditNoticeMapsOntoCore(t *testing.T) {
 	n := kit.FromEdit(edit.Notice{ID: "vim.pattern-not-found", Severity: edit.Error, Text: "Pattern not found: foo"}, "vim")
-	if n.ID != "vim.pattern-not-found" || n.Severity != core.SevError || n.Source != "vim" || !n.Key || n.Time.IsZero() {
+	if n.ID != "vim.pattern-not-found" || n.Severity != core.SevError || n.Source != "vim" || !n.Key {
 		t.Errorf("notice = %+v", n)
 	}
 	q := kit.FromEdit(edit.Notice{ID: "vim.swap-range", Severity: edit.Question}, "vim")

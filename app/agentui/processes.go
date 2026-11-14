@@ -122,7 +122,7 @@ func (x *Console) processes(c *ui.Ctx, se core.SessionState, st *consoleState, w
 						done := registry.OnDone(context.Background(), func(err error) {
 							delete(st.stopping, key)
 							if err != nil {
-								x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error(), Time: time.Now()})
+								x.h.Notify(core.Notice{ID: "agent.console", Severity: core.SevError, Source: "agent", Text: err.Error()})
 							}
 						})
 						_ = x.h.Run(done, "agent.process.stop", registry.Args{"session": string(se.ID), "id": t.ID})
