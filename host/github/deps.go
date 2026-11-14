@@ -18,7 +18,7 @@ type GitHub struct {
 	deps    Deps
 	ship    shipState
 	mirror  mirrorState
-	tokens  gh.Tokens // each GitHub server's token, once found
+	clients gh.Clients
 	remotes remotes
 }
 
@@ -38,7 +38,14 @@ type Deps struct {
 
 // New is the code host side of st's sessions.
 func New(env hostcore.Env, st hostcore.State, deps Deps) *GitHub {
-	return &GitHub{env: env, st: st, deps: deps, ship: shipState{github: map[string]githubRead{}, synced: map[string]time.Time{}}}
+	x := &GitHub{env: env, st: st, deps: deps, ship: shipState{github: map[string]githubRead{}, synced: map[string]time.Time{}}}
+	x.clients = gh.Clients{HTTP: deps.HTTP, Client: func(dir string, env []string) gh.Client {
+		if c := deps.Client(); c != nil {
+			return c(dir, env)
+		}
+		return nil
+	}}
+	return x
 }
 
 // PROpen says the last GitHub reading of a branch found its PR open, whose page shows the PR rather than a draft.

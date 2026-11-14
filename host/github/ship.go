@@ -1,10 +1,8 @@
 package github
 
 import (
-	"cmp"
 	"context"
 	"fmt"
-	"net/http"
 	"slices"
 	"strings"
 	"sync"
@@ -130,35 +128,9 @@ func shipKey(id core.SessionID, project string) string { return string(id) + "/"
 // github is the GitHub client for a checkout.
 func (x *GitHub) github(r gitx.Repo) gh.Client { return x.githubOn(r, "", "") }
 
-// githubOn is the GitHub client for a checkout, on a GitHub Enterprise server's hostname when given: GitHub's API with
-// token, else the user's own (gh.TokenFor). gh needn't be installed.
+// githubOn is the GitHub client for a checkout, on a GitHub Enterprise server's hostname when given (gh.Clients).
 func (x *GitHub) githubOn(r gitx.Repo, hostname, token string) gh.Client {
-	if c := x.deps.Client(); c != nil {
-		return c(r.Dir, r.Env)
-	}
-	host := strings.ToLower(cmp.Or(hostname, "github.com"))
-	base := "https://api.github.com"
-	if host != "github.com" {
-		base = "https://" + host + "/api/v3"
-	}
-	if token == "" {
-		token = x.tokens.For(context.Background(), host)
-	}
-	if token == "" {
-		return gh.API{T: noToken{host: host}}
-	}
-	var client *http.Client
-	if x.deps.HTTP != nil {
-		client = x.deps.HTTP()
-	}
-	return gh.API{T: gh.HTTP{Base: base, Token: token, Client: client}}
-}
-
-// noToken is GitHub with no token found: every call is refused, as GitHub would refuse it.
-type noToken struct{ host string }
-
-func (n noToken) Do(context.Context, string, string, any, any) error {
-	return &gh.Error{Status: 401, Message: "no GitHub token found: set GITHUB_TOKEN, sign in with gh, or store a git credential for " + n.host}
+	return x.clients.On(r.Dir, r.Env, hostname, token)
 }
 
 // ShipRead is every project of a session on its way to a PR, or those r names.
