@@ -83,7 +83,7 @@ func (r *rankings) rank(s uireg.PickerSource, q string, limit int, moving bool) 
 	if s.Key != nil {
 		if err := registry.Call(func() error { key = s.Key(); return nil }); err != nil {
 			r.mu.Unlock()
-			r.h.TurnOff("picker", s.ID, err)
+			r.h.TurnOff(s.ContributionKind(), s.ID, err)
 			return group{}, false
 		}
 	}
@@ -176,7 +176,7 @@ func sourceItems(h plugin.Host, s uireg.PickerSource, q string) ([]uireg.PickerI
 	}
 	var items []uireg.PickerItem
 	if err := registry.Call(func() error { items = s.Items(context.Background(), q); return nil }); err != nil {
-		h.TurnOff("picker", s.ID, err)
+		h.TurnOff(s.ContributionKind(), s.ID, err)
 		return nil, false
 	}
 	return items, true

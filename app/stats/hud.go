@@ -139,7 +139,7 @@ func (x *HUD) node(c *ui.Ctx, ind uireg.Indicator) (ui.Node, error) {
 	if due {
 		var n ui.Node
 		err := registry.Call(func() (err error) { n, err = ind.Build(context.Background()); return })
-		x.h.Report("hud.indicator", ind.Name, err)
+		x.h.Report(ind.ContributionKind(), ind.Name, err)
 		b = &builtIndicator{node: n, err: err, at: now}
 		x.mu.Lock()
 		x.cache[ind.Name] = b

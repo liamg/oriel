@@ -35,7 +35,7 @@ func (p Picker) Source(spec script.Table, where string) error {
 	s.Items = func(_ registry.Ctx, query string) []uireg.PickerItem {
 		out, err := a.VM.Call(items, query)
 		if err != nil {
-			a.Host.Report("picker", id, err)
+			a.Host.Report(uireg.PickerSource{}.ContributionKind(), id, err)
 			return nil
 		}
 		list, _ := first(out).([]any)
@@ -56,7 +56,7 @@ func (p Picker) Source(spec script.Table, where string) error {
 		s.Loading = func() bool {
 			out, err := a.VM.Call(loading)
 			if err != nil {
-				a.Host.Report("picker", id, err)
+				a.Host.Report(uireg.PickerSource{}.ContributionKind(), id, err)
 				return false
 			}
 			busy, _ := first(out).(bool)
@@ -73,7 +73,7 @@ func (p Picker) Source(spec script.Table, where string) error {
 		s.Preview = func(it uireg.PickerItem) ui.Node {
 			out, err := a.VM.Call(prev, it.Data)
 			if err != nil {
-				a.Host.Report("picker", id, err)
+				a.Host.Report(uireg.PickerSource{}.ContributionKind(), id, err)
 				return nil
 			}
 			v := first(out)
