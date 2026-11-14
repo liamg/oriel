@@ -45,7 +45,7 @@ func (t *themes) Activate(_ context.Context, h plugin.Host) error {
 type themePreviews struct {
 	themes, langs int
 	by            map[string]themePreview // by name and variant
-	sample        *kit.SourceFile
+	sample        *kit.HighlightedExcerpt
 }
 
 type themePreview struct {
@@ -53,7 +53,7 @@ type themePreview struct {
 	err error
 }
 
-func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.Resolved, error, kit.SourceFile) {
+func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.Resolved, error, kit.HighlightedExcerpt) {
 	srcs, themes := h.Themes()
 	_, langs := h.Languages()
 	if p.by == nil || p.themes != themes || p.langs != langs {

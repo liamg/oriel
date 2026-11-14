@@ -70,7 +70,7 @@ type ThemeEditor struct {
 	undoKey string // the name the last undo entry was for, so a drag is one entry
 	written string // the name last written, lit in the TOML strip
 	live    map[string]*liveFile
-	files   kit.FileSrcs // the theme files' text, read again when they change
+	files   kit.FileTexts // the theme files' text, read again when they change
 
 	fixtures map[*theme.Resolved]*fixture
 	lint     []theme.Finding
@@ -108,7 +108,7 @@ func (e *ThemeEditor) Manifest() plugin.Manifest {
 
 func (e *ThemeEditor) Activate(_ context.Context, h plugin.Host) error {
 	e.h = h
-	e.live, e.files = map[string]*liveFile{}, kit.FileSrcs{}
+	e.live, e.files = map[string]*liveFile{}, kit.FileTexts{}
 	e.fixtures = map[*theme.Resolved]*fixture{}
 	place := kit.PagePlace("theme", "Theme editor", "theme.edit", &e.open)
 	place.Shown = func() bool { return e.open || e.picking }

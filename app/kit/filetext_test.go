@@ -32,11 +32,11 @@ func until(t *testing.T, what string, ok func() bool) {
 }
 
 // A file's text is read off the loop: the first ask finds it loading, a later one has it.
-func TestFileSrcReadsOffTheLoop(t *testing.T) {
+func TestFileTextReadsOffTheLoop(t *testing.T) {
 	_, r := testReads(t)
 	path := filepath.Join(t.TempDir(), "a.go")
 	os.WriteFile(path, []byte("package a\n"), 0o644)
-	fs := FileSrcs{}
+	fs := FileTexts{}
 	if f := fs.Of(r, path); !f.Loading() || f.Src != nil {
 		t.Fatalf("the first ask read the file on the loop: %q", f.Src)
 	}
@@ -47,11 +47,11 @@ func TestFileSrcReadsOffTheLoop(t *testing.T) {
 }
 
 // A preview's highlighting is made off the loop: plain text until it's in.
-func TestFileSrcHighlightsOffTheLoop(t *testing.T) {
+func TestFileTextHighlightsOffTheLoop(t *testing.T) {
 	_, r := testReads(t)
 	path := filepath.Join(t.TempDir(), "a.go")
 	os.WriteFile(path, []byte("package a\n\nfunc A() {}\n"), 0o644)
-	fs := FileSrcs{}
+	fs := FileTexts{}
 	until(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
 	f := fs.Of(r, path)
 	if hl := f.Around(r, path, 3, 1, 1); f.hlDone || len(hl.lines) == 0 {
@@ -62,11 +62,11 @@ func TestFileSrcHighlightsOffTheLoop(t *testing.T) {
 
 // A file's text is read again when the file changes on disk or its buffer's version moves, and what's made from it
 // is kept until then.
-func TestFileSrcFollowsTheFileAndItsBuffer(t *testing.T) {
+func TestFileTextFollowsTheFileAndItsBuffer(t *testing.T) {
 	rd, r := testReads(t)
 	path := filepath.Join(t.TempDir(), "a.go")
 	os.WriteFile(path, []byte("package a\n\nfunc A() {}\n"), 0o644)
-	fs := FileSrcs{}
+	fs := FileTexts{}
 	until(t, "the file's text", func() bool { return !fs.Of(r, path).Loading() })
 	f := fs.Of(r, path)
 	until(t, "the highlighting", func() bool { f.Around(registry.New(), path, 1, 0, 2); return f.hlDone })

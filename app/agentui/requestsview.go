@@ -271,7 +271,7 @@ func (x *Requests) newRequestNote(c *ui.Ctx, st *requestsState, width float32) {
 // fileLines are a file's lines as the editor has them, else as they are on disk; nil for no file.
 func (x *Requests) fileLines(path string) []string {
 	if x.files == nil {
-		x.files = kit.FileSrcs{}
+		x.files = kit.FileTexts{}
 	}
 	f := x.files.Of(x.h, path)
 	if f.Missing() {

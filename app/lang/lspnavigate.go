@@ -42,7 +42,7 @@ type refPeek struct {
 	refs   []lsp.Location
 	texts  []string       // each ref's line
 	counts map[string]int // the refs in each file
-	srcs   kit.FileSrcs   // the refs' files
+	srcs   kit.FileTexts  // the refs' files
 	sel    int
 	shown  int // the selection the list last scrolled to
 }
@@ -260,7 +260,7 @@ func (x *LSP) references() error {
 			}
 			return a.Range.Start.Line - b.Range.Start.Line
 		})
-		pk := &refPeek{path: path, line: pos.Line, name: name, refs: ls, texts: make([]string, len(ls)), counts: map[string]int{}, srcs: kit.FileSrcs{},
+		pk := &refPeek{path: path, line: pos.Line, name: name, refs: ls, texts: make([]string, len(ls)), counts: map[string]int{}, srcs: kit.FileTexts{},
 			shown: -1}
 		for i, l := range ls {
 			pk.texts[i] = lineOf(x, l)
