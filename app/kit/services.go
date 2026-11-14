@@ -109,9 +109,8 @@ const (
 
 // Markdown draws markdown, as the markdown plugin renders it.
 type Markdown interface {
-	// Text draws src wrapped to width, its body in body's style.
-	Text(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle)
-	// TextIn is Text as o says: its images found from o.Dir, its newlines line breaks with o.Breaks.
+	// TextIn draws src wrapped to width, its body in body's style, as o says: its images found from o.Dir, its
+	// newlines line breaks with o.Breaks.
 	TextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle, o MarkdownOpts)
 	// Title is src's first level-1 heading, as plain text.
 	Title(src string) (string, bool)

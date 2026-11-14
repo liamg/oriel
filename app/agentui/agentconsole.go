@@ -1,3 +1,5 @@
+// Package agentui is the agent's side of the window: the agent console, its prompt cards and asks, the assistant (Ori),
+// dictation, and the agent's tools a session offers.
 package agentui
 
 import (

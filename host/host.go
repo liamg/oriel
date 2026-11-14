@@ -2,11 +2,11 @@
 // app's process. It is the source of truth for session state: every change is a core event, applied to the store
 // it shares with the app, and kept in a log per session so it survives a restart.
 //
-// This package is the host's facade: the API the app calls, each entry point recovering a panic into an error. The
-// work is done by its parts, each in a package of its own that sees the host only as a hostcore.State: worktree
-// (workspaces), agentrun (agents), sandboxhost (sandboxes), github (code hosts and the Ship page), repos, jobs,
-// utility, aireview, persist (what's kept on disk) and pricing (the price book). The parts never call each other;
-// what one needs of another it's given here, as a func.
+// This package is the host's facade: the API the app calls, much of it the methods of the parts it embeds, each entry
+// point recovering a panic into an error. The work is done by its parts, each in a package of its own that sees the
+// host only as a hostcore.State: worktree (workspaces), agentrun (agents), sandboxhost (sandboxes), github (code
+// hosts and the Ship page), repos, jobs, utility, aireview, persist (what's kept on disk) and pricing (the price
+// book). The parts never call each other; what one needs of another it's given here, as a func.
 //
 // Lock order, outermost first: a session's agent's lock (agentrun), then the edit lock (State.Mutate), then the
 // store's. Every other lock (the runner's, the logs', the sandbox settings', the ship and mirror states') is held

@@ -1,3 +1,5 @@
+// Package editor is the text editor: buffers in panes, its vim or plain input, git signs, markdown and its preview,
+// and the pickers and search it brings.
 package editor
 
 import (

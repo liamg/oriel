@@ -1,3 +1,5 @@
+// Package explain explains code to the user: a unit or a branch's change, asked of an agent, with walkthroughs and the
+// Changed units panel.
 package explain
 
 import (

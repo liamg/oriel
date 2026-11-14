@@ -1,3 +1,5 @@
+// Package gitui is git in the window: the explorer, diffs, the commit dialog, and each work tree's status as the
+// panels read it.
 package gitui
 
 import (
