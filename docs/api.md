@@ -10,11 +10,9 @@ A failure the caller may expect (a file or program that isn't there, a program t
 ## oriel
 
 - `oriel.asset(path)` (`ui`): One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.
-- `oriel.cmd(id, args?)` (`ui`): Run a command by its id, with arguments. Deprecated: use oriel.run.
 - `oriel.command(name, fn, opts?)` (`ui`): Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
-- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
+- `oriel.exec(argv, opts?)` (`exec`): Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default).
 - `oriel.exec_async(argv, opts?, fn)` (`exec`): Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too.
-- `oriel.json(v)` (`ui`): Decode JSON text to a table, or encode any other value as JSON text. Deprecated: use oriel.json_encode or oriel.json_decode, which can encode a string.
 - `oriel.json_decode(s)` (`ui`): Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
 - `oriel.json_encode(v)` (`ui`): Encode a value as JSON text: a table, a string, a number, a boolean.
 - `oriel.load(fn, opts?)` (`ui`): A load for oriel.ui.async and busy: fn(done) starts the work on the loop and calls done(value) when it has it, or done(nil, err) when it failed (from an oriel.http.request answer, say). opts: timeout (seconds; a load still running then fails). Returns a handle: h:start() (once; does nothing while loading or loaded), h:reload() (keeps the value on show), h:reset(), h:value(), h:state() ({ phase = idle|pending|ready|failed, error, stale, note, elapsed }).

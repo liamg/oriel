@@ -89,8 +89,6 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`L.json_encode({ a = 1 })`, `"{\"a\":1}"`},
 		{`L.json_encode("hello")`, `"\"hello\""`},
 		{`L.json_decode('"hello"')`, `"hello"`},
-		{`L.json('{"a":[1,2]}').a[2]`, "2"}, // deprecated, kept for old configs
-		{`L.json({ a = 1 })`, `"{\"a\":1}"`},
 		{`L.read("` + file + `")`, `"hello"`},
 		{`select(2, L.read("/nonexistent/x"))`, `"open /nonexistent/x: no such file or directory"`},
 		{`L.exec({ "echo", "hi" })`, `"hi\n"`},
@@ -104,8 +102,6 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`select(2, L.wasm.load("/no/such/module.wasm")) ~= nil`, "true"},
 		{`(L.run("Remember", { x = 7 })) == nil`, "true"},
 		{`L.remembered`, "7"},
-		{`(L.cmd("Remember", { x = 8 })) == nil`, "true"}, // deprecated, kept for old configs
-		{`L.remembered`, "8"},
 	} {
 		if got := luaconfig.Show(s.Lua(c.line)[0]); got != c.want {
 			t.Errorf("%s = %s, want %s", c.line, got, c.want)

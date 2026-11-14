@@ -45,19 +45,13 @@ oriel = {}
 ---@return string?,string?
 function oriel.asset(path) end
 
---- Run a command by its id, with arguments.
----@param id string
----@param args? table
----@deprecated use oriel.run
-function oriel.cmd(id, args) end
-
 --- Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.
 ---@param name string
 ---@param fn function
 ---@param opts? table
 function oriel.command(name, fn, opts) end
 
---- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).
+--- Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default).
 ---@param argv string|string[]
 ---@param opts? table
 ---@return string?,string?
@@ -68,12 +62,6 @@ function oriel.exec(argv, opts) end
 ---@param opts? any
 ---@param fn any
 function oriel.exec_async(argv, opts, fn) end
-
---- Decode JSON text to a table, or encode any other value as JSON text.
----@param v any
----@return any
----@deprecated use oriel.json_encode or oriel.json_decode, which can encode a string
-function oriel.json(v) end
 
 --- Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.
 ---@param s string

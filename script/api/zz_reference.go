@@ -6,11 +6,9 @@ package api
 var Reference = map[string][]RefFunc{
 	"": {
 		{Call: "oriel.asset(path)", Doc: "One of the plugin's own assets, read-only, or nil and why not: path is under its assets/ directory (oriel.asset('icons/x.svg')), and may not lead out of it. Needs no capability.", Cap: "ui"},
-		{Call: "oriel.cmd(id, args?)", Doc: "Run a command by its id, with arguments.", Cap: "ui"},
 		{Call: "oriel.command(name, fn, opts?)", Doc: "Add a command: name is what :Name and the omnibox run, fn gets the command's arguments.", Cap: "ui"},
-		{Call: "oriel.exec(argv, opts?)", Doc: "Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default), on_done (deprecated: use oriel.exec_async).", Cap: "exec"},
+		{Call: "oriel.exec(argv, opts?)", Doc: "Run a program, argv as a list, and return what it printed, or nil and why it failed (not found, or it failed). ~ is your home, and a relative program (./tool) is in cwd. opts: cwd, timeout (seconds, 10 by default).", Cap: "exec"},
 		{Call: "oriel.exec_async(argv, opts?, fn)", Doc: "Run a program as oriel.exec does, in the background, without holding up the window: fn(output, err) gets what it printed and why it failed (nil if it didn't), on the loop: a program that isn't there too.", Cap: "exec"},
-		{Call: "oriel.json(v)", Doc: "Decode JSON text to a table, or encode any other value as JSON text.", Cap: "ui"},
 		{Call: "oriel.json_decode(s)", Doc: "Decode JSON text to the value it holds: a table, a string, a number, a boolean, or nil.", Cap: "ui"},
 		{Call: "oriel.json_encode(v)", Doc: "Encode a value as JSON text: a table, a string, a number, a boolean.", Cap: "ui"},
 		{Call: "oriel.load(fn, opts?)", Doc: "A load for oriel.ui.async and busy: fn(done) starts the work on the loop and calls done(value) when it has it, or done(nil, err) when it failed (from an oriel.http.request answer, say). opts: timeout (seconds; a load still running then fails). Returns a handle: h:start() (once; does nothing while loading or loaded), h:reload() (keeps the value on show), h:reset(), h:value(), h:state() ({ phase = idle|pending|ready|failed, error, stale, note, elapsed }).", Cap: "ui"},
