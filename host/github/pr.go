@@ -12,8 +12,8 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// A session's project's pull request on GitHub, for the app's GitHub code host: each call is made with the checkout's
-// gh and env, so a sandboxed workspace's goes through its gateway.
+// A session's project's pull request on GitHub, for the app's GitHub code host: each call goes to GitHub's API from
+// the host, with the token the request carries or the one found for the server.
 
 // GitHubReq names a session's project, and what the call needs of its PR.
 type GitHubReq struct {
