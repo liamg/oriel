@@ -362,14 +362,14 @@ func (x *Plan) docsView(c *ui.Ctx) {
 		docs, loading := x.docs(se, st)
 		x.current(st, docs)
 		c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 12, B: 10}, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", "PLAN DOCS", kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("k", "PLAN DOCS", widget.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", fmt.Sprintf("%d %s", len(docs), kit.Plural(len(docs), "file", "files")), kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("n", fmt.Sprintf("%d %s", len(docs), kit.Plural(len(docs), "file", "files")), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		widget.Rule(c, "rule")
 		if len(docs) == 0 && !loading {
 			c.Box("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12)}, func(c *ui.Ctx) {
-				widget.Wrap(c, "t", "No docs yet: the agent writes PLAN.md here.", 220, kit.UIFont(12, th.C(theme.FgFaint)))
+				widget.Wrap(c, "t", "No docs yet: the agent writes PLAN.md here.", 220, widget.UIFont(12, th.C(theme.FgFaint)))
 			})
 		} else {
 			res := widget.List(c, "docs", len(docs), &st.docSel, widget.ListOpts{RowHeight: 36, Height: ui.Px(float32(36 * len(docs))), Label: "Plan docs",
@@ -385,14 +385,14 @@ func (x *Plan) docsView(c *ui.Ctx) {
 		}
 		widget.Rule(c, "rule2")
 		c.Column("source", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 9, Role: ui.RoleGroup, Label: "Source"}, func(c *ui.Ctx) {
-			c.Text("k", "SOURCE", kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("k", "SOURCE", widget.KickerFont(th.C(theme.FgFaint)))
 			if se.Ticket != "" {
 				// The ticket opens in a tab of its own: the prompt it started with is its text, too long for this column.
 				if widget.Clickable(c, "ticket", ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(8, 6), Gap: 8, Cross: ui.Center, Radius: 4,
 					Label: "Ticket " + se.Ticket, Help: "agent/plan#docs"}, func(c *ui.Ctx) {
 					kit.Icon(c, x.h, "i", "doc", 12, th.C(theme.Accent))
-					c.Text("k", "Ticket", kit.UIFont(12.5, th.C(theme.FgMuted)))
-					c.Text("key", se.Ticket, kit.MonoFont(12, th.C(theme.Accent)))
+					c.Text("k", "Ticket", widget.UIFont(12.5, th.C(theme.FgMuted)))
+					c.Text("key", se.Ticket, widget.MonoFont(12, th.C(theme.Accent)))
 				}).Clicked {
 					x.run("ticket.open", registry.Args{"ticket": se.Ticket})
 				}
@@ -405,12 +405,12 @@ func (x *Plan) docsView(c *ui.Ctx) {
 				}
 			}
 			if prompt = strings.TrimSpace(core.PlainMarkdown(prompt)); prompt != "" {
-				widget.Wrap(c, "p", strings.Join(strings.Fields(prompt), " "), 220, kit.UIFont(12, th.C(theme.FgFaint)))
+				widget.Wrap(c, "p", strings.Join(strings.Fields(prompt), " "), 220, widget.UIFont(12, th.C(theme.FgFaint)))
 			}
 		})
 		if len(se.Projects) > 0 {
 			c.Column("projects", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 4), Gap: 8, Role: ui.RoleGroup, Label: "Projects"}, func(c *ui.Ctx) {
-				c.Text("k", "PROJECTS", kit.KickerFont(th.C(theme.FgFaint)))
+				c.Text("k", "PROJECTS", widget.KickerFont(th.C(theme.FgFaint)))
 				for i, p := range se.Projects {
 					c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 						tone := th.C(theme.StatusQuiet)
@@ -418,9 +418,9 @@ func (x *Plan) docsView(c *ui.Ctx) {
 							tone = th.C(theme.FgFaint)
 						}
 						c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: tone}, nil)
-						c.Text("n", p.Name, kit.MonoFont(11.5, th.C(theme.Fg)))
+						c.Text("n", p.Name, widget.MonoFont(11.5, th.C(theme.Fg)))
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-						c.Text("b", p.Branch, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+						c.Text("b", p.Branch, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 					})
 				}
 			})
@@ -431,9 +431,9 @@ func (x *Plan) docsView(c *ui.Ctx) {
 		c.Column("ready", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 9, Role: ui.RoleGroup, Label: "Readiness", Help: "agent/plan#readiness"},
 			func(c *ui.Ctx) {
 				c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("k", "READINESS", kit.KickerFont(th.C(theme.FgFaint)))
+					c.Text("k", "READINESS", widget.KickerFont(th.C(theme.FgFaint)))
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-					c.Text("n", fmt.Sprintf("%d open", open), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+					c.Text("n", fmt.Sprintf("%d open", open), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 				})
 				tone := th.C(tPlanMark)
 				if open == 0 {
@@ -447,7 +447,7 @@ func (x *Plan) docsView(c *ui.Ctx) {
 				case open == 0:
 					note = "Ready: every thread is resolved or deferred."
 				}
-				widget.Wrap(c, "note", note, 220, kit.UIFont(11.5, th.C(theme.FgFaint)))
+				widget.Wrap(c, "note", note, 220, widget.UIFont(11.5, th.C(theme.FgFaint)))
 			})
 	})
 }
@@ -472,7 +472,7 @@ func (x *Plan) docRow(c *ui.Ctx, se core.SessionState, d planDoc, sel bool) {
 	}
 	c.Row("row", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(14, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Box("sq", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 2, Fill: th.C(tPlanMark)}, nil)
-		c.Text("n", d.name, kit.UIFont(13, name))
+		c.Text("n", d.name, widget.UIFont(13, name))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		switch {
 		case needs > 0:
@@ -482,7 +482,7 @@ func (x *Plan) docRow(c *ui.Ctx, se core.SessionState, d planDoc, sel bool) {
 		case open > 0:
 			widget.Chip(c, "n", fmt.Sprint(open), th.C(theme.FgFaint), "agent/plan#docs")
 		default:
-			c.Text("n", "–", kit.MonoFont(11, th.C(theme.FgGhost)))
+			c.Text("n", "–", widget.MonoFont(11, th.C(theme.FgGhost)))
 		}
 	})
 }
@@ -507,8 +507,8 @@ func (x *Plan) view(c *ui.Ctx, vc uireg.ViewCtx) {
 		}
 		if !has {
 			c.Column("none", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 8}, func(c *ui.Ctx) {
-				c.Text("k", "NO PLAN DOCS YET", kit.KickerFont(th.C(tPlanMark)))
-				c.Text("t", "The agent drafts PLAN.md at the workspace root; it shows here as it writes.", kit.UIFont(13, th.C(theme.FgFaint)))
+				c.Text("k", "NO PLAN DOCS YET", widget.KickerFont(th.C(tPlanMark)))
+				c.Text("t", "The agent drafts PLAN.md at the workspace root; it shows here as it writes.", widget.UIFont(13, th.C(theme.FgFaint)))
 			})
 			return
 		}
@@ -540,12 +540,12 @@ func (x *Plan) header(c *ui.Ctx, se core.SessionState, st *planState, d planDoc,
 		if len(who) > 0 {
 			meta = strings.Join(who, " ") + " · " + phase
 		}
-		c.Text("meta", meta, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("meta", meta, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if doc := editing(se); doc != "" {
 			c.Row("editing", ui.Style{Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(theme.StatusWorking)}, nil)
-				c.Text("t", "agent editing "+doc, kit.MonoFont(10.5, th.C(theme.FgMuted)))
+				c.Text("t", "agent editing "+doc, widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			})
 		}
 		diff := registry.Args{"path": se.Dir}
@@ -569,7 +569,7 @@ func (x *Plan) document(c *ui.Ctx, vc uireg.ViewCtx, se core.SessionState, st *p
 	pr, ok := uireg.PresenterNamed(x.h, "markdown")
 	present, has := kit.PresenterOf(x.h)
 	if !ok || !has {
-		c.Text("none", "No markdown presenter is registered.", kit.UIFont(13, c.Theme().C(theme.FgFaint)))
+		c.Text("none", "No markdown presenter is registered.", widget.UIFont(13, c.Theme().C(theme.FgFaint)))
 		return
 	}
 	ps := st.present[d.name]

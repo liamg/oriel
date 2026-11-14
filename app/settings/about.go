@@ -121,7 +121,7 @@ func (x *About) card(c *ui.Ctx) {
 	case x.h.Available("update.install", nil):
 		status, tone = "A newer version is out", th.C(theme.Accent)
 	}
-	c.Text("status", status, kit.UIFont(12, tone))
+	c.Text("status", status, widget.UIFont(12, tone))
 	c.Row("updates", ui.Style{W: ui.Flex(1), Gap: 6, Wrap: true}, func(c *ui.Ctx) {
 		switch {
 		case x.h.Available("update.restart", nil):

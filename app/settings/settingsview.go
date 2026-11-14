@@ -78,7 +78,7 @@ func (s *Plugin) build(c *ui.Ctx) {
 						c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13}, Color: th.C(fg)})
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 						if n := sections[name]; n > 0 {
-							c.Text("m", fmt.Sprintf("● %d", n), kit.MonoFont(10, th.C(tSetModified)))
+							c.Text("m", fmt.Sprintf("● %d", n), widget.MonoFont(10, th.C(tSetModified)))
 						}
 					}).Clicked {
 						s.section, s.query = name, ""
@@ -181,13 +181,13 @@ func (s *Plugin) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at r
 			c.Row("name", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("n", sp.Name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 12.5, Weight: typeset.Medium}, Color: th.C(theme.Fg)})
 				if len(sp.Aliases) > 0 {
-					c.Text("a", strings.Join(sp.Aliases, " · "), kit.MonoFont(10, th.C(theme.FgGhost)))
+					c.Text("a", strings.Join(sp.Aliases, " · "), widget.MonoFont(10, th.C(theme.FgGhost)))
 				}
 			})
 			if s.asTOML {
 				sec, key, _ := strings.Cut(sp.Name, ".")
-				c.Text("toml", fmt.Sprintf("[%s] %s = %s", sec, key, formatValue(toTOML(sp, v))), kit.MonoFont(11, th.C(tThemeTOMLVal)))
-				c.Text("lua", fmt.Sprintf("oriel.option[%q] = %s", sp.Name, luaValue(toTOML(sp, v))), kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("toml", fmt.Sprintf("[%s] %s = %s", sec, key, formatValue(toTOML(sp, v))), widget.MonoFont(11, th.C(tThemeTOMLVal)))
+				c.Text("lua", fmt.Sprintf("oriel.option[%q] = %s", sp.Name, luaValue(toTOML(sp, v))), widget.MonoFont(11, th.C(theme.FgFaint)))
 			} else if sp.Help != "" {
 				widget.Wrap(c, "h", sp.Help, 560, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.FgFaint)})
 			}
@@ -203,7 +203,7 @@ func (s *Plugin) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at r
 			srcTok, src = tSetModified, "✓ saved"
 			c.WakeAt(t.Add(settingsSavedFor))
 		}
-		c.Text("src", src, kit.MonoFont(10.5, th.C(srcTok)))
+		c.Text("src", src, widget.MonoFont(10.5, th.C(srcTok)))
 		fade := float32(0)
 		if disabled {
 			fade = .55
@@ -224,10 +224,10 @@ func (s *Plugin) row(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, at r
 func (s *Plugin) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src string) {
 	c.Row("shadow", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		if l != registry.LayerLua {
-			c.Text("t", "overridden here by "+strings.TrimSuffix(s.sourceLabel("", l, registry.At{})+" · "+src, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("t", "overridden here by "+strings.TrimSuffix(s.sourceLabel("", l, registry.At{})+" · "+src, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			return
 		}
-		c.Text("t", "init.lua wins over settings.toml", kit.MonoFont(10.5, th.C(tSetLua)))
+		c.Text("t", "init.lua wins over settings.toml", widget.MonoFont(10.5, th.C(tSetLua)))
 		file, line := script.SplitLoc(src)
 		if line == 0 {
 			return
@@ -236,7 +236,7 @@ func (s *Plugin) shadowNote(c *ui.Ctx, th *theme.Resolved, l registry.Layer, src
 			file = filepath.Join(s.ConfigDir, file)
 		}
 		if widget.Clickable(c, "open", ui.Style{Dir: ui.Row, Label: "Open " + src, Help: "shell/settings#rows"}, func(c *ui.Ctx) {
-			c.Text("t", "Open "+src, kit.MonoFont(10.5, th.C(theme.Accent)))
+			c.Text("t", "Open "+src, widget.MonoFont(10.5, th.C(theme.Accent)))
 		}).Clicked {
 			s.fail(s.h.Run(context.Background(), "editor.open", registry.Args{"path": file, "line": line}))
 		}
@@ -269,7 +269,7 @@ func (s *Plugin) control(c *ui.Ctx, th *theme.Resolved, sp registry.OptionSpec, 
 		return
 	case registry.Table:
 		m, _ := v.(map[string]any)
-		c.Text("table", fmt.Sprintf("%d %s · in settings.toml", len(m), kit.Plural(len(m), "entry", "entries")), kit.MonoFont(11, th.C(theme.FgMuted)))
+		c.Text("table", fmt.Sprintf("%d %s · in settings.toml", len(m), kit.Plural(len(m), "entry", "entries")), widget.MonoFont(11, th.C(theme.FgMuted)))
 		return
 	case registry.Bool:
 		on, _ := v.(bool)
@@ -489,16 +489,16 @@ func (s *Plugin) footer(c *ui.Ctx, th *theme.Resolved) {
 		if f != nil {
 			where = "writing to " + kit.TildePath(f.path)
 		}
-		c.Text("w", where, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("w", where, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		if f != nil {
 			f.mu.Lock()
 			err, untrusted := f.err, f.untrusted
 			f.mu.Unlock()
 			switch {
 			case err != nil:
-				c.Text("err", "✕ "+err.Error()+"; the last good values stay", kit.MonoFont(10.5, th.C(theme.Error)))
+				c.Text("err", "✕ "+err.Error()+"; the last good values stay", widget.MonoFont(10.5, th.C(theme.Error)))
 			case untrusted:
-				c.Text("trust", "not trusted yet, so not applied", kit.MonoFont(10.5, th.C(theme.Warn)))
+				c.Text("trust", "not trusted yet, so not applied", widget.MonoFont(10.5, th.C(theme.Warn)))
 			}
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -508,7 +508,7 @@ func (s *Plugin) footer(c *ui.Ctx, th *theme.Resolved) {
 		if widget.Button(c, "all", "Reset all", widget.ButtonOpts{Ghost: true, Help: "shell/settings#reset"}) {
 			s.fail(s.resetWhere(func(registry.OptionSpec) bool { return true }, s.scope))
 		}
-		c.Text("keys", "esc close", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("keys", "esc close", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	})
 }
 

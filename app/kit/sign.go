@@ -27,7 +27,7 @@ func DrawSign(c *ui.Ctx, h plugin.Host, key any, d uireg.Decoration, size float3
 			Icon(c, r, "icon", d.Icon, 12, col)
 			if d.Text != "" {
 				c.Box("n", ui.Style{Float: &ui.Float{At: render.Point{X: 1, Y: 1}, Self: render.Point{X: .5, Y: .7}}}, func(c *ui.Ctx) {
-					c.Text("t", d.Text, MonoFont(8, col))
+					c.Text("t", d.Text, widget.MonoFont(8, col))
 				})
 			}
 		case d.Text == "":

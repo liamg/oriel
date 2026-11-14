@@ -717,7 +717,7 @@ func (x *Reviews) source() uireg.PickerSource {
 				th := c.Theme()
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					if r.req == nil {
-						c.Text("t", it.Label, kit.UIFont(12, th.C(theme.FgMuted)))
+						c.Text("t", it.Label, widget.UIFont(12, th.C(theme.FgMuted)))
 						return
 					}
 					q := r.req
@@ -731,7 +731,7 @@ func (x *Reviews) source() uireg.PickerSource {
 						kit.PreviewField(c, "session", r.se.Name())
 						hint = "↵ continues it in " + r.se.Name()
 					}
-					c.Text("hint", hint, kit.UIFont(11, th.C(theme.FgFaint)))
+					c.Text("hint", hint, widget.UIFont(11, th.C(theme.FgFaint)))
 				})
 			}}
 		},

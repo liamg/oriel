@@ -312,7 +312,7 @@ func markdown(c *ui.Ctx, r registry.Registry, key any, m lsp.Markup, width float
 		kit.DocText(c, r, key, m.Text, width)
 		return
 	}
-	body := kit.UIFont(12, c.Theme().C(theme.FgMuted))
+	body := widget.UIFont(12, c.Theme().C(theme.FgMuted))
 	c.Column(key, ui.Style{W: ui.Px(width), Gap: 6}, func(c *ui.Ctx) {
 		for i, p := range strings.Split(strings.TrimSpace(m.Text), "\n\n") {
 			widget.Wrap(c, i, p, width, body)

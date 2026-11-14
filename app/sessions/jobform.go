@@ -216,25 +216,25 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 	f.focus = false
 	f.settle(x.h.State())
 	c.Column("title", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-		kit.Heading(c, "h", "Title", "from the prompt's first line when empty")
+		widget.Heading(c, "h", "Title", "from the prompt's first line when empty")
 		x.jobField(c, "title", &f.title, focus, widget.InputOpts{Label: "Title", Placeholder: "a name for the list"})
 	})
 	c.Column("prompt", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		kit.Heading(c, "h", "Prompt", "markdown · name the repos it needs")
+		widget.Heading(c, "h", "Prompt", "markdown · name the repos it needs")
 		if widget.Prose(c, "prompt", &f.prompt, widget.ProseOpts{Label: "Prompt", Placeholder: "What should each run do? Name the repos; the agent adds them.",
 			Help: "agent/jobs#new", TabMoves: true, KeyMode: JobFormKeyMode, Lines: 8, MinLines: 5}).Cancelled {
 			x.closeForm()
 		}
-		kit.Note(c, "n", "no repo or branch here: the agent adds what the prompt names, fresh each run")
+		widget.Note(c, "n", "no repo or branch here: the agent adds what the prompt names, fresh each run")
 	})
 	c.Column("runs", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		kit.Heading(c, "h", "Runs in", "")
+		widget.Heading(c, "h", "Runs in", "")
 		widget.Segmented(c, "in", runsIn, &f.runsIn, widget.SegmentedOpts{Label: "Runs in", Help: "agent/jobs#new"})
-		kit.Note(c, "n", []string{"pinned for every run · container, gateway for git & gh", "pinned for every run · on this machine itself",
+		widget.Note(c, "n", []string{"pinned for every run · container, gateway for git & gh", "pinned for every run · on this machine itself",
 			"sandbox.default"}[f.runsIn])
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		kit.Heading(c, "h", "Agent", "provider · model · effort")
+		widget.Heading(c, "h", "Agent", "provider · model · effort")
 		agents, _ := f.agents.Value()
 		widget.Async(c, "agents", f.agents.State(), widget.AsyncOpts{Policy: widget.Gate, Label: "Looking for agents", Retry: f.agents.Reload,
 			Empty: "No agents installed. Each run uses the first agent installed on this machine when it runs.", IsEmpty: len(agents) == 0,
@@ -243,7 +243,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 		})
 	})
 	c.Column("schedule", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		kit.Heading(c, "h", "Schedule", "runs while Oriel is open · skips while the last run is going")
+		widget.Heading(c, "h", "Schedule", "runs while Oriel is open · skips while the last run is going")
 		c.Row("row", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			widget.Segmented(c, "every", everyFor, &f.every, widget.SegmentedOpts{Label: "Schedule", Help: "agent/jobs#schedule"})
 			switch everyOf[f.every] {
@@ -268,7 +268,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 					f.custom = v
 				}
 			}
-			c.Text("at", "at", kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("at", "at", widget.MonoFont(11, th.C(theme.FgFaint)))
 			_, err := time.Parse("15:04", strings.TrimSpace(f.at))
 			x.jobField(c, "time", &f.at, false, widget.InputOpts{Label: "At", Placeholder: "07:00", Width: ui.Px(80), Invalid: err != nil,
 				Accept: func(r rune) bool { return r >= '0' && r <= '9' || r == ':' }})
@@ -277,13 +277,13 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 	widget.Rule(c, "rule")
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		if f.err != "" {
-			c.Text("err", f.err, kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", f.err, widget.MonoFont(11, th.C(theme.Error)))
 		} else {
 			file := f.name
 			if file == "" {
 				file = trimSlug(hostapi.Sanitise(cmp.Or(f.title, kit.FirstLine(f.prompt))))
 			}
-			c.Text("file", "→ "+cmp.Or(file, "job")+".json", kit.MonoFont(10.5, th.C(theme.FgGhost)))
+			c.Text("file", "→ "+cmp.Or(file, "job")+".json", widget.MonoFont(10.5, th.C(theme.FgGhost)))
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Help: "agent/jobs#new"}) {

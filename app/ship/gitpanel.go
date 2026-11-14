@@ -46,7 +46,7 @@ func (x *Ship) gitPanelBody(c *ui.Ctx, se core.SessionState, p string) {
 	c.Box("sp", ui.Style{H: ui.Px(4)}, nil)
 	if len(s.Files) == 0 {
 		kit.SectionCap(c, "CHANGES")
-		c.Text("clean", "Nothing uncommitted.", kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("clean", "Nothing uncommitted.", widget.UIFont(12, th.C(theme.FgFaint)))
 	} else {
 		kit.SectionCap(c, fmt.Sprintf("CHANGES · %d", len(s.Files)))
 		f := x.commitForm(se.ID, s.Project)
@@ -58,8 +58,8 @@ func (x *Ship) gitPanelBody(c *ui.Ctx, se core.SessionState, p string) {
 		kit.SectionCap(c, fmt.Sprintf("TO PUSH · %d", len(s.Unpushed)))
 		for i, cm := range s.Unpushed {
 			c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Clip: true}, func(c *ui.Ctx) {
-				c.Text("h", cm.Hash, kit.MonoFont(11, th.C(tShipHash)))
-				c.Text("s", cm.Subject, kit.MonoFont(11, th.C(theme.FgMuted)))
+				c.Text("h", cm.Hash, widget.MonoFont(11, th.C(tShipHash)))
+				c.Text("s", cm.Subject, widget.MonoFont(11, th.C(theme.FgMuted)))
 			})
 		}
 	}
@@ -100,7 +100,7 @@ func (x *Ship) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 		parts = append(parts, "conflicts in "+strings.Join(s.Conflicts, ", "))
 	}
 	c.Row("sub", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		c.Text("s", strings.Join(parts, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("s", strings.Join(parts, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	})
 	if s.ReadOnly {
 		return
@@ -133,7 +133,7 @@ func (x *Ship) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 		widget.Busy(c, "merging", widget.LoadState{Phase: widget.Pending}, widget.BusyOpts{Label: "Merging into " + s.Default, Help: "git/ship#merge-default"})
 	}
 	if f := x.failed(se.ID, s.Project); f != "" && x.doing(se.ID, s.Project) == "" {
-		widget.Wrap(c, "failed", f, 280, kit.MonoFont(10.5, th.C(theme.Error)))
+		widget.Wrap(c, "failed", f, 280, widget.MonoFont(10.5, th.C(theme.Error)))
 	}
 }
 

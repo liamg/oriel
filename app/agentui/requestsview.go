@@ -66,7 +66,7 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 				Width: ui.Flex(1)})
 			// The panel's own key, where its name used to repeat the tab's.
 			if k := kit.BoundKey(x.h, "view.toggle", requestsArgs()); k != "" {
-				c.Text("keys", k, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("keys", k, widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
 		listID := c.Next("list")
@@ -81,7 +81,7 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 			if len(vs) == 0 {
 				c.Box("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12)}, func(c *ui.Ctx) {
 					widget.Wrap(c, "t", "No requests yet. Write one below, or ask about a line from the editor.", max(vc.Width-32, 120),
-						kit.UIFont(12, th.C(theme.FgFaint)))
+						widget.UIFont(12, th.C(theme.FgFaint)))
 				})
 			}
 			for g := kit.GroupWorking; g <= kit.GroupResolved; g++ {
@@ -95,10 +95,10 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 					continue
 				}
 				c.Row(fmt.Sprint("g", g), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, T: 12, B: 6}, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("k", strings.ToUpper(groupNames[g]), kit.KickerFont(th.C(groupTokens[g])))
+					c.Text("k", strings.ToUpper(groupNames[g]), widget.KickerFont(th.C(groupTokens[g])))
 					if g == kit.GroupResolved {
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-						c.Text("n", fmt.Sprint(len(in)), kit.MonoFont(10, th.C(theme.FgFaint)))
+						c.Text("n", fmt.Sprint(len(in)), widget.MonoFont(10, th.C(theme.FgFaint)))
 					}
 				})
 				for _, t := range in {
@@ -116,7 +116,7 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 			if k := kit.BoundKey(x.h, "request.new", nil); k != "" {
 				note = k + " · " + note
 			}
-			c.Text("note", note, kit.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("note", note, widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
 	})
 }
@@ -138,11 +138,11 @@ func (x *Requests) listRow(c *ui.Ctx, se core.SessionState, st *requestsState, t
 		c.Column("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 14, R: 16, T: 9, B: 9}, Gap: 4}, func(c *ui.Ctx) {
 			c.Row("h", ui.Style{W: ui.Flex(1), Gap: 9, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: tone}, nil)
-				c.Text("t", t.Heading(), kit.UIFont(13, title))
+				c.Text("t", t.Heading(), widget.UIFont(13, title))
 			})
 			c.Box("p", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {
 				if p := preview(x.h, se, t); p != "" && g != kit.GroupResolved {
-					c.Text("t", p, kit.UIFont(12, th.C(theme.FgFaint)))
+					c.Text("t", p, widget.UIFont(12, th.C(theme.FgFaint)))
 				}
 			})
 			meta := []widget.AgoPart{{Text: threadPlace(t)}, {Text: msgs(len(t.Comments))}, {At: t.Updated}}
@@ -150,7 +150,7 @@ func (x *Requests) listRow(c *ui.Ctx, se core.SessionState, st *requestsState, t
 				meta = []widget.AgoPart{{Text: "btw"}, {At: t.Updated}}
 			}
 			c.Box("m", ui.Style{Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {
-				widget.AgoLine(c, "t", widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgGhost))}, meta...)
+				widget.AgoLine(c, "t", widget.AgoLineOpts{Text: widget.MonoFont(10.5, th.C(theme.FgGhost))}, meta...)
 			})
 		})
 	}).Clicked {
@@ -258,13 +258,13 @@ func (x *Requests) requestHeader(c *ui.Ctx, se core.SessionState, t core.Thread,
 func (x *Requests) newRequestNote(c *ui.Ctx, st *requestsState, width float32) {
 	th := c.Theme()
 	c.Column("new", ui.Style{W: ui.Px(width), Gap: 8}, func(c *ui.Ctx) {
-		c.Text("k", "NEW REQUEST", kit.KickerFont(th.C(theme.Accent)))
+		c.Text("k", "NEW REQUEST", widget.KickerFont(th.C(theme.Accent)))
 		where := "Not anchored to a line: it's about the whole change."
 		if a := st.newAnchor; a != nil {
 			where = fmt.Sprintf("About %s:%d.", a.File, a.Line)
 		}
 		widget.Wrap(c, "w", where+" The agent gets it at once when it's idle, or when its turn ends; urgent interrupts the turn, and btw asks a fork on the side.",
-			width, kit.UIFont(12.5, th.C(theme.FgMuted)))
+			width, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	})
 }
 
@@ -299,14 +299,14 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 		Label: "Anchored code"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("sq", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: th.C(theme.StatusWorking)}, nil)
-			c.Text("f", a.File, kit.MonoFont(11.5, th.C(theme.FgMuted)))
+			c.Text("f", a.File, widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			span := fmt.Sprintf(":%d", from+1)
 			if end > from {
 				span = fmt.Sprintf(":%d-%d", from+1, end+1)
 			}
-			c.Text("l", span, kit.MonoFont(11, th.C(theme.FgGhost)))
+			c.Text("l", span, widget.MonoFont(11, th.C(theme.FgGhost)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", "anchored · follows edits", kit.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("n", "anchored · follows edits", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
 		c.Column("code", ui.Style{W: ui.Flex(1), Pad: ui.Insets{T: 4, B: 4}}, func(c *ui.Ctx) {
@@ -324,9 +324,9 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 					}
 					c.Box("e", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 					c.Box("n", ui.Style{W: ui.Px(44), Pad: ui.Insets{L: 10}}, func(c *ui.Ctx) {
-						c.Text("t", fmt.Sprint(n+1), kit.MonoFont(11.5, th.C(theme.FgGhost)))
+						c.Text("t", fmt.Sprint(n+1), widget.MonoFont(11.5, th.C(theme.FgGhost)))
 					})
-					c.Text("t", strings.ReplaceAll(l, "\t", "    "), kit.MonoFont(12, th.C(theme.Fg)))
+					c.Text("t", strings.ReplaceAll(l, "\t", "    "), widget.MonoFont(12, th.C(theme.Fg)))
 				})
 			}
 		})
@@ -354,7 +354,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					commentMenu(c, x.h, t, cm, hover)
 				}()
 				c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-				commentWhen(c, cm, t.Origin, kit.MonoFont(10, th.C(theme.FgGhost)))
+				commentWhen(c, cm, t.Origin, widget.MonoFont(10, th.C(theme.FgGhost)))
 				if cm.Redacted {
 					widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 				}
@@ -377,7 +377,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					}
 				}
 			})
-			kit.MarkdownText(c, x.h, "body", cm.Body, inner, kit.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
+			kit.MarkdownText(c, x.h, "body", cm.Body, inner, widget.UIFont(13, th.C(theme.Fg)), kit.ThreadMarkdown(se, t))
 			if sourced && src.Comment != nil {
 				src.Comment(c, string(se.ID), string(t.ID), cm.ID, inner)
 			}
@@ -388,7 +388,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 				}
 				c.Row(fmt.Sprint("img", i), ui.Style{Pad: ui.PadXY(10, 6), Gap: 8, Radius: 6, Stroke: th.C(tBlockLine), Border: 1, Cross: ui.Center},
 					func(c *ui.Ctx) {
-						c.Text("t", "pasted · "+filepath.Base(img), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+						c.Text("t", "pasted · "+filepath.Base(img), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 					})
 			}
 			if cm.Unbacked != "" {
@@ -410,7 +410,7 @@ func lastAgentComment(t core.Thread) string {
 
 // unbacked flags a reply's claim that no run backs: "says tests pass, but ran none".
 func unbacked(c *ui.Ctx, why string) {
-	c.Text("unbacked", "⚠ "+why, kit.MonoFont(10.5, c.Theme().C(tReqUnbacked)))
+	c.Text("unbacked", "⚠ "+why, widget.MonoFont(10.5, c.Theme().C(tReqUnbacked)))
 }
 
 // composer is where you write to the request: what's attached, the text, its ways of going, and Send.
@@ -424,7 +424,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			c.Row("attach", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 				for i, a := range d.attach {
 					c.Row(i, ui.Style{Gap: 4, Pad: ui.PadXY(6, 2), Radius: 4, Stroke: th.C(tBlockLine), Border: 1, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Text("t", a.label(), kit.MonoFont(10.5, th.C(theme.Accent)))
+						c.Text("t", a.label(), widget.MonoFont(10.5, th.C(theme.Accent)))
 						if widget.IconButton(c, "x", "✕", widget.IconButtonOpts{Label: "Remove " + a.label(), Help: "agent/requests#composer"}) {
 							d.attach = slices.Delete(slices.Clone(d.attach), i, i+1)
 						}
@@ -445,7 +445,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 		}
 		if d.editing != "" {
 			c.Row("editing", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("t", "Editing your queued message: send replaces it", kit.MonoFont(10.5, th.C(tQueued)))
+				c.Text("t", "Editing your queued message: send replaces it", widget.MonoFont(10.5, th.C(tQueued)))
 				if widget.Link(c, "cancel", "cancel", "agent/requests#composer") {
 					*d = draft{}
 				}
@@ -484,7 +484,7 @@ func (x *Requests) composer(c *ui.Ctx, se core.SessionState, st *requestsState, 
 			if se.Agent.Model != "" {
 				who = append(who, se.Agent.Model)
 			}
-			c.Text("md", strings.Join(append([]string{"markdown"}, strings.Join(who, " ")), " · "), kit.MonoFont(10.5, th.C(theme.FgGhost)))
+			c.Text("md", strings.Join(append([]string{"markdown"}, strings.Join(who, " ")), " · "), widget.MonoFont(10.5, th.C(theme.FgGhost)))
 			if widget.Button(c, "send", "Send", widget.ButtonOpts{Primary: true, Key: "⏎", Disabled: strings.TrimSpace(d.body()) == "",
 				Help: "agent/requests#composer"}) {
 				if err := x.send(context.Background(), st, id, false); err != nil {
@@ -531,8 +531,8 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 				kit.Section(c, "changed", "Changed by this request", "", func(c *ui.Ctx) {
 					for i, f := range t.Touched {
 						c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-							c.Text("m", "M", kit.MonoFont(11.5, th.C(theme.Warn)))
-							c.Text("p", relTo(se, f.Path), kit.MonoFont(11.5, th.C(theme.FgMuted)))
+							c.Text("m", "M", widget.MonoFont(11.5, th.C(theme.Warn)))
+							c.Text("p", relTo(se, f.Path), widget.MonoFont(11.5, th.C(theme.FgMuted)))
 							c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 							widget.DiffStat(c, "s", f.Added, f.Removed, widget.DiffStatOpts{})
 						})
@@ -572,8 +572,8 @@ func (x *Requests) requestSide(c *ui.Ctx, se core.SessionState, st *requestsStat
 			}
 		})
 		c.Column("keys", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12), Gap: 4}, func(c *ui.Ctx) {
-			c.Text("a", "j/k next request · ⏎ focus composer", kit.MonoFont(10, th.C(theme.FgGhost)))
-			c.Text("b", "o open anchor · R resolve", kit.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("a", "j/k next request · ⏎ focus composer", widget.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("b", "o open anchor · R resolve", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
 	})
 }
@@ -585,7 +585,7 @@ func (x *Requests) threadLink(c *ui.Ctx, se core.SessionState, t core.Thread) {
 	if widget.Clickable(c, "t."+string(t.ID), ui.Style{Dir: ui.Row, W: ui.Flex(1), Gap: 8, Cross: ui.Center, Label: t.Heading(), Help: "agent/requests#request"},
 		func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(tok)}, nil)
-			c.Text("t", t.Heading(), kit.MonoFont(11.5, th.C(theme.FgMuted)))
+			c.Text("t", t.Heading(), widget.MonoFont(11.5, th.C(theme.FgMuted)))
 		}).Clicked {
 		x.run("request.open", registry.Args{"thread": string(t.ID)})
 	}
@@ -616,7 +616,7 @@ func (x *Requests) summary(c *ui.Ctx) {
 				counts[kit.GroupOf(t)]++
 			}
 			c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, T: 10, B: 8}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("k", "REQUESTS", kit.KickerFont(th.C(theme.FgFaint)))
+				c.Text("k", "REQUESTS", widget.KickerFont(th.C(theme.FgFaint)))
 				if n := counts[kit.GroupNeedsYou]; n > 0 {
 					widget.Chip(c, "needs", fmt.Sprintf("%d needs you", n), th.C(theme.StatusNeedsYou), "agent/requests#summary")
 				}
@@ -625,7 +625,7 @@ func (x *Requests) summary(c *ui.Ctx) {
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if n := counts[kit.GroupResolved]; n > 0 {
-					c.Text("res", fmt.Sprintf("%d resolved", n), kit.MonoFont(11, th.C(theme.FgFaint)))
+					c.Text("res", fmt.Sprintf("%d resolved", n), widget.MonoFont(11, th.C(theme.FgFaint)))
 				}
 			})
 			for i, t := range x.visible(se, &requestsState{}) {
@@ -638,7 +638,7 @@ func (x *Requests) summary(c *ui.Ctx) {
 			done, all := taskCount(se.Tasks)
 			kit.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) {
 				if all == 0 {
-					c.Text("none", "No tasks yet: the agent adds them as it plans.", kit.UIFont(12, th.C(theme.FgGhost)))
+					c.Text("none", "No tasks yet: the agent adds them as it plans.", widget.UIFont(12, th.C(theme.FgGhost)))
 				}
 				taskRail(c, "rail", se.Tasks)
 			})
@@ -672,10 +672,10 @@ func (x *Requests) summaryRow(c *ui.Ctx, se core.SessionState, t core.Thread, no
 		Help: "agent/requests#summary"}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{Gap: 9, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(groupTokens[g])}, nil)
-			c.Text("t", t.Heading(), kit.UIFont(13, title))
+			c.Text("t", t.Heading(), widget.UIFont(13, title))
 		})
 		c.Box("m", ui.Style{Pad: ui.Insets{L: 16}}, func(c *ui.Ctx) {
-			widget.AgoLine(c, "t", widget.AgoLineOpts{Text: kit.MonoFont(10.5, meta)}, note...)
+			widget.AgoLine(c, "t", widget.AgoLineOpts{Text: widget.MonoFont(10.5, meta)}, note...)
 		})
 	}).Clicked {
 		x.run("request.open", registry.Args{"thread": string(t.ID)})

@@ -95,10 +95,10 @@ func (x *Console) processes(c *ui.Ctx, se core.SessionState, st *consoleState, w
 	stop := x.canStop(se.ID)
 	c.Column("processes", blockStyle(th, width, sel), func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Cross: ui.Center, Help: "agent/console#running"}, func(c *ui.Ctx) {
-			c.Text("k", "RUNNING", kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("k", "RUNNING", widget.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", fmt.Sprintf("%d %s · left running by the last turn", len(ps), kit.Plural(len(ps), "process", "processes")),
-				kit.MonoFont(10, th.C(theme.FgFaint)))
+				widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		for i, t := range ps {
 			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
@@ -107,10 +107,10 @@ func (x *Console) processes(c *ui.Ctx, se core.SessionState, st *consoleState, w
 					kit.StateMark(c, "mark", kit.MarkRunning, time.Time{}, 10)
 					c.Text("kind", cmp.Or(t.Kind, "process"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.Medium},
 						Color: th.C(theme.Fg)})
-					c.Text("cmd", t.Description, kit.MonoFont(11.5, th.C(theme.FgMuted)))
+					c.Text("cmd", t.Description, widget.MonoFont(11.5, th.C(theme.FgMuted)))
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 					if use := processUse(t); use != "" {
-						c.Text("use", use, kit.MonoFont(10, th.C(theme.FgGhost)))
+						c.Text("use", use, widget.MonoFont(10, th.C(theme.FgGhost)))
 					}
 					if !stop || t.ID == "" {
 						return

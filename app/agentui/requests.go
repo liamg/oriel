@@ -652,7 +652,7 @@ func avatar(c *ui.Ctx, key any, cm core.Comment) {
 		tone, label = th.C(kit.TAvatarGitHub), cmp.Or(kit.Initials(strings.NewReplacer("-", " ", "_", " ", ".", " ").Replace(cm.Name)), "GH")
 	}
 	c.Box(key, ui.Style{W: ui.Px(28), H: ui.Px(28), Radius: 6, Fill: tone, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("t", label, ui.TextStyle{Font: kit.KickerFont(render.Color{}).Font, Color: th.C(theme.AccentInk)})
+		c.Text("t", label, ui.TextStyle{Font: widget.KickerFont(render.Color{}).Font, Color: th.C(theme.AccentInk)})
 	})
 }
 

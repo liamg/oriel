@@ -23,12 +23,12 @@ func workingLine(c *ui.Ctx, key any, se core.SessionState, width ui.Size) {
 	who := kit.ProviderNameIn(c, a.Provider) + " is working"
 	c.Row(key, ui.Style{W: width, Gap: 10, Cross: ui.Center, Pad: ui.PadXY(2, 4)}, func(c *ui.Ctx) {
 		widget.Dots(c, "dots", widget.DotsOpts{Tone: th.C(theme.StatusWorking), Name: who, Help: workingHelp})
-		c.Text("who", who, kit.UIFont(12, th.C(theme.FgMuted)))
+		c.Text("who", who, widget.UIFont(12, th.C(theme.FgMuted)))
 		if !a.TurnStarted.IsZero() {
 			if c.WindowFocused() && c.WindowVisible() {
 				c.WakeAt(c.Now().Truncate(time.Second).Add(time.Second)) // its clock, which holds behind another app
 			}
-			c.Text("for", "· "+kit.Duration(c.Now().Sub(a.TurnStarted)), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("for", "· "+kit.Duration(c.Now().Sub(a.TurnStarted)), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		}
 	})
 }

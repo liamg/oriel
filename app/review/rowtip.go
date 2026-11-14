@@ -23,26 +23,26 @@ const rowTipWidth = 380
 func (x *Reviews) rowTip(c *ui.Ctx, r reviewRow, many bool) {
 	th := c.Theme()
 	q := r.req
-	faint, body := kit.MonoFont(10.5, th.C(theme.FgMuted)), kit.UIFont(12, th.C(theme.Fg))
+	faint, body := widget.MonoFont(10.5, th.C(theme.FgMuted)), widget.UIFont(12, th.C(theme.Fg))
 	c.Column("tip", ui.Style{Gap: 6, Pad: ui.PadXY(2, 4)}, func(c *ui.Ctx) {
 		c.Row("where", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("key", q.Key(), faint)
 			if q.Draft {
-				c.Text("draft", "draft", kit.MonoFont(10.5, th.C(theme.Warn)))
+				c.Text("draft", "draft", widget.MonoFont(10.5, th.C(theme.Warn)))
 			}
 			if many && r.src.Label() != "" {
 				c.Text("src", r.src.Label(), faint)
 			}
 		})
-		widget.Wrap(c, "title", q.Title, rowTipWidth, kit.UIFont(13.5, th.C(theme.Fg)))
+		widget.Wrap(c, "title", q.Title, rowTipWidth, widget.UIFont(13.5, th.C(theme.Fg)))
 		for i, line := range rowTipLines(*q, x.now()) {
 			c.Text(i, line, body)
 		}
 		if mark, tone := ciMark(q.CI); mark != "" {
-			c.Text("ci", mark, kit.MonoFont(10.5, kit.TokenColour(th, tone, th.C(theme.FgMuted))))
+			c.Text("ci", mark, widget.MonoFont(10.5, kit.TokenColour(th, tone, th.C(theme.FgMuted))))
 		}
 		if r.se != nil {
-			c.Text("se", "Session: "+r.se.Name(), kit.UIFont(12, th.C(theme.Accent)))
+			c.Text("se", "Session: "+r.se.Name(), widget.UIFont(12, th.C(theme.Accent)))
 		}
 	})
 }

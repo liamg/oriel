@@ -593,7 +593,7 @@ func (x *Update) pageView(c *ui.Ctx) {
 			c.Column("box", ui.Style{W: ui.Px(min(640, c.Size().X-48)), Gap: 14}, func(c *ui.Ctx) {
 				c.Text("title", "UPDATING ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 16, Weight: typeset.Bold, Tracking: .24},
 					Color: th.C(theme.Fg)})
-				c.Text("versions", r.from+"  →  "+r.to, kit.MonoFont(12, th.C(theme.FgMuted)))
+				c.Text("versions", r.from+"  →  "+r.to, widget.MonoFont(12, th.C(theme.FgMuted)))
 				frac := -1.0
 				switch {
 				case r.failed != "":
@@ -613,7 +613,7 @@ func (x *Update) pageView(c *ui.Ctx) {
 					}
 				})
 				if r.failed != "" {
-					widget.Wrap(c, "err", r.failed, 600, kit.MonoFont(11, th.C(theme.Error)))
+					widget.Wrap(c, "err", r.failed, 600, widget.MonoFont(11, th.C(theme.Error)))
 				}
 				c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Main: ui.End, Pad: ui.Insets{T: 8}}, func(c *ui.Ctx) {
 					switch {
@@ -687,16 +687,16 @@ func updateStepRow(c *ui.Ctx, key any, l updateLine) {
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true, Role: ui.RoleText, Label: l.text}, func(c *ui.Ctx) {
 		switch l.state {
 		case lineOK:
-			c.Text("mark", "✓", kit.MonoFont(11.5, th.C(tUpdateOK)))
+			c.Text("mark", "✓", widget.MonoFont(11.5, th.C(tUpdateOK)))
 		case lineFailed:
-			c.Text("mark", "✕", kit.MonoFont(11.5, th.C(tUpdateFailed)))
+			c.Text("mark", "✕", widget.MonoFont(11.5, th.C(tUpdateFailed)))
 		default:
 			widget.Spinner(c, "mark", widget.SpinnerOpts{Size: 11, Tone: th.C(tUpdateRunning)})
 		}
-		c.Text("text", l.text, kit.MonoFont(11.5, th.C(theme.Fg)))
+		c.Text("text", l.text, widget.MonoFont(11.5, th.C(theme.Fg)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if !l.at.IsZero() {
-			c.Text("at", l.at.Local().Format("15:04:05"), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("at", l.at.Local().Format("15:04:05"), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		}
 	})
 }
@@ -721,34 +721,34 @@ func (x *Update) cardView(c *ui.Ctx) {
 		ready, isReady := x.ready()
 		switch {
 		case u == nil:
-			widget.Wrap(c, "none", "This build of Oriel doesn't update itself.", 570, kit.UIFont(12.5, th.C(theme.Fg)))
+			widget.Wrap(c, "none", "This build of Oriel doesn't update itself.", 570, widget.UIFont(12.5, th.C(theme.Fg)))
 		case found:
 			sub := fmt.Sprintf("you have %s · %s channel", u.Version, x.channel())
 			if !m.Published.IsZero() {
 				sub += " · released " + m.Published.Format("2 Jan 2006")
 			}
-			kit.Heading(c, "h", "WHAT'S NEW", sub)
+			widget.Heading(c, "h", "WHAT'S NEW", sub)
 			notes := strings.TrimSpace(m.Notes)
 			if notes == "" {
 				notes = "This release has no notes."
 			}
 			c.Column("notes", ui.Style{W: ui.Flex(1), H: ui.Size{Kind: ui.Fit}.Clamp(0, 320), ScrollY: true, Pad: ui.Insets{R: 8}}, func(c *ui.Ctx) {
-				kit.MarkdownText(c, x.h, "md", notes, 556, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+				kit.MarkdownText(c, x.h, "md", notes, 556, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 			})
 		case busy != "":
 		default:
 			widget.Wrap(c, "current", fmt.Sprintf("Oriel %s is the newest on the %s channel.", u.Version, x.channel()), 570,
-				kit.UIFont(12.5, th.C(theme.Fg)))
+				widget.UIFont(12.5, th.C(theme.Fg)))
 		}
 		if busy != "" {
 			widget.Busy(c, "busy", widget.LoadState{Phase: widget.Pending, Since: since}, widget.BusyOpts{Label: busy, Help: updateHelp + "#check"})
 		}
 		if failed != "" {
-			widget.Wrap(c, "err", failed, 570, kit.MonoFont(11, th.C(theme.Error)))
+			widget.Wrap(c, "err", failed, 570, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			if isReady {
-				kit.Note(c, "ready", "Oriel "+ready+" is installed")
+				widget.Note(c, "ready", "Oriel "+ready+" is installed")
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Button(c, "close", "Later", widget.ButtonOpts{Key: "esc", Help: updateHelp + "#card"}) {

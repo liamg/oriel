@@ -179,10 +179,10 @@ func (x *Repos) header(c *ui.Ctx) {
 		if tidy > 0 {
 			meta = append(meta, fmt.Sprintf("%d to tidy", tidy))
 		}
-		c.Text("m", strings.Join(meta, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("m", strings.Join(meta, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.err != "" {
-			c.Text("err", kit.FirstLine(x.err), kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", kit.FirstLine(x.err), widget.MonoFont(11, th.C(theme.Error)))
 		}
 		if widget.Button(c, "add", "+ Add repo", widget.ButtonOpts{Key: "a", Help: "agent/repos#add"}) {
 			x.run("repos.new", nil)
@@ -218,7 +218,7 @@ func (x *Repos) list(c *ui.Ctx, rows []core.Repo) {
 					if strings.TrimSpace(x.filter) != "" {
 						msg = "No repo matches."
 					}
-					widget.Wrap(c, "t", msg, 270, kit.UIFont(12, th.C(theme.FgFaint)))
+					widget.Wrap(c, "t", msg, 270, widget.UIFont(12, th.C(theme.FgFaint)))
 				})
 				return
 			}
@@ -235,8 +235,8 @@ func (x *Repos) list(c *ui.Ctx, rows []core.Repo) {
 		})
 		widget.Rule(c, "rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
-			kit.Note(c, "a", "~/.oriel/repos.json · removing one forgets it")
-			kit.Note(c, "b", "files are never deleted; removed repos stay removed")
+			widget.Note(c, "a", "~/.oriel/repos.json · removing one forgets it")
+			widget.Note(c, "b", "files are never deleted; removed repos stay removed")
 		})
 	})
 }
@@ -256,12 +256,12 @@ func (x *Repos) rowView(c *ui.Ctx, r core.Repo, on bool) {
 				if tidy {
 					c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(tRepoTidy), Role: ui.RoleText, Label: "to tidy"}, nil)
 				}
-				c.Text("t", string(r.ID), kit.UIFont(13, th.C(theme.Fg)))
+				c.Text("t", string(r.ID), widget.UIFont(13, th.C(theme.Fg)))
 				if isFound(r) {
 					widget.Chip(c, "found", "found", th.C(tRepoFound), "agent/repos#discovery")
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("b", strings.TrimPrefix(r.BaseBranch, "origin/"), kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("b", strings.TrimPrefix(r.BaseBranch, "origin/"), widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			line := []string{kit.TildePath(r.Path)}
 			switch {
@@ -270,7 +270,7 @@ func (x *Repos) rowView(c *ui.Ctx, r core.Repo, on bool) {
 			case tidy:
 				line = append(line, kit.Counted(len(d.plan.Branches)+len(d.plan.Stale), "to tidy"))
 			}
-			c.Text("l2", strings.Join(line, " · "), kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("l2", strings.Join(line, " · "), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 	})
 }
@@ -278,9 +278,9 @@ func (x *Repos) rowView(c *ui.Ctx, r core.Repo, on bool) {
 func (x *Repos) emptyPage(c *ui.Ctx) {
 	th := c.Theme()
 	c.Column("empty", ui.Style{W: ui.Flex(1), Pad: ui.Pad(24), Gap: 12}, func(c *ui.Ctx) {
-		c.Text("t", "No repos yet.", kit.UIFont(14, th.C(theme.Fg)))
+		c.Text("t", "No repos yet.", widget.UIFont(14, th.C(theme.Fg)))
 		widget.Wrap(c, "d", "Add a checkout, or clone one into a folder you choose. Oriel finds the repos beside the ones you add.", 460,
-			kit.UIFont(12, th.C(theme.FgFaint)))
+			widget.UIFont(12, th.C(theme.FgFaint)))
 		if widget.Button(c, "add", "+ Add repo", widget.ButtonOpts{Primary: true, Help: "agent/repos#add"}) {
 			x.run("repos.new", nil)
 		}
@@ -308,7 +308,7 @@ func (x *Repos) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			if b := strings.TrimPrefix(r.BaseBranch, "origin/"); b != "" {
 				meta = append(meta, "default "+b)
 			}
-			c.Text("meta", strings.Join(meta, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("meta", strings.Join(meta, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			busy := d.busy != ""
 			if r.Remote != "" && widget.Button(c, "fetch", "Fetch", widget.ButtonOpts{Key: "f", Disabled: busy, Busy: d.busy == "fetch", BusyLabel: "Fetching",
@@ -361,7 +361,7 @@ func (x *Repos) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 		if d.busy == "" && d.note != "" {
 			line = append(line, widget.AgoPart{Text: d.note})
 		}
-		widget.AgoLine(c, "l2", widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgMuted)), Now: time.Now()}, line...)
+		widget.AgoLine(c, "l2", widget.AgoLineOpts{Text: widget.MonoFont(10.5, th.C(theme.FgMuted)), Now: time.Now()}, line...)
 	})
 }
 
@@ -371,8 +371,8 @@ func repoCard(c *ui.Ctx, key, title, note string, right func(c *ui.Ctx), body fu
 	c.Column(key, ui.Style{W: ui.Flex(1), Fill: th.C(theme.BgSurface), Stroke: th.C(theme.Line), Border: 1, Radius: 8, Clip: true,
 		Role: ui.RoleRegion, Label: title}, func(c *ui.Ctx) {
 		c.Row("cap", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 9), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			kit.Caption(c, "t", title)
-			c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+			widget.Caption(c, "t", title)
+			c.Text("n", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if right != nil {
 				right(c)
@@ -403,7 +403,7 @@ func (x *Repos) statsCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 					c.Column(i, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 7), Gap: 2, Stroke: th.C(theme.Line), Border: 1, Radius: 6, Clip: true,
 						Role: ui.RoleText, Label: t[0] + " " + t[1]}, func(c *ui.Ctx) {
 						c.Text("v", t[0], ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 16, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-						c.Text("l", strings.ToUpper(t[1]), kit.MonoFont(9, th.C(theme.FgFaint)))
+						c.Text("l", strings.ToUpper(t[1]), widget.MonoFont(9, th.C(theme.FgFaint)))
 					})
 				}
 			})
@@ -448,16 +448,16 @@ func (x *Repos) housekeepCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 				continue
 			}
 			if e := d.results[b]; e != "" {
-				c.Text("res."+b, "✗ "+b+": "+kit.FirstLine(e), kit.MonoFont(11, th.C(theme.Error)))
+				c.Text("res."+b, "✗ "+b+": "+kit.FirstLine(e), widget.MonoFont(11, th.C(theme.Error)))
 			} else {
-				c.Text("res."+b, "✓ deleted "+b, kit.MonoFont(11, th.C(theme.OK)))
+				c.Text("res."+b, "✓ deleted "+b, widget.MonoFont(11, th.C(theme.OK)))
 			}
 		}
 		if len(p.Branches)+len(p.Stale) == 0 {
-			c.Text("none", "Nothing to clean: no merged branches, none whose upstream went, no stale worktrees.", kit.UIFont(12, th.C(theme.FgFaint)))
+			c.Text("none", "Nothing to clean: no merged branches, none whose upstream went, no stale worktrees.", widget.UIFont(12, th.C(theme.FgFaint)))
 			return
 		}
-		head := kit.MonoFont(9, th.C(theme.FgFaint))
+		head := widget.MonoFont(9, th.C(theme.FgFaint))
 		c.Row("cols", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("check", ui.Style{W: ui.Px(14)}, nil)
 			housekeepCol(c, "b", ui.Flex(2), "BRANCH", head)
@@ -517,7 +517,7 @@ func housekeepBranch(c *ui.Ctx, b hostapi.StaleBranch, d *repoDetail) {
 		if b.Session != "" {
 			fg = th.C(theme.FgFaint)
 		}
-		housekeepCol(c, "b", ui.Flex(2), b.Name, kit.MonoFont(11.5, fg))
+		housekeepCol(c, "b", ui.Flex(2), b.Name, widget.MonoFont(11.5, fg))
 		c.Row("w", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) {
 			tone := th.C(tRepoMerged)
 			if b.Why == hostapi.WhyGone {
@@ -525,22 +525,22 @@ func housekeepBranch(c *ui.Ctx, b hostapi.StaleBranch, d *repoDetail) {
 			}
 			widget.Chip(c, "why", b.Why, tone, "agent/repos#housekeeping")
 		})
-		housekeepCol(c, "t", ui.Flex(1.4), cmp.Or(kit.TildePath(b.Worktree), "none"), kit.MonoFont(11, th.C(theme.FgMuted)))
+		housekeepCol(c, "t", ui.Flex(1.4), cmp.Or(kit.TildePath(b.Worktree), "none"), widget.MonoFont(11, th.C(theme.FgMuted)))
 		c.Row("a", ui.Style{W: ui.Px(80), Clip: true}, func(c *ui.Ctx) {
-			widget.Ago(c, "t", b.When, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgMuted)), Long: true, Now: time.Now()})
+			widget.Ago(c, "t", b.When, widget.AgoOpts{Text: widget.MonoFont(11, th.C(theme.FgMuted)), Long: true, Now: time.Now()})
 		})
 		c.Row("n", ui.Style{W: ui.Flex(1.6), Gap: 6, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 			res, done := d.results[b.Name]
 			switch {
 			case done && res == "":
-				c.Text("t", "✓ done", kit.MonoFont(10.5, th.C(theme.OK)))
+				c.Text("t", "✓ done", widget.MonoFont(10.5, th.C(theme.OK)))
 			case done:
-				c.Text("t", "✗ "+kit.FirstLine(res), kit.MonoFont(10.5, th.C(theme.Error)))
+				c.Text("t", "✗ "+kit.FirstLine(res), widget.MonoFont(10.5, th.C(theme.Error)))
 			case b.Session != "":
-				c.Text("t", "in session "+b.Session+" · archive it", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("t", "in session "+b.Session+" · archive it", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			case b.Dirty:
 				widget.Chip(c, "dirty", "dirty", th.C(theme.Warn), "agent/repos#housekeeping")
-				c.Text("t", "tick to force", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("t", "tick to force", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			}
 		})
 	})
@@ -556,19 +556,19 @@ func housekeepStale(c *ui.Ctx, s string, d *repoDetail) {
 		if widget.Check(c, "check", st, widget.CheckOpts{Label: "Prune stale worktrees", Help: "agent/repos#housekeeping"}) {
 			d.prune = !d.prune
 		}
-		housekeepCol(c, "b", ui.Flex(2), "—", kit.MonoFont(11.5, th.C(theme.FgFaint)))
+		housekeepCol(c, "b", ui.Flex(2), "—", widget.MonoFont(11.5, th.C(theme.FgFaint)))
 		c.Row("w", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) {
 			widget.Chip(c, "why", "stale", th.C(theme.StatusQuiet), "agent/repos#housekeeping")
 		})
-		housekeepCol(c, "t", ui.Flex(1.4), kit.TildePath(s), kit.MonoFont(11, th.C(theme.FgFaint)))
-		housekeepCol(c, "a", ui.Px(80), "—", kit.MonoFont(11, th.C(theme.FgFaint)))
-		housekeepCol(c, "n", ui.Flex(1.6), "directory gone · worktree prune", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		housekeepCol(c, "t", ui.Flex(1.4), kit.TildePath(s), widget.MonoFont(11, th.C(theme.FgFaint)))
+		housekeepCol(c, "a", ui.Px(80), "—", widget.MonoFont(11, th.C(theme.FgFaint)))
+		housekeepCol(c, "n", ui.Flex(1.6), "directory gone · worktree prune", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	})
 }
 
 func (x *Repos) housekeepFoot(c *ui.Ctx, r core.Repo, d *repoDetail, ticked int) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		kit.Note(c, "never", "never offered: the default branch, the checked-out one")
+		widget.Note(c, "never", "never offered: the default branch, the checked-out one")
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		n := ticked
 		if d.prune {
@@ -725,7 +725,7 @@ func (x *Repos) tagCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			x.tagDone(c, r, t)
 			return
 		case !t.open:
-			kit.Note(c, "how", "an annotated tag on a branch, pulled first; only the new tag is pushed")
+			widget.Note(c, "how", "an annotated tag on a branch, pulled first; only the new tag is pushed")
 			return
 		case !t.loaded:
 			st := widget.LoadState{Phase: widget.Pending, Since: t.since}
@@ -750,7 +750,7 @@ func (x *Repos) tagFormView(c *ui.Ctx, r core.Repo, t *tagForm) {
 	}
 	labelled := func(c *ui.Ctx, key, label string, body func(c *ui.Ctx)) {
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Row("l", ui.Style{W: ui.Px(90)}, func(c *ui.Ctx) { c.Text("t", label, kit.UIFont(12.5, th.C(theme.FgMuted))) })
+			c.Row("l", ui.Style{W: ui.Px(90)}, func(c *ui.Ctx) { c.Text("t", label, widget.UIFont(12.5, th.C(theme.FgMuted))) })
 			body(c)
 		})
 	}
@@ -778,7 +778,7 @@ func (x *Repos) tagFormView(c *ui.Ctx, r core.Repo, t *tagForm) {
 			})
 			labelled(c, "msg", "Message", func(c *ui.Ctx) {
 				widget.Input(c, "message", &t.message, widget.InputOpts{Label: "Message", Help: "agent/repos#tags"})
-				kit.Note(c, "from", "from repos.tag.message")
+				widget.Note(c, "from", "from repos.tag.message")
 			})
 			c.Column("toggles", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{L: 100}}, func(c *ui.Ctx) {
 				pullNote := ""
@@ -803,14 +803,14 @@ func (x *Repos) tagFormView(c *ui.Ctx, r core.Repo, t *tagForm) {
 			if t.pull && t.preview.Remote {
 				what += " · after pulling"
 			}
-			kit.Caption(c, "cap", what)
-			c.Text("ref", t.branch+" "+kit.ShortSHA(t.preview.Commit), kit.MonoFont(11.5, th.C(theme.Accent)))
-			widget.Wrap(c, "subj", t.preview.Subject, 220, kit.MonoFont(11, th.C(theme.Fg)))
+			widget.Caption(c, "cap", what)
+			c.Text("ref", t.branch+" "+kit.ShortSHA(t.preview.Commit), widget.MonoFont(11.5, th.C(theme.Accent)))
+			widget.Wrap(c, "subj", t.preview.Subject, 220, widget.MonoFont(11, th.C(theme.Fg)))
 		})
 	})
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		if t.err != "" {
-			c.Text("err", kit.FirstLine(t.err), kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", kit.FirstLine(t.err), widget.MonoFont(11, th.C(theme.Error)))
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Help: "agent/repos#tags"}) {
@@ -835,9 +835,9 @@ func toggleInline(c *ui.Ctx, key, label, note string, on *bool, disabled bool) {
 		if disabled {
 			fg = th.C(theme.FgFaint)
 		}
-		c.Text("l", label, kit.UIFont(12, fg))
+		c.Text("l", label, widget.UIFont(12, fg))
 		if note != "" {
-			c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("n", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 		}
 	})
 }
@@ -873,13 +873,13 @@ func (x *Repos) tagDone(c *ui.Ctx, r core.Repo, t *tagForm) {
 	th := c.Theme()
 	res := t.done
 	c.Row("done", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("t", "✓ tagged "+res.Name+" at "+kit.ShortSHA(res.Commit)+" "+res.Subject, kit.MonoFont(11.5, th.C(theme.OK)))
+		c.Text("t", "✓ tagged "+res.Name+" at "+kit.ShortSHA(res.Commit)+" "+res.Subject, widget.MonoFont(11.5, th.C(theme.OK)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		switch {
 		case res.Pushed:
-			c.Text("p", "pushed", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("p", "pushed", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		case res.PushErr != "":
-			c.Text("p", "push failed: "+kit.FirstLine(res.PushErr), kit.MonoFont(10.5, th.C(theme.Error)))
+			c.Text("p", "push failed: "+kit.FirstLine(res.PushErr), widget.MonoFont(10.5, th.C(theme.Error)))
 			if widget.Button(c, "again", "Push again", widget.ButtonOpts{Busy: x.detail(r.ID).busy == "push", BusyLabel: "Pushing", Help: "agent/repos#tags"}) {
 				name := res.Name
 				x.act(r.ID, "push", func(ctx context.Context, w hostapi.RepoCalls) (string, error) {

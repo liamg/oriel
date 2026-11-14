@@ -141,7 +141,7 @@ func (x *Images) view(c *ui.Ctx, vc uireg.ViewCtx) {
 			widget.VectorImage(c, "img", widget.Vector{Size: size, Fill: th.C(tImageViewBg), Draw: func(fr render.Frame, r render.Rect) { doc.Draw(fr, r, sh) }}, w, o)
 		}
 		c.Text("info", fmt.Sprintf("%d × %d · %s · %s", int(math.Round(float64(size.X))), int(math.Round(float64(size.Y))), kit.Bytes(f.size),
-			strings.ToUpper(f.format)), kit.MonoFont(11, th.C(theme.FgFaint)))
+			strings.ToUpper(f.format)), widget.MonoFont(11, th.C(theme.FgFaint)))
 	})
 }
 
@@ -160,14 +160,14 @@ func (x *Images) card(c *ui.Ctx, path string, f *viewedFile) {
 	}
 	c.Column("card", ui.Style{W: ui.Size{Max: 460}, Pad: ui.Pad(24), Gap: 10, Cross: ui.Center, Radius: 8, Stroke: th.C(theme.LineStrong), Border: 1,
 		Fill: th.C(theme.BgSurface), Role: ui.RoleGroup, Label: filepath.Base(path)}, func(c *ui.Ctx) {
-		c.Text("glyph", mediaGlyph(kind), kit.UIFont(30, th.C(theme.FgFaint)))
+		c.Text("glyph", mediaGlyph(kind), widget.UIFont(30, th.C(theme.FgFaint)))
 		c.Text("name", filepath.Base(path), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 15, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		meta := kind
 		if f.err == nil || !os.IsNotExist(f.err) {
 			meta += " · " + kit.Bytes(f.size)
 		}
-		c.Text("meta", meta, kit.MonoFont(11, th.C(theme.FgMuted)))
-		c.Text("why", why, kit.UIFont(12.5, th.C(theme.FgFaint)))
+		c.Text("meta", meta, widget.MonoFont(11, th.C(theme.FgMuted)))
+		c.Text("why", why, widget.UIFont(12.5, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{H: ui.Px(4)}, nil)
 		if widget.Button(c, "open", "Open in default app", widget.ButtonOpts{Primary: true, Help: imageHelp + "#card"}) {
 			if err := x.h.Run(context.Background(), "system.open", registry.Args{"path": path}); err != nil {

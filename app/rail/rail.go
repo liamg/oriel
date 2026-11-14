@@ -720,13 +720,13 @@ func (r *Rail) header(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 					twisty = "▾"
 				}
 			}
-			c.Box("tw", ui.Style{W: ui.Px(9)}, func(c *ui.Ctx) { c.Text("t", twisty, kit.Mono(11, typeset.Normal, th.C(tSideHead))) })
+			c.Box("tw", ui.Style{W: ui.Px(9)}, func(c *ui.Ctx) { c.Text("t", twisty, widget.Mono(11, typeset.Normal, th.C(tSideHead))) })
 			c.Box("sq", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 2, Fill: w.Colour(th, row.project.Name)}, nil)
-			c.Text("n", row.project.Name, kit.Mono(11, typeset.SemiBold, name))
+			c.Text("n", row.project.Name, widget.Mono(11, typeset.SemiBold, name))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if row.index < 9 {
 				c.Box("key", ui.Style{Pad: ui.PadXY(4, 1), Radius: 3, Stroke: th.C(tSideKeyEdge), Border: 1}, func(c *ui.Ctx) {
-					c.Text("k", fmt.Sprintf("⌃%d", row.index+1), kit.Mono(9, typeset.Normal, th.C(tSideKey)))
+					c.Text("k", fmt.Sprintf("⌃%d", row.index+1), widget.Mono(9, typeset.Normal, th.C(tSideKey)))
 				})
 			}
 		})
@@ -734,12 +734,12 @@ func (r *Rail) header(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 		c.Row("l2", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 15}, Gap: 4, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 			for i, p := range line {
 				if i > 0 && !p.dot && !strings.HasPrefix(p.text, "↑") && !strings.HasPrefix(p.text, "↓") {
-					c.Text(fmt.Sprint("sep", i), "·", kit.Mono(10, typeset.Normal, th.C(tSideHead)))
+					c.Text(fmt.Sprint("sep", i), "·", widget.Mono(10, typeset.Normal, th.C(tSideHead)))
 				}
 				if p.dot {
 					c.Box(fmt.Sprint("dot", i), ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: p.tone}, nil)
 				}
-				c.Text(i, p.text, kit.Mono(10, typeset.Normal, p.tone))
+				c.Text(i, p.text, widget.Mono(10, typeset.Normal, p.tone))
 			}
 		})
 	})
@@ -753,7 +753,7 @@ func (r *Rail) entryNote(c *ui.Ctx, row sideRow, size float32) {
 		return
 	}
 	if note := noteOf(row); note != "" {
-		c.Text("note", note, kit.Mono(10, typeset.Normal, th.C(tSideNote)))
+		c.Text("note", note, widget.Mono(10, typeset.Normal, th.C(tSideNote)))
 	}
 }
 
@@ -807,7 +807,7 @@ func (r *Rail) narrowRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 				st.Stroke, st.Border = col, 1
 			}
 			c.Box("ini", st, func(c *ui.Ctx) {
-				c.Text("t", kit.ProjectInitials(row.project.Name), kit.Mono(10, typeset.Bold, col))
+				c.Text("t", kit.ProjectInitials(row.project.Name), widget.Mono(10, typeset.Bold, col))
 				for _, p := range r.stateLine(w, row.project) {
 					if p.dot {
 						c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: p.tone,

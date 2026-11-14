@@ -7,7 +7,6 @@ import (
 
 	"github.com/liamg/oriel/registry/services"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -75,7 +74,7 @@ func (x *Plugin) unread(c *ui.Ctx, u core.ProviderUsage) {
 		for i, f := range st.UsageFailures {
 			if f.Provider == u.Provider {
 				c.Box(fmt.Sprint("fail", i), ui.Style{Tooltip: f.Err}, func(c *ui.Ctx) {
-					c.Text("t", failureText(x.h, f), kit.MonoFont(11, th.C(theme.Warn)))
+					c.Text("t", failureText(x.h, f), widget.MonoFont(11, th.C(theme.Warn)))
 				})
 			}
 		}

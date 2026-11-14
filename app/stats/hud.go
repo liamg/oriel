@@ -170,7 +170,7 @@ func (x *HUD) Node(c *ui.Ctx, ind uireg.Indicator) ui.Node {
 	if err != nil {
 		th := c.Theme()
 		return &ui.Func{Key: "err", Fn: func(c *ui.Ctx) {
-			c.Text("err", "✕ "+ind.Name+": "+kit.FirstLine(err.Error()), kit.MonoFont(10, th.C(theme.Error)))
+			c.Text("err", "✕ "+ind.Name+": "+kit.FirstLine(err.Error()), widget.MonoFont(10, th.C(theme.Error)))
 		}}
 	}
 	return n

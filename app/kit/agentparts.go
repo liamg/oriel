@@ -47,9 +47,9 @@ func EvidenceChip(c *ui.Ctx, h plugin.Host, key any, session core.SessionID, run
 	if widget.Clickable(c, key, ui.Style{Dir: ui.Row, H: ui.Px(20), Pad: ui.PadXY(7, 0), Gap: 6, Cross: ui.Center, Radius: 10, Fill: theme.WithAlpha(tone, .08),
 		Stroke: theme.WithAlpha(tone, .4), Border: 1, Focusable: true, Label: "Test run " + run + ": " + label, Tooltip: "Open the run",
 		Help: "agent/requests#evidence"}, func(c *ui.Ctx) {
-		c.Text("g", glyph, MonoFont(10.5, tone))
-		c.Text("l", label, MonoFont(10.5, tone))
-		c.Text("r", "run "+run, MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("g", glyph, widget.MonoFont(10.5, tone))
+		c.Text("l", label, widget.MonoFont(10.5, tone))
+		c.Text("r", "run "+run, widget.MonoFont(10, th.C(theme.FgFaint)))
 	}).Clicked {
 		_ = h.Run(context.Background(), "test.run.show", registry.Args{"id": run, "session": string(session)})
 	}

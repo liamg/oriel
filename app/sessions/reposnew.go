@@ -183,7 +183,7 @@ func (x *Repos) dialogBody(c *ui.Ctx, f *addRepo) {
 	focus := f.focus
 	f.focus = false
 	if f.note != "" {
-		widget.Wrap(c, "note", f.note, 580, kit.UIFont(12.5, th.C(theme.FgMuted)))
+		widget.Wrap(c, "note", f.note, 580, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	}
 	if widget.Segmented(c, "mode", repoNewModes, &f.mode, widget.SegmentedOpts{Label: "Add from", Help: "agent/repos#add"}) {
 		f.err, focus = "", true
@@ -199,7 +199,7 @@ func (x *Repos) dialogBody(c *ui.Ctx, f *addRepo) {
 		phase, frac, parsed := gitx.ParseProgress(f.progress)
 		switch {
 		case f.err != "":
-			c.Text("err", kit.FirstLine(f.err), kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", kit.FirstLine(f.err), widget.MonoFont(11, th.C(theme.Error)))
 		case f.busy && parsed:
 			widget.ProgressBar(c, "progress", widget.ProgressOpts{Frac: frac, Height: 6, Label: phase, Help: "agent/repos#add"})
 		case f.busy && f.mode == 1:
@@ -215,7 +215,7 @@ func (x *Repos) dialogBody(c *ui.Ctx, f *addRepo) {
 		case f.probing:
 			c.WakeAt(f.probeAt.Add(probeShow))
 		case f.mode == 1:
-			kit.Note(c, "creds", "clones with this machine's git credentials")
+			widget.Note(c, "creds", "clones with this machine's git credentials")
 		}
 		if !f.busy || !parsed {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -250,7 +250,7 @@ func (x *Repos) dialogBody(c *ui.Ctx, f *addRepo) {
 func (x *Repos) dirMode(c *ui.Ctx, f *addRepo, focus bool) {
 	th := c.Theme()
 	c.Column("dir", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		kit.Heading(c, "h", "Directory", "a checkout, or a worktree of one")
+		widget.Heading(c, "h", "Directory", "a checkout, or a worktree of one")
 		c.Row("row", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			x.repoField(c, "path", &f.path, focus, widget.InputOpts{Label: "Directory", Placeholder: "~/src/my-project"})
 			if desktop.HasChooseDir(kit.ReadsIn(c)) && widget.Button(c, "browse", "Browse…", widget.ButtonOpts{Help: "agent/repos#add"}) {
@@ -270,13 +270,13 @@ func (x *Repos) dirMode(c *ui.Ctx, f *addRepo, focus bool) {
 		switch ch := f.check; {
 		case strings.TrimSpace(f.path) == "" || f.checking():
 		case ch.Error != "":
-			c.Text("check", "✗ "+ch.Error, kit.MonoFont(11, bad))
+			c.Text("check", "✗ "+ch.Error, widget.MonoFont(11, bad))
 		case ch.Known != "":
-			c.Text("check", "✓ already added as "+string(ch.Known), kit.MonoFont(11, ok))
+			c.Text("check", "✓ already added as "+string(ch.Known), widget.MonoFont(11, ok))
 		case ch.Worktree:
-			c.Text("check", "✓ a worktree of "+kit.TildePath(ch.Path)+" — adds "+kit.TildePath(ch.Path), kit.MonoFont(11, ok))
+			c.Text("check", "✓ a worktree of "+kit.TildePath(ch.Path)+" — adds "+kit.TildePath(ch.Path), widget.MonoFont(11, ok))
 		default:
-			c.Text("check", "✓ git repo · "+strings.Join(nonEmpty(ch.Branch, remoteHost(ch.Remote)), " · "), kit.MonoFont(11, ok))
+			c.Text("check", "✓ git repo · "+strings.Join(nonEmpty(ch.Branch, remoteHost(ch.Remote)), " · "), widget.MonoFont(11, ok))
 		}
 	})
 }
@@ -300,7 +300,7 @@ func (x *Repos) completions(c *ui.Ctx, f *addRepo) {
 	res := widget.Rows(c, "completions", len(dirs), &sel, widget.RowsOpts{Label: "Directories", Help: "agent/repos#add",
 		RowLabel: func(i int) string { return dirs[i] }}, func(c *ui.Ctx, i int, _ bool) {
 		c.Row("r", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 3)}, func(c *ui.Ctx) {
-			c.Text("t", kit.TildePath(dirs[i])+"/", kit.MonoFont(11, c.Theme().C(theme.FgMuted)))
+			c.Text("t", kit.TildePath(dirs[i])+"/", widget.MonoFont(11, c.Theme().C(theme.FgMuted)))
 		})
 	})
 	if res.Activated >= 0 {
@@ -314,7 +314,7 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 	th := c.Theme()
 	labelled := func(c *ui.Ctx, key, label string, body func(c *ui.Ctx)) {
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Row("l", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) { c.Text("t", label, kit.UIFont(12.5, th.C(theme.FgMuted))) })
+			c.Row("l", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) { c.Text("t", label, widget.UIFont(12.5, th.C(theme.FgMuted))) })
 			body(c)
 		})
 	}
@@ -337,10 +337,10 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 			}
 		})
 		if w, _ := kit.RepoCalls(x.h); w != nil && expandTilde(f.parent) == w.CloneParent() && len(x.repos()) > 0 {
-			labelled(c, "where", "", func(c *ui.Ctx) { kit.Note(c, "t", "where most of your repos are") })
+			labelled(c, "where", "", func(c *ui.Ctx) { widget.Note(c, "t", "where most of your repos are") })
 		}
 		if h := f.parentHint(); h != "" {
-			labelled(c, "hint", "", func(c *ui.Ctx) { c.Text("t", h, kit.MonoFont(10.5, th.C(theme.Warn))) })
+			labelled(c, "hint", "", func(c *ui.Ctx) { c.Text("t", h, widget.MonoFont(10.5, th.C(theme.Warn))) })
 		}
 		labelled(c, "name", "Folder name", func(c *ui.Ctx) {
 			x.repoField(c, "name", &f.name, false, widget.InputOpts{Label: "Folder name", Placeholder: "my-project"})
@@ -350,12 +350,12 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 			into = kit.TildePath(filepath.Join(p, n))
 		}
 		labelled(c, "into", "Clones into", func(c *ui.Ctx) {
-			c.Text("t", cmp.Or(into, "—"), kit.MonoFont(12, th.C(theme.Fg)))
+			c.Text("t", cmp.Or(into, "—"), widget.MonoFont(12, th.C(theme.Fg)))
 		})
 		labelled(c, "status", "", func(c *ui.Ctx) {
 			st, tone := f.cloneStatus()
 			if st != "" {
-				c.Text("t", st, kit.MonoFont(10.5, th.C(tone)))
+				c.Text("t", st, widget.MonoFont(10.5, th.C(tone)))
 			}
 		})
 	})

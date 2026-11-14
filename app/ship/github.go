@@ -494,7 +494,7 @@ func (x *GitHub) head(c *ui.Ctx, session, thread string) {
 	if t.Anchor != nil {
 		place = fmt.Sprintf("· L%d ·", t.Anchor.Line)
 	}
-	c.Text("l", place, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+	c.Text("l", place, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	if g.Reviewer != "" {
 		widget.Chip(c, "who", "@"+g.Reviewer, th.C(tGitHub), "git/github#threads")
 	}
@@ -509,7 +509,7 @@ func (x *GitHub) head(c *ui.Ctx, session, thread string) {
 	}
 	c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 	if m, ok := x.mirror(core.SessionID(session)); ok && !m.at.IsZero() {
-		c.Text("synced", "synced "+syncedAgo(c.Now(), m.at), kit.MonoFont(10, th.C(theme.FgGhost)))
+		c.Text("synced", "synced "+syncedAgo(c.Now(), m.at), widget.MonoFont(10, th.C(theme.FgGhost)))
 	}
 }
 
@@ -603,7 +603,7 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 			x.run("github.edit", args)
 		}
 		c.Text("never", services.ProviderTitle(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
-			kit.UIFont(11, th.C(theme.FgFaint)))
+			widget.UIFont(11, th.C(theme.FgFaint)))
 	})
 }
 

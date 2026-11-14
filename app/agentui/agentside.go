@@ -65,7 +65,7 @@ func (x *Console) sessionStats(c *ui.Ctx, se core.SessionState) {
 		kit.Stat(c, "turns", "turns · tool calls", fmt.Sprintf("%d · %d", t.Turns, t.ToolCalls), fg)
 		kit.Stat(c, "tokens", "tokens in / out", kit.Tokens(t.Input+t.CacheRead+t.CacheWrite)+" / "+kit.Tokens(t.Output), fg)
 		c.Row("cost", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("n", "cost (est.)", kit.MonoFont(11.5, th.C(theme.FgMuted)))
+			c.Text("n", "cost (est.)", widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			statsLink(c, x.h, se.ID, fmt.Sprintf("$%.2f ›", t.Cost), 11.5)
 		})
@@ -209,7 +209,7 @@ func taskRail(c *ui.Ctx, key any, ts []core.Task) {
 			}
 			c.Row(t.ID, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Subject + " " + string(t.Status)}, func(c *ui.Ctx) {
 				taskMark(c, "g", t.Status)
-				c.Text("s", t.Subject, kit.UIFont(12.5, fg))
+				c.Text("s", t.Subject, widget.UIFont(12.5, fg))
 			})
 		}
 	})
@@ -219,7 +219,7 @@ func taskRail(c *ui.Ctx, key any, ts []core.Task) {
 func taskMark(c *ui.Ctx, key any, s core.TaskStatus) {
 	th := c.Theme()
 	if s == core.TaskCompleted {
-		c.Box(key, ui.Style{W: ui.Px(12)}, func(c *ui.Ctx) { c.Text("t", "✓", kit.UIFont(12.5, th.C(tTaskDone))) })
+		c.Box(key, ui.Style{W: ui.Px(12)}, func(c *ui.Ctx) { c.Text("t", "✓", widget.UIFont(12.5, th.C(tTaskDone))) })
 		return
 	}
 	tone := th.C(tTaskPending)
@@ -263,16 +263,16 @@ func latestRun(se core.SessionState) (core.TestRun, bool) {
 func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time) {
 	th := c.Theme()
 	t := se.Agent.Stats
-	label := func(c *ui.Ctx, k, s string) { c.Text(k, s, kit.MonoFont(10.5, th.C(theme.FgFaint))) }
-	value := func(c *ui.Ctx, k, s string, tone render.Color) { c.Text(k, s, kit.MonoFont(11, tone)) }
+	label := func(c *ui.Ctx, k, s string) { c.Text(k, s, widget.MonoFont(10.5, th.C(theme.FgFaint))) }
+	value := func(c *ui.Ctx, k, s string, tone render.Color) { c.Text(k, s, widget.MonoFont(11, tone)) }
 	fg := th.C(theme.Fg)
 	c.Column("stats", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 12), Gap: 10, Role: ui.RoleGroup, Label: "Session stats", Help: "agent/console#stats"},
 		func(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("k", "SESSION", kit.KickerFont(th.C(theme.FgFaint)))
+				c.Text("k", "SESSION", widget.KickerFont(th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("who", strings.Join(slices.DeleteFunc([]string{strings.ToLower(services.ProviderTitle(h, se.Agent.Provider)), se.Agent.Model, se.Agent.Effort},
-					func(s string) bool { return s == "" || s == "agent" }), " · "), kit.MonoFont(10, th.C(theme.FgGhost)))
+					func(s string) bool { return s == "" || s == "agent" }), " · "), widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			c.Row("a", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				label(c, "ctx", "CTX")
@@ -325,9 +325,9 @@ func statsLink(c *ui.Ctx, h plugin.Host, id core.SessionID, text string, size fl
 	}
 	widget.HoverCard(c, "statscard", anchor, widget.HoverCardOpts{Label: "Session stats", Help: "agent/stats#session"}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", "Session stats", kit.UIFont(12, th.C(theme.Fg)))
-			kit.Keycap(c, "k", ":Stats session")
+			c.Text("t", "Session stats", widget.UIFont(12, th.C(theme.Fg)))
+			widget.Keycap(c, "k", ":Stats session")
 		})
-		c.Text("d", "opens as a main tab", kit.MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("d", "opens as a main tab", widget.MonoFont(10, th.C(theme.FgFaint)))
 	})
 }

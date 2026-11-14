@@ -79,7 +79,7 @@ func (x *Prompts) Activate(_ context.Context, h plugin.Host) error {
 
 // section is the settings page's way to the Prompts page.
 func (x *Prompts) section(c *ui.Ctx) {
-	widget.Wrap(c, "about", "The coding style, and what each kind of session tells its agent.", 700, kit.UIFont(12.5, c.Theme().C(theme.FgFaint)))
+	widget.Wrap(c, "about", "The coding style, and what each kind of session tells its agent.", 700, widget.UIFont(12.5, c.Theme().C(theme.FgFaint)))
 	c.Row("open", ui.Style{Pad: ui.Insets{T: 8}}, func(c *ui.Ctx) {
 		if widget.Button(c, "open", "Open Prompts", widget.ButtonOpts{Primary: true, Help: "agent/prompts"}) {
 			x.openPage("")
@@ -237,10 +237,10 @@ func (x *Prompts) header(c *ui.Ctx, o prompts.Overrides) {
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(42), Pad: ui.PadXY(18, 0), Gap: 12, Cross: ui.Center, Fill: th.C(kit.TStatsHead)}, func(c *ui.Ctx) {
 		c.Text("h", "PROMPTS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
 			Color: th.C(theme.Fg)})
-		c.Text("m", fmt.Sprintf("%s · %d yours", kit.Counted(len(prompts.Defs(kit.Prompts(x.h)...)), "prompt"), len(o)), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("m", fmt.Sprintf("%s · %d yours", kit.Counted(len(prompts.Defs(kit.Prompts(x.h)...)), "prompt"), len(o)), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.err != "" {
-			c.Text("err", x.err, kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", x.err, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		if widget.Button(c, "close", "Close", widget.ButtonOpts{Key: "esc", Help: promptsHelp + "#page"}) {
 			x.open = false
@@ -286,7 +286,7 @@ func (x *Prompts) list(c *ui.Ctx, defs []prompts.Def, o prompts.Overrides) {
 				r := rows[i]
 				if r.group != "" {
 					c.Row("g", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 14, R: 14, T: 10, B: 4}}, func(c *ui.Ctx) {
-						c.Text("t", strings.ToUpper(r.group), kit.KickerFont(th.C(theme.FgFaint)))
+						c.Text("t", strings.ToUpper(r.group), widget.KickerFont(th.C(theme.FgFaint)))
 					})
 					return
 				}
@@ -298,8 +298,8 @@ func (x *Prompts) list(c *ui.Ctx, defs []prompts.Def, o prompts.Overrides) {
 		})
 		widget.Rule(c, "rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
-			kit.Note(c, "a", "yours: "+kit.TildePath(x.ConfigDir))
-			kit.Note(c, "b", "only what you change is kept")
+			widget.Note(c, "a", "yours: "+kit.TildePath(x.ConfigDir))
+			widget.Note(c, "b", "only what you change is kept")
 		})
 	})
 }
@@ -313,10 +313,10 @@ func (x *Prompts) rowView(c *ui.Ctx, d prompts.Def, on, custom bool) {
 	c.Row("row", ui.Style{W: ui.Flex(1), Fill: fill}, func(c *ui.Ctx) {
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		c.Row("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 14, T: 7, B: 7}, Gap: 8, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", d.Label, kit.UIFont(13, th.C(theme.Fg)))
+			c.Text("t", d.Label, widget.UIFont(13, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if custom {
-				c.Text("yours", "yours", kit.MonoFont(10, th.C(theme.Accent)))
+				c.Text("yours", "yours", widget.MonoFont(10, th.C(theme.Accent)))
 			}
 		})
 	})
@@ -328,7 +328,7 @@ func (x *Prompts) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 	custom := o.Custom(d.ID)
 	c.Row("title", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", d.Label, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 17, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-		c.Text("id", d.ID, kit.MonoFont(11, th.C(theme.FgGhost)))
+		c.Text("id", d.ID, widget.MonoFont(11, th.C(theme.FgGhost)))
 		if custom {
 			widget.Chip(c, "yours", "yours", th.C(theme.Accent), help)
 		} else {
@@ -342,11 +342,11 @@ func (x *Prompts) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 			x.run("prompts.reset", registry.Args{"id": d.ID})
 		}
 	})
-	widget.Wrap(c, "help", d.Help, 760, kit.UIFont(12, th.C(theme.FgMuted)))
+	widget.Wrap(c, "help", d.Help, 760, widget.UIFont(12, th.C(theme.FgMuted)))
 	if len(d.Vars) > 0 {
 		c.Column("vars", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {
 			for _, v := range d.Vars {
-				c.Text(v.Name, "{{"+v.Name+"}} "+v.Desc, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text(v.Name, "{{"+v.Name+"}} "+v.Desc, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			}
 		})
 	}
@@ -370,12 +370,12 @@ func (x *Prompts) detail(c *ui.Ctx, d prompts.Def, o prompts.Overrides) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 		switch {
 		case editing:
-			kit.Note(c, "state", "not saved")
+			widget.Note(c, "state", "not saved")
 		case x.saved == d.ID:
-			kit.Note(c, "state", "saved · sessions use it from now on")
+			widget.Note(c, "state", "saved · sessions use it from now on")
 		}
 		path, _ := x.store().Path(d.ID)
-		kit.Note(c, "file", kit.TildePath(path))
+		widget.Note(c, "file", kit.TildePath(path))
 		if widget.Button(c, "save", "Save", widget.ButtonOpts{Primary: true, Key: "⌘S", Disabled: !editing, Help: help}) {
 			x.run("prompts.save", registry.Args{"id": d.ID})
 		}

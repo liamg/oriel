@@ -221,10 +221,10 @@ func (x *Tickets) pageHeader(c *ui.Ctx) {
 		if !at.IsZero() {
 			meta = append(meta, widget.AgoPart{Text: "updated ", At: at, Long: true})
 		}
-		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint))}, meta...)
+		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: widget.MonoFont(11, th.C(theme.FgFaint))}, meta...)
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.page.err != "" {
-			c.Text("err", x.page.err, kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", x.page.err, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Busy: x.pageState().Phase == widget.Pending, BusyLabel: "Refreshing",
 			Help: ticketsHelp + "#page"}) {
@@ -355,8 +355,8 @@ func (x *Tickets) ticketRowView(c *ui.Ctx, r ticketRow, many bool) {
 				}
 				c.Row("l1", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 					c.Column("t", ui.Style{W: ui.Flex(1), Gap: 4, Clip: true}, func(c *ui.Ctx) {
-						c.Text("t", rowLabel(r), kit.UIFont(13, tone))
-						c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+						c.Text("t", rowLabel(r), widget.UIFont(13, tone))
+						c.Text("n", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 					})
 					if widget.Button(c, "act", button, widget.ButtonOpts{Help: ticketsHelp + "#list"}) {
 						x.act(r, core.KindPlan, true)
@@ -369,8 +369,8 @@ func (x *Tickets) ticketRowView(c *ui.Ctx, r ticketRow, many bool) {
 				if many && r.tracker.Icon != "" {
 					kit.Icon(c, x.h, "tracker", r.tracker.Icon, 12, th.C(theme.FgMuted))
 				}
-				c.Text("k", t.Key, kit.MonoFont(11, th.C(theme.FgMuted)))
-				c.Text("t", t.Title, kit.UIFont(13, th.C(theme.Fg)))
+				c.Text("k", t.Key, widget.MonoFont(11, th.C(theme.FgMuted)))
+				c.Text("t", t.Title, widget.UIFont(13, th.C(theme.Fg)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if t.State != "" {
 					widget.Chip(c, "st", t.State, kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), ticketsHelp+"#list")
@@ -387,12 +387,12 @@ func (x *Tickets) ticketRowView(c *ui.Ctx, r ticketRow, many bool) {
 				if t.PR != nil {
 					parts = append(parts, fmt.Sprintf("PR #%d", t.PR.Number))
 				}
-				c.Text("n", strings.Join(parts, " · "), kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("n", strings.Join(parts, " · "), widget.MonoFont(10, th.C(theme.FgFaint)))
 				if t.Blocked {
-					c.Text("b", "blocked", kit.MonoFont(10, th.C(theme.Warn)))
+					c.Text("b", "blocked", widget.MonoFont(10, th.C(theme.Warn)))
 				}
 				if se, ok := ticketSession(x.h, t.Key); ok {
-					c.Text("se", continueLabel(se), kit.MonoFont(10, th.C(theme.Accent)))
+					c.Text("se", continueLabel(se), widget.MonoFont(10, th.C(theme.Accent)))
 				}
 			})
 		})
@@ -409,7 +409,7 @@ func (x *Tickets) pageDetail(c *ui.Ctx, r ticketRow) {
 	x.mu.Unlock()
 	help := ticketsHelp + "#ticket"
 	c.Row("kicker", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("k", t.Key, kit.MonoFont(11, th.C(theme.FgMuted)))
+		c.Text("k", t.Key, widget.MonoFont(11, th.C(theme.FgMuted)))
 		if t.State != "" {
 			widget.Chip(c, "st", t.State, kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), help)
 		}
@@ -458,16 +458,16 @@ func (x *Tickets) pageDetail(c *ui.Ctx, r ticketRow) {
 		widget.Busy(c, "asking", widget.LoadState{Phase: widget.Pending, Since: d.since}, widget.BusyOpts{Label: "Asking " + r.tracker.Label() + " for the rest",
 			Size: 11, Help: help})
 	case failed != "":
-		widget.Wrap(c, "err", failed, 640, kit.MonoFont(11, th.C(theme.Error)))
+		widget.Wrap(c, "err", failed, 640, widget.MonoFont(11, th.C(theme.Error)))
 	default:
 		if len(full.Facts) > 0 {
-			c.Text("facts", strings.Join(full.Facts, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("facts", strings.Join(full.Facts, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		}
 		switch {
 		case full.Description != "":
-			kit.MarkdownText(c, x.h, "description", full.Description, 640, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+			kit.MarkdownText(c, x.h, "description", full.Description, 640, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 		case full.Summary != "":
-			widget.Wrap(c, "summary", full.Summary, 640, kit.UIFont(13, th.C(theme.FgMuted)))
+			widget.Wrap(c, "summary", full.Summary, 640, widget.UIFont(13, th.C(theme.FgMuted)))
 		}
 	}
 }

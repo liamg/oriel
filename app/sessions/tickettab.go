@@ -3,11 +3,11 @@ package sessions
 import (
 	"cmp"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // ticketTab is a ticket in a tab of its own (kit.TicketView, its key the instance): what the tickets page shows of
@@ -26,7 +26,7 @@ func (x *Tickets) tabView(c *ui.Ctx, key string) {
 		Fill: th.C(theme.BgBase), Selectable: true, Role: ui.RoleRegion, Label: "Ticket " + key, Help: ticketsHelp + "#ticket"}, func(c *ui.Ctx) {
 		tr, ok := registry.TrackerFor(x.h, key)
 		if !ok {
-			c.Text("none", "No ticket tracker takes "+key+".", kit.UIFont(13, th.C(theme.FgFaint)))
+			c.Text("none", "No ticket tracker takes "+key+".", widget.UIFont(13, th.C(theme.FgFaint)))
 			return
 		}
 		t := registry.Ticket{Key: key}

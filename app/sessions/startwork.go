@@ -213,7 +213,7 @@ func (x *Plan) startWorkHeader(c *ui.Ctx, se core.SessionState) {
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("title", "START WORK", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
 			Color: th.C(theme.Fg)})
-		c.Text("meta", se.Name, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("meta", se.Name, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: startWorkHelp}) {
 			x.closeStartWork()
@@ -240,11 +240,11 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	th := c.Theme()
 	c.Column("threads", ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 		gone, carried := threadCounts(se)
-		kit.Heading(c, "head", "Threads", fmt.Sprintf("%d %s · %d carried", gone, kit.Plural(gone, "goes", "go"), carried))
+		widget.Heading(c, "head", "Threads", fmt.Sprintf("%d %s · %d carried", gone, kit.Plural(gone, "goes", "go"), carried))
 		agentkit.ToggleRow(c, "clear", "Clear the plan's threads", &d.clear, agentkit.ToggleRowOpts{Note: "resolved go · open and deferred go into the prompt", Help: startWorkHelp})
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Agent", strings.TrimSpace(services.ProviderTitle(x.h, d.provider.ID)+" · model · effort"))
+		widget.Heading(c, "head", "Agent", strings.TrimSpace(services.ProviderTitle(x.h, d.provider.ID)+" · model · effort"))
 		note := "from the plan docs and the work pack"
 		if !d.fresh {
 			note = "keeps the plan's conversation"
@@ -271,12 +271,12 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 	})
 	if len(d.branches) > 0 {
 		c.Column("branches", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-			kit.Heading(c, "head", "Branches", "one worktree each")
+			widget.Heading(c, "head", "Branches", "one worktree each")
 			for i := range d.branches {
 				b := &d.branches[i]
 				c.Row(i, ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 					c.Box("name", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) {
-						c.Text("t", b.project, kit.MonoFont(11.5, th.C(theme.Fg)))
+						c.Text("t", b.project, widget.MonoFont(11.5, th.C(theme.Fg)))
 					})
 					r := widget.Input(c, "branch", &b.branch, widget.InputOpts{Label: "Branch for " + b.project, Placeholder: b.planned,
 						Help: startWorkHelp, TabMoves: true, KeyMode: StartWorkKeyMode, Width: ui.Flex(1)})
@@ -288,7 +288,7 @@ func (x *Plan) startWorkBody(c *ui.Ctx, d *startWork, se core.SessionState) {
 		})
 	}
 	c.Column("run", ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Run on", "")
+		widget.Heading(c, "head", "Run on", "")
 		agentkit.SandboxToggles(c, &d.sandbox, &d.openNet, agentkit.BackendPick{Setting: cmp.Or(d.backend, agentkit.SettingBackend(x.h))}, startWorkHelp)
 	})
 }
@@ -298,10 +298,10 @@ func (x *Plan) startWorkFooter(c *ui.Ctx, d *startWork) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Column("about", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			if d.err != "" {
-				c.Text("err", d.err, kit.MonoFont(11, th.C(theme.Error)))
+				c.Text("err", d.err, widget.MonoFont(11, th.C(theme.Error)))
 				return
 			}
-			c.Text("t", "Worktrees first, then the agent builds the plan.", kit.MonoFont(11, th.C(theme.FgMuted)))
+			c.Text("t", "Worktrees first, then the agent builds the plan.", widget.MonoFont(11, th.C(theme.FgMuted)))
 		})
 		if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Key: "esc", Help: startWorkHelp}) {
 			x.closeStartWork()

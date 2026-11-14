@@ -387,8 +387,8 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 		w       float32
 	}
 	const gap = 8
-	chipFont := kit.UIFont(12, th.C(theme.FgMuted))
-	srcFont := kit.MonoFont(10.5, th.C(theme.FgFaint))
+	chipFont := widget.UIFont(12, th.C(theme.FgMuted))
+	srcFont := widget.MonoFont(10.5, th.C(theme.FgFaint))
 	var rows [][]pic
 	var used float32
 	for _, im := range imgs {

@@ -111,7 +111,7 @@ func (x *Ship) prTabContent(c *ui.Ctx, se core.SessionState, s shipRead, f *prFo
 			x.previous(c, se, s.Project)
 			x.ticket(c, se)
 			c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
-			widget.Wrap(c, "note", "Across projects, the merge order and \"raise all\" live in Ship.", 226, kit.UIFont(11, th.C(theme.FgFaint)))
+			widget.Wrap(c, "note", "Across projects, the merge order and \"raise all\" live in Ship.", 226, widget.UIFont(11, th.C(theme.FgFaint)))
 		})
 	})
 }
@@ -127,9 +127,9 @@ func (x *Ship) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		c.Text("h", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06},
 			Color: th.C(theme.Fg)})
 		c.Box("sq", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: kit.TokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
-		c.Text("p", s.Project, kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
+		c.Text("p", s.Project, widget.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmp.Or(s.Base, "?"), kit.Counted(s.Commits, "commit")), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmp.Or(s.Base, "?"), kit.Counted(s.Commits, "commit")), widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 		step := func(step string, o widget.ButtonOpts) widget.ButtonOpts { return x.stepOpts(se.ID, s.Project, step, o) }
 		if s.PR != nil && widget.Button(c, "cancel", "Cancel", step("", widget.ButtonOpts{Ghost: true, Help: "git/ship#raise"})) {
@@ -162,10 +162,10 @@ func (x *Ship) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 		c.Text("h", fmt.Sprintf("%s %s%d", strings.ToUpper(w.Short), w.Sigil, s.PR.Number),
 			ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Box("sq", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: kit.TokenColour(th, se.ProjectColour(s.Project), th.C(theme.Accent))}, nil)
-		c.Text("p", s.Project, kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
+		c.Text("p", s.Project, widget.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		x.prBadge(c, se, s)
 		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmp.Or(s.Base, "?"), kit.Counted(s.Commits, "commit")), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("m", fmt.Sprintf("%s → %s · %s", s.Branch, cmp.Or(s.Base, "?"), kit.Counted(s.Commits, "commit")), widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 		x.readyButton(c, se, s)
 		x.mergeButton(c, se, s)
@@ -192,10 +192,10 @@ func (x *Ship) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float32) {
 	th := c.Theme()
 	if e := x.failed(se.ID, s.Project); e != "" {
-		widget.Wrap(c, "failed", e, width, kit.MonoFont(11, th.C(theme.Error)))
+		widget.Wrap(c, "failed", e, width, widget.MonoFont(11, th.C(theme.Error)))
 	}
 	if s.HostError != "" {
-		widget.Wrap(c, "gherr", s.HostError, width, kit.MonoFont(11, th.C(theme.Error)))
+		widget.Wrap(c, "gherr", s.HostError, width, widget.MonoFont(11, th.C(theme.Error)))
 	}
 	widget.Wrap(c, "title", s.PR.Title, width, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 18, Weight: typeset.SemiBold},
 		Color: th.C(theme.Fg)})
@@ -227,10 +227,10 @@ func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float
 	section("description", func(c *ui.Ctx) {
 		kit.SectionCap(c, "DESCRIPTION")
 		if strings.TrimSpace(s.PR.Body) == "" {
-			c.Text("none", "No description.", kit.UIFont(12, th.C(theme.FgFaint)))
+			c.Text("none", "No description.", widget.UIFont(12, th.C(theme.FgFaint)))
 			return
 		}
-		kit.MarkdownText(c, x.h, "md", s.PR.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+		kit.MarkdownText(c, x.h, "md", s.PR.Body, inner, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 	})
 	section("review", func(c *ui.Ctx) { x.reviewThreads(c, se, s, inner) })
 }
@@ -256,7 +256,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 	ts := prThreads(se, s)
 	if len(ts) == 0 {
 		kit.SectionCap(c, "REVIEW · NONE YET")
-		c.Text("none", "No review comments yet.", kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("none", "No review comments yet.", widget.UIFont(12, th.C(theme.FgFaint)))
 		return
 	}
 	kit.SectionCap(c, "REVIEW · "+strings.ToUpper(kit.Counted(len(ts), "thread")))
@@ -268,7 +268,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 		c.Column(string(t.ID), ui.Style{W: ui.Flex(1), Gap: 6, Pad: ui.Insets{T: 8}, Role: ui.RoleGroup, Label: "Thread " + place}, func(c *ui.Ctx) {
 			widget.Rule(c, "rule")
 			c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Row("place", ui.Style{Clip: true}, func(c *ui.Ctx) { c.Text("p", place, kit.MonoFont(11, th.C(theme.FgMuted))) })
+				c.Row("place", ui.Style{Clip: true}, func(c *ui.Ctx) { c.Text("p", place, widget.MonoFont(11, th.C(theme.FgMuted))) })
 				if r := t.Hosted.Reviewer; r != "" {
 					widget.Chip(c, "who", "@"+r, th.C(tGitHub), "git/github#threads")
 				}
@@ -292,16 +292,16 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 				}
 				c.Column(cm.ID, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 					c.Row("by", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Text("n", cmp.Or(cm.Name, string(cm.Author)), kit.Mono(11, typeset.SemiBold, th.C(theme.Fg)))
+						c.Text("n", cmp.Or(cm.Name, string(cm.Author)), widget.Mono(11, typeset.SemiBold, th.C(theme.Fg)))
 						if !cm.Time.IsZero() {
-							widget.Ago(c, "at", cm.Time, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint))})
+							widget.Ago(c, "at", cm.Time, widget.AgoOpts{Text: widget.MonoFont(10, th.C(theme.FgFaint))})
 						}
 					})
-					kit.MarkdownText(c, x.h, "body", cm.Body, width, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+					kit.MarkdownText(c, x.h, "body", cm.Body, width, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 				})
 			}
 			if n := len(t.Drafts()); n > 0 {
-				c.Text("drafts", fmt.Sprintf("%d %s to forward", n, kit.Plural(n, "draft reply", "draft replies")), kit.MonoFont(10.5, th.C(tGitHub)))
+				c.Text("drafts", fmt.Sprintf("%d %s to forward", n, kit.Plural(n, "draft reply", "draft replies")), widget.MonoFont(10.5, th.C(tGitHub)))
 			}
 		})
 	}
@@ -311,10 +311,10 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) {
 	th := c.Theme()
 	if f.veto != "" {
-		widget.Wrap(c, "veto", f.veto, 600, kit.MonoFont(11, th.C(theme.Warn)))
+		widget.Wrap(c, "veto", f.veto, 600, widget.MonoFont(11, th.C(theme.Warn)))
 	}
 	if e := x.failed(se.ID, s.Project); e != "" {
-		widget.Wrap(c, "failed", e, 600, kit.MonoFont(11, th.C(theme.Error)))
+		widget.Wrap(c, "failed", e, 600, widget.MonoFont(11, th.C(theme.Error)))
 	}
 	kit.SectionCap(c, "TITLE")
 	first := !f.edited
@@ -338,7 +338,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 			widget.Segmented(c, "mode", []string{"WRITE", "PREVIEW"}, &f.tab, widget.SegmentedOpts{Label: "Body", Help: "git/ship#raise"})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if s.TemplateFile != "" {
-				c.Text("file", s.TemplateFile, kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("file", s.TemplateFile, widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 			if widget.Button(c, "redraft", "Redraft", widget.ButtonOpts{Ghost: true, Help: "git/ship#drafts", Disabled: !x.h.Available("ship.redraft", nil)}) {
 				x.run("ship.redraft", registry.Args{"project": s.Project, "kind": "pr"})
@@ -347,7 +347,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		widget.Rule(c, "rule")
 		c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8)}, func(c *ui.Ctx) {
 			if f.tab == 1 {
-				kit.MarkdownText(c, x.h, "preview", f.body, max(200, c.Size().X-40), kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+				kit.MarkdownText(c, x.h, "preview", f.body, max(200, c.Size().X-40), widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				return
 			}
 			if r := widget.Prose(c, "body", &f.body, widget.ProseOpts{Label: "Body", Placeholder: "What and why", Lines: 18, MinLines: 10,
@@ -368,11 +368,11 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		c.Column("linked", ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(tShipCard), Border: 1, Pad: ui.PadXY(12, 10), Gap: 6}, func(c *ui.Ctx) {
 			kit.SectionCap(c, "SHIPS WITH")
 			if len(se.Projects) < 2 {
-				c.Text("none", "One project: it ships alone.", kit.UIFont(12, th.C(theme.FgFaint)))
+				c.Text("none", "One project: it ships alone.", widget.UIFont(12, th.C(theme.FgFaint)))
 				return
 			}
 			x.links(c, se, s)
-			c.Text("both", "merged in the session's order", kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("both", "merged in the session's order", widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 	})
 }
@@ -391,7 +391,7 @@ func (x *Ship) reviewerRows(c *ui.Ctx, s shipRead, f *prForm) {
 	for _, r := range rs {
 		c.Row(r, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			prui.ReviewerAvatar(c, r)
-			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", prui.ReviewerName(r), kit.UIFont(12.5, th.C(theme.FgMuted))) })
+			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", prui.ReviewerName(r), widget.UIFont(12.5, th.C(theme.FgMuted))) })
 			note := "added"
 			if slices.Contains(s.Owners, r) {
 				note = "CODEOWNERS"
@@ -399,7 +399,7 @@ func (x *Ship) reviewerRows(c *ui.Ctx, s shipRead, f *prForm) {
 			if s.PR != nil && slices.Contains(s.PR.Reviewers, r) {
 				note = "asked"
 			}
-			c.Text("w", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("w", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 			if widget.IconButton(c, "rm", "✕", widget.IconButtonOpts{Label: "Remove " + r, Help: "git/ship#raise", Size: 18}) {
 				f.removed = append(f.removed, r)
 				f.reviewers = remove(f.reviewers, r)

@@ -185,7 +185,7 @@ func (x *Permissions) build(c *ui.Ctx) {
 	c.Column("perms", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(tConsoleBg), Role: ui.RoleRegion, Label: "Permissions", Help: "agent/permissions"},
 		func(c *ui.Ctx) {
 			if !ok {
-				kit.PaneNote(c, "none", "No session in front: what a sandboxed agent may do shows here.")
+				widget.PaneNote(c, "none", "No session in front: what a sandboxed agent may do shows here.")
 				return
 			}
 			s := se.Snapshot()
@@ -204,7 +204,7 @@ func (x *Permissions) build(c *ui.Ctx) {
 				c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(16, 12), Gap: 8, ScrollY: true, Selectable: true}, func(c *ui.Ctx) {
 					switch {
 					case !p.Sandboxed:
-						kit.PaneNote(c, "host", "This session's agent isn't running in a sandbox: it has your access, and none of these rules apply.")
+						widget.PaneNote(c, "host", "This session's agent isn't running in a sandbox: it has your access, and none of these rules apply.")
 					case st.pane == 0:
 						x.waiting(c, s)
 						x.hosts(c, s, st, p)
@@ -221,7 +221,7 @@ func (x *Permissions) header(c *ui.Ctx, se core.SessionState, st *permsState) {
 	th := c.Theme()
 	p, _ := st.load.Value()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(16, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("where", kit.Label(se), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("where", kit.Label(se), widget.MonoFont(11, th.C(theme.FgFaint)))
 		blocked := 0
 		for _, e := range p.Conns {
 			if !e.Allowed {
@@ -253,10 +253,10 @@ func (x *Permissions) waiting(c *ui.Ctx, se core.SessionState) {
 	if len(asks) == 0 {
 		return
 	}
-	kit.KickerRow(c, "waiting", fmt.Sprintf("WAITING ON YOU · %d", len(asks)))
+	widget.KickerRow(c, "waiting", fmt.Sprintf("WAITING ON YOU · %d", len(asks)))
 	for _, a := range asks {
 		c.Row(a.ID, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-			c.Text("s", a.Summary, kit.UIFont(12.5, th.C(theme.Fg)))
+			c.Text("s", a.Summary, widget.UIFont(12.5, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			for _, d := range []struct{ key, label string }{{"allow", "Allow once"}, {"always", "Allow for this session"}, {"deny", "Deny"}} {
 				if widget.Button(c, d.key, d.label, widget.ButtonOpts{Primary: d.key == "allow", Ghost: d.key == "deny", Help: "agent/asks"}) {
@@ -282,7 +282,7 @@ var actionWord = map[string]string{gateway.Allow: "allowed", gateway.Ask: "asks 
 // tools are the gateway's tools by server: what a call meets, where that comes from, and the session's own say.
 func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p hostapi.Permissions) {
 	th := c.Theme()
-	kit.KickerRow(c, "toolscap", "TOOLS")
+	widget.KickerRow(c, "toolscap", "TOOLS")
 	widget.Input(c, "toolq", &st.toolQ, widget.InputOpts{Label: "Filter tools", Placeholder: "Filter tools", Width: ui.Px(280), Help: "agent/permissions#tools"})
 	q := strings.ToLower(strings.TrimSpace(st.toolQ))
 	server := ""
@@ -295,12 +295,12 @@ func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p h
 		if t.Server != server {
 			server = t.Server
 			c.Row("srv:"+server, ui.Style{W: ui.Flex(1), Pad: ui.Insets{T: 4}}, func(c *ui.Ctx) {
-				c.Text("t", cmp.Or(server, "Oriel"), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+				c.Text("t", cmp.Or(server, "Oriel"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			})
 		}
 		c.Row("tool:"+t.Name, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true, Role: ui.RoleText,
 			Label: t.Name + " " + actionWord[t.Action] + ", " + t.Source}, func(c *ui.Ctx) {
-			c.Row("name", ui.Style{W: ui.Px(260), Clip: true}, func(c *ui.Ctx) { c.Text("t", t.Name, kit.MonoFont(11.5, th.C(theme.Fg))) })
+			c.Row("name", ui.Style{W: ui.Px(260), Clip: true}, func(c *ui.Ctx) { c.Text("t", t.Name, widget.MonoFont(11.5, th.C(theme.Fg))) })
 			widget.Chip(c, "act", cmp.Or(actionWord[t.Action], t.Action), th.C(actionTone(t.Action)), "agent/permissions#tools")
 			why := t.Source
 			if t.Fixed {
@@ -308,7 +308,7 @@ func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p h
 			} else if t.Rule != "" && t.Rule != "*" && t.Rule != t.Name {
 				why += " · " + t.Rule
 			}
-			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 			locked := t.Fixed || t.Action == gateway.Deny && t.Source != hostapi.SourceSession
 			if locked {
 				return
@@ -324,17 +324,17 @@ func (x *Permissions) tools(c *ui.Ctx, se core.SessionState, st *permsState, p h
 		})
 	}
 	if shown == 0 {
-		c.Text("notools", map[bool]string{true: "Nothing matches.", false: "No tools."}[q != ""], kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("notools", map[bool]string{true: "Nothing matches.", false: "No tools."}[q != ""], widget.UIFont(12, th.C(theme.FgFaint)))
 	}
 }
 
 // hosts are the network rules in force, most local first, and a way to add the session's own.
 func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p hostapi.Permissions) {
 	th := c.Theme()
-	kit.KickerRow(c, "netcap", "NETWORK")
+	widget.KickerRow(c, "netcap", "NETWORK")
 	if !p.Filtered {
 		widget.Wrap(c, "open", "Network filtering is off (sandbox.egress_proxy, or the session's network): every connection is allowed and none of these rules apply.", 560,
-			kit.UIFont(12, th.C(theme.Warn)))
+			widget.UIFont(12, th.C(theme.Warn)))
 	}
 	c.Row("add", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		r := widget.Input(c, "host", &st.hostQ, widget.InputOpts{Label: "A host for this session", Placeholder: "host or host:port, *.example.com",
@@ -365,7 +365,7 @@ func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p h
 			dest += " · any port"
 		}
 		c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-			c.Row("dest", ui.Style{W: ui.Px(260), Clip: true}, func(c *ui.Ctx) { c.Text("t", dest, kit.MonoFont(11.5, th.C(theme.Fg))) })
+			c.Row("dest", ui.Style{W: ui.Px(260), Clip: true}, func(c *ui.Ctx) { c.Text("t", dest, widget.MonoFont(11.5, th.C(theme.Fg))) })
 			word, tone := "blocked", tPermDeny
 			if r.Allow {
 				word, tone = "allowed", kit.TPermAllow
@@ -375,7 +375,7 @@ func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p h
 			if r.Allow && r.Private {
 				why += " · private addresses too"
 			}
-			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 			if r.Source == hostapi.SourceSession && widget.Button(c, "rm", "Remove", widget.ButtonOpts{Ghost: true, Help: "agent/permissions#network"}) {
 				x.run("permissions.net", registry.Args{"id": string(se.ID), "host": r.Host, "port": r.Port, "action": "none"})
 			}
@@ -389,10 +389,10 @@ func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p h
 	if builtin > 0 {
 		c.Row("builtin", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Row("dest", ui.Style{W: ui.Px(260)}, func(c *ui.Ctx) {
-				c.Text("t", fmt.Sprintf("%d hosts the agent needs", builtin), kit.MonoFont(11.5, th.C(theme.FgMuted)))
+				c.Text("t", fmt.Sprintf("%d hosts the agent needs", builtin), widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			})
 			widget.Chip(c, "act", "allowed", th.C(kit.TPermAllow), "agent/permissions#network")
-			c.Row("why", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Text("t", builtinSource, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+			c.Row("why", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Text("t", builtinSource, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 			label := "Show"
 			if st.builtin {
 				label = "Hide"
@@ -410,7 +410,7 @@ func (x *Permissions) hosts(c *ui.Ctx, se core.SessionState, st *permsState, p h
 		}
 	}
 	c.Row("else", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Row("dest", ui.Style{W: ui.Px(260)}, func(c *ui.Ctx) { c.Text("t", "anything else", kit.MonoFont(11.5, th.C(theme.FgMuted))) })
+		c.Row("dest", ui.Style{W: ui.Px(260)}, func(c *ui.Ctx) { c.Text("t", "anything else", widget.MonoFont(11.5, th.C(theme.FgMuted))) })
 		widget.Chip(c, "act", "asks you", th.C(tPermAsk), "agent/permissions#network")
 	})
 }
@@ -451,10 +451,10 @@ func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p h
 		return st.blocked && e.Allowed || q != "" && !strings.Contains(strings.ToLower(fmt.Sprintf("%s:%d %s %s", e.Host, e.Port, e.Proto, e.Path)), q)
 	})
 	if len(p.Waiting) > 0 {
-		widget.Wrap(c, "waiting", "Held for your answer: "+strings.Join(p.Waiting, ", "), 560, kit.UIFont(12, th.C(theme.Warn)))
+		widget.Wrap(c, "waiting", "Held for your answer: "+strings.Join(p.Waiting, ", "), 560, widget.UIFont(12, th.C(theme.Warn)))
 	}
 	if len(rows) == 0 {
-		c.Text("none", map[bool]string{true: "Nothing matches.", false: "No connections yet."}[len(p.Conns) > 0], kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("none", map[bool]string{true: "Nothing matches.", false: "No connections yet."}[len(p.Conns) > 0], widget.UIFont(12, th.C(theme.FgFaint)))
 		return
 	}
 	act := func(c *ui.Ctx, host string, port int, allowed bool) {
@@ -476,40 +476,42 @@ func (x *Permissions) conns(c *ui.Ctx, se core.SessionState, st *permsState, p h
 	if st.flat {
 		for i, e := range rows[:min(len(rows), permsMaxConns)] {
 			c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-				c.Row("when", ui.Style{W: ui.Px(64)}, func(c *ui.Ctx) { c.Text("t", e.At.Local().Format("15:04:05"), kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+				c.Row("when", ui.Style{W: ui.Px(64)}, func(c *ui.Ctx) {
+					c.Text("t", e.At.Local().Format("15:04:05"), widget.MonoFont(10.5, th.C(theme.FgFaint)))
+				})
 				dest := fmt.Sprintf("%s:%d", e.Host, e.Port)
 				if e.Proto == "http" {
 					dest += " " + e.Method + " " + cmp.Or(e.Path, "/")
 				}
-				c.Row("dest", ui.Style{W: ui.Px(300), Clip: true}, func(c *ui.Ctx) { c.Text("t", dest, kit.MonoFont(11.5, th.C(theme.Fg))) })
+				c.Row("dest", ui.Style{W: ui.Px(300), Clip: true}, func(c *ui.Ctx) { c.Text("t", dest, widget.MonoFont(11.5, th.C(theme.Fg))) })
 				verdict(c, e.Allowed)
-				c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", connWhy(e), kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+				c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", connWhy(e), widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 				if e.Allowed {
-					c.Text("bytes", "↑"+kit.Bytes(e.BytesUp)+" ↓"+kit.Bytes(e.BytesDown), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+					c.Text("bytes", "↑"+kit.Bytes(e.BytesUp)+" ↓"+kit.Bytes(e.BytesDown), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 				}
 				act(c, e.Host, e.Port, e.Allowed)
 			})
 		}
 		if len(rows) > permsMaxConns {
-			c.Text("more", fmt.Sprintf("The newest %d of %d.", permsMaxConns, len(rows)), kit.UIFont(11.5, th.C(theme.FgFaint)))
+			c.Text("more", fmt.Sprintf("The newest %d of %d.", permsMaxConns, len(rows)), widget.UIFont(11.5, th.C(theme.FgFaint)))
 		}
 		return
 	}
 	for i, g := range groupConns(rows) {
 		c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 			c.Row("dest", ui.Style{W: ui.Px(300), Clip: true}, func(c *ui.Ctx) {
-				c.Text("t", fmt.Sprintf("%s:%d", g.host, g.port), kit.MonoFont(11.5, th.C(theme.Fg)))
+				c.Text("t", fmt.Sprintf("%s:%d", g.host, g.port), widget.MonoFont(11.5, th.C(theme.Fg)))
 			})
-			c.Text("proto", cmp.Or(g.proto, "tcp"), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("proto", cmp.Or(g.proto, "tcp"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			verdict(c, g.allowed)
 			why := g.why
 			if g.blocked > 0 && g.blocked < g.n {
 				why = fmt.Sprintf("%d of %d blocked", g.blocked, g.n)
 			}
-			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
-			c.Text("n", kit.Counted(g.n, "connection"), kit.MonoFont(10.5, th.C(theme.FgMuted)))
-			c.Text("bytes", "↑"+kit.Bytes(g.up)+" ↓"+kit.Bytes(g.down), kit.MonoFont(10.5, th.C(theme.FgMuted)))
-			widget.Ago(c, "last", g.last, widget.AgoOpts{Text: kit.MonoFont(10.5, th.C(theme.FgFaint))})
+			c.Row("why", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", why, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
+			c.Text("n", kit.Counted(g.n, "connection"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("bytes", "↑"+kit.Bytes(g.up)+" ↓"+kit.Bytes(g.down), widget.MonoFont(10.5, th.C(theme.FgMuted)))
+			widget.Ago(c, "last", g.last, widget.AgoOpts{Text: widget.MonoFont(10.5, th.C(theme.FgFaint))})
 			act(c, g.host, g.port, g.allowed)
 		})
 	}

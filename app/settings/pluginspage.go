@@ -384,9 +384,9 @@ func (x *Catalog) pageView(c *ui.Ctx) {
 				if waits > 0 {
 					lazy = fmt.Sprintf("%d waiting for first use · ", waits)
 				}
-				c.Text("t", fmt.Sprintf("%d installed · %d running · %s%s", len(rows), loaded, lazy, kit.Counted(ups, "update")), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("t", fmt.Sprintf("%d installed · %d running · %s%s", len(rows), loaded, lazy, kit.Counted(ups, "update")), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("file", "~/.config/oriel/settings.toml", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("file", "~/.config/oriel/settings.toml", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			})
 		})
 }
@@ -434,12 +434,12 @@ func (x *Catalog) installedList(c *ui.Ctx, rows []pluginRow) {
 				t string
 				w ui.Size
 			}{{"PLUGIN", ui.Px(260)}, {"CONTRIBUTES", ui.Flex(1)}, {"PERMISSIONS", ui.Flex(1)}, {"RUNS", ui.Px(90)}} {
-				c.Box(i, ui.Style{W: h.w, Clip: true}, func(c *ui.Ctx) { c.Text("t", h.t, kit.KickerFont(th.C(theme.FgFaint))) })
+				c.Box(i, ui.Style{W: h.w, Clip: true}, func(c *ui.Ctx) { c.Text("t", h.t, widget.KickerFont(th.C(theme.FgFaint))) })
 			}
 		})
 		c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true}, func(c *ui.Ctx) {
 			if len(rows) == 0 {
-				c.Row("none", ui.Style{Pad: ui.PadXY(18, 12)}, func(c *ui.Ctx) { kit.Note(c, "t", "Nothing here.") })
+				c.Row("none", ui.Style{Pad: ui.PadXY(18, 12)}, func(c *ui.Ctx) { widget.Note(c, "t", "Nothing here.") })
 				return
 			}
 			widget.Rows(c, "plugins", len(rows), &x.page.sel, widget.RowsOpts{Label: "Plugins", KeyMode: PluginsKeyMode, Help: pluginsHelp, ClickSelects: true,
@@ -463,15 +463,15 @@ func (x *Catalog) rowView(c *ui.Ctx, r pluginRow, selected bool) {
 			})
 			c.Column("t", ui.Style{Gap: 3, Clip: true}, func(c *ui.Ctx) {
 				c.Row("l1", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("n", r.name, kit.UIFont(13, th.C(theme.Fg)))
+					c.Text("n", r.name, widget.UIFont(13, th.C(theme.Fg)))
 					if r.version != "" {
-						c.Text("v", r.version, kit.MonoFont(10, th.C(theme.FgFaint)))
+						c.Text("v", r.version, widget.MonoFont(10, th.C(theme.FgFaint)))
 					}
 					if r.badge != catalog.BadgeBuiltin {
 						widget.Chip(c, "badge", strings.ToUpper(r.badge), th.C(badgeTone(r.badge)), pluginsHelp+"#badges")
 					}
 				})
-				c.Text("l2", r.id+" · "+r.state, kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("l2", r.id+" · "+r.state, widget.MonoFont(10, th.C(theme.FgFaint)))
 			})
 		})
 		c.Row("contrib", ui.Style{W: ui.Flex(1), Gap: 6, Clip: true}, func(c *ui.Ctx) {
@@ -484,9 +484,9 @@ func (x *Catalog) rowView(c *ui.Ctx, r pluginRow, selected bool) {
 			if perms == "" {
 				perms = "none"
 			}
-			c.Text("t", perms, kit.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("t", perms, widget.MonoFont(10.5, th.C(theme.FgMuted)))
 		})
-		c.Box("runs", ui.Style{W: ui.Px(90), Clip: true}, func(c *ui.Ctx) { c.Text("t", r.runs, kit.KickerFont(th.C(theme.Accent))) })
+		c.Box("runs", ui.Style{W: ui.Px(90), Clip: true}, func(c *ui.Ctx) { c.Text("t", r.runs, widget.KickerFont(th.C(theme.Accent))) })
 	})
 }
 
@@ -501,21 +501,21 @@ func (x *Catalog) detail(c *ui.Ctx, r pluginRow) {
 				meta = append(meta, r.version)
 			}
 			meta = append(meta, strings.ToLower(r.runs))
-			c.Text("m", strings.Join(meta, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("m", strings.Join(meta, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		widget.Chip(c, "badge", strings.ToUpper(r.badge), th.C(badgeTone(r.badge)), pluginsHelp+"#badges")
 	})
 	if r.m.Description != "" {
-		widget.Wrap(c, "desc", r.m.Description, 380, kit.UIFont(12.5, th.C(theme.FgMuted)))
+		widget.Wrap(c, "desc", r.m.Description, 380, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	}
 	section := func(key, title string, lines [][2]string) {
 		c.Column(key, ui.Style{W: ui.Flex(1), Gap: 5}, func(c *ui.Ctx) {
-			c.Text("h", title, kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("h", title, widget.KickerFont(th.C(theme.FgFaint)))
 			for i, l := range lines {
 				c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-					c.Text("k", l[0], kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("k", l[0], widget.MonoFont(10.5, th.C(theme.FgFaint)))
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-					c.Box("v", ui.Style{Clip: true}, func(c *ui.Ctx) { c.Text("t", l[1], kit.MonoFont(10.5, th.C(theme.Fg))) })
+					c.Box("v", ui.Style{Clip: true}, func(c *ui.Ctx) { c.Text("t", l[1], widget.MonoFont(10.5, th.C(theme.Fg))) })
 				})
 			}
 		})
@@ -569,10 +569,10 @@ func (x *Catalog) detail(c *ui.Ctx, r pluginRow) {
 			section("prov", "PROVENANCE", prov)
 		}
 		if r.st.Warning != "" {
-			widget.Wrap(c, "warn", "⚠ "+r.st.Warning, 380, kit.UIFont(12, th.C(tConsentWarning)))
+			widget.Wrap(c, "warn", "⚠ "+r.st.Warning, 380, widget.UIFont(12, th.C(tConsentWarning)))
 		}
 		if r.st.Err != nil {
-			widget.Wrap(c, "err", r.st.Err.Error(), 380, kit.UIFont(12, th.C(theme.Error)))
+			widget.Wrap(c, "err", r.st.Err.Error(), 380, widget.UIFont(12, th.C(theme.Error)))
 		}
 		c.Row("acts", ui.Style{W: ui.Flex(1), Gap: 8, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			id, scope := r.id, scopeOf(r.st.Entry)
@@ -644,7 +644,7 @@ func (x *Catalog) registryTab(c *ui.Ctx, installed []pluginRow) {
 				if err := client.Err(s.Repo); err != nil {
 					c.Row("err"+s.Repo, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Column("t", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-							widget.Wrap(c, "t", s.Repo+": "+err.Error(), 760, kit.UIFont(12, th.C(theme.Error)))
+							widget.Wrap(c, "t", s.Repo+": "+err.Error(), 760, widget.UIFont(12, th.C(theme.Error)))
 						})
 						if widget.Button(c, "retry", "Retry", widget.ButtonOpts{Busy: x.page.fetching, BusyLabel: "Fetching", Help: pluginsHelp}) {
 							x.fetch()
@@ -678,9 +678,9 @@ func (x *Catalog) registryRow(c *ui.Ctx, f catalog.Found, installed bool) {
 	c.Row(f.ID, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 8), Gap: 12, Cross: ui.Center, Label: f.ID, Role: ui.RoleGroup}, func(c *ui.Ctx) {
 		c.Column("t", ui.Style{W: ui.Flex(1), Gap: 3, Clip: true}, func(c *ui.Ctx) {
 			c.Row("l1", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("n", f.ID, kit.UIFont(13, th.C(theme.Fg)))
+				c.Text("n", f.ID, widget.UIFont(13, th.C(theme.Fg)))
 				if newest != "" {
-					c.Text("v", newest, kit.MonoFont(10, th.C(theme.FgFaint)))
+					c.Text("v", newest, widget.MonoFont(10, th.C(theme.FgFaint)))
 				}
 				widget.Chip(c, "badge", strings.ToUpper(badge), th.C(badgeTone(badge)), pluginsHelp+"#badges")
 			})
@@ -688,10 +688,10 @@ func (x *Catalog) registryRow(c *ui.Ctx, f catalog.Found, installed bool) {
 			if len(f.Also) > 0 {
 				where += " (also in " + strings.Join(f.Also, ", ") + ")"
 			}
-			c.Text("l2", strings.TrimSpace(f.Description+" · "+where), kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("l2", strings.TrimSpace(f.Description+" · "+where), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		if installed {
-			c.Text("in", "installed", kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("in", "installed", widget.KickerFont(th.C(theme.FgFaint)))
 			return
 		}
 		if widget.Button(c, "install", "Install", widget.ButtonOpts{Busy: x.page.running[f.ID] != "", BusyLabel: "Installing", Help: pluginsHelp}) {

@@ -3,8 +3,9 @@ package lang
 import (
 	"cmp"
 	"fmt"
-	"github.com/liamg/oriel/ui/widget"
 	"strings"
+
+	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -82,7 +83,7 @@ func (x *Tests) runView(c *ui.Ctx, instance string) {
 		if !r.Started.IsZero() && !r.Ended.IsZero() {
 			meta = append(meta, kit.Duration(r.Ended.Sub(r.Started)))
 		}
-		c.Text("meta", strings.Join(meta, " · "), kit.KickerFont(th.C(theme.FgFaint)))
+		c.Text("meta", strings.Join(meta, " · "), widget.KickerFont(th.C(theme.FgFaint)))
 		c.Row("counts", ui.Style{Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("p", fmt.Sprintf("%d ✓", r.Passed), mono(12, tTestPassed))
 			if r.Failed > 0 {
@@ -99,7 +100,7 @@ func (x *Tests) runView(c *ui.Ctx, instance string) {
 			c.Text(fmt.Sprint("fail", i), "✕ "+f, mono(11.5, tTestFailed))
 		}
 		widget.Rule(c, "rule")
-		c.Text("k", "OUTPUT", kit.KickerFont(th.C(theme.FgFaint)))
+		c.Text("k", "OUTPUT", widget.KickerFont(th.C(theme.FgFaint)))
 		c.Column("out", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Clip: true, Gap: 1}, func(c *ui.Ctx) {
 			for i, l := range strings.Split(r.Output, "\n") {
 				tok := theme.FgMuted

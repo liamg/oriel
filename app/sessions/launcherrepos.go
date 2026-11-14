@@ -73,7 +73,7 @@ func (x *Launcher) reposSection(c *ui.Ctx, k core.KindSpec) {
 	if startsFrom(k) == core.FromPR {
 		about = "the PR's repo, found by its remote if none"
 	}
-	kit.Heading(c, "head", "Repositories", about)
+	widget.Heading(c, "head", "Repositories", about)
 	all := x.repoChoices()
 	addNew := func(c *ui.Ctx) {
 		if widget.Button(c, "addrepo", "+ Add repo", widget.ButtonOpts{Help: "agent/launcher#repositories"}) {
@@ -84,7 +84,7 @@ func (x *Launcher) reposSection(c *ui.Ctx, k core.KindSpec) {
 	}
 	if len(all) == 0 {
 		c.Row("none", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", "No repos yet.", kit.UIFont(12.5, th.C(theme.FgFaint)))
+			c.Text("t", "No repos yet.", widget.UIFont(12.5, th.C(theme.FgFaint)))
 			addNew(c)
 		})
 	} else {
@@ -114,17 +114,17 @@ func (x *Launcher) reposSection(c *ui.Ctx, k core.KindSpec) {
 			}
 			if len(shown) == 0 {
 				c.Row("nomatch", ui.Style{W: ui.Flex(1), H: ui.Px(repoRowHeight), Pad: ui.PadXY(10, 0), Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("t", "No repo matches.", kit.UIFont(12, th.C(theme.FgFaint)))
+					c.Text("t", "No repo matches.", widget.UIFont(12, th.C(theme.FgFaint)))
 				})
 			}
 		})
 		if n := len(x.chosen); n > 0 {
-			kit.Note(c, "selected", fmt.Sprintf("%d selected", n))
+			widget.Note(c, "selected", fmt.Sprintf("%d selected", n))
 		}
 	}
 	if k.Worktrees == core.WorktreesNow || k.Worktrees == core.WorktreesStartWork {
 		c.Row("branch", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("l", "Branch", kit.UIFont(12.5, th.C(theme.FgMuted)))
+			c.Text("l", "Branch", widget.UIFont(12.5, th.C(theme.FgMuted)))
 			x.field(c, "branch", &x.branch, "Branch", "named from the ticket and prompt", false, ui.Flex(1), 1)
 		})
 	}
@@ -149,9 +149,9 @@ func (x *Launcher) repoRow(c *ui.Ctx, r core.Repo) {
 			}
 		})
 		c.Row("path", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", kit.TildePath(r.Path), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("t", kit.TildePath(r.Path), widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
-		c.Text("branch", strings.TrimPrefix(r.BaseBranch, "origin/"), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("branch", strings.TrimPrefix(r.BaseBranch, "origin/"), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		c.Row("when", ui.Style{W: ui.Px(110), Main: ui.End}, func(c *ui.Ctx) {
 			switch {
 			case r.ID == x.justAdded:
@@ -159,7 +159,7 @@ func (x *Launcher) repoRow(c *ui.Ctx, r core.Repo) {
 			case isFound(r):
 				widget.Chip(c, "chip", "found", th.C(tRepoFound), "agent/launcher#repositories")
 			case !r.Used.IsZero():
-				widget.Ago(c, "t", r.Used, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgGhost)), Long: true, Prefix: "used ", Now: time.Now()})
+				widget.Ago(c, "t", r.Used, widget.AgoOpts{Text: widget.MonoFont(10, th.C(theme.FgGhost)), Long: true, Prefix: "used ", Now: time.Now()})
 			}
 		})
 	})

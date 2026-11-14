@@ -338,7 +338,7 @@ func (x *quitDialog) stoppingBody(c *ui.Ctx, r *quitDrain, width float32) {
 		}
 	}
 	widget.Wrap(c, "t", fmt.Sprintf("Stopping %s. They come back when Oriel opens again.", kit.Counted(left, "agent")), width,
-		kit.UIFont(12.5, th.C(theme.Fg)))
+		widget.UIFont(12.5, th.C(theme.Fg)))
 	c.Column("agents", ui.Style{W: ui.Flex(1), Gap: 4, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 		for _, id := range ids {
 			var se core.SessionState
@@ -346,11 +346,11 @@ func (x *quitDialog) stoppingBody(c *ui.Ctx, r *quitDrain, width float32) {
 				se = v.Snapshot()
 			}
 			c.Row(string(id), ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("name", cmp.Or(se.Name, string(id)), kit.MonoFont(11.5, th.C(theme.Fg)))
+				c.Text("name", cmp.Or(se.Name, string(id)), widget.MonoFont(11.5, th.C(theme.Fg)))
 				if se.Agent.Live() {
-					c.Text("state", "stopping", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("state", "stopping", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				} else {
-					c.Text("state", "stopped", kit.MonoFont(10.5, th.C(kit.TPermAllow)))
+					c.Text("state", "stopped", widget.MonoFont(10.5, th.C(kit.TPermAllow)))
 				}
 			})
 		}
@@ -367,25 +367,25 @@ func (x *quitDialog) drainBody(c *ui.Ctx, r *quitDrain, busy []core.SessionState
 		}
 		lead, then := "Oriel stops the agents running your sessions as it quits.",
 			fmt.Sprintf("It quits when these turns end, or in %s; their agents come back when Oriel opens again.", left)
-		widget.Wrap(c, "t", lead, width, kit.UIFont(12.5, th.C(theme.Fg)))
-		widget.Wrap(c, "when", then, width, kit.UIFont(12, th.C(theme.FgMuted)))
+		widget.Wrap(c, "t", lead, width, widget.UIFont(12.5, th.C(theme.Fg)))
+		widget.Wrap(c, "when", then, width, widget.UIFont(12, th.C(theme.FgMuted)))
 		c.Column("busy", ui.Style{W: ui.Flex(1), Gap: 4, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			for _, se := range busy {
 				c.Row(string(se.ID), ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("name", kit.Label(se), kit.MonoFont(11.5, th.C(theme.Fg)))
-					c.Text("state", "mid-turn", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("name", kit.Label(se), widget.MonoFont(11.5, th.C(theme.Fg)))
+					c.Text("state", "mid-turn", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				})
 			}
 		})
 	}
 	if len(jobs) > 0 {
 		widget.Wrap(c, "jobs", "Scheduled jobs don't run while Oriel is closed: one that comes due runs once when it opens again.",
-			width, kit.UIFont(12, th.C(theme.Warn)))
+			width, widget.UIFont(12, th.C(theme.Warn)))
 		c.Column("scheduled", ui.Style{W: ui.Flex(1), Gap: 4, Pad: ui.Insets{T: 2}}, func(c *ui.Ctx) {
 			for _, j := range jobs {
 				c.Row(j.Name, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("name", cmp.Or(j.Title, j.Name), kit.MonoFont(11.5, th.C(theme.Fg)))
-					c.Text("when", j.Schedule.String(), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("name", cmp.Or(j.Title, j.Name), widget.MonoFont(11.5, th.C(theme.Fg)))
+					c.Text("when", j.Schedule.String(), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				})
 			}
 		})

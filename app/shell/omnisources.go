@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // sessionsSource is the sessions, the ones that need you first.
@@ -91,7 +92,7 @@ func commandsSource(h plugin.Host) uireg.PickerSource {
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					kit.PreviewHead(c, "command", ui.TextStyle{Color: c.Theme().C(theme.Accent)}, it.Label)
 					if cmd.Title != "" {
-						kit.PreviewText(c, "desc", cmd.Title, kit.UIFont(13, c.Theme().C(theme.FgMuted)))
+						kit.PreviewText(c, "desc", cmd.Title, widget.UIFont(13, c.Theme().C(theme.FgMuted)))
 					}
 					kit.PreviewField(c, "source", cmd.Source)
 					for i, k := range keysFor(cmd.ID) {

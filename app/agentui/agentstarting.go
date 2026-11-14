@@ -27,11 +27,11 @@ func startingCard(c *ui.Ctx, key any, se core.SessionState, width float32) {
 				Help: kit.StartingHelp})
 			c.Text("step", s.Step+"…", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("for", kit.Duration(c.Now().Sub(s.Since)), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("for", kit.Duration(c.Now().Sub(s.Since)), widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 		if s.Note != "" {
-			widget.Wrap(c, "note", s.Note, width-28, kit.UIFont(12.5, th.C(theme.FgMuted)))
+			widget.Wrap(c, "note", s.Note, width-28, widget.UIFont(12.5, th.C(theme.FgMuted)))
 		}
-		c.Text("then", kit.ProviderNameIn(c, se.Agent.Provider)+" gets your request once it's up.", kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("then", kit.ProviderNameIn(c, se.Agent.Provider)+" gets your request once it's up.", widget.UIFont(12, th.C(theme.FgFaint)))
 	})
 }

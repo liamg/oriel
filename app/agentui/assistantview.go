@@ -111,7 +111,7 @@ func (x *Assistant) header(c *ui.Ctx) {
 	th := c.Theme()
 	widget.Chip(c, "model", x.runsOn(), th.C(tAsstModel), assistantHelp+"#model")
 	c.Row("about", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		c.Text("t", x.about(), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("t", x.about(), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	})
 	if widget.Button(c, "new", "New", widget.ButtonOpts{Ghost: true, Help: assistantHelp + "#conversation"}) {
 		x.conv.Clear()
@@ -161,7 +161,7 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 		ui.Style{Gap: 12, Pad: ui.Insets{T: 4, B: 8, R: 8}}, func(c *ui.Ctx, _ func(string) ui.ID) {
 			if len(log) == 0 {
 				widget.Wrap(c, "empty", "Ask what needs you, to review a pull request, to start or stop a session, or to run a job. "+
-					"It reads before it answers, and anything that starts or stops an agent waits for your yes.", width*.8, kit.UIFont(13, th.C(theme.FgGhost)))
+					"It reads before it answers, and anything that starts or stops an agent waits for your yes.", width*.8, widget.UIFont(13, th.C(theme.FgGhost)))
 			}
 			var block *asstBlock
 			flush := func(key int) {
@@ -179,7 +179,7 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 					flush(i)
 					c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 						widget.Rule(c, "l")
-						c.Text("t", strings.ToUpper(e.Text), kit.KickerFont(th.C(theme.FgGhost)))
+						c.Text("t", strings.ToUpper(e.Text), widget.KickerFont(th.C(theme.FgGhost)))
 						widget.Rule(c, "r")
 					})
 				case assistant.KindTool:
@@ -205,7 +205,7 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 			}
 			flush(len(log))
 			if busy && (len(log) == 0 || log[len(log)-1].Kind != assistant.KindProgress) {
-				c.Text("thinking", "thinking…", kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("thinking", "thinking…", widget.MonoFont(11, th.C(theme.FgFaint)))
 			}
 		})
 	if !wake.IsZero() {
@@ -220,7 +220,7 @@ func (x *Assistant) mine(c *ui.Ctx, key any, e assistant.Entry, width float32) {
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		c.Column("b", ui.Style{Pad: ui.PadXY(13, 9), Radius: 8, Fill: th.C(tAsstMine), Stroke: th.C(theme.LineStrong), Border: 1,
 			Role: ui.RoleText, Label: e.Text}, func(c *ui.Ctx) {
-			widget.Wrap(c, "t", e.Text, width*.6, kit.UIFont(13, th.C(theme.Fg)))
+			widget.Wrap(c, "t", e.Text, width*.6, widget.UIFont(13, th.C(theme.Fg)))
 		})
 	})
 }
@@ -243,15 +243,15 @@ func (x *Assistant) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, late
 			for _, e := range b.entries {
 				switch e.Kind {
 				case assistant.KindReply:
-					widget.Rich(c, e.Seq, kit.MDSpans(e.Text), width-40, kit.UIFont(13.5, th.C(theme.Fg)), widget.RichOpts{})
+					widget.Rich(c, e.Seq, kit.MDSpans(e.Text), width-40, widget.UIFont(13.5, th.C(theme.Fg)), widget.RichOpts{})
 					if len(e.Items) > 0 {
 						keyed := slices.IndexFunc(log, func(o assistant.Entry) bool { return o.Seq == e.Seq }) == latestItems
 						x.items(c, fmt.Sprint("items", e.Seq), e.Items, keyed)
 					}
 				case assistant.KindProgress:
-					c.Text(e.Seq, e.Text, kit.MonoFont(11, th.C(theme.FgFaint)))
+					c.Text(e.Seq, e.Text, widget.MonoFont(11, th.C(theme.FgFaint)))
 				case assistant.KindError:
-					widget.Wrap(c, e.Seq, e.Text, width-40, kit.MonoFont(11, th.C(theme.Error)))
+					widget.Wrap(c, e.Seq, e.Text, width-40, widget.MonoFont(11, th.C(theme.Error)))
 				case assistant.KindConfirm:
 					x.confirmCard(c, e, now, wake)
 				case assistant.KindAction:
@@ -279,13 +279,13 @@ func (x *Assistant) items(c *ui.Ctx, key any, items []assistant.Item, keyed bool
 				}
 				c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: tone}, nil)
 				c.Text("title", it.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-				c.Text("text", it.Text, kit.UIFont(12.5, th.C(theme.FgMuted)))
+				c.Text("text", it.Text, widget.UIFont(12.5, th.C(theme.FgMuted)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if it.Meta != "" {
-					c.Text("meta", it.Meta, kit.MonoFont(10.5, th.C(theme.FgGhost)))
+					c.Text("meta", it.Meta, widget.MonoFont(10.5, th.C(theme.FgGhost)))
 				}
 				if keyed && i < 9 {
-					kit.Keycap(c, "key", fmt.Sprintf("⌘%d", i+1))
+					widget.Keycap(c, "key", fmt.Sprintf("⌘%d", i+1))
 				}
 			}).Clicked {
 				x.pickRow(it)
@@ -321,7 +321,7 @@ func (x *Assistant) confirmCard(c *ui.Ctx, e assistant.Entry, now time.Time, wak
 		if e.Answer == assistant.Yes {
 			tone = th.C(tAsstDone)
 		}
-		c.Text(e.Seq, cmp.Or(text, "not answered — nothing was done"), kit.MonoFont(11, tone))
+		c.Text(e.Seq, cmp.Or(text, "not answered — nothing was done"), widget.MonoFont(11, tone))
 		return
 	}
 	key := fmt.Sprint("confirm", e.Seq)
@@ -430,14 +430,14 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 			if lead != nil {
 				lead(c)
 			}
-			c.Text("l", label, kit.MonoFont(11, th.C(theme.FgMuted)))
+			c.Text("l", label, widget.MonoFont(11, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Box("value", ui.Style{Keep: true}, func(c *ui.Ctx) {
 				if !at.IsZero() {
-					widget.Ago(c, "v", at, widget.AgoOpts{Text: kit.Mono(11, typeset.SemiBold, tone)})
+					widget.Ago(c, "v", at, widget.AgoOpts{Text: widget.Mono(11, typeset.SemiBold, tone)})
 					return
 				}
-				c.Text("v", value, kit.Mono(11, typeset.SemiBold, tone))
+				c.Text("v", value, widget.Mono(11, typeset.SemiBold, tone))
 			})
 		})
 	}
@@ -451,7 +451,7 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 		}
 		c.Row("voice", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("s", "spoken replies "+spoken, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("s", "spoken replies "+spoken, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 	})
 }
@@ -505,10 +505,10 @@ func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, he
 		if e.Undone {
 			mark, tone = "↶", th.C(theme.FgFaint)
 		}
-		row(c, fmt.Sprint("act", e.Seq), e.Text, "", e.At, th.C(theme.FgFaint), func(c *ui.Ctx) { c.Text("m", mark, kit.Mono(11, typeset.Bold, tone)) })
+		row(c, fmt.Sprint("act", e.Seq), e.Text, "", e.At, th.C(theme.FgFaint), func(c *ui.Ctx) { c.Text("m", mark, widget.Mono(11, typeset.Bold, tone)) })
 	}
 	if n == 0 {
-		c.Text("none", "nothing yet", kit.MonoFont(11, th.C(theme.FgGhost)))
+		c.Text("none", "nothing yet", widget.MonoFont(11, th.C(theme.FgGhost)))
 	}
 }
 
@@ -537,26 +537,26 @@ func confirmBody(c *ui.Ctx, x *Assistant, cf registry.Confirmation) {
 					continue
 				}
 				c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-					c.Box("k", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) { c.Text("t", r.Key, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+					c.Box("k", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) { c.Text("t", r.Key, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 					if r.URL != "" {
 						if widget.Link(c, "v", r.Value, assistantHelp+"#confirm") {
 							x.report(kit.OpenURL(x.h, r.URL))
 						}
 						return
 					}
-					c.Text("v", r.Value, kit.UIFont(12.5, th.C(theme.Fg)))
+					c.Text("v", r.Value, widget.UIFont(12.5, th.C(theme.Fg)))
 				})
 			}
 		})
 	}
 	if b := cf.Block; b != nil {
 		c.Column("block", ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
-			c.Text("l", strings.ToUpper(b.Label), kit.KickerFont(th.C(theme.FgGhost)))
+			c.Text("l", strings.ToUpper(b.Label), widget.KickerFont(th.C(theme.FgGhost)))
 			text := b.Text
 			if len(b.Items) > 0 {
 				text = "• " + strings.Join(b.Items, "\n• ")
 			}
-			widget.Wrap(c, "t", text, 560, kit.UIFont(12.5, th.C(theme.FgMuted)))
+			widget.Wrap(c, "t", text, 560, widget.UIFont(12.5, th.C(theme.FgMuted)))
 		})
 	}
 }

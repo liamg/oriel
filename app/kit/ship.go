@@ -33,12 +33,12 @@ var (
 )
 
 // SectionCap is a section's caption: "CHECKS · 5 OF 7".
-func SectionCap(c *ui.Ctx, s string) { c.Text(s, s, KickerFont(c.Theme().C(TShipCapFg))) }
+func SectionCap(c *ui.Ctx, s string) { c.Text(s, s, widget.KickerFont(c.Theme().C(TShipCapFg))) }
 
 // EmptyNote says why there's nothing to show.
 func EmptyNote(c *ui.Ctx, msg string) {
 	c.Column("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14)}, func(c *ui.Ctx) {
-		widget.Wrap(c, "t", msg, 280, UIFont(12, c.Theme().C(theme.FgFaint)))
+		widget.Wrap(c, "t", msg, 280, widget.UIFont(12, c.Theme().C(theme.FgFaint)))
 	})
 }
 

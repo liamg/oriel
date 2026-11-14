@@ -3,10 +3,11 @@ package shell
 import (
 	"context"
 	"fmt"
-	"github.com/liamg/oriel/ui/widget"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
@@ -140,7 +141,7 @@ func (w *whichKey) build(c *ui.Ctx) {
 		Float: &ui.Float{Point: &at, Self: render.Point{X: .5, Y: 1}}, Role: ui.RoleDialog, Label: "Keys that can follow"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(16, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			for i, k := range p.Keys {
-				c.Box(i, ui.Style{}, func(c *ui.Ctx) { kit.KbdKey(c, kit.KeyLabel(k)) })
+				c.Box(i, ui.Style{}, func(c *ui.Ctx) { widget.KbdKey(c, kit.KeyLabel(k)) })
 			}
 			if title != "" {
 				c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(tWKGroup)})

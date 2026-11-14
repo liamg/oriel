@@ -266,7 +266,7 @@ func (x *Consent) header(c *ui.Ctx, k plugin.Consent) {
 				meta = append(meta, "v"+m.Version)
 			}
 			meta = append(meta, "runs: "+runsOf(m))
-			c.Text("meta", strings.Join(meta, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("meta", strings.Join(meta, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		if k.Badge != "" {
 			widget.Chip(c, "badge", strings.ToUpper(k.Badge), th.C(badgeTone(k.Badge)), consentHelp+"#badges")
@@ -295,11 +295,11 @@ func consentRows(c *ui.Ctx, k plugin.Consent, width float32) {
 	if k.Warning != "" {
 		c.Row("warning", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 10, Stroke: th.C(tConsentWarning), Border: 1, Radius: 6,
 			Role: ui.RoleGroup, Label: k.Warning}, func(c *ui.Ctx) {
-			c.Text("sign", "⚠", kit.UIFont(12.5, th.C(tConsentWarning)))
-			widget.Wrap(c, "t", k.Warning, width-60, kit.UIFont(12.5, th.C(tConsentWarning)))
+			c.Text("sign", "⚠", widget.UIFont(12.5, th.C(tConsentWarning)))
+			widget.Wrap(c, "t", k.Warning, width-60, widget.UIFont(12.5, th.C(tConsentWarning)))
 		})
 	}
-	widget.Wrap(c, "intro", intro, width, kit.UIFont(12.5, th.C(theme.FgMuted)))
+	widget.Wrap(c, "intro", intro, width, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	for _, g := range plugin.Groups {
 		var rows []plugin.ConsentRow
 		for _, r := range k.Rows {
@@ -315,7 +315,7 @@ func consentRows(c *ui.Ctx, k plugin.Consent, width float32) {
 			if g == "Critical" {
 				tone = tRiskCrit
 			}
-			c.Text("cap", strings.ToUpper(g), kit.KickerFont(th.C(tone)))
+			c.Text("cap", strings.ToUpper(g), widget.KickerFont(th.C(tone)))
 			for _, r := range rows {
 				consentRow(c, k, r, width)
 			}
@@ -323,8 +323,8 @@ func consentRows(c *ui.Ctx, k plugin.Consent, width float32) {
 	}
 	if len(k.Removed) > 0 {
 		c.Column("removed", ui.Style{W: ui.Flex(1), Gap: 4, Pad: ui.Insets{T: 8}}, func(c *ui.Ctx) {
-			c.Text("cap", "NO LONGER ASKED FOR", kit.KickerFont(th.C(theme.FgFaint)))
-			widget.Wrap(c, "list", strings.Join(k.Removed, ", "), width, kit.MonoFont(11, th.C(theme.FgMuted)))
+			c.Text("cap", "NO LONGER ASKED FOR", widget.KickerFont(th.C(theme.FgFaint)))
+			widget.Wrap(c, "list", strings.Join(k.Removed, ", "), width, widget.MonoFont(11, th.C(theme.FgMuted)))
 		})
 	}
 }
@@ -356,14 +356,14 @@ func consentRow(c *ui.Ctx, k plugin.Consent, r plugin.ConsentRow, width float32)
 				c.Row("added", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 					widget.Chip(c, "chip", word, th.C(theme.Accent), help)
 					if !r.New() {
-						c.Text("t", strings.Join(r.Added, ", "), kit.MonoFont(10.5, th.C(theme.Accent)))
+						c.Text("t", strings.Join(r.Added, ", "), widget.MonoFont(10.5, th.C(theme.Accent)))
 					}
 				})
 			}
-			widget.Wrap(c, "explain", r.Explain, text, kit.UIFont(12.5, th.C(theme.Fg)))
+			widget.Wrap(c, "explain", r.Explain, text, widget.UIFont(12.5, th.C(theme.Fg)))
 			if r.Why != "" {
 				c.Row("why", ui.Style{Gap: 8}, func(c *ui.Ctx) {
-					c.Text("by", "AUTHOR SAYS", kit.KickerFont(th.C(theme.FgGhost)))
+					c.Text("by", "AUTHOR SAYS", widget.KickerFont(th.C(theme.FgGhost)))
 					widget.Wrap(c, "t", r.Why, text-100, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11.5, Italic: true}, Color: th.C(theme.FgMuted)})
 				})
 			}
@@ -379,24 +379,24 @@ func consentSide(c *ui.Ctx, k plugin.Consent, width float32) {
 		"session": "Inside each session's sandbox container: the worktree only, network through the egress proxy, no home directory.",
 		"both":    "A UI part in the app (Lua or WASM, checked in the VM) and a session part inside each session's sandbox container: the worktree only, network through the egress proxy.",
 	}[runsOf(k.Plugin)]
-	c.Text("where", "WHERE IT RUNS", kit.KickerFont(th.C(theme.FgFaint)))
-	widget.Wrap(c, "runs", where, width, kit.UIFont(12, th.C(theme.Fg)))
+	c.Text("where", "WHERE IT RUNS", widget.KickerFont(th.C(theme.FgFaint)))
+	widget.Wrap(c, "runs", where, width, widget.UIFont(12, th.C(theme.Fg)))
 	c.Box("gap", ui.Style{H: ui.Px(6)}, nil)
-	c.Text("prov", "PROVENANCE", kit.KickerFont(th.C(theme.FgFaint)))
+	c.Text("prov", "PROVENANCE", widget.KickerFont(th.C(theme.FgFaint)))
 	facts := append([]plugin.Fact{{Label: "source", Value: k.Source}}, k.Facts...)
 	for i, f := range facts {
 		c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10}, func(c *ui.Ctx) {
-			c.Text("l", f.Label, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("l", f.Label, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Box("v", ui.Style{Clip: true}, func(c *ui.Ctx) {
-				c.Text("t", f.Value, kit.MonoFont(10.5, th.C(theme.Fg)))
+				c.Text("t", f.Value, widget.MonoFont(10.5, th.C(theme.Fg)))
 			})
 		})
 	}
 	c.Box("gap2", ui.Style{H: ui.Px(6)}, nil)
-	c.Text("also", "ALSO", kit.KickerFont(th.C(theme.FgFaint)))
+	c.Text("also", "ALSO", widget.KickerFont(th.C(theme.FgFaint)))
 	widget.Wrap(c, "always", "UI, themes and notifications are always allowed, not listed. Updates that add capabilities ask again: take the update, or stay on this version.",
-		width, kit.UIFont(12, th.C(theme.FgMuted)))
+		width, widget.UIFont(12, th.C(theme.FgMuted)))
 }
 
 func (x *Consent) footer(c *ui.Ctx, k plugin.Consent) {
@@ -417,7 +417,7 @@ func (x *Consent) footer(c *ui.Ctx, k plugin.Consent) {
 		}
 		parts = append(parts, "audit log in :Plugins")
 		c.Box("about", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", strings.Join(parts, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("t", strings.Join(parts, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		cancel, ok := "Cancel", "Install"
 		if k.Update() {

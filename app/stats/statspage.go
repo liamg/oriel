@@ -79,7 +79,7 @@ func (x *Plugin) reportBody(c *ui.Ctx, q stats.Query, r stats.Report) {
 			tokensByKind(c, r.Tokens, r.Costs)
 			modelsCard(c, r.Models)
 			toolsByErrors(c, r.Tools)
-			widget.DataCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { kit.Note(c, "n", "cost by hour · local") }, func(c *ui.Ctx) {
+			widget.DataCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { widget.Note(c, "n", "cost by hour · local") }, func(c *ui.Ctx) {
 				hoursChart(c, "chart", r.Hours, 88)
 			})
 		})
@@ -104,7 +104,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 			}
 		}
 		meta2 := []string{scope, kit.Counted(r.Totals.Sessions, "session"), q.From.Format("Jan 2") + " – " + q.To.AddDate(0, 0, -1).Format("Jan 2")}
-		c.Text("m", strings.Join(meta2, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("m", strings.Join(meta2, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		var origins []string
 		o := 0
@@ -121,7 +121,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 		case meta.state.Phase == widget.Pending:
 			widget.Busy(c, "scanned", meta.state, widget.BusyOpts{Label: "Scanning", Size: 11, Help: "agent/stats#page"})
 		case !meta.at.IsZero():
-			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.now()})
+			widget.Ago(c, "scanned", meta.at, widget.AgoOpts{Text: widget.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "scanned ", Now: x.now()})
 		}
 		if one := q.Filters["session"]; len(one) == 1 && widget.Button(c, "tab", "Session stats", widget.ButtonOpts{Help: "agent/stats#session"}) {
 			x.run("stats.session", registry.Args{"id": one[0]})
@@ -203,7 +203,7 @@ func (x *Plugin) toolbar(c *ui.Ctx) {
 		if widget.Toggle(c, "split", on, widget.ToggleOpts{Label: "Split multi-repo sessions", Help: "agent/stats#split"}) {
 			x.run("stats.split", registry.Args{"on": !on})
 		}
-		c.Text("splitl", label, kit.UIFont(11.5, th.C(theme.FgMuted)))
+		c.Text("splitl", label, widget.UIFont(11.5, th.C(theme.FgMuted)))
 	})
 	widget.Rule(c, "rule")
 }
@@ -221,9 +221,9 @@ func (x *Plugin) filterChips(c *ui.Ctx, key string) {
 		if widget.Clickable(c, key+fmt.Sprint(i), ui.Style{Dir: ui.Row, H: ui.Px(22), Pad: ui.PadXY(8, 0), Gap: 5, Cross: ui.Center, Radius: 11,
 			Fill: th.C(theme.AccentBg), Stroke: theme.WithAlpha(th.C(theme.Accent), .35), Border: 1, Label: "Remove " + key + " " + label,
 			Help: "agent/stats#filters"}, func(c *ui.Ctx) {
-			c.Text("k", key, kit.MonoFont(10.5, th.C(theme.FgGhost)))
-			c.Text("v", label, kit.MonoFont(10.5, th.C(theme.Fg)))
-			c.Text("x", "✕", kit.MonoFont(9, th.C(theme.FgGhost)))
+			c.Text("k", key, widget.MonoFont(10.5, th.C(theme.FgGhost)))
+			c.Text("v", label, widget.MonoFont(10.5, th.C(theme.Fg)))
+			c.Text("x", "✕", widget.MonoFont(9, th.C(theme.FgGhost)))
 		}).Clicked {
 			x.q.filters[key] = slices.Delete(slices.Clone(vals), i, i+1)
 			if len(x.q.filters[key]) == 0 {
@@ -328,7 +328,7 @@ func (x *Plugin) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 			delta(c, "d", float64(all), float64(p.Tokens.Total()))
 			dim(c, "s", fmt.Sprintf("cache hit %d%%", kit.Pct(cacheHit(t.Tokens))))
 			if out := outsideTokens(r); out > 0 && out < all {
-				c.Text("o", fmt.Sprintf("%d%% outside", kit.Pct(float64(out)/float64(all))), kit.MonoFont(10, c.Theme().C(theme.FgMuted)))
+				c.Text("o", fmt.Sprintf("%d%% outside", kit.Pct(float64(out)/float64(all))), widget.MonoFont(10, c.Theme().C(theme.FgMuted)))
 			}
 		})
 		statsTile(c, "requests", "REQUESTS", kit.Count(t.Requests), "", func(c *ui.Ctx) {
@@ -347,7 +347,7 @@ func (x *Plugin) tiles(c *ui.Ctx, q stats.Query, r stats.Report) {
 				if d < 0 {
 					arrow, tone, d = "▼", c.Theme().C(tStatsDown), -d
 				}
-				c.Text("d", fmt.Sprintf("%s %.1fpt", arrow, d), kit.MonoFont(10, tone))
+				c.Text("d", fmt.Sprintf("%s %.1fpt", arrow, d), widget.MonoFont(10, tone))
 			}
 			dim(c, "s", fmt.Sprintf("%.1f%% errored", rate*100))
 		})
@@ -465,7 +465,7 @@ func (x *Plugin) chart(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 		c.Row("pick", ui.Style{W: ui.Flex(1), Main: ui.End, H: ui.Px(12)}, func(c *ui.Ctx) {
 			if hl >= 0 && hl < len(r.Groups) && r.Totals.Cost > 0 {
 				g := r.Groups[hl]
-				c.Text("t", fmt.Sprintf("%s · %s · %.1f%%", g.Label, kit.Money(g.Cost), g.Cost/r.Totals.Cost*100), kit.MonoFont(10, tones[hl]))
+				c.Text("t", fmt.Sprintf("%s · %s · %.1f%%", g.Label, kit.Money(g.Cost), g.Cost/r.Totals.Cost*100), widget.MonoFont(10, tones[hl]))
 			}
 		})
 		res := widget.Chart(c, "c", series, widget.ChartOpts{Height: 140, Labels: dayLabels(r.Points), YTicks: 3, YFormat: axisMoney, Format: kit.Money, Hover: true, Highlight: hl, Title: func(i int) string {
@@ -495,7 +495,7 @@ func (x *Plugin) legend(c *ui.Ctx, series []widget.ChartSeries, perLine int) {
 				for i, s := range series[l*perLine : min(len(series), (l+1)*perLine)] {
 					c.Row(i, ui.Style{Gap: 5, Cross: ui.Center}, func(c *ui.Ctx) {
 						widget.Swatch(c, "sw", s.Tone)
-						c.Text("n", s.Name, kit.MonoFont(10.5, th.C(theme.FgMuted)))
+						c.Text("n", s.Name, widget.MonoFont(10.5, th.C(theme.FgMuted)))
 					})
 				}
 			})
@@ -512,9 +512,9 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 		if x.sel < len(r.Groups) {
 			c.Row("hint", ui.Style{Gap: 5, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Box("k", ui.Style{Pad: ui.PadXY(4, 0), Radius: 3, Stroke: theme.WithAlpha(th.C(theme.Accent), .4), Border: 1}, func(c *ui.Ctx) {
-					c.Text("t", "⏎", kit.MonoFont(9, th.C(theme.Accent)))
+					c.Text("t", "⏎", widget.MonoFont(9, th.C(theme.Accent)))
 				})
-				c.Text("t", "drill into "+r.Groups[x.sel].Label, kit.MonoFont(10, th.C(theme.Accent)))
+				c.Text("t", "drill into "+r.Groups[x.sel].Label, widget.MonoFont(10, th.C(theme.Accent)))
 			})
 		}
 	}
@@ -551,7 +551,9 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 				}
 			}
 			c.Row("more", ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center}, func(c *ui.Ctx) {
-				widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", fmt.Sprintf("%d more", len(rest)), kit.MonoFont(11, th.C(theme.FgFaint))) })
+				widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) {
+					c.Text("t", fmt.Sprintf("%d more", len(rest)), widget.MonoFont(11, th.C(theme.FgFaint)))
+				})
 				if q.Group == stats.BySession {
 					widget.DataText(c, 1, cols[1].W, strings.Join(repos, ", "), th.C(theme.FgGhost))
 					widget.DataText(c, 2, cols[2].W, "", th.C(theme.FgGhost))
@@ -565,7 +567,7 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 		t := r.Totals
 		c.Row("total", ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center, Role: ui.RoleText, Label: "total"}, func(c *ui.Ctx) {
 			fg := th.C(theme.Fg)
-			widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", "total", kit.MonoFont(11, fg)) })
+			widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", "total", widget.MonoFont(11, fg)) })
 			if q.Group == stats.BySession {
 				widget.DataText(c, 1, cols[1].W, fmt.Sprintf("%d of %d span several repos", t.MultiRepo, t.Sessions), th.C(theme.FgGhost))
 				widget.DataText(c, 2, cols[2].W, "", fg)
@@ -580,7 +582,7 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 			widget.DataText(c, 4, cols[4].W, kit.Money(t.Cost), fg)
 			widget.DataCell(c, 5, 0, true, func(c *ui.Ctx) {
 				if q.Group == stats.ByRepo && q.Split {
-					c.Text("t", fmt.Sprintf("%d repo-sessions from %d", t.Pairs, t.Sessions), kit.MonoFont(10.5, th.C(theme.FgGhost)))
+					c.Text("t", fmt.Sprintf("%d repo-sessions from %d", t.Pairs, t.Sessions), widget.MonoFont(10.5, th.C(theme.FgGhost)))
 				}
 			})
 		})
@@ -604,9 +606,9 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []wid
 		fg, muted := th.C(theme.Fg), th.C(theme.FgMuted)
 		widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) {
 			widget.Swatch(c, "sw", tone)
-			c.Text("t", g.Label, kit.Mono(11.5, typeset.Medium, fg))
+			c.Text("t", g.Label, widget.Mono(11.5, typeset.Medium, fg))
 			if g.Origin == stats.OriginOutside {
-				c.Text("o", "outside", kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("o", "outside", widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
 		if bySession {
@@ -614,7 +616,7 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []wid
 				for j, rp := range g.Repos {
 					c.Row(j, ui.Style{Gap: 4, Cross: ui.Center}, func(c *ui.Ctx) {
 						widget.Swatch(c, "sw", kit.RepoTone(th, x.h.State(), rp, j))
-						c.Text("t", rp, kit.MonoFont(11, muted))
+						c.Text("t", rp, widget.MonoFont(11, muted))
 					})
 				}
 			})
@@ -628,7 +630,7 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []wid
 			widget.DataText(c, 3, cols[3].W, kit.Count(g.Requests), muted)
 			widget.DataText(c, 4, cols[4].W, kit.Money(g.Cost), fg)
 			widget.DataCell(c, 5, cols[5].W, false, func(c *ui.Ctx) {
-				widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.now()})
+				widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: widget.MonoFont(11, muted), Long: true, Now: x.now()})
 			})
 			return
 		}
@@ -642,7 +644,7 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []wid
 		}
 		widget.DataCell(c, 5, cols[5].W, true, func(c *ui.Ctx) { shareBar(c, "share", share, tone, 90, fmt.Sprintf("%.1f%%", share*100)) })
 		widget.DataCell(c, 6, cols[6].W, false, func(c *ui.Ctx) {
-			widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: kit.MonoFont(11, muted), Long: true, Now: x.now()})
+			widget.Ago(c, "t", g.Last, widget.AgoOpts{Text: widget.MonoFont(11, muted), Long: true, Now: x.now()})
 		})
 		widget.DataCell(c, 7, cols[7].W, false, func(c *ui.Ctx) {
 			widget.Chart(c, "spark", []widget.ChartSeries{{Name: g.Label, Values: g.Series, Tone: tone}}, widget.ChartOpts{Kind: widget.ChartSpark,
@@ -662,7 +664,7 @@ func (x *Plugin) row(c *ui.Ctx, i int, g stats.Group, r stats.Report, cols []wid
 // tokensByKind is the tokens and their cost by kind, with a strip of the cost.
 func tokensByKind(c *ui.Ctx, t stats.Tokens, cost stats.Costs) {
 	th := c.Theme()
-	widget.DataCard(c, "kinds", ui.Flex(1), "TOKENS BY KIND", "", func(c *ui.Ctx) { kit.Note(c, "n", "tokens · cost") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "kinds", ui.Flex(1), "TOKENS BY KIND", "", func(c *ui.Ctx) { widget.Note(c, "n", "tokens · cost") }, func(c *ui.Ctx) {
 		var strip []widget.ChartSeries
 		for _, k := range kinds {
 			strip = append(strip, widget.ChartSeries{Name: k.name, Values: []float64{k.cost(cost)}, Tone: th.C(k.tone)})
@@ -676,7 +678,7 @@ func tokensByKind(c *ui.Ctx, t stats.Tokens, cost stats.Costs) {
 
 func modelsCard(c *ui.Ctx, ms []stats.Model) {
 	th := c.Theme()
-	widget.DataCard(c, "models", ui.Flex(1), "MODELS", "", func(c *ui.Ctx) { kit.Note(c, "n", "req · tokens · cost") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "models", ui.Flex(1), "MODELS", "", func(c *ui.Ctx) { widget.Note(c, "n", "req · tokens · cost") }, func(c *ui.Ctx) {
 		var strip []widget.ChartSeries
 		for i, m := range ms {
 			strip = append(strip, widget.ChartSeries{Name: m.Name, Values: []float64{m.Cost}, Tone: greyTone(th, i)})
@@ -692,7 +694,7 @@ func modelsCard(c *ui.Ctx, ms []stats.Model) {
 			}
 			widget.KV(c, i, render.Color{}, m.Name, sub, kit.Count(m.Requests), kit.Count(m.Tokens), kit.Money(m.Cost))
 		}
-		kit.Note(c, "n", "bar is share of cost")
+		widget.Note(c, "n", "bar is share of cost")
 	})
 }
 
@@ -715,9 +717,9 @@ func toolsByErrors(c *ui.Ctx, tools []stats.ToolRow) {
 		}
 		return 0
 	})
-	widget.DataCard(c, "tools", ui.Flex(1), "TOOLS BY ERROR RATE", "", func(c *ui.Ctx) { kit.Note(c, "n", "≥ 100 calls") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "tools", ui.Flex(1), "TOOLS BY ERROR RATE", "", func(c *ui.Ctx) { widget.Note(c, "n", "≥ 100 calls") }, func(c *ui.Ctx) {
 		if len(ts) == 0 {
-			kit.Note(c, "none", "no tool has 100 calls in this range")
+			widget.Note(c, "none", "no tool has 100 calls in this range")
 		}
 		for i, t := range ts {
 			if i == 5 {
@@ -725,15 +727,15 @@ func toolsByErrors(c *ui.Ctx, tools []stats.ToolRow) {
 			}
 			rate := float64(t.Errors) / float64(t.Calls)
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(20), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: t.Name}, func(c *ui.Ctx) {
-				c.Text("n", t.Name, kit.MonoFont(11, th.C(theme.Fg)))
+				c.Text("n", t.Name, widget.MonoFont(11, th.C(theme.Fg)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("calls", kit.Count(t.Calls), kit.MonoFont(11, th.C(theme.FgMuted)))
+				c.Text("calls", kit.Count(t.Calls), widget.MonoFont(11, th.C(theme.FgMuted)))
 				shareBar(c, "bar", rate/0.08, th.C(tStatsBad), 60, "")
 				c.Row("pct", ui.Style{W: ui.Px(40), Main: ui.End}, func(c *ui.Ctx) {
-					c.Text("t", fmt.Sprintf("%.1f%%", rate*100), kit.MonoFont(11, th.C(theme.Fg)))
+					c.Text("t", fmt.Sprintf("%.1f%%", rate*100), widget.MonoFont(11, th.C(theme.Fg)))
 				})
 			})
 		}
-		kit.Note(c, "note", "bar is the share of calls that errored")
+		widget.Note(c, "note", "bar is the share of calls that errored")
 	})
 }

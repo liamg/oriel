@@ -29,11 +29,11 @@ func StateMark(c *ui.Ctx, key any, state string, since time.Time, size float32) 
 		case MarkRunning:
 			widget.Busy(c, "spin", widget.LoadState{Phase: widget.Pending, Since: since}, widget.BusyOpts{Size: size, Clock: -1, Tone: th.C(TStateRunning)})
 		case MarkOK:
-			c.Text("g", "✓", UIFont(size+1, th.C(TToolOK)))
+			c.Text("g", "✓", widget.UIFont(size+1, th.C(TToolOK)))
 		case MarkFailed:
-			c.Text("g", "✗", UIFont(size+1, th.C(TToolFailed)))
+			c.Text("g", "✗", widget.UIFont(size+1, th.C(TToolFailed)))
 		default:
-			c.Text("g", "○", UIFont(size+1, th.C(theme.FgFaint)))
+			c.Text("g", "○", widget.UIFont(size+1, th.C(theme.FgFaint)))
 		}
 	})
 }
@@ -52,7 +52,7 @@ func StatusMark(c *ui.Ctx, key any, s core.Status, size float32) {
 		case s == core.StatusWorking:
 			widget.Busy(c, "spin", widget.LoadState{Phase: widget.Pending}, widget.BusyOpts{Size: size, Clock: -1, Tone: tone})
 		case ok:
-			c.Text("g", g, UIFont(size+1, tone))
+			c.Text("g", g, widget.UIFont(size+1, tone))
 		}
 	})
 }

@@ -155,14 +155,14 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 			}
 			c.Column("h", ui.Style{W: ui.Px(width), Gap: 10, Pad: ui.Insets{B: 8}, Cross: cross}, func(c *ui.Ctx) {
 				if title && d.Kicker != "" {
-					c.Text("k", strings.ToUpper(d.Kicker), kit.KickerFont(th.C(tMdMark)))
+					c.Text("k", strings.ToUpper(d.Kicker), widget.KickerFont(th.C(tMdMark)))
 				}
 				mdAligned(c, "t", b.Align, width, func(c *ui.Ctx, key any) {
 					widget.Rich(c, key, spans, width, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 28, Weight: typeset.Medium},
 						Color: th.C(theme.Fg)}, widget.RichOpts{})
 				})
 				if len(toc) > 0 && title {
-					c.Text("toc", strings.Join(toc, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("toc", strings.Join(toc, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				}
 			})
 			return
@@ -175,7 +175,7 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 	case mdItem:
 		indent := float32(b.Level) * 16
 		c.Row("li", ui.Style{Gap: 10, Pad: ui.Insets{L: indent}}, func(c *ui.Ctx) {
-			c.Text("mark", b.Mark, kit.UIFont(14.5, th.C(theme.FgFaint)))
+			c.Text("mark", b.Mark, widget.UIFont(14.5, th.C(theme.FgFaint)))
 			widget.Rich(c, "t", spans, width-24-indent, body, widget.RichOpts{})
 		})
 	case mdCode:
@@ -184,9 +184,9 @@ func markdownBody(c *ui.Ctx, b mdBlock, line string, title bool, toc []string, d
 			c.Column("box", ui.Style{W: ui.Flex(1), Pad: ui.Pad(14), Gap: 3, Radius: 6, Stroke: th.C(tMdCodeBorder), Border: 1, Fill: th.C(theme.BgSurface)},
 				func(c *ui.Ctx) {
 					if b.Lang != "" {
-						c.Text("lang", mdFenceKicker(c, b), kit.KickerFont(th.C(theme.FgFaint)))
+						c.Text("lang", mdFenceKicker(c, b), widget.KickerFont(th.C(theme.FgFaint)))
 					}
-					widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-indent-28, 3, kit.MonoFont(12, th.C(theme.FgMuted)))
+					widget.WrapCode(c, "lines", strings.Join(b.Code, "\n"), width-indent-28, 3, widget.MonoFont(12, th.C(theme.FgMuted)))
 				})
 		})
 	case mdRule:

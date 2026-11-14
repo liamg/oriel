@@ -62,9 +62,9 @@ func ToggleRow(c *ui.Ctx, key any, label string, on *bool, o ToggleRowOpts) {
 		if disabled {
 			fg = th.C(theme.FgFaint)
 		}
-		c.Text("l", label, kit.UIFont(12.5, fg))
+		c.Text("l", label, widget.UIFont(12.5, fg))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("n", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 	})
 }
 
@@ -93,7 +93,7 @@ func SandboxToggles(c *ui.Ctx, on, openNet *bool, pick BackendPick, help string)
 				labels[i] = strings.ToUpper(b)
 			}
 			at := slices.Index(pick.Offered, pick.Current())
-			c.Text("l", "Sandbox type", kit.UIFont(12.5, c.Theme().C(theme.Fg)))
+			c.Text("l", "Sandbox type", widget.UIFont(12.5, c.Theme().C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Segmented(c, "pick", labels, &at, widget.SegmentedOpts{Label: "Sandbox type", Help: help}) {
 				*pick.Chosen = pick.Offered[at]

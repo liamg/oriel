@@ -175,7 +175,7 @@ func (g *Git) commitView(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("title", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
 					Color: th.C(theme.Fg)})
-				c.Text("repo", filepath.Base(a.root), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("repo", filepath.Base(a.root), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: commitHelp}) {
 					g.ask = nil
@@ -202,7 +202,7 @@ func (g *Git) commitMessage(c *ui.Ctx, a *commitAsk, width float32) {
 	if a.all {
 		what = "everything uncommitted"
 	}
-	c.Text("what", "Commits "+what+".", kit.UIFont(12, th.C(theme.FgMuted)))
+	c.Text("what", "Commits "+what+".", widget.UIFont(12, th.C(theme.FgMuted)))
 	id := c.Next("msg")
 	if a.focus {
 		c.RequestFocus(id)

@@ -505,7 +505,7 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 		}
 		if n := len(stack) - shown; n > 0 {
 			c.Row("more", ui.Style{W: ui.Flex(1), Main: ui.End, Cross: ui.Center, Gap: 8}, func(c *ui.Ctx) {
-				c.Text("t", fmt.Sprintf("+%d more waiting", n), kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("t", fmt.Sprintf("+%d more waiting", n), widget.MonoFont(10, th.C(theme.FgFaint)))
 				if widget.Button(c, "open", "Open the inbox", widget.ButtonOpts{Ghost: true, Key: kit.BoundKey(x.h, "inbox.open", nil), Help: inboxHelp}) {
 					x.h.Run(context.Background(), "inbox.open", nil)
 				}
@@ -539,7 +539,7 @@ func (x *Inbox) draw(c *ui.Ctx, r *inboxRow, p uireg.CardPlace) {
 	if r.card.Draw != nil {
 		draw := r.card.Draw
 		if err := registry.Call(func() error { draw(c, "card", p); return nil }); err != nil {
-			c.Text("err", r.card.Title+": "+err.Error(), kit.MonoFont(10, c.Theme().C(theme.Error)))
+			c.Text("err", r.card.Title+": "+err.Error(), widget.MonoFont(10, c.Theme().C(theme.Error)))
 		}
 		return
 	}
@@ -722,7 +722,7 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if k := kit.BoundKey(x.h, "inbox.open", nil); k != "" {
-				c.Text("keys", k, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("keys", k, widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
 		c.Row("filters", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, B: 10}, Gap: 6, ScrollX: true, Clip: true, Role: ui.RoleTabList,
@@ -746,7 +746,7 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 			if len(rows) == 0 {
 				c.Box("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12)}, func(c *ui.Ctx) {
 					widget.Wrap(c, "t", "Nothing is waiting on you. Questions, approvals and review requests show here as they come.",
-						max(vc.Width-32, 120), kit.UIFont(12, th.C(theme.FgFaint)))
+						max(vc.Width-32, 120), widget.UIFont(12, th.C(theme.FgFaint)))
 				})
 			}
 			for _, r := range rows {
@@ -807,9 +807,9 @@ func (x *Inbox) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
 				kit.Icon(c, x.h, "g", name, 13, tone)
 			})
 		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {
-			c.Text("title", r.card.Title, kit.UIFont(12.5, title))
+			c.Text("title", r.card.Title, widget.UIFont(12.5, title))
 			if r.card.Sub != "" {
-				c.Text("sub", r.card.Sub, kit.MonoFont(10, sub))
+				c.Text("sub", r.card.Sub, widget.MonoFont(10, sub))
 			}
 		})
 		widget.Ago(c, "when", r.when(), widget.AgoOpts{Text: ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5}, Color: th.C(theme.FgGhost)}})

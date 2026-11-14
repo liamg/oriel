@@ -327,7 +327,7 @@ func (x *Ship) mergeView(c *ui.Ctx) {
 				c.Text("title", fmt.Sprintf("MERGE %s%d", words.Sigil, a.pr.Number), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14,
 					Weight: typeset.Bold, Tracking: .24}, Color: th.C(theme.Fg)})
 				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-					c.Text("t", a.pr.Title, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("t", a.pr.Title, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				})
 				if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: mergeHelp}) {
 					x.merging = nil
@@ -378,8 +378,8 @@ func (x *Ship) mergeBlockers(c *ui.Ctx, a *mergeAsk, width float32) {
 			if b.Hard {
 				glyph, tone = "✗", th.C(theme.Error)
 			}
-			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
-			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", b.Text, kit.UIFont(12.5, th.C(theme.FgMuted))) })
+			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, widget.UIFont(13, tone)) })
+			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", b.Text, widget.UIFont(12.5, th.C(theme.FgMuted))) })
 			if b.Kind == registry.BlockOrielThreads {
 				if widget.Button(c, "show", "Show", widget.ButtonOpts{Ghost: true, Help: mergeHelp}) {
 					x.merging = nil
@@ -393,10 +393,10 @@ func (x *Ship) mergeBlockers(c *ui.Ctx, a *mergeAsk, width float32) {
 		})
 	}
 	if hard := a.hard(); len(hard) > 0 {
-		widget.Wrap(c, "refuse", a.s.CodeHost.Label()+" won't merge it until that's fixed.", width, kit.MonoFont(10.5, th.C(theme.Error)))
+		widget.Wrap(c, "refuse", a.s.CodeHost.Label()+" won't merge it until that's fixed.", width, widget.MonoFont(10.5, th.C(theme.Error)))
 	}
 	c.Row("method", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("l", "Method", kit.UIFont(12, th.C(theme.FgMuted)))
+		c.Text("l", "Method", widget.UIFont(12, th.C(theme.FgMuted)))
 		widget.Segmented(c, "m", a.methods, &a.method, widget.SegmentedOpts{Label: "Merge method", Help: mergeHelp})
 	})
 	st := widget.CheckOff

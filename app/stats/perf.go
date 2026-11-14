@@ -212,12 +212,12 @@ func (x *Perf) page(c *ui.Ctx) {
 	widget.Page(c, "perf", &x.open, widget.PageOpts{Label: "Performance", Help: PerfHelp}, func(c *ui.Ctx) {
 		th := c.Theme()
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", "Performance", kit.UIFont(16, th.C(theme.Fg)))
+			c.Text("t", "Performance", widget.UIFont(16, th.C(theme.Fg)))
 			note := "sampling…"
 			if !s.at.IsZero() {
 				note = "sampled every " + x.every().String() + ", while this page is up"
 			}
-			c.Text("m", note, kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("m", note, widget.MonoFont(11, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Button(c, "close", "Close", widget.ButtonOpts{Key: "esc", Help: PerfHelp}) {
 				x.open = false
@@ -240,7 +240,7 @@ func (x *Perf) page(c *ui.Ctx) {
 }
 
 func perfHeading(c *ui.Ctx, key, text string) {
-	c.Text(key, text, kit.KickerFont(c.Theme().C(theme.FgFaint)))
+	c.Text(key, text, widget.KickerFont(c.Theme().C(theme.FgFaint)))
 }
 
 // share is a CPU share of one core as a percentage, or a dash before there are two samples.
@@ -344,7 +344,7 @@ func (x *Perf) sessions(c *ui.Ctx, s perfSnap, width float32) {
 	}
 	th := c.Theme()
 	if len(by) == 0 {
-		c.Text("none", "No session has a process running here.", kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("none", "No session has a process running here.", widget.UIFont(12, th.C(theme.FgFaint)))
 		return
 	}
 	ids := make([]string, 0, len(by))
@@ -361,7 +361,7 @@ func (x *Perf) sessions(c *ui.Ctx, s perfSnap, width float32) {
 		b := by[id]
 		rows = append(rows, cells(name, status, fmt.Sprint(b.n), share(s, b.share), kit.Bytes(int64(b.rss))))
 	}
-	widget.Table(c, "sessions", rows, width, kit.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Sessions",
+	widget.Table(c, "sessions", rows, width, widget.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Sessions",
 		Align: []ui.Align{ui.Start, ui.Start, ui.End, ui.End, ui.End, ui.Start}})
 }
 
@@ -386,7 +386,7 @@ func (x *Perf) processes(c *ui.Ctx, s perfSnap, width float32) {
 	th := c.Theme()
 	perfHeading(c, "procs.h", fmt.Sprintf("PROCESSES · %d", len(s.procs)))
 	if s.err != "" {
-		c.Text("err", "Can't read the processes: "+s.err, kit.UIFont(12, th.C(theme.Warn)))
+		c.Text("err", "Can't read the processes: "+s.err, widget.UIFont(12, th.C(theme.Warn)))
 		return
 	}
 	rows := [][][]widget.Span{cells("PID", "Command", "Session", "CPU", "Memory")}
@@ -404,7 +404,7 @@ func (x *Perf) processes(c *ui.Ctx, s perfSnap, width float32) {
 		}
 		rows = append(rows, cells(fmt.Sprint(p.PID), cmd, session, share(s, p.Share), kit.Bytes(int64(p.RSS))))
 	}
-	widget.Table(c, "procs", rows, width, kit.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Processes",
+	widget.Table(c, "procs", rows, width, widget.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Processes",
 		Align: []ui.Align{ui.End, ui.Start, ui.Start, ui.End, ui.End}})
 	if more := len(s.procs) - perfShown; more > 0 {
 		dim(c, "more", fmt.Sprintf("and %d more", more))
@@ -447,7 +447,7 @@ func (x *Perf) watches(c *ui.Ctx, s perfSnap, width float32) {
 	th := c.Theme()
 	perfHeading(c, "watch.h", fmt.Sprintf("WATCHES · %d", len(s.watches)))
 	if len(s.watches) == 0 {
-		c.Text("none", "Nothing is being kept fresh.", kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("none", "Nothing is being kept fresh.", widget.UIFont(12, th.C(theme.FgFaint)))
 		return
 	}
 	rows := [][][]widget.Span{cells("Manager", "Source", "State", "Subscribers", "Reads/min", "Last read", "Why")}
@@ -471,6 +471,6 @@ func (x *Perf) watches(c *ui.Ctx, s perfSnap, width float32) {
 		}
 		rows = append(rows, cells(w.manager, tail(w.Key, 70), w.State, subs, fmt.Sprint(w.PerMin), last, tail(cmp.Or(w.Cause, "—"), 60)))
 	}
-	widget.Table(c, "watches", rows, width, kit.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Watches",
+	widget.Table(c, "watches", rows, width, widget.MonoFont(11, th.C(theme.Fg)), widget.TableOpts{Head: true, Label: "Watches",
 		Align: []ui.Align{ui.Start, ui.Start, ui.Start, ui.Start, ui.End, ui.End}})
 }

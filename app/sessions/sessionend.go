@@ -318,7 +318,7 @@ func (x *End) view(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("title", "END SESSION", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
 					Color: th.C(theme.Fg)})
-				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.Label(se), kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.Label(se), widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 				if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: kit.EndHelp}) {
 					x.ask = nil
 				}
@@ -363,15 +363,15 @@ func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []services.
 	}
 	if a.done != "" {
 		c.Row("done", ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleText, Label: a.done}, func(c *ui.Ctx) {
-			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", "✓", kit.UIFont(13, th.C(theme.OK))) })
-			widget.Wrap(c, "t", a.done, width-24, kit.UIFont(12.5, th.C(theme.Fg)))
+			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", "✓", widget.UIFont(13, th.C(theme.OK))) })
+			widget.Wrap(c, "t", a.done, width-24, widget.UIFont(12.5, th.C(theme.Fg)))
 		})
 	}
 	what := "Its worktrees go; its threads, transcript and test runs stay, searchable, and it can be reopened."
 	if a.how == 1 {
 		what = "Its worktrees, workspace and log go, with everything in them. The repos themselves stay."
 	}
-	widget.Wrap(c, "what", what, width, kit.UIFont(12.5, th.C(theme.FgMuted)))
+	widget.Wrap(c, "what", what, width, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	widget.Async(c, "read", st, widget.AsyncOpts{Policy: widget.Gate, Label: "Reading what would be lost", Help: kit.EndHelp,
 		Retry: func() {
 			if s, ok := services.ShipsOf(x.h); ok {
@@ -467,8 +467,8 @@ func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []service
 	th := c.Theme()
 	line := func(key, glyph string, tone render.Color, text string) {
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleText, Label: text}, func(c *ui.Ctx) {
-			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
-			widget.Wrap(c, "t", text, width-24, kit.UIFont(12.5, th.C(theme.FgMuted)))
+			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, widget.UIFont(13, tone)) })
+			widget.Wrap(c, "t", text, width-24, widget.UIFont(12.5, th.C(theme.FgMuted)))
 		})
 	}
 	ls := x.lossesOf(se, ships, a.deleteBranch)

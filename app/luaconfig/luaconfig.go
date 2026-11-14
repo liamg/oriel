@@ -580,7 +580,7 @@ func (x *Lua) inspectView(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(36), Pad: ui.PadXY(14, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", ":INSPECT", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.SemiBold}, Color: th.C(theme.Accent)})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			kit.KbdKey(c, "esc")
+			widget.KbdKey(c, "esc")
 		})
 		for i, s := range secs {
 			rows := s.Rows()

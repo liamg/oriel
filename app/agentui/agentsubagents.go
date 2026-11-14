@@ -37,10 +37,10 @@ func (x *Console) subagents(c *ui.Ctx, se core.SessionState) {
 				Label: cmp.Or(s.Type, "agent") + " " + s.Description, Help: subagentsHelp}, func(c *ui.Ctx) {
 				c.Row("top", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 					kit.StateMark(c, "mark", subagentMark(s), s.Started, 10)
-					c.Text("t", cmp.Or(s.Description, "subagent"), kit.UIFont(12.5, th.C(theme.Fg)))
+					c.Text("t", cmp.Or(s.Description, "subagent"), widget.UIFont(12.5, th.C(theme.Fg)))
 				})
 				c.Row("sub", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 20}, Clip: true}, func(c *ui.Ctx) {
-					c.Text("t", cmp.Or(s.Type, "agent")+" · "+subagentTook(s, now), kit.MonoFont(10, th.C(theme.FgGhost)))
+					c.Text("t", cmp.Or(s.Type, "agent")+" · "+subagentTook(s, now), widget.MonoFont(10, th.C(theme.FgGhost)))
 				})
 			}).Clicked {
 				st.sub = s.ID
@@ -72,7 +72,7 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 		c.Row("state", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			kit.StateMark(c, "mark", subagentMark(s), s.Started, 10)
 			widget.Chip(c, "st", state, subagentTone(c, s), subagentsHelp)
-			c.Text("t", cmp.Or(s.Type, "agent")+" · "+subagentTook(s, c.Now()), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("t", cmp.Or(s.Type, "agent")+" · "+subagentTook(s, c.Now()), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		if !s.Started.IsZero() {
 			kit.PreviewField(c, "started", s.Started.Local().Format("15:04:05"))
@@ -94,14 +94,14 @@ func (x *Console) subagentDetail(c *ui.Ctx, se core.SessionState, st *consoleSta
 			{"result", "RESULT", s.Result, map[bool]string{true: "Still running.", false: "It said nothing back."}[s.Running]},
 		} {
 			c.Column(part.key, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-				c.Text("h", part.title, kit.KickerFont(th.C(theme.FgFaint)))
+				c.Text("h", part.title, widget.KickerFont(th.C(theme.FgFaint)))
 				if strings.TrimSpace(part.body) == "" {
-					c.Text("none", part.none, kit.UIFont(12.5, th.C(theme.FgGhost)))
+					c.Text("none", part.none, widget.UIFont(12.5, th.C(theme.FgGhost)))
 					return
 				}
 				c.Column("box", ui.Style{W: ui.Flex(1), H: ui.Px(200), Pad: ui.Pad(12), Fill: th.C(theme.BgBase), Stroke: th.C(theme.Line), Border: 1,
 					Radius: 6, ScrollY: true}, func(c *ui.Ctx) {
-					kit.MarkdownText(c, x.h, "md", part.body, 630, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+					kit.MarkdownText(c, x.h, "md", part.body, 630, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				})
 			})
 		}

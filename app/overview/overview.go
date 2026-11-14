@@ -277,8 +277,8 @@ func (o *Overview) cardView(c *ui.Ctx, dir string) {
 				width = r.Dx() - 36
 			}
 			c.Column("readme", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 10, Role: ui.RoleRegion, Label: cd.readme.name}, func(c *ui.Ctx) {
-				kit.Caption(c, "title", cd.readme.name)
-				kit.MarkdownText(c, o.h, "md", cd.readme.text, width, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{Dir: dir,
+				widget.Caption(c, "title", cd.readme.name)
+				kit.MarkdownText(c, o.h, "md", cd.readme.text, width, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{Dir: dir,
 					Group: "readme:" + dir, Help: "shell/overview"})
 			})
 		}
@@ -319,7 +319,7 @@ func (o *Overview) panels(c *ui.Ctx, dir string, cd *card) {
 				w = ui.Px(p.Width)
 			}
 			c.Column(p.Name, ui.Style{W: w, Pad: ui.PadXY(18, 14), Gap: 10, Clip: true, Role: ui.RoleRegion, Label: p.Title}, func(c *ui.Ctx) {
-				kit.Caption(c, "title", p.Title)
+				widget.Caption(c, "title", p.Title)
 				res := cd.panels[p.Name]
 				widget.Async(c, "load", res.state(), widget.AsyncOpts{Help: "shell/overview", Loading: func(c *ui.Ctx) {
 					widget.Busy(c, "busy", res.state(), widget.BusyOpts{Label: "Counting", Size: 10, Help: "shell/overview"})

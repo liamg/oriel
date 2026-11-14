@@ -433,8 +433,8 @@ func (e *Explorer) build(c *ui.Ctx) {
 	c.Column("explorer", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(kit.TExplorerBg), Help: "files/explorer", Role: ui.RoleRegion, Label: "Explorer"}, func(c *ui.Ctx) {
 		if e.git().ready && e.git().Root() == "" {
 			c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Gap: 6}, func(c *ui.Ctx) {
-				c.Text("t", "Not a git repository", kit.MonoTok(c, 11.5, theme.FgMuted))
-				c.Text("d", "Open a directory inside a work tree to see its changes.", kit.MonoTok(c, 10.5, theme.FgFaint))
+				c.Text("t", "Not a git repository", widget.MonoTok(c, 11.5, theme.FgMuted))
+				c.Text("d", "Open a directory inside a work tree to see its changes.", widget.MonoTok(c, 10.5, theme.FgFaint))
 			})
 			return
 		}
@@ -504,7 +504,7 @@ func (e *Explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 			if base == "" {
 				base = "HEAD"
 			}
-			c.Text("vs", "vs "+base+"@"+st.BaseHash, kit.MonoTok(c, 10.5, theme.FgFaint))
+			c.Text("vs", "vs "+base+"@"+st.BaseHash, widget.MonoTok(c, 10.5, theme.FgFaint))
 			view := max(slices.Index(changedLayouts, e.layout()), 0)
 			if widget.Segmented(c, "view", changedLayouts, &view, widget.SegmentedOpts{Help: "files/explorer#changed", Label: "Layout"}) {
 				e.keep(func(k *explorerKept) { k.Layout = changedLayouts[view] })
@@ -513,7 +513,7 @@ func (e *Explorer) subheader(c *ui.Ctx, st *gitx.State, sc gitx.Scope) {
 			x := e.indexFor(st).scope(gitx.Changed)
 			widget.DiffStat(c, "total", x.add, x.del, widget.DiffStatOpts{})
 		case gitx.Uncommitted:
-			c.Text("vs", "vs HEAD", kit.MonoTok(c, 10.5, theme.FgFaint))
+			c.Text("vs", "vs HEAD", widget.MonoTok(c, 10.5, theme.FgFaint))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			x := e.indexFor(st).scope(gitx.Uncommitted)
 			widget.DiffStat(c, "total", x.add, x.del, widget.DiffStatOpts{})
@@ -535,7 +535,7 @@ func (e *Explorer) footer(c *ui.Ctx, sc gitx.Scope) {
 		hint = "⏎ opens the diff, not the file"
 	}
 	c.Row("footer", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Cross: ui.Center, Stroke: c.Theme().C(theme.Line)}, func(c *ui.Ctx) {
-		c.Text("keys", hint, kit.MonoTok(c, 10, theme.FgFaint))
+		c.Text("keys", hint, widget.MonoTok(c, 10, theme.FgFaint))
 	})
 }
 
@@ -756,7 +756,7 @@ func (e *Explorer) fileItem(th *theme.Resolved, f gitx.FileState, label string, 
 func (e *Explorer) trailing(c *ui.Ctx, x *scopeIndex, sc gitx.Scope, it widget.TreeItem) {
 	th := c.Theme()
 	if it.Section {
-		c.Text("n", fmt.Sprint(x.areas[it.ID]), kit.MonoTok(c, 10, theme.FgFaint))
+		c.Text("n", fmt.Sprint(x.areas[it.ID]), widget.MonoTok(c, 10, theme.FgFaint))
 		return
 	}
 	if strings.HasPrefix(it.ID, "hunk\x00") {
@@ -780,7 +780,7 @@ func (e *Explorer) trailing(c *ui.Ctx, x *scopeIndex, sc gitx.Scope, it widget.T
 	if len(it.Children) > 0 {
 		if n := x.changed[p]; n > 0 {
 			c.Text("dot", "●", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 8}, Color: th.C(kit.TGitDot)})
-			c.Text("n", fmt.Sprint(n), kit.MonoTok(c, 10, theme.FgFaint))
+			c.Text("n", fmt.Sprint(n), widget.MonoTok(c, 10, theme.FgFaint))
 		}
 		return
 	}
@@ -816,7 +816,7 @@ func (e *Explorer) diagCounts(c *ui.Ctx, file string) {
 		tok   theme.TokenID
 	}{{errs, "✕", kit.TDiagError}, {warns, "⚠", kit.TDiagWarning}} {
 		if x.n > 0 {
-			c.Text(x.glyph, fmt.Sprintf("%s%d", x.glyph, x.n), kit.MonoTok(c, 10.5, x.tok))
+			c.Text(x.glyph, fmt.Sprintf("%s%d", x.glyph, x.n), widget.MonoTok(c, 10.5, x.tok))
 		}
 	}
 }

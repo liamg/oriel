@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/diagrams"
+	"github.com/liamg/oriel/ui/widget"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render/diagram"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -59,7 +59,7 @@ func mdDiagramBox(c *ui.Ctx, key any, b mdBlock, width float32, o mdOpts, doc bo
 		return true
 	}
 	c.Column(key, ui.Style{W: ui.Px(width), Pad: ui.Pad(14), Gap: 12, Radius: 6, Stroke: th.C(tMdCodeBorder), Border: 1, Fill: th.C(theme.BgSurface)}, func(c *ui.Ctx) {
-		c.Text("lang", diagrams.Kicker(l), kit.KickerFont(th.C(theme.FgFaint)))
+		c.Text("lang", diagrams.Kicker(l), widget.KickerFont(th.C(theme.FgFaint)))
 		diagrams.Draw(c, "d", l, width-28, o)
 	})
 	return true

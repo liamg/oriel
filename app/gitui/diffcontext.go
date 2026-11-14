@@ -209,7 +209,7 @@ func (x *Diff) expander(c *ui.Ctx, fc *fileContext, g hiddenGap, lo, hi int) {
 					fc.show(g, s.dir, contextStep)
 				}
 			}
-			c.Text("n", fmt.Sprintf("%d unchanged %s", left, kit.Plural(left, "line", "lines")), kit.MonoFont(10.5, th.C(theme.FgGhost)))
+			c.Text("n", fmt.Sprintf("%d unchanged %s", left, kit.Plural(left, "line", "lines")), widget.MonoFont(10.5, th.C(theme.FgGhost)))
 		})
 }
 

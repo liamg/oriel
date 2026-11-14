@@ -96,10 +96,10 @@ func Section(c *ui.Ctx, key, title, note string, body func(c *ui.Ctx)) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 14), Gap: 9, Role: ui.RoleGroup, Label: title}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", strings.ToUpper(title), KickerFont(th.C(theme.FgFaint)))
+			c.Text("k", strings.ToUpper(title), widget.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if note != "" {
-				c.Text("n", note, MonoFont(9.5, th.C(theme.FgGhost)))
+				c.Text("n", note, widget.MonoFont(9.5, th.C(theme.FgGhost)))
 			}
 		})
 		body(c)
@@ -111,9 +111,9 @@ func Section(c *ui.Ctx, key, title, note string, body func(c *ui.Ctx)) {
 func Stat(c *ui.Ctx, key, name, value string, tone render.Color) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Cross: ui.Center, Role: ui.RoleText, Label: name + " " + value}, func(c *ui.Ctx) {
-		c.Text("n", name, MonoFont(11.5, th.C(theme.FgMuted)))
+		c.Text("n", name, widget.MonoFont(11.5, th.C(theme.FgMuted)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("v", value, MonoFont(11.5, tone))
+		c.Text("v", value, widget.MonoFont(11.5, tone))
 	})
 }
 
@@ -121,8 +121,8 @@ func Stat(c *ui.Ctx, key, name, value string, tone render.Color) {
 func StatAgo(c *ui.Ctx, key any, name string, at time.Time, suffix string, tone render.Color) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Cross: ui.Center, Role: ui.RoleText, Label: name + " " + widget.AgoLabel(c.Now(), at) + suffix}, func(c *ui.Ctx) {
-		c.Text("n", name, MonoFont(11.5, th.C(theme.FgMuted)))
+		c.Text("n", name, widget.MonoFont(11.5, th.C(theme.FgMuted)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		widget.Ago(c, "v", at, widget.AgoOpts{Text: MonoFont(11.5, tone), Suffix: suffix})
+		widget.Ago(c, "v", at, widget.AgoOpts{Text: widget.MonoFont(11.5, tone), Suffix: suffix})
 	})
 }

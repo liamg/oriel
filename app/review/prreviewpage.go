@@ -51,7 +51,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 			c.Column("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 14}, func(c *ui.Ctx) {
 				if done && full.Request.Author != "" {
 					c.Text("who", fmt.Sprintf("%s wants to merge %s → %s · %s  +%d −%d", full.Request.Author, cmp.Or(full.Head, "?"), cmp.Or(full.Base, "?"),
-						kit.Counted(len(full.Files), "file"), full.Request.Adds, full.Request.Dels), kit.MonoFont(11, th.C(theme.FgMuted)))
+						kit.Counted(len(full.Files), "file"), full.Request.Adds, full.Request.Dels), widget.MonoFont(11, th.C(theme.FgMuted)))
 				}
 				x.progress(c, se)
 				x.review(c, se, src, f, width, done && (full.State == "merged" || full.State == "closed"))
@@ -61,7 +61,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 					widget.Busy(c, "asking", widget.LoadState{Phase: widget.Pending, Since: d.since}, widget.BusyOpts{Label: "Asking " + src.Label() + " for the pull request",
 						Size: 11, Help: prReviewHelp})
 				case failed != "":
-					widget.Wrap(c, "err", failed, width, kit.MonoFont(11, th.C(theme.Error)))
+					widget.Wrap(c, "err", failed, width, widget.MonoFont(11, th.C(theme.Error)))
 				default:
 					x.overview(c, full, width)
 				}
@@ -99,12 +99,12 @@ func (x *PRReview) pageHead(c *ui.Ctx, se core.SessionState, src registry.HostSi
 	th := c.Theme()
 	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center, Fill: th.C(kit.TShipHead)}, func(c *ui.Ctx) {
 		c.Text("h", "REVIEW", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
-		c.Text("ref", kit.Label(se), kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
+		c.Text("ref", kit.Label(se), widget.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		if full.State != "" { // until its host says, it's no state at all
 			prui.PRBadge(c, x.h, "state", reviewedStatus(full), prReviewHelp)
 		}
 		c.Row("title", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", full.Request.Title, kit.UIFont(13, th.C(theme.FgMuted)))
+			c.Text("t", full.Request.Title, widget.UIFont(13, th.C(theme.FgMuted)))
 		})
 		if widget.Button(c, "open", "Open in "+src.Label(), widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 			x.run("system.open", registry.Args{"url": reviewPR(se)})
@@ -145,9 +145,9 @@ func (x *PRReview) overview(c *ui.Ctx, full registry.ReviewDetail, width float32
 		reviewCard(c, "files", fmt.Sprintf("FILES  %d", len(full.Files)), ui.Flex(1), func(c *ui.Ctx) {
 			for i, fc := range full.Files {
 				c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Box("p", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", fc.Path, kit.MonoFont(11, th.C(theme.Fg))) })
-					c.Text("a", fmt.Sprintf("+%d", fc.Adds), kit.MonoFont(11, th.C(theme.OK)))
-					c.Text("d", fmt.Sprintf("−%d", fc.Dels), kit.MonoFont(11, th.C(theme.Error)))
+					c.Box("p", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", fc.Path, widget.MonoFont(11, th.C(theme.Fg))) })
+					c.Text("a", fmt.Sprintf("+%d", fc.Adds), widget.MonoFont(11, th.C(theme.OK)))
+					c.Text("d", fmt.Sprintf("−%d", fc.Dels), widget.MonoFont(11, th.C(theme.Error)))
 				})
 			}
 		})
@@ -164,14 +164,14 @@ func reviewKeys(c *ui.Ctx) {
 			kit.KeyHint(c, i, k[0], k[1])
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("on", "on the selected comment", kit.MonoFont(10, th.C(theme.FgGhost)))
+		c.Text("on", "on the selected comment", widget.MonoFont(10, th.C(theme.FgGhost)))
 	})
 }
 
 func (x *PRReview) banner(c *ui.Ctx, text, action string, do func()) {
 	th := c.Theme()
 	c.Row("banner", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 8), Gap: 10, Cross: ui.Center, Fill: th.C(theme.BgRaised)}, func(c *ui.Ctx) {
-		c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", text, kit.UIFont(12.5, th.C(theme.Fg))) })
+		c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", text, widget.UIFont(12.5, th.C(theme.Fg))) })
 		if widget.Button(c, "do", action, widget.ButtonOpts{Primary: true, Help: prReviewHelp}) {
 			do()
 		}
@@ -213,7 +213,7 @@ func (x *PRReview) progress(c *ui.Ctx, se core.SessionState) {
 				if s.busy {
 					widget.Busy(c, "spin", widget.LoadState{Phase: widget.Pending, Since: se.Created}, widget.BusyOpts{Size: 10, Clock: -1, Help: prReviewHelp})
 				}
-				c.Text("t", s.text, kit.MonoFont(10.5, th.C(theme.FgMuted)))
+				c.Text("t", s.text, widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			})
 		}
 	})
@@ -248,7 +248,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 				if len(items) == 0 {
 					text = "No comments yet: the agent's and the AI review's land here as they're made, and yours (gc in the diff)."
 				}
-				c.Text("t", text, kit.UIFont(12.5, th.C(theme.FgMuted)))
+				c.Text("t", text, widget.UIFont(12.5, th.C(theme.FgMuted)))
 			})
 			if t, ok := reviewRequest(se); ok && widget.Button(c, "req", "Open request", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 				x.run("request.open", registry.Args{"thread": string(t.ID)})
@@ -259,7 +259,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 		}
 		widget.Rule(c, "rule")
 		c.Row("summaryhead", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Row("t", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Text("t", "SUMMARY", kit.MonoFont(10, th.C(theme.FgFaint))) })
+			c.Row("t", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) { c.Text("t", "SUMMARY", widget.MonoFont(10, th.C(theme.FgFaint))) })
 			asked := x.draft(se).SummaryAsk != ""
 			if widget.Button(c, "draft", "Draft summary", widget.ButtonOpts{Ghost: true, Key: "S", Busy: asked, BusyLabel: "The agent is drafting it",
 				Help: prReviewHelp}) {
@@ -270,7 +270,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 			Lines: 6, MinLines: 3, Help: prReviewHelp})
 		c.Row("verdicts", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-				c.Text("n", fmt.Sprintf("%s on lines, posted to %s with your verdict", kit.Counted(kept, "comment"), src.Label()), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("n", fmt.Sprintf("%s on lines, posted to %s with your verdict", kit.Counted(kept, "comment"), src.Label()), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			})
 			empty := strings.TrimSpace(f.body) == "" && kept == 0
 			suggested := suggestedVerdict(items)
@@ -279,7 +279,7 @@ func (x *PRReview) review(c *ui.Ctx, se core.SessionState, src registry.HostSite
 				if ended {
 					why = "It's no longer open"
 				}
-				c.Text("why", why, kit.MonoFont(10.5, th.C(theme.Warn)))
+				c.Text("why", why, widget.MonoFont(10.5, th.C(theme.Warn)))
 				if widget.Button(c, "there", "Open in "+src.Label(), widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					x.run("system.open", registry.Args{"url": reviewPR(se)})
 				}
@@ -327,7 +327,7 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 			}
 			widget.Chip(c, "sev", strings.ToUpper(prui.SeverityShort(cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewHelp)
 			at := widget.Clickable(c, "at", ui.Style{Role: ui.RoleLink, Label: "Show " + place, Tooltip: "Show it in the diff", Help: prReviewKeysHelp},
-				func(c *ui.Ctx) { c.Text("t", place, kit.MonoFont(11, th.C(theme.Accent))) })
+				func(c *ui.Ctx) { c.Text("t", place, widget.MonoFont(11, th.C(theme.Accent))) })
 			if at.Clicked {
 				x.run("review.pr.show", registry.Args{"id": string(se.ID), "item": it.id})
 			}
@@ -338,10 +338,10 @@ func (x *PRReview) itemRow(c *ui.Ctx, se core.SessionState, f *reviewForm, it re
 					if it.pick.State == core.PickDrop {
 						tone = theme.FgFaint
 					}
-					c.Text("t", it.title, kit.UIFont(12.5, th.C(tone)))
+					c.Text("t", it.title, widget.UIFont(12.5, th.C(tone)))
 				})
 				for _, tag := range itemTags(it) {
-					c.Text(tag, tag, kit.MonoFont(10, th.C(theme.FgFaint)))
+					c.Text(tag, tag, widget.MonoFont(10, th.C(theme.FgFaint)))
 				}
 			})
 			if in.Clicked {
@@ -447,8 +447,8 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 				}
 			})
 		default:
-			c.Text("cap", "WHAT THE AUTHOR GETS", kit.MonoFont(9.5, th.C(theme.FgFaint)))
-			kit.MarkdownText(c, x.h, "words", it.words(), width-60, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			c.Text("cap", "WHAT THE AUTHOR GETS", widget.MonoFont(9.5, th.C(theme.FgFaint)))
+			kit.MarkdownText(c, x.h, "words", it.words(), width-60, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 		}
 		if f.asking == it.id {
 			widget.Input(c, "ask", &f.ask, widget.InputOpts{Label: "How should it change?", Placeholder: "How should the agent reword it?", EnterSubmits: true,
@@ -467,7 +467,7 @@ func (x *PRReview) itemDetail(c *ui.Ctx, se core.SessionState, f *reviewForm, it
 			return
 		}
 		reviewCard(c, "reworded", "THE AGENT'S REWORDING", ui.Flex(1), func(c *ui.Ctx) {
-			kit.MarkdownText(c, x.h, "t", text, width-84, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+			kit.MarkdownText(c, x.h, "t", text, width-84, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 			c.Row("btns", ui.Style{Gap: 8, Main: ui.End, W: ui.Flex(1)}, func(c *ui.Ctx) {
 				if widget.Button(c, "keep", "Keep mine", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					x.run("review.pr.rework.drop", registry.Args{"id": string(se.ID), "item": it.id})
@@ -491,7 +491,7 @@ func (x *PRReview) sent(c *ui.Ctx, se core.SessionState, width float32) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Column("sent", ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 				for i, r := range reviewDraft(se).Sent {
-					widget.AgoLine(c, i, widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgMuted))},
+					widget.AgoLine(c, i, widget.AgoLineOpts{Text: widget.MonoFont(10.5, th.C(theme.FgMuted))},
 						widget.AgoPart{Text: sentWord(r.Verdict)}, widget.AgoPart{Text: kit.Counted(r.Comments, "comment")}, widget.AgoPart{At: r.At})
 				}
 			})
@@ -513,7 +513,7 @@ func (x *PRReview) sent(c *ui.Ctx, se core.SessionState, width float32) {
 					}
 				}
 				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-					c.Text("t", cmp.Or(s.thread.Title, firstWords(s.posted)), kit.UIFont(12.5, th.C(theme.Fg)))
+					c.Text("t", cmp.Or(s.thread.Title, firstWords(s.posted)), widget.UIFont(12.5, th.C(theme.Fg)))
 				})
 				if widget.Button(c, "code", "Jump to code", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					x.run("diff.open", registry.Args{"path": filepath.Join(reviewDir(se, s.thread.Anchor.Project), filepath.FromSlash(s.thread.Anchor.File)),
@@ -553,7 +553,7 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("title", strings.ToUpper(sentWord(f.preview)), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold,
 					Tracking: .24}, Color: th.C(theme.Fg)})
-				c.Text("to", "on "+kit.Label(se)+", as you, on "+src.Label(), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("to", "on "+kit.Label(se)+", as you, on "+src.Label(), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
 					f.preview = ""
@@ -561,15 +561,15 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 			})
 			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 24, R: 24, T: 16, B: 18}, Gap: 12}, func(c *ui.Ctx) {
-				c.Text("scap", "SUMMARY", kit.MonoFont(9.5, th.C(theme.FgFaint)))
-				kit.MarkdownText(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+				c.Text("scap", "SUMMARY", widget.MonoFont(9.5, th.C(theme.FgFaint)))
+				kit.MarkdownText(c, x.h, "summary", cmp.Or(strings.TrimSpace(f.body), "(none)"), w-48, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 				for i, it := range items {
 					c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
-						c.Text("at", fmt.Sprintf("%s:%d", it.at.File, it.at.Line), kit.MonoFont(10.5, th.C(theme.Accent)))
-						kit.MarkdownText(c, x.h, "b", comments[i].Body, w-48, kit.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
+						c.Text("at", fmt.Sprintf("%s:%d", it.at.File, it.at.Line), widget.MonoFont(10.5, th.C(theme.Accent)))
+						kit.MarkdownText(c, x.h, "b", comments[i].Body, w-48, widget.UIFont(12.5, th.C(theme.Fg)), kit.CommentMarkdown())
 					})
 				}
-				c.Text("note", "A comment off the diff's lines goes on its file; one on a file the PR doesn't change, in the summary.", kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("note", "A comment off the diff's lines goes on its file; one on a file the PR doesn't change, in the summary.", widget.MonoFont(10, th.C(theme.FgFaint)))
 			})
 			widget.Rule(c, "rule2")
 			// An approval's summary on a review that isn't one asks first: it says the opposite of the verdict.
@@ -577,7 +577,7 @@ func (x *PRReview) previewDialog(c *ui.Ctx, se core.SessionState, src registry.H
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 10, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 				if odd {
 					c.Row("odd", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-						c.Text("t", "Are you sure? The summary says LGTM, but this isn't an approval.", kit.UIFont(12, th.C(theme.Warn)))
+						c.Text("t", "Are you sure? The summary says LGTM, but this isn't an approval.", widget.UIFont(12, th.C(theme.Warn)))
 					})
 				}
 				if widget.Button(c, "back", "Back", widget.ButtonOpts{Ghost: true, Help: prReviewHelp}) {
@@ -612,7 +612,7 @@ func (x *PRReview) foot(c *ui.Ctx, session, thread string, where uireg.ThreadWhe
 	th := c.Theme()
 	if pk, ok := x.draft(se).Picks[thread]; ok && pk.Sent != "" {
 		c.Row("review.sent", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Pad: ui.PadXY(0, 2)}, func(c *ui.Ctx) {
-			c.Text("t", "Posted to the author in your review", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("t", "Posted to the author in your review", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		return
 	}
@@ -644,9 +644,9 @@ func (x *PRReview) foot(c *ui.Ctx, session, thread string, where uireg.ThreadWhe
 			case it.pick.State == "":
 				state = "not sent unless you keep it"
 			}
-			c.Text("cap", "YOUR REVIEW", kit.MonoFont(9.5, th.C(theme.FgFaint)))
+			c.Text("cap", "YOUR REVIEW", widget.MonoFont(9.5, th.C(theme.FgFaint)))
 			widget.Chip(c, "sev", strings.ToUpper(prui.SeverityShort(cmp.Or(it.severity(), "note"))), prui.SeverityTone(th, it.severity()), prReviewKeysHelp)
-			c.Row("state", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", state, kit.MonoFont(10.5, th.C(theme.FgMuted))) })
+			c.Row("state", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", state, widget.MonoFont(10.5, th.C(theme.FgMuted))) })
 			if it.pick.State != core.PickKeep && widget.Button(c, "keep", "Keep", widget.ButtonOpts{Ghost: true, Help: prReviewKeysHelp}) {
 				x.run("review.pr.pick", a(registry.Args{"state": core.PickKeep}))
 			}

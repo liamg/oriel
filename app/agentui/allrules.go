@@ -57,9 +57,9 @@ func (x *Permissions) rulesSection(c *ui.Ctx) {
 	th := c.Theme()
 	rules := x.h.State().Rules
 	widget.Wrap(c, "about", "What goes through in every session without asking: each made by Allow for all sessions on a prompt, and kept in "+
-		"Oriel's home. A session's own rules (Allow for this session) are the session's, in its Permissions.", 700, kit.UIFont(12.5, th.C(theme.FgFaint)))
+		"Oriel's home. A session's own rules (Allow for this session) are the session's, in its Permissions.", 700, widget.UIFont(12.5, th.C(theme.FgFaint)))
 	if len(rules) == 0 {
-		widget.Wrap(c, "none", "No rule for all sessions yet.", 700, kit.UIFont(12.5, th.C(theme.FgMuted)))
+		widget.Wrap(c, "none", "No rule for all sessions yet.", 700, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	}
 	for _, r := range rules {
 		c.Row(string(r.Kind)+"/"+r.Rule, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 8), Gap: 16, Cross: ui.Center, Help: rulesHelp, Role: ui.RoleGroup,
@@ -67,7 +67,7 @@ func (x *Permissions) rulesSection(c *ui.Ctx) {
 			c.Box("kind", ui.Style{W: ui.Px(96)}, func(c *ui.Ctx) {
 				widget.Chip(c, "k", string(r.Kind), th.C(askTone(r.Kind)), rulesHelp)
 			})
-			c.Text("rule", r.Rule, kit.MonoFont(12.5, th.C(theme.Fg)))
+			c.Text("rule", r.Rule, widget.MonoFont(12.5, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if !r.Added.IsZero() {
 				widget.Ago(c, "added", r.Added, widget.AgoOpts{Long: true, Prefix: "added ",

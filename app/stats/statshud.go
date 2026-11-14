@@ -27,11 +27,11 @@ var tHUDDivider = theme.Declare("hud.divider", "line")
 func hudFigure(c *ui.Ctx, key any, label, value, unit string, tone render.Color) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Gap: 3, Role: ui.RoleText, Label: label + " " + value + unit}, func(c *ui.Ctx) {
-		c.Text("l", label, kit.KickerFont(th.C(theme.FgFaint)))
+		c.Text("l", label, widget.KickerFont(th.C(theme.FgFaint)))
 		c.Row("v", ui.Style{Gap: 3, Cross: ui.End}, func(c *ui.Ctx) {
 			c.Text("n", value, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 20, Weight: typeset.Medium}, Color: tone})
 			if unit != "" {
-				c.Text("u", unit, kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("u", unit, widget.MonoFont(11, th.C(theme.FgFaint)))
 			}
 		})
 	})
@@ -56,9 +56,9 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 	us, failed := x.hudUsage()
 	for i, f := range failed {
 		c.Row(fmt.Sprint("failed", i), ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", strings.ToUpper(services.ProviderTitle(x.h, f.Provider)), kit.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
+			c.Text("t", strings.ToUpper(services.ProviderTitle(x.h, f.Provider)), widget.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
 			c.Row("e", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-				c.Text("e", "plan couldn't be read", kit.MonoFont(10.5, th.C(theme.Warn)))
+				c.Text("e", "plan couldn't be read", widget.MonoFont(10.5, th.C(theme.Warn)))
 			})
 		})
 	}
@@ -70,7 +70,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 			widget.Busy(c, "none", st, widget.BusyOpts{Label: "Reading the plans", Size: 10.5, Help: "agent/usage"})
 			return
 		}
-		c.Text("none", "no plan read yet", kit.MonoFont(10.5, th.C(theme.FgGhost)))
+		c.Text("none", "no plan read yet", widget.MonoFont(10.5, th.C(theme.FgGhost)))
 		return
 	}
 	for i, u := range us {
@@ -84,7 +84,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 				if u.Tier != "" {
 					parts = append(parts, strings.ToUpper(u.Tier))
 				}
-				c.Text("t", strings.Join(parts, " · "), kit.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
+				c.Text("t", strings.Join(parts, " · "), widget.Mono(10, typeset.Medium, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if len(x.h.State().SignedOut(u)) > 0 {
 					widget.Chip(c, "out", "signed out", th.C(theme.Error), "")
@@ -99,14 +99,14 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 				r := readWindow(now, w, hist)
 				tone := windowTone(th, w)
 				c.Row(j, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Row("k", ui.Style{W: ui.Px(22)}, func(c *ui.Ctx) { c.Text("t", usageShort(w), kit.MonoFont(10.5, th.C(theme.FgMuted))) })
+					c.Row("k", ui.Style{W: ui.Px(22)}, func(c *ui.Ctx) { c.Text("t", usageShort(w), widget.MonoFont(10.5, th.C(theme.FgMuted))) })
 					widget.Meter(c, "m", w.Used, widget.MeterOpts{Tone: tone, Height: 6, To: r.atReset, Label: w.Name})
 					fg := th.C(theme.Fg)
 					if w.Used >= .7 {
 						fg = th.C(theme.Warn)
 					}
-					c.Text("v", fmt.Sprintf("%d%%", kit.Pct(w.Used)), kit.Mono(10.5, typeset.SemiBold, fg))
-					c.Text("at", x.headed(r, now), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("v", fmt.Sprintf("%d%%", kit.Pct(w.Used)), widget.Mono(10.5, typeset.SemiBold, fg))
+					c.Text("at", x.headed(r, now), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				})
 				if fiveHour(w) {
 					if !w.Resets.IsZero() {
@@ -120,7 +120,7 @@ func (x *Plugin) usagePanel(c *ui.Ctx) {
 			if len(foot) > 0 {
 				c.Row("foot", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 32}, Main: ui.SpaceBetween}, func(c *ui.Ctx) {
 					for k, s := range foot {
-						c.Text(k, s, kit.MonoFont(9.5, th.C(theme.FgGhost)))
+						c.Text(k, s, widget.MonoFont(9.5, th.C(theme.FgGhost)))
 					}
 				})
 			}

@@ -71,10 +71,10 @@ func (x *Jobs) header(c *ui.Ctx, rows []jobRow) {
 			}
 		}
 		meta := []string{kit.Counted(len(rows), "job"), fmt.Sprintf("%d running", running), kit.Counted(runs, "run")}
-		c.Text("m", strings.Join(meta, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("m", strings.Join(meta, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.err != "" {
-			c.Text("err", x.err, kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", x.err, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		if widget.Button(c, "new", "+ New job", widget.ButtonOpts{Key: "n", Help: "agent/jobs#new", Disabled: !x.h.Available("jobs.new", nil)}) {
 			x.run("jobs.new", nil)
@@ -140,8 +140,8 @@ func (x *Jobs) list(c *ui.Ctx, rows []jobRow) {
 		})
 		widget.Rule(c, "rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
-			kit.Note(c, "a", "~/.oriel/jobs · one file per job")
-			kit.Note(c, "b", "runs are workspaces; deleting a job keeps them")
+			widget.Note(c, "a", "~/.oriel/jobs · one file per job")
+			widget.Note(c, "b", "runs are workspaces; deleting a job keeps them")
 		})
 	})
 }
@@ -156,30 +156,30 @@ func (x *Jobs) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 		c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 		c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 14, T: 9, B: 9}, Gap: 5, Clip: true}, func(c *ui.Ctx) {
 			c.Row("l1", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("t", r.job.Title, kit.UIFont(13, th.C(theme.Fg)))
+				c.Text("t", r.job.Title, widget.UIFont(13, th.C(theme.Fg)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				n := "no runs"
 				if len(r.runs) > 0 {
 					n = kit.Counted(len(r.runs), "run")
 				}
-				c.Text("n", n, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("n", n, widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			c.Row("l2", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 				last, ok := r.last()
 				switch {
 				case !ok:
-					c.Text("w", "never run · saved "+r.job.CreatedAt.In(x.loc).Format("Jan 2"), kit.MonoFont(10, th.C(theme.FgFaint)))
+					c.Text("w", "never run · saved "+r.job.CreatedAt.In(x.loc).Format("Jan 2"), widget.MonoFont(10, th.C(theme.FgFaint)))
 				default:
 					widget.Chip(c, "st", last.run.Status, th.C(runTone(last.run.Status)), "agent/jobs#runs")
 					if last.run.Status == hostapi.RunRunning {
-						widget.Ago(c, "w", last.se.Created, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint)), Long: true, Prefix: "started ", Now: x.now()})
+						widget.Ago(c, "w", last.se.Created, widget.AgoOpts{Text: widget.MonoFont(10, th.C(theme.FgFaint)), Long: true, Prefix: "started ", Now: x.now()})
 					} else {
-						x.when(c, "w", last.se.Created, kit.MonoFont(10, th.C(theme.FgFaint)))
+						x.when(c, "w", last.se.Created, widget.MonoFont(10, th.C(theme.FgFaint)))
 					}
 				}
 				pinChip(c, "pin", r.job.Sandbox)
 				if r.job.Schedule.Every != "" {
-					c.Text("sch", r.job.Schedule.String(), kit.MonoFont(10, th.C(theme.FgFaint)))
+					c.Text("sch", r.job.Schedule.String(), widget.MonoFont(10, th.C(theme.FgFaint)))
 				}
 			})
 		})
@@ -198,7 +198,7 @@ func pinChip(c *ui.Ctx, key any, sandbox string) {
 	}
 	c.Row(key, ui.Style{Pad: ui.PadXY(5, 0), H: ui.Px(15), Cross: ui.Center, Radius: 3, Stroke: theme.WithAlpha(tone, .45), Border: 1,
 		Role: ui.RoleText, Label: label}, func(c *ui.Ctx) {
-		c.Text("t", label, kit.MonoFont(9.5, tone))
+		c.Text("t", label, widget.MonoFont(9.5, tone))
 	})
 }
 
@@ -232,8 +232,8 @@ func (x *Jobs) started(t time.Time) string {
 func (x *Jobs) empty(c *ui.Ctx) {
 	th := c.Theme()
 	c.Column("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(4, 40), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("t", "Save a prompt you'd run more than once, then press Run.", kit.UIFont(13, th.C(theme.FgMuted)))
-		kit.Note(c, "n", "Each run is a session of kind job in a fresh workspace, given the prompt as JOB.md.")
+		c.Text("t", "Save a prompt you'd run more than once, then press Run.", widget.UIFont(13, th.C(theme.FgMuted)))
+		widget.Note(c, "n", "Each run is a session of kind job in a fresh workspace, given the prompt as JOB.md.")
 	})
 }
 
@@ -251,7 +251,7 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 	key := jobKey(j)
 	c.Row("title", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", j.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 17, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-		c.Text("slug", j.Name, kit.MonoFont(11, th.C(theme.FgGhost)))
+		c.Text("slug", j.Name, widget.MonoFont(11, th.C(theme.FgGhost)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		args := registry.Args{"name": j.Name}
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Key: "e", Help: "agent/jobs#job"}) {
@@ -280,15 +280,15 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 		pinChip(c, "pin", j.Sandbox)
 		faint := th.C(theme.FgFaint)
 		if j.Sandbox != "" {
-			c.Text("pinned", "pinned", kit.MonoFont(11, th.C(theme.FgGhost)))
+			c.Text("pinned", "pinned", widget.MonoFont(11, th.C(theme.FgGhost)))
 		}
-		dot := func(k string) { c.Text(k, "·", kit.MonoFont(11, th.C(theme.FgGhost))) }
+		dot := func(k string) { c.Text(k, "·", widget.MonoFont(11, th.C(theme.FgGhost))) }
 		dot("d1")
 		agent := strings.TrimSpace(strings.ToLower(services.ProviderTitle(x.h, j.Provider)) + " " + j.Model + " " + j.Effort)
 		if j.Provider == "" {
 			agent = "the first agent installed"
 		}
-		c.Text("agent", agent, kit.MonoFont(11, th.C(theme.Fg)))
+		c.Text("agent", agent, widget.MonoFont(11, th.C(theme.Fg)))
 		if len(r.runs) == 0 {
 			return
 		}
@@ -312,12 +312,12 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 				parts = append(parts, fmt.Sprintf("%d %s", n, s))
 			}
 		}
-		c.Text("runs", kit.Counted(len(r.runs), "run")+": "+strings.Join(parts, ", "), kit.MonoFont(11, faint))
+		c.Text("runs", kit.Counted(len(r.runs), "run")+": "+strings.Join(parts, ", "), widget.MonoFont(11, faint))
 		dot("d4")
-		c.Text("total", kit.Money(total)+" total", kit.MonoFont(11, th.C(theme.Fg)))
+		c.Text("total", kit.Money(total)+" total", widget.MonoFont(11, th.C(theme.Fg)))
 		if ended > 0 {
 			dot("d5")
-			c.Text("avg", "avg "+kit.Duration(spent/time.Duration(ended)), kit.MonoFont(11, faint))
+			c.Text("avg", "avg "+kit.Duration(spent/time.Duration(ended)), widget.MonoFont(11, faint))
 		}
 	})
 	x.prompt(c, j)
@@ -356,27 +356,27 @@ func (x *Jobs) prompt(c *ui.Ctx, j hostapi.Job) {
 	}
 	widget.DataCard(c, "prompt", ui.Flex(1), "PROMPT", "JOB.md for each run", func(c *ui.Ctx) {
 		if len(names) == 0 {
-			kit.Note(c, "none", "names no repo · the agent adds what it needs")
+			widget.Note(c, "none", "names no repo · the agent adds what it needs")
 			return
 		}
-		kit.Note(c, "names", "names")
+		widget.Note(c, "names", "names")
 		for i, n := range names {
-			widget.Rich(c, i, []widget.Span{{Text: n, Code: true, Tone: tones[n]}}, 200, kit.MonoFont(11, th.C(theme.Fg)), widget.RichOpts{})
+			widget.Rich(c, i, []widget.Span{{Text: n, Code: true, Tone: tones[n]}}, 200, widget.MonoFont(11, th.C(theme.Fg)), widget.RichOpts{})
 		}
-		kit.Note(c, "adds", "· the agent adds them")
+		widget.Note(c, "adds", "· the agent adds them")
 	}, func(c *ui.Ctx) {
 		width := float32(600)
 		if r, ok := c.Rect(c.ID()); ok {
 			width = r.Dx() - 24
 		}
-		base := kit.UIFont(13, th.C(theme.FgMuted))
+		base := widget.UIFont(13, th.C(theme.FgMuted))
 		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 4, Pad: ui.PadXY(2, 4)}, func(c *ui.Ctx) {
 			for i, line := range strings.Split(j.Prompt, "\n") {
 				if strings.TrimSpace(line) == "" {
 					c.Box(i, ui.Style{H: ui.Px(4)}, nil)
 					continue
 				}
-				widget.Rich(c, i, promptSpans(line, tones), width, base, widget.RichOpts{Code: kit.MonoFont(12, th.C(theme.Fg))})
+				widget.Rich(c, i, promptSpans(line, tones), width, base, widget.RichOpts{Code: widget.MonoFont(12, th.C(theme.Fg))})
 			}
 		})
 	})
@@ -428,7 +428,7 @@ func (x *Jobs) schedule(c *ui.Ctx, j hostapi.Job) {
 		labels[3] = strings.ToUpper(s.String())
 	}
 	c.Row("schedule", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
-		kit.Caption(c, "cap", "Schedule")
+		widget.Caption(c, "cap", "Schedule")
 		pick := cur
 		if widget.Segmented(c, "every", labels, &pick, widget.SegmentedOpts{Label: "Schedule", Help: "agent/jobs#schedule"}) {
 			args := registry.Args{"name": j.Name}
@@ -451,7 +451,7 @@ func (x *Jobs) schedule(c *ui.Ctx, j hostapi.Job) {
 			}
 			x.runInBackground("jobs.save", args)
 		}
-		c.Text("n", "runs while Oriel is open · skips while the last run is going", kit.MonoFont(10, th.C(theme.FgGhost)))
+		c.Text("n", "runs while Oriel is open · skips while the last run is going", widget.MonoFont(10, th.C(theme.FgGhost)))
 	})
 }
 
@@ -484,7 +484,7 @@ func (x *Jobs) runs(c *ui.Ctx, r jobRow) {
 				if want != "" {
 					msg = "No " + want + " runs."
 				}
-				c.Text("t", msg, kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("t", msg, widget.MonoFont(11, th.C(theme.FgFaint)))
 			})
 			return
 		}
@@ -546,10 +546,10 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 		widget.DataCell(c, 0, runCols[0].W, true, func(c *ui.Ctx) {
 			widget.Chip(c, "st", r.run.Status, th.C(runTone(r.run.Status)), "agent/jobs#runs")
 		})
-		widget.DataCell(c, 1, runCols[1].W, true, func(c *ui.Ctx) { c.Text("t", x.started(r.start()), kit.MonoFont(11, th.C(theme.Fg))) })
+		widget.DataCell(c, 1, runCols[1].W, true, func(c *ui.Ctx) { c.Text("t", x.started(r.start()), widget.MonoFont(11, th.C(theme.Fg))) })
 		if r.skipped() {
 			c.Column(3, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: runCols[2].W + 6, R: 6}}, func(c *ui.Ctx) {
-				c.Text("t", r.run.Summary, kit.UIFont(12, th.C(theme.FgFaint)))
+				c.Text("t", r.run.Summary, widget.UIFont(12, th.C(theme.FgFaint)))
 			})
 			return
 		}
@@ -557,7 +557,7 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 			for j, p := range r.run.Repos {
 				c.Row(j, ui.Style{Gap: 4, Cross: ui.Center}, func(c *ui.Ctx) {
 					widget.Swatch(c, "sw", kit.RepoTone(th, st, p, j))
-					c.Text("t", p, kit.MonoFont(11, th.C(theme.FgMuted)))
+					c.Text("t", p, widget.MonoFont(11, th.C(theme.FgMuted)))
 				})
 			}
 		})
@@ -570,7 +570,7 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 			if r.run.Status == hostapi.RunBlocked {
 				tone = th.C(theme.Fg)
 			}
-			widget.Wrap(c, "t", x.summary(r), width, kit.UIFont(12, tone))
+			widget.Wrap(c, "t", x.summary(r), width, widget.UIFont(12, tone))
 		})
 		widget.DataCell(c, 4, runCols[4].W, false, func(c *ui.Ctx) { x.costCell(c, r) })
 		took := ""
@@ -613,7 +613,7 @@ func (x *Jobs) costCell(c *ui.Ctx, r runRow) {
 	st := x.h.State()
 	cost, shares, ok := x.cost(r)
 	if !ok {
-		c.Text("none", "—", kit.MonoFont(11, th.C(theme.FgGhost)))
+		c.Text("none", "—", widget.MonoFont(11, th.C(theme.FgGhost)))
 		return
 	}
 	var strip []widget.ChartSeries
@@ -623,7 +623,7 @@ func (x *Jobs) costCell(c *ui.Ctx, r runRow) {
 	anchor := c.Next("cost")
 	if widget.Clickable(c, "cost", ui.Style{Dir: ui.Column, Gap: 3, W: ui.Px(60), Label: "Cost " + kit.Money(cost), NoHover: true, Help: "agent/jobs#cost"}, func(c *ui.Ctx) {
 		c.Row("v", ui.Style{W: ui.Flex(1), Main: ui.End}, func(c *ui.Ctx) {
-			c.Text("t", kit.Money(cost), kit.Mono(11.5, typeset.Medium, th.C(theme.Fg)))
+			c.Text("t", kit.Money(cost), widget.Mono(11.5, typeset.Medium, th.C(theme.Fg)))
 		})
 		if len(strip) > 0 {
 			widget.Chart(c, "split", strip, widget.ChartOpts{Kind: widget.ChartStrip, Height: 3, Highlight: -1, Label: "Cost by repo", Help: "agent/jobs#cost"})
@@ -632,11 +632,11 @@ func (x *Jobs) costCell(c *ui.Ctx, r runRow) {
 		x.run("stats.session", registry.Args{"id": string(r.se.ID)})
 	}
 	widget.HoverCard(c, "split", anchor, widget.HoverCardOpts{Label: "Cost by repo", Help: "agent/jobs#cost", Width: 190}, func(c *ui.Ctx) {
-		c.Text("t", r.se.Created.In(x.loc).Format("Jan 2")+" run · "+kit.Money(cost)+" est.", kit.Mono(11, typeset.SemiBold, th.C(theme.Fg)))
+		c.Text("t", r.se.Created.In(x.loc).Format("Jan 2")+" run · "+kit.Money(cost)+" est.", widget.Mono(11, typeset.SemiBold, th.C(theme.Fg)))
 		for i, s := range shares {
 			widget.KV(c, i, kit.RepoTone(th, st, s.Repo, i), s.Repo, "", kit.Money(s.Cost))
 		}
-		c.Text("more", "session stats ›", kit.MonoFont(10.5, th.C(theme.Accent)))
+		c.Text("more", "session stats ›", widget.MonoFont(10.5, th.C(theme.Accent)))
 	})
 }
 
@@ -661,7 +661,7 @@ func (x *Jobs) more(c *ui.Ctx, rest []runRow) {
 		textCellLeft(c, 0, runCols[0].W, fmt.Sprintf("%d more", len(rest)), faint)
 		textCellLeft(c, 1, runCols[1].W, "since "+rest[len(rest)-1].start().In(x.loc).Format("Jan 2"), th.C(theme.FgGhost))
 		textCellLeft(c, 2, runCols[2].W, "", faint)
-		widget.DataCell(c, 3, 0, true, func(c *ui.Ctx) { c.Text("t", strings.Join(parts, ", "), kit.UIFont(12, th.C(theme.FgGhost))) })
+		widget.DataCell(c, 3, 0, true, func(c *ui.Ctx) { c.Text("t", strings.Join(parts, ", "), widget.UIFont(12, th.C(theme.FgGhost))) })
 		widget.DataText(c, 4, runCols[4].W, kit.Money(total), th.C(theme.FgMuted))
 		widget.DataText(c, 5, runCols[5].W, "", faint)
 		widget.DataText(c, 6, runCols[6].W, "", faint)
@@ -669,7 +669,7 @@ func (x *Jobs) more(c *ui.Ctx, rest []runRow) {
 }
 
 func textCellLeft(c *ui.Ctx, key any, w float32, s string, tone render.Color) {
-	widget.DataCell(c, key, w, true, func(c *ui.Ctx) { c.Text("t", s, kit.MonoFont(11, tone)) })
+	widget.DataCell(c, key, w, true, func(c *ui.Ctx) { c.Text("t", s, widget.MonoFont(11, tone)) })
 }
 
 // consoleSide is a run's job in its agent console: the job, how this run is going and the last one
@@ -690,14 +690,14 @@ func (x *Jobs) consoleSide(c *ui.Ctx, id core.SessionID) {
 	cur := runRow{se: se, run: hostapi.RunOf(se)}
 	kit.Section(c, "job", "Job", "", func(c *ui.Ctx) {
 		c.Row("title", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-			widget.Wrap(c, "t", cmp.Or(row.job.Title, hostapi.JobOf(se)), 240, kit.UIFont(13, th.C(theme.Fg)))
+			widget.Wrap(c, "t", cmp.Or(row.job.Title, hostapi.JobOf(se)), 240, widget.UIFont(13, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Link(c, "jobs", "Jobs ›", "agent/jobs#page") {
 				x.run("jobs.open", registry.Args{"job": hostapi.JobOf(se)})
 			}
 		})
 		c.Row("status", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("n", "status", kit.MonoFont(11.5, th.C(theme.FgMuted)))
+			c.Text("n", "status", widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			widget.Chip(c, "v", cur.run.Status, th.C(runTone(cur.run.Status)), "agent/jobs#runs")
 		})
@@ -738,6 +738,6 @@ func (x *Jobs) consoleSide(c *ui.Ctx, id core.SessionID) {
 		kit.Stat(c, "total", "total est.", kit.Money(cost), th.C(theme.Fg))
 	})
 	kit.Section(c, "ends", "When it ends", "", func(c *ui.Ctx) {
-		widget.Wrap(c, "t", "The run row gets its status and the agent's summary; blocked also lands in Requests.", 290, kit.UIFont(12, th.C(theme.FgFaint)))
+		widget.Wrap(c, "t", "The run row gets its status and the agent's summary; blocked also lands in Requests.", 290, widget.UIFont(12, th.C(theme.FgFaint)))
 	})
 }

@@ -72,11 +72,11 @@ func tipTile(c *ui.Ctx, key any, label, value, small, tip string, sub func(c *ui
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 11, R: 11, T: 8, B: 9}, Gap: 6, Fill: th.C(widget.TDataCard), Stroke: th.C(widget.TDataCardLine),
 		Border: 1, Radius: 8, Clip: true, Role: ui.RoleGroup, Label: label + " " + value, Tooltip: tip}, func(c *ui.Ctx) {
-		c.Text("l", label, kit.KickerFont(th.C(theme.FgFaint)))
+		c.Text("l", label, widget.KickerFont(th.C(theme.FgFaint)))
 		c.Row("v", ui.Style{Gap: 4, Cross: ui.End}, func(c *ui.Ctx) {
 			c.Text("v", value, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 19, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			if small != "" {
-				c.Text("s", small, kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("s", small, widget.MonoFont(11, th.C(theme.FgFaint)))
 			}
 		})
 		c.Row("sub", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center, H: ui.Px(13)}, func(c *ui.Ctx) {
@@ -98,10 +98,12 @@ func delta(c *ui.Ctx, key any, cur, prev float64) {
 	if d < 0 {
 		arrow, tone, d = "▼", th.C(tStatsDown), -d
 	}
-	c.Text(key, fmt.Sprintf("%s %.0f%%", arrow, d), kit.MonoFont(10, tone))
+	c.Text(key, fmt.Sprintf("%s %.0f%%", arrow, d), widget.MonoFont(10, tone))
 }
 
-func dim(c *ui.Ctx, key any, s string) { c.Text(key, s, kit.MonoFont(10, c.Theme().C(theme.FgFaint))) }
+func dim(c *ui.Ctx, key any, s string) {
+	c.Text(key, s, widget.MonoFont(10, c.Theme().C(theme.FgFaint)))
+}
 
 // shareBar is a share as a bar on a track, then its percentage.
 func shareBar(c *ui.Ctx, key any, frac float64, tone render.Color, w float32, label string) {
@@ -115,7 +117,7 @@ func shareBar(c *ui.Ctx, key any, frac float64, tone render.Color, w float32, la
 			}
 		})
 		if label != "" {
-			c.Text("p", label, kit.MonoFont(11, th.C(theme.FgMuted)))
+			c.Text("p", label, widget.MonoFont(11, th.C(theme.FgMuted)))
 		}
 	})
 }

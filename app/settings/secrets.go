@@ -113,9 +113,9 @@ func (x *Secrets) section(c *ui.Ctx) {
 	th := c.Theme()
 	ds := x.declared()
 	widget.Wrap(c, "about", "The secrets your plugins declare. Each is kept in Oriel's secrets file, readable only by you, and sent only "+
-		"to the host its plugin's manifest binds it to. Plugins never see one.", 700, kit.UIFont(12.5, th.C(theme.FgFaint)))
+		"to the host its plugin's manifest binds it to. Plugins never see one.", 700, widget.UIFont(12.5, th.C(theme.FgFaint)))
 	if len(ds) == 0 {
-		widget.Wrap(c, "none", "No plugin you run declares a secret.", 700, kit.UIFont(12.5, th.C(theme.FgMuted)))
+		widget.Wrap(c, "none", "No plugin you run declares a secret.", 700, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	}
 	for _, d := range ds {
 		x.secretRowView(c, d)
@@ -139,23 +139,23 @@ func (x *Secrets) secretRowView(c *ui.Ctx, d declaredSecret) {
 	c.Row(d.plugin+"/"+d.name, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 10), Gap: 16, Cross: ui.Center, Help: help}, func(c *ui.Ctx) {
 		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 			c.Row("name", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("n", d.name, kit.MonoFont(12.5, th.C(theme.Fg)))
-				c.Text("p", d.plugin, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("n", d.name, widget.MonoFont(12.5, th.C(theme.Fg)))
+				c.Text("p", d.plugin, widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			if d.why != "" {
-				widget.Wrap(c, "why", d.why, 520, kit.UIFont(12.5, th.C(theme.FgFaint)))
+				widget.Wrap(c, "why", d.why, 520, widget.UIFont(12.5, th.C(theme.FgFaint)))
 			}
 			if d.host != "" {
-				c.Text("host", "sent only to "+d.host, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("host", "sent only to "+d.host, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			}
 			if r.err != "" {
-				widget.Wrap(c, "err", r.err, 520, kit.MonoFont(11, th.C(theme.Error)))
+				widget.Wrap(c, "err", r.err, 520, widget.MonoFont(11, th.C(theme.Error)))
 			}
 		})
 		c.Row("ctl", ui.Style{W: ui.Px(360), Gap: 8, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 			if set && !r.replacing {
 				widget.Chip(c, "set", "set", th.C(theme.StatusQuiet), help)
-				c.Text("dots", "••••••••", kit.MonoFont(12, th.C(theme.FgGhost)))
+				c.Text("dots", "••••••••", widget.MonoFont(12, th.C(theme.FgGhost)))
 				if widget.Button(c, "replace", "Replace", widget.ButtonOpts{Help: help}) {
 					r.replacing, r.confirm, r.err = true, false, ""
 				}
@@ -252,7 +252,7 @@ func (x *Secrets) dialog(c *ui.Ctx) {
 		if d.set {
 			note = "set: this replaces it"
 		}
-		kit.Heading(c, "h", "Value", note)
+		widget.Heading(c, "h", "Value", note)
 		res := widget.Input(c, "value", &d.value, widget.InputOpts{Label: d.name, Placeholder: "paste it here", Secret: true, DefaultFocus: true, Help: secretsHelp,
 			KeyMode: SecretDialogMode, Invalid: d.err != ""})
 		switch {
@@ -265,10 +265,10 @@ func (x *Secrets) dialog(c *ui.Ctx) {
 			d.err = ""
 		}
 		if d.err != "" {
-			widget.Wrap(c, "err", d.err, 480, kit.MonoFont(11, th.C(theme.Error)))
+			widget.Wrap(c, "err", d.err, 480, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		widget.Wrap(c, "about", "Kept in Oriel's secrets file, readable only by you. Plugins never see it: Oriel sends it for a plugin only "+
-			"to the host its manifest binds it to.", 480, kit.UIFont(11.5, th.C(theme.FgFaint)))
+			"to the host its manifest binds it to.", 480, widget.UIFont(11.5, th.C(theme.FgFaint)))
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Main: ui.End, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Key: "esc", Help: secretsHelp}) {
 				x.dlg = nil

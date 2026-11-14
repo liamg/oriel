@@ -302,7 +302,7 @@ func (v *helpView) page(c *ui.Ctx) {
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				widget.Chip(c, "file", path.Join(p.Source, p.File), th.C(theme.FgFaint), "shell/help")
-				kit.KbdKey(c, "esc")
+				widget.KbdKey(c, "esc")
 			})
 			widget.Rule(c, "rule")
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
@@ -411,7 +411,7 @@ func (v *helpView) keys(c *ui.Ctx, key any, glob string) {
 		c.Text("label", "KEYS", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium, Tracking: .14}, Color: th.C(tHelpLabel)})
 		for i, k := range rows {
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(30), Gap: 14, Cross: ui.Center, Stroke: th.C(theme.Line)}, func(c *ui.Ctx) {
-				c.Row("k", ui.Style{W: ui.Px(140)}, func(c *ui.Ctx) { kit.KbdKey(c, kit.KeyLabel(k.Keys)) })
+				c.Row("k", ui.Style{W: ui.Px(140)}, func(c *ui.Ctx) { widget.KbdKey(c, kit.KeyLabel(k.Keys)) })
 				desc := k.Desc
 				if desc == "" {
 					desc = k.Command
