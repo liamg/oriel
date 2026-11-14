@@ -63,7 +63,7 @@ func (s *server) serve(body string) {
 }
 
 func deps(s *server) Deps {
-	return Deps{Client: func() *http.Client { return s.Client() }, URL: func() string { return s.URL }}
+	return Deps{Client: s.Client(), URL: s.URL}
 }
 
 func sol(b *price.Book) price.Rate { return b.RateFor("gpt-6.1-sol", false, 0) }

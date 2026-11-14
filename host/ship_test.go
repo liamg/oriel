@@ -55,9 +55,8 @@ func (r *rig) ship(id core.SessionID, fresh bool) map[string]Ship {
 // Flows tested against fixture repos and a fake GitHub: a flight checklist per project (uncommitted → behind base →
 // unpushed → PR → checks), and multiple projects side by side, with a merge order.
 func TestShipFlowAcrossProjects(t *testing.T) {
-	r := newRig(t)
 	hub := ghtest.New(t)
-	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	r := newRigWith(t, func(o *Options) { o.GitHub = func(string, []string) gh.Client { return hub.Client() } })
 	api, apiUp := githubRepo(t, "api", map[string]string{
 		"limiter.go":                       "package limiter\n\nfunc Allow() bool {\n\treturn true\n}\n",
 		".github/CODEOWNERS":               "*  @acme/platform-team\n*.go  @jkowalski\n",
@@ -163,8 +162,8 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 
 // A rebase that would conflict is predicted, and Sync undoes it and says where.
 func TestShipSyncConflicts(t *testing.T) {
-	r := newRig(t)
-	r.w.opts.GitHub = func(string, []string) gh.Client { return ghtest.New(t).Client() }
+	hub := ghtest.New(t)
+	r := newRigWith(t, func(o *Options) { o.GitHub = func(string, []string) gh.Client { return hub.Client() } })
 	api, up := githubRepo(t, "api", map[string]string{"limiter.go": "package limiter\n\nvar n = 1\n"})
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(api.Dir)}})
 	p, _ := r.session(id).Primary()
@@ -188,9 +187,8 @@ func TestShipSyncConflicts(t *testing.T) {
 
 // A direct session is the user's own checkout: it ships from the branch it's on now, whichever they switched to.
 func TestShipDirectFollowsTheCheckout(t *testing.T) {
-	r := newRig(t)
 	hub := ghtest.New(t)
-	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	r := newRigWith(t, func(o *Options) { o.GitHub = func(string, []string) gh.Client { return hub.Client() } })
 	blog, up := githubRepo(t, "blog", map[string]string{"post.md": "# One\n"})
 	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: blog.Dir})
 	p, _ := r.session(id).Primary()
@@ -223,14 +221,15 @@ func TestShipDirectFollowsTheCheckout(t *testing.T) {
 
 // GitHub's API is asked through the host's HTTP client (Options.HTTP), as its other requests are.
 func TestGitHubIsAskedThroughTheHostsHTTP(t *testing.T) {
-	r := newRig(t)
-	t.Setenv("GH_TOKEN", "test-token")
 	var asked []string
-	r.w.opts.HTTP = &http.Client{Transport: roundTrip(func(req *http.Request) (*http.Response, error) {
-		asked = append(asked, req.URL.Host)
-		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[]`)),
-			Header: http.Header{"Content-Type": {"application/json"}}, Request: req}, nil
-	})}
+	r := newRigWith(t, func(o *Options) {
+		o.HTTP = &http.Client{Transport: roundTrip(func(req *http.Request) (*http.Response, error) {
+			asked = append(asked, req.URL.Host)
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`[]`)),
+				Header: http.Header{"Content-Type": {"application/json"}}, Request: req}, nil
+		})}
+	})
+	t.Setenv("GH_TOKEN", "test-token")
 	blog, _ := githubRepo(t, "blog", map[string]string{"post.md": "# One\n"})
 	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: blog.Dir})
 	if _, err := r.w.SyncGitHub(context.Background(), MirrorReq{Session: id, Fresh: true}); err != nil {
