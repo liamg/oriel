@@ -123,7 +123,7 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	}
 	g = prRead{at: x.now()}
 	h, repo := *s.Code, s.codeRepo(id)
-	pr, err := forBranch(ctx, h, repo, s.Branch)
+	pr, err := x.forBranch(ctx, h, repo, s.Branch)
 	x.cache.mu.Lock()
 	if r, ok := x.cache.raised[key]; ok {
 		switch {
@@ -161,14 +161,24 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 	return g
 }
 
-// forBranch is a branch's PR on h.
-func forBranch(ctx context.Context, h registry.CodeHost, repo registry.CodeRepo, branch string) (*registry.PR, error) {
+// forBranch is a branch's PR on h, which the session host is told of: the agent asks it whether the PR is open.
+func (x *Ship) forBranch(ctx context.Context, h registry.CodeHost, repo registry.CodeRepo, branch string) (*registry.PR, error) {
 	if h.ForBranch == nil {
 		return nil, registry.ErrNotOffered
 	}
 	var pr *registry.PR
 	err := registry.Call(func() (err error) { pr, err = h.ForBranch(ctx, repo, branch); return err })
+	if err == nil {
+		x.sawPR(repo, branch, pr.Open())
+	}
 	return pr, err
+}
+
+// sawPR tells the session host whether a project's branch's PR is open.
+func (x *Ship) sawPR(repo registry.CodeRepo, branch string, open bool) {
+	if c, err := kit.ShipCalls(x.h); err == nil {
+		_ = c.SawPR(host.PRSeenReq{Session: core.SessionID(repo.Session), Project: repo.Project, Branch: branch, Open: open})
+	}
 }
 
 // prReq is a PR to raise, or the open one's new title and body.
@@ -203,7 +213,7 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 		return fmt.Errorf("%s has no branch to raise a %s from", s.Project, h.Said().Short)
 	}
 	repo := s.codeRepo(se.ID)
-	pr, err := forBranch(ctx, h, repo, s.Branch)
+	pr, err := x.forBranch(ctx, h, repo, s.Branch)
 	if err != nil {
 		return err
 	}
@@ -217,6 +227,9 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 		if s.Base == "" {
 			return fmt.Errorf("%s has no base branch for the %s", s.Project, h.Said().Short)
 		}
+		if err := x.ownBranch(ctx, se.ID, s); err != nil {
+			return err
+		}
 		n := registry.NewPR{Title: r.Title, Body: withoutLinkedPRs(r.Body), Branch: s.Branch, Base: s.Base, Draft: r.Draft}
 		err = registry.Call(func() (err error) { pr, err = h.Create(ctx, repo, n); return err })
 	}
@@ -226,6 +239,7 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 	if pr == nil {
 		return fmt.Errorf("%s didn't answer with the %s", h.Label(), h.Said().Short)
 	}
+	x.sawPR(repo, s.Branch, true)
 	x.cache.mu.Lock()
 	if x.cache.raised == nil {
 		x.cache.raised = map[string]raisedPR{}
@@ -236,6 +250,23 @@ func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r 
 		if err := registry.Call(func() error { return h.RequestReviewers(ctx, repo, *pr, r.Reviewers) }); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// ownBranch refuses a PR from any branch but the one the session host raises the project's from: the worktree may
+// have been switched off it since it was read.
+func (x *Ship) ownBranch(ctx context.Context, id core.SessionID, s shipRead) error {
+	c, err := kit.ShipCalls(x.h)
+	if err != nil {
+		return err
+	}
+	branch, err := c.ShipBranch(ctx, host.ShipRef{Session: id, Project: s.Project})
+	if err != nil {
+		return err
+	}
+	if branch != s.Branch {
+		return fmt.Errorf("%s raises its %s from %q, not %q", s.Project, s.words().Short, branch, s.Branch)
 	}
 	return nil
 }
@@ -270,7 +301,7 @@ func (x *Ship) markReady(ctx context.Context, se core.SessionState, s shipRead) 
 	if err != nil {
 		return err
 	}
-	pr, err := forBranch(ctx, h, s.codeRepo(se.ID), s.Branch)
+	pr, err := x.forBranch(ctx, h, s.codeRepo(se.ID), s.Branch)
 	if err != nil {
 		return err
 	}
@@ -285,7 +316,7 @@ func (x *Ship) renameGuard(ctx context.Context, se core.SessionState, s shipRead
 	if s.Code == nil || s.Code.ForBranch == nil || s.Branch == "" {
 		return nil
 	}
-	pr, err := forBranch(ctx, *s.Code, s.codeRepo(se.ID), s.Branch)
+	pr, err := x.forBranch(ctx, *s.Code, s.codeRepo(se.ID), s.Branch)
 	if err != nil && !errors.Is(err, registry.ErrNotOffered) {
 		return err
 	}
