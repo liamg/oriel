@@ -4,7 +4,6 @@ import (
 	"image"
 
 	"github.com/liamg/oriel/theme"
-	"github.com/liamg/oriel/update"
 )
 
 // What the package's outside tests read of its plugins.
@@ -39,16 +38,5 @@ func (x *Lua) Repl() (texts []string, kinds []int) {
 func (x *Lua) Complete(line string) []string { _, names := x.complete(line); return names }
 func (x *Lua) SetInput(s string)             { x.input = s }
 
-const (
-	UpdateAsk       = updateAsk
-	UpdateAutomatic = updateAutomatic
-)
-
-func (x *Update) Updater() *update.Updater { return x.updater() }
-func (x *Update) Ready() (string, bool)    { return x.ready() }
-
 // SetFilter filters the Plugins page's list, as typing in its filter does.
 func (x *Catalog) SetFilter(s string) { x.page.filter = s }
-
-// WaitStartup waits for an automatic start's check to have run.
-func (x *Update) WaitStartup() { x.start.Wait() }

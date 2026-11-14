@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"github.com/liamg/oriel/app/agentui"
-	"github.com/liamg/oriel/app/settings"
 	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/lsp"
 	"github.com/liamg/oriel/plugin"
@@ -56,7 +56,7 @@ type (
 	PluginOpts   = shell.PluginOpts
 	Crash        = shell.Crash
 	// Updates is Oriel updating itself.
-	Updates = settings.Updates
+	Updates = updates.Updates
 	// VoiceConfig swaps dictation's parts; nil ones are the real ones, from the voice.* options.
 	VoiceConfig = agentui.VoiceConfig
 )

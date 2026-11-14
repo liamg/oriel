@@ -1,4 +1,6 @@
-package settings
+// Package updates is Oriel updating itself: checking for a new release, downloading and staging it, and restarting
+// into it, with its card on the settings page and its own page.
+package updates
 
 import (
 	"context"

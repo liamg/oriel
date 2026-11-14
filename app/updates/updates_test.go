@@ -1,4 +1,4 @@
-package settings_test
+package updates_test
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/update"
@@ -17,15 +17,15 @@ import (
 // updatesScene is the app updating itself from r.
 func updatesScene(t *testing.T, r *rig.Releases, change ...func(*apptest.Config)) *apptest.Scene {
 	return apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
-		cfg.Updates = &settings.Updates{Updater: r.Updater(), Relaunch: r.Relaunch}
+		cfg.Updates = &updates.Updates{Updater: r.Updater(), Relaunch: r.Relaunch}
 		for _, f := range change {
 			f(cfg)
 		}
 	}})
 }
 
-func updatesOf(s *apptest.Scene) *settings.Update {
-	return apptest.PluginOf[*settings.Update](s, "update")
+func updatesOf(s *apptest.Scene) *updates.Update {
+	return apptest.PluginOf[*updates.Update](s, "update")
 }
 
 // The app's side of updating: :UpdateCheck opens the card with the release's notes; Update runs the update on the
@@ -76,7 +76,7 @@ func TestAutomaticUpdateAtStart(t *testing.T) {
 // A release that comes out while Oriel runs is downloaded first, quietly. Ask then offers it; automatic installs it
 // for the next restart, and says so, without restarting by itself.
 func TestUpdateDownloadsBeforeItSays(t *testing.T) {
-	for _, mode := range []string{settings.UpdateAsk, settings.UpdateAutomatic} {
+	for _, mode := range []string{updates.UpdateAsk, updates.UpdateAutomatic} {
 		t.Run(mode, func(t *testing.T) {
 			r := rig.NewReleases(t)
 			s := updatesScene(t, r)
@@ -89,14 +89,14 @@ func TestUpdateDownloadsBeforeItSays(t *testing.T) {
 				t.Fatalf("not downloaded first: %v", err)
 			}
 			switch mode {
-			case settings.UpdateAsk:
+			case updates.UpdateAsk:
 				if !hasNotice(s.Store().State(), "update.available") {
 					t.Fatal("no offer")
 				}
 				if _, ok := updatesOf(s).Ready(); ok {
 					t.Fatal("ask mode installed by itself")
 				}
-			case settings.UpdateAutomatic:
+			case updates.UpdateAutomatic:
 				s.Until("the install", func() bool { _, ok := updatesOf(s).Ready(); return ok })
 				s.Until("the notice", func() bool { return hasNotice(s.Store().State(), "update.ready") })
 				s.Frame()
