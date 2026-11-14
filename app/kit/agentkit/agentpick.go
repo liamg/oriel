@@ -4,10 +4,12 @@ package agentkit
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/core"
 
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -117,4 +119,31 @@ func (p BackendPick) Current() string {
 		return *p.Chosen
 	}
 	return p.Setting
+}
+
+// ProviderNote is a provider's plan and what's used of each window, or why it can't run.
+func ProviderNote(p hostapi.ProviderInfo, usage []core.ProviderUsage) string {
+	switch {
+	case p.Error != "":
+		return p.Error
+	case !p.Install.LoggedIn:
+		return cmp.Or(p.Install.Note, "not logged in")
+	}
+	u := p.Usage
+	for _, x := range usage {
+		if x.Provider == p.ID {
+			u = x
+		}
+	}
+	parts := []string{}
+	if u.Plan != "" {
+		parts = append(parts, u.Plan)
+	}
+	for _, w := range u.Windows {
+		parts = append(parts, fmt.Sprintf("%s %d%%", strings.TrimSuffix(w.Name, " window"), int(w.Used*100+.5)))
+	}
+	if len(parts) == 0 {
+		return cmp.Or(p.Install.Version, "ready")
+	}
+	return strings.Join(parts, " · ")
 }

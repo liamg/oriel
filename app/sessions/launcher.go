@@ -717,38 +717,11 @@ func (x *Launcher) providerCard(c *ui.Ctx, p hostapi.ProviderInfo) {
 				x.model, x.effort = m, e
 			}
 		}
-		c.Text("usage", providerNote(p, x.h.State().Usage), widget.MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("usage", agentkit.ProviderNote(p, x.h.State().Usage), widget.MonoFont(10, th.C(theme.FgFaint)))
 	})
 	if in.Clicked {
 		x.pickProvider(p.ID)
 	}
-}
-
-// providerNote is a provider's plan and what's used of each window, or why it can't run.
-func providerNote(p hostapi.ProviderInfo, usage []core.ProviderUsage) string {
-	switch {
-	case p.Error != "":
-		return p.Error
-	case !p.Install.LoggedIn:
-		return cmp.Or(p.Install.Note, "not logged in")
-	}
-	u := p.Usage
-	for _, x := range usage {
-		if x.Provider == p.ID {
-			u = x
-		}
-	}
-	parts := []string{}
-	if u.Plan != "" {
-		parts = append(parts, u.Plan)
-	}
-	for _, w := range u.Windows {
-		parts = append(parts, fmt.Sprintf("%s %d%%", strings.TrimSuffix(w.Name, " window"), int(w.Used*100+.5)))
-	}
-	if len(parts) == 0 {
-		return cmp.Or(p.Install.Version, "ready")
-	}
-	return strings.Join(parts, " · ")
 }
 
 // noAgentCard starts the session with no agent.

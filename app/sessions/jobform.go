@@ -310,7 +310,7 @@ func (x *Jobs) agentChoices(c *ui.Ctx, f *jobForm, agents []hostapi.ProviderInfo
 	items := make([]widget.Choice, len(agents))
 	cur := 0
 	for i, p := range agents {
-		items[i] = widget.Choice{Title: services.ProviderTitle(x.h, p.ID), Desc: providerNote(p, x.h.State().Usage)}
+		items[i] = widget.Choice{Title: services.ProviderTitle(x.h, p.ID), Desc: agentkit.ProviderNote(p, x.h.State().Usage)}
 		if p.ID == f.agent {
 			cur = i
 		}
