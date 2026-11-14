@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -17,16 +16,12 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// langSets are the registry's languages as a syntax.Set, made again when they change.
-var langSets struct {
-	sync.Mutex
-	by map[registry.Registry]*langSet
-}
+// LanguagesService is the window's languages as one syntax.Set: a LanguageSet, which the editor's languages
+// plugin keeps.
+const LanguagesService = "kit.languages"
 
-type langSet struct {
-	gen int
-	set *syntax.Set
-}
+// LanguageSet is the window's registered languages as a syntax.Set, made again when they change.
+type LanguageSet interface{ Set() *syntax.Set }
 
 // WindowRegistry is the registry r stands for: a plugin's host is a view of its window's.
 func WindowRegistry(r registry.Registry) registry.Registry {
@@ -38,33 +33,23 @@ func WindowRegistry(r registry.Registry) registry.Registry {
 	return r
 }
 
-// Languages is the set of languages r has now, one set a window.
+// Languages is the set of languages r has now: the window's kept set, else one made now.
 func Languages(r registry.Registry) *syntax.Set {
-	ls, gen := r.Languages()
-	r = WindowRegistry(r)
-	langSets.Lock()
-	defer langSets.Unlock()
-	if langSets.by == nil {
-		langSets.by = map[registry.Registry]*langSet{}
+	if s, ok := registry.ServiceOf[LanguageSet](r, LanguagesService); ok {
+		return s.Set()
 	}
-	if s, ok := langSets.by[r]; ok && s.gen == gen {
-		return s.set
-	}
+	return LanguageSetOf(r)
+}
+
+// LanguageSetOf makes r's languages into a syntax.Set.
+func LanguageSetOf(r registry.Registry) *syntax.Set {
+	ls, _ := r.Languages()
 	var out []*syntax.Language
 	for _, l := range ls {
 		out = append(out, &syntax.Language{Name: l.Name, Extensions: l.Extensions, Filenames: l.Filenames, Shebangs: l.Shebangs,
 			Grammar: l.Grammar, Queries: l.Queries})
 	}
-	s := &langSet{gen: gen, set: syntax.NewSet(out...)}
-	langSets.by[r] = s
-	return s.set
-}
-
-// ForgetLanguages drops r's set, once the window it belongs to has closed.
-func ForgetLanguages(r registry.Registry) {
-	langSets.Lock()
-	defer langSets.Unlock()
-	delete(langSets.by, WindowRegistry(r))
+	return syntax.NewSet(out...)
 }
 
 // LanguageFor is the language of the file at path, by its name or the first line of src.

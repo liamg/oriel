@@ -48,7 +48,7 @@ type Reviews struct {
 // Deps are what a review needs of the rest of the host.
 type Deps struct {
 	Providers *agent.Providers
-	Exec      func() agent.Exec
+	Exec      agent.Exec
 	// Pack is a prompt pack by name, as the user has it.
 	Pack func(name string) (agent.Pack, bool)
 	// Protected are the checkouts an agent of the session must never edit.
@@ -120,7 +120,7 @@ func (x *Reviews) AIReview(ctx context.Context, r AIReviewReq) (_ string, err er
 	}
 	run := &aiReviewRun{x: x, session: se.ID, review: rv}
 	spec := agent.StartSpec{Cwd: hostcore.AgentDir(se), Model: model, Pack: pack, Prompt: reviewPrompt(se, rv, change), Tools: run.tools(),
-		Policy: agent.PolicyAsk, Protect: x.deps.Protected(se), Exec: x.deps.Exec(),
+		Policy: agent.PolicyAsk, Protect: x.deps.Protected(se), Exec: x.deps.Exec,
 		StateDir: filepath.Join(x.env.SessionDir(se.ID), "ai-review", rv.ID), Env: x.env.AgentEnv(se.ID)}
 	x.runs.Go(func() {
 		var err error

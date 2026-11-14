@@ -105,7 +105,7 @@ func (x *Boxes) backendFor(b *Box, cfg sandbox.Config) (sandbox.Backend, error) 
 	if b != nil {
 		return b.backend, nil
 	}
-	f, ok := x.deps.Factory().(interface {
+	f, ok := x.deps.Factory.(interface {
 		BackendFor(sandbox.Config) (sandbox.Backend, error)
 	})
 	if !ok {

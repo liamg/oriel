@@ -20,20 +20,26 @@ var runtime struct {
 	mu       sync.Mutex
 	compiled map[[32]byte]wazero.CompiledModule // by the grammar's checksum
 	cacheDir string
+	made     bool // the runtime is made: its cache dir is fixed
 }
 
 // SetCacheDir keeps compiled grammars in dir, so each compiles once per version of it and of wazero, not once per
-// run. It takes effect only before the first grammar is used.
-func SetCacheDir(dir string) {
+// run. Once a grammar has been used the runtime is made, and another dir is refused.
+func SetCacheDir(dir string) error {
 	runtime.mu.Lock()
 	defer runtime.mu.Unlock()
+	if runtime.made && dir != runtime.cacheDir {
+		return fmt.Errorf("syntax: the grammar runtime is running with the cache %q already, so %q isn't used", runtime.cacheDir, dir)
+	}
 	runtime.cacheDir = dir
+	return nil
 }
 
 func wasmRuntime() (wazero.Runtime, error) {
 	runtime.once.Do(func() {
 		runtime.mu.Lock()
 		dir := runtime.cacheDir
+		runtime.made = true
 		runtime.mu.Unlock()
 		runtime.rt, runtime.err = newRuntime(dir)
 		runtime.compiled = map[[32]byte]wazero.CompiledModule{}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
@@ -18,9 +19,8 @@ import (
 // no host imports, so a pack on disk needs no consent. languages.install adds a grammar pack CI built.
 type Languages struct {
 	kit.Disposer
-	Dir      string          // ~/.config/oriel/languages
-	CacheDir string          // where compiled grammars are kept
-	Sums     syntax.PackSums // the packs it installs; the binary's list when nil
+	Dir  string          // ~/.config/oriel/languages
+	Sums syntax.PackSums // the packs it installs; the binary's list when nil
 
 	h     plugin.Host
 	packs map[string]registry.Disposable // each local pack's registration, by its directory's name
@@ -30,12 +30,10 @@ func (x *Languages) Manifest() plugin.Manifest { return plugin.Manifest{ID: "lan
 
 func (x *Languages) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.packs = h, map[string]registry.Disposable{}
+	x.Add(h.Contribute(registry.Service{Name: kit.LanguagesService, Impl: &languageSet{r: h}}))
 	x.Add(registry.DisposeFunc(func() { x.packs = nil }))
 	x.Add(h.Command(registry.Command{ID: "languages.install", Title: "Install the grammar pack in the .tar.gz at {path}, if it's one this build of Oriel lists",
 		Run: func(_ registry.Ctx, a registry.Args) error { return x.install(a.String("path")) }}))
-	if x.CacheDir != "" {
-		syntax.SetCacheDir(x.CacheDir)
-	}
 	for _, l := range syntax.Builtin().Languages() {
 		x.Add(h.Language(registry.Language{Name: l.Name, Extensions: l.Extensions, Filenames: l.Filenames, Shebangs: l.Shebangs,
 			Grammar: l.Grammar, Queries: l.Queries, Source: "builtin:languages"}))
@@ -85,4 +83,22 @@ func (x *Languages) install(path string) error {
 		return err
 	}
 	return x.load(name)
+}
+
+// languageSet is the window's languages as one syntax.Set, made again when the registry's change (kit.LanguageSet).
+type languageSet struct {
+	r   registry.Registry
+	mu  sync.Mutex
+	gen int
+	set *syntax.Set
+}
+
+func (l *languageSet) Set() *syntax.Set {
+	_, gen := l.r.Languages()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.set == nil || l.gen != gen {
+		l.set, l.gen = kit.LanguageSetOf(l.r), gen
+	}
+	return l.set
 }

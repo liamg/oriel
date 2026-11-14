@@ -2,11 +2,8 @@ package ratchet
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"io/fs"
 	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 	"unicode"
@@ -24,39 +21,6 @@ var pureCalls = []string{
 	"theme.semanticOn", "strings.NewReplacer",
 	"template.Must", "time.Date", "time.Duration", "json.RawMessage", "slices.Clone", "append", "float32", "reflect.TypeFor",
 	"strings.Replace", "strings.ReplaceAll", "strings.Repeat", "strings.Join", "fmt.Sprintf", "filepath.Join",
-}
-
-// ParseAll reads every Go file under root's dirs, tests too, skipping vendor and testdata.
-func ParseAll(root string, dirs ...string) ([]File, error) {
-	var out []File
-	for _, d := range dirs {
-		err := filepath.WalkDir(filepath.Join(root, d), func(p string, e fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if e.IsDir() {
-				if n := e.Name(); n == "vendor" || n == "testdata" || (strings.HasPrefix(n, ".") && p != filepath.Join(root, d)) {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-			if !strings.HasSuffix(p, ".go") {
-				return nil
-			}
-			fset := token.NewFileSet()
-			f, err := parser.ParseFile(fset, p, nil, parser.SkipObjectResolution|parser.ParseComments)
-			if err != nil {
-				return err
-			}
-			rel, _ := filepath.Rel(root, p)
-			out = append(out, File{Path: filepath.ToSlash(rel), Fset: fset, AST: f})
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-	return out, nil
 }
 
 func isTest(f File) bool { return strings.HasSuffix(f.Path, "_test.go") }

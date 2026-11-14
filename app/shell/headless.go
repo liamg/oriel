@@ -153,7 +153,6 @@ func (h *Headless) Close() error {
 		err = errors.Join(err, e.Deactivate(context.Background()))
 	}
 	h.plugins = nil
-	kit.ForgetLanguages(h.sh.cfg.Registry)
 	if h.ts != nil {
 		h.ts.Close()
 	}
