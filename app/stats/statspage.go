@@ -133,7 +133,7 @@ func (x *Plugin) header(c *ui.Ctx, q stats.Query, r stats.Report, meta reportMet
 			x.open = false
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 func (x *Plugin) run(id string, a registry.Args) {
@@ -205,7 +205,7 @@ func (x *Plugin) toolbar(c *ui.Ctx) {
 		}
 		c.Text("splitl", label, kit.UIFont(11.5, th.C(theme.FgMuted)))
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 // filterChips are a filter's chips: one for each value, ✕ taking it off; for the main three with none, a menu of

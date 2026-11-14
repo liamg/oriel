@@ -323,7 +323,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 				c.Text("since", "since "+s, kit.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		var shown []core.Finding
 		count := map[string]int{}
 		gone := 0
@@ -388,7 +388,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 				x.card(c, se, f, width-42)
 			}
 		})
-		c.Box("foot.rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "foot.rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 8}, func(c *ui.Ctx) {
 			c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("k", "REVIEWER", kit.KickerFont(th.C(theme.FgFaint)))

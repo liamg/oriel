@@ -105,7 +105,7 @@ func (x *Ship) prTabContent(c *ui.Ctx, se core.SessionState, s shipRead, f *prFo
 				x.prFields(c, se, s, f)
 			})
 		}
-		c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+		widget.VRule(c, "divider")
 		c.Column("side", ui.Style{W: ui.Px(260), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 			x.gatesList(c, se)
 			x.previous(c, se, s.Project)
@@ -151,7 +151,7 @@ func (x *Ship) prHeader(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 			x.run("ship.raise", registry.Args{"project": s.Project})
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 // overviewHeader is a raised PR's header: its number, project, state and branch, and what can be done with it.
@@ -184,7 +184,7 @@ func (x *Ship) overviewHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 			}
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 // overview is a raised PR as its code host has it: the title, its link, reviewers and links to the session's other PRs,
@@ -266,7 +266,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 			place = fmt.Sprintf("%s:%d", a.File, a.Line)
 		}
 		c.Column(string(t.ID), ui.Style{W: ui.Flex(1), Gap: 6, Pad: ui.Insets{T: 8}, Role: ui.RoleGroup, Label: "Thread " + place}, func(c *ui.Ctx) {
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Row("place", ui.Style{Clip: true}, func(c *ui.Ctx) { c.Text("p", place, kit.MonoFont(11, th.C(theme.FgMuted))) })
 				if r := t.Hosted.Reviewer; r != "" {
@@ -344,7 +344,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 				x.run("ship.redraft", registry.Args{"project": s.Project, "kind": "pr"})
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8)}, func(c *ui.Ctx) {
 			if f.tab == 1 {
 				kit.MarkdownText(c, x.h, "preview", f.body, max(200, c.Size().X-40), kit.UIFont(12.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})

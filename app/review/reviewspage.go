@@ -305,7 +305,7 @@ func (x *Reviews) pageHeader(c *ui.Ctx, rows []reviewRow) {
 			x.page.open = false
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 func atoiOr(s string) int {

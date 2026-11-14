@@ -519,7 +519,7 @@ func (x *Console) build(c *ui.Ctx, vc uireg.ViewCtx) {
 			}
 			st := x.state(se.ID)
 			x.header(c, se)
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				width := float32(820)
 				if r, ok := c.Rect(c.Next("left")); ok {
@@ -528,10 +528,10 @@ func (x *Console) build(c *ui.Ctx, vc uireg.ViewCtx) {
 				c.Column("left", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 					x.threadCard(c, se, width)
 					x.transcript(c, se, st, width)
-					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+					widget.Rule(c, "rule")
 					x.composer(c, se, st)
 				})
-				c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "edge")
 				x.side(c, se)
 			})
 		})

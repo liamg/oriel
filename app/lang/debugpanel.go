@@ -66,12 +66,12 @@ func (x *Debug) panelView(c *ui.Ctx) {
 				x.stackList(c)
 				x.breakpointList(c)
 			})
-			c.Box("e1", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "e1")
 			c.Column("mid", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				x.variables(c)
 				x.watchList(c)
 			})
-			c.Box("e2", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "e2")
 			c.Column("right", ui.Style{W: ui.Flex(1.3), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				x.consoleView(c)
 				x.accessView(c)

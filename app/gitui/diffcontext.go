@@ -215,7 +215,6 @@ func (x *Diff) expander(c *ui.Ctx, fc *fileContext, g hiddenGap, lo, hi int) {
 
 // contextRow is a line the diff hid, shown: the same on both sides, numbered on each.
 func (x *Diff) contextRow(c *ui.Ctx, st *diffState, file string, l gitx.DiffLine, spans []kit.Span, layout string) {
-	th := c.Theme()
 	h0, cross := x.rowFit()
 	fit := x.codeFit(st, file)
 	c.Row("c"+lineKey(l), ui.Style{W: ui.Flex(1), H: h0, Cross: cross, Role: ui.RoleListItem, Label: strings.TrimRight(l.Text, "\r\n")},
@@ -233,7 +232,7 @@ func (x *Diff) contextRow(c *ui.Ctx, st *diffState, file string, l gitx.DiffLine
 				n   int
 			}{{"old", l.Old}, {"new", l.New}} {
 				if side.key == "new" {
-					c.Box("mid", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+					widget.VRule(c, "mid")
 				}
 				c.Row(side.key, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Cross: cross, Clip: true}, func(c *ui.Ctx) {
 					c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1)}, nil)

@@ -140,7 +140,8 @@ func virtualText(c *ui.Ctx, th *theme.Resolved, ds []uireg.Decoration) {
 }
 
 // spans draws a line's Highlight and Underline decorations over its text, x0 being where the text starts.
-func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []uireg.Decoration, rowID ui.ID, x0 float32, m kit.PaneMetrics, segs []rowSeg) {
+func spans(c *ui.Ctx, th *theme.Resolved, r paneRow) {
+	p, line, ds, rowID, x0, m, segs := r.p, r.line, r.ds, r.id, r.x0, r.m, r.segs
 	for i, d := range ds {
 		if d.Kind != uireg.Highlight && d.Kind != uireg.Underline {
 			continue
@@ -179,7 +180,8 @@ func spans(c *ui.Ctx, th *theme.Resolved, p vim.Pane, line int, ds []uireg.Decor
 
 // blocks draws a line's Block decorations under it, from where its text starts, and returns their ids and whether
 // each wants revealing.
-func blocks(c *ui.Ctx, line int, ds []uireg.Decoration, x0 float32) (ids []ui.ID, reveal []bool) {
+func blocks(c *ui.Ctx, r paneRow) (ids []ui.ID, reveal []bool) {
+	line, ds, x0 := r.line, r.ds, r.x0
 	for _, d := range ds {
 		if d.Kind != uireg.Block || d.Node == nil {
 			continue

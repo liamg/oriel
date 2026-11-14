@@ -221,7 +221,7 @@ func (x *Prompts) page(c *ui.Ctx) {
 			x.header(c, o)
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				x.list(c, defs, o)
-				c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "divider")
 				c.Column("detail", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Pad: ui.Insets{L: 18, R: 18, T: 14, B: 18}, Gap: 10,
 					Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 					if d, ok := prompts.Lookup(x.selected(), kit.Prompts(x.h)...); ok {
@@ -246,7 +246,7 @@ func (x *Prompts) header(c *ui.Ctx, o prompts.Overrides) {
 			x.open = false
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 }
 
 // promptRow is a row of the list: a group's heading, or a prompt.
@@ -296,7 +296,7 @@ func (x *Prompts) list(c *ui.Ctx, defs []prompts.Def, o prompts.Overrides) {
 				x.sel, x.err, x.saved = rows[sel].def.ID, "", ""
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 3}, func(c *ui.Ctx) {
 			kit.Note(c, "a", "yours: "+kit.TildePath(x.ConfigDir))
 			kit.Note(c, "b", "only what you change is kept")

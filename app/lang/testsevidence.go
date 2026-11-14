@@ -3,6 +3,7 @@ package lang
 import (
 	"cmp"
 	"fmt"
+	"github.com/liamg/oriel/ui/widget"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -97,7 +98,7 @@ func (x *Tests) runView(c *ui.Ctx, instance string) {
 		for i, f := range r.Failing {
 			c.Text(fmt.Sprint("fail", i), "✕ "+f, mono(11.5, tTestFailed))
 		}
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Text("k", "OUTPUT", kit.KickerFont(th.C(theme.FgFaint)))
 		c.Column("out", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Clip: true, Gap: 1}, func(c *ui.Ctx) {
 			for i, l := range strings.Split(r.Output, "\n") {

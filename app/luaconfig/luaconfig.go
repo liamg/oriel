@@ -584,7 +584,7 @@ func (x *Lua) inspectView(c *ui.Ctx) {
 		})
 		for i, s := range secs {
 			rows := s.Rows()
-			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, fmt.Sprint("rule", i))
 			c.Row(i, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 8), Gap: 16}, func(c *ui.Ctx) {
 				c.Box("name", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) { c.Text("n", s.Name, mono(9.5, theme.FgFaint)) })
 				c.Column("rows", ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {

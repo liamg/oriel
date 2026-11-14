@@ -197,7 +197,7 @@ func (x *Permissions) build(c *ui.Ctx) {
 			}
 			c.WakeAt(st.read.Add(permsEvery))
 			x.header(c, s, st)
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			p, _ := st.load.Value()
 			widget.Async(c, "load", st.load.State(), widget.AsyncOpts{Label: "Reading the session's rules", Retry: st.load.Reload, Height: ui.Flex(1),
 				Help: "agent/permissions"}, func(c *ui.Ctx) {

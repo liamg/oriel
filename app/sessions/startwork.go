@@ -190,11 +190,11 @@ func (x *Plan) startWorkView(c *ui.Ctx) {
 			Trap: true, Interactive: true, Focusable: true, KeyMode: StartWorkKeyMode, Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}},
 			Role: ui.RoleDialog, Label: "Start work", Help: startWorkHelp}, func(c *ui.Ctx) {
 			x.startWorkHeader(c, se.Snapshot())
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 24, R: 24, T: 18, B: 20}, Gap: 20}, func(c *ui.Ctx) {
 				x.startWorkBody(c, d, se.Snapshot())
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			x.startWorkFooter(c, d)
 		})
 		for _, k := range c.Interaction(box).Keys {

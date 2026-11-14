@@ -49,7 +49,6 @@ func (x *Assistant) window(c *ui.Ctx) {
 	if len(log) > 0 {
 		x.seen = max(x.seen, log[len(log)-1].Seq)
 	}
-	th := c.Theme()
 	res := widget.Window(c, "assistant", &x.win, widget.WindowOpts{Title: "ORI", Default: def, Min: render.Point{X: 320, Y: 280},
 		Minimise: true, Label: "Ori, the assistant", Help: assistantHelp, KeyMode: AssistantKeyMode,
 		Lead: func(c *ui.Ctx) { ori(c, "face", 18, oriMood{busy: busy}) },
@@ -66,7 +65,7 @@ func (x *Assistant) window(c *ui.Ctx) {
 					x.composer(c)
 				})
 				if side > 0 {
-					c.Box("rule", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+					widget.VRule(c, "rule")
 					x.side(c, side)
 				}
 			})
@@ -179,9 +178,9 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 				case assistant.KindDivider:
 					flush(i)
 					c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Box("l", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+						widget.Rule(c, "l")
 						c.Text("t", strings.ToUpper(e.Text), kit.KickerFont(th.C(theme.FgGhost)))
-						c.Box("r", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+						widget.Rule(c, "r")
 					})
 				case assistant.KindTool:
 					if block == nil {

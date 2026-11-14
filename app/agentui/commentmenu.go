@@ -97,7 +97,7 @@ func (x *Requests) mdViewer() uireg.View {
 							v.open = false
 						}
 					})
-					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+					widget.Rule(c, "rule")
 					kit.Scrolled(c, "src", &v.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 2},
 						func(c *ui.Ctx, _ func(string) ui.ID) {
 							for i, ln := range strings.Split(v.body, "\n") {

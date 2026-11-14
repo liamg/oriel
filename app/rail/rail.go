@@ -509,7 +509,7 @@ func (r *Rail) build(c *ui.Ctx, vc uireg.ViewCtx) {
 				}
 			}
 		})
-		c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+		widget.VRule(c, "edge")
 	})
 }
 
@@ -679,7 +679,7 @@ func (r *Rail) wideRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 				r.h.Run(context.Background(), "sidebar.form", registry.Args{"form": "narrow"})
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Box("pad", ui.Style{H: ui.Px(4)}, nil)
 	case rowProject:
 		r.header(c, w, row)

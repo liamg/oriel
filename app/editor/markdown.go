@@ -298,7 +298,7 @@ func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextS
 					})
 				})
 			case mdRule:
-				c.Box(fmt.Sprint("hr", k), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, fmt.Sprint("hr", k))
 			case mdTable:
 				markdownTable(c, fmt.Sprint("table", k), b, width, body, nil)
 			case mdHeading:

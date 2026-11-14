@@ -79,4 +79,3 @@ func (x *Permissions) rulesSection(c *ui.Ctx) {
 		})
 	}
 }
-

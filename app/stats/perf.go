@@ -223,7 +223,7 @@ func (x *Perf) page(c *ui.Ctx) {
 				x.open = false
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		width := float32(900)
 		if r, ok := c.Rect(c.Next("body")); ok {
 			width = r.Dx() - 36

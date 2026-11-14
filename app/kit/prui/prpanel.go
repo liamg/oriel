@@ -37,7 +37,7 @@ func PRBox(c *ui.Ctx, key, title string, body func(c *ui.Ctx), foot func(c *ui.C
 			body(c)
 		})
 		if foot != nil {
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 5), Clip: true}, foot)
 		}
 	})

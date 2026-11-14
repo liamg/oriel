@@ -3,6 +3,7 @@ package shell
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/ui/widget"
 	"slices"
 	"strings"
 	"time"
@@ -146,7 +147,7 @@ func (w *whichKey) build(c *ui.Ctx) {
 			}
 			c.Text("how", fmt.Sprintf("shown after %dms · ⌫ back up · ? all · esc cancel", WhichKeyDelay.Milliseconds()), mono(10, theme.FgFaint))
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		cols := max(1, min(4, int(min(1180, size.X-32)/280)))
 		rows := (len(es) + cols - 1) / cols
 		c.Row("grid", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 8), Gap: 8}, func(c *ui.Ctx) {

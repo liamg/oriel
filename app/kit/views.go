@@ -104,7 +104,7 @@ func Section(c *ui.Ctx, key, title, note string, body func(c *ui.Ctx)) {
 		})
 		body(c)
 	})
-	c.Box(key+".rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, key+".rule")
 }
 
 // Stat is a row of a side section: a name, and its value at the right in tone.
