@@ -1,4 +1,4 @@
-package shell_test
+package overview_test
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/overview"
 	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -29,7 +29,7 @@ func overviewScene(t *testing.T, make func(home string) string) *apptest.Scene {
 	t.Helper()
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.WorkDir = make(os.Getenv("HOME")) }})
 	s.OverviewOff.Dispose()
-	apptest.PluginOf[*shell.Overview](s, "overview").SetClock(clocktest.New(overviewNow))
+	apptest.PluginOf[*overview.Overview](s, "overview").SetClock(clocktest.New(overviewNow))
 	s.Registry().Language(registry.Language{Name: "Go", Extensions: []string{".go"}})
 	s.Registry().Language(registry.Language{Name: "SQL", Extensions: []string{".sql"}})
 	s.Registry().Language(registry.Language{Name: "YAML", Extensions: []string{".yaml"}})
@@ -39,7 +39,7 @@ func overviewScene(t *testing.T, make func(home string) string) *apptest.Scene {
 }
 
 func overviewDone(s *apptest.Scene) bool {
-	return apptest.PluginOf[*shell.Overview](s, "overview").Done()
+	return apptest.PluginOf[*overview.Overview](s, "overview").Done()
 }
 
 // A repo's card against 40-overview: languages, commit activity, contributors and the branch.

@@ -7,8 +7,6 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
-	"github.com/liamg/oriel/internal/clock"
-	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -76,27 +74,6 @@ func (v *helpView) EndHelpMode() { v.mode = false }
 // LastMove is the last of a run of pointer moves waiting from ev, and the event read after the run.
 func LastMove(ev render.Event, events <-chan render.Event) (render.Event, render.Event) {
 	return lastMove(ev, events)
-}
-
-type Overview = overview
-
-const PanelBudget = panelBudget
-
-func (o *overview) SetClock(c clock.Clock) { o.clock = c }
-
-// Done says every card's header and panels have been computed.
-func (o *overview) Done() bool {
-	for _, cd := range o.cards {
-		if cd.git && cd.header == nil {
-			return false
-		}
-		for _, p := range cd.panels {
-			if !p.done {
-				return false
-			}
-		}
-	}
-	return len(o.cards) > 0
 }
 
 // TabNameOn is the token the session in front's tab name is drawn in.
@@ -188,11 +165,6 @@ func PaneLead(h *Headless, v layout.ViewRef) (render.Color, bool) { return h.sh.
 
 // PaneTip is a tab's tooltip.
 func PaneTip(h *Headless, v layout.ViewRef) string { return h.sh.layout.panes.Tip(v) }
-
-// RailEntryActive says e's panel is showing for project, as its rail entry is lit.
-func RailEntryActive(h plugin.Host, e uireg.RailEntry, project string) bool {
-	return active(h, e, project)
-}
 
 // Selected is the omnibox's selected row.
 func (o *omnibox) Selected() int { return o.sel }

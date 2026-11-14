@@ -65,7 +65,7 @@ func (l *layoutPlugin) Activate(_ context.Context, h plugin.Host) error {
 	l.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "layout", Path: path, Load: func(b []byte) { l.saved = b }})
 	l.Add(registry.DisposeFunc(l.state.Close))
 	// A view put in front is what the user asked to see: the page over the layout gives way to it.
-	l.root.OnShow(func(layout.ViewRef) { closePlaces(h) })
+	l.root.OnShow(func(layout.ViewRef) { uireg.ClosePlaces(h) })
 	l.Add(h.DeclareEvent(registry.EventInfo{Name: registry.EventName[kit.DirChanged](), Fired: true, Payload: kit.DirChanged{},
 		Doc: "The window moved onto another directory, as a session in another one came to the front; plugins live on across it, and one that keeps something per directory swaps it here. The new directory's layout comes back after its hooks, in place of any view one opens. { dir, was, session }"}))
 	h.Do(func() { // once every plugin has registered its views, and what they hold it for is read
@@ -111,7 +111,7 @@ func (l *layoutPlugin) arrive() {
 // leave saves the layout for the directory the window is leaving, keeps it as it is for the window's return, and
 // empties it for the next one's; the pages over it close, as the layout under them goes.
 func (l *layoutPlugin) leave() {
-	closePlaces(l.h)
+	uireg.ClosePlaces(l.h)
 	l.keep(l.h) // to the directory's file it's leaving: the state file follows the window after
 	if p := l.state.Path(); l.restored && p != "" {
 		l.live[p], l.keptAt[p] = l.root.Save(), l.kept
@@ -223,7 +223,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 		{ID: "view.toggle", Title: "Show a view {id} (for a {project}), or close it if it's showing", Available: viewRegistered,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				if s, ok := l.matching(a, l.root.Visible()); ok {
-					if placeShown(h) {
+					if uireg.PlaceShown(h) {
 						// Open under a page: asked for, it's revealed, not put away.
 						l.root.Show(s)
 						return nil

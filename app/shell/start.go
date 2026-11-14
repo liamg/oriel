@@ -28,7 +28,7 @@ import (
 // shows while the window is about to open again on another directory or session.
 const (
 	StartView          = "app.start"
-	OverviewView       = "app.overview"
+	OverviewView       = kit.OverviewView
 	OpeningView        = "app.opening"
 	OverviewPanelsView = kit.OverviewPanelsView
 )

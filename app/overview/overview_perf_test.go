@@ -1,6 +1,6 @@
 //go:build perf && !race
 
-package shell_test
+package overview_test
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/overview"
 	"github.com/liamg/oriel/tools/perf"
 )
 
@@ -29,7 +29,7 @@ func TestOverviewBigRepoBudget(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: dir})
 	s.OverviewOff.Dispose()
 	var frames perf.Sampler
-	deadline := time.Now().Add(shell.PanelBudget + 5*time.Second)
+	deadline := time.Now().Add(overview.PanelBudget + 5*time.Second)
 	for !overviewDone(s) {
 		frames.Time(func() {
 			s.RunQueued()

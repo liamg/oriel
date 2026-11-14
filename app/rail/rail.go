@@ -1,4 +1,5 @@
-package shell
+// Package rail is the project sidebar: the window's projects and the panels each opens, with their entries.
+package rail
 
 import (
 	"cmp"
@@ -59,19 +60,20 @@ var (
 	tSideToggleBg = theme.Declare("sidebar.toggle.bg", "bg.raised")
 )
 
-// rail is the project sidebar, its built-in entries, and the commands that switch projects and panels.
-type rail struct {
+// Rail is the project sidebar, its built-in entries, and the commands that switch projects and panels.
+type Rail struct {
 	kit.Disposer
-	sh     *shell
-	h      plugin.Host
-	sel    int
-	form   string         // the window's own: "wide" or "narrow"; "" follows sidebar.form
-	state  *kit.StateFile // the form, kept for the window's directory
-	counts []railCount    // the git entries' notes, by the state they were counted in
+	// DirState is a state file kept for the directory the window is on now, as it moves.
+	DirState func(name string) string
+	h        plugin.Host
+	sel      int
+	form     string         // the window's own: "wide" or "narrow"; "" follows sidebar.form
+	state    *kit.StateFile // the form, kept for the window's directory
+	counts   []railCount    // the git entries' notes, by the state they were counted in
 }
 
 // loadForm takes the form the window's directory's sidebar was left in: none for nil.
-func (r *rail) loadForm(b []byte) {
+func (r *Rail) loadForm(b []byte) {
 	r.form = ""
 	var st sidebarState
 	if b != nil && json.Unmarshal(b, &st) == nil {
@@ -85,7 +87,7 @@ type railCount struct {
 }
 
 // uncommitted is kit.UncommittedCount(st), counted once per state; the states of the last few projects are kept.
-func (r *rail) uncommitted(st *gitx.State) int {
+func (r *Rail) uncommitted(st *gitx.State) int {
 	for _, c := range r.counts {
 		if c.st == st {
 			return c.n
@@ -96,7 +98,7 @@ func (r *rail) uncommitted(st *gitx.State) int {
 	return c.n
 }
 
-func (r *rail) Manifest() plugin.Manifest { return plugin.Manifest{ID: "rail"} }
+func (r *Rail) Manifest() plugin.Manifest { return plugin.Manifest{ID: "rail"} }
 
 // sidebarState is what the window keeps of the sidebar across restarts.
 type sidebarState struct {
@@ -114,9 +116,9 @@ var projectPanels = []struct {
 	{"pull-request", "pullrequest", "Pull request", kit.PullRequestView, "", 40, 0},
 }
 
-func (r *rail) Activate(_ context.Context, h plugin.Host) error {
+func (r *Rail) Activate(_ context.Context, h plugin.Host) error {
 	r.h = h
-	r.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "sidebar", Path: func() string { return r.sh.dirState("sidebar") }, Load: r.loadForm})
+	r.state = kit.NewStateFile(h, kit.StateFileOpts{Name: "sidebar", Path: func() string { return r.DirState("sidebar") }, Load: r.loadForm})
 	r.Add(registry.DisposeFunc(r.state.Close))
 	r.Add(kit.OnDirChanged(h, "the sidebar's selection is of its directory", func(kit.DirChanged) { r.sel = 0 }))
 	r.Add(h.Option(registry.OptionSpec{Name: "sidebar.form", Type: registry.Enum, Values: []string{"auto", "wide", "narrow"}, Default: "auto",
@@ -138,7 +140,7 @@ func (r *rail) Activate(_ context.Context, h plugin.Host) error {
 }
 
 // entries are the built-in rail entries: each project's panels, Requests and Ship, with their keys.
-func (r *rail) entries(h plugin.Host) {
+func (r *Rail) entries(h plugin.Host) {
 	remote := func(project string) bool {
 		return kit.GitOf(h).Tree(kit.ProjectsHere(h).Dir(project)).Remote() != ""
 	}
@@ -208,7 +210,7 @@ func (r *rail) entries(h plugin.Host) {
 }
 
 // commands are project.open, project.move, project.fold, project.panel and sidebar.form.
-func (r *rail) commands(h plugin.Host) []registry.Command {
+func (r *Rail) commands(h plugin.Host) []registry.Command {
 	return []registry.Command{
 		{ID: "project.open", Title: "Open a project of the session: {project}, or the {index}th; it reopens its last panel",
 			Available: func(a registry.Args) bool { _, ok := r.target(a); return ok },
@@ -277,10 +279,10 @@ func (r *rail) commands(h plugin.Host) []registry.Command {
 	}
 }
 
-func (r *rail) Deactivate(ctx context.Context) error { return r.Disposer.Deactivate(ctx) }
+func (r *Rail) Deactivate(ctx context.Context) error { return r.Disposer.Deactivate(ctx) }
 
 // target is the project a project.open names: by name, or by its place (1-based).
-func (r *rail) target(a registry.Args) (core.Project, bool) {
+func (r *Rail) target(a registry.Args) (core.Project, bool) {
 	w := kit.ProjectsHere(r.h)
 	if name := a.String("project"); name != "" {
 		return w.Project(name)
@@ -292,14 +294,14 @@ func (r *rail) target(a registry.Args) (core.Project, bool) {
 }
 
 // scopeOf is the project a command's {project} names, else the one a panel opened now is for.
-func (r *rail) scopeOf(a registry.Args) string {
+func (r *Rail) scopeOf(a registry.Args) string {
 	if p := a.String("project"); p != "" {
 		return p
 	}
 	return kit.ProjectsHere(r.h).Scope()
 }
 
-func (r *rail) entry(name string) (uireg.RailEntry, bool) {
+func (r *Rail) entry(name string) (uireg.RailEntry, bool) {
 	for _, e := range uireg.ProjectEntries(r.h) {
 		if e.Name == name {
 			return e, true
@@ -322,7 +324,7 @@ func active(h plugin.Host, e uireg.RailEntry, project string) bool {
 }
 
 // run runs an entry for project, and remembers a project's panel once it's showing.
-func (r *rail) run(ctx registry.Ctx, e uireg.RailEntry, project string) error {
+func (r *Rail) run(ctx registry.Ctx, e uireg.RailEntry, project string) error {
 	if err := r.h.Run(ctx, e.Command, kit.SidebarArgs(e.Command, e.ArgsFor(project))); err != nil {
 		return err
 	}
@@ -335,7 +337,7 @@ func (r *rail) run(ctx registry.Ctx, e uireg.RailEntry, project string) error {
 
 // open makes p the open project: the docked panels of the others go, and p's last panel (or the one showing for the
 // project it replaces) comes back.
-func (r *rail) open(ctx registry.Ctx, p core.Project) error {
+func (r *Rail) open(ctx registry.Ctx, p core.Project) error {
 	w := kit.ProjectsHere(r.h)
 	if w.Session == nil {
 		return nil
@@ -369,7 +371,10 @@ func (r *rail) open(ctx registry.Ctx, p core.Project) error {
 }
 
 // formNow is the window's form: its own, else the option's, auto being wide with projects to choose between.
-func (r *rail) formNow(w kit.Here) string {
+// Form is the form the sidebar takes for the projects here: wide, narrow, one, or none.
+func (r *Rail) Form() string { return r.formNow(kit.ProjectsHere(r.h)) }
+
+func (r *Rail) formNow(w kit.Here) string {
 	if r.form != "" {
 		return r.form
 	}
@@ -384,7 +389,7 @@ func (r *rail) formNow(w kit.Here) string {
 }
 
 // canAdd says the user can add a project to the session in front: there are sessions, and it isn't a directory.
-func (r *rail) canAdd(w kit.Here) bool {
+func (r *Rail) canAdd(w kit.Here) bool {
 	return w.Session != nil && registry.Can(r.h, w.Session.Kind, core.AddProjects) && r.h.Available("project.add", nil)
 }
 
@@ -407,7 +412,7 @@ const (
 	rowGap
 )
 
-func (r *rail) rows(w kit.Here, wide bool) []sideRow {
+func (r *Rail) rows(w kit.Here, wide bool) []sideRow {
 	rows := []sideRow{{kind: rowHeading}}
 	var kind core.Kind
 	if w.Session != nil {
@@ -464,7 +469,7 @@ func (r *rail) rows(w kit.Here, wide bool) []sideRow {
 	return rows
 }
 
-func (r *rail) build(c *ui.Ctx, vc uireg.ViewCtx) {
+func (r *Rail) build(c *ui.Ctx, vc uireg.ViewCtx) {
 	w := kit.ProjectsIn(r.h.Here().Project, vc.Session)
 	th := c.Theme()
 	wide := r.formNow(w) == "wide"
@@ -509,14 +514,14 @@ func (r *rail) build(c *ui.Ctx, vc uireg.ViewCtx) {
 	})
 }
 
-func (r *rail) unavailable(row sideRow) bool {
+func (r *Rail) unavailable(row sideRow) bool {
 	if row.kind != rowEntry && row.kind != rowSession {
 		return false
 	}
 	return !r.h.Available(row.entry.Command, row.entry.ArgsFor(row.scope))
 }
 
-func (r *rail) label(row sideRow) string {
+func (r *Rail) label(row sideRow) string {
 	switch row.kind {
 	case rowProject:
 		return row.project.Name
@@ -526,7 +531,7 @@ func (r *rail) label(row sideRow) string {
 	return ""
 }
 
-func (r *rail) tooltip(w kit.Here, row sideRow, wide bool) string {
+func (r *Rail) tooltip(w kit.Here, row sideRow, wide bool) string {
 	switch row.kind {
 	case rowProject:
 		if wide {
@@ -569,10 +574,10 @@ func noteOf(row sideRow) string {
 	return note
 }
 
-func (r *rail) activate(w kit.Here, row sideRow) {
+func (r *Rail) activate(w kit.Here, row sideRow) {
 	ctx := context.Background()
-	if placeShown(r.h) {
-		closePlaces(r.h)
+	if uireg.PlaceShown(r.h) {
+		uireg.ClosePlaces(r.h)
 		if row.kind != rowProject && active(r.h, row.entry, row.scope) {
 			return
 		}
@@ -615,7 +620,7 @@ func (l stateLine) texts() []string {
 
 // stateLine is a project's header line: branch and ahead/behind, its changes ("read-only" for a project the session
 // only reads), then what plugins add (a PR, CI).
-func (r *rail) stateLine(w kit.Here, p core.Project) stateLine {
+func (r *Rail) stateLine(w kit.Here, p core.Project) stateLine {
 	th := r.h.CurrentTheme()
 	if th == nil {
 		return nil
@@ -654,7 +659,7 @@ func (r *rail) stateLine(w kit.Here, p core.Project) stateLine {
 }
 
 // wideRow draws a row of the wide sidebar.
-func (r *rail) wideRow(c *ui.Ctx, w kit.Here, row sideRow) {
+func (r *Rail) wideRow(c *ui.Ctx, w kit.Here, row sideRow) {
 	th := c.Theme()
 	switch row.kind {
 	case rowHeading:
@@ -691,7 +696,7 @@ func (r *rail) wideRow(c *ui.Ctx, w kit.Here, row sideRow) {
 }
 
 // addButton is + in the sidebar's heading: add a project to the session.
-func (r *rail) addButton(c *ui.Ctx, w kit.Here) {
+func (r *Rail) addButton(c *ui.Ctx, w kit.Here) {
 	if r.canAdd(w) && widget.IconButton(c, "add", "+", widget.IconButtonOpts{Label: "Add a project", Help: "shell/rail", Size: 20}) {
 		if err := r.h.Run(context.Background(), "project.add", nil); err != nil {
 			r.h.Log().Error("sidebar", "add", err)
@@ -700,7 +705,7 @@ func (r *rail) addButton(c *ui.Ctx, w kit.Here) {
 }
 
 // header is a project's two lines: twisty, colour, name and ⌃n; then its state.
-func (r *rail) header(c *ui.Ctx, w kit.Here, row sideRow) {
+func (r *Rail) header(c *ui.Ctx, w kit.Here, row sideRow) {
 	th := c.Theme()
 	open := row.project.Name == w.Open
 	fill := render.Color{}
@@ -742,7 +747,7 @@ func (r *rail) header(c *ui.Ctx, w kit.Here, row sideRow) {
 }
 
 // entryNote is the right of an entry: its badge as a pill, else its note.
-func (r *rail) entryNote(c *ui.Ctx, row sideRow, size float32) {
+func (r *Rail) entryNote(c *ui.Ctx, row sideRow, size float32) {
 	th := c.Theme()
 	if n := badge(row.entry); n > 0 {
 		widget.Badge(c, "badge", n, widget.BadgeOpts{Fill: badgeFill(th, row.entry), Ink: th.C(tRailBadgeF), Size: size})
@@ -753,7 +758,7 @@ func (r *rail) entryNote(c *ui.Ctx, row sideRow, size float32) {
 	}
 }
 
-func (r *rail) wideEntry(c *ui.Ctx, row sideRow) {
+func (r *Rail) wideEntry(c *ui.Ctx, row sideRow) {
 	th := c.Theme()
 	off := r.unavailable(row)
 	on := !off && active(r.h, row.entry, row.scope)
@@ -780,7 +785,7 @@ func (r *rail) wideEntry(c *ui.Ctx, row sideRow) {
 }
 
 // narrowRow draws a row of the icon strip.
-func (r *rail) narrowRow(c *ui.Ctx, w kit.Here, row sideRow) {
+func (r *Rail) narrowRow(c *ui.Ctx, w kit.Here, row sideRow) {
 	th := c.Theme()
 	cell := func(key string, h float32, body func(c *ui.Ctx)) {
 		c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(h), Main: ui.Center, Cross: ui.Center}, body)
@@ -849,7 +854,8 @@ func entryIcon(c *ui.Ctx, e uireg.RailEntry, size float32, tone render.Color) {
 		e.Draw(c, "icon", size, tone)
 		return
 	}
-	icon(c, "icon", e.Icon, size, tone)
+	r, _ := ui.Service[registry.Registry](c)
+	kit.Icon(c, r, "icon", e.Icon, size, tone)
 }
 
 // badgeFill is the colour of an entry's pill: its BadgeTone, else rail.badge.

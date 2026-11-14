@@ -1,4 +1,6 @@
-package shell
+// Package overview is the project overview: what the window shows on a directory with no view open, a card per
+// repo with its languages, size, branch and readme.
+package overview
 
 import (
 	"bufio"
@@ -50,17 +52,18 @@ const (
 	maxLineFile  = 4 << 20 // bigger files' lines are estimated from their size
 )
 
-// overview is the project overview: a card per repo or directory open, its panels computed off the loop and kept
+// Overview is the project overview: a card per repo or directory open, its panels computed off the loop and kept
 // until the repo's HEAD moves.
-type overview struct {
+type Overview struct {
 	kit.Disposer
-	sh    *shell
-	h     plugin.Host
-	mu    sync.Mutex
-	cards map[string]*card
-	scans map[string]*scan
-	clock clock.Clock
-	busy  kit.Busy // a card's reads and panels, off the loop
+	// WorkDir is the directory the window is on now.
+	WorkDir func() string
+	h       plugin.Host
+	mu      sync.Mutex
+	cards   map[string]*card
+	scans   map[string]*scan
+	clock   clock.Clock
+	busy    kit.Busy // a card's reads and panels, off the loop
 }
 
 // card is one directory's results, for the HEAD they were computed at.
@@ -100,9 +103,9 @@ func (r *panelResult) state() widget.LoadState {
 	return widget.LoadState{Phase: widget.Ready}
 }
 
-func (o *overview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "overview"} }
+func (o *Overview) Manifest() plugin.Manifest { return plugin.Manifest{ID: "overview"} }
 
-func (o *overview) Activate(_ context.Context, h plugin.Host) error {
+func (o *Overview) Activate(_ context.Context, h plugin.Host) error {
 	o.h, o.cards, o.scans = h, map[string]*card{}, map[string]*scan{}
 	for _, p := range []uireg.OverviewPanel{
 		{Name: "languages", Title: "Languages", Order: 10, Width: 330, Repos: true, Dirs: true, Compute: o.languages},
@@ -114,10 +117,10 @@ func (o *overview) Activate(_ context.Context, h plugin.Host) error {
 		o.Add(h.Contribute(p))
 	}
 	o.Add(h.Contribute(registry.Busy{Name: "overview", Busy: o.busy.Busy, Source: "builtin:overview"}))
-	o.Add(h.View(OverviewView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
+	o.Add(h.View(kit.OverviewView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "overview", Fn: o.build}
 	})))
-	o.Add(h.View(OverviewPanelsView, uireg.ViewFunc(func(vc uireg.ViewCtx) ui.Node {
+	o.Add(h.View(kit.OverviewPanelsView, uireg.ViewFunc(func(vc uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "panels", Fn: func(c *ui.Ctx) {
 			if vc.Instance != "" {
 				o.panels(c, vc.Instance, o.card(vc.Instance))
@@ -128,8 +131,11 @@ func (o *overview) Activate(_ context.Context, h plugin.Host) error {
 }
 
 // roots are the directories the overview has a card for: the one open, until sessions bring their repos.
-func (o *overview) roots() []string {
-	dir := o.sh.cfg.WorkDir
+func (o *Overview) roots() []string {
+	if o.WorkDir == nil {
+		return nil
+	}
+	dir := o.WorkDir()
 	if dir == "" {
 		return nil
 	}
@@ -173,7 +179,7 @@ func headOf(rd *kit.Reads, dir string) (head string, git, ok bool) {
 
 // card is dir's card, started computing if it's new or its HEAD has moved. Until its HEAD is read it's an empty
 // card that isn't kept.
-func (o *overview) card(dir string) *card {
+func (o *Overview) card(dir string) *card {
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	cd := o.cards[dir]
@@ -214,7 +220,7 @@ func (o *overview) card(dir string) *card {
 }
 
 // computeNew starts the panels that apply to dir's card and haven't started yet.
-func (o *overview) computeNew(dir string, cd *card) {
+func (o *Overview) computeNew(dir string, cd *card) {
 	for _, p := range uireg.OverviewPanels(o.h) {
 		if cd.panels[p.Name] == nil && ((cd.git && p.Repos) || (!cd.git && p.Dirs)) {
 			o.compute(dir, cd, p)
@@ -222,7 +228,7 @@ func (o *overview) computeNew(dir string, cd *card) {
 	}
 }
 
-func (o *overview) compute(dir string, cd *card, p uireg.OverviewPanel) {
+func (o *Overview) compute(dir string, cd *card, p uireg.OverviewPanel) {
 	res := &panelResult{since: kit.WindowNow(o.h)}
 	cd.panels[p.Name] = res
 	o.busy.Go(func() {
@@ -234,7 +240,7 @@ func (o *overview) compute(dir string, cd *card, p uireg.OverviewPanel) {
 	})
 }
 
-func (o *overview) build(c *ui.Ctx) {
+func (o *Overview) build(c *ui.Ctx) {
 	th := c.Theme()
 	c.Column("overview", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(34, 26), Gap: 22, ScrollY: true, Help: "shell/overview",
 		Role: ui.RoleRegion, Label: "Overview"}, func(c *ui.Ctx) {
@@ -248,7 +254,7 @@ func (o *overview) build(c *ui.Ctx) {
 	})
 }
 
-func (o *overview) cardView(c *ui.Ctx, dir string) {
+func (o *Overview) cardView(c *ui.Ctx, dir string) {
 	th := c.Theme()
 	cd := o.card(dir)
 	c.Column(dir, ui.Style{W: ui.Flex(1), Fill: th.C(tOverviewCard), Stroke: th.C(theme.Line), Border: 1, Radius: 12, Clip: true,
@@ -297,7 +303,7 @@ func readReadme(dir string) readme {
 }
 
 // panels are dir's card's panels, side by side.
-func (o *overview) panels(c *ui.Ctx, dir string, cd *card) {
+func (o *Overview) panels(c *ui.Ctx, dir string, cd *card) {
 	th := c.Theme()
 	c.Row("panels", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		ps := slices.DeleteFunc(uireg.OverviewPanels(o.h), func(p uireg.OverviewPanel) bool {
@@ -326,7 +332,7 @@ func (o *overview) panels(c *ui.Ctx, dir string, cd *card) {
 	})
 }
 
-func (o *overview) branch(c *ui.Ctx, cd *card) {
+func (o *Overview) branch(c *ui.Ctx, cd *card) {
 	th := c.Theme()
 	hd := cd.header
 	if hd == nil && cd.git {
@@ -373,7 +379,7 @@ type scannedFile struct {
 	lines int
 }
 
-func (o *overview) scanOf(ctx context.Context, dir string) *scan {
+func (o *Overview) scanOf(ctx context.Context, dir string) *scan {
 	o.mu.Lock()
 	s := o.scans[dir]
 	if s == nil {
@@ -560,7 +566,7 @@ func shares(files []scannedFile) (out []langShare, total, n int) {
 	return out, total, n
 }
 
-func (o *overview) languages(ctx registry.Ctx, dir string) (ui.Node, error) {
+func (o *Overview) languages(ctx registry.Ctx, dir string) (ui.Node, error) {
 	s := o.scanOf(ctx, dir)
 	if s.err != nil {
 		return nil, s.err
@@ -620,7 +626,7 @@ func (o *overview) languages(ctx registry.Ctx, dir string) (ui.Node, error) {
 	}}, nil
 }
 
-func (o *overview) size(ctx registry.Ctx, dir string) (ui.Node, error) {
+func (o *Overview) size(ctx registry.Ctx, dir string) (ui.Node, error) {
 	s := o.scanOf(ctx, dir)
 	if s.err != nil {
 		return nil, s.err
@@ -636,7 +642,7 @@ func (o *overview) size(ctx registry.Ctx, dir string) (ui.Node, error) {
 	return statRows([][2]string{{"files", kit.Thousands(n)}, {"directories", kit.Thousands(len(dirs))}, {"on disk", kit.Bytes(size)}}), nil
 }
 
-func (o *overview) largest(ctx registry.Ctx, dir string) (ui.Node, error) {
+func (o *Overview) largest(ctx registry.Ctx, dir string) (ui.Node, error) {
 	s := o.scanOf(ctx, dir)
 	if s.err != nil {
 		return nil, s.err
@@ -675,7 +681,7 @@ const (
 	heatGap   = 3
 )
 
-func (o *overview) activity(ctx registry.Ctx, dir string) (ui.Node, error) {
+func (o *Overview) activity(ctx registry.Ctx, dir string) (ui.Node, error) {
 	r := gitx.Repo{Dir: dir}
 	now := clock.Or(o.clock).Now()
 	end := now.AddDate(0, 0, 6-int(now.Weekday())) // the Saturday ending this week
@@ -737,7 +743,7 @@ func (o *overview) activity(ctx registry.Ctx, dir string) (ui.Node, error) {
 	}}, nil
 }
 
-func (o *overview) contributors(ctx registry.Ctx, dir string) (ui.Node, error) {
+func (o *Overview) contributors(ctx registry.Ctx, dir string) (ui.Node, error) {
 	as, err := gitx.Repo{Dir: dir}.Authors(ctx)
 	if err != nil {
 		return nil, err

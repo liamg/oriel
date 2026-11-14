@@ -19,6 +19,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/agents"
+	"github.com/liamg/oriel/app/rail"
 	"github.com/liamg/oriel/tools/perf"
 
 	"github.com/liamg/oriel/registry/uireg"
@@ -871,3 +872,6 @@ type nowClock func() time.Time
 func (c nowClock) Now() time.Time { return c() }
 
 func (nowClock) AfterFunc(d time.Duration, f func()) clock.Timer { return clock.Real().AfterFunc(d, f) }
+
+// SidebarForm is the form the sidebar takes for the projects here: wide, narrow, one, or none.
+func (s *Scene) SidebarForm() string { return PluginOf[*rail.Rail](s, "rail").Form() }

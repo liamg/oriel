@@ -34,6 +34,8 @@ const (
 	RailView = "app.rail"
 	// EditorView is the editor pane's view id; each window is an instance of it, named by the window's id.
 	EditorView = "editor"
+	// OverviewView is the project overview, which the window shows with a directory or session open but no view in it.
+	OverviewView = "app.overview"
 	// OverviewPanelsView is a directory's overview panels alone, the directory its instance: the Repos page's stats.
 	OverviewPanelsView = "app.overview.panels"
 	// AgentConsoleView is a session's agent console.

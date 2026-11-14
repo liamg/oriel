@@ -93,13 +93,15 @@ type Builtins func(Parts) []plugin.Plugin
 type Parts struct {
 	Config Config // as it is when the plugins are made: WorkDir and Files are where the window started
 	// DirState is a state file kept for the directory the window is on now (Config.DirState), as it moves.
-	DirState  func(name string) string
+	DirState func(name string) string
+	// WorkDir is the directory the window is on now.
+	WorkDir   func() string
 	Clipboard edit.Clipboard // the system clipboard, as the editor's registers see it
 	Pictures  *kit.Pictures  // the window's images
 	Tools     *search.Tools  // the machine's search tools
 
-	UI, Frames, Themes, Layout, Rail, Start, Overview, Introspect, StatusLine, SessionTabs plugin.Plugin
-	Omnibox, Picker, WhichKey, Help, Nav, Menus, Notices, Desktop, Quit                    plugin.Plugin
+	UI, Frames, Themes, Layout, Start, Introspect, StatusLine, SessionTabs plugin.Plugin
+	Omnibox, Picker, WhichKey, Help, Nav, Menus, Notices, Desktop, Quit    plugin.Plugin
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}

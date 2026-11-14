@@ -333,3 +333,23 @@ func Indicators(r registry.Contributions, slot string) []Indicator {
 
 func (Indicator) ContributionKind() string   { return "hud.indicator" }
 func (t Indicator) ContributionName() string { return t.Name }
+
+// PlaceShown says a place (a page) is showing over the layout.
+func PlaceShown(r registry.Contributions) bool {
+	name, ok := ShownPlace(r)
+	return name != "" || !ok
+}
+
+// ClosePlaces puts away every place showing, as something else is put in front.
+func ClosePlaces(r registry.Contributions) {
+	for _, p := range registry.ContributionsOf[Place](r) {
+		if p.Shown == nil || p.Close == nil {
+			continue
+		}
+		shown := false
+		registry.Call(func() error { shown = p.Shown(); return nil })
+		if shown {
+			registry.Call(func() error { p.Close(); return nil })
+		}
+	}
+}

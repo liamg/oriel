@@ -10,6 +10,8 @@ import (
 	"github.com/liamg/oriel/app/gitui"
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/app/luaconfig"
+	"github.com/liamg/oriel/app/overview"
+	"github.com/liamg/oriel/app/rail"
 	"github.com/liamg/oriel/app/review"
 	appsessions "github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/app/settings"
@@ -34,7 +36,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	// The agent providers come before the plugins and config that may register their own under the same name.
 	out = append(out, cfg.Agents...)
 	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages"), CacheDir: c.CacheDir}, p.Themes, p.Layout, gits,
-		p.Rail, &gitui.Explorer{Git: gits}, p.Start, p.Overview, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
+		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
 		&stats.HUD{}, &agentui.Inbox{}, p.Omnibox, p.Picker, p.WhichKey, &settings.Consent{}, p.Help, p.Nav, p.Menus,
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},

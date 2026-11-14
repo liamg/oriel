@@ -17,9 +17,9 @@ import (
 func (sh *shell) parts() Parts {
 	sh.layout = &layoutPlugin{sh: sh}
 	cfg := sh.cfg
-	return Parts{Config: cfg, DirState: sh.dirState, Clipboard: desktopClipboard{&sh.desktop}, Pictures: sh.reads.Pictures, Tools: sh.tools,
+	return Parts{Config: cfg, DirState: sh.dirState, WorkDir: func() string { return sh.cfg.WorkDir }, Clipboard: desktopClipboard{&sh.desktop}, Pictures: sh.reads.Pictures, Tools: sh.tools,
 		UI: &uiOptions{}, Frames: &frames{}, Themes: &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, Layout: sh.layout,
-		Rail: &rail{sh: sh}, Start: &start{sh: sh}, Overview: &overview{sh: sh}, Introspect: &introspect{configDir: cfg.ConfigDir},
+		Start: &start{sh: sh}, Introspect: &introspect{configDir: cfg.ConfigDir},
 		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh}, Omnibox: &omnibox{}, Picker: &picker{}, WhichKey: &whichKey{},
 		Help: &helpView{configDir: cfg.ConfigDir}, Nav: &navPlugin{sh: sh}, Menus: &contextMenus{}, Notices: &notices{sh: sh},
 		Desktop: &desktopPlugin{desktop: &sh.desktop}, Quit: &quitDialog{draining: &sh.draining}}

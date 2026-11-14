@@ -408,13 +408,3 @@ func (h *Headless) Drop(ev render.DropEvent) { h.sh.dropped(ev) }
 
 // ReopenAsked says the window has been asked to open again on another directory or session.
 func (h *Headless) ReopenAsked() bool { return len(h.sh.reopen) > 0 }
-
-// SidebarForm is the form the sidebar takes for the projects here: wide, narrow, one, or none.
-func (h *Headless) SidebarForm() string {
-	for _, p := range h.plugins {
-		if r, ok := p.(*rail); ok {
-			return r.formNow(kit.ProjectsHere(h.host))
-		}
-	}
-	return ""
-}

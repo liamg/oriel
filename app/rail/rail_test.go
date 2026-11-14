@@ -1,4 +1,4 @@
-package shell_test
+package rail_test
 
 import (
 	"image"

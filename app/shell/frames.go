@@ -32,7 +32,7 @@ func (x *frames) Manifest() plugin.Manifest { return plugin.Manifest{ID: "frames
 func (x *frames) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(uireg.Frame{ID: WorkspaceFrame, Order: 50, When: sessionRunning, Regions: []uireg.Region{
 		{View: kit.TitleBarView, Area: uireg.AreaTop},
-		{View: RailView, Area: uireg.AreaLeft},
+		{View: kit.RailView, Area: uireg.AreaLeft},
 		{View: kit.RootView, Area: uireg.AreaMain},
 		{View: kit.StatusLineView, Area: uireg.AreaBottom},
 		{View: NotificationsView, Area: uireg.AreaOver},
