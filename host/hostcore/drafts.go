@@ -6,31 +6,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
+
+	"github.com/liamg/oriel/host/hostapi"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 )
 
-// Draft is a commit message or PR drafted for a project: by the agent (its provider's name) or "you". Stale says
-// the code has moved on since it was written.
-type Draft struct {
-	Title string    `json:"title,omitempty"`
-	Body  string    `json:"body,omitempty"`
-	By    string    `json:"by,omitempty"`
-	Saved time.Time `json:"saved,omitzero"`
-	Stale bool      `json:"stale,omitempty"`
-	Code  string    `json:"-"` // the code's fingerprint when it was written (DraftCode)
-}
+type Draft = hostapi.Draft
 
-// DraftByYou marks a draft the user wrote: the agent never overwrites it.
-const DraftByYou = "you"
+const DraftByYou = hostapi.DraftByYou
 
 // DraftNoun is what each kind of draft is called.
 var DraftNoun = map[string]string{"commit": "commit message", "pr": "PR draft"}
-
-// Empty says nothing was drafted.
-func (d Draft) Empty() bool { return strings.TrimSpace(d.Title+d.Body) == "" }
 
 // DraftCode is the fingerprint a draft is written against: the uncommitted code for a commit message, the branch's
 // whole change from its base for a PR.

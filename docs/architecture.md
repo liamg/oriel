@@ -73,8 +73,11 @@ plugin uses, so each can be replaced, removed or configured from Lua.
 
 What crosses features is a service, a command, a hook event or a core event, never another plugin's fields. A plugin
 offers a typed service with `registry.Service{Name, Impl}` and others find it with `registry.ServiceOf[T]`; the
-built-ins include `Editors`, `GitTrees` (`registry/services`), `CodeSites`, `Ships`, `Sessions` and the session host's parts (`host.SessionCalls`, `host.RepoCalls`…). A plugin reads and
+built-ins include `Editors`, `GitTrees` (`registry/services`), `CodeSites`, `Ships`, `Sessions` and the session host's parts (`hostapi.SessionCalls`, `hostapi.RepoCalls`…, published by the app's built-in `host` plugin). A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
+
+The session host's calls and the types they carry live in `host/hostapi`, a leaf
+the host's parts and the app both import (`app/kit` never reaches the host itself).
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
 underneath them: the layout it leaves is saved and kept as it is, its views open, the pages over it close, the

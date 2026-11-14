@@ -10,7 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -113,7 +113,7 @@ func (x *End) commands() []registry.Command {
 				case "":
 					return x.open(id)
 				case endArchive, endDelete:
-					return x.end(ctx, host.EndReq{Session: id, Delete: a.String("how") == endDelete, Discard: a.Bool("discard"),
+					return x.end(ctx, hostapi.EndReq{Session: id, Delete: a.String("how") == endDelete, Discard: a.Bool("discard"),
 						DeleteBranch: a.Bool("delete_branch")})
 				}
 				return fmt.Errorf("a session ends by archive or delete, not %q", a.String("how"))
@@ -201,7 +201,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 	if !kit.ArchivesOnMerge(x.h, se, ships.For(se)) {
 		return
 	}
-	if err := x.end(ctx, host.EndReq{Session: id}); err != nil {
+	if err := x.end(ctx, hostapi.EndReq{Session: id}); err != nil {
 		x.h.Notify(core.Notice{ID: "session.end." + string(id), Severity: core.SevError, Session: id, Text: err.Error()})
 	}
 }
@@ -241,11 +241,11 @@ func (x *End) confirm(ctx registry.Ctx) error {
 		ships = s.For(se)
 	}
 	x.ask = nil
-	return x.end(ctx, host.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && kit.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
+	return x.end(ctx, hostapi.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && kit.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
 }
 
 // end closes the session's tab, then ends it off the loop; an archive offers Undo while its branches stay.
-func (x *End) end(ctx registry.Ctx, r host.EndReq) error {
+func (x *End) end(ctx registry.Ctx, r hostapi.EndReq) error {
 	w, _ := kit.SessionCalls(x.h)
 	if w == nil {
 		return errors.New("there are no sessions in this window")
@@ -294,7 +294,7 @@ func (x *End) view(c *ui.Ctx) {
 	if a.closing && (a.done == "" || deletes) && st.Phase == widget.Ready && !slices.ContainsFunc(x.lossesOf(se, ships, a.deleteBranch), loss.matters) {
 		x.ask = nil
 		x.h.Do(func() {
-			if err := x.end(context.Background(), host.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
+			if err := x.end(context.Background(), hostapi.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
 				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, AutoClear: true, Session: a.id, Text: err.Error()})
 			}
 		})

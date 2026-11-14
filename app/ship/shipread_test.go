@@ -6,7 +6,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -25,7 +25,7 @@ func TestAChangeReadsOnlyItsProject(t *testing.T) {
 	s.WriteFiles(shipDir(se, "search-api"), map[string]string{"internal/changed.go": "package internal\n"})
 	shipSettle(s, t, "search-api read again with the new file", func() bool {
 		api, _ := x.ShipOf(se.ID, "search-api")
-		return slices.ContainsFunc(api.Files, func(f host.ShipFile) bool { return f.Path == "internal/changed.go" })
+		return slices.ContainsFunc(api.Files, func(f hostapi.ShipFile) bool { return f.Path == "internal/changed.go" })
 	})
 	shipQuiet(s)
 	if n := x.WholeReads(se.ID) - whole; n > 0 {

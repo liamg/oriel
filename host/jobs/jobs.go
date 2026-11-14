@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
@@ -43,25 +45,7 @@ func New(env hostcore.Env, st hostcore.State, deps Deps) *Jobs {
 	return &Jobs{env: env, st: st, deps: deps}
 }
 
-// Job is a saved prompt with its pins. It names no repo or branch: the prompt names the repos,
-// and the agent running it adds them. Each is one file under the host's jobs/.
-type Job struct {
-	Name     string `json:"name"` // its slug: the file, and what its runs are named after
-	Title    string `json:"title"`
-	Prompt   string `json:"prompt"`
-	Sandbox  string `json:"sandbox,omitempty"` // "sandbox", "host", or "" for sandbox.default
-	Provider string `json:"provider,omitempty"`
-	Model    string `json:"model,omitempty"`
-	Effort   string `json:"effort,omitempty"`
-	// Schedule runs it by itself; the zero one is manual.
-	Schedule  Schedule  `json:"schedule,omitzero"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	// Due is the occurrence of its schedule it last ran, or skipped.
-	Due time.Time `json:"due,omitzero"`
-	// Skips are the occurrences skipped while its last run was still going, the latest maxSkips, oldest first.
-	Skips []time.Time `json:"skips,omitempty"`
-}
+type Job = hostapi.Job
 
 // maxSkips is how many skipped occurrences a job keeps.
 const maxSkips = 50

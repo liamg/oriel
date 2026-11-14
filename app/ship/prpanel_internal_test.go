@@ -5,7 +5,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/prui"
 
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -13,12 +13,12 @@ import (
 func panelStates() map[string]shipRead {
 	open := &registry.PR{Number: 7, Title: "t", State: "open", Head: "aaaaaaa1"}
 	return map[string]shipRead{
-		"not raised": {Ship: host.Ship{Base: "main"}},
-		"unpushed":   {Ship: host.Ship{Base: "main", Files: []host.ShipFile{{Path: "a"}}, Behind: 2, Unpushed: []host.ShipCommit{{Hash: "b"}}}},
-		"open":       {Ship: host.Ship{Base: "main", Pushed: true, Head: "aaaaaaa1"}, PR: open},
-		"no checks":  {Ship: host.Ship{Pushed: true}, PR: open},
-		"remote":     {Ship: host.Ship{Base: "main", Pushed: true, Head: "bbbbbbb2"}, PR: open},
-		"merged":     {Ship: host.Ship{Base: "main", Pushed: true}, PR: &registry.PR{Number: 7, State: "closed", Merged: true}},
+		"not raised": {Ship: hostapi.Ship{Base: "main"}},
+		"unpushed":   {Ship: hostapi.Ship{Base: "main", Files: []hostapi.ShipFile{{Path: "a"}}, Behind: 2, Unpushed: []hostapi.ShipCommit{{Hash: "b"}}}},
+		"open":       {Ship: hostapi.Ship{Base: "main", Pushed: true, Head: "aaaaaaa1"}, PR: open},
+		"no checks":  {Ship: hostapi.Ship{Pushed: true}, PR: open},
+		"remote":     {Ship: hostapi.Ship{Base: "main", Pushed: true, Head: "bbbbbbb2"}, PR: open},
+		"merged":     {Ship: hostapi.Ship{Base: "main", Pushed: true}, PR: &registry.PR{Number: 7, State: "closed", Merged: true}},
 	}
 }
 
@@ -43,18 +43,18 @@ func TestRemoteAhead(t *testing.T) {
 		s    shipRead
 		want bool
 	}{
-		{"same commit", shipRead{Ship: host.Ship{Head: "c3f1a9e0b7d24e6f"}, PR: pr}, false},
-		{"same commit, short sha", shipRead{Ship: host.Ship{Head: "c3f1a9e"}, PR: pr}, false},
-		{"someone pushed", shipRead{Ship: host.Ship{Head: "0d9e8f7a6b5c4d3e"}, PR: pr}, true},
-		{"ours to push", shipRead{Ship: host.Ship{Head: "0d9e8f7a6b5c4d3e", Unpushed: []host.ShipCommit{{Hash: "0d9e8f7"}}}, PR: pr}, false},
-		{"no PR", shipRead{Ship: host.Ship{Head: "0d9e8f7a6b5c4d3e"}}, false},
-		{"host gives no head", shipRead{Ship: host.Ship{Head: "0d9e8f7a6b5c4d3e"}, PR: &registry.PR{State: "open"}}, false},
+		{"same commit", shipRead{Ship: hostapi.Ship{Head: "c3f1a9e0b7d24e6f"}, PR: pr}, false},
+		{"same commit, short sha", shipRead{Ship: hostapi.Ship{Head: "c3f1a9e"}, PR: pr}, false},
+		{"someone pushed", shipRead{Ship: hostapi.Ship{Head: "0d9e8f7a6b5c4d3e"}, PR: pr}, true},
+		{"ours to push", shipRead{Ship: hostapi.Ship{Head: "0d9e8f7a6b5c4d3e", Unpushed: []hostapi.ShipCommit{{Hash: "0d9e8f7"}}}, PR: pr}, false},
+		{"no PR", shipRead{Ship: hostapi.Ship{Head: "0d9e8f7a6b5c4d3e"}}, false},
+		{"host gives no head", shipRead{Ship: hostapi.Ship{Head: "0d9e8f7a6b5c4d3e"}, PR: &registry.PR{State: "open"}}, false},
 	} {
 		if got := remoteAhead(tc.s); got != tc.want {
 			t.Errorf("%s: remoteAhead = %v, want %v", tc.name, got, tc.want)
 		}
 	}
-	lines := branchLines(shipRead{Ship: host.Ship{Pushed: true, Head: "0d9e8f7a6b5c4d3e"}, PR: pr})
+	lines := branchLines(shipRead{Ship: hostapi.Ship{Pushed: true, Head: "0d9e8f7a6b5c4d3e"}, PR: pr})
 	if l := lines[len(lines)-1]; l.key != "remote" || l.note != "new commits" || l.state != "warn" {
 		t.Errorf("the Remote line: %+v", l)
 	}

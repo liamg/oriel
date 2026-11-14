@@ -12,16 +12,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/internal/atomicfile"
 )
 
-// UsageHistoryReq asks for the plan readings a host has kept: a provider's, or every one, since a time.
-type UsageHistoryReq struct {
-	Provider string    `json:"provider,omitempty"`
-	Since    time.Time `json:"since,omitzero"`
-}
+type UsageHistoryReq = hostapi.UsageHistoryReq
 
 // UsageKeep is how long plan readings are kept: the Usage page shows a week.
 const UsageKeep = 8 * 24 * time.Hour

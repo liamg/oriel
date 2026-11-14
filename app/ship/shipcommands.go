@@ -10,7 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -79,8 +79,8 @@ func (x *Ship) shipCommands() []registry.Command {
 			}},
 		{ID: "ship.push", Title: "Push a project's branch to origin: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Pushing", func(ctx context.Context, c host.ShipCalls) error {
-					return c.ShipPush(ctx, host.ShipRef{Session: se.ID, Project: p})
+				return x.step(se.ID, p, "Pushing", func(ctx context.Context, c hostapi.ShipCalls) error {
+					return c.ShipPush(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
 		{ID: "ship.push-all", Title: "Push every project with an open PR and commits origin hasn't got", Available: inFront,
@@ -90,8 +90,8 @@ func (x *Ship) shipCommands() []registry.Command {
 				for _, s := range x.report(se.ID).ships {
 					if !s.ReadOnly && s.PR.Open() && len(s.Unpushed) > 0 {
 						p := s.Project
-						errs = append(errs, x.step(se.ID, p, "Pushing", func(ctx context.Context, c host.ShipCalls) error {
-							return c.ShipPush(ctx, host.ShipRef{Session: se.ID, Project: p})
+						errs = append(errs, x.step(se.ID, p, "Pushing", func(ctx context.Context, c hostapi.ShipCalls) error {
+							return c.ShipPush(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 						}))
 					}
 				}
@@ -135,23 +135,23 @@ func (x *Ship) branchCommands() []registry.Command {
 				}
 				delete(x.renaming, formKey(se.ID, p))
 				s, _ := x.ship(se.ID, p)
-				return x.step(se.ID, p, "Renaming", func(ctx context.Context, c host.ShipCalls) error {
+				return x.step(se.ID, p, "Renaming", func(ctx context.Context, c hostapi.ShipCalls) error {
 					if err := x.renameGuard(ctx, se, s); err != nil {
 						return err
 					}
-					return c.ShipRename(ctx, host.RenameReq{Session: se.ID, Project: p, Name: name})
+					return c.ShipRename(ctx, hostapi.RenameReq{Session: se.ID, Project: p, Name: name})
 				})
 			})},
 		{ID: "ship.switch-back", Title: "Put a project's worktree back on the session's branch for it: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Switching back", func(ctx context.Context, c host.ShipCalls) error {
-					return c.ShipSwitchBack(ctx, host.ShipRef{Session: se.ID, Project: p})
+				return x.step(se.ID, p, "Switching back", func(ctx context.Context, c hostapi.ShipCalls) error {
+					return c.ShipSwitchBack(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
 		{ID: "ship.adopt-branch", Title: "Make the branch a project's worktree is on the session's branch for it, where that's safe: {project}",
 			Available: inFront, Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
-				return x.step(se.ID, p, "Adopting", func(ctx context.Context, c host.ShipCalls) error {
-					return c.ShipAdopt(ctx, host.ShipRef{Session: se.ID, Project: p})
+				return x.step(se.ID, p, "Adopting", func(ctx context.Context, c hostapi.ShipCalls) error {
+					return c.ShipAdopt(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 				})
 			})},
 		{ID: "ship.merge-default", Title: "Merge a project's branch into its repo's default branch here, without a PR and not pushed, after asking: {project}; {confirm} merges",
@@ -163,7 +163,7 @@ func (x *Ship) branchCommands() []registry.Command {
 		{ID: "ship.ready", Title: "Mark a project's draft PR ready for review: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, _ registry.Args) error {
 				s, _ := x.ship(se.ID, p)
-				return x.step(se.ID, p, "Marking ready", func(ctx context.Context, _ host.ShipCalls) error {
+				return x.step(se.ID, p, "Marking ready", func(ctx context.Context, _ hostapi.ShipCalls) error {
 					return x.markReady(ctx, se, s)
 				})
 			})},
@@ -217,17 +217,17 @@ func (x *Ship) draftCommands() []registry.Command {
 					f.edited, f.save = false, autosave{}
 				}
 				x.saving.Wait()
-				if err := c.ShipDraft(ctx, host.DraftReq{Session: se.ID, Project: p, Kind: kind, Drop: true}); err != nil {
+				if err := c.ShipDraft(ctx, hostapi.DraftReq{Session: se.ID, Project: p, Kind: kind, Drop: true}); err != nil {
 					return err
 				}
-				return agent.Send(host.SendReq{Session: se.ID, Text: text})
+				return agent.Send(hostapi.SendReq{Session: se.ID, Text: text})
 			})},
 		{ID: "ship.draft.save", Title: "Save a project's draft as yours, which the agent leaves: {project}, {kind} pr (the Raise PR tab's, by default) or commit (the commit box's), {title}, {body}",
 			Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
 				kind := cmp.Or(a.String("kind"), "pr")
 				s, _ := x.ship(se.ID, p)
-				req := host.DraftReq{Session: se.ID, Project: p, Kind: kind}
+				req := hostapi.DraftReq{Session: se.ID, Project: p, Kind: kind}
 				switch kind {
 				case "pr":
 					f := x.prForm(se.ID, s)
@@ -237,7 +237,7 @@ func (x *Ship) draftCommands() []registry.Command {
 				default:
 					return fmt.Errorf("a draft is a commit or a pr, not %q", kind)
 				}
-				return x.step(se.ID, p, "Saving", func(ctx context.Context, c host.ShipCalls) error { return c.ShipDraft(ctx, req) })
+				return x.step(se.ID, p, "Saving", func(ctx context.Context, c hostapi.ShipCalls) error { return c.ShipDraft(ctx, req) })
 			})},
 		{ID: "ship.browse", Title: "Open a project's PR, or a past one by {number}, in the browser: {project}", Available: inFront,
 			Run: run(func(_ registry.Ctx, se core.SessionState, p string, a registry.Args) error {
@@ -289,16 +289,16 @@ func (x *Ship) commit(ctx registry.Ctx, se core.SessionState, p string, a regist
 		return fmt.Errorf("%w: %s", kit.ErrStopped, v.Reason)
 	}
 	f.veto = ""
-	return x.step(se.ID, p, "Committing", func(cx context.Context, c host.ShipCalls) error {
+	return x.step(se.ID, p, "Committing", func(cx context.Context, c hostapi.ShipCalls) error {
 		x.saving.Wait()
-		_, err := c.ShipCommit(cx, host.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files})
+		_, err := c.ShipCommit(cx, hostapi.ShipCommitReq{Session: se.ID, Project: p, Message: ev.Message, Files: ev.Files})
 		return err
 	}, func() { *f = commitForm{skip: map[string]bool{}} })
 }
 
 func (x *Ship) sync(se core.SessionState, p string) error {
-	return x.step(se.ID, p, "Rebasing", func(ctx context.Context, c host.ShipCalls) error {
-		return c.ShipSync(ctx, host.ShipRef{Session: se.ID, Project: p})
+	return x.step(se.ID, p, "Rebasing", func(ctx context.Context, c hostapi.ShipCalls) error {
+		return c.ShipSync(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 	})
 }
 
@@ -343,9 +343,9 @@ func (x *Ship) raise(ctx registry.Ctx, se core.SessionState, p string, a registr
 	if s.PR.Open() {
 		label = "Updating"
 	}
-	return x.step(se.ID, p, label, func(cx context.Context, c host.ShipCalls) error {
+	return x.step(se.ID, p, label, func(cx context.Context, c hostapi.ShipCalls) error {
 		if len(s.Unpushed) > 0 || !s.Pushed {
-			if err := c.ShipPush(cx, host.ShipRef{Session: se.ID, Project: p}); err != nil {
+			if err := c.ShipPush(cx, hostapi.ShipRef{Session: se.ID, Project: p}); err != nil {
 				return err
 			}
 		}
@@ -380,9 +380,9 @@ func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 		for _, req := range reqs {
 			done := make(chan struct{})
 			s, _ := x.ship(se.ID, req.Project)
-			err := x.step(se.ID, req.Project, "Raising", func(cx context.Context, c host.ShipCalls) error {
+			err := x.step(se.ID, req.Project, "Raising", func(cx context.Context, c hostapi.ShipCalls) error {
 				defer close(done)
-				if err := c.ShipPush(cx, host.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
+				if err := c.ShipPush(cx, hostapi.ShipRef{Session: se.ID, Project: req.Project}); err != nil {
 					return err
 				}
 				return x.raisePR(cx, se, s, req)

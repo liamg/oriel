@@ -13,7 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/ui/layout"
@@ -25,7 +25,7 @@ func jobRun(st core.State, job string) (core.SessionState, bool) {
 	var out core.SessionState
 	found := false
 	for _, se := range st.Sessions {
-		if host.JobOf(se) == job && (!found || se.Created.After(out.Created) || se.Created.Equal(out.Created) && se.ID > out.ID) {
+		if hostapi.JobOf(se) == job && (!found || se.Created.After(out.Created) || se.Created.Equal(out.Created) && se.ID > out.ID) {
 			out, found = se, true
 		}
 	}
@@ -95,14 +95,14 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	}
 	a := lw.Fake.WaitStarted(t)
 	a.WaitSent(t) // the prompt reaches the agent before it can answer it
-	s.Until("the running row", func() bool { return runShown(s, host.RunRunning) })
+	s.Until("the running row", func() bool { return runShown(s, hostapi.RunRunning) })
 
 	ctx := context.Background()
 	if err := lw.W.AddRepo(ctx, se.ID, core.RepoID(lw.Repo)); err != nil {
 		t.Fatal(err)
 	}
 	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "Bumped 3 deps in pricing; its tests pass.", "resolve": true})
-	s.Until("the done row", func() bool { return runShown(s, host.RunDone, "Delete") })
+	s.Until("the done row", func() bool { return runShown(s, hostapi.RunDone, "Delete") })
 	row := s.Within("Runs", "done run").Name
 	for _, want := range []string{"Bumped 3 deps in pricing; its tests pass."} {
 		if !strings.Contains(row, want) {
@@ -129,7 +129,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	a = lw.Fake.WaitStarted(t)
 	question := "pricing's tests fail before any bump: is main broken?"
 	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "**Blocked:** " + question})
-	s.Until("the blocked row", func() bool { return runShown(s, host.RunBlocked, "Open") })
+	s.Until("the blocked row", func() bool { return runShown(s, hostapi.RunBlocked, "Open") })
 	s.Click(apptest.Centre(s.Within("Runs", "Open").Bounds), 0)
 	s.UntilState("the run in front", func(st core.State) bool { return st.Focus == se.ID })
 	s.Until("the window on the run's directory, as it follows it", s.Reopen)
@@ -151,7 +151,7 @@ func TestJobsRunAsJobSessions(t *testing.T) {
 	third, _ := jobRun(s.Store().State(), "sweep-stale-deps")
 	lw.Fake.WaitStarted(t)
 	s.Run("session.stop", registry.Args{"id": string(third.ID)})
-	s.Until("the stopped row", func() bool { return runShown(s, host.RunStopped, "Resume") })
+	s.Until("the stopped row", func() bool { return runShown(s, hostapi.RunStopped, "Resume") })
 	s.Click(apptest.Centre(s.Within("stopped run", "Resume").Bounds), 0)
 	s.UntilState("the stopped run resumed", func(st core.State) bool {
 		r, _ := st.Session(third.ID)
@@ -250,7 +250,7 @@ func jobsScene(t *testing.T) (*apptest.Scene, *rig.Jobs, *sessions.Jobs) {
 	s.StatsClock(s.Clock(), time.UTC)
 	st := s.UntilState("the runs", func(st core.State) bool { return !st.Machine.Sampled.IsZero() && len(st.Sessions) == 12 })
 	for _, se := range st.Sessions {
-		if host.RunOf(se).Status == host.RunRunning {
+		if hostapi.RunOf(se).Status == hostapi.RunRunning {
 			s.Store().Apply(core.SessionFocused{ID: se.ID})
 		}
 	}
@@ -383,8 +383,8 @@ func TestARunOpensInItsSessionTab(t *testing.T) {
 // A run skipped while one is going shows in the list.
 func TestASkippedRunShowsInTheList(t *testing.T) {
 	r := rig.NewJobs(t)
-	j := r.Save(rig.Day44(10, 13, 6, 0), host.Job{Title: "Morning CI triage", Prompt: "Say what CI failed on my open PRs in api.",
-		Schedule: host.Schedule{Every: host.EveryWeekday, At: "07:00"}})
+	j := r.Save(rig.Day44(10, 13, 6, 0), hostapi.Job{Title: "Morning CI triage", Prompt: "Say what CI failed on my open PRs in api.",
+		Schedule: hostapi.Schedule{Every: hostapi.EveryWeekday, At: "07:00"}})
 	r.Clock.Set(rig.Day44(10, 13, 7, 0).Add(30 * time.Second))
 	r.W.RunDue(context.Background())
 	r.Claude.WaitStarted(t)

@@ -3,181 +3,171 @@ package host
 import (
 	"encoding/json"
 
+	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/host/sandboxhost"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/agentrun"
 	"github.com/liamg/oriel/host/aireview"
-	"github.com/liamg/oriel/host/github"
-	"github.com/liamg/oriel/host/hostcore"
-	"github.com/liamg/oriel/host/jobs"
-	"github.com/liamg/oriel/host/persist"
-	"github.com/liamg/oriel/host/repos"
-	"github.com/liamg/oriel/host/sandboxhost"
-	"github.com/liamg/oriel/host/utility"
 	"github.com/liamg/oriel/host/worktree"
 )
 
 // The host's API types live with the part that does the work; these are their names here, where the app finds them.
 
-// EndReq ends a session: archived, or deleted.
-type EndReq struct {
-	Session      core.SessionID `json:"session"`
-	Delete       bool           `json:"delete,omitempty"`       // throw it all away; otherwise archive
-	Discard      bool           `json:"discard,omitempty"`      // archive over uncommitted work, which is lost
-	DeleteBranch bool           `json:"deleteBranch,omitempty"` // each project's local branch goes too
-}
+type EndReq = hostapi.EndReq
 
 // Shared by the parts.
 type (
-	SandboxFactory = hostcore.SandboxFactory
-	Approve        = hostcore.Approve
-	Approval       = hostcore.Approval
-	Sandbox        = hostcore.Sandbox
-	SandboxAgent   = hostcore.SandboxAgent
-	ToolsReq       = hostcore.ToolsReq
-	Draft          = hostcore.Draft
+	SandboxFactory = hostapi.SandboxFactory
+	Approve        = hostapi.Approve
+	Approval       = hostapi.Approval
+	Sandbox        = hostapi.Sandbox
+	SandboxAgent   = hostapi.SandboxAgent
+	ToolsReq       = hostapi.ToolsReq
+	Draft          = hostapi.Draft
 )
 
 // Agents.
 type (
-	App          = agentrun.App
-	StartWorkReq = agentrun.StartWorkReq
-	ConfigureReq = agentrun.ConfigureReq
-	CommentReq   = agentrun.CommentReq
-	ThreadReq    = agentrun.ThreadReq
-	QueuedReq    = agentrun.QueuedReq
-	UnqueueReq   = agentrun.UnqueueReq
-	AnswerReq    = agentrun.AnswerReq
-	AskReq       = agentrun.AskReq
-	SendReq      = agentrun.SendReq
-	TermReq      = agentrun.TermReq
-	ToolCall     = agentrun.ToolCall
-	Decide       = agentrun.Decide
-	Verdict      = agentrun.Verdict
-	Decision     = agentrun.Decision
+	App          = hostapi.App
+	StartWorkReq = hostapi.StartWorkReq
+	ConfigureReq = hostapi.ConfigureReq
+	CommentReq   = hostapi.CommentReq
+	ThreadReq    = hostapi.ThreadReq
+	QueuedReq    = hostapi.QueuedReq
+	UnqueueReq   = hostapi.UnqueueReq
+	AnswerReq    = hostapi.AnswerReq
+	AskReq       = hostapi.AskReq
+	SendReq      = hostapi.SendReq
+	TermReq      = hostapi.TermReq
+	ToolCall     = hostapi.ToolCall
+	Decide       = hostapi.Decide
+	Verdict      = hostapi.Verdict
+	Decision     = hostapi.Decision
 )
 
 // Workspaces.
 type (
-	Manifest      = worktree.Manifest
-	ManifestEntry = worktree.ManifestEntry
-	ManifestPR    = worktree.ManifestPR
-	NextPRReq     = worktree.NextPRReq
-	NewBranchReq  = worktree.NewBranchReq
-	PRMove        = worktree.PRMove
+	Manifest      = hostapi.Manifest
+	ManifestEntry = hostapi.ManifestEntry
+	ManifestPR    = hostapi.ManifestPR
+	NextPRReq     = hostapi.NextPRReq
+	NewBranchReq  = hostapi.NewBranchReq
+	PRMove        = hostapi.PRMove
 )
 
 // Sandboxes.
 type (
-	Permissions    = sandboxhost.Permissions
-	ToolPermission = sandboxhost.ToolPermission
-	Workspace      = sandboxhost.Workspace
-	WorkspacePath  = sandboxhost.WorkspacePath
+	Permissions    = hostapi.Permissions
+	ToolPermission = hostapi.ToolPermission
+	Workspace      = hostapi.Workspace
+	WorkspacePath  = hostapi.WorkspacePath
 )
 
 // Code hosts and the Ship page.
 type (
-	Ship            = github.Ship
-	ShipFile        = github.ShipFile
-	ShipCommit      = github.ShipCommit
-	ShipReq         = github.ShipReq
-	ShipRef         = github.ShipRef
-	ShipCommitReq   = github.ShipCommitReq
-	DraftReq        = github.DraftReq
-	RenameReq       = github.RenameReq
-	OffBranch       = hostcore.OffBranch
-	Trust           = github.Trust
-	MirrorReq       = github.MirrorReq
-	Mirror          = github.Mirror
-	MirrorPR        = github.MirrorPR
-	ForwardReq      = github.ForwardReq
-	ForwardedReq    = github.ForwardedReq
-	DraftEditReq    = github.DraftEditReq
-	ResolveReq      = github.ResolveReq
-	PRSeenReq       = github.PRSeenReq
-	MirrorReviewReq = github.MirrorReviewReq
-	ReviewThread    = github.ReviewThread
-	ReviewComment   = github.ReviewComment
+	Ship            = hostapi.Ship
+	ShipFile        = hostapi.ShipFile
+	ShipCommit      = hostapi.ShipCommit
+	ShipReq         = hostapi.ShipReq
+	ShipRef         = hostapi.ShipRef
+	ShipCommitReq   = hostapi.ShipCommitReq
+	DraftReq        = hostapi.DraftReq
+	RenameReq       = hostapi.RenameReq
+	OffBranch       = hostapi.OffBranch
+	Trust           = hostapi.Trust
+	MirrorReq       = hostapi.MirrorReq
+	Mirror          = hostapi.Mirror
+	MirrorPR        = hostapi.MirrorPR
+	ForwardReq      = hostapi.ForwardReq
+	ForwardedReq    = hostapi.ForwardedReq
+	DraftEditReq    = hostapi.DraftEditReq
+	ResolveReq      = hostapi.ResolveReq
+	PRSeenReq       = hostapi.PRSeenReq
+	MirrorReviewReq = hostapi.MirrorReviewReq
+	ReviewThread    = hostapi.ReviewThread
+	ReviewComment   = hostapi.ReviewComment
 )
 
 // Repos.
 type (
-	RepoCheck     = repos.RepoCheck
-	CloneReq      = repos.CloneReq
-	CloneTarget   = repos.CloneTarget
-	RepoFacts     = repos.RepoFacts
-	StaleBranch   = repos.StaleBranch
-	HousekeepPlan = repos.HousekeepPlan
-	HousekeepReq  = repos.HousekeepReq
-	Cleaned       = repos.Cleaned
-	TagPreview    = repos.TagPreview
-	TagReq        = repos.TagReq
-	Tagged        = repos.Tagged
+	RepoCheck     = hostapi.RepoCheck
+	CloneReq      = hostapi.CloneReq
+	CloneTarget   = hostapi.CloneTarget
+	RepoFacts     = hostapi.RepoFacts
+	StaleBranch   = hostapi.StaleBranch
+	HousekeepPlan = hostapi.HousekeepPlan
+	HousekeepReq  = hostapi.HousekeepReq
+	Cleaned       = hostapi.Cleaned
+	TagPreview    = hostapi.TagPreview
+	TagReq        = hostapi.TagReq
+	Tagged        = hostapi.Tagged
 )
 
 // Jobs, utility agents, AI reviews, stats.
 type (
-	Job             = jobs.Job
-	Schedule        = jobs.Schedule
-	Run             = jobs.Run
-	UtilitySpec     = utility.UtilitySpec
-	UtilityEvent    = utility.UtilityEvent
-	UtilityReq      = utility.UtilityReq
-	Utility         = utility.Utility
-	AIReviewReq     = aireview.AIReviewReq
-	StatsSessionReq = persist.StatsSessionReq
-	UsageHistoryReq = persist.UsageHistoryReq
-	SearchReq       = persist.SearchReq
-	Hit             = persist.Hit
+	Job             = hostapi.Job
+	Schedule        = hostapi.Schedule
+	Run             = hostapi.Run
+	UtilitySpec     = hostapi.UtilitySpec
+	UtilityEvent    = hostapi.UtilityEvent
+	UtilityReq      = hostapi.UtilityReq
+	Utility         = hostapi.Utility
+	AIReviewReq     = hostapi.AIReviewReq
+	StatsSessionReq = hostapi.StatsSessionReq
+	UsageHistoryReq = hostapi.UsageHistoryReq
+	SearchReq       = hostapi.SearchReq
+	Hit             = hostapi.Hit
 )
 
 const (
-	DraftByYou   = hostcore.DraftByYou
-	AIReviewPack = aireview.AIReviewPack
+	DraftByYou   = hostapi.DraftByYou
+	AIReviewPack = hostapi.AIReviewPack
 	BatchLead    = agentrun.BatchLead
 	NoticeLead   = agentrun.NoticeLead
 	NoPosting    = agentrun.NoPosting
 	KeyWait      = agentrun.KeyWait
 	ForAll       = agentrun.ForAll
 	// An ask's answers (Decision).
-	DecisionAllow   = agentrun.DecisionAllow
-	DecisionAlways  = agentrun.DecisionAlways
-	DecisionDeny    = agentrun.DecisionDeny
-	DecisionAnswer  = agentrun.DecisionAnswer
-	DecisionRecheck = agentrun.DecisionRecheck
+	DecisionAllow   = hostapi.DecisionAllow
+	DecisionAlways  = hostapi.DecisionAlways
+	DecisionDeny    = hostapi.DecisionDeny
+	DecisionAnswer  = hostapi.DecisionAnswer
+	DecisionRecheck = hostapi.DecisionRecheck
 	GatewayServer   = sandboxhost.GatewayServer
-	ManifestFile    = worktree.ManifestFile
-	ReposDir        = worktree.ReposDir
+	ManifestFile    = hostapi.ManifestFile
+	ReposDir        = hostapi.ReposDir
 
-	SourceSession  = sandboxhost.SourceSession
-	SourceProject  = sandboxhost.SourceProject
-	SourceSettings = sandboxhost.SourceSettings
-	SourceAlways   = sandboxhost.SourceAlways
-	SourceReadOnly = sandboxhost.SourceReadOnly
-	SourceDefault  = sandboxhost.SourceDefault
-	SourceOriel    = sandboxhost.SourceOriel
+	SourceSession  = hostapi.SourceSession
+	SourceProject  = hostapi.SourceProject
+	SourceSettings = hostapi.SourceSettings
+	SourceAlways   = hostapi.SourceAlways
+	SourceReadOnly = hostapi.SourceReadOnly
+	SourceDefault  = hostapi.SourceDefault
+	SourceOriel    = hostapi.SourceOriel
 
-	WhyMerged = repos.WhyMerged
-	WhyGone   = repos.WhyGone
+	WhyMerged = hostapi.WhyMerged
+	WhyGone   = hostapi.WhyGone
 
-	EveryWeekday = jobs.EveryWeekday
-	EveryWeek    = jobs.EveryWeek
-	EveryDays    = jobs.EveryDays
-	RunRunning   = jobs.RunRunning
-	RunDone      = jobs.RunDone
-	RunBlocked   = jobs.RunBlocked
-	RunStopped   = jobs.RunStopped
-	RunSkipped   = jobs.RunSkipped
+	EveryWeekday = hostapi.EveryWeekday
+	EveryWeek    = hostapi.EveryWeek
+	EveryDays    = hostapi.EveryDays
+	RunRunning   = hostapi.RunRunning
+	RunDone      = hostapi.RunDone
+	RunBlocked   = hostapi.RunBlocked
+	RunStopped   = hostapi.RunStopped
+	RunSkipped   = hostapi.RunSkipped
 )
 
 var (
 	// Templates a new repo can start from, besides any git URL (a GitHub template repo).
-	Templates = worktree.Templates
+	Templates = hostapi.Templates
 	// ErrKeyCancelled is a git operation stopped from its security-key card.
 	ErrKeyCancelled = agentrun.ErrKeyCancelled
 )
 
 // Sanitise reduces a string to a name safe for a directory and a git branch.
-func Sanitise(s string) string { return hostcore.Sanitise(s) }
+func Sanitise(s string) string { return hostapi.Sanitise(s) }
 
 // BranchName is <you>/<ticket>-<slug>.
 func BranchName(you, ticket, slug string) string { return worktree.BranchName(you, ticket, slug) }
@@ -186,13 +176,13 @@ func BranchName(you, ticket, slug string) string { return worktree.BranchName(yo
 func LoadManifest(root string) (Manifest, bool) { return worktree.LoadManifest(root) }
 
 // CloneName is the folder a clone of url is named by default: its last part, with .git dropped.
-func CloneName(url string) string { return repos.CloneName(url) }
+func CloneName(url string) string { return hostapi.CloneName(url) }
 
 // JobOf is the saved job a session is a run of; "" for any other session.
-func JobOf(se core.SessionState) string { return jobs.JobOf(se) }
+func JobOf(se core.SessionState) string { return hostapi.JobOf(se) }
 
 // RunOf reads a job session's run from its request thread.
-func RunOf(se core.SessionState) Run { return jobs.RunOf(se) }
+func RunOf(se core.SessionState) Run { return hostapi.RunOf(se) }
 
 // ParseFindings reads the findings a reviewer wrote as JSON in its answer.
 func ParseFindings(text string) []core.Finding { return aireview.ParseFindings(text) }

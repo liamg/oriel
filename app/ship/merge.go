@@ -11,7 +11,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -289,7 +289,7 @@ func (x *Ship) confirmMerge() error {
 	if a.method < len(a.methods) {
 		o.Method = a.methods[a.method]
 	}
-	return x.step(a.se.ID, a.s.Project, "Merging", func(ctx context.Context, _ host.ShipCalls) error {
+	return x.step(a.se.ID, a.s.Project, "Merging", func(ctx context.Context, _ hostapi.ShipCalls) error {
 		if err := registry.Call(func() error { return h.Merge(ctx, repo, pr, o) }); err != nil {
 			return err
 		}

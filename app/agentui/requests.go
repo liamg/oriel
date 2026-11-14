@@ -14,7 +14,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -192,7 +192,7 @@ func (x *Requests) commands() []registry.Command {
 					if err != nil {
 						return err
 					}
-					return w.SetThread(host.ThreadReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Title: name})
+					return w.SetThread(hostapi.ThreadReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Title: name})
 				}
 				se, ok := x.front()
 				if !ok {
@@ -668,7 +668,7 @@ func (x *Requests) setThread(a registry.Args) error {
 		return err
 	}
 	status := core.ThreadStatus(cmp.Or(a.String("status"), string(core.ThreadResolved)))
-	return w.SetThread(host.ThreadReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Status: status})
+	return w.SetThread(hostapi.ThreadReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Status: status})
 }
 
 // commentOn sends a comment through the CommentSend hooks to the session host, which hands it to the agent:
@@ -686,7 +686,7 @@ func (x *Requests) commentOn(ctx registry.Ctx, a registry.Args) error {
 	if strings.TrimSpace(ev.Body) == "" {
 		return errors.New("the comment is empty")
 	}
-	req := host.CommentReq{Session: se.ID, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
+	req := hostapi.CommentReq{Session: se.ID, Thread: core.ThreadID(ev.Thread), Title: a.String("title"), Body: ev.Body, Urgent: ev.Urgent, Btw: ev.Btw,
 		Status: core.ThreadStatus(a.String("status")), Severity: a.String("severity"), Finding: a.String("finding"), Outgoing: a.Bool("outgoing"),
 		Images: localImages(ev.Body)}
 	if ev.Thread == "" && ev.File != "" {
@@ -726,7 +726,7 @@ func (x *Requests) editQueued(_ registry.Ctx, a registry.Args, del bool) error {
 	if err != nil {
 		return err
 	}
-	r := host.QueuedReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Comment: a.String("comment"), Body: a.String("body"), Delete: del,
+	r := hostapi.QueuedReq{Session: se.ID, Thread: core.ThreadID(a.String("thread")), Comment: a.String("comment"), Body: a.String("body"), Delete: del,
 		Urgent: a.Bool("urgent"), Btw: a.Bool("btw")}
 	if del || r.Body != "" {
 		return w.EditQueued(r)

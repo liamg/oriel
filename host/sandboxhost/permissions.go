@@ -7,42 +7,27 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/egress"
 	"github.com/liamg/oriel/sandbox/gateway"
 )
 
-// Where a rule comes from, as the Permissions view names it.
 const (
-	SourceSession  = "this session"
-	SourceProject  = "project settings"
-	SourceSettings = "your settings"
-	SourceAlways   = "always, on this machine"
-	SourceReadOnly = "read-only, allowed by default"
-	SourceDefault  = "built-in default"
-	SourceOriel    = "Oriel"
+	SourceSession  = hostapi.SourceSession
+	SourceProject  = hostapi.SourceProject
+	SourceSettings = hostapi.SourceSettings
+	SourceAlways   = hostapi.SourceAlways
+	SourceReadOnly = hostapi.SourceReadOnly
+	SourceDefault  = hostapi.SourceDefault
+	SourceOriel    = hostapi.SourceOriel
 )
 
-// Permissions is what a sandboxed session's agent may do: each gateway tool and each network rule in force, with
-// where its answer comes from, the connections it made or tried, and the destinations waiting on a card.
-type Permissions struct {
-	// Sandboxed is false for an agent on the host, which none of this applies to.
-	Sandboxed bool
-	// Filtered is false when the egress proxy is off: the sandbox has plain internet.
-	Filtered bool
-	Tools    []ToolPermission
-	Hosts    []egress.Rule
-	Conns    []egress.Event
-	Waiting  []string
-}
+type Permissions = hostapi.Permissions
 
-// ToolPermission is one gateway tool: what a call meets, its source, and the session's own rule for it.
-type ToolPermission struct {
-	gateway.ToolPolicy
-	Source  string
-	Session string
-}
+type ToolPermission = hostapi.ToolPermission
 
 // Permissions reads session id's sandbox permissions. A session whose agent isn't running in a sandbox has none.
 func (x *Boxes) Permissions(ctx context.Context, id core.SessionID) (_ Permissions, err error) {

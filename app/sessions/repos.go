@@ -12,7 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -65,7 +65,7 @@ func repoOptions() []registry.OptionSpec {
 func (x *Repos) Activate(_ context.Context, h plugin.Host) error {
 	x.h, x.details = h, map[core.RepoID]*repoDetail{}
 	x.Add(&x.work)
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.NewRepoKind}}))
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: hostapi.NewRepoKind}}))
 	for _, sp := range repoOptions() {
 		x.Add(h.Option(sp))
 	}
@@ -132,7 +132,7 @@ func (x *Repos) commands() []registry.Command {
 					return err
 				}
 				w, _ := kit.RepoCalls(x.h)
-				req := host.CloneReq{URL: a.String("url"), Parent: a.String("parent"), Name: a.String("name")}
+				req := hostapi.CloneReq{URL: a.String("url"), Parent: a.String("parent"), Name: a.String("name")}
 				return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.clone." + req.URL, Doing: "Cloning " + req.URL},
 					func(ctx context.Context) (core.Repo, error) { return w.CloneRepo(ctx, req) },
 					func(ctx registry.Ctx, r core.Repo) error { return x.then(ctx, then, r.ID) })
@@ -296,7 +296,7 @@ func (x *Repos) housekeepCommand(ctx registry.Ctx, a registry.Args) error {
 	if err != nil {
 		return err
 	}
-	req := host.HousekeepReq{Repo: id, Apply: apply, Force: a.Strings("force"), Prune: a.Bool("prune")}
+	req := hostapi.HousekeepReq{Repo: id, Apply: apply, Force: a.Strings("force"), Prune: a.Bool("prune")}
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "repos.housekeep." + string(id), Doing: "Cleaning up " + string(id)},
 		func(ctx context.Context) (struct{}, error) {
 			res, err := w.Housekeep(ctx, req)
@@ -362,7 +362,7 @@ func (x *Repos) tagCommand(ctx registry.Ctx, a registry.Args) error {
 				sign = a.Bool("sign")
 			}
 			msg := cmp.Or(a.String("message"), tagMessage(tmpl, name, branch, id))
-			t, err := w.Tag(ctx, host.TagReq{Repo: id, Branch: branch, Name: name, Message: msg, Pull: pull, Sign: sign, Push: push && p.Remote})
+			t, err := w.Tag(ctx, hostapi.TagReq{Repo: id, Branch: branch, Name: name, Message: msg, Pull: pull, Sign: sign, Push: push && p.Remote})
 			if err != nil {
 				return struct{}{}, err
 			}

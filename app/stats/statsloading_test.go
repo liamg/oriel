@@ -10,7 +10,7 @@ import (
 	hoststats "github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -42,12 +42,12 @@ func TestStatsPageLoadsWithASkeleton(t *testing.T) {
 
 // failingStats is the session host's stats, but one session's can't be read.
 type failingStats struct {
-	host.StatsCalls
+	hostapi.StatsCalls
 	id    core.SessionID
 	asked atomic.Int32
 }
 
-func (f *failingStats) SessionStats(r host.StatsSessionReq) (hoststats.Detail, error) {
+func (f *failingStats) SessionStats(r hostapi.StatsSessionReq) (hoststats.Detail, error) {
 	if r.Session == f.id {
 		f.asked.Add(1)
 		return hoststats.Detail{}, errors.New("the transcript is gone")
@@ -64,7 +64,7 @@ func TestSessionStatsFailureRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := &failingStats{StatsCalls: w, id: id}
-	s.Registry().Contribute(registry.Service{Name: registry.HostStatsService, Impl: host.StatsCalls(f), Source: "test"})
+	s.Registry().Contribute(registry.Service{Name: registry.HostStatsService, Impl: hostapi.StatsCalls(f), Source: "test"})
 	s.Run("stats.session", registry.Args{"id": string(id)})
 	settle(s, x)
 	s.Now = s.Now.Add(time.Second)

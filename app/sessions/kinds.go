@@ -4,8 +4,9 @@ package sessions
 
 import (
 	"github.com/liamg/oriel/agent"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/services"
@@ -35,8 +36,8 @@ func registryProviders(r registry.Contributions) []agent.Provider {
 // contributeKinds registers the work and direct kinds and the Sessions and host services, and gives the host the
 // registry's kinds and agent providers.
 func (x *Sessions) contributeKinds(h plugin.Host) {
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.WorkKind}}))
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.DirectKind}}))
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: hostapi.WorkKind}}))
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: hostapi.DirectKind}}))
 	// A work session's plan, before it ships.
 	x.Add(h.Contribute(registry.ShipGate{Name: "plan", Title: "Plan approved", Order: 10, Check: func(id string) registry.Gate {
 		se, ok := sessionSnapshot(h, core.SessionID(id))
@@ -55,16 +56,7 @@ func (x *Sessions) contributeKinds(h plugin.Host) {
 		return registry.Gate{}
 	}}))
 	x.Add(h.Contribute(registry.Service{Name: registry.SessionsService, Impl: sessionsService{x}}))
-	if w := x.Host; w != nil {
-		for _, part := range []struct {
-			name string
-			impl any
-		}{{registry.HostSessionsService, host.SessionCalls(w)},
-			{registry.HostSandboxesService, host.SandboxCalls(w)}, {registry.HostShipsService, host.ShipCalls(w)},
-			{registry.HostCodeHostsService, host.CodeHostCalls(w)}, {registry.HostReposService, host.RepoCalls(w)},
-			{registry.HostJobsService, host.JobCalls(w)}, {registry.HostStatsService, host.StatsCalls(w)}} {
-			x.Add(h.Contribute(registry.Service{Name: part.name, Impl: part.impl}))
-		}
+	if w, err := kit.SessionCalls(h); err == nil {
 		w.SetKinds(registryKinds{h})
 		x.Add(registry.DisposeFunc(func() { w.SetKinds(nil) }))
 		w.SetProviders(func() []agent.Provider { return registryProviders(h) })

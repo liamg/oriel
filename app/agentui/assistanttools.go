@@ -17,7 +17,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/testrun"
@@ -524,11 +524,11 @@ func (x *Assistant) jobs(context.Context) []jobLine {
 			l.Schedule = j.Schedule.String()
 		}
 		for _, s := range st.Sessions {
-			if host.JobOf(s) != j.Name || s.Created.Before(l.at) {
+			if hostapi.JobOf(s) != j.Name || s.Created.Before(l.at) {
 				continue
 			}
-			r := host.RunOf(s)
-			l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == host.RunRunning
+			r := hostapi.RunOf(s)
+			l.at, l.LastRun, l.Summary, l.Running = s.Created, r.Status, clipLine(r.Summary, 300), r.Status == hostapi.RunRunning
 			l.LastAt = s.Created.Format(time.RFC3339)
 		}
 		out = append(out, l)

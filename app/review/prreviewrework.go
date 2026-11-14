@@ -8,7 +8,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -36,7 +36,7 @@ func (x *PRReview) rework(ctx registry.Ctx, se core.SessionState, it reviewItem,
 	if err != nil {
 		return err
 	}
-	req := host.CommentReq{Session: se.ID, Body: body}
+	req := hostapi.CommentReq{Session: se.ID, Body: body}
 	at := 0
 	if it.thread != "" && !it.mine {
 		req.Thread = it.thread
@@ -107,7 +107,7 @@ func (x *PRReview) askSummary(ctx registry.Ctx, a registry.Args) error {
 	}
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "review.pr.summary." + string(se.ID), Doing: "Asking the agent for a summary"},
 		func(ctx context.Context) (core.ThreadID, error) {
-			return w.Comment(ctx, host.CommentReq{Session: se.ID, Title: "Draft the review summary", Body: body})
+			return w.Comment(ctx, hostapi.CommentReq{Session: se.ID, Title: "Draft the review summary", Body: body})
 		},
 		func(_ registry.Ctx, t core.ThreadID) error {
 			x.setDraft(se.ID, func(d *core.ReviewDraft) { d.SummaryAsk = t })

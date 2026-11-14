@@ -13,7 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -56,7 +56,7 @@ type Workspace struct {
 
 // wsState is one session's page: its reads, and what's picked.
 type wsState struct {
-	load       *plugin.Load[host.Workspace]
+	load       *plugin.Load[hostapi.Workspace]
 	log        *plugin.Load[string]
 	read       time.Time
 	logRead    time.Time
@@ -135,10 +135,10 @@ func (x *Workspace) state(id core.SessionID) *wsState {
 		return st
 	}
 	st = &wsState{}
-	st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.Workspace, error) {
+	st.load = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.Workspace, error) {
 		w, _ := kit.SessionCalls(x.h)
 		if w == nil {
-			return host.Workspace{}, errors.New("there are no sessions in this window")
+			return hostapi.Workspace{}, errors.New("there are no sessions in this window")
 		}
 		return w.Workspace(ctx, id)
 	}, plugin.LoadOpts{Timeout: 20 * time.Second})
@@ -312,7 +312,7 @@ func wsRow(c *ui.Ctx, h plugin.Host, key, label, value string, copyable bool) {
 	})
 }
 
-func (x *Workspace) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws host.Workspace) {
+func (x *Workspace) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws hostapi.Workspace) {
 	th := c.Theme()
 	kit.KickerRow(c, "sessioncap", "SESSION")
 	x.name(c, s, st)
@@ -419,7 +419,7 @@ func (x *Workspace) name(c *ui.Ctx, s core.SessionState, st *wsState) {
 }
 
 // actions are the sandbox's buttons: Rebuild image and Restart sandbox.
-func (x *Workspace) actions(c *ui.Ctx, s core.SessionState, st *wsState, ws host.Workspace) {
+func (x *Workspace) actions(c *ui.Ctx, s core.SessionState, st *wsState, ws hostapi.Workspace) {
 	c.Row("actions", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Pad: ui.Insets{T: 4}}, func(c *ui.Ctx) {
 		if ws.Rebuild && ws.Dockerfile != "" && widget.Button(c, "rebuild", "Rebuild image", widget.ButtonOpts{Busy: st.rebuilding, BusyLabel: "Rebuilding",
 			Help: workspaceHelp}) {
@@ -442,15 +442,15 @@ func (x *Workspace) actions(c *ui.Ctx, s core.SessionState, st *wsState, ws host
 }
 
 // wsBrowsable are the directories the files tab can show: the scratchpad first, then the rest in the overview's order.
-func wsBrowsable(ws host.Workspace) []host.WorkspacePath {
-	var out []host.WorkspacePath
+func wsBrowsable(ws hostapi.Workspace) []hostapi.WorkspacePath {
+	var out []hostapi.WorkspacePath
 	for _, p := range ws.Paths {
 		if p.Name == "Go cache" || p.Host == "" {
 			continue
 		}
 		out = append(out, p)
 	}
-	slices.SortStableFunc(out, func(a, b host.WorkspacePath) int {
+	slices.SortStableFunc(out, func(a, b hostapi.WorkspacePath) int {
 		return boolOrder(b.Name == "Scratchpad") - boolOrder(a.Name == "Scratchpad")
 	})
 	return out
@@ -463,11 +463,11 @@ func boolOrder(b bool) int {
 	return 0
 }
 
-func wsBrowsableIndex(ws host.Workspace, path string) int {
-	return slices.IndexFunc(wsBrowsable(ws), func(p host.WorkspacePath) bool { return p.Host == path })
+func wsBrowsableIndex(ws hostapi.Workspace, path string) int {
+	return slices.IndexFunc(wsBrowsable(ws), func(p hostapi.WorkspacePath) bool { return p.Host == path })
 }
 
-func (x *Workspace) files(c *ui.Ctx, st *wsState, ws host.Workspace) {
+func (x *Workspace) files(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 	th := c.Theme()
 	dirs := wsBrowsable(ws)
 	if len(dirs) == 0 {
@@ -507,7 +507,7 @@ func (x *Workspace) files(c *ui.Ctx, st *wsState, ws host.Workspace) {
 	}
 }
 
-func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws host.Workspace) {
+func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws hostapi.Workspace) {
 	th := c.Theme()
 	switch {
 	case !ws.Sandboxed:
@@ -551,7 +551,7 @@ func codeLines(c *ui.Ctx, key, text string) {
 	})
 }
 
-func (x *Workspace) buildLog(c *ui.Ctx, st *wsState, ws host.Workspace) {
+func (x *Workspace) buildLog(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 	th := c.Theme()
 	if !ws.Sandboxed || ws.Image == "" {
 		kit.PaneNote(c, "nolog", "There's no image, so there's no build log.")

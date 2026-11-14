@@ -10,14 +10,14 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/ui/widget"
 )
 
 // pastedFiles is what a field writing to session id's agent makes of pasted and dropped files and pictures
 // (widget.InputOpts.Files): markdown the thread shows and the agent reads. A picture is an image; a file in one of the
-// session's projects is a link to it; any other file is copied where the agent can read it (host.Attach) first.
+// session's projects is a link to it; any other file is copied where the agent can read it (hostapi.Attach) first.
 func pastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 	return func(p widget.Pasted) string {
 		w, err := kit.SessionCalls(h)
@@ -28,7 +28,7 @@ func pastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 			kit.NotifyError(h, "paste.files", err, true)
 		}
 		if len(p.Image) > 0 {
-			path, err := w.Attach(host.AttachReq{Session: id, Name: "pasted-" + time.Now().Format("150405") + ".png", Data: p.Image})
+			path, err := w.Attach(hostapi.AttachReq{Session: id, Name: "pasted-" + time.Now().Format("150405") + ".png", Data: p.Image})
 			if err != nil {
 				fail(err)
 				return ""
@@ -43,7 +43,7 @@ func pastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 		for _, path := range p.Paths {
 			name := filepath.Base(path)
 			if !inProjects(projects, path) {
-				kept, err := w.Attach(host.AttachReq{Session: id, Path: path})
+				kept, err := w.Attach(hostapi.AttachReq{Session: id, Path: path})
 				if err != nil {
 					fail(fmt.Errorf("%s: %w", name, err))
 					continue

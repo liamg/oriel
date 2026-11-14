@@ -10,7 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render/typeset"
@@ -357,7 +357,7 @@ func (x *Ship) prFields(c *ui.Ctx, se core.SessionState, s shipRead, f *prForm) 
 		})
 	})
 	if !s.PR.Open() {
-		x.keepTyped(c, &f.save, typed, typed && first, host.DraftReq{Session: se.ID, Project: s.Project, Kind: "pr", Title: f.title, Body: f.body})
+		x.keepTyped(c, &f.save, typed, typed && first, hostapi.DraftReq{Session: se.ID, Project: s.Project, Kind: "pr", Title: f.title, Body: f.body})
 	}
 	c.Box("sp2", ui.Style{H: ui.Px(6)}, nil)
 	c.Row("boxes", ui.Style{W: ui.Flex(1), Gap: 14}, func(c *ui.Ctx) {

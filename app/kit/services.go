@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -20,26 +20,26 @@ import (
 var ErrNoSessions = errors.New("there are no sessions in this window")
 
 // The session host's parts' calls, each its own service, or why there are none.
-func SessionCalls(r registry.Registry) (host.SessionCalls, error) {
-	return hostPart[host.SessionCalls](r, registry.HostSessionsService)
+func SessionCalls(r registry.Registry) (hostapi.SessionCalls, error) {
+	return hostPart[hostapi.SessionCalls](r, registry.HostSessionsService)
 }
-func SandboxCalls(r registry.Registry) (host.SandboxCalls, error) {
-	return hostPart[host.SandboxCalls](r, registry.HostSandboxesService)
+func SandboxCalls(r registry.Registry) (hostapi.SandboxCalls, error) {
+	return hostPart[hostapi.SandboxCalls](r, registry.HostSandboxesService)
 }
-func ShipCalls(r registry.Registry) (host.ShipCalls, error) {
-	return hostPart[host.ShipCalls](r, registry.HostShipsService)
+func ShipCalls(r registry.Registry) (hostapi.ShipCalls, error) {
+	return hostPart[hostapi.ShipCalls](r, registry.HostShipsService)
 }
-func CodeHostCalls(r registry.Registry) (host.CodeHostCalls, error) {
-	return hostPart[host.CodeHostCalls](r, registry.HostCodeHostsService)
+func CodeHostCalls(r registry.Registry) (hostapi.CodeHostCalls, error) {
+	return hostPart[hostapi.CodeHostCalls](r, registry.HostCodeHostsService)
 }
-func RepoCalls(r registry.Registry) (host.RepoCalls, error) {
-	return hostPart[host.RepoCalls](r, registry.HostReposService)
+func RepoCalls(r registry.Registry) (hostapi.RepoCalls, error) {
+	return hostPart[hostapi.RepoCalls](r, registry.HostReposService)
 }
-func JobCalls(r registry.Registry) (host.JobCalls, error) {
-	return hostPart[host.JobCalls](r, registry.HostJobsService)
+func JobCalls(r registry.Registry) (hostapi.JobCalls, error) {
+	return hostPart[hostapi.JobCalls](r, registry.HostJobsService)
 }
-func StatsCalls(r registry.Registry) (host.StatsCalls, error) {
-	return hostPart[host.StatsCalls](r, registry.HostStatsService)
+func StatsCalls(r registry.Registry) (hostapi.StatsCalls, error) {
+	return hostPart[hostapi.StatsCalls](r, registry.HostStatsService)
 }
 
 func hostPart[T any](r registry.Registry, name string) (T, error) {
@@ -91,7 +91,7 @@ func SessionFrom(h plugin.Host, a registry.Args) (core.SessionState, error) {
 }
 
 // SessionArgs is SessionFrom, and the session host's session calls.
-func SessionArgs(h plugin.Host, a registry.Args) (core.SessionState, host.SessionCalls, error) {
+func SessionArgs(h plugin.Host, a registry.Args) (core.SessionState, hostapi.SessionCalls, error) {
 	se, err := SessionFrom(h, a)
 	if err != nil {
 		return se, nil, err

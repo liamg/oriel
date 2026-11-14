@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -19,7 +19,7 @@ import (
 
 // ModelSelects are a provider's model and effort menus, at model and effort ("" is the default effort). It reports
 // a pick, with what's picked: a new model's effort is its default.
-func ModelSelects(c *ui.Ctx, p host.ProviderInfo, model, effort string, disabled bool, help string) (string, string, bool) {
+func ModelSelects(c *ui.Ctx, p hostapi.ProviderInfo, model, effort string, disabled bool, help string) (string, string, bool) {
 	name := kit.ProviderNameIn(c, p.ID)
 	picked := false
 	c.Row("model", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {

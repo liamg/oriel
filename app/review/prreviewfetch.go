@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -24,8 +24,8 @@ func (x *PRReview) fetch(ctx registry.Ctx, a registry.Args) error {
 		return err
 	}
 	return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: "review.pr.fetch." + string(se.ID), Doing: "Fetching " + kit.Label(se)},
-		func(ctx context.Context) (map[string]host.PRMove, error) { return w.UpdatePR(ctx, se.ID) },
-		func(_ registry.Ctx, moved map[string]host.PRMove) error {
+		func(ctx context.Context) (map[string]hostapi.PRMove, error) { return w.UpdatePR(ctx, se.ID) },
+		func(_ registry.Ctx, moved map[string]hostapi.PRMove) error {
 			x.forget(reviewPR(se))
 			for _, m := range moved {
 				x.form(se.ID).moved = m // the tab's banner says so
@@ -105,7 +105,7 @@ func (x *PRReview) recheck(ctx registry.Ctx, a registry.Args) error {
 	if m.To == "" {
 		return errors.New("no fetch has brought new commits")
 	}
-	x.form(se.ID).moved = host.PRMove{}
+	x.form(se.ID).moved = hostapi.PRMove{}
 	var b strings.Builder
 	fmt.Fprintf(&b, "The PR was reviewed before: the author has pushed %s since you reviewed %s. Review what changed (`git diff %s %s`) as a later round.",
 		kit.Counted(m.Commits, "commit"), kit.Label(se), kit.ShortSHA(m.From), kit.ShortSHA(m.To))

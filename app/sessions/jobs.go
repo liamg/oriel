@@ -13,7 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -41,20 +41,20 @@ var (
 
 func runTone(status string) theme.TokenID {
 	switch status {
-	case host.RunRunning:
+	case hostapi.RunRunning:
 		return tRunRunning
-	case host.RunDone:
+	case hostapi.RunDone:
 		return tRunDone
-	case host.RunBlocked:
+	case hostapi.RunBlocked:
 		return tRunBlocked
-	case host.RunSkipped:
+	case hostapi.RunSkipped:
 		return tRunSkipped
 	}
 	return tRunStopped
 }
 
 // runFilters are the runs card's filters: all, then each status.
-var runFilters = []string{"", host.RunRunning, host.RunDone, host.RunBlocked, host.RunStopped}
+var runFilters = []string{"", hostapi.RunRunning, hostapi.RunDone, hostapi.RunBlocked, hostapi.RunStopped}
 
 type Jobs struct {
 	kit.Disposer
@@ -79,24 +79,24 @@ type Jobs struct {
 
 // jobsData is the jobs and repos as the session host last told them.
 type jobsData struct {
-	jobs  []host.Job
+	jobs  []hostapi.Job
 	repos []core.Repo
 	at    time.Time
 }
 
 // jobRow is a job with its runs, newest first.
 type jobRow struct {
-	job  host.Job
+	job  hostapi.Job
 	runs []runRow
 }
 
 // runRow is a run, or a scheduled one that was skipped (no session).
 type runRow struct {
 	se  core.SessionState
-	run host.Run
+	run hostapi.Run
 }
 
-func (r runRow) skipped() bool { return r.run.Status == host.RunSkipped }
+func (r runRow) skipped() bool { return r.run.Status == hostapi.RunSkipped }
 
 // start is when it started, or was due.
 func (r runRow) start() time.Time {
@@ -107,15 +107,15 @@ func (r runRow) start() time.Time {
 }
 
 // skipRows are a job's skipped occurrences as rows.
-func skipRows(j host.Job) []runRow {
+func skipRows(j hostapi.Job) []runRow {
 	var out []runRow
 	for _, at := range j.Skips {
-		out = append(out, runRow{run: host.Run{Status: host.RunSkipped, Started: at, Summary: "skipped (last run still going)"}})
+		out = append(out, runRow{run: hostapi.Run{Status: hostapi.RunSkipped, Started: at, Summary: "skipped (last run still going)"}})
 	}
 	return out
 }
 
-func jobKey(j host.Job) string { return j.Name }
+func jobKey(j hostapi.Job) string { return j.Name }
 
 func (r jobRow) last() (runRow, bool) {
 	if len(r.runs) == 0 {
@@ -128,7 +128,7 @@ func (x *Jobs) Manifest() plugin.Manifest { return plugin.Manifest{ID: "jobs"} }
 
 func (x *Jobs) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.JobKind}}))
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: hostapi.JobKind}}))
 	if x.loc == nil {
 		x.loc = time.Local
 	}
@@ -234,7 +234,7 @@ func (x *Jobs) refresh() {
 }
 
 // load is the jobs and repos as last read, reading them again when they're old or missing. Call it on the loop.
-func (x *Jobs) load() ([]host.Job, []core.Repo) {
+func (x *Jobs) load() ([]hostapi.Job, []core.Repo) {
 	if !kit.HasSessions(x.h) {
 		return nil, nil
 	}
@@ -267,8 +267,8 @@ func (x *Jobs) rows() []jobRow {
 	for _, j := range jobs {
 		r := jobRow{job: j}
 		for _, se := range st.Sessions {
-			if host.JobOf(se) == j.Name {
-				r.runs = append(r.runs, runRow{se: se, run: host.RunOf(se)})
+			if hostapi.JobOf(se) == j.Name {
+				r.runs = append(r.runs, runRow{se: se, run: hostapi.RunOf(se)})
 			}
 		}
 		slices.SortStableFunc(r.runs, func(a, b runRow) int { return b.se.Created.Compare(a.se.Created) })
@@ -310,34 +310,34 @@ func (x *Jobs) selected(rows []jobRow) (jobRow, int, bool) {
 }
 
 // target is the job a command names by {name}, else the selected one.
-func (x *Jobs) target(a registry.Args) (host.Job, error) {
+func (x *Jobs) target(a registry.Args) (hostapi.Job, error) {
 	rows := x.rows()
 	name := a.String("name")
 	if name == "" {
 		if r, _, ok := x.selected(rows); ok {
 			return r.job, nil
 		}
-		return host.Job{}, errors.New("no job is selected")
+		return hostapi.Job{}, errors.New("no job is selected")
 	}
 	for _, r := range rows {
 		if r.job.Name == name {
 			return r.job, nil
 		}
 	}
-	return host.Job{}, fmt.Errorf("no job %q", name)
+	return hostapi.Job{}, fmt.Errorf("no job %q", name)
 }
 
-func (x *Jobs) client() (host.JobCalls, error) {
+func (x *Jobs) client() (hostapi.JobCalls, error) {
 	return kit.JobCalls(x.h)
 }
 
 // save is jobs.save: the job named, with what the args give changed, or a new one; it returns the job as saved.
-func (x *Jobs) save(ctx context.Context, a registry.Args) (host.Job, error) {
-	var j host.Job
+func (x *Jobs) save(ctx context.Context, a registry.Args) (hostapi.Job, error) {
+	var j hostapi.Job
 	if a.String("name") != "" {
 		var err error
 		if j, err = x.target(a); err != nil {
-			return host.Job{}, err
+			return hostapi.Job{}, err
 		}
 	}
 	for k, p := range map[string]*string{"title": &j.Title, "prompt": &j.Prompt, "sandbox": &j.Sandbox, "provider": &j.Provider,
@@ -349,17 +349,17 @@ func (x *Jobs) save(ctx context.Context, a registry.Args) (host.Job, error) {
 	if v, ok := a["schedule"]; ok {
 		s, err := scheduleFrom(v)
 		if err != nil {
-			return host.Job{}, err
+			return hostapi.Job{}, err
 		}
 		j.Schedule = s
 	}
 	c, err := x.client()
 	if err != nil {
-		return host.Job{}, err
+		return hostapi.Job{}, err
 	}
 	saved, err := c.SaveJob(j)
 	if err != nil {
-		return host.Job{}, err
+		return hostapi.Job{}, err
 	}
 	x.h.Do(func() { x.selKey = jobKey(saved) })
 	x.refresh()
@@ -418,7 +418,7 @@ func (x *Jobs) runInBackground(id string, a registry.Args) {
 func (x *Jobs) figure() string {
 	n := 0
 	for _, se := range x.h.State().Sessions {
-		if host.JobOf(se) != "" && host.RunOf(se).Status == host.RunRunning {
+		if hostapi.JobOf(se) != "" && hostapi.RunOf(se).Status == hostapi.RunRunning {
 			n++
 		}
 	}
@@ -453,12 +453,12 @@ func parseDay(s string) (time.Weekday, bool) {
 
 // scheduleFrom is a schedule from jobs.save's {schedule}: "manual", "weekdays 07:00", "weekly mon 07:00", "mon,thu
 // 07:00", or a table of {every, days, at}.
-func scheduleFrom(v any) (host.Schedule, error) {
-	var s host.Schedule
+func scheduleFrom(v any) (hostapi.Schedule, error) {
+	var s hostapi.Schedule
 	switch v := v.(type) {
 	case nil:
 		return s, nil
-	case host.Schedule:
+	case hostapi.Schedule:
 		s = v
 	case map[string]any:
 		s.Every, _ = v["every"].(string)
@@ -487,15 +487,15 @@ func scheduleFrom(v any) (host.Schedule, error) {
 		case len(f) == 0 || f[0] == "manual":
 			return s, nil
 		case f[0] == "weekdays" && len(f) == 2:
-			s.Every, s.At = host.EveryWeekday, f[1]
+			s.Every, s.At = hostapi.EveryWeekday, f[1]
 		case f[0] == "weekly" && len(f) == 3:
 			d, ok := parseDay(f[1])
 			if !ok {
 				return s, fmt.Errorf("no day %q", f[1])
 			}
-			s.Every, s.Days, s.At = host.EveryWeek, []time.Weekday{d}, f[2]
+			s.Every, s.Days, s.At = hostapi.EveryWeek, []time.Weekday{d}, f[2]
 		case len(f) == 2:
-			s.Every, s.At = host.EveryDays, f[1]
+			s.Every, s.At = hostapi.EveryDays, f[1]
 			for _, n := range strings.Split(f[0], ",") {
 				d, ok := parseDay(n)
 				if !ok {

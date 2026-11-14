@@ -13,7 +13,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -23,7 +23,7 @@ import (
 )
 
 // The Ship page and its panels: each project's way from uncommitted work to a merged PR, read from
-// the session host (host.ShipRead) and its code host (codehost.go), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
+// the session host (hostapi.ShipRead) and its code host (codehost.go), and the steps along it. Everything is a command, so keys, Lua and the buttons reach it
 // the same way; the gates are ShipGate contributions, and ShipCommit and ShipRaise hooks can stop a step.
 
 // shipPoll is the most often the session in front's git is read again as it changes.
@@ -159,7 +159,7 @@ func (x *Ship) Deactivate(ctx context.Context) error {
 func (x *Ship) focused() core.SessionID { return x.h.State().Focus }
 
 // client is the session host's ship calls.
-func (x *Ship) client(id core.SessionID) (host.ShipCalls, error) {
+func (x *Ship) client(id core.SessionID) (hostapi.ShipCalls, error) {
 	return kit.ShipCalls(x.h)
 }
 
@@ -346,8 +346,8 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) 
 	c, err := x.client(id)
 	if err == nil {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-		var read []host.Ship
-		if read, err = c.ShipRead(ctx, host.ShipReq{Session: id, Fresh: fresh}); err == nil {
+		var read []hostapi.Ship
+		if read, err = c.ShipRead(ctx, hostapi.ShipReq{Session: id, Fresh: fresh}); err == nil {
 			ships = x.withPRs(ctx, id, read, fresh)
 			x.mirrorReviews(ctx, id, ships, fresh)
 		}
@@ -458,7 +458,7 @@ func (x *Ship) Wait() { x.wait() }
 // step runs one step on a project off the loop, showing doing while it runs and until the project's been read after
 // it, so its panel never shows the state from before; then done, if it succeeded, on the loop. A failure is kept for
 // the project and sent as a notice. The session is read again after, fetched.
-func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c host.ShipCalls) error, done ...func()) error {
+func (x *Ship) step(id core.SessionID, project, doing string, fn func(ctx context.Context, c hostapi.ShipCalls) error, done ...func()) error {
 	return stepWith(x, kit.ShipCalls, id, project, doing, fn, done...)
 }
 
@@ -694,7 +694,7 @@ func (x *Ship) sessionShips(se core.SessionState) ([]shipRead, shipReport) {
 		if i >= 0 {
 			out = append(out, r.ships[i])
 		} else {
-			out = append(out, shipRead{Ship: host.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base}})
+			out = append(out, shipRead{Ship: hostapi.Ship{Project: p.Name, Branch: p.Branch, Base: p.Base}})
 		}
 	}
 	return out, r

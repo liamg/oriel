@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
@@ -20,91 +22,23 @@ import (
 // user's credentials are, with the sandbox's git guard in a sandboxed workspace. The pull request is the app's, through
 // its code host (registry.CodeHost).
 
-// Ship is a project on its way to a merged pull request.
-type Ship struct {
-	Project   string       `json:"project"`
-	Branch    string       `json:"branch,omitempty"`
-	Base      string       `json:"base,omitempty"`      // the branch it merges into: main
-	Default   string       `json:"default,omitempty"`   // the repo's default branch, when it has it locally: main
-	HasOrigin bool         `json:"hasOrigin,omitempty"` // it has an origin to push to
-	Origin    string       `json:"origin,omitempty"`    // origin's URL
-	Remotes   []string     `json:"remotes,omitempty"`   // the repo's remotes, when none is origin
-	ReadOnly  bool         `json:"readOnly,omitempty"`  // a pinned or read-only worktree, with nothing to ship
-	Files     []ShipFile   `json:"files,omitempty"`     // uncommitted
-	Behind    int          `json:"behind,omitempty"`    // commits on the base it lacks
-	BaseAhead int          `json:"baseAhead,omitempty"` // commits it has from the local base that origin's lacks: a PR would show them again
-	Conflicts []string     `json:"conflicts,omitempty"`
-	Commits   int          `json:"commits,omitempty"` // on the branch since its base
-	Unpushed  []ShipCommit `json:"unpushed,omitempty"`
-	First     ShipCommit   `json:"first,omitzero"` // the branch's own first commit, pushed or not
-	Pushed    bool         `json:"pushed,omitempty"`
-	Head      string       `json:"head,omitempty"`     // the commit checked out
-	Replaced  int          `json:"replaced,omitempty"` // commits on origin's branch a rebase rewrote: the next push replaces them
-	Synced    time.Time    `json:"synced,omitzero"`    // when it was last rebased onto its base from here
-	// CommitDraft is the commit message drafted for it (Body), PRDraft the pull request's.
-	CommitDraft  hostcore.Draft `json:"commitDraft,omitzero"`
-	PRDraft      hostcore.Draft `json:"prDraft,omitzero"`
-	Template     string         `json:"template,omitempty"` // the repo's pull request template
-	TemplateFile string         `json:"templateFile,omitempty"`
-	Owners       []string       `json:"owners,omitempty"` // CODEOWNERS of what the branch changes
-	GitError     string         `json:"gitError,omitempty"`
-	// Off is set while the worktree is on a branch other than the session's for it, which Oriel won't push.
-	Off *hostcore.OffBranch `json:"off,omitempty"`
-}
+type Ship = hostapi.Ship
 
-// ShipFile is an uncommitted file.
-type ShipFile struct {
-	Path   string `json:"path"`
-	Code   string `json:"code"` // git's letter: M, A, D, R, ? (untracked), U (conflicted)
-	Add    int    `json:"add,omitempty"`
-	Del    int    `json:"del,omitempty"`
-	Binary bool   `json:"binary,omitempty"`
-}
+type ShipFile = hostapi.ShipFile
 
-// ShipCommit is a commit on the branch.
-type ShipCommit struct {
-	Hash    string `json:"hash"`
-	Subject string `json:"subject"`
-	Body    string `json:"body,omitempty"`
-	Author  string `json:"author,omitempty"`
-}
+type ShipCommit = hostapi.ShipCommit
 
 func shipCommit(c gitx.Commit) ShipCommit {
 	return ShipCommit{Hash: c.Hash, Subject: c.Subject, Body: c.Body, Author: c.Author}
 }
 
-// ShipReq reads a session's projects; Fresh fetches first.
-type ShipReq struct {
-	Session  core.SessionID `json:"session"`
-	Fresh    bool           `json:"fresh,omitempty"`
-	Projects []string       `json:"projects,omitempty"` // only these projects, in the session's order; every one when empty
-}
+type ShipReq = hostapi.ShipReq
 
-// ShipRef is one project of a session.
-type ShipRef struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-}
+type ShipRef = hostapi.ShipRef
 
-// ShipCommitReq commits files of a project (every change when none) with a message.
-type ShipCommitReq struct {
-	Session  core.SessionID `json:"session"`
-	Project  string         `json:"project"`
-	Message  string         `json:"message"`
-	Files    []string       `json:"files,omitempty"`    // none commits every change, untracked files too
-	Trailers []string       `json:"trailers,omitempty"` // added to the message, as git commit --trailer does
-}
+type ShipCommitReq = hostapi.ShipCommitReq
 
-// DraftReq saves a project's commit message (Kind "commit": Body) or PR draft (Kind "pr") as the user wrote it, or
-// with Drop clears it, so the agent drafts it again.
-type DraftReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Kind    string         `json:"kind"`
-	Title   string         `json:"title,omitempty"`
-	Body    string         `json:"body"`
-	Drop    bool           `json:"drop,omitempty"`
-}
+type DraftReq = hostapi.DraftReq
 
 // shipState is what the host keeps between reads: each branch's PR on GitHub, for review mirroring, which branches'
 // PRs a code host last found open, and when each project was last synced.
@@ -336,12 +270,7 @@ func localDefault(ctx context.Context, repo gitx.Repo) string {
 	return ""
 }
 
-// RenameReq renames a project's branch.
-type RenameReq struct {
-	Session core.SessionID `json:"session"`
-	Project string         `json:"project"`
-	Name    string         `json:"name"`
-}
+type RenameReq = hostapi.RenameReq
 
 // ShipRename renames a project's branch. The app refuses first when its PR is open on it.
 func (x *GitHub) ShipRename(ctx context.Context, r RenameReq) (err error) {

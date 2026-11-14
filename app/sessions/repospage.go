@@ -13,7 +13,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -36,11 +36,11 @@ var (
 
 // repoDetail is what the page has read of one repo.
 type repoDetail struct {
-	facts *plugin.Load[host.RepoFacts]
+	facts *plugin.Load[hostapi.RepoFacts]
 	busy  string // the action running: "fetch", "clean", "push"
 	note  string // how the last action went
 
-	plan      *host.HousekeepPlan
+	plan      *hostapi.HousekeepPlan
 	planBusy  bool
 	planSince time.Time
 	planErr   string
@@ -55,9 +55,9 @@ func (x *Repos) detail(id core.RepoID) *repoDetail {
 	d := x.details[id]
 	if d == nil {
 		w, _ := kit.RepoCalls(x.h)
-		d = &repoDetail{facts: plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (host.RepoFacts, error) {
+		d = &repoDetail{facts: plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) (hostapi.RepoFacts, error) {
 			if w == nil {
-				return host.RepoFacts{}, errors.New("there are no repos in this window")
+				return hostapi.RepoFacts{}, errors.New("there are no repos in this window")
 			}
 			return w.RepoFacts(ctx, id)
 		}, plugin.LoadOpts{Timeout: 20 * time.Second})}
@@ -80,7 +80,7 @@ func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 	plugin.Go(x.h, "repos: housekeeping "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
-		p, err := w.Housekeeping(ctx, host.HousekeepReq{Repo: id, Fetch: fetch})
+		p, err := w.Housekeeping(ctx, hostapi.HousekeepReq{Repo: id, Fetch: fetch})
 		x.h.Do(func() {
 			d.planBusy = false
 			if err != nil {
@@ -97,7 +97,7 @@ func (x *Repos) readPlan(id core.RepoID, fetch bool) {
 }
 
 // act runs a host call for a repo off the loop, then reads its facts again.
-func (x *Repos) act(id core.RepoID, what string, fn func(ctx context.Context, w host.RepoCalls) (string, error)) {
+func (x *Repos) act(id core.RepoID, what string, fn func(ctx context.Context, w hostapi.RepoCalls) (string, error)) {
 	d := x.detail(id)
 	w, _ := kit.RepoCalls(x.h)
 	if d.busy != "" || w == nil {
@@ -313,7 +313,7 @@ func (x *Repos) repoHead(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			busy := d.busy != ""
 			if r.Remote != "" && widget.Button(c, "fetch", "Fetch", widget.ButtonOpts{Key: "f", Disabled: busy, Busy: d.busy == "fetch", BusyLabel: "Fetching",
 				Help: "agent/repos#detail"}) {
-				x.act(r.ID, "fetch", func(ctx context.Context, w host.RepoCalls) (string, error) {
+				x.act(r.ID, "fetch", func(ctx context.Context, w hostapi.RepoCalls) (string, error) {
 					return "fetched", w.FetchRepo(ctx, r.ID)
 				})
 				d.plan = nil
@@ -444,7 +444,7 @@ func (x *Repos) housekeepCard(c *ui.Ctx, r core.Repo, d *repoDetail) {
 			return
 		}
 		for _, b := range slices.Sorted(maps.Keys(d.results)) {
-			if slices.ContainsFunc(p.Branches, func(s host.StaleBranch) bool { return s.Name == b }) {
+			if slices.ContainsFunc(p.Branches, func(s hostapi.StaleBranch) bool { return s.Name == b }) {
 				continue
 			}
 			if e := d.results[b]; e != "" {
@@ -502,7 +502,7 @@ func housekeepCol(c *ui.Ctx, key string, w ui.Size, s string, ts ui.TextStyle) {
 	c.Row(key, ui.Style{W: w, Clip: true}, func(c *ui.Ctx) { c.Text("t", s, ts) })
 }
 
-func housekeepBranch(c *ui.Ctx, b host.StaleBranch, d *repoDetail) {
+func housekeepBranch(c *ui.Ctx, b hostapi.StaleBranch, d *repoDetail) {
 	th := c.Theme()
 	c.Row("b."+b.Name, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		st := widget.CheckOff
@@ -520,7 +520,7 @@ func housekeepBranch(c *ui.Ctx, b host.StaleBranch, d *repoDetail) {
 		housekeepCol(c, "b", ui.Flex(2), b.Name, kit.MonoFont(11.5, fg))
 		c.Row("w", ui.Style{W: ui.Px(110)}, func(c *ui.Ctx) {
 			tone := th.C(tRepoMerged)
-			if b.Why == host.WhyGone {
+			if b.Why == hostapi.WhyGone {
 				tone = th.C(tRepoGone)
 			}
 			widget.Chip(c, "why", b.Why, tone, "agent/repos#housekeeping")
@@ -612,7 +612,7 @@ func (d *repoDetail) tickedCount() int {
 
 // clean deletes the ticked branches, forcing the dirty worktrees ticked, and prunes if ticked.
 func (x *Repos) clean(id core.RepoID, d *repoDetail) {
-	req := host.HousekeepReq{Repo: id, Prune: d.prune}
+	req := hostapi.HousekeepReq{Repo: id, Prune: d.prune}
 	for _, b := range d.plan.Branches {
 		if d.ticked[b.Name] {
 			req.Apply = append(req.Apply, b.Name)
@@ -621,7 +621,7 @@ func (x *Repos) clean(id core.RepoID, d *repoDetail) {
 			}
 		}
 	}
-	x.act(id, "clean", func(ctx context.Context, w host.RepoCalls) (string, error) {
+	x.act(id, "clean", func(ctx context.Context, w hostapi.RepoCalls) (string, error) {
 		res, err := w.Housekeep(ctx, req)
 		x.h.Do(func() {
 			d.results = map[string]string{}
@@ -650,7 +650,7 @@ var bumps = []string{"patch", "minor", "major"}
 // tagForm is the New tag form of a repo.
 type tagForm struct {
 	open    bool
-	preview host.TagPreview
+	preview hostapi.TagPreview
 	loaded  bool
 	loading bool
 	since   time.Time // when the preview's read started
@@ -665,7 +665,7 @@ type tagForm struct {
 	push    bool
 	busy    bool
 	err     string
-	done    *host.Tagged
+	done    *hostapi.Tagged
 }
 
 func (x *Repos) loadTag(id core.RepoID, t *tagForm) {
@@ -853,7 +853,7 @@ func (x *Repos) createTag(id core.RepoID, t *tagForm) {
 	plugin.Go(x.h, "repos: tag "+string(id), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
-		res, err := w.Tag(ctx, host.TagReq{Repo: id, Branch: a.String("branch"), Name: a.String("name"), Message: a.String("message"),
+		res, err := w.Tag(ctx, hostapi.TagReq{Repo: id, Branch: a.String("branch"), Name: a.String("name"), Message: a.String("message"),
 			Pull: a.Bool("pull"), Sign: a.Bool("sign"), Push: a.Bool("push")})
 		x.h.Do(func() {
 			t.busy = false
@@ -882,7 +882,7 @@ func (x *Repos) tagDone(c *ui.Ctx, r core.Repo, t *tagForm) {
 			c.Text("p", "push failed: "+kit.FirstLine(res.PushErr), kit.MonoFont(10.5, th.C(theme.Error)))
 			if widget.Button(c, "again", "Push again", widget.ButtonOpts{Busy: x.detail(r.ID).busy == "push", BusyLabel: "Pushing", Help: "agent/repos#tags"}) {
 				name := res.Name
-				x.act(r.ID, "push", func(ctx context.Context, w host.RepoCalls) (string, error) {
+				x.act(r.ID, "push", func(ctx context.Context, w hostapi.RepoCalls) (string, error) {
 					err := w.PushTag(ctx, r.ID, name)
 					if err == nil {
 						x.h.Do(func() { res.Pushed, res.PushErr = true, "" })

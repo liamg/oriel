@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/ui"
 )
 
@@ -46,7 +46,7 @@ type autosave struct {
 }
 
 // keepTyped is called each frame a draft box is drawn: changed says it was typed into, first that it hadn't been.
-func (x *Ship) keepTyped(c *ui.Ctx, a *autosave, changed, first bool, req host.DraftReq) {
+func (x *Ship) keepTyped(c *ui.Ctx, a *autosave, changed, first bool, req hostapi.DraftReq) {
 	now := c.Now()
 	if changed {
 		a.pending, a.at = true, now

@@ -14,7 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -43,7 +43,7 @@ func TestShipMergeWarnsAboutUnresolvedThreads(t *testing.T) {
 	hub.Resolve(root.ID, false)
 	ctx := context.Background()
 	for _, body := range []string{"rename this", "and test it"} {
-		if _, err := lw.W.Comment(ctx, host.CommentReq{Session: se.ID, Body: body}); err != nil {
+		if _, err := lw.W.Comment(ctx, hostapi.CommentReq{Session: se.ID, Body: body}); err != nil {
 			t.Fatal(err)
 		}
 	}

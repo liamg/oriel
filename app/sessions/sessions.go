@@ -20,7 +20,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -31,7 +31,6 @@ import (
 // Commands drive it, so Lua and keys reach it the same way.
 type Sessions struct {
 	kit.Disposer
-	Host      *host.Host // the session host; nil for none
 	ConfigDir string
 	h         plugin.Host
 	ctx       context.Context
@@ -48,13 +47,13 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	ctx, cancel := context.WithCancel(context.Background())
 	x.ctx, x.cancel = ctx, cancel
-	if w := x.Host; w != nil {
-		w.SetApp(host.App{
-			Tools:    func(r host.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
-			CallTool: func(ctx context.Context, call host.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
-			Decide:   func(ctx context.Context, d host.Decide) host.Verdict { return x.decide(ctx, h, d) },
+	if w, err := kit.SessionCalls(h); err == nil {
+		w.SetApp(hostapi.App{
+			Tools:    func(r hostapi.ToolsReq) []agent.Tool { return x.agentTools(h, r) },
+			CallTool: func(ctx context.Context, call hostapi.ToolCall) (string, error) { return x.callTool(ctx, h, w, call) },
+			Decide:   func(ctx context.Context, d hostapi.Decide) hostapi.Verdict { return x.decide(ctx, h, d) },
 		})
-		x.Add(registry.DisposeFunc(func() { w.SetApp(host.App{}) }))
+		x.Add(registry.DisposeFunc(func() { w.SetApp(hostapi.App{}) }))
 	}
 	x.contributeKinds(h)
 	landAtLaunch(h)
@@ -67,7 +66,7 @@ func (x *Sessions) Activate(_ context.Context, h plugin.Host) error {
 	x.sendRestart()
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "Permission", Fired: true, Payload: registry.PermissionEvent{},
 		Doc: "An agent, the egress proxy or the gateway wants something; a Decide hook answers allow or deny before the user is asked."}))
-	if x.Host != nil {
+	if _, err := kit.SessionCalls(h); err == nil {
 		x.Add(h.Contribute(registry.Explainer{Name: "agent", Order: 10, Explain: x.explain, Label: x.explainer, Byline: x.explainerByline}))
 		x.Add(h.Contribute(registry.Forker{Name: "agent", Order: 10, Fork: x.fork, Label: x.forker}))
 	}
@@ -130,7 +129,7 @@ func (x *Sessions) follow(id core.SessionID) {
 
 func (x *Sessions) commands() []registry.Command {
 	h := x.h
-	has := func(registry.Args) bool { return x.Host != nil }
+	has := func(registry.Args) bool { _, err := kit.SessionCalls(x.h); return err == nil }
 	focused := func(registry.Args) bool { return has(nil) && x.focused() != "" }
 	named := func(a registry.Args) bool { return has(nil) && (a.String("id") != "" || x.focused() != "") } // {id}, or the one in front
 	planning := func(registry.Args) bool {
@@ -182,34 +181,34 @@ func (x *Sessions) commands() []registry.Command {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
 			}},
 		{ID: "session.stop", Grant: "session.control", Title: "Stop the agent of {id}, or the session in front", Available: named,
-			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error { return w.Stop(ctx, id) })},
+			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Stop(ctx, id) })},
 		{ID: "session.archive", Grant: "session.control", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
-			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error { return w.Archive(ctx, id) })},
+			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Archive(ctx, id) })},
 		{ID: "session.start-work", Grant: "session.control", Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
 			Available: planning,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.start-work", "Starting work on", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
+				return x.slowSession("session.start-work", "Starting work on", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
 		{ID: "session.configure", Grant: "session.control", Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
 			Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.configure", "Switching the agent of", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
-					return w.Configure(ctx, host.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
+				return x.slowSession("session.configure", "Switching the agent of", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
+					return w.Configure(ctx, hostapi.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
 				})(ctx, a)
 			}},
 		{ID: "session.interrupt", Grant: "session.control", Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
-			Run: x.onSession(func(_ context.Context, w host.SessionCalls, id core.SessionID) error { return w.Interrupt(id) })},
+			Run: x.onSession(func(_ context.Context, w hostapi.SessionCalls, id core.SessionID) error { return w.Interrupt(id) })},
 		{ID: "session.rename", Grant: "session.control", Title: "Rename {id}, or the session in front: {name}", Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.onSession(func(_ context.Context, w host.SessionCalls, id core.SessionID) error {
+				return x.onSession(func(_ context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.Rename(id, a.String("name"))
 				})(ctx, a)
 			}},
 		{ID: "session.add-repo", Grant: "session.control", Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return x.slowSession("session.add-repo", "Adding "+a.String("repo")+" to", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
+				return x.slowSession("session.add-repo", "Adding "+a.String("repo")+" to", func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 					return w.AddRepo(ctx, id, core.RepoID(a.String("repo")))
 				})(ctx, a)
 			}},
@@ -261,17 +260,18 @@ func (x *Sessions) loginNotices(signedOut, was []core.Login) {
 }
 
 // host is the session host, or why there's none.
-func (x *Sessions) host() (host.SessionCalls, error) {
-	if x.Host == nil {
+func (x *Sessions) host() (hostapi.SessionCalls, error) {
+	w, err := kit.SessionCalls(x.h)
+	if err != nil {
 		return nil, errors.New("there are no sessions in this window")
 	}
-	return x.Host, nil
+	return w, nil
 }
 
 func (x *Sessions) focused() core.SessionID { return x.h.State().Focus }
 
 // onSession runs fn on the session {id}, or the one in front.
-func (x *Sessions) onSession(fn func(context.Context, host.SessionCalls, core.SessionID) error) func(registry.Ctx, registry.Args) error {
+func (x *Sessions) onSession(fn func(context.Context, hostapi.SessionCalls, core.SessionID) error) func(registry.Ctx, registry.Args) error {
 	return func(ctx registry.Ctx, a registry.Args) error {
 		id := core.SessionID(a.String("id"))
 		if id == "" {
@@ -290,8 +290,8 @@ func (x *Sessions) onSession(fn func(context.Context, host.SessionCalls, core.Se
 
 // slowSession is onSession for host work that runs off the loop (plugin.RunSlow): doing, then the session, says what
 // it is.
-func (x *Sessions) slowSession(command, doing string, fn func(context.Context, host.SessionCalls, core.SessionID) error) func(registry.Ctx, registry.Args) error {
-	return x.onSession(func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
+func (x *Sessions) slowSession(command, doing string, fn func(context.Context, hostapi.SessionCalls, core.SessionID) error) func(registry.Ctx, registry.Args) error {
+	return x.onSession(func(ctx context.Context, w hostapi.SessionCalls, id core.SessionID) error {
 		return plugin.RunSlow(ctx, x.h, plugin.Slow{ID: command + "." + string(id), Doing: doing + " " + x.label(id)},
 			func(ctx context.Context) (struct{}, error) { return struct{}{}, fn(ctx, w, id) }, nil)
 	})
@@ -413,11 +413,12 @@ const autoNameOption = "sessions.auto_name"
 const restartOption = "sessions.restart_on_exit"
 
 func (x *Sessions) sendRestart() {
-	if x.Host == nil {
+	w, err := kit.SessionCalls(x.h)
+	if err != nil {
 		return
 	}
 	on, set := registry.Option[bool](x.h.Options(), restartOption, registry.At{})
-	x.Host.SetRestartOnExit(on || !set) // on unless it's set false
+	w.SetRestartOnExit(on || !set) // on unless it's set false
 }
 
 // start starts a session and brings it to the front, unless {background}.
@@ -562,7 +563,7 @@ func (x *Sessions) readOnly(path string) string {
 }
 
 // agentTools are the tools plugins offer an agent, as the host hands them on.
-func (x *Sessions) agentTools(h plugin.Host, r host.ToolsReq) []agent.Tool {
+func (x *Sessions) agentTools(h plugin.Host, r hostapi.ToolsReq) []agent.Tool {
 	var out []agent.Tool
 	name, utility := x.agentName(r.Session, r.Agent)
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
@@ -587,7 +588,7 @@ func (x *Sessions) agentName(id core.SessionID, agent string) (string, bool) {
 
 // callTool runs a tool for an agent. A session's agent is owned by the host: an act there is asked through the
 // session's rules, the policy hooks and then the user's card, as the agent's own gate is.
-func (x *Sessions) callTool(ctx context.Context, h plugin.Host, w host.SessionCalls, call host.ToolCall) (string, error) {
+func (x *Sessions) callTool(ctx context.Context, h plugin.Host, w hostapi.SessionCalls, call hostapi.ToolCall) (string, error) {
 	name, utility := x.agentName(call.Session, call.Agent)
 	for _, t := range registry.AgentToolsFor(h, name, utility) {
 		if t.Name != call.Tool || t.Run == nil {
@@ -612,14 +613,14 @@ func (x *Sessions) callTool(ctx context.Context, h plugin.Host, w host.SessionCa
 }
 
 // askForSession asks for a session's agent's act. The rule "Always" makes is the tool's name.
-func askForSession(ctx context.Context, w host.SessionCalls, call host.ToolCall, cf registry.Confirmation) (bool, error) {
+func askForSession(ctx context.Context, w hostapi.SessionCalls, call hostapi.ToolCall, cf registry.Confirmation) (bool, error) {
 	tool := "mcp__oriel__" + call.Tool
-	v, err := w.Ask(ctx, host.AskReq{Session: call.Session, Ask: core.Ask{Kind: core.AskPermission, Tool: tool,
+	v, err := w.Ask(ctx, hostapi.AskReq{Session: call.Session, Ask: core.Ask{Kind: core.AskPermission, Tool: tool,
 		Summary: cmp.Or(cf.Line, cf.Title), Detail: cf.Lead, Input: string(call.Args), Rule: tool}})
 	if err != nil {
 		return false, err
 	}
-	if v.Decision == host.DecisionAllow {
+	if v.Decision == hostapi.DecisionAllow {
 		return true, nil
 	}
 	if v.Note != "" {
@@ -629,7 +630,7 @@ func askForSession(ctx context.Context, w host.SessionCalls, call host.ToolCall,
 }
 
 // decide runs the Permission hooks on an ask: layer 2, before it reaches the user.
-func (x *Sessions) decide(ctx context.Context, h plugin.Host, d host.Decide) host.Verdict {
+func (x *Sessions) decide(ctx context.Context, h plugin.Host, d hostapi.Decide) hostapi.Verdict {
 	ev := registry.PermissionEvent{Session: string(d.Session), Kind: string(d.Ask.Kind), Tool: d.Ask.Tool, Summary: d.Ask.Summary,
 		Input: kit.MainInput(d.Ask.Input), Rule: d.Ask.Rule, Host: d.Ask.Host}
 	subject := d.Ask.Tool
@@ -645,20 +646,20 @@ func (x *Sessions) decide(ctx context.Context, h plugin.Host, d host.Decide) hos
 	select {
 	case <-done:
 	case <-ctx.Done():
-		return host.Verdict{}
+		return hostapi.Verdict{}
 	}
 	switch {
 	case v.Veto:
-		return host.Verdict{Decision: host.DecisionDeny, Note: v.Reason, By: "a Permission hook"}
+		return hostapi.Verdict{Decision: hostapi.DecisionDeny, Note: v.Reason, By: "a Permission hook"}
 	case !v.Decided:
-		return host.Verdict{}
+		return hostapi.Verdict{}
 	}
 	return hookVerdict(v.Value)
 }
 
 // hookVerdict reads a Permission hook's answer, in any of the shapes it may give ("allow", true, a
 // registry.PermissionVerdict, a {decision, note} table), as allow or deny; anything else leaves the ask to the user.
-func hookVerdict(answer any) host.Verdict {
+func hookVerdict(answer any) hostapi.Verdict {
 	var dec, note string
 	switch val := answer.(type) {
 	case string:
@@ -671,10 +672,10 @@ func hookVerdict(answer any) host.Verdict {
 		dec, _ = val["decision"].(string)
 		note, _ = val["note"].(string)
 	}
-	if d := host.Decision(dec); d.Decided() {
-		return host.Verdict{Decision: d, Note: note, By: "a Permission hook"}
+	if d := hostapi.Decision(dec); d.Decided() {
+		return hostapi.Verdict{Decision: d, Note: note, By: "a Permission hook"}
 	}
-	return host.Verdict{}
+	return hostapi.Verdict{}
 }
 
 // explain answers "ask to explain" from a tool-less fork of the session in front: it knows why the code is as
@@ -751,8 +752,8 @@ func (x *Sessions) forker(id string) string {
 
 // startWorkReq is session.start-work's args as the host's request: {clear} and {fresh} (both on unless false),
 // {branches} by project name, {sandbox}, {network}, {model} and {effort}, each the session's own when absent.
-func startWorkReq(id core.SessionID, a registry.Args) host.StartWorkReq {
-	r := host.StartWorkReq{Session: id, KeepThreads: a["clear"] == false, KeepConversation: a["fresh"] == false,
+func startWorkReq(id core.SessionID, a registry.Args) hostapi.StartWorkReq {
+	r := hostapi.StartWorkReq{Session: id, KeepThreads: a["clear"] == false, KeepConversation: a["fresh"] == false,
 		Network: a.String("network"), Model: a.String("model"), Effort: a.String("effort")}
 	if v, ok := a["sandbox"].(bool); ok {
 		r.Sandbox = &v

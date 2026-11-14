@@ -31,6 +31,10 @@ var Rules = []Rule{
 	apart("host/agentrun"), apart("host/aireview"), apart("host/github"), apart("host/jobs"), apart("host/persist"),
 	apart("host/pricing"), apart("host/repos"), apart("host/sandboxhost"), apart("host/utility"), apart("host/worktree"),
 	{From: []string{"host/hostcore", "host/hosttest"}, Never: hostParts},
+	// The features' shared kit sees the host only through its contracts (host/hostapi): not its parts, the sandboxes'
+	// backends or Lua.
+	{From: []string{"app/kit"}, Never: append([]string{"host/hostcore", "sandbox/container", "sandbox/seatbelt", "script"}, hostParts...),
+		Built: true},
 	// Libraries the host and the app both use, reaching neither.
 	{From: []string{"search", "sysload", "agent/usage/stats"}, Never: []string{"app", "host", "ui", "render"}},
 }

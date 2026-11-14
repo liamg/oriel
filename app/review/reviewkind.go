@@ -12,7 +12,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
@@ -35,7 +35,7 @@ func reviewDraft(se core.SessionState) *core.ReviewDraft {
 // Raise PR's.
 func (x *PRReview) contributeKind() {
 	h := x.h
-	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: host.ReviewKind,
+	x.Add(h.Contribute(registry.KindEntry{SessionKind: registry.Kind{KindSpec: hostapi.ReviewKind,
 		PrepareFunc: x.prepare,
 		ChipsFunc: func(se core.SessionState) []registry.Chip {
 			if pr := reviewPR(se); pr != "" {

@@ -7,16 +7,13 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 )
 
-// OffBranch is a project whose worktree is on a branch other than the session's for it, which Oriel won't push.
-type OffBranch struct {
-	Session string `json:"session"`           // the session's branch for the project
-	Current string `json:"current,omitempty"` // the branch checked out; "" when detached
-	Refused string `json:"refused,omitempty"` // why Current can't be made the session's branch; "" when it can
-}
+type OffBranch = hostapi.OffBranch
 
 // OffBranchOf is p's worktree off the session's branch, or nil while it's on it or p has no branch of the session's.
 func OffBranchOf(ctx context.Context, st State, se core.SessionState, p core.Project, repo gitx.Repo) *OffBranch {

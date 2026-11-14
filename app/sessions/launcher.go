@@ -17,7 +17,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -60,7 +60,7 @@ type Launcher struct {
 	gen        int  // which opening the host's answers are for
 
 	kinds     []core.KindSpec
-	providers *plugin.Load[[]host.ProviderInfo]
+	providers *plugin.Load[[]hostapi.ProviderInfo]
 	loadErr   string
 	noAgent   bool // No agent was picked: never by default
 	picked    bool // the agent was picked, by the user or once the providers arrived
@@ -136,7 +136,7 @@ func (x *Launcher) openWith(a registry.Args) {
 		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", backend: spec.Sandbox.Backend, branch: spec.Branch,
 		card: ticketCard{key: strings.TrimSpace(spec.Ticket)}}
 	if x.template == "" {
-		x.template = host.Templates[0]
+		x.template = hostapi.Templates[0]
 	}
 	if _, given := a["sandbox"]; !given {
 		v, _, _ := x.h.Options().Get("sandbox.default", registry.At{})
@@ -157,7 +157,7 @@ func (x *Launcher) load(want core.Kind) {
 	if i := slices.IndexFunc(x.kinds, func(k core.KindSpec) bool { return k.Kind == want }); i >= 0 {
 		x.kind = i
 	}
-	x.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]host.ProviderInfo, error) {
+	x.providers = plugin.NewLoad(x.h, func(ctx context.Context, _ func(string, float64)) ([]hostapi.ProviderInfo, error) {
 		ps := c.ProviderInfo(ctx)
 		if len(ps) == 0 {
 			return nil, errors.New("no agents are set up on this machine")
@@ -168,7 +168,7 @@ func (x *Launcher) load(want core.Kind) {
 }
 
 // providerList is the providers the probe found; none while it runs.
-func (x *Launcher) providerList() []host.ProviderInfo {
+func (x *Launcher) providerList() []hostapi.ProviderInfo {
 	if x.providers == nil {
 		return nil
 	}
@@ -511,7 +511,7 @@ func (x *Launcher) form(c *ui.Ctx) {
 		case core.FromName:
 			c.Row("repo", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				x.field(c, "name", &x.name, "Name", namePlaceholder, true, ui.Flex(1), 1)
-				if t, ok := widget.Select(c, "template", "template: "+x.template, host.Templates,
+				if t, ok := widget.Select(c, "template", "template: "+x.template, hostapi.Templates,
 					widget.SelectOpts{Label: "Template", Help: "agent/launcher#prompt"}); ok {
 					x.template = t
 				}
@@ -683,7 +683,7 @@ func (x *Launcher) ticketCard(c *ui.Ctx) {
 }
 
 // providerCard is one provider: its name, model and effort, and what's left of its plan.
-func (x *Launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
+func (x *Launcher) providerCard(c *ui.Ctx, p hostapi.ProviderInfo) {
 	th := c.Theme()
 	on := x.provider == p.ID
 	fill, line := th.C(tLaunchCard), th.C(tLaunchCardLine)
@@ -725,7 +725,7 @@ func (x *Launcher) providerCard(c *ui.Ctx, p host.ProviderInfo) {
 }
 
 // providerNote is a provider's plan and what's used of each window, or why it can't run.
-func providerNote(p host.ProviderInfo, usage []core.ProviderUsage) string {
+func providerNote(p hostapi.ProviderInfo, usage []core.ProviderUsage) string {
 	switch {
 	case p.Error != "":
 		return p.Error

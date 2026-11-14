@@ -7,7 +7,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -31,8 +31,8 @@ func (x *Ship) mergeDefault(_ registry.Ctx, se core.SessionState, p string, a re
 		return nil
 	}
 	x.h.Dismiss("ship.merge-default")
-	return x.step(se.ID, p, mergeStep, func(ctx context.Context, c host.ShipCalls) error {
-		m, err := c.ShipMergeDefault(ctx, host.ShipRef{Session: se.ID, Project: p})
+	return x.step(se.ID, p, mergeStep, func(ctx context.Context, c hostapi.ShipCalls) error {
+		m, err := c.ShipMergeDefault(ctx, hostapi.ShipRef{Session: se.ID, Project: p})
 		if err != nil {
 			return err
 		}
@@ -64,13 +64,13 @@ func (x *Ship) nextPR(se core.SessionState, p string, done *registry.PR) error {
 	if done == nil {
 		done = s.PR
 	}
-	req := host.NextPRReq{Session: se.ID, Project: p}
+	req := hostapi.NextPRReq{Session: se.ID, Project: p}
 	if done != nil {
 		req.Done = core.PastPR{Number: done.Number, URL: done.URL, Title: done.Title, State: prStateWord(done)}
 		req.Head = done.Head
 	}
 	x.h.Dismiss(nextPRAsk(p))
-	return x.step(se.ID, p, nextPRStep, func(ctx context.Context, c host.ShipCalls) error {
+	return x.step(se.ID, p, nextPRStep, func(ctx context.Context, c hostapi.ShipCalls) error {
 		return c.NextPR(ctx, req)
 	}, func() { delete(x.prs, formKey(se.ID, p)) })
 }

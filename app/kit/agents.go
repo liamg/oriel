@@ -12,7 +12,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -41,14 +41,14 @@ func PendingFirst(s widget.LoadState) bool { return s.Phase == widget.Pending &&
 
 // DefaultAgent is the agent and model a session starts on when nobody picks: the last session's (a job's runs on its
 // own), while its provider is still there; else the first provider by installed, then logged in, then name.
-func DefaultAgent(st core.State, ps []host.ProviderInfo) (provider, model string) {
+func DefaultAgent(st core.State, ps []hostapi.ProviderInfo) (provider, model string) {
 	var last core.SessionState
 	for _, se := range st.Sessions {
-		if se.Agent.Provider != "" && host.JobOf(se) == "" && se.Created.After(last.Created) {
+		if se.Agent.Provider != "" && hostapi.JobOf(se) == "" && se.Created.After(last.Created) {
 			last = se
 		}
 	}
-	if i := slices.IndexFunc(ps, func(p host.ProviderInfo) bool { return p.ID == last.Agent.Provider }); i >= 0 {
+	if i := slices.IndexFunc(ps, func(p hostapi.ProviderInfo) bool { return p.ID == last.Agent.Provider }); i >= 0 {
 		p := ps[i]
 		if last.Agent.Model != "" && (len(p.Models) == 0 || slices.ContainsFunc(p.Models, func(m agent.Model) bool { return m.ID == last.Agent.Model })) {
 			return p.ID, last.Agent.Model
@@ -58,7 +58,7 @@ func DefaultAgent(st core.State, ps []host.ProviderInfo) (provider, model string
 	if len(ps) == 0 {
 		return "", ""
 	}
-	rank := func(p host.ProviderInfo) int {
+	rank := func(p hostapi.ProviderInfo) int {
 		switch installed := p.Error == "" && p.Install.Bin != ""; {
 		case installed && p.Install.LoggedIn:
 			return 0
@@ -67,7 +67,7 @@ func DefaultAgent(st core.State, ps []host.ProviderInfo) (provider, model string
 		}
 		return 2
 	}
-	best := slices.MinFunc(ps, func(a, b host.ProviderInfo) int {
+	best := slices.MinFunc(ps, func(a, b hostapi.ProviderInfo) int {
 		if d := rank(a) - rank(b); d != 0 {
 			return d
 		}
@@ -77,7 +77,7 @@ func DefaultAgent(st core.State, ps []host.ProviderInfo) (provider, model string
 }
 
 // DefaultModel is a provider's default model, else its first.
-func DefaultModel(p host.ProviderInfo) string {
+func DefaultModel(p hostapi.ProviderInfo) string {
 	for _, m := range p.Models {
 		if m.Default {
 			return m.ID

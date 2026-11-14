@@ -16,7 +16,7 @@ import (
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -66,7 +66,7 @@ func (x *Jobs) header(c *ui.Ctx, rows []jobRow) {
 		for _, r := range rows {
 			runs += len(r.runs)
 			for _, rr := range r.runs {
-				if rr.run.Status == host.RunRunning {
+				if rr.run.Status == hostapi.RunRunning {
 					running++
 				}
 			}
@@ -172,7 +172,7 @@ func (x *Jobs) jobRowView(c *ui.Ctx, r jobRow, on bool) {
 					c.Text("w", "never run · saved "+r.job.CreatedAt.In(x.loc).Format("Jan 2"), kit.MonoFont(10, th.C(theme.FgFaint)))
 				default:
 					widget.Chip(c, "st", last.run.Status, th.C(runTone(last.run.Status)), "agent/jobs#runs")
-					if last.run.Status == host.RunRunning {
+					if last.run.Status == hostapi.RunRunning {
 						widget.Ago(c, "w", last.se.Created, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint)), Long: true, Prefix: "started ", Now: x.now()})
 					} else {
 						x.when(c, "w", last.se.Created, kit.MonoFont(10, th.C(theme.FgFaint)))
@@ -240,7 +240,7 @@ func (x *Jobs) empty(c *ui.Ctx) {
 
 // took is how long a run ran: so far while it runs.
 func (x *Jobs) took(r runRow) time.Duration {
-	if r.run.Status == host.RunRunning {
+	if r.run.Status == hostapi.RunRunning {
 		return x.now().Sub(r.se.Created)
 	}
 	return r.run.Took()
@@ -302,13 +302,13 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 			count[rr.run.Status]++
 			cost, _, _ := x.cost(rr)
 			total += cost
-			if t := rr.run.Took(); t > 0 && rr.run.Status == host.RunDone {
+			if t := rr.run.Took(); t > 0 && rr.run.Status == hostapi.RunDone {
 				spent += t
 				ended++
 			}
 		}
 		var parts []string
-		for _, s := range []string{host.RunDone, host.RunBlocked, host.RunStopped, host.RunRunning} {
+		for _, s := range []string{hostapi.RunDone, hostapi.RunBlocked, hostapi.RunStopped, hostapi.RunRunning} {
 			if n := count[s]; n > 0 {
 				parts = append(parts, fmt.Sprintf("%d %s", n, s))
 			}
@@ -330,7 +330,7 @@ func (x *Jobs) detail(c *ui.Ctx, r jobRow) {
 var repoWord = regexp.MustCompile(`[A-Za-z0-9][A-Za-z0-9._-]*`)
 
 // named are the registered repos a prompt names, in the order it names them.
-func (x *Jobs) named(j host.Job) []string {
+func (x *Jobs) named(j hostapi.Job) []string {
 	_, repos := x.load()
 	known := map[string]bool{}
 	for _, r := range repos {
@@ -347,7 +347,7 @@ func (x *Jobs) named(j host.Job) []string {
 }
 
 // prompt is the job's prompt, the repos it names picked out in their colours.
-func (x *Jobs) prompt(c *ui.Ctx, j host.Job) {
+func (x *Jobs) prompt(c *ui.Ctx, j hostapi.Job) {
 	th := c.Theme()
 	st := x.h.State()
 	names := x.named(j)
@@ -415,17 +415,17 @@ func promptSpans(line string, tones map[string]render.Color) []widget.Span {
 }
 
 // schedule is the job's schedule as a strip: manual, every weekday, weekly, or custom (the dialog's).
-func (x *Jobs) schedule(c *ui.Ctx, j host.Job) {
+func (x *Jobs) schedule(c *ui.Ctx, j hostapi.Job) {
 	th := c.Theme()
 	s := j.Schedule
 	at := cmp.Or(s.At, "07:00")
 	day := time.Monday
-	if s.Every == host.EveryWeek && len(s.Days) == 1 {
+	if s.Every == hostapi.EveryWeek && len(s.Days) == 1 {
 		day = s.Days[0]
 	}
 	labels := []string{"MANUAL", "EVERY WEEKDAY " + at, "WEEKLY " + strings.ToUpper(dayName(day)) + " " + at, "CUSTOM…"}
-	cur := map[string]int{"": 0, host.EveryWeekday: 1, host.EveryWeek: 2, host.EveryDays: 3}[s.Every]
-	if s.Every == host.EveryDays {
+	cur := map[string]int{"": 0, hostapi.EveryWeekday: 1, hostapi.EveryWeek: 2, hostapi.EveryDays: 3}[s.Every]
+	if s.Every == hostapi.EveryDays {
 		labels[3] = strings.ToUpper(s.String())
 	}
 	c.Row("schedule", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -521,7 +521,7 @@ var stoppedBy = map[string]string{core.StoppedByYou: " by you", core.StoppedByAg
 
 // summary is what a run's row says it did.
 func (x *Jobs) summary(r runRow) string {
-	if r.run.Status == host.RunStopped {
+	if r.run.Status == hostapi.RunStopped {
 		s := "Stopped" + stoppedBy[r.run.StoppedBy]
 		if t := r.run.Took(); t > 0 {
 			s += " after " + kit.Duration(t)
@@ -568,7 +568,7 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 				width = rc.Dx() - 12
 			}
 			tone := th.C(theme.FgMuted)
-			if r.run.Status == host.RunBlocked {
+			if r.run.Status == hostapi.RunBlocked {
 				tone = th.C(theme.Fg)
 			}
 			widget.Wrap(c, "t", x.summary(r), width, kit.UIFont(12, tone))
@@ -585,10 +585,10 @@ func (x *Jobs) runRowView(c *ui.Ctx, i int, r runRow) {
 			if live {
 				label = "Open"
 			}
-			if widget.Button(c, "open", label, widget.ButtonOpts{Primary: r.run.Status == host.RunRunning, Help: "agent/jobs#runs"}) {
+			if widget.Button(c, "open", label, widget.ButtonOpts{Primary: r.run.Status == hostapi.RunRunning, Help: "agent/jobs#runs"}) {
 				x.openRun(r.se.ID)
 			}
-			if r.run.Status == host.RunRunning {
+			if r.run.Status == hostapi.RunRunning {
 				return
 			}
 			label = "Delete"
@@ -678,23 +678,23 @@ func textCellLeft(c *ui.Ctx, key any, w float32, s string, tone render.Color) {
 func (x *Jobs) consoleSide(c *ui.Ctx, id core.SessionID) {
 	th := c.Theme()
 	view, ok := x.h.State().Session(id)
-	if !ok || host.JobOf(view.Snapshot()) == "" {
+	if !ok || hostapi.JobOf(view.Snapshot()) == "" {
 		return
 	}
 	se := view.Snapshot()
 	var row jobRow
 	for _, r := range x.rows() {
-		if r.job.Name == host.JobOf(se) && slices.ContainsFunc(r.runs, func(rr runRow) bool { return rr.se.ID == id }) {
+		if r.job.Name == hostapi.JobOf(se) && slices.ContainsFunc(r.runs, func(rr runRow) bool { return rr.se.ID == id }) {
 			row = r
 		}
 	}
-	cur := runRow{se: se, run: host.RunOf(se)}
+	cur := runRow{se: se, run: hostapi.RunOf(se)}
 	kit.Section(c, "job", "Job", "", func(c *ui.Ctx) {
 		c.Row("title", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-			widget.Wrap(c, "t", cmp.Or(row.job.Title, host.JobOf(se)), 240, kit.UIFont(13, th.C(theme.Fg)))
+			widget.Wrap(c, "t", cmp.Or(row.job.Title, hostapi.JobOf(se)), 240, kit.UIFont(13, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Link(c, "jobs", "Jobs ›", "agent/jobs#page") {
-				x.run("jobs.open", registry.Args{"job": host.JobOf(se)})
+				x.run("jobs.open", registry.Args{"job": hostapi.JobOf(se)})
 			}
 		})
 		c.Row("status", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {

@@ -5,22 +5,13 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/host/hostapi"
+
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// QueuedReq changes a comment of the user's the agent hasn't been given yet: Body in its place, or with Delete, the
-// comment taken out. The comments after it stay as they are, after it. Urgent makes its request urgent, interrupting
-// the turn, as sending it urgent would have; Btw turns it into a side question, asked of a fork, at the thread's end.
-type QueuedReq struct {
-	Session core.SessionID `json:"session"`
-	Thread  core.ThreadID  `json:"thread"`
-	Comment string         `json:"comment"`
-	Body    string         `json:"body,omitempty"`
-	Delete  bool           `json:"delete,omitempty"`
-	Urgent  bool           `json:"urgent,omitempty"`
-	Btw     bool           `json:"btw,omitempty"`
-}
+type QueuedReq = hostapi.QueuedReq
 
 // EditQueued changes or deletes a queued comment. It refuses one the agent already has: it can't be taken back.
 func (x *Runner) EditQueued(r QueuedReq) error {
@@ -75,13 +66,7 @@ func (x *Runner) EditQueued(r QueuedReq) error {
 	return nil
 }
 
-// UnqueueReq takes a message for the agent out of the session's queue before it's sent: the one at Index, which must
-// still be Text.
-type UnqueueReq struct {
-	Session core.SessionID `json:"session"`
-	Index   int            `json:"index"`
-	Text    string         `json:"text"`
-}
+type UnqueueReq = hostapi.UnqueueReq
 
 // Unqueue drops a queued message. One the agent has been given already is gone from the queue, so it refuses.
 func (x *Runner) Unqueue(r UnqueueReq) (err error) {

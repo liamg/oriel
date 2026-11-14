@@ -16,7 +16,7 @@ import (
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -630,7 +630,7 @@ func (x *Plugin) detailLoad(id core.SessionID) (stats.Detail, widget.LoadState) 
 	if w == nil {
 		return stats.Detail{}, widget.LoadState{}
 	}
-	req := host.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
+	req := hostapi.StatsSessionReq{Session: id, Split: x.split(), Offset: x.offset()}
 	a, state := keep(x, x.detailKey(id), "session", func() (stats.Detail, error) { return w.SessionStats(req) })
 	return a.v, state
 }
@@ -654,7 +654,7 @@ func (x *Plugin) usageHistory(acct core.ProviderUsage) []core.ProviderUsage {
 			x.mu.Lock()
 			since := x.frameNow.Add(-8 * 24 * time.Hour)
 			x.mu.Unlock()
-			return w.UsageHistory(host.UsageHistoryReq{Since: since}), nil
+			return w.UsageHistory(hostapi.UsageHistoryReq{Since: since}), nil
 		})
 		hist = a.v
 	}

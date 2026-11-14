@@ -20,7 +20,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -74,14 +74,14 @@ type GitHub struct {
 
 // githubMirror is a session's last sync, and when it came back.
 type githubMirror struct {
-	host.Mirror
+	hostapi.Mirror
 	at  time.Time
 	err error
 }
 
 // ended says every PR the mirror read is closed or merged.
 func (m githubMirror) ended() bool {
-	return len(m.PRs) > 0 && !slices.ContainsFunc(m.PRs, func(p host.MirrorPR) bool { return p.Open })
+	return len(m.PRs) > 0 && !slices.ContainsFunc(m.PRs, func(p hostapi.MirrorPR) bool { return p.Open })
 }
 
 func (x *GitHub) Manifest() plugin.Manifest { return plugin.Manifest{ID: "github"} }
@@ -274,7 +274,7 @@ func (x *GitHub) resolveHost(id core.SessionID, t core.Thread) {
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, time.Minute)
 		defer cancel()
-		if err := c.ResolveGitHub(ctx, host.ResolveReq{Session: id, Thread: t.ID, Resolved: want}); err != nil {
+		if err := c.ResolveGitHub(ctx, hostapi.ResolveReq{Session: id, Thread: t.ID, Resolved: want}); err != nil {
 			fail(err)
 		}
 	})
@@ -288,17 +288,17 @@ func (x *GitHub) session(a registry.Args) (core.SessionState, bool) {
 	return se, err == nil
 }
 
-func (x *GitHub) client(id core.SessionID) (host.CodeHostCalls, error) {
+func (x *GitHub) client(id core.SessionID) (hostapi.CodeHostCalls, error) {
 	return kit.CodeHostCalls(x.h)
 }
 
 // trust is the trusted orgs and users, from the options.
-func (x *GitHub) trust() host.Trust {
+func (x *GitHub) trust() hostapi.Trust {
 	list := func(name string) []string {
 		l, _ := registry.Option[[]string](x.h.Options(), name, registry.At{})
 		return l
 	}
-	return host.Trust{Orgs: list("github.trusted_orgs"), Users: list("github.trusted_users")}
+	return hostapi.Trust{Orgs: list("github.trusted_orgs"), Users: list("github.trusted_users")}
 }
 
 // sync asks the session host to mirror the session's PRs' reviews, off the loop.
@@ -318,11 +318,11 @@ func (x *GitHub) sync(id core.SessionID, fresh bool) {
 	x.mu.Unlock()
 	trust := x.trust()
 	x.busy.Go(func() {
-		var m host.Mirror
+		var m hostapi.Mirror
 		c, err := x.client(id)
 		if err == nil {
 			ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-			m, err = c.SyncGitHub(ctx, host.MirrorReq{Session: id, Fresh: fresh, Trust: trust})
+			m, err = c.SyncGitHub(ctx, hostapi.MirrorReq{Session: id, Fresh: fresh, Trust: trust})
 			cancel()
 		}
 		x.mu.Lock()
@@ -425,7 +425,7 @@ func (x *GitHub) forward(a registry.Args) error {
 	delete(x.editing, cm.ID)
 	x.busy.Go(func() {
 		ctx, cancel := context.WithTimeout(x.ctx, 2*time.Minute)
-		_, err := c.ForwardGitHub(ctx, host.ForwardReq{Session: se.ID, Thread: t.ID, Comment: cm.ID})
+		_, err := c.ForwardGitHub(ctx, hostapi.ForwardReq{Session: se.ID, Thread: t.ID, Comment: cm.ID})
 		cancel()
 		x.mu.Lock()
 		delete(x.forwarding, cm.ID)
@@ -470,7 +470,7 @@ func (x *GitHub) save(a registry.Args) error {
 	if err != nil {
 		return err
 	}
-	if err := c.EditDraft(host.DraftEditReq{Session: se.ID, Thread: t.ID, Comment: cm.ID, Body: body}); err != nil {
+	if err := c.EditDraft(hostapi.DraftEditReq{Session: se.ID, Thread: t.ID, Comment: cm.ID, Body: body}); err != nil {
 		return err
 	}
 	delete(x.editing, cm.ID)

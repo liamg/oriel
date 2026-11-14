@@ -17,7 +17,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/assistant"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -254,7 +254,7 @@ func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Age
 	if err != nil {
 		return nil, err
 	}
-	spec := host.UtilitySpec{Name: kit.AssistantAgent, Provider: kit.Unless(x.str("assistant.provider"), "auto"), Model: x.str("assistant.model"),
+	spec := hostapi.UtilitySpec{Name: kit.AssistantAgent, Provider: kit.Unless(x.str("assistant.provider"), "auto"), Model: x.str("assistant.model"),
 		Pack: x.Prompt(), Prompt: first, Web: x.bool("assistant.web")}
 	u, err := c.StartUtility(context.Background(), spec)
 	if err != nil {
@@ -283,7 +283,7 @@ func (x *Assistant) runsOn() string {
 
 // utilityAgent is a utility agent as the conversation drives it.
 type utilityAgent struct {
-	u   *host.Utility
+	u   hostapi.Utility
 	sig chan assistant.Signal
 }
 
@@ -295,7 +295,7 @@ func (a *utilityAgent) Close() error                                { return a.u
 func (a *utilityAgent) pump(ctx context.Context) {
 	defer close(a.sig)
 	for {
-		var ev host.UtilityEvent
+		var ev hostapi.UtilityEvent
 		select {
 		case <-ctx.Done():
 			return

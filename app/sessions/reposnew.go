@@ -12,7 +12,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -45,8 +45,8 @@ type addRepo struct {
 	probed   string    // the key last checked
 	probing  bool
 	probeAt  time.Time // when the check running started
-	check    host.RepoCheck
-	target   host.CloneTarget
+	check    hostapi.RepoCheck
+	target   hostapi.CloneTarget
 	probeErr string
 
 	busy     bool
@@ -80,7 +80,7 @@ func (x *Repos) newDialog(a registry.Args) error {
 		f.parent = kit.TildePath(w.CloneParent())
 	}
 	if f.name == "" {
-		f.name = host.CloneName(f.url)
+		f.name = hostapi.CloneName(f.url)
 		f.urlName = f.name
 	}
 	if x.dialog != nil && x.dialog.cancel != nil {
@@ -132,7 +132,7 @@ func (f *addRepo) probeKey() string {
 // probe checks what the fields name, once they've rested.
 func (x *Repos) probe(c *ui.Ctx, f *addRepo) {
 	now := c.Now()
-	if n := host.CloneName(f.url); f.mode == 1 && f.name == f.urlName && n != f.urlName {
+	if n := hostapi.CloneName(f.url); f.mode == 1 && f.name == f.urlName && n != f.urlName {
 		f.name, f.urlName = n, n
 	}
 	if k := f.probeKey(); k != f.key {
@@ -147,9 +147,9 @@ func (x *Repos) probe(c *ui.Ctx, f *addRepo) {
 		return
 	}
 	key, mode, path := f.key, f.mode, expandTilde(f.path)
-	req := host.CloneReq{URL: f.url, Parent: expandTilde(f.parent), Name: f.name}
+	req := hostapi.CloneReq{URL: f.url, Parent: expandTilde(f.parent), Name: f.name}
 	if mode == 0 && strings.TrimSpace(f.path) == "" || mode == 1 && strings.TrimSpace(f.url) == "" {
-		f.probed, f.check, f.target, f.probeErr = key, host.RepoCheck{}, host.CloneTarget{}, ""
+		f.probed, f.check, f.target, f.probeErr = key, hostapi.RepoCheck{}, hostapi.CloneTarget{}, ""
 		return
 	}
 	f.probing, f.probeAt = true, now
@@ -157,8 +157,8 @@ func (x *Repos) probe(c *ui.Ctx, f *addRepo) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		var (
-			check  host.RepoCheck
-			target host.CloneTarget
+			check  hostapi.RepoCheck
+			target hostapi.CloneTarget
 			err    error
 		)
 		if mode == 0 {
@@ -345,7 +345,7 @@ func (x *Repos) cloneMode(c *ui.Ctx, f *addRepo, focus bool) {
 			x.repoField(c, "name", &f.name, false, widget.InputOpts{Label: "Folder name", Placeholder: "my-project"})
 		})
 		into := ""
-		if p, n := expandTilde(f.parent), host.Sanitise(f.name); p != "" && n != "" {
+		if p, n := expandTilde(f.parent), hostapi.Sanitise(f.name); p != "" && n != "" {
 			into = kit.TildePath(filepath.Join(p, n))
 		}
 		labelled(c, "into", "Clones into", func(c *ui.Ctx) {
@@ -366,8 +366,8 @@ func (f *addRepo) parentHint() string {
 	switch {
 	case strings.Contains(p, "://") || strings.HasPrefix(p, "git@"):
 		return "that looks like a URL: it goes in the URL field"
-	case p != "" && f.name != "" && filepath.Base(expandTilde(p)) == host.Sanitise(f.name):
-		return "the folder name is added to this: it would clone into " + kit.TildePath(filepath.Join(expandTilde(p), host.Sanitise(f.name)))
+	case p != "" && f.name != "" && filepath.Base(expandTilde(p)) == hostapi.Sanitise(f.name):
+		return "the folder name is added to this: it would clone into " + kit.TildePath(filepath.Join(expandTilde(p), hostapi.Sanitise(f.name)))
 	}
 	return ""
 }
@@ -428,7 +428,7 @@ func (x *Repos) submitDialog() {
 	ctx, cancel := context.WithCancel(context.Background())
 	f.busy, f.err, f.progress, f.cancel, f.since = true, "", "", cancel, x.h.UI().Now()
 	mode, path := f.mode, expandTilde(f.path)
-	req := host.CloneReq{URL: strings.TrimSpace(f.url), Parent: expandTilde(f.parent), Name: f.name,
+	req := hostapi.CloneReq{URL: strings.TrimSpace(f.url), Parent: expandTilde(f.parent), Name: f.name,
 		Progress: func(line string) {
 			x.h.Do(func() { f.progress = line })
 			x.h.Redraw()
