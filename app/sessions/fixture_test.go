@@ -22,7 +22,6 @@ func jobsOf(s *apptest.Scene) *sessions.Jobs { return apptest.PluginOf[*sessions
 func launcherOf(s *apptest.Scene) *sessions.Launcher {
 	return apptest.PluginOf[*sessions.Launcher](s, "launcher")
 }
-func reposOf(s *apptest.Scene) *sessions.Repos { return apptest.PluginOf[*sessions.Repos](s, "repos") }
 
 // settleJobs frames until the Jobs page, what else the app is working on (a console's models) and the stats it
 // shows have been read.

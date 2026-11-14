@@ -1,4 +1,5 @@
-package sessions
+// Package repos is the Repos page: the repos the session host knows, adding and cloning one, and tidying them.
+package repos
 
 import (
 	"cmp"

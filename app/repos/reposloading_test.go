@@ -1,4 +1,4 @@
-package sessions_test
+package repos_test
 
 import (
 	"path/filepath"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/repos"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 )
@@ -45,3 +46,5 @@ func TestCloneShowsItsProgress(t *testing.T) {
 	}
 	s.WantFrame("Cloning…")
 }
+
+func reposOf(s *apptest.Scene) *repos.Repos { return apptest.PluginOf[*repos.Repos](s, "repos") }

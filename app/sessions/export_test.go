@@ -49,6 +49,3 @@ func (x *Launcher) Prompt() string           { return x.prompt }
 func (x *Launcher) Provider() string         { return x.provider }
 func (x *Launcher) Sandbox() bool            { return x.sandbox }
 func (x *Launcher) OpenWith(a registry.Args) { x.openWith(a) }
-
-// Cloning shows the Add repo dialog cloning, git saying progress.
-func (x *Repos) Cloning(progress string) { x.dialog.busy, x.dialog.progress = true, progress }
