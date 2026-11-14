@@ -108,7 +108,7 @@ func (x *Ship) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 	x.offBranch(c, se, s, 240)
 	c.Row("sync", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		if widget.Button(c, "rebase", "Rebase on "+cmp.Or(s.Base, "base"), x.stepOpts(se.ID, s.Project, "Rebasing", widget.ButtonOpts{Help: "git/ship#sync",
-			Disabled: !s.Remote, Why: noOriginWhy(s), Primary: s.Behind > 0})) {
+			Disabled: !s.HasOrigin, Why: noOriginWhy(s), Primary: s.Behind > 0})) {
 			x.run("ship.sync", registry.Args{"project": s.Project})
 		}
 		c.Row("gap", ui.Style{W: ui.Flex(1)}, nil)

@@ -201,7 +201,7 @@ type prReq struct {
 // hosted is a project's code host, refusing one whose origin is on none or whose host can't do what's asked.
 func hosted(s shipRead, can bool) (registry.CodeHost, error) {
 	switch {
-	case s.Code == nil && !s.Remote:
+	case s.Code == nil && !s.HasOrigin:
 		return registry.CodeHost{}, fmt.Errorf("%s has no remote", s.Project)
 	case s.Code == nil:
 		return registry.CodeHost{}, fmt.Errorf("%s's origin isn't on a code host Oriel knows", s.Project)

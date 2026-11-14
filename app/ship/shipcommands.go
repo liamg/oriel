@@ -106,7 +106,7 @@ func (x *Ship) shipCommands() []registry.Command {
 				se, _ := x.session(a)
 				var errs []error
 				for _, s := range x.report(se.ID).ships {
-					if !s.ReadOnly && s.Remote {
+					if !s.ReadOnly && s.HasOrigin {
 						errs = append(errs, x.sync(se, s.Project))
 					}
 				}
