@@ -138,51 +138,18 @@ func TestShipFlowAcrossProjects(t *testing.T) {
 	if out := apiUp.Git("ls-remote", "origin", se.Branch); !strings.Contains(out, se.Branch) {
 		t.Fatalf("origin hasn't got %s: %q", se.Branch, out)
 	}
-	// The app's GitHub code host raises it with the checkout's gh, from the session's branch only.
-	req := GitHubReq{Session: id, Project: "api", New: gh.NewPR{Title: "feat(search): back off on 429", Body: "## What\nRetry-After.\n",
-		Head: se.Branch, Base: "main", Draft: true}}
-	pr, err := r.w.GitHubCreate(ctx, req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := r.w.GitHubCreate(ctx, GitHubReq{Session: id, Project: "api", New: gh.NewPR{Title: "x", Head: "main", Base: "main"}}); err == nil {
-		t.Error("raised a PR from a branch that isn't the session's")
-	}
-	if err := r.w.GitHubReviewers(ctx, GitHubReq{Session: id, Project: "api", PR: pr, Reviewers: []string{"acme/platform-team", "jkowalski"}}); err != nil {
-		t.Fatal(err)
-	}
-	if got := hub.PRs("acme/api"); len(got) != 1 || !got[0].Draft || got[0].Head != se.Branch || got[0].Base != "main" ||
-		!slices.Equal(got[0].Reviewers, []string{"jkowalski", "acme/platform-team"}) || got[0].Number != pr.Number {
-		t.Fatalf("the PR on GitHub: %+v", got)
-	}
-	if got, err := r.w.GitHubPRFor(ctx, GitHubReq{Session: id, Project: "api", Branch: se.Branch}); err != nil || got == nil || got.Number != pr.Number {
-		t.Fatalf("the branch's PR: %+v, %v", got, err)
-	}
-
-	// Checks: a failing Actions job's log line comes with them.
-	t0 := r.now().Add(-3 * time.Minute)
-	hub.SetChecks("acme/api", se.Branch,
-		gh.Check{ID: 11, Name: "lint", Status: "completed", Conclusion: "success", Actions: true, Started: t0, Completed: t0.Add(38 * time.Second)},
-		gh.Check{ID: 12, Name: "unit", Status: "completed", Conclusion: "failure", Actions: true, Started: t0, Completed: t0.Add(time.Minute)},
-		gh.Check{ID: 13, Name: "e2e · chromium", Status: "in_progress", Actions: true, Started: t0})
-	hub.SetLog(12, "2026-10-14T09:00:00.0000000Z go test ./limiter/...\n2026-10-14T09:00:01.0000000Z --- FAIL: TestBurst (0.02s)\n")
-	cs, err := r.w.GitHubChecks(ctx, GitHubReq{Session: id, Project: "api", Branch: se.Branch})
-	if err != nil || len(cs.Checks) != 3 || cs.FailLine != "--- FAIL: TestBurst (0.02s)" {
-		t.Fatalf("checks %+v, %v", cs, err)
-	}
-
-	// Ready for review.
-	if err := r.w.GitHubReady(ctx, GitHubReq{Session: id, Project: "api", PR: pr}); err != nil {
-		t.Fatal(err)
-	}
-	if hub.PRs("acme/api")[0].Draft {
-		t.Error("Ready for review left it a draft")
+	// A PR is raised from the session's branch, which the host names for every code host.
+	if b, err := r.w.ShipBranch(ctx, ShipRef{Session: id, Project: "api"}); err != nil || b != se.Branch {
+		t.Fatalf("api raises from %q, %v; want %s", b, err, se.Branch)
 	}
 
 	// Only the session's branch is pushed.
 	(&gittest.Repo{T: t, Dir: dirs["web"]}).Git("checkout", "-q", "-b", "elsewhere")
 	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: "web"}); err == nil || !strings.Contains(err.Error(), "only pushes") {
 		t.Errorf("pushing another branch: %v", err)
+	}
+	if _, err := r.w.ShipBranch(ctx, ShipRef{Session: id, Project: "web"}); err == nil || !strings.Contains(err.Error(), "raises PRs") {
+		t.Errorf("raising from another branch: %v", err)
 	}
 
 	// A draft the user writes is theirs.
@@ -245,12 +212,8 @@ func TestShipDirectFollowsTheCheckout(t *testing.T) {
 	if out := up.Git("ls-remote", "origin", "two"); !strings.Contains(out, "refs/heads/two") {
 		t.Fatalf("origin hasn't got two: %q", out)
 	}
-	pr, err := r.w.GitHubCreate(ctx, GitHubReq{Session: id, Project: p.Name, New: gh.NewPR{Title: "docs: two", Head: "two", Base: "main"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if pr.Head != "two" || pr.Base != "main" {
-		t.Errorf("PR %+v, want two → main", pr)
+	if b, err := r.w.ShipBranch(ctx, ShipRef{Session: id, Project: p.Name}); err != nil || b != "two" {
+		t.Errorf("raises its PR from %q, %v; want two", b, err)
 	}
 	blog.Git("switch", "-q", "--detach")
 	if err := r.w.ShipPush(ctx, ShipRef{Session: id, Project: p.Name}); err == nil {
@@ -270,8 +233,7 @@ func TestGitHubIsAskedThroughTheHostsHTTP(t *testing.T) {
 	})}
 	blog, _ := githubRepo(t, "blog", map[string]string{"post.md": "# One\n"})
 	id := r.start(core.SessionSpec{Kind: core.KindDirect, Dir: blog.Dir})
-	p, _ := r.session(id).Primary()
-	if _, err := r.w.GitHubPRFor(context.Background(), GitHubReq{Session: id, Project: p.Name, Branch: "main"}); err != nil {
+	if _, err := r.w.SyncGitHub(context.Background(), MirrorReq{Session: id, Fresh: true}); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(asked, []string{"api.github.com"}) {
