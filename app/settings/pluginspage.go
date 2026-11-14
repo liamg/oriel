@@ -343,7 +343,7 @@ func (x *Catalog) pageView(c *ui.Ctx) {
 			th := c.Theme()
 			rows := x.rows()
 			x.pageHeader(c, rows)
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			switch x.page.tab {
 			case tabRegistry:
 				x.registryTab(c, rows)
@@ -357,7 +357,7 @@ func (x *Catalog) pageView(c *ui.Ctx) {
 				shown = x.filtered(shown)
 				c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 					x.installedList(c, shown)
-					c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+					widget.VRule(c, "divider")
 					c.Column("detail", ui.Style{W: ui.Px(420), H: ui.Flex(1), ScrollY: true, Pad: ui.Pad(18), Gap: 12, Fill: th.C(theme.BgSurface)},
 						func(c *ui.Ctx) {
 							if x.page.sel >= 0 && x.page.sel < len(shown) {
@@ -366,7 +366,7 @@ func (x *Catalog) pageView(c *ui.Ctx) {
 						})
 				})
 			}
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(18, 0), Cross: ui.Center}, func(c *ui.Ctx) {
 				loaded, waits, ups := 0, 0, 0
 				for _, r := range rows {

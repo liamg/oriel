@@ -62,7 +62,7 @@ func (s *Plugin) build(c *ui.Ctx) {
 	po := widget.PageOpts{KeyMode: "settings", Label: "Settings", Help: "shell/settings"}
 	widget.Page(c, "settings", &s.open, po, func(c *ui.Ctx) {
 		s.header(c, th)
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			c.Column("sections", ui.Style{W: ui.Px(240), H: ui.Flex(1), Pad: ui.PadXY(8, 12), Gap: 2, Fill: th.C(tThemePanel), ScrollY: true}, func(c *ui.Ctx) {
 				c.Text("t", "SECTIONS", capLabel(th))
@@ -85,7 +85,7 @@ func (s *Plugin) build(c *ui.Ctx) {
 					}
 				}
 			})
-			c.Box("d", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "d")
 			c.Column("rows", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(28, 16), Gap: 4, ScrollY: true}, func(c *ui.Ctx) {
 				title := s.section
 				if s.query != "" {

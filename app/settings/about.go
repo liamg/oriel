@@ -138,7 +138,7 @@ func (x *About) card(c *ui.Ctx) {
 			run("update.check")
 		}
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 6, Wrap: true}, func(c *ui.Ctx) {
 		if widget.Button(c, "report", "Copy report", widget.ButtonOpts{Ghost: true, Help: "errors#log"}) {
 			run("log.copy_report")

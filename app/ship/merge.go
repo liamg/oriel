@@ -333,11 +333,11 @@ func (x *Ship) mergeView(c *ui.Ctx) {
 					x.merging = nil
 				}
 			})
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 24, R: 24, T: 16, B: 18}, Gap: 12}, func(c *ui.Ctx) {
 				x.mergeBody(c, a, w-48)
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule2")
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 10, Cross: ui.Center, Main: ui.End}, func(c *ui.Ctx) {
 				if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Key: "esc", Help: mergeHelp}) {
 					x.merging = nil

@@ -439,13 +439,13 @@ func (x *Launcher) build(c *ui.Ctx) {
 			Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}}, Role: ui.RoleDialog, Label: "New session", Help: "agent/launcher"},
 			func(c *ui.Ctx) {
 				x.header(c)
-				c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "rule")
 				c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 					c.Column("form", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 24, R: 24, T: 20, B: 20}, Gap: 22, ScrollY: true}, x.form)
-					c.Box("divider", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+					widget.VRule(c, "divider")
 					c.Column("side", ui.Style{W: ui.Px(330), H: ui.Flex(1), Pad: ui.Pad(16), Gap: 10}, x.side)
 				})
-				c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "rule2")
 				x.footer(c)
 			})
 	}) || escaped {

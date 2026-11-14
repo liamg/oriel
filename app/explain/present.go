@@ -426,7 +426,7 @@ func (x *Presenter) draw(c *ui.Ctx, h plugin.Host, st *presentState, p kit.Prese
 					c.Box("gap", ui.Style{H: ui.Px(gap)}, nil)
 				}
 			})
-			c.Box("rule", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "rule")
 			if focus.opened {
 				decor = blockDecorations(h, dctx, built) // with the thread a click just opened, so it takes the keys typed next
 			}

@@ -99,7 +99,7 @@ func (x *Console) detailView() uireg.View {
 							x.detail = nil
 						}
 					})
-					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+					widget.Rule(c, "rule")
 					kit.Scrolled(c, "body", &d.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 14},
 						func(c *ui.Ctx, _ func(string) ui.ID) {
 							if d.item != "" {

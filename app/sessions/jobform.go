@@ -278,7 +278,7 @@ func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {
 				Accept: func(r rune) bool { return r >= '0' && r <= '9' || r == ':' }})
 		})
 	})
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		if f.err != "" {
 			c.Text("err", f.err, kit.MonoFont(11, th.C(theme.Error)))

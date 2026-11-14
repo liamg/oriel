@@ -107,7 +107,7 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 				}
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Row("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 10), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			if widget.Button(c, "new", "New request", widget.ButtonOpts{Primary: true, Help: "agent/requests#new-request"}) {
 				x.run("request.new", nil)
@@ -174,7 +174,7 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 			st := x.state(se.ID)
 			t, has := x.selection(se, st)
 			x.requestHeader(c, se, t, has)
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			c.Row("body", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				width := float32(840)
 				if r, ok := c.Rect(c.Next("left")); ok {
@@ -203,12 +203,12 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 						}
 						startingCard(c, "starting", se, width)
 					})
-					c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+					widget.Rule(c, "rule")
 					c.Row("composerwrap", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(0, 14), Main: ui.Center}, func(c *ui.Ctx) {
 						x.composer(c, se, st, has, width)
 					})
 				})
-				c.Box("edge", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+				widget.VRule(c, "edge")
 				x.requestSide(c, se, st, t, has)
 			})
 		})
@@ -630,11 +630,11 @@ func (x *Requests) summary(c *ui.Ctx) {
 			})
 			for i, t := range x.visible(se, &requestsState{}) {
 				if i > 0 {
-					c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+					widget.Rule(c, fmt.Sprint("rule", i))
 				}
 				x.summaryRow(c, se, t, now)
 			}
-			c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+			widget.Rule(c, "rule")
 			done, all := taskCount(se.Tasks)
 			kit.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) {
 				if all == 0 {
@@ -643,7 +643,7 @@ func (x *Requests) summary(c *ui.Ctx) {
 				taskRail(c, "rail", se.Tasks)
 			})
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		sessionStats(c, x.h, se, now)
 	})
 }

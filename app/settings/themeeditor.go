@@ -396,14 +396,14 @@ func (e *ThemeEditor) build(c *ui.Ctx) {
 	widget.Page(c, "theme", &e.open, widget.PageOpts{KeyMode: "theme", Label: "Theme editor", Help: "shell/theme"}, func(c *ui.Ctx) {
 		c.Row("main", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 			e.tokens(c, th)
-			c.Box("d1", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "d1")
 			c.Column("centre", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 				e.toolbar(c, th)
 				e.preview(c, th)
-				c.Box("d2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+				widget.Rule(c, "d2")
 				e.strip(c, th)
 			})
-			c.Box("d3", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+			widget.VRule(c, "d3")
 			e.inspector(c, th)
 		})
 		e.footer(c, th)
@@ -486,7 +486,7 @@ func (e *ThemeEditor) tokens(c *ui.Ctx, th *theme.Resolved) {
 				c.Text("ext", "extends "+base, kit.MonoFont(10, th.C(theme.FgFaint)))
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		c.Row("filter", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			widget.Input(c, "q", &e.filter, widget.InputOpts{Label: "Filter tokens", Placeholder: "filter tokens…", Help: "shell/theme#tokens"})
 			c.Text("n", fmt.Sprintf("● %d overridden", mine), kit.MonoFont(10, th.C(theme.FgFaint)))

@@ -362,7 +362,7 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 				}
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		if !open {
 			return
 		}
@@ -594,7 +594,7 @@ func lineKeys(c *ui.Ctx, st *diffState) {
 		return
 	}
 	th := c.Theme()
-	c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+	widget.Rule(c, "rule")
 	c.Row("keys", ui.Style{W: ui.Flex(1), H: ui.Px(26), Gap: 12, Pad: ui.PadXY(14, 0), Cross: ui.Center, Fill: th.C(tDiffFiles), Role: ui.RoleGroup,
 		Label: "Keys for the selected line", Help: "files/diff#keys"}, func(c *ui.Ctx) {
 		rel, err := filepath.Rel(st.root, path)
@@ -658,7 +658,7 @@ func (x *Diff) splitRow(c *ui.Ctx, st *diffState, at diffSel, r int, p [2]int, h
 	h0, _ := x.rowFit()
 	in := widget.SelectRow(c, key, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: h0, Label: label, Help: "files/diff#hunks", Subject: diffLineSubject}, sel, func(c *ui.Ctx) {
 		side(c, "old", p[0], true)
-		c.Box("mid", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(theme.Line)}, nil)
+		widget.VRule(c, "mid")
 		side(c, "new", p[1], false)
 	})
 	x.lineClicked(st, me, in)

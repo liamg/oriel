@@ -81,7 +81,7 @@ func home(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 				open = false
 			}
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
+		widget.Rule(c, "rule")
 		vc := vc
 		vc.Instance, vc.Focused, vc.Project = ref.Instance, true, ref.Project
 		c.Column("view", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Pad(10)}, func(c *ui.Ctx) { c.Node(v.Build(vc)) })
