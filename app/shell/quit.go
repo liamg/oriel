@@ -29,7 +29,7 @@ const QuitKeyMode = "quit"
 const quitHelp = "shell/quit"
 
 // quitWait is how long a quit waits for agents mid-turn before cutting their turns short.
-var quitWait = 60 * time.Second
+const quitWait = 60 * time.Second
 
 var errQuitCancelled = errors.New("quit cancelled")
 
@@ -60,8 +60,9 @@ func (r *quitDrain) cancelQuit() {
 	}
 }
 
-func newDrain(ask bool) *quitDrain {
-	return &quitDrain{deadline: time.Now().Add(quitWait), now: make(chan struct{}), cancel: make(chan struct{}), focus: true, ask: ask}
+// newDrain is a quit asked at now, which waits until quitWait after it.
+func newDrain(ask bool, now time.Time) *quitDrain {
+	return &quitDrain{deadline: now.Add(quitWait), now: make(chan struct{}), cancel: make(chan struct{}), focus: true, ask: ask}
 }
 
 func (sh *shell) closeWindow() {
@@ -82,7 +83,7 @@ func (sh *shell) quit(ask bool) {
 		sh.closeWindow()
 		return
 	}
-	sh.drain(newDrain(ask))
+	sh.drain(newDrain(ask, sh.now()))
 }
 
 func (sh *shell) drain(r *quitDrain) {
@@ -125,7 +126,8 @@ func (r *quitDrain) stoppingNow() []core.SessionID {
 }
 
 func (sh *shell) handOver(r *quitDrain) error {
-	wait := time.NewTimer(time.Until(r.deadline))
+	expired := make(chan struct{})
+	wait := windowClock{sh}.AfterFunc(r.deadline.Sub(sh.now()), func() { close(expired) })
 	defer wait.Stop()
 	tick := kit.NewTicker(sh.polls, 200*time.Millisecond)
 	defer tick.Stop()
@@ -137,7 +139,7 @@ func (sh *shell) handOver(r *quitDrain) error {
 			return nil
 		case <-r.cancel:
 			return errQuitCancelled
-		case <-wait.C:
+		case <-expired:
 			return nil
 		case <-tick.C:
 		}
@@ -167,7 +169,7 @@ waiting:
 			break waiting
 		case <-r.cancel:
 			return errQuitCancelled
-		case <-wait.C:
+		case <-expired:
 			break waiting
 		case <-tick.C:
 		}

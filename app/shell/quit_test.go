@@ -11,9 +11,9 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/headless"
 )
 
@@ -180,20 +180,46 @@ func TestQuitWarnsOfScheduledJobs(t *testing.T) {
 	r.WaitExit()
 }
 
-// The quit dialog: the sessions mid-turn with the countdown, and the scheduled jobs that won't run.
+// The quit dialog: the sessions mid-turn with the countdown, and the scheduled jobs that won't run. Cancel takes the
+// quit back.
 func TestQuitDialogSnapshot(t *testing.T) {
 	s := apptest.New(t, apptest.Options{CrashDir: t.TempDir()})
-	shell.Draining(s.Headless, s.Now.Add(42*time.Second), []core.SessionState{{ID: "rounding", Name: "Round half-even"}},
-		[]host.Job{{Name: "sweep", Title: "Sweep stale deps", Schedule: host.Schedule{Every: "weekdays", At: "07:00"}}})
-	for range 3 {
+	jobs := quitJobs{{Name: "sweep", Title: "Sweep stale deps", Schedule: host.Schedule{Every: "weekdays", At: "07:00"}}}
+	s.Registry().Contribute(registry.Service{Name: registry.HostSessionsService, Impl: quitSessions{}})
+	s.Registry().Contribute(registry.Service{Name: registry.HostJobsService, Impl: jobs})
+	se := core.SessionState{ID: "rounding", Name: "Round half-even", Kind: core.KindWork, Status: core.StatusWorking}
+	se.Agent.Working = true
+	if err := s.Store().Apply(core.SessionSynced{Session: se}); err != nil {
+		t.Fatal(err)
+	}
+	s.Run("quit", nil)
+	// The dialog is of the quit under way: its deadline is a timer Quiet would otherwise run.
+	s.Midway(func() {
+		s.Until("the quit dialog", func() bool { return strings.Contains(s.Text(), "Round half-even") })
+		s.Advance(18 * time.Second)
 		s.Frame()
-	}
-	s.Lint("the quit dialog")
-	s.Golden("quit")
-	if text := s.Text(); !apptest.HasAll(text, "QUITTING ORIEL", "Round half-even", "in 42s", "Sweep stale deps", "Cancel", "Quit now") {
-		t.Errorf("the dialog reads:\n%s", text)
-	}
+		s.Lint("the quit dialog")
+		s.Golden("quit")
+		if text := s.Text(); !apptest.HasAll(text, "QUITTING ORIEL", "Round half-even", "in 42s", "Sweep stale deps", "Cancel", "Quit now") {
+			t.Errorf("the dialog reads:\n%s", text)
+		}
+		s.ClickTop("Cancel")
+	})
+	s.Until("the quit taken back", func() bool { return !strings.Contains(s.Text(), "QUITTING ORIEL") })
 }
+
+// quitSessions is a session host with nothing to hand over.
+type quitSessions struct{ host.SessionCalls }
+
+func (quitSessions) HandOver() {}
+
+// quitJobs are a session host's scheduled jobs.
+type quitJobs []host.Job
+
+func (j quitJobs) Jobs() []host.Job                                     { return j }
+func (quitJobs) SaveJob(j host.Job) (host.Job, error)                   { return j, nil }
+func (quitJobs) DeleteJob(string) error                                 { return nil }
+func (quitJobs) RunJob(context.Context, string) (core.SessionID, error) { return "", nil }
 
 // Quitting with agents running, none of them mid-turn, still shows what's happening while they stop: the window says
 // it's shutting down and lists the agents still stopping, rather than looking frozen. It takes no other keys.

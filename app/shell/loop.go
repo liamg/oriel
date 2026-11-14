@@ -494,7 +494,7 @@ func (l *loop) dispatch(ctx context.Context, ev render.Event) bool {
 			}
 			return true
 		}
-		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, time.Now()))
+		l.run(ctx, l.keys.Feed(l.sh.keyModesFor(k), k, l.sh.now()))
 	}
 	return true
 }

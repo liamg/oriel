@@ -16,7 +16,10 @@ func picker(s *apptest.Scene) *shell.Picker { return apptest.PluginOf[*shell.Pic
 // pickerScene is omniScene's world with a picker open on source.
 func pickerScene(t *testing.T, source, query string) *apptest.Scene {
 	s := omniScene(t, "")
-	omni(s).Close()
+	s.Press("<Esc>")
+	if omni(s).Open() {
+		t.Fatal("Escape didn't close the omnibox")
+	}
 	s.Run("picker.open", registry.Args{"source": source, "query": query})
 	s.Frame()
 	s.Frame()

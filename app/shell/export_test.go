@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -49,7 +48,6 @@ func SourceLoading(s uireg.PickerSource) bool { return sourceLoading(s) }
 
 func (o *omnibox) Results(moving bool) []group { g, _ := o.results(moving); return g }
 func (o *omnibox) Open() bool                  { return o.open }
-func (o *omnibox) Close()                      { o.open = false }
 
 func (p *picker) Open() bool     { return p.open }
 func (p *picker) Source() string { return p.source }
@@ -68,8 +66,6 @@ type Help = helpView
 
 func (v *helpView) Open() bool   { return v.open }
 func (v *helpView) Page() string { return v.cur }
-func (v *helpView) Close()       { v.open = false }
-func (v *helpView) EndHelpMode() { v.mode = false }
 
 // LastMove is the last of a run of pointer moves waiting from ev, and the event read after the run.
 func LastMove(ev render.Event, events <-chan render.Event) (render.Event, render.Event) {
@@ -123,25 +119,11 @@ func logPanelOf(h *Headless) *logPanel {
 	return p.(*notices).panel
 }
 
-// SetLogScope shows the log panel's records of scope.
-func SetLogScope(h *Headless, scope int) { logPanelOf(h).scope = scope }
-
 // LogOpenRow is the log panel's expanded row's key; "" with none.
 func LogOpenRow(h *Headless) string { return logPanelOf(h).open }
 
-// FoldLogRow folds the log panel's expanded row.
-func FoldLogRow(h *Headless) { logPanelOf(h).open = "" }
-
 // ToastTTL is how long a notification's toast stays; 0 until it's answered.
 func ToastTTL(n core.Notification) time.Duration { return toastTTL(n) }
-
-// Draining has the window show a quit waiting until deadline on busy, mid-turn, and the scheduled jobs.
-func Draining(h *Headless, deadline time.Time, busy []core.SessionState, jobs []host.Job) {
-	h.sh.draining.Store(&quitDrain{deadline: deadline, focus: true, polled: true, busy: busy, jobs: jobs})
-}
-
-// KeepRecents keeps the window's recent directories in path, as Run does in its state directory.
-func KeepRecents(h *Headless, path string) { h.sh.recents = &recents{path: path} }
 
 // AddRecent adds dir to the recent directories, opened at at.
 func AddRecent(h *Headless, dir string, at time.Time) error { return h.sh.recents.add(dir, at) }

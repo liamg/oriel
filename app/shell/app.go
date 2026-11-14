@@ -153,9 +153,11 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	probed := make(chan struct{}) // rg, off the loop, so the search panel finds the answer waiting
 	go func() { sh.tools.Ripgrep(); close(probed) }()
 	defer func() { <-probed }()
-	sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
+	if sh.recents == nil {
+		sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
+	}
 	if cfg.WorkDir != "" {
-		sh.recents.add(cfg.WorkDir, time.Now())
+		sh.recents.add(cfg.WorkDir, sh.now())
 	}
 	defer func() {
 		if v := recover(); v != nil {
@@ -276,7 +278,7 @@ func (p *running) reopen(to reopenTo, log *slog.Logger) error {
 	p.sh.traceMove(log, to)
 	p.sh.move(p.ctx, to)
 	if to.session == "" && to.dir != "" {
-		p.sh.recents.add(to.dir, time.Now())
+		p.sh.recents.add(to.dir, p.sh.now())
 	}
 	return nil
 }
@@ -436,6 +438,9 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 	}, Clock: windowClock{sh}})
 	sh.polls, sh.tools = &kit.PollSet{}, search.NewTools()
 	sh.kept = newKeptStore(cfg.StateDir, log)
+	if cfg.StateDir != "" {
+		sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
+	}
 	sh.kept.writer.track = sh.inflight.begin
 	gone := cfg.Store.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.SessionClosed); ok {

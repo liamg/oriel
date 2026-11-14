@@ -14,7 +14,7 @@ import (
 // A picker source whose items are still coming shows a busy row, and "No matches" only once it's done.
 func TestPickerSourceLoading(t *testing.T) {
 	s := omniScene(t, "")
-	omni(s).Close()
+	s.Press("<Esc>")
 	loading := true
 	s.Registry().Picker(uireg.PickerSource{ID: "slow", Title: "Slow", PickerOnly: true,
 		Items:   func(registry.Ctx, string) []uireg.PickerItem { return nil },

@@ -97,8 +97,7 @@ func TestStartViewSnapshots(t *testing.T) {
 		{"start-light", true, theme.Light, ""},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			s := apptest.New(t, apptest.Options{})
-			shell.KeepRecents(s.Headless, filepath.Join(t.TempDir(), "recent.json"))
+			s := apptest.New(t, apptest.Options{Config: stateDir(t)})
 			if tt.recents {
 				addRecents(s)
 			}
@@ -150,6 +149,12 @@ func TestTypedDirs(t *testing.T) {
 }
 
 // addRecents puts 39-start's three directories in s's recents.
+// stateDir gives the window a state directory of the test's, where it keeps its recent directories.
+func stateDir(t *testing.T) func(*apptest.Config) {
+	dir := t.TempDir()
+	return func(cfg *apptest.Config) { cfg.StateDir = dir }
+}
+
 func addRecents(s *apptest.Scene) {
 	home, _ := os.UserHomeDir()
 	for _, d := range []struct {
@@ -173,8 +178,7 @@ func TestStartViewFits(t *testing.T) {
 		width float32
 		tabs  bool
 	}{{1400, false}, {1000, false}, {640, true}, {420, true}} {
-		s := apptest.New(t, apptest.Options{Size: render.Point{X: tt.width, Y: 700}})
-		shell.KeepRecents(s.Headless, filepath.Join(t.TempDir(), "recent.json"))
+		s := apptest.New(t, apptest.Options{Size: render.Point{X: tt.width, Y: 700}, Config: stateDir(t)})
 		addRecents(s)
 		s.Frame()
 		s.Frame()
@@ -282,8 +286,7 @@ func TestWindowPlaceKept(t *testing.T) {
 
 // A ✕ shows on a recent under the pointer; clicking it forgets the directory, for the next launch too.
 func TestStartViewForgetOnHover(t *testing.T) {
-	s := apptest.New(t, apptest.Options{})
-	shell.KeepRecents(s.Headless, filepath.Join(t.TempDir(), "recent.json"))
+	s := apptest.New(t, apptest.Options{Config: stateDir(t)})
 	addRecents(s)
 	s.Frame()
 	s.Frame()
@@ -357,8 +360,7 @@ func TestStartViewKeepsToItsOwnKeys(t *testing.T) {
 // lines inside the Start column rather than running past it.
 func TestStartLinksWrap(t *testing.T) {
 	for _, width := range []float32{1400, 1000, 640} {
-		s := apptest.New(t, apptest.Options{Size: render.Point{X: width, Y: 900}})
-		shell.KeepRecents(s.Headless, filepath.Join(t.TempDir(), "recent.json"))
+		s := apptest.New(t, apptest.Options{Size: render.Point{X: width, Y: 900}, Config: stateDir(t)})
 		addRecents(s)
 		var titles []string
 		for i := range 8 {

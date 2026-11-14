@@ -1,6 +1,7 @@
 package shell_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -94,8 +95,9 @@ func TestErrorsSnapshots(t *testing.T) {
 		{"errors-oriel", shell.LogScopeOriel, []string{"tickets.lua:8", "init.lua"}, []string{"worktree ready"}},
 		{"errors-session", shell.LogScopeSession, []string{"config session opened"}, []string{"worktree ready", "tickets.lua:8"}},
 	} {
-		shell.SetLogScope(s.Headless, sc.scope)
-		shell.FoldLogRow(s.Headless)
+		pickLogScope(s, sc.scope)
+		foldLogRow(s)
+		s.PointerLeaves()
 		s.Golden(sc.name)
 		text := s.Text()
 		for _, w := range sc.has {
@@ -181,7 +183,7 @@ func TestLogRowClickExpands(t *testing.T) {
 	s := apptest.New(t, apptest.Options{})
 	populate(s)
 	s.Run("log.open", nil)
-	shell.FoldLogRow(s.Headless)
+	foldLogRow(s)
 	s.Frame()
 	s.Frame()
 	row := s.Node(s.Store().State().Notifications[1].Text)
@@ -231,4 +233,30 @@ func TestTimedToastCloses(t *testing.T) {
 	}
 	s.Click(render.Point{X: (b.Bounds.Min.X + b.Bounds.Max.X) / 2, Y: (b.Bounds.Min.Y + b.Bounds.Max.Y) / 2}, 0)
 	s.Until("the toast gone", func() bool { return !s.Has("Saved the thing") })
+}
+
+// pickLogScope clicks the log's scope tab at index i (shell.LogScopeOriel…).
+func pickLogScope(s *apptest.Scene, i int) {
+	s.T.Helper()
+	tabs := s.NodeRole(render.RoleTabList, "Log scope")
+	s.Click(apptest.Centre(tabs.Children[i].Bounds), 0)
+	s.Frame()
+}
+
+// foldLogRow clicks the log's expanded row, if one is, to fold it.
+func foldLogRow(s *apptest.Scene) {
+	s.T.Helper()
+	key := shell.LogOpenRow(s.Headless)
+	if key == "" {
+		return
+	}
+	for _, n := range s.Store().State().Notifications {
+		if fmt.Sprint("n", n.Seq) == key {
+			s.Click(apptest.Centre(s.Node(n.Text).Bounds), 0)
+			s.Frame()
+		}
+	}
+	if k := shell.LogOpenRow(s.Headless); k != "" {
+		s.T.Fatalf("row %s is still expanded", k)
+	}
 }

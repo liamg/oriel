@@ -794,6 +794,12 @@ func (s *Scene) WaitFor(want string) string {
 	}
 }
 
+// PointerLeaves moves the pointer out of the window, as a person does once they've clicked, so nothing shows its hover.
+func (s *Scene) PointerLeaves() {
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerLeave})
+	s.Frame()
+}
+
 // RightClick right-clicks p, and answers the frame's text after: the menu it opened.
 func (s *Scene) RightClick(p render.Point) string {
 	s.Frame()
