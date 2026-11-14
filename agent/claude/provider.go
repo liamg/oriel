@@ -136,14 +136,8 @@ func subscription(env []string) (kind, limit, mark string, ok bool) {
 		json.Unmarshal(b, &cred) == nil && cred.OAuth.Token != "" {
 		return cred.OAuth.Subscription, cred.OAuth.Tier, tokenMark(cred.OAuth.Token), true
 	}
-	var state struct {
-		Account *struct {
-			OrgType string `json:"organizationType"`
-			Tier    string `json:"organizationRateLimitTier"`
-		} `json:"oauthAccount"`
-	}
-	if b, err := os.ReadFile(statePath(env)); err == nil && json.Unmarshal(b, &state) == nil && state.Account != nil {
-		return strings.TrimPrefix(state.Account.OrgType, "claude_"), state.Account.Tier, "", true
+	if a, ok := readOAuthAccount(env); ok {
+		return strings.TrimPrefix(a.OrgType, "claude_"), a.Tier, "", true
 	}
 	return "", "", "", false
 }
@@ -181,19 +175,10 @@ func tierOf(kind, limit string) string {
 // account is who Claude is signed in as, from its state file's oauthAccount: an identity that tells a company
 // subscription from a personal one (the organisation, then the account), and the email or organisation to show.
 func account(env []string) (id, name string) {
-	var state struct {
-		Account *struct {
-			Email   string `json:"emailAddress"`
-			UUID    string `json:"accountUuid"`
-			OrgUUID string `json:"organizationUuid"`
-			OrgName string `json:"organizationName"`
-		} `json:"oauthAccount"`
-	}
-	b, err := os.ReadFile(statePath(env))
-	if err != nil || json.Unmarshal(b, &state) != nil || state.Account == nil {
+	a, ok := readOAuthAccount(env)
+	if !ok {
 		return "", ""
 	}
-	a := state.Account
 	switch {
 	case a.OrgUUID != "" || a.UUID != "":
 		id = strings.Trim(a.UUID+"/"+a.OrgUUID, "/")
