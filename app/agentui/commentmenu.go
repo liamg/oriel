@@ -63,7 +63,7 @@ func cmTitle(h plugin.Host, cm core.Comment) string {
 type mdViewer struct {
 	title, body string
 	open        bool
-	scroll      kit.Scroll
+	scroll      widget.Scroll
 }
 
 func (x *Requests) mdViewer() uireg.View {
@@ -98,7 +98,7 @@ func (x *Requests) mdViewer() uireg.View {
 						}
 					})
 					widget.Rule(c, "rule")
-					kit.Scrolled(c, "src", &v.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 2},
+					widget.Scrolled(c, "src", &v.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 2},
 						func(c *ui.Ctx, _ func(string) ui.ID) {
 							for i, ln := range strings.Split(v.body, "\n") {
 								widget.Wrap(c, i, kit.ExpandTabs(ln), w-40, widget.MonoFont(12, th.C(theme.Fg)))

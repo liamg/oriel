@@ -30,7 +30,7 @@ type presentState struct {
 	sel    int                   // the selected block, or -1
 	part   int                   // the selected block's selected part, or -1 for the whole block
 	parts  map[int][]presentPart // each block's parts (PresentDraw.Part), as last drawn
-	scroll kit.Scroll
+	scroll widget.Scroll
 	gaps   map[string]float32 // the space above each margin card, as last laid out
 	focus  bool               // take focus next frame
 	reveal bool               // bring the selected block into view next frame
@@ -499,8 +499,8 @@ func (fr *presentFrame) settled(p kit.Presentation) (int, bool) {
 }
 
 // scrolledBox is a column that scrolls, its content keyed "content".
-func scrolledBox(c *ui.Ctx, key any, st *kit.Scroll, s ui.Style, body func(c *ui.Ctx)) {
-	kit.Scrolled(c, key, st, s, ui.Style{}, func(c *ui.Ctx, _ func(string) ui.ID) { body(c) })
+func scrolledBox(c *ui.Ctx, key any, st *widget.Scroll, s ui.Style, body func(c *ui.Ctx)) {
+	widget.Scrolled(c, key, st, s, ui.Style{}, func(c *ui.Ctx, _ func(string) ui.ID) { body(c) })
 }
 
 // blockMark is a line number and an edge colour, beside a block or one of its parts.

@@ -115,8 +115,8 @@ type requestsState struct {
 	query     string
 	drafts    map[core.ThreadID]*draft
 	awaiting  string // a new request's body, sent, to select once its thread arrives
-	list      kit.Scroll
-	convo     kit.Scroll
+	list      widget.Scroll
+	convo     widget.Scroll
 	focusList bool
 	inline    *inlineNew
 	rename    widget.Rename // the selected request's name, being edited in its header
@@ -315,7 +315,7 @@ func (x *Requests) state(id core.SessionID) *requestsState {
 	}
 	st := x.by[id]
 	if st == nil {
-		st = &requestsState{drafts: map[core.ThreadID]*draft{}, list: kit.Scroll{}, convo: kit.Scroll{Follow: true}}
+		st = &requestsState{drafts: map[core.ThreadID]*draft{}, list: widget.Scroll{}, convo: widget.Scroll{Follow: true}}
 		x.by[id] = st
 	}
 	return st

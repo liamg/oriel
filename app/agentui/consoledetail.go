@@ -22,7 +22,7 @@ type detailOpen struct {
 	session core.SessionID
 	item    string // a tool call's transcript item
 	ask     string // an ask's id
-	scroll  kit.Scroll
+	scroll  widget.Scroll
 }
 
 // detailCommand is agent.console.details: {item} or {ask} of {id} (the session in front) in a dialog, in full.
@@ -100,7 +100,7 @@ func (x *Console) detailView() uireg.View {
 						}
 					})
 					widget.Rule(c, "rule")
-					kit.Scrolled(c, "body", &d.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 14},
+					widget.Scrolled(c, "body", &d.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 14},
 						func(c *ui.Ctx, _ func(string) ui.ID) {
 							if d.item != "" {
 								x.toolDetail(c, se, it, w-40)

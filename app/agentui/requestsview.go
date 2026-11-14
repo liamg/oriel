@@ -76,7 +76,7 @@ func (x *Requests) listView(c *ui.Ctx, vc uireg.ViewCtx) {
 		}
 		vs := x.visible(se, st)
 		now := c.Now()
-		kit.Scrolled(c, "list", &st.list, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: RequestsKeyMode, Role: ui.RoleList,
+		widget.Scrolled(c, "list", &st.list, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: RequestsKeyMode, Role: ui.RoleList,
 			Label: "Requests", Help: "agent/requests#list"}, ui.Style{Pad: ui.Insets{B: 8}}, func(c *ui.Ctx, block func(string) ui.ID) {
 			if len(vs) == 0 {
 				c.Box("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12)}, func(c *ui.Ctx) {
@@ -182,7 +182,7 @@ func (x *Requests) requestView(c *ui.Ctx, vc uireg.ViewCtx) {
 				}
 				c.Column("left", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, func(c *ui.Ctx) {
 					// Its keys are the list's: j, k, o, R.
-					kit.Scrolled(c, "convo", &st.convo, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: RequestsKeyMode, Role: ui.RoleList,
+					widget.Scrolled(c, "convo", &st.convo, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: RequestsKeyMode, Role: ui.RoleList,
 						Label: "Conversation"}, ui.Style{Pad: ui.Insets{T: 20, B: 20}, Gap: 20, Cross: ui.Center}, func(c *ui.Ctx, block func(string) ui.ID) {
 						if !has {
 							x.newRequestNote(c, st, width)

@@ -86,3 +86,14 @@ func KickerRow(c *ui.Ctx, key, text string) {
 		c.Text("k", text, KickerFont(c.Theme().C(theme.FgFaint)))
 	})
 }
+
+// KeyHint is a key cap and what it does.
+func KeyHint(c *ui.Ctx, key any, k, what string) {
+	th := c.Theme()
+	c.Row(key, ui.Style{Gap: 5, Cross: ui.Center}, func(c *ui.Ctx) {
+		c.Row("cap", ui.Style{Pad: ui.PadXY(4, 0), H: ui.Px(15), Cross: ui.Center, Stroke: th.C(theme.LineStrong), Border: 1, Radius: 3}, func(c *ui.Ctx) {
+			c.Text("k", k, MonoFont(9.5, th.C(theme.FgMuted)))
+		})
+		c.Text("t", what, UIFont(11, th.C(theme.FgFaint)))
+	})
+}

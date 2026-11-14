@@ -603,7 +603,7 @@ func lineKeys(c *ui.Ctx, st *diffState) {
 		}
 		c.Text("at", fmt.Sprintf("%s:%d", filepath.ToSlash(rel), line), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 		for i, k := range [][2]string{{"gc", "comment"}, {"ga", "ask"}, {"o", "open"}, {"?", "explain"}} {
-			kit.KeyHint(c, i, k[0], k[1])
+			widget.KeyHint(c, i, k[0], k[1])
 		}
 	})
 }

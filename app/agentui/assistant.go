@@ -54,8 +54,8 @@ type Assistant struct {
 	draft      string
 	focus      bool            // the composer takes focus next frame
 	focused    map[string]bool // the confirmations that have asked for focus once
-	scroll     kit.Scroll
-	sideScroll kit.Scroll
+	scroll     widget.Scroll
+	sideScroll widget.Scroll
 	spoken     int // the last reply said aloud
 	seen       int // the last entry shown in the window: what's after it is unread
 	win        widget.WindowState

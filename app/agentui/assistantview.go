@@ -157,7 +157,7 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 		}
 	}
 	wake := time.Time{}
-	kit.Scrolled(c, "chat", &x.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Role: ui.RoleList, Label: "Conversation", Help: assistantHelp},
+	widget.Scrolled(c, "chat", &x.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Role: ui.RoleList, Label: "Conversation", Help: assistantHelp},
 		ui.Style{Gap: 12, Pad: ui.Insets{T: 4, B: 8, R: 8}}, func(c *ui.Ctx, _ func(string) ui.ID) {
 			if len(log) == 0 {
 				widget.Wrap(c, "empty", "Ask what needs you, to review a pull request, to start or stop a session, or to run a job. "+
@@ -442,7 +442,7 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 		})
 	}
 	c.Column("side", ui.Style{W: ui.Px(width), H: ui.Flex(1), Gap: 9, Clip: true}, func(c *ui.Ctx) {
-		kit.Scrolled(c, "list", &x.sideScroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Gap: 9, Pad: ui.Insets{R: 8}}, func(c *ui.Ctx, _ func(string) ui.ID) {
+		widget.Scrolled(c, "list", &x.sideScroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Gap: 9, Pad: ui.Insets{R: 8}}, func(c *ui.Ctx, _ func(string) ui.ID) {
 			x.sideList(c, now, log, heading, row)
 		})
 		spoken := "on"

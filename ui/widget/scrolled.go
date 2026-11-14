@@ -1,4 +1,4 @@
-package kit
+package widget
 
 import "github.com/liamg/oriel/ui"
 
@@ -9,7 +9,7 @@ type Scroll struct {
 }
 
 // Scrolled is a column that scrolls (with the toolkit's scrollbars), following its end or bringing a block keyed in
-// it into view on request; everything the console scrolls goes through it.
+// it into view on request.
 func Scrolled(c *ui.Ctx, key any, st *Scroll, s, content ui.Style, body func(c *ui.Ctx, block func(key string) ui.ID)) {
 	id := c.Next(key)
 	inner := ui.Child(id, "content")

@@ -31,7 +31,7 @@ const ConsoleSide = kit.ConsoleSide
 // usage, and the rules in force.
 func (x *Console) side(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
-	kit.Scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
+	widget.Scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
 		func(c *ui.Ctx, _ func(string) ui.ID) {
 			for _, id := range x.h.Views() {
 				if v, ok := x.h.ViewByID(id); ok && strings.HasPrefix(id, ConsoleSide) {

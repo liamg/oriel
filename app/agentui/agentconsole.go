@@ -73,8 +73,8 @@ type consoleState struct {
 	sel      string          // the selected block's key; "" follows the end
 	flip     map[string]bool // blocks folded or unfolded against their default
 	blocks   []string        // the blocks' keys as last built, for j and k
-	scroll   kit.Scroll
-	side     kit.Scroll
+	scroll   widget.Scroll
+	side     widget.Scroll
 	draft    string
 	compose  bool // focus the composer next frame
 	focus    bool // focus the transcript next frame
@@ -291,7 +291,7 @@ func (x *Console) state(id core.SessionID) *consoleState {
 	}
 	st := x.by[id]
 	if st == nil {
-		st = &consoleState{flip: map[string]bool{}, stopping: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: kit.Scroll{Follow: true}, scope: map[string]int{}}
+		st = &consoleState{flip: map[string]bool{}, stopping: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: widget.Scroll{Follow: true}, scope: map[string]int{}}
 		x.by[id] = st
 	}
 	return st

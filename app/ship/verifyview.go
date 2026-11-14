@@ -129,7 +129,7 @@ func countWord(n int) string {
 func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	width := min(640, c.Size().X-32) - 36
-	kit.Scrolled(c, "chat", &q.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)},
+	widget.Scrolled(c, "chat", &q.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)},
 		ui.Style{Pad: ui.PadXY(18, 16), Gap: 12}, func(c *ui.Ctx, _ func(string) ui.ID) {
 			for i := 0; i < len(q.qs) && i <= q.at; i++ {
 				qq := q.qs[i]

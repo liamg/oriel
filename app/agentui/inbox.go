@@ -65,7 +65,7 @@ type Inbox struct {
 	inline    map[string]bool      // shown by a surface of their own, so not stacked
 	filter    int
 	sel       string // the panel's selected row, its card open under it
-	list      kit.Scroll
+	list      widget.Scroll
 	panelLeft float32 // where the Inbox panel's left edge was last drawn, so the stack sits beside it
 
 	front    core.SessionID // the session in front as the overlay last saw it
@@ -741,7 +741,7 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 		x.mu.Lock()
 		sel := x.sel
 		x.mu.Unlock()
-		kit.Scrolled(c, "list", &x.list, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: InboxKeyMode, Role: ui.RoleList,
+		widget.Scrolled(c, "list", &x.list, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: InboxKeyMode, Role: ui.RoleList,
 			Label: "Cards", Help: inboxHelp + "#list"}, ui.Style{Pad: ui.Insets{B: 8}}, func(c *ui.Ctx, block func(string) ui.ID) {
 			if len(rows) == 0 {
 				c.Box("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12)}, func(c *ui.Ctx) {

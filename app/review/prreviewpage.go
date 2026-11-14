@@ -161,7 +161,7 @@ func reviewKeys(c *ui.Ctx) {
 		Help: prReviewKeysHelp}, func(c *ui.Ctx) {
 		for i, k := range [][2]string{{"j k", "move"}, {"y", "keep"}, {"x", "drop"}, {"1–5", "severity"}, {"e", "edit"}, {"r", "reword"},
 			{"⏎", "show in diff"}, {"S", "summary"}, {"F1", "help"}} {
-			kit.KeyHint(c, i, k[0], k[1])
+			widget.KeyHint(c, i, k[0], k[1])
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		c.Text("on", "on the selected comment", widget.MonoFont(10, th.C(theme.FgGhost)))
