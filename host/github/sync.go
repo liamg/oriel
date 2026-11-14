@@ -231,3 +231,28 @@ func (x *GitHub) truster(ctx context.Context, c gh.Client, repo gh.Repo, trust T
 		return false
 	}
 }
+
+// githubFor is a branch's PR: the last githubTTL's reading unless fresh.
+func (x *GitHub) githubFor(ctx context.Context, id core.SessionID, project string, repo gitx.Repo, ghRepo gh.Repo, hostname, token, branch string, fresh bool) githubRead {
+	st := &x.ship
+	key := shipKey(id, project) + "/" + branch
+	st.mu.Lock()
+	g, ok := st.github[key]
+	st.mu.Unlock()
+	if ok && !fresh && x.env.Now().Sub(g.at) < githubTTL {
+		return g
+	}
+	g = githubRead{at: x.env.Now()}
+	if pr, err := x.githubOn(repo, hostname, token).PRForBranch(ctx, ghRepo, branch); err != nil {
+		g.err = err.Error()
+	} else {
+		g.pr = pr
+	}
+	st.mu.Lock()
+	st.github[key] = g
+	st.mu.Unlock()
+	if g.err == "" {
+		x.sawPR(id, project, branch, g.pr.Open())
+	}
+	return g
+}

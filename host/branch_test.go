@@ -88,6 +88,21 @@ func TestRenameBranchTool(t *testing.T) {
 	}
 }
 
+// rename_branch keeps the name while a code host last said the branch's PR is open: renaming would leave it behind.
+func TestRenameBranchWaitsForAnOpenPR(t *testing.T) {
+	r := newRig(t)
+	id, p, _, a := branchSession(t, r)
+	r.w.SawPR(PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch, Open: true})
+	if _, err := a.CallErr("rename_branch", map[string]any{"name": "tester/backoff"}); err == nil || !strings.Contains(err.Error(), "is open") {
+		t.Fatalf("renamed under an open PR: %v", err)
+	}
+	r.w.SawPR(PRSeenReq{Session: id, Project: p.Name, Branch: p.Branch})
+	a.Call(t, "rename_branch", map[string]any{"name": "tester/backoff"})
+	if got := r.project(id).Branch; got != "tester/backoff" {
+		t.Errorf("once the PR closed, the branch is %q", got)
+	}
+}
+
 // new_branch starts a fresh branch off the default branch, freshly fetched, and the session takes it; the old one is
 // kept locally, and the answer says so.
 func TestNewBranchTool(t *testing.T) {

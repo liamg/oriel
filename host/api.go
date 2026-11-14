@@ -93,8 +93,7 @@ type (
 	ForwardedReq    = github.ForwardedReq
 	DraftEditReq    = github.DraftEditReq
 	ResolveReq      = github.ResolveReq
-	GitHubReq       = github.GitHubReq
-	GitHubChecks    = github.GitHubChecks
+	PRSeenReq       = github.PRSeenReq
 	MirrorReviewReq = github.MirrorReviewReq
 	ReviewThread    = github.ReviewThread
 	ReviewComment   = github.ReviewComment

@@ -5,7 +5,6 @@ import (
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/host/stats"
 	"github.com/liamg/oriel/sandbox"
@@ -80,6 +79,8 @@ type ShipCalls interface {
 	ShipMergeDefault(ctx context.Context, r ShipRef) (gitx.Merge, error)
 	NextPR(ctx context.Context, r NextPRReq) error
 	UpdatePR(ctx context.Context, id core.SessionID) (map[string]PRMove, error)
+	ShipBranch(ctx context.Context, r ShipRef) (string, error)
+	SawPR(r PRSeenReq) error
 }
 
 // CodeHostCalls are the code hosts' pull requests and review threads: the registry's "host.codehosts" service.
@@ -92,15 +93,6 @@ type CodeHostCalls interface {
 	EditDraft(r DraftEditReq) error
 	ForwardGitHub(ctx context.Context, r ForwardReq) (core.Comment, error)
 	ForwardHost(ctx context.Context, r ForwardReq, post func(ctx context.Context, t core.Thread, body string) (string, error)) (core.Comment, error)
-	GitHubPRFor(ctx context.Context, r GitHubReq) (*gh.PR, error)
-	GitHubCreate(ctx context.Context, r GitHubReq) (*gh.PR, error)
-	GitHubEdit(ctx context.Context, r GitHubReq) (*gh.PR, error)
-	GitHubReady(ctx context.Context, r GitHubReq) error
-	GitHubReviewers(ctx context.Context, r GitHubReq) error
-	GitHubChecks(ctx context.Context, r GitHubReq) (GitHubChecks, error)
-	GitHubMergeState(ctx context.Context, r GitHubReq) (gh.MergeState, error)
-	GitHubMerge(ctx context.Context, r GitHubReq) error
-	GitHubDeleteBranch(ctx context.Context, r GitHubReq) error
 }
 
 // RepoCalls add, clone, tidy and tag the host's repositories: the registry's "host.repos" service.
