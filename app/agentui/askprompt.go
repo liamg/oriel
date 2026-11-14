@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -57,17 +58,17 @@ func (x *Console) decide(th *theme.Resolved, se core.SessionState, a core.Ask) d
 	label := kit.Label(se)
 	switch a.Kind {
 	case core.AskNetwork:
-		host, port, err := net.SplitHostPort(a.Host)
+		hostname, port, err := net.SplitHostPort(a.Host)
 		if err != nil {
-			host = a.Host
+			hostname = a.Host
 		}
-		d.title = "The agent is trying to connect to " + host
+		d.title = "The agent is trying to connect to " + hostname
 		d.where = kit.JoinParts(label, a.Detail)
 		if port != "" {
 			d.where = kit.JoinParts(label, "CONNECT :"+port)
 		}
-		d.scopes, d.scopeArgs = []string{host}, []string{a.Host}
-		if domain, _ := domainOf(a.Host); host != domain && domain != "" {
+		d.scopes, d.scopeArgs = []string{hostname}, []string{a.Host}
+		if domain, _ := domainOf(a.Host); hostname != domain && domain != "" {
 			scope := "*." + domain
 			if port != "" {
 				scope += ":" + port
@@ -75,11 +76,11 @@ func (x *Console) decide(th *theme.Resolved, se core.SessionState, a core.Ask) d
 			d.scopes, d.scopeArgs = append(d.scopes, "*."+domain), append(d.scopeArgs, scope)
 		}
 		d.options = []decisionOption{
-			{PromptOption: widget.PromptOption{Key: "o", Label: "Once"}, act: askAct{args: registry.Args{"decision": "allow"}}},
-			{PromptOption: widget.PromptOption{Key: "a", Label: "Allow for this session"}, act: askAct{args: registry.Args{"decision": "always"}}, scoped: true},
+			{PromptOption: widget.PromptOption{Key: "o", Label: "Once"}, act: askAct{args: registry.Args{"decision": string(host.DecisionAllow)}}},
+			{PromptOption: widget.PromptOption{Key: "a", Label: "Allow for this session"}, act: askAct{args: registry.Args{"decision": string(host.DecisionAlways)}}, scoped: true},
 			{PromptOption: widget.PromptOption{Key: "A", Label: "Allow for all sessions", Note: "every session"},
-				act: askAct{args: registry.Args{"decision": "always", "for": forAll}}, scoped: true},
-			{PromptOption: widget.PromptOption{Key: "n", Label: "Deny", Danger: true}, act: askAct{args: registry.Args{"decision": "deny"}}},
+				act: askAct{args: registry.Args{"decision": string(host.DecisionAlways), "for": forAll}}, scoped: true},
+			{PromptOption: widget.PromptOption{Key: "n", Label: "Deny", Danger: true}, act: askAct{args: registry.Args{"decision": string(host.DecisionDeny)}}},
 		}
 		return d
 	case core.AskGateway:
@@ -151,16 +152,16 @@ func (x *Console) permissionDecision(th *theme.Resolved, d *decision, se core.Se
 // answers are a permission's or a gateway call's: once, for the session or for all sessions (with the rule each
 // makes; none without a rule), deny, deny with a note.
 func answers(rule string) []decisionOption {
-	out := []decisionOption{{PromptOption: widget.PromptOption{Key: "y", Label: "Allow once"}, act: askAct{args: registry.Args{"decision": "allow"}}}}
+	out := []decisionOption{{PromptOption: widget.PromptOption{Key: "y", Label: "Allow once"}, act: askAct{args: registry.Args{"decision": string(host.DecisionAllow)}}}}
 	if rule != "" {
 		out = append(out,
 			decisionOption{PromptOption: widget.PromptOption{Key: "a", Label: "Allow for this session", Note: rule},
-				act: askAct{args: registry.Args{"decision": "always"}}},
+				act: askAct{args: registry.Args{"decision": string(host.DecisionAlways)}}},
 			decisionOption{PromptOption: widget.PromptOption{Key: "A", Label: "Allow for all sessions", Note: rule + " · every session"},
-				act: askAct{args: registry.Args{"decision": "always", "for": forAll}}})
+				act: askAct{args: registry.Args{"decision": string(host.DecisionAlways), "for": forAll}}})
 	}
 	return append(out,
-		decisionOption{PromptOption: widget.PromptOption{Key: "n", Label: "Deny", Danger: true}, act: askAct{args: registry.Args{"decision": "deny"}}},
+		decisionOption{PromptOption: widget.PromptOption{Key: "n", Label: "Deny", Danger: true}, act: askAct{args: registry.Args{"decision": string(host.DecisionDeny)}}},
 		decisionOption{PromptOption: widget.PromptOption{Key: "N", Label: "Deny with a note…", Danger: true}, act: askAct{note: true}})
 }
 

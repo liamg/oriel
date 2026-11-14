@@ -249,10 +249,10 @@ func (x *Console) keymaps() []registry.Keymap {
 		{Keys: "<CR>", Command: "agent.console.fold", Desc: "Fold or unfold"},
 		{Keys: "i", Command: "agent.console.compose", Desc: "Write to the agent"},
 		{Keys: "<Esc>", Command: "agent.console.escape", Desc: "Interrupt, or close"},
-		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": "allow"}, Desc: "Allow once"},
-		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": "always"}, Desc: "Allow for this session"},
-		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": "always", "for": forAll}, Desc: "Allow for all sessions"},
-		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": "deny"}, Desc: "Deny"},
+		{Keys: "y", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAllow)}, Desc: "Allow once"},
+		{Keys: "a", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAlways)}, Desc: "Allow for this session"},
+		{Keys: "A", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionAlways), "for": forAll}, Desc: "Allow for all sessions"},
+		{Keys: "n", Command: "ask.answer", Args: registry.Args{"decision": string(host.DecisionDeny)}, Desc: "Deny"},
 		{Keys: "N", Command: "ask.deny-note", Desc: "Deny with a note"},
 	} {
 		k.Mode = AgentKeyMode

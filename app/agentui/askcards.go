@@ -287,7 +287,7 @@ func (k *askCardParts) login(r registry.Contributions, se core.SessionState, a c
 	case l.Shell != "":
 		k.o.Note = "run " + l.Shell + " in a terminal"
 	}
-	k.add("Check again", "c", !canLogIn(l), registry.Args{"decision": "recheck"})
+	k.add("Check again", "c", !canLogIn(l), registry.Args{"decision": string(host.DecisionRecheck)})
 }
 
 func (k *askCardParts) terminal(a core.Ask, prov string, kicker bool) {
@@ -305,7 +305,7 @@ func (x *Console) keyCard(k *askCardParts, se core.SessionState, a core.Ask) {
 	k.o.Title = "Touch your security key"
 	k.o.Detail = kit.JoinParts(a.Summary, a.Detail, kit.Label(se))
 	k.o.Icon = func(c *ui.Ctx, tone render.Color) { kit.Icon(c, x.h, "icon", "key", 15, tone) }
-	k.add("Cancel", "c", false, registry.Args{"decision": "deny"})
+	k.add("Cancel", "c", false, registry.Args{"decision": string(host.DecisionDeny)})
 }
 
 func (x *Console) questionCard(k *askCardParts, se core.SessionState, a core.Ask, st *consoleState, prov string) {
@@ -398,7 +398,7 @@ func (x *Console) noteInput(c *ui.Ctx, se core.SessionState, a core.Ask, st *con
 		send := widget.Button(c, "send", "Deny with this note", widget.ButtonOpts{Help: "agent/asks#deny-with-a-note"})
 		switch {
 		case r.Submitted || send:
-			x.run(context.Background(), "ask.answer", registry.Args{"id": string(se.ID), "ask": a.ID, "decision": "deny", "note": st.note})
+			x.run(context.Background(), "ask.answer", registry.Args{"id": string(se.ID), "ask": a.ID, "decision": string(host.DecisionDeny), "note": st.note})
 			st.focus = true
 		case r.Cancelled:
 			st.noting, st.note, st.focus = "", "", true
