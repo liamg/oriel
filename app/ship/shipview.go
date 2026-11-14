@@ -82,8 +82,8 @@ func (x *Ship) page(c *ui.Ctx) {
 				cols.ScrollX, col.W = true, ui.Px(shipColumnMin)
 			}
 			c.Column("cols", cols, func(c *ui.Ctx) {
-				if rep.err != "" && len(ships) == 0 {
-					c.Text("err", rep.err, kit.MonoFont(11, th.C(theme.Error)))
+				if rep.err != nil && len(ships) == 0 {
+					c.Text("err", rep.err.Error(), kit.MonoFont(11, th.C(theme.Error)))
 				}
 				shown := x.quietStrip(c, se, ships)
 				c.Row("row", ui.Style{W: ui.Flex(1), Gap: shipColumnGap}, func(c *ui.Ctx) {

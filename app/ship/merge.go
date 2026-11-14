@@ -53,7 +53,7 @@ type mergeAsk struct {
 	deleteBr bool
 	loading  bool
 	since    time.Time // when the read started
-	err      string
+	err      error
 	focus    bool
 	host     registry.CodeHost
 }
@@ -63,8 +63,8 @@ func (a *mergeAsk) state() widget.LoadState {
 	switch {
 	case a.loading:
 		return widget.LoadState{Phase: widget.Pending, Since: a.since}
-	case a.err != "":
-		return widget.LoadState{Phase: widget.Failed, Err: errors.New(a.err)}
+	case a.err != nil:
+		return widget.LoadState{Phase: widget.Failed, Err: a.err}
 	}
 	return widget.LoadState{Phase: widget.Ready}
 }
@@ -137,7 +137,7 @@ func (x *Ship) openMerge(se core.SessionState, p string) error {
 // readMerge reads, off the loop, the PR as it is now and what stands in its way.
 func (x *Ship) readMerge(a *mergeAsk) {
 	se, s, h, p := a.se, a.s, a.host, a.s.Project
-	a.loading, a.err, a.since = true, "", time.Now()
+	a.loading, a.err, a.since = true, nil, time.Now()
 	if u := x.h.UI(); u != nil {
 		a.since = u.Now()
 	}
@@ -151,7 +151,7 @@ func (x *Ship) readMerge(a *mergeAsk) {
 			}
 			a.loading = false
 			if err != nil {
-				a.err = err.Error()
+				a.err = err
 				return
 			}
 			a.pr, a.methods, a.blockers = pr, methods.Allowed, blockers
@@ -278,8 +278,8 @@ func (x *Ship) confirmMerge() error {
 		return errors.New("no merge is waiting")
 	case a.loading:
 		return errors.New("still reading what stands in the way")
-	case a.err != "":
-		return errors.New(a.err)
+	case a.err != nil:
+		return a.err
 	case len(a.hard()) > 0:
 		return fmt.Errorf("%s won't merge it: %s", a.s.Code.Label(), a.hard()[0].Text)
 	}
@@ -348,7 +348,7 @@ func (x *Ship) mergeView(c *ui.Ctx) {
 					label = "Continue"
 				}
 				if widget.Button(c, "merge", label, widget.ButtonOpts{Primary: true, Key: "↵", Help: mergeHelp,
-					Disabled: a.loading || a.err != "" || len(a.hard()) > 0}) {
+					Disabled: a.loading || a.err != nil || len(a.hard()) > 0}) {
 					x.run("ship.merge.confirm", nil)
 				}
 			})
@@ -387,7 +387,7 @@ func (x *Ship) mergeBlockers(c *ui.Ctx, a *mergeAsk, width float32) {
 				}
 			} else if b.URL != "" && widget.Button(c, "show", "Show", widget.ButtonOpts{Ghost: true, Help: mergeHelp}) {
 				if err := kit.OpenURL(x.h, b.URL); err != nil {
-					a.err = err.Error()
+					a.err = err
 				}
 			}
 		})

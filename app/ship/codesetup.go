@@ -32,7 +32,7 @@ type siteAsk struct {
 	pick     int
 	api      string
 	token    string
-	err      string
+	err      error
 	focus    bool
 }
 
@@ -124,18 +124,18 @@ func (x *CodeSites) saveSetup() error {
 	}
 	if _, public := hs.PublicSite(a.hostname); !public {
 		if err := kit.SitesOf(x.h).Remember(a.hostname, hs.Name, hs.Site.API); err != nil {
-			a.err = err.Error()
+			a.err = err
 			return err
 		}
 	}
 	if t := strings.TrimSpace(a.token); t != "" && hs.Site.Secret != "" {
 		if err := x.h.Secrets().SetSecret(hs.Site.Secret, t); err != nil {
-			a.err = err.Error()
+			a.err = err
 			return err
 		}
 	} else if !kit.SitesOf(x.h).Keyed(hs) {
-		a.err = "paste the token first"
-		return errors.New(a.err)
+		a.err = errors.New("paste the token first")
+		return a.err
 	}
 	x.ask = nil
 	x.h.Notify(core.Notice{ID: "code.setup", Severity: core.SevInfo, Title: hs.Label(), Text: a.hostname + " is set up"})
@@ -192,21 +192,21 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 					a.focus = false
 				}
 				res := widget.Input(c, "token", &a.token, widget.InputOpts{Label: hs.Site.Secret, Placeholder: "paste it here", Secret: true,
-					Help: codeSetupHelp, KeyMode: SetupKeyMode, Invalid: a.err != ""})
+					Help: codeSetupHelp, KeyMode: SetupKeyMode, Invalid: a.err != nil})
 				if res.Submitted {
 					x.saveSetup()
 				}
 				if page := hs.Setup.TokenPage(a.hostname); page != "" && widget.Button(c, "make", "Create a token ↗", widget.ButtonOpts{Ghost: true, Help: codeSetupHelp}) {
 					if err := kit.OpenURL(x.h, page); err != nil {
-						a.err = err.Error()
+						a.err = err
 					}
 				}
 				widget.Wrap(c, "about", "Kept as "+hs.Site.Secret+" in Oriel's secrets, and sent only to "+a.hostname+", by the "+hs.Label()+
 					" plugin.", 500, kit.UIFont(11.5, th.C(theme.FgFaint)))
 			}
 		}
-		if a.err != "" {
-			widget.Wrap(c, "err", a.err, 500, kit.MonoFont(11, th.C(theme.Error)))
+		if a.err != nil {
+			widget.Wrap(c, "err", a.err.Error(), 500, kit.MonoFont(11, th.C(theme.Error)))
 		}
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Main: ui.End, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Key: "esc", Help: codeSetupHelp}) {
