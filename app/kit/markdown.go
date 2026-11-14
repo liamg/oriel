@@ -275,8 +275,8 @@ func DocText(c *ui.Ctx, r registry.Registry, key any, src string, width float32)
 	MarkdownText(c, r, key, src, width, UIFont(12, c.Theme().C(theme.FgMuted)), MarkdownOpts{})
 }
 
-// PlainText is markdown as it reads, without its marks: headings, quotes, fences, emphasis, code ticks and links'
-// targets go; list markers and line breaks stay.
+// PlainText is a markdown document as it reads, without its marks: fences, headings' and quotes' marks go, and each
+// line's inline markup as core.PlainMarkdown takes it; list markers and line breaks stay.
 func PlainText(md string) string {
 	var out []string
 	for _, ln := range strings.Split(md, "\n") {
@@ -287,17 +287,9 @@ func PlainText(md string) string {
 		indent := ln[:len(ln)-len(strings.TrimLeft(ln, " \t"))]
 		t = mdHeading.ReplaceAllString(t, "")
 		t = strings.TrimPrefix(strings.TrimPrefix(t, ">"), " ")
-		t = mdWholeImage.ReplaceAllString(t, "")
-		var b strings.Builder
-		for _, sp := range MDSpans(t) {
-			b.WriteString(sp.Text)
-		}
-		out = append(out, indent+strings.TrimSpace(b.String()))
+		out = append(out, indent+strings.TrimSpace(core.PlainMarkdown(t)))
 	}
 	return strings.TrimSpace(strings.Join(out, "\n"))
 }
 
-var (
-	mdHeading    = regexp.MustCompile(`^#{1,6}\s+`)
-	mdWholeImage = regexp.MustCompile(`!\[[^\]]*\]\([^)]*\)`)
-)
+var mdHeading = regexp.MustCompile(`^#{1,6}\s+`)

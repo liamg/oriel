@@ -72,7 +72,7 @@ type Utilities struct {
 // Deps are what a utility agent needs of the rest of the host.
 type Deps struct {
 	Providers *agent.Providers
-	Exec      func() agent.Exec
+	Exec      agent.Exec
 	// Tools are the tools the app offers an agent.
 	Tools func(hostcore.ToolsReq) []agent.Tool
 	// SignedOut says a provider's login here has stopped working.
@@ -111,7 +111,7 @@ func (x *Utilities) runUtility(ctx context.Context, spec UtilitySpec, send func(
 		spec.Allow = append(slices.Clone(spec.Allow), agent.WebToolsOf(p)...)
 	}
 	// It only reads, and nobody is there to ask: its gate never asks, and refuses what isn't allowed ahead.
-	sess, err := p.Start(ctx, agent.StartSpec{Cwd: dir, Model: model, Policy: agent.PolicyRefuse, Allow: spec.Allow, Exec: x.deps.Exec(),
+	sess, err := p.Start(ctx, agent.StartSpec{Cwd: dir, Model: model, Policy: agent.PolicyRefuse, Allow: spec.Allow, Exec: x.deps.Exec,
 		Pack:     agent.Pack{Name: spec.Name, Skill: spec.Name, Text: spec.Pack},
 		Prompt:   spec.Prompt,
 		Tools:    x.deps.Tools(hostcore.ToolsReq{Agent: spec.Name}),

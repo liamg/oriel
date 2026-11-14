@@ -93,16 +93,16 @@ func newSandboxRig(t *testing.T, more ...agent.Provider) *sandboxRig {
 	}
 	t.Cleanup(func() { os.RemoveAll(home) })
 	t.Setenv("HOME", home)
-	r := newRig(t, more...)
-	remote := filepath.Join(t.TempDir(), "origin.git")
-	r.repo.Git("init", "-q", "--bare", remote)
-	r.repo.Git("remote", "add", "origin", remote)
-	s := &sandboxRig{rig: r, remote: remote, launched: make(chan []string, 4), opts: make(chan sandbox.LaunchOpts, 4)}
+	s := &sandboxRig{launched: make(chan []string, 4), opts: make(chan sandbox.LaunchOpts, 4)}
 	s.f = NewSandboxFactory(nil)
 	s.f.Backend = func(sandbox.Config) (sandbox.Backend, error) { return fakeBackend{s}, nil }
 	s.f.Available = func() []string { return []string{"fake"} }
+	r := newRigWith(t, func(o *Options) { o.Sandbox = s.f }, more...)
+	s.rig = r
+	s.remote = filepath.Join(t.TempDir(), "origin.git")
+	r.repo.Git("init", "-q", "--bare", s.remote)
+	r.repo.Git("remote", "add", "origin", s.remote)
 	s.f.Attach(r.w)
-	r.w.opts.Sandbox = s.f
 	return s
 }
 

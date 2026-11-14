@@ -48,8 +48,7 @@ func keyAsk(se core.SessionState) (core.Ask, bool) {
 // A commit that has waited on signing past KeyWait asks its session for a touch,
 // and the ask goes when the commit ends.
 func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
-	r := newRig(t)
-	r.w.opts.KeyWait = 50 * time.Millisecond
+	r := newRigWith(t, func(o *Options) { o.KeyWait = 50 * time.Millisecond })
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p, _ := r.session(id).Primary()
 	touch := signsSlowly(t, p.Dir)
@@ -72,8 +71,7 @@ func TestSigningAsksForASecurityKeyTouch(t *testing.T) {
 
 // Cancel on the key's card (a deny) stops the operation waiting on it.
 func TestCancellingTheKeyStopsTheOperation(t *testing.T) {
-	r := newRig(t)
-	r.w.opts.KeyWait = 50 * time.Millisecond
+	r := newRigWith(t, func(o *Options) { o.KeyWait = 50 * time.Millisecond })
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "n", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p, _ := r.session(id).Primary()
 	signsSlowly(t, p.Dir)

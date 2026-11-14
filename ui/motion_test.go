@@ -339,3 +339,22 @@ func TestScrollToGlides(t *testing.T) {
 		t.Error("the glide went on after the wheel")
 	}
 }
+
+// MotionFor is how long the motion spring takes to settle a 0..1 move at speed, for tests and budgets.
+func MotionFor(speed float32) time.Duration {
+	u := New(nil, TextStyle{})
+	u.opts.MotionSpeed = speed
+	clk := clocktest.New(time.Unix(0, 0))
+	u.SetClock(clk)
+	id := ID(1)
+	u.motion(id, 0, 1)
+	for t := time.Duration(0); t < 2*time.Second; t += time.Second / 120 {
+		clk.Advance(time.Second / 120)
+		u.animating = false
+		u.motion(id, 0, 1)
+		if !u.animating {
+			return t + time.Second/120
+		}
+	}
+	return 2 * time.Second
+}

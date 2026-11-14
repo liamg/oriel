@@ -24,16 +24,16 @@ var ceilings = map[string]int{
 	"functions over 120 lines elsewhere":   35,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
-	"RequestFocus calls outside ui/":       37,
+	"RequestFocus calls outside ui/":       36,
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
 	// The rest of the tree (cmd, sandbox, render, regex, integ…) is held to the same rule from here, its count only
 	// falling: what's truly process-wide (a cgo callback's map, an init-time registry) goes in stateAllowed with why.
-	"mutable package-level vars elsewhere": 114,
+	"mutable package-level vars elsewhere": 104,
 	"tests writing package-level vars":     0,
 	// A test that sleeps guesses how long work takes, and a busy machine makes it wrong: tests wait for the work
 	// (apptest's Quiet, a Busy or Wait) or move a clock of their own (internal/clock/clocktest).
-	"time.Sleep in tests": 27,
+	"time.Sleep in tests": 26,
 	// Work started with a bare go statement is counted by nothing, so a test can't wait for it: plugin.Go, a
 	// plugin.Load, work.Busy or work.Work (whose Loop is for what runs as long as the plugin) count it.
 	"go statements in app/": 6,
@@ -47,7 +47,6 @@ var ceilings = map[string]int{
 
 // stateAllowed are the package-level vars MutableVars may pass over, by "dir.name", and why each is safe to share.
 var stateAllowed = map[string]string{
-	"app/kit.langSets":      "keyed by window registry, and a window's dropped as it closes (ForgetLanguages)",
 	"plugin.native":         "linked-in native plugins, registered from their init (oriel build --with)",
 	"ui/widget.fadeIn":      "a transition read, never written",
 	"ui/widget.tickIn":      "a transition read, never written",

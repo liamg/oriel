@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -95,7 +96,8 @@ func (c Client) Lookup(ctx context.Context, url string) (registry.ReviewDetail, 
 		return d, err
 	}
 	for _, f := range diffs {
-		adds, dels := diffStat(f.Diff)
+		fd := core.PatchDiff(f.NewPath, f.Diff)
+		adds, dels := fd.Added, fd.Removed
 		d.Files = append(d.Files, registry.PRFileChange{Path: f.NewPath, Adds: adds, Dels: dels})
 		d.Request.Adds, d.Request.Dels = d.Request.Adds+adds, d.Request.Dels+dels
 	}
@@ -379,20 +381,6 @@ func (c Client) Merge(ctx context.Context, path string, pr registry.PR, o regist
 		in[key] = msg
 	}
 	return c.call(ctx, "PUT", fmt.Sprintf("/projects/%s/merge_requests/%d/merge", project(path), pr.Number), in, nil)
-}
-
-// diffStat counts a unified diff's added and taken lines.
-func diffStat(diff string) (adds, dels int) {
-	for _, l := range strings.Split(diff, "\n") {
-		switch {
-		case strings.HasPrefix(l, "+++"), strings.HasPrefix(l, "---"):
-		case strings.HasPrefix(l, "+"):
-			adds++
-		case strings.HasPrefix(l, "-"):
-			dels++
-		}
-	}
-	return adds, dels
 }
 
 func when(s string) time.Time {

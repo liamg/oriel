@@ -2,6 +2,8 @@ package shell_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -17,22 +19,26 @@ func cursorIs(pos string) func(string) bool {
 }
 
 // gg goes to the top at once, as in vim: the first g is a prefix of IDE maps (gd, grr…) and of the engine's own,
-// and the second must reach the engine with it, however long after it comes.
+// and the second must reach the engine with it, however long after it comes on the window's clock.
 func TestGGGoesToTheTop(t *testing.T) {
 	var body strings.Builder
 	for i := 1; i <= 50; i++ {
 		fmt.Fprintf(&body, "line %d\n", i)
 	}
-	r := apptest.NewWindow(t, apptest.WindowOpts{Write: map[string]string{"a.txt": body.String()}, Files: []string{"a.txt"}})
-	r.WaitText("line 1")
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte(body.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := apptest.New(t, apptest.Options{WorkDir: dir})
+	s.OpenFile("a.txt")
+	s.Until("the file", func() bool { return strings.HasPrefix(s.Line(0), "line 1") })
 	for _, pause := range []time.Duration{0, 80 * time.Millisecond, 450 * time.Millisecond, 1200 * time.Millisecond} {
-		r.TypeKeys("G")
-		r.WaitAfter("the bottom", len(r.Win.Frames()), cursorIs("50:1"))
-		mark := len(r.Win.Frames())
-		r.TypeKeys("g")
-		time.Sleep(pause)
-		r.TypeKeys("g")
-		r.WaitAfter(fmt.Sprintf("the top, with %v between the g's", pause), mark, cursorIs("1:1"))
+		s.Type("G")
+		s.Until("the bottom", func() bool { return s.EditorWindow().Cursor.Line == 49 })
+		s.Type("g")
+		s.Advance(pause)
+		s.Type("g")
+		s.Until(fmt.Sprintf("the top, with %v between the g's", pause), func() bool { return s.EditorWindow().Cursor.Line == 0 })
 	}
 }
 

@@ -18,7 +18,7 @@ var ErrKeyCancelled = errors.New("cancelled while it waited for a security-key t
 // Keyed runs fn, a git operation of session id's that may wait on a security-key touch: once it has run for
 // Deps.KeyWait, the session asks for the touch (a core.AskKey) until it ends, and Cancel there stops it.
 func (x *Runner) Keyed(ctx context.Context, id core.SessionID, what, project string, fn func(ctx context.Context) error) error {
-	wait := x.deps.KeyWait()
+	wait := x.deps.KeyWait
 	if wait == 0 {
 		wait = KeyWait
 	}

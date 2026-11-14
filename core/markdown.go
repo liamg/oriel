@@ -10,15 +10,19 @@ var (
 	mdComment = regexp.MustCompile(`(?s)<!--.*?(-->|$)`)
 	mdTag     = regexp.MustCompile(`</?[A-Za-z][A-Za-z0-9-]*(\s[^<>]*)?/?>`)
 	mdInline  = strings.NewReplacer("`", "", "**", "", "__", "", "~~", "")
+	mdStar    = regexp.MustCompile(`\*([^\s*](?:[^*]*[^\s*])?)\*`)
+	mdUnder   = regexp.MustCompile(`(^|[^\w])_([^\s_](?:[^_]*[^\s_])?)_($|[^\w])`)
 )
 
 // PlainMarkdown is markdown as plain text: images, HTML comments and tags go, and inline markup (`code`, **bold**,
-// [links](url)) keeps only its text.
+// *emphasis*, [links](url)) keeps only its text. An underscore inside a word (snake_case) isn't emphasis.
 func PlainMarkdown(s string) string {
 	s = mdComment.ReplaceAllString(s, "")
 	s = mdImage.ReplaceAllString(s, "")
 	s = mdTag.ReplaceAllString(s, "")
 	s = mdInline.Replace(s)
+	s = mdStar.ReplaceAllString(s, "$1")
+	s = mdUnder.ReplaceAllString(s, "$1$2$3")
 	for {
 		i := strings.Index(s, "](")
 		if i < 0 {

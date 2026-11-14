@@ -30,9 +30,16 @@ type rig struct {
 	tools []string         // the packs' tools
 	log   *slog.Logger     // the host's log; none if nil
 	bare  bool             // open the host with no providers of its own: the app's come later (SetProviders)
+	tune  func(*Options)   // changes the host's options before it opens; nil for none
 }
 
 func newRig(t *testing.T, more ...agent.Provider) *rig {
+	t.Helper()
+	return newRigWith(t, nil, more...)
+}
+
+// newRigWith is newRig with its host's options changed by tune before the host opens.
+func newRigWith(t *testing.T, tune func(*Options), more ...agent.Provider) *rig {
 	t.Helper()
 	isolate.Test(t)
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -43,7 +50,7 @@ func newRig(t *testing.T, more ...agent.Provider) *rig {
 	t.Setenv("GIT_COMMITTER_EMAIL", "fixture@example.com")
 	t.Setenv("USER", "tester")
 	r := &rig{t: t, home: t.TempDir(), fake: agenttest.NewFake(), clock: &rigClock{Fake: clocktest.New(time.Date(2026, 10, 14, 9, 0, 0, 0, time.UTC))},
-		more: more}
+		more: more, tune: tune}
 	r.repo = gittest.New(t)
 	r.repo.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
 	r.repo.Commit("Ada", "first")
@@ -60,10 +67,14 @@ func (r *rig) open() {
 			providers.Register(p)
 		}
 	}
-	w, err := New(Options{Home: r.home, Providers: providers, Exec: nopExec{}, Clock: r.clock, Log: r.log, HTTP: isolate.Net(r.t),
+	opts := Options{Home: r.home, Providers: providers, Exec: nopExec{}, Clock: r.clock, Log: r.log, HTTP: isolate.Net(r.t),
 		Packs: func(name string) (agent.Pack, bool) {
 			return agent.Pack{Name: name, Skill: name, Text: "pack " + name, Tools: r.tools}, true
-		}})
+		}}
+	if r.tune != nil {
+		r.tune(&opts)
+	}
+	w, err := New(opts)
 	if err != nil {
 		r.t.Fatal(err)
 	}

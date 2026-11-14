@@ -217,3 +217,25 @@ func lockFile(path string) (func(), error) {
 		time.Sleep(20 * time.Millisecond)
 	}
 }
+
+// oauthAccount is who Claude Code is signed in as, from its state file.
+type oauthAccount struct {
+	Email   string `json:"emailAddress"`
+	UUID    string `json:"accountUuid"`
+	OrgUUID string `json:"organizationUuid"`
+	OrgName string `json:"organizationName"`
+	OrgType string `json:"organizationType"`
+	Tier    string `json:"organizationRateLimitTier"`
+}
+
+// readOAuthAccount reads the account from Claude Code's state file; ok is false when it has none.
+func readOAuthAccount(env []string) (oauthAccount, bool) {
+	var state struct {
+		Account *oauthAccount `json:"oauthAccount"`
+	}
+	b, err := os.ReadFile(statePath(env))
+	if err != nil || json.Unmarshal(b, &state) != nil || state.Account == nil {
+		return oauthAccount{}, false
+	}
+	return *state.Account, true
+}

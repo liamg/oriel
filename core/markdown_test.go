@@ -20,3 +20,18 @@ func TestHeadingSkipsMarkup(t *testing.T) {
 		}
 	}
 }
+
+// Emphasis keeps its words; an underscore in a name and a lone star aren't emphasis.
+func TestPlainMarkdownEmphasis(t *testing.T) {
+	for in, want := range map[string]string{
+		"an *important* point":    "an important point",
+		"_really_ do it":          "really do it",
+		"set max_age and min_age": "set max_age and min_age",
+		"2 * 3 = 6":               "2 * 3 = 6",
+		"**bold** and *em*":       "bold and em",
+	} {
+		if got := PlainMarkdown(in); got != want {
+			t.Errorf("PlainMarkdown(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

@@ -40,9 +40,8 @@ func githubThreads(se core.SessionState) []core.Thread {
 // drafts replies and the user forwards them, with echo reconciliation; PR and comment text from outside the trusted
 // orgs and users is redacted for the agent.
 func TestGitHubReviewMirror(t *testing.T) {
-	r := newRig(t)
 	hub := ghtest.New(t)
-	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	r := newRigWith(t, func(o *Options) { o.GitHub = func(string, []string) gh.Client { return hub.Client() } })
 	co, _ := githubRepo(t, "pricing", map[string]string{"round.go": "package pricing\n\nfunc RoundMinor() int {\n\treturn 2\n}\n"})
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "round half even", Provider: "fake", Repos: []core.RepoID{core.RepoID(co.Dir)}})
 	a := r.agent()
@@ -215,9 +214,8 @@ func TestAgentAskingToPostAReviewIsRefused(t *testing.T) {
 // GitHub faked, and the PR's head.
 func reviewSessionScene(t *testing.T, provider string) (*rig, *ghtest.Server, gh.PR, string, core.SessionID) {
 	t.Helper()
-	r := newRig(t)
 	hub := ghtest.New(t)
-	r.w.opts.GitHub = func(string, []string) gh.Client { return hub.Client() }
+	r := newRigWith(t, func(o *Options) { o.GitHub = func(string, []string) gh.Client { return hub.Client() } })
 	ctx := context.Background()
 	co, up := githubRepo(t, "pricing", map[string]string{"round.go": "package pricing\n"})
 	if _, err := r.w.addRepo(ctx, co.Dir, core.RepoAdded); err != nil {
@@ -305,10 +303,9 @@ func (c slowReviews) ReviewComments(ctx context.Context, repo gh.Repo, number in
 
 // A sync waiting on GitHub doesn't hold up another session's.
 func TestASlowSyncDoesNotBlockAnother(t *testing.T) {
-	r := newRig(t)
 	hub := ghtest.New(t)
 	slow := slowReviews{Client: hub.Client(), repo: "pricing", waiting: make(chan struct{}, 1), hold: make(chan struct{})}
-	r.w.opts.GitHub = func(string, []string) gh.Client { return slow }
+	r := newRigWith(t, func(o *Options) { o.GitHub = func(string, []string) gh.Client { return slow } })
 	ctx := context.Background()
 	sessionOn := func(name string) core.SessionID {
 		co, _ := githubRepo(t, name, map[string]string{"a.go": "package a\n"})
