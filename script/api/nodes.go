@@ -418,11 +418,7 @@ func (a *APIs) callback(n script.Table, field string, args ...any) {
 		return
 	}
 	if _, err := a.VM.Call(fn, args...); err != nil {
-		nt := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
-		if e, ok := err.(*script.Error); ok {
-			nt.Location, nt.Detail = e.Where(), e.Trace()
-		}
-		a.Host.Notify(nt)
+		a.callbackFailed(fn, err)
 	}
 	a.Host.Redraw()
 }
