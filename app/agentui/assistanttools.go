@@ -20,6 +20,7 @@ import (
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/testrun"
 	"github.com/liamg/oriel/ui/widget"
 )
@@ -458,7 +459,7 @@ func pullRequest(ref string) (url, key string, err error) {
 
 // reviewOf is the open session already on a pull request.
 func (x *Assistant) reviewOf(url string) (core.SessionState, bool) {
-	if s, ok := kit.ReviewSession(x.h, url); ok && !s.Snapshot().Archived {
+	if s, ok := services.ReviewSession(x.h, url); ok && !s.Snapshot().Archived {
 		return s.Snapshot(), true
 	}
 	return core.SessionState{}, false

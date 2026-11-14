@@ -11,10 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/app/kit/prui"
-
 	"github.com/liamg/oriel/app/kit/work"
-
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -92,7 +89,7 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.mirrors, x.syncing, x.forwarding, x.editing = map[core.SessionID]githubMirror{}, map[core.SessionID]bool{}, map[string]bool{}, map[string]*string{}
 	x.again, x.resolving, x.lastSync = map[core.SessionID]bool{}, map[core.ThreadID]bool{}, map[core.SessionID]time.Time{}
 	x.ctx, x.cancel = context.WithCancel(context.Background())
-	x.Add(h.Contribute(registry.Service{Name: prui.PRReviewsService, Impl: githubReviews{x}}))
+	x.Add(h.Contribute(registry.Service{Name: services.PRReviewsService, Impl: githubReviews{x}}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrPushed", Fired: true, Payload: kit.PrPushed{},
 		Doc: "A session's pull request's head, each time GitHub is read for it; the subject is the session. { session, project, head }"}))
 	x.Add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
@@ -171,7 +168,7 @@ func (x *GitHub) follow() {
 			continue
 		}
 		if !front {
-			if m, ok := x.mirror(se.ID); kit.ReviewedPR(x.h, se) == "" || ok && m.ended() {
+			if m, ok := x.mirror(se.ID); services.ReviewedPR(x.h, se) == "" || ok && m.ended() {
 				continue
 			}
 		}
@@ -256,7 +253,7 @@ func (x *GitHub) resolveHost(id core.SessionID, t core.Thread) {
 		x.h.Notify(core.Notice{ID: "github.resolve", Severity: core.SevWarning, Session: id, Text: fmt.Sprintf("%s the thread on its code host: %v", word, err)})
 	}
 	if g.Host != "" {
-		s, ok := registry.ShipsOf(x.h)
+		s, ok := services.ShipsOf(x.h)
 		if !ok {
 			return
 		}
@@ -404,7 +401,7 @@ func (x *GitHub) forward(a registry.Args) error {
 		return err
 	}
 	if t.Hosted != nil && t.Hosted.Host != "" {
-		s, ok := registry.ShipsOf(x.h)
+		s, ok := services.ShipsOf(x.h)
 		if !ok {
 			return errors.New("the Ship page isn't running")
 		}

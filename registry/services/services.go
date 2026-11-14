@@ -1,6 +1,6 @@
-// Package services are the built-in services' contracts: the editors, git's work trees, the freshness managers, and
-// the agent providers plugins bring. The registry carries them (registry.Service) without knowing them, so it stays
-// free of what they're made of (syntax, gitx, watch, agent).
+// Package services are the built-in services' contracts that draw nothing: the editors, git's work trees, the
+// freshness managers, the agent providers plugins bring, the code sites, ships and reviews. The registry carries them
+// (registry.Service) without knowing them, so it stays free of what they're made of (syntax, gitx, watch, agent, gh).
 package services
 
 import (

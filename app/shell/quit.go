@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -230,7 +231,7 @@ func (x *quitDialog) Activate(_ context.Context, h plugin.Host) error {
 	})))
 	x.Add(h.Command(registry.Command{ID: "quit", Title: "Quit Oriel, handing its agents over",
 		Run: func(registry.Ctx, registry.Args) error {
-			if q, ok := kit.QuitOf(h); ok {
+			if q, ok := services.QuitOf(h); ok {
 				q.Quit()
 			}
 			return nil

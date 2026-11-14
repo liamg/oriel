@@ -25,7 +25,7 @@ workspace (a container or macOS's seatbelt), behind a gateway MCP server and an 
 | `watch` | freshness managers: sources kept up to date only while something subscribes; `watch/gitsrc`, a work tree's git status as sources |
 | `fswatch`, `search`, `sysload`, `semver` | file and folder changes from the OS; project search and replace (ripgrep, or the same in Go); how busy the machine is; semantic versions |
 | `integ/*` | code hosts and trackers (GitLab, Azure, Linear) |
-| `registry` | the contribution registry, pure: commands, keymaps, options, events and hooks, kinds, services, help; `registry/uireg` is what's drawn (views, decorations, pickers, the rail…); `registry/lang` holds language servers and debug adapters; `registry/services` holds the built-in services' contracts made of the editor, git, watches and agents (`Editors`, `GitTrees`, `Watches`, `AgentProvider`), so the registry itself reaches none of them |
+| `registry` | the contribution registry, pure: commands, keymaps, options, events and hooks, kinds, services, help; `registry/uireg` is what's drawn (views, decorations, pickers, the rail…); `registry/lang` holds language servers and debug adapters; `registry/services` holds the built-in services' contracts that draw nothing (`Editors`, `GitTrees`, `Watches`, `CodeSites`, `Ships`, `Reviews`…), so the registry itself reaches none of what they're made of |
 | `plugin` | the plugin host: manifests, process RPC, wasm, permissions, `plugin.Load` |
 | `script` | the Lua VM and the `oriel.*` bindings (`script/api`, documented in [api.md](api.md)) |
 | `catalog` | the plugin registry client and the plugin manager |
@@ -73,11 +73,13 @@ plugin uses, so each can be replaced, removed or configured from Lua.
 
 What crosses features is a service, a command, a hook event or a core event, never another plugin's fields. A plugin
 offers a typed service with `registry.Service{Name, Impl}` and others find it with `registry.ServiceOf[T]`; the
-built-ins include `Editors`, `GitTrees` (`registry/services`), `CodeSites`, `Ships`, `Sessions` and the session host's parts (`hostapi.SessionCalls`, `hostapi.RepoCalls`…, published by the app's built-in `host` plugin). A plugin reads and
+built-ins include `Editors`, `GitTrees`, `CodeSites`, `Ships` (`registry/services`), `Sessions` and the session host's parts (`hostapi.SessionCalls`, `hostapi.RepoCalls`…, published by the app's built-in `host` plugin). A plugin reads and
 changes state through its `plugin.Host` (`State`, `Apply`).
 
-The session host's calls and the types they carry live in `host/hostapi`, a leaf
-the host's parts and the app both import (`app/kit` never reaches the host itself).
+A contract lives where its types let it, its name beside its interface: the session host's calls and the types they
+carry in `host/hostapi`, a leaf the host's parts and the app both import (`app/kit` never reaches the host itself);
+one that draws, or carries the toolkit's or a plugin's types, in `app/kit`; `Sessions`, which the registry itself asks
+which session is in front, in `registry`; every other in `registry/services`.
 
 Plugins live as long as the app. Bringing a session in another directory to the front moves the window onto it
 underneath them: the layout it leaves is saved and kept as it is, its views open, the pages over it close, the

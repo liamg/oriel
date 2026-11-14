@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -63,7 +64,7 @@ const ArchiveOnMergeOption = "session.archive_on_merge"
 
 // AllMerged is whether every project with something to ship has its PR merged, and one at least has. A project
 // that moved on from a merged PR with nothing since counts as merged.
-func AllMerged(se core.SessionState, ships []registry.ProjectShip) bool {
+func AllMerged(se core.SessionState, ships []services.ProjectShip) bool {
 	merged := 0
 	for _, s := range ships {
 		switch {
@@ -89,14 +90,14 @@ func movedOnMerged(se core.SessionState, project string) bool {
 
 // ArchivesOnMerge says session.archive_on_merge archives se as it stands: it's on, every PR is merged and nothing
 // is Uncommitted.
-func ArchivesOnMerge(h plugin.Host, se core.SessionState, ships []registry.ProjectShip) bool {
+func ArchivesOnMerge(h plugin.Host, se core.SessionState, ships []services.ProjectShip) bool {
 	primary, _ := se.Primary()
 	on, _ := registry.Option[bool](h.Options(), ArchiveOnMergeOption, registry.At{Project: primary.Dir, Session: string(se.ID)})
 	return on && !se.Archived && AllMerged(se, ships) && Uncommitted(ships) == 0
 }
 
 // Uncommitted counts the files ships have uncommitted.
-func Uncommitted(ships []registry.ProjectShip) int {
+func Uncommitted(ships []services.ProjectShip) int {
 	n := 0
 	for _, s := range ships {
 		n += len(s.Files)

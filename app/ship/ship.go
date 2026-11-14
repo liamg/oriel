@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -117,7 +118,7 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
 	x.Add(h.Contribute(uireg.ProjectState{Name: "ship", Order: 10, State: x.projectState}))
-	x.Add(h.Contribute(registry.Service{Name: registry.ShipsService, Impl: ships{x}}))
+	x.Add(h.Contribute(registry.Service{Name: services.ShipsService, Impl: ships{x}}))
 	x.Add(h.Contribute(registry.CardChips{Name: "pr", Chips: x.prChips}))
 	x.Add(h.Contribute(registry.SessionDone{Name: "ship.merged", Done: x.shipped}))
 	x.gates()
@@ -224,7 +225,7 @@ func (r *shipReport) seen(now time.Time) {
 // ships is Ship's Ships service.
 type ships struct{ x *Ship }
 
-func (s ships) For(se core.SessionState) []registry.ProjectShip {
+func (s ships) For(se core.SessionState) []services.ProjectShip {
 	x := s.x
 	reads, _ := x.sessionShips(se)
 	x.mu.Lock()
@@ -251,14 +252,14 @@ func (s ships) For(se core.SessionState) []registry.ProjectShip {
 }
 
 // projectShips are reads as other plugins see them.
-func projectShips(reads []shipRead) []registry.ProjectShip {
-	out := make([]registry.ProjectShip, 0, len(reads))
+func projectShips(reads []shipRead) []services.ProjectShip {
+	out := make([]services.ProjectShip, 0, len(reads))
 	for _, p := range reads {
 		var files []string
 		for _, f := range p.Files {
 			files = append(files, f.Path)
 		}
-		out = append(out, registry.ProjectShip{Project: p.Project, ReadOnly: p.ReadOnly, Files: files, Unpushed: len(p.Unpushed), Commits: p.Commits,
+		out = append(out, services.ProjectShip{Project: p.Project, ReadOnly: p.ReadOnly, Files: files, Unpushed: len(p.Unpushed), Commits: p.Commits,
 			Pushed: p.Pushed, PR: p.PR, Code: p.CodeHost})
 	}
 	return out
@@ -737,7 +738,7 @@ func conflictTrouble(s shipRead) (registry.Trouble, bool) {
 // prChips are the pull requests a session that ships has raised, as the window's Ships last read its projects: its
 // card names them.
 func (x *Ship) prChips(se core.SessionState) []registry.Chip {
-	s, ok := registry.ShipsOf(x.h)
+	s, ok := services.ShipsOf(x.h)
 	if !ok || !registry.Can(x.h, se.Kind, core.Ships) {
 		return nil
 	}
@@ -753,7 +754,7 @@ func (x *Ship) prChips(se core.SessionState) []registry.Chip {
 // shipped says a session that ships is done once every PR is merged and nothing is uncommitted or unpushed, as last
 // read.
 func (x *Ship) shipped(se core.SessionState) string {
-	s, ok := registry.ShipsOf(x.h)
+	s, ok := services.ShipsOf(x.h)
 	if !ok || !registry.Can(x.h, se.Kind, core.Ships) {
 		return ""
 	}

@@ -8,12 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/liamg/oriel/registry/services"
-
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -99,7 +98,7 @@ func (x *Requests) newInline(a registry.Args) error {
 	st := x.state("")
 	n := &inlineNew{path: a.String("file"), line: a.Int("line") - 1, end: a.Int("end_line") - 1, col: a.Int("col"), endCol: a.Int("end_col"),
 		focus: true, window: a.String("window")}
-	if se, ok := x.front(); ok && kit.ReviewedPR(x.h, se) != "" {
+	if se, ok := x.front(); ok && services.ReviewedPR(x.h, se) != "" {
 		n.review, n.toAuthor = true, a.String("to") != "agent"
 	}
 	if n.line < 0 {

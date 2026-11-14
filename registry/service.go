@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -34,9 +33,7 @@ func ServiceOf[T any](r Contributions, name string) (T, bool) {
 
 // The built-in services' names.
 const (
-	CodeSitesService = "code.sites"
-	ShipsService     = "ships"
-	SessionsService  = "sessions"
+	SessionsService = "sessions"
 
 	// The session host's parts' calls, each its own service (host.SessionCalls, host.SandboxCalls…).
 	HostSessionsService  = "host.sessions"
@@ -59,9 +56,7 @@ func SecretUnset(err error) bool {
 	return errors.As(err, &c) && c.RPCCode() == CodeSecretUnset
 }
 
-func CodeSitesOf(r Contributions) (CodeSites, bool) { return ServiceOf[CodeSites](r, CodeSitesService) }
-func ShipsOf(r Contributions) (Ships, bool)         { return ServiceOf[Ships](r, ShipsService) }
-func SessionsOf(r Contributions) (Sessions, bool)   { return ServiceOf[Sessions](r, SessionsService) }
+func SessionsOf(r Contributions) (Sessions, bool) { return ServiceOf[Sessions](r, SessionsService) }
 
 // Sessions are the window's sessions.
 type Sessions interface {
@@ -95,46 +90,4 @@ type Load struct {
 	Done  bool
 	Err   error
 	Since time.Time
-}
-
-// CodeSites say which code host, and which of its sites, a remote or a pull request's URL is on.
-// They don't block but Probe, and are safe off the loop.
-type CodeSites interface {
-	URL(raw string) (HostSite, bool)                             // a pull request's URL
-	Remote(remote string) (HostSite, string, bool)               // a remote's URL, and the repo's name there
-	Probe(ctx context.Context, hostname string) (HostSite, bool) // asks each host whether hostname is one of its
-	Named(hostname string) (string, bool)                        // the code host the user, gh or glab names hostname as
-	Remember(hostname, name, api string) error                   // keeps which host hostname is, and its API URL
-	ReviewSources() []HostSite                                   // the sites review requests are read from
-	Keyed(s HostSite) bool                                       // s's token is set
-	Warm(ctx context.Context, s HostSite)                        // reads s's token ahead of its first request
-	Refuse(s HostSite, err error) bool                           // says s refused its token with err; true if it was refused
-	TrustedUser(login string) bool                               // code.trusted_users has login
-}
-
-// Ships are what each of a session's projects has to ship, as the Ship page last read them.
-type Ships interface {
-	// For are se's projects as last read; one not read yet has only its branch.
-	For(se core.SessionState) []ProjectShip
-	// Refresh reads id's projects again, fresh past what's cached.
-	Refresh(id core.SessionID, fresh bool)
-	// ResolveThread starts resolving a thread mirrored from a code host there, or reopening it. The error is only
-	// why it couldn't start; how it went shows on the project's step.
-	ResolveThread(se core.SessionState, thread core.ThreadID, resolved bool) error
-	// ForwardThread starts posting the user's draft reply, comment commentID, on a mirrored thread to its host. The
-	// error is only why it couldn't start; how it went shows on the project's step.
-	ForwardThread(se core.SessionState, thread core.ThreadID, commentID string) error
-}
-
-// ProjectShip is one of a session's projects as Ship read it.
-type ProjectShip struct {
-	Project  string
-	ReadOnly bool
-	Files    []string // uncommitted
-	Unpushed int      // commits not pushed
-	Commits  int      // on the branch since its base
-	Pushed   bool
-	PR       *PR
-	Code     *CodeHost // where origin is; nil for none Oriel knows
-	Load     Load
 }

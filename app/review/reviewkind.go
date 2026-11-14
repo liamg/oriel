@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
@@ -45,7 +46,7 @@ func (x *PRReview) contributeKind() {
 		}}}))
 	x.Add(h.Contribute(registry.SessionDone{Name: "review.approved", Done: approved}))
 	x.Add(h.Contribute(registry.SessionUnsaved{Name: "review.unsent", Unsaved: x.unsent}))
-	x.Add(h.Contribute(registry.Service{Name: kit.ReviewsService, Impl: reviewsService{x}}))
+	x.Add(h.Contribute(registry.Service{Name: services.ReviewsService, Impl: reviewsService{x}}))
 	x.Add(h.Contribute(uireg.SlotView{Name: "review.pr", Slot: kit.PRView, Kinds: []core.Kind{core.KindReview}, View: reviewTab{x}}))
 }
 

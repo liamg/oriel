@@ -11,13 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/registry/services"
-
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -458,7 +457,7 @@ func (x *Jobs) schedule(c *ui.Ctx, j hostapi.Job) {
 
 // cost is a run's estimated cost and its split by repo: from its stats once they're in, its agent's until then.
 func (x *Jobs) cost(r runRow) (float64, []stats.Share, bool) {
-	if st, ok := kit.StatsOf(x.h); ok {
+	if st, ok := services.StatsOf(x.h); ok {
 		if d, ok := st.Session(r.se.ID); ok && d.Totals.Cost > 0 {
 			return d.Totals.Cost, d.Repos, true
 		}

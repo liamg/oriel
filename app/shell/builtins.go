@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/ui"
 )
@@ -157,7 +158,7 @@ var fontRoles = []struct{ name, role, help string }{
 // fonts are the font options, each drawing its role with the family it names as it changes.
 func (o *uiOptions) fonts(h plugin.Host) {
 	installed := func() []string {
-		if f, ok := registry.FontsOf(h); ok {
+		if f, ok := services.FontsOf(h); ok {
 			return f.Families(h.Redraw)
 		}
 		return nil
@@ -165,7 +166,7 @@ func (o *uiOptions) fonts(h plugin.Host) {
 	for _, r := range fontRoles {
 		o.Add(h.Option(registry.OptionSpec{Name: r.name, Type: registry.String, Default: "", Choices: installed, Scopes: registry.ScopeUser, Help: r.help}))
 		apply := func() {
-			f, ok := registry.FontsOf(h)
+			f, ok := services.FontsOf(h)
 			if !ok {
 				return
 			}

@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/services"
 )
 
 // Which code host, and which of its sites, a remote or a pull request's URL is on: a host's public site by its
@@ -407,7 +408,7 @@ func (x *CodeSites) Activate(_ context.Context, h plugin.Host) error {
 	for _, o := range x.sites.options() {
 		x.Add(h.Option(o))
 	}
-	x.Add(h.Contribute(registry.Service{Name: registry.CodeSitesService, Impl: x.sites}))
+	x.Add(h.Contribute(registry.Service{Name: services.CodeSitesService, Impl: x.sites}))
 	x.Add(h.Contribute(registry.Service{Name: kit.SiteTokensService, Impl: x.sites}))
 	x.activateSetup(h)
 	return nil

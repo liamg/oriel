@@ -5,7 +5,6 @@ import (
 
 	"github.com/liamg/oriel/app/kit"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -55,25 +54,6 @@ func PRBadge(c *ui.Ctx, r registry.Registry, key any, s PRStatus, help string) {
 		kit.Icon(c, r, "i", s.Icon, 18, tone)
 		c.Text("w", s.Word, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13.5, Weight: typeset.SemiBold}, Color: tone})
 	})
-}
-
-// PRReviewsService gives a PR's reviewers' latest verdicts, for a code host that keeps them (GitHub's mirror).
-const PRReviewsService = "pr.reviews"
-
-// PRReviews is the PRReviewsService.
-type PRReviews interface {
-	// Reviews are the latest verdict of each reviewer of the PR at url in session id, as the host says it.
-	Reviews(id core.SessionID, url string) []string
-}
-
-// PRReviewsOf are the reviewers' latest verdicts on the PR at url in session id, from whichever plugin keeps them.
-func PRReviewsOf(r registry.Registry, id core.SessionID, url string) []string {
-	if s, ok := registry.ServiceOf[PRReviews](r, PRReviewsService); ok {
-		var out []string
-		registry.Call(func() error { out = s.Reviews(id, url); return nil })
-		return out
-	}
-	return nil
 }
 
 // Framed says the status is one worth framing the whole PR view in: something happened to it (merged, closed) or a
