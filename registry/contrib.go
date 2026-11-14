@@ -141,8 +141,8 @@ type AgentTool struct {
 	Reads string
 	// Confirm makes it an act that waits for the user's yes: what it will do, shown by the agent's owner before Run.
 	// It returns Granted when this call needs no yes, and an error to refuse it.
-	Confirm func(ctx Ctx, params map[string]any) (Confirmation, error)
-	Run     func(ctx Ctx, params map[string]any) (any, error)
+	Confirm func(ctx Ctx, params Args) (Confirmation, error)
+	Run     func(ctx Ctx, params Args) (any, error)
 	// Adds makes it a part of another tool's answer rather than a tool of its own: when the tool named Adds is
 	// called, the answer is each one's result under its Reads (or Name): agentbus's review requests beside GitHub's.
 	Adds string

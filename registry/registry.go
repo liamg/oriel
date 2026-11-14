@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/liamg/oriel/internal/clock"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -151,13 +152,31 @@ type Args map[string]any
 // String is the string argument k, or "".
 func (a Args) String(k string) string { s, _ := a[k].(string); return s }
 
-// Int is the numeric argument k: an int from Go, a float64 from Lua or JSON; 0 if it's neither.
+// Trimmed is the argument k as text with its spaces trimmed, a number as it's written: what an agent passes for a
+// name may come as either.
+func (a Args) Trimmed(k string) string {
+	switch v := a[k].(type) {
+	case string:
+		return strings.TrimSpace(v)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case int:
+		return strconv.Itoa(v)
+	}
+	return ""
+}
+
+// Int is the numeric argument k: an int from Go, a float64 from Lua or JSON, or a string of digits (an agent may
+// quote a number); 0 if it's none of these.
 func (a Args) Int(k string) int {
 	switch n := a[k].(type) {
 	case int:
 		return n
 	case float64:
 		return int(n)
+	case string:
+		i, _ := strconv.Atoi(strings.TrimSpace(n))
+		return i
 	}
 	return 0
 }

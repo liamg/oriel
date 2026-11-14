@@ -3,8 +3,6 @@ package kit
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
@@ -21,17 +19,6 @@ var (
 	TToolOK     = theme.Declare("agent.tool.ok", "ok")
 	TToolFailed = theme.Declare("agent.tool.failed", "error")
 )
-
-// ParamString is an agent tool's string parameter k, trimmed; a number as it's written.
-func ParamString(p map[string]any, k string) string {
-	switch v := p[k].(type) {
-	case string:
-		return strings.TrimSpace(v)
-	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	}
-	return ""
-}
 
 // CountPill is a small round count: a tab's cards waiting, the inbox's.
 func CountPill(c *ui.Ctx, key any, n int, fill render.Color) {
