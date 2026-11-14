@@ -290,7 +290,7 @@ func (p *picker) act(a uireg.PickerAction, g group) {
 	}
 	p.close(false)
 	if err := registry.Call(func() error { return a.Run(context.Background(), items) }); err != nil {
-		p.h.Notify(core.Notice{ID: "picker.action", Severity: core.SevError, Source: "picker", Key: true, Text: a.Title + ": " + err.Error()})
+		p.h.Notify(core.Notice{ID: "picker.action", Severity: core.SevError, Source: "picker", AutoClear: true, Text: a.Title + ": " + err.Error()})
 	}
 }
 
@@ -325,7 +325,7 @@ func (p *picker) run(s uireg.PickerSource, h hit) {
 		return
 	}
 	if err := registry.Call(func() error { return run(context.Background(), h.item) }); err != nil {
-		p.h.Notify(core.Notice{ID: "picker.run", Severity: core.SevError, Source: s.Source, Key: true, Text: err.Error()})
+		p.h.Notify(core.Notice{ID: "picker.run", Severity: core.SevError, Source: s.Source, AutoClear: true, Text: err.Error()})
 	}
 }
 

@@ -495,7 +495,7 @@ func stepWith[T any](x *Ship, part func(registry.Registry) (T, error), id core.S
 			}
 			x.mu.Unlock()
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Key: true, Title: project, Text: err.Error()})
+				x.h.Notify(core.Notice{ID: "ship." + project, Severity: core.SevError, Title: project, Text: err.Error()})
 			}
 		})
 	})

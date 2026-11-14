@@ -25,7 +25,7 @@ func pastedFiles(h plugin.Host, id core.SessionID) func(widget.Pasted) string {
 			return ""
 		}
 		fail := func(err error) {
-			h.Notify(core.Notice{ID: "paste.files", Severity: core.SevError, Source: "paste", Text: err.Error()})
+			kit.NotifyError(h, "paste.files", err, true)
 		}
 		if len(p.Image) > 0 {
 			path, err := w.Attach(host.AttachReq{Session: id, Name: "pasted-" + time.Now().Format("150405") + ".png", Data: p.Image})

@@ -90,7 +90,7 @@ func (x *Catalog) act(id, cmd, title string, a registry.Args) {
 		err := x.h.Run(ctx, cmd, a)
 		x.h.Do(func() { delete(x.page.running, id) })
 		if err != nil {
-			x.h.Notify(noticeErr("plugins", title, err))
+			x.h.Notify(noticeErr("plugins", title, err, false))
 		}
 		x.h.Redraw()
 	})
@@ -552,7 +552,7 @@ func (x *Catalog) detail(c *ui.Ctx, r pluginRow) {
 			}
 			if widget.Button(c, "turn", label, widget.ButtonOpts{Help: pluginsHelp + "#bundled"}) {
 				if err := x.h.Run(context.Background(), cmd, registry.Args{"id": r.id}); err != nil {
-					x.h.Notify(noticeErr("plugins", "Plugins", err))
+					x.h.Notify(noticeErr("plugins", "Plugins", err, true))
 				}
 			}
 		})
@@ -589,7 +589,7 @@ func (x *Catalog) detail(c *ui.Ctx, r pluginRow) {
 			}
 			if r.state == waitsState && widget.Button(c, "load", "Load now", busy("", "")) {
 				if err := x.h.Run(context.Background(), registry.LoadCommand(id), nil); err != nil {
-					x.h.Notify(noticeErr("plugins", "Plugins", err))
+					x.h.Notify(noticeErr("plugins", "Plugins", err, true))
 				}
 			}
 			if r.st.Update != "" {
@@ -711,7 +711,7 @@ func sortVersionsDesc(vs []string) {
 	})
 }
 
-// noticeErr is a failed action's notice.
-func noticeErr(id, title string, err error) core.Notice {
-	return core.Notice{ID: id, Severity: core.SevError, Title: title, Text: err.Error()}
+// noticeErr is an error on the Plugins page as a notice titled title; autoClear as kit.NotifyError says.
+func noticeErr(id, title string, err error, autoClear bool) core.Notice {
+	return core.Notice{ID: id, Severity: core.SevError, Title: title, Text: err.Error(), AutoClear: autoClear}
 }

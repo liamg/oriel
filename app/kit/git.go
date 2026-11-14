@@ -28,7 +28,7 @@ func (noTrees) WatchWindow(func(string, []string)) registry.Disposable {
 }
 func (t noTrees) Run(func(ctx context.Context) error) {
 	if n, ok := t.r.(interface{ Notify(core.Notice) }); ok {
-		n.Notify(core.Notice{ID: "git.none", Severity: core.SevError, Source: "git", Text: "There's no git service in this window to run that."})
+		n.Notify(core.Notice{ID: "git.none", Severity: core.SevError, AutoClear: true, Source: "git", Text: "There's no git service in this window to run that."})
 	}
 }
 func (noTrees) Reload()           {}

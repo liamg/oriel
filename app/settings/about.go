@@ -98,7 +98,7 @@ func (x *About) card(c *ui.Ctx) {
 	th := c.Theme()
 	run := func(command string) {
 		if err := x.h.Run(context.Background(), command, nil); err != nil {
-			x.h.Notify(core.Notice{ID: "about", Severity: core.SevError, Source: "about", Key: true, Text: err.Error()})
+			kit.NotifyError(x.h, "about", err, true)
 		}
 	}
 	c.Row("head", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -142,7 +142,7 @@ func (x *About) card(c *ui.Ctx) {
 	c.Row("links", ui.Style{W: ui.Flex(1), Gap: 6, Wrap: true}, func(c *ui.Ctx) {
 		if widget.Button(c, "report", "Copy report", widget.ButtonOpts{Ghost: true, Help: "errors#log"}) {
 			run("log.copy_report")
-			x.h.Notify(core.Notice{ID: "about.report", Severity: core.SevInfo, Source: "about", Key: true,
+			x.h.Notify(core.Notice{ID: "about.report", Severity: core.SevInfo, Source: "about", AutoClear: true,
 				Text: fmt.Sprintf("Report copied: paste it into an issue at %s/issues", RepoURL)})
 		}
 		if widget.Button(c, "help", "Help", widget.ButtonOpts{Ghost: true, Help: aboutHelp}) {

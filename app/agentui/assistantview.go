@@ -307,7 +307,7 @@ func (x *Assistant) pickRow(it assistant.Item) {
 
 func (x *Assistant) report(err error) {
 	if err != nil {
-		x.h.Notify(core.Notice{ID: "assistant", Severity: core.SevError, Key: true, Text: err.Error()})
+		kit.NotifyError(x.h, "assistant", err, true)
 	}
 }
 

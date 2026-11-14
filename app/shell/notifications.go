@@ -28,7 +28,7 @@ func toastTTL(n core.Notification) time.Duration {
 	switch {
 	case n.Severity == core.SevInfo:
 		return 3 * time.Second
-	case n.Severity == core.SevWarning, n.Severity == core.SevError && n.Key:
+	case n.Severity == core.SevWarning, n.Severity == core.SevError && n.AutoClear:
 		return 8 * time.Second
 	}
 	return 0
@@ -266,7 +266,7 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	case res.Action >= 0:
 		a := row.Actions[res.Action]
 		if err := n.h.Run(ctx, a.Command, registry.Args(a.Args)); err != nil {
-			n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
+			n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, AutoClear: true, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
 		}
 		n.h.Apply(core.Dismissal(row))
 	case res.Closed:
@@ -294,7 +294,7 @@ func (n *notices) inboxCards() []uireg.InboxCard {
 		for _, a := range row.Actions {
 			card.Actions = append(card.Actions, uireg.InboxAction{Label: a.Title, Primary: len(card.Actions) == 0, Run: func() {
 				if err := n.h.Run(context.Background(), a.Command, registry.Args(a.Args)); err != nil {
-					n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
+					n.h.Notify(core.Notice{ID: "action.failed", Severity: core.SevError, AutoClear: true, Source: "core", Text: fmt.Sprintf("%s: %v", a.Title, err)})
 				}
 				answer()
 			}})
@@ -387,7 +387,7 @@ func (n *notices) crashModal(c *ui.Ctx) {
 			if widget.Link(c, "issue", "Open a GitHub issue ↗", "errors#crash") {
 				kit.CopyText(n.h, cr.Report)
 				if err := kit.OpenURL(n.h, IssueURL); err != nil {
-					n.h.Notify(core.Notice{ID: "crash.open-issue", Severity: core.SevError, Source: "core", Text: err.Error()})
+					kit.NotifyError(n.h, "crash.open-issue", err, true)
 				}
 			}
 			c.Text("url", strings.TrimPrefix(IssueURL, "https://"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: c.Theme().C(theme.FgFaint)})

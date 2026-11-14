@@ -77,7 +77,7 @@ func (x *Editor) paneView(c *ui.Ctx, id vim.WindowID, focused bool) {
 			r := st.Key(kit.Notation(k))
 			if r.Command != "" {
 				if err := x.h.Run(context.Background(), r.Command, registry.Args(r.Args)); err != nil {
-					x.h.Notify(core.Notice{ID: "editor.command", Severity: core.SevError, Source: "editor", Key: true, Text: err.Error()})
+					kit.NotifyError(x.h, "editor.command", err, true)
 				}
 			}
 		}
@@ -295,7 +295,7 @@ func (x *Editor) gutterAction(p vim.Pane, line int) bool {
 		args[k] = v
 	}
 	if err := x.h.Run(context.Background(), a.Command, args); err != nil {
-		x.h.Notify(core.Notice{ID: "editor.gutter", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		x.h.Notify(core.Notice{ID: "editor.gutter", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}
 	return true
 }
@@ -374,7 +374,7 @@ func (x *Editor) action(c *ui.Ctx, a registry.EditorAction, w registry.EditorWin
 		args[k] = v
 	}
 	if err := x.h.Run(context.Background(), a.Command, args); err != nil {
-		x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, Key: true, Text: err.Error()})
+		x.h.Notify(core.Notice{ID: "editor.action", Severity: core.SevWarning, AutoClear: true, Text: err.Error()})
 	}
 }
 

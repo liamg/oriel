@@ -94,7 +94,7 @@ func commandNotice(r registry.Registry, id string, err error, dir string, now ti
 			src = c.Source
 		}
 	}
-	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now, Key: true}
+	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now, AutoClear: true}
 	return script.WithTrace(n, err, dir, "Open at line")
 }
 

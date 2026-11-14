@@ -304,7 +304,7 @@ func (x *Requests) inlineThread(c *ui.Ctx, id core.ThreadID, open bool) {
 	}
 	inlineThreadCard(c, x.h, se, t, &d.text, func() {
 		if err := x.send(context.Background(), st, id, false); err != nil {
-			x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+			kit.NotifyError(x.h, "requests", err, true)
 		}
 	}, threadCardOpts{Open: open, Defer: se.Planning(), Focus: focus, Fold: func() { delete(x.unfolded, id) }})
 }
@@ -350,7 +350,7 @@ func paintChevron(f render.Frame, r render.Rect, fg render.Color, open bool) {
 func reopenLink(c *ui.Ctx, h plugin.Host, id core.ThreadID) {
 	if widget.Link(c, "reopen", "reopen", "agent/requests#inline") {
 		if err := h.Run(context.Background(), "request.reopen", registry.Args{"thread": string(id)}); err != nil {
-			h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+			kit.NotifyError(h, "requests", err, true)
 		}
 	}
 }
@@ -542,7 +542,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 					a["outgoing"] = true
 				}
 				if err := x.h.Run(context.Background(), "request.comment", a); err != nil {
-					x.h.Notify(core.Notice{ID: "requests", Severity: core.SevError, Source: "requests", Text: err.Error()})
+					kit.NotifyError(x.h, "requests", err, true)
 					return
 				}
 				n.release()

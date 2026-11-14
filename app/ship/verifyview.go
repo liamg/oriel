@@ -212,7 +212,7 @@ func (x *Verify) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
 					}
 					if widget.Link(c, "open", label, verifyHelp+"#file") {
 						if err := x.openAt(context.Background(), x.shown(), qq.File, qq.Line); err != nil {
-							x.h.Notify(core.Notice{ID: "verify", Severity: core.SevError, Key: true, Text: err.Error()})
+							kit.NotifyError(x.h, "verify", err, true)
 						}
 					}
 				})

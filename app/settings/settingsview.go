@@ -514,6 +514,6 @@ func (s *Plugin) footer(c *ui.Ctx, th *theme.Resolved) {
 
 func (s *Plugin) fail(err error) {
 	if err != nil {
-		s.h.Notify(core.Notice{ID: "settings.set", Severity: core.SevError, Title: "Settings", Text: err.Error(), Key: true})
+		s.h.Notify(core.Notice{ID: "settings.set", Severity: core.SevError, Title: "Settings", Text: err.Error(), AutoClear: true})
 	}
 }
