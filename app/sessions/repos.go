@@ -178,9 +178,6 @@ func (x *Repos) count() string {
 	return kit.Counted(len(rs), "repo")
 }
 
-// isFound says whether discovery added r and no session has used it yet.
-func isFound(r core.Repo) bool { return r.Source == core.RepoDiscovered && r.Used.IsZero() }
-
 func (x *Repos) optBool(name string) bool {
 	b, _ := registry.Option[bool](x.h.Options(), name, registry.At{})
 	return b

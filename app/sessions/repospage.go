@@ -31,7 +31,6 @@ var (
 	tRepoTidy   = theme.Declare("repos.tidy", "amber")
 	tRepoMerged = theme.Declare("repos.merged", "ok")
 	tRepoGone   = theme.Declare("repos.gone", "violet")
-	tRepoFound  = theme.Declare("repos.found", "amber")
 )
 
 // repoDetail is what the page has read of one repo.
@@ -126,7 +125,7 @@ func (x *Repos) shown() []core.Repo {
 		return q != "" && !strings.Contains(strings.ToLower(string(r.ID)+" "+r.Path), q)
 	})
 	slices.SortStableFunc(rs, func(a, b core.Repo) int {
-		if fa, fb := isFound(a), isFound(b); fa != fb {
+		if fa, fb := kit.RepoFound(a), kit.RepoFound(b); fa != fb {
 			if fa {
 				return 1
 			}
@@ -257,8 +256,8 @@ func (x *Repos) rowView(c *ui.Ctx, r core.Repo, on bool) {
 					c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: th.C(tRepoTidy), Role: ui.RoleText, Label: "to tidy"}, nil)
 				}
 				c.Text("t", string(r.ID), widget.UIFont(13, th.C(theme.Fg)))
-				if isFound(r) {
-					widget.Chip(c, "found", "found", th.C(tRepoFound), "agent/repos#discovery")
+				if kit.RepoFound(r) {
+					widget.Chip(c, "found", "found", th.C(kit.TRepoFound), "agent/repos#discovery")
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("b", strings.TrimPrefix(r.BaseBranch, "origin/"), widget.MonoFont(10, th.C(theme.FgGhost)))

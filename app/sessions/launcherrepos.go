@@ -156,8 +156,8 @@ func (x *Launcher) repoRow(c *ui.Ctx, r core.Repo) {
 			switch {
 			case r.ID == x.justAdded:
 				widget.Chip(c, "chip", "just added", th.C(theme.OK), "agent/launcher#repositories")
-			case isFound(r):
-				widget.Chip(c, "chip", "found", th.C(tRepoFound), "agent/launcher#repositories")
+			case kit.RepoFound(r):
+				widget.Chip(c, "chip", "found", th.C(kit.TRepoFound), "agent/launcher#repositories")
 			case !r.Used.IsZero():
 				widget.Ago(c, "t", r.Used, widget.AgoOpts{Text: widget.MonoFont(10, th.C(theme.FgGhost)), Long: true, Prefix: "used ", Now: time.Now()})
 			}

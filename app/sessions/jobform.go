@@ -207,7 +207,7 @@ func (x *Jobs) dialog(c *ui.Ctx) {
 // jobField is one of the job form's fields.
 func (x *Jobs) jobField(c *ui.Ctx, key string, text *string, focus bool, o widget.InputOpts) {
 	o.Help, o.TabMoves, o.KeyMode = "agent/jobs#new", true, JobFormKeyMode
-	dialogField(c, key, text, o, focus, x.closeForm, nil)
+	widget.DialogField(c, key, text, o, focus, x.closeForm, nil)
 }
 
 func (x *Jobs) formBody(c *ui.Ctx, f *jobForm) {

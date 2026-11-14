@@ -487,7 +487,7 @@ func (x *Launcher) field(c *ui.Ctx, key any, text *string, label, placeholder st
 	}
 	if lines <= 1 {
 		o := widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true, KeyMode: LauncherKeyMode, Width: w}
-		dialogField(c, key, text, o, focus, x.close, nil)
+		widget.DialogField(c, key, text, o, focus, x.close, nil)
 		return
 	}
 	if focus {
