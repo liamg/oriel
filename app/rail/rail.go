@@ -419,7 +419,7 @@ func (r *Rail) rows(w kit.Here, wide bool) []sideRow {
 	}
 	entries := func(scope string) {
 		for _, e := range uireg.ProjectEntries(r.h) {
-			if e.For(r.h, kind) && e.Is(scope) {
+			if e.For(r.h, kind) && e.Listed(scope) {
 				rows = append(rows, sideRow{kind: rowEntry, entry: e, scope: scope})
 			}
 		}
@@ -440,7 +440,7 @@ func (r *Rail) rows(w kit.Here, wide bool) []sideRow {
 	rows = append(rows, sideRow{kind: rowDivider})
 	bottom := false
 	for _, e := range uireg.SessionEntries(r.h) {
-		if !e.For(r.h, kind) || !e.Is("") {
+		if !e.For(r.h, kind) || !e.Listed("") {
 			continue
 		}
 		if e.Bottom && !bottom {
@@ -452,7 +452,7 @@ func (r *Rail) rows(w kit.Here, wide bool) []sideRow {
 	// Every session's pages, pinned to the foot; in the wide form, below a second divider.
 	var global []sideRow
 	for _, e := range uireg.GlobalEntries(r.h) {
-		if e.For(r.h, kind) && e.Is("") {
+		if e.For(r.h, kind) && e.Listed("") {
 			global = append(global, sideRow{kind: rowSession, entry: e})
 		}
 	}
