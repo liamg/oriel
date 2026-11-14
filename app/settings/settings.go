@@ -1,3 +1,5 @@
+// Package settings is the settings pages: the options, themes and their editor, prompts, secrets, sandboxes, plugins
+// and their registry, the consent asked before a plugin runs, and About.
 package settings
 
 import (

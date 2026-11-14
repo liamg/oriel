@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/registry"
@@ -50,8 +50,8 @@ func TestLuaRegex(t *testing.T) {
 	} {
 		got := s.Lua(`{ L.regex.find("` + c.pcre + `", "` + c.subject + `") }`)
 		want := s.Lua(`{ string.find("` + c.subject + `", "` + c.lua + `") }`)
-		if settings.Show(got[0]) != settings.Show(want[0]) {
-			t.Errorf("find(%q, %q) = %s, string.find gives %s", c.pcre, c.subject, settings.Show(got[0]), settings.Show(want[0]))
+		if luaconfig.Show(got[0]) != luaconfig.Show(want[0]) {
+			t.Errorf("find(%q, %q) = %s, string.find gives %s", c.pcre, c.subject, luaconfig.Show(got[0]), luaconfig.Show(want[0]))
 		}
 	}
 	for line, want := range map[string]string{
@@ -65,7 +65,7 @@ func TestLuaRegex(t *testing.T) {
 		`L.regex.replace("(\\w+)@", "x@ y@", "$1!")`:            `"x! y!"`,
 		`L.regex.find("(?<=a)b", "ab")`:                         "2",
 	} {
-		if got := settings.Show(s.Lua(line)[0]); got != want {
+		if got := luaconfig.Show(s.Lua(line)[0]); got != want {
 			t.Errorf("%s = %s, want %s", line, got, want)
 		}
 	}
@@ -107,7 +107,7 @@ L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x
 		{`(L.cmd("Remember", { x = 8 })) == nil`, "true"}, // deprecated, kept for old configs
 		{`L.remembered`, "8"},
 	} {
-		if got := settings.Show(s.Lua(c.line)[0]); got != c.want {
+		if got := luaconfig.Show(s.Lua(c.line)[0]); got != c.want {
 			t.Errorf("%s = %s, want %s", c.line, got, c.want)
 		}
 	}
@@ -148,7 +148,7 @@ L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severit
 	if len(ds) != 1 || ds[0] != (registry.Diagnostic{File: "/p/a.go", Line: 2, From: 1, To: 4, Severity: registry.SevWarning, Message: "unused", Owner: "lint"}) {
 		t.Fatalf("diagnostics %+v", ds)
 	}
-	if got := settings.Show(s.Lua(`L.diagnostics.list()[1].line`)[0]); got != "3" {
+	if got := luaconfig.Show(s.Lua(`L.diagnostics.list()[1].line`)[0]); got != "3" {
 		t.Errorf("list's line %s", got)
 	}
 	if err := s.LuaErr(`L.diagnostics.set("x", "/f", { 1 })`); !strings.Contains(err, "a diagnostic is a table") {
@@ -184,7 +184,7 @@ L.option["ui.variant"] = nil
 			t.Errorf("%s: %s", line, err)
 		}
 	}
-	if got := settings.Show(s.Lua(`L.option.tabstop`)[0]); got != "4" {
+	if got := luaconfig.Show(s.Lua(`L.option.tabstop`)[0]); got != "4" {
 		t.Errorf("reading L.option.tabstop: %s", got)
 	}
 }
@@ -326,10 +326,10 @@ L.coverage.set("jest", "/p/a.ts", { [3] = 2, [5] = 0 })
 	if got := s.Registry().CoverageFor("/p/a.ts"); len(got) != 2 || got[2] != 2 || got[4] != 0 {
 		t.Fatalf("coverage %v", got)
 	}
-	if got := settings.Show(s.Lua(`#L.coverage.lines("/p/a.ts", 1, 4)`)[0]); got != "1" {
+	if got := luaconfig.Show(s.Lua(`#L.coverage.lines("/p/a.ts", 1, 4)`)[0]); got != "1" {
 		t.Errorf("lines 1–4: %s", got)
 	}
-	if got := settings.Show(s.Lua(`L.coverage.lines("/p/a.ts", 1, 9)[2].hit`)[0]); got != "false" {
+	if got := luaconfig.Show(s.Lua(`L.coverage.lines("/p/a.ts", 1, 9)[2].hit`)[0]); got != "false" {
 		t.Errorf("line 5's hit: %s", got)
 	}
 	s.WriteConfig(map[string]string{"init.lua": ""})

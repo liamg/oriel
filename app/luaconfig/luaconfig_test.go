@@ -1,4 +1,4 @@
-package settings_test
+package luaconfig_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -27,7 +27,7 @@ func luaScene(t *testing.T, initLua string) *apptest.Scene {
 	return s
 }
 
-func luaOf(s *apptest.Scene) *settings.Lua { return apptest.PluginOf[*settings.Lua](s, "lua") }
+func luaOf(s *apptest.Scene) *luaconfig.Lua { return apptest.PluginOf[*luaconfig.Lua](s, "lua") }
 
 // sample is the init.lua docs/configuration.md shows.
 func sample(t *testing.T) string {

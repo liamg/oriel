@@ -9,6 +9,7 @@ import (
 	"github.com/liamg/oriel/app/explain"
 	"github.com/liamg/oriel/app/gitui"
 	"github.com/liamg/oriel/app/lang"
+	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/app/review"
 	appsessions "github.com/liamg/oriel/app/sessions"
 	"github.com/liamg/oriel/app/settings"
@@ -49,7 +50,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&agentui.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &appsessions.Tickets{}, &review.Reviews{}, &ship.GitHubHost{},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
 		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &ship.GitHub{}, &settings.Secrets{},
-		&settings.Lua{Dir: c.ConfigDir}, &settings.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
+		&luaconfig.Lua{Dir: c.ConfigDir}, &settings.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
 	)
 }

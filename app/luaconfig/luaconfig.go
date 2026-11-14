@@ -1,4 +1,6 @@
-package settings
+// Package luaconfig runs the user's Lua config: init.lua and lua/, loaded at start and again when they change, with
+// its REPL, its hooks and what it has bound.
+package luaconfig
 
 import (
 	"cmp"
