@@ -134,3 +134,15 @@ func TestOnError(t *testing.T) {
 		t.Errorf("OnError got %+v", got)
 	}
 }
+
+// IsSyntax tells a chunk that couldn't be parsed from one that raised an error running, whatever its message says.
+func TestIsSyntax(t *testing.T) {
+	vm := New()
+	defer vm.Close()
+	if _, err := vm.Eval(Chunk{Name: "repl", Source: []byte("return 1 +")}); !IsSyntax(err) {
+		t.Errorf("an unfinished expression: %v", err)
+	}
+	if _, err := vm.Eval(Chunk{Name: "repl", Source: []byte(`error("syntax error")`)}); err == nil || IsSyntax(err) {
+		t.Errorf("a runtime error saying syntax error: %v", err)
+	}
+}

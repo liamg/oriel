@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -220,11 +219,7 @@ func (a *APIs) later(fn *script.Fn, args ...any) {
 	if err == nil || errors.Is(err, script.ErrClosed) {
 		return
 	}
-	nt := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
-	if e, ok := err.(*script.Error); ok {
-		nt.Location, nt.Detail = e.Where(), e.Trace()
-	}
-	a.Host.Notify(nt)
+	a.callbackFailed(fn, err)
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	for _, ch := range a.waiting {

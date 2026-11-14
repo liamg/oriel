@@ -1,17 +1,13 @@
 package kit
 
 import (
-	"errors"
 	"maps"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
-	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
@@ -64,29 +60,6 @@ const (
 	// ReplaceView is a change to files shown as a diff before it's made, by Apply (edits.preview): a replace, a rename.
 	ReplaceView = "search.replace"
 )
-
-// Traced is an error that knows where it happened and how it got there: a Lua error.
-type Traced interface {
-	Where() string
-	Trace() string
-}
-
-// WithTrace gives a notice for err its location and trace, and an action titled title that opens the line. A
-// relative location is a config file's.
-func WithTrace(n core.Notice, err error, dir, title string) core.Notice {
-	var t Traced
-	if !errors.As(err, &t) {
-		return n
-	}
-	n.Detail, n.Location = t.Trace(), t.Where()
-	if file, line := script.SplitLoc(n.Location); line > 0 {
-		if !filepath.IsAbs(file) {
-			file = filepath.Join(dir, file)
-		}
-		n.Actions = append([]core.Action{{Title: title, Command: "editor.open", Args: map[string]any{"path": file, "line": line}}}, n.Actions...)
-	}
-	return n
-}
 
 // DiffHeader is the prefix of the views a diff's header shows at its right.
 const DiffHeader = "diff.header."

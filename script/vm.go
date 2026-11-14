@@ -208,7 +208,7 @@ func (vm *VM) Load(c Chunk) error {
 	}
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
-		return &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
+		return &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source)), Syntax: true}
 	}
 	return vm.guard(LoadBudget, func() error {
 		vm.L.Push(fn)
@@ -224,7 +224,7 @@ func (vm *VM) Eval(c Chunk) ([]any, error) {
 	}
 	fn, err := vm.L.Load(strings.NewReader(string(c.Source)), c.Name)
 	if err != nil {
-		return nil, &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source))}
+		return nil, &Error{Message: strings.TrimSpace(atEOF(err.Error(), c.Name, c.Source)), Syntax: true}
 	}
 	top := vm.L.GetTop()
 	err = vm.guard(InterruptAfter, func() error {
@@ -696,6 +696,13 @@ type Error struct {
 	Traceback string // Lua's: the oriel API function that raised it named, gopher-lua's own frames left out
 	GoStack   string // the Go stack under the API function that raised it
 	At        string // where it is, when neither the message nor the traceback says: "init.lua:12"
+	Syntax    bool   // the chunk couldn't be parsed, so nothing of it ran
+}
+
+// IsSyntax says err is, or wraps, a chunk that couldn't be parsed.
+func IsSyntax(err error) bool {
+	var e *Error
+	return errors.As(err, &e) && e.Syntax
 }
 
 func (e *Error) Error() string { return e.Message }

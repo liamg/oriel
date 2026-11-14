@@ -8,6 +8,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/liamg/oriel/core"
 	"runtime"
 	"slices"
 	"strings"
@@ -91,6 +92,13 @@ func (a *APIs) Dispose() {
 
 // check is the guard on a call: the generated glue asks it for each function's capability.
 func (a *APIs) check(c plugin.Capability) error { return a.Plugin.Check(c, "") }
+
+// callbackFailed tells the user a plugin's Lua callback failed: where, how it got there, and an action opening the
+// line.
+func (a *APIs) callbackFailed(fn *script.Fn, err error) {
+	n := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
+	a.Host.Notify(script.WithTrace(n, err, a.Plugin.Dir, "Open at line"))
+}
 
 // commandGrant refuses to run command id for a plugin without the capability the command names (Command.Grant).
 func (a *APIs) commandGrant(id string) error {
