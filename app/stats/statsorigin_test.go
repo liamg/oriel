@@ -47,7 +47,7 @@ func TestStatsOriginSplit(t *testing.T) {
 	s, r, x := statsScene(t)
 	settle(s, x)
 	id := outside(t, r)
-	x.ForgetReports()
+	x.RefreshReports()
 	week := hoststats.Query{From: rig.StatsNow.Truncate(24*time.Hour).AddDate(0, 0, -6), To: rig.StatsNow.Truncate(24*time.Hour).AddDate(0, 0, 1),
 		Offset: x.Offset(), Split: true}
 	x.Report(week)
@@ -120,7 +120,7 @@ func TestStatsQueriesListTheMachinesLogsOnce(t *testing.T) {
 		Offset: x.Offset(), Split: true}
 	before := r.Claude.Discovers()
 	for range 3 {
-		x.ForgetReports()
+		x.RefreshReports()
 		x.Report(week)
 		settle(s, x)
 	}
@@ -128,7 +128,7 @@ func TestStatsQueriesListTheMachinesLogsOnce(t *testing.T) {
 		t.Errorf("3 queries looked for the machine's logs %d times", n)
 	}
 	outside(t, r)
-	x.ForgetReports()
+	x.RefreshReports()
 	x.Report(week)
 	settle(s, x)
 	if all := x.Report(week); len(all.Origins) != 2 {
