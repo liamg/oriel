@@ -138,7 +138,7 @@ func (x *Sessions) commands() []registry.Command {
 		return ok && has(nil) && se.Snapshot().Planning()
 	}
 	return []registry.Command{
-		{ID: "session.start", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} opens its tab behind the one in front; {then} is a list of {command, args} run once the window is on it",
+		{ID: "session.start", Grant: "session.control", Title: "Start a session: {kind}, {prompt}, {repos}, {provider}, {model}, {effort}, {sandbox}…; {background} opens its tab behind the one in front; {then} is a list of {command, args} run once the window is on it",
 			Available: has, Run: x.startCommand},
 		{ID: "session.opens", Title: "Run session {id}'s kind's opening commands (KindSpec.Opens) its first time in front, however it got there, when the window shows nothing in its main area",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
@@ -177,37 +177,37 @@ func (x *Sessions) commands() []registry.Command {
 			}},
 		{ID: "session.open-dir", Title: "Bring the direct session on {dir} to the front: its own, with no agent, started if it hasn't one", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.openDirect(ctx, a.String("dir")) }},
-		{ID: "session.resume", Title: "Resume a session: pick one", Available: has,
+		{ID: "session.resume", Grant: "session.control", Title: "Resume a session: pick one", Available: has,
 			Run: func(ctx registry.Ctx, _ registry.Args) error {
 				return h.Run(ctx, "picker.open", registry.Args{"source": "sessions"})
 			}},
-		{ID: "session.stop", Title: "Stop the agent of {id}, or the session in front", Available: named,
+		{ID: "session.stop", Grant: "session.control", Title: "Stop the agent of {id}, or the session in front", Available: named,
 			Run: x.slowSession("session.stop", "Stopping", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error { return w.Stop(ctx, id) })},
-		{ID: "session.archive", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
+		{ID: "session.archive", Grant: "session.control", Title: "Archive {id}, or the session in front: its worktrees go, its threads and transcript stay", Available: named,
 			Run: x.slowSession("session.archive", "Archiving", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error { return w.Archive(ctx, id) })},
-		{ID: "session.start-work", Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
+		{ID: "session.start-work", Grant: "session.control", Title: "Start work on this plan: worktrees, then the agent implements it; {clear}, {fresh}, {branches}, {sandbox}, {network}, {model}, {effort}",
 			Available: planning,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.start-work", "Starting work on", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.StartWork(ctx, startWorkReq(id, a))
 				})(ctx, a)
 			}},
-		{ID: "session.configure", Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
+		{ID: "session.configure", Grant: "session.control", Title: "Switch the agent of {id}, or the session in front, to {model} at {effort}, its conversation kept; only while it's idle",
 			Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.configure", "Switching the agent of", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.Configure(ctx, host.ConfigureReq{Session: id, Model: a.String("model"), Effort: a.String("effort")})
 				})(ctx, a)
 			}},
-		{ID: "session.interrupt", Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
+		{ID: "session.interrupt", Grant: "session.control", Title: "Interrupt the agent's turn: {id}'s, or the session in front's", Available: named,
 			Run: x.onSession(func(_ context.Context, w host.SessionCalls, id core.SessionID) error { return w.Interrupt(id) })},
-		{ID: "session.rename", Title: "Rename {id}, or the session in front: {name}", Available: named,
+		{ID: "session.rename", Grant: "session.control", Title: "Rename {id}, or the session in front: {name}", Available: named,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.onSession(func(_ context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.Rename(id, a.String("name"))
 				})(ctx, a)
 			}},
-		{ID: "session.add-repo", Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
+		{ID: "session.add-repo", Grant: "session.control", Title: "Add a repo to the session in front: {repo}, by name or path", Available: focused,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				return x.slowSession("session.add-repo", "Adding "+a.String("repo")+" to", func(ctx context.Context, w host.SessionCalls, id core.SessionID) error {
 					return w.AddRepo(ctx, id, core.RepoID(a.String("repo")))

@@ -44,7 +44,7 @@ func serving(t *testing.T, h host) *jsonrpc.Conn {
 	g := plugin.NewGrants()
 	g.Grant(m.ID, m.Permissions)
 	// The server site, as Oriel grants it once the user sets it up.
-	g.Add(m.ID, plugin.Grant{Cap: plugin.CapNet, Scope: []string{azuretest.ServerHost}},
+	g.Widen(m.ID, "the server site, set up", plugin.Grant{Cap: plugin.CapNet, Scope: []string{azuretest.ServerHost}},
 		plugin.Grant{Cap: plugin.CapSecrets, Scope: []string{azuretest.OnPrem.Secret + "@" + azuretest.ServerHost}})
 	p := plugin.Caller{ID: m.ID, Guard: g}
 	methods := plugin.HostMethods(h)

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -89,7 +90,17 @@ func (a *APIs) Dispose() {
 }
 
 // check is the guard on a call: the generated glue asks it for each function's capability.
-func (a *APIs) check(c string) error { return a.Plugin.Check(plugin.Capability(c), "") }
+func (a *APIs) check(c plugin.Capability) error { return a.Plugin.Check(c, "") }
+
+// commandGrant refuses to run command id for a plugin without the capability the command names (Command.Grant).
+func (a *APIs) commandGrant(id string) error {
+	cs := a.Host.Commands()
+	i, ok := slices.BinarySearchFunc(cs, id, func(c registry.Command, id string) int { return strings.Compare(c.ID, id) })
+	if !ok || cs[i].Grant == "" {
+		return nil
+	}
+	return a.Plugin.Check(plugin.Capability(cs[i].Grant), "")
+}
 
 // Check asks the guard whether the VM's plugin may use c on target.
 func (a *APIs) Check(c plugin.Capability, target string) error { return a.Plugin.Check(c, target) }

@@ -209,26 +209,19 @@ func (ps *Processes) program(p Caller, name string) (string, []string, error) {
 }
 
 func (ps *Processes) file(p Caller, name string) (string, error) {
-	var path string
-	if own := p.Path(name); p.Dir != "" && !filepath.IsAbs(Expand(name)) && fileExists(own) {
-		if p.Own(own) {
-			return own, nil
-		}
-		path = own
-	} else {
-		var err error
-		if path, err = exec.LookPath(Expand(name)); err != nil {
-			return "", err
-		}
-		if path, err = filepath.Abs(path); err != nil {
-			return "", err
-		}
+	if own := p.Path(name); p.Dir != "" && !filepath.IsAbs(Expand(name)) && fileExists(own) && p.Own(own) {
+		return own, nil
 	}
-	path = RealPath(path)
-	if err := p.Check(CapExec, path); err != nil {
+	prog, err := p.CheckProgram(name, "")
+	if err != nil {
 		return "", err
 	}
-	return path, nil
+	if !filepath.IsAbs(prog) {
+		if prog, err = exec.LookPath(prog); err != nil {
+			return "", err
+		}
+	}
+	return RealPath(prog), nil
 }
 
 func fileExists(p string) bool {

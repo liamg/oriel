@@ -82,13 +82,6 @@ func (g *Grants) Grant(plugin string, gs []Grant) {
 	g.grants[plugin] = gs
 }
 
-// Add grants plugin more, at runtime: a self-hosted code host's server, once the user sets it up.
-func (g *Grants) Add(plugin string, gs ...Grant) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	g.grants[plugin] = append(g.grants[plugin], gs...)
-}
-
 // Widen is Guard.Widen.
 func (g *Grants) Widen(plugin, why string, gs ...Grant) (undo func()) {
 	g.mu.Lock()
@@ -256,18 +249,29 @@ func splitHost(s string) (host, port string) {
 	return s, ""
 }
 
-// matchCommand is a declared command against a program: the same name or path, or, for a bare name, the program
-// it finds on PATH. A bare name never matches another program of that name elsewhere.
+// matchCommand is a declared command against a program, written either way round as a name or a path: the same
+// name or path, or the same file once a bare name is found on PATH. A bare name never matches another program of
+// that name elsewhere.
 func matchCommand(decl, target string) bool {
 	if decl == target {
 		return true
 	}
-	if !filepath.IsAbs(target) {
-		return false
+	a, b := commandPath(decl), commandPath(target)
+	return a != "" && a == b
+}
+
+// commandPath is the file a command names: a path as it is, a bare name as PATH finds it; "" when there's none.
+func commandPath(name string) string {
+	name = Expand(name)
+	if !strings.ContainsRune(name, filepath.Separator) {
+		p, err := exec.LookPath(name)
+		if err != nil {
+			return ""
+		}
+		name = p
 	}
-	if strings.ContainsRune(decl, filepath.Separator) {
-		return RealPath(Expand(decl)) == RealPath(target)
+	if !filepath.IsAbs(name) {
+		return ""
 	}
-	p, err := exec.LookPath(decl)
-	return err == nil && RealPath(p) == RealPath(target)
+	return RealPath(name)
 }

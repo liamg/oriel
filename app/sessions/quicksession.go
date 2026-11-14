@@ -12,7 +12,7 @@ import (
 
 // addQuick adds Quick session: session.quick.start, ⇧⌘N, the start view's entry and the tabs' + menu.
 func (x *Launcher) addQuick(h plugin.Host, has func(registry.Args) bool) {
-	x.Add(h.Command(registry.Command{ID: "session.quick.start",
+	x.Add(h.Command(registry.Command{ID: "session.quick.start", Grant: "session.control",
 		Title:     "Quick session: a work session on the defaults New session's Start uses, with no repos and no prompt",
 		Available: has, Run: func(registry.Ctx, registry.Args) error { x.quick(); return nil }}))
 	x.Add(h.Keymap(registry.Keymap{Mode: "global", Keys: "<D-N>", Command: "session.quick.start", Desc: "Quick Session"}))

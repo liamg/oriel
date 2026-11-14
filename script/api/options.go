@@ -129,7 +129,7 @@ func (a *APIs) options(vm *script.VM) {
 		})
 	}
 	vm.Callable("option", func(c *script.Args) ([]any, error) {
-		if err := a.check("ui"); err != nil {
+		if err := a.check(plugin.CapUI); err != nil {
 			return nil, err
 		}
 		return nil, a.declare(c.Table(0), c.Where())
