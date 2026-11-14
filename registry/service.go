@@ -34,15 +34,6 @@ func ServiceOf[T any](r Contributions, name string) (T, bool) {
 // The built-in services' names.
 const (
 	SessionsService = "sessions"
-
-	// The session host's parts' calls, each its own service (host.SessionCalls, host.SandboxCalls…).
-	HostSessionsService  = "host.sessions"
-	HostSandboxesService = "host.sandboxes"
-	HostShipsService     = "host.ships"
-	HostCodeHostsService = "host.codehosts"
-	HostReposService     = "host.repos"
-	HostJobsService      = "host.jobs"
-	HostStatsService     = "host.stats"
 )
 
 // CodeSecretUnset is the JSON-RPC error a host request (http.request) answers when a secret it names isn't set:

@@ -12,7 +12,16 @@ import (
 )
 
 // The session host's calls, part by part, as the app's plugins make them: each part is the registry service of its
-// own name ("host.sessions", "host.sandboxes"…), and a plugin takes only the part it uses.
+// own name, and a plugin takes only the part it uses.
+const (
+	HostSessionsService  = "host.sessions"
+	HostSandboxesService = "host.sandboxes"
+	HostShipsService     = "host.ships"
+	HostCodeHostsService = "host.codehosts"
+	HostReposService     = "host.repos"
+	HostJobsService      = "host.jobs"
+	HostStatsService     = "host.stats"
+)
 
 // SessionCalls start, steer and end sessions: the registry's "host.sessions" service.
 type SessionCalls interface {

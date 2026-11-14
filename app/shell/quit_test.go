@@ -185,8 +185,8 @@ func TestQuitWarnsOfScheduledJobs(t *testing.T) {
 func TestQuitDialogSnapshot(t *testing.T) {
 	s := apptest.New(t, apptest.Options{CrashDir: t.TempDir()})
 	jobs := quitJobs{{Name: "sweep", Title: "Sweep stale deps", Schedule: hostapi.Schedule{Every: "weekdays", At: "07:00"}}}
-	s.Registry().Contribute(registry.Service{Name: registry.HostSessionsService, Impl: quitSessions{}})
-	s.Registry().Contribute(registry.Service{Name: registry.HostJobsService, Impl: jobs})
+	s.Registry().Contribute(registry.Service{Name: hostapi.HostSessionsService, Impl: quitSessions{}})
+	s.Registry().Contribute(registry.Service{Name: hostapi.HostJobsService, Impl: jobs})
 	se := core.SessionState{ID: "rounding", Name: "Round half-even", Kind: core.KindWork, Status: core.StatusWorking}
 	se.Agent.Working = true
 	if err := s.Store().Apply(core.SessionSynced{Session: se}); err != nil {

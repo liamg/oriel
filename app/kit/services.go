@@ -19,25 +19,25 @@ var ErrNoSessions = errors.New("there are no sessions in this window")
 
 // The session host's parts' calls, each its own service, or why there are none.
 func SessionCalls(r registry.Registry) (hostapi.SessionCalls, error) {
-	return hostPart[hostapi.SessionCalls](r, registry.HostSessionsService)
+	return hostPart[hostapi.SessionCalls](r, hostapi.HostSessionsService)
 }
 func SandboxCalls(r registry.Registry) (hostapi.SandboxCalls, error) {
-	return hostPart[hostapi.SandboxCalls](r, registry.HostSandboxesService)
+	return hostPart[hostapi.SandboxCalls](r, hostapi.HostSandboxesService)
 }
 func ShipCalls(r registry.Registry) (hostapi.ShipCalls, error) {
-	return hostPart[hostapi.ShipCalls](r, registry.HostShipsService)
+	return hostPart[hostapi.ShipCalls](r, hostapi.HostShipsService)
 }
 func CodeHostCalls(r registry.Registry) (hostapi.CodeHostCalls, error) {
-	return hostPart[hostapi.CodeHostCalls](r, registry.HostCodeHostsService)
+	return hostPart[hostapi.CodeHostCalls](r, hostapi.HostCodeHostsService)
 }
 func RepoCalls(r registry.Registry) (hostapi.RepoCalls, error) {
-	return hostPart[hostapi.RepoCalls](r, registry.HostReposService)
+	return hostPart[hostapi.RepoCalls](r, hostapi.HostReposService)
 }
 func JobCalls(r registry.Registry) (hostapi.JobCalls, error) {
-	return hostPart[hostapi.JobCalls](r, registry.HostJobsService)
+	return hostPart[hostapi.JobCalls](r, hostapi.HostJobsService)
 }
 func StatsCalls(r registry.Registry) (hostapi.StatsCalls, error) {
-	return hostPart[hostapi.StatsCalls](r, registry.HostStatsService)
+	return hostPart[hostapi.StatsCalls](r, hostapi.HostStatsService)
 }
 
 func hostPart[T any](r registry.Registry, name string) (T, error) {
