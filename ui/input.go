@@ -801,10 +801,11 @@ func (u *UI) ContextClick() (ID, render.Point, bool) {
 	return best, at, best != 0
 }
 
-// RequestHelp asks for help page id (a context menu's "Help" item does); HelpRequest takes the request.
+// RequestHelp asks for help page id (a context menu's "Help" item does).
 func (u *UI) RequestHelp(id string) { u.in.help = id }
 
-func (u *UI) HelpRequest() (string, bool) {
+// TakeHelpRequest is the help page asked for since it was last taken, which it clears: one reader gets it.
+func (u *UI) TakeHelpRequest() (string, bool) {
 	h := u.in.help
 	u.in.help = ""
 	return h, h != ""

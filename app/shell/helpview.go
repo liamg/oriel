@@ -218,7 +218,7 @@ func (v *helpView) title(id string) string {
 
 func (v *helpView) build(c *ui.Ctx, vc uireg.ViewCtx) {
 	if u := v.h.UI(); u != nil {
-		if id, ok := u.HelpRequest(); ok {
+		if id, ok := u.TakeHelpRequest(); ok {
 			v.show(id)
 		}
 	}
