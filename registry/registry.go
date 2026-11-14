@@ -142,7 +142,9 @@ type Faults interface {
 
 type Disposable interface{ Dispose() }
 
-type Ctx interface{ context.Context }
+// Ctx is the context a command, hook or agent tool runs in: it carries the session and agent it runs for (SessionOf,
+// AgentOf).
+type Ctx = context.Context
 
 type Args map[string]any
 
