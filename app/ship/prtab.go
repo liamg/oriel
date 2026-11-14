@@ -237,12 +237,12 @@ func (x *Ship) overview(c *ui.Ctx, se core.SessionState, s shipRead, width float
 
 // prThreads are the session's threads mirrored from a project's PR: its review threads and its conversation.
 func prThreads(se core.SessionState, s shipRead) []core.Thread {
-	if s.PR == nil || s.Code == nil {
+	if s.PR == nil || s.CodeHost == nil {
 		return nil
 	}
 	var out []core.Thread
 	for _, t := range se.Threads {
-		if g := t.Hosted; g != nil && g.Project == s.Project && g.PR == s.PR.Number && cmp.Or(g.Host, "github") == s.Code.Name {
+		if g := t.Hosted; g != nil && g.Project == s.Project && g.PR == s.PR.Number && cmp.Or(g.Host, "github") == s.CodeHost.Name {
 			out = append(out, t)
 		}
 	}

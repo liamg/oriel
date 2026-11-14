@@ -121,7 +121,7 @@ func (x *Ship) openMerge(se core.SessionState, p string) error {
 	if !ok {
 		return fmt.Errorf("%s hasn't been read yet", p)
 	}
-	h, err := hosted(s, s.Code != nil && s.Code.Merge != nil && s.Code.ForBranch != nil)
+	h, err := hosted(s, s.CodeHost != nil && s.CodeHost.Merge != nil && s.CodeHost.ForBranch != nil)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (x *Ship) sessionBlockers(se core.SessionState, s shipRead) []registry.Merg
 		if o.Project == s.Project {
 			break
 		}
-		if o.Code != nil && !o.ReadOnly && (o.PR == nil || !o.PR.Merged) && (o.Commits > 0 || o.PR != nil) {
+		if o.CodeHost != nil && !o.ReadOnly && (o.PR == nil || !o.PR.Merged) && (o.Commits > 0 || o.PR != nil) {
 			out = append(out, registry.MergeBlocker{Kind: registry.BlockOrder, Text: prRef(o) + " merges first"})
 		}
 	}
@@ -281,10 +281,10 @@ func (x *Ship) confirmMerge() error {
 	case a.err != nil:
 		return a.err
 	case len(a.hard()) > 0:
-		return fmt.Errorf("%s won't merge it: %s", a.s.Code.Label(), a.hard()[0].Text)
+		return fmt.Errorf("%s won't merge it: %s", a.s.CodeHost.Label(), a.hard()[0].Text)
 	}
 	x.merging = nil
-	h, repo, pr := *a.s.Code, a.s.codeRepo(a.se.ID), a.pr
+	h, repo, pr := *a.s.CodeHost, a.s.codeRepo(a.se.ID), a.pr
 	o := registry.MergeOpts{Head: pr.Head, DeleteBranch: a.deleteBr}
 	if a.method < len(a.methods) {
 		o.Method = a.methods[a.method]
@@ -393,7 +393,7 @@ func (x *Ship) mergeBlockers(c *ui.Ctx, a *mergeAsk, width float32) {
 		})
 	}
 	if hard := a.hard(); len(hard) > 0 {
-		widget.Wrap(c, "refuse", a.s.Code.Label()+" won't merge it until that's fixed.", width, kit.MonoFont(10.5, th.C(theme.Error)))
+		widget.Wrap(c, "refuse", a.s.CodeHost.Label()+" won't merge it until that's fixed.", width, kit.MonoFont(10.5, th.C(theme.Error)))
 	}
 	c.Row("method", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("l", "Method", kit.UIFont(12, th.C(theme.FgMuted)))

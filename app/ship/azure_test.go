@@ -106,9 +106,9 @@ func TestAzureShipAndReviews(t *testing.T) {
 
 	writeFiles(t, shipDir(se, "dashboard"), map[string]string{"src/chart.ts": "export const chart = 1\n"})
 	s.Run("ship.refresh", nil)
-	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "dashboard"); return len(sh.Files) == 1 && sh.Code != nil })
-	if sh, _ := x.ShipOf(se.ID, "dashboard"); sh.Code.Name != "azure" || sh.Repo != "dashboard" {
-		t.Fatalf("the project's code host: %+v, repo %q", sh.Code, sh.Repo)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "dashboard"); return len(sh.Files) == 1 && sh.CodeHost != nil })
+	if sh, _ := x.ShipOf(se.ID, "dashboard"); sh.CodeHost.Name != "azure" || sh.Repo != "dashboard" {
+		t.Fatalf("the project's code host: %+v, repo %q", sh.CodeHost, sh.Repo)
 	}
 	s.Run("ship.commit", registry.Args{"project": "dashboard", "message": "feat: weekly chart"})
 	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "dashboard"); return sh.Commits == 1 })

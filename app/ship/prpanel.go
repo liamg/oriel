@@ -79,10 +79,10 @@ func checksFoot(c *ui.Ctx, s shipRead) {
 
 // labelOf is the project's code host's name, "" for none.
 func labelOf(s shipRead) string {
-	if s.Code == nil {
+	if s.CodeHost == nil {
 		return ""
 	}
-	return s.Code.Label()
+	return s.CodeHost.Label()
 }
 
 func shortSHA(h string) string { return h[:min(7, len(h))] }
@@ -194,7 +194,7 @@ func (x *Ship) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	if s.PR != nil {
 		x.checksBox(c, s)
 		x.reviewsBox(c, s)
-	} else if s.HostError != "" && s.Code != nil {
+	} else if s.HostError != "" && s.CodeHost != nil {
 		c.Row("err", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { checksFoot(c, s) })
 	}
 	x.branchBox(c, s)

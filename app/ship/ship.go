@@ -259,7 +259,7 @@ func projectShips(reads []shipRead) []registry.ProjectShip {
 			files = append(files, f.Path)
 		}
 		out = append(out, registry.ProjectShip{Project: p.Project, ReadOnly: p.ReadOnly, Files: files, Unpushed: len(p.Unpushed), Commits: p.Commits,
-			Pushed: p.Pushed, PR: p.PR, Code: p.Code})
+			Pushed: p.Pushed, PR: p.PR, Code: p.CodeHost})
 	}
 	return out
 }
@@ -528,7 +528,7 @@ func (x *Ship) projectState(project, _ string) []uireg.StatePart {
 		return nil
 	}
 	s, ok := x.ship(id, project)
-	if !ok || s.ReadOnly || s.Code == nil {
+	if !ok || s.ReadOnly || s.CodeHost == nil {
 		return nil
 	}
 	if s.PR == nil {

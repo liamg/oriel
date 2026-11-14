@@ -120,7 +120,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 	raisable, pushable, w := 0, 0, registry.CodeHost{}.Said()
 	for _, s := range ships {
 		switch {
-		case s.ReadOnly || s.Code == nil:
+		case s.ReadOnly || s.CodeHost == nil:
 		case s.PR.Open():
 			if len(s.Unpushed) > 0 {
 				pushable++
@@ -562,7 +562,7 @@ func (x *Ship) mergeOrder(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 	th := c.Theme()
 	var rows []shipRead
 	for _, s := range ships {
-		if !s.ReadOnly && s.Code != nil {
+		if !s.ReadOnly && s.CodeHost != nil {
 			rows = append(rows, s)
 		}
 	}
