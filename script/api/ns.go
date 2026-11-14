@@ -162,7 +162,7 @@ func (g Agent) Tool(spec script.Table, where string) error {
 	t := registry.AgentTool{Name: str(spec, "name"), Desc: str(spec, "desc"), Params: params, Source: where,
 		ReadOnly: readOnly, Reads: str(spec, "reads"), For: plugin.Strings(spec["for"]), Adds: str(spec, "adds"),
 		CoveredBy: plugin.Strings(spec["covered_by"]),
-		Run: func(ctx registry.Ctx, p map[string]any) (any, error) {
+		Run: func(ctx registry.Ctx, p registry.Args) (any, error) {
 			var out any
 			var err error
 			if async {
@@ -182,7 +182,7 @@ func (g Agent) Tool(spec script.Table, where string) error {
 			return out, nil
 		}}
 	if confirm != nil {
-		t.Confirm = func(ctx registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+		t.Confirm = func(ctx registry.Ctx, p registry.Args) (registry.Confirmation, error) {
 			out, err := g.a.callOnLoop(ctx, confirm, p)
 			if err != nil {
 				return registry.Confirmation{}, err

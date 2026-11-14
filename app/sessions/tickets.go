@@ -559,7 +559,7 @@ type myTicket struct {
 
 // toolMyTickets is the assistant's my_tickets: every tracker's tickets as the omnibox lists them, asked for first
 // when they're stale, and why a tracker has none.
-func (x *Tickets) toolMyTickets(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Tickets) toolMyTickets(ctx registry.Ctx, _ registry.Args) (any, error) {
 	trackers := registry.TicketTrackers(x.h)
 	var waits []<-chan struct{}
 	for _, tr := range trackers {

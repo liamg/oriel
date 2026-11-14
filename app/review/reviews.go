@@ -767,7 +767,7 @@ type reviewLine struct {
 
 // toolReviewRequests is the assistant's review_requests: every source's requests as the page lists them, asked for
 // first when they're stale, and why a source has none.
-func (x *Reviews) toolReviewRequests(ctx registry.Ctx, _ map[string]any) (any, error) {
+func (x *Reviews) toolReviewRequests(ctx registry.Ctx, _ registry.Args) (any, error) {
 	sources := kit.SitesOf(x.h).ReviewSources()
 	var waits []<-chan struct{}
 	for _, s := range sources {

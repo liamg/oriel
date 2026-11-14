@@ -98,44 +98,30 @@ func (x *LSP) agentDoc(ctx context.Context, path string) (c *lsp.Client, src []b
 }
 
 // position is a tool's line and column (or symbol) as a server position.
-func position(src []byte, p map[string]any) (text.Pos, error) {
-	line := intArg(p["line"])
+func position(src []byte, p registry.Args) (text.Pos, error) {
+	line := p.Int("line")
 	lines := strings.Split(string(src), "\n")
 	if line < 1 || line > len(lines) {
 		return text.Pos{}, fmt.Errorf("line %d is outside the file's %d lines", line, len(lines))
 	}
 	l := lines[line-1]
-	if sym, _ := p["symbol"].(string); sym != "" {
+	if sym := p.Trimmed("symbol"); sym != "" {
 		i := strings.Index(l, sym)
 		if i < 0 {
 			return text.Pos{}, fmt.Errorf("%q isn't on line %d: %s", sym, line, strings.TrimSpace(l))
 		}
 		return text.Pos{Line: line - 1, Col: i}, nil
 	}
-	col := intArg(p["column"])
+	col := p.Int("column")
 	if col < 1 {
 		return text.Pos{}, errors.New("give a column or the symbol's name")
 	}
 	return text.Pos{Line: line - 1, Col: min(col-1, len(l))}, nil
 }
 
-func intArg(v any) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
-		return n
-	case string:
-		var i int
-		fmt.Sscanf(n, "%d", &i)
-		return i
-	}
-	return 0
-}
-
-func (x *LSP) toolLocations(what string, find func(*lsp.Client, context.Context, lsp.Loc) ([]lsp.Location, error)) func(registry.Ctx, map[string]any) (any, error) {
-	return func(ctx registry.Ctx, p map[string]any) (any, error) {
-		file, _ := p["file"].(string)
+func (x *LSP) toolLocations(what string, find func(*lsp.Client, context.Context, lsp.Loc) ([]lsp.Location, error)) func(registry.Ctx, registry.Args) (any, error) {
+	return func(ctx registry.Ctx, p registry.Args) (any, error) {
+		file := p.Trimmed("file")
 		path, err := x.agentPath(ctx, file)
 		if err != nil {
 			return nil, err
@@ -178,9 +164,9 @@ func agentRel(root, path string) string {
 	return path
 }
 
-func (x *LSP) toolDiagnostics(ctx registry.Ctx, p map[string]any) (any, error) {
+func (x *LSP) toolDiagnostics(ctx registry.Ctx, p registry.Args) (any, error) {
 	var ds []registry.Diagnostic
-	if file, _ := p["file"].(string); file != "" {
+	if file := p.Trimmed("file"); file != "" {
 		path, err := x.agentPath(ctx, file)
 		if err != nil {
 			return nil, err

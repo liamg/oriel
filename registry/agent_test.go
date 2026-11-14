@@ -45,10 +45,10 @@ func TestActToolsWaitForTheOwnersYes(t *testing.T) {
 	r := registry.New()
 	ran := 0
 	tool := registry.AgentTool{Name: "stop_session", For: []string{"assistant"},
-		Confirm: func(_ registry.Ctx, p map[string]any) (registry.Confirmation, error) {
+		Confirm: func(_ registry.Ctx, p registry.Args) (registry.Confirmation, error) {
 			return registry.Confirmation{Title: "Stop a session", Line: "stop " + p["id"].(string)}, nil
 		},
-		Run: func(registry.Ctx, map[string]any) (any, error) {
+		Run: func(registry.Ctx, registry.Args) (any, error) {
 			ran++
 			return registry.Acted{Result: "stopped", Line: "stopped rounding", Undo: func(registry.Ctx) error { return nil }}, nil
 		}}
@@ -91,12 +91,12 @@ func TestActToolsWaitForTheOwnersYes(t *testing.T) {
 func TestAgentToolParts(t *testing.T) {
 	r := registry.New()
 	base := registry.AgentTool{Name: "review_requests", For: []string{"assistant"}, ReadOnly: true, Reads: "github",
-		Run: func(registry.Ctx, map[string]any) (any, error) { return []string{"acme/api#1"}, nil }}
+		Run: func(registry.Ctx, registry.Args) (any, error) { return []string{"acme/api#1"}, nil }}
 	r.Contribute(base)
 	r.Contribute(registry.AgentTool{Name: "review_requests.agentbus", Adds: "review_requests", For: []string{"assistant"}, ReadOnly: true,
-		Reads: "agentbus", Run: func(registry.Ctx, map[string]any) (any, error) { return []string{"priya: acme/api#2"}, nil }})
+		Reads: "agentbus", Run: func(registry.Ctx, registry.Args) (any, error) { return []string{"priya: acme/api#2"}, nil }})
 	r.Contribute(registry.AgentTool{Name: "review_requests.down", Adds: "review_requests", For: []string{"assistant"}, Reads: "down",
-		Run: func(registry.Ctx, map[string]any) (any, error) { return nil, errors.New("offline") }})
+		Run: func(registry.Ctx, registry.Args) (any, error) { return nil, errors.New("offline") }})
 	for _, tl := range registry.AgentToolsFor(r, "assistant", true) {
 		if tl.Adds != "" {
 			t.Errorf("a part is offered as a tool: %s", tl.Name)
@@ -122,7 +122,7 @@ func TestConfirmGrantsRefusesOrAsksTheCallsOwner(t *testing.T) {
 	level := "allow"
 	ran := 0
 	tool := registry.AgentTool{Name: "debug_step",
-		Confirm: func(registry.Ctx, map[string]any) (registry.Confirmation, error) {
+		Confirm: func(registry.Ctx, registry.Args) (registry.Confirmation, error) {
 			switch level {
 			case "allow":
 				return registry.Confirmation{}, registry.Granted
@@ -131,7 +131,7 @@ func TestConfirmGrantsRefusesOrAsksTheCallsOwner(t *testing.T) {
 			}
 			return registry.Confirmation{Title: "Step", Line: "step over"}, nil
 		},
-		Run: func(registry.Ctx, map[string]any) (any, error) { ran++; return "stepped", nil }}
+		Run: func(registry.Ctx, registry.Args) (any, error) { ran++; return "stepped", nil }}
 	ctx := registry.WithAgent(context.Background(), "work")
 	if out, err := registry.CallAgentTool(ctx, r, tool, nil); err != nil || out != "stepped" || ran != 1 {
 		t.Fatalf("granted: %q %v", out, err)
