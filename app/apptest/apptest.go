@@ -557,6 +557,9 @@ func (s *Scene) ClickOn(label string) {
 // Config is the app's config, as Options.Config changes it.
 type Config = app.Config
 
+// VoiceConfig swaps dictation's parts (app.VoiceConfig).
+type VoiceConfig = app.VoiceConfig
+
 // Connect is a config change that gives the app a session host, and its store; builtin are as for Builtin.
 func Connect(w *host.Host, builtin ...agent.Provider) func(*Config) {
 	return func(cfg *Config) {

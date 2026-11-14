@@ -1,4 +1,4 @@
-package agentui_test
+package dictation_test
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 	"runtime"
 	"slices"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/app/dictation"
+
 	"github.com/liamg/oriel/agent/prompts"
-	"github.com/liamg/oriel/app/agentui"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -22,27 +22,9 @@ import (
 	"github.com/liamg/oriel/voice/voicetest"
 )
 
-type saidSpeaker struct {
-	mu   sync.Mutex
-	said []string
-}
-
-func (s *saidSpeaker) Speak(_ context.Context, text string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.said = append(s.said, text)
-	return nil
-}
-
-func (s *saidSpeaker) words() []string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return append([]string(nil), s.said...)
-}
-
-func voiceScene(t *testing.T, cfg agentui.VoiceConfig) (*apptest.Scene, *agentui.Voice, *saidSpeaker) {
+func voiceScene(t *testing.T, cfg dictation.VoiceConfig) (*apptest.Scene, *dictation.Voice, *voicetest.Speaker) {
 	t.Helper()
-	sp := &saidSpeaker{}
+	sp := &voicetest.Speaker{}
 	cfg.Speaker = sp
 	s := apptest.New(t, apptest.Options{Config: func(c *apptest.Config) {
 		if cfg.Whisper == nil {
@@ -50,7 +32,7 @@ func voiceScene(t *testing.T, cfg agentui.VoiceConfig) (*apptest.Scene, *agentui
 		}
 		c.Voice = cfg
 	}})
-	return s, apptest.PluginOf[*agentui.Voice](s, "voice"), sp
+	return s, apptest.PluginOf[*dictation.Voice](s, "voice"), sp
 }
 
 // styleText is the Prompts page open on the coding style: a long field.
@@ -76,7 +58,7 @@ func TestMicDictatesIntoALongField(t *testing.T) {
 		voicetest.Speech(1200*time.Millisecond), voicetest.Silence(700*time.Millisecond), voicetest.Speech(400*time.Millisecond),
 		voicetest.Silence(700*time.Millisecond))}
 	tr := &voicetest.Transcriber{}
-	s, x, _ := voiceScene(t, agentui.VoiceConfig{Mic: mic, Transcriber: tr})
+	s, x, _ := voiceScene(t, dictation.VoiceConfig{Mic: mic, Transcriber: tr})
 	openStyle(s)
 	before := value(s, styleText)
 	s.ClickNode("Dictate")
@@ -102,7 +84,7 @@ func TestMicDictatesIntoALongField(t *testing.T) {
 func TestKeyStopsDictation(t *testing.T) {
 	mic := &voicetest.Mic{Hold: true, Script: voicetest.Script(voicetest.Silence(300*time.Millisecond), voicetest.Speech(600*time.Millisecond),
 		voicetest.Silence(700*time.Millisecond))}
-	s, x, _ := voiceScene(t, agentui.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
+	s, x, _ := voiceScene(t, dictation.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
 	openStyle(s)
 	s.ClickNode("Dictate")
 	s.Until("the phrase typed", func() bool { return strings.HasPrefix(value(s, styleText), "la la la") })
@@ -120,7 +102,7 @@ func TestKeyStopsDictation(t *testing.T) {
 func TestSilenceEndsDictation(t *testing.T) {
 	mic := &voicetest.Mic{Hold: true, Script: voicetest.Script(voicetest.Silence(300*time.Millisecond), voicetest.Speech(600*time.Millisecond),
 		voicetest.Silence(4500*time.Millisecond))}
-	s, x, _ := voiceScene(t, agentui.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
+	s, x, _ := voiceScene(t, dictation.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
 	openStyle(s)
 	s.ClickNode("Dictate")
 	s.Until("the silence to end it", func() bool { return !x.Dictating() })
@@ -136,7 +118,7 @@ func TestSilenceEndsDictation(t *testing.T) {
 // Esc drops the live phrase; the page stays open.
 func TestEscapeDropsTheLivePhrase(t *testing.T) {
 	mic := &voicetest.Mic{Hold: true, Script: voicetest.Script(voicetest.Silence(300*time.Millisecond), voicetest.Speech(1500*time.Millisecond))}
-	s, x, _ := voiceScene(t, agentui.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
+	s, x, _ := voiceScene(t, dictation.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
 	openStyle(s)
 	before := value(s, styleText)
 	s.ClickNode("Dictate")
@@ -157,7 +139,7 @@ func TestEscapeDropsTheLivePhrase(t *testing.T) {
 // Starting in a second field stops the first.
 func TestOneDictationAtATime(t *testing.T) {
 	mic := &voicetest.Mic{Hold: true}
-	s, x, _ := voiceScene(t, agentui.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
+	s, x, _ := voiceScene(t, dictation.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}})
 	s.Frame()
 	a, b := ui.ID(1), ui.ID(2)
 	if err := x.Start(a); err != nil {
@@ -174,7 +156,7 @@ func TestOneDictationAtATime(t *testing.T) {
 
 // With no dictation registered (voice off), no mic is drawn.
 func TestNoMicWithDictationOff(t *testing.T) {
-	s, _, _ := voiceScene(t, agentui.VoiceConfig{Mic: &voicetest.Mic{}, Transcriber: &voicetest.Transcriber{}})
+	s, _, _ := voiceScene(t, dictation.VoiceConfig{Mic: &voicetest.Mic{}, Transcriber: &voicetest.Transcriber{}})
 	openStyle(s)
 	if s.Find("Dictate") == nil {
 		t.Fatal("a long field has no mic")
@@ -207,7 +189,7 @@ func TestModelNotReady(t *testing.T) {
 	w.LookPath = func(string) (string, error) { return "whisper-server", nil }
 	w.Metered = func() bool { return false }
 	mic := &voicetest.Mic{}
-	s, _, _ := voiceScene(t, agentui.VoiceConfig{Mic: mic, Whisper: w})
+	s, _, _ := voiceScene(t, dictation.VoiceConfig{Mic: mic, Whisper: w})
 	t.Cleanup(func() { close(release) })
 	s.Until("the model prefetched", func() bool {
 		st, ok := w.DownloadState(voice.DefaultModel())
@@ -225,7 +207,7 @@ func TestModelNotReady(t *testing.T) {
 
 // A microphone permission refusal is a toast, which offers the Privacy settings on macOS.
 func TestMicDenied(t *testing.T) {
-	s, x, _ := voiceScene(t, agentui.VoiceConfig{Mic: &voicetest.Mic{Err: voice.ErrMicDenied}, Transcriber: &voicetest.Transcriber{}})
+	s, x, _ := voiceScene(t, dictation.VoiceConfig{Mic: &voicetest.Mic{Err: voice.ErrMicDenied}, Transcriber: &voicetest.Transcriber{}})
 	openStyle(s)
 	s.ClickNode("Dictate")
 	s.Until("the toast", func() bool { return noticed(s, "isn't allowed to use the microphone") })
@@ -240,11 +222,11 @@ func TestMicDenied(t *testing.T) {
 }
 
 func TestSpokenReplies(t *testing.T) {
-	s, _, sp := voiceScene(t, agentui.VoiceConfig{Mic: &voicetest.Mic{}, Transcriber: &voicetest.Transcriber{}})
+	s, _, sp := voiceScene(t, dictation.VoiceConfig{Mic: &voicetest.Mic{}, Transcriber: &voicetest.Transcriber{}})
 	s.Run("voice.speak", registry.Args{"text": "The tests pass."})
-	s.Until("it to be said", func() bool { return len(sp.words()) == 1 })
-	if sp.words()[0] != "The tests pass." {
-		t.Errorf("said %q", sp.words())
+	s.Until("it to be said", func() bool { return len(sp.Said()) == 1 })
+	if sp.Said()[0] != "The tests pass." {
+		t.Errorf("said %q", sp.Said())
 	}
 	s.Registry().Options().Set("voice.speech", registry.LayerUser, registry.At{}, "off")
 	if err := s.Registry().Run(context.Background(), "voice.speak", registry.Args{"text": "x"}); err == nil {

@@ -36,17 +36,17 @@ func assistantOf(s *apptest.Scene) *agentui.Assistant {
 
 // assistantScene is the app on a session host with the fake provider, at the mockup's size and a fixed clock, with
 // a scripted microphone and a speaker that keeps what it's given.
-func assistantScene(t *testing.T, o host.Options, mic *voicetest.Mic, tr *voicetest.Transcriber) (*apptest.Scene, *rig.Host, *saidSpeaker) {
+func assistantScene(t *testing.T, o host.Options, mic *voicetest.Mic, tr *voicetest.Transcriber) (*apptest.Scene, *rig.Host, *voicetest.Speaker) {
 	t.Helper()
 	lw := rig.NewHostWith(t, o)
-	sp := &saidSpeaker{}
+	sp := &voicetest.Speaker{}
 	if mic == nil {
 		mic, tr = &voicetest.Mic{}, &voicetest.Transcriber{}
 	}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
 		cfg.GitHubClient = o.GitHub
-		cfg.Voice = agentui.VoiceConfig{Mic: mic, Transcriber: tr, Speaker: sp}
+		cfg.Voice = apptest.VoiceConfig{Mic: mic, Transcriber: tr, Speaker: sp}
 	}})
 	s.Now = asstNow
 	assistantOf(s).SetClock(s.NowClock())

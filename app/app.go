@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/liamg/oriel/app/agentui"
+	"github.com/liamg/oriel/app/dictation"
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/catalog"
@@ -62,7 +62,7 @@ type (
 	// Updates is Oriel updating itself.
 	Updates = updates.Updates
 	// VoiceConfig swaps dictation's parts; nil ones are the real ones, from the voice.* options.
-	VoiceConfig = agentui.VoiceConfig
+	VoiceConfig = dictation.VoiceConfig
 )
 
 // OverviewView is the project overview, which a test hides: its temporary paths would change every run.

@@ -1,4 +1,6 @@
-package agentui
+// Package dictation is voice in the app: what the microphone hears, transcribed into the field dictated into, and
+// answers read aloud.
+package dictation
 
 import (
 	"context"
