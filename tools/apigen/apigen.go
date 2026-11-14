@@ -370,7 +370,11 @@ func Reference(pkg string, nss []Namespace) []byte {
 				}
 				ps = append(ps, n)
 			}
-			fmt.Fprintf(&b, "\t\t{Call: %q, Doc: %q, Cap: %q},\n", fmt.Sprintf("%s.%s(%s)", name, f.Lua, strings.Join(ps, ", ")), f.Doc, f.Cap)
+			doc := f.Doc
+			if f.Deprecated != "" {
+				doc += " Deprecated: " + f.Deprecated + "."
+			}
+			fmt.Fprintf(&b, "\t\t{Call: %q, Doc: %q, Cap: %q},\n", fmt.Sprintf("%s.%s(%s)", name, f.Lua, strings.Join(ps, ", ")), doc, f.Cap)
 		}
 		b.WriteString("\t},\n")
 	}

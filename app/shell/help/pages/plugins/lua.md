@@ -35,7 +35,7 @@ or a built-in it replaces. `fn` returns `L.ui` nodes: `row` and `column` (with `
 `indicator`, `ring` (a dial with a short label in it), `list`, `button` (`on_click` runs Lua), `input`, `toggle` and `select` (their `on_change` gets the new value),
 and `mode`. `oriel.ui.state(key, initial)` is a table kept across redraws, for what a view shows. Tab moves between
 controls. Any node can be dragged (`drag = { kind, data, label }`) or take drops (`accepts`, `on_drop`), by pointer
-or keyboard (Space picks up and drops). `oriel.decor.provider` marks lines in the editor, and `oriel.menu.add` adds a
+or keyboard (Space picks up and drops). `oriel.decorations.provider` marks lines in the editor, and `oriel.menu.add` adds a
 right-click entry.
 
 ## Options {#options}

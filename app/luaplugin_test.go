@@ -56,9 +56,9 @@ own = oriel.read("notes.txt")`); err != "" {
 		`oriel.read("/etc/hostname")`:                                         `"fs.read"`,
 		`oriel.wasm.load("/etc/hostname")`:                                    `"fs.read"`,
 		`oriel.agent.tool{ name = "t", run = function() end }`:                `"agent.tools"`,
-		`oriel.agent.pack("p", { prompt = "x" })`:                             `"agent.prompt"`,
+		`oriel.agent.pack{ name = "p", prompt = "x" }`:                        `"agent.prompt"`,
 		`oriel.thread.list()`:                                                 `"agent.read"`,
-		`oriel.session.kind("k", {})`:                                         `"session.control"`,
+		`oriel.session.kind{ name = "k" }`:                                    `"session.control"`,
 		`oriel.agent.provider{ name = "x", program = "bin/x" }`:               `"agent.provider"`,
 		`oriel.agent.bridge{ name = "x", program = "bin/x" }`:                 `"agent.provider"`,
 		`oriel.lsp.server{ name = "x", languages = {"go"}, cmd = {"gopls"} }`: `"exec"`,
@@ -258,7 +258,7 @@ func TestLuaNowAndPlatform(t *testing.T) {
 }
 
 // oriel.exec_async runs in the background: the call returns at once, and fn gets the output, or why it failed, on
-// the loop. oriel.exec's on_done, deprecated, is the same.
+// the loop.
 func TestLuaExecInBackground(t *testing.T) {
 	if _, err := exec.LookPath("sh"); err != nil {
 		t.Skip(err)
@@ -277,7 +277,7 @@ func TestLuaExecInBackground(t *testing.T) {
 	// opts is optional: fn may come straight after argv.
 	s.Lua(`L.exec_async({ "/no/such/program" }, function(out, err) missing = err end)`)
 	s.Until("the missing program", func() bool { return global(lua(s).VM(), "missing") != nil })
-	s.Lua(`L.exec({ "sh", "-c", "echo nope >&2; exit 3" }, { on_done = function(out, err) failed = err end })`)
+	s.Lua(`L.exec_async({ "sh", "-c", "echo nope >&2; exit 3" }, {}, function(out, err) failed = err end)`)
 	s.Until("the failure", func() bool { return global(lua(s).VM(), "failed") != nil })
 	if f, _ := global(lua(s).VM(), "failed").(string); !strings.Contains(f, "exit status 3") || !strings.Contains(f, "nope") {
 		t.Errorf("failed = %q", f)

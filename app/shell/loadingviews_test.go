@@ -37,7 +37,7 @@ func TestPickerSourceLoading(t *testing.T) {
 // oriel.picker.source's loading = fn() is the same signal for a Lua source.
 func TestLuaPickerSourceLoading(t *testing.T) {
 	s := apptest.LuaScene(t, `busy = true
-oriel.picker.source{ id = "wiki", title = "Wiki", picker_only = true, items = function(q) return {} end, loading = function() return busy end }`)
+oriel.picker.source{ name = "wiki", title = "Wiki", picker_only = true, items = function(q) return {} end, loading = function() return busy end }`)
 	s.Run("picker.open", registry.Args{"source": "wiki", "query": "x"})
 	s.Frame()
 	s.Now = s.Now.Add(time.Second)
