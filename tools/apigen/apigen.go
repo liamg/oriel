@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"cmp"
 	"fmt"
+	"github.com/liamg/oriel/plugin"
 	"go/ast"
 	"go/format"
 	"go/parser"
@@ -128,6 +129,9 @@ func Parse(dir string) ([]Namespace, error) {
 			Cap: cmp.Or(a["cap"], ns.Cap), Deprecated: a["deprecated"]}
 		if fn.Cap == "" {
 			return nil, fmt.Errorf("%s.%s declares no capability: add cap=… to it or to %s", recv, d.Name.Name, ns.Type)
+		}
+		if _, ok := plugin.Capability(fn.Cap).Info(); !ok && fn.Cap != CapTarget {
+			return nil, fmt.Errorf("%s.%s declares cap=%s, which isn't a capability", recv, d.Name.Name, fn.Cap)
 		}
 		for _, o := range strings.Split(a["optional"], ",") {
 			if o != "" {

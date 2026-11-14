@@ -89,7 +89,7 @@ func (a *APIs) Dispose() {
 }
 
 // check is the guard on a call: the generated glue asks it for each function's capability.
-func (a *APIs) check(c string) error { return a.Plugin.Check(plugin.Capability(c), "") }
+func (a *APIs) check(c plugin.Capability) error { return a.Plugin.Check(c, "") }
 
 // Check asks the guard whether the VM's plugin may use c on target.
 func (a *APIs) Check(c plugin.Capability, target string) error { return a.Plugin.Check(c, target) }
