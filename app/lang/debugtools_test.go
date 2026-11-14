@@ -1,6 +1,7 @@
 package lang_test
 
 import (
+	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -130,6 +131,13 @@ func TestAgentDebuggerTools(t *testing.T) {
 	}
 	if len(x.Breakpoints(main)) != 1 {
 		t.Fatalf("the breakpoint was set before the user said yes: %+v", x.Breakpoints(main))
+	}
+	// An answer that doesn't say what it decides lets nothing through: the ask still waits.
+	var refused error
+	s.Registry().Run(registry.OnDone(context.Background(), func(e error) { refused = e }), "ask.answer", registry.Args{"id": "w"})
+	s.Until("ask.answer to finish", func() bool { return refused != nil })
+	if se, _ := s.Store().State().Session("w"); len(se.Snapshot().Asks) != 1 || len(x.Breakpoints(main)) != 1 {
+		t.Fatalf("an answer with no decision was taken: asks %+v, breakpoints %+v", se.Snapshot().Asks, x.Breakpoints(main))
 	}
 	s.Run("ask.answer", registry.Args{"id": "w", "decision": "allow"})
 	if r = toolAnswer(t, s, ch); r.err != nil || r.out != "set a breakpoint at main.go:12" {

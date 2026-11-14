@@ -425,11 +425,14 @@ func (x *Console) answer(ctx context.Context, id core.SessionID, ask core.Ask, a
 			r.Answers[k] = fmt.Sprint(v)
 		}
 	}
-	if r.Decision == "" {
-		r.Decision = "allow"
-	}
 	if len(r.Answers) > 0 {
-		r.Decision = "answer"
+		r.Decision = host.DecisionAnswer
+	}
+	switch r.Decision {
+	case host.DecisionAllow, host.DecisionAlways, host.DecisionDeny, host.DecisionAnswer, host.DecisionRecheck:
+	default:
+		// An answer that doesn't say what it decides decides nothing: it never lets the call through.
+		return fmt.Errorf("ask.answer: decision %q isn't one of allow, always, deny, answer or recheck", r.Decision)
 	}
 	if st := x.by[id]; st != nil && st.noting == ask.ID {
 		st.noting, st.note = "", ""
