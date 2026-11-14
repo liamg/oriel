@@ -313,7 +313,7 @@ func (x *Editor) breadcrumb(c *ui.Ctx, p vim.Pane, wp *windowPresent) {
 			file = filepath.Join(x.dir, file)
 		}
 		if w := kit.ProjectsHere(x.h); w.Many() {
-			if pr, ok := w.Of(file); ok {
+			if pr, ok := w.ProjectOf(file); ok {
 				if rel, err := filepath.Rel(pr.Dir, file); err == nil {
 					parts = append([]string{pr.Name}, strings.Split(filepath.ToSlash(rel), "/")...)
 				}

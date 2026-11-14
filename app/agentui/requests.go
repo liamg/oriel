@@ -74,7 +74,7 @@ type Requests struct {
 	unfolded   map[core.ThreadID]bool           // closed threads opened to read in a presentation's margin
 
 	edits map[string]*agentEdit // the agent's latest edit to each file decorated, by path
-	files kit.FileSrcs          // the anchored files' text, by path
+	files kit.FileTexts         // the anchored files' text, by path
 }
 
 // draft is what's being written to a request: its text, how it goes, and what's attached.

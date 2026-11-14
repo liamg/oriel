@@ -197,7 +197,7 @@ func (g *GitSigns) located(path string) gitFile {
 		path = filepath.Join(g.Editor.dir, path)
 	}
 	f := gitFile{abs: path}
-	if p, ok := kit.ProjectsHere(g.h).Of(path); ok {
+	if p, ok := kit.ProjectsHere(g.h).ProjectOf(path); ok {
 		f.tree = p.Dir
 	}
 	return f

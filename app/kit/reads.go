@@ -33,7 +33,7 @@ type Reads struct {
 	Reals    *plugin.Cache[string, string] // paths with symbolic links resolved
 	Programs *plugin.Cache[string, string] // programs on PATH, by name (exec.LookPath)
 	// Highlights are windows of files' text highlighted, each made off the loop for one version of the text.
-	Highlights *plugin.Cache[highlightKey, *SourceFile]
+	Highlights *plugin.Cache[highlightKey, *HighlightedExcerpt]
 	Pictures   *Pictures
 	q          *landing
 	frame      func() int
@@ -66,9 +66,9 @@ func NewReads(o ReadsOpts) *Reads {
 		plugin.CacheOpts[string, string]{Frame: o.Frame, Clock: o.Clock, MaxAge: 10 * time.Second})
 	r.Programs = plugin.NewCache(q, func(_ context.Context, name string) (string, error) { return exec.LookPath(name) },
 		plugin.CacheOpts[string, string]{Frame: o.Frame, Clock: o.Clock, MaxAge: time.Minute})
-	r.Highlights = plugin.NewCache(q, func(_ context.Context, k highlightKey) (*SourceFile, error) {
+	r.Highlights = plugin.NewCache(q, func(_ context.Context, k highlightKey) (*HighlightedExcerpt, error) {
 		return highlightIn(k.lang, k.path, k.src.b, k.line, k.before, k.after), nil
-	}, plugin.CacheOpts[highlightKey, *SourceFile]{MaxEntries: 64, Frame: o.Frame, Clock: o.Clock})
+	}, plugin.CacheOpts[highlightKey, *HighlightedExcerpt]{MaxEntries: 64, Frame: o.Frame, Clock: o.Clock})
 	r.Pictures = newPictures(q, o)
 	r.Pictures.note = r.note
 	return r
@@ -149,7 +149,7 @@ type highlightKey struct {
 type srcBytes struct{ b []byte }
 
 // highlight is the window k highlighted, nil until it's made.
-func (r *Reads) highlight(k highlightKey) *SourceFile {
+func (r *Reads) highlight(k highlightKey) *HighlightedExcerpt {
 	r.q.run()
 	f, st := r.Highlights.Get(k)
 	r.note(st)

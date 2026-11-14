@@ -45,7 +45,7 @@ func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(
 			return ship.CheckOf(c)
 		}
 		return []ship.Read{
-			{Code: github, Repo: "acme/search-api", GitRead: now.Add(-4 * time.Second), Ship: host.Ship{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", Remote: true,
+			{CodeHost: github, Repo: "acme/search-api", GitRead: now.Add(-4 * time.Second), Ship: host.Ship{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
 				Origin: "https://github.com/acme/search-api.git",
 				Files: []host.ShipFile{{Path: "internal/api/usage/handler.go", Code: "M", Add: 3, Del: 1},
 					{Path: "internal/api/usage/handler_test.go", Code: "M", Add: 18}, {Path: "internal/api/usage/routes.go", Code: "M", Add: 20, Del: 5}},
@@ -56,8 +56,8 @@ func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(
 					"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs ENG-2231"},
 				PRDraft:  host.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"},
 				Template: "## What\n\n## Why\n", TemplateFile: ".github/pull_request_template.md", Owners: []string{"acme/platform-team", "jkowalski"}}},
-			{Code: github, Repo: "acme/web-dashboard", GitRead: now.Add(-4 * time.Second), PRRead: now.Add(-28 * time.Second),
-				Ship: host.Ship{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", Remote: true,
+			{CodeHost: github, Repo: "acme/web-dashboard", GitRead: now.Add(-4 * time.Second), PRRead: now.Add(-28 * time.Second),
+				Ship: host.Ship{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
 					Origin: "https://github.com/acme/web-dashboard.git", Commits: 3, Pushed: true, Synced: now.Add(-6 * time.Minute), Head: "c3f1a9e0b7d24e6f"},
 				PR: &registry.PR{Number: 812, Title: "feat(search): back off on 429 using Retry-After", State: "open", Draft: true, Branch: "rethink/search-endpoint", Base: "main",
 					Head: "c3f1a9e0b7d24e6f"},

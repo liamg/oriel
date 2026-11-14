@@ -17,16 +17,16 @@ import (
 	"github.com/liamg/oriel/ui/layout"
 )
 
-// Here is what the window is on, as its projects: the session in front's when the window is on it, or
+// WindowProjects is what the window is on, as its projects: the session in front's when the window is on it, or
 // the directory it's open on as one project.
-type Here struct {
+type WindowProjects struct {
 	Session  *core.SessionState // nil for a directory
 	Projects []core.Project
 	Open     string // the open project's name
 }
 
 // ProjectsHere reads it from the host, as a plugin would.
-func ProjectsHere(h plugin.Host) Here {
+func ProjectsHere(h plugin.Host) WindowProjects {
 	var se *core.SessionState
 	if id := h.State().Focus; id != "" {
 		if s, ok := h.Session(id); ok {
@@ -38,7 +38,7 @@ func ProjectsHere(h plugin.Host) Here {
 }
 
 // ProjectsIn is the window's projects, on directory work with session se in front (nil for none).
-func ProjectsIn(work string, se *core.SessionState) Here {
+func ProjectsIn(work string, se *core.SessionState) WindowProjects {
 	if se != nil {
 		st := *se
 		on := work == "" && len(st.Projects) > 0
@@ -48,14 +48,14 @@ func ProjectsIn(work string, se *core.SessionState) Here {
 			}
 		}
 		if on && len(st.Projects) > 0 {
-			return Here{Session: &st, Projects: st.ListedProjects(), Open: st.OpenProject()}
+			return WindowProjects{Session: &st, Projects: st.ListedProjects(), Open: st.OpenProject()}
 		}
 	}
 	if work == "" {
-		return Here{}
+		return WindowProjects{}
 	}
 	p := core.Project{Name: filepath.Base(work), Dir: work, Primary: true}
-	return Here{Projects: []core.Project{p}, Open: p.Name}
+	return WindowProjects{Projects: []core.Project{p}, Open: p.Name}
 }
 
 func DirsOf(ps []core.Project) []string {
@@ -128,13 +128,13 @@ func Holds(se core.SessionState, dir string) bool {
 }
 
 // Many says the window has projects to choose between: views then carry the project they're for.
-func (w Here) Many() bool { return len(w.Projects) > 1 }
+func (w WindowProjects) Many() bool { return len(w.Projects) > 1 }
 
 // Folded says the open project's panels are folded away in the sidebar.
-func (w Here) Folded() bool { return w.Session != nil && w.Session.ProjectUI.Folded }
+func (w WindowProjects) Folded() bool { return w.Session != nil && w.Session.ProjectUI.Folded }
 
 // Project is a project by name.
-func (w Here) Project(name string) (core.Project, bool) {
+func (w WindowProjects) Project(name string) (core.Project, bool) {
 	i := slices.IndexFunc(w.Projects, func(p core.Project) bool { return p.Name == name })
 	if i < 0 {
 		return core.Project{}, false
@@ -143,7 +143,7 @@ func (w Here) Project(name string) (core.Project, bool) {
 }
 
 // Dir is the directory of a view's project: the named one's, or the open one's for "".
-func (w Here) Dir(name string) string {
+func (w WindowProjects) Dir(name string) string {
 	if name == "" {
 		name = w.Open
 	}
@@ -151,8 +151,8 @@ func (w Here) Dir(name string) string {
 	return p.Dir
 }
 
-// Of is the project a path is in, the innermost when they nest.
-func (w Here) Of(path string) (core.Project, bool) {
+// ProjectOf is the project a path is in, the innermost when they nest.
+func (w WindowProjects) ProjectOf(path string) (core.Project, bool) {
 	best := -1
 	for i, p := range w.Projects {
 		if p.Dir != "" && filepath.IsAbs(path) && Inside(path, p.Dir) && (best < 0 || len(p.Dir) > len(w.Projects[best].Dir)) {
@@ -166,7 +166,7 @@ func (w Here) Of(path string) (core.Project, bool) {
 }
 
 // Scope is the project a view opened now is for: the open one when there are several, else none (the window's).
-func (w Here) Scope() string {
+func (w WindowProjects) Scope() string {
 	if w.Many() {
 		return w.Open
 	}
@@ -174,7 +174,7 @@ func (w Here) Scope() string {
 }
 
 // Colour is a project's colour in th.
-func (w Here) Colour(th *theme.Resolved, name string) render.Color {
+func (w WindowProjects) Colour(th *theme.Resolved, name string) render.Color {
 	c := core.ProjectColours[0]
 	if w.Session != nil {
 		c = w.Session.ProjectColour(name)
@@ -217,12 +217,12 @@ func ViewFile(h plugin.Host, v layout.ViewRef) string {
 }
 
 // ViewProject is the project a view instance is of: the one it was opened for, else the one its file is in.
-func ViewProject(h plugin.Host, w Here, v layout.ViewRef) (core.Project, bool) {
+func ViewProject(h plugin.Host, w WindowProjects, v layout.ViewRef) (core.Project, bool) {
 	if v.Project != "" {
 		return w.Project(v.Project)
 	}
 	if file := ViewFile(h, v); file != "" {
-		return w.Of(file)
+		return w.ProjectOf(file)
 	}
 	return core.Project{}, false
 }

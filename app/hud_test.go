@@ -49,12 +49,12 @@ L.hud.indicator("next-meeting", L.ui.row{
 	t0 := rig.StatsNow.Add(-4 * time.Minute)
 	apptest.PluginOf[*ship.Ship](s, "ship").Fixture(r.IDs["pricing-rounding"], false, func([]ship.Read) []ship.Read {
 		return []ship.Read{
-			{Ship: host.Ship{Project: "pricing"}, Code: code, Repo: "acme/pricing", PR: &registry.PR{Number: 4421, State: "open"},
+			{Ship: host.Ship{Project: "pricing"}, CodeHost: code, Repo: "acme/pricing", PR: &registry.PR{Number: 4421, State: "open"},
 				Checks: []registry.Check{{Name: "lint", State: registry.CheckOK, Started: t0, Completed: t0.Add(time.Minute)},
 					{Name: "e2e", State: registry.CheckRunning, Started: t0}}},
-			{Ship: host.Ship{Project: "billing-export"}, Code: code, Repo: "acme/billing-export", PR: &registry.PR{Number: 4419, State: "open"},
+			{Ship: host.Ship{Project: "billing-export"}, CodeHost: code, Repo: "acme/billing-export", PR: &registry.PR{Number: 4419, State: "open"},
 				Checks: []registry.Check{{Name: "e2e", State: registry.CheckFailed, Started: t0, Completed: t0.Add(time.Minute)}}},
-			{Ship: host.Ship{Project: "dash-filters"}, Code: code, Repo: "acme/dash-filters", PR: &registry.PR{Number: 4417, State: "open"},
+			{Ship: host.Ship{Project: "dash-filters"}, CodeHost: code, Repo: "acme/dash-filters", PR: &registry.PR{Number: 4417, State: "open"},
 				Checks: []registry.Check{{Name: "build", State: registry.CheckOK, Started: t0, Completed: t0.Add(time.Minute)}}},
 		}
 	})

@@ -108,14 +108,15 @@ func (x *Runner) AddRule(kind core.AskKind, rule string) (err error) {
 	return nil
 }
 
-// RemoveRule drops a rule for all sessions: what it allowed asks again.
-func (x *Runner) RemoveRule(rule string) (err error) {
+// RemoveRule drops a rule of kind's for all sessions: what it allowed asks again. The same text as another kind's
+// rule is that rule's, and stays.
+func (x *Runner) RemoveRule(kind core.AskKind, rule string) (err error) {
 	defer x.env.Recover("RemoveRule", &err)
 	err = x.rules.edit(func(rs []core.Rule) ([]core.Rule, error) {
 		n := len(rs)
-		rs = slices.DeleteFunc(rs, func(r core.Rule) bool { return r.Rule == rule })
+		rs = slices.DeleteFunc(rs, func(r core.Rule) bool { return r.Rule == rule && r.Kind == kind })
 		if len(rs) == n {
-			return nil, fmt.Errorf("no rule %q for all sessions", rule)
+			return nil, fmt.Errorf("no %s rule %q for all sessions", kind, rule)
 		}
 		return rs, nil
 	})

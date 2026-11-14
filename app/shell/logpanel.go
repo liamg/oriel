@@ -45,7 +45,7 @@ type logPanel struct {
 	goFrames bool
 	follow   bool    // scroll the open row into view once it's laid out
 	width    float32 // the rows' width as last laid out
-	srcs     kit.FileSrcs
+	srcs     kit.FileTexts
 	cache    logCache
 	shown    *kit.WhileShown // the ring's writes ask for frames while the panel is drawn
 }
@@ -74,7 +74,7 @@ type logCache struct {
 }
 
 func newLogPanel(sh *shell, h plugin.Host) *logPanel {
-	return &logPanel{sh: sh, h: h, scope: scopeAll, srcs: kit.FileSrcs{},
+	return &logPanel{sh: sh, h: h, scope: scopeAll, srcs: kit.FileTexts{},
 		show:  map[slog.Level]bool{slog.LevelError: true, slog.LevelWarn: true, slog.LevelInfo: true},
 		shown: &kit.WhileShown{Want: sh.cfg.Logs.Showing, Focus: h}}
 }
@@ -427,7 +427,7 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 			loc = f.Loc()
 		}
 	}
-	var src *kit.SourceFile
+	var src *kit.HighlightedExcerpt
 	if loc != "" {
 		src = p.source(loc)
 	}
@@ -559,7 +559,7 @@ func (p *logPanel) resolve(file string) string {
 
 const sourceContext = 2
 
-func (p *logPanel) source(loc string) *kit.SourceFile {
+func (p *logPanel) source(loc string) *kit.HighlightedExcerpt {
 	file, line := script.SplitLoc(loc)
 	if line == 0 {
 		return nil

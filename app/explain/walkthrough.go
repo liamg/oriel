@@ -78,7 +78,7 @@ type walkthrough struct {
 	reveal  bool // the step just opened: scroll its first note into view
 	by      string
 
-	srcs    kit.FileSrcs    // the step files' text now, by path
+	srcs    kit.FileTexts   // the step files' text now, by path
 	checked map[string]int  // the text of each step file its steps were last checked against, by its gen
 	cardH   map[int]float32 // each note card's height last frame
 }
@@ -231,7 +231,7 @@ func (x *Walkthrough) start() error {
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	w := &walkthrough{loading: true, since: kit.WindowNow(x.h), cancel: cancel, srcs: kit.FileSrcs{}, checked: map[string]int{}, cardH: map[int]float32{}}
+	w := &walkthrough{loading: true, since: kit.WindowNow(x.h), cancel: cancel, srcs: kit.FileTexts{}, checked: map[string]int{}, cardH: map[int]float32{}}
 	x.w = w
 	x.busy.Go(func() {
 		defer cancel()
@@ -310,7 +310,7 @@ func (x *Walkthrough) moveLine(by int) {
 }
 
 // srcOf is a step file's text now: an open buffer's, else the file's, read again when it changes on disk.
-func (x *Walkthrough) srcOf(w *walkthrough, path string) *kit.FileSrc { return w.srcs.Of(x.h, path) }
+func (x *Walkthrough) srcOf(w *walkthrough, path string) *kit.FileText { return w.srcs.Of(x.h, path) }
 
 // check discards the walkthrough once the lines a step is about read differently from when it was written.
 func (x *Walkthrough) check() {
@@ -700,7 +700,7 @@ func (x *Walkthrough) notes(c *ui.Ctx, w *walkthrough, s walkStep, ps []placedNo
 
 // codeRow is line l of the step's file: its number, coloured by the note it's lit for, and its text, dimmed when no
 // note is on it, with a note's mark highlighted.
-func (x *Walkthrough) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *kit.SourceFile, lines []string, l int, gutter float32, m kit.PaneMetrics) {
+func (x *Walkthrough) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *kit.HighlightedExcerpt, lines []string, l int, gutter float32, m kit.PaneMetrics) {
 	th := c.Theme()
 	note, on := lit(s, l)
 	tone := noteTone(th, note)

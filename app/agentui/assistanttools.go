@@ -687,7 +687,7 @@ type projectLine struct {
 
 func (x *Assistant) toolWhere(ctx registry.Ctx, _ registry.Args) (any, error) {
 	var at registry.At
-	var w kit.Here
+	var w kit.WindowProjects
 	if err := kit.OnLoop(ctx, x.h, func() { at, w = x.h.Here(), kit.ProjectsHere(x.h) }); err != nil {
 		return nil, err
 	}

@@ -20,17 +20,17 @@ import (
 // shipRead is a project as the Ship page shows it: the host's reading of its git, and its pull request.
 type shipRead struct {
 	host.Ship
-	Code      *registry.CodeHost // the host origin is on; nil for none Oriel knows
-	Site      registry.Site      // which of its servers
-	Repo      string             // its name there: "acme/api"
-	Unknown   string             // origin's hostname, when no code host is known to be there
-	Unkeyed   bool               // the site's token isn't set yet
-	PR        *registry.PR
-	Checks    []registry.Check
-	FailLine  string // what the first failing check's log says
-	HostError string
-	GitRead   time.Time // when git was read
-	PRRead    time.Time // when the code host was last asked; zero if never
+	CodeHost    *registry.CodeHost // the host origin is on; nil for none Oriel knows
+	Site        registry.Site      // which of its servers
+	Repo        string             // its name there: "acme/api"
+	UnknownHost string             // origin's hostname, when no code host is known to be there
+	Unkeyed     bool               // the site's token isn't set yet
+	PR          *registry.PR
+	Checks      []registry.Check
+	FailLine    string // what the first failing check's log says
+	HostError   string
+	GitRead     time.Time // when git was read
+	PRRead      time.Time // when the code host was last asked; zero if never
 }
 
 // codeRepo is the project as its code host's funcs are asked about it.
@@ -39,7 +39,7 @@ func (s shipRead) codeRepo(id core.SessionID) registry.CodeRepo {
 }
 
 // words are how the project's host names a pull request.
-func (s shipRead) words() registry.Words { return kit.WordsOf(s.Code) }
+func (s shipRead) words() registry.Words { return kit.WordsOf(s.CodeHost) }
 
 // prTTL is how long a branch's PR and checks answer before the code host is asked again.
 const prTTL = 30 * time.Second
@@ -93,11 +93,11 @@ func (x *Ship) withPRs(ctx context.Context, id core.SessionID, ships []host.Ship
 				hs, repo, ok = kit.SitesOf(x.h).Remote(s.Origin)
 			}
 			if !ok {
-				out[i].Unknown = hostname
+				out[i].UnknownHost = hostname
 				continue
 			}
 		}
-		out[i].Code, out[i].Site, out[i].Repo = &hs.CodeHost, hs.Site, repo
+		out[i].CodeHost, out[i].Site, out[i].Repo = &hs.CodeHost, hs.Site, repo
 		kit.SitesOf(x.h).Warm(ctx, hs)
 		if !kit.SitesOf(x.h).Keyed(hs) {
 			out[i].Unkeyed = true
@@ -130,7 +130,7 @@ func (x *Ship) prFor(ctx context.Context, id core.SessionID, s shipRead, fresh b
 		return g
 	}
 	g = prRead{at: x.now()}
-	h, repo := *s.Code, s.codeRepo(id)
+	h, repo := *s.CodeHost, s.codeRepo(id)
 	pr, err := x.forBranch(ctx, h, repo, s.Branch)
 	x.cache.mu.Lock()
 	if r, ok := x.cache.raised[key]; ok {
@@ -201,19 +201,19 @@ type prReq struct {
 // hosted is a project's code host, refusing one whose origin is on none or whose host can't do what's asked.
 func hosted(s shipRead, can bool) (registry.CodeHost, error) {
 	switch {
-	case s.Code == nil && !s.Remote:
+	case s.CodeHost == nil && !s.HasOrigin:
 		return registry.CodeHost{}, fmt.Errorf("%s has no remote", s.Project)
-	case s.Code == nil:
+	case s.CodeHost == nil:
 		return registry.CodeHost{}, fmt.Errorf("%s's origin isn't on a code host Oriel knows", s.Project)
 	case !can:
-		return registry.CodeHost{}, fmt.Errorf("%s: %w", s.Code.Label(), registry.ErrNotOffered)
+		return registry.CodeHost{}, fmt.Errorf("%s: %w", s.CodeHost.Label(), registry.ErrNotOffered)
 	}
-	return *s.Code, nil
+	return *s.CodeHost, nil
 }
 
 // raisePR raises a project's PR from its branch, or edits the open one, and asks its reviewers.
 func (x *Ship) raisePR(ctx context.Context, se core.SessionState, s shipRead, r prReq) error {
-	h, err := hosted(s, s.Code != nil && s.Code.ForBranch != nil && s.Code.Create != nil)
+	h, err := hosted(s, s.CodeHost != nil && s.CodeHost.ForBranch != nil && s.CodeHost.Create != nil)
 	if err != nil {
 		return err
 	}
@@ -305,7 +305,7 @@ func withoutLinkedPRs(body string) string {
 
 // markReady takes a project's draft PR out of draft.
 func (x *Ship) markReady(ctx context.Context, se core.SessionState, s shipRead) error {
-	h, err := hosted(s, s.Code != nil && s.Code.Ready != nil)
+	h, err := hosted(s, s.CodeHost != nil && s.CodeHost.Ready != nil)
 	if err != nil {
 		return err
 	}
@@ -321,32 +321,32 @@ func (x *Ship) markReady(ctx context.Context, se core.SessionState, s shipRead) 
 
 // renameGuard refuses to rename a branch its PR is open on: the PR would be left on the old one.
 func (x *Ship) renameGuard(ctx context.Context, se core.SessionState, s shipRead) error {
-	if s.Code == nil || s.Code.ForBranch == nil || s.Branch == "" {
+	if s.CodeHost == nil || s.CodeHost.ForBranch == nil || s.Branch == "" {
 		return nil
 	}
-	pr, err := x.forBranch(ctx, *s.Code, s.codeRepo(se.ID), s.Branch)
+	pr, err := x.forBranch(ctx, *s.CodeHost, s.codeRepo(se.ID), s.Branch)
 	if err != nil && !errors.Is(err, registry.ErrNotOffered) {
 		return err
 	}
 	if pr.Open() {
 		return fmt.Errorf("%s's %s %s is open on %s: renaming would leave it behind", s.Project, s.words().Short,
-			s.Code.Ref(s.Repo, pr.Number), s.Branch)
+			s.CodeHost.Ref(s.Repo, pr.Number), s.Branch)
 	}
 	return nil
 }
 
 // setupArgs set up the project's code host's site, or ask which host its server is.
 func setupArgs(s shipRead) registry.Args {
-	if s.Code != nil {
-		return registry.Args{"hostname": s.Site.Host, "code_host": s.Code.Name}
+	if s.CodeHost != nil {
+		return registry.Args{"hostname": s.Site.Host, "code_host": s.CodeHost.Name}
 	}
-	return registry.Args{"hostname": s.Unknown}
+	return registry.Args{"hostname": s.UnknownHost}
 }
 
 // setupFirst opens the setup dialog for a project whose site isn't set up, and says so: with the error when it
 // can't be opened.
 func (x *Ship) setupFirst(ctx registry.Ctx, s shipRead) (bool, error) {
-	if !s.Unkeyed && s.Unknown == "" {
+	if !s.Unkeyed && s.UnknownHost == "" {
 		return false, nil
 	}
 	if err := x.h.Run(ctx, "code.setup", setupArgs(s)); err != nil {
@@ -383,10 +383,10 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 		return
 	}
 	for _, s := range ships {
-		if s.Code == nil || s.Code.Threads == nil || s.PR == nil || s.Unkeyed {
+		if s.CodeHost == nil || s.CodeHost.Threads == nil || s.PR == nil || s.Unkeyed {
 			continue
 		}
-		h, repo, pr := *s.Code, s.codeRepo(id), *s.PR
+		h, repo, pr := *s.CodeHost, s.codeRepo(id), *s.PR
 		var ts []registry.ReviewThread
 		if err := registry.Call(func() (err error) { ts, err = h.Threads(ctx, repo, pr); return err }); err != nil {
 			kit.SitesOf(x.h).Refuse(registry.HostSite{CodeHost: h, Site: s.Site}, err)
@@ -428,10 +428,10 @@ func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment s
 		return err
 	}
 	s, ok := x.ship(se.ID, t.Hosted.Project)
-	if !ok || s.Code == nil || s.Code.Name != t.Hosted.Host || s.PR == nil {
+	if !ok || s.CodeHost == nil || s.CodeHost.Name != t.Hosted.Host || s.PR == nil {
 		return fmt.Errorf("%s's %s hasn't been read yet", t.Hosted.Project, t.Hosted.Host)
 	}
-	h, err := hosted(s, s.Code.Reply != nil)
+	h, err := hosted(s, s.CodeHost.Reply != nil)
 	if err != nil {
 		return err
 	}
@@ -453,13 +453,13 @@ func (x *Ship) forwardHost(se core.SessionState, thread core.ThreadID, comment s
 // user did in Oriel.
 func (x *Ship) resolveHost(se core.SessionState, t core.Thread, resolved bool) error {
 	s, ok := x.ship(se.ID, t.Hosted.Project)
-	if !ok || s.Code == nil || s.Code.Name != t.Hosted.Host || s.PR == nil {
+	if !ok || s.CodeHost == nil || s.CodeHost.Name != t.Hosted.Host || s.PR == nil {
 		return fmt.Errorf("%s's %s hasn't been read yet", t.Hosted.Project, t.Hosted.Host)
 	}
-	if s.Code.Resolve == nil {
-		return fmt.Errorf("%s can't resolve threads from Oriel", s.Code.Label())
+	if s.CodeHost.Resolve == nil {
+		return fmt.Errorf("%s can't resolve threads from Oriel", s.CodeHost.Label())
 	}
-	h, repo, pr := *s.Code, s.codeRepo(se.ID), *s.PR
+	h, repo, pr := *s.CodeHost, s.codeRepo(se.ID), *s.PR
 	rt := registry.ReviewThread{ID: t.Hosted.Key, URL: t.Hosted.URL, Outdated: t.Hosted.Outdated}
 	if a := t.Anchor; a != nil {
 		rt.Path, rt.Line, rt.Old = a.File, a.Line, a.Side == "old"

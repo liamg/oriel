@@ -13,7 +13,7 @@ import (
 // FilePreview is a picker's preview of a file's text, highlighted; it keeps the file it last showed.
 type FilePreview struct {
 	path string
-	src  FileSrc
+	src  FileText
 }
 
 // Node is the file name (relative to dir) around line, 0-based; marked unless it's the first.
@@ -21,7 +21,7 @@ func (p *FilePreview) Node(r registry.Registry, dir, name string, line int) ui.N
 	return &ui.Func{Key: "file", Fn: func(c *ui.Ctx) {
 		path := filepath.Join(dir, name)
 		if p.path != path {
-			p.path, p.src = path, FileSrc{}
+			p.path, p.src = path, FileText{}
 		}
 		rd, _ := ReadsOf(r)
 		src := p.src.Load(rd, BufferOn(r, path), path)

@@ -259,19 +259,23 @@ func projectShips(reads []shipRead) []registry.ProjectShip {
 			files = append(files, f.Path)
 		}
 		out = append(out, registry.ProjectShip{Project: p.Project, ReadOnly: p.ReadOnly, Files: files, Unpushed: len(p.Unpushed), Commits: p.Commits,
-			Pushed: p.Pushed, PR: p.PR, Code: p.Code})
+			Pushed: p.Pushed, PR: p.PR, Code: p.CodeHost})
 	}
 	return out
 }
 
 func (s ships) Refresh(id core.SessionID, fresh bool) { s.x.refresh(id, fresh) }
 
-func (s ships) ResolveThread(se core.SessionState, t core.Thread, resolved bool) error {
+func (s ships) ResolveThread(se core.SessionState, thread core.ThreadID, resolved bool) error {
+	t, ok := se.Thread(thread)
+	if !ok || t.Hosted == nil {
+		return fmt.Errorf("thread %s isn't from a code host", thread)
+	}
 	return s.x.resolveHost(se, t, resolved)
 }
 
-func (s ships) ForwardThread(se core.SessionState, thread core.ThreadID, comment string) error {
-	return s.x.forwardHost(se, thread, comment)
+func (s ships) ForwardThread(se core.SessionState, thread core.ThreadID, commentID string) error {
+	return s.x.forwardHost(se, thread, commentID)
 }
 
 // stepOpts are a step's button options while the project's steps run: busy, labelled as the step, while it's this
@@ -528,7 +532,7 @@ func (x *Ship) projectState(project, _ string) []uireg.StatePart {
 		return nil
 	}
 	s, ok := x.ship(id, project)
-	if !ok || s.ReadOnly || s.Code == nil {
+	if !ok || s.ReadOnly || s.CodeHost == nil {
 		return nil
 	}
 	if s.PR == nil {

@@ -254,9 +254,9 @@ func TestGiteaExamplePlugin(t *testing.T) {
 
 	writeFiles(t, shipDir(se, "app"), map[string]string{"health.go": "package main\n\nfunc health() {}\n"})
 	s.Run("ship.refresh", nil)
-	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "app"); return len(sh.Files) == 1 && sh.Code != nil })
-	if sh, _ := x.ShipOf(se.ID, "app"); sh.Code.Name != "gitea" || sh.Repo != "acme/app" {
-		t.Fatalf("the project's code host: %+v, repo %q", sh.Code, sh.Repo)
+	shipSettle(s, t, "the file", func() bool { sh, _ := x.ShipOf(se.ID, "app"); return len(sh.Files) == 1 && sh.CodeHost != nil })
+	if sh, _ := x.ShipOf(se.ID, "app"); sh.CodeHost.Name != "gitea" || sh.Repo != "acme/app" {
+		t.Fatalf("the project's code host: %+v, repo %q", sh.CodeHost, sh.Repo)
 	}
 	s.Run("ship.commit", registry.Args{"project": "app", "message": "feat: health check"})
 	shipSettle(s, t, "the commit", func() bool { sh, _ := x.ShipOf(se.ID, "app"); return sh.Commits == 1 })

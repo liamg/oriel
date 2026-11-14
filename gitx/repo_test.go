@@ -170,7 +170,7 @@ func TestCancelledGitLetsGoOfTheIndex(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
-	if _, err := (Repo{Dir: r.Dir}).CommitStaged(ctx, "a"); err == nil {
+	if _, err := (Repo{Dir: r.Dir}).Commit(ctx, "a", CommitOpts{}); err == nil {
 		t.Fatal("the commit finished before it was stopped")
 	}
 	if _, err := os.Stat(filepath.Join(r.Dir, ".git", "index.lock")); !os.IsNotExist(err) {
