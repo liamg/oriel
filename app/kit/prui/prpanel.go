@@ -1,10 +1,14 @@
-package kit
+// Package prui is the pull request views the Ship and Reviews features share: a PR's box, its checks and reviewers,
+// and its status line.
+package prui
 
 import (
 	"fmt"
 	"image/color"
 	"strings"
 	"time"
+
+	"github.com/liamg/oriel/app/kit"
 
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -29,7 +33,7 @@ func PRBox(c *ui.Ctx, key, title string, body func(c *ui.Ctx), foot func(c *ui.C
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Radius: 6, Stroke: th.C(TPRCard), Border: 1, Fill: th.C(TPRCardBg), Clip: true}, func(c *ui.Ctx) {
 		c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8), Gap: 2}, func(c *ui.Ctx) {
-			SectionCap(c, title)
+			kit.SectionCap(c, title)
 			body(c)
 		})
 		if foot != nil {
@@ -45,9 +49,9 @@ func PRLine(c *ui.Ctx, key, state, label, note string) {
 	th := c.Theme()
 	glyph, tone := PRGlyph(c, state)
 	c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: label + " " + note}, func(c *ui.Ctx) {
-		c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, UIFont(12.5, tone)) })
-		c.Row("l", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("l", label, UIFont(12.5, th.C(theme.Fg))) })
-		c.Text("n", note, MonoFont(10.5, prNoteTone(c, state)))
+		c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(12.5, tone)) })
+		c.Row("l", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("l", label, kit.UIFont(12.5, th.C(theme.Fg))) })
+		c.Text("n", note, kit.MonoFont(10.5, prNoteTone(c, state)))
 	})
 }
 
@@ -88,7 +92,7 @@ func Freshness(c *ui.Ctx, what string, at time.Time, stale time.Duration, extra 
 	if extra != "" {
 		text += " · " + extra
 	}
-	c.Text("f", text, MonoFont(10, tone))
+	c.Text("f", text, kit.MonoFont(10, tone))
 }
 
 // AgoFine is AgoText to the second under a minute: "28s ago".
@@ -129,7 +133,7 @@ func ChecksBody(c *ui.Ctx, checks []registry.Check) ui.ID {
 	state, text := ChecksSummary(checks)
 	glyph, tone := PRGlyph(c, state)
 	sum := c.Row("sum", ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 8, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-		c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, UIFont(13, tone)) })
+		c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
 		c.Text("t", text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: tone})
 	})
 	now := c.Now()
@@ -147,7 +151,7 @@ func CheckRow(c *ui.Ctx, key any, ch registry.Check, now time.Time) {
 	c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		took := ""
 		if d := ch.Took(now); d > 0 {
-			took = Duration(d)
+			took = kit.Duration(d)
 		}
 		glyph, tone, note := "✓", th.C(theme.OK), took
 		switch ch.State {
@@ -162,9 +166,9 @@ func CheckRow(c *ui.Ctx, key any, ch registry.Check, now time.Time) {
 				note = strings.TrimSpace("running " + took)
 			}
 		}
-		c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, UIFont(12, tone)) })
-		c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", ch.Name, UIFont(12, th.C(theme.FgMuted))) })
-		c.Text("d", note, MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(12, tone)) })
+		c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", ch.Name, kit.UIFont(12, th.C(theme.FgMuted))) })
+		c.Text("d", note, kit.MonoFont(10.5, th.C(theme.FgFaint)))
 	})
 }
 
@@ -187,7 +191,7 @@ func ReviewersBox(c *ui.Ctx, reviewers []registry.PRReviewer) {
 	PRBox(c, "reviews", "REVIEWS", func(c *ui.Ctx) {
 		if len(reviewers) == 0 {
 			c.Row("none", ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("t", "No reviewers yet", UIFont(12, th.C(theme.FgMuted)))
+				c.Text("t", "No reviewers yet", kit.UIFont(12, th.C(theme.FgMuted)))
 			})
 			return
 		}
@@ -205,8 +209,8 @@ func ReviewersBox(c *ui.Ctx, reviewers []registry.PRReviewer) {
 			}
 			c.Row(r.Login, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 8, Cross: ui.Center, Role: ui.RoleText, Label: r.Login + " " + word}, func(c *ui.Ctx) {
 				ReviewerAvatar(c, r.Login)
-				c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", ReviewerName(r.Login), UIFont(12, th.C(theme.Fg))) })
-				c.Text("s", word, MonoFont(10.5, tone))
+				c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", ReviewerName(r.Login), kit.UIFont(12, th.C(theme.Fg))) })
+				c.Text("s", word, kit.MonoFont(10.5, tone))
 			})
 		}
 	}, nil)
@@ -248,7 +252,7 @@ func ReviewerAvatar(c *ui.Ctx, who string) {
 		tone = th.C(TPRTodo)
 	}
 	c.Box("av", ui.Style{W: ui.Px(17), H: ui.Px(17), Radius: 4, Fill: tone, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("i", ProjectInitials(ReviewerName(who)), Mono(8, typeset.Bold, th.C(theme.AccentInk)))
+		c.Text("i", kit.ProjectInitials(ReviewerName(who)), kit.Mono(8, typeset.Bold, th.C(theme.AccentInk)))
 	})
 }
 

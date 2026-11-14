@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -21,15 +23,15 @@ import (
 )
 
 var (
-	tShipCard     = kit.TPRCard
+	tShipCard     = prui.TPRCard
 	tShipCardOpen = theme.DeclareOn("ship.card.open.border", "alpha(amber, 55%)", "bg.base")
-	tShipCardBg   = kit.TPRCardBg
+	tShipCardBg   = prui.TPRCardBg
 	tShipDone     = theme.Declare("ship.step.done", "ok")
-	tShipTodo     = kit.TPRTodo
+	tShipTodo     = prui.TPRTodo
 	tShipRail     = theme.Declare("ship.rail", "line.strong")
 	tShipHash     = theme.Declare("ship.commit.hash", "brand")
-	tShipLink     = kit.TPRLink
-	tShipCI       = kit.TPRRunning
+	tShipLink     = prui.TPRLink
+	tShipCI       = prui.TPRRunning
 )
 
 func (x *Ship) views() {
@@ -599,7 +601,7 @@ func (x *Ship) previous(c *ui.Ctx, se core.SessionState, project string) {
 	for i, pr := range past {
 		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			state := cmp.Or(pr.State, "merged here")
-			widget.Chip(c, "state", state, kit.PRStateTone(c, state), "git/ship#next")
+			widget.Chip(c, "state", state, prui.PRStateTone(c, state), "git/ship#next")
 			c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 				label := pr.Branch
 				if pr.Number > 0 {

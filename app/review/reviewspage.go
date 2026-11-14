@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -596,7 +598,7 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 	c.Row("meta", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 		widget.Chip(c, "st", stateLabel(r), kit.TokenColour(th, stateTone(r), th.C(theme.Accent)), help)
 		if done && full.State != "" {
-			widget.Chip(c, "pr", full.State, kit.PRStateTone(c, full.State), help)
+			widget.Chip(c, "pr", full.State, prui.PRStateTone(c, full.State), help)
 		}
 		parts := []widget.AgoPart{{Text: q.Key()}}
 		if q.Author != "" {
@@ -653,7 +655,7 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 // reviewCard is a titled box of the detail.
 func reviewCard(c *ui.Ctx, key, title string, w ui.Size, body func(c *ui.Ctx)) {
 	th := c.Theme()
-	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(12, 10), Gap: 8, Stroke: th.C(kit.TReviewCard), Border: 1, Radius: 6}, func(c *ui.Ctx) {
+	c.Column(key, ui.Style{W: w, Pad: ui.PadXY(12, 10), Gap: 8, Stroke: th.C(prui.TReviewCard), Border: 1, Radius: 6}, func(c *ui.Ctx) {
 		c.Text("h", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Tracking: .12}, Color: th.C(theme.FgFaint)})
 		body(c)
 	})

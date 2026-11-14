@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
@@ -73,11 +75,11 @@ func (x *Ship) editPR(id core.SessionID, project string, edit bool) {
 func (x *Ship) prTabBody(c *ui.Ctx, se core.SessionState, p string) {
 	s, _ := x.ship(se.ID, p)
 	f := x.prForm(se.ID, s)
-	var status kit.PRStatus
+	var status prui.PRStatus
 	if s.PR != nil && !f.editing {
 		status = x.prStatus(se, s)
 	}
-	kit.PRFrame(c, "frame", status, func(c *ui.Ctx) { x.prTabContent(c, se, s, f) })
+	prui.PRFrame(c, "frame", status, func(c *ui.Ctx) { x.prTabContent(c, se, s, f) })
 }
 
 // prTabContent is the tab's header and body: a raised PR's overview, or the form.
@@ -388,8 +390,8 @@ func (x *Ship) reviewerRows(c *ui.Ctx, s shipRead, f *prForm) {
 	}
 	for _, r := range rs {
 		c.Row(r, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			kit.ReviewerAvatar(c, r)
-			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", kit.ReviewerName(r), kit.UIFont(12.5, th.C(theme.FgMuted))) })
+			prui.ReviewerAvatar(c, r)
+			c.Row("n", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("n", prui.ReviewerName(r), kit.UIFont(12.5, th.C(theme.FgMuted))) })
 			note := "added"
 			if slices.Contains(s.Owners, r) {
 				note = "CODEOWNERS"

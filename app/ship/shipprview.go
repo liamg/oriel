@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -126,20 +128,20 @@ func (x *Ship) nextButton(c *ui.Ctx, se core.SessionState, s shipRead, primary b
 // prBadge is where a raised PR stands, at a glance: merged or closed over what its reviewers said, then changes
 // requested, approved, draft or open.
 func (x *Ship) prBadge(c *ui.Ctx, se core.SessionState, s shipRead) {
-	kit.PRBadge(c, x.h, "state", x.prStatus(se, s), "git/ship#pr")
+	prui.PRBadge(c, x.h, "state", x.prStatus(se, s), "git/ship#pr")
 }
 
 // prStatus is where a raised PR stands, from its state and its reviewers' latest verdicts: this code host's, as its
 // threads were mirrored, and those a plugin keeps (GitHub's).
-func (x *Ship) prStatus(se core.SessionState, s shipRead) kit.PRStatus {
+func (x *Ship) prStatus(se core.SessionState, s shipRead) prui.PRStatus {
 	x.mu.Lock()
 	var reviews []string
 	for _, v := range x.reviewed[s.PR.URL] {
 		reviews = append(reviews, v)
 	}
 	x.mu.Unlock()
-	reviews = append(reviews, kit.PRReviewsOf(x.h, se.ID, s.PR.URL)...)
-	return kit.PRStatusOf(s.PR.State, s.PR.Merged, s.PR.Draft, reviews)
+	reviews = append(reviews, prui.PRReviewsOf(x.h, se.ID, s.PR.URL)...)
+	return prui.PRStatusOf(s.PR.State, s.PR.Merged, s.PR.Draft, reviews)
 }
 
 // prStateWord is where a PR stands, in a word: open, draft, merged or closed.
@@ -200,7 +202,7 @@ func (x *Ship) checks(c *ui.Ctx, s shipRead) {
 	kit.SectionCap(c, fmt.Sprintf("CHECKS · %d OF %d", pass, len(s.Checks)))
 	now := c.Now()
 	for i, ch := range s.Checks {
-		kit.CheckRow(c, i, ch, now)
+		prui.CheckRow(c, i, ch, now)
 	}
 	if s.FailLine != "" {
 		c.Row("fail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Clip: true}, func(c *ui.Ctx) {
@@ -220,8 +222,8 @@ func (x *Ship) reviewersLine(c *ui.Ctx, s shipRead, reviewers, owners []string) 
 		}
 		for _, r := range reviewers {
 			c.Row(r, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-				kit.ReviewerAvatar(c, r)
-				c.Text("n", kit.ReviewerName(r), kit.UIFont(12, th.C(theme.FgMuted)))
+				prui.ReviewerAvatar(c, r)
+				c.Text("n", prui.ReviewerName(r), kit.UIFont(12, th.C(theme.FgMuted)))
 			})
 		}
 		if len(owners) > 0 && len(slices.DeleteFunc(slices.Clone(reviewers), func(r string) bool { return !slices.Contains(owners, r) })) > 0 {

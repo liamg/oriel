@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -37,7 +39,7 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 	if wake := x.saveSummary(se, f, c.Now()); !wake.IsZero() {
 		c.WakeAt(wake)
 	}
-	kit.PRFrame(c, "frame", reviewedStatus(full), func(c *ui.Ctx) {
+	prui.PRFrame(c, "frame", reviewedStatus(full), func(c *ui.Ctx) {
 		x.pageHead(c, se, src, full)
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.Line)}, nil)
 		x.pageBanner(c, se, f, full, p, done)
@@ -81,15 +83,15 @@ func (x *PRReview) page(c *ui.Ctx, se core.SessionState) {
 }
 
 // reviewedStatus is where the reviewed PR stands, from its state and its reviewers'; none while its host hasn't said.
-func reviewedStatus(full registry.ReviewDetail) kit.PRStatus {
+func reviewedStatus(full registry.ReviewDetail) prui.PRStatus {
 	if full.State == "" {
-		return kit.PRStatus{}
+		return prui.PRStatus{}
 	}
 	var reviews []string
 	for _, r := range full.Reviewers {
 		reviews = append(reviews, r.State)
 	}
-	return kit.PRStatusOf(full.State, false, full.Request.Draft, reviews)
+	return prui.PRStatusOf(full.State, false, full.Request.Draft, reviews)
 }
 
 // pageHead is the tab's top bar: the PR's ref and title, and its open and fetch buttons.
@@ -99,7 +101,7 @@ func (x *PRReview) pageHead(c *ui.Ctx, se core.SessionState, src registry.HostSi
 		c.Text("h", "REVIEW", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06}, Color: th.C(theme.Fg)})
 		c.Text("ref", kit.Label(se), kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		if full.State != "" { // until its host says, it's no state at all
-			kit.PRBadge(c, x.h, "state", reviewedStatus(full), prReviewHelp)
+			prui.PRBadge(c, x.h, "state", reviewedStatus(full), prReviewHelp)
 		}
 		c.Row("title", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("t", full.Request.Title, kit.UIFont(13, th.C(theme.FgMuted)))

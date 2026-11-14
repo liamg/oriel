@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
@@ -83,7 +85,7 @@ func rowTipLines(q registry.ReviewRequest, now time.Time) []string {
 	}
 	add(size, files)
 	var asked, reviewed []string
-	for _, rv := range kit.MergeReviewers(q.Reviewers) {
+	for _, rv := range prui.MergeReviewers(q.Reviewers) {
 		switch rv.State {
 		case "requested":
 			asked = append(asked, rv.Login)

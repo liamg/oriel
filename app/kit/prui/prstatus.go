@@ -1,7 +1,9 @@
-package kit
+package prui
 
 import (
 	"strings"
+
+	"github.com/liamg/oriel/app/kit"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -50,7 +52,7 @@ func PRBadge(c *ui.Ctx, r registry.Registry, key any, s PRStatus, help string) {
 	th := c.Theme()
 	tone := th.C(s.Tone)
 	c.Row(key, ui.Style{H: ui.Px(30), Pad: ui.PadXY(10, 0), Gap: 7, Cross: ui.Center, Radius: 7, Stroke: theme.WithAlpha(tone, .75), Border: 1, Role: ui.RoleStatus, Label: "Pull request: " + s.Word, Help: help}, func(c *ui.Ctx) {
-		Icon(c, r, "i", s.Icon, 18, tone)
+		kit.Icon(c, r, "i", s.Icon, 18, tone)
 		c.Text("w", s.Word, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13.5, Weight: typeset.SemiBold}, Color: tone})
 	})
 }
