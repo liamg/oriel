@@ -503,7 +503,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(theme.Accent)}, nil)
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-			c.Text("l", fmt.Sprintf("· L%d", line+1), widget.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("l", n.lines(line), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			if n.review {
 				to := 1
 				if n.toAuthor {
@@ -561,6 +561,14 @@ func (x *Requests) composerButtons(c *ui.Ctx, n *inlineNew) (send, cancel bool) 
 			Disabled: strings.TrimSpace(n.draft) == "", Why: "Write something first"})
 	})
 	return send, cancel
+}
+
+// lines is the header's line label for the thread being opened on line (0-based): "· L8", or "· L8–10" for a range.
+func (n *inlineNew) lines(line int) string {
+	if n.end > n.line {
+		return fmt.Sprintf("· L%d–%d", line+1, line+1+n.end-n.line)
+	}
+	return fmt.Sprintf("· L%d", line+1)
 }
 
 // commentArgs is request.comment's arguments for the thread being opened on line (0-based).

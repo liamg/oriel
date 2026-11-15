@@ -267,7 +267,7 @@ func TestAskAboutThisFromTheMenu(t *testing.T) {
 	}
 }
 
-// A thread opened on a selection is about its first through last characters.
+// A thread opened on a selection is about its first through last characters, and its header names the lines.
 func TestThreadOnASelection(t *testing.T) {
 	r, a, _ := apptest.AgentWindow(t)
 	dir := projectDir(t, r)
@@ -284,7 +284,7 @@ func TestThreadOnASelection(t *testing.T) {
 	if err := r.Do(func() error { return r.Host.Run(context.Background(), "thread.new", nil) }); err != nil {
 		t.Fatal(err)
 	}
-	r.WaitText("New thread")
+	r.WaitFrame("the header naming lines 3 to 4", func(s string) bool { return apptest.HasAll(s, "New thread", "· L3–4") })
 	r.TypeText("why these?")
 	r.WaitText("why these?")
 	r.TypeKeys("<CR>")
