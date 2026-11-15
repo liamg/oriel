@@ -16,6 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/internal/clock"
 	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/registry/services"
@@ -55,7 +56,8 @@ const ExplainUnit = "explain.unit"
 // Diff is the diff view, its commands and keys, and the review marks it keeps.
 type Diff struct {
 	kit.Disposer
-	h plugin.Host
+	h     plugin.Host
+	clock clock.Clock // what its remakes are paced by; the system's if nil
 
 	by    map[string]*diffState // by instance: the repo's root
 	focus *diffState            // the diff with focus, or the last to have it
@@ -668,7 +670,7 @@ func (x *Diff) diffFor(tree services.GitTree, st *gitx.State, f gitx.FileState, 
 		x.mu.Lock()
 		x.loading[k] = true
 		if d == nil || d.in != in {
-			x.started[k] = time.Now() // a stage on the same text doesn't hold back its remaking
+			x.started[k] = clock.Or(x.clock).Now() // a stage on the same text doesn't hold back its remaking
 		}
 		x.mu.Unlock()
 		x.busy.Go(func() {
@@ -770,13 +772,14 @@ const diffRemakeGap = 500 * time.Millisecond
 func (x *Diff) mayRemake(k diffKey) bool {
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	wait := diffRemakeGap - time.Since(x.started[k])
+	c := clock.Or(x.clock)
+	wait := diffRemakeGap - c.Now().Sub(x.started[k])
 	if wait <= 0 {
 		return true
 	}
 	if !x.waking[k] {
 		x.waking[k] = true
-		time.AfterFunc(wait, func() {
+		c.AfterFunc(wait, func() {
 			x.mu.Lock()
 			delete(x.waking, k)
 			x.gen++ // what was made from the old diff asks for the new one
