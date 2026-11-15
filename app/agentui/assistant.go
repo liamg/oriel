@@ -15,7 +15,7 @@ import (
 
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/assistant"
+	"github.com/liamg/oriel/conversation"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -47,7 +47,7 @@ type Assistant struct {
 	kit.Disposer
 	ConfigDir, StateDir string
 	h                   plugin.Host
-	conv                *assistant.Conversation
+	conv                *conversation.Conversation
 
 	// On the loop.
 	open       bool
@@ -92,7 +92,7 @@ func (x *Assistant) Activate(_ context.Context, h plugin.Host) error {
 		o.Scopes = registry.ScopeUser
 		x.Add(h.Option(o))
 	}
-	x.conv = assistant.New(x.startAgent)
+	x.conv = conversation.New(x.startAgent)
 	x.conv.Progress = assistantProgress
 	x.conv.Changed = func() { h.Do(x.changed) }
 	x.setIdle()
@@ -197,7 +197,7 @@ func (x *Assistant) unread() int {
 	log, _ := x.conv.Log()
 	n := 0
 	for _, e := range log {
-		if e.Seq > x.seen && (e.Kind == assistant.KindReply || e.Kind == assistant.KindConfirm || e.Kind == assistant.KindError) {
+		if e.Seq > x.seen && (e.Kind == conversation.KindReply || e.Kind == conversation.KindConfirm || e.Kind == conversation.KindError) {
 			n++
 		}
 	}
@@ -223,7 +223,7 @@ func (x *Assistant) setIdle() {
 func (x *Assistant) changed() {
 	log, _ := x.conv.Log()
 	for _, e := range log {
-		if e.Seq <= x.spoken || e.Kind != assistant.KindReply {
+		if e.Seq <= x.spoken || e.Kind != conversation.KindReply {
 			continue
 		}
 		x.spoken = e.Seq
@@ -249,7 +249,7 @@ func (x *Assistant) Prompt() string {
 }
 
 // startAgent starts the conversation's agent: a utility agent.
-func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Agent, error) {
+func (x *Assistant) startAgent(ctx context.Context, first string) (conversation.Agent, error) {
 	c, err := kit.SessionCalls(x.h)
 	if err != nil {
 		return nil, err
@@ -264,7 +264,7 @@ func (x *Assistant) startAgent(ctx context.Context, first string) (assistant.Age
 	x.mu.Lock()
 	x.ran = strings.Trim(ready.Provider+" · "+ready.Model, " ·")
 	x.mu.Unlock()
-	a := &utilityAgent{u: u, sig: make(chan assistant.Signal, 64)}
+	a := &utilityAgent{u: u, sig: make(chan conversation.Signal, 64)}
 	if !x.work.Loop(a.pump) {
 		close(a.sig)
 	}
@@ -284,12 +284,12 @@ func (x *Assistant) runsOn() string {
 // utilityAgent is a utility agent as the conversation drives it.
 type utilityAgent struct {
 	u   hostapi.Utility
-	sig chan assistant.Signal
+	sig chan conversation.Signal
 }
 
 func (a *utilityAgent) Send(ctx context.Context, text string) error { return a.u.Send(ctx, text) }
 func (a *utilityAgent) Interrupt(ctx context.Context) error         { return a.u.Interrupt(ctx) }
-func (a *utilityAgent) Signals() <-chan assistant.Signal            { return a.sig }
+func (a *utilityAgent) Signals() <-chan conversation.Signal         { return a.sig }
 func (a *utilityAgent) Close() error                                { return a.u.Close() }
 
 func (a *utilityAgent) pump(ctx context.Context) {
@@ -305,20 +305,20 @@ func (a *utilityAgent) pump(ctx context.Context) {
 			}
 			ev = e
 		}
-		var s assistant.Signal
+		var s conversation.Signal
 		switch ev.Type {
 		case "turn-start":
-			s = assistant.Signal{Kind: assistant.TurnStarted}
+			s = conversation.Signal{Kind: conversation.TurnStarted}
 		case "message":
-			s = assistant.Signal{Kind: assistant.Said, Text: ev.Text}
+			s = conversation.Signal{Kind: conversation.Said, Text: ev.Text}
 		case "tool-call":
-			s = assistant.Signal{Kind: assistant.UsedTool, Tool: ev.Tool}
+			s = conversation.Signal{Kind: conversation.UsedTool, Tool: ev.Tool}
 		case "turn-end":
-			s = assistant.Signal{Kind: assistant.TurnEnded}
+			s = conversation.Signal{Kind: conversation.TurnEnded}
 		case "failure":
-			s = assistant.Signal{Kind: assistant.Failed, Text: ev.Text}
+			s = conversation.Signal{Kind: conversation.Failed, Text: ev.Text}
 		case "exited":
-			s = assistant.Signal{Kind: assistant.Exited, Text: ev.Text}
+			s = conversation.Signal{Kind: conversation.Exited, Text: ev.Text}
 		default:
 			continue
 		}
@@ -335,11 +335,11 @@ func (a *utilityAgent) pump(ctx context.Context) {
 func (x *Assistant) confirm(ctx registry.Ctx, tool string, c registry.Confirmation) (bool, error) {
 	x.h.Redraw()
 	switch x.conv.Confirm(ctx, tool, c.Line, c) {
-	case assistant.Yes:
+	case conversation.Yes:
 		return true, nil
-	case assistant.No:
+	case conversation.No:
 		return false, errors.New("the user said no, so nothing was done")
-	case assistant.NoAnswer:
+	case conversation.NoAnswer:
 		return false, fmt.Errorf("the user didn't answer within %s, so nothing was done", x.conv.ConfirmWait.Round(time.Second))
 	}
 	return false, registry.ErrNotConfirmed
@@ -347,7 +347,7 @@ func (x *Assistant) confirm(ctx registry.Ctx, tool string, c registry.Confirmati
 
 // acted is what a tool did, kept in the log with its undo.
 func (x *Assistant) acted(_ registry.Ctx, tool string, a registry.Acted) {
-	act := assistant.Act{Tool: tool, Line: a.Line, Detail: a.Detail, Open: a.Open, OpenArgs: a.OpenArgs}
+	act := conversation.Act{Tool: tool, Line: a.Line, Detail: a.Detail, Open: a.Open, OpenArgs: a.OpenArgs}
 	if a.Undo != nil {
 		act.Undo = func(ctx context.Context) error { return a.Undo(ctx) }
 	}
@@ -370,10 +370,10 @@ func (x *Assistant) answer(id string, yes bool) error {
 }
 
 // lastItems are the rows of the latest reply that offers some.
-func (x *Assistant) lastItems() []assistant.Item {
+func (x *Assistant) lastItems() []conversation.Item {
 	log, _ := x.conv.Log()
 	for _, e := range slices.Backward(log) {
-		if e.Kind == assistant.KindReply && len(e.Items) > 0 {
+		if e.Kind == conversation.KindReply && len(e.Items) > 0 {
 			return e.Items
 		}
 	}
@@ -406,19 +406,19 @@ func (x *Assistant) pick(n int) error {
 }
 
 // action is the action {id}, else the latest that offers what's asked.
-func (x *Assistant) action(id string, ok func(assistant.Entry) bool) (assistant.Entry, error) {
+func (x *Assistant) action(id string, ok func(conversation.Entry) bool) (conversation.Entry, error) {
 	log, _ := x.conv.Log()
 	for _, e := range slices.Backward(log) {
-		if e.Kind == assistant.KindAction && (id == e.ID || id == "" && ok(e)) {
+		if e.Kind == conversation.KindAction && (id == e.ID || id == "" && ok(e)) {
 			return e, nil
 		}
 	}
-	return assistant.Entry{}, errors.New("no such action")
+	return conversation.Entry{}, errors.New("no such action")
 }
 
 // undo takes an action back, off the loop: what undoes it may wait on the loop.
 func (x *Assistant) undo(id string) error {
-	e, err := x.action(id, func(e assistant.Entry) bool { return !e.Until.IsZero() && !e.Undone && time.Now().Before(e.Until) })
+	e, err := x.action(id, func(e conversation.Entry) bool { return !e.Until.IsZero() && !e.Undone && time.Now().Before(e.Until) })
 	if err != nil {
 		return errors.New("nothing to undo")
 	}
@@ -431,7 +431,7 @@ func (x *Assistant) undo(id string) error {
 }
 
 func (x *Assistant) show(ctx context.Context, id string) error {
-	e, err := x.action(id, func(e assistant.Entry) bool { return e.Open != "" && !e.Undone })
+	e, err := x.action(id, func(e conversation.Entry) bool { return e.Open != "" && !e.Undone })
 	if err != nil || e.Open == "" {
 		return errors.New("nothing to open")
 	}
@@ -480,7 +480,7 @@ func (x *Assistant) inboxCards() []uireg.InboxCard {
 	var out []uireg.InboxCard
 	for _, e := range log {
 		switch {
-		case e.Kind == assistant.KindConfirm && waiting[e.ID]:
+		case e.Kind == conversation.KindConfirm && waiting[e.ID]:
 			cf, _ := e.Card.(registry.Confirmation)
 			id := e.ID
 			out = append(out, uireg.InboxCard{ID: id, Type: "assistant-confirm", Group: uireg.GroupAgents, Mine: true, Icon: "◇",
@@ -489,7 +489,7 @@ func (x *Assistant) inboxCards() []uireg.InboxCard {
 				Body: func(c *ui.Ctx) { confirmBody(c, x, cf) },
 				Actions: []uireg.InboxAction{{Label: "Yes", Key: "y", Primary: true, Run: func() { x.report(x.answer(id, true)) }},
 					{Label: "No", Key: "n", Run: func() { x.report(x.answer(id, false)) }}}})
-		case e.Kind == assistant.KindAction:
+		case e.Kind == conversation.KindAction:
 			out = append(out, uireg.InboxCard{ID: e.ID, Type: "assistant-action", Group: uireg.GroupAgents, Mine: true, Icon: "◇",
 				Tone: "assistant.done", Title: e.Text, Sub: "assistant · " + e.Detail, Created: e.At, Done: true})
 		}

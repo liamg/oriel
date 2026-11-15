@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/assistant"
+	"github.com/liamg/oriel/conversation"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -139,7 +139,7 @@ func (x *Assistant) sources() []string {
 // turn is one of the assistant's turns as the drawer draws it: the tools it used, then what it said and did.
 type asstBlock struct {
 	tools   []string
-	entries []assistant.Entry
+	entries []conversation.Entry
 }
 
 // chat is the conversation: your turns at the right; the assistant's at the left, its tools as chips, its answer,
@@ -150,7 +150,7 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 	now := c.Now()
 	latestItems := -1
 	for i, e := range slices.Backward(log) {
-		if e.Kind == assistant.KindReply && len(e.Items) > 0 {
+		if e.Kind == conversation.KindReply && len(e.Items) > 0 {
 			latestItems = len(log) - 1 - i
 			_ = e
 			break
@@ -172,24 +172,24 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 			}
 			for i, e := range log {
 				switch e.Kind {
-				case assistant.KindUser:
+				case conversation.KindUser:
 					flush(i)
 					x.mine(c, i, e, width)
-				case assistant.KindDivider:
+				case conversation.KindDivider:
 					flush(i)
 					c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 						widget.Rule(c, "l")
 						c.Text("t", strings.ToUpper(e.Text), widget.KickerFont(th.C(theme.FgGhost)))
 						widget.Rule(c, "r")
 					})
-				case assistant.KindTool:
+				case conversation.KindTool:
 					if block == nil {
 						block = &asstBlock{}
 					}
 					if !slices.Contains(block.tools, e.Tool) {
 						block.tools = append(block.tools, e.Tool)
 					}
-				case assistant.KindProgress:
+				case conversation.KindProgress:
 					if busy && i == len(log)-1 {
 						if block == nil {
 							block = &asstBlock{}
@@ -204,7 +204,7 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 				}
 			}
 			flush(len(log))
-			if busy && (len(log) == 0 || log[len(log)-1].Kind != assistant.KindProgress) {
+			if busy && (len(log) == 0 || log[len(log)-1].Kind != conversation.KindProgress) {
 				c.Text("thinking", "thinking…", widget.MonoFont(11, th.C(theme.FgFaint)))
 			}
 		})
@@ -214,7 +214,7 @@ func (x *Assistant) chat(c *ui.Ctx, width float32) {
 }
 
 // mine is one of your turns: a bubble at the right.
-func (x *Assistant) mine(c *ui.Ctx, key any, e assistant.Entry, width float32) {
+func (x *Assistant) mine(c *ui.Ctx, key any, e conversation.Entry, width float32) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -226,7 +226,7 @@ func (x *Assistant) mine(c *ui.Ctx, key any, e assistant.Entry, width float32) {
 }
 
 // theirs is one of the assistant's turns: its avatar and tool chips, then what it said and did.
-func (x *Assistant) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, latestItems int, log []assistant.Entry, now time.Time, wake *time.Time) {
+func (x *Assistant) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, latestItems int, log []conversation.Entry, now time.Time, wake *time.Time) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 		c.Box("av", ui.Style{W: ui.Px(22), H: ui.Px(22), Role: ui.RoleText, Label: "Ori"}, func(c *ui.Ctx) {
@@ -242,19 +242,19 @@ func (x *Assistant) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, late
 			}
 			for _, e := range b.entries {
 				switch e.Kind {
-				case assistant.KindReply:
+				case conversation.KindReply:
 					widget.Rich(c, e.Seq, kit.MDSpans(e.Text), width-40, widget.UIFont(13.5, th.C(theme.Fg)), widget.RichOpts{})
 					if len(e.Items) > 0 {
-						keyed := slices.IndexFunc(log, func(o assistant.Entry) bool { return o.Seq == e.Seq }) == latestItems
+						keyed := slices.IndexFunc(log, func(o conversation.Entry) bool { return o.Seq == e.Seq }) == latestItems
 						x.items(c, fmt.Sprint("items", e.Seq), e.Items, keyed)
 					}
-				case assistant.KindProgress:
+				case conversation.KindProgress:
 					c.Text(e.Seq, e.Text, widget.MonoFont(11, th.C(theme.FgFaint)))
-				case assistant.KindError:
+				case conversation.KindError:
 					widget.Wrap(c, e.Seq, e.Text, width-40, widget.MonoFont(11, th.C(theme.Error)))
-				case assistant.KindConfirm:
+				case conversation.KindConfirm:
 					x.confirmCard(c, e, now, wake)
-				case assistant.KindAction:
+				case conversation.KindAction:
 					x.actionCard(c, e, now, wake)
 				}
 			}
@@ -263,7 +263,7 @@ func (x *Assistant) theirs(c *ui.Ctx, key any, b *asstBlock, width float32, late
 }
 
 // items are a reply's rows: each opens its session or link, or asks about it; the latest reply's have keys.
-func (x *Assistant) items(c *ui.Ctx, key any, items []assistant.Item, keyed bool) {
+func (x *Assistant) items(c *ui.Ctx, key any, items []conversation.Item, keyed bool) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		for i, it := range items {
@@ -294,7 +294,7 @@ func (x *Assistant) items(c *ui.Ctx, key any, items []assistant.Item, keyed bool
 	})
 }
 
-func (x *Assistant) pickRow(it assistant.Item) {
+func (x *Assistant) pickRow(it conversation.Item) {
 	for i, o := range x.lastItems() {
 		if o == it {
 			x.report(x.pick(i + 1))
@@ -312,13 +312,13 @@ func (x *Assistant) report(err error) {
 
 // confirmCard is an act waiting for your yes: what it will do, with Yes (y) and No (n). It takes focus as it comes,
 // so the keys answer it.
-func (x *Assistant) confirmCard(c *ui.Ctx, e assistant.Entry, now time.Time, wake *time.Time) {
+func (x *Assistant) confirmCard(c *ui.Ctx, e conversation.Entry, now time.Time, wake *time.Time) {
 	th := c.Theme()
 	cf, _ := e.Card.(registry.Confirmation)
 	if e.Answer != "" {
-		tone, text := th.C(theme.FgFaint), map[assistant.Answer]string{assistant.Yes: "you said yes: " + e.Text,
-			assistant.No: "you said no — nothing was done", assistant.NoAnswer: "no answer in time — nothing was done"}[e.Answer]
-		if e.Answer == assistant.Yes {
+		tone, text := th.C(theme.FgFaint), map[conversation.Answer]string{conversation.Yes: "you said yes: " + e.Text,
+			conversation.No: "you said no — nothing was done", conversation.NoAnswer: "no answer in time — nothing was done"}[e.Answer]
+		if e.Answer == conversation.Yes {
 			tone = th.C(tAsstDone)
 		}
 		c.Text(e.Seq, cmp.Or(text, "not answered — nothing was done"), widget.MonoFont(11, tone))
@@ -342,7 +342,7 @@ func (x *Assistant) confirmCard(c *ui.Ctx, e assistant.Entry, now time.Time, wak
 }
 
 // actionCard is something its tools did: Open what it made, and Undo with its countdown while it can be.
-func (x *Assistant) actionCard(c *ui.Ctx, e assistant.Entry, now time.Time, wake *time.Time) {
+func (x *Assistant) actionCard(c *ui.Ctx, e conversation.Entry, now time.Time, wake *time.Time) {
 	th := c.Theme()
 	var actions []widget.CardAction
 	open, undo := -1, -1
@@ -457,7 +457,7 @@ func (x *Assistant) side(c *ui.Ctx, width float32) {
 }
 
 // sideList is what it can do, its sources and how fresh each is, and what it did lately.
-func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, heading func(c *ui.Ctx, key any, s string),
+func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []conversation.Entry, heading func(c *ui.Ctx, key any, s string),
 	row func(c *ui.Ctx, key any, label, value string, at time.Time, tone render.Color, lead func(c *ui.Ctx))) {
 	th := c.Theme()
 	heading(c, "can", "WHAT IT CAN DO")
@@ -497,7 +497,7 @@ func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, he
 	heading(c, "recent", "RECENT ACTIONS")
 	n := 0
 	for _, e := range slices.Backward(log) {
-		if e.Kind != assistant.KindAction || n == 5 {
+		if e.Kind != conversation.KindAction || n == 5 {
 			continue
 		}
 		n++
@@ -513,14 +513,14 @@ func (x *Assistant) sideList(c *ui.Ctx, now time.Time, log []assistant.Entry, he
 }
 
 // lastRead is when each source was last read: the last time a tool reading it was used.
-func (x *Assistant) lastRead(log []assistant.Entry) map[string]time.Time {
+func (x *Assistant) lastRead(log []conversation.Entry) map[string]time.Time {
 	reads := map[string]string{}
 	for _, t := range registry.AgentToolsFor(x.h, kit.AssistantAgent, true) {
 		reads[t.Name] = t.Reads
 	}
 	out := map[string]time.Time{}
 	for _, e := range log {
-		if s := reads[e.Tool]; e.Kind == assistant.KindTool && s != "" {
+		if s := reads[e.Tool]; e.Kind == conversation.KindTool && s != "" {
 			out[s] = e.At
 		}
 	}

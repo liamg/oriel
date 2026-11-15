@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
-	"github.com/liamg/oriel/assistant"
+	"github.com/liamg/oriel/conversation"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
@@ -102,7 +102,7 @@ func (x *Assistant) toolReply(_ registry.Ctx, p registry.Args) (any, error) {
 	if text == "" {
 		return nil, errors.New("the reply is empty")
 	}
-	var items []assistant.Item
+	var items []conversation.Item
 	if raw, err := json.Marshal(p["items"]); err == nil {
 		_ = json.Unmarshal(raw, &items)
 	}
