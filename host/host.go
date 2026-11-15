@@ -33,13 +33,13 @@ import (
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/agentrun"
 	"github.com/liamg/oriel/host/aireview"
-	"github.com/liamg/oriel/host/github"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/host/jobs"
 	"github.com/liamg/oriel/host/persist"
 	"github.com/liamg/oriel/host/pricing"
 	"github.com/liamg/oriel/host/repos"
 	"github.com/liamg/oriel/host/sandboxhost"
+	"github.com/liamg/oriel/host/ship"
 	"github.com/liamg/oriel/host/utility"
 	"github.com/liamg/oriel/host/worktree"
 	"github.com/liamg/oriel/internal/clock"
@@ -88,7 +88,7 @@ type (
 	reposPart   = repos.Registry
 	runPart     = agentrun.Runner
 	boxesPart   = sandboxhost.Boxes
-	codePart    = github.GitHub
+	codePart    = ship.Ships
 	jobsPart    = jobs.Jobs
 	utilityPart = utility.Utilities
 	reviewsPart = aireview.Reviews
@@ -219,7 +219,7 @@ func (w *Host) parts() error {
 	if w.boxesPart, err = sandboxhost.New(w.sandboxDeps()); err != nil {
 		return err
 	}
-	w.codePart = github.New(w.env, st, github.Deps{Kinds: &w.kinds, Keyed: w.runPart.Keyed, Wake: w.runPart.Wake,
+	w.codePart = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, Keyed: w.runPart.Keyed, Wake: w.runPart.Wake,
 		Client:        w.opts.GitHub,
 		HTTP:          w.opts.HTTP,
 		BranchRenamed: worktree.BranchRenamed})

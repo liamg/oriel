@@ -1,4 +1,4 @@
-package github
+package ship
 
 import (
 	"context"
@@ -25,7 +25,7 @@ type remoteURL struct {
 // remoteURL is repo's origin URL, read with git only when its config changed since it was last read, or when fresh
 // (Read again, a fetch): a config's time can stay put through a change in the same tick. Only an origin found is
 // kept: a read that fails, or finds none, has the next ask git again.
-func (x *GitHub) remoteURL(ctx context.Context, repo gitx.Repo, fresh bool) string {
+func (x *Ships) remoteURL(ctx context.Context, repo gitx.Repo, fresh bool) string {
 	_, common := gitx.Dirs(repo.Dir)
 	var at time.Time
 	if fi, err := os.Stat(filepath.Join(common, "config")); err == nil {
