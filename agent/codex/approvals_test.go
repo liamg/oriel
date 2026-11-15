@@ -193,19 +193,6 @@ func TestProtectedCheckout(t *testing.T) {
 	}
 }
 
-// A command that would post to a review is declined before anyone is asked.
-func TestNoPosting(t *testing.T) {
-	w := wired(t, agent.StartSpec{Cwd: "/w", Policy: agent.PolicyAsk})
-	got := w.call("item/commandExecution/requestApproval", map[string]any{"threadId": "th", "turnId": "tu", "itemId": "c", "startedAtMs": 1,
-		"command": "gh pr review 7 --approve", "cwd": "/w"})
-	if d := answered(t, got); !strings.Contains(d, `"decline"`) {
-		t.Errorf("decision = %s", d)
-	}
-	if said := w.steer(); !strings.Contains(said, "never post") {
-		t.Errorf("the turn was told %q", said)
-	}
-}
-
 // "Always" on a command is a rule in Oriel's form: the prefix codex proposes allowing, else the session host's.
 //
 // ref:   codex/codex-rs/app-server-protocol/src/protocol/v2/item.rs
@@ -269,9 +256,9 @@ func TestElicitationNamesTheTool(t *testing.T) {
 	w.notify("item/started", `{"threadId":"th","turnId":"tu","item":{"type":"mcpToolCall","id":"m2","server":"github",
 		"tool":"add_reply_to_pull_request_comment","status":"inProgress","arguments":{}}}`)
 	w.next()
-	got := w.call("mcpServer/elicitation/request", map[string]any{"threadId": "th", "turnId": "tu", "serverName": "github", "mode": "form",
+	w.call("mcpServer/elicitation/request", map[string]any{"threadId": "th", "turnId": "tu", "serverName": "github", "mode": "form",
 		"message": "Allow?", "requestedSchema": map[string]any{"type": "object", "properties": map[string]any{}}})
-	if a := answered(t, got); !strings.Contains(a, `"decline"`) {
-		t.Errorf("a review reply = %s", a)
+	if p := w.next().(agent.Permission); p.Tool != "mcp__github__add_reply_to_pull_request_comment" {
+		t.Errorf("a review reply is asked like any call: %+v", p)
 	}
 }

@@ -74,23 +74,25 @@ func (c *codeSites) optionMap(name string) map[string]string {
 	return m
 }
 
-// Named is the code host the user, gh or glab names hostname as.
+// Named is the code host the user names hostname as, or a host's CLI does (CLIConfig).
 func (c *codeSites) Named(hostname string) (string, bool) {
 	if n, ok := c.optionMap(CodeHostsOption)[hostname]; ok {
 		return n, true
 	}
-	for name, hosts := range map[string][]string{"github": cliHosts(filepath.Join(c.config, "gh", "hosts.yml"), ""),
-		"gitlab": cliHosts(filepath.Join(c.config, "glab-cli", "config.yml"), "hosts")} {
-		for _, h := range hosts {
+	for _, ch := range registry.ContributionsOf[registry.CodeHost](c.h) {
+		if ch.CLIConfig.Path == "" {
+			continue
+		}
+		for _, h := range cliHosts(filepath.Join(c.config, filepath.FromSlash(ch.CLIConfig.Path)), ch.CLIConfig.Section) {
 			if strings.EqualFold(h, hostname) {
-				return name, true
+				return ch.Name, true
 			}
 		}
 	}
 	return "", false
 }
 
-// cliHosts are the hostnames a gh or glab config lists: its top-level keys, or the keys a level under section.
+// cliHosts are the hostnames a CLI's config lists: its top-level keys, or the keys a level under section.
 func cliHosts(path, section string) []string {
 	f, err := os.Open(path)
 	if err != nil {

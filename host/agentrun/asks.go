@@ -9,9 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/agent/guard"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
@@ -62,11 +60,6 @@ func (h *session) permission(sess agent.Session, p agent.Permission) {
 	ask := core.Ask{ID: p.ID, Kind: core.AskPermission, Tool: p.Tool, Summary: p.Summary, Input: string(p.Input), Rule: p.Rule, Diff: p.Diff}
 	if ask.Rule == "" {
 		ask.Rule = RuleFor(p.Tool, p.Input)
-	}
-	if postsReview(p.Tool, p.Input) {
-		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Note: NoPosting})
-		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: h.r.env.Now().UTC(), Text: p.Tool + " denied: agents never post to GitHub reviews"})
-		return
 	}
 	if v, ok := h.r.policy(h.id, ask); ok {
 		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Allow: v.Decision == DecisionAllow, Note: v.Note})
@@ -333,19 +326,4 @@ func (x *Runner) policy(id core.SessionID, ask core.Ask) (Verdict, bool) {
 		return v, true
 	}
 	return Verdict{}, false
-}
-
-// NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
-const NoPosting = guard.NoPosting
-
-// postsReview says a tool call would post to a GitHub review: a review tool on any MCP server, or a gh command.
-func postsReview(tool string, input json.RawMessage) bool {
-	if gh.ReviewTool(tool) {
-		return true
-	}
-	var in struct {
-		Command string `json:"command"`
-	}
-	_ = json.Unmarshal(input, &in)
-	return in.Command != "" && gh.PostsReview(in.Command)
 }

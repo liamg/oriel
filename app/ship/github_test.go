@@ -19,7 +19,7 @@ func githubOf(s *apptest.Scene) *ship.GitHub { return apptest.PluginOf[*ship.Git
 
 // The agent never posts; the user's forward does. GitHub threads are mirrored inline, the agent drafts a reply, and
 // you forward it: "GitHub review · L80 · @priya-k · changes requested · synced 30s ago", the reviewer's comment,
-// "Claude draft · not sent", "↗ Forward to GitHub", "Edit", "Claude never posts to GitHub. You do.", and the status
+// "Claude draft · not sent", "↗ Forward to GitHub", "Edit", "Claude's draft reaches GitHub when you forward it.", and the status
 // line's "GH 1 changes requested".
 func TestGitHubReviewForward(t *testing.T) {
 	s, lw, hub, se, _ := shipScene(t)
@@ -71,7 +71,7 @@ func TestGitHubReviewForward(t *testing.T) {
 		return strings.Contains(f, "GitHub review") && strings.Contains(f, "↗ Forward to GitHub")
 	})
 	s.WantFrame("GitHub review", "· L3 ·", "@PRIYA-K", "CHANGES REQUESTED", "synced", "priya-k", "Can this return an error instead?",
-		"draft · not sent", "Edit", "Fake never posts to GitHub. You do.", "GH 1 changes requested")
+		"draft · not sent", "Edit", "Fake's draft reaches GitHub when you forward it.", "GH 1 changes requested")
 	s.Lint("a GitHub thread in the diff")
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		t.Errorf("text drawn past its box:\n%s", strings.Join(o, "\n"))

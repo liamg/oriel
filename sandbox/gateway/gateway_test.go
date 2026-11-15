@@ -203,30 +203,28 @@ func TestSettingsDenyBeatsSessionGrant(t *testing.T) {
 	}
 }
 
-// The agent never posts: a tool that posts to a GitHub review isn't offered, and a call to it is refused
-// even when the user's rules allow every tool, without asking.
-func TestReviewPostingToolsAreNeverOffered(t *testing.T) {
+// A tool that posts to a review is no special case: the user's rules decide it as any other, so allowing GitHub's
+// tools offers and runs it without asking.
+func TestReviewToolsFollowTheRules(t *testing.T) {
 	h := newHarness(t)
 	gh := fakeServer(t, "github")
 	gh.Env["GATEWAY_FAKE_MCP"] = "github"
 	h.g.Up = &Upstreams{Servers: []Server{gh}}
 	t.Cleanup(h.g.Up.Close)
-	h.session = []Rule{{Tool: "*", Action: Allow}}
 	h.global = []Rule{{Tool: "github__*", Action: Allow}}
 	tools, _ := h.g.Tools(context.Background())
 	var names []string
 	for _, tl := range tools {
 		names = append(names, tl.Name)
 	}
-	if strings.Contains(strings.Join(names, " "), "add_reply_to_pull_request_comment") || strings.Contains(strings.Join(names, " "), "pull_request_review_write") ||
-		!strings.Contains(strings.Join(names, " "), "github__pull_request_read") {
+	if !strings.Contains(strings.Join(names, " "), "github__add_reply_to_pull_request_comment") {
 		t.Errorf("offered %q", names)
 	}
-	if out, ok := h.call(t, "github__add_reply_to_pull_request_comment"); ok || h.asks() != 0 {
-		t.Errorf("a review reply ran: %q, asked %d", out, h.asks())
+	if out, ok := h.call(t, "github__add_reply_to_pull_request_comment"); !ok || h.asks() != 0 {
+		t.Errorf("an allowed review reply: %q, ran %v, asked %d", out, ok, h.asks())
 	}
 	for _, p := range h.g.Policy(context.Background()) {
-		if p.Name == "github__pull_request_review_write" && (p.Action != Deny || p.From != FromOriel) {
+		if p.Name == "github__pull_request_review_write" && (p.Action != Allow || p.From != FromGlobal) {
 			t.Errorf("policy shows %+v", p)
 		}
 	}

@@ -7,9 +7,6 @@ import (
 	"github.com/liamg/oriel/agent/guard"
 )
 
-// NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
-const NoPosting = guard.NoPosting
-
 // CheckFailed is why the mod refuses an MCP call (Oriel's own and the gateway's aside) when its check got no answer
 // from Oriel: CHECK_FAILED in the mod.
 const CheckFailed = "Oriel couldn't be asked about this call, so it was refused."

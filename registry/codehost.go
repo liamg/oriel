@@ -30,6 +30,8 @@ type CodeHost struct {
 	Shape  *regexp.Regexp
 	Setup  SiteSetup
 	Tokens TokenSources
+	// CLIConfig is the host's CLI's config, whose hostnames are this host's servers.
+	CLIConfig CLIConfig
 	// Allow lets the host's plugin reach a site, for why: its hostname, and the site's secret there if secret isn't
 	// "". undo takes that back.
 	Allow func(host, secret, why string) (undo func())
@@ -150,6 +152,13 @@ type SiteSetup struct {
 	TokenHelp string // which scopes, and why
 	// Probe says whether hostname is one of the host's servers, from a request that sends no token.
 	Probe func(ctx context.Context, hostname string) (bool, error)
+}
+
+// CLIConfig is a code host CLI's config file, by its slash path under the user's config directory ("gh/hosts.yml"):
+// its keys a level under Section, or its top-level ones with no Section, are the hostnames it's signed in to.
+type CLIConfig struct {
+	Path    string
+	Section string
 }
 
 // TokenSources are where a site's token is found before the user is asked: environment variables, then a command's

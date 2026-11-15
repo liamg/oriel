@@ -23,7 +23,7 @@ import (
 
 // testGitLab is a self-hostable code host, as the GitLab plugin brings one.
 func testGitLab(probe func(string) bool, allowed *[]string) registry.CodeHost {
-	return registry.CodeHost{Name: "gitlab", Title: "GitLab", Order: 20,
+	return registry.CodeHost{Name: "gitlab", Title: "GitLab", Order: 20, CLIConfig: registry.CLIConfig{Path: "glab-cli/config.yml", Section: "hosts"},
 		Sites: []registry.Site{{Host: "gitlab.com", API: "https://gitlab.com/api/v4", Secret: "GITLAB_TOKEN"}},
 		Path:  regexp.MustCompile(`^/?(.+?)(?:\.git)?/?$`), Takes: regexp.MustCompile(`/-/merge_requests/\d+`),
 		Setup: registry.SiteSetup{API: "https://{host}/api/v4", Secret: "GITLAB_TOKEN", TokenURL: "https://{host}/-/user_settings/personal_access_tokens",
@@ -308,4 +308,26 @@ func TestLuaCodeHostCallbackError(t *testing.T) {
 
 func sitesOf(s *apptest.Scene) *ship.Sites {
 	return apptest.PluginOf[*ship.CodeSites](s, "code-sites").Sites()
+}
+
+// A Lua code host's cli_config names its CLI's config: the hostnames there are its servers. A path out of the config
+// directory is refused.
+func TestLuaCodeHostCLIConfig(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	vm := s.PluginVM(plugin.Caller{ID: "acme/forge", Dir: t.TempDir()})
+	src := `oriel.code.host{ name = "forge", path = "^/?(.+?)(?:\\.git)?/?$",
+  setup = { api = "https://{host}/api" }, cli_config = { path = "forge/hosts.yml", section = "hosts" } }`
+	if err := vm.Load(script.Chunk{Name: "init.lua", Source: []byte(src)}); err != nil {
+		t.Fatal(err)
+	}
+	sites := sitesOf(s)
+	os.MkdirAll(filepath.Join(sites.Config(), "forge"), 0o755)
+	os.WriteFile(filepath.Join(sites.Config(), "forge", "hosts.yml"), []byte("hosts:\n  code.acme.test:\n    user: you\n"), 0o644)
+	if name, ok := sites.Named("code.acme.test"); !ok || name != "forge" {
+		t.Errorf("the forge CLI's server is named %q, %v", name, ok)
+	}
+	err := vm.Load(script.Chunk{Name: "out.lua", Source: []byte(`oriel.code.host{ name = "out", cli_config = { path = "../secrets.yml" } }`)})
+	if err == nil || !strings.Contains(err.Error(), "config directory") {
+		t.Errorf("a path out of the config directory: %v", err)
+	}
 }

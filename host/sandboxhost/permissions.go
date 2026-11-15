@@ -22,7 +22,6 @@ const (
 	SourceAlways   = hostapi.SourceAlways
 	SourceReadOnly = hostapi.SourceReadOnly
 	SourceDefault  = hostapi.SourceDefault
-	SourceOriel    = hostapi.SourceOriel
 )
 
 type Permissions = hostapi.Permissions
@@ -111,8 +110,6 @@ func (b *Box) permissions(ctx context.Context) Permissions {
 			}
 		case gateway.FromReadOnly:
 			tp.Source = SourceReadOnly
-		case gateway.FromOriel:
-			tp.Source = SourceOriel
 		}
 		if i := slices.IndexFunc(session, func(r gateway.Rule) bool { return r.Tool == t.Name }); i >= 0 {
 			tp.Session = session[i].Action

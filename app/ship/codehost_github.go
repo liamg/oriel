@@ -48,6 +48,7 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 			Probe:     x.probe},
 		Tokens: registry.TokenSources{Env: []string{"GH_TOKEN", "GITHUB_TOKEN"}, HostedEnv: []string{"GH_ENTERPRISE_TOKEN", "GITHUB_ENTERPRISE_TOKEN"},
 			Command: []string{"gh", "auth", "token", "--hostname", "{host}"}, Optional: true},
+		CLIConfig: registry.CLIConfig{Path: "gh/hosts.yml"},
 		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
 		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge}))
