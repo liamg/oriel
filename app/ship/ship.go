@@ -68,15 +68,13 @@ type Ship struct {
 	watching  map[core.SessionID]bool           // the sessions whose git follow watches; x.mu
 	projects  map[core.SessionID][]core.Project // each session's projects as follow last saw them; x.mu
 
-	mu       sync.Mutex
-	reports  map[core.SessionID]*shipReport
-	seenPRs  map[string]bool // the PRs PrSeen has fired for, by URL
-	merged   map[string]bool // the PRs PrMerged has fired for, by URL
-	opened   map[string]bool // the PRs read open by this process, by URL
-	movedOn  map[string]bool // the merged PRs whose next PR has been started or asked about, by URL
-	cache    prCache
-	mirrored map[core.SessionID]time.Time // when each session's reviews were last mirrored from a code host
-	reviewed map[string]map[string]string // each PR's reviewers' latest verdicts, by URL, from its mirrored threads
+	mu      sync.Mutex
+	reports map[core.SessionID]*shipReport
+	seenPRs map[string]bool // the PRs PrSeen has fired for, by URL
+	merged  map[string]bool // the PRs PrMerged has fired for, by URL
+	opened  map[string]bool // the PRs read open by this process, by URL
+	movedOn map[string]bool // the merged PRs whose next PR has been started or asked about, by URL
+	cache   prCache
 
 	// On the loop: what's typed, by session/project.
 	commits  map[string]*commitForm
@@ -268,18 +266,6 @@ func projectShips(reads []shipRead) []services.ProjectShip {
 
 func (s ships) Refresh(id core.SessionID, fresh bool) { s.x.refresh(id, fresh) }
 
-func (s ships) ResolveThread(se core.SessionState, thread core.ThreadID, resolved bool) error {
-	t, ok := se.Thread(thread)
-	if !ok || t.Hosted == nil {
-		return fmt.Errorf("thread %s isn't from a code host", thread)
-	}
-	return s.x.resolveHost(se, t, resolved)
-}
-
-func (s ships) ForwardThread(se core.SessionState, thread core.ThreadID, commentID string) error {
-	return s.x.forwardHost(se, thread, commentID)
-}
-
 // stepOpts are a step's button options while the project's steps run: busy, labelled as the step, while it's this
 // one's step; off while another runs.
 func (x *Ship) stepOpts(id core.SessionID, project, step string, o widget.ButtonOpts) widget.ButtonOpts {
@@ -351,7 +337,6 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) 
 		var read []hostapi.Ship
 		if read, err = c.ShipRead(ctx, hostapi.ShipReq{Session: id, Fresh: fresh}); err == nil {
 			ships = x.withPRs(ctx, id, read, fresh)
-			x.mirrorReviews(ctx, id, ships, fresh)
 		}
 		cancel()
 	}

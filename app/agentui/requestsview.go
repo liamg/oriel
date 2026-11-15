@@ -354,7 +354,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					commentMenu(c, x.h, t, cm, hover)
 				}()
 				c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-				commentWhen(c, cm, t.Origin, widget.MonoFont(10, th.C(theme.FgGhost)))
+				commentWhen(c, cm, originOf(t), widget.MonoFont(10, th.C(theme.FgGhost)))
 				if cm.Redacted {
 					widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 				}

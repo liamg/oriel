@@ -100,6 +100,8 @@ type ShipCalls interface {
 
 // CodeHostCalls are the code hosts' pull requests and review threads: the registry's "host.codehosts" service.
 type CodeHostCalls interface {
+	// ProjectRemote is origin's URL in a session's project.
+	ProjectRemote(ctx context.Context, r ShipRef) (string, error)
 	SyncGitHub(ctx context.Context, r MirrorReq) (Mirror, error)
 	ResolveGitHub(ctx context.Context, r ResolveReq) error
 	MarkHostResolved(r ResolveReq) error

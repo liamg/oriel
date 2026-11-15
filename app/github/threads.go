@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -107,6 +108,9 @@ func (x *GitHubHost) threads(ctx context.Context, r registry.CodeRepo, pr regist
 	if len(convo.Comments) > 0 {
 		convo.Reviewer = convo.Comments[0].Author
 		convo.State = state(convo.Reviewer)
+	}
+	for _, user := range slices.Sorted(maps.Keys(states)) {
+		convo.Reviewers = append(convo.Reviewers, registry.PRReviewer{Login: user, State: reviewWord(states[user])})
 	}
 	return append(out, convo), nil
 }

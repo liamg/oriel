@@ -89,7 +89,7 @@ func TestShowcaseP6GitHub(t *testing.T) {
 	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
 		Path: "internal/api/usage/handler.go", Line: 9, Body: "Silently defaulting to 2s will hide config mistakes. Can this return an error instead?"})
 	hub.AddReview("acme/search-api", pr.Number, gh.Review{User: "priya-k", Association: "MEMBER", State: gh.ReviewChangesRequested})
-	s.Run("github.sync", nil)
+	s.Run("review.threads.sync", nil)
 	var tid core.ThreadID
 	s.Until("the mirrored thread", func() bool {
 		x.Wait()

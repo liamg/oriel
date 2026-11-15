@@ -272,6 +272,8 @@ type ReviewThread struct {
 	State    string       `json:"state,omitempty"` // the reviewer's: ReviewChanges, ReviewApproved, ReviewCommented
 	URL      string       `json:"url,omitempty"`
 	Comments []ReviewNote `json:"comments"`
+	// Reviewers are, on the conversation (no ID), each reviewer's latest verdict: those who left no comment too.
+	Reviewers []PRReviewer `json:"reviewers,omitempty"`
 }
 
 // ReviewNote is one comment of a ReviewThread. Member says its author belongs to the repo, so the agent may read it;

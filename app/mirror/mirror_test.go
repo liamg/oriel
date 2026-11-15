@@ -1,29 +1,30 @@
-package github_test
+package mirror_test
 
 import (
 	"context"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/github"
+	"github.com/liamg/oriel/app/mirror"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/registry"
 )
 
-func githubOf(s *apptest.Scene) *github.GitHub { return apptest.PluginOf[*github.GitHub](s, "github") }
+func mirrorOf(s *apptest.Scene) *mirror.Mirror { return apptest.PluginOf[*mirror.Mirror](s, "mirror") }
 
-// The agent never posts; the user's forward does. GitHub threads are mirrored inline, the agent drafts a reply, and
-// you forward it: "GitHub review · L80 · @priya-k · changes requested · synced 30s ago", the reviewer's comment,
-// "Claude draft · not sent", "↗ Forward to GitHub", "Edit", "Claude's draft reaches GitHub when you forward it.", and the status
-// line's "GH 1 changes requested".
+// The user's forward posts the agent's draft. A code host's threads (GitHub's here) are mirrored inline, the agent
+// drafts a reply, and you forward it: "Review · L80 · @priya-k · changes requested · synced 30s ago", the reviewer's
+// comment, "Claude draft · not sent", "↗ Forward to GitHub", "Edit", "Claude's draft reaches GitHub when you forward
+// it.", and the status line's "PR 1 changes requested".
 func TestGitHubReviewForward(t *testing.T) {
 	s, lw, hub, se, _ := apptest.ShipScene(t)
-	x := githubOf(s)
+	x := mirrorOf(s)
 	ag := lw.Fake.WaitStarted(t)
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
@@ -43,14 +44,14 @@ func TestGitHubReviewForward(t *testing.T) {
 		Path: "internal/api/usage/handler.go", Line: 3, Body: "Silently defaulting to 2 will hide config mistakes. Can this return an error instead?"})
 	hub.AddReview("acme/search-api", pr.Number, gh.Review{User: "priya-k", Association: "MEMBER", State: gh.ReviewChangesRequested})
 
-	s.Run("github.sync", nil)
+	s.Run("review.threads.sync", nil)
 	var tid core.ThreadID
 	s.Until("the mirrored thread", func() bool {
 		x.Wait()
 		st := s.Store().State()
 		sess, _ := st.Session(se.ID)
 		for _, th := range sess.Snapshot().Threads {
-			if th.Origin == core.OriginGitHub && th.Hosted.Root == root.ID {
+			if th.Origin == core.OriginCodeHost && th.Hosted.Host == "github" && th.Hosted.Key == strconv.FormatInt(root.ID, 10) {
 				tid = th.ID
 			}
 		}
@@ -66,12 +67,12 @@ func TestGitHubReviewForward(t *testing.T) {
 	ag.Emit(agent.TurnEnd{})
 
 	s.Run("diff.open", registry.Args{"path": file})
-	s.Until("the GitHub block between the diff's lines", func() bool {
+	s.Until("the review block between the diff's lines", func() bool {
 		f := s.Text()
-		return strings.Contains(f, "GitHub review") && strings.Contains(f, "↗ Forward to GitHub")
+		return strings.Contains(f, "Review") && strings.Contains(f, "↗ Forward to GitHub")
 	})
-	s.WantFrame("GitHub review", "· L3 ·", "@PRIYA-K", "CHANGES REQUESTED", "synced", "priya-k", "Can this return an error instead?",
-		"draft · not sent", "Edit", "Fake's draft reaches GitHub when you forward it.", "GH 1 changes requested")
+	s.WantFrame("Review", "· L3 ·", "@PRIYA-K", "CHANGES REQUESTED", "synced", "priya-k", "Can this return an error instead?",
+		"draft · not sent", "Edit", "Fake's draft reaches GitHub when you forward it.", "PR 1 changes requested")
 	s.Lint("a GitHub thread in the diff")
 	if o := s.UI().Overflowing(); len(o) > 0 {
 		t.Errorf("text drawn past its box:\n%s", strings.Join(o, "\n"))
@@ -108,12 +109,12 @@ func TestGitHubReviewForward(t *testing.T) {
 	if strings.Contains(s.Text(), "↗ Forward to GitHub") {
 		t.Error("a sent reply still offers Forward")
 	}
-	if err := s.Host().Run(context.Background(), "github.forward", registry.Args{"thread": string(tid)}); err == nil {
+	if err := s.Host().Run(context.Background(), "review.draft.forward", registry.Args{"thread": string(tid)}); err == nil {
 		t.Error("forwarding again went through")
 	}
 
 	// The echo doesn't come back as another comment.
-	s.Run("github.sync", nil)
+	s.Run("review.threads.sync", nil)
 	x.Wait()
 	st := s.Store().State()
 	sess, _ := st.Session(se.ID)

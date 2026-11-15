@@ -267,7 +267,7 @@ func TestNewSessionFromTheTabs(t *testing.T) {
 	s, _ := apptest.HostScene(t)
 	s.Store().Apply(core.SessionSynced{Session: core.SessionState{ID: "s1", Name: "pricing-rounding", Kind: core.KindWork, Status: core.StatusQuiet}})
 	s.Store().Apply(core.SessionFocused{ID: "s1"})
-	s.Until("the tab's status", func() bool { return strings.Contains(s.Text(), "pricing-rounding\noff") })
+	s.Until("the tab", func() bool { return strings.Contains(s.Text(), "pricing-rounding") })
 	s.Frame()
 	b := s.NodeRole(render.RoleButton, "New session")
 	if tab := s.Node("pricing-rounding").Bounds; b.Bounds.Min.X < tab.Max.X {

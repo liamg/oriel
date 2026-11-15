@@ -18,14 +18,14 @@ func TestAReviewedPRsBadgeSaysWhereItStands(t *testing.T) {
 	}
 
 	hub.AddReview("acme/api", pr.Number, gh.Review{User: "priya-k", State: gh.ReviewApproved})
-	s.Run("github.sync", registry.Args{"id": string(id)})
+	s.Run("review.threads.sync", registry.Args{"id": string(id)})
 	s.Run("ship.pr.open", nil)
 	s.Until("approved, the view framed so", func() bool {
 		return s.Find("Pull request: Approved") != nil && s.Find("Pull request approved") != nil
 	})
 
 	hub.Merge("acme/api", pr.Number)
-	s.Run("github.sync", registry.Args{"id": string(id)})
+	s.Run("review.threads.sync", registry.Args{"id": string(id)})
 	s.Run("ship.pr.open", nil)
 	s.Until("merged, over the approval, the view framed so", func() bool {
 		return s.Find("Pull request: Merged") != nil && s.Find("Pull request merged") != nil

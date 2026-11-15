@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -287,22 +288,24 @@ func TestReviewSessionPRTab(t *testing.T) {
 		t.Fatalf("posted %+v with %+v", rs, cs)
 	}
 
-	// The posted comments come back as GitHub threads, and resolving one in Oriel resolves it there.
+	// The posted comments come back as GitHub's threads, and resolving one in Oriel resolves it there.
 	s.UntilState("the posted comments linked", func(st core.State) bool {
 		th := thread(st, "Takes one whatever the cost.")
-		return th.Hosted != nil && th.Hosted.Root != 0
+		return th.Hosted != nil && th.Hosted.Host == "github" && th.Hosted.Key != ""
 	})
 	s.Until("the sent card", func() bool {
 		return strings.Contains(s.Text(), "SENT  3") && strings.Contains(s.Text(), "WAITING ON AUTHOR")
 	})
 	high = thread(s.Store().State(), "Takes one whatever the cost.")
 	s.Run("request.resolve", registry.Args{"id": string(id), "thread": string(high.ID)})
-	s.Until("resolved on GitHub", func() bool { return hub.Resolved(high.Hosted.Root) })
+	root, _ := strconv.ParseInt(high.Hosted.Key, 10, 64)
+	s.Until("resolved on GitHub", func() bool { return hub.Resolved(root) })
 
 	// The author's reply on GitHub is a notice.
 	nit := thread(s.Store().State(), "Name the package for what it limits.")
-	hub.AddReviewComment("acme/api", pr.Number, gh.ReviewComment{User: "mkhan", InReplyTo: nit.Hosted.Root, Body: "Renamed it to ratelimit."})
-	s.Run("github.sync", registry.Args{"id": string(id)})
+	nitRoot, _ := strconv.ParseInt(nit.Hosted.Key, 10, 64)
+	hub.AddReviewComment("acme/api", pr.Number, gh.ReviewComment{User: "mkhan", InReplyTo: nitRoot, Body: "Renamed it to ratelimit."})
+	s.Run("review.threads.sync", registry.Args{"id": string(id)})
 	s.Until("the author's reply, told", func() bool {
 		for _, n := range s.Store().State().Notifications {
 			if n.Title == "mkhan replied" && strings.Contains(n.Text, "Renamed it to ratelimit.") {
@@ -314,7 +317,7 @@ func TestReviewSessionPRTab(t *testing.T) {
 
 	// A push is seen by the next sync: the checkout moves to it, and the agent's asked to review it.
 	head := push("package ratelimit\n\nfunc Take(cost int) int { return cost }\n")
-	s.Run("github.sync", registry.Args{"id": string(id)})
+	s.Run("review.threads.sync", registry.Args{"id": string(id)})
 	s.UntilState("the re-review asked", func(st core.State) bool {
 		sess, _ := st.Session(id)
 		se := sess.Snapshot()
@@ -331,7 +334,7 @@ func TestReviewSessionPRTab(t *testing.T) {
 
 	// Once the PR is merged, the tab says so and offers to archive the review; nothing more can be posted.
 	hub.Merge("acme/api", pr.Number)
-	s.Run("github.sync", registry.Args{"id": string(id)})
+	s.Run("review.threads.sync", registry.Args{"id": string(id)})
 	s.Run("ship.pr.open", nil)
 	s.Until("the merged PR", func() bool {
 		text := s.Text()

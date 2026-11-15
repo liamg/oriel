@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/liamg/oriel/app/github"
+	"github.com/liamg/oriel/app/mirror"
 
 	"github.com/liamg/oriel/app/assistant"
 
@@ -63,7 +64,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&updates.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, dictation.NewVoiceEntries(dictate), dictate,
 		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &github.GitHubHost{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
-		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &github.GitHub{}, &settings.Secrets{},
+		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &mirror.Mirror{}, &settings.Secrets{},
 		&luaconfig.Lua{Dir: c.ConfigDir}, &plugins.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
 	)

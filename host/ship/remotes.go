@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host/hostcore"
 )
 
 // remotes keeps each checkout's origin URL as its repo's config had it: a sync, a read and a PR lookup each want
@@ -52,4 +53,14 @@ func (x *Ships) remoteURL(ctx context.Context, repo gitx.Repo, fresh bool) strin
 	r.urls[repo.Dir] = remoteURL{url: url, config: at}
 	r.mu.Unlock()
 	return url
+}
+
+// ProjectRemote is origin's URL in a session's project.
+func (x *Ships) ProjectRemote(ctx context.Context, r ShipRef) (_ string, err error) {
+	defer x.env.Recover("ProjectRemote", &err)
+	_, _, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
+	if err != nil {
+		return "", err
+	}
+	return x.remoteURL(ctx, repo, false), nil
 }

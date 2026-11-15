@@ -128,11 +128,11 @@ func TestAzureShipAndReviews(t *testing.T) {
 	}
 
 	// Review mirroring: the reviewer's thread on a line becomes the session's, the agent's draft reply is forwarded by
-	// github.forward into that thread on Azure DevOps, and the draft is marked sent.
+	// review.draft.forward into that thread on Azure DevOps, and the draft is marked sent.
 	priya := azure.Identity{ID: "6f3c2a10-0000-4000-8000-000000000002", DisplayName: "Priya K", UniqueName: "priya@acme.com"}
 	az.Vote(prs[0].ID, priya, -5)
 	onLine := az.AddFileThread(prs[0].ID, "src/chart.ts", 1, priya, "Can chart take the week as an argument?")
-	s.Run("ship.refresh", nil)
+	s.Run("review.threads.sync", nil)
 	var tid core.ThreadID
 	shipSettle(s, t, "the mirrored thread", func() bool {
 		st := s.Store().State()
@@ -155,7 +155,7 @@ func TestAzureShipAndReviews(t *testing.T) {
 	if cs := az.Threads(prs[0].ID)[onLine-1].Comments; len(cs) != 1 {
 		t.Fatalf("Azure DevOps was written to before the forward: %+v", cs)
 	}
-	if err := s.Host().Run(context.Background(), "github.forward", registry.Args{"thread": string(tid)}); err != nil {
+	if err := s.Host().Run(context.Background(), "review.draft.forward", registry.Args{"thread": string(tid)}); err != nil {
 		t.Fatal(err)
 	}
 	shipSettle(s, t, "the reply on Azure DevOps", func() bool {
