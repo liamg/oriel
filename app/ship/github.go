@@ -603,7 +603,7 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 		if widget.Button(c, "edit", "Edit", widget.ButtonOpts{Ghost: true, Disabled: busy, Help: "git/github#forward"}) {
 			x.run("github.edit", args)
 		}
-		c.Text("never", services.ProviderTitle(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+" never posts to "+hostLabel(x.h, t.Hosted)+". You do.",
+		c.Text("draft", services.ProviderTitle(x.h, cmp.Or(cm.Name, se.Snapshot().Agent.Provider))+"'s draft reaches "+hostLabel(x.h, t.Hosted)+" when you forward it.",
 			widget.UIFont(11, th.C(theme.FgFaint)))
 	})
 }

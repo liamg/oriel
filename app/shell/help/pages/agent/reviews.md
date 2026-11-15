@@ -126,7 +126,7 @@ at the commit the review read. A comment the host won't put on the diff goes in 
 The comments come back from GitHub as its review threads, each in the thread it was posted from, and **Sent** lists
 them with where each stands: *waiting on author*, *author replied*, *code changed* or *resolved*, each with
 **Jump to code**. The author's
-replies reach the agent, which can draft an answer for you to forward; it never posts. Resolving a thread in Oriel
+replies reach the agent, which can draft an answer for you to forward. Resolving a thread in Oriel
 resolves it on GitHub too, and reopening it reopens it there (a code host plugin's `resolve` does the same for its
 host).
 

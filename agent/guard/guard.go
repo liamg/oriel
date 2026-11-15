@@ -1,5 +1,5 @@
-// Package guard is the guard rails every provider's agent is held to, before its own gate has a say: it never posts
-// to a code review, never edits the user's checkouts, and in a sandbox reaches GitHub only through the gateway.
+// Package guard is the guard rails every provider's agent is held to, before its own gate has a say: it never edits
+// the user's checkouts, and in a sandbox reaches GitHub only through the gateway.
 package guard
 
 import (
@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/agent"
-	"github.com/liamg/oriel/gh"
 )
 
 // Gateway is the prefix of the sandbox gateway's tools.
@@ -19,10 +18,6 @@ const Gateway = "mcp__oriel-gw__oriel__"
 
 // gatewayServer is the prefix of every tool the sandbox gateway carries: its own, and the user's servers behind it.
 const gatewayServer = "mcp__oriel-gw__"
-
-// NoPosting is why an agent's attempt to post to a pull request's review or conversation is refused.
-const NoPosting = "Oriel: agents never post to GitHub reviews. Answer the thread with mcp__oriel__reply: on a GitHub " +
-	"thread your reply is a draft, and the user forwards it."
 
 var (
 	// In a sandbox gh has no credentials; it's caught as a command opening the line or following ; or &&.
@@ -46,7 +41,7 @@ type Decision struct {
 // call asks Oriel, which answers from the session's rules and the app's policy or puts it to the user; an agent
 // nobody can ask (PolicyRefuse) is answered here instead: its Allow goes ahead, the rest is refused.
 func Check(spec agent.StartSpec, tool string, input json.RawMessage) Decision {
-	if strings.HasPrefix(tool, "mcp__oriel__") || spec.Sandbox != nil && strings.HasPrefix(tool, gatewayServer) && !gh.ReviewTool(tool) {
+	if strings.HasPrefix(tool, "mcp__oriel__") || spec.Sandbox != nil && strings.HasPrefix(tool, gatewayServer) {
 		return Decision{Allow: true}
 	}
 	var in struct {
@@ -55,9 +50,6 @@ func Check(spec agent.StartSpec, tool string, input json.RawMessage) Decision {
 		Notebook string `json:"notebook_path"`
 	}
 	_ = json.Unmarshal(input, &in)
-	if gh.ReviewTool(tool) || tool == "Bash" && gh.PostsReview(in.Command) {
-		return Decision{Deny: true, Reason: NoPosting}
-	}
 	if strings.HasPrefix(tool, "mcp__") {
 		switch {
 		case spec.Policy != agent.PolicyRefuse:

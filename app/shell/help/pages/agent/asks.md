@@ -39,8 +39,7 @@ as you). **Allow once** (`y`) lets this call through. **Allow for this session**
 the same kind of call goes through in this session from now on, after a restart too: `Bash(go test:*)` for commands
 starting `go test` (one alone: chained, piped, redirected or with a `$(…)` in it, it asks again), `Edit` for edits, a tool's name for its calls. **Allow for all sessions** (`⇧A`) makes it a
 rule for every session ([For all sessions](#all-sessions)). **Deny** (`n`) refuses it, and the agent reads that as
-the tool's result. Whatever the agent, it never posts to a code review, and an edit of your own checkout is refused
-before you're asked.
+the tool's result. Whatever the agent, an edit of your own checkout is refused before you're asked.
 
 ### MCP calls {#mcp}
 

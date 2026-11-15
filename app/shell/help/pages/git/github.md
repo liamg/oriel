@@ -9,7 +9,8 @@ related: [git/ship, agent/requests, files/diff]
 Review comments on the session's pull requests come into Oriel as threads, between the lines they're about in the
 diff and the editor, and in Requests: GitHub's, and those of any code host whose plugin mirrors them (GitLab's, Azure
 DevOps'). The agent answers them like any thread, but only as a **draft**: nothing reaches the host until you forward
-it. The agent never posts to a code host. You do.
+it. What else an agent may post is its own: in a sandbox the gateway's rules decide its code host tools, and on your
+machine its own settings do.
 
 ## Threads {#threads}
 

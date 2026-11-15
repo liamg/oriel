@@ -2,7 +2,6 @@ package host
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -184,29 +183,6 @@ func TestGitHubReviewMirror(t *testing.T) {
 				t.Errorf("a trusted user's comment is redacted: %+v", c)
 			}
 		}
-	}
-}
-
-// A permission ask to post to a review is refused before the user or a rule can allow it.
-func TestAgentAskingToPostAReviewIsRefused(t *testing.T) {
-	r := newRig(t)
-	id, a := r.workSession("start")
-	a.WaitSent(t)
-	r.w.addRule(id, "Bash(gh api:*)")
-	cmd, _ := json.Marshal(map[string]string{"command": "gh api repos/acme/api/pulls/7/comments/9/replies -f body=Agreed"})
-	select {
-	case d := <-a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Input: cmd}):
-		if d.Allow || !strings.Contains(d.Note, "never post") {
-			t.Errorf("decision %+v", d)
-		}
-	case <-time.After(waitTimeout):
-		t.Fatal("no answer")
-	}
-	if d := <-a.Ask(agent.Permission{ID: "p2", Tool: "mcp__github__add_issue_comment", Input: json.RawMessage(`{}`)}); d.Allow {
-		t.Errorf("an MCP review comment was allowed: %+v", d)
-	}
-	for _, ask := range r.session(id).Asks {
-		t.Errorf("the user was asked: %+v", ask)
 	}
 }
 
