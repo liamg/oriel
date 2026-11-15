@@ -135,6 +135,10 @@ func (x *Requests) newInline(a registry.Args) error {
 		o.focus, o.toAuthor = true, n.toAuthor
 		return nil
 	} else if o != nil {
+		if filepath.Clean(o.path) == filepath.Clean(n.path) && n.line <= o.line && o.line <= max(n.end, n.line) {
+			// The same thread, widened to more lines: what's written in it stays.
+			n.draft, n.append = o.draft, o.append
+		}
 		o.release()
 	}
 	st.inline = n

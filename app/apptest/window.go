@@ -366,17 +366,23 @@ func (w *Window) RightClickText(text string) {
 // the click before it builds another, so a frame built meanwhile, by work landing, can't move what it lands on.
 func (w *Window) clickOn(what string, find func(headless.Frame) (render.Point, bool), button render.Buttons) {
 	w.T.Helper()
-	w.clicksOn(what, find, button, 1)
+	w.clicksOn(what, find, button, 1, 0)
+}
+
+// ShiftClickText clicks the middle of the first run of text in the frame on screen with Shift held.
+func (w *Window) ShiftClickText(text string) {
+	w.T.Helper()
+	w.clicksOn(`"`+text+`" to Shift-click`, textIn(text, false), render.ButtonPrimary, 1, render.ModShift)
 }
 
 // ClickTextTimes clicks the middle of the first run of text n times in quick succession: 2 is a double click, 3 a
 // triple. All n are aimed at once, at where the text has settled, so nothing moving between them sends one astray.
 func (w *Window) ClickTextTimes(text string, n int) {
 	w.T.Helper()
-	w.clicksOn(`"`+text+`" to click`, textIn(text, false), render.ButtonPrimary, n)
+	w.clicksOn(`"`+text+`" to click`, textIn(text, false), render.ButtonPrimary, n, 0)
 }
 
-func (w *Window) clicksOn(what string, find func(headless.Frame) (render.Point, bool), button render.Buttons, n int) {
+func (w *Window) clicksOn(what string, find func(headless.Frame) (render.Point, bool), button render.Buttons, n int, mods render.Mods) {
 	w.T.Helper()
 	find = enabledAt(w, find)
 	for deadline := time.Now().Add(Timeout); ; {
@@ -387,8 +393,8 @@ func (w *Window) clicksOn(what string, find func(headless.Frame) (render.Point, 
 			if p, ok := find(fs[len(fs)-1]); ok {
 				w.Win.Send(render.PointerEvent{Kind: render.PointerMove, Pos: p})
 				for range n {
-					w.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: button})
-					w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: button})
+					w.Win.Send(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: button, Mods: mods})
+					w.Win.Send(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: button, Mods: mods})
 				}
 				sent = true
 			}

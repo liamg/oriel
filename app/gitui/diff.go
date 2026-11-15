@@ -103,6 +103,7 @@ type diffState struct {
 	head    bool // against HEAD (Uncommitted's), not the base (Changed's)
 	open    map[string]bool
 	sel     diffSel
+	span    diffSpan
 	reveal  bool
 	tries   int  // frames reveal has waited for its target to be built and laid out
 	making  bool // reveal's file was waiting for its diff last frame
@@ -555,6 +556,11 @@ func (st *diffState) selLine() (path string, line, end int, ok bool) {
 			}
 		}
 		return max(h.NewStart, 1)
+	}
+	if first, last, ok := st.spanned(); ok && last < len(h.Lines) {
+		if a, b := near(first), near(last); b > a {
+			return path, a, b, true
+		}
 	}
 	if l := st.sel.line; l >= 0 && l < len(h.Lines) {
 		return path, near(l), 0, true
