@@ -58,7 +58,7 @@ func TestHostCallsRecoverPanics(t *testing.T) {
 }
 
 // embedded are the part types the host embeds, whose methods are its own.
-var embedded = map[string]bool{"Logs": true, "Stats": true, "Registry": true, "Runner": true, "Boxes": true, "GitHub": true,
+var embedded = map[string]bool{"Logs": true, "Stats": true, "Registry": true, "Runner": true, "Boxes": true, "Ships": true,
 	"Jobs": true, "Utilities": true, "Reviews": true, "Worktrees": true}
 
 func receiver(fn *ast.FuncDecl) string {

@@ -1,4 +1,4 @@
-package ship_test
+package github_test
 
 import (
 	"context"

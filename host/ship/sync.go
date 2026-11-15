@@ -1,4 +1,4 @@
-package github
+package ship
 
 import (
 	"cmp"
@@ -15,7 +15,7 @@ import (
 )
 
 // SyncGitHub mirrors the review of each of a session's projects' PRs into its threads.
-func (x *GitHub) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error) {
+func (x *Ships) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err error) {
 	defer x.env.Recover("SyncGitHub", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
@@ -73,7 +73,7 @@ func (x *GitHub) SyncGitHub(ctx context.Context, r MirrorReq) (_ Mirror, err err
 }
 
 // reviewedPR is the pull request a review session reads, as GitHub has it now.
-func (x *GitHub) reviewedPR(ctx context.Context, repo gitx.Repo, url string) (*gh.PR, gh.Repo, error) {
+func (x *Ships) reviewedPR(ctx context.Context, repo gitx.Repo, url string) (*gh.PR, gh.Repo, error) {
 	ghRepo, n, err := gh.ParsePR(url)
 	if err != nil {
 		return nil, ghRepo, err
@@ -86,7 +86,7 @@ func (x *GitHub) reviewedPR(ctx context.Context, repo gitx.Repo, url string) (*g
 }
 
 // mirrorPR brings one PR's review threads and conversation into the session; kick says the agent has something new.
-func (x *GitHub) mirrorPR(ctx context.Context, id core.SessionID, p core.Project, repo gitx.Repo, ghRepo gh.Repo, pr *gh.PR, trust Trust) (MirrorPR, bool, error) {
+func (x *Ships) mirrorPR(ctx context.Context, id core.SessionID, p core.Project, repo gitx.Repo, ghRepo gh.Repo, pr *gh.PR, trust Trust) (MirrorPR, bool, error) {
 	c := x.github(repo)
 	comments, err := c.ReviewComments(ctx, ghRepo, pr.Number)
 	if err != nil {
@@ -184,7 +184,7 @@ func (x *GitHub) mirrorPR(ctx context.Context, id core.SessionID, p core.Project
 }
 
 // githubMe is who the user is on GitHub, asked once.
-func (x *GitHub) githubMe(ctx context.Context, c gh.Client) string {
+func (x *Ships) githubMe(ctx context.Context, c gh.Client) string {
 	x.mirror.mu2.Lock()
 	defer x.mirror.mu2.Unlock()
 	if x.mirror.me == "" {
@@ -195,7 +195,7 @@ func (x *GitHub) githubMe(ctx context.Context, c gh.Client) string {
 
 // truster says whose text the agent may read: a trusted user, or a member of a trusted org (the repo's owner when
 // none is set).
-func (x *GitHub) truster(ctx context.Context, c gh.Client, repo gh.Repo, trust Trust) func(user, assoc string) bool {
+func (x *Ships) truster(ctx context.Context, c gh.Client, repo gh.Repo, trust Trust) func(user, assoc string) bool {
 	orgs := trust.Orgs
 	if len(orgs) == 0 && len(trust.Users) == 0 {
 		orgs = []string{repo.Owner}
@@ -233,7 +233,7 @@ func (x *GitHub) truster(ctx context.Context, c gh.Client, repo gh.Repo, trust T
 }
 
 // githubFor is a branch's PR: the last githubTTL's reading unless fresh.
-func (x *GitHub) githubFor(ctx context.Context, id core.SessionID, project string, repo gitx.Repo, ghRepo gh.Repo, hostname, token, branch string, fresh bool) githubRead {
+func (x *Ships) githubFor(ctx context.Context, id core.SessionID, project string, repo gitx.Repo, ghRepo gh.Repo, hostname, token, branch string, fresh bool) githubRead {
 	st := &x.ship
 	key := shipKey(id, project) + "/" + branch
 	st.mu.Lock()

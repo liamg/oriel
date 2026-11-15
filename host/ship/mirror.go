@@ -1,4 +1,4 @@
-package github
+package ship
 
 import (
 	"cmp"
@@ -43,7 +43,7 @@ type mirrored struct {
 // applyMirror brings a PR's threads on host (GitHub when "") in line with threads, and dismisses its mirrored review
 // threads the host no longer has; kick says the agent has something new. It holds the threads' edit lock, so the
 // agent's own changes to them meanwhile aren't lost.
-func (x *GitHub) applyMirror(id core.SessionID, host, repo string, pr int, threads []mirrored) (bool, error) {
+func (x *Ships) applyMirror(id core.SessionID, host, repo string, pr int, threads []mirrored) (bool, error) {
 	kick := false
 	err := x.st.Mutate(id, func(se core.SessionState) error {
 		kick = x.mirrorInto(se, host, repo, pr, threads)
@@ -53,7 +53,7 @@ func (x *GitHub) applyMirror(id core.SessionID, host, repo string, pr int, threa
 }
 
 // mirrorInto is applyMirror on se, under the edit lock.
-func (x *GitHub) mirrorInto(se core.SessionState, host, repo string, pr int, threads []mirrored) bool {
+func (x *Ships) mirrorInto(se core.SessionState, host, repo string, pr int, threads []mirrored) bool {
 	id := se.ID
 	now := x.env.Now().UTC()
 	origin := core.OriginGitHub
@@ -183,7 +183,7 @@ type ReviewThread = hostapi.ReviewThread
 type ReviewComment = hostapi.ReviewComment
 
 // MirrorReview brings a PR's review threads into the session, and hands the agent what's new.
-func (x *GitHub) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error) {
+func (x *Ships) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error) {
 	defer x.env.Recover("MirrorReview", &err)
 	if r.Host == "" {
 		return errors.New("which code host's review?")
@@ -229,7 +229,7 @@ func (x *GitHub) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error
 type ForwardedReq = hostapi.ForwardedReq
 
 // DraftOf is a thread's draft reply to forward: its body, refusing one that isn't a draft or has gone already.
-func (x *GitHub) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {
+func (x *Ships) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {
 	defer x.env.Recover("DraftOf", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
@@ -260,14 +260,14 @@ func (x *GitHub) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {
 
 // Forwarded marks a draft reply sent, once its code host has it. A mirror can meanwhile take its echo for a new
 // comment: ForwardHost posts and marks with mirroring held off.
-func (x *GitHub) Forwarded(r ForwardedReq) (_ core.Comment, err error) {
+func (x *Ships) Forwarded(r ForwardedReq) (_ core.Comment, err error) {
 	defer x.env.Recover("Forwarded", &err)
 	x.mirror.mu.Lock()
 	defer x.mirror.mu.Unlock()
 	return x.forwarded(r.Session, r.Thread, r.Comment, 0, r.HostID)
 }
 
-func (x *GitHub) forwarded(id core.SessionID, thread core.ThreadID, comment string, num int64, key string) (core.Comment, error) {
+func (x *Ships) forwarded(id core.SessionID, thread core.ThreadID, comment string, num int64, key string) (core.Comment, error) {
 	var sent core.Comment
 	_, err := hostcore.MutateThread(x.st, x.env.Now(), id, thread, func(t *core.Thread) error {
 		for i := range t.Comments {

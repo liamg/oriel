@@ -1,4 +1,4 @@
-package github
+package ship
 
 import (
 	"context"
@@ -61,15 +61,15 @@ const githubTTL = 30 * time.Second
 func shipKey(id core.SessionID, project string) string { return string(id) + "/" + project }
 
 // github is the GitHub client for a checkout.
-func (x *GitHub) github(r gitx.Repo) gh.Client { return x.githubOn(r, "", "") }
+func (x *Ships) github(r gitx.Repo) gh.Client { return x.githubOn(r, "", "") }
 
 // githubOn is the GitHub client for a checkout, on a GitHub Enterprise server's hostname when given (gh.Clients).
-func (x *GitHub) githubOn(r gitx.Repo, hostname, token string) gh.Client {
+func (x *Ships) githubOn(r gitx.Repo, hostname, token string) gh.Client {
 	return x.clients.On(r.Dir, r.Env, hostname, token)
 }
 
 // ShipRead is every project of a session on its way to a PR, or those r names.
-func (x *GitHub) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
+func (x *Ships) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
 	defer x.env.Recover("ShipRead", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
@@ -93,7 +93,7 @@ func (x *GitHub) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) 
 	return out, nil
 }
 
-func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.Project, fresh bool) Ship {
+func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Project, fresh bool) Ship {
 	s := Ship{Project: p.Name, Branch: p.Branch, Base: strings.TrimPrefix(p.Base, "origin/"), ReadOnly: p.ReadOnly || p.Detached}
 	s.CommitDraft = x.env.ReadDraft(se.ID, p.Name, "commit")
 	s.PRDraft = x.env.ReadDraft(se.ID, p.Name, "pr")
@@ -170,7 +170,7 @@ func (x *GitHub) shipProject(ctx context.Context, se core.SessionState, p core.P
 
 // ShipCommit commits a project's files with the user's git identity, drops the commit draft it used, and returns the
 // commit's hash.
-func (x *GitHub) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err error) {
+func (x *Ships) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err error) {
 	defer x.env.Recover("ShipCommit", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -192,7 +192,7 @@ func (x *GitHub) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err
 }
 
 // ShipPush pushes a project's branch to origin: the session's own branch only.
-func (x *GitHub) ShipPush(ctx context.Context, r ShipRef) (err error) {
+func (x *Ships) ShipPush(ctx context.Context, r ShipRef) (err error) {
 	defer x.env.Recover("ShipPush", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -207,7 +207,7 @@ func (x *GitHub) ShipPush(ctx context.Context, r ShipRef) (err error) {
 
 // ShipSync fetches origin and rebases a project's branch onto its base, carrying uncommitted work over. One that
 // conflicts is undone and says where.
-func (x *GitHub) ShipSync(ctx context.Context, r ShipRef) (err error) {
+func (x *Ships) ShipSync(ctx context.Context, r ShipRef) (err error) {
 	defer x.env.Recover("ShipSync", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -235,7 +235,7 @@ func (x *GitHub) ShipSync(ctx context.Context, r ShipRef) (err error) {
 
 // ShipMergeDefault merges a project's branch into the repo's default branch, here and not pushed (gitx.MergeInto):
 // the session's own branch only, and its committed work only.
-func (x *GitHub) ShipMergeDefault(ctx context.Context, r ShipRef) (m gitx.Merge, err error) {
+func (x *Ships) ShipMergeDefault(ctx context.Context, r ShipRef) (m gitx.Merge, err error) {
 	defer x.env.Recover("ShipMergeDefault", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -273,7 +273,7 @@ func localDefault(ctx context.Context, repo gitx.Repo) string {
 type RenameReq = hostapi.RenameReq
 
 // ShipRename renames a project's branch. The app refuses first when its PR is open on it.
-func (x *GitHub) ShipRename(ctx context.Context, r RenameReq) (err error) {
+func (x *Ships) ShipRename(ctx context.Context, r RenameReq) (err error) {
 	se, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return err
@@ -301,7 +301,7 @@ func (x *GitHub) ShipRename(ctx context.Context, r RenameReq) (err error) {
 }
 
 // ShipDraft saves a draft the user wrote, or drops it.
-func (x *GitHub) ShipDraft(ctx context.Context, r DraftReq) (err error) {
+func (x *Ships) ShipDraft(ctx context.Context, r DraftReq) (err error) {
 	defer x.env.Recover("ShipDraft", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {

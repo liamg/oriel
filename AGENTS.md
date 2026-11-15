@@ -108,7 +108,7 @@ If the issue is silent or ambiguous on something that matters, ask rather than i
   drops a count.
 - `tools/layout` keeps `app/<feature>` packages apart: a feature never imports another, nor the root `app`; features
   share `app/kit` and meet through registry services, and their tests drive the app through `app/apptest`.
-- `tools/layout` keeps the session host's parts (`host/agentrun`, `host/worktree`, `host/github`…) apart: each sees
+- `tools/layout` keeps the session host's parts (`host/agentrun`, `host/worktree`, `host/ship`…) apart: each sees
   the host as a `host/hostcore` State, and never imports another; only the `host` facade wires them together.
 - `cfg.Store` and `cfg.Host` are at 0: a plugin reads and changes the state through its `plugin.Host` (`State`,
   `Apply`), and reaches the session host and other features through registry services (`Editors`, `GitTrees`,

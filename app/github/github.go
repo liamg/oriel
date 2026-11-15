@@ -1,4 +1,4 @@
-package ship
+package github
 
 import (
 	"cmp"
@@ -41,12 +41,6 @@ const githubPoll = 30 * time.Second
 
 // GitHubStatusView is the status line's segment: "GH 1 changes requested".
 const GitHubStatusView = "statusline.left.70-github"
-
-var (
-	tGitHub       = theme.Declare("github.accent", "violet")
-	tGitHubDanger = theme.Declare("github.changes", "warn")
-	tGitHubOK     = theme.Declare("github.approved", "ok")
-)
 
 type GitHub struct {
 	kit.Disposer
@@ -497,9 +491,9 @@ func (x *GitHub) head(c *ui.Ctx, session, thread string) {
 	}
 	c.Text("l", place, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	if g.Reviewer != "" {
-		widget.Chip(c, "who", "@"+g.Reviewer, th.C(tGitHub), "git/github#threads")
+		widget.Chip(c, "who", "@"+g.Reviewer, th.C(prui.TReviewAccent), "git/github#threads")
 	}
-	if word, tok := githubReviewWord(g.State); word != "" {
+	if word, tok := prui.ReviewWord(g.State); word != "" {
 		widget.Chip(c, "state", word, th.C(tok), "git/github#threads")
 	}
 	if !t.Open() {
@@ -512,19 +506,6 @@ func (x *GitHub) head(c *ui.Ctx, session, thread string) {
 	if m, ok := x.mirror(core.SessionID(session)); ok && !m.at.IsZero() {
 		c.Text("synced", "synced "+syncedAgo(c.Now(), m.at), widget.MonoFont(10, th.C(theme.FgGhost)))
 	}
-}
-
-// githubReviewWord is a reviewer's state, GitHub's or another code host's (registry.ReviewChanges…), in words.
-func githubReviewWord(s string) (string, theme.TokenID) {
-	switch s {
-	case gh.ReviewChangesRequested, registry.ReviewChanges:
-		return "changes requested", tGitHubDanger
-	case gh.ReviewApproved, registry.ReviewApproved:
-		return "approved", tGitHubOK
-	case gh.ReviewCommented, registry.ReviewCommented:
-		return "commented", theme.FgFaint
-	}
-	return "", theme.FgFaint
 }
 
 // hostWords are how a mirrored thread's code host names a PR; GitHub's when host is "".
@@ -577,7 +558,7 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 		c.Column("edit", ui.Style{W: ui.Px(width), Gap: 6, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			r := widget.Prose(c, "draft", e, widget.ProseOpts{Label: "Edit the draft reply", Lines: 8, MinLines: 3, Help: "git/github#forward"})
 			c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				save := widget.Button(c, "save", "Save draft", widget.ButtonOpts{Primary: true, Tone: th.C(tGitHub), Help: "git/github#forward"})
+				save := widget.Button(c, "save", "Save draft", widget.ButtonOpts{Primary: true, Tone: th.C(prui.TReviewAccent), Help: "git/github#forward"})
 				if save || r.Submitted {
 					a := registry.Args{"body": *e}
 					for k, v := range args {
@@ -596,7 +577,7 @@ func (x *GitHub) comment(c *ui.Ctx, session, thread, comment string, width float
 	busy := x.forwarding[comment]
 	x.mu.Unlock()
 	c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
-		if widget.Button(c, "forward", "↗ Forward to "+hostLabel(x.h, t.Hosted), widget.ButtonOpts{Primary: true, Tone: th.C(tGitHub), Busy: busy,
+		if widget.Button(c, "forward", "↗ Forward to "+hostLabel(x.h, t.Hosted), widget.ButtonOpts{Primary: true, Tone: th.C(prui.TReviewAccent), Busy: busy,
 			BusyLabel: "Forwarding", Help: "git/github#forward"}) {
 			x.run("github.forward", args)
 		}
@@ -640,7 +621,7 @@ func (x *GitHub) statusSegment(c *ui.Ctx) {
 	var parts []string
 	for _, s := range []string{gh.ReviewChangesRequested, gh.ReviewApproved} {
 		if n := counts[s]; n > 0 {
-			word, _ := githubReviewWord(s)
+			word, _ := prui.ReviewWord(s)
 			parts = append(parts, fmt.Sprintf("%d %s", n, word))
 		}
 	}
@@ -649,6 +630,6 @@ func (x *GitHub) statusSegment(c *ui.Ctx) {
 	}
 	text := "GH " + strings.Join(parts, " · ")
 	c.Row("github", ui.Style{H: ui.Flex(1), Gap: 6, Cross: ui.Center, Help: "git/github#status", Role: ui.RoleStatus, Label: text}, func(c *ui.Ctx) {
-		c.Text("t", text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Medium}, Color: c.Theme().C(tGitHub)})
+		c.Text("t", text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Medium}, Color: c.Theme().C(prui.TReviewAccent)})
 	})
 }

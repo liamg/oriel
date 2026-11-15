@@ -270,9 +270,9 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 			c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Row("place", ui.Style{Clip: true}, func(c *ui.Ctx) { c.Text("p", place, widget.MonoFont(11, th.C(theme.FgMuted))) })
 				if r := t.Hosted.Reviewer; r != "" {
-					widget.Chip(c, "who", "@"+r, th.C(tGitHub), "git/github#threads")
+					widget.Chip(c, "who", "@"+r, th.C(prui.TReviewAccent), "git/github#threads")
 				}
-				if word, tok := githubReviewWord(t.Hosted.State); word != "" {
+				if word, tok := prui.ReviewWord(t.Hosted.State); word != "" {
 					widget.Chip(c, "state", word, th.C(tok), "git/github#threads")
 				}
 				if !t.Open() {
@@ -301,7 +301,7 @@ func (x *Ship) reviewThreads(c *ui.Ctx, se core.SessionState, s shipRead, width 
 				})
 			}
 			if n := len(t.Drafts()); n > 0 {
-				c.Text("drafts", fmt.Sprintf("%d %s to forward", n, kit.Plural(n, "draft reply", "draft replies")), widget.MonoFont(10.5, th.C(tGitHub)))
+				c.Text("drafts", fmt.Sprintf("%d %s to forward", n, kit.Plural(n, "draft reply", "draft replies")), widget.MonoFont(10.5, th.C(prui.TReviewAccent)))
 			}
 		})
 	}

@@ -1,4 +1,4 @@
-package github
+package ship
 
 import (
 	"context"
@@ -24,7 +24,7 @@ func TestRemoteURLReadOnceUntilTheConfigChanges(t *testing.T) {
 		}
 	}
 	set("https://github.com/acme/search-api.git")
-	var x GitHub
+	var x Ships
 	ctx := context.Background()
 	if got := x.remoteURL(ctx, gitx.Repo{Dir: r.Dir}, false); got != "https://github.com/acme/search-api.git" {
 		t.Fatalf("origin %q", got)
@@ -56,7 +56,7 @@ func TestAFailedRemoteReadIsntKept(t *testing.T) {
 	if out, err := exec.Command("git", "-C", r.Dir, "remote", "add", "origin", "https://github.com/acme/search-api.git").CombinedOutput(); err != nil {
 		t.Fatalf("%v: %s", err, out)
 	}
-	var x GitHub
+	var x Ships
 	ctx := context.Background()
 	path := os.Getenv("PATH")
 	t.Setenv("PATH", t.TempDir())
@@ -73,7 +73,7 @@ func TestAFailedRemoteReadIsntKept(t *testing.T) {
 // made, say) never sticks, even with the config's time where it was.
 func TestNoOriginIsAskedAgain(t *testing.T) {
 	r := gittest.New(t)
-	var x GitHub
+	var x Ships
 	ctx := context.Background()
 	config := filepath.Join(r.Dir, ".git", "config")
 	fi, err := os.Stat(config)
@@ -99,7 +99,7 @@ func TestNoOriginIsAskedAgain(t *testing.T) {
 func TestAFreshReadAsksAgain(t *testing.T) {
 	r := gittest.New(t)
 	r.Git("remote", "add", "origin", "https://github.com/acme/search-api.git")
-	var x GitHub
+	var x Ships
 	ctx := context.Background()
 	config := filepath.Join(r.Dir, ".git", "config")
 	fi, err := os.Stat(config)

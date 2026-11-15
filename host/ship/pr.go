@@ -1,4 +1,4 @@
-package github
+package ship
 
 import (
 	"context"
@@ -15,13 +15,13 @@ import (
 type PRSeenReq = hostapi.PRSeenReq
 
 // SawPR keeps what a code host said of a branch's pull request.
-func (x *GitHub) SawPR(r PRSeenReq) (err error) {
+func (x *Ships) SawPR(r PRSeenReq) (err error) {
 	defer x.env.Recover("SawPR", &err)
 	x.sawPR(r.Session, r.Project, r.Branch, r.Open)
 	return nil
 }
 
-func (x *GitHub) sawPR(id core.SessionID, project, branch string, open bool) {
+func (x *Ships) sawPR(id core.SessionID, project, branch string, open bool) {
 	x.ship.mu.Lock()
 	defer x.ship.mu.Unlock()
 	key := shipKey(id, project) + "/" + branch
@@ -33,14 +33,14 @@ func (x *GitHub) sawPR(id core.SessionID, project, branch string, open bool) {
 }
 
 // PROpen says the last code host reading of a branch found its PR open, whose page shows the PR rather than a draft.
-func (x *GitHub) PROpen(id core.SessionID, project, branch string) bool {
+func (x *Ships) PROpen(id core.SessionID, project, branch string) bool {
 	x.ship.mu.Lock()
 	defer x.ship.mu.Unlock()
 	return x.ship.open[shipKey(id, project)+"/"+branch]
 }
 
 // ShipBranch is the branch a project's PR is raised from: the session's own, refused when the worktree is off it.
-func (x *GitHub) ShipBranch(ctx context.Context, r ShipRef) (_ string, err error) {
+func (x *Ships) ShipBranch(ctx context.Context, r ShipRef) (_ string, err error) {
 	defer x.env.Recover("ShipBranch", &err)
 	_, p, _, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {

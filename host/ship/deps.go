@@ -1,6 +1,6 @@
-// Package github is the session host's side of code hosts: a session's projects on their way to a merged pull request
+// Package ship is the session host's side of code hosts: a session's projects on their way to a merged pull request
 // (the Ship page), their pull requests on GitHub, and review threads mirrored from GitHub or another code host.
-package github
+package ship
 
 import (
 	"net/http"
@@ -11,8 +11,9 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// GitHub is the host's code host side.
-type GitHub struct {
+// Ships is the host's code host side: each session's projects on their way to a merged pull request, and the review
+// threads mirrored into them.
+type Ships struct {
 	env     hostcore.Env
 	st      hostcore.State
 	deps    Deps
@@ -37,8 +38,8 @@ type Deps struct {
 }
 
 // New is the code host side of st's sessions.
-func New(env hostcore.Env, st hostcore.State, deps Deps) *GitHub {
-	x := &GitHub{env: env, st: st, deps: deps, ship: shipState{github: map[string]githubRead{}, open: map[string]bool{}, synced: map[string]time.Time{}}}
+func New(env hostcore.Env, st hostcore.State, deps Deps) *Ships {
+	x := &Ships{env: env, st: st, deps: deps, ship: shipState{github: map[string]githubRead{}, open: map[string]bool{}, synced: map[string]time.Time{}}}
 	x.clients = gh.Clients{HTTP: func() *http.Client { return deps.HTTP }, Client: func(dir string, env []string) gh.Client {
 		if c := deps.Client; c != nil {
 			return c(dir, env)

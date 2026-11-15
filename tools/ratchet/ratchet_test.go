@@ -24,7 +24,7 @@ var ceilings = map[string]int{
 	"functions over 120 lines elsewhere":   35,
 	"files over 900 lines in host/":        0,
 	"Focus calls outside ui/":              0,
-	"RequestFocus calls outside ui/":       36,
+	"RequestFocus calls outside ui/":       35,
 	"multi-line Input outside Prose":       0,
 	"mutable package-level vars":           0,
 	// The rest of the tree (cmd, sandbox, render, regex, integ…) is held to the same rule from here, its count only
@@ -40,7 +40,7 @@ var ceilings = map[string]int{
 	// What only a wall clock can measure runs behind the perf build tag (make perf), never in go test ./...
 	"wall-clock measures in tests": 4,
 	// A timer in a test either guards a hang or guesses how long work takes; a test waits for the work instead.
-	"timers in tests": 82,
+	"timers in tests": 81,
 	// A test frames and runs the loop's queue through apptest's waits (Until, Quiet), not a loop of its own.
 	"RunQueued in tests outside apptest": 2,
 }
