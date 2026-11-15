@@ -3,11 +3,9 @@
 package ship
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
@@ -19,7 +17,6 @@ type Ships struct {
 	deps    Deps
 	ship    shipState
 	mirror  mirrorState
-	clients gh.Clients
 	remotes remotes
 }
 
@@ -27,10 +24,6 @@ type Ships struct {
 type Deps struct {
 	Kinds hostcore.Kinds
 	Keyed hostcore.Keyed
-	// Client is the GitHub client for a checkout, with the git guard's env; nil for GitHub's API with the user's token.
-	Client func(dir string, env []string) gh.Client
-	// HTTP is the client GitHub's API is asked through; http.DefaultClient if nil, or it gives nil.
-	HTTP *http.Client
 	// Wake hands a session's agent what's new, starting it if it isn't running.
 	Wake func(id core.SessionID)
 	// BranchRenamed records a project's branch's new name in its workspace's manifest.
@@ -39,12 +32,5 @@ type Deps struct {
 
 // New is the code host side of st's sessions.
 func New(env hostcore.Env, st hostcore.State, deps Deps) *Ships {
-	x := &Ships{env: env, st: st, deps: deps, ship: shipState{github: map[string]githubRead{}, open: map[string]bool{}, synced: map[string]time.Time{}}}
-	x.clients = gh.Clients{HTTP: func() *http.Client { return deps.HTTP }, Client: func(dir string, env []string) gh.Client {
-		if c := deps.Client; c != nil {
-			return c(dir, env)
-		}
-		return nil
-	}}
-	return x
+	return &Ships{env: env, st: st, deps: deps, ship: shipState{open: map[string]bool{}, synced: map[string]time.Time{}}}
 }

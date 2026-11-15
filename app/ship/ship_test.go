@@ -337,7 +337,7 @@ func TestGitPanelInAnOpenedDirectory(t *testing.T) {
 	t.Setenv("GIT_COMMITTER_NAME", "You")
 	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
 	hub := ghtest.New(t)
-	lw := rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	lw := rig.NewHostWith(t, host.Options{})
 	blog, up := shipRepo(t, "blog", map[string]string{"post.md": "# One\n"})
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)

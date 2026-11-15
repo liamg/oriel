@@ -4,6 +4,7 @@ package ship_test
 
 import (
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -70,7 +71,6 @@ func TestShowcaseP6RaisePR(t *testing.T) {
 
 func TestShowcaseP6GitHub(t *testing.T) {
 	s, lw, hub, se, _ := shipScene(t)
-	x := githubOf(s)
 	ag := lw.Fake.WaitStarted(t)
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
@@ -92,11 +92,11 @@ func TestShowcaseP6GitHub(t *testing.T) {
 	s.Run("review.threads.sync", nil)
 	var tid core.ThreadID
 	s.Until("the mirrored thread", func() bool {
-		x.Wait()
+		s.Quiet()
 		st := s.Store().State()
 		sess, _ := st.Session(se.ID)
 		for _, th := range sess.Snapshot().Threads {
-			if th.Origin == core.OriginGitHub && th.Hosted.Root == root.ID {
+			if th.Origin == core.OriginCodeHost && th.Hosted.Host == "github" && th.Hosted.Key == strconv.FormatInt(root.ID, 10) {
 				tid = th.ID
 			}
 		}

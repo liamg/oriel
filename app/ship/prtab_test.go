@@ -141,18 +141,18 @@ func TestPROverviewSnapshot(t *testing.T) {
 	})
 	said := s.Now.Add(-2 * time.Hour)
 	se.Threads = append(se.Threads,
-		core.Thread{ID: "gh1", Origin: core.OriginGitHub, Status: core.ThreadOpen,
+		core.Thread{ID: "gh1", Origin: core.OriginCodeHost, Status: core.ThreadOpen,
 			Anchor: &core.Anchor{Project: "web-dashboard", File: "src/search/backoff.ts", Line: 42},
-			Hosted: &core.HostThread{Project: "web-dashboard", Repo: "acme/web-dashboard", PR: 812, Root: 9001, Reviewer: "mchen",
+			Hosted: &core.HostThread{Host: "github", Project: "web-dashboard", Repo: "acme/web-dashboard", PR: 812, Key: "9001", Reviewer: "mchen",
 				State: gh.ReviewChangesRequested},
 			Comments: []core.Comment{{ID: "c1", Author: core.AuthorHost, Name: "mchen", Time: said,
 				Body: "Cap the wait: a `Retry-After` of an hour shouldn't freeze the page."}}},
-		core.Thread{ID: "gh2", Origin: core.OriginGitHub, Status: core.ThreadOpen,
-			Hosted: &core.HostThread{Project: "web-dashboard", Repo: "acme/web-dashboard", PR: 812},
+		core.Thread{ID: "gh2", Origin: core.OriginCodeHost, Status: core.ThreadOpen,
+			Hosted: &core.HostThread{Host: "github", Project: "web-dashboard", Repo: "acme/web-dashboard", PR: 812},
 			Comments: []core.Comment{{ID: "c2", Author: core.AuthorHost, Name: "jkowalski", Time: said.Add(30 * time.Minute),
 				Body: "Looks good once the cap's in."}}},
-		core.Thread{ID: "other", Origin: core.OriginGitHub, Status: core.ThreadOpen,
-			Hosted:   &core.HostThread{Project: "search-api", Repo: "acme/search-api", PR: 811},
+		core.Thread{ID: "other", Origin: core.OriginCodeHost, Status: core.ThreadOpen,
+			Hosted:   &core.HostThread{Host: "github", Project: "search-api", Repo: "acme/search-api", PR: 811},
 			Comments: []core.Comment{{ID: "c3", Author: core.AuthorHost, Name: "mchen", Body: "Not this PR's."}}})
 	if err := s.Store().Apply(core.SessionSynced{Session: se}); err != nil {
 		t.Fatal(err)

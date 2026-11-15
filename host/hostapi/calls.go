@@ -102,13 +102,10 @@ type ShipCalls interface {
 type CodeHostCalls interface {
 	// ProjectRemote is origin's URL in a session's project.
 	ProjectRemote(ctx context.Context, r ShipRef) (string, error)
-	SyncGitHub(ctx context.Context, r MirrorReq) (Mirror, error)
-	ResolveGitHub(ctx context.Context, r ResolveReq) error
 	MarkHostResolved(r ResolveReq) error
 	MirrorReview(ctx context.Context, r MirrorReviewReq) error
 	DraftOf(r ForwardReq) (core.Thread, string, error)
 	EditDraft(r DraftEditReq) error
-	ForwardGitHub(ctx context.Context, r ForwardReq) (core.Comment, error)
 	ForwardHost(ctx context.Context, r ForwardReq, post func(ctx context.Context, t core.Thread, body string) (string, error)) (core.Comment, error)
 }
 

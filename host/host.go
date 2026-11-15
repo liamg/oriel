@@ -30,7 +30,6 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/eventstore"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/agentrun"
 	"github.com/liamg/oriel/host/aireview"
 	"github.com/liamg/oriel/host/hostcore"
@@ -63,14 +62,10 @@ type Options struct {
 	Packs func(name string) (agent.Pack, bool)
 	// ReposDir is where repos.clone and new repos go; ~/src if "".
 	ReposDir string
-	// GitHub is the GitHub client for a checkout, with the git guard's env; GitHub's API with the user's token
-	// (gh.TokenFor) if nil.
-	GitHub func(dir string, env []string) gh.Client
 	// KeyWait is how long a git operation that may need a security-key touch runs before its session asks for one;
 	// KeyWait (the constant) if 0, never if negative.
 	KeyWait time.Duration
-	// HTTP is the client the host's own requests go through (cost.dev's prices, GitHub's API); http.DefaultClient if
-	// nil.
+	// HTTP is the client the host's own requests go through (cost.dev's prices); http.DefaultClient if nil.
 	HTTP *http.Client
 	// PricesURL is where the price list is fetched from; cost.dev's (price.URL) if "".
 	PricesURL string
@@ -220,8 +215,6 @@ func (w *Host) parts() error {
 		return err
 	}
 	w.codePart = ship.New(w.env, st, ship.Deps{Kinds: &w.kinds, Keyed: w.runPart.Keyed, Wake: w.runPart.Wake,
-		Client:        w.opts.GitHub,
-		HTTP:          w.opts.HTTP,
 		BranchRenamed: worktree.BranchRenamed})
 	w.jobsPart = jobs.New(w.env, st, jobs.Deps{Providers: w.opts.Providers, Start: w.Start,
 		Sandboxed: func() bool { return w.opts.Sandbox != nil && w.boxesPart.Config().Default != "host" }})

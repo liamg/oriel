@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"slices"
 	"strings"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
+	"github.com/liamg/oriel/gh/ghtest"
 )
 
 // Review mirroring for any host: a code host's threads become Oriel threads like GitHub's, by the same rules: the
@@ -230,5 +233,69 @@ func TestMirrorReviewInAReviewSession(t *testing.T) {
 	th, _ = r.session(id).Thread(mine)
 	if u := th.Undelivered(); len(u) != 1 || u[0].Body != "Renamed it." {
 		t.Errorf("the author's reply is the agent's to read: %+v", u)
+	}
+}
+
+// reviewSessionScene is a review session of bob's pull request on acme/pricing, its agent provider's (none for ""),
+// GitHub faked, and the PR's head.
+func reviewSessionScene(t *testing.T, provider string) (*rig, *ghtest.Server, gh.PR, string, core.SessionID) {
+	t.Helper()
+	hub := ghtest.New(t)
+	r := newRig(t)
+	ctx := context.Background()
+	co, up := githubRepo(t, "pricing", map[string]string{"round.go": "package pricing\n"})
+	if _, err := r.w.addRepo(ctx, co.Dir, core.RepoAdded); err != nil {
+		t.Fatal(err)
+	}
+	pr := hub.AddPR("acme/pricing", gh.PR{Title: "feat: round", Author: "bob", Head: "bob/round", Base: "main"})
+	up.Write(map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
+	up.Commit("Bob", "round")
+	head := strings.TrimSpace(up.Git("rev-parse", "HEAD"))
+	up.Git("push", "-q", "origin", fmt.Sprintf("HEAD:refs/pull/%d/head", pr.Number))
+	hub.SetPRSize("acme/pricing", pr.Number, ghtest.PRSize{Author: "bob", HeadSHA: head})
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr.URL, Provider: provider, Repos: []core.RepoID{core.RepoID(co.Dir)}})
+	return r, hub, pr, head, id
+}
+
+// A review on another code host follows the same rule, by the PR's author the host's plugin names.
+func TestAReviewOnACodeHostLeavesOthersCommentsToRead(t *testing.T) {
+	r, _, _, _, id := reviewSessionScene(t, "")
+	p, _ := r.session(id).Primary()
+	at := time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)
+	req := MirrorReviewReq{Session: id, Project: p.Name, Host: "gitlab", Repo: "acme/pricing", PR: 7, Author: "bob", Threads: []ReviewThread{
+		{Key: "d1", Path: "round.go", Line: 3, Comments: []ReviewComment{{Key: "n1", User: "carol", Body: "Round half to even?", At: at, Trusted: true}}},
+		{Key: "d2", Path: "round.go", Line: 1, Comments: []ReviewComment{{Key: "n2", User: "bob", Body: "I'll split this later.", At: at, Trusted: true}}},
+	}}
+	if err := r.w.MirrorReview(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, th := range r.session(id).Threads {
+		if th.Hosted == nil || th.Hosted.Host != "gitlab" || len(th.Comments) != 1 {
+			continue
+		}
+		n++
+		if c := th.Comments[0]; c.Delivered != (c.Name == "carol") {
+			t.Errorf("%s's comment: given to the agent unasked %v", c.Name, c.Delivered)
+		}
+	}
+	if n != 2 {
+		t.Errorf("%d threads mirrored, want 2", n)
+	}
+}
+
+// The threads tool lists the threads the agent wasn't handed too, so it can read another reviewer's comment.
+func TestTheThreadsToolListsOthersComments(t *testing.T) {
+	r, _, pr, _, id := reviewSessionScene(t, "fake")
+	a := r.agent()
+	p, _ := r.session(id).Primary()
+	req := MirrorReviewReq{Session: id, Project: p.Name, Host: "github", Repo: "acme/pricing", PR: pr.Number, Author: "bob", Threads: []ReviewThread{
+		{Key: "41", Path: "round.go", Line: 3, Comments: []ReviewComment{{Key: "41", User: "carol", Body: "Round half to even?\nOr away from zero?", Trusted: true}}}}}
+	if err := r.w.MirrorReview(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	list := a.Call(t, "threads", nil)
+	if !strings.Contains(list, `by="carol"`) || !strings.Contains(list, `origin="github"`) || !strings.Contains(list, ">Round half to even?</thread>") {
+		t.Errorf("the threads tool doesn't list another reviewer's comment by its first line:\n%s", list)
 	}
 }

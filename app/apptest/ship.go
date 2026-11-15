@@ -29,7 +29,7 @@ func ShipSceneWith(t *testing.T, setup func(*Scene), more ...func(*Config)) (s *
 	t.Setenv("GIT_COMMITTER_NAME", "You")
 	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
 	hub = ghtest.New(t)
-	lw = rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	lw = rig.NewHostWith(t, host.Options{})
 	api, apiUp := rig.ShipRepo(t, "search-api", map[string]string{
 		"internal/api/usage/handler.go":    "package usage\n\nfunc Handle() {}\n",
 		"internal/api/usage/routes.go":     "package usage\n\nvar Routes = 1\n",

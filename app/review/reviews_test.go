@@ -49,7 +49,7 @@ func reviewScene(t *testing.T) (*apptest.Scene, *rig.Host, *ghtest.Server, map[s
 	if err := hub.Client().RequestReviewers(context.Background(), gh.Repo{Owner: "acme", Name: "billing-ui"}, prs["invoices"].Number, []string{"you"}); err != nil {
 		t.Fatal(err)
 	}
-	lw := rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	lw := rig.NewHostWith(t, host.Options{})
 	state := t.TempDir()
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)

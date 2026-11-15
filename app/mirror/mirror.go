@@ -104,7 +104,6 @@ func (x *Mirror) Activate(_ context.Context, h plugin.Host) error {
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
-	x.Add(h.Contribute(uireg.ThreadSource{Origin: core.OriginGitHub, Title: "GitHub review", Head: x.head, Comment: x.comment}))
 	x.Add(h.Contribute(uireg.ThreadSource{Origin: core.OriginCodeHost, Title: "Review", Head: x.head, Comment: x.comment}))
 	x.Add(h.View(StatusView, uireg.ViewFunc(func(uireg.ViewCtx) ui.Node { return &ui.Func{Key: "reviews", Fn: x.statusSegment} })))
 	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {

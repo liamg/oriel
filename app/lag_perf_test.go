@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/liamg/oriel/app/agentui"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/assistant"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/registry"
@@ -59,11 +59,11 @@ func lagApp(t *testing.T) *apptest.Window {
 func clearOfBlinks(d time.Duration) {
 	for {
 		now := time.Now()
-		shut, next := agentui.OriBlink(now)
+		shut, next := assistant.OriBlink(now)
 		if !shut && next.Sub(now) >= d {
 			return
 		}
-		time.Sleep(next.Sub(now) + agentui.OriBlinkFor)
+		time.Sleep(next.Sub(now) + assistant.OriBlinkFor)
 	}
 }
 

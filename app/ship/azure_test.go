@@ -12,7 +12,6 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/integ/azure"
@@ -83,7 +82,7 @@ func TestAzureShipAndReviews(t *testing.T) {
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	secrets.SetSecret(azure.Secret, azuretest.Token)
 	hub := ghtest.New(t)
-	lw := rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	lw := rig.NewHostWith(t, host.Options{})
 	dash := azureRepo(t, "dashboard")
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
