@@ -431,7 +431,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 								name = kit.ProviderNameIn(c, cm.Name)
 							}
 							c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-							commentWhen(c, cm, t.Origin, widget.MonoFont(9.5, th.C(theme.FgGhost)))
+							commentWhen(c, cm, originOf(t), widget.MonoFont(9.5, th.C(theme.FgGhost)))
 							if cm.Redacted {
 								widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 							}
@@ -466,6 +466,14 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 }
 
 // commentWhen is the small text after a comment's author: how long ago, where it came from, and whether it was sent.
+// originOf is where a thread's comments came from, as a comment says it: its code host's name, else its origin.
+func originOf(t core.Thread) string {
+	if t.Hosted != nil && t.Hosted.Host != "" {
+		return t.Hosted.Host
+	}
+	return t.Origin
+}
+
 func commentWhen(c *ui.Ctx, cm core.Comment, origin string, ts ui.TextStyle) {
 	var parts []widget.AgoPart
 	switch {

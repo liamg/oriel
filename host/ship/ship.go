@@ -40,33 +40,15 @@ type ShipCommitReq = hostapi.ShipCommitReq
 
 type DraftReq = hostapi.DraftReq
 
-// shipState is what the host keeps between reads: each branch's PR on GitHub, for review mirroring, which branches'
-// PRs a code host last found open, and when each project was last synced.
+// shipState is what the host keeps between reads: which branches' PRs a code host last found open, and when each
+// project was last synced.
 type shipState struct {
 	mu     sync.Mutex
-	github map[string]githubRead // by session/project/branch
-	open   map[string]bool       // by session/project/branch
-	synced map[string]time.Time  // by session/project
+	open   map[string]bool      // by session/project/branch
+	synced map[string]time.Time // by session/project
 }
-
-type githubRead struct {
-	at  time.Time
-	pr  *gh.PR
-	err string
-}
-
-// githubTTL is how long a branch's PR answers before GitHub is asked again.
-const githubTTL = 30 * time.Second
 
 func shipKey(id core.SessionID, project string) string { return string(id) + "/" + project }
-
-// github is the GitHub client for a checkout.
-func (x *Ships) github(r gitx.Repo) gh.Client { return x.githubOn(r, "", "") }
-
-// githubOn is the GitHub client for a checkout, on a GitHub Enterprise server's hostname when given (gh.Clients).
-func (x *Ships) githubOn(r gitx.Repo, hostname, token string) gh.Client {
-	return x.clients.On(r.Dir, r.Env, hostname, token)
-}
 
 // ShipRead is every project of a session on its way to a PR, or those r names.
 func (x *Ships) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {

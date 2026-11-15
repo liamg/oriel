@@ -26,7 +26,7 @@ const (
 func (x *Runner) tools(h *session) []agent.Tool {
 	own := []agent.Tool{
 		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. resolve: resolve the thread after replying. " +
-			"On a thread with origin=\"github\" your reply is a draft: the user reads it and forwards it to GitHub themselves. You never post to GitHub.",
+			"On a thread from a code host (origin=\"github\", \"gitlab\"…) your reply is a draft: the user reads it and forwards it there themselves. Don't post to the code host yourself.",
 			Schema: hostcore.Schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl+`,"resolve":`+bl, "thread", "body"), Call: h.toolReply},
 		{Name: "thread", Description: "Read one Oriel thread in full: every comment, with nothing clipped.", ReadOnly: true,
 			Schema: hostcore.Schema(`"thread":`+str, "thread"), Call: h.toolThread},
@@ -121,7 +121,7 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	hostcore.Restatus(h.r.st, h.id)
 	said := "replied"
 	if c.Draft {
-		said = "drafted: the user reads your reply and forwards it to GitHub; nothing was posted"
+		said = "drafted: the user reads your reply and forwards it to its code host; nothing was posted"
 	}
 	if c.Unbacked != "" {
 		return said + "; note: " + c.Unbacked + ". Run the tests with test_run and cite the run.", nil

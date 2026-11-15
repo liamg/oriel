@@ -59,20 +59,3 @@ func TestRemoteAhead(t *testing.T) {
 		t.Errorf("the Remote line: %+v", l)
 	}
 }
-
-func TestReviewStatesKeepAVerdictOverAComment(t *testing.T) {
-	got := reviewStates([]registry.ReviewThread{
-		{Reviewer: "ana", State: registry.ReviewApproved}, {Reviewer: "ana", State: registry.ReviewCommented},
-		{Reviewer: "bo", State: registry.ReviewCommented}, {Reviewer: "bo", State: registry.ReviewChanges},
-		{Reviewer: "cy", State: registry.ReviewCommented}, {Reviewer: "", State: registry.ReviewApproved},
-	})
-	want := map[string]string{"ana": registry.ReviewApproved, "bo": registry.ReviewChanges, "cy": registry.ReviewCommented}
-	if len(got) != len(want) {
-		t.Fatalf("got %v, want %v", got, want)
-	}
-	for k, v := range want {
-		if got[k] != v {
-			t.Errorf("%s: got %q, want %q", k, got[k], v)
-		}
-	}
-}

@@ -75,10 +75,6 @@ type (
 	DraftReq        = hostapi.DraftReq
 	RenameReq       = hostapi.RenameReq
 	OffBranch       = hostapi.OffBranch
-	Trust           = hostapi.Trust
-	MirrorReq       = hostapi.MirrorReq
-	Mirror          = hostapi.Mirror
-	MirrorPR        = hostapi.MirrorPR
 	ForwardReq      = hostapi.ForwardReq
 	ForwardedReq    = hostapi.ForwardedReq
 	DraftEditReq    = hostapi.DraftEditReq

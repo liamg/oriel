@@ -3,6 +3,7 @@ package ship
 import (
 	"cmp"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -132,16 +133,10 @@ func (x *Ship) prBadge(c *ui.Ctx, se core.SessionState, s shipRead) {
 	prui.PRBadge(c, x.h, "state", x.prStatus(se, s), "git/ship#pr")
 }
 
-// prStatus is where a raised PR stands, from its state and its reviewers' latest verdicts: this code host's, as its
-// threads were mirrored, and those a plugin keeps (GitHub's).
+// prStatus is where a raised PR stands, from its state and its reviewers' latest verdicts, as its threads were
+// mirrored.
 func (x *Ship) prStatus(se core.SessionState, s shipRead) prui.PRStatus {
-	x.mu.Lock()
-	var reviews []string
-	for _, v := range x.reviewed[s.PR.URL] {
-		reviews = append(reviews, v)
-	}
-	x.mu.Unlock()
-	reviews = append(reviews, services.ReviewVerdicts(x.h, se.ID, s.PR.URL)...)
+	reviews := slices.Collect(maps.Values(services.ReviewVerdicts(x.h, se.ID, s.PR.URL)))
 	return prui.PRStatusOf(s.PR.State, s.PR.Merged, s.PR.Draft, reviews)
 }
 

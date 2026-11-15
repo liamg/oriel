@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 )
 
 // reviewedPR is the pull request a review session reads; "" for any other session.
@@ -16,18 +15,18 @@ func reviewedPR(se core.SessionState) string {
 	return rd.PR
 }
 
-// sentFrom is the thread of the review's comment that GitHub's review comment c was posted from: the same words (less
-// the line heading one posted on its file), on its file.
-func sentFrom(se core.SessionState, c gh.ReviewComment) core.ThreadID {
+// sentFrom is the thread of the review's comment that a code host's comment on path was posted from: the same
+// words, as written, on the same file.
+func sentFrom(se core.SessionState, path, written string) core.ThreadID {
 	rd, _ := core.DataOf[core.ReviewData](se)
-	if rd.Draft == nil || c.InReplyTo != 0 {
+	if rd.Draft == nil {
 		return ""
 	}
 	for id, pk := range rd.Draft.Picks {
-		if pk.Sent == "" || strings.TrimSpace(pk.Sent) != gh.PostedAs(c.Body) {
+		if pk.Sent == "" || strings.TrimSpace(pk.Sent) != strings.TrimSpace(written) {
 			continue
 		}
-		if t, ok := se.Thread(core.ThreadID(id)); ok && t.Hosted == nil && t.Anchor != nil && t.Anchor.File == c.Path {
+		if t, ok := se.Thread(core.ThreadID(id)); ok && t.Hosted == nil && t.Anchor != nil && t.Anchor.File == path {
 			return t.ID
 		}
 	}

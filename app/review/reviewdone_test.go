@@ -112,7 +112,7 @@ func TestApprovedReviewIsQuiet(t *testing.T) {
 		se := sess.Snapshot()
 		mirrored := false
 		for _, th := range se.Threads {
-			mirrored = mirrored || th.Origin == core.OriginGitHub && len(th.Comments) > 0
+			mirrored = mirrored || th.Origin == core.OriginCodeHost && len(th.Comments) > 0
 		}
 		return mirrored && sess.Status() == core.StatusQuiet
 	})

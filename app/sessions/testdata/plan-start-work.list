@@ -7,11 +7,10 @@ path 5 segments fill #ff8a1f
 text "ORIEL" @44,29.152 #ece6d8 Space Grotesk 12
 clip 101.9375,0 1144.3063x50 r 0
   path 9 segments fill #0c0c0b
-  path 6 segments stroke 1.5 #232220
-  path 25 segments stroke 1.5 #4cc9f0
+  text "!" @128,24.637695 #ff5f6d Inter 10
   text "pricing-rounding" @141.9375,25.54712 #ece6d8 Inter 12.5
-  text "plan" @139.9375,42.600002 #7c7566 JetBrains Mono 10
-  text "⌘1" @170.9375,42.42 #4f4a40 JetBrains Mono 9.5
+  text "needs you" @139.9375,42.600002 #ff5f6d JetBrains Mono 10
+  text "⌘1" @200.9375,42.42 #4f4a40 JetBrains Mono 9.5
   text "+" @282.39844,33.356 #7c7566 JetBrains Mono 12.1
 pop
 rect 1260.2438,13 209.9375x24 radius 5 stroke 1 #332f27

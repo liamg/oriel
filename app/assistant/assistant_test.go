@@ -36,16 +36,18 @@ func assistantOf(s *apptest.Scene) *assistant.Assistant {
 
 // assistantScene is the app on a session host with the fake provider, at the mockup's size and a fixed clock, with
 // a scripted microphone and a speaker that keeps what it's given.
-func assistantScene(t *testing.T, o host.Options, mic *voicetest.Mic, tr *voicetest.Transcriber) (*apptest.Scene, *rig.Host, *voicetest.Speaker) {
+func assistantScene(t *testing.T, hub *ghtest.Server, mic *voicetest.Mic, tr *voicetest.Transcriber) (*apptest.Scene, *rig.Host, *voicetest.Speaker) {
 	t.Helper()
-	lw := rig.NewHostWith(t, o)
+	lw := rig.NewHostWith(t, host.Options{})
 	sp := &voicetest.Speaker{}
 	if mic == nil {
 		mic, tr = &voicetest.Mic{}, &voicetest.Transcriber{}
 	}
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
-		cfg.GitHubClient = o.GitHub
+		if hub != nil {
+			cfg.GitHubClient = func(string, []string) gh.Client { return hub.Client() }
+		}
 		cfg.Voice = apptest.VoiceConfig{Mic: mic, Transcriber: tr, Speaker: sp}
 	}})
 	s.Now = asstNow
@@ -109,7 +111,7 @@ func toolNames(a *agenttest.FakeSession) []string {
 // what it's allowed to do, and its data sources with how fresh each is. It's a resident utility session, never
 // claude -p.
 func TestAssistantWhatNeedsMe(t *testing.T) {
-	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, nil, nil, nil)
 	s.Run("session.start", registry.Args{"kind": "work", "name": "rounding", "provider": "fake", "repos": []string{lw.Repo}})
 	work := lw.Fake.WaitStarted(t)
 	work.Ask(agent.Permission{ID: "p1", Tool: "Bash", Summary: "make e2e"})
@@ -248,7 +250,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 // Confirmation cards, and every action has an undo with a countdown. An act shows what it will do and waits; y does
 // it, n doesn't, and what it made can be undone for a few seconds.
 func TestAssistantAsksFirst(t *testing.T) {
-	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, nil, nil, nil)
 	c := lw.W
 	if _, err := c.AddRepoPath(context.Background(), lw.Repo); err != nil {
 		t.Fatal(err)
@@ -300,7 +302,7 @@ func TestAssistantAsksFirst(t *testing.T) {
 // a feature or plugin offers them for the assistant through the registry (this my_tickets shadows the app's), and they reach it, and only it, like its own. An act
 // of theirs asks first just the same.
 func TestPluginToolsReachTheAssistant(t *testing.T) {
-	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, nil, nil, nil)
 	requested := ""
 	for _, tool := range []registry.AgentTool{
 		{Name: "my_tickets", For: []string{kit.AssistantAgent}, ReadOnly: true, Reads: "linear", Desc: "The user's Linear tickets.",
@@ -366,7 +368,7 @@ func TestAssistantReadsPullRequests(t *testing.T) {
 	hub := ghtest.New(t)
 	hub.AddPR("acme/api", gh.PR{Title: "retry transient 502s", Author: "maria", Reviewers: []string{"you"}})
 	mine := hub.AddPR("acme/api", gh.PR{Title: "round half to even", Draft: true})
-	s, lw, _ := assistantScene(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }}, nil, nil)
+	s, lw, _ := assistantScene(t, hub, nil, nil)
 	s.Run("assistant.say", registry.Args{"text": "my PRs?"})
 	ua := lw.Fake.WaitStarted(t)
 	out, err := settleCall(t, s, asstCall(ua, "my_prs", map[string]any{}))
@@ -402,7 +404,7 @@ func TestLuaToolsForTheAssistant(t *testing.T) {
 // asstWorkScene is a work session on two projects, pricing and web, in front, and the assistant's agent started.
 func asstWorkScene(t *testing.T) (*apptest.Scene, *agenttest.FakeSession, core.SessionState) {
 	t.Helper()
-	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, nil, nil, nil)
 	web := filepath.Join(t.TempDir(), "web")
 	rig.Git(t, filepath.Dir(web), "init", "-q", "-b", "main", web)
 	rig.WriteFiles(t, lw.Repo, map[string]string{"round.go": "package pricing\n\nfunc Round() {}\n"})
@@ -550,7 +552,7 @@ func widenAssistant(t *testing.T, s *apptest.Scene) {
 func TestAssistantRunsOnTheDefaultModel(t *testing.T) {
 	for _, tt := range []struct{ setting, want string }{{"", "big"}, {"small", "tiny"}} {
 		t.Run(cmp.Or(tt.setting, "unset"), func(t *testing.T) {
-			s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+			s, lw, _ := assistantScene(t, nil, nil, nil)
 			lw.Fake.Offers = []agent.Model{{ID: "big", Name: "Big", Default: true}, {ID: "tiny", Name: "Tiny", Small: true}}
 			if tt.setting != "" {
 				if err := s.Registry().Options().Set("assistant.model", registry.LayerUser, registry.At{}, tt.setting); err != nil {
@@ -567,7 +569,7 @@ func TestAssistantRunsOnTheDefaultModel(t *testing.T) {
 
 // What Ori says selects to be copied, in its window as anywhere: a session's name, a test, an error, read out of it.
 func TestOrisRepliesSelect(t *testing.T) {
-	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+	s, lw, _ := assistantScene(t, nil, nil, nil)
 	s.Run("assistant.open", nil)
 	s.Frame()
 	s.TypeInto("Ask the assistant", "which test is flaky?")

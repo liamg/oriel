@@ -624,7 +624,7 @@ func (x *PRReview) hear(se core.SessionState) {
 	var last core.Comment
 	var at core.Thread
 	for _, t := range se.Threads {
-		if t.Hosted == nil || t.Hosted.Root == 0 && t.Hosted.Key == "" {
+		if t.Hosted == nil || t.Hosted.Key == "" {
 			continue
 		}
 		for _, c := range t.Comments {

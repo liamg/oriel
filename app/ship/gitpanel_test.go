@@ -10,7 +10,6 @@ import (
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/registry"
@@ -26,7 +25,7 @@ func gitPanelScene(t *testing.T, prepare func(dir string)) (s *apptest.Scene, x 
 	t.Setenv("GIT_COMMITTER_NAME", "You")
 	t.Setenv("GIT_COMMITTER_EMAIL", "you@example.com")
 	hub := ghtest.New(t)
-	lw := rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	lw := rig.NewHostWith(t, host.Options{})
 	blog, upstream = shipRepo(t, "blog", map[string]string{"post.md": "# One\n"})
 	if prepare != nil {
 		prepare(blog)

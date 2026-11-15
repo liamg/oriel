@@ -30,7 +30,14 @@ type GitHubHost struct {
 	Client  func(dir string, env []string) gh.Client
 	h       plugin.Host
 	clients gh.Clients
+	trust   trust
 }
+
+// The options saying whose review comments the agent may read.
+const (
+	trustedOrgsOption  = "github.trusted_orgs"
+	trustedUsersOption = "github.trusted_users"
+)
 
 var (
 	githubPRPath = regexp.MustCompile(`^/[^/]+/[^/]+/pull/\d+`)
@@ -53,7 +60,11 @@ func (x *GitHubHost) Activate(_ context.Context, h plugin.Host) error {
 		CLIConfig: registry.CLIConfig{Path: "gh/hosts.yml"},
 		Requested: x.requested, Lookup: x.lookup, Checkout: githubCheckout, Submit: x.submit, React: x.react, Unreact: x.unreact,
 		ForBranch: x.forBranch, Create: x.create, Edit: x.edit, Ready: x.ready, RequestReviewers: x.reviewers, Checks: x.checks,
-		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge}))
+		MergeMethods: x.mergeMethods, Blockers: x.blockers, Merge: x.merge, Threads: x.threads, Reply: x.reply, Resolve: x.resolve}))
+	x.Add(h.Option(registry.OptionSpec{Name: trustedOrgsOption, Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
+		Help: "GitHub orgs whose members' review comments the agent may read. Text from anyone else is hidden from it. Empty: the repository's owner."}))
+	x.Add(h.Option(registry.OptionSpec{Name: trustedUsersOption, Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
+		Help: "GitHub logins whose review comments the agent may read, beside the trusted orgs' members."}))
 	return nil
 }
 

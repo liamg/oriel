@@ -32,19 +32,20 @@ func ReviewSession(r registry.Contributions, url string) (core.Session, bool) {
 	return nil, false
 }
 
-// PRReviewsService gives a PR's reviewers' latest verdicts, for a code host that keeps them (GitHub's mirror).
+// PRReviewsService gives a PR's reviewers' latest verdicts, as the review mirror last read its threads.
 const PRReviewsService = "pr.reviews"
 
 // PRReviews is the PRReviewsService.
 type PRReviews interface {
-	// Reviews are the latest verdict of each reviewer of the PR at url in session id, as the host says it.
-	Reviews(id core.SessionID, url string) []string
+	// Reviews are each reviewer's latest verdict on the PR at url in session id: registry.ReviewChanges,
+	// ReviewApproved or ReviewCommented.
+	Reviews(id core.SessionID, url string) map[string]string
 }
 
-// ReviewVerdicts are the reviewers' latest verdicts on the PR at url in session id, from whichever plugin keeps them.
-func ReviewVerdicts(r registry.Contributions, id core.SessionID, url string) []string {
+// ReviewVerdicts are each reviewer's latest verdict on the PR at url in session id, from whichever plugin keeps them.
+func ReviewVerdicts(r registry.Contributions, id core.SessionID, url string) map[string]string {
 	if s, ok := registry.ServiceOf[PRReviews](r, PRReviewsService); ok {
-		var out []string
+		var out map[string]string
 		registry.Call(func() error { out = s.Reviews(id, url); return nil })
 		return out
 	}

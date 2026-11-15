@@ -23,8 +23,6 @@ import (
 	"github.com/liamg/oriel/agent/claude"
 	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
-	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/gitx/gittest"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/internal/isolate"
@@ -542,10 +540,6 @@ func NewHostWith(t *testing.T, o host.Options, fakes ...*agenttest.Fake) *Host {
 	}
 	if o.HTTP == nil {
 		o.HTTP = isolate.Net(t)
-	}
-	if o.GitHub == nil {
-		hub := ghtest.New(t) // never the user's own gh
-		o.GitHub = func(string, []string) gh.Client { return hub.Client() }
 	}
 	w, err := host.New(o)
 	if err != nil {

@@ -16,12 +16,11 @@ import (
 	"github.com/liamg/oriel/host/hostcore"
 )
 
-// Review mirroring for any code host: a PR's review threads and conversation, as GitHub's SyncGitHub or the app (for a
-// code host's plugin) reads them, are brought into the session's threads, and the user's forwarded drafts marked sent.
+// Review mirroring for any code host: a PR's review threads and conversation, as the app's review mirror reads them
+// from the host, are brought into the session's threads, and the user's forwarded drafts marked sent.
 
-// mirrorMsg is one comment of a mirrored thread: num is GitHub's id, key another host's.
+// mirrorMsg is one comment of a mirrored thread; key is its id on the host.
 type mirrorMsg struct {
-	num     int64
 	key     string
 	user    string
 	body    string
@@ -40,7 +39,7 @@ type mirrored struct {
 	into   core.ThreadID // the session's thread it was posted from, which it joins
 }
 
-// applyMirror brings a PR's threads on host (GitHub when "") in line with threads, and dismisses its mirrored review
+// applyMirror brings a PR's threads on host in line with threads, and dismisses its mirrored review
 // threads the host no longer has; kick says the agent has something new. It holds the threads' edit lock, so the
 // agent's own changes to them meanwhile aren't lost.
 func (x *Ships) applyMirror(id core.SessionID, host, repo string, pr int, threads []mirrored) (bool, error) {
@@ -56,20 +55,17 @@ func (x *Ships) applyMirror(id core.SessionID, host, repo string, pr int, thread
 func (x *Ships) mirrorInto(se core.SessionState, host, repo string, pr int, threads []mirrored) bool {
 	id := se.ID
 	now := x.env.Now().UTC()
-	origin := core.OriginGitHub
-	if host != "" {
-		origin = core.OriginCodeHost
-	}
+	origin := core.OriginCodeHost
 	same := func(g *core.HostThread, ref core.HostThread) bool {
-		return g != nil && g.Host == host && g.Repo == repo && g.PR == pr && g.Root == ref.Root && g.Key == ref.Key
+		return g != nil && g.Host == host && g.Repo == repo && g.PR == pr && g.Key == ref.Key
 	}
 	kick := false
 	seen := map[string]bool{}
 	for _, m := range threads {
 		ref := m.ref
 		ref.Host = host
-		if ref.Root != 0 || ref.Key != "" {
-			seen[fmt.Sprint(ref.Root, "/", ref.Key)] = true
+		if ref.Key != "" {
+			seen[ref.Key] = true
 		}
 		i := slices.IndexFunc(se.Threads, func(t core.Thread) bool { return same(t.Hosted, ref) })
 		var t core.Thread
@@ -120,10 +116,10 @@ func (x *Ships) mirrorInto(se core.SessionState, host, repo string, pr int, thre
 	}
 	for _, t := range se.Threads {
 		g := t.Hosted
-		if g == nil || g.Host != host || g.Repo != repo || g.PR != pr || g.Root == 0 && g.Key == "" || t.Status == core.ThreadDismissed {
+		if g == nil || g.Host != host || g.Repo != repo || g.PR != pr || g.Key == "" || t.Status == core.ThreadDismissed {
 			continue
 		}
-		if !seen[fmt.Sprint(g.Root, "/", g.Key)] {
+		if !seen[g.Key] {
 			t.Status, t.Busy, t.Updated = core.ThreadDismissed, false, now
 			_ = x.st.Emit(core.ThreadUpdated{Session: id, Thread: t})
 		}
@@ -153,14 +149,12 @@ func asides(msgs []mirrorMsg, author string, convo bool) {
 // agent again), deleted ones taken out. A comment of Oriel's (a forwarded draft) is matched by its id there, so it
 // isn't added again.
 func mergeMsgs(t *core.Thread, msgs []mirrorMsg) {
-	is := func(c core.Comment, m mirrorMsg) bool {
-		return m.num != 0 && c.GitHubID == m.num || m.key != "" && c.HostID == m.key
-	}
+	is := func(c core.Comment, m mirrorMsg) bool { return m.key != "" && c.HostID == m.key }
 	for _, m := range msgs {
 		i := slices.IndexFunc(t.Comments, func(c core.Comment) bool { return is(c, m) })
 		if i < 0 {
 			t.Comments = append(t.Comments, core.Comment{ID: hostcore.NewID(6), Author: core.AuthorHost, Name: m.user, Body: m.body, Time: m.at.UTC(),
-				GitHubID: m.num, HostID: m.key, Redacted: !m.trusted, Delivered: m.own || m.aside, Mine: m.own})
+				HostID: m.key, Redacted: !m.trusted, Delivered: m.own || m.aside, Mine: m.own})
 			continue
 		}
 		c := &t.Comments[i]
@@ -171,7 +165,7 @@ func mergeMsgs(t *core.Thread, msgs []mirrorMsg) {
 		}
 	}
 	t.Comments = slices.DeleteFunc(t.Comments, func(c core.Comment) bool {
-		return c.Author == core.AuthorHost && (c.GitHubID != 0 || c.HostID != "") &&
+		return c.Author == core.AuthorHost && c.HostID != "" &&
 			!slices.ContainsFunc(msgs, func(m mirrorMsg) bool { return is(c, m) })
 	})
 }
@@ -206,11 +200,16 @@ func (x *Ships) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error)
 			}
 			m.anchor = a
 		}
+		review := reviewedPR(se) != ""
 		for _, c := range rt.Comments {
-			m.msgs = append(m.msgs, mirrorMsg{key: c.Key, user: c.User, body: c.Body, at: c.At, trusted: c.Trusted})
+			m.msgs = append(m.msgs, mirrorMsg{key: c.Key, user: c.User, body: c.Body, at: c.At, trusted: c.Trusted, own: review && c.Mine})
 		}
-		if reviewedPR(se) != "" {
+		if review {
 			asides(m.msgs, r.Author, rt.Key == "")
+			if rt.Key != "" && rt.Path != "" && len(rt.Comments) > 0 {
+				first := rt.Comments[0]
+				m.into = sentFrom(se, rt.Path, cmp.Or(first.Written, first.Body))
+			}
 		}
 		threads = append(threads, m)
 	}
@@ -246,7 +245,7 @@ func (x *Ships) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {
 	switch {
 	case i < 0:
 		return t, "", fmt.Errorf("no comment %s in the thread", r.Comment)
-	case t.Comments[i].GitHubID != 0 || t.Comments[i].HostID != "":
+	case t.Comments[i].HostID != "":
 		return t, "", errors.New("this reply is already posted")
 	case !t.Comments[i].Draft:
 		return t, "", errors.New("only a draft reply can be forwarded")
@@ -264,15 +263,15 @@ func (x *Ships) Forwarded(r ForwardedReq) (_ core.Comment, err error) {
 	defer x.env.Recover("Forwarded", &err)
 	x.mirror.mu.Lock()
 	defer x.mirror.mu.Unlock()
-	return x.forwarded(r.Session, r.Thread, r.Comment, 0, r.HostID)
+	return x.forwarded(r.Session, r.Thread, r.Comment, r.HostID)
 }
 
-func (x *Ships) forwarded(id core.SessionID, thread core.ThreadID, comment string, num int64, key string) (core.Comment, error) {
+func (x *Ships) forwarded(id core.SessionID, thread core.ThreadID, comment string, key string) (core.Comment, error) {
 	var sent core.Comment
 	_, err := hostcore.MutateThread(x.st, x.env.Now(), id, thread, func(t *core.Thread) error {
 		for i := range t.Comments {
 			if t.Comments[i].ID == comment {
-				t.Comments[i].Draft, t.Comments[i].GitHubID, t.Comments[i].HostID, t.Comments[i].Sent = false, num, key, x.env.Now().UTC()
+				t.Comments[i].Draft, t.Comments[i].HostID, t.Comments[i].Sent = false, key, x.env.Now().UTC()
 				sent = t.Comments[i]
 			}
 		}

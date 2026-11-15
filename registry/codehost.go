@@ -272,15 +272,21 @@ type ReviewThread struct {
 	State    string       `json:"state,omitempty"` // the reviewer's: ReviewChanges, ReviewApproved, ReviewCommented
 	URL      string       `json:"url,omitempty"`
 	Comments []ReviewNote `json:"comments"`
+	// Reviewers are, on the conversation (no ID), each reviewer's latest verdict: those who left no comment too.
+	Reviewers []PRReviewer `json:"reviewers,omitempty"`
 }
 
-// ReviewNote is one comment of a ReviewThread. Member says its author belongs to the repo, so the agent may read it.
+// ReviewNote is one comment of a ReviewThread. Member says its author belongs to the repo, so the agent may read it;
+// Mine that the user wrote it. Written is its text as written where the host changed it as it was posted (a heading
+// it put before it), "" when Body is.
 type ReviewNote struct {
-	ID     string    `json:"id"`
-	Author string    `json:"author"`
-	Body   string    `json:"body"`
-	At     time.Time `json:"at,omitzero"`
-	Member bool      `json:"member,omitempty"`
+	ID      string    `json:"id"`
+	Author  string    `json:"author"`
+	Body    string    `json:"body"`
+	At      time.Time `json:"at,omitzero"`
+	Member  bool      `json:"member,omitempty"`
+	Mine    bool      `json:"mine,omitempty"`
+	Written string    `json:"written,omitempty"`
 }
 
 // NewPR is a pull request to raise.

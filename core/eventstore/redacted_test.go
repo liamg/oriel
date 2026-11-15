@@ -24,7 +24,7 @@ func TestRedactedBodiesStayOutOfTheLog(t *testing.T) {
 	a.Subscribe(core.Filter{}, core.NewRecorder(&log).Keep(vault).Record)
 	thread := core.Thread{ID: "t1", Status: core.ThreadOpen, Comments: []core.Comment{
 		{ID: "c1", Author: core.AuthorHost, Name: "mallory", Body: body, Redacted: true},
-		{ID: "c2", Author: core.AuthorHost, Name: "priya-k", Body: "rename this", GitHubID: 2},
+		{ID: "c2", Author: core.AuthorHost, Name: "priya-k", Body: "rename this", HostID: "2"},
 	}}
 	for _, ev := range []core.Event{
 		core.SessionSynced{Session: core.SessionState{ID: "pr", Kind: core.KindWork}},
