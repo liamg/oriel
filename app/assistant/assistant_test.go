@@ -1,4 +1,4 @@
-package agentui_test
+package assistant_test
 
 import (
 	"cmp"
@@ -14,9 +14,9 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
-	"github.com/liamg/oriel/app/agentui"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/assistant"
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -30,8 +30,8 @@ import (
 
 var asstNow = time.Date(2026, 10, 15, 14, 5, 0, 0, time.UTC)
 
-func assistantOf(s *apptest.Scene) *agentui.Assistant {
-	return apptest.PluginOf[*agentui.Assistant](s, "assistant")
+func assistantOf(s *apptest.Scene) *assistant.Assistant {
+	return apptest.PluginOf[*assistant.Assistant](s, "assistant")
 }
 
 // assistantScene is the app on a session host with the fake provider, at the mockup's size and a fixed clock, with
@@ -186,7 +186,7 @@ func TestAssistantWhatNeedsMe(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var lines []agentui.SessionLine
+	var lines []assistant.SessionLine
 	if json.Unmarshal([]byte(out), &lines) != nil || len(lines) != 2 || lines[0].ID != "rounding" || lines[0].Status != "permission" ||
 		len(lines[0].Asks) != 1 || lines[0].Asks[0] != "Bash make e2e" || lines[0].Kind != "work" {
 		t.Fatalf("sessions: %s", out)
@@ -370,7 +370,7 @@ func TestAssistantReadsPullRequests(t *testing.T) {
 	s.Run("assistant.say", registry.Args{"text": "my PRs?"})
 	ua := lw.Fake.WaitStarted(t)
 	out, err := settleCall(t, s, asstCall(ua, "my_prs", map[string]any{}))
-	var prs []agentui.PRLine
+	var prs []assistant.PRLine
 	if err != nil || json.Unmarshal([]byte(out), &prs) != nil || len(prs) != 1 || prs[0].Title != "round half to even" || !prs[0].Draft ||
 		prs[0].URL != mine.URL || prs[0].Repo != "acme/api" {
 		t.Errorf("my_prs: %s %v", out, err)
@@ -455,7 +455,7 @@ func TestAssistantFindsTheTest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var files []agentui.AsstFile
+	var files []assistant.AsstFile
 	if json.Unmarshal([]byte(out), &files) != nil || len(files) != 2 ||
 		files[0].Project != "pricing" || files[0].Path != "round_test.go" || !files[0].Test || files[0].Ago != "2m" ||
 		files[1].Project != "web" || files[1].Path != "src/usage.test.ts" || files[1].Area != "uncommitted" || files[1].Add != 1 {
@@ -482,7 +482,7 @@ func TestAssistantFindsTheTest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var w agentui.WhereLine
+	var w assistant.WhereLine
 	if json.Unmarshal([]byte(out), &w) != nil || w.Session != string(se.ID) || w.Project != "pricing" || len(w.Projects) != 2 ||
 		w.File != "round_test.go" || w.Line != 5 {
 		t.Fatalf("where: %s", out)
@@ -562,5 +562,22 @@ func TestAssistantRunsOnTheDefaultModel(t *testing.T) {
 				t.Errorf("the assistant started on %q, want %q", ua.Spec.Model, tt.want)
 			}
 		})
+	}
+}
+
+// What Ori says selects to be copied, in its window as anywhere: a session's name, a test, an error, read out of it.
+func TestOrisRepliesSelect(t *testing.T) {
+	s, lw, _ := assistantScene(t, host.Options{}, nil, nil)
+	s.Run("assistant.open", nil)
+	s.Frame()
+	s.TypeInto("Ask the assistant", "which test is flaky?")
+	s.Press("<CR>")
+	ua := lw.Fake.WaitStarted(t)
+	if _, err := settleCall(t, s, asstCall(ua, "reply", map[string]any{"text": "The flaky test is TestRetryBackoff in api."})); err != nil {
+		t.Fatal(err)
+	}
+	s.Quiet()
+	if got := s.SelectAcross("The flaky"); !strings.Contains(got, "TestRetryBackoff") {
+		t.Errorf("a drag across Ori's reply selected %q", got)
 	}
 }

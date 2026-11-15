@@ -7,7 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/app/agentui"
+	"github.com/liamg/oriel/app/assistant"
+
 	"github.com/liamg/oriel/app/shell/help"
 	"github.com/liamg/oriel/registry/uireg"
 
@@ -63,7 +64,7 @@ func TestNoWorkerInAnyUI(t *testing.T) {
 		e := c.(registry.AgentTool)
 		check("agent tool "+e.Name, fmt.Sprint(e.Name, " ", e.Desc, " ", e.Params, " ", e.Reads))
 	}
-	check("the assistant's prompt", apptest.PluginOf[*agentui.Assistant](s, "assistant").Prompt())
+	check("the assistant's prompt", apptest.PluginOf[*assistant.Assistant](s, "assistant").Prompt())
 	var srcs []help.Source
 	hs, _ := s.Registry().HelpSources()
 	for _, h := range hs {

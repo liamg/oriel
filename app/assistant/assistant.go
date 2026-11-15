@@ -1,4 +1,6 @@
-package agentui
+// Package assistant is Ori, the window's own agent: its window, its face, the tools it's given and the commands that
+// drive it, over the conversation package's conversation.
+package assistant
 
 import (
 	"cmp"

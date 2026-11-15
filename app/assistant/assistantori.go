@@ -1,4 +1,4 @@
-package agentui
+package assistant
 
 import (
 	"math"
