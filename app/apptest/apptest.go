@@ -340,6 +340,19 @@ func (s *Scene) Drag(from, to render.Point) {
 	s.Frame()
 }
 
+// SelectAcross drags along the first run of text starting with prefix, as the pointer would, and answers what it
+// selected.
+func (s *Scene) SelectAcross(prefix string) string {
+	s.T.Helper()
+	at, ok := s.TextStart(prefix)
+	if !ok {
+		s.T.Fatalf("no %q:\n%s", prefix, s.Text())
+	}
+	y := at.Y - 5
+	s.Drag(render.Point{X: at.X + 12, Y: y}, render.Point{X: at.X + 260, Y: y})
+	return s.UI().SelectedText()
+}
+
 // MeanFrame is how long a frame takes, on average over 100 after 10 to settle, timed by perf.Times.
 func (s *Scene) MeanFrame() time.Duration {
 	s.Frames(10)
