@@ -27,3 +27,15 @@ func ThreadsScene(t *testing.T, o Options, threads ...[4]string) *Scene {
 	s.Apply(core.SessionSynced{Session: se}, core.SessionFocused{ID: se.ID})
 	return s
 }
+
+// Draft is the one draft reply on session id's thread tid; the test fails without exactly one.
+func (s *Scene) Draft(id core.SessionID, tid core.ThreadID) core.Comment {
+	s.T.Helper()
+	sess, _ := s.Store().State().Session(id)
+	th, _ := sess.Snapshot().Thread(tid)
+	if d := th.Drafts(); len(d) == 1 {
+		return d[0]
+	}
+	s.T.Fatalf("no draft in %+v", th.Comments)
+	return core.Comment{}
+}

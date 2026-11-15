@@ -1,4 +1,4 @@
-package ship_test
+package github_test
 
 import (
 	"context"
@@ -9,29 +9,29 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/ship"
+	"github.com/liamg/oriel/app/github"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/registry"
 )
 
-func githubOf(s *apptest.Scene) *ship.GitHub { return apptest.PluginOf[*ship.GitHub](s, "github") }
+func githubOf(s *apptest.Scene) *github.GitHub { return apptest.PluginOf[*github.GitHub](s, "github") }
 
 // The agent never posts; the user's forward does. GitHub threads are mirrored inline, the agent drafts a reply, and
 // you forward it: "GitHub review · L80 · @priya-k · changes requested · synced 30s ago", the reviewer's comment,
 // "Claude draft · not sent", "↗ Forward to GitHub", "Edit", "Claude's draft reaches GitHub when you forward it.", and the status
 // line's "GH 1 changes requested".
 func TestGitHubReviewForward(t *testing.T) {
-	s, lw, hub, se, _ := shipScene(t)
+	s, lw, hub, se, _ := apptest.ShipScene(t)
 	x := githubOf(s)
 	ag := lw.Fake.WaitStarted(t)
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
 	rig.Answered(t, s.Store(), ag)
 	ag.Emit(agent.TurnEnd{})
-	apiDir := shipDir(se, "search-api")
+	apiDir := apptest.ProjectDir(se, "search-api")
 	file := filepath.Join(apiDir, "internal/api/usage/handler.go")
-	writeFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() int { return 2 }\n"})
+	rig.WriteFiles(t, apiDir, map[string]string{"internal/api/usage/handler.go": "package usage\n\nfunc Handle() int { return 2 }\n"})
 	var branch string
 	for _, p := range se.Projects {
 		if p.Name == "search-api" {
@@ -88,7 +88,7 @@ func TestGitHubReviewForward(t *testing.T) {
 	s.Until("the edited draft", func() bool {
 		return strings.Contains(s.Text(), "Logged too.") && s.Count("Edit the draft reply") == 0
 	})
-	if d := draftOf(t, s, se.ID, tid); d.Body != "Agreed. `Handle` now returns an error. Logged too." || !d.Draft {
+	if d := s.Draft(se.ID, tid); d.Body != "Agreed. `Handle` now returns an error. Logged too." || !d.Draft {
 		t.Errorf("the edited draft %+v", d)
 	}
 
@@ -134,16 +134,4 @@ func ghPosts(hub interface{ Calls() []string }) []string {
 		}
 	}
 	return out
-}
-
-func draftOf(t *testing.T, s *apptest.Scene, id core.SessionID, tid core.ThreadID) core.Comment {
-	t.Helper()
-	st := s.Store().State()
-	sess, _ := st.Session(id)
-	th, _ := sess.Snapshot().Thread(tid)
-	if d := th.Drafts(); len(d) == 1 {
-		return d[0]
-	}
-	t.Fatalf("no draft in %+v", th.Comments)
-	return core.Comment{}
 }

@@ -300,7 +300,7 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	if out := ag.Call(t, "reply", map[string]any{"thread": string(tid), "body": "It does now: it pings the pool."}); !strings.Contains(out, "drafted") {
 		t.Fatalf("reply: %q", out)
 	}
-	d := draftOf(t, s, se.ID, tid)
+	d := s.Draft(se.ID, tid)
 	s.Run("github.forward", registry.Args{"thread": string(tid)})
 	shipSettle(s, t, "the forward", func() bool {
 		sess, _ := s.Store().State().Session(se.ID)

@@ -1,4 +1,6 @@
-package ship
+// Package github is GitHub in the app: its code host (raising, reading and merging pull requests, review requests) and
+// the mirror of a session's pull request reviews into its threads.
+package github
 
 import (
 	"cmp"

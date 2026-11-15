@@ -153,7 +153,7 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	if n := g.Notes(); len(n) != 0 {
 		t.Fatalf("GitLab was written to before the forward: %q", n)
 	}
-	d := draftOf(t, s, se.ID, tid)
+	d := s.Draft(se.ID, tid)
 	s.Run("github.forward", registry.Args{"thread": string(tid)})
 	s.Until("the forward", func() bool {
 		st := s.Store().State()

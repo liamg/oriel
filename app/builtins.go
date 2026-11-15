@@ -4,6 +4,8 @@ import (
 	"cmp"
 	"path/filepath"
 
+	"github.com/liamg/oriel/app/github"
+
 	"github.com/liamg/oriel/app/assistant"
 
 	"github.com/liamg/oriel/app/agentui"
@@ -59,9 +61,9 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		p.Quit, &settings.SandboxSettings{Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
 		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &jobs.Jobs{}, &repos.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
 		&updates.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, dictation.NewVoiceEntries(dictate), dictate,
-		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &ship.GitHubHost{Client: cfg.GitHubClient},
+		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &github.GitHubHost{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
-		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &ship.GitHub{}, &settings.Secrets{},
+		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &github.GitHub{}, &settings.Secrets{},
 		&luaconfig.Lua{Dir: c.ConfigDir}, &plugins.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
 	)

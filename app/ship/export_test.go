@@ -55,8 +55,6 @@ func (x *Ship) SetDoing(id core.SessionID, project, step string) {
 
 const DraftSaveAfter = draftSaveAfter
 
-func (x *GitHub) Wait() { x.wait() }
-
 func (x *Verify) Wait()                          { x.wait() }
 func (x *Verify) Open() core.SessionID           { return x.open }
 func (x *Verify) Answered(id core.SessionID) int { return x.quizzes[id].at }
