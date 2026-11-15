@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -53,14 +54,14 @@ func (x *Console) item(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 		c.Column(k, blockStyle(th, width, sel), func(c *ui.Ctx) {
 			if widget.Clickable(c, "head", ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(12, 7), Gap: 8, Cross: ui.Center, Help: "agent/console#thinking",
 				Label: "Thinking", Expanded: &open}, func(c *ui.Ctx) {
-				c.Text("t", map[bool]string{true: "▾ thinking", false: "▸ thinking"}[open], kit.MonoFont(11, th.C(tThinking)))
-				c.Text("n", fmt.Sprintf("%d lines", lineCount(it.Text)), kit.MonoFont(10, th.C(tThinking)))
+				c.Text("t", map[bool]string{true: "▾ thinking", false: "▸ thinking"}[open], widget.MonoFont(11, th.C(tThinking)))
+				c.Text("n", fmt.Sprintf("%d lines", lineCount(it.Text)), widget.MonoFont(10, th.C(tThinking)))
 			}).Clicked {
 				st.toggle(k)
 			}
 			if open {
 				c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 8}}, func(c *ui.Ctx) {
-					widget.Wrap(c, "w", it.Text, width-24, kit.UIFont(12, th.C(tThinking)))
+					widget.Wrap(c, "w", it.Text, width-24, widget.UIFont(12, th.C(tThinking)))
 				})
 			}
 		})
@@ -69,26 +70,26 @@ func (x *Console) item(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 		c.Column(k, blockStyle(th, width, sel), func(c *ui.Ctx) {
 			if widget.Clickable(c, "head", ui.Style{Dir: ui.Row, W: ui.Flex(1), Pad: ui.PadXY(12, 7), Gap: 8, Cross: ui.Center, Help: "agent/console#transcript",
 				Label: "Prompt", Expanded: &open}, func(c *ui.Ctx) {
-				c.Text("k", "YOU", kit.KickerFont(th.C(theme.Accent)))
+				c.Text("k", "YOU", widget.KickerFont(th.C(theme.Accent)))
 				if !open {
-					c.Text("t", kit.FirstLine(it.Text), kit.UIFont(12, th.C(theme.FgMuted)))
+					c.Text("t", kit.FirstLine(it.Text), widget.UIFont(12, th.C(theme.FgMuted)))
 				}
 			}).Clicked {
 				st.toggle(k)
 			}
 			if open {
 				c.Column("text", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 8}}, func(c *ui.Ctx) {
-					widget.Wrap(c, "w", it.Text, width-24, kit.UIFont(12.5, th.C(theme.Fg)))
+					widget.Wrap(c, "w", it.Text, width-24, widget.UIFont(12.5, th.C(theme.Fg)))
 				})
 			}
 		})
 	case core.ItemError:
 		s := blockStyle(th, width, sel)
 		s.Stroke, s.Pad, s.Fill = th.C(theme.Error), ui.PadXY(12, 8), theme.WithAlpha(th.C(theme.Error), .06)
-		c.Column(k, s, func(c *ui.Ctx) { widget.Wrap(c, "w", it.Text, width-24, kit.UIFont(12.5, th.C(theme.Error))) })
+		c.Column(k, s, func(c *ui.Ctx) { widget.Wrap(c, "w", it.Text, width-24, widget.UIFont(12.5, th.C(theme.Error))) })
 	case core.ItemSystem:
 		c.Row(k, ui.Style{W: ui.Px(width), Pad: ui.PadXY(8, 0), Role: ui.RoleListItem, Selected: sel}, func(c *ui.Ctx) {
-			c.Text("t", it.Text, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("t", it.Text, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 	default:
 		x.tool(c, k, se, it, st, width)
@@ -100,12 +101,12 @@ func (x *Console) item(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, st *consoleState, width float32) {
 	th := c.Theme()
 	sel := st.sel == k
-	mark := kit.MarkRunning
+	mark := draw.MarkRunning
 	switch {
 	case it.IsError:
-		mark = kit.MarkFailed
+		mark = draw.MarkFailed
 	case it.Done:
-		mark = kit.MarkOK
+		mark = draw.MarkOK
 	}
 	title := cmp.Or(it.Title, it.Tool)
 	verb, rest, _ := strings.Cut(title, " ")
@@ -135,9 +136,9 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 			head.Expanded = &open
 		}
 		if widget.Clickable(c, "head", head, func(c *ui.Ctx) {
-			kit.StateMark(c, "mark", mark, it.Time, 10)
+			draw.StateMark(c, "mark", mark, it.Time, 10)
 			c.Text("verb", verb, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-			c.Text("rest", rest, kit.MonoFont(11.5, th.C(theme.FgMuted)))
+			c.Text("rest", rest, widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if it.Diff != nil {
 				widget.DiffStat(c, "stat", it.Diff.Added, it.Diff.Removed, widget.DiffStatOpts{})
@@ -146,13 +147,13 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 				}
 			}
 			if len(summary) > 0 {
-				c.Text("sum", strings.Join(summary, " · "), kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("sum", strings.Join(summary, " · "), widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
 			if r, ok := runOf(se, it.ID); ok {
-				kit.EvidenceChip(c, x.h, "run", se.ID, r.ID, kit.RunLabel(r), r.OK)
+				draw.EvidenceChip(c, x.h, "run", se.ID, r.ID, draw.RunLabel(r), r.OK)
 			}
 			if hasOutput && core.ShellTool(it.Tool) {
-				c.Text("fold", map[bool]string{true: "▾", false: "▸"}[open], kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("fold", map[bool]string{true: "▾", false: "▸"}[open], widget.MonoFont(11, th.C(theme.FgFaint)))
 			}
 			if widget.IconButton(c, "expand", "⤢", widget.IconButtonOpts{Label: "Show in full", Help: "agent/console#details", Size: 18}) {
 				x.run(context.Background(), "agent.console.details", registry.Args{"id": string(se.ID), "item": it.ID})
@@ -178,7 +179,7 @@ func (x *Console) tool(c *ui.Ctx, k string, se core.SessionState, it core.Item, 
 					tok = theme.Error
 				}
 				for i, l := range lines {
-					c.Text(i, strings.ReplaceAll(l, "\t", "    "), kit.MonoFont(11.5, th.C(tok)))
+					c.Text(i, strings.ReplaceAll(l, "\t", "    "), widget.MonoFont(11.5, th.C(tok)))
 				}
 			})
 		}
@@ -215,13 +216,13 @@ func miniDiff(c *ui.Ctx, d *core.FileDiff) {
 				numTok := theme.FgGhost
 				switch l.Op {
 				case "+":
-					numTok = kit.TToolOK
+					numTok = draw.TToolOK
 				case "-":
-					numTok = kit.TToolFailed
+					numTok = draw.TToolFailed
 				}
-				c.Box("n", ui.Style{W: ui.Px(32)}, func(c *ui.Ctx) { c.Text("t", n, kit.MonoFont(11, th.C(numTok))) })
-				c.Box("op", ui.Style{W: ui.Px(10)}, func(c *ui.Ctx) { c.Text("t", strings.TrimSpace(l.Op), kit.MonoFont(11.5, th.C(numTok))) })
-				c.Text("t", strings.ReplaceAll(l.Text, "\t", "    "), kit.MonoFont(11.5, th.C(tok)))
+				c.Box("n", ui.Style{W: ui.Px(32)}, func(c *ui.Ctx) { c.Text("t", n, widget.MonoFont(11, th.C(numTok))) })
+				c.Box("op", ui.Style{W: ui.Px(10)}, func(c *ui.Ctx) { c.Text("t", strings.TrimSpace(l.Op), widget.MonoFont(11.5, th.C(numTok))) })
+				c.Text("t", strings.ReplaceAll(l.Text, "\t", "    "), widget.MonoFont(11.5, th.C(tok)))
 			})
 		}
 	})
@@ -249,18 +250,18 @@ func (x *Console) background(c *ui.Ctx, se core.SessionState, width float32, sel
 	bg := se.Agent.Background
 	c.Column("background", blockStyle(th, width, sel), func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(28), Pad: ui.PadXY(12, 0), Cross: ui.Center, Help: "agent/console#background"}, func(c *ui.Ctx) {
-			c.Text("k", "IN THE BACKGROUND", kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("k", "IN THE BACKGROUND", widget.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", fmt.Sprintf("%d running · wakes the agent when done", len(bg)), kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("n", fmt.Sprintf("%d running · wakes the agent when done", len(bg)), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		for i, t := range bg {
 			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 10, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Description},
 				func(c *ui.Ctx) {
-					kit.StateMark(c, "mark", kit.MarkRunning, time.Time{}, 10)
+					draw.StateMark(c, "mark", draw.MarkRunning, time.Time{}, 10)
 					c.Text("kind", cmp.Or(t.Kind, "task"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.Medium},
 						Color: th.C(theme.Fg)})
-					c.Text("desc", t.Description, kit.UIFont(12, th.C(theme.FgMuted)))
+					c.Text("desc", t.Description, widget.UIFont(12, th.C(theme.FgMuted)))
 				})
 		}
 	})
@@ -273,15 +274,15 @@ func (x *Console) forkCard(c *ui.Ctx, k string, f forkAnswer, width float32, sel
 	s.Pad, s.Gap = ui.PadXY(14, 10), 6
 	c.Column(k, s, func(c *ui.Ctx) {
 		c.Row("q", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", "BTW", kit.KickerFont(th.C(theme.Accent)))
-			c.Text("t", f.q, kit.UIFont(12.5, th.C(theme.Fg)))
+			c.Text("k", "BTW", widget.KickerFont(th.C(theme.Accent)))
+			c.Text("t", f.q, widget.UIFont(12.5, th.C(theme.Fg)))
 		})
 		switch {
 		case !f.done:
 			widget.Busy(c, "wait", widget.LoadState{Phase: widget.Pending, Since: f.since}, widget.BusyOpts{Label: "Asking a fork", Size: 11,
 				Help: "agent/console#fork"})
 		case f.err != nil:
-			c.Text("err", f.err.Error(), kit.UIFont(12, th.C(theme.Error)))
+			c.Text("err", f.err.Error(), widget.UIFont(12, th.C(theme.Error)))
 		default:
 			kit.DocText(c, x.h, "a", f.a, width-28)
 		}

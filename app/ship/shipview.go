@@ -35,16 +35,16 @@ var (
 )
 
 func (x *Ship) views() {
-	x.Add(x.h.View(kit.ShipView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
+	x.Add(x.h.View(prui.ShipView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "ship", Fn: func(c *ui.Ctx) { x.page(c) }}
 	})))
-	x.Add(x.h.View(kit.PullRequestView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
+	x.Add(x.h.View(prui.PullRequestView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "pull-request", Fn: func(c *ui.Ctx) { x.checklist(c, v.Project) }}
 	})))
-	x.Add(x.h.View(kit.GitView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
+	x.Add(x.h.View(prui.GitView, uireg.ViewFunc(func(v uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "git", Fn: func(c *ui.Ctx) { x.gitPanel(c, v.Project) }}
 	})))
-	x.Add(x.h.View(kit.PRView, prView{x}))
+	x.Add(x.h.View(prui.PRView, prView{x}))
 }
 
 func (x *Ship) run(id string, a registry.Args) {
@@ -70,7 +70,7 @@ func (x *Ship) page(c *ui.Ctx) {
 	se, _, ok := x.here("")
 	c.Column("page", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)}, func(c *ui.Ctx) {
 		if !ok {
-			kit.EmptyNote(c, "Ship is a session's page: open a session with a repo that has a remote.")
+			prui.EmptyNote(c, "Ship is a session's page: open a session with a repo that has a remote.")
 			return
 		}
 		ships, rep := x.sessionShips(se)
@@ -83,7 +83,7 @@ func (x *Ship) page(c *ui.Ctx) {
 			}
 			c.Column("cols", cols, func(c *ui.Ctx) {
 				if rep.err != nil && len(ships) == 0 {
-					c.Text("err", rep.err.Error(), kit.MonoFont(11, th.C(theme.Error)))
+					c.Text("err", rep.err.Error(), widget.MonoFont(11, th.C(theme.Error)))
 				}
 				shown := x.quietStrip(c, se, ships)
 				c.Row("row", ui.Style{W: ui.Flex(1), Gap: shipColumnGap}, func(c *ui.Ctx) {
@@ -102,14 +102,14 @@ func (x *Ship) page(c *ui.Ctx) {
 				})
 			})
 			widget.VRule(c, "divider")
-			c.Column("side", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(kit.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
+			c.Column("side", ui.Style{W: ui.Px(300), H: ui.Flex(1), Fill: th.C(prui.TShipSide), Pad: ui.PadXY(16, 16), Gap: 8, ScrollY: true}, func(c *ui.Ctx) {
 				x.gatesList(c, se)
 				x.mergeOrder(c, se, ships)
 				x.previous(c, se, "")
 				x.ticket(c, se)
 				c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)
 				widget.Wrap(c, "note", "Commits, pushes and PRs run with your git and gh. The agent can draft, never send.", 266,
-					kit.UIFont(11, th.C(theme.FgFaint)))
+					widget.UIFont(11, th.C(theme.FgFaint)))
 			})
 		})
 	})
@@ -132,7 +132,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 			raisable++
 		}
 	}
-	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(22, 0), Gap: 14, Cross: ui.Center, Fill: th.C(kit.TShipHead)}, func(c *ui.Ctx) {
+	c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(44), Pad: ui.PadXY(22, 0), Gap: 14, Cross: ui.Center, Fill: th.C(prui.TShipHead)}, func(c *ui.Ctx) {
 		c.Text("h", "SHIP", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .06},
 			Color: th.C(theme.Fg)})
 		var meta []string
@@ -144,7 +144,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 			meta = append(meta, "branch "+se.Branch)
 		}
 		c.Row("meta", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("m", strings.Join(meta, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("m", strings.Join(meta, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 		var reads []widget.LoadState
 		for _, s := range ships {
@@ -164,7 +164,7 @@ func (x *Ship) pageHeader(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 		case raisable > 2:
 			label = fmt.Sprintf("Push + raise all %d %ss", raisable, w.Short)
 		}
-		if kit.AllMerged(se, projectShips(ships)) {
+		if prui.AllMerged(se, projectShips(ships)) {
 			if widget.Button(c, "finish", "Finish session", widget.ButtonOpts{Primary: true, Help: kit.EndHelp, Disabled: waiting, Why: stillReading}) {
 				x.run("session.end", registry.Args{"id": string(se.ID)})
 			}
@@ -189,7 +189,7 @@ func (x *Ship) columnHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 		c.Text("n", s.Project, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		c.Row("br", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			if s.Branch != "" {
-				c.Text("b", s.Branch+" ← "+cmp.Or(s.Base, "?"), kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("b", s.Branch+" ← "+cmp.Or(s.Base, "?"), widget.MonoFont(11, th.C(theme.FgFaint)))
 			}
 		})
 		if label, tone := statusChip(th, s); label != "" {
@@ -223,14 +223,14 @@ func statusChip(th *theme.Resolved, s shipRead) (string, render.Color) {
 func (x *Ship) column(c *ui.Ctx, se core.SessionState, s shipRead) {
 	th := c.Theme()
 	if s.ReadOnly {
-		kit.EmptyNote(c, "This worktree is pinned or read-only: nothing to ship from it.")
+		prui.EmptyNote(c, "This worktree is pinned or read-only: nothing to ship from it.")
 		return
 	}
 	if s.GitError != "" {
-		c.Text("gerr", s.GitError, kit.MonoFont(11, th.C(theme.Error)))
+		c.Text("gerr", s.GitError, widget.MonoFont(11, th.C(theme.Error)))
 	}
 	if f := x.failed(se.ID, s.Project); f != "" && x.doing(se.ID, s.Project) == "" {
-		widget.Wrap(c, "failed", f, 420, kit.MonoFont(11, th.C(theme.Error)))
+		widget.Wrap(c, "failed", f, 420, widget.MonoFont(11, th.C(theme.Error)))
 	}
 	x.offBranch(c, se, s, 420)
 	cur := currentStep(s)
@@ -266,7 +266,7 @@ func (x *Ship) stepRow(c *ui.Ctx, key string, n, cur int, done bool, card func(c
 				tone = th.C(tShipTodo)
 			}
 			c.Box("dot", ui.Style{W: ui.Px(18), H: ui.Px(18), Radius: 9, Stroke: tone, Border: 1, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("n", label, kit.Mono(9.5, typeset.SemiBold, tone))
+				c.Text("n", label, widget.Mono(9.5, typeset.SemiBold, tone))
 			})
 			c.Box("line", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tShipRail)}, nil)
 		})
@@ -296,7 +296,7 @@ func stepTitle(c *ui.Ctx, title, note string, at ...widget.AgoPart) {
 	c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 	c.Row("note", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 		if note != "" || len(at) > 0 {
-			widget.AgoLine(c, "n", widget.AgoLineOpts{Text: kit.MonoFont(10.5, th.C(theme.FgFaint))}, append([]widget.AgoPart{{Text: note}}, at...)...)
+			widget.AgoLine(c, "n", widget.AgoLineOpts{Text: widget.MonoFont(10.5, th.C(theme.FgFaint))}, append([]widget.AgoPart{{Text: note}}, at...)...)
 		}
 	})
 }
@@ -337,7 +337,7 @@ func (x *Ship) fileRows(c *ui.Ctx, se core.SessionState, s shipRead, f *commitFo
 				}
 			})
 			if fl.Code == "?" {
-				c.Text("new", "new", kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("new", "new", widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 			widget.DiffStat(c, "ds", fl.Add, fl.Del, widget.DiffStatOpts{Binary: fl.Binary})
 			if discard && widget.IconButton(c, "discard", "↺", widget.IconButtonOpts{Label: "Discard " + fl.Path + "'s changes", Help: "git/ship#git",
@@ -390,7 +390,7 @@ func (x *Ship) commitBox(c *ui.Ctx, se core.SessionState, s shipRead, f *commitF
 		}
 	})
 	if f.veto != "" {
-		widget.Wrap(c, "veto", f.veto, 520, kit.MonoFont(10.5, th.C(theme.Warn)))
+		widget.Wrap(c, "veto", f.veto, 520, widget.MonoFont(10.5, th.C(theme.Warn)))
 	}
 }
 
@@ -420,7 +420,7 @@ func (x *Ship) behind(c *ui.Ctx, se core.SessionState, s shipRead) {
 		}
 		return func(c *ui.Ctx) {
 			widget.Wrap(c, "conf", "conflicts predicted in "+strings.Join(s.Conflicts, ", ")+": a rebase stops and is undone", 420,
-				kit.MonoFont(10.5, th.C(theme.Warn)))
+				widget.MonoFont(10.5, th.C(theme.Warn)))
 			if t, ok := conflictTrouble(s); ok {
 				c.Row("twins", ui.Style{Gap: 8}, func(c *ui.Ctx) {
 					kit.AskTwins(c, x.h, "ship.conflict."+s.Project, t, kit.AskTwinsOpts{Help: "git/ship#sync", Explain: "Explain with agent", Fix: "Fix conflicts with agent"})
@@ -501,8 +501,8 @@ func (x *Ship) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 	}, func(c *ui.Ctx) {
 		for i, cm := range s.Unpushed {
 			c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Clip: true}, func(c *ui.Ctx) {
-				c.Text("h", cm.Hash, kit.MonoFont(11, th.C(tShipHash)))
-				c.Text("s", cm.Subject, kit.MonoFont(11, th.C(theme.FgMuted)))
+				c.Text("h", cm.Hash, widget.MonoFont(11, th.C(tShipHash)))
+				c.Text("s", cm.Subject, widget.MonoFont(11, th.C(theme.FgMuted)))
 			})
 		}
 	})
@@ -511,10 +511,10 @@ func (x *Ship) unpushed(c *ui.Ctx, se core.SessionState, s shipRead) {
 // gatesList is "before this ships": every gate's state for the session.
 func (x *Ship) gatesList(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
-	kit.SectionCap(c, "BEFORE THIS SHIPS")
+	prui.SectionCap(c, "BEFORE THIS SHIPS")
 	gs := registry.ShipGates(x.h, string(se.ID), string(se.Kind))
 	if len(gs) == 0 {
-		c.Text("none", "No gates for this session.", kit.UIFont(12, th.C(theme.FgFaint)))
+		c.Text("none", "No gates for this session.", widget.UIFont(12, th.C(theme.FgFaint)))
 	}
 	for _, g := range gs {
 		c.Column(g.Name, ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
@@ -535,13 +535,13 @@ func (x *Ship) gatesList(c *ui.Ctx, se core.SessionState) {
 					if g.State == registry.GateSkipped {
 						title = th.C(theme.FgFaint)
 					}
-					c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
-					c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", g.Title, kit.UIFont(12.5, title)) })
+					c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, widget.UIFont(13, tone)) })
+					c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", g.Title, widget.UIFont(12.5, title)) })
 					noteTone := th.C(theme.FgFaint)
 					if g.State == registry.GateWarn {
 						noteTone = th.C(theme.Warn)
 					}
-					c.Text("n", g.Note, kit.MonoFont(10.5, noteTone))
+					c.Text("n", g.Note, widget.MonoFont(10.5, noteTone))
 				})
 			if g.Action != "" {
 				c.Row("act", ui.Style{Pad: ui.Insets{L: 24, B: 6}}, func(c *ui.Ctx) {
@@ -569,14 +569,14 @@ func (x *Ship) mergeOrder(c *ui.Ctx, se core.SessionState, ships []shipRead) {
 	if len(rows) < 2 {
 		return
 	}
-	kit.SectionCap(c, "MERGE ORDER")
+	prui.SectionCap(c, "MERGE ORDER")
 	for i, s := range rows {
 		c.Row(s.Project, ui.Style{W: ui.Flex(1), H: ui.Px(22), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			pr := s.words().Sigil + "—"
 			if s.PR != nil {
 				pr = s.words().Sigil + strconv.Itoa(s.PR.Number)
 			}
-			c.Text("t", fmt.Sprintf("%d · %s → %s", i+1, s.Project, pr), kit.MonoFont(11, th.C(theme.FgMuted)))
+			c.Text("t", fmt.Sprintf("%d · %s → %s", i+1, s.Project, pr), widget.MonoFont(11, th.C(theme.FgMuted)))
 		})
 	}
 	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
@@ -597,7 +597,7 @@ func (x *Ship) previous(c *ui.Ctx, se core.SessionState, project string) {
 	if len(past) == 0 {
 		return
 	}
-	kit.SectionCap(c, "PREVIOUS")
+	prui.SectionCap(c, "PREVIOUS")
 	for i, pr := range past {
 		c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(24), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 			state := cmp.Or(pr.State, "merged here")
@@ -611,7 +611,7 @@ func (x *Ship) previous(c *ui.Ctx, se core.SessionState, project string) {
 					label = pr.Project + " " + label
 				}
 				if pr.URL == "" {
-					c.Text("l", label, kit.MonoFont(11, th.C(theme.FgMuted)))
+					c.Text("l", label, widget.MonoFont(11, th.C(theme.FgMuted)))
 					return
 				}
 				if widget.Link(c, "l", label, "git/ship#next") {
@@ -628,8 +628,8 @@ func (x *Ship) ticket(c *ui.Ctx, se core.SessionState) {
 		return
 	}
 	th := c.Theme()
-	kit.SectionCap(c, "TICKET")
-	c.Text("t", se.Ticket, kit.MonoFont(11.5, th.C(tShipLink)))
+	prui.SectionCap(c, "TICKET")
+	c.Text("t", se.Ticket, widget.MonoFont(11.5, th.C(tShipLink)))
 }
 
 // --- the dock: Pull request (01h) and Git ---
@@ -639,7 +639,7 @@ func (x *Ship) checklist(c *ui.Ctx, project string) {
 	se, p, ok := x.here(project)
 	c.Column("pr", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4, ScrollY: true}, func(c *ui.Ctx) {
 		if !ok {
-			kit.EmptyNote(c, "Pull request is a session's project's: open a session.")
+			prui.EmptyNote(c, "Pull request is a session's project's: open a session.")
 			return
 		}
 		widget.Async(c, "load", x.loadState(c, se.ID, p), widget.AsyncOpts{Label: "Reading " + p, Retry: func() { x.refresh(se.ID, true) },

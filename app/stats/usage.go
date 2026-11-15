@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent/usage/stats"
@@ -237,19 +238,19 @@ func (x *Plugin) indicators(c *ui.Ctx) {
 		Stroke: stroke, Border: 1, Role: ui.RoleButton, Label: label,
 		Help: "agent/usage#indicators"}, func(c *ui.Ctx) {
 		if out {
-			c.Text("out", "signed out", kit.MonoFont(10.5, th.C(theme.Error)))
+			c.Text("out", "signed out", widget.MonoFont(10.5, th.C(theme.Error)))
 		}
 		for i, w := range u.Windows {
 			if qualifier(w) != "" {
 				continue
 			}
-			tone := th.C(kit.TMeterContext)
+			tone := th.C(draw.TMeterContext)
 			if w.Used >= .9 {
 				tone = th.C(theme.Error)
 			}
-			c.Text(fmt.Sprint("n", i), usageShort(w), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text(fmt.Sprint("n", i), usageShort(w), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			widget.Meter(c, fmt.Sprint("m", i), w.Used, widget.MeterOpts{Tone: tone, Width: ui.Px(44), Label: w.Name})
-			c.Text(fmt.Sprint("v", i), fmt.Sprintf("%d%%", kit.Pct(w.Used)), kit.MonoFont(10.5, th.C(theme.Fg)))
+			c.Text(fmt.Sprint("v", i), fmt.Sprintf("%d%%", kit.Pct(w.Used)), widget.MonoFont(10.5, th.C(theme.Fg)))
 		}
 	}).Clicked {
 		x.run("usage.open", nil)
@@ -290,33 +291,33 @@ func (x *Plugin) usageCard(c *ui.Ctx, front core.ProviderUsage) {
 			if out := x.h.State().SignedOut(u); len(out) > 0 {
 				sub += " · signed out"
 			}
-			c.Text("s", sub, kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("s", sub, widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		for j, w := range u.Windows {
 			r := readWindow(now, w, hist)
 			c.Row(fmt.Sprint("w", i, j), ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Row("k", ui.Style{W: ui.Px(34)}, func(c *ui.Ctx) { c.Text("t", usageShort(w), kit.MonoFont(10, th.C(theme.FgGhost))) })
+				c.Row("k", ui.Style{W: ui.Px(34)}, func(c *ui.Ctx) { c.Text("t", usageShort(w), widget.MonoFont(10, th.C(theme.FgGhost))) })
 				widget.Meter(c, "m", w.Used, widget.MeterOpts{Tone: windowTone(th, w), Width: ui.Px(60), Label: w.Name})
 				at, in := resets(now, x.Loc, w)
 				line := fmt.Sprintf("%d%%  %s", kit.Pct(w.Used), at)
 				if in != "" && fiveHour(w) {
 					line += " · " + in
 				}
-				c.Text("v", line, kit.MonoFont(10.5, th.C(theme.Fg)))
+				c.Text("v", line, widget.MonoFont(10.5, th.C(theme.Fg)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("b", fmt.Sprintf("%.1f%%/h", r.burn*100), kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("b", fmt.Sprintf("%.1f%%/h", r.burn*100), widget.MonoFont(10, th.C(theme.FgFaint)))
 			})
 			if !r.runsOut.IsZero() {
 				v, tone := r.verdict(now, x.Loc)
-				c.Row(fmt.Sprint("x", i, j), ui.Style{Pad: ui.Insets{L: 42}}, func(c *ui.Ctx) { c.Text("t", v, kit.MonoFont(10, th.C(tone))) })
+				c.Row(fmt.Sprint("x", i, j), ui.Style{Pad: ui.Insets{L: 42}}, func(c *ui.Ctx) { c.Text("t", v, widget.MonoFont(10, th.C(tone))) })
 			}
 		}
 	}
 	c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("t", "click for Usage", kit.MonoFont(10, th.C(theme.FgFaint)))
-		kit.Keycap(c, "k", kit.BoundKey(x.h, "usage.open", nil))
+		c.Text("t", "click for Usage", widget.MonoFont(10, th.C(theme.FgFaint)))
+		widget.Keycap(c, "k", kit.BoundKey(x.h, "usage.open", nil))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		widget.Ago(c, "r", read, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint)), Long: true, Prefix: "read ", Suffix: " · no tokens spent", Now: now})
+		widget.Ago(c, "r", read, widget.AgoOpts{Text: widget.MonoFont(10, th.C(theme.FgFaint)), Long: true, Prefix: "read ", Suffix: " · no tokens spent", Now: now})
 	})
 }
 
@@ -332,7 +333,7 @@ func providerMark(c *ui.Ctx, provider string) {
 		}
 	}
 	c.Box("mark", ui.Style{W: ui.Px(18), H: ui.Px(18), Radius: 4, Fill: theme.WithAlpha(tone, .85), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("t", letters, kit.Mono(8.5, typeset.Bold, th.C(theme.BgBase)))
+		c.Text("t", letters, widget.Mono(8.5, typeset.Bold, th.C(theme.BgBase)))
 	})
 }
 
@@ -355,9 +356,9 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 				c.Text("h", "USAGE", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.SemiBold, Tracking: .04},
 					Color: th.C(theme.Fg)})
 				c.Text("m", fmt.Sprintf("plan windows · %s · %s", kit.Counted(len(st.Usage), "account"),
-					now.In(x.Loc).Format("Mon Jan 2 15:04")), kit.MonoFont(11, th.C(theme.FgFaint)))
+					now.In(x.Loc).Format("Mon Jan 2 15:04")), widget.MonoFont(11, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				widget.Ago(c, "read", read, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "read ", Now: now})
+				widget.Ago(c, "read", read, widget.AgoOpts{Text: widget.MonoFont(11, th.C(theme.FgFaint)), Long: true, Prefix: "read ", Now: now})
 				reading := x.reading.State()
 				if widget.Button(c, "refresh", "Refresh", widget.ButtonOpts{Key: "r", Busy: reading.Phase == widget.Pending, BusyLabel: "Refreshing",
 					Help: "agent/usage#burned"}) {
@@ -378,14 +379,14 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 						continue
 					}
 					c.Box(fmt.Sprint("fail", i), ui.Style{Tooltip: f.Err}, func(c *ui.Ctx) {
-						c.Text("t", failureText(x.h, f), kit.MonoFont(11, th.C(theme.Warn)))
+						c.Text("t", failureText(x.h, f), widget.MonoFont(11, th.C(theme.Warn)))
 					})
 				}
 				if err := x.reading.State().Err; err != nil && len(st.UsageFailures) == 0 {
-					c.Text("err", "Couldn't read every provider's windows: "+err.Error(), kit.MonoFont(11, th.C(theme.Warn)))
+					c.Text("err", "Couldn't read every provider's windows: "+err.Error(), widget.MonoFont(11, th.C(theme.Warn)))
 				}
 				if !shown && x.reading.State().Phase != widget.Pending {
-					kit.Note(c, "none", "No plan windows read yet: they're read at start and with each session's turns, or Refresh.")
+					widget.Note(c, "none", "No plan windows read yet: they're read at start and with each session's turns, or Refresh.")
 				}
 				if shown {
 					x.accountSwitch(c, u)
@@ -396,8 +397,8 @@ func (x *Plugin) usagePage(c *ui.Ctx) {
 					}
 				}
 				c.Row("how", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 9), Gap: 6, Radius: 6, Stroke: th.C(theme.LineStrong), Border: 1}, func(c *ui.Ctx) {
-					c.Text("t", "How it's measured", kit.MonoFont(10.5, th.C(theme.Fg)))
-					kit.Note(c, "n", "Oriel reads each provider's own figures; nothing is prompted, so reading spends no tokens · burn is the slope over the last 30 min (5h) or 24h (weekly)")
+					c.Text("t", "How it's measured", widget.MonoFont(10.5, th.C(theme.Fg)))
+					widget.Note(c, "n", "Oriel reads each provider's own figures; nothing is prompted, so reading spends no tokens · burn is the slope over the last 30 min (5h) or 24h (weekly)")
 				})
 			})
 		})
@@ -415,11 +416,11 @@ func (x *Plugin) provider(c *ui.Ctx, i int, u core.ProviderUsage, now time.Time)
 			if u.Tier != "" {
 				widget.Chip(c, "tier", u.Tier, th.C(tUsageWeek), "agent/usage#accounts")
 			}
-			c.Text("acct", x.accountLabel(u.Account, u.AccountName), kit.Mono(10.5, typeset.SemiBold, th.C(theme.FgMuted)))
-			c.Text("m", x.providerLine(u), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("acct", x.accountLabel(u.Account, u.AccountName), widget.Mono(10.5, typeset.SemiBold, th.C(theme.FgMuted)))
+			c.Text("m", x.providerLine(u), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if u.Source != "" {
-				widget.AgoLine(c, "src", widget.AgoLineOpts{Text: kit.MonoFont(10, th.C(theme.FgGhost)), Now: now}, widget.AgoPart{Text: "windows from " + u.Source}, widget.AgoPart{At: u.Sampled, Long: true})
+				widget.AgoLine(c, "src", widget.AgoLineOpts{Text: widget.MonoFont(10, th.C(theme.FgGhost)), Now: now}, widget.AgoPart{Text: "windows from " + u.Source}, widget.AgoPart{At: u.Sampled, Long: true})
 			}
 		})
 		c.Row("windows", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
@@ -467,12 +468,12 @@ func (x *Plugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 10), Gap: 8, Fill: th.C(widget.TDataCard), Stroke: line, Border: 1, Radius: 8, Role: ui.RoleGroup,
 		Label: windowLabel(w), Help: "agent/usage#windows"}, func(c *ui.Ctx) {
 		c.Row("hd", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", windowLabel(w), kit.KickerFont(th.C(theme.FgMuted)))
+			c.Text("t", windowLabel(w), widget.KickerFont(th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			at, in := resets(now, x.Loc, w)
-			c.Text("r", at, kit.MonoFont(10.5, th.C(theme.Fg)))
+			c.Text("r", at, widget.MonoFont(10.5, th.C(theme.Fg)))
 			if in != "" {
-				c.Text("in", "· "+in, kit.MonoFont(10.5, th.C(theme.FgGhost)))
+				c.Text("in", "· "+in, widget.MonoFont(10.5, th.C(theme.FgGhost)))
 			}
 		})
 		tone := windowTone(th, w)
@@ -493,30 +494,30 @@ func (x *Plugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 			if q := qualifier(w); q != "" {
 				sub = "used · " + q + " only"
 			}
-			c.Text("s", sub, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("s", sub, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		projected(c, w.Used, r.atReset, tone, th.C(tUsageOut), !r.runsOut.IsZero())
 		c.Row("scale", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-			kit.Note(c, "0", "0")
+			widget.Note(c, "0", "0")
 			c.Box("g1", ui.Style{W: ui.Flex(1)}, nil)
 			if !r.runsOut.IsZero() {
-				c.Text("full", "full "+r.runsOut.In(x.Loc).Format("Mon 15:04"), kit.MonoFont(10, th.C(tUsageOut)))
+				c.Text("full", "full "+r.runsOut.In(x.Loc).Format("Mon 15:04"), widget.MonoFont(10, th.C(tUsageOut)))
 			} else {
-				kit.Note(c, "at", fmt.Sprintf("at reset ≈ %d", kit.Pct(r.atReset)))
+				widget.Note(c, "at", fmt.Sprintf("at reset ≈ %d", kit.Pct(r.atReset)))
 				c.Box("g2", ui.Style{W: ui.Flex(1)}, nil)
-				kit.Note(c, "100", "100")
+				widget.Note(c, "100", "100")
 			}
 		})
 		c.Row("burn", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", "BURN", kit.KickerFont(th.C(theme.FgGhost)))
+			c.Text("k", "BURN", widget.KickerFont(th.C(theme.FgGhost)))
 			basis := "the last 30 min"
 			if r.basis >= 24*time.Hour {
 				basis = "the last 24h"
 			}
-			c.Text("v", fmt.Sprintf("%.1f%%/h", r.burn*100), kit.MonoFont(11, th.C(theme.Fg)))
-			c.Text("b", "over "+basis, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("v", fmt.Sprintf("%.1f%%/h", r.burn*100), widget.MonoFont(11, th.C(theme.Fg)))
+			c.Text("b", "over "+basis, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			if !fiveHour(w) && r.overall > 0 {
-				c.Text("o", fmt.Sprintf("· %.1f%%/h over the week", r.overall*100), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("o", fmt.Sprintf("· %.1f%%/h over the week", r.overall*100), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			}
 		})
 		v, vt := r.verdict(now, x.Loc)
@@ -527,7 +528,7 @@ func (x *Plugin) windowCard(c *ui.Ctx, key int, r windowRead, now time.Time) {
 		}
 		c.Row("verdict", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 6), Radius: 5, Fill: theme.WithAlpha(th.C(vt), .07), Stroke: theme.WithAlpha(th.C(vt), .35),
 			Border: 1, Role: ui.RoleStatus, Label: v}, func(c *ui.Ctx) {
-			widget.Wrap(c, "t", v, width, kit.MonoFont(10.5, th.C(vt)))
+			widget.Wrap(c, "t", v, width, widget.MonoFont(10.5, th.C(vt)))
 		})
 	})
 }
@@ -779,7 +780,7 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 		}
 	}
 	widget.DataCard(c, "burned", ui.Flex(1), title, "", right, func(c *ui.Ctx) {
-		kit.Note(c, "since", "since "+from.In(x.Loc).Format("Mon 15:04")+" · by repo, multi-repo sessions split as in Stats")
+		widget.Note(c, "since", "since "+from.In(x.Loc).Format("Mon 15:04")+" · by repo, multi-repo sessions split as in Stats")
 		var strip []widget.ChartSeries
 		st := x.h.State()
 		for i, row := range rows {
@@ -804,7 +805,7 @@ func (x *Plugin) burnedCard(c *ui.Ctx, u core.ProviderUsage, hist []core.Provide
 		}
 		widget.KV(c, "total", render.Color{}, "total", "", "", fmt.Sprintf("%.0fpt", total), "")
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			kit.Note(c, "n", "pt: points of the window · $ est. from the price table")
+			widget.Note(c, "n", "pt: points of the window · $ est. from the price table")
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Link(c, "open", "Open in Stats ›", "agent/usage#burned") {
 				x.run("stats.open", registry.Args{"provider": u.Provider, "account": u.Account})
@@ -850,7 +851,7 @@ func (x *Plugin) accountSwitch(c *ui.Ctx, cur core.ProviderUsage) {
 		}
 	}
 	c.Row("accounts", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("k", "ACCOUNT", kit.KickerFont(c.Theme().C(theme.FgGhost)))
+		c.Text("k", "ACCOUNT", widget.KickerFont(c.Theme().C(theme.FgGhost)))
 		if widget.Segmented(c, "acct", labels, &at, widget.SegmentedOpts{Label: "Account", Badges: tiers, Help: "agent/usage#accounts"}) {
 			x.acct = accountKey(us[at])
 		}

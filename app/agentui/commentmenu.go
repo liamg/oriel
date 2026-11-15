@@ -63,7 +63,7 @@ func cmTitle(h plugin.Host, cm core.Comment) string {
 type mdViewer struct {
 	title, body string
 	open        bool
-	scroll      kit.Scroll
+	scroll      widget.Scroll
 }
 
 func (x *Requests) mdViewer() uireg.View {
@@ -88,7 +88,7 @@ func (x *Requests) mdViewer() uireg.View {
 					Radius: 10, Clip: true, Trap: true, Interactive: true, Float: &ui.Float{Point: &centre, Self: render.Point{X: .5, Y: .5}},
 					Role: ui.RoleDialog, Label: "Markdown", Help: "agent/requests#comments"}, func(c *ui.Ctx) {
 					c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(48), Pad: ui.PadXY(18, 0), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Text("t", "MARKDOWN · "+strings.ToUpper(v.title), kit.MonoFont(11, th.C(theme.FgMuted)))
+						c.Text("t", "MARKDOWN · "+strings.ToUpper(v.title), widget.MonoFont(11, th.C(theme.FgMuted)))
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 						if widget.Button(c, "copy", "Copy", widget.ButtonOpts{Ghost: true, Help: "agent/requests#comments"}) {
 							kit.CopyText(x.h, v.body)
@@ -98,10 +98,10 @@ func (x *Requests) mdViewer() uireg.View {
 						}
 					})
 					widget.Rule(c, "rule")
-					kit.Scrolled(c, "src", &v.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 2},
+					widget.Scrolled(c, "src", &v.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 2},
 						func(c *ui.Ctx, _ func(string) ui.ID) {
 							for i, ln := range strings.Split(v.body, "\n") {
-								widget.Wrap(c, i, kit.ExpandTabs(ln), w-40, kit.MonoFont(12, th.C(theme.Fg)))
+								widget.Wrap(c, i, kit.ExpandTabs(ln), w-40, widget.MonoFont(12, th.C(theme.Fg)))
 							}
 						})
 				})

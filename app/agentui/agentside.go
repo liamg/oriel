@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -31,7 +32,7 @@ const ConsoleSide = kit.ConsoleSide
 // usage, and the rules in force.
 func (x *Console) side(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
-	kit.Scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
+	widget.Scrolled(c, "side", &x.state(se.ID).side, ui.Style{W: ui.Px(330), H: ui.Flex(1), Fill: th.C(tConsoleSide), Help: "agent/console#stats"}, ui.Style{},
 		func(c *ui.Ctx, _ func(string) ui.ID) {
 			for _, id := range x.h.Views() {
 				if v, ok := x.h.ViewByID(id); ok && strings.HasPrefix(id, ConsoleSide) {
@@ -52,20 +53,20 @@ func (x *Console) sessionStats(c *ui.Ctx, se core.SessionState) {
 	th := c.Theme()
 	t := se.Agent.Stats
 	fg := th.C(theme.Fg)
-	kit.Section(c, "stats", "Session stats", se.Agent.Provider, func(c *ui.Ctx) {
+	widget.Section(c, "stats", "Session stats", se.Agent.Provider, func(c *ui.Ctx) {
 		ctxv := kit.Tokens(int64(t.Context))
 		if t.ContextMax > 0 {
 			ctxv += " / " + kit.Tokens(int64(t.ContextMax))
 		}
-		kit.Stat(c, "context", "context", ctxv, fg)
+		widget.Stat(c, "context", "context", ctxv, fg)
 		if t.ContextMax > 0 {
-			widget.Meter(c, "contextbar", float64(t.Context)/float64(t.ContextMax), widget.MeterOpts{Tone: th.C(kit.TMeterContext), Label: "context"})
+			widget.Meter(c, "contextbar", float64(t.Context)/float64(t.ContextMax), widget.MeterOpts{Tone: th.C(draw.TMeterContext), Label: "context"})
 		}
-		kit.Stat(c, "cache", "cache hit", fmt.Sprintf("%d%%", int(t.CacheHit()*100+.5)), fg)
-		kit.Stat(c, "turns", "turns · tool calls", fmt.Sprintf("%d · %d", t.Turns, t.ToolCalls), fg)
-		kit.Stat(c, "tokens", "tokens in / out", kit.Tokens(t.Input+t.CacheRead+t.CacheWrite)+" / "+kit.Tokens(t.Output), fg)
+		widget.Stat(c, "cache", "cache hit", fmt.Sprintf("%d%%", int(t.CacheHit()*100+.5)), fg)
+		widget.Stat(c, "turns", "turns · tool calls", fmt.Sprintf("%d · %d", t.Turns, t.ToolCalls), fg)
+		widget.Stat(c, "tokens", "tokens in / out", kit.Tokens(t.Input+t.CacheRead+t.CacheWrite)+" / "+kit.Tokens(t.Output), fg)
 		c.Row("cost", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("n", "cost (est.)", kit.MonoFont(11.5, th.C(theme.FgMuted)))
+			c.Text("n", "cost (est.)", widget.MonoFont(11.5, th.C(theme.FgMuted)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			statsLink(c, x.h, se.ID, fmt.Sprintf("$%.2f ›", t.Cost), 11.5)
 		})
@@ -73,7 +74,7 @@ func (x *Console) sessionStats(c *ui.Ctx, se core.SessionState) {
 		if se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 			run += c.Now().Sub(se.Agent.TurnStarted)
 		}
-		kit.Stat(c, "running", "running", kit.Duration(run), fg)
+		widget.Stat(c, "running", "running", kit.Duration(run), fg)
 	})
 }
 
@@ -99,21 +100,21 @@ func (x *Console) usage(c *ui.Ctx, se core.SessionState) {
 		if i > 0 || u.Provider != se.Agent.Provider {
 			title, note = cmp.Or(u.Plan, services.ProviderTitle(x.h, u.Provider)), "other sessions"
 		}
-		kit.Section(c, "usage."+u.Provider, title, note, func(c *ui.Ctx) {
+		widget.Section(c, "usage."+u.Provider, title, note, func(c *ui.Ctx) {
 			for j, w := range u.Windows {
 				v := fmt.Sprintf("%d%%", int(w.Used*100+.5))
 				if !w.Resets.IsZero() && w.Resets.After(now) {
 					v += " · resets " + strings.ReplaceAll(kit.Duration(w.Resets.Sub(now)), " ", "")
 				}
-				tone := th.C(kit.TMeterContext)
+				tone := th.C(draw.TMeterContext)
 				if w.Used >= .9 {
 					tone = th.C(theme.Error)
 				}
-				kit.Stat(c, fmt.Sprint("w", j), w.Name, v, th.C(theme.Fg))
+				widget.Stat(c, fmt.Sprint("w", j), w.Name, v, th.C(theme.Fg))
 				widget.Meter(c, fmt.Sprint("bar", j), w.Used, widget.MeterOpts{Tone: tone, Label: w.Name})
 			}
 			if u.Credits != "" {
-				kit.Stat(c, "credits", "credits", u.Credits, th.C(theme.Fg))
+				widget.Stat(c, "credits", "credits", u.Credits, th.C(theme.Fg))
 			}
 		})
 	}
@@ -156,7 +157,7 @@ func (x *Console) rules(c *ui.Ctx, se core.SessionState) {
 	if len(rs) == 0 {
 		return
 	}
-	kit.Section(c, "rules", "Rules in force", "", func(c *ui.Ctx) {
+	widget.Section(c, "rules", "Rules in force", "", func(c *ui.Ctx) {
 		// Chips flow onto rows of about the column's width.
 		var rows [][]rule
 		w := 0
@@ -209,7 +210,7 @@ func taskRail(c *ui.Ctx, key any, ts []core.Task) {
 			}
 			c.Row(t.ID, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Subject + " " + string(t.Status)}, func(c *ui.Ctx) {
 				taskMark(c, "g", t.Status)
-				c.Text("s", t.Subject, kit.UIFont(12.5, fg))
+				c.Text("s", t.Subject, widget.UIFont(12.5, fg))
 			})
 		}
 	})
@@ -219,7 +220,7 @@ func taskRail(c *ui.Ctx, key any, ts []core.Task) {
 func taskMark(c *ui.Ctx, key any, s core.TaskStatus) {
 	th := c.Theme()
 	if s == core.TaskCompleted {
-		c.Box(key, ui.Style{W: ui.Px(12)}, func(c *ui.Ctx) { c.Text("t", "✓", kit.UIFont(12.5, th.C(tTaskDone))) })
+		c.Box(key, ui.Style{W: ui.Px(12)}, func(c *ui.Ctx) { c.Text("t", "✓", widget.UIFont(12.5, th.C(tTaskDone))) })
 		return
 	}
 	tone := th.C(tTaskPending)
@@ -242,7 +243,7 @@ func (x *Console) tasks(c *ui.Ctx, se core.SessionState) {
 		return
 	}
 	done, all := taskCount(se.Tasks)
-	kit.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) { taskRail(c, "rail", se.Tasks) })
+	widget.Section(c, "tasks", "Tasks", fmt.Sprintf("%d/%d", done, all), func(c *ui.Ctx) { taskRail(c, "rail", se.Tasks) })
 }
 
 // latestRun is the session's last test run.
@@ -263,16 +264,16 @@ func latestRun(se core.SessionState) (core.TestRun, bool) {
 func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time) {
 	th := c.Theme()
 	t := se.Agent.Stats
-	label := func(c *ui.Ctx, k, s string) { c.Text(k, s, kit.MonoFont(10.5, th.C(theme.FgFaint))) }
-	value := func(c *ui.Ctx, k, s string, tone render.Color) { c.Text(k, s, kit.MonoFont(11, tone)) }
+	label := func(c *ui.Ctx, k, s string) { c.Text(k, s, widget.MonoFont(10.5, th.C(theme.FgFaint))) }
+	value := func(c *ui.Ctx, k, s string, tone render.Color) { c.Text(k, s, widget.MonoFont(11, tone)) }
 	fg := th.C(theme.Fg)
 	c.Column("stats", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 12), Gap: 10, Role: ui.RoleGroup, Label: "Session stats", Help: "agent/console#stats"},
 		func(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("k", "SESSION", kit.KickerFont(th.C(theme.FgFaint)))
+				c.Text("k", "SESSION", widget.KickerFont(th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				c.Text("who", strings.Join(slices.DeleteFunc([]string{strings.ToLower(services.ProviderTitle(h, se.Agent.Provider)), se.Agent.Model, se.Agent.Effort},
-					func(s string) bool { return s == "" || s == "agent" }), " · "), kit.MonoFont(10, th.C(theme.FgGhost)))
+					func(s string) bool { return s == "" || s == "agent" }), " · "), widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			c.Row("a", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				label(c, "ctx", "CTX")
@@ -280,7 +281,7 @@ func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time)
 				if t.ContextMax > 0 {
 					frac = float64(t.Context) / float64(t.ContextMax)
 				}
-				widget.Meter(c, "ctxbar", frac, widget.MeterOpts{Tone: th.C(kit.TMeterContext), Width: ui.Px(44), Label: "context"})
+				widget.Meter(c, "ctxbar", frac, widget.MeterOpts{Tone: th.C(draw.TMeterContext), Width: ui.Px(44), Label: "context"})
 				value(c, "ctxv", kit.Tokens(int64(t.Context)), fg)
 				c.Box("g1", ui.Style{W: ui.Px(6)}, nil)
 				label(c, "cache", "CACHE")
@@ -302,7 +303,7 @@ func sessionStats(c *ui.Ctx, h plugin.Host, se core.SessionState, now time.Time)
 				case r.Failed > 0:
 					value(c, "testsv", fmt.Sprintf("%d fail", r.Failed), th.C(theme.Error))
 				default:
-					value(c, "testsv", fmt.Sprintf("%d ✓", r.Passed), th.C(kit.TToolOK))
+					value(c, "testsv", fmt.Sprintf("%d ✓", r.Passed), th.C(draw.TToolOK))
 				}
 				if se.Agent.Working && !se.Agent.TurnStarted.IsZero() {
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -325,9 +326,9 @@ func statsLink(c *ui.Ctx, h plugin.Host, id core.SessionID, text string, size fl
 	}
 	widget.HoverCard(c, "statscard", anchor, widget.HoverCardOpts{Label: "Session stats", Help: "agent/stats#session"}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", "Session stats", kit.UIFont(12, th.C(theme.Fg)))
-			kit.Keycap(c, "k", ":Stats session")
+			c.Text("t", "Session stats", widget.UIFont(12, th.C(theme.Fg)))
+			widget.Keycap(c, "k", ":Stats session")
 		})
-		c.Text("d", "opens as a main tab", kit.MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("d", "opens as a main tab", widget.MonoFont(10, th.C(theme.FgFaint)))
 	})
 }

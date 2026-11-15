@@ -88,9 +88,9 @@ func (x *Verify) header(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	c.Column("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 18, R: 18, T: 14, B: 12}, Gap: 6}, func(c *ui.Ctx) {
 		c.Row("kick", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", "VERIFY THIS CHANGE", kit.KickerFont(th.C(tVerifyKicker)))
+			c.Text("k", "VERIFY THIS CHANGE", widget.KickerFont(th.C(tVerifyKicker)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("by", q.by, kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("by", q.by, widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close the quiz", Help: verifyHelp, Size: 18}) {
 				x.open = ""
 			}
@@ -110,10 +110,10 @@ func (x *Verify) header(c *ui.Ctx, q *quiz) {
 				}
 				c.Box(i, ui.Style{W: ui.Px(34), H: ui.Px(4), Radius: 2, Fill: tone}, nil)
 			}
-			c.Text("n", fmt.Sprintf("%d/%d", q.at, n), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("n", fmt.Sprintf("%d/%d", q.at, n), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		widget.Wrap(c, "about", fmt.Sprintf("%s short questions about the diff you're putting your name on. The answers go in the PR as reviewer notes if you want them there.",
-			countWord(max(len(q.qs), quizLength))), min(600, c.Size().X-36), kit.UIFont(12, th.C(theme.FgMuted)))
+			countWord(max(len(q.qs), quizLength))), min(600, c.Size().X-36), widget.UIFont(12, th.C(theme.FgMuted)))
 	})
 }
 
@@ -129,14 +129,14 @@ func countWord(n int) string {
 func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	width := min(640, c.Size().X-32) - 36
-	kit.Scrolled(c, "chat", &q.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)},
+	widget.Scrolled(c, "chat", &q.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(theme.BgBase)},
 		ui.Style{Pad: ui.PadXY(18, 16), Gap: 12}, func(c *ui.Ctx, _ func(string) ui.ID) {
 			for i := 0; i < len(q.qs) && i <= q.at; i++ {
 				qq := q.qs[i]
 				c.Column(i, ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					c.Row("num", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 						widget.Rule(c, "l")
-						c.Text("t", fmt.Sprintf("QUESTION %d", i+1), kit.KickerFont(th.C(theme.FgGhost)))
+						c.Text("t", fmt.Sprintf("QUESTION %d", i+1), widget.KickerFont(th.C(theme.FgGhost)))
 						widget.Rule(c, "r")
 					})
 					x.theirs(c, "q", q, qq.Question, width)
@@ -144,7 +144,7 @@ func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 						c.Row("a", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 							c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 							c.Column("b", ui.Style{Pad: ui.PadXY(12, 9), Radius: 12, Fill: th.C(tVerifyMine), Stroke: th.C(tVerifyBorder), Border: 1}, func(c *ui.Ctx) {
-								widget.Rich(c, "t", kit.MDSpans(qq.Answer), width*.74, kit.UIFont(13, th.C(tVerifyMineFg)), widget.RichOpts{})
+								widget.Rich(c, "t", kit.MDSpans(qq.Answer), width*.74, widget.UIFont(13, th.C(tVerifyMineFg)), widget.RichOpts{})
 							})
 						})
 					}
@@ -158,7 +158,7 @@ func (x *Verify) chat(c *ui.Ctx, q *quiz) {
 				x.typing(c, q)
 			case q.err != nil:
 				c.Column("err", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-					widget.Wrap(c, "t", q.err.Error(), width, kit.MonoFont(11, th.C(theme.Error)))
+					widget.Wrap(c, "t", q.err.Error(), width, widget.MonoFont(11, th.C(theme.Error)))
 					if widget.Button(c, "retry", "Try again", widget.ButtonOpts{Help: verifyHelp}) {
 						if len(q.qs) == 0 {
 							x.run("verify.again")
@@ -177,10 +177,10 @@ func (x *Verify) theirs(c *ui.Ctx, key any, q *quiz, text string, width float32)
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.End}, func(c *ui.Ctx) {
 		c.Box("av", ui.Style{W: ui.Px(22), H: ui.Px(22), Radius: 5, Fill: th.C(tVerifyAvatar), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("c", strings.ToUpper(cmp.Or(q.by, "a")[:1]), kit.Mono(11, typeset.Bold, th.C(theme.AccentInk)))
+			c.Text("c", strings.ToUpper(cmp.Or(q.by, "a")[:1]), widget.Mono(11, typeset.Bold, th.C(theme.AccentInk)))
 		})
 		c.Column("b", ui.Style{Pad: ui.PadXY(12, 9), Radius: 12, Fill: th.C(tVerifyTheirs)}, func(c *ui.Ctx) {
-			widget.Rich(c, "t", kit.MDSpans(text), width*.74, kit.UIFont(13, th.C(theme.Fg)), widget.RichOpts{})
+			widget.Rich(c, "t", kit.MDSpans(text), width*.74, widget.UIFont(13, th.C(theme.Fg)), widget.RichOpts{})
 		})
 	})
 }
@@ -196,16 +196,16 @@ func (x *Verify) verdict(c *ui.Ctx, qq core.QuizQuestion, width float32) {
 				c.Box("half", ui.Style{W: ui.Px(5.5), H: ui.Flex(1), Fill: tone}, nil)
 			})
 		} else {
-			g := kit.UIFont(13, tone)
+			g := widget.UIFont(13, tone)
 			g.Font.Weight = typeset.Bold
 			c.Text("g", verdictGlyph(qq.Verdict), g)
 		}
 		c.Column("t", ui.Style{Gap: 4, Pad: ui.PadXY(0, 3)}, func(c *ui.Ctx) {
 			note := cmp.Or(qq.Note, map[string]string{core.VerdictRight: "Right.", core.VerdictPartly: "Partly.", core.VerdictWrong: "Not quite."}[qq.Verdict])
-			widget.Rich(c, "note", kit.MDSpans(note), width*.7, kit.UIFont(12, th.C(theme.FgMuted)), widget.RichOpts{})
+			widget.Rich(c, "note", kit.MDSpans(note), width*.7, widget.UIFont(12, th.C(theme.FgMuted)), widget.RichOpts{})
 			if qq.File != "" && qq.Verdict != core.VerdictRight {
 				c.Row("file", ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("w", "Worth a look:", kit.UIFont(12, th.C(theme.FgFaint)))
+					c.Text("w", "Worth a look:", widget.UIFont(12, th.C(theme.FgFaint)))
 					label := filepath.Base(qq.File)
 					if qq.Line > 0 {
 						label += fmt.Sprintf(":%d", qq.Line)
@@ -239,7 +239,7 @@ func (x *Verify) typing(c *ui.Ctx, q *quiz) {
 			})
 			if now := c.Now(); len(q.qs) > 0 && !q.since.IsZero() {
 				if now.Sub(q.since) >= 3*time.Second {
-					c.Text("clock", widget.Elapsed(now, q.since), kit.MonoFont(10, th.C(theme.FgGhost)))
+					c.Text("clock", widget.Elapsed(now, q.since), widget.MonoFont(10, th.C(theme.FgGhost)))
 					c.WakeAt(now.Truncate(time.Second).Add(time.Second))
 				} else {
 					c.WakeAt(q.since.Add(3 * time.Second))
@@ -289,7 +289,7 @@ func (x *Verify) outcome(c *ui.Ctx, q *quiz) {
 			case core.VerifyFailed:
 				head, tone = "Not yet · ", th.C(tVerifyWrong)
 			}
-			c.Text("t", head+strings.Join(parts, " · "), kit.Mono(12, typeset.SemiBold, tone))
+			c.Text("t", head+strings.Join(parts, " · "), widget.Mono(12, typeset.SemiBold, tone))
 			if q.result == core.VerifyPassed {
 				st := widget.CheckOff
 				if q.notes {
@@ -316,11 +316,11 @@ func (x *Verify) footer(c *ui.Ctx, q *quiz) {
 	th := c.Theme()
 	f, _ := q.pointer()
 	c.Row("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 7), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("send", "⌘↵ send", kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("send", "⌘↵ send", widget.MonoFont(11, th.C(theme.FgFaint)))
 		if widget.Button(c, "file", "open the file it's asking about", widget.ButtonOpts{Ghost: true, Key: "⌥O", Disabled: f == "", Help: verifyHelp + "#file"}) {
 			x.run("verify.open-file")
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("opt", "optional: a raise never waits for it", kit.MonoFont(10.5, th.C(theme.FgGhost)))
+		c.Text("opt", "optional: a raise never waits for it", widget.MonoFont(10.5, th.C(theme.FgGhost)))
 	})
 }

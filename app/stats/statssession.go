@@ -80,7 +80,7 @@ func (x *Plugin) sessionTab(c *ui.Ctx, id core.SessionID) {
 				c.Row("low", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					toolsCard(c, d.Tools, d.Totals)
 					c.Column("side", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-						widget.DataCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { kit.Note(c, "n", "cost by hour started") }, func(c *ui.Ctx) {
+						widget.DataCard(c, "hours", ui.Flex(1), "HOURS OF THE DAY", "", func(c *ui.Ctx) { widget.Note(c, "n", "cost by hour started") }, func(c *ui.Ctx) {
 							hoursChart(c, "chart", d.Hours, 70)
 						})
 						effortCard(c, d.Efforts)
@@ -101,7 +101,7 @@ func (x *Plugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabSta
 		if se != nil {
 			name, a = se.Name(), se.Agent()
 		}
-		c.Text("n", name, kit.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
+		c.Text("n", name, widget.Mono(12, typeset.SemiBold, th.C(theme.Fg)))
 		var meta []string
 		if a.Provider != "" {
 			meta = append(meta, strings.ToLower(services.ProviderTitle(x.h, a.Provider)))
@@ -126,7 +126,7 @@ func (x *Plugin) tabHeader(c *ui.Ctx, se coreSession, d stats.Detail, st *tabSta
 		if a.Working || a.Running {
 			meta = append(meta, "live")
 		}
-		c.Text("m", strings.Join(meta, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("m", strings.Join(meta, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		widget.Segmented(c, "mode", []string{"$ COST", "TOKENS"}, &st.tokens, widget.SegmentedOpts{Label: "Chart in", Help: "agent/stats#session"})
 		if widget.Button(c, "all", "All sessions", widget.ButtonOpts{Key: ":Stats", Help: "agent/stats#page"}) {
@@ -157,7 +157,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 		})
 		statsTile(c, "turns", "TURNS", fmt.Sprint(t.Turns), "", func(c *ui.Ctx) { dim(c, "s", kit.Counted(d.Agents, "subagent")) })
 		statsTile(c, "tools", "TOOL CALLS", kit.Count(t.ToolCalls), fmt.Sprintf("%d err", t.ToolErrors), func(c *ui.Ctx) {
-			c.Text("p", fmt.Sprintf("%.1f%%", errRate(t)*100), kit.MonoFont(10, th.C(tStatsBad)))
+			c.Text("p", fmt.Sprintf("%.1f%%", errRate(t)*100), widget.MonoFont(10, th.C(tStatsBad)))
 			dim(c, "s", "errored")
 		})
 		active := time.Duration(t.ActiveS) * time.Second
@@ -186,7 +186,7 @@ func sessionTiles(c *ui.Ctx, d stats.Detail) {
 func (x *Plugin) overTime(c *ui.Ctx, d stats.Detail, inTokens bool) {
 	th := c.Theme()
 	if len(d.Buckets) == 0 {
-		widget.DataCard(c, "time", ui.Flex(2.2), "COST OVER THE SESSION", "", nil, func(c *ui.Ctx) { kit.Note(c, "none", "no requests yet") })
+		widget.DataCard(c, "time", ui.Flex(2.2), "COST OVER THE SESSION", "", nil, func(c *ui.Ctx) { widget.Note(c, "none", "no requests yet") })
 		return
 	}
 	span := int64(300)
@@ -272,7 +272,7 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 		if widget.Toggle(c, "whole", whole, widget.ToggleOpts{Label: "Count whole session in each", Help: "agent/stats#split"}) {
 			x.run("stats.split", registry.Args{"on": whole})
 		}
-		c.Text("l", "count whole session in each", kit.UIFont(11.5, th.C(theme.FgMuted)))
+		c.Text("l", "count whole session in each", widget.UIFont(11.5, th.C(theme.FgMuted)))
 	}, func(c *ui.Ctx) {
 		var strip []widget.ChartSeries
 		for i, r := range d.Repos {
@@ -286,15 +286,15 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 		}
 		switch {
 		case len(d.Repos) > 1 && whole:
-			kit.Note(c, "n", "each repo is charged the whole session: the rows overlap")
+			widget.Note(c, "n", "each repo is charged the whole session: the rows overlap")
 		case len(d.Repos) > 1:
-			kit.Note(c, "n", "each request charged to the repo its file tool calls worked in")
+			widget.Note(c, "n", "each request charged to the repo its file tool calls worked in")
 		}
 		widget.Rule(c, "rule")
 		c.Row("mh", ui.Style{W: ui.Flex(1), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", "MODELS", kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("t", "MODELS", widget.KickerFont(th.C(theme.FgFaint)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			kit.Note(c, "n", "req · tokens · cost")
+			widget.Note(c, "n", "req · tokens · cost")
 		})
 		for i, m := range d.Models {
 			sub := ""
@@ -309,7 +309,7 @@ func (x *Plugin) repoCard(c *ui.Ctx, d stats.Detail) {
 // toolsCard is each tool's calls, errors, how long they took and the median.
 func toolsCard(c *ui.Ctx, tools []stats.ToolRow, t stats.Totals) {
 	widget.DataCard(c, "tools", ui.Flex(2.2), "TOOLS", fmt.Sprintf("%s · %s", kit.Counted(int(t.ToolCalls), "call"), kit.Counted(int(t.ToolErrors), "error")),
-		func(c *ui.Ctx) { kit.Note(c, "n", "time per call") }, func(c *ui.Ctx) {
+		func(c *ui.Ctx) { widget.Note(c, "n", "time per call") }, func(c *ui.Ctx) {
 			cols := []widget.DataCol{{Title: "TOOL", W: 0}, {Title: "CALLS", W: 70}, {Title: "ERRORS", W: 70}, {Title: "ERR %", W: 70}, {Title: ".1S 1S 10S 1M 1M+", W: 130}, {Title: "P50", W: 70}, {Title: "CALLS", W: 160}}
 			widget.DataHead(c, cols)
 			most := int64(1)
@@ -342,7 +342,7 @@ func toolsCard(c *ui.Ctx, tools []stats.ToolRow, t stats.Totals) {
 func toolRow(c *ui.Ctx, key any, tr stats.ToolRow, cols []widget.DataCol, most int64) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center, Role: ui.RoleText, Label: tr.Name}, func(c *ui.Ctx) {
-		widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", tr.Name, kit.Mono(11.5, typeset.Medium, th.C(theme.Fg))) })
+		widget.DataCell(c, 0, cols[0].W, true, func(c *ui.Ctx) { c.Text("t", tr.Name, widget.Mono(11.5, typeset.Medium, th.C(theme.Fg))) })
 		widget.DataText(c, 1, cols[1].W, kit.Count(tr.Calls), th.C(theme.Fg))
 		errTone := th.C(tStatsBad)
 		if tr.Errors == 0 {
@@ -394,7 +394,7 @@ func duration(ms int64) string {
 
 func effortCard(c *ui.Ctx, es []stats.Effort) {
 	th := c.Theme()
-	widget.DataCard(c, "effort", ui.Flex(1), "EFFORT", "", func(c *ui.Ctx) { kit.Note(c, "n", "req · cost") }, func(c *ui.Ctx) {
+	widget.DataCard(c, "effort", ui.Flex(1), "EFFORT", "", func(c *ui.Ctx) { widget.Note(c, "n", "req · cost") }, func(c *ui.Ctx) {
 		var total int64
 		for _, e := range es {
 			total += e.Requests

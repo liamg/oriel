@@ -4,10 +4,12 @@ package agentkit
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/core"
 
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -62,9 +64,9 @@ func ToggleRow(c *ui.Ctx, key any, label string, on *bool, o ToggleRowOpts) {
 		if disabled {
 			fg = th.C(theme.FgFaint)
 		}
-		c.Text("l", label, kit.UIFont(12.5, fg))
+		c.Text("l", label, widget.UIFont(12.5, fg))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("n", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 	})
 }
 
@@ -93,7 +95,7 @@ func SandboxToggles(c *ui.Ctx, on, openNet *bool, pick BackendPick, help string)
 				labels[i] = strings.ToUpper(b)
 			}
 			at := slices.Index(pick.Offered, pick.Current())
-			c.Text("l", "Sandbox type", kit.UIFont(12.5, c.Theme().C(theme.Fg)))
+			c.Text("l", "Sandbox type", widget.UIFont(12.5, c.Theme().C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Segmented(c, "pick", labels, &at, widget.SegmentedOpts{Label: "Sandbox type", Help: help}) {
 				*pick.Chosen = pick.Offered[at]
@@ -117,4 +119,31 @@ func (p BackendPick) Current() string {
 		return *p.Chosen
 	}
 	return p.Setting
+}
+
+// ProviderNote is a provider's plan and what's used of each window, or why it can't run.
+func ProviderNote(p hostapi.ProviderInfo, usage []core.ProviderUsage) string {
+	switch {
+	case p.Error != "":
+		return p.Error
+	case !p.Install.LoggedIn:
+		return cmp.Or(p.Install.Note, "not logged in")
+	}
+	u := p.Usage
+	for _, x := range usage {
+		if x.Provider == p.ID {
+			u = x
+		}
+	}
+	parts := []string{}
+	if u.Plan != "" {
+		parts = append(parts, u.Plan)
+	}
+	for _, w := range u.Windows {
+		parts = append(parts, fmt.Sprintf("%s %d%%", strings.TrimSuffix(w.Name, " window"), int(w.Used*100+.5)))
+	}
+	if len(parts) == 0 {
+		return cmp.Or(p.Install.Version, "ready")
+	}
+	return strings.Join(parts, " · ")
 }

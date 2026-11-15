@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/registry/services"
 
@@ -111,9 +112,9 @@ func (x *Ship) Activate(_ context.Context, h plugin.Host) error {
 	x.ctx, x.cancel = context.WithCancel(context.Background())
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipCommit", Fired: true, Payload: ShipCommit{},
 		Doc: "A commit about to be made from the Ship page; a veto stops it (its reason shows in the commit box), a rewrite changes it. { session, project, message, files }"}))
-	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrSeen", Fired: true, Payload: kit.PrSeen{},
+	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrSeen", Fired: true, Payload: prui.PrSeen{},
 		Doc: "A session's pull request, the first time Oriel reads it, whoever raised it; the subject is its URL. { session, project, ticket, number, url, title, state, draft, merged }"}))
-	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrMerged", Fired: true, Payload: kit.PrMerged{},
+	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrMerged", Fired: true, Payload: prui.PrMerged{},
 		Doc: "A session's pull request read as merged, the first time Oriel sees it so, whoever merged it; the subject is its URL. open is how many of the session's other PRs are still open. { session, project, ticket, number, url, title, open }"}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "ShipRaise", Fired: true, Payload: ShipRaise{},
 		Doc: "A pull request about to be raised or edited from the Ship page; a veto stops it (a quiz to take first), a rewrite changes it. { session, project, title, body, draft, reviewers, edit, all }"}))
@@ -384,7 +385,7 @@ func (x *Ship) readAs(id core.SessionID, r *shipReport, n, seq int, fresh bool) 
 }
 
 // fire fires PrSeen and PrMerged for what a read found new, asks about the next PR, and follows the PRs open now.
-func (x *Ship) fire(id core.SessionID, seen []kit.PrSeen, merged []kit.PrMerged, asks []shipRead) {
+func (x *Ship) fire(id core.SessionID, seen []prui.PrSeen, merged []prui.PrMerged, asks []shipRead) {
 	if len(seen)+len(merged)+len(asks) > 0 {
 		x.h.Do(func() {
 			for _, ev := range seen {
@@ -405,7 +406,7 @@ func (x *Ship) fire(id core.SessionID, seen []kit.PrSeen, merged []kit.PrMerged,
 
 // newPRs are the PRs in ships not seen before, as PrSeen events, and those not seen merged before, as PrMerged
 // events; x.mu is held.
-func (x *Ship) newPRs(id core.SessionID, ships []shipRead) (seen []kit.PrSeen, merged []kit.PrMerged, asks []shipRead) {
+func (x *Ship) newPRs(id core.SessionID, ships []shipRead) (seen []prui.PrSeen, merged []prui.PrMerged, asks []shipRead) {
 	if x.seenPRs == nil {
 		x.seenPRs, x.merged = map[string]bool{}, map[string]bool{}
 	}
@@ -425,7 +426,7 @@ func (x *Ship) newPRs(id core.SessionID, ships []shipRead) (seen []kit.PrSeen, m
 		}
 		if !x.seenPRs[s.PR.URL] {
 			x.seenPRs[s.PR.URL] = true
-			seen = append(seen, kit.PrSeen{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
+			seen = append(seen, prui.PrSeen{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
 				Title: s.PR.Title, State: s.PR.State, Draft: s.PR.Draft, Merged: s.PR.Merged})
 		}
 		if s.PR.Open() {
@@ -443,7 +444,7 @@ func (x *Ship) newPRs(id core.SessionID, ships []shipRead) (seen []kit.PrSeen, m
 		}
 		if s.PR.Merged && !x.merged[s.PR.URL] {
 			x.merged[s.PR.URL] = true
-			merged = append(merged, kit.PrMerged{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
+			merged = append(merged, prui.PrMerged{Session: string(id), Project: s.Project, Ticket: ticket, Number: s.PR.Number, URL: s.PR.URL,
 				Title: s.PR.Title, Open: open})
 		}
 	}
@@ -764,7 +765,7 @@ func (x *Ship) shipped(se core.SessionState) string {
 			return ""
 		}
 	}
-	if !kit.AllMerged(se, ships) || kit.Uncommitted(ships) > 0 {
+	if !prui.AllMerged(se, ships) || prui.Uncommitted(ships) > 0 {
 		return ""
 	}
 	return "Every pull request is merged, and nothing is left to commit or push."

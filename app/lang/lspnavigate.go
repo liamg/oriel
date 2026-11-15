@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -299,15 +300,15 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 		}
 		return p
 	}
-	c.Row("peek", ui.Style{W: ui.Flex(1), H: ui.Px(220), Fill: th.C(tPeekBg), Stroke: th.C(kit.TPopupLine), Border: 1, Radius: 6, Clip: true,
+	c.Row("peek", ui.Style{W: ui.Flex(1), H: ui.Px(220), Fill: th.C(tPeekBg), Stroke: th.C(draw.TPopupLine), Border: 1, Radius: 6, Clip: true,
 		Help: "editor/pane#references", Role: ui.RoleRegion, Label: "References"}, func(c *ui.Ctx) {
 		c.Column("code", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(10, 8), Gap: 6}, func(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("f", filepath.Base(sel.Path), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11.5, Weight: typeset.SemiBold},
 					Color: th.C(theme.Fg)})
-				c.Text("d", filepath.Dir(rel(sel.Path)), kit.MonoTok(c, 10.5, theme.FgFaint))
+				c.Text("d", filepath.Dir(rel(sel.Path)), widget.MonoTok(c, 10.5, theme.FgFaint))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("n", fmt.Sprintf("%d / %d", pk.sel+1, len(pk.refs)), kit.MonoTok(c, 10.5, theme.FgFaint))
+				c.Text("n", fmt.Sprintf("%d / %d", pk.sel+1, len(pk.refs)), widget.MonoTok(c, 10.5, theme.FgFaint))
 			})
 			f := pk.srcs.Of(x.h, sel.Path).Around(x.h, sel.Path, sel.Range.Start.Line+1, 2, 6)
 			f.Mark, f.Title, f.Size = true, rel(sel.Path), 12
@@ -316,7 +317,7 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 		widget.VRule(c, "edge")
 		listID := c.Column("list", ui.Style{W: ui.Px(300), H: ui.Flex(1), Pad: ui.PadXY(0, 8), ScrollY: true}, func(c *ui.Ctx) {
 			c.Row("count", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 2)}, func(c *ui.Ctx) {
-				c.Text("t", fmt.Sprintf("%d references to %s", len(pk.refs), pk.name), kit.MonoTok(c, 10, theme.FgFaint))
+				c.Text("t", fmt.Sprintf("%d references to %s", len(pk.refs), pk.name), widget.MonoTok(c, 10, theme.FgFaint))
 			})
 			file := ""
 			for i, l := range pk.refs {
@@ -325,7 +326,7 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 					n := pk.counts[file]
 					c.Row(fmt.Sprint("file", i), ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 10, R: 10, T: 6}, Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 						c.Text("f", filepath.Base(file), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(theme.Fg)})
-						c.Text("n", fmt.Sprint(n), kit.MonoTok(c, 10, theme.FgFaint))
+						c.Text("n", fmt.Sprint(n), widget.MonoTok(c, 10, theme.FgFaint))
 					})
 				}
 				fill := render.Color{}
@@ -334,8 +335,8 @@ func (x *LSP) peekView(c *ui.Ctx, pk *refPeek) {
 				}
 				in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(20), Pad: ui.Insets{L: 22, R: 10}, Gap: 8, Cross: ui.Center,
 					Fill: fill, Clip: true, Label: pk.texts[i], Help: "editor/pane#references"}, func(c *ui.Ctx) {
-					c.Text("l", fmt.Sprint(l.Range.Start.Line+1), kit.MonoTok(c, 10.5, theme.FgGhost))
-					c.Text("t", pk.texts[i], ui.TextStyle{Font: kit.CodeMono, Color: th.C(theme.FgMuted)})
+					c.Text("l", fmt.Sprint(l.Range.Start.Line+1), widget.MonoTok(c, 10.5, theme.FgGhost))
+					c.Text("t", pk.texts[i], ui.TextStyle{Font: draw.CodeMono, Color: th.C(theme.FgMuted)})
 				})
 				if in.Clicked {
 					pk.sel = i
@@ -398,7 +399,7 @@ func (x *LSP) renameInput(c *ui.Ctx, at render.Point) {
 		c.RequestFocus(id)
 	}
 	c.Box("rename", ui.Style{Z: ui.LayerPopup, Float: &ui.Float{Point: &at}}, func(c *ui.Ctx) {
-		kit.Popup(c, renameCard, ui.Style{W: ui.Px(320), Pad: ui.Pad(8), Gap: 6, Help: "editor/pane#rename"}, func(c *ui.Ctx) {
+		draw.Popup(c, renameCard, ui.Style{W: ui.Px(320), Pad: ui.Pad(8), Gap: 6, Help: "editor/pane#rename"}, func(c *ui.Ctx) {
 			c.Text("t", "RENAME "+rp.old, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .12},
 				Color: c.Theme().C(theme.FgFaint)})
 			res := widget.Input(c, renameIn, &rp.value, widget.InputOpts{Label: "New name", SelectOnFocus: true, Help: "editor/pane#rename"})

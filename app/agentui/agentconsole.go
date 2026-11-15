@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit/agentkit"
+	"github.com/liamg/oriel/app/kit/draw"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -44,7 +45,7 @@ var (
 	tBlockBg       = theme.Declare("agent.block.bg", "bg.surface")
 	tBlockLine     = theme.Declare("agent.block.border", "line")
 	tBlockSelected = theme.Declare("agent.block.selected", "accent")
-	tToolRunning   = kit.TStateRunning
+	tToolRunning   = draw.TStateRunning
 	tThinking      = theme.Declare("agent.thinking.fg", "fg.ghost")
 	tThreadKicker  = theme.Declare("agent.thread.kicker", "amber")
 	tQueued        = theme.Declare("agent.queued", "amber")
@@ -73,8 +74,8 @@ type consoleState struct {
 	sel      string          // the selected block's key; "" follows the end
 	flip     map[string]bool // blocks folded or unfolded against their default
 	blocks   []string        // the blocks' keys as last built, for j and k
-	scroll   kit.Scroll
-	side     kit.Scroll
+	scroll   widget.Scroll
+	side     widget.Scroll
 	draft    string
 	compose  bool // focus the composer next frame
 	focus    bool // focus the transcript next frame
@@ -291,7 +292,7 @@ func (x *Console) state(id core.SessionID) *consoleState {
 	}
 	st := x.by[id]
 	if st == nil {
-		st = &consoleState{flip: map[string]bool{}, stopping: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: kit.Scroll{Follow: true}, scope: map[string]int{}}
+		st = &consoleState{flip: map[string]bool{}, stopping: map[string]bool{}, chosen: map[string]map[int][]string{}, typed: map[string]string{}, scroll: widget.Scroll{Follow: true}, scope: map[string]int{}}
 		x.by[id] = st
 	}
 	return st
@@ -317,7 +318,7 @@ func (x *Console) agentChips(c *ui.Ctx, se core.SessionState) {
 			x.run(context.Background(), "session.configure", registry.Args{"id": string(se.ID), "model": m, "effort": e})
 		}
 		if a.Working {
-			c.Text("idle", "switch when the agent is idle", kit.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("idle", "switch when the agent is idle", widget.MonoFont(10, th.C(theme.FgGhost)))
 		}
 	} else {
 		if a.Model != "" {
@@ -513,7 +514,7 @@ func (x *Console) build(c *ui.Ctx, vc uireg.ViewCtx) {
 		func(c *ui.Ctx) {
 			if !ok {
 				c.Column("none", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("t", "No session in front: start one with ⌘N, and its agent shows here.", kit.UIFont(12.5, th.C(theme.FgFaint)))
+					c.Text("t", "No session in front: start one with ⌘N, and its agent shows here.", widget.UIFont(12.5, th.C(theme.FgFaint)))
 				})
 				return
 			}
@@ -582,7 +583,7 @@ func (x *Console) header(c *ui.Ctx, se core.SessionState) {
 		if branch != "" {
 			where = append(where, branch)
 		}
-		c.Text("where", strings.Join(where, " · "), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("where", strings.Join(where, " · "), widget.MonoFont(11, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		ctx := context.Background()
 		if widget.Button(c, "fork", "Fork", widget.ButtonOpts{Help: "agent/console#fork"}) {
@@ -627,7 +628,7 @@ func (x *Console) threadCard(c *ui.Ctx, se core.SessionState, width float32) {
 			Radius: 6, Role: ui.RoleGroup, Label: "Thread " + where}, func(c *ui.Ctx) {
 			// Both fit the card: the kicker takes at most 45% of it, the request the rest.
 			inner := width - 28 - 10
-			kf, bf := kit.KickerFont(th.C(tThreadKicker)), kit.UIFont(12.5, th.C(theme.Fg))
+			kf, bf := widget.KickerFont(th.C(tThreadKicker)), widget.UIFont(12.5, th.C(theme.Fg))
 			kicker := ui.Elide(c.Shaper(), strings.ToUpper("thread · "+where), kf.Font, inner*0.45)
 			c.Text("k", kicker, kf)
 			left := inner - c.Shaper().Shape(kicker, kf.Font).Advance
@@ -652,7 +653,7 @@ func (x *Console) transcript(c *ui.Ctx, se core.SessionState, st *consoleState, 
 			if se.Agent.Starting != nil {
 				startingCard(c, "starting", se, width)
 			} else {
-				c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", kit.UIFont(12.5, th.C(theme.FgGhost)))
+				c.Text("empty", "Nothing yet: the agent's turns show here as they happen.", widget.UIFont(12.5, th.C(theme.FgGhost)))
 			}
 		case blockAsk:
 			c.Box(b.key, ui.Style{W: ui.Px(width)}, func(c *ui.Ctx) { x.askCard(c, "card", se, se.Asks[b.at], uireg.CardPlace{}, st.sel == b.key) })
@@ -705,7 +706,7 @@ func (x *Console) composer(c *ui.Ctx, se core.SessionState, st *consoleState) {
 			c.Row(fmt.Sprint("q", i), ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				widget.Chip(c, "chip", "queued", th.C(tQueued), "agent/console#composer")
 				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-					c.Text("t", kit.FirstLine(q), kit.UIFont(12, th.C(theme.FgMuted)))
+					c.Text("t", kit.FirstLine(q), widget.UIFont(12, th.C(theme.FgMuted)))
 				})
 				// Edit takes it out of the queue into the composer, to send again once changed.
 				if widget.Link(c, "edit", "edit", "agent/console#composer") {
@@ -756,7 +757,7 @@ func (x *Console) composer(c *ui.Ctx, se core.SessionState, st *consoleState) {
 		c.Row("chips", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			x.agentChips(c, se)
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("keys", "@path names a file · ⏎ send · ⌘⏎ send now", kit.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("keys", "@path names a file · ⏎ send · ⌘⏎ send now", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
 	})
 }

@@ -65,7 +65,7 @@ func (x *Ship) prStep(c *ui.Ctx, se core.SessionState, s shipRead) {
 				}
 			})
 			if s.HostError != "" {
-				widget.Wrap(c, "gherr", s.HostError, 420, kit.MonoFont(10.5, th.C(theme.Error)))
+				widget.Wrap(c, "gherr", s.HostError, 420, widget.MonoFont(10.5, th.C(theme.Error)))
 			}
 		})
 		return
@@ -197,17 +197,17 @@ func (x *Ship) checks(c *ui.Ctx, s shipRead) {
 		}
 	}
 	if len(s.Checks) == 0 {
-		kit.SectionCap(c, "CHECKS · NONE YET")
+		prui.SectionCap(c, "CHECKS · NONE YET")
 		return
 	}
-	kit.SectionCap(c, fmt.Sprintf("CHECKS · %d OF %d", pass, len(s.Checks)))
+	prui.SectionCap(c, fmt.Sprintf("CHECKS · %d OF %d", pass, len(s.Checks)))
 	now := c.Now()
 	for i, ch := range s.Checks {
 		prui.CheckRow(c, i, ch, now)
 	}
 	if s.FailLine != "" {
 		c.Row("fail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Clip: true}, func(c *ui.Ctx) {
-			c.Text("f", s.FailLine, kit.MonoFont(10.5, th.C(theme.Error)))
+			c.Text("f", s.FailLine, widget.MonoFont(10.5, th.C(theme.Error)))
 		})
 	}
 }
@@ -216,20 +216,20 @@ func (x *Ship) checks(c *ui.Ctx, s shipRead) {
 func (x *Ship) reviewersLine(c *ui.Ctx, s shipRead, reviewers, owners []string) {
 	th := c.Theme()
 	c.Row("reviewers", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-		kit.SectionCap(c, "REVIEWERS")
+		prui.SectionCap(c, "REVIEWERS")
 		if len(reviewers) == 0 {
-			c.Text("none", "none yet", kit.UIFont(12, th.C(theme.FgFaint)))
+			c.Text("none", "none yet", widget.UIFont(12, th.C(theme.FgFaint)))
 			return
 		}
 		for _, r := range reviewers {
 			c.Row(r, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 				prui.ReviewerAvatar(c, r)
-				c.Text("n", prui.ReviewerName(r), kit.UIFont(12, th.C(theme.FgMuted)))
+				c.Text("n", prui.ReviewerName(r), widget.UIFont(12, th.C(theme.FgMuted)))
 			})
 		}
 		if len(owners) > 0 && len(slices.DeleteFunc(slices.Clone(reviewers), func(r string) bool { return !slices.Contains(owners, r) })) > 0 {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("co", "CODEOWNERS", kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("co", "CODEOWNERS", widget.MonoFont(10, th.C(theme.FgFaint)))
 		}
 	})
 }
@@ -271,8 +271,8 @@ func (x *Ship) links(c *ui.Ctx, se core.SessionState, s shipRead) {
 	}
 	c.Row("links", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 7), Gap: 8, Radius: 5, Stroke: th.C(tShipCard), Border: 1, Cross: ui.Center, Clip: true},
 		func(c *ui.Ctx) {
-			c.Text("i", "⟷", kit.UIFont(12, th.C(tShipLink)))
-			c.Text("t", text+" · merge order: "+strings.Join(order, " → "), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("i", "⟷", widget.UIFont(12, th.C(tShipLink)))
+			c.Text("t", text+" · merge order: "+strings.Join(order, " → "), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 		})
 }
 

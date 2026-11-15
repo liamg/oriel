@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
 	"github.com/liamg/oriel/theme"
@@ -60,7 +59,7 @@ func (e *ThemeEditor) chain(c *ui.Ctx, th *theme.Resolved) {
 		c.Row("head", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
 			c.Text("t", "PICKED", capLabel(th))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", e.picked, kit.MonoFont(10, th.C(tThemePick)))
+			c.Text("n", e.picked, widget.MonoFont(10, th.C(tThemePick)))
 		})
 		for i, l := range links {
 			on := l.Name == e.sel
@@ -72,7 +71,7 @@ func (e *ThemeEditor) chain(c *ui.Ctx, th *theme.Resolved) {
 			in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(10, 0), Gap: 10, Cross: ui.Center, Stroke: stroke,
 				Border: 1, Radius: 5, Fill: th.C(theme.BgBase), Help: "shell/theme#chain", Role: ui.RoleListItem, Label: label, Selected: on}, func(c *ui.Ctx) {
 				c.Box("sw", ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 3, Fill: colorOf(th, l.Name), Stroke: th.C(theme.LineStrong), Border: 1}, nil)
-				c.Text("n", label, kit.MonoFont(11.5, th.C(theme.Fg)))
+				c.Text("n", label, widget.MonoFont(11.5, th.C(theme.Fg)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				kind := kindOf(l.Name)
 				if on {
@@ -118,7 +117,7 @@ func (e *ThemeEditor) value(c *ui.Ctx, th *theme.Resolved) {
 				if widget.Input(c, "in", &e.expr, widget.InputOpts{Label: "Expression", Help: "shell/theme#value"}).Submitted {
 					e.fail(e.set(e.sel, e.expr))
 				}
-				c.Text("eq", "= "+theme.Hex(col), kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("eq", "= "+theme.Hex(col), widget.MonoFont(11, th.C(theme.FgFaint)))
 			})
 			return
 		}
@@ -140,12 +139,12 @@ func (e *ThemeEditor) value(c *ui.Ctx, th *theme.Resolved) {
 		changed := false
 		for _, s := range sliders {
 			c.Row(s.key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("l", s.label, kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("l", s.label, widget.MonoFont(10, th.C(theme.FgFaint)))
 				if widget.Slider(c, "s", s.v, widget.SliderOpts{Min: 0, Max: s.max, Step: s.step, Width: ui.Flex(1), Label: s.label,
 					Track: track(s.at), Help: "shell/theme#value"}) {
 					changed = true
 				}
-				c.Text("v", fmt.Sprintf(s.fmt, *s.v), kit.MonoFont(11, th.C(theme.Fg)))
+				c.Text("v", fmt.Sprintf(s.fmt, *s.v), widget.MonoFont(11, th.C(theme.Fg)))
 			})
 		}
 		if changed {

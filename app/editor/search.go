@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -392,7 +394,7 @@ func (p *Search) build(c *ui.Ctx) {
 				if err != nil {
 					tok = kit.TDiagError
 				}
-				c.Text("status", status, kit.MonoTok(c, 10.5, tok))
+				c.Text("status", status, widget.MonoTok(c, 10.5, tok))
 			})
 			c.Row("find", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 				widget.Input(c, "q", &p.query, widget.InputOpts{Label: "Find", Placeholder: "Find (PCRE2; @all for generated files)", Help: "files/search"})
@@ -407,7 +409,7 @@ func (p *Search) build(c *ui.Ctx) {
 					c.Text("t", "All projects", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11}, Color: th.C(theme.FgFaint)})
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 					if !p.allProjects && p.project != "" && done && p.ran.pattern != "" {
-						c.Text("n", fmt.Sprintf("%d in %s", n, p.project), kit.MonoTok(c, 10, theme.FgGhost))
+						c.Text("n", fmt.Sprintf("%d in %s", n, p.project), widget.MonoTok(c, 10, theme.FgGhost))
 					}
 				})
 			}
@@ -441,7 +443,7 @@ func (p *Search) row(c *ui.Ctx, r searchRow) {
 	if r.project != "" {
 		c.Row("project", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 0), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("sq", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 2, Fill: kit.ProjectsHere(p.h).Colour(th, r.project)}, nil)
-			c.Text("p", r.project, kit.MonoTok(c, 11, theme.FgMuted))
+			c.Text("p", r.project, widget.MonoTok(c, 11, theme.FgMuted))
 		})
 		return
 	}
@@ -450,13 +452,13 @@ func (p *Search) row(c *ui.Ctx, r searchRow) {
 			c.Box("sw", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: th.C(theme.StatusWorking)}, nil)
 			c.Text("p", p.rowPath(r.file), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5}, Color: th.C(theme.Fg)})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("n", fmt.Sprint(r.count), kit.MonoTok(c, 10.5, theme.FgFaint))
+			c.Text("n", fmt.Sprint(r.count), widget.MonoTok(c, 10.5, theme.FgFaint))
 		})
 		return
 	}
 	m := r.match
 	c.Row("m", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 30, R: 12}, Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-		c.Text("ln", fmt.Sprint(m.Line), kit.MonoTok(c, 10.5, theme.FgGhost))
+		c.Text("ln", fmt.Sprint(m.Line), widget.MonoTok(c, 10.5, theme.FgGhost))
 		lead := len(m.Text) - len(strings.TrimLeft(m.Text, " \t"))
 		replaced, err := p.replaced(m)
 		c.Row("text", ui.Style{Cross: ui.Center}, func(c *ui.Ctx) {
@@ -594,7 +596,7 @@ func (p *Search) apply(ctx registry.Ctx) error {
 				errs = append(errs, f.Path+" changed since the preview")
 				continue
 			}
-			if _, err := buf.Text.Apply(text.Edit{Ranges: kit.HunkEdits(buf.Text.Snapshot(), f.Hunks), Author: text.Author{Kind: text.User}}); err != nil {
+			if _, err := buf.Text.Apply(text.Edit{Ranges: edits.HunkEdits(buf.Text.Snapshot(), f.Hunks), Author: text.Author{Kind: text.User}}); err != nil {
 				errs = append(errs, f.Path+": "+err.Error())
 				continue
 			}
@@ -628,13 +630,13 @@ func (p *Search) buildPreview(c *ui.Ctx) {
 	th := c.Theme()
 	plan := p.plan
 	if plan == nil {
-		c.Text("none", "Nothing to preview.", kit.MonoTok(c, 11.5, theme.FgGhost))
+		c.Text("none", "Nothing to preview.", widget.MonoTok(c, 11.5, theme.FgGhost))
 		return
 	}
 	c.Column("replace", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Gap: 12, Help: "files/search#replace"}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Text("t", plan.title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-			c.Text("q", plan.detail, kit.MonoTok(c, 11, theme.FgFaint))
+			c.Text("q", plan.detail, widget.MonoTok(c, 11, theme.FgFaint))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if widget.Button(c, "apply", "Apply", widget.ButtonOpts{Primary: true, Disabled: len(plan.edits) == 0, Help: "files/search#replace"}) {
 				if err := p.apply(context.Background()); err != nil {
@@ -669,10 +671,10 @@ func (p *Search) buildPreview(c *ui.Ctx) {
 // diffBlock draws a hunk as a unified diff: its header, the lines it removes, and with withNew, the lines it adds.
 func diffBlock(c *ui.Ctx, key any, h gitx.Hunk, withNew bool) {
 	th := c.Theme()
-	code := ui.TextStyle{Font: kit.CodeFont}
+	code := ui.TextStyle{Font: draw.CodeFont}
 	c.Column(key, ui.Style{W: ui.Flex(1), Radius: 4, Clip: true, Stroke: th.C(theme.Line), Border: 1}, func(c *ui.Ctx) {
 		c.Row("h", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 2), Fill: th.C(theme.BgRaised)}, func(c *ui.Ctx) {
-			c.Text("t", h.Header(), kit.MonoTok(c, 10.5, theme.FgFaint))
+			c.Text("t", h.Header(), widget.MonoTok(c, 10.5, theme.FgFaint))
 		})
 		line := func(k string, i int, sign, s string, fill, fg theme.TokenID) {
 			c.Row(fmt.Sprint(k, i), ui.Style{W: ui.Flex(1), Pad: ui.PadXY(8, 1), Fill: th.C(fill)}, func(c *ui.Ctx) {

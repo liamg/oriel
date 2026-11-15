@@ -380,7 +380,7 @@ func (x *Launcher) continues() (core.Session, bool) {
 	if t := strings.TrimSpace(x.ticket); t != "" && strings.EqualFold(t, x.another) {
 		return nil, false
 	}
-	return ticketSession(x.h, x.ticket)
+	return kit.TicketSession(x.h, x.ticket)
 }
 
 // continuing is the agent column while Start continues se: the agent se runs on, which Start keeps, and Start
@@ -396,7 +396,7 @@ func (x *Launcher) continuing(c *ui.Ctx, se core.Session) {
 		}
 	}
 	c.Row("continuing", ui.Style{W: ui.Flex(1), Gap: 14, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
-		c.Text("on", se.Name()+" carries on with "+on, kit.MonoFont(11, th.C(theme.FgMuted)))
+		c.Text("on", se.Name()+" carries on with "+on, widget.MonoFont(11, th.C(theme.FgMuted)))
 		if widget.Button(c, "another", "Start another", widget.ButtonOpts{Ghost: true, Help: "agent/launcher#agent"}) {
 			x.another = strings.TrimSpace(x.ticket)
 		}
@@ -470,7 +470,7 @@ func (x *Launcher) header(c *ui.Ctx) {
 			meta = append(meta, "from ticket")
 		}
 		if len(meta) > 0 {
-			c.Text("meta", strings.Join(meta, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("meta", strings.Join(meta, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: "agent/launcher"}) {
@@ -487,7 +487,7 @@ func (x *Launcher) field(c *ui.Ctx, key any, text *string, label, placeholder st
 	}
 	if lines <= 1 {
 		o := widget.InputOpts{Label: label, Placeholder: placeholder, Help: "agent/launcher", TabMoves: true, KeyMode: LauncherKeyMode, Width: w}
-		dialogField(c, key, text, o, focus, x.close, nil)
+		widget.DialogField(c, key, text, o, focus, x.close, nil)
 		return
 	}
 	if focus {
@@ -504,7 +504,7 @@ func (x *Launcher) form(c *ui.Ctx) {
 	k, loaded := x.current()
 	f := startsFrom(k)
 	c.Column("prompt", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Prompt", "⌘↵ starts · esc closes")
+		widget.Heading(c, "head", "Prompt", "⌘↵ starts · esc closes")
 		switch f {
 		case core.FromPR:
 			x.field(c, "pr", &x.pr, "Pull request", PRPlaceholder, true, ui.Flex(1), 1)
@@ -533,14 +533,14 @@ func (x *Launcher) form(c *ui.Ctx) {
 				if x.ticketHere() != nil {
 					note = "the ticket, comments and attachments go to the agent as context"
 				}
-				c.Text("note", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("note", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 			})
 		}
 	})
 	c.Column("mode", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Mode", "")
+		widget.Heading(c, "head", "Mode", "")
 		if !loaded {
-			c.Text("wait", cmp.Or(x.loadErr, "No kinds of session"), kit.UIFont(12, th.C(theme.Warn)))
+			c.Text("wait", cmp.Or(x.loadErr, "No kinds of session"), widget.UIFont(12, th.C(theme.Warn)))
 			return
 		}
 		items := make([]widget.Choice, len(x.kinds))
@@ -552,7 +552,7 @@ func (x *Launcher) form(c *ui.Ctx) {
 		}
 	})
 	c.Column("agent", ui.Style{W: ui.Flex(1)}, func(c *ui.Ctx) {
-		kit.Heading(c, "head", "Agent", "provider · model · effort")
+		widget.Heading(c, "head", "Agent", "provider · model · effort")
 		if se, ok := x.continues(); ok {
 			x.continuing(c, se)
 			return
@@ -643,14 +643,14 @@ func (x *Launcher) ticketCard(c *ui.Ctx) {
 	se, cont := x.continues()
 	switch {
 	case t == nil && cont && !x.card.busy:
-		c.Text("ticket-continue", continueLabel(se), kit.MonoFont(10.5, th.C(theme.Accent)))
+		c.Text("ticket-continue", kit.ContinueLabel(se), widget.MonoFont(10.5, th.C(theme.Accent)))
 		return
 	case x.card.busy:
 		widget.Busy(c, "ticket-wait", widget.LoadState{Phase: widget.Pending, Since: x.card.since},
 			widget.BusyOpts{Label: "Looking up " + x.card.asked + " in " + x.card.source, Size: 11, Help: help})
 		return
 	case x.card.err != "" && x.card.key == strings.TrimSpace(x.ticket):
-		c.Text("ticket-err", x.card.asked+": "+x.card.err, kit.MonoFont(10.5, th.C(theme.Warn)))
+		c.Text("ticket-err", x.card.asked+": "+x.card.err, widget.MonoFont(10.5, th.C(theme.Warn)))
 		return
 	case t == nil:
 		return
@@ -659,21 +659,21 @@ func (x *Launcher) ticketCard(c *ui.Ctx) {
 	c.Row("ticket-card", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 12), Gap: 14, Stroke: th.C(tLaunchCardLine), Border: 1, Radius: 8,
 		Role: ui.RoleGroup, Label: "Ticket " + t.Key, Help: help}, func(c *ui.Ctx) {
 		c.Column("id", ui.Style{W: ui.Px(110), Gap: 6}, func(c *ui.Ctx) {
-			c.Text("key", t.Key, kit.MonoFont(11, th.C(theme.Accent)))
+			c.Text("key", t.Key, widget.MonoFont(11, th.C(theme.Accent)))
 			if t.State != "" {
-				widget.Chip(c, "state", t.State, kit.TokenColour(th, stageTone(t.Stage), th.C(theme.Accent)), help)
+				widget.Chip(c, "state", t.State, kit.TokenColour(th, kit.TicketStageTone(t.Stage), th.C(theme.Accent)), help)
 			}
 		})
 		c.Column("body", ui.Style{W: ui.Flex(1), Gap: 6, Clip: true}, func(c *ui.Ctx) {
 			c.Text("title", t.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			if t.Summary != "" {
-				widget.Wrap(c, "summary", t.Summary, width, kit.UIFont(12, th.C(theme.FgMuted)))
+				widget.Wrap(c, "summary", t.Summary, width, widget.UIFont(12, th.C(theme.FgMuted)))
 			}
 			if len(t.Facts) > 0 {
-				c.Text("facts", strings.Join(t.Facts, "   "), kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("facts", strings.Join(t.Facts, "   "), widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 			if cont {
-				c.Text("continue", continueLabel(se), kit.MonoFont(10.5, th.C(theme.Accent)))
+				c.Text("continue", kit.ContinueLabel(se), widget.MonoFont(10.5, th.C(theme.Accent)))
 			}
 		})
 		if widget.IconButton(c, "drop", "✕", widget.IconButtonOpts{Label: "Take " + t.Key + " off", Help: help, Size: 18}) {
@@ -698,7 +698,7 @@ func (x *Launcher) providerCard(c *ui.Ctx, p hostapi.ProviderInfo) {
 				c.Text("t", strings.ToUpper(name[:1]), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9, Weight: typeset.Bold},
 					Color: th.C(theme.Fg)})
 			})
-			c.Text("name", name, kit.UIFont(13, th.C(theme.Fg)))
+			c.Text("name", name, widget.UIFont(13, th.C(theme.Fg)))
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if id, _ := kit.DefaultAgent(x.h.State(), x.providerList()); p.ID == id {
 				widget.Chip(c, "default", "default", th.C(theme.Accent), "agent/launcher#agent")
@@ -717,38 +717,11 @@ func (x *Launcher) providerCard(c *ui.Ctx, p hostapi.ProviderInfo) {
 				x.model, x.effort = m, e
 			}
 		}
-		c.Text("usage", providerNote(p, x.h.State().Usage), kit.MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("usage", agentkit.ProviderNote(p, x.h.State().Usage), widget.MonoFont(10, th.C(theme.FgFaint)))
 	})
 	if in.Clicked {
 		x.pickProvider(p.ID)
 	}
-}
-
-// providerNote is a provider's plan and what's used of each window, or why it can't run.
-func providerNote(p hostapi.ProviderInfo, usage []core.ProviderUsage) string {
-	switch {
-	case p.Error != "":
-		return p.Error
-	case !p.Install.LoggedIn:
-		return cmp.Or(p.Install.Note, "not logged in")
-	}
-	u := p.Usage
-	for _, x := range usage {
-		if x.Provider == p.ID {
-			u = x
-		}
-	}
-	parts := []string{}
-	if u.Plan != "" {
-		parts = append(parts, u.Plan)
-	}
-	for _, w := range u.Windows {
-		parts = append(parts, fmt.Sprintf("%s %d%%", strings.TrimSuffix(w.Name, " window"), int(w.Used*100+.5)))
-	}
-	if len(parts) == 0 {
-		return cmp.Or(p.Install.Version, "ready")
-	}
-	return strings.Join(parts, " · ")
 }
 
 // noAgentCard starts the session with no agent.
@@ -765,8 +738,8 @@ func (x *Launcher) noAgentCard(c *ui.Ctx, k core.KindSpec) {
 	}
 	if widget.Clickable(c, "provider.none", ui.Style{Dir: ui.Column, W: ui.Px(200), Pad: ui.Pad(12), Gap: 8, Clip: true, Fill: fill, Stroke: line, Border: 1, Radius: 8,
 		NoHover: true, Label: "No agent", Selected: on, Help: "agent/launcher#agent"}, func(c *ui.Ctx) {
-		c.Text("name", "No agent", kit.UIFont(13, th.C(theme.Fg)))
-		c.Text("note", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+		c.Text("name", "No agent", widget.UIFont(13, th.C(theme.Fg)))
+		c.Text("note", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 	}).Clicked {
 		x.picked = true
 		x.pickProvider("")
@@ -775,7 +748,7 @@ func (x *Launcher) noAgentCard(c *ui.Ctx, k core.KindSpec) {
 
 // runsIn is where the session runs: in a sandbox or not, which backend, and its network.
 func (x *Launcher) runsIn(c *ui.Ctx) {
-	kit.Heading(c, "head", "Runs in", "")
+	widget.Heading(c, "head", "Runs in", "")
 	pick := agentkit.BackendPick{Chosen: &x.backend, Setting: agentkit.SettingBackend(x.h), Offered: x.h.State().Machine.Sandboxes}
 	agentkit.SandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#runs-in")
 }
@@ -783,13 +756,13 @@ func (x *Launcher) runsIn(c *ui.Ctx) {
 // side is the recent prompts, and what starting will do.
 func (x *Launcher) side(c *ui.Ctx) {
 	th := c.Theme()
-	kit.Heading(c, "head", "Recent prompts", "")
+	widget.Heading(c, "head", "Recent prompts", "")
 	sessions := slices.Clone(x.h.State().Sessions)
 	sessions = slices.DeleteFunc(sessions, func(se core.SessionState) bool { return strings.TrimSpace(se.Prompt) == "" })
 	slices.SortStableFunc(sessions, func(a, b core.SessionState) int { return b.Created.Compare(a.Created) })
 	c.Column("recent", ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
 		if len(sessions) == 0 {
-			c.Text("none", "Prompts you start sessions with show here.", kit.UIFont(12, th.C(theme.FgFaint)))
+			c.Text("none", "Prompts you start sessions with show here.", widget.UIFont(12, th.C(theme.FgFaint)))
 		}
 		for _, se := range sessions[:min(len(sessions), 5)] {
 			meta := []widget.AgoPart{{Text: string(se.Kind)}}
@@ -800,8 +773,8 @@ func (x *Launcher) side(c *ui.Ctx) {
 			if widget.Clickable(c, "recent."+string(se.ID), ui.Style{Dir: ui.Column, W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 4, Fill: th.C(tLaunchCard),
 				Stroke: th.C(tLaunchCardLine), Border: 1, Radius: 8, Clip: true, Label: kit.FirstLine(se.Prompt), Help: "agent/launcher#recent-prompts"},
 				func(c *ui.Ctx) {
-					c.Text("p", kit.FirstLine(se.Prompt), kit.UIFont(12.5, th.C(theme.Fg)))
-					widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint))}, meta...)
+					c.Text("p", kit.FirstLine(se.Prompt), widget.UIFont(12.5, th.C(theme.Fg)))
+					widget.AgoLine(c, "m", widget.AgoLineOpts{Text: widget.MonoFont(10, th.C(theme.FgFaint))}, meta...)
 				}).Clicked {
 				x.reuse(se)
 			}
@@ -812,9 +785,9 @@ func (x *Launcher) side(c *ui.Ctx) {
 		Role: ui.RoleGroup, Label: "Pre-flight"}, func(c *ui.Ctx) {
 		for i, row := range x.preflight() {
 			c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8}, func(c *ui.Ctx) {
-				c.Text("k", row[0], kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				c.Text("k", row[0], widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("v", row[1], kit.MonoFont(10.5, th.C(theme.Fg)))
+				c.Text("v", row[1], widget.MonoFont(10.5, th.C(theme.Fg)))
 			})
 		}
 	})
@@ -871,10 +844,10 @@ func (x *Launcher) footer(c *ui.Ctx) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(60), Pad: ui.PadXY(24, 0), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Column("about", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			if x.err != "" {
-				c.Text("err", x.err, kit.MonoFont(11, th.C(theme.Error)))
+				c.Text("err", x.err, widget.MonoFont(11, th.C(theme.Error)))
 				return
 			}
-			c.Text("t", k.About, kit.MonoFont(11, th.C(theme.FgMuted)))
+			c.Text("t", k.About, widget.MonoFont(11, th.C(theme.FgMuted)))
 		})
 		if widget.Button(c, "savejob", "Save as job", widget.ButtonOpts{Ghost: true, Disabled: !x.h.Available("jobs.new", nil),
 			Help: "agent/launcher#save-as-job"}) {

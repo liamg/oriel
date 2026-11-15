@@ -156,7 +156,7 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 	open := true
 	widget.Modal(c, "codesetup", &open, widget.ModalOpts{Title: "Set up " + a.hostname, Width: 540, Help: codeSetupHelp}, func(c *ui.Ctx) {
 		if len(a.hosts) > 1 {
-			widget.Wrap(c, "which", "Which code host is "+a.hostname+"?", 500, kit.UIFont(13, th.C(theme.Fg)))
+			widget.Wrap(c, "which", "Which code host is "+a.hostname+"?", 500, widget.UIFont(13, th.C(theme.Fg)))
 			labels := make([]string, 0, len(a.hosts)+1)
 			for _, h := range a.hosts {
 				labels = append(labels, h.Label())
@@ -171,22 +171,22 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 		}
 		hs, ok := a.site()
 		if !ok {
-			widget.Wrap(c, "none", "Oriel won't ask again; its pull request steps stay off for "+a.hostname+".", 500, kit.UIFont(12, th.C(theme.FgMuted)))
+			widget.Wrap(c, "none", "Oriel won't ask again; its pull request steps stay off for "+a.hostname+".", 500, widget.UIFont(12, th.C(theme.FgMuted)))
 		} else {
 			_, public := hs.PublicSite(a.hostname)
 			if !public && hs.Setup.API != "" {
-				kit.Heading(c, "api", "API URL", "")
+				widget.Heading(c, "api", "API URL", "")
 				widget.Input(c, "api", &a.api, widget.InputOpts{Label: "API URL", Help: codeSetupHelp, KeyMode: SetupKeyMode})
 			}
 			if help := strings.ReplaceAll(hs.Setup.TokenHelp, "{host}", a.hostname); help != "" {
-				widget.Wrap(c, "help", help, 500, kit.UIFont(12, th.C(theme.FgMuted)))
+				widget.Wrap(c, "help", help, 500, widget.UIFont(12, th.C(theme.FgMuted)))
 			}
 			if hs.Site.Secret != "" {
 				note := "not set yet"
 				if kit.Sites(x.h).Keyed(hs) {
 					note = "set: this replaces it"
 				}
-				kit.Heading(c, "token", "Token", note)
+				widget.Heading(c, "token", "Token", note)
 				if a.focus {
 					c.RequestFocus(c.Next("token"))
 					a.focus = false
@@ -202,11 +202,11 @@ func (x *CodeSites) setupView(c *ui.Ctx) {
 					}
 				}
 				widget.Wrap(c, "about", "Kept as "+hs.Site.Secret+" in Oriel's secrets, and sent only to "+a.hostname+", by the "+hs.Label()+
-					" plugin.", 500, kit.UIFont(11.5, th.C(theme.FgFaint)))
+					" plugin.", 500, widget.UIFont(11.5, th.C(theme.FgFaint)))
 			}
 		}
 		if a.err != nil {
-			widget.Wrap(c, "err", a.err.Error(), 500, kit.MonoFont(11, th.C(theme.Error)))
+			widget.Wrap(c, "err", a.err.Error(), 500, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		c.Row("foot", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Main: ui.End, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 			if widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Key: "esc", Help: codeSetupHelp}) {

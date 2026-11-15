@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/vim"
 )
@@ -27,8 +28,8 @@ func (x *Editor) WaitDocs() {
 	}
 }
 
-func (x *Editor) Current() vim.Pane        { return x.current() }
-func (x *Editor) Metrics() kit.PaneMetrics { return x.pane }
+func (x *Editor) Current() vim.Pane         { return x.current() }
+func (x *Editor) Metrics() draw.PaneMetrics { return x.pane }
 
 // MdPicture is the picture a markdown image's src names, found from dir, or why there's none.
 func MdPicture(pics *kit.Pictures, src, dir string) (*kit.Picture, string) {

@@ -66,7 +66,7 @@ func (x *Ship) quietStrip(c *ui.Ctx, se core.SessionState, ships []shipRead) []s
 	c.Row("quiet", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Row("names", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 			c.Text("t", fmt.Sprintf("%s with nothing to ship: %s", kit.Counted(len(still), "project"), strings.Join(still, ", ")),
-				kit.MonoFont(11, th.C(theme.FgFaint)))
+				widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 		label := "Show"
 		if open {

@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // fileBadge is a file badge and its counts for the session in front.
@@ -54,7 +55,7 @@ func (e *Explorer) badgeMarks(c *ui.Ctx, abs string, dir bool) {
 			tip += "s"
 		}
 		c.Box("badge."+fb.b.Name, ui.Style{Tooltip: tip, Help: fb.b.Help, Role: ui.RoleText, Label: tip}, func(c *ui.Ctx) {
-			c.Text("t", fmt.Sprintf("%s%d", fb.b.Glyph, n), kit.MonoFont(10.5, kit.TokenColour(c.Theme(), fb.b.Tone, c.Theme().C(theme.FgMuted))))
+			c.Text("t", fmt.Sprintf("%s%d", fb.b.Glyph, n), widget.MonoFont(10.5, kit.TokenColour(c.Theme(), fb.b.Tone, c.Theme().C(theme.FgMuted))))
 		})
 	}
 }

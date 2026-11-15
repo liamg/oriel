@@ -39,14 +39,14 @@ func (x *Diff) imageDiff(c *ui.Ctx, st *diffState, file string, d *imageDiff) {
 		if both && st.slider[file] {
 			w := min(width, float32(max(d.old.Bounds().Dx(), d.new.Bounds().Dx())))
 			widget.Compare(c, "slider", d.old, d.new, w, widget.CompareOpts{Before: "OLD", After: "NEW", Label: file, Help: diffImageHelp})
-			c.Text("sizes", "old "+imageFacts(d.old, d.oldSize)+"   new "+imageFacts(d.new, d.newSize), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("sizes", "old "+imageFacts(d.old, d.oldSize)+"   new "+imageFacts(d.new, d.newSize), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			return
 		}
 		side := func(c *ui.Ctx, key, label string, img image.Image, size int, tone theme.TokenID, w float32) {
 			c.Column(key, ui.Style{W: ui.Px(w), Gap: 6}, func(c *ui.Ctx) {
 				c.Row("head", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Text("l", label, kit.KickerFont(th.C(tone)))
-					c.Text("facts", imageFacts(img, size), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("l", label, widget.KickerFont(th.C(tone)))
+					c.Text("facts", imageFacts(img, size), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				})
 				iw := min(w, float32(img.Bounds().Dx()))
 				c.Box("img", ui.Style{W: ui.Px(iw), Stroke: th.C(theme.Line), Border: 1}, func(c *ui.Ctx) {

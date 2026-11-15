@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/syntax"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // LanguagesService is the window's languages as one syntax.Set: a LanguageSet, which the editor's languages
@@ -164,7 +165,7 @@ func (f *HighlightedExcerpt) Build(c *ui.Ctx, n *core.Notification) {
 	}
 	c.Column("src", box, func(c *ui.Ctx) {
 		c.Row("path", ui.Style{W: ui.Flex(1), H: ui.Px(24), Pad: ui.PadXY(10, 0), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text(nil, shown, Mono(10.5, typeset.Normal, th.C(theme.FgFaint)))
+			c.Text(nil, shown, widget.Mono(10.5, typeset.Normal, th.C(theme.FgFaint)))
 		})
 		c.Column("lines", lines, func(c *ui.Ctx) {
 			for i, ln := range f.Spans {
@@ -181,7 +182,7 @@ func (f *HighlightedExcerpt) Build(c *ui.Ctx, n *core.Notification) {
 					}
 					c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
 					c.Box("no", ui.Style{W: ui.Px(numW)}, func(c *ui.Ctx) {
-						c.Text(nil, fmt.Sprint(no), Mono(size-0.5, typeset.Normal, th.C(theme.FgGhost)))
+						c.Text(nil, fmt.Sprint(no), widget.Mono(size-0.5, typeset.Normal, th.C(theme.FgGhost)))
 					})
 					c.Row("code", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
 						for j, s := range ln {
@@ -189,7 +190,7 @@ func (f *HighlightedExcerpt) Build(c *ui.Ctx, n *core.Notification) {
 							if s.Capture != "" {
 								col = th.Syntax("@" + s.Capture).FG
 							}
-							c.Text(j, ExpandTabs(s.Text), Mono(size, typeset.Normal, col))
+							c.Text(j, ExpandTabs(s.Text), widget.Mono(size, typeset.Normal, col))
 						}
 					})
 				})

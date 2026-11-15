@@ -14,7 +14,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/registry/services"
 
@@ -113,7 +115,7 @@ type diffState struct {
 	focus   bool
 	goLine  int  // a line of the selected file to select once it's drawn
 	goOld   bool // goLine is the old side's
-	scroll  kit.Scroll
+	scroll  widget.Scroll
 	order   []diffSel                  // every hunk drawn, in order
 	lines   map[diffSel]int            // lines each hunk has, as drawn
 	bufs    map[string]diffBuf         // the new side of files not open in the editor
@@ -814,7 +816,7 @@ func (x *Diff) newBuffer(st *diffState, file string, d *diffFile) *text.Buffer {
 	case b.from != d:
 		snap := b.buf.Snapshot()
 		if old := snap.Bytes(); !bytes.Equal(old, d.newText) {
-			_, err := b.buf.Apply(text.Edit{Ranges: kit.HunkEdits(snap, gitx.DiffLines(old, d.newText)), Author: text.Author{Kind: text.File}})
+			_, err := b.buf.Apply(text.Edit{Ranges: edits.HunkEdits(snap, gitx.DiffLines(old, d.newText)), Author: text.Author{Kind: text.File}})
 			if err != nil || !bytes.Equal(b.buf.Snapshot().Bytes(), d.newText) {
 				b.buf = text.New(d.newText, text.Author{Kind: text.File})
 			}

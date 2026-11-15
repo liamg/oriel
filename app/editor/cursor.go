@@ -3,7 +3,7 @@ package editor
 import (
 	"time"
 
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/vim"
@@ -90,7 +90,7 @@ func (g cursorGlide) size(k cursorKey, v float32) float32 {
 // glideCursor glides the cursor between positions on the motion spring (editor.cursor_glide). A step of one column
 // on the same line, a move within cursorFast of the last, and a scroll snap, so it never trails typing or held keys.
 // c is the window's lines, which the cursor's place is measured in.
-func (x *Editor) glideCursor(c *ui.Ctx, p vim.Pane, rowID ui.ID, line, vc int, cx, cy float32, shape vim.Shape, m kit.PaneMetrics) cursorGlide {
+func (x *Editor) glideCursor(c *ui.Ctx, p vim.Pane, rowID ui.ID, line, vc int, cx, cy float32, shape vim.Shape, m draw.PaneMetrics) cursorGlide {
 	if on, _, err := x.h.Options().Get("editor.cursor_glide", registry.At{}); err == nil && on == false {
 		return cursorGlide{}
 	}

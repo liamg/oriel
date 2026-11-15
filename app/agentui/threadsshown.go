@@ -148,9 +148,9 @@ func threadsPopover(c *ui.Ctx, h plugin.Host, se core.SessionState, line int, ts
 				c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 					c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(groupTone(h, se, t))}, nil)
 					c.Text("t", "Thread", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-					c.Text("l", fmt.Sprintf("· L%d", line+1), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("l", fmt.Sprintf("· L%d", line+1), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 					if t.Title != "" {
-						c.Text("title", t.Title, kit.UIFont(12, th.C(theme.FgMuted)))
+						c.Text("title", t.Title, widget.UIFont(12, th.C(theme.FgMuted)))
 					}
 					c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 					widget.Chip(c, "status", word, th.C(tok), "editor/pane#threads")
@@ -163,7 +163,7 @@ func threadsPopover(c *ui.Ctx, h plugin.Host, se core.SessionState, line int, ts
 					}
 					c.Column(j, ui.Style{W: ui.Flex(1), Gap: 2}, func(c *ui.Ctx) {
 						c.Text("who", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(theme.FgMuted)})
-						kit.MarkdownText(c, h, "body", cm.Body, 340, kit.UIFont(12, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						kit.MarkdownText(c, h, "body", cm.Body, 340, widget.UIFont(12, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 					})
 				}
 			})

@@ -364,27 +364,27 @@ func (p *logPanel) row(c *ui.Ctx, r logRow) {
 				edge = th.C(theme.Error)
 			}
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: edge}, nil)
-			c.Text("time", r.time.Local().Format("15:04:05"), kit.Mono(11, typeset.Normal, th.C(tLogTime)))
+			c.Text("time", r.time.Local().Format("15:04:05"), widget.Mono(11, typeset.Normal, th.C(tLogTime)))
 			c.Box("level", ui.Style{W: ui.Px(44)}, func(c *ui.Ctx) {
-				c.Text(nil, levelName(r.level), kit.Mono(10, typeset.SemiBold, th.C(levelCol)))
+				c.Text(nil, levelName(r.level), widget.Mono(10, typeset.SemiBold, th.C(levelCol)))
 			})
 			c.Row("where", ui.Style{W: ui.Px(230), Gap: 6, Clip: true}, func(c *ui.Ctx) {
 				sess := "oriel"
 				if r.session != "" {
 					sess = string(r.session)
 				}
-				c.Text("session", sess, kit.Mono(11, typeset.Normal, th.C(theme.FgFaint)))
+				c.Text("session", sess, widget.Mono(11, typeset.Normal, th.C(theme.FgFaint)))
 				if r.source != "" {
-					c.Text("sep", "›", kit.Mono(11, typeset.Normal, th.C(theme.FgGhost)))
-					c.Text("source", r.source, kit.Mono(11, typeset.Normal, th.C(tLogSource)))
+					c.Text("sep", "›", widget.Mono(11, typeset.Normal, th.C(theme.FgGhost)))
+					c.Text("source", r.source, widget.Mono(11, typeset.Normal, th.C(tLogSource)))
 				}
 			})
 			c.Row("text", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-				c.Text(nil, kit.FirstLine(r.text), kit.Mono(11.5, typeset.Normal, th.C(theme.Fg)))
+				c.Text(nil, kit.FirstLine(r.text), widget.Mono(11.5, typeset.Normal, th.C(theme.Fg)))
 			})
 			if r.count > 1 {
 				c.Row("count", ui.Style{Pad: ui.PadXY(6, 1), Radius: 8, Fill: th.C(theme.BgOverlay)}, func(c *ui.Ctx) {
-					c.Text(nil, fmt.Sprintf("×%d", r.count), kit.Mono(9.5, typeset.Normal, th.C(theme.FgFaint)))
+					c.Text(nil, fmt.Sprintf("×%d", r.count), widget.Mono(9.5, typeset.Normal, th.C(theme.FgFaint)))
 				})
 			}
 		})
@@ -438,25 +438,25 @@ func (p *logPanel) detail(c *ui.Ctx, r logRow) {
 	}
 	c.Row("detail", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 86, T: 10, R: 12, B: 12}, Gap: 16}, func(c *ui.Ctx) {
 		c.Column("left", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-			if text, font := kit.ExpandTabs(r.text), kit.Mono(11.5, typeset.Normal, th.C(theme.Fg)); p.cut(c, r, text, font.Font) {
+			if text, font := kit.ExpandTabs(r.text), widget.Mono(11.5, typeset.Normal, th.C(theme.Fg)); p.cut(c, r, text, font.Font) {
 				widget.Wrap(c, "text", text, width, font)
 			}
 			switch {
 			case len(frames) > 0:
-				c.Text("head", "TRACEBACK", kit.Mono(9.5, typeset.SemiBold, th.C(theme.FgFaint)))
+				c.Text("head", "TRACEBACK", widget.Mono(9.5, typeset.SemiBold, th.C(theme.FgFaint)))
 				p.frames(c, frames, loc)
 			case detail != "":
-				c.Text("head", "OUTPUT", kit.Mono(9.5, typeset.SemiBold, th.C(theme.FgFaint)))
+				c.Text("head", "OUTPUT", widget.Mono(9.5, typeset.SemiBold, th.C(theme.FgFaint)))
 				for i, ln := range strings.Split(strings.TrimRight(detail, "\n"), "\n") {
 					col := th.C(theme.FgMuted)
 					if hasFileRef(ln) {
 						col = th.C(tLogSource)
 					}
-					widget.Wrap(c, i, kit.ExpandTabs(ln), width, kit.Mono(11, typeset.Normal, col))
+					widget.Wrap(c, i, kit.ExpandTabs(ln), width, widget.Mono(11, typeset.Normal, col))
 				}
 			case r.rec != nil:
 				for i, a := range r.rec.Attrs {
-					widget.Wrap(c, i, kit.ExpandTabs(a.Key+" = "+a.Value), width, kit.Mono(11, typeset.Normal, th.C(theme.FgMuted)))
+					widget.Wrap(c, i, kit.ExpandTabs(a.Key+" = "+a.Value), width, widget.Mono(11, typeset.Normal, th.C(theme.FgMuted)))
 				}
 			}
 			if len(actions) > 0 {
@@ -484,9 +484,9 @@ func (p *logPanel) cut(c *ui.Ctx, r logRow, text string, f typeset.FontSpec) boo
 		return true
 	}
 	sh := c.Shaper()
-	room := cmp.Or(p.width, 900) - 2 - 44 - 230 - 4*12 - 12 - sh.Shape("00:00:00", kit.Mono(11, typeset.Normal, color.NRGBA{}).Font).Advance
+	room := cmp.Or(p.width, 900) - 2 - 44 - 230 - 4*12 - 12 - sh.Shape("00:00:00", widget.Mono(11, typeset.Normal, color.NRGBA{}).Font).Advance
 	if r.count > 1 {
-		room -= 12 + 12 + sh.Shape(fmt.Sprintf("×%d", r.count), kit.Mono(9.5, typeset.Normal, color.NRGBA{}).Font).Advance
+		room -= 12 + 12 + sh.Shape(fmt.Sprintf("×%d", r.count), widget.Mono(9.5, typeset.Normal, color.NRGBA{}).Font).Advance
 	}
 	return sh.Shape(text, f).Advance > room
 }
@@ -519,10 +519,10 @@ func (p *logPanel) frames(c *ui.Ctx, frames []Frame, failing string) {
 			in := widget.Clickable(c, i, ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Px(19), Pad: ui.PadXY(6, 0), Gap: 12, Cross: ui.Center, Fill: fill,
 				Radius: 3, Help: "errors#log", Label: f.Loc()}, func(c *ui.Ctx) {
 				c.Box("loc", ui.Style{W: ui.Px(180), Clip: true}, func(c *ui.Ctx) {
-					c.Text(nil, shortLoc(f), kit.Mono(11, typeset.Normal, th.C(tLogSource)))
+					c.Text(nil, shortLoc(f), widget.Mono(11, typeset.Normal, th.C(tLogSource)))
 				})
 				c.Row("fn", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-					c.Text(nil, f.Fn, kit.Mono(11, typeset.Normal, th.C(theme.FgMuted)))
+					c.Text(nil, f.Fn, widget.Mono(11, typeset.Normal, th.C(theme.FgMuted)))
 				})
 			})
 			if in.Clicked && f.Line > 0 {
@@ -533,8 +533,8 @@ func (p *logPanel) frames(c *ui.Ctx, frames []Frame, failing string) {
 		}
 		if hidden > 0 {
 			if widget.Clickable(c, "gofr", ui.Style{Dir: ui.Row, Pad: ui.PadXY(6, 2), Gap: 12, Help: "errors#log", Label: "Show Go frames"}, func(c *ui.Ctx) {
-				c.Text("n", fmt.Sprintf("+%d Go frames", hidden), kit.Mono(11, typeset.Normal, th.C(theme.FgGhost)))
-				c.Text("show", "show", kit.Mono(11, typeset.Normal, th.C(theme.FgFaint)))
+				c.Text("n", fmt.Sprintf("+%d Go frames", hidden), widget.Mono(11, typeset.Normal, th.C(theme.FgGhost)))
+				c.Text("show", "show", widget.Mono(11, typeset.Normal, th.C(theme.FgFaint)))
 			}).Clicked {
 				p.goFrames = true
 			}

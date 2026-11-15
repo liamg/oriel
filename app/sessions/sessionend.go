@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -86,11 +87,11 @@ func (x *End) Activate(_ context.Context, h plugin.Host) error {
 	} {
 		x.Add(h.Contribute(it))
 	}
-	x.Add(h.Option(registry.OptionSpec{Name: kit.ArchiveOnMergeOption, Section: "git", Type: registry.Bool, Default: false,
+	x.Add(h.Option(registry.OptionSpec{Name: prui.ArchiveOnMergeOption, Section: "git", Type: registry.Bool, Default: false,
 		Scopes: registry.ScopeUser | registry.ScopeProject,
 		Help:   "Archive a session by itself once every one of its pull requests is merged and nothing in its worktrees is uncommitted."}))
 	x.Add(registry.On(h, registry.Hook{Kind: registry.Observe, Label: "archive the session once all its PRs are merged (session.archive_on_merge)"},
-		func(ctx registry.Ctx, ev *kit.PrMerged) (registry.Verdict, error) {
+		func(ctx registry.Ctx, ev *prui.PrMerged) (registry.Verdict, error) {
 			x.archiveIfMerged(ctx, core.SessionID(ev.Session))
 			return registry.Verdict{}, nil
 		}))
@@ -199,7 +200,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 		return
 	}
 	se := s.Snapshot()
-	if !kit.ArchivesOnMerge(x.h, se, ships.For(se)) {
+	if !prui.ArchivesOnMerge(x.h, se, ships.For(se)) {
 		return
 	}
 	if err := x.end(ctx, hostapi.EndReq{Session: id}); err != nil {
@@ -242,7 +243,7 @@ func (x *End) confirm(ctx registry.Ctx) error {
 		ships = s.For(se)
 	}
 	x.ask = nil
-	return x.end(ctx, hostapi.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && kit.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
+	return x.end(ctx, hostapi.EndReq{Session: a.id, Delete: a.how == 1, Discard: a.how == 0 && prui.Uncommitted(ships) > 0, DeleteBranch: a.deleteBranch})
 }
 
 // end closes the session's tab, then ends it off the loop; an archive offers Undo while its branches stay.
@@ -318,7 +319,7 @@ func (x *End) view(c *ui.Ctx) {
 			c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(20, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("title", "END SESSION", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 14, Weight: typeset.Bold, Tracking: .24},
 					Color: th.C(theme.Fg)})
-				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.Label(se), kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+				c.Row("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.Label(se), widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 				if widget.Button(c, "close", "esc", widget.ButtonOpts{Ghost: true, Help: kit.EndHelp}) {
 					x.ask = nil
 				}
@@ -334,7 +335,7 @@ func (x *End) view(c *ui.Ctx) {
 					return
 				}
 				label := endHows[a.how]
-				if a.how == 0 && kit.Uncommitted(ships) > 0 {
+				if a.how == 0 && prui.Uncommitted(ships) > 0 {
 					label = "Discard and archive"
 				}
 				if widget.Button(c, "end", label, widget.ButtonOpts{Primary: true, Key: "⌘↵", Help: kit.EndHelp, Disabled: st.Loading()}) {
@@ -363,15 +364,15 @@ func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []services.
 	}
 	if a.done != "" {
 		c.Row("done", ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleText, Label: a.done}, func(c *ui.Ctx) {
-			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", "✓", kit.UIFont(13, th.C(theme.OK))) })
-			widget.Wrap(c, "t", a.done, width-24, kit.UIFont(12.5, th.C(theme.Fg)))
+			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", "✓", widget.UIFont(13, th.C(theme.OK))) })
+			widget.Wrap(c, "t", a.done, width-24, widget.UIFont(12.5, th.C(theme.Fg)))
 		})
 	}
 	what := "Its worktrees go; its threads, transcript and test runs stay, searchable, and it can be reopened."
 	if a.how == 1 {
 		what = "Its worktrees, workspace and log go, with everything in them. The repos themselves stay."
 	}
-	widget.Wrap(c, "what", what, width, kit.UIFont(12.5, th.C(theme.FgMuted)))
+	widget.Wrap(c, "what", what, width, widget.UIFont(12.5, th.C(theme.FgMuted)))
 	widget.Async(c, "read", st, widget.AsyncOpts{Policy: widget.Gate, Label: "Reading what would be lost", Help: kit.EndHelp,
 		Retry: func() {
 			if s, ok := services.ShipsOf(x.h); ok {
@@ -425,7 +426,7 @@ func lossesOf(se core.SessionState, ships []services.ProjectShip, deleteBranch, 
 				text: fmt.Sprintf("%s: %s not pushed: %s", s.Project, kit.Counted(k, "commit"), fate)})
 		}
 		if ownPRs && s.PR.Open() {
-			w := kit.WordsOf(s.Code)
+			w := prui.WordsOf(s.Code)
 			out = append(out, loss{key: s.Project + "/pr", text: fmt.Sprintf("%s: %s%d stays open on %s", s.Project, w.Sigil, s.PR.Number, s.Code.Label())})
 		}
 	}
@@ -467,8 +468,8 @@ func (x *End) losses(c *ui.Ctx, a *endAsk, se core.SessionState, ships []service
 	th := c.Theme()
 	line := func(key, glyph string, tone render.Color, text string) {
 		c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Role: ui.RoleText, Label: text}, func(c *ui.Ctx) {
-			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(13, tone)) })
-			widget.Wrap(c, "t", text, width-24, kit.UIFont(12.5, th.C(theme.FgMuted)))
+			c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, widget.UIFont(13, tone)) })
+			widget.Wrap(c, "t", text, width-24, widget.UIFont(12.5, th.C(theme.FgMuted)))
 		})
 	}
 	ls := x.lossesOf(se, ships, a.deleteBranch)

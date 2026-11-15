@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -184,7 +185,7 @@ func (x *Tests) agentRun(c *ui.Ctx) {
 		return
 	}
 	c.Text("agent", "AGENT", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5}, Color: c.Theme().C(theme.FgFaint)})
-	kit.EvidenceChip(c, x.h, "agentrun", se.ID(), last.ID, kit.RunLabel(last), last.OK)
+	draw.EvidenceChip(c, x.h, "agentrun", se.ID(), last.ID, draw.RunLabel(last), last.OK)
 }
 
 // lastRunLine is the last run: its number, trigger, scope, counts and who started it.

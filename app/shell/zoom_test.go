@@ -9,6 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
@@ -62,8 +63,8 @@ func TestPartFontSizes(t *testing.T) {
 	s := apptest.EditorScene(t)
 	o := s.Registry().Options()
 	o.Set("ui.font_size", registry.LayerUser, registry.At{}, 16.0)
-	if v, _, _ := o.Get("ui.statusline.font_size", registry.At{}); v != 16.0 || kit.PartScale(o, "ui.statusline.font_size") != 0 {
-		t.Errorf("unset under ui.font_size 16: reads %v, scale %v; want 16, following", v, kit.PartScale(o, "ui.statusline.font_size"))
+	if v, _, _ := o.Get("ui.statusline.font_size", registry.At{}); v != 16.0 || draw.PartScale(o, "ui.statusline.font_size") != 0 {
+		t.Errorf("unset under ui.font_size 16: reads %v, scale %v; want 16, following", v, draw.PartScale(o, "ui.statusline.font_size"))
 	}
 	o.Unset("ui.font_size", registry.LayerUser, registry.At{})
 	normal := func() (size float32, bar render.Rect) {

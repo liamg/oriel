@@ -82,8 +82,7 @@ func (x *Tests) failureView(c *ui.Ctx, f failure) {
 		return ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: size}, Color: th.C(tok)}
 	}
 	label := func(c *ui.Ctx, s string) {
-		c.Text("label", s, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .14},
-			Color: th.C(theme.FgFaint)})
+		c.Text("label", s, widget.KickerFont(th.C(theme.FgFaint)))
 	}
 	c.Column("failure", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 8, Fill: th.C(tFailBg), Stroke: th.C(tFailBorder), Border: 1, Radius: 6,
 		Help: "editor/pane#tests", Role: ui.RoleRegion, Label: "Failure"}, func(c *ui.Ctx) {

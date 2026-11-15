@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 
@@ -50,7 +51,7 @@ func TestPRTabLandsOnTheOverview(t *testing.T) {
 	if f := s.Text(); strings.Contains(f, "Update PR") || strings.Contains(f, "RAISE PR") {
 		t.Errorf("the tab is still the form:\n%s", f)
 	}
-	if n := countRefs(s, kit.PRView); n != 1 {
+	if n := countRefs(s, prui.PRView); n != 1 {
 		t.Errorf("%d PR tabs open", n)
 	}
 	s.Lint("the PR overview")
@@ -128,7 +129,7 @@ func TestPROverviewSnapshot(t *testing.T) {
 	s, se := shipSession(t)
 	s.Run("ship.open", nil)
 	s.SettleGit()
-	s.Run("view.close", registry.Args{"id": kit.ShipView})
+	s.Run("view.close", registry.Args{"id": prui.ShipView})
 	x := shipOf(s)
 	x.Fixture(se.ID, false, func(ships []ship.Read) []ship.Read {
 		web := &ships[1]
@@ -231,7 +232,7 @@ func TestPROverviewMergedSnapshot(t *testing.T) {
 	s, se := shipSession(t)
 	s.Run("ship.open", nil)
 	s.SettleGit()
-	s.Run("view.close", registry.Args{"id": kit.ShipView})
+	s.Run("view.close", registry.Args{"id": prui.ShipView})
 	x := shipOf(s)
 	x.Fixture(se.ID, false, func(ships []ship.Read) []ship.Read {
 		web := &ships[1]

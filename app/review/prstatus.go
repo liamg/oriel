@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/prui"
 
 	"github.com/liamg/oriel/app/kit"
@@ -51,10 +52,10 @@ func prStatusBoxes(c *ui.Ctx, s prStatus) {
 			prui.PRLine(c, "mergeable", state, "Mergeable", note)
 		}
 		for _, f := range s.fields {
-			kit.PreviewField(c, f[0], f[1])
+			draw.PreviewField(c, f[0], f[1])
 		}
 		if s.done && len(full.Labels) > 0 {
-			kit.PreviewField(c, "labels", strings.Join(full.Labels, " · "))
+			draw.PreviewField(c, "labels", strings.Join(full.Labels, " · "))
 		}
 	}, nil)
 	if s.done {
@@ -92,7 +93,7 @@ func prDescription(c *ui.Ctx, r registry.Registry, full registry.ReviewDetail, w
 	th := c.Theme()
 	reviewCard(c, "description", "DESCRIPTION", ui.Flex(1), func(c *ui.Ctx) {
 		if strings.TrimSpace(full.Body) != "" {
-			kit.MarkdownText(c, r, "body", full.Body, width, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+			kit.MarkdownText(c, r, "body", full.Body, width, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 		}
 		reactions(c, "reactions", full.Reactions)
 	})
@@ -108,8 +109,8 @@ func reactions(c *ui.Ctx, key string, rs []registry.PRReaction) {
 		for i, re := range rs {
 			c.Row(i, ui.Style{Pad: ui.PadXY(7, 2), Gap: 4, Cross: ui.Center, Radius: 10, Stroke: th.C(theme.Line), Border: 1,
 				Role: ui.RoleText, Label: fmt.Sprintf("%s %d", re.Emoji, re.Count)}, func(c *ui.Ctx) {
-				c.Text("e", re.Emoji, kit.UIFont(12, th.C(theme.Fg)))
-				c.Text("n", fmt.Sprint(re.Count), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+				c.Text("e", re.Emoji, widget.UIFont(12, th.C(theme.Fg)))
+				c.Text("n", fmt.Sprint(re.Count), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 			})
 		}
 	})
@@ -129,18 +130,18 @@ func prActivity(c *ui.Ctx, r registry.Registry, events []registry.PREvent, width
 			glyph, verb, tone := activityLine(c, e)
 			c.Column(i, ui.Style{W: ui.Flex(1), Gap: 4}, func(c *ui.Ctx) {
 				c.Row("head", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, kit.UIFont(12, tone)) })
+					c.Box("g", ui.Style{W: ui.Px(14)}, func(c *ui.Ctx) { c.Text("g", glyph, widget.UIFont(12, tone)) })
 					c.Text("who", cmp.Or(e.Who, "someone"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold},
 						Color: th.C(theme.Fg)})
-					c.Row("verb", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("v", verb, kit.UIFont(12.5, th.C(theme.FgMuted))) })
+					c.Row("verb", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("v", verb, widget.UIFont(12.5, th.C(theme.FgMuted))) })
 					if !e.At.IsZero() {
-						c.Text("at", widget.AgoLong(c.Now(), e.At), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+						c.Text("at", widget.AgoLong(c.Now(), e.At), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 					}
 				})
 				if body := activityBody(e); body != "" || len(e.Reactions) > 0 {
 					c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 22}, Gap: 6}, func(c *ui.Ctx) {
 						if body != "" {
-							kit.MarkdownText(c, r, "md", body, width-46, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.CommentMarkdown())
+							kit.MarkdownText(c, r, "md", body, width-46, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.CommentMarkdown())
 						}
 						reactions(c, "reactions", e.Reactions)
 					})

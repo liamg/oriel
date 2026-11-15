@@ -11,8 +11,8 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/plugins"
 	appsessions "github.com/liamg/oriel/app/sessions"
-	"github.com/liamg/oriel/app/settings"
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -417,7 +417,7 @@ func bundledLinear(t *testing.T, l *lineartest.Linear, workDir string) (*apptest
 func TestLinearDormantUntilKeyed(t *testing.T) {
 	l := lineartest.New(t)
 	s, secrets := bundledLinear(t, l, "")
-	if st := apptest.PluginOf[*settings.Catalog](s, "catalog").State("liamg/linear"); st != "loaded" {
+	if st := apptest.PluginOf[*plugins.Catalog](s, "catalog").State("liamg/linear"); st != "loaded" {
 		t.Fatalf("the bundled plugin is %q", st)
 	}
 	if n := s.Count("Linear tickets"); n != 0 {
@@ -543,7 +543,7 @@ func railEntry(s *apptest.Scene, t *testing.T, label string) *render.AccessNode 
 func TestBundledPluginOffAndReplaced(t *testing.T) {
 	l := lineartest.New(t)
 	s, _ := bundledLinear(t, l, "")
-	x := apptest.PluginOf[*settings.Catalog](s, "catalog")
+	x := apptest.PluginOf[*plugins.Catalog](s, "catalog")
 	state := func() string { return x.State("liamg/linear") }
 	tracker := func() bool { _, ok := registry.TrackerFor(s.Registry(), "ENG-1"); return ok }
 	if !tracker() {

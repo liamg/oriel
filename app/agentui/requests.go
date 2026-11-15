@@ -115,8 +115,8 @@ type requestsState struct {
 	query     string
 	drafts    map[core.ThreadID]*draft
 	awaiting  string // a new request's body, sent, to select once its thread arrives
-	list      kit.Scroll
-	convo     kit.Scroll
+	list      widget.Scroll
+	convo     widget.Scroll
 	focusList bool
 	inline    *inlineNew
 	rename    widget.Rename // the selected request's name, being edited in its header
@@ -315,7 +315,7 @@ func (x *Requests) state(id core.SessionID) *requestsState {
 	}
 	st := x.by[id]
 	if st == nil {
-		st = &requestsState{drafts: map[core.ThreadID]*draft{}, list: kit.Scroll{}, convo: kit.Scroll{Follow: true}}
+		st = &requestsState{drafts: map[core.ThreadID]*draft{}, list: widget.Scroll{}, convo: widget.Scroll{Follow: true}}
 		x.by[id] = st
 	}
 	return st
@@ -652,7 +652,7 @@ func avatar(c *ui.Ctx, key any, cm core.Comment) {
 		tone, label = th.C(kit.TAvatarGitHub), cmp.Or(kit.Initials(strings.NewReplacer("-", " ", "_", " ", ".", " ").Replace(cm.Name)), "GH")
 	}
 	c.Box(key, ui.Style{W: ui.Px(28), H: ui.Px(28), Radius: 6, Fill: tone, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
-		c.Text("t", label, ui.TextStyle{Font: kit.KickerFont(render.Color{}).Font, Color: th.C(theme.AccentInk)})
+		c.Text("t", label, ui.TextStyle{Font: widget.KickerFont(render.Color{}).Font, Color: th.C(theme.AccentInk)})
 	})
 }
 

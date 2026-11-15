@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/app/kit/diagrams"
+	"github.com/liamg/oriel/app/kit/draw"
 
 	"github.com/liamg/oriel/app/kit/work"
 
@@ -55,7 +56,7 @@ type Walkthrough struct {
 	ConfigDir string // the user's config
 	h         plugin.Host
 	busy      work.Busy
-	metrics   kit.PaneMetrics // the code's, as the editor draws it
+	metrics   draw.PaneMetrics // the code's, as the editor draws it
 
 	w     *walkthrough // on the loop only
 	focus bool         // give the view focus next frame
@@ -411,7 +412,7 @@ func (x *Walkthrough) view(c *ui.Ctx, vc uireg.ViewCtx) {
 		x.focus = false
 	}
 	w := x.w
-	c.Column("walk", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(kit.TEditorBg), Clip: true, Focusable: true, DefaultFocus: true, KeyMode: ExplainChangeKeyMode,
+	c.Column("walk", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Fill: th.C(draw.TEditorBg), Clip: true, Focusable: true, DefaultFocus: true, KeyMode: ExplainChangeKeyMode,
 		Role: ui.RoleRegion, Label: "Explain this change", Help: walkHelp}, func(c *ui.Ctx) {
 		x.header(c, w)
 		switch {
@@ -448,7 +449,7 @@ func (x *Walkthrough) message(c *ui.Ctx, msg string, failed bool) {
 		if failed {
 			tok = theme.Error
 		}
-		c.Text("t", msg, kit.UIFont(13, th.C(tok)))
+		c.Text("t", msg, widget.UIFont(13, th.C(tok)))
 		if failed && widget.Button(c, "again", "Try again", widget.ButtonOpts{Help: walkHelp}) {
 			x.w = nil
 			x.run("explain.change", nil)
@@ -467,19 +468,19 @@ func (x *Walkthrough) header(c *ui.Ctx, w *walkthrough) {
 			switch {
 			case s.path != "":
 				c.Box("dot", ui.Style{W: ui.Px(8), H: ui.Px(8), Radius: 2, Fill: kit.ProjectsHere(x.h).Colour(th, s.proj)}, nil)
-				c.Text("file", s.proj+" / "+s.rel, kit.MonoFont(12, th.C(theme.Fg)))
-				c.Text("lines", fmt.Sprintf("L%d–%d", s.Start, s.End), kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("file", s.proj+" / "+s.rel, widget.MonoFont(12, th.C(theme.Fg)))
+				c.Text("lines", fmt.Sprintf("L%d–%d", s.Start, s.End), widget.MonoFont(11, th.C(theme.FgFaint)))
 			case s.missing:
-				c.Text("file", s.rel+" isn't in the change", kit.MonoFont(12, th.C(theme.Warn)))
+				c.Text("file", s.rel+" isn't in the change", widget.MonoFont(12, th.C(theme.Warn)))
 			default:
-				c.Text("file", "summary", kit.MonoFont(12, th.C(theme.FgMuted)))
+				c.Text("file", "summary", widget.MonoFont(12, th.C(theme.FgMuted)))
 			}
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if w == nil {
 			return
 		}
-		c.Text("throwaway", "throwaway · discarded if the code changes", kit.UIFont(11, th.C(theme.FgFaint)))
+		c.Text("throwaway", "throwaway · discarded if the code changes", widget.UIFont(11, th.C(theme.FgFaint)))
 		if widget.Button(c, "discard", "Discard", widget.ButtonOpts{Ghost: true, Help: walkHelp}) {
 			x.run("explain.change.discard", nil)
 		}
@@ -522,11 +523,11 @@ func (x *Walkthrough) stage(c *ui.Ctx, w *walkthrough) {
 			if s.missing {
 				msg = s.rel + " isn't in the change or its projects."
 			}
-			c.Text("t", msg, kit.UIFont(13, th.C(theme.FgFaint)))
+			c.Text("t", msg, widget.UIFont(13, th.C(theme.FgFaint)))
 		})
 		return
 	}
-	x.metrics = kit.Metrics(c, x.h.Options(), x.metrics)
+	x.metrics = draw.Metrics(c, x.h.Options(), x.metrics)
 	m := x.metrics
 	src := x.srcOf(w, s.path)
 	if src.Loading() {
@@ -558,7 +559,7 @@ func (x *Walkthrough) stage(c *ui.Ctx, w *walkthrough) {
 	last := min(w.top+rows-1, len(lines))
 	w.line = min(max(w.line, w.top), last)
 
-	gutter := max(float32(kit.GutterW), float32(len(fmt.Sprint(len(lines))))*m.CharW+34)
+	gutter := max(float32(draw.GutterW), float32(len(fmt.Sprint(len(lines))))*m.CharW+34)
 	textX := gutter + 4
 	notesW := float32(440)
 	codeW := max(area.Dx()-notesW-110, area.Dx()*.5)
@@ -607,7 +608,7 @@ func (x *Walkthrough) diagram(c *ui.Ctx, stageID ui.ID, s walkStep) bool {
 		width = l.Size.X * h / l.Size.Y
 	}
 	c.Column("stage", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Main: ui.Center, Cross: ui.Center, Gap: 14, Clip: true}, func(c *ui.Ctx) {
-		c.Text("kicker", diagrams.Kicker(l), kit.KickerFont(th.C(theme.FgFaint)))
+		c.Text("kicker", diagrams.Kicker(l), widget.KickerFont(th.C(theme.FgFaint)))
 		diagrams.Draw(c, "diagram", l, max(width, 80), kit.MarkdownOpts{Help: walkHelp})
 	})
 	return true
@@ -685,7 +686,7 @@ func (x *Walkthrough) notes(c *ui.Ctx, w *walkthrough, s walkStep, ps []placedNo
 		n := s.Notes[p.i]
 		c.Box(fmt.Sprint("note", p.i), ui.Style{Float: &ui.Float{Offset: render.Point{X: cardX, Y: p.y}}, Z: ui.LayerContent + 1}, func(c *ui.Ctx) {
 			id := widget.Annotation(c, "card", widget.AnnotationOpts{N: noteMark(p.i), Title: n.Title, Tone: noteTone(th, p.i),
-				Width: ui.Px(notesW), Ground: th.C(kit.TEditorBg), Help: walkHelp}, func(c *ui.Ctx) {
+				Width: ui.Px(notesW), Ground: th.C(draw.TEditorBg), Help: walkHelp}, func(c *ui.Ctx) {
 				if n.Text != "" {
 					kit.MarkdownText(c, x.h, "md", n.Text, notesW-28, widget.AnnotationBody(c), kit.MarkdownOpts{})
 				}
@@ -700,7 +701,7 @@ func (x *Walkthrough) notes(c *ui.Ctx, w *walkthrough, s walkStep, ps []placedNo
 
 // codeRow is line l of the step's file: its number, coloured by the note it's lit for, and its text, dimmed when no
 // note is on it, with a note's mark highlighted.
-func (x *Walkthrough) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *kit.HighlightedExcerpt, lines []string, l int, gutter float32, m kit.PaneMetrics) {
+func (x *Walkthrough) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *kit.HighlightedExcerpt, lines []string, l int, gutter float32, m draw.PaneMetrics) {
 	th := c.Theme()
 	note, on := lit(s, l)
 	tone := noteTone(th, note)
@@ -711,7 +712,7 @@ func (x *Walkthrough) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *kit.Hig
 		st.Fade = .65
 	}
 	c.Row(l, st, func(c *ui.Ctx) {
-		num := th.C(kit.TGutterFg)
+		num := th.C(draw.TGutterFg)
 		switch {
 		case l == w.line:
 			num = th.C(theme.Fg)
@@ -737,7 +738,7 @@ func (x *Walkthrough) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *kit.Hig
 		}
 		if hl != nil && l-hl.First >= 0 && l-hl.First < len(hl.Spans) {
 			for k, sp := range hl.Spans[l-hl.First] {
-				ts := ui.TextStyle{Font: m.Font, Color: th.C(kit.TCodeFg)}
+				ts := ui.TextStyle{Font: m.Font, Color: th.C(draw.TCodeFg)}
 				if sp.Capture != "" {
 					sy := th.Syntax("@" + sp.Capture)
 					ts.Color, ts.Font.Italic = sy.FG, sy.Italic
@@ -746,7 +747,7 @@ func (x *Walkthrough) codeRow(c *ui.Ctx, w *walkthrough, s walkStep, hl *kit.Hig
 			}
 			return
 		}
-		c.Text("t", kit.ExpandTabs(lines[l-1]), ui.TextStyle{Font: m.Font, Color: th.C(kit.TCodeFg)})
+		c.Text("t", kit.ExpandTabs(lines[l-1]), ui.TextStyle{Font: m.Font, Color: th.C(draw.TCodeFg)})
 	})
 }
 
@@ -776,11 +777,11 @@ func (x *Walkthrough) dock(c *ui.Ctx, w *walkthrough) {
 				}
 			})
 			c.Text("n", fmt.Sprintf("%d %s · %d %s", w.repos, kit.Plural(w.repos, "repo", "repos"), w.files, kit.Plural(w.files, "file", "files")),
-				kit.MonoFont(10.5, th.C(theme.FgFaint)))
+				widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		})
 		c.Row("body", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(18, 14), Gap: 26}, func(c *ui.Ctx) {
 			c.Column("num", ui.Style{W: ui.Px(110), Gap: 6}, func(c *ui.Ctx) {
-				c.Text("k", "STEP", kit.KickerFont(th.C(theme.FgFaint)))
+				c.Text("k", "STEP", widget.KickerFont(th.C(theme.FgFaint)))
 				c.Row("n", ui.Style{Cross: ui.End}, func(c *ui.Ctx) {
 					c.Text("i", fmt.Sprintf("%02d", w.step+1), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 40, Weight: typeset.SemiBold},
 						Color: th.C(tWalkStep)})
@@ -794,7 +795,7 @@ func (x *Walkthrough) dock(c *ui.Ctx, w *walkthrough) {
 			c.Column("text", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 				c.Text("title", s.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 19, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 				if s.Prose != "" {
-					kit.MarkdownText(c, x.h, "prose", s.Prose, width, kit.UIFont(13.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+					kit.MarkdownText(c, x.h, "prose", s.Prose, width, widget.UIFont(13.5, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 				}
 				c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center, Pad: ui.Insets{T: 6}}, func(c *ui.Ctx) {
 					if widget.Button(c, "ask", "Ask about this step", widget.ButtonOpts{Ghost: true, Help: walkHelp,
@@ -805,7 +806,7 @@ func (x *Walkthrough) dock(c *ui.Ctx, w *walkthrough) {
 						Disabled: !x.h.Available("explain.change.comment", nil)}) {
 						x.run("explain.change.comment", nil)
 					}
-					c.Text("by", w.by, kit.UIFont(11, th.C(theme.FgFaint)))
+					c.Text("by", w.by, widget.UIFont(11, th.C(theme.FgFaint)))
 				})
 			})
 			c.Row("nav", ui.Style{Gap: 8}, func(c *ui.Ctx) {
@@ -846,13 +847,13 @@ func (x *Walkthrough) stepChip(c *ui.Ctx, i int, s walkStep, on, done bool) bool
 		widget.Diamond(c, "n", fmt.Sprint(i+1), 22, fill, fg)
 		c.Row("file", ui.Style{Pad: ui.PadXY(7, 2), Gap: 5, Stroke: border, Border: 1, Radius: 3, Fill: th.C(theme.BgSurface), Cross: ui.Center}, func(c *ui.Ctx) {
 			if proj != "" {
-				c.Text("p", proj, kit.MonoFont(10.5, th.C(tWalkProject)))
+				c.Text("p", proj, widget.MonoFont(10.5, th.C(tWalkProject)))
 			}
 			tok := theme.FgFaint
 			if on {
 				tok = theme.Fg
 			}
-			c.Text("f", file, kit.MonoFont(10.5, th.C(tok)))
+			c.Text("f", file, widget.MonoFont(10.5, th.C(tok)))
 		})
 	}).Clicked
 }
@@ -866,12 +867,12 @@ func (x *Walkthrough) statusSegment(c *ui.Ctx) {
 	th := c.Theme()
 	w, s := x.w, x.current()
 	c.Row("explain", ui.Style{H: ui.Flex(1), Gap: 12, Cross: ui.Center, Role: ui.RoleStatus, Label: "Walkthrough"}, func(c *ui.Ctx) {
-		c.Text("step", fmt.Sprintf("step %d/%d", w.step+1, len(w.steps)), kit.StatusText(c, kit.TStatusStrong))
+		c.Text("step", fmt.Sprintf("step %d/%d", w.step+1, len(w.steps)), draw.StatusText(c, draw.TStatusStrong))
 		if s.rel != "" {
-			c.Text("file", filepath.Base(s.rel), kit.StatusText(c, kit.TStatusFg))
+			c.Text("file", filepath.Base(s.rel), draw.StatusText(c, kit.TStatusFg))
 		}
 		c.Box("sep", ui.Style{W: ui.Px(1), H: ui.Px(12), Fill: th.C(theme.Line)}, nil)
-		c.Text("keys", "←/→ step · c comment · q quit", kit.StatusText(c, kit.TStatusFg))
+		c.Text("keys", "←/→ step · c comment · q quit", draw.StatusText(c, kit.TStatusFg))
 	})
 }
 

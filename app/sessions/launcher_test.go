@@ -501,3 +501,28 @@ func TestLauncherContinuingSaysWhichAgent(t *testing.T) {
 		}
 	}
 }
+
+// The launcher's prompt takes several lines too; ⌘⏎ starts.
+func TestTheLauncherPromptTakesLines(t *testing.T) {
+	lw := rig.NewHost(t)
+	s := apptest.New(t, apptest.Options{Config: apptest.Connect(lw.W)})
+	s.UntilState("the machine", func(st core.State) bool { return !st.Machine.Sampled.IsZero() })
+	if err := s.Host().Options().Set("sandbox.default", registry.LayerUser, registry.At{}, "host"); err != nil { // no sandbox here
+		t.Fatal(err)
+	}
+	s.Run("session.new", registry.Args{"kind": "plan"})
+	l := launcherOf(s)
+	s.Until("the launcher's agents", func() bool { return l.Provider() != "" })
+	s.TypeInto("Prompt", "notes")
+	s.Type("CR", "x")
+	if l.Prompt() != "notes\nx" || !l.Open() {
+		t.Fatalf("⏎ in the launcher's prompt: %q, open %v", l.Prompt(), l.Open())
+	}
+	s.Press("<D-CR>")
+	if a := lw.Fake.WaitStarted(t); a == nil {
+		t.Fatal("⌘⏎ didn't start it")
+	}
+	s.UntilState("the session", func(st core.State) bool {
+		return len(st.Sessions) == 1 && st.Sessions[0].Prompt == "notes\nx"
+	})
+}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -20,7 +21,7 @@ func (x *Ship) gitPanel(c *ui.Ctx, project string) {
 	se, p, ok := x.here(project)
 	c.Column("git", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 6, ScrollY: true}, func(c *ui.Ctx) {
 		if !ok {
-			kit.EmptyNote(c, "Git is a session's project's: open a directory or a session.")
+			prui.EmptyNote(c, "Git is a session's project's: open a directory or a session.")
 			return
 		}
 		widget.Async(c, "load", x.loadState(c, se.ID, p), widget.AsyncOpts{Label: "Reading " + p, Retry: func() { x.refresh(se.ID, true) },
@@ -35,31 +36,31 @@ func (x *Ship) gitPanelBody(c *ui.Ctx, se core.SessionState, p string) {
 	th := c.Theme()
 	s, _ := x.ship(se.ID, p)
 	if s.GitError != "" {
-		kit.EmptyNote(c, s.GitError)
+		prui.EmptyNote(c, s.GitError)
 		return
 	}
 	x.gitBranch(c, se, s)
 	if s.ReadOnly {
-		kit.EmptyNote(c, p+" is read-only here: nothing to commit.")
+		prui.EmptyNote(c, p+" is read-only here: nothing to commit.")
 		return
 	}
 	c.Box("sp", ui.Style{H: ui.Px(4)}, nil)
 	if len(s.Files) == 0 {
-		kit.SectionCap(c, "CHANGES")
-		c.Text("clean", "Nothing uncommitted.", kit.UIFont(12, th.C(theme.FgFaint)))
+		prui.SectionCap(c, "CHANGES")
+		c.Text("clean", "Nothing uncommitted.", widget.UIFont(12, th.C(theme.FgFaint)))
 	} else {
-		kit.SectionCap(c, fmt.Sprintf("CHANGES · %d", len(s.Files)))
+		prui.SectionCap(c, fmt.Sprintf("CHANGES · %d", len(s.Files)))
 		f := x.commitForm(se.ID, s.Project)
 		x.fileRows(c, se, s, f, true)
 		x.commitBox(c, se, s, f)
 	}
 	if len(s.Unpushed) > 0 {
 		c.Box("sp2", ui.Style{H: ui.Px(4)}, nil)
-		kit.SectionCap(c, fmt.Sprintf("TO PUSH · %d", len(s.Unpushed)))
+		prui.SectionCap(c, fmt.Sprintf("TO PUSH · %d", len(s.Unpushed)))
 		for i, cm := range s.Unpushed {
 			c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Clip: true}, func(c *ui.Ctx) {
-				c.Text("h", cm.Hash, kit.MonoFont(11, th.C(tShipHash)))
-				c.Text("s", cm.Subject, kit.MonoFont(11, th.C(theme.FgMuted)))
+				c.Text("h", cm.Hash, widget.MonoFont(11, th.C(tShipHash)))
+				c.Text("s", cm.Subject, widget.MonoFont(11, th.C(theme.FgMuted)))
 			})
 		}
 	}
@@ -100,7 +101,7 @@ func (x *Ship) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 		parts = append(parts, "conflicts in "+strings.Join(s.Conflicts, ", "))
 	}
 	c.Row("sub", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		c.Text("s", strings.Join(parts, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("s", strings.Join(parts, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	})
 	if s.ReadOnly {
 		return
@@ -133,7 +134,7 @@ func (x *Ship) gitBranch(c *ui.Ctx, se core.SessionState, s shipRead) {
 		widget.Busy(c, "merging", widget.LoadState{Phase: widget.Pending}, widget.BusyOpts{Label: "Merging into " + s.Default, Help: "git/ship#merge-default"})
 	}
 	if f := x.failed(se.ID, s.Project); f != "" && x.doing(se.ID, s.Project) == "" {
-		widget.Wrap(c, "failed", f, 280, kit.MonoFont(10.5, th.C(theme.Error)))
+		widget.Wrap(c, "failed", f, 280, widget.MonoFont(10.5, th.C(theme.Error)))
 	}
 }
 

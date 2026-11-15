@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry"
@@ -39,7 +40,7 @@ func (s shipRead) codeRepo(id core.SessionID) registry.CodeRepo {
 }
 
 // words are how the project's host names a pull request.
-func (s shipRead) words() registry.Words { return kit.WordsOf(s.CodeHost) }
+func (s shipRead) words() registry.Words { return prui.WordsOf(s.CodeHost) }
 
 // prTTL is how long a branch's PR and checks answer before the code host is asked again.
 const prTTL = 30 * time.Second

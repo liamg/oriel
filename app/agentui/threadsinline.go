@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -115,9 +116,9 @@ func (x *Requests) newInline(a registry.Args) error {
 		}
 		snap := b.Text.Snapshot()
 		n.path, n.buf = b.Path, b.Text
-		at := kit.PlaceAt(snap, b.Cursor)
+		at := edits.PlaceAt(snap, b.Cursor)
 		if r, ok := ed.Selection(); ok {
-			at = kit.PlaceOf(snap, r)
+			at = edits.PlaceOf(snap, r)
 		}
 		n.line, n.end, n.col, n.endCol = at.Line-1, at.EndLine-1, at.Col, at.EndCol
 		n.text = string(snap.Line(n.line))
@@ -326,7 +327,7 @@ func foldedThread(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thread,
 			if last, ok := t.Last(); ok && last.Author == core.AuthorAgent {
 				quote += " → " + core.Summary(last.Body)
 			}
-			c.Box("q", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", quote, kit.UIFont(11.5, th.C(theme.FgFaint))) })
+			c.Box("q", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", quote, widget.UIFont(11.5, th.C(theme.FgFaint))) })
 		}).Clicked
 		reopenLink(c, h, t.ID)
 	})
@@ -388,7 +389,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 				src.Head(c, string(se.ID), string(id))
 			} else {
 				if t.Anchor != nil {
-					c.Text("l", fmt.Sprintf("· L%d ·", t.Anchor.Line), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("l", fmt.Sprintf("· L%d ·", t.Anchor.Line), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				}
 				widget.Chip(c, "status", word, th.C(tok), "agent/requests#inline")
 			}
@@ -405,7 +406,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 			if !t.Open() && o.Fold != nil {
 				reopenLink(c, h, id)
 			}
-			c.Text("id", "t:"+string(id)[:min(4, len(id))], kit.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("id", "t:"+string(id)[:min(4, len(id))], widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
 		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tReqThreadBd)}, nil)
 		c.Column("comments", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12}, func(c *ui.Ctx) {
@@ -430,13 +431,13 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 								name = kit.ProviderNameIn(c, cm.Name)
 							}
 							c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-							commentWhen(c, cm, t.Origin, kit.MonoFont(9.5, th.C(theme.FgGhost)))
+							commentWhen(c, cm, t.Origin, widget.MonoFont(9.5, th.C(theme.FgGhost)))
 							if cm.Redacted {
 								widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 							}
 							askedChip(c, cm)
 						})
-						kit.MarkdownText(c, h, "body", cm.Body, inner, kit.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
+						kit.MarkdownText(c, h, "body", cm.Body, inner, widget.UIFont(12.5, th.C(theme.FgMuted)), kit.ThreadMarkdown(se, t))
 						if sourced && src.Comment != nil {
 							src.Comment(c, string(se.ID), string(id), cm.ID, inner)
 						}
@@ -500,7 +501,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Box("dot", ui.Style{W: ui.Px(7), H: ui.Px(7), Radius: 3.5, Fill: th.C(theme.Accent)}, nil)
 			c.Text("t", title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-			c.Text("l", fmt.Sprintf("· L%d", line+1), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+			c.Text("l", fmt.Sprintf("· L%d", line+1), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 			if n.review {
 				to := 1
 				if n.toAuthor {
@@ -511,7 +512,7 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 				}
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("keys", "⏎ sends · ⇧⏎ new line · esc drops it", kit.MonoFont(10, th.C(theme.FgGhost)))
+			c.Text("keys", "⏎ sends · ⇧⏎ new line · esc drops it", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
 		c.Box("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 10}}, func(c *ui.Ctx) {
 			id := c.Next("input")

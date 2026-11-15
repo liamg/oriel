@@ -438,7 +438,7 @@ func (p *picker) footer(c *ui.Ctx, s uireg.PickerSource, place bool) {
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		hint := func(k, what string) {
 			c.Row(what, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-				kit.KbdKey(c, k)
+				widget.KbdKey(c, k)
 				c.Text("w", what, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgFaint)})
 			})
 		}

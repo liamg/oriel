@@ -391,11 +391,11 @@ func (e *Explorer) askView(c *ui.Ctx) {
 		if f.kind == "rename" {
 			where = "in " + kit.TildePath(filepath.Dir(f.path))
 		}
-		c.Text("where", where, kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("where", where, widget.MonoFont(11, th.C(theme.FgFaint)))
 		r := widget.Input(c, "name", &f.name, widget.InputOpts{Label: "Name", Placeholder: map[bool]string{true: "name.go or dir/name.go", false: "name"}[f.kind == "file"],
 			Help: filesHelp, SelectOnFocus: f.kind == "rename", Invalid: f.err != "", DefaultFocus: true})
 		if f.err != "" {
-			widget.Wrap(c, "err", f.err, 420, kit.UIFont(12, th.C(theme.Error)))
+			widget.Wrap(c, "err", f.err, 420, widget.UIFont(12, th.C(theme.Error)))
 		}
 		switch {
 		case r.Cancelled:

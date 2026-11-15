@@ -150,3 +150,23 @@ func abs(v int) int {
 	}
 	return v
 }
+
+// Speaker says nothing aloud, and keeps what it was given to say.
+type Speaker struct {
+	mu   sync.Mutex
+	said []string
+}
+
+func (s *Speaker) Speak(_ context.Context, text string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.said = append(s.said, text)
+	return nil
+}
+
+// Said is what it was given to say, in order.
+func (s *Speaker) Said() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.said...)
+}

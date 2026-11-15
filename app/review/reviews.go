@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -717,21 +718,21 @@ func (x *Reviews) source() uireg.PickerSource {
 				th := c.Theme()
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					if r.req == nil {
-						c.Text("t", it.Label, kit.UIFont(12, th.C(theme.FgMuted)))
+						c.Text("t", it.Label, widget.UIFont(12, th.C(theme.FgMuted)))
 						return
 					}
 					q := r.req
 					tone := ui.TextStyle{Color: kit.TokenColour(th, stateTone(r), th.C(theme.Accent))}
-					kit.PreviewHead(c, strings.ToUpper(stateLabel(r)), tone, q.Title)
-					kit.PreviewField(c, "pr", q.Key())
-					kit.PreviewField(c, "author", q.Author)
-					kit.PreviewField(c, "asked", askedWhom(*q))
+					draw.PreviewHead(c, strings.ToUpper(stateLabel(r)), tone, q.Title)
+					draw.PreviewField(c, "pr", q.Key())
+					draw.PreviewField(c, "author", q.Author)
+					draw.PreviewField(c, "asked", askedWhom(*q))
 					hint := "↵ starts a review: the launcher on Review PR"
 					if r.se != nil {
-						kit.PreviewField(c, "session", r.se.Name())
+						draw.PreviewField(c, "session", r.se.Name())
 						hint = "↵ continues it in " + r.se.Name()
 					}
-					c.Text("hint", hint, kit.UIFont(11, th.C(theme.FgFaint)))
+					c.Text("hint", hint, widget.UIFont(11, th.C(theme.FgFaint)))
 				})
 			}}
 		},

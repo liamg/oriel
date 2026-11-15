@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -30,7 +31,7 @@ type presentState struct {
 	sel    int                   // the selected block, or -1
 	part   int                   // the selected block's selected part, or -1 for the whole block
 	parts  map[int][]presentPart // each block's parts (PresentDraw.Part), as last drawn
-	scroll kit.Scroll
+	scroll widget.Scroll
 	gaps   map[string]float32 // the space above each margin card, as last laid out
 	focus  bool               // take focus next frame
 	reveal bool               // bring the selected block into view next frame
@@ -499,8 +500,8 @@ func (fr *presentFrame) settled(p kit.Presentation) (int, bool) {
 }
 
 // scrolledBox is a column that scrolls, its content keyed "content".
-func scrolledBox(c *ui.Ctx, key any, st *kit.Scroll, s ui.Style, body func(c *ui.Ctx)) {
-	kit.Scrolled(c, key, st, s, ui.Style{}, func(c *ui.Ctx, _ func(string) ui.ID) { body(c) })
+func scrolledBox(c *ui.Ctx, key any, st *widget.Scroll, s ui.Style, body func(c *ui.Ctx)) {
+	widget.Scrolled(c, key, st, s, ui.Style{}, func(c *ui.Ctx, _ func(string) ui.ID) { body(c) })
 }
 
 // blockMark is a line number and an edge colour, beside a block or one of its parts.
@@ -592,12 +593,12 @@ func presentBlock(c *ui.Ctx, h plugin.Host, f *presentFocus, i int, b *uireg.Pre
 				if len(bd.signs) > 0 {
 					c.Row("signs", ui.Style{Gap: 2, Cross: ui.Center, Float: &ui.Float{Offset: render.Point{X: 2, Y: 3}}}, func(c *ui.Ctx) {
 						for k, d := range bd.signs {
-							kit.DrawSign(c, h, k, d, 13)
+							draw.DrawSign(c, h, k, d, 13)
 						}
 					})
 				}
 				if lk.mark.line > 0 {
-					c.Text("t", fmt.Sprint(lk.mark.line), kit.MonoFont(10.5, th.C(theme.FgGhost)))
+					c.Text("t", fmt.Sprint(lk.mark.line), widget.MonoFont(10.5, th.C(theme.FgGhost)))
 				}
 			})
 			c.Box("edge", ui.Style{W: ui.Px(2), H: ui.Flex(1), Fill: lk.mark.tone}, nil)
@@ -658,7 +659,7 @@ func partMarks(c *ui.Ctx, parts []presentPart, lk blockLook, box render.Rect, ho
 		}
 		if m := lk.marks[k]; m.line > 0 {
 			c.Row(fmt.Sprint("n", k), ui.Style{W: ui.Px(40), Pad: ui.Insets{R: 10, T: 6}, Main: ui.End, Float: at(0)}, func(c *ui.Ctx) {
-				c.Text("t", fmt.Sprint(m.line), kit.MonoFont(10.5, th.C(theme.FgGhost)))
+				c.Text("t", fmt.Sprint(m.line), widget.MonoFont(10.5, th.C(theme.FgGhost)))
 			})
 		}
 		if m := lk.marks[k]; m.tone != (render.Color{}) {
@@ -676,7 +677,7 @@ func blockLabel(c *ui.Ctx, l *uireg.Decoration, space float32) {
 			c.Row("chip", ui.Style{Pad: ui.PadXY(8, 3), Gap: 6, Cross: ui.Center, Radius: 10, Fill: th.C(theme.BgBase), Stroke: theme.WithAlpha(edge, .5),
 				Border: 1, Role: ui.RoleText, Label: l.Text}, func(c *ui.Ctx) {
 				c.Box("dot", ui.Style{W: ui.Px(6), H: ui.Px(6), Radius: 3, Fill: edge}, nil)
-				c.Text("t", strings.ToUpper(l.Text), kit.KickerFont(edge))
+				c.Text("t", strings.ToUpper(l.Text), widget.KickerFont(edge))
 			})
 		})
 }
@@ -733,7 +734,7 @@ func presentMargin(c *ui.Ctx, st *presentState, p kit.Presentation, decor []bloc
 			}
 		}
 		if len(entries) == 0 && p.Presenter.Comments {
-			c.Text("none", "Click a line to comment on it.", kit.UIFont(12, th.C(theme.FgGhost)))
+			c.Text("none", "Click a line to comment on it.", widget.UIFont(12, th.C(theme.FgGhost)))
 		}
 	})
 	return reveal

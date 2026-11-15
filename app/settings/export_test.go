@@ -25,4 +25,3 @@ const TypingPause = settingsTypingPause
 func (x *Prompts) Selected() string { return x.sel }
 
 // SetFilter filters the Plugins page's list, as typing in its filter does.
-func (x *Catalog) SetFilter(s string) { x.page.filter = s }

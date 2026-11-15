@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -65,7 +66,7 @@ type Inbox struct {
 	inline    map[string]bool      // shown by a surface of their own, so not stacked
 	filter    int
 	sel       string // the panel's selected row, its card open under it
-	list      kit.Scroll
+	list      widget.Scroll
 	panelLeft float32 // where the Inbox panel's left edge was last drawn, so the stack sits beside it
 
 	front    core.SessionID // the session in front as the overlay last saw it
@@ -505,7 +506,7 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 		}
 		if n := len(stack) - shown; n > 0 {
 			c.Row("more", ui.Style{W: ui.Flex(1), Main: ui.End, Cross: ui.Center, Gap: 8}, func(c *ui.Ctx) {
-				c.Text("t", fmt.Sprintf("+%d more waiting", n), kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("t", fmt.Sprintf("+%d more waiting", n), widget.MonoFont(10, th.C(theme.FgFaint)))
 				if widget.Button(c, "open", "Open the inbox", widget.ButtonOpts{Ghost: true, Key: kit.BoundKey(x.h, "inbox.open", nil), Help: inboxHelp}) {
 					x.h.Run(context.Background(), "inbox.open", nil)
 				}
@@ -539,7 +540,7 @@ func (x *Inbox) draw(c *ui.Ctx, r *inboxRow, p uireg.CardPlace) {
 	if r.card.Draw != nil {
 		draw := r.card.Draw
 		if err := registry.Call(func() error { draw(c, "card", p); return nil }); err != nil {
-			c.Text("err", r.card.Title+": "+err.Error(), kit.MonoFont(10, c.Theme().C(theme.Error)))
+			c.Text("err", r.card.Title+": "+err.Error(), widget.MonoFont(10, c.Theme().C(theme.Error)))
 		}
 		return
 	}
@@ -722,7 +723,7 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if k := kit.BoundKey(x.h, "inbox.open", nil); k != "" {
-				c.Text("keys", k, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("keys", k, widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
 		c.Row("filters", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 16, R: 16, B: 10}, Gap: 6, ScrollX: true, Clip: true, Role: ui.RoleTabList,
@@ -741,12 +742,12 @@ func (x *Inbox) panel(c *ui.Ctx, vc uireg.ViewCtx) {
 		x.mu.Lock()
 		sel := x.sel
 		x.mu.Unlock()
-		kit.Scrolled(c, "list", &x.list, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: InboxKeyMode, Role: ui.RoleList,
+		widget.Scrolled(c, "list", &x.list, ui.Style{W: ui.Flex(1), H: ui.Flex(1), Focusable: true, DefaultFocus: true, KeyMode: InboxKeyMode, Role: ui.RoleList,
 			Label: "Cards", Help: inboxHelp + "#list"}, ui.Style{Pad: ui.Insets{B: 8}}, func(c *ui.Ctx, block func(string) ui.ID) {
 			if len(rows) == 0 {
 				c.Box("empty", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(16, 12)}, func(c *ui.Ctx) {
 					widget.Wrap(c, "t", "Nothing is waiting on you. Questions, approvals and review requests show here as they come.",
-						max(vc.Width-32, 120), kit.UIFont(12, th.C(theme.FgFaint)))
+						max(vc.Width-32, 120), widget.UIFont(12, th.C(theme.FgFaint)))
 				})
 			}
 			for _, r := range rows {
@@ -807,9 +808,9 @@ func (x *Inbox) row(c *ui.Ctx, r *inboxRow, on bool, now time.Time) bool {
 				kit.Icon(c, x.h, "g", name, 13, tone)
 			})
 		c.Column("text", ui.Style{W: ui.Flex(1), Gap: 3}, func(c *ui.Ctx) {
-			c.Text("title", r.card.Title, kit.UIFont(12.5, title))
+			c.Text("title", r.card.Title, widget.UIFont(12.5, title))
 			if r.card.Sub != "" {
-				c.Text("sub", r.card.Sub, kit.MonoFont(10, sub))
+				c.Text("sub", r.card.Sub, widget.MonoFont(10, sub))
 			}
 		})
 		widget.Ago(c, "when", r.when(), widget.AgoOpts{Text: ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5}, Color: th.C(theme.FgGhost)}})
@@ -828,7 +829,7 @@ func (x *Inbox) indicator(c *ui.Ctx) {
 		Tooltip: "Everything waiting on you"}, func(c *ui.Ctx) {
 		c.Text("k", "INBOX", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10.5, Weight: typeset.Medium}, Color: th.C(theme.FgMuted)})
 		if n > 0 {
-			kit.CountPill(c, "n", n, th.C(tInboxCount))
+			draw.CountPill(c, "n", n, th.C(tInboxCount))
 		}
 	}).Clicked {
 		x.h.Run(context.Background(), "inbox.open", nil)

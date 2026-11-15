@@ -115,10 +115,10 @@ func (x *Machine) panel(c *ui.Ctx) {
 			c.Text("n", cmp.Or(m.Host, "this machine"), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
 				Color: th.C(theme.Fg)})
 			if m.Cores > 0 {
-				c.Text("w", fmt.Sprintf("%d cores", m.Cores), kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("w", fmt.Sprintf("%d cores", m.Cores), widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			c.Text("s", kit.Counted(len(st.Sessions), "session"), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+			c.Text("s", kit.Counted(len(st.Sessions), "session"), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 		})
 		c.Row("load", ui.Style{W: ui.Flex(1), Gap: 12, Cross: ui.Center}, func(c *ui.Ctx) {
 			c.Column("kv", ui.Style{Gap: 4}, func(c *ui.Ctx) {
@@ -132,9 +132,9 @@ func (x *Machine) panel(c *ui.Ctx) {
 					tone render.Color
 				}{{"CPU", fmt.Sprintf("%d%%", kit.Pct(m.CPU)), m.CPU, loadTone(th, m.CPU)}, {"MEM", kit.Bytes(int64(m.Mem)), mem, th.C(theme.StatusWorking)}} {
 					c.Row(r.k, ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Row("k", ui.Style{W: ui.Px(28)}, func(c *ui.Ctx) { c.Text("t", r.k, kit.MonoFont(10, th.C(theme.FgMuted))) })
+						c.Row("k", ui.Style{W: ui.Px(28)}, func(c *ui.Ctx) { c.Text("t", r.k, widget.MonoFont(10, th.C(theme.FgMuted))) })
 						widget.Meter(c, "m", r.f, widget.MeterOpts{Tone: r.tone, Width: ui.Px(80), Height: 6, Label: r.k})
-						c.Text("v", r.v, kit.Mono(10.5, typeset.SemiBold, th.C(theme.Fg)))
+						c.Text("v", r.v, widget.Mono(10.5, typeset.SemiBold, th.C(theme.Fg)))
 					})
 				}
 			})

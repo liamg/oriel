@@ -483,13 +483,13 @@ func (e *ThemeEditor) tokens(c *ui.Ctx, th *theme.Resolved) {
 			c.Text("name", e.themeName(), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11.5, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if base := e.base(); base != "" {
-				c.Text("ext", "extends "+base, kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("ext", "extends "+base, widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 		})
 		widget.Rule(c, "rule")
 		c.Row("filter", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			widget.Input(c, "q", &e.filter, widget.InputOpts{Label: "Filter tokens", Placeholder: "filter tokens…", Help: "shell/theme#tokens"})
-			c.Text("n", fmt.Sprintf("● %d overridden", mine), kit.MonoFont(10, th.C(theme.FgFaint)))
+			c.Text("n", fmt.Sprintf("● %d overridden", mine), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		c.List("list", ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, len(rows), 26, func(c *ui.Ctx, i int) {
 			row := rows[i]
@@ -512,9 +512,9 @@ func (e *ThemeEditor) tokens(c *ui.Ctx, th *theme.Resolved) {
 				}
 				c.Box("mine", ui.Style{W: ui.Px(4), H: ui.Px(4), Radius: 2, Fill: dot}, nil)
 				c.Box("sw", ui.Style{W: ui.Px(14), H: ui.Px(14), Radius: 3, Fill: row.color, Stroke: th.C(theme.LineStrong), Border: 1}, nil)
-				c.Text("n", row.label, kit.MonoFont(11.5, th.C(fg)))
+				c.Text("n", row.label, widget.MonoFont(11.5, th.C(fg)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-				c.Text("x", row.expr, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("x", row.expr, widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			if in.Clicked {
 				e.choose(row.name)
@@ -555,7 +555,7 @@ func (e *ThemeEditor) toolbar(c *ui.Ctx, th *theme.Resolved) {
 			e.fail(e.startPick())
 		}
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("ms", fmt.Sprintf("repainted in %.1fms", float64(e.paintDur.Microseconds())/1000), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("ms", fmt.Sprintf("repainted in %.1fms", float64(e.paintDur.Microseconds())/1000), widget.MonoFont(11, th.C(theme.FgFaint)))
 	})
 }
 
@@ -659,9 +659,9 @@ func (e *ThemeEditor) strip(c *ui.Ctx, th *theme.Resolved) {
 			if path != "" {
 				shown = filepath.Join(filepath.Base(filepath.Dir(path)), filepath.Base(path))
 			}
-			widget.Wrap(c, "path", shown, 150, kit.MonoFont(11, th.C(theme.Fg)))
+			widget.Wrap(c, "path", shown, 150, widget.MonoFont(11, th.C(theme.Fg)))
 			if path != "" {
-				c.Text("n", fmt.Sprintf("%d overrides · %d lines", overrides(src), len(lines)), kit.MonoFont(10, th.C(theme.FgFaint)))
+				c.Text("n", fmt.Sprintf("%d overrides · %d lines", overrides(src), len(lines)), widget.MonoFont(10, th.C(theme.FgFaint)))
 			}
 		})
 		c.Column("toml", ui.Style{W: ui.Flex(1), H: ui.Flex(1), ScrollY: true, Clip: true, Help: "shell/theme#toml"}, func(c *ui.Ctx) {
@@ -688,19 +688,19 @@ func (e *ThemeEditor) tomlLine(c *ui.Ctx, th *theme.Resolved, i int, l string) {
 	c.Row(i, ui.Style{H: ui.Px(17), Cross: ui.Center}, func(c *ui.Ctx) {
 		switch {
 		case strings.HasPrefix(t, "["):
-			c.Text("h", l, kit.MonoFont(11.5, th.C(tThemeTOMLHead)))
+			c.Text("h", l, widget.MonoFont(11.5, th.C(tThemeTOMLHead)))
 		case isKV:
 			kt := tThemeTOMLKey
 			if lit {
 				kt = tThemeWritten
 			}
-			c.Text("k", fmt.Sprintf("%-22s", strings.TrimSpace(key)), kit.MonoFont(11.5, th.C(kt)))
-			c.Text("v", "= "+strings.TrimSpace(val), kit.MonoFont(11.5, th.C(tThemeTOMLVal)))
+			c.Text("k", fmt.Sprintf("%-22s", strings.TrimSpace(key)), widget.MonoFont(11.5, th.C(kt)))
+			c.Text("v", "= "+strings.TrimSpace(val), widget.MonoFont(11.5, th.C(tThemeTOMLVal)))
 			if lit {
-				c.Text("now", "    # ← just now", kit.MonoFont(11.5, th.C(tThemeWritten)))
+				c.Text("now", "    # ← just now", widget.MonoFont(11.5, th.C(tThemeWritten)))
 			}
 		default:
-			c.Text("t", l, kit.MonoFont(11.5, th.C(theme.FgFaint)))
+			c.Text("t", l, widget.MonoFont(11.5, th.C(theme.FgFaint)))
 		}
 	})
 }
@@ -734,10 +734,10 @@ func (e *ThemeEditor) footer(c *ui.Ctx, th *theme.Resolved) {
 		c.Row("mode", ui.Style{H: ui.Flex(1), Pad: ui.PadXY(12, 0), Cross: ui.Center, Fill: th.C(theme.Accent)}, func(c *ui.Ctx) {
 			c.Text("t", "THEME", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10, Weight: typeset.Bold, Tracking: .1}, Color: th.C(theme.AccentInk)})
 		})
-		c.Text("name", e.themeName(), kit.MonoFont(11, th.C(theme.FgMuted)))
-		c.Text("n", fmt.Sprintf("● %d overrides", overrides(src)), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("name", e.themeName(), widget.MonoFont(11, th.C(theme.FgMuted)))
+		c.Text("n", fmt.Sprintf("● %d overrides", overrides(src)), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("keys", "p pick · r reset · u undo · esc close", kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("keys", "p pick · r reset · u undo · esc close", widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		c.Box("pad", ui.Style{W: ui.Px(4)}, nil)
 	})
 }

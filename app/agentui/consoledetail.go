@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -22,7 +23,7 @@ type detailOpen struct {
 	session core.SessionID
 	item    string // a tool call's transcript item
 	ask     string // an ask's id
-	scroll  kit.Scroll
+	scroll  widget.Scroll
 }
 
 // detailCommand is agent.console.details: {item} or {ask} of {id} (the session in front) in a dialog, in full.
@@ -92,15 +93,15 @@ func (x *Console) detailView() uireg.View {
 						if d.item != "" {
 							title, at = "Tool call · "+cmp.Or(it.Tool, "tool"), it.Time
 						}
-						c.Text("t", strings.ToUpper(title), kit.MonoFont(11, th.C(theme.FgMuted)))
-						widget.Ago(c, "ago", at, widget.AgoOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint))})
+						c.Text("t", strings.ToUpper(title), widget.MonoFont(11, th.C(theme.FgMuted)))
+						widget.Ago(c, "ago", at, widget.AgoOpts{Text: widget.MonoFont(11, th.C(theme.FgFaint))})
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 						if widget.IconButton(c, "close", "✕", widget.IconButtonOpts{Label: "Close", Help: "agent/console#details"}) {
 							x.detail = nil
 						}
 					})
 					widget.Rule(c, "rule")
-					kit.Scrolled(c, "body", &d.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 14},
+					widget.Scrolled(c, "body", &d.scroll, ui.Style{W: ui.Flex(1), H: ui.Flex(1)}, ui.Style{Pad: ui.Pad(18), Gap: 14},
 						func(c *ui.Ctx, _ func(string) ui.ID) {
 							if d.item != "" {
 								x.toolDetail(c, se, it, w-40)
@@ -123,17 +124,17 @@ func (x *Console) toolDetail(c *ui.Ctx, se core.SessionState, it core.Item, widt
 		switch {
 		case !it.Done:
 			widget.Spinner(c, "spin", widget.SpinnerOpts{Name: "Running", Help: "agent/console#details"})
-			c.Text("s", "running", kit.MonoFont(11, th.C(tToolRunning)))
+			c.Text("s", "running", widget.MonoFont(11, th.C(tToolRunning)))
 		case it.IsError:
-			c.Text("s", "failed", kit.MonoFont(11, th.C(kit.TToolFailed)))
+			c.Text("s", "failed", widget.MonoFont(11, th.C(draw.TToolFailed)))
 		default:
-			c.Text("s", "done", kit.MonoFont(11, th.C(kit.TToolOK)))
+			c.Text("s", "done", widget.MonoFont(11, th.C(draw.TToolOK)))
 		}
 		if d := msText(it.Duration); d != "" {
-			c.Text("d", d, kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("d", d, widget.MonoFont(11, th.C(theme.FgFaint)))
 		}
 		if r, ok := runOf(se, it.ID); ok {
-			kit.EvidenceChip(c, x.h, "run", se.ID, r.ID, kit.RunLabel(r), r.OK)
+			draw.EvidenceChip(c, x.h, "run", se.ID, r.ID, draw.RunLabel(r), r.OK)
 		}
 	})
 	if core.ShellTool(it.Tool) {
@@ -146,10 +147,10 @@ func (x *Console) toolDetail(c *ui.Ctx, se core.SessionState, it core.Item, widt
 	case !it.Done:
 		c.Row("wait", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 			widget.Spinner(c, "spin", widget.SpinnerOpts{Name: "Waiting for the result", Size: 12, Help: "agent/console#details"})
-			c.Text("t", "waiting for the result…", kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("t", "waiting for the result…", widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 	case it.Diff != nil:
-		c.Text("dk", "RESULT", kit.MonoFont(9.5, th.C(theme.FgFaint)))
+		c.Text("dk", "RESULT", widget.MonoFont(9.5, th.C(theme.FgFaint)))
 		miniDiff(c, it.Diff)
 	default:
 		tone := th.C(theme.FgMuted)
@@ -182,14 +183,14 @@ func (x *Console) askDetail(c *ui.Ctx, se core.SessionState, a core.Ask, width f
 func detailBlock(c *ui.Ctx, key, caption, text string, width float32, tone render.Color) {
 	th := c.Theme()
 	c.Column(key, ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
-		c.Text("k", caption, kit.MonoFont(9.5, th.C(theme.FgFaint)))
+		c.Text("k", caption, widget.MonoFont(9.5, th.C(theme.FgFaint)))
 		c.Column("v", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 1, Fill: th.C(theme.BgBase), Radius: 6}, func(c *ui.Ctx) {
 			lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
 			if len(lines) > 2000 {
 				lines = append(lines[:1000:1000], append([]string{fmt.Sprintf("… %d lines …", len(lines)-2000)}, lines[len(lines)-1000:]...)...)
 			}
 			for i, ln := range lines {
-				widget.Wrap(c, i, kit.ExpandTabs(ln), width-20, kit.MonoFont(11.5, tone))
+				widget.Wrap(c, i, kit.ExpandTabs(ln), width-20, widget.MonoFont(11.5, tone))
 			}
 		})
 	})

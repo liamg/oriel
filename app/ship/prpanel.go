@@ -48,14 +48,14 @@ func (x *Ship) panelHeader(c *ui.Ctx, se core.SessionState, s shipRead) {
 	c.Row("sub", ui.Style{W: ui.Flex(1), Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
 		word := x.prPanelState(se, s)
 		widget.Chip(c, "state", word, prui.PRStateTone(c, word), "git/ship#pr")
-		c.Row("s", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("s", sub, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+		c.Row("s", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("s", sub, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 		if widget.IconButton(c, "refresh", "↻", widget.IconButtonOpts{Label: "Read again: fetch origin, ask " + cmp.Or(labelOf(s), "the code host"),
 			Help: "git/ship#pr", Disabled: x.report(se.ID).loading}) {
 			x.readSoon(se.ID, s.Project, true) // this project's PR: the others' stand
 		}
 	})
 	c.Row("branch", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-		c.Text("b", s.Branch+" → "+cmp.Or(s.Base, "?"), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+		c.Text("b", s.Branch+" → "+cmp.Or(s.Base, "?"), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 	})
 }
 
@@ -67,7 +67,7 @@ func checksFoot(c *ui.Ctx, s shipRead) {
 		if !s.PRRead.IsZero() {
 			text += " · " + prui.AgoFine(c.Now(), s.PRRead)
 		}
-		c.Text("f", text, kit.MonoFont(10, th.C(theme.Error)))
+		c.Text("f", text, widget.MonoFont(10, th.C(theme.Error)))
 		return
 	}
 	at := ""
@@ -92,10 +92,10 @@ func (x *Ship) checksBox(c *ui.Ctx, s shipRead) {
 	prui.PRBox(c, "checks", "CHECKS", func(c *ui.Ctx) {
 		sum := prui.ChecksBody(c, s.Checks)
 		if s.FailLine != "" {
-			prui.WrapUnder(c, "fail", sum, s.FailLine, kit.MonoFont(10, th.C(theme.Error)))
+			prui.WrapUnder(c, "fail", sum, s.FailLine, widget.MonoFont(10, th.C(theme.Error)))
 		}
 		if s.HostError != "" {
-			prui.WrapUnder(c, "herr", sum, s.HostError, kit.MonoFont(10, th.C(theme.Error)))
+			prui.WrapUnder(c, "herr", sum, s.HostError, widget.MonoFont(10, th.C(theme.Error)))
 		}
 		if t, ok := ciTrouble(s); ok && s.PR.Open() {
 			c.Column("ci", ui.Style{Gap: 6, Pad: ui.Insets{T: 4}}, func(c *ui.Ctx) {
@@ -219,7 +219,7 @@ func (x *Ship) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	case movesOn(s) && registry.Can(x.h, se.Kind, core.NextPR):
 		note = "Start next " + w.Short + " cuts a fresh branch from " + cmp.Or(s.Base, "the base")
 	}
-	c.Text("note", note, kit.MonoFont(10, th.C(theme.FgGhost)))
+	c.Text("note", note, widget.MonoFont(10, th.C(theme.FgGhost)))
 }
 
 // reviewStates is each reviewer's latest verdict among a PR's review threads: approved or changes over commented.

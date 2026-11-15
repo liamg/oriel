@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -50,7 +51,7 @@ const (
 // at the column's right edge, so a run of them lines up whatever else a line has; of the rest, the one with the
 // highest priority sits centred left of it, the others in its menu (uireg.TopSign). every are the signs on every line
 // (uireg.EveryLine), put on this one; an OnHover sign shows only while the pointer is on the line's row.
-func (x *Editor) signs(c *ui.Ctx, ds, every []uireg.Decoration, line int, gw float32, m kit.PaneMetrics, row ui.ID) {
+func (x *Editor) signs(c *ui.Ctx, ds, every []uireg.Decoration, line int, gw float32, m draw.PaneMetrics, row ui.ID) {
 	c.Row("signs", ui.Style{W: ui.Px(signColW), H: ui.Flex(1), Pad: ui.Insets{R: signBarW}, Cross: ui.Center, Main: ui.Center,
 		Float: &ui.Float{Offset: render.Point{X: gw - 16}}}, func(c *ui.Ctx) {
 		var room [2]uireg.Decoration
@@ -93,12 +94,12 @@ func (x *Editor) signs(c *ui.Ctx, ds, every []uireg.Decoration, line int, gw flo
 			rest = slices.DeleteFunc(rest, func(d uireg.Decoration) bool { return d.OnHover })
 		}
 		if d, ok := uireg.TopSign(rest); ok {
-			kit.DrawSign(c, x.h, "sign", d, m.Font.Size)
+			draw.DrawSign(c, x.h, "sign", d, m.Font.Size)
 		}
 		if d, ok := uireg.TopSign(hover); ok {
 			c.Row("hover", ui.Style{W: ui.Px(signColW), H: ui.Flex(1), Cross: ui.Center, Main: ui.Center, Fill: c.Theme().C(theme.BgBase),
 				Float: &ui.Float{Offset: render.Point{X: -signColW - 4}}}, func(c *ui.Ctx) {
-				kit.DrawSign(c, x.h, "sign", d, m.Font.Size)
+				draw.DrawSign(c, x.h, "sign", d, m.Font.Size)
 			})
 		}
 	})
@@ -226,7 +227,7 @@ func inlayShift(ds []uireg.Decoration, col int, at bool) int {
 }
 
 // inlayBox draws an inlay hint inline, exactly as wide as its cells so the code after it stays on the grid.
-func inlayBox(c *ui.Ctx, key any, d uireg.Decoration, m kit.PaneMetrics) {
+func inlayBox(c *ui.Ctx, key any, d uireg.Decoration, m draw.PaneMetrics) {
 	th := c.Theme()
 	c.Box(key, ui.Style{W: ui.Px(float32(inlayCells(d)) * m.CharW), Cross: ui.Center, Main: ui.Center, Fill: th.C(tInlayBg), Radius: 3}, func(c *ui.Ctx) {
 		c.Text("t", d.Text, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: m.Font.Size - 2}, Color: kit.TokenColour(th, d.Style, th.C(tInlay))})

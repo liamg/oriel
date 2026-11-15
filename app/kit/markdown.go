@@ -272,7 +272,7 @@ func MarkdownText(c *ui.Ctx, r registry.Registry, key any, src string, width flo
 
 // DocText draws markdown as a doc reads, a hover's or an answer's: the UI face, muted.
 func DocText(c *ui.Ctx, r registry.Registry, key any, src string, width float32) {
-	MarkdownText(c, r, key, src, width, UIFont(12, c.Theme().C(theme.FgMuted)), MarkdownOpts{})
+	MarkdownText(c, r, key, src, width, widget.UIFont(12, c.Theme().C(theme.FgMuted)), MarkdownOpts{})
 }
 
 // PlainText is a markdown document as it reads, without its marks: fences, headings' and quotes' marks go, and each

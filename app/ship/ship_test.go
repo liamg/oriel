@@ -10,7 +10,7 @@ import (
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -113,7 +113,7 @@ func TestShipFlow(t *testing.T) {
 	s.ClickOn("Raise PR…")
 	s.Until("the Raise PR tab", func() bool { return strings.Contains(s.Text(), "RAISE PR") })
 	if !slices.ContainsFunc(s.Host().Layout().Visible(), func(v layout.ViewRef) bool {
-		return v.ID == kit.PRView && v.Instance == "search-api"
+		return v.ID == prui.PRView && v.Instance == "search-api"
 	}) {
 		t.Errorf("the tab: %+v", s.Host().Layout().Visible())
 	}

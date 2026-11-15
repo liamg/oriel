@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/plugin"
@@ -51,7 +52,7 @@ type Workspace struct {
 	open bool
 	tab  int
 	by   map[core.SessionID]*wsState
-	dirs *kit.DirTree // the files tab's folders
+	dirs *draw.DirTree // the files tab's folders
 }
 
 // wsState is one session's page: its reads, and what's picked.
@@ -73,7 +74,7 @@ func (x *Workspace) Manifest() plugin.Manifest { return plugin.Manifest{ID: "wor
 func (x *Workspace) Activate(_ context.Context, h plugin.Host) error {
 	x.h = h
 	x.by = map[core.SessionID]*wsState{}
-	x.dirs = kit.NewDirTree(h)
+	x.dirs = draw.NewDirTree(h)
 	x.Add(registry.DisposeFunc(x.dirs.Close))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
@@ -228,7 +229,7 @@ func (x *Workspace) page(c *ui.Ctx) {
 			se, ok := x.h.State().Session(x.h.State().Focus)
 			if !ok {
 				x.header(c, core.SessionState{}, nil)
-				kit.PaneNote(c, "none", "No session in front: its workspace shows here.")
+				widget.PaneNote(c, "none", "No session in front: its workspace shows here.")
 				return
 			}
 			s := se.Snapshot()
@@ -280,7 +281,7 @@ func (x *Workspace) header(c *ui.Ctx, s core.SessionState, st *wsState) {
 	th := c.Theme()
 	c.Row("top", ui.Style{W: ui.Flex(1), H: ui.Px(52), Pad: ui.PadXY(18, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("h", "Workspace", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Size: 18, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-		c.Text("where", kit.Label(s), kit.MonoFont(11, th.C(theme.FgFaint)))
+		c.Text("where", kit.Label(s), widget.MonoFont(11, th.C(theme.FgFaint)))
 		widget.Tabs(c, "tabs", []string{"OVERVIEW", "FILES", "IMAGE", "BUILD LOG", "PERMISSIONS"}, &x.tab, widget.TabsOpts{Help: workspaceHelp})
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if st != nil {
@@ -304,8 +305,8 @@ func (x *Workspace) header(c *ui.Ctx, s core.SessionState, st *wsState) {
 func wsRow(c *ui.Ctx, h plugin.Host, key, label, value string, copyable bool) {
 	th := c.Theme()
 	c.Row(key, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-		c.Row("k", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) { c.Text("t", label, kit.UIFont(12, th.C(theme.FgMuted))) })
-		c.Row("v", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", value, kit.MonoFont(11.5, th.C(theme.Fg))) })
+		c.Row("k", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) { c.Text("t", label, widget.UIFont(12, th.C(theme.FgMuted))) })
+		c.Row("v", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", value, widget.MonoFont(11.5, th.C(theme.Fg))) })
 		if copyable && value != "" && widget.Button(c, "copy", "Copy", widget.ButtonOpts{Ghost: true, Help: workspaceHelp}) {
 			kit.CopyText(h, value)
 		}
@@ -314,15 +315,15 @@ func wsRow(c *ui.Ctx, h plugin.Host, key, label, value string, copyable bool) {
 
 func (x *Workspace) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws hostapi.Workspace) {
 	th := c.Theme()
-	kit.KickerRow(c, "sessioncap", "SESSION")
+	widget.KickerRow(c, "sessioncap", "SESSION")
 	x.name(c, s, st)
 	wsRow(c, x.h, "id", "Session", string(s.ID), true)
 	wsRow(c, x.h, "kind", "Kind", string(s.Kind), false)
 	wsRow(c, x.h, "root", "Workspace", ws.Root, true)
-	kit.KickerRow(c, "sandboxcap", "SANDBOX")
+	widget.KickerRow(c, "sandboxcap", "SANDBOX")
 	if !ws.Sandboxed {
 		widget.Wrap(c, "host", "This session's agent runs on your machine, with your access: there's no sandbox, image or permissions.", 620,
-			kit.UIFont(12, th.C(theme.Warn)))
+			widget.UIFont(12, th.C(theme.Warn)))
 	} else {
 		wsRow(c, x.h, "backend", "Backend", ws.Backend, false)
 		if ws.Container != "" {
@@ -337,12 +338,12 @@ func (x *Workspace) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws hos
 		}
 		x.actions(c, s, st, ws)
 	}
-	kit.KickerRow(c, "dirscap", "DIRECTORIES")
+	widget.KickerRow(c, "dirscap", "DIRECTORIES")
 	for i, p := range ws.Paths {
 		c.Row(i, ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true, Role: ui.RoleText, Label: p.Name + " " + p.Host}, func(c *ui.Ctx) {
-			c.Row("k", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) { c.Text("t", p.Name, kit.UIFont(12, th.C(theme.FgMuted))) })
+			c.Row("k", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) { c.Text("t", p.Name, widget.UIFont(12, th.C(theme.FgMuted))) })
 			c.Column("v", ui.Style{W: ui.Flex(1), Clip: true, Gap: 2}, func(c *ui.Ctx) {
-				c.Text("host", kit.TildePath(p.Host), kit.MonoFont(11.5, th.C(theme.Fg)))
+				c.Text("host", kit.TildePath(p.Host), widget.MonoFont(11.5, th.C(theme.Fg)))
 				var sub []string
 				if p.Agent != "" {
 					sub = append(sub, "in the sandbox: "+p.Agent)
@@ -351,7 +352,7 @@ func (x *Workspace) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws hos
 					sub = append(sub, p.Note)
 				}
 				if len(sub) > 0 {
-					c.Text("sub", strings.Join(sub, " · "), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("sub", strings.Join(sub, " · "), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				}
 			})
 			if i := wsBrowsableIndex(ws, p.Host); i >= 0 && widget.Button(c, "browse", "Browse", widget.ButtonOpts{Ghost: true, Help: workspaceHelp}) {
@@ -363,25 +364,25 @@ func (x *Workspace) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws hos
 		})
 	}
 	if len(ws.Mounts) > 0 {
-		kit.KickerRow(c, "mountscap", fmt.Sprintf("MOUNTS · %d", len(ws.Mounts)))
+		widget.KickerRow(c, "mountscap", fmt.Sprintf("MOUNTS · %d", len(ws.Mounts)))
 		for i, m := range ws.Mounts {
 			c.Row(fmt.Sprint("m", i), ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-				c.Row("agent", ui.Style{W: ui.Px(320), Clip: true}, func(c *ui.Ctx) { c.Text("t", m.Agent, kit.MonoFont(11.5, th.C(theme.Fg))) })
+				c.Row("agent", ui.Style{W: ui.Px(320), Clip: true}, func(c *ui.Ctx) { c.Text("t", m.Agent, widget.MonoFont(11.5, th.C(theme.Fg))) })
 				if m.ReadOnly {
 					widget.Chip(c, "ro", "read-only", th.C(theme.FgFaint), workspaceHelp)
 				} else {
 					widget.Chip(c, "rw", "read-write", th.C(theme.Warn), workspaceHelp)
 				}
 				c.Row("host", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-					c.Text("t", "← "+kit.TildePath(m.Host), kit.MonoFont(10.5, th.C(theme.FgFaint)))
+					c.Text("t", "← "+kit.TildePath(m.Host), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 				})
 			})
 		}
 	}
-	kit.KickerRow(c, "endcap", "END")
+	widget.KickerRow(c, "endcap", "END")
 	c.Row("end", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
 		c.Row("k", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", "Archive it to keep its history, or delete it.", kit.UIFont(12, th.C(theme.FgMuted)))
+			c.Text("t", "Archive it to keep its history, or delete it.", widget.UIFont(12, th.C(theme.FgMuted)))
 		})
 		if widget.Button(c, "end", "End session…", widget.ButtonOpts{Help: kit.EndHelp}) {
 			x.open = false
@@ -394,9 +395,9 @@ func (x *Workspace) overview(c *ui.Ctx, s core.SessionState, st *wsState, ws hos
 func (x *Workspace) name(c *ui.Ctx, s core.SessionState, st *wsState) {
 	th := c.Theme()
 	c.Row("name", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-		c.Row("k", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) { c.Text("t", "Name", kit.UIFont(12, th.C(theme.FgMuted))) })
+		c.Row("k", ui.Style{W: ui.Px(140), Clip: true}, func(c *ui.Ctx) { c.Text("t", "Name", widget.UIFont(12, th.C(theme.FgMuted))) })
 		if !st.renaming {
-			c.Row("v", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.Label(s), kit.UIFont(12.5, th.C(theme.Fg))) })
+			c.Row("v", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.Label(s), widget.UIFont(12.5, th.C(theme.Fg))) })
 			if widget.Button(c, "rename", "Rename…", widget.ButtonOpts{Ghost: true, Help: workspaceHelp + "#overview"}) {
 				st.renaming, st.focusName, st.name = true, true, kit.Label(s)
 			}
@@ -471,7 +472,7 @@ func (x *Workspace) files(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 	th := c.Theme()
 	dirs := wsBrowsable(ws)
 	if len(dirs) == 0 {
-		kit.PaneNote(c, "nodirs", "The session has no directories yet.")
+		widget.PaneNote(c, "nodirs", "The session has no directories yet.")
 		return
 	}
 	st.dir = min(st.dir, len(dirs)-1)
@@ -484,7 +485,7 @@ func (x *Workspace) files(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 		if v, ok := widget.Select(c, "dir", root.Name, names, widget.SelectOpts{Label: "Directory", Width: 220, Help: workspaceHelp}); ok {
 			st.dir = slices.Index(names, v)
 		}
-		c.Row("path", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.TildePath(root.Host), kit.MonoFont(11, th.C(theme.FgFaint))) })
+		c.Row("path", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", kit.TildePath(root.Host), widget.MonoFont(11, th.C(theme.FgFaint))) })
 		if widget.Button(c, "reload", "Refresh", widget.ButtonOpts{Ghost: true, Help: workspaceHelp}) {
 			x.dirs.Refresh()
 		}
@@ -494,7 +495,7 @@ func (x *Workspace) files(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 		return
 	}
 	if len(items) == 0 {
-		kit.PaneNote(c, "empty", "Nothing here yet.")
+		widget.PaneNote(c, "empty", "Nothing here yet.")
 		return
 	}
 	res := widget.Tree(c, "tree", items, widget.TreeOpts{Height: ui.Flex(1), Label: root.Name, Help: workspaceHelp})
@@ -511,10 +512,10 @@ func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws hostap
 	th := c.Theme()
 	switch {
 	case !ws.Sandboxed:
-		kit.PaneNote(c, "host", "This session's agent runs on your machine: it has no image.")
+		widget.PaneNote(c, "host", "This session's agent runs on your machine: it has no image.")
 		return
 	case ws.Image == "":
-		kit.PaneNote(c, "noimage", "The "+ws.Backend+" sandbox runs the agent with your machine's own tools: it has no image.")
+		widget.PaneNote(c, "noimage", "The "+ws.Backend+" sandbox runs the agent with your machine's own tools: it has no image.")
 		return
 	}
 	wsRow(c, x.h, "tag", "Image", ws.Image, true)
@@ -527,13 +528,13 @@ func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws hostap
 	x.actions(c, s, st, ws)
 	if strings.Contains(ws.ImageFrom, ".oriel/") {
 		widget.Wrap(c, "branch", "Oriel builds a repo's Dockerfile from its default branch, never from a session's: a change the agent makes here "+
-			"takes effect once it's merged.", 620, kit.UIFont(12, th.C(theme.FgFaint)))
+			"takes effect once it's merged.", 620, widget.UIFont(12, th.C(theme.FgFaint)))
 	}
 	if ws.Dockerfile == "" {
-		widget.Wrap(c, "named", "This image is named in your settings: Oriel runs it as it is and doesn't build it.", 620, kit.UIFont(12, th.C(theme.FgFaint)))
+		widget.Wrap(c, "named", "This image is named in your settings: Oriel runs it as it is and doesn't build it.", 620, widget.UIFont(12, th.C(theme.FgFaint)))
 		return
 	}
-	kit.KickerRow(c, "srccap", "DOCKERFILE")
+	widget.KickerRow(c, "srccap", "DOCKERFILE")
 	codeLines(c, "src", ws.Dockerfile)
 }
 
@@ -544,8 +545,8 @@ func codeLines(c *ui.Ctx, key, text string) {
 	c.Column(key, ui.Style{W: ui.Flex(1), Pad: ui.PadXY(10, 8), Radius: 6, Fill: th.C(theme.BgBase), Stroke: th.C(theme.Line), Border: 1}, func(c *ui.Ctx) {
 		for i, l := range lines {
 			c.Row(i, ui.Style{W: ui.Flex(1), Gap: 12, Clip: true}, func(c *ui.Ctx) {
-				c.Row("n", ui.Style{W: ui.Px(28), Main: ui.End}, func(c *ui.Ctx) { c.Text("t", fmt.Sprint(i+1), kit.MonoFont(11.5, th.C(theme.FgGhost))) })
-				c.Text("l", l, kit.MonoFont(11.5, th.C(theme.Fg)))
+				c.Row("n", ui.Style{W: ui.Px(28), Main: ui.End}, func(c *ui.Ctx) { c.Text("t", fmt.Sprint(i+1), widget.MonoFont(11.5, th.C(theme.FgGhost))) })
+				c.Text("l", l, widget.MonoFont(11.5, th.C(theme.Fg)))
 			})
 		}
 	})
@@ -554,13 +555,13 @@ func codeLines(c *ui.Ctx, key, text string) {
 func (x *Workspace) buildLog(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 	th := c.Theme()
 	if !ws.Sandboxed || ws.Image == "" {
-		kit.PaneNote(c, "nolog", "There's no image, so there's no build log.")
+		widget.PaneNote(c, "nolog", "There's no image, so there's no build log.")
 		return
 	}
 	text, _ := st.log.Value()
 	c.Row("bar", ui.Style{W: ui.Flex(1), Gap: 10, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Row("path", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) {
-			c.Text("t", cmp.Or(kit.TildePath(ws.BuildLog), "no log yet"), kit.MonoFont(11, th.C(theme.FgFaint)))
+			c.Text("t", cmp.Or(kit.TildePath(ws.BuildLog), "no log yet"), widget.MonoFont(11, th.C(theme.FgFaint)))
 		})
 		if st.rebuilding {
 			widget.Chip(c, "busy", "rebuilding", th.C(theme.Warn), workspaceHelp)
@@ -570,14 +571,14 @@ func (x *Workspace) buildLog(c *ui.Ctx, st *wsState, ws hostapi.Workspace) {
 		}
 	})
 	if text == "" {
-		kit.PaneNote(c, "empty", "No build log: the image was built before Oriel kept one, or hasn't been built here. Rebuild image writes one.")
+		widget.PaneNote(c, "empty", "No build log: the image was built before Oriel kept one, or hasn't been built here. Rebuild image writes one.")
 		return
 	}
 	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
 	widget.List(c, "log", len(lines), &st.logSel, widget.ListOpts{RowHeight: 18, Height: ui.Flex(1), Label: "Build log", Help: workspaceHelp},
 		func(c *ui.Ctx, i int, _ bool) {
 			c.Row("l", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Pad: ui.PadXY(10, 0), Cross: ui.Center, Clip: true}, func(c *ui.Ctx) {
-				c.Text("t", lines[i], kit.MonoFont(11, th.C(theme.FgMuted)))
+				c.Text("t", lines[i], widget.MonoFont(11, th.C(theme.FgMuted)))
 			})
 		})
 }

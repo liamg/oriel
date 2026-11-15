@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -271,7 +272,7 @@ type mdOpts = kit.MarkdownOpts
 // markdownTextIn is markdownText with its images found from o.Dir.
 func markdownTextIn(c *ui.Ctx, key any, src string, width float32, body ui.TextStyle, o mdOpts) {
 	th := c.Theme()
-	code := ui.TextStyle{Font: kit.CodeMono, Color: th.C(theme.Fg)}
+	code := ui.TextStyle{Font: draw.CodeMono, Color: th.C(theme.Fg)}
 	head := body
 	head.Font.Weight, head.Color = typeset.SemiBold, th.C(theme.Fg)
 	if o.Group == "" {
@@ -387,8 +388,8 @@ func mdPictures(c *ui.Ctx, key any, imgs []mdImage, align string, width float32,
 		w       float32
 	}
 	const gap = 8
-	chipFont := kit.UIFont(12, th.C(theme.FgMuted))
-	srcFont := kit.MonoFont(10.5, th.C(theme.FgFaint))
+	chipFont := widget.UIFont(12, th.C(theme.FgMuted))
+	srcFont := widget.MonoFont(10.5, th.C(theme.FgFaint))
 	var rows [][]pic
 	var used float32
 	for _, im := range imgs {

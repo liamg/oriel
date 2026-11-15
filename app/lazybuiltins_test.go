@@ -8,8 +8,9 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/liamg/oriel/app/dictation"
+
 	"github.com/liamg/oriel/agent/prompts"
-	"github.com/liamg/oriel/app/agentui"
 	"github.com/liamg/oriel/voice/voicetest"
 
 	"github.com/liamg/oriel/app/apptest"
@@ -70,7 +71,7 @@ func TestLazyBuiltinsLoadOnTheirTriggers(t *testing.T) {
 		mic := &voicetest.Mic{Hold: true, Script: voicetest.Script(voicetest.Silence(300*time.Millisecond), voicetest.Speech(600*time.Millisecond),
 			voicetest.Silence(700*time.Millisecond))}
 		s := apptest.New(t, apptest.Options{WorkDir: t.TempDir(), Config: func(c *apptest.Config) {
-			c.Voice = agentui.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}, Whisper: c.Voice.Whisper}
+			c.Voice = dictation.VoiceConfig{Mic: mic, Transcriber: &voicetest.Transcriber{}, Whisper: c.Voice.Whisper}
 		}})
 		s.Run("prompts.open", map[string]any{"id": prompts.StyleID})
 		s.Frame()
@@ -79,7 +80,7 @@ func TestLazyBuiltinsLoadOnTheirTriggers(t *testing.T) {
 			t.Fatal("a long field loaded voice")
 		}
 		s.ClickNode("Dictate")
-		if !loaded(s, "voice") || !apptest.PluginOf[*agentui.Voice](s, "voice").Dictating() {
+		if !loaded(s, "voice") || !apptest.PluginOf[*dictation.Voice](s, "voice").Dictating() {
 			t.Errorf("loaded %v; the mic didn't start dictating", loaded(s, "voice"))
 		}
 	})

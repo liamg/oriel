@@ -278,10 +278,10 @@ func (x *Reviews) pageHeader(c *ui.Ctx, rows []reviewRow) {
 		if !at.IsZero() {
 			parts = append(parts, widget.AgoPart{Text: "updated ", At: at, Long: true})
 		}
-		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(11, th.C(theme.FgFaint))}, parts...)
+		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: widget.MonoFont(11, th.C(theme.FgFaint))}, parts...)
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 		if x.page.err != "" {
-			c.Text("err", x.page.err, kit.MonoFont(11, th.C(theme.Error)))
+			c.Text("err", x.page.err, widget.MonoFont(11, th.C(theme.Error)))
 		}
 		counts := make([]string, len(reviewScopes))
 		for _, r := range x.rows() {
@@ -446,7 +446,7 @@ func (x *Reviews) groupView(c *ui.Ctx, rows []reviewRow, g string) {
 	c.Row("group", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 14, R: 14, T: 10, B: 4}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 		c.Text("t", fmt.Sprintf("%s  %d", title, n), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Tracking: .12}, Color: th.C(theme.FgFaint)})
 		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-		c.Text("a", aside, kit.MonoFont(9.5, th.C(theme.FgFaint)))
+		c.Text("a", aside, widget.MonoFont(9.5, th.C(theme.FgFaint)))
 	})
 }
 
@@ -508,7 +508,7 @@ func (x *Reviews) reviewRowView(c *ui.Ctx, r reviewRow, many bool) {
 				if r.src.Icon != "" {
 					kit.Icon(c, x.h, "src", r.src.Icon, 12, tone)
 				}
-				c.Box("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", reviewRowLabel(r), kit.UIFont(12, tone)) })
+				c.Box("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", reviewRowLabel(r), widget.UIFont(12, tone)) })
 				if widget.Button(c, "act", button, widget.ButtonOpts{Help: reviewsHelp + "#list"}) {
 					x.act(r)
 				}
@@ -523,16 +523,16 @@ func (x *Reviews) reviewRowView(c *ui.Ctx, r reviewRow, many bool) {
 			})
 			c.Column("text", ui.Style{W: ui.Flex(1), Gap: 5, Clip: true}, func(c *ui.Ctx) {
 				c.Row("l1", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-					c.Box("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", q.Title, kit.UIFont(13, th.C(theme.Fg))) })
+					c.Box("t", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", q.Title, widget.UIFont(13, th.C(theme.Fg))) })
 					if !q.Asked.IsZero() {
-						widget.Ago(c, "age", q.Asked, widget.AgoOpts{Text: kit.MonoFont(10, th.C(theme.FgFaint))})
+						widget.Ago(c, "age", q.Asked, widget.AgoOpts{Text: widget.MonoFont(10, th.C(theme.FgFaint))})
 					}
 				})
 				c.Row("l2", ui.Style{W: ui.Flex(1), Gap: 7, Cross: ui.Center}, func(c *ui.Ctx) {
 					widget.Chip(c, "st", stateLabel(r), kit.TokenColour(th, stateTone(r), th.C(theme.Accent)), reviewsHelp+"#list")
-					c.Text("n", reviewNote(*q), kit.MonoFont(10, th.C(theme.FgFaint)))
+					c.Text("n", reviewNote(*q), widget.MonoFont(10, th.C(theme.FgFaint)))
 					if mark, tone := ciMark(q.CI); mark != "" {
-						c.Text("ci", mark, kit.MonoFont(10, kit.TokenColour(th, tone, th.C(theme.FgFaint))))
+						c.Text("ci", mark, widget.MonoFont(10, kit.TokenColour(th, tone, th.C(theme.FgFaint))))
 					}
 					if q.Via != "" {
 						widget.Chip(c, "via", q.Via, th.C(theme.FgMuted), reviewsHelp+"#list")
@@ -541,7 +541,7 @@ func (x *Reviews) reviewRowView(c *ui.Ctx, r reviewRow, many bool) {
 						widget.Chip(c, "src", r.src.Label(), th.C(kit.TAvatarGitHub), reviewsHelp+"#list")
 					}
 					if r.se != nil {
-						c.Text("se", "Continue · "+r.se.Name(), kit.MonoFont(10, th.C(theme.Accent)))
+						c.Text("se", "Continue · "+r.se.Name(), widget.MonoFont(10, th.C(theme.Accent)))
 					}
 				})
 			})
@@ -615,7 +615,7 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 			}
 			parts = append(parts, asked)
 		}
-		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: kit.MonoFont(11, th.C(theme.FgMuted))}, parts...)
+		widget.AgoLine(c, "m", widget.AgoLineOpts{Text: widget.MonoFont(11, th.C(theme.FgMuted))}, parts...)
 	})
 	fields := [][2]string{{"size", fmt.Sprintf("%s  +%d −%d", kit.Counted(q.Files, "file"), q.Adds, q.Dels)}}
 	if name, path := x.checkout(*q); name != "" {
@@ -634,7 +634,7 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 		widget.Busy(c, "asking", widget.LoadState{Phase: widget.Pending, Since: d.since}, widget.BusyOpts{Label: "Asking " + r.src.Label() + " for the rest",
 			Size: 11, Help: help})
 	case failed != "":
-		widget.Wrap(c, "err", failed, 640, kit.MonoFont(11, th.C(theme.Error)))
+		widget.Wrap(c, "err", failed, 640, widget.MonoFont(11, th.C(theme.Error)))
 	default:
 		prDescription(c, x.h, full, 640)
 		prActivity(c, x.h, full.Events, 640)
@@ -642,9 +642,9 @@ func (x *Reviews) pageDetail(c *ui.Ctx, r reviewRow) {
 			reviewCard(c, "files", fmt.Sprintf("FILES  %d", len(full.Files)), ui.Flex(1), func(c *ui.Ctx) {
 				for i, f := range full.Files {
 					c.Row(i, ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Box("p", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", f.Path, kit.MonoFont(11, th.C(theme.Fg))) })
-						c.Text("a", fmt.Sprintf("+%d", f.Adds), kit.MonoFont(11, th.C(theme.OK)))
-						c.Text("d", fmt.Sprintf("−%d", f.Dels), kit.MonoFont(11, th.C(theme.Error)))
+						c.Box("p", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", f.Path, widget.MonoFont(11, th.C(theme.Fg))) })
+						c.Text("a", fmt.Sprintf("+%d", f.Adds), widget.MonoFont(11, th.C(theme.OK)))
+						c.Text("d", fmt.Sprintf("−%d", f.Dels), widget.MonoFont(11, th.C(theme.Error)))
 					})
 				}
 			})

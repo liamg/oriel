@@ -10,7 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/plugins"
 	"github.com/liamg/oriel/app/updates"
 
 	"github.com/liamg/oriel/plugin"
@@ -34,8 +34,8 @@ func catalogScene(t *testing.T, workDir string, change ...func(*apptest.Config))
 	return s, filepath.Join(s.ConfigDir, "settings.toml")
 }
 
-func catalogOf(s *apptest.Scene) *settings.Catalog {
-	return apptest.PluginOf[*settings.Catalog](s, "catalog")
+func catalogOf(s *apptest.Scene) *plugins.Catalog {
+	return apptest.PluginOf[*plugins.Catalog](s, "catalog")
 }
 
 // syncPlugins reads the settings files again and waits for the plugin manager to sync what they say.
@@ -208,8 +208,8 @@ end)`})
 	}
 }
 
-func consent(s *apptest.Scene) *settings.Consent {
-	return apptest.PluginOf[*settings.Consent](s, "consent")
+func consent(s *apptest.Scene) *plugins.Consent {
+	return apptest.PluginOf[*plugins.Consent](s, "consent")
 }
 
 func updatesOf(s *apptest.Scene) *updates.Update {

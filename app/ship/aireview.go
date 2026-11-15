@@ -314,13 +314,13 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 	last, reviewed := se.LastAIReview()
 	c.Column("ai-review", ui.Style{W: ui.Flex(1), H: ui.Flex(1), Role: ui.RoleRegion, Label: "AI review", Help: findHelp}, func(c *ui.Ctx) {
 		c.Row("head", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("k", "AI REVIEW", kit.KickerFont(th.C(theme.FgFaint)))
+			c.Text("k", "AI REVIEW", widget.KickerFont(th.C(theme.FgFaint)))
 			if reviewed {
 				widget.Chip(c, "who", reviewerLabel(last), th.C(tFindReviewer), findHelp+"#reviewer")
 			}
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			if s := last.Since(); s != "" {
-				c.Text("since", "since "+s, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("since", "since "+s, widget.MonoFont(10, th.C(theme.FgGhost)))
 			}
 		})
 		widget.Rule(c, "rule")
@@ -358,7 +358,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 						if x.dismissed {
 							fg = th.C(theme.Fg)
 						}
-						c.Text("t", label, kit.UIFont(11, fg))
+						c.Text("t", label, widget.UIFont(11, fg))
 					}).Clicked {
 						x.h.Run(context.Background(), "review.ai.dismissed", nil)
 					}
@@ -381,7 +381,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 			}
 			if note != "" {
 				c.Row("note", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10)}, func(c *ui.Ctx) {
-					widget.Rich(c, "t", []widget.Span{{Text: note}}, width-24, kit.UIFont(11.5, th.C(theme.FgFaint)), widget.RichOpts{})
+					widget.Rich(c, "t", []widget.Span{{Text: note}}, width-24, widget.UIFont(11.5, th.C(theme.FgFaint)), widget.RichOpts{})
 				})
 			}
 			for _, f := range shown {
@@ -391,13 +391,13 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 		widget.Rule(c, "foot.rule")
 		c.Column("foot", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 8}, func(c *ui.Ctx) {
 			c.Row("who", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-				c.Text("k", "REVIEWER", kit.KickerFont(th.C(theme.FgFaint)))
+				c.Text("k", "REVIEWER", widget.KickerFont(th.C(theme.FgFaint)))
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				what := "the session's agent"
 				if v, _, _ := x.h.Options().Get("review.ai.provider", registry.At{}); v != "auto" && v != nil {
 					what = services.ProviderTitle(x.h, fmt.Sprint(v))
 				}
-				c.Text("what", what, kit.MonoFont(10, th.C(theme.FgGhost)))
+				c.Text("what", what, widget.MonoFont(10, th.C(theme.FgGhost)))
 			})
 			c.Row("acts", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				label := "Review changes"
@@ -449,16 +449,16 @@ func (x *AIReview) card(c *ui.Ctx, se core.SessionState, f core.Finding, width f
 						widget.Chip(c, "cat", f.Category, th.C(theme.FgMuted), findHelp+"#findings")
 					}
 				})
-				widget.Rich(c, "title", []widget.Span{{Text: f.Title}}, width, kit.UIFont(12.5, title), widget.RichOpts{})
+				widget.Rich(c, "title", []widget.Span{{Text: f.Title}}, width, widget.UIFont(12.5, title), widget.RichOpts{})
 				if w := f.Where(); w != "" {
 					if widget.Clickable(c, "where", ui.Style{Dir: ui.Row, Label: w, Tooltip: "Show it in the diff", Help: findHelp + "#findings"}, func(c *ui.Ctx) {
-						c.Text("t", w, kit.MonoFont(10.5, th.C(tFindWhere)))
+						c.Text("t", w, widget.MonoFont(10.5, th.C(tFindWhere)))
 					}).Clicked {
 						run("review.ai.open", nil)
 					}
 				}
 				if f.Body != "" {
-					widget.Rich(c, "body", kit.MDSpans(f.Body), width, kit.UIFont(11.5, fg), widget.RichOpts{})
+					widget.Rich(c, "body", kit.MDSpans(f.Body), width, widget.UIFont(11.5, fg), widget.RichOpts{})
 				}
 				c.Row("acts", ui.Style{Gap: 6, Pad: ui.Insets{T: 3}, Cross: ui.Center}, func(c *ui.Ctx) {
 					if f.Dismissed {

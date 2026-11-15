@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -593,7 +594,7 @@ func (l *loop) draw() error {
 	if v, _, err := l.reg.Options().Get("ui.scrollbars", registry.At{}); err == nil && v == "always" {
 		o.Bars = ui.BarsAlways
 	}
-	o.TooltipScale = kit.PartScale(l.reg.Options(), "ui.tooltip.font_size")
+	o.TooltipScale = draw.PartScale(l.reg.Options(), "ui.tooltip.font_size")
 	l.ui.SetOptions(o)
 	l.watchThemes()
 	if l.themeDirty.Swap(false) {

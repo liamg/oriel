@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
@@ -155,7 +156,7 @@ func TestMergeStartsTheNextPR(t *testing.T) {
 // With session.archive_on_merge on, a merge that leaves every PR merged archives the session; no next PR starts.
 func TestMergeArchivesRatherThanStartingTheNextPR(t *testing.T) {
 	s, _, hub, se, pr := raisedScene(t)
-	if err := s.Registry().Options().Set(kit.ArchiveOnMergeOption, registry.LayerUser, registry.At{}, true); err != nil {
+	if err := s.Registry().Options().Set(prui.ArchiveOnMergeOption, registry.LayerUser, registry.At{}, true); err != nil {
 		t.Fatal(err)
 	}
 	hub.SetMergeable("acme/search-api", pr.Number, "MERGEABLE", "CLEAN")

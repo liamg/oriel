@@ -5,12 +5,14 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
 	"github.com/liamg/oriel/ui"
+	"github.com/liamg/oriel/ui/widget"
 )
 
 // sessionsSource is the sessions, the ones that need you first.
@@ -40,11 +42,11 @@ func sessionsSource(h plugin.Host) uireg.PickerSource {
 				th := c.Theme()
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
 					tone := ui.TextStyle{Color: th.C(kit.StatusTokens[s.Status()])}
-					kit.PreviewHead(c, strings.ReplaceAll(string(s.Status()), "_", " "), tone, s.Name())
-					kit.PreviewField(c, "kind", string(s.Kind()))
-					kit.PreviewField(c, "session", string(s.ID()))
+					draw.PreviewHead(c, strings.ReplaceAll(string(s.Status()), "_", " "), tone, s.Name())
+					draw.PreviewField(c, "kind", string(s.Kind()))
+					draw.PreviewField(c, "session", string(s.ID()))
 					if n := s.Unseen(); n > 0 {
-						kit.PreviewField(c, "errors", fmt.Sprintf("%d unseen", n))
+						draw.PreviewField(c, "errors", fmt.Sprintf("%d unseen", n))
 					}
 				})
 			}}
@@ -89,13 +91,13 @@ func commandsSource(h plugin.Host) uireg.PickerSource {
 			cmd := it.Data.(registry.Command)
 			return &ui.Func{Key: "command", Fn: func(c *ui.Ctx) {
 				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-					kit.PreviewHead(c, "command", ui.TextStyle{Color: c.Theme().C(theme.Accent)}, it.Label)
+					draw.PreviewHead(c, "command", ui.TextStyle{Color: c.Theme().C(theme.Accent)}, it.Label)
 					if cmd.Title != "" {
-						kit.PreviewText(c, "desc", cmd.Title, kit.UIFont(13, c.Theme().C(theme.FgMuted)))
+						draw.PreviewText(c, "desc", cmd.Title, widget.UIFont(13, c.Theme().C(theme.FgMuted)))
 					}
-					kit.PreviewField(c, "source", cmd.Source)
+					draw.PreviewField(c, "source", cmd.Source)
 					for i, k := range keysFor(cmd.ID) {
-						kit.PreviewField(c, fmt.Sprint("keys ", i+1), k.Mode+" "+kit.KeyLabel(k.Keys))
+						draw.PreviewField(c, fmt.Sprint("keys ", i+1), k.Mode+" "+kit.KeyLabel(k.Keys))
 					}
 				})
 			}}

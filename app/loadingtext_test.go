@@ -14,7 +14,7 @@ var loadingText = regexp.MustCompile(`(?i)^(reading|loading|asking|fetching|find
 
 // narrations say what an agent is doing, not that a view waits on its data.
 var narrations = map[string]bool{
-	"agentui.assistantProgress": true, // the assistant's line for the tool it's running
+	"assistant.assistantProgress": true, // the assistant's line for the tool it's running
 }
 
 // A view says it's loading through widget.Busy or widget.Async, so every wait looks and behaves

@@ -377,7 +377,7 @@ func (s *start) content(c *ui.Ctx, h plugin.Host, actions, recent []startRow, na
 		actionsCol := func(c *ui.Ctx, st ui.Style) {
 			c.Column("actions", st, func(c *ui.Ctx) {
 				if !narrow {
-					kit.Caption(c, "cap", "Start")
+					widget.Caption(c, "cap", "Start")
 				}
 				links := slices.IndexFunc(actions, func(r startRow) bool { return r.link })
 				if links < 0 {
@@ -396,7 +396,7 @@ func (s *start) content(c *ui.Ctx, h plugin.Host, actions, recent []startRow, na
 			c.Column("recent", st, func(c *ui.Ctx) {
 				if !narrow {
 					c.Row("head", ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 10}}, func(c *ui.Ctx) {
-						kit.Caption(c, "cap", "Recent")
+						widget.Caption(c, "cap", "Recent")
 						c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 						c.Text("keys", "↵ open · ⌫ forget", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgFaint)})
 					})
@@ -410,7 +410,7 @@ func (s *start) content(c *ui.Ctx, h plugin.Host, actions, recent []startRow, na
 					}
 					if g != group {
 						group = g
-						c.Box("group"+g, ui.Style{Pad: ui.Insets{L: 12, T: 6, B: 6}}, func(c *ui.Ctx) { kit.Caption(c, "cap", g) })
+						c.Box("group"+g, ui.Style{Pad: ui.Insets{L: 12, T: 6, B: 6}}, func(c *ui.Ctx) { widget.Caption(c, "cap", g) })
 					}
 					if r.session != nil {
 						if s.recentSession(c, n, r) {
@@ -505,7 +505,7 @@ func (s *start) action(c *ui.Ctx, h plugin.Host, i int, r startRow) bool {
 			c.Row("title", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("t", e.Title, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 14, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 				if note := entryNote(e); note != "" && r.ok {
-					c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+					c.Text("n", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 				}
 				if !r.ok {
 					c.Box("soon", ui.Style{Pad: ui.PadXY(6, 1), Radius: 8, Stroke: th.C(theme.LineStrong), Border: 1}, func(c *ui.Ctx) {
@@ -517,7 +517,7 @@ func (s *start) action(c *ui.Ctx, h plugin.Host, i int, r startRow) bool {
 			c.Text("desc", e.Desc, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12}, Color: th.C(theme.FgFaint)})
 		})
 		if k := kit.BoundKey(h, e.Command, e.Args); k != "" {
-			kit.Keycap(c, "key", k)
+			widget.Keycap(c, "key", k)
 		}
 	})
 	s.hover(c, i, in)
@@ -542,9 +542,9 @@ func (s *start) links(c *ui.Ctx, from int, links []startRow) {
 				Fill: fill, Stroke: line, Border: 1, NoHover: true, Label: e.Title, Tooltip: e.Desc, Selected: n == s.sel, Help: "shell/start#links"},
 				func(c *ui.Ctx) {
 					icon(c, "icon", e.Icon, 12, th.C(theme.Accent))
-					c.Text("t", e.Title, kit.UIFont(12, th.C(theme.Fg)))
+					c.Text("t", e.Title, widget.UIFont(12, th.C(theme.Fg)))
 					if note != "" {
-						c.Text("n", note, kit.MonoFont(10, th.C(theme.FgFaint)))
+						c.Text("n", note, widget.MonoFont(10, th.C(theme.FgFaint)))
 					}
 				})
 			s.hover(c, n, in)

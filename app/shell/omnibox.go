@@ -192,7 +192,7 @@ func (o *omnibox) build(c *ui.Ctx) {
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(18, 0), Gap: 16, Cross: ui.Center}, func(c *ui.Ctx) {
 				hint := func(k, what string) {
 					c.Row(what, ui.Style{Gap: 6, Cross: ui.Center}, func(c *ui.Ctx) {
-						kit.KbdKey(c, k)
+						widget.KbdKey(c, k)
 						c.Text("w", what, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 10}, Color: th.C(theme.FgFaint)})
 					})
 				}
@@ -327,7 +327,7 @@ func resultRow(c *ui.Ctx, i int, h hit, on, picked bool) bool {
 			widget.Chip(c, "badge", it.Badge, kit.TokenColour(th, it.BadgeStyle, th.C(theme.FgMuted)), "shell/omnibox")
 		}
 		if it.Key != "" {
-			kit.KbdKey(c, it.Key)
+			widget.KbdKey(c, it.Key)
 		}
 	}).Clicked
 }

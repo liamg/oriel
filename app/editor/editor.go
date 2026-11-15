@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/registry/services"
@@ -66,7 +68,7 @@ type Editor struct {
 	rows    map[vim.WindowID]int
 	// blockPx is how tall the blocks between a window's lines were last frame: rows it doesn't have for text.
 	blockPx map[vim.WindowID]float32
-	pane    kit.PaneMetrics
+	pane    draw.PaneMetrics
 	disk    diskWatch
 	maps    map[string]registry.Disposable // :map's keymaps, by mode and keys
 	inputs  map[vim.WindowID]paneInput
@@ -75,7 +77,7 @@ type Editor struct {
 
 	fileHost  *editorHost
 	lineTops  map[vim.WindowID][]lineTop // where a window's lines were drawn last frame, below the blocks between them
-	previewed kit.FilePreview            // the file a picker last previewed
+	previewed draw.FilePreview           // the file a picker last previewed
 
 	now          time.Time   // the frame's, for decorations
 	drawing      input.State // the engine of the pane being drawn
@@ -100,7 +102,7 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 	if x.Clipboard != nil {
 		x.ed.SetClipboard(x.Clipboard)
 	}
-	x.ed.OnNotice(func(n edit.Notice) { h.Notify(kit.FromEdit(n, "vim")) })
+	x.ed.OnNotice(func(n edit.Notice) { h.Notify(edits.FromEdit(n, "vim")) })
 	x.e = vim.New(x.ed)
 	x.fileHost = &editorHost{x: x, disk: vim.Disk{Dir: x.dir}}
 	x.e.SetHost(x.fileHost)
@@ -111,7 +113,7 @@ func (x *Editor) Activate(_ context.Context, h plugin.Host) error {
 	for _, s := range conventionOptions() {
 		x.Add(h.Option(s))
 	}
-	x.Add(h.Option(registry.OptionSpec{Name: "editor.font_size", Type: registry.Float, Default: float64(kit.CodeSize), Min: 6, Max: 48, Step: 0.5,
+	x.Add(h.Option(registry.OptionSpec{Name: "editor.font_size", Type: registry.Float, Default: float64(draw.CodeSize), Min: 6, Max: 48, Step: 0.5,
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The code's text size, inside the UI's zoom (ui.font_size)."}))
 	x.Add(h.Option(registry.OptionSpec{Name: "editor.cursor_glide", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Glide the cursor between places. Typing, single steps and held keys still move it at once."}))

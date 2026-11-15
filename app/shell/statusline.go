@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/theme"
@@ -32,7 +33,7 @@ func (s *statusLine) Activate(_ context.Context, h plugin.Host) error {
 		return &ui.Func{Key: "statusline", Fn: func(c *ui.Ctx) {
 			th := c.Theme()
 			c.Row("statusline", ui.Style{W: ui.Flex(1), H: ui.Px(kit.StatusH), Gap: 16, Cross: ui.Center, Fill: th.C(tStatusBg), Stroke: th.C(theme.Line),
-				Scale: kit.PartScale(h.Options(), "ui.statusline.font_size"),
+				Scale: draw.PartScale(h.Options(), "ui.statusline.font_size"),
 				Role:  ui.RoleStatus, Label: "Status line"}, func(c *ui.Ctx) {
 				slot(c, h, uireg.SlotStatusLeft, vc)
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)

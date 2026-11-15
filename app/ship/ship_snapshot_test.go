@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/prui"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -42,7 +42,7 @@ func TestRaisePRSnapshot(t *testing.T) {
 	s, _ := shipSession(t)
 	s.Run("ship.open", nil)
 	s.SettleGit()
-	s.Run("view.close", registry.Args{"id": kit.ShipView})
+	s.Run("view.close", registry.Args{"id": prui.ShipView})
 	s.Run("project.panel", registry.Args{"name": "pull-request"})
 	s.Run("ship.pr.open", registry.Args{"project": "search-api"})
 	s.Golden("ship-raise-pr")
@@ -98,7 +98,7 @@ func TestPRPanelSnapshots(t *testing.T) {
 			}
 			s.Run("ship.open", nil)
 			s.SettleGit()
-			s.Run("view.close", registry.Args{"id": kit.ShipView})
+			s.Run("view.close", registry.Args{"id": prui.ShipView})
 			s.Run("project.open", registry.Args{"project": tc.project})
 			s.Run("project.panel", registry.Args{"name": "pull-request"})
 			s.Golden("ship-pr-panel-" + tc.name)

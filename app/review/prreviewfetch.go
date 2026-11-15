@@ -37,7 +37,7 @@ func (x *PRReview) fetch(ctx registry.Ctx, a registry.Args) error {
 		})
 }
 
-// pushed is a sync's word (kit.PrPushed) that a review's pull request is at head on its host: when that's new it's fetched, and with
+// pushed is a sync's word (prui.PrPushed) that a review's pull request is at head on its host: when that's new it's fetched, and with
 // review.auto_rereview on, the agent is asked to review what changed once its last review is done.
 func (x *PRReview) pushed(id core.SessionID, head string) {
 	ref, ok := x.h.Session(id)

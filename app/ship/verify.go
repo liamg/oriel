@@ -16,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/liamg/oriel/app/kit/work"
+	"github.com/liamg/oriel/ui/widget"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -72,7 +73,7 @@ type quiz struct {
 	notes    bool   // the answers go in the PR as reviewer notes
 	result   string // once every question is graded
 	gen      int
-	scroll   kit.Scroll
+	scroll   widget.Scroll
 	focus    bool
 }
 

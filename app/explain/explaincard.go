@@ -114,7 +114,7 @@ func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
 				c.Row("crumbs", ui.Style{Gap: 5, Cross: ui.Center, Clip: true, W: ui.Flex(1)}, func(c *ui.Ctx) {
 					for i, cr := range cd.crumbs {
 						if i > 0 {
-							c.Text(fmt.Sprint("sep", i), "›", kit.MonoFont(11, th.C(theme.FgGhost)))
+							c.Text(fmt.Sprint("sep", i), "›", widget.MonoFont(11, th.C(theme.FgGhost)))
 						}
 						if widget.ToggleChip(c, i, cr.label, i == cd.sel, widget.ToggleChipOpts{Help: help, Label: "Explain " + cr.label}) != (i == cd.sel) {
 							cd.sel = i
@@ -141,11 +141,11 @@ func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
 				}
 				widget.Async(c, "answer", st, widget.AsyncOpts{Label: "Asking", Retry: func() { run("explain.refresh", nil) }, Help: help},
 					func(c *ui.Ctx) {
-						kit.MarkdownText(c, x.h, "md", a.text, width-28, kit.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
+						kit.MarkdownText(c, x.h, "md", a.text, width-28, widget.UIFont(13, th.C(theme.FgMuted)), kit.MarkdownOpts{})
 					})
 				if x.changed(cd) {
 					c.Row("changed", ui.Style{Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-						c.Text("t", "changed since it was explained", kit.MonoFont(10.5, th.C(tUnitsChanged)))
+						c.Text("t", "changed since it was explained", widget.MonoFont(10.5, th.C(tUnitsChanged)))
 						if widget.Link(c, "refresh", "refresh", help) {
 							run("explain.refresh", nil)
 						}
@@ -162,7 +162,7 @@ func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
 				if a := x.shown(cd); a != nil {
 					by = a.by
 				}
-				c.Box("by", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", by, kit.MonoFont(10.5, th.C(theme.FgFaint))) })
+				c.Box("by", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { c.Text("t", by, widget.MonoFont(10.5, th.C(theme.FgFaint))) })
 				a := x.shown(cd)
 				answered := a != nil && a.text != ""
 				if widget.Button(c, "follow", "Ask a follow-up", widget.ButtonOpts{Help: help, Disabled: !x.h.Available("request.new", nil)}) {

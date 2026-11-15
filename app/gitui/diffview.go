@@ -239,7 +239,7 @@ func (x *Diff) body(c *ui.Ctx, vc uireg.ViewCtx, st *diffState, gs *gitx.State, 
 			base = gs.Base + "@" + gs.BaseHash
 		}
 		c.Column("none", ui.Style{W: ui.Flex(1), Pad: ui.Pad(40), Cross: ui.Center}, func(c *ui.Ctx) {
-			c.Text("t", "No changes against "+base+".", kit.UIFont(13, th.C(theme.FgFaint)))
+			c.Text("t", "No changes against "+base+".", widget.UIFont(13, th.C(theme.FgFaint)))
 		})
 	}
 	st.panLines(c)
@@ -330,19 +330,19 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 			if widget.Clickable(c, "toggle", ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Flex(1), Pad: ui.Insets{L: 14}, Gap: 10, Cross: ui.Center,
 				Label: f.Path, Help: "files/diff#files"}, func(c *ui.Ctx) {
 				c.Box("mark", ui.Style{W: ui.Px(9), H: ui.Px(9), Radius: 2, Fill: th.C(tDiffFileMark)}, nil)
-				c.Text("p", f.Path, kit.MonoFont(12, th.C(theme.Fg)))
+				c.Text("p", f.Path, widget.MonoFont(12, th.C(theme.Fg)))
 				if f.Old != "" {
-					c.Text("old", "← "+f.Old, kit.MonoFont(11, th.C(theme.FgFaint)))
+					c.Text("old", "← "+f.Old, widget.MonoFont(11, th.C(theme.FgFaint)))
 				}
 				widget.DiffStat(c, "stat", f.Add, f.Del, widget.DiffStatOpts{Binary: f.Binary})
 				if check, n := fileCheck(d, st.marks[f.Path]); check == widget.CheckOn {
 					widget.Chip(c, "rv", "reviewed", th.C(tDiffReviewed), "files/diff#review")
 				} else if d != nil && len(d.hunks) > 0 {
-					c.Text("rv", fmt.Sprintf("%d/%d hunks reviewed", n, len(d.hunks)), kit.MonoFont(10, th.C(theme.FgGhost)))
+					c.Text("rv", fmt.Sprintf("%d/%d hunks reviewed", n, len(d.hunks)), widget.MonoFont(10, th.C(theme.FgGhost)))
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 				if !open {
-					c.Text("x", "⌄ expand", kit.MonoFont(11, th.C(theme.FgFaint)))
+					c.Text("x", "⌄ expand", widget.MonoFont(11, th.C(theme.FgFaint)))
 				}
 			}).Clicked {
 				st.open[f.Path] = !open
@@ -394,7 +394,7 @@ func (x *Diff) fileSection(c *ui.Ctx, st *diffState, f gitx.FileState, layout st
 			note = "No changes."
 		}
 		if note != "" {
-			c.Row("note", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(62, 10)}, func(c *ui.Ctx) { c.Text("t", note, kit.UIFont(12, th.C(theme.FgFaint))) })
+			c.Row("note", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(62, 10)}, func(c *ui.Ctx) { c.Text("t", note, widget.UIFont(12, th.C(theme.FgFaint))) })
 			return
 		}
 		if f.Path == st.sel.file {
@@ -445,7 +445,7 @@ func (x *Diff) hunk(c *ui.Ctx, st *diffState, file string, i int, h diffHunk, la
 			}
 			if widget.Clickable(c, "at", ui.Style{Dir: ui.Row, W: ui.Flex(1), H: ui.Flex(1), Cross: ui.Center, Role: ui.RoleListItem, Selected: selHunk,
 				Label: h.Header(), Help: "files/diff#hunks"}, func(c *ui.Ctx) {
-				c.Text("t", strings.TrimSpace(h.Header()+" "+h.fn), kit.MonoFont(11, th.C(theme.FgFaint)))
+				c.Text("t", strings.TrimSpace(h.Header()+" "+h.fn), widget.MonoFont(11, th.C(theme.FgFaint)))
 			}).Clicked {
 				st.sel, st.focus = at, true
 			}
@@ -601,9 +601,9 @@ func lineKeys(c *ui.Ctx, st *diffState) {
 		if err != nil {
 			rel = path
 		}
-		c.Text("at", fmt.Sprintf("%s:%d", filepath.ToSlash(rel), line), kit.MonoFont(10.5, th.C(theme.FgMuted)))
+		c.Text("at", fmt.Sprintf("%s:%d", filepath.ToSlash(rel), line), widget.MonoFont(10.5, th.C(theme.FgMuted)))
 		for i, k := range [][2]string{{"gc", "comment"}, {"ga", "ask"}, {"o", "open"}, {"?", "explain"}} {
-			kit.KeyHint(c, i, k[0], k[1])
+			widget.KeyHint(c, i, k[0], k[1])
 		}
 	})
 }

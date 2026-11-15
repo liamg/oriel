@@ -3,7 +3,6 @@ package ship
 import (
 	"cmp"
 
-	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render/typeset"
@@ -24,7 +23,7 @@ func (x *Ship) offBranch(c *ui.Ctx, se core.SessionState, s shipRead, width floa
 	c.Column("off", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) {
 		c.Text("head", "Not on this session's branch", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 12, Weight: typeset.SemiBold},
 			Color: th.C(theme.Warn)})
-		widget.Wrap(c, "note", "On "+on+". Oriel pushes and raises PRs only from "+off.Session+".", width, kit.UIFont(11, th.C(theme.FgMuted)))
+		widget.Wrap(c, "note", "On "+on+". Oriel pushes and raises PRs only from "+off.Session+".", width, widget.UIFont(11, th.C(theme.FgMuted)))
 		c.Row("acts", ui.Style{W: ui.Flex(1), Gap: 8, Wrap: true}, func(c *ui.Ctx) {
 			if widget.Button(c, "back", "Switch back to "+off.Session, x.stepOpts(se.ID, s.Project, "Switching back",
 				widget.ButtonOpts{Primary: off.Refused != "", Help: "git/ship#branch"})) {
@@ -37,7 +36,7 @@ func (x *Ship) offBranch(c *ui.Ctx, se core.SessionState, s shipRead, width floa
 			}
 		})
 		if off.Refused != "" {
-			widget.Wrap(c, "why", "It can't be made the session's: "+off.Refused+".", width, kit.UIFont(11, th.C(theme.FgFaint)))
+			widget.Wrap(c, "why", "It can't be made the session's: "+off.Refused+".", width, widget.UIFont(11, th.C(theme.FgFaint)))
 		}
 	})
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
@@ -145,15 +145,15 @@ func TestErrorViewsHaveHelp(t *testing.T) {
 
 // An engine's edit.Notice becomes a core event, Notified.
 func TestEditNoticeMapsOntoCore(t *testing.T) {
-	n := kit.FromEdit(edit.Notice{ID: "vim.pattern-not-found", Severity: edit.Error, Text: "Pattern not found: foo"}, "vim")
+	n := edits.FromEdit(edit.Notice{ID: "vim.pattern-not-found", Severity: edit.Error, Text: "Pattern not found: foo"}, "vim")
 	if n.ID != "vim.pattern-not-found" || n.Severity != core.SevError || n.Source != "vim" || !n.AutoClear {
 		t.Errorf("notice = %+v", n)
 	}
-	q := kit.FromEdit(edit.Notice{ID: "vim.swap-range", Severity: edit.Question}, "vim")
+	q := edits.FromEdit(edit.Notice{ID: "vim.swap-range", Severity: edit.Question}, "vim")
 	if q.Severity != core.SevQuestion || shell.ToastTTL(core.Notification{Notice: q}) != 0 {
 		t.Errorf("a question should stay until answered: %+v", q)
 	}
-	info := kit.FromEdit(edit.Notice{ID: "vim.yanked", Severity: edit.Info}, "vim")
+	info := edits.FromEdit(edit.Notice{ID: "vim.yanked", Severity: edit.Info}, "vim")
 	if shell.ToastTTL(core.Notification{Notice: info}) != 3*time.Second {
 		t.Error("an info toast should go after 3 s")
 	}

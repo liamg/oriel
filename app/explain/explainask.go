@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/app/kit/edits"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
@@ -82,7 +84,7 @@ func (x *Plugin) Kept(c *ui.Ctx, key, help string) {
 	if r, ok := c.Rect(c.Next("explain")); ok && r.Dx() > 20 {
 		width = r.Dx() - 20
 	}
-	kit.Popup(c, "explain", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 6, Help: help}, func(c *ui.Ctx) {
+	draw.Popup(c, "explain", ui.Style{W: ui.Flex(1), Pad: ui.Pad(10), Gap: 6, Help: help}, func(c *ui.Ctx) {
 		c.Text("label", "EXPLAIN · CHANGES NOTHING", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold,
 			Tracking: .14}, Color: th.C(theme.FgFaint)})
 		switch {
@@ -356,9 +358,9 @@ func (x *Plugin) requestThis(ctx registry.Ctx, what string) error {
 	}
 	path, snap := b.Path, b.Text.Snapshot()
 	r, ok := ed.Selection()
-	name, at := "the selection", kit.Place{}
+	name, at := "the selection", edits.Place{}
 	if ok {
-		at = kit.PlaceOf(snap, r)
+		at = edits.PlaceOf(snap, r)
 		x.leaveVisual()
 	} else {
 		units := x.unitsNow(path, b.Text)
@@ -367,9 +369,9 @@ func (x *Plugin) requestThis(ctx registry.Ctx, what string) error {
 		if i >= 0 {
 			r, name = units[i].Range, units[i].Label(snap.Bytes())
 			start, end := spanLines(snap, r)
-			at = kit.Place{Line: start + 1, EndLine: end + 1}
+			at = edits.Place{Line: start + 1, EndLine: end + 1}
 		} else {
-			r, name, at = text.Range{Start: snap.LineStart(cur.Line), End: snap.LineEnd(cur.Line)}, "the code at the cursor", kit.PlaceAt(snap, cur)
+			r, name, at = text.Range{Start: snap.LineStart(cur.Line), End: snap.LineEnd(cur.Line)}, "the code at the cursor", edits.PlaceAt(snap, cur)
 		}
 	}
 	start, _ := spanLines(snap, r)
