@@ -15,6 +15,7 @@ import (
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/app/luaconfig"
 	"github.com/liamg/oriel/app/overview"
+	"github.com/liamg/oriel/app/plugins"
 	"github.com/liamg/oriel/app/rail"
 	"github.com/liamg/oriel/app/repos"
 	"github.com/liamg/oriel/app/review"
@@ -46,7 +47,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	out = append(out, cfg.Agents...)
 	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages")}, p.Themes, p.Layout, gits,
 		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
-		&stats.HUD{}, &agentui.Inbox{}, p.Omnibox, p.Picker, p.WhichKey, &settings.Consent{}, p.Help, p.Nav, p.Menus,
+		&stats.HUD{}, &agentui.Inbox{}, p.Omnibox, p.Picker, p.WhichKey, &plugins.Consent{}, p.Help, p.Nav, p.Menus,
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},
 		&editor.Search{Editor: ed, Tools: p.Tools}, &lang.LSP{Version: c.Version, Logger: c.Logs.Logger, Servers: cfg.LanguageServers},
@@ -61,7 +62,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &ship.GitHubHost{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
 		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &ship.GitHub{}, &settings.Secrets{},
-		&luaconfig.Lua{Dir: c.ConfigDir}, &settings.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
+		&luaconfig.Lua{Dir: c.ConfigDir}, &plugins.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
 	)
 }

@@ -1,4 +1,4 @@
-package settings_test
+package plugins_test
 
 import (
 	"os"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/plugins"
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/registry"
 )
@@ -43,14 +43,14 @@ func catalogScene(t *testing.T) (s *apptest.Scene, settingsFile, lock, data stri
 	return s, filepath.Join(s.ConfigDir, "settings.toml"), filepath.Join(s.ConfigDir, catalog.LockFile), data
 }
 
-func catalogOf(s *apptest.Scene) *settings.Catalog {
-	return apptest.PluginOf[*settings.Catalog](s, "catalog")
+func catalogOf(s *apptest.Scene) *plugins.Catalog {
+	return apptest.PluginOf[*plugins.Catalog](s, "catalog")
 }
 
 // syncPlugins reads the settings files again and waits for the plugin manager to sync what they say.
 func syncPlugins(s *apptest.Scene) {
 	s.T.Helper()
-	settingsOf(s).Reload()
+	s.Run("settings.reload", nil)
 	synced := catalogOf(s).Sync()
 	if !s.Headless.Until(30*time.Second, func() bool {
 		select {

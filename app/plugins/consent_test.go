@@ -1,4 +1,4 @@
-package settings_test
+package plugins_test
 
 import (
 	"os"
@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/settings"
+	"github.com/liamg/oriel/app/plugins"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
@@ -47,8 +47,8 @@ func consentScene(t *testing.T) (*apptest.Scene, *[]string) {
 	return s, &installed
 }
 
-func consentOf(s *apptest.Scene) *settings.Consent {
-	return apptest.PluginOf[*settings.Consent](s, "consent")
+func consentOf(s *apptest.Scene) *plugins.Consent {
+	return apptest.PluginOf[*plugins.Consent](s, "consent")
 }
 
 // settleInstall waits for the installer's command, which runs off the loop.

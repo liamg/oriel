@@ -1,4 +1,6 @@
-package settings
+// Package plugins is the plugin manager (builtin:catalog): installing what [plugins] lists, the lockfiles, the bundled
+// plugins, the consent screen for a plugin asking for more, and the Plugins page.
+package plugins
 
 import (
 	"cmp"

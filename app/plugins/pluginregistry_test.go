@@ -1,4 +1,4 @@
-package settings_test
+package plugins_test
 
 import (
 	"crypto/ed25519"
@@ -96,7 +96,7 @@ func TestInstallFromTheRegistryTab(t *testing.T) {
 	}})
 	settings := filepath.Join(s.ConfigDir, "settings.toml")
 	rig.WriteFile(t, settings, "[registry]\nkeys = { \""+catalog.DefaultRepo+"\" = \""+catalog.FormatKey(reg.key.Public().(ed25519.PublicKey))+"\" }\n\n[plugins]\n")
-	settingsOf(s).Reload()
+	s.Run("settings.reload", nil)
 
 	s.Run("plugins.open", map[string]any{"tab": "registry"})
 	if !s.Headless.Until(30*time.Second, func() bool { return strings.Contains(s.Text(), "acme/hi") }) {
@@ -116,7 +116,7 @@ func TestInstallFromTheRegistryTab(t *testing.T) {
 	if r, a := rig.Changed(before, after); r != 0 || a != 1 || !strings.Contains(after, "[plugins]\n\"acme/hi\" = \"*\"\n") {
 		t.Errorf("%d lines removed and %d added:\n%s", r, a, after)
 	}
-	settingsOf(s).Reload()
+	s.Run("settings.reload", nil)
 	if !s.Headless.Until(30*time.Second, func() bool { return s.HasCommand("Hi") }) {
 		t.Fatalf("not loaded; notices: %v", s.Notices())
 	}
@@ -147,7 +147,7 @@ func TestRegistryTabRefusesABadSignature(t *testing.T) {
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) { cfg.GitHub = &catalog.GitHub{Base: reg.srv.URL} }})
 	rig.WriteFile(t, filepath.Join(s.ConfigDir, "settings.toml"),
 		"[registry]\nkeys = { \""+catalog.DefaultRepo+"\" = \""+catalog.FormatKey(other.Public().(ed25519.PublicKey))+"\" }\n")
-	settingsOf(s).Reload()
+	s.Run("settings.reload", nil)
 	s.Run("plugins.open", map[string]any{"tab": "registry"})
 	if !s.Headless.Until(30*time.Second, func() bool { return strings.Contains(s.Text(), "signature doesn't verify") }) {
 		t.Fatalf("no word of the bad signature:\n%s", s.Text())
