@@ -406,7 +406,7 @@ func (x *Ship) mirrorReviews(ctx context.Context, id core.SessionID, ships []shi
 				Reviewer: t.Reviewer, State: t.State, URL: t.URL}
 			for _, n := range t.Comments {
 				rt.Comments = append(rt.Comments, hostapi.ReviewComment{Key: n.ID, User: n.Author, Body: n.Body, At: n.At,
-					Trusted: n.Member || kit.Sites(x.h).TrustedUser(n.Author)})
+					Trusted: n.Member || kit.Sites(x.h).TrustedUser(n.Author), Mine: n.Mine, Written: n.Written})
 			}
 			req.Threads = append(req.Threads, rt)
 		}

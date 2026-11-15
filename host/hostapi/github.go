@@ -184,13 +184,16 @@ type ReviewThread struct {
 	Comments []ReviewComment `json:"comments"`
 }
 
-// ReviewComment is one comment of a ReviewThread; Trusted says the agent may read it.
+// ReviewComment is one comment of a ReviewThread; Trusted says the agent may read it, Mine that the user wrote it.
+// Written is its text as written where the host changed it as it was posted.
 type ReviewComment struct {
 	Key     string    `json:"key"`
 	User    string    `json:"user"`
 	Body    string    `json:"body"`
 	At      time.Time `json:"at"`
 	Trusted bool      `json:"trusted,omitempty"`
+	Mine    bool      `json:"mine,omitempty"`
+	Written string    `json:"written,omitempty"`
 }
 
 // ForwardedReq marks a draft reply sent: posted on its thread's code host as HostID.

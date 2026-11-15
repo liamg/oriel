@@ -157,7 +157,7 @@ func (x *Ships) mirrorPR(ctx context.Context, id core.SessionID, p core.Project,
 			res = &v
 		}
 		threads = append(threads, mirrored{ref: core.HostThread{Project: p.Name, Repo: mp.Repo, PR: pr.Number, Root: root, Reviewer: first.User,
-			State: states[first.User], URL: first.URL, Outdated: first.Line == 0}, anchor: a, msgs: msgs, res: res, into: sentFrom(se, first)})
+			State: states[first.User], URL: first.URL, Outdated: first.Line == 0}, anchor: a, msgs: msgs, res: res, into: sentFromGitHub(se, first)})
 	}
 
 	var convo []mirrorMsg
@@ -255,4 +255,12 @@ func (x *Ships) githubFor(ctx context.Context, id core.SessionID, project string
 		x.sawPR(id, project, branch, g.pr.Open())
 	}
 	return g
+}
+
+// sentFromGitHub is sentFrom for a GitHub review comment: a thread's first, as written (gh.PostedAs).
+func sentFromGitHub(se core.SessionState, c gh.ReviewComment) core.ThreadID {
+	if c.InReplyTo != 0 {
+		return ""
+	}
+	return sentFrom(se, c.Path, gh.PostedAs(c.Body))
 }

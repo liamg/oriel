@@ -206,11 +206,16 @@ func (x *Ships) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error)
 			}
 			m.anchor = a
 		}
+		review := reviewedPR(se) != ""
 		for _, c := range rt.Comments {
-			m.msgs = append(m.msgs, mirrorMsg{key: c.Key, user: c.User, body: c.Body, at: c.At, trusted: c.Trusted})
+			m.msgs = append(m.msgs, mirrorMsg{key: c.Key, user: c.User, body: c.Body, at: c.At, trusted: c.Trusted, own: review && c.Mine})
 		}
-		if reviewedPR(se) != "" {
+		if review {
 			asides(m.msgs, r.Author, rt.Key == "")
+			if rt.Key != "" && rt.Path != "" && len(rt.Comments) > 0 {
+				first := rt.Comments[0]
+				m.into = sentFrom(se, rt.Path, cmp.Or(first.Written, first.Body))
+			}
 		}
 		threads = append(threads, m)
 	}

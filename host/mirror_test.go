@@ -193,3 +193,42 @@ func waitingOnALock(fn string) bool {
 	}
 	return false
 }
+
+// In a review session the general mirror follows the same rules as GitHub's: a comment the user posted joins the
+// thread it was posted from (matched by what was written, though the host headed it), the user's own words aren't
+// the agent's to answer, and the PR's author's reply is.
+func TestMirrorReviewInAReviewSession(t *testing.T) {
+	r, _, pr, _, id := reviewSessionScene(t, "")
+	ctx := context.Background()
+	mine, err := r.w.Comment(ctx, CommentReq{Session: id, Anchor: &core.Anchor{File: "round.go", Line: 3}, Body: "Name the mode.", Outgoing: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sent := "**nit:** Name the mode."
+	if err := r.w.SetReviewDraft(core.ReviewDrafted{Session: id, Draft: core.ReviewDraft{Picks: map[string]core.ReviewPick{string(mine): {State: core.PickKeep, Sent: sent}}}}); err != nil {
+		t.Fatal(err)
+	}
+	p, _ := r.session(id).Primary()
+	at := time.Date(2026, 10, 19, 9, 0, 0, 0, time.UTC)
+	req := MirrorReviewReq{Session: id, Project: p.Name, Host: "forge", Repo: "acme/pricing", PR: pr.Number, URL: pr.URL, Author: "bob",
+		Threads: []ReviewThread{{Key: "41", Path: "round.go", Line: 3, Comments: []ReviewComment{
+			{Key: "41", User: "you", Body: "**Line 3**\n\n" + sent, Written: sent, At: at, Mine: true}}}}}
+	if err := r.w.MirrorReview(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+	th, _ := r.session(id).Thread(mine)
+	if th.Hosted == nil || th.Hosted.Key != "41" || th.Hosted.Host != "forge" || !th.Open() {
+		t.Fatalf("the posted comment didn't join its thread: %+v", th)
+	}
+	if c, _ := th.Last(); c.HostID != "41" || !c.Delivered || !c.Mine {
+		t.Errorf("the user's own words went to the agent: %+v", c)
+	}
+	req.Threads[0].Comments = append(req.Threads[0].Comments, ReviewComment{Key: "42", User: "bob", Body: "Renamed it.", At: at.Add(time.Minute), Trusted: true})
+	if err := r.w.MirrorReview(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+	th, _ = r.session(id).Thread(mine)
+	if u := th.Undelivered(); len(u) != 1 || u[0].Body != "Renamed it." {
+		t.Errorf("the author's reply is the agent's to read: %+v", u)
+	}
+}
