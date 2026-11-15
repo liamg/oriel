@@ -21,24 +21,25 @@ const DockerfilePath = ".oriel/sandbox.Dockerfile"
 // Image picks root's image, building it if needed: the project's image named in settings, else the primary
 // project's Dockerfile, else the image named in settings, else the base.
 func Image(ctx context.Context, root string, cfg sandbox.Config) (string, error) {
-	p := pick(root, cfg)
+	p := pick(ctx, root, cfg)
 	if p.dockerfile == "" {
 		return p.tag, nil
 	}
-	if err := ensureBase(ctx, p); err != nil {
+	p, err := ensureBase(ctx, p)
+	if err != nil {
 		return "", err
 	}
 	return p.tag, ensureImage(ctx, p.tag, p.dockerfile)
 }
 
 // picked is the image root's sandbox runs: its tag, its source ("" for one named in settings) and where it comes
-// from. onBase marks a Dockerfile built on the base, which has to be there first.
+// from. layers is a repo Dockerfile with no FROM, built on the base, which has to be there first.
 type picked struct {
 	tag, dockerfile, from string
-	onBase                bool
+	layers                string
 }
 
-func pick(root string, cfg sandbox.Config) picked {
+func pick(ctx context.Context, root string, cfg sandbox.Config) picked {
 	if ws, ok := sandbox.LoadManifest(root); ok {
 		for _, p := range ws.Projects {
 			if !p.Primary {
@@ -53,8 +54,7 @@ func pick(root string, cfg sandbox.Config) picked {
 				if hasFrom(df) {
 					return picked{tag: container.ProjectImage(df), dockerfile: df, from: from}
 				}
-				df = "FROM " + container.BaseImage() + "\n" + df
-				return picked{tag: container.ProjectImage(df), dockerfile: df, from: from + " on the base image", onBase: true}
+				return picked{from: from + " on the base image", layers: df}.onBase(ctx)
 			}
 		}
 	}
@@ -74,13 +74,35 @@ func hasFrom(df string) bool {
 	return false
 }
 
-// ensureBase fetches the base a Dockerfile builds on: its FROM names a local tag, which a build would otherwise
-// look for on a registry.
-func ensureBase(ctx context.Context, p picked) error {
-	if !p.onBase {
-		return nil
+// onBase puts the base under p's layers, which gives its tag.
+func (p picked) onBase(ctx context.Context) picked {
+	if p.layers == "" {
+		return p
 	}
-	return ensureImage(ctx, container.BaseImage(), container.BaseDockerfile)
+	p.dockerfile = "FROM " + baseRef(ctx) + "\n" + p.layers
+	p.tag = container.ProjectImage(p.dockerfile)
+	return p
+}
+
+// baseRef is the name a Dockerfile's FROM gives the base. A pulled base goes by where it came from: an image store
+// that keeps only some of a pulled image's layers (Docker's containerd store) fetches the rest from the registry the
+// FROM names, and the local name means Docker Hub. A base built here has every layer under its local name.
+func baseRef(ctx context.Context) string {
+	if container.ImageExists(ctx, container.PublishedBase()) {
+		return container.PublishedBase()
+	}
+	return container.BaseImage()
+}
+
+// ensureBase fetches the base p's layers build on, then names it in p's Dockerfile as it now is.
+func ensureBase(ctx context.Context, p picked) (picked, error) {
+	if p.layers == "" {
+		return p, nil
+	}
+	if err := ensureImage(ctx, container.BaseImage(), container.BaseDockerfile); err != nil {
+		return p, err
+	}
+	return p.onBase(ctx), nil
 }
 
 // BuildLog is the file tag's last build wrote to.
@@ -102,11 +124,12 @@ func ensureImage(ctx context.Context, tag, dockerfile string) error {
 
 // Rebuild builds root's image again from its source, skipping the cache. An image named in settings has none.
 func Rebuild(ctx context.Context, root string, cfg sandbox.Config) error {
-	p := pick(root, cfg)
+	p := pick(ctx, root, cfg)
 	if p.dockerfile == "" {
 		return fmt.Errorf("the sandbox runs %s, named in %s: Oriel doesn't build it", p.tag, p.from)
 	}
-	if err := ensureBase(ctx, p); err != nil {
+	p, err := ensureBase(ctx, p)
+	if err != nil {
 		return err
 	}
 	return container.Rebuild(ctx, p.tag, p.dockerfile, BuildLog(p.tag))
@@ -114,7 +137,7 @@ func Rebuild(ctx context.Context, root string, cfg sandbox.Config) error {
 
 // Describe is root's container and image, and what the running container mounts.
 func Describe(ctx context.Context, root string, cfg sandbox.Config) sandbox.Description {
-	p := pick(root, cfg)
+	p := pick(ctx, root, cfg)
 	d := sandbox.Description{Container: Name(root), Image: p.tag, ImageFrom: p.from, Dockerfile: p.dockerfile,
 		Built: container.ImageExists(ctx, p.tag)}
 	if _, err := os.Stat(BuildLog(p.tag)); err == nil {
