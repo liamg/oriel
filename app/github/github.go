@@ -87,10 +87,6 @@ func (x *GitHub) Activate(_ context.Context, h plugin.Host) error {
 	x.Add(h.Contribute(registry.Service{Name: services.PRReviewsService, Impl: githubReviews{x}}))
 	x.Add(h.DeclareEvent(registry.EventInfo{Name: "PrPushed", Fired: true, Payload: prui.PrPushed{},
 		Doc: "A session's pull request's head, each time GitHub is read for it; the subject is the session. { session, project, head }"}))
-	x.Add(h.Option(registry.OptionSpec{Name: "github.trusted_orgs", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
-		Help: "GitHub orgs whose members' review comments the agent may read. Text from anyone else is hidden from it. Empty: the repository's owner."}))
-	x.Add(h.Option(registry.OptionSpec{Name: "github.trusted_users", Section: "git", Type: registry.List, Default: []string{}, Scopes: registry.ScopeUser,
-		Help: "GitHub logins whose review comments the agent may read, beside the trusted orgs' members."}))
 	for _, c := range x.commands() {
 		x.Add(h.Command(c))
 	}
