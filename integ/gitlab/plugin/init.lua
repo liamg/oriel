@@ -32,6 +32,7 @@ L.code.host{ name = "gitlab", title = "GitLab", icon = "gitlab", order = 20, sec
     token_url = "https://{host}/-/user_settings/personal_access_tokens?name=Oriel&scopes=api",
     token_help = "A personal access token with the api scope: Oriel reads your merge requests, and raises and merges them when you ask.",
     probe = function(host, done) call("probe", { host = host }, done, "gitlab") end },
+  cli_config = { path = "glab-cli/config.yml", section = "hosts" },
   requested = function(site, done) call("requested", { site = site }, done, "requests") end,
   lookup = function(site, url, done) call("lookup", { site = site, url = url }, done) end,
   checkout = function(site, url, done) call("checkout", { site = site, url = url }, done) end,
