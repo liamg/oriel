@@ -34,6 +34,7 @@ type inlineNew struct {
 	buf         *text.Buffer
 	anchor      text.AnchorID
 	draft       string
+	append      string // goes on the end of draft as one edit, on the next frame
 	focus       bool
 	toAuthor    bool   // a comment for the pull request's author, not a question for the agent
 	review      bool   // the session is a review: it can be either
@@ -526,7 +527,8 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 				files = pastedFiles(x.h, se.ID)
 			}
 			r = widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
-				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files, KeyMode: ThreadComposerKeyMode})
+				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files, KeyMode: ThreadComposerKeyMode, Append: n.append})
+			n.append = ""
 		})
 		send, cancel := x.composerButtons(c, n)
 		switch {
@@ -608,10 +610,10 @@ func (x *Requests) suggest() error {
 	for i := first; i <= first+max(n.end-n.line, 0) && i < snap.Lines(); i++ {
 		lines = append(lines, strings.TrimRight(string(snap.Line(i)), "\r\n"))
 	}
-	if n.draft != "" && !strings.HasSuffix(n.draft, "\n") {
-		n.draft += "\n"
+	if was := n.draft + n.append; was != "" && !strings.HasSuffix(was, "\n") {
+		n.append += "\n"
 	}
-	n.draft += suggestion(strings.Join(lines, "\n"))
+	n.append += suggestion(strings.Join(lines, "\n"))
 	n.focus = true
 	return nil
 }

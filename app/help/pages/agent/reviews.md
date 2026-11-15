@@ -121,7 +121,7 @@ In a review session, `gc` on a line of the diff opens a **comment for the author
 ### Suggesting a change {#suggest}
 
 **Suggest a change** (`⌘G`) under the field of a comment for the author adds a suggestion block holding the commented lines as they
-read: edit them into what they should be (`⇧⏎` for a new line), and the author can apply it on GitHub in one click.
+read: edit them into what they should be (`⇧⏎` for a new line), and the author can apply it on GitHub in one click. `⌘Z` takes the block back out.
 To suggest a change to several lines, select them in the editor and comment with **Ask about this…** in its
 right-click menu.
 

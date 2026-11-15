@@ -45,6 +45,9 @@ type InputOpts struct {
 	// Files takes what a paste offers besides text (copied files, a picture) and files dropped on the field, and
 	// returns the text that goes in their place. Without it a paste is text only, and the field takes no drops.
 	Files func(Pasted) string
+	// Append is text put at the end as one edit, so undo takes it back: a block a command adds to a comment. It goes
+	// in each frame it's set, so the caller clears it once the call returns.
+	Append string
 }
 
 // Pasted is what a paste or a drop gives a field besides text.
@@ -471,6 +474,12 @@ func (ff *fieldFrame) outside() {
 		before := ff.now()
 		ff.replace(clampInt(e.From, 0, len(ff.runes)), clampInt(e.To, 0, len(ff.runes)), ff.typable(e.Insert))
 		ff.record(before, e.Join)
+		ff.moved = true
+	}
+	if o.Append != "" && !o.Disabled {
+		before := ff.now()
+		ff.replace(len(ff.runes), len(ff.runes), ff.typable(o.Append))
+		ff.record(before, "")
 		ff.moved = true
 	}
 	if d := ff.in.Dropped; d != nil && o.Files != nil && !o.Disabled {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -461,6 +462,26 @@ func TestCommentForTheAuthorSuggestsAChange(t *testing.T) {
 		}
 		return false
 	})
+}
+
+// Undo (⌘Z on macOS, Ctrl+Z elsewhere) takes a suggestion back out of the comment, keeping what was typed before it.
+func TestCommentForTheAuthorUndoesASuggestion(t *testing.T) {
+	undo := "<C-z>"
+	if runtime.GOOS == "darwin" {
+		undo = "<D-z>"
+	}
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	sess, _ := s.Store().State().Session(id)
+	file := filepath.Join(sess.Snapshot().Projects[0].Dir, "bucket.go")
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("the composer, for the author", func() bool { return s.Has("Comment for the author", "Suggest a change") })
+	s.TypeText("Return two")
+	s.Until("the typing", func() bool { return s.Has("Return two") })
+	s.Press("<D-g>")
+	s.Until("the suggestion in the field", func() bool { return s.Has("```suggestion") })
+	s.Press(undo)
+	s.Until("the suggestion gone, the typing kept", func() bool { return s.Has("Return two") && !s.Has("```suggestion") })
 }
 
 // The composer's buttons sit under its field, as GitHub's do: Suggest a change at the left, Cancel and Comment at
