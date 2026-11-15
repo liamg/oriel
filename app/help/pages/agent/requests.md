@@ -76,7 +76,7 @@ the agent about it or ask for a change, whatever threads the line has already. I
 on the line itself does the same. `ga` does the same on the cursor's line (`gc` or `ga` in a diff).
 **Ask about this…** in the editor's right-click menu (or `thread.new`) opens a thread on the selection, or on the place
 clicked, and the agent is told its line and column (`round.go:4:7`, or `round.go:3:6-4:2` for a selection): `⏎` sends
-it, `⇧⏎` starts a new line, `Esc` drops it. Open threads show under their line with the agent's state, and take replies there
+it (or **Ask**, **Comment** for the author, under the field), `⇧⏎` starts a new line, `Esc` (or **Cancel**) drops it. Open threads show under their line with the agent's state, and take replies there
 the same way.
 
 ## Summary

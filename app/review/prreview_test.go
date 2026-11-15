@@ -21,6 +21,7 @@ import (
 	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
+	"github.com/liamg/oriel/render"
 )
 
 // prReviewScene is the Reviews page's scene with the ratelimit PR's head pushed to a repo whose origin has it, and a
@@ -460,4 +461,45 @@ func TestCommentForTheAuthorSuggestsAChange(t *testing.T) {
 		}
 		return false
 	})
+}
+
+// The composer's buttons sit under its field, as GitHub's do: Suggest a change at the left, Cancel and Comment at
+// the right, each doing what its key does.
+func TestCommentForTheAuthorButtons(t *testing.T) {
+	const suggest, cancel, send = "Suggest a change ⌘G", "Cancel esc", "Comment ⏎" // a button is named by its label and key
+	s, _, _, _, id, _ := prReviewScene(t, false)
+	sess, _ := s.Store().State().Session(id)
+	file := filepath.Join(sess.Snapshot().Projects[0].Dir, "bucket.go")
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("the composer's buttons", func() bool { return s.FindRole(render.RoleButton, send) != nil })
+	field := s.NodeRole(render.RoleTextBox, "Comment for the author").Bounds
+	for _, b := range []string{suggest, cancel, send} {
+		if r := s.NodeRole(render.RoleButton, b).Bounds; r.Min.Y < field.Max.Y {
+			t.Errorf("%s at %v, not under the field at %v", b, r, field)
+		}
+	}
+	if s.NodeRole(render.RoleButton, suggest).Bounds.Min.X > s.NodeRole(render.RoleButton, cancel).Bounds.Min.X {
+		t.Error("Suggest a change is right of Cancel")
+	}
+	s.ClickNode(suggest)
+	s.Until("the suggestion in the field", func() bool { return s.Has("```suggestion", "func Take() int { return 1 }") })
+	s.ClickNode(send)
+	s.UntilState("the comment sent", func(st core.State) bool {
+		sess, _ := st.Session(id)
+		for _, th := range sess.Snapshot().Threads {
+			for _, c := range th.Comments {
+				if strings.Contains(c.Body, "```suggestion") {
+					return true
+				}
+			}
+		}
+		return false
+	})
+	s.Until("the composer gone", func() bool { return s.FindRole(render.RoleButton, send) == nil })
+
+	s.Run("thread.new", registry.Args{"file": file, "line": 3})
+	s.Until("a new composer", func() bool { return s.FindRole(render.RoleButton, cancel) != nil })
+	s.ClickNode(cancel)
+	s.Until("the composer dropped", func() bool { return s.FindRole(render.RoleButton, cancel) == nil })
 }

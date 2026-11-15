@@ -513,13 +513,9 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 					n.toAuthor = to == 0
 				}
 			}
-			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
-			if n.toAuthor && widget.Button(c, "suggest", "Suggest a change", widget.ButtonOpts{Ghost: true, Key: "⌘G", Help: "agent/reviews#suggest"}) {
-				kit.NotifyError(x.h, "requests", x.h.Run(context.Background(), "thread.suggest", nil), true)
-			}
-			c.Text("keys", "⏎ sends · ⇧⏎ new line · esc drops it", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
-		c.Box("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, B: 10}}, func(c *ui.Ctx) {
+		var r widget.InputResult
+		c.Box("in", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12}}, func(c *ui.Ctx) {
 			id := c.Next("input")
 			if n.focus {
 				c.RequestFocus(id)
@@ -529,35 +525,60 @@ func (x *Requests) inlineComposer(c *ui.Ctx, st *requestsState, n *inlineNew, li
 			if se, ok := x.front(); ok && !n.toAuthor {
 				files = pastedFiles(x.h, se.ID)
 			}
-			r := widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
+			r = widget.Prose(c, "input", &n.draft, widget.ProseOpts{Label: label, Placeholder: hint,
 				Lines: commentLines, EnterSubmits: true, Help: "agent/requests#inline", Files: files, KeyMode: ThreadComposerKeyMode})
-			switch {
-			case r.Submitted && strings.TrimSpace(n.draft) != "":
-				a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
-				if n.end > n.line {
-					a["end_line"] = line + 1 + n.end - n.line
-				}
-				if n.col > 0 {
-					a["col"] = n.col
-				}
-				if n.endCol > 0 {
-					a["end_col"] = n.endCol
-				}
-				if n.toAuthor {
-					a["outgoing"] = true
-				}
-				if err := x.h.Run(context.Background(), "request.comment", a); err != nil {
-					kit.NotifyError(x.h, "requests", err, true)
-					return
-				}
-				n.release()
-				st.inline = nil
-			case r.Cancelled:
-				n.release()
-				st.inline = nil
-			}
 		})
+		send, cancel := x.composerButtons(c, n)
+		switch {
+		case (r.Submitted || send) && strings.TrimSpace(n.draft) != "":
+			if err := x.h.Run(context.Background(), "request.comment", n.commentArgs(line)); err != nil {
+				kit.NotifyError(x.h, "requests", err, true)
+				return
+			}
+			n.release()
+			st.inline = nil
+		case r.Cancelled || cancel:
+			n.release()
+			st.inline = nil
+		}
 	})
+}
+
+// composerButtons is the row under a new thread's field, laid out as GitHub's: a suggestion for the author at the
+// left, Cancel and the send button at the right. It says which of the two was pressed.
+func (x *Requests) composerButtons(c *ui.Ctx, n *inlineNew) (send, cancel bool) {
+	c.Row("buttons", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 12, R: 12, T: 8, B: 10}, Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
+		if n.toAuthor && widget.Button(c, "suggest", "Suggest a change", widget.ButtonOpts{Ghost: true, Key: "⌘G", Help: "agent/reviews#suggest"}) {
+			kit.NotifyError(x.h, "requests", x.h.Run(context.Background(), "thread.suggest", nil), true)
+		}
+		c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
+		cancel = widget.Button(c, "cancel", "Cancel", widget.ButtonOpts{Ghost: true, Key: "esc"})
+		verb := "Ask"
+		if n.toAuthor {
+			verb = "Comment"
+		}
+		send = widget.Button(c, "send", verb, widget.ButtonOpts{Primary: true, Key: "⏎",
+			Disabled: strings.TrimSpace(n.draft) == "", Why: "Write something first"})
+	})
+	return send, cancel
+}
+
+// commentArgs is request.comment's arguments for the thread being opened on line (0-based).
+func (n *inlineNew) commentArgs(line int) registry.Args {
+	a := registry.Args{"body": strings.TrimSpace(n.draft), "file": n.path, "line": line + 1, "text": strings.TrimRight(n.text, "\r\n")}
+	if n.end > n.line {
+		a["end_line"] = line + 1 + n.end - n.line
+	}
+	if n.col > 0 {
+		a["col"] = n.col
+	}
+	if n.endCol > 0 {
+		a["end_col"] = n.endCol
+	}
+	if n.toAuthor {
+		a["outgoing"] = true
+	}
+	return a
 }
 
 // suggest adds a suggestion block holding the commented lines, as they read now, to the comment being written, and
