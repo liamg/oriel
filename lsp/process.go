@@ -28,15 +28,3 @@ func Exec(ctx context.Context, spec ServerSpec, root string, stderr io.Writer) (
 	cmd.Dir = root
 	return jsonrpc.StartStdio(cmd, stderr)
 }
-
-// Installed reports whether the spec can run: it connects some other way, or its command is on PATH.
-func Installed(spec ServerSpec) bool {
-	if spec.Connect != nil {
-		return true
-	}
-	if len(spec.Cmd) == 0 {
-		return false
-	}
-	_, err := exec.LookPath(spec.Cmd[0])
-	return err == nil
-}

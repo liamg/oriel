@@ -296,7 +296,7 @@ function oriel.language.add(spec) end
 ---@class oriel.lsp
 oriel.lsp = {}
 
---- Register a language server: { name, languages = { \
+--- Register a language server: { name, languages = { 'go' }, cmd = { 'gopls' }, roots = { 'go.mod' }, settings = {…}, init = {…}, order, install = { tool = 'npm' or 'go', packages = {…} } }. One with a built-in's name replaces it; order picks among a language's servers, lowest first. cmd is looked for in the project's node_modules/.bin, then on PATH, then where Oriel installed it; install lets Oriel offer to install it when it's found nowhere, which needs exec for the tool too.
 ---@param spec table
 function oriel.lsp.server(spec) end
 
@@ -425,7 +425,7 @@ oriel.ship = {}
 ---@param spec table
 function oriel.ship.action(spec) end
 
---- Add a \
+--- Add a 'before this ships' gate to the Ship page and the Raise PR tab: { name, title, order (50 by default), check = fn(session) }. check returns a state (pass, warn, fail, pending, optional or skipped; nil leaves the gate out) or { state, note }, the note dim text at its right; a check that throws fails, with the error as its note. It runs on the app's loop as the page is drawn, so keep it quick. A gate informs; a veto hook on ShipCommit or ShipRaise is what stops one.
 ---@param spec table
 function oriel.ship.gate(spec) end
 

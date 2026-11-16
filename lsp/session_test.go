@@ -162,8 +162,8 @@ func session(t *testing.T, fx fixture, launch lsp.Launcher, root string) *result
 	var mu sync.Mutex
 	diags := make(chan lsp.DiagnosticSet, 100)
 	m := lsp.NewManager(lsp.ManagerOpts{
-		Servers:   func() []lsp.ServerSpec { return []lsp.ServerSpec{fx.spec(t)} },
-		Installed: func(lsp.ServerSpec) bool { return true },
+		Servers: func() []lsp.ServerSpec { return []lsp.ServerSpec{fx.spec(t)} },
+		Find:    func(_ lsp.ServerSpec, _ string) (string, bool) { return "", true },
 		Client: lsp.Options{
 			Launch:        launch,
 			OnDiagnostics: func(s lsp.DiagnosticSet) { diags <- s },

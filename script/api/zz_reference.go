@@ -76,7 +76,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.language.add(spec)", Doc: "Add a language: { name, extensions, filenames, shebangs, grammar = 'path/to/grammar.wasm', queries = { highlights = '…' } or a directory of .scm files }.", Cap: "ui"},
 	},
 	"lsp": {
-		{Call: "oriel.lsp.server(spec)", Doc: "Register a language server: { name, languages = { \\", Cap: "exec"},
+		{Call: "oriel.lsp.server(spec)", Doc: "Register a language server: { name, languages = { 'go' }, cmd = { 'gopls' }, roots = { 'go.mod' }, settings = {…}, init = {…}, order, install = { tool = 'npm' or 'go', packages = {…} } }. One with a built-in's name replaces it; order picks among a language's servers, lowest first. cmd is looked for in the project's node_modules/.bin, then on PATH, then where Oriel installed it; install lets Oriel offer to install it when it's found nowhere, which needs exec for the tool too.", Cap: "exec"},
 	},
 	"menu": {
 		{Call: "oriel.menu.add(spec)", Doc: "Add a right-click menu entry: { name (the label, where it's called from, if omitted), label, run = fn(at) or a command id, args (the command's), when = { view, file = '*.go', selection, help, subject = 'session:' }, group, order (50 by default), key }. at has view, instance, file, selection, help and subject (what the clicked thing stands for: 'session:<id>'). An entry that runs agent.fix gets an 'Ask the agent to explain' twin beside it, with the same args.", Cap: "ui"},
@@ -115,7 +115,7 @@ var Reference = map[string][]RefFunc{
 	},
 	"ship": {
 		{Call: "oriel.ship.action(spec)", Doc: "Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).", Cap: "ui"},
-		{Call: "oriel.ship.gate(spec)", Doc: "Add a \\", Cap: "ui"},
+		{Call: "oriel.ship.gate(spec)", Doc: "Add a 'before this ships' gate to the Ship page and the Raise PR tab: { name, title, order (50 by default), check = fn(session) }. check returns a state (pass, warn, fail, pending, optional or skipped; nil leaves the gate out) or { state, note }, the note dim text at its right; a check that throws fails, with the error as its note. It runs on the app's loop as the page is drawn, so keep it quick. A gate informs; a veto hook on ShipCommit or ShipRaise is what stops one.", Cap: "ui"},
 	},
 	"start": {
 		{Call: "oriel.start.add(spec)", Doc: "Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note, shown, unlisted }. It's dimmed while the command isn't available, and listed only while shown = fn() returns true, when there's a shown. link = true makes it a small link under the actions. note = fn() is its figure, beside its title. unlisted = true draws nothing: only its command's keys work on the start view, which keeps other keys out.", Cap: "ui"},

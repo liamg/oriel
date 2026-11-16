@@ -47,6 +47,12 @@ A file whose language has a server installed (gopls, typescript-language-server,
 others) gets one, started for its project root. Its state is in the status line, its errors and warnings are marked
 in the file and listed in Problems, and its stderr goes to the log.
 
+A server is looked for in the project's `node_modules/.bin` (or a workspace's above it) first, then on your `PATH`,
+then where Oriel installed it. When a file's language has servers but none is found, a notice says so, once: with
+**Install** when Oriel can install one here (npm for typescript-language-server, vtsls, pyright, and the YAML, JSON
+and Bash servers; go for gopls), into its own data directory, `lsp/` beside the installed plugins; otherwise with
+the command to install one yourself. `lsp.missing_notice = false` turns the notice off.
+
 ## Completion {#completion}
 
 As you type a word (or after `.`), the server's completions show under the cursor, the letters you typed lit, with the

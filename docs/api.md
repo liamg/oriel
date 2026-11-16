@@ -95,7 +95,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 
 ## oriel.lsp
 
-- `oriel.lsp.server(spec)` (`exec`): Register a language server: { name, languages = { \
+- `oriel.lsp.server(spec)` (`exec`): Register a language server: { name, languages = { 'go' }, cmd = { 'gopls' }, roots = { 'go.mod' }, settings = {…}, init = {…}, order, install = { tool = 'npm' or 'go', packages = {…} } }. One with a built-in's name replaces it; order picks among a language's servers, lowest first. cmd is looked for in the project's node_modules/.bin, then on PATH, then where Oriel installed it; install lets Oriel offer to install it when it's found nowhere, which needs exec for the tool too.
 
 ## oriel.menu
 
@@ -144,7 +144,7 @@ What agents are offered and asked, and the agents themselves: a plugin brings an
 ## oriel.ship
 
 - `oriel.ship.action(spec)` (`ui`): Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).
-- `oriel.ship.gate(spec)` (`ui`): Add a \
+- `oriel.ship.gate(spec)` (`ui`): Add a 'before this ships' gate to the Ship page and the Raise PR tab: { name, title, order (50 by default), check = fn(session) }. check returns a state (pass, warn, fail, pending, optional or skipped; nil leaves the gate out) or { state, note }, the note dim text at its right; a check that throws fails, with the error as its note. It runs on the app's loop as the page is drawn, so keep it quick. A gate informs; a veto hook on ShipCommit or ShipRaise is what stops one.
 
 ## oriel.start
 

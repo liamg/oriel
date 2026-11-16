@@ -23,6 +23,8 @@ type ServerSpec struct {
 	// Connect, when set, reaches the server some other way than running Cmd (in process, over a socket), in place
 	// of the client's launcher.
 	Connect Launcher
+	// Install is how Oriel can install the server itself when it isn't found; nil for one it can't.
+	Install *Install
 }
 
 // Serves reports whether the spec is for language.
@@ -75,11 +77,14 @@ func Builtins() []ServerSpec {
 	return []ServerSpec{
 		{Name: "gopls", Language: []string{"go", "gomod", "gowork", "gotmpl"}, Cmd: []string{"gopls"},
 			Roots:    []string{"go.work", "go.mod", ".git"},
-			Settings: raw(`{"gopls":{"semanticTokens":true,"hints":{"parameterNames":true,"assignVariableTypes":true,"compositeLiteralFields":true}}}`), Source: src},
+			Settings: raw(`{"gopls":{"semanticTokens":true,"hints":{"parameterNames":true,"assignVariableTypes":true,"compositeLiteralFields":true}}}`), Source: src,
+			Install: &Install{Tool: ToolGo, Packages: []string{"golang.org/x/tools/gopls@latest"}}},
 		{Name: "typescript-language-server", Language: tsLanguages, Cmd: []string{"typescript-language-server", "--stdio"},
-			Roots: tsRoots, Settings: raw(tsSettings), Source: src},
-		{Name: "vtsls", Language: tsLanguages, Cmd: []string{"vtsls", "--stdio"}, Roots: tsRoots, Settings: raw(tsSettings), Order: 1, Source: src},
-		{Name: "pyright", Language: []string{"python"}, Cmd: []string{"pyright-langserver", "--stdio"}, Roots: pyRoots, Source: src},
+			Roots: tsRoots, Settings: raw(tsSettings), Source: src, Install: npm("typescript-language-server", "typescript")},
+		{Name: "vtsls", Language: tsLanguages, Cmd: []string{"vtsls", "--stdio"}, Roots: tsRoots, Settings: raw(tsSettings), Order: 1, Source: src,
+			Install: npm("@vtsls/language-server", "typescript")},
+		{Name: "pyright", Language: []string{"python"}, Cmd: []string{"pyright-langserver", "--stdio"}, Roots: pyRoots, Source: src,
+			Install: npm("pyright")},
 		{Name: "basedpyright", Language: []string{"python"}, Cmd: []string{"basedpyright-langserver", "--stdio"}, Roots: pyRoots, Order: 1, Source: src},
 		{Name: "rust-analyzer", Language: []string{"rust"}, Cmd: []string{"rust-analyzer"},
 			Roots: []string{"Cargo.toml", "rust-project.json", ".git"}, Source: src},
@@ -88,11 +93,11 @@ func Builtins() []ServerSpec {
 		{Name: "lua-language-server", Language: []string{"lua"}, Cmd: []string{"lua-language-server"},
 			Roots: []string{".luarc.json", ".luarc.jsonc", ".stylua.toml", "stylua.toml", ".git"}, Source: src},
 		{Name: "yaml-language-server", Language: []string{"yaml"}, Cmd: []string{"yaml-language-server", "--stdio"},
-			Roots: []string{".git"}, Source: src},
+			Roots: []string{".git"}, Source: src, Install: npm("yaml-language-server")},
 		{Name: "vscode-json-language-server", Language: []string{"json", "jsonc"}, Cmd: []string{"vscode-json-language-server", "--stdio"},
-			Roots: []string{".git"}, Init: raw(`{"provideFormatter":true}`), Source: src},
+			Roots: []string{".git"}, Init: raw(`{"provideFormatter":true}`), Source: src, Install: npm("vscode-langservers-extracted")},
 		{Name: "bash-language-server", Language: []string{"bash", "sh"}, Cmd: []string{"bash-language-server", "start"},
-			Roots: []string{".git"}, Source: src},
+			Roots: []string{".git"}, Source: src, Install: npm("bash-language-server")},
 		{Name: "terraform-ls", Language: []string{"terraform", "hcl"}, Cmd: []string{"terraform-ls", "serve"},
 			Roots: []string{".terraform", ".git"}, Source: src},
 	}

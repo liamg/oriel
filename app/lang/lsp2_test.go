@@ -227,6 +227,28 @@ func TestLSPServerFromLua(t *testing.T) {
 	t.Error("no gopls")
 }
 
+// A Lua server can say how Oriel installs it when it's found nowhere: with npm or go, and its packages.
+func TestLSPServerFromLuaSaysHowToInstallIt(t *testing.T) {
+	s := apptest.New(t, apptest.Options{WorkDir: t.TempDir()})
+	s.Lua(`L.lsp.server{ name = "eslint-ls", languages = { "typescript" }, cmd = { "vscode-eslint-language-server", "--stdio" },
+  install = { tool = "npm", packages = { "vscode-langservers-extracted" } } }`)
+	i := slices.IndexFunc(reglang.LSPServers(s.Registry()), func(sv reglang.LSPServer) bool { return sv.Name == "eslint-ls" })
+	if i < 0 {
+		t.Fatal("not registered")
+	}
+	if in := reglang.LSPServers(s.Registry())[i].Install; in == nil || in.Tool != "npm" || !slices.Equal(in.Packages, []string{"vscode-langservers-extracted"}) {
+		t.Errorf("install = %+v", in)
+	}
+	for src, want := range map[string]string{
+		`L.lsp.server{ name = "a", languages = { "x" }, cmd = { "a" }, install = { tool = "pip", packages = { "a" } } }`: "npm or go",
+		`L.lsp.server{ name = "b", languages = { "x" }, cmd = { "b" }, install = { tool = "npm" } }`:                     "needs its packages",
+	} {
+		if err := s.LuaErr(src); !strings.Contains(err, want) {
+			t.Errorf("%s: %q", src, err)
+		}
+	}
+}
+
 // gd typed while the file's server is still starting waits for it, saying so, rather than falling back to vim's gd.
 func TestLSPDefinitionWaitsForTheServer(t *testing.T) {
 	s, root := lspScene(t, "go", "gopls", "main.go")

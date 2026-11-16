@@ -176,6 +176,7 @@ Every option Oriel registers. A test checks this table against the registry.
 | `bundled.disabled` | `[]`: the plugins bundled with Oriel that are turned off, by id | app | |
 | `editor.input` | `vim`: the input engine a buffer is edited with | app | |
 | `lsp.start` | `project`: a project's servers start when it opens; `file`: when one of their files does | app | |
+| `lsp.missing_notice` | true: say when a file's language has servers but none is installed, offering to install one | app | |
 | `keymap.leader` | Space | app | |
 | `keymap.timeout` | true | app | `timeout`, `to` |
 | `keymap.timeoutlen` | 1s | app | `timeoutlen`, `tm` |

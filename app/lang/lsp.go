@@ -46,9 +46,12 @@ type LSP struct {
 	Version string                           // Oriel's, as servers are told it
 	Logger  func(source string) *slog.Logger // a server's stderr goes to the log as source
 	Servers func(lsp.ServerSpec) bool        // which servers may start, of those installed; every one if nil
-	h       plugin.Host
-	m       *lsp.Manager
-	work    work.Work
+	// InstallDir is where Oriel installs a server it can't find (lsp.server.install), and looks for it; none if "".
+	InstallDir string
+	installs   serverInstalls
+	h          plugin.Host
+	m          *lsp.Manager
+	work       work.Work
 
 	mu       sync.Mutex
 	docs     map[string]*lspDoc // by path
@@ -100,12 +103,9 @@ func (x *LSP) Activate(_ context.Context, h plugin.Host) error {
 		s.Source = "builtin:lsp"
 		x.Add(h.Contribute(reglang.LSPServer(s)))
 	}
-	installed := lsp.Installed
-	if allow := x.Servers; allow != nil {
-		installed = func(s lsp.ServerSpec) bool { return allow(s) && lsp.Installed(s) }
-	}
+	x.installCommands(h)
 	x.m = lsp.NewManager(lsp.ManagerOpts{
-		Installed: installed,
+		Find: x.find,
 		Servers: func() []lsp.ServerSpec {
 			var out []lsp.ServerSpec
 			for _, s := range reglang.LSPServers(h) {
@@ -239,7 +239,7 @@ func (x *LSP) warm() {
 				continue
 			}
 			for _, lang := range s.Language {
-				spec, ok := x.m.SpecFor(lang)
+				spec, ok := x.m.SpecFor(lang, filepath.Join(root, "_"))
 				if !ok || seen[spec.Name+"\x00"+root] {
 					continue
 				}
@@ -314,7 +314,8 @@ func (x *LSP) doc(path string, buf *text.Buffer) *lspDoc {
 		x.mu.Unlock()
 		return nil
 	}
-	if _, ok := x.m.SpecFor(lang.Name); !ok {
+	if _, ok := x.m.SpecFor(lang.Name, path); !ok {
+		x.missing(lang.Name)
 		x.mu.Lock()
 		x.docs[path] = &lspDoc{path: path, buf: buf, failed: true}
 		x.mu.Unlock()

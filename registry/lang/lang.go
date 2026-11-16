@@ -26,6 +26,7 @@ type LSPServer struct {
 	Order    int // among the servers for a language, lower is tried first
 	Source   string
 	Connect  lsp.Launcher // reaches the server some other way than running Cmd: in process, over a socket
+	Install  *lsp.Install // how Oriel can install it when it isn't found; nil for one it can't
 }
 
 func (LSPServer) ContributionKind() string   { return "lsp.server" }
