@@ -77,8 +77,7 @@ func TestExplorerScopes(t *testing.T) {
 func TestExplorerMarkers(t *testing.T) {
 	s, _ := explorerScene(t)
 	s.Run("explorer.scope", registry.Args{"scope": "all"})
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 	after := func(name string) string {
 		lines := strings.Split(s.Text(), "\n")
 		for i, l := range lines {
@@ -110,8 +109,7 @@ func TestExplorerMarkers(t *testing.T) {
 func TestExplorerChangedOnly(t *testing.T) {
 	s, _ := explorerScene(t)
 	s.Run("explorer.scope", registry.Args{"scope": "all"})
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 	if !strings.Contains(s.Text(), "go.mod") {
 		t.Fatal("All doesn't list go.mod")
 	}
@@ -134,8 +132,7 @@ func TestExplorerHiddenFiles(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Quiet()
 	s.Run("explorer.scope", registry.Args{"scope": "all"})
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 	all := s.Text()
 	if strings.Contains(all, ".gitignore") {
 		t.Errorf("All lists the unchanged .gitignore before Hidden files is on:\n%s", all)
@@ -170,8 +167,7 @@ func selectRow(t *testing.T, s *apptest.Scene, text string) {
 func TestExplorerStagesFiles(t *testing.T) {
 	s, r := explorerScene(t)
 	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 	s.Click(s.TextPoint("STAGED"), 0)
 	s.Click(s.TextPoint("STAGED"), 0) // closed by the first click, open again: the tree has focus
 	if m := s.KeyModes()[0]; m != gitui.ExplorerKeyMode {
@@ -269,8 +265,7 @@ func TestExplorerStagesHunks(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Quiet()
 	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 	s.Click(s.TextPoint("UNSTAGED"), 0)
 	s.Click(s.TextPoint("UNSTAGED"), 0)
 	selectRow(t, s, "f.txt")
@@ -307,8 +302,7 @@ func TestExplorerHunksFollowTheSelection(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.Quiet()
 	s.Run("explorer.scope", registry.Args{"scope": "uncommitted"})
-	s.Frame()
-	s.Frame()
+	s.Quiet()
 	s.Click(s.TextPoint("UNSTAGED"), 0)
 	s.Click(s.TextPoint("UNSTAGED"), 0)
 	shown := func(name string) []gitx.Hunk {
