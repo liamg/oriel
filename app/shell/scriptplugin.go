@@ -114,7 +114,7 @@ func (p *scriptPlugin) Activate(_ context.Context, h plugin.Host) error {
 }
 
 func (p *scriptPlugin) failed(h plugin.Host, err error) {
-	h.Notify(core.Notice{ID: "plugin.load", Severity: core.SevError, Title: "Plugin " + p.m.ID, Text: err.Error()})
+	kit.NotifyFailure(h, core.Notice{ID: "plugin.load", Title: "Plugin " + p.m.ID}, err)
 }
 
 func (p *scriptPlugin) Deactivate(context.Context) error {

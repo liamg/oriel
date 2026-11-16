@@ -35,3 +35,24 @@ func TestNotifyError(t *testing.T) {
 		t.Error("no error was posted")
 	}
 }
+
+// A failure's notice keeps what it says of itself (its title and actions) and takes err's text as an error.
+func TestNotifyFailure(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	h := s.HostAs("builtin:test")
+	kit.NotifyFailure(h, core.Notice{ID: "test.ship", Title: "api", Severity: core.SevInfo,
+		Actions: []core.Action{{Title: "Retry", Command: "ship.push"}}}, errors.New("push refused"))
+	kit.NotifyFailure(h, core.Notice{ID: "test.stopped"}, kit.ErrStopped)
+	var n core.Notification
+	for _, x := range s.Store().State().Notifications {
+		if x.ID == "test.ship" {
+			n = x
+		}
+		if x.ID == "test.stopped" {
+			t.Error("a hook's stop was posted")
+		}
+	}
+	if n.Severity != core.SevError || n.Text != "push refused" || n.Title != "api" || len(n.Actions) != 1 {
+		t.Errorf("the failure's notice: %+v", n)
+	}
+}

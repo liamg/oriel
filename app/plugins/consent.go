@@ -167,7 +167,7 @@ func (x *Consent) consentCommand(a registry.Args) error {
 		}
 		plugin.Go(x.h, "what follows a plugin's install", func() {
 			if err := x.h.Run(context.Background(), then, registry.Args{"dir": dir}); err != nil {
-				x.h.Notify(core.Notice{ID: "plugins.install", Severity: core.SevError, Title: "Install " + m.ID, Text: err.Error()})
+				kit.NotifyFailure(x.h, core.Notice{ID: "plugins.install", Title: "Install " + m.ID}, err)
 			}
 		})
 	})

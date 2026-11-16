@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 
@@ -84,7 +85,7 @@ func commandNotice(r registry.Registry, id string, err error, dir string, now ti
 			src = c.Source
 		}
 	}
-	n := core.Notice{ID: "command.failed." + id, Severity: core.SevError, Source: src, Text: err.Error(), Time: now, AutoClear: true}
+	n := kit.ErrorNotice(core.Notice{ID: "command.failed." + id, Source: src, Time: now, AutoClear: true}, err)
 	return script.WithTrace(n, err, dir, "Open at line")
 }
 

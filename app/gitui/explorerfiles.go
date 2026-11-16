@@ -301,8 +301,8 @@ func (e *Explorer) remove(path string, confirm, permanent bool) error {
 			return err
 		}
 	} else if err := trash(path); err != nil {
-		e.h.Notify(core.Notice{ID: "explorer.delete", Severity: core.SevError, Source: "explorer", Text: err.Error(), // stays: it offers what to do
-			Actions: []core.Action{{Title: "Delete for good…", Command: "explorer.delete", Args: map[string]any{"path": path, "permanent": true}}}})
+		kit.NotifyFailure(e.h, core.Notice{ID: "explorer.delete", Source: "explorer", // stays: it offers what to do
+			Actions: []core.Action{{Title: "Delete for good…", Command: "explorer.delete", Args: map[string]any{"path": path, "permanent": true}}}}, err)
 		return nil
 	}
 	e.stillOpen(path, "was deleted", nil)

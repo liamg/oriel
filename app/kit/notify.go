@@ -24,9 +24,21 @@ func RunOrNotify(h plugin.Host, source, cmd string, a registry.Args) error {
 // where the step was asked for), is none. autoClear is for a failure in answer to what the user just did, which they
 // saw: its toast clears itself. Work that fails later, maybe while they look elsewhere, stays until it's dismissed.
 func NotifyError(h plugin.Host, id string, err error, autoClear bool) {
+	NotifyFailure(h, core.Notice{ID: id, AutoClear: autoClear}, err)
+}
+
+// NotifyFailure is NotifyError for a notice that says more of itself: n gives its id, title, source, session and
+// whether it clears itself (AutoClear, as NotifyError's autoClear); its severity and text are err's.
+func NotifyFailure(h plugin.Host, n core.Notice, err error) {
 	if err == nil || errors.Is(err, ErrStopped) {
 		return
 	}
-	h.Log().Warn(id, "err", err)
-	h.Notify(core.Notice{ID: id, Severity: core.SevError, Text: err.Error(), AutoClear: autoClear})
+	h.Log().Warn(n.ID, "err", err)
+	h.Notify(ErrorNotice(n, err))
+}
+
+// ErrorNotice is n saying err: an error, with err's text.
+func ErrorNotice(n core.Notice, err error) core.Notice {
+	n.Severity, n.Text = core.SevError, err.Error()
+	return n
 }
