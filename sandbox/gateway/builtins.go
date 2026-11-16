@@ -57,6 +57,12 @@ func Builtins(h Host) map[string]Builtin {
 		full := Prefix + name
 		b[full] = Builtin{Tool: mcp.Tool{Name: full, Description: desc, InputSchema: sch}, AlwaysAsk: alwaysAsk, Run: run}
 	}
+	// looks marks a builtin as only looking: it's allowed unless a rule says otherwise.
+	looks := func(name string) {
+		t, ro := b[Prefix+name], true
+		t.Tool.Annotations = &mcp.ToolAnnotations{ReadOnlyHint: &ro}
+		b[Prefix+name] = t
+	}
 	sync := func(run func(context.Context, string) error, done string) func(context.Context, json.RawMessage) (mcp.CallResult, error) {
 		return func(ctx context.Context, args json.RawMessage) (mcp.CallResult, error) {
 			var in projectArg
@@ -192,10 +198,13 @@ func Builtins(h Host) map[string]Builtin {
 		})
 	ghBuiltins(h, func(name, desc string, sch json.RawMessage, readOnly bool, run func(context.Context, json.RawMessage) (mcp.CallResult, error)) {
 		add(name, desc, sch, false, run)
-		t := b[Prefix+name]
-		t.Tool.Annotations = &mcp.ToolAnnotations{ReadOnlyHint: &readOnly}
-		b[Prefix+name] = t
+		if readOnly {
+			looks(name)
+		}
 	})
+	for _, name := range []string{"fetch", "ci", "repos"} {
+		looks(name)
+	}
 	b[Prefix+"request_host"] = Builtin{
 		Tool: mcp.Tool{Name: Prefix + "request_host", InputSchema: schema(map[string]any{"why": strProp}, "why"),
 			Description: "Ask the user to run this session outside the sandbox, with their full access. Only for a task that cannot be done in the sandbox at all; say exactly why. A refusal holds for the rest of the session."},
