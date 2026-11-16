@@ -5,8 +5,10 @@ package pricing
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -60,7 +62,7 @@ func New(env hostcore.Env, deps Deps) *Pricing {
 	p := &Pricing{env: env, deps: deps, live: price.NewLive(price.Default())}
 	c, b, err := p.readCache()
 	switch {
-	case os.IsNotExist(err):
+	case errors.Is(err, fs.ErrNotExist):
 	case err != nil:
 		env.Log.Warn("prices: the cached list", "err", err)
 	case b.Generated().After(p.live.Book().Generated()):

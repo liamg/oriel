@@ -5,7 +5,9 @@ package leakcheck
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,7 +59,7 @@ func Scan(root string, files, terms []string) ([]Hit, error) {
 	for _, f := range files {
 		b, err := os.ReadFile(filepath.Join(root, f))
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				continue
 			}
 			return nil, err

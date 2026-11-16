@@ -87,7 +87,7 @@ func (x *About) brand(c *ui.Ctx) {
 			c.Text("word", "ORIEL", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Display, Weight: typeset.Bold, Size: 12, Tracking: .2},
 				Color: th.C(kit.TWordmark)})
 		}).Clicked {
-			x.h.Run(context.Background(), "about.toggle", nil)
+			kit.RunOrNotify(x.h, "settings", "about.toggle", nil)
 		}
 		widget.Popover(c, "card", id, &x.open, widget.PopoverOpts{Label: "About Oriel", Width: aboutWidth, Help: aboutHelp}, x.card)
 	})
@@ -147,7 +147,7 @@ func (x *About) card(c *ui.Ctx) {
 		}
 		if widget.Button(c, "help", "Help", widget.ButtonOpts{Ghost: true, Help: aboutHelp}) {
 			x.open = false
-			x.h.Run(context.Background(), "help.open", registry.Args{"id": "shell/help"})
+			kit.RunOrNotify(x.h, "settings", "help.open", registry.Args{"id": "shell/help"})
 		}
 		if widget.Button(c, "website", "Website", widget.ButtonOpts{Ghost: true, Help: aboutHelp}) {
 			run("about.website")

@@ -1,7 +1,6 @@
 package ship
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -141,7 +140,7 @@ func (x *CodeSites) saveSetup() error {
 	x.h.Notify(core.Notice{ID: "code.setup", Severity: core.SevInfo, Title: hs.Label(), Text: a.hostname + " is set up"})
 	for _, c := range []string{"ship.refresh", "reviews.refresh"} {
 		if x.h.Available(c, nil) {
-			x.h.Run(context.Background(), c, nil)
+			kit.RunOrNotify(x.h, "ship", c, nil)
 		}
 	}
 	return nil

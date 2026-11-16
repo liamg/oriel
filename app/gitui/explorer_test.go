@@ -1,7 +1,9 @@
 package gitui_test
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -216,7 +218,7 @@ func TestExplorerStagesFiles(t *testing.T) {
 	}
 	s.Run(ask.Actions[0].Command, registry.Args(ask.Actions[0].Args))
 	s.Quiet()
-	if _, err := os.Stat(filepath.Join(r.Dir, "scratch.sql")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(r.Dir, "scratch.sql")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Discard left scratch.sql: %v", err)
 	}
 }

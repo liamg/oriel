@@ -188,11 +188,14 @@ type Info struct {
 	Server string
 }
 
+// ErrNotInstalled is an engine whose CLI or VM isn't on this machine, as opposed to one that's installed and down.
+var ErrNotInstalled = errors.New("is not installed")
+
 // Ping reports whether the CLI is installed and the daemon answers.
 func Ping(ctx context.Context) (Info, error) {
 	e := EngineOf(ctx)
 	if !e.Installed() {
-		return Info{}, fmt.Errorf("%s is not installed", e.Bin)
+		return Info{}, fmt.Errorf("%s %w", e.Bin, ErrNotInstalled)
 	}
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

@@ -388,9 +388,9 @@ func (l *layoutPlugin) moveMenu(c *ui.Ctx, h plugin.Host) {
 			l.menu = false
 			p := movePlacements[chosen]
 			if p.args == nil {
-				h.Run(context.Background(), "layout.zoom", nil)
+				kit.RunOrNotify(h, "shell", "layout.zoom", nil)
 			} else {
-				h.Run(context.Background(), "layout.move", p.args)
+				kit.RunOrNotify(h, "shell", "layout.move", p.args)
 			}
 		}
 	})

@@ -169,7 +169,8 @@ func (t *Tools) runRg(ctx context.Context, q Query, emit func([]Match)) error {
 	if ctx.Err() != nil || n >= q.Max {
 		return ctx.Err()
 	}
-	if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 1 {
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
 		return nil // no matches
 	}
 	if err != nil {

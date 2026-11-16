@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ func Health(ctx context.Context, cfg sandbox.Config, fix string, helper func() (
 	info, err := container.Ping(ctx)
 	if err != nil {
 		code := "engine-down"
-		if strings.Contains(err.Error(), "not installed") {
+		if errors.Is(err, container.ErrNotInstalled) {
 			code = "engine-missing"
 		}
 		return append(out, sandbox.Problem{Code: code, Message: err.Error(), Fix: fix, Blocking: true})

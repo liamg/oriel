@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -86,7 +88,7 @@ func TestRefreshSwapsAndCaches(t *testing.T) {
 	if err != nil || json.Unmarshal(data, &c) != nil || c.ETag == "" || string(c.Models) != newer {
 		t.Fatalf("prices.json = %s (%v)", data, err)
 	}
-	if _, err := os.Stat(filepath.Join(env.Home, "prices.json.tmp")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(env.Home, "prices.json.tmp")); !errors.Is(err, fs.ErrNotExist) {
 		t.Error("the cache's temporary file is left")
 	}
 

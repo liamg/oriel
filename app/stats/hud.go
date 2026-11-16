@@ -271,6 +271,6 @@ func (x *HUD) button(c *ui.Ctx) {
 		Tooltip: "Hold ⌥ for the HUD; click to pin it"}, func(c *ui.Ctx) {
 		c.Text("k", "⌥ HUD", ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.SemiBold, Tracking: .06}, Color: fg})
 	}).Clicked {
-		x.h.Run(context.Background(), "hud.toggle", nil)
+		kit.RunOrNotify(x.h, "stats", "hud.toggle", nil)
 	}
 }

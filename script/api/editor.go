@@ -36,15 +36,17 @@ func (e Editor) Action(spec script.Table, where string) error {
 		a.Order = int(o)
 	}
 	if fn, ok := spec["when"].(*script.Fn); ok {
-		a.When = func(path string) bool { return e.a.truthy(fn, path) }
+		a.When = func(path string) bool { return e.a.truthy(a.ContributionKind(), a.Name, fn, path) }
 	}
 	if fn, ok := spec["on"].(*script.Fn); ok {
-		a.On = func(w registry.EditorWindow) bool { return e.a.truthy(fn, windowTable(w)) }
+		a.On = func(w registry.EditorWindow) bool {
+			return e.a.truthy(a.ContributionKind(), a.Name, fn, windowTable(w))
+		}
 	}
 	if fn, ok := spec["note"].(*script.Fn); ok {
 		a.Note = func(w registry.EditorWindow) string {
-			out, err := e.a.VM.Call(fn, windowTable(w))
-			if err != nil || len(out) == 0 || out[0] == nil {
+			out, ok := e.a.contributed(a.ContributionKind(), a.Name, fn, windowTable(w))
+			if !ok || len(out) == 0 || out[0] == nil {
 				return ""
 			}
 			return fmt.Sprint(out[0])
@@ -54,10 +56,11 @@ func (e Editor) Action(spec script.Table, where string) error {
 	return nil
 }
 
-// truthy calls fn and reports whether it returned something other than nil or false.
-func (a *APIs) truthy(fn *script.Fn, args ...any) bool {
-	out, err := a.VM.Call(fn, args...)
-	if err != nil || len(out) == 0 {
+// truthy calls fn, a callback of kind's contribution id, and reports whether it returned something other than nil
+// or false; an error is false, and reported as contributed reports it.
+func (a *APIs) truthy(kind, id string, fn *script.Fn, args ...any) bool {
+	out, ok := a.contributed(kind, id, fn, args...)
+	if !ok || len(out) == 0 {
 		return false
 	}
 	b, isBool := out[0].(bool)
@@ -76,7 +79,7 @@ func (e Editor) Presenter(spec script.Table, where string) error {
 		p.Order = int(o)
 	}
 	if fn, ok := spec["when"].(*script.Fn); ok {
-		p.When = func(path string) bool { return e.a.truthy(fn, path) }
+		p.When = func(path string) bool { return e.a.truthy(p.ContributionKind(), p.Name, fn, path) }
 	}
 	id := "presenter." + p.Name
 	p.Build = func(ctx *uireg.PresentCtx) {
@@ -128,7 +131,7 @@ func (e Editor) Viewer(spec script.Table, where string) error {
 	if v.Name == "" || v.View == "" || !ok {
 		return fmt.Errorf("a file viewer needs a name, a view and a when function")
 	}
-	v.When = func(path string) bool { return e.a.truthy(when, path) }
+	v.When = func(path string) bool { return e.a.truthy(v.ContributionKind(), v.Name, when, path) }
 	if o, ok := spec["order"].(float64); ok {
 		v.Order = int(o)
 	}

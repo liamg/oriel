@@ -311,7 +311,8 @@ func build(c *ui.Ctx, v any, a *APIs) {
 					}
 					out, err := a.VM.Call(row, it)
 					if err != nil {
-						panic(err)
+						callbackError(c, row, err)
+						continue
 					}
 					if len(out) > 0 {
 						build(c, out[0], a)
@@ -364,18 +365,24 @@ func async(c *ui.Ctx, n script.Table, a *APIs) {
 	if retry, _ := n["retry"].(bool); retry {
 		o.Retry = func() { l.Reload(); a.Host.Redraw() }
 	}
+	var emptyErr error
 	if fn, ok := n["is_empty"].(*script.Fn); ok && l.State().Phase == widget.Ready {
 		out, err := a.VM.Call(fn, v)
+		emptyErr = err
 		o.IsEmpty = err == nil && len(out) > 0 && out[0] == true
 	}
 	widget.Async(c, cmp.Or(str(n, "id"), str(n, "label"), "async"), l.State(), o, func(c *ui.Ctx) {
+		if emptyErr != nil {
+			callbackError(c, n["is_empty"].(*script.Fn), emptyErr)
+		}
 		fn, ok := n["body"].(*script.Fn)
 		if !ok {
 			return
 		}
 		out, err := a.VM.Call(fn, v)
 		if err != nil {
-			panic(err)
+			callbackError(c, fn, err)
+			return
 		}
 		if len(out) > 0 {
 			build(c, out[0], a)
@@ -409,6 +416,12 @@ func dnd(c *ui.Ctx, n script.Table, a *APIs) bool {
 	}
 	c.Box(key, st, func(c *ui.Ctx) { build(c, inner, a) })
 	return true
+}
+
+// callbackError draws why fn, a callback that draws (a list's row, an async body), failed, in its place: it runs each
+// frame, so a notice would come again every frame. A view's own function does the same (View.Override).
+func callbackError(c *ui.Ctx, fn *script.Fn, err error) {
+	c.Text(nil, fn.Source+": "+err.Error(), ui.TextStyle{Color: c.Theme().C(theme.Error)})
 }
 
 // callback calls a node's function field with args, if it has one, and redraws: an error is a notice at its line.

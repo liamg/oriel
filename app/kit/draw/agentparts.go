@@ -1,9 +1,9 @@
 package draw
 
 import (
-	"context"
 	"fmt"
 
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -51,7 +51,7 @@ func EvidenceChip(c *ui.Ctx, h plugin.Host, key any, session core.SessionID, run
 		c.Text("l", label, widget.MonoFont(10.5, tone))
 		c.Text("r", "run "+run, widget.MonoFont(10, th.C(theme.FgFaint)))
 	}).Clicked {
-		_ = h.Run(context.Background(), "test.run.show", registry.Args{"id": run, "session": string(session)})
+		kit.RunOrNotify(h, "agent", "test.run.show", registry.Args{"id": run, "session": string(session)})
 	}
 }
 

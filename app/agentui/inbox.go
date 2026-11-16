@@ -508,7 +508,7 @@ func (x *Inbox) overlay(c *ui.Ctx) {
 			c.Row("more", ui.Style{W: ui.Flex(1), Main: ui.End, Cross: ui.Center, Gap: 8}, func(c *ui.Ctx) {
 				c.Text("t", fmt.Sprintf("+%d more waiting", n), widget.MonoFont(10, th.C(theme.FgFaint)))
 				if widget.Button(c, "open", "Open the inbox", widget.ButtonOpts{Ghost: true, Key: kit.BoundKey(x.h, "inbox.open", nil), Help: inboxHelp}) {
-					x.h.Run(context.Background(), "inbox.open", nil)
+					kit.RunOrNotify(x.h, "agentui", "inbox.open", nil)
 				}
 			})
 		}
@@ -593,7 +593,7 @@ func (x *Inbox) face(c *ui.Ctx, cd uireg.InboxCard, p uireg.CardPlace) {
 		return
 	}
 	if a.Command != "" {
-		x.h.Run(context.Background(), a.Command, a.Args)
+		kit.RunOrNotify(x.h, "agentui", a.Command, a.Args)
 	}
 }
 
@@ -832,6 +832,6 @@ func (x *Inbox) indicator(c *ui.Ctx) {
 			draw.CountPill(c, "n", n, th.C(tInboxCount))
 		}
 	}).Clicked {
-		x.h.Run(context.Background(), "inbox.open", nil)
+		kit.RunOrNotify(x.h, "agentui", "inbox.open", nil)
 	}
 }

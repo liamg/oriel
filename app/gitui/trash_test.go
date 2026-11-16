@@ -1,6 +1,8 @@
 package gitui
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -26,7 +28,7 @@ func TestTrash(t *testing.T) {
 		if err := trash(p); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := os.Stat(p); !os.IsNotExist(err) {
+		if _, err := os.Stat(p); !errors.Is(err, fs.ErrNotExist) {
 			t.Fatalf("%s is still there", p)
 		}
 	}

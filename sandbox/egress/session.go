@@ -4,7 +4,9 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"maps"
 	"net/http"
 	"os"
@@ -111,20 +113,38 @@ type dialGrant struct {
 	scope Scope
 }
 
-// Grants are the rules the user made for this session.
+// Grants are the rules the user made for this session; a file it can't read grants nothing.
 func (s *Session) Grants() []Rule {
-	var out []Rule
-	if b, err := os.ReadFile(s.GrantsPath); err == nil {
-		_ = json.Unmarshal(b, &out)
-	}
+	out, _ := s.readGrants()
 	return out
 }
 
-// UpdateGrants rewrites the session's grants with f, one writer at a time.
+// readGrants reads the grants: none yet is empty, and a file that doesn't parse is an error, so it's never saved over.
+func (s *Session) readGrants() ([]Rule, error) {
+	var out []Rule
+	b, err := os.ReadFile(s.GrantsPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(b, &out); err != nil {
+		return nil, fmt.Errorf("%s doesn't parse, so it's left as it is: fix or remove it: %w", s.GrantsPath, err)
+	}
+	return out, nil
+}
+
+// UpdateGrants rewrites the session's grants with f, one writer at a time. A file that doesn't parse is left alone,
+// with an error.
 func (s *Session) UpdateGrants(f func([]Rule) []Rule) error {
 	s.grantsMu.Lock()
 	defer s.grantsMu.Unlock()
-	b, err := json.MarshalIndent(f(s.Grants()), "", "  ")
+	rules, err := s.readGrants()
+	if err != nil {
+		return err
+	}
+	b, err := json.MarshalIndent(f(rules), "", "  ")
 	if err != nil {
 		return err
 	}

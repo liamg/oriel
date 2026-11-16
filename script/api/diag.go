@@ -17,7 +17,10 @@ type Diagnostics struct{ a *APIs }
 //oriel:api doc="Set owner's diagnostics for a file, replacing its last: a list of { line, col, end_col, severity (error, warning, info, hint), message }, 1-based. An empty list clears them; so does reloading the config."
 func (d Diagnostics) Set(owner, file string, list any) error {
 	file = expand(file)
-	items, _ := list.([]any)
+	items, ok := list.([]any)
+	if t, isTable := list.(script.Table); !ok && list != nil && (!isTable || len(t) > 0) {
+		return fmt.Errorf("diagnostics are a list of tables, not %T", list)
+	}
 	var ds []registry.Diagnostic
 	for _, it := range items {
 		t, ok := it.(script.Table)
@@ -25,6 +28,9 @@ func (d Diagnostics) Set(owner, file string, list any) error {
 			return fmt.Errorf("a diagnostic is a table, not %T", it)
 		}
 		line, _ := t["line"].(float64)
+		if line < 1 {
+			return fmt.Errorf("a diagnostic needs a line, 1 or more: %v", t)
+		}
 		col, _ := t["col"].(float64)
 		end, _ := t["end_col"].(float64)
 		ds = append(ds, registry.Diagnostic{Line: int(line) - 1, From: max(0, int(col)-1), To: max(0, int(end)-1),

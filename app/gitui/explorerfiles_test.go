@@ -1,6 +1,8 @@
 package gitui_test
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +47,7 @@ func TestExplorerRenameFromTheMenu(t *testing.T) {
 		_, err := os.Stat(renamed)
 		return err == nil
 	})
-	if _, err := os.Stat(old); !os.IsNotExist(err) {
+	if _, err := os.Stat(old); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("%s is still there", old)
 	}
 	s.Until("the tree on the new name", func() bool { s.Frame(); return strings.Contains(s.Text(), "money_units.go") })
@@ -64,7 +66,7 @@ func TestExplorerDeleteAsksThenTrashes(t *testing.T) {
 	s.ClickText("Move to trash")
 	s.Until("the file gone", func() bool {
 		_, err := os.Stat(p)
-		return os.IsNotExist(err)
+		return errors.Is(err, fs.ErrNotExist)
 	})
 }
 

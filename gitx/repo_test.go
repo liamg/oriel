@@ -2,6 +2,8 @@ package gitx
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -127,7 +129,7 @@ func TestWriteRemovesAStaleIndexLock(t *testing.T) {
 	if err := (Repo{Dir: r.Dir, gitRunning: func() bool { return false }}).Stage(context.Background(), "a.txt"); err != nil {
 		t.Fatalf("staging past a stale lock: %v", err)
 	}
-	if _, err := os.Stat(lock); !os.IsNotExist(err) {
+	if _, err := os.Stat(lock); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("the stale lock is still there: %v", err)
 	}
 }
@@ -173,7 +175,7 @@ func TestCancelledGitLetsGoOfTheIndex(t *testing.T) {
 	if _, err := (Repo{Dir: r.Dir}).Commit(ctx, "a", CommitOpts{}); err == nil {
 		t.Fatal("the commit finished before it was stopped")
 	}
-	if _, err := os.Stat(filepath.Join(r.Dir, ".git", "index.lock")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(r.Dir, ".git", "index.lock")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("the stopped git left its lock: %v", err)
 	}
 }

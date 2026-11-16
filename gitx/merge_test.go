@@ -3,6 +3,7 @@ package gitx_test
 import (
 	"context"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -133,7 +134,7 @@ func TestMergeIntoABranchNotCheckedOut(t *testing.T) {
 	if got := strings.TrimSpace(main.Git("rev-parse", "--abbrev-ref", "HEAD")); got != "elsewhere" {
 		t.Errorf("the checkout moved to %q", got)
 	}
-	if _, err := os.Stat(filepath.Join(main.Dir, "b.txt")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(main.Dir, "b.txt")); !errors.Is(err, fs.ErrNotExist) {
 		t.Error("the checkout on another branch got the merge's files")
 	}
 	if _, err := (gitx.Repo{Dir: feature.Dir}).MergeInto(ctx, "nope", "feature", nil); err == nil {
