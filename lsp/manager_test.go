@@ -182,8 +182,8 @@ func TestManager(t *testing.T) {
 	}
 	var stderrFor []string
 	m := NewManager(ManagerOpts{
-		Servers:   func() []ServerSpec { return specs },
-		Installed: func(s ServerSpec) bool { return s.Name != "missing" },
+		Servers: func() []ServerSpec { return specs },
+		Find:    func(s ServerSpec, _ string) (string, bool) { return "", s.Name != "missing" },
 		Stderr: func(s ServerSpec, root string) io.Writer {
 			stderrFor = append(stderrFor, s.Name+" "+root)
 			return io.Discard
@@ -283,22 +283,22 @@ func TestSpecForOrder(t *testing.T) {
 		Servers: func() []ServerSpec {
 			return []ServerSpec{{Name: "a", Language: []string{"x"}, Order: 1}, {Name: "b", Language: []string{"x"}}}
 		},
-		Installed: func(ServerSpec) bool { return true },
+		Find: func(_ ServerSpec, _ string) (string, bool) { return "", true },
 	})
-	if s, _ := m.SpecFor("x"); s.Name != "b" {
+	if s, _ := m.SpecFor("x", "/p/a.x"); s.Name != "b" {
 		t.Errorf("SpecFor = %s, want b, the lower order", s.Name)
 	}
 }
 
 func TestSpecForPrefersInstalled(t *testing.T) {
 	m := NewManager(ManagerOpts{
-		Servers:   func() []ServerSpec { return Builtins() },
-		Installed: func(s ServerSpec) bool { return s.Name == "vtsls" },
+		Servers: func() []ServerSpec { return Builtins() },
+		Find:    func(s ServerSpec, _ string) (string, bool) { return "", s.Name == "vtsls" },
 	})
-	if s, ok := m.SpecFor("tsx"); !ok || s.Name != "vtsls" {
+	if s, ok := m.SpecFor("tsx", "/p/a.tsx"); !ok || s.Name != "vtsls" {
 		t.Errorf("SpecFor(tsx) = %s, %v; want vtsls, the one installed", s.Name, ok)
 	}
-	if _, ok := m.SpecFor("python"); ok {
+	if _, ok := m.SpecFor("python", "/p/a.py"); ok {
 		t.Error("SpecFor(python) found a server none of which is installed")
 	}
 }
@@ -312,8 +312,8 @@ func TestShutdownStopsAServerStillStarting(t *testing.T) {
 	gate, launched := make(chan struct{}), make(chan struct{})
 	spec := ServerSpec{Name: "fake", Language: []string{"go"}, Cmd: []string{"fake"}, Roots: []string{"go.mod"}}
 	m := NewManager(ManagerOpts{
-		Servers:   func() []ServerSpec { return []ServerSpec{spec} },
-		Installed: func(ServerSpec) bool { return true },
+		Servers: func() []ServerSpec { return []ServerSpec{spec} },
+		Find:    func(_ ServerSpec, _ string) (string, bool) { return "", true },
 		Client: Options{Launch: func(ctx context.Context, s ServerSpec, root string, stderr io.Writer) (Process, error) {
 			close(launched)
 			<-gate

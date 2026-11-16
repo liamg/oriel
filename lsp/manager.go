@@ -20,8 +20,9 @@ var ErrNoServer = errors.New("lsp: no server for the language")
 type ManagerOpts struct {
 	// Servers lists the specs to choose from, read on every Open: the registry's lsp.server contributions.
 	Servers func() []ServerSpec
-	// Installed says whether a spec's server can run; nil looks its command up on PATH.
-	Installed func(ServerSpec) bool
+	// Find finds a spec's command for a project root (ServerSpec.Locate): its path, "" for a spec that connects some
+	// other way, and ok false when it can't run there. nil locates it with nothing installed by Oriel.
+	Find func(spec ServerSpec, root string) (string, bool)
 	// Stderr is where a server's stderr goes, such as a logs.Lines with the source "lsp:<name>"; nil drops it.
 	Stderr func(spec ServerSpec, root string) io.Writer
 	// StartTimeout bounds a server's start and initialization; 0 is a minute.
@@ -63,19 +64,26 @@ func NewManager(o ManagerOpts) *Manager {
 // ErrShutDown is a server asked for after the manager has shut down.
 var ErrShutDown = errors.New("the language servers have shut down")
 
-// SpecFor picks the server for a file of a language: the first by Order that serves it and is installed.
-func (m *Manager) SpecFor(language string) (ServerSpec, bool) {
+// SpecFor picks the server for a file of a language at path: the first by Order that serves it and is found for the
+// file's root, its command the path found.
+func (m *Manager) SpecFor(language, path string) (ServerSpec, bool) {
 	if m.opts.Servers == nil {
 		return ServerSpec{}, false
 	}
-	installed := m.opts.Installed
-	if installed == nil {
-		installed = Installed
+	find := m.opts.Find
+	if find == nil {
+		find = func(s ServerSpec, root string) (string, bool) { return s.Locate(root, "") }
 	}
 	specs := slices.Clone(m.opts.Servers())
 	slices.SortStableFunc(specs, func(a, b ServerSpec) int { return a.Order - b.Order })
 	for _, s := range specs {
-		if s.Serves(language) && installed(s) {
+		if !s.Serves(language) {
+			continue
+		}
+		if cmd, ok := find(s, s.FindRoot(path)); ok {
+			if cmd != "" && len(s.Cmd) > 0 {
+				s.Cmd = append([]string{cmd}, s.Cmd[1:]...)
+			}
 			return s, true
 		}
 	}
@@ -88,7 +96,7 @@ func (m *Manager) Open(ctx context.Context, path, language string, s text.Snapsh
 	if c, ok := m.Client(path); ok && !exited(c) {
 		return c, nil
 	}
-	spec, ok := m.SpecFor(language)
+	spec, ok := m.SpecFor(language, path)
 	if !ok {
 		return nil, ErrNoServer
 	}
@@ -106,11 +114,12 @@ func (m *Manager) Open(ctx context.Context, path, language string, s text.Snapsh
 // Warm starts the server for a language's files under root ahead of any of them opening, so the first request
 // doesn't wait for it. It blocks while the server starts.
 func (m *Manager) Warm(ctx context.Context, language, root string) (*Client, error) {
-	spec, ok := m.SpecFor(language)
+	path := filepath.Join(root, "_")
+	spec, ok := m.SpecFor(language, path)
 	if !ok {
 		return nil, ErrNoServer
 	}
-	return m.client(ctx, spec, clientKey{spec.Name, spec.FindRoot(filepath.Join(root, "_"))})
+	return m.client(ctx, spec, clientKey{spec.Name, spec.FindRoot(path)})
 }
 
 // client returns the running client for key, starting one if there's none or it has exited.

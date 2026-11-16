@@ -34,8 +34,8 @@ func TestResponder(t *testing.T) {
 		}
 	}
 	m := lsp.NewManager(lsp.ManagerOpts{Servers: func() []lsp.ServerSpec { return []lsp.ServerSpec{spec} },
-		Installed: func(lsp.ServerSpec) bool { return true },
-		Client:    lsp.Options{Launch: r.Launcher(), OnDiagnostics: func(s lsp.DiagnosticSet) { diags <- s }}})
+		Find:   func(_ lsp.ServerSpec, _ string) (string, bool) { return "", true },
+		Client: lsp.Options{Launch: r.Launcher(), OnDiagnostics: func(s lsp.DiagnosticSet) { diags <- s }}})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	main := filepath.Join(root, "main.go")
