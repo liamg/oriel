@@ -10,7 +10,7 @@ import (
 //oriel:api name=ship cap=ui
 type Ship struct{ a *APIs }
 
-//oriel:api doc="Add a \"before this ships\" gate to the Ship page and the Raise PR tab: { name, title, order (50 by default), check = fn(session) }. check returns a state (pass, warn, fail, pending, optional or skipped; nil leaves the gate out) or { state, note }, the note dim text at its right. It runs on the app's loop as the page is drawn, so keep it quick. A gate informs; a veto hook on ShipCommit or ShipRaise is what stops one."
+//oriel:api doc="Add a \"before this ships\" gate to the Ship page and the Raise PR tab: { name, title, order (50 by default), check = fn(session) }. check returns a state (pass, warn, fail, pending, optional or skipped; nil leaves the gate out) or { state, note }, the note dim text at its right; a check that throws fails, with the error as its note. It runs on the app's loop as the page is drawn, so keep it quick. A gate informs; a veto hook on ShipCommit or ShipRaise is what stops one."
 func (s Ship) Gate(spec script.Table, where string) error {
 	fn, _ := spec["check"].(*script.Fn)
 	g := registry.ShipGate{Name: str(spec, "name"), Title: str(spec, "title"), Order: 50, Source: where}
@@ -25,7 +25,11 @@ func (s Ship) Gate(spec script.Table, where string) error {
 	}
 	g.Check = func(session string) registry.Gate {
 		out, err := s.a.VM.Call(fn, session)
-		if err != nil || len(out) == 0 {
+		s.a.Host.Report(g.ContributionKind(), g.Name, err)
+		if err != nil {
+			return registry.Gate{State: registry.GateFail, Note: err.Error()}
+		}
+		if len(out) == 0 {
 			return registry.Gate{}
 		}
 		switch v := out[0].(type) {

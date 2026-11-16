@@ -29,8 +29,8 @@ func (r Rail) Add(spec script.Table, where string) error {
 	e.BadgeTone = str(spec, "badge_tone")
 	if fn, ok := spec["badge"].(*script.Fn); ok {
 		e.Badge = func() int {
-			out, err := r.a.VM.Call(fn)
-			if err != nil || len(out) == 0 {
+			out, ok := r.a.contributed(e.ContributionKind(), e.Name, fn)
+			if !ok || len(out) == 0 {
 				return 0
 			}
 			return int(num(out[0]))
@@ -43,15 +43,15 @@ func (r Rail) Add(spec script.Table, where string) error {
 		return fmt.Errorf("a rail entry's scope is project, session or global, not %q", sc)
 	}
 	if fn, ok := spec["shown"].(*script.Fn); ok {
-		e.Shown = func(project string) bool { return r.a.truthy(fn, project) }
+		e.Shown = func(project string) bool { return r.a.truthy(e.ContributionKind(), e.Name, fn, project) }
 	}
 	if fn, ok := spec["active"].(*script.Fn); ok {
-		e.Active = func(project string) bool { return r.a.truthy(fn, project) }
+		e.Active = func(project string) bool { return r.a.truthy(e.ContributionKind(), e.Name, fn, project) }
 	}
 	if fn, ok := spec["note"].(*script.Fn); ok {
 		e.Note = func(project string) string {
-			out, err := r.a.VM.Call(fn, project)
-			if err != nil || len(out) == 0 || out[0] == nil {
+			out, ok := r.a.contributed(e.ContributionKind(), e.Name, fn, project)
+			if !ok || len(out) == 0 || out[0] == nil {
 				return ""
 			}
 			return fmt.Sprint(out[0])
@@ -80,12 +80,12 @@ func (s Start) Add(spec script.Table, where string) error {
 	e.Link, _ = spec["link"].(bool)
 	e.Unlisted, _ = spec["unlisted"].(bool)
 	if fn, ok := spec["shown"].(*script.Fn); ok {
-		e.Shown = func() bool { return s.a.truthy(fn) }
+		e.Shown = func() bool { return s.a.truthy(e.ContributionKind(), e.Name, fn) }
 	}
 	if fn, ok := spec["note"].(*script.Fn); ok {
 		e.Note = func() string {
-			out, err := s.a.VM.Call(fn)
-			if err != nil || len(out) == 0 || out[0] == nil {
+			out, ok := s.a.contributed(e.ContributionKind(), e.Name, fn)
+			if !ok || len(out) == 0 || out[0] == nil {
 				return ""
 			}
 			return fmt.Sprint(out[0])
@@ -109,8 +109,8 @@ func (p Place) Add(spec script.Table, where string) error {
 	if a, ok := spec["args"].(script.Table); ok {
 		pl.Args = registry.Args(a)
 	}
-	pl.Shown = func() bool { return p.a.truthy(shown) }
-	pl.Close = func() { _, _ = p.a.VM.Call(closer) }
+	pl.Shown = func() bool { return p.a.truthy(pl.ContributionKind(), pl.Name, shown) }
+	pl.Close = func() { p.a.contributed(pl.ContributionKind(), pl.Name, closer) }
 	p.a.own(p.a.Host.Contribute(pl))
 	return nil
 }
