@@ -110,7 +110,7 @@ function oriel.placeholder(name, spec, fn) end
 ---@return string?,string?
 function oriel.read(path) end
 
---- Run a command by its id, with arguments. A command that does what a capability guards (answering an agent's ask, starting or stopping a session, prompting an agent) needs that capability.
+--- Run a command by its id, with arguments. A command that does what a capability guards (answering an agent's ask, starting or stopping a session, prompting an agent) needs that capability. One that changes who may do what (installing plugins or accepting their consent, settings, secrets, updates) is yours alone: a plugin can't run it.
 ---@param id string
 ---@param args? table
 function oriel.run(id, args) end

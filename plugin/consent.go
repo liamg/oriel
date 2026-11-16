@@ -189,6 +189,8 @@ func Explain(g Grant) string {
 		return "commit, push and open PRs through the gateway, still subject to its approvals"
 	case CapClipboard:
 		return "read the clipboard"
+	case CapSettings:
+		return "change your settings, except the sandbox's"
 	}
 	return string(g.Cap)
 }

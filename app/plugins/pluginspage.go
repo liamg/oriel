@@ -118,10 +118,10 @@ func (x *Catalog) pageCommands(h plugin.Host) {
 			open(a.String("tab"))
 			return nil
 		}},
-		{ID: "plugins.disable", Title: "Turn off {id}, a plugin bundled with Oriel", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "plugins.disable", UserOnly: true, Title: "Turn off {id}, a plugin bundled with Oriel", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.turnBundled(ctx, a.String("id"), false)
 		}},
-		{ID: "plugins.enable", Title: "Turn {id}, a plugin bundled with Oriel, back on", Run: func(ctx registry.Ctx, a registry.Args) error {
+		{ID: "plugins.enable", UserOnly: true, Title: "Turn {id}, a plugin bundled with Oriel, back on", Run: func(ctx registry.Ctx, a registry.Args) error {
 			return x.turnBundled(ctx, a.String("id"), true)
 		}},
 	} {

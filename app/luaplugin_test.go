@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/plugin/hosttest"
 	"github.com/liamg/oriel/plugin/ossandbox"
+	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/script"
 	"github.com/liamg/oriel/script/api"
 )
@@ -84,10 +85,13 @@ func TestPluginRunNeedsTheCommandsCapability(t *testing.T) {
 	g := plugin.NewGrants()
 	vm := s.PluginVM(plugin.Caller{ID: "acme/run", Guard: g})
 	for src, capability := range map[string]string{
-		`oriel.run("ask.answer", { decision = "always" })`: `"gate"`,
-		`oriel.run("rules.add", { rule = "Bash(*)" })`:     `"gate"`,
-		`oriel.run("session.stop")`:                        `"session.control"`,
-		`oriel.run("agent.send", { text = "hi" })`:         `"agent.prompt"`,
+		`oriel.run("ask.answer", { decision = "always" })`:                                    `"gate"`,
+		`oriel.run("rules.add", { rule = "Bash(*)" })`:                                        `"gate"`,
+		`oriel.run("session.stop")`:                                                           `"session.control"`,
+		`oriel.run("agent.send", { text = "hi" })`:                                            `"agent.prompt"`,
+		`oriel.run("permissions.tool", { id = "s", tool = "aws__x", action = "allow" })`:      `"gate"`,
+		`oriel.run("permissions.net", { id = "s", host = "evil.example", action = "allow" })`: `"gate"`,
+		`oriel.run("jobs.run", { name = "nightly" })`:                                         `"session.control"`,
 	} {
 		if err := luaErr(t, vm, src); !strings.Contains(err, capability+" capability isn't declared") {
 			t.Errorf("%s: %q, want an error naming %s", src, err, capability)
@@ -101,6 +105,75 @@ func TestPluginRunNeedsTheCommandsCapability(t *testing.T) {
 		if _, ok := plugin.Capability(c.Grant).Info(); c.Grant != "" && !ok {
 			t.Errorf("%s needs %q, which isn't a capability", c.ID, c.Grant)
 		}
+	}
+}
+
+// What changes who may do what is the user's alone: no plugin runs it through oriel.run, whatever it holds, while the
+// user's own config still can. Every command that installs or enables plugins, accepts consent, or changes settings,
+// secrets, jobs, rules or the app itself is the user's own or needs a capability.
+func TestPluginCantRunTheUsersCommands(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	var all []plugin.Grant
+	for _, c := range plugin.Capabilities {
+		all = append(all, plugin.Grant{Cap: c.Cap, Scope: []string{"*"}})
+	}
+	g.Grant("acme/run", all)
+	vm := s.PluginVM(plugin.Caller{ID: "acme/run", Guard: g})
+	own := s.PluginVM(plugin.Caller{ID: "init.lua"})
+	for _, id := range []string{"plugins.install", "plugins.uninstall", "plugins.accept", "plugins.enable", "plugins.disable",
+		"plugins.consent.accept", "settings.set", "settings.trust", "settings.reset_all", "secrets.set", "secrets.delete", "update.install"} {
+		src := `oriel.run("` + id + `", {})`
+		if err := luaErr(t, vm, src); !strings.Contains(err, "only you can run "+id) {
+			t.Errorf("a plugin ran %s: %q", id, err)
+		}
+		if err := luaErr(t, own, src); strings.Contains(err, "only you can run") {
+			t.Errorf("your config can't run %s: %q", id, err)
+		}
+	}
+	harmless := map[string]bool{"plugins.open": true, "plugins.refresh": true, "plugins.review": true, "plugins.consent.cancel": true,
+		"settings.open": true, "settings.reload": true, "update.check": true, "update.notes": true, "update.progress": true,
+		"jobs.open": true, "jobs.new": true, "jobs.edit": true, "jobs.duplicate": true}
+	for _, c := range s.Registry().Commands() {
+		family, _, _ := strings.Cut(c.ID, ".")
+		switch family {
+		case "plugins", "settings", "secrets", "update", "jobs", "rules", "permissions":
+			if !c.UserOnly && c.Grant == "" && !harmless[c.ID] {
+				t.Errorf("%s is neither the user's own nor guarded by a capability", c.ID)
+			}
+		}
+	}
+}
+
+// A plugin sets its own options freely; another option needs the settings capability, and the sandbox's settings
+// are never a plugin's to change. A buffer's options (an ftplugin's tabstop) are free.
+func TestPluginOptionsNeedTheSettingsCapability(t *testing.T) {
+	s := apptest.LuaScene(t, "")
+	g := plugin.NewGrants()
+	vm := s.PluginVM(plugin.Caller{ID: "acme/opts", Guard: g})
+	if err := luaErr(t, vm, `oriel.option{ name = "plugin.opts.level", type = "int" }; oriel.option["plugin.opts.level"] = 3`); err != "" {
+		t.Errorf("its own option: %s", err)
+	}
+	if err := luaErr(t, vm, `oriel.option["ui.font_size"] = 20`); !strings.Contains(err, `"settings" capability isn't declared`) {
+		t.Errorf("ui.font_size without settings: %q", err)
+	}
+	if err := luaErr(t, vm, `oriel.buffer_option.tabstop = 2`); err != "" {
+		t.Errorf("a buffer's tabstop: %s", err)
+	}
+	g.Grant("acme/opts", []plugin.Grant{{Cap: plugin.CapSettings}})
+	if err := luaErr(t, vm, `oriel.option["ui.font_size"] = 20`); err != "" {
+		t.Errorf("ui.font_size with settings: %s", err)
+	}
+	for _, src := range []string{`oriel.option["sandbox.default"] = "host"`, `oriel.option["sandbox.rules"] = nil`, `oriel.session_option["sandbox.default"] = "host"`} {
+		if err := luaErr(t, vm, src); !strings.Contains(err, "can't change the sandbox's settings") {
+			t.Errorf("%s: %q", src, err)
+		}
+	}
+	if v, _, _ := s.Registry().Options().Get("sandbox.default", registry.At{}); v == "host" {
+		t.Error("a plugin moved sessions out of the sandbox")
+	}
+	if err := luaErr(t, s.PluginVM(plugin.Caller{ID: "init.lua"}), `oriel.option["sandbox.default"] = "host"`); err != "" {
+		t.Errorf("your config: %s", err)
 	}
 }
 

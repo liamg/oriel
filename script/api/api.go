@@ -100,11 +100,17 @@ func (a *APIs) callbackFailed(fn *script.Fn, err error) {
 	a.Host.Notify(script.WithTrace(n, err, a.Plugin.Dir, "Open at line"))
 }
 
-// commandGrant refuses to run command id for a plugin without the capability the command names (Command.Grant).
+// commandGrant refuses to run command id for a plugin without the capability the command names (Command.Grant), and
+// for any plugin when the command is the user's own (Command.UserOnly). The user's config runs anything.
 func (a *APIs) commandGrant(id string) error {
 	cs := a.Host.Commands()
 	i, ok := slices.BinarySearchFunc(cs, id, func(c registry.Command, id string) int { return strings.Compare(c.ID, id) })
-	if !ok || cs[i].Grant == "" {
+	switch {
+	case !ok:
+		return nil
+	case cs[i].UserOnly && !a.Plugin.Trusted():
+		return fmt.Errorf("%s: only you can run %s, not a plugin", a.Plugin.ID, id)
+	case cs[i].Grant == "":
 		return nil
 	}
 	return a.Plugin.Check(plugin.Capability(cs[i].Grant), "")

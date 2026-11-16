@@ -79,7 +79,7 @@ says which it needs. Some take a scope:
 | `agent.tools` | `tools = [...]` |
 
 The rest take only `why`: `editor.read`, `editor.write`, `input.observe`, `agent.read`, `agent.prompt`,
-`agent.provider`, `gate`, `session.control`, `git`, `clipboard`. The install help page
+`agent.provider`, `gate`, `session.control`, `git`, `clipboard`, `settings`. The install help page
 (`plugins/install`) gives each one's risk.
 
 Installing is all or nothing: the user grants every capability listed, or none. Anything not declared is refused when
@@ -100,7 +100,9 @@ L.option{ name = "plugin.saves.label", type = "string", default = "saves",
 ```
 
 A plugin's options must be named `plugin.<name>.…`. They show in the plugin's section of the settings page and are
-saved under `[plugin.saves]` in `settings.toml`. Read one with `L.option["plugin.saves.label"]`.
+saved under `[plugin.saves]` in `settings.toml`. Read one with `L.option["plugin.saves.label"]`, and set it the same
+way. Setting anyone else's option needs the `settings` capability, and a plugin can never change the sandbox's
+(`sandbox.*`); a buffer's own options (`L.buffer_option.tabstop`) are free.
 
 ## Step 2: keep state per session
 
@@ -188,8 +190,10 @@ L.rail.add{ name = "saves", icon = "◆", title = "Saves", command = "view.toggl
 
 - `oriel.command(name, fn, opts)` adds a command: `:Saves` and the omnibox run it. `fn` gets its arguments.
 - `oriel.run(id, args)` runs a command, here the built-in `view.toggle`. A command that does what a capability
-  guards needs it: `ask.answer` and `rules.add` need `gate`, `session.start` and `session.stop` `session.control`,
-  `agent.send` `agent.prompt`.
+  guards needs it: `ask.answer`, `rules.add` and `permissions.tool` need `gate`, `session.start`, `session.stop` and
+  `jobs.run` `session.control`, `agent.send` `agent.prompt`. What changes who may do what is yours alone, and no
+  plugin can run it: installing, enabling or updating plugins and accepting their consent, settings, secrets and
+  updating Oriel.
 - `oriel.keymap.set(modes, lhs, rhs, opts)` maps keys to a command id or a Lua function, in `n`, `i`, `x` or a
   panel's own mode.
 - `oriel.rail.add` adds an entry to the sidebar. `icon` is a built-in icon's name or a glyph. `scope` is `session`

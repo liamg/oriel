@@ -198,29 +198,29 @@ func (s *Plugin) commands() []registry.Command {
 			}
 			return nil
 		}},
-		{ID: "settings.set", Title: "Set an option: {name} = {value}, at {scope}: user, project or session; with {key}, that key of a table option alone",
+		{ID: "settings.set", UserOnly: true, Title: "Set an option: {name} = {value}, at {scope}: user, project or session; with {key}, that key of a table option alone",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				if k := str(a, "key"); k != "" {
 					return s.setKey(str(a, "name"), k, a["value"], s.scopeArg(str(a, "scope")))
 				}
 				return s.set(str(a, "name"), a["value"], s.scopeArg(str(a, "scope")))
 			}},
-		{ID: "settings.reset", Title: "Reset an option at {scope}: its line leaves the file; with {key}, that key of a table option alone",
+		{ID: "settings.reset", UserOnly: true, Title: "Reset an option at {scope}: its line leaves the file; with {key}, that key of a table option alone",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				if k := str(a, "key"); k != "" {
 					return s.setKey(str(a, "name"), k, nil, s.scopeArg(str(a, "scope")))
 				}
 				return s.reset(str(a, "name"), s.scopeArg(str(a, "scope")))
 			}},
-		{ID: "settings.reset_section", Title: "Reset every option in a {section}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "settings.reset_section", UserOnly: true, Title: "Reset every option in a {section}", Run: func(_ registry.Ctx, a registry.Args) error {
 			return s.resetWhere(func(sp registry.OptionSpec) bool { return sectionOf(sp) == str(a, "section") }, s.scope)
 		}},
-		{ID: "settings.reset_all", Title: "Reset every option", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "settings.reset_all", UserOnly: true, Title: "Reset every option", Run: func(registry.Ctx, registry.Args) error {
 			return s.resetWhere(func(registry.OptionSpec) bool { return true }, s.scope)
 		}},
-		{ID: "settings.undo", Title: "Undo the last settings change", Run: func(registry.Ctx, registry.Args) error { return s.undoLast() }},
+		{ID: "settings.undo", UserOnly: true, Title: "Undo the last settings change", Run: func(registry.Ctx, registry.Args) error { return s.undoLast() }},
 		{ID: "settings.reload", Title: "Read the settings files again", Run: func(registry.Ctx, registry.Args) error { s.Reload(); return nil }},
-		{ID: "settings.trust", Title: "Trust a project's settings file, as it is now: {path}",
+		{ID: "settings.trust", UserOnly: true, Title: "Trust a project's settings file, as it is now: {path}",
 			Run: func(_ registry.Ctx, a registry.Args) error { return s.trustFile(str(a, "path")) }},
 	}
 }

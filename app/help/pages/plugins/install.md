@@ -141,6 +141,12 @@ Commit, push and open PRs through the gateway, still subject to its approvals. H
 
 Read the clipboard. Medium risk.
 
+## settings {#settings}
+
+Change your settings other than its own (`plugin.<name>.…`, which it needs nothing for). It can never change the
+sandbox's settings, and it can't run the settings page's commands: those, like installing plugins and changing
+secrets, are yours alone. **High risk.**
+
 ## Bundled plugins {#bundled}
 
 Some plugins ship inside Oriel (Linear): they load at start with what their manifest declares, without
