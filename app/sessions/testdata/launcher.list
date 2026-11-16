@@ -296,6 +296,10 @@ clip 170,105 1260x790 r 10
     rect 668.09375,616.94946 14x14 fill #ece6d8 radius 7
     text "Open network" @708.09375,628.4966 #ece6d8 Inter 12.5
     text "ask per new host when off" @925,627.5495 #7c7566 JetBrains Mono 10
+    rect 666.09375,643.04944 13x13 radius 3 stroke 1 #332f27
+    clip 666.09375,643.04944 13x13 r 3
+    pop
+    text "ALLOW SANDBOX CUSTOMISATION" @685.09375,653.1495 #7c7566 JetBrains Mono 10
   pop
   rect 1099,158 1x676 fill #24221d
   text "RECENT PROMPTS" @1116,183.69 #7c7566 JetBrains Mono 9.5

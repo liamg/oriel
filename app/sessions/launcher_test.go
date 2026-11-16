@@ -2,6 +2,7 @@ package sessions_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -525,4 +526,32 @@ func TestTheLauncherPromptTakesLines(t *testing.T) {
 	s.UntilState("the session", func(st core.State) bool {
 		return len(st.Sessions) == 1 && st.Sessions[0].Prompt == "notes\nx"
 	})
+}
+
+// Allow sandbox customisation starts off, and a session started with it ticked lets its sandbox use the repo's own
+// Dockerfile; one started without it doesn't.
+func TestLauncherAllowsSandboxCustomisation(t *testing.T) {
+	for _, custom := range []bool{false, true} {
+		t.Run(fmt.Sprint(custom), func(t *testing.T) {
+			jr := rig.NewJobs(t, "docker")
+			r := apptest.NewWindow(t, apptest.WindowOpts{State: t.TempDir(), Config: apptest.Connect(jr.W)})
+			r.WaitFrame("New Session available", func(s string) bool { return strings.Contains(s, "New Session") && !strings.Contains(s, "SOON") })
+			r.TypeKeys("<D-n>")
+			r.WaitText("NEW SESSION")
+			r.ClickTop("Work")
+			r.WaitText("ALLOW SANDBOX CUSTOMISATION")
+			if custom {
+				r.ClickTop("ALLOW SANDBOX CUSTOMISATION")
+			}
+			r.ClickTop(sessions.PromptPlaceholder)
+			r.TypeText("Fix stale search results")
+			r.ClickTop("pricing")
+			r.Latest("the repo ticked", func(f headless.Frame) bool { return strings.Contains(f.Text(), "1 selected") })
+			r.ClickTop("Start Work")
+			se := r.UntilState("the session started", func(st core.State) bool { return len(st.Sessions) == 1 }).Sessions[0]
+			if se.Agent.CustomImage != custom {
+				t.Errorf("started with a custom image %v, want %v", se.Agent.CustomImage, custom)
+			}
+		})
+	}
 }

@@ -27,6 +27,8 @@ type Manifest struct {
 	Reads []string `json:"reads,omitempty"`
 	// Memory are the projects' memory directories, the primary's first.
 	Memory []ProjectMemory `json:"memory,omitempty"`
+	// CustomImage builds the image on the base with the primary project's Dockerfile (runner.DockerfilePath).
+	CustomImage bool `json:"customImage,omitempty"`
 }
 
 // LoadManifest reads root's manifest; ok=false when there is none.

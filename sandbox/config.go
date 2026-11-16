@@ -56,9 +56,6 @@ type ProjectConfig struct {
 	Egress []EgressRule `json:"egress,omitempty"`
 	// Image is the project's own image.
 	Image string `json:"image,omitempty"`
-	// Dockerfile is the sha256 of the repo's .oriel/sandbox.Dockerfile the
-	// user approved; a different file waits for approval again.
-	Dockerfile string `json:"dockerfile,omitempty"`
 }
 
 // PolicyRule rules on gateway tools matching Tool, a name or a glob.

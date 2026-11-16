@@ -514,6 +514,12 @@ func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws hostap
 	case !ws.Sandboxed:
 		widget.PaneNote(c, "host", "This session's agent runs on your machine: it has no image.")
 		return
+	case ws.Refused != "":
+		wsRow(c, x.h, "from", "From", ws.ImageFrom, false)
+		widget.Wrap(c, "refused", ws.Refused, 620, widget.UIFont(12, th.C(theme.Warn)))
+		widget.KickerRow(c, "srccap", "DOCKERFILE")
+		codeLines(c, "src", ws.Dockerfile)
+		return
 	case ws.Image == "":
 		widget.PaneNote(c, "noimage", "The "+ws.Backend+" sandbox runs the agent with your machine's own tools: it has no image.")
 		return
@@ -527,8 +533,8 @@ func (x *Workspace) image(c *ui.Ctx, s core.SessionState, st *wsState, ws hostap
 	wsRow(c, x.h, "built", "State", built, false)
 	x.actions(c, s, st, ws)
 	if strings.Contains(ws.ImageFrom, ".oriel/") {
-		widget.Wrap(c, "branch", "Oriel builds a repo's Dockerfile from its default branch, never from a session's: a change the agent makes here "+
-			"takes effect once it's merged.", 620, widget.UIFont(12, th.C(theme.FgFaint)))
+		widget.Wrap(c, "branch", "Oriel reads a repo's Dockerfile from the repo's own checkout, committed or not, else from its default branch; "+
+			"never from a session's worktree, and builds it on the base image.", 620, widget.UIFont(12, th.C(theme.FgFaint)))
 	}
 	if ws.Dockerfile == "" {
 		widget.Wrap(c, "named", "This image is named in your settings: Oriel runs it as it is and doesn't build it.", 620, widget.UIFont(12, th.C(theme.FgFaint)))

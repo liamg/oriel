@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/container"
@@ -19,21 +18,35 @@ import (
 // DockerfilePath is where a repository asks for its own sandbox image.
 const DockerfilePath = ".oriel/sandbox.Dockerfile"
 
-// Image picks root's image, building it if needed: the image named in
-// settings, else the primary project's approved Dockerfile, else the base.
+// Image picks root's image, building it if needed: the project's image named in settings, else the base with the
+// primary project's Dockerfile on it when the session allows it (Manifest.CustomImage), else the image named in
+// settings, else the base.
 func Image(ctx context.Context, root string, cfg sandbox.Config) (string, error) {
-	p := pick(root, cfg)
+	p := pick(ctx, root, cfg)
+	if p.refused != nil {
+		return "", p.refused
+	}
 	if p.dockerfile == "" {
 		return p.tag, nil
+	}
+	p, err := ensureBase(ctx, p)
+	if err != nil {
+		return "", err
 	}
 	return p.tag, ensureImage(ctx, p.tag, p.dockerfile)
 }
 
-// picked is the image root's sandbox runs: its tag, its source ("" for one named in settings) and where it comes from.
-type picked struct{ tag, dockerfile, from string }
+// picked is the image root's sandbox runs: its tag, its source ("" for one named in settings) and where it comes
+// from. layers is a repo's Dockerfile, built on the base, which has to be there first; refused is why a repo's
+// Dockerfile can't be.
+type picked struct {
+	tag, dockerfile, from string
+	layers                string
+	refused               error
+}
 
-func pick(root string, cfg sandbox.Config) picked {
-	if ws, ok := sandbox.LoadManifest(root); ok {
+func pick(ctx context.Context, root string, cfg sandbox.Config) picked {
+	if ws, ok := sandbox.LoadManifest(root); ok && ws.CustomImage {
 		for _, p := range ws.Projects {
 			if !p.Primary {
 				continue
@@ -43,10 +56,12 @@ func pick(root string, cfg sandbox.Config) picked {
 				return picked{tag: ps.Image, from: "sandbox.image for " + filepath.Base(p.Repo)}
 			}
 			if df, ok := RepoDockerfile(p.Repo); ok {
-				if ps.Dockerfile == container.Sum(df) {
-					return picked{tag: container.ProjectImage(df), dockerfile: df, from: filepath.Base(p.Repo) + "'s " + DockerfilePath}
+				from := filepath.Base(p.Repo) + "'s " + DockerfilePath
+				if hasFrom(df) {
+					return picked{dockerfile: df, from: from, refused: fmt.Errorf("%s has a FROM: a repo's sandbox Dockerfile only "+
+						"adds to Oriel's base image, so it can't name an image of its own. Remove its FROM lines", from)}
 				}
-				notePending(p.Repo, df)
+				return picked{from: from + " on the base image", layers: df}.onBase(ctx)
 			}
 		}
 	}
@@ -54,6 +69,48 @@ func pick(root string, cfg sandbox.Config) picked {
 		return picked{tag: cfg.Image, from: "sandbox.image"}
 	}
 	return picked{tag: container.BaseImage(), dockerfile: container.BaseDockerfile, from: "the base image"}
+}
+
+// hasFrom says whether df names an image of its own, as a base or a build stage. A repo's Dockerfile may only add
+// to Oriel's base.
+func hasFrom(df string) bool {
+	for line := range strings.SplitSeq(df, "\n") {
+		if f := strings.Fields(line); len(f) > 0 && strings.EqualFold(f[0], "FROM") {
+			return true
+		}
+	}
+	return false
+}
+
+// onBase puts the base under p's layers, which gives its tag.
+func (p picked) onBase(ctx context.Context) picked {
+	if p.layers == "" {
+		return p
+	}
+	p.dockerfile = "FROM " + baseRef(ctx) + "\n" + p.layers
+	p.tag = container.ProjectImage(p.dockerfile)
+	return p
+}
+
+// baseRef is the name a Dockerfile's FROM gives the base. A pulled base goes by where it came from: an image store
+// that keeps only some of a pulled image's layers (Docker's containerd store) fetches the rest from the registry the
+// FROM names, and the local name means Docker Hub. A base built here has every layer under its local name.
+func baseRef(ctx context.Context) string {
+	if container.ImageExists(ctx, container.PublishedBase()) {
+		return container.PublishedBase()
+	}
+	return container.BaseImage()
+}
+
+// ensureBase fetches the base p's layers build on, then names it in p's Dockerfile as it now is.
+func ensureBase(ctx context.Context, p picked) (picked, error) {
+	if p.layers == "" {
+		return p, nil
+	}
+	if err := ensureImage(ctx, container.BaseImage(), container.BaseDockerfile); err != nil {
+		return p, err
+	}
+	return p.onBase(ctx), nil
 }
 
 // BuildLog is the file tag's last build wrote to.
@@ -75,19 +132,30 @@ func ensureImage(ctx context.Context, tag, dockerfile string) error {
 
 // Rebuild builds root's image again from its source, skipping the cache. An image named in settings has none.
 func Rebuild(ctx context.Context, root string, cfg sandbox.Config) error {
-	p := pick(root, cfg)
+	p := pick(ctx, root, cfg)
+	if p.refused != nil {
+		return p.refused
+	}
 	if p.dockerfile == "" {
 		return fmt.Errorf("the sandbox runs %s, named in %s: Oriel doesn't build it", p.tag, p.from)
+	}
+	p, err := ensureBase(ctx, p)
+	if err != nil {
+		return err
 	}
 	return container.Rebuild(ctx, p.tag, p.dockerfile, BuildLog(p.tag))
 }
 
 // Describe is root's container and image, and what the running container mounts.
 func Describe(ctx context.Context, root string, cfg sandbox.Config) sandbox.Description {
-	p := pick(root, cfg)
-	d := sandbox.Description{Container: Name(root), Image: p.tag, ImageFrom: p.from, Dockerfile: p.dockerfile,
-		Built: container.ImageExists(ctx, p.tag)}
-	if _, err := os.Stat(BuildLog(p.tag)); err == nil {
+	p := pick(ctx, root, cfg)
+	d := sandbox.Description{Container: Name(root), Image: p.tag, ImageFrom: p.from, Dockerfile: p.dockerfile}
+	if p.refused != nil {
+		d.Refused = p.refused.Error()
+	} else {
+		d.Built = container.ImageExists(ctx, p.tag)
+	}
+	if _, err := os.Stat(BuildLog(p.tag)); p.tag != "" && err == nil {
 		d.BuildLog = BuildLog(p.tag)
 	}
 	d.Mounts, d.Running = containerMounts(ctx, Name(root))
@@ -136,64 +204,17 @@ func containerMounts(ctx context.Context, name string) ([]sandbox.Bind, bool) {
 	return binds, running == "true"
 }
 
-// RepoDockerfile reads the repo's sandbox Dockerfile from its default branch,
-// never from a worktree the agent can edit.
+// RepoDockerfile reads the repo's sandbox Dockerfile: the checkout's, committed or not, else its default branch's.
 func RepoDockerfile(repo string) (string, bool) {
+	if b, err := os.ReadFile(filepath.Join(repo, DockerfilePath)); err == nil && strings.TrimSpace(string(b)) != "" {
+		return string(b), true
+	}
 	base := defaultBranch(repo)
 	out, err := sandbox.Git(repo, "show", base+":"+DockerfilePath)
 	if err != nil || strings.TrimSpace(out) == "" {
 		return "", false
 	}
 	return out, true
-}
-
-var pendingMu sync.Mutex
-
-func pendingPath() string { return filepath.Join(sandbox.Base(), "pending-dockerfiles.json") }
-
-func notePending(repo, df string) {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
-	all := loadPending()
-	all[repo] = sandbox.Pending{Repo: repo, Sum: container.Sum(df), Dockerfile: df}
-	savePending(all)
-}
-
-func loadPending() map[string]sandbox.Pending {
-	out := map[string]sandbox.Pending{}
-	if b, err := os.ReadFile(pendingPath()); err == nil {
-		_ = json.Unmarshal(b, &out)
-	}
-	return out
-}
-
-func savePending(all map[string]sandbox.Pending) {
-	b, _ := json.MarshalIndent(all, "", "  ")
-	_ = os.MkdirAll(sandbox.Base(), 0o700)
-	_ = os.WriteFile(pendingPath(), b, 0o600)
-}
-
-// PendingDockerfiles lists the Dockerfiles awaiting approval, dropping any
-// that have since been approved or removed.
-func PendingDockerfiles(cfg sandbox.Config) []sandbox.Pending {
-	pendingMu.Lock()
-	defer pendingMu.Unlock()
-	all := loadPending()
-	var out []sandbox.Pending
-	approved := false
-	for repo, p := range all {
-		if cfg.Projects[repo].Dockerfile == p.Sum {
-			delete(all, repo)
-			approved = true
-			continue
-		}
-		out = append(out, p)
-	}
-	if approved {
-		savePending(all)
-	}
-	slices.SortFunc(out, func(a, b sandbox.Pending) int { return cmp.Compare(a.Repo, b.Repo) })
-	return out
 }
 
 // defaultBranch is repo's default branch: origin's HEAD, else the first of

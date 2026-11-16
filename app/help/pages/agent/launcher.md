@@ -68,6 +68,10 @@ Whether the agent runs in a sandbox (with the gateway for git and gh; on unless 
 **Sandbox type** shows when this machine can run more than one kind of sandbox: `docker`, a container, or `seatbelt`,
 macOS's own sandbox. It starts at the `sandbox.backend` setting; the session keeps the one you pick.
 
+**Allow sandbox customisation** (off by default) builds the session's sandbox on the base image with the primary
+repo's `.oriel/sandbox.Dockerfile`. Off, the repo's file is ignored and the sandbox runs the base image
+([Workspace](agent/workspace)).
+
 ## Recent prompts
 
 The prompts recent sessions started with. Choosing one fills in its prompt, mode and repos again.

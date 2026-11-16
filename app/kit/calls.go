@@ -23,7 +23,7 @@ func SpecFrom(a registry.Args) core.SessionSpec {
 		PR: a.String("pr"), PRRemote: a.String("pr_remote"), PRRef: a.String("pr_ref"), Dir: a.String("dir"), Branch: a.String("branch"), Base: a.String("base"), Provider: a.String("provider"),
 		Model: a.String("model"), Effort: a.String("effort"), Template: a.String("template"),
 		Sandbox: core.SandboxPolicy{Container: a.Bool("sandbox"), Network: a.String("network"), Gate: a.String("gate"),
-			Backend: a.String("backend")}}
+			Backend: a.String("backend"), CustomImage: a.Bool("custom_image")}}
 	if s.Kind == "" {
 		s.Kind = core.KindWork
 	}

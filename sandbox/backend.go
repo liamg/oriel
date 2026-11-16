@@ -71,7 +71,9 @@ type Description struct {
 	ImageFrom string
 	// Dockerfile is the image's source; "" for an image named in settings.
 	Dockerfile string
-	Built      bool
+	// Refused is why the sandbox can't start with Dockerfile: a repo's names an image of its own.
+	Refused string
+	Built   bool
 	// BuildLog is the file the image's last build wrote to; "" if it hasn't been built here.
 	BuildLog string
 	// Mounts are what the running container sees of the host.
@@ -107,19 +109,11 @@ type LaunchOpts struct {
 // Problem is something stopping sandboxed agents on this machine, with what
 // fixes it.
 type Problem struct {
-	Code    string   `json:"code"`
-	Message string   `json:"message"`
-	Fix     string   `json:"fix,omitempty"`
-	Pending *Pending `json:"pending,omitempty"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Fix     string `json:"fix,omitempty"`
 	// Blocking problems stop sandboxed launches; the rest are warnings.
 	Blocking bool `json:"blocking"`
-}
-
-// Pending is a project's sandbox Dockerfile waiting for the user's approval.
-type Pending struct {
-	Repo       string `json:"repo"`
-	Sum        string `json:"sum"`
-	Dockerfile string `json:"dockerfile"`
 }
 
 // Blocking reports the first problem that stops a sandboxed launch.

@@ -381,11 +381,7 @@ func (x *End) body(c *ui.Ctx, a *endAsk, se core.SessionState, ships []services.
 		}}, func(c *ui.Ctx) {
 		c.Column("losses", ui.Style{W: ui.Flex(1), Gap: 6}, func(c *ui.Ctx) { x.losses(c, a, se, ships, width) })
 	})
-	st2 := widget.CheckOff
-	if a.deleteBranch {
-		st2 = widget.CheckOn
-	}
-	if registry.Can(x.h, se.Kind, core.OwnsBranch) && widget.Check(c, "branch", st2, widget.CheckOpts{Text: "Delete the local branches too (remote branches stay)", Help: kit.EndHelp,
+	if registry.Can(x.h, se.Kind, core.OwnsBranch) && widget.Check(c, "branch", widget.CheckStateOf(a.deleteBranch), widget.CheckOpts{Text: "Delete the local branches too (remote branches stay)", Help: kit.EndHelp,
 		Tooltip: "Each project's local branch; the remote's stays"}) {
 		a.deleteBranch = !a.deleteBranch
 	}

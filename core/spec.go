@@ -35,6 +35,9 @@ type SandboxPolicy struct {
 	Network   string `json:"network,omitempty"`   // "ask" (per new host) or "open"
 	Gate      string `json:"gate,omitempty"`      // the agent's own gate: ask, light, auto or bypass
 	Backend   string `json:"backend,omitempty"`   // the sandbox backend, one of the machine's Sandboxes; "" is sandbox.backend
+	// CustomImage builds the sandbox's image on the base with the primary repo's .oriel/sandbox.Dockerfile; off, the
+	// repo's file is ignored.
+	CustomImage bool `json:"customImage,omitempty"`
 }
 
 // SessionSpec is what a new session starts from.
