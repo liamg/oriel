@@ -2,11 +2,14 @@ package script
 
 import (
 	"errors"
-	"github.com/liamg/oriel/internal/testhook"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/liamg/oriel/internal/leaktest"
+	"github.com/liamg/oriel/internal/testhook"
 )
 
 func TestLoadAndCall(t *testing.T) {
@@ -114,7 +117,11 @@ func TestCallFromAnotherGoroutineWaits(t *testing.T) {
 		_, err := vm.Call(fns[1].(*Fn))
 		other <- err
 	}()
-	time.Sleep(50 * time.Millisecond)
+	for deadline := time.Now().Add(10 * time.Second); !leaktest.WaitingOnALock("lock"); runtime.Gosched() {
+		if time.Now().After(deadline) {
+			t.Fatal("the other call never waited on the VM")
+		}
+	}
 	if marked.Load() {
 		t.Error("a call from another goroutine ran while the VM was busy")
 	}

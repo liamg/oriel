@@ -3,7 +3,6 @@ package host
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -13,6 +12,7 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
+	"github.com/liamg/oriel/internal/leaktest"
 )
 
 // Review mirroring for any host: a code host's threads become Oriel threads like GitHub's, by the same rules: the
@@ -169,7 +169,7 @@ func TestAForwardsEchoIsRecognisedMidPost(t *testing.T) {
 	mirrored := make(chan error, 1)
 	_, err := r.w.ForwardHost(ctx, ForwardReq{Session: id, Thread: review.ID, Comment: draft.ID}, func(context.Context, core.Thread, string) (string, error) {
 		go func() { mirrored <- r.w.MirrorReview(ctx, echo) }()
-		until(t, "the mirror to wait on the forward", func() bool { return waitingOnALock("MirrorReview") })
+		until(t, "the mirror to wait on the forward", func() bool { return leaktest.WaitingOnALock("MirrorReview") })
 		return "n9", nil
 	})
 	if err != nil {
@@ -182,19 +182,6 @@ func TestAForwardsEchoIsRecognisedMidPost(t *testing.T) {
 	if len(th.Comments) != 2 || th.Comments[1].HostID != "n9" || th.Comments[1].Author != core.AuthorAgent {
 		t.Errorf("after the echo: %+v", th.Comments)
 	}
-}
-
-// waitingOnALock says a goroutine in fn is blocked taking a mutex.
-func waitingOnALock(fn string) bool {
-	buf := make([]byte, 1<<20)
-	buf = buf[:runtime.Stack(buf, true)]
-	for g := range strings.SplitSeq(string(buf), "\n\n") {
-		head, _, _ := strings.Cut(g, "\n")
-		if strings.Contains(head, "[sync.Mutex.Lock") && strings.Contains(g, "."+fn+"(") {
-			return true
-		}
-	}
-	return false
 }
 
 // In a review session the general mirror follows the same rules as GitHub's: a comment the user posted joins the

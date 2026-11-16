@@ -113,3 +113,17 @@ func cThread(stack string) bool {
 	return strings.Contains(head, "locked to thread") && strings.HasPrefix(fn, "runtime.goexit(") &&
 		strings.Count(rest, "\n") <= 1
 }
+
+// WaitingOnALock says a goroutine in a function named fn is blocked taking a mutex: for a test that waits until a
+// call is held up, rather than for a while.
+func WaitingOnALock(fn string) bool {
+	buf := make([]byte, 1<<20)
+	buf = buf[:runtime.Stack(buf, true)]
+	for g := range strings.SplitSeq(string(buf), "\n\n") {
+		head, _, _ := strings.Cut(g, "\n")
+		if strings.Contains(head, "[sync.Mutex.Lock") && strings.Contains(g, "."+fn+"(") {
+			return true
+		}
+	}
+	return false
+}
