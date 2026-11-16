@@ -122,7 +122,7 @@ func (x *Secrets) section(c *ui.Ctx) {
 	}
 	c.Row("help", ui.Style{Pad: ui.Insets{T: 8}}, func(c *ui.Ctx) {
 		if widget.Button(c, "help", "About secrets", widget.ButtonOpts{Ghost: true, Help: secretsHelp}) {
-			x.h.Run(context.Background(), "help.open", registry.Args{"id": secretsHelp})
+			kit.RunOrNotify(x.h, "settings", "help.open", registry.Args{"id": secretsHelp})
 		}
 	})
 }

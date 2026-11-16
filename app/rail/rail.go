@@ -677,7 +677,7 @@ func (r *Rail) wideRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 			})
 			r.addButton(c, w)
 			if widget.IconButton(c, "form", "«", widget.IconButtonOpts{Label: "Narrow the sidebar", Help: "shell/rail", Size: 20}) {
-				r.h.Run(context.Background(), "sidebar.form", registry.Args{"form": "narrow"})
+				kit.RunOrNotify(r.h, "rail", "sidebar.form", registry.Args{"form": "narrow"})
 			}
 		})
 		widget.Rule(c, "rule")
@@ -794,7 +794,7 @@ func (r *Rail) narrowRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 	case rowHeading:
 		cell("head", 30, func(c *ui.Ctx) {
 			if widget.IconButton(c, "form", "»", widget.IconButtonOpts{Label: "Widen the sidebar", Help: "shell/rail", Size: 22}) {
-				r.h.Run(context.Background(), "sidebar.form", registry.Args{"form": "wide"})
+				kit.RunOrNotify(r.h, "rail", "sidebar.form", registry.Args{"form": "wide"})
 			}
 		})
 	case rowAdd:

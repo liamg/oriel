@@ -1,6 +1,8 @@
 package prompts
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -97,7 +99,7 @@ func TestOnlyOverridesAreStored(t *testing.T) {
 	if err := s.Set(StyleID, "\n"+d.Default+"\n"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
 		t.Error("saving the default kept a file")
 	}
 	if err := s.Set(PackID("work"), "---\nname: work\n---\n# Mine\n"); err != nil {

@@ -3,6 +3,8 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -118,7 +120,7 @@ func TestGHCreateTagRefusesExisting(t *testing.T) {
 func argv(t *testing.T, log string) string {
 	t.Helper()
 	b, err := os.ReadFile(log)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return ""
 	}
 	if err != nil {

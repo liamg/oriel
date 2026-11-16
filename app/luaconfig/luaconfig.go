@@ -182,7 +182,7 @@ func (x *Lua) Reload(toast bool) {
 	apis := api.Install(vm, x.h, x.Dir)
 	x.clearMarks()
 	src, err := os.ReadFile(x.initLua())
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		x.swap(vm, apis)
 		x.err, x.good = nil, true
 		x.h.Dismiss("lua.load")

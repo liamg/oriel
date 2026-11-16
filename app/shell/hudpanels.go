@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"context"
 	"fmt"
 	"slices"
 
@@ -75,7 +74,7 @@ func (t *sessionTabs) sessionsPanel(c *ui.Ctx, h plugin.Host) {
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("w", kit.Why(s, now), widget.MonoFont(10.5, th.C(theme.FgFaint)))
 		}).Clicked {
-			h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID)})
+			kit.RunOrNotify(h, "shell", "session.focus", registry.Args{"id": string(s.ID)})
 		}
 	}
 }

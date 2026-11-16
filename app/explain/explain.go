@@ -426,7 +426,7 @@ func (x *Plugin) explainSelection() error {
 
 // leaveVisual takes the editor out of Visual mode, as <Esc> does.
 func (x *Plugin) leaveVisual() {
-	x.h.Run(context.Background(), "editor.keys", registry.Args{"keys": "<Esc>", "noremap": true})
+	kit.RunOrNotify(x.h, "explain", "editor.keys", registry.Args{"keys": "<Esc>", "noremap": true})
 }
 
 // explainRange opens a card on a range of a buffer, under the units around it; kind is what it is, a selection if "".

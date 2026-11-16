@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"os"
 	"os/exec"
@@ -206,7 +207,7 @@ func workModules(root string) (map[string]string, error) {
 		return nil, err
 	}
 	b, err := os.ReadFile(filepath.Join(root, "go.work"))
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		mod, err := modulePath(root)
 		return map[string]string{mod: root}, err
 	}

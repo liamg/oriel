@@ -3,6 +3,8 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -67,7 +69,7 @@ func startCounted(t *testing.T, name string) (Server, func() int) {
 	s.Env["GATEWAY_FAKE_STARTS"] = path
 	return s, func() int {
 		b, err := os.ReadFile(path)
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return 0
 		}
 		if err != nil {

@@ -1,7 +1,6 @@
 package lang
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -129,12 +128,11 @@ func (x *Tests) failureView(c *ui.Ctx, f failure) {
 			})
 		})
 		c.Row("acts", ui.Style{W: ui.Flex(1), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
-			ctx := context.Background()
 			if widget.Button(c, "jump", "jump to assertion", widget.ButtonOpts{Help: "editor/pane#tests"}) {
-				x.h.Run(ctx, "editor.open", registry.Args{"path": fl.Loc.File, "line": fl.Loc.Line + 1})
+				kit.RunOrNotify(x.h, "lang", "editor.open", registry.Args{"path": fl.Loc.File, "line": fl.Loc.Line + 1})
 			}
 			if widget.Button(c, "debug", "debug this case", widget.ButtonOpts{Disabled: !x.h.Available("debug.test", nil), Help: "editor/pane#tests"}) {
-				x.h.Run(ctx, "debug.test", registry.Args{"key": key, "file": fl.Loc.File, "line": fl.Loc.Line + 1})
+				kit.RunOrNotify(x.h, "lang", "debug.test", registry.Args{"key": key, "file": fl.Loc.File, "line": fl.Loc.Line + 1})
 			}
 			kit.AskTwins(c, x.h, failureKey(key), failureTrouble(res, x.testSource(res)), kit.AskTwinsOpts{Help: "editor/pane#tests"})
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)

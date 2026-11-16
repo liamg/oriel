@@ -347,7 +347,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 					label := fmt.Sprintf("%d %s", n, strings.ToUpper(prui.SeverityShort(s)))
 					if widget.ToggleChip(c, s, label, x.filter == s, widget.ToggleChipOpts{Tone: prui.SeverityTone(th, s), Help: findHelp + "#severity",
 						Tooltip: "Show only these"}) != (x.filter == s) {
-						x.h.Run(context.Background(), "review.ai.filter", registry.Args{"severity": s})
+						kit.RunOrNotify(x.h, "ship", "review.ai.filter", registry.Args{"severity": s})
 					}
 				}
 				c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
@@ -360,7 +360,7 @@ func (x *AIReview) view(c *ui.Ctx, root string, width float32) {
 						}
 						c.Text("t", label, widget.UIFont(11, fg))
 					}).Clicked {
-						x.h.Run(context.Background(), "review.ai.dismissed", nil)
+						kit.RunOrNotify(x.h, "ship", "review.ai.dismissed", nil)
 					}
 				}
 			})

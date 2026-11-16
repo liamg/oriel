@@ -3,8 +3,10 @@ package editor
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"image"
+	"io/fs"
 	"math"
 	"os"
 	"path/filepath"
@@ -151,7 +153,7 @@ func (x *Images) card(c *ui.Ctx, path string, f *viewedFile) {
 	kind := fileKind(path, "")
 	why := "Oriel doesn't show " + kind + "s."
 	switch {
-	case os.IsNotExist(f.err):
+	case errors.Is(f.err, fs.ErrNotExist):
 		why = "The file isn't there any more."
 	case f.err != nil && kit.IsImage(path):
 		why = "It can't be read as an image: " + f.err.Error()
@@ -163,7 +165,7 @@ func (x *Images) card(c *ui.Ctx, path string, f *viewedFile) {
 		c.Text("glyph", mediaGlyph(kind), widget.UIFont(30, th.C(theme.FgFaint)))
 		c.Text("name", filepath.Base(path), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 15, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
 		meta := kind
-		if f.err == nil || !os.IsNotExist(f.err) {
+		if f.err == nil || !errors.Is(f.err, fs.ErrNotExist) {
 			meta += " · " + kit.Bytes(f.size)
 		}
 		c.Text("meta", meta, widget.MonoFont(11, th.C(theme.FgMuted)))

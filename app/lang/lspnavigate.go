@@ -207,7 +207,7 @@ func (x *LSP) toQuickfix(title string, ls []lsp.Location) {
 	}
 	ctx := context.Background()
 	if err := x.h.Run(ctx, "quickfix.set", registry.Args{"title": title, "items": items}); err == nil {
-		x.h.Run(ctx, "quickfix.open", nil)
+		kit.RunOrNotify(x.h, "lang", "quickfix.open", nil)
 	}
 }
 
@@ -630,7 +630,7 @@ func (x *LSP) calls(ctx registry.Ctx, incoming bool) error {
 			return
 		}
 		x.callItems = items
-		x.h.Run(context.Background(), "picker.open", registry.Args{"source": "lsp.calls"})
+		kit.RunOrNotify(x.h, "lang", "picker.open", registry.Args{"source": "lsp.calls"})
 	})
 	return nil
 }

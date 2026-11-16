@@ -174,7 +174,7 @@ func (t *sessionTabs) build(c *ui.Ctx, h plugin.Host, vc uireg.ViewCtx) {
 						tip += " · quick session " + k + ", or right-click"
 					}
 					if widget.IconButton(c, "b", "+", widget.IconButtonOpts{Label: "New session", Tooltip: tip, Help: kit.NewSessionHelp, Size: 22}) {
-						h.Run(context.Background(), "session.new", nil)
+						kit.RunOrNotify(h, "shell", "session.new", nil)
 					}
 				})
 			}
@@ -262,7 +262,7 @@ func (t *sessionTabs) tab(c *ui.Ctx, h plugin.Host, i int, s core.Session, on bo
 		})
 	})
 	if in.Clicked {
-		h.Run(context.Background(), "session.focus", registry.Args{"id": string(s.ID())})
+		kit.RunOrNotify(h, "shell", "session.focus", registry.Args{"id": string(s.ID())})
 	}
 	if d := in.Dropped; d != nil {
 		if id, ok := d.Data.(core.SessionID); ok && id != s.ID() {

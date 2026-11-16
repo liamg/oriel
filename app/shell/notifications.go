@@ -263,7 +263,7 @@ func (n *notices) toast(c *ui.Ctx, row core.Notification, now time.Time) {
 	ctx := context.Background()
 	switch {
 	case res.Action >= 0 && res.Action == details:
-		n.h.Run(ctx, "log.open", registry.Args{"seq": row.Seq})
+		kit.RunOrNotify(n.h, "shell", "log.open", registry.Args{"seq": row.Seq})
 		n.h.Apply(core.Dismissal(row))
 	case res.Action >= 0:
 		a := row.Actions[res.Action]
@@ -322,7 +322,7 @@ func (n *notices) status(c *ui.Ctx) {
 				c.Text("glyph", glyph, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: tone})
 				c.Text("n", fmt.Sprint(k), ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 11}, Color: c.Theme().C(kit.TStatusFg)})
 			}).Clicked {
-				n.h.Run(context.Background(), "log.open", registry.Args{"severity": string(sev)})
+				kit.RunOrNotify(n.h, "shell", "log.open", registry.Args{"severity": string(sev)})
 			}
 		}
 		count("errors", "✕", errs, core.SevError, c.Theme().C(theme.Error))

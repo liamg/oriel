@@ -84,7 +84,7 @@ func CheckPath(root, path string) error {
 		}
 		cur = filepath.Join(cur, part)
 		fi, err := os.Lstat(cur)
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
 		if err != nil {

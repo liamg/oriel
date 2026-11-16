@@ -297,7 +297,7 @@ func (x *Debug) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
 	x.changed()
 	x.console = []consoleLine{{Kind: "console", Text: fmt.Sprintf("%s · %s", spec.Name, cmp.Or(cfg.Name, cfg.Program))}}
 	x.panel.watchVals = nil
-	x.h.Run(context.Background(), "view.open", debugViewArgs())
+	kit.RunOrNotify(x.h, "lang", "view.open", debugViewArgs())
 	opts := dap.Options{
 		Stderr:      &logs.Lines{Log: logTo(x.h, x.Logger, "dap:"+spec.Name)},
 		Breakpoints: x.dapBreakpoints(),
@@ -436,7 +436,7 @@ func (x *Debug) frameChanged(s *debugSession) {
 		return
 	}
 	if f.Path != "" {
-		x.h.Run(context.Background(), "editor.open", registry.Args{"path": f.Path, "line": f.Line + 1})
+		kit.RunOrNotify(x.h, "lang", "editor.open", registry.Args{"path": f.Path, "line": f.Line + 1})
 	}
 	gen, frame, c := s.gen, s.frame, s.client
 	x.async(func(ctx context.Context) error {

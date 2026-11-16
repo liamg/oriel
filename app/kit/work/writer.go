@@ -1,6 +1,8 @@
 package work
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
@@ -63,7 +65,7 @@ func (w *Writer) drain() {
 		w.mu.Unlock()
 		var err error
 		if wr.remove {
-			if err = os.Remove(path); os.IsNotExist(err) {
+			if err = os.Remove(path); errors.Is(err, fs.ErrNotExist) {
 				err = nil
 			}
 		} else if err = os.MkdirAll(filepath.Dir(path), 0o755); err == nil {

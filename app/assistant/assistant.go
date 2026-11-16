@@ -230,7 +230,7 @@ func (x *Assistant) changed() {
 		}
 		x.spoken = e.Seq
 		if e.Voice && e.Text != "" && x.h.Available("voice.speak", nil) {
-			_ = x.h.Run(context.Background(), "voice.speak", registry.Args{"text": e.Text})
+			kit.RunOrNotify(x.h, "assistant", "voice.speak", registry.Args{"text": e.Text})
 		}
 	}
 	x.h.Redraw()
