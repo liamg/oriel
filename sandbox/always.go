@@ -2,6 +2,9 @@ package sandbox
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -26,20 +29,36 @@ var alwaysMu sync.Mutex
 
 func alwaysPath() string { return filepath.Join(Base(), "always.json") }
 
-// LoadAlways reads the machine's always-allow list.
+// LoadAlways reads the machine's always-allow list; one it can't read allows nothing.
 func LoadAlways() Always {
-	var a Always
-	if b, err := os.ReadFile(alwaysPath()); err == nil {
-		_ = json.Unmarshal(b, &a)
-	}
+	a, _ := readAlways()
 	return a
 }
 
-// UpdateAlways applies edit to the list and saves it.
+// readAlways reads the list: none yet is empty, and one that doesn't parse is an error, so it's never saved over.
+func readAlways() (Always, error) {
+	var a Always
+	b, err := os.ReadFile(alwaysPath())
+	if errors.Is(err, fs.ErrNotExist) {
+		return a, nil
+	}
+	if err != nil {
+		return a, err
+	}
+	if err := json.Unmarshal(b, &a); err != nil {
+		return Always{}, fmt.Errorf("%s doesn't parse, so it's left as it is: fix or remove it: %w", alwaysPath(), err)
+	}
+	return a, nil
+}
+
+// UpdateAlways applies edit to the list and saves it. A list that doesn't parse is left alone, with an error.
 func UpdateAlways(edit func(*Always)) error {
 	alwaysMu.Lock()
 	defer alwaysMu.Unlock()
-	a := LoadAlways()
+	a, err := readAlways()
+	if err != nil {
+		return err
+	}
 	edit(&a)
 	b, err := json.MarshalIndent(a, "", "  ")
 	if err != nil {
