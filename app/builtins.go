@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/app/jobs"
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/app/luaconfig"
+	"github.com/liamg/oriel/app/omnibox"
 	"github.com/liamg/oriel/app/overview"
 	"github.com/liamg/oriel/app/plugins"
 	"github.com/liamg/oriel/app/rail"
@@ -49,8 +50,8 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	// The agent providers come before the plugins and config that may register their own under the same name.
 	out = append(out, cfg.Agents...)
 	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages")}, p.Themes, p.Layout, gits,
-		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
-		&stats.HUD{}, &agentui.Inbox{}, p.Omnibox, p.Picker, p.WhichKey, &plugins.Consent{}, p.Help, p.Nav, p.Menus,
+		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, &omnibox.Introspect{ConfigDir: c.ConfigDir}, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
+		&stats.HUD{}, &agentui.Inbox{}, &omnibox.Omnibox{}, &omnibox.Picker{}, p.WhichKey, &plugins.Consent{}, p.Help, p.Nav, p.Menus,
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},
 		&editor.Search{Editor: ed, Tools: p.Tools}, &lang.LSP{Version: c.Version, Logger: c.Logs.Logger, Servers: cfg.LanguageServers},

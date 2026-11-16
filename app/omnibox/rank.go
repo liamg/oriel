@@ -1,4 +1,4 @@
-package shell
+package omnibox
 
 import (
 	"context"

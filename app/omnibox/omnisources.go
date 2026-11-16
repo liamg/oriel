@@ -1,12 +1,10 @@
-package shell
+package omnibox
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/draw"
-	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
@@ -14,48 +12,6 @@ import (
 	"github.com/liamg/oriel/ui"
 	"github.com/liamg/oriel/ui/widget"
 )
-
-// sessionsSource is the sessions, the ones that need you first.
-func sessionsSource(h plugin.Host) uireg.PickerSource {
-	boost := map[core.Status]int{core.StatusNeedsYou: 40, core.StatusPermission: 30, core.StatusReviewer: 10}
-	return uireg.PickerSource{ID: "sessions", Title: "Sessions", Order: 10,
-		Key: func() any { return h.State().Seq },
-		Items: func(registry.Ctx, string) []uireg.PickerItem {
-			var out []uireg.PickerItem
-			tabs := map[core.SessionID]int{}
-			for i, s := range openTabs(h.State()) {
-				tabs[s.ID()] = i
-			}
-			for _, s := range h.Sessions() {
-				it := uireg.PickerItem{ID: string(s.ID()), Label: s.Name(), Detail: string(s.Kind()), Note: statusWord(s),
-					IconStyle: "status." + string(s.Status()), Boost: boost[s.Status()], Data: s}
-				if i, ok := tabs[s.ID()]; ok && i < 9 {
-					it.Key = fmt.Sprintf("⌘%d", i+1)
-				}
-				out = append(out, it)
-			}
-			return out
-		},
-		Preview: func(it uireg.PickerItem) ui.Node {
-			s := it.Data.(core.Session)
-			return &ui.Func{Key: "session", Fn: func(c *ui.Ctx) {
-				th := c.Theme()
-				c.Column("p", ui.Style{W: ui.Flex(1), Gap: 12}, func(c *ui.Ctx) {
-					tone := ui.TextStyle{Color: th.C(kit.StatusTokens[s.Status()])}
-					draw.PreviewHead(c, strings.ReplaceAll(string(s.Status()), "_", " "), tone, s.Name())
-					draw.PreviewField(c, "kind", string(s.Kind()))
-					draw.PreviewField(c, "session", string(s.ID()))
-					if n := s.Unseen(); n > 0 {
-						draw.PreviewField(c, "errors", fmt.Sprintf("%d unseen", n))
-					}
-				})
-			}}
-		},
-		Run: func(ctx registry.Ctx, it uireg.PickerItem) error {
-			return h.Run(ctx, "session.open", registry.Args{"id": it.ID})
-		},
-	}
-}
 
 // commandsSource is every command, by its id, with the keys bound to it; its title is in the preview.
 func commandsSource(h plugin.Host) uireg.PickerSource {

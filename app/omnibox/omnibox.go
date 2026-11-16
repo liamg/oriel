@@ -1,4 +1,6 @@
-package shell
+// Package omnibox is the omnibox (search everything: sessions, commands, files, symbols) and the picker that every
+// list of choices opens in, with their ranking and the :Keys and :Commands lists.
+package omnibox
 
 import (
 	"context"
@@ -34,7 +36,7 @@ var (
 
 // omnibox is ⌘K: every picker source merged into one ranked list, with a preview of the selection.
 // A source's prefix narrows it to that source; ⇥ steps through them.
-type omnibox struct {
+type Omnibox struct {
 	kit.Disposer
 	h     plugin.Host
 	open  bool
@@ -49,9 +51,9 @@ type omnibox struct {
 // The keys down from the omnibox to its search field, which its build and its key reading share.
 const omniBox, omniHead, omniInput = "box", "head", "input"
 
-func (o *omnibox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "omnibox"} }
+func (o *Omnibox) Manifest() plugin.Manifest { return plugin.Manifest{ID: "omnibox"} }
 
-func (o *omnibox) Activate(_ context.Context, h plugin.Host) error {
+func (o *Omnibox) Activate(_ context.Context, h plugin.Host) error {
 	o.h = h
 	o.ranks = newRankings(h)
 	o.Add(registry.DisposeFunc(o.ranks.reset))
@@ -87,7 +89,7 @@ type group struct {
 
 // results ranks every source's items against the query: the fuzzy score plus the item's boost, best first, each
 // source in its order. A source's prefix at the start of the query narrows to it.
-func (o *omnibox) results(moving bool) (out []group, busy []string) {
+func (o *Omnibox) results(moving bool) (out []group, busy []string) {
 	q, scope := o.query, o.scope
 	srcs := o.h.Pickers()
 	for _, s := range srcs {
@@ -124,7 +126,7 @@ func rankSource(h plugin.Host, s uireg.PickerSource, q string, limit int) (group
 	return g, len(g.hits) > 0
 }
 
-func (o *omnibox) build(c *ui.Ctx) {
+func (o *Omnibox) build(c *ui.Ctx) {
 	if !o.open {
 		return
 	}
@@ -210,7 +212,7 @@ func (o *omnibox) build(c *ui.Ctx) {
 }
 
 // chips are the scopes: all, then each source, with its prefix. The current one is lit.
-func (o *omnibox) chips(c *ui.Ctx) {
+func (o *Omnibox) chips(c *ui.Ctx) {
 	th := c.Theme()
 	chip := func(id, label string) {
 		tone := th.C(theme.FgMuted)
@@ -236,7 +238,7 @@ func (o *omnibox) chips(c *ui.Ctx) {
 	}
 }
 
-func (o *omnibox) cycleScope(back bool) {
+func (o *Omnibox) cycleScope(back bool) {
 	ids := []string{""}
 	for _, s := range o.h.Pickers() {
 		if !s.PickerOnly {
@@ -252,7 +254,7 @@ func (o *omnibox) cycleScope(back bool) {
 	o.scope, o.sel = ids[(i+len(ids))%len(ids)], 0
 }
 
-func (o *omnibox) run(h hit) {
+func (o *Omnibox) run(h hit) {
 	o.open = false
 	if h.src.Run == nil {
 		return
@@ -263,7 +265,7 @@ func (o *omnibox) run(h hit) {
 }
 
 // list is the results, grouped by source under its title and count.
-func (o *omnibox) list(c *ui.Ctx, groups []group) {
+func (o *Omnibox) list(c *ui.Ctx, groups []group) {
 	th := c.Theme()
 	if len(groups) == 0 {
 		return

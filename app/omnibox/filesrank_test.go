@@ -1,11 +1,11 @@
-package shell_test
+package omnibox_test
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/omnibox"
 	"github.com/liamg/oriel/gitx/gittest"
 )
 
@@ -20,7 +20,7 @@ func TestFilesRankChangedFirst(t *testing.T) {
 	s := apptest.New(t, apptest.Options{WorkDir: r.Dir})
 	s.WaitGit()
 	src := mustSource(t, s, "files")
-	g, ok := shell.RankSource(s.Headless, src, "same", shell.PickerMax)
+	g, ok := omnibox.RankSource(s.HostAs("test"), src, "same", omnibox.PickerMax)
 	if !ok || len(g.Items()) != 2 {
 		t.Fatalf("hits: %+v", g)
 	}

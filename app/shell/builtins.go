@@ -21,31 +21,10 @@ func (sh *shell) parts() Parts {
 	cfg := sh.cfg
 	return Parts{Config: cfg, DirState: sh.dirState, WorkDir: func() string { return sh.cfg.WorkDir }, Clipboard: desktopClipboard{&sh.desktop}, Pictures: sh.reads.Pictures, Tools: sh.tools,
 		UI: &uiOptions{}, Frames: &frames{}, Themes: &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, Layout: sh.layout,
-		Start: &start{sh: sh}, Introspect: &introspect{configDir: cfg.ConfigDir},
-		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh}, Omnibox: &omnibox{}, Picker: &picker{}, WhichKey: &whichKey{},
+		Start:      &start{sh: sh},
+		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh}, WhichKey: &whichKey{},
 		Help: &helpView{configDir: cfg.ConfigDir}, Nav: &navPlugin{sh: sh}, Menus: &contextMenus{}, Notices: &notices{sh: sh},
 		Desktop: &desktopPlugin{desktop: &sh.desktop}, Quit: &quitDialog{draining: &sh.draining}}
-}
-
-// introspect is :Keys and :Commands: every keymap and command, with where it came from, in a picker.
-type introspect struct {
-	kit.Disposer
-	configDir string
-}
-
-func (i *introspect) Manifest() plugin.Manifest { return plugin.Manifest{ID: "introspect"} }
-
-func (i *introspect) Activate(_ context.Context, h plugin.Host) error {
-	pick := func(source string) func(registry.Ctx, registry.Args) error {
-		return func(ctx registry.Ctx, _ registry.Args) error {
-			return h.Run(ctx, "picker.open", registry.Args{"source": source})
-		}
-	}
-	i.Add(h.Picker(commandsSource(h)))
-	i.Add(h.Picker(keymapsSource(h, i.configDir)))
-	i.Add(h.Command(registry.Command{ID: "Keys", Title: "List keymaps", Run: pick("keymaps")}))
-	i.Add(h.Command(registry.Command{ID: "Commands", Title: "List commands", Run: pick("commands")}))
-	return nil
 }
 
 // uiOptions registers the toolkit's own options.

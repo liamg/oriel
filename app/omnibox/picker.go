@@ -1,4 +1,4 @@
-package shell
+package omnibox
 
 import (
 	"context"
@@ -26,7 +26,7 @@ const pickerRowH = 32 // a result's row
 
 // picker is a picker: one source at a time, its query matched as you type, a preview of the highlighted
 // result, and actions on it. ⇥ steps to the next source keeping the query; ␣' resumes the last one as it was left.
-type picker struct {
+type Picker struct {
 	kit.Disposer
 	h       plugin.Host
 	open    bool
@@ -84,9 +84,9 @@ func pickerWaitRow(c *ui.Ctx, s widget.LoadState, label string, none bool, help 
 	})
 }
 
-func (p *picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker"} }
+func (p *Picker) Manifest() plugin.Manifest { return plugin.Manifest{ID: "picker"} }
 
-func (p *picker) Activate(_ context.Context, h plugin.Host) error {
+func (p *Picker) Activate(_ context.Context, h plugin.Host) error {
 	p.h, p.picked, p.ranks = h, map[string]bool{}, newRankings(h)
 	p.Add(registry.DisposeFunc(p.ranks.reset))
 	p.Add(h.Command(registry.Command{ID: "picker.open", Title: "Open a picker: {source}, and a {query}", Available: func(a registry.Args) bool {
@@ -119,7 +119,7 @@ func (p *picker) Activate(_ context.Context, h plugin.Host) error {
 	return nil
 }
 
-func (p *picker) src() (uireg.PickerSource, bool) {
+func (p *Picker) src() (uireg.PickerSource, bool) {
 	for _, s := range p.h.Pickers() {
 		if s.ID == p.source {
 			return s, true
@@ -129,7 +129,7 @@ func (p *picker) src() (uireg.PickerSource, bool) {
 }
 
 // actions are the source's, then the ones every place has: open, vsplit, split, tab, quickfix and attach.
-func (p *picker) actions(s uireg.PickerSource) []uireg.PickerAction {
+func (p *Picker) actions(s uireg.PickerSource) []uireg.PickerAction {
 	out := slices.Clone(s.Actions)
 	place := func(where string) func(registry.Ctx, []uireg.PickerItem) error {
 		return func(ctx registry.Ctx, items []uireg.PickerItem) error {
@@ -162,7 +162,7 @@ func (p *picker) actions(s uireg.PickerSource) []uireg.PickerAction {
 }
 
 // toQuickfix sends the items with places to a new quickfix list, all of them when none are picked.
-func (p *picker) toQuickfix(s uireg.PickerSource) func(registry.Ctx, []uireg.PickerItem) error {
+func (p *Picker) toQuickfix(s uireg.PickerSource) func(registry.Ctx, []uireg.PickerItem) error {
 	return func(ctx registry.Ctx, items []uireg.PickerItem) error {
 		var qf []map[string]any
 		for _, it := range items {
@@ -174,7 +174,7 @@ func (p *picker) toQuickfix(s uireg.PickerSource) func(registry.Ctx, []uireg.Pic
 	}
 }
 
-func (p *picker) build(c *ui.Ctx) {
+func (p *Picker) build(c *ui.Ctx) {
 	if !p.open {
 		return
 	}
@@ -243,7 +243,7 @@ func (p *picker) build(c *ui.Ctx) {
 }
 
 // keys are the picker's own: moving, picking, the actions, and ⇥ to the next source.
-func (p *picker) keys(c *ui.Ctx, s uireg.PickerSource, g group, keys []render.KeyEvent) {
+func (p *Picker) keys(c *ui.Ctx, s uireg.PickerSource, g group, keys []render.KeyEvent) {
 	acts := p.actions(s)
 	for _, k := range keys {
 		n := kit.Notation(k)
@@ -272,7 +272,7 @@ func (p *picker) keys(c *ui.Ctx, s uireg.PickerSource, g group, keys []render.Ke
 }
 
 // selection is the picked items, or the highlighted one.
-func (p *picker) selection(g group) []uireg.PickerItem {
+func (p *Picker) selection(g group) []uireg.PickerItem {
 	var out []uireg.PickerItem
 	for _, h := range g.hits {
 		if p.picked[h.item.ID] {
@@ -285,7 +285,7 @@ func (p *picker) selection(g group) []uireg.PickerItem {
 	return out
 }
 
-func (p *picker) act(a uireg.PickerAction, g group) {
+func (p *Picker) act(a uireg.PickerAction, g group) {
 	items := p.selection(g)
 	if a.Title == "to quickfix" && len(p.picked) == 0 {
 		items = nil
@@ -300,7 +300,7 @@ func (p *picker) act(a uireg.PickerAction, g group) {
 }
 
 // close shuts the picker; cancelled, the source puts back what Hover showed.
-func (p *picker) close(cancelled bool) {
+func (p *Picker) close(cancelled bool) {
 	p.open, p.hovered = false, ""
 	if s, ok := p.src(); ok && cancelled && s.Cancel != nil {
 		registry.Call(func() error { s.Cancel(); return nil })
@@ -318,7 +318,7 @@ func startAt(s uireg.PickerSource, query string, h plugin.Host) int {
 	return 0
 }
 
-func (p *picker) run(s uireg.PickerSource, h hit) {
+func (p *Picker) run(s uireg.PickerSource, h hit) {
 	p.close(false)
 	run := s.Run
 	if run == nil && h.item.Path != "" {
@@ -335,7 +335,7 @@ func (p *picker) run(s uireg.PickerSource, h hit) {
 }
 
 // step moves to the next (or previous) source in the strip, keeping the query.
-func (p *picker) step(back bool) {
+func (p *Picker) step(back bool) {
 	var ids []string
 	for _, s := range p.h.Pickers() {
 		if !s.Unlisted || s.ID == p.source {
@@ -356,7 +356,7 @@ func (p *picker) step(back bool) {
 }
 
 // sourceStrip is PICK, then each source with the key that opens it; the current one lit.
-func (p *picker) sourceStrip(c *ui.Ctx, cur uireg.PickerSource) {
+func (p *Picker) sourceStrip(c *ui.Ctx, cur uireg.PickerSource) {
 	th := c.Theme()
 	label := ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 9.5, Weight: typeset.Medium, Tracking: .12}, Color: th.C(theme.FgFaint)}
 	c.Row("strip", ui.Style{W: ui.Flex(1), H: ui.Px(38), Pad: ui.PadXY(14, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
@@ -373,7 +373,7 @@ func (p *picker) sourceStrip(c *ui.Ctx, cur uireg.PickerSource) {
 	})
 }
 
-func (p *picker) sources(c *ui.Ctx, cur uireg.PickerSource, label ui.TextStyle) {
+func (p *Picker) sources(c *ui.Ctx, cur uireg.PickerSource, label ui.TextStyle) {
 	th := c.Theme()
 	for _, s := range p.h.Pickers() {
 		on := s.ID == cur.ID
@@ -397,7 +397,7 @@ func (p *picker) sources(c *ui.Ctx, cur uireg.PickerSource, label ui.TextStyle) 
 }
 
 // keyFor is the key that opens a source's picker, as its keymap writes it, with the leader as ␣.
-func (p *picker) keyFor(src string) string {
+func (p *Picker) keyFor(src string) string {
 	for _, k := range p.h.Keymaps() {
 		if k.Command == "picker.open" && k.Args["source"] == src && k.Args["query"] == nil {
 			return strings.ReplaceAll(strings.ReplaceAll(k.Keys, "<Space>", "␣"), " ", "␣")
@@ -406,7 +406,7 @@ func (p *picker) keyFor(src string) string {
 	return ""
 }
 
-func (p *picker) input(c *ui.Ctx, id ui.ID, s uireg.PickerSource, g group) {
+func (p *Picker) input(c *ui.Ctx, id ui.ID, s uireg.PickerSource, g group) {
 	th := c.Theme()
 	if p.focus {
 		p.focus = false
@@ -433,7 +433,7 @@ func (p *picker) input(c *ui.Ctx, id ui.ID, s uireg.PickerSource, g group) {
 }
 
 // footer lists the keys: the place actions only when the highlighted item is a place.
-func (p *picker) footer(c *ui.Ctx, s uireg.PickerSource, place bool) {
+func (p *Picker) footer(c *ui.Ctx, s uireg.PickerSource, place bool) {
 	th := c.Theme()
 	c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(14, 0), Gap: 14, Cross: ui.Center}, func(c *ui.Ctx) {
 		hint := func(k, what string) {

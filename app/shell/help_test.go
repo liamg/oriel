@@ -16,7 +16,10 @@ func help(s *apptest.Scene) *shell.Help { return apptest.PluginOf[*shell.Help](s
 
 // Every interactive element resolves to a help page and anchor, across the app's surfaces.
 func TestHelpLint(t *testing.T) {
-	s := omniScene(t, "pri")
+	s := apptest.New(t, apptest.Options{})
+	s.Run("omnibox.open", registry.Args{"query": "pri"})
+	s.Frame()
+	s.Frame()
 	s.Lint("omnibox")
 	s.Press("<Esc>")
 	s.Run("picker.open", registry.Args{"source": "files", "query": "go"})

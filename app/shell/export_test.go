@@ -15,45 +15,6 @@ import (
 
 // What the package's outside tests read and set of its plugins.
 
-type (
-	Picker  = picker
-	Omnibox = omnibox
-	Group   = group
-)
-
-const (
-	PickerMax = pickerMax
-	RankAway  = rankAway
-)
-
-// Source is the id of the source the group's results are of.
-func (g group) Source() string { return g.src.ID }
-
-// Items are the group's results, best first.
-func (g group) Items() []uireg.PickerItem {
-	out := make([]uireg.PickerItem, len(g.hits))
-	for i, h := range g.hits {
-		out[i] = h.item
-	}
-	return out
-}
-
-// RankSource is s's items for q, best first, at most limit of them, as a source of h's plugins ranks them.
-func RankSource(h *Headless, s uireg.PickerSource, q string, limit int) (group, bool) {
-	return rankSource(h.sh.host("test"), s, q, limit)
-}
-
-// SourceLoading says s is still loading its items.
-func SourceLoading(s uireg.PickerSource) bool { return sourceLoading(s) }
-
-func (o *omnibox) Results(moving bool) []group { g, _ := o.results(moving); return g }
-func (o *omnibox) Open() bool                  { return o.open }
-
-func (p *picker) Open() bool     { return p.open }
-func (p *picker) Source() string { return p.source }
-func (p *picker) Query() string  { return p.query }
-func (p *picker) Selected() int  { return p.sel }
-
 // SetKeys has the window's keys go through r, as its loop's do.
 func SetKeys(h *Headless, r *registry.Resolver) { h.sh.keys = r }
 
@@ -147,6 +108,3 @@ func PaneLead(h *Headless, v layout.ViewRef) (render.Color, bool) { return h.sh.
 
 // PaneTip is a tab's tooltip.
 func PaneTip(h *Headless, v layout.ViewRef) string { return h.sh.layout.panes.Tip(v) }
-
-// Selected is the omnibox's selected row.
-func (o *omnibox) Selected() int { return o.sel }

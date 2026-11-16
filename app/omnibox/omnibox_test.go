@@ -1,4 +1,4 @@
-package shell_test
+package omnibox_test
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/omnibox"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -45,7 +45,7 @@ func omniScene(t *testing.T, query string) *apptest.Scene {
 	return s
 }
 
-func omni(s *apptest.Scene) *shell.Omnibox { return apptest.PluginOf[*shell.Omnibox](s, "omnibox") }
+func omni(s *apptest.Scene) *omnibox.Omnibox { return apptest.PluginOf[*omnibox.Omnibox](s, "omnibox") }
 
 // The merged list for "pri", ranked and grouped, against a golden.
 func TestOmniboxSnapshot(t *testing.T) {
@@ -98,7 +98,7 @@ func TestOmniboxPrefixes(t *testing.T) {
 // until the new one is made, then the files matching what was typed.
 func TestOmniboxRanksManyFilesOffTheLoop(t *testing.T) {
 	dir := t.TempDir()
-	for i := range shell.RankAway + 500 {
+	for i := range omnibox.RankAway + 500 {
 		p := filepath.Join(dir, fmt.Sprintf("pkg%d", i%20), fmt.Sprintf("f%05d.go", i))
 		os.MkdirAll(filepath.Dir(p), 0o755)
 		os.WriteFile(p, []byte("package p\n"), 0o644)

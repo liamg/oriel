@@ -1,6 +1,6 @@
 //go:build perf && !race
 
-package shell_test
+package omnibox_test
 
 import (
 	"fmt"

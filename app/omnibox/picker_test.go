@@ -1,17 +1,18 @@
-package shell_test
+package omnibox_test
 
 import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/omnibox"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 )
 
-func picker(s *apptest.Scene) *shell.Picker { return apptest.PluginOf[*shell.Picker](s, "picker") }
+func picker(s *apptest.Scene) *omnibox.Picker { return apptest.PluginOf[*omnibox.Picker](s, "picker") }
 
 // pickerScene is omniScene's world with a picker open on source.
 func pickerScene(t *testing.T, source, query string) *apptest.Scene {
@@ -42,10 +43,10 @@ func TestPickerSources(t *testing.T) {
 			tt.source, _, _ = strings.Cut(tt.source, " ")
 			s := pickerScene(t, tt.source, tt.query)
 			src := mustSource(t, s, tt.source)
-			g, _ := shell.RankSource(s.Headless, src, tt.query, shell.PickerMax)
+			g, _ := omnibox.RankSource(s.HostAs("test"), src, tt.query, omnibox.PickerMax)
 			apptest.Poll(t, "results", func() bool { // a live source answers off the UI's goroutine
 				var ok bool
-				g, ok = shell.RankSource(s.Headless, src, tt.query, shell.PickerMax)
+				g, ok = omnibox.RankSource(s.HostAs("test"), src, tt.query, omnibox.PickerMax)
 				return ok
 			})
 			text := s.WaitFor(tt.preview)
@@ -70,7 +71,7 @@ func sourcesLoaded(s *apptest.Scene) {
 	}
 	s.Until("the picker sources to load", func() bool {
 		for _, src := range s.Registry().Pickers() {
-			if shell.SourceLoading(src) {
+			if omnibox.SourceLoading(src) {
 				return false
 			}
 		}
@@ -111,7 +112,7 @@ func TestPickerActions(t *testing.T) {
 	s := pickerScene(t, "files", ".go")
 	p := picker(s)
 	src := mustSource(t, s, "files")
-	g, _ := shell.RankSource(s.Headless, src, ".go", shell.PickerMax)
+	g, _ := omnibox.RankSource(s.HostAs("test"), src, ".go", omnibox.PickerMax)
 	s.Press("<C-q>")
 	title, items := s.Editor().Quickfix()
 	if len(items) != 2 || !strings.HasPrefix(title, "Files") || items[0].Path == "" {
@@ -158,5 +159,24 @@ func TestPickingASymbolOpensIt(t *testing.T) {
 				t.Errorf("the cursor is at %s:%d, not the symbol (%v)", at.File, at.Line, err)
 			}
 		})
+	}
+}
+
+func TestSearchClosesOnTheNextFrame(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	s.Now = time.Unix(1000, 0)
+	s.Run("picker.open", registry.Args{"source": "grep"})
+	s.Frame()
+	s.Frame()
+	s.Type("Esc")
+	if picker(s).Open() {
+		t.Fatal("Escape didn't close the search")
+	}
+	if next := s.UI().NextFrame(); next.IsZero() || next.After(s.Now) {
+		t.Errorf("the frame that closed the search, still showing it, asks for the next at %v, not now", next)
+	}
+	s.Frame()
+	if picker(s).Open() || s.UI().NextFrame().After(s.Now) {
+		t.Error("the search is still up a frame later")
 	}
 }

@@ -1,4 +1,4 @@
-package shell_test
+package omnibox_test
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/omnibox"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/uireg"
 )
@@ -54,10 +54,10 @@ oriel.picker.source{ name = "wiki", title = "Wiki", picker_only = true, items = 
 func TestFilesPickerWalksOffTheLoop(t *testing.T) {
 	s := omniScene(t, "")
 	src := mustSource(t, s, "files")
-	if shell.SourceLoading(src) {
+	if omnibox.SourceLoading(src) {
 		t.Fatal("still loading after the walk")
 	}
-	g, ok := shell.RankSource(s.Headless, src, "round", shell.PickerMax)
+	g, ok := omnibox.RankSource(s.HostAs("test"), src, "round", omnibox.PickerMax)
 	if !ok || g.Items()[0].Label != "internal/pricing/round.go" {
 		t.Errorf("hits: %+v", g.Items())
 	}
