@@ -742,8 +742,7 @@ func (x *Plugin) frontUsage() (core.ProviderUsage, bool) {
 
 // accountLabel is how an account reads: the user's label for it (usage.accounts), else its email or organisation.
 func (x *Plugin) accountLabel(account, name string) string {
-	v, _, _ := x.h.Options().Get(AccountsOption, registry.At{})
-	if m, ok := v.(map[string]string); ok && m[account] != "" {
+	if m, _ := registry.Option[map[string]string](x.h.Options(), AccountsOption, registry.At{}); m[account] != "" {
 		return m[account]
 	}
 	return cmp.Or(name, cmp.Or(account, "unknown account"))
