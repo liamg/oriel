@@ -1,9 +1,10 @@
-package shell
+// Package themes is the themes: the built-in ones and the user's theme files, and :Themes, which previews each as
+// it's highlighted and keeps the one chosen.
+package themes
 
 import (
 	"context"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -16,19 +17,19 @@ import (
 	"github.com/liamg/oriel/ui"
 )
 
-// themes registers the built-in themes and the theme files in the user's themes directory.
-type themes struct {
+// Themes registers the built-in themes and the theme files in the user's themes directory.
+type Themes struct {
 	kit.Disposer
-	dir string
+	Dir string // the user's themes directory
 }
 
-func (t *themes) Manifest() plugin.Manifest { return plugin.Manifest{ID: "themes"} }
+func (t *Themes) Manifest() plugin.Manifest { return plugin.Manifest{ID: "themes"} }
 
-func (t *themes) Activate(_ context.Context, h plugin.Host) error {
+func (t *Themes) Activate(_ context.Context, h plugin.Host) error {
 	for _, s := range theme.Builtins() {
 		t.Add(h.Theme(s))
 	}
-	files, _ := filepath.Glob(filepath.Join(t.dir, "*.toml"))
+	files, _ := filepath.Glob(filepath.Join(t.Dir, "*.toml"))
 	for _, f := range files {
 		t.Add(h.Theme(theme.File{Path: f}))
 	}
@@ -62,7 +63,7 @@ func (p *themePreviews) of(h plugin.Host, name string, v theme.Variant) (*theme.
 	k := name + "\x00" + string(v)
 	t, ok := p.by[k]
 	if !ok {
-		t.r, t.err = resolveTheme(srcs, name, v)
+		t.r, t.err = theme.ResolveNamed(srcs, name, v)
 		p.by[k] = t
 	}
 	if p.sample == nil {
@@ -151,19 +152,6 @@ func PriceFor(t *Tier, qty int) (int, error) {
 }
 `
 
-// themeNames are the registered themes' names, sorted.
-func themeNames(h registry.Registry) []string {
-	srcs, _ := h.Themes()
-	var out []string
-	for _, src := range srcs {
-		if !slices.Contains(out, src.Name()) {
-			out = append(out, src.Name())
-		}
-	}
-	slices.Sort(out)
-	return out
-}
-
 // themePicker is :Themes: each theme shows as it's highlighted, Enter keeps it in your settings, and Esc goes back
 // to the one before.
 func themePicker(h plugin.Host) uireg.PickerSource {
@@ -195,7 +183,7 @@ func themePicker(h plugin.Host) uireg.PickerSource {
 				cur = before.cur
 			}
 			var out []uireg.PickerItem
-			for _, n := range themeNames(h) {
+			for _, n := range kit.ThemeNames(h) {
 				it := uireg.PickerItem{ID: n, Label: n, Current: n == cur}
 				if it.Current {
 					it.Note = "current"

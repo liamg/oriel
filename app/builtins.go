@@ -31,6 +31,7 @@ import (
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/app/stats"
 	"github.com/liamg/oriel/app/terminal"
+	"github.com/liamg/oriel/app/themes"
 	"github.com/liamg/oriel/app/tickets"
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/app/watches"
@@ -51,7 +52,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	out := []plugin.Plugin{p.UI, p.Frames, &watches.Watches{Timing: cfg.WatchTiming}, &hostPlugin{Host: c.Host}}
 	// The agent providers come before the plugins and config that may register their own under the same name.
 	out = append(out, cfg.Agents...)
-	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages")}, p.Themes, p.Layout, gits,
+	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages")}, &themes.Themes{Dir: filepath.Join(c.ConfigDir, "themes")}, p.Layout, gits,
 		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, &omnibox.Introspect{ConfigDir: c.ConfigDir}, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
 		&stats.HUD{}, &agentui.Inbox{}, &omnibox.Omnibox{}, &omnibox.Picker{}, &keys.WhichKey{}, &plugins.Consent{}, &help.View{ConfigDir: c.ConfigDir}, p.Nav, &keys.Menus{},
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},

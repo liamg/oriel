@@ -427,23 +427,15 @@ func chosenTheme(reg registry.Registry, osLight bool) (*theme.Resolved, error) {
 		}
 	}
 	srcs, _ := reg.Themes()
-	r, err := resolveTheme(srcs, name, variant)
+	r, err := theme.ResolveNamed(srcs, name, variant)
 	if err == nil {
 		return r, nil
 	}
-	b, berr := resolveTheme(theme.Builtins(), "oriel", variant)
+	b, berr := theme.ResolveNamed(theme.Builtins(), "oriel", variant)
 	if berr != nil {
 		panic(berr) // the built-in theme always resolves; its tests say so
 	}
 	return b, fmt.Errorf("%s: %w", name, err)
-}
-
-func resolveTheme(sources []theme.Source, name string, v theme.Variant) (*theme.Resolved, error) {
-	st, err := theme.Stack(sources, name)
-	if err != nil {
-		return nil, err
-	}
-	return theme.Resolve(st, theme.Effective(st, v))
 }
 
 // dispatch applies ev to the window. It reports whether the next frame can differ for it.

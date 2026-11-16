@@ -101,8 +101,8 @@ type Parts struct {
 	Pictures  *kit.Pictures  // the window's images
 	Tools     *search.Tools  // the machine's search tools
 
-	UI, Frames, Themes, Layout, Start, StatusLine, SessionTabs plugin.Plugin
-	Nav, Notices, Desktop, Quit                                plugin.Plugin
+	UI, Frames, Layout, Start, StatusLine, SessionTabs plugin.Plugin
+	Nav, Notices, Desktop, Quit                        plugin.Plugin
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}

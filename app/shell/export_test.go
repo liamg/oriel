@@ -38,11 +38,6 @@ func Reopening(h *Headless) (string, bool) {
 	}
 }
 
-// ResolveTheme is the theme name in variant v from srcs, as the window resolves ui.theme.
-func ResolveTheme(srcs []theme.Source, name string, v theme.Variant) (*theme.Resolved, error) {
-	return resolveTheme(srcs, name, v)
-}
-
 // Report is "Copy report"'s text, with nothing at its head.
 func Report(h *Headless) string { return h.sh.report("") }
 

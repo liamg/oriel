@@ -1,4 +1,4 @@
-package shell_test
+package themes_test
 
 import (
 	"os"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
-	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/theme"
 )
@@ -118,7 +117,7 @@ func TestThemePickerSnapshot(t *testing.T) {
 		t.Fatalf("highlighting glacier shows %s", got)
 	}
 	srcs, _ := s.Registry().Themes()
-	r, err := shell.ResolveTheme(srcs, currentTheme(t, s), theme.Dark) // as the window's loop does when ui.theme moves
+	r, err := theme.ResolveNamed(srcs, currentTheme(t, s), theme.Dark) // as the window's loop does when ui.theme moves
 	if err != nil {
 		t.Fatal(err)
 	}

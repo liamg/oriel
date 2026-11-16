@@ -359,7 +359,7 @@ func (h *Headless) Retheme() error {
 	}
 	srcs, _ := h.sh.cfg.Registry.Themes()
 	n, _ := name.(string)
-	r, err := resolveTheme(srcs, n, v)
+	r, err := theme.ResolveNamed(srcs, n, v)
 	if err != nil {
 		return err
 	}
