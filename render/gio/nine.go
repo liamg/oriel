@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"math"
 
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
@@ -92,7 +93,7 @@ func (c *Frame) drawNine(n *nine, dst image.Rectangle, hollow bool) {
 		return
 	}
 	defer clip.Rect(image.Rect(x1, y1, x2, y2)).Push(c.ops).Pop()
-	paint.ColorOp{Color: c.solid(n.centre)}.Add(c.ops)
+	paint.ColorOp{Color: asImage(n.centre)}.Add(c.ops)
 	paint.PaintOp{}.Add(c.ops)
 }
 
@@ -108,4 +109,19 @@ func (c *Frame) tile(n *nine, i int, r image.Rectangle, horizontal bool) {
 		}
 		c.piece(n, i, p, image.Rectangle{Min: p, Max: p.Add(n.pieces[i].Bounds().Size())}.Intersect(r))
 	}
+}
+
+// asImage is the colour a plain fill takes to look as col does in an image. Gio linearises an image's premultiplied
+// sRGB texels as they are, so a translucent pixel lands as lin(c·a), where a fill's colour lands as lin(c)·a: the
+// fill that matches has lin(c')·a = lin(c·a). A 9-slice's centre is painted so, to meet its edges without a seam (a
+// pill's centre is a single row, which showed as a line across a translucent chip).
+func asImage(col color.NRGBA) color.NRGBA {
+	if col.A == 0 || col.A == 255 {
+		return col
+	}
+	a := float64(col.A) / 255
+	ch := func(v uint8) uint8 {
+		return uint8(math.Round(255 * math.Min(1, enc(lin(float64(v)/255*a)/a))))
+	}
+	return color.NRGBA{R: ch(col.R), G: ch(col.G), B: ch(col.B), A: col.A}
 }
