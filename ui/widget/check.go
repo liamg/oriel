@@ -26,6 +26,14 @@ const (
 	CheckMixed
 )
 
+// CheckStateOf is on's check: CheckOn or CheckOff.
+func CheckStateOf(on bool) CheckState {
+	if on {
+		return CheckOn
+	}
+	return CheckOff
+}
+
 type CheckOpts struct {
 	Text     string // shown beside the box, in small mono capitals (as written when Plain); none if ""
 	Plain    bool   // Text as written, in the body's colour: a file name, a choice

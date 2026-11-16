@@ -71,7 +71,9 @@ type Description struct {
 	ImageFrom string
 	// Dockerfile is the image's source; "" for an image named in settings.
 	Dockerfile string
-	Built      bool
+	// Refused is why the sandbox can't start with Dockerfile: a repo's names an image of its own.
+	Refused string
+	Built   bool
 	// BuildLog is the file the image's last build wrote to; "" if it hasn't been built here.
 	BuildLog string
 	// Mounts are what the running container sees of the host.

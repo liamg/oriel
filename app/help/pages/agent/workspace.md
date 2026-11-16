@@ -41,13 +41,15 @@ downloads are fetched afresh, then restarts the agent on it once its turn ends.
 The base image is pulled from `ghcr.io/liamg/oriel-sandbox`, built from the same Dockerfile for amd64 and arm64
 (a release pins it by digest); when the pull fails, it's built here instead. **Rebuild image** always builds it here.
 
-A repo's Dockerfile is read from the repo's own checkout, committed or not (keep it out of git with
-`.git/info/exclude`), else from its default branch; never from a session's worktree. It's used as found, with
-nothing to approve.
+A repo's Dockerfile is used only by a session started with **Allow sandbox customisation** ticked
+([New session](agent/launcher#runs-in)); otherwise the sandbox runs the base image. It's read from the repo's own
+checkout, committed or not (keep it out of git with `.git/info/exclude`), else from its default branch; never from a
+session's worktree.
 
-A Dockerfile with no `FROM` adds to the base image: Oriel puts the base under it, so a new base or an edit to the
-file builds it again (`RUN apt-get install -y …`). One with a `FROM` of its own is the whole image, built as written.
-An image named in your settings is run as it is: Oriel doesn't build it.
+A repo's Dockerfile adds to the base image: Oriel puts the base under it, so a new base or an edit to the file builds
+it again (`RUN apt-get install -y …`). It can't replace the base: one with a `FROM` line of its own is refused, and
+the session doesn't start until the line is removed. An image named in your settings is run as it is: Oriel doesn't
+build it.
 
 ## Build log
 

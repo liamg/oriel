@@ -56,12 +56,13 @@ type AgentState struct {
 	Policy      Policy           `json:"policy,omitempty"` // the agent's own gate
 	Mode        string           `json:"mode,omitempty"`   // the agent's own permission mode as it last said, in its provider's terms: what its conversation resumes in
 	Sandboxed   bool             `json:"sandboxed,omitempty"`
-	Network     string           `json:"network,omitempty"`    // in a sandbox: ask or open
-	Backend     string           `json:"backend,omitempty"`    // in a sandbox: what confines it; "" is sandbox.backend
-	Pack        string           `json:"pack,omitempty"`       // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
-	Queue       []string         `json:"queue,omitempty"`      // messages waiting for the turn to end
-	Background  []BackgroundTask `json:"background,omitempty"` // work the last turn left running, which will wake it again
-	Processes   []BackgroundTask `json:"processes,omitempty"`  // what the last turn left running that won't wake it
+	Network     string           `json:"network,omitempty"`     // in a sandbox: ask or open
+	Backend     string           `json:"backend,omitempty"`     // in a sandbox: what confines it; "" is sandbox.backend
+	CustomImage bool             `json:"customImage,omitempty"` // in a sandbox: its image adds the primary repo's Dockerfile
+	Pack        string           `json:"pack,omitempty"`        // the prompt pack it runs with, when not its kind's: work, after a fresh Start work
+	Queue       []string         `json:"queue,omitempty"`       // messages waiting for the turn to end
+	Background  []BackgroundTask `json:"background,omitempty"`  // work the last turn left running, which will wake it again
+	Processes   []BackgroundTask `json:"processes,omitempty"`   // what the last turn left running that won't wake it
 	Stats       Stats            `json:"stats,omitzero"`
 	// StoppedBy is who stopped it, while it's stopped: StoppedByYou, StoppedByAgent, StoppedByCrash or StoppedByHandOver.
 	StoppedBy string    `json:"stoppedBy,omitempty"`

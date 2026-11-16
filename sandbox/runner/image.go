@@ -18,10 +18,14 @@ import (
 // DockerfilePath is where a repository asks for its own sandbox image.
 const DockerfilePath = ".oriel/sandbox.Dockerfile"
 
-// Image picks root's image, building it if needed: the project's image named in settings, else the primary
-// project's Dockerfile, else the image named in settings, else the base.
+// Image picks root's image, building it if needed: the project's image named in settings, else the base with the
+// primary project's Dockerfile on it when the session allows it (Manifest.CustomImage), else the image named in
+// settings, else the base.
 func Image(ctx context.Context, root string, cfg sandbox.Config) (string, error) {
 	p := pick(ctx, root, cfg)
+	if p.refused != nil {
+		return "", p.refused
+	}
 	if p.dockerfile == "" {
 		return p.tag, nil
 	}
@@ -33,14 +37,16 @@ func Image(ctx context.Context, root string, cfg sandbox.Config) (string, error)
 }
 
 // picked is the image root's sandbox runs: its tag, its source ("" for one named in settings) and where it comes
-// from. layers is a repo Dockerfile with no FROM, built on the base, which has to be there first.
+// from. layers is a repo's Dockerfile, built on the base, which has to be there first; refused is why a repo's
+// Dockerfile can't be.
 type picked struct {
 	tag, dockerfile, from string
 	layers                string
+	refused               error
 }
 
 func pick(ctx context.Context, root string, cfg sandbox.Config) picked {
-	if ws, ok := sandbox.LoadManifest(root); ok {
+	if ws, ok := sandbox.LoadManifest(root); ok && ws.CustomImage {
 		for _, p := range ws.Projects {
 			if !p.Primary {
 				continue
@@ -52,7 +58,8 @@ func pick(ctx context.Context, root string, cfg sandbox.Config) picked {
 			if df, ok := RepoDockerfile(p.Repo); ok {
 				from := filepath.Base(p.Repo) + "'s " + DockerfilePath
 				if hasFrom(df) {
-					return picked{tag: container.ProjectImage(df), dockerfile: df, from: from}
+					return picked{dockerfile: df, from: from, refused: fmt.Errorf("%s has a FROM: a repo's sandbox Dockerfile only "+
+						"adds to Oriel's base image, so it can't name an image of its own. Remove its FROM lines", from)}
 				}
 				return picked{from: from + " on the base image", layers: df}.onBase(ctx)
 			}
@@ -64,10 +71,11 @@ func pick(ctx context.Context, root string, cfg sandbox.Config) picked {
 	return picked{tag: container.BaseImage(), dockerfile: container.BaseDockerfile, from: "the base image"}
 }
 
-// hasFrom says whether df names its own base image. One without adds to Oriel's base.
+// hasFrom says whether df names an image of its own, as a base or a build stage. A repo's Dockerfile may only add
+// to Oriel's base.
 func hasFrom(df string) bool {
 	for line := range strings.SplitSeq(df, "\n") {
-		if word, _, _ := strings.Cut(strings.TrimSpace(line), " "); strings.EqualFold(word, "FROM") {
+		if f := strings.Fields(line); len(f) > 0 && strings.EqualFold(f[0], "FROM") {
 			return true
 		}
 	}
@@ -125,6 +133,9 @@ func ensureImage(ctx context.Context, tag, dockerfile string) error {
 // Rebuild builds root's image again from its source, skipping the cache. An image named in settings has none.
 func Rebuild(ctx context.Context, root string, cfg sandbox.Config) error {
 	p := pick(ctx, root, cfg)
+	if p.refused != nil {
+		return p.refused
+	}
 	if p.dockerfile == "" {
 		return fmt.Errorf("the sandbox runs %s, named in %s: Oriel doesn't build it", p.tag, p.from)
 	}
@@ -138,9 +149,13 @@ func Rebuild(ctx context.Context, root string, cfg sandbox.Config) error {
 // Describe is root's container and image, and what the running container mounts.
 func Describe(ctx context.Context, root string, cfg sandbox.Config) sandbox.Description {
 	p := pick(ctx, root, cfg)
-	d := sandbox.Description{Container: Name(root), Image: p.tag, ImageFrom: p.from, Dockerfile: p.dockerfile,
-		Built: container.ImageExists(ctx, p.tag)}
-	if _, err := os.Stat(BuildLog(p.tag)); err == nil {
+	d := sandbox.Description{Container: Name(root), Image: p.tag, ImageFrom: p.from, Dockerfile: p.dockerfile}
+	if p.refused != nil {
+		d.Refused = p.refused.Error()
+	} else {
+		d.Built = container.ImageExists(ctx, p.tag)
+	}
+	if _, err := os.Stat(BuildLog(p.tag)); p.tag != "" && err == nil {
 		d.BuildLog = BuildLog(p.tag)
 	}
 	d.Mounts, d.Running = containerMounts(ctx, Name(root))

@@ -73,7 +73,7 @@ type Launcher struct {
 	chosen                                        []core.RepoID
 	repoFilter                                    string
 	justAdded                                     core.RepoID // the repo Add repo just brought back ticked
-	sandbox, openNet                              bool
+	sandbox, openNet, customImage                 bool
 	backend                                       string // the sandbox backend picked; "" is sandbox.backend
 	busy                                          bool
 	err                                           string
@@ -133,7 +133,7 @@ func (x *Launcher) openWith(a registry.Args) {
 	*x = Launcher{Disposer: x.Disposer, h: x.h, life: x.life, gen: x.gen + 1, open: true, focusField: true,
 		prompt: spec.Prompt, ticket: spec.Ticket, pr: spec.PR, dir: spec.Dir,
 		name: spec.Name, template: spec.Template, provider: spec.Provider, model: spec.Model, effort: spec.Effort, chosen: spec.Repos,
-		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", backend: spec.Sandbox.Backend, branch: spec.Branch,
+		sandbox: spec.Sandbox.Container, openNet: spec.Sandbox.Network == "open", backend: spec.Sandbox.Backend, customImage: spec.Sandbox.CustomImage, branch: spec.Branch,
 		card: ticketCard{key: strings.TrimSpace(spec.Ticket)}}
 	if x.template == "" {
 		x.template = hostapi.Templates[0]
@@ -305,6 +305,9 @@ func (x *Launcher) args() registry.Args {
 		}
 		if x.backend != "" {
 			a["backend"] = x.backend
+		}
+		if x.customImage {
+			a["custom_image"] = true
 		}
 	}
 	switch startsFrom(k) {
@@ -751,6 +754,10 @@ func (x *Launcher) runsIn(c *ui.Ctx) {
 	widget.Heading(c, "head", "Runs in", "")
 	pick := agentkit.BackendPick{Chosen: &x.backend, Setting: agentkit.SettingBackend(x.h), Offered: x.h.State().Machine.Sandboxes}
 	agentkit.SandboxToggles(c, &x.sandbox, &x.openNet, pick, "agent/launcher#runs-in")
+	if x.sandbox && widget.Check(c, "customimage", widget.CheckStateOf(x.customImage), widget.CheckOpts{Text: "Allow sandbox customisation",
+		Tooltip: "Build the sandbox on the base image with the repo's .oriel/sandbox.Dockerfile", Help: "agent/launcher#runs-in"}) {
+		x.customImage = !x.customImage
+	}
 }
 
 // side is the recent prompts, and what starting will do.

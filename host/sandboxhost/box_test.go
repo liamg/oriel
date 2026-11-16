@@ -24,6 +24,17 @@ func TestManifestCarriesTheMemory(t *testing.T) {
 	}
 }
 
+// The sandbox's manifest carries whether the session allows a custom image, so the image is picked by it.
+func TestManifestCarriesTheCustomImageChoice(t *testing.T) {
+	root := t.TempDir()
+	for _, custom := range []bool{false, true} {
+		se := core.SessionState{Kind: core.KindWork, Dir: root, Agent: core.AgentState{Sandboxed: true, CustomImage: custom}}
+		if got := ManifestOf(root, se).CustomImage; got != custom {
+			t.Errorf("custom image %v: the manifest says %v", custom, got)
+		}
+	}
+}
+
 // The factory offers every backend Oriel has, docker preferred.
 func TestKnownBackends(t *testing.T) {
 	want := []string{"docker", "orbstack", "colima", "podman", "seatbelt"}

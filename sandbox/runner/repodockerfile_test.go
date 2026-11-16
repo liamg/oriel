@@ -12,12 +12,19 @@ import (
 	"github.com/liamg/oriel/sandbox/container"
 )
 
-// repoWorkspace is a sandboxed workspace whose primary project is repo, with df at the repo's DockerfilePath.
+// repoWorkspace is a sandboxed workspace whose session allows a custom image, and whose primary project is repo, with
+// df at the repo's DockerfilePath.
 func repoWorkspace(t *testing.T, df string) (root, repo string) {
+	t.Helper()
+	return repoWorkspaceWith(t, df, true)
+}
+
+func repoWorkspaceWith(t *testing.T, df string, custom bool) (root, repo string) {
 	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	root, repo = t.TempDir(), t.TempDir()
-	if err := sandbox.SaveManifest(root, sandbox.Manifest{Projects: []sandbox.Project{{Name: "api", Repo: repo, Dir: "api", Primary: true}}}); err != nil {
+	m := sandbox.Manifest{Projects: []sandbox.Project{{Name: "api", Repo: repo, Dir: "api", Primary: true}}, CustomImage: custom}
+	if err := sandbox.SaveManifest(root, m); err != nil {
 		t.Fatal(err)
 	}
 	writeRepoDockerfile(t, repo, df)
@@ -60,14 +67,36 @@ func TestRepoDockerfileWithoutFromBuildsOnTheBase(t *testing.T) {
 	}
 }
 
-// A repo's Dockerfile with a FROM of its own is the whole image, built as written.
-func TestRepoDockerfileWithFromIsBuiltAsWritten(t *testing.T) {
-	for _, df := range []string{"FROM debian\nRUN true\n", "# syntax note\n  from debian AS b\n"} {
+// A repo's Dockerfile can only add to the base: one with a FROM of its own, as its base or a build stage, is refused,
+// and nothing is pulled or built for it.
+func TestRepoDockerfileWithFromIsRefused(t *testing.T) {
+	for _, df := range []string{"FROM debian\nRUN true\n", "# syntax note\n  from debian AS b\n", "RUN true\nFROM\tdebian\n"} {
 		root, repo := repoWorkspace(t, df)
-		ctx := container.WithEngine(context.Background(), describeEngine(t))
-		d := Describe(ctx, root, sandbox.Config{})
-		if d.Dockerfile != df || d.Image != container.ProjectImage(df) || d.ImageFrom != filepath.Base(repo)+"'s "+DockerfilePath {
-			t.Errorf("%q: image %q from %q:\n%s", df, d.Image, d.ImageFrom, d.Dockerfile)
+		d := Describe(container.WithEngine(context.Background(), describeEngine(t)), root, sandbox.Config{})
+		if d.Refused == "" || d.Image != "" || d.Built || d.Dockerfile != df || d.ImageFrom != filepath.Base(repo)+"'s "+DockerfilePath {
+			t.Errorf("%q: described %+v", df, d)
+		}
+		e, dir := layerEngine(t, true, true)
+		ctx := container.WithEngine(context.Background(), e)
+		if _, err := Image(ctx, root, sandbox.Config{}); err == nil || !strings.Contains(err.Error(), "FROM") {
+			t.Errorf("%q: started with %v", df, err)
+		}
+		if err := Rebuild(ctx, root, sandbox.Config{}); err == nil {
+			t.Errorf("%q: rebuilt", df)
+		}
+		if _, log := built(dir); strings.Contains(log, "build") || strings.Contains(log, "pull") {
+			t.Errorf("%q: calls:\n%s", df, log)
+		}
+	}
+}
+
+// A session that doesn't allow a custom image runs the base, whatever the repo's Dockerfile says.
+func TestRepoDockerfileIsIgnoredUnlessTheSessionAllowsIt(t *testing.T) {
+	for _, df := range []string{"RUN apt-get install -y postgresql-18\n", "FROM debian\n"} {
+		root, _ := repoWorkspaceWith(t, df, false)
+		d := Describe(container.WithEngine(context.Background(), describeEngine(t)), root, sandbox.Config{})
+		if d.Image != container.BaseImage() || d.Dockerfile != container.BaseDockerfile || d.Refused != "" {
+			t.Errorf("%q: image %q from %q, refused %q", df, d.Image, d.ImageFrom, d.Refused)
 		}
 	}
 }
