@@ -36,7 +36,7 @@ func (r Root) Command(name string, fn *script.Fn, opts script.Table, where strin
 	return nil
 }
 
-//oriel:api doc="Run a command by its id, with arguments. A command that does what a capability guards (answering an agent's ask, starting or stopping a session, prompting an agent) needs that capability." optional=args
+//oriel:api doc="Run a command by its id, with arguments. A command that does what a capability guards (answering an agent's ask, starting or stopping a session, prompting an agent) needs that capability. One that changes who may do what (installing plugins or accepting their consent, settings, secrets, updates) is yours alone: a plugin can't run it." optional=args
 func (r Root) Run(id string, args script.Table) error {
 	if err := r.a.commandGrant(id); err != nil {
 		return err

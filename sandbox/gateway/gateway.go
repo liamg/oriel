@@ -90,14 +90,14 @@ func (g *Gateway) Tools(ctx context.Context) ([]mcp.Tool, error) {
 	var out []mcp.Tool
 	for _, name := range slices.Sorted(maps.Keys(g.Builtins)) {
 		b := g.Builtins[name]
-		if b.Direct || Decide(name, false, levels) != Deny {
+		if b.Direct || Decide(name, b.hint(), levels) != Deny {
 			out = append(out, b.Tool)
 		}
 	}
 	if g.Up != nil {
 		tools, _ := g.Up.Tools(ctx)
 		for _, t := range tools {
-			if Decide(t.Name, readOnly(t.Tool), levels) != Deny {
+			if Decide(t.Name, serverHint(t.Tool), levels) != Deny {
 				out = append(out, t.Tool)
 			}
 		}
@@ -124,7 +124,7 @@ func (g *Gateway) Policy(ctx context.Context) []ToolPolicy {
 	var out []ToolPolicy
 	for _, name := range slices.Sorted(maps.Keys(g.Builtins)) {
 		b := g.Builtins[name]
-		p := ToolPolicy{Name: name, Server: ServerOf(name), Description: b.Tool.Description, Builtin: true, Why: Explain(name, false, levels)}
+		p := ToolPolicy{Name: name, Server: ServerOf(name), Description: b.Tool.Description, Builtin: true, ReadOnly: readOnly(b.Tool), Why: Explain(name, b.hint(), levels)}
 		if b.Direct || (b.AlwaysAsk && p.Action != Deny) {
 			p.Fixed, p.Why = true, Why{Action: Ask, From: FromDefault}
 		}
@@ -134,7 +134,7 @@ func (g *Gateway) Policy(ctx context.Context) []ToolPolicy {
 		tools, _ := g.Up.Tools(ctx)
 		for _, t := range tools {
 			ro := readOnly(t.Tool)
-			out = append(out, ToolPolicy{Name: t.Name, Server: t.Server, Description: t.Description, ReadOnly: ro, Why: Explain(t.Name, ro, levels)})
+			out = append(out, ToolPolicy{Name: t.Name, Server: t.Server, Description: t.Description, ReadOnly: ro, Why: Explain(t.Name, serverHint(t.Tool), levels)})
 		}
 	}
 	return out
@@ -183,7 +183,11 @@ func (g *Gateway) Call(ctx context.Context, name string, args json.RawMessage) (
 		entry.Decision = "direct"
 		return b.Run(ctx, args)
 	}
-	action := Decide(name, req.ReadOnly, g.levels())
+	hint := b.hint()
+	if !builtin {
+		hint = serverHint(up.Tool)
+	}
+	action := Decide(name, hint, g.levels())
 	if req.AlwaysAsk && action != Deny {
 		action = Ask
 	}
@@ -290,6 +294,22 @@ func (g *Gateway) levels() Levels {
 		return Levels{}
 	}
 	return g.Levels()
+}
+
+// hint is what a builtin says of itself: Oriel's own read-only tools are trusted.
+func (b Builtin) hint() Hint {
+	if readOnly(b.Tool) {
+		return OwnReadOnly
+	}
+	return Writes
+}
+
+// serverHint is what a server's tool says of itself, trusted only as settings say.
+func serverHint(t mcp.Tool) Hint {
+	if readOnly(t) {
+		return SaysReadOnly
+	}
+	return Writes
 }
 
 func readOnly(t mcp.Tool) bool {

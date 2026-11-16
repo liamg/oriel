@@ -73,14 +73,14 @@ func (x *Permissions) Activate(_ context.Context, h plugin.Host) error {
 			}},
 		{ID: "agent.permissions.dock", Title: "Show the sandboxed agent's permissions and connections docked at the bottom, or hide them",
 			Run: func(ctx registry.Ctx, _ registry.Args) error { return h.Run(ctx, "view.toggle", open) }},
-		{ID: "permissions.tool", Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
+		{ID: "permissions.tool", Grant: string(plugin.CapGate), Title: "Set {id}'s own rule for a gateway {tool}: {action} allow, ask, deny, or none to drop it",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				return x.change(id, func(w hostapi.SandboxCalls) error {
 					return w.SetToolRule(id, a.String("tool"), noneAsEmpty(a.String("action")))
 				})
 			}},
-		{ID: "permissions.net", Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
+		{ID: "permissions.net", Grant: string(plugin.CapGate), Title: "Allow or block {host}[:{port}] for the rest of {id}: {action} allow, block, or none to drop the session's rule",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				id := session(a)
 				h, port, err := hostPort(a.String("host"), a.Int("port"))

@@ -20,18 +20,22 @@ const (
 // Rule is the sandbox settings' rule, shared with the settings page.
 type Rule = sandbox.PolicyRule
 
-// Defaults apply when nothing else matches: read-only looks are allowed,
-// everything else is asked about.
+// Defaults apply when nothing else matches: everything is asked about, except Oriel's own read-only tools.
 var Defaults = []Rule{
-	{Tool: "oriel__ci", Action: Allow},
-	{Tool: "oriel__fetch", Action: Allow},
-	{Tool: "oriel__repos", Action: Allow},
-	{Tool: "oriel__gh_repo_variable", Action: Allow},
-	{Tool: "oriel__gh_workflow_runs", Action: Allow},
-	{Tool: "oriel__gh_compare", Action: Allow},
-	{Tool: "oriel__gh_matching_refs", Action: Allow},
 	{Tool: "*", Action: Ask},
 }
+
+// Hint is what a tool says of itself: whether it only looks.
+type Hint uint8
+
+const (
+	// Writes is a tool that may change something, or says nothing.
+	Writes Hint = iota
+	// SaysReadOnly is a server's tool that declares readOnlyHint: allowed only when settings trust the hint.
+	SaysReadOnly
+	// OwnReadOnly is one of Oriel's own tools that only looks: allowed unless a rule says otherwise.
+	OwnReadOnly
+)
 
 // Levels are the rule sets a decision consults, most local first.
 type Levels struct {
@@ -62,12 +66,12 @@ type Why struct {
 // wins, and the first level with a match decides — except that settings
 // always keep a deny, and keep an ask more specific than the session's grant:
 // "allow all of aws" for a session still asks about aws__delete_*.
-func Decide(tool string, readOnlyHint bool, l Levels) string {
-	return Explain(tool, readOnlyHint, l).Action
+func Decide(tool string, hint Hint, l Levels) string {
+	return Explain(tool, hint, l).Action
 }
 
 // Explain is Decide, with the rule that decided.
-func Explain(tool string, readOnlyHint bool, l Levels) Why {
+func Explain(tool string, hint Hint, l Levels) Why {
 	var settings Why
 	var pattern string
 	found := false
@@ -93,7 +97,7 @@ func Explain(tool string, readOnlyHint bool, l Levels) Why {
 	if found {
 		return settings
 	}
-	if l.ReadOnly && readOnlyHint {
+	if hint == OwnReadOnly || (l.ReadOnly && hint == SaysReadOnly) {
 		return Why{Action: Allow, From: FromReadOnly}
 	}
 	r, _ := Match(Defaults, tool)

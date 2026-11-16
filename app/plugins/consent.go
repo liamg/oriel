@@ -82,9 +82,9 @@ func (x *Consent) Activate(_ context.Context, h plugin.Host) error {
 func (x *Consent) commands() []registry.Command {
 	open := func(registry.Args) bool { return len(x.queue) > 0 }
 	return []registry.Command{
-		{ID: "plugins.consent", Title: "Ask to install the plugin in {dir} (or update to it from the one in {from}), then run {then} with {dir} if it's accepted; {source}, {badge}, {warning} and {facts} ({label, value}s) are what's known of where it comes from",
+		{ID: "plugins.consent", UserOnly: true, Title: "Ask to install the plugin in {dir} (or update to it from the one in {from}), then run {then} with {dir} if it's accepted; {source}, {badge}, {warning} and {facts} ({label, value}s) are what's known of where it comes from",
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.consentCommand(a) }},
-		{ID: "plugins.consent.accept", Title: "Install: accept every capability the plugin asks for", Available: open,
+		{ID: "plugins.consent.accept", UserOnly: true, Title: "Install: accept every capability the plugin asks for", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.answer(true); return nil }},
 		{ID: "plugins.consent.cancel", Title: "Cancel the install: grant nothing", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.answer(false); return nil }},

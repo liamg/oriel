@@ -76,17 +76,17 @@ func (x *Secrets) commands() []registry.Command {
 		{ID: "Secret", Title: "Set a secret plugins name, in a dialog; :Secret NAME", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.open(strings.TrimSpace(a.String("args")))
 		}},
-		{ID: "secrets.set", Title: "Set a secret plugins name: {name}, its value typed into a dialog", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "secrets.set", UserOnly: true, Title: "Set a secret plugins name: {name}, its value typed into a dialog", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.open(a.String("name"))
 		}},
-		{ID: "secrets.delete", Title: "Delete a secret: {name}", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "secrets.delete", UserOnly: true, Title: "Delete a secret: {name}", Run: func(_ registry.Ctx, a registry.Args) error {
 			name := a.String("name")
 			if name == "" {
 				return fmt.Errorf("secrets.delete needs a name")
 			}
 			return x.h.Secrets().SetSecret(name, "")
 		}},
-		{ID: "secrets.dialog.save", Title: "Save the secret the dialog holds", Available: open,
+		{ID: "secrets.dialog.save", UserOnly: true, Title: "Save the secret the dialog holds", Available: open,
 			Run: func(registry.Ctx, registry.Args) error { x.save(); return nil }},
 	}
 }

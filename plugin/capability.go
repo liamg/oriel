@@ -23,6 +23,7 @@ const (
 	CapGit            Capability = "git"
 	CapClipboard      Capability = "clipboard"
 	CapNotify         Capability = "notify"
+	CapSettings       Capability = "settings"
 )
 
 // Risk is how much harm a capability can do, as the install screen shows it.
@@ -66,6 +67,7 @@ var Capabilities = []CapInfo{
 	{CapGit, RiskHigh, true, false, ""},
 	{CapClipboard, RiskMedium, true, false, ""},
 	{CapNotify, RiskLow, false, false, ""},
+	{CapSettings, RiskHigh, true, true, ""},
 }
 
 // Info is what Oriel says about c; ok is false for a capability it doesn't know.

@@ -188,13 +188,13 @@ func (x *Jobs) commands() []registry.Command {
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, false) }},
 		{ID: "jobs.duplicate", Title: "Duplicate a job in the New job dialog: {name}, the selected one by default", Available: has,
 			Run: func(_ registry.Ctx, a registry.Args) error { return x.editForm(a, true) }},
-		{ID: "jobs.save", Title: "Save a job: a new one, or {name}'s with what's given changed: {title}, {prompt}, {sandbox} (sandbox, host or \"\"), {provider}, {model}, {effort}, {schedule}; {run} runs it after",
+		{ID: "jobs.save", Grant: string(plugin.CapSessionControl), Title: "Save a job: a new one, or {name}'s with what's given changed: {title}, {prompt}, {sandbox} (sandbox, host or \"\"), {provider}, {model}, {effort}, {schedule}; {run} runs it after",
 			Available: has, Run: func(ctx registry.Ctx, a registry.Args) error { _, err := x.save(ctx, a); return err }},
-		{ID: "jobs.run", Title: "Run a job now: {name}, the selected one by default", Available: has,
+		{ID: "jobs.run", Grant: string(plugin.CapSessionControl), Title: "Run a job now: {name}, the selected one by default", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.runJob(ctx, a) }},
-		{ID: "jobs.delete", Title: "Delete a job: {name}; its runs stay", Available: has,
+		{ID: "jobs.delete", Grant: string(plugin.CapSessionControl), Title: "Delete a job: {name}; its runs stay", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error { return x.deleteJob(ctx, a) }},
-		{ID: "session.delete", Grant: "session.control", Title: "Delete a session: {id}, or the one in front; its worktrees, workspace and log go, the repos stay", Available: has,
+		{ID: "session.delete", Grant: string(plugin.CapSessionControl), Title: "Delete a session: {id}, or the one in front; its worktrees, workspace and log go, the repos stay", Available: has,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := core.SessionID(a.String("id"))
 				if id == "" {
@@ -206,7 +206,7 @@ func (x *Jobs) commands() []registry.Command {
 				}
 				return c.Delete(ctx, id)
 			}},
-		{ID: "jobs.form.save", Title: "Save the job the dialog holds; {run} runs it too", Available: formOpen,
+		{ID: "jobs.form.save", UserOnly: true, Title: "Save the job the dialog holds; {run} runs it too", Available: formOpen,
 			Run: func(_ registry.Ctx, a registry.Args) error { x.submit(a.Bool("run")); return nil }},
 	}
 }

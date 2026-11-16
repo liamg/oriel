@@ -141,7 +141,7 @@ func (x *Console) commands() []registry.Command {
 		{ID: "agent.console", Title: "Show the agent console of the session in front, or hide it", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			return h.Run(ctx, "view.toggle", open)
 		}},
-		{ID: "agent.unqueue", Grant: "agent.prompt", Title: "Take a message out of {id}'s queue before the agent gets it: the one at {index}, still {text}",
+		{ID: "agent.unqueue", Grant: string(plugin.CapAgentPrompt), Title: "Take a message out of {id}'s queue before the agent gets it: the one at {index}, still {text}",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				c, err := x.client(session(a))
 				if err != nil {
@@ -175,7 +175,7 @@ func (x *Console) commands() []registry.Command {
 				}
 				return h.Run(ctx, "view.close", registry.Args{"docked": true})
 			}},
-		{ID: "agent.send", Grant: "agent.prompt", Title: "Send the agent of {id}, or the session in front, a message: {text}; {urgent} interrupts the turn, else it waits for it",
+		{ID: "agent.send", Grant: string(plugin.CapAgentPrompt), Title: "Send the agent of {id}, or the session in front, a message: {text}; {urgent} interrupts the turn, else it waits for it",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := session(a)
 				c, err := x.client(id)
@@ -188,7 +188,7 @@ func (x *Console) commands() []registry.Command {
 				}
 				return c.Send(hostapi.SendReq{Session: id, Text: text, Urgent: a.Bool("urgent")})
 			}},
-		{ID: "agent.console.send", Grant: "agent.prompt", Title: "Agent console: send what's in the composer; {urgent} interrupts the turn",
+		{ID: "agent.console.send", Grant: string(plugin.CapAgentPrompt), Title: "Agent console: send what's in the composer; {urgent} interrupts the turn",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := h.State().Focus
 				st := x.state(id)
@@ -201,7 +201,7 @@ func (x *Console) commands() []registry.Command {
 				st.draft = ""
 				return nil
 			}},
-		{ID: "agent.fork", Grant: "agent.prompt", Title: "Ask the agent of the session in front a side question: {prompt}, answered from its context outside the conversation",
+		{ID: "agent.fork", Grant: string(plugin.CapAgentPrompt), Title: "Ask the agent of the session in front a side question: {prompt}, answered from its context outside the conversation",
 			Available: inFront, Run: func(_ registry.Ctx, a registry.Args) error {
 				prompt := strings.TrimSpace(a.String("prompt"))
 				if prompt == "" {
@@ -218,7 +218,7 @@ func (x *Console) commands() []registry.Command {
 		{ID: "agent.login", Title: "Sign the agent of {id} in again, or the one waiting on {provider}'s login: its sign-in in the browser, or its own terminal with the login typed",
 			Available: func(a registry.Args) bool { _, _, ok := x.loginWaiting(a); return ok },
 			Run:       x.logIn},
-		{ID: "ask.answer", Grant: "gate", Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope} (a network rule's host pattern), {for} (\"all\": an always for every session, else for this one), {answers}",
+		{ID: "ask.answer", Grant: string(plugin.CapGate), Title: "Answer an ask: {ask} of {id} (the first of the session in front by default) with {decision} allow, always, deny, answer or recheck (a login), {note}, {scope} (a network rule's host pattern), {for} (\"all\": an always for every session, else for this one), {answers}",
 			Available: inFront, Run: func(ctx registry.Ctx, a registry.Args) error {
 				id := session(a)
 				ask, ok := x.ask(id, a.String("ask"))
@@ -227,7 +227,7 @@ func (x *Console) commands() []registry.Command {
 				}
 				return x.answer(ctx, id, ask, a)
 			}},
-		{ID: "ask.deny-note", Grant: "gate", Title: "Deny an ask with a note for the agent: {ask} of {id}, the first of the session in front by default",
+		{ID: "ask.deny-note", Grant: string(plugin.CapGate), Title: "Deny an ask with a note for the agent: {ask} of {id}, the first of the session in front by default",
 			Available: inFront, Run: func(registry.Ctx, registry.Args) error {
 				id := h.State().Focus
 				ask, ok := x.ask(id, "")

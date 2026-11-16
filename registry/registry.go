@@ -252,8 +252,11 @@ type Command struct {
 	When Capability
 	// Grant is the plugin capability ("gate", "session.control") a plugin must hold to run it with oriel.run: what
 	// the command does that the API's own calls guard. "" for none.
-	Grant  string
-	Source string // who registered it: "builtin:git", "init.lua:14", a plugin's id
+	Grant string
+	// UserOnly is a command no plugin may run, whatever it holds: what changes who may do what (installing plugins
+	// and accepting their consent, settings, secrets, updates). The user's own keys, clicks and config still run it.
+	UserOnly bool
+	Source   string // who registered it: "builtin:git", "init.lua:14", a plugin's id
 }
 
 // Keymap binds keys, in vim notation, to a command in one mode. One with no command names a group of the

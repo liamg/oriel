@@ -42,7 +42,7 @@ func serve(t *testing.T, h *Handler) string {
 
 func handler(t *testing.T) *Handler {
 	g := &gateway.Gateway{Builtins: map[string]gateway.Builtin{
-		"oriel__ci": {Tool: mcp.Tool{Name: "oriel__ci"}, Run: func(context.Context, json.RawMessage) (mcp.CallResult, error) {
+		"oriel__ci": {Tool: mcp.Tool{Name: "oriel__ci", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: new(true)}}, Run: func(context.Context, json.RawMessage) (mcp.CallResult, error) {
 			return mcp.TextResult("green", false), nil
 		}},
 	}}

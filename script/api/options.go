@@ -105,6 +105,9 @@ func (a *APIs) options(vm *script.VM) {
 		}, func(args *script.Args, key string, v any) error {
 			l, at := where()
 			sp, ok := o.Spec(key)
+			if err := a.optionGrant(ns, cmp.Or(sp.Name, key)); err != nil {
+				return err
+			}
 			if !ok {
 				a.mu.Lock()
 				a.pending[key] = pendingOption{l, at, v, args.Where()}
@@ -142,6 +145,25 @@ var optionTypes = map[string]registry.OptionType{"bool": registry.Bool, "int": r
 // zeros are each type's default when a declaration gives none.
 var zeros = map[registry.OptionType]any{registry.Bool: false, registry.Int: 0, registry.Float: 0.0, registry.String: "", registry.Duration: time.Duration(0),
 	registry.Key: "", registry.List: []string{}, registry.Map: map[string]string{}, registry.Table: map[string]any{}}
+
+// optionGrant refuses a plugin setting an option in ns that isn't its own (plugin.<its name>.…) without the settings
+// capability, and any sandbox option at all; a buffer's options (an ftplugin's tabstop) are free. The user's config
+// sets anything.
+func (a *APIs) optionGrant(ns, name string) error {
+	if a.Plugin.Trusted() {
+		return nil
+	}
+	_, own, _ := strings.Cut(a.Plugin.ID, "/")
+	switch {
+	case strings.HasPrefix(name, "plugin."+own+"."):
+		return nil
+	case name == "sandbox" || strings.HasPrefix(name, "sandbox."):
+		return fmt.Errorf("%s: a plugin can't change the sandbox's settings (%s)", a.Plugin.ID, name)
+	case ns == "buffer_option":
+		return nil
+	}
+	return a.Plugin.Check(plugin.CapSettings, name)
+}
 
 // declare registers an option from oriel.option{ name, type, default, help, values, min, max, step, follows, section, on_change }.
 // A plugin's are named plugin.<its name>.… and shown in its own section of the settings page.

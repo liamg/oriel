@@ -81,7 +81,7 @@ func newHarness(t *testing.T) *harness {
 			"oriel__push": {Tool: mcp.Tool{Name: "oriel__push"}, Run: func(context.Context, json.RawMessage) (mcp.CallResult, error) {
 				return mcp.TextResult("pushed", false), nil
 			}},
-			"oriel__ci": {Tool: mcp.Tool{Name: "oriel__ci"}, Run: func(context.Context, json.RawMessage) (mcp.CallResult, error) {
+			"oriel__ci": {Tool: mcp.Tool{Name: "oriel__ci", Annotations: &mcp.ToolAnnotations{ReadOnlyHint: new(true)}}, Run: func(context.Context, json.RawMessage) (mcp.CallResult, error) {
 				return mcp.TextResult("green", false), nil
 			}},
 			"oriel__ask_user_to_run": {Tool: mcp.Tool{Name: "oriel__ask_user_to_run"}, AlwaysAsk: true, Run: func(context.Context, json.RawMessage) (mcp.CallResult, error) {
@@ -286,13 +286,12 @@ func TestDecideSpecificity(t *testing.T) {
 		"aws__delete_bucket":     Ask,
 		"aws__delete_everything": Deny,
 		"linear__create":         Ask,
-		"oriel__ci":              Allow,
 	} {
-		if got := Decide(tool, false, l); got != want {
+		if got := Decide(tool, Writes, l); got != want {
 			t.Errorf("%s: got %s want %s", tool, got, want)
 		}
 	}
-	if got := Decide("aws__x", true, Levels{ReadOnly: true}); got != Allow {
+	if got := Decide("aws__x", SaysReadOnly, Levels{ReadOnly: true}); got != Allow {
 		t.Errorf("readOnlyHint with ReadOnly: %s", got)
 	}
 }
@@ -341,22 +340,43 @@ func TestExplainSaysWhichRuleDecided(t *testing.T) {
 	}
 	for _, c := range []struct {
 		tool string
-		ro   bool
+		ro   Hint
 		want Why
 	}{
-		{"aws__list", false, Why{Allow, FromSession, "aws__*"}},
-		{"aws__delete_bucket", false, Why{Ask, FromGlobal, "aws__delete_*"}},
-		{"notes__secret", false, Why{Deny, FromProject, "notes__secret"}},
-		{"linear__get", false, Why{Allow, FromGlobal, "linear__*"}},
-		{"docs__read", true, Why{Action: Allow, From: FromReadOnly}},
-		{"docs__write", false, Why{Ask, FromDefault, "*"}},
-		{"oriel__ci", false, Why{Allow, FromDefault, "oriel__ci"}},
+		{"aws__list", Writes, Why{Allow, FromSession, "aws__*"}},
+		{"aws__delete_bucket", Writes, Why{Ask, FromGlobal, "aws__delete_*"}},
+		{"notes__secret", Writes, Why{Deny, FromProject, "notes__secret"}},
+		{"linear__get", Writes, Why{Allow, FromGlobal, "linear__*"}},
+		{"docs__read", SaysReadOnly, Why{Action: Allow, From: FromReadOnly}},
+		{"docs__write", Writes, Why{Ask, FromDefault, "*"}},
+		{"oriel__ci", OwnReadOnly, Why{Action: Allow, From: FromReadOnly}},
 	} {
 		if got := Explain(c.tool, c.ro, l); got != c.want {
 			t.Errorf("%s: %+v, want %+v", c.tool, got, c.want)
 		}
 		if got := Decide(c.tool, c.ro, l); got != c.want.Action {
 			t.Errorf("%s: Decide = %s", c.tool, got)
+		}
+	}
+}
+
+// Oriel's own tools are allowed when they say they only look, whatever settings say of servers' hints; a server's
+// hint counts only when settings trust it, and a rule still beats either.
+func TestOwnReadOnlyToolsAreAllowedByTheirHint(t *testing.T) {
+	for _, c := range []struct {
+		hint Hint
+		l    Levels
+		want string
+	}{
+		{OwnReadOnly, Levels{}, Allow},
+		{SaysReadOnly, Levels{}, Ask},
+		{SaysReadOnly, Levels{ReadOnly: true}, Allow},
+		{Writes, Levels{ReadOnly: true}, Ask},
+		{OwnReadOnly, Levels{Global: []Rule{{Tool: "oriel__gh_*", Action: Deny}}}, Deny},
+		{OwnReadOnly, Levels{Project: []Rule{{Tool: "oriel__gh_compare", Action: Ask}}}, Ask},
+	} {
+		if got := Decide("oriel__gh_compare", c.hint, c.l); got != c.want {
+			t.Errorf("hint %d with %+v: %s, want %s", c.hint, c.l, got, c.want)
 		}
 	}
 }

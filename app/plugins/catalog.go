@@ -256,11 +256,11 @@ func (x *Catalog) commands() []registry.Command {
 	h := x.h
 	str := func(a registry.Args, k string) string { v, _ := a[k].(string); return v }
 	return []registry.Command{
-		{ID: "plugins.sync", Title: "Install and load what [plugins] lists now", Run: func(registry.Ctx, registry.Args) error {
+		{ID: "plugins.sync", UserOnly: true, Title: "Install and load what [plugins] lists now", Run: func(registry.Ctx, registry.Args) error {
 			x.kick()
 			return nil
 		}},
-		{ID: "plugins.install", Title: "Install {id}: one line in [plugins] at {scope} (user by default), a {version} range or a {git} or {path} source",
+		{ID: "plugins.install", UserOnly: true, Title: "Install {id}: one line in [plugins] at {scope} (user by default), a {version} range or a {git} or {path} source",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				var v any = cmp.Or(str(a, "version"), "*")
 				switch {
@@ -272,7 +272,7 @@ func (x *Catalog) commands() []registry.Command {
 				return h.Run(context.Background(), "settings.set", registry.Args{"name": PluginsOption, "key": str(a, "id"), "value": v,
 					"scope": cmp.Or(str(a, "scope"), "user")})
 			}},
-		{ID: "plugins.uninstall", Title: "Uninstall {id}: its line leaves [plugins] at {scope} (user by default)",
+		{ID: "plugins.uninstall", UserOnly: true, Title: "Uninstall {id}: its line leaves [plugins] at {scope} (user by default)",
 			Run: func(_ registry.Ctx, a registry.Args) error {
 				return h.Run(context.Background(), "settings.reset", registry.Args{"name": PluginsOption, "key": str(a, "id"),
 					"scope": cmp.Or(str(a, "scope"), "user")})
@@ -280,10 +280,10 @@ func (x *Catalog) commands() []registry.Command {
 		{ID: "plugins.review", Title: "Open the consent screen for {id}, which waits for it", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.review(str(a, "id"))
 		}},
-		{ID: "plugins.accept", Title: "Record consent to the plugin waiting in {dir}, and load it", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.accept", UserOnly: true, Title: "Record consent to the plugin waiting in {dir}, and load it", Run: func(_ registry.Ctx, a registry.Args) error {
 			return x.accept(str(a, "dir"))
 		}},
-		{ID: "plugins.update", Title: "Update {id} to the newest version its range allows", Run: func(_ registry.Ctx, a registry.Args) error {
+		{ID: "plugins.update", UserOnly: true, Title: "Update {id} to the newest version its range allows", Run: func(_ registry.Ctx, a registry.Args) error {
 			x.mu.Lock()
 			x.updates[str(a, "id")] = true
 			x.mu.Unlock()
