@@ -7,12 +7,14 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/liamg/oriel/core"
 	"runtime"
 	"slices"
 	"strings"
 	"sync"
+
+	"github.com/liamg/oriel/core"
 
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
@@ -98,6 +100,19 @@ func (a *APIs) check(c plugin.Capability) error { return a.Plugin.Check(c, "") }
 func (a *APIs) callbackFailed(fn *script.Fn, err error) {
 	n := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
 	a.Host.Notify(script.WithTrace(n, err, a.Plugin.Dir, "Open at line"))
+}
+
+// contributed calls fn, a callback of kind's contribution id that runs as Oriel needs it (a badge each frame, a
+// gate's check), and reports how it went to the registry's fault guard: an error shows among the plugin's failures,
+// and enough in a row turn the contribution off. ok is false on an error. A callback answering something the user did
+// once (a click, a request's answer) says why it failed in a notice instead (callbackFailed).
+func (a *APIs) contributed(kind, id string, fn *script.Fn, args ...any) (out []any, ok bool) {
+	out, err := a.VM.Call(fn, args...)
+	if errors.Is(err, script.ErrClosed) {
+		return nil, false
+	}
+	a.Host.Report(kind, id, err)
+	return out, err == nil
 }
 
 // commandGrant refuses to run command id for a plugin without the capability the command names (Command.Grant), and

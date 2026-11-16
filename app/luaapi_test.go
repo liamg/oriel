@@ -150,6 +150,22 @@ L.diagnostics.set("lint", "/p/a.go", { { line = 3, col = 2, end_col = 5, severit
 	if err := s.LuaErr(`L.diagnostics.set("x", "/f", { 1 })`); !strings.Contains(err, "a diagnostic is a table") {
 		t.Errorf("a bad item: %s", err)
 	}
+	for src, want := range map[string]string{
+		`L.diagnostics.set("lint", "/p/a.go", { line = 1, message = "one, not a list" })`: "a list of tables",
+		`L.diagnostics.set("lint", "/p/a.go", "unused")`:                                  "a list of tables",
+		`L.diagnostics.set("lint", "/p/a.go", { { message = "no line" } })`:               "needs a line",
+	} {
+		if err := s.LuaErr(src); !strings.Contains(err, want) {
+			t.Errorf("%s: %q", src, err)
+		}
+	}
+	if ds, _ := s.Registry().Diagnostics(); len(ds) != 1 {
+		t.Errorf("bad input cleared or changed them: %+v", ds)
+	}
+	s.Lua(`L.diagnostics.set("lint", "/p/a.go", {})`)
+	if ds, _ := s.Registry().Diagnostics(); len(ds) != 0 {
+		t.Errorf("an empty list didn't clear them: %+v", ds)
+	}
 	s.WriteConfig(map[string]string{"init.lua": ""})
 	s.ReloadLua()
 	if ds, _ := s.Registry().Diagnostics(); len(ds) != 0 {
@@ -215,6 +231,58 @@ end)
 	}
 	if off := s.Registry().TurnedOff(); len(off) != 0 {
 		t.Errorf("turned off: %+v", off)
+	}
+}
+
+// A Lua callback that draws and throws (a list's row) shows why in its place, and the rest still draws.
+func TestLuaUIRowErrorShowsInPlace(t *testing.T) {
+	s := apptest.LuaScene(t, `local L = oriel
+L.statusline(function(w)
+  return L.ui.row{
+    L.ui.list({ "a", "b" }, function(x)
+      if x == "a" then error("row broke") end
+      return L.ui.text("item " .. x)
+    end),
+  }
+end)
+`)
+	file := filepath.Join(t.TempDir(), "a.txt")
+	os.WriteFile(file, []byte("one\n"), 0o644)
+	s.Run("editor.open", registry.Args{"path": file})
+	s.Frame()
+	s.Frame()
+	if text := s.Text(); !strings.Contains(text, "row broke") || !strings.Contains(text, "item b") {
+		t.Errorf("the status line:\n%s", text)
+	}
+}
+
+// A ship gate whose check throws fails, saying why, rather than leaving the Ship page; and it's reported among the
+// plugin's failures, so enough of them turn it off.
+func TestLuaShipGateThatThrowsFails(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.ship.gate{ name = "lint", check = function() error("lint crashed") end }`)
+	var failed []registry.Failure
+	s.Registry().OnFailure(func(f registry.Failure) { failed = append(failed, f) })
+	gs := registry.ShipGates(s.Registry(), "", "")
+	if len(gs) != 1 || gs[0].State != registry.GateFail || !strings.Contains(gs[0].Note, "lint crashed") {
+		t.Errorf("gates: %+v", gs)
+	}
+	if len(failed) != 1 || failed[0].Kind != "ship.gate" || failed[0].ID != "lint" {
+		t.Errorf("failures: %+v", failed)
+	}
+}
+
+// A per-frame callback that throws (a rail entry's badge) counts nothing and is reported, as a view's is.
+func TestLuaBadgeThatThrowsIsReported(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.rail.add{ name = "todo", icon = "◆", title = "Todo", command = "Settings", badge = function() error("no count") end }`)
+	var failed []registry.Failure
+	s.Registry().OnFailure(func(f registry.Failure) { failed = append(failed, f) })
+	for _, e := range registry.ContributionsOf[uireg.RailEntry](s.Registry()) {
+		if e.Name == "todo" && e.Badge() != 0 {
+			t.Error("a broken badge counted something")
+		}
+	}
+	if len(failed) != 1 || failed[0].Kind != "rail.entry" || failed[0].ID != "todo" || !strings.Contains(failed[0].Err.Error(), "no count") {
+		t.Errorf("failures: %+v", failed)
 	}
 }
 

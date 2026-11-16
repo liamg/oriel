@@ -2,6 +2,8 @@ package settings_test
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +46,7 @@ func TestThePromptsPage(t *testing.T) {
 	}
 
 	s.ClickText("Reset to default")
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
 		t.Error("reset kept the file")
 	}
 	s.Until("the host to have the default style", func() bool {

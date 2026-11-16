@@ -4,8 +4,10 @@ package gomod
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"regexp"
 	"strings"
@@ -85,7 +87,7 @@ func Requires(gomod string) ([]Module, error) {
 // Vendored reads the modules listed in a vendor/modules.txt.
 func Vendored(modulesTxt string) ([]Module, error) {
 	b, err := os.ReadFile(modulesTxt)
-	if os.IsNotExist(err) {
+	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	} else if err != nil {
 		return nil, err

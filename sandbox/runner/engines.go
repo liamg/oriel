@@ -54,7 +54,7 @@ var (
 func findDocker() (container.Engine, error) {
 	e := container.Docker
 	if !e.Installed() {
-		return e, fmt.Errorf("%s is not installed", e.Bin)
+		return e, fmt.Errorf("%s %w", e.Bin, container.ErrNotInstalled)
 	}
 	if os.Getenv("DOCKER_HOST") != "" {
 		return e, nil
@@ -76,7 +76,7 @@ func findDocker() (container.Engine, error) {
 func findOrbStack() (container.Engine, error) {
 	sock := container.Socket(orbStackSockets...)
 	if sock == "" {
-		return container.Engine{}, fmt.Errorf("OrbStack is not installed")
+		return container.Engine{}, fmt.Errorf("OrbStack %w", container.ErrNotInstalled)
 	}
 	e := container.Engine{Bin: "docker", Host: sock, VM: true}
 	if !e.Installed() {
@@ -91,11 +91,11 @@ func findOrbStack() (container.Engine, error) {
 func findColima() (container.Engine, error) {
 	sock := container.Socket(colimaSockets...)
 	if sock == "" {
-		return container.Engine{}, fmt.Errorf("Colima is not installed")
+		return container.Engine{}, fmt.Errorf("Colima %w", container.ErrNotInstalled)
 	}
 	e := container.Engine{Bin: "docker", Host: sock, VM: true}
 	if !e.Installed() {
-		return e, fmt.Errorf("docker is not installed; Colima needs its CLI")
+		return e, fmt.Errorf("docker %w; Colima needs its CLI", container.ErrNotInstalled)
 	}
 	return e, nil
 }
@@ -103,7 +103,7 @@ func findColima() (container.Engine, error) {
 func findPodman() (container.Engine, error) {
 	e := container.Engine{Bin: "podman", VM: runtime.GOOS != "linux"}
 	if !e.Installed() {
-		return e, fmt.Errorf("podman is not installed")
+		return e, fmt.Errorf("podman %w", container.ErrNotInstalled)
 	}
 	return e, nil
 }

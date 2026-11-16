@@ -4,6 +4,7 @@ package desktop
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"strings"
 
@@ -23,7 +24,8 @@ func ChooseDir(ctx context.Context) (string, error) {
 			continue
 		}
 		out, err := exec.CommandContext(ctx, c[0], c[1:]...).Output()
-		if _, ok := err.(*exec.ExitError); ok {
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
 			return "", nil // cancelled
 		}
 		return strings.TrimSpace(string(out)), err

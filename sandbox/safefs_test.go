@@ -3,6 +3,7 @@ package sandbox
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -186,5 +187,26 @@ func TestWriteFileRefusesADirectorySwappedForALink(t *testing.T) {
 	ents, _ := os.ReadDir(away)
 	if len(ents) != 1 {
 		t.Fatalf("wrote outside the workspace through a swapped link: %d entries", len(ents))
+	}
+}
+
+// An always-allow list that doesn't parse allows nothing, and adding to it fails rather than saving over it.
+func TestAlwaysThatDoesntParseIsLeftAlone(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if err := os.MkdirAll(Base(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	broken := []byte(`{"rules": [{"tool": "a", "action": "allow"},`)
+	if err := os.WriteFile(alwaysPath(), broken, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if a := LoadAlways(); len(a.Rules) != 0 {
+		t.Errorf("a broken list allows %+v", a.Rules)
+	}
+	if err := AddAlwaysRules([]PolicyRule{{Tool: "b", Action: "allow"}}, false); err == nil || !strings.Contains(err.Error(), "doesn't parse") {
+		t.Errorf("added to a broken list: %v", err)
+	}
+	if b, _ := os.ReadFile(alwaysPath()); string(b) != string(broken) {
+		t.Errorf("the broken list was saved over:\n%s", b)
 	}
 }

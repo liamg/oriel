@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"os"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -509,5 +510,24 @@ func TestTheAgentsHostsAreAllowed(t *testing.T) {
 	}
 	if allow(s, "ab.chatgpt.com", 443) {
 		t.Error("a setting's block didn't hold over the provider's host")
+	}
+}
+
+// A session's grants file that doesn't parse grants nothing, and a new rule fails rather than saving over it.
+func TestEgressGrantsThatDontParseAreLeftAlone(t *testing.T) {
+	s, _ := newSession(t)
+	broken := []byte(`[{"host": "a.example.com", "allow": true},`)
+	if err := os.WriteFile(s.GrantsPath, broken, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if g := s.Grants(); len(g) != 0 {
+		t.Errorf("a broken file grants %+v", g)
+	}
+	err := s.UpdateGrants(func(r []Rule) []Rule { return append(r, Rule{Host: "b.example.com", Allow: true}) })
+	if err == nil || !strings.Contains(err.Error(), "doesn't parse") {
+		t.Errorf("updated a broken file: %v", err)
+	}
+	if b, _ := os.ReadFile(s.GrantsPath); string(b) != string(broken) {
+		t.Errorf("the broken file was saved over:\n%s", b)
 	}
 }

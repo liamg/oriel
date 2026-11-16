@@ -429,7 +429,7 @@ func (p *Search) build(c *ui.Ctx) {
 				}
 			}
 			if widget.Button(c, "qf", "→ quickfix", widget.ButtonOpts{Ghost: true, Disabled: n == 0, Help: "files/search"}) {
-				p.h.Run(context.Background(), "search.quickfix", nil)
+				kit.RunOrNotify(p.h, "editor", "search.quickfix", nil)
 			}
 		})
 	})

@@ -1,6 +1,8 @@
 package work
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,7 +21,7 @@ func TestWriterWritesTheLatest(t *testing.T) {
 	}
 	w.Remove(p)
 	w.Wait()
-	if _, err := os.Stat(p); !os.IsNotExist(err) {
+	if _, err := os.Stat(p); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("after Remove: %v", err)
 	}
 }

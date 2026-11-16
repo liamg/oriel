@@ -22,8 +22,8 @@ func (x Explorer) Badge(spec script.Table, where string) error {
 		b.Order = int(o)
 	}
 	b.Counts = func(id core.SessionID) map[string]int {
-		out, err := x.a.VM.Call(fn, string(id))
-		if err != nil || len(out) == 0 {
+		out, ok := x.a.contributed(b.ContributionKind(), b.Name, fn, string(id))
+		if !ok || len(out) == 0 {
 			return nil
 		}
 		t, _ := out[0].(script.Table)

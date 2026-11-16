@@ -3,7 +3,9 @@ package gitui
 import (
 	"cmp"
 	"context"
+	"errors"
 	"image"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -65,7 +67,7 @@ func loadDiff(r registry.Registry, in diffInput, newText []byte, styled bool) *d
 	}
 	if newText == nil && in.code != 'D' {
 		b, err := os.ReadFile(in.work)
-		if err != nil && !os.IsNotExist(err) {
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			f.err = err
 			return f
 		}

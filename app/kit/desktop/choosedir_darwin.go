@@ -2,6 +2,7 @@ package desktop
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"strings"
 
@@ -15,7 +16,8 @@ func ChooseDir(ctx context.Context) (string, error) {
 		return "", nil
 	}
 	if err != nil {
-		if e, ok := err.(*exec.ExitError); ok && strings.Contains(string(e.Stderr), "-128") {
+		var exit *exec.ExitError
+		if errors.As(err, &exit) && strings.Contains(string(exit.Stderr), "-128") {
 			return "", nil // cancelled
 		}
 		return "", err

@@ -350,22 +350,12 @@ func (x *Registry) CloneRepo(ctx context.Context, r CloneReq) (_ core.Repo, err 
 	}
 	if err := gitx.CloneProgress(ctx, url, t.Dir, r.Progress); err != nil {
 		_ = os.RemoveAll(t.Dir)
-		if needsCredentials(err.Error()) {
+		if errors.Is(err, gitx.ErrNoCredentials) {
 			err = fmt.Errorf("%w (it clones with this machine's git credentials: set them up)", err)
 		}
 		return core.Repo{}, err
 	}
 	return x.Add(ctx, t.Dir, core.RepoCloned)
-}
-
-// needsCredentials says whether git's message is about credentials it didn't have.
-func needsCredentials(msg string) bool {
-	for _, s := range []string{"Permission denied", "could not read Username", "Authentication failed", "terminal prompts disabled"} {
-		if strings.Contains(msg, s) {
-			return true
-		}
-	}
-	return false
 }
 
 // expandHome expands a leading ~.

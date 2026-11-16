@@ -1,6 +1,8 @@
 package plugins_test
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -91,7 +93,7 @@ func TestPluginsLineInstallsAndUninstalls(t *testing.T) {
 	if s.HasCommand("Hi") {
 		t.Error("the plugin is still loaded")
 	}
-	if _, err := os.Stat(filepath.Join(data, "plugins", "acme", "hi")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(data, "plugins", "acme", "hi")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("its files are still there: %v", err)
 	}
 	if b, err := os.ReadFile(lock); err == nil && strings.Contains(string(b), "acme/hi") {

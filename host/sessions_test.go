@@ -2,6 +2,8 @@ package host
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,7 +36,7 @@ func TestCritSessionsAreDroppedOnRestore(t *testing.T) {
 	if _, err := r.w.session("crit-p5"); err == nil {
 		t.Error("the crit session came back")
 	}
-	if _, err := os.Stat(r.w.sessionDir("crit-p5")); !os.IsNotExist(err) {
+	if _, err := os.Stat(r.w.sessionDir("crit-p5")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("its log is still there: %v", err)
 	}
 	r.session(id)
@@ -690,7 +692,7 @@ func TestRedactedBodyStaysOutOfTheLog(t *testing.T) {
 	if err := r.w.Delete(context.Background(), id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "redacted.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "redacted.json")); !errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("the vault outlived the session: %v", err)
 	}
 }

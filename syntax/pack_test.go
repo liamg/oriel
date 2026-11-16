@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -95,7 +96,7 @@ func TestPackInstall(t *testing.T) {
 	if _, err := sums.Install(bytes.NewReader(packArchive(t, gox...)), dir); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "gox", "queries", "stale.scm")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "gox", "queries", "stale.scm")); !errors.Is(err, fs.ErrNotExist) {
 		t.Error("a reinstall kept a file the pack doesn't have")
 	}
 	entries, _ = os.ReadDir(dir)
