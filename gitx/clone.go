@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -57,9 +58,26 @@ func CloneProgress(ctx context.Context, url, dir string, progress func(line stri
 		if msg == "" {
 			msg = err.Error()
 		}
+		if needsCredentials(msg) {
+			return fmt.Errorf("cloning %s: %w: %s", url, ErrNoCredentials, msg)
+		}
 		return fmt.Errorf("cloning %s: %s", url, msg)
 	}
 	return nil
+}
+
+// ErrNoCredentials is a clone git couldn't authenticate for: the machine has no credentials for the remote.
+var ErrNoCredentials = errors.New("no credentials for the remote")
+
+// needsCredentials says whether git's message is about credentials it didn't have. Git says so only in words, so
+// they're read here, where git is run, and nowhere else.
+func needsCredentials(msg string) bool {
+	for _, s := range []string{"Permission denied", "could not read Username", "Authentication failed", "terminal prompts disabled"} {
+		if strings.Contains(msg, s) {
+			return true
+		}
+	}
+	return false
 }
 
 // scanProgress splits git's progress output at \r as well as \n.
