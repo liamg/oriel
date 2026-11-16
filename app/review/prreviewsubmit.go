@@ -123,8 +123,8 @@ func (x *PRReview) submit(ctx registry.Ctx, a registry.Args) error {
 			x.busy.Go(func() {
 				<-saved
 				x.h.Do(func() {
-					if a := (registry.Args{"id": string(se.ID)}); x.h.Available("github.sync", a) {
-						x.run("github.sync", a)
+					if a := (registry.Args{"id": string(se.ID)}); x.h.Available("review.threads.sync", a) {
+						x.run("review.threads.sync", a)
 					}
 				})
 			})

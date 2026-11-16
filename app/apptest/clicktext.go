@@ -41,3 +41,56 @@ func (s *Scene) textPoint(text string) (render.Point, bool) {
 	}
 	return render.Point{}, false
 }
+
+// ClickTop clicks the run of text reading text painted last, on top of any other, and draws a frame.
+func (s *Scene) ClickTop(text string) {
+	s.T.Helper()
+	s.drawn(text)
+	p, ok := s.TextAt(text)
+	if !ok {
+		s.T.Fatalf("no %q in the frame", text)
+	}
+	s.Click(p, 0)
+	s.Frame()
+}
+
+// ClickNode clicks the control named label (ClickOn), and draws two frames after for what it opened to lay out.
+func (s *Scene) ClickNode(label string) {
+	s.T.Helper()
+	s.ClickOn(label)
+	s.Frame()
+	s.Frame()
+}
+
+// ClickOn clicks the middle of the control named label once it's enabled and settled, in the same place two frames
+// running, pressing and letting go on the frame it was found in.
+func (s *Scene) ClickOn(label string) {
+	s.T.Helper()
+	s.Quiet()
+	var last *render.AccessNode
+	for deadline := time.Now().Add(Timeout); ; {
+		s.Frame()
+		n := s.Find(label)
+		if n != nil && last != nil && !n.Disabled && n.Bounds == last.Bounds {
+			s.Click(Centre(n.Bounds), 0)
+			return
+		}
+		last = n
+		if time.Now().After(deadline) {
+			s.T.Fatalf("%q never enabled and settled:\n%s", label, s.Text())
+		}
+		s.RunQueued()
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// RightClick right-clicks p, and answers the frame's text after: the menu it opened.
+func (s *Scene) RightClick(p render.Point) string {
+	s.Frame()
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerMove, Pos: p})
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerPress, Pos: p, Buttons: render.ButtonSecondary})
+	s.UI().Pointer(render.PointerEvent{Kind: render.PointerRelease, Pos: p, Buttons: render.ButtonSecondary})
+	s.Frame()
+	s.Frame()
+	return s.Text()
+}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/liamg/oriel/registry/services"
 
+	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/editor"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -135,4 +136,34 @@ func dueSources(r registry.Registry, st core.State) []string {
 		}
 	}
 	return out
+}
+
+// Until draws frames, running the work handed to the loop, until ok; it fails the test after Timeout.
+func (s *Scene) Until(what string, ok func() bool) {
+	s.T.Helper()
+	if !s.Headless.Until(Timeout, ok) {
+		s.T.Fatalf("waiting for %s; notices %q:\n%s%s", what, rig.NoticeTexts(s.Store().State().Notifications), s.Text(), rig.Stuck())
+	}
+}
+
+// UntilState draws frames until ok holds of the state, as Until does, and answers that state.
+func (s *Scene) UntilState(what string, ok func(core.State) bool) core.State {
+	s.T.Helper()
+	var st core.State
+	s.Until(what, func() bool { st = s.Store().State(); return ok(st) })
+	return st
+}
+
+// WaitFor frames until the frame's text, its lines run together, has want, for up to Timeout, and answers that text.
+func (s *Scene) WaitFor(want string) string {
+	s.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	for {
+		s.Frame()
+		text := strings.ReplaceAll(s.Text(), "\n", "")
+		if strings.Contains(text, want) || time.Now().After(deadline) {
+			return text
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
 }

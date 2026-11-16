@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/shell/diag"
+
 	"github.com/liamg/oriel/app/kit/work"
 
 	"github.com/liamg/oriel/app/kit"
@@ -115,7 +117,7 @@ func (n *notices) Activate(_ context.Context, h plugin.Host) error {
 			if lv == "" {
 				return openLog(ctx, a)
 			}
-			l, ok := ParseLevel(lv)
+			l, ok := diag.ParseLevel(lv)
 			if !ok {
 				return fmt.Errorf("no log level %q: debug, info, warn or error", lv)
 			}

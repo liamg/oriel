@@ -549,7 +549,7 @@ func (x *Update) statusSegment(c *ui.Ctx) {
 		})
 		if in.Clicked {
 			if err := x.h.Run(context.Background(), "update.restart", nil); err != nil {
-				x.h.Notify(core.Notice{ID: "update.restart", Severity: core.SevError, AutoClear: true, Title: "Update", Text: err.Error()})
+				kit.NotifyFailure(x.h, core.Notice{ID: "update.restart", AutoClear: true, Title: "Update"}, err)
 			}
 		}
 		return

@@ -102,7 +102,7 @@ func (x *Console) processes(c *ui.Ctx, se core.SessionState, st *consoleState, w
 				widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		for i, t := range ps {
-			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
+			widget.RuleTone(c, fmt.Sprint("rule", i), tBlockLine)
 			c.Row(t.ID, ui.Style{W: ui.Flex(1), H: ui.Px(34), Pad: ui.PadXY(12, 0), Gap: 10, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Description},
 				func(c *ui.Ctx) {
 					draw.StateMark(c, "mark", draw.MarkRunning, time.Time{}, 10)

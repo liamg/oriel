@@ -1,8 +1,6 @@
 package shell
 
 import (
-	"io"
-	"log/slog"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -15,57 +13,10 @@ import (
 
 // What the package's outside tests read and set of its plugins.
 
-type (
-	Picker  = picker
-	Omnibox = omnibox
-	Group   = group
-)
-
-const (
-	PickerMax = pickerMax
-	RankAway  = rankAway
-)
-
-// Source is the id of the source the group's results are of.
-func (g group) Source() string { return g.src.ID }
-
-// Items are the group's results, best first.
-func (g group) Items() []uireg.PickerItem {
-	out := make([]uireg.PickerItem, len(g.hits))
-	for i, h := range g.hits {
-		out[i] = h.item
-	}
-	return out
-}
-
-// RankSource is s's items for q, best first, at most limit of them, as a source of h's plugins ranks them.
-func RankSource(h *Headless, s uireg.PickerSource, q string, limit int) (group, bool) {
-	return rankSource(h.sh.host("test"), s, q, limit)
-}
-
-// SourceLoading says s is still loading its items.
-func SourceLoading(s uireg.PickerSource) bool { return sourceLoading(s) }
-
-func (o *omnibox) Results(moving bool) []group { g, _ := o.results(moving); return g }
-func (o *omnibox) Open() bool                  { return o.open }
-
-func (p *picker) Open() bool     { return p.open }
-func (p *picker) Source() string { return p.source }
-func (p *picker) Query() string  { return p.query }
-func (p *picker) Selected() int  { return p.sel }
-
-// SetKeys has the window's keys go through r, as its loop's do.
-func SetKeys(h *Headless, r *registry.Resolver) { h.sh.keys = r }
-
 // What fork F1's moved tests read and set of the shell.
 
 func (f *windowFocus) Now() (bool, <-chan struct{}) { return f.now() }
 func (f *windowFocus) Set(on bool) bool             { return f.set(on) }
-
-type Help = helpView
-
-func (v *helpView) Open() bool   { return v.open }
-func (v *helpView) Page() string { return v.cur }
 
 // LastMove is the last of a run of pointer moves waiting from ev, and the event read after the run.
 func LastMove(ev render.Event, events <-chan render.Event) (render.Event, render.Event) {
@@ -85,28 +36,8 @@ func Reopening(h *Headless) (string, bool) {
 	}
 }
 
-// ResolveTheme is the theme name in variant v from srcs, as the window resolves ui.theme.
-func ResolveTheme(srcs []theme.Source, name string, v theme.Variant) (*theme.Resolved, error) {
-	return resolveTheme(srcs, name, v)
-}
-
 // Report is "Copy report"'s text, with nothing at its head.
 func Report(h *Headless) string { return h.sh.report("") }
-
-// StallTrace is a stall trace, for a test to hold its writes.
-type StallTrace struct{ s *stallTrace }
-
-// StartStallTrace starts the stall trace written to path, or answers false where there's no flight recorder.
-func StartStallTrace(path string) (StallTrace, bool) {
-	s := startStallTrace(path, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return StallTrace{s}, s != nil
-}
-
-func (t StallTrace) Stop()         { t.s.stop() }
-func (t StallTrace) Stalled()      { t.s.stalled() }
-func (t StallTrace) HoldWrite()    { t.s.wmu.Lock() }
-func (t StallTrace) ReleaseWrite() { t.s.wmu.Unlock() }
-func (t StallTrace) Forget()       { t.s.written = time.Time{} }
 
 // The log panel's scopes.
 const (
@@ -147,6 +78,3 @@ func PaneLead(h *Headless, v layout.ViewRef) (render.Color, bool) { return h.sh.
 
 // PaneTip is a tab's tooltip.
 func PaneTip(h *Headless, v layout.ViewRef) string { return h.sh.layout.panes.Tip(v) }
-
-// Selected is the omnibox's selected row.
-func (o *omnibox) Selected() int { return o.sel }

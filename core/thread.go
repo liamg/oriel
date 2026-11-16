@@ -1,6 +1,10 @@
 package core
 
-import "time"
+import (
+	"encoding/json"
+	"strconv"
+	"time"
+)
 
 // ThreadID names a thread within its session.
 type ThreadID string
@@ -62,11 +66,9 @@ type Comment struct {
 	Severity  string     `json:"severity,omitempty"`
 	Evidence  []Evidence `json:"evidence,omitempty"`
 	Unbacked  string     `json:"unbacked,omitempty"` // a claim with no evidence: "says tests pass, but ran none"
-	// Draft is an agent's reply not sent where the thread came from: the user forwards it (a GitHub thread's).
+	// Draft is an agent's reply not sent where the thread came from: the user forwards it (a code host's thread's).
 	Draft bool `json:"draft,omitempty"`
-	// GitHubID is the comment's on GitHub, HostID on another code host: one mirrored from there, or a draft once
-	// forwarded.
-	GitHubID int64     `json:"githubId,omitempty"`
+	// HostID is the comment's id on its code host: one mirrored from there, or a draft once forwarded.
 	HostID   string    `json:"hostId,omitempty"`
 	Sent     time.Time `json:"sent,omitzero"`      // when the user forwarded it
 	Redacted bool      `json:"redacted,omitempty"` // its author isn't trusted, so the agent isn't given its text
@@ -74,26 +76,72 @@ type Comment struct {
 	Mine     bool      `json:"mine,omitempty"`     // mirrored, and written there by the user: not the agent's to answer
 }
 
-// Origins of threads that came from elsewhere: GitHub, or another code host (HostThread.Host names it).
-const (
-	OriginGitHub   = "github"
-	OriginCodeHost = "codehost"
-)
+// OriginCodeHost is a thread mirrored from a code host's pull request (HostThread.Host names it).
+const OriginCodeHost = "codehost"
 
 // HostThread is where a mirrored thread lives on its code host: a review comment's thread on a PR's line, or the PR's
-// conversation (Root 0 and Key "").
+// conversation (Key "").
 type HostThread struct {
-	Host     string `json:"host,omitempty"` // the code host's name; "" for GitHub
-	Key      string `json:"key,omitempty"`  // the thread's id on a host other than GitHub
+	Host     string `json:"host,omitempty"` // the code host's name: "github", "gitlab"
+	Key      string `json:"key,omitempty"`  // the thread's id there
 	Project  string `json:"project"`
 	Repo     string `json:"repo"` // owner/name
 	PR       int    `json:"pr"`
-	Root     int64  `json:"root,omitempty"`     // the review thread's first comment
 	Reviewer string `json:"reviewer,omitempty"` // who started it
-	State    string `json:"state,omitempty"`    // the reviewer's review: CHANGES_REQUESTED, APPROVED, COMMENTED
+	State    string `json:"state,omitempty"`    // the reviewer's verdict: registry's changes, approved, commented
 	URL      string `json:"url,omitempty"`
-	Resolved bool   `json:"resolved,omitempty"` // resolved on GitHub, as last synced
+	Resolved bool   `json:"resolved,omitempty"` // resolved there, as last mirrored
 	Outdated bool   `json:"outdated,omitempty"` // its line is gone from the PR's head
+}
+
+// UnmarshalJSON reads where a mirrored thread lives, taking one older logs kept as GitHub's alone (no host, its
+// first comment's id as root) as GitHub's under its key.
+func (g *HostThread) UnmarshalJSON(b []byte) error {
+	type plain HostThread
+	var v struct {
+		plain
+		Root int64 `json:"root"`
+	}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	*g = HostThread(v.plain)
+	if g.Host == "" {
+		g.Host = "github"
+		if v.Root != 0 {
+			g.Key = strconv.FormatInt(v.Root, 10)
+		}
+	}
+	return nil
+}
+
+// UnmarshalJSON reads a comment, taking the GitHub id older logs kept apart (githubId) as its HostID.
+func (c *Comment) UnmarshalJSON(b []byte) error {
+	type plain Comment
+	var v struct {
+		plain
+		GitHubID int64 `json:"githubId"`
+	}
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	*c = Comment(v.plain)
+	if c.HostID == "" && v.GitHubID != 0 {
+		c.HostID = strconv.FormatInt(v.GitHubID, 10)
+	}
+	return nil
+}
+
+// UnmarshalJSON reads a thread, taking one older logs said came from GitHub (origin "github") as a code host's.
+func (t *Thread) UnmarshalJSON(b []byte) error {
+	type plain Thread
+	if err := json.Unmarshal(b, (*plain)(t)); err != nil {
+		return err
+	}
+	if t.Origin == "github" {
+		t.Origin = OriginCodeHost
+	}
+	return nil
 }
 
 // Touched is a file the agent changed while working on a thread.
@@ -116,7 +164,7 @@ type Thread struct {
 	// Active says the agent is on it now, not only handed it with others: its working reply, a task of it started,
 	// or the only one it was handed. Several can be, as subagents work.
 	Active bool        `json:"active,omitempty"`
-	Origin string      `json:"origin,omitempty"` // where it came from: "" for Oriel, OriginGitHub
+	Origin string      `json:"origin,omitempty"` // where it came from: "" for Oriel, OriginCodeHost
 	Hosted *HostThread `json:"github,omitempty"` // a review thread mirrored from the PR's code host
 	// Outgoing is the user's comment for a pull request's author, in the review they'll submit: not the agent's to
 	// answer.

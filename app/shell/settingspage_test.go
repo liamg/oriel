@@ -36,14 +36,17 @@ func TestOmniboxOverSettings(t *testing.T) {
 	if m := s.UI().KeyMode(); m != "input" {
 		t.Fatalf("with the omnibox over settings, keys go to %q, not the omnibox's input", m)
 	}
+	if !omniOpen(s) {
+		t.Fatal("the omnibox isn't on screen")
+	}
 	s.Type("Esc")
-	if omni(s).Open() {
+	if omniOpen(s) {
 		t.Error("Escape didn't close the omnibox")
 	}
 	s.Run("omnibox.open", nil)
 	s.Frame()
 	s.Click(render.Point{X: 8, Y: s.Size().Y - 8}, 0)
-	if omni(s).Open() {
+	if omniOpen(s) {
 		t.Error("a click outside didn't close the omnibox")
 	}
 }
@@ -56,3 +59,6 @@ func settingsAt(t *testing.T, query string) *apptest.Scene {
 	s.Frame()
 	return s
 }
+
+// omniOpen says the omnibox is open: its region is on screen once a frame is drawn.
+func omniOpen(s *apptest.Scene) bool { s.Frame(); return s.Find("Search everything") != nil }

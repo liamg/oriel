@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/editor"
+	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/internal/clock/clocktest"
 
 	"github.com/liamg/oriel/gitx/gittest"
@@ -48,4 +49,46 @@ func ExplorerScene(t *testing.T) (*Scene, *gittest.Repo) {
 	s.WaitGit()
 	s.Frame()
 	return s, r
+}
+
+// WaitGit waits for the git work running off the loop, as the GitTrees service says, running what it hands the loop.
+func (s *Scene) WaitGit() {
+	for kit.Git(s.Registry()).Busy() {
+		s.RunQueued()
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// SettleGit frames until every project's git status has come: the window's work tree's first read, and each project's,
+// as the GitTrees service says.
+func (s *Scene) SettleGit() {
+	s.T.Helper()
+	deadline := time.Now().Add(Timeout)
+	for {
+		s.Frame()
+		s.RunQueued()
+		if !kit.Git(s.Registry()).Busy() && s.gitRead() {
+			s.Frame()
+			return
+		}
+		if time.Now().After(deadline) {
+			s.T.Fatal("the projects' git status never came")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}
+
+// gitRead says the window's work tree and each project's have been read once.
+func (s *Scene) gitRead() bool {
+	trees := kit.Git(s.Registry())
+	dirs := []string{""}
+	for _, p := range kit.ProjectsHere(s.Host()).Projects {
+		dirs = append(dirs, p.Dir)
+	}
+	for _, d := range dirs {
+		if !trees.Tree(d).Load().Done {
+			return false
+		}
+	}
+	return true
 }

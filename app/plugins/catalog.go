@@ -353,7 +353,7 @@ func (x *Catalog) kick() {
 				s, _, err := f.m.Sync(ctx, f.entries, keep) // apply stops what's no longer listed
 				cancel()
 				if err != nil {
-					x.h.Notify(core.Notice{ID: "plugins.sync", Severity: core.SevError, Title: "Plugins", Text: err.Error()})
+					kit.NotifyFailure(x.h, core.Notice{ID: "plugins.sync", Title: "Plugins"}, err)
 				}
 				sts = append(sts, s...)
 			}
@@ -503,7 +503,7 @@ func (x *Catalog) start(st catalog.Status) error {
 	id := st.Entry.ID
 	stop, err := x.loadScript(os.DirFS(st.Dir), kit.ScriptOpts{Dir: st.Dir, Grants: st.Grants(), Data: filepath.Join(x.StateDir, "plugins", id)})
 	if err != nil {
-		x.h.Notify(core.Notice{ID: "plugins.failed." + id, Severity: core.SevError, Title: "Plugin " + id, Text: err.Error()})
+		kit.NotifyFailure(x.h, core.Notice{ID: "plugins.failed." + id, Title: "Plugin " + id}, err)
 		return err
 	}
 	x.loaded[id] = &loadedPlugin{dir: st.Dir, stop: stop}

@@ -163,7 +163,6 @@ func (x *Ship) readPRs(ctx context.Context, id core.SessionID) {
 			x.budget.Limited()
 		}
 	}
-	x.mirrorReviews(ctx, id, ships, false)
 	x.mu.Lock()
 	r = x.reports[id]
 	if r == nil || r.loading || r.fixed {

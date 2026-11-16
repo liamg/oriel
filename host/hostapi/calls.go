@@ -100,13 +100,12 @@ type ShipCalls interface {
 
 // CodeHostCalls are the code hosts' pull requests and review threads: the registry's "host.codehosts" service.
 type CodeHostCalls interface {
-	SyncGitHub(ctx context.Context, r MirrorReq) (Mirror, error)
-	ResolveGitHub(ctx context.Context, r ResolveReq) error
+	// ProjectRemote is origin's URL in a session's project.
+	ProjectRemote(ctx context.Context, r ShipRef) (string, error)
 	MarkHostResolved(r ResolveReq) error
 	MirrorReview(ctx context.Context, r MirrorReviewReq) error
 	DraftOf(r ForwardReq) (core.Thread, string, error)
 	EditDraft(r DraftEditReq) error
-	ForwardGitHub(ctx context.Context, r ForwardReq) (core.Comment, error)
 	ForwardHost(ctx context.Context, r ForwardReq, post func(ctx context.Context, t core.Thread, body string) (string, error)) (core.Comment, error)
 }
 

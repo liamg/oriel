@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/app/dictation"
 	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/shell/diag"
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/catalog"
 	"github.com/liamg/oriel/gh"
@@ -52,8 +53,8 @@ type Config struct {
 type (
 	// Window is the window's part of Config (shell.Config).
 	Window       = shell.Config
-	Logs         = shell.Logs
-	LogOpts      = shell.LogOpts
+	Logs         = diag.Logs
+	LogOpts      = diag.LogOpts
 	Desktop      = shell.Desktop
 	Headless     = shell.Headless
 	HeadlessOpts = shell.HeadlessOpts
@@ -78,7 +79,7 @@ func NewHeadless(cfg Config, o HeadlessOpts) (*Headless, error) {
 	return shell.NewHeadless(cfg.Window, cfg.builtins, o)
 }
 
-func NewLogs(o LogOpts) *Logs { return shell.NewLogs(o) }
+func NewLogs(o LogOpts) *Logs { return diag.NewLogs(o) }
 
 // DefaultConfigDir is $XDG_CONFIG_HOME/oriel, or ~/.config/oriel, on every platform.
 func DefaultConfigDir() string { return shell.DefaultConfigDir() }

@@ -3,6 +3,8 @@ package apptest
 import (
 	"strings"
 
+	"github.com/liamg/oriel/registry"
+	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 )
 
@@ -47,4 +49,41 @@ func (s *Scene) Shows(text string) (render.Point, bool) {
 		}
 	}
 	return render.Point{}, false
+}
+
+// place is the place named name (a page: "stats", "usage"), if one's registered.
+func (s *Scene) place(name string) (uireg.Place, bool) {
+	for _, p := range registry.ContributionsOf[uireg.Place](s.Registry()) {
+		if p.Name == name {
+			return p, true
+		}
+	}
+	return uireg.Place{}, false
+}
+
+// Shown says whether the place named name is showing.
+func (s *Scene) Shown(name string) bool {
+	p, ok := s.place(name)
+	return ok && p.Shown()
+}
+
+// Close puts the place named name away, as going elsewhere would.
+func (s *Scene) Close(name string) {
+	s.T.Helper()
+	p, ok := s.place(name)
+	if !ok {
+		s.T.Fatalf("no place %s", name)
+	}
+	p.Close()
+	s.Frame()
+}
+
+// Showing says whether a view with id is in the layout, visible.
+func (s *Scene) Showing(id string) bool {
+	for _, v := range s.Host().Layout().Visible() {
+		if v.ID == id {
+			return true
+		}
+	}
+	return false
 }

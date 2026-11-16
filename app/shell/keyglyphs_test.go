@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/registry"
 )
 
@@ -70,11 +70,11 @@ func TestWhichKeyShowsGlyphs(t *testing.T) {
 	s.Registry().Keymap(registry.Keymap{Mode: "n", Keys: "<Space>q<C-r>", Command: "test.noop", Desc: "redo the thing"})
 	s.Registry().Keymap(registry.Keymap{Mode: "n", Keys: "<Space>q<CR>", Command: "test.noop", Desc: "enter the thing"})
 	keys := registry.NewResolver(s.Registry())
-	shell.SetKeys(s.Headless, keys)
+	s.Headless.SetKeys(keys)
 	start := s.Now
 	keys.Feed([]string{"n", "global"}, " ", start)
 	keys.Feed([]string{"n", "global"}, "q", start)
-	s.Now = start.Add(shell.WhichKeyDelay)
+	s.Now = start.Add(time.Second) // past which-key's delay
 	s.Frame()
 	if text := s.Text(); !strings.Contains(text, "⌃R") || !strings.Contains(text, "↵") || rawKeys.MatchString(text) {
 		t.Errorf("which-key's next keys:\n%s", text)

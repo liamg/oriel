@@ -4,14 +4,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/luaconfig"
+	"github.com/liamg/oriel/registry/services"
 )
 
-// A plugin's own source, polled while subscribed: on_change gets each reading, get the latest, and the source is
-// read no more once its subscription closes.
+// A plugin's own source, polled while subscribed: on_change gets each reading, get the latest, and once its
+// subscription closes the manager no longer keeps it fresh.
 func TestLuaSourceAndSubscribe(t *testing.T) {
 	s := apptest.LuaScene(t, `
 reads, seen = 0, nil
@@ -25,13 +25,13 @@ sub = oriel.subscribe("demo.count", { session = "app", who = "ada", max_age = 0.
 	if got := luaconfig.Show(s.Lua(`(function() for _, n in ipairs(oriel.sources()) do if n == "demo.count" then return true end end return false end)()`)[0]); got != "true" {
 		t.Errorf("oriel.sources() lacks demo.count: %s", got)
 	}
-	s.Lua(`(function() sub:close(); before = reads end)()`)
-	for range 20 { // four of its polls
-		s.Quiet()
-		time.Sleep(10 * time.Millisecond)
-	}
-	if got := luaconfig.Show(s.Lua(`reads <= before + 1`)[0]); got != "true" { // one read may have been under way
-		t.Errorf("read on after its subscription closed: %s then %s", luaconfig.Show(s.Lua(`before`)[0]), luaconfig.Show(s.Lua(`reads`)[0]))
+	s.Lua(`sub:close()`)
+	s.Quiet()
+	w, _ := services.WatchesOf(s.Registry())
+	for _, st := range w.App().Stats() {
+		if strings.Contains(st.Key, "demo.count") && (len(st.Subs) > 0 || st.State == "polling" || st.State == "reading") {
+			t.Errorf("its subscription closed, the source is still kept fresh: %s, %d subscribers", st.State, len(st.Subs))
+		}
 	}
 }
 

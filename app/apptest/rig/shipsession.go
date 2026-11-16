@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/app/github"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gh"
@@ -14,7 +15,7 @@ import (
 // ShipSession is the Ship page's session at now: search-api with three files uncommitted, four behind and two unpushed;
 // web-dashboard pushed, its draft PR #812 with five of seven checks done. reads are its projects as Ship read them,
 // their origins on github.
-func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(github *registry.CodeHost) []ship.Read) {
+func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(hub *registry.CodeHost) []ship.Read) {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", "/dev/null")
 	dirs := map[string]string{}
@@ -32,7 +33,7 @@ func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(
 	for i := range 9 {
 		se.Threads = append(se.Threads, core.Thread{ID: core.ThreadID("t" + string(rune('1'+i))), Status: core.ThreadResolved})
 	}
-	return se, func(github *registry.CodeHost) []ship.Read {
+	return se, func(hub *registry.CodeHost) []ship.Read {
 		t0 := now.Add(-4 * time.Minute)
 		check := func(name, status, conclusion string, took time.Duration) registry.Check {
 			c := gh.Check{Name: name, Status: status, Conclusion: conclusion, Started: t0}
@@ -42,10 +43,10 @@ func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(
 			if status == "in_progress" {
 				c.Started = now.Add(-3 * time.Minute)
 			}
-			return ship.CheckOf(c)
+			return github.CheckOf(c)
 		}
 		return []ship.Read{
-			{CodeHost: github, Repo: "acme/search-api", GitRead: now.Add(-4 * time.Second), Ship: host.Ship{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
+			{CodeHost: hub, Repo: "acme/search-api", GitRead: now.Add(-4 * time.Second), Ship: host.Ship{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
 				Origin: "https://github.com/acme/search-api.git",
 				Files: []host.ShipFile{{Path: "internal/api/usage/handler.go", Code: "M", Add: 3, Del: 1},
 					{Path: "internal/api/usage/handler_test.go", Code: "M", Add: 18}, {Path: "internal/api/usage/routes.go", Code: "M", Add: 20, Del: 5}},
@@ -56,7 +57,7 @@ func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(
 					"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs ENG-2231"},
 				PRDraft:  host.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"},
 				Template: "## What\n\n## Why\n", TemplateFile: ".github/pull_request_template.md", Owners: []string{"acme/platform-team", "jkowalski"}}},
-			{CodeHost: github, Repo: "acme/web-dashboard", GitRead: now.Add(-4 * time.Second), PRRead: now.Add(-28 * time.Second),
+			{CodeHost: hub, Repo: "acme/web-dashboard", GitRead: now.Add(-4 * time.Second), PRRead: now.Add(-28 * time.Second),
 				Ship: host.Ship{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
 					Origin: "https://github.com/acme/web-dashboard.git", Commits: 3, Pushed: true, Synced: now.Add(-6 * time.Minute), Head: "c3f1a9e0b7d24e6f"},
 				PR: &registry.PR{Number: 812, Title: "feat(search): back off on 429 using Retry-After", State: "open", Draft: true, Branch: "rethink/search-endpoint", Base: "main",

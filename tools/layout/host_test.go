@@ -15,14 +15,14 @@ func TestHostPartsStayApart(t *testing.T) {
 	m := func(p string) string { return Module + "/" + p }
 	pkgs := []Package{
 		{ImportPath: m("host/jobs"), Deps: []string{m("host/hostcore"), m("agent/usage/stats")}},
-		{ImportPath: m("host/github"), TestImports: []string{m("host/hosttest")}, Deps: []string{m("host/worktree")}},
+		{ImportPath: m("host/ship"), TestImports: []string{m("host/hosttest")}, Deps: []string{m("host/worktree")}},
 		{ImportPath: m("host/hostcore"), Deps: []string{m("gitx")}},
 	}
 	var got []string
-	for _, v := range Check(pkgs, []Rule{apart("host/jobs"), apart("host/github"), {From: []string{"host/hostcore"}, Never: hostParts}}) {
+	for _, v := range Check(pkgs, []Rule{apart("host/jobs"), apart("host/ship"), {From: []string{"host/hostcore"}, Never: hostParts}}) {
 		got = append(got, v.Key())
 	}
-	if want := []string{"host/github -> host/worktree"}; !slices.Equal(got, want) {
+	if want := []string{"host/ship -> host/worktree"}; !slices.Equal(got, want) {
 		t.Errorf("violations %q, want %q", got, want)
 	}
 }

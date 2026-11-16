@@ -31,8 +31,8 @@ func TestCheck(t *testing.T) {
 		{"gh in a sandbox", sandboxed, "Bash", `{"command":"gh pr create"}`, false, true, Gateway + "pr_create"},
 		{"git push on the host", spec, "Bash", `{"command":"git push"}`, false, false, ""},
 		{"a quoted git push is an argument", sandboxed, "Bash", `{"command":"echo 'git push'"}`, false, false, ""},
-		{"a review by gh", spec, "Bash", `{"command":"gh pr review 7 --approve"}`, false, true, "never post"},
-		{"a GitHub MCP review reply", spec, "mcp__github__add_reply_to_pull_request_comment", `{}`, false, true, "never post"},
+		{"a review by gh on the host is the agent's own config's", spec, "Bash", `{"command":"gh pr review 7 --approve"}`, false, false, ""},
+		{"a GitHub MCP review reply is asked like any MCP call", spec, "mcp__github__add_reply_to_pull_request_comment", `{}`, false, false, "Oriel decides"},
 	}
 	for _, c := range cases {
 		got := Check(c.spec, c.tool, json.RawMessage(c.input))

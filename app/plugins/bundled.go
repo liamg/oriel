@@ -34,7 +34,7 @@ func (x *Catalog) readBundled() {
 			m, err = plugin.ParseManifest(raw)
 		}
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "plugins.bundled", Severity: core.SevError, Title: "Bundled plugin", Text: err.Error()})
+			kit.NotifyFailure(x.h, core.Notice{ID: "plugins.bundled", Title: "Bundled plugin"}, err)
 			continue
 		}
 		x.bundled[m.ID] = &bundledPlugin{b: b, m: m}
@@ -96,7 +96,7 @@ func (x *Catalog) startBundled(bp *bundledPlugin) error {
 	stop, err := x.loadScript(bp.b.FS, kit.ScriptOpts{Data: filepath.Join(x.StateDir, "plugins", id),
 		Programs: plugin.BundledPrograms(bp.b, x.self())})
 	if err != nil {
-		x.h.Notify(core.Notice{ID: "plugins.failed." + id, Severity: core.SevError, Title: "Plugin " + id, Text: err.Error()})
+		kit.NotifyFailure(x.h, core.Notice{ID: "plugins.failed." + id, Title: "Plugin " + id}, err)
 		bp.stop, bp.state = nil, "failed"
 		return err
 	}

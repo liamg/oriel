@@ -6,39 +6,7 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-// Trust is whose GitHub text the agent may read (crit's trusted orgs): members of Orgs and the Users named. With
-// neither set, the repository's owner is the trusted org.
-type Trust struct {
-	Orgs  []string `json:"orgs,omitempty"`
-	Users []string `json:"users,omitempty"`
-}
-
-// MirrorReq syncs a session's PRs' reviews; Fresh asks GitHub for the PR again rather than the last 30 s's.
-type MirrorReq struct {
-	Session core.SessionID `json:"session"`
-	Fresh   bool           `json:"fresh,omitempty"`
-	Trust   Trust          `json:"trust,omitzero"`
-}
-
-// Mirror is what a sync found.
-type Mirror struct {
-	Synced time.Time  `json:"synced"`
-	PRs    []MirrorPR `json:"prs,omitempty"`
-	Errors []string   `json:"errors,omitempty"`
-}
-
-// MirrorPR is one project's PR and where each reviewer stands (gh.ReviewStates).
-type MirrorPR struct {
-	Project string            `json:"project"`
-	Repo    string            `json:"repo"`
-	Number  int               `json:"number"`
-	URL     string            `json:"url,omitempty"`
-	Reviews map[string]string `json:"reviews,omitempty"`
-	Head    string            `json:"head,omitempty"` // a reviewed PR's head commit on GitHub
-	Open    bool              `json:"open,omitempty"` // not closed or merged
-}
-
-// ForwardReq forwards an agent's draft reply on a GitHub thread to GitHub.
+// ForwardReq forwards an agent's draft reply on a mirrored thread to its code host.
 type ForwardReq struct {
 	Session core.SessionID `json:"session"`
 	Thread  core.ThreadID  `json:"thread"`
@@ -184,13 +152,16 @@ type ReviewThread struct {
 	Comments []ReviewComment `json:"comments"`
 }
 
-// ReviewComment is one comment of a ReviewThread; Trusted says the agent may read it.
+// ReviewComment is one comment of a ReviewThread; Trusted says the agent may read it, Mine that the user wrote it.
+// Written is its text as written where the host changed it as it was posted.
 type ReviewComment struct {
 	Key     string    `json:"key"`
 	User    string    `json:"user"`
 	Body    string    `json:"body"`
 	At      time.Time `json:"at"`
 	Trusted bool      `json:"trusted,omitempty"`
+	Mine    bool      `json:"mine,omitempty"`
+	Written string    `json:"written,omitempty"`
 }
 
 // ForwardedReq marks a draft reply sent: posted on its thread's code host as HostID.

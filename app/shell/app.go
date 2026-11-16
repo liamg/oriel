@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/shell/diag"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/watch"
@@ -52,7 +54,7 @@ type Config struct {
 	Store     core.Store      // the materialised state, shared with the session host; Host's, else in-memory, if nil
 	Registry  uireg.Registry  // a fresh one if nil
 	Plugins   []plugin.Plugin // activated in order, after the built-ins
-	Logs      *Logs           // where log records go; a ring in memory if nil
+	Logs      *diag.Logs      // where log records go; a ring in memory if nil
 	ConfigDir string          // DefaultConfigDir() unless set; user themes live in its themes/
 	CrashDir  string          // crash reports are written to and offered from here; none if ""
 	Version   string
@@ -101,8 +103,8 @@ type Parts struct {
 	Pictures  *kit.Pictures  // the window's images
 	Tools     *search.Tools  // the machine's search tools
 
-	UI, Frames, Themes, Layout, Start, Introspect, StatusLine, SessionTabs plugin.Plugin
-	Omnibox, Picker, WhichKey, Help, Nav, Menus, Notices, Desktop, Quit    plugin.Plugin
+	UI, Frames, Layout, Start, StatusLine, SessionTabs plugin.Plugin
+	Nav, Notices, Desktop, Quit                        plugin.Plugin
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
@@ -211,8 +213,8 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 	defer cancel()
 
 	l := &loop{sh: sh, debug: cfg.Debug, reg: cfg.Registry, store: cfg.Store, keys: registry.NewResolver(cfg.Registry), win: w, ui: ui.New(be.Shaper(), textStyle), log: log}
-	l.stalls = startStallTrace(cfg.Trace, log)
-	defer l.stalls.stop()
+	l.stalls = diag.StartStallTrace(cfg.Trace, log)
+	defer l.stalls.Stop()
 	defer l.unwatchThemes()
 	for _, stop := range l.open(poke) {
 		defer stop()
@@ -405,7 +407,7 @@ func (cfg *Config) defaults() {
 		cfg.Registry = uireg.NewWith(registry.Config{Clock: cfg.Clock})
 	}
 	if cfg.Logs == nil {
-		cfg.Logs = NewLogs(LogOpts{})
+		cfg.Logs = diag.NewLogs(diag.LogOpts{})
 	}
 	if cfg.Version == "" {
 		cfg.Version = "dev"

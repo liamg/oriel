@@ -125,7 +125,7 @@ func (p *logPanel) only(s core.Severity) {
 // rows are what the panel lists before its severity filter and search: the history, and records that
 // aren't a notice already in it, in the scope, oldest first. They're shared: callers mustn't change them.
 func (p *logPanel) rows(st core.State) []logRow {
-	k := logKey{seq: st.Seq, writes: p.sh.cfg.Logs.writes.Load(), scope: p.scope}
+	k := logKey{seq: st.Seq, writes: p.sh.cfg.Logs.Writes(), scope: p.scope}
 	if p.cache.made && p.cache.key == k {
 		return p.cache.all
 	}

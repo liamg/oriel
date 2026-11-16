@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/shell/diag"
 	"github.com/liamg/oriel/core/logs"
 )
 
@@ -24,9 +24,9 @@ func ConfigFromFlags(args []string, version string, stderr io.Writer) (Config, e
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
-	lv := shell.LevelFromEnv(slog.LevelInfo)
+	lv := diag.LevelFromEnv(slog.LevelInfo)
 	if *level != "" {
-		l, ok := shell.ParseLevel(*level)
+		l, ok := diag.ParseLevel(*level)
 		if !ok {
 			return Config{}, fmt.Errorf("no log level %q: debug, info, warn or error", *level)
 		}

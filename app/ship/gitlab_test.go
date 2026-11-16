@@ -130,7 +130,7 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	// it's forwarded, then a note in that discussion, marked sent.
 	g.SetMember("acme/billing", "priya-k", 30)
 	disc := g.AddThread("acme/billing", 1, gitlabtest.Thread{Author: "priya-k", Body: "Should the PDF be cached?", Path: "pdf.go", Line: 1})
-	s.Run("ship.refresh", nil)
+	s.Run("review.threads.sync", nil)
 	var tid core.ThreadID
 	s.Until("the mirrored discussion", func() bool { // Lua answers on frames: no waiting on the read
 		st := s.Store().State()
@@ -153,8 +153,8 @@ func TestGitlabRaiseAndMergeFromShip(t *testing.T) {
 	if n := g.Notes(); len(n) != 0 {
 		t.Fatalf("GitLab was written to before the forward: %q", n)
 	}
-	d := draftOf(t, s, se.ID, tid)
-	s.Run("github.forward", registry.Args{"thread": string(tid)})
+	d := s.Draft(se.ID, tid)
+	s.Run("review.draft.forward", registry.Args{"thread": string(tid)})
 	s.Until("the forward", func() bool {
 		st := s.Store().State()
 		sess, _ := st.Session(se.ID)

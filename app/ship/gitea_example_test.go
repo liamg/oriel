@@ -16,7 +16,6 @@ import (
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/host"
 	"github.com/liamg/oriel/internal/isolate"
@@ -236,7 +235,7 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	secrets := &plugin.SecretFile{Path: filepath.Join(t.TempDir(), "secrets.json")}
 	secrets.SetSecret("GITEA_TOKEN", giteaToken)
 	hub := ghtest.New(t)
-	lw := rig.NewHostWith(t, host.Options{GitHub: func(string, []string) gh.Client { return hub.Client() }})
+	lw := rig.NewHostWith(t, host.Options{})
 	app := giteaRepo(t, "app")
 	s := apptest.New(t, apptest.Options{Config: func(cfg *apptest.Config) {
 		apptest.Connect(lw.W)(cfg)
@@ -280,7 +279,7 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	gt.comments["acme/app#100"] = []map[string]any{{"id": 7, "body": "Should this check the database too?", "path": "health.go", "position": 3,
 		"resolver": nil, "user": map[string]string{"login": "priya"}, "created_at": "2026-10-19T09:30:00Z", "html_url": prs[0].HTMLURL + "/files#issuecomment-7"}}
 	gt.mu.Unlock()
-	s.Run("ship.refresh", nil)
+	s.Run("review.threads.sync", nil)
 	var tid core.ThreadID
 	shipSettle(s, t, "the mirrored comment", func() bool {
 		sess, _ := s.Store().State().Session(se.ID)
@@ -300,8 +299,8 @@ func TestGiteaExamplePlugin(t *testing.T) {
 	if out := ag.Call(t, "reply", map[string]any{"thread": string(tid), "body": "It does now: it pings the pool."}); !strings.Contains(out, "drafted") {
 		t.Fatalf("reply: %q", out)
 	}
-	d := draftOf(t, s, se.ID, tid)
-	s.Run("github.forward", registry.Args{"thread": string(tid)})
+	d := s.Draft(se.ID, tid)
+	s.Run("review.draft.forward", registry.Args{"thread": string(tid)})
 	shipSettle(s, t, "the forward", func() bool {
 		sess, _ := s.Store().State().Session(se.ID)
 		th, _ := sess.Snapshot().Thread(tid)

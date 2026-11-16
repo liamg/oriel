@@ -541,8 +541,7 @@ func TestAccessTreeOnlyWhileAScreenReaderReads(t *testing.T) {
 	b.waitText(t, "ORIEL")
 	b.win.SetScreenReader(false)
 	b.win.Send(render.KeyEvent{Key: "a"})
-	b.waitText(t, "content of alpha")
-	time.Sleep(100 * time.Millisecond)
+	b.waitText(t, "content of alpha") // a frame was drawn, with no screen reader to build its tree for
 	if tr := b.win.Access(); tr != nil && strings.Contains(tr.Dump(), `group "alpha"`) {
 		t.Errorf("the tree was built with no screen reader reading:\n%s", tr.Dump())
 	}

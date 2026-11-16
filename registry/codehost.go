@@ -30,6 +30,8 @@ type CodeHost struct {
 	Shape  *regexp.Regexp
 	Setup  SiteSetup
 	Tokens TokenSources
+	// CLIConfig is the host's CLI's config, whose hostnames are this host's servers.
+	CLIConfig CLIConfig
 	// Allow lets the host's plugin reach a site, for why: its hostname, and the site's secret there if secret isn't
 	// "". undo takes that back.
 	Allow func(host, secret, why string) (undo func())
@@ -152,6 +154,13 @@ type SiteSetup struct {
 	Probe func(ctx context.Context, hostname string) (bool, error)
 }
 
+// CLIConfig is a code host CLI's config file, by its slash path under the user's config directory ("gh/hosts.yml"):
+// its keys a level under Section, or its top-level ones with no Section, are the hostnames it's signed in to.
+type CLIConfig struct {
+	Path    string
+	Section string
+}
+
 // TokenSources are where a site's token is found before the user is asked: environment variables, then a command's
 // output ("{host}" replaced). Optional says the host can work without one (GitHub's gh has its own login).
 type TokenSources struct {
@@ -263,15 +272,21 @@ type ReviewThread struct {
 	State    string       `json:"state,omitempty"` // the reviewer's: ReviewChanges, ReviewApproved, ReviewCommented
 	URL      string       `json:"url,omitempty"`
 	Comments []ReviewNote `json:"comments"`
+	// Reviewers are, on the conversation (no ID), each reviewer's latest verdict: those who left no comment too.
+	Reviewers []PRReviewer `json:"reviewers,omitempty"`
 }
 
-// ReviewNote is one comment of a ReviewThread. Member says its author belongs to the repo, so the agent may read it.
+// ReviewNote is one comment of a ReviewThread. Member says its author belongs to the repo, so the agent may read it;
+// Mine that the user wrote it. Written is its text as written where the host changed it as it was posted (a heading
+// it put before it), "" when Body is.
 type ReviewNote struct {
-	ID     string    `json:"id"`
-	Author string    `json:"author"`
-	Body   string    `json:"body"`
-	At     time.Time `json:"at,omitzero"`
-	Member bool      `json:"member,omitempty"`
+	ID      string    `json:"id"`
+	Author  string    `json:"author"`
+	Body    string    `json:"body"`
+	At      time.Time `json:"at,omitzero"`
+	Member  bool      `json:"member,omitempty"`
+	Mine    bool      `json:"mine,omitempty"`
+	Written string    `json:"written,omitempty"`
 }
 
 // NewPR is a pull request to raise.

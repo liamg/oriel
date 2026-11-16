@@ -308,7 +308,7 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", "anchored · follows edits", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
+		widget.RuleTone(c, "rule", tBlockLine)
 		c.Column("code", ui.Style{W: ui.Flex(1), Pad: ui.Insets{T: 4, B: 4}}, func(c *ui.Ctx) {
 			for i, l := range shown {
 				n := from + i
@@ -354,7 +354,7 @@ func (x *Requests) comment(c *ui.Ctx, se core.SessionState, t core.Thread, cm co
 					commentMenu(c, x.h, t, cm, hover)
 				}()
 				c.Text("n", name, ui.TextStyle{Font: typeset.FontSpec{Family: typeset.UI, Size: 13, Weight: typeset.SemiBold}, Color: th.C(theme.Fg)})
-				commentWhen(c, cm, t.Origin, widget.MonoFont(10, th.C(theme.FgGhost)))
+				commentWhen(c, cm, originOf(t), widget.MonoFont(10, th.C(theme.FgGhost)))
 				if cm.Redacted {
 					widget.Chip(c, "redacted", "hidden from the agent", th.C(theme.FgFaint), "git/github#trusted")
 				}

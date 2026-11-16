@@ -44,11 +44,12 @@ func TestGuardRails(t *testing.T) {
 		{"git push on the host", spec, "Bash", `{"command":"git push"}`, "", ""},
 		{"a quoted git push is an argument", sandboxed, "Bash", `{"command":"echo 'git push'"}`, "", ""},
 		{"git status in a sandbox", sandboxed, "Bash", `{"command":"git status"}`, "", ""},
-		// The agent never posts to a review, on the host or in a sandbox, by gh or by MCP.
-		{"a review reply by gh api on the host", spec, "Bash", `{"command":"gh api repos/acme/api/pulls/7/comments/9/replies -f body=Agreed"}`, "deny", "never post"},
-		{"a review by gh in a sandbox", sandboxed, "Bash", `{"command":"gh pr review 7 --approve"}`, "deny", "never post"},
-		{"a GitHub MCP review reply", spec, "mcp__github__add_reply_to_pull_request_comment", `{}`, "deny", "never post"},
-		{"the gateway's GitHub comment tool", sandboxed, "mcp__oriel-gw__github__add_issue_comment", `{}`, "deny", "never post"},
+		// A review is no special case: on the host it's the agent's own config's, in a sandbox gh has no login, an
+		// MCP review tool is asked like any MCP call, and the gateway's is the gateway's rules'.
+		{"a review reply by gh api on the host", spec, "Bash", `{"command":"gh api repos/acme/api/pulls/7/comments/9/replies -f body=Agreed"}`, "", ""},
+		{"a review by gh in a sandbox", sandboxed, "Bash", `{"command":"gh pr review 7 --approve"}`, "deny", "no credentials"},
+		{"a GitHub MCP review reply", spec, "mcp__github__add_reply_to_pull_request_comment", `{}`, "ask", "Oriel"},
+		{"the gateway's GitHub comment tool", sandboxed, "mcp__oriel-gw__github__add_issue_comment", `{}`, "allow", ""},
 		{"reading the review on the host", spec, "Bash", `{"command":"gh api repos/acme/api/pulls/7/comments"}`, "", ""},
 		// Every other MCP call is put to Oriel, whatever the mode; the gateway gates its own.
 		{"a claude.ai connector asks Oriel", spec, "mcp__claude_ai_Claude_Docs__guide", `{}`, "ask", "Oriel"},

@@ -563,7 +563,7 @@ func (x *Plugin) table(c *ui.Ctx, q stats.Query, r stats.Report, tones []render.
 				}
 			})
 		}
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(theme.LineStrong)}, nil)
+		widget.RuleTone(c, "rule", theme.LineStrong)
 		t := r.Totals
 		c.Row("total", ui.Style{W: ui.Flex(1), H: ui.Px(22), Cross: ui.Center, Role: ui.RoleText, Label: "total"}, func(c *ui.Ctx) {
 			fg := th.C(theme.Fg)

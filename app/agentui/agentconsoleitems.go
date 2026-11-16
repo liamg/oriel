@@ -255,7 +255,7 @@ func (x *Console) background(c *ui.Ctx, se core.SessionState, width float32, sel
 			c.Text("n", fmt.Sprintf("%d running · wakes the agent when done", len(bg)), widget.MonoFont(10, th.C(theme.FgFaint)))
 		})
 		for i, t := range bg {
-			c.Box(fmt.Sprint("rule", i), ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
+			widget.RuleTone(c, fmt.Sprint("rule", i), tBlockLine)
 			c.Row(i, ui.Style{W: ui.Flex(1), H: ui.Px(32), Pad: ui.PadXY(12, 0), Gap: 10, Cross: ui.Center, Role: ui.RoleListItem, Label: t.Description},
 				func(c *ui.Ctx) {
 					draw.StateMark(c, "mark", draw.MarkRunning, time.Time{}, 10)

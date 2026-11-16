@@ -25,3 +25,25 @@ func TestRules(t *testing.T) {
 		t.Errorf("the vertical rule: %v", r)
 	}
 }
+
+// A toned rule is drawn in its token's colour, across its row as a Rule is.
+func TestRuleTone(t *testing.T) {
+	var id ui.ID
+	h := newHarness(t, theme.Dark, render.Point{X: 400, Y: 300}, func(c *ui.Ctx) {
+		c.Column("col", ui.Style{W: ui.Px(200)}, func(c *ui.Ctx) { id = RuleTone(c, "toned", theme.Accent) })
+	})
+	h.frame()
+	if r := h.rect(id); r.Dx() != 200 || r.Dy() != 1 {
+		t.Errorf("the toned rule: %v", r)
+	}
+	want := h.u.Theme().C(theme.Accent)
+	found := false
+	for _, op := range h.list.Ops {
+		if op.Kind == render.OpRect && op.Style.Fill == want {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no rect drawn in the accent %v", want)
+	}
+}

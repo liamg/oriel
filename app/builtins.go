@@ -4,6 +4,10 @@ import (
 	"cmp"
 	"path/filepath"
 
+	"github.com/liamg/oriel/app/github"
+	"github.com/liamg/oriel/app/keys"
+	"github.com/liamg/oriel/app/mirror"
+
 	"github.com/liamg/oriel/app/assistant"
 
 	"github.com/liamg/oriel/app/agentui"
@@ -11,9 +15,11 @@ import (
 	"github.com/liamg/oriel/app/editor"
 	"github.com/liamg/oriel/app/explain"
 	"github.com/liamg/oriel/app/gitui"
+	"github.com/liamg/oriel/app/help"
 	"github.com/liamg/oriel/app/jobs"
 	"github.com/liamg/oriel/app/lang"
 	"github.com/liamg/oriel/app/luaconfig"
+	"github.com/liamg/oriel/app/omnibox"
 	"github.com/liamg/oriel/app/overview"
 	"github.com/liamg/oriel/app/plugins"
 	"github.com/liamg/oriel/app/rail"
@@ -25,6 +31,7 @@ import (
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/app/stats"
 	"github.com/liamg/oriel/app/terminal"
+	"github.com/liamg/oriel/app/themes"
 	"github.com/liamg/oriel/app/tickets"
 	"github.com/liamg/oriel/app/updates"
 	"github.com/liamg/oriel/app/watches"
@@ -45,9 +52,9 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	out := []plugin.Plugin{p.UI, p.Frames, &watches.Watches{Timing: cfg.WatchTiming}, &hostPlugin{Host: c.Host}}
 	// The agent providers come before the plugins and config that may register their own under the same name.
 	out = append(out, cfg.Agents...)
-	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages")}, p.Themes, p.Layout, gits,
-		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, p.Introspect, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
-		&stats.HUD{}, &agentui.Inbox{}, p.Omnibox, p.Picker, p.WhichKey, &plugins.Consent{}, p.Help, p.Nav, p.Menus,
+	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages")}, &themes.Themes{Dir: filepath.Join(c.ConfigDir, "themes")}, p.Layout, gits,
+		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, &omnibox.Introspect{ConfigDir: c.ConfigDir}, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
+		&stats.HUD{}, &agentui.Inbox{}, &omnibox.Omnibox{}, &omnibox.Picker{}, &keys.WhichKey{}, &plugins.Consent{}, &help.View{ConfigDir: c.ConfigDir}, p.Nav, &keys.Menus{},
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},
 		&editor.Search{Editor: ed, Tools: p.Tools}, &lang.LSP{Version: c.Version, Logger: c.Logs.Logger, Servers: cfg.LanguageServers},
@@ -59,9 +66,9 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 		p.Quit, &settings.SandboxSettings{Backends: cfg.SandboxBackends}, &agentui.Console{}, &agentui.Permissions{},
 		&appsessions.Workspace{}, st, &stats.Page{Stats: st}, &jobs.Jobs{}, &repos.Repos{}, &stats.Machine{Load: cfg.Load}, &stats.Perf{Load: cfg.Load},
 		&updates.Update{Updates: cfg.Updates, StateDir: c.StateDir}, &settings.Prompts{ConfigDir: c.ConfigDir}, dictation.NewVoiceEntries(dictate), dictate,
-		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &ship.GitHubHost{Client: cfg.GitHubClient},
+		&assistant.Assistant{ConfigDir: c.ConfigDir, StateDir: c.StateDir}, &tickets.Tickets{}, &review.Reviews{}, &github.GitHubHost{Client: cfg.GitHubClient},
 		&appsessions.Launcher{}, &agentui.Requests{}, &appsessions.Plan{}, &gitui.Diff{}, &ship.Ship{ConfigDir: c.ConfigDir}, &review.PRReview{},
-		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &ship.GitHub{}, &settings.Secrets{},
+		&appsessions.End{}, &ship.AIReview{ConfigDir: c.ConfigDir}, &ship.Verify{ConfigDir: c.ConfigDir}, &mirror.Mirror{}, &settings.Secrets{},
 		&luaconfig.Lua{Dir: c.ConfigDir}, &plugins.Catalog{GitHub: cfg.GitHub, ConfigDir: c.ConfigDir,
 			DataDir: cmp.Or(cfg.DataDir, DefaultDataDir()), StateDir: c.StateDir, CacheDir: c.CacheDir, Bundled: cfg.Bundled, Self: cfg.Self},
 	)

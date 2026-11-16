@@ -75,10 +75,6 @@ type (
 	DraftReq        = hostapi.DraftReq
 	RenameReq       = hostapi.RenameReq
 	OffBranch       = hostapi.OffBranch
-	Trust           = hostapi.Trust
-	MirrorReq       = hostapi.MirrorReq
-	Mirror          = hostapi.Mirror
-	MirrorPR        = hostapi.MirrorPR
 	ForwardReq      = hostapi.ForwardReq
 	ForwardedReq    = hostapi.ForwardedReq
 	DraftEditReq    = hostapi.DraftEditReq
@@ -125,7 +121,6 @@ const (
 	AIReviewPack = hostapi.AIReviewPack
 	BatchLead    = agentrun.BatchLead
 	NoticeLead   = agentrun.NoticeLead
-	NoPosting    = agentrun.NoPosting
 	KeyWait      = agentrun.KeyWait
 	ForAll       = agentrun.ForAll
 	// An ask's answers (Decision).
@@ -144,7 +139,6 @@ const (
 	SourceAlways   = hostapi.SourceAlways
 	SourceReadOnly = hostapi.SourceReadOnly
 	SourceDefault  = hostapi.SourceDefault
-	SourceOriel    = hostapi.SourceOriel
 
 	WhyMerged = hostapi.WhyMerged
 	WhyGone   = hostapi.WhyGone

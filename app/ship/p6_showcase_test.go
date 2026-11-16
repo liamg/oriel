@@ -4,6 +4,7 @@ package ship_test
 
 import (
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -70,7 +71,6 @@ func TestShowcaseP6RaisePR(t *testing.T) {
 
 func TestShowcaseP6GitHub(t *testing.T) {
 	s, lw, hub, se, _ := shipScene(t)
-	x := githubOf(s)
 	ag := lw.Fake.WaitStarted(t)
 	ag.WaitSent(t)
 	ag.Emit(agent.TurnStart{})
@@ -89,14 +89,14 @@ func TestShowcaseP6GitHub(t *testing.T) {
 	root := hub.AddReviewComment("acme/search-api", pr.Number, gh.ReviewComment{User: "priya-k", Association: "MEMBER",
 		Path: "internal/api/usage/handler.go", Line: 9, Body: "Silently defaulting to 2s will hide config mistakes. Can this return an error instead?"})
 	hub.AddReview("acme/search-api", pr.Number, gh.Review{User: "priya-k", Association: "MEMBER", State: gh.ReviewChangesRequested})
-	s.Run("github.sync", nil)
+	s.Run("review.threads.sync", nil)
 	var tid core.ThreadID
 	s.Until("the mirrored thread", func() bool {
-		x.Wait()
+		s.Quiet()
 		st := s.Store().State()
 		sess, _ := st.Session(se.ID)
 		for _, th := range sess.Snapshot().Threads {
-			if th.Origin == core.OriginGitHub && th.Hosted.Root == root.ID {
+			if th.Origin == core.OriginCodeHost && th.Hosted.Host == "github" && th.Hosted.Key == strconv.FormatInt(root.ID, 10) {
 				tid = th.ID
 			}
 		}

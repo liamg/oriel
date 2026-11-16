@@ -132,7 +132,7 @@ func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
 					run("explain.close", nil)
 				}
 			})
-			c.Box("rule1", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tExplainCardBd)}, nil)
+			widget.RuleTone(c, "rule1", tExplainCardBd)
 			c.Column("body", ui.Style{W: ui.Flex(1), Pad: ui.Insets{L: 14, R: 14, T: 9, B: 10}, Gap: 8}, func(c *ui.Ctx) {
 				a := x.shown(cd)
 				st := a.state()
@@ -152,7 +152,7 @@ func (x *Plugin) cardView(c *ui.Ctx, cd *explainCard) {
 					})
 				}
 			})
-			c.Box("rule2", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tExplainCardBd)}, nil)
+			widget.RuleTone(c, "rule2", tExplainCardBd)
 			c.Row("foot", ui.Style{W: ui.Flex(1), H: ui.Px(36), Pad: ui.PadXY(12, 0), Gap: 8, Cross: ui.Center}, func(c *ui.Ctx) {
 				depth := cd.depth
 				if widget.Segmented(c, "depth", []string{"BRIEF", "DETAILED", "WHY · HISTORY"}, &depth, widget.SegmentedOpts{Help: help, Label: "Depth"}) {

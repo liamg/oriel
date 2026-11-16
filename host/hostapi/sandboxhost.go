@@ -55,5 +55,4 @@ const (
 	SourceAlways   = "always, on this machine"
 	SourceReadOnly = "read-only, allowed by default"
 	SourceDefault  = "built-in default"
-	SourceOriel    = "Oriel"
 )

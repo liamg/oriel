@@ -3,10 +3,10 @@ package ship
 import (
 	"cmp"
 	"fmt"
-	"maps"
 	"slices"
 
 	"github.com/liamg/oriel/app/kit/prui"
+	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
@@ -108,10 +108,8 @@ func (x *Ship) checksBox(c *ui.Ctx, s shipRead) {
 
 // reviewersOf is who's asked to review a PR or has reviewed it, each with where they stand: approved, changes or
 // waiting.
-func (x *Ship) reviewersOf(s shipRead) (who []string, state map[string]string) {
-	x.mu.Lock()
-	state = maps.Clone(x.reviewed[s.PR.URL])
-	x.mu.Unlock()
+func (x *Ship) reviewersOf(id core.SessionID, s shipRead) (who []string, state map[string]string) {
+	state = services.ReviewVerdicts(x.h, id, s.PR.URL)
 	who = slices.Clone(s.PR.Reviewers)
 	for r := range state {
 		if !slices.Contains(who, r) {
@@ -122,8 +120,8 @@ func (x *Ship) reviewersOf(s shipRead) (who []string, state map[string]string) {
 	return who, state
 }
 
-func (x *Ship) reviewsBox(c *ui.Ctx, s shipRead) {
-	who, state := x.reviewersOf(s)
+func (x *Ship) reviewsBox(c *ui.Ctx, id core.SessionID, s shipRead) {
+	who, state := x.reviewersOf(id, s)
 	rs := make([]registry.PRReviewer, len(who))
 	for i, r := range who {
 		rs[i] = registry.PRReviewer{Login: r, State: state[r]}
@@ -193,7 +191,7 @@ func (x *Ship) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 	c.Box("sp", ui.Style{H: ui.Px(6)}, nil)
 	if s.PR != nil {
 		x.checksBox(c, s)
-		x.reviewsBox(c, s)
+		x.reviewsBox(c, se.ID, s)
 	} else if s.HostError != "" && s.CodeHost != nil {
 		c.Row("err", ui.Style{W: ui.Flex(1), Clip: true}, func(c *ui.Ctx) { checksFoot(c, s) })
 	}
@@ -220,19 +218,4 @@ func (x *Ship) checklistBody(c *ui.Ctx, se core.SessionState, p string) {
 		note = "Start next " + w.Short + " cuts a fresh branch from " + cmp.Or(s.Base, "the base")
 	}
 	c.Text("note", note, widget.MonoFont(10, th.C(theme.FgGhost)))
-}
-
-// reviewStates is each reviewer's latest verdict among a PR's review threads: approved or changes over commented.
-func reviewStates(ts []registry.ReviewThread) map[string]string {
-	out := map[string]string{}
-	for _, t := range ts {
-		if t.Reviewer == "" || t.State == "" {
-			continue
-		}
-		if t.State == registry.ReviewCommented && out[t.Reviewer] != "" {
-			continue
-		}
-		out[t.Reviewer] = t.State
-	}
-	return out
 }

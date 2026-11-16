@@ -97,3 +97,22 @@ func (s *Scene) stepClock() bool {
 	s.Advance(max(at.Sub(s.Now), 0))
 	return true
 }
+
+// At is a time of day on Day.
+func At(h, m, s int) time.Time {
+	return Day.Add(time.Duration(h)*time.Hour + time.Duration(m)*time.Minute + time.Duration(s)*time.Second)
+}
+
+// Clock is the scene's clock: it reads Now, and what's timed on it runs as Advance or Quiet passes it.
+func (s *Scene) Clock() clock.Clock { return s.clock }
+
+// NowClock reads the scene's Now, but what's timed on it runs by the system's clock, which neither Advance nor Quiet
+// moves: for timers a test shouldn't step to, such as a conversation's idle end.
+func (s *Scene) NowClock() clock.Clock { return nowClock(func() time.Time { return s.Now }) }
+
+// nowClock is a clock.Clock that reads now; its timers are the real clock's.
+type nowClock func() time.Time
+
+func (c nowClock) Now() time.Time { return c() }
+
+func (nowClock) AfterFunc(d time.Duration, f func()) clock.Timer { return clock.Real().AfterFunc(d, f) }

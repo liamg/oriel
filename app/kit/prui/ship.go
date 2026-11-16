@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/services"
@@ -134,4 +135,24 @@ func WordsOf(h *registry.CodeHost) registry.Words {
 		return registry.CodeHost{}.Said()
 	}
 	return h.Said()
+}
+
+// A mirrored review's accent, and its reviewers' verdicts.
+var (
+	TReviewAccent   = theme.Declare("github.accent", "violet")
+	TReviewChanges  = theme.Declare("github.changes", "warn")
+	TReviewApproved = theme.Declare("github.approved", "ok")
+)
+
+// ReviewWord is a reviewer's state, GitHub's or another code host's (registry.ReviewChanges…), in words.
+func ReviewWord(s string) (string, theme.TokenID) {
+	switch s {
+	case gh.ReviewChangesRequested, registry.ReviewChanges:
+		return "changes requested", TReviewChanges
+	case gh.ReviewApproved, registry.ReviewApproved:
+		return "approved", TReviewApproved
+	case gh.ReviewCommented, registry.ReviewCommented:
+		return "commented", theme.FgFaint
+	}
+	return "", theme.FgFaint
 }
