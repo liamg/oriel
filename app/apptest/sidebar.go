@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest/rig"
+	"github.com/liamg/oriel/app/rail"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
@@ -104,3 +105,6 @@ func OpenProject(s *Scene) string {
 	se, _ := s.Store().State().Session("eng-2310")
 	return se.Snapshot().OpenProject()
 }
+
+// SidebarForm is the form the sidebar takes for the projects here: wide, narrow, one, or none.
+func (s *Scene) SidebarForm() string { return PluginOf[*rail.Rail](s, "rail").Form() }
