@@ -688,7 +688,7 @@ func (r *Rail) wideRow(c *ui.Ctx, w kit.WindowProjects, row sideRow) {
 		r.wideEntry(c, row)
 	case rowDivider:
 		c.Box("div", ui.Style{W: ui.Flex(1), H: ui.Px(11), Pad: ui.Insets{L: 10, R: 10, T: 5, B: 5}}, func(c *ui.Ctx) {
-			c.Box("line", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tSideDivider)}, nil)
+			widget.RuleTone(c, "line", tSideDivider)
 		})
 	case rowGap:
 		c.Box("gap", ui.Style{H: ui.Flex(1)}, nil)

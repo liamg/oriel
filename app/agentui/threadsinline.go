@@ -408,7 +408,7 @@ func inlineThreadCard(c *ui.Ctx, h plugin.Host, se core.SessionState, t core.Thr
 			}
 			c.Text("id", "t:"+string(id)[:min(4, len(id))], widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tReqThreadBd)}, nil)
+		widget.RuleTone(c, "rule", tReqThreadBd)
 		c.Column("comments", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(12, 10), Gap: 12}, func(c *ui.Ctx) {
 			for _, cm := range t.Comments {
 				inner := width - 62

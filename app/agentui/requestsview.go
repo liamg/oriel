@@ -308,7 +308,7 @@ func (x *Requests) anchorCard(c *ui.Ctx, se core.SessionState, t core.Thread, wi
 			c.Box("gap", ui.Style{W: ui.Flex(1)}, nil)
 			c.Text("n", "anchored · follows edits", widget.MonoFont(10, th.C(theme.FgGhost)))
 		})
-		c.Box("rule", ui.Style{W: ui.Flex(1), H: ui.Px(1), Fill: th.C(tBlockLine)}, nil)
+		widget.RuleTone(c, "rule", tBlockLine)
 		c.Column("code", ui.Style{W: ui.Flex(1), Pad: ui.Insets{T: 4, B: 4}}, func(c *ui.Ctx) {
 			for i, l := range shown {
 				n := from + i
