@@ -330,7 +330,7 @@ func (p *picker) run(s uireg.PickerSource, h hit) {
 		return
 	}
 	if err := registry.Call(func() error { return run(context.Background(), h.item) }); err != nil {
-		p.h.Notify(core.Notice{ID: "picker.run", Severity: core.SevError, Source: s.Source, AutoClear: true, Text: err.Error()})
+		kit.NotifyFailure(p.h, core.Notice{ID: "picker.run", Source: s.Source, AutoClear: true}, err)
 	}
 }
 

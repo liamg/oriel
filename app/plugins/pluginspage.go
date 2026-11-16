@@ -713,5 +713,5 @@ func sortVersionsDesc(vs []string) {
 
 // noticeErr is an error on the Plugins page as a notice titled title; autoClear as kit.NotifyError says.
 func noticeErr(id, title string, err error, autoClear bool) core.Notice {
-	return core.Notice{ID: id, Severity: core.SevError, Title: title, Text: err.Error(), AutoClear: autoClear}
+	return kit.ErrorNotice(core.Notice{ID: id, Title: title, AutoClear: autoClear}, err)
 }

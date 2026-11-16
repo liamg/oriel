@@ -174,7 +174,7 @@ func (o *uiOptions) fonts(h plugin.Host) {
 			family, _ := registry.Option[string](h.Options(), r.name, registry.At{})
 			f.Use(r.role, strings.TrimSpace(family), func(err error) {
 				if err != nil {
-					h.Notify(core.Notice{ID: "ui.font", Severity: core.SevError, Source: "ui", Title: r.name, Text: err.Error()})
+					kit.NotifyFailure(h, core.Notice{ID: "ui.font", Source: "ui", Title: r.name}, err)
 				} else {
 					h.Dismiss("ui.font")
 				}

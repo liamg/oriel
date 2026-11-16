@@ -323,7 +323,7 @@ func (x *Voice) tell(n core.Notice) { x.h.Do(func() { x.h.Notify(n) }) }
 // problem is why voice didn't work, with the way to fix it when there's one. autoClear is for a failure in answer to
 // what the user just did; one offering a fix stays, for them to take it.
 func (x *Voice) problem(err error, autoClear bool) core.Notice {
-	n := core.Notice{ID: "voice", Severity: core.SevError, Title: "Voice", Text: err.Error()}
+	n := kit.ErrorNotice(core.Notice{ID: "voice", Title: "Voice"}, err)
 	var noModel *voice.NoModelError
 	switch {
 	case errors.Is(err, voice.ErrMicDenied):

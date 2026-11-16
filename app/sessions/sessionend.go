@@ -204,7 +204,7 @@ func (x *End) archiveIfMerged(ctx registry.Ctx, id core.SessionID) {
 		return
 	}
 	if err := x.end(ctx, hostapi.EndReq{Session: id}); err != nil {
-		x.h.Notify(core.Notice{ID: "session.end." + string(id), Severity: core.SevError, Session: id, Text: err.Error()})
+		kit.NotifyFailure(x.h, core.Notice{ID: "session.end." + string(id), Session: id}, err)
 	}
 }
 
@@ -297,7 +297,7 @@ func (x *End) view(c *ui.Ctx) {
 		x.ask = nil
 		x.h.Do(func() {
 			if err := x.end(context.Background(), hostapi.EndReq{Session: a.id, Delete: deletes, DeleteBranch: deletes}); err != nil {
-				x.h.Notify(core.Notice{ID: "session.end." + string(a.id), Severity: core.SevError, AutoClear: true, Session: a.id, Text: err.Error()})
+				kit.NotifyFailure(x.h, core.Notice{ID: "session.end." + string(a.id), AutoClear: true, Session: a.id}, err)
 			}
 		})
 		return

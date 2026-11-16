@@ -311,7 +311,7 @@ func (x *Debug) start(spec dap.AdapterSpec, cfg dap.LaunchConfig) {
 			if err != nil {
 				s.state = debugEnded
 				x.print("error", err.Error())
-				x.h.Notify(core.Notice{ID: "debug.start", Severity: core.SevError, Source: "debug", Title: "Couldn't start debugging", Text: err.Error()})
+				kit.NotifyFailure(x.h, core.Notice{ID: "debug.start", Source: "debug", Title: "Couldn't start debugging"}, err)
 				return
 			}
 			x.mu.Lock()

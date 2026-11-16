@@ -586,7 +586,7 @@ func (x *Mirror) forward(a registry.Args) error {
 		delete(x.forwarding, cm.ID)
 		x.mu.Unlock()
 		if err != nil {
-			x.h.Notify(core.Notice{ID: "review.forward", Severity: core.SevError, Source: "mirror", Title: "Forward to " + p.host.Label(), Text: err.Error()})
+			kit.NotifyFailure(x.h, core.Notice{ID: "review.forward", Source: "mirror", Title: "Forward to " + p.host.Label()}, err)
 		}
 		x.h.Redraw()
 	})

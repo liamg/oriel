@@ -389,7 +389,7 @@ func (x *Ship) raiseAll(ctx registry.Ctx, se core.SessionState) error {
 				return x.raisePR(cx, se, s, req)
 			})
 			if err != nil {
-				x.h.Notify(core.Notice{ID: "ship." + req.Project, Severity: core.SevError, Title: req.Project, Text: err.Error()})
+				kit.NotifyFailure(x.h, core.Notice{ID: "ship." + req.Project, Title: req.Project}, err)
 				continue
 			}
 			<-done

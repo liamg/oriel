@@ -268,7 +268,7 @@ func (x *Ship) stepRow(c *ui.Ctx, key string, n, cur int, done bool, card func(c
 			c.Box("dot", ui.Style{W: ui.Px(18), H: ui.Px(18), Radius: 9, Stroke: tone, Border: 1, Main: ui.Center, Cross: ui.Center}, func(c *ui.Ctx) {
 				c.Text("n", label, widget.Mono(9.5, typeset.SemiBold, tone))
 			})
-			c.Box("line", ui.Style{W: ui.Px(1), H: ui.Flex(1), Fill: th.C(tShipRail)}, nil)
+			widget.VRuleTone(c, "line", tShipRail)
 		})
 		c.Column("card", ui.Style{W: ui.Flex(1), Pad: ui.Insets{B: 2}}, card)
 	})
