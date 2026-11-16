@@ -9,7 +9,7 @@ import (
 
 	"github.com/liamg/oriel/app/assistant"
 
-	"github.com/liamg/oriel/app/shell/help"
+	"github.com/liamg/oriel/app/help"
 	"github.com/liamg/oriel/registry/uireg"
 
 	"github.com/liamg/oriel/app/apptest"

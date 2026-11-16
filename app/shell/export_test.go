@@ -23,11 +23,6 @@ func SetKeys(h *Headless, r *registry.Resolver) { h.sh.keys = r }
 func (f *windowFocus) Now() (bool, <-chan struct{}) { return f.now() }
 func (f *windowFocus) Set(on bool) bool             { return f.set(on) }
 
-type Help = helpView
-
-func (v *helpView) Open() bool   { return v.open }
-func (v *helpView) Page() string { return v.cur }
-
 // LastMove is the last of a run of pointer moves waiting from ev, and the event read after the run.
 func LastMove(ev render.Event, events <-chan render.Event) (render.Event, render.Event) {
 	return lastMove(ev, events)

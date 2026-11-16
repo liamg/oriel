@@ -23,7 +23,7 @@ func (sh *shell) parts() Parts {
 		UI: &uiOptions{}, Frames: &frames{}, Themes: &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, Layout: sh.layout,
 		Start:      &start{sh: sh},
 		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh}, WhichKey: &whichKey{},
-		Help: &helpView{configDir: cfg.ConfigDir}, Nav: &navPlugin{sh: sh}, Menus: &contextMenus{}, Notices: &notices{sh: sh},
+		Nav: &navPlugin{sh: sh}, Menus: &contextMenus{}, Notices: &notices{sh: sh},
 		Desktop: &desktopPlugin{desktop: &sh.desktop}, Quit: &quitDialog{draining: &sh.draining}}
 }
 

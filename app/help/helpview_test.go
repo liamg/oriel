@@ -1,4 +1,4 @@
-package shell_test
+package help_test
 
 import (
 	"fmt"
@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/help"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )
 
-func help(s *apptest.Scene) *shell.Help { return apptest.PluginOf[*shell.Help](s, "help") }
+func helpOf(s *apptest.Scene) *help.View { return apptest.PluginOf[*help.View](s, "help") }
 
 // Every interactive element resolves to a help page and anchor, across the app's surfaces.
 func TestHelpLint(t *testing.T) {
@@ -40,7 +40,7 @@ func TestHelpLint(t *testing.T) {
 	s.Frame()
 	s.Lint("a help page")
 	s.Press("<Esc>")
-	if help(s).Open() {
+	if helpOf(s).Open() {
 		t.Fatal("Escape didn't close the help page")
 	}
 	s.Run("help.mode", nil)
@@ -72,7 +72,7 @@ func TestHelpLint(t *testing.T) {
 
 func TestHelpWays(t *testing.T) {
 	s := apptest.EditorScene(t)
-	hv := help(s)
+	hv := helpOf(s)
 	// :help topic, by words of a title.
 	s.EditorKeys(":help pickers<CR>")
 	s.Frame()

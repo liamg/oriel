@@ -66,8 +66,8 @@ func TestNamedCommandsAreRegistered(t *testing.T) {
 		}
 	}
 
-	pages, _ := filepath.Glob("shell/help/pages/*.md")
-	more, _ := filepath.Glob("shell/help/pages/*/*.md")
+	pages, _ := filepath.Glob("help/pages/*.md")
+	more, _ := filepath.Glob("help/pages/*/*.md")
 	for _, p := range append(pages, more...) {
 		b, err := os.ReadFile(p)
 		if err != nil {

@@ -1,4 +1,4 @@
-package shell
+package help
 
 import (
 	"cmp"
@@ -11,12 +11,12 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/app/kit/draw"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/script/api"
 
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/kit/fuzzy"
-	"github.com/liamg/oriel/app/shell/help"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
@@ -33,13 +33,13 @@ var (
 	tHelpLabel    = theme.Declare("help.label", "fg.faint")
 )
 
-// helpView is help everywhere: pages from every contributor, opened from a right-click, F1, help mode
+// View is help everywhere: pages from every contributor, opened from a right-click, F1, help mode
 // (⌘?), :help and the ␣h picker.
-type helpView struct {
+type View struct {
 	kit.Disposer
-	configDir string
+	ConfigDir string // the config directory, whose help folder adds the user's own pages
 	h         plugin.Host
-	ix        *help.Index
+	ix        *Index
 	gen       int
 	open      bool
 	cur       string   // the help id shown
@@ -49,12 +49,13 @@ type helpView struct {
 	into      bool     // help mode asked for focus
 }
 
-func (v *helpView) Manifest() plugin.Manifest { return plugin.Manifest{ID: "help"} }
+func (v *View) Manifest() plugin.Manifest { return plugin.Manifest{ID: "help"} }
 
-func (v *helpView) Activate(_ context.Context, h plugin.Host) error {
+func (v *View) Activate(_ context.Context, h plugin.Host) error {
 	v.h = h
-	v.Add(h.HelpPages(registry.HelpSource{FS: help.Builtin(), Source: "builtin"}))
-	if dir := filepath.Join(v.configDir, "help"); dirExists(dir) {
+	v.Add(h.HelpPages(registry.HelpSource{FS: Builtin(), Source: "builtin"}))
+	v.Add(h.Contribute(registry.Service{Name: services.HelpPagesService, Impl: helpPages{v}}))
+	if dir := filepath.Join(v.ConfigDir, "help"); dirExists(dir) {
 		v.Add(h.HelpPages(registry.HelpSource{FS: os.DirFS(dir), Source: "config"}))
 	}
 	for _, c := range []registry.Command{
@@ -139,14 +140,14 @@ func dirExists(dir string) bool {
 }
 
 // index is the pages, read again when a contributor adds or drops some.
-func (v *helpView) index() *help.Index {
+func (v *View) index() *Index {
 	srcs, gen := v.h.HelpSources()
 	if v.ix == nil || gen != v.gen {
-		var all []help.Source
+		var all []Source
 		for _, s := range srcs {
-			all = append(all, help.Source{Name: s.Source, FS: s.FS})
+			all = append(all, Source{Name: s.Source, FS: s.FS})
 		}
-		ix, errs := help.Load(all)
+		ix, errs := Load(all)
 		for _, err := range errs {
 			v.h.Log().Warn("help page", "err", err)
 		}
@@ -156,7 +157,7 @@ func (v *helpView) index() *help.Index {
 }
 
 // find is the best topic for what :help was given: an id, an anchor, or words of a title.
-func (v *helpView) find(topic string) string {
+func (v *View) find(topic string) string {
 	ix := v.index()
 	if _, _, ok := ix.For(topic); ok {
 		return topic
@@ -175,7 +176,7 @@ func (v *helpView) find(topic string) string {
 }
 
 // show opens a help id, the page before it going on the back stack.
-func (v *helpView) show(id string) error {
+func (v *View) show(id string) error {
 	if id == "" {
 		return fmt.Errorf("no help on that")
 	}
@@ -190,7 +191,7 @@ func (v *helpView) show(id string) error {
 }
 
 // source is the ␣h picker: every page and section.
-func (v *helpView) source() uireg.PickerSource {
+func (v *View) source() uireg.PickerSource {
 	return uireg.PickerSource{ID: "help", Title: "Help", Order: 70, PickerOnly: true,
 		Items: func(registry.Ctx, string) []uireg.PickerItem {
 			var out []uireg.PickerItem
@@ -206,7 +207,7 @@ func (v *helpView) source() uireg.PickerSource {
 	}
 }
 
-func (v *helpView) title(id string) string {
+func (v *View) title(id string) string {
 	p, anchor, ok := v.index().For(id)
 	if !ok {
 		return id
@@ -217,7 +218,7 @@ func (v *helpView) title(id string) string {
 	return p.Title
 }
 
-func (v *helpView) build(c *ui.Ctx, vc uireg.ViewCtx) {
+func (v *View) build(c *ui.Ctx, vc uireg.ViewCtx) {
 	if u := v.h.UI(); u != nil {
 		if id, ok := u.TakeHelpRequest(); ok {
 			v.show(id)
@@ -232,7 +233,7 @@ func (v *helpView) build(c *ui.Ctx, vc uireg.ViewCtx) {
 }
 
 // markers are help mode's: a ? on everything with help, which opens its page.
-func (v *helpView) markers(c *ui.Ctx) {
+func (v *View) markers(c *ui.Ctx) {
 	th := c.Theme()
 	u := v.h.UI()
 	if u == nil {
@@ -268,7 +269,7 @@ func (v *helpView) markers(c *ui.Ctx) {
 }
 
 // page is the open help page (28-help): its path, the section asked for, and the related pages beside it.
-func (v *helpView) page(c *ui.Ctx) {
+func (v *View) page(c *ui.Ctx) {
 	th := c.Theme()
 	p, anchor, ok := v.index().For(v.cur)
 	if !ok {
@@ -341,7 +342,7 @@ func (v *helpView) page(c *ui.Ctx) {
 }
 
 // body is a help id's section: its title, then its blocks, the generated ones filled from the registries.
-func (v *helpView) body(c *ui.Ctx, id string, width float32) {
+func (v *View) body(c *ui.Ctx, id string, width float32) {
 	th := c.Theme()
 	p, anchor, ok := v.index().For(id)
 	if !ok {
@@ -397,7 +398,7 @@ func plainText(s string) string {
 }
 
 // keys is {{keys "glob"}}: the keymaps whose command matches glob, from the registry.
-func (v *helpView) keys(c *ui.Ctx, key any, glob string) {
+func (v *View) keys(c *ui.Ctx, key any, glob string) {
 	th := c.Theme()
 	var rows []registry.Keymap
 	for _, k := range v.h.Keymaps() {
@@ -426,7 +427,7 @@ func (v *helpView) keys(c *ui.Ctx, key any, glob string) {
 }
 
 // options is {{options "prefix"}}: the options under prefix, with their values now.
-func (v *helpView) options(c *ui.Ctx, key any, prefix string) {
+func (v *View) options(c *ui.Ctx, key any, prefix string) {
 	th := c.Theme()
 	var specs []registry.OptionSpec
 	for _, s := range v.h.Options().Specs() {
@@ -451,7 +452,7 @@ func (v *helpView) options(c *ui.Ctx, key any, prefix string) {
 }
 
 // api is a namespace's reference from the generated API (docs/api.md), each call and what it does.
-func (v *helpView) api(c *ui.Ctx, key any, ns string) {
+func (v *View) api(c *ui.Ctx, key any, ns string) {
 	th := c.Theme()
 	name := strings.TrimPrefix(strings.TrimPrefix(ns, "oriel"), ".")
 	fns := api.Reference[name]
@@ -471,12 +472,12 @@ func (v *helpView) api(c *ui.Ctx, key any, ns string) {
 
 const helpSearchHits = 8
 
-func (v *helpView) toolSearch(ctx registry.Ctx, p registry.Args) (any, error) {
+func (v *View) toolSearch(ctx registry.Ctx, p registry.Args) (any, error) {
 	q := strings.TrimSpace(p.Trimmed("query"))
 	if q == "" {
 		return nil, errors.New("search for what?")
 	}
-	var hits []help.Result
+	var hits []Result
 	if err := kit.OnLoop(ctx, v.h, func() { hits = v.index().Search(q, helpSearchHits, v.expand) }); err != nil {
 		return nil, err
 	}
@@ -492,7 +493,7 @@ type helpSection struct {
 	Text  string `json:"text"`
 }
 
-func (v *helpView) toolRead(ctx registry.Ctx, p registry.Args) (any, error) {
+func (v *View) toolRead(ctx registry.Ctx, p registry.Args) (any, error) {
 	id := p.Trimmed("id")
 	var out helpSection
 	ok := false
@@ -506,7 +507,7 @@ func (v *helpView) toolRead(ctx registry.Ctx, p registry.Args) (any, error) {
 	return out, nil
 }
 
-func (v *helpView) toolOpen(ctx registry.Ctx, p registry.Args) (any, error) {
+func (v *View) toolOpen(ctx registry.Ctx, p registry.Args) (any, error) {
 	id := p.Trimmed("id")
 	var err error
 	if e := kit.OnLoop(ctx, v.h, func() { err = v.show(id) }); e != nil {
@@ -519,7 +520,7 @@ func (v *helpView) toolOpen(ctx registry.Ctx, p registry.Args) (any, error) {
 }
 
 // expand is a directive as text, as the page draws it now: the keys and settings it lists, an API's calls.
-func (v *helpView) expand(b help.Block) string {
+func (v *View) expand(b Block) string {
 	var lines []string
 	switch b.Kind {
 	case "keys":
@@ -548,4 +549,12 @@ func (v *helpView) expand(b help.Block) string {
 		return strings.Join(lines, "\n")
 	}
 	return ""
+}
+
+// helpPages is the HelpPagesService: the view's index.
+type helpPages struct{ v *View }
+
+func (p helpPages) Resolves(helpID string) bool {
+	_, _, ok := p.v.index().For(helpID)
+	return ok
 }

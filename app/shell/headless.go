@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/registry/keymap"
+	"github.com/liamg/oriel/registry/services"
 	"github.com/liamg/oriel/registry/uireg"
 	"github.com/liamg/oriel/render"
 	"github.com/liamg/oriel/render/typeset"
@@ -337,14 +338,12 @@ func (h *Headless) HelpLint() []string {
 	if missing := h.ui.WithoutHelp(); len(missing) > 0 {
 		out = append(out, fmt.Sprintf("%d interactive nodes have no help id", len(missing)))
 	}
-	p, ok := h.Plugin("help")
-	v, isHelp := p.(*helpView)
-	if !ok || !isHelp {
+	pages, ok := services.HelpPagesOf(h.sh.cfg.Registry)
+	if !ok {
 		return append(out, "no help view")
 	}
-	ix := v.index()
 	for _, n := range h.ui.HelpNodes() {
-		if _, _, ok := ix.For(n.Help); !ok {
+		if !pages.Resolves(n.Help) {
 			out = append(out, fmt.Sprintf("help id %q doesn't resolve to a page and anchor", n.Help))
 		}
 	}

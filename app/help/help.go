@@ -1,5 +1,6 @@
-// Package help is Oriel's help pages: markdown with front matter, indexed by page id and heading anchor,
-// and searched for :help and the ␣h picker. Pages come from every contributor's fs.FS; Oriel's own are embedded.
+// Package help is Oriel's help pages and the view that shows them: markdown with front matter, indexed by page id
+// and heading anchor, and searched for :help and the ␣h picker. Pages come from every contributor's fs.FS; Oriel's
+// own are embedded. The view (View) opens them from a right-click, F1, help mode and :help.
 package help
 
 import (
