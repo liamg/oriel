@@ -1,4 +1,4 @@
-package shell
+package diag
 
 import (
 	"fmt"
@@ -14,9 +14,9 @@ import (
 // stallGap is the least time between traces written, so a slow stretch writes one, not one a frame.
 const stallGap = 10 * time.Second
 
-// stallTrace keeps the last few seconds of execution trace, and writes them to a file when the window stalls: the
+// StallTrace keeps the last few seconds of execution trace, and writes them to a file when the window stalls: the
 // first to path, later ones beside it numbered. A nil one does nothing.
-type stallTrace struct {
+type StallTrace struct {
 	fr      *trace.FlightRecorder
 	path    string
 	log     *slog.Logger
@@ -28,7 +28,7 @@ type stallTrace struct {
 	writes  sync.WaitGroup
 }
 
-func startStallTrace(path string, log *slog.Logger) *stallTrace {
+func StartStallTrace(path string, log *slog.Logger) *StallTrace {
 	if path == "" {
 		return nil
 	}
@@ -37,11 +37,11 @@ func startStallTrace(path string, log *slog.Logger) *stallTrace {
 		log.Error("no trace of stalls", "err", err)
 		return nil
 	}
-	return &stallTrace{fr: fr, path: path, log: log}
+	return &StallTrace{fr: fr, path: path, log: log}
 }
 
-// stalled writes the trace, off the caller's goroutine.
-func (s *stallTrace) stalled() {
+// Stalled writes the trace, off the caller's goroutine.
+func (s *StallTrace) Stalled() {
 	if s == nil {
 		return
 	}
@@ -79,8 +79,8 @@ func (s *stallTrace) stalled() {
 	})
 }
 
-// stop stops recording, once a write under way is done; writes asked for and not yet begun are dropped.
-func (s *stallTrace) stop() {
+// Stop stops recording, once a write under way is done; writes asked for and not yet begun are dropped.
+func (s *StallTrace) Stop() {
 	if s == nil {
 		return
 	}

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/liamg/oriel/app/shell/diag"
+
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/registry"
@@ -28,7 +30,7 @@ func redactNotice(n core.Notice, r *logs.Redactor, now time.Time) core.Notice {
 
 // faultNotice is the error notice for a contribution turned off: its stack or trace as the detail, and an action
 // to turn it back on. One turned off for its errors in a row is the row its errors were, now saying so.
-func faultNotice(f registry.Fault, l *Logs, dir string, now time.Time) core.Notice {
+func faultNotice(f registry.Fault, l *diag.Logs, dir string, now time.Time) core.Notice {
 	n := core.Notice{ID: "turned-off." + f.Kind + "." + f.ID, Severity: core.SevError, Source: cmp.Or(f.Source, "core"),
 		Text: fmt.Sprintf("%s %s is turned off: %v", f.Kind, f.ID, f.Err)}
 	if f.Errors > 0 {
@@ -47,7 +49,7 @@ func faultNotice(f registry.Fault, l *Logs, dir string, now time.Time) core.Noti
 
 // failureNotice is a contribution's error, or a warning about it, as a notice: one row for each contribution,
 // counting its errors.
-func failureNotice(f registry.Failure, l *Logs, dir string, now time.Time) core.Notice {
+func failureNotice(f registry.Failure, l *diag.Logs, dir string, now time.Time) core.Notice {
 	n := core.Notice{ID: "failed." + f.Kind + "." + f.ID, Severity: core.SevError, Source: cmp.Or(f.Source, "core"),
 		Title: contribTitle(f.Kind), Text: f.Err.Error()}
 	if f.Warn {

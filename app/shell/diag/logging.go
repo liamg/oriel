@@ -1,4 +1,4 @@
-package shell
+package diag
 
 import (
 	"log/slog"
@@ -88,3 +88,6 @@ func LevelFromEnv(def slog.Level) slog.Level {
 	}
 	return def
 }
+
+// Writes are how many records the ring has taken, so a reader knows when to read it again.
+func (l *Logs) Writes() uint64 { return l.writes.Load() }

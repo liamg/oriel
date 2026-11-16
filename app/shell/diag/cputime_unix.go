@@ -1,6 +1,6 @@
 //go:build unix
 
-package shell
+package diag
 
 import (
 	"syscall"

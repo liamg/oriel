@@ -1,16 +1,16 @@
-package shell_test
+package diag_test
 
 import (
 	"path/filepath"
 	"testing"
 
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
+	"github.com/liamg/oriel/app/shell/diag"
 )
 
 // The loop marks a stall without waiting on a trace still being written.
 func TestStallTraceNeverWaitsOnAWrite(t *testing.T) {
-	s, ok := shell.StartStallTrace(filepath.Join(t.TempDir(), "stall.trace"))
+	s, ok := diag.StartQuietStallTrace(filepath.Join(t.TempDir(), "stall.trace"))
 	if !ok {
 		t.Skip("no flight recorder")
 	}

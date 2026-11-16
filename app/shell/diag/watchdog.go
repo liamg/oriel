@@ -1,4 +1,4 @@
-package shell
+package diag
 
 import (
 	"bytes"
@@ -11,9 +11,9 @@ import (
 	"time"
 )
 
-// watchdog logs the loop goroutine's stack when one turn holds it up past slowLoop, while it's still held: the
+// Watchdog logs the loop goroutine's stack when one turn holds it up past slowLoop, while it's still held: the
 // stack names the culprit. A nil one does nothing.
-type watchdog struct {
+type Watchdog struct {
 	log   *slog.Logger
 	limit time.Duration
 	gid   []byte // "goroutine N " of the loop
@@ -28,16 +28,16 @@ type watchdog struct {
 	cpu   func() time.Duration
 }
 
-// startWatchdog is a watchdog on the calling goroutine, the loop's.
-func startWatchdog(log *slog.Logger, limit time.Duration) *watchdog {
-	w := &watchdog{log: log, limit: limit, gid: goroutineHeader(), cpu: cpuTime}
+// StartWatchdog is a watchdog on the calling goroutine, the loop's.
+func StartWatchdog(log *slog.Logger, limit time.Duration) *Watchdog {
+	w := &Watchdog{log: log, limit: limit, gid: goroutineHeader(), cpu: cpuTime}
 	w.timer = time.AfterFunc(time.Hour, func() {})
 	w.timer.Stop()
 	return w
 }
 
-// enter starts a turn.
-func (w *watchdog) enter() {
+// Enter starts a turn.
+func (w *Watchdog) Enter() {
 	if w == nil {
 		return
 	}
@@ -53,8 +53,8 @@ func (w *watchdog) enter() {
 	w.mu.Unlock()
 }
 
-// leave ends a turn.
-func (w *watchdog) leave() {
+// Leave ends a turn.
+func (w *Watchdog) Leave() {
 	if w == nil {
 		return
 	}
@@ -67,7 +67,7 @@ func (w *watchdog) leave() {
 	w.mu.Unlock()
 }
 
-func (w *watchdog) stop() {
+func (w *Watchdog) Stop() {
 	if w == nil {
 		return
 	}
@@ -78,7 +78,7 @@ func (w *watchdog) stop() {
 }
 
 // held logs the loop's stack if turn is still running.
-func (w *watchdog) held(turn uint64) {
+func (w *Watchdog) held(turn uint64) {
 	buf := make([]byte, 1<<20)
 	buf = buf[:runtime.Stack(buf, true)]
 	w.mu.Lock()
@@ -102,7 +102,7 @@ const starvedShare = 0.5
 
 // starved says the loop was held up by the machine rather than its own work: it was runnable, waiting to be run,
 // while the process used under starvedShare of a core since the turn began. share is what it used.
-func (w *watchdog) starved(stack string, began time.Time, cpu0 time.Duration) (share float64, busy bool) {
+func (w *Watchdog) starved(stack string, began time.Time, cpu0 time.Duration) (share float64, busy bool) {
 	wall := time.Since(began)
 	if wall <= 0 || w.cpu == nil {
 		return 0, false

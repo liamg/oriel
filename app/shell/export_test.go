@@ -1,8 +1,6 @@
 package shell
 
 import (
-	"io"
-	"log/slog"
 	"time"
 
 	"github.com/liamg/oriel/core"
@@ -40,21 +38,6 @@ func Reopening(h *Headless) (string, bool) {
 
 // Report is "Copy report"'s text, with nothing at its head.
 func Report(h *Headless) string { return h.sh.report("") }
-
-// StallTrace is a stall trace, for a test to hold its writes.
-type StallTrace struct{ s *stallTrace }
-
-// StartStallTrace starts the stall trace written to path, or answers false where there's no flight recorder.
-func StartStallTrace(path string) (StallTrace, bool) {
-	s := startStallTrace(path, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	return StallTrace{s}, s != nil
-}
-
-func (t StallTrace) Stop()         { t.s.stop() }
-func (t StallTrace) Stalled()      { t.s.stalled() }
-func (t StallTrace) HoldWrite()    { t.s.wmu.Lock() }
-func (t StallTrace) ReleaseWrite() { t.s.wmu.Unlock() }
-func (t StallTrace) Forget()       { t.s.written = time.Time{} }
 
 // The log panel's scopes.
 const (

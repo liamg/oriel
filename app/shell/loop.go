@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/liamg/oriel/app/shell/diag"
+
 	"github.com/liamg/oriel/app/kit/draw"
 	"github.com/liamg/oriel/registry/services"
 
@@ -49,9 +51,9 @@ type loop struct {
 	log   *slog.Logger
 
 	input  inputLag
-	stalls *stallTrace
+	stalls *diag.StallTrace
 	hidden bool // the window can't be seen: no frames are drawn
-	dog    *watchdog
+	dog    *diag.Watchdog
 }
 
 // open readies the loop on its window: the clipboard, the UI the plugins see, the theme and the window's events.
@@ -106,8 +108,8 @@ func (l *loop) serve(ctx context.Context, p *running, dirty <-chan struct{}) err
 	timer := time.NewTimer(0)
 	<-timer.C
 	if v := sh.cfg.Version; v == "" || v == "dev" || l.debug {
-		l.dog = startWatchdog(l.log, slowLoop)
-		defer l.dog.stop()
+		l.dog = diag.StartWatchdog(l.log, slowLoop)
+		defer l.dog.Stop()
 	}
 	var t turn
 	t.pace.Ask()
@@ -255,7 +257,7 @@ func (l *loop) frame(ctx context.Context, t *turn, dirty <-chan struct{}) (drawn
 	sh.framed.Fire()
 	moved := !l.input.oldest.IsZero()
 	if l.input.built() {
-		l.stalls.stalled()
+		l.stalls.Stalled()
 	}
 	lag := time.Duration(0)
 	if moved {
@@ -365,12 +367,12 @@ const slowLoop = 50 * time.Millisecond
 // watchdog logs where it's held up meanwhile. The work is in a frame for fsx's check.
 func (l *loop) timed(fn func()) {
 	start := time.Now()
-	l.dog.enter()
-	defer l.dog.leave()
+	l.dog.Enter()
+	defer l.dog.Leave()
 	defer fsx.Enter()()
 	fn()
 	if time.Since(start) > slowLoop {
-		l.stalls.stalled()
+		l.stalls.Stalled()
 	}
 }
 
@@ -447,7 +449,7 @@ func (l *loop) dispatch(ctx context.Context, ev render.Event) bool {
 		l.win.SetCursor(l.ui.Cursor())
 		return changed
 	case render.SlowFrameEvent:
-		l.stalls.stalled()
+		l.stalls.Stalled()
 		return false
 	case render.AppearanceEvent:
 		l.osLight = !ev.Dark

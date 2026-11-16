@@ -1,4 +1,4 @@
-package shell
+package diag
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 // Busy itself, or running, it's Oriel's.
 func TestWatchdogTellsABusyMachineFromOriel(t *testing.T) {
 	var used time.Duration
-	w := &watchdog{cpu: func() time.Duration { return used }}
+	w := &Watchdog{cpu: func() time.Duration { return used }}
 	began := time.Now().Add(-200 * time.Millisecond)
 	for _, tc := range []struct {
 		stack string
