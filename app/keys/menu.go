@@ -1,4 +1,4 @@
-package shell
+package keys
 
 import (
 	"context"
@@ -16,9 +16,9 @@ import (
 	"github.com/liamg/oriel/ui/widget"
 )
 
-// contextMenus is the window's right-click menu: the menu items that apply where it was clicked, by group,
+// Menus is the window's right-click menu: the menu items that apply where it was clicked, by group,
 // then Help. Built-in entries are menu items like any plugin's.
-type contextMenus struct {
+type Menus struct {
 	kit.Disposer
 	h      plugin.Host
 	target ui.ID
@@ -26,9 +26,9 @@ type contextMenus struct {
 	items  []registry.MenuItem
 }
 
-func (m *contextMenus) Manifest() plugin.Manifest { return plugin.Manifest{ID: "menus"} }
+func (m *Menus) Manifest() plugin.Manifest { return plugin.Manifest{ID: "menus"} }
 
-func (m *contextMenus) Activate(_ context.Context, h plugin.Host) error {
+func (m *Menus) Activate(_ context.Context, h plugin.Host) error {
 	m.h = h
 	m.Add(h.View(kit.OverlayPrefix+"context-menu", uireg.ViewFunc(func(uireg.ViewCtx) ui.Node {
 		return &ui.Func{Key: "context-menu", Fn: m.build}
@@ -59,7 +59,7 @@ func (m *contextMenus) Activate(_ context.Context, h plugin.Host) error {
 }
 
 // closeTabs is a tab's menu item closing the tabs beside it in its pane that close says to, by place.
-func (m *contextMenus) closeTabs(name, label string, order int, close func(i, at int) bool) registry.MenuItem {
+func (m *Menus) closeTabs(name, label string, order int, close func(i, at int) bool) registry.MenuItem {
 	return registry.MenuItem{Name: name, Label: label, Group: "pane", Order: order, When: registry.MenuWhen{View: "*", Help: panes.HelpTab},
 		Source: "builtin:menus", Run: func(ctx registry.Ctx, at registry.MenuCtx) error {
 			v := layout.ViewRef{ID: at.View, Instance: at.Instance, Project: at.Project}
@@ -86,7 +86,7 @@ func (m *contextMenus) closeTabs(name, label string, order int, close func(i, at
 
 // where is what node t at p is in: the view whose tab it is, or else the pane's view (the smallest pane holding
 // p), and what that view says is there.
-func (m *contextMenus) where(t ui.ID, p render.Point, help, subject string) registry.MenuCtx {
+func (m *Menus) where(t ui.ID, p render.Point, help, subject string) registry.MenuCtx {
 	at := registry.MenuCtx{Help: help, Subject: subject}
 	if v, ok := m.h.PaneTab(t); ok {
 		at.View, at.Instance, at.Project = v.ID, v.Instance, v.Project
@@ -110,7 +110,7 @@ func (m *contextMenus) where(t ui.ID, p render.Point, help, subject string) regi
 	return at
 }
 
-func (m *contextMenus) build(c *ui.Ctx) {
+func (m *Menus) build(c *ui.Ctx) {
 	u := m.h.UI()
 	if u == nil {
 		return
@@ -147,7 +147,7 @@ func (m *contextMenus) build(c *ui.Ctx) {
 	}
 }
 
-func (m *contextMenus) run(it registry.MenuItem) {
+func (m *Menus) run(it registry.MenuItem) {
 	at, ctx := m.at, context.Background()
 	err := registry.Call(func() error {
 		if it.Run != nil {

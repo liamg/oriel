@@ -15,9 +15,6 @@ import (
 
 // What the package's outside tests read and set of its plugins.
 
-// SetKeys has the window's keys go through r, as its loop's do.
-func SetKeys(h *Headless, r *registry.Resolver) { h.sh.keys = r }
-
 // What fork F1's moved tests read and set of the shell.
 
 func (f *windowFocus) Now() (bool, <-chan struct{}) { return f.now() }

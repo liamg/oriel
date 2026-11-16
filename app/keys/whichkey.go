@@ -1,4 +1,6 @@
-package shell
+// Package keys is what helps with the keys and the pointer: which-key, which lists the keys that can come next after
+// a prefix, and the right-click menu.
+package keys
 
 import (
 	"context"
@@ -29,16 +31,16 @@ var (
 	tWKDesc  = theme.Declare("whichkey.desc", "fg")
 )
 
-// whichKey is the which-key popup: after a pause on a prefix, every key that can come next, with its
+// WhichKey is the which-key popup: after a pause on a prefix, every key that can come next, with its
 // description, from the registry's keymaps and the engine's own commands. Built only on the public API.
-type whichKey struct {
+type WhichKey struct {
 	kit.Disposer
 	h plugin.Host
 }
 
-func (w *whichKey) Manifest() plugin.Manifest { return plugin.Manifest{ID: "whichkey"} }
+func (w *WhichKey) Manifest() plugin.Manifest { return plugin.Manifest{ID: "whichkey"} }
 
-func (w *whichKey) Activate(_ context.Context, h plugin.Host) error {
+func (w *WhichKey) Activate(_ context.Context, h plugin.Host) error {
 	w.h = h
 	w.Add(h.Option(registry.OptionSpec{Name: "whichkey.enabled", Type: registry.Bool, Default: true, Scopes: registry.ScopeUser,
 		Help: "Show what keys can follow a prefix, after a short pause."}))
@@ -114,7 +116,7 @@ func entries(h plugin.Host, p plugin.Pending) (title string, out []entry) {
 	return title, out
 }
 
-func (w *whichKey) build(c *ui.Ctx) {
+func (w *WhichKey) build(c *ui.Ctx) {
 	if on, _, err := w.h.Options().Get("whichkey.enabled", registry.At{}); err == nil && on == false {
 		return
 	}

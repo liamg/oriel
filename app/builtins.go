@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/liamg/oriel/app/github"
+	"github.com/liamg/oriel/app/keys"
 	"github.com/liamg/oriel/app/mirror"
 
 	"github.com/liamg/oriel/app/assistant"
@@ -52,7 +53,7 @@ func (cfg Config) builtins(p shell.Parts) []plugin.Plugin {
 	out = append(out, cfg.Agents...)
 	return append(out, &editor.Languages{Dir: filepath.Join(c.ConfigDir, "languages")}, p.Themes, p.Layout, gits,
 		&rail.Rail{DirState: p.DirState}, &gitui.Explorer{Git: gits}, p.Start, &overview.Overview{WorkDir: p.WorkDir}, &omnibox.Introspect{ConfigDir: c.ConfigDir}, p.StatusLine, p.SessionTabs, &settings.About{Version: c.Version},
-		&stats.HUD{}, &agentui.Inbox{}, &omnibox.Omnibox{}, &omnibox.Picker{}, p.WhichKey, &plugins.Consent{}, &help.View{ConfigDir: c.ConfigDir}, p.Nav, p.Menus,
+		&stats.HUD{}, &agentui.Inbox{}, &omnibox.Omnibox{}, &omnibox.Picker{}, &keys.WhichKey{}, &plugins.Consent{}, &help.View{ConfigDir: c.ConfigDir}, p.Nav, &keys.Menus{},
 		p.Notices, &lang.Problems{ConfigDir: c.ConfigDir}, &settings.ThemeEditor{Dir: filepath.Join(c.ConfigDir, "themes")},
 		&explain.Presenter{}, ed, &editor.Markdown{Pictures: p.Pictures}, &editor.Images{}, p.Desktop, &editor.GitSigns{Editor: ed},
 		&editor.Search{Editor: ed, Tools: p.Tools}, &lang.LSP{Version: c.Version, Logger: c.Logs.Logger, Servers: cfg.LanguageServers},

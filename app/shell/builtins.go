@@ -22,8 +22,8 @@ func (sh *shell) parts() Parts {
 	return Parts{Config: cfg, DirState: sh.dirState, WorkDir: func() string { return sh.cfg.WorkDir }, Clipboard: desktopClipboard{&sh.desktop}, Pictures: sh.reads.Pictures, Tools: sh.tools,
 		UI: &uiOptions{}, Frames: &frames{}, Themes: &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, Layout: sh.layout,
 		Start:      &start{sh: sh},
-		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh}, WhichKey: &whichKey{},
-		Nav: &navPlugin{sh: sh}, Menus: &contextMenus{}, Notices: &notices{sh: sh},
+		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh},
+		Nav: &navPlugin{sh: sh}, Notices: &notices{sh: sh},
 		Desktop: &desktopPlugin{desktop: &sh.desktop}, Quit: &quitDialog{draining: &sh.draining}}
 }
 

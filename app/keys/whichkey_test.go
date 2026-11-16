@@ -1,12 +1,13 @@
-package shell_test
+package keys_test
 
 import (
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/liamg/oriel/app/keys"
+
 	"github.com/liamg/oriel/app/apptest"
-	"github.com/liamg/oriel/app/shell"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"
 )
@@ -93,17 +94,17 @@ func TestWhichKeyWaitsItsDelay(t *testing.T) {
 	for _, k := range agentKeys {
 		s.Registry().Keymap(k)
 	}
-	keys := registry.NewResolver(s.Registry())
-	shell.SetKeys(s.Headless, keys)
+	res := registry.NewResolver(s.Registry())
+	s.Headless.SetKeys(res)
 	start := s.Now
-	keys.Feed([]string{"n", "global"}, " ", start)
-	s.Now = start.Add(shell.WhichKeyDelay - time.Millisecond)
+	res.Feed([]string{"n", "global"}, " ", start)
+	s.Now = start.Add(keys.WhichKeyDelay - time.Millisecond)
 	s.Quiet()
 	s.Frame()
 	if strings.Contains(s.Text(), "+agent") {
 		t.Fatalf("which-key showed before its delay:\n%s", s.Text())
 	}
-	s.Now = start.Add(shell.WhichKeyDelay)
+	s.Now = start.Add(keys.WhichKeyDelay)
 	s.Frame()
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Errorf("which-key not shown after its delay:\n%s", s.Text())
@@ -117,12 +118,12 @@ func TestWhichKeySnapshot(t *testing.T) {
 	for _, k := range agentKeys {
 		s.Registry().Keymap(k)
 	}
-	keys := registry.NewResolver(s.Registry())
-	shell.SetKeys(s.Headless, keys)
+	res := registry.NewResolver(s.Registry())
+	s.Headless.SetKeys(res)
 	start := s.Now
-	keys.Feed([]string{"n", "global"}, " ", start)
-	keys.Feed([]string{"n", "global"}, "a", start)
-	s.Now = start.Add(shell.WhichKeyDelay)
+	res.Feed([]string{"n", "global"}, " ", start)
+	res.Feed([]string{"n", "global"}, "a", start)
+	s.Now = start.Add(keys.WhichKeyDelay)
 	s.Golden("whichkey")
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Errorf("no +agent:\n%s", s.Text())
@@ -139,22 +140,22 @@ func TestWhichKeyHoldsThePrefix(t *testing.T) {
 	if err := s.Registry().Options().Set("keymap.timeoutlen", registry.LayerUser, registry.At{}, 500*time.Millisecond); err != nil {
 		t.Fatal(err)
 	}
-	keys := registry.NewResolver(s.Registry())
-	shell.SetKeys(s.Headless, keys)
+	res := registry.NewResolver(s.Registry())
+	s.Headless.SetKeys(res)
 	start := s.Now
-	keys.Feed([]string{"n", "global"}, " ", start)
-	s.Now = start.Add(shell.WhichKeyDelay)
+	res.Feed([]string{"n", "global"}, " ", start)
+	s.Now = start.Add(keys.WhichKeyDelay)
 	s.Frame()
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Fatalf("which-key not shown after its delay:\n%s", s.Text())
 	}
 	s.Now = start.Add(time.Second) // past keymap.timeoutlen: the loop's key timer fires
-	keys.Timeout(s.Now)
+	res.Timeout(s.Now)
 	s.Frame()
 	if !strings.Contains(s.Text(), "+agent") {
 		t.Fatalf("which-key went after keymap.timeoutlen:\n%s", s.Text())
 	}
-	keys.Feed([]string{"n", "global"}, "a", s.Now)
+	res.Feed([]string{"n", "global"}, "a", s.Now)
 	s.Frame()
 	if !strings.Contains(s.Text(), "Interrupt agent") {
 		t.Errorf("the prefix wasn't held for a:\n%s", s.Text())

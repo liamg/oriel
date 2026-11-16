@@ -1,4 +1,4 @@
-package shell_test
+package keys_test
 
 import (
 	"os"

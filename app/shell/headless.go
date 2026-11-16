@@ -406,3 +406,6 @@ func (h *Headless) Drop(ev render.DropEvent) { h.sh.dropped(ev) }
 
 // ReopenAsked says the window has been asked to open again on another directory or session.
 func (h *Headless) ReopenAsked() bool { return len(h.sh.reopen) > 0 }
+
+// SetKeys has the window's keys go through r, as its loop's do: for a test that feeds keys to r itself.
+func (h *Headless) SetKeys(r *registry.Resolver) { h.sh.keys = r }

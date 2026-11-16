@@ -102,7 +102,7 @@ type Parts struct {
 	Tools     *search.Tools  // the machine's search tools
 
 	UI, Frames, Themes, Layout, Start, StatusLine, SessionTabs plugin.Plugin
-	WhichKey, Nav, Menus, Notices, Desktop, Quit               plugin.Plugin
+	Nav, Notices, Desktop, Quit                                plugin.Plugin
 }
 
 var textStyle = ui.TextStyle{Font: typeset.FontSpec{Family: typeset.Mono, Size: 13}}
