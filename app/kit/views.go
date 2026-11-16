@@ -2,6 +2,7 @@ package kit
 
 import (
 	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -85,4 +86,17 @@ func SidebarArgs(command string, a registry.Args) registry.Args {
 	a = maps.Clone(a)
 	a["alone"], a["fixed"] = true, true
 	return a
+}
+
+// ThemeNames are the registered themes' names, sorted.
+func ThemeNames(h registry.Registry) []string {
+	srcs, _ := h.Themes()
+	var out []string
+	for _, src := range srcs {
+		if !slices.Contains(out, src.Name()) {
+			out = append(out, src.Name())
+		}
+	}
+	slices.Sort(out)
+	return out
 }

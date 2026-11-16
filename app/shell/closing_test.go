@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/liamg/oriel/app/apptest"
 	"github.com/liamg/oriel/app/shell"
@@ -44,25 +43,6 @@ func TestLogPanelCloses(t *testing.T) {
 	s.Run(k.Command, k.Args)
 	if !s.Showing("log") {
 		t.Error("Escape closed a view in the main area")
-	}
-}
-
-func TestSearchClosesOnTheNextFrame(t *testing.T) {
-	s := apptest.New(t, apptest.Options{})
-	s.Now = time.Unix(1000, 0)
-	s.Run("picker.open", registry.Args{"source": "grep"})
-	s.Frame()
-	s.Frame()
-	s.Type("Esc")
-	if picker(s).Open() {
-		t.Fatal("Escape didn't close the search")
-	}
-	if next := s.UI().NextFrame(); next.IsZero() || next.After(s.Now) {
-		t.Errorf("the frame that closed the search, still showing it, asks for the next at %v, not now", next)
-	}
-	s.Frame()
-	if picker(s).Open() || s.UI().NextFrame().After(s.Now) {
-		t.Error("the search is still up a frame later")
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/liamg/oriel/app/shell/diag"
+
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/core"
@@ -25,7 +27,7 @@ type pluginHost struct {
 	uireg.Registry
 	store  core.Store
 	source string
-	logs   *Logs
+	logs   *diag.Logs
 	log    *slog.Logger
 	sh     *shell
 }

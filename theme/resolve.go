@@ -325,3 +325,13 @@ func (r *Resolved) With(over map[TokenID]Color) *Resolved {
 	}
 	return &w
 }
+
+// ResolveNamed is the theme name among sources resolved for v: its stack (Stack), in the variant it takes for v
+// (Effective).
+func ResolveNamed(sources []Source, name string, v Variant) (*Resolved, error) {
+	st, err := Stack(sources, name)
+	if err != nil {
+		return nil, err
+	}
+	return Resolve(st, Effective(st, v))
+}

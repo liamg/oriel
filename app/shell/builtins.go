@@ -2,7 +2,6 @@ package shell
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -20,32 +19,11 @@ func (sh *shell) parts() Parts {
 	sh.layout = &layoutPlugin{sh: sh}
 	cfg := sh.cfg
 	return Parts{Config: cfg, DirState: sh.dirState, WorkDir: func() string { return sh.cfg.WorkDir }, Clipboard: desktopClipboard{&sh.desktop}, Pictures: sh.reads.Pictures, Tools: sh.tools,
-		UI: &uiOptions{}, Frames: &frames{}, Themes: &themes{dir: filepath.Join(cfg.ConfigDir, "themes")}, Layout: sh.layout,
-		Start: &start{sh: sh}, Introspect: &introspect{configDir: cfg.ConfigDir},
-		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh}, Omnibox: &omnibox{}, Picker: &picker{}, WhichKey: &whichKey{},
-		Help: &helpView{configDir: cfg.ConfigDir}, Nav: &navPlugin{sh: sh}, Menus: &contextMenus{}, Notices: &notices{sh: sh},
+		UI: &uiOptions{}, Frames: &frames{}, Layout: sh.layout,
+		Start:      &start{sh: sh},
+		StatusLine: &statusLine{sh: sh}, SessionTabs: &sessionTabs{sh: sh},
+		Nav: &navPlugin{sh: sh}, Notices: &notices{sh: sh},
 		Desktop: &desktopPlugin{desktop: &sh.desktop}, Quit: &quitDialog{draining: &sh.draining}}
-}
-
-// introspect is :Keys and :Commands: every keymap and command, with where it came from, in a picker.
-type introspect struct {
-	kit.Disposer
-	configDir string
-}
-
-func (i *introspect) Manifest() plugin.Manifest { return plugin.Manifest{ID: "introspect"} }
-
-func (i *introspect) Activate(_ context.Context, h plugin.Host) error {
-	pick := func(source string) func(registry.Ctx, registry.Args) error {
-		return func(ctx registry.Ctx, _ registry.Args) error {
-			return h.Run(ctx, "picker.open", registry.Args{"source": source})
-		}
-	}
-	i.Add(h.Picker(commandsSource(h)))
-	i.Add(h.Picker(keymapsSource(h, i.configDir)))
-	i.Add(h.Command(registry.Command{ID: "Keys", Title: "List keymaps", Run: pick("keymaps")}))
-	i.Add(h.Command(registry.Command{ID: "Commands", Title: "List commands", Run: pick("commands")}))
-	return nil
 }
 
 // uiOptions registers the toolkit's own options.
@@ -135,7 +113,7 @@ func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 		Scopes: registry.ScopeUser, Help: "Jump straight to the end of every animation."}))
 	o.Add(h.Option(registry.OptionSpec{Name: "ui.scrollbars", Type: registry.Enum, Values: []string{"auto", "always"}, Default: "auto",
 		Scopes: registry.ScopeUser, Help: "When scrollbars show: auto, while the pointer is over what scrolls and for a moment after it scrolls; or always, whenever there's more than fits."}))
-	o.Add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return themeNames(h) },
+	o.Add(h.Option(registry.OptionSpec{Name: "ui.theme", Type: registry.String, Default: "oriel", Choices: func() []string { return kit.ThemeNames(h) },
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme, by name: a built-in, or a file in your themes directory. :Themes previews them."}))
 	o.Add(h.Option(registry.OptionSpec{Name: "ui.variant", Type: registry.Enum, Values: []string{"system", "dark", "light"}, Default: "system",
 		Scopes: registry.ScopeUser | registry.ScopeProject, Help: "The theme's dark or light variant; system follows the OS."}))
