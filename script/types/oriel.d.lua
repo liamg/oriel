@@ -199,10 +199,10 @@ oriel.decorations = {}
 ---@param name string
 function oriel.decorations.changed(name) end
 
---- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name).
----@param name string
----@param fn function
-function oriel.decorations.provider(name, fn) end
+--- Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name). Takes its spec too: { name, run = fn }.
+---@param spec any
+---@param fn? function
+function oriel.decorations.provider(spec, fn) end
 
 ---@class oriel.diagnostics
 oriel.diagnostics = {}
@@ -391,15 +391,15 @@ function oriel.secret.has(name) end
 ---@class oriel.session
 oriel.session = {}
 
---- Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }.
----@param name string
----@param fn function
-function oriel.session.chips(name, fn) end
+--- Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }. Takes its spec too: { name, run = fn }.
+---@param spec any
+---@param fn? function
+function oriel.session.chips(spec, fn) end
 
---- Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it.
----@param name string
----@param fn function
-function oriel.session.done(name, fn) end
+--- Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it. Takes its spec too: { name, run = fn }.
+---@param spec any
+---@param fn? function
+function oriel.session.done(spec, fn) end
 
 --- Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON.
 ---@param id string
@@ -417,10 +417,10 @@ function oriel.session.kept(id, key) end
 ---@param spec table
 function oriel.session.kind(spec) end
 
---- Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it.
----@param name string
----@param fn function
-function oriel.session.unsaved(name, fn) end
+--- Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it. Takes its spec too: { name, run = fn }.
+---@param spec any
+---@param fn? function
+function oriel.session.unsaved(spec, fn) end
 
 ---@class oriel.ship
 oriel.ship = {}
@@ -443,10 +443,10 @@ function oriel.start.add(spec) end
 ---@class oriel.status
 oriel.status = {}
 
---- A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it.
----@param name string
----@param fn function
-function oriel.status.rule(name, fn) end
+--- A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it. Takes its spec too: { name, run = fn }.
+---@param spec any
+---@param fn? function
+function oriel.status.rule(spec, fn) end
 
 ---@class oriel.thread
 oriel.thread = {}
@@ -593,10 +593,10 @@ function oriel.ui.toggle(spec) end
 ---@class oriel.view
 oriel.view = {}
 
---- Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes.
----@param id string
----@param fn function
-function oriel.view.override(id, fn) end
+--- Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes. Takes its spec too: { id, run = fn }.
+---@param spec any
+---@param fn? function
+function oriel.view.override(spec, fn) end
 
 ---@class oriel.wasm
 oriel.wasm = {}

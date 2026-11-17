@@ -43,7 +43,7 @@ var Reference = map[string][]RefFunc{
 	},
 	"decorations": {
 		{Call: "oriel.decorations.changed(name)", Doc: "Says the decorations provider name gives have changed, so it's asked again: what they're made from moved.", Cap: "ui"},
-		{Call: "oriel.decorations.provider(name, fn)", Doc: "Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name).", Cap: "ui"},
+		{Call: "oriel.decorations.provider(spec, fn?)", Doc: "Decorate the lines in view: fn(buf, top, bottom) returns a list of { line, sign, hl, text, bg, command, args, tooltip, menu, on_hover, every_line } (1-based lines; bg draws the text as a chip on that colour; a sign runs command with args when clicked, menu = { { label, command, args } } is what a right-click on it offers, and on_hover shows it only while the pointer is on its line, as the + that comments on a line does; every_line puts the sign on every line instead of line, its args given that line and {line} in its tooltip the number). fn is called again when the buffer's text or the lines in view change, or after decorations.changed(name). Takes its spec too: { name, run = fn }.", Cap: "ui"},
 	},
 	"diagnostics": {
 		{Call: "oriel.diagnostics.list()", Doc: "Every diagnostic, each { file, line, col, end_col, severity, message, owner }, 1-based.", Cap: "ui"},
@@ -107,12 +107,12 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.secret.has(name)", Doc: "Whether a secret the plugin declares (permissions.secrets) is set: a bool, never its value. Use it to keep the plugin's entries hidden until its key is set: shown = function() return oriel.secret.has('LINEAR_TOKEN') end.", Cap: "target"},
 	},
 	"session": {
-		{Call: "oriel.session.chips(name, fn)", Doc: "Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }.", Cap: "session.control"},
-		{Call: "oriel.session.done(name, fn)", Doc: "Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it.", Cap: "session.control"},
+		{Call: "oriel.session.chips(spec, fn?)", Doc: "Chips for every session, after its kind's, wherever a session is described: fn(session) returns a list of texts or { text, help, link }. Takes its spec too: { name, run = fn }.", Cap: "session.control"},
+		{Call: "oriel.session.done(spec, fn?)", Doc: "Says when a session's work looks finished: fn(session) returns why ('You approved the PR.'), or nil. Closing the tab of a finished session offers to archive or delete it. Takes its spec too: { name, run = fn }.", Cap: "session.control"},
 		{Call: "oriel.session.keep(id, key, value)", Doc: "Keep a value for a session (the one in front when id is empty) under key, nil to forget it: the window keeps it as the session is switched away from and back, and across restarts, until the session is gone. Use your plugin's name in key. value crosses as JSON.", Cap: "session.control"},
 		{Call: "oriel.session.kept(id, key)", Doc: "What oriel.session.keep last kept for a session (the one in front when id is empty) under key, or nil.", Cap: "session.control"},
 		{Call: "oriel.session.kind(spec)", Doc: "A kind of session, shadowing a built-in of the same name: { name, title, desc, about, from (prompt, pr, name or dir), pack, worktrees (now, start-work, pr, none or init), needs_repo, launcher, order, prompt_file, agent_gate (the agent's own gate: ask, light, auto or bypass; ask by default), opens = { { command, args } }, can = { capabilities: add-projects, ships, owns-changes, next-pr, delete, owns-branch, comments-in-diff, restarts-agent, deletes-on-end }, gates = { ship gate names }, label = fn(session), chips = fn(session), prepare = fn(spec) }. label returns how a session of it reads; chips a list of texts or { text, help } for its card; prepare returns the fields of the spec to change before it starts (name, title, prompt, context, branch, base).", Cap: "session.control"},
-		{Call: "oriel.session.unsaved(name, fn)", Doc: "Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it.", Cap: "session.control"},
+		{Call: "oriel.session.unsaved(spec, fn?)", Doc: "Says what ending a session would lose that only your plugin knows of: fn(session) returns what ('Your review isn't sent.'), or nil. Closing or ending the session asks first, and lists it. Takes its spec too: { name, run = fn }.", Cap: "session.control"},
 	},
 	"ship": {
 		{Call: "oriel.ship.action(spec)", Doc: "Add a button to a raised pull request, beside Ready for review and Open on GitHub (the Ship page and the Pull request panel): { name, label = 'text' or fn(pr), command, args, run = fn(pr), order (50 by default), help }. pr is { session, project, repo (owner/name), number, title, url, state (open or closed), draft, merged }; a label function returning nil leaves the button off that PR, and runs as the page is drawn, so keep it quick. A click runs command with args and pr's fields, or run(pr).", Cap: "ui"},
@@ -122,7 +122,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.start.add(spec)", Doc: "Add an action to the start view: { name, icon, title, desc, command, args, order (50 by default), link, note, shown, unlisted }. It's dimmed while the command isn't available, and listed only while shown = fn() returns true, when there's a shown. link = true makes it a small link under the actions. note = fn() is its figure, beside its title. unlisted = true draws nothing: only its command's keys work on the start view, which keeps other keys out.", Cap: "ui"},
 	},
 	"status": {
-		{Call: "oriel.status.rule(name, fn)", Doc: "A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it.", Cap: "ui"},
+		{Call: "oriel.status.rule(spec, fn?)", Doc: "A status rule named name, which a later rule of the name replaces: fn(session) returns a status colour name, or nil to leave it. Takes its spec too: { name, run = fn }.", Cap: "ui"},
 	},
 	"thread": {
 		{Call: "oriel.thread.list()", Doc: "The requests (threads) of the session in front, each { id, title, status (open, resolved, deferred, dismissed), file, line, busy (the agent has it), urgent, btw, comments (how many), last (the last comment's text), author (who said it: you, agent, or codehost for a reviewer's comment mirrored from a code host) }.", Cap: "agent.read"},
@@ -158,7 +158,7 @@ var Reference = map[string][]RefFunc{
 		{Call: "oriel.ui.toggle(spec)", Doc: "An on/off switch: { on, on_change = fn(on), id, label }.", Cap: "ui"},
 	},
 	"view": {
-		{Call: "oriel.view.override(id, fn)", Doc: "Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes.", Cap: "ui"},
+		{Call: "oriel.view.override(spec, fn?)", Doc: "Register a view under id, replacing any of that id (a built-in panel, the status line): fn(ctx) returns oriel.ui nodes. Takes its spec too: { id, run = fn }.", Cap: "ui"},
 	},
 	"wasm": {
 		{Call: "oriel.wasm.load(path, opts?)", Doc: "Load a WASM module: path is the plugin's own .wasm (relative to its directory: no grant needed), or a file its fs.read grant covers. It runs in wazero with no way out but the host functions it imports from oriel (request, notify, log), each checked against the plugin's grants. opts: on = { method = fn(params) } answering its requests before the host. Returns a module: mod:call(fn, ...) with numbers, mod:call_json(fn, value) with JSON (both answer at once; a process's proc:request answers in a callback), mod:exports(), mod:close(); or nil and why, when the file isn't there.", Cap: "target"},

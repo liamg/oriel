@@ -208,6 +208,27 @@ func optsAndFn(first, second any) (script.Table, *script.Fn, error) {
 	return nil, nil, fmt.Errorf("options are a table, not %T", opts)
 }
 
+// specOr reads a contribution given as its spec table, { <key> = name, run = fn }, the canonical shape, or as
+// (name, fn). Either way it needs both.
+func specOr(first any, fn *script.Fn, key string) (string, *script.Fn, error) {
+	var name string
+	switch v := first.(type) {
+	case string:
+		name = v
+	case script.Table:
+		name = str(v, key)
+		if run, ok := v["run"].(*script.Fn); ok && fn == nil {
+			fn = run
+		}
+	default:
+		return "", nil, fmt.Errorf("a %s or a spec table { %s, run = fn }, not %T", key, key, first)
+	}
+	if name == "" || fn == nil {
+		return "", nil, fmt.Errorf("it needs a %s and a function: { %s, run = fn }, or (%s, fn)", key, key, key)
+	}
+	return name, fn, nil
+}
+
 // str reads a string field of a table.
 func str(t script.Table, k string) string {
 	s, _ := t[k].(string)

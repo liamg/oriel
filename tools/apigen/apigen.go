@@ -308,7 +308,9 @@ func Docs(nss []Namespace, version string) []byte {
 		"A failure the caller may expect (a file or program that isn't there, a program that fails) is returned: nil, and why. "+
 		"A mistake in the call (a missing argument, a path out of bounds, a capability the plugin didn't declare) raises an error.\n\n"+
 		"Options go last: a call's opts table follows its function (oriel.command(name, fn, opts)). oriel.on and "+
-		"oriel.exec_async take it before the function too. Options that aren't a table are a mistake in the call.\n", version)
+		"oriel.exec_async take it before the function too. Options that aren't a table are a mistake in the call.\n\n"+
+		"A contribution is given as its spec table: { name, run = fn, order, … } (oriel.agent.forker{ name, run }). Those "+
+		"that also take (name, fn) take their spec table as well.\n", version)
 	for _, ns := range nss {
 		name := "oriel"
 		if ns.Name != "" {

@@ -105,6 +105,46 @@ func TestLuaSessionDone(t *testing.T) {
 	}
 }
 
+// A contribution's spec table, { name, run = fn }, is its canonical shape (docs/api.md), so the bindings that take
+// (name, fn) take one too; a call that gives neither a name nor a function raises.
+func TestLuaPositionalContributionsTakeASpecTable(t *testing.T) {
+	s := apptest.New(t, apptest.Options{})
+	for _, line := range []string{
+		`L.session.done{ name = "incident", run = function(se) return "The page is resolved." end }`,
+		`L.session.unsaved{ name = "notes", run = function(se) return "Your notes aren't saved." end }`,
+		`L.session.chips{ name = "pager", run = function(se) return { "P1" } end }`,
+		`L.status.rule{ name = "red", run = function(sess) return "error" end }`,
+		`L.decorations.provider{ name = "todo", run = function() return {} end }`,
+		`L.view.override{ id = "my.panel", run = function() return L.ui.text("mine") end }`,
+	} {
+		s.Lua(line)
+	}
+	se := core.SessionState{Name: "pager"}
+	if why := registry.Done(s.Registry(), se); why != "The page is resolved." {
+		t.Errorf("done = %q", why)
+	}
+	if what := registry.Unsaved(s.Registry(), se); len(what) != 1 || what[0] != "Your notes aren't saved." {
+		t.Errorf("unsaved = %q", what)
+	}
+	if chips := registry.Chips(s.Registry(), se); len(chips) != 1 || chips[0].Text != "P1" {
+		t.Errorf("chips = %+v", chips)
+	}
+	if rules := s.Registry().Contributions("status.rule"); len(rules) != 1 || rules[0].(registry.StatusRule).Name != "red" {
+		t.Errorf("status rules = %+v", rules)
+	}
+	for _, line := range []string{
+		`L.session.done{ name = "x" }`,
+		`L.session.done{ run = function() end }`,
+		`L.status.rule(7, function() end)`,
+		`L.decorations.provider("todo")`,
+		`L.view.override{ id = "x" }`,
+	} {
+		if err := s.LuaErr(line); err == "" {
+			t.Errorf("%s: no error", line)
+		}
+	}
+}
+
 // oriel.session.keep keeps a value for a session, which oriel.session.kept reads back after the Lua's reloaded;
 // nil forgets it.
 func TestLuaSessionKeep(t *testing.T) {
