@@ -51,7 +51,7 @@ func (x *Machine) Activate(_ context.Context, h plugin.Host) error {
 	if x.Load != nil {
 		x.shown.Want = x.Load.Want
 	}
-	x.Add(h.Framed(x.shown.Framed))
+	x.Add(h.Framed(x.shown.EndFrame))
 	x.Add(registry.DisposeFunc(x.shown.Drop))
 	x.Add(h.Subscribe(core.Filter{}, func(ev core.Event) {
 		if ev, ok := ev.(core.MachineChanged); ok {

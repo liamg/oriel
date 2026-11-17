@@ -40,7 +40,7 @@ func TestTimesKeepsSteadySlowness(t *testing.T) {
 	if times[9] != 20*time.Microsecond {
 		t.Errorf("step 9 slow in one round measured %v, want the 20µs of its other rounds", times[9])
 	}
-	if p := Pct(times, 99); p != times[5] {
+	if p := Percentile(times, 99); p != times[5] {
 		t.Errorf("p99 %v, want the slowest step's %v", p, times[5])
 	}
 }

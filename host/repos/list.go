@@ -175,8 +175,8 @@ func (r *repoList) find(ref string) (core.Repo, bool) {
 	return core.Repo{}, false
 }
 
-// Changed tells the store the list as it is now.
-func (x *Registry) Changed(added ...core.RepoID) {
+// EmitChanged tells the store the list as it is now.
+func (x *Registry) EmitChanged(added ...core.RepoID) {
 	_ = x.st.Emit(core.ReposChanged{Repos: x.list.all(), Added: added})
 }
 
@@ -184,7 +184,7 @@ func (x *Registry) Changed(added ...core.RepoID) {
 func (x *Registry) Add(ctx context.Context, path string, src core.RepoSource) (core.Repo, error) {
 	r, added, err := x.list.add(ctx, path, src)
 	if err == nil && added {
-		x.Changed(r.ID)
+		x.EmitChanged(r.ID)
 	}
 	return r, err
 }
@@ -204,7 +204,7 @@ func (x *Registry) Resolve(ctx context.Context, ref string) (core.Repo, error) {
 	if err := x.list.used(r.ID); err != nil {
 		x.env.Log.Warn("repos.json", "err", err)
 	}
-	x.Changed()
+	x.EmitChanged()
 	return r, nil
 }
 
@@ -242,7 +242,7 @@ func (x *Registry) RemoveRepo(id core.RepoID) (err error) {
 	if _, err := x.list.remove(r.ID); err != nil {
 		return err
 	}
-	x.Changed()
+	x.EmitChanged()
 	return nil
 }
 

@@ -312,7 +312,7 @@ func (h *session) turnEnd(ev agent.TurnEnd, now time.Time) {
 			a.Stats.ContextMax = u.ContextMax
 		}
 		if !started.IsZero() {
-			a.Stats.Running += int64(now.Sub(started).Seconds())
+			a.Stats.TurnSeconds += int64(now.Sub(started).Seconds())
 		}
 	})
 	chaos.Sleep() // what follows the end lands a while after it shows

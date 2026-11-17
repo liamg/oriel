@@ -22,8 +22,8 @@ type Ships struct {
 
 // Deps are what it needs of the rest of the host.
 type Deps struct {
-	Kinds hostcore.Kinds
-	Keyed hostcore.Keyed
+	Kinds          hostcore.Kinds
+	RunAwaitingKey hostcore.RunAwaitingKey
 	// Wake hands a session's agent what's new, starting it if it isn't running.
 	Wake func(id core.SessionID)
 	// BranchRenamed records a project's branch's new name in its workspace's manifest.

@@ -160,7 +160,7 @@ func (x *Ship) readPRs(ctx context.Context, id core.SessionID) {
 	}
 	for _, s := range ships {
 		if strings.Contains(strings.ToLower(s.HostError), "rate limit") {
-			x.budget.Limited()
+			x.budget.BackOff()
 		}
 	}
 	x.mu.Lock()

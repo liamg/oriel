@@ -30,7 +30,7 @@ func (s *Scene) HoldsFrameBudget(name string, budget time.Duration, n int, setup
 		s.RunQueued()
 		s.Frame()
 	})
-	p50, p99, worst := perf.Pct(times, 50), perf.Pct(times, 99), perf.Pct(times, 100)
+	p50, p99, worst := perf.Percentile(times, 50), perf.Percentile(times, 99), perf.Percentile(times, 100)
 	s.T.Logf("%s: p50 %v, p99 %v, worst %v a frame over %d", name, p50, p99, worst, n)
 	if p99 > budget {
 		s.T.Errorf("%s: p99 %v a frame, budget %v", name, p99, budget)

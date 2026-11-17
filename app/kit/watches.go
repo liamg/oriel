@@ -257,8 +257,8 @@ func (b *Budget) Interval(maxAge time.Duration) time.Duration {
 	return d
 }
 
-// Limited says the API refused for its rate limit: intervals double for the next quarter hour.
-func (b *Budget) Limited() {
+// BackOff says the API refused for its rate limit: intervals double for the next quarter hour.
+func (b *Budget) BackOff() {
 	b.mu.Lock()
 	b.backed = time.Now().Add(15 * time.Minute)
 	b.mu.Unlock()

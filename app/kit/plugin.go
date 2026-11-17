@@ -190,8 +190,8 @@ func (w *WhileShown) Keep() {
 	}
 }
 
-// Framed lets go if no build kept it this frame.
-func (w *WhileShown) Framed() {
+// EndFrame lets go if no build kept it this frame.
+func (w *WhileShown) EndFrame() {
 	if !w.kept {
 		w.Drop()
 	}

@@ -14,11 +14,11 @@ func TestPct(t *testing.T) {
 		p    float64
 		want time.Duration
 	}{{50, 50 * time.Millisecond}, {99, 99 * time.Millisecond}, {100, 100 * time.Millisecond}, {0, time.Millisecond}} {
-		if got := d.Pct(c.p); got != c.want {
+		if got := d.Percentile(c.p); got != c.want {
 			t.Errorf("Pct(%v) = %v, want %v", c.p, got, c.want)
 		}
 	}
-	if (Durations{}).Pct(50) != 0 {
+	if (Durations{}).Percentile(50) != 0 {
 		t.Error("empty Pct should be 0")
 	}
 }

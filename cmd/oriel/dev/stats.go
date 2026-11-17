@@ -9,8 +9,8 @@ import (
 // Durations collects samples and reports percentiles.
 type Durations []time.Duration
 
-// Pct returns the p-th percentile (nearest rank), or 0 with no samples.
-func (d Durations) Pct(p float64) time.Duration {
+// Percentile returns the p-th percentile (nearest rank), or 0 with no samples.
+func (d Durations) Percentile(p float64) time.Duration {
 	if len(d) == 0 {
 		return 0
 	}
@@ -21,7 +21,7 @@ func (d Durations) Pct(p float64) time.Duration {
 }
 
 func (d Durations) String() string {
-	return fmt.Sprintf("n=%d p50=%s p99=%s max=%s", len(d), ms(d.Pct(50)), ms(d.Pct(99)), ms(d.Pct(100)))
+	return fmt.Sprintf("n=%d p50=%s p99=%s max=%s", len(d), ms(d.Percentile(50)), ms(d.Percentile(99)), ms(d.Percentile(100)))
 }
 
 func ms(d time.Duration) string { return fmt.Sprintf("%.2fms", float64(d.Microseconds())/1000) }

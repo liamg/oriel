@@ -65,7 +65,7 @@ func (x *Registry) ScanRepos(ctx context.Context, all bool) (added []core.Repo, 
 		for i, r := range added {
 			ids[i] = r.ID
 		}
-		x.Changed(ids...)
+		x.EmitChanged(ids...)
 	}
 	return added, nil
 }

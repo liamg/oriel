@@ -469,7 +469,7 @@ func (e *Explorer) build(c *ui.Ctx) {
 			e.activate(res.Activated, sc)
 		}
 		if res.Toggled != "" {
-			e.scratch.Opened(res.Toggled, scratchID)
+			e.scratch.ReadOpened(res.Toggled, scratchID)
 		}
 		if s, ok := e.hunksLoading(sc); ok {
 			c.Row("hunks", ui.Style{W: ui.Flex(1), Pad: ui.PadXY(14, 6)}, func(c *ui.Ctx) {
