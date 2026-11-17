@@ -156,29 +156,17 @@ func Builtins(h Host) map[string]Builtin {
 			}
 			return mcp.TextResult(addedText(a), false), nil
 		})
-	add("ask_user_to_run", "Ask the user to run a command on their machine that the sandbox cannot (docker, tilt, anything needing the host). They can run it themselves or have Oriel run it on the host for them, once. cwd is the workspace root by default, a path relative to it, or an absolute host path. Blocks until they answer; returns the output, or their note. Never use it to install dependencies: that runs the repo's own scripts on the host; use oriel__ssh_agent and install in the sandbox.",
+	add("ask_user_to_run", "Ask the user to let Oriel run a command on their machine that the sandbox cannot (docker, tilt, anything needing the host), once. cwd is the workspace root by default, a path relative to it, or an absolute host path. Blocks until they answer; returns the command's output, or their note if they refuse. Never use it to install dependencies: that runs the repo's own scripts on the host; use oriel__ssh_agent and install in the sandbox.",
 		schema(map[string]any{"command": strProp, "why": strProp, "cwd": strProp}, "command", "why"), true,
 		func(ctx context.Context, args json.RawMessage) (mcp.CallResult, error) {
-			ans, _ := AnswerFrom(ctx)
-			if ans.Run {
-				var in struct {
-					Command string `json:"command"`
-					Cwd     string `json:"cwd"`
-				}
-				if err := decodeArgs(args, &in); err != nil {
-					return toolResult(err, ""), nil
-				}
-				return h.RunOnHost(ctx, in.Command, in.Cwd), nil
+			var in struct {
+				Command string `json:"command"`
+				Cwd     string `json:"cwd"`
 			}
-			var sb strings.Builder
-			sb.WriteString("The user says they ran it.")
-			if n := strings.TrimSpace(ans.Note); n != "" {
-				sb.WriteString(" Their note: " + n)
+			if err := decodeArgs(args, &in); err != nil {
+				return toolResult(err, ""), nil
 			}
-			if out := h.RunTail(); out != "" {
-				sb.WriteString("\n\nThe end of the terminal:\n" + out)
-			}
-			return mcp.TextResult(sb.String(), false), nil
+			return h.RunOnHost(ctx, in.Command, in.Cwd), nil
 		})
 	add("ssh_agent", "Let the sandbox use the user's ssh-agent for a few minutes (at most 5): for cloning or installing dependencies from private repositories over ssh. The keys stay on the host; each use may need the user's security-key touch.",
 		schema(map[string]any{"why": strProp, "minutes": map[string]any{"type": "integer", "minimum": 1, "maximum": 5}}, "why"), false,

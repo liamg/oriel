@@ -82,7 +82,7 @@ func (g gatewayHost) Approve(ctx context.Context, r gateway.Request) (gateway.An
 	if !v.Allow {
 		return gateway.Answer{Decision: gateway.Deny, By: v.By, Note: v.Note}, nil
 	}
-	ans := gateway.Answer{Decision: gateway.Once, Run: r.Tool == gateway.Prefix+"ask_user_to_run"}
+	ans := gateway.Answer{Decision: gateway.Once}
 	if g.b.ruled(ask.Rule) {
 		ans.Decision = gateway.Session
 	}
@@ -280,8 +280,6 @@ func (g gatewayHost) RunOnHost(ctx context.Context, command, cwd string) mcp.Cal
 	}
 	return gateway.HostRun(ctx, dir, command)
 }
-
-func (g gatewayHost) RunTail() string { return "" }
 
 func (g gatewayHost) SSHAgent(_ context.Context, d time.Duration) (time.Time, error) {
 	return g.b.ssh.Grant(d)
