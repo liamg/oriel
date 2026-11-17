@@ -240,7 +240,7 @@ func reviewSessionScene(t *testing.T, provider string) (*rig, *ghtest.Server, gh
 	head := strings.TrimSpace(up.Git("rev-parse", "HEAD"))
 	up.Git("push", "-q", "origin", fmt.Sprintf("HEAD:refs/pull/%d/head", pr.Number))
 	hub.SetPRSize("acme/pricing", pr.Number, ghtest.PRSize{Author: "bob", HeadSHA: head})
-	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr.URL, Provider: provider, Repos: []core.RepoID{core.RepoID(co.Dir)}})
+	id := r.start(core.SessionSpec{Kind: core.KindReview, PR: pr.URL, PRRef: fmt.Sprintf("pull/%d/head", pr.Number), Provider: provider, Repos: []core.RepoID{core.RepoID(co.Dir)}})
 	return r, hub, pr, head, id
 }
 

@@ -13,11 +13,10 @@ import (
 	"github.com/liamg/oriel/host/hostapi"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/gitx"
 )
 
-// addPRProject fetches the PR's head (spec.PRRef, else GitHub's pull/N/head) and pins a worktree there.
+// addPRProject fetches the PR's head from spec.PRRef and pins a worktree there.
 func addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, spec core.SessionSpec) (ManifestEntry, error) {
 	from, ref, err := prRefs(spec.PR, spec.PRRef, root)
 	if err != nil {
@@ -37,16 +36,12 @@ func addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, sp
 	return p, gitx.Repo{Dir: filepath.Join(root, p.Dir)}.SetBase(ctx, "origin/"+base)
 }
 
-// prRefs are where a review's PR is fetched from (from, else GitHub's pull/N/head) and the ref it's kept at.
+// prRefs are where a review's PR is fetched from, as its code host said, and the ref it's kept at.
 func prRefs(url, from, root string) (string, string, error) {
-	if from = strings.TrimSpace(from); from != "" {
-		return from, "refs/oriel/pr/" + filepath.Base(root), nil
+	if from = strings.TrimSpace(from); from == "" {
+		return "", "", fmt.Errorf("no code host says where %s is fetched from", url)
 	}
-	_, n, err := gh.ParsePR(url)
-	if err != nil {
-		return "", "", err
-	}
-	return fmt.Sprintf("pull/%d/head", n), fmt.Sprintf("refs/oriel/pr/%d", n), nil
+	return from, "refs/oriel/pr/" + filepath.Base(root), nil
 }
 
 func fetchPR(ctx context.Context, repo, from, ref string) error {
