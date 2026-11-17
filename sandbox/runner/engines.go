@@ -21,6 +21,8 @@ type Engine struct {
 	Fix string
 	// Helper is the sandbox helper its containers run (sandbox.HelperRunner); none until the host hands it over.
 	Helper func() ([]byte, error)
+	// Builds builds the base image when a health check finds it missing; its owner closes it.
+	Builds *Builds
 }
 
 // WithHelper is b running helper's binary in its containers (sandbox.HelperRunner).
@@ -146,7 +148,7 @@ func (b Engine) Health(ctx context.Context, cfg sandbox.Config) []sandbox.Proble
 	if err != nil {
 		return []sandbox.Problem{{Code: "engine-missing", Message: err.Error(), Fix: b.Fix, Blocking: true}}
 	}
-	return Health(ctx, cfg, b.Fix, b.Helper)
+	return Health(ctx, cfg, b.Fix, b.Helper, b.Builds)
 }
 
 func (b Engine) Sweep(ctx context.Context, attached func(root string) bool) []string {

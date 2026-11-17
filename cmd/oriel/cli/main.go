@@ -102,7 +102,7 @@ func runApp(args []string) {
 	cfg.Closed = watch.start
 	go func() {
 		err := app.Run(context.Background(), be, cfg)
-		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close() }, stopProfile))
+		os.Exit(shutdown(err, cfg.Logs, cancel, func() { w.Close(); sandboxes.Close() }, stopProfile))
 	}()
 	gio.Main()
 }
