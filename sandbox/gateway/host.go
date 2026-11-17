@@ -41,8 +41,6 @@ type Host interface {
 	// workspace root by default, relative to it, or absolute. HostRun is the
 	// usual implementation, once the directory is resolved.
 	RunOnHost(ctx context.Context, command, cwd string) mcp.CallResult
-	// RunTail is the end of the terminal the user ran a command in themselves.
-	RunTail() string
 	// SSHAgent opens the sandbox's ssh-agent socket for d (at most five
 	// minutes) and says until when.
 	SSHAgent(ctx context.Context, d time.Duration) (time.Time, error)

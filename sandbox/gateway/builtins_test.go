@@ -75,8 +75,6 @@ func (f *fakeHost) RunOnHost(ctx context.Context, command, _ string) mcp.CallRes
 	return HostRun(ctx, f.dir, command)
 }
 
-func (f *fakeHost) RunTail() string { return "$ make up\nready" }
-
 func (f *fakeHost) SSHAgent(context.Context, time.Duration) (time.Time, error) {
 	return time.Date(2026, 1, 1, 12, 0, 0, 0, time.Local), nil
 }
@@ -119,19 +117,17 @@ func TestHostToolsNameTheirProject(t *testing.T) {
 	}
 }
 
+// Allowing ask_user_to_run runs the command on the host, once; refusing it runs nothing.
 func TestAskUserToRun(t *testing.T) {
 	h := newFakeHost(t)
 	g := &Gateway{Builtins: Builtins(h), Approve: func(context.Context, Request) (Answer, error) {
-		return Answer{Decision: Once, Note: "done it"}, nil
+		return Answer{Decision: Deny, Note: "not now"}, nil
 	}}
 	res, _ := g.Call(t.Context(), "oriel__ask_user_to_run", []byte(`{"command":"make up","why":"docker"}`))
-	if res.IsError || !strings.Contains(res.Text(), "The user says they ran it. Their note: done it") || !strings.Contains(res.Text(), "ready") {
-		t.Fatalf("ran it themselves: %q", res.Text())
+	if !res.IsError || !strings.Contains(res.Text(), "not now") || len(h.ran) != 0 {
+		t.Fatalf("refused: %q, ran %q", res.Text(), h.ran)
 	}
-	if len(h.ran) != 0 {
-		t.Fatalf("ran on the host without Run: %q", h.ran)
-	}
-	g.Approve = func(context.Context, Request) (Answer, error) { return Answer{Decision: Once, Run: true}, nil }
+	g.Approve = func(context.Context, Request) (Answer, error) { return Answer{Decision: Once}, nil }
 	res, _ = g.Call(t.Context(), "oriel__ask_user_to_run", []byte(`{"command":"echo hi","why":"docker"}`))
 	if res.IsError || res.Text() != "Ran on the host.\n\nhi\n" {
 		t.Fatalf("run on host: %q", res.Text())

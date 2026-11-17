@@ -56,8 +56,6 @@ type Answer struct {
 	Everywhere bool   `json:"everywhere,omitempty"`
 	Note       string `json:"note,omitempty"`
 	By         string `json:"by,omitempty"` // who refused: "the user" when ""
-	// Run is the user pressing Run on host on an ask_user_to_run card.
-	Run bool `json:"run,omitempty"`
 }
 
 // Entry is one call, for the session's log.
