@@ -13,8 +13,8 @@ import (
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
-	"github.com/liamg/oriel/gh/ghtest"
+	gh "github.com/liamg/oriel/integ/github"
+	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/integ/linear/lineartest"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/registry"

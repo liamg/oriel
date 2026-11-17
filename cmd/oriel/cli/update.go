@@ -16,7 +16,7 @@ import (
 
 	"github.com/liamg/oriel/app"
 	"github.com/liamg/oriel/core/logs"
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/plugin"
 	"github.com/liamg/oriel/update"
 )

@@ -10,8 +10,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
-	"github.com/liamg/oriel/gh/ghtest"
+	gh "github.com/liamg/oriel/integ/github"
+	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/internal/leaktest"
 )
 

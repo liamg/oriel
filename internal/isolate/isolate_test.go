@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 )
 
 func TestTestGivesItsOwnTempDir(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/registry"
 )
 

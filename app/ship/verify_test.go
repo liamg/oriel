@@ -15,7 +15,7 @@ import (
 	"github.com/liamg/oriel/app/kit"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
+	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/ui/layout"
 )

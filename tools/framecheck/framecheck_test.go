@@ -12,7 +12,7 @@ import (
 
 // scanned are the packages whose code can run in a frame.
 var scanned = []string{"app", "ui", "registry", "plugin", "render", "theme", "syntax", "gitx", "host", "core", "text", "vim",
-	"edit", "lsp", "dap", "term", "testrun", "agent", "sandbox", "script", "fswatch", "voice", "catalog", "assistant", "gh", "update"}
+	"edit", "lsp", "dap", "term", "testrun", "agent", "sandbox", "script", "fswatch", "voice", "catalog", "assistant", "integ/github", "update"}
 
 func files(t *testing.T) []ratchet.File {
 	wd, _ := os.Getwd()

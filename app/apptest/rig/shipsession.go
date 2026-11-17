@@ -7,8 +7,8 @@ import (
 	"github.com/liamg/oriel/app/github"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host"
+	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/registry"
 )
 

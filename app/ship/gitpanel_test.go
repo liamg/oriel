@@ -10,8 +10,8 @@ import (
 	"github.com/liamg/oriel/app/apptest/rig"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh/ghtest"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/registry"
 	"github.com/liamg/oriel/render"
 )

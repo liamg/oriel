@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/gh"
 	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
+	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/gateway"
 	"github.com/liamg/oriel/sandbox/mcp"
