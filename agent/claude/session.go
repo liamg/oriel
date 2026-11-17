@@ -381,7 +381,7 @@ func (s *session) serve() {
 }
 
 func (s *session) serveConn(conn net.Conn) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	r := bufio.NewReader(conn)
 	var req request
 	if err := json.NewDecoder(r).Decode(&req); err != nil {

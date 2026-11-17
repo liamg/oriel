@@ -137,7 +137,7 @@ func patchFiles(input string, args json.RawMessage) json.RawMessage {
 		var a struct {
 			Input string `json:"input"`
 		}
-		json.Unmarshal(args, &a)
+		_ = json.Unmarshal(args, &a)
 		input = a.Input
 	}
 	type file struct {

@@ -273,7 +273,7 @@ func (b *Book) index() {
 				b.lines[line] = i
 			}
 		}
-		fmt.Fprintf(h, "%s %v %v %v %v\n", m.ID, m.Aliases, m.Rate, m.Fast, m.Tiers)
+		_, _ = fmt.Fprintf(h, "%s %v %v %v %v\n", m.ID, m.Aliases, m.Rate, m.Fast, m.Tiers)
 	}
 	b.version = hex.EncodeToString(h.Sum(nil))[:16]
 }

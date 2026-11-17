@@ -106,7 +106,7 @@ func (s *session) wait() {
 	case <-s.rpc.Done():
 	case <-time.After(2 * time.Second):
 	}
-	s.rpc.Close()
+	_ = s.rpc.Close()
 	ev := agent.Exited{}
 	if err != nil {
 		ev.Err = err.Error()
@@ -309,17 +309,17 @@ func (s *session) Close() error {
 		s.term.releaseAll()
 		if has(s.caps.SessionCapabilities.Close) && s.ID() != "" {
 			ctx, cancel := context.WithTimeout(context.Background(), stopTimeout)
-			s.rpc.Call(ctx, "session/close", map[string]any{"sessionId": s.ID()}, nil)
+			_ = s.rpc.Call(ctx, "session/close", map[string]any{"sessionId": s.ID()}, nil)
 			cancel()
 		}
-		s.proc.Stdin().Close()
+		_ = s.proc.Stdin().Close()
 		select {
 		case <-s.exited:
 		case <-time.After(stopTimeout):
-			s.proc.Kill()
+			_ = s.proc.Kill()
 			<-s.exited
 		}
-		s.tools.Close()
+		_ = s.tools.Close()
 		s.mu.Lock()
 		s.closed = true
 		close(s.events)
@@ -442,7 +442,7 @@ func (s *session) flush() {
 // toolCall merges a tool call's report into what's known of it, and says its call and its result once each.
 func (s *session) toolCall(c toolCall, created bool, raw json.RawMessage) {
 	var fields map[string]json.RawMessage
-	json.Unmarshal(raw, &fields)
+	_ = json.Unmarshal(raw, &fields)
 	s.mu.Lock()
 	tc := s.calls[c.ID]
 	if tc == nil || created {
@@ -562,7 +562,7 @@ func (c *toolCall) result() agent.ToolResult {
 func (s *session) onRequest(r *jsonrpc.Request) {
 	go func() {
 		res, err := s.answer(r.Context(), r.Method, r.Params)
-		r.Reply(res, err)
+		_ = r.Reply(res, err)
 	}()
 }
 

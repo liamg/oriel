@@ -17,6 +17,6 @@ func GetJSON(ctx context.Context, c *http.Client, url string, header http.Header
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return json.NewDecoder(resp.Body).Decode(v)
 }

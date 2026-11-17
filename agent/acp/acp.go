@@ -179,7 +179,7 @@ func modelOf(opts []configOption, asked string) string {
 			return asked
 		}
 		var cur string
-		json.Unmarshal(o.CurrentValue, &cur)
+		_ = json.Unmarshal(o.CurrentValue, &cur)
 		return cur
 	}
 	return ""
@@ -206,12 +206,12 @@ func (p *Provider) start(ctx context.Context, resume string, spec agent.StartSpe
 	}
 	proc, err := ex.Start(ctx, cmd)
 	if err != nil {
-		tools.Close()
+		_ = tools.Close()
 		return nil, fmt.Errorf("%s: %w", p.Name, err)
 	}
 	s := newSession(p, spec, ex, proc, tools, errs)
 	fail := func(err error) (agent.Session, error) {
-		s.Close()
+		_ = s.Close()
 		if t := errs.String(); t != "" && !errors.As(err, new(agent.AuthExpired)) {
 			err = fmt.Errorf("%w\n%s", err, t)
 		}

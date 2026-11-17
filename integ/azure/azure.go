@@ -89,7 +89,7 @@ func (c Client) do(ctx context.Context, site Site, method, raw string, in, out a
 		var e struct {
 			Message string `json:"message"`
 		}
-		json.Unmarshal(body, &e)
+		_ = json.Unmarshal(body, &e)
 		return &Error{Status: status, Message: cmp.Or(e.Message, strconv.Itoa(status))}
 	}
 	if out == nil || len(body) == 0 {

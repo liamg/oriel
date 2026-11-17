@@ -227,7 +227,7 @@ func (ts *terminals) answer(ctx context.Context, method string, params json.RawM
 		defer t.mu.Unlock()
 		return t.status(), nil
 	}
-	t.p.Kill()
+	_ = t.p.Kill()
 	if method == "terminal/release" {
 		t.stop()
 	}
@@ -251,7 +251,7 @@ func (ts *terminals) create(command string, args []string, cwd string, limit int
 		stop()
 		return nil, fmt.Errorf("%s: %w", command, err)
 	}
-	p.Stdin().Close()
+	_ = p.Stdin().Close()
 	t.p, t.stop = p, stop
 	ts.mu.Lock()
 	ts.seq++
@@ -264,7 +264,7 @@ func (ts *terminals) create(command string, args []string, cwd string, limit int
 		for {
 			n, err := out.Read(buf)
 			if n > 0 {
-				t.Write(buf[:n])
+				_, _ = t.Write(buf[:n])
 			}
 			if err != nil {
 				break
@@ -295,7 +295,7 @@ func (ts *terminals) releaseAll() {
 	ts.open = map[string]*term{}
 	ts.mu.Unlock()
 	for _, t := range open {
-		t.p.Kill()
+		_ = t.p.Kill()
 		t.stop()
 	}
 }

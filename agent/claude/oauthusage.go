@@ -38,7 +38,7 @@ func (p *Provider) apiUsage(ctx context.Context, client *http.Client, url string
 	if err != nil {
 		return core.ProviderUsage{}, true, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	b, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return core.ProviderUsage{}, true, err

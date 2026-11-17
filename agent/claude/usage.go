@@ -149,7 +149,7 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 	if err != nil {
 		return core.ProviderUsage{}, err
 	}
-	defer os.RemoveAll(state)
+	defer func() { _ = os.RemoveAll(state) }()
 	// Claude Code's own debug log of the last probe, for when it reads no windows.
 	logs := filepath.Join(dir, "debug")
 	_ = os.RemoveAll(logs)
@@ -162,7 +162,7 @@ func (p *Provider) probe(ctx context.Context) (core.ProviderUsage, error) {
 		return core.ProviderUsage{}, err
 	}
 	s := sess.(*session)
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 	ask := time.NewTicker(probeAsk)
 	defer ask.Stop()
 	typed := false

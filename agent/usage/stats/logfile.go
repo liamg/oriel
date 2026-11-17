@@ -18,7 +18,7 @@ func tail(path string, offset int64) (data []byte, size int64, shrunk bool, err 
 	if err != nil {
 		return nil, 0, false, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	fi, err := f.Stat()
 	if err != nil {
 		return nil, 0, false, err
@@ -37,7 +37,7 @@ func tail(path string, offset int64) (data []byte, size int64, shrunk bool, err 
 	if err != nil {
 		return nil, 0, false, err
 	}
-	defer z.Close()
+	defer func() { _ = z.Close() }()
 	if n, err := io.CopyN(io.Discard, z, offset); n < offset {
 		if err == io.EOF {
 			return nil, fi.Size(), true, nil

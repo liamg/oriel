@@ -127,7 +127,7 @@ func Serve(r io.Reader, w io.Writer) error {
 			<-ready
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
-			req.Reply(s.Handle(ctx, req.Method, req.Params))
+			_ = req.Reply(s.Handle(ctx, req.Method, req.Params))
 		}()
 	}}, jsonrpc.Options{Version: "2.0"})
 	close(ready)

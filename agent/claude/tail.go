@@ -109,7 +109,7 @@ func (t *tailer) watch(done <-chan struct{}, emit func(agent.Event)) bool {
 	if err != nil {
 		return false
 	}
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	var watched []string
 	retarget := func() bool {
 		want := t.logs()

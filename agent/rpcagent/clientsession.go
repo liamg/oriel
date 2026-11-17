@@ -78,7 +78,7 @@ func (c *Client) start(ctx context.Context, resume string, spec agent.StartSpec)
 	go func() {
 		select {
 		case <-ctx.Done():
-			p.Notify("session/stop", sessionParams{Session: s.handle})
+			_ = p.Notify("session/stop", sessionParams{Session: s.handle})
 		case <-s.done:
 		}
 	}()
@@ -214,7 +214,7 @@ func (s *session) finish(drain bool) {
 		s.events.drop()
 	}
 	s.term.Close()
-	s.tools.Close()
+	_ = s.tools.Close()
 	s.c.mu.Lock()
 	var ps []*proc
 	for k, p := range s.c.procs {
@@ -254,9 +254,9 @@ type proc struct {
 func (p *proc) kill() {
 	p.stop()
 	if p.pty != nil {
-		p.pty.Close()
+		_ = p.pty.Close()
 	} else if p.p != nil {
-		p.p.Kill()
+		_ = p.p.Kill()
 	}
 }
 
@@ -331,7 +331,7 @@ func (c *Client) startProc(e execParams) error {
 	ctx, stop := context.WithCancel(context.Background())
 	pr := &proc{session: s, peer: s.peer, handle: e.Process, stop: stop}
 	out := func(stream string, b []byte) {
-		pr.peer.Notify("exec/output", output{Process: e.Process, Stream: stream, Data: b64(b)})
+		_ = pr.peer.Notify("exec/output", output{Process: e.Process, Stream: stream, Data: b64(b)})
 	}
 	var src io.Reader
 	var wait func() error
@@ -385,7 +385,7 @@ func (c *Client) startProc(e execParams) error {
 			delete(c.procs, e.Process)
 		}
 		c.mu.Unlock()
-		pr.peer.Notify("exec/exit", x)
+		_ = pr.peer.Notify("exec/exit", x)
 	}()
 	return nil
 }
