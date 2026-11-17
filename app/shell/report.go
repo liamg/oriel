@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
 	"github.com/liamg/oriel/search"
@@ -32,7 +33,7 @@ type shell struct {
 	cfg          Config
 	builtins     Builtins
 	reads        *kit.Reads    // the window's files, folders and images, read off the loop
-	polls        *kit.PollSet  // its periodic work
+	polls        *work.PollSet // its periodic work
 	tools        *search.Tools // the machine's search tools
 	store        core.Store    // cfg.Store: the state the loop and the plugins' hosts read and change
 	events       *eventTail
@@ -69,7 +70,7 @@ type shell struct {
 	launchDone   bool                         // the window has started once: what comes back at launch, comes back once
 	crashSeen    bool                         // the last run's crash report has been offered: once a launch, not each reopen
 	focus        *windowFocus                 // whether the window has the OS's focus
-	framed       kit.Signals                  // after each frame is drawn, on the loop
+	framed       work.Signals                 // after each frame is drawn, on the loop
 	frames       kit.FrameLog                 // the frames drawn: how long each took
 	claims       sync.Map                     // Host.Claim's keys held
 	kept         *keptStore                   // Host.Keep's, per session

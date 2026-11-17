@@ -10,6 +10,7 @@ import (
 	"github.com/liamg/oriel/render"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/fswatch"
 	"github.com/liamg/oriel/plugin"
@@ -52,7 +53,7 @@ func (w window) Dir() string { return w.sh.workDir() }
 
 func (w window) Hold() (release func()) { return w.sh.hold() }
 
-func (w window) Polls() *kit.PollSet { return w.sh.polls }
+func (w window) Polls() *work.PollSet { return w.sh.polls }
 
 func (w window) Frames() *kit.FrameLog { return &w.sh.frames }
 

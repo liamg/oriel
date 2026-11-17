@@ -17,6 +17,7 @@ import (
 	"github.com/liamg/oriel/app/shell/diag"
 
 	"github.com/liamg/oriel/app/kit"
+	"github.com/liamg/oriel/app/kit/work"
 	"github.com/liamg/oriel/edit"
 	"github.com/liamg/oriel/watch"
 
@@ -450,7 +451,7 @@ func newShell(cfg Config, builtins Builtins, poke func()) (*shell, func()) {
 		}
 		return 0
 	}, Clock: windowClock{sh}})
-	sh.polls, sh.tools = &kit.PollSet{}, search.NewTools()
+	sh.polls, sh.tools = &work.PollSet{}, search.NewTools()
 	sh.kept = newKeptStore(cfg.StateDir, log)
 	if cfg.StateDir != "" {
 		sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}

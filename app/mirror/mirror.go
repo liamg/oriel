@@ -182,9 +182,9 @@ func (x *Mirror) follow() {
 		}
 		id := se.ID
 		key := "mirror.sync:" + string(id)
-		need := watch.Need{MaxAge: syncPoll, Background: watch.Slow, Slow: kit.UnfocusedPoll}
+		need := watch.Need{MaxAge: syncPoll, Background: watch.Slow, Slow: work.UnfocusedPoll}
 		if !front {
-			need = watch.Need{MaxAge: reviewPoll, Background: watch.Slow, Slow: kit.UnfocusedPoll}
+			need = watch.Need{MaxAge: reviewPoll, Background: watch.Slow, Slow: work.UnfocusedPoll}
 		}
 		keep[key] = true
 		x.subs.Hold(key, m, need, func() kit.Closer {
