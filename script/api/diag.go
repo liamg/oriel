@@ -52,8 +52,6 @@ func (d Diagnostics) List() []any {
 	return out
 }
 
-// cmpOr is the first of ss that isn't empty.
-
 //oriel:api name=coverage cap=ui
 type Coverage struct{ a *APIs }
 

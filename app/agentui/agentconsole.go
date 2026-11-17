@@ -1,5 +1,5 @@
-// Package agentui is the agent's side of the window: the agent console, its prompt cards and asks, the assistant (Ori),
-// dictation, and the agent's tools a session offers.
+// Package agentui is the agent's side of the window: the agent console, its prompt cards and asks, comment threads,
+// the inbox, the requests page and a session's permissions.
 package agentui
 
 import (
