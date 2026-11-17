@@ -248,8 +248,8 @@ func (x *Requests) commands() []registry.Command {
 			x.draftFor(st, x.target(st)).compose = true
 			return x.openRequest(ctx)
 		}},
-		{ID: "request.anchor", Title: "Requests: open the selected request's anchor in the editor", Available: inFront,
-			Run: func(ctx registry.Ctx, _ registry.Args) error { return x.openAnchor(ctx) }},
+		{ID: "request.anchor", Title: "Requests: open the selected request's anchor in the editor, where it is now, or at {line}", Available: inFront,
+			Run: func(ctx registry.Ctx, a registry.Args) error { return x.openAnchor(ctx, a.Int("line")) }},
 		{ID: "request.send", Grant: string(plugin.CapAgentPrompt), Title: "Requests: send what's in the composer; {urgent} interrupts the turn", Available: inFront,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
 				st := x.state("")
@@ -538,7 +538,7 @@ func (x *Requests) send(ctx context.Context, st *requestsState, id core.ThreadID
 }
 
 // openAnchor opens the selected request's anchor in the editor.
-func (x *Requests) openAnchor(ctx context.Context) error {
+func (x *Requests) openAnchor(ctx context.Context, line int) error {
 	se, ok := x.front()
 	if !ok {
 		return errors.New("no session is in front")
@@ -547,7 +547,11 @@ func (x *Requests) openAnchor(ctx context.Context) error {
 	if !ok || t.Anchor == nil {
 		return errors.New("the request isn't anchored to a line")
 	}
-	return x.h.Run(ctx, "editor.open", registry.Args{"path": kit.AnchorPath(se, t.Anchor), "line": t.Anchor.Line})
+	path := kit.AnchorPath(se, t.Anchor)
+	if line <= 0 {
+		line = anchoredLine(x.fileLines(path), t.Anchor) + 1
+	}
+	return x.h.Run(ctx, "editor.open", registry.Args{"path": path, "line": line})
 }
 
 // run runs a command from a click, saying what went wrong in a notice.

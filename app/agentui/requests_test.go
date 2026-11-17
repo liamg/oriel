@@ -627,3 +627,25 @@ func TestQueuedEditKeepsTheToggles(t *testing.T) {
 	rig.Answered(t, r.Store, a)
 	a.Emit(agent.TurnEnd{})
 }
+
+// A request's anchored code opens in the editor from the code itself: its "open in editor" link goes to the anchor
+// where it is now, and a click on one of its lines goes to that line.
+func TestARequestsCodeOpensInTheEditor(t *testing.T) {
+	s := apptest.RequestsScene(t)
+	s.Run("request.open", registry.Args{"thread": "7d45e1a0"})
+	s.Frame()
+	s.ClickText("open in editor ↗")
+	s.Until("round.go at the anchor", func() bool {
+		w, ok := s.Editor().Window("")
+		return ok && strings.HasSuffix(w.Path, "round.go") && strings.TrimSpace(s.Line(w.Cursor.Line)) == "case 0:"
+	})
+	anchor := s.EditorWindow().Cursor.Line
+
+	s.Run("request.open", registry.Args{"thread": "7d45e1a0"})
+	s.Frame()
+	s.ClickNode(fmt.Sprintf("Open line %d in the editor", anchor))
+	s.Until("round.go at the line above the anchor", func() bool {
+		w, ok := s.Editor().Window("")
+		return ok && strings.HasSuffix(w.Path, "round.go") && w.Cursor.Line == anchor-1
+	})
+}
