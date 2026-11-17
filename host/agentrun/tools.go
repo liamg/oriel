@@ -25,14 +25,14 @@ const (
 // tools are what the agent is offered as mcp__oriel__*: the host's own, then the app's (LSP lookups, say).
 func (x *Runner) tools(h *session) []agent.Tool {
 	own := []agent.Tool{
-		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. resolve: resolve the thread after replying. " +
+		{Name: "reply", Description: "Reply in an Oriel thread. working: a progress note that keeps the thread marked in progress. The user resolves threads, not you: " +
+			"a reply that isn't working hands the thread back to them. " +
 			"On a thread from a code host (origin=\"github\", \"gitlab\"…) your reply is a draft: the user reads it and forwards it there themselves. Don't post to the code host yourself.",
-			Schema: hostcore.Schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl+`,"resolve":`+bl, "thread", "body"), Call: h.toolReply},
+			Schema: hostcore.Schema(`"thread":`+str+`,"body":`+str+`,"working":`+bl, "thread", "body"), Call: h.toolReply},
 		{Name: "thread", Description: "Read one Oriel thread in full: every comment, with nothing clipped.", ReadOnly: true,
 			Schema: hostcore.Schema(`"thread":`+str, "thread"), Call: h.toolThread},
 		{Name: "threads", Description: "List the session's Oriel threads, open and closed, each with where it is, where it came from, who started it and its first line: the thread tool reads one in full. Those mirrored from a code host include other people's comments that weren't handed to you.", ReadOnly: true,
 			Schema: hostcore.Schema(""), Call: h.toolThreads},
-		{Name: "resolve", Description: "Resolve an Oriel thread.", Schema: hostcore.Schema(`"thread":`+str+`,"summary":`+str, "thread"), Call: h.toolResolve},
 		{Name: "ask", Description: "Ask the user something in an Oriel thread and wait for the answer: the thread you're working on, where the user sees the question with its options as buttons and a field for an answer of their own. Each question has its options (header: a short label; multi: several may be picked). Returns each question with the user's answer.",
 			Schema: hostcore.Schema(`"thread":`+str+`,"questions":`+questionsType, "thread", "questions"), Call: h.toolAsk},
 		{Name: "comment", Description: `Start a thread of your own: on a line of a file (file, line, optional end_line and side "old"/"new", project in a session with more than one), or a general one with no file. severity rates a review finding: nit, low, medium, high or critical.`,
@@ -90,8 +90,8 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	if err != nil {
 		return "", err
 	}
-	working, resolve := a.Bool("working"), a.Bool("resolve")
-	if resolve || !working {
+	working := a.Bool("working")
+	if !working {
 		if err := h.refuseUnseen(t.ID); err != nil {
 			return "", err
 		}
@@ -107,16 +107,10 @@ func (h *session) toolReply(_ context.Context, raw json.RawMessage) (string, err
 	_, err = h.r.mutateThread(h.id, t.ID, func(t *core.Thread) error {
 		t.Comments = append(t.Comments, c)
 		t.Busy, t.Active = working, working
-		if resolve {
-			t.Status, t.Busy, t.Active = core.ThreadResolved, false, false
-		}
 		return nil
 	})
 	if err != nil {
 		return "", err
-	}
-	if resolve {
-		h.r.completeTasks(h.id, t.ID)
 	}
 	hostcore.Restatus(h.r.st, h.id)
 	said := "replied"
@@ -192,26 +186,6 @@ func (h *session) toolThreads(context.Context, json.RawMessage) (string, error) 
 	return renderThreadList(se), nil
 }
 
-func (h *session) toolResolve(ctx context.Context, raw json.RawMessage) (string, error) {
-	a := hostcore.ParseArgs(raw)
-	if s := strings.TrimSpace(a.Str("summary")); s != "" {
-		b, _ := json.Marshal(map[string]any{"thread": a.Str("thread"), "body": s, "resolve": true})
-		return h.toolReply(ctx, b)
-	}
-	se, err := h.r.st.Session(h.id)
-	if err != nil {
-		return "", err
-	}
-	t, err := hostcore.FindThread(se, a.Str("thread"))
-	if err != nil {
-		return "", err
-	}
-	if err := h.refuseUnseen(t.ID); err != nil {
-		return "", err
-	}
-	return "resolved", h.r.SetThread(ThreadReq{Session: h.id, Thread: t.ID, Status: core.ThreadResolved})
-}
-
 // questionsType is the ask tool's questions: each a question, with its options.
 const questionsType = `{"type":"array","minItems":1,"items":{"type":"object","properties":{"question":` + str + `,"header":` + str +
 	`,"options":{"type":"array","items":` + str + `},"multi":` + bl + `},"required":["question"]}}`
@@ -281,7 +255,7 @@ func (h *session) refuseUnseen(tid core.ThreadID) error {
 	if err != nil {
 		return err
 	}
-	return errors.New("refused: the user added comments you hadn't seen. Handle them, then reply or resolve again.\n\n" + renderThreadFull(se, t))
+	return errors.New("refused: the user added comments you hadn't seen. Handle them, then reply again.\n\n" + renderThreadFull(se, t))
 }
 
 func (h *session) toolComment(ctx context.Context, raw json.RawMessage) (string, error) {

@@ -257,11 +257,11 @@ func TestReviewSessionPRTab(t *testing.T) {
 		th, _ := sess.Snapshot().Thread(ask.ID)
 		return len(th.Undelivered()) == 0
 	})
-	a.Call(t, "reply", map[string]any{"thread": string(ask.ID), "body": "the cost isn't charged yet; the rest is optional.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(ask.ID), "body": "the cost isn't charged yet; the rest is optional."})
 	s.Until("the summary in the box", func() bool { return strings.Contains(s.Text(), "the cost isn't charged yet") })
 
 	// The agent's done; Request changes, the suggested verdict, previews the review, and Post sends it.
-	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "Looks fine bar the cost.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(se.Threads[0].ID), "body": "Looks fine bar the cost."})
 	s.Until("the review done", func() bool {
 		for _, n := range s.Store().State().Notifications {
 			if n.Title == "Review done" && strings.Contains(n.Text, "3 comments to triage") {

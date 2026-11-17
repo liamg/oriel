@@ -146,7 +146,7 @@ func (r *Jobs) Run(job string, fx FxRun) core.SessionID {
 	tid := string(se.Snapshot().Threads[0].ID)
 	switch fx.Status {
 	case host.RunDone:
-		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.Summary, "resolve": true})
+		a.Call(t, "reply", map[string]any{"thread": tid, "body": fx.Summary})
 		r.Stop(id)
 	case host.RunBlocked:
 		a.Call(t, "reply", map[string]any{"thread": tid, "body": "**Blocked:** " + fx.Summary})

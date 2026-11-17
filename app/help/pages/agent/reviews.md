@@ -76,7 +76,7 @@ Raise PR's checklist) opens the tab again, is lit while it's showing, and counts
 tab's header has a badge of where the PR stands: **Merged** (purple) or **Closed** (red) over anything a reviewer said,
 then **Changes requested** (amber), **Approved** (green), **Draft** or **Open**; from Approved on, the tab's boxes
 are bordered in that colour too. The tab's top line says where the agent and the AI review are;
-when the agent resolves its request, a **Review done** notice says how many comments it has for you to triage.
+when the agent answers its request and stops, a **Review done** notice says how many comments it has for you to triage.
 
 ### Triage {#triage}
 
@@ -118,7 +118,7 @@ In a review session, `gc` on a line of the diff opens a **comment for the author
 can edit. The verdict the kept comments call for is highlighted: **Request changes** for anything high or worse,
 **Comment** for anything at all, else **Approve**. Each opens a **preview** of exactly what's posted (the summary,
 then each comment at its line, as the author gets it); **Post** sends it (`review.pr.preview`, `review.pr.submit`),
-at the commit the review read. A comment the host won't put on the diff goes in the summary instead. With
+at the commit the review read, and resolves the review's request. A comment the host won't put on the diff goes in the summary instead. With
 `review.severity_badges` on (the default), each comment is headed with a badge of its severity.
 
 ### After it's sent {#after}
@@ -146,7 +146,7 @@ under **Sent** once you've posted) puts the session away. Closing its tab delete
 while you have comments kept or a summary written that you haven't sent ([Ending a session](shell/tabs#end)).
 
 A review the assistant started in the background opens the same way, on the Explorer and the PR's diff, the first
-time you bring it to the front. If the agent answers its request without resolving it, the review counts as done once it stops.
+time you bring it to the front.
 
 The PR's description, files, checks and reviewers are on the tab too, as its host has them. A code host that can't
 take a review from Oriel (no `submit`) says so where the verdicts would be, with **Open in** it.

@@ -23,7 +23,7 @@ func DeriveStatus(se SessionState) Status {
 			return StatusWorking
 		}
 	}
-	owes := false
+	owes, answered := false, false
 	for _, t := range se.Threads {
 		if !t.Open() || t.Btw {
 			continue
@@ -31,10 +31,11 @@ func DeriveStatus(se SessionState) Status {
 		if t.Busy {
 			return StatusWorking
 		}
-		if t.AgentAnswered() {
-			return StatusNeedsYou
-		}
+		answered = answered || t.AgentAnswered()
 		owes = owes || t.WaitsOnAgent()
+	}
+	if answered {
+		return StatusNeedsYou
 	}
 	if owes {
 		if !se.Agent.Live() {

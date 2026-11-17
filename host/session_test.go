@@ -215,7 +215,9 @@ func TestTasksFollowTheirThreads(t *testing.T) {
 	if tasks := r.session(id).Tasks; len(tasks) != 2 || tasks[0].Status != core.TaskInProgress || string(tasks[0].Thread) != tid {
 		t.Fatalf("tasks = %+v", tasks)
 	}
-	a.Call(t, "reply", map[string]any{"thread": tid, "body": "done", "resolve": true})
+	if err := r.w.SetThread(ThreadReq{Session: id, Thread: core.ThreadID(tid), Status: core.ThreadResolved}); err != nil {
+		t.Fatal(err)
+	}
 	tasks := r.session(id).Tasks
 	if tasks[0].Status != core.TaskCompleted || tasks[1].Status != core.TaskPending {
 		t.Errorf("resolving the thread should complete its task only: %+v", tasks)
@@ -577,7 +579,7 @@ func TestStartSpecCarriesThePackToolsAndGuards(t *testing.T) {
 	for _, tool := range s.Tools {
 		names = append(names, tool.Name)
 	}
-	for _, want := range []string{"reply", "thread", "resolve", "comment", "ask", "task_add", "task_update", "tasks", "projects", "commit_draft", "pr_draft", "test_run"} {
+	for _, want := range []string{"reply", "thread", "comment", "ask", "task_add", "task_update", "tasks", "projects", "commit_draft", "pr_draft", "test_run"} {
 		if !strings.Contains(" "+strings.Join(names, " ")+" ", " "+want+" ") {
 			t.Errorf("no %s tool in %v", want, names)
 		}
@@ -950,7 +952,7 @@ func TestOnlyTheRequestTheAgentIsOnIsActive(t *testing.T) {
 	a.Emit(agent.TurnStart{})
 	b, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "second"})
 	c, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "third"})
-	a.Call(t, "reply", map[string]any{"thread": string(first), "body": "Done.", "resolve": true})
+	a.Call(t, "reply", map[string]any{"thread": string(first), "body": "Done."})
 	a.Emit(agent.TurnEnd{})
 	a.WaitSent(t)
 	r.eventually(id, "both handed over busy, neither active", func(se core.SessionState) bool {
@@ -978,7 +980,7 @@ func TestOrielToolCallsSayWhatTheyDid(t *testing.T) {
 	id, a := r.workSession("Negative values round the wrong way")
 	a.WaitSent(t)
 	tid := string(r.session(id).Threads[0].ID)
-	in, _ := json.Marshal(map[string]any{"thread": tid, "body": "Fixed: `Floor` rounds toward -∞.\n\nmore", "resolve": true})
+	in, _ := json.Marshal(map[string]any{"thread": tid, "body": "Fixed: `Floor` rounds toward -∞.\n\nmore"})
 	a.Emit(agent.TurnStart{})
 	a.Emit(agent.ToolCall{ID: "r1", Tool: "mcp__oriel__reply", Input: in})
 	a.Emit(agent.ToolResult{ID: "r1", Output: "replied"})
@@ -986,7 +988,7 @@ func TestOrielToolCallsSayWhatTheyDid(t *testing.T) {
 		return slices.ContainsFunc(se.Transcript, func(it core.Item) bool { return it.ID == "r1" && it.Done })
 	})
 	it := se.Transcript[slices.IndexFunc(se.Transcript, func(it core.Item) bool { return it.ID == "r1" })]
-	if want := "Reply and resolve on “Negative values round the wrong way”: Fixed: `Floor` rounds toward -∞."; it.Title != want {
+	if want := "Reply on “Negative values round the wrong way”: Fixed: `Floor` rounds toward -∞."; it.Title != want {
 		t.Errorf("title %q, want %q", it.Title, want)
 	}
 	if !strings.HasPrefix(it.Output, "Fixed: `Floor` rounds toward -∞.") || !strings.HasSuffix(it.Output, "→ replied") {
@@ -994,49 +996,45 @@ func TestOrielToolCallsSayWhatTheyDid(t *testing.T) {
 	}
 }
 
-// Neither an answer, reply-and-resolve nor resolve goes through on a thread holding a comment the agent hasn't been
-// given: the error hands the comment over, and trying again works. A progress note still does.
-func TestResolveRefusesUnseenComments(t *testing.T) {
-	for _, tool := range []string{"reply", "answer", "resolve"} {
-		t.Run(tool, func(t *testing.T) {
-			r := newRig(t)
-			id, a := r.workSession("Fix the rounding")
-			a.WaitSent(t)
-			tid := r.session(id).Threads[0].ID
-			if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Thread: tid, Body: "and the zero case"}); err != nil {
-				t.Fatal(err)
-			}
-			a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "On it.", "working": true})
-			args := map[string]any{"thread": string(tid), "body": "Fixed.", "resolve": true}
-			switch tool {
-			case "resolve":
-				args = map[string]any{"thread": string(tid)}
-			case "answer":
-				args = map[string]any{"thread": string(tid), "body": "Fixed."}
-			}
-			name := tool
-			if tool == "answer" {
-				name = "reply"
-			}
-			_, err := a.CallErr(name, args)
-			if err == nil || !strings.Contains(err.Error(), "and the zero case") {
-				t.Fatalf("resolving with an unseen comment: err = %v", err)
-			}
-			th, _ := r.session(id).Thread(tid)
-			if !th.Open() || len(th.Undelivered()) != 0 {
-				t.Fatalf("after the refusal: open %v, undelivered %v", th.Open(), th.Undelivered())
-			}
-			if slices.ContainsFunc(th.Comments, func(c core.Comment) bool { return c.Body == "Fixed." }) {
-				t.Error("the refused reply was posted")
-			}
-			a.Call(t, name, args)
-			th, _ = r.session(id).Thread(tid)
-			if tool != "answer" && th.Open() {
-				t.Error("resolving again, with nothing unseen, left the thread open")
-			}
-			if tool == "answer" && !slices.ContainsFunc(th.Comments, func(c core.Comment) bool { return c.Body == "Fixed." }) {
-				t.Error("answering again, with nothing unseen, wasn't posted")
-			}
-		})
+// A reply that hands a thread back doesn't go through while it holds a comment the agent hasn't been given: the error
+// hands the comment over, and replying again works. A progress note still does.
+func TestReplyRefusesUnseenComments(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Fix the rounding")
+	a.WaitSent(t)
+	tid := r.session(id).Threads[0].ID
+	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Thread: tid, Body: "and the zero case"}); err != nil {
+		t.Fatal(err)
+	}
+	a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "On it.", "working": true})
+	args := map[string]any{"thread": string(tid), "body": "Fixed."}
+	_, err := a.CallErr("reply", args)
+	if err == nil || !strings.Contains(err.Error(), "and the zero case") {
+		t.Fatalf("replying with an unseen comment: err = %v", err)
+	}
+	th, _ := r.session(id).Thread(tid)
+	if len(th.Undelivered()) != 0 || slices.ContainsFunc(th.Comments, func(c core.Comment) bool { return c.Body == "Fixed." }) {
+		t.Fatalf("after the refusal: undelivered %v, comments %+v", th.Undelivered(), th.Comments)
+	}
+	a.Call(t, "reply", args)
+	if th, _ = r.session(id).Thread(tid); !slices.ContainsFunc(th.Comments, func(c core.Comment) bool { return c.Body == "Fixed." }) {
+		t.Error("replying again, with nothing unseen, wasn't posted")
+	}
+}
+
+// The agent never resolves a thread: its reply hands the thread back to the user, open, for them to read and resolve,
+// and it has no tool that resolves one.
+func TestTheAgentsReplyLeavesTheThreadOpen(t *testing.T) {
+	r := newRig(t)
+	id, a := r.workSession("Fix the rounding")
+	a.WaitSent(t)
+	tid := r.session(id).Threads[0].ID
+	a.Call(t, "reply", map[string]any{"thread": string(tid), "body": "Fixed.", "resolve": true})
+	se := r.eventually(id, "the session needs you", func(se core.SessionState) bool { return se.Status == core.StatusNeedsYou })
+	if th, _ := se.Thread(tid); !th.Open() || !th.AgentAnswered() {
+		t.Errorf("the answered thread: %+v", th)
+	}
+	if _, err := a.CallErr("resolve", map[string]any{"thread": string(tid)}); err == nil {
+		t.Error("the agent has a resolve tool")
 	}
 }
