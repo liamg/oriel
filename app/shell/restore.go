@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,7 +72,7 @@ func persist(h plugin.Host, v layout.ViewRef) (st json.RawMessage, ok bool) {
 	if !can {
 		return nil, false
 	}
-	registry.Call(func() error { st, ok = p.Persist(v.Instance); return nil })
+	registry.Try(func() { st, ok = p.Persist(v.Instance) })
 	return st, ok
 }
 
@@ -178,6 +179,7 @@ type stateWriter struct {
 	busy    bool
 	done    sync.WaitGroup
 	track   func(what string) (end func()) // counts a write under way; nil counts nothing
+	log     *slog.Logger                   // where a write that fails is told; nil tells nowhere
 }
 
 func (w *stateWriter) write(path string, b []byte) {
@@ -208,8 +210,13 @@ func (w *stateWriter) run(end func()) {
 			return
 		}
 		w.mu.Unlock()
-		os.MkdirAll(filepath.Dir(path), 0o755)
-		atomicfile.Write(path, b, 0o600)
+		err := os.MkdirAll(filepath.Dir(path), 0o755)
+		if err == nil {
+			err = atomicfile.Write(path, b, 0o600)
+		}
+		if err != nil && w.log != nil {
+			w.log.Warn("saving the window's state", "path", path, "err", err)
+		}
 	}
 }
 

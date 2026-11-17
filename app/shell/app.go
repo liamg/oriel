@@ -172,7 +172,9 @@ func Run(ctx context.Context, be render.Backend, cfg Config, builtins Builtins) 
 		sh.recents = &recents{path: filepath.Join(cfg.StateDir, "recent.json")}
 	}
 	if cfg.WorkDir != "" {
-		sh.recents.add(cfg.WorkDir, sh.now())
+		if err := sh.recents.add(cfg.WorkDir, sh.now()); err != nil {
+			log.Warn("the recent directories", "err", err)
+		}
 	}
 	defer func() {
 		if v := recover(); v != nil {
@@ -290,7 +292,9 @@ func (p *running) reopen(to reopenTo, log *slog.Logger) error {
 	p.sh.traceMove(log, to)
 	p.sh.move(p.ctx, to)
 	if to.session == "" && to.dir != "" {
-		p.sh.recents.add(to.dir, p.sh.now())
+		if err := p.sh.recents.add(to.dir, p.sh.now()); err != nil {
+			log.Warn("the recent directories", "err", err)
+		}
 	}
 	return nil
 }

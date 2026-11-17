@@ -89,7 +89,7 @@ func (a *APIs) Dispose() {
 		procs.Close()
 	}
 	if wasm != nil {
-		wasm.Close(context.Background())
+		_ = wasm.Close(context.Background())
 	}
 }
 
@@ -101,6 +101,22 @@ func (a *APIs) check(c plugin.Capability) error { return a.Plugin.Check(c, "") }
 func (a *APIs) callbackFailed(fn *script.Fn, err error) {
 	n := core.Notice{ID: "lua.callback." + fn.Source, Severity: core.SevError, Source: fn.Source, Title: "Lua", Text: err.Error()}
 	a.Host.Notify(script.WithTrace(n, err, a.Plugin.Dir, "Open at line"))
+}
+
+// callOnce calls fn, a callback answering something that happened once (a reply, a process's exit), and says why it
+// failed in a notice (callbackFailed). A plugin stopped since isn't called, and that's no failure.
+func (a *APIs) callOnce(fn *script.Fn, args ...any) {
+	if _, err := a.VM.Call(fn, args...); err != nil && !errors.Is(err, script.ErrClosed) {
+		a.callbackFailed(fn, err)
+	}
+}
+
+// run runs command id for a card's click, as a key would run it, and says why it failed in a notice from the plugin.
+func (a *APIs) run(id string, args registry.Args) {
+	if err := a.Host.Run(context.Background(), id, args); err != nil {
+		a.Host.Notify(core.Notice{ID: "lua.run." + id, Severity: core.SevError, Source: a.Plugin.Dir, Title: "Lua",
+			Text: id + ": " + err.Error(), AutoClear: true})
+	}
 }
 
 // contributed calls fn, a callback of kind's contribution id that runs as Oriel needs it (a badge each frame, a

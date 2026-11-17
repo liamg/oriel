@@ -17,6 +17,23 @@ import (
 	"github.com/liamg/oriel/render"
 )
 
+// A callback answering something once, a side question's answer here, that raises says so in a notice at its line,
+// as a click's callback does, rather than failing unseen.
+func TestAFailingAnswerCallbackSaysSo(t *testing.T) {
+	s := apptest.LuaScene(t, `oriel.agent.fork({ prompt = "why?" }, function(answer, err)
+  error("boom: " .. tostring(err))
+end)
+`)
+	s.Until("the callback's notice", func() bool {
+		_, ok := apptest.LastNotice(s.Store().State(), "lua.callback.")
+		return ok
+	})
+	n, _ := apptest.LastNotice(s.Store().State(), "lua.callback.")
+	if n.Location != "init.lua:2" || !strings.Contains(n.Text, "boom: no session's agent to ask") {
+		t.Errorf("the failing callback's notice: %+v", n)
+	}
+}
+
 // L.regex is PCRE2 with string.find's conventions (docs/api.md), so for patterns both dialects read the same, Lua's
 // own string functions are the oracle.
 func TestLuaRegex(t *testing.T) {
@@ -62,7 +79,9 @@ func TestLuaRootFunctions(t *testing.T) {
 L.command("Remember", function(args) L.remembered = args.x end, { desc = "keep x" })
 `)
 	file := filepath.Join(t.TempDir(), "f.txt")
-	os.WriteFile(file, []byte("hello"), 0o644)
+	if err := os.WriteFile(file, []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	for _, c := range []struct{ line, want string }{
 		{`L.json_decode('{"a":[1,2]}').a[2]`, "2"},
 		{`L.json_encode({ a = 1 })`, `"{\"a\":1}"`},
@@ -198,7 +217,9 @@ L.statusline(function(w)
 end)
 `)
 	file := filepath.Join(t.TempDir(), "a.txt")
-	os.WriteFile(file, []byte("one\n"), 0o644)
+	if err := os.WriteFile(file, []byte("one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": file}) // the mode shows while an editor does
 	s.Frame()
 	s.Frame()
@@ -226,7 +247,9 @@ L.statusline(function(w)
 end)
 `)
 	file := filepath.Join(t.TempDir(), "a.txt")
-	os.WriteFile(file, []byte("one\n"), 0o644)
+	if err := os.WriteFile(file, []byte("one\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": file})
 	s.Frame()
 	s.Frame()
@@ -273,7 +296,9 @@ L.decorations.provider("todo", function(buf, top, bottom)
 end)
 `)
 	file := filepath.Join(t.TempDir(), "a.txt")
-	os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644)
+	if err := os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": file})
 	s.Frame()
 	s.Frame()
@@ -396,7 +421,9 @@ end)
 	var got registry.Args
 	s.Registry().Command(registry.Command{ID: "owners.show", Run: func(_ registry.Ctx, a registry.Args) error { got = a; return nil }})
 	file := filepath.Join(t.TempDir(), "a.txt")
-	os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644)
+	if err := os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": file})
 	s.Frame()
 	s.Frame()
@@ -422,7 +449,9 @@ end)
 	var got registry.Args
 	s.Registry().Command(registry.Command{ID: "peek.note", Run: func(_ registry.Ctx, a registry.Args) error { got = a; return nil }})
 	file := filepath.Join(t.TempDir(), "a.txt")
-	os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644)
+	if err := os.WriteFile(file, []byte("one\ntwo\nthree\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	s.Run("editor.open", registry.Args{"path": file})
 	s.Frame()
 	s.Frame()

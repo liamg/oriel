@@ -25,6 +25,7 @@ func newKeptStore(stateDir string, log *slog.Logger) *keptStore {
 		return k
 	}
 	k.path = filepath.Join(stateDir, "kept.json")
+	k.writer.log = log
 	b, err := os.ReadFile(k.path)
 	if err == nil {
 		if err := json.Unmarshal(b, &k.by); err != nil {
