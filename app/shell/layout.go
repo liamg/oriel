@@ -212,8 +212,8 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			if place == "" {
 				place = layout.Tab
 			}
-			o := layout.Opts{Edge: layout.Edge(a.String("edge")), Side: layout.Side(a.String("side")), Size: float32(a.Float("size")), Alone: a["alone"] == true,
-				Fixed: a["fixed"] == true}
+			o := layout.Opts{Edge: layout.Edge(a.String("edge")), Side: layout.Side(a.String("side")), Size: float32(a.Float("size")), Alone: a.Bool("alone"),
+				Fixed: a.Bool("fixed")}
 			if b := a.String("beside"); b != "" {
 				id, inst, _ := strings.Cut(b, "#")
 				o.Beside = &layout.ViewRef{ID: id, Instance: inst}
@@ -244,7 +244,7 @@ func (l *layoutPlugin) commands(h plugin.Host) []registry.Command {
 			if err != nil {
 				return err
 			}
-			if w := l.root.Find(v); a["docked"] == true && (w == nil || w.Placement == layout.Tab) && !l.onHome(h) {
+			if w := l.root.Find(v); a.Bool("docked") && (w == nil || w.Placement == layout.Tab) && !l.onHome(h) {
 				return nil
 			}
 			l.root.Close(v)

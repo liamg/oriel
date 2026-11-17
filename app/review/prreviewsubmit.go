@@ -31,7 +31,7 @@ func severityBadge(sev string) string {
 // posted is the text a kept item is posted with: its words, headed by its severity's badge when badges are on.
 func (x *PRReview) posted(it reviewItem) string {
 	body := strings.TrimSpace(it.words())
-	if on, _, _ := x.h.Options().Get(optSeverityBadges, registry.At{}); on != true {
+	if on, _ := registry.Option[bool](x.h.Options(), optSeverityBadges, registry.At{}); !on {
 		return body
 	}
 	if b := severityBadge(it.severity()); b != "" && !strings.HasPrefix(body, b) {

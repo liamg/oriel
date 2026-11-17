@@ -53,3 +53,24 @@ func TestRegistryRefusesOutOfRange(t *testing.T) {
 		t.Errorf("shift_width = 0: %v", err)
 	}
 }
+
+// A setting of the wrong type, or an enum value that isn't one of its values, is ignored rather than taken: the
+// defaults stand.
+func TestOptionsOfTheWrongTypeFromSettings(t *testing.T) {
+	e := multiEngine(t, "\tx", 0, 0)
+	e.SetSettings(fixedSettings{"expandtab": "yes", "clipboard": "everywhere", "nrformats": 7})
+	keys(e, ">>$")
+	if got := bufText(e); got != "\t\tx" {
+		t.Errorf("buffer %q, want %q", got, "\t\tx")
+	}
+	for _, c := range []struct {
+		name string
+		v    any
+	}{{"expandtab", "yes"}, {"clipboard", "everywhere"}, {"nrformats", 7}} {
+		for _, d := range vim.OptionDefs() {
+			if d.Name == c.name && d.Check(c.v) == nil {
+				t.Errorf("%s takes %v", c.name, c.v)
+			}
+		}
+	}
+}

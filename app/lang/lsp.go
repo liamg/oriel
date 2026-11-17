@@ -221,7 +221,7 @@ func (x *LSP) Wait() { x.work.Wait() }
 // worktrees), when lsp.start says to: each server whose own root files are there, its generic ones (.git) aside.
 func (x *LSP) warm() {
 	dir := x.dir()
-	if v, _, err := x.h.Options().Get("lsp.start", registry.At{}); err != nil || v != "project" || dir == "" {
+	if v, _ := registry.Option[string](x.h.Options(), "lsp.start", registry.At{}); v != "project" || dir == "" {
 		return
 	}
 	roots := []string{dir}

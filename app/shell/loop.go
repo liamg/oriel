@@ -581,11 +581,9 @@ func (l *loop) draw() error {
 	}
 	size := l.win.Size()
 	o := l.ui.Options()
-	if on, _, err := l.reg.Options().Get("ui.reduced_motion", registry.At{}); err == nil {
-		o.ReducedMotion = on == true
-	}
+	o.ReducedMotion, _ = registry.Option[bool](l.reg.Options(), "ui.reduced_motion", registry.At{})
 	o.Bars = ui.BarsAuto
-	if v, _, err := l.reg.Options().Get("ui.scrollbars", registry.At{}); err == nil && v == "always" {
+	if v, _ := registry.Option[string](l.reg.Options(), "ui.scrollbars", registry.At{}); v == "always" {
 		o.Bars = ui.BarsAlways
 	}
 	o.TooltipScale = draw.PartScale(l.reg.Options(), "ui.tooltip.font_size")

@@ -254,7 +254,7 @@ func (g *Git) commands() []registry.Command {
 		})},
 		{ID: "git.discard", Title: "Throw away files' unstaged changes, after asking: {path}", Available: inRepo,
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				if a["confirm"] != true {
+				if !a.Bool("confirm") {
 					ps := paths(a)
 					for i, p := range ps {
 						ps[i] = g.holding(p).Rel(p)

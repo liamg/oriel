@@ -82,8 +82,7 @@ func (r *reg) hookBudget() time.Duration {
 	if d := time.Duration(r.budget.Load()); d > 0 {
 		return d
 	}
-	v, _, _ := r.Options().Get("hooks.budget", At{})
-	d, _ := v.(time.Duration)
+	d, _ := Option[time.Duration](r.Options(), "hooks.budget", At{})
 	d = cmp.Or(d, 2*time.Millisecond)
 	r.budget.Store(int64(d))
 	return d

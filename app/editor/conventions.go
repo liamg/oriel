@@ -207,7 +207,7 @@ func (c *conventions) resolve(path string) map[string]value {
 		c.warn(e.Error(), e.Error())
 	}
 
-	if on, _, _ := c.h.Options().Get("editor.modelines", c.h.Here()); on == true {
+	if on, _ := registry.Option[bool](c.h.Options(), "editor.modelines", c.h.Here()); on {
 		for name, v := range modeline(path) {
 			set(name, v.v, c.rel(path)+":"+v.src+" (modeline)")
 		}

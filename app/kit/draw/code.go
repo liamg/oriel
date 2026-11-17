@@ -38,11 +38,11 @@ type PaneMetrics struct {
 // Metrics are a pane's for editor.font_size and editor.line_height now; prev, when they haven't moved.
 func Metrics(c *ui.Ctx, o registry.Options, prev PaneMetrics) PaneMetrics {
 	size, lh := float32(CodeSize), float32(1.55)
-	if v, _, err := o.Get("editor.font_size", registry.At{}); err == nil {
-		size = float32(v.(float64))
+	if v, ok := registry.Option[float64](o, "editor.font_size", registry.At{}); ok {
+		size = float32(v)
 	}
-	if v, _, err := o.Get("editor.line_height", registry.At{}); err == nil {
-		lh = float32(v.(float64))
+	if v, ok := registry.Option[float64](o, "editor.line_height", registry.At{}); ok {
+		lh = float32(v)
 	}
 	if prev.CharW == 0 || prev.Font.Size != size || prev.LineH != float32(math.Round(float64(size*lh))) {
 		font := typeset.FontSpec{Family: typeset.Mono, Size: size}

@@ -163,9 +163,9 @@ func (r *Resolver) feed(out []Action, keys []string, now time.Time) []Action {
 func (r *Resolver) arm(now time.Time) {
 	r.deadline = time.Time{}
 	if len(r.pending) > 0 {
-		if on, _, _ := r.reg.Options().Get("keymap.timeout", At{}); on == true {
-			d, _, _ := r.reg.Options().Get("keymap.timeoutlen", At{})
-			r.deadline = now.Add(d.(time.Duration))
+		if on, _ := Option[bool](r.reg.Options(), "keymap.timeout", At{}); on {
+			d, _ := Option[time.Duration](r.reg.Options(), "keymap.timeoutlen", At{})
+			r.deadline = now.Add(d)
 		}
 	}
 }

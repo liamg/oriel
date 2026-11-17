@@ -352,13 +352,12 @@ func (h *Headless) HelpLint() []string {
 
 // Retheme resolves ui.theme and ui.variant from the registry, as the loop does when a theme changes.
 func (h *Headless) Retheme() error {
-	name, _, _ := h.sh.cfg.Registry.Options().Get("ui.theme", registry.At{})
+	n, _ := registry.Option[string](h.sh.cfg.Registry.Options(), "ui.theme", registry.At{})
 	v := theme.Dark
-	if got, _, _ := h.sh.cfg.Registry.Options().Get("ui.variant", registry.At{}); got == "light" {
+	if got, _ := registry.Option[string](h.sh.cfg.Registry.Options(), "ui.variant", registry.At{}); got == "light" {
 		v = theme.Light
 	}
 	srcs, _ := h.sh.cfg.Registry.Themes()
-	n, _ := name.(string)
 	r, err := theme.ResolveNamed(srcs, n, v)
 	if err != nil {
 		return err

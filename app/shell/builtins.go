@@ -2,6 +2,7 @@ package shell
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/liamg/oriel/app/kit"
@@ -41,8 +42,8 @@ var partSizes = []struct{ name, help string }{
 
 // zoomOf is the window's zoom for ui.font_size.
 func zoomOf(o registry.Options) float32 {
-	if v, _, err := o.Get("ui.font_size", registry.At{}); err == nil {
-		return float32(v.(float64) / uiFontSize)
+	if v, ok := registry.Option[float64](o, "ui.font_size", registry.At{}); ok {
+		return float32(v / uiFontSize)
 	}
 	return 1
 }
@@ -92,11 +93,11 @@ func (o *uiOptions) Activate(_ context.Context, h plugin.Host) error {
 				opts.Unset("ui.font_size", registry.LayerUser, registry.At{})
 				return nil
 			}
-			v, _, err := opts.Get("ui.font_size", registry.At{})
-			if err != nil {
-				return err
+			v, ok := registry.Option[float64](opts, "ui.font_size", registry.At{})
+			if !ok {
+				return errors.New("ui.font_size isn't a number")
 			}
-			return opts.Set("ui.font_size", registry.LayerUser, registry.At{}, min(32, max(8, v.(float64)+by)))
+			return opts.Set("ui.font_size", registry.LayerUser, registry.At{}, min(32, max(8, v+by)))
 		}
 	}
 	for _, c := range []registry.Command{

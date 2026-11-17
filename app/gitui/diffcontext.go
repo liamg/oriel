@@ -124,7 +124,7 @@ func (x *Diff) moreContext(st *diffState, a registry.Args) error {
 		n = contextStep
 	}
 	switch _, gap := a["gap"]; {
-	case a["all"] == true:
+	case a.Bool("all"):
 		for _, g := range gaps {
 			fc.show(g, "all", 0)
 		}

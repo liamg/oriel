@@ -660,7 +660,7 @@ func (x *Reviews) startBehind(ctx registry.Ctx, url string) error {
 	if err != nil {
 		return err
 	}
-	v, _, _ := h.Options().Get("sandbox.default", registry.At{})
+	v, _ := registry.Option[string](h.Options(), "sandbox.default", registry.At{})
 	sandbox := v == "sandbox"
 	return plugin.RunSlow(ctx, h, plugin.Slow{ID: "reviews.start:" + url, Doing: "Starting a review of " + name},
 		func(ctx context.Context) (struct{}, error) {

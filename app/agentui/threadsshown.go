@@ -42,8 +42,8 @@ func (x *Requests) hiddenIn(window, path string) bool {
 	if v, ok := x.shown[window]; ok && filepath.Clean(v.path) == filepath.Clean(path) {
 		return v.hidden
 	}
-	v, _, err := x.h.Options().Get("editor.threads", registry.At{})
-	return err == nil && v == "hidden"
+	v, _ := registry.Option[string](x.h.Options(), "editor.threads", registry.At{})
+	return v == "hidden"
 }
 
 // window is an editor window with a file: {window}, or the focused one.

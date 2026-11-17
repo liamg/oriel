@@ -268,7 +268,7 @@ func hunkArg(st *diffState, a registry.Args) diffSel {
 }
 
 func (x *Diff) layout() string {
-	if v, _, _ := x.h.Options().Get("diff.layout", registry.At{}); v == "unified" {
+	if v, _ := registry.Option[string](x.h.Options(), "diff.layout", registry.At{}); v == "unified" {
 		return "unified"
 	}
 	return "split"

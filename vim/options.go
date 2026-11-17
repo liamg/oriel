@@ -2,7 +2,9 @@ package vim
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 )
 
 // OptionScope is where an option's value lives, as in vim: everywhere, per buffer, or per window.
@@ -89,13 +91,26 @@ func OptionDefs() []OptionDef {
 
 // Check says why v isn't a value d can hold.
 func (d OptionDef) Check(v any) error {
-	if d.Kind == IntKind {
+	switch d.Kind {
+	case IntKind:
 		n, ok := v.(int)
 		if !ok {
 			return fmt.Errorf("%s: want a number, got %v", d.Name, v)
 		}
 		if n < d.Min {
 			return fmt.Errorf("%s: must be at least %d", d.Name, d.Min)
+		}
+	case BoolKind:
+		if _, ok := v.(bool); !ok {
+			return fmt.Errorf("%s: want on or off, got %v", d.Name, v)
+		}
+	case StringKind:
+		if _, ok := v.(string); !ok {
+			return fmt.Errorf("%s: want a string, got %v", d.Name, v)
+		}
+	case EnumKind:
+		if s, ok := v.(string); !ok || !slices.Contains(d.Values, s) {
+			return fmt.Errorf("%s: want one of %s, got %v", d.Name, strings.Join(d.Values, ", "), v)
 		}
 	}
 	return nil

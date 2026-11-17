@@ -26,12 +26,13 @@ func Popup(c *ui.Ctx, key any, st ui.Style, body func(c *ui.Ctx)) {
 
 // PartScale is what a part with its own size option is drawn at over the UI; 0 when it follows the UI.
 func PartScale(o registry.Options, name string) float32 {
-	v, l, err := o.Get(name, registry.At{})
-	if err != nil || l == registry.LayerDefault {
+	raw, l, err := o.Get(name, registry.At{})
+	v, ok := raw.(float64)
+	if err != nil || !ok || l == registry.LayerDefault {
 		return 0
 	}
-	if ui, _, err := o.Get("ui.font_size", registry.At{}); err == nil && ui.(float64) > 0 {
-		return float32(v.(float64) / ui.(float64))
+	if ui, ok := registry.Option[float64](o, "ui.font_size", registry.At{}); ok && ui > 0 {
+		return float32(v / ui)
 	}
-	return float32(v.(float64) / UIFontSize)
+	return float32(v / UIFontSize)
 }

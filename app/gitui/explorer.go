@@ -289,7 +289,7 @@ func (e *Explorer) commands() []registry.Command {
 		}},
 		{ID: "explorer.commit", Title: "Commit what's staged in the Explorer's repo ({all}: everything uncommitted)",
 			Run: func(ctx registry.Ctx, a registry.Args) error {
-				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().Root(), "all": a["all"] == true})
+				return h.Run(ctx, "git.commit", registry.Args{"path": e.git().Root(), "all": a.Bool("all")})
 			}},
 		{ID: "explorer.diff", Title: "Open the selected file's diff", Run: func(ctx registry.Ctx, _ registry.Args) error {
 			if f, ok := e.selectedFile(); ok {

@@ -91,7 +91,7 @@ func (g cursorGlide) size(k cursorKey, v float32) float32 {
 // on the same line, a move within cursorFast of the last, and a scroll snap, so it never trails typing or held keys.
 // c is the window's lines, which the cursor's place is measured in.
 func (x *Editor) glideCursor(c *ui.Ctx, p vim.Pane, rowID ui.ID, line, vc int, cx, cy float32, shape vim.Shape, m draw.PaneMetrics) cursorGlide {
-	if on, _, err := x.h.Options().Get("editor.cursor_glide", registry.At{}); err == nil && on == false {
+	if on, ok := registry.Option[bool](x.h.Options(), "editor.cursor_glide", registry.At{}); ok && !on {
 		return cursorGlide{}
 	}
 	lines, ok1 := c.Rect(c.ID())

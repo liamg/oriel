@@ -53,7 +53,7 @@ func (x *PRReview) pushed(id core.SessionID, head string) {
 	if reviewPR(se) == "" || !ok || head == "" || p.Commit == "" || head == p.Commit || se.Archived || x.ended(reviewPR(se)) {
 		return
 	}
-	if on, _, _ := x.h.Options().Get(optAutoRereview, registry.At{}); on != true {
+	if on, _ := registry.Option[bool](x.h.Options(), optAutoRereview, registry.At{}); !on {
 		x.forget(reviewPR(se)) // the tab's bar offers Fetch latest
 		return
 	}
