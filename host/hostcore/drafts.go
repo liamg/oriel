@@ -13,10 +13,6 @@ import (
 	"github.com/liamg/oriel/gitx"
 )
 
-type Draft = hostapi.Draft
-
-const DraftByYou = hostapi.DraftByYou
-
 // DraftNoun is what each kind of draft is called.
 var DraftNoun = map[string]string{"commit": "commit message", "pr": "PR draft"}
 
@@ -35,17 +31,17 @@ func DraftCode(ctx context.Context, repo gitx.Repo, base, kind string) string {
 
 // draftPath is where a project's commit message or PR draft is kept: "# title\n\nbody" for a PR.
 func (e Env) draftPath(id core.SessionID, project, kind string) string {
-	return filepath.Join(e.SessionDir(id), "drafts", Sanitise(project)+"."+kind+".md")
+	return filepath.Join(e.SessionDir(id), "drafts", hostapi.Sanitise(project)+"."+kind+".md")
 }
 
 // ReadDraft is a project's draft and who wrote it.
-func (e Env) ReadDraft(id core.SessionID, project, kind string) Draft {
+func (e Env) ReadDraft(id core.SessionID, project, kind string) hostapi.Draft {
 	path := e.draftPath(id, project, kind)
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return Draft{}
+		return hostapi.Draft{}
 	}
-	d := Draft{Body: strings.TrimSpace(string(data))}
+	d := hostapi.Draft{Body: strings.TrimSpace(string(data))}
 	if fi, err := os.Stat(path); err == nil {
 		d.Saved = fi.ModTime()
 	}
@@ -64,7 +60,7 @@ func (e Env) ReadDraft(id core.SessionID, project, kind string) Draft {
 
 // WriteDraft keeps a project's draft of kind: its Title, Body, who wrote it (By) and the code it was written against
 // (Code). Saved and Stale are ReadDraft's.
-func (e Env) WriteDraft(id core.SessionID, project, kind string, d Draft) error {
+func (e Env) WriteDraft(id core.SessionID, project, kind string, d hostapi.Draft) error {
 	title, body := d.Title, d.Body
 	path := e.draftPath(id, project, kind)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {

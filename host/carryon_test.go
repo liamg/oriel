@@ -8,6 +8,8 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // replied is one turn of the agent's that replies on the session's request and ends.
@@ -32,7 +34,7 @@ func TestATurnEndingWithWorkOwedIsToldToCarryOn(t *testing.T) {
 
 	replied(r, id, a, map[string]any{"body": "Writing the fix.", "working": true})
 	got := a.WaitSent(t)
-	for _, want := range []string{NoticeLead, "carry on", string(tid)} {
+	for _, want := range []string{agentrun.NoticeLead, "carry on", string(tid)} {
 		if !strings.Contains(got.Text, want) {
 			t.Errorf("the nudge lacks %q:\n%s", want, got.Text)
 		}
@@ -50,7 +52,7 @@ func TestATurnEndingWithWorkOwedIsToldToCarryOn(t *testing.T) {
 	replied(r, id, a, map[string]any{"body": "One more step.", "working": true})
 	r.noneSent(a) // three without the user is enough
 
-	if _, err := r.w.Comment(context.Background(), CommentReq{Session: id, Thread: tid, Body: "keep going"}); err != nil {
+	if _, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Thread: tid, Body: "keep going"}); err != nil {
 		t.Fatal(err)
 	}
 	a.WaitSent(t)

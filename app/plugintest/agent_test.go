@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/registry/services"
 
 	"github.com/liamg/oriel/agent/hostexec"
@@ -28,11 +29,11 @@ func TestPluginAgentProvider(t *testing.T) {
 	dir := plugintest.Install(t, "testdata/agent/plugin", "./testdata/agent/cmd/oriel-agent")
 	a.Load(dir, nil)
 
-	var infos []host.ProviderInfo
-	find := func(id string) (host.ProviderInfo, bool) {
-		i := slices.IndexFunc(infos, func(p host.ProviderInfo) bool { return p.ID == id })
+	var infos []hostapi.ProviderInfo
+	find := func(id string) (hostapi.ProviderInfo, bool) {
+		i := slices.IndexFunc(infos, func(p hostapi.ProviderInfo) bool { return p.ID == id })
 		if i < 0 {
-			return host.ProviderInfo{}, false
+			return hostapi.ProviderInfo{}, false
 		}
 		return infos[i], true
 	}
@@ -69,7 +70,7 @@ func TestPluginAgentProvider(t *testing.T) {
 		return false
 	}
 	a.Until("the agent's reply", func() bool { return said("say hello") })
-	if err := h.W.Send(host.SendReq{Session: id, Text: "and goodbye"}); err != nil {
+	if err := h.W.Send(hostapi.SendReq{Session: id, Text: "and goodbye"}); err != nil {
 		t.Fatal(err)
 	}
 	a.Until("the second turn's reply", func() bool { return said("and goodbye") })
@@ -88,7 +89,7 @@ func TestPluginACPAgent(t *testing.T) {
 		cfg.Self = []string{filepath.Join(bridge, "bin", "oriel-acp")}
 	}})
 	a.Load(dir, nil)
-	var info host.ProviderInfo
+	var info hostapi.ProviderInfo
 	a.Until("the ACP agent in the launcher's list", func() bool {
 		for _, p := range h.W.ProviderInfo(context.Background()) {
 			if p.ID == "fakeacp" {

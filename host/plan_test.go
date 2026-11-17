@@ -11,6 +11,7 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // The plan pack (agent/packs/text/plan.md): "The request ... is also the first comment on the `where=\"plan\"`
@@ -37,7 +38,7 @@ func TestPlanThreadsReachTheAgentByPlace(t *testing.T) {
 	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the turn to end", func(se core.SessionState) bool { return !se.Agent.Working })
-	_, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: "half-up?",
+	_, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: "half-up?",
 		Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: 5, Text: "- Round each line in minor units, ties to even."}})
 	if err != nil {
 		t.Fatal(err)
@@ -60,7 +61,7 @@ func TestPlanThreadsReachTheAgentByPlace(t *testing.T) {
 func TestStartWorkNamesTheWorktrees(t *testing.T) {
 	r := newRig(t)
 	id := r.start(core.SessionSpec{Kind: core.KindPlan, Prompt: "Round invoice lines", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.session(id)
@@ -76,11 +77,11 @@ func TestStartWorkNamesTheWorktrees(t *testing.T) {
 	if se.Planning() {
 		t.Error("still planning after Start work")
 	}
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err == nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err == nil {
 		t.Error("Start work twice")
 	}
 	work := r.start(core.SessionSpec{Kind: core.KindWork, Prompt: "x", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: work}); err == nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: work}); err == nil {
 		t.Error("Start work on a work session")
 	}
 }
@@ -102,12 +103,12 @@ func planWithAgent(t *testing.T, r *rig) (core.SessionID, *agenttest.FakeSession
 // thread opens a thread on PLAN.md and gives it status.
 func (r *rig) thread(id core.SessionID, line int, body string, status core.ThreadStatus) core.ThreadID {
 	r.t.Helper()
-	tid, err := r.w.Comment(context.Background(), CommentReq{Session: id, Body: body,
+	tid, err := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Body: body,
 		Anchor: &core.Anchor{Project: core.DocsProject, File: "PLAN.md", Line: line}})
 	if err != nil {
 		r.t.Fatal(err)
 	}
-	if err := r.w.SetThread(ThreadReq{Session: id, Thread: tid, Status: status}); err != nil {
+	if err := r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: status}); err != nil {
 		r.t.Fatal(err)
 	}
 	return tid
@@ -120,7 +121,7 @@ func TestStartWorkClearsThePlansThreads(t *testing.T) {
 	id := r.start(core.SessionSpec{Kind: core.KindPlan, Prompt: "Round invoice lines", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	r.thread(id, 3, "Where does precision come from?", core.ThreadResolved)
 	r.thread(id, 9, "Should historical invoices change?", core.ThreadDeferred)
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.session(id)
@@ -136,7 +137,7 @@ func TestStartWorkClearsThePlansThreads(t *testing.T) {
 	kept := r.start(core.SessionSpec{Kind: core.KindPlan, Prompt: "Round invoice totals", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	r.thread(kept, 3, "Where does precision come from?", core.ThreadResolved)
 	r.thread(kept, 9, "Should historical invoices change?", core.ThreadDeferred)
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: kept, KeepThreads: true}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: kept, KeepThreads: true}); err != nil {
 		t.Fatal(err)
 	}
 	se = r.session(kept)
@@ -152,7 +153,7 @@ func TestStartWorkClearsThePlansThreads(t *testing.T) {
 func TestStartWorkRestartsTheAgentFresh(t *testing.T) {
 	r := newRig(t)
 	id, a := planWithAgent(t, r)
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	fresh := r.agent()
@@ -168,7 +169,7 @@ func TestStartWorkRestartsTheAgentFresh(t *testing.T) {
 	r.eventually(id, "the fresh agent's id", func(se core.SessionState) bool { return se.Agent.Session == fresh.ID() && se.Agent.Pack == "work" })
 
 	keep, b := planWithAgent(t, r)
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: keep, KeepConversation: true}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: keep, KeepConversation: true}); err != nil {
 		t.Fatal(err)
 	}
 	if in := b.WaitSent(t); !strings.Contains(in.Text, "Start work") {
@@ -195,7 +196,7 @@ func TestStartWorkPromptIsTheFreshAgentsFirstTurn(t *testing.T) {
 	answered(r, id, a)
 	a.Emit(agent.TurnEnd{})
 	r.eventually(id, "the agent's first turn", func(se core.SessionState) bool { return !se.Agent.Working && se.Agent.Session != "" })
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	fresh := r.agent()
@@ -214,7 +215,7 @@ func TestStartWorkPromptIsTheFreshAgentsFirstTurn(t *testing.T) {
 func TestStartWorkChangesTheModel(t *testing.T) {
 	r := newRig(t)
 	id, a := planWithAgent(t, r)
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id, KeepConversation: true, Model: "m2", Effort: "high"}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id, KeepConversation: true, Model: "m2", Effort: "high"}); err != nil {
 		t.Fatal(err)
 	}
 	b := r.agent()
@@ -239,14 +240,14 @@ func TestStartWorkBranchNames(t *testing.T) {
 		t.Errorf("the branch Start work offers is %q", got)
 	}
 	for _, bad := range []map[string]string{{name: "two..dots"}, {"nope": "tester/x"}} {
-		if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id, Branches: bad}); err == nil {
+		if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id, Branches: bad}); err == nil {
 			t.Errorf("Start work took branches %v", bad)
 		}
 	}
 	if se := r.session(id); se.Started || se.Projects[0].Dir != r.repo.Dir {
 		t.Fatalf("a refused Start work moved the session: %+v", se.Projects)
 	}
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id, Branches: map[string]string{name: "liam/rounding"}}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id, Branches: map[string]string{name: "liam/rounding"}}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.session(id)
@@ -260,7 +261,7 @@ func TestStartWorkSandboxAndNetwork(t *testing.T) {
 	r := newRig(t)
 	id, _ := planWithAgent(t, r)
 	on := true
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id, Sandbox: &on}); err == nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id, Sandbox: &on}); err == nil {
 		t.Error("a host with no sandbox started work in one")
 	}
 	if r.session(id).Started {
@@ -269,7 +270,7 @@ func TestStartWorkSandboxAndNetwork(t *testing.T) {
 
 	s := newSandboxRig(t)
 	id, a := planWithAgent(t, s.rig)
-	if err := s.w.StartWork(context.Background(), StartWorkReq{Session: id, Sandbox: &on, Network: "open"}); err != nil {
+	if err := s.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id, Sandbox: &on, Network: "open"}); err != nil {
 		t.Fatal(err)
 	}
 	b := s.agent()

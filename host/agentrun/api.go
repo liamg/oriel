@@ -8,10 +8,11 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // Answer answers an ask.
-func (x *Runner) Answer(r AnswerReq) (err error) {
+func (x *Runner) Answer(r hostapi.AnswerReq) (err error) {
 	defer x.env.Recover("Answer", &err)
 	h, _ := x.sessionFor(r.Session, false)
 	if h == nil {
@@ -21,20 +22,20 @@ func (x *Runner) Answer(r AnswerReq) (err error) {
 }
 
 // Ask is the app asking the user for a session's agent, as its own gate would (an agent tool that asks first).
-func (x *Runner) Ask(ctx context.Context, r AskReq) (_ Verdict, err error) {
+func (x *Runner) Ask(ctx context.Context, r hostapi.AskReq) (_ hostapi.Verdict, err error) {
 	defer x.env.Recover("Ask", &err)
 	h, _ := x.sessionFor(r.Session, false)
 	if h == nil {
-		return Verdict{}, fmt.Errorf("session %s isn't running", r.Session)
+		return hostapi.Verdict{}, fmt.Errorf("session %s isn't running", r.Session)
 	}
 	if r.Ask.Kind == "" {
 		r.Ask.Kind = core.AskPermission
 	}
 	a, err := h.approve(ctx, r.Ask)
 	if err != nil {
-		return Verdict{}, err
+		return hostapi.Verdict{}, err
 	}
-	v := Verdict{Decision: DecisionDeny, By: a.By, Note: a.Note}
+	v := hostapi.Verdict{Decision: hostapi.DecisionDeny, By: a.By, Note: a.Note}
 	if a.Allow {
 		v.Decision = "allow"
 	}
@@ -42,7 +43,7 @@ func (x *Runner) Ask(ctx context.Context, r AskReq) (_ Verdict, err error) {
 }
 
 // Send is a message to the agent outside any thread: sent now if it's free, queued for the turn's end if not.
-func (x *Runner) Send(r SendReq) (err error) {
+func (x *Runner) Send(r hostapi.SendReq) (err error) {
 	defer x.env.Recover("Send", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {

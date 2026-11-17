@@ -14,13 +14,13 @@ import (
 
 // ForwardHost posts a draft reply on a thread mirrored from a code host with post, which returns the host's id for
 // it, and marks it sent. A mirror meanwhile waits for the mark, so the reply's echo is recognised.
-func (x *Ships) ForwardHost(ctx context.Context, r ForwardReq, post func(ctx context.Context, t core.Thread, body string) (string, error)) (_ core.Comment, err error) {
+func (x *Ships) ForwardHost(ctx context.Context, r hostapi.ForwardReq, post func(ctx context.Context, t core.Thread, body string) (string, error)) (_ core.Comment, err error) {
 	defer x.env.Recover("ForwardHost", &err)
 	return x.forward(r, func(t core.Thread, body string) (string, error) { return post(ctx, t, body) })
 }
 
 // forward posts a draft with post and marks it sent, with mirroring held off between the two.
-func (x *Ships) forward(r ForwardReq, post func(t core.Thread, body string) (key string, err error)) (core.Comment, error) {
+func (x *Ships) forward(r hostapi.ForwardReq, post func(t core.Thread, body string) (key string, err error)) (core.Comment, error) {
 	x.mirror.mu.Lock()
 	defer x.mirror.mu.Unlock()
 	t, body, err := x.DraftOf(r)
@@ -35,7 +35,7 @@ func (x *Ships) forward(r ForwardReq, post func(t core.Thread, body string) (key
 }
 
 // EditDraft rewrites a draft reply before it's forwarded.
-func (x *Ships) EditDraft(r DraftEditReq) (err error) {
+func (x *Ships) EditDraft(r hostapi.DraftEditReq) (err error) {
 	defer x.env.Recover("EditDraft", &err)
 	body := strings.TrimSpace(r.Body)
 	if body == "" {
@@ -56,11 +56,9 @@ func (x *Ships) EditDraft(r DraftEditReq) (err error) {
 	return err
 }
 
-type ResolveReq = hostapi.ResolveReq
-
 // MarkHostResolved records that a mirrored thread is resolved, or open, on its code host: once the user's resolve has
 // reached it.
-func (x *Ships) MarkHostResolved(r ResolveReq) (err error) {
+func (x *Ships) MarkHostResolved(r hostapi.ResolveReq) (err error) {
 	defer x.env.Recover("MarkHostResolved", &err)
 	_, err = hostcore.MutateThread(x.st, x.env.Now(), r.Session, r.Thread, func(t *core.Thread) error {
 		if t.Hosted == nil {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // repoAt is a repo with one commit, at dir.
@@ -180,13 +181,13 @@ func TestCloneParent(t *testing.T) {
 	}
 	bare := filepath.Join(t.TempDir(), "My-Project.git")
 	r.repo.Git("clone", "-q", "--bare", r.repo.Dir, bare)
-	tg, err := r.w.CloneTarget(ctx, CloneReq{URL: bare})
+	tg, err := r.w.CloneTarget(ctx, hostapi.CloneReq{URL: bare})
 	if err != nil || tg.Dir != filepath.Join(code, "my-project") || tg.Exists {
 		t.Fatalf("target = %+v, %v", tg, err)
 	}
 	elsewhere := filepath.Join(t.TempDir(), "elsewhere")
 	var lines []string
-	repo, err := r.w.CloneRepo(ctx, CloneReq{URL: bare, Parent: elsewhere, Name: "mine", Progress: func(l string) { lines = append(lines, l) }})
+	repo, err := r.w.CloneRepo(ctx, hostapi.CloneReq{URL: bare, Parent: elsewhere, Name: "mine", Progress: func(l string) { lines = append(lines, l) }})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +197,7 @@ func TestCloneParent(t *testing.T) {
 	if len(lines) == 0 {
 		t.Error("no progress lines")
 	}
-	if tg, _ := r.w.CloneTarget(ctx, CloneReq{URL: bare, Parent: elsewhere, Name: "mine"}); !tg.Exists || !tg.Same {
+	if tg, _ := r.w.CloneTarget(ctx, hostapi.CloneReq{URL: bare, Parent: elsewhere, Name: "mine"}); !tg.Exists || !tg.Same {
 		t.Errorf("target over its own clone = %+v", tg)
 	}
 }

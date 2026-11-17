@@ -20,6 +20,7 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/hostexec"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
@@ -49,7 +50,7 @@ type Factory struct {
 	attached bool
 }
 
-var _ hostcore.SandboxFactory = (*Factory)(nil)
+var _ hostapi.SandboxFactory = (*Factory)(nil)
 
 // Known are the backends Oriel can run sandboxes in, the most preferred first.
 func Known() sandbox.Backends {
@@ -127,7 +128,7 @@ type Box struct {
 	d       Deps
 	id      core.SessionID
 	root    string
-	approve hostcore.Approve
+	approve hostapi.Approve
 	cfg     sandbox.Config
 	backend sandbox.Backend
 	// provider names the agent's provider, agent what says what it needs here (nil: nothing past the workspace).
@@ -154,7 +155,7 @@ type Box struct {
 
 // Open readies the sandbox for a session's workspace: its record and manifest, the egress session, the gateway,
 // the ssh-agent and the session socket. The backend confines the agent when it starts (Exec).
-func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostcore.Approve, a hostcore.SandboxAgent) (hostcore.Sandbox, error) {
+func (s *Factory) Open(ctx context.Context, se core.SessionState, approve hostapi.Approve, a hostapi.SandboxAgent) (hostapi.Sandbox, error) {
 	d, ok := s.host()
 	if !ok {
 		return nil, errors.New("the sandbox factory has no session host")
@@ -390,11 +391,11 @@ func (b *Box) egressSettings() [][]egress.Rule {
 	if se, err := b.session(); err == nil {
 		var project []egress.Rule
 		for _, p := range se.Projects {
-			project = append(project, egressRules(SourceProject, b.cfg.Projects[p.Repo].Egress)...)
+			project = append(project, egressRules(hostapi.SourceProject, b.cfg.Projects[p.Repo].Egress)...)
 		}
 		out = append(out, project)
 	}
-	return append(out, append(egressRules(SourceSettings, b.cfg.Egress), egressRules(SourceAlways, sandbox.LoadAlways().Egress)...))
+	return append(out, append(egressRules(hostapi.SourceSettings, b.cfg.Egress), egressRules(hostapi.SourceAlways, sandbox.LoadAlways().Egress)...))
 }
 
 func egressRules(source string, rs []sandbox.EgressRule) []egress.Rule {

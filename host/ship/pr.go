@@ -12,10 +12,8 @@ import (
 // What the code hosts say of a session's branches' pull requests. The app's code hosts make the calls themselves;
 // the host keeps what they found, for the agent, and checks a PR is raised from the session's own branch.
 
-type PRSeenReq = hostapi.PRSeenReq
-
 // SawPR keeps what a code host said of a branch's pull request.
-func (x *Ships) SawPR(r PRSeenReq) (err error) {
+func (x *Ships) SawPR(r hostapi.PRSeenReq) (err error) {
 	defer x.env.Recover("SawPR", &err)
 	x.sawPR(r.Session, r.Project, r.Branch, r.Open)
 	return nil
@@ -40,7 +38,7 @@ func (x *Ships) PROpen(id core.SessionID, project, branch string) bool {
 }
 
 // ShipBranch is the branch a project's PR is raised from: the session's own, refused when the worktree is off it.
-func (x *Ships) ShipBranch(ctx context.Context, r ShipRef) (_ string, err error) {
+func (x *Ships) ShipBranch(ctx context.Context, r hostapi.ShipRef) (_ string, err error) {
 	defer x.env.Recover("ShipBranch", &err)
 	_, p, _, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {

@@ -10,12 +10,13 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
 // Comment adds your comment to a thread, opening one if needed, and hands it to the agent: at once if it's idle,
 // after an interrupt if urgent, else when the turn ends.
-func (x *Runner) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, err error) {
+func (x *Runner) Comment(ctx context.Context, r hostapi.CommentReq) (_ core.ThreadID, err error) {
 	defer x.env.Recover("Comment", &err)
 	if strings.TrimSpace(r.Body) == "" && len(r.Images) == 0 {
 		return "", errors.New("the comment is empty")
@@ -88,7 +89,7 @@ func (x *Runner) Comment(ctx context.Context, r CommentReq) (_ core.ThreadID, er
 }
 
 // SetThread changes a thread's status, urgency or title. Resolving one completes the tasks it asked for.
-func (x *Runner) SetThread(r ThreadReq) (err error) {
+func (x *Runner) SetThread(r hostapi.ThreadReq) (err error) {
 	defer x.env.Recover("SetThread", &err)
 	t, err := x.mutateThread(r.Session, r.Thread, func(t *core.Thread) error {
 		if r.Status != "" {

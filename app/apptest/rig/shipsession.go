@@ -7,7 +7,7 @@ import (
 	"github.com/liamg/oriel/app/github"
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
-	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/registry"
 )
@@ -46,19 +46,19 @@ func ShipSession(t *testing.T, now time.Time) (se core.SessionState, reads func(
 			return github.CheckOf(c)
 		}
 		return []ship.Read{
-			{CodeHost: hub, Repo: "acme/search-api", GitRead: now.Add(-4 * time.Second), Ship: host.Ship{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
+			{CodeHost: hub, Repo: "acme/search-api", GitRead: now.Add(-4 * time.Second), Ship: hostapi.Ship{Project: "search-api", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
 				Origin: "https://github.com/acme/search-api.git",
-				Files: []host.ShipFile{{Path: "internal/api/usage/handler.go", Code: "M", Add: 3, Del: 1},
+				Files: []hostapi.ShipFile{{Path: "internal/api/usage/handler.go", Code: "M", Add: 3, Del: 1},
 					{Path: "internal/api/usage/handler_test.go", Code: "M", Add: 18}, {Path: "internal/api/usage/routes.go", Code: "M", Add: 20, Del: 5}},
 				Behind: 4, Commits: 2,
-				Unpushed: []host.ShipCommit{{Hash: "a41c9e2", Subject: "feat(ratelimit): expose Reservation.ResetAt"},
+				Unpushed: []hostapi.ShipCommit{{Hash: "a41c9e2", Subject: "feat(ratelimit): expose Reservation.ResetAt"},
 					{Hash: "7be0d13", Subject: "test(api): table-test the 429 path"}},
-				CommitDraft: host.Draft{By: "codex", Body: "feat(api): set Retry-After on rate-limited usage responses\n\n" +
+				CommitDraft: hostapi.Draft{By: "codex", Body: "feat(api): set Retry-After on rate-limited usage responses\n\n" +
 					"Both the single and batch usage endpoints now return Retry-After\nfrom the limiter's reset time, rounded up to whole seconds.\n\nRefs ENG-2231"},
-				PRDraft: host.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"}},
+				PRDraft: hostapi.Draft{By: "codex", Title: "feat(search): back off on 429 using Retry-After", Body: "## What\n"}},
 				Template: registry.PRTemplate{Body: "## What\n\n## Why\n", File: ".github/pull_request_template.md"}, Owners: []string{"acme/platform-team", "jkowalski"}},
 			{CodeHost: hub, Repo: "acme/web-dashboard", GitRead: now.Add(-4 * time.Second), PRRead: now.Add(-28 * time.Second),
-				Ship: host.Ship{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
+				Ship: hostapi.Ship{Project: "web-dashboard", Branch: "rethink/search-endpoint", Base: "main", HasOrigin: true,
 					Origin: "https://github.com/acme/web-dashboard.git", Commits: 3, Pushed: true, Synced: now.Add(-6 * time.Minute), Head: "c3f1a9e0b7d24e6f"},
 				PR: &registry.PR{Number: 812, Title: "feat(search): back off on 429 using Retry-After", State: "open", Draft: true, Branch: "rethink/search-endpoint", Base: "main",
 					Head: "c3f1a9e0b7d24e6f"},

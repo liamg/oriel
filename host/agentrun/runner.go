@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/agent/prompts"
 	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 	"github.com/liamg/oriel/testrun"
 )
@@ -26,7 +27,7 @@ type Runner struct {
 
 	mu          sync.Mutex
 	live        map[core.SessionID]*session // the sessions with an agent running or starting
-	app         App
+	app         hostapi.App
 	prompts     prompts.Overrides // the user's versions of the prompts the app last sent
 	promptsSent bool
 	starts      hostcore.Jobs // agents starting off their callers (startAside), and restarts
@@ -53,7 +54,7 @@ type Deps struct {
 	// Exec is how agents' processes start.
 	Exec agent.Exec
 	// Sandbox makes a sandboxed session's sandbox; nil when this machine can't run one.
-	Sandbox hostcore.SandboxFactory
+	Sandbox hostapi.SandboxFactory
 	// Packs finds a kind's prompt pack, before the user's versions; nil for none.
 	Packs func(name string) (agent.Pack, bool)
 	// KeyWait is how long a git operation runs before its session asks for a security-key touch; never if negative.
@@ -108,7 +109,7 @@ func (x *Runner) sessionOf(id core.SessionID) *session {
 	h := x.live[id]
 	if h == nil {
 		h = &session{r: x, id: id, ctx: context.Background(), calls: map[string]agent.ToolCall{}, items: map[string]core.Item{},
-			waiting: map[string]chan AnswerReq{}, nudged: map[string]string{}}
+			waiting: map[string]chan hostapi.AnswerReq{}, nudged: map[string]string{}}
 		x.live[id] = h
 	}
 	return h
@@ -214,7 +215,7 @@ func (x *Runner) SetAgent(id core.SessionID, fn func(a *core.AgentState)) {
 }
 
 // Sandbox is session id's sandbox while its agent runs in one.
-func (x *Runner) Sandbox(id core.SessionID) hostcore.Sandbox {
+func (x *Runner) Sandbox(id core.SessionID) hostapi.Sandbox {
 	h, _ := x.sessionFor(id, false)
 	if h == nil {
 		return nil
@@ -225,8 +226,8 @@ func (x *Runner) Sandbox(id core.SessionID) hostcore.Sandbox {
 }
 
 // Sandboxes are the sandboxes agents run in now.
-func (x *Runner) Sandboxes() []hostcore.Sandbox {
-	var out []hostcore.Sandbox
+func (x *Runner) Sandboxes() []hostapi.Sandbox {
+	var out []hostapi.Sandbox
 	for _, h := range x.all() {
 		h.mu.Lock()
 		if h.box != nil {
@@ -245,7 +246,7 @@ func (x *Runner) Running(id core.SessionID) bool {
 
 // RestartWhenIdle restarts session id's agent, resumed, if it still runs in sb: now if it's idle, else once its turn
 // ends, before it's handed anything more.
-func (x *Runner) RestartWhenIdle(id core.SessionID, sb hostcore.Sandbox, why string) {
+func (x *Runner) RestartWhenIdle(id core.SessionID, sb hostapi.Sandbox, why string) {
 	h, _ := x.sessionFor(id, false)
 	if h == nil {
 		return

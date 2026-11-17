@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/egress"
 )
@@ -51,7 +52,7 @@ func TestWorkspaceDescribesTheSandbox(t *testing.T) {
 	if c, err := s.w.SandboxShell(context.Background(), id, ""); err != nil || len(c.Argv) != 3 || c.Argv[2] != b.Root() {
 		t.Errorf("the sandbox's shell = %+v, %v", c, err)
 	}
-	i := slices.IndexFunc(ws.Paths, func(p WorkspacePath) bool { return p.Name == "Scratchpad" })
+	i := slices.IndexFunc(ws.Paths, func(p hostapi.WorkspacePath) bool { return p.Name == "Scratchpad" })
 	if i < 0 || ws.Paths[i].Host != sandbox.TmpDir(b.Root()) || ws.Paths[i].Agent != "/tmp/claude-1" {
 		t.Errorf("paths = %+v", ws.Paths)
 	}

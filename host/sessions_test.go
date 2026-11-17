@@ -14,6 +14,8 @@ import (
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
 	"github.com/liamg/oriel/gitx/gittest"
+	"github.com/liamg/oriel/host/hostapi"
+	"github.com/liamg/oriel/host/worktree"
 )
 
 func branchOf(t *testing.T, dir string) string {
@@ -63,7 +65,7 @@ func TestWorkSessionGetsAWorktreeOnAFreshBranch(t *testing.T) {
 	if !gitx.IsRepo(se.Dir) {
 		t.Error("the workspace isn't a git repo of its own, for plan docs")
 	}
-	if m, ok := LoadManifest(se.Dir); !ok || len(m.Projects) != 1 {
+	if m, ok := worktree.LoadManifest(se.Dir); !ok || len(m.Projects) != 1 {
 		t.Errorf("manifest = %+v %v", m, ok)
 	}
 	// The prompt opened the first request.
@@ -121,14 +123,14 @@ func TestPlanWorktreesComeAtStartWork(t *testing.T) {
 		t.Error("a plan made worktrees before Start work")
 	}
 	// The plan's own thread doesn't hold up Start work; another open one does.
-	tid, _ := r.w.Comment(context.Background(), CommentReq{Session: id, Anchor: &core.Anchor{File: "PLAN.md", Line: 3}, Body: "half-up?"})
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err == nil {
+	tid, _ := r.w.Comment(context.Background(), hostapi.CommentReq{Session: id, Anchor: &core.Anchor{File: "PLAN.md", Line: 3}, Body: "half-up?"})
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err == nil {
 		t.Fatal("Start work with a thread open")
 	}
-	if err := r.w.SetThread(ThreadReq{Session: id, Thread: tid, Status: core.ThreadDeferred}); err != nil {
+	if err := r.w.SetThread(hostapi.ThreadReq{Session: id, Thread: tid, Status: core.ThreadDeferred}); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.StartWork(context.Background(), StartWorkReq{Session: id}); err != nil {
+	if err := r.w.StartWork(context.Background(), hostapi.StartWorkReq{Session: id}); err != nil {
 		t.Fatal(err)
 	}
 	se = r.session(id)
@@ -302,7 +304,7 @@ func TestReviewUpdatesToTheNewHead(t *testing.T) {
 	if got, _ := (gitx.Repo{Dir: p.Dir}).Head(ctx); got != head {
 		t.Errorf("the worktree is at %s, want %s", got, head)
 	}
-	if m, _ := LoadManifest(r.session(id).Dir); m.Projects[0].Commit != head {
+	if m, _ := worktree.LoadManifest(r.session(id).Dir); m.Projects[0].Commit != head {
 		t.Errorf("the manifest keeps %s, want %s", m.Projects[0].Commit, head)
 	}
 }
@@ -425,14 +427,14 @@ func TestArchiveKeepsThreadsAndTranscriptSearchable(t *testing.T) {
 	if !se.Archived || se.Status != core.StatusOff || len(se.Threads) != 1 || len(se.Transcript) != 1 {
 		t.Fatalf("archived session after a restart: %+v", se)
 	}
-	if hits := r.w.Search(SearchReq{Query: "banker"}); len(hits) != 0 {
+	if hits := r.w.Search(hostapi.SearchReq{Query: "banker"}); len(hits) != 0 {
 		t.Errorf("archived sessions show without asking: %+v", hits)
 	}
-	hits := r.w.Search(SearchReq{Query: "BANKER", Archived: true})
+	hits := r.w.Search(hostapi.SearchReq{Query: "BANKER", Archived: true})
 	if len(hits) != 1 || hits[0].Thread == "" {
 		t.Errorf("thread hits = %+v", hits)
 	}
-	hits = r.w.Search(SearchReq{Query: "minus infinity", Archived: true})
+	hits = r.w.Search(hostapi.SearchReq{Query: "minus infinity", Archived: true})
 	if len(hits) != 1 || hits[0].Item != "i1" {
 		t.Errorf("transcript hits = %+v", hits)
 	}
@@ -443,7 +445,7 @@ func TestNextPRCutsAFreshBranchAndKeepsThePast(t *testing.T) {
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	first := r.session(id).Branch
 	done := core.PastPR{Number: 812, URL: "https://github.com/acme/pricing/pull/812", Title: "fix: round half even", State: "merged"}
-	if err := r.w.NextPR(context.Background(), NextPRReq{Session: id, Project: r.session(id).Projects[0].Name, Done: done}); err != nil {
+	if err := r.w.NextPR(context.Background(), hostapi.NextPRReq{Session: id, Project: r.session(id).Projects[0].Name, Done: done}); err != nil {
 		t.Fatal(err)
 	}
 	se := r.session(id)
@@ -453,7 +455,7 @@ func TestNextPRCutsAFreshBranchAndKeepsThePast(t *testing.T) {
 	if len(se.Past) != 1 || se.Past[0].Branch != first || se.Past[0].Number != 812 || se.Past[0].State != "merged" || se.Past[0].Project != se.Projects[0].Name {
 		t.Errorf("past = %+v", se.Past)
 	}
-	m, _ := LoadManifest(se.Dir)
+	m, _ := worktree.LoadManifest(se.Dir)
 	if len(m.Projects[0].Past) != 1 || m.Projects[0].Branch != se.Branch || m.Projects[0].Past[0].Title != done.Title {
 		t.Errorf("manifest = %+v", m.Projects[0])
 	}
@@ -468,7 +470,7 @@ func TestNextPRRefusesToLeaveWorkBehind(t *testing.T) {
 	p := r.session(id).Projects[0]
 	first := p.Branch
 	wt := gitx.Repo{Dir: p.Dir}
-	next := func() error { return r.w.NextPR(ctx, NextPRReq{Session: id, Project: p.Name}) }
+	next := func() error { return r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name}) }
 
 	if err := os.WriteFile(filepath.Join(p.Dir, "round.go"), []byte("package pricing\n\nfunc Round() int { return 0 }\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -486,7 +488,7 @@ func TestNextPRRefusesToLeaveWorkBehind(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.NextPR(ctx, NextPRReq{Session: id, Project: p.Name, Head: strings.TrimSpace(head)}); err != nil {
+	if err := r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name, Head: strings.TrimSpace(head)}); err != nil {
 		t.Errorf("with the commit the PR's: %v", err)
 	}
 	if b := r.session(id).Projects[0].Branch; b == first {
@@ -510,10 +512,10 @@ func TestNextPRAfterMergingIntoTheDefaultBranch(t *testing.T) {
 	if _, err := wt.Run(ctx, "commit", "-qm", "round half even"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := r.w.ShipMergeDefault(ctx, ShipRef{Session: id, Project: p.Name}); err != nil {
+	if _, err := r.w.ShipMergeDefault(ctx, hostapi.ShipRef{Session: id, Project: p.Name}); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.NextPR(ctx, NextPRReq{Session: id, Project: p.Name}); err != nil {
+	if err := r.w.NextPR(ctx, hostapi.NextPRReq{Session: id, Project: p.Name}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(p.Dir, "half.go")); err != nil {
@@ -549,7 +551,7 @@ func TestEndArchiveDiscardsThenReopens(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(p.Dir, "dirty.txt"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.End(ctx, EndReq{Session: id, Discard: true}); err != nil {
+	if err := r.w.End(ctx, hostapi.EndReq{Session: id, Discard: true}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(p.Dir); err == nil {
@@ -574,7 +576,7 @@ func TestEndDeletesTheBranchToo(t *testing.T) {
 	ctx := context.Background()
 	id := r.start(core.SessionSpec{Kind: core.KindWork, Name: "rounding", Repos: []core.RepoID{core.RepoID(r.repo.Dir)}})
 	p := r.session(id).Projects[0]
-	if err := r.w.End(ctx, EndReq{Session: id, Delete: true, DeleteBranch: true}); err != nil {
+	if err := r.w.End(ctx, hostapi.EndReq{Session: id, Delete: true, DeleteBranch: true}); err != nil {
 		t.Fatal(err)
 	}
 	if (gitx.Repo{Dir: p.Repo}).HasBranch(ctx, p.Branch) {
@@ -797,7 +799,7 @@ func TestADeletedSessionsIDIsNeverReused(t *testing.T) {
 			t.Fatalf("start %d took %s, the id of a session deleted before it", i+1, id)
 		}
 		seen[id] = true
-		if err := r.w.End(ctx, EndReq{Session: id, Delete: true, DeleteBranch: true}); err != nil {
+		if err := r.w.End(ctx, hostapi.EndReq{Session: id, Delete: true, DeleteBranch: true}); err != nil {
 			t.Fatal(err)
 		}
 		if i == 1 {

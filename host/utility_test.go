@@ -12,9 +12,10 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
-func nextUtility(t *testing.T, u Utility) UtilityEvent {
+func nextUtility(t *testing.T, u hostapi.Utility) hostapi.UtilityEvent {
 	t.Helper()
 	select {
 	case ev, ok := <-u.Events():
@@ -25,7 +26,7 @@ func nextUtility(t *testing.T, u Utility) UtilityEvent {
 	case <-time.After(waitTimeout):
 		t.Fatal("no event from the utility agent")
 	}
-	return UtilityEvent{}
+	return hostapi.UtilityEvent{}
 }
 
 // Outside a session (the assistant …), a resident utility session: a hidden interactive claude in a PTY with the
@@ -34,21 +35,21 @@ func nextUtility(t *testing.T, u Utility) UtilityEvent {
 func TestUtilityAgent(t *testing.T) {
 	r := newRig(t)
 	r.fake.Offers = []agent.Model{{ID: "big", Default: true}, {ID: "small", Small: true}}
-	var asked ToolsReq
-	calls := make(chan ToolCall, 1)
-	r.w.SetApp(App{
-		Tools: func(q ToolsReq) []agent.Tool {
+	var asked hostapi.ToolsReq
+	calls := make(chan hostapi.ToolCall, 1)
+	r.w.SetApp(hostapi.App{
+		Tools: func(q hostapi.ToolsReq) []agent.Tool {
 			asked = q
 			return []agent.Tool{{Name: "sessions", Description: "Every session.", ReadOnly: true, Schema: json.RawMessage(`{"type":"object"}`)}}
 		},
-		CallTool: func(_ context.Context, call ToolCall) (string, error) {
+		CallTool: func(_ context.Context, call hostapi.ToolCall) (string, error) {
 			calls <- call
 			return "rounding: needs you", nil
 		}})
-	if _, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "../x", Pack: "p", Prompt: "hi"}); err == nil {
+	if _, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "../x", Pack: "p", Prompt: "hi"}); err == nil {
 		t.Error("a utility agent named ../x started")
 	}
-	u, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "what needs me?",
+	u, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "what needs me?",
 		Web: true})
 	if err != nil {
 		t.Fatal(err)
@@ -87,7 +88,7 @@ func TestUtilityAgent(t *testing.T) {
 	fs.Emit(agent.Message{Role: core.ItemAssistant, Text: "One thing: rounding.", Partial: true})
 	fs.Emit(agent.Message{Role: core.ItemAssistant, Text: "One thing: rounding."})
 	fs.Emit(agent.TurnEnd{})
-	for _, want := range []UtilityEvent{{Type: "turn-start"}, {Type: "tool-call", ID: "t1", Tool: "sessions"},
+	for _, want := range []hostapi.UtilityEvent{{Type: "turn-start"}, {Type: "tool-call", ID: "t1", Tool: "sessions"},
 		{Type: "message", Text: "One thing: rounding."}, {Type: "turn-end"}} {
 		got := nextUtility(t, u)
 		if got.Type != want.Type || got.Tool != want.Tool || got.Text != want.Text || got.ID != want.ID {
@@ -121,7 +122,7 @@ func TestUtilityAgent(t *testing.T) {
 // that terminal, so it would hold the turn for good.
 func TestUtilityAgentCancelsATerminalDialog(t *testing.T) {
 	r := newRig(t)
-	u, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Pack: "p", Prompt: "hi"})
+	u, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "p", Prompt: "hi"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,8 +136,8 @@ func TestUtilityAgentCancelsATerminalDialog(t *testing.T) {
 // A session's agent isn't offered the tools of a utility agent: the host asks the app for the session's kind's.
 func TestSessionToolsAreAskedForByKind(t *testing.T) {
 	r := newRig(t)
-	var asked ToolsReq
-	r.w.SetApp(App{Tools: func(q ToolsReq) []agent.Tool {
+	var asked hostapi.ToolsReq
+	r.w.SetApp(hostapi.App{Tools: func(q hostapi.ToolsReq) []agent.Tool {
 		asked = q
 		return nil
 	}})
@@ -151,7 +152,7 @@ func TestUtilityAgentThatPanicsFailsToStart(t *testing.T) {
 	r := newRig(t, panicky{&agenttest.Fake{Name: "codex"}})
 	done := make(chan error, 1)
 	go func() {
-		_, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Provider: "codex", Pack: "p", Prompt: "hi"})
+		_, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Provider: "codex", Pack: "p", Prompt: "hi"})
 		done <- err
 	}()
 	select {

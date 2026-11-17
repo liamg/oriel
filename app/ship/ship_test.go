@@ -14,6 +14,7 @@ import (
 	"github.com/liamg/oriel/app/ship"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/host"
+	"github.com/liamg/oriel/host/hostapi"
 	gh "github.com/liamg/oriel/integ/github"
 	"github.com/liamg/oriel/integ/github/ghtest"
 	"github.com/liamg/oriel/registry"
@@ -262,16 +263,16 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 
 	// Typing claims the draft at once, and keeps the whole message once the typing rests.
 	s.TypeInto("Commit message", " (3)")
-	onHost := func() host.Draft {
-		ss, _ := lw.W.ShipRead(t.Context(), host.ShipReq{Session: se.ID})
+	onHost := func() hostapi.Draft {
+		ss, _ := lw.W.ShipRead(t.Context(), hostapi.ShipReq{Session: se.ID})
 		for _, sh := range ss {
 			if sh.Project == "search-api" {
 				return sh.CommitDraft
 			}
 		}
-		return host.Draft{}
+		return hostapi.Draft{}
 	}
-	shipSettle(s, t, "the claim", func() bool { return onHost().By == host.DraftByYou })
+	shipSettle(s, t, "the claim", func() bool { return onHost().By == hostapi.DraftByYou })
 	if d := onHost(); d.Body == "feat(api): two routes (3)" {
 		t.Errorf("kept before the typing rested: %+v", d)
 	}
@@ -282,7 +283,7 @@ func TestShipDraftsFreshnessAndYours(t *testing.T) {
 		t.Errorf("the agent's tool overwrote the user's draft: %q", out)
 	}
 	s.Run("ship.refresh", nil)
-	shipSettle(s, t, "the read", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.CommitDraft.By == host.DraftByYou })
+	shipSettle(s, t, "the read", func() bool { sh, _ := x.ShipOf(se.ID, "search-api"); return sh.CommitDraft.By == hostapi.DraftByYou })
 	if v := s.Node("Commit message").Value; v != "feat(api): two routes (3)" {
 		t.Errorf("the box has %q", v)
 	}

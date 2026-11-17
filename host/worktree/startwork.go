@@ -10,6 +10,7 @@ import (
 
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/gitx"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
@@ -41,7 +42,7 @@ func CanStartWork(ctx context.Context, se core.SessionState, branches map[string
 func (x *Worktrees) StartWork(ctx context.Context, se core.SessionState, branches map[string]string, keepThreads bool) (string, error) {
 	m, ok := LoadManifest(se.Dir)
 	if !ok {
-		m = Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
+		m = hostapi.Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
 	}
 	m.Projects = nil
 	var projects []core.Project
@@ -155,7 +156,7 @@ func (x *Worktrees) AddRepo(ctx context.Context, se core.SessionState, ref core.
 	k, _ := x.deps.Kinds.Get(se.Kind)
 	m, ok := LoadManifest(se.Dir)
 	if !ok {
-		m = Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
+		m = hostapi.Manifest{Name: string(se.ID), CreatedAt: se.Created, Kind: string(se.Kind)}
 	}
 	branch := se.Branch
 	if branch == "" {

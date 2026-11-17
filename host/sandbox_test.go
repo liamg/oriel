@@ -21,6 +21,8 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/sandboxhost"
 	"github.com/liamg/oriel/sandbox"
 	"github.com/liamg/oriel/sandbox/agentsock"
@@ -355,7 +357,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 		t.Fatalf("not held: %+v", r)
 	default:
 	}
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"})
 	if r := <-res; r.code != http.StatusForbidden || !strings.Contains(r.body, "not allowed") {
 		t.Errorf("denied: %+v", r)
 	}
@@ -363,7 +365,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	// Allow: the dial goes through, and the next asks again.
 	res = fetch()
 	ask = s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"})
 	if r := <-res; r.code != 200 || r.body != "upstream" {
 		t.Errorf("allowed: %+v", r)
 	}
@@ -371,7 +373,7 @@ func TestNetworkAsksHoldTheConnection(t *testing.T) {
 	// Always: recorded, and the next goes through with no ask.
 	res = fetch()
 	ask = s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
 	if r := <-res; r.code != 200 {
 		t.Errorf("always: %+v", r)
 	}
@@ -401,7 +403,7 @@ func TestNetworkFailuresReachTheTranscript(t *testing.T) {
 		res := make(chan int, 1)
 		go func() { code, _ := get(t, paddr, up.URL); res <- code }()
 		ask := s.waitAsk(id, core.AskNetwork)
-		s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "not today"})
+		s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "not today"})
 		if code := <-res; code != http.StatusForbidden {
 			t.Fatalf("denied: %d", code)
 		}
@@ -443,7 +445,7 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	done := make(chan bool, 1)
 	go func() { done <- b.Egress().Allow(ctx, "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test"})
 	if !<-done {
 		t.Fatal("not allowed")
 	}
@@ -460,7 +462,7 @@ func TestNetworkAlwaysWithAScope(t *testing.T) {
 	other, _, ob := s.sandboxed()
 	go func() { done <- ob.Egress().Allow(ctx, "cdn.mirror.test", 443) }()
 	ask = s.waitAsk(other, core.AskNetwork)
-	s.w.Answer(AnswerReq{Session: other, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test", For: ForAll})
+	s.w.Answer(hostapi.AnswerReq{Session: other, Ask: ask.ID, Decision: "always", Scope: "*.mirror.test", For: agentrun.ForAll})
 	if !<-done {
 		t.Fatal("not allowed for all sessions")
 	}
@@ -494,7 +496,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 	if ask.Tool != "oriel__commit" || ask.Rule != "oriel__commit" || !strings.Contains(ask.Summary, "Add new.go") {
 		t.Fatalf("ask = %+v", ask)
 	}
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "allow"})
 	if r := <-res; r.IsError || r.Text() != "Committed 1 file(s)." {
 		t.Fatalf("commit = %q", r.Text())
 	}
@@ -506,7 +508,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 		t.Fatalf("not held: %q", r.Text())
 	default:
 	}
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "open a PR instead"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny", Note: "open a PR instead"})
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "the user denied oriel__push") || !strings.Contains(r.Text(), "open a PR instead") {
 		t.Errorf("deny = %q, want who denied it and their note", r.Text())
 	}
@@ -516,7 +518,7 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 
 	res = call("oriel__push", map[string]any{})
 	ask = s.waitAsk(id, core.AskGateway)
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always"})
 	if r := <-res; r.IsError || r.Text() != "Pushed." {
 		t.Fatalf("push = %q", r.Text())
 	}
@@ -537,16 +539,16 @@ func TestGatewayCallsWaitForTheUser(t *testing.T) {
 func TestPolicyHooksAnswerSandboxAsks(t *testing.T) {
 	s := newSandboxRig(t)
 	id, _, b := s.sandboxed()
-	s.w.SetApp(App{Decide: func(_ context.Context, d Decide) Verdict {
+	s.w.SetApp(hostapi.App{Decide: func(_ context.Context, d hostapi.Decide) hostapi.Verdict {
 		switch {
 		case d.Ask.Kind == core.AskNetwork && d.Ask.Host == "pkgs.mirror.test:443":
-			return Verdict{Decision: "allow", By: "init.lua"}
+			return hostapi.Verdict{Decision: "allow", By: "init.lua"}
 		case d.Ask.Kind == core.AskNetwork && d.Ask.Host == "tracker.test:443":
-			return Verdict{Decision: "deny", By: "init.lua", Note: "no telemetry"}
+			return hostapi.Verdict{Decision: "deny", By: "init.lua", Note: "no telemetry"}
 		case d.Ask.Kind == core.AskGateway && d.Ask.Tool == "oriel__push":
-			return Verdict{Decision: "deny", By: "init.lua", Note: "pushes go through CI"}
+			return hostapi.Verdict{Decision: "deny", By: "init.lua", Note: "pushes go through CI"}
 		}
-		return Verdict{}
+		return hostapi.Verdict{}
 	}})
 	if !b.Egress().Allow(context.Background(), "pkgs.mirror.test", 443) {
 		t.Error("the hook's allow didn't let the connection through")
@@ -575,7 +577,7 @@ func TestRequestHostRefusalHolds(t *testing.T) {
 	if ask.Tool != "oriel__request_host" || !strings.Contains(ask.Summary, "needs docker") {
 		t.Fatalf("ask = %+v", ask)
 	}
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "deny"})
 	if r := <-res; !r.IsError || !strings.Contains(r.Text(), "refused") {
 		t.Errorf("deny = %q", r.Text())
 	}
@@ -726,7 +728,7 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 	if err != nil || !p.Sandboxed || !p.Filtered {
 		t.Fatalf("permissions = %+v, %v", p, err)
 	}
-	hostRule := func(p Permissions, host string, port int) (egress.Rule, bool) {
+	hostRule := func(p hostapi.Permissions, host string, port int) (egress.Rule, bool) {
 		i := slices.IndexFunc(p.Hosts, func(r egress.Rule) bool { return r.Host == host && r.Port == port })
 		if i < 0 {
 			return egress.Rule{}, false
@@ -739,8 +741,8 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 	if r, ok := hostRule(p, "github.com", 443); !ok || r.Source != "built-in list" {
 		t.Errorf("github.com = %+v, %v", r, ok)
 	}
-	push := func(p Permissions) ToolPermission {
-		i := slices.IndexFunc(p.Tools, func(tp ToolPermission) bool { return tp.Name == gateway.Prefix+"push" })
+	push := func(p hostapi.Permissions) hostapi.ToolPermission {
+		i := slices.IndexFunc(p.Tools, func(tp hostapi.ToolPermission) bool { return tp.Name == gateway.Prefix+"push" })
 		if i < 0 {
 			t.Fatalf("no push tool in %+v", p.Tools)
 		}
@@ -757,7 +759,7 @@ func TestPermissionsListRulesAndConnections(t *testing.T) {
 		t.Fatal(err)
 	}
 	p, _ = s.w.Permissions(ctx, id)
-	if tp := push(p); tp.Action != gateway.Deny || tp.Source != SourceSession || tp.Session != gateway.Deny {
+	if tp := push(p); tp.Action != gateway.Deny || tp.Source != hostapi.SourceSession || tp.Session != gateway.Deny {
 		t.Errorf("push after a session deny = %+v", tp)
 	}
 	if r, ok := hostRule(p, "example.com", 443); !ok || r.Allow || r.Source != "this session" {
@@ -900,7 +902,7 @@ func TestAlwaysNotSavedReachesTheTranscript(t *testing.T) {
 	done := make(chan bool, 1)
 	go func() { done <- b.Egress().Allow(context.Background(), "pkgs.mirror.test", 443) }()
 	ask := s.waitAsk(id, core.AskNetwork)
-	s.w.Answer(AnswerReq{Session: id, Ask: ask.ID, Decision: "always", For: ForAll})
+	s.w.Answer(hostapi.AnswerReq{Session: id, Ask: ask.ID, Decision: "always", For: agentrun.ForAll})
 	if !<-done {
 		t.Fatal("not allowed")
 	}

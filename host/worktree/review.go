@@ -17,13 +17,13 @@ import (
 )
 
 // addPRProject fetches the PR's head from spec.PRRef and pins a worktree there.
-func addPRProject(ctx context.Context, root string, m *Manifest, r core.Repo, spec core.SessionSpec) (ManifestEntry, error) {
+func addPRProject(ctx context.Context, root string, m *hostapi.Manifest, r core.Repo, spec core.SessionSpec) (hostapi.ManifestEntry, error) {
 	from, ref, err := prRefs(spec.PR, spec.PRRef, root)
 	if err != nil {
-		return ManifestEntry{}, err
+		return hostapi.ManifestEntry{}, err
 	}
 	if err := fetchPR(ctx, r.Path, from, ref); err != nil {
-		return ManifestEntry{}, err
+		return hostapi.ManifestEntry{}, err
 	}
 	p, err := addProject(ctx, root, m, r.Path, "", ref, true)
 	if err != nil || spec.PRBase == "" {
@@ -51,11 +51,9 @@ func fetchPR(ctx context.Context, repo, from, ref string) error {
 	return nil
 }
 
-type PRMove = hostapi.PRMove
-
 // UpdatePR fetches a review's pull request again and moves its pinned worktrees to the head it has now, answering
 // the projects that moved.
-func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]PRMove, err error) {
+func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (_ map[string]hostapi.PRMove, err error) {
 	defer x.env.Recover("UpdatePR", &err)
 	se, err := x.st.Session(id)
 	if err != nil {
@@ -69,7 +67,7 @@ func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (_ map[stri
 	if err != nil {
 		return nil, err
 	}
-	moved := map[string]PRMove{}
+	moved := map[string]hostapi.PRMove{}
 	projects := slices.Clone(se.Projects)
 	for i, p := range projects {
 		if !p.Detached || p.Repo == "" || p.Base != ref {
@@ -93,7 +91,7 @@ func (x *Worktrees) UpdatePR(ctx context.Context, id core.SessionID) (_ map[stri
 		if err := g.Detach(ctx, head); err != nil {
 			return nil, fmt.Errorf("%s: %w", p.Name, err)
 		}
-		projects[i].Commit, moved[p.Name] = head, PRMove{From: p.Commit, To: head, Commits: n}
+		projects[i].Commit, moved[p.Name] = head, hostapi.PRMove{From: p.Commit, To: head, Commits: n}
 	}
 	if len(moved) == 0 {
 		return moved, nil

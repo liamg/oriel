@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // Terminal is the agent's raw terminal: what it has shown, then what it shows, until ctx ends or the agent
@@ -54,7 +55,7 @@ func (x *Runner) Terminal(ctx context.Context, id core.SessionID) (_ <-chan []by
 }
 
 // TermInput types into the agent's terminal, and resizes it.
-func (x *Runner) TermInput(r TermReq) (err error) {
+func (x *Runner) TermInput(r hostapi.TermReq) (err error) {
 	defer x.env.Recover("TermInput", &err)
 	h, _ := x.sessionFor(r.Session, false)
 	if h == nil {

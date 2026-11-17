@@ -16,6 +16,7 @@ import (
 	"github.com/liamg/oriel/agent/usage"
 	"github.com/liamg/oriel/agent/usage/stats"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
@@ -133,14 +134,14 @@ func TestStatsReadEveryTranscript(t *testing.T) {
 		t.Errorf("a log last written before the range was read: %d scans", n)
 	}
 
-	d, err := r.w.SessionStats(StatsSessionReq{Session: "claude:stray"})
+	d, err := r.w.SessionStats(hostapi.StatsSessionReq{Session: "claude:stray"})
 	if err != nil || d.Origin != stats.OriginOutside || d.Name != "tidy the css" || d.Totals.Requests != 1 || d.Provider != "claude" {
 		t.Errorf("an outside session's stats = %+v, %v", d, err)
 	}
-	if d, err := r.w.SessionStats(StatsSessionReq{Session: "claude:old"}); err != nil || d.Totals.Requests != 1 {
+	if d, err := r.w.SessionStats(hostapi.StatsSessionReq{Session: "claude:old"}); err != nil || d.Totals.Requests != 1 {
 		t.Errorf("an old outside session's stats = %+v, %v", d, err)
 	}
-	if _, err := r.w.SessionStats(StatsSessionReq{Session: "claude:nothing"}); err == nil {
+	if _, err := r.w.SessionStats(hostapi.StatsSessionReq{Session: "claude:nothing"}); err == nil {
 		t.Error("stats of a session there's no log of")
 	}
 }

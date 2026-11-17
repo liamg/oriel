@@ -7,6 +7,7 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // A comment still queued behind the agent's turn can be edited in place or deleted, the ones after it kept; one the
@@ -21,19 +22,19 @@ func TestQueuedCommentsEditAndDelete(t *testing.T) {
 	r.eventually(id, "the turn", func(se core.SessionState) bool { return se.Agent.Working })
 	ctx := context.Background()
 	for _, b := range []string{"second", "third", "fourth"} {
-		if _, err := r.w.Comment(ctx, CommentReq{Session: id, Thread: tid, Body: b}); err != nil {
+		if _, err := r.w.Comment(ctx, hostapi.CommentReq{Session: id, Thread: tid, Body: b}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	th, _ := r.session(id).Thread(tid)
 	second, third := th.Comments[1].ID, th.Comments[2].ID
-	if err := r.w.EditQueued(QueuedReq{Session: id, Thread: tid, Comment: second, Body: "second, better"}); err != nil {
+	if err := r.w.EditQueued(hostapi.QueuedReq{Session: id, Thread: tid, Comment: second, Body: "second, better"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.EditQueued(QueuedReq{Session: id, Thread: tid, Comment: third, Delete: true}); err != nil {
+	if err := r.w.EditQueued(hostapi.QueuedReq{Session: id, Thread: tid, Comment: third, Delete: true}); err != nil {
 		t.Fatal(err)
 	}
-	if err := r.w.EditQueued(QueuedReq{Session: id, Thread: tid, Comment: given, Body: "x"}); err == nil {
+	if err := r.w.EditQueued(hostapi.QueuedReq{Session: id, Thread: tid, Comment: given, Body: "x"}); err == nil {
 		t.Error("a comment the agent has was edited")
 	}
 	th, _ = r.session(id).Thread(tid)

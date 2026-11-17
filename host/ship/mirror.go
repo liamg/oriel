@@ -23,10 +23,6 @@ import (
 // there, so it never comes back as a new comment (echo reconciliation); edits, deletions and resolutions there update
 // the mirror.
 
-type ForwardReq = hostapi.ForwardReq
-
-type DraftEditReq = hostapi.DraftEditReq
-
 // mirrorState serialises applying a mirror with a forward's post and mark, so a forward's echo is always recognised.
 type mirrorState struct {
 	mu sync.Mutex
@@ -183,14 +179,8 @@ func mergeMsgs(t *core.Thread, msgs []mirrorMsg) {
 	})
 }
 
-type MirrorReviewReq = hostapi.MirrorReviewReq
-
-type ReviewThread = hostapi.ReviewThread
-
-type ReviewComment = hostapi.ReviewComment
-
 // MirrorReview brings a PR's review threads into the session, and hands the agent what's new.
-func (x *Ships) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error) {
+func (x *Ships) MirrorReview(ctx context.Context, r hostapi.MirrorReviewReq) (err error) {
 	defer x.env.Recover("MirrorReview", &err)
 	if r.Host == "" {
 		return errors.New("which code host's review?")
@@ -238,10 +228,8 @@ func (x *Ships) MirrorReview(ctx context.Context, r MirrorReviewReq) (err error)
 	return nil
 }
 
-type ForwardedReq = hostapi.ForwardedReq
-
 // DraftOf is a thread's draft reply to forward: its body, refusing one that isn't a draft or has gone already.
-func (x *Ships) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {
+func (x *Ships) DraftOf(r hostapi.ForwardReq) (_ core.Thread, _ string, err error) {
 	defer x.env.Recover("DraftOf", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
@@ -272,7 +260,7 @@ func (x *Ships) DraftOf(r ForwardReq) (_ core.Thread, _ string, err error) {
 
 // Forwarded marks a draft reply sent, once its code host has it. A mirror can meanwhile take its echo for a new
 // comment: ForwardHost posts and marks with mirroring held off.
-func (x *Ships) Forwarded(r ForwardedReq) (_ core.Comment, err error) {
+func (x *Ships) Forwarded(r hostapi.ForwardedReq) (_ core.Comment, err error) {
 	defer x.env.Recover("Forwarded", &err)
 	x.mirror.mu.Lock()
 	defer x.mirror.mu.Unlock()

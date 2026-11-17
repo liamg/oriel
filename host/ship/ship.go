@@ -21,23 +21,9 @@ import (
 // user's credentials are, with the sandbox's git guard in a sandboxed workspace. The pull request is the app's, through
 // its code host (registry.CodeHost).
 
-type Ship = hostapi.Ship
-
-type ShipFile = hostapi.ShipFile
-
-type ShipCommit = hostapi.ShipCommit
-
-func shipCommit(c gitx.Commit) ShipCommit {
-	return ShipCommit{Hash: c.Hash, Subject: c.Subject, Body: c.Body, Author: c.Author}
+func shipCommit(c gitx.Commit) hostapi.ShipCommit {
+	return hostapi.ShipCommit{Hash: c.Hash, Subject: c.Subject, Body: c.Body, Author: c.Author}
 }
-
-type ShipReq = hostapi.ShipReq
-
-type ShipRef = hostapi.ShipRef
-
-type ShipCommitReq = hostapi.ShipCommitReq
-
-type DraftReq = hostapi.DraftReq
 
 // shipState is what the host keeps between reads: which branches' PRs a code host last found open, and when each
 // project was last synced.
@@ -50,7 +36,7 @@ type shipState struct {
 func shipKey(id core.SessionID, project string) string { return string(id) + "/" + project }
 
 // ShipRead is every project of a session on its way to a PR, or those r names.
-func (x *Ships) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
+func (x *Ships) ShipRead(ctx context.Context, r hostapi.ShipReq) (_ []hostapi.Ship, err error) {
 	defer x.env.Recover("ShipRead", &err)
 	se, err := x.st.Session(r.Session)
 	if err != nil {
@@ -60,7 +46,7 @@ func (x *Ships) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
 	if len(r.Projects) > 0 {
 		projects = slices.DeleteFunc(slices.Clone(projects), func(p core.Project) bool { return !slices.Contains(r.Projects, p.Name) })
 	}
-	out := make([]Ship, len(projects))
+	out := make([]hostapi.Ship, len(projects))
 	var wg sync.WaitGroup
 	for i, p := range projects {
 		wg.Add(1)
@@ -74,8 +60,8 @@ func (x *Ships) ShipRead(ctx context.Context, r ShipReq) (_ []Ship, err error) {
 	return out, nil
 }
 
-func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Project, fresh bool) Ship {
-	s := Ship{Project: p.Name, Dir: p.Dir, Branch: p.Branch, Base: strings.TrimPrefix(p.Base, "origin/"), ReadOnly: p.ReadOnly || p.Detached}
+func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Project, fresh bool) hostapi.Ship {
+	s := hostapi.Ship{Project: p.Name, Dir: p.Dir, Branch: p.Branch, Base: strings.TrimPrefix(p.Base, "origin/"), ReadOnly: p.ReadOnly || p.Detached}
 	s.CommitDraft = x.env.ReadDraft(se.ID, p.Name, "commit")
 	s.PRDraft = x.env.ReadDraft(se.ID, p.Name, "pr")
 	env, err := sandbox.GitEnv(p.Dir)
@@ -114,7 +100,7 @@ func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Pr
 		s.Base = strings.TrimPrefix(f.Base, "origin/")
 	}
 	for _, fs := range f.Uncommitted {
-		s.Files = append(s.Files, ShipFile{Path: fs.Path, Code: string(fs.Code), Add: fs.Add, Del: fs.Del, Binary: fs.Binary})
+		s.Files = append(s.Files, hostapi.ShipFile{Path: fs.Path, Code: string(fs.Code), Add: fs.Add, Del: fs.Del, Binary: fs.Binary})
 	}
 	s.Behind, s.Conflicts, s.Commits, s.Pushed, s.Replaced = f.Behind, f.Conflicts, len(f.Commits), f.Pushed, f.Replaced
 	s.Head, _ = repo.Head(ctx)
@@ -136,7 +122,7 @@ func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Pr
 			s.Changed = files
 		}
 	}
-	for kind, d := range map[string]*hostcore.Draft{"commit": &s.CommitDraft, "pr": &s.PRDraft} {
+	for kind, d := range map[string]*hostapi.Draft{"commit": &s.CommitDraft, "pr": &s.PRDraft} {
 		if d.Code != "" {
 			d.Stale = d.Code != hostcore.DraftCode(ctx, repo, f.Base, kind)
 		}
@@ -150,7 +136,7 @@ func (x *Ships) shipProject(ctx context.Context, se core.SessionState, p core.Pr
 
 // ShipCommit commits a project's files with the user's git identity, drops the commit draft it used, and returns the
 // commit's hash.
-func (x *Ships) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err error) {
+func (x *Ships) ShipCommit(ctx context.Context, r hostapi.ShipCommitReq) (_ string, err error) {
 	defer x.env.Recover("ShipCommit", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -172,7 +158,7 @@ func (x *Ships) ShipCommit(ctx context.Context, r ShipCommitReq) (_ string, err 
 }
 
 // ShipPush pushes a project's branch to origin: the session's own branch only.
-func (x *Ships) ShipPush(ctx context.Context, r ShipRef) (err error) {
+func (x *Ships) ShipPush(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer x.env.Recover("ShipPush", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -187,7 +173,7 @@ func (x *Ships) ShipPush(ctx context.Context, r ShipRef) (err error) {
 
 // ShipSync fetches origin and rebases a project's branch onto its base, carrying uncommitted work over. One that
 // conflicts is undone and says where.
-func (x *Ships) ShipSync(ctx context.Context, r ShipRef) (err error) {
+func (x *Ships) ShipSync(ctx context.Context, r hostapi.ShipRef) (err error) {
 	defer x.env.Recover("ShipSync", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -215,7 +201,7 @@ func (x *Ships) ShipSync(ctx context.Context, r ShipRef) (err error) {
 
 // ShipMergeDefault merges a project's branch into the repo's default branch, here and not pushed (gitx.MergeInto):
 // the session's own branch only, and its committed work only.
-func (x *Ships) ShipMergeDefault(ctx context.Context, r ShipRef) (m gitx.Merge, err error) {
+func (x *Ships) ShipMergeDefault(ctx context.Context, r hostapi.ShipRef) (m gitx.Merge, err error) {
 	defer x.env.Recover("ShipMergeDefault", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -250,10 +236,8 @@ func localDefault(ctx context.Context, repo gitx.Repo) string {
 	return ""
 }
 
-type RenameReq = hostapi.RenameReq
-
 // ShipRename renames a project's branch. The app refuses first when its PR is open on it.
-func (x *Ships) ShipRename(ctx context.Context, r RenameReq) (err error) {
+func (x *Ships) ShipRename(ctx context.Context, r hostapi.RenameReq) (err error) {
 	se, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
 		return err
@@ -281,7 +265,7 @@ func (x *Ships) ShipRename(ctx context.Context, r RenameReq) (err error) {
 }
 
 // ShipDraft saves a draft the user wrote, or drops it.
-func (x *Ships) ShipDraft(ctx context.Context, r DraftReq) (err error) {
+func (x *Ships) ShipDraft(ctx context.Context, r hostapi.DraftReq) (err error) {
 	defer x.env.Recover("ShipDraft", &err)
 	_, p, repo, err := hostcore.ProjectRepo(ctx, x.st, x.deps.Kinds, r.Session, r.Project)
 	if err != nil {
@@ -295,5 +279,5 @@ func (x *Ships) ShipDraft(ctx context.Context, r DraftReq) (err error) {
 		return nil
 	}
 	code := hostcore.DraftCode(ctx, repo, repo.FlightBase(ctx, p.Base), r.Kind)
-	return x.env.WriteDraft(r.Session, p.Name, r.Kind, hostcore.Draft{Title: r.Title, Body: r.Body, By: hostcore.DraftByYou, Code: code})
+	return x.env.WriteDraft(r.Session, p.Name, r.Kind, hostapi.Draft{Title: r.Title, Body: r.Body, By: hostapi.DraftByYou, Code: code})
 }

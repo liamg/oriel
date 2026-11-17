@@ -25,9 +25,9 @@ func (x *hostPlugin) Activate(_ context.Context, h plugin.Host) error {
 		return nil
 	}
 	for name, impl := range map[string]any{
-		hostapi.HostSessionsService: host.SessionCalls(w), hostapi.HostSandboxesService: host.SandboxCalls(w),
-		hostapi.HostShipsService: host.ShipCalls(w), hostapi.HostCodeHostsService: host.CodeHostCalls(w),
-		hostapi.HostReposService: host.RepoCalls(w), hostapi.HostJobsService: host.JobCalls(w), hostapi.HostStatsService: host.StatsCalls(w),
+		hostapi.HostSessionsService: hostapi.SessionCalls(w), hostapi.HostSandboxesService: hostapi.SandboxCalls(w),
+		hostapi.HostShipsService: hostapi.ShipCalls(w), hostapi.HostCodeHostsService: hostapi.CodeHostCalls(w),
+		hostapi.HostReposService: hostapi.RepoCalls(w), hostapi.HostJobsService: hostapi.JobCalls(w), hostapi.HostStatsService: hostapi.StatsCalls(w),
 	} {
 		x.Add(h.Contribute(registry.Service{Name: name, Impl: impl}))
 	}

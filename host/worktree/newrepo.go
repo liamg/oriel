@@ -11,9 +11,6 @@ import (
 	"github.com/liamg/oriel/host/hostapi"
 )
 
-// Templates a new repo can start from, besides any git URL.
-var Templates = hostapi.Templates
-
 // initRepo makes a repo at dir from a template, with one commit, so worktrees can be cut from it.
 func initRepo(ctx context.Context, dir, template, name, you string) error {
 	if template == "" {
@@ -38,7 +35,7 @@ func initRepo(ctx context.Context, dir, template, name, you string) error {
 		}
 		files = nil
 	default:
-		return fmt.Errorf("no template %q: use one of %s, or a git URL", template, strings.Join(Templates, ", "))
+		return fmt.Errorf("no template %q: use one of %s, or a git URL", template, strings.Join(hostapi.Templates, ", "))
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

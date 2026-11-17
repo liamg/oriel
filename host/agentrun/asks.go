@@ -10,21 +10,22 @@ import (
 
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
 // askUser opens an ask and waits for the user's answer, or for ctx.
-func (h *session) askUser(ctx context.Context, ask core.Ask) (AnswerReq, bool) {
+func (h *session) askUser(ctx context.Context, ask core.Ask) (hostapi.AnswerReq, bool) {
 	if ask.ID == "" {
 		ask.ID = hostcore.NewID(6)
 	}
 	ask.Created = h.r.env.Now().UTC()
-	ch := make(chan AnswerReq, 1)
+	ch := make(chan hostapi.AnswerReq, 1)
 	h.mu.Lock()
 	h.waiting[ask.ID] = ch
 	h.mu.Unlock()
 	if err := h.r.st.Emit(core.AskOpened{Session: h.id, Ask: ask}); err != nil {
-		return AnswerReq{}, false
+		return hostapi.AnswerReq{}, false
 	}
 	hostcore.Restatus(h.r.st, h.id)
 	defer hostcore.Restatus(h.r.st, h.id)
@@ -36,12 +37,12 @@ func (h *session) askUser(ctx context.Context, ask core.Ask) (AnswerReq, bool) {
 		delete(h.waiting, ask.ID)
 		h.mu.Unlock()
 		_ = h.r.st.Emit(core.AskClosed{Session: h.id, ID: ask.ID, Decision: "gone"})
-		return AnswerReq{}, false
+		return hostapi.AnswerReq{}, false
 	}
 }
 
 // answer is the user's answer to an ask.
-func (h *session) answer(r AnswerReq) error {
+func (h *session) answer(r hostapi.AnswerReq) error {
 	h.mu.Lock()
 	ch, ok := h.waiting[r.Ask]
 	delete(h.waiting, r.Ask)
@@ -62,16 +63,16 @@ func (h *session) permission(sess agent.Session, p agent.Permission) {
 		ask.Rule = RuleFor(p.Tool, p.Input)
 	}
 	if v, ok := h.r.policy(h.id, ask); ok {
-		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Allow: v.Decision == DecisionAllow, Note: v.Note})
+		_ = sess.Answer(h.ctx, p.ID, agent.Decision{Allow: v.Decision == hostapi.DecisionAllow, Note: v.Note})
 		h.appendItem(core.Item{ID: hostcore.NewID(6), Kind: core.ItemSystem, Time: h.r.env.Now().UTC(),
-			Text: fmt.Sprintf("%s %s by %s", p.Tool, map[bool]string{true: "allowed", false: "denied"}[v.Decision == DecisionAllow], v.By)})
+			Text: fmt.Sprintf("%s %s by %s", p.Tool, map[bool]string{true: "allowed", false: "denied"}[v.Decision == hostapi.DecisionAllow], v.By)})
 		return
 	}
 	a, ok := h.askUser(h.ctx, ask)
 	if !ok {
 		return
 	}
-	d := agent.Decision{Allow: a.Decision.Allows(), Always: a.Decision == DecisionAlways, Note: a.Note}
+	d := agent.Decision{Allow: a.Decision.Allows(), Always: a.Decision == hostapi.DecisionAlways, Note: a.Note}
 	if !d.Allow && d.Note == "" {
 		d.Note = "Denied by the user in Oriel."
 	} else if !d.Allow {
@@ -93,10 +94,10 @@ func (h *session) question(sess agent.Session, q agent.Question) {
 
 // ask asks the user questions in a thread (questionThread's) and waits for the answer. A thread opened for the
 // question keeps the answer and is resolved once it's given.
-func (h *session) ask(ctx context.Context, id string, named core.ThreadID, qs []core.Question) (AnswerReq, bool) {
+func (h *session) ask(ctx context.Context, id string, named core.ThreadID, qs []core.Question) (hostapi.AnswerReq, bool) {
 	tid, opened, err := h.questionThread(named, qs)
 	if err != nil {
-		return AnswerReq{}, false
+		return hostapi.AnswerReq{}, false
 	}
 	asked := h.r.env.Now().UTC()
 	a, ok := h.askUser(ctx, core.Ask{ID: id, Kind: core.AskQuestion, Summary: questionSummary(qs), Questions: qs, Thread: tid})
@@ -183,7 +184,7 @@ func questionsText(qs []core.Question) string {
 }
 
 // answerText is the user's answers to questions, as a comment or the ask tool's result: each question and its answer.
-func answerText(qs []core.Question, a AnswerReq) string {
+func answerText(qs []core.Question, a hostapi.AnswerReq) string {
 	var lines []string
 	for _, q := range qs {
 		if ans, ok := a.Answers[q.Question]; ok {
@@ -204,24 +205,24 @@ func questionSummary(qs []core.Question) string {
 }
 
 // approve is layer 3 asking: a connection or gateway call waits while the user decides.
-func (h *session) approve(ctx context.Context, ask core.Ask) (hostcore.Approval, error) {
+func (h *session) approve(ctx context.Context, ask core.Ask) (hostapi.Approval, error) {
 	if v, ok := h.r.policy(h.id, ask); ok {
-		return hostcore.Approval{Allow: v.Decision == DecisionAllow, By: v.By, Note: v.Note}, nil
+		return hostapi.Approval{Allow: v.Decision == hostapi.DecisionAllow, By: v.By, Note: v.Note}, nil
 	}
 	a, ok := h.askUser(ctx, ask)
 	if !ok {
-		return hostcore.Approval{}, ctx.Err()
+		return hostapi.Approval{}, ctx.Err()
 	}
-	if a.Decision == DecisionAlways {
+	if a.Decision == hostapi.DecisionAlways {
 		h.remember(ask, a)
 	}
-	return hostcore.Approval{Allow: a.Decision.Allows(), Scope: a.Scope, All: a.For == ForAll, By: "the user",
+	return hostapi.Approval{Allow: a.Decision.Allows(), Scope: a.Scope, All: a.For == ForAll, By: "the user",
 		Note: a.Note}, nil
 }
 
 // remember keeps the rule an always makes of ask: the session's, or with ForAll every session's. One for all sessions
 // that can't be saved still allows the call, and the transcript says so.
-func (h *session) remember(ask core.Ask, a AnswerReq) {
+func (h *session) remember(ask core.Ask, a hostapi.AnswerReq) {
 	rule := ask.Rule
 	if ask.Kind == core.AskNetwork && a.Scope != "" {
 		rule = "net(" + a.Scope + ")"
@@ -304,26 +305,26 @@ func (x *Runner) addRule(id core.SessionID, rule string) error {
 }
 
 // policy is layer 2: the session's rules, the rules for all sessions, then the app's hooks. ok is false when neither answers.
-func (x *Runner) policy(id core.SessionID, ask core.Ask) (Verdict, bool) {
+func (x *Runner) policy(id core.SessionID, ask core.Ask) (hostapi.Verdict, bool) {
 	se, err := x.st.Session(id)
 	if err != nil {
-		return Verdict{}, false
+		return hostapi.Verdict{}, false
 	}
 	for _, r := range se.Rules {
 		if matchRule(r, ask) {
-			return Verdict{Decision: DecisionAllow, By: "rule " + r}, true
+			return hostapi.Verdict{Decision: hostapi.DecisionAllow, By: "rule " + r}, true
 		}
 	}
 	if r, ok := x.allRule(ask); ok {
-		return Verdict{Decision: DecisionAllow, By: "rule " + r + " for all sessions"}, true
+		return hostapi.Verdict{Decision: hostapi.DecisionAllow, By: "rule " + r + " for all sessions"}, true
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	if v, ok := x.decide(ctx, Decide{Session: id, Ask: ask}); ok {
+	if v, ok := x.decide(ctx, hostapi.Decide{Session: id, Ask: ask}); ok {
 		if v.By == "" {
 			v.By = "policy"
 		}
 		return v, true
 	}
-	return Verdict{}, false
+	return hostapi.Verdict{}, false
 }

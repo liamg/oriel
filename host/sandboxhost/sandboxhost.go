@@ -27,11 +27,11 @@ type Deps struct {
 	// Providers are the agent providers the host knows, whose installed MCP servers every sandbox's gateway carries.
 	Providers func() []agent.Provider
 	// Factory is the host's sandbox factory; nil when this machine can't run one.
-	Factory hostcore.SandboxFactory
+	Factory hostapi.SandboxFactory
 	// Live is session id's sandbox while its agent runs in one, else nil.
-	Live func(id core.SessionID) hostcore.Sandbox
+	Live func(id core.SessionID) hostapi.Sandbox
 	// Running are the sandboxes agents run in now.
-	Running func() []hostcore.Sandbox
+	Running func() []hostapi.Sandbox
 	// Repos are the registered checkouts.
 	Repos func() []core.Repo
 	// AddRepo brings a repo into a session.
@@ -43,7 +43,7 @@ type Deps struct {
 	// GatewayTools are the tools plugins add to each sandbox's gateway.
 	GatewayTools func() []hostapi.GatewayTool
 	// RestartWhenIdle restarts session id's agent, resumed, once its turn ends, if it still runs in sb.
-	RestartWhenIdle func(id core.SessionID, sb hostcore.Sandbox, why string)
+	RestartWhenIdle func(id core.SessionID, sb hostapi.Sandbox, why string)
 }
 
 // Boxes are the host's sessions' sandboxes, and the sandbox settings the app last sent.
@@ -69,7 +69,7 @@ func (x *Boxes) of(id core.SessionID) *Box {
 }
 
 // Of is session id's sandbox while its agent runs in one of this package's, else nil.
-func Of(sb hostcore.Sandbox) *Box {
+func Of(sb hostapi.Sandbox) *Box {
 	b, _ := sb.(*Box)
 	return b
 }
@@ -102,7 +102,7 @@ func (x *Boxes) Sweep(ctx context.Context, every time.Duration) {
 // attached says whether a running agent's sandbox is root's.
 func (x *Boxes) attached(root string) bool {
 	root = filepath.Clean(root)
-	return slices.ContainsFunc(x.deps.Running(), func(sb hostcore.Sandbox) bool {
+	return slices.ContainsFunc(x.deps.Running(), func(sb hostapi.Sandbox) bool {
 		b, ok := sb.(*Box)
 		return ok && filepath.Clean(b.root) == root
 	})

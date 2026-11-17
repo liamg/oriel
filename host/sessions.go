@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/worktree"
 	"github.com/liamg/oriel/sysload"
 )
@@ -86,7 +87,7 @@ func (w *Host) Stop(_ context.Context, id core.SessionID) (err error) {
 // uncommitted work are refused: removing them would lose it.
 func (w *Host) Archive(ctx context.Context, id core.SessionID) (err error) {
 	defer w.env.Recover("Archive", &err)
-	return w.End(ctx, EndReq{Session: id})
+	return w.End(ctx, hostapi.EndReq{Session: id})
 }
 
 // Delete throws a session away: its agent stops, its worktrees go with whatever is in them, then its workspace and
@@ -94,11 +95,11 @@ func (w *Host) Archive(ctx context.Context, id core.SessionID) (err error) {
 // refused.
 func (w *Host) Delete(ctx context.Context, id core.SessionID) (err error) {
 	defer w.env.Recover("Delete", &err)
-	return w.End(ctx, EndReq{Session: id, Delete: true})
+	return w.End(ctx, hostapi.EndReq{Session: id, Delete: true})
 }
 
 // End archives or deletes a session, as r says.
-func (w *Host) End(ctx context.Context, r EndReq) (err error) {
+func (w *Host) End(ctx context.Context, r hostapi.EndReq) (err error) {
 	defer w.env.Recover("End", &err)
 	se, err := w.session(r.Session)
 	if err != nil {
@@ -166,7 +167,7 @@ func (w *Host) delete(ctx context.Context, se core.SessionState) error {
 // StartWork makes a plan's worktrees and tells its agent to implement the plan (05-plan), as r asks: on the branches
 // it names, clearing the plan's threads into a note unless they're kept, and with the agent restarted fresh on the
 // work pack unless its conversation is kept, on the sandbox, network, model and effort given.
-func (w *Host) StartWork(ctx context.Context, r StartWorkReq) (err error) {
+func (w *Host) StartWork(ctx context.Context, r hostapi.StartWorkReq) (err error) {
 	defer w.env.Recover("StartWork", &err)
 	se, err := w.session(r.Session)
 	if err != nil {
@@ -186,13 +187,13 @@ func (w *Host) StartWork(ctx context.Context, r StartWorkReq) (err error) {
 	if err := w.runPart.WorkAgent(se.ID, r, "start work"); err != nil {
 		return err
 	}
-	_, err = w.runPart.Comment(ctx, CommentReq{Session: se.ID, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
+	_, err = w.runPart.Comment(ctx, hostapi.CommentReq{Session: se.ID, Thread: se.PlanThread(), Title: "Start work", Body: prompt})
 	return err
 }
 
 // Configure restarts the session's agent on another model or effort, its conversation kept. It refuses mid-turn,
 // which a restart would cut off.
-func (w *Host) Configure(ctx context.Context, r ConfigureReq) (err error) {
+func (w *Host) Configure(ctx context.Context, r hostapi.ConfigureReq) (err error) {
 	defer w.env.Recover("Configure", &err)
 	running, err := w.runPart.Configure(r)
 	if err != nil || !running {
@@ -222,7 +223,7 @@ func (w *Host) AddRepo(ctx context.Context, id core.SessionID, ref core.RepoID) 
 
 // NextPR moves a project onto a fresh branch cut from its updated base, keeping the branch it leaves as a past PR.
 // It refuses while that branch has uncommitted changes, or commits that are neither pushed nor on the base.
-func (w *Host) NextPR(ctx context.Context, r NextPRReq) (err error) {
+func (w *Host) NextPR(ctx context.Context, r hostapi.NextPRReq) (err error) {
 	defer w.env.Recover("NextPR", &err)
 	if err := w.workPart.NextPR(ctx, r); err != nil {
 		return err

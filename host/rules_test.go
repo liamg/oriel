@@ -13,6 +13,8 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // goTest is a Bash permission for a go test command.
@@ -53,7 +55,7 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 	a2.WaitSent(t)
 
 	ans := r.askedCard(one, a1, goTest("p1", "./..."))
-	if err := r.w.Answer(AnswerReq{Session: one, Ask: "p1", Decision: "always"}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: one, Ask: "p1", Decision: "always"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; !d.Allow {
@@ -66,7 +68,7 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 	}
 
 	r.setNow(r.now().Add(5 * time.Minute))
-	if err := r.w.Answer(AnswerReq{Session: two, Ask: "p3", Decision: "always", For: ForAll}); err != nil {
+	if err := r.w.Answer(hostapi.AnswerReq{Session: two, Ask: "p3", Decision: "always", For: agentrun.ForAll}); err != nil {
 		t.Fatal(err)
 	}
 	if d := <-ans; !d.Allow {
@@ -101,7 +103,7 @@ func TestRulesForThisSessionAndAllSessions(t *testing.T) {
 		t.Fatalf("removed, yet %+v", rules)
 	}
 	ans = r.askedCard(four, a4, goTest("p6", "./..."))
-	r.w.Answer(AnswerReq{Session: four, Ask: "p6", Decision: "deny"})
+	r.w.Answer(hostapi.AnswerReq{Session: four, Ask: "p6", Decision: "deny"})
 	if d := <-ans; d.Allow {
 		t.Error("denied, yet allowed")
 	}
@@ -118,7 +120,7 @@ func TestUtilityAgentsIgnoreRulesForAllSessions(t *testing.T) {
 	if err := r.w.AddRule(core.AskPermission, "Bash(go test:*)"); err != nil {
 		t.Fatal(err)
 	}
-	u, err := r.w.StartUtility(context.Background(), UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "hi"})
+	u, err := r.w.StartUtility(context.Background(), hostapi.UtilitySpec{Name: "assistant", Pack: "Be brief.", Prompt: "hi"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +161,7 @@ func TestARuleAllowsOnlyItsOwnCommand(t *testing.T) {
 	} {
 		p := bash(fmt.Sprint("p", i), cmd)
 		ans := r.askedCard(id, a, p)
-		if err := r.w.Answer(AnswerReq{Session: id, Ask: p.ID, Decision: "deny"}); err != nil {
+		if err := r.w.Answer(hostapi.AnswerReq{Session: id, Ask: p.ID, Decision: "deny"}); err != nil {
 			t.Fatal(err)
 		}
 		if d := <-ans; d.Allow {

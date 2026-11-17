@@ -11,12 +11,8 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-type SearchReq = hostapi.SearchReq
-
-type Hit = hostapi.Hit
-
 // Search finds text in sessions' threads and transcripts: archived ones keep theirs, so they stay searchable.
-func (l *Logs) Search(q SearchReq) (out []Hit) {
+func (l *Logs) Search(q hostapi.SearchReq) (out []hostapi.Hit) {
 	defer l.env.Recover("Search", nil)
 	needle := strings.ToLower(strings.TrimSpace(q.Query))
 	if needle == "" {
@@ -29,13 +25,13 @@ func (l *Logs) Search(q SearchReq) (out []Hit) {
 		for _, t := range se.Threads {
 			for _, c := range t.Comments {
 				if strings.Contains(strings.ToLower(c.Body), needle) {
-					out = append(out, Hit{Session: se.ID, Thread: t.ID, Text: snippet(c.Body, needle)})
+					out = append(out, hostapi.Hit{Session: se.ID, Thread: t.ID, Text: snippet(c.Body, needle)})
 				}
 			}
 		}
 		for _, it := range l.Transcript(se.ID) {
 			if strings.Contains(strings.ToLower(it.Text), needle) {
-				out = append(out, Hit{Session: se.ID, Item: it.ID, Text: snippet(it.Text, needle)})
+				out = append(out, hostapi.Hit{Session: se.ID, Item: it.ID, Text: snippet(it.Text, needle)})
 			}
 		}
 	}

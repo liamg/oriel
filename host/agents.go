@@ -2,17 +2,18 @@ package host
 
 import (
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
 // SetApp is agentrun.Runner.SetApp.
-func (w *Host) SetApp(a App) {
+func (w *Host) SetApp(a hostapi.App) {
 	defer w.env.Recover("SetApp", nil)
 	w.runPart.SetApp(a)
 }
 
 // EditQueued changes or deletes a comment of the user's the agent hasn't been given yet.
-func (w *Host) EditQueued(r QueuedReq) (err error) {
+func (w *Host) EditQueued(r hostapi.QueuedReq) (err error) {
 	defer w.env.Recover("EditQueued", &err)
 	err = w.runPart.EditQueued(r)
 	w.restatus(r.Session)

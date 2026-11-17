@@ -116,9 +116,9 @@ func (r *repoList) add(ctx context.Context, path string, src core.RepoSource) (_
 		return core.Repo{}, false, fmt.Errorf("%s was removed", top)
 	}
 	r.ignored = slices.DeleteFunc(r.ignored, func(p string) bool { return p == top })
-	id := core.RepoID(hostcore.Sanitise(filepath.Base(top)))
+	id := core.RepoID(hostapi.Sanitise(filepath.Base(top)))
 	for n := 2; slices.ContainsFunc(r.list, func(x core.Repo) bool { return x.ID == id }); n++ {
-		id = core.RepoID(fmt.Sprintf("%s-%d", hostcore.Sanitise(filepath.Base(top)), n))
+		id = core.RepoID(fmt.Sprintf("%s-%d", hostapi.Sanitise(filepath.Base(top)), n))
 	}
 	remote, _ := g.Origin(ctx) // a repo with no origin, or one git can't read, is still added
 	repo := core.Repo{ID: id, Path: top, Remote: remote, BaseBranch: g.DefaultBranch(ctx), Source: src,
@@ -245,36 +245,27 @@ func (x *Registry) RemoveRepo(id core.RepoID) (err error) {
 	return nil
 }
 
-type RepoCheck = hostapi.RepoCheck
-
 // CheckRepoPath says what adding the checkout at path would do, without adding it.
-func (x *Registry) CheckRepoPath(ctx context.Context, p string) (c RepoCheck) {
+func (x *Registry) CheckRepoPath(ctx context.Context, p string) (c hostapi.RepoCheck) {
 	defer x.env.Recover("CheckRepoPath", nil)
 	abs, err := filepath.Abs(p)
 	if err != nil {
-		return RepoCheck{Error: err.Error()}
+		return hostapi.RepoCheck{Error: err.Error()}
 	}
 	top, err := gitx.Root(ctx, abs)
 	if err != nil {
-		return RepoCheck{Error: "not a git repository"}
+		return hostapi.RepoCheck{Error: "not a git repository"}
 	}
 	main := gitx.Repo{Dir: top}.MainClone(ctx)
 	g := gitx.Repo{Dir: main}
 	remote, _ := g.Origin(ctx)
-	c = RepoCheck{Path: main, Worktree: main != top, Remote: remote}
+	c = hostapi.RepoCheck{Path: main, Worktree: main != top, Remote: remote}
 	c.Branch = g.CurrentBranch(ctx)
 	if r, ok := x.list.find(main); ok {
 		c.Known = r.ID
 	}
 	return c
 }
-
-type CloneReq = hostapi.CloneReq
-
-type CloneTarget = hostapi.CloneTarget
-
-// CloneName is the folder a clone of url is named by default: its last part, with .git dropped.
-func CloneName(url string) string { return hostapi.CloneName(url) }
 
 // CloneParent is the folder clones go in by default: the one most known repos share, else the repos directory.
 func (x *Registry) CloneParent() string {
@@ -310,18 +301,18 @@ func (x *Registry) Dir() string {
 }
 
 // CloneTarget says where a clone would go and what's there.
-func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (_ CloneTarget, err error) {
+func (x *Registry) CloneTarget(ctx context.Context, r hostapi.CloneReq) (_ hostapi.CloneTarget, err error) {
 	defer x.env.Recover("CloneTarget", &err)
 	url := strings.TrimSpace(r.URL)
-	name := hostcore.Sanitise(r.Name)
+	name := hostapi.Sanitise(r.Name)
 	if name == "" {
-		name = CloneName(url)
+		name = hostapi.CloneName(url)
 	}
 	if name == "" {
-		return CloneTarget{}, fmt.Errorf("can't name a checkout of %s: give it a name", url)
+		return hostapi.CloneTarget{}, fmt.Errorf("can't name a checkout of %s: give it a name", url)
 	}
 	parent := cmp.Or(expandHome(strings.TrimSpace(r.Parent)), x.CloneParent())
-	t := CloneTarget{Dir: filepath.Join(parent, name), Name: name}
+	t := hostapi.CloneTarget{Dir: filepath.Join(parent, name), Name: name}
 	if _, err := os.Stat(t.Dir); err == nil {
 		t.Exists = true
 		origin, err := gitx.Repo{Dir: t.Dir}.Origin(ctx)
@@ -332,7 +323,7 @@ func (x *Registry) CloneTarget(ctx context.Context, r CloneReq) (_ CloneTarget, 
 
 // CloneRepo clones a repo with the user's own git and credentials, and registers it. A checkout already there of
 // the same URL is registered as it is. Cancelling ctx stops the clone and takes away what it made.
-func (x *Registry) CloneRepo(ctx context.Context, r CloneReq) (_ core.Repo, err error) {
+func (x *Registry) CloneRepo(ctx context.Context, r hostapi.CloneReq) (_ core.Repo, err error) {
 	defer x.env.Recover("CloneRepo", &err)
 	url := strings.TrimSpace(r.URL)
 	if url == "" {

@@ -45,8 +45,6 @@ func New(env hostcore.Env, st hostcore.State, deps Deps) *Jobs {
 	return &Jobs{env: env, st: st, deps: deps}
 }
 
-type Job = hostapi.Job
-
 // maxSkips is how many skipped occurrences a job keeps.
 const maxSkips = 50
 
@@ -54,19 +52,19 @@ func (x *Jobs) jobsDir() string { return filepath.Join(x.env.Home, "jobs") }
 
 func (x *Jobs) jobPath(name string) string { return filepath.Join(x.jobsDir(), name+".json") }
 
-func (x *Jobs) loadJob(name string) (Job, bool) {
+func (x *Jobs) loadJob(name string) (hostapi.Job, bool) {
 	b, err := os.ReadFile(x.jobPath(name))
 	if err != nil {
-		return Job{}, false
+		return hostapi.Job{}, false
 	}
-	var j Job
+	var j hostapi.Job
 	if json.Unmarshal(b, &j) != nil || j.Prompt == "" {
-		return Job{}, false
+		return hostapi.Job{}, false
 	}
 	return j, true
 }
 
-func (x *Jobs) writeJob(j Job) error {
+func (x *Jobs) writeJob(j hostapi.Job) error {
 	if err := os.MkdirAll(x.jobsDir(), 0o700); err != nil {
 		return err
 	}
@@ -78,19 +76,19 @@ func (x *Jobs) writeJob(j Job) error {
 }
 
 // Jobs is every job, the most recently changed first.
-func (x *Jobs) Jobs() []Job {
+func (x *Jobs) Jobs() []hostapi.Job {
 	defer x.env.Recover("Jobs", nil)
 	x.mu.Lock()
 	defer x.mu.Unlock()
 	return x.jobs()
 }
 
-func (x *Jobs) jobs() []Job {
+func (x *Jobs) jobs() []hostapi.Job {
 	entries, err := os.ReadDir(x.jobsDir())
 	if err != nil {
 		return nil
 	}
-	var out []Job
+	var out []hostapi.Job
 	for _, e := range entries {
 		if name, ok := strings.CutSuffix(e.Name(), ".json"); ok && !e.IsDir() {
 			if j, ok := x.loadJob(name); ok {
@@ -98,7 +96,7 @@ func (x *Jobs) jobs() []Job {
 			}
 		}
 	}
-	slices.SortStableFunc(out, func(a, b Job) int {
+	slices.SortStableFunc(out, func(a, b hostapi.Job) int {
 		if c := b.UpdatedAt.Compare(a.UpdatedAt); c != 0 {
 			return c
 		}
@@ -109,19 +107,19 @@ func (x *Jobs) jobs() []Job {
 
 // SaveJob writes a job: a new one when j has no Name (named from its title, stepping aside from a name in use), else
 // the job of that name, rewritten.
-func (x *Jobs) SaveJob(j Job) (_ Job, err error) {
+func (x *Jobs) SaveJob(j hostapi.Job) (_ hostapi.Job, err error) {
 	defer x.env.Recover("SaveJob", &err)
 	j.Prompt, j.Title = strings.TrimSpace(j.Prompt), strings.TrimSpace(j.Title)
 	if j.Prompt == "" {
-		return Job{}, errors.New("a job is a prompt: say what it should do")
+		return hostapi.Job{}, errors.New("a job is a prompt: say what it should do")
 	}
 	if err := j.Schedule.Check(); err != nil {
-		return Job{}, err
+		return hostapi.Job{}, err
 	}
 	switch j.Sandbox {
 	case "", "sandbox", "host":
 	default:
-		return Job{}, fmt.Errorf("a job runs in a sandbox or on the host, not %q", j.Sandbox)
+		return hostapi.Job{}, fmt.Errorf("a job runs in a sandbox or on the host, not %q", j.Sandbox)
 	}
 	if j.Title == "" {
 		j.Title = promptTitle(j.Prompt)
@@ -130,14 +128,14 @@ func (x *Jobs) SaveJob(j Job) (_ Job, err error) {
 	defer x.mu.Unlock()
 	now := x.env.Now().UTC()
 	j.UpdatedAt = now
-	if name := hostcore.Sanitise(j.Name); name != "" {
+	if name := hostapi.Sanitise(j.Name); name != "" {
 		old, ok := x.loadJob(name)
 		if !ok {
-			return Job{}, fmt.Errorf("no job %q", name)
+			return hostapi.Job{}, fmt.Errorf("no job %q", name)
 		}
 		j.Name, j.CreatedAt, j.Due, j.Skips = name, old.CreatedAt, old.Due, old.Skips
 	} else {
-		base := hostcore.TrimWords(hostcore.Sanitise(j.Title), 6)
+		base := hostcore.TrimWords(hostapi.Sanitise(j.Title), 6)
 		if base == "" {
 			base = "job"
 		}
@@ -150,7 +148,7 @@ func (x *Jobs) SaveJob(j Job) (_ Job, err error) {
 		}
 	}
 	if err := x.writeJob(j); err != nil {
-		return Job{}, err
+		return hostapi.Job{}, err
 	}
 	return j, nil
 }
@@ -160,7 +158,7 @@ func (x *Jobs) DeleteJob(name string) (err error) {
 	defer x.env.Recover("DeleteJob", &err)
 	x.mu.Lock()
 	defer x.mu.Unlock()
-	name = hostcore.Sanitise(name)
+	name = hostapi.Sanitise(name)
 	if _, ok := x.loadJob(name); !ok {
 		return fmt.Errorf("no job %q", name)
 	}
@@ -180,7 +178,7 @@ func promptTitle(prompt string) string {
 func (x *Jobs) RunJob(ctx context.Context, name string) (_ core.SessionID, err error) {
 	defer x.env.Recover("RunJob", &err)
 	x.mu.Lock()
-	j, ok := x.loadJob(hostcore.Sanitise(name))
+	j, ok := x.loadJob(hostapi.Sanitise(name))
 	x.mu.Unlock()
 	if !ok {
 		return "", fmt.Errorf("no job %q", name)
@@ -188,7 +186,7 @@ func (x *Jobs) RunJob(ctx context.Context, name string) (_ core.SessionID, err e
 	return x.runJob(ctx, j)
 }
 
-func (x *Jobs) runJob(ctx context.Context, j Job) (core.SessionID, error) {
+func (x *Jobs) runJob(ctx context.Context, j hostapi.Job) (core.SessionID, error) {
 	provider := j.Provider
 	if provider == "" {
 		if ps := x.deps.Providers.List(); len(ps) > 0 {
@@ -211,7 +209,7 @@ func (x *Jobs) RunDue(ctx context.Context) {
 	defer x.env.Recover("RunDue", nil)
 	x.mu.Lock()
 	now := x.env.Now()
-	var due []Job
+	var due []hostapi.Job
 	for _, j := range x.jobs() {
 		from := j.UpdatedAt
 		if j.Due.After(from) {
@@ -244,7 +242,7 @@ func (x *Jobs) RunDue(ctx context.Context) {
 // running says whether a run of the job is still going.
 func (x *Jobs) running(job string) bool {
 	return slices.ContainsFunc(x.st.Snapshot().Sessions, func(se core.SessionState) bool {
-		return JobOf(se) == job && !se.Archived && RunOf(se).Status == RunRunning
+		return hostapi.JobOf(se) == job && !se.Archived && hostapi.RunOf(se).Status == hostapi.RunRunning
 	})
 }
 

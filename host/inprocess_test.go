@@ -13,6 +13,7 @@ import (
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
 	"github.com/liamg/oriel/core/logs"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/internal/clock/clocktest"
 	"github.com/liamg/oriel/sysload"
 )
@@ -32,7 +33,7 @@ func TestTheAppSharesTheHostsStore(t *testing.T) {
 	if st.Machine.OS == "" || st.Machine.Sampled.IsZero() {
 		t.Errorf("machine = %+v", st.Machine)
 	}
-	if hits := r.w.Search(SearchReq{Query: "hi"}); len(hits) != 1 {
+	if hits := r.w.Search(hostapi.SearchReq{Query: "hi"}); len(hits) != 1 {
 		t.Errorf("search = %+v", hits)
 	}
 }
@@ -122,11 +123,11 @@ func TestAPanicInTheHostIsLoggedNotFatal(t *testing.T) {
 	<-sampled
 	r.clock.breakWith("")
 
-	r.w.SetApp(App{Decide: func(context.Context, Decide) Verdict { panic("a hook broke") }})
+	r.w.SetApp(hostapi.App{Decide: func(context.Context, hostapi.Decide) hostapi.Verdict { panic("a hook broke") }})
 	id, a := r.workSession("Work")
 	ans := a.Ask(agent.Permission{ID: "p1", Tool: "Bash", Summary: "ls"})
 	r.eventually(id, "the card, as no hook answered", func(se core.SessionState) bool { return len(se.Asks) == 1 })
-	r.w.Answer(AnswerReq{Session: id, Ask: "p1", Decision: "allow"})
+	r.w.Answer(hostapi.AnswerReq{Session: id, Ask: "p1", Decision: "allow"})
 	if d := <-ans; !d.Allow {
 		t.Errorf("answer = %+v", d)
 	}

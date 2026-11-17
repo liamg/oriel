@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/hostapi"
 	"github.com/liamg/oriel/host/hostcore"
 )
 
@@ -21,7 +22,7 @@ func (x *Runner) Begin(ctx context.Context, id core.SessionID, spec core.Session
 		body = strings.TrimSpace(fmt.Sprintf("%s: %s\n\n%s", p, spec.PR, body))
 	}
 	if body != "" {
-		_, err := x.Comment(ctx, CommentReq{Session: id, Title: core.Summary(cmp.Or(p, body)), Body: body})
+		_, err := x.Comment(ctx, hostapi.CommentReq{Session: id, Title: core.Summary(cmp.Or(p, body)), Body: body})
 		return err
 	}
 	if spec.Provider != "" {
@@ -44,7 +45,7 @@ func firstRequest(spec core.SessionSpec) string {
 
 // Configure switches the session's agent to another model or effort, its conversation kept, and says whether it was
 // running, to be started again. It refuses mid-turn, which a restart would cut off.
-func (x *Runner) Configure(r ConfigureReq) (bool, error) {
+func (x *Runner) Configure(r hostapi.ConfigureReq) (bool, error) {
 	se, err := x.st.Session(r.Session)
 	if err != nil {
 		return false, err
@@ -56,7 +57,7 @@ func (x *Runner) Configure(r ConfigureReq) (bool, error) {
 		return false, errors.New("switch when the agent is idle")
 	}
 	running := se.Agent.Live()
-	if err := x.WorkAgent(r.Session, StartWorkReq{Model: r.Model, Effort: r.Effort, KeepConversation: true}, "switching model"); err != nil {
+	if err := x.WorkAgent(r.Session, hostapi.StartWorkReq{Model: r.Model, Effort: r.Effort, KeepConversation: true}, "switching model"); err != nil {
 		return false, err
 	}
 	return running, nil
@@ -64,7 +65,7 @@ func (x *Runner) Configure(r ConfigureReq) (bool, error) {
 
 // WorkAgent readies the session's agent: on the model, effort, sandbox and network r gives, restarted fresh on the
 // work pack unless its conversation is kept, and restarted by its own id when only those changed; why is the stop's.
-func (x *Runner) WorkAgent(id core.SessionID, r StartWorkReq, why string) error {
+func (x *Runner) WorkAgent(id core.SessionID, r hostapi.StartWorkReq, why string) error {
 	se, err := x.st.Session(id)
 	if err != nil {
 		return err

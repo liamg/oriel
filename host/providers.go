@@ -11,21 +11,19 @@ import (
 	"github.com/liamg/oriel/core"
 )
 
-type ProviderInfo = hostapi.ProviderInfo
-
 // ProviderInfo is each provider as the launcher shows it: installed, logged in, its models, its usage. The
 // providers are asked at once, so it takes as long as the slowest.
-func (w *Host) ProviderInfo(ctx context.Context) []ProviderInfo {
+func (w *Host) ProviderInfo(ctx context.Context) []hostapi.ProviderInfo {
 	defer w.env.Recover("ProviderInfo", nil)
 	st := w.store.State()
 	lost := w.runPart.LostLogins()
 	ps := w.opts.Providers.List()
-	out := make([]ProviderInfo, len(ps))
+	out := make([]hostapi.ProviderInfo, len(ps))
 	var wg sync.WaitGroup
 	for i, p := range ps {
 		wg.Go(func() {
 			defer w.env.Recover("ProviderInfo", nil)
-			info := ProviderInfo{ID: p.ID(), Has: agent.FeaturesOf(p)}
+			info := hostapi.ProviderInfo{ID: p.ID(), Has: agent.FeaturesOf(p)}
 			dctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			inst, err := p.Detect(dctx)
 			cancel()

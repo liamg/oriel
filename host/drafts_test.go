@@ -10,6 +10,8 @@ import (
 	"github.com/liamg/oriel/agent"
 	"github.com/liamg/oriel/agent/agenttest"
 	"github.com/liamg/oriel/core"
+	"github.com/liamg/oriel/host/agentrun"
+	"github.com/liamg/oriel/host/hostapi"
 )
 
 // draftsRig is a work session whose pack drafts (it offers commit_draft), past its first turn, and its worktree.
@@ -61,12 +63,12 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	write(t, dir, "round.go", "package pricing\n\nfunc Round(x float64) float64 { return x }\n")
 	turn(r, id, a)
 	got := a.WaitSent(t)
-	for _, want := range []string{NoticeLead, "<notice>", "commit message (mcp__oriel__commit_draft)", "PR draft (mcp__oriel__pr_draft)"} {
+	for _, want := range []string{agentrun.NoticeLead, "<notice>", "commit message (mcp__oriel__commit_draft)", "PR draft (mcp__oriel__pr_draft)"} {
 		if !strings.Contains(got.Text, want) {
 			t.Errorf("the nudge lacks %q:\n%s", want, got.Text)
 		}
 	}
-	if strings.Contains(got.Text, BatchLead) || len(r.session(id).Threads) != 1 {
+	if strings.Contains(got.Text, agentrun.BatchLead) || len(r.session(id).Threads) != 1 {
 		t.Errorf("the nudge is a user thread: %q, %d threads", got.Text, len(r.session(id).Threads))
 	}
 
@@ -116,7 +118,7 @@ func TestDraftsNudgeOncePerChangeWhenIdle(t *testing.T) {
 	a.Handled(t)
 	r.noneSent(a)
 	p, _ := r.session(id).Primary()
-	if _, err := r.w.ShipCommit(ctx, ShipCommitReq{Session: id, Project: p.Name, Message: "fix(pricing): round negatives"}); err != nil {
+	if _, err := r.w.ShipCommit(ctx, hostapi.ShipCommitReq{Session: id, Project: p.Name, Message: "fix(pricing): round negatives"}); err != nil {
 		t.Fatal(err)
 	}
 	if d := r.ship(id, false)[p.Name].PRDraft; d.Stale || d.Empty() {
@@ -133,7 +135,7 @@ func TestDraftsKeepWhatTheUserWrote(t *testing.T) {
 	ctx := context.Background()
 	p, _ := r.session(id).Primary()
 	write(t, dir, "round.go", "package pricing\n\nfunc Round(x float64) float64 { return x }\n")
-	if err := r.w.ShipDraft(ctx, DraftReq{Session: id, Project: p.Name, Kind: "commit", Body: "fix: mine"}); err != nil {
+	if err := r.w.ShipDraft(ctx, hostapi.DraftReq{Session: id, Project: p.Name, Kind: "commit", Body: "fix: mine"}); err != nil {
 		t.Fatal(err)
 	}
 	turn(r, id, a)
@@ -144,11 +146,11 @@ func TestDraftsKeepWhatTheUserWrote(t *testing.T) {
 	if out := a.Call(t, "commit_draft", map[string]any{"message": "fix: theirs"}); !strings.Contains(out, "the user wrote") {
 		t.Errorf("the tool said %q", out)
 	}
-	if d := r.ship(id, false)[p.Name].CommitDraft; d.Body != "fix: mine" || d.By != DraftByYou {
+	if d := r.ship(id, false)[p.Name].CommitDraft; d.Body != "fix: mine" || d.By != hostapi.DraftByYou {
 		t.Errorf("the user's draft became %+v", d)
 	}
 
-	if err := r.w.ShipDraft(ctx, DraftReq{Session: id, Project: p.Name, Kind: "commit", Drop: true}); err != nil {
+	if err := r.w.ShipDraft(ctx, hostapi.DraftReq{Session: id, Project: p.Name, Kind: "commit", Drop: true}); err != nil {
 		t.Fatal(err)
 	}
 	if out := a.Call(t, "commit_draft", map[string]any{"message": "fix: theirs"}); out != "saved" {
